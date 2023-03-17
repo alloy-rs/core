@@ -1,0 +1,18 @@
+[package]
+name = "ethers-abi-enc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ethers-primitives = { version = "0.1.0", path = "../primitives" }
+hex = "0.4.3"
+thiserror = {version = "1.0.39", optional = true}
+
+[dev-dependencies]
+hex-literal = "0.3.4"
+
+[features]
+default = ["std"]
+std = ["hex/std", "thiserror"]
