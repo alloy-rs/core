@@ -7,43 +7,6 @@ pub trait Decodable: Sized {
     fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError>;
 }
 
-#[cfg(feature = "alloc")]
-mod alloc_impl {
-    use super::*;
-
-    impl<T> Decodable for ::alloc::boxed::Box<T>
-    where
-        T: Decodable + Sized,
-    {
-        fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
-            T::decode(buf).map(::alloc::boxed::Box::new)
-        }
-    }
-
-    impl<T> Decodable for ::alloc::sync::Arc<T>
-    where
-        T: Decodable + Sized,
-    {
-        fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
-            T::decode(buf).map(::alloc::sync::Arc::new)
-        }
-    }
-
-    impl Decodable for ::alloc::string::String {
-        fn decode(from: &mut &[u8]) -> Result<Self, DecodeError> {
-            let h = Header::decode(from)?;
-            if h.list {
-                return Err(DecodeError::UnexpectedList);
-            }
-            let mut to = ::alloc::vec::Vec::with_capacity(h.payload_length);
-            to.extend_from_slice(&from[..h.payload_length]);
-            from.advance(h.payload_length);
-
-            Self::from_utf8(to).map_err(|_| DecodeError::Custom("invalid string"))
-        }
-    }
-}
-
 /// Errors for RLP decoding
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DecodeError {
@@ -251,33 +214,6 @@ impl Decodable for bool {
     }
 }
 
-#[cfg(feature = "std")]
-impl Decodable for std::net::IpAddr {
-    fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
-        use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
-
-        let h = Header::decode(buf)?;
-        if h.list {
-            return Err(DecodeError::UnexpectedList);
-        }
-        let o = match h.payload_length {
-            4 => {
-                let mut to = [0_u8; 4];
-                to.copy_from_slice(&buf[..4]);
-                IpAddr::V4(Ipv4Addr::from(to))
-            }
-            16 => {
-                let mut to = [0u8; 16];
-                to.copy_from_slice(&buf[..16]);
-                IpAddr::V6(Ipv6Addr::from(to))
-            }
-            _ => return Err(DecodeError::UnexpectedLength),
-        };
-        buf.advance(h.payload_length);
-        Ok(o)
-    }
-}
-
 impl<const N: usize> Decodable for [u8; N] {
     fn decode(from: &mut &[u8]) -> Result<Self, DecodeError> {
         let h = Header::decode(from)?;
@@ -346,27 +282,93 @@ impl<'a> Rlp<'a> {
     }
 }
 
+#[cfg(feature = "std")]
+mod std_impl {
+    use super::*;
+    impl Decodable for std::net::IpAddr {
+        fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
+            use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
+            let h = Header::decode(buf)?;
+            if h.list {
+                return Err(DecodeError::UnexpectedList);
+            }
+            let o = match h.payload_length {
+                4 => {
+                    let mut to = [0_u8; 4];
+                    to.copy_from_slice(&buf[..4]);
+                    IpAddr::V4(Ipv4Addr::from(to))
+                }
+                16 => {
+                    let mut to = [0u8; 16];
+                    to.copy_from_slice(&buf[..16]);
+                    IpAddr::V6(Ipv6Addr::from(to))
+                }
+                _ => return Err(DecodeError::UnexpectedLength),
+            };
+            buf.advance(h.payload_length);
+            Ok(o)
+        }
+    }
+}
+
 #[cfg(feature = "alloc")]
-impl<E> Decodable for alloc::vec::Vec<E>
-where
-    E: Decodable,
-{
-    fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
-        let h = Header::decode(buf)?;
-        if !h.list {
-            return Err(DecodeError::UnexpectedString);
+mod alloc_impl {
+    use super::*;
+
+    impl<E> Decodable for alloc::vec::Vec<E>
+    where
+        E: Decodable,
+    {
+        fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
+            let h = Header::decode(buf)?;
+            if !h.list {
+                return Err(DecodeError::UnexpectedString);
+            }
+
+            let payload_view = &mut &buf[..h.payload_length];
+
+            let mut to = alloc::vec::Vec::new();
+            while !payload_view.is_empty() {
+                to.push(E::decode(payload_view)?);
+            }
+
+            buf.advance(h.payload_length);
+
+            Ok(to)
         }
+    }
 
-        let payload_view = &mut &buf[..h.payload_length];
-
-        let mut to = alloc::vec::Vec::new();
-        while !payload_view.is_empty() {
-            to.push(E::decode(payload_view)?);
+    impl<T> Decodable for ::alloc::boxed::Box<T>
+    where
+        T: Decodable + Sized,
+    {
+        fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
+            T::decode(buf).map(::alloc::boxed::Box::new)
         }
+    }
 
-        buf.advance(h.payload_length);
+    impl<T> Decodable for ::alloc::sync::Arc<T>
+    where
+        T: Decodable + Sized,
+    {
+        fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
+            T::decode(buf).map(::alloc::sync::Arc::new)
+        }
+    }
 
-        Ok(to)
+    impl Decodable for ::alloc::string::String {
+        fn decode(from: &mut &[u8]) -> Result<Self, DecodeError> {
+            let h = Header::decode(from)?;
+            if h.list {
+                return Err(DecodeError::UnexpectedList);
+            }
+            let mut to = ::alloc::vec::Vec::with_capacity(h.payload_length);
+            to.extend_from_slice(&from[..h.payload_length]);
+            from.advance(h.payload_length);
+
+            Self::from_utf8(to).map_err(|_| DecodeError::Custom("invalid string"))
+        }
     }
 }
 

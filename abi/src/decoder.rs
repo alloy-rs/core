@@ -11,8 +11,6 @@
 
 use core::ops::Range;
 
-#[cfg(not(feature = "std"))]
-use crate::no_std_prelude::*;
 use crate::{encode, Error, SolType, Token, Word};
 
 fn round_up_nearest_multiple(value: usize, padding: usize) -> usize {

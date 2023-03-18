@@ -164,15 +164,17 @@ impl Encodable for bool {
 impl_max_encoded_len!(bool, { <u8 as MaxEncodedLenAssoc>::LEN });
 
 #[cfg(feature = "std")]
-impl Encodable for std::net::IpAddr {
-    fn encode(&self, out: &mut dyn BufMut) {
-        match self {
-            std::net::IpAddr::V4(ref o) => (&o.octets()[..]).encode(out),
-            std::net::IpAddr::V6(ref o) => (&o.octets()[..]).encode(out),
+mod std_support {
+    use super::*;
+    impl Encodable for std::net::IpAddr {
+        fn encode(&self, out: &mut dyn BufMut) {
+            match self {
+                std::net::IpAddr::V4(ref o) => (&o.octets()[..]).encode(out),
+                std::net::IpAddr::V6(ref o) => (&o.octets()[..]).encode(out),
+            }
         }
     }
 }
-
 macro_rules! slice_impl {
     ($t:ty) => {
         impl $crate::Encodable for $t {
