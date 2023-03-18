@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 ethers-primitives = { version = "0.1.0", path = "../primitives" }
 hex = "0.4.3"
-thiserror = {version = "1.0.39", optional = true}
+thiserror = { version = "1.0.39", optional = true }
 
 [dev-dependencies]
 hex-literal = "0.3.4"

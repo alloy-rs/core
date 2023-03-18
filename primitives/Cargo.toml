@@ -21,10 +21,10 @@ fixed-hash = { version = "0.8", default-features = false, features = [
 derive_more = "0.99"
 
 # optional
-ethers-rlp = { version = "0.1.0", path = "../rlp", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 
 # rlp support
+ethers-rlp = { version = "0.1.0", path = "../rlp", optional = true }
 
 bytes = { version = "1", default-features = false, optional = true }
 

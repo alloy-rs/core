@@ -2,7 +2,8 @@ use core::marker::PhantomData;
 
 use ethers_primitives::{B160, B256, U256};
 
-use std::string::String as RustString;
+#[cfg(not(feature = "std"))]
+use crate::no_std_prelude::{String as RustString, ToOwned, ToString, Vec};
 
 use crate::{decoder::*, Error::InvalidData, Token, Word};
 
@@ -415,7 +416,7 @@ impl SolType for String {
 
     fn type_check(token: &Token) -> bool {
         match token {
-            Token::PackedSeq(bytes) => std::str::from_utf8(bytes).is_ok(),
+            Token::PackedSeq(bytes) => core::str::from_utf8(bytes).is_ok(),
             _ => false,
         }
     }

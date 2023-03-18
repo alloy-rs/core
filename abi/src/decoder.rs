@@ -60,7 +60,7 @@ pub struct Decoder<'a> {
     validate: bool,
 }
 
-impl std::fmt::Debug for Decoder<'_> {
+impl core::fmt::Debug for Decoder<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Decoder")
             .field("buf", &format!("0x{}", hex::encode(self.buf)))

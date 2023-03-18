@@ -184,7 +184,7 @@ macro_rules! slice_impl {
 mod alloc_support {
     use super::*;
 
-    extern crate alloc;
+    // extern crate alloc;
 
     impl<T> Encodable for ::alloc::vec::Vec<T>
     where
