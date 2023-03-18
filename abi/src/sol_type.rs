@@ -4,6 +4,8 @@ use ethers_primitives::{B160, B256, U256};
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::{String as RustString, ToOwned, ToString, Vec};
+#[cfg(feature = "std")]
+use std::string::String as RustString;
 
 use crate::{decoder::*, Error::InvalidData, Token, Word};
 
