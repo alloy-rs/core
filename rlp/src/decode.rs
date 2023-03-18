@@ -1,7 +1,9 @@
 use crate::types::Header;
 use bytes::{Buf, Bytes, BytesMut};
 
+/// A type that can be decoded from an RLP blob
 pub trait Decodable: Sized {
+    /// Decode the blob into the appropriate type
     fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError>;
 }
 
@@ -42,17 +44,33 @@ mod alloc_impl {
     }
 }
 
+/// Errors for RLP decoding
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DecodeError {
+    /// Numeric Overflow
     Overflow,
+    /// Leading zero disallowed
     LeadingZero,
+    /// Overran input while decoding
     InputTooShort,
+    /// Expected single byte, but got invalid value
     NonCanonicalSingleByte,
+    /// Expected size, but got invalid value
     NonCanonicalSize,
+    /// Expected a payload of a specific size, got an unexpected size
     UnexpectedLength,
+    /// Expected another type, got a string instead
     UnexpectedString,
+    /// Expected another type, got a list instead
     UnexpectedList,
-    ListLengthMismatch { expected: usize, got: usize },
+    /// Got an unexpected number of items in a list
+    ListLengthMismatch {
+        /// Expected length
+        expected: usize,
+        /// Actual length
+        got: usize,
+    },
+    /// Custom Err
     Custom(&'static str),
 }
 
@@ -70,8 +88,8 @@ impl core::fmt::Display for DecodeError {
             DecodeError::UnexpectedLength => write!(f, "unexpected length"),
             DecodeError::UnexpectedString => write!(f, "unexpected string"),
             DecodeError::UnexpectedList => write!(f, "unexpected list"),
-            DecodeError::ListLengthMismatch { expected, got } => {
-                write!(f, "list length mismatch: expected {expected}, got {got}")
+            DecodeError::ListLengthMismatch { got, expected } => {
+                write!(f, "unexpected list len got {} expected: {}", got, expected)
             }
             DecodeError::Custom(err) => write!(f, "{err}"),
         }
@@ -298,11 +316,13 @@ impl Decodable for Bytes {
     }
 }
 
+/// An active RLP decoder, with a specific slice of a payload
 pub struct Rlp<'a> {
     payload_view: &'a [u8],
 }
 
 impl<'a> Rlp<'a> {
+    /// Instantiate an RLP decoder with a payload slice
     pub fn new(mut payload: &'a [u8]) -> Result<Self, DecodeError> {
         let h = Header::decode(&mut payload)?;
         if !h.list {
@@ -313,7 +333,11 @@ impl<'a> Rlp<'a> {
         Ok(Self { payload_view })
     }
 
-    pub fn get_next<T: Decodable>(&mut self) -> Result<Option<T>, DecodeError> {
+    /// Decode the next item from the buffer
+    pub fn get_next<T>(&mut self) -> Result<Option<T>, DecodeError>
+    where
+        T: Decodable,
+    {
         if self.payload_view.is_empty() {
             return Ok(None);
         }

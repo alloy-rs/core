@@ -6,6 +6,8 @@
     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 ))]
 
+//! RLP Encoding and Decoding
+
 #[cfg(feature = "alloc")]
 extern crate alloc;
 

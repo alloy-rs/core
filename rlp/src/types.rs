@@ -1,8 +1,11 @@
 use bytes::{BufMut, BytesMut};
 
+/// The header for an RLP item,
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Header {
+    /// True if list, false otherwise
     pub list: bool,
+    /// Length of the payload in items or bytes
     pub payload_length: usize,
 }
 
@@ -33,5 +36,8 @@ impl Header {
     }
 }
 
+/// RLP prefix byte for 0-length string.
 pub const EMPTY_STRING_CODE: u8 = 0x80;
+
+/// RLP prefix byte for a 0-length array.
 pub const EMPTY_LIST_CODE: u8 = 0xC0;
