@@ -17,12 +17,136 @@ use crate::{
 
 /// A Solidity Type, for ABI enc/decoding
 ///
-/// TODO: implementer's guide
+/// This trait is implemented by types that contain ABI enc/decoding info for
+/// solidity types. Types may be combined to express arbitrarily complex
+/// solidity types.
+///
+/// Future work will add derive for this trait :)
+///
+/// ```
+/// use ethers_abi_enc::sol_type::*;
+///
+/// // uint256[]
+/// type DynUint256Array = Array<Uint<256>>;
+/// assert_eq!(&DynUint256Array::sol_type_name(), "uint256[]");
+///
+/// type Erc20FunctionArgs = (Address, Uint<256>);
+/// assert_eq!(&Erc20FunctionArgs::sol_type_name(), "tuple(address,uint256)");
+///
+/// type LargeComplexType = (FixedArray<Array<Bool>, 2>, (FixedBytes<13>, String));
+/// assert_eq!(&LargeComplexType::sol_type_name(), "tuple(bool[][2],tuple(bytes13,string))");
+/// ```
+///
+/// These types are zero cost representations of Solidity types. They do not
+/// exist at runtime. They ONLY information about the type, they do not carry
+/// data
+///
+/// ### Implementer's Guide
+///
+/// You may want to implement this on your own struct, for example, to encode a
+/// named solidity struct.
+///
+/// Overall, implementing this trait is straightforward.
+///
+///
+/// ```
+/// # use ethers_abi_enc::AbiResult;
+/// use ethers_abi_enc::sol_type::*;
+/// use ethers_primitives::U256;
+///
+/// // struct MySolidityStruct {
+/// //    uint256 a;
+/// //    uint256 b;
+/// // }
+///
+/// // This should be a ZST. See note.
+/// pub struct MySolidityStruct;
+///
+/// // This will be the data type in rust
+/// pub struct MyRustStruct {
+///    a: U256,
+///    b: U256,
+/// }
+///
+///
+/// // We're going to get really cute here.
+/// //
+/// // Structs are encoded as Tuples. So we can entirely define this trait by
+/// // delegating to a tuple type!
+/// type UnderlyingTuple = (Uint<256>, Uint<256>);
+///
+/// impl SolType for MySolidityStruct {
+///     type RustType = MyRustStruct;
+///     type TokenType = <UnderlyingTuple as SolType>::TokenType;
+///
+///     // The name in solidity
+///     fn sol_type_name() -> std::string::String {
+///         "MySolidityStruct".to_owned()
+///     }
+///
+///     // True if your type has a dynamic encoding length. This is dynamic
+///     // arrays, strings, bytes, dynamic tuple etc.
+///     //
+///     // Of course, we can cheat here by delegating to the tuple
+///     fn is_dynamic() -> bool {
+///         UnderlyingTuple::is_dynamic()
+///     }
+///
+///     // This function should check the data in the token and enforce any
+///     // type rules. For example, a bool should ONLY be 0 or 1. This function
+///     // should check the data, and return false if the bool is 2 or 3 or
+///     // whatever.
+///     //
+///     // It will be ignored if the decoder runs without validation
+///     fn type_check(token: &Self::TokenType) -> bool {
+///         UnderlyingTuple::type_check(token)
+///     }
+///
+///     // Convert from the token to the rust type. We cheat here again by
+///     // delegating.
+///     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
+///         let (a, b) = UnderlyingTuple::detokenize(token)?;
+///         Ok(MyRustStruct{ a, b })
+///     }
+///
+///     // Convert from the rust type to the token type. We cheat here AGAIN
+///     // by delegating.
+///     fn tokenize(rust: Self::RustType) -> Self::TokenType {
+///         let MyRustStruct { a, b } = rust;
+///         UnderlyingTuple::tokenize((a, b))
+///     }
+/// }
+/// ```
+///
+/// As you can see, because any NEW soltype corresponds to some combination of
+/// OLD sol types, it's really easy to implement [`SolType`] for anything you
+/// want!
+///
+/// #### Note on zero size
+///
+/// Any type implementing this should be 0-sized. This trait exposes only
+/// associated functions and types, and not methods.
+///
+/// ```ignore
+///
+/// // Bad - This type is sized.
+/// pub struct MyStruct(usize);
+///
+/// impl SolType for MyStruct { ... }
+///
+/// // Good - This type is 0 sized.
+/// pub struct MyStruct;
+///
+/// impl SolType for MyStruct { ... }
+/// ```
 pub trait SolType {
-    /// The corresponding Rust type
+    /// The corresponding Rust type.
     type RustType: Sized;
 
-    /// The corresponding token type
+    /// The corresponding ABI token type.
+    ///
+    /// See implementers of [`TokenType`].
+    ///
     type TokenType: TokenType;
 
     /// The name of the type in solidity
@@ -346,6 +470,7 @@ impl_uint_sol_type!(
 
 /// Bool - `bool`
 pub struct Bool;
+
 impl SolType for Bool {
     type RustType = bool;
     type TokenType = WordToken;
