@@ -31,20 +31,20 @@
 //! ```
 //! use ethers_abi_enc::sol_type::*;
 //! # pub fn main() -> ethers_abi_enc::AbiResult<()> {
-//!     // Represent a solidity type in rust
-//!     type MySolType = FixedArray<Bool, 2>;
+//! // Represent a solidity type in rust
+//! type MySolType = FixedArray<Bool, 2>;
 //!
-//!     let data = [true, false];
-//!     let validate = true;
+//! let data = [true, false];
+//! let validate = true;
 //!
-//!     // SolTypes expose their solidity name :)
-//!     assert_eq!(&MySolType::sol_type_name(), "bool[2]");
+//! // SolTypes expose their solidity name :)
+//! assert_eq!(&MySolType::sol_type_name(), "bool[2]");
 //!
-//!     // SolTypes are used to transform Rust into ABI blobs, and back.
-//!     let encoded: Vec<u8> = MySolType::encode(data);
-//!     let decoded: [bool; 2] = MySolType::decode(&encoded, validate)?;
-//!     assert_eq!(data, decoded);
-//!     # Ok(())
+//! // SolTypes are used to transform Rust into ABI blobs, and back.
+//! let encoded: Vec<u8> = MySolType::encode(data);
+//! let decoded: [bool; 2] = MySolType::decode(&encoded, validate)?;
+//! assert_eq!(data, decoded);
+//! # Ok(())
 //! # }
 //! ```
 //!
