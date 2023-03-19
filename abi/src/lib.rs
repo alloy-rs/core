@@ -117,7 +117,7 @@ mod no_std_prelude {
     pub use std::borrow::Cow;
 }
 
-use ethers_primitives::{B160, B256};
+use ethers_primitives::B256;
 #[cfg(not(feature = "std"))]
 use no_std_prelude::*;
 
@@ -137,19 +137,7 @@ pub use errors::{AbiResult, Error};
 pub mod sol_type;
 pub use sol_type::SolType;
 
-pub mod util;
+mod util;
 
-/// EVM Word
+/// The Word type for ABI Encoding
 pub type Word = B256;
-/// EVM Address
-pub type Address = B160;
-/// FixedBytes type
-pub type FixedBytes = Vec<u8>;
-/// Dynamic Byte array
-pub type Bytes = Vec<u8>;
-/// Signed int
-pub type Int = B256;
-/// Unsigned Int
-pub type Uint = B256;
-/// Hash
-pub type Hash = B256;

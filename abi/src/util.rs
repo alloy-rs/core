@@ -12,7 +12,7 @@
 use crate::Word;
 
 /// Converts a u32 to a right aligned array of 32 bytes.
-pub fn pad_u32(value: u32) -> Word {
+pub(crate) fn pad_u32(value: u32) -> Word {
     let mut padded = Word::default();
     padded[28..32].copy_from_slice(&value.to_be_bytes());
     padded
