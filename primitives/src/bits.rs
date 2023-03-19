@@ -30,54 +30,9 @@ construct_fixed_hash! {
 impl From<u64> for B160 {
     fn from(fr: u64) -> Self {
         let x_bytes = fr.to_be_bytes();
-        B160([
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, x_bytes[0], x_bytes[1], x_bytes[2], x_bytes[3],
-            x_bytes[4], x_bytes[5], x_bytes[6], x_bytes[7],
-        ])
-    }
-}
-
-#[cfg(feature = "primitive-types")]
-impl From<primitive_types::H160> for B160 {
-    fn from(fr: primitive_types::H160) -> Self {
-        B160(fr.0)
-    }
-}
-
-#[cfg(feature = "primitive-types")]
-impl From<primitive_types::H256> for B256 {
-    fn from(fr: primitive_types::H256) -> Self {
-        B256(fr.0)
-    }
-}
-
-#[cfg(feature = "primitive-types")]
-impl From<B160> for primitive_types::H160 {
-    fn from(fr: B160) -> Self {
-        primitive_types::H160(fr.0)
-    }
-}
-
-#[cfg(feature = "primitive-types")]
-impl From<B256> for primitive_types::H256 {
-    fn from(fr: B256) -> Self {
-        primitive_types::H256(fr.0)
-    }
-}
-
-#[cfg(feature = "primitive-types")]
-impl From<primitive_types::U256> for B256 {
-    fn from(fr: primitive_types::U256) -> Self {
-        let mut ret = B256::zero();
-        fr.to_big_endian(ret.as_bytes_mut());
-        ret
-    }
-}
-
-#[cfg(feature = "primitive-types")]
-impl From<B256> for primitive_types::U256 {
-    fn from(fr: B256) -> Self {
-        primitive_types::U256::from(fr.as_ref() as &[u8])
+        let mut b = B160::default();
+        b[12..].copy_from_slice(&x_bytes);
+        b
     }
 }
 
@@ -94,6 +49,8 @@ impl From<B256> for ruint::aliases::U256 {
 }
 
 impl_fixed_hash_conversions!(B256, B160);
+impl_fixed_hash_conversions!(B512, B160);
+impl_fixed_hash_conversions!(B512, B256);
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for B256 {
@@ -385,66 +342,12 @@ mod rlp {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(any(feature = "arbitrary", feature = "primitive-types"))]
+    #[cfg(feature = "arbitrary")]
     use super::*;
 
     #[test]
     #[cfg(feature = "arbitrary")]
     fn arbitrary() {
         proptest::proptest!(|(_v1: B160, _v2: B256)| {});
-    }
-
-    #[test]
-    #[cfg(feature = "primitive-types")]
-    fn should_convert_from_primitive_types_h160() {
-        let h160 = primitive_types::H160::random();
-        let b160: B160 = h160.into();
-        let new_h160: primitive_types::H160 = b160.into();
-        assert_eq!(h160, new_h160)
-    }
-
-    #[test]
-    #[cfg(feature = "primitive-types")]
-    fn should_convert_to_primitive_types_h160() {
-        let b160 = B160::random();
-        let h160: primitive_types::H160 = b160.into();
-        let new_b160: B160 = h160.into();
-        assert_eq!(b160, new_b160)
-    }
-
-    #[test]
-    #[cfg(feature = "primitive-types")]
-    fn should_convert_from_primitive_types_h256() {
-        let h256 = primitive_types::H256::random();
-        let b256: B256 = h256.into();
-        let new_h256: primitive_types::H256 = b256.into();
-        assert_eq!(h256, new_h256)
-    }
-
-    #[test]
-    #[cfg(feature = "primitive-types")]
-    fn should_convert_to_primitive_types_h256() {
-        let b256 = B256::random();
-        let h256: primitive_types::H256 = b256.into();
-        let new_b256: B256 = h256.into();
-        assert_eq!(b256, new_b256)
-    }
-
-    #[test]
-    #[cfg(feature = "primitive-types")]
-    fn should_convert_to_primitive_types_h256_u256() {
-        let b256 = B256::random();
-        let u256: primitive_types::U256 = b256.into();
-        let new_b256: B256 = u256.into();
-        assert_eq!(b256, new_b256)
-    }
-
-    #[test]
-    #[cfg(feature = "arbitrary")]
-    fn should_convert_to_ruint_u256() {
-        let b256 = B256::random();
-        let u256: ruint::aliases::U256 = b256.into();
-        let new_b256: B256 = u256.into();
-        assert_eq!(b256, new_b256)
     }
 }
