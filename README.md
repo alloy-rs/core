@@ -1,6 +1,6 @@
-# Rust Ethereum Core
+# Ethers Core
 
-This repository will hold the core crates at the root of the the Rust Ethereum
+This repository will hold the core crates at the root of the the Ethers-rs
 ecosystem. These types and libraries will be used by revm, reth, ethers, and
 foundry.
 
