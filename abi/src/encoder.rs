@@ -11,7 +11,7 @@
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::*;
-use crate::{token::TokenSeq, util::pad_u32, Word};
+use crate::{token::TokenSeq, util::pad_u32, TokenType, Word};
 
 #[derive(Default, Clone, Debug)]
 pub struct Encoder {
@@ -55,7 +55,6 @@ impl Encoder {
     }
 
     pub fn append_word(&mut self, word: Word) {
-        dbg!(&self, hex::encode(word.as_slice()));
         self.buf.push(word);
     }
 
@@ -73,8 +72,6 @@ impl Encoder {
     }
 
     fn append_bytes(&mut self, bytes: &[u8]) {
-        dbg!(&self);
-        dbg!(hex::encode(bytes));
         let len = (bytes.len() + 31) / 32;
         for i in 0..len {
             let mut padded = Word::default();
@@ -97,7 +94,7 @@ impl Encoder {
     where
         T: TokenSeq,
     {
-        token.encode_head_tail_append(self);
+        token.encode_sequence(self);
     }
 
     pub fn is_params(&self) -> bool {
@@ -120,7 +117,7 @@ where
         .collect()
 }
 
-/// Encode an ABI token
+/// Encode an ABI token sequence
 pub fn encode<T>(token: T) -> Vec<u8>
 where
     T: TokenSeq,
@@ -128,7 +125,18 @@ where
     encode_impl(token)
 }
 
-/// Encode as ABI function params
+/// Encode a single token by wrapping it in a tuple
+pub fn encode_single<T>(token: T) -> Vec<u8>
+where
+    T: TokenType,
+{
+    encode((token,))
+}
+
+/// Encode a tuple as ABI function params. If argument is not a tuple,
+/// functions as [`encode_single`]
+///
+/// TODO: document this choice of behavior
 pub fn encode_params<T>(token: T) -> Vec<u8>
 where
     T: TokenSeq,
@@ -153,7 +161,7 @@ mod tests {
     fn encode_address() {
         let address = B160([0x11u8; 20]);
         let expected = hex!("0000000000000000000000001111111111111111111111111111111111111111");
-        let encoded = sol_type::Address::encode(address);
+        let encoded = sol_type::Address::encode_single(address);
         assert_eq!(encoded, expected);
     }
 
@@ -161,7 +169,7 @@ mod tests {
     fn encode_dynamic_array_of_addresses() {
         type MyTy = sol_type::Array<sol_type::Address>;
         let rust = vec![B160([0x11u8; 20]), B160([0x22u8; 20])];
-        let encoded = MyTy::encode(rust);
+        let encoded = MyTy::encode_single(rust);
         let expected = hex!(
             "
 			0000000000000000000000000000000000000000000000000000000000000020
@@ -180,7 +188,7 @@ mod tests {
 
         let addresses = [B160([0x11u8; 20]), B160([0x22u8; 20])];
 
-        let encoded = MyTy::encode(addresses);
+        let encoded = MyTy::encode_single(addresses);
         let encoded_params = MyTy::encode_params(addresses);
         let expected = hex!(
             "
@@ -234,7 +242,7 @@ mod tests {
     	"
         )
         .to_vec();
-        let encoded = MyTy::encode(fixed.clone());
+        let encoded = MyTy::encode_single(fixed.clone());
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(fixed);
         assert_eq!(encoded_params, expected);
@@ -250,8 +258,6 @@ mod tests {
             [B160([0x33u8; 20]), B160([0x44u8; 20])],
         ];
 
-        let encoded = MyTy::encode(dynamic.clone());
-        let encoded_params = MyTy::encode_params(dynamic);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -264,7 +270,9 @@ mod tests {
         )
         .to_vec();
         // a DynSeq at top level ALWAYS has extra indirection
+        let encoded = MyTy::encode_single(dynamic.clone());
         assert_eq!(encoded, expected);
+        let encoded_params = MyTy::encode_params(dynamic);
         assert_eq!(encoded_params, expected);
     }
 
@@ -274,8 +282,6 @@ mod tests {
 
         let dynamic = vec![vec![B160([0x11u8; 20])], vec![B160([0x22u8; 20])]];
 
-        let encoded = MyTy::encode(dynamic.clone());
-        let encoded_params = MyTy::encode_params(dynamic);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -290,7 +296,9 @@ mod tests {
         )
         .to_vec();
         // a DynSeq at top level ALWAYS has extra indirection
+        let encoded = MyTy::encode_single(dynamic.clone());
         assert_eq!(encoded, expected);
+        let encoded_params = MyTy::encode_params(dynamic);
         assert_eq!(encoded_params, expected);
     }
 
@@ -302,8 +310,6 @@ mod tests {
             vec![B160([0x11u8; 20]), B160([0x22u8; 20])],
             vec![B160([0x33u8; 20]), B160([0x44u8; 20])],
         ];
-        let encoded = MyTy::encode(dynamic.clone());
-        let encoded_params = MyTy::encode_params(dynamic);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -320,7 +326,9 @@ mod tests {
         )
         .to_vec();
         // a DynSeq at top level ALWAYS has extra indirection
+        let encoded = MyTy::encode_single(dynamic.clone());
         assert_eq!(encoded, expected);
+        let encoded_params = MyTy::encode_params(dynamic);
         assert_eq!(encoded_params, expected);
     }
 
@@ -366,9 +374,6 @@ mod tests {
             ],
             "gavofyork".to_string(),
         );
-        let f = Fixed::tokenize(data.0);
-        dbg!(f.head_words());
-        dbg!(f);
 
         let expected = hex!(
             "
@@ -387,10 +392,8 @@ mod tests {
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded. For this particular test, there was an
         // implicit param incoding
-        let encoded = MyTy::encode(data.clone());
+        let encoded = MyTy::encode_single(data.clone());
         assert_ne!(encoded, expected);
-
-        dbg!("START");
 
         let encoded_params = MyTy::encode_params(data);
         assert_eq!(encoded_params, expected);
@@ -404,7 +407,7 @@ mod tests {
         let data = (vec![],);
 
         // Empty arrays
-        let encoded = MyTy0::encode(data.clone());
+        let encoded = MyTy0::encode_single(data.clone());
         let encoded_params = MyTy0::encode_params(data);
         let expected = hex!(
             "
@@ -439,7 +442,7 @@ mod tests {
         // when not param encoded. For this particular test, there was an
         // implicit param incoding
         // Empty arrays
-        let encoded = MyTy::encode(data.clone());
+        let encoded = MyTy::encode_single(data.clone());
         assert_ne!(encoded, expected);
         let encoded_params = MyTy::encode_params(data);
         assert_eq!(encoded_params, expected);
@@ -468,7 +471,7 @@ mod tests {
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded. For this particular test, there was an
         // implicit param incoding
-        let encoded = MyTy2::encode(data.clone());
+        let encoded = MyTy2::encode_single(data.clone());
         assert_ne!(encoded, expected);
         let encoded_params = MyTy2::encode_params(data);
         assert_eq!(encoded_params, expected);
@@ -480,7 +483,7 @@ mod tests {
         type MyTy = sol_type::Bytes;
         let bytes = vec![0x12, 0x34];
 
-        let encoded = MyTy::encode(bytes);
+        let encoded = MyTy::encode_single(bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -494,7 +497,7 @@ mod tests {
 
     #[test]
     fn encode_fixed_bytes() {
-        let encoded = sol_type::FixedBytes::<2>::encode([0x12, 0x34]);
+        let encoded = sol_type::FixedBytes::<2>::encode_single([0x12, 0x34]);
         let expected = hex!("1234000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
     }
@@ -502,7 +505,7 @@ mod tests {
     #[test]
     fn encode_string() {
         let s = "gavofyork".to_string();
-        let encoded = sol_type::String::encode(s);
+        let encoded = sol_type::String::encode_single(s);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -517,7 +520,7 @@ mod tests {
     #[test]
     fn encode_bytes2() {
         let bytes = hex!("10000000000000000000000000000000000000000000000000000000000002").to_vec();
-        let encoded = sol_type::Bytes::encode(bytes);
+        let encoded = sol_type::Bytes::encode_single(bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -538,7 +541,7 @@ mod tests {
     	"
         )
         .to_vec();
-        let encoded = sol_type::Bytes::encode(bytes);
+        let encoded = sol_type::Bytes::encode_single(bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -559,7 +562,7 @@ mod tests {
             hex!("10000000000000000000000000000000000000000000000000000000000002").to_vec(),
             hex!("0010000000000000000000000000000000000000000000000000000000000002").to_vec(),
         );
-        let encoded = MyTy::encode(bytes.clone());
+        let encoded = MyTy::encode_single(bytes.clone());
         let encoded_params = MyTy::encode_params(bytes);
         let expected = hex!(
             "
@@ -583,7 +586,7 @@ mod tests {
     #[test]
     fn encode_uint() {
         let uint = 4;
-        let encoded = sol_type::Uint::<8>::encode(uint);
+        let encoded = sol_type::Uint::<8>::encode_single(uint);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000004");
         assert_eq!(encoded, expected);
     }
@@ -591,21 +594,21 @@ mod tests {
     #[test]
     fn encode_int() {
         let int = 4;
-        let encoded = sol_type::Int::<8>::encode(int);
+        let encoded = sol_type::Int::<8>::encode_single(int);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000004");
         assert_eq!(encoded, expected);
     }
 
     #[test]
     fn encode_bool() {
-        let encoded = sol_type::Bool::encode(true);
+        let encoded = sol_type::Bool::encode_single(true);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000001");
         assert_eq!(encoded, expected);
     }
 
     #[test]
     fn encode_bool2() {
-        let encoded = sol_type::Bool::encode(false);
+        let encoded = sol_type::Bool::encode_single(false);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
     }
@@ -629,7 +632,7 @@ mod tests {
 
         let data = (5, bytes.clone(), 3, bytes);
 
-        let encoded = MyTy::encode(data.clone());
+        let encoded = MyTy::encode_single(data.clone());
         let encoded_params = MyTy::encode_params(data);
 
         let expected = hex!(
@@ -675,9 +678,6 @@ mod tests {
 
         let data = (true, "gavofyork".to_string(), 2, 3, 4, vec![5, 6, 7]);
 
-        let encoded = MyTy::encode(data.clone());
-        let encoded_params = MyTy::encode_params(data);
-
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000001
@@ -698,7 +698,9 @@ mod tests {
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded. For this particular test, there was an
         // implicit param incoding
+        let encoded = MyTy::encode_single(data.clone());
         assert_ne!(encoded, expected);
+        let encoded_params = MyTy::encode_params(data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
     }
@@ -710,9 +712,6 @@ mod tests {
             "019c80031b20d5e69c8093a571162299032018d913930d93ab320ae5ea44a4218a274f00d607"
         )
         .to_vec()];
-
-        let encoded = MyTy::encode(data.clone());
-        let encoded_params = MyTy::encode_params(data);
 
         let expected = hex!(
             "
@@ -726,7 +725,9 @@ mod tests {
         )
         .to_vec();
         // a DynSeq at top level ALWAYS has extra indirection
+        let encoded = MyTy::encode_single(data.clone());
         assert_eq!(encoded, expected);
+        let encoded_params = MyTy::encode_params(data);
         assert_eq!(encoded_params, expected);
     }
 
@@ -740,9 +741,6 @@ mod tests {
             hex!("6666666666666666666666666666666666666666666666666666666666666666666666666666")
                 .to_vec(),
         ];
-
-        let encoded = MyTy::encode(data.clone());
-        let encoded_params = MyTy::encode_params(data);
 
         let expected = hex!(
             "
@@ -760,7 +758,9 @@ mod tests {
         )
         .to_vec();
         // a DynSeq at top level ALWAYS has extra indirection
+        let encoded = MyTy::encode_single(data.clone());
         assert_eq!(encoded, expected);
+        let encoded_params = MyTy::encode_params(data);
         assert_eq!(encoded_params, expected);
     }
 
@@ -794,10 +794,6 @@ mod tests {
         dbg!(tok1.head_words());
         dbg!(tok2.head_words());
 
-        let encoded = MyTy::encode(data.clone());
-
-        let encoded_params = MyTy::encode_params(data);
-
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -812,7 +808,9 @@ mod tests {
         .to_vec();
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded.
+        let encoded = MyTy::encode_single(data.clone());
         assert_eq!(encoded, expected);
+        let encoded_params = MyTy::encode_params(data);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
     }
@@ -828,7 +826,7 @@ mod tests {
                 .to_vec(),
         );
 
-        let encoded = MyTy::encode(data.clone());
+        let encoded = MyTy::encode_single(data.clone());
         let encoded_params = MyTy::encode_params(data);
 
         let expected = hex!(
@@ -868,9 +866,6 @@ mod tests {
             B160([0x22u8; 20]),
         );
 
-        let encoded = MyTy::encode(data.clone());
-        let encoded_params = MyTy::encode_params(data);
-
         let expected = hex!(
             "
             0000000000000000000000000000000000000000000000000000000000000020
@@ -885,7 +880,9 @@ mod tests {
         .to_vec();
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded.
+        let encoded = MyTy::encode_single(data.clone());
         assert_eq!(encoded, expected);
+        let encoded_params = MyTy::encode_params(data);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
     }
@@ -914,7 +911,7 @@ mod tests {
             ),
         );
 
-        let encoded = MyTy::encode(data.clone());
+        let encoded = MyTy::encode_single(data.clone());
         let encoded_params = MyTy::encode_params(data);
 
         let expected = hex!(
@@ -968,7 +965,7 @@ mod tests {
             false,
         );
 
-        let encoded = MyTy::encode(data.clone());
+        let encoded = MyTy::encode_single(data.clone());
         let encoded_params = MyTy::encode_params(data);
 
         let expected = hex!(
@@ -1041,7 +1038,7 @@ mod tests {
 
         let data = (((false, 0x777),), vec![0x42, 0x1337]);
 
-        let encoded = MyTy::encode(data.clone());
+        let encoded = MyTy::encode_single(data.clone());
         let encoded_params = MyTy::encode_params(data);
 
         let expected = hex!(

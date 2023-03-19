@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use ethers_primitives::{B160, B256, U256};
+use ethers_primitives::{B160, U256};
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::{String as RustString, ToOwned, ToString, Vec};
@@ -18,7 +18,7 @@ use crate::{
 /// A Solidity Type, for ABI enc/decoding
 pub trait SolType {
     /// The corresponding Rust type
-    type RustType;
+    type RustType: Sized;
 
     /// The corresponding token type
     type TokenType: TokenType;
@@ -34,13 +34,22 @@ pub trait SolType {
     /// Tokenize
     fn tokenize(rust: Self::RustType) -> Self::TokenType;
 
-    /// Encode a Rust type to an ABI blob
-    fn encode(rust: Self::RustType) -> Vec<u8> {
+    /// Encode a single ABI token by wrapping it in a 1-length sequence
+    fn encode_single(rust: Self::RustType) -> Vec<u8> {
         let token = Self::tokenize(rust);
-        crate::encode((token,))
+        crate::encode_single(token)
     }
 
-    /// Encode a Rust type
+    /// Encode an ABI sequence
+    fn encode(rust: Self::RustType) -> Vec<u8>
+    where
+        Self::TokenType: TokenSeq,
+    {
+        let token = Self::tokenize(rust);
+        crate::encode(token)
+    }
+
+    /// Encode an ABI sequence suitable for function params
     fn encode_params(rust: Self::RustType) -> Vec<u8>
     where
         Self::TokenType: TokenSeq,
@@ -49,24 +58,79 @@ pub trait SolType {
         crate::encode_params(token)
     }
 
-    /// Encode a Rust type to an ABI blob, then hex encode the blob
-    fn hex_encode(rust: Self::RustType) -> RustString {
+    /// Hex output of encode
+    fn hex_encode(rust: Self::RustType) -> RustString
+    where
+        Self::TokenType: TokenSeq,
+    {
         format!("0x{}", hex::encode(Self::encode(rust)))
     }
 
+    /// Hex output of encode_single
+    fn hex_encode_single(rust: Self::RustType) -> RustString {
+        format!("0x{}", hex::encode(Self::encode_single(rust)))
+    }
+
+    /// Hex output of encode_params
+    fn hex_encode_params(rust: Self::RustType) -> RustString
+    where
+        Self::TokenType: TokenSeq,
+    {
+        format!("0x{}", hex::encode(Self::encode_params(rust)))
+    }
+
     /// Decode a Rust type from an ABI blob
-    fn decode(data: &[u8]) -> AbiResult<Self::RustType> {
-        Self::detokenize(Self::TokenType::decode_from(&mut Decoder::new(
-            data, false, false,
-        ))?)
+    fn decode(data: &[u8], validate: bool) -> AbiResult<Self::RustType>
+    where
+        Self::TokenType: TokenSeq,
+    {
+        let decoded = decode::<Self::TokenType>(data, validate)?;
+        Self::detokenize(decoded)
+    }
+
+    /// Decode a Rust type from an ABI blob
+    fn decode_params(data: &[u8], validate: bool) -> AbiResult<Self::RustType>
+    where
+        Self::TokenType: TokenSeq,
+    {
+        let decoded = decode_params::<Self::TokenType>(data, validate)?;
+        Self::detokenize(decoded)
+    }
+
+    /// Decode a Rust type from an ABI blob
+    fn decode_single(data: &[u8], validate: bool) -> AbiResult<Self::RustType> {
+        let decoded = decode_single::<Self::TokenType>(data, validate)?;
+        Self::detokenize(decoded)
     }
 
     /// Decode a Rust type from a hex-encoded ABI blob
-    fn hex_decode(data: &str) -> AbiResult<Self::RustType> {
+    fn hex_decode(data: &str, validate: bool) -> AbiResult<Self::RustType>
+    where
+        Self::TokenType: TokenSeq,
+    {
         let payload = data.strip_prefix("0x").unwrap_or(data);
         hex::decode(payload)
             .map_err(|_| InvalidData)
-            .and_then(|buf| Self::decode(&buf))
+            .and_then(|buf| Self::decode(&buf, validate))
+    }
+
+    /// Decode a Rust type from a hex-encoded ABI blob
+    fn hex_decode_single(data: &str, validate: bool) -> AbiResult<Self::RustType> {
+        let payload = data.strip_prefix("0x").unwrap_or(data);
+        hex::decode(payload)
+            .map_err(|_| InvalidData)
+            .and_then(|buf| Self::decode_single(&buf, validate))
+    }
+
+    /// Decode a Rust type from a hex-encoded ABI blob
+    fn hex_decode_params(data: &str, validate: bool) -> AbiResult<Self::RustType>
+    where
+        Self::TokenType: TokenSeq,
+    {
+        let payload = data.strip_prefix("0x").unwrap_or(data);
+        hex::decode(payload)
+            .map_err(|_| InvalidData)
+            .and_then(|buf| Self::decode_params(&buf, validate))
     }
 }
 
@@ -95,9 +159,7 @@ impl SolType for Address {
     }
 
     fn tokenize(rust: Self::RustType) -> Self::TokenType {
-        let mut word = Word::default();
-        word[12..].copy_from_slice(&rust[..]);
-        word.into()
+        rust.into()
     }
 }
 
@@ -241,7 +303,7 @@ macro_rules! impl_uint_sol_type {
             }
 
             fn tokenize(rust: Self::RustType) -> Self::TokenType {
-                B256(rust.to_be_bytes::<32>()).into()
+                rust.into()
             }
         }
     };
@@ -288,7 +350,7 @@ impl SolType for Bool {
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
-        Ok(token.as_slice()[31] < 2)
+        Ok(token.inner() != Word::repeat_byte(0))
     }
 
     fn tokenize(rust: Self::RustType) -> Self::TokenType {
@@ -352,7 +414,11 @@ impl SolType for String {
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
-        RustString::from_utf8(Bytes::detokenize(token)?).map_err(|_| InvalidData)
+        // NOTE: We're decoding strings using lossy UTF-8 decoding to
+        // prevent invalid strings written into contracts by either users or
+        // Solidity bugs from causing graph-node to fail decoding event
+        // data.
+        Ok(RustString::from_utf8_lossy(&Bytes::detokenize(token)?).into())
     }
 
     fn tokenize(rust: Self::RustType) -> Self::TokenType {
@@ -481,10 +547,6 @@ macro_rules! impl_tuple_sol_type {
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
-                if !Self::type_check(&token) {
-                    return Err(InvalidData)
-                }
-
                 Ok((
                     $(
                         $ty::detokenize(token.$no)?,

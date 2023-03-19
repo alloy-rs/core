@@ -11,7 +11,18 @@
 #![allow(clippy::module_inception)]
 #![warn(missing_docs)]
 
-//! ABI implementation
+//! ABI Encoding & Decoding implementation
+//!
+//! ### How this library works
+//!
+//! This library maps the solidity type scheme to Rust types via the
+//! [`SolType`] trait.
+//!
+//! Every `SolType` corresponds to exactly 1 rust type, and
+//! exactly 1 token type.
+//!
+//!
+//!
 
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate alloc;
@@ -35,10 +46,10 @@ use ethers_primitives::{B160, B256};
 use no_std_prelude::*;
 
 mod decoder;
-pub use decoder::{decode, decode_params, decode_params_validate, decode_validate};
+pub use decoder::{decode, decode_params, decode_single};
 
 mod encoder;
-pub use encoder::{encode, encode_params};
+pub use encoder::{encode, encode_params, encode_single};
 
 mod token;
 pub use token::TokenType;

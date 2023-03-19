@@ -21,6 +21,7 @@
 
 use core::fmt;
 
+use ethers_primitives::{B160, U256};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -28,60 +29,15 @@ use serde::{Deserialize, Serialize};
 use crate::no_std_prelude::*;
 use crate::{decoder::Decoder, encoder::Encoder, AbiResult, Error, Word};
 
-pub trait TokenSeq: TokenType {
-    fn encode_head_tail_append(&self, enc: &mut Encoder);
-}
-
-impl<T> TokenSeq for DynSeqToken<T>
-where
-    T: TokenType,
-{
-    fn encode_head_tail_append(&self, enc: &mut Encoder) {
-        let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
-        enc.push_offset(head_words as u32);
-        for t in self.0.iter() {
-            t.head_append(enc);
-            enc.bump_offset(t.tail_words() as u32);
-        }
-        for t in self.0.iter() {
-            t.tail_append(enc)
-        }
-        enc.pop_offset();
-    }
-}
-impl<T, const N: usize> TokenSeq for FixedSeqToken<T, N>
-where
-    T: TokenType,
-{
-    fn encode_head_tail_append(&self, enc: &mut Encoder) {
-        let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
-        enc.push_offset(head_words as u32);
-
-        for t in self.0.iter() {
-            t.head_append(enc);
-            enc.bump_offset(t.tail_words() as u32);
-        }
-        for t in self.0.iter() {
-            t.tail_append(enc)
-        }
-        enc.pop_offset();
-    }
-}
-
 /// Abi-Encoding Tokens. This is a sealed trait. It contains the type
 /// information necessary to encode & decode data. Tokens are an intermediate
 /// state between abi-encoded blobs, and rust types.
-pub trait TokenType: sealed::Sealed + Sized {
-    /// True for tuples onl.
-    fn can_be_params() -> bool {
-        false
-    }
-
+pub trait TokenType: sealed::Sealed + Sized + Clone {
     /// True if the token represents a dynamically-sized type
     fn is_dynamic() -> bool;
 
     /// Decode a token from a decoder
-    fn decode_from(decoder: &mut Decoder) -> AbiResult<Self>;
+    fn decode_from(dec: &mut Decoder) -> AbiResult<Self>;
 
     /// Calculate the number of head words
     fn head_words(&self) -> usize;
@@ -101,12 +57,52 @@ pub trait TokenType: sealed::Sealed + Sized {
     fn tail_append(&self, enc: &mut Encoder);
 }
 
-#[derive(Debug, Clone)]
+pub trait TokenSeq: TokenType {
+    /// True for tuples only.
+    fn can_be_params() -> bool {
+        false
+    }
+    fn encode_sequence(&self, enc: &mut Encoder);
+
+    fn decode_sequence(dec: &mut Decoder) -> AbiResult<Self>;
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct WordToken(Word);
 
 impl From<Word> for WordToken {
     fn from(value: Word) -> Self {
         Self(value)
+    }
+}
+
+impl From<bool> for WordToken {
+    fn from(value: bool) -> Self {
+        U256::from(value as usize).into()
+    }
+}
+
+impl From<U256> for WordToken {
+    fn from(value: U256) -> Self {
+        Self(value.into())
+    }
+}
+
+impl From<B160> for WordToken {
+    fn from(value: B160) -> Self {
+        Self(value.into())
+    }
+}
+
+impl From<[u8; 20]> for WordToken {
+    fn from(value: [u8; 20]) -> Self {
+        Self(B160::from(value).into())
+    }
+}
+
+impl From<[u8; 32]> for WordToken {
+    fn from(value: [u8; 32]) -> Self {
+        Self(value.into())
     }
 }
 
@@ -137,10 +133,8 @@ impl TokenType for WordToken {
         false
     }
 
-    fn decode_from(decoder: &mut Decoder) -> AbiResult<Self> {
-        let word = decoder.take_word()?;
-        let token = Self(word);
-        Ok(token)
+    fn decode_from(dec: &mut Decoder) -> AbiResult<Self> {
+        dec.take_word().map(Into::into)
     }
 
     fn head_words(&self) -> usize {
@@ -158,7 +152,7 @@ impl TokenType for WordToken {
     fn tail_append(&self, _enc: &mut Encoder) {}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FixedSeqToken<T, const N: usize>([T; N]);
 
 impl<T, const N: usize> From<[T; N]> for FixedSeqToken<T, N> {
@@ -181,23 +175,16 @@ where
         T::is_dynamic()
     }
 
-    fn decode_from(decoder: &mut Decoder) -> AbiResult<Self> {
+    fn decode_from(dec: &mut Decoder) -> AbiResult<Self> {
         let is_dynamic = Self::is_dynamic();
 
         let mut child = if is_dynamic {
-            decoder.take_indirection()?
+            dec.take_indirection()?
         } else {
-            decoder.raw_child()
+            dec.raw_child()
         };
 
-        let mut tokens = Vec::with_capacity(N);
-
-        for _ in 0..N {
-            let token = T::decode_from(&mut child)?;
-            tokens.push(token);
-        }
-
-        Ok(Self(tokens.try_into().map_err(|_| Error::InvalidData)?))
+        Self::decode_sequence(&mut child)
     }
 
     fn head_words(&self) -> usize {
@@ -226,8 +213,38 @@ where
 
     fn tail_append(&self, enc: &mut Encoder) {
         if Self::is_dynamic() {
-            self.encode_head_tail_append(enc)
+            self.encode_sequence(enc)
         }
+    }
+}
+
+impl<T, const N: usize> TokenSeq for FixedSeqToken<T, N>
+where
+    T: TokenType,
+{
+    fn encode_sequence(&self, enc: &mut Encoder) {
+        let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
+        enc.push_offset(head_words as u32);
+
+        for t in self.0.iter() {
+            t.head_append(enc);
+            enc.bump_offset(t.tail_words() as u32);
+        }
+        for t in self.0.iter() {
+            t.tail_append(enc)
+        }
+        enc.pop_offset();
+    }
+
+    fn decode_sequence(dec: &mut Decoder) -> AbiResult<Self> {
+        let mut tokens = Vec::with_capacity(N);
+
+        for _ in 0..N {
+            let token = T::decode_from(dec)?;
+            tokens.push(token);
+        }
+
+        Ok(Self(tokens.try_into().map_err(|_| Error::InvalidData)?))
     }
 }
 
@@ -244,7 +261,7 @@ impl<T, const N: usize> FixedSeqToken<T, N> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DynSeqToken<T>(Vec<T>);
 
 impl<T> From<Vec<T>> for DynSeqToken<T> {
@@ -280,8 +297,8 @@ impl<T: TokenType> TokenType for DynSeqToken<T> {
         true
     }
 
-    fn decode_from(decoder: &mut Decoder) -> AbiResult<Self> {
-        let mut child = decoder.take_indirection()?;
+    fn decode_from(dec: &mut Decoder) -> AbiResult<Self> {
+        let mut child = dec.take_indirection()?;
         let len = child.take_usize()?;
 
         let mut tokens = vec![];
@@ -308,11 +325,33 @@ impl<T: TokenType> TokenType for DynSeqToken<T> {
 
     fn tail_append(&self, enc: &mut Encoder) {
         enc.append_seq_len(&self.0);
-        self.encode_head_tail_append(enc);
+        self.encode_sequence(enc);
     }
 }
 
-#[derive(Clone)]
+impl<T> TokenSeq for DynSeqToken<T>
+where
+    T: TokenType,
+{
+    fn encode_sequence(&self, enc: &mut Encoder) {
+        let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
+        enc.push_offset(head_words as u32);
+        for t in self.0.iter() {
+            t.head_append(enc);
+            enc.bump_offset(t.tail_words() as u32);
+        }
+        for t in self.0.iter() {
+            t.tail_append(enc)
+        }
+        enc.pop_offset();
+    }
+
+    fn decode_sequence(dec: &mut Decoder) -> AbiResult<Self> {
+        Self::decode_from(dec)
+    }
+}
+
+#[derive(Clone, PartialEq)]
 pub struct PackedSeqToken(Vec<u8>);
 
 impl From<Vec<u8>> for PackedSeqToken {
@@ -342,8 +381,8 @@ impl TokenType for PackedSeqToken {
         true
     }
 
-    fn decode_from(decoder: &mut Decoder) -> AbiResult<Self> {
-        let mut child = decoder.take_indirection()?;
+    fn decode_from(dec: &mut Decoder) -> AbiResult<Self> {
+        let mut child = dec.take_indirection()?;
         let len = child.take_usize()?;
         let bytes = child.peek_len(len)?;
         Ok(PackedSeqToken(bytes.to_vec()))
@@ -390,10 +429,6 @@ macro_rules! impl_tuple_token_type {
                 $ty: TokenType,
             )+
         {
-            fn can_be_params() -> bool {
-                true
-            }
-
             fn is_dynamic() -> bool {
                 $(
                     if $ty::is_dynamic() {
@@ -403,21 +438,20 @@ macro_rules! impl_tuple_token_type {
                 false
             }
 
-            fn decode_from(decoder: &mut Decoder<'_>) -> AbiResult<Self> {
-                let is_dynamic = Self::is_dynamic() && !decoder.is_params();
+            fn decode_from(dec: &mut Decoder<'_>) -> AbiResult<Self> {
+                let is_dynamic = Self::is_dynamic();
                 // The first element in a dynamic Tuple is an offset to the Tuple's data
                 // For a static Tuple the data begins right away
                 let mut child = if is_dynamic {
-                    decoder.take_indirection()?
+                    dec.take_indirection()?
                 } else {
-                    decoder.raw_child()
+                    dec.raw_child()
                 };
 
-                let res = (
-                    $($ty::decode_from(&mut child)?,)+
-                );
+                let res = Self::decode_sequence(&mut child)?;
+
                 if !is_dynamic {
-                    decoder.take_offset(child);
+                    dec.take_offset(child);
                 }
                 Ok(res)
             }
@@ -468,13 +502,10 @@ macro_rules! impl_tuple_token_type {
                     $(
                         head_words += self.$no.head_words();
                     )+
-                    dbg!(head_words);
                     enc.push_offset(head_words as u32);
                     $(
-                        dbg!($no);
                         self.$no.head_append(enc);
                         enc.bump_offset(self.$no.tail_words() as u32);
-                        dbg!(self.$no.tail_words());
                     )+
                     $(
                         self.$no.tail_append(enc);
@@ -490,12 +521,16 @@ macro_rules! impl_tuple_token_type {
                 $ty: TokenType,
             )+
         {
-            fn encode_head_tail_append(&self, enc: &mut Encoder) {
+
+            fn can_be_params() -> bool {
+                true
+            }
+
+            fn encode_sequence(&self, enc: &mut Encoder) {
                 let mut head_words = 0;
                 $(
                     head_words += self.$no.head_words();
                 )+
-                dbg!(head_words);
                 enc.push_offset(head_words as u32);
                 $(
                     self.$no.head_append(enc);
@@ -505,6 +540,13 @@ macro_rules! impl_tuple_token_type {
                     self.$no.tail_append(enc);
                 )+
                 enc.pop_offset();
+            }
+
+            fn decode_sequence(dec: &mut Decoder) -> AbiResult<Self> {
+                let res = (
+                    $($ty::decode_from(dec)?,)+
+                );
+                Ok(res)
             }
         }
     }

@@ -31,9 +31,9 @@ pub enum Error {
     #[cfg_attr(feature = "std", error("Buffer overrun in deser"))]
     /// Overran deser buffer
     Overrun,
-    #[cfg_attr(feature = "std", error("Extra data in deser buffer"))]
-    /// Extra data in deser buffer
-    ExtraData,
+    #[cfg_attr(feature = "std", error("Reserialization did not match original"))]
+    /// Validation reserialization did not match input
+    ReserMismatch,
     /// Serialization error.
     #[cfg(feature = "full-serde")]
     #[error("Serialization error: {0}")]

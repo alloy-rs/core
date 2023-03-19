@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+auto_impl = "1.0.1"
 ethers-primitives = { version = "0.1.0", path = "../primitives" }
 hex = "0.4.3"
 thiserror = { version = "1.0.39", optional = true }
