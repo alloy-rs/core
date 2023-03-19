@@ -9,15 +9,12 @@
 
 //! Ethereum ABI Tokens.
 //!
-//! ABI encodes 4 types:
+//! ABI encoding uses 5 types:
 //! - Single EVM words (a 32-byte string)
 //! - Sequences with a fixed length `T[M]`
 //! - Sequences with a dynamic length `T[]`
+//! - Tuples (T, U, V, ...)
 //! - Dynamic-length byte arrays `u8[]`
-//!
-//! The [`Token`] enum represents these 4 types, and is used as an intermediate
-//! type in encoding and decoding. The encoder first transforms a
-//! [`crate::SolType`] into tokens, and then encodes the tokens
 
 use core::fmt;
 
@@ -67,6 +64,7 @@ pub trait TokenSeq: TokenType {
     fn decode_sequence(dec: &mut Decoder) -> AbiResult<Self>;
 }
 
+/// A single EVM word - T for any value type
 #[derive(Debug, Clone, PartialEq)]
 pub struct WordToken(Word);
 
@@ -119,10 +117,12 @@ impl AsRef<[u8]> for WordToken {
 }
 
 impl WordToken {
+    /// Get a reference to the word as a slice
     pub fn as_slice(&self) -> &[u8] {
         self.as_ref()
     }
 
+    /// Copy the inner word
     pub fn inner(&self) -> Word {
         self.0
     }
@@ -152,6 +152,7 @@ impl TokenType for WordToken {
     fn tail_append(&self, _enc: &mut Encoder) {}
 }
 
+/// A Fixed Sequence - T\[M\]
 #[derive(Debug, Clone, PartialEq)]
 pub struct FixedSeqToken<T, const N: usize>([T; N]);
 
@@ -249,18 +250,23 @@ where
 }
 
 impl<T, const N: usize> FixedSeqToken<T, N> {
+    /// Take the backing array, consuming the token
     pub fn take_array(self) -> [T; N] {
         self.0
     }
 
+    /// Get a reference to the array
     pub fn as_array(&self) -> &[T; N] {
         self.as_ref()
     }
+
+    /// Get a reference to the backing array as a slice
     pub fn as_slice(&self) -> &[T] {
         self.as_array().as_slice()
     }
 }
 
+/// A Dynamic Sequence - T[]
 #[derive(Debug, Clone, PartialEq)]
 pub struct DynSeqToken<T>(Vec<T>);
 
@@ -277,10 +283,12 @@ impl<T> AsRef<[T]> for DynSeqToken<T> {
 }
 
 impl<T> DynSeqToken<T> {
+    /// Take the backing vec, consuming the tokey
     pub fn take_vec(self) -> Vec<T> {
         self.0
     }
 
+    /// Get a reference to the backing slice
     pub fn as_slice(&self) -> &[T] {
         self.as_ref()
     }
@@ -351,6 +359,7 @@ where
     }
 }
 
+/// A Packed Sequence - bytes or string
 #[derive(Clone, PartialEq)]
 pub struct PackedSeqToken(Vec<u8>);
 
@@ -367,10 +376,12 @@ impl AsRef<[u8]> for PackedSeqToken {
 }
 
 impl PackedSeqToken {
+    /// Get a reference to the backing slice
     pub fn as_slice(&self) -> &[u8] {
         self.as_ref()
     }
 
+    /// Take the backing vec, consuming the token
     pub fn take_vec(self) -> Vec<u8> {
         self.0
     }

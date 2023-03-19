@@ -16,6 +16,8 @@ use crate::{
 };
 
 /// A Solidity Type, for ABI enc/decoding
+///
+/// TODO: implementer's guide
 pub trait SolType {
     /// The corresponding Rust type
     type RustType: Sized;
@@ -56,6 +58,17 @@ pub trait SolType {
     {
         let token = Self::tokenize(rust);
         crate::encode_params(token)
+    }
+
+    /// Encode a function call
+    fn encode_function(selector: [u8; 4], rust: Self::RustType) -> Vec<u8>
+    where
+        Self::TokenType: TokenSeq,
+    {
+        selector
+            .into_iter()
+            .chain(Self::encode_params(rust))
+            .collect()
     }
 
     /// Hex output of encode
