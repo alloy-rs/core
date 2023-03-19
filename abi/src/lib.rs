@@ -1,3 +1,12 @@
+// Copyright 2015-2020 Parity Technologies
+// Copyright 2023-2023 Ethers-rs Team
+
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::module_inception)]
 #![warn(missing_docs)]
@@ -29,13 +38,13 @@ mod decoder;
 pub use decoder::{decode, decode_params, decode_params_validate, decode_validate};
 
 mod encoder;
-pub use encoder::{encode, encode_raw};
+pub use encoder::{encode, encode_params};
 
 mod token;
-pub use token::Token;
+pub use token::TokenType;
 
 mod errors;
-pub use errors::{Error, Result};
+pub use errors::{AbiResult, Error};
 
 /// Solidity Types
 pub mod sol_type;

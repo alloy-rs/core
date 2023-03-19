@@ -1,5 +1,6 @@
 // Copyright 2015-2020 Parity Technologies
 // Copyright 2023-2023 Ethers-rs Team
+//
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
@@ -10,187 +11,133 @@
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::*;
-use crate::{util::pad_u32, Bytes, Token, Word};
+use crate::{token::TokenSeq, util::pad_u32, Word};
 
-fn pad_bytes_len(bytes: &[u8]) -> u32 {
-    // "+ 1" because len is also appended
-    ((bytes.len() + 31) / 32) as u32 + 1
+#[derive(Default, Clone, Debug)]
+pub struct Encoder {
+    buf: Vec<Word>,
+    suffix_offset: Vec<u32>,
 }
 
-fn pad_bytes_append(data: &mut Vec<Word>, bytes: &[u8]) {
-    data.push(pad_u32(bytes.len() as u32));
-    fixed_bytes_append(data, bytes);
-}
-
-fn fixed_bytes_append(result: &mut Vec<Word>, bytes: &[u8]) {
-    let len = (bytes.len() + 31) / 32;
-    for i in 0..len {
-        let mut padded = Word::default();
-
-        let to_copy = match i == len - 1 {
-            false => 32,
-            true => match bytes.len() % 32 {
-                0 => 32,
-                x => x,
-            },
-        };
-
-        let offset = 32 * i;
-        padded[..to_copy].copy_from_slice(&bytes[offset..offset + to_copy]);
-        result.push(padded);
-    }
-}
-
-fn encode_head_tail(mediates: &[Mediate]) -> Vec<Word> {
-    let (heads_len, tails_len) = mediates.iter().fold((0, 0), |(head_acc, tail_acc), m| {
-        (head_acc + m.head_len(), tail_acc + m.tail_len())
-    });
-
-    let mut result = Vec::with_capacity((heads_len + tails_len) as usize);
-    encode_head_tail_append(&mut result, mediates);
-
-    result
-}
-
-fn encode_head_tail_append(acc: &mut Vec<Word>, mediates: &[Mediate]) {
-    let heads_len = mediates
-        .iter()
-        .fold(0, |head_acc, m| head_acc + m.head_len());
-
-    let mut offset = heads_len;
-    for mediate in mediates {
-        mediate.head_append(acc, offset);
-        offset += mediate.tail_len();
-    }
-
-    mediates.iter().for_each(|m| m.tail_append(acc));
-}
-
-fn encode_token_append(data: &mut Vec<Word>, token: &Token) {
-    match token {
-        Token::Word(word) => data.push(*word),
-        Token::PackedSeq(bytes) => pad_bytes_append(data, bytes),
-        _ => panic!("Unhandled nested token: {:?}", token),
-    };
-}
-
-#[derive(Debug)]
-enum Mediate<'a> {
-    // head
-    // Head-only
-
-    // Raw: head words + token
-    Raw(u32, &'a Token),
-    // RawArray: tokens
-    RawArray(Vec<Mediate<'a>>),
-
-    // head + tail
-
-    // Prefixed: tail words, token
-    Prefixed(u32, &'a Token),
-    //
-    PrefixedArray(Vec<Mediate<'a>>),
-    PrefixedArrayWithLength(Vec<Mediate<'a>>),
-}
-
-impl Mediate<'_> {
-    fn from_token(token: &Token) -> Mediate<'_> {
-        match token {
-            Token::Word(_) => Mediate::Raw(1, token),
-            Token::FixedSeq(tokens) => {
-                let mediates = tokens.iter().map(Mediate::from_token).collect();
-
-                if token.is_dynamic() {
-                    Mediate::PrefixedArray(mediates)
-                } else {
-                    Mediate::RawArray(mediates)
-                }
-            }
-            Token::DynSeq(tokens) => {
-                let mediates = tokens.iter().map(Mediate::from_token).collect();
-
-                Mediate::PrefixedArrayWithLength(mediates)
-            }
-            Token::PackedSeq(seq) => Mediate::Prefixed(pad_bytes_len(seq), token),
+impl Encoder {
+    pub fn with_capacity(size: usize) -> Self {
+        Self {
+            buf: Vec::with_capacity(size + 1),
+            suffix_offset: vec![],
         }
     }
 
-    fn head_len(&self) -> u32 {
-        match self {
-            Mediate::Raw(len, _) => 32 * len,
-            Mediate::RawArray(ref mediates) => {
-                mediates.iter().map(|mediate| mediate.head_len()).sum()
-            }
-            Mediate::Prefixed(_, _)
-            | Mediate::PrefixedArray(_)
-            | Mediate::PrefixedArrayWithLength(_) => 32,
+    pub fn finish(self) -> Vec<Word> {
+        self.buf
+    }
+
+    pub fn suffix_offset(&self) -> u32 {
+        *self.suffix_offset.last().unwrap()
+    }
+
+    pub fn push_offset(&mut self, words: u32) {
+        self.suffix_offset.push(words * 32);
+    }
+
+    pub fn pop_offset(&mut self) -> u32 {
+        self.suffix_offset.pop().unwrap()
+    }
+
+    pub fn into_bytes(self) -> Vec<u8> {
+        self.buf
+            .into_iter()
+            .flat_map(Word::to_fixed_bytes)
+            .collect()
+    }
+
+    pub fn bump_offset(&mut self, words: u32) {
+        (*self.suffix_offset.last_mut().unwrap()) += words * 32;
+    }
+
+    pub fn append_word(&mut self, word: Word) {
+        dbg!(&self, hex::encode(word.as_slice()));
+        self.buf.push(word);
+    }
+
+    pub fn append_indirection(&mut self) {
+        self.append_word(pad_u32(self.suffix_offset()));
+    }
+
+    pub fn append_seq_len<T>(&mut self, seq: &[T]) {
+        self.append_word(pad_u32(seq.len() as u32));
+    }
+
+    pub fn append_packed_seq(&mut self, bytes: &[u8]) {
+        self.append_seq_len(bytes);
+        self.append_bytes(bytes);
+    }
+
+    fn append_bytes(&mut self, bytes: &[u8]) {
+        dbg!(&self);
+        dbg!(hex::encode(bytes));
+        let len = (bytes.len() + 31) / 32;
+        for i in 0..len {
+            let mut padded = Word::default();
+
+            let to_copy = match i == len - 1 {
+                false => 32,
+                true => match bytes.len() % 32 {
+                    0 => 32,
+                    x => x,
+                },
+            };
+
+            let offset = 32 * i;
+            padded[..to_copy].copy_from_slice(&bytes[offset..offset + to_copy]);
+            self.append_word(padded);
         }
     }
 
-    fn tail_len(&self) -> u32 {
-        match self {
-            Mediate::Raw(_, _) | Mediate::RawArray(_) => 0,
-            Mediate::Prefixed(len, _) => 32 * len,
-            Mediate::PrefixedArray(ref mediates) => mediates
-                .iter()
-                .fold(0, |acc, m| acc + m.head_len() + m.tail_len()),
-            Mediate::PrefixedArrayWithLength(ref mediates) => mediates
-                .iter()
-                .fold(32, |acc, m| acc + m.head_len() + m.tail_len()),
-        }
+    pub fn append_head_tail<T>(&mut self, token: &T)
+    where
+        T: TokenSeq,
+    {
+        token.encode_head_tail_append(self);
     }
 
-    fn head_append(&self, acc: &mut Vec<Word>, suffix_offset: u32) {
-        match *self {
-            Mediate::Raw(_, raw) => encode_token_append(acc, raw),
-            Mediate::RawArray(ref raw) => {
-                raw.iter().for_each(|mediate| mediate.head_append(acc, 0))
-            }
-            Mediate::Prefixed(_, _)
-            | Mediate::PrefixedArray(_)
-            | Mediate::PrefixedArrayWithLength(_) => acc.push(pad_u32(suffix_offset)),
-        }
-    }
-
-    fn tail_append(&self, acc: &mut Vec<Word>) {
-        match *self {
-            Mediate::Raw(_, _) | Mediate::RawArray(_) => {}
-            Mediate::Prefixed(_, raw) => encode_token_append(acc, raw),
-            Mediate::PrefixedArray(ref mediates) => encode_head_tail_append(acc, mediates),
-            Mediate::PrefixedArrayWithLength(ref mediates) => {
-                // + 32 added to offset represents len of the array prepended to tail
-                acc.push(pad_u32(mediates.len() as u32));
-                encode_head_tail_append(acc, mediates);
-            }
-        };
+    pub fn is_params(&self) -> bool {
+        self.suffix_offset.is_empty()
     }
 }
 
-/// Encodes vector of tokens into ABI compliant vector of bytes.
-fn encode_impl<'a>(tokens: impl IntoIterator<Item = &'a Token>) -> Bytes {
-    let mediates = &tokens
+/// Encodes vector of tokens into ABI-compliant vector of bytes.
+pub(crate) fn encode_impl<T>(tokens: T) -> Vec<u8>
+where
+    T: TokenSeq,
+{
+    let mut enc = Encoder::with_capacity(tokens.total_words());
+
+    enc.append_head_tail(&tokens);
+
+    enc.finish()
         .into_iter()
-        .map(Mediate::from_token)
-        .collect::<Vec<_>>();
-
-    encode_head_tail(mediates)
-        .into_iter()
-        .flat_map(Into::<[u8; 32]>::into)
+        .flat_map(Word::to_fixed_bytes)
         .collect()
 }
 
-/// Encode a token to a bytearray.
-pub fn encode(token: &Token) -> Bytes {
-    match token {
-        Token::FixedSeq(v) => encode_impl(v),
-        _ => encode_impl([token]),
-    }
+/// TODO
+pub fn encode<T>(token: T) -> Vec<u8>
+where
+    T: TokenSeq,
+{
+    encode_impl(token)
 }
 
-/// Encode a token into a bytearray suitable for use INTERNAL to an abi blob.
-/// Typically.
-pub fn encode_raw(token: &Token) -> Bytes {
-    encode_impl([token])
+/// TODO
+pub fn encode_params<T>(token: T) -> Vec<u8>
+where
+    T: TokenSeq,
+{
+    if T::can_be_params() {
+        encode_impl(token)
+    } else {
+        encode((token,))
+    }
 }
 
 #[cfg(test)]
@@ -200,7 +147,7 @@ mod tests {
 
     #[cfg(not(feature = "std"))]
     use crate::no_std_prelude::*;
-    use crate::{sol_type, util::pad_u32, SolType};
+    use crate::{sol_type, util::pad_u32, SolType, TokenType};
 
     #[test]
     fn encode_address() {
@@ -208,7 +155,6 @@ mod tests {
         let expected = hex!("0000000000000000000000001111111111111111111111111111111111111111");
         let encoded = sol_type::Address::encode(address);
         assert_eq!(encoded, expected);
-        assert_eq!(sol_type::Address::encode_params(address), expected);
     }
 
     #[test]
@@ -268,14 +214,11 @@ mod tests {
     #[test]
     fn encode_fixed_array_of_dynamic_array_of_addresses() {
         type MyTy = sol_type::FixedArray<sol_type::Array<sol_type::Address>, 2>;
-
+        dbg!(MyTy::sol_type_name());
         let fixed = [
             vec![B160([0x11u8; 20]), B160([0x22u8; 20])],
             vec![B160([0x33u8; 20]), B160([0x44u8; 20])],
         ];
-
-        let encoded = MyTy::encode(fixed.clone());
-        let encoded_params = MyTy::encode_params(fixed);
 
         let expected = hex!(
             "
@@ -291,11 +234,10 @@ mod tests {
     	"
         )
         .to_vec();
-        // a dynamic FixedSeq at top level should start with indirection
-        // when not param encoded
+        let encoded = MyTy::encode(fixed.clone());
         assert_eq!(encoded, expected);
-        assert_ne!(encoded_params, expected);
-        assert_eq!(encoded_params.len() + 32, encoded.len());
+        let encoded_params = MyTy::encode_params(fixed);
+        assert_eq!(encoded_params, expected);
     }
 
     #[test]
@@ -424,9 +366,10 @@ mod tests {
             ],
             "gavofyork".to_string(),
         );
+        let f = Fixed::tokenize(data.0);
+        dbg!(f.head_words());
+        dbg!(f);
 
-        let encoded = MyTy::encode(data.clone());
-        let encoded_params = MyTy::encode_params(data);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000005930cc5
@@ -444,35 +387,61 @@ mod tests {
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded. For this particular test, there was an
         // implicit param incoding
+        let encoded = MyTy::encode(data.clone());
         assert_ne!(encoded, expected);
+
+        dbg!("START");
+
+        let encoded_params = MyTy::encode_params(data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
     }
 
     #[test]
     fn encode_empty_array() {
-        type MyTy = (
-            sol_type::Array<sol_type::Address>,
-            sol_type::Array<sol_type::Address>,
-        );
-        let data = (vec![], vec![]);
+        type MyTy0 = (sol_type::Array<sol_type::Address>,);
+
+        let data = (vec![],);
 
         // Empty arrays
-        let encoded = MyTy::encode(data.clone());
-        let encoded_params = MyTy::encode_params(data);
+        let encoded = MyTy0::encode(data.clone());
+        let encoded_params = MyTy0::encode_params(data);
         let expected = hex!(
             "
-    		0000000000000000000000000000000000000000000000000000000000000040
-    		0000000000000000000000000000000000000000000000000000000000000060
+    		0000000000000000000000000000000000000000000000000000000000000020
     		0000000000000000000000000000000000000000000000000000000000000000
-    		0000000000000000000000000000000000000000000000000000000000000000
-    	"
+    	    "
         )
         .to_vec();
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded. For this particular test, there was an
         // implicit param incoding
         assert_ne!(encoded, expected);
+        assert_eq!(encoded_params, expected);
+        assert_eq!(encoded_params.len() + 32, encoded.len());
+
+        type MyTy = (
+            sol_type::Array<sol_type::Address>,
+            sol_type::Array<sol_type::Address>,
+        );
+        let data = (vec![], vec![]);
+
+        let expected = hex!(
+            "
+    		0000000000000000000000000000000000000000000000000000000000000040
+    		0000000000000000000000000000000000000000000000000000000000000060
+    		0000000000000000000000000000000000000000000000000000000000000000
+    		0000000000000000000000000000000000000000000000000000000000000000
+    	    "
+        )
+        .to_vec();
+        // a dynamic FixedSeq at top level should start with indirection
+        // when not param encoded. For this particular test, there was an
+        // implicit param incoding
+        // Empty arrays
+        let encoded = MyTy::encode(data.clone());
+        assert_ne!(encoded, expected);
+        let encoded_params = MyTy::encode_params(data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
 
@@ -483,8 +452,6 @@ mod tests {
         let data = (vec![vec![]], vec![vec![]]);
 
         // Nested empty arrays
-        let encoded = MyTy2::encode(data.clone());
-        let encoded_params = MyTy2::encode_params(data);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000040
@@ -501,7 +468,9 @@ mod tests {
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded. For this particular test, there was an
         // implicit param incoding
+        let encoded = MyTy2::encode(data.clone());
         assert_ne!(encoded, expected);
+        let encoded_params = MyTy2::encode_params(data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
     }
@@ -511,8 +480,7 @@ mod tests {
         type MyTy = sol_type::Bytes;
         let bytes = vec![0x12, 0x34];
 
-        let encoded = MyTy::encode(bytes.clone());
-        let encoded_params = MyTy::encode_params(bytes);
+        let encoded = MyTy::encode(bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -522,23 +490,19 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded_params, expected);
     }
 
     #[test]
     fn encode_fixed_bytes() {
         let encoded = sol_type::FixedBytes::<2>::encode([0x12, 0x34]);
-        let encoded_params = sol_type::FixedBytes::<2>::encode_params([0x12, 0x34]);
         let expected = hex!("1234000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
-        assert_eq!(encoded_params, expected);
     }
 
     #[test]
     fn encode_string() {
         let s = "gavofyork".to_string();
-        let encoded = sol_type::String::encode(s.clone());
-        let encoded_params = sol_type::String::encode_params(s);
+        let encoded = sol_type::String::encode(s);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -548,14 +512,12 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded_params, expected);
     }
 
     #[test]
     fn encode_bytes2() {
         let bytes = hex!("10000000000000000000000000000000000000000000000000000000000002").to_vec();
-        let encoded = sol_type::Bytes::encode(bytes.clone());
-        let encoded_params = sol_type::Bytes::encode_params(bytes);
+        let encoded = sol_type::Bytes::encode(bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -565,7 +527,6 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded_params, expected);
     }
 
     #[test]
@@ -577,8 +538,7 @@ mod tests {
     	"
         )
         .to_vec();
-        let encoded = sol_type::Bytes::encode(bytes.clone());
-        let encoded_params = sol_type::Bytes::encode_params(bytes);
+        let encoded = sol_type::Bytes::encode(bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -589,7 +549,6 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded_params, expected);
     }
 
     #[test]
@@ -625,38 +584,30 @@ mod tests {
     fn encode_uint() {
         let uint = 4;
         let encoded = sol_type::Uint::<8>::encode(uint);
-        let encoded_params = sol_type::Uint::<8>::encode_params(uint);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000004");
         assert_eq!(encoded, expected);
-        assert_eq!(encoded_params, expected);
     }
 
     #[test]
     fn encode_int() {
         let int = 4;
         let encoded = sol_type::Int::<8>::encode(int);
-        let encoded_params = sol_type::Int::<8>::encode_params(int);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000004");
         assert_eq!(encoded, expected);
-        assert_eq!(encoded_params, expected);
     }
 
     #[test]
     fn encode_bool() {
         let encoded = sol_type::Bool::encode(true);
-        let encoded_params = sol_type::Bool::encode_params(true);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000001");
         assert_eq!(encoded, expected);
-        assert_eq!(encoded_params, expected);
     }
 
     #[test]
     fn encode_bool2() {
         let encoded = sol_type::Bool::encode(false);
-        let encoded_params = sol_type::Bool::encode_params(false);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
-        assert_eq!(encoded_params, expected);
     }
 
     #[test]
@@ -837,7 +788,14 @@ mod tests {
         type MyTy = (sol_type::String, sol_type::String);
         let data = ("gavofyork".to_string(), "gavofyork".to_string());
 
+        let tok1 = <(MyTy,)>::tokenize((data.clone(),));
+        let tok2 = <MyTy>::tokenize(data.clone());
+
+        dbg!(tok1.head_words());
+        dbg!(tok2.head_words());
+
         let encoded = MyTy::encode(data.clone());
+
         let encoded_params = MyTy::encode_params(data);
 
         let expected = hex!(

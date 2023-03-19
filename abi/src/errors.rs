@@ -1,5 +1,6 @@
 // Copyright 2015-2020 Parity Technologies
-//
+// Copyright 2023-2023 Ethers-rs Team
+
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
@@ -14,10 +15,10 @@ use core::num;
 #[cfg(feature = "std")]
 use thiserror::Error;
 
-/// Ethabi result type
-pub type Result<T> = core::result::Result<T, Error>;
+/// ABI result type
+pub type AbiResult<T> = core::result::Result<T, Error>;
 
-/// Ethabi errors
+/// ABI errors
 #[cfg_attr(feature = "std", derive(Error))]
 #[derive(Debug)]
 pub enum Error {
