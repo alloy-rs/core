@@ -120,7 +120,7 @@ where
         .collect()
 }
 
-/// TODO
+/// Encode an ABI token
 pub fn encode<T>(token: T) -> Vec<u8>
 where
     T: TokenSeq,
@@ -128,7 +128,7 @@ where
     encode_impl(token)
 }
 
-/// TODO
+/// Encode as ABI function params
 pub fn encode_params<T>(token: T) -> Vec<u8>
 where
     T: TokenSeq,

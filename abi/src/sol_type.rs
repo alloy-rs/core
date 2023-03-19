@@ -86,8 +86,7 @@ impl SolType for Address {
     }
 
     fn type_check(token: &Self::TokenType) -> bool {
-        // TODO
-        true
+        check_zeroes(&token.inner()[..12]).is_ok()
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -117,7 +116,7 @@ impl SolType for Bytes {
         "bytes".to_string()
     }
 
-    fn type_check(token: &Self::TokenType) -> bool {
+    fn type_check(_token: &Self::TokenType) -> bool {
         true
     }
 
@@ -144,8 +143,7 @@ macro_rules! impl_int_sol_type {
                 format!("int{}", $bits)
             }
 
-            fn type_check(token: &Self::TokenType) -> bool {
-                // TODO
+            fn type_check(_token: &Self::TokenType) -> bool {
                 true
             }
 
@@ -198,8 +196,9 @@ macro_rules! impl_uint_sol_type {
             }
 
             fn type_check(token: &Self::TokenType) -> bool {
-                // TODO
-                true
+                let bytes = (<$uty>::BITS / 8) as usize;
+                let sli = &token.as_slice()[..32 - bytes];
+                check_zeroes(sli).is_ok()
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -232,8 +231,9 @@ macro_rules! impl_uint_sol_type {
             }
 
             fn type_check(token: &Self::TokenType) -> bool {
-                // TODO
-                true
+                let bytes = $bits / 8 as usize;
+                let sli = &token.as_slice()[..32 - bytes];
+                check_zeroes(sli).is_ok()
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {

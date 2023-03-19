@@ -68,26 +68,36 @@ where
     }
 }
 
-/// Abi Encoding Tokens. This is a sealed trait.
+/// Abi-Encoding Tokens. This is a sealed trait. It contains the type
+/// information necessary to encode & decode data. Tokens are an intermediate
+/// state between abi-encoded blobs, and rust types.
 pub trait TokenType: sealed::Sealed + Sized {
+    /// True for tuples onl.
     fn can_be_params() -> bool {
         false
     }
 
+    /// True if the token represents a dynamically-sized type
     fn is_dynamic() -> bool;
 
+    /// Decode a token from a decoder
     fn decode_from(decoder: &mut Decoder) -> AbiResult<Self>;
 
+    /// Calculate the number of head words
     fn head_words(&self) -> usize;
 
+    /// Calculate the number of tail words
     fn tail_words(&self) -> usize;
 
+    /// Calculate the total number of head and tail words
     fn total_words(&self) -> usize {
         self.head_words() + self.tail_words()
     }
 
+    /// Append head words to the encoder
     fn head_append(&self, enc: &mut Encoder);
 
+    /// Append tail words to the encoder
     fn tail_append(&self, enc: &mut Encoder);
 }
 
@@ -145,7 +155,7 @@ impl TokenType for WordToken {
         enc.append_word(self.inner());
     }
 
-    fn tail_append(&self, enc: &mut Encoder) {}
+    fn tail_append(&self, _enc: &mut Encoder) {}
 }
 
 #[derive(Debug, Clone)]
@@ -524,130 +534,80 @@ impl_tuple_token_type!(21, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:1
 
 #[cfg(test)]
 mod tests {
-    // TODO
+    use ethers_primitives::B256;
 
-    // use ethers_primitives::B256;
+    use super::*;
+    #[cfg(not(feature = "std"))]
+    use crate::no_std_prelude::*;
+    use crate::{sol_type, SolType};
 
-    // #[cfg(not(feature = "std"))]
-    // use crate::no_std_prelude::*;
-    // use crate::{sol_type, SolType, Token};
+    macro_rules! assert_type_check {
+        ($sol:ty, $token:expr) => {
+            assert!(<$sol>::type_check($token))
+        };
+        ($sol:ty, $token:expr,) => {
+            assert_type_check!($sol, $token)
+        };
+    }
 
-    // macro_rules! assert_type_check {
-    //     ($sol:ty, $token:expr) => {
-    //         assert!(<$sol>::type_check($token))
-    //     };
-    //     ($sol:ty, $token:expr,) => {
-    //         assert_type_check!($sol, $token)
-    //     };
-    // }
+    macro_rules! assert_not_type_check {
+        ($sol:ty, $token:expr) => {
+            assert!(!<$sol>::type_check($token))
+        };
+        ($sol:ty, $token:expr,) => {
+            assert_not_type_check!($sol, $token)
+        };
+    }
 
-    // macro_rules! assert_not_type_check {
-    //     ($sol:ty, $token:expr) => {
-    //         assert!(!<$sol>::type_check($token))
-    //     };
-    //     ($sol:ty, $token:expr,) => {
-    //         assert_not_type_check!($sol, $token)
-    //     };
-    // }
+    #[test]
+    fn test_type_check() {
+        assert_type_check!(
+            (sol_type::Uint<256>, sol_type::Bool),
+            &(WordToken(B256::default()), WordToken(B256::default())),
+        );
 
-    // #[test]
-    // fn test_type_check() {
-    //     assert_type_check!(
-    //         (sol_type::Uint<256>, sol_type::Bool),
-    //         &Token::FixedSeq(vec!(
-    //             Token::Word(B256::default()),
-    //             Token::Word(B256::default())
-    //         )),
-    //     );
-    //     assert_type_check!(
-    //         (sol_type::Uint<32>, sol_type::Bool),
-    //         &Token::FixedSeq(vec!(
-    //             Token::Word(B256::default()),
-    //             Token::Word(B256::default())
-    //         )),
-    //     );
+        // TODO: more like this where we test type check internal logic
+        assert_not_type_check!(sol_type::Uint<8>, &WordToken(Word::repeat_byte(0x11)),);
 
-    //     assert_not_type_check!(
-    //         (sol_type::Uint<32>, sol_type::Bool),
-    //         &Token::Word(B256::default()),
-    //     );
+        assert_type_check!(
+            (sol_type::Uint<32>, sol_type::Bool),
+            &(WordToken(B256::default()), WordToken(B256::default())),
+        );
 
-    //     assert_not_type_check!(
-    //         sol_type::Uint<32>,
-    //         &Token::FixedSeq(vec![
-    //             Token::Word(B256::default()),
-    //             Token::Word(B256::default()),
-    //         ]),
-    //     );
-    //     assert_type_check!(
-    //         (sol_type::Uint<32>, sol_type::Bool),
-    //         &Token::FixedSeq(vec![
-    //             Token::Word(B256::default()),
-    //             Token::Word(B256::default())
-    //         ]),
-    //     );
+        assert_type_check!(
+            (sol_type::Uint<32>, sol_type::Bool),
+            &(WordToken(B256::default()), WordToken(B256::default())),
+        );
 
-    //     assert_type_check!(
-    //         sol_type::Array<sol_type::Bool>,
-    //         &Token::DynSeq(vec![
-    //             Token::Word(B256::default()),
-    //             Token::Word(B256::default()),
-    //         ]),
-    //     );
-    //     assert_type_check!(
-    //         sol_type::Array<sol_type::Bool>,
-    //         &Token::DynSeq(vec![
-    //             Token::Word(B256::default()),
-    //             Token::Word(B256::default()),
-    //         ]),
-    //     );
-    //     assert_type_check!(
-    //         sol_type::Array<sol_type::Address>,
-    //         &Token::DynSeq(vec![
-    //             Token::Word(B256::default()),
-    //             Token::Word(B256::default()),
-    //         ]),
-    //     );
+        assert_type_check!(
+            sol_type::Array<sol_type::Bool>,
+            &DynSeqToken(vec![WordToken(B256::default()), WordToken(B256::default()),]),
+        );
+        assert_type_check!(
+            sol_type::Array<sol_type::Bool>,
+            &DynSeqToken(vec![WordToken(B256::default()), WordToken(B256::default()),]),
+        );
+        assert_type_check!(
+            sol_type::Array<sol_type::Address>,
+            &DynSeqToken(vec![WordToken(B256::default()), WordToken(B256::default()),]),
+        );
 
-    //     assert_type_check!(
-    //         sol_type::FixedArray<sol_type::Bool, 2>,
-    //         &Token::FixedSeq(vec![
-    //             Token::Word(B256::default()),
-    //             Token::Word(B256::default()),
-    //         ]),
-    //     );
-    //     assert_not_type_check!(
-    //         sol_type::FixedArray<sol_type::Bool, 3>,
-    //         &Token::FixedSeq(vec![
-    //             Token::Word(B256::default()),
-    //             Token::Word(B256::default()),
-    //         ]),
-    //     );
+        assert_type_check!(
+            sol_type::FixedArray<sol_type::Bool, 2>,
+            &FixedSeqToken::<_, 2>([
+                WordToken(B256::default()),
+                WordToken(B256::default()),
+            ]),
+        );
 
-    //     assert_type_check!(
-    //         sol_type::FixedArray<sol_type::Address, 2>,
-    //         &Token::FixedSeq(vec![
-    //             Token::Word(B256::default()),
-    //             Token::Word(B256::default()),
-    //         ]),
-    //     );
-    // }
-
-    // #[test]
-    // fn test_is_dynamic() {
-    //     assert!(!Token::Word(B256::default()).is_dynamic());
-    //     assert!(Token::PackedSeq(vec![0, 0, 0, 0]).is_dynamic());
-    //     assert!(!Token::Word(B256::default()).is_dynamic());
-    //     assert!(!Token::Word(B256::default()).is_dynamic());
-    //     assert!(!Token::Word(B256::default()).is_dynamic());
-    //     assert!(Token::PackedSeq("".into()).is_dynamic());
-    //     assert!(Token::DynSeq(vec![Token::Word(B256::default())]).is_dynamic());
-    //     assert!(!Token::FixedSeq(vec![Token::Word(B256::default())]).is_dynamic());
-    //     assert!(Token::FixedSeq(vec![Token::PackedSeq("".into())]).is_dynamic());
-    //     assert!(
-    //         Token::FixedSeq(vec![Token::DynSeq(vec![Token::Word(B256::default())])]).is_dynamic()
-    //     );
-    // }
+        assert_type_check!(
+            sol_type::FixedArray<sol_type::Address, 2>,
+            &FixedSeqToken::<_, 2>([
+                WordToken(B256::default()),
+                WordToken(B256::default()),
+            ]),
+        );
+    }
 }
 
 mod sealed {
