@@ -35,7 +35,7 @@ pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> AbiResult<()> {
     match len {
         0 => panic!("cannot have bytes0"),
         1..=31 => check_zeroes(&word[len..]),
-        32 => Ok(()),
+        32 => Ok(()), // always valid
         33.. => panic!("cannot have bytes33 or higher"),
         _ => unreachable!(),
     }
@@ -592,15 +592,18 @@ mod tests {
         assert!(<(sol_type::Address, sol_type::Address)>::decode_single(&input, true).is_ok());
     }
 
-    // #[test]
-    // fn decode_verify_bytes() {
-    //     let input = hex!(
-    //         "
-    // 	0000000000000000000000001234500000000000000000000000000000012345
-    // 	0000000000000000000000005432100000000000000000000000000000054321
-    // 	"
-    //     );
-    //     assert!(decode_validate::<(sol_type::Address, sol_type::FixedBytes<20>)>(&input).is_err());
-    //     assert!(decode_validate::<(sol_type::Address, sol_type::Address)>(&input).is_ok());
-    // }
+    #[test]
+    fn decode_verify_bytes() {
+        type MyTy = (sol_type::Address, sol_type::FixedBytes<20>);
+        type MyTy2 = (sol_type::Address, sol_type::Address);
+
+        let input = hex!(
+            "
+    	0000000000000000000000001234500000000000000000000000000000012345
+    	0000000000000000000000005432100000000000000000000000000000054321
+    	"
+        );
+        MyTy::decode_params(&input, true).unwrap_err();
+        assert!(MyTy2::decode_params(&input, true).is_ok());
+    }
 }

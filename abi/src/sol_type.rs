@@ -54,6 +54,8 @@ use crate::{
 /// use ethers_abi_enc::sol_type::*;
 /// use ethers_primitives::U256;
 ///
+/// // This is the solidity type:
+/// //
 /// // struct MySolidityStruct {
 /// //    uint256 a;
 /// //    uint256 b;
@@ -62,12 +64,11 @@ use crate::{
 /// // This should be a ZST. See note.
 /// pub struct MySolidityStruct;
 ///
-/// // This will be the data type in rust
+/// // This will be the data type in rust.
 /// pub struct MyRustStruct {
 ///    a: U256,
 ///    b: U256,
 /// }
-///
 ///
 /// // We're going to get really cute here.
 /// //
@@ -222,6 +223,9 @@ pub trait SolType {
         Self::TokenType: TokenSeq,
     {
         let decoded = decode::<Self::TokenType>(data, validate)?;
+        if validate && !Self::type_check(&decoded) {
+            return Err(InvalidData);
+        }
         Self::detokenize(decoded)
     }
 
@@ -231,12 +235,18 @@ pub trait SolType {
         Self::TokenType: TokenSeq,
     {
         let decoded = decode_params::<Self::TokenType>(data, validate)?;
+        if validate && !Self::type_check(&decoded) {
+            return Err(InvalidData);
+        }
         Self::detokenize(decoded)
     }
 
     /// Decode a Rust type from an ABI blob
     fn decode_single(data: &[u8], validate: bool) -> AbiResult<Self::RustType> {
         let decoded = decode_single::<Self::TokenType>(data, validate)?;
+        if validate && !Self::type_check(&decoded) {
+            return Err(InvalidData);
+        }
         Self::detokenize(decoded)
     }
 
@@ -742,9 +752,6 @@ impl SolType for Function {
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
-        if !Self::type_check(&token) {
-            return Err(InvalidData);
-        }
         let t = token.as_slice();
 
         let mut address = [0u8; 20];
