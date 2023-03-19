@@ -277,12 +277,7 @@ mod tests {
 
     #[cfg(not(feature = "std"))]
     use crate::no_std_prelude::*;
-    use crate::{
-        decode, decode_params, decode_single, sol_type,
-        token::{FixedSeqToken, WordToken},
-        util::pad_u32,
-        SolType,
-    };
+    use crate::{sol_type, util::pad_u32, SolType};
 
     #[test]
     fn decode_static_tuple_of_addresses_and_uints() {
