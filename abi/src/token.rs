@@ -19,8 +19,6 @@
 use core::fmt;
 
 use ethers_primitives::{B160, U256};
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::*;

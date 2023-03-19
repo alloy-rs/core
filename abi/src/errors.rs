@@ -8,10 +8,6 @@
 // except according to those terms.
 
 use crate::no_std_prelude::Cow;
-#[cfg(not(feature = "std"))]
-use crate::no_std_prelude::*;
-#[cfg(feature = "serde")]
-use core::num;
 #[cfg(feature = "std")]
 use thiserror::Error;
 
