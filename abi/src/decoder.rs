@@ -20,8 +20,6 @@ pub(crate) fn check_zeroes(data: &[u8]) -> AbiResult<()> {
     if data.iter().all(|b| *b == 0) {
         Ok(())
     } else {
-        dbg!("this");
-        dbg!(hex::encode(data));
         Err(Error::InvalidData)
     }
 }
@@ -34,7 +32,6 @@ pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> AbiResult<()> {
     if word == Word::default() {
         return Ok(());
     }
-    dbg!(hex::encode(word.as_slice()));
     match len {
         0 => panic!("cannot have bytes0"),
         1..=31 => check_zeroes(&word[len..]),
