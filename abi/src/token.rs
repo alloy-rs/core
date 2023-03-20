@@ -22,7 +22,7 @@ use ethers_primitives::{B160, U256};
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::*;
-use crate::{decoder::Decoder, encoder::Encoder, AbiResult, Error, Word};
+use crate::{decoder::Decoder, encoder::Encoder, AbiResult, Word};
 
 /// Abi-Encoding Tokens. This is a sealed trait. It contains the type
 /// information necessary to encode & decode data. Tokens are an intermediate
@@ -243,7 +243,10 @@ where
             tokens.push(token);
         }
 
-        Ok(Self(tokens.try_into().map_err(|_| Error::InvalidData)?))
+        match tokens.try_into() {
+            Ok(tokens) => Ok(Self(tokens)),
+            _ => panic!("vec has size n exactly"),
+        }
     }
 }
 
@@ -305,7 +308,7 @@ impl<T: TokenType> TokenType for DynSeqToken<T> {
 
     fn decode_from(dec: &mut Decoder) -> AbiResult<Self> {
         let mut child = dec.take_indirection()?;
-        let len = child.take_usize()?;
+        let len = child.take_u32()? as usize;
 
         let mut tokens = vec![];
 
@@ -392,7 +395,7 @@ impl TokenType for PackedSeqToken {
 
     fn decode_from(dec: &mut Decoder) -> AbiResult<Self> {
         let mut child = dec.take_indirection()?;
-        let len = child.take_usize()?;
+        let len = child.take_u32()? as usize;
         let bytes = child.peek_len(len)?;
         Ok(PackedSeqToken(bytes.to_vec()))
     }
@@ -594,7 +597,7 @@ mod tests {
 
     macro_rules! assert_type_check {
         ($sol:ty, $token:expr) => {
-            assert!(<$sol>::type_check($token))
+            assert!(<$sol>::type_check($token).is_ok())
         };
         ($sol:ty, $token:expr,) => {
             assert_type_check!($sol, $token)
@@ -603,7 +606,7 @@ mod tests {
 
     macro_rules! assert_not_type_check {
         ($sol:ty, $token:expr) => {
-            assert!(!<$sol>::type_check($token))
+            assert!(<$sol>::type_check($token).is_err())
         };
         ($sol:ty, $token:expr,) => {
             assert_not_type_check!($sol, $token)

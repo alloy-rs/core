@@ -11,50 +11,55 @@
 
 use core::ops::Range;
 
+#[cfg(not(feature = "std"))]
+use crate::no_std_prelude::Cow;
+#[cfg(feature = "std")]
+use std::borrow::Cow;
+
 use crate::{
     encode, encode_params, encoder::encode_single, token::TokenSeq, AbiResult, Error, TokenType,
     Word,
 };
 
-pub(crate) fn check_zeroes(data: &[u8]) -> AbiResult<()> {
-    if data.iter().all(|b| *b == 0) {
-        Ok(())
-    } else {
-        Err(Error::InvalidData)
-    }
+pub(crate) fn check_zeroes(data: &[u8]) -> bool {
+    data.iter().all(|b| *b == 0)
 }
 
 fn round_up_nearest_multiple(value: usize, padding: usize) -> usize {
     (value + padding - 1) / padding * padding
 }
 
-pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> AbiResult<()> {
+pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
     if word == Word::default() {
-        return Ok(());
+        return true;
     }
     match len {
         0 => panic!("cannot have bytes0"),
         1..=31 => check_zeroes(&word[len..]),
-        32 => Ok(()), // always valid
+        32 => true, // always valid
         33.. => panic!("cannot have bytes33 or higher"),
         _ => unreachable!(),
     }
 }
 
-pub(crate) fn as_usize(slice: Word) -> AbiResult<usize> {
-    check_zeroes(&slice[..28])?;
+pub(crate) fn as_u32(word: Word, type_check: bool) -> AbiResult<u32> {
+    if type_check && !check_zeroes(&word.as_slice()[..28]) {
+        return Err(Error::TypeCheckFail {
+            data: hex::encode(&word),
+            expected_type: "Solidity pointer (uint32)".to_owned(),
+        });
+    }
 
-    let result = ((slice[28] as usize) << 24)
-        + ((slice[29] as usize) << 16)
-        + ((slice[30] as usize) << 8)
-        + (slice[31] as usize);
+    let result = ((word[28] as u32) << 24)
+        + ((word[29] as u32) << 16)
+        + ((word[30] as u32) << 8)
+        + (word[31] as u32);
 
     Ok(result)
 }
 
-pub(crate) fn check_bool(slice: Word) -> AbiResult<()> {
-    check_zeroes(&slice[..31])?;
-    Ok(())
+pub(crate) fn check_bool(slice: Word) -> bool {
+    check_zeroes(&slice[..31])
 }
 
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
@@ -136,12 +141,12 @@ impl<'a> Decoder<'a> {
         self.peek_word_at(self.offset)
     }
 
-    pub fn peek_usize_at(&self, offset: usize) -> AbiResult<usize> {
-        as_usize(self.peek_word_at(offset)?)
+    pub fn peek_u32_at(&self, offset: usize) -> AbiResult<u32> {
+        as_u32(self.peek_word_at(offset)?, true)
     }
 
-    pub fn peek_usize(&self) -> AbiResult<usize> {
-        as_usize(self.peek_word()?)
+    pub fn peek_u32(&self) -> AbiResult<u32> {
+        as_u32(self.peek_word()?, true)
     }
 
     pub fn take_word(&mut self) -> Result<Word, Error> {
@@ -151,12 +156,13 @@ impl<'a> Decoder<'a> {
     }
 
     pub fn take_indirection(&mut self) -> Result<Decoder<'a>, Error> {
-        let ptr = self.take_usize()?;
+        let ptr = self.take_u32()? as usize;
         self.child(ptr)
     }
 
-    pub fn take_usize(&mut self) -> AbiResult<usize> {
-        as_usize(self.take_word()?)
+    pub fn take_u32(&mut self) -> AbiResult<u32> {
+        let word = self.take_word()?;
+        as_u32(word, true)
     }
 
     pub fn take_slice(&mut self, len: usize) -> Result<&[u8], Error> {
@@ -165,7 +171,11 @@ impl<'a> Decoder<'a> {
             if self.offset + padded_len > self.buf.len() {
                 return Err(Error::Overrun);
             }
-            check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?)?;
+            if !check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
+                return Err(Error::InvalidData(Cow::Borrowed(
+                    "Non-empty bytes after packed array",
+                )));
+            }
         }
         let res = self.peek_len(len)?;
         self.increase_offset(len);
@@ -193,7 +203,7 @@ impl<'a> Decoder<'a> {
         T: TokenType,
     {
         if data.is_empty() {
-            return Err(Error::InvalidData);
+            return Err(Error::Overrun);
         }
 
         let token = T::decode_from(self)?;
@@ -206,7 +216,7 @@ impl<'a> Decoder<'a> {
         T: TokenType + TokenSeq,
     {
         if data.is_empty() {
-            return Err(Error::InvalidData);
+            return Err(Error::Overrun);
         }
         let token = T::decode_sequence(self)?;
 

@@ -5,13 +5,13 @@ use ethers_primitives::{B160, U256};
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::{String as RustString, ToOwned, ToString, Vec};
 #[cfg(feature = "std")]
-use std::string::String as RustString;
+use std::{borrow::Cow, string::String as RustString};
 
 use crate::{
     decoder::*,
     token::{DynSeqToken, FixedSeqToken, PackedSeqToken, TokenSeq, TokenType, WordToken},
     AbiResult,
-    Error::InvalidData,
+    Error::{self, InvalidData},
     Word,
 };
 
@@ -99,7 +99,7 @@ use crate::{
 ///     // whatever.
 ///     //
 ///     // It will be ignored if the decoder runs without validation
-///     fn type_check(token: &Self::TokenType) -> bool {
+///     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
 ///         UnderlyingTuple::type_check(token)
 ///     }
 ///
@@ -155,11 +155,19 @@ pub trait SolType {
     /// True if the type is dynamic according to ABI rules
     fn is_dynamic() -> bool;
     /// Check a token to see if it can be detokenized with this type
-    fn type_check(token: &Self::TokenType) -> bool;
+    fn type_check(token: &Self::TokenType) -> AbiResult<()>;
     /// Detokenize
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType>;
     /// Tokenize
     fn tokenize(rust: Self::RustType) -> Self::TokenType;
+
+    #[doc(hidden)]
+    fn type_check_fail(data: &[u8]) -> Error {
+        Error::TypeCheckFail {
+            data: hex::encode(data),
+            expected_type: Self::sol_type_name(),
+        }
+    }
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence
     fn encode_single(rust: Self::RustType) -> Vec<u8> {
@@ -223,8 +231,8 @@ pub trait SolType {
         Self::TokenType: TokenSeq,
     {
         let decoded = decode::<Self::TokenType>(data, validate)?;
-        if validate && !Self::type_check(&decoded) {
-            return Err(InvalidData);
+        if validate {
+            Self::type_check(&decoded)?;
         }
         Self::detokenize(decoded)
     }
@@ -235,8 +243,8 @@ pub trait SolType {
         Self::TokenType: TokenSeq,
     {
         let decoded = decode_params::<Self::TokenType>(data, validate)?;
-        if validate && !Self::type_check(&decoded) {
-            return Err(InvalidData);
+        if validate {
+            Self::type_check(&decoded)?;
         }
         Self::detokenize(decoded)
     }
@@ -244,8 +252,8 @@ pub trait SolType {
     /// Decode a Rust type from an ABI blob
     fn decode_single(data: &[u8], validate: bool) -> AbiResult<Self::RustType> {
         let decoded = decode_single::<Self::TokenType>(data, validate)?;
-        if validate && !Self::type_check(&decoded) {
-            return Err(InvalidData);
+        if validate {
+            Self::type_check(&decoded)?;
         }
         Self::detokenize(decoded)
     }
@@ -257,7 +265,7 @@ pub trait SolType {
     {
         let payload = data.strip_prefix("0x").unwrap_or(data);
         hex::decode(payload)
-            .map_err(|_| InvalidData)
+            .map_err(|_| InvalidData(Cow::Owned(data.to_owned())))
             .and_then(|buf| Self::decode(&buf, validate))
     }
 
@@ -265,7 +273,7 @@ pub trait SolType {
     fn hex_decode_single(data: &str, validate: bool) -> AbiResult<Self::RustType> {
         let payload = data.strip_prefix("0x").unwrap_or(data);
         hex::decode(payload)
-            .map_err(|_| InvalidData)
+            .map_err(|_| InvalidData(Cow::Owned(data.to_owned())))
             .and_then(|buf| Self::decode_single(&buf, validate))
     }
 
@@ -276,7 +284,7 @@ pub trait SolType {
     {
         let payload = data.strip_prefix("0x").unwrap_or(data);
         hex::decode(payload)
-            .map_err(|_| InvalidData)
+            .map_err(|_| InvalidData(Cow::Owned(data.to_owned())))
             .and_then(|buf| Self::decode_params(&buf, validate))
     }
 }
@@ -296,8 +304,11 @@ impl SolType for Address {
         false
     }
 
-    fn type_check(token: &Self::TokenType) -> bool {
-        check_zeroes(&token.inner()[..12]).is_ok()
+    fn type_check(token: &Self::TokenType) -> AbiResult<()> {
+        if !check_zeroes(&token.inner()[..12]) {
+            return Err(Self::type_check_fail(&token.as_slice()));
+        }
+        Ok(())
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -325,8 +336,8 @@ impl SolType for Bytes {
         "bytes".to_string()
     }
 
-    fn type_check(_token: &Self::TokenType) -> bool {
-        true
+    fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
+        Ok(())
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -352,8 +363,8 @@ macro_rules! impl_int_sol_type {
                 format!("int{}", $bits)
             }
 
-            fn type_check(_token: &Self::TokenType) -> bool {
-                true
+            fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
+                Ok(())
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -404,10 +415,13 @@ macro_rules! impl_uint_sol_type {
                 format!("uint{}", $bits)
             }
 
-            fn type_check(token: &Self::TokenType) -> bool {
+            fn type_check(token: &Self::TokenType) -> AbiResult<()> {
                 let bytes = (<$uty>::BITS / 8) as usize;
                 let sli = &token.as_slice()[..32 - bytes];
-                check_zeroes(sli).is_ok()
+                if !check_zeroes(sli) {
+                    return Err(Self::type_check_fail(&token.as_slice()));
+                }
+                Ok(())
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -439,10 +453,13 @@ macro_rules! impl_uint_sol_type {
                 format!("uint{}", $bits)
             }
 
-            fn type_check(token: &Self::TokenType) -> bool {
+            fn type_check(token: &Self::TokenType) -> AbiResult<()> {
                 let bytes = $bits / 8 as usize;
                 let sli = &token.as_slice()[..32 - bytes];
-                check_zeroes(sli).is_ok()
+                if !check_zeroes(sli) {
+                    return Err(Self::type_check_fail(&token.as_slice()));
+                }
+                Ok(())
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -493,8 +510,11 @@ impl SolType for Bool {
         "bool".into()
     }
 
-    fn type_check(token: &Self::TokenType) -> bool {
-        check_bool(token.inner()).is_ok()
+    fn type_check(token: &Self::TokenType) -> AbiResult<()> {
+        if !check_bool(token.inner()) {
+            return Err(Self::type_check_fail(&token.as_slice()));
+        }
+        Ok(())
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -526,8 +546,11 @@ where
         format!("{}[]", T::sol_type_name())
     }
 
-    fn type_check(token: &Self::TokenType) -> bool {
-        token.as_slice().iter().all(|inner| T::type_check(inner))
+    fn type_check(token: &Self::TokenType) -> AbiResult<()> {
+        for token in token.as_slice() {
+            T::type_check(token)?;
+        }
+        Ok(())
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -557,8 +580,11 @@ impl SolType for String {
         "string".to_owned()
     }
 
-    fn type_check(token: &Self::TokenType) -> bool {
-        core::str::from_utf8(token.as_slice()).is_ok()
+    fn type_check(token: &Self::TokenType) -> AbiResult<()> {
+        if !core::str::from_utf8(token.as_slice()).is_ok() {
+            return Err(Self::type_check_fail(&token.as_slice()));
+        }
+        Ok(())
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -588,8 +614,11 @@ macro_rules! impl_fixed_bytes_sol_type {
                 format!("bytes{}", $bytes)
             }
 
-            fn type_check(token: &Self::TokenType) -> bool {
-                check_fixed_bytes(token.inner(), $bytes).is_ok()
+            fn type_check(token: &Self::TokenType) -> AbiResult<()> {
+                if !check_fixed_bytes(token.inner(), $bytes) {
+                    return Err(Self::type_check_fail(&token.as_slice()));
+                }
+                Ok(())
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -637,18 +666,24 @@ where
         format!("{}[{}]", T::sol_type_name(), N)
     }
 
-    fn type_check(token: &Self::TokenType) -> bool {
-        token.as_array().iter().all(|token| T::type_check(token))
+    fn type_check(token: &Self::TokenType) -> AbiResult<()> {
+        for token in token.as_array().iter() {
+            T::type_check(token)?;
+        }
+        Ok(())
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
-        token
+        let res = token
             .take_array()
             .into_iter()
             .map(|t| T::detokenize(t))
             .collect::<AbiResult<Vec<_>>>()?
-            .try_into()
-            .map_err(|_| InvalidData)
+            .try_into();
+        match res {
+            Ok(tokens) => Ok(tokens),
+            Err(_) => panic!("input is exact len"),
+        }
     }
 
     fn tokenize(rust: Self::RustType) -> Self::TokenType {
@@ -685,13 +720,11 @@ macro_rules! impl_tuple_sol_type {
                 format!("tuple({})", types.join(","))
             }
 
-            fn type_check(token: &Self::TokenType) -> bool {
+            fn type_check(token: &Self::TokenType) -> AbiResult<()> {
                 $(
-                    if !$ty::type_check(&token.$no) {
-                        return false
-                    }
+                    $ty::type_check(&token.$no)?;
                 )+
-                true
+                Ok(())
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -747,8 +780,11 @@ impl SolType for Function {
         false
     }
 
-    fn type_check(token: &Self::TokenType) -> bool {
-        crate::decoder::check_fixed_bytes(token.inner(), 24).is_ok()
+    fn type_check(token: &Self::TokenType) -> AbiResult<()> {
+        if !crate::decoder::check_fixed_bytes(token.inner(), 24) {
+            return Err(Self::type_check_fail(&token.as_slice()));
+        }
+        Ok(())
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {

@@ -18,9 +18,20 @@ pub type AbiResult<T> = core::result::Result<T, Error>;
 #[cfg_attr(feature = "std", derive(Error))]
 #[derive(Debug)]
 pub enum Error {
+    /// A typecheck detected a word that does not match the data type
+    #[cfg_attr(
+        feature = "std",
+        error("Type check failed. Expected {expected_type} but {data} is not valid for that type")
+    )]
+    TypeCheckFail {
+        /// Hex-encoded data
+        data: alloc::string::String,
+        /// The Solidity type we failed to produce
+        expected_type: alloc::string::String,
+    },
     /// Invalid data.
     #[cfg_attr(feature = "std", error("Invalid data"))]
-    InvalidData,
+    InvalidData(Cow<'static, str>),
     #[cfg_attr(feature = "std", error("Buffer overrun in deser"))]
     /// Overran deser buffer
     Overrun,
