@@ -5,14 +5,12 @@ use ethers_primitives::{B160, U256};
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::{String as RustString, ToOwned, ToString, Vec};
 #[cfg(feature = "std")]
-use std::{borrow::Cow, string::String as RustString};
+use std::string::String as RustString;
 
 use crate::{
     decoder::*,
     token::{DynSeqToken, FixedSeqToken, PackedSeqToken, TokenSeq, TokenType, WordToken},
-    AbiResult,
-    Error::{self, InvalidData},
-    Word,
+    AbiResult, Error, Word,
 };
 
 /// A Solidity Type, for ABI enc/decoding
@@ -265,7 +263,7 @@ pub trait SolType {
     {
         let payload = data.strip_prefix("0x").unwrap_or(data);
         hex::decode(payload)
-            .map_err(|_| InvalidData(Cow::Owned(data.to_owned())))
+            .map_err(Into::into)
             .and_then(|buf| Self::decode(&buf, validate))
     }
 
@@ -273,7 +271,7 @@ pub trait SolType {
     fn hex_decode_single(data: &str, validate: bool) -> AbiResult<Self::RustType> {
         let payload = data.strip_prefix("0x").unwrap_or(data);
         hex::decode(payload)
-            .map_err(|_| InvalidData(Cow::Owned(data.to_owned())))
+            .map_err(Into::into)
             .and_then(|buf| Self::decode_single(&buf, validate))
     }
 
@@ -284,7 +282,7 @@ pub trait SolType {
     {
         let payload = data.strip_prefix("0x").unwrap_or(data);
         hex::decode(payload)
-            .map_err(|_| InvalidData(Cow::Owned(data.to_owned())))
+            .map_err(Into::into)
             .and_then(|buf| Self::decode_params(&buf, validate))
     }
 }
@@ -306,7 +304,7 @@ impl SolType for Address {
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
         if !check_zeroes(&token.inner()[..12]) {
-            return Err(Self::type_check_fail(&token.as_slice()));
+            return Err(Self::type_check_fail(token.as_slice()));
         }
         Ok(())
     }
@@ -419,7 +417,7 @@ macro_rules! impl_uint_sol_type {
                 let bytes = (<$uty>::BITS / 8) as usize;
                 let sli = &token.as_slice()[..32 - bytes];
                 if !check_zeroes(sli) {
-                    return Err(Self::type_check_fail(&token.as_slice()));
+                    return Err(Self::type_check_fail(token.as_slice()));
                 }
                 Ok(())
             }
@@ -457,7 +455,7 @@ macro_rules! impl_uint_sol_type {
                 let bytes = $bits / 8 as usize;
                 let sli = &token.as_slice()[..32 - bytes];
                 if !check_zeroes(sli) {
-                    return Err(Self::type_check_fail(&token.as_slice()));
+                    return Err(Self::type_check_fail(token.as_slice()));
                 }
                 Ok(())
             }
@@ -512,7 +510,7 @@ impl SolType for Bool {
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
         if !check_bool(token.inner()) {
-            return Err(Self::type_check_fail(&token.as_slice()));
+            return Err(Self::type_check_fail(token.as_slice()));
         }
         Ok(())
     }
@@ -581,8 +579,8 @@ impl SolType for String {
     }
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
-        if !core::str::from_utf8(token.as_slice()).is_ok() {
-            return Err(Self::type_check_fail(&token.as_slice()));
+        if core::str::from_utf8(token.as_slice()).is_err() {
+            return Err(Self::type_check_fail(token.as_slice()));
         }
         Ok(())
     }
@@ -616,7 +614,7 @@ macro_rules! impl_fixed_bytes_sol_type {
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
                 if !check_fixed_bytes(token.inner(), $bytes) {
-                    return Err(Self::type_check_fail(&token.as_slice()));
+                    return Err(Self::type_check_fail(token.as_slice()));
                 }
                 Ok(())
             }
@@ -782,7 +780,7 @@ impl SolType for Function {
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
         if !crate::decoder::check_fixed_bytes(token.inner(), 24) {
-            return Err(Self::type_check_fail(&token.as_slice()));
+            return Err(Self::type_check_fail(token.as_slice()));
         }
         Ok(())
     }

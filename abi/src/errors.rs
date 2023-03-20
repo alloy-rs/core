@@ -29,16 +29,22 @@ pub enum Error {
         /// The Solidity type we failed to produce
         expected_type: alloc::string::String,
     },
-    /// Invalid data.
-    #[cfg_attr(feature = "std", error("Invalid data"))]
-    InvalidData(Cow<'static, str>),
     #[cfg_attr(feature = "std", error("Buffer overrun in deser"))]
     /// Overran deser buffer
     Overrun,
     #[cfg_attr(feature = "std", error("Reserialization did not match original"))]
     /// Validation reserialization did not match input
     ReserMismatch,
+    /// FromHex
+    #[cfg_attr(feature = "std", error("{0}"))]
+    FromHexError(hex::FromHexError),
     /// Other errors.
     #[cfg_attr(feature = "std", error("{0}"))]
     Other(Cow<'static, str>),
+}
+
+impl From<hex::FromHexError> for Error {
+    fn from(value: hex::FromHexError) -> Self {
+        Self::FromHexError(value)
+    }
 }

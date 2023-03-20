@@ -45,7 +45,7 @@ pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
 pub(crate) fn as_u32(word: Word, type_check: bool) -> AbiResult<u32> {
     if type_check && !check_zeroes(&word.as_slice()[..28]) {
         return Err(Error::TypeCheckFail {
-            data: hex::encode(&word),
+            data: hex::encode(word),
             expected_type: "Solidity pointer (uint32)".to_owned(),
         });
     }
@@ -172,7 +172,7 @@ impl<'a> Decoder<'a> {
                 return Err(Error::Overrun);
             }
             if !check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
-                return Err(Error::InvalidData(Cow::Borrowed(
+                return Err(Error::Other(Cow::Borrowed(
                     "Non-empty bytes after packed array",
                 )));
             }
