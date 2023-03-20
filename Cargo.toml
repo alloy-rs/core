@@ -4,4 +4,5 @@ members = [
     "primitives",
     "rlp",
     "abi",
+    "abi/sol-type-parser",
 ]

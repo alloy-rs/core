@@ -121,13 +121,12 @@ use crate::{
 /// OLD sol types, it's really easy to implement [`SolType`] for anything you
 /// want!
 ///
-/// #### Note on zero size
+/// #### Note on implementing type size
 ///
 /// Any type implementing this should be 0-sized. This trait exposes only
 /// associated functions and types, and not methods.
 ///
 /// ```ignore
-///
 /// // Bad - This type is sized.
 /// pub struct MyStruct(usize);
 ///
@@ -189,17 +188,6 @@ pub trait SolType {
     {
         let token = Self::tokenize(rust);
         crate::encode_params(token)
-    }
-
-    /// Encode a function call
-    fn encode_function(selector: [u8; 4], rust: Self::RustType) -> Vec<u8>
-    where
-        Self::TokenType: TokenSeq,
-    {
-        selector
-            .into_iter()
-            .chain(Self::encode_params(rust))
-            .collect()
     }
 
     /// Hex output of encode

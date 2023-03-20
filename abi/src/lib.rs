@@ -50,6 +50,45 @@
 //!
 //! See the [`SolType`] docs for an implementer's guide.
 //!
+//! ## `sol!`
+//!
+//! The `sol!` proc macro parses complex soltypes from valid solidity. Right now
+//! it's limited to the solidity types defines in this library. It's useful for
+//! defining complex structures using familiar syntax.
+//!
+//! In the future, `sol!` will support macro definitions, functions, and more!
+//!
+//! ```
+//! # use ethers_abi_enc::sol;
+//! # use ethers_abi_enc::SolType;
+//! # pub fn main() {
+//! // outputs a type built that implements `SolType`
+//! type B32 = sol! {bytes32};
+//! assert_eq!(B32::sol_type_name(), "bytes32");
+//! assert_eq!
+//!     (B32::hex_encode_single([0; 32]),
+//!     "0x0000000000000000000000000000000000000000000000000000000000000000"
+//! ); // Wow!
+//!
+//! type Complex = sol! {((address, address)[],address)};
+//! assert_eq!(
+//!     Complex::sol_type_name(),
+//!     "tuple(tuple(address,address)[],address)"
+//! ); // Cool!
+//!
+//! type Gamut = sol! {
+//!     (
+//!         address, bool[], bytes15[12], uint256, uint24, int8, int56,
+//!         (function, string, bytes,)
+//!     )
+//! };
+//! assert_eq!(
+//!     Gamut::sol_type_name(),
+//!     "tuple(address,bool[],bytes15[12],uint256,uint24,int8,int56,tuple(function,string,bytes))"
+//! ); // Amazing!
+//! # }
+//! ```
+//!
 //! ## Tokenization/Detokenization
 //!
 //! The process of converting from a Rust type to a to a token is called
@@ -69,37 +108,7 @@
 //!
 //! The [`SolType`] encoding and decoding methods operate on Rust types. We
 //! recommend users use them wherever possible. We do not recommend that users
-//! interact with Tokens except when implementing their own [`SolType`];
-//!
-//! ### `encode/decode_single`
-//!
-//! [`SolType::encode_single()`] and [`crate::encode_single()`] operate on a
-//! single token. They wrap this token in a tuple, and pass it to the encoder.
-//! Use this interface when abi-encoding a single token. This is suitable for
-//! encoding a type in isolation, or for encoding parameters for single-param
-//! functions.
-//!
-//! ### `encode/decode_params`
-//!
-//! [`SolType::encode_params()`] and [`crate::encode_params()`] operate on a
-//! sequence. If the sequence is a tuple, the tuple is inferred to be a set of
-//! Solidity function parameters,
-//!
-//! The corresponding [`SolType::decode_params()`] and
-//! [`crate::decode_params()`] reverse this operation, decoding a tuple from a
-//! blob.
-//!
-//! [`SolType::encode_function`] adds a selector to front of the encoded params
-//!
-//! This is used to encode the parameters for a solidity function
-//!
-//! ### `encode/decode`
-//!
-//! [`SolType::encode()`] and [`crate::encode()`] operate on a sequence of
-//! tokens. This sequence is inferred not to be function parameters.
-//!
-//! This is the least useful one. Most users will not need it.
-
+//! interact with Tokens, except when implementing their own [`SolType`].
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate alloc;
 #[cfg(not(feature = "std"))]
@@ -138,6 +147,9 @@ pub mod sol_type;
 pub use sol_type::SolType;
 
 mod util;
+
+/// The `sol!` proc macro parses rust type structurs
+pub use sol_type_parser::sol;
 
 /// The Word type for ABI Encoding
 pub type Word = B256;

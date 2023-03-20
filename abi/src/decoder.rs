@@ -7,7 +7,42 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 //
+
 //! ABI decoder.
+//!
+//!  ### `encode/decode_single`
+//!
+//! [`crate::SolType::encode_single()`] and [`decode_single()`] operate on a
+//! single token. They wrap this token in a tuple, and pass it to the encoder.
+//! Use this interface when abi-encoding a single token. This is suitable for
+//! encoding a type in isolation, or for encoding parameters for single-param
+//! functions.
+//!
+//! The corresponding [`crate::SolType::decode()`] and
+//! [`decode()`] reverse this operation, decoding a single type from a
+//! blob.
+//!
+//! ### `encode/decode_params`
+//!
+//! [`crate::SolType::encode_params()`] and [`encode_params()`] operate on a
+//! sequence. If the sequence is a tuple, the tuple is inferred to be a set of
+//! Solidity function parameters,
+//!
+//! The corresponding [`crate::SolType::decode_params()`] and
+//! [`decode_params()`] reverse this operation, decoding a tuple from a
+//! blob.
+//!
+//! This is used to encode/decode the parameters for a solidity function.
+//!
+//! ### `encode/decode`
+//!
+//! [`crate::SolType::encode()`] and [`encode()`] operate on a sequence of
+//! tokens. This sequence is inferred not to be function parameters. This is
+//! the least useful one. Most users will not need it. It wraps the input in a
+//! tuple, and then encodes.
+//!
+//! [`crate::SolType::decode()`] and [`decode()`] reverse this, by attempting
+//! to decode the type from inside a tuple.
 
 use core::ops::Range;
 
