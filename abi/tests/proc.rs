@@ -1,25 +1,54 @@
-use ethers_abi_enc::sol;
+use ethers_abi_enc::{sol, SolType};
 
-use ethers_abi_enc::SolType;
+use ethers_primitives::{B160, U256};
+
+sol! {
+    struct MyStruct {
+        uint256 a;
+        bytes32 b;
+        address[] c;
+    }
+}
+
+// Works only outside of function scope due to rust import rules
+sol! {
+    struct MyStruct2 {
+        MyStruct a;
+        bytes32 b;
+        address[] c;
+    }
+}
+
+// This works
+type MyTuple = sol! {
+    (MyStruct, bytes32)
+};
+
+// This works
+type LateBinding<A> = sol! {
+    (A[], address)
+};
 
 #[test]
-fn expand_and_contract() {
-    type B32 = sol! {(bytes32, address)};
-    assert_eq!(B32::sol_type_name(), "tuple(bytes32,address)");
-
-    type Complex = sol! {((address, address)[],address)};
-    assert_eq!(
-        Complex::sol_type_name(),
-        "tuple(tuple(address,address)[],address)"
-    );
-
-    type Gamut = sol! {
-        (
-            address, bool[], bytes15[12], uint256, uint24, int8, int56, (function, string, bytes,)
-        )
+fn hello() {
+    let a = MyStructRust {
+        a: U256::from(1),
+        b: [0; 32],
+        c: vec![],
     };
-    assert_eq!(
-        Gamut::sol_type_name(),
-        "tuple(address,bool[],bytes15[12],uint256,uint24,int8,int56,tuple(function,string,bytes))"
-    );
+
+    dbg!(MyTuple::hex_encode((a.clone(), [0; 32])));
+
+    dbg!(MyStruct::hex_encode(a.clone()));
+
+    dbg!(LateBinding::<MyStruct>::hex_encode((
+        vec![a.clone(), a.clone()],
+        B160::default()
+    )));
+
+    dbg!(MyStruct2::hex_encode(MyStruct2Rust {
+        a,
+        b: [0; 32],
+        c: vec![],
+    }));
 }

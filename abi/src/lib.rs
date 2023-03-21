@@ -59,8 +59,7 @@
 //! In the future, `sol!` will support macro definitions, functions, and more!
 //!
 //! ```
-//! # use ethers_abi_enc::sol;
-//! # use ethers_abi_enc::SolType;
+//! # use ethers_abi_enc::{sol, sol_type, SolType};
 //! # pub fn main() {
 //! // outputs a type built that implements `SolType`
 //! type B32 = sol! {bytes32};
@@ -86,7 +85,31 @@
 //!     Gamut::sol_type_name(),
 //!     "tuple(address,bool[],bytes15[12],uint256,uint24,int8,int56,tuple(function,string,bytes))"
 //! ); // Amazing!
+//!
+//! // `sol!` supports late binding of types, and your own custom types!
+//! type Abstract<A> = sol! { A[] };
+//! assert_eq!(Abstract::<sol_type::Address>::sol_type_name(), "address[]",);
+//! // Incredible!
 //! # }
+//!
+//! // And we allow you to define your own custom types!
+//!
+//! sol! {
+//!     struct MyStruct {
+//!         uint256 a;
+//!         bytes32 b;
+//!         address[] c;
+//!     }
+//! }
+//!
+//! // Works only outside of function scope due to rust import rules
+//! sol! {
+//!     struct MyStruct2 {
+//!         MyStruct a;
+//!         bytes32 b;
+//!         address[] c;
+//!     }
+//! }
 //! ```
 //!
 //! ## Tokenization/Detokenization
