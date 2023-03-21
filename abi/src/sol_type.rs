@@ -114,6 +114,12 @@ use crate::{
 ///         let MyRustStruct { a, b } = rust;
 ///         UnderlyingTuple::tokenize((a, b))
 ///     }
+///
+///     fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+///        let MyRustStruct { a, b } = rust;
+///        UnderlyingTuple::encode_packed_to(target, (a, b))
+///     }
+///
 /// }
 /// ```
 ///
