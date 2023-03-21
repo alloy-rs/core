@@ -458,7 +458,7 @@ macro_rules! impl_uint_sol_type {
             fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
                 // encode the rust to be bytes, strip leading zeroes, then push to the target
                 let bytes = rust.to_be_bytes();
-                target.extend(bytes.into_iter().skip_while(|b| *b == 0));
+                target.extend(bytes);
             }
         }
     };
@@ -496,7 +496,7 @@ macro_rules! impl_uint_sol_type {
             fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
                 // encode the rust to be bytes, strip leading zeroes, then push to the target
                 let bytes: [u8; $bits / 8] = rust.to_be_bytes();
-                target.extend(bytes.into_iter().skip_while(|b| *b == 0));
+                target.extend(bytes);
             }
         }
     };
