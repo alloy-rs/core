@@ -158,6 +158,17 @@ pub trait SolType {
     /// Tokenize
     fn tokenize(rust: Self::RustType) -> Self::TokenType;
 
+    /// Implemens solidity's encodePacked() function, writing to the target to
+    /// avoid allocations
+    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType);
+
+    /// Implements solidity's encodePacked() function
+    fn encode_packed(rust: Self::RustType) -> Vec<u8> {
+        let mut res = Vec::new();
+        Self::encode_packed_to(&mut res, rust);
+        res
+    }
+
     #[doc(hidden)]
     fn type_check_fail(data: &[u8]) -> Error {
         Error::TypeCheckFail {
@@ -305,6 +316,11 @@ impl SolType for Address {
     fn tokenize(rust: Self::RustType) -> Self::TokenType {
         rust.into()
     }
+
+    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+        // push the last 20 bytes of the word to the target
+        target.extend_from_slice(&rust.as_bytes()[12..]);
+    }
 }
 
 /// Bytes - `bytes`
@@ -332,6 +348,11 @@ impl SolType for Bytes {
 
     fn tokenize(rust: Self::RustType) -> Self::TokenType {
         rust.into()
+    }
+
+    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+        // push the buf to the vec
+        target.extend_from_slice(&rust);
     }
 }
 
@@ -370,6 +391,16 @@ macro_rules! impl_int_sol_type {
                 let slice = rust.to_be_bytes();
                 word[32 - bytes..].copy_from_slice(&slice);
                 word.into()
+            }
+
+            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+                // encode the rust to be bytes, strip leading zeroes, then push to the target
+                let bytes = rust.to_be_bytes();
+                if rust > 0 {
+                    target.extend(bytes.into_iter().skip_while(|b| *b == 0));
+                } else {
+                    target.extend(bytes);
+                }
             }
         }
     };
@@ -423,6 +454,12 @@ macro_rules! impl_uint_sol_type {
                 word[32 - bytes..].copy_from_slice(&slice);
                 word.into()
             }
+
+            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+                // encode the rust to be bytes, strip leading zeroes, then push to the target
+                let bytes = rust.to_be_bytes();
+                target.extend(bytes.into_iter().skip_while(|b| *b == 0));
+            }
         }
     };
 
@@ -454,6 +491,12 @@ macro_rules! impl_uint_sol_type {
 
             fn tokenize(rust: Self::RustType) -> Self::TokenType {
                 rust.into()
+            }
+
+            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+                // encode the rust to be bytes, strip leading zeroes, then push to the target
+                let bytes: [u8; $bits / 8] = rust.to_be_bytes();
+                target.extend(bytes.into_iter().skip_while(|b| *b == 0));
             }
         }
     };
@@ -512,6 +555,11 @@ impl SolType for Bool {
         word[31..32].copy_from_slice(&[rust as u8]);
         word.into()
     }
+
+    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+        // write the bool as a u8
+        target.push(rust as u8);
+    }
 }
 
 /// Array - `T[]`
@@ -549,6 +597,12 @@ where
             .collect::<Vec<_>>()
             .into()
     }
+
+    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+        for item in rust {
+            T::encode_packed_to(target, item);
+        }
+    }
 }
 
 /// String - `string`
@@ -584,6 +638,10 @@ impl SolType for String {
     fn tokenize(rust: Self::RustType) -> Self::TokenType {
         rust.into_bytes().into()
     }
+
+    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+        target.extend(rust.as_bytes());
+    }
 }
 
 macro_rules! impl_fixed_bytes_sol_type {
@@ -618,6 +676,11 @@ macro_rules! impl_fixed_bytes_sol_type {
                 let mut word = Word::default();
                 word[..$bytes].copy_from_slice(&rust[..]);
                 word.into()
+            }
+
+            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+                // write only the first n bytes
+                target.extend_from_slice(&rust[..$bytes]);
             }
         }
     };
@@ -675,6 +738,12 @@ where
     fn tokenize(rust: Self::RustType) -> Self::TokenType {
         rust.map(|r| T::tokenize(r)).into()
     }
+
+    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+        for item in rust {
+            T::encode_packed_to(target, item);
+        }
+    }
 }
 
 macro_rules! impl_tuple_sol_type {
@@ -725,6 +794,12 @@ macro_rules! impl_tuple_sol_type {
                 ($(
                     $ty::tokenize(rust.$no),
                 )+)
+            }
+
+            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+                $(
+                    $ty::encode_packed_to(target, rust.$no);
+                )+
             }
         }
     };
@@ -788,5 +863,10 @@ impl SolType for Function {
         word[..20].copy_from_slice(&rust.0[..]);
         word[20..24].copy_from_slice(&rust.1[..]);
         word.into()
+    }
+
+    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+        target.extend_from_slice(&rust.0[..]);
+        target.extend_from_slice(&rust.1[..]);
     }
 }
