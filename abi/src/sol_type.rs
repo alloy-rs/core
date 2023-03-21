@@ -396,11 +396,7 @@ macro_rules! impl_int_sol_type {
             fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
                 // encode the rust to be bytes, strip leading zeroes, then push to the target
                 let bytes = rust.to_be_bytes();
-                if rust > 0 {
-                    target.extend(bytes.into_iter().skip_while(|b| *b == 0));
-                } else {
-                    target.extend(bytes);
-                }
+                target.extend(bytes);
             }
         }
     };
