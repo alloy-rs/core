@@ -152,7 +152,7 @@ where
     encode_impl(token)
 }
 
-/// Encode a single token by wrapping it in a tuple
+/// Encode a single token
 pub fn encode_single<T>(token: T) -> Vec<u8>
 where
     T: TokenType,
@@ -160,16 +160,13 @@ where
     encode((token,))
 }
 
-/// Encode a tuple as ABI function params. If argument is not a tuple,
-/// functions as [`encode_single`]
-///
-/// TODO: document this choice of behavior
+/// Encode a tuple as ABI function params, suitable for passing to a function
 pub fn encode_params<T>(token: T) -> Vec<u8>
 where
     T: TokenSeq,
 {
     if T::can_be_params() {
-        encode_impl(token)
+        encode(token)
     } else {
         encode((token,))
     }
