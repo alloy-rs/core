@@ -43,6 +43,18 @@ pub enum Error {
     Other(Cow<'static, str>),
 }
 
+impl Error {
+    /// Instantiates a new error with a static str
+    pub fn custom(s: &'static str) -> Self {
+        Self::Other(s.into())
+    }
+
+    /// Instantiates a new error with a string
+    pub fn custom_owned(s: String) -> Self {
+        Self::Other(s.into())
+    }
+}
+
 impl From<hex::FromHexError> for Error {
     fn from(value: hex::FromHexError) -> Self {
         Self::FromHexError(value)

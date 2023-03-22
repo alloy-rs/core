@@ -156,6 +156,9 @@ use no_std_prelude::*;
 mod decoder;
 pub use decoder::{decode, decode_params, decode_single};
 
+mod dyn_sol_type;
+pub use dyn_sol_type::{DynSolType, DynToken};
+
 mod encoder;
 pub use encoder::{encode, encode_params, encode_single};
 
