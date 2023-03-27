@@ -10,6 +10,12 @@ sol! {
     }
 }
 
+sol! {
+    tuple(
+        address[][3], bool, address
+    )
+}
+
 // Works only outside of function scope due to rust import rules
 sol! {
     struct MyStruct2 {

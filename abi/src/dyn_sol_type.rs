@@ -7,18 +7,31 @@ use crate::{
     SolType, TokenType, Word, WordToken,
 };
 
-pub struct Parenthesized<'a> {
-    inner: &'a str,
+pub struct CommaSeparatedList<'a> {
+    elements: Vec<&'a str>,
 }
 
-impl<'a> FromStr for Parenthesized<'a> {
-    type Err = ();
+impl<'a> TryFrom<&'a str> for CommaSeparatedList<'a> {
+    type Error = ();
 
-    fn from_str(s: &'a str) -> Result<Parenthesized<'a>, Self::Err> {
-        s.split_once('(')
-            .and_then(|(_, inner)| inner.rsplit_once(')'))
-            .map(|(inner, _)| Self { inner })
-            .ok_or(())
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
+        let s = s.trim_matches("()");
+
+        let mut elements = vec![];
+        let mut depth = 0;
+        let mut start = 0;
+
+        for (i, c) in s.char_indices() {
+            match c {
+                '(' => depth += 1,
+                ')' => depth -= 1,
+                ',' if depth == 0 => {
+                    elements.push(&s[start..i]);
+                    start = i + 1;
+                }
+                _ => {}
+            }
+        }
     }
 }
 
@@ -26,16 +39,16 @@ impl<'a> FromStr for Parenthesized<'a> {
 // Wraps all implementers of sol_type::SolType
 pub enum DynSolType {
     Address,
-    Bool,
     Bytes,
-    FixedBytes(usize),
     Int(usize),
     Uint(usize),
-    Function,
-    String,
-    Tuple(Vec<DynSolType>),
+    Bool,
     Array(Box<DynSolType>),
+    String,
+    FixedBytes(usize),
     FixedArray(Box<DynSolType>, usize),
+    Tuple(Vec<DynSolType>),
+    Function,
     CustomStruct {
         name: String,
         tuple: Vec<DynSolType>,
