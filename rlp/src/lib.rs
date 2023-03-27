@@ -15,7 +15,7 @@ mod decode;
 mod encode;
 mod types;
 
-pub use bytes::BufMut;
+pub use bytes::{Buf, BufMut};
 
 pub use decode::{Decodable, DecodeError, Rlp};
 pub use encode::{
@@ -24,7 +24,7 @@ pub use encode::{
 };
 pub use types::*;
 
-// #[cfg(feature = "derive")]
-// pub use reth_rlp_derive::{
-//     RlpDecodable, RlpDecodableWrapper, RlpEncodable, RlpEncodableWrapper, RlpMaxEncodedLen,
-// };
+#[cfg(feature = "derive")]
+pub use ethers_rlp_derive::{
+    RlpDecodable, RlpDecodableWrapper, RlpEncodable, RlpEncodableWrapper, RlpMaxEncodedLen,
+};

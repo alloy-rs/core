@@ -148,6 +148,8 @@ impl Header {
     }
 }
 
+/// Left-pads a slice to a staticly known size array. Returns None if the slice
+/// is too long or if the first byte is 0.
 fn static_left_pad<const LEN: usize>(data: &[u8]) -> Option<[u8; LEN]> {
     if data.len() > LEN {
         return None;
@@ -223,6 +225,9 @@ impl<const N: usize> Decodable for [u8; N] {
         if h.payload_length != N {
             return Err(DecodeError::UnexpectedLength);
         }
+        if from.remaining() < N {
+            return Err(DecodeError::InputTooShort);
+        }
 
         let mut to = [0_u8; N];
         to.copy_from_slice(&from[..N]);
@@ -237,6 +242,9 @@ impl Decodable for BytesMut {
         let h = Header::decode(from)?;
         if h.list {
             return Err(DecodeError::UnexpectedList);
+        }
+        if from.remaining() < h.payload_length {
+            return Err(DecodeError::InputTooShort);
         }
         let mut to = BytesMut::with_capacity(h.payload_length);
         to.extend_from_slice(&from[..h.payload_length]);
@@ -293,6 +301,9 @@ mod std_impl {
             if h.list {
                 return Err(DecodeError::UnexpectedList);
             }
+            if buf.remaining() < h.payload_length {
+                return Err(DecodeError::InputTooShort);
+            }
             let o = match h.payload_length {
                 4 => {
                     let mut to = [0_u8; 4];
@@ -324,6 +335,9 @@ mod alloc_impl {
             let h = Header::decode(buf)?;
             if !h.list {
                 return Err(DecodeError::UnexpectedString);
+            }
+            if buf.remaining() < h.payload_length {
+                return Err(DecodeError::InputTooShort);
             }
 
             let payload_view = &mut &buf[..h.payload_length];
@@ -362,6 +376,9 @@ mod alloc_impl {
             let h = Header::decode(from)?;
             if h.list {
                 return Err(DecodeError::UnexpectedList);
+            }
+            if from.remaining() < h.payload_length {
+                return Err(DecodeError::InputTooShort);
             }
             let mut to = ::alloc::vec::Vec::with_capacity(h.payload_length);
             to.extend_from_slice(&from[..h.payload_length]);
@@ -473,5 +490,35 @@ mod tests {
                 &hex!("C883BBCCB583FFC0B5")[..],
             ),
         ])
+    }
+
+    #[test]
+    fn malformed_rlp() {
+        check_decode::<Bytes, _>(vec![
+            (Err(DecodeError::InputTooShort), &hex!("C1")[..]),
+            (Err(DecodeError::InputTooShort), &hex!("D7")[..]),
+        ]);
+        check_decode::<[u8; 5], _>(vec![
+            (Err(DecodeError::InputTooShort), &hex!("C1")[..]),
+            (Err(DecodeError::InputTooShort), &hex!("D7")[..]),
+        ]);
+        check_decode::<std::net::IpAddr, _>(vec![
+            (Err(DecodeError::InputTooShort), &hex!("C1")[..]),
+            (Err(DecodeError::InputTooShort), &hex!("D7")[..]),
+        ]);
+        check_decode::<Vec<u8>, _>(vec![
+            (Err(DecodeError::InputTooShort), &hex!("C1")[..]),
+            (Err(DecodeError::InputTooShort), &hex!("D7")[..]),
+        ]);
+        check_decode::<String, _>(vec![
+            (Err(DecodeError::InputTooShort), &hex!("C1")[..]),
+            (Err(DecodeError::InputTooShort), &hex!("D7")[..]),
+        ]);
+        check_decode::<String, _>(vec![
+            (Err(DecodeError::InputTooShort), &hex!("C1")[..]),
+            (Err(DecodeError::InputTooShort), &hex!("D7")[..]),
+        ]);
+        check_decode::<u8, _>(vec![(Err(DecodeError::InputTooShort), &hex!("82")[..])]);
+        check_decode::<u64, _>(vec![(Err(DecodeError::InputTooShort), &hex!("82")[..])]);
     }
 }

@@ -1,8 +1,19 @@
 [workspace]
 
 members = [
+    "uint",
+    "uint/ruint-macro",
     "primitives",
     "rlp",
+    "rlp/rlp-derive",
     "abi",
     "abi/sol-type-parser",
 ]
+
+# Copied from ruint cargo.toml:
+#
+# Compilation profile for any non-workspace member.
+# Dependencies are optimized, even in a dev build. This improves dev performance
+# while having neglible impact on incremental build times.
+[profile.dev.package."*"]
+opt-level = 3

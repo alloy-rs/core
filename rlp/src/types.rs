@@ -5,7 +5,7 @@ use bytes::{BufMut, BytesMut};
 pub struct Header {
     /// True if list, false otherwise
     pub list: bool,
-    /// Length of the payload in items or bytes
+    /// Length of the payload in bytes
     pub payload_length: usize,
 }
 

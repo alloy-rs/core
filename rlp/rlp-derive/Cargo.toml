@@ -1,19 +1,19 @@
 [package]
-name = "sol-type-parser"
+name = "ethers-rlp-derive"
 version = "0.1.0"
 edition = "2021"
-description = "Solidity type parsing & generation for the ethers-abi-enc"
+description = "Procedural macros for ethers-rlp"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/ethers-rs/core"
 readme = "README.md"
-keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
+keywords = ["ethers", "rlp", "derive", "ethereum"]
 categories = ["encoding", "serialization", "cryptocurrency", "ethereum"]
 authors = []
 
 [lib]
-proc_macro = true
+proc-macro = true
 
 [dependencies]
-proc-macro2 = "1.0.52"
-quote = "1.0.26"
-syn = "2.0.3"
+syn = "2"
+quote = "1"
+proc-macro2 = "1"
