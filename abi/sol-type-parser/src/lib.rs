@@ -151,7 +151,7 @@ mod kw {
 
 impl Parse for SolType {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let candidate = if input.peek(kw::address) {
+        let mut candidate = if input.peek(kw::address) {
             let _ = input.parse::<kw::address>()?;
             Self::Address
         } else if input.peek(kw::bool) {
@@ -205,11 +205,12 @@ impl Parse for SolType {
             return Err(Error::new(input.span(), "no candidate sol type found"));
         };
 
-        if input.peek(syn::token::Bracket) {
-            Ok(Self::Array(Box::new(candidate), input.parse()?))
-        } else {
-            Ok(candidate)
+        // while the next token is a bracket, parse an array size and nest the
+        // candidate into an array
+        while input.peek(syn::token::Bracket) {
+            candidate = Self::Array(Box::new(candidate), input.parse()?)
         }
+        Ok(candidate)
     }
 }
 

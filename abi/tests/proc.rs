@@ -29,8 +29,16 @@ type LateBinding<A> = sol! {
     (A[], address)
 };
 
+type NestedArray = sol! {
+    bool[2][]
+};
+
 #[test]
 fn hello() {
+    <sol! {
+        bool
+    }>::hex_encode_single(true);
+
     let a = MyStructRust {
         a: U256::from(1),
         b: [0; 32],
@@ -51,4 +59,10 @@ fn hello() {
         b: [0; 32],
         c: vec![],
     }));
+
+    dbg!(NestedArray::hex_encode(vec![
+        [true, false],
+        [true, false],
+        [true, false]
+    ]));
 }
