@@ -13,3 +13,4 @@ foundry.
 - check license info
 - set up cargo deny
 - set up CI
+- Set up branch protection
