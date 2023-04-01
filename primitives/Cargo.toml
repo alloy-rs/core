@@ -2,10 +2,10 @@
 name = "ethers-primitives"
 version = "0.1.0"
 edition = "2021"
+description = "Fundamental ethereum types shared by revm, reth and ethers"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/ethers-rs/core"
 readme = "README.md"
-description = "fundamental ethereum types shared by revm, reth and ethers"
 
 [dependencies]
 # eth
