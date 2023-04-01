@@ -10,8 +10,6 @@ keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
 categories = ["encoding", "serialization", "cryptocurrency", "ethereum"]
 authors = []
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 ethers-primitives = { version = "0.1.0", path = "../primitives" }
 hex = "0.4.3"

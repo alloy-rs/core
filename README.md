@@ -10,7 +10,9 @@ foundry.
   - authors
   - package names
   - etc
-- check license info
+- double-check license info
 - set up cargo deny
 - set up CI
 - Set up branch protection
+- fix uint CI
+  - maybe: integrate uint CI with local CI?
