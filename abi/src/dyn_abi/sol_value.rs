@@ -150,6 +150,39 @@ impl DynSolValue {
             _ => None,
         }
     }
+
+    /// Encodes the packed value and appends it to the end of a byte array
+    pub fn encode_packed_to(&self, buf: &mut Vec<u8>) {
+        match self {
+            DynSolValue::Address(addr) => buf.extend_from_slice(addr.as_bytes()),
+            DynSolValue::Bool(b) => buf.push(*b as u8),
+            DynSolValue::Bytes(bytes) => buf.extend_from_slice(bytes),
+            DynSolValue::FixedBytes(word, size) => buf.extend_from_slice(&word.as_bytes()[..*size]),
+            DynSolValue::Int(num, size) => buf.extend_from_slice(&num[(32 - *size)..]),
+            DynSolValue::Uint(num, size) => {
+                buf.extend_from_slice(&num.to_be_bytes::<32>().as_slice()[(32 - *size)..])
+            }
+            DynSolValue::Function(addr, selector) => {
+                buf.extend_from_slice(addr.as_bytes());
+                buf.extend_from_slice(selector.as_slice());
+            }
+            DynSolValue::String(s) => buf.extend_from_slice(s.as_bytes()),
+            DynSolValue::Tuple(inner)
+            | DynSolValue::Array(inner)
+            | DynSolValue::FixedArray(inner)
+            | DynSolValue::CustomStruct { tuple: inner, .. } => {
+                inner.iter().for_each(|v| v.encode_packed_to(buf));
+            }
+            DynSolValue::CustomValue { inner, .. } => buf.extend_from_slice(inner.as_bytes()),
+        }
+    }
+
+    /// Encodes the value into a packed byte array
+    pub fn encode_packed(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        self.encode_packed_to(&mut buf);
+        buf
+    }
 }
 
 impl From<B160> for DynSolValue {
