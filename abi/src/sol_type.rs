@@ -177,10 +177,7 @@ pub trait SolType {
 
     #[doc(hidden)]
     fn type_check_fail(data: &[u8]) -> Error {
-        Error::TypeCheckFail {
-            data: hex::encode(data),
-            expected_type: Self::sol_type_name(),
-        }
+        Error::type_check_fail(hex::encode(data), Self::sol_type_name())
     }
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence

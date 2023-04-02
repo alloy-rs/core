@@ -79,10 +79,10 @@ pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
 
 pub(crate) fn as_u32(word: Word, type_check: bool) -> AbiResult<u32> {
     if type_check && !check_zeroes(&word.as_slice()[..28]) {
-        return Err(Error::TypeCheckFail {
-            data: hex::encode(word),
-            expected_type: "Solidity pointer (uint32)".to_owned(),
-        });
+        return Err(Error::type_check_fail(
+            hex::encode(word),
+            "Solidity pointer (uint32)",
+        ));
     }
 
     let result = ((word[28] as u32) << 24)

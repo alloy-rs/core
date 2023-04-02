@@ -150,8 +150,6 @@ mod no_std_prelude {
 }
 
 use ethers_primitives::B256;
-#[cfg(not(feature = "std"))]
-use no_std_prelude::*;
 
 pub(crate) mod decoder;
 #[doc(hidden)]

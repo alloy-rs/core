@@ -7,9 +7,14 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use crate::no_std_prelude::Cow;
 #[cfg(feature = "std")]
 use thiserror::Error;
+
+#[cfg(feature = "std")]
+use std::borrow::Cow;
+
+#[cfg(not(feature = "std"))]
+use crate::no_std_prelude::*;
 
 /// ABI result type
 pub type AbiResult<T> = core::result::Result<T, Error>;
@@ -25,9 +30,9 @@ pub enum Error {
     )]
     TypeCheckFail {
         /// Hex-encoded data
-        data: alloc::string::String,
+        data: Cow<'static, str>,
         /// The Solidity type we failed to produce
-        expected_type: alloc::string::String,
+        expected_type: Cow<'static, str>,
     },
     #[cfg_attr(feature = "std", error("Buffer overrun in deser"))]
     /// Overran deser buffer
@@ -54,8 +59,19 @@ impl Error {
     }
 
     /// Instantiates a new error with a string
-    pub fn custom_owned(s: String) -> Self {
+    pub fn custom_owned(s: alloc::string::String) -> Self {
         Self::Other(s.into())
+    }
+
+    /// Instantiates a [`Error::TypeCheckFail`] with the provided data
+    pub fn type_check_fail(
+        data: impl Into<Cow<'static, str>>,
+        expected_type: impl Into<Cow<'static, str>>,
+    ) -> Self {
+        Self::TypeCheckFail {
+            data: data.into(),
+            expected_type: expected_type.into(),
+        }
     }
 }
 
