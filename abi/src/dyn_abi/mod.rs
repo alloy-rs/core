@@ -4,6 +4,33 @@
 //! intended to be used when the solidity type is not known at compile time.
 //! This is particularly useful for EIP-712 signing interfaces.
 //!
+//! We **strongly** recommend using the static encoder/decoder when possible.
+//! The dyanmic encoder/decoder is significantly more expensive, especially for
+//! complex types. It is also significantly more error prone, as the mapping
+//! between solidity types and rust types is not enforced by the compiler.
+//!
+//! ## Example
+//!
+//! ```
+//! # use ethers_abi_enc::{Decoder, Encoder, DynSolType, DynSolValue, parse};
+//! // parse a type from a string
+//! let my_type: DynSolType = parse("uint8[2][]").unwrap();
+//!
+//! // set values
+//! let uints = DynSolValue::FixedArray(vec![0u8.into(), 1u8.into()]);
+//! let my_values = DynSolValue::Array(vec![uints]);
+//!
+//! // encode
+//! let encoded = my_type.encode_single(my_values.clone()).unwrap();
+//!
+//! // decode
+//! let decoded = my_type.decode_single(&encoded).unwrap();
+//!
+//! assert_eq!(decoded, my_values);
+//! ```
+//!
+//! ## How it works
+//!
 //! The dynamic encodr/decoder is implemented as a set of enums that represent
 //! solidity types, solidity values (in rust representation form), and ABI
 //! tokens. Unlike the static encoder, each of these must be instantiated at
@@ -25,7 +52,7 @@
 //! Detokenizing - `DynSolType` + `DynToken` = `DynSolValue`
 //!
 //! Users must manually handle the conversions between [`DynSolValue`] and their
-//! own rust types. We provide several From implementations, but they fall
+//! own rust types. We provide several `From` implementations, but they fall
 //! short when dealing with arrays and tuples. We also provide fallible casts
 //! into the contents of each variant.
 //!
@@ -36,27 +63,9 @@
 //! pre-allocate a [`DynToken`] with the same shape as the expected type, and
 //! empty values. We then populate the empty values with the decoded data.
 //!
-//! This is a significant behavior departure from the static decoder.
-//!
-//! ## Example
-//!
-//! ```
-//! # use ethers_abi_enc::{Decoder, Encoder, DynSolType, DynSolValue, parse};
-//! // parse a type from a string
-//! let my_type: DynSolType = parse("uint8[2][]").unwrap();
-//!
-//! // set values
-//! let uints = DynSolValue::FixedArray(vec![0u8.into(), 1u8.into()]);
-//! let my_values = DynSolValue::Array(vec![uints]);
-//!
-//! // encode
-//! let encoded = my_type.encode_single(my_values.clone()).unwrap();
-//!
-//! // decode
-//! let decoded = my_type.decode_single(&encoded).unwrap();
-//!
-//! assert_eq!(decoded, my_values);
-//! ```
+//! This is a significant behavior departure from the static decoder. We do not
+//! recommend using the [`DynToken`] type directly. Instead, we recommend using
+//! the encoding and decoding methods on [`DynSolType`].
 mod sol_type;
 pub use sol_type::DynSolType;
 

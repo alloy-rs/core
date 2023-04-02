@@ -196,9 +196,7 @@ impl DynToken {
         }
     }
 
-    /// Encode this data, if it is a sequence. No-op otherwise
-    ///
-    /// TODO: should this panic otherwise?
+    /// Encode this data, if it is a sequence. Error otherwise
     pub(crate) fn encode_sequence(&self, enc: &mut Encoder) -> AbiResult<()> {
         match self {
             DynToken::FixedSeq(tokens, _) => {

@@ -7,7 +7,37 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A Dynamic SolType. Equivalent to an enum wrapper around all implementers of
-/// [`crate::SolType`]
+/// [`crate::SolType`]. This is used to represent solidity types that are not
+/// known at compile time. It is used in conjunction with [`DynToken`] and
+/// [`DynSolValue`] to allow for dynamic ABI encoding and decoding.
+///
+/// Users will generally want to instantiate via the [`crate::dyn_abi::parse`]
+/// function. This will parse a string into a [`DynSolType`]. User-defined
+/// types be instantiated directly.
+///
+/// # Example
+/// ```
+/// # use ethers_abi_enc::{DynSolType, DynToken, DynSolValue, AbiResult};
+/// # use ethers_primitives::U256;
+/// # pub fn main() -> AbiResult<()> {
+/// let my_type = DynSolType::Uint(256);
+/// let my_data: DynSolValue = U256::from(183).into();
+///
+/// let encoded = my_type.encode_single(my_data.clone())?;
+/// let decoded = my_type.decode_single(&encoded)?;
+///
+/// assert_eq!(decoded, my_data);
+///
+/// let my_type = DynSolType::Array(Box::new(DynSolType::Uint(256)));
+/// let my_data = DynSolValue::Array(vec![my_data.clone()]);
+///
+/// let encoded = my_type.encode_single(my_data.clone())?;
+/// let decoded = my_type.decode_single(&encoded)?;
+///
+/// assert_eq!(decoded, my_data);
+/// # Ok(())
+/// # }
+/// ```
 pub enum DynSolType {
     /// Address
     Address,
