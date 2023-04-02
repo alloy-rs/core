@@ -1,5 +1,3 @@
-use core::str::FromStr;
-
 use crate::{
     dyn_abi::{DynSolValue, DynToken},
     sol_type, AbiResult, SolType, Word,
@@ -59,8 +57,6 @@ pub enum DynSolType {
     FixedArray(Box<DynSolType>, usize),
     /// Tuple
     Tuple(Vec<DynSolType>),
-    /// Function
-    Function,
     /// User-defined struct
     CustomStruct {
         /// Name of the struct
@@ -74,21 +70,6 @@ pub enum DynSolType {
         /// Name of the value type
         name: String,
     },
-}
-
-impl FromStr for DynSolType {
-    type Err = crate::Error;
-
-    fn from_str(s: &str) -> AbiResult<Self> {
-        match s {
-            "address" => Ok(Self::Address),
-            "bool" => Ok(Self::Bool),
-            "bytes" => Ok(Self::Bytes),
-            "function" => Ok(Self::Function),
-            "string" => Ok(Self::String),
-            _ => todo!(),
-        }
-    }
 }
 
 impl DynSolType {
@@ -113,9 +94,6 @@ impl DynSolType {
             }
             (DynSolType::Int(_), DynSolValue::Int(word, _)) => Ok(word.into()),
             (DynSolType::Uint(_), DynSolValue::Uint(num, _)) => Ok(DynToken::Word(num.into())),
-            (DynSolType::Function, DynSolValue::Function(addr, selector)) => Ok(DynToken::Word(
-                sol_type::Function::tokenize((addr, selector)).inner(),
-            )),
             (DynSolType::String, DynSolValue::String(buf)) => Ok(DynToken::PackedSeq(buf.into())),
             (DynSolType::Tuple(types), DynSolValue::Tuple(tokens)) => {
                 let tokens = types
@@ -245,10 +223,7 @@ impl DynSolType {
                 sol_type::Uint::<256>::detokenize(word.into())?,
                 *size,
             )),
-            (DynSolType::Function, DynToken::Word(word)) => {
-                let detok = sol_type::Function::detokenize(word.into())?;
-                Ok(DynSolValue::Function(detok.0, detok.1))
-            }
+
             (DynSolType::String, DynToken::PackedSeq(buf)) => Ok(DynSolValue::String(
                 sol_type::String::detokenize(buf.into())?,
             )),
@@ -318,7 +293,6 @@ impl DynSolType {
             DynSolType::FixedBytes(_) => DynToken::Word(Word::default()),
             DynSolType::Int(_) => DynToken::Word(Word::default()),
             DynSolType::Uint(_) => DynToken::Word(Word::default()),
-            DynSolType::Function => DynToken::Word(Word::default()),
             DynSolType::String => DynToken::PackedSeq(Vec::new()),
             DynSolType::Tuple(types) => DynToken::FixedSeq(
                 types.iter().map(|t| t.empty_dyn_token()).collect(),

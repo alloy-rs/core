@@ -78,12 +78,12 @@
 //! type Gamut = sol! {
 //!     (
 //!         address, bool[], bytes15[12], uint256, uint24, int8, int56,
-//!         (function, string, bytes,)
+//!         (bytes17, string, bytes,)
 //!     )
 //! };
 //! assert_eq!(
 //!     Gamut::sol_type_name(),
-//!     "tuple(address,bool[],bytes15[12],uint256,uint24,int8,int56,tuple(function,string,bytes))"
+//!     "tuple(address,bool[],bytes15[12],uint256,uint24,int8,int56,tuple(bytes17,string,bytes))"
 //! ); // Amazing!
 //!
 //! // `sol!` supports late binding of types, and your own custom types!
@@ -161,7 +161,7 @@ pub use decoder::{decode, decode_params, decode_single};
 #[cfg(feature = "dynamic")]
 mod dyn_abi;
 #[cfg(feature = "dynamic")]
-pub use dyn_abi::{parse, DynSolType, DynSolValue, DynToken};
+pub use dyn_abi::{DynSolType, DynSolValue, DynToken, ParserError};
 
 pub(crate) mod encoder;
 #[doc(hidden)]

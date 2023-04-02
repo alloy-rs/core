@@ -12,9 +12,9 @@
 //! ## Example
 //!
 //! ```
-//! # use ethers_abi_enc::{Decoder, Encoder, DynSolType, DynSolValue, parse};
+//! # use ethers_abi_enc::{Decoder, Encoder, DynSolType, DynSolValue};
 //! // parse a type from a string
-//! let my_type: DynSolType = parse("uint8[2][]").unwrap();
+//! let my_type: DynSolType = "uint8[2][]".parse().unwrap();
 //!
 //! // set values
 //! let uints = DynSolValue::FixedArray(vec![0u8.into(), 1u8.into()]);
@@ -76,16 +76,16 @@ mod token;
 pub use token::DynToken;
 
 mod parser;
-pub use parser::parse;
+pub use parser::ParserError;
 
 #[cfg(test)]
 mod test {
-    use crate::{decoder::Decoder, encoder::Encoder, parse, DynSolValue};
+    use crate::{decoder::Decoder, encoder::Encoder, DynSolType, DynSolValue};
 
     #[test]
     fn simple_e2e() {
         // parse a type from a string
-        let my_type = parse("uint8[2][]").unwrap();
+        let my_type: DynSolType = "uint8[2][]".parse().unwrap();
 
         // set values
         let uints = DynSolValue::FixedArray(vec![64u8.into(), 128u8.into()]);

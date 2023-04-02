@@ -19,8 +19,6 @@ pub enum DynSolValue {
     Int(Word, usize),
     /// An unsigned integer
     Uint(U256, usize),
-    /// A function
-    Function(B160, [u8; 4]),
     /// A string
     String(String),
     /// A tuple of values
@@ -96,14 +94,6 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant
-    pub fn as_function(&self) -> Option<(B160, [u8; 4])> {
-        match self {
-            Self::Function(a, f) => Some((*a, *f)),
-            _ => None,
-        }
-    }
-
-    /// Fallible cast to the contents of a variant
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Self::String(s) => Some(s.as_str()),
@@ -161,10 +151,6 @@ impl DynSolValue {
             DynSolValue::Int(num, size) => buf.extend_from_slice(&num[(32 - *size)..]),
             DynSolValue::Uint(num, size) => {
                 buf.extend_from_slice(&num.to_be_bytes::<32>().as_slice()[(32 - *size)..])
-            }
-            DynSolValue::Function(addr, selector) => {
-                buf.extend_from_slice(addr.as_bytes());
-                buf.extend_from_slice(selector.as_slice());
             }
             DynSolValue::String(s) => buf.extend_from_slice(s.as_bytes()),
             DynSolValue::Tuple(inner)
@@ -247,14 +233,60 @@ impl_from_uint!(usize);
 // TODO: more?
 impl_from_uint!(U256);
 
-impl From<(B160, [u8; 4])> for DynSolValue {
-    fn from(value: (B160, [u8; 4])) -> Self {
-        Self::Function(value.0, value.1)
-    }
-}
-
 impl From<String> for DynSolValue {
     fn from(value: String) -> Self {
         Self::String(value)
+    }
+}
+
+macro_rules! impl_from_tuple {
+    ($num:expr, $( $ty:ident : $no:tt ),+ $(,)?) => {
+        impl<$($ty,)+> From<($( $ty, )+)> for DynSolValue
+        where
+            $(
+                $ty: Into<DynSolValue>,
+            )+
+        {
+            fn from(value: ($( $ty, )+)) -> Self {
+                Self::Tuple(vec![$( value.$no.into(), )+])
+            }
+        }
+    }
+}
+
+impl_from_tuple!(1, A:0, );
+impl_from_tuple!(2, A:0, B:1, );
+impl_from_tuple!(3, A:0, B:1, C:2, );
+impl_from_tuple!(4, A:0, B:1, C:2, D:3, );
+impl_from_tuple!(5, A:0, B:1, C:2, D:3, E:4, );
+impl_from_tuple!(6, A:0, B:1, C:2, D:3, E:4, F:5, );
+impl_from_tuple!(7, A:0, B:1, C:2, D:3, E:4, F:5, G:6, );
+impl_from_tuple!(8, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, );
+impl_from_tuple!(9, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, );
+impl_from_tuple!(10, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, );
+impl_from_tuple!(11, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, );
+impl_from_tuple!(12, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, );
+impl_from_tuple!(13, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, );
+impl_from_tuple!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, );
+impl_from_tuple!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
+impl_from_tuple!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
+impl_from_tuple!(17, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16,);
+impl_from_tuple!(18, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17,);
+impl_from_tuple!(19, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18,);
+impl_from_tuple!(20, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19,);
+impl_from_tuple!(21, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19, U:20,);
+
+impl From<Vec<DynSolValue>> for DynSolValue {
+    fn from(value: Vec<DynSolValue>) -> Self {
+        Self::Array(value)
+    }
+}
+
+impl<T, const N: usize> From<[T; N]> for DynSolValue
+where
+    T: Into<DynSolValue>,
+{
+    fn from(value: [T; N]) -> Self {
+        Self::Array(value.into_iter().map(|v| v.into()).collect())
     }
 }

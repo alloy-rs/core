@@ -1,13 +1,19 @@
-use core::num::ParseIntError;
+use core::{num::ParseIntError, str::FromStr};
 
 use super::DynSolType;
 
+/// Error parsing a dynamic solidity type
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParserError {
+    /// Tried to parse a list, but the value was not a list
     NotAList,
+    /// Unmatched parenthesis
     UnmatchedParen,
+    /// Unmatched bracket
     UnmatchedBracket,
+    /// Error parsing int
     ParseInt(ParseIntError),
+    /// Unknown type in parser input
     Unknown(String),
 }
 
@@ -54,7 +60,7 @@ impl<'a> TryFrom<&'a str> for CommaSeparatedList<'a> {
 }
 
 /// Parse a solidity type from a string
-pub fn parse(s: &str) -> Result<DynSolType, ParserError> {
+pub(crate) fn parse(s: &str) -> Result<DynSolType, ParserError> {
     let s = s.trim();
 
     if s.ends_with(')') {
@@ -91,7 +97,6 @@ pub fn parse(s: &str) -> Result<DynSolType, ParserError> {
         "bytes" => return Ok(DynSolType::Bytes),
         "bool" => return Ok(DynSolType::Bool),
         "string" => return Ok(DynSolType::String),
-        "function" => return Ok(DynSolType::Function),
         _ => {}
     }
 
@@ -100,6 +105,14 @@ pub fn parse(s: &str) -> Result<DynSolType, ParserError> {
     }
 
     Err(ParserError::Unknown(s.to_string()))
+}
+
+impl FromStr for DynSolType {
+    type Err = crate::Error;
+
+    fn from_str(s: &str) -> crate::AbiResult<Self> {
+        Ok(crate::dyn_abi::parser::parse(s)?)
+    }
 }
 
 #[cfg(test)]
@@ -183,11 +196,11 @@ mod test {
         );
 
         assert_eq!(
-            parse(r#"tuple(address,function, (bool, (string, uint256)[][3]))[2]"#),
+            parse(r#"tuple(address,bytes, (bool, (string, uint256)[][3]))[2]"#),
             Ok(DynSolType::FixedArray(
                 Box::new(DynSolType::Tuple(vec![
                     DynSolType::Address,
-                    DynSolType::Function,
+                    DynSolType::Bytes,
                     DynSolType::Tuple(vec![
                         DynSolType::Bool,
                         DynSolType::FixedArray(
