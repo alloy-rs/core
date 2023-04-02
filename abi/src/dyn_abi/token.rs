@@ -5,7 +5,10 @@ use crate::{
 
 /// A dynamic token. Equivalent to an enum over all types implementing
 /// [`crate::TokenType`]
-#[derive(Debug, Clone, PartialEq)]
+// NOTE: do not derive `Hash` for this type. The derived version is not
+// compatible with the current `PartialEq` implementation. If manually
+// implementing `Hash`, ignore the `template`
+#[derive(Debug, Clone)]
 pub enum DynToken {
     /// A single word
     Word(Word),
@@ -15,12 +18,35 @@ pub enum DynToken {
     DynSeq {
         /// The contents of the dynamic sequence
         contents: Vec<DynToken>,
-        /// The template type of the dynamic sequence
+        /// The type of the dynamic sequence
         template: Box<DynToken>,
     },
     /// A packed sequence (string or bytes)
     PackedSeq(Vec<u8>),
 }
+
+impl PartialEq<DynToken> for DynToken {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Word(l0), Self::Word(r0)) => l0 == r0,
+            (Self::FixedSeq(l0, l1), Self::FixedSeq(r0, r1)) => l0 == r0 && l1 == r1,
+            (
+                Self::DynSeq {
+                    contents: l_contents,
+                    ..
+                },
+                Self::DynSeq {
+                    contents: r_contents,
+                    ..
+                },
+            ) => l_contents == r_contents,
+            (Self::PackedSeq(l0), Self::PackedSeq(r0)) => l0 == r0,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for DynToken {}
 
 impl From<Word> for DynToken {
     fn from(value: Word) -> Self {
@@ -29,10 +55,34 @@ impl From<Word> for DynToken {
 }
 
 impl DynToken {
-    /// Attempt to cast to a word
+    /// Attempt to cast to a word.
     pub fn as_word(&self) -> Option<Word> {
         match self {
             Self::Word(word) => Some(*word),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast into a fixed sequence.
+    pub fn as_fixed_seq(&self) -> Option<(&[DynToken], usize)> {
+        match self {
+            Self::FixedSeq(toks, size) => Some((toks.as_slice(), *size)),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast into a dynamic sequence.
+    pub fn as_dynamic_seq(&self) -> Option<&[DynToken]> {
+        match self {
+            Self::DynSeq { contents, .. } => Some(contents.as_slice()),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast into a packed sequence.
+    pub fn as_packed_seq(&self) -> Option<&[u8]> {
+        match self {
+            Self::PackedSeq(bytes) => Some(bytes.as_slice()),
             _ => None,
         }
     }
@@ -65,8 +115,7 @@ impl DynToken {
             }
             DynToken::DynSeq { contents, template } => {
                 let mut child = dec.take_indirection()?;
-                let size = dec.take_u32()? as usize;
-
+                let size = child.take_u32()? as usize;
                 let mut new_toks = Vec::with_capacity(size);
                 for _ in 0..size {
                     let mut t = (**template).clone();
@@ -136,12 +185,12 @@ impl DynToken {
             DynToken::Word(_) => {}
             DynToken::FixedSeq(_, _) => {
                 if self.is_dynamic() {
-                    self.encode_sequence(enc);
+                    self.encode_sequence(enc).expect("known to be sequence");
                 }
             }
             DynToken::DynSeq { contents, .. } => {
                 enc.append_seq_len(contents);
-                self.encode_sequence(enc);
+                self.encode_sequence(enc).expect("known to be sequence");
             }
             DynToken::PackedSeq(buf) => enc.append_packed_seq(buf),
         }
@@ -150,7 +199,7 @@ impl DynToken {
     /// Encode this data, if it is a sequence. No-op otherwise
     ///
     /// TODO: should this panic otherwise?
-    pub fn encode_sequence(&self, enc: &mut Encoder) {
+    pub(crate) fn encode_sequence(&self, enc: &mut Encoder) -> AbiResult<()> {
         match self {
             DynToken::FixedSeq(tokens, _) => {
                 let head_words = tokens.iter().map(DynToken::head_words).sum::<usize>();
@@ -176,13 +225,18 @@ impl DynToken {
                 }
                 enc.pop_offset();
             }
-            _ => {}
+            _ => {
+                return Err(Error::custom(
+                    "Called encode_sequence on non-sequence token",
+                ))
+            }
         }
+        Ok(())
     }
 
     /// Decode a sequence from the decoder, populating the data by consuming
     /// decoder words
-    pub fn decode_sequence_populate(&mut self, dec: &mut Decoder) -> AbiResult<()> {
+    pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder) -> AbiResult<()> {
         match self {
             DynToken::FixedSeq(buf, _) => {
                 for item in buf.iter_mut() {
@@ -192,8 +246,25 @@ impl DynToken {
             }
             DynToken::DynSeq { .. } => self.decode_populate(dec),
             _ => Err(Error::custom(
-                "Called decode_sequence_populate on non-sequence",
+                "Called decode_sequence_populate on non-sequence token",
             )),
         }
+    }
+
+    /// Encode a single item of this type, as a sequence of length 1
+    pub(crate) fn encode_single(&self, enc: &mut Encoder) -> AbiResult<()> {
+        DynToken::FixedSeq(vec![self.clone()], 1).encode_sequence(enc)
+    }
+
+    /// Decode a single item of this type, as a sequence of length 1
+    pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder) -> AbiResult<()> {
+        let mut tok = DynToken::FixedSeq(vec![self.clone()], 1);
+        tok.decode_sequence_populate(dec)?;
+        if let DynToken::FixedSeq(mut toks, _) = tok {
+            *self = toks.drain(..).next().unwrap();
+        } else {
+            unreachable!()
+        }
+        Ok(())
     }
 }

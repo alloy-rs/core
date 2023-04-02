@@ -46,6 +46,112 @@ pub enum DynSolValue {
     },
 }
 
+impl DynSolValue {
+    /// Fallible cast to the contents of a variant DynSolValue {
+    pub fn as_address(&self) -> Option<B160> {
+        match self {
+            Self::Address(a) => Some(*a),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            Self::Bool(b) => Some(*b),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_bytes(&self) -> Option<&[u8]> {
+        match self {
+            Self::Bytes(b) => Some(b),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_fixed_bytes(&self) -> Option<(&[u8], usize)> {
+        match self {
+            Self::FixedBytes(w, size) => Some((w.as_bytes(), *size)),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_int(&self) -> Option<(Word, usize)> {
+        match self {
+            Self::Int(w, size) => Some((*w, *size)),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_uint(&self) -> Option<(U256, usize)> {
+        match self {
+            Self::Uint(u, size) => Some((*u, *size)),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_function(&self) -> Option<(B160, [u8; 4])> {
+        match self {
+            Self::Function(a, f) => Some((*a, *f)),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Self::String(s) => Some(s.as_str()),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_tuple(&self) -> Option<&[DynSolValue]> {
+        match self {
+            Self::Tuple(t) => Some(t.as_slice()),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_array(&self) -> Option<&[DynSolValue]> {
+        match self {
+            Self::Array(a) => Some(a.as_slice()),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_fixed_array(&self) -> Option<&[DynSolValue]> {
+        match self {
+            Self::FixedArray(a) => Some(a.as_slice()),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_custom_struct(&self) -> Option<(&str, &[DynSolValue])> {
+        match self {
+            Self::CustomStruct { name, tuple } => Some((name.as_str(), tuple.as_slice())),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to the contents of a variant
+    pub fn as_custom_value(&self) -> Option<(&str, Word)> {
+        match self {
+            Self::CustomValue { name, inner } => Some((name.as_str(), *inner)),
+            _ => None,
+        }
+    }
+}
+
 impl From<B160> for DynSolValue {
     fn from(value: B160) -> Self {
         Self::Address(value)
@@ -119,6 +225,3 @@ impl From<String> for DynSolValue {
         Self::String(value)
     }
 }
-
-
-

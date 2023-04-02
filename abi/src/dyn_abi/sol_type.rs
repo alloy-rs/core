@@ -280,7 +280,7 @@ impl DynSolType {
     }
 
     /// Instantiate an empty dyn token, to be decoded into
-    pub fn empty_dyn_token(&self) -> DynToken {
+    pub(crate) fn empty_dyn_token(&self) -> DynToken {
         match self {
             DynSolType::Address => DynToken::Word(Word::default()),
             DynSolType::Bool => DynToken::Word(Word::default()),
@@ -307,6 +307,37 @@ impl DynSolType {
             ),
             DynSolType::CustomValue { .. } => DynToken::Word(Word::default()),
         }
+    }
+
+    /// Encode a single value. Fails if the value does not match this type
+    pub fn encode_single(&self, value: DynSolValue) -> AbiResult<Vec<u8>> {
+        let mut encoder = crate::encoder::Encoder::default();
+        self.tokenize(value)?.encode_single(&mut encoder)?;
+        Ok(encoder.into_bytes())
+    }
+
+    /// Decode a single value. Fails if the value does not match this type
+    pub fn decode_single(&self, data: &[u8]) -> AbiResult<DynSolValue> {
+        let mut decoder = crate::decoder::Decoder::new(data, false);
+        let mut toks = self.empty_dyn_token();
+        toks.decode_single_populate(&mut decoder)?;
+        self.detokenize(toks)
+    }
+
+    /// Encode a sequence of values. Fails if the values do not match this
+    /// type. Is a no-op if this type or the values are not a sequence.
+    pub fn encode_sequence(&self, values: DynSolValue) -> AbiResult<Vec<u8>> {
+        let mut encoder = crate::encoder::Encoder::default();
+        self.tokenize(values)?.encode_sequence(&mut encoder)?;
+        Ok(encoder.into_bytes())
+    }
+
+    /// Decode a sequence of values. Fails if the values do not match this type
+    pub fn decode_sequence(&self, data: &[u8]) -> AbiResult<DynSolValue> {
+        let mut decoder = crate::decoder::Decoder::new(data, false);
+        let mut toks = self.empty_dyn_token();
+        toks.decode_sequence_populate(&mut decoder)?;
+        self.detokenize(toks)
     }
 }
 
@@ -343,7 +374,7 @@ mod test {
             DynToken::FixedSeq(vec![DynToken::Word(word1), DynToken::Word(word2)], 2)
         );
         let mut enc = crate::encoder::Encoder::default();
-        token.encode_sequence(&mut enc);
+        token.encode_sequence(&mut enc).unwrap();
         assert_eq!(enc.finish(), vec![word1, word2]);
     }
 }

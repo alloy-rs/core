@@ -114,7 +114,7 @@
 //!
 //! ## Tokenization/Detokenization
 //!
-//! The process of converting from a Rust type to a to a token is called
+//! The process of converting from a Rust type to a to an abi token is called
 //! "Tokenization". Typical users will not access tokenizaiton directly.
 //! Power users should use the [`SolType::tokenize()`] and
 //! [`SolType::detokenize()`] methods.
@@ -153,7 +153,9 @@ use ethers_primitives::B256;
 #[cfg(not(feature = "std"))]
 use no_std_prelude::*;
 
-mod decoder;
+pub(crate) mod decoder;
+#[doc(hidden)]
+pub use decoder::Decoder;
 pub use decoder::{decode, decode_params, decode_single};
 
 #[cfg(feature = "dynamic")]
@@ -161,7 +163,9 @@ mod dyn_abi;
 #[cfg(feature = "dynamic")]
 pub use dyn_abi::{parse, DynSolType, DynSolValue, DynToken};
 
-mod encoder;
+pub(crate) mod encoder;
+#[doc(hidden)]
+pub use encoder::Encoder;
 pub use encoder::{encode, encode_params, encode_single};
 
 mod token;
