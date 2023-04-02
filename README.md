@@ -16,3 +16,4 @@ foundry.
 - Set up branch protection
 - fix uint CI
   - maybe: integrate uint CI with local CI?
+- fix wasm in uint
