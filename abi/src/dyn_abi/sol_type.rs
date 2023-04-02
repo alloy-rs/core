@@ -1,61 +1,48 @@
-use core::{ops::Deref, str::FromStr};
-
-use ethers_primitives::{B160, U256};
+use core::str::FromStr;
 
 use crate::{
-    decoder::Decoder, encoder::Encoder, sol_type, AbiResult, Error, FixedSeqToken, PackedSeqToken,
-    SolType, TokenType, Word, WordToken,
+    dyn_abi::{DynSolValue, DynToken},
+    sol_type, AbiResult, SolType, Word,
 };
 
-pub struct CommaSeparatedList<'a> {
-    elements: Vec<&'a str>,
-}
-
-impl<'a> TryFrom<&'a str> for CommaSeparatedList<'a> {
-    type Error = ();
-
-    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
-        let s = s.trim_matches("()");
-
-        let mut elements = vec![];
-        let mut depth = 0;
-        let mut start = 0;
-
-        for (i, c) in s.char_indices() {
-            match c {
-                '(' => depth += 1,
-                ')' => depth -= 1,
-                ',' if depth == 0 => {
-                    elements.push(&s[start..i]);
-                    start = i + 1;
-                }
-                _ => {}
-            }
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
-// Wraps all implementers of sol_type::SolType
+/// A Dynamic SolType. Equivalent to an enum wrapper around all implementers of
+/// [`crate::SolType`]
 pub enum DynSolType {
+    /// Address
     Address,
+    /// Dynamic bytes
     Bytes,
+    /// Signed Integer
     Int(usize),
+    /// Unsigned Integer
     Uint(usize),
+    /// Boolean
     Bool,
+    /// Dynamically sized array
     Array(Box<DynSolType>),
+    /// String
     String,
+    /// Fixed-size bytes, up to 32
     FixedBytes(usize),
+    /// Fixed-sized array
     FixedArray(Box<DynSolType>, usize),
+    /// Tuple
     Tuple(Vec<DynSolType>),
+    /// Function
     Function,
+    /// User-defined struct
     CustomStruct {
+        /// Name of the struct
         name: String,
+        // TODO: names?
+        /// Inner types
         tuple: Vec<DynSolType>,
     },
+    /// User-defined value
     CustomValue {
+        /// Name of the value type
         name: String,
-        inner: Box<DynSolType>,
     },
 }
 
@@ -76,16 +63,16 @@ impl FromStr for DynSolType {
 
 impl DynSolType {
     /// Dynamic tokenization
-    pub fn tokenize(&self, value: SolValue) -> AbiResult<DynToken> {
+    pub fn tokenize(&self, value: DynSolValue) -> AbiResult<DynToken> {
         match (self, value) {
-            (DynSolType::Address, SolValue::Address(val)) => {
+            (DynSolType::Address, DynSolValue::Address(val)) => {
                 Ok(DynToken::Word(sol_type::Address::tokenize(val).inner()))
             }
-            (DynSolType::Bool, SolValue::Bool(val)) => {
+            (DynSolType::Bool, DynSolValue::Bool(val)) => {
                 Ok(DynToken::Word(sol_type::Bool::tokenize(val).inner()))
             }
-            (DynSolType::Bytes, SolValue::Bytes(val)) => Ok(DynToken::PackedSeq(val)),
-            (DynSolType::FixedBytes(len), SolValue::FixedBytes(word, size)) => {
+            (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(val)),
+            (DynSolType::FixedBytes(len), DynSolValue::FixedBytes(word, size)) => {
                 if size != *len {
                     return Err(crate::Error::custom_owned(format!(
                         "Size mismatch for FixedBytes. Got {}, expected {}",
@@ -94,13 +81,13 @@ impl DynSolType {
                 }
                 Ok(word.into())
             }
-            (DynSolType::Int(_), SolValue::Int(word, _)) => Ok(word.into()),
-            (DynSolType::Uint(_), SolValue::Uint(num, _)) => Ok(DynToken::Word(num.into())),
-            (DynSolType::Function, SolValue::Function(word)) => {
-                Ok(DynToken::Word(sol_type::Function::tokenize(word).inner()))
-            }
-            (DynSolType::String, SolValue::String(buf)) => Ok(DynToken::PackedSeq(buf.into())),
-            (DynSolType::Tuple(types), SolValue::Tuple(tokens)) => {
+            (DynSolType::Int(_), DynSolValue::Int(word, _)) => Ok(word.into()),
+            (DynSolType::Uint(_), DynSolValue::Uint(num, _)) => Ok(DynToken::Word(num.into())),
+            (DynSolType::Function, DynSolValue::Function(addr, selector)) => Ok(DynToken::Word(
+                sol_type::Function::tokenize((addr, selector)).inner(),
+            )),
+            (DynSolType::String, DynSolValue::String(buf)) => Ok(DynToken::PackedSeq(buf.into())),
+            (DynSolType::Tuple(types), DynSolValue::Tuple(tokens)) => {
                 let tokens = types
                     .iter()
                     .zip(tokens.into_iter())
@@ -109,7 +96,7 @@ impl DynSolType {
 
                 Ok(DynToken::FixedSeq(tokens, types.len()))
             }
-            (DynSolType::Array(t), SolValue::Array(values)) => {
+            (DynSolType::Array(t), DynSolValue::Array(values)) => {
                 let contents: Vec<DynToken> = values
                     .into_iter()
                     .map(|val| t.tokenize(val))
@@ -117,7 +104,7 @@ impl DynSolType {
                 let template = Box::new(contents.first().unwrap().clone());
                 Ok(DynToken::DynSeq { contents, template })
             }
-            (DynSolType::FixedArray(t, size), SolValue::FixedArray(tokens)) => {
+            (DynSolType::FixedArray(t, size), DynSolValue::FixedArray(tokens)) => {
                 if *size != tokens.len() {
                     return Err(crate::Error::custom_owned(format!(
                         "Size mismatch for FixedArray. Got {}, expected {}",
@@ -133,7 +120,7 @@ impl DynSolType {
                     *size,
                 ))
             }
-            (DynSolType::CustomStruct { name, tuple }, SolValue::Tuple(tokens)) => {
+            (DynSolType::CustomStruct { name, tuple }, DynSolValue::Tuple(tokens)) => {
                 if tuple.len() != tokens.len() {
                     return Err(crate::Error::custom_owned(format!(
                         "Tuple length mismatch for {} . Got {}, expected {}",
@@ -152,7 +139,7 @@ impl DynSolType {
             }
             (
                 DynSolType::CustomStruct { name, tuple },
-                SolValue::CustomStruct {
+                DynSolValue::CustomStruct {
                     name: name_val,
                     tuple: tuple_val,
                 },
@@ -182,8 +169,8 @@ impl DynSolType {
                 Ok(DynToken::FixedSeq(tuple, len))
             }
             (
-                DynSolType::CustomValue { name, inner },
-                SolValue::CustomValue {
+                DynSolType::CustomValue { name },
+                DynSolValue::CustomValue {
                     name: name_val,
                     inner: inner_val,
                 },
@@ -196,10 +183,9 @@ impl DynSolType {
                         name,
                     )));
                 }
-                Ok(inner.tokenize(*inner_val)?)
+                // A little hacky. A Custom value type is always encoded as a full 32-byte worc
+                Ok(DynSolType::FixedBytes(32).tokenize(DynSolValue::FixedBytes(inner_val, 32))?)
             }
-            (DynSolType::CustomValue { inner, .. }, value) => inner.tokenize(value),
-
             _ => Err(crate::Error::Other(
                 "Invalid type on dynamic tokenization".into(),
             )),
@@ -207,41 +193,42 @@ impl DynSolType {
     }
 
     /// Dynamic detokenization
-    pub fn detokenize(&self, token: DynToken) -> AbiResult<SolValue> {
+    pub fn detokenize(&self, token: DynToken) -> AbiResult<DynSolValue> {
         match (self, token) {
-            (DynSolType::Address, DynToken::Word(word)) => Ok(SolValue::Address(
+            (DynSolType::Address, DynToken::Word(word)) => Ok(DynSolValue::Address(
                 sol_type::Address::detokenize(word.into())?,
             )),
             (DynSolType::Bool, DynToken::Word(word)) => {
-                Ok(SolValue::Bool(sol_type::Bool::detokenize(word.into())?))
+                Ok(DynSolValue::Bool(sol_type::Bool::detokenize(word.into())?))
             }
-            (DynSolType::Bytes, DynToken::PackedSeq(buf)) => Ok(SolValue::Bytes(buf)),
-            (DynSolType::FixedBytes(size), DynToken::Word(word)) => Ok(SolValue::FixedBytes(
+            (DynSolType::Bytes, DynToken::PackedSeq(buf)) => Ok(DynSolValue::Bytes(buf)),
+            (DynSolType::FixedBytes(size), DynToken::Word(word)) => Ok(DynSolValue::FixedBytes(
                 sol_type::FixedBytes::<32>::detokenize(word.into())?.into(),
                 *size,
             )),
             // cheating here, but it's ok
-            (DynSolType::Int(size), DynToken::Word(word)) => Ok(SolValue::Int(
+            (DynSolType::Int(size), DynToken::Word(word)) => Ok(DynSolValue::Int(
                 sol_type::FixedBytes::<32>::detokenize(word.into())?.into(),
                 *size,
             )),
-            (DynSolType::Uint(size), DynToken::Word(word)) => Ok(SolValue::Uint(
+            (DynSolType::Uint(size), DynToken::Word(word)) => Ok(DynSolValue::Uint(
                 sol_type::Uint::<256>::detokenize(word.into())?,
                 *size,
             )),
-            (DynSolType::Function, DynToken::Word(word)) => Ok(SolValue::Function(
-                sol_type::Function::detokenize(word.into())?,
-            )),
-            (DynSolType::String, DynToken::PackedSeq(buf)) => {
-                Ok(SolValue::String(sol_type::String::detokenize(buf.into())?))
+            (DynSolType::Function, DynToken::Word(word)) => {
+                let detok = sol_type::Function::detokenize(word.into())?;
+                Ok(DynSolValue::Function(detok.0, detok.1))
             }
+            (DynSolType::String, DynToken::PackedSeq(buf)) => Ok(DynSolValue::String(
+                sol_type::String::detokenize(buf.into())?,
+            )),
             (DynSolType::Tuple(types), DynToken::FixedSeq(tokens, _)) => {
                 if types.len() != tokens.len() {
                     return Err(crate::Error::custom(
                         "tuple length mismatch on dynamic detokenization",
                     ));
                 }
-                Ok(SolValue::Tuple(
+                Ok(DynSolValue::Tuple(
                     types
                         .iter()
                         .zip(tokens.into_iter())
@@ -249,19 +236,19 @@ impl DynSolType {
                         .collect::<Result<_, _>>()?,
                 ))
             }
-            (DynSolType::Array(t), DynToken::DynSeq { contents, .. }) => Ok(SolValue::Array(
+            (DynSolType::Array(t), DynToken::DynSeq { contents, .. }) => Ok(DynSolValue::Array(
                 contents
                     .into_iter()
                     .map(|tok| t.detokenize(tok))
                     .collect::<Result<_, _>>()?,
             )),
-            (DynSolType::FixedArray(t, size), DynToken::FixedSeq(tokens, count)) => {
+            (DynSolType::FixedArray(t, size), DynToken::FixedSeq(tokens, _)) => {
                 if *size != tokens.len() {
                     return Err(crate::Error::custom(
                         "array length mismatch on dynamic detokenization",
                     ));
                 }
-                Ok(SolValue::FixedArray(
+                Ok(DynSolValue::FixedArray(
                     tokens
                         .into_iter()
                         .map(|tok| t.detokenize(tok))
@@ -280,12 +267,12 @@ impl DynSolType {
                     .map(|(t, w)| t.detokenize(w))
                     .collect::<Result<_, _>>()?;
 
-                Ok(SolValue::CustomStruct {
+                Ok(DynSolValue::CustomStruct {
                     name: name.clone(),
                     tuple,
                 })
             }
-            (DynSolType::CustomValue { name, inner }, token) => inner.detokenize(token),
+            (DynSolType::CustomValue { .. }, token) => DynSolType::FixedBytes(32).detokenize(token),
             _ => Err(crate::Error::custom(
                 "mismatched types on dynamic detokenization",
             )),
@@ -318,198 +305,7 @@ impl DynSolType {
                 tuple.iter().map(|t| t.empty_dyn_token()).collect(),
                 tuple.len(),
             ),
-            DynSolType::CustomValue { inner, .. } => inner.empty_dyn_token(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SolValue {
-    Address(B160),
-    Bool(bool),
-    Bytes(Vec<u8>),
-    FixedBytes(Word, usize),
-    Int(Word, usize),
-    Uint(U256, usize),
-    Function((B160, [u8; 4])),
-    String(String),
-    Tuple(Vec<SolValue>),
-    Array(Vec<SolValue>),
-    FixedArray(Vec<SolValue>),
-    CustomStruct { name: String, tuple: Vec<SolValue> },
-    CustomValue { name: String, inner: Box<SolValue> },
-}
-
-impl From<B160> for SolValue {
-    fn from(value: B160) -> Self {
-        Self::Address(value)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum DynToken {
-    Word(Word),
-    FixedSeq(Vec<DynToken>, usize),
-    DynSeq {
-        contents: Vec<DynToken>,
-        template: Box<DynToken>,
-    },
-    PackedSeq(Vec<u8>),
-}
-
-impl From<Word> for DynToken {
-    fn from(value: Word) -> Self {
-        Self::Word(value.into())
-    }
-}
-
-impl DynToken {
-    fn is_dynamic(&self) -> bool {
-        match self {
-            Self::Word(_) => false,
-            Self::FixedSeq(inner, _) => inner.iter().any(|i| i.is_dynamic()),
-            Self::DynSeq { .. } => true,
-            Self::PackedSeq(_) => true,
-        }
-    }
-
-    fn decode_populate(&mut self, dec: &mut Decoder) -> AbiResult<()> {
-        let dynamic = self.is_dynamic();
-        match self {
-            DynToken::Word(w) => *w = WordToken::decode_from(dec)?.inner(),
-            DynToken::FixedSeq(toks, size) => {
-                // todo try to remove this duplication?
-                let mut child = if dynamic {
-                    dec.take_indirection()?
-                } else {
-                    dec.raw_child()
-                };
-                for tok in toks.iter_mut().take(*size) {
-                    tok.decode_populate(&mut child)?;
-                }
-            }
-            DynToken::DynSeq { contents, template } => {
-                let mut child = dec.take_indirection()?;
-                let size = dec.take_u32()? as usize;
-
-                let mut new_toks = Vec::with_capacity(size);
-                for tok in 0..size {
-                    let mut t = (**template).clone();
-                    t.decode_populate(&mut child)?;
-                    new_toks.push(t);
-                }
-                *contents = new_toks;
-            }
-            DynToken::PackedSeq(buf) => *buf = PackedSeqToken::decode_from(dec)?.take_vec(),
-        }
-        Ok(())
-    }
-
-    fn head_words(&self) -> usize {
-        match self {
-            DynToken::Word(_) => 1,
-            DynToken::FixedSeq(tokens, _) => {
-                if self.is_dynamic() {
-                    1
-                } else {
-                    tokens.iter().map(DynToken::head_words).sum()
-                }
-            }
-            DynToken::DynSeq { .. } => 1,
-            DynToken::PackedSeq(_) => 1,
-        }
-    }
-
-    fn tail_words(&self) -> usize {
-        match self {
-            DynToken::Word(_) => 0,
-            DynToken::FixedSeq(_, size) => {
-                if self.is_dynamic() {
-                    *size
-                } else {
-                    0
-                }
-            }
-            DynToken::DynSeq { contents, .. } => {
-                1 + contents.iter().map(DynToken::tail_words).sum::<usize>()
-            }
-            DynToken::PackedSeq(buf) => 1 + (buf.len() + 31) / 32,
-        }
-    }
-
-    fn head_append(&self, enc: &mut Encoder) {
-        match self {
-            DynToken::Word(word) => enc.append_word(*word),
-            DynToken::FixedSeq(tokens, _) => {
-                if self.is_dynamic() {
-                    enc.append_indirection();
-                } else {
-                    tokens.iter().for_each(|inner| inner.head_append(enc))
-                }
-            }
-            DynToken::DynSeq { .. } => enc.append_indirection(),
-            DynToken::PackedSeq(buf) => enc.append_indirection(),
-        }
-    }
-
-    fn tail_append(&self, enc: &mut Encoder) {
-        match self {
-            DynToken::Word(_) => {}
-            DynToken::FixedSeq(_, _) => {
-                if self.is_dynamic() {
-                    self.encode_sequence(enc);
-                }
-            }
-            DynToken::DynSeq { contents, .. } => {
-                enc.append_seq_len(contents);
-                self.encode_sequence(enc);
-            }
-            DynToken::PackedSeq(buf) => enc.append_packed_seq(buf),
-        }
-    }
-
-    fn encode_sequence(&self, enc: &mut Encoder) {
-        match self {
-            DynToken::FixedSeq(tokens, _) => {
-                let head_words = tokens.iter().map(DynToken::head_words).sum::<usize>();
-                enc.push_offset(head_words as u32);
-                for t in tokens.iter() {
-                    t.head_append(enc);
-                    enc.bump_offset(t.tail_words() as u32);
-                }
-                for t in tokens.iter() {
-                    t.tail_append(enc);
-                }
-                enc.pop_offset();
-            }
-            DynToken::DynSeq { contents, .. } => {
-                let head_words = contents.iter().map(DynToken::head_words).sum::<usize>();
-                enc.push_offset(head_words as u32);
-                for t in contents.iter() {
-                    t.head_append(enc);
-                    enc.bump_offset(t.tail_words() as u32);
-                }
-                for t in contents.iter() {
-                    t.tail_append(enc);
-                }
-                enc.pop_offset();
-            }
-            _ => {}
-        }
-    }
-
-    fn decode_sequence_populate(&mut self, dec: &mut Decoder) -> AbiResult<()> {
-        match self {
-            DynToken::FixedSeq(buf, size) => {
-                for item in buf.iter_mut() {
-                    item.decode_populate(dec)?;
-                }
-                Ok(())
-            }
-            DynToken::DynSeq { .. } => self.decode_populate(dec),
-            _ => Err(Error::custom(
-                "Called decode_sequence_populate on non-sequence",
-            )),
+            DynSolType::CustomValue { .. } => DynToken::Word(Word::default()),
         }
     }
 }
@@ -517,9 +313,11 @@ impl DynToken {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::*;
+    use ethers_primitives::B160;
 
     #[test]
-    fn it_encodes() {
+    fn dynamically_encodes() {
         let word1 = "0000000000000000000000000101010101010101010101010101010101010101"
             .parse()
             .unwrap();
@@ -529,13 +327,13 @@ mod test {
 
         let sol_type = DynSolType::Address;
         let token = sol_type
-            .tokenize(SolValue::Address(B160::repeat_byte(0x01)))
+            .tokenize(DynSolValue::Address(B160::repeat_byte(0x01)))
             .unwrap();
         assert_eq!(token, DynToken::from(word1));
 
         let sol_type = DynSolType::FixedArray(Box::new(DynSolType::Address), 2);
         let token = sol_type
-            .tokenize(SolValue::FixedArray(vec![
+            .tokenize(DynSolValue::FixedArray(vec![
                 B160::repeat_byte(0x01).into(),
                 B160::repeat_byte(0x02).into(),
             ]))
@@ -544,7 +342,7 @@ mod test {
             token,
             DynToken::FixedSeq(vec![DynToken::Word(word1), DynToken::Word(word2)], 2)
         );
-        let mut enc = Encoder::default();
+        let mut enc = crate::encoder::Encoder::default();
         token.encode_sequence(&mut enc);
         assert_eq!(enc.finish(), vec![word1, word2]);
     }

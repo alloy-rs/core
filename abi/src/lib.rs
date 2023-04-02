@@ -156,8 +156,10 @@ use no_std_prelude::*;
 mod decoder;
 pub use decoder::{decode, decode_params, decode_single};
 
-// mod dyn_sol_type;
-// pub use dyn_sol_type::{DynSolType, DynToken};
+#[cfg(feature = "dynamic")]
+mod dyn_abi;
+#[cfg(feature = "dynamic")]
+pub use dyn_abi::{parse, DynSolType, DynSolValue, DynToken};
 
 mod encoder;
 pub use encoder::{encode, encode_params, encode_single};
