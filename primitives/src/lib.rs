@@ -1,4 +1,9 @@
-#![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
+#![warn(
+    missing_docs,
+    unreachable_pub,
+    unused_crate_dependencies,
+    clippy::missing_const_for_fn
+)]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![doc(test(
     no_crate_inject,
@@ -9,9 +14,14 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod bits;
+#[cfg(not(feature = "std"))]
+extern crate alloc;
 
+mod bits;
 pub use bits::{B160, B256, B512};
+
+mod signed;
+pub use signed::{ParseI256Error, Sign, TryFromBigIntError, I256};
 
 /// Address type is first 20 bytes of hash of ethereum account
 pub type Address = B160;
