@@ -710,6 +710,21 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     pub fn try_from_le_slice(slice: &[u8]) -> Option<Self> {
         Some(Self(Uint::try_from_le_slice(slice)?))
     }
+
+    /// Get a reference to the underlying limbs
+    pub const fn as_limbs(&self) -> &[u64; LIMBS] {
+        self.0.as_limbs()
+    }
+
+    /// Get the underlying limbs
+    pub const fn into_limbs(self) -> [u64; LIMBS] {
+        self.0.into_limbs()
+    }
+
+    /// Instantiate from limbs
+    pub const fn from_limbs(limbs: [u64; LIMBS]) -> Self {
+        Self(Uint::from_limbs(limbs))
+    }
 }
 
 // ops impl
