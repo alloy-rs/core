@@ -24,10 +24,10 @@ derive_more = "0.99"
 
 # optional
 serde = { version = "1.0", features = ["derive"], optional = true }
+thiserror = { version = "1.0.40", optional = true }
 
 # rlp support
 ethers-rlp = { version = "0.1.0", path = "../rlp", optional = true }
-
 bytes = { version = "1", default-features = false, optional = true }
 
 # prop tests
@@ -47,12 +47,6 @@ ruint = { path = "../uint", version = "1.7.0", features = [
 
 [features]
 default = ["std"]
-std = []
+std = ["dep:thiserror"]
 rlp = ["dep:ethers-rlp", "dep:bytes"]
-arbitrary = [
-    "ruint/arbitrary",
-    "ruint/proptest",
-    "dep:arbitrary",
-    "dep:proptest",
-    "dep:proptest-derive",
-]
+arbitrary = ["ruint/arbitrary", "ruint/proptest", "dep:arbitrary", "dep:proptest", "dep:proptest-derive"]
