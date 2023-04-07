@@ -18,11 +18,11 @@
 extern crate alloc;
 
 mod bits;
-pub use bits::{B160, B256, B512};
+pub use bits::{B160, B256};
 
 mod signed;
 pub use signed::{
-    aliases::{self, I128, I256},
+    aliases::{self, I160, I256},
     const_eq, BigIntConversionError, ParseSignedError, Sign, Signed,
 };
 
