@@ -1,16 +1,22 @@
 use super::Signed;
 
+/// The 0-bit signed integer type, capable of representing 0
+pub type I0 = Signed<0, 0>;
+
+/// The 1-bit signed integer type, capable of representing 0 and -1
+pub type I1 = Signed<1, 1>;
+
 /// 8-bit signed integer type
-pub type I8 = Signed<8, 0>;
+pub type I8 = Signed<8, 1>;
 
 /// 16-bit signed integer type
-pub type I16 = Signed<16, 0>;
+pub type I16 = Signed<16, 1>;
 
 /// 24-bit signed integer type
-pub type I24 = Signed<24, 0>;
+pub type I24 = Signed<24, 1>;
 
 /// 32-bit signed integer type
-pub type I32 = Signed<32, 0>;
+pub type I32 = Signed<32, 1>;
 
 /// 40-bit signed integer type
 pub type I40 = Signed<40, 1>;
