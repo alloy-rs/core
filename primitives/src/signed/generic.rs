@@ -1739,7 +1739,10 @@ mod tests {
     use std::ops::Neg;
 
     use super::*;
-    use crate::{ParseSignedError, I128, I160, I192, I256};
+    use crate::{
+        aliases::{I128, I160, I192, I256},
+        ParseSignedError,
+    };
 
     type I96 = Signed<96, 2>;
     type U96 = Uint<96, 2>;
