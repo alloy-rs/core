@@ -1,7 +1,7 @@
 /// The error type that is returned when parsing a 256-bit signed integer.
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "std", derive(thiserror::Error))]
-pub enum ParseI256Error {
+pub enum ParseSignedError {
     /// Error that occurs when an invalid digit is encountered while parsing.
     #[cfg_attr(feature = "std", error("Parsing Error: {0}"))]
     Ruint(ruint::ParseError),
@@ -12,7 +12,7 @@ pub enum ParseI256Error {
     IntegerOverflow,
 }
 
-impl From<ruint::ParseError> for ParseI256Error {
+impl From<ruint::ParseError> for ParseSignedError {
     fn from(err: ruint::ParseError) -> Self {
         Self::Ruint(err)
     }
