@@ -1,4 +1,4 @@
-use ethers_primitives::{B160, U256};
+use ethers_primitives::{B160, I256, U256};
 
 use crate::Word;
 
@@ -195,7 +195,7 @@ macro_rules! impl_from_int {
             fn from(value: $size) -> Self {
                 let bits = <$size>::BITS as usize;
                 let bytes = bits / 8;
-                let mut word = if value < 0 {
+                let mut word = if value.is_negative() {
                     ethers_primitives::B256::repeat_byte(0xff)
                 } else {
                     ethers_primitives::B256::default()
@@ -214,6 +214,7 @@ impl_from_int!(i32);
 impl_from_int!(i64);
 impl_from_int!(isize);
 // TODO: more?
+impl_from_int!(I256);
 
 macro_rules! impl_from_uint {
     ($size:ty) => {
