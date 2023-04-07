@@ -49,6 +49,10 @@ pub const fn const_eq<const BITS: usize, const LIMBS: usize>(
 
 /// Compute the max value at compile time
 const fn max<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
+    if LIMBS == 0 {
+        return zero();
+    }
+
     let mut limbs = [u64::MAX; LIMBS];
     limbs[LIMBS - 1] &= Signed::<BITS, LIMBS>::MASK; // unset all high bits
     limbs[LIMBS - 1] &= !Signed::<BITS, LIMBS>::SIGN_BIT; // unset the sign bit
@@ -56,6 +60,10 @@ const fn max<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
 }
 
 const fn min<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
+    if LIMBS == 0 {
+        return zero();
+    }
+
     let mut limbs = [0; LIMBS];
     limbs[LIMBS - 1] = Signed::<BITS, LIMBS>::SIGN_BIT;
     Signed(Uint::from_limbs(limbs))
@@ -67,6 +75,10 @@ const fn zero<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
 }
 
 const fn one<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
+    if LIMBS == 0 {
+        return zero();
+    }
+
     let mut limbs = [0; LIMBS];
     limbs[0] = 1;
     Signed(Uint::from_limbs(limbs))
@@ -1791,6 +1803,7 @@ mod tests {
         ParseSignedError,
     };
 
+    // type U2 = Uint<2, 1>;
     type I96 = Signed<96, 2>;
     type U96 = Uint<96, 2>;
 
@@ -1866,6 +1879,9 @@ mod tests {
             };
         }
 
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -1910,6 +1926,10 @@ mod tests {
                 assert_eq!(err, ParseSignedError::IntegerOverflow);
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -1957,6 +1977,10 @@ mod tests {
                 assert!(matches!(err, ParseSignedError::IntegerOverflow));
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2000,6 +2024,10 @@ mod tests {
                 );
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2037,6 +2065,10 @@ mod tests {
                 assert!(<$i_struct>::zero().is_zero());
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2063,6 +2095,10 @@ mod tests {
                 assert_eq!(<$i_struct>::MIN.checked_abs(), None);
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2087,6 +2123,10 @@ mod tests {
                 assert_eq!(<$i_struct>::MIN.checked_neg(), None);
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2110,6 +2150,10 @@ mod tests {
                 assert_eq!(<$i_struct>::zero().bits(), 0);
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2131,6 +2175,10 @@ mod tests {
                 );
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2208,6 +2256,10 @@ mod tests {
                 );
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2262,6 +2314,10 @@ mod tests {
                 assert_eq!(value.asl(1024), expected_result, "0 << anything was not 0");
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2315,6 +2371,10 @@ mod tests {
                 );
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2371,6 +2431,9 @@ mod tests {
             };
         }
 
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2436,6 +2499,9 @@ mod tests {
             };
         }
 
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2484,6 +2550,10 @@ mod tests {
                 );
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2500,6 +2570,9 @@ mod tests {
             };
         }
 
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2541,6 +2614,9 @@ mod tests {
             };
         }
 
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2595,6 +2671,9 @@ mod tests {
             };
         }
 
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2614,6 +2693,10 @@ mod tests {
                 );
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2629,6 +2712,10 @@ mod tests {
                 let _ = <$i_struct>::MIN.div_euclid(<$i_struct>::minus_one());
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2644,6 +2731,10 @@ mod tests {
                 let _ = <$i_struct>::one() % <$i_struct>::zero();
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2687,6 +2778,10 @@ mod tests {
                 );
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2720,6 +2815,10 @@ mod tests {
                 assert_eq!(<$i_struct>::exp10(18).to_string(), "1000000000000000000");
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2747,6 +2846,10 @@ mod tests {
                 );
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2798,6 +2901,10 @@ mod tests {
                 assert_twos_complement!($i_struct, $u_struct, isize, usize);
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
+        // run_test!(I2, U2);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
