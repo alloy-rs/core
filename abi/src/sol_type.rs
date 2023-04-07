@@ -177,10 +177,7 @@ pub trait SolType {
 
     #[doc(hidden)]
     fn type_check_fail(data: &[u8]) -> Error {
-        Error::TypeCheckFail {
-            data: hex::encode(data),
-            expected_type: Self::sol_type_name(),
-        }
+        Error::type_check_fail(hex::encode(data), Self::sol_type_name())
     }
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence
@@ -827,48 +824,3 @@ impl_tuple_sol_type!(18, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10,
 impl_tuple_sol_type!(19, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18,);
 impl_tuple_sol_type!(20, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19,);
 impl_tuple_sol_type!(21, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19, U:20,);
-
-/// Function - `function`
-pub struct Function;
-
-impl SolType for Function {
-    type RustType = (B160, [u8; 4]);
-    type TokenType = WordToken;
-
-    fn sol_type_name() -> RustString {
-        "function".to_string()
-    }
-
-    fn is_dynamic() -> bool {
-        false
-    }
-
-    fn type_check(token: &Self::TokenType) -> AbiResult<()> {
-        if !crate::decoder::check_fixed_bytes(token.inner(), 24) {
-            return Err(Self::type_check_fail(token.as_slice()));
-        }
-        Ok(())
-    }
-
-    fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
-        let t = token.as_slice();
-
-        let mut address = [0u8; 20];
-        let mut selector = [0u8; 4];
-        address.copy_from_slice(&t[..20]);
-        selector.copy_from_slice(&t[20..24]);
-        Ok((B160(address), selector))
-    }
-
-    fn tokenize(rust: Self::RustType) -> Self::TokenType {
-        let mut word = Word::default();
-        word[..20].copy_from_slice(&rust.0[..]);
-        word[20..24].copy_from_slice(&rust.1[..]);
-        word.into()
-    }
-
-    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
-        target.extend_from_slice(&rust.0[..]);
-        target.extend_from_slice(&rust.1[..]);
-    }
-}

@@ -20,5 +20,6 @@ thiserror = { version = "1.0.39", optional = true }
 hex-literal = "0.3.4"
 
 [features]
-default = ["std"]
+default = ["std", "dynamic"]
 std = ["hex/std", "thiserror"]
+dynamic = ["std"]

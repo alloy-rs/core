@@ -7,9 +7,14 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use crate::no_std_prelude::Cow;
 #[cfg(feature = "std")]
 use thiserror::Error;
+
+#[cfg(feature = "std")]
+use std::borrow::Cow;
+
+#[cfg(not(feature = "std"))]
+use crate::no_std_prelude::*;
 
 /// ABI result type
 pub type AbiResult<T> = core::result::Result<T, Error>;
@@ -25,9 +30,9 @@ pub enum Error {
     )]
     TypeCheckFail {
         /// Hex-encoded data
-        data: alloc::string::String,
+        data: Cow<'static, str>,
         /// The Solidity type we failed to produce
-        expected_type: alloc::string::String,
+        expected_type: Cow<'static, str>,
     },
     #[cfg_attr(feature = "std", error("Buffer overrun in deser"))]
     /// Overran deser buffer
@@ -41,10 +46,44 @@ pub enum Error {
     /// Other errors.
     #[cfg_attr(feature = "std", error("{0}"))]
     Other(Cow<'static, str>),
+    #[cfg(feature = "dynamic")]
+    /// Parser Error
+    #[cfg_attr(feature = "std", error("{0:?}"))]
+    ParserError(crate::dyn_abi::ParserError),
+}
+
+impl Error {
+    /// Instantiates a new error with a static str
+    pub fn custom(s: &'static str) -> Self {
+        Self::Other(s.into())
+    }
+
+    /// Instantiates a new error with a string
+    pub fn custom_owned(s: alloc::string::String) -> Self {
+        Self::Other(s.into())
+    }
+
+    /// Instantiates a [`Error::TypeCheckFail`] with the provided data
+    pub fn type_check_fail(
+        data: impl Into<Cow<'static, str>>,
+        expected_type: impl Into<Cow<'static, str>>,
+    ) -> Self {
+        Self::TypeCheckFail {
+            data: data.into(),
+            expected_type: expected_type.into(),
+        }
+    }
 }
 
 impl From<hex::FromHexError> for Error {
     fn from(value: hex::FromHexError) -> Self {
         Self::FromHexError(value)
+    }
+}
+
+#[cfg(feature = "dynamic")]
+impl From<crate::dyn_abi::ParserError> for Error {
+    fn from(value: crate::dyn_abi::ParserError) -> Self {
+        Self::ParserError(value)
     }
 }

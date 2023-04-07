@@ -29,12 +29,14 @@ type LateBinding<A> = sol! {
     (A[], address)
 };
 
+// testcase for something i messed up earlier :)
 type NestedArray = sol! {
     bool[2][]
 };
 
 #[test]
-fn hello() {
+fn hello_world() {
+    // this is possible but not recomended :)
     <sol! {
         bool
     }>::hex_encode_single(true);

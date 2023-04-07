@@ -63,7 +63,7 @@ pub trait TokenSeq: TokenType {
 }
 
 /// A single EVM word - T for any value type
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct WordToken(Word);
 
 impl From<Word> for WordToken {
@@ -230,7 +230,7 @@ where
             enc.bump_offset(t.tail_words() as u32);
         }
         for t in self.0.iter() {
-            t.tail_append(enc)
+            t.tail_append(enc);
         }
         enc.pop_offset();
     }
@@ -350,7 +350,7 @@ where
             enc.bump_offset(t.tail_words() as u32);
         }
         for t in self.0.iter() {
-            t.tail_append(enc)
+            t.tail_append(enc);
         }
         enc.pop_offset();
     }
@@ -405,8 +405,8 @@ impl TokenType for PackedSeqToken {
     }
 
     fn tail_words(&self) -> usize {
-        // "+ 1" because len is also appended
-        ((self.0.len() + 31) / 32) + 1
+        // "1 +" because len is also appended
+        1 + ((self.0.len() + 31) / 32)
     }
 
     fn head_append(&self, enc: &mut Encoder) {

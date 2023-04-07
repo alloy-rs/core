@@ -79,10 +79,10 @@ pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
 
 pub(crate) fn as_u32(word: Word, type_check: bool) -> AbiResult<u32> {
     if type_check && !check_zeroes(&word.as_slice()[..28]) {
-        return Err(Error::TypeCheckFail {
-            data: hex::encode(word),
-            expected_type: "Solidity pointer (uint32)".to_owned(),
-        });
+        return Err(Error::type_check_fail(
+            hex::encode(word),
+            "Solidity pointer (uint32)",
+        ));
     }
 
     let result = ((word[28] as u32) << 24)
@@ -125,6 +125,10 @@ impl core::fmt::Debug for Decoder<'_> {
 }
 
 impl<'a> Decoder<'a> {
+    /// Instantiate a new decoder from a byte slice and a validation flag. If
+    /// Validation is set to true, the decoder will check that the bytes
+    /// conform to expected type limitations, and that the decoded values can be
+    /// re-encoded to an identical bytestring.
     pub fn new(buf: &'a [u8], validate: bool) -> Self {
         Self {
             buf,
@@ -133,6 +137,9 @@ impl<'a> Decoder<'a> {
         }
     }
 
+    /// Create a child decoder, starting at `offset` bytes from the current
+    /// decoder's offset. The child decoder shares the buffer and validation
+    /// flag
     fn child(&self, offset: usize) -> Result<Decoder<'a>, Error> {
         if offset > self.buf.len() {
             return Err(Error::Overrun);
@@ -144,62 +151,80 @@ impl<'a> Decoder<'a> {
         })
     }
 
+    /// Get a child decoder at the current offset
     pub fn raw_child(&self) -> Decoder<'a> {
         self.child(self.offset).unwrap()
     }
 
+    /// Advance the offset by `len` bytes
     fn increase_offset(&mut self, len: usize) {
         self.offset += len;
     }
 
+    /// Peek a range from the buffer
     pub fn peek(&self, range: Range<usize>) -> Result<&'a [u8], Error> {
         (self.buf.len() >= range.end)
             .then(|| &self.buf[range])
             .ok_or(Error::Overrun)
     }
 
+    /// Peek a slice of size `len` from the buffer at a specific offset, without
+    /// advancing the offset
     pub fn peek_len_at(&self, offset: usize, len: usize) -> Result<&'a [u8], Error> {
         self.peek(offset..offset + len)
     }
 
+    /// Peek a slice of size `len` from the buffer without advancing the offset.
     pub fn peek_len(&self, len: usize) -> Result<&'a [u8], Error> {
         self.peek_len_at(self.offset, len)
     }
 
+    /// Peek a word from the buffer at a specific offset, without advancing the
+    /// offset
     pub fn peek_word_at(&self, offset: usize) -> Result<Word, Error> {
         Ok(Word::from_slice(
             self.peek_len_at(offset, Word::len_bytes())?,
         ))
     }
 
+    /// Peek the next word from the buffer without advancing the offset.
     pub fn peek_word(&self) -> Result<Word, Error> {
         self.peek_word_at(self.offset)
     }
 
+    /// Peek a u32 from the buffer at a specific offset, without advancing the
+    /// offset.
     pub fn peek_u32_at(&self, offset: usize) -> AbiResult<u32> {
         as_u32(self.peek_word_at(offset)?, true)
     }
 
+    /// Peek the next word as a u32
     pub fn peek_u32(&self) -> AbiResult<u32> {
         as_u32(self.peek_word()?, true)
     }
 
+    /// Take a word from the buffer, advancing the offset.
     pub fn take_word(&mut self) -> Result<Word, Error> {
         let contents = self.peek_word()?;
         self.increase_offset(Word::len_bytes());
         Ok(contents)
     }
 
+    /// Return a child decoder by consuming a word, interpreting it as a
+    /// pointer, and following it.
     pub fn take_indirection(&mut self) -> Result<Decoder<'a>, Error> {
         let ptr = self.take_u32()? as usize;
         self.child(ptr)
     }
 
+    /// Take a u32 from the buffer by consuming a word.
     pub fn take_u32(&mut self) -> AbiResult<u32> {
         let word = self.take_word()?;
         as_u32(word, true)
     }
 
+    /// Takes a slice of bytes of the given length by consuming up to the next
+    /// word boundary
     pub fn take_slice(&mut self, len: usize) -> Result<&[u8], Error> {
         if self.validate {
             let padded_len = round_up_nearest_multiple(len, 32);
@@ -217,22 +242,28 @@ impl<'a> Decoder<'a> {
         Ok(res)
     }
 
+    /// True if this decoder is validating type correctness
     pub fn validate(&self) -> bool {
         self.validate
     }
 
+    /// Takes the offset from the child decoder and sets it as the current
+    /// offset.
     pub fn take_offset(&mut self, child: Decoder<'a>) {
         self.set_offset(child.offset + (self.buf.len() - child.buf.len()))
     }
 
+    /// Sets the current offset in the buffer.
     pub fn set_offset(&mut self, offset: usize) {
         self.offset = offset;
     }
 
+    /// Returns the current offset in the buffer.
     pub fn offset(&self) -> usize {
         self.offset
     }
 
+    /// Decodes a single token from the underlying buffer.
     pub fn decode<T>(&mut self, data: &[u8]) -> AbiResult<T>
     where
         T: TokenType,
@@ -246,6 +277,7 @@ impl<'a> Decoder<'a> {
         Ok(token)
     }
 
+    /// Decodes a sequence of tokens from the underlying buffer.
     pub fn decode_sequence<T>(&mut self, data: &[u8]) -> AbiResult<T>
     where
         T: TokenType + TokenSeq,

@@ -78,12 +78,12 @@
 //! type Gamut = sol! {
 //!     (
 //!         address, bool[], bytes15[12], uint256, uint24, int8, int56,
-//!         (function, string, bytes,)
+//!         (bytes17, string, bytes,)
 //!     )
 //! };
 //! assert_eq!(
 //!     Gamut::sol_type_name(),
-//!     "tuple(address,bool[],bytes15[12],uint256,uint24,int8,int56,tuple(function,string,bytes))"
+//!     "tuple(address,bool[],bytes15[12],uint256,uint24,int8,int56,tuple(bytes17,string,bytes))"
 //! ); // Amazing!
 //!
 //! // `sol!` supports late binding of types, and your own custom types!
@@ -114,7 +114,7 @@
 //!
 //! ## Tokenization/Detokenization
 //!
-//! The process of converting from a Rust type to a to a token is called
+//! The process of converting from a Rust type to a to an abi token is called
 //! "Tokenization". Typical users will not access tokenizaiton directly.
 //! Power users should use the [`SolType::tokenize()`] and
 //! [`SolType::detokenize()`] methods.
@@ -150,13 +150,20 @@ mod no_std_prelude {
 }
 
 use ethers_primitives::B256;
-#[cfg(not(feature = "std"))]
-use no_std_prelude::*;
 
-mod decoder;
+pub(crate) mod decoder;
+#[doc(hidden)]
+pub use decoder::Decoder;
 pub use decoder::{decode, decode_params, decode_single};
 
-mod encoder;
+#[cfg(feature = "dynamic")]
+mod dyn_abi;
+#[cfg(feature = "dynamic")]
+pub use dyn_abi::{DynSolType, DynSolValue, DynToken, ParserError};
+
+pub(crate) mod encoder;
+#[doc(hidden)]
+pub use encoder::Encoder;
 pub use encoder::{encode, encode_params, encode_single};
 
 mod token;

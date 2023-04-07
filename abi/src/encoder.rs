@@ -40,6 +40,10 @@
 use crate::no_std_prelude::*;
 use crate::{token::TokenSeq, util::pad_u32, TokenType, Word};
 
+/// An ABI encoder. This is not intended for public consumption. It should be
+/// used only by the token types. If you have found yourself here, you probably
+/// want to use the high-level [`SolType`] interface (or its dynamic
+/// equivalent) instead.
 #[derive(Default, Clone, Debug)]
 pub struct Encoder {
     buf: Vec<Word>,
@@ -47,6 +51,7 @@ pub struct Encoder {
 }
 
 impl Encoder {
+    /// Instantiate a new encoder with a given capacity in words.
     pub fn with_capacity(size: usize) -> Self {
         Self {
             buf: Vec::with_capacity(size + 1),
@@ -54,22 +59,12 @@ impl Encoder {
         }
     }
 
+    /// Finish the encoding process, returning the encoded words
     pub fn finish(self) -> Vec<Word> {
         self.buf
     }
 
-    pub fn suffix_offset(&self) -> u32 {
-        *self.suffix_offset.last().unwrap()
-    }
-
-    pub fn push_offset(&mut self, words: u32) {
-        self.suffix_offset.push(words * 32);
-    }
-
-    pub fn pop_offset(&mut self) -> u32 {
-        self.suffix_offset.pop().unwrap()
-    }
-
+    /// Finish the encoding process, returning the encoded bytes
     pub fn into_bytes(self) -> Vec<u8> {
         self.buf
             .into_iter()
@@ -77,27 +72,42 @@ impl Encoder {
             .collect()
     }
 
+    /// Determine the current suffix offset
+    pub fn suffix_offset(&self) -> u32 {
+        *self.suffix_offset.last().unwrap()
+    }
+
+    /// Push a new suffix offset
+    pub fn push_offset(&mut self, words: u32) {
+        self.suffix_offset.push(words * 32);
+    }
+
+    /// Pop the last suffix offset
+    pub fn pop_offset(&mut self) -> u32 {
+        self.suffix_offset.pop().unwrap()
+    }
+
+    /// Bump the suffix offset by a given number of words
     pub fn bump_offset(&mut self, words: u32) {
         (*self.suffix_offset.last_mut().unwrap()) += words * 32;
     }
 
+    /// Append a word to the encoder
     pub fn append_word(&mut self, word: Word) {
         self.buf.push(word);
     }
 
+    /// Append a pointer to the current suffix offset
     pub fn append_indirection(&mut self) {
         self.append_word(pad_u32(self.suffix_offset()));
     }
 
+    /// Append a sequence length
     pub fn append_seq_len<T>(&mut self, seq: &[T]) {
         self.append_word(pad_u32(seq.len() as u32));
     }
 
-    pub fn append_packed_seq(&mut self, bytes: &[u8]) {
-        self.append_seq_len(bytes);
-        self.append_bytes(bytes);
-    }
-
+    /// Append a seqeunce of bytes, padding to the next word
     fn append_bytes(&mut self, bytes: &[u8]) {
         let len = (bytes.len() + 31) / 32;
         for i in 0..len {
@@ -117,15 +127,18 @@ impl Encoder {
         }
     }
 
+    /// Append a sequence of bytes as a packed sequence with a length prefix
+    pub fn append_packed_seq(&mut self, bytes: &[u8]) {
+        self.append_seq_len(bytes);
+        self.append_bytes(bytes);
+    }
+
+    /// Shortcut for appending a token sequence
     pub fn append_head_tail<T>(&mut self, token: &T)
     where
         T: TokenSeq,
     {
         token.encode_sequence(self);
-    }
-
-    pub fn is_params(&self) -> bool {
-        self.suffix_offset.is_empty()
     }
 }
 
