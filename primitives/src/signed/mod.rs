@@ -8,18 +8,9 @@ pub use errors::{BigIntConversionError, ParseSignedError};
 mod sign;
 pub use sign::Sign;
 
+/// Type aliases for signed integers whose bitsize is divisble by 8
+pub mod aliases;
+
 /// Signed integer type
 mod generic;
 pub use generic::{const_eq, Signed};
-
-/// 128-bit signed integer type.
-pub type I128 = Signed<128, 2>;
-
-/// 160-bit signed integer type.
-pub type I160 = Signed<160, 3>;
-
-/// 192-bit signed integer type.
-pub type I192 = Signed<192, 3>;
-
-/// 256-bit signed integer type.
-pub type I256 = Signed<256, 4>;

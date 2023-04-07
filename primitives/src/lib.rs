@@ -22,7 +22,8 @@ pub use bits::{B160, B256, B512};
 
 mod signed;
 pub use signed::{
-    const_eq, BigIntConversionError, ParseSignedError, Sign, Signed, I128, I160, I192, I256,
+    aliases::{self, I128, I256},
+    const_eq, BigIntConversionError, ParseSignedError, Sign, Signed,
 };
 
 /// Address type is first 20 bytes of hash of ethereum account
