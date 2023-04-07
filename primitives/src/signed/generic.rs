@@ -679,26 +679,36 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         self.0.to_le_bytes()
     }
 
-    /// Convert from a slice in BE format
+    /// Convert from an array in BE format
     ///
     /// # Panics
     ///
-    /// If the given slice is not the correct length.
+    /// If the given array is not the correct length.
     #[inline(always)]
     #[track_caller]
     pub fn from_be_bytes<const BYTES: usize>(bytes: [u8; BYTES]) -> Self {
         Self(Uint::from_be_bytes::<BYTES>(bytes))
     }
 
-    /// Convert from a slice in LE format
+    /// Convert from an array in LE format
     ///
     /// # Panics
     ///
-    /// If the given slice is not the correct length.
+    /// If the given array is not the correct length.
     #[inline(always)]
     #[track_caller]
     pub fn from_le_bytes<const BYTES: usize>(bytes: [u8; BYTES]) -> Self {
         Self(Uint::from_le_bytes::<BYTES>(bytes))
+    }
+
+    /// Convert from a slice in BE format
+    pub fn try_from_be_slice(slice: &[u8]) -> Option<Self> {
+        Some(Self(Uint::try_from_be_slice(slice)?))
+    }
+
+    /// Convert from a slice in LE format
+    pub fn try_from_le_slice(slice: &[u8]) -> Option<Self> {
+        Some(Self(Uint::try_from_le_slice(slice)?))
     }
 }
 
