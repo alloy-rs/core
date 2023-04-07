@@ -664,7 +664,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// If the given slice is not exactly 32 bytes long.
     #[inline(always)]
     #[track_caller]
-    pub fn to_big_endian(self) -> [u8; 32] {
+    pub fn to_be_bytes(self) -> [u8; 32] {
         self.0.to_be_bytes()
     }
 
@@ -675,8 +675,55 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// If the given slice is not exactly 32 bytes long.
     #[inline(always)]
     #[track_caller]
-    pub fn to_little_endian(self) -> [u8; 32] {
+    pub fn to_le_bytes(self) -> [u8; 32] {
         self.0.to_le_bytes()
+    }
+
+    /// Convert from an array in BE format
+    ///
+    /// # Panics
+    ///
+    /// If the given array is not the correct length.
+    #[inline(always)]
+    #[track_caller]
+    pub fn from_be_bytes<const BYTES: usize>(bytes: [u8; BYTES]) -> Self {
+        Self(Uint::from_be_bytes::<BYTES>(bytes))
+    }
+
+    /// Convert from an array in LE format
+    ///
+    /// # Panics
+    ///
+    /// If the given array is not the correct length.
+    #[inline(always)]
+    #[track_caller]
+    pub fn from_le_bytes<const BYTES: usize>(bytes: [u8; BYTES]) -> Self {
+        Self(Uint::from_le_bytes::<BYTES>(bytes))
+    }
+
+    /// Convert from a slice in BE format
+    pub fn try_from_be_slice(slice: &[u8]) -> Option<Self> {
+        Some(Self(Uint::try_from_be_slice(slice)?))
+    }
+
+    /// Convert from a slice in LE format
+    pub fn try_from_le_slice(slice: &[u8]) -> Option<Self> {
+        Some(Self(Uint::try_from_le_slice(slice)?))
+    }
+
+    /// Get a reference to the underlying limbs
+    pub const fn as_limbs(&self) -> &[u64; LIMBS] {
+        self.0.as_limbs()
+    }
+
+    /// Get the underlying limbs
+    pub const fn into_limbs(self) -> [u64; LIMBS] {
+        self.0.into_limbs()
+    }
+
+    /// Instantiate from limbs
+    pub const fn from_limbs(limbs: [u64; LIMBS]) -> Self {
+        Self(Uint::from_limbs(limbs))
     }
 }
 
