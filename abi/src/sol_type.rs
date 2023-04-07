@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use ethers_primitives::{B160, U256};
+use ethers_primitives::{B160, I256, U256};
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::{String as RustString, ToOwned, ToString, Vec};
@@ -397,11 +397,59 @@ macro_rules! impl_int_sol_type {
             }
 
             fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
-                // encode the rust to be bytes, strip leading zeroes, then push to the target
-                let bytes = rust.to_be_bytes();
-                target.extend(bytes);
+                if rust.is_negative(){
+                    let bytes = rust.to_be_bytes();
+                    target.extend(bytes);
+                } else {
+                    Uint::<$bits>::encode_packed_to(target, rust as <Uint::<$bits> as SolType>::RustType);
+                }
             }
         }
+    };
+
+    ($bits:literal) => {
+        impl SolType for Int<$bits> {
+            type RustType = I256;
+            type TokenType = WordToken;
+
+            fn is_dynamic() -> bool {
+                false
+            }
+
+            fn sol_type_name() -> RustString {
+                format!("int{}", $bits)
+            }
+
+            fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
+                Ok(())
+            }
+
+            fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
+                Ok(I256::from_be_bytes::<32>(token.into()))
+            }
+
+            fn tokenize(rust: Self::RustType) -> Self::TokenType {
+                rust.to_be_bytes().into()
+            }
+
+            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+                if rust.is_negative(){
+                    let bytes = rust.to_be_bytes();
+                    target.extend(bytes);
+                } else {
+                    Uint::<$bits>::encode_packed_to(
+                        target,
+                        rust.into_raw(),
+                    )
+                }
+            }
+        }
+    };
+
+    ($($bits:literal,)+) => {
+        $(
+            impl_int_sol_type!($bits);
+        )+
     };
 }
 
@@ -415,7 +463,10 @@ impl_int_sol_type!(i64, 40);
 impl_int_sol_type!(i64, 48);
 impl_int_sol_type!(i64, 56);
 impl_int_sol_type!(i64, 64);
-// TODO: larger
+impl_int_sol_type!(
+    72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224,
+    232, 240, 248, 256,
+);
 
 macro_rules! impl_uint_sol_type {
     ($uty:ty, $bits:literal) => {

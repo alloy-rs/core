@@ -96,6 +96,12 @@ impl From<[u8; 20]> for WordToken {
     }
 }
 
+impl Into<[u8; 32]> for WordToken {
+    fn into(self) -> [u8; 32] {
+        self.0.into()
+    }
+}
+
 impl From<[u8; 32]> for WordToken {
     fn from(value: [u8; 32]) -> Self {
         Self(value.into())
