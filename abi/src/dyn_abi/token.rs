@@ -3,11 +3,13 @@ use crate::{
     WordToken,
 };
 
+// TODO: try to remove duplicated encoding/decoding logic
+
 /// A dynamic token. Equivalent to an enum over all types implementing
 /// [`crate::TokenType`]
 // NOTE: do not derive `Hash` for this type. The derived version is not
 // compatible with the current `PartialEq` implementation. If manually
-// implementing `Hash`, ignore the `template`
+// implementing `Hash`, ignore the `template` prop in the `DynSeq` variant
 #[derive(Debug, Clone)]
 pub enum DynToken {
     /// A single word
@@ -103,7 +105,6 @@ impl DynToken {
         match self {
             DynToken::Word(w) => *w = WordToken::decode_from(dec)?.inner(),
             DynToken::FixedSeq(toks, size) => {
-                // todo try to remove this duplication?
                 let mut child = if dynamic {
                     dec.take_indirection()?
                 } else {

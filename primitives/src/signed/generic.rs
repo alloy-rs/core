@@ -23,6 +23,9 @@ fn handle_overflow<const BITS: usize, const LIMBS: usize>(
 fn twos_complement<const BITS: usize, const LIMBS: usize>(
     u: Uint<BITS, LIMBS>,
 ) -> Uint<BITS, LIMBS> {
+    if BITS == 0 {
+        return u;
+    }
     (!u).overflowing_add(Uint::<BITS, LIMBS>::from(1)).0
 }
 
@@ -32,6 +35,10 @@ pub const fn const_eq<const BITS: usize, const LIMBS: usize>(
     left: Signed<BITS, LIMBS>,
     right: Signed<BITS, LIMBS>,
 ) -> bool {
+    if BITS == 0 {
+        return true;
+    }
+
     let mut i = 0;
     let llimbs = left.0.as_limbs();
     let rlimbs = right.0.as_limbs();
@@ -49,6 +56,10 @@ pub const fn const_eq<const BITS: usize, const LIMBS: usize>(
 
 /// Compute the max value at compile time
 const fn max<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
+    if LIMBS == 0 {
+        return zero();
+    }
+
     let mut limbs = [u64::MAX; LIMBS];
     limbs[LIMBS - 1] &= Signed::<BITS, LIMBS>::MASK; // unset all high bits
     limbs[LIMBS - 1] &= !Signed::<BITS, LIMBS>::SIGN_BIT; // unset the sign bit
@@ -56,6 +67,10 @@ const fn max<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
 }
 
 const fn min<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
+    if LIMBS == 0 {
+        return zero();
+    }
+
     let mut limbs = [0; LIMBS];
     limbs[LIMBS - 1] = Signed::<BITS, LIMBS>::SIGN_BIT;
     Signed(Uint::from_limbs(limbs))
@@ -67,6 +82,10 @@ const fn zero<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
 }
 
 const fn one<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
+    if LIMBS == 0 {
+        return zero();
+    }
+
     let mut limbs = [0; LIMBS];
     limbs[0] = 1;
     Signed(Uint::from_limbs(limbs))
@@ -480,6 +499,15 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         Sign::Positive
     }
 
+    /// Determines if the integer is odd
+    pub const fn is_odd(self) -> bool {
+        if BITS == 0 {
+            false
+        } else {
+            self.as_limbs()[0] % 2 == 1
+        }
+    }
+
     /// Returns `true` if `self` is zero and `false` if the number is negative
     /// or positive.
     #[inline(always)]
@@ -752,6 +780,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline(always)]
     #[must_use]
     pub fn overflowing_abs(self) -> (Self, bool) {
+        if BITS == 0 {
+            return (self, false);
+        }
         if self == Self::MIN {
             (self, true)
         } else {
@@ -802,6 +833,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline(always)]
     #[must_use]
     pub fn overflowing_neg(self) -> (Self, bool) {
+        if BITS == 0 {
+            return (self, false);
+        }
         if self == Self::MIN {
             (self, true)
         } else {
@@ -1281,8 +1315,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// of exponentiation can be computed even if the actual result is too large
     /// to fit in 256-bit signed integer.
     #[inline(always)]
-    const fn pow_sign(self, exp: u32) -> Sign {
-        let is_exp_odd = exp % 2 != 0;
+    const fn pow_sign(self, exp: Uint<BITS, LIMBS>) -> Sign {
+        let is_exp_odd = BITS != 0 && exp.as_limbs()[0] % 2 == 1;
         if is_exp_odd && self.is_negative() {
             Sign::Negative
         } else {
@@ -1313,7 +1347,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline(always)]
     #[track_caller]
     #[must_use]
-    pub fn pow(self, exp: u32) -> Self {
+    pub fn pow(self, exp: Uint<BITS, LIMBS>) -> Self {
         handle_overflow(self.overflowing_pow(exp))
     }
 
@@ -1323,11 +1357,14 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// happened.
     #[inline(always)]
     #[must_use]
-    pub fn overflowing_pow(self, exp: u32) -> (Self, bool) {
+    pub fn overflowing_pow(self, exp: Uint<BITS, LIMBS>) -> (Self, bool) {
+        if BITS == 0 {
+            return (Self::zero(), false);
+        }
+
         let sign = self.pow_sign(exp);
-        let (unsigned, overflow_pow) = self
-            .unsigned_abs()
-            .overflowing_pow(Uint::<BITS, LIMBS>::from(exp));
+
+        let (unsigned, overflow_pow) = self.unsigned_abs().overflowing_pow(exp);
         let (result, overflow_conv) = Self::overflowing_from_sign_and_abs(sign, unsigned);
 
         (result, overflow_pow || overflow_conv)
@@ -1336,7 +1373,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Checked exponentiation. Computes `self.pow(exp)`, returning `None` if overflow occurred.
     #[inline(always)]
     #[must_use]
-    pub fn checked_pow(self, exp: u32) -> Option<Self> {
+    pub fn checked_pow(self, exp: Uint<BITS, LIMBS>) -> Option<Self> {
         let (result, overflow) = self.overflowing_pow(exp);
         if overflow {
             None
@@ -1349,7 +1386,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// bounds instead of overflowing.
     #[inline(always)]
     #[must_use]
-    pub fn saturating_pow(self, exp: u32) -> Self {
+    pub fn saturating_pow(self, exp: Uint<BITS, LIMBS>) -> Self {
         let (result, overflow) = self.overflowing_pow(exp);
         if overflow {
             match self.pow_sign(exp) {
@@ -1365,7 +1402,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// boundary of the type.
     #[inline(always)]
     #[must_use]
-    pub fn wrapping_pow(self, exp: u32) -> Self {
+    pub fn wrapping_pow(self, exp: Uint<BITS, LIMBS>) -> Self {
         self.overflowing_pow(exp).0
     }
 
@@ -1441,7 +1478,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn asr(self, rhs: usize) -> Self {
         // Avoid shifting if we are going to know the result regardless of the value.
-        if rhs == 0 {
+        if rhs == 0 || BITS == 0 {
             return self;
         }
 
@@ -1476,7 +1513,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline(always)]
     #[must_use]
     pub fn asl(self, rhs: usize) -> Option<Self> {
-        if rhs == 0 {
+        if rhs == 0 || BITS == 0 {
             Some(self)
         } else {
             let result = self.wrapping_shl(rhs);
@@ -1709,7 +1746,8 @@ macro_rules! impl_conversions {
 
                 #[inline(always)]
                 fn try_from(value: $u) -> Result<Self, Self::Error> {
-                    Ok(Signed(Uint::<BITS, LIMBS>::from(value)))
+                    let u = Uint::<BITS, LIMBS>::try_from(value).map_err(|_| BigIntConversionError)?;
+                    Signed::checked_from_sign_and_abs(Sign::Positive, u).ok_or(BigIntConversionError)
                 }
             }
 
@@ -1719,12 +1757,14 @@ macro_rules! impl_conversions {
                 #[inline(always)]
                 fn try_from(value: $i) -> Result<Self, Self::Error> {
                     let uint: $u = value as $u;
-                    Ok(Self(if value.is_negative() {
-                        let abs = (!uint).wrapping_add(1);
-                        twos_complement(Uint::<BITS, LIMBS>::from(abs))
-                    } else {
-                        Uint::<BITS, LIMBS>::from(uint)
-                    }))
+
+                    if value.is_positive() {
+                        return Self::try_from(uint);
+                    }
+
+                    let abs = (!uint).wrapping_add(1);
+                    let tc = twos_complement(Uint::<BITS, LIMBS>::from(abs));
+                    Ok(Self(tc))
                 }
             }
 
@@ -1752,6 +1792,10 @@ macro_rules! impl_conversions {
         /// Low word.
         #[inline(always)]
         pub const fn $low(&self) -> $t {
+            if BITS == 0 {
+                return 0
+            }
+
             self.0.as_limbs()[0] as $t
         }
 
@@ -1779,7 +1823,7 @@ impl_conversions! {
 #[cfg(test)]
 mod tests {
     use ruint::{
-        aliases::{U128, U160, U192, U256},
+        aliases::{U0, U1, U128, U160, U192, U256},
         BaseConvertError, ParseError,
     };
     // use serde_json::json;
@@ -1787,10 +1831,11 @@ mod tests {
 
     use super::*;
     use crate::{
-        aliases::{I128, I160, I192, I256},
+        aliases::{I0, I1, I128, I160, I192, I256},
         ParseSignedError,
     };
 
+    // type U2 = Uint<2, 1>;
     type I96 = Signed<96, 2>;
     type U96 = Uint<96, 2>;
 
@@ -1805,6 +1850,11 @@ mod tests {
                 assert_eq!(<$signed>::min_value().to_string(), $min);
             };
         }
+
+        assert_eq!(I0::zero().to_string(), "0");
+        assert_eq!(I1::zero().to_string(), "0");
+        assert_eq!(I1::one().to_string(), "-1");
+
         test_identities!(
             I96,
             "39614081257132168796771975167",
@@ -1866,6 +1916,15 @@ mod tests {
             };
         }
 
+        // edge cases
+        assert_eq!(I0::unchecked_from(0), I0::default());
+        assert_eq!(I0::try_from(1u8), Err(BigIntConversionError));
+        assert_eq!(I0::try_from(1i8), Err(BigIntConversionError));
+        assert_eq!(I1::unchecked_from(0), I1::default());
+        assert_eq!(I1::try_from(1u8), Err(BigIntConversionError));
+        assert_eq!(I1::try_from(1i8), Err(BigIntConversionError));
+        assert_eq!(I1::try_from(-1), Ok(I1::MINUS_ONE));
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -1910,6 +1969,15 @@ mod tests {
                 assert_eq!(err, ParseSignedError::IntegerOverflow);
             };
         }
+
+        assert_eq!(I0::from_dec_str("0"), Ok(I0::default()));
+        assert_eq!(I1::from_dec_str("0"), Ok(I1::ZERO));
+        assert_eq!(I1::from_dec_str("-1"), Ok(I1::MINUS_ONE));
+        assert_eq!(
+            I1::from_dec_str("1"),
+            Err(ParseSignedError::IntegerOverflow)
+        );
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -1957,6 +2025,16 @@ mod tests {
                 assert!(matches!(err, ParseSignedError::IntegerOverflow));
             };
         }
+
+        assert_eq!(I0::from_hex_str("0x0"), Ok(I0::default()));
+        assert_eq!(I1::from_hex_str("0x0"), Ok(I1::ZERO));
+        assert_eq!(I1::from_hex_str("0x0"), Ok(I1::ZERO));
+        assert_eq!(I1::from_hex_str("-0x1"), Ok(I1::MINUS_ONE));
+        assert_eq!(
+            I1::from_hex_str("0x1"),
+            Err(ParseSignedError::IntegerOverflow)
+        );
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2000,6 +2078,12 @@ mod tests {
                 );
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(format!("{z} {o} {m}"), "0 0 -1");
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2037,6 +2121,14 @@ mod tests {
                 assert!(<$i_struct>::zero().is_zero());
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.sign(), Sign::Positive);
+        assert_eq!(o.sign(), Sign::Positive);
+        assert_eq!(m.sign(), Sign::Negative);
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2063,6 +2155,14 @@ mod tests {
                 assert_eq!(<$i_struct>::MIN.checked_abs(), None);
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.abs(), z);
+        assert_eq!(o.abs(), o);
+        assert_eq!(m.checked_abs(), None);
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2087,6 +2187,14 @@ mod tests {
                 assert_eq!(<$i_struct>::MIN.checked_neg(), None);
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(-z, z);
+        assert_eq!(-o, o);
+        assert_eq!(m.checked_neg(), None);
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2110,6 +2218,14 @@ mod tests {
                 assert_eq!(<$i_struct>::zero().bits(), 0);
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.bits(), 0);
+        assert_eq!(o.bits(), 0);
+        assert_eq!(m.bits(), 1);
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2131,6 +2247,15 @@ mod tests {
                 );
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z << 1, z >> 1);
+        assert_eq!(o << 1, o >> 0);
+        assert_eq!(m << 1, o);
+        assert_eq!(m >> 1, o);
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2208,6 +2333,15 @@ mod tests {
                 );
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.asr(1), z);
+        assert_eq!(o.asr(1), o);
+        assert_eq!(m.asr(1), m);
+        assert_eq!(m.asr(1000), m);
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2262,6 +2396,14 @@ mod tests {
                 assert_eq!(value.asl(1024), expected_result, "0 << anything was not 0");
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.asl(1), Some(z));
+        assert_eq!(o.asl(1), Some(o));
+        assert_eq!(m.asl(1), None);
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2315,6 +2457,15 @@ mod tests {
                 );
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z + z, z);
+        assert_eq!(o + o, o);
+        assert_eq!(m + o, m);
+        assert_eq!(m.overflowing_add(m), (o, true));
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2370,6 +2521,9 @@ mod tests {
                 );
             };
         }
+
+        // run_test!(I0, U0);
+        // run_test!(I1, U1);
 
         run_test!(I96, U96);
         run_test!(I128, U128);
@@ -2436,6 +2590,14 @@ mod tests {
             };
         }
 
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z * z, z);
+        assert_eq!(o * o, o);
+        assert_eq!(m * o, o);
+        assert_eq!(m.overflowing_mul(m), (m, true));
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2484,6 +2646,15 @@ mod tests {
                 );
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.checked_div(z), None);
+        assert_eq!(o.checked_div(o), None);
+        assert_eq!(m.checked_div(o), None);
+        assert_eq!(m.overflowing_div(m), (m, true));
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2492,14 +2663,18 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn division_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let _ = <$i_struct>::one() / <$i_struct>::zero();
+                let err = std::panic::catch_unwind(|| {
+                    let _ = <$i_struct>::one() / <$i_struct>::zero();
+                });
+                assert!(err.is_err());
             };
         }
 
+        run_test!(I0, U0);
+        run_test!(I1, U1);
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2540,6 +2715,14 @@ mod tests {
                 );
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.checked_div_euclid(z), None);
+        assert_eq!(o.checked_div_euclid(o), None);
+        assert_eq!(m.checked_div_euclid(o), None);
+        assert_eq!(m.overflowing_div_euclid(m), (m, true));
 
         run_test!(I96, U96);
         run_test!(I128, U128);
@@ -2595,6 +2778,14 @@ mod tests {
             };
         }
 
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.checked_rem_euclid(z), None);
+        assert_eq!(o.checked_rem_euclid(o), None);
+        assert_eq!(m.checked_rem_euclid(o), None);
+        assert_eq!(m.overflowing_rem_euclid(m), (o, true));
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2603,17 +2794,27 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn div_euclid_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let _ = <$i_struct>::one().div_euclid(<$i_struct>::zero());
-                assert_eq!(
-                    <$i_struct>::MIN.div_euclid(<$i_struct>::minus_one()),
-                    <$i_struct>::MAX
-                );
+                let err = std::panic::catch_unwind(|| {
+                    let _ = <$i_struct>::one().div_euclid(<$i_struct>::zero());
+                });
+                assert!(err.is_err());
+
+                let err = std::panic::catch_unwind(|| {
+                    assert_eq!(
+                        <$i_struct>::MIN.div_euclid(<$i_struct>::minus_one()),
+                        <$i_struct>::MAX
+                    );
+                });
+                assert!(err.is_err());
             };
         }
+
+        run_test!(I0, U0);
+        run_test!(I1, U1);
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2637,13 +2838,19 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn mod_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let _ = <$i_struct>::one() % <$i_struct>::zero();
+                let err = std::panic::catch_unwind(|| {
+                    let _ = <$i_struct>::one() % <$i_struct>::zero();
+                });
+                assert!(err.is_err());
             };
         }
+
+        run_test!(I0, U0);
+        run_test!(I1, U1);
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2687,6 +2894,15 @@ mod tests {
                 );
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.checked_rem(z), None);
+        assert_eq!(o.checked_rem(o), None);
+        assert_eq!(m.checked_rem(o), None);
+        assert_eq!(m.overflowing_rem(m), (o, true));
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2699,27 +2915,40 @@ mod tests {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
                 assert_eq!(
-                    <$i_struct>::try_from(1000).unwrap().saturating_pow(1000),
+                    <$i_struct>::unchecked_from(1000).saturating_pow(<$u_struct>::from(1000)),
                     <$i_struct>::MAX
                 );
                 assert_eq!(
-                    <$i_struct>::try_from(-1000).unwrap().saturating_pow(1001),
+                    <$i_struct>::unchecked_from(-1000).saturating_pow(<$u_struct>::from(1001)),
                     <$i_struct>::MIN
                 );
 
                 assert_eq!(
-                    <$i_struct>::try_from(2).unwrap().pow(64),
-                    <$i_struct>::try_from(1u128 << 64).unwrap()
+                    <$i_struct>::unchecked_from(2).pow(<$u_struct>::from(64)),
+                    <$i_struct>::unchecked_from(1u128 << 64)
                 );
                 assert_eq!(
-                    <$i_struct>::try_from(-2).unwrap().pow(63),
-                    <$i_struct>::try_from(i64::MIN).unwrap()
+                    <$i_struct>::unchecked_from(-2).pow(<$u_struct>::from(63)),
+                    <$i_struct>::unchecked_from(i64::MIN)
                 );
 
-                assert_eq!(<$i_struct>::zero().pow(42), <$i_struct>::zero());
+                assert_eq!(
+                    <$i_struct>::zero().pow(<$u_struct>::from(42)),
+                    <$i_struct>::zero()
+                );
                 assert_eq!(<$i_struct>::exp10(18).to_string(), "1000000000000000000");
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.pow(U0::default()), z);
+        assert_eq!(o.overflowing_pow(U1::default()), (m, true));
+        assert_eq!(o.overflowing_pow(U1::from(1u8)), (o, false));
+        assert_eq!(m.overflowing_pow(U1::from(1u8)), (m, false));
+        assert_eq!(m.overflowing_pow(U1::default()), (m, true));
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2747,6 +2976,14 @@ mod tests {
                 );
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!([z; 0].into_iter().sum::<I0>(), z);
+        assert_eq!([o; 1].into_iter().sum::<I1>(), o);
+        assert_eq!([m; 1].into_iter().sum::<I1>(), m);
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
@@ -2798,6 +3035,14 @@ mod tests {
                 assert_twos_complement!($i_struct, $u_struct, isize, usize);
             };
         }
+
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z.twos_complement(), U0::default());
+        assert_eq!(o.twos_complement(), U1::default());
+        assert_eq!(m.twos_complement(), U1::from(1));
+
         run_test!(I96, U96);
         run_test!(I128, U128);
         run_test!(I160, U160);
