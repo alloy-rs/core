@@ -2,7 +2,7 @@
 
 /// Error types for signed integers
 mod errors;
-pub use errors::{ParseSignedError, TryFromBigIntError};
+pub use errors::{BigIntConversionError, ParseSignedError};
 
 /// Sign type
 mod sign;
@@ -12,11 +12,14 @@ pub use sign::Sign;
 mod generic;
 pub use generic::{const_eq, Signed};
 
-/// I256 signed integer type.
-pub type I256 = Signed<256, 4>;
+/// 128-bit signed integer type.
+pub type I128 = Signed<128, 2>;
 
-/// I192 signed integer type.
+/// 160-bit signed integer type.
+pub type I160 = Signed<160, 3>;
+
+/// 192-bit signed integer type.
 pub type I192 = Signed<192, 3>;
 
-/// I128 signed integer type.
-pub type I128 = Signed<128, 2>;
+/// 256-bit signed integer type.
+pub type I256 = Signed<256, 4>;
