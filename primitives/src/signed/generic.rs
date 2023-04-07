@@ -433,6 +433,32 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         Self(val)
     }
 
+    /// Attempt to perform the conversion via a `TryInto` implementation, and
+    /// panic on failure
+    ///
+    /// This is a shortcut for `val.try_into().unwrap()`
+    #[inline(always)]
+    pub fn unchecked_from<T>(val: T) -> Self
+    where
+        T: TryInto<Self>,
+        <T as TryInto<Self>>::Error: fmt::Debug,
+    {
+        val.try_into().unwrap()
+    }
+
+    /// Attempt to perform the conversion via a `TryInto` implementation, and
+    /// panic on failure
+    ///
+    /// This is a shortcut for `self.try_into().unwrap()`
+    #[inline(always)]
+    pub fn unchecked_into<T>(self) -> T
+    where
+        Self: TryInto<T>,
+        <Self as TryInto<T>>::Error: fmt::Debug,
+    {
+        self.try_into().unwrap()
+    }
+
     /// Returns the signed integer as a unsigned integer. If the value of `self` negative, then the
     /// two's complement of its absolute value will be returned.
     #[inline(always)]
