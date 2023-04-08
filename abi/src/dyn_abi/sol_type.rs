@@ -9,9 +9,9 @@ use crate::{
 /// known at compile time. It is used in conjunction with [`DynToken`] and
 /// [`DynSolValue`] to allow for dynamic ABI encoding and decoding.
 ///
-/// Users will generally want to instantiate via the [`crate::dyn_abi::parse`]
-/// function. This will parse a string into a [`DynSolType`]. User-defined
-/// types be instantiated directly.
+/// Users will generally want to instantiate via the [`std::str::FromStr`] impl
+/// on [`DynSolType`]. This will parse a string into a [`DynSolType`].
+/// User-defined types can be instantiated directly.
 ///
 /// # Example
 /// ```

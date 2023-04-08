@@ -45,7 +45,7 @@
 //! Where the static encoding system encodes the expected type information into
 //! the rust type system, the dynamic encoder/decoder encodes it as a concrete
 //! instance of [`DynSolType`]. This type is used to tokenize and detokenize
-//! [`DynSolValue`] instances. The [`parse`] function is used to parse a
+//! [`DynSolValue`] instances. The [`std::str::FromStr`] impl is used to parse a
 //! solidity type string into a [`DynSolType`] object.
 //!
 //! Tokenizing - `DynSolType + `DynSolValue` = `DynToken`

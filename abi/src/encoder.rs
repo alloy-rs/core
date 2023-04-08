@@ -42,7 +42,7 @@ use crate::{token::TokenSeq, util::pad_u32, TokenType, Word};
 
 /// An ABI encoder. This is not intended for public consumption. It should be
 /// used only by the token types. If you have found yourself here, you probably
-/// want to use the high-level [`SolType`] interface (or its dynamic
+/// want to use the high-level [`crate::SolType`] interface (or its dynamic
 /// equivalent) instead.
 #[derive(Default, Clone, Debug)]
 pub struct Encoder {
