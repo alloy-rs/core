@@ -1,4 +1,4 @@
-use ethers_primitives::{B160, I256, U256};
+use ethers_primitives::{aliases::*, B160, I256, U256};
 
 use crate::Word;
 
@@ -206,15 +206,15 @@ macro_rules! impl_from_int {
             }
         }
     };
+    ($($size:ty),+) => {
+        $(impl_from_int!($size);)+
+    };
 }
 
-impl_from_int!(i8);
-impl_from_int!(i16);
-impl_from_int!(i32);
-impl_from_int!(i64);
-impl_from_int!(isize);
-// TODO: more?
-impl_from_int!(I256);
+impl_from_int!(
+    i8, i16, i32, i64, isize, i128, I24, I40, I48, I56, I72, I80, I88, I96, I104, I112, I120, I128,
+    I136, I144, I152, I160, I168, I176, I184, I192, I200, I208, I216, I224, I232, I240, I248, I256
+);
 
 macro_rules! impl_from_uint {
     ($size:ty) => {
@@ -224,15 +224,13 @@ macro_rules! impl_from_uint {
             }
         }
     };
+    ($($size:ty),+) => {
+        $(impl_from_uint!($size);)+
+    };
 }
 
-impl_from_uint!(u8);
-impl_from_uint!(u16);
-impl_from_uint!(u32);
-impl_from_uint!(u64);
-impl_from_uint!(usize);
 // TODO: more?
-impl_from_uint!(U256);
+impl_from_uint!(u8, u16, u32, u64, usize, u128, U256);
 
 impl From<String> for DynSolValue {
     fn from(value: String) -> Self {
