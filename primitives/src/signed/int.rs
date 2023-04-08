@@ -2,7 +2,7 @@ use core::fmt;
 use ruint::Uint;
 
 #[cfg(not(feature = "std"))]
-use alloc::format;
+use alloc::{format, string::String};
 
 use super::{
     errors::{self},
@@ -12,6 +12,73 @@ use super::{
 
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 /// Signed integer wrapping a `ruint::Uint`.
+///
+/// This signed integer implementation is fully abstract across the number of
+/// bits. It wraps a [`ruint::Uint`], and co-opts the most significant bit to
+/// represent the sign. The number is represented in two's complement, using the
+/// underlying `Uint`'s `u64` limbs. The limbs can be accessed via the
+/// [`Signed::as_limbs()`] method, and are least-significant first.
+///
+/// ## Aliases
+///
+/// We provide aliases for every bit-width divisble by 8, from 8 to 256. These
+/// are located in [`crate::aliases`] and are named `I256`, `I248` etc. Most
+/// users will want [`crate::I256`].
+///
+/// # Usage
+///
+/// ```
+/// # use ethers_primitives::I256;
+/// // Instantiate from a number
+/// let a = I256::unchecked_from(1);
+/// // Use `try_from` if you're not sure it'll fit
+/// let b = I256::try_from(200000382).unwrap();
+///
+/// // Or parse from a string :)
+/// let c = "100".parse::<I256>().unwrap();
+/// let d = "-0x138f".parse::<I256>().unwrap();
+///
+/// // Preceding plus is allowed but not recommended
+/// let e = "+0xdeadbeef".parse::<I256>().unwrap();
+///
+/// // Underscores are ignored
+/// let f = "1_000_000".parse::<I256>().unwrap();
+///
+/// // But invalid chars are not
+/// assert!("^31".parse::<I256>().is_err());
+///
+/// // Omitting the hex prefix is allowed, but not recommended
+/// // Be careful, it can be confused for a decimal string!
+/// let g = "deadbeef".parse::<I256>().unwrap();
+/// // Is this hex? or decimal?
+/// let h = "1113".parse::<I256>().unwrap();
+/// // It's decimal!
+/// assert_eq!(h, I256::unchecked_from(1113));
+///
+/// // Math works great :)
+/// let g = a * b + c - d;
+///
+/// // And so does comparison!
+/// assert!(e > a);
+///
+/// // We have some useful constants too
+/// assert_eq!(I256::zero(), I256::unchecked_from(0));
+/// assert_eq!(I256::one(), I256::unchecked_from(1));
+/// assert_eq!(I256::minus_one(), I256::unchecked_from(-1));
+/// ```
+///
+/// # Note on [`std::str::FromStr`]
+///
+/// The parse function first tries the string as a decimal string, then as a
+/// hex string. We do it this way because decimal has a more-restrictive
+/// alphabet. E.g. the string "11f" is valid hex but not valid decimal. This
+/// means that errors are reported more correctly (there are no false invalid
+/// char errors on valid-but-overflowing hex strings). However, this means that
+/// when using un-prefixed hex strings, they will be confused for decimal
+/// strings if they use no hex digits.
+///
+/// To prevent this, we strongly recommend always prefixing hex strings with
+/// `0x` AFTER the sign (if any).
 pub struct Signed<const BITS: usize, const LIMBS: usize>(pub(crate) Uint<BITS, LIMBS>);
 
 // formatting
@@ -316,6 +383,14 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         Self::checked_from_sign_and_abs(sign, abs).ok_or(errors::ParseSignedError::IntegerOverflow)
     }
 
+    /// Convert to a decimal string.
+    pub fn to_dec_string(self) -> String {
+        let sign = self.sign();
+        let abs = self.unsigned_abs();
+
+        format!("{sign}{abs}")
+    }
+
     /// Convert from a hex string.
     pub fn from_hex_str(value: &str) -> Result<Self, errors::ParseSignedError> {
         let (sign, value) = match value.as_bytes().first() {
@@ -332,6 +407,14 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
         let abs = Uint::<BITS, LIMBS>::from_str_radix(value, 16)?;
         Self::checked_from_sign_and_abs(sign, abs).ok_or(errors::ParseSignedError::IntegerOverflow)
+    }
+
+    /// Convert to a hex string.
+    pub fn to_hex_string(self) -> String {
+        let sign = self.sign();
+        let abs = self.unsigned_abs();
+
+        format!("{sign}0x{abs:x}")
     }
 
     /// Splits a Signed into its absolute value and negative flag.
@@ -412,6 +495,26 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Instantiate from limbs
     pub const fn from_limbs(limbs: [u64; LIMBS]) -> Self {
         Self(Uint::from_limbs(limbs))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<const BITS: usize, const LIMBS: usize> serde::Serialize for Signed<BITS, LIMBS> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_string().serialize(serializer)
+    }
+}
+
+impl<'de, const BITS: usize, const LIMBS: usize> serde::Deserialize<'de> for Signed<BITS, LIMBS> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
     }
 }
 
@@ -528,7 +631,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_dec_str() {
+    fn from_dec_str() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
                 let min_abs: $u_struct = <$i_struct>::MIN.0;
@@ -581,7 +684,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_hex_str() {
+    fn from_hex_str() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
                 let min_abs = <$i_struct>::MIN.0;
@@ -635,6 +738,23 @@ mod tests {
         run_test!(I160, U160);
         run_test!(I192, U192);
         run_test!(I256, U256);
+    }
+
+    #[test]
+    fn parse() {
+        assert_eq!("0x0".parse::<I0>(), Ok(I0::default()));
+        assert_eq!("+0x0".parse::<I0>(), Ok(I0::default()));
+        assert_eq!("0x0".parse::<I1>(), Ok(I1::ZERO));
+        assert_eq!("+0x0".parse::<I1>(), Ok(I1::ZERO));
+        assert_eq!("-0x1".parse::<I1>(), Ok(I1::MINUS_ONE));
+        assert_eq!("0x1".parse::<I1>(), Err(ParseSignedError::IntegerOverflow));
+
+        assert_eq!("0".parse::<I0>(), Ok(I0::default()));
+        assert_eq!("+0".parse::<I0>(), Ok(I0::default()));
+        assert_eq!("0".parse::<I1>(), Ok(I1::ZERO));
+        assert_eq!("+0".parse::<I1>(), Ok(I1::ZERO));
+        assert_eq!("-1".parse::<I1>(), Ok(I1::MINUS_ONE));
+        assert_eq!("1".parse::<I1>(), Err(ParseSignedError::IntegerOverflow));
     }
 
     #[test]

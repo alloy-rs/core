@@ -63,7 +63,7 @@ impl<const BITS: usize, const LIMBS: usize> FromStr for Signed<BITS, LIMBS> {
 
     #[inline(always)]
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Signed::from_hex_str(value).or_else(|_| Signed::from_dec_str(value))
+        Signed::from_dec_str(value).or_else(|_| Signed::from_hex_str(value))
     }
 }
 

@@ -46,7 +46,8 @@ ruint = { path = "../uint", version = "1.7.0", features = [
 ] }
 
 [features]
-default = ["std"]
+default = ["std", "rlp", "serde"]
 std = ["dep:thiserror"]
 rlp = ["dep:ethers-rlp", "dep:bytes"]
+serde = ["dep:serde", "ruint/serde"]
 arbitrary = ["ruint/arbitrary", "ruint/proptest", "dep:arbitrary", "dep:proptest", "dep:proptest-derive"]
