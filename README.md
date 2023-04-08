@@ -6,10 +6,6 @@ foundry.
 
 # Some TODOS
 
-- correct cargo.toml metadata
-  - authors
-  - package names
-  - etc
 - double-check license info
 - set up cargo deny
 - set up CI
@@ -17,3 +13,4 @@ foundry.
 - fix uint CI
   - maybe: integrate uint CI with local CI?
 - fix wasm in uint
+- unify workspace deps
