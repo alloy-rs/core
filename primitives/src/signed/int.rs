@@ -1544,11 +1544,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn div_euclid_overflow() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let _ = <$i_struct>::MIN.div_euclid(<$i_struct>::minus_one());
+                let err = std::panic::catch_unwind(|| {
+                    let _ = <$i_struct>::MIN.div_euclid(<$i_struct>::minus_one());
+                });
+                assert!(err.is_err());
             };
         }
         run_test!(I96, U96);
