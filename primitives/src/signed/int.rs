@@ -1237,8 +1237,14 @@ mod tests {
             };
         }
 
-        // run_test!(I0, U0);
-        // run_test!(I1, U1);
+        let z = I0::default();
+        let o = I1::default();
+        let m = I1::MINUS_ONE;
+        assert_eq!(z - z, z);
+        assert_eq!(o - o, o);
+        assert_eq!(m - o, m);
+        assert_eq!(m - m, o);
+        assert_eq!(o.overflowing_sub(m), (m, true));
 
         run_test!(I96, U96);
         run_test!(I128, U128);
