@@ -5,7 +5,7 @@ use ethers_primitives::{B160, I256, U256};
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::{String as RustString, ToOwned, ToString, Vec};
 #[cfg(feature = "std")]
-use std::string::String as RustString;
+use std::{borrow::Borrow, string::String as RustString};
 
 use crate::{
     decoder::*,
@@ -110,13 +110,20 @@ use crate::{
 ///
 ///     // Convert from the rust type to the token type. We cheat here AGAIN
 ///     // by delegating.
-///     fn tokenize(rust: Self::RustType) -> Self::TokenType {
-///         let MyRustStruct { a, b } = rust;
+///     fn tokenize<B>(rust: B) -> Self::TokenType
+///     where
+///        B: std::borrow::Borrow<Self::RustType>,
+///     {
+///         let MyRustStruct { a, b } = *rust.borrow();
 ///         UnderlyingTuple::tokenize((a, b))
 ///     }
 ///
-///     fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
-///        let MyRustStruct { a, b } = rust;
+///     // Implement packed encoding
+///     fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
+///     where
+///        B: std::borrow::Borrow<Self::RustType>,
+///     {
+///        let MyRustStruct { a, b } = *rust.borrow();
 ///        UnderlyingTuple::encode_packed_to(target, (a, b))
 ///     }
 ///
@@ -144,8 +151,10 @@ use crate::{
 /// impl SolType for MyStruct { ... }
 /// ```
 pub trait SolType {
-    /// The corresponding Rust type.
-    type RustType: Sized;
+    /// The corresponding Rust type. This type may be borrowed (e.g. `str`)
+    type RustType;
+
+    /// The corresponding owned Rust type.
 
     /// The corresponding ABI token type.
     ///
@@ -162,14 +171,21 @@ pub trait SolType {
     /// Detokenize
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType>;
     /// Tokenize
-    fn tokenize(rust: Self::RustType) -> Self::TokenType;
+    fn tokenize<B>(rust: B) -> Self::TokenType
+    where
+        B: Borrow<Self::RustType>;
 
     /// Implemens solidity's encodePacked() function, writing to the target to
     /// avoid allocations
-    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType);
+    fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
+    where
+        B: Borrow<Self::RustType>;
 
     /// Implements solidity's encodePacked() function
-    fn encode_packed(rust: Self::RustType) -> Vec<u8> {
+    fn encode_packed<B>(rust: B) -> Vec<u8>
+    where
+        B: Borrow<Self::RustType>,
+    {
         let mut res = Vec::new();
         Self::encode_packed_to(&mut res, rust);
         res
@@ -181,46 +197,56 @@ pub trait SolType {
     }
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence
-    fn encode_single(rust: Self::RustType) -> Vec<u8> {
+    fn encode_single<B>(rust: B) -> Vec<u8>
+    where
+        B: Borrow<Self::RustType>,
+    {
         let token = Self::tokenize(rust);
         crate::encode_single(token)
     }
 
     /// Encode an ABI sequence
-    fn encode(rust: Self::RustType) -> Vec<u8>
+    fn encode<B>(rust: B) -> Vec<u8>
     where
         Self::TokenType: TokenSeq,
+        B: Borrow<Self::RustType>,
     {
         let token = Self::tokenize(rust);
         crate::encode(token)
     }
 
     /// Encode an ABI sequence suitable for function params
-    fn encode_params(rust: Self::RustType) -> Vec<u8>
+    fn encode_params<B>(rust: B) -> Vec<u8>
     where
         Self::TokenType: TokenSeq,
+        B: Borrow<Self::RustType>,
     {
         let token = Self::tokenize(rust);
         crate::encode_params(token)
     }
 
     /// Hex output of encode
-    fn hex_encode(rust: Self::RustType) -> RustString
+    fn hex_encode<B>(rust: B) -> RustString
     where
         Self::TokenType: TokenSeq,
+        B: Borrow<Self::RustType>,
     {
         format!("0x{}", hex::encode(Self::encode(rust)))
     }
 
     /// Hex output of encode_single
-    fn hex_encode_single(rust: Self::RustType) -> RustString {
+    fn hex_encode_single<B>(rust: B) -> RustString
+    where
+        B: Borrow<Self::RustType>,
+    {
         format!("0x{}", hex::encode(Self::encode_single(rust)))
     }
 
     /// Hex output of encode_params
-    fn hex_encode_params(rust: Self::RustType) -> RustString
+    fn hex_encode_params<B>(rust: B) -> RustString
     where
         Self::TokenType: TokenSeq,
+        B: Borrow<Self::RustType>,
     {
         format!("0x{}", hex::encode(Self::encode_params(rust)))
     }
@@ -316,13 +342,16 @@ impl SolType for Address {
         Ok(B160::from_slice(sli))
     }
 
-    fn tokenize(rust: Self::RustType) -> Self::TokenType {
-        rust.into()
+    fn tokenize<B>(rust: B) -> Self::TokenType
+    where
+        B: Borrow<Self::RustType>,
+    {
+        WordToken::from(*rust.borrow())
     }
 
-    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
         // push the last 20 bytes of the word to the target
-        target.extend_from_slice(&rust.as_bytes()[12..]);
+        target.extend_from_slice(&rust.borrow().as_bytes()[12..]);
     }
 }
 
@@ -349,13 +378,16 @@ impl SolType for Bytes {
         Ok(token.take_vec())
     }
 
-    fn tokenize(rust: Self::RustType) -> Self::TokenType {
-        rust.into()
+    fn tokenize<B>(rust: B) -> Self::TokenType
+    where
+        B: Borrow<Self::RustType>,
+    {
+        rust.borrow().to_owned().into()
     }
 
-    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
         // push the buf to the vec
-        target.extend_from_slice(&rust);
+        target.extend_from_slice(rust.borrow());
     }
 }
 
@@ -383,9 +415,13 @@ macro_rules! impl_int_sol_type {
                 Ok(<$ity>::from_be_bytes(sli.try_into().unwrap()))
             }
 
-            fn tokenize(rust: Self::RustType) -> Self::TokenType {
+            fn tokenize<B>(rust: B) -> Self::TokenType
+            where
+                B: Borrow<Self::RustType>
+            {
+                let rust = rust.borrow();
                 let bytes = (<$ity>::BITS / 8) as usize;
-                let mut word = if rust < 0 {
+                let mut word = if *rust < 0 {
                     // account for negative
                     Word::repeat_byte(0xff)
                 } else {
@@ -396,12 +432,16 @@ macro_rules! impl_int_sol_type {
                 word.into()
             }
 
-            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+            fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
+            where
+                B: Borrow<Self::RustType>
+            {
+                let rust = rust.borrow();
                 if rust.is_negative(){
                     let bytes = rust.to_be_bytes();
                     target.extend(bytes);
                 } else {
-                    Uint::<$bits>::encode_packed_to(target, rust as <Uint::<$bits> as SolType>::RustType);
+                    Uint::<$bits>::encode_packed_to(target, *rust as <Uint::<$bits> as SolType>::RustType);
                 }
             }
         }
@@ -428,11 +468,12 @@ macro_rules! impl_int_sol_type {
                 Ok(I256::from_be_bytes::<32>(token.into()))
             }
 
-            fn tokenize(rust: Self::RustType) -> Self::TokenType {
-                rust.to_be_bytes().into()
+            fn tokenize<B>(rust: B) -> Self::TokenType where B: Borrow<Self::RustType>{
+                rust.borrow().to_be_bytes().into()
             }
 
-            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+            fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B) where B: Borrow<Self::RustType>{
+                let rust = rust.borrow();
                 if rust.is_negative(){
                     let bytes = rust.to_be_bytes();
                     target.extend(bytes);
@@ -497,17 +538,17 @@ macro_rules! impl_uint_sol_type {
                 Ok(<$uty>::from_be_bytes(sli.try_into().unwrap()))
             }
 
-            fn tokenize(rust: Self::RustType) -> Self::TokenType {
+            fn tokenize<B>(rust: B) -> Self::TokenType where B: Borrow<Self::RustType>{
                 let bytes = (<$uty>::BITS / 8) as usize;
                 let mut word = Word::default();
-                let slice = rust.to_be_bytes();
+                let slice = rust.borrow().to_be_bytes();
                 word[32 - bytes..].copy_from_slice(&slice);
                 word.into()
             }
 
-            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+            fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B) where B: Borrow<Self::RustType>{
                 // encode the rust to be bytes, strip leading zeroes, then push to the target
-                let bytes = rust.to_be_bytes();
+                let bytes = rust.borrow().to_be_bytes();
                 target.extend(bytes);
             }
         }
@@ -539,13 +580,13 @@ macro_rules! impl_uint_sol_type {
                 Ok(U256::from_be_bytes::<32>(*token.inner()))
             }
 
-            fn tokenize(rust: Self::RustType) -> Self::TokenType {
-                rust.into()
+            fn tokenize<B>(rust: B) -> Self::TokenType where B: Borrow<Self::RustType>{
+                (*rust.borrow()).into()
             }
 
-            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+            fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B) where B: Borrow<Self::RustType>{
                 // encode the rust to be bytes, strip leading zeroes, then push to the target
-                let bytes: [u8; $bits / 8] = rust.to_be_bytes();
+                let bytes: [u8; $bits / 8] = rust.borrow().to_be_bytes();
                 target.extend(bytes);
             }
         }
@@ -600,15 +641,21 @@ impl SolType for Bool {
         Ok(token.inner() != Word::repeat_byte(0))
     }
 
-    fn tokenize(rust: Self::RustType) -> Self::TokenType {
+    fn tokenize<B>(rust: B) -> Self::TokenType
+    where
+        B: Borrow<Self::RustType>,
+    {
         let mut word = Word::default();
-        word[31..32].copy_from_slice(&[rust as u8]);
+        word[31..32].copy_from_slice(&[*rust.borrow() as u8]);
         word.into()
     }
 
-    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+    fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
+    where
+        B: Borrow<Self::RustType>,
+    {
         // write the bool as a u8
-        target.push(rust as u8);
+        target.push(*rust.borrow() as u8);
     }
 }
 
@@ -641,15 +688,22 @@ where
         token.take_vec().into_iter().map(T::detokenize).collect()
     }
 
-    fn tokenize(rust: Self::RustType) -> Self::TokenType {
-        rust.into_iter()
+    fn tokenize<B>(rust: B) -> Self::TokenType
+    where
+        B: Borrow<Self::RustType>,
+    {
+        rust.borrow()
+            .iter()
             .map(|r| T::tokenize(r))
             .collect::<Vec<_>>()
             .into()
     }
 
-    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
-        for item in rust {
+    fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
+    where
+        B: Borrow<Self::RustType>,
+    {
+        for item in rust.borrow() {
             T::encode_packed_to(target, item);
         }
     }
@@ -682,15 +736,21 @@ impl SolType for String {
         // prevent invalid strings written into contracts by either users or
         // Solidity bugs from causing graph-node to fail decoding event
         // data.
-        Ok(RustString::from_utf8_lossy(&Bytes::detokenize(token)?).into())
+        Ok(RustString::from_utf8_lossy(&Bytes::detokenize(token)?).into_owned())
     }
 
-    fn tokenize(rust: Self::RustType) -> Self::TokenType {
-        rust.into_bytes().into()
+    fn tokenize<B>(rust: B) -> Self::TokenType
+    where
+        B: Borrow<Self::RustType>,
+    {
+        rust.borrow().as_bytes().to_vec().into()
     }
 
-    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
-        target.extend(rust.as_bytes());
+    fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
+    where
+        B: Borrow<Self::RustType>,
+    {
+        target.extend(rust.borrow().as_bytes());
     }
 }
 
@@ -722,15 +782,15 @@ macro_rules! impl_fixed_bytes_sol_type {
                 Ok(res)
             }
 
-            fn tokenize(rust: Self::RustType) -> Self::TokenType {
+            fn tokenize<B>(rust: B) -> Self::TokenType where B: Borrow<Self::RustType>{
                 let mut word = Word::default();
-                word[..$bytes].copy_from_slice(&rust[..]);
+                word[..$bytes].copy_from_slice(&rust.borrow()[..]);
                 word.into()
             }
 
-            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+            fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B) where B: Borrow<Self::RustType> {
                 // write only the first n bytes
-                target.extend_from_slice(&rust[..$bytes]);
+                target.extend_from_slice(&rust.borrow()[..$bytes]);
             }
         }
     };
@@ -785,12 +845,27 @@ where
         }
     }
 
-    fn tokenize(rust: Self::RustType) -> Self::TokenType {
-        rust.map(|r| T::tokenize(r)).into()
+    fn tokenize<B>(rust: B) -> Self::TokenType
+    where
+        B: Borrow<Self::RustType>,
+    {
+        match rust
+            .borrow()
+            .iter()
+            .map(|r| T::tokenize(r))
+            .collect::<Vec<_>>()
+            .try_into()
+        {
+            Ok(tokens) => tokens,
+            Err(_) => unreachable!(),
+        }
     }
 
-    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
-        for item in rust {
+    fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
+    where
+        B: Borrow<Self::RustType>,
+    {
+        for item in rust.borrow() {
             T::encode_packed_to(target, item);
         }
     }
@@ -840,20 +915,28 @@ macro_rules! impl_tuple_sol_type {
                 ))
             }
 
-            fn tokenize(rust: Self::RustType) -> Self::TokenType {
+            fn tokenize<Borrower>(rust: Borrower) -> Self::TokenType
+            where
+                Borrower: Borrow<Self::RustType>{
+                let rust = rust.borrow();
                 ($(
-                    $ty::tokenize(rust.$no),
+                    $ty::tokenize(&rust.$no),
                 )+)
             }
 
-            fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
+            fn encode_packed_to<Borrower>(target: &mut Vec<u8>, rust: Borrower)
+            where
+                Borrower: Borrow<Self::RustType>
+            {
+                let rust = rust.borrow();
                 $(
-                    $ty::encode_packed_to(target, rust.$no);
+                    $ty::encode_packed_to(target, &rust.$no);
                 )+
             }
         }
     };
 }
+
 impl_tuple_sol_type!(1, A:0, );
 impl_tuple_sol_type!(2, A:0, B:1, );
 impl_tuple_sol_type!(3, A:0, B:1, C:2, );

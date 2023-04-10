@@ -160,6 +160,14 @@ impl TokenType for WordToken {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FixedSeqToken<T, const N: usize>([T; N]);
 
+impl<T, const N: usize> TryFrom<Vec<T>> for FixedSeqToken<T, N> {
+    type Error = <[T; N] as TryFrom<Vec<T>>>::Error;
+
+    fn try_from(value: Vec<T>) -> Result<Self, Self::Error> {
+        <[T; N]>::try_from(value).map(Self)
+    }
+}
+
 impl<T, const N: usize> From<[T; N]> for FixedSeqToken<T, N> {
     fn from(value: [T; N]) -> Self {
         Self(value)

@@ -349,8 +349,11 @@ impl SolStructDef {
 
     fn expand_tokenize(&self) -> TokenStream {
         quote! {
-            fn tokenize(rust: Self::RustType) -> Self::TokenType {
-                let tuple: UnderlyingRustTuple = rust.into();
+            fn tokenize<Borrower>(rust: Borrower) -> Self::TokenType
+            where
+                Borrower: ::std::borrow::Borrow<Self::RustType>
+            {
+                let tuple: UnderlyingRustTuple = rust.borrow().clone().into();
                 <UnderlyingTuple as ::ethers_abi_enc::SolType>::tokenize(tuple)
             }
         }
@@ -411,8 +414,11 @@ impl ToTokens for SolStructDef {
                     #detokenize
                     #tokenize
 
-                    fn encode_packed_to(target: &mut Vec<u8>, rust: Self::RustType) {
-                        let tuple: UnderlyingRustTuple = rust.into();
+                    fn encode_packed_to<Borrower>(target: &mut Vec<u8>, rust: Borrower)
+                    where
+                        Borrower: ::std::borrow::Borrow<Self::RustType>
+                    {
+                        let tuple: UnderlyingRustTuple = rust.borrow().clone().into();
                         <UnderlyingTuple as ::ethers_abi_enc::SolType>::encode_packed_to(target, tuple)
                     }
                 }
