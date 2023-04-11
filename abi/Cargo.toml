@@ -14,12 +14,17 @@ authors = []
 ethers-primitives = { version = "0.1.0", path = "../primitives" }
 hex = "0.4.3"
 sol-type-parser = { version = "0.1.0", path = "sol-type-parser" }
+
 thiserror = { version = "1.0.39", optional = true }
+serde = { version = "1.0.159", optional = true }
+tiny-keccak = { version = "2.0.2", optional = true, features = ["keccak"] }
 
 [dev-dependencies]
 hex-literal = "0.3.4"
 
 [features]
-default = ["std", "dynamic"]
+default = ["std", "dynamic", "eip712"]
 std = ["hex/std", "thiserror"]
 dynamic = ["std"]
+eip712 = ["dep:tiny-keccak"]
+eip712-serde = ["dep:serde", "std", "eip712"]

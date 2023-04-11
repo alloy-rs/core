@@ -46,7 +46,7 @@ pub enum DynSolValue {
 
 impl DynSolValue {
     /// Fallible cast to the contents of a variant DynSolValue {
-    pub fn as_address(&self) -> Option<B160> {
+    pub const fn as_address(&self) -> Option<B160> {
         match self {
             Self::Address(a) => Some(*a),
             _ => None,
@@ -54,7 +54,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant
-    pub fn as_bool(&self) -> Option<bool> {
+    pub const fn as_bool(&self) -> Option<bool> {
         match self {
             Self::Bool(b) => Some(*b),
             _ => None,
@@ -78,7 +78,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant
-    pub fn as_int(&self) -> Option<(Word, usize)> {
+    pub const fn as_int(&self) -> Option<(Word, usize)> {
         match self {
             Self::Int(w, size) => Some((*w, *size)),
             _ => None,
@@ -86,7 +86,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant
-    pub fn as_uint(&self) -> Option<(U256, usize)> {
+    pub const fn as_uint(&self) -> Option<(U256, usize)> {
         match self {
             Self::Uint(u, size) => Some((*u, *size)),
             _ => None,

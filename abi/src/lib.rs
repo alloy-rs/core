@@ -8,8 +8,19 @@
 // except according to those terms.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::module_inception)]
-#![warn(missing_docs)]
+#![warn(
+    missing_docs,
+    unreachable_pub,
+    unused_crate_dependencies,
+    missing_copy_implementations,
+    missing_debug_implementations,
+    clippy::missing_const_for_fn
+)]
+#![deny(unused_must_use, rust_2018_idioms)]
+#![doc(test(
+    no_crate_inject,
+    attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
+))]
 
 //! ABI Encoding & Decoding implementation
 //!
@@ -135,18 +146,17 @@
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate alloc;
 #[cfg(not(feature = "std"))]
-mod no_std_prelude {
-    pub use alloc::{
+pub(crate) mod no_std_prelude {
+    pub(crate) use alloc::{
         borrow::{Borrow, Cow, ToOwned},
-        boxed::Box,
-        string::{self, String, ToString},
+        string::{String, ToString},
         vec::Vec,
     };
 }
 
 #[cfg(feature = "std")]
-mod no_std_prelude {
-    pub use std::borrow::Cow;
+pub(crate) mod no_std_prelude {
+    pub(crate) use std::borrow::ToOwned;
 }
 
 use ethers_primitives::B256;
@@ -167,7 +177,7 @@ pub use encoder::Encoder;
 pub use encoder::{encode, encode_params, encode_single};
 
 mod token;
-pub use token::{DynSeqToken, FixedSeqToken, PackedSeqToken, TokenType, WordToken};
+pub use token::{DynSeqToken, FixedSeqToken, PackedSeqToken, TokenSeq, TokenType, WordToken};
 
 mod errors;
 pub use errors::{AbiResult, Error};
@@ -183,3 +193,8 @@ pub use sol_type_parser::sol;
 
 /// The Word type for ABI Encoding
 pub type Word = B256;
+
+#[cfg(feature = "eip712")]
+mod eip712;
+#[cfg(feature = "eip712")]
+pub use eip712::{Eip712Domain, SolStruct};

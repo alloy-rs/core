@@ -58,7 +58,7 @@ impl From<Word> for DynToken {
 
 impl DynToken {
     /// Attempt to cast to a word.
-    pub fn as_word(&self) -> Option<Word> {
+    pub const fn as_word(&self) -> Option<Word> {
         match self {
             Self::Word(word) => Some(*word),
             _ => None,
@@ -100,7 +100,7 @@ impl DynToken {
     }
 
     /// Decodes from a decoder, populating the structure with the decoded data
-    pub fn decode_populate(&mut self, dec: &mut Decoder) -> AbiResult<()> {
+    pub fn decode_populate(&mut self, dec: &mut Decoder<'_>) -> AbiResult<()> {
         let dynamic = self.is_dynamic();
         match self {
             DynToken::Word(w) => *w = WordToken::decode_from(dec)?.inner(),
@@ -235,7 +235,7 @@ impl DynToken {
 
     /// Decode a sequence from the decoder, populating the data by consuming
     /// decoder words
-    pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder) -> AbiResult<()> {
+    pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'_>) -> AbiResult<()> {
         match self {
             DynToken::FixedSeq(buf, _) => {
                 for item in buf.iter_mut() {
@@ -256,7 +256,7 @@ impl DynToken {
     }
 
     /// Decode a single item of this type, as a sequence of length 1
-    pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder) -> AbiResult<()> {
+    pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder<'_>) -> AbiResult<()> {
         let mut tok = DynToken::FixedSeq(vec![self.clone()], 1);
         tok.decode_sequence_populate(dec)?;
         if let DynToken::FixedSeq(mut toks, _) = tok {

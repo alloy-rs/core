@@ -32,7 +32,7 @@ pub trait TokenType: sealed::Sealed + Sized + Clone {
     fn is_dynamic() -> bool;
 
     /// Decode a token from a decoder
-    fn decode_from(dec: &mut Decoder) -> AbiResult<Self>;
+    fn decode_from(dec: &mut Decoder<'_>) -> AbiResult<Self>;
 
     /// Calculate the number of head words
     fn head_words(&self) -> usize;
@@ -52,18 +52,25 @@ pub trait TokenType: sealed::Sealed + Sized + Clone {
     fn tail_append(&self, enc: &mut Encoder);
 }
 
+/// A token composed of a sequence of other tokens
+///
+/// This functions as an extension trait for [`TokenType`], and may only be
+/// implemented by [`FixedSeqToken`], [`DynSeqToken`], and [`PackedSeqToken`].
 pub trait TokenSeq: TokenType {
     /// True for tuples only.
     fn can_be_params() -> bool {
         false
     }
+
+    /// Encode the token sequence to the encoder
     fn encode_sequence(&self, enc: &mut Encoder);
 
-    fn decode_sequence(dec: &mut Decoder) -> AbiResult<Self>;
+    /// Decode the token sequence from the encoder
+    fn decode_sequence(dec: &mut Decoder<'_>) -> AbiResult<Self>;
 }
 
 /// A single EVM word - T for any value type
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Copy)]
 pub struct WordToken(Word);
 
 impl From<Word> for WordToken {
@@ -127,7 +134,7 @@ impl WordToken {
     }
 
     /// Copy the inner word
-    pub fn inner(&self) -> Word {
+    pub const fn inner(&self) -> Word {
         self.0
     }
 }
@@ -137,7 +144,7 @@ impl TokenType for WordToken {
         false
     }
 
-    fn decode_from(dec: &mut Decoder) -> AbiResult<Self> {
+    fn decode_from(dec: &mut Decoder<'_>) -> AbiResult<Self> {
         dec.take_word().map(Into::into)
     }
 
@@ -188,7 +195,7 @@ where
         T::is_dynamic()
     }
 
-    fn decode_from(dec: &mut Decoder) -> AbiResult<Self> {
+    fn decode_from(dec: &mut Decoder<'_>) -> AbiResult<Self> {
         let is_dynamic = Self::is_dynamic();
 
         let mut child = if is_dynamic {
@@ -249,7 +256,7 @@ where
         enc.pop_offset();
     }
 
-    fn decode_sequence(dec: &mut Decoder) -> AbiResult<Self> {
+    fn decode_sequence(dec: &mut Decoder<'_>) -> AbiResult<Self> {
         let mut tokens = Vec::with_capacity(N);
 
         for _ in 0..N {
@@ -266,6 +273,8 @@ where
 
 impl<T, const N: usize> FixedSeqToken<T, N> {
     /// Take the backing array, consuming the token
+    // https://github.com/rust-lang/rust-clippy/issues/4979
+    #[allow(clippy::missing_const_for_fn)]
     pub fn take_array(self) -> [T; N] {
         self.0
     }
@@ -299,6 +308,8 @@ impl<T> AsRef<[T]> for DynSeqToken<T> {
 
 impl<T> DynSeqToken<T> {
     /// Take the backing vec, consuming the tokey
+    // https://github.com/rust-lang/rust-clippy/issues/4979
+    #[allow(clippy::missing_const_for_fn)]
     pub fn take_vec(self) -> Vec<T> {
         self.0
     }
@@ -320,7 +331,7 @@ impl<T: TokenType> TokenType for DynSeqToken<T> {
         true
     }
 
-    fn decode_from(dec: &mut Decoder) -> AbiResult<Self> {
+    fn decode_from(dec: &mut Decoder<'_>) -> AbiResult<Self> {
         let mut child = dec.take_indirection()?;
         let len = child.take_u32()? as usize;
 
@@ -369,7 +380,7 @@ where
         enc.pop_offset();
     }
 
-    fn decode_sequence(dec: &mut Decoder) -> AbiResult<Self> {
+    fn decode_sequence(dec: &mut Decoder<'_>) -> AbiResult<Self> {
         Self::decode_from(dec)
     }
 }
@@ -397,6 +408,8 @@ impl PackedSeqToken {
     }
 
     /// Take the backing vec, consuming the token
+    // https://github.com/rust-lang/rust-clippy/issues/4979
+    #[allow(clippy::missing_const_for_fn)]
     pub fn take_vec(self) -> Vec<u8> {
         self.0
     }
@@ -407,7 +420,7 @@ impl TokenType for PackedSeqToken {
         true
     }
 
-    fn decode_from(dec: &mut Decoder) -> AbiResult<Self> {
+    fn decode_from(dec: &mut Decoder<'_>) -> AbiResult<Self> {
         let mut child = dec.take_indirection()?;
         let len = child.take_u32()? as usize;
         let bytes = child.peek_len(len)?;
@@ -568,7 +581,7 @@ macro_rules! impl_tuple_token_type {
                 enc.pop_offset();
             }
 
-            fn decode_sequence(dec: &mut Decoder) -> AbiResult<Self> {
+            fn decode_sequence(dec: &mut Decoder<'_>) -> AbiResult<Self> {
                 let res = (
                     $($ty::decode_from(dec)?,)+
                 );

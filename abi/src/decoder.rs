@@ -60,7 +60,7 @@ pub(crate) fn check_zeroes(data: &[u8]) -> bool {
     data.iter().all(|b| *b == 0)
 }
 
-fn round_up_nearest_multiple(value: usize, padding: usize) -> usize {
+const fn round_up_nearest_multiple(value: usize, padding: usize) -> usize {
     (value + padding - 1) / padding * padding
 }
 
@@ -129,7 +129,7 @@ impl<'a> Decoder<'a> {
     /// Validation is set to true, the decoder will check that the bytes
     /// conform to expected type limitations, and that the decoded values can be
     /// re-encoded to an identical bytestring.
-    pub fn new(buf: &'a [u8], validate: bool) -> Self {
+    pub const fn new(buf: &'a [u8], validate: bool) -> Self {
         Self {
             buf,
             offset: 0,
@@ -243,7 +243,7 @@ impl<'a> Decoder<'a> {
     }
 
     /// True if this decoder is validating type correctness
-    pub fn validate(&self) -> bool {
+    pub const fn validate(&self) -> bool {
         self.validate
     }
 
@@ -259,7 +259,7 @@ impl<'a> Decoder<'a> {
     }
 
     /// Returns the current offset in the buffer.
-    pub fn offset(&self) -> usize {
+    pub const fn offset(&self) -> usize {
         self.offset
     }
 

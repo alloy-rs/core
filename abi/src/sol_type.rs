@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use ethers_primitives::{B160, I256, U256};
 
 #[cfg(not(feature = "std"))]
-use crate::no_std_prelude::{String as RustString, ToOwned, ToString, Vec};
+use crate::no_std_prelude::{Borrow, String as RustString, ToOwned, ToString, Vec};
 #[cfg(feature = "std")]
 use std::{borrow::Borrow, string::String as RustString};
 
@@ -316,6 +316,7 @@ pub trait SolType {
 }
 
 /// Address - `address`
+#[derive(Copy, Clone, Debug)]
 pub struct Address;
 
 impl SolType for Address {
@@ -356,6 +357,7 @@ impl SolType for Address {
 }
 
 /// Bytes - `bytes`
+#[derive(Copy, Clone, Debug)]
 pub struct Bytes;
 
 impl SolType for Bytes {
@@ -495,6 +497,7 @@ macro_rules! impl_int_sol_type {
 }
 
 /// Int - `intX`
+#[derive(Copy, Clone, Debug)]
 pub struct Int<const BITS: usize>;
 impl_int_sol_type!(i8, 8);
 impl_int_sol_type!(i16, 16);
@@ -600,6 +603,7 @@ macro_rules! impl_uint_sol_type {
 }
 
 /// Uint - `uintX`
+#[derive(Copy, Clone, Debug)]
 pub struct Uint<const BITS: usize>;
 
 impl_uint_sol_type!(u8, 8);
@@ -616,6 +620,7 @@ impl_uint_sol_type!(
 );
 
 /// Bool - `bool`
+#[derive(Copy, Clone, Debug)]
 pub struct Bool;
 
 impl SolType for Bool {
@@ -660,6 +665,7 @@ impl SolType for Bool {
 }
 
 /// Array - `T[]`
+#[derive(Copy, Clone, Debug)]
 pub struct Array<T: SolType>(PhantomData<T>);
 
 impl<T> SolType for Array<T>
@@ -710,6 +716,7 @@ where
 }
 
 /// String - `string`
+#[derive(Copy, Clone, Debug)]
 pub struct String;
 
 impl SolType for String {
@@ -801,6 +808,7 @@ macro_rules! impl_fixed_bytes_sol_type {
 }
 
 /// FixedBytes - `bytesX`
+#[derive(Copy, Clone, Debug)]
 pub struct FixedBytes<const N: usize>;
 impl_fixed_bytes_sol_type!(
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
@@ -808,6 +816,7 @@ impl_fixed_bytes_sol_type!(
 );
 
 /// FixedArray - `T[M]`
+#[derive(Copy, Clone, Debug)]
 pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 
 impl<T, const N: usize> SolType for FixedArray<T, N>

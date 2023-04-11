@@ -24,7 +24,7 @@ impl From<ParseIntError> for ParserError {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CommaSeparatedList<'a> {
+struct CommaSeparatedList<'a> {
     elements: Vec<&'a str>,
 }
 
@@ -64,7 +64,7 @@ pub(crate) fn parse(s: &str) -> Result<DynSolType, ParserError> {
     let s = s.trim();
 
     if s.ends_with(')') {
-        let csl: CommaSeparatedList = s.try_into()?;
+        let csl: CommaSeparatedList<'_> = s.try_into()?;
         let v: Vec<_> = csl
             .elements
             .into_iter()

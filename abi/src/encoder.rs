@@ -60,6 +60,8 @@ impl Encoder {
     }
 
     /// Finish the encoding process, returning the encoded words
+    // https://github.com/rust-lang/rust-clippy/issues/4979
+    #[allow(clippy::missing_const_for_fn)]
     pub fn finish(self) -> Vec<Word> {
         self.buf
     }
