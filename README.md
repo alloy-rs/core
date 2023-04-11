@@ -13,4 +13,4 @@ foundry.
 - fix uint CI
   - maybe: integrate uint CI with local CI?
 - fix wasm in uint
-- unify workspace deps
+- unify workspace deps with `.workspace = true`
