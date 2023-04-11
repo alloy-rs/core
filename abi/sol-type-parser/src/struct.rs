@@ -5,6 +5,7 @@ use quote::{quote, ToTokens};
 
 use crate::r#type::SolType;
 
+#[derive(Debug, Clone)]
 pub struct SolStructField {
     ty: SolType,
     name: Ident,
@@ -50,50 +51,16 @@ impl Parse for SolStructDef {
 }
 
 impl SolStructDef {
-    fn rust_name_alias(&self) -> Ident {
-        Ident::new(&format!("{}Rust", self.name), self.name.span())
-    }
-
-    fn token_alias(&self) -> Ident {
-        Ident::new(&format!("{}Token", self.name), self.name.span())
-    }
-
-    fn expand_aliases(&self) -> TokenStream {
-        let rust_name = self.rust_name_alias();
-        let sol_doc = format!("A type containg info for the Solidity type {}", &self.name);
-        let token_alias = self.token_alias();
-        let sol_name = &self.name;
-
-        let field_ty = self.fields.iter().map(|f| &f.ty);
-        let field_ty2 = field_ty.clone();
-        let field_ty3 = field_ty.clone();
-
-        quote! {
-            #[doc = #sol_doc]
-            #[derive(Debug, Clone, Copy, Default)]
-            pub struct #sol_name(
-                #(::core::marker::PhantomData<#field_ty>),*,
-                ::core::marker::PhantomData<#rust_name>,
-            );
-
-            impl #sol_name {
-                /// Instantiate at runtime for dynamic encoding
-                pub fn new() -> Self {
-                    Self::default()
-                }
-            }
-
-            type UnderlyingTuple = (#(#field_ty2),*);
-
-            pub type #token_alias = <UnderlyingTuple as ::ethers_abi_enc::SolType>::TokenType;
-
-            type UnderlyingRustTuple = (#(<#field_ty3 as ::ethers_abi_enc::SolType>::RustType),*);
-        }
+    fn name(&self) -> Ident {
+        self.name.clone()
     }
 
     fn expand_from(&self) -> TokenStream {
-        let rust_name = self.rust_name_alias();
+        let name = self.name();
         let field_names = self.fields.iter().map(|f| &f.name);
+
+        let field_ty = self.fields.iter().map(|f| &f.ty);
+        let field_ty2 = field_ty.clone();
 
         let (f_no, f_name): (Vec<_>, Vec<_>) = self
             .fields
@@ -103,15 +70,18 @@ impl SolStructDef {
             .unzip();
 
         quote! {
-            impl Into<UnderlyingRustTuple> for #rust_name {
-                fn into(self) -> UnderlyingRustTuple {
-                    (#(self.#field_names),*)
+            type UnderlyingSolTuple = (#(#field_ty),*);
+            type UnderlyingRustTuple = (#(<#field_ty2 as ::ethers_abi_enc::SolType>::RustType),*);
+
+            impl From<#name> for UnderlyingRustTuple {
+                fn from(value: #name) -> UnderlyingRustTuple {
+                    (#(value.#field_names),*)
                 }
             }
 
-            impl From<UnderlyingRustTuple> for #rust_name {
+            impl From<UnderlyingRustTuple> for #name {
                 fn from(tuple: UnderlyingRustTuple) -> Self {
-                    #rust_name {
+                    #name {
                         #(#f_name: tuple.#f_no),*
                     }
                 }
@@ -119,102 +89,89 @@ impl SolStructDef {
         }
     }
 
-    fn expand_detokenize(&self) -> TokenStream {
-        let rust_name = self.rust_name_alias();
+    fn expand_impl(&self) -> TokenStream {
+        let name = self.name();
 
-        let (field_nos, field_names): (Vec<_>, Vec<_>) = self
+        let doc = format!(
+            "A Rust type containg info for the Solidity type {}",
+            &self.name
+        );
+
+        let fields = self.fields.iter();
+
+        let (f_ty, f_name): (Vec<_>, Vec<_>) = self
             .fields
             .iter()
-            .enumerate()
-            .map(|(i, f)| (Index::from(i), &f.name))
+            .map(|f| (f.ty.to_string(), f.name.to_string()))
             .unzip();
 
-        quote! {
-            fn detokenize(token: Self::TokenType) -> ::ethers_abi_enc::AbiResult<#rust_name> {
-                let tuple = <UnderlyingTuple as ::ethers_abi_enc::SolType>::detokenize(token)?;
-                Ok(#rust_name {
-                    #(#field_names: tuple.#field_nos),*
-                })
-            }
-        }
-    }
+        let props_tys: Vec<_> = self.fields.iter().map(|f| f.ty.clone()).collect();
 
-    fn expand_tokenize(&self) -> TokenStream {
+        let convert = self.expand_from();
+        let mod_name = Ident::new(&format!("__{}", name), name.span());
+
         quote! {
-            fn tokenize<Borrower>(rust: Borrower) -> Self::TokenType
-            where
-                Borrower: ::std::borrow::Borrow<Self::RustType>
-            {
-                let tuple: UnderlyingRustTuple = rust.borrow().clone().into();
-                <UnderlyingTuple as ::ethers_abi_enc::SolType>::tokenize(tuple)
-            }
+            pub use #mod_name::#name;
+            #[allow(non_snake_case)]
+            mod #mod_name {
+                extern crate alloc;
+                use super::*;
+
+                use ::ethers_abi_enc::{SolType, no_std_prelude::*};
+
+                #[doc = #doc]
+                #[derive(Debug, Clone, PartialEq)]
+                pub struct #name {
+                    #(pub #fields),*
+                }
+
+                #convert
+
+                impl ::ethers_abi_enc::SolStruct for #name {
+                    type Tuple = UnderlyingSolTuple;
+
+                    const NAME: &'static str = stringify!(#name);
+
+                    const FIELDS: &'static [(&'static str, &'static str)] = &[
+                        #((#f_ty, #f_name)),*
+                    ];
+
+                    fn to_tuple(&self) -> UnderlyingRustTuple {
+                        self.clone().into()
+                    }
+
+                    fn from_tuple(tuple: UnderlyingRustTuple) -> Self {
+                        tuple.into()
+                    }
+
+                    fn encode_type() -> String {
+                        let mut types: Vec<String> = Default::default();
+                        let mut tails: Vec<String> = Default::default();
+                        #(
+                            {
+                                type Prop = #props_tys;
+                                types.push(Prop::sol_type_name());
+                                if let Some(tail) = Prop::struct_type() {
+                                    tails.push(tail);
+                                }
+                            }
+                        )*
+                        format!(
+                            "{}({}){}", Self::NAME, types.join(","),
+                            tails.join("")
+                        )
+                    }
+
+                    fn encode_data(&self) -> Vec<u8> {
+                        todo!()
+                    }
+            }}
         }
     }
 }
 
 impl ToTokens for SolStructDef {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let rust_name = self.rust_name_alias();
-        let rust_name_str = rust_name.to_string();
-        let sol_name = &self.name;
-
-        let token_alias = Ident::new(&format!("{}Token", sol_name), sol_name.span());
-
-        let mod_name = Ident::new(&format!("__{}", sol_name), sol_name.span());
-
-        let doc = format!(
-            "A rust struct that represents the Solidity type {}",
-            sol_name
-        );
-        let fields = self.fields.iter();
-
-        let aliases = self.expand_aliases();
-        let from = self.expand_from();
-        let detokenize = self.expand_detokenize();
-        let tokenize = self.expand_tokenize();
-
-        tokens.extend(quote! {
-            pub use #mod_name::{#sol_name, #rust_name, #token_alias};
-            #[allow(non_snake_case)]
-            mod #mod_name {
-                use super::*;
-
-                #aliases
-
-                #[doc = #doc]
-                #[derive(Debug, Clone, PartialEq)]
-                pub struct #rust_name {
-                    #(pub #fields),*
-                }
-
-                #from
-
-                impl ::ethers_abi_enc::SolType for #sol_name {
-                    type RustType = #rust_name;
-                    type TokenType = #token_alias;
-
-                    fn sol_type_name() -> ::std::string::String {
-                        #rust_name_str.to_owned()
-                    }
-                    fn is_dynamic() -> bool {
-                        <UnderlyingTuple as ::ethers_abi_enc::SolType>::is_dynamic()
-                    }
-                    fn type_check(token: &Self::TokenType) -> ::ethers_abi_enc::AbiResult<()> {
-                        <UnderlyingTuple as ::ethers_abi_enc::SolType>::type_check(token)
-                    }
-
-                    #detokenize
-                    #tokenize
-
-                    fn encode_packed_to<Borrower>(target: &mut Vec<u8>, rust: Borrower)
-                    where
-                        Borrower: ::std::borrow::Borrow<Self::RustType>
-                    {
-                        let tuple: UnderlyingRustTuple = rust.borrow().clone().into();
-                        <UnderlyingTuple as ::ethers_abi_enc::SolType>::encode_packed_to(target, tuple)
-                    }
-                }
-            }
-        });
+        tokens.extend(self.expand_impl());
     }
 }

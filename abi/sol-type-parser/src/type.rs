@@ -7,6 +7,7 @@ use syn::{
 
 use quote::{quote, ToTokens};
 
+#[derive(Clone)]
 pub struct ArraySize {
     _bracket: syn::token::Bracket,
     size: Option<LitInt>,
@@ -39,7 +40,7 @@ impl Parse for ArraySize {
         ))
     }
 }
-
+#[derive(Clone)]
 pub struct SolTuple {
     _tup: Option<kw::tuple>,
     parenthesized: syn::token::Paren,
@@ -49,6 +50,22 @@ pub struct SolTuple {
 impl Debug for SolTuple {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SolTuple").finish()
+    }
+}
+
+impl std::fmt::Display for SolTuple {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(")?;
+        write!(
+            f,
+            "{}",
+            self.inner
+                .iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        )?;
+        write!(f, ")")
     }
 }
 
@@ -72,13 +89,13 @@ impl ToTokens for SolTuple {
     }
 }
 
+#[derive(Clone)]
 pub enum SolType {
     Address,
     Array(Box<SolType>, ArraySize),
     Bool,
     Bytes,
     FixedBytes(LitInt),
-    Function,
     Int(LitInt),
     String,
     Uint(LitInt),
@@ -97,12 +114,38 @@ impl std::fmt::Debug for SolType {
                 .debug_tuple("FixedBytes")
                 .field(&arg0.base10_digits())
                 .finish(),
-            Self::Function => write!(f, "Function"),
             Self::Int(arg0) => f.debug_tuple("Int").field(&arg0.base10_digits()).finish(),
             Self::String => write!(f, "String"),
             Self::Uint(arg0) => f.debug_tuple("Uint").field(&arg0.base10_digits()).finish(),
             Self::Tuple(arg0) => f.debug_tuple("Tuple").field(arg0).finish(),
             Self::Other(arg0) => f.debug_tuple("Other").field(arg0).finish(),
+        }
+    }
+}
+
+impl std::fmt::Display for SolType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SolType::Address => write!(f, "address"),
+            SolType::Array(ty, size) => {
+                write!(
+                    f,
+                    "{}[{}]",
+                    ty,
+                    size.size
+                        .as_ref()
+                        .map(|s| s.base10_digits())
+                        .unwrap_or_default()
+                )
+            }
+            SolType::Bool => write!(f, "bool"),
+            SolType::Bytes => write!(f, "bytes"),
+            SolType::FixedBytes(size) => write!(f, "bytes{}", size.base10_digits()),
+            SolType::Int(size) => write!(f, "int{}", size.base10_digits()),
+            SolType::String => write!(f, "string"),
+            SolType::Uint(size) => write!(f, "uint{}", size.base10_digits()),
+            SolType::Tuple(inner) => write!(f, "{}", inner),
+            SolType::Other(name) => write!(f, "{}", name),
         }
     }
 }
@@ -125,7 +168,6 @@ impl ToTokens for SolType {
             SolType::Bool => quote! { ::ethers_abi_enc::sol_type::Bool },
             SolType::Bytes => quote! { ::ethers_abi_enc::sol_type::Bytes },
             SolType::FixedBytes(size) => quote! {::ethers_abi_enc::sol_type::FixedBytes<#size>},
-            SolType::Function => quote! { ::ethers_abi_enc::sol_type::Function },
             SolType::Int(size) => quote! { ::ethers_abi_enc::sol_type::Int<#size> },
             SolType::String => quote! { ::ethers_abi_enc::sol_type::String },
             SolType::Uint(size) => quote! { ::ethers_abi_enc::sol_type::Uint<#size> },
@@ -158,9 +200,6 @@ impl Parse for SolType {
         } else if input.peek(kw::bytes) {
             let _ = input.parse::<kw::bytes>()?;
             Self::Bytes
-        } else if input.peek(kw::function) {
-            let _ = input.parse::<kw::function>()?;
-            Self::Function
         } else if input.peek(kw::string) {
             let _ = input.parse::<kw::string>()?;
             Self::String

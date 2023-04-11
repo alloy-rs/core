@@ -15,7 +15,7 @@ use crate::{
 ///
 /// # Example
 /// ```
-/// # use ethers_abi_enc::{DynSolType, DynToken, DynSolValue, AbiResult};
+/// # use ethers_abi_enc::{DynSolType, DynSolValue, AbiResult};
 /// # use ethers_primitives::U256;
 /// # pub fn main() -> AbiResult<()> {
 /// let my_type = DynSolType::Uint(256);

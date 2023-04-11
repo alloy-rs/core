@@ -166,6 +166,15 @@ pub trait SolType {
     fn sol_type_name() -> RustString;
     /// True if the type is dynamic according to ABI rules
     fn is_dynamic() -> bool;
+    /// True if the type is a user defined type. These include structs, enums,
+    /// and user defined value types
+    fn is_user_defined() -> bool {
+        false
+    }
+    /// The encoded struct type (as EIP-712), if any. None for non-structs
+    fn struct_type() -> Option<RustString> {
+        None
+    }
     /// Check a token to see if it can be detokenized with this type
     fn type_check(token: &Self::TokenType) -> AbiResult<()>;
     /// Detokenize

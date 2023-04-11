@@ -11,7 +11,12 @@ type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
 ///
 /// This trait is used to implement EIP-712 encoding/decoding. We generally
 /// recommend implementing this via the [`crate::sol`] proc macro. Or by
-/// deriving sol struct.
+/// deriving.
+///
+/// Special attention should be payed to `encode_type` for complex solidity
+/// types. Nested solidity structs MUST properly encode their type. To be clear,
+/// a struct with a nested struct must encode the nested struct's type as well.
+/// See: <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
 pub trait SolStruct {
     /// The corresponding Tuple type, used for encoding/decoding
     type Tuple: SolType;
@@ -71,6 +76,14 @@ where
 
     fn is_dynamic() -> bool {
         <<Self as SolStruct>::Tuple as SolType>::is_dynamic()
+    }
+
+    fn is_user_defined() -> bool {
+        true
+    }
+
+    fn struct_type() -> Option<String> {
+        Some(Self::encode_type())
     }
 
     fn type_check(token: &Self::TokenType) -> crate::AbiResult<()> {

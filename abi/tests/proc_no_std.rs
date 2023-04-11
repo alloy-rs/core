@@ -1,4 +1,6 @@
-use ethers_abi_enc::{sol, SolType};
+#![no_std]
+
+use ethers_abi_enc::{no_std_prelude::*, sol, SolType};
 
 use ethers_primitives::{B160, U256};
 
@@ -35,7 +37,7 @@ type NestedArray = sol! {
 };
 
 #[test]
-fn proc_macro_expansion() {
+fn no_std_proc_macro() {
     // this is possible but not recomended :)
     <sol! {
         bool
@@ -44,27 +46,20 @@ fn proc_macro_expansion() {
     let a = MyStruct {
         a: U256::from(1),
         b: [0; 32],
-        c: vec![],
+        c: Vec::new(),
     };
 
-    dbg!(MyTuple::hex_encode((a.clone(), [0; 32])));
+    MyTuple::hex_encode((a.clone(), [0; 32]));
 
-    dbg!(MyStruct::hex_encode(a.clone()));
+    MyStruct::hex_encode(a.clone());
 
-    dbg!(LateBinding::<MyStruct>::hex_encode((
-        vec![a.clone(), a.clone()],
-        B160::default()
-    )));
+    LateBinding::<MyStruct>::hex_encode((vec![a.clone(), a.clone()], B160::default()));
 
-    dbg!(MyStruct2::hex_encode(MyStruct2 {
+    MyStruct2::hex_encode(MyStruct2 {
         a,
         b: [0; 32],
         c: vec![],
-    }));
+    });
 
-    dbg!(NestedArray::hex_encode(vec![
-        [true, false],
-        [true, false],
-        [true, false]
-    ]));
+    NestedArray::hex_encode(vec![[true, false], [true, false], [true, false]]);
 }

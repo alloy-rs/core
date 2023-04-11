@@ -12,7 +12,7 @@
 //! ## Example
 //!
 //! ```
-//! # use ethers_abi_enc::{Decoder, Encoder, DynSolType, DynSolValue};
+//! # use ethers_abi_enc::{DynSolType, DynSolValue};
 //! // parse a type from a string
 //! let my_type: DynSolType = "uint8[2][]".parse().unwrap();
 //!

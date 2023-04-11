@@ -104,7 +104,8 @@
 //! # }
 //!
 //! // And we allow you to define your own custom types!
-//!
+//! // (Works only outside of function scope due to rust import rules)
+//! // (And unfortunately, doesn't yet support late binding)
 //! sol! {
 //!     struct MyStruct {
 //!         uint256 a;
@@ -113,7 +114,6 @@
 //!     }
 //! }
 //!
-//! // Works only outside of function scope due to rust import rules
 //! sol! {
 //!     struct MyStruct2 {
 //!         MyStruct a;
@@ -143,20 +143,32 @@
 //! The [`SolType`] encoding and decoding methods operate on Rust types. We
 //! recommend users use them wherever possible. We do not recommend that users
 //! interact with Tokens, except when implementing their own [`SolType`].
+
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate alloc;
+
 #[cfg(not(feature = "std"))]
-pub(crate) mod no_std_prelude {
-    pub(crate) use alloc::{
+#[doc(hidden)]
+pub mod no_std_prelude {
+    pub use alloc::{
         borrow::{Borrow, Cow, ToOwned},
+        format,
         string::{String, ToString},
+        vec,
         vec::Vec,
     };
 }
 
 #[cfg(feature = "std")]
-pub(crate) mod no_std_prelude {
-    pub(crate) use std::borrow::ToOwned;
+#[doc(hidden)]
+pub mod no_std_prelude {
+    pub use std::{
+        borrow::{Borrow, Cow, ToOwned},
+        format,
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
 }
 
 use ethers_primitives::B256;
@@ -188,9 +200,6 @@ pub use sol_type::SolType;
 
 mod util;
 
-/// The `sol!` proc macro parses rust type structurs
-pub use sol_type_parser::sol;
-
 /// The Word type for ABI Encoding
 pub type Word = B256;
 
@@ -198,3 +207,7 @@ pub type Word = B256;
 mod eip712;
 #[cfg(feature = "eip712")]
 pub use eip712::{Eip712Domain, SolStruct};
+
+#[cfg(feature = "eip712")]
+/// The `sol!` proc macro parses rust type structurs
+pub use sol_type_parser::sol;
