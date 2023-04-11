@@ -8,8 +8,8 @@ use alloc::{string::String, vec::Vec};
 /// Eip712 Domain attributes used in determining the domain separator;
 /// Unused fields are left out of the struct type.
 ///
-/// Protocol designers only need to include the fields that make sense for their signing domain.
-/// Unused fields are left out of the struct type.
+/// Protocol designers only need to include the fields that make sense for
+/// their signing domain. Unused fields are left out of the struct type.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "eip712-serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "eip712-serde", serde(rename_all = "camelCase"))]
@@ -59,6 +59,8 @@ pub struct Eip712Domain {
 }
 
 impl Eip712Domain {
+    const NAME: &'static str = "EIP712Domain";
+
     /// Calculate the domain separator for the domain object.
     pub fn separator(&self) -> B256 {
         self.hash_struct()
@@ -67,7 +69,7 @@ impl Eip712Domain {
     /// EIP-712 `encodeType`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     pub fn encode_type(&self) -> String {
-        let mut ty = String::from("EIP712Domain(");
+        let mut ty = format!("{}(", Self::NAME);
         if self.name.is_some() {
             ty.push_str("string name,");
         }
@@ -99,6 +101,8 @@ impl Eip712Domain {
     /// EIP-712 `encodeData`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
     pub fn encode_data(&self) -> Vec<u8> {
+        // This giant match block was produced with excel-based
+        // meta-programming lmao
         match (
             self.name.as_ref(),
             self.version.as_ref(),
@@ -106,7 +110,6 @@ impl Eip712Domain {
             self.verifying_contract,
             self.salt,
         ) {
-            // This was produced with excel-based meta-programming lmao
             (None, None, None, None, None) => vec![],
             (None, None, None, None, Some(salt)) => {
                 <(sol_type::FixedBytes<32>,)>::encode((salt.0,))

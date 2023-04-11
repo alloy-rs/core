@@ -1,3 +1,6 @@
+//! This module contains the [`SolStruct`] trait, which is used to implement
+//! Solidity structs logic, particularly for EIP-712 encoding/decoding.
+
 use ethers_primitives::B256;
 
 use crate::{util::keccak256, SolType};
@@ -12,6 +15,8 @@ type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
 /// This trait is used to implement EIP-712 encoding/decoding. We generally
 /// recommend implementing this via the [`crate::sol`] proc macro. Or by
 /// deriving.
+///
+/// # Note
 ///
 /// Special attention should be payed to `encode_type` for complex solidity
 /// types. Nested solidity structs MUST properly encode their type. To be clear,
@@ -67,6 +72,7 @@ pub trait SolStruct {
     }
 }
 
+// blanket impl
 impl<T> SolType for T
 where
     T: SolStruct,
@@ -96,7 +102,7 @@ where
 
     fn tokenize<Borrower>(rust: Borrower) -> Self::TokenType
     where
-        Borrower: std::borrow::Borrow<Self::RustType>,
+        Borrower: Borrow<Self::RustType>,
     {
         let tuple = rust.borrow().to_tuple();
         TupleFor::<T>::tokenize(tuple)
@@ -109,7 +115,7 @@ where
 
     fn encode_packed_to<Borrower>(target: &mut Vec<u8>, rust: Borrower)
     where
-        Borrower: std::borrow::Borrow<Self::RustType>,
+        Borrower: Borrow<Self::RustType>,
     {
         let tuple = rust.borrow().to_tuple();
         TupleFor::<T>::encode_packed_to(target, tuple)

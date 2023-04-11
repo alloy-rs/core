@@ -171,7 +171,12 @@ pub mod no_std_prelude {
     };
 }
 
-use ethers_primitives::B256;
+/// The `sol!` proc macro parses Solidity types and structdefs, and outputs
+/// Rust types that implement [`SolType`].
+pub use sol_type_parser::sol;
+
+/// The Word type for ABI Encoding
+pub type Word = ethers_primitives::B256;
 
 pub(crate) mod decoder;
 #[doc(hidden)]
@@ -188,26 +193,24 @@ pub(crate) mod encoder;
 pub use encoder::Encoder;
 pub use encoder::{encode, encode_params, encode_single};
 
+mod errors;
+pub use errors::{AbiResult, Error};
+
 mod token;
 pub use token::{DynSeqToken, FixedSeqToken, PackedSeqToken, TokenSeq, TokenType, WordToken};
 
-mod errors;
-pub use errors::{AbiResult, Error};
+/// A solidity struct trait
+mod sol_struct;
+pub use sol_struct::SolStruct;
 
 /// Solidity Types
 pub mod sol_type;
 pub use sol_type::SolType;
 
 mod util;
-
-/// The Word type for ABI Encoding
-pub type Word = B256;
+pub use util::keccak256;
 
 #[cfg(feature = "eip712")]
 mod eip712;
 #[cfg(feature = "eip712")]
-pub use eip712::{Eip712Domain, SolStruct};
-
-#[cfg(feature = "eip712")]
-/// The `sol!` proc macro parses rust type structurs
-pub use sol_type_parser::sol;
+pub use eip712::Eip712Domain;
