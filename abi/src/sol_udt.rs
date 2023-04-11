@@ -10,16 +10,44 @@ macro_rules! define_udt {
         underlying: $underlying:ty,
         type_check: $path:path,
     ) => {
+
         $(#[$outer])*
+        /// This struct is a Solidity user-defined value type. It wraps
+        /// an underlying type.
         #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
         pub struct $name {
-            value: ::ethers_primitives::B256,
+            value: <$underlying as $crate::SolType>::RustType,
             _pd: $crate::no_std_prelude::PhantomData<$underlying>
         }
 
         impl $name {
-            /// The type name
+            /// The solidity type name
             pub const NAME: &'static str = stringify!($name);
+
+            /// Convert from the underlying value type
+            pub const fn from(value: <$underlying as $crate::SolType>::RustType) -> Self {
+                Self {
+                    value,
+                    _pd: $crate::no_std_prelude::PhantomData,
+                }
+            }
+
+            /// Return the underlying value
+            pub const fn into(self) -> <$underlying as $crate::SolType>::RustType {
+                self.value
+            }
+
+            /// Return the single encoding of this value, delegating to the
+            /// underlying type
+            pub fn encode_single(&self) -> $crate::no_std_prelude::Vec<u8> {
+                <Self as $crate::SolType>::encode_single(self.value)
+            }
+
+            /// Return the packed encoding of this value, delegating to the
+            /// underlying type
+            pub fn encode_packed(&self) -> $crate::no_std_prelude::Vec<u8> {
+                <Self as $crate::SolType>::encode_packed(self.value)
+            }
         }
 
         impl $crate::SolType for $name {
@@ -39,6 +67,7 @@ macro_rules! define_udt {
             }
 
             fn type_check(token: &Self::TokenType) -> $crate::AbiResult<()> {
+                <$underlying as $crate::SolType>::type_check(token)?;
                 $path(token)
             }
 
@@ -71,7 +100,7 @@ macro_rules! define_udt {
             $(#[$outer])*
             $name,
             underlying: $underlying,
-            type_check: Ok(()),
+            type_check: $crate::just_ok,
         );
     };
 
@@ -87,7 +116,18 @@ macro_rules! define_udt {
             type_check: $type_check,
         );
     };
-
+    (
+        $(#[$outer:meta])*
+        $name:ident,
+        underlying: $underlying:ty,
+    ) => {
+        define_udt!(
+            $(#[$outer])*
+            $name,
+            underlying: $underlying,
+            type_check: $crate::just_ok,
+        );
+    };
     (
         $(#[$outer:meta])*
         $name:ident,

@@ -7,6 +7,15 @@ use syn::{
 
 use quote::{quote, ToTokens};
 
+mod kw {
+    syn::custom_keyword!(tuple);
+    syn::custom_keyword!(address);
+    syn::custom_keyword!(bool);
+    syn::custom_keyword!(bytes);
+    syn::custom_keyword!(function);
+    syn::custom_keyword!(string);
+}
+
 #[derive(Clone)]
 pub struct ArraySize {
     _bracket: syn::token::Bracket,
@@ -178,15 +187,6 @@ impl ToTokens for SolType {
         };
         tokens.extend(expanded);
     }
-}
-
-mod kw {
-    syn::custom_keyword!(tuple);
-    syn::custom_keyword!(address);
-    syn::custom_keyword!(bool);
-    syn::custom_keyword!(bytes);
-    syn::custom_keyword!(function);
-    syn::custom_keyword!(string);
 }
 
 impl Parse for SolType {

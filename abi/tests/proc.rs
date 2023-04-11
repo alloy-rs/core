@@ -34,6 +34,10 @@ type NestedArray = sol! {
     bool[2][]
 };
 
+sol! {
+    type MyValueType is uint256;
+}
+
 #[test]
 fn proc_macro_expansion() {
     // this is possible but not recomended :)
@@ -67,4 +71,10 @@ fn proc_macro_expansion() {
         [true, false],
         [true, false]
     ]));
+
+    let mvt = MyValueType::from(U256::from(1));
+    assert_eq!(
+        mvt.encode_single(),
+        ethers_abi_enc::sol_type::Uint::<256>::encode_single(U256::from(1))
+    );
 }

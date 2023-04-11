@@ -114,7 +114,6 @@ impl SolStructDef {
             pub use #mod_name::#name;
             #[allow(non_snake_case)]
             mod #mod_name {
-                extern crate alloc;
                 use super::*;
 
                 use ::ethers_abi_enc::{SolType, no_std_prelude::*};
@@ -156,7 +155,7 @@ impl SolStructDef {
                                 }
                             }
                         )*
-                        format!(
+                        ::ethers_abi_enc::no_std_prelude::format!(
                             "{}({}){}", Self::NAME, types.join(","),
                             tails.join("")
                         )

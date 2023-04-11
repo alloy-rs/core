@@ -71,6 +71,7 @@
 //!
 //! ```
 //! # use ethers_abi_enc::{sol, sol_type, SolType};
+//! # use ethers_primitives::U256;
 //! # pub fn main() {
 //! // outputs a type built that implements `SolType`
 //! type B32 = sol! {bytes32};
@@ -123,6 +124,19 @@
 //!         address[] c;
 //!     }
 //! }
+//!
+//! // We also also support solidity value types
+//! sol! {
+//!     type MyValueType is uint256;
+//! }
+//!
+//! # fn foo() {
+//! let mvt = MyValueType::from(U256::from(1));
+//! assert_eq!(
+//!     mvt.encode_single(),
+//!     sol_type::Uint::<256>::encode_single(U256::from(1))
+//! );
+//! # }
 //! ```
 //!
 //! ## Tokenization/Detokenization
@@ -177,6 +191,8 @@ pub mod no_std_prelude {
 
 /// The `sol!` proc macro parses Solidity types and structdefs, and outputs
 /// Rust types that implement [`SolType`].
+///
+/// See the root crate docs for more information.
 pub use sol_type_parser::sol;
 
 /// The Word type for ABI Encoding
