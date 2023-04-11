@@ -6,6 +6,12 @@ use arbitrary::Arbitrary;
 #[cfg(any(test, feature = "arbitrary"))]
 use proptest_derive::Arbitrary as PropTestArbitrary;
 
+#[cfg(feature = "std")]
+use std::borrow::Borrow;
+
+#[cfg(not(feature = "std"))]
+use alloc::borrow::Borrow;
+
 construct_fixed_hash! {
     /// 256 bits fixed hash
     #[cfg_attr(any(test, feature = "arbitrary"), derive(Arbitrary, PropTestArbitrary))]
@@ -51,6 +57,24 @@ impl From<B256> for ruint::aliases::U256 {
 impl_fixed_hash_conversions!(B256, B160);
 impl_fixed_hash_conversions!(B512, B160);
 impl_fixed_hash_conversions!(B512, B256);
+
+impl Borrow<[u8; 32]> for B256 {
+    fn borrow(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
+impl Borrow<[u8; 20]> for B160 {
+    fn borrow(&self) -> &[u8; 20] {
+        &self.0
+    }
+}
+
+impl Borrow<[u8; 64]> for B512 {
+    fn borrow(&self) -> &[u8; 64] {
+        &self.0
+    }
+}
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for B256 {
