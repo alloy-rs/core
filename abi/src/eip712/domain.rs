@@ -2,8 +2,7 @@ use ethers_primitives::{B160, B256, U256};
 
 use crate::{sol_type, util::keccak256, SolType};
 
-#[cfg(not(feature = "std"))]
-use alloc::{string::String, vec::Vec};
+use crate::no_std_prelude::{Cow, String, Vec};
 
 /// Eip712 Domain attributes used in determining the domain separator;
 /// Unused fields are left out of the struct type.
@@ -19,7 +18,7 @@ pub struct Eip712Domain {
         feature = "eip712-serde",
         serde(default, skip_serializing_if = "Option::is_none")
     )]
-    pub name: Option<String>,
+    pub name: Option<Cow<'static, str>>,
 
     /// The current major version of the signing domain. Signatures from different versions are not
     /// compatible.
@@ -27,7 +26,7 @@ pub struct Eip712Domain {
         feature = "eip712-serde",
         serde(default, skip_serializing_if = "Option::is_none")
     )]
-    pub version: Option<String>,
+    pub version: Option<Cow<'static, str>>,
 
     /// The EIP-155 chain id. The user-agent should refuse signing if it does not match the
     /// currently active chain.
@@ -59,7 +58,25 @@ pub struct Eip712Domain {
 }
 
 impl Eip712Domain {
-    const NAME: &'static str = "EIP712Domain";
+    /// The name of the struct
+    pub const NAME: &'static str = "EIP712Domain";
+
+    /// Instantiate a new domain
+    pub const fn new(
+        name: Option<Cow<'static, str>>,
+        version: Option<Cow<'static, str>>,
+        chain_id: Option<U256>,
+        verifying_contract: Option<B160>,
+        salt: Option<B256>,
+    ) -> Self {
+        Self {
+            name,
+            version,
+            chain_id,
+            verifying_contract,
+            salt,
+        }
+    }
 
     /// Calculate the domain separator for the domain object.
     pub fn separator(&self) -> B256 {
@@ -140,17 +157,17 @@ impl Eip712Domain {
                 )>::encode((chain_id, verifying_contract, salt.0))
             }
             (None, Some(version), None, None, None) => {
-                <(sol_type::FixedBytes<32>,)>::encode((keccak256(version).0,))
+                <(sol_type::FixedBytes<32>,)>::encode((keccak256(version.as_bytes()).0,))
             }
             (None, Some(version), None, None, Some(salt)) => {
                 <(sol_type::FixedBytes<32>, sol_type::FixedBytes<32>)>::encode((
-                    keccak256(version).0,
+                    keccak256(version.as_bytes()).0,
                     salt.0,
                 ))
             }
             (None, Some(version), None, Some(verifying_contract), None) => {
                 <(sol_type::FixedBytes<32>, sol_type::Address)>::encode((
-                    keccak256(version).0,
+                    keccak256(version.as_bytes()).0,
                     verifying_contract,
                 ))
             }
@@ -159,11 +176,15 @@ impl Eip712Domain {
                     sol_type::FixedBytes<32>,
                     sol_type::Address,
                     sol_type::FixedBytes<32>,
-                )>::encode((keccak256(version).0, verifying_contract, salt.0))
+                )>::encode((
+                    keccak256(version.as_bytes()).0,
+                    verifying_contract,
+                    salt.0,
+                ))
             }
             (None, Some(version), Some(chain_id), None, None) => {
                 <(sol_type::FixedBytes<32>, sol_type::Uint<256>)>::encode((
-                    keccak256(version).0,
+                    keccak256(version.as_bytes()).0,
                     chain_id,
                 ))
             }
@@ -172,14 +193,18 @@ impl Eip712Domain {
                     sol_type::FixedBytes<32>,
                     sol_type::Uint<256>,
                     sol_type::FixedBytes<32>,
-                )>::encode((keccak256(version).0, chain_id, salt.0))
+                )>::encode((keccak256(version.as_bytes()).0, chain_id, salt.0))
             }
             (None, Some(version), Some(chain_id), Some(verifying_contract), None) => {
                 <(
                     sol_type::FixedBytes<32>,
                     sol_type::Uint<256>,
                     sol_type::Address,
-                )>::encode((keccak256(version).0, chain_id, verifying_contract))
+                )>::encode((
+                    keccak256(version.as_bytes()).0,
+                    chain_id,
+                    verifying_contract,
+                ))
             }
             (None, Some(version), Some(chain_id), Some(verifying_contract), Some(salt)) => {
                 <(
@@ -188,24 +213,24 @@ impl Eip712Domain {
                     sol_type::Address,
                     sol_type::FixedBytes<32>,
                 )>::encode((
-                    keccak256(version).0,
+                    keccak256(version.as_bytes()).0,
                     chain_id,
                     verifying_contract,
                     salt.0,
                 ))
             }
             (Some(name), None, None, None, None) => {
-                <(sol_type::FixedBytes<32>,)>::encode((keccak256(name).0,))
+                <(sol_type::FixedBytes<32>,)>::encode((keccak256(name.as_bytes()).0,))
             }
             (Some(name), None, None, None, Some(salt)) => {
                 <(sol_type::FixedBytes<32>, sol_type::FixedBytes<32>)>::encode((
-                    keccak256(name).0,
+                    keccak256(name.as_bytes()).0,
                     salt.0,
                 ))
             }
             (Some(name), None, None, Some(verifying_contract), None) => {
                 <(sol_type::FixedBytes<32>, sol_type::Address)>::encode((
-                    keccak256(name).0,
+                    keccak256(name.as_bytes()).0,
                     verifying_contract,
                 ))
             }
@@ -214,11 +239,15 @@ impl Eip712Domain {
                     sol_type::FixedBytes<32>,
                     sol_type::Address,
                     sol_type::FixedBytes<32>,
-                )>::encode((keccak256(name).0, verifying_contract, salt.0))
+                )>::encode((
+                    keccak256(name.as_bytes()).0,
+                    verifying_contract,
+                    salt.0,
+                ))
             }
             (Some(name), None, Some(chain_id), None, None) => {
                 <(sol_type::FixedBytes<32>, sol_type::Uint<256>)>::encode((
-                    keccak256(name).0,
+                    keccak256(name.as_bytes()).0,
                     chain_id,
                 ))
             }
@@ -227,14 +256,18 @@ impl Eip712Domain {
                     sol_type::FixedBytes<32>,
                     sol_type::Uint<256>,
                     sol_type::FixedBytes<32>,
-                )>::encode((keccak256(name).0, chain_id, salt.0))
+                )>::encode((keccak256(name.as_bytes()).0, chain_id, salt.0))
             }
             (Some(name), None, Some(chain_id), Some(verifying_contract), None) => {
                 <(
                     sol_type::FixedBytes<32>,
                     sol_type::Uint<256>,
                     sol_type::Address,
-                )>::encode((keccak256(name).0, chain_id, verifying_contract))
+                )>::encode((
+                    keccak256(name.as_bytes()).0,
+                    chain_id,
+                    verifying_contract,
+                ))
             }
             (Some(name), None, Some(chain_id), Some(verifying_contract), Some(salt)) => {
                 <(
@@ -243,7 +276,7 @@ impl Eip712Domain {
                     sol_type::Address,
                     sol_type::FixedBytes<32>,
                 )>::encode((
-                    keccak256(name).0,
+                    keccak256(name.as_bytes()).0,
                     chain_id,
                     verifying_contract,
                     salt.0,
@@ -251,25 +284,27 @@ impl Eip712Domain {
             }
             (Some(name), Some(version), None, None, None) => {
                 <(sol_type::FixedBytes<32>, sol_type::FixedBytes<32>)>::encode((
-                    keccak256(name).0,
-                    keccak256(version).0,
+                    keccak256(name.as_bytes()).0,
+                    keccak256(version.as_bytes()).0,
                 ))
             }
-            (Some(name), Some(version), None, None, Some(salt)) => {
-                <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::FixedBytes<32>,
-                    sol_type::FixedBytes<32>,
-                )>::encode((keccak256(name).0, keccak256(version).0, salt.0))
-            }
+            (Some(name), Some(version), None, None, Some(salt)) => <(
+                sol_type::FixedBytes<32>,
+                sol_type::FixedBytes<32>,
+                sol_type::FixedBytes<32>,
+            )>::encode((
+                keccak256(name.as_bytes()).0,
+                keccak256(version.as_bytes()).0,
+                salt.0,
+            )),
             (Some(name), Some(version), None, Some(verifying_contract), None) => {
                 <(
                     sol_type::FixedBytes<32>,
                     sol_type::FixedBytes<32>,
                     sol_type::Address,
                 )>::encode((
-                    keccak256(name).0,
-                    keccak256(version).0,
+                    keccak256(name.as_bytes()).0,
+                    keccak256(version.as_bytes()).0,
                     verifying_contract,
                 ))
             }
@@ -280,19 +315,21 @@ impl Eip712Domain {
                     sol_type::Address,
                     sol_type::FixedBytes<32>,
                 )>::encode((
-                    keccak256(name).0,
-                    keccak256(version).0,
+                    keccak256(name.as_bytes()).0,
+                    keccak256(version.as_bytes()).0,
                     verifying_contract,
                     salt.0,
                 ))
             }
-            (Some(name), Some(version), Some(chain_id), None, None) => {
-                <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::FixedBytes<32>,
-                    sol_type::Uint<256>,
-                )>::encode((keccak256(name).0, keccak256(version).0, chain_id))
-            }
+            (Some(name), Some(version), Some(chain_id), None, None) => <(
+                sol_type::FixedBytes<32>,
+                sol_type::FixedBytes<32>,
+                sol_type::Uint<256>,
+            )>::encode((
+                keccak256(name.as_bytes()).0,
+                keccak256(version.as_bytes()).0,
+                chain_id,
+            )),
             (Some(name), Some(version), Some(chain_id), None, Some(salt)) => {
                 <(
                     sol_type::FixedBytes<32>,
@@ -300,8 +337,8 @@ impl Eip712Domain {
                     sol_type::Uint<256>,
                     sol_type::FixedBytes<32>,
                 )>::encode((
-                    keccak256(name).0,
-                    keccak256(version).0,
+                    keccak256(name.as_bytes()).0,
+                    keccak256(version.as_bytes()).0,
                     chain_id,
                     salt.0,
                 ))
@@ -313,8 +350,8 @@ impl Eip712Domain {
                     sol_type::Uint<256>,
                     sol_type::Address,
                 )>::encode((
-                    keccak256(name).0,
-                    keccak256(version).0,
+                    keccak256(name.as_bytes()).0,
+                    keccak256(version.as_bytes()).0,
                     chain_id,
                     verifying_contract,
                 ))
@@ -327,8 +364,8 @@ impl Eip712Domain {
                     sol_type::Address,
                     sol_type::FixedBytes<32>,
                 )>::encode((
-                    keccak256(name).0,
-                    keccak256(version).0,
+                    keccak256(name.as_bytes()).0,
+                    keccak256(version.as_bytes()).0,
                     chain_id,
                     verifying_contract,
                     salt.0,
@@ -344,4 +381,301 @@ impl Eip712Domain {
         type_hash.extend(self.encode_data());
         keccak256(type_hash)
     }
+}
+
+// This was generated by excel meta-programming
+/// Instantiate an EIP-712 domain.
+#[macro_export]
+macro_rules! domain {
+    (salt: $salt:expr,) => {
+        Eip712Domain::new(
+            None,
+            None,
+            None,
+            None,
+            Some($salt),
+        )
+    };
+    (verifying_contract: $verifying_contract:expr,) => {
+        Eip712Domain::new(
+            None,
+            None,
+            None,
+            Some($verifying_contract),
+            None,
+        )
+    };
+    (verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            None,
+            None,
+            None,
+            Some($verifying_contract),
+            Some($salt),
+        )
+    };
+    (chain_id: $chain_id:expr,) => {
+        Eip712Domain::new(
+            None,
+            None,
+            Some($chain_id)
+            None,
+            None,
+        )
+    };
+    (chain_id: $chain_id:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            None,
+            None,
+            Some($chain_id)
+            None,
+            Some($salt),
+        )
+    };
+    (chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
+        Eip712Domain::new(
+            None,
+            None,
+            Some($chain_id),
+            Some($verifying_contract),
+            None,
+        )
+    };
+    (chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            None,
+            None,
+            Some($chain_id),
+            Some($verifying_contract),
+            Some($salt),
+        )
+    };
+    (version: $version:literal,) => {
+        Eip712Domain::new(
+            None,
+            Some(Cow::Borrowed($version)),
+            None,
+            None,
+            None,
+        )
+    };
+    (version: $version:literal,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            None,
+            Some(Cow::Borrowed($version)),
+            None,
+            None,
+            Some($salt),
+        )
+    };
+    (version: $version:literal,verifying_contract: $verifying_contract:expr,) => {
+        Eip712Domain::new(
+            None,
+            Some(Cow::Borrowed($version)),
+            None,
+            Some($verifying_contract),
+            None,
+        )
+};
+    (version: $version:literal,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            None,
+            Some(Cow::Borrowed($version)),
+            None,
+            Some($verifying_contract),
+            Some($salt),
+        )
+    };
+    (version: $version:literal,chain_id: $chain_id:expr,) => {
+        Eip712Domain::new(
+            None,
+            Some(Cow::Borrowed($version)),
+            Some($chain_id)
+            None,
+            None,
+        )
+    };
+    (version: $version:literal,chain_id: $chain_id:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            None,
+            Some(Cow::Borrowed($version)),
+            Some($chain_id)
+            None,
+            Some($salt),
+        )
+    };
+    (version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
+        Eip712Domain::new(
+            None,
+            Some(Cow::Borrowed($version)),
+            Some($chain_id),
+            Some($verifying_contract),
+            None,
+        )
+    };
+    (version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            None,
+            Some(Cow::Borrowed($version)),
+            Some($chain_id),
+            Some($verifying_contract),
+            Some($salt),
+        )
+    };
+    (name: $name:literal,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            None,
+            None,
+            None,
+            None,
+        )
+    };
+    (name: $name:literal,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            None,
+            None,
+            None,
+            Some($salt),
+        )
+    };
+    (name: $name:literal,verifying_contract: $verifying_contract:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            None,
+            None,
+            Some($verifying_contract),
+            None,
+        )
+    };
+    (name: $name:literal,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            None,
+            None,
+            Some($verifying_contract),
+            Some($salt),
+        )
+    };
+    (name: $name:literal,chain_id: $chain_id:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            None,
+            Some($chain_id)
+            None,
+            None,
+        )
+    };
+    (name: $name:literal,chain_id: $chain_id:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            None,
+            Some($chain_id)
+            None,
+            Some($salt),
+        )
+    };
+    (name: $name:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            None,
+            Some($chain_id),
+            Some($verifying_contract),
+            None,
+        )
+    };
+    (name: $name:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            None,
+            Some($chain_id),
+            Some($verifying_contract),
+            Some($salt),
+        )
+    };
+    (name: $name:literal,version: $version:literal,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            Some(Cow::Borrowed($version)),
+            None,
+            None,
+            None,
+        )
+    };
+    (name: $name:literal,version: $version:literal,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            Some(Cow::Borrowed($version)),
+            None,
+            None,
+            Some($salt),
+        )
+    };
+    (name: $name:literal,version: $version:literal,verifying_contract: $verifying_contract:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            Some(Cow::Borrowed($version)),
+            None,
+            Some($verifying_contract),
+            None,
+        )
+    };
+    (name: $name:literal,version: $version:literal,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            Some(Cow::Borrowed($version)),
+            None,
+            Some($verifying_contract),
+            Some($salt),
+        )
+    };
+    (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            Some(Cow::Borrowed($version)),
+            Some($chain_id)
+            None,
+            None,
+        )
+    };
+    (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            Some(Cow::Borrowed($version)),
+            Some($chain_id)
+            None,
+            Some($salt),
+        )
+    };
+    (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            Some(Cow::Borrowed($version)),
+            Some($chain_id),
+            Some($verifying_contract),
+            None,
+        )
+    };
+    (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
+        Eip712Domain::new(
+            Some(Cow::Borrowed($name)),
+            Some(Cow::Borrowed($version)),
+            Some($chain_id),
+            Some($verifying_contract),
+            Some($salt),
+        )
+    };
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    const _DOMAIN: Eip712Domain = domain! {
+        name: "abcd",
+        version: "1",
+        chain_id: U256::from_limbs([0u64, 0, 0, 1]),
+        verifying_contract: B160([0u8;20]),
+        salt: B256([0u8;32]),
+    };
 }

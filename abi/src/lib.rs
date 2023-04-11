@@ -22,19 +22,19 @@
     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 ))]
 
-//! ABI Encoding & Decoding implementation
+//! Solidity type modeling & ABI Coding implementation
 //!
 //! This library provides tools for expressing Solidity types in Rust, and for
 //! encoding these representations into ABI blobs suitable for smart contract
 //! processing. In other words, you can represent your smart contract args in
 //! native Rust, easily encode them to pass to a smart contract, and easily
-//! decode the smart contract return values .
+//! decode the smart contract return values.
 //!
-//! We do this by representing solidity types as via the [`SolType`] trait.
+//! We do this by representing solidity types in rust via the [`SolType`] trait.
 //! This trait maps Solidity types to Rust types via the associated
 //! [`SolType::RustType`].
 //!
-//! Each [`SolType`] also has a [`SolType::TokenType`]. This is the
+//! Each [`SolType`] also has an associated [`SolType::TokenType`]. This is the
 //! intermediate representation of the data suitable for ABI encoding. The ABI
 //! `encode` and `decode` methods operate on objects implementing
 //! [`TokenType`].
@@ -92,6 +92,7 @@
 //!         (bytes17, string, bytes,)
 //!     )
 //! };
+//!
 //! assert_eq!(
 //!     Gamut::sol_type_name(),
 //!     "tuple(address,bool[],bytes15[12],uint256,uint24,int8,int56,tuple(bytes17,string,bytes))"
@@ -99,7 +100,8 @@
 //!
 //! // `sol!` supports late binding of types, and your own custom types!
 //! type Abstract<A> = sol! { A[] };
-//! assert_eq!(Abstract::<sol_type::Address>::sol_type_name(), "address[]",);
+//!
+//! assert_eq!(Abstract::<sol_type::Address>::sol_type_name(), "address[]");
 //! // Incredible!
 //! # }
 //!

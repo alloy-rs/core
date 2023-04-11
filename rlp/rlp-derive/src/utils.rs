@@ -28,7 +28,7 @@ pub(crate) fn attributes_include(attrs: &[Attribute], attr_name: &str) -> bool {
                     Ok(())
                 });
                 if is_attr {
-                    return true
+                    return true;
                 }
             }
         }
@@ -38,10 +38,10 @@ pub(crate) fn attributes_include(attrs: &[Attribute], attr_name: &str) -> bool {
 
 pub(crate) fn is_optional(field: &Field) -> bool {
     if let Type::Path(TypePath { qself, path }) = &field.ty {
-        qself.is_none() &&
-            path.leading_colon.is_none() &&
-            path.segments.len() == 1 &&
-            path.segments.first().unwrap().ident == "Option"
+        qself.is_none()
+            && path.leading_colon.is_none()
+            && path.segments.len() == 1
+            && path.segments.first().unwrap().ident == "Option"
     } else {
         false
     }

@@ -24,7 +24,7 @@ type MyTuple = sol! {
     (MyStruct, bytes32)
 };
 
-// This works
+// This works in typdefs, but not in structs (yet?)
 type LateBinding<A> = sol! {
     (A[], address)
 };
