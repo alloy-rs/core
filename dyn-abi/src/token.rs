@@ -1,7 +1,5 @@
-use crate::{
-    decoder::Decoder, encoder::Encoder, AbiResult, Error, PackedSeqToken, TokenType, Word,
-    WordToken,
-};
+use crate::{no_std_prelude::*, AbiResult, Decoder, Encoder, Error, Word};
+use ethers_abi_enc::{PackedSeqToken, TokenType, WordToken};
 
 // TODO: try to remove duplicated encoding/decoding logic
 

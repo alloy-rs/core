@@ -1,6 +1,8 @@
+use crate::no_std_prelude::*;
+
 use core::{num::ParseIntError, str::FromStr};
 
-use super::DynSolType;
+use crate::DynSolType;
 
 /// Error parsing a dynamic solidity type
 #[derive(Debug, Clone, PartialEq)]
@@ -108,10 +110,10 @@ pub(crate) fn parse(s: &str) -> Result<DynSolType, ParserError> {
 }
 
 impl FromStr for DynSolType {
-    type Err = crate::Error;
+    type Err = ParserError;
 
-    fn from_str(s: &str) -> crate::AbiResult<Self> {
-        Ok(crate::dyn_abi::parser::parse(s)?)
+    fn from_str(s: &str) -> Result<Self, ParserError> {
+        crate::parser::parse(s)
     }
 }
 

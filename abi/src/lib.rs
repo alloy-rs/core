@@ -203,11 +203,6 @@ pub(crate) mod decoder;
 pub use decoder::Decoder;
 pub use decoder::{decode, decode_params, decode_single};
 
-#[cfg(feature = "dynamic")]
-mod dyn_abi;
-#[cfg(feature = "dynamic")]
-pub use dyn_abi::{DynSolType, DynSolValue, DynToken, ParserError};
-
 pub(crate) mod encoder;
 #[doc(hidden)]
 pub use encoder::Encoder;

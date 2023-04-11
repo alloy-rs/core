@@ -2,7 +2,7 @@
 name = "ethers-abi-enc"
 version = "0.1.0"
 edition = "2021"
-description = "Ethereum ABI encoding and decoding"
+description = "Ethereum ABI encoding and decoding, with static typing"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/ethers-rs/core"
 readme = "README.md"
@@ -23,8 +23,7 @@ serde = { version = "1.0.159", optional = true }
 hex-literal = "0.3.4"
 
 [features]
-default = ["std", "dynamic", "eip712"]
+default = ["std", "eip712"]
 std = ["hex/std", "thiserror"]
-dynamic = ["std"]
 eip712 = []
 eip712-serde = ["dep:serde", "eip712"]

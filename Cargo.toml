@@ -8,6 +8,7 @@ members = [
     "rlp/rlp-derive",
     "abi",
     "abi/sol-type-parser",
+    "dyn-abi",
 ]
 
 # Copied from ruint cargo.toml:

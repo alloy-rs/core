@@ -1,0 +1,21 @@
+[package]
+name = "ethers-dyn-abi"
+version = "0.1.0"
+edition = "2021"
+description = "Ethereum ABI encoding and decoding, with runtime typing"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/ethers-rs/core"
+readme = "README.md"
+keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
+categories = ["encoding", "serialization", "cryptocurrency", "ethereum"]
+authors = []
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ethers-abi-enc = { version = "0.1.0", path = "../abi" }
+ethers-primitives = { version = "0.1.0", path = "../primitives" }
+
+[features]
+default = ["std"]
+std = ["ethers-abi-enc/std", "ethers-primitives/std"]

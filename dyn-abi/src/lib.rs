@@ -1,6 +1,30 @@
+// Copyright 2015-2020 Parity Technologies
+// Copyright 2023-2023 Ethers-rs Team
+
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
+#![cfg_attr(not(feature = "std"), no_std)]
+#![warn(
+    missing_docs,
+    unreachable_pub,
+    unused_crate_dependencies,
+    missing_copy_implementations,
+    missing_debug_implementations,
+    clippy::missing_const_for_fn
+)]
+#![deny(unused_must_use, rust_2018_idioms)]
+#![doc(test(
+    no_crate_inject,
+    attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
+))]
+
 //! Dynamic Solidity Type Encoder
 //!
-//! This module provides a runtime encoder/decoder for solidity types. It is
+//! This library provides a runtime encoder/decoder for solidity types. It is
 //! intended to be used when the solidity type is not known at compile time.
 //! This is particularly useful for EIP-712 signing interfaces.
 //!
@@ -12,7 +36,7 @@
 //! ## Example
 //!
 //! ```
-//! # use ethers_abi_enc::{DynSolType, DynSolValue};
+//! # use ethers_dyn_abi::{DynSolType, DynSolValue};
 //! // parse a type from a string
 //! let my_type: DynSolType = "uint8[2][]".parse().unwrap();
 //!
@@ -31,7 +55,7 @@
 //!
 //! ## How it works
 //!
-//! The dynamic encodr/decoder is implemented as a set of enums that represent
+//! The dynamic encoder/decoder is implemented as a set of enums that represent
 //! solidity types, solidity values (in rust representation form), and ABI
 //! tokens. Unlike the static encoder, each of these must be instantiated at
 //! runtime. The [`DynSolType`] enum represents a solidity type, and is
@@ -66,11 +90,45 @@
 //! This is a significant behavior departure from the static decoder. We do not
 //! recommend using the [`DynToken`] type directly. Instead, we recommend using
 //! the encoding and decoding methods on [`DynSolType`].
-mod sol_type;
-pub use sol_type::DynSolType;
 
-mod sol_value;
-pub use sol_value::DynSolValue;
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+#[cfg(not(feature = "std"))]
+#[doc(hidden)]
+pub mod no_std_prelude {
+    pub use alloc::{
+        borrow::{Borrow, Cow, ToOwned},
+        boxed::Box,
+        format,
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+    pub use core::marker::PhantomData;
+}
+
+#[cfg(feature = "std")]
+#[doc(hidden)]
+pub mod no_std_prelude {
+    pub use std::{
+        borrow::{Borrow, Cow, ToOwned},
+        boxed::Box,
+        format,
+        marker::PhantomData,
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+}
+
+pub use ethers_abi_enc::{AbiResult, Decoder, Encoder, Error, SolType, Word};
+
+mod r#type;
+pub use r#type::DynSolType;
+
+mod value;
+pub use value::DynSolValue;
 
 mod token;
 pub use token::DynToken;
@@ -80,7 +138,7 @@ pub use parser::ParserError;
 
 #[cfg(test)]
 mod test {
-    use crate::{decoder::Decoder, encoder::Encoder, DynSolType, DynSolValue};
+    use crate::{Decoder, DynSolType, DynSolValue, Encoder};
 
     #[test]
     fn simple_e2e() {

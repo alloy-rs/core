@@ -46,10 +46,6 @@ pub enum Error {
     /// Other errors.
     #[cfg_attr(feature = "std", error("{0}"))]
     Other(Cow<'static, str>),
-    #[cfg(feature = "dynamic")]
-    /// Parser Error
-    #[cfg_attr(feature = "std", error("{0:?}"))]
-    ParserError(crate::dyn_abi::ParserError),
 }
 
 impl Error {
@@ -78,12 +74,5 @@ impl Error {
 impl From<hex::FromHexError> for Error {
     fn from(value: hex::FromHexError) -> Self {
         Self::FromHexError(value)
-    }
-}
-
-#[cfg(feature = "dynamic")]
-impl From<crate::dyn_abi::ParserError> for Error {
-    fn from(value: crate::dyn_abi::ParserError) -> Self {
-        Self::ParserError(value)
     }
 }
