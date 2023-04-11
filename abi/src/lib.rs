@@ -159,6 +159,7 @@ pub mod no_std_prelude {
         vec,
         vec::Vec,
     };
+    pub use core::marker::PhantomData;
 }
 
 #[cfg(feature = "std")]
@@ -167,6 +168,7 @@ pub mod no_std_prelude {
     pub use std::{
         borrow::{Borrow, Cow, ToOwned},
         format,
+        marker::PhantomData,
         string::{String, ToString},
         vec,
         vec::Vec,
@@ -209,7 +211,12 @@ pub use sol_struct::SolStruct;
 pub mod sol_type;
 pub use sol_type::SolType;
 
+/// Solidity user-defined value types
+mod sol_udt;
+
 mod util;
+#[doc(hidden)]
+pub use util::just_ok;
 pub use util::keccak256;
 
 #[cfg(feature = "eip712")]

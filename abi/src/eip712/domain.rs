@@ -388,7 +388,7 @@ impl Eip712Domain {
 #[macro_export]
 macro_rules! domain {
     (salt: $salt:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
             None,
             None,
@@ -397,7 +397,7 @@ macro_rules! domain {
         )
     };
     (verifying_contract: $verifying_contract:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
             None,
             None,
@@ -406,7 +406,7 @@ macro_rules! domain {
         )
     };
     (verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
             None,
             None,
@@ -415,7 +415,7 @@ macro_rules! domain {
         )
     };
     (chain_id: $chain_id:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
             None,
             Some($chain_id)
@@ -424,7 +424,7 @@ macro_rules! domain {
         )
     };
     (chain_id: $chain_id:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
             None,
             Some($chain_id)
@@ -433,7 +433,7 @@ macro_rules! domain {
         )
     };
     (chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
             None,
             Some($chain_id),
@@ -442,7 +442,7 @@ macro_rules! domain {
         )
     };
     (chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
             None,
             Some($chain_id),
@@ -451,80 +451,80 @@ macro_rules! domain {
         )
     };
     (version: $version:literal,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
-            Some(Cow::Borrowed($version)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             None,
             None,
             None,
         )
     };
     (version: $version:literal,salt: $salt:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
-            Some(Cow::Borrowed($version)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             None,
             None,
             Some($salt),
         )
     };
     (version: $version:literal,verifying_contract: $verifying_contract:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
-            Some(Cow::Borrowed($version)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             None,
             Some($verifying_contract),
             None,
         )
 };
     (version: $version:literal,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
-            Some(Cow::Borrowed($version)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             None,
             Some($verifying_contract),
             Some($salt),
         )
     };
     (version: $version:literal,chain_id: $chain_id:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
-            Some(Cow::Borrowed($version)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             Some($chain_id)
             None,
             None,
         )
     };
     (version: $version:literal,chain_id: $chain_id:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
-            Some(Cow::Borrowed($version)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             Some($chain_id)
             None,
             Some($salt),
         )
     };
     (version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
-            Some(Cow::Borrowed($version)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             Some($chain_id),
             Some($verifying_contract),
             None,
         )
     };
     (version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
+        $crate::Eip712Domain::new(
             None,
-            Some(Cow::Borrowed($version)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             Some($chain_id),
             Some($verifying_contract),
             Some($salt),
         )
     };
     (name: $name:literal,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
             None,
             None,
             None,
@@ -532,8 +532,8 @@ macro_rules! domain {
         )
     };
     (name: $name:literal,salt: $salt:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
             None,
             None,
             None,
@@ -541,8 +541,8 @@ macro_rules! domain {
         )
     };
     (name: $name:literal,verifying_contract: $verifying_contract:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
             None,
             None,
             Some($verifying_contract),
@@ -550,8 +550,8 @@ macro_rules! domain {
         )
     };
     (name: $name:literal,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
             None,
             None,
             Some($verifying_contract),
@@ -559,8 +559,8 @@ macro_rules! domain {
         )
     };
     (name: $name:literal,chain_id: $chain_id:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
             None,
             Some($chain_id)
             None,
@@ -568,8 +568,8 @@ macro_rules! domain {
         )
     };
     (name: $name:literal,chain_id: $chain_id:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
             None,
             Some($chain_id)
             None,
@@ -577,8 +577,8 @@ macro_rules! domain {
         )
     };
     (name: $name:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
             None,
             Some($chain_id),
             Some($verifying_contract),
@@ -586,8 +586,8 @@ macro_rules! domain {
         )
     };
     (name: $name:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
             None,
             Some($chain_id),
             Some($verifying_contract),
@@ -595,72 +595,72 @@ macro_rules! domain {
         )
     };
     (name: $name:literal,version: $version:literal,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
-            Some(Cow::Borrowed($version)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             None,
             None,
             None,
         )
     };
     (name: $name:literal,version: $version:literal,salt: $salt:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
-            Some(Cow::Borrowed($version)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             None,
             None,
             Some($salt),
         )
     };
     (name: $name:literal,version: $version:literal,verifying_contract: $verifying_contract:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
-            Some(Cow::Borrowed($version)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             None,
             Some($verifying_contract),
             None,
         )
     };
     (name: $name:literal,version: $version:literal,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
-            Some(Cow::Borrowed($version)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             None,
             Some($verifying_contract),
             Some($salt),
         )
     };
     (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
-            Some(Cow::Borrowed($version)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             Some($chain_id)
             None,
             None,
         )
     };
     (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
-            Some(Cow::Borrowed($version)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             Some($chain_id)
             None,
             Some($salt),
         )
     };
     (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
-            Some(Cow::Borrowed($version)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             Some($chain_id),
             Some($verifying_contract),
             None,
         )
     };
     (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        Eip712Domain::new(
-            Some(Cow::Borrowed($name)),
-            Some(Cow::Borrowed($version)),
+        $crate::Eip712Domain::new(
+            Some($crate::no_std_prelude::Cow::Borrowed($name)),
+            Some($crate::no_std_prelude::Cow::Borrowed($version)),
             Some($chain_id),
             Some($verifying_contract),
             Some($salt),

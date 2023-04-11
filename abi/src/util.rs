@@ -28,6 +28,14 @@ pub fn keccak256(bytes: impl AsRef<[u8]>) -> ethers_primitives::B256 {
     output.into()
 }
 
+// clippy issue
+#[doc(hidden)]
+#[allow(clippy::missing_const_for_fn)]
+/// Return Ok(()). Exists for the UDT macro's typecheck
+pub fn just_ok<T>(_: T) -> crate::AbiResult<()> {
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::pad_u32;

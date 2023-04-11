@@ -136,11 +136,11 @@ impl SolStructDef {
                         #((#f_ty, #f_name)),*
                     ];
 
-                    fn to_tuple(&self) -> UnderlyingRustTuple {
+                    fn to_rust(&self) -> UnderlyingRustTuple {
                         self.clone().into()
                     }
 
-                    fn from_tuple(tuple: UnderlyingRustTuple) -> Self {
+                    fn from_rust(tuple: UnderlyingRustTuple) -> Self {
                         tuple.into()
                     }
 

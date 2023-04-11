@@ -34,10 +34,10 @@ pub trait SolStruct {
     const FIELDS: &'static [(&'static str, &'static str)];
 
     /// Convert to the tuple type used for ABI encoding/decoding
-    fn to_tuple(&self) -> <Self::Tuple as SolType>::RustType;
+    fn to_rust(&self) -> <Self::Tuple as SolType>::RustType;
 
     /// Convert from the tuple type used for ABI encoding/decoding
-    fn from_tuple(tuple: <Self::Tuple as SolType>::RustType) -> Self
+    fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self
     where
         Self: Sized;
 
@@ -104,20 +104,20 @@ where
     where
         Borrower: Borrow<Self::RustType>,
     {
-        let tuple = rust.borrow().to_tuple();
+        let tuple = rust.borrow().to_rust();
         TupleFor::<T>::tokenize(tuple)
     }
 
     fn detokenize(token: Self::TokenType) -> crate::AbiResult<Self::RustType> {
         let tuple = TupleFor::<T>::detokenize(token)?;
-        Ok(T::from_tuple(tuple))
+        Ok(T::from_rust(tuple))
     }
 
     fn encode_packed_to<Borrower>(target: &mut Vec<u8>, rust: Borrower)
     where
         Borrower: Borrow<Self::RustType>,
     {
-        let tuple = rust.borrow().to_tuple();
+        let tuple = rust.borrow().to_rust();
         TupleFor::<T>::encode_packed_to(target, tuple)
     }
 }
