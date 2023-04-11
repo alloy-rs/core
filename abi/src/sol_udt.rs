@@ -15,10 +15,9 @@ macro_rules! define_udt {
         /// This struct is a Solidity user-defined value type. It wraps
         /// an underlying type.
         #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
-        pub struct $name {
-            value: <$underlying as $crate::SolType>::RustType,
-            _pd: $crate::no_std_prelude::PhantomData<$underlying>
-        }
+        pub struct $name (
+            <$underlying as $crate::SolType>::RustType,
+        );
 
         impl $name {
             /// The solidity type name
@@ -26,27 +25,24 @@ macro_rules! define_udt {
 
             /// Convert from the underlying value type
             pub const fn from(value: <$underlying as $crate::SolType>::RustType) -> Self {
-                Self {
-                    value,
-                    _pd: $crate::no_std_prelude::PhantomData,
-                }
+                Self(value)
             }
 
             /// Return the underlying value
             pub const fn into(self) -> <$underlying as $crate::SolType>::RustType {
-                self.value
+                self.0
             }
 
             /// Return the single encoding of this value, delegating to the
             /// underlying type
             pub fn encode_single(&self) -> $crate::no_std_prelude::Vec<u8> {
-                <Self as $crate::SolType>::encode_single(self.value)
+                <Self as $crate::SolType>::encode_single(self.0)
             }
 
             /// Return the packed encoding of this value, delegating to the
             /// underlying type
             pub fn encode_packed(&self) -> $crate::no_std_prelude::Vec<u8> {
-                <Self as $crate::SolType>::encode_packed(self.value)
+                <Self as $crate::SolType>::encode_packed(self.0)
             }
         }
 
