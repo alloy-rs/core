@@ -14,3 +14,11 @@ foundry.
   - maybe: integrate uint CI with local CI?
 - fix wasm in uint
 - unify workspace deps with `.workspace = true`
+- meta crate?
+
+# Current build command
+
+cargo clippy --no-default-features
+cargo clippy
+cargo clippy --target wasm32-unknown-unknown
+cargo clippy --features eip712-serde
