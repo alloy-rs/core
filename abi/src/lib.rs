@@ -198,32 +198,19 @@ pub use sol_type_parser::sol;
 /// The Word type for ABI Encoding
 pub type Word = ethers_primitives::B256;
 
-pub(crate) mod decoder;
+mod coder;
+pub use coder::{
+    decode, decode_params, decode_single, encode, encode_params, encode_single,
+    token::{self, TokenType},
+};
 #[doc(hidden)]
-pub use decoder::Decoder;
-pub use decoder::{decode, decode_params, decode_single};
-
-pub(crate) mod encoder;
-#[doc(hidden)]
-pub use encoder::Encoder;
-pub use encoder::{encode, encode_params, encode_single};
+pub use coder::{Decoder, Encoder};
 
 mod errors;
 pub use errors::{AbiResult, Error};
 
-mod token;
-pub use token::{DynSeqToken, FixedSeqToken, PackedSeqToken, TokenSeq, TokenType, WordToken};
-
-/// A solidity struct trait
-mod sol_struct;
-pub use sol_struct::SolStruct;
-
-/// Solidity Types
-pub mod sol_type;
-pub use sol_type::SolType;
-
-/// Solidity user-defined value types
-mod sol_udt;
+mod sol_types;
+pub use sol_types::{sol_type, SolStruct, SolType};
 
 mod util;
 #[doc(hidden)]

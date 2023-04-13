@@ -9,7 +9,7 @@
 
 //! Utils used by different modules.
 
-use crate::Word;
+use crate::{AbiResult, Error, Word};
 
 /// Converts a u32 to a right aligned array of 32 bytes.
 pub(crate) fn pad_u32(value: u32) -> Word {
@@ -34,6 +34,47 @@ pub fn keccak256(bytes: impl AsRef<[u8]>) -> ethers_primitives::B256 {
 /// Return Ok(()). Exists for the UDT macro's typecheck
 pub fn just_ok<T>(_: T) -> crate::AbiResult<()> {
     Ok(())
+}
+
+pub(crate) fn check_zeroes(data: &[u8]) -> bool {
+    data.iter().all(|b| *b == 0)
+}
+
+pub(crate) const fn round_up_nearest_multiple(value: usize, padding: usize) -> usize {
+    (value + padding - 1) / padding * padding
+}
+
+pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
+    if word == Word::default() {
+        return true;
+    }
+    match len {
+        0 => panic!("cannot have bytes0"),
+        1..=31 => check_zeroes(&word[len..]),
+        32 => true, // always valid
+        33.. => panic!("cannot have bytes33 or higher"),
+        _ => unreachable!(),
+    }
+}
+
+pub(crate) fn as_u32(word: Word, type_check: bool) -> AbiResult<u32> {
+    if type_check && !check_zeroes(&word.as_slice()[..28]) {
+        return Err(Error::type_check_fail(
+            hex::encode(word),
+            "Solidity pointer (uint32)",
+        ));
+    }
+
+    let result = ((word[28] as u32) << 24)
+        + ((word[29] as u32) << 16)
+        + ((word[30] as u32) << 8)
+        + (word[31] as u32);
+
+    Ok(result)
+}
+
+pub(crate) fn check_bool(slice: Word) -> bool {
+    check_zeroes(&slice[..31])
 }
 
 #[cfg(test)]

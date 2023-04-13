@@ -22,7 +22,7 @@ use ethers_primitives::{B160, U256};
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::*;
-use crate::{decoder::Decoder, encoder::Encoder, AbiResult, Word};
+use crate::{AbiResult, Decoder, Encoder, Word};
 
 /// Abi-Encoding Tokens. This is a sealed trait. It contains the type
 /// information necessary to encode & decode data. Tokens are an intermediate

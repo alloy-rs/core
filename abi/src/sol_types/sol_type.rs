@@ -7,11 +7,7 @@ use crate::no_std_prelude::{Borrow, String as RustString, ToOwned, ToString, Vec
 #[cfg(feature = "std")]
 use std::{borrow::Borrow, string::String as RustString};
 
-use crate::{
-    decoder::*,
-    token::{DynSeqToken, FixedSeqToken, PackedSeqToken, TokenSeq, TokenType, WordToken},
-    AbiResult, Error, Word,
-};
+use crate::{decode, decode_params, decode_single, token::*, util, AbiResult, Error, Word};
 
 /// A Solidity Type, for ABI enc/decoding
 ///
@@ -341,7 +337,7 @@ impl SolType for Address {
     }
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
-        if !check_zeroes(&token.inner()[..12]) {
+        if !util::check_zeroes(&token.inner()[..12]) {
             return Err(Self::type_check_fail(token.as_slice()));
         }
         Ok(())
@@ -538,7 +534,7 @@ macro_rules! impl_uint_sol_type {
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
                 let bytes = (<$uty>::BITS / 8) as usize;
                 let sli = &token.as_slice()[..32 - bytes];
-                if !check_zeroes(sli) {
+                if !util::check_zeroes(sli) {
                     return Err(Self::type_check_fail(token.as_slice()));
                 }
                 Ok(())
@@ -582,7 +578,7 @@ macro_rules! impl_uint_sol_type {
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
                 let bytes = $bits / 8 as usize;
                 let sli = &token.as_slice()[..32 - bytes];
-                if !check_zeroes(sli) {
+                if !util::check_zeroes(sli) {
                     return Err(Self::type_check_fail(token.as_slice()));
                 }
                 Ok(())
@@ -645,7 +641,7 @@ impl SolType for Bool {
     }
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
-        if !check_bool(token.inner()) {
+        if !util::check_bool(token.inner()) {
             return Err(Self::type_check_fail(token.as_slice()));
         }
         Ok(())
@@ -785,7 +781,7 @@ macro_rules! impl_fixed_bytes_sol_type {
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
-                if !check_fixed_bytes(token.inner(), $bytes) {
+                if !util::check_fixed_bytes(token.inner(), $bytes) {
                     return Err(Self::type_check_fail(token.as_slice()));
                 }
                 Ok(())

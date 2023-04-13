@@ -52,50 +52,9 @@ use crate::no_std_prelude::Cow;
 use std::borrow::Cow;
 
 use crate::{
-    encode, encode_params, encoder::encode_single, token::TokenSeq, AbiResult, Error, TokenType,
-    Word,
+    coder::encoder::encode_single, encode, encode_params, token::TokenSeq, util, AbiResult, Error,
+    TokenType, Word,
 };
-
-pub(crate) fn check_zeroes(data: &[u8]) -> bool {
-    data.iter().all(|b| *b == 0)
-}
-
-const fn round_up_nearest_multiple(value: usize, padding: usize) -> usize {
-    (value + padding - 1) / padding * padding
-}
-
-pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
-    if word == Word::default() {
-        return true;
-    }
-    match len {
-        0 => panic!("cannot have bytes0"),
-        1..=31 => check_zeroes(&word[len..]),
-        32 => true, // always valid
-        33.. => panic!("cannot have bytes33 or higher"),
-        _ => unreachable!(),
-    }
-}
-
-pub(crate) fn as_u32(word: Word, type_check: bool) -> AbiResult<u32> {
-    if type_check && !check_zeroes(&word.as_slice()[..28]) {
-        return Err(Error::type_check_fail(
-            hex::encode(word),
-            "Solidity pointer (uint32)",
-        ));
-    }
-
-    let result = ((word[28] as u32) << 24)
-        + ((word[29] as u32) << 16)
-        + ((word[30] as u32) << 8)
-        + (word[31] as u32);
-
-    Ok(result)
-}
-
-pub(crate) fn check_bool(slice: Word) -> bool {
-    check_zeroes(&slice[..31])
-}
 
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
 /// deserialize the bytes into a sequence of tokens.
@@ -195,12 +154,12 @@ impl<'a> Decoder<'a> {
     /// Peek a u32 from the buffer at a specific offset, without advancing the
     /// offset.
     pub fn peek_u32_at(&self, offset: usize) -> AbiResult<u32> {
-        as_u32(self.peek_word_at(offset)?, true)
+        util::as_u32(self.peek_word_at(offset)?, true)
     }
 
     /// Peek the next word as a u32
     pub fn peek_u32(&self) -> AbiResult<u32> {
-        as_u32(self.peek_word()?, true)
+        util::as_u32(self.peek_word()?, true)
     }
 
     /// Take a word from the buffer, advancing the offset.
@@ -220,18 +179,18 @@ impl<'a> Decoder<'a> {
     /// Take a u32 from the buffer by consuming a word.
     pub fn take_u32(&mut self) -> AbiResult<u32> {
         let word = self.take_word()?;
-        as_u32(word, true)
+        util::as_u32(word, true)
     }
 
     /// Takes a slice of bytes of the given length by consuming up to the next
     /// word boundary
     pub fn take_slice(&mut self, len: usize) -> Result<&[u8], Error> {
         if self.validate {
-            let padded_len = round_up_nearest_multiple(len, 32);
+            let padded_len = util::round_up_nearest_multiple(len, 32);
             if self.offset + padded_len > self.buf.len() {
                 return Err(Error::Overrun);
             }
-            if !check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
+            if !util::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
                 return Err(Error::Other(Cow::Borrowed(
                     "Non-empty bytes after packed array",
                 )));
