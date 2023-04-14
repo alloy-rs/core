@@ -2,6 +2,11 @@ use crate::{no_std_prelude::*, AbiResult, DynSolValue, DynToken, SolType, Word};
 use ethers_abi_enc::sol_type;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+struct StructProp {
+    name: String,
+    ty: DynSolType,
+}
+
 /// A Dynamic SolType. Equivalent to an enum wrapper around all implementers of
 /// [`crate::SolType`]. This is used to represent solidity types that are not
 /// known at compile time. It is used in conjunction with [`DynToken`] and
@@ -34,6 +39,7 @@ use ethers_abi_enc::sol_type;
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DynSolType {
     /// Address
     Address,
@@ -59,7 +65,8 @@ pub enum DynSolType {
     CustomStruct {
         /// Name of the struct
         name: String,
-        // TODO: names?
+        /// Prop names
+        prop_names: Vec<String>,
         /// Inner types
         tuple: Vec<DynSolType>,
     },
@@ -126,7 +133,7 @@ impl DynSolType {
                     *size,
                 ))
             }
-            (DynSolType::CustomStruct { name, tuple }, DynSolValue::Tuple(tokens)) => {
+            (DynSolType::CustomStruct { name, tuple, .. }, DynSolValue::Tuple(tokens)) => {
                 if tuple.len() != tokens.len() {
                     return Err(crate::Error::custom_owned(format!(
                         "Tuple length mismatch for {} . Got {}, expected {}",
@@ -144,16 +151,27 @@ impl DynSolType {
                 Ok(DynToken::FixedSeq(tuple, len))
             }
             (
-                DynSolType::CustomStruct { name, tuple },
+                DynSolType::CustomStruct {
+                    name,
+                    tuple,
+                    prop_names,
+                },
                 DynSolValue::CustomStruct {
                     name: name_val,
                     tuple: tuple_val,
+                    prop_names: prop_names_val,
                 },
             ) => {
                 if name != &name_val {
                     return Err(crate::Error::custom_owned(format!(
                         "Name mismatch for {} . Got {}, expected {}",
                         name, name_val, name,
+                    )));
+                }
+                if prop_names != &prop_names_val {
+                    return Err(crate::Error::custom_owned(format!(
+                        "Prop names mismatch for {} . Got {:?}, expected {:?}",
+                        name, prop_names_val, prop_names,
                     )));
                 }
                 if tuple.len() != tuple_val.len() {
@@ -254,7 +272,14 @@ impl DynSolType {
                         .collect::<Result<_, _>>()?,
                 ))
             }
-            (DynSolType::CustomStruct { name, tuple }, DynToken::FixedSeq(tokens, len)) => {
+            (
+                DynSolType::CustomStruct {
+                    name,
+                    tuple,
+                    prop_names,
+                },
+                DynToken::FixedSeq(tokens, len),
+            ) => {
                 if len != tokens.len() || len != tuple.len() {
                     return Err(crate::Error::custom(
                         "custom length mismatch on dynamic detokenization",
@@ -268,6 +293,7 @@ impl DynSolType {
 
                 Ok(DynSolValue::CustomStruct {
                     name: name.clone(),
+                    prop_names: prop_names.clone(),
                     tuple,
                 })
             }

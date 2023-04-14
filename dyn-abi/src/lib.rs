@@ -100,6 +100,7 @@ pub mod no_std_prelude {
     pub use alloc::{
         borrow::{Borrow, Cow, ToOwned},
         boxed::Box,
+        collections::{BTreeMap, HashSet},
         format,
         string::{String, ToString},
         vec,
@@ -114,6 +115,7 @@ pub mod no_std_prelude {
     pub use std::{
         borrow::{Borrow, Cow, ToOwned},
         boxed::Box,
+        collections::{BTreeMap, HashSet},
         format,
         marker::PhantomData,
         string::{String, ToString},
@@ -122,7 +124,7 @@ pub mod no_std_prelude {
     };
 }
 
-pub use ethers_abi_enc::{AbiResult, Decoder, Encoder, Error, SolType, Word};
+pub use ethers_abi_enc::{AbiResult, Decoder, Eip712Domain, Encoder, Error, SolType, Word};
 
 mod r#type;
 pub use r#type::DynSolType;
@@ -135,6 +137,11 @@ pub use token::DynToken;
 
 mod parser;
 pub use parser::ParserError;
+
+#[cfg(feature = "eip712")]
+mod eip712;
+#[cfg(feature = "eip712")]
+pub use eip712::{NameTypePair, Parse712Error, TypedData};
 
 #[cfg(test)]
 mod test {

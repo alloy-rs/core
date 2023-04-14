@@ -13,7 +13,10 @@ authors = []
 [dependencies]
 ethers-abi-enc = { version = "0.1.0", path = "../abi" }
 ethers-primitives = { version = "0.1.0", path = "../primitives" }
+serde = { version = "1.0.160", optional = true }
+serde_json = { version = "1.0.96", optional = true }
 
 [features]
-default = ["std"]
+default = ["std", "eip712"]
 std = ["ethers-abi-enc/std", "ethers-primitives/std"]
+eip712 = ["dep:serde", "dep:serde_json", "ethers-abi-enc/eip712-serde"]

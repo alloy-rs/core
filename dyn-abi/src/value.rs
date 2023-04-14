@@ -33,7 +33,8 @@ pub enum DynSolValue {
     CustomStruct {
         /// The name of the struct
         name: String,
-        // TODO: names
+        /// The struct's prop names, in declaration order
+        prop_names: Vec<String>,
         /// A inner types
         tuple: Vec<DynSolValue>,
     },
@@ -128,9 +129,13 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant
-    pub fn as_custom_struct(&self) -> Option<(&str, &[DynSolValue])> {
+    pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[DynSolValue])> {
         match self {
-            Self::CustomStruct { name, tuple } => Some((name.as_str(), tuple.as_slice())),
+            Self::CustomStruct {
+                name,
+                prop_names,
+                tuple,
+            } => Some((name.as_str(), prop_names.as_slice(), tuple.as_slice())),
             _ => None,
         }
     }
