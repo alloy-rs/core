@@ -39,6 +39,7 @@ fn is_atomic(type_name: &str) -> bool {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeDef {
+    /// Must always be a ROOT type name with any array stripped
     type_name: String,
     props: Vec<NameTypePair>,
 }
@@ -79,27 +80,6 @@ pub struct DepGraph {
     nodes: BTreeMap<String, TypeDef>,
     /// Edges from a type name to its dependencies
     edges: BTreeMap<String, Vec<String>>,
-}
-
-/// A subgraph rooted at a specific node
-pub struct SubGraph<'a> {
-    root: &'a TypeDef,
-    edges: &'a Vec<String>,
-    parent: &'a DepGraph,
-}
-
-impl SubGraph<'_> {
-    pub fn root(&self) -> &TypeDef {
-        self.root
-    }
-
-    pub fn edges(&self) -> &[String] {
-        self.edges
-    }
-
-    pub fn parent(&self) -> &DepGraph {
-        self.parent
-    }
 }
 
 #[derive(Debug, Default)]
@@ -154,13 +134,13 @@ impl DepGraph {
                 self.edges
                     .entry(type_name.clone())
                     .or_insert_with(Vec::new)
-                    .push(prop.type_name().to_owned());
+                    .push(prop.root_type_name().to_owned());
             });
     }
 
     pub fn ingest_types(&mut self, types: Types) {
         for (type_name, props) in types.into_iter() {
-            self.ingest(TypeDef { type_name, props });
+            self.ingest(TypeDef::new(type_name, props));
         }
     }
 
@@ -174,10 +154,14 @@ impl DepGraph {
             return Ok(());
         }
 
+        println!("Resolving into {}", type_name);
+
         let this_type = self
             .nodes
             .get(type_name)
             .ok_or_else(|| Parse712Error::missing_type(type_name))?;
+
+        println!("Found type {:?}", this_type);
         let edges: &Vec<String> = self.edges.get(type_name).unwrap();
 
         if !resolution.contains(&this_type) {
@@ -187,11 +171,14 @@ impl DepGraph {
             }
         }
 
+        println!("Resolution: {:?}", resolution);
+
         Ok(())
     }
 
     /// This function resolves a type into a list of typedefs
     pub fn resolve(&self, type_name: &str) -> Result<Vec<&TypeDef>, Parse712Error> {
+        println!("Resolving {}", type_name);
         let mut context = DfsContext::default();
         if self.detect_cycle(type_name, &mut context) {
             return Err(Parse712Error::circular_dependency(type_name));
@@ -202,8 +189,9 @@ impl DepGraph {
     }
 
     pub fn encode_type(&self, name: &str) -> Result<String, Parse712Error> {
+        println!("Encoding type {}", name);
         let resolution = self.resolve(name)?;
-
+        println!("Resolved");
         let first = resolution.first().unwrap().encode_type();
 
         // Sort references by name (eip-712 encodeType spec)
@@ -224,6 +212,7 @@ impl DepGraph {
         self.encode_type(name)
             .and_then(|s| crate::eip712::parser::parse_structs(&s))
             .and_then(|m| {
+                println!("Resolved {} to {:?}", name, m);
                 m.get(name)
                     .map(Clone::clone)
                     .ok_or(Parse712Error::missing_type(name))
@@ -310,6 +299,42 @@ mod test {
             name: "B".to_string(),
             prop_names: vec!["myC".to_string()],
             tuple: vec![c.clone()],
+        };
+        let a = DynSolType::CustomStruct {
+            name: "A".to_string(),
+            prop_names: vec!["myB".to_string()],
+            tuple: vec![b.clone()],
+        };
+        assert_eq!(graph.resolve_type("A").unwrap(), a);
+        assert_eq!(graph.resolve_type("B").unwrap(), b);
+        assert_eq!(graph.resolve_type("C").unwrap(), c);
+    }
+
+    #[test]
+    fn it_resolves_types_with_arrays() {
+        let mut graph = DepGraph::default();
+        graph.ingest(TypeDef::new(
+            "A".to_string(),
+            vec![NameTypePair::new("B", "myB".to_string())],
+        ));
+        graph.ingest(TypeDef::new(
+            "B".to_string(),
+            vec![NameTypePair::new("C[]", "myC".to_string())],
+        ));
+        graph.ingest(TypeDef::new(
+            "C".to_string(),
+            vec![NameTypePair::new("uint256", "myUint".to_string())],
+        ));
+
+        let c = DynSolType::CustomStruct {
+            name: "C".to_string(),
+            prop_names: vec!["myUint".to_string()],
+            tuple: vec![DynSolType::Uint(256)],
+        };
+        let b = DynSolType::CustomStruct {
+            name: "B".to_string(),
+            prop_names: vec!["myC".to_string()],
+            tuple: vec![DynSolType::Array(Box::new(c.clone()))],
         };
         let a = DynSolType::CustomStruct {
             name: "A".to_string(),

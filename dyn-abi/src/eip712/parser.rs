@@ -2,6 +2,48 @@ use crate::{no_std_prelude::*, DynSolType};
 
 use std::collections::HashMap;
 
+pub struct Array<'a> {
+    pub inner: &'a str,
+    /// innermost is first outermost array is last
+    pub sizes: Vec<Option<usize>>,
+}
+
+impl Array<'_> {
+    fn to_sol_type(self, inner: DynSolType) -> DynSolType {
+        self.sizes.into_iter().fold(inner, |inner, size| {
+            if let Some(size) = size {
+                DynSolType::FixedArray(Box::new(inner), size)
+            } else {
+                DynSolType::Array(Box::new(inner))
+            }
+        })
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Array<'a> {
+    type Error = Parse712Error;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        let mut inner = value;
+        let mut sizes = vec![];
+        while inner.contains("[") {
+            let mut size = "";
+            (inner, size) = value
+                .strip_suffix(']')
+                .and_then(|s| s.rsplit_once('['))
+                .ok_or(Parse712Error::InvalidTypeString)?;
+
+            sizes.push(match size {
+                "" => None,
+                _ => Some(size.parse().map_err(|_| Parse712Error::InvalidTypeString)?),
+            });
+        }
+
+        sizes.reverse();
+        Ok(Self { inner, sizes })
+    }
+}
+
 /// Error when parsing EIP-712 `encodeType` strings
 /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -80,6 +122,15 @@ pub(crate) fn parse_structs(input: &str) -> Result<HashMap<String, DynSolType>, 
             } else if let Some(ty) = types.get(ty) {
                 prop_names.push(name.to_owned());
                 tuple.push(ty.clone());
+            } else if let Ok(arr) = Array::try_from(ty) {
+                // we already know it's not a primitive array, as that would be
+                // caught above
+                let inner = types
+                    .get(arr.inner)
+                    .ok_or(Parse712Error::missing_type(arr.inner))?;
+                let ty = arr.to_sol_type(inner.clone());
+                prop_names.push(name.to_owned());
+                tuple.push(ty);
             } else {
                 return Err(Parse712Error::missing_type(ty));
             }

@@ -20,9 +20,18 @@ impl NameTypePair {
         }
     }
 
-    /// Returns the type of the property
+    /// Returns the type name of the property
     pub fn type_name(&self) -> &str {
         &self.type_name
+    }
+
+    /// Returns the root type of the name/type pair, stripping any array
+    pub fn root_type_name(&self) -> &str {
+        &self
+            .type_name
+            .split_once('[')
+            .map(|t| t.0)
+            .unwrap_or(&self.type_name)
     }
 
     /// Returns the name of the property
