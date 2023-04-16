@@ -67,6 +67,13 @@ macro_rules! define_udt {
                 $path(token)
             }
 
+            fn eip712_encode_data<B>(rust: B) -> $crate::Word
+            where
+                B: $crate::no_std_prelude::Borrow<Self::RustType>
+            {
+                Self::tokenize(rust).inner()
+            }
+
             fn tokenize<B>(rust: B) -> Self::TokenType
             where
                 B: $crate::no_std_prelude::Borrow<Self::RustType>

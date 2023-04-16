@@ -217,7 +217,5 @@ mod util;
 pub use util::just_ok;
 pub use util::keccak256;
 
-#[cfg(feature = "eip712")]
 mod eip712;
-#[cfg(feature = "eip712")]
 pub use eip712::Eip712Domain;
