@@ -371,7 +371,7 @@ impl SolType for Address {
     where
         B: Borrow<Self::RustType>,
     {
-        Self::tokenize(rust).inner().into()
+        Self::tokenize(rust).inner()
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -776,7 +776,7 @@ where
         for item in rust.borrow() {
             encoded.extend(T::eip712_encode_data(item).as_slice());
         }
-        keccak256(encoded).into()
+        keccak256(encoded)
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -947,7 +947,7 @@ where
     {
         let rust = rust.borrow();
         let encoded = rust
-            .into_iter()
+            .iter()
             .flat_map(|element| T::eip712_encode_data(element).to_fixed_bytes())
             .collect::<Vec<u8>>();
         keccak256(encoded)

@@ -104,7 +104,7 @@ where
     where
         B: Borrow<Self::RustType>,
     {
-        keccak256(SolStruct::encode_data(rust.borrow())).into()
+        keccak256(SolStruct::encode_data(rust.borrow()))
     }
 
     fn tokenize<Borrower>(rust: Borrower) -> Self::TokenType
