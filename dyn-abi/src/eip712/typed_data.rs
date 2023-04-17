@@ -1,7 +1,29 @@
 use ethers_abi_enc::Eip712Domain;
 use serde::{Deserialize, Serialize};
 
-use crate::{eip712::PropertyDef, no_std_prelude::BTreeMap, parser::RootType};
+use crate::{eip712::PropertyDef, no_std_prelude::*, parser::RootType};
+
+/// Thin wrapper around `serde_json::Value`
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Object(serde_json::Value);
+
+impl From<Object> for serde_json::Value {
+    fn from(obj: Object) -> Self {
+        obj.0
+    }
+}
+
+impl From<serde_json::Value> for Object {
+    fn from(value: serde_json::Value) -> Self {
+        Self(value)
+    }
+}
+
+impl AsRef<serde_json::Value> for Object {
+    fn as_ref(&self) -> &serde_json::Value {
+        &self.0
+    }
+}
 
 /// Custom types for `TypedData`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -22,9 +44,9 @@ impl<'de> Deserialize<'de> for Eip712Types {
     }
 }
 
-impl std::iter::IntoIterator for Eip712Types {
+impl core::iter::IntoIterator for Eip712Types {
     type Item = (String, Vec<PropertyDef>);
-    type IntoIter = std::collections::btree_map::IntoIter<String, Vec<PropertyDef>>;
+    type IntoIter = btree_map::IntoIter<String, Vec<PropertyDef>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -78,7 +100,7 @@ pub struct TypedData {
     /// The type of the message.
     pub primary_type: String,
     /// The message to be signed.
-    pub message: BTreeMap<String, serde_json::Value>,
+    pub message: Object,
 }
 
 /// According to the MetaMask implementation,
@@ -96,7 +118,7 @@ impl<'de> Deserialize<'de> for TypedData {
             types: Eip712Types,
             #[serde(rename = "primaryType")]
             primary_type: String,
-            message: BTreeMap<String, serde_json::Value>,
+            message: Object,
         }
 
         #[derive(Deserialize)]

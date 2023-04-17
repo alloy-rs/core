@@ -1,62 +1,7 @@
 //! Contains utilities for parsing Solidity types.
 //!
 //! This is a simple representation of solidity type grammar.
-use crate::{no_std_prelude::*, DynSolType};
-
-/// Error when parsing EIP-712 `encodeType` strings
-///
-/// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParserError {
-    /// Invalid size for a primitive type (intX, uintX, or bytesX)
-    InvalidSize(Cow<'static, str>),
-    /// Invalid type string, extra chars, or invalid structure
-    InvalidTypeString(Cow<'static, str>),
-    /// Unknown type referenced from another type
-    MissingType(Cow<'static, str>),
-    /// Detected circular dep during typegraph resolution
-    CircularDependency(Cow<'static, str>),
-    /// Invalid Property definition
-    InvalidPropertyDefinition(Cow<'static, str>),
-}
-
-impl core::fmt::Display for ParserError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ParserError::InvalidSize(ty) => write!(f, "Invalid size for type: {}", ty),
-            ParserError::InvalidTypeString(ty) => write!(f, "Invalid type string: {}", ty),
-            ParserError::MissingType(name) => {
-                write!(f, "Missing type in type resolution: {}", name)
-            }
-            ParserError::CircularDependency(dep) => write!(f, "Circular dependency: {}", dep),
-            ParserError::InvalidPropertyDefinition(def) => {
-                write!(f, "Invalid property definition: {}", def)
-            }
-        }
-    }
-}
-
-impl ParserError {
-    pub(crate) fn invalid_property_def(def: impl Borrow<str>) -> ParserError {
-        ParserError::InvalidPropertyDefinition(def.borrow().to_owned().into())
-    }
-
-    pub(crate) fn invalid_size(ty: impl Borrow<str>) -> ParserError {
-        ParserError::InvalidSize(ty.borrow().to_owned().into())
-    }
-
-    pub(crate) fn invalid_type_string(ty: impl Borrow<str>) -> ParserError {
-        ParserError::InvalidTypeString(ty.borrow().to_owned().into())
-    }
-
-    pub(crate) fn missing_type(name: impl Borrow<str>) -> ParserError {
-        ParserError::MissingType(name.borrow().to_owned().into())
-    }
-
-    pub(crate) fn circular_dependency(dep: impl Borrow<str>) -> ParserError {
-        ParserError::CircularDependency(dep.borrow().to_owned().into())
-    }
-}
+use crate::{no_std_prelude::*, DynAbiError, DynSolType};
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type
@@ -74,25 +19,25 @@ impl RootType<'_> {
     /// symbol.
     ///
     /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier>
-    fn legal_identifier(&self) -> Result<(), ParserError> {
+    fn legal_identifier(&self) -> Result<(), DynAbiError> {
         if self.0.is_empty() {
-            return Err(ParserError::invalid_type_string(self.0));
+            return Err(DynAbiError::invalid_type_string(self.0));
         }
 
         match self.0.chars().next().unwrap() {
             'a'..='z' | 'A'..='Z' | '_' | '$' => {}
-            _ => return Err(ParserError::invalid_type_string(self.0)),
+            _ => return Err(DynAbiError::invalid_type_string(self.0)),
         }
 
         if self.0.chars().skip(1).all(char::is_alphanumeric) {
             Ok(())
         } else {
-            Err(ParserError::invalid_type_string(self.0))
+            Err(DynAbiError::invalid_type_string(self.0))
         }
     }
 
     /// True if the type is a basic solidity type
-    pub fn try_basic_solidity(&self) -> Result<(), ParserError> {
+    pub fn try_basic_solidity(&self) -> Result<(), DynAbiError> {
         let type_name = self.0;
         match type_name {
             "address" | "bool" | "string" | "bytes" => Ok(()),
@@ -103,7 +48,7 @@ impl RootType<'_> {
                             if len <= 32 {
                                 return Ok(());
                             }
-                            return Err(ParserError::invalid_size(type_name));
+                            return Err(DynAbiError::invalid_size(type_name));
                         }
                     }
                 }
@@ -116,7 +61,7 @@ impl RootType<'_> {
                             if len <= 256 && len % 8 == 0 {
                                 return Ok(());
                             }
-                            return Err(ParserError::invalid_size(type_name));
+                            return Err(DynAbiError::invalid_size(type_name));
                         }
                     }
                 }
@@ -129,17 +74,17 @@ impl RootType<'_> {
                             if len <= 256 && len % 8 == 0 {
                                 return Ok(());
                             }
-                            return Err(ParserError::invalid_size(type_name));
+                            return Err(DynAbiError::invalid_size(type_name));
                         }
                     }
                 }
-                Err(ParserError::invalid_type_string(type_name))
+                Err(DynAbiError::invalid_type_string(type_name))
             }
         }
     }
 
     /// Resolve the type string into a basic solidity type
-    pub fn resolve_basic_solidity(&self) -> Result<DynSolType, ParserError> {
+    pub fn resolve_basic_solidity(&self) -> Result<DynSolType, DynAbiError> {
         self.try_basic_solidity()?;
 
         let s = self.0;
@@ -165,15 +110,15 @@ impl RootType<'_> {
         // prefix is shared between two types
         if let Some(s) = s.strip_prefix("bytes") {
             return Ok(DynSolType::FixedBytes(
-                s.trim().parse().map_err(|_| ParserError::invalid_size(s))?,
+                s.trim().parse().map_err(|_| DynAbiError::invalid_size(s))?,
             ));
         }
-        Err(ParserError::missing_type(s))
+        Err(DynAbiError::missing_type(s))
     }
 }
 
 impl<'a> TryFrom<&'a str> for RootType<'a> {
-    type Error = ParserError;
+    type Error = DynAbiError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         let s = Self(value.trim());
@@ -206,7 +151,7 @@ pub struct TupleSpecifier<'a> {
 
 impl TupleSpecifier<'_> {
     /// True if the type is a basic solidity type
-    pub fn try_basic_solidity(&self) -> Result<(), ParserError> {
+    pub fn try_basic_solidity(&self) -> Result<(), DynAbiError> {
         for ty in &self.types {
             ty.try_basic_solidity()?;
         }
@@ -214,7 +159,7 @@ impl TupleSpecifier<'_> {
     }
 
     /// Resolve the type string into a basic solidity type if possible
-    pub fn resolve_basic_solidity(&self) -> Result<DynSolType, ParserError> {
+    pub fn resolve_basic_solidity(&self) -> Result<DynSolType, DynAbiError> {
         let tuple = self
             .types
             .iter()
@@ -225,7 +170,7 @@ impl TupleSpecifier<'_> {
 }
 
 impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
-    type Error = ParserError;
+    type Error = DynAbiError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         // flexible for `a, b` or `(a, b)`, or `tuple(a, b)`
@@ -265,14 +210,14 @@ pub enum TypeStem<'a> {
 }
 
 impl TypeStem<'_> {
-    pub(crate) fn try_basic_solidity(&self) -> Result<(), ParserError> {
+    pub(crate) fn try_basic_solidity(&self) -> Result<(), DynAbiError> {
         match self {
             Self::Root(root) => root.try_basic_solidity(),
             Self::Tuple(tuple) => tuple.try_basic_solidity(),
         }
     }
 
-    pub(crate) fn resolve_basic_solidity(&self) -> Result<DynSolType, ParserError> {
+    pub(crate) fn resolve_basic_solidity(&self) -> Result<DynSolType, DynAbiError> {
         match self {
             Self::Root(root) => root.resolve_basic_solidity(),
             Self::Tuple(tuple) => tuple.resolve_basic_solidity(),
@@ -281,7 +226,7 @@ impl TypeStem<'_> {
 }
 
 impl<'a> TryFrom<&'a str> for TypeStem<'a> {
-    type Error = ParserError;
+    type Error = DynAbiError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         if value.starts_with('(') || value.starts_with("tuple") {
@@ -310,12 +255,12 @@ pub struct TypeSpecifier<'a> {
 
 impl TypeSpecifier<'_> {
     /// True if the type is a basic solidity type
-    pub fn try_basic_solidity(&self) -> Result<(), ParserError> {
+    pub fn try_basic_solidity(&self) -> Result<(), DynAbiError> {
         self.root.try_basic_solidity()
     }
 
     /// Resolve the type string into a basic solidity type if possible
-    pub fn resolve_basic_solidity(&self) -> Result<DynSolType, ParserError> {
+    pub fn resolve_basic_solidity(&self) -> Result<DynSolType, DynAbiError> {
         let ty = self.root.resolve_basic_solidity()?;
         Ok(self.sizes.iter().fold(ty, |acc, item| match item {
             Some(size) => DynSolType::FixedArray(Box::new(acc), *size),
@@ -325,7 +270,7 @@ impl TypeSpecifier<'_> {
 }
 
 impl<'a> TryFrom<&'a str> for TypeSpecifier<'a> {
-    type Error = ParserError;
+    type Error = DynAbiError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         let value = value.trim();
@@ -350,14 +295,14 @@ impl<'a> TryFrom<&'a str> for TypeSpecifier<'a> {
             let s = s
                 .trim()
                 .strip_suffix(']')
-                .ok_or_else(|| ParserError::invalid_type_string(value))?;
+                .ok_or_else(|| DynAbiError::invalid_type_string(value))?;
 
             if s.is_empty() {
                 sizes.push(None);
             } else {
                 sizes.push(Some(
                     s.parse()
-                        .map_err(|_| ParserError::invalid_type_string(value))?,
+                        .map_err(|_| DynAbiError::invalid_type_string(value))?,
                 ));
             }
         }
@@ -371,7 +316,7 @@ impl<'a> TryFrom<&'a str> for TypeSpecifier<'a> {
     }
 }
 
-pub(crate) fn parse(s: &str) -> Result<DynSolType, ParserError> {
+pub(crate) fn parse(s: &str) -> Result<DynSolType, DynAbiError> {
     let s = s.trim();
     let ty = TypeSpecifier::try_from(s)?;
 
@@ -379,7 +324,7 @@ pub(crate) fn parse(s: &str) -> Result<DynSolType, ParserError> {
 }
 
 impl FromStr for DynSolType {
-    type Err = ParserError;
+    type Err = DynAbiError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parse(s)
@@ -502,7 +447,7 @@ mod test {
             TypeSpecifier::try_from("MyStruct")
                 .unwrap()
                 .try_basic_solidity(),
-            Err(ParserError::invalid_type_string("MyStruct"))
+            Err(DynAbiError::invalid_type_string("MyStruct"))
         );
     }
 }

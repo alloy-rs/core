@@ -1,10 +1,12 @@
+use core::cmp::Ordering;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
     eip712::typed_data::Eip712Types,
-    no_std_prelude::{fmt, BTreeMap, HashSet},
+    no_std_prelude::*,
     parser::{RootType, TypeSpecifier, TypeStem},
-    DynSolType, ParserError,
+    DynAbiError, DynSolType,
 };
 
 /// An EIP-712 property definition
@@ -37,7 +39,7 @@ impl<'de> serde::Deserialize<'de> for PropertyDef {
 
 impl PropertyDef {
     /// Instantiate a new name-type pair
-    pub fn new(type_name: impl AsRef<str>, name: impl AsRef<str>) -> Result<Self, ParserError> {
+    pub fn new(type_name: impl AsRef<str>, name: impl AsRef<str>) -> Result<Self, DynAbiError> {
         let type_name: RootType<'_> = type_name.as_ref().try_into()?;
         Ok(Self::new_unchecked(type_name, name))
     }
@@ -78,6 +80,19 @@ pub struct TypeDef {
     props: Vec<PropertyDef>,
 }
 
+impl Ord for TypeDef {
+    // This is not a logic error because we know type names cannot be duplicated in the resolver map
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.type_name.cmp(&other.type_name)
+    }
+}
+
+impl PartialOrd for TypeDef {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl fmt::Display for TypeDef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.encode_type())
@@ -87,7 +102,7 @@ impl fmt::Display for TypeDef {
 impl TypeDef {
     /// Instantiate a new type definition, checking that the type name is a
     /// valid root type
-    pub fn new(type_name: String, props: Vec<PropertyDef>) -> Result<Self, ParserError> {
+    pub fn new(type_name: String, props: Vec<PropertyDef>) -> Result<Self, DynAbiError> {
         let _rt: RootType<'_> = type_name.as_str().try_into()?;
         Ok(Self { type_name, props })
     }
@@ -148,8 +163,8 @@ impl TypeDef {
 
 #[derive(Debug, Default)]
 struct DfsContext<'a> {
-    visited: HashSet<&'a TypeDef>,
-    stack: HashSet<&'a str>,
+    visited: BTreeSet<&'a TypeDef>,
+    stack: BTreeSet<&'a str>,
 }
 
 /// A dependency graph built from the `Eip712Types` object. This is used to
@@ -158,6 +173,9 @@ struct DfsContext<'a> {
 #[derive(Debug, Clone, Default)]
 pub struct Resolver {
     /// Nodes in the graph
+    ///
+    // NOTE: Non-duplication of names must be enforced. See note on impl of Ord
+    // for TypeDef
     nodes: BTreeMap<String, TypeDef>,
     /// Edges from a type name to its dependencies
     edges: BTreeMap<String, Vec<String>>,
@@ -236,7 +254,7 @@ impl Resolver {
         &'a self,
         resolution: &mut Vec<&'a TypeDef>,
         root_type: RootType<'_>,
-    ) -> Result<(), ParserError> {
+    ) -> Result<(), DynAbiError> {
         if root_type.try_basic_solidity().is_ok() {
             return Ok(());
         }
@@ -244,7 +262,7 @@ impl Resolver {
         let this_type = self
             .nodes
             .get(root_type.as_str())
-            .ok_or_else(|| ParserError::missing_type(root_type))?;
+            .ok_or_else(|| DynAbiError::missing_type(root_type))?;
 
         let edges: &Vec<String> = self.edges.get(root_type.as_str()).unwrap();
 
@@ -261,10 +279,10 @@ impl Resolver {
 
     /// This function linearizes a type into a list of typedefs of its
     /// dependencies
-    pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>, ParserError> {
+    pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>, DynAbiError> {
         let mut context = DfsContext::default();
         if self.detect_cycle(type_name, &mut context) {
-            return Err(ParserError::circular_dependency(type_name));
+            return Err(DynAbiError::circular_dependency(type_name));
         }
         let root_type = type_name.try_into()?;
         let mut resolution = vec![];
@@ -274,7 +292,7 @@ impl Resolver {
 
     /// Resolves a root solidity type into either a basic type or a custom
     /// struct
-    fn resolve_root_type(&self, root_type: RootType<'_>) -> Result<DynSolType, ParserError> {
+    fn resolve_root_type(&self, root_type: RootType<'_>) -> Result<DynSolType, DynAbiError> {
         if root_type.try_basic_solidity().is_ok() {
             return root_type.resolve_basic_solidity();
         }
@@ -282,7 +300,7 @@ impl Resolver {
         let ty = self
             .nodes
             .get(root_type.as_str())
-            .ok_or_else(|| ParserError::missing_type(root_type))?;
+            .ok_or_else(|| DynAbiError::missing_type(root_type))?;
 
         let prop_names = ty.prop_names().map(str::to_string).collect();
         let tuple = ty
@@ -298,7 +316,7 @@ impl Resolver {
     }
 
     /// Resolve a type into a [`crate::DynSolType`] without checking for cycles
-    fn unchecked_resolve(&self, type_spec: TypeSpecifier<'_>) -> Result<DynSolType, ParserError> {
+    fn unchecked_resolve(&self, type_spec: TypeSpecifier<'_>) -> Result<DynSolType, DynAbiError> {
         let ty = match type_spec.root {
             TypeStem::Root(root) => self.resolve_root_type(root)?,
             TypeStem::Tuple(tuple) => {
@@ -321,9 +339,9 @@ impl Resolver {
 
     /// Resolve a typename into a [`crate::DynSolType`] or return an error if
     /// the type is mising, or contains a circular dependency.
-    pub fn resolve(&self, type_name: &str) -> Result<DynSolType, ParserError> {
+    pub fn resolve(&self, type_name: &str) -> Result<DynSolType, DynAbiError> {
         if self.detect_cycle(type_name, &mut Default::default()) {
-            return Err(ParserError::circular_dependency(type_name));
+            return Err(DynAbiError::circular_dependency(type_name));
         }
         self.unchecked_resolve(type_name.try_into()?)
     }
@@ -331,7 +349,7 @@ impl Resolver {
     /// Encode the type into an EIP-712 compatible string
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    pub fn encode_type(&self, name: &str) -> Result<String, ParserError> {
+    pub fn encode_type(&self, name: &str) -> Result<String, DynAbiError> {
         let linear = self.linearize(name)?;
         let first = linear.first().unwrap().encode_type();
 
