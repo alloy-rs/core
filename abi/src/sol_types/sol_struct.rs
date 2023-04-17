@@ -100,7 +100,7 @@ where
         Self::NAME.to_owned()
     }
 
-    fn eip712_encode_data<B>(rust: B) -> Word
+    fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
     {

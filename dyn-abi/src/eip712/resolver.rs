@@ -181,8 +181,8 @@ pub struct Resolver {
     edges: BTreeMap<String, Vec<String>>,
 }
 
-impl From<Eip712Types> for Resolver {
-    fn from(types: Eip712Types) -> Self {
+impl From<&Eip712Types> for Resolver {
+    fn from(types: &Eip712Types) -> Self {
         let mut graph = Resolver::default();
         graph.ingest_types(types);
         graph
@@ -241,9 +241,9 @@ impl Resolver {
     }
 
     /// Ingest a `Types` object into the resolver, discarding any invalid types
-    pub fn ingest_types(&mut self, types: Eip712Types) {
-        for (type_name, props) in types.into_iter() {
-            if let Ok(ty) = TypeDef::new(type_name, props) {
+    pub fn ingest_types(&mut self, types: &Eip712Types) {
+        for (type_name, props) in types.iter() {
+            if let Ok(ty) = TypeDef::new(type_name.clone(), props.to_vec()) {
                 self.ingest(ty);
             }
         }

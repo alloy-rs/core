@@ -105,12 +105,12 @@ use crate::{
 ///     // keccak256 hash of the encoding of the components.
 ///     //
 ///     // Our implementation is easy, we just delegate :)
-///     fn eip712_encode_data<B>(rust: B) -> Word
+///     fn eip712_data_word<B>(rust: B) -> Word
 ///     where
 ///         B: Borrow<Self::RustType>
 ///     {
 ///         let rust = rust.borrow();
-///         UnderlyingTuple::eip712_encode_data((rust.a, rust.b))
+///         UnderlyingTuple::eip712_data_word((rust.a, rust.b))
 ///     }
 ///
 ///     // Convert from the token to the rust type. We cheat here again by
@@ -218,10 +218,15 @@ pub trait SolType {
         Error::type_check_fail(hex::encode(data), Self::sol_type_name())
     }
 
-    /// Encode this type according to EIP-712 `encodeData` rules
+    /// Encode this data according to EIP-712 `encodeData` rules, and hash it
+    /// if necessary.
+    ///
+    /// Implementer's note: All single-word types are encoded as their word.
+    /// All multi-word types are encoded as the hash the concatenated data
+    /// words for each element
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
-    fn eip712_encode_data<B>(rust: B) -> Word
+    fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>;
 
@@ -367,7 +372,7 @@ impl SolType for Address {
         Ok(())
     }
 
-    fn eip712_encode_data<B>(rust: B) -> Word
+    fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
     {
@@ -412,7 +417,7 @@ impl SolType for Bytes {
         Ok(())
     }
 
-    fn eip712_encode_data<B>(rust: B) -> Word
+    fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
     {
@@ -454,7 +459,7 @@ macro_rules! impl_int_sol_type {
                 Ok(())
             }
 
-            fn eip712_encode_data<B>(rust: B) -> Word
+            fn eip712_data_word<B>(rust: B) -> Word
             where
                 B: Borrow<Self::RustType>
             {
@@ -516,7 +521,7 @@ macro_rules! impl_int_sol_type {
                 Ok(())
             }
 
-            fn eip712_encode_data<B>(rust: B) -> Word
+            fn eip712_data_word<B>(rust: B) -> Word
             where
                 B: Borrow<Self::RustType>
             {
@@ -592,7 +597,7 @@ macro_rules! impl_uint_sol_type {
                 Ok(())
             }
 
-            fn eip712_encode_data<B>(rust: B) -> Word
+            fn eip712_data_word<B>(rust: B) -> Word
             where
                 B: Borrow<Self::RustType>
             {
@@ -643,7 +648,7 @@ macro_rules! impl_uint_sol_type {
                 Ok(())
             }
 
-            fn eip712_encode_data<B>(rust: B) -> Word
+            fn eip712_data_word<B>(rust: B) -> Word
             where
                 B: Borrow<Self::RustType>
             {
@@ -713,7 +718,7 @@ impl SolType for Bool {
         Ok(())
     }
 
-    fn eip712_encode_data<B>(rust: B) -> Word
+    fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
     {
@@ -768,13 +773,13 @@ where
         Ok(())
     }
 
-    fn eip712_encode_data<B>(rust: B) -> Word
+    fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
     {
         let mut encoded = Vec::new();
         for item in rust.borrow() {
-            encoded.extend(T::eip712_encode_data(item).as_slice());
+            encoded.extend(T::eip712_data_word(item).as_slice());
         }
         keccak256(encoded)
     }
@@ -827,7 +832,7 @@ impl SolType for String {
         Ok(())
     }
 
-    fn eip712_encode_data<B>(rust: B) -> Word
+    fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
     {
@@ -878,7 +883,7 @@ macro_rules! impl_fixed_bytes_sol_type {
                 Ok(())
             }
 
-            fn eip712_encode_data<B>(rust: B) -> Word where B: Borrow<Self::RustType> {
+            fn eip712_data_word<B>(rust: B) -> Word where B: Borrow<Self::RustType> {
                 Self::tokenize(rust).inner()
             }
 
@@ -941,14 +946,14 @@ where
         Ok(())
     }
 
-    fn eip712_encode_data<B>(rust: B) -> Word
+    fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
     {
         let rust = rust.borrow();
         let encoded = rust
             .iter()
-            .flat_map(|element| T::eip712_encode_data(element).to_fixed_bytes())
+            .flat_map(|element| T::eip712_data_word(element).to_fixed_bytes())
             .collect::<Vec<u8>>();
         keccak256(encoded)
     }
@@ -1028,14 +1033,14 @@ macro_rules! impl_tuple_sol_type {
                 Ok(())
             }
 
-            fn eip712_encode_data<Borrower>(rust: Borrower) -> Word
+            fn eip712_data_word<Borrower>(rust: Borrower) -> Word
             where
                 Borrower: Borrow<Self::RustType>
             {
                 let rust = rust.borrow();
                 let mut encoding = Vec::new();
                 $(
-                    encoding.extend_from_slice(&$ty::eip712_encode_data(&rust.$no).as_slice());
+                    encoding.extend_from_slice(&$ty::eip712_data_word(&rust.$no).as_slice());
                 )+
                 keccak256(&encoding).into()
             }

@@ -1,7 +1,9 @@
 use ethers_abi_enc::Eip712Domain;
 use serde::{Deserialize, Serialize};
 
-use crate::{eip712::PropertyDef, no_std_prelude::*, parser::RootType};
+use crate::{
+    eip712::PropertyDef, no_std_prelude::*, parser::RootType, DynAbiError, DynSolValue, Resolver,
+};
 
 /// Thin wrapper around `serde_json::Value`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,12 +46,19 @@ impl<'de> Deserialize<'de> for Eip712Types {
     }
 }
 
-impl core::iter::IntoIterator for Eip712Types {
+impl IntoIterator for Eip712Types {
     type Item = (String, Vec<PropertyDef>);
     type IntoIter = btree_map::IntoIter<String, Vec<PropertyDef>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+impl Eip712Types {
+    /// Iterate over the underlying map
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<PropertyDef>)> {
+        self.0.iter()
     }
 }
 
@@ -165,5 +174,12 @@ impl TypedData {
     /// Returns the domain for this typed data
     pub const fn domain(&self) -> &Eip712Domain {
         &self.domain
+    }
+
+    /// Coerce the message to the type specified by `primary_type`, using the types map as a resolver
+    pub fn coerce(&self) -> Result<DynSolValue, DynAbiError> {
+        let resolver: Resolver = (&self.types).into();
+        let ty = resolver.resolve(&self.primary_type)?;
+        ty.coerce(self.message.as_ref())
     }
 }
