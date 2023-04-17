@@ -101,7 +101,8 @@ pub mod no_std_prelude {
         borrow::{Borrow, Cow, ToOwned},
         boxed::Box,
         collections::{BTreeMap, HashSet},
-        format,
+        fmt, format,
+        str::FromStr,
         string::{String, ToString},
         vec,
         vec::Vec,
@@ -116,8 +117,9 @@ pub mod no_std_prelude {
         borrow::{Borrow, Cow, ToOwned},
         boxed::Box,
         collections::{BTreeMap, HashSet},
-        format,
+        fmt, format,
         marker::PhantomData,
+        str::FromStr,
         string::{String, ToString},
         vec,
         vec::Vec,
@@ -135,13 +137,11 @@ pub use value::DynSolValue;
 mod token;
 pub use token::DynToken;
 
-mod parser;
+pub mod parser;
 pub use parser::ParserError;
 
-#[cfg(feature = "eip712")]
-mod eip712;
-#[cfg(feature = "eip712")]
-pub use eip712::{NameTypePair, Parse712Error, TypedData};
+pub mod eip712;
+pub use eip712::{parser as eip712_parser, Eip712Types, Resolver, TypedData};
 
 #[cfg(test)]
 mod test {

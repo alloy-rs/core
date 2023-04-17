@@ -7,11 +7,11 @@
 //!
 //! <https://eips.ethereum.org/EIPS/eip-712#specification-of-the-eth_signtypeddata-json-rpc>
 
-mod parser;
-pub use parser::Parse712Error;
+/// EIP-712 specific parsing structures
+pub mod parser;
 
 mod typed_data;
-pub use typed_data::{NameTypePair, TypedData};
+pub use typed_data::{Eip712Types, TypedData};
 
-mod dep;
-pub use dep::DepGraph;
+mod resolver;
+pub use resolver::{PropertyDef, Resolver};

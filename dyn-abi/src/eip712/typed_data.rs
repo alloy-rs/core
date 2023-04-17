@@ -1,74 +1,33 @@
 use ethers_abi_enc::Eip712Domain;
 use serde::{Deserialize, Serialize};
 
-use crate::{eip712::DepGraph, no_std_prelude::BTreeMap};
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct NameTypePair {
-    /// Typename
-    #[serde(rename = "type")]
-    type_name: String,
-    /// Property Name
-    name: String,
-}
-
-impl NameTypePair {
-    pub fn new(type_name: impl AsRef<str>, name: impl AsRef<str>) -> Self {
-        Self {
-            type_name: type_name.as_ref().to_owned(),
-            name: name.as_ref().to_owned(),
-        }
-    }
-
-    /// Returns the type name of the property
-    pub fn type_name(&self) -> &str {
-        &self.type_name
-    }
-
-    /// Returns the root type of the name/type pair, stripping any array
-    pub fn root_type_name(&self) -> &str {
-        &self
-            .type_name
-            .split_once('[')
-            .map(|t| t.0)
-            .unwrap_or(&self.type_name)
-    }
-
-    /// Returns the name of the property
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
+use crate::{eip712::PropertyDef, no_std_prelude::BTreeMap, parser::RootType};
 
 /// Custom types for `TypedData`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Types(BTreeMap<String, Vec<NameTypePair>>);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Eip712Types(BTreeMap<String, Vec<PropertyDef>>);
 
-impl std::iter::IntoIterator for Types {
-    type Item = (String, Vec<NameTypePair>);
-    type IntoIter = std::collections::btree_map::IntoIter<String, Vec<NameTypePair>>;
+impl<'de> Deserialize<'de> for Eip712Types {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let map: BTreeMap<String, Vec<PropertyDef>> = BTreeMap::deserialize(deserializer)?;
+
+        for key in map.keys() {
+            let _rt: RootType<'_> = key.as_str().try_into().map_err(serde::de::Error::custom)?;
+        }
+
+        Ok(Self(map))
+    }
+}
+
+impl std::iter::IntoIterator for Eip712Types {
+    type Item = (String, Vec<PropertyDef>);
+    type IntoIter = std::collections::btree_map::IntoIter<String, Vec<PropertyDef>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
-    }
-}
-
-impl Types {
-    /// Returns the `EIP712Domain` type
-    fn domain(&self) -> Option<&Vec<NameTypePair>> {
-        self.0.get("EIP712Domain")
-    }
-
-    fn get(&self, type_name: &str) -> Option<&Vec<NameTypePair>> {
-        self.0.get(type_name)
-    }
-}
-
-impl From<Types> for DepGraph {
-    fn from(types: Types) -> Self {
-        let mut graph = DepGraph::default();
-        graph.ingest_types(types);
-        graph
     }
 }
 
@@ -114,7 +73,7 @@ pub struct TypedData {
     /// This data is used to construct the domain seperator of the message.
     pub domain: Eip712Domain,
     /// The custom types used by this message.
-    pub types: Types,
+    pub types: Eip712Types,
     #[serde(rename = "primaryType")]
     /// The type of the message.
     pub primary_type: String,
@@ -134,7 +93,7 @@ impl<'de> Deserialize<'de> for TypedData {
         #[derive(Deserialize)]
         struct TypedDataHelper {
             domain: Eip712Domain,
-            types: Types,
+            types: Eip712Types,
             #[serde(rename = "primaryType")]
             primary_type: String,
             message: BTreeMap<String, serde_json::Value>,
@@ -181,7 +140,8 @@ impl<'de> Deserialize<'de> for TypedData {
 }
 
 impl TypedData {
-    fn domain(&self) -> &Eip712Domain {
+    /// Returns the domain for this typed data
+    pub const fn domain(&self) -> &Eip712Domain {
         &self.domain
     }
 }
