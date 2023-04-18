@@ -1,0 +1,143 @@
+use crate::{no_std_prelude::*, parser::TypeSpecifier, DynAbiError};
+
+/// A property is a type and a name. Of the form `type name`. E.g.
+/// `uint256 foo` or `(MyStruct[23],bool) bar`.
+#[derive(Debug, PartialEq, Eq)]
+pub struct PropDef<'a> {
+    /// The prop type specifier
+    pub ty: TypeSpecifier<'a>,
+    /// The prop name
+    pub name: &'a str,
+}
+
+impl<'a> TryFrom<&'a str> for PropDef<'a> {
+    type Error = DynAbiError;
+
+    fn try_from(input: &'a str) -> Result<Self, Self::Error> {
+        let (ty, name) = input
+            .rsplit_once(' ')
+            .ok_or_else(|| DynAbiError::invalid_property_def(input))?;
+
+        Ok(PropDef {
+            ty: ty.trim().try_into()?,
+            name: name.trim(),
+        })
+    }
+}
+
+/// Represents a single component type in an EIP-712 `encodeType` type string.
+///
+/// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
+#[derive(Debug, PartialEq, Eq)]
+pub struct ComponentType<'a> {
+    /// The span
+    pub span: &'a str,
+    /// The name of the component type.
+    pub type_name: &'a str,
+    /// Properties of the component type.
+    pub props: Vec<PropDef<'a>>,
+}
+
+// This impl handles
+impl<'a> TryFrom<&'a str> for ComponentType<'a> {
+    type Error = DynAbiError;
+
+    fn try_from(input: &'a str) -> Result<Self, Self::Error> {
+        let (name, props_str) = input
+            .split_once('(')
+            .ok_or_else(|| DynAbiError::invalid_type_string(input))?;
+
+        let mut props = vec![];
+        let mut depth = 1; // 1 to account for the ( in the split above
+        let mut last = 0;
+
+        for (i, c) in props_str.chars().enumerate() {
+            match c {
+                '(' => depth += 1,
+                ')' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        props.push(props_str[last..i].try_into()?);
+                        last = i + 1;
+                        break;
+                    }
+                }
+                ',' => {
+                    if depth == 1 {
+                        props.push(props_str[last..i].try_into()?);
+                        last = i + 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Ok(Self {
+            span: &input[..last + name.len() + 1],
+            type_name: name,
+            props,
+        })
+    }
+}
+
+/// Represents a list of component types in an EIP-712 `encodeType` type string.
+#[derive(Debug, PartialEq, Eq)]
+pub struct EncodeType<'a> {
+    /// The list of component types.
+    pub types: Vec<ComponentType<'a>>,
+}
+
+impl<'a> TryFrom<&'a str> for EncodeType<'a> {
+    type Error = DynAbiError;
+
+    fn try_from(input: &'a str) -> Result<Self, Self::Error> {
+        let mut types = vec![];
+        let mut remaining = input;
+
+        while let Ok(t) = ComponentType::try_from(remaining) {
+            remaining = &remaining[t.span.len()..];
+            types.push(t);
+        }
+
+        Ok(Self { types })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    const EXAMPLE: &str = "Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)";
+
+    #[test]
+    fn test_component_type() {
+        assert_eq!(
+            ComponentType::try_from("Transaction(Person from,Person to,Asset tx)").unwrap(),
+            ComponentType {
+                span: "Transaction(Person from,Person to,Asset tx)",
+                type_name: "Transaction",
+                props: vec![
+                    "Person from".try_into().unwrap(),
+                    "Person to".try_into().unwrap(),
+                    "Asset tx".try_into().unwrap(),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn test_encode_type() {
+        assert_eq!(
+            EncodeType::try_from(EXAMPLE).unwrap(),
+            EncodeType {
+                types: vec![
+                    "Transaction(Person from,Person to,Asset tx)"
+                        .try_into()
+                        .unwrap(),
+                    "Asset(address token,uint256 amount)".try_into().unwrap(),
+                    "Person(address wallet,string name)".try_into().unwrap(),
+                ]
+            }
+        )
+    }
+}

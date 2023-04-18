@@ -23,7 +23,6 @@ serde = { version = "1.0.159", optional = true }
 hex-literal = "0.3.4"
 
 [features]
-default = ["std", "eip712"]
+default = ["std"]
 std = ["hex/std", "thiserror"]
-eip712 = []
-eip712-serde = ["dep:serde", "eip712"]
+eip712-serde = ["dep:serde"]

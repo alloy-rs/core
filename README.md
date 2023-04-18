@@ -12,9 +12,18 @@ foundry.
 - Set up branch protection
 - fix uint CI
   - maybe: integrate uint CI with local CI?
-- fix wasm in uint
 - unify workspace deps with `.workspace = true`
 - meta crate?
+- serde_helpers crate?
+- Rename crates?
+
+  - ethers-abi-enc -> ethers-abi
+
+- dyn-abi
+  - thorough docs
+  - ergonomic construction & access
+    - eip712 builder for `TypedData`
+    - from a `ethers_abi::SolType`, etc
 
 # Current build command
 

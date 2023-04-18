@@ -7,7 +7,9 @@ use crate::no_std_prelude::{Borrow, String as RustString, ToOwned, ToString, Vec
 #[cfg(feature = "std")]
 use std::{borrow::Borrow, string::String as RustString};
 
-use crate::{decode, decode_params, decode_single, token::*, util, AbiResult, Error, Word};
+use crate::{
+    decode, decode_params, decode_single, keccak256, token::*, util, AbiResult, Error, Word,
+};
 
 /// A Solidity Type, for ABI enc/decoding
 ///
@@ -44,9 +46,9 @@ use crate::{decode, decode_params, decode_single, token::*, util, AbiResult, Err
 ///
 ///
 /// ```
-/// # use ethers_abi_enc::AbiResult;
-/// use ethers_abi_enc::sol_type::*;
-/// use ethers_primitives::U256;
+/// # use ethers_abi_enc::{AbiResult, Word, no_std_prelude::Borrow};
+/// # use ethers_abi_enc::sol_type::*;
+/// # use ethers_primitives::U256;
 ///
 /// // This is the solidity type:
 /// //
@@ -95,6 +97,20 @@ use crate::{decode, decode_params, decode_single, token::*, util, AbiResult, Err
 ///     // It will be ignored if the decoder runs without validation
 ///     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
 ///         UnderlyingTuple::type_check(token)
+///     }
+///
+///     // This function defines the EIP-712 encoding of the type. This is
+///     // used to encode types for EIP-712 typed data signing. For value types
+///     // it is equal to the ABI encoding. For compound types, it is the
+///     // keccak256 hash of the encoding of the components.
+///     //
+///     // Our implementation is easy, we just delegate :)
+///     fn eip712_data_word<B>(rust: B) -> Word
+///     where
+///         B: Borrow<Self::RustType>
+///     {
+///         let rust = rust.borrow();
+///         UnderlyingTuple::eip712_data_word((rust.a, rust.b))
 ///     }
 ///
 ///     // Convert from the token to the rust type. We cheat here again by
@@ -167,8 +183,9 @@ pub trait SolType {
     fn is_user_defined() -> bool {
         false
     }
+
     /// The encoded struct type (as EIP-712), if any. None for non-structs
-    fn struct_type() -> Option<RustString> {
+    fn eip712_encode_type() -> Option<RustString> {
         None
     }
     /// Check a token to see if it can be detokenized with this type
@@ -200,6 +217,18 @@ pub trait SolType {
     fn type_check_fail(data: &[u8]) -> Error {
         Error::type_check_fail(hex::encode(data), Self::sol_type_name())
     }
+
+    /// Encode this data according to EIP-712 `encodeData` rules, and hash it
+    /// if necessary.
+    ///
+    /// Implementer's note: All single-word types are encoded as their word.
+    /// All multi-word types are encoded as the hash the concatenated data
+    /// words for each element
+    ///
+    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
+    fn eip712_data_word<B>(rust: B) -> Word
+    where
+        B: Borrow<Self::RustType>;
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence
     fn encode_single<B>(rust: B) -> Vec<u8>
@@ -343,6 +372,13 @@ impl SolType for Address {
         Ok(())
     }
 
+    fn eip712_data_word<B>(rust: B) -> Word
+    where
+        B: Borrow<Self::RustType>,
+    {
+        Self::tokenize(rust).inner()
+    }
+
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
         let sli = &token.as_slice()[12..];
         Ok(B160::from_slice(sli))
@@ -381,6 +417,13 @@ impl SolType for Bytes {
         Ok(())
     }
 
+    fn eip712_data_word<B>(rust: B) -> Word
+    where
+        B: Borrow<Self::RustType>,
+    {
+        keccak256(Self::encode_packed(rust.borrow()))
+    }
+
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
         Ok(token.take_vec())
     }
@@ -414,6 +457,13 @@ macro_rules! impl_int_sol_type {
 
             fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
                 Ok(())
+            }
+
+            fn eip712_data_word<B>(rust: B) -> Word
+            where
+                B: Borrow<Self::RustType>
+            {
+                Self::tokenize(rust).inner().into()
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -469,6 +519,13 @@ macro_rules! impl_int_sol_type {
 
             fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
                 Ok(())
+            }
+
+            fn eip712_data_word<B>(rust: B) -> Word
+            where
+                B: Borrow<Self::RustType>
+            {
+                Self::tokenize(rust).inner().into()
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -540,6 +597,13 @@ macro_rules! impl_uint_sol_type {
                 Ok(())
             }
 
+            fn eip712_data_word<B>(rust: B) -> Word
+            where
+                B: Borrow<Self::RustType>
+            {
+                Self::tokenize(rust).inner().into()
+            }
+
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
                 let bytes = (<$uty>::BITS / 8) as usize;
                 let sli = &token.as_slice()[32 - bytes..];
@@ -582,6 +646,13 @@ macro_rules! impl_uint_sol_type {
                     return Err(Self::type_check_fail(token.as_slice()));
                 }
                 Ok(())
+            }
+
+            fn eip712_data_word<B>(rust: B) -> Word
+            where
+                B: Borrow<Self::RustType>
+            {
+                Self::tokenize(rust).inner().into()
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -647,6 +718,13 @@ impl SolType for Bool {
         Ok(())
     }
 
+    fn eip712_data_word<B>(rust: B) -> Word
+    where
+        B: Borrow<Self::RustType>,
+    {
+        Self::tokenize(rust).inner()
+    }
+
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
         Ok(token.inner() != Word::repeat_byte(0))
     }
@@ -693,6 +771,17 @@ where
             T::type_check(token)?;
         }
         Ok(())
+    }
+
+    fn eip712_data_word<B>(rust: B) -> Word
+    where
+        B: Borrow<Self::RustType>,
+    {
+        let mut encoded = Vec::new();
+        for item in rust.borrow() {
+            encoded.extend(T::eip712_data_word(item).as_slice());
+        }
+        keccak256(encoded)
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -743,6 +832,13 @@ impl SolType for String {
         Ok(())
     }
 
+    fn eip712_data_word<B>(rust: B) -> Word
+    where
+        B: Borrow<Self::RustType>,
+    {
+        keccak256(Self::encode_packed(rust.borrow()))
+    }
+
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
         // NOTE: We're decoding strings using lossy UTF-8 decoding to
         // prevent invalid strings written into contracts by either users or
@@ -785,6 +881,10 @@ macro_rules! impl_fixed_bytes_sol_type {
                     return Err(Self::type_check_fail(token.as_slice()));
                 }
                 Ok(())
+            }
+
+            fn eip712_data_word<B>(rust: B) -> Word where B: Borrow<Self::RustType> {
+                Self::tokenize(rust).inner()
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -844,6 +944,18 @@ where
             T::type_check(token)?;
         }
         Ok(())
+    }
+
+    fn eip712_data_word<B>(rust: B) -> Word
+    where
+        B: Borrow<Self::RustType>,
+    {
+        let rust = rust.borrow();
+        let encoded = rust
+            .iter()
+            .flat_map(|element| T::eip712_data_word(element).to_fixed_bytes())
+            .collect::<Vec<u8>>();
+        keccak256(encoded)
     }
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
@@ -919,6 +1031,18 @@ macro_rules! impl_tuple_sol_type {
                     $ty::type_check(&token.$no)?;
                 )+
                 Ok(())
+            }
+
+            fn eip712_data_word<Borrower>(rust: Borrower) -> Word
+            where
+                Borrower: Borrow<Self::RustType>
+            {
+                let rust = rust.borrow();
+                let mut encoding = Vec::new();
+                $(
+                    encoding.extend_from_slice(&$ty::eip712_data_word(&rust.$no).as_slice());
+                )+
+                keccak256(&encoding).into()
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {

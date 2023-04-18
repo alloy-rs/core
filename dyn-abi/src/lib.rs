@@ -64,7 +64,7 @@
 //! rust shapes of possible solidity values. It is similar to, but not
 //! equivalent to an enum over types used as [`crate::SolType::RustType`]. The
 //! [`DynToken`] enum represents an ABI token, and is equivalent to an enum over
-//! the types implementing the [`crate::TokenType`] trait.
+//! the types implementing the [`ethers_abi_enc::TokenType`] trait.
 //!
 //! Where the static encoding system encodes the expected type information into
 //! the rust type system, the dynamic encoder/decoder encodes it as a concrete
@@ -100,7 +100,9 @@ pub mod no_std_prelude {
     pub use alloc::{
         borrow::{Borrow, Cow, ToOwned},
         boxed::Box,
-        format,
+        collections::{btree_map, BTreeMap, BTreeSet},
+        fmt, format,
+        str::FromStr,
         string::{String, ToString},
         vec,
         vec::Vec,
@@ -114,15 +116,20 @@ pub mod no_std_prelude {
     pub use std::{
         borrow::{Borrow, Cow, ToOwned},
         boxed::Box,
-        format,
+        collections::{btree_map, BTreeMap, BTreeSet},
+        fmt, format,
         marker::PhantomData,
+        str::FromStr,
         string::{String, ToString},
         vec,
         vec::Vec,
     };
 }
 
-pub use ethers_abi_enc::{AbiResult, Decoder, Encoder, Error, SolType, Word};
+mod error;
+pub use error::DynAbiError;
+
+pub use ethers_abi_enc::{AbiResult, Decoder, Eip712Domain, Encoder, Error, SolType, Word};
 
 mod r#type;
 pub use r#type::DynSolType;
@@ -133,8 +140,10 @@ pub use value::DynSolValue;
 mod token;
 pub use token::DynToken;
 
-mod parser;
-pub use parser::ParserError;
+pub mod parser;
+
+pub mod eip712;
+pub use eip712::{parser as eip712_parser, Resolver, TypedData};
 
 #[cfg(test)]
 mod test {

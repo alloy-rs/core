@@ -3,7 +3,7 @@
 
 use ethers_primitives::B256;
 
-use crate::{util::keccak256, SolType};
+use crate::{util::keccak256, SolType, Word};
 
 use crate::{no_std_prelude::*, Eip712Domain};
 
@@ -102,7 +102,7 @@ where
         true
     }
 
-    fn struct_type() -> Option<String> {
+    fn eip712_encode_type() -> Option<String> {
         Some(Self::encode_type())
     }
 
@@ -112,6 +112,13 @@ where
 
     fn sol_type_name() -> String {
         Self::NAME.to_owned()
+    }
+
+    fn eip712_data_word<B>(rust: B) -> Word
+    where
+        B: Borrow<Self::RustType>,
+    {
+        keccak256(SolStruct::encode_data(rust.borrow()))
     }
 
     fn tokenize<Borrower>(rust: Borrower) -> Self::TokenType

@@ -30,13 +30,12 @@ pub struct Eip712Domain {
 
     /// The EIP-155 chain id. The user-agent should refuse signing if it does not match the
     /// currently active chain.
-    // TODO: re-enable serde_helpers
     #[cfg_attr(
         feature = "eip712-serde",
         serde(
             default,
             skip_serializing_if = "Option::is_none",
-            // deserialize_with = "crate::types::serde_helpers::deserialize_stringified_numeric_opt"
+            deserialize_with = "crate::util::deserialize_stringified_numeric_opt"
         )
     )]
     pub chain_id: Option<U256>,

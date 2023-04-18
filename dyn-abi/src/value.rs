@@ -18,7 +18,7 @@ pub enum DynSolValue {
     /// A fixed-length byte string
     FixedBytes(Word, usize),
     /// A signed integer
-    Int(Word, usize),
+    Int(I256, usize),
     /// An unsigned integer
     Uint(U256, usize),
     /// A string
@@ -33,7 +33,8 @@ pub enum DynSolValue {
     CustomStruct {
         /// The name of the struct
         name: String,
-        // TODO: names
+        /// The struct's prop names, in declaration order
+        prop_names: Vec<String>,
         /// A inner types
         tuple: Vec<DynSolValue>,
     },
@@ -47,6 +48,43 @@ pub enum DynSolValue {
 }
 
 impl DynSolValue {
+    /// The solidity type name
+    pub fn sol_type_name(&self) -> String {
+        match self {
+            Self::Address(_) => "address".to_string(),
+            Self::Bool(_) => "bool".to_string(),
+            Self::Bytes(_) => "bytes".to_string(),
+            Self::FixedBytes(_, size) => format!("bytes{}", size),
+            Self::Int(_, size) => format!("int{}", size),
+            Self::Uint(_, size) => format!("uint{}", size),
+            Self::String(_) => "string".to_string(),
+            Self::Tuple(_) => "tuple".to_string(),
+            Self::Array(_) => "array".to_string(),
+            Self::FixedArray(_) => "fixed_array".to_string(),
+            Self::CustomStruct { name, .. } => name.clone(),
+            Self::CustomValue { name, .. } => name.clone(),
+        }
+    }
+
+    /// Fallible cast to a single word. Will succeed for any single-word type
+    pub fn as_word(&self) -> Option<Word> {
+        match self {
+            Self::Address(a) => Some((*a).into()),
+            Self::Bool(b) => Some({
+                let mut buf = [0u8; 32];
+                if *b {
+                    buf[31] = 1;
+                }
+                buf.into()
+            }),
+            Self::FixedBytes(w, _) => Some(*w),
+            Self::Int(w, _) => Some(w.to_be_bytes().into()),
+            Self::Uint(u, _) => Some(u.to_be_bytes::<32>().into()),
+            Self::CustomValue { inner, .. } => Some(*inner),
+            _ => None,
+        }
+    }
+
     /// Fallible cast to the contents of a variant DynSolValue {
     pub const fn as_address(&self) -> Option<B160> {
         match self {
@@ -80,7 +118,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant
-    pub const fn as_int(&self) -> Option<(Word, usize)> {
+    pub const fn as_int(&self) -> Option<(I256, usize)> {
         match self {
             Self::Int(w, size) => Some((*w, *size)),
             _ => None,
@@ -128,9 +166,13 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant
-    pub fn as_custom_struct(&self) -> Option<(&str, &[DynSolValue])> {
+    pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[DynSolValue])> {
         match self {
-            Self::CustomStruct { name, tuple } => Some((name.as_str(), tuple.as_slice())),
+            Self::CustomStruct {
+                name,
+                prop_names,
+                tuple,
+            } => Some((name.as_str(), prop_names.as_slice(), tuple.as_slice())),
             _ => None,
         }
     }
@@ -150,7 +192,16 @@ impl DynSolValue {
             DynSolValue::Bool(b) => buf.push(*b as u8),
             DynSolValue::Bytes(bytes) => buf.extend_from_slice(bytes),
             DynSolValue::FixedBytes(word, size) => buf.extend_from_slice(&word.as_bytes()[..*size]),
-            DynSolValue::Int(num, size) => buf.extend_from_slice(&num[(32 - *size)..]),
+            DynSolValue::Int(num, size) => {
+                let mut bytes = num.to_be_bytes();
+                let start = 32 - *size;
+                if num.is_negative() {
+                    bytes[start] |= 0x80;
+                } else {
+                    bytes[start] &= 0x7f;
+                }
+                buf.extend_from_slice(&bytes[start..])
+            }
             DynSolValue::Uint(num, size) => {
                 buf.extend_from_slice(&num.to_be_bytes::<32>().as_slice()[(32 - *size)..])
             }
@@ -204,7 +255,7 @@ macro_rules! impl_from_int {
                 };
                 word[32 - bytes..].copy_from_slice(&value.to_be_bytes());
 
-                Self::Int(word.into(), bits)
+                Self::Int(I256::from_be_bytes(word.into()), bits)
             }
         }
     };

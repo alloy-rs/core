@@ -11,8 +11,11 @@ categories = ["encoding", "serialization", "cryptocurrency", "ethereum"]
 authors = []
 
 [dependencies]
-ethers-abi-enc = { version = "0.1.0", path = "../abi" }
+ethers-abi-enc = { version = "0.1.0", path = "../abi", features = ["eip712-serde"] }
 ethers-primitives = { version = "0.1.0", path = "../primitives" }
+hex = "0.4.3"
+serde = "1.0.160"
+serde_json = "1.0.96"
 
 [features]
 default = ["std"]

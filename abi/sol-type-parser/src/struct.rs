@@ -106,6 +106,7 @@ impl SolStructDef {
             .unzip();
 
         let props_tys: Vec<_> = self.fields.iter().map(|f| f.ty.clone()).collect();
+        let props = self.fields.iter().map(|f| &f.name);
 
         let convert = self.expand_from();
         let mod_name = Ident::new(&format!("__{}", name), name.span());
@@ -116,7 +117,7 @@ impl SolStructDef {
             mod #mod_name {
                 use super::*;
 
-                use ::ethers_abi_enc::{SolType, no_std_prelude::*};
+                use ::ethers_abi_enc::{SolType, keccak256, no_std_prelude::*};
 
                 #[doc = #doc]
                 #[derive(Debug, Clone, PartialEq)]
@@ -150,7 +151,7 @@ impl SolStructDef {
                             {
                                 type Prop = #props_tys;
                                 types.push(Prop::sol_type_name());
-                                if let Some(tail) = Prop::struct_type() {
+                                if let Some(tail) = Prop::eip712_encode_type() {
                                     tails.push(tail);
                                 }
                             }
@@ -162,7 +163,14 @@ impl SolStructDef {
                     }
 
                     fn encode_data(&self) -> Vec<u8> {
-                        todo!()
+                        let mut vec = Vec::new();
+                        #(
+                            {
+                                type Prop = #props_tys;
+                                vec.extend(Prop::eip712_encode_data(&self.#props).as_slice());
+                            }
+                        )*
+                        vec
                     }
             }}
         }
