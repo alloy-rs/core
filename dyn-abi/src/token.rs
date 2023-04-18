@@ -2,7 +2,7 @@ use crate::{no_std_prelude::*, AbiResult, Decoder, Encoder, Error, Word};
 use ethers_abi_enc::token::{PackedSeqToken, TokenType, WordToken};
 
 /// A dynamic token. Equivalent to an enum over all types implementing
-/// [`crate::TokenType`]
+/// [`ethers_abi_enc::TokenType`]
 // NOTE: do not derive `Hash` for this type. The derived version is not
 // compatible with the current `PartialEq` implementation. If manually
 // implementing `Hash`, ignore the `template` prop in the `DynSeq` variant

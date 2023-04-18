@@ -64,7 +64,7 @@
 //! rust shapes of possible solidity values. It is similar to, but not
 //! equivalent to an enum over types used as [`crate::SolType::RustType`]. The
 //! [`DynToken`] enum represents an ABI token, and is equivalent to an enum over
-//! the types implementing the [`crate::TokenType`] trait.
+//! the types implementing the [`ethers_abi_enc::TokenType`] trait.
 //!
 //! Where the static encoding system encodes the expected type information into
 //! the rust type system, the dynamic encoder/decoder encodes it as a concrete
@@ -143,7 +143,7 @@ pub use token::DynToken;
 pub mod parser;
 
 pub mod eip712;
-pub use eip712::{parser as eip712_parser, Eip712Types, Resolver, TypedData};
+pub use eip712::{parser as eip712_parser, Resolver, TypedData};
 
 #[cfg(test)]
 mod test {
