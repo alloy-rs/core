@@ -1,6 +1,6 @@
-# ethers-rs ABI Encoding
+# ethers-rs Dynamic ABI Encoding
 
-Compile-time representation of Ethereum's type system with ABI encoding &
+Run-time representation of Ethereum's type system with ABI encoding &
 decoding.
 
 ## Licensing
