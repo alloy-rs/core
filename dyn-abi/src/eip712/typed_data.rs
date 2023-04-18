@@ -132,7 +132,6 @@ impl<'de> Deserialize<'de> for TypedData {
         enum ValOrString {
             Val(TypedDataHelper),
             String(String),
-            Other(serde_json::Value),
         }
 
         match ValOrString::deserialize(deserializer)? {
@@ -141,22 +140,6 @@ impl<'de> Deserialize<'de> for TypedData {
                 let v = serde_json::from_str::<TypedDataHelper>(&s)
                     .map_err(serde::de::Error::custom)?;
                 Ok(v.into())
-            }
-            ValOrString::Other(v) => {
-                dbg!(&v);
-                let m = v.as_object().unwrap().get("message").unwrap();
-                let p = v.as_object().unwrap().get("primaryType").unwrap();
-                let t = v.as_object().unwrap().get("types").unwrap();
-                let d = v.as_object().unwrap().get("domain").unwrap();
-
-                dbg!(&m, &p, &t, &d);
-
-                let p = serde_json::from_value::<String>(p.clone()).unwrap();
-                let t = serde_json::from_value::<Eip712Types>(t.clone()).unwrap();
-                let d = serde_json::from_value::<Eip712Domain>(d.clone()).unwrap();
-                dbg!(&p, &t, &d);
-
-                panic!()
             }
         }
     }
