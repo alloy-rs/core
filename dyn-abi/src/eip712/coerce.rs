@@ -1,4 +1,4 @@
-use ethers_primitives::B160;
+use ethers_primitives::{B160, I256, U256};
 
 use crate::{no_std_prelude::*, DynAbiError, DynSolType, DynSolValue, Word};
 
@@ -55,34 +55,30 @@ pub(crate) fn fixed_bytes(n: usize, value: &serde_json::Value) -> Result<DynSolV
 }
 
 pub(crate) fn int(n: usize, value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
-    if let Some(Ok(buf)) = value
-        .as_str()
-        .map(|s| s.strip_prefix("0x").unwrap_or(s))
-        .map(hex::decode)
-    {
-        let mut word: Word = Default::default();
-        let bytes = n / 8;
-        let min = if buf.len() > bytes { bytes } else { buf.len() };
-        word[32 - min..].copy_from_slice(&buf[..min]);
+    if let Some(num) = value.as_i64() {
+        return Ok(DynSolValue::Int(I256::try_from(num).unwrap(), n));
+    }
 
-        return Ok(DynSolValue::Int(word, n));
+    if let Some(Ok(i)) = value.as_str().map(|s| s.parse()) {
+        return Ok(DynSolValue::Int(i, n));
     }
 
     Err(DynAbiError::type_mismatch(DynSolType::Int(n), value))
 }
 
 pub(crate) fn uint(n: usize, value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
-    if let Some(Ok(buf)) = value
-        .as_str()
-        .map(|s| s.strip_prefix("0x").unwrap_or(s))
-        .map(hex::decode)
-    {
-        let mut word: Word = Default::default();
-        let bytes = n / 8;
-        let min = if buf.len() > bytes { bytes } else { buf.len() };
-        word[32 - min..].copy_from_slice(&buf[..min]);
+    if let Some(num) = value.as_u64() {
+        return Ok(DynSolValue::Uint(U256::from(num), n));
+    }
 
-        return Ok(DynSolValue::Uint(word.into(), n));
+    if let Some(s) = value.as_str() {
+        let s = s.strip_prefix("0x").unwrap_or(s);
+        if let Ok(int) = U256::from_str_radix(s, 10) {
+            return Ok(DynSolValue::Uint(int, n));
+        }
+        if let Ok(int) = U256::from_str_radix(s, 16) {
+            return Ok(DynSolValue::Uint(int, n));
+        }
     }
 
     Err(DynAbiError::type_mismatch(DynSolType::Uint(n), value))

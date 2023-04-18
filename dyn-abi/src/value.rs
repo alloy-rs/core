@@ -1,5 +1,3 @@
-use ethers_abi_enc::keccak256;
-use ethers_primitives::B256;
 use ethers_primitives::{aliases::*, B160, I256, U256};
 
 use crate::no_std_prelude::*;
@@ -20,7 +18,7 @@ pub enum DynSolValue {
     /// A fixed-length byte string
     FixedBytes(Word, usize),
     /// A signed integer
-    Int(Word, usize),
+    Int(I256, usize),
     /// An unsigned integer
     Uint(U256, usize),
     /// A string
@@ -80,7 +78,7 @@ impl DynSolValue {
                 buf.into()
             }),
             Self::FixedBytes(w, _) => Some(*w),
-            Self::Int(w, _) => Some(*w),
+            Self::Int(w, _) => Some(w.to_be_bytes().into()),
             Self::Uint(u, _) => Some(u.to_be_bytes::<32>().into()),
             Self::CustomValue { inner, .. } => Some(*inner),
             _ => None,
@@ -120,7 +118,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant
-    pub const fn as_int(&self) -> Option<(Word, usize)> {
+    pub const fn as_int(&self) -> Option<(I256, usize)> {
         match self {
             Self::Int(w, size) => Some((*w, *size)),
             _ => None,
@@ -194,7 +192,16 @@ impl DynSolValue {
             DynSolValue::Bool(b) => buf.push(*b as u8),
             DynSolValue::Bytes(bytes) => buf.extend_from_slice(bytes),
             DynSolValue::FixedBytes(word, size) => buf.extend_from_slice(&word.as_bytes()[..*size]),
-            DynSolValue::Int(num, size) => buf.extend_from_slice(&num[(32 - *size)..]),
+            DynSolValue::Int(num, size) => {
+                let mut bytes = num.to_be_bytes();
+                let start = 32 - *size;
+                if num.is_negative() {
+                    bytes[start] |= 0x80;
+                } else {
+                    bytes[start] &= 0x7f;
+                }
+                buf.extend_from_slice(&bytes[start..])
+            }
             DynSolValue::Uint(num, size) => {
                 buf.extend_from_slice(&num.to_be_bytes::<32>().as_slice()[(32 - *size)..])
             }
@@ -214,88 +221,6 @@ impl DynSolValue {
         let mut buf = Vec::new();
         self.encode_packed_to(&mut buf);
         buf
-    }
-}
-
-// EIP-712 methods
-impl DynSolValue {
-    /// Calculate the `typeHash` for this type
-    /// Fails if this type is not a struct
-    pub fn type_hash(&self) -> Option<B256> {
-        Some(keccak256(self.eip712_encode_type()?))
-    }
-
-    /// Calculate the `hashStruct for this value
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct>
-    pub fn hash_struct(&self) -> Option<B256> {
-        let mut type_hash = self.type_hash()?.to_vec();
-        type_hash.extend(self.encode_data()?);
-        Some(keccak256(type_hash))
-    }
-
-    /// Calculate the `encodeType` for this value
-    /// Fails if this type is not a struct
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    pub fn encode_type(&self) -> Option<String> {
-        self.eip712_encode_type()
-    }
-
-    /// Calculate the `encodeData` for this value
-    /// Fails if this type is not a struct
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
-    pub fn encode_data(&self) -> Option<Vec<u8>> {
-        if let DynSolValue::CustomStruct { tuple: inner, .. }
-        | DynSolValue::Array(inner)
-        | DynSolValue::FixedArray(inner) = self
-        {
-            Some(
-                inner
-                    .iter()
-                    .map(DynSolValue::eip712_data_word)
-                    .flat_map(B256::to_fixed_bytes)
-                    .collect(),
-            )
-        } else {
-            None
-        }
-    }
-
-    /// Calculate the `encodeType` for this value
-    /// Fails if this type is not a struct
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    pub fn eip712_encode_type(&self) -> Option<String> {
-        if let DynSolValue::CustomStruct {
-            name,
-            prop_names,
-            tuple,
-        } = self
-        {
-            let mut base = format!("{}(", name);
-            for (prop_name, ty) in prop_names.iter().zip(tuple.iter()) {
-                base.push_str(ty.eip712_encode_type()?.as_str());
-                base.push(' ');
-                base.push_str(prop_name);
-                base.push(',');
-            }
-            if !prop_names.is_empty() {
-                // trailing comma
-                base.pop();
-            }
-            base.push(')');
-            Some(base)
-        } else {
-            None
-        }
-    }
-
-    /// Encode this data according to EIP-712 `encodeData` rules, and hash it
-    /// if necessary.
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
-    pub fn eip712_data_word(&self) -> Word {
-        match self.as_word() {
-            Some(word) => word,
-            None => keccak256(self.encode_data().unwrap()),
-        }
     }
 }
 
@@ -330,7 +255,7 @@ macro_rules! impl_from_int {
                 };
                 word[32 - bytes..].copy_from_slice(&value.to_be_bytes());
 
-                Self::Int(word.into(), bits)
+                Self::Int(I256::from_be_bytes(word.into()), bits)
             }
         }
     };

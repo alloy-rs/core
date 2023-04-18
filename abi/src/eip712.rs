@@ -36,7 +36,7 @@ pub struct Eip712Domain {
         serde(
             default,
             skip_serializing_if = "Option::is_none",
-            // deserialize_with = "crate::types::serde_helpers::deserialize_stringified_numeric_opt"
+            deserialize_with = "crate::util::deserialize_stringified_numeric_opt"
         )
     )]
     pub chain_id: Option<U256>,

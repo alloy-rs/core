@@ -1,12 +1,14 @@
 use core::cmp::Ordering;
 
+use ethers_abi_enc::keccak256;
+use ethers_primitives::B256;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     eip712::typed_data::Eip712Types,
     no_std_prelude::*,
     parser::{RootType, TypeSpecifier, TypeStem},
-    DynAbiError, DynSolType,
+    DynAbiError, DynSolType, DynSolValue,
 };
 
 /// An EIP-712 property definition
@@ -40,7 +42,7 @@ impl<'de> serde::Deserialize<'de> for PropertyDef {
 impl PropertyDef {
     /// Instantiate a new name-type pair
     pub fn new(type_name: impl AsRef<str>, name: impl AsRef<str>) -> Result<Self, DynAbiError> {
-        let type_name: RootType<'_> = type_name.as_ref().try_into()?;
+        let type_name: TypeSpecifier<'_> = type_name.as_ref().try_into()?;
         Ok(Self::new_unchecked(type_name, name))
     }
 
@@ -225,19 +227,17 @@ impl Resolver {
     /// Ingest a type
     pub fn ingest(&mut self, type_def: TypeDef) {
         let type_name = type_def.type_name.to_owned();
-        self.nodes.insert(type_name.clone(), type_def);
+        // Insert the edges into the graph
+        {
+            let entry = self.edges.entry(type_name.clone()).or_insert_with(Vec::new);
+            type_def
+                .props
+                .iter()
+                .for_each(|prop| entry.push(prop.root_type_name().to_owned()));
+        } // entry dropped here
 
-        self.nodes
-            .get(&type_name)
-            .unwrap()
-            .props
-            .iter()
-            .for_each(|prop| {
-                self.edges
-                    .entry(type_name.clone())
-                    .or_insert_with(Vec::new)
-                    .push(prop.root_type_name().to_owned());
-            });
+        // Insert the node into the graph
+        self.nodes.insert(type_name, type_def);
     }
 
     /// Ingest a `Types` object into the resolver, discarding any invalid types
@@ -346,7 +346,7 @@ impl Resolver {
         self.unchecked_resolve(type_name.try_into()?)
     }
 
-    /// Encode the type into an EIP-712 compatible string
+    /// Encode the type into an EIP-712 `encodeType` string
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     pub fn encode_type(&self, name: &str) -> Result<String, DynAbiError> {
@@ -364,6 +364,59 @@ impl Resolver {
             acc.push_str(s);
             acc
         }))
+    }
+
+    /// Compute the keccak256 hash of the EIP-712 `encodeType` string
+    pub fn type_hash(&self, name: &str) -> Result<B256, DynAbiError> {
+        self.encode_type(name).map(keccak256)
+    }
+
+    /// Encode the data according to EIP-712 `encodeData` rules
+    pub fn encode_data(&self, value: &DynSolValue) -> Result<Option<Vec<u8>>, DynAbiError> {
+        match value {
+            DynSolValue::CustomStruct { tuple: inner, .. }
+            | DynSolValue::Array(inner)
+            | DynSolValue::FixedArray(inner) => {
+                let inner = inner.iter().try_fold(Vec::new(), |mut acc, v| {
+                    acc.extend(self.eip712_data_word(v)?.as_slice());
+                    Ok::<_, DynAbiError>(acc)
+                })?;
+                Ok(Some(inner))
+            }
+            DynSolValue::Bytes(buf) => Ok(Some(buf.to_vec())),
+            DynSolValue::String(s) => Ok(Some(s.as_bytes().to_vec())),
+            _ => Ok(None),
+        }
+    }
+
+    /// Encode the data as a struct property according to EIP-712 `encodeData`
+    /// rules. Atomic types are encoded as-is, while non-atomic types are
+    /// encoded as their `encodeData` hash.
+    pub fn eip712_data_word(&self, value: &DynSolValue) -> Result<B256, DynAbiError> {
+        if let Some(word) = value.as_word() {
+            return Ok(word);
+        }
+
+        match value {
+            DynSolValue::CustomStruct { name, tuple, .. } => {
+                let type_hash = self.type_hash(name)?.to_vec();
+                let inner = tuple.iter().try_fold(type_hash, |mut acc, v| {
+                    acc.extend(self.eip712_data_word(v)?.as_slice());
+                    Ok::<_, DynAbiError>(acc)
+                })?;
+                Ok(keccak256(inner))
+            }
+            DynSolValue::Array(inner) | DynSolValue::FixedArray(inner) => {
+                let inner = inner.iter().try_fold(Vec::new(), |mut acc, v| {
+                    acc.extend(self.eip712_data_word(v)?.as_slice());
+                    Ok::<_, DynAbiError>(acc)
+                })?;
+                Ok(keccak256(inner))
+            }
+            DynSolValue::Bytes(buf) => Ok(keccak256(buf)),
+            DynSolValue::String(s) => Ok(keccak256(s.as_bytes())),
+            _ => unreachable!("all types are words or covered in the match"),
+        }
     }
 }
 

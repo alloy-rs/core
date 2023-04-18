@@ -11,7 +11,7 @@
 pub mod parser;
 
 mod typed_data;
-pub use typed_data::{Eip712Types, Object, TypedData};
+pub use typed_data::{Eip712Types, TypedData};
 
 mod resolver;
 pub use resolver::{PropertyDef, Resolver};

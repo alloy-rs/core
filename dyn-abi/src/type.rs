@@ -101,7 +101,9 @@ impl DynSolType {
                 }
                 Ok(word.into())
             }
-            (DynSolType::Int(_), DynSolValue::Int(word, _)) => Ok(word.into()),
+            (DynSolType::Int(_), DynSolValue::Int(word, _)) => {
+                Ok(DynToken::Word(word.to_be_bytes().into()))
+            }
             (DynSolType::Uint(_), DynSolValue::Uint(num, _)) => Ok(DynToken::Word(num.into())),
             (DynSolType::String, DynSolValue::String(buf)) => Ok(DynToken::PackedSeq(buf.into())),
             (DynSolType::Tuple(types), DynSolValue::Tuple(tokens)) => {
@@ -232,7 +234,7 @@ impl DynSolType {
             )),
             // cheating here, but it's ok
             (DynSolType::Int(size), DynToken::Word(word)) => Ok(DynSolValue::Int(
-                sol_type::FixedBytes::<32>::detokenize(word.into())?.into(),
+                sol_type::Int::<256>::detokenize(word.into())?,
                 *size,
             )),
             (DynSolType::Uint(size), DynToken::Word(word)) => Ok(DynSolValue::Uint(

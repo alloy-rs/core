@@ -253,6 +253,12 @@ pub struct TypeSpecifier<'a> {
     pub sizes: Vec<Option<usize>>,
 }
 
+impl AsRef<str> for TypeSpecifier<'_> {
+    fn as_ref(&self) -> &str {
+        self.span
+    }
+}
+
 impl TypeSpecifier<'_> {
     /// True if the type is a basic solidity type
     pub fn try_basic_solidity(&self) -> Result<(), DynAbiError> {
