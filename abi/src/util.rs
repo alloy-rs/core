@@ -80,8 +80,6 @@ pub(crate) fn check_bool(slice: Word) -> bool {
     check_zeroes(&slice[..31])
 }
 
-// TODO: serde_helpers crate?
-
 /// Helper type to parse numeric strings, `u64` and `U256`
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(untagged)]
