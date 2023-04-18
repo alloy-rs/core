@@ -647,7 +647,7 @@ mod tests {
             &(WordToken(B256::default()), WordToken(B256::default())),
         );
 
-        // TODO: more like this where we test type check internal logic
+        // TODO(tests): more like this where we test type check internal logic
         assert_not_type_check!(sol_type::Uint<8>, &Word::repeat_byte(0x11).into());
         assert_not_type_check!(sol_type::Bool, &B256::repeat_byte(0x11).into());
         assert_not_type_check!(sol_type::FixedBytes<31>, &B256::repeat_byte(0x11).into());

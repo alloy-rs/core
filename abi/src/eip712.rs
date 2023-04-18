@@ -30,7 +30,6 @@ pub struct Eip712Domain {
 
     /// The EIP-155 chain id. The user-agent should refuse signing if it does not match the
     /// currently active chain.
-    // TODO: re-enable serde_helpers
     #[cfg_attr(
         feature = "eip712-serde",
         serde(

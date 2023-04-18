@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Custom types for `TypedData`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 pub struct Eip712Types(BTreeMap<String, Vec<PropertyDef>>);
 
 impl<'de> Deserialize<'de> for Eip712Types {
@@ -43,6 +43,11 @@ impl Eip712Types {
     /// Iterate over the underlying map
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<PropertyDef>)> {
         self.0.iter()
+    }
+
+    /// Insert a new type
+    pub fn insert(&mut self, key: String, value: Vec<PropertyDef>) {
+        self.0.insert(key, value);
     }
 }
 
@@ -81,8 +86,7 @@ impl Eip712Types {
 /// }
 /// ```
 ///
-// TODO: Implement (De)Serialize on Resolver
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct TypedData {
     /// Signing domain metadata. The signing domain is the intended context for
     /// the signature (e.g. the dapp, protocol, etc. that it's intended for).
@@ -90,6 +94,7 @@ pub struct TypedData {
     pub domain: Eip712Domain,
     /// The custom types used by this message.
     pub resolver: Resolver,
+    #[serde(rename = "primaryType")]
     /// The type of the message.
     pub primary_type: String,
     /// The message to be signed.

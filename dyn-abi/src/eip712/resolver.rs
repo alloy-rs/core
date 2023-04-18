@@ -159,7 +159,7 @@ impl TypeDef {
         self.type_name
             .as_str()
             .try_into()
-            .expect("TODO FIX IN INSTANTIATION")
+            .expect("checked in instantiation")
     }
 }
 
@@ -183,11 +183,49 @@ pub struct Resolver {
     edges: BTreeMap<String, Vec<String>>,
 }
 
+impl serde::Serialize for Resolver {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let types: Eip712Types = self.into();
+        types.serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Resolver {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let types: Eip712Types = serde::Deserialize::deserialize(deserializer)?;
+        Ok(types.into())
+    }
+}
+
+impl From<Eip712Types> for Resolver {
+    fn from(types: Eip712Types) -> Self {
+        let mut graph = Resolver::default();
+        graph.ingest_types(&types);
+        graph
+    }
+}
+
 impl From<&Eip712Types> for Resolver {
     fn from(types: &Eip712Types) -> Self {
         let mut graph = Resolver::default();
         graph.ingest_types(types);
         graph
+    }
+}
+
+impl From<&Resolver> for Eip712Types {
+    fn from(resolver: &Resolver) -> Self {
+        let mut types = Eip712Types::default();
+        for (name, ty) in resolver.nodes.iter() {
+            types.insert(name.clone(), ty.props.clone());
+        }
+        types
     }
 }
 

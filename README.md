@@ -15,6 +15,7 @@ foundry.
 - fix wasm in uint
 - unify workspace deps with `.workspace = true`
 - meta crate?
+- serde_helpers crate?
 
 # Current build command
 
