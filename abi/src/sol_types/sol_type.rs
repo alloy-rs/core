@@ -1,6 +1,5 @@
-use core::marker::PhantomData;
-
 use alloc::borrow::Cow;
+use core::marker::PhantomData;
 use ethers_primitives::{B160, I256, U256};
 
 #[cfg(not(feature = "std"))]
@@ -45,7 +44,6 @@ use crate::{
 ///
 /// Overall, implementing this trait is straightforward.
 ///
-///
 /// ```
 /// # use ethers_abi_enc::{AbiResult, Word, no_std_prelude::Borrow};
 /// # use ethers_abi_enc::sol_type::*;
@@ -78,8 +76,8 @@ use crate::{
 ///     type TokenType = <UnderlyingTuple as SolType>::TokenType;
 ///
 ///     // The name in solidity
-///     fn sol_type_name() -> std::string::String {
-///         "MySolidityStruct".to_owned()
+///     fn sol_type_name() -> std::borrow::Cow<'static, str> {
+///         "MySolidityStruct".into()
 ///     }
 ///
 ///     // True if your type has a dynamic encoding length. This is dynamic
@@ -572,7 +570,7 @@ macro_rules! impl_uint_sol_type {
             }
 
             fn sol_type_name() -> Cow<'static, str> {
-                concat!("int", $bits).into()
+                concat!("uint", $bits).into()
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -623,7 +621,7 @@ macro_rules! impl_uint_sol_type {
             }
 
             fn sol_type_name() -> Cow<'static, str> {
-                concat!("int", $bits).into()
+                concat!("uint", $bits).into()
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -1027,7 +1025,7 @@ macro_rules! tuple_impls {
                 Ok(())
             }
 
-            fn eip712_data_word<R: Borrow<Self::RustType>>(rust: R) -> Word {
+            fn eip712_data_word<B_: Borrow<Self::RustType>>(rust: B_) -> Word {
                 let ($(ref $ty,)+) = *rust.borrow();
                 let encoding: Vec<u8> = [$(
                     <$ty as SolType>::eip712_data_word($ty).0,
@@ -1042,14 +1040,14 @@ macro_rules! tuple_impls {
                 )+))
             }
 
-            fn tokenize<R: Borrow<Self::RustType>>(rust: R) -> Self::TokenType {
+            fn tokenize<B_: Borrow<Self::RustType>>(rust: B_) -> Self::TokenType {
                 let ($(ref $ty,)+) = *rust.borrow();
                 ($(
                     <$ty as SolType>::tokenize($ty),
                 )+)
             }
 
-            fn encode_packed_to<R: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: R) {
+            fn encode_packed_to<B_: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B_) {
                 let ($(ref $ty,)+) = *rust.borrow();
                 // TODO: Reserve
                 $(
@@ -1062,4 +1060,4 @@ macro_rules! tuple_impls {
     };
 }
 
-tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, }
+tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, }

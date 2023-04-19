@@ -567,7 +567,7 @@ macro_rules! tuple_impls {
     };
 }
 
-tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, }
+tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, }
 
 #[cfg(test)]
 mod tests {

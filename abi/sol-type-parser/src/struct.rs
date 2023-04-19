@@ -1,6 +1,6 @@
 use crate::r#type::SolType;
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 use std::fmt;
 use syn::{
     braced,
@@ -96,9 +96,10 @@ impl SolStructDef {
     }
 
     fn expand_impl(&self) -> TokenStream {
+        debug_assert!(!self.fields.is_empty());
         let name = &self.name;
 
-        let doc = format!("A Rust type containg info for the Solidity type {name}");
+        let doc = format!("Represents the `{name}` Solidity struct type.");
 
         let fields = self.fields.iter();
 
@@ -112,7 +113,6 @@ impl SolStructDef {
         let props = self.fields.iter().map(|f| &f.name);
 
         let convert = self.expand_from();
-        let mod_name = format_ident!("__{name}");
 
         let fields_string = self
             .fields
@@ -137,8 +137,9 @@ impl SolStructDef {
             quote!(#encoded_type)
         };
 
-        let encode_data_impl = if self.fields.is_empty() {
-            quote!(::core::default::Default::default())
+        let encode_data_impl = if self.fields.len() == 1 {
+            let SolStructField { ty, name } = self.fields.first().unwrap();
+            quote!(<#ty as SolType>::eip712_data_word(&self.#name).0.to_vec())
         } else {
             quote! {
                 [#(
@@ -148,18 +149,15 @@ impl SolStructDef {
         };
 
         quote! {
-            pub use #mod_name::#name;
+            #[doc = #doc]
+            #[derive(Debug, Clone, PartialEq)]
+            pub struct #name {
+                #(pub #fields),*
+            }
+
             #[allow(non_snake_case)]
-            mod #mod_name {
-                use super::*;
-
+            const _: () = {
                 use ::ethers_abi_enc::{SolType, keccak256, no_std_prelude::*};
-
-                #[doc = #doc]
-                #[derive(Debug, Clone, PartialEq)]
-                pub struct #name {
-                    #(pub #fields),*
-                }
 
                 #convert
 
@@ -188,13 +186,19 @@ impl SolStructDef {
                         #encode_data_impl
                     }
                 }
-            }
+            };
         }
     }
 }
 
 impl ToTokens for SolStructDef {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.extend(self.expand_impl());
+        if self.fields.is_empty() {
+            tokens.extend(quote_spanned! { self.name.span() =>
+                compile_error!("Defining empty structs is disallowed.");
+            });
+        } else {
+            tokens.extend(self.expand_impl());
+        }
     }
 }

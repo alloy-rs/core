@@ -179,9 +179,7 @@ impl ToTokens for SolType {
             SolType::String => quote! { ::ethers_abi_enc::sol_type::String },
             SolType::Uint(size) => quote! { ::ethers_abi_enc::sol_type::Uint<#size> },
             SolType::Tuple(inner) => return inner.to_tokens(tokens),
-            SolType::Other(ident) => {
-                quote! { #ident }
-            }
+            SolType::Other(ident) => quote! { #ident },
         };
         tokens.extend(expanded);
     }
