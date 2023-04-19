@@ -4,11 +4,7 @@ use ruint::Uint;
 #[cfg(not(feature = "std"))]
 use alloc::{format, string::String};
 
-use super::{
-    errors::{self},
-    utils::*,
-    Sign,
-};
+use super::{errors, utils::*, Sign};
 
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 /// Signed integer wrapping a `ruint::Uint`.
