@@ -30,6 +30,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
+              with:
+                  submodules: "recursive"
             - uses: dtolnay/rust-toolchain@nightly
               with:
                   components: clippy
@@ -44,6 +46,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
+              with:
+                  submodules: "recursive"
             - uses: dtolnay/rust-toolchain@nightly
               with:
                   components: rust-docs
@@ -56,6 +60,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
+              with:
+                  submodules: "recursive"
             - uses: dtolnay/rust-toolchain@nightly
               with:
                   components: rustfmt
