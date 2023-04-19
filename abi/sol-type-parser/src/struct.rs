@@ -1,7 +1,12 @@
 use proc_macro2::TokenStream;
-use syn::{braced, parse::Parse, punctuated::Punctuated, token::Struct, Ident, Index, Token};
-
-use quote::{quote, ToTokens};
+use quote::{format_ident, quote, ToTokens};
+use syn::{
+    braced,
+    parse::Parse,
+    punctuated::Punctuated,
+    token::{Brace, Struct},
+    Ident, Index, Token,
+};
 
 use crate::r#type::SolType;
 
@@ -13,7 +18,7 @@ pub struct SolStructField {
 
 impl Parse for SolStructField {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        Ok(SolStructField {
+        Ok(Self {
             ty: input.parse()?,
             name: input.parse()?,
         })
@@ -33,15 +38,14 @@ impl ToTokens for SolStructField {
 pub struct SolStructDef {
     _struct: Struct,
     name: Ident,
-    _brace: syn::token::Brace,
+    _brace: Brace,
     fields: Punctuated<SolStructField, Token![;]>,
 }
 
 impl Parse for SolStructDef {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let content;
-
-        Ok(SolStructDef {
+        Ok(Self {
             _struct: input.parse()?,
             name: input.parse()?,
             _brace: braced!(content in input),
@@ -51,12 +55,8 @@ impl Parse for SolStructDef {
 }
 
 impl SolStructDef {
-    fn name(&self) -> Ident {
-        self.name.clone()
-    }
-
     fn expand_from(&self) -> TokenStream {
-        let name = self.name();
+        let name = &self.name;
         let field_names = self.fields.iter().map(|f| &f.name);
 
         let field_ty = self.fields.iter().map(|f| &f.ty);
@@ -90,12 +90,9 @@ impl SolStructDef {
     }
 
     fn expand_impl(&self) -> TokenStream {
-        let name = self.name();
+        let name = &self.name;
 
-        let doc = format!(
-            "A Rust type containg info for the Solidity type {}",
-            &self.name
-        );
+        let doc = format!("A Rust type containg info for the Solidity type {name}");
 
         let fields = self.fields.iter();
 
@@ -109,7 +106,17 @@ impl SolStructDef {
         let props = self.fields.iter().map(|f| &f.name);
 
         let convert = self.expand_from();
-        let mod_name = Ident::new(&format!("__{}", name), name.span());
+        let mod_name = format_ident!("__{name}");
+
+        let encode_data = if self.fields.is_empty() {
+            quote!(::core::default::Default::default())
+        } else {
+            quote! {
+                [#(
+                    <#props_tys as SolType>::eip712_data_word(&self.#props).0,
+                )*].concat()
+            }
+        };
 
         quote! {
             pub use #mod_name::#name;
@@ -157,22 +164,18 @@ impl SolStructDef {
                             }
                         )*
                         ::ethers_abi_enc::no_std_prelude::format!(
-                            "{}({}){}", Self::NAME, types.join(","),
+                            "{}({}){}",
+                            Self::NAME,
+                            types.join(","),
                             tails.join("")
                         )
                     }
 
                     fn encode_data(&self) -> Vec<u8> {
-                        let mut vec = Vec::new();
-                        #(
-                            {
-                                type Prop = #props_tys;
-                                vec.extend(Prop::eip712_data_word(&self.#props).as_slice());
-                            }
-                        )*
-                        vec
+                        #encode_data
                     }
-            }}
+                }
+            }
         }
     }
 }
