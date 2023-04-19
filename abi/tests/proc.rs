@@ -1,4 +1,4 @@
-use ethers_abi_enc::{sol, SolType};
+use ethers_abi_enc::{sol, SolStruct, SolType};
 
 use ethers_primitives::{B160, U256};
 
@@ -39,6 +39,19 @@ sol! {
 }
 
 #[test]
+fn strings() {
+    assert_eq!(
+        MyStruct::encode_type(),
+        "MyStruct(uint256 a,bytes32 b,address[] c)"
+    );
+
+    assert_eq!(
+        MyStruct2::encode_type(),
+        "MyStruct2(MyStruct a,bytes32 b,address[] c)MyStruct(uint256 a,bytes32 b,address[] c)"
+    );
+}
+
+#[test]
 fn proc_macro_expansion() {
     // this is possible but not recomended :)
     <sol! {
@@ -51,26 +64,19 @@ fn proc_macro_expansion() {
         c: vec![],
     };
 
-    dbg!(MyTuple::hex_encode((a.clone(), [0; 32])));
+    MyTuple::hex_encode((a.clone(), [0; 32]));
 
-    dbg!(MyStruct::hex_encode(a.clone()));
+    MyStruct::hex_encode(a.clone());
 
-    dbg!(LateBinding::<MyStruct>::hex_encode((
-        vec![a.clone(), a.clone()],
-        B160::default()
-    )));
+    LateBinding::<MyStruct>::hex_encode((vec![a.clone(), a.clone()], B160::default()));
 
-    dbg!(MyStruct2::hex_encode(MyStruct2 {
+    MyStruct2::hex_encode(MyStruct2 {
         a,
         b: [0; 32],
         c: vec![],
-    }));
+    });
 
-    dbg!(NestedArray::hex_encode(vec![
-        [true, false],
-        [true, false],
-        [true, false]
-    ]));
+    NestedArray::hex_encode(vec![[true, false], [true, false], [true, false]]);
 
     let mvt = MyValueType::from(U256::from(1));
     assert_eq!(

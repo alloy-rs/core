@@ -1,5 +1,5 @@
+use alloc::borrow::Cow;
 use core::marker::PhantomData;
-
 use ethers_primitives::{B160, I256, U256};
 
 #[cfg(not(feature = "std"))]
@@ -44,7 +44,6 @@ use crate::{
 ///
 /// Overall, implementing this trait is straightforward.
 ///
-///
 /// ```
 /// # use ethers_abi_enc::{AbiResult, Word, no_std_prelude::Borrow};
 /// # use ethers_abi_enc::sol_type::*;
@@ -77,8 +76,8 @@ use crate::{
 ///     type TokenType = <UnderlyingTuple as SolType>::TokenType;
 ///
 ///     // The name in solidity
-///     fn sol_type_name() -> std::string::String {
-///         "MySolidityStruct".to_owned()
+///     fn sol_type_name() -> std::borrow::Cow<'static, str> {
+///         "MySolidityStruct".into()
 ///     }
 ///
 ///     // True if your type has a dynamic encoding length. This is dynamic
@@ -166,18 +165,17 @@ pub trait SolType {
     /// The corresponding Rust type. This type may be borrowed (e.g. `str`)
     type RustType;
 
-    /// The corresponding owned Rust type.
-
     /// The corresponding ABI token type.
     ///
     /// See implementers of [`TokenType`].
-    ///
     type TokenType: TokenType;
 
     /// The name of the type in solidity
-    fn sol_type_name() -> RustString;
+    fn sol_type_name() -> Cow<'static, str>;
+
     /// True if the type is dynamic according to ABI rules
     fn is_dynamic() -> bool;
+
     /// True if the type is a user defined type. These include structs, enums,
     /// and user defined value types
     fn is_user_defined() -> bool {
@@ -185,29 +183,24 @@ pub trait SolType {
     }
 
     /// The encoded struct type (as EIP-712), if any. None for non-structs
-    fn eip712_encode_type() -> Option<RustString> {
+    fn eip712_encode_type() -> Option<Cow<'static, str>> {
         None
     }
+
     /// Check a token to see if it can be detokenized with this type
     fn type_check(token: &Self::TokenType) -> AbiResult<()>;
+
     /// Detokenize
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType>;
+
     /// Tokenize
-    fn tokenize<B>(rust: B) -> Self::TokenType
-    where
-        B: Borrow<Self::RustType>;
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType;
 
-    /// Implemens solidity's encodePacked() function, writing to the target to
-    /// avoid allocations
-    fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
-    where
-        B: Borrow<Self::RustType>;
+    /// Implemens Solidity's `encodePacked()` function, writing into the given buffer.
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B);
 
-    /// Implements solidity's encodePacked() function
-    fn encode_packed<B>(rust: B) -> Vec<u8>
-    where
-        B: Borrow<Self::RustType>,
-    {
+    /// Implements Solidity's `encodePacked()` function.
+    fn encode_packed<B: Borrow<Self::RustType>>(rust: B) -> Vec<u8> {
         let mut res = Vec::new();
         Self::encode_packed_to(&mut res, rust);
         res
@@ -226,15 +219,10 @@ pub trait SolType {
     /// words for each element
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
-    fn eip712_data_word<B>(rust: B) -> Word
-    where
-        B: Borrow<Self::RustType>;
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word;
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence
-    fn encode_single<B>(rust: B) -> Vec<u8>
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn encode_single<B: Borrow<Self::RustType>>(rust: B) -> Vec<u8> {
         let token = Self::tokenize(rust);
         crate::encode_single(token)
     }
@@ -269,10 +257,7 @@ pub trait SolType {
     }
 
     /// Hex output of encode_single
-    fn hex_encode_single<B>(rust: B) -> RustString
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn hex_encode_single<B: Borrow<Self::RustType>>(rust: B) -> RustString {
         format!("0x{}", hex::encode(Self::encode_single(rust)))
     }
 
@@ -357,8 +342,8 @@ impl SolType for Address {
     type RustType = B160;
     type TokenType = WordToken;
 
-    fn sol_type_name() -> RustString {
-        "address".to_string()
+    fn sol_type_name() -> Cow<'static, str> {
+        "address".into()
     }
 
     fn is_dynamic() -> bool {
@@ -409,8 +394,8 @@ impl SolType for Bytes {
         true
     }
 
-    fn sol_type_name() -> RustString {
-        "bytes".to_string()
+    fn sol_type_name() -> Cow<'static, str> {
+        "bytes".into()
     }
 
     fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
@@ -451,8 +436,8 @@ macro_rules! impl_int_sol_type {
                 false
             }
 
-            fn sol_type_name() -> RustString {
-                format!("int{}", $bits)
+            fn sol_type_name() -> Cow<'static, str> {
+                concat!("int", $bits).into()
             }
 
             fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
@@ -513,8 +498,8 @@ macro_rules! impl_int_sol_type {
                 false
             }
 
-            fn sol_type_name() -> RustString {
-                format!("int{}", $bits)
+            fn sol_type_name() -> Cow<'static, str> {
+                concat!("int", $bits).into()
             }
 
             fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
@@ -584,8 +569,8 @@ macro_rules! impl_uint_sol_type {
                 false
             }
 
-            fn sol_type_name() -> RustString {
-                format!("uint{}", $bits)
+            fn sol_type_name() -> Cow<'static, str> {
+                concat!("uint", $bits).into()
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -635,8 +620,8 @@ macro_rules! impl_uint_sol_type {
                 false
             }
 
-            fn sol_type_name() -> RustString {
-                format!("uint{}", $bits)
+            fn sol_type_name() -> Cow<'static, str> {
+                concat!("uint", $bits).into()
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -707,7 +692,7 @@ impl SolType for Bool {
         false
     }
 
-    fn sol_type_name() -> RustString {
+    fn sol_type_name() -> Cow<'static, str> {
         "bool".into()
     }
 
@@ -762,8 +747,8 @@ where
         true
     }
 
-    fn sol_type_name() -> RustString {
-        format!("{}[]", T::sol_type_name())
+    fn sol_type_name() -> Cow<'static, str> {
+        format!("{}[]", T::sol_type_name()).into()
     }
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -821,8 +806,8 @@ impl SolType for String {
         true
     }
 
-    fn sol_type_name() -> RustString {
-        "string".to_owned()
+    fn sol_type_name() -> Cow<'static, str> {
+        "string".into()
     }
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -872,8 +857,8 @@ macro_rules! impl_fixed_bytes_sol_type {
                 false
             }
 
-            fn sol_type_name() -> RustString {
-                format!("bytes{}", $bytes)
+            fn sol_type_name() -> Cow<'static, str> {
+                concat!("bytes", $bytes).into()
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -935,8 +920,8 @@ where
         T::is_dynamic()
     }
 
-    fn sol_type_name() -> RustString {
-        format!("{}[{}]", T::sol_type_name(), N)
+    fn sol_type_name() -> Cow<'static, str> {
+        format!("{}[{}]", T::sol_type_name(), N).into()
     }
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -997,102 +982,82 @@ where
     }
 }
 
-macro_rules! impl_tuple_sol_type {
-    ($num:expr, $( $ty:ident : $no:tt ),+ $(,)?) => {
-        impl<$($ty,)+> SolType for ($( $ty, )+)
-        where
-            $(
-                $ty: SolType,
-            )+
-        {
+macro_rules! tuple_impls {
+    () => {};
+
+    (@peel $_:ident, $($other:ident,)*) => { tuple_impls! { $($other,)* } };
+
+    // compile time `join(",")` format string
+    (@fmt $other:ident) => { ",{}" };
+    (@fmt $first:ident, $($other:ident,)*) => {
+        concat!(
+            "{}",
+            $(tuple_impls! { @fmt $other }),*
+        )
+    };
+
+    ($($ty:ident,)+) => {
+        #[allow(non_snake_case)]
+        impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
             type RustType = ($( $ty::RustType, )+);
             type TokenType = ($( $ty::TokenType, )+);
 
             fn is_dynamic() -> bool {
-                $(
-                    if $ty::is_dynamic() {
-                        return true;
-                    }
-                )+
-                false
+                $( <$ty as SolType>::is_dynamic() )||+
             }
 
-            fn sol_type_name() -> RustString {
-                let mut types = Vec::with_capacity($num);
-                $(
-                    types.push($ty::sol_type_name());
-                )+
-
-                format!("tuple({})", types.join(","))
+            fn sol_type_name() -> Cow<'static, str> {
+                format!(
+                    concat!(
+                        "tuple(",
+                        tuple_impls! { @fmt $($ty,)+ },
+                        ")",
+                    ),
+                    $(<$ty as SolType>::sol_type_name(),)+
+                ).into()
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
+                let ($(ref $ty,)+) = *token;
                 $(
-                    $ty::type_check(&token.$no)?;
+                    <$ty as SolType>::type_check($ty)?;
                 )+
                 Ok(())
             }
 
-            fn eip712_data_word<Borrower>(rust: Borrower) -> Word
-            where
-                Borrower: Borrow<Self::RustType>
-            {
-                let rust = rust.borrow();
-                let mut encoding = Vec::new();
-                $(
-                    encoding.extend_from_slice(&$ty::eip712_data_word(&rust.$no).as_slice());
-                )+
+            fn eip712_data_word<B_: Borrow<Self::RustType>>(rust: B_) -> Word {
+                let ($(ref $ty,)+) = *rust.borrow();
+                let encoding: Vec<u8> = [$(
+                    <$ty as SolType>::eip712_data_word($ty).0,
+                )+].concat();
                 keccak256(&encoding).into()
             }
 
             fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
-                Ok((
-                    $(
-                        $ty::detokenize(token.$no)?,
-                    )+
-                ))
+                let ($($ty,)+) = token;
+                Ok(($(
+                    <$ty as SolType>::detokenize($ty)?,
+                )+))
             }
 
-            fn tokenize<Borrower>(rust: Borrower) -> Self::TokenType
-            where
-                Borrower: Borrow<Self::RustType>{
-                let rust = rust.borrow();
+            fn tokenize<B_: Borrow<Self::RustType>>(rust: B_) -> Self::TokenType {
+                let ($(ref $ty,)+) = *rust.borrow();
                 ($(
-                    $ty::tokenize(&rust.$no),
+                    <$ty as SolType>::tokenize($ty),
                 )+)
             }
 
-            fn encode_packed_to<Borrower>(target: &mut Vec<u8>, rust: Borrower)
-            where
-                Borrower: Borrow<Self::RustType>
-            {
-                let rust = rust.borrow();
+            fn encode_packed_to<B_: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B_) {
+                let ($(ref $ty,)+) = *rust.borrow();
+                // TODO: Reserve
                 $(
-                    $ty::encode_packed_to(target, &rust.$no);
+                    <$ty as SolType>::encode_packed_to(target, $ty);
                 )+
             }
         }
+
+        tuple_impls! { @peel $($ty,)+ }
     };
 }
 
-impl_tuple_sol_type!(1, A:0, );
-impl_tuple_sol_type!(2, A:0, B:1, );
-impl_tuple_sol_type!(3, A:0, B:1, C:2, );
-impl_tuple_sol_type!(4, A:0, B:1, C:2, D:3, );
-impl_tuple_sol_type!(5, A:0, B:1, C:2, D:3, E:4, );
-impl_tuple_sol_type!(6, A:0, B:1, C:2, D:3, E:4, F:5, );
-impl_tuple_sol_type!(7, A:0, B:1, C:2, D:3, E:4, F:5, G:6, );
-impl_tuple_sol_type!(8, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, );
-impl_tuple_sol_type!(9, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, );
-impl_tuple_sol_type!(10, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, );
-impl_tuple_sol_type!(11, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, );
-impl_tuple_sol_type!(12, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, );
-impl_tuple_sol_type!(13, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, );
-impl_tuple_sol_type!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, );
-impl_tuple_sol_type!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
-impl_tuple_sol_type!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
-impl_tuple_sol_type!(17, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16,);
-impl_tuple_sol_type!(18, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17,);
-impl_tuple_sol_type!(19, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18,);
-impl_tuple_sol_type!(20, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19,);
-impl_tuple_sol_type!(21, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19, U:20,);
+tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, }

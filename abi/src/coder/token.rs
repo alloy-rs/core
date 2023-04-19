@@ -163,7 +163,7 @@ impl TokenType for WordToken {
     fn tail_append(&self, _enc: &mut Encoder) {}
 }
 
-/// A Fixed Sequence - T\[M\]
+/// A Fixed Sequence - `T[N]`
 #[derive(Debug, Clone, PartialEq)]
 pub struct FixedSeqToken<T, const N: usize>([T; N]);
 
@@ -290,7 +290,7 @@ impl<T, const N: usize> FixedSeqToken<T, N> {
     }
 }
 
-/// A Dynamic Sequence - T[]
+/// A Dynamic Sequence - `T[]`
 #[derive(Debug, Clone, PartialEq)]
 pub struct DynSeqToken<T>(Vec<T>);
 
@@ -385,7 +385,7 @@ where
     }
 }
 
-/// A Packed Sequence - bytes or string
+/// A Packed Sequence - `bytes` or `string`
 #[derive(Clone, PartialEq)]
 pub struct PackedSeqToken(Vec<u8>);
 
@@ -453,28 +453,16 @@ impl fmt::Debug for PackedSeqToken {
     }
 }
 
-macro_rules! impl_tuple_token_type {
-    ($num:expr, $( $ty:ident : $no:tt ),+ $(,)?) => {
-        impl<$($ty,)+> sealed::Sealed for ($( $ty, )+)
-        where
-        $(
-            $ty: TokenType,
-        )+
-        {}
+macro_rules! tuple_impls {
+    () => {};
+    (@peel $_:ident, $($other:ident,)*) => { tuple_impls! { $($other,)* } };
+    ($($ty:ident,)+) => {
+        impl<$($ty: TokenType,)+> sealed::Sealed for ($($ty,)+) {}
 
-        impl<$($ty,)+> TokenType for ($( $ty, )+)
-        where
-            $(
-                $ty: TokenType,
-            )+
-        {
+        #[allow(non_snake_case)]
+        impl<$($ty: TokenType,)+> TokenType for ($($ty,)+) {
             fn is_dynamic() -> bool {
-                $(
-                    if $ty::is_dynamic() {
-                        return true;
-                    }
-                )+
-                false
+                $( <$ty as TokenType>::is_dynamic() )||+
             }
 
             fn decode_from(dec: &mut Decoder<'_>) -> AbiResult<Self> {
@@ -492,6 +480,7 @@ macro_rules! impl_tuple_token_type {
                 if !is_dynamic {
                     dec.take_offset(child);
                 }
+
                 Ok(res)
             }
 
@@ -499,119 +488,86 @@ macro_rules! impl_tuple_token_type {
                 if Self::is_dynamic() {
                     1
                 } else {
-                    let mut sum = 0;
-                    $(
-                        sum += self.$no.head_words();
-                    )+
-                    sum
+                    let ($(ref $ty,)+) = *self;
+                    0 $( + $ty.head_words() )+
                 }
             }
 
             fn tail_words(&self) -> usize {
-                let mut sum = 0;
                 if Self::is_dynamic() {
-                    $(
-                        sum += self.$no.total_words();
-                    )+
+                    let ($(ref $ty,)+) = *self;
+                    0 $( + $ty.total_words() )+
+                } else {
+                    0
                 }
-                sum
             }
 
             fn total_words(&self) -> usize {
-                let mut sum = 0;
-                $(
-                    sum += self.$no.total_words();
-                )+
-                sum
+                let ($(ref $ty,)+) = *self;
+                0 $( + $ty.total_words() )+
             }
 
             fn head_append(&self, enc: &mut Encoder) {
                 if Self::is_dynamic() {
                     enc.append_indirection();
                 } else {
+                    let ($(ref $ty,)+) = *self;
                     $(
-                        self.$no.head_append(enc);
+                        $ty.head_append(enc);
                     )+
                 }
             }
 
             fn tail_append(&self, enc: &mut Encoder) {
                 if Self::is_dynamic() {
-                    let mut head_words = 0;
-                    $(
-                        head_words += self.$no.head_words();
-                    )+
+                    let ($(ref $ty,)+) = *self;
+                    let head_words = 0 $( + $ty.head_words() )+;
+
                     enc.push_offset(head_words as u32);
                     $(
-                        self.$no.head_append(enc);
-                        enc.bump_offset(self.$no.tail_words() as u32);
+                        $ty.head_append(enc);
+                        enc.bump_offset($ty.tail_words() as u32);
                     )+
                     $(
-                        self.$no.tail_append(enc);
+                        $ty.tail_append(enc);
                     )+
                     enc.pop_offset();
                 }
             }
         }
 
-        impl<$($ty,)+> TokenSeq for ($( $ty, )+)
-        where
-            $(
-                $ty: TokenType,
-            )+
-        {
-
+        #[allow(non_snake_case)]
+        impl<$($ty: TokenType,)+> TokenSeq for ($($ty,)+) {
             fn can_be_params() -> bool {
                 true
             }
 
             fn encode_sequence(&self, enc: &mut Encoder) {
-                let mut head_words = 0;
-                $(
-                    head_words += self.$no.head_words();
-                )+
+                let ($(ref $ty,)+) = *self;
+                let head_words = 0 $( + $ty.head_words() )+;
                 enc.push_offset(head_words as u32);
                 $(
-                    self.$no.head_append(enc);
-                    enc.bump_offset(self.$no.tail_words() as u32);
+                    $ty.head_append(enc);
+                    enc.bump_offset($ty.tail_words() as u32);
                 )+
                 $(
-                    self.$no.tail_append(enc);
+                    $ty.tail_append(enc);
                 )+
                 enc.pop_offset();
             }
 
             fn decode_sequence(dec: &mut Decoder<'_>) -> AbiResult<Self> {
-                let res = (
-                    $($ty::decode_from(dec)?,)+
-                );
-                Ok(res)
+                Ok(($(
+                    <$ty as TokenType>::decode_from(dec)?,
+                )+))
             }
         }
-    }
+
+        tuple_impls! { @peel $($ty,)+ }
+    };
 }
 
-impl_tuple_token_type!(1, A:0, );
-impl_tuple_token_type!(2, A:0, B:1, );
-impl_tuple_token_type!(3, A:0, B:1, C:2, );
-impl_tuple_token_type!(4, A:0, B:1, C:2, D:3, );
-impl_tuple_token_type!(5, A:0, B:1, C:2, D:3, E:4, );
-impl_tuple_token_type!(6, A:0, B:1, C:2, D:3, E:4, F:5, );
-impl_tuple_token_type!(7, A:0, B:1, C:2, D:3, E:4, F:5, G:6, );
-impl_tuple_token_type!(8, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, );
-impl_tuple_token_type!(9, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, );
-impl_tuple_token_type!(10, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, );
-impl_tuple_token_type!(11, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, );
-impl_tuple_token_type!(12, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, );
-impl_tuple_token_type!(13, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, );
-impl_tuple_token_type!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, );
-impl_tuple_token_type!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
-impl_tuple_token_type!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
-impl_tuple_token_type!(17, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16,);
-impl_tuple_token_type!(18, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17,);
-impl_tuple_token_type!(19, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18,);
-impl_tuple_token_type!(20, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19,);
-impl_tuple_token_type!(21, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19, U:20,);
+tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, }
 
 #[cfg(test)]
 mod tests {
@@ -623,20 +579,14 @@ mod tests {
     use crate::{sol_type, SolType};
 
     macro_rules! assert_type_check {
-        ($sol:ty, $token:expr) => {
+        ($sol:ty, $token:expr $(,)?) => {
             assert!(<$sol>::type_check($token).is_ok())
-        };
-        ($sol:ty, $token:expr,) => {
-            assert_type_check!($sol, $token)
         };
     }
 
     macro_rules! assert_not_type_check {
-        ($sol:ty, $token:expr) => {
+        ($sol:ty, $token:expr $(,)?) => {
             assert!(<$sol>::type_check($token).is_err())
-        };
-        ($sol:ty, $token:expr,) => {
-            assert_not_type_check!($sol, $token)
         };
     }
 

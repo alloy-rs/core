@@ -1,9 +1,14 @@
-use proc_macro2::TokenStream;
-use syn::{braced, parse::Parse, punctuated::Punctuated, token::Struct, Ident, Index, Token};
-
-use quote::{quote, ToTokens};
-
 use crate::r#type::SolType;
+use proc_macro2::TokenStream;
+use quote::{quote, quote_spanned, ToTokens};
+use std::fmt;
+use syn::{
+    braced,
+    parse::Parse,
+    punctuated::Punctuated,
+    token::{Brace, Struct},
+    Ident, Index, Token,
+};
 
 #[derive(Debug, Clone)]
 pub struct SolStructField {
@@ -11,9 +16,15 @@ pub struct SolStructField {
     name: Ident,
 }
 
+impl fmt::Display for SolStructField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.ty, self.name)
+    }
+}
+
 impl Parse for SolStructField {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        Ok(SolStructField {
+        Ok(Self {
             ty: input.parse()?,
             name: input.parse()?,
         })
@@ -33,15 +44,14 @@ impl ToTokens for SolStructField {
 pub struct SolStructDef {
     _struct: Struct,
     name: Ident,
-    _brace: syn::token::Brace,
+    _brace: Brace,
     fields: Punctuated<SolStructField, Token![;]>,
 }
 
 impl Parse for SolStructDef {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let content;
-
-        Ok(SolStructDef {
+        Ok(Self {
             _struct: input.parse()?,
             name: input.parse()?,
             _brace: braced!(content in input),
@@ -51,12 +61,8 @@ impl Parse for SolStructDef {
 }
 
 impl SolStructDef {
-    fn name(&self) -> Ident {
-        self.name.clone()
-    }
-
     fn expand_from(&self) -> TokenStream {
-        let name = self.name();
+        let name = &self.name;
         let field_names = self.fields.iter().map(|f| &f.name);
 
         let field_ty = self.fields.iter().map(|f| &f.ty);
@@ -90,12 +96,10 @@ impl SolStructDef {
     }
 
     fn expand_impl(&self) -> TokenStream {
-        let name = self.name();
+        debug_assert!(!self.fields.is_empty());
+        let name = &self.name;
 
-        let doc = format!(
-            "A Rust type containg info for the Solidity type {}",
-            &self.name
-        );
+        let doc = format!("Represents the `{name}` Solidity struct type.");
 
         let fields = self.fields.iter();
 
@@ -109,21 +113,51 @@ impl SolStructDef {
         let props = self.fields.iter().map(|f| &f.name);
 
         let convert = self.expand_from();
-        let mod_name = Ident::new(&format!("__{}", name), name.span());
+
+        let fields_string = self
+            .fields
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(",");
+        let encoded_type = format!("{name}({fields_string})");
+        let encode_type_impl = if self.fields.iter().any(|f| f.ty.is_non_primitive()) {
+            quote! {
+                {
+                    let mut encoded = String::from(#encoded_type);
+                    #(
+                        if let Some(s) = <#props_tys as SolType>::eip712_encode_type() {
+                            encoded.push_str(&s);
+                        }
+                    )*
+                    encoded
+                }
+            }
+        } else {
+            quote!(#encoded_type)
+        };
+
+        let encode_data_impl = if self.fields.len() == 1 {
+            let SolStructField { ty, name } = self.fields.first().unwrap();
+            quote!(<#ty as SolType>::eip712_data_word(&self.#name).0.to_vec())
+        } else {
+            quote! {
+                [#(
+                    <#props_tys as SolType>::eip712_data_word(&self.#props).0,
+                )*].concat()
+            }
+        };
 
         quote! {
-            pub use #mod_name::#name;
+            #[doc = #doc]
+            #[derive(Debug, Clone, PartialEq)]
+            pub struct #name {
+                #(pub #fields),*
+            }
+
             #[allow(non_snake_case)]
-            mod #mod_name {
-                use super::*;
-
+            const _: () = {
                 use ::ethers_abi_enc::{SolType, keccak256, no_std_prelude::*};
-
-                #[doc = #doc]
-                #[derive(Debug, Clone, PartialEq)]
-                pub struct #name {
-                    #(pub #fields),*
-                }
 
                 #convert
 
@@ -144,41 +178,27 @@ impl SolStructDef {
                         tuple.into()
                     }
 
-                    fn encode_type() -> String {
-                        let mut types: Vec<String> = Default::default();
-                        let mut tails: Vec<String> = Default::default();
-                        #(
-                            {
-                                type Prop = #props_tys;
-                                types.push(Prop::sol_type_name());
-                                if let Some(tail) = Prop::eip712_encode_type() {
-                                    tails.push(tail);
-                                }
-                            }
-                        )*
-                        ::ethers_abi_enc::no_std_prelude::format!(
-                            "{}({}){}", Self::NAME, types.join(","),
-                            tails.join("")
-                        )
+                    fn encode_type() -> Cow<'static, str> {
+                        #encode_type_impl.into()
                     }
 
                     fn encode_data(&self) -> Vec<u8> {
-                        let mut vec = Vec::new();
-                        #(
-                            {
-                                type Prop = #props_tys;
-                                vec.extend(Prop::eip712_data_word(&self.#props).as_slice());
-                            }
-                        )*
-                        vec
+                        #encode_data_impl
                     }
-            }}
+                }
+            };
         }
     }
 }
 
 impl ToTokens for SolStructDef {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.extend(self.expand_impl());
+        if self.fields.is_empty() {
+            tokens.extend(quote_spanned! { self.name.span() =>
+                compile_error!("Defining empty structs is disallowed.");
+            });
+        } else {
+            tokens.extend(self.expand_impl());
+        }
     }
 }

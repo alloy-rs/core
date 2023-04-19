@@ -1,11 +1,9 @@
-use std::fmt::Debug;
-
 use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
+use std::fmt;
 use syn::{
     bracketed, parenthesized, parse::Parse, punctuated::Punctuated, Error, Ident, LitInt, Token,
 };
-
-use quote::{quote, ToTokens};
 
 mod kw {
     syn::custom_keyword!(tuple);
@@ -22,8 +20,8 @@ pub struct ArraySize {
     size: Option<LitInt>,
 }
 
-impl Debug for ArraySize {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for ArraySize {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let size = self
             .size
             .as_ref()
@@ -56,14 +54,14 @@ pub struct SolTuple {
     inner: Punctuated<SolType, Token![,]>,
 }
 
-impl Debug for SolTuple {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for SolTuple {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SolTuple").finish()
     }
 }
 
-impl std::fmt::Display for SolTuple {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for SolTuple {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "(")?;
         write!(
             f,
@@ -112,8 +110,8 @@ pub enum SolType {
     Other(Ident),
 }
 
-impl std::fmt::Debug for SolType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for SolType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Address => write!(f, "Address"),
             Self::Array(arg0, arg1) => f.debug_tuple("Array").field(arg0).field(arg1).finish(),
@@ -132,8 +130,8 @@ impl std::fmt::Debug for SolType {
     }
 }
 
-impl std::fmt::Display for SolType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for SolType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SolType::Address => write!(f, "address"),
             SolType::Array(ty, size) => {
@@ -181,9 +179,7 @@ impl ToTokens for SolType {
             SolType::String => quote! { ::ethers_abi_enc::sol_type::String },
             SolType::Uint(size) => quote! { ::ethers_abi_enc::sol_type::Uint<#size> },
             SolType::Tuple(inner) => return inner.to_tokens(tokens),
-            SolType::Other(ident) => {
-                quote! { #ident }
-            }
+            SolType::Other(ident) => quote! { #ident },
         };
         tokens.extend(expanded);
     }
@@ -248,5 +244,11 @@ impl Parse for SolType {
             candidate = Self::Array(Box::new(candidate), input.parse()?)
         }
         Ok(candidate)
+    }
+}
+
+impl SolType {
+    pub fn is_non_primitive(&self) -> bool {
+        matches!(self, Self::Other(_))
     }
 }

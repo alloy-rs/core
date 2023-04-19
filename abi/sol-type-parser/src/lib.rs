@@ -44,8 +44,5 @@ impl ToTokens for SolInput {
 #[proc_macro]
 pub fn sol(input: TS) -> TS {
     let s: SolInput = parse_macro_input!(input);
-    quote! {
-        #s
-    }
-    .into()
+    quote!(#s).into()
 }

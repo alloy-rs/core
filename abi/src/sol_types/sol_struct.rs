@@ -43,14 +43,26 @@ pub trait SolStruct {
 
     /// EIP-712 `encodeType`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    fn encode_type() -> String {
-        let inner = Self::FIELDS
+    fn encode_type() -> Cow<'static, str> {
+        let capacity = Self::FIELDS
             .iter()
-            .map(|(ty, name)| format!("{} {}", ty, name))
-            .collect::<Vec<_>>()
-            .join(",");
-
-        format!("{}({})", Self::NAME, inner)
+            .map(|(ty, name)| ty.len() + name.len() + 1)
+            .sum::<usize>()
+            + Self::NAME.len()
+            + 2;
+        let mut out = String::with_capacity(capacity);
+        out.push_str(Self::NAME);
+        out.push('(');
+        for (i, &(ty, name)) in Self::FIELDS.iter().enumerate() {
+            if i > 0 {
+                out.push(',');
+            }
+            out.push_str(ty);
+            out.push(' ');
+            out.push_str(name);
+        }
+        out.push(')');
+        out.into()
     }
 
     /// EIP-712 `typeHash`
@@ -102,7 +114,7 @@ where
         true
     }
 
-    fn eip712_encode_type() -> Option<String> {
+    fn eip712_encode_type() -> Option<Cow<'static, str>> {
         Some(Self::encode_type())
     }
 
@@ -110,8 +122,8 @@ where
         TupleFor::<T>::type_check(token)
     }
 
-    fn sol_type_name() -> String {
-        Self::NAME.to_owned()
+    fn sol_type_name() -> Cow<'static, str> {
+        Self::NAME.into()
     }
 
     fn eip712_data_word<B>(rust: B) -> Word
