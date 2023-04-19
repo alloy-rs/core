@@ -18,6 +18,8 @@ jobs:
                 os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         steps:
             - uses: actions/checkout@v3
+              with:
+                  submodules: "recursive"
             - uses: dtolnay/rust-toolchain@stable
             - uses: Swatinem/rust-cache@v2
             - name: test
@@ -33,7 +35,9 @@ jobs:
                   components: clippy
             - uses: Swatinem/rust-cache@v2
             - name: clippy
-              run: cargo clippy --workspace --tests -Dwarnings
+              run: cargo clippy --workspace --tests
+              env:
+                  RUSTFLAGS: -Dwarnings
 
     docs:
         name: docs
