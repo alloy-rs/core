@@ -167,7 +167,7 @@ impl SolStructDef {
                         #(
                             {
                                 type Prop = #props_tys;
-                                vec.extend(Prop::eip712_encode_data(&self.#props).as_slice());
+                                vec.extend(Prop::eip712_data_word(&self.#props).as_slice());
                             }
                         )*
                         vec

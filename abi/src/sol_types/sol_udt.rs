@@ -67,7 +67,7 @@ macro_rules! define_udt {
                 $path(token)
             }
 
-            fn eip712_encode_data<B>(rust: B) -> $crate::Word
+            fn eip712_data_word<B>(rust: B) -> $crate::Word
             where
                 B: $crate::no_std_prelude::Borrow<Self::RustType>
             {

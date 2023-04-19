@@ -73,7 +73,7 @@ pub trait SolStruct {
 
     /// EIP-712 `signTypedData`
     /// <https://eips.ethereum.org/EIPS/eip-712#specification-of-the-eth_signtypeddata-json-rpc>
-    fn encode_eip712(&self, domain: &Eip712Domain) -> B256 {
+    fn eip712_signing_hash(&self, domain: &Eip712Domain) -> B256 {
         let domain_separator = domain.hash_struct();
         let struct_hash = self.hash_struct();
 
@@ -118,7 +118,7 @@ where
     where
         B: Borrow<Self::RustType>,
     {
-        keccak256(SolStruct::encode_data(rust.borrow()))
+        keccak256(SolStruct::hash_struct(rust.borrow()))
     }
 
     fn tokenize<Borrower>(rust: Borrower) -> Self::TokenType

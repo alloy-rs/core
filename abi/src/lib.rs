@@ -61,7 +61,7 @@
 //!
 //! See the [`SolType`] docs for an implementer's guide.
 //!
-//! ## `sol!`
+//! ## `sol!` type parsing
 //!
 //! The `sol!` proc macro parses complex soltypes from valid solidity. Right now
 //! it's limited to the solidity types defines in this library. It's useful for
@@ -71,7 +71,6 @@
 //!
 //! ```
 //! # use ethers_abi_enc::{sol, sol_type, SolType};
-//! # use ethers_primitives::U256;
 //! # pub fn main() {
 //! // outputs a type built that implements `SolType`
 //! type B32 = sol! {bytes32};
@@ -102,13 +101,31 @@
 //! // `sol!` supports late binding of types, and your own custom types!
 //! type Abstract<A> = sol! { A[] };
 //!
-//! assert_eq!(Abstract::<sol_type::Address>::sol_type_name(), "address[]");
 //! // Incredible!
+//! assert_eq!(Abstract::<sol_type::Address>::sol_type_name(), "address[]");
 //! # }
+//! ```
 //!
-//! // And we allow you to define your own custom types!
-//! // (Works only outside of function scope due to rust import rules)
-//! // (And unfortunately, doesn't yet support late binding)
+//! ## [`sol!`] structs, the [`SolStruct`] trait, and the [`domain!`] macro
+//!
+//! The [`sol!`] macro also supports parsing structs. This is useful for
+//! defining complex types that you want to encode and decode. It also provides
+//! a convenient way to define EIP-712 structs at compile-time. It accepts a
+//! standard solidity `struct` definition, and generating a Rust struct that
+//! implements [`SolStruct`] and [`SolType`].
+//!
+//! The [`SolStruct`] trait primarily provides EIP-712 signing support.
+//!
+//! ### Gotchas:
+//!
+//! Right now, sol! structs works only **outside** of function scope, due to
+//! rust import rules, and unfortunately, doesn't yet support late binding.
+//!
+//! ```
+//! # use ethers_abi_enc::{sol, SolStruct};
+//! # use ethers_primitives::U256;
+//! // `sol!` allows you to define struct types!
+//! // Usually you can just paste solidity into the macro :)
 //! sol! {
 //!     struct MyStruct {
 //!         uint256 a;
@@ -125,12 +142,43 @@
 //!     }
 //! }
 //!
+//! # pub fn main() {
+//! // All structs generated with `sol!` implement `crate::SolType` &
+//! // `crate::SolStruct`. This means you get eip-712 signing for freeeeee
+//! let my_struct = MyStruct {
+//!     a: U256::from(1),
+//!     b: [0; 32],
+//!     c: vec![Default::default()],
+//! };
+//!
+//! // The domain macro lets you easily define an EIP-712 domain object :)
+//! let my_domain = ethers_abi_enc::domain!(
+//!    name: "MyDomain",
+//!    version: "1",
+//! );
+//!
+//! // Because all the hard work is done by the `sol!` macro, EIP-712 is as easy
+//! // as calling `eip712_signing_hash` with your domain
+//! let signing_hash = my_struct.eip712_signing_hash(&my_domain);
+//! # }
+//! ```
+//!
+//! ### [`sol!`] User-defined Value Types
+//!
+//! Support for user-defined value types is new! These are currently
+//! implemented as wrapper types. Watch this space for more
+//! features!
+//!
+//! ```
+//! # use ethers_abi_enc::{sol, sol_type, SolType};
+//! # use ethers_primitives::U256;
 //! // We also also support solidity value types
 //! sol! {
 //!     type MyValueType is uint256;
 //! }
 //!
-//! # fn foo() {
+//! # pub fn main() {
+//! // UDTs are encoded as their underlying type
 //! let mvt = MyValueType::from(U256::from(1));
 //! assert_eq!(
 //!     mvt.encode_single(),
