@@ -1,7 +1,6 @@
-/// Define a solidity user-defined value type
+/// Define a solidity user-defined value type.
 ///
 /// Generates a struct of the form `$name { value: B256 }`
-///
 #[macro_export]
 macro_rules! define_udt {
     (
@@ -50,8 +49,8 @@ macro_rules! define_udt {
             type RustType = <$underlying as $crate::SolType>::RustType;
             type TokenType = <$underlying as $crate::SolType>::TokenType;
 
-            fn sol_type_name() -> $crate::no_std_prelude::String {
-                $crate::no_std_prelude::ToOwned::to_owned(Self::NAME)
+            fn sol_type_name() -> $crate::no_std_prelude::Cow<'static, str> {
+                Self::NAME.into()
             }
 
             fn is_dynamic() -> bool {

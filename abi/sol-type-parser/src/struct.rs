@@ -1,5 +1,7 @@
+use crate::r#type::SolType;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
+use std::fmt;
 use syn::{
     braced,
     parse::Parse,
@@ -8,12 +10,16 @@ use syn::{
     Ident, Index, Token,
 };
 
-use crate::r#type::SolType;
-
 #[derive(Debug, Clone)]
 pub struct SolStructField {
     ty: SolType,
     name: Ident,
+}
+
+impl fmt::Display for SolStructField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.ty, self.name)
+    }
 }
 
 impl Parse for SolStructField {
@@ -108,7 +114,30 @@ impl SolStructDef {
         let convert = self.expand_from();
         let mod_name = format_ident!("__{name}");
 
-        let encode_data = if self.fields.is_empty() {
+        let fields_string = self
+            .fields
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(",");
+        let encoded_type = format!("{name}({fields_string})");
+        let encode_type_impl = if self.fields.iter().any(|f| f.ty.is_non_primitive()) {
+            quote! {
+                {
+                    let mut encoded = String::from(#encoded_type);
+                    #(
+                        if let Some(s) = <#props_tys as SolType>::eip712_encode_type() {
+                            encoded.push_str(&s);
+                        }
+                    )*
+                    encoded
+                }
+            }
+        } else {
+            quote!(#encoded_type)
+        };
+
+        let encode_data_impl = if self.fields.is_empty() {
             quote!(::core::default::Default::default())
         } else {
             quote! {
@@ -151,28 +180,12 @@ impl SolStructDef {
                         tuple.into()
                     }
 
-                    fn encode_type() -> String {
-                        let mut types: Vec<String> = Default::default();
-                        let mut tails: Vec<String> = Default::default();
-                        #(
-                            {
-                                type Prop = #props_tys;
-                                types.push(Prop::sol_type_name());
-                                if let Some(tail) = Prop::eip712_encode_type() {
-                                    tails.push(tail);
-                                }
-                            }
-                        )*
-                        ::ethers_abi_enc::no_std_prelude::format!(
-                            "{}({}){}",
-                            Self::NAME,
-                            types.join(","),
-                            tails.join("")
-                        )
+                    fn encode_type() -> Cow<'static, str> {
+                        #encode_type_impl.into()
                     }
 
                     fn encode_data(&self) -> Vec<u8> {
-                        #encode_data
+                        #encode_data_impl
                     }
                 }
             }

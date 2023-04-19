@@ -1,5 +1,6 @@
 use core::marker::PhantomData;
 
+use alloc::borrow::Cow;
 use ethers_primitives::{B160, I256, U256};
 
 #[cfg(not(feature = "std"))]
@@ -172,7 +173,7 @@ pub trait SolType {
     type TokenType: TokenType;
 
     /// The name of the type in solidity
-    fn sol_type_name() -> RustString;
+    fn sol_type_name() -> Cow<'static, str>;
 
     /// True if the type is dynamic according to ABI rules
     fn is_dynamic() -> bool;
@@ -184,7 +185,7 @@ pub trait SolType {
     }
 
     /// The encoded struct type (as EIP-712), if any. None for non-structs
-    fn eip712_encode_type() -> Option<RustString> {
+    fn eip712_encode_type() -> Option<Cow<'static, str>> {
         None
     }
 
@@ -343,8 +344,8 @@ impl SolType for Address {
     type RustType = B160;
     type TokenType = WordToken;
 
-    fn sol_type_name() -> RustString {
-        "address".to_string()
+    fn sol_type_name() -> Cow<'static, str> {
+        "address".into()
     }
 
     fn is_dynamic() -> bool {
@@ -395,8 +396,8 @@ impl SolType for Bytes {
         true
     }
 
-    fn sol_type_name() -> RustString {
-        "bytes".to_string()
+    fn sol_type_name() -> Cow<'static, str> {
+        "bytes".into()
     }
 
     fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
@@ -437,8 +438,8 @@ macro_rules! impl_int_sol_type {
                 false
             }
 
-            fn sol_type_name() -> RustString {
-                format!("int{}", $bits)
+            fn sol_type_name() -> Cow<'static, str> {
+                concat!("int", $bits).into()
             }
 
             fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
@@ -499,8 +500,8 @@ macro_rules! impl_int_sol_type {
                 false
             }
 
-            fn sol_type_name() -> RustString {
-                format!("int{}", $bits)
+            fn sol_type_name() -> Cow<'static, str> {
+                concat!("int", $bits).into()
             }
 
             fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
@@ -570,8 +571,8 @@ macro_rules! impl_uint_sol_type {
                 false
             }
 
-            fn sol_type_name() -> RustString {
-                format!("uint{}", $bits)
+            fn sol_type_name() -> Cow<'static, str> {
+                concat!("int", $bits).into()
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -621,8 +622,8 @@ macro_rules! impl_uint_sol_type {
                 false
             }
 
-            fn sol_type_name() -> RustString {
-                format!("uint{}", $bits)
+            fn sol_type_name() -> Cow<'static, str> {
+                concat!("int", $bits).into()
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -693,7 +694,7 @@ impl SolType for Bool {
         false
     }
 
-    fn sol_type_name() -> RustString {
+    fn sol_type_name() -> Cow<'static, str> {
         "bool".into()
     }
 
@@ -748,8 +749,8 @@ where
         true
     }
 
-    fn sol_type_name() -> RustString {
-        format!("{}[]", T::sol_type_name())
+    fn sol_type_name() -> Cow<'static, str> {
+        format!("{}[]", T::sol_type_name()).into()
     }
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -807,8 +808,8 @@ impl SolType for String {
         true
     }
 
-    fn sol_type_name() -> RustString {
-        "string".to_owned()
+    fn sol_type_name() -> Cow<'static, str> {
+        "string".into()
     }
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -858,8 +859,8 @@ macro_rules! impl_fixed_bytes_sol_type {
                 false
             }
 
-            fn sol_type_name() -> RustString {
-                format!("bytes{}", $bytes)
+            fn sol_type_name() -> Cow<'static, str> {
+                concat!("bytes", $bytes).into()
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -921,8 +922,8 @@ where
         T::is_dynamic()
     }
 
-    fn sol_type_name() -> RustString {
-        format!("{}[{}]", T::sol_type_name(), N)
+    fn sol_type_name() -> Cow<'static, str> {
+        format!("{}[{}]", T::sol_type_name(), N).into()
     }
 
     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
@@ -1007,7 +1008,7 @@ macro_rules! tuple_impls {
                 $( <$ty as SolType>::is_dynamic() )||+
             }
 
-            fn sol_type_name() -> RustString {
+            fn sol_type_name() -> Cow<'static, str> {
                 format!(
                     concat!(
                         "tuple(",
@@ -1015,7 +1016,7 @@ macro_rules! tuple_impls {
                         ")",
                     ),
                     $(<$ty as SolType>::sol_type_name(),)+
-                )
+                ).into()
             }
 
             fn type_check(token: &Self::TokenType) -> AbiResult<()> {
