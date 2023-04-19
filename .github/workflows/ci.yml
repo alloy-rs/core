@@ -10,12 +10,13 @@ env:
 
 jobs:
     test:
-        name: test ${{ matrix.os }}
+        name: test ${{ matrix.os }} ${{ matrix.flags }}
         runs-on: ${{ matrix.os }}
         strategy:
             fail-fast: false
             matrix:
                 os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+                flags: ["--no-default-features", "", "--all-features"]
         steps:
             - uses: actions/checkout@v3
               with:
@@ -23,7 +24,7 @@ jobs:
             - uses: dtolnay/rust-toolchain@stable
             - uses: Swatinem/rust-cache@v2
             - name: test
-              run: cargo +stable test --workspace
+              run: cargo +stable test --workspace ${{ matrix.flags }}
 
     clippy:
         name: clippy
