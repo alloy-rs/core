@@ -194,7 +194,7 @@ mod tests {
 
     #[cfg(not(feature = "std"))]
     use crate::no_std_prelude::*;
-    use crate::{sol_type, util::pad_u32, SolType, TokenType};
+    use crate::{sol_type, util::pad_u32, SolType};
 
     #[test]
     fn encode_address() {
@@ -261,7 +261,6 @@ mod tests {
     #[test]
     fn encode_fixed_array_of_dynamic_array_of_addresses() {
         type MyTy = sol_type::FixedArray<sol_type::Array<sol_type::Address>, 2>;
-        dbg!(MyTy::sol_type_name());
         let fixed = [
             vec![B160([0x11u8; 20]), B160([0x22u8; 20])],
             vec![B160([0x33u8; 20]), B160([0x44u8; 20])],
@@ -826,12 +825,6 @@ mod tests {
     fn encode_dynamic_tuple() {
         type MyTy = (sol_type::String, sol_type::String);
         let data = ("gavofyork".to_string(), "gavofyork".to_string());
-
-        let tok1 = <(MyTy,)>::tokenize((data.clone(),));
-        let tok2 = <MyTy>::tokenize(data.clone());
-
-        dbg!(tok1.head_words());
-        dbg!(tok2.head_words());
 
         let expected = hex!(
             "

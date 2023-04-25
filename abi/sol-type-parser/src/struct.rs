@@ -7,7 +7,7 @@ use syn::{
     parse::Parse,
     punctuated::Punctuated,
     token::{Brace, Struct},
-    Ident, Index, Token,
+    Attribute, Ident, Index, Token,
 };
 
 #[derive(Debug, Clone)]
@@ -42,6 +42,7 @@ impl ToTokens for SolStructField {
 }
 
 pub struct SolStructDef {
+    attrs: Vec<Attribute>,
     _struct: Struct,
     name: Ident,
     _brace: Brace,
@@ -52,6 +53,7 @@ impl Parse for SolStructDef {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let content;
         Ok(Self {
+            attrs: input.call(Attribute::parse_outer)?,
             _struct: input.parse()?,
             name: input.parse()?,
             _brace: braced!(content in input),
@@ -76,12 +78,12 @@ impl SolStructDef {
             .unzip();
 
         quote! {
-            type UnderlyingSolTuple = (#(#field_ty),*);
-            type UnderlyingRustTuple = (#(<#field_ty2 as ::ethers_abi_enc::SolType>::RustType),*);
+            type UnderlyingSolTuple = (#(#field_ty,)*);
+            type UnderlyingRustTuple = (#(<#field_ty2 as ::ethers_abi_enc::SolType>::RustType,)*);
 
             impl From<#name> for UnderlyingRustTuple {
                 fn from(value: #name) -> UnderlyingRustTuple {
-                    (#(value.#field_names),*)
+                    (#(value.#field_names,)*)
                 }
             }
 
@@ -147,9 +149,12 @@ impl SolStructDef {
                 )*].concat()
             }
         };
+        let attrs = self.attrs.iter();
 
         quote! {
             #[doc = #doc]
+            #(#attrs)*
+            #[allow(non_snake_case)]
             #[derive(Debug, Clone, PartialEq)]
             pub struct #name {
                 #(pub #fields),*

@@ -1,6 +1,9 @@
 use proc_macro::TokenStream as TS;
 use proc_macro2::TokenStream;
-use syn::{parse::Parse, parse_macro_input, token::Struct, Token};
+use syn::{
+    parse::{discouraged::Speculative, Parse},
+    parse_macro_input,
+};
 
 use quote::{quote, ToTokens};
 
@@ -21,13 +24,19 @@ enum SolInput {
 
 impl Parse for SolInput {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if input.peek(Struct) {
-            Ok(SolInput::StructDef(input.parse()?))
-        } else if input.peek(Token![type]) {
-            Ok(SolInput::ValueTypeDef(input.parse()?))
-        } else {
-            Ok(SolInput::Type(input.parse()?))
+        let fork = input.fork();
+        if let Ok(sol_ty) = fork.parse::<SolType>() {
+            input.advance_to(&fork);
+            return Ok(SolInput::Type(sol_ty));
         }
+
+        let fork = input.fork();
+        if let Ok(udt) = fork.parse::<Udt>() {
+            input.advance_to(&fork);
+            return Ok(SolInput::ValueTypeDef(udt));
+        }
+
+        Ok(SolInput::StructDef(input.parse()?))
     }
 }
 

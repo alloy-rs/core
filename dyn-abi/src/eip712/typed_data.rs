@@ -1,4 +1,4 @@
-use ethers_abi_enc::{keccak256, Eip712Domain};
+use ethers_abi_enc::{keccak256, Eip712Domain, SolStruct};
 use ethers_primitives::B256;
 use serde::{Deserialize, Serialize};
 
@@ -151,6 +151,17 @@ impl<'de> Deserialize<'de> for TypedData {
 }
 
 impl TypedData {
+    /// Instantiate [`TypedData`] from a [`SolStruct`] that implements
+    /// [`serde::Serialize`].
+    pub fn from_struct<S: SolStruct + Serialize>(s: &S, domain: Option<Eip712Domain>) -> Self {
+        Self {
+            domain: domain.unwrap_or_default(),
+            resolver: Resolver::from_struct::<S>(),
+            primary_type: S::NAME.to_string(),
+            message: serde_json::to_value(s).unwrap(),
+        }
+    }
+
     /// Returns the domain for this typed data
     pub const fn domain(&self) -> &Eip712Domain {
         &self.domain
@@ -231,6 +242,8 @@ impl TypedData {
 // Adapted tests from <https://github.com/MetaMask/eth-sig-util/blob/main/src/sign-typed-data.test.ts>
 #[cfg(test)]
 mod tests {
+    use ethers_abi_enc::sol;
+
     use super::*;
 
     #[test]
@@ -269,12 +282,6 @@ mod tests {
           },
           "message": {}
         });
-
-        dbg!(serde_json::from_str::<serde_json::Value>(r#"{}"#).unwrap());
-
-        let s = serde_json::to_string_pretty(&json).unwrap();
-        println!("{}", &s);
-        println!("{:?}", serde_json::from_str::<TypedData>(&s));
 
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
 
@@ -485,11 +492,7 @@ mod tests {
         assert_eq!(
             typed_data.eip712_signing_hash(),
             Err(DynAbiError::CircularDependency("Mail".into()))
-        )
-        // assert_eq!(
-        //     "0808c17abba0aef844b0470b77df9c994bc0fa3e244dc718afd66a3901c4bd7b",
-        //     hex::encode(&hash[..])
-        // );
+        );
     }
 
     #[test]
@@ -611,6 +614,75 @@ mod tests {
         let hash = typed_data.eip712_signing_hash().unwrap();
         assert_eq!(
             "0b8aa9f3712df0034bc29fe5b24dd88cfdba02c7f499856ab24632e2969709a8",
+            hex::encode(&hash[..])
+        );
+    }
+
+    sol!(
+      /// Fancy struct
+      #[derive(serde::Serialize, serde::Deserialize)]
+      struct MyStruct {
+        string name;
+        string otherThing;
+      }
+    );
+
+    #[test]
+    fn from_sol_struct() {
+        let s = MyStruct {
+            name: "hello".to_string(),
+            otherThing: "world".to_string(),
+        };
+
+        let typed_data = TypedData::from_struct(&s, None);
+        assert_eq!(
+            typed_data.encode_type().unwrap(),
+            "MyStruct(string name,string otherThing)"
+        );
+    }
+
+    sol! {
+      #[derive(serde::Serialize, serde::Deserialize)]
+      struct Person {
+        string name;
+        address wallet;
+      }
+    }
+
+    sol! {
+      #[derive(serde::Serialize, serde::Deserialize)]
+      struct Mail {
+        Person from;
+        Person to;
+        string contents;
+      }
+    }
+
+    #[test]
+    fn e2e_from_sol_struct() {
+        let sender = Person {
+            name: "Cow".to_string(),
+            wallet: "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
+                .parse()
+                .unwrap(),
+        };
+        let recipient = Person {
+            name: "Bob".to_string(),
+            wallet: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
+                .parse()
+                .unwrap(),
+        };
+        let mail = Mail {
+            from: sender,
+            to: recipient,
+            contents: "Hello, Bob!".to_string(),
+        };
+
+        let typed_data = TypedData::from_struct(&mail, None);
+
+        let hash = typed_data.eip712_signing_hash().unwrap();
+        assert_eq!(
+            "25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775",
             hex::encode(&hash[..])
         );
     }

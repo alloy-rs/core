@@ -8,6 +8,7 @@ mod kw {
 }
 
 pub struct Udt {
+    attrs: Vec<syn::Attribute>,
     _type: syn::Token![type],
     name: syn::Ident,
     _is: kw::is,
@@ -18,6 +19,7 @@ pub struct Udt {
 impl Parse for Udt {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Udt {
+            attrs: input.call(syn::Attribute::parse_outer)?,
             _type: input.parse()?,
             name: input.parse()?,
             _is: input.parse()?,
@@ -32,6 +34,7 @@ impl ToTokens for Udt {
         let name = &self.name;
         let mod_name = syn::Ident::new(&format!("__{}", name), name.span());
         let ty = &self.ty;
+        let attrs = self.attrs.iter();
         tokens.extend(quote! {
             pub use #mod_name::#name;
             #[allow(non_snake_case)]
@@ -39,6 +42,7 @@ impl ToTokens for Udt {
                 use ::ethers_abi_enc::define_udt;
                 define_udt! {
                     /// A solidity user-defined type
+                    #(#attrs)*
                     #name,
                     underlying: #ty,
                 }
