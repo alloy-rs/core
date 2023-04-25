@@ -156,7 +156,7 @@ impl TypedData {
     pub fn from_struct<S: SolStruct + Serialize>(s: &S, domain: Option<Eip712Domain>) -> Self {
         Self {
             domain: domain.unwrap_or_default(),
-            resolver: Resolver::from(s),
+            resolver: Resolver::from_struct::<S>(),
             primary_type: S::NAME.to_string(),
             message: serde_json::to_value(s).unwrap(),
         }
@@ -282,12 +282,6 @@ mod tests {
           },
           "message": {}
         });
-
-        dbg!(serde_json::from_str::<serde_json::Value>(r#"{}"#).unwrap());
-
-        let s = serde_json::to_string_pretty(&json).unwrap();
-        println!("{}", &s);
-        println!("{:?}", serde_json::from_str::<TypedData>(&s));
 
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
 

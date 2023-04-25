@@ -231,18 +231,17 @@ impl From<&Resolver> for Eip712Types {
     }
 }
 
-impl<T> From<&T> for Resolver
-where
-    T: SolStruct,
-{
-    fn from(_value: &T) -> Self {
+impl Resolver {
+    /// Instantiate a new resolver from a `SolStruct` type.
+    pub fn from_struct<S>() -> Self
+    where
+        S: SolStruct,
+    {
         let mut resolver = Resolver::default();
-        resolver.ingest_sol_struct::<T>();
+        resolver.ingest_sol_struct::<S>();
         resolver
     }
-}
 
-impl Resolver {
     /// Detect cycles in the subgraph rooted at `ty`
     fn detect_cycle<'a>(&'a self, type_name: &'_ str, context: &mut DfsContext<'a>) -> bool {
         let ty = match self.nodes.get(type_name) {

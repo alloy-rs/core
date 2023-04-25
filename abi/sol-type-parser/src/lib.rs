@@ -30,10 +30,12 @@ impl Parse for SolInput {
             return Ok(SolInput::Type(sol_ty));
         }
 
+        let fork = input.fork();
         if let Ok(udt) = fork.parse::<Udt>() {
             input.advance_to(&fork);
             return Ok(SolInput::ValueTypeDef(udt));
         }
+
         Ok(SolInput::StructDef(input.parse()?))
     }
 }

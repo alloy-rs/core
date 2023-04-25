@@ -147,7 +147,7 @@ pub use eip712::{parser as eip712_parser, Resolver, TypedData};
 
 #[cfg(test)]
 mod test {
-    use crate::{Decoder, DynSolType, DynSolValue, Encoder};
+    use crate::{no_std_prelude::*, Decoder, DynSolType, DynSolValue, Encoder};
 
     #[test]
     fn simple_e2e() {
