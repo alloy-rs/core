@@ -485,11 +485,7 @@ mod tests {
         assert_eq!(
             typed_data.eip712_signing_hash(),
             Err(DynAbiError::CircularDependency("Mail".into()))
-        )
-        // assert_eq!(
-        //     "0808c17abba0aef844b0470b77df9c994bc0fa3e244dc718afd66a3901c4bd7b",
-        //     hex::encode(&hash[..])
-        // );
+        );
     }
 
     #[test]

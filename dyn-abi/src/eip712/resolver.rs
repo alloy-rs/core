@@ -1,11 +1,12 @@
 use core::cmp::Ordering;
 
-use ethers_abi_enc::keccak256;
+use ethers_abi_enc::{keccak256, SolStruct};
 use ethers_primitives::B256;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     eip712::typed_data::Eip712Types,
+    eip712_parser::EncodeType,
     no_std_prelude::*,
     parser::{RootType, TypeSpecifier, TypeStem},
     DynAbiError, DynSolType, DynSolValue,
@@ -20,8 +21,6 @@ pub struct PropertyDef {
     /// Property Name
     name: String,
 }
-
-impl PropertyDef {}
 
 impl<'de> serde::Deserialize<'de> for PropertyDef {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -104,9 +103,12 @@ impl fmt::Display for TypeDef {
 impl TypeDef {
     /// Instantiate a new type definition, checking that the type name is a
     /// valid root type
-    pub fn new(type_name: String, props: Vec<PropertyDef>) -> Result<Self, DynAbiError> {
-        let _rt: RootType<'_> = type_name.as_str().try_into()?;
-        Ok(Self { type_name, props })
+    pub fn new(type_name: impl AsRef<str>, props: Vec<PropertyDef>) -> Result<Self, DynAbiError> {
+        let _rt: RootType<'_> = type_name.as_ref().try_into()?;
+        Ok(Self {
+            type_name: type_name.as_ref().to_owned(),
+            props,
+        })
     }
 
     /// Instantiate a new type definition, without checking that the type name
@@ -229,6 +231,17 @@ impl From<&Resolver> for Eip712Types {
     }
 }
 
+impl<T> From<&T> for Resolver
+where
+    T: SolStruct,
+{
+    fn from(_value: &T) -> Self {
+        let mut resolver = Resolver::default();
+        resolver.ingest_sol_struct::<T>();
+        resolver
+    }
+}
+
 impl Resolver {
     /// Detect cycles in the subgraph rooted at `ty`
     fn detect_cycle<'a>(&'a self, type_name: &'_ str, context: &mut DfsContext<'a>) -> bool {
@@ -260,6 +273,20 @@ impl Resolver {
 
         context.stack.remove(type_name);
         false
+    }
+
+    /// Ingest types from an EIP-712 `encodeType`
+    pub fn ingest_string(&mut self, s: impl AsRef<str>) -> Result<(), DynAbiError> {
+        let encode_type: EncodeType<'_> = s.as_ref().try_into()?;
+        for type_def in encode_type.types.into_iter().map(|t| t.to_owned()) {
+            self.ingest(type_def);
+        }
+        Ok(())
+    }
+
+    /// Ingest a sol struct typedef
+    pub fn ingest_sol_struct<S: SolStruct>(&mut self) {
+        self.ingest_string(S::encode_type()).unwrap();
     }
 
     /// Ingest a type
@@ -460,6 +487,8 @@ impl Resolver {
 
 #[cfg(test)]
 mod test {
+    use ethers_abi_enc::sol;
+
     use super::*;
 
     #[test]
@@ -582,5 +611,34 @@ mod test {
         assert_eq!(graph.resolve("C").unwrap(), c);
         assert_eq!(graph.resolve("B").unwrap(), b);
         assert_eq!(graph.resolve("A").unwrap(), a);
+    }
+
+    #[test]
+    fn encode_type_round_trip() {
+        const ENCODE_TYPE: &str = "A(C myC,B myB)B(C myC)C(uint256 myUint,uint256 myUint2)";
+        let mut graph = Resolver::default();
+        graph.ingest_string(ENCODE_TYPE).unwrap();
+        assert_eq!(graph.encode_type("A").unwrap(), ENCODE_TYPE);
+
+        const ENCODE_TYPE_2: &str = "Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)";
+        let mut graph = Resolver::default();
+        graph.ingest_string(ENCODE_TYPE_2).unwrap();
+        assert_eq!(graph.encode_type("Transaction").unwrap(), ENCODE_TYPE_2);
+    }
+
+    sol!(
+        struct MyStruct {
+            uint256 a;
+        }
+    );
+
+    #[test]
+    fn it_ingests_sol_structs() {
+        let mut graph = Resolver::default();
+        graph.ingest_sol_struct::<MyStruct>();
+        assert_eq!(
+            graph.encode_type("MyStruct").unwrap(),
+            MyStruct::encode_type()
+        );
     }
 }

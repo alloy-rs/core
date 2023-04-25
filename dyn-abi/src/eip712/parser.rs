@@ -1,4 +1,9 @@
-use crate::{no_std_prelude::*, parser::TypeSpecifier, DynAbiError};
+use crate::{
+    eip712::resolver::{PropertyDef, TypeDef},
+    no_std_prelude::*,
+    parser::TypeSpecifier,
+    DynAbiError,
+};
 
 /// A property is a type and a name. Of the form `type name`. E.g.
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.
@@ -8,6 +13,13 @@ pub struct PropDef<'a> {
     pub ty: TypeSpecifier<'a>,
     /// The prop name
     pub name: &'a str,
+}
+
+impl PropDef<'_> {
+    /// Convert to an owned `PropertyDef`
+    pub fn to_owned(&self) -> PropertyDef {
+        PropertyDef::new(self.ty.span, self.name).unwrap()
+    }
 }
 
 impl<'a> TryFrom<&'a str> for PropDef<'a> {
@@ -36,6 +48,17 @@ pub struct ComponentType<'a> {
     pub type_name: &'a str,
     /// Properties of the component type.
     pub props: Vec<PropDef<'a>>,
+}
+
+impl ComponentType<'_> {
+    /// Convert to an owned TypeDef
+    pub fn to_owned(&self) -> TypeDef {
+        TypeDef::new(
+            self.type_name,
+            self.props.iter().map(|p| p.to_owned()).collect(),
+        )
+        .unwrap()
+    }
 }
 
 // This impl handles
