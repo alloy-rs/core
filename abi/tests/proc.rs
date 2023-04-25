@@ -2,6 +2,12 @@ use ethers_abi_enc::{sol, SolStruct, SolType};
 
 use ethers_primitives::{B160, U256};
 
+sol!(
+    struct HalonGas {
+        uint256 a;
+    }
+);
+
 sol! {
     struct MyStruct {
         uint256 a;

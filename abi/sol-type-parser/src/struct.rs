@@ -76,12 +76,12 @@ impl SolStructDef {
             .unzip();
 
         quote! {
-            type UnderlyingSolTuple = (#(#field_ty),*);
-            type UnderlyingRustTuple = (#(<#field_ty2 as ::ethers_abi_enc::SolType>::RustType),*);
+            type UnderlyingSolTuple = (#(#field_ty,)*);
+            type UnderlyingRustTuple = (#(<#field_ty2 as ::ethers_abi_enc::SolType>::RustType,)*);
 
             impl From<#name> for UnderlyingRustTuple {
                 fn from(value: #name) -> UnderlyingRustTuple {
-                    (#(value.#field_names),*)
+                    (#(value.#field_names,)*)
                 }
             }
 
