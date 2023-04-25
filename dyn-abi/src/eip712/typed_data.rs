@@ -1,4 +1,4 @@
-use ethers_abi_enc::{keccak256, Eip712Domain};
+use ethers_abi_enc::{keccak256, Eip712Domain, SolStruct};
 use ethers_primitives::B256;
 use serde::{Deserialize, Serialize};
 
@@ -151,6 +151,17 @@ impl<'de> Deserialize<'de> for TypedData {
 }
 
 impl TypedData {
+    /// Instantiate [`TypedData`] from a [`SolStruct`] that implements
+    /// [`serde::Serialize`].
+    pub fn from_struct<S: SolStruct + Serialize>(s: &S, domain: Option<Eip712Domain>) -> Self {
+        Self {
+            domain: domain.unwrap_or_default(),
+            resolver: Resolver::from(s),
+            primary_type: S::NAME.to_string(),
+            message: serde_json::to_value(s).unwrap(),
+        }
+    }
+
     /// Returns the domain for this typed data
     pub const fn domain(&self) -> &Eip712Domain {
         &self.domain
@@ -231,6 +242,8 @@ impl TypedData {
 // Adapted tests from <https://github.com/MetaMask/eth-sig-util/blob/main/src/sign-typed-data.test.ts>
 #[cfg(test)]
 mod tests {
+    use ethers_abi_enc::sol;
+
     use super::*;
 
     #[test]
@@ -608,6 +621,29 @@ mod tests {
         assert_eq!(
             "0b8aa9f3712df0034bc29fe5b24dd88cfdba02c7f499856ab24632e2969709a8",
             hex::encode(&hash[..])
+        );
+    }
+
+    sol!(
+      /// Fancy struct
+      #[derive(serde::Serialize, serde::Deserialize)]
+      struct MyStruct {
+        string name;
+        string otherThing;
+      }
+    );
+
+    #[test]
+    fn from_sol_struct() {
+        let s = MyStruct {
+            name: "hello".to_string(),
+            otherThing: "world".to_string(),
+        };
+
+        let typed_data = TypedData::from_struct(&s, None);
+        assert_eq!(
+            typed_data.encode_type().unwrap(),
+            "MyStruct(string name,string otherThing)"
         );
     }
 }
