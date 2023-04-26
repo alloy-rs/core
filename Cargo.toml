@@ -49,11 +49,3 @@ proptest = { version = "1.1", default-features = false }
 proptest-derive = "0.3"
 thiserror = "1.0"
 tiny-keccak = "2.0"
-
-# Copied from ruint cargo.toml:
-#
-# Compilation profile for any non-workspace member.
-# Dependencies are optimized, even in a dev build. This improves dev performance
-# while having neglible impact on incremental build times.
-[profile.dev.package."*"]
-opt-level = 3
