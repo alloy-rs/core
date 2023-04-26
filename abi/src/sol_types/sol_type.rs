@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use ethers_primitives::{B160, I256, U256};
 
 #[cfg(not(feature = "std"))]
-use crate::no_std_prelude::{Borrow, String as RustString, ToOwned, ToString, Vec};
+use crate::no_std_prelude::{Borrow, String as RustString, ToOwned, Vec};
 #[cfg(feature = "std")]
 use std::{borrow::Borrow, string::String as RustString};
 
