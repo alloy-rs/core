@@ -11,6 +11,16 @@ members = [
     "dyn-abi",
 ]
 
+[workspace.package]
+edition = "2021"
+rust-version = "1.65"
+authors = []
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/ethers-rs/core"
+repository = "https://github.com/ethers-rs/core"
+
+[workspace.package.dependencies]
+
 # Copied from ruint cargo.toml:
 #
 # Compilation profile for any non-workspace member.

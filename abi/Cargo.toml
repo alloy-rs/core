@@ -1,18 +1,21 @@
 [package]
 name = "ethers-abi-enc"
 version = "0.1.0"
-edition = "2021"
 description = "Ethereum ABI encoding and decoding, with static typing"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/ethers-rs/core"
 readme = "README.md"
 keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
-categories = ["encoding", "serialization", "cryptocurrency", "ethereum"]
-authors = []
+categories = ["encoding", "cryptography::cryptocurrencies"]
+
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
 ethers-primitives = { version = "0.1.0", path = "../primitives" }
-hex = "0.4.3"
+hex = { version = "0.4.3", default-features = false }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 sol-type-parser = { version = "0.1.0", path = "sol-type-parser" }
 
