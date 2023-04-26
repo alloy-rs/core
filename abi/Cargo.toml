@@ -29,4 +29,5 @@ hex-literal.workspace = true
 [features]
 default = ["std"]
 std = ["ethers-primitives/std", "hex/std", "serde?/std", "thiserror"]
-eip712-serde = ["dep:serde"]
+# TODO: Can we remove std from here?
+eip712-serde = ["std", "dep:serde"]

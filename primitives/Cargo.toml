@@ -36,12 +36,6 @@ arbitrary = { workspace = true, features = ["derive"], optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-arbitrary = { workspace = true, features = ["derive"] }
-proptest.workspace = true
-proptest-derive.workspace = true
-ruint = { workspace = true, features = ["primitive-types", "proptest", "arbitrary"] }
-
 [features]
 default = ["std", "rlp", "serde"]
 std = ["serde/std", "ethers-rlp?/std", "bytes?/std", "proptest?/std", "dep:thiserror"]

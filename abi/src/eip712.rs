@@ -1,8 +1,10 @@
+use crate::{
+    no_std_prelude::{Cow, String, Vec},
+    sol_type,
+    util::keccak256,
+    SolType,
+};
 use ethers_primitives::{B160, B256, U256};
-
-use crate::{sol_type, util::keccak256, SolType};
-
-use crate::no_std_prelude::{Cow, String, Vec};
 
 /// Eip712 Domain attributes used in determining the domain separator;
 /// Unused fields are left out of the struct type.

@@ -1,9 +1,9 @@
 use derive_more::{AsRef, Deref};
 use fixed_hash::{construct_fixed_hash, impl_fixed_hash_conversions};
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(feature = "arbitrary")]
 use arbitrary::Arbitrary;
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(feature = "arbitrary")]
 use proptest_derive::Arbitrary as PropTestArbitrary;
 
 #[cfg(feature = "std")]
@@ -14,22 +14,22 @@ use alloc::borrow::Borrow;
 
 construct_fixed_hash! {
     /// 256 bits fixed hash
-    #[cfg_attr(any(test, feature = "arbitrary"), derive(Arbitrary, PropTestArbitrary))]
-    #[derive(AsRef,Deref)]
+    #[cfg_attr(feature = "arbitrary", derive(Arbitrary, PropTestArbitrary))]
+    #[derive(AsRef, Deref)]
     pub struct B256(32);
 }
 
 construct_fixed_hash! {
     /// 160 bits fixed hash
-    #[cfg_attr(any(test, feature = "arbitrary"), derive(Arbitrary, PropTestArbitrary))]
-    #[derive(AsRef,Deref)]
+    #[cfg_attr(feature = "arbitrary", derive(Arbitrary, PropTestArbitrary))]
+    #[derive(AsRef, Deref)]
     pub struct B160(20);
 }
 
 construct_fixed_hash! {
     /// 512 bits fixed hash
-    #[cfg_attr(any(test, feature = "arbitrary"), derive(Arbitrary, PropTestArbitrary))]
-    #[derive(AsRef,Deref)]
+    #[cfg_attr(feature = "arbitrary", derive(Arbitrary, PropTestArbitrary))]
+    #[derive(AsRef, Deref)]
     pub struct B512(64);
 }
 
