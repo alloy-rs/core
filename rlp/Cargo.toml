@@ -1,29 +1,28 @@
 [package]
 name = "ethers-rlp"
 version = "0.1.0"
-edition = "2021"
 description = "A fast Rust implementation of the Ethereum RLP encoding"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/ethers-rs/core"
 readme = "README.md"
 keywords = ["ethereum", "rlp", "serialization"]
-categories = ["encoding", "serialization", "cryptocurrency", "ethereum"]
-authors = []
+categories = ["encoding", "cryptography::cryptocurrencies"]
 
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-arrayvec = "0.7.2"
-auto_impl = "1.0.1"
-bytes = "1.4.0"
-ethers-rlp-derive = { version = "0.1", path = "./rlp-derive", optional = true }
+arrayvec.workspace = true
+bytes.workspace = true
+ethers-rlp-derive = { workspace = true, optional = true }
 
 [dev-dependencies]
-hex-literal = "0.3.4"
+hex-literal.workspace = true
 
 [features]
 default = ["std", "derive"]
 derive = ["dep:ethers-rlp-derive"]
+std = ["alloc", "arrayvec/std", "bytes/std"]
 alloc = []
-std = ["alloc"]

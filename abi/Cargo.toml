@@ -1,28 +1,33 @@
 [package]
 name = "ethers-abi-enc"
 version = "0.1.0"
-edition = "2021"
 description = "Ethereum ABI encoding and decoding, with static typing"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/ethers-rs/core"
 readme = "README.md"
 keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
-categories = ["encoding", "serialization", "cryptocurrency", "ethereum"]
-authors = []
+categories = ["encoding", "cryptography::cryptocurrencies"]
+
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-ethers-primitives = { version = "0.1.0", path = "../primitives" }
-hex = "0.4.3"
-tiny-keccak = { version = "2.0.2", features = ["keccak"] }
-sol-type-parser = { version = "0.1.0", path = "sol-type-parser" }
+ethers-primitives.workspace = true
+sol-type-parser.workspace = true
 
-thiserror = { version = "1.0.39", optional = true }
-serde = { version = "1.0.159", optional = true }
+hex.workspace = true
+tiny-keccak = { workspace = true, features = ["keccak"] }
+
+thiserror = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
 
 [dev-dependencies]
-hex-literal = "0.3.4"
+hex-literal.workspace = true
 
 [features]
 default = ["std"]
-std = ["hex/std", "thiserror"]
-eip712-serde = ["dep:serde"]
+std = ["ethers-primitives/std", "hex/std", "serde?/std", "thiserror"]
+# TODO: Can we remove std from here?
+eip712-serde = ["std", "dep:serde"]

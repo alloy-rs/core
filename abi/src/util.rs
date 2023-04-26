@@ -86,7 +86,7 @@ mod serde_helper {
     use serde::{Deserialize, Deserializer};
 
     /// Helper type to parse numeric strings, `u64` and `U256`
-    #[derive(serde::Deserialize, Debug, Clone)]
+    #[derive(Deserialize, Debug, Clone)]
     #[serde(untagged)]
     pub(crate) enum StringifiedNumeric {
         String(String),

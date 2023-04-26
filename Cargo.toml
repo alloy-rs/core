@@ -1,20 +1,51 @@
 [workspace]
 resolver = "2"
 members = [
-    "uint",
-    "uint/ruint-macro",
-    "primitives",
-    "rlp",
-    "rlp/rlp-derive",
     "abi",
     "abi/sol-type-parser",
     "dyn-abi",
+    "primitives",
+    "rlp",
+    "rlp/rlp-derive",
+    "uint",
+    "uint/ruint-macro",
 ]
 
-# Copied from ruint cargo.toml:
-#
-# Compilation profile for any non-workspace member.
-# Dependencies are optimized, even in a dev build. This improves dev performance
-# while having neglible impact on incremental build times.
-[profile.dev.package."*"]
-opt-level = 3
+[workspace.package]
+edition = "2021"
+rust-version = "1.65"
+authors = []
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/ethers-rs/core"
+repository = "https://github.com/ethers-rs/core"
+
+[workspace.dependencies]
+# workspace crates
+ethers-abi-enc = { version = "0.1.0", path = "abi", default-features = false }
+sol-type-parser = { version = "0.1.0", path = "abi/sol-type-parser", default-features = false }
+ethers-dyn-abi = { version = "0.1.0", path = "dyn-abi", default-features = false }
+ethers-primitives = { version = "0.1.0", path = "primitives", default-features = false }
+ethers-rlp = { version = "0.1.0", path = "rlp", default-features = false }
+ethers-rlp-derive = { version = "0.1.0", path = "rlp/rlp-derive", default-features = false }
+ruint = { version = "1.0.2", path = "uint", default-features = false }
+ruint-macro = { version = "1.7.0", path = "uint/ruint-macro", default-features = false }
+
+# serde
+serde = { version = "1.0", default-features = false }
+serde_json = { version = "1.0", default-features = false }
+
+# macros
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = "2.0"
+
+# misc
+arbitrary = { version = "1.2", default-features = false }
+arrayvec = { version = "0.7.2", default-features = false }
+bytes = { version = "1.0", default-features = false }
+hex = { version = "0.4", default-features = false }
+hex-literal = "0.4"
+proptest = { version = "1.1", default-features = false }
+proptest-derive = "0.3"
+thiserror = "1.0"
+tiny-keccak = "2.0"

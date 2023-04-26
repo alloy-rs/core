@@ -6,7 +6,6 @@ use alloc::{format, string::String};
 
 use super::{errors, utils::*, Sign};
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 /// Signed integer wrapping a `ruint::Uint`.
 ///
 /// This signed integer implementation is fully abstract across the number of
@@ -75,6 +74,7 @@ use super::{errors, utils::*, Sign};
 ///
 /// To prevent this, we strongly recommend always prefixing hex strings with
 /// `0x` AFTER the sign (if any).
+#[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct Signed<const BITS: usize, const LIMBS: usize>(pub(crate) Uint<BITS, LIMBS>);
 
 // formatting
@@ -504,6 +504,7 @@ impl<const BITS: usize, const LIMBS: usize> serde::Serialize for Signed<BITS, LI
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de, const BITS: usize, const LIMBS: usize> serde::Deserialize<'de> for Signed<BITS, LIMBS> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -514,20 +515,18 @@ impl<'de, const BITS: usize, const LIMBS: usize> serde::Deserialize<'de> for Sig
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
-    use ruint::{
-        aliases::{U0, U1, U128, U160, U192, U256},
-        BaseConvertError, ParseError,
-    };
-    // use serde_json::json;
-    use std::ops::Neg;
-
     use super::*;
     use crate::{
         aliases::{I0, I1, I128, I160, I192, I256},
         BigIntConversionError, ParseSignedError,
     };
+    use ruint::{
+        aliases::{U0, U1, U128, U160, U192, U256},
+        BaseConvertError, ParseError,
+    };
+    use std::ops::Neg;
 
     // type U2 = Uint<2, 1>;
     type I96 = Signed<96, 2>;

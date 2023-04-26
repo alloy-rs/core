@@ -1,22 +1,26 @@
 [package]
 name = "ethers-dyn-abi"
 version = "0.1.0"
-edition = "2021"
 description = "Ethereum ABI encoding and decoding, with runtime typing"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/ethers-rs/core"
 readme = "README.md"
 keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
-categories = ["encoding", "serialization", "cryptocurrency", "ethereum"]
-authors = []
+categories = ["encoding", "cryptography::cryptocurrencies"]
+
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-ethers-abi-enc = { version = "0.1.0", path = "../abi", features = ["eip712-serde"] }
-ethers-primitives = { version = "0.1.0", path = "../primitives" }
-hex = "0.4.3"
-serde = "1.0.160"
-serde_json = "1.0.96"
+ethers-abi-enc = { workspace = true, features = ["eip712-serde"] }
+ethers-primitives.workspace = true
+
+hex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [features]
 default = ["std"]
-std = ["ethers-abi-enc/std", "ethers-primitives/std"]
+std = ["ethers-abi-enc/std", "ethers-primitives/std", "hex/std", "serde/std", "serde_json/std"]

@@ -1,53 +1,50 @@
 [package]
 name = "ethers-primitives"
 version = "0.1.0"
-edition = "2021"
 description = "Fundamental ethereum types shared by revm, reth and ethers"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/ethers-rs/core"
 readme = "README.md"
 keywords = ["ethereum", "ethers", "revm", "reth"]
-categories = ["ethereum", "cryptocurrency", "blockchain", "types"]
-authors = []
+categories = ["cryptography::cryptocurrencies"]
+
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
 # eth
-ruint = { path = "../uint", version = "1.7", features = ["rlp", "serde"] }
+ruint = { workspace = true, features = ["rlp", "serde"] }
 
 # bits B256 B160 crate
-fixed-hash = { version = "0.8", default-features = false, features = [
-    "rustc-hex",
-] }
+fixed-hash = { version = "0.8", default-features = false, features = ["rustc-hex"] }
 
 # utility
 derive_more = "0.99"
 
 # optional
-serde = { version = "1.0", features = ["derive"], optional = true }
-thiserror = { version = "1.0.40", optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+thiserror = { workspace = true, optional = true }
 
 # rlp support
-ethers-rlp = { version = "0.1.0", path = "../rlp", optional = true }
-bytes = { version = "1", default-features = false, optional = true }
+ethers-rlp = { workspace = true, optional = true }
+bytes = { workspace = true, optional = true }
 
 # prop tests
-arbitrary = { version = "1.2", features = ["derive"], optional = true }
-proptest = { version = "1.1", optional = true }
-proptest-derive = { version = "0.3", optional = true }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-arbitrary = { version = "1.2", features = ["derive"] }
-proptest = { version = "1.1" }
-proptest-derive = "0.3"
-ruint = { path = "../uint", version = "1.7.0", features = [
-    "primitive-types",
-    "proptest",
-    "arbitrary",
-] }
+arbitrary = { workspace = true, features = ["derive"], optional = true }
+proptest = { workspace = true, optional = true }
+proptest-derive = { workspace = true, optional = true }
 
 [features]
 default = ["std", "rlp", "serde"]
-std = ["dep:thiserror"]
+std = ["serde/std", "ethers-rlp?/std", "bytes?/std", "proptest?/std", "dep:thiserror"]
 rlp = ["dep:ethers-rlp", "dep:bytes"]
 serde = ["dep:serde", "ruint/serde"]
-arbitrary = ["ruint/arbitrary", "ruint/proptest", "dep:arbitrary", "dep:proptest", "dep:proptest-derive"]
+arbitrary = [
+    "ruint/arbitrary",
+    "ruint/proptest",
+    "dep:arbitrary",
+    "dep:proptest",
+    "dep:proptest-derive",
+]

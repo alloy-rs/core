@@ -1,19 +1,22 @@
 [package]
 name = "ethers-rlp-derive"
 version = "0.1.0"
-edition = "2021"
 description = "Procedural macros for ethers-rlp"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/ethers-rs/core"
 readme = "README.md"
-keywords = ["ethers", "rlp", "derive", "ethereum"]
-categories = ["encoding", "serialization", "cryptocurrency", "ethereum"]
-authors = []
+keywords = ["ethereum", "rlp", "serialization"]
+categories = ["encoding", "cryptography::cryptocurrencies"]
+
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [lib]
 proc-macro = true
 
 [dependencies]
-syn = "2"
-quote = "1"
-proc-macro2 = "1"
+proc-macro2.workspace = true
+quote.workspace = true
+syn.workspace = true

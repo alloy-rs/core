@@ -1,6 +1,5 @@
 use crate::types::*;
 use arrayvec::ArrayVec;
-use auto_impl::auto_impl;
 use bytes::{BufMut, Bytes, BytesMut};
 use core::borrow::Borrow;
 
@@ -37,20 +36,19 @@ pub unsafe trait MaxEncodedLenAssoc: Encodable {
 /// Invalid value can cause the encoder to crash.
 #[macro_export]
 macro_rules! impl_max_encoded_len {
-    ($t:ty, $len:block) => {
-        unsafe impl MaxEncodedLen<{ $len }> for $t {}
-        unsafe impl MaxEncodedLenAssoc for $t {
+    ($t:ty, $len:expr) => {
+        unsafe impl $crate::MaxEncodedLen<$len> for $t {}
+        unsafe impl $crate::MaxEncodedLenAssoc for $t {
             const LEN: usize = $len;
         }
     };
 }
 
 /// A type that can be encoded via RLP
-#[auto_impl(&)]
-#[cfg_attr(feature = "alloc", auto_impl(Box, Arc))]
 pub trait Encodable {
     /// Encode the type into the `out` buffer
     fn encode(&self, out: &mut dyn BufMut);
+
     /// Return the length of the type in bytes
     ///
     /// The default implementation computes this by encoding the type. If
@@ -62,7 +60,71 @@ pub trait Encodable {
     }
 }
 
-impl<'a> Encodable for &'a [u8] {
+impl<'a, T: ?Sized + Encodable> Encodable for &'a T {
+    fn encode(&self, out: &mut dyn BufMut) {
+        (**self).encode(out)
+    }
+
+    fn length(&self) -> usize {
+        (**self).length()
+    }
+}
+
+impl<'a, T: ?Sized + Encodable> Encodable for &'a mut T {
+    fn encode(&self, out: &mut dyn BufMut) {
+        (**self).encode(out)
+    }
+
+    fn length(&self) -> usize {
+        (**self).length()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, T: ?Sized + alloc::borrow::ToOwned + Encodable> Encodable for alloc::borrow::Cow<'a, T> {
+    fn encode(&self, out: &mut dyn BufMut) {
+        (**self).encode(out)
+    }
+
+    fn length(&self) -> usize {
+        (**self).length()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T: ?Sized + Encodable> Encodable for alloc::boxed::Box<T> {
+    fn encode(&self, out: &mut dyn BufMut) {
+        (**self).encode(out)
+    }
+
+    fn length(&self) -> usize {
+        (**self).length()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T: ?Sized + Encodable> Encodable for alloc::rc::Rc<T> {
+    fn encode(&self, out: &mut dyn BufMut) {
+        (**self).encode(out)
+    }
+
+    fn length(&self) -> usize {
+        (**self).length()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<T: ?Sized + Encodable> Encodable for alloc::sync::Arc<T> {
+    fn encode(&self, out: &mut dyn BufMut) {
+        (**self).encode(out)
+    }
+
+    fn length(&self) -> usize {
+        (**self).length()
+    }
+}
+
+impl Encodable for [u8] {
     fn length(&self) -> usize {
         let mut len = self.len();
         if self.len() != 1 || self[0] >= EMPTY_STRING_CODE {
@@ -166,15 +228,80 @@ impl_max_encoded_len!(bool, { <u8 as MaxEncodedLenAssoc>::LEN });
 #[cfg(feature = "std")]
 mod std_support {
     use super::*;
-    impl Encodable for std::net::IpAddr {
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
+    impl Encodable for IpAddr {
         fn encode(&self, out: &mut dyn BufMut) {
             match self {
-                std::net::IpAddr::V4(ref o) => (&o.octets()[..]).encode(out),
-                std::net::IpAddr::V6(ref o) => (&o.octets()[..]).encode(out),
+                IpAddr::V4(ip) => ip.encode(out),
+                IpAddr::V6(ip) => ip.encode(out),
+            }
+        }
+
+        fn length(&self) -> usize {
+            match self {
+                IpAddr::V4(ip) => ip.length(),
+                IpAddr::V6(ip) => ip.length(),
             }
         }
     }
+
+    impl Encodable for Ipv4Addr {
+        fn encode(&self, out: &mut dyn BufMut) {
+            Encodable::encode(&self.octets()[..], out)
+        }
+
+        fn length(&self) -> usize {
+            Encodable::length(&self.octets()[..])
+        }
+    }
+
+    impl Encodable for Ipv6Addr {
+        fn encode(&self, out: &mut dyn BufMut) {
+            Encodable::encode(&self.octets()[..], out)
+        }
+
+        fn length(&self) -> usize {
+            Encodable::length(&self.octets()[..])
+        }
+    }
 }
+
+#[cfg(feature = "alloc")]
+mod alloc_support {
+    use super::*;
+
+    impl<T: Encodable> Encodable for alloc::vec::Vec<T> {
+        fn length(&self) -> usize {
+            list_length(self)
+        }
+
+        fn encode(&self, out: &mut dyn BufMut) {
+            encode_list(self, out)
+        }
+    }
+
+    impl Encodable for alloc::string::String {
+        fn encode(&self, out: &mut dyn BufMut) {
+            self.as_bytes().encode(out);
+        }
+
+        fn length(&self) -> usize {
+            self.as_bytes().length()
+        }
+    }
+}
+
+impl Encodable for &str {
+    fn encode(&self, out: &mut dyn BufMut) {
+        self.as_bytes().encode(out);
+    }
+
+    fn length(&self) -> usize {
+        self.as_bytes().length()
+    }
+}
+
 macro_rules! slice_impl {
     ($t:ty) => {
         impl $crate::Encodable for $t {
@@ -187,44 +314,6 @@ macro_rules! slice_impl {
             }
         }
     };
-}
-
-#[cfg(feature = "alloc")]
-mod alloc_support {
-    use super::*;
-
-    // extern crate alloc;
-
-    impl<T> Encodable for ::alloc::vec::Vec<T>
-    where
-        T: Encodable,
-    {
-        fn length(&self) -> usize {
-            list_length(self)
-        }
-
-        fn encode(&self, out: &mut dyn BufMut) {
-            encode_list(self, out)
-        }
-    }
-
-    impl Encodable for ::alloc::string::String {
-        fn encode(&self, out: &mut dyn BufMut) {
-            self.as_bytes().encode(out);
-        }
-        fn length(&self) -> usize {
-            self.as_bytes().length()
-        }
-    }
-}
-
-impl Encodable for &str {
-    fn encode(&self, out: &mut dyn BufMut) {
-        self.as_bytes().encode(out);
-    }
-    fn length(&self) -> usize {
-        self.as_bytes().length()
-    }
 }
 
 slice_impl!(Bytes);

@@ -1,19 +1,22 @@
 [package]
 name = "sol-type-parser"
 version = "0.1.0"
-edition = "2021"
 description = "Solidity type parsing & generation for the ethers-abi-enc"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/ethers-rs/core"
 readme = "README.md"
 keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
-categories = ["encoding", "serialization", "cryptocurrency", "ethereum"]
-authors = []
+categories = ["encoding", "cryptography::cryptocurrencies"]
+
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [lib]
 proc_macro = true
 
 [dependencies]
-proc-macro2 = "1.0.52"
-quote = "1.0.26"
-syn = "2.0.3"
+proc-macro2.workspace = true
+quote.workspace = true
+syn.workspace = true
