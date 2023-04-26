@@ -86,6 +86,7 @@ impl serde::Serialize for B256 {
         serialize::serialize_raw(&mut slice, &self.0, serializer)
     }
 }
+
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for B256 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -97,6 +98,7 @@ impl<'de> serde::Deserialize<'de> for B256 {
         Ok(B256(bytes))
     }
 }
+
 #[cfg(feature = "serde")]
 impl serde::Serialize for B160 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -119,6 +121,7 @@ impl<'de> serde::Deserialize<'de> for B160 {
         Ok(B160(bytes))
     }
 }
+
 #[cfg(feature = "serde")]
 impl serde::Serialize for B512 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -142,7 +145,7 @@ impl<'de> serde::Deserialize<'de> for B512 {
     }
 }
 
-// code optained from: https://docs.rs/impl-serde/0.4.0/impl_serde/
+// code stolen from: https://docs.rs/impl-serde/0.4.0/impl_serde/
 #[cfg(feature = "serde")]
 mod serialize {
     extern crate alloc;
@@ -337,7 +340,7 @@ mod serialize {
 #[cfg(feature = "rlp")]
 mod rlp {
     use super::{B160, B256, B512};
-    use ethers_rlp::{MaxEncodedLen, MaxEncodedLenAssoc};
+
     macro_rules! fixed_hash_impl {
         ($t:ty) => {
             impl ethers_rlp::Decodable for $t {
@@ -364,13 +367,11 @@ mod rlp {
     fixed_hash_impl!(B512);
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "arbitrary"))]
 mod tests {
-    #[cfg(feature = "arbitrary")]
     use super::*;
 
     #[test]
-    #[cfg(feature = "arbitrary")]
     fn arbitrary() {
         proptest::proptest!(|(_v1: B160, _v2: B256)| {});
     }

@@ -14,16 +14,15 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-arrayvec = "0.7.2"
-auto_impl = "1.0.1"
-bytes = "1.4.0"
-ethers-rlp-derive = { version = "0.1", path = "./rlp-derive", optional = true }
+arrayvec.workspace = true
+bytes.workspace = true
+ethers-rlp-derive = { workspace = true, optional = true }
 
 [dev-dependencies]
-hex-literal = "0.3.4"
+hex-literal.workspace = true
 
 [features]
 default = ["std", "derive"]
 derive = ["dep:ethers-rlp-derive"]
+std = ["alloc", "arrayvec/std", "bytes/std"]
 alloc = []
-std = ["alloc"]

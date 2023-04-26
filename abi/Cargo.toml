@@ -14,18 +14,19 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-ethers-primitives = { version = "0.1.0", path = "../primitives" }
-hex = { version = "0.4.3", default-features = false }
-tiny-keccak = { version = "2.0.2", features = ["keccak"] }
-sol-type-parser = { version = "0.1.0", path = "sol-type-parser" }
+ethers-primitives.workspace = true
+sol-type-parser.workspace = true
 
-thiserror = { version = "1.0.39", optional = true }
-serde = { version = "1.0.159", optional = true }
+hex.workspace = true
+tiny-keccak = { workspace = true, features = ["keccak"] }
+
+thiserror = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
 
 [dev-dependencies]
-hex-literal = "0.3.4"
+hex-literal.workspace = true
 
 [features]
 default = ["std"]
-std = ["hex/std", "thiserror"]
+std = ["ethers-primitives/std", "hex/std", "serde?/std", "thiserror"]
 eip712-serde = ["dep:serde"]

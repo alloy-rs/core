@@ -14,12 +14,13 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-ethers-abi-enc = { version = "0.1.0", path = "../abi", features = ["eip712-serde"] }
-ethers-primitives = { version = "0.1.0", path = "../primitives" }
-hex = { version = "0.4.3", default-features = false }
-serde = { version = "1.0.160", default-features = false }
-serde_json = { version = "1.0.96", default-features = false }
+ethers-abi-enc = { workspace = true, features = ["eip712-serde"] }
+ethers-primitives.workspace = true
+
+hex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [features]
 default = ["std"]
-std = ["ethers-abi-enc/std", "ethers-primitives/std"]
+std = ["ethers-abi-enc/std", "ethers-primitives/std", "hex/std", "serde/std", "serde_json/std"]
