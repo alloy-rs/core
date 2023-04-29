@@ -18,7 +18,7 @@
 
 use core::fmt;
 
-use ethers_primitives::{B160, U256};
+use ethers_primitives::{Address, U256};
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::*;
@@ -91,15 +91,15 @@ impl From<U256> for WordToken {
     }
 }
 
-impl From<B160> for WordToken {
-    fn from(value: B160) -> Self {
+impl From<Address> for WordToken {
+    fn from(value: Address) -> Self {
         Self(value.into())
     }
 }
 
 impl From<[u8; 20]> for WordToken {
     fn from(value: [u8; 20]) -> Self {
-        Self(B160::from(value).into())
+        Self(Address::from(value).into())
     }
 }
 

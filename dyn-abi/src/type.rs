@@ -397,7 +397,7 @@ impl DynSolType {
 mod test {
     use super::*;
     use crate::*;
-    use ethers_primitives::B160;
+    use ethers_primitives::Address;
     use serde_json::json;
 
     #[test]
@@ -411,15 +411,15 @@ mod test {
 
         let sol_type = DynSolType::Address;
         let token = sol_type
-            .tokenize(DynSolValue::Address(B160::repeat_byte(0x01)))
+            .tokenize(DynSolValue::Address(Address::repeat_byte(0x01)))
             .unwrap();
         assert_eq!(token, DynToken::from(word1));
 
         let sol_type = DynSolType::FixedArray(Box::new(DynSolType::Address), 2);
         let token = sol_type
             .tokenize(DynSolValue::FixedArray(vec![
-                B160::repeat_byte(0x01).into(),
-                B160::repeat_byte(0x02).into(),
+                Address::repeat_byte(0x01).into(),
+                Address::repeat_byte(0x02).into(),
             ]))
             .unwrap();
         assert_eq!(

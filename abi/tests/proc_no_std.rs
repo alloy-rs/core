@@ -2,7 +2,7 @@
 
 use ethers_abi_enc::{no_std_prelude::*, sol, SolType};
 
-use ethers_primitives::{B160, U256};
+use ethers_primitives::{Address, U256};
 
 sol! {
     struct MyStruct {
@@ -57,7 +57,7 @@ fn no_std_proc_macro() {
 
     MyStruct::hex_encode(a.clone());
 
-    LateBinding::<MyStruct>::hex_encode((vec![a.clone(), a.clone()], B160::default()));
+    LateBinding::<MyStruct>::hex_encode((vec![a.clone(), a.clone()], Address::default()));
 
     MyStruct2::hex_encode(MyStruct2 {
         a,

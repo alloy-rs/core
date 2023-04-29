@@ -1,4 +1,4 @@
-use ethers_primitives::{B160, I256, U256};
+use ethers_primitives::{Address, I256, U256};
 
 use crate::{no_std_prelude::*, DynAbiError, DynSolType, DynSolValue, Word};
 
@@ -7,7 +7,7 @@ pub(crate) fn address(value: &serde_json::Value) -> Result<DynSolValue, DynAbiEr
     let address = value
         .as_str()
         .map(|s| {
-            s.parse::<B160>()
+            s.parse::<Address>()
                 .map_err(|_| DynAbiError::type_mismatch(DynSolType::Address, value))
         })
         .ok_or_else(|| DynAbiError::type_mismatch(DynSolType::Address, value))??;

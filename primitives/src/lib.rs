@@ -18,7 +18,7 @@
 extern crate alloc;
 
 mod bits;
-pub use bits::{B160, B256};
+pub use bits::{Address, B160, B256, B512};
 
 mod signed;
 pub use signed::{
@@ -26,8 +26,6 @@ pub use signed::{
     const_eq, BigIntConversionError, ParseSignedError, Sign, Signed,
 };
 
-/// Address type is first 20 bytes of hash of ethereum account
-pub type Address = B160;
 /// Hash, in Ethereum usually kecack256.
 pub type Hash = B256;
 
