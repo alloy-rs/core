@@ -34,7 +34,13 @@ pub(crate) fn to_hex_raw<'a>(
     skip_leading_zero: bool,
     add_prefix: bool,
 ) -> &'a str {
-    assert!(v.len() > 1 + bytes.len() * 2);
+    let necessary_len = if add_prefix {
+        bytes.len() * 2 + 2
+    } else {
+        bytes.len() * 2
+    };
+
+    assert!(v.len() >= necessary_len);
 
     let mut idx = 0;
     if add_prefix {
