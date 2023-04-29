@@ -30,4 +30,9 @@ foundry.
 cargo clippy --no-default-features
 cargo clippy
 cargo clippy --target wasm32-unknown-unknown
-cargo clippy --features eip712-serde
+cargo clippy --all-features
+
+# Note on `no_std`
+
+We try to support `no_std` with `alloc`. These crates will work in environments
+without standard, as long as the `alloc` crate exists.

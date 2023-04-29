@@ -17,7 +17,7 @@ repository.workspace = true
 ethers-primitives.workspace = true
 sol-type-parser.workspace = true
 
-hex.workspace = true
+hex = { workspace = true, features = ["alloc"] }
 tiny-keccak = { workspace = true, features = ["keccak"] }
 
 thiserror = { workspace = true, optional = true }
@@ -27,7 +27,7 @@ serde = { workspace = true, optional = true }
 hex-literal.workspace = true
 
 [features]
-default = ["std"]
+default = ["std", "hex/alloc"]
 std = ["ethers-primitives/std", "hex/std", "serde?/std", "thiserror"]
 # TODO: Can we remove std from here?
 eip712-serde = ["std", "dep:serde"]
