@@ -60,16 +60,16 @@ construct_fixed_hash! {
     pub struct Address(20);
 }
 
-// manual impls because `impl_fixed_hash_conversions` macro requires one type to be smalelr
+// manual impls because `impl_fixed_hash_conversions` macro requires one type to be smaller
 impl From<B160> for Address {
     fn from(value: B160) -> Self {
-        value.as_fixed_bytes().into()
+        Self(value.0)
     }
 }
 
 impl From<Address> for B160 {
     fn from(value: Address) -> Self {
-        value.0.into()
+        Self(value.0)
     }
 }
 
@@ -108,7 +108,7 @@ impl Address {
             .zip(hash_hex.into_iter())
             .for_each(|(addr_byte, hash_byte)| {
                 if hash_byte >= 56 {
-                    *addr_byte = addr_byte.to_ascii_uppercase();
+                    addr_byte.make_ascii_uppercase();
                 }
             });
 
