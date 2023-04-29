@@ -90,7 +90,9 @@ impl Address {
     /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
     /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
-    pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
+    pub fn to_checksum_buf<'a>(&'_ self, addr_buf: &'a mut [u8], chain_id: Option<u64>) -> &'a str {
+        assert_eq!(addr_buf.len(), 42, "Address buffer must be 42 bytes long");
+
         let prefixed_addr = match chain_id {
             Some(chain_id) => format!("{chain_id}0x{self:x}"),
             None => format!("{self:x}"),
@@ -100,10 +102,9 @@ impl Address {
         let mut hash_hex = [0u8; 64];
         hex::to_hex_raw(&mut hash_hex, hash.as_bytes(), false, false);
 
-        let mut addr_hex = [0u8; 42];
-        hex::to_hex_raw(&mut addr_hex, self.as_bytes(), false, true);
+        hex::to_hex_raw(addr_buf, self.as_bytes(), false, true);
 
-        addr_hex[2..]
+        addr_buf[2..]
             .iter_mut()
             .zip(hash_hex.into_iter())
             .for_each(|(addr_byte, hash_byte)| {
@@ -112,7 +113,22 @@ impl Address {
                 }
             });
 
-        unsafe { String::from_utf8_unchecked(addr_hex.to_vec()) }
+        // SAFETY: all characters come either from to_hex_raw, which produces
+        // only valid UTF8. therefore valid UTF8
+        unsafe { core::str::from_utf8_unchecked(addr_buf) }
+    }
+
+    /// Encodes an Ethereum address to its [EIP-55] checksum.
+    ///
+    /// You can optionally specify an [EIP-155 chain ID] to encode the address
+    /// using [EIP-1191].
+    ///
+    /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
+    /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
+    /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
+    pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
+        let mut buf = [0u8; 42];
+        self.to_checksum_buf(&mut buf, chain_id).to_owned()
     }
 
     /// Parse an Ethereum address, verifying its [EIP-55] checksum.
