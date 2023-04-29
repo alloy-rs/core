@@ -22,6 +22,7 @@ fixed-hash = { version = "0.8", default-features = false, features = ["rustc-hex
 
 # utility
 derive_more = "0.99"
+tiny-keccak = { workspace = true, features = ["keccak"] }
 
 # optional
 serde = { workspace = true, features = ["derive"], optional = true }

@@ -18,7 +18,6 @@ ethers-primitives.workspace = true
 sol-type-parser.workspace = true
 
 hex = { workspace = true, features = ["alloc"] }
-tiny-keccak = { workspace = true, features = ["keccak"] }
 
 thiserror = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }

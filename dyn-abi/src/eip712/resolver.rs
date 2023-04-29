@@ -1,7 +1,7 @@
 use core::cmp::Ordering;
 
-use ethers_abi_enc::{keccak256, SolStruct};
-use ethers_primitives::B256;
+use ethers_abi_enc::SolStruct;
+use ethers_primitives::{keccak256, B256};
 use serde::{Deserialize, Serialize};
 
 use crate::{

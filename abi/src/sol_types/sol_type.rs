@@ -1,15 +1,13 @@
 use alloc::borrow::Cow;
 use core::marker::PhantomData;
-use ethers_primitives::{Address as RustAddress, I256, U256};
+use ethers_primitives::{keccak256, Address as RustAddress, I256, U256};
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::{Borrow, String as RustString, ToOwned, Vec};
 #[cfg(feature = "std")]
 use std::{borrow::Borrow, string::String as RustString};
 
-use crate::{
-    decode, decode_params, decode_single, keccak256, token::*, util, AbiResult, Error, Word,
-};
+use crate::{decode, decode_params, decode_single, token::*, util, AbiResult, Error, Word};
 
 /// A Solidity Type, for ABI enc/decoding
 ///

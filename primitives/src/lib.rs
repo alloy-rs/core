@@ -18,13 +18,16 @@
 extern crate alloc;
 
 mod bits;
-pub use bits::{Address, B160, B256, B512};
+pub use bits::{Address, AddressError, B160, B256, B512};
 
 mod signed;
 pub use signed::{
     aliases::{self, I160, I256},
     const_eq, BigIntConversionError, ParseSignedError, Sign, Signed,
 };
+
+mod utils;
+pub use utils::{keccak256, Hasher, Keccak};
 
 /// Hash, in Ethereum usually kecack256.
 pub type Hash = B256;

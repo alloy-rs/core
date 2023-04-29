@@ -12,8 +12,6 @@ use std::borrow::Borrow;
 #[cfg(not(feature = "std"))]
 use alloc::borrow::Borrow;
 
-#[cfg(not(feature = "std"))]
-use alloc::borrow::Borrow;
 construct_fixed_hash! {
     /// 256 bits fixed hash
     #[cfg_attr(feature = "arbitrary", derive(Arbitrary, PropTestArbitrary))]
