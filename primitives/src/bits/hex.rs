@@ -35,8 +35,11 @@ pub(crate) fn to_hex_raw<'a>(
     add_prefix: bool,
 ) -> &'a str {
     let necessary_len = 2 * (bytes.len() + add_prefix as usize);
-
-    assert!(v.len() >= necessary_len);
+    debug_assert!(
+        v.len() >= necessary_len,
+        "must supply a buffer of length {} or greater",
+        necessary_len
+    );
 
     let mut idx = 0;
     if add_prefix {

@@ -91,18 +91,15 @@ impl Address {
     /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
     pub fn to_checksum_buf<'a>(&'_ self, addr_buf: &'a mut [u8], chain_id: Option<u64>) -> &'a str {
-        assert_eq!(addr_buf.len(), 42, "Address buffer must be 42 bytes long");
+        hex::to_hex_raw(addr_buf, self.as_bytes(), false, true);
 
         let prefixed_addr = match chain_id {
             Some(chain_id) => format!("{chain_id}0x{self:x}"),
             None => format!("{self:x}"),
         };
-
         let hash = keccak256(prefixed_addr);
         let mut hash_hex = [0u8; 64];
         hex::to_hex_raw(&mut hash_hex, hash.as_bytes(), false, false);
-
-        hex::to_hex_raw(addr_buf, self.as_bytes(), false, true);
 
         addr_buf[2..]
             .iter_mut()
@@ -115,7 +112,7 @@ impl Address {
 
         // SAFETY: all characters come either from to_hex_raw, which produces
         // only valid UTF8. therefore valid UTF8
-        unsafe { core::str::from_utf8_unchecked(addr_buf) }
+        unsafe { core::str::from_utf8_unchecked(&addr_buf[..42]) }
     }
 
     /// Encodes an Ethereum address to its [EIP-55] checksum.
