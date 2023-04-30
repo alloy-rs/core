@@ -87,6 +87,10 @@ impl Address {
     /// You can optionally specify an [EIP-155 chain ID] to encode the address
     /// using [EIP-1191].
     ///
+    /// # Panics
+    ///
+    /// If `addr_buf` is shorter than 42 bytes.
+    ///
     /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
     /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
