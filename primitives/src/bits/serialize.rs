@@ -4,7 +4,7 @@ use alloc::string::String;
 use core::{fmt, result::Result};
 use serde::{de, Deserializer, Serializer};
 
-use super::{Address, B160, B256, B512};
+use super::{Address, B256};
 
 /// Serializes a slice of bytes.
 pub(crate) fn serialize_raw<S>(
@@ -117,27 +117,6 @@ impl<'de> serde::Deserialize<'de> for B256 {
     }
 }
 
-impl serde::Serialize for B160 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut slice = [0u8; 2 + 2 * 20];
-        serialize_raw(&mut slice, &self.0, serializer)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for B160 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let mut bytes = [0u8; 20];
-        deserialize_check_len(deserializer, ExpectedLen::Exact(&mut bytes))?;
-        Ok(B160(bytes))
-    }
-}
-
 impl serde::Serialize for Address {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -156,26 +135,5 @@ impl<'de> serde::Deserialize<'de> for Address {
         let mut bytes = [0u8; 20];
         deserialize_check_len(deserializer, ExpectedLen::Exact(&mut bytes))?;
         Ok(Address(bytes))
-    }
-}
-
-impl serde::Serialize for B512 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut slice = [0u8; 2 + 2 * 64];
-        serialize_raw(&mut slice, &self.0, serializer)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for B512 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let mut bytes = [0u8; 64];
-        deserialize_check_len(deserializer, ExpectedLen::Exact(&mut bytes))?;
-        Ok(B512(bytes))
     }
 }

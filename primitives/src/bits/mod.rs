@@ -1,5 +1,5 @@
 mod address;
-mod fixed;
+mod hash;
 
 pub(self) mod hex;
 pub(self) use hex::{from_hex_raw, to_hex_raw};
@@ -12,4 +12,4 @@ mod serialize;
 mod rlp;
 
 pub use address::{Address, AddressError};
-pub use fixed::{B160, B256, B512};
+pub use hash::B256;

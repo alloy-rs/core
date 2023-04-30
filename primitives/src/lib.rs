@@ -18,7 +18,7 @@
 extern crate alloc;
 
 mod bits;
-pub use bits::{Address, AddressError, B160, B256, B512};
+pub use bits::{Address, AddressError, B256};
 
 mod signed;
 pub use signed::{

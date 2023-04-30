@@ -1,4 +1,4 @@
-use super::{Address, B160, B256, B512};
+use super::{Address, B256};
 
 macro_rules! fixed_hash_impl {
     ($t:ty) => {
@@ -23,6 +23,4 @@ macro_rules! fixed_hash_impl {
 }
 
 fixed_hash_impl!(Address);
-fixed_hash_impl!(B160);
 fixed_hash_impl!(B256);
-fixed_hash_impl!(B512);

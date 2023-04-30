@@ -14,7 +14,7 @@ use alloc::{borrow::Borrow, format, string::String};
 
 use crate::utils::keccak256;
 
-use super::{hex, B160, B256};
+use super::{hex, B256};
 
 /// Error type for address checksum validation
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -58,19 +58,6 @@ construct_fixed_hash! {
     #[cfg_attr(feature = "arbitrary", derive(Arbitrary, PropTestArbitrary))]
     #[derive(AsRef, Deref)]
     pub struct Address(20);
-}
-
-// manual impls because `impl_fixed_hash_conversions` macro requires one type to be smaller
-impl From<B160> for Address {
-    fn from(value: B160) -> Self {
-        Self(value.0)
-    }
-}
-
-impl From<Address> for B160 {
-    fn from(value: Address) -> Self {
-        Self(value.0)
-    }
 }
 
 impl_fixed_hash_conversions!(B256, Address);
