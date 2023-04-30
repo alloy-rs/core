@@ -90,7 +90,7 @@ impl Address {
     /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
     /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
-    pub fn to_checksum_buf<'a>(&'_ self, addr_buf: &'a mut [u8], chain_id: Option<u64>) -> &'a str {
+    pub fn to_checksum_raw<'a>(&'_ self, addr_buf: &'a mut [u8], chain_id: Option<u64>) -> &'a str {
         hex::to_hex_raw(addr_buf, self.as_bytes(), false, true);
 
         let prefixed_addr = match chain_id {
@@ -125,7 +125,7 @@ impl Address {
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
     pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
         let mut buf = [0u8; 42];
-        self.to_checksum_buf(&mut buf, chain_id).to_owned()
+        self.to_checksum_raw(&mut buf, chain_id).to_owned()
     }
 
     /// Parse an Ethereum address, verifying its [EIP-55] checksum.
