@@ -103,7 +103,7 @@ macro_rules! wrap_fixed_bytes {
         impl $name {
             /// Returns a new fixed hash from the given bytes array.
             pub const fn new(bytes: [u8; $n]) -> Self {
-                Self(FixedBytes(bytes))
+                Self($crate::FixedBytes(bytes))
             }
             /// Returns a new fixed hash where all bits are set to the given byte.
             #[inline]
