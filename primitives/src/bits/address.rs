@@ -1,8 +1,3 @@
-#[cfg(feature = "arbitrary")]
-use arbitrary::Arbitrary;
-#[cfg(feature = "arbitrary")]
-use proptest_derive::Arbitrary as PropTestArbitrary;
-
 #[cfg(feature = "std")]
 use std::borrow::Borrow;
 

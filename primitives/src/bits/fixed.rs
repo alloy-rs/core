@@ -3,7 +3,10 @@ use core::{fmt, ops};
 use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut};
 
 /// A bytearray of fixed length.
-#[cfg_attr(feature = "arbitrary", derive(Arbitrary, PropTestArbitrary))]
+#[cfg_attr(
+    feature = "arbitrary",
+    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+)]
 #[derive(
     AsRef,
     AsMut,
