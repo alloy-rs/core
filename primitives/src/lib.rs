@@ -18,7 +18,7 @@
 extern crate alloc;
 
 mod bits;
-pub use bits::{Address, AddressError, B256};
+pub use bits::{Address, AddressError, FixedBytes};
 
 mod signed;
 pub use signed::{
@@ -29,11 +29,11 @@ pub use signed::{
 mod utils;
 pub use utils::{keccak256, Hasher, Keccak};
 
-/// Hash, in Ethereum usually kecack256.
-pub type Hash = B256;
-
 // ruint reexports
 pub use ruint::{
     aliases::{B128 as H128, B64 as H64, U128, U256, U64},
     uint,
 };
+
+#[doc(hidden)]
+pub use derive_more;

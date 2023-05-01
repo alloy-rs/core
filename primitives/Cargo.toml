@@ -17,9 +17,6 @@ repository.workspace = true
 # eth
 ruint = { workspace = true, features = ["rlp", "serde"] }
 
-# bits B256 B160 crate
-fixed-hash = { version = "0.8", default-features = false, features = ["rustc-hex"] }
-
 # utility
 derive_more = "0.99"
 tiny-keccak = { workspace = true, features = ["keccak"] }

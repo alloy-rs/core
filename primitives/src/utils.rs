@@ -1,9 +1,9 @@
 pub use tiny_keccak::{Hasher, Keccak};
 
-use super::B256;
+use crate::bits::FixedBytes;
 
 /// Simple interface to keccak256 hash function
-pub fn keccak256(bytes: impl AsRef<[u8]>) -> B256 {
+pub fn keccak256(bytes: impl AsRef<[u8]>) -> FixedBytes<32> {
     let mut output = [0u8; 32];
     let mut hasher = Keccak::v256();
     hasher.update(bytes.as_ref());

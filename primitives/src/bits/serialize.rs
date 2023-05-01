@@ -4,7 +4,7 @@ use alloc::string::String;
 use core::{fmt, result::Result};
 use serde::{de, Deserializer, Serializer};
 
-use super::{Address, B256};
+use super::FixedBytes;
 
 /// Serializes a slice of bytes.
 pub(crate) fn serialize_raw<S>(
@@ -62,14 +62,12 @@ where
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(
                 formatter,
-                "a (both 0x-prefixed or not) hex string with {}",
+                "a hex string (with or wthout 0x prefix) with {} bytes",
                 self.len
             )
         }
 
         fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-            let (v, stripped) = v.strip_prefix("0x").map_or((v, false), |v| (v, true));
-
             let len = v.len();
             let is_len_valid = match self.len {
                 ExpectedLen::Exact(ref slice) => len == 2 * slice.len(),
@@ -85,7 +83,7 @@ where
                 ExpectedLen::Between(_, slice) => slice,
             };
 
-            super::from_hex_raw(v, bytes, stripped).map_err(E::custom)
+            super::from_hex_raw(v, bytes).map_err(E::custom)
         }
 
         fn visit_string<E: de::Error>(self, v: String) -> Result<Self::Value, E> {
@@ -96,7 +94,7 @@ where
     deserializer.deserialize_str(Visitor { len })
 }
 
-impl serde::Serialize for B256 {
+impl<const N: usize> serde::Serialize for FixedBytes<N> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -106,34 +104,13 @@ impl serde::Serialize for B256 {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for B256 {
+impl<'de, const N: usize> serde::Deserialize<'de> for FixedBytes<N> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        let mut bytes = [0u8; 32];
+        let mut bytes = [0u8; N];
         deserialize_check_len(deserializer, ExpectedLen::Exact(&mut bytes))?;
-        Ok(B256(bytes))
-    }
-}
-
-impl serde::Serialize for Address {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut slice = [0u8; 2 + 2 * 20];
-        serialize_raw(&mut slice, &self.0, serializer)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for Address {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let mut bytes = [0u8; 20];
-        deserialize_check_len(deserializer, ExpectedLen::Exact(&mut bytes))?;
-        Ok(Address(bytes))
+        Ok(Self(bytes))
     }
 }

@@ -5,6 +5,7 @@ static CHARS: &[u8] = b"0123456789abcdef";
 /// Decoding bytes from hex string error.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FromHexError {
+    OddLength,
     /// Invalid (non-hex) character encountered.
     InvalidHex {
         /// The unexpected character.
@@ -19,10 +20,11 @@ impl std::error::Error for FromHexError {}
 
 impl fmt::Display for FromHexError {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
+        match self {
             Self::InvalidHex { character, index } => {
                 write!(fmt, "invalid hex character: {character}, at {index}")
             }
+            Self::OddLength => write!(fmt, "Odd number of hex digits"),
         }
     }
 }
@@ -66,48 +68,59 @@ pub(crate) fn to_hex_raw<'a>(
     unsafe { core::str::from_utf8_unchecked(&v[0..idx]) }
 }
 
-/// Decode given 0x-prefix-stripped hex string into provided slice.
-/// Used for address checksumming and the `serde` feature to implement
-/// `deserialize_check_len`.
-///
-/// The method will panic if `bytes` have incorrect length (make sure to
+/// Decode given hex string into provided slice.
+
+/// The method will panic if the output buffer is short (so make sure to
 /// allocate enough beforehand).
-pub(crate) fn from_hex_raw(
-    v: &str,
-    bytes: &mut [u8],
-    stripped: bool,
-) -> Result<usize, FromHexError> {
-    let bytes_len = v.len();
-    let mut modulus = bytes_len % 2;
-    let mut buf = 0;
-    let mut pos = 0;
-    for (index, byte) in v.bytes().enumerate() {
-        buf <<= 4;
-
-        match byte {
-            b'A'..=b'F' => buf |= byte - b'A' + 10,
-            b'a'..=b'f' => buf |= byte - b'a' + 10,
-            b'0'..=b'9' => buf |= byte - b'0',
-            b' ' | b'\r' | b'\n' | b'\t' => {
-                buf >>= 4;
-                continue;
-            }
-            b => {
-                let character = char::from(b);
-                return Err(FromHexError::InvalidHex {
-                    character,
-                    index: index + if stripped { 2 } else { 0 },
-                });
-            }
-        }
-
-        modulus += 1;
-        if modulus == 2 {
-            modulus = 0;
-            bytes[pos] = buf;
-            pos += 1;
-        }
+pub(crate) fn from_hex_raw(v: &str, bytes: &mut [u8]) -> Result<usize, FromHexError> {
+    if v.len() % 2 != 0 {
+        return Err(FromHexError::OddLength);
     }
 
-    Ok(pos)
+    let mut stripped = false;
+    let v = v.strip_prefix("0x").unwrap_or_else(|| {
+        stripped = true;
+        v
+    });
+
+    v.as_bytes()
+        .chunks_exact(2)
+        .enumerate()
+        .try_for_each(|(index, pair): (usize, &[u8])| {
+            let mut buf = 0;
+
+            match pair[0] {
+                b'A'..=b'F' => buf |= pair[0] - b'A' + 10,
+                b'a'..=b'f' => buf |= pair[0] - b'a' + 10,
+                b'0'..=b'9' => buf |= pair[0] - b'0',
+                b => {
+                    let character = char::from(b);
+                    return Err(FromHexError::InvalidHex {
+                        character,
+                        index: (index * 2) + if stripped { 2 } else { 0 },
+                    });
+                }
+            }
+
+            buf <<= 4;
+
+            match pair[1] {
+                b'A'..=b'F' => buf |= pair[1] - b'A' + 10,
+                b'a'..=b'f' => buf |= pair[1] - b'a' + 10,
+                b'0'..=b'9' => buf |= pair[1] - b'0',
+                b => {
+                    let character = char::from(b);
+                    return Err(FromHexError::InvalidHex {
+                        character,
+                        index: (index * 2) + 1 + if stripped { 2 } else { 0 },
+                    });
+                }
+            }
+
+            bytes[index] = buf;
+
+            Ok(())
+        })?;
+
+    Ok(v.len() / 2)
 }

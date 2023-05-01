@@ -1,6 +1,3 @@
-use derive_more::{AsRef, Deref};
-use fixed_hash::{construct_fixed_hash, impl_fixed_hash_conversions};
-
 #[cfg(feature = "arbitrary")]
 use arbitrary::Arbitrary;
 #[cfg(feature = "arbitrary")]
@@ -12,9 +9,9 @@ use std::borrow::Borrow;
 #[cfg(not(feature = "std"))]
 use alloc::{borrow::Borrow, format, string::String};
 
-use crate::utils::keccak256;
+use crate::{utils::keccak256, wrap_fixed_bytes};
 
-use super::{hex, B256};
+use super::hex;
 
 /// Error type for address checksum validation
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -53,18 +50,11 @@ impl core::fmt::Display for AddressError {
     }
 }
 
-construct_fixed_hash! {
-    /// Ethereum address type
-    #[cfg_attr(feature = "arbitrary", derive(Arbitrary, PropTestArbitrary))]
-    #[derive(AsRef, Deref)]
-    pub struct Address(20);
-}
-
-impl_fixed_hash_conversions!(B256, Address);
+wrap_fixed_bytes!(Address<20>);
 
 impl Borrow<[u8; 20]> for Address {
     fn borrow(&self) -> &[u8; 20] {
-        &self.0
+        self.0.borrow()
     }
 }
 
