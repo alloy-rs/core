@@ -21,6 +21,7 @@ macro_rules! wrap_fixed_bytes {
             Eq,
             PartialOrd,
             Ord,
+            Default,
             $crate::derive_more::Index,
             $crate::derive_more::IndexMut,
             $crate::derive_more::BitAnd,
@@ -68,6 +69,10 @@ macro_rules! wrap_fixed_bytes {
         }
 
         impl $name {
+            /// Returns a new fixed hash from the given bytes array.
+            pub const fn new(bytes: [u8; $n]) -> Self {
+                Self(FixedBytes(bytes))
+            }
             /// Returns a new fixed hash where all bits are set to the given byte.
             #[inline]
             #[track_caller]
@@ -84,7 +89,7 @@ macro_rules! wrap_fixed_bytes {
             #[inline]
             #[track_caller]
             pub const fn len_bytes() -> usize {
-                32
+                $n
             }
             /// Extracts a byte slice containing the entire fixed hash.
             #[inline]
@@ -138,7 +143,7 @@ macro_rules! wrap_fixed_bytes {
             ///
             /// If the length of `src` and the number of bytes in `self` do not match.
             pub fn assign_from_slice(&mut self, src: &[u8]) {
-                assert_eq!(src.len(), 32);
+                assert_eq!(src.len(), $n);
                 self.as_bytes_mut().copy_from_slice(src);
             }
             /// Create a new fixed-hash from the given slice `src`.
@@ -151,7 +156,7 @@ macro_rules! wrap_fixed_bytes {
             ///
             /// If the length of `src` and the number of bytes in `Self` do not match.
             pub fn from_slice(src: &[u8]) -> Self {
-                assert_eq!(src.len(), 32);
+                assert_eq!(src.len(), $n);
                 let mut ret = Self::zero();
                 ret.assign_from_slice(src);
                 ret

@@ -1,6 +1,6 @@
 use core::fmt;
 
-static CHARS: &[u8] = b"0123456789abcdef";
+pub(crate) const CHARS: &[u8] = b"0123456789abcdef";
 
 /// Decoding bytes from hex string error.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

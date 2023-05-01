@@ -104,7 +104,9 @@ impl DynSolType {
             (DynSolType::Int(_), DynSolValue::Int(word, _)) => {
                 Ok(DynToken::Word(word.to_be_bytes().into()))
             }
-            (DynSolType::Uint(_), DynSolValue::Uint(num, _)) => Ok(DynToken::Word(num.into())),
+            (DynSolType::Uint(_), DynSolValue::Uint(num, _)) => {
+                Ok(DynToken::Word(num.to_be_bytes().into()))
+            }
             (DynSolType::String, DynSolValue::String(buf)) => Ok(DynToken::PackedSeq(buf.into())),
             (DynSolType::Tuple(types), DynSolValue::Tuple(tokens)) => {
                 let tokens = types

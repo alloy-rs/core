@@ -87,7 +87,7 @@ impl From<bool> for WordToken {
 
 impl From<U256> for WordToken {
     fn from(value: U256) -> Self {
-        Self(value.into())
+        Self(value.to_be_bytes().into())
     }
 }
 

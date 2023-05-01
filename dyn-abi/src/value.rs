@@ -110,7 +110,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant
-    pub fn as_fixed_bytes(&self) -> Option<(&[u8], usize)> {
+    pub const fn as_fixed_bytes(&self) -> Option<(&[u8], usize)> {
         match self {
             Self::FixedBytes(w, size) => Some((w.as_bytes(), *size)),
             _ => None,

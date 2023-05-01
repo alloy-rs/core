@@ -674,7 +674,7 @@ mod test {
         name: "abcd",
         version: "1",
         chain_id: U256::from_limbs([0u64, 0, 0, 1]),
-        verifying_contract: Address([0u8;20]),
-        salt: B256([0u8;32]),
+        verifying_contract: Address::new([0u8;20]),
+        salt: B256::new([0u8;32]),
     };
 }

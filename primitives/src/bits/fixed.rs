@@ -81,6 +81,32 @@ impl<const N: usize> AsMut<[u8]> for FixedBytes<N> {
 }
 
 impl<const N: usize> FixedBytes<N> {
+    /// Instantiates a new fixed hash from the given bytes array.
+    pub const fn new(bytes: [u8; N]) -> Self {
+        FixedBytes(bytes)
+    }
+
+    /// Concatenate two fixed hashes. Due to rust constraints, the user must
+    /// specify Z. Incorrect specification will result in a panic.
+    pub const fn concat<const M: usize, const Z: usize>(
+        self,
+        other: FixedBytes<M>,
+    ) -> FixedBytes<Z> {
+        assert!(N + M == Z, "Output size must be sum of input sizes");
+
+        let mut result = [0u8; Z];
+
+        let i = 0;
+        loop {
+            result[i] = if i >= N { other.0[i - N] } else { self.0[i] };
+            if i == Z {
+                break;
+            }
+        }
+
+        FixedBytes(result)
+    }
+
     /// Returns a new fixed hash where all bits are set to the given byte.
     #[inline]
     #[track_caller]
@@ -288,3 +314,6 @@ impl<const N: usize> core::str::FromStr for FixedBytes<N> {
         Ok(Self(buf))
     }
 }
+
+#[cfg(test)]
+mod test {}

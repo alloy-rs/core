@@ -7,9 +7,13 @@ use proptest_derive::Arbitrary as PropTestArbitrary;
 use std::borrow::Borrow;
 
 #[cfg(not(feature = "std"))]
-use alloc::{borrow::Borrow, format, string::String};
+use alloc::{
+    borrow::Borrow,
+    format,
+    string::{String, ToString},
+};
 
-use crate::{utils::keccak256, wrap_fixed_bytes};
+use crate::{utils::keccak256, wrap_fixed_bytes, FixedBytes};
 
 use super::hex;
 
@@ -55,6 +59,20 @@ wrap_fixed_bytes!(Address<20>);
 impl Borrow<[u8; 20]> for Address {
     fn borrow(&self) -> &[u8; 20] {
         self.0.borrow()
+    }
+}
+
+impl From<Address> for [u8; 20] {
+    fn from(addr: Address) -> Self {
+        addr.0.into()
+    }
+}
+
+impl From<Address> for FixedBytes<32> {
+    fn from(addr: Address) -> Self {
+        let mut buf: FixedBytes<32> = Default::default();
+        buf[12..].copy_from_slice(addr.as_bytes());
+        buf
     }
 }
 
@@ -106,7 +124,7 @@ impl Address {
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
     pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
         let mut buf = [0u8; 42];
-        self.to_checksum_raw(&mut buf, chain_id).to_owned()
+        self.to_checksum_raw(&mut buf, chain_id).to_string()
     }
 
     /// Parse an Ethereum address, verifying its [EIP-55] checksum.
