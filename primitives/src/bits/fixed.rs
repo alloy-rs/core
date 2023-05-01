@@ -183,6 +183,12 @@ impl<const N: usize> FixedBytes<N> {
         &(*b & *self) == b
     }
 
+    /// Returns `true` if no bits are set.
+    #[inline]
+    pub fn is_zero(&self) -> bool {
+        self.as_bytes().iter().all(|x| *x == 0)
+    }
+
     /// Compile-time equality. NOT constant-time equality.
     #[inline]
     pub const fn const_eq(&self, other: Self) -> bool {
@@ -204,12 +210,6 @@ impl<const N: usize> FixedBytes<N> {
     #[inline]
     pub const fn const_is_zero(&self) -> bool {
         self.const_eq(Self::ZERO)
-    }
-
-    /// Returns `true` if no bits are set.
-    #[inline]
-    pub fn is_zero(&self) -> bool {
-        self.as_bytes().iter().all(|x| *x == 0)
     }
 
     /// Computes the bitwise AND of two `FixedBytes`.

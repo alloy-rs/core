@@ -47,7 +47,10 @@ impl core::fmt::Display for AddressError {
     }
 }
 
-wrap_fixed_bytes!(Address<20>);
+wrap_fixed_bytes!(
+    /// An Ethereum address, 20 bytes in length.
+    Address<20>
+);
 
 impl Borrow<[u8; 20]> for Address {
     fn borrow(&self) -> &[u8; 20] {
