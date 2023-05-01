@@ -9,6 +9,8 @@
 /// ```
 /// use ethers_primitives::wrap_fixed_bytes;
 ///
+/// // These hashes are the same length, and have the same functionality, but
+/// // are distinct types
 /// wrap_fixed_bytes!(KeccakOutput<32>);
 /// wrap_fixed_bytes!(MerkleTreeItem<32>);
 /// ```
