@@ -3,6 +3,12 @@ use core::{fmt, ops};
 use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut};
 
 /// A bytearray of fixed length.
+///
+/// This type allows us to more tightly control serialization, deserialization.
+/// rlp encoding, decoding, and other type-level attributes for fixed-length
+/// byte arrays. Users looking to prevent type-confusion between byte arrays of
+/// different lengths should use the [`crate::wrap_fixed_bytes`] macro to
+/// create a new fixed-length byte array type.
 #[cfg_attr(
     feature = "arbitrary",
     derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
