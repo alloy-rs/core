@@ -82,14 +82,17 @@ impl<const N: usize> AsMut<[u8]> for FixedBytes<N> {
 }
 
 impl<const N: usize> FixedBytes<N> {
+    /// Array of Zero bytes
+    pub const ZERO: FixedBytes<N> = FixedBytes([0u8; N]);
+
     /// Instantiates a new fixed hash from the given bytes array.
     pub const fn new(bytes: [u8; N]) -> Self {
         FixedBytes(bytes)
     }
 
-    /// Concatenate two fixed hashes. Due to rust constraints, the user must
+    /// Concatenate two `FixedBytes`. Due to rust constraints, the user must
     /// specify Z. Incorrect specification will result in a panic.
-    pub const fn concat<const M: usize, const Z: usize>(
+    pub const fn concat_const<const M: usize, const Z: usize>(
         self,
         other: FixedBytes<M>,
     ) -> FixedBytes<Z> {
@@ -174,14 +177,81 @@ impl<const N: usize> FixedBytes<N> {
         ret
     }
     /// Returns `true` if all bits set in `b` are also set in `self`.
+
     #[inline]
     pub fn covers(&self, b: &Self) -> bool {
         &(*b & *self) == b
     }
+
+    /// Compile-time equality. NOT constant-time equality.
+    #[inline]
+    pub const fn const_eq(&self, other: Self) -> bool {
+        let mut i = 0;
+        loop {
+            if self.0[i] != other.0[i] {
+                return false;
+            }
+            i += 1;
+            if i == N {
+                break;
+            }
+        }
+
+        true
+    }
+
+    /// Returns `true` if no bits are set.
+    #[inline]
+    pub const fn const_is_zero(&self) -> bool {
+        self.const_eq(Self::ZERO)
+    }
+
     /// Returns `true` if no bits are set.
     #[inline]
     pub fn is_zero(&self) -> bool {
-        self.as_bytes().iter().all(|&byte| byte == 0u8)
+        self.as_bytes().iter().all(|x| *x == 0)
+    }
+
+    /// Computes the bitwise AND of two `FixedBytes`.
+    pub const fn bit_and(self, rhs: Self) -> Self {
+        let mut ret = Self::ZERO;
+        let mut i = 0;
+        loop {
+            ret.0[i] = self.0[i] & rhs.0[i];
+            i += 1;
+            if i == N {
+                break;
+            }
+        }
+        ret
+    }
+
+    /// Computes the bitwise OR of two `FixedBytes`.
+    pub const fn bit_or(self, rhs: Self) -> Self {
+        let mut ret = Self::ZERO;
+        let mut i = 0;
+        loop {
+            ret.0[i] = self.0[i] | rhs.0[i];
+            i += 1;
+            if i == N {
+                break;
+            }
+        }
+        ret
+    }
+
+    /// Computes the bitwise XOR of two `FixedBytes`.
+    pub const fn bit_xor(self, rhs: Self) -> Self {
+        let mut ret = Self::ZERO;
+        let mut i = 0;
+        loop {
+            ret.0[i] = self.0[i] ^ rhs.0[i];
+            i += 1;
+            if i == N {
+                break;
+            }
+        }
+        ret
     }
 }
 
