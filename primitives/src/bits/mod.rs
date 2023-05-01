@@ -6,7 +6,7 @@ pub use fixed::FixedBytes;
 
 mod macros;
 
-pub(self) mod hex;
+// pub(self) mod hex;
 
 // code stolen from: https://docs.rs/impl-serde/0.4.0/impl_serde/
 #[cfg(feature = "serde")]

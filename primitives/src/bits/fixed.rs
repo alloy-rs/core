@@ -166,7 +166,6 @@ impl<const N: usize> FixedBytes<N> {
     /// If the length of `src` and the number of bytes in `Self` do not match.
     #[track_caller]
     pub fn from_slice(src: &[u8]) -> Self {
-        assert_eq!(src.len(), 32);
         let mut ret = Self::zero();
         ret.copy_from_slice(src);
         ret
@@ -191,18 +190,25 @@ impl<const N: usize> fmt::Debug for FixedBytes<N> {
 
 impl<const N: usize> fmt::Display for FixedBytes<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if N <= 4 {
+            return fmt::Debug::fmt(self, f);
+        }
+
+        // If the alternate flag is NOT set, we write the full hex.
         if !f.alternate() {
             return write!(f, "{:#x}", self);
         }
 
+        // If the alternate flag is set, we use middle-out compression.
         write!(f, "0x")?;
         for i in &self.0[0..2] {
             write!(f, "{:02x}", i)?;
         }
         write!(f, "…")?;
-        for i in &self.0[32 - 2..32] {
+        for i in &self.0[N - 2..N] {
             write!(f, "{:02x}", i)?;
         }
+
         Ok(())
     }
 }
@@ -222,7 +228,7 @@ impl<const N: usize> fmt::LowerHex for FixedBytes<N> {
 impl<const N: usize> fmt::UpperHex for FixedBytes<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
-            write!(f, "0X")?;
+            write!(f, "0x")?;
         }
         for i in &self.0[..] {
             write!(f, "{:02X}", i)?;
@@ -280,11 +286,13 @@ impl<const N: usize> ops::BitXorAssign for FixedBytes<N> {
 }
 
 impl<const N: usize> core::str::FromStr for FixedBytes<N> {
-    type Err = super::hex::FromHexError;
+    type Err = hex::FromHexError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.strip_prefix("0x").unwrap_or(s);
+
         let mut buf = [0u8; N];
-        super::hex::from_hex_raw(s, &mut buf)?;
+        hex::decode_to_slice(s, buf.as_mut())?;
         Ok(Self(buf))
     }
 }

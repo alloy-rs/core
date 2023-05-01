@@ -15,10 +15,8 @@ use alloc::{
 
 use crate::{utils::keccak256, wrap_fixed_bytes, FixedBytes};
 
-use super::hex;
-
 /// Error type for address checksum validation
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub enum AddressError {
     /// FromHexError
     FromHexError(hex::FromHexError),
@@ -90,7 +88,13 @@ impl Address {
     /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
     pub fn to_checksum_raw<'a>(&'_ self, addr_buf: &'a mut [u8], chain_id: Option<u64>) -> &'a str {
-        hex::to_hex_raw(addr_buf, self.as_bytes(), false, true);
+        debug_assert!(
+            addr_buf.len() >= 42,
+            "addr_buf must be at least 42 bytes long"
+        );
+        addr_buf[0] = b'0';
+        addr_buf[1] = b'x';
+        hex::encode_to_slice(self.as_bytes(), &mut addr_buf[2..]).unwrap();
 
         let prefixed_addr = match chain_id {
             Some(chain_id) => format!("{chain_id}0x{self:x}"),
@@ -98,7 +102,8 @@ impl Address {
         };
         let hash = keccak256(prefixed_addr);
         let mut hash_hex = [0u8; 64];
-        hex::to_hex_raw(&mut hash_hex, hash.as_bytes(), false, false);
+
+        hex::encode_to_slice(hash.as_bytes(), &mut hash_hex).unwrap();
 
         addr_buf[2..]
             .iter_mut()
