@@ -1,7 +1,7 @@
 use core::cmp::Ordering;
 
-use ethers_abi_enc::{keccak256, SolStruct};
-use ethers_primitives::B256;
+use ethers_abi_enc::SolStruct;
+use ethers_primitives::{keccak256, B256};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -242,7 +242,7 @@ impl Resolver {
         resolver
     }
 
-    /// Detect cycles in the subgraph rooted at `ty`
+    /// Detect cycles in the subgraph rooted at `type_name`
     fn detect_cycle<'a>(&'a self, type_name: &'_ str, context: &mut DfsContext<'a>) -> bool {
         let ty = match self.nodes.get(type_name) {
             Some(ty) => ty,

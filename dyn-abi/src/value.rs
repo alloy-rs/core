@@ -1,4 +1,4 @@
-use ethers_primitives::{aliases::*, B160, I256, U256};
+use ethers_primitives::{aliases::*, Address, I256, U256};
 
 use crate::no_std_prelude::*;
 
@@ -10,7 +10,7 @@ use crate::Word;
 #[derive(Debug, Clone, PartialEq)]
 pub enum DynSolValue {
     /// An address
-    Address(B160),
+    Address(Address),
     /// A boolean
     Bool(bool),
     /// A dynamic-length byte array
@@ -86,7 +86,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant DynSolValue {
-    pub const fn as_address(&self) -> Option<B160> {
+    pub const fn as_address(&self) -> Option<Address> {
         match self {
             Self::Address(a) => Some(*a),
             _ => None,
@@ -110,7 +110,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant
-    pub fn as_fixed_bytes(&self) -> Option<(&[u8], usize)> {
+    pub const fn as_fixed_bytes(&self) -> Option<(&[u8], usize)> {
         match self {
             Self::FixedBytes(w, size) => Some((w.as_bytes(), *size)),
             _ => None,
@@ -224,8 +224,8 @@ impl DynSolValue {
     }
 }
 
-impl From<B160> for DynSolValue {
-    fn from(value: B160) -> Self {
+impl From<Address> for DynSolValue {
+    fn from(value: Address) -> Self {
         Self::Address(value)
     }
 }

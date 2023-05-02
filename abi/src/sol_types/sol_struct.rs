@@ -1,11 +1,9 @@
 //! This module contains the [`SolStruct`] trait, which is used to implement
 //! Solidity structs logic, particularly for EIP-712 encoding/decoding.
 
-use ethers_primitives::B256;
+use ethers_primitives::{keccak256, B256};
 
-use crate::{util::keccak256, SolType, Word};
-
-use crate::{no_std_prelude::*, Eip712Domain};
+use crate::{no_std_prelude::*, Eip712Domain, SolType, Word};
 
 type TupleFor<T> = <T as SolStruct>::Tuple;
 type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;

@@ -162,7 +162,7 @@ impl SolStructDef {
 
             #[allow(non_snake_case)]
             const _: () = {
-                use ::ethers_abi_enc::{SolType, keccak256, no_std_prelude::*};
+                use ::ethers_abi_enc::{SolType, no_std_prelude::*};
 
                 #convert
 

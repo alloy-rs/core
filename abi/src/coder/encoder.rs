@@ -189,7 +189,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use ethers_primitives::{B160, U256};
+    use ethers_primitives::{Address, U256};
     use hex_literal::hex;
 
     #[cfg(not(feature = "std"))]
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn encode_address() {
-        let address = B160([0x11u8; 20]);
+        let address = Address::from([0x11u8; 20]);
         let expected = hex!("0000000000000000000000001111111111111111111111111111111111111111");
         let encoded = sol_type::Address::encode_single(address);
         assert_eq!(encoded, expected);
@@ -207,7 +207,7 @@ mod tests {
     #[test]
     fn encode_dynamic_array_of_addresses() {
         type MyTy = sol_type::Array<sol_type::Address>;
-        let rust = vec![B160([0x11u8; 20]), B160([0x22u8; 20])];
+        let rust = vec![Address::from([0x11u8; 20]), Address::from([0x22u8; 20])];
         let encoded = MyTy::encode_single(rust);
         let expected = hex!(
             "
@@ -225,7 +225,7 @@ mod tests {
     fn encode_fixed_array_of_addresses() {
         type MyTy = sol_type::FixedArray<sol_type::Address, 2>;
 
-        let addresses = [B160([0x11u8; 20]), B160([0x22u8; 20])];
+        let addresses = [Address::from([0x11u8; 20]), Address::from([0x22u8; 20])];
 
         let encoded = MyTy::encode_single(addresses);
         let encoded_params = MyTy::encode_params(addresses);
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn encode_two_addresses() {
         type MyTy = (sol_type::Address, sol_type::Address);
-        let addresses = (B160([0x11u8; 20]), B160([0x22u8; 20]));
+        let addresses = (Address::from([0x11u8; 20]), Address::from([0x22u8; 20]));
 
         let encoded = MyTy::encode(addresses);
         let encoded_params = MyTy::encode_params(addresses);
@@ -262,8 +262,8 @@ mod tests {
     fn encode_fixed_array_of_dynamic_array_of_addresses() {
         type MyTy = sol_type::FixedArray<sol_type::Array<sol_type::Address>, 2>;
         let fixed = [
-            vec![B160([0x11u8; 20]), B160([0x22u8; 20])],
-            vec![B160([0x33u8; 20]), B160([0x44u8; 20])],
+            vec![Address::from([0x11u8; 20]), Address::from([0x22u8; 20])],
+            vec![Address::from([0x33u8; 20]), Address::from([0x44u8; 20])],
         ];
 
         let expected = hex!(
@@ -292,8 +292,8 @@ mod tests {
         type MyTy = sol_type::Array<TwoAddrs>;
 
         let dynamic = vec![
-            [B160([0x11u8; 20]), B160([0x22u8; 20])],
-            [B160([0x33u8; 20]), B160([0x44u8; 20])],
+            [Address::from([0x11u8; 20]), Address::from([0x22u8; 20])],
+            [Address::from([0x33u8; 20]), Address::from([0x44u8; 20])],
         ];
 
         let expected = hex!(
@@ -318,7 +318,10 @@ mod tests {
     fn encode_dynamic_array_of_dynamic_arrays() {
         type MyTy = sol_type::Array<sol_type::Array<sol_type::Address>>;
 
-        let dynamic = vec![vec![B160([0x11u8; 20])], vec![B160([0x22u8; 20])]];
+        let dynamic = vec![
+            vec![Address::from([0x11u8; 20])],
+            vec![Address::from([0x22u8; 20])],
+        ];
 
         let expected = hex!(
             "
@@ -345,8 +348,8 @@ mod tests {
         type MyTy = sol_type::Array<sol_type::Array<sol_type::Address>>;
 
         let dynamic = vec![
-            vec![B160([0x11u8; 20]), B160([0x22u8; 20])],
-            vec![B160([0x33u8; 20]), B160([0x44u8; 20])],
+            vec![Address::from([0x11u8; 20]), Address::from([0x22u8; 20])],
+            vec![Address::from([0x33u8; 20]), Address::from([0x44u8; 20])],
         ];
         let expected = hex!(
             "
@@ -375,8 +378,8 @@ mod tests {
         type MyTy = sol_type::FixedArray<sol_type::FixedArray<sol_type::Address, 2>, 2>;
 
         let fixed = [
-            [B160([0x11u8; 20]), B160([0x22u8; 20])],
-            [B160([0x33u8; 20]), B160([0x44u8; 20])],
+            [Address::from([0x11u8; 20]), Address::from([0x22u8; 20])],
+            [Address::from([0x33u8; 20]), Address::from([0x44u8; 20])],
         ];
 
         let encoded = MyTy::encode(fixed);
@@ -406,9 +409,13 @@ mod tests {
                 (
                     U256::from(93523141),
                     U256::from(352332135),
-                    B160([0x44u8; 20]),
+                    Address::from([0x44u8; 20]),
                 ),
-                (U256::from(12411), U256::from(451), B160([0x22u8; 20])),
+                (
+                    U256::from(12411),
+                    U256::from(451),
+                    Address::from([0x22u8; 20]),
+                ),
             ],
             "gavofyork".to_string(),
         );
@@ -805,7 +812,7 @@ mod tests {
     #[test]
     fn encode_static_tuple_of_addresses() {
         type MyTy = (sol_type::Address, sol_type::Address);
-        let data = (B160([0x11u8; 20]), B160([0x22u8; 20]));
+        let data = (Address::from([0x11u8; 20]), Address::from([0x22u8; 20]));
 
         let encoded = MyTy::encode(data);
         let encoded_params = MyTy::encode_params(data);
@@ -894,8 +901,8 @@ mod tests {
         let data = (
             U256::from_be_bytes::<32>([0x11u8; 32]),
             "gavofyork".to_owned(),
-            B160([0x11u8; 20]),
-            B160([0x22u8; 20]),
+            Address::from([0x11u8; 20]),
+            Address::from([0x22u8; 20]),
         );
 
         let expected = hex!(
@@ -990,10 +997,10 @@ mod tests {
             sol_type::Bool,
         );
         let data = (
-            B160([0x22u8; 20]),
+            Address::from([0x22u8; 20]),
             (true, "spaceship".to_owned(), "cyborg".to_owned()),
-            B160([0x33u8; 20]),
-            B160([0x44u8; 20]),
+            Address::from([0x33u8; 20]),
+            Address::from([0x44u8; 20]),
             false,
         );
 
@@ -1035,10 +1042,10 @@ mod tests {
         );
 
         let data = (
-            B160([0x11u8; 20]),
-            (B160([0x22u8; 20]), true, false),
-            B160([0x33u8; 20]),
-            B160([0x44u8; 20]),
+            Address::from([0x11u8; 20]),
+            (Address::from([0x22u8; 20]), true, false),
+            Address::from([0x33u8; 20]),
+            Address::from([0x44u8; 20]),
         );
 
         let encoded = MyTy::encode(data);

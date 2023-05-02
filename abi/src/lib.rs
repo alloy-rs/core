@@ -263,7 +263,6 @@ pub use sol_types::{sol_type, SolStruct, SolType};
 mod util;
 #[doc(hidden)]
 pub use util::just_ok;
-pub use util::keccak256;
 
 mod eip712;
 pub use eip712::Eip712Domain;

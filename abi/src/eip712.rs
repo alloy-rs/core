@@ -1,10 +1,8 @@
 use crate::{
     no_std_prelude::{Cow, String, Vec},
-    sol_type,
-    util::keccak256,
-    SolType,
+    sol_type, SolType,
 };
-use ethers_primitives::{B160, B256, U256};
+use ethers_primitives::{keccak256, Address, B256, U256};
 
 /// Eip712 Domain attributes used in determining the domain separator;
 /// Unused fields are left out of the struct type.
@@ -47,7 +45,7 @@ pub struct Eip712Domain {
         feature = "eip712-serde",
         serde(default, skip_serializing_if = "Option::is_none")
     )]
-    pub verifying_contract: Option<B160>,
+    pub verifying_contract: Option<Address>,
 
     /// A disambiguating salt for the protocol. This can be used as a domain separator of last
     /// resort.
@@ -67,7 +65,7 @@ impl Eip712Domain {
         name: Option<Cow<'static, str>>,
         version: Option<Cow<'static, str>>,
         chain_id: Option<U256>,
-        verifying_contract: Option<B160>,
+        verifying_contract: Option<Address>,
         salt: Option<B256>,
     ) -> Self {
         Self {
@@ -676,7 +674,7 @@ mod test {
         name: "abcd",
         version: "1",
         chain_id: U256::from_limbs([0u64, 0, 0, 1]),
-        verifying_contract: B160([0u8;20]),
-        salt: B256([0u8;32]),
+        verifying_contract: Address::new([0u8;20]),
+        salt: B256::new([0u8;32]),
     };
 }

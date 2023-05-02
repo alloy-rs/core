@@ -38,6 +38,7 @@
 //! ```
 //! # use ethers_dyn_abi::{DynSolType, DynSolValue};
 //! // parse a type from a string
+//! // limitation: custom structs cannot currently be parsed this way.
 //! let my_type: DynSolType = "uint8[2][]".parse().unwrap();
 //!
 //! // set values

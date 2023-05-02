@@ -305,7 +305,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use ethers_primitives::{B160, B256, U256};
+    use ethers_primitives::{Address, B256, U256};
     use hex_literal::hex;
 
     #[cfg(not(feature = "std"))]
@@ -323,8 +323,8 @@ mod tests {
     		1111111111111111111111111111111111111111111111111111111111111111
     	"
         );
-        let address1 = B160([0x11u8; 20]);
-        let address2 = B160([0x22u8; 20]);
+        let address1 = Address::from([0x11u8; 20]);
+        let address2 = Address::from([0x22u8; 20]);
         let uint = U256::from_be_bytes::<32>([0x11u8; 32]);
         let expected = (address1, address2, uint);
         let decoded = MyTy::decode(&encoded, true).unwrap();
@@ -430,8 +430,8 @@ mod tests {
         );
         let uint = U256::from_be_bytes::<32>([0x11u8; 32]);
         let string = "gavofyork".to_string();
-        let address1 = B160([0x11u8; 20]);
-        let address2 = B160([0x22u8; 20]);
+        let address1 = Address::from([0x11u8; 20]);
+        let address2 = Address::from([0x22u8; 20]);
         let expected = (uint, string, address1, address2);
 
         let decoded = MyTy::decode_single(&encoded, true).unwrap();
@@ -464,13 +464,13 @@ mod tests {
     		6379626f72670000000000000000000000000000000000000000000000000000
     	"
         );
-        let address1 = B160([0x22u8; 20]);
+        let address1 = Address::from([0x22u8; 20]);
         let bool1 = true;
         let string1 = "spaceship".to_string();
         let string2 = "cyborg".to_string();
         let tuple = (bool1, string1, string2);
-        let address2 = B160([0x33u8; 20]);
-        let address3 = B160([0x44u8; 20]);
+        let address2 = Address::from([0x33u8; 20]);
+        let address3 = Address::from([0x44u8; 20]);
         let bool2 = false;
         let expected = (address1, tuple, address2, address3, bool2);
 
@@ -497,13 +497,13 @@ mod tests {
     		0000000000000000000000004444444444444444444444444444444444444444
     	"
         );
-        let address1 = B160([0x11u8; 20]);
-        let address2 = B160([0x22u8; 20]);
+        let address1 = Address::from([0x11u8; 20]);
+        let address2 = Address::from([0x22u8; 20]);
         let bool1 = true;
         let bool2 = false;
         let tuple = (address2, bool1, bool2);
-        let address3 = B160([0x33u8; 20]);
-        let address4 = B160([0x44u8; 20]);
+        let address3 = Address::from([0x33u8; 20]);
+        let address4 = Address::from([0x44u8; 20]);
 
         let expected = (address1, tuple, address3, address4);
 

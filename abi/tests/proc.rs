@@ -1,6 +1,6 @@
 use ethers_abi_enc::{sol, SolStruct, SolType};
 
-use ethers_primitives::{B160, U256};
+use ethers_primitives::{Address, U256};
 
 sol!(
     /// Hello this is extra docs
@@ -76,7 +76,7 @@ fn proc_macro_expansion() {
 
     MyStruct::hex_encode(a.clone());
 
-    LateBinding::<MyStruct>::hex_encode((vec![a.clone(), a.clone()], B160::default()));
+    LateBinding::<MyStruct>::hex_encode((vec![a.clone(), a.clone()], Address::default()));
 
     MyStruct2::hex_encode(MyStruct2 {
         a,
