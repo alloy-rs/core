@@ -634,10 +634,7 @@ mod tests {
         // TODO(tests): more like this where we test type check internal logic
         assert_not_type_check!(sol_data::Uint<8>, &Word::repeat_byte(0x11).into());
         assert_not_type_check!(sol_data::Bool, &B256::repeat_byte(0x11).into());
-        assert_not_type_check!(
-            sol_data::FixedBytes<31>,
-            &B256::repeat_byte(0x11).into()
-        );
+        assert_not_type_check!(sol_data::FixedBytes<31>, &B256::repeat_byte(0x11).into());
 
         assert_type_check!(
             (sol_data::Uint<32>, sol_data::Bool),
