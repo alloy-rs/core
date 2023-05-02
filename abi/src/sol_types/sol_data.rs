@@ -1,13 +1,13 @@
 use alloc::borrow::Cow;
 use core::marker::PhantomData;
-use ethers_primitives::{B160, I256, U256};
+use ethers_primitives::{keccak256, Address as RustAddress, I256, U256};
 
 #[cfg(not(feature = "std"))]
 use crate::no_std_prelude::{Borrow, String as RustString, ToOwned, Vec};
 #[cfg(feature = "std")]
 use std::{borrow::Borrow, string::String as RustString};
 
-use crate::{keccak256, token::*, util, AbiResult, SolType, Word};
+use crate::{token::*, util, AbiResult, SolType, Word};
 
 /// This trait describes types that exist in normal Solidity operation
 /// (i.e. NOT events, errors, function calls)
@@ -43,7 +43,7 @@ pub trait SolDataType: SolType {
 pub struct Address;
 
 impl SolType for Address {
-    type RustType = B160;
+    type RustType = RustAddress;
     type TokenType = WordToken;
 
     fn sol_type_name() -> Cow<'static, str> {
@@ -56,7 +56,7 @@ impl SolType for Address {
 
     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
         let sli = &token.as_slice()[12..];
-        Ok(B160::from_slice(sli))
+        Ok(RustAddress::from_slice(sli))
     }
 
     fn tokenize<B>(rust: B) -> Self::TokenType

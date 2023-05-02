@@ -3,10 +3,7 @@
 
 use ethers_primitives::{keccak256, B256};
 
-use crate::token::TokenSeq;
-use crate::{util::keccak256, SolDataType, Word};
-
-use crate::{no_std_prelude::*, Eip712Domain};
+use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, SolDataType, Word};
 
 use super::SolType;
 

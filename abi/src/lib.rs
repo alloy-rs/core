@@ -259,6 +259,9 @@ mod sol_types;
 pub use sol_types::{sol_data, SolDataType, SolError, SolStruct, SolType};
 
 mod util;
+
+#[doc(hidden)]
+pub use ethers_primitives::keccak256;
 #[doc(hidden)]
 pub use util::just_ok;
 

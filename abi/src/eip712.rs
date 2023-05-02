@@ -1,8 +1,6 @@
 use crate::{
     no_std_prelude::{Cow, String, Vec},
-    sol_data,
-    util::keccak256,
-    SolType,
+    sol_data, SolType,
 };
 use ethers_primitives::{keccak256, Address, B256, U256};
 
