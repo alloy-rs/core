@@ -17,7 +17,7 @@ mod udt;
 use udt::*;
 
 enum SolInput {
-    Type(SolType),
+    Type(SolDataType),
     StructDef(SolStructDef),
     ValueTypeDef(Udt),
 }
@@ -25,7 +25,7 @@ enum SolInput {
 impl Parse for SolInput {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let fork = input.fork();
-        if let Ok(sol_ty) = fork.parse::<SolType>() {
+        if let Ok(sol_ty) = fork.parse::<SolDataType>() {
             input.advance_to(&fork);
             return Ok(SolInput::Type(sol_ty));
         }

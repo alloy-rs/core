@@ -310,11 +310,11 @@ mod tests {
 
     #[cfg(not(feature = "std"))]
     use crate::no_std_prelude::*;
-    use crate::{sol_type, util::pad_u32, SolType};
+    use crate::{sol_data, util::pad_u32, SolType};
 
     #[test]
     fn decode_static_tuple_of_addresses_and_uints() {
-        type MyTy = (sol_type::Address, sol_type::Address, sol_type::Uint<256>);
+        type MyTy = (sol_data::Address, sol_data::Address, sol_data::Uint<256>);
 
         let encoded = hex!(
             "
@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     fn decode_dynamic_tuple() {
-        type MyTy = (sol_type::String, sol_type::String);
+        type MyTy = (sol_data::String, sol_data::String);
         let encoded = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -357,13 +357,13 @@ mod tests {
     #[test]
     fn decode_nested_tuple() {
         type MyTy = (
-            sol_type::String,
-            sol_type::Bool,
-            sol_type::String,
+            sol_data::String,
+            sol_data::Bool,
+            sol_data::String,
             (
-                sol_type::String,
-                sol_type::String,
-                (sol_type::String, sol_type::String),
+                sol_data::String,
+                sol_data::String,
+                (sol_data::String, sol_data::String),
             ),
         );
 
@@ -411,10 +411,10 @@ mod tests {
     #[test]
     fn decode_complex_tuple_of_dynamic_and_static_types() {
         type MyTy = (
-            sol_type::Uint<256>,
-            sol_type::String,
-            sol_type::Address,
-            sol_type::Address,
+            sol_data::Uint<256>,
+            sol_data::String,
+            sol_data::Address,
+            sol_data::Address,
         );
 
         let encoded = hex!(
@@ -441,11 +441,11 @@ mod tests {
     #[test]
     fn decode_params_containing_dynamic_tuple() {
         type MyTy = (
-            sol_type::Address,
-            (sol_type::Bool, sol_type::String, sol_type::String),
-            sol_type::Address,
-            sol_type::Address,
-            sol_type::Bool,
+            sol_data::Address,
+            (sol_data::Bool, sol_data::String, sol_data::String),
+            sol_data::Address,
+            sol_data::Address,
+            sol_data::Bool,
         );
 
         let encoded = hex!(
@@ -481,10 +481,10 @@ mod tests {
     #[test]
     fn decode_params_containing_static_tuple() {
         type MyTy = (
-            sol_type::Address,
-            (sol_type::Address, sol_type::Bool, sol_type::Bool),
-            sol_type::Address,
-            sol_type::Address,
+            sol_data::Address,
+            (sol_data::Address, sol_data::Bool, sol_data::Bool),
+            sol_data::Address,
+            sol_data::Address,
         );
 
         let encoded = hex!(
@@ -514,11 +514,11 @@ mod tests {
     #[test]
     fn decode_data_with_size_that_is_not_a_multiple_of_32() {
         type MyTy = (
-            sol_type::Uint<256>,
-            sol_type::String,
-            sol_type::String,
-            sol_type::Uint<256>,
-            sol_type::Uint<256>,
+            sol_data::Uint<256>,
+            sol_data::String,
+            sol_data::String,
+            sol_data::Uint<256>,
+            sol_data::Uint<256>,
         );
 
         let data = (
@@ -553,10 +553,10 @@ mod tests {
     #[test]
     fn decode_after_fixed_bytes_with_less_than_32_bytes() {
         type MyTy = (
-            sol_type::Address,
-            sol_type::FixedBytes<32>,
-            sol_type::FixedBytes<4>,
-            sol_type::String,
+            sol_data::Address,
+            sol_data::FixedBytes<32>,
+            sol_data::FixedBytes<4>,
+            sol_data::String,
         );
 
         let encoded = hex!(
@@ -592,14 +592,14 @@ mod tests {
         );
 
         assert_eq!(
-            sol_type::String::decode_single(&encoded, false).unwrap(),
+            sol_data::String::decode_single(&encoded, false).unwrap(),
             "不�".to_string()
         );
     }
 
     #[test]
     fn decode_corrupted_dynamic_array() {
-        type MyTy = sol_type::Array<sol_type::Uint<32>>;
+        type MyTy = sol_data::Array<sol_data::Uint<32>>;
         // line 1 at 0x00 =   0: tail offset of array
         // line 2 at 0x20 =  32: length of array
         // line 3 at 0x40 =  64: first word
@@ -623,15 +623,15 @@ mod tests {
     	0000000000000000000000000000000000000000000000000000000000054321
     	"
         );
-        assert!(sol_type::Address::decode_single(&input, false).is_ok());
-        assert!(sol_type::Address::decode_single(&input, true).is_err());
-        assert!(<(sol_type::Address, sol_type::Address)>::decode_single(&input, true).is_ok());
+        assert!(sol_data::Address::decode_single(&input, false).is_ok());
+        assert!(sol_data::Address::decode_single(&input, true).is_err());
+        assert!(<(sol_data::Address, sol_data::Address)>::decode_single(&input, true).is_ok());
     }
 
     #[test]
     fn decode_verify_bytes() {
-        type MyTy = (sol_type::Address, sol_type::FixedBytes<20>);
-        type MyTy2 = (sol_type::Address, sol_type::Address);
+        type MyTy = (sol_data::Address, sol_data::FixedBytes<20>);
+        type MyTy2 = (sol_data::Address, sol_data::Address);
 
         let input = hex!(
             "

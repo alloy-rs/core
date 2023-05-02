@@ -8,7 +8,7 @@ fn ret_ok<T>(_: T) -> ethers_abi_enc::AbiResult<()> {
 define_udt!(
     /// My Sol UDT
     MyUdt,
-    underlying: ethers_abi_enc::sol_type::Bool,
+    underlying: ethers_abi_enc::sol_data::Bool,
     type_check: ret_ok,
 );
 

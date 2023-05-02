@@ -51,7 +51,7 @@ impl Parse for ArraySize {
 pub struct SolTuple {
     _tup: Option<kw::tuple>,
     parenthesized: syn::token::Paren,
-    inner: Punctuated<SolType, Token![,]>,
+    inner: Punctuated<SolDataType, Token![,]>,
 }
 
 impl fmt::Debug for SolTuple {
@@ -83,7 +83,7 @@ impl Parse for SolTuple {
         Ok(SolTuple {
             _tup: input.parse()?,
             parenthesized: parenthesized!(content in input),
-            inner: content.parse_terminated(SolType::parse, Token![,])?,
+            inner: content.parse_terminated(SolDataType::parse, Token![,])?,
         })
     }
 }
@@ -97,9 +97,9 @@ impl ToTokens for SolTuple {
 }
 
 #[derive(Clone)]
-pub enum SolType {
+pub enum SolDataType {
     Address,
-    Array(Box<SolType>, ArraySize),
+    Array(Box<SolDataType>, ArraySize),
     Bool,
     Bytes,
     FixedBytes(LitInt),
@@ -110,7 +110,7 @@ pub enum SolType {
     Other(Ident),
 }
 
-impl fmt::Debug for SolType {
+impl fmt::Debug for SolDataType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Address => write!(f, "Address"),
@@ -130,11 +130,11 @@ impl fmt::Debug for SolType {
     }
 }
 
-impl fmt::Display for SolType {
+impl fmt::Display for SolDataType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SolType::Address => write!(f, "address"),
-            SolType::Array(ty, size) => {
+            SolDataType::Address => write!(f, "address"),
+            SolDataType::Array(ty, size) => {
                 write!(
                     f,
                     "{}[{}]",
@@ -145,47 +145,49 @@ impl fmt::Display for SolType {
                         .unwrap_or_default()
                 )
             }
-            SolType::Bool => write!(f, "bool"),
-            SolType::Bytes => write!(f, "bytes"),
-            SolType::FixedBytes(size) => write!(f, "bytes{}", size.base10_digits()),
-            SolType::Int(size) => write!(f, "int{}", size.base10_digits()),
-            SolType::String => write!(f, "string"),
-            SolType::Uint(size) => write!(f, "uint{}", size.base10_digits()),
-            SolType::Tuple(inner) => write!(f, "{}", inner),
-            SolType::Other(name) => write!(f, "{}", name),
+            SolDataType::Bool => write!(f, "bool"),
+            SolDataType::Bytes => write!(f, "bytes"),
+            SolDataType::FixedBytes(size) => write!(f, "bytes{}", size.base10_digits()),
+            SolDataType::Int(size) => write!(f, "int{}", size.base10_digits()),
+            SolDataType::String => write!(f, "string"),
+            SolDataType::Uint(size) => write!(f, "uint{}", size.base10_digits()),
+            SolDataType::Tuple(inner) => write!(f, "{}", inner),
+            SolDataType::Other(name) => write!(f, "{}", name),
         }
     }
 }
 
-impl ToTokens for SolType {
+impl ToTokens for SolDataType {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let expanded = match self {
-            SolType::Address => quote! { ::ethers_abi_enc::sol_type::Address },
-            SolType::Array(inner, size) => {
+            SolDataType::Address => quote! { ::ethers_abi_enc::sol_data::Address },
+            SolDataType::Array(inner, size) => {
                 if let Some(size) = &size.size {
                     quote! {
-                        ::ethers_abi_enc::sol_type::FixedArray<#inner, #size>
+                        ::ethers_abi_enc::sol_data::FixedArray<#inner, #size>
                     }
                 } else {
                     quote! {
-                        ::ethers_abi_enc::sol_type::Array<#inner>
+                        ::ethers_abi_enc::sol_data::Array<#inner>
                     }
                 }
             }
-            SolType::Bool => quote! { ::ethers_abi_enc::sol_type::Bool },
-            SolType::Bytes => quote! { ::ethers_abi_enc::sol_type::Bytes },
-            SolType::FixedBytes(size) => quote! {::ethers_abi_enc::sol_type::FixedBytes<#size>},
-            SolType::Int(size) => quote! { ::ethers_abi_enc::sol_type::Int<#size> },
-            SolType::String => quote! { ::ethers_abi_enc::sol_type::String },
-            SolType::Uint(size) => quote! { ::ethers_abi_enc::sol_type::Uint<#size> },
-            SolType::Tuple(inner) => return inner.to_tokens(tokens),
-            SolType::Other(ident) => quote! { #ident },
+            SolDataType::Bool => quote! { ::ethers_abi_enc::sol_data::Bool },
+            SolDataType::Bytes => quote! { ::ethers_abi_enc::sol_data::Bytes },
+            SolDataType::FixedBytes(size) => {
+                quote! {::ethers_abi_enc::sol_data::FixedBytes<#size>}
+            }
+            SolDataType::Int(size) => quote! { ::ethers_abi_enc::sol_data::Int<#size> },
+            SolDataType::String => quote! { ::ethers_abi_enc::sol_data::String },
+            SolDataType::Uint(size) => quote! { ::ethers_abi_enc::sol_data::Uint<#size> },
+            SolDataType::Tuple(inner) => return inner.to_tokens(tokens),
+            SolDataType::Other(ident) => quote! { #ident },
         };
         tokens.extend(expanded);
     }
 }
 
-impl Parse for SolType {
+impl Parse for SolDataType {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut candidate = if input.peek(kw::address) {
             let _ = input.parse::<kw::address>()?;
@@ -247,7 +249,7 @@ impl Parse for SolType {
     }
 }
 
-impl SolType {
+impl SolDataType {
     pub fn is_non_primitive(&self) -> bool {
         matches!(self, Self::Other(_))
     }
