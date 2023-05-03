@@ -13,37 +13,36 @@ pub enum DynAbiError {
         actual: serde_json::Value,
     },
     /// Invalid size for a primitive type (intX, uintX, or bytesX)
-    InvalidSize(Cow<'static, str>),
+    InvalidSize(String),
     /// Invalid type string, extra chars, or invalid structure
-    InvalidTypeString(Cow<'static, str>),
+    InvalidTypeString(String),
     /// Unknown type referenced from another type
-    MissingType(Cow<'static, str>),
+    MissingType(String),
     /// Detected circular dep during typegraph resolution
-    CircularDependency(Cow<'static, str>),
+    CircularDependency(String),
     /// Invalid Property definition
-    InvalidPropertyDefinition(Cow<'static, str>),
+    InvalidPropertyDefinition(String),
     /// Hex
     HexError(hex::FromHexError),
 }
 
-impl core::fmt::Display for DynAbiError {
+#[cfg(feature = "std")]
+impl std::error::Error for DynAbiError {}
+
+impl fmt::Display for DynAbiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DynAbiError::TypeMismatch { expected, actual } => write!(
-                f,
-                "Type mismatch, expected: {:?}, actual: {}",
-                expected, actual
-            ),
-            DynAbiError::InvalidSize(ty) => write!(f, "Invalid size for type: {}", ty),
-            DynAbiError::InvalidTypeString(ty) => write!(f, "Invalid type string: {}", ty),
-            DynAbiError::MissingType(name) => {
-                write!(f, "Missing type in type resolution: {}", name)
+            DynAbiError::TypeMismatch { expected, actual } => {
+                write!(f, "Type mismatch, expected: {expected:?}, actual: {actual}")
             }
-            DynAbiError::CircularDependency(dep) => write!(f, "Circular dependency: {}", dep),
+            DynAbiError::InvalidSize(ty) => write!(f, "Invalid size for type: {ty}"),
+            DynAbiError::InvalidTypeString(ty) => write!(f, "Invalid type string: {ty}"),
+            DynAbiError::MissingType(name) => write!(f, "Missing type in type resolution: {name}"),
+            DynAbiError::CircularDependency(dep) => write!(f, "Circular dependency: {dep}"),
             DynAbiError::InvalidPropertyDefinition(def) => {
-                write!(f, "Invalid property definition: {}", def)
+                write!(f, "Invalid property definition: {def}")
             }
-            DynAbiError::HexError(h) => write!(f, "Hex error: {}", h),
+            DynAbiError::HexError(h) => h.fmt(f),
         }
     }
 }
@@ -62,23 +61,23 @@ impl DynAbiError {
         }
     }
 
-    pub(crate) fn invalid_property_def(def: impl Borrow<str>) -> DynAbiError {
-        DynAbiError::InvalidPropertyDefinition(def.borrow().to_owned().into())
+    pub(crate) fn invalid_property_def(def: impl ToString) -> DynAbiError {
+        DynAbiError::InvalidPropertyDefinition(def.to_string())
     }
 
-    pub(crate) fn invalid_size(ty: impl Borrow<str>) -> DynAbiError {
-        DynAbiError::InvalidSize(ty.borrow().to_owned().into())
+    pub(crate) fn invalid_size(ty: impl ToString) -> DynAbiError {
+        DynAbiError::InvalidSize(ty.to_string())
     }
 
-    pub(crate) fn invalid_type_string(ty: impl Borrow<str>) -> DynAbiError {
-        DynAbiError::InvalidTypeString(ty.borrow().to_owned().into())
+    pub(crate) fn invalid_type_string(ty: impl ToString) -> DynAbiError {
+        DynAbiError::InvalidTypeString(ty.to_string())
     }
 
-    pub(crate) fn missing_type(name: impl Borrow<str>) -> DynAbiError {
-        DynAbiError::MissingType(name.borrow().to_owned().into())
+    pub(crate) fn missing_type(name: impl ToString) -> DynAbiError {
+        DynAbiError::MissingType(name.to_string())
     }
 
-    pub(crate) fn circular_dependency(dep: impl Borrow<str>) -> DynAbiError {
-        DynAbiError::CircularDependency(dep.borrow().to_owned().into())
+    pub(crate) fn circular_dependency(dep: impl ToString) -> DynAbiError {
+        DynAbiError::CircularDependency(dep.to_string())
     }
 }
