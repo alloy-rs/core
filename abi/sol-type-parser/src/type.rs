@@ -19,23 +19,24 @@ mod kw {
 }
 
 #[derive(Clone)]
-pub struct ArraySize {
+pub struct SolArray {
+    ty: Box<SolType>,
     bracket_token: Bracket,
     size: Option<LitInt>,
 }
 
-impl fmt::Debug for ArraySize {
+impl fmt::Debug for SolArray {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut t = f.debug_tuple("ArraySize");
-        if let Some(s) = &self.size {
-            t.field(&s.base10_digits());
-        }
-        t.finish()
+        f.debug_tuple("SolArray")
+            .field(&self.ty)
+            .field(&self.size.as_ref().map(|s| s.base10_digits()))
+            .finish()
     }
 }
 
-impl fmt::Display for ArraySize {
+impl fmt::Display for SolArray {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.ty.fmt(f)?;
         f.write_str("[")?;
         if let Some(s) = &self.size {
             f.write_str(s.base10_digits())?;
@@ -44,26 +45,36 @@ impl fmt::Display for ArraySize {
     }
 }
 
-impl Parse for ArraySize {
-    fn parse(input: ParseStream) -> Result<Self> {
+impl ToTokens for SolArray {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let ty = &self.ty;
+        let span = self.span();
+        let expanded = if let Some(size) = &self.size {
+            quote_spanned! {span=>
+                ::ethers_abi_enc::sol_type::FixedArray<#ty, #size>
+            }
+        } else {
+            quote_spanned! {span=>
+                ::ethers_abi_enc::sol_type::Array<#ty>
+            }
+        };
+        tokens.extend(expanded);
+    }
+}
+
+impl SolArray {
+    pub fn span(&self) -> Span {
+        let span = self.ty.span();
+        span.join(self.bracket_token.span.join()).unwrap_or(span)
+    }
+
+    pub fn parse(input: ParseStream, ty: SolType) -> Result<Self> {
         let content;
-        Ok(Self {
+        Ok(SolArray {
+            ty: Box::new(ty),
             bracket_token: bracketed!(content in input),
             size: content.parse()?,
         })
-    }
-}
-
-impl ToTokens for ArraySize {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.bracket_token
-            .surround(tokens, |tokens| self.size.to_tokens(tokens))
-    }
-}
-
-impl ArraySize {
-    pub fn span(&self) -> Span {
-        self.bracket_token.span.join()
     }
 }
 
@@ -146,10 +157,7 @@ pub enum SolType {
     },
 
     /// `Some(size) => <size>`, `None => `
-    Array {
-        ty: Box<SolType>,
-        size: ArraySize,
-    },
+    Array(SolArray),
     /// `(tuple)? ( $($type),* )`
     Tuple(SolTuple),
 
@@ -165,8 +173,8 @@ impl fmt::Debug for SolType {
             Self::Bytes { size, .. } => f.debug_tuple("Bytes").field(size).finish(),
             Self::Int { size, .. } => f.debug_tuple("Int").field(size).finish(),
             Self::Uint { size, .. } => f.debug_tuple("Uint").field(size).finish(),
-            Self::Tuple(inner) => inner.fmt(f),
-            Self::Array { ty, size } => ty.fmt(f).and_then(|()| size.fmt(f)),
+            Self::Tuple(tuple) => tuple.fmt(f),
+            Self::Array(array) => array.fmt(f),
             Self::Other(name) => name.fmt(f),
         }
     }
@@ -181,8 +189,8 @@ impl fmt::Display for SolType {
             Self::Bytes { size, .. } => write_opt(f, "bytes", *size),
             Self::Int { size, .. } => write_opt(f, "int", *size),
             Self::Uint { size, .. } => write_opt(f, "uint", *size),
-            Self::Tuple(inner) => inner.fmt(f),
-            Self::Array { ty, size } => ty.fmt(f).and_then(|()| size.fmt(f)),
+            Self::Tuple(tuple) => tuple.fmt(f),
+            Self::Array(array) => array.fmt(f),
             Self::Other(name) => name.fmt(f),
         }
     }
@@ -237,10 +245,7 @@ impl Parse for SolType {
         // while the next token is a bracket, parse an array size and nest the
         // candidate into an array
         while input.peek(Bracket) {
-            candidate = Self::Array {
-                ty: Box::new(candidate),
-                size: input.parse()?,
-            };
+            candidate = Self::Array(SolArray::parse(input, candidate)?);
         }
 
         Ok(candidate)
@@ -278,20 +283,8 @@ impl ToTokens for SolType {
                 }
             }
 
-            Self::Tuple(ref inner) => return inner.to_tokens(tokens),
-            Self::Array { ref ty, ref size } => {
-                let span = self.span();
-                if let Some(size) = &size.size {
-                    quote_spanned! {span=>
-                        ::ethers_abi_enc::sol_type::FixedArray<#ty, #size>
-                    }
-                } else {
-                    quote_spanned! {span=>
-                        ::ethers_abi_enc::sol_type::Array<#ty>
-                    }
-                }
-            }
-
+            Self::Tuple(ref tuple) => return tuple.to_tokens(tokens),
+            Self::Array(ref array) => return array.to_tokens(tokens),
             Self::Other(ref ident) => return ident.to_tokens(tokens),
         };
         tokens.extend(expanded);
@@ -308,10 +301,7 @@ impl SolType {
             | Self::Int { span, .. }
             | Self::Uint { span, .. } => *span,
             Self::Tuple(tuple) => tuple.span(),
-            Self::Array { ty, size } => {
-                let span = ty.span();
-                span.join(size.span()).unwrap_or(span)
-            }
+            Self::Array(array) => array.span(),
             Self::Other(ident) => ident.span(),
         }
     }

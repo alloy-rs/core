@@ -23,7 +23,7 @@ impl fmt::Display for SolStructField {
 }
 
 impl Parse for SolStructField {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> Result<Self> {
         Ok(Self {
             ty: input.parse()?,
             name: input.parse()?,

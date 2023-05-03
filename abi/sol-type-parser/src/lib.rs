@@ -54,7 +54,7 @@ enum SolInputKind {
 }
 
 impl Parse for SolInputKind {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> Result<Self> {
         let this = if input.peek(Token![type]) {
             Self::ValueTypeDef(input.parse()?)
         } else if input.peek(Token![struct]) {
