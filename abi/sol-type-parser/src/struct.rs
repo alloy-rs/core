@@ -1,7 +1,7 @@
 use crate::r#type::SolType;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
-use std::fmt;
+use std::fmt::{self, Write};
 use syn::{
     braced,
     parse::{Parse, ParseStream},
@@ -111,13 +111,7 @@ impl SolStructDef {
         let props_tys: Vec<_> = self.fields.iter().map(|f| f.ty.clone()).collect();
         let props = self.fields.iter().map(|f| &f.name);
 
-        let fields_string = self
-            .fields
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join(",");
-        let encoded_type = format!("{name}({fields_string})");
+        let encoded_type = self.signature();
         let encode_type_impl = if self.fields.iter().any(|f| f.ty.is_non_primitive()) {
             quote! {
                 {
@@ -189,6 +183,20 @@ impl SolStructDef {
                 }
             };
         }
+    }
+
+    fn signature(&self) -> String {
+        let mut out = self.name.to_string();
+        out.reserve(2 + self.fields.len() * 32);
+        out.push('(');
+        for (i, field) in self.fields.iter().enumerate() {
+            if i > 0 {
+                out.push(',');
+            }
+            write!(out, "{field}").unwrap();
+        }
+        out.push(')');
+        out
     }
 
     pub fn to_tokens(&self, tokens: &mut TokenStream, attrs: &[Attribute]) {
