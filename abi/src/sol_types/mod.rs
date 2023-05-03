@@ -2,6 +2,10 @@
 mod sol_error;
 pub use sol_error::SolError;
 
+/// A Solidity call
+mod sol_call;
+pub use sol_call::SolCall;
+
 /// A solidity type that can be encoded/decoded via ABI
 mod sol_type;
 pub use sol_type::SolType;
