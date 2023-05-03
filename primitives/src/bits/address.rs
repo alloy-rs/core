@@ -54,7 +54,7 @@ wrap_fixed_bytes!(
 
 impl Borrow<[u8; 20]> for Address {
     fn borrow(&self) -> &[u8; 20] {
-        self.0.borrow()
+        &self.0
     }
 }
 
