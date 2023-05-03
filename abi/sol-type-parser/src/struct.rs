@@ -4,10 +4,10 @@ use quote::{quote, quote_spanned, ToTokens};
 use std::fmt;
 use syn::{
     braced,
-    parse::Parse,
+    parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    token::{Brace, Struct},
-    Attribute, Ident, Index, Token,
+    token::Brace,
+    Attribute, Ident, Index, Result, Token,
 };
 
 #[derive(Debug, Clone)]
@@ -42,21 +42,19 @@ impl ToTokens for SolStructField {
 }
 
 pub struct SolStructDef {
-    attrs: Vec<Attribute>,
-    _struct: Struct,
+    _struct_token: Token![struct],
     name: Ident,
-    _brace: Brace,
+    _brace_token: Brace,
     fields: Punctuated<SolStructField, Token![;]>,
 }
 
 impl Parse for SolStructDef {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> Result<Self> {
         let content;
         Ok(Self {
-            attrs: input.call(Attribute::parse_outer)?,
-            _struct: input.parse()?,
+            _struct_token: input.parse()?,
             name: input.parse()?,
-            _brace: braced!(content in input),
+            _brace_token: braced!(content in input),
             fields: content.parse_terminated(SolStructField::parse, Token![;])?,
         })
     }
@@ -97,8 +95,7 @@ impl SolStructDef {
         }
     }
 
-    fn expand_impl(&self) -> TokenStream {
-        debug_assert!(!self.fields.is_empty());
+    fn expand_impl(&self, attrs: &[Attribute]) -> TokenStream {
         let name = &self.name;
 
         let doc = format!("Represents the `{name}` Solidity struct type.");
@@ -113,8 +110,6 @@ impl SolStructDef {
 
         let props_tys: Vec<_> = self.fields.iter().map(|f| f.ty.clone()).collect();
         let props = self.fields.iter().map(|f| &f.name);
-
-        let convert = self.expand_from();
 
         let fields_string = self
             .fields
@@ -149,13 +144,14 @@ impl SolStructDef {
                 )*].concat()
             }
         };
-        let attrs = self.attrs.iter();
 
+        let attrs = attrs.iter();
+        let convert = self.expand_from();
         quote! {
             #[doc = #doc]
             #(#attrs)*
             #[allow(non_snake_case)]
-            #[derive(Debug, Clone, PartialEq)]
+            #[derive(Debug, Clone, PartialEq)] // TODO: Derive traits dynamically
             pub struct #name {
                 #(pub #fields),*
             }
@@ -194,16 +190,13 @@ impl SolStructDef {
             };
         }
     }
-}
 
-impl ToTokens for SolStructDef {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
+    pub fn to_tokens(&self, tokens: &mut TokenStream, attrs: &[Attribute]) {
         if self.fields.is_empty() {
-            tokens.extend(quote_spanned! { self.name.span() =>
+            tokens.extend(quote_spanned! {self.name.span()=>
                 compile_error!("Defining empty structs is disallowed.");
             });
-        } else {
-            tokens.extend(self.expand_impl());
         }
+        tokens.extend(self.expand_impl(attrs))
     }
 }
