@@ -62,23 +62,23 @@ impl DynAbiError {
         }
     }
 
-    pub(crate) fn invalid_property_def(def: impl Borrow<str>) -> DynAbiError {
-        DynAbiError::InvalidPropertyDefinition(def.borrow().to_owned().into())
+    pub(crate) fn invalid_property_def(def: impl Into<Cow<'static, str>>) -> DynAbiError {
+        DynAbiError::InvalidPropertyDefinition(def.into())
     }
 
-    pub(crate) fn invalid_size(ty: impl Borrow<str>) -> DynAbiError {
-        DynAbiError::InvalidSize(ty.borrow().to_owned().into())
+    pub(crate) fn invalid_size(ty: impl Into<Cow<'static, str>>) -> DynAbiError {
+        DynAbiError::InvalidSize(ty.into())
     }
 
-    pub(crate) fn invalid_type_string(ty: impl Borrow<str>) -> DynAbiError {
-        DynAbiError::InvalidTypeString(ty.borrow().to_owned().into())
+    pub(crate) fn invalid_type_string(ty: impl Into<Cow<'static, str>>) -> DynAbiError {
+        DynAbiError::InvalidTypeString(ty.into())
     }
 
-    pub(crate) fn missing_type(name: impl Borrow<str>) -> DynAbiError {
-        DynAbiError::MissingType(name.borrow().to_owned().into())
+    pub(crate) fn missing_type(name: impl Into<Cow<'static, str>>) -> DynAbiError {
+        DynAbiError::MissingType(name.into())
     }
 
-    pub(crate) fn circular_dependency(dep: impl Borrow<str>) -> DynAbiError {
-        DynAbiError::CircularDependency(dep.borrow().to_owned().into())
+    pub(crate) fn circular_dependency(dep: impl Into<Cow<'static, str>>) -> DynAbiError {
+        DynAbiError::CircularDependency(dep.into())
     }
 }
