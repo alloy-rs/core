@@ -8,6 +8,12 @@ use crate::{no_std_prelude::*, DynAbiError, DynSolType};
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RootType<'a>(&'a str);
 
+impl fmt::Display for RootType<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.0)
+    }
+}
+
 impl RootType<'_> {
     /// The string underlying this type. The type name
     pub const fn as_str(&self) -> &str {

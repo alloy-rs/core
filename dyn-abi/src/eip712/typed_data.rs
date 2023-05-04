@@ -85,7 +85,6 @@ impl Eip712Types {
 ///     "required": ["types", "primaryType", "domain", "message"]
 /// }
 /// ```
-///
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct TypedData {
     /// Signing domain metadata. The signing domain is the intended context for
