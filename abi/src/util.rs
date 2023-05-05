@@ -35,15 +35,14 @@ pub(crate) const fn round_up_nearest_multiple(value: usize, padding: usize) -> u
 }
 
 pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
-    if word == Word::default() {
+    if word.is_empty() {
         return true;
     }
     match len {
         0 => panic!("cannot have bytes0"),
         1..=31 => check_zeroes(&word[len..]),
         32 => true, // always valid
-        33.. => panic!("cannot have bytes33 or higher"),
-        _ => unreachable!(),
+        _ => panic!("cannot have bytes33 or higher"),
     }
 }
 
