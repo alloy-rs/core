@@ -8,7 +8,7 @@ use syn::{
 use quote::{quote, quote_spanned, ToTokens};
 
 mod r#type;
-use r#type::SolType;
+use r#type::SolDataType;
 
 mod r#struct;
 use r#struct::SolStructDef;
@@ -48,7 +48,7 @@ impl ToTokens for SolInput {
 }
 
 enum SolInputKind {
-    Type(SolType),
+    Type(SolDataType),
     StructDef(SolStructDef),
     ValueTypeDef(Udt),
 }

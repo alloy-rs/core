@@ -1,6 +1,6 @@
 use crate::{
     no_std_prelude::{Cow, String, Vec},
-    sol_type, SolType,
+    sol_data, SolType,
 };
 use ethers_primitives::{keccak256, Address, B256, U256};
 
@@ -128,53 +128,53 @@ impl Eip712Domain {
         ) {
             (None, None, None, None, None) => vec![],
             (None, None, None, None, Some(salt)) => {
-                <(sol_type::FixedBytes<32>,)>::encode((salt.0,))
+                <(sol_data::FixedBytes<32>,)>::encode((salt.0,))
             }
             (None, None, None, Some(verifying_contract), None) => {
-                <(sol_type::Address,)>::encode((verifying_contract,))
+                <(sol_data::Address,)>::encode((verifying_contract,))
             }
             (None, None, None, Some(verifying_contract), Some(salt)) => {
-                <(sol_type::Address, sol_type::FixedBytes<32>)>::encode((
+                <(sol_data::Address, sol_data::FixedBytes<32>)>::encode((
                     verifying_contract,
                     salt.0,
                 ))
             }
             (None, None, Some(chain_id), None, None) => {
-                <(sol_type::Uint<256>,)>::encode((chain_id,))
+                <(sol_data::Uint<256>,)>::encode((chain_id,))
             }
             (None, None, Some(chain_id), None, Some(salt)) => {
-                <(sol_type::Uint<256>, sol_type::FixedBytes<32>)>::encode((chain_id, salt.0))
+                <(sol_data::Uint<256>, sol_data::FixedBytes<32>)>::encode((chain_id, salt.0))
             }
             (None, None, Some(chain_id), Some(verifying_contract), None) => {
-                <(sol_type::Uint<256>, sol_type::Address)>::encode((chain_id, verifying_contract))
+                <(sol_data::Uint<256>, sol_data::Address)>::encode((chain_id, verifying_contract))
             }
             (None, None, Some(chain_id), Some(verifying_contract), Some(salt)) => {
                 <(
-                    sol_type::Uint<256>,
-                    sol_type::Address,
-                    sol_type::FixedBytes<32>,
+                    sol_data::Uint<256>,
+                    sol_data::Address,
+                    sol_data::FixedBytes<32>,
                 )>::encode((chain_id, verifying_contract, salt.0))
             }
             (None, Some(version), None, None, None) => {
-                <(sol_type::FixedBytes<32>,)>::encode((keccak256(version.as_bytes()).0,))
+                <(sol_data::FixedBytes<32>,)>::encode((keccak256(version.as_bytes()).0,))
             }
             (None, Some(version), None, None, Some(salt)) => {
-                <(sol_type::FixedBytes<32>, sol_type::FixedBytes<32>)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode((
                     keccak256(version.as_bytes()).0,
                     salt.0,
                 ))
             }
             (None, Some(version), None, Some(verifying_contract), None) => {
-                <(sol_type::FixedBytes<32>, sol_type::Address)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::Address)>::encode((
                     keccak256(version.as_bytes()).0,
                     verifying_contract,
                 ))
             }
             (None, Some(version), None, Some(verifying_contract), Some(salt)) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::Address,
-                    sol_type::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Address,
+                    sol_data::FixedBytes<32>,
                 )>::encode((
                     keccak256(version.as_bytes()).0,
                     verifying_contract,
@@ -182,23 +182,23 @@ impl Eip712Domain {
                 ))
             }
             (None, Some(version), Some(chain_id), None, None) => {
-                <(sol_type::FixedBytes<32>, sol_type::Uint<256>)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::Uint<256>)>::encode((
                     keccak256(version.as_bytes()).0,
                     chain_id,
                 ))
             }
             (None, Some(version), Some(chain_id), None, Some(salt)) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::Uint<256>,
-                    sol_type::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Uint<256>,
+                    sol_data::FixedBytes<32>,
                 )>::encode((keccak256(version.as_bytes()).0, chain_id, salt.0))
             }
             (None, Some(version), Some(chain_id), Some(verifying_contract), None) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::Uint<256>,
-                    sol_type::Address,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Uint<256>,
+                    sol_data::Address,
                 )>::encode((
                     keccak256(version.as_bytes()).0,
                     chain_id,
@@ -207,10 +207,10 @@ impl Eip712Domain {
             }
             (None, Some(version), Some(chain_id), Some(verifying_contract), Some(salt)) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::Uint<256>,
-                    sol_type::Address,
-                    sol_type::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Uint<256>,
+                    sol_data::Address,
+                    sol_data::FixedBytes<32>,
                 )>::encode((
                     keccak256(version.as_bytes()).0,
                     chain_id,
@@ -219,25 +219,25 @@ impl Eip712Domain {
                 ))
             }
             (Some(name), None, None, None, None) => {
-                <(sol_type::FixedBytes<32>,)>::encode((keccak256(name.as_bytes()).0,))
+                <(sol_data::FixedBytes<32>,)>::encode((keccak256(name.as_bytes()).0,))
             }
             (Some(name), None, None, None, Some(salt)) => {
-                <(sol_type::FixedBytes<32>, sol_type::FixedBytes<32>)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode((
                     keccak256(name.as_bytes()).0,
                     salt.0,
                 ))
             }
             (Some(name), None, None, Some(verifying_contract), None) => {
-                <(sol_type::FixedBytes<32>, sol_type::Address)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::Address)>::encode((
                     keccak256(name.as_bytes()).0,
                     verifying_contract,
                 ))
             }
             (Some(name), None, None, Some(verifying_contract), Some(salt)) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::Address,
-                    sol_type::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Address,
+                    sol_data::FixedBytes<32>,
                 )>::encode((
                     keccak256(name.as_bytes()).0,
                     verifying_contract,
@@ -245,23 +245,23 @@ impl Eip712Domain {
                 ))
             }
             (Some(name), None, Some(chain_id), None, None) => {
-                <(sol_type::FixedBytes<32>, sol_type::Uint<256>)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::Uint<256>)>::encode((
                     keccak256(name.as_bytes()).0,
                     chain_id,
                 ))
             }
             (Some(name), None, Some(chain_id), None, Some(salt)) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::Uint<256>,
-                    sol_type::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Uint<256>,
+                    sol_data::FixedBytes<32>,
                 )>::encode((keccak256(name.as_bytes()).0, chain_id, salt.0))
             }
             (Some(name), None, Some(chain_id), Some(verifying_contract), None) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::Uint<256>,
-                    sol_type::Address,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Uint<256>,
+                    sol_data::Address,
                 )>::encode((
                     keccak256(name.as_bytes()).0,
                     chain_id,
@@ -270,10 +270,10 @@ impl Eip712Domain {
             }
             (Some(name), None, Some(chain_id), Some(verifying_contract), Some(salt)) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::Uint<256>,
-                    sol_type::Address,
-                    sol_type::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Uint<256>,
+                    sol_data::Address,
+                    sol_data::FixedBytes<32>,
                 )>::encode((
                     keccak256(name.as_bytes()).0,
                     chain_id,
@@ -282,15 +282,15 @@ impl Eip712Domain {
                 ))
             }
             (Some(name), Some(version), None, None, None) => {
-                <(sol_type::FixedBytes<32>, sol_type::FixedBytes<32>)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode((
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
                 ))
             }
             (Some(name), Some(version), None, None, Some(salt)) => <(
-                sol_type::FixedBytes<32>,
-                sol_type::FixedBytes<32>,
-                sol_type::FixedBytes<32>,
+                sol_data::FixedBytes<32>,
+                sol_data::FixedBytes<32>,
+                sol_data::FixedBytes<32>,
             )>::encode((
                 keccak256(name.as_bytes()).0,
                 keccak256(version.as_bytes()).0,
@@ -298,9 +298,9 @@ impl Eip712Domain {
             )),
             (Some(name), Some(version), None, Some(verifying_contract), None) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::FixedBytes<32>,
-                    sol_type::Address,
+                    sol_data::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Address,
                 )>::encode((
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
@@ -309,10 +309,10 @@ impl Eip712Domain {
             }
             (Some(name), Some(version), None, Some(verifying_contract), Some(salt)) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::FixedBytes<32>,
-                    sol_type::Address,
-                    sol_type::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Address,
+                    sol_data::FixedBytes<32>,
                 )>::encode((
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
@@ -321,9 +321,9 @@ impl Eip712Domain {
                 ))
             }
             (Some(name), Some(version), Some(chain_id), None, None) => <(
-                sol_type::FixedBytes<32>,
-                sol_type::FixedBytes<32>,
-                sol_type::Uint<256>,
+                sol_data::FixedBytes<32>,
+                sol_data::FixedBytes<32>,
+                sol_data::Uint<256>,
             )>::encode((
                 keccak256(name.as_bytes()).0,
                 keccak256(version.as_bytes()).0,
@@ -331,10 +331,10 @@ impl Eip712Domain {
             )),
             (Some(name), Some(version), Some(chain_id), None, Some(salt)) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::FixedBytes<32>,
-                    sol_type::Uint<256>,
-                    sol_type::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Uint<256>,
+                    sol_data::FixedBytes<32>,
                 )>::encode((
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
@@ -344,10 +344,10 @@ impl Eip712Domain {
             }
             (Some(name), Some(version), Some(chain_id), Some(verifying_contract), None) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::FixedBytes<32>,
-                    sol_type::Uint<256>,
-                    sol_type::Address,
+                    sol_data::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Uint<256>,
+                    sol_data::Address,
                 )>::encode((
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
@@ -357,11 +357,11 @@ impl Eip712Domain {
             }
             (Some(name), Some(version), Some(chain_id), Some(verifying_contract), Some(salt)) => {
                 <(
-                    sol_type::FixedBytes<32>,
-                    sol_type::FixedBytes<32>,
-                    sol_type::Uint<256>,
-                    sol_type::Address,
-                    sol_type::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::FixedBytes<32>,
+                    sol_data::Uint<256>,
+                    sol_data::Address,
+                    sol_data::FixedBytes<32>,
                 )>::encode((
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,

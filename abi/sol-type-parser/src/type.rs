@@ -20,7 +20,7 @@ mod kw {
 
 #[derive(Clone)]
 pub struct SolArray {
-    ty: Box<SolType>,
+    ty: Box<SolDataType>,
     bracket_token: Bracket,
     size: Option<LitInt>,
 }
@@ -51,11 +51,11 @@ impl ToTokens for SolArray {
         let span = self.span();
         let expanded = if let Some(size) = &self.size {
             quote_spanned! {span=>
-                ::ethers_abi_enc::sol_type::FixedArray<#ty, #size>
+                ::ethers_abi_enc::sol_data::FixedArray<#ty, #size>
             }
         } else {
             quote_spanned! {span=>
-                ::ethers_abi_enc::sol_type::Array<#ty>
+                ::ethers_abi_enc::sol_data::Array<#ty>
             }
         };
         tokens.extend(expanded);
@@ -68,7 +68,7 @@ impl SolArray {
         span.join(self.bracket_token.span.join()).unwrap_or(span)
     }
 
-    pub fn parse(input: ParseStream, ty: SolType) -> Result<Self> {
+    pub fn parse(input: ParseStream, ty: SolDataType) -> Result<Self> {
         let content;
         Ok(SolArray {
             ty: Box::new(ty),
@@ -82,7 +82,7 @@ impl SolArray {
 pub struct SolTuple {
     tuple_token: Option<kw::tuple>,
     paren_token: Paren,
-    types: Punctuated<SolType, Token![,]>,
+    types: Punctuated<SolDataType, Token![,]>,
 }
 
 impl fmt::Debug for SolTuple {
@@ -110,7 +110,7 @@ impl Parse for SolTuple {
         Ok(SolTuple {
             tuple_token: input.parse()?,
             paren_token: parenthesized!(content in input),
-            types: content.parse_terminated(SolType::parse, Token![,])?,
+            types: content.parse_terminated(SolDataType::parse, Token![,])?,
         })
     }
 }
@@ -132,7 +132,7 @@ impl SolTuple {
 }
 
 #[derive(Clone)]
-pub enum SolType {
+pub enum SolDataType {
     /// `address`
     Address(Span),
     /// `bool`
@@ -164,7 +164,7 @@ pub enum SolType {
     Other(Ident),
 }
 
-impl fmt::Debug for SolType {
+impl fmt::Debug for SolDataType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Address(_) => f.write_str("Address"),
@@ -180,7 +180,7 @@ impl fmt::Debug for SolType {
     }
 }
 
-impl fmt::Display for SolType {
+impl fmt::Display for SolDataType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Address(_) => f.write_str("address"),
@@ -196,7 +196,7 @@ impl fmt::Display for SolType {
     }
 }
 
-impl Parse for SolType {
+impl Parse for SolDataType {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut candidate = if input.peek(Paren) || input.peek(kw::tuple) {
             Self::Tuple(input.parse()?)
@@ -252,34 +252,34 @@ impl Parse for SolType {
     }
 }
 
-impl ToTokens for SolType {
+impl ToTokens for SolDataType {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let expanded = match *self {
-            Self::Address(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_type::Address },
-            Self::Bool(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_type::Bool },
-            Self::String(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_type::String },
+            Self::Address(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_data::Address },
+            Self::Bool(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_data::Bool },
+            Self::String(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_data::String },
 
             Self::Bytes { span, size } => match size {
                 Some(size) => {
                     let size = Literal::u16_unsuffixed(size.get());
                     quote_spanned! {span=>
-                        ::ethers_abi_enc::sol_type::FixedBytes<#size>
+                        ::ethers_abi_enc::sol_data::FixedBytes<#size>
                     }
                 }
                 None => quote_spanned! {span=>
-                    ::ethers_abi_enc::sol_type::Bytes
+                    ::ethers_abi_enc::sol_data::Bytes
                 },
             },
             Self::Int { span, size } => {
                 let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
                 quote_spanned! {span=>
-                    ::ethers_abi_enc::sol_type::Int<#size>
+                    ::ethers_abi_enc::sol_data::Int<#size>
                 }
             }
             Self::Uint { span, size } => {
                 let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
                 quote_spanned! {span=>
-                    ::ethers_abi_enc::sol_type::Uint<#size>
+                    ::ethers_abi_enc::sol_data::Uint<#size>
                 }
             }
 
@@ -291,7 +291,7 @@ impl ToTokens for SolType {
     }
 }
 
-impl SolType {
+impl SolDataType {
     pub fn span(&self) -> Span {
         match self {
             Self::Address(span)

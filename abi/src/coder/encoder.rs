@@ -194,19 +194,19 @@ mod tests {
 
     #[cfg(not(feature = "std"))]
     use crate::no_std_prelude::*;
-    use crate::{sol_type, util::pad_u32, SolType};
+    use crate::{sol_data, util::pad_u32, SolType};
 
     #[test]
     fn encode_address() {
         let address = Address::from([0x11u8; 20]);
         let expected = hex!("0000000000000000000000001111111111111111111111111111111111111111");
-        let encoded = sol_type::Address::encode_single(address);
+        let encoded = sol_data::Address::encode_single(address);
         assert_eq!(encoded, expected);
     }
 
     #[test]
     fn encode_dynamic_array_of_addresses() {
-        type MyTy = sol_type::Array<sol_type::Address>;
+        type MyTy = sol_data::Array<sol_data::Address>;
         let rust = vec![Address::from([0x11u8; 20]), Address::from([0x22u8; 20])];
         let encoded = MyTy::encode_single(rust);
         let expected = hex!(
@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn encode_fixed_array_of_addresses() {
-        type MyTy = sol_type::FixedArray<sol_type::Address, 2>;
+        type MyTy = sol_data::FixedArray<sol_data::Address, 2>;
 
         let addresses = [Address::from([0x11u8; 20]), Address::from([0x22u8; 20])];
 
@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn encode_two_addresses() {
-        type MyTy = (sol_type::Address, sol_type::Address);
+        type MyTy = (sol_data::Address, sol_data::Address);
         let addresses = (Address::from([0x11u8; 20]), Address::from([0x22u8; 20]));
 
         let encoded = MyTy::encode(addresses);
@@ -260,7 +260,7 @@ mod tests {
 
     #[test]
     fn encode_fixed_array_of_dynamic_array_of_addresses() {
-        type MyTy = sol_type::FixedArray<sol_type::Array<sol_type::Address>, 2>;
+        type MyTy = sol_data::FixedArray<sol_data::Array<sol_data::Address>, 2>;
         let fixed = [
             vec![Address::from([0x11u8; 20]), Address::from([0x22u8; 20])],
             vec![Address::from([0x33u8; 20]), Address::from([0x44u8; 20])],
@@ -288,8 +288,8 @@ mod tests {
 
     #[test]
     fn encode_dynamic_array_of_fixed_array_of_addresses() {
-        type TwoAddrs = sol_type::FixedArray<sol_type::Address, 2>;
-        type MyTy = sol_type::Array<TwoAddrs>;
+        type TwoAddrs = sol_data::FixedArray<sol_data::Address, 2>;
+        type MyTy = sol_data::Array<TwoAddrs>;
 
         let dynamic = vec![
             [Address::from([0x11u8; 20]), Address::from([0x22u8; 20])],
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn encode_dynamic_array_of_dynamic_arrays() {
-        type MyTy = sol_type::Array<sol_type::Array<sol_type::Address>>;
+        type MyTy = sol_data::Array<sol_data::Array<sol_data::Address>>;
 
         let dynamic = vec![
             vec![Address::from([0x11u8; 20])],
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn encode_dynamic_array_of_dynamic_arrays2() {
-        type MyTy = sol_type::Array<sol_type::Array<sol_type::Address>>;
+        type MyTy = sol_data::Array<sol_data::Array<sol_data::Address>>;
 
         let dynamic = vec![
             vec![Address::from([0x11u8; 20]), Address::from([0x22u8; 20])],
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn encode_fixed_array_of_fixed_arrays() {
-        type MyTy = sol_type::FixedArray<sol_type::FixedArray<sol_type::Address, 2>, 2>;
+        type MyTy = sol_data::FixedArray<sol_data::FixedArray<sol_data::Address, 2>, 2>;
 
         let fixed = [
             [Address::from([0x11u8; 20]), Address::from([0x22u8; 20])],
@@ -400,9 +400,9 @@ mod tests {
 
     #[test]
     fn encode_fixed_array_of_static_tuples_followed_by_dynamic_type() {
-        type Tup = (sol_type::Uint<256>, sol_type::Uint<256>, sol_type::Address);
-        type Fixed = sol_type::FixedArray<Tup, 2>;
-        type MyTy = (Fixed, sol_type::String);
+        type Tup = (sol_data::Uint<256>, sol_data::Uint<256>, sol_data::Address);
+        type Fixed = sol_data::FixedArray<Tup, 2>;
+        type MyTy = (Fixed, sol_data::String);
 
         let data = (
             [
@@ -447,7 +447,7 @@ mod tests {
 
     #[test]
     fn encode_empty_array() {
-        type MyTy0 = (sol_type::Array<sol_type::Address>,);
+        type MyTy0 = (sol_data::Array<sol_data::Address>,);
 
         let data = (vec![],);
 
@@ -469,8 +469,8 @@ mod tests {
         assert_eq!(encoded_params.len() + 32, encoded.len());
 
         type MyTy = (
-            sol_type::Array<sol_type::Address>,
-            sol_type::Array<sol_type::Address>,
+            sol_data::Array<sol_data::Address>,
+            sol_data::Array<sol_data::Address>,
         );
         let data = (vec![], vec![]);
 
@@ -494,8 +494,8 @@ mod tests {
         assert_eq!(encoded_params.len() + 32, encoded.len());
 
         type MyTy2 = (
-            sol_type::Array<sol_type::Array<sol_type::Address>>,
-            sol_type::Array<sol_type::Array<sol_type::Address>>,
+            sol_data::Array<sol_data::Array<sol_data::Address>>,
+            sol_data::Array<sol_data::Array<sol_data::Address>>,
         );
         let data = (vec![vec![]], vec![vec![]]);
 
@@ -525,7 +525,7 @@ mod tests {
 
     #[test]
     fn encode_bytes() {
-        type MyTy = sol_type::Bytes;
+        type MyTy = sol_data::Bytes;
         let bytes = vec![0x12, 0x34];
 
         let encoded = MyTy::encode_single(bytes);
@@ -542,7 +542,7 @@ mod tests {
 
     #[test]
     fn encode_fixed_bytes() {
-        let encoded = sol_type::FixedBytes::<2>::encode_single([0x12, 0x34]);
+        let encoded = sol_data::FixedBytes::<2>::encode_single([0x12, 0x34]);
         let expected = hex!("1234000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
     }
@@ -550,7 +550,7 @@ mod tests {
     #[test]
     fn encode_string() {
         let s = "gavofyork".to_string();
-        let encoded = sol_type::String::encode_single(s);
+        let encoded = sol_data::String::encode_single(s);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -565,7 +565,7 @@ mod tests {
     #[test]
     fn encode_bytes2() {
         let bytes = hex!("10000000000000000000000000000000000000000000000000000000000002").to_vec();
-        let encoded = sol_type::Bytes::encode_single(bytes);
+        let encoded = sol_data::Bytes::encode_single(bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -586,7 +586,7 @@ mod tests {
     	"
         )
         .to_vec();
-        let encoded = sol_type::Bytes::encode_single(bytes);
+        let encoded = sol_data::Bytes::encode_single(bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -601,7 +601,7 @@ mod tests {
 
     #[test]
     fn encode_two_bytes() {
-        type MyTy = (sol_type::Bytes, sol_type::Bytes);
+        type MyTy = (sol_data::Bytes, sol_data::Bytes);
 
         let bytes = (
             hex!("10000000000000000000000000000000000000000000000000000000000002").to_vec(),
@@ -631,7 +631,7 @@ mod tests {
     #[test]
     fn encode_uint() {
         let uint = 4;
-        let encoded = sol_type::Uint::<8>::encode_single(uint);
+        let encoded = sol_data::Uint::<8>::encode_single(uint);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000004");
         assert_eq!(encoded, expected);
     }
@@ -639,21 +639,21 @@ mod tests {
     #[test]
     fn encode_int() {
         let int = 4;
-        let encoded = sol_type::Int::<8>::encode_single(int);
+        let encoded = sol_data::Int::<8>::encode_single(int);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000004");
         assert_eq!(encoded, expected);
     }
 
     #[test]
     fn encode_bool() {
-        let encoded = sol_type::Bool::encode_single(true);
+        let encoded = sol_data::Bool::encode_single(true);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000001");
         assert_eq!(encoded, expected);
     }
 
     #[test]
     fn encode_bool2() {
-        let encoded = sol_type::Bool::encode_single(false);
+        let encoded = sol_data::Bool::encode_single(false);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
     }
@@ -661,10 +661,10 @@ mod tests {
     #[test]
     fn comprehensive_test() {
         type MyTy = (
-            sol_type::Uint<8>,
-            sol_type::Bytes,
-            sol_type::Uint<8>,
-            sol_type::Bytes,
+            sol_data::Uint<8>,
+            sol_data::Bytes,
+            sol_data::Uint<8>,
+            sol_data::Bytes,
         );
 
         let bytes = hex!(
@@ -713,12 +713,12 @@ mod tests {
     #[test]
     fn comprehensive_test2() {
         type MyTy = (
-            sol_type::Bool,
-            sol_type::String,
-            sol_type::Uint<8>,
-            sol_type::Uint<8>,
-            sol_type::Uint<8>,
-            sol_type::Array<sol_type::Uint<8>>,
+            sol_data::Bool,
+            sol_data::String,
+            sol_data::Uint<8>,
+            sol_data::Uint<8>,
+            sol_data::Uint<8>,
+            sol_data::Array<sol_data::Uint<8>>,
         );
 
         let data = (true, "gavofyork".to_string(), 2, 3, 4, vec![5, 6, 7]);
@@ -752,7 +752,7 @@ mod tests {
 
     #[test]
     fn encode_dynamic_array_of_bytes() {
-        type MyTy = sol_type::Array<sol_type::Bytes>;
+        type MyTy = sol_data::Array<sol_data::Bytes>;
         let data = vec![hex!(
             "019c80031b20d5e69c8093a571162299032018d913930d93ab320ae5ea44a4218a274f00d607"
         )
@@ -778,7 +778,7 @@ mod tests {
 
     #[test]
     fn encode_dynamic_array_of_bytes2() {
-        type MyTy = sol_type::Array<sol_type::Bytes>;
+        type MyTy = sol_data::Array<sol_data::Bytes>;
 
         let data = vec![
             hex!("4444444444444444444444444444444444444444444444444444444444444444444444444444")
@@ -811,7 +811,7 @@ mod tests {
 
     #[test]
     fn encode_static_tuple_of_addresses() {
-        type MyTy = (sol_type::Address, sol_type::Address);
+        type MyTy = (sol_data::Address, sol_data::Address);
         let data = (Address::from([0x11u8; 20]), Address::from([0x22u8; 20]));
 
         let encoded = MyTy::encode(data);
@@ -830,7 +830,7 @@ mod tests {
 
     #[test]
     fn encode_dynamic_tuple() {
-        type MyTy = (sol_type::String, sol_type::String);
+        type MyTy = (sol_data::String, sol_data::String);
         let data = ("gavofyork".to_string(), "gavofyork".to_string());
 
         let expected = hex!(
@@ -856,7 +856,7 @@ mod tests {
 
     #[test]
     fn encode_dynamic_tuple_of_bytes2() {
-        type MyTy = (sol_type::Bytes, sol_type::Bytes);
+        type MyTy = (sol_data::Bytes, sol_data::Bytes);
 
         let data = (
             hex!("4444444444444444444444444444444444444444444444444444444444444444444444444444")
@@ -892,10 +892,10 @@ mod tests {
     #[test]
     fn encode_complex_tuple() {
         type MyTy = (
-            sol_type::Uint<256>,
-            sol_type::String,
-            sol_type::Address,
-            sol_type::Address,
+            sol_data::Uint<256>,
+            sol_data::String,
+            sol_data::Address,
+            sol_data::Address,
         );
 
         let data = (
@@ -929,13 +929,13 @@ mod tests {
     #[test]
     fn encode_nested_tuple() {
         type MyTy = (
-            sol_type::String,
-            sol_type::Bool,
-            sol_type::String,
+            sol_data::String,
+            sol_data::Bool,
+            sol_data::String,
             (
-                sol_type::String,
-                sol_type::String,
-                (sol_type::String, sol_type::String),
+                sol_data::String,
+                sol_data::String,
+                (sol_data::String, sol_data::String),
             ),
         );
 
@@ -990,11 +990,11 @@ mod tests {
     #[test]
     fn encode_params_containing_dynamic_tuple() {
         type MyTy = (
-            sol_type::Address,
-            (sol_type::Bool, sol_type::String, sol_type::String),
-            sol_type::Address,
-            sol_type::Address,
-            sol_type::Bool,
+            sol_data::Address,
+            (sol_data::Bool, sol_data::String, sol_data::String),
+            sol_data::Address,
+            sol_data::Address,
+            sol_data::Bool,
         );
         let data = (
             Address::from([0x22u8; 20]),
@@ -1035,10 +1035,10 @@ mod tests {
     #[test]
     fn encode_params_containing_static_tuple() {
         type MyTy = (
-            sol_type::Address,
-            (sol_type::Address, sol_type::Bool, sol_type::Bool),
-            sol_type::Address,
-            sol_type::Address,
+            sol_data::Address,
+            (sol_data::Address, sol_data::Bool, sol_data::Bool),
+            sol_data::Address,
+            sol_data::Address,
         );
 
         let data = (
@@ -1071,8 +1071,8 @@ mod tests {
     #[test]
     fn encode_dynamic_tuple_with_nested_static_tuples() {
         type MyTy = (
-            ((sol_type::Bool, sol_type::Uint<16>),),
-            sol_type::Array<sol_type::Uint<16>>,
+            ((sol_data::Bool, sol_data::Uint<16>),),
+            sol_data::Array<sol_data::Uint<16>>,
         );
 
         let data = (((false, 0x777),), vec![0x42, 0x1337]);

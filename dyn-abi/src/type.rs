@@ -3,7 +3,7 @@ use crate::{
     no_std_prelude::*,
     AbiResult, DynAbiError, DynSolValue, DynToken, SolType, Word,
 };
-use ethers_abi_enc::sol_type;
+use ethers_abi_enc::sol_data;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct StructProp {
@@ -86,10 +86,10 @@ impl DynSolType {
     pub fn tokenize(&self, value: DynSolValue) -> AbiResult<DynToken> {
         match (self, value) {
             (DynSolType::Address, DynSolValue::Address(val)) => {
-                Ok(DynToken::Word(sol_type::Address::tokenize(val).inner()))
+                Ok(DynToken::Word(sol_data::Address::tokenize(val).inner()))
             }
             (DynSolType::Bool, DynSolValue::Bool(val)) => {
-                Ok(DynToken::Word(sol_type::Bool::tokenize(val).inner()))
+                Ok(DynToken::Word(sol_data::Bool::tokenize(val).inner()))
             }
             (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(val)),
             (DynSolType::FixedBytes(len), DynSolValue::FixedBytes(word, size)) => {
@@ -224,28 +224,28 @@ impl DynSolType {
     pub fn detokenize(&self, token: DynToken) -> AbiResult<DynSolValue> {
         match (self, token) {
             (DynSolType::Address, DynToken::Word(word)) => Ok(DynSolValue::Address(
-                sol_type::Address::detokenize(word.into())?,
+                sol_data::Address::detokenize(word.into())?,
             )),
             (DynSolType::Bool, DynToken::Word(word)) => {
-                Ok(DynSolValue::Bool(sol_type::Bool::detokenize(word.into())?))
+                Ok(DynSolValue::Bool(sol_data::Bool::detokenize(word.into())?))
             }
             (DynSolType::Bytes, DynToken::PackedSeq(buf)) => Ok(DynSolValue::Bytes(buf)),
             (DynSolType::FixedBytes(size), DynToken::Word(word)) => Ok(DynSolValue::FixedBytes(
-                sol_type::FixedBytes::<32>::detokenize(word.into())?.into(),
+                sol_data::FixedBytes::<32>::detokenize(word.into())?.into(),
                 *size,
             )),
             // cheating here, but it's ok
             (DynSolType::Int(size), DynToken::Word(word)) => Ok(DynSolValue::Int(
-                sol_type::Int::<256>::detokenize(word.into())?,
+                sol_data::Int::<256>::detokenize(word.into())?,
                 *size,
             )),
             (DynSolType::Uint(size), DynToken::Word(word)) => Ok(DynSolValue::Uint(
-                sol_type::Uint::<256>::detokenize(word.into())?,
+                sol_data::Uint::<256>::detokenize(word.into())?,
                 *size,
             )),
 
             (DynSolType::String, DynToken::PackedSeq(buf)) => Ok(DynSolValue::String(
-                sol_type::String::detokenize(buf.into())?,
+                sol_data::String::detokenize(buf.into())?,
             )),
             (DynSolType::Tuple(types), DynToken::FixedSeq(tokens, _)) => {
                 if types.len() != tokens.len() {

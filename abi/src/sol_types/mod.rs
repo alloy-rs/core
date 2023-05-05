@@ -1,11 +1,23 @@
-/// A solidity struct trait
+/// A solidity error
+mod sol_error;
+pub use sol_error::SolError;
+
+/// A Solidity call
+mod sol_call;
+pub use sol_call::SolCall;
+
+/// A solidity type that can be encoded/decoded via ABI
+mod sol_type;
+pub use sol_type::SolType;
+
+/// A solidity struct
 mod sol_struct;
 pub use sol_struct::SolStruct;
 
-/// Solidity Types
-pub mod sol_type;
-pub use sol_type::SolType;
+/// Solidity Primitives. These are the types that are built in to solidity.
+pub mod sol_data;
+pub use sol_data::SolDataType;
 
 /// Solidity user-defined value types
-mod sol_udt;
 // no export needed as only item is a macro
+mod sol_udt;

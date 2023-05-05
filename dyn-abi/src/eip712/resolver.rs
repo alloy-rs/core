@@ -284,7 +284,10 @@ impl Resolver {
     }
 
     /// Ingest a sol struct typedef
-    pub fn ingest_sol_struct<S: SolStruct>(&mut self) {
+    pub fn ingest_sol_struct<S>(&mut self)
+    where
+        S: SolStruct,
+    {
         self.ingest_string(S::encode_type()).unwrap();
     }
 

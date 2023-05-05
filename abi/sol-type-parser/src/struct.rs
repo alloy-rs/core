@@ -1,4 +1,4 @@
-use crate::r#type::SolType;
+use crate::r#type::SolDataType;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use std::fmt::{self, Write};
@@ -12,7 +12,7 @@ use syn::{
 
 #[derive(Debug, Clone)]
 pub struct SolStructField {
-    ty: SolType,
+    ty: SolDataType,
     name: Ident,
 }
 
@@ -117,7 +117,7 @@ impl SolStructDef {
                 {
                     let mut encoded = String::from(#encoded_type);
                     #(
-                        if let Some(s) = <#props_tys as SolType>::eip712_encode_type() {
+                        if let Some(s) = <#props_tys as ::ethers_abi_enc::SolDataType>::eip712_encode_type() {
                             encoded.push_str(&s);
                         }
                     )*
@@ -128,15 +128,17 @@ impl SolStructDef {
             quote!(#encoded_type)
         };
 
-        let encode_data_impl = if self.fields.len() == 1 {
-            let SolStructField { ty, name } = self.fields.first().unwrap();
-            quote!(<#ty as SolType>::eip712_data_word(&self.#name).0.to_vec())
-        } else {
-            quote! {
-                [#(
-                    <#props_tys as SolType>::eip712_data_word(&self.#props).0,
-                )*].concat()
+        let encode_data_impl = match self.fields.len() {
+            0 => quote! { vec![] },
+            1 => {
+                let SolStructField { ty, name } = self.fields.first().unwrap();
+                quote!(<#ty as ::ethers_abi_enc::SolDataType>::eip712_data_word(&self.#name).0.to_vec())
             }
+            _ => quote! {
+                [#(
+                    <#props_tys as ::ethers_abi_enc::SolDataType>::eip712_data_word(&self.#props).0,
+                )*].concat()
+            },
         };
 
         let attrs = attrs.iter();
@@ -152,12 +154,13 @@ impl SolStructDef {
 
             #[allow(non_snake_case)]
             const _: () = {
-                use ::ethers_abi_enc::{SolType, no_std_prelude::*};
+                use ::ethers_abi_enc::no_std_prelude::*;
 
                 #convert
 
                 impl ::ethers_abi_enc::SolStruct for #name {
                     type Tuple = UnderlyingSolTuple;
+                    type Token = <UnderlyingSolTuple as ::ethers_abi_enc::SolType>::TokenType;
 
                     const NAME: &'static str = stringify!(#name);
 

@@ -1,4 +1,4 @@
-use crate::r#type::SolType;
+use crate::r#type::SolDataType;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
@@ -14,7 +14,7 @@ pub struct Udt {
     _type_token: Token![type],
     name: syn::Ident,
     _is: kw::is,
-    ty: SolType,
+    ty: SolDataType,
     _semi_token: Token![;],
 }
 
