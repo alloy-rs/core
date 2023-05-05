@@ -1,7 +1,9 @@
+use crate::common::kw;
 use proc_macro2::{Literal, Span, TokenStream};
 use quote::{quote_spanned, ToTokens};
 use std::{
     fmt,
+    hash::{Hash, Hasher},
     num::{IntErrorKind, NonZeroU16},
 };
 use syn::{
@@ -14,15 +16,26 @@ use syn::{
     Ident, LitInt, Result, Token,
 };
 
-mod kw {
-    syn::custom_keyword!(tuple);
-}
-
 #[derive(Clone)]
 pub struct SolArray {
-    ty: Box<SolDataType>,
+    ty: Box<Type>,
     bracket_token: Bracket,
     size: Option<LitInt>,
+}
+
+impl PartialEq for SolArray {
+    fn eq(&self, other: &Self) -> bool {
+        self.ty == other.ty && self.size == other.size
+    }
+}
+
+impl Eq for SolArray {}
+
+impl Hash for SolArray {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.ty.hash(state);
+        self.size.hash(state);
+    }
 }
 
 impl fmt::Debug for SolArray {
@@ -68,7 +81,7 @@ impl SolArray {
         span.join(self.bracket_token.span.join()).unwrap_or(span)
     }
 
-    pub fn parse(input: ParseStream, ty: SolDataType) -> Result<Self> {
+    pub fn parse(input: ParseStream, ty: Type) -> Result<Self> {
         let content;
         Ok(SolArray {
             ty: Box::new(ty),
@@ -82,7 +95,21 @@ impl SolArray {
 pub struct SolTuple {
     tuple_token: Option<kw::tuple>,
     paren_token: Paren,
-    types: Punctuated<SolDataType, Token![,]>,
+    types: Punctuated<Type, Token![,]>,
+}
+
+impl PartialEq for SolTuple {
+    fn eq(&self, other: &Self) -> bool {
+        self.types == other.types
+    }
+}
+
+impl Eq for SolTuple {}
+
+impl Hash for SolTuple {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.types.hash(state);
+    }
 }
 
 impl fmt::Debug for SolTuple {
@@ -110,7 +137,7 @@ impl Parse for SolTuple {
         Ok(SolTuple {
             tuple_token: input.parse()?,
             paren_token: parenthesized!(content in input),
-            types: content.parse_terminated(SolDataType::parse, Token![,])?,
+            types: content.parse_terminated(Type::parse, Token![,])?,
         })
     }
 }
@@ -132,7 +159,7 @@ impl SolTuple {
 }
 
 #[derive(Clone)]
-pub enum SolDataType {
+pub enum Type {
     /// `address`
     Address(Span),
     /// `bool`
@@ -164,7 +191,53 @@ pub enum SolDataType {
     Other(Ident),
 }
 
-impl fmt::Debug for SolDataType {
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Address(_), Self::Address(_)) => true,
+            (Self::Bool(_), Self::Bool(_)) => true,
+            (Self::String(_), Self::String(_)) => true,
+            (Self::Bytes { size: a, .. }, Self::Bytes { size: b, .. }) => a == b,
+            (Self::Int { size: a, .. }, Self::Int { size: b, .. }) => a == b,
+            (Self::Uint { size: a, .. }, Self::Uint { size: b, .. }) => a == b,
+            (Self::Tuple(a), Self::Tuple(b)) => a == b,
+            (Self::Array(a), Self::Array(b)) => a == b,
+            (Self::Other(a), Self::Other(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Type {}
+
+impl Hash for Type {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self).hash(state);
+        match self {
+            Self::Address(_) | Self::Bool(_) | Self::String(_) => {}
+            Self::Bytes { size, .. } => {
+                size.hash(state);
+            }
+            Self::Int { size, .. } => {
+                size.hash(state);
+            }
+            Self::Uint { size, .. } => {
+                size.hash(state);
+            }
+            Self::Tuple(tuple) => {
+                tuple.hash(state);
+            }
+            Self::Array(array) => {
+                array.hash(state);
+            }
+            Self::Other(name) => {
+                name.hash(state);
+            }
+        }
+    }
+}
+
+impl fmt::Debug for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Address(_) => f.write_str("Address"),
@@ -180,7 +253,7 @@ impl fmt::Debug for SolDataType {
     }
 }
 
-impl fmt::Display for SolDataType {
+impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Address(_) => f.write_str("address"),
@@ -196,7 +269,7 @@ impl fmt::Display for SolDataType {
     }
 }
 
-impl Parse for SolDataType {
+impl Parse for Type {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut candidate = if input.peek(Paren) || input.peek(kw::tuple) {
             Self::Tuple(input.parse()?)
@@ -239,7 +312,7 @@ impl Parse for SolDataType {
                 }
             }
         } else {
-            return Err(input.error("expected solidity type"));
+            return Err(input.error("expected a Solidity type: `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, or a tuple"));
         };
 
         // while the next token is a bracket, parse an array size and nest the
@@ -252,7 +325,7 @@ impl Parse for SolDataType {
     }
 }
 
-impl ToTokens for SolDataType {
+impl ToTokens for Type {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let expanded = match *self {
             Self::Address(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_data::Address },
@@ -291,7 +364,7 @@ impl ToTokens for SolDataType {
     }
 }
 
-impl SolDataType {
+impl Type {
     pub fn span(&self) -> Span {
         match self {
             Self::Address(span)

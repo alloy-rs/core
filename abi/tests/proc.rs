@@ -62,9 +62,7 @@ fn strings() {
 #[test]
 fn proc_macro_expansion() {
     // this is possible but not recomended :)
-    <sol! {
-        bool
-    }>::hex_encode_single(true);
+    <sol!(bool)>::hex_encode_single(true);
 
     let a = MyStruct {
         a: U256::from(1),

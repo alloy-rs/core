@@ -1,4 +1,4 @@
-use crate::r#type::SolDataType;
+use crate::{common::kw, r#type::Type};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
@@ -6,15 +6,11 @@ use syn::{
     Attribute, Result, Token,
 };
 
-mod kw {
-    syn::custom_keyword!(is);
-}
-
 pub struct Udt {
     _type_token: Token![type],
     name: syn::Ident,
     _is: kw::is,
-    ty: SolDataType,
+    ty: Type,
     _semi_token: Token![;],
 }
 
