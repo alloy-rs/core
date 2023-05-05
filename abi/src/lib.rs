@@ -40,7 +40,7 @@
 //! [`TokenType`].
 //!
 //! ```
-//! use ethers_abi_enc::sol_type::*;
+//! use ethers_abi_enc::{SolType, sol_data::*};
 //! # pub fn main() -> ethers_abi_enc::AbiResult<()> {
 //! // Represent a solidity type in rust
 //! type MySolType = FixedArray<Bool, 2>;
@@ -59,8 +59,6 @@
 //! # }
 //! ```
 //!
-//! See the [`SolType`] docs for an implementer's guide.
-//!
 //! ## `sol!` type parsing
 //!
 //! The `sol!` proc macro parses complex soltypes from valid solidity. Right now
@@ -70,7 +68,7 @@
 //! In the future, `sol!` will support macro definitions, functions, and more!
 //!
 //! ```
-//! # use ethers_abi_enc::{sol, sol_type, SolType};
+//! # use ethers_abi_enc::{sol, sol_data, SolType};
 //! # pub fn main() {
 //! // outputs a type built that implements `SolType`
 //! type B32 = sol! {bytes32};
@@ -102,7 +100,7 @@
 //! type Abstract<A> = sol! { A[] };
 //!
 //! // Incredible!
-//! assert_eq!(Abstract::<sol_type::Address>::sol_type_name(), "address[]");
+//! assert_eq!(Abstract::<sol_data::Address>::sol_type_name(), "address[]");
 //! # }
 //! ```
 //!
@@ -170,7 +168,7 @@
 //! features!
 //!
 //! ```
-//! # use ethers_abi_enc::{sol, sol_type, SolType};
+//! # use ethers_abi_enc::{sol, sol_data, SolType};
 //! # use ethers_primitives::U256;
 //! // We also also support solidity value types
 //! sol! {
@@ -182,7 +180,7 @@
 //! let mvt = MyValueType::from(U256::from(1));
 //! assert_eq!(
 //!     mvt.encode_single(),
-//!     sol_type::Uint::<256>::encode_single(U256::from(1))
+//!     sol_data::Uint::<256>::encode_single(U256::from(1))
 //! );
 //! # }
 //! ```
@@ -258,9 +256,12 @@ mod errors;
 pub use errors::{AbiResult, Error};
 
 mod sol_types;
-pub use sol_types::{sol_type, SolStruct, SolType};
+pub use sol_types::{sol_data, SolCall, SolDataType, SolError, SolStruct, SolType};
 
 mod util;
+
+#[doc(hidden)]
+pub use ethers_primitives::keccak256;
 #[doc(hidden)]
 pub use util::just_ok;
 

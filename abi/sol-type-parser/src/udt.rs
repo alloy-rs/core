@@ -1,7 +1,7 @@
 use quote::{quote, ToTokens};
 use syn::parse::Parse;
 
-use crate::r#type::SolType;
+use crate::r#type::SolDataType;
 
 mod kw {
     syn::custom_keyword!(is);
@@ -12,7 +12,7 @@ pub struct Udt {
     _type: syn::Token![type],
     name: syn::Ident,
     _is: kw::is,
-    ty: SolType,
+    ty: SolDataType,
     _semi: syn::Token![;],
 }
 

@@ -569,6 +569,40 @@ macro_rules! tuple_impls {
 
 tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, }
 
+impl TokenType for () {
+    fn is_dynamic() -> bool {
+        false
+    }
+
+    fn decode_from(_dec: &mut Decoder<'_>) -> AbiResult<Self> {
+        Ok(())
+    }
+
+    fn head_words(&self) -> usize {
+        0
+    }
+
+    fn tail_words(&self) -> usize {
+        0
+    }
+
+    fn head_append(&self, _enc: &mut Encoder) {}
+
+    fn tail_append(&self, _enc: &mut Encoder) {}
+}
+
+impl TokenSeq for () {
+    fn can_be_params() -> bool {
+        true
+    }
+
+    fn encode_sequence(&self, _enc: &mut Encoder) {}
+
+    fn decode_sequence(_dec: &mut Decoder<'_>) -> AbiResult<Self> {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use ethers_primitives::B256;
@@ -576,7 +610,7 @@ mod tests {
     use super::*;
     #[cfg(not(feature = "std"))]
     use crate::no_std_prelude::*;
-    use crate::{sol_type, SolType};
+    use crate::{sol_data, SolType};
 
     macro_rules! assert_type_check {
         ($sol:ty, $token:expr $(,)?) => {
@@ -593,36 +627,36 @@ mod tests {
     #[test]
     fn test_type_check() {
         assert_type_check!(
-            (sol_type::Uint<256>, sol_type::Bool),
+            (sol_data::Uint<256>, sol_data::Bool),
             &(WordToken(B256::default()), WordToken(B256::default())),
         );
 
         // TODO(tests): more like this where we test type check internal logic
-        assert_not_type_check!(sol_type::Uint<8>, &Word::repeat_byte(0x11).into());
-        assert_not_type_check!(sol_type::Bool, &B256::repeat_byte(0x11).into());
-        assert_not_type_check!(sol_type::FixedBytes<31>, &B256::repeat_byte(0x11).into());
+        assert_not_type_check!(sol_data::Uint<8>, &Word::repeat_byte(0x11).into());
+        assert_not_type_check!(sol_data::Bool, &B256::repeat_byte(0x11).into());
+        assert_not_type_check!(sol_data::FixedBytes<31>, &B256::repeat_byte(0x11).into());
 
         assert_type_check!(
-            (sol_type::Uint<32>, sol_type::Bool),
+            (sol_data::Uint<32>, sol_data::Bool),
             &(WordToken(B256::default()), WordToken(B256::default())),
         );
 
         assert_type_check!(
-            sol_type::Array<sol_type::Bool>,
+            sol_data::Array<sol_data::Bool>,
             &DynSeqToken(vec![WordToken(B256::default()), WordToken(B256::default()),]),
         );
 
         assert_type_check!(
-            sol_type::Array<sol_type::Bool>,
+            sol_data::Array<sol_data::Bool>,
             &DynSeqToken(vec![WordToken(B256::default()), WordToken(B256::default()),]),
         );
         assert_type_check!(
-            sol_type::Array<sol_type::Address>,
+            sol_data::Array<sol_data::Address>,
             &DynSeqToken(vec![WordToken(B256::default()), WordToken(B256::default()),]),
         );
 
         assert_type_check!(
-            sol_type::FixedArray<sol_type::Bool, 2>,
+            sol_data::FixedArray<sol_data::Bool, 2>,
             &FixedSeqToken::<_, 2>([
                 WordToken(B256::default()),
                 WordToken(B256::default()),
@@ -630,7 +664,7 @@ mod tests {
         );
 
         assert_type_check!(
-            sol_type::FixedArray<sol_type::Address, 2>,
+            sol_data::FixedArray<sol_data::Address, 2>,
             &FixedSeqToken::<_, 2>([
                 WordToken(B256::default()),
                 WordToken(B256::default()),
@@ -643,6 +677,7 @@ mod sealed {
     use super::*;
     pub trait Sealed {}
     impl Sealed for WordToken {}
+    impl Sealed for () {}
     impl<T, const N: usize> Sealed for FixedSeqToken<T, N> {}
     impl<T> Sealed for DynSeqToken<T> {}
     impl Sealed for PackedSeqToken {}

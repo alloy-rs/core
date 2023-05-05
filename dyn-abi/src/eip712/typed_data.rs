@@ -152,7 +152,10 @@ impl<'de> Deserialize<'de> for TypedData {
 impl TypedData {
     /// Instantiate [`TypedData`] from a [`SolStruct`] that implements
     /// [`serde::Serialize`].
-    pub fn from_struct<S: SolStruct + Serialize>(s: &S, domain: Option<Eip712Domain>) -> Self {
+    pub fn from_struct<S>(s: &S, domain: Option<Eip712Domain>) -> Self
+    where
+        S: SolStruct + Serialize,
+    {
         Self {
             domain: domain.unwrap_or_default(),
             resolver: Resolver::from_struct::<S>(),

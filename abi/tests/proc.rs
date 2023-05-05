@@ -89,6 +89,6 @@ fn proc_macro_expansion() {
     let mvt = MyValueType::from(U256::from(1));
     assert_eq!(
         mvt.encode_single(),
-        ethers_abi_enc::sol_type::Uint::<256>::encode_single(U256::from(1))
+        ethers_abi_enc::sol_data::Uint::<256>::encode_single(U256::from(1))
     );
 }

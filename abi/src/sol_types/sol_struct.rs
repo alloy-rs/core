@@ -3,7 +3,9 @@
 
 use ethers_primitives::{keccak256, B256};
 
-use crate::{no_std_prelude::*, Eip712Domain, SolType, Word};
+use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, SolDataType, Word};
+
+use super::SolType;
 
 type TupleFor<T> = <T as SolStruct>::Tuple;
 type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
@@ -14,6 +16,11 @@ type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
 /// recommend implementing this via the [`crate::sol`] proc macro. Or by
 /// deriving.
 ///
+/// # Implementer's Guide
+///
+/// We do not recommend implementing this trait directly. Instead, we recommend
+/// using the [`crate::sol`] proc macro to parse a solidity structdef.
+///
 /// # Note
 ///
 /// Special attention should be payed to `encode_type` for complex solidity
@@ -22,7 +29,9 @@ type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
 /// See: <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
 pub trait SolStruct {
     /// The corresponding Tuple type, used for encoding/decoding
-    type Tuple: SolType;
+    type Tuple: SolDataType<TokenType = Self::Token>;
+    /// The corresponding Token type
+    type Token: TokenSeq;
 
     /// The struct name
     const NAME: &'static str;
@@ -112,10 +121,6 @@ where
         true
     }
 
-    fn eip712_encode_type() -> Option<Cow<'static, str>> {
-        Some(Self::encode_type())
-    }
-
     fn type_check(token: &Self::TokenType) -> crate::AbiResult<()> {
         TupleFor::<T>::type_check(token)
     }
@@ -124,11 +129,9 @@ where
         Self::NAME.into()
     }
 
-    fn eip712_data_word<B>(rust: B) -> Word
-    where
-        B: Borrow<Self::RustType>,
-    {
-        keccak256(SolStruct::hash_struct(rust.borrow()))
+    fn detokenize(token: Self::TokenType) -> crate::AbiResult<Self::RustType> {
+        let tuple = TupleFor::<T>::detokenize(token)?;
+        Ok(T::from_rust(tuple))
     }
 
     fn tokenize<Borrower>(rust: Borrower) -> Self::TokenType
@@ -138,10 +141,21 @@ where
         let tuple = rust.borrow().to_rust();
         TupleFor::<T>::tokenize(tuple)
     }
+}
 
-    fn detokenize(token: Self::TokenType) -> crate::AbiResult<Self::RustType> {
-        let tuple = TupleFor::<T>::detokenize(token)?;
-        Ok(T::from_rust(tuple))
+impl<T> SolDataType for T
+where
+    T: SolStruct,
+{
+    fn eip712_encode_type() -> Option<Cow<'static, str>> {
+        Some(Self::encode_type())
+    }
+
+    fn eip712_data_word<B>(rust: B) -> Word
+    where
+        B: Borrow<Self::RustType>,
+    {
+        keccak256(SolStruct::hash_struct(rust.borrow()))
     }
 
     fn encode_packed_to<Borrower>(target: &mut Vec<u8>, rust: Borrower)
