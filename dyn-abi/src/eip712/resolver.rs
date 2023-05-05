@@ -326,7 +326,7 @@ impl Resolver {
         let this_type = self
             .nodes
             .get(root_type.as_str())
-            .ok_or_else(|| DynAbiError::missing_type(root_type))?;
+            .ok_or_else(|| DynAbiError::missing_type(root_type.as_str()))?;
 
         let edges: &Vec<String> = self.edges.get(root_type.as_str()).unwrap();
 
@@ -364,7 +364,7 @@ impl Resolver {
         let ty = self
             .nodes
             .get(root_type.as_str())
-            .ok_or_else(|| DynAbiError::missing_type(root_type))?;
+            .ok_or_else(|| DynAbiError::missing_type(root_type.as_str()))?;
 
         let prop_names = ty.prop_names().map(str::to_string).collect();
         let tuple = ty
