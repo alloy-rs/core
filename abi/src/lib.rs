@@ -256,8 +256,8 @@ pub use coder::{Decoder, Encoder};
 mod errors;
 pub use errors::{AbiResult, Error};
 
-mod sol_types;
-pub use sol_types::{sol_data, SolCall, SolDataType, SolError, SolStruct, SolType};
+mod types;
+pub use types::{data_type as sol_data, SolCall, SolDataType, SolError, SolStruct, SolType};
 
 mod util;
 
