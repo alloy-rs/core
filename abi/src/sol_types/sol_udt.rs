@@ -101,7 +101,7 @@ macro_rules! define_udt {
         $name:ident,
         underlying: $underlying:ty,
     ) => {
-        define_udt!(
+        $crate::define_udt!(
             $(#[$outer])*
             $name,
             underlying: $underlying,
@@ -114,7 +114,7 @@ macro_rules! define_udt {
         $name:ident,
         type_check: $type_check:path,
     ) => {
-        define_udt!(
+        $crate::define_udt!(
             $(#[$outer])*
             $name,
             underlying: $crate::sol_data::FixedBytes<32>,
@@ -126,7 +126,7 @@ macro_rules! define_udt {
         $name:ident,
         underlying: $underlying:ty,
     ) => {
-        define_udt!(
+        $crate::define_udt!(
             $(#[$outer])*
             $name,
             underlying: $underlying,
@@ -137,7 +137,7 @@ macro_rules! define_udt {
         $(#[$outer:meta])*
         $name:ident,
     ) => {
-        define_udt!(
+        $crate::define_udt!(
             $(#[$outer])*
             $name,
             type_check: $crate::just_ok,
@@ -148,13 +148,9 @@ macro_rules! define_udt {
         $(#[$outer:meta])*
         $name:ident
     )  => {
-        define_udt!(
+        $crate::define_udt!(
             $(#[$outer])*
             name: $name,
         );
     };
 }
-
-#[cfg(test)]
-#[allow(unreachable_pub)]
-mod test {}
