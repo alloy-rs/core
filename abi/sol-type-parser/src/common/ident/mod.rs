@@ -4,7 +4,7 @@ use std::fmt;
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
-    Result,
+    Error, Result,
 };
 
 mod path;
@@ -214,9 +214,12 @@ impl Parse for SolIdent {
         let s = s.as_str();
 
         if KEYWORDS.contains(&s) {
-            Err(input.error("expected identifier, found reserved keyword"))
+            Err(Error::new(
+                ident.span(),
+                "expected identifier, found reserved keyword",
+            ))
         } else if !is_ident(s.strip_prefix("r#").unwrap_or(s)) {
-            Err(input.error("invalid identifier"))
+            Err(Error::new(ident.span(), "invalid identifier"))
         } else {
             Ok(Self(ident))
         }

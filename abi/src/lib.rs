@@ -239,6 +239,7 @@ pub mod no_std_prelude {
 /// Rust types that implement [`SolType`].
 ///
 /// See the root crate docs for more information.
+#[doc(inline)]
 pub use sol_type_parser::sol;
 
 /// The Word type for ABI Encoding

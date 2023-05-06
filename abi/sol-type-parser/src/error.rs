@@ -1,16 +1,16 @@
-use crate::common::{kw, VariableDeclaration};
+use crate::common::{kw, SolIdent, VariableDeclaration};
 use proc_macro2::TokenStream;
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
-    Attribute, Ident, Result, Token,
+    Attribute, Result, Token,
 };
 
 pub struct Error {
     _error_token: kw::error,
-    name: Ident,
+    name: SolIdent,
     _paren_token: Paren,
     fields: Punctuated<VariableDeclaration, Token![,]>,
     _semi_token: Token![;],
@@ -33,6 +33,6 @@ impl Error {
     pub fn to_tokens(&self, _tokens: &mut TokenStream, _attrs: &[Attribute]) {
         let _ = &self.name;
         let _ = &self.fields;
-        todo!()
+        // TODO
     }
 }

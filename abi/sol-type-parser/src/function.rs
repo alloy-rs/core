@@ -6,7 +6,7 @@ use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
-    Attribute, Result, Token,
+    Attribute, Error, Result, Token,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -44,7 +44,10 @@ impl Parse for Returns {
             returns: content.parse_terminated(VariableDeclaration::parse, Token![,])?,
         };
         if this.returns.is_empty() {
-            Err(input.error("expected at least one return type"))
+            Err(Error::new(
+                this.paren_token.span.join(),
+                "expected at least one return type",
+            ))
         } else {
             Ok(this)
         }
@@ -52,6 +55,7 @@ impl Parse for Returns {
 }
 
 impl Returns {
+    #[allow(dead_code)]
     pub fn span(&self) -> Span {
         let span = self.returns_token.span;
         span.join(self.paren_token.span.join()).unwrap_or(span)
@@ -103,8 +107,6 @@ impl Function {
         let _ = &self.name;
         let _ = &self.arguments;
         let _ = self.arguments.iter().map(|x| x.span());
-        let _ = self.attributes.0.iter().map(|x| x.span());
-        let _ = self.returns.as_ref().map(|x| x.span());
-        todo!()
+        // TODO
     }
 }

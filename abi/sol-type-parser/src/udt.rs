@@ -1,4 +1,7 @@
-use crate::{common::kw, r#type::Type};
+use crate::{
+    common::{kw, SolIdent},
+    r#type::Type,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
@@ -8,7 +11,7 @@ use syn::{
 
 pub struct Udt {
     _type_token: Token![type],
-    name: syn::Ident,
+    name: SolIdent,
     _is: kw::is,
     ty: Type,
     _semi_token: Token![;],

@@ -13,7 +13,7 @@ use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::{Bracket, Paren},
-    Ident, LitInt, Result, Token,
+    Error, Ident, LitInt, Result, Token,
 };
 
 #[derive(Clone)]
@@ -134,11 +134,22 @@ impl fmt::Display for SolTuple {
 impl Parse for SolTuple {
     fn parse(input: ParseStream) -> Result<Self> {
         let content;
-        Ok(SolTuple {
+        let this = SolTuple {
             tuple_token: input.parse()?,
             paren_token: parenthesized!(content in input),
             types: content.parse_terminated(Type::parse, Token![,])?,
-        })
+        };
+        match this.types.len() {
+            0 => Err(Error::new(
+                this.paren_token.span.join(),
+                "empty tuples are not allowed",
+            )),
+            1 if !this.types.trailing_punct() => Err(Error::new(
+                this.paren_token.span.close(),
+                "single element tuples must have a trailing comma",
+            )),
+            _ => Ok(this),
+        }
     }
 }
 
@@ -183,11 +194,12 @@ pub enum Type {
         size: Option<NonZeroU16>,
     },
 
-    /// `Some(size) => <size>`, `None => `
+    /// `Some(size) => <type>[<size>]`, `None => <type>[]`
     Array(SolArray),
     /// `(tuple)? ( $($type),* )`
     Tuple(SolTuple),
 
+    /// Rust Ident assumed to be a `ethers_abi_enc::SolidityType` implementor.
     Other(Ident),
 }
 
@@ -283,26 +295,32 @@ impl Parse for Type {
                 "string" => Self::String(span),
                 s => {
                     if let Some(s) = s.strip_prefix("bytes") {
-                        match parse_size(input, s)? {
+                        match parse_size(s, span)? {
                             None => Self::Other(ident),
                             Some(Some(size)) if size.get() > 32 => {
-                                return Err(input.error("fixed bytes range is 1-32"));
+                                return Err(Error::new(span, "fixed bytes range is 1-32"));
                             }
                             Some(size) => Self::Bytes { span, size },
                         }
                     } else if let Some(s) = s.strip_prefix("int") {
-                        match parse_size(input, s)? {
+                        match parse_size(s, span)? {
                             None => Self::Other(ident),
                             Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
-                                return Err(input.error("intX must be a multiple of 8 up to 256"));
+                                return Err(Error::new(
+                                    span,
+                                    "intX must be a multiple of 8 up to 256",
+                                ));
                             }
                             Some(size) => Self::Int { span, size },
                         }
                     } else if let Some(s) = s.strip_prefix("uint") {
-                        match parse_size(input, s)? {
+                        match parse_size(s, span)? {
                             None => Self::Other(ident),
                             Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
-                                return Err(input.error("uintX must be a multiple of 8 up to 256"));
+                                return Err(Error::new(
+                                    span,
+                                    "uintX must be a multiple of 8 up to 256",
+                                ));
                             }
                             Some(size) => Self::Uint { span, size },
                         }
@@ -312,7 +330,7 @@ impl Parse for Type {
                 }
             }
         } else {
-            return Err(input.error("expected a Solidity type: `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, or a tuple"));
+            return Err(input.error( "expected a Solidity type: `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, or a tuple"));
         };
 
         // while the next token is a bracket, parse an array size and nest the
@@ -379,7 +397,19 @@ impl Type {
         }
     }
 
-    pub fn is_non_primitive(&self) -> bool {
+    /// Returns whether a [Storage][crate::common::Storage] location can be specified for this type.
+    pub fn can_have_storage(&self) -> bool {
+        self.is_dynamic() || self.is_struct()
+    }
+
+    pub fn is_dynamic(&self) -> bool {
+        matches!(
+            self,
+            Self::String(_) | Self::Bytes { size: None, .. } | Self::Array(_)
+        )
+    }
+
+    pub fn is_struct(&self) -> bool {
         matches!(self, Self::Other(_))
     }
 }
@@ -394,7 +424,7 @@ fn write_opt(f: &mut fmt::Formatter<'_>, name: &str, size: Option<NonZeroU16>) -
 
 // None => Other
 // Some(size) => size
-fn parse_size(input: ParseStream<'_>, s: &str) -> Result<Option<Option<NonZeroU16>>> {
+fn parse_size(s: &str, span: Span) -> Result<Option<Option<NonZeroU16>>> {
     let opt = match s.parse::<NonZeroU16>() {
         Ok(size) => Some(Some(size)),
         Err(e) => match e.kind() {
@@ -403,7 +433,7 @@ fn parse_size(input: ParseStream<'_>, s: &str) -> Result<Option<Option<NonZeroU1
             // bytes_
             IntErrorKind::InvalidDigit => None,
             // bytesN where N == 0 || N > MAX
-            _ => return Err(input.error(format_args!("invalid size: {e}"))),
+            _ => return Err(Error::new(span, format_args!("invalid size: {e}"))),
         },
     };
     Ok(opt)

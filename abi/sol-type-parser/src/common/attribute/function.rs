@@ -10,7 +10,7 @@ use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
     spanned::Spanned,
-    Ident, Result, Token,
+    Error, Ident, Result, Token,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -18,11 +18,15 @@ pub struct FunctionAttributes(pub HashSet<FunctionAttribute>);
 
 impl Parse for FunctionAttributes {
     fn parse(input: ParseStream) -> Result<Self> {
-        let mut attributes = HashSet::new();
+        let mut attributes = HashSet::<FunctionAttribute>::new();
         while !(input.peek(kw::returns) || input.peek(Token![;])) {
-            if !attributes.insert(input.parse()?) {
-                return Err(input.error("duplicate attribute"));
+            let attr = input.parse()?;
+            if let Some(prev) = attributes.get(&attr) {
+                let mut e = Error::new(attr.span(), "duplicate attribute");
+                e.combine(Error::new(prev.span(), "previous declaration is here"));
+                return Err(e);
             }
+            attributes.insert(attr);
         }
         Ok(Self(attributes))
     }

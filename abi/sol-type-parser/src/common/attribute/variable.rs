@@ -8,7 +8,7 @@ use std::{
 use syn::{
     parse::{Parse, ParseStream},
     spanned::Spanned,
-    Result,
+    Error, Result,
 };
 
 pub struct VariableAttributes(pub HashSet<VariableAttribute>);
@@ -16,24 +16,36 @@ pub struct VariableAttributes(pub HashSet<VariableAttribute>);
 impl Parse for VariableAttributes {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut attributes = HashSet::new();
-        while let Ok(attribute) = input.parse() {
+        while let Ok(attribute) = input.parse::<VariableAttribute>() {
+            let error = |prev: &VariableAttribute| {
+                let mut e = Error::new(attribute.span(), "duplicate attribute");
+                e.combine(Error::new(prev.span(), "previous declaration is here"));
+                e
+            };
+
+            // Only one of: `constant`, `immutable`
             match attribute {
                 VariableAttribute::Constant(_) => {
-                    if attributes.contains(&VariableAttribute::Immutable(Default::default())) {
-                        return Err(input.error("duplicate constant attribute"));
+                    if let Some(prev) =
+                        attributes.get(&VariableAttribute::Immutable(Default::default()))
+                    {
+                        return Err(error(prev));
                     }
                 }
                 VariableAttribute::Immutable(_) => {
-                    if attributes.contains(&VariableAttribute::Constant(Default::default())) {
-                        return Err(input.error("duplicate constant attribute"));
+                    if let Some(prev) =
+                        attributes.get(&VariableAttribute::Constant(Default::default()))
+                    {
+                        return Err(error(prev));
                     }
                 }
                 _ => {}
             }
-            let _ = attribute.span();
-            if !attributes.insert(attribute) {
-                return Err(input.error("duplicate attribute"));
+
+            if let Some(prev) = attributes.get(&attribute) {
+                return Err(error(prev));
             }
+            attributes.insert(attribute);
         }
         Ok(Self(attributes))
     }

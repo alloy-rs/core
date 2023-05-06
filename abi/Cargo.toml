@@ -24,6 +24,7 @@ serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex-literal.workspace = true
+trybuild = "1.0"
 
 [features]
 default = ["std", "hex/alloc"]

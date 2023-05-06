@@ -2,8 +2,6 @@
 
 use ethers_abi_enc::{no_std_prelude::*, sol, SolType};
 
-use ethers_primitives::{Address, U256};
-
 sol! {
     struct MyStruct {
         uint256 a;
@@ -42,6 +40,8 @@ sol! {
 
 #[test]
 fn no_std_proc_macro() {
+    use ethers_primitives::{Address, U256};
+
     // this is possible but not recomended :)
     <sol!(bool)>::hex_encode_single(true);
 

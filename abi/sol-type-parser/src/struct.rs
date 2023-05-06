@@ -24,7 +24,7 @@ impl Parse for Struct {
             _struct_token: input.parse()?,
             name: input.parse()?,
             _brace_token: braced!(content in input),
-            fields: content.parse_terminated(VariableDeclaration::parse, Token![;])?,
+            fields: content.parse_terminated(VariableDeclaration::parse_for_struct, Token![;])?,
         })
     }
 }
@@ -81,7 +81,7 @@ impl Struct {
         let props = self.fields.iter().map(|f| &f.name);
 
         let encoded_type = self.eip712_signature();
-        let encode_type_impl = if self.fields.iter().any(|f| f.ty.is_non_primitive()) {
+        let encode_type_impl = if self.fields.iter().any(|f| f.ty.is_struct()) {
             quote! {
                 {
                     let mut encoded = String::from(#encoded_type);

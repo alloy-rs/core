@@ -1,0 +1,17 @@
+error: expected identifier, found reserved keyword
+ --> tests/ui/ident.rs:5:14
+  |
+5 |         bool uint256;
+  |              ^^^^^^^
+
+error: invalid identifier
+  --> tests/ui/ident.rs:11:14
+   |
+11 |         bool è;
+   |              ^
+
+error: invalid identifier
+  --> tests/ui/ident.rs:17:14
+   |
+17 |         bool r#è;
+   |              ^^^
