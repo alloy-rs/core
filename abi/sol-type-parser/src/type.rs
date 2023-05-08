@@ -475,8 +475,7 @@ impl Type {
         matches!(self, Self::Other(..))
     }
 
-    /// Returns the resolved type, which is the innermost type that is not
-    /// `Other`.
+    /// Returns the resolved type, which is the innermost type that is not `Other`.
     ///
     /// Prefer using other methods which don't clone, like `encoded_size` or `Display::fmt`.
     pub fn resolved(&self) -> Self {
@@ -510,7 +509,7 @@ impl Type {
         }
     }
 
-    /// Recursively calculates the ABI-encoded size of the type in bytes.
+    /// Recursively calculates the ABI-encoded size of `self` in bytes.
     pub fn encoded_size(&self) -> usize {
         match self {
             // static types: 1 word
@@ -540,6 +539,10 @@ impl Type {
         }
     }
 
+    /// Asserts that this type is resolved, meaning no `Type::Other(_, None)` types are present.
+    ///
+    /// This is only necessary when expanding code for `SolCall` or similar traits, which require
+    /// the fully resolved type to calculate the ABI signature and selector.
     pub fn assert_resolved(&self) {
         self.visit(&mut |ty| {
             if let Self::Other(ident, None) = ty {

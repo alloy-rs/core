@@ -144,7 +144,7 @@ impl<P> Parameters<P> {
     pub fn type_strings(
         &self,
     ) -> impl ExactSizeIterator<Item = String> + DoubleEndedIterator + Clone + '_ {
-        self.iter().map(|var| var.ty.resolved().to_string())
+        self.iter().map(|var| var.ty.to_string())
     }
 
     pub fn encoded_size(&self) -> usize {

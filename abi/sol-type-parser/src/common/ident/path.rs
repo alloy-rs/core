@@ -40,8 +40,7 @@ impl Parse for SolPath {
             if !input.peek(Token![.]) {
                 break;
             }
-            let punct = input.parse()?;
-            segments.push_punct(punct);
+            segments.push_punct(input.parse()?);
         }
 
         if segments.is_empty() {
@@ -58,7 +57,7 @@ impl SolPath {
     pub fn span(&self) -> Span {
         let mut path = self.0.iter();
         let first = path.next().unwrap().span();
-        
+
         path.fold(first, |span, ident| span.join(ident.span()).unwrap_or(span))
     }
 }
