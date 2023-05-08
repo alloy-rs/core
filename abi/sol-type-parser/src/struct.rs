@@ -3,7 +3,7 @@ use crate::{
     r#type::Type,
 };
 use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned};
+use quote::quote;
 use std::fmt;
 use syn::{
     braced,
@@ -75,7 +75,7 @@ impl Struct {
         };
 
         let encode_data_impl = match self.fields.len() {
-            0 => quote! { vec![] },
+            0 => unreachable!(),
             1 => {
                 let VariableDeclaration { ty, name, .. } = self.fields.first().unwrap();
                 quote!(<#ty as ::ethers_abi_enc::SolDataType>::eip712_data_word(&self.#name).0.to_vec())
@@ -136,11 +136,6 @@ impl Struct {
     }
 
     pub fn to_tokens(&self, tokens: &mut TokenStream, attrs: &[Attribute]) {
-        if self.fields.is_empty() {
-            tokens.extend(quote_spanned! {self.name.span()=>
-                compile_error!("defining empty structs is disallowed.");
-            });
-        }
         tokens.extend(self.expand_impl(attrs))
     }
 

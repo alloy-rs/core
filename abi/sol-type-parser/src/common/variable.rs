@@ -58,7 +58,9 @@ impl Parse for Parameters<Token![,]> {
 impl Parse for Parameters<Token![;]> {
     fn parse(input: ParseStream) -> Result<Self> {
         let this = input.parse_terminated(VariableDeclaration::parse_for_struct, Token![;])?;
-        if !this.is_empty() && !this.trailing_punct() {
+        if this.is_empty() {
+            Err(input.error("defining empty structs is disallowed"))
+        } else if !this.trailing_punct() {
             Err(input.error("expected trailing semicolon"))
         } else {
             Ok(Self(this))

@@ -6,8 +6,8 @@ error: unexpected end of input, expected at least one of: `type`, `struct`, `fun
   |
   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: defining empty structs is disallowed.
- --> tests/ui/empty.rs:6:12
+error: unexpected end of input, defining empty structs is disallowed
+ --> tests/ui/empty.rs:6:25
   |
 6 |     struct EmptyStruct {}
-  |            ^^^^^^^^^^^
+  |                         ^
