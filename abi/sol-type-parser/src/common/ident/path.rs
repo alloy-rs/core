@@ -58,7 +58,7 @@ impl SolPath {
     pub fn span(&self) -> Span {
         let mut path = self.0.iter();
         let first = path.next().unwrap().span();
-        let span = path.fold(first, |span, ident| span.join(ident.span()).unwrap_or(span));
-        span
+        
+        path.fold(first, |span, ident| span.join(ident.span()).unwrap_or(span))
     }
 }

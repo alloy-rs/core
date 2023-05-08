@@ -487,7 +487,7 @@ impl Type {
                 size,
             }) => Self::Array(SolArray {
                 ty: ty.resolved().into(),
-                bracket_token: bracket_token.clone(),
+                bracket_token: *bracket_token,
                 size: size.clone(),
             }),
             Self::Tuple(SolTuple {
@@ -495,8 +495,8 @@ impl Type {
                 paren_token,
                 types,
             }) => Self::Tuple(SolTuple {
-                tuple_token: tuple_token.clone(),
-                paren_token: paren_token.clone(),
+                tuple_token: *tuple_token,
+                paren_token: *paren_token,
                 types: {
                     let mut types = types.clone();
                     for ty in &mut types {
