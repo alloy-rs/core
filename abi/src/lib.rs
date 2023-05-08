@@ -209,6 +209,11 @@
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate alloc;
 
+// `unused_crate_dependencies` bug workaround.
+// This crate is used in tests/compiletest.rs
+#[cfg(test)]
+use trybuild as _;
+
 #[cfg(not(feature = "std"))]
 #[doc(hidden)]
 pub mod no_std_prelude {

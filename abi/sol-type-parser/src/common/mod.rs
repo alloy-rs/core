@@ -1,5 +1,5 @@
 use proc_macro2::Span;
-use std::fmt::{self, Write};
+use std::fmt;
 use syn::{
     parse::{Parse, ParseStream},
     spanned::Spanned,
@@ -16,7 +16,10 @@ mod ident;
 pub use ident::{is_id_continue, is_id_start, is_ident, SolIdent, SolPath};
 
 mod variable;
-pub use variable::VariableDeclaration;
+pub use variable::{Parameters, VariableDeclaration};
+
+mod utils;
+pub use utils::*;
 
 pub mod kw {
     use syn::custom_keyword;
@@ -49,20 +52,6 @@ pub mod kw {
     custom_keyword!(memory);
     custom_keyword!(storage);
     custom_keyword!(calldata);
-}
-
-#[allow(dead_code)]
-pub fn signature(mut name: String, args: &[VariableDeclaration]) -> String {
-    name.reserve(2 + args.len() * 16);
-    name.push('(');
-    for (i, arg) in args.iter().enumerate() {
-        if i > 0 {
-            name.push(',');
-        }
-        write!(name, "{}", arg.ty).unwrap();
-    }
-    name.push(')');
-    name
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]

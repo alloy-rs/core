@@ -40,9 +40,7 @@ sol! {
     struct Custom {
         bool a;
     }
-}
 
-sol! {
     function validStorage(
         bytes memory a,
         bytes storage b,

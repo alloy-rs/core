@@ -1,19 +1,32 @@
-use crate::common::{kw, SolIdent, VariableDeclaration};
+use crate::{
+    common::{from_into_tuples, kw, Parameters, SolIdent},
+    r#type::Type,
+};
 use proc_macro2::TokenStream;
+use quote::quote;
+use std::fmt;
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
-    punctuated::Punctuated,
     token::Paren,
     Attribute, Result, Token,
 };
 
 pub struct Error {
     _error_token: kw::error,
-    name: SolIdent,
+    pub name: SolIdent,
     _paren_token: Paren,
-    fields: Punctuated<VariableDeclaration, Token![,]>,
+    pub fields: Parameters<Token![,]>,
     _semi_token: Token![;],
+}
+
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Error")
+            .field("name", &self.name)
+            .field("fields", &self.fields)
+            .finish()
+    }
 }
 
 impl Parse for Error {
@@ -23,16 +36,64 @@ impl Parse for Error {
             _error_token: input.parse()?,
             name: input.parse()?,
             _paren_token: parenthesized!(content in input),
-            fields: content.parse_terminated(VariableDeclaration::parse, Token![,])?,
+            fields: content.parse()?,
             _semi_token: input.parse()?,
         })
     }
 }
 
 impl Error {
-    pub fn to_tokens(&self, _tokens: &mut TokenStream, _attrs: &[Attribute]) {
-        let _ = &self.name;
-        let _ = &self.fields;
-        // TODO
+    fn expand(&self, attrs: &[Attribute]) -> TokenStream {
+        self.fields.assert_resolved();
+        let name = &self.name;
+        let name_s = name.as_string();
+        let fields = self.fields.iter();
+        let args = self.fields.type_strings();
+        let selector = self.fields.selector(name_s.clone());
+        let size = self.fields.encoded_size();
+        let converts = from_into_tuples(&name.0, &self.fields);
+        quote! {
+            #(#attrs)*
+            #[derive(Debug, Clone, PartialEq)] // TODO: Derive traits dynamically
+            #[allow(non_camel_case_types, non_snake_case)]
+            pub struct #name {
+                #(pub #fields,)*
+            }
+
+            #[allow(non_camel_case_types, non_snake_case)]
+            const _: () = {
+                #converts
+
+                impl ::ethers_abi_enc::SolCall for #name {
+                    type Tuple = UnderlyingSolTuple;
+                    type Token = <UnderlyingSolTuple as ::ethers_abi_enc::SolType>::TokenType;
+
+                    const SELECTOR: [u8; 4] = [#(#selector),*];
+                    const NAME: &'static str = #name_s;
+                    const ARGS: &'static [&'static str] = &[#(#args),*];
+
+                    fn to_rust(&self) -> <Self::Tuple as ::ethers_abi_enc::SolType>::RustType {
+                        self.clone().into()
+                    }
+
+                    fn from_rust(tuple: <Self::Tuple as ::ethers_abi_enc::SolType>::RustType) -> Self {
+                        tuple.into()
+                    }
+
+                    fn encoded_size(&self) -> usize {
+                        #size
+                    }
+                }
+            };
+        }
+    }
+
+    pub fn to_tokens(&self, tokens: &mut TokenStream, attrs: &[Attribute]) {
+        let tts = self.expand(attrs);
+        tokens.extend(tts);
+    }
+
+    pub fn ty(&self) -> Type {
+        Type::Tuple(self.fields.iter().map(|f| f.ty.clone()).collect())
     }
 }

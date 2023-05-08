@@ -1,20 +1,31 @@
-use crate::common::{SolIdent, VariableDeclaration};
+use crate::{
+    common::{from_into_tuples, Parameters, SolIdent, VariableDeclaration},
+    r#type::Type,
+};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
-use std::fmt::Write;
+use std::fmt;
 use syn::{
     braced,
     parse::{Parse, ParseStream},
-    punctuated::Punctuated,
     token::Brace,
-    Attribute, Index, Result, Token,
+    Attribute, Result, Token,
 };
 
 pub struct Struct {
     _struct_token: Token![struct],
-    name: SolIdent,
+    pub name: SolIdent,
     _brace_token: Brace,
-    fields: Punctuated<VariableDeclaration, Token![;]>,
+    pub fields: Parameters<Token![;]>,
+}
+
+impl fmt::Debug for Struct {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Struct")
+            .field("name", &self.name)
+            .field("fields", &self.fields)
+            .finish()
+    }
 }
 
 impl Parse for Struct {
@@ -24,46 +35,12 @@ impl Parse for Struct {
             _struct_token: input.parse()?,
             name: input.parse()?,
             _brace_token: braced!(content in input),
-            fields: content.parse_terminated(VariableDeclaration::parse_for_struct, Token![;])?,
+            fields: content.parse()?,
         })
     }
 }
 
 impl Struct {
-    fn expand_from(&self) -> TokenStream {
-        let name = &self.name;
-        let field_names = self.fields.iter().map(|f| &f.name);
-
-        let field_ty = self.fields.iter().map(|f| &f.ty);
-        let field_ty2 = field_ty.clone();
-
-        let (f_no, f_name): (Vec<_>, Vec<_>) = self
-            .fields
-            .iter()
-            .enumerate()
-            .map(|(i, f)| (Index::from(i), &f.name))
-            .unzip();
-
-        quote! {
-            type UnderlyingSolTuple = (#(#field_ty,)*);
-            type UnderlyingRustTuple = (#(<#field_ty2 as ::ethers_abi_enc::SolType>::RustType,)*);
-
-            impl From<#name> for UnderlyingRustTuple {
-                fn from(value: #name) -> UnderlyingRustTuple {
-                    (#(value.#field_names,)*)
-                }
-            }
-
-            impl From<UnderlyingRustTuple> for #name {
-                fn from(tuple: UnderlyingRustTuple) -> Self {
-                    #name {
-                        #(#f_name: tuple.#f_no),*
-                    }
-                }
-            }
-        }
-    }
-
     fn expand_impl(&self, attrs: &[Attribute]) -> TokenStream {
         let name = &self.name;
 
@@ -80,7 +57,7 @@ impl Struct {
         let props_tys: Vec<_> = self.fields.iter().map(|f| f.ty.clone()).collect();
         let props = self.fields.iter().map(|f| &f.name);
 
-        let encoded_type = self.eip712_signature();
+        let encoded_type = self.fields.eip712_signature(self.name.to_string());
         let encode_type_impl = if self.fields.iter().any(|f| f.ty.is_struct()) {
             quote! {
                 {
@@ -111,17 +88,18 @@ impl Struct {
         };
 
         let attrs = attrs.iter();
-        let convert = self.expand_from();
+        let convert = from_into_tuples(&self.name.0, &self.fields);
+        let name_s = name.to_string();
         quote! {
             #[doc = #doc]
             #(#attrs)*
-            #[allow(non_snake_case)]
+            #[allow(non_camel_case_types, non_snake_case)]
             #[derive(Debug, Clone, PartialEq)] // TODO: Derive traits dynamically
             pub struct #name {
                 #(pub #fields),*
             }
 
-            #[allow(non_snake_case)]
+            #[allow(non_camel_case_types, non_snake_case)]
             const _: () = {
                 use ::ethers_abi_enc::no_std_prelude::*;
 
@@ -131,7 +109,7 @@ impl Struct {
                     type Tuple = UnderlyingSolTuple;
                     type Token = <UnderlyingSolTuple as ::ethers_abi_enc::SolType>::TokenType;
 
-                    const NAME: &'static str = stringify!(#name);
+                    const NAME: &'static str = #name_s;
 
                     const FIELDS: &'static [(&'static str, &'static str)] = &[
                         #((#f_ty, #f_name)),*
@@ -157,26 +135,16 @@ impl Struct {
         }
     }
 
-    fn eip712_signature(&self) -> String {
-        let mut out = self.name.to_string();
-        out.reserve(2 + self.fields.len() * 32);
-        out.push('(');
-        for (i, field) in self.fields.iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            write!(out, "{field}").unwrap();
-        }
-        out.push(')');
-        out
-    }
-
     pub fn to_tokens(&self, tokens: &mut TokenStream, attrs: &[Attribute]) {
         if self.fields.is_empty() {
             tokens.extend(quote_spanned! {self.name.span()=>
-                compile_error!("Defining empty structs is disallowed.");
+                compile_error!("defining empty structs is disallowed.");
             });
         }
         tokens.extend(self.expand_impl(attrs))
+    }
+
+    pub fn ty(&self) -> Type {
+        Type::Tuple(self.fields.types().cloned().collect())
     }
 }

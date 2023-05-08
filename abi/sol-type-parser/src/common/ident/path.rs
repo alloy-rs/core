@@ -1,7 +1,8 @@
 use super::SolIdent;
-use proc_macro2::Span;
+use proc_macro2::{Ident, Span};
 use std::fmt;
 use syn::{
+    ext::IdentExt,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     Result, Token,
@@ -29,11 +30,26 @@ impl fmt::Display for SolPath {
 
 impl Parse for SolPath {
     fn parse(input: ParseStream) -> Result<Self> {
-        let path = input.parse_terminated(SolIdent::parse, Token![.])?;
-        if path.empty_or_trailing() {
-            Err(input.error("expected identifier path"))
+        // Modified from: `syn::Path::parse_mod_style`
+        let mut segments = Punctuated::new();
+        loop {
+            if !input.peek(Ident::peek_any) {
+                break;
+            }
+            segments.push_value(input.parse()?);
+            if !input.peek(Token![.]) {
+                break;
+            }
+            let punct = input.parse()?;
+            segments.push_punct(punct);
+        }
+
+        if segments.is_empty() {
+            Err(input.parse::<SolIdent>().unwrap_err())
+        } else if segments.trailing_punct() {
+            Err(input.error("expected path segment after `.`"))
         } else {
-            Ok(Self(path))
+            Ok(Self(segments))
         }
     }
 }

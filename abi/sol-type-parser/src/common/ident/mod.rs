@@ -237,11 +237,11 @@ impl SolIdent {
         self.0.span()
     }
 
-    #[allow(dead_code)]
+    /// Returns the identifier as a string, without the `r#` prefix if present.
     pub fn as_string(&self) -> String {
         let mut s = self.0.to_string();
         if s.starts_with("r#") {
-            s = s.drain(2..).collect();
+            s = s[2..].to_string();
         }
         s
     }

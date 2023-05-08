@@ -10,6 +10,7 @@ use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
     spanned::Spanned,
+    token::{Brace, Bracket},
     Error, Ident, Result, Token,
 };
 
@@ -19,7 +20,11 @@ pub struct FunctionAttributes(pub HashSet<FunctionAttribute>);
 impl Parse for FunctionAttributes {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut attributes = HashSet::<FunctionAttribute>::new();
-        while !(input.peek(kw::returns) || input.peek(Token![;])) {
+        while !(input.is_empty()
+            || input.peek(kw::returns)
+            || input.peek(Token![;])
+            || input.peek(Bracket))
+        {
             let attr = input.parse()?;
             if let Some(prev) = attributes.get(&attr) {
                 let mut e = Error::new(attr.span(), "duplicate attribute");
@@ -95,6 +100,9 @@ impl Parse for FunctionAttribute {
             Ok(Self::Immutable(input.parse()?))
         } else if !input.peek(kw::returns) && lookahead.peek(Ident::peek_any) {
             Ok(Self::Modifier(input.parse()?))
+        } else if input.peek(Brace) {
+            // special case for function with implementation
+            Err(input.error("functions cannot have an implementation"))
         } else {
             Err(lookahead.error())
         }

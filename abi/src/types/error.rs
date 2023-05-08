@@ -7,11 +7,11 @@ use crate::{no_std_prelude::*, token::TokenSeq, SolDataType, SolType};
 ///  We do not recommend implementing this trait directly. Instead, we recommend
 /// using the [`crate::sol`] proc macro to parse a solidity error definition.
 pub trait SolError: Sized {
+    /// The underlying tuple type which represents the error's members.
+    /// If the error has no arguments, this will be the unit type `()`
+    type Tuple: SolDataType<TokenType = Self::Token>;
     /// The corresponding Token type
     type Token: TokenSeq;
-    /// The underlying tuple type which represents the error's members.
-    /// If the error is empty, this will be the unit type `()`
-    type Tuple: SolDataType<TokenType = Self::Token>;
 
     /// The error selector
     const SELECTOR: [u8; 4];

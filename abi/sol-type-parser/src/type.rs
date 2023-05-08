@@ -4,7 +4,7 @@ use quote::{quote_spanned, ToTokens};
 use std::{
     fmt,
     hash::{Hash, Hasher},
-    num::{IntErrorKind, NonZeroU16},
+    num::{IntErrorKind, NonZeroU16, NonZeroU64},
 };
 use syn::{
     bracketed,
@@ -18,9 +18,9 @@ use syn::{
 
 #[derive(Clone)]
 pub struct SolArray {
-    ty: Box<Type>,
+    pub ty: Box<Type>,
     bracket_token: Bracket,
-    size: Option<LitInt>,
+    pub size: Option<LitInt>,
 }
 
 impl PartialEq for SolArray {
@@ -75,18 +75,40 @@ impl ToTokens for SolArray {
     }
 }
 
+impl Parse for SolArray {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let ty = input.parse()?;
+        Self::wrap(input, ty)
+    }
+}
+
 impl SolArray {
     pub fn span(&self) -> Span {
         let span = self.ty.span();
         span.join(self.bracket_token.span.join()).unwrap_or(span)
     }
 
-    pub fn parse(input: ParseStream, ty: Type) -> Result<Self> {
+    pub fn set_span(&mut self, span: Span) {
+        self.ty.set_span(span);
+        self.bracket_token = Bracket(span);
+        if let Some(size) = &mut self.size {
+            size.set_span(span);
+        }
+    }
+
+    pub fn wrap(input: ParseStream, ty: Type) -> Result<Self> {
         let content;
-        Ok(SolArray {
+        Ok(Self {
             ty: Box::new(ty),
             bracket_token: bracketed!(content in input),
-            size: content.parse()?,
+            size: {
+                let size = content.parse::<Option<syn::LitInt>>()?;
+                // Validate the size
+                if let Some(sz) = &size {
+                    sz.base10_parse::<NonZeroU64>()?;
+                }
+                size
+            },
         })
     }
 }
@@ -95,7 +117,7 @@ impl SolArray {
 pub struct SolTuple {
     tuple_token: Option<kw::tuple>,
     paren_token: Paren,
-    types: Punctuated<Type, Token![,]>,
+    pub types: Punctuated<Type, Token![,]>,
 }
 
 impl PartialEq for SolTuple {
@@ -114,7 +136,7 @@ impl Hash for SolTuple {
 
 impl fmt::Debug for SolTuple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SolTuple").finish()
+        f.debug_tuple("SolTuple").field(&self.types).finish()
     }
 }
 
@@ -134,7 +156,7 @@ impl fmt::Display for SolTuple {
 impl Parse for SolTuple {
     fn parse(input: ParseStream) -> Result<Self> {
         let content;
-        let this = SolTuple {
+        let this = Self {
             tuple_token: input.parse()?,
             paren_token: parenthesized!(content in input),
             types: content.parse_terminated(Type::parse, Token![,])?,
@@ -160,12 +182,36 @@ impl ToTokens for SolTuple {
     }
 }
 
+impl FromIterator<Type> for SolTuple {
+    fn from_iter<T: IntoIterator<Item = Type>>(iter: T) -> Self {
+        SolTuple {
+            tuple_token: None,
+            paren_token: Paren::default(),
+            types: {
+                let mut types = iter.into_iter().collect::<Punctuated<_, _>>();
+                // ensure trailing comma for single item tuple
+                if !types.trailing_punct() && types.len() == 1 {
+                    types.push_punct(Default::default())
+                }
+                types
+            },
+        }
+    }
+}
+
 impl SolTuple {
     pub fn span(&self) -> Span {
         let span = self.paren_token.span.join();
         self.tuple_token
-            .and_then(|tuple| tuple.span.join(span))
+            .and_then(|tuple_token| tuple_token.span.join(span))
             .unwrap_or(span)
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        if let Some(tuple_token) = &mut self.tuple_token {
+            *tuple_token = kw::tuple(span);
+        }
+        self.paren_token = Paren(span);
     }
 }
 
@@ -200,7 +246,10 @@ pub enum Type {
     Tuple(SolTuple),
 
     /// Rust Ident assumed to be a `ethers_abi_enc::SolidityType` implementor.
-    Other(Ident),
+    ///
+    /// The second field is this type's Solidity representation.
+    /// This is 'None' if it couldn't be resolved.
+    Other(Ident, Option<Box<Type>>),
 }
 
 impl PartialEq for Type {
@@ -214,7 +263,7 @@ impl PartialEq for Type {
             (Self::Uint { size: a, .. }, Self::Uint { size: b, .. }) => a == b,
             (Self::Tuple(a), Self::Tuple(b)) => a == b,
             (Self::Array(a), Self::Array(b)) => a == b,
-            (Self::Other(a), Self::Other(b)) => a == b,
+            (Self::Other(a, _), Self::Other(b, _)) => a == b,
             _ => false,
         }
     }
@@ -227,24 +276,12 @@ impl Hash for Type {
         std::mem::discriminant(self).hash(state);
         match self {
             Self::Address(_) | Self::Bool(_) | Self::String(_) => {}
-            Self::Bytes { size, .. } => {
-                size.hash(state);
-            }
-            Self::Int { size, .. } => {
-                size.hash(state);
-            }
-            Self::Uint { size, .. } => {
-                size.hash(state);
-            }
-            Self::Tuple(tuple) => {
-                tuple.hash(state);
-            }
-            Self::Array(array) => {
-                array.hash(state);
-            }
-            Self::Other(name) => {
-                name.hash(state);
-            }
+            Self::Bytes { size, .. } => size.hash(state),
+            Self::Int { size, .. } => size.hash(state),
+            Self::Uint { size, .. } => size.hash(state),
+            Self::Tuple(tuple) => tuple.hash(state),
+            Self::Array(array) => array.hash(state),
+            Self::Other(name, _) => name.hash(state),
         }
     }
 }
@@ -260,7 +297,10 @@ impl fmt::Debug for Type {
             Self::Uint { size, .. } => f.debug_tuple("Uint").field(size).finish(),
             Self::Tuple(tuple) => tuple.fmt(f),
             Self::Array(array) => array.fmt(f),
-            Self::Other(name) => name.fmt(f),
+            Self::Other(name, repr) => {
+                let s = name.to_string();
+                f.debug_tuple(&s).field(repr).finish()
+            }
         }
     }
 }
@@ -276,7 +316,8 @@ impl fmt::Display for Type {
             Self::Uint { size, .. } => write_opt(f, "uint", *size),
             Self::Tuple(tuple) => tuple.fmt(f),
             Self::Array(array) => array.fmt(f),
-            Self::Other(name) => name.fmt(f),
+            Self::Other(name, None) => name.fmt(f),
+            Self::Other(_, Some(ty)) => ty.fmt(f),
         }
     }
 }
@@ -296,7 +337,7 @@ impl Parse for Type {
                 s => {
                     if let Some(s) = s.strip_prefix("bytes") {
                         match parse_size(s, span)? {
-                            None => Self::Other(ident),
+                            None => Self::Other(ident, None),
                             Some(Some(size)) if size.get() > 32 => {
                                 return Err(Error::new(span, "fixed bytes range is 1-32"));
                             }
@@ -304,7 +345,7 @@ impl Parse for Type {
                         }
                     } else if let Some(s) = s.strip_prefix("int") {
                         match parse_size(s, span)? {
-                            None => Self::Other(ident),
+                            None => Self::Other(ident, None),
                             Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
                                 return Err(Error::new(
                                     span,
@@ -315,7 +356,7 @@ impl Parse for Type {
                         }
                     } else if let Some(s) = s.strip_prefix("uint") {
                         match parse_size(s, span)? {
-                            None => Self::Other(ident),
+                            None => Self::Other(ident, None),
                             Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
                                 return Err(Error::new(
                                     span,
@@ -325,18 +366,21 @@ impl Parse for Type {
                             Some(size) => Self::Uint { span, size },
                         }
                     } else {
-                        Self::Other(ident)
+                        Self::Other(ident, None)
                     }
                 }
             }
         } else {
-            return Err(input.error( "expected a Solidity type: `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, or a tuple"));
+            return Err(input.error(
+                "expected a Solidity type: \
+                `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, a tuple, or a custom type name",
+            ));
         };
 
         // while the next token is a bracket, parse an array size and nest the
         // candidate into an array
         while input.peek(Bracket) {
-            candidate = Self::Array(SolArray::parse(input, candidate)?);
+            candidate = Self::Array(SolArray::wrap(input, candidate)?);
         }
 
         Ok(candidate)
@@ -376,7 +420,7 @@ impl ToTokens for Type {
 
             Self::Tuple(ref tuple) => return tuple.to_tokens(tokens),
             Self::Array(ref array) => return array.to_tokens(tokens),
-            Self::Other(ref ident) => return ident.to_tokens(tokens),
+            Self::Other(ref ident, _) => return ident.to_tokens(tokens),
         };
         tokens.extend(expanded);
     }
@@ -393,7 +437,25 @@ impl Type {
             | Self::Uint { span, .. } => *span,
             Self::Tuple(tuple) => tuple.span(),
             Self::Array(array) => array.span(),
-            Self::Other(ident) => ident.span(),
+            Self::Other(ident, _) => ident.span(),
+        }
+    }
+
+    pub fn set_span(&mut self, new_span: Span) {
+        match self {
+            Self::Address(span)
+            | Self::Bool(span)
+            | Self::String(span)
+            | Self::Bytes { span, .. }
+            | Self::Int { span, .. }
+            | Self::Uint { span, .. } => *span = new_span,
+            Self::Tuple(tuple) => tuple.set_span(new_span),
+            Self::Array(array) => array.set_span(new_span),
+            Self::Other(ident, None) => ident.set_span(new_span),
+            Self::Other(ident, Some(inner)) => {
+                ident.set_span(new_span);
+                inner.set_span(new_span);
+            }
         }
     }
 
@@ -410,7 +472,104 @@ impl Type {
     }
 
     pub fn is_struct(&self) -> bool {
-        matches!(self, Self::Other(_))
+        matches!(self, Self::Other(..))
+    }
+
+    /// Returns the resolved type, which is the innermost type that is not
+    /// `Other`.
+    ///
+    /// Prefer using other methods which don't clone, like `encoded_size` or `Display::fmt`.
+    pub fn resolved(&self) -> Self {
+        match self {
+            Self::Array(SolArray {
+                ty,
+                bracket_token,
+                size,
+            }) => Self::Array(SolArray {
+                ty: ty.resolved().into(),
+                bracket_token: bracket_token.clone(),
+                size: size.clone(),
+            }),
+            Self::Tuple(SolTuple {
+                tuple_token,
+                paren_token,
+                types,
+            }) => Self::Tuple(SolTuple {
+                tuple_token: tuple_token.clone(),
+                paren_token: paren_token.clone(),
+                types: {
+                    let mut types = types.clone();
+                    for ty in &mut types {
+                        *ty = ty.resolved();
+                    }
+                    types
+                },
+            }),
+            Self::Other(_, Some(inner)) => inner.resolved(),
+            s => s.clone(),
+        }
+    }
+
+    /// Recursively calculates the ABI-encoded size of the type in bytes.
+    pub fn encoded_size(&self) -> usize {
+        match self {
+            // static types: 1 word
+            Self::Address(_)
+            | Self::Bool(_)
+            | Self::Int { .. }
+            | Self::Uint { .. }
+            | Self::Bytes { size: Some(_), .. } => 32,
+
+            // dynamic types: 1 offset word, 1 length word
+            Self::String(_)
+            | Self::Bytes { size: None, .. }
+            | Self::Array(SolArray { size: None, .. }) => 64,
+
+            // fixed array: size * encoded size
+            Self::Array(SolArray {
+                ty,
+                size: Some(size),
+                ..
+            }) => ty.encoded_size() * size.base10_parse::<usize>().unwrap(),
+
+            // tuple: sum of encoded sizes
+            Self::Tuple(tuple) => tuple.types.iter().map(Type::encoded_size).sum(),
+
+            Self::Other(_, Some(ty)) => ty.encoded_size(),
+            Self::Other(ident, None) => unreachable!("unresolved type: {ident}"),
+        }
+    }
+
+    pub fn assert_resolved(&self) {
+        self.visit(&mut |ty| {
+            if let Self::Other(ident, None) = ty {
+                panic!(
+                    "missing necessary definition for type \"{ident}\"\n\
+                     Custom types must be declared inside of the same scope they are referenced in,\n\
+                     or \"imported\" as a UDT with `type {ident} is (...);`"
+                )
+            }
+        });
+    }
+
+    /// Calls `f` on each type.
+    pub fn visit(&self, f: &mut impl FnMut(&Self)) {
+        match self {
+            Self::Array(array) => array.ty.visit(f),
+            Self::Tuple(tuple) => tuple.types.iter().for_each(|ty| ty.visit(f)),
+            Self::Other(_, Some(ty)) => f(ty),
+            ty => f(ty),
+        }
+    }
+
+    /// Calls `f` on each type.
+    pub fn visit_mut(&mut self, f: &mut impl FnMut(&mut Self)) {
+        match self {
+            Self::Array(array) => array.ty.visit_mut(f),
+            Self::Tuple(tuple) => tuple.types.iter_mut().for_each(|ty| ty.visit_mut(f)),
+            Self::Other(_, Some(ty)) => f(ty),
+            ty => f(ty),
+        }
     }
 }
 

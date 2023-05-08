@@ -4,6 +4,7 @@ use crate::{
 };
 use proc_macro2::TokenStream;
 use quote::quote;
+use std::fmt;
 use syn::{
     parse::{Parse, ParseStream},
     Attribute, Result, Token,
@@ -11,10 +12,19 @@ use syn::{
 
 pub struct Udt {
     _type_token: Token![type],
-    name: SolIdent,
+    pub name: SolIdent,
     _is: kw::is,
-    ty: Type,
+    pub ty: Type,
     _semi_token: Token![;],
+}
+
+impl fmt::Debug for Udt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Udt")
+            .field("name", &self.name)
+            .field("ty", &self.ty)
+            .finish()
+    }
 }
 
 impl Parse for Udt {

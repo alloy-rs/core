@@ -1,0 +1,71 @@
+error: expected parentheses
+ --> tests/ui/function.rs:4:27
+  |
+4 |     function missingParens;
+  |                           ^
+
+error: expected `;`
+ --> tests/ui/function.rs:7:1
+  |
+7 | / sol! {
+8 | |     function missingSemi1()
+9 | | }
+  | |_^
+  |
+  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected `;`
+  --> tests/ui/function.rs:11:1
+   |
+11 | / sol! {
+12 | |     function missingSemi2() external
+13 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected `;`
+  --> tests/ui/function.rs:15:1
+   |
+15 | / sol! {
+16 | |     function missingSemi3() returns (uint256)
+17 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: functions cannot have an implementation
+  --> tests/ui/function.rs:20:30
+   |
+20 |     function semiNotBrace1() {}
+   |                              ^
+
+error: functions cannot have an implementation
+  --> tests/ui/function.rs:24:39
+   |
+24 |     function semiNotBrace2() external {}
+   |                                       ^
+
+error: functions cannot have an implementation
+  --> tests/ui/function.rs:28:48
+   |
+28 |     function semiNotBrace3() returns (uint256) {}
+   |                                                ^
+
+error: expected a Solidity type: `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, a tuple, or a custom type name
+  --> tests/ui/function.rs:32:26
+   |
+32 |     function singleComma(,);
+   |                          ^
+
+error: expected parentheses
+  --> tests/ui/function.rs:43:34
+   |
+43 |     function badReturn1() returns;
+   |                                  ^
+
+error: expected at least one return type
+  --> tests/ui/function.rs:47:34
+   |
+47 |     function badReturn2() returns();
+   |                                  ^^
