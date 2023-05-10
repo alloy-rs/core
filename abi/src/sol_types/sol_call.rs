@@ -30,8 +30,9 @@ pub trait SolCall: Sized {
     where
         Self: Sized;
 
-    /// The size (in bytes) of this data when encoded
-    fn encoded_size(&self) -> usize;
+    /// The size (in bytes) of this data when encoded, NOT including the
+    /// selector
+    fn data_size(&self) -> usize;
 
     /// Decode function args from an ABI-encoded byte slice WITHOUT its
     /// selector
@@ -61,7 +62,7 @@ pub trait SolCall: Sized {
 
     /// Encode the call to an ABI-encoded byte vector
     fn encode_with_selector(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(4 + self.encoded_size());
+        let mut out = Vec::with_capacity(4 + self.data_size());
         out.extend(&Self::SELECTOR);
         self.encode_raw(&mut out);
         out

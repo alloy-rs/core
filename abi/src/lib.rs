@@ -256,7 +256,7 @@ mod errors;
 pub use errors::{AbiResult, Error};
 
 mod sol_types;
-pub use sol_types::{sol_data, SolCall, SolDataType, SolError, SolStruct, SolType};
+pub use sol_types::{sol_data, Panic, Revert, SolCall, SolDataType, SolError, SolStruct, SolType};
 
 mod util;
 
