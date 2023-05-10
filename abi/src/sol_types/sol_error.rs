@@ -1,8 +1,10 @@
 use core::fmt::Display;
 
+use ethers_primitives::U256;
+
 use crate::{
     no_std_prelude::*,
-    token::{PackedSeqToken, TokenSeq},
+    token::{PackedSeqToken, TokenSeq, WordToken},
     SolDataType, SolType,
 };
 
@@ -36,7 +38,7 @@ pub trait SolError: Sized {
     where
         Self: Sized;
 
-    /// The size (in bytes) of this data when encoded
+    /// The size (in bytes) of this data when encoded, including the selector
     fn encoded_size(&self) -> usize;
 
     /// Decode an error contents from an ABI-encoded byte slice WITHOUT its
@@ -117,9 +119,9 @@ impl Revert {
 }
 
 impl SolError for Revert {
-    type Tuple = (crate::sol_data::String,);
-
     type Token = (PackedSeqToken,);
+
+    type Tuple = (crate::sol_data::String,);
 
     // Selector for `"Error(string)"`
     const SELECTOR: [u8; 4] = [0x08, 0xc3, 0x79, 0xa0];
@@ -141,5 +143,76 @@ impl SolError for Revert {
 
     fn encoded_size(&self) -> usize {
         64 + (self.0.len() + 31) / 32
+    }
+}
+
+/// Represents a Solidity Panic. These are thrown by
+/// `assert(condition, reason)` and by Solidity internal checks.
+///
+/// [Solidity Panic](https://docs.soliditylang.org/en/v0.8.6/control-structures.html#panic-via-assert-and-error-via-require)
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct Panic(pub U256);
+
+impl AsRef<U256> for Panic {
+    fn as_ref(&self) -> &U256 {
+        &self.0
+    }
+}
+
+impl Borrow<U256> for Panic {
+    fn borrow(&self) -> &U256 {
+        &self.0
+    }
+}
+
+impl Display for Panic {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Panic: {}", self.0)
+    }
+}
+
+impl From<Panic> for U256 {
+    fn from(value: Panic) -> Self {
+        value.0
+    }
+}
+
+impl From<U256> for Panic {
+    fn from(s: U256) -> Self {
+        Self(s)
+    }
+}
+
+impl Panic {
+    /// Get the reason code for the panic
+    pub const fn code(&self) -> U256 {
+        self.0
+    }
+}
+
+impl SolError for Panic {
+    type Token = (WordToken,);
+
+    type Tuple = (crate::sol_data::Uint<256>,);
+
+    const SELECTOR: [u8; 4] = [0x4e, 0x48, 0x7b, 0x71];
+
+    const NAME: &'static str = "Panic";
+
+    const FIELDS: &'static [&'static str] = &["code"];
+
+    fn to_rust(&self) -> <Self::Tuple as SolType>::RustType {
+        (self.0,)
+    }
+
+    fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self
+    where
+        Self: Sized,
+    {
+        Self(tuple.0)
+    }
+
+    fn encoded_size(&self) -> usize {
+        36
     }
 }

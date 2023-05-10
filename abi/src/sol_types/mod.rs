@@ -1,6 +1,6 @@
 /// A solidity error
 mod sol_error;
-pub use sol_error::SolError;
+pub use sol_error::{Revert, SolError};
 
 /// A Solidity call
 mod sol_call;
