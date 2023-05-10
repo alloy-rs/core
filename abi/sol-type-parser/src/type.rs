@@ -637,9 +637,7 @@ impl Type {
             }
 
             Self::Custom(CustomType::Unresolved(ident)) => unreachable!("unresolved type: {ident}"),
-            Self::Custom(CustomType::Struct(strukt)) => {
-                strukt.fields.encoded_size(Some(field.clone()))
-            }
+            Self::Custom(CustomType::Struct(strukt)) => strukt.fields.encoded_size(Some(field)),
             Self::Custom(CustomType::Udt(udt)) => udt.ty.encoded_size(field),
         }
     }
