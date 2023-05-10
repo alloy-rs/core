@@ -371,10 +371,7 @@ impl<const N: usize> core::str::FromStr for FixedBytes<N> {
         let s = s.strip_prefix("0x").unwrap_or(s);
 
         let mut buf = [0u8; N];
-        hex::decode_to_slice(s, buf.as_mut())?;
+        hex::decode_to_slice(s, &mut buf)?;
         Ok(Self(buf))
     }
 }
-
-#[cfg(test)]
-mod test {}
