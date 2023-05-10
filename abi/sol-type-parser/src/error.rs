@@ -47,7 +47,7 @@ impl Error {
         let fields = self.fields.iter();
         let args = self.fields.type_strings();
         let selector = self.fields.selector(name_s.clone());
-        let size = self.fields.encoded_size(None);
+        let size = self.fields.data_size(None);
         let converts = from_into_tuples(&name.0, &self.fields);
         quote! {
             #(#attrs)*
@@ -78,7 +78,7 @@ impl Error {
                         tuple.into()
                     }
 
-                    fn encoded_size(&self) -> usize {
+                    fn data_size(&self) -> usize {
                         #size
                     }
                 }

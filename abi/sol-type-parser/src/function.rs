@@ -125,7 +125,7 @@ impl Function {
         let fields = params.iter();
         let selector = params.selector(fn_name.clone());
         let args = params.type_strings();
-        let size = params.encoded_size(None);
+        let size = params.data_size(None);
         let converts = from_into_tuples(call_name, params);
         quote! {
             #(#attrs)*
@@ -156,7 +156,7 @@ impl Function {
                         tuple.into()
                     }
 
-                    fn encoded_size(&self) -> usize {
+                    fn data_size(&self) -> usize {
                         #size
                     }
                 }

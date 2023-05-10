@@ -527,7 +527,7 @@ impl Type {
 
     /// Returns the resolved type, which is the innermost type that is not `Custom`.
     ///
-    /// Prefer using other methods which don't clone, like `encoded_size` or `Display::fmt`.
+    /// Prefer using other methods which don't clone, like `data_size` or `Display::fmt`.
     pub fn resolved(&self) -> Self {
         match self {
             Self::Array(SolArray {
@@ -564,7 +564,7 @@ impl Type {
     ///
     /// That is, the minimum number of bytes required to encode `self` without
     /// any dynamic data.
-    pub fn base_encoded_size(&self) -> usize {
+    pub fn base_data_size(&self) -> usize {
         match self {
             // static types: 1 word
             Self::Address(_)
@@ -583,34 +583,34 @@ impl Type {
                 ty,
                 size: Some(size),
                 ..
-            }) => ty.base_encoded_size() * size.base10_parse::<usize>().unwrap(),
+            }) => ty.base_data_size() * size.base10_parse::<usize>().unwrap(),
 
             // tuple: sum of encoded sizes
-            Self::Tuple(tuple) => tuple.types.iter().map(Type::base_encoded_size).sum(),
+            Self::Tuple(tuple) => tuple.types.iter().map(Type::base_data_size).sum(),
 
             Self::Custom(CustomType::Unresolved(ident)) => unreachable!("unresolved type: {ident}"),
-            Self::Custom(custom) => custom.as_type().base_encoded_size(),
+            Self::Custom(custom) => custom.as_type().base_data_size(),
         }
     }
 
     /// Recursively calculates the ABI-encoded size of `self` in bytes.
-    pub fn encoded_size(&self, field: TokenStream) -> TokenStream {
+    pub fn data_size(&self, field: TokenStream) -> TokenStream {
         match self {
             // static types: 1 word
             Self::Address(_)
             | Self::Bool(_)
             | Self::Int { .. }
             | Self::Uint { .. }
-            | Self::Bytes { size: Some(_), .. } => self.base_encoded_size().into_token_stream(),
+            | Self::Bytes { size: Some(_), .. } => self.base_data_size().into_token_stream(),
 
             // dynamic types: 1 offset word, 1 length word, length rounded up to word size
             Self::String(_) | Self::Bytes { size: None, .. } => {
-                let base = self.base_encoded_size();
+                let base = self.base_data_size();
                 quote!(#base + (#field.len() / 31) * 32)
             }
             Self::Array(SolArray { ty, size: None, .. }) => {
-                let base = self.base_encoded_size();
-                let inner_size = ty.encoded_size(field.clone());
+                let base = self.base_data_size();
+                let inner_size = ty.data_size(field.clone());
                 quote!(#base + #field.len() * (#inner_size))
             }
 
@@ -620,8 +620,8 @@ impl Type {
                 size: Some(size),
                 ..
             }) => {
-                let base = self.base_encoded_size();
-                let inner_size = ty.encoded_size(field);
+                let base = self.base_data_size();
+                let inner_size = ty.data_size(field);
                 let len: usize = size.base10_parse().unwrap();
                 quote!(#base + #len * (#inner_size))
             }
@@ -631,14 +631,14 @@ impl Type {
                 let fields = tuple.types.iter().enumerate().map(|(i, ty)| {
                     let index = syn::Index::from(i);
                     let field_name = quote!(#field.#index);
-                    ty.encoded_size(field_name)
+                    ty.data_size(field_name)
                 });
                 quote!(0usize #(+ #fields)*)
             }
 
             Self::Custom(CustomType::Unresolved(ident)) => unreachable!("unresolved type: {ident}"),
-            Self::Custom(CustomType::Struct(strukt)) => strukt.fields.encoded_size(Some(field)),
-            Self::Custom(CustomType::Udt(udt)) => udt.ty.encoded_size(field),
+            Self::Custom(CustomType::Struct(strukt)) => strukt.fields.data_size(Some(field)),
+            Self::Custom(CustomType::Udt(udt)) => udt.ty.data_size(field),
         }
     }
 

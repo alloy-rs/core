@@ -161,11 +161,11 @@ impl<P> Parameters<P> {
         self.iter().map(|var| var.ty.to_string())
     }
 
-    pub fn encoded_size(&self, base: Option<TokenStream>) -> TokenStream {
+    pub fn data_size(&self, base: Option<TokenStream>) -> TokenStream {
         let base = base.unwrap_or_else(|| quote!(self));
         let sizes = self.iter().map(|var| {
             let field = var.name.as_ref().unwrap();
-            var.ty.encoded_size(quote!(#base.#field))
+            var.ty.data_size(quote!(#base.#field))
         });
         quote!(0usize #( + #sizes)*)
     }

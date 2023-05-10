@@ -115,7 +115,7 @@ fn function() {
         },
     };
     assert_eq!(
-        call.encoded_size(),
+        call.data_size(),
         32 + (64 + 32) + (64 + 32 + 32) + (64 + 32 + 32) + (32 + 32) + (32 + 32)
     );
 }
