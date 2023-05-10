@@ -5,7 +5,7 @@ use ethers_primitives::U256;
 use crate::{
     no_std_prelude::*,
     token::{PackedSeqToken, TokenSeq, WordToken},
-    SolDataType, SolType,
+    SolDataType, SolStruct, SolType,
 };
 
 /// Solidity Error (a tuple with a selector)
@@ -139,7 +139,8 @@ impl SolError for Revert {
     }
 
     fn data_size(&self) -> usize {
-        64 + (self.reason.len() + 31) / 32
+        let body_words = (self.reason.len() + 31) / 32;
+        (2 + body_words) * 32
     }
 }
 
@@ -211,5 +212,49 @@ impl SolError for Panic {
 
     fn data_size(&self) -> usize {
         32
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use ethers_primitives::keccak256;
+
+    use super::*;
+
+    #[test]
+    fn test_revert_encoding() {
+        let revert = Revert::from("test".to_string());
+        let encoded = revert.encode_with_selector();
+        let decoded = Revert::decode(&encoded, true).unwrap();
+        assert_eq!(encoded.len(), revert.data_size() + 4);
+        assert_eq!(encoded.len(), 100);
+        assert_eq!(revert, decoded);
+    }
+
+    #[test]
+    fn test_panic_encoding() {
+        let panic = Panic {
+            error_code: U256::from(0),
+        };
+        let encoded = panic.encode_with_selector();
+        let decoded = Panic::decode(&encoded, true).unwrap();
+
+        assert_eq!(encoded.len(), panic.data_size() + 4);
+        assert_eq!(encoded.len(), 36);
+        assert_eq!(panic, decoded);
+    }
+
+    #[test]
+    fn test_selectors() {
+        assert_eq!(
+            Revert::SELECTOR,
+            &keccak256(b"Error(string)")[..4],
+            "Revert selector is incorrect"
+        );
+        assert_eq!(
+            Panic::SELECTOR,
+            &keccak256(b"Panic(uint256)")[..4],
+            "Panic selector is incorrect"
+        );
     }
 }
