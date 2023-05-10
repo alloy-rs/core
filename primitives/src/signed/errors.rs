@@ -1,16 +1,14 @@
+use core::fmt;
 use ruint::BaseConvertError;
 
 /// The error type that is returned when parsing a signed integer.
 #[derive(Clone, Copy, Debug, PartialEq)]
-#[cfg_attr(feature = "std", derive(thiserror::Error))]
 pub enum ParseSignedError {
     /// Error that occurs when an invalid digit is encountered while parsing.
-    #[cfg_attr(feature = "std", error("Parsing Error: {0}"))]
     Ruint(ruint::ParseError),
 
     /// Error that occurs when the number is too large or too small (negative)
     /// and does not fit in the target signed integer.
-    #[cfg_attr(feature = "std", error("number does not fit in the integer size"))]
     IntegerOverflow,
 }
 
@@ -27,8 +25,27 @@ impl From<ruint::ParseError> for ParseSignedError {
     }
 }
 
+#[cfg(feature = "std")]
+impl std::error::Error for ParseSignedError {}
+
+impl fmt::Display for ParseSignedError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ruint(err) => write!(f, "Parsing Error: {err}"),
+            Self::IntegerOverflow => f.write_str("number does not fit in the integer size"),
+        }
+    }
+}
+
 /// The error type that is returned when conversion to or from a integer fails.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "std", derive(thiserror::Error))]
-#[cfg_attr(feature = "std", error("output of range integer conversion attempted"))]
 pub struct BigIntConversionError;
+
+#[cfg(feature = "std")]
+impl std::error::Error for BigIntConversionError {}
+
+impl fmt::Display for BigIntConversionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("output of range integer conversion attempted")
+    }
+}

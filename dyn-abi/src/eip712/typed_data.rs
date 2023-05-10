@@ -110,6 +110,7 @@ impl<'de> Deserialize<'de> for TypedData {
         D: serde::de::Deserializer<'de>,
     {
         #[derive(Deserialize)]
+        #[allow(missing_debug_implementations)]
         struct TypedDataHelper {
             #[serde(default)]
             domain: Eip712Domain,

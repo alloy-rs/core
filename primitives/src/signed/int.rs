@@ -1,10 +1,7 @@
+use super::{errors, utils::*, Sign};
+use alloc::string::{String, ToString};
 use core::fmt;
 use ruint::Uint;
-
-#[cfg(not(feature = "std"))]
-use alloc::{format, string::String};
-
-use super::{errors, utils::*, Sign};
 
 /// Signed integer wrapping a `ruint::Uint`.
 ///

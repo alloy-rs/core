@@ -71,6 +71,7 @@ pub(crate) use serde_helper::*;
 
 #[cfg(feature = "eip712-serde")]
 mod serde_helper {
+    use alloc::string::{String, ToString};
     use ethers_primitives::U256;
     use serde::{Deserialize, Deserializer};
 
@@ -78,9 +79,9 @@ mod serde_helper {
     #[derive(Deserialize, Debug, Clone)]
     #[serde(untagged)]
     pub(crate) enum StringifiedNumeric {
-        String(String),
-        U256(U256),
         Num(u64),
+        U256(U256),
+        String(String),
     }
 
     impl TryFrom<StringifiedNumeric> for U256 {
@@ -88,14 +89,12 @@ mod serde_helper {
 
         fn try_from(value: StringifiedNumeric) -> Result<Self, Self::Error> {
             match value {
-                StringifiedNumeric::U256(n) => Ok(n),
                 StringifiedNumeric::Num(n) => Ok(U256::from(n)),
+                StringifiedNumeric::U256(n) => Ok(n),
+                // TODO: this is probably unreachable, due to ruint U256 deserializing from a string
                 StringifiedNumeric::String(s) => {
-                    if let Ok(val) = s.parse::<u128>() {
-                        Ok(U256::from(val))
-                    } else if s.starts_with("0x") {
-                        U256::from_str_radix(s.strip_prefix("0x").unwrap(), 16)
-                            .map_err(|err| err.to_string())
+                    if let Some(s) = s.strip_prefix("0x") {
+                        U256::from_str_radix(s, 16).map_err(|err| err.to_string())
                     } else {
                         U256::from_str_radix(&s, 10).map_err(|err| err.to_string())
                     }
