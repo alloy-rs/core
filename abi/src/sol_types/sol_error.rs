@@ -5,7 +5,7 @@ use ethers_primitives::U256;
 use crate::{
     no_std_prelude::*,
     token::{PackedSeqToken, TokenSeq, WordToken},
-    SolDataType, SolStruct, SolType,
+    SolDataType, SolType,
 };
 
 /// Solidity Error (a tuple with a selector)
