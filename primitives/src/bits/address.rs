@@ -1,14 +1,8 @@
-#[cfg(feature = "std")]
-use std::borrow::Borrow;
-
-#[cfg(not(feature = "std"))]
+use crate::{utils::keccak256, wrap_fixed_bytes, FixedBytes};
 use alloc::{
     borrow::Borrow,
-    format,
     string::{String, ToString},
 };
-
-use crate::{utils::keccak256, wrap_fixed_bytes, FixedBytes};
 
 /// Error type for address checksum validation
 #[derive(Debug, Copy, Clone)]
@@ -157,6 +151,7 @@ impl Address {
 #[cfg(test)]
 mod test {
     use super::Address;
+    use alloc::string::String;
 
     #[test]
     fn it_parses() {

@@ -605,12 +605,9 @@ impl TokenSeq for () {
 
 #[cfg(test)]
 mod tests {
-    use ethers_primitives::B256;
-
     use super::*;
-    #[cfg(not(feature = "std"))]
-    use crate::no_std_prelude::*;
     use crate::{sol_data, SolType};
+    use ethers_primitives::B256;
 
     macro_rules! assert_type_check {
         ($sol:ty, $token:expr $(,)?) => {

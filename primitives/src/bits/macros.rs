@@ -70,7 +70,6 @@ macro_rules! wrap_fixed_bytes {
 
         impl<'a> From<[u8; $n]> for $name {
             #[inline]
-            #[track_caller]
             fn from(bytes: [u8; $n]) -> Self {
                 Self(bytes.into())
             }
@@ -78,7 +77,6 @@ macro_rules! wrap_fixed_bytes {
 
         impl<'a> From<&'a [u8; $n]> for $name {
             #[inline]
-            #[track_caller]
             fn from(bytes: &'a [u8; $n]) -> Self {
                 Self(bytes.into())
             }
@@ -86,7 +84,6 @@ macro_rules! wrap_fixed_bytes {
 
         impl AsRef<[u8]> for $name {
             #[inline]
-            #[track_caller]
             fn as_ref(&self) -> &[u8] {
                 self.as_bytes()
             }
@@ -94,7 +91,6 @@ macro_rules! wrap_fixed_bytes {
 
         impl AsMut<[u8]> for $name {
             #[inline]
-            #[track_caller]
             fn as_mut(&mut self) -> &mut [u8] {
                 self.as_bytes_mut()
             }

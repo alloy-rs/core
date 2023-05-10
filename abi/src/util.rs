@@ -71,7 +71,7 @@ pub(crate) use serde_helper::*;
 
 #[cfg(feature = "eip712-serde")]
 mod serde_helper {
-    use alloc::string::String;
+    use alloc::string::{String, ToString};
     use ethers_primitives::U256;
     use serde::{Deserialize, Deserializer};
 
