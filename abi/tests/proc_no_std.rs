@@ -1,6 +1,7 @@
 #![no_std]
 
-use ethers_abi_enc::{no_std_prelude::*, sol, SolType};
+use ethers_abi_enc::{no_std_prelude::*, sol, SolCall, SolType};
+use ethers_primitives::{Address, U256};
 
 sol! {
     struct MyStruct {
@@ -40,8 +41,6 @@ sol! {
 
 #[test]
 fn no_std_proc_macro() {
-    use ethers_primitives::{Address, U256};
-
     // this is possible but not recomended :)
     <sol!(bool)>::hex_encode_single(true);
 
@@ -69,5 +68,54 @@ fn no_std_proc_macro() {
     assert_eq!(
         mvt.encode_single(),
         ethers_abi_enc::sol_data::Uint::<256>::encode_single(U256::from(1))
+    );
+}
+
+#[test]
+fn function() {
+    sol! {
+        struct customStruct {
+            address a;
+            uint64 b;
+        }
+
+        function someFunction(
+            uint256 basic,
+            string memory string_,
+            bytes calldata longBytes,
+            address[] memory array,
+            bool[2] memory fixedArray,
+            customStruct struct_,
+        );
+    }
+
+    assert_eq!(someFunctionCall::NAME, "someFunction");
+    assert_eq!(
+        someFunctionCall::ARGS,
+        &[
+            "uint256",
+            "string",
+            "bytes",
+            "address[]",
+            "bool[2]",
+            "(address,uint64)"
+        ]
+    );
+    assert_eq!(someFunctionCall::SELECTOR, [0xd2, 0x02, 0xd9, 0xa5]);
+
+    let call = someFunctionCall {
+        basic: U256::from(1),
+        string_: "Hello World".to_owned(),
+        longBytes: vec![0; 36],
+        array: vec![Address::zero(), Address::zero()],
+        fixedArray: [true, false],
+        struct_: customStruct {
+            a: Address::zero(),
+            b: 2,
+        },
+    };
+    assert_eq!(
+        call.encoded_size(),
+        32 + (64 + 32) + (64 + 32 + 32) + (64 + 32 + 32) + (32 + 32) + (32 + 32)
     );
 }

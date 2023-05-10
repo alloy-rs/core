@@ -28,7 +28,7 @@ pub trait SolCall: Sized {
     /// Convert from the tuple type used for ABI encoding/decoding
     fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self;
 
-    /// A size estimate (in bytes) of the encoded data, selector excluded
+    /// The size of the encoded data in bytes, selector excluded
     fn encoded_size(&self) -> usize;
 
     /// Decode function args from an ABI-encoded byte slice WITHOUT its

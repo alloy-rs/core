@@ -237,6 +237,10 @@ impl SolIdent {
         self.0.span()
     }
 
+    pub fn set_span(&mut self, span: Span) {
+        self.0.set_span(span);
+    }
+
     /// Returns the identifier as a string, without the `r#` prefix if present.
     pub fn as_string(&self) -> String {
         let mut s = self.0.to_string();

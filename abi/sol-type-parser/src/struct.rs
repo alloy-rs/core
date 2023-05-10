@@ -2,9 +2,12 @@ use crate::{
     common::{from_into_tuples, Parameters, SolIdent, VariableDeclaration},
     r#type::Type,
 };
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use std::fmt;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 use syn::{
     braced,
     parse::{Parse, ParseStream},
@@ -12,11 +15,27 @@ use syn::{
     Attribute, Result, Token,
 };
 
+#[derive(Clone)]
 pub struct Struct {
-    _struct_token: Token![struct],
+    struct_token: Token![struct],
     pub name: SolIdent,
-    _brace_token: Brace,
+    brace_token: Brace,
     pub fields: Parameters<Token![;]>,
+}
+
+impl PartialEq for Struct {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.fields == other.fields
+    }
+}
+
+impl Eq for Struct {}
+
+impl Hash for Struct {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.fields.hash(state);
+    }
 }
 
 impl fmt::Debug for Struct {
@@ -32,15 +51,25 @@ impl Parse for Struct {
     fn parse(input: ParseStream) -> Result<Self> {
         let content;
         Ok(Self {
-            _struct_token: input.parse()?,
+            struct_token: input.parse()?,
             name: input.parse()?,
-            _brace_token: braced!(content in input),
+            brace_token: braced!(content in input),
             fields: content.parse()?,
         })
     }
 }
 
 impl Struct {
+    pub fn span(&self) -> Span {
+        self.name.span()
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.struct_token = Token![struct](span);
+        self.name.set_span(span);
+        self.brace_token = Brace(span);
+    }
+
     fn expand_impl(&self, attrs: &[Attribute]) -> TokenStream {
         let name = &self.name;
 
@@ -105,6 +134,7 @@ impl Struct {
 
                 #convert
 
+                #[automatically_derived]
                 impl ::ethers_abi_enc::SolStruct for #name {
                     type Tuple = UnderlyingSolTuple;
                     type Token = <UnderlyingSolTuple as ::ethers_abi_enc::SolType>::TokenType;

@@ -125,7 +125,7 @@ impl Function {
         let fields = params.iter();
         let selector = params.selector(fn_name.clone());
         let args = params.type_strings();
-        let size = params.encoded_size();
+        let size = params.encoded_size(None);
         let converts = from_into_tuples(call_name, params);
         quote! {
             #(#attrs)*
@@ -139,6 +139,7 @@ impl Function {
             const _: () = {
                 #converts
 
+                #[automatically_derived]
                 impl ::ethers_abi_enc::SolCall for #call_name {
                     type Tuple = UnderlyingSolTuple;
                     type Token = <UnderlyingSolTuple as ::ethers_abi_enc::SolType>::TokenType;

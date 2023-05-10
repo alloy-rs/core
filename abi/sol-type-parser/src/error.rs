@@ -1,7 +1,4 @@
-use crate::{
-    common::{from_into_tuples, kw, Parameters, SolIdent},
-    r#type::Type,
-};
+use crate::common::{from_into_tuples, kw, Parameters, SolIdent};
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::fmt;
@@ -50,7 +47,7 @@ impl Error {
         let fields = self.fields.iter();
         let args = self.fields.type_strings();
         let selector = self.fields.selector(name_s.clone());
-        let size = self.fields.encoded_size();
+        let size = self.fields.encoded_size(None);
         let converts = from_into_tuples(&name.0, &self.fields);
         quote! {
             #(#attrs)*
@@ -64,6 +61,7 @@ impl Error {
             const _: () = {
                 #converts
 
+                #[automatically_derived]
                 impl ::ethers_abi_enc::SolCall for #name {
                     type Tuple = UnderlyingSolTuple;
                     type Token = <UnderlyingSolTuple as ::ethers_abi_enc::SolType>::TokenType;
@@ -91,9 +89,5 @@ impl Error {
     pub fn to_tokens(&self, tokens: &mut TokenStream, attrs: &[Attribute]) {
         let tts = self.expand(attrs);
         tokens.extend(tts);
-    }
-
-    pub fn ty(&self) -> Type {
-        Type::Tuple(self.fields.iter().map(|f| f.ty.clone()).collect())
     }
 }

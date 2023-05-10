@@ -30,7 +30,7 @@ pub trait SolError: Sized {
     where
         Self: Sized;
 
-    /// The size (in bytes) of this data when encoded
+    /// The size of the encoded data in bytes, selector excluded
     fn encoded_size(&self) -> usize;
 
     /// Decode an error contents from an ABI-encoded byte slice WITHOUT its

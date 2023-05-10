@@ -1,5 +1,5 @@
 use super::{keccak256, kw, SolIdent, Storage};
-use crate::r#type::Type;
+use crate::r#type::{CustomType, Type};
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use std::{
@@ -36,7 +36,7 @@ impl<P> fmt::Debug for Parameters<P> {
     }
 }
 
-/// Parameter list
+/// Parameter list: fields names are set to `_{index}`
 impl Parse for Parameters<Token![,]> {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut list = input.parse_terminated(VariableDeclaration::parse, Token![,])?;
@@ -102,17 +102,25 @@ impl<'a, P> IntoIterator for &'a mut Parameters<P> {
 }
 
 impl<P> Parameters<P> {
+    pub fn new() -> Self {
+        Self(Punctuated::new())
+    }
+
     pub fn signature(&self, mut name: String) -> String {
         name.reserve(2 + self.len() * 16);
-        name.push('(');
+        self.fmt_as_tuple(&mut name).unwrap();
+        name
+    }
+
+    pub fn fmt_as_tuple(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_char('(')?;
         for (i, var) in self.iter().enumerate() {
             if i > 0 {
-                name.push(',');
+                f.write_char(',')?;
             }
-            write!(name, "{}", var.ty).unwrap();
+            write!(f, "{}", var.ty)?;
         }
-        name.push(')');
-        name
+        f.write_char(')')
     }
 
     pub fn selector(&self, name: String) -> [u8; 4] {
@@ -143,14 +151,23 @@ impl<P> Parameters<P> {
         self.iter().map(|var| &var.ty)
     }
 
+    pub fn types_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Type> + DoubleEndedIterator {
+        self.iter_mut().map(|var| &mut var.ty)
+    }
+
     pub fn type_strings(
         &self,
     ) -> impl ExactSizeIterator<Item = String> + DoubleEndedIterator + Clone + '_ {
         self.iter().map(|var| var.ty.to_string())
     }
 
-    pub fn encoded_size(&self) -> usize {
-        self.iter().map(|var| var.ty.encoded_size()).sum()
+    pub fn encoded_size(&self, base: Option<TokenStream>) -> TokenStream {
+        let base = base.unwrap_or_else(|| quote!(self));
+        let sizes = self.iter().map(|var| {
+            let field = var.name.as_ref().unwrap();
+            var.ty.encoded_size(quote!(#base.#field))
+        });
+        quote!(0usize #( + #sizes)*)
     }
 
     pub fn assert_resolved(&self) {
@@ -161,17 +178,22 @@ impl<P> Parameters<P> {
 /// `<ty> [storage] <name>`
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclaration {
+    /// The type of the variable
     pub ty: Type,
+    /// The storage location, if any, of the variable
     pub storage: Option<Storage>,
+    /// The name of the variable. This is always Some if parsed as part of [`Parameters`].
     pub name: Option<SolIdent>,
 }
 
 /// Formats as an EIP712 field: `<ty> <name>`
 impl fmt::Display for VariableDeclaration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // important: `Other` is encoded dynamically at run time.
+        // important: Custom structs are encoded dynamically at run time.
+        // TODO: We can probably avoid doing this if we have all the resolved types.
         match &self.ty {
-            Type::Other(name, _) => name.fmt(f),
+            Type::Custom(CustomType::Struct(s)) => s.name.fmt(f),
+            Type::Custom(other) => other.fmt(f),
             ty => ty.fmt(f),
         }?;
         if let Some(name) = &self.name {
@@ -198,6 +220,14 @@ impl ToTokens for VariableDeclaration {
 }
 
 impl VariableDeclaration {
+    pub fn new(ty: Type) -> Self {
+        Self {
+            ty,
+            storage: None,
+            name: None,
+        }
+    }
+
     pub fn span(&self) -> Span {
         let span = self.ty.span();
         match (&self.storage, &self.name) {

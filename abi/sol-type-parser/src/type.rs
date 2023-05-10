@@ -1,6 +1,6 @@
-use crate::common::kw;
+use crate::{common::kw, r#struct::Struct, udt::Udt};
 use proc_macro2::{Literal, Span, TokenStream};
-use quote::{quote_spanned, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 use std::{
     fmt,
     hash::{Hash, Hasher},
@@ -215,6 +215,61 @@ impl SolTuple {
     }
 }
 
+/// A custom type that implements `ethers_abi_enc::SolidityType`.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum CustomType {
+    /// A type that has not yet been resolved
+    Unresolved(Ident),
+    /// A user-defined type
+    Udt(Box<Udt>),
+    /// A struct
+    Struct(Struct),
+}
+
+impl fmt::Display for CustomType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Unresolved(ident) => ident.fmt(f),
+            Self::Udt(udt) => udt.ty.fmt(f),
+            Self::Struct(strukt) => strukt.fields.fmt_as_tuple(f),
+        }
+    }
+}
+
+impl CustomType {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Unresolved(ident) => ident.span(),
+            Self::Udt(ty) => ty.span(),
+            Self::Struct(ty) => ty.span(),
+        }
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        match self {
+            Self::Unresolved(ident) => ident.set_span(span),
+            Self::Udt(udt) => udt.set_span(span),
+            Self::Struct(strukt) => strukt.set_span(span),
+        }
+    }
+
+    pub fn ident(&self) -> &Ident {
+        match self {
+            Self::Unresolved(ident) => ident,
+            Self::Udt(udt) => &udt.name.0,
+            Self::Struct(strukt) => &strukt.name.0,
+        }
+    }
+
+    pub fn as_type(&self) -> Type {
+        match self {
+            Self::Unresolved(_) => Type::Custom(self.clone()),
+            Self::Udt(udt) => udt.ty.clone(),
+            Self::Struct(strukt) => strukt.ty(),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum Type {
     /// `address`
@@ -245,11 +300,8 @@ pub enum Type {
     /// `(tuple)? ( $($type),* )`
     Tuple(SolTuple),
 
-    /// Rust Ident assumed to be a `ethers_abi_enc::SolidityType` implementor.
-    ///
-    /// The second field is this type's Solidity representation.
-    /// This is 'None' if it couldn't be resolved.
-    Other(Ident, Option<Box<Type>>),
+    /// A custom type, that may or may not be resolved to a Solidity type.
+    Custom(CustomType),
 }
 
 impl PartialEq for Type {
@@ -263,7 +315,7 @@ impl PartialEq for Type {
             (Self::Uint { size: a, .. }, Self::Uint { size: b, .. }) => a == b,
             (Self::Tuple(a), Self::Tuple(b)) => a == b,
             (Self::Array(a), Self::Array(b)) => a == b,
-            (Self::Other(a, _), Self::Other(b, _)) => a == b,
+            (Self::Custom(a), Self::Custom(b)) => a == b,
             _ => false,
         }
     }
@@ -281,7 +333,7 @@ impl Hash for Type {
             Self::Uint { size, .. } => size.hash(state),
             Self::Tuple(tuple) => tuple.hash(state),
             Self::Array(array) => array.hash(state),
-            Self::Other(name, _) => name.hash(state),
+            Self::Custom(custom) => custom.hash(state),
         }
     }
 }
@@ -297,10 +349,7 @@ impl fmt::Debug for Type {
             Self::Uint { size, .. } => f.debug_tuple("Uint").field(size).finish(),
             Self::Tuple(tuple) => tuple.fmt(f),
             Self::Array(array) => array.fmt(f),
-            Self::Other(name, repr) => {
-                let s = name.to_string();
-                f.debug_tuple(&s).field(repr).finish()
-            }
+            Self::Custom(custom) => custom.fmt(f),
         }
     }
 }
@@ -316,8 +365,7 @@ impl fmt::Display for Type {
             Self::Uint { size, .. } => write_opt(f, "uint", *size),
             Self::Tuple(tuple) => tuple.fmt(f),
             Self::Array(array) => array.fmt(f),
-            Self::Other(name, None) => name.fmt(f),
-            Self::Other(_, Some(ty)) => ty.fmt(f),
+            Self::Custom(custom) => custom.fmt(f),
         }
     }
 }
@@ -337,7 +385,7 @@ impl Parse for Type {
                 s => {
                     if let Some(s) = s.strip_prefix("bytes") {
                         match parse_size(s, span)? {
-                            None => Self::Other(ident, None),
+                            None => Self::custom(ident),
                             Some(Some(size)) if size.get() > 32 => {
                                 return Err(Error::new(span, "fixed bytes range is 1-32"));
                             }
@@ -345,7 +393,7 @@ impl Parse for Type {
                         }
                     } else if let Some(s) = s.strip_prefix("int") {
                         match parse_size(s, span)? {
-                            None => Self::Other(ident, None),
+                            None => Self::custom(ident),
                             Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
                                 return Err(Error::new(
                                     span,
@@ -356,7 +404,7 @@ impl Parse for Type {
                         }
                     } else if let Some(s) = s.strip_prefix("uint") {
                         match parse_size(s, span)? {
-                            None => Self::Other(ident, None),
+                            None => Self::custom(ident),
                             Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
                                 return Err(Error::new(
                                     span,
@@ -366,7 +414,7 @@ impl Parse for Type {
                             Some(size) => Self::Uint { span, size },
                         }
                     } else {
-                        Self::Other(ident, None)
+                        Self::custom(ident)
                     }
                 }
             }
@@ -394,17 +442,19 @@ impl ToTokens for Type {
             Self::Bool(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_data::Bool },
             Self::String(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_data::String },
 
-            Self::Bytes { span, size } => match size {
-                Some(size) => {
-                    let size = Literal::u16_unsuffixed(size.get());
-                    quote_spanned! {span=>
-                        ::ethers_abi_enc::sol_data::FixedBytes<#size>
-                    }
+            Self::Bytes {
+                span,
+                size: Some(size),
+            } => {
+                let size = Literal::u16_unsuffixed(size.get());
+                quote_spanned! {span=>
+                    ::ethers_abi_enc::sol_data::FixedBytes<#size>
                 }
-                None => quote_spanned! {span=>
-                    ::ethers_abi_enc::sol_data::Bytes
-                },
+            }
+            Self::Bytes { span, size: None } => quote_spanned! {span=>
+                ::ethers_abi_enc::sol_data::Bytes
             },
+
             Self::Int { span, size } => {
                 let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
                 quote_spanned! {span=>
@@ -420,13 +470,17 @@ impl ToTokens for Type {
 
             Self::Tuple(ref tuple) => return tuple.to_tokens(tokens),
             Self::Array(ref array) => return array.to_tokens(tokens),
-            Self::Other(ref ident, _) => return ident.to_tokens(tokens),
+            Self::Custom(ref custom) => return custom.ident().to_tokens(tokens),
         };
         tokens.extend(expanded);
     }
 }
 
 impl Type {
+    pub fn custom(ident: Ident) -> Self {
+        Self::Custom(CustomType::Unresolved(ident))
+    }
+
     pub fn span(&self) -> Span {
         match self {
             Self::Address(span)
@@ -437,7 +491,7 @@ impl Type {
             | Self::Uint { span, .. } => *span,
             Self::Tuple(tuple) => tuple.span(),
             Self::Array(array) => array.span(),
-            Self::Other(ident, _) => ident.span(),
+            Self::Custom(custom) => custom.span(),
         }
     }
 
@@ -451,11 +505,7 @@ impl Type {
             | Self::Uint { span, .. } => *span = new_span,
             Self::Tuple(tuple) => tuple.set_span(new_span),
             Self::Array(array) => array.set_span(new_span),
-            Self::Other(ident, None) => ident.set_span(new_span),
-            Self::Other(ident, Some(inner)) => {
-                ident.set_span(new_span);
-                inner.set_span(new_span);
-            }
+            Self::Custom(custom) => custom.set_span(new_span),
         }
     }
 
@@ -472,10 +522,10 @@ impl Type {
     }
 
     pub fn is_struct(&self) -> bool {
-        matches!(self, Self::Other(..))
+        matches!(self, Self::Custom(..))
     }
 
-    /// Returns the resolved type, which is the innermost type that is not `Other`.
+    /// Returns the resolved type, which is the innermost type that is not `Custom`.
     ///
     /// Prefer using other methods which don't clone, like `encoded_size` or `Display::fmt`.
     pub fn resolved(&self) -> Self {
@@ -504,13 +554,17 @@ impl Type {
                     types
                 },
             }),
-            Self::Other(_, Some(inner)) => inner.resolved(),
+            Self::Custom(CustomType::Udt(udt)) => udt.ty.resolved(),
+            Self::Custom(CustomType::Struct(strukt)) => strukt.ty().resolved(),
             s => s.clone(),
         }
     }
 
-    /// Recursively calculates the ABI-encoded size of `self` in bytes.
-    pub fn encoded_size(&self) -> usize {
+    /// Recursively calculates the base ABI-encoded size of `self` in bytes.
+    ///
+    /// That is, the minimum number of bytes required to encode `self` without
+    /// any dynamic data.
+    pub fn base_encoded_size(&self) -> usize {
         match self {
             // static types: 1 word
             Self::Address(_)
@@ -529,23 +583,74 @@ impl Type {
                 ty,
                 size: Some(size),
                 ..
-            }) => ty.encoded_size() * size.base10_parse::<usize>().unwrap(),
+            }) => ty.base_encoded_size() * size.base10_parse::<usize>().unwrap(),
 
             // tuple: sum of encoded sizes
-            Self::Tuple(tuple) => tuple.types.iter().map(Type::encoded_size).sum(),
+            Self::Tuple(tuple) => tuple.types.iter().map(Type::base_encoded_size).sum(),
 
-            Self::Other(_, Some(ty)) => ty.encoded_size(),
-            Self::Other(ident, None) => unreachable!("unresolved type: {ident}"),
+            Self::Custom(CustomType::Unresolved(ident)) => unreachable!("unresolved type: {ident}"),
+            Self::Custom(custom) => custom.as_type().base_encoded_size(),
         }
     }
 
-    /// Asserts that this type is resolved, meaning no `Type::Other(_, None)` types are present.
+    /// Recursively calculates the ABI-encoded size of `self` in bytes.
+    pub fn encoded_size(&self, field: TokenStream) -> TokenStream {
+        match self {
+            // static types: 1 word
+            Self::Address(_)
+            | Self::Bool(_)
+            | Self::Int { .. }
+            | Self::Uint { .. }
+            | Self::Bytes { size: Some(_), .. } => self.base_encoded_size().into_token_stream(),
+
+            // dynamic types: 1 offset word, 1 length word, length rounded up to word size
+            Self::String(_) | Self::Bytes { size: None, .. } => {
+                let base = self.base_encoded_size();
+                quote!(#base + (#field.len() / 31) * 32)
+            }
+            Self::Array(SolArray { ty, size: None, .. }) => {
+                let base = self.base_encoded_size();
+                let inner_size = ty.encoded_size(field.clone());
+                quote!(#base + #field.len() * (#inner_size))
+            }
+
+            // fixed array: size * encoded size
+            Self::Array(SolArray {
+                ty,
+                size: Some(size),
+                ..
+            }) => {
+                let base = self.base_encoded_size();
+                let inner_size = ty.encoded_size(field);
+                let len: usize = size.base10_parse().unwrap();
+                quote!(#base + #len * (#inner_size))
+            }
+
+            // tuple: sum of encoded sizes
+            Self::Tuple(tuple) => {
+                let fields = tuple.types.iter().enumerate().map(|(i, ty)| {
+                    let index = syn::Index::from(i);
+                    let field_name = quote!(#field.#index);
+                    ty.encoded_size(field_name)
+                });
+                quote!(0usize #(+ #fields)*)
+            }
+
+            Self::Custom(CustomType::Unresolved(ident)) => unreachable!("unresolved type: {ident}"),
+            Self::Custom(CustomType::Struct(strukt)) => {
+                strukt.fields.encoded_size(Some(field.clone()))
+            }
+            Self::Custom(CustomType::Udt(udt)) => udt.ty.encoded_size(field),
+        }
+    }
+
+    /// Asserts that this type is resolved, meaning no `CustomType::Unresolved` types are present.
     ///
     /// This is only necessary when expanding code for `SolCall` or similar traits, which require
     /// the fully resolved type to calculate the ABI signature and selector.
     pub fn assert_resolved(&self) {
         self.visit(&mut |ty| {
-            if let Self::Other(ident, None) = ty {
+            if let Self::Custom(CustomType::Unresolved(ident)) = ty {
                 panic!(
                     "missing necessary definition for type \"{ident}\"\n\
                      Custom types must be declared inside of the same scope they are referenced in,\n\
@@ -560,7 +665,10 @@ impl Type {
         match self {
             Self::Array(array) => array.ty.visit(f),
             Self::Tuple(tuple) => tuple.types.iter().for_each(|ty| ty.visit(f)),
-            Self::Other(_, Some(ty)) => f(ty),
+            Self::Custom(CustomType::Struct(strukt)) => {
+                strukt.fields.types().for_each(|ty| ty.visit(f))
+            }
+            Self::Custom(CustomType::Udt(udt)) => f(&udt.ty),
             ty => f(ty),
         }
     }
@@ -570,7 +678,10 @@ impl Type {
         match self {
             Self::Array(array) => array.ty.visit_mut(f),
             Self::Tuple(tuple) => tuple.types.iter_mut().for_each(|ty| ty.visit_mut(f)),
-            Self::Other(_, Some(ty)) => f(ty),
+            Self::Custom(CustomType::Struct(strukt)) => {
+                strukt.fields.types_mut().for_each(|ty| ty.visit_mut(f))
+            }
+            Self::Custom(CustomType::Udt(udt)) => udt.ty.visit_mut(f),
             ty => f(ty),
         }
     }
@@ -584,7 +695,7 @@ fn write_opt(f: &mut fmt::Formatter<'_>, name: &str, size: Option<NonZeroU16>) -
     Ok(())
 }
 
-// None => Other
+// None => Custom
 // Some(size) => size
 fn parse_size(s: &str, span: Span) -> Result<Option<Option<NonZeroU16>>> {
     let opt = match s.parse::<NonZeroU16>() {

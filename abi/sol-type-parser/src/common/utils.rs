@@ -15,12 +15,14 @@ pub fn from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStream 
         type UnderlyingSolTuple = (#(#tys,)*);
         type UnderlyingRustTuple = (#(<#tys2 as ::ethers_abi_enc::SolType>::RustType,)*);
 
+        #[automatically_derived]
         impl From<#name> for UnderlyingRustTuple {
             fn from(value: #name) -> Self {
                 (#(value.#names,)*)
             }
         }
 
+        #[automatically_derived]
         impl From<UnderlyingRustTuple> for #name {
             fn from(tuple: UnderlyingRustTuple) -> Self {
                 #name {

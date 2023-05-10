@@ -1,7 +1,12 @@
 use std::collections::HashMap;
 
 use crate::{
-    common::kw, error::Error, function::Function, r#struct::Struct, r#type::Type, udt::Udt,
+    common::kw,
+    error::Error,
+    function::Function,
+    r#struct::Struct,
+    r#type::{CustomType, Type},
+    udt::Udt,
 };
 use proc_macro2::{Ident, TokenStream as TokenStream2};
 use quote::{quote_spanned, ToTokens};
@@ -54,7 +59,7 @@ impl ToTokens for Input {
 
 impl Input {
     fn resolve(&mut self) {
-        let types = self.type_map();
+        let types = self.custom_type_map();
         if types.is_empty() {
             return;
         }
@@ -62,8 +67,8 @@ impl Input {
         for _i in 0..RESOLVE_LIMIT {
             let mut any = false;
             self.visit_types(|ty| {
-                let Type::Other(ident, None) = ty else { return };
-                let Some(resolved) = types.get(ident) else { return };
+                let Type::Custom(ty @ CustomType::Unresolved(_)) = ty else { return };
+                let Some(resolved) = types.get(ty.ident()) else { return };
                 let old_span = ty.span();
                 ty.clone_from(resolved);
                 ty.set_span(old_span);
@@ -83,16 +88,15 @@ impl Input {
     }
 
     /// Constructs a map of custom types' names to their definitions.
-    fn type_map(&self) -> HashMap<Ident, Type> {
+    fn custom_type_map(&self) -> HashMap<Ident, CustomType> {
         let mut map = HashMap::with_capacity(self.inputs.len());
         for s in &self.inputs {
             let (name, ty) = match &s.kind {
-                InputKind::Udt(udt) => (udt.name.0.clone(), udt.ty.clone()),
-                InputKind::Struct(strukt) => (strukt.name.0.clone(), strukt.ty()),
-                InputKind::Error(error) => (error.name.0.clone(), error.ty()),
+                InputKind::Udt(udt) => (&udt.name.0, CustomType::Udt(udt.clone().into())),
+                InputKind::Struct(strukt) => (&strukt.name.0, CustomType::Struct(strukt.clone())),
                 _ => continue,
             };
-            map.insert(name, ty);
+            map.insert(name.clone(), ty);
         }
         map
     }
