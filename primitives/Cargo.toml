@@ -20,11 +20,10 @@ ruint = { workspace = true, features = ["rlp", "serde"] }
 # utility
 derive_more = "0.99"
 tiny-keccak = { workspace = true, features = ["keccak"] }
-hex = { workspace = true, default-features = false }
+hex.workspace = true
 
 # optional
 serde = { workspace = true, features = ["derive"], optional = true }
-thiserror = { workspace = true, optional = true }
 
 # rlp support
 ethers-rlp = { workspace = true, optional = true }
@@ -37,8 +36,13 @@ proptest-derive = { workspace = true, optional = true }
 
 [features]
 default = ["std", "rlp", "serde", "hex/std"]
-std = ["serde/std", "ethers-rlp?/std", "bytes?/std", "proptest?/std", "dep:thiserror"]
+std = ["serde/std", "ethers-rlp?/std", "bytes?/std", "proptest?/std"]
 rlp = ["dep:ethers-rlp", "dep:bytes"]
 serde = ["dep:serde", "ruint/serde"]
-arbitrary = ["ruint/arbitrary", "ruint/proptest", "dep:arbitrary", "dep:proptest", "dep:proptest-derive"]
-
+arbitrary = [
+    "ruint/arbitrary",
+    "ruint/proptest",
+    "dep:arbitrary",
+    "dep:proptest",
+    "dep:proptest-derive",
+]

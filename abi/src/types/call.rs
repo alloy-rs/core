@@ -29,7 +29,7 @@ pub trait SolCall: Sized {
     fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self;
 
     /// The size of the encoded data in bytes, selector excluded
-    fn encoded_size(&self) -> usize;
+    fn data_size(&self) -> usize;
 
     /// Decode function args from an ABI-encoded byte slice WITHOUT its
     /// selector
@@ -56,7 +56,7 @@ pub trait SolCall: Sized {
 
     /// Encode the call to an ABI-encoded byte vector
     fn encode_with_selector(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(4 + self.encoded_size());
+        let mut out = Vec::with_capacity(4 + self.data_size());
         out.extend(&Self::SELECTOR);
         self.encode_raw(&mut out);
         out

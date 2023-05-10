@@ -1,6 +1,6 @@
-use core::result::Result;
-
 use super::FixedBytes;
+use alloc::string::String;
+use core::result::Result;
 
 impl<const N: usize> serde::Serialize for FixedBytes<N> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

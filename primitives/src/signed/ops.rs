@@ -1,11 +1,9 @@
-use ruint::Uint;
-
-use core::{cmp, iter, ops};
-
 use super::{
     utils::{handle_overflow, twos_complement},
     Sign, Signed,
 };
+use core::{cmp, iter, ops};
+use ruint::Uint;
 
 // ops impl
 impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {

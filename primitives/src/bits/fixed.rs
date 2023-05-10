@@ -1,5 +1,4 @@
 use core::{fmt, ops};
-
 use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut};
 
 /// A bytearray of fixed length.
@@ -65,7 +64,6 @@ impl<'a, const N: usize> From<&'a mut [u8; N]> for FixedBytes<N> {
 
 impl<const N: usize> From<FixedBytes<N>> for [u8; N] {
     #[inline]
-    #[track_caller]
     fn from(s: FixedBytes<N>) -> Self {
         s.0
     }
@@ -73,7 +71,6 @@ impl<const N: usize> From<FixedBytes<N>> for [u8; N] {
 
 impl<const N: usize> AsRef<[u8]> for FixedBytes<N> {
     #[inline]
-    #[track_caller]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
@@ -81,7 +78,6 @@ impl<const N: usize> AsRef<[u8]> for FixedBytes<N> {
 
 impl<const N: usize> AsMut<[u8]> for FixedBytes<N> {
     #[inline]
-    #[track_caller]
     fn as_mut(&mut self) -> &mut [u8] {
         self.as_bytes_mut()
     }
@@ -371,10 +367,7 @@ impl<const N: usize> core::str::FromStr for FixedBytes<N> {
         let s = s.strip_prefix("0x").unwrap_or(s);
 
         let mut buf = [0u8; N];
-        hex::decode_to_slice(s, buf.as_mut())?;
+        hex::decode_to_slice(s, &mut buf)?;
         Ok(Self(buf))
     }
 }
-
-#[cfg(test)]
-mod test {}
