@@ -10,13 +10,6 @@ sol! {
     }
 }
 
-// OK
-sol! {
-    function trailingComma1(bytes,);
-    // function trailingComma2(bytes a,);
-    // function trailingComma3(bytes memory a,);
-}
-
 // Works only outside of function scope due to rust import rules
 sol! {
     struct MyStruct2 {
