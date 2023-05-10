@@ -79,42 +79,45 @@ pub trait SolError: Sized {
 /// Represents a standard Solidity revert. These are thrown by
 /// `require(condition, reason)` statements in Solidity.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Revert(pub String);
+pub struct Revert {
+    /// The reason string, provided by the Solidity contract
+    pub reason: String,
+}
 
 impl AsRef<str> for Revert {
     fn as_ref(&self) -> &str {
-        &self.0
+        &self.reason
     }
 }
 
 impl Borrow<str> for Revert {
     fn borrow(&self) -> &str {
-        &self.0
+        &self.reason
     }
 }
 
 impl Display for Revert {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Revert: {}", self.0)
+        write!(f, "Revert: {}", self.reason)
     }
 }
 
 impl From<Revert> for String {
     fn from(value: Revert) -> Self {
-        value.0
+        value.reason
     }
 }
 
 impl From<String> for Revert {
     fn from(s: String) -> Self {
-        Self(s)
+        Self { reason: s }
     }
 }
 
 impl Revert {
     /// Get the reason string for the revert
     pub fn reason(&self) -> &str {
-        &self.0
+        &self.reason
     }
 }
 
@@ -131,18 +134,18 @@ impl SolError for Revert {
     const FIELDS: &'static [&'static str] = &["reason"];
 
     fn to_rust(&self) -> <Self::Tuple as SolType>::RustType {
-        (self.0.clone(),)
+        (self.reason.clone(),)
     }
 
     fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self
     where
         Self: Sized,
     {
-        Self(tuple.0)
+        Self { reason: tuple.0 }
     }
 
     fn encoded_size(&self) -> usize {
-        64 + (self.0.len() + 31) / 32
+        64 + (self.reason.len() + 31) / 32
     }
 }
 
@@ -151,42 +154,47 @@ impl SolError for Revert {
 ///
 /// [Solidity Panic](https://docs.soliditylang.org/en/v0.8.6/control-structures.html#panic-via-assert-and-error-via-require)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct Panic(pub U256);
+pub struct Panic {
+    /// The panic code.
+    ///
+    /// [Solidity Panic Codes](https://docs.soliditylang.org/en/v0.8.6/control-structures.html#panic-via-assert-and-error-via-require)
+    pub error_code: U256,
+}
 
 impl AsRef<U256> for Panic {
     fn as_ref(&self) -> &U256 {
-        &self.0
+        &self.error_code
     }
 }
 
 impl Borrow<U256> for Panic {
     fn borrow(&self) -> &U256 {
-        &self.0
+        &self.error_code
     }
 }
 
 impl Display for Panic {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Panic: {}", self.0)
+        write!(f, "Panic: {}", self.error_code)
     }
 }
 
 impl From<Panic> for U256 {
     fn from(value: Panic) -> Self {
-        value.0
+        value.error_code
     }
 }
 
 impl From<U256> for Panic {
     fn from(s: U256) -> Self {
-        Self(s)
+        Self { error_code: s }
     }
 }
 
 impl Panic {
     /// Get the reason code for the panic
     pub const fn code(&self) -> U256 {
-        self.0
+        self.error_code
     }
 }
 
@@ -199,17 +207,19 @@ impl SolError for Panic {
 
     const NAME: &'static str = "Panic";
 
-    const FIELDS: &'static [&'static str] = &["code"];
+    const FIELDS: &'static [&'static str] = &["errorCode"];
 
     fn to_rust(&self) -> <Self::Tuple as SolType>::RustType {
-        (self.0,)
+        (self.error_code,)
     }
 
     fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self
     where
         Self: Sized,
     {
-        Self(tuple.0)
+        Self {
+            error_code: tuple.0,
+        }
     }
 
     fn encoded_size(&self) -> usize {
