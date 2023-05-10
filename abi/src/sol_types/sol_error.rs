@@ -1,4 +1,10 @@
-use crate::{no_std_prelude::*, token::TokenSeq, SolDataType, SolType};
+use core::fmt::Display;
+
+use crate::{
+    no_std_prelude::*,
+    token::{PackedSeqToken, TokenSeq},
+    SolDataType, SolType,
+};
 
 /// Solidity Error (a tuple with a selector)
 ///
@@ -65,5 +71,75 @@ pub trait SolError: Sized {
         out.extend(&Self::SELECTOR);
         self.encode_raw(&mut out);
         out
+    }
+}
+
+/// Represents a standard Solidity revert. These are thrown by
+/// `require(condition, reason)` statements in Solidity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Revert(pub String);
+
+impl AsRef<str> for Revert {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Borrow<str> for Revert {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Display for Revert {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Revert: {}", self.0)
+    }
+}
+
+impl From<Revert> for String {
+    fn from(value: Revert) -> Self {
+        value.0
+    }
+}
+
+impl From<String> for Revert {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
+impl Revert {
+    /// Get the reason string for the revert
+    pub fn reason(&self) -> &str {
+        &self.0
+    }
+}
+
+impl SolError for Revert {
+    type Tuple = (crate::sol_data::String,);
+
+    type Token = (PackedSeqToken,);
+
+    // Selector for `"Error(string)"`
+    const SELECTOR: [u8; 4] = [0x08, 0xc3, 0x79, 0xa0];
+
+    const NAME: &'static str = "Error";
+
+    const FIELDS: &'static [&'static str] = &["reason"];
+
+    fn to_rust(&self) -> <Self::Tuple as SolType>::RustType {
+        (self.0.clone(),)
+    }
+
+    fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self
+    where
+        Self: Sized,
+    {
+        Self(tuple.0)
+    }
+
+    fn encoded_size(&self) -> usize {
+        64 + (self.0.len() + 31) / 32
     }
 }
