@@ -38,8 +38,9 @@ pub trait SolError: Sized {
     where
         Self: Sized;
 
-    /// The size (in bytes) of this data when encoded, including the selector
-    fn encoded_size(&self) -> usize;
+    /// The size (in bytes) of this data when encoded, NOT including the
+    /// selector
+    fn data_size(&self) -> usize;
 
     /// Decode an error contents from an ABI-encoded byte slice WITHOUT its
     /// selector
@@ -69,7 +70,7 @@ pub trait SolError: Sized {
 
     /// Encode an error to an ABI-encoded byte vector
     fn encode_with_selector(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(4 + self.encoded_size());
+        let mut out = Vec::with_capacity(4 + self.data_size());
         out.extend(&Self::SELECTOR);
         self.encode_raw(&mut out);
         out
@@ -109,15 +110,8 @@ impl From<Revert> for String {
 }
 
 impl From<String> for Revert {
-    fn from(s: String) -> Self {
-        Self { reason: s }
-    }
-}
-
-impl Revert {
-    /// Get the reason string for the revert
-    pub fn reason(&self) -> &str {
-        &self.reason
+    fn from(reason: String) -> Self {
+        Self { reason }
     }
 }
 
@@ -144,7 +138,7 @@ impl SolError for Revert {
         Self { reason: tuple.0 }
     }
 
-    fn encoded_size(&self) -> usize {
+    fn data_size(&self) -> usize {
         64 + (self.reason.len() + 31) / 32
     }
 }
@@ -186,15 +180,8 @@ impl From<Panic> for U256 {
 }
 
 impl From<U256> for Panic {
-    fn from(s: U256) -> Self {
-        Self { error_code: s }
-    }
-}
-
-impl Panic {
-    /// Get the reason code for the panic
-    pub const fn code(&self) -> U256 {
-        self.error_code
+    fn from(error_code: U256) -> Self {
+        Self { error_code }
     }
 }
 
@@ -222,7 +209,7 @@ impl SolError for Panic {
         }
     }
 
-    fn encoded_size(&self) -> usize {
-        36
+    fn data_size(&self) -> usize {
+        32
     }
 }
