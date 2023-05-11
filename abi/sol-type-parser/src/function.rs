@@ -121,12 +121,15 @@ impl Function {
         attrs: &[Attribute],
     ) -> TokenStream {
         params.assert_resolved();
-        let fn_name = self.name.as_string();
+
         let fields = params.iter();
-        let selector = params.selector(fn_name.clone());
-        let args = params.type_strings();
+
+        let (signature, selector) = params.sig_and_sel(self.name.as_string());
+
         let size = params.data_size(None);
+
         let converts = from_into_tuples(call_name, params);
+
         quote! {
             #(#attrs)*
             #[derive(Debug, Clone, PartialEq)] // TODO: Derive traits dynamically
@@ -144,9 +147,8 @@ impl Function {
                     type Tuple = UnderlyingSolTuple;
                     type Token = <UnderlyingSolTuple as ::ethers_abi_enc::SolType>::TokenType;
 
+                    const SIGNATURE: &'static str = #signature;
                     const SELECTOR: [u8; 4] = [#(#selector),*];
-                    const NAME: &'static str = #fn_name;
-                    const ARGS: &'static [&'static str] = &[#(#args),*];
 
                     fn to_rust(&self) -> <Self::Tuple as ::ethers_abi_enc::SolType>::RustType {
                         self.clone().into()

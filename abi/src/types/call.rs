@@ -13,14 +13,11 @@ pub trait SolCall: Sized {
     /// The corresponding Token type
     type Token: TokenSeq;
 
-    /// The function selector
+    /// The function ABI signature
+    const SIGNATURE: &'static str;
+
+    /// The function selector: `keccak256(SIGNATURE)[0..4]`
     const SELECTOR: [u8; 4];
-
-    /// The function name
-    const NAME: &'static str;
-
-    /// The function arguments
-    const ARGS: &'static [&'static str];
 
     /// Converts to the tuple type used for ABI encoding/decoding
     fn to_rust(&self) -> <Self::Tuple as SolType>::RustType;
@@ -41,11 +38,11 @@ pub trait SolCall: Sized {
     /// Decode function args from an ABI-encoded byte slice with its selector
     fn decode(data: &[u8], validate: bool) -> crate::AbiResult<Self> {
         if data.len() < 4 {
-            return Err(crate::Error::type_check_fail(hex::encode(data), Self::NAME));
+            return Err(crate::Error::type_check_fail_sig(data, Self::SIGNATURE));
         }
         let data = data
             .strip_prefix(&Self::SELECTOR)
-            .ok_or_else(|| crate::Error::type_check_fail(hex::encode(&data[..4]), Self::NAME))?;
+            .ok_or_else(|| crate::Error::type_check_fail_sig(&data[..4], Self::SIGNATURE))?;
         Self::decode_raw(data, validate)
     }
 

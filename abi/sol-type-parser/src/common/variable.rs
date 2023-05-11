@@ -106,6 +106,12 @@ impl<P> Parameters<P> {
         Self(Punctuated::new())
     }
 
+    pub fn sig_and_sel(&self, name: String) -> (String, [u8; 4]) {
+        let sig = self.signature(name);
+        let sel = keccak256(sig.as_bytes())[..4].try_into().unwrap();
+        (sig, sel)
+    }
+
     pub fn signature(&self, mut name: String) -> String {
         name.reserve(2 + self.len() * 16);
         self.fmt_as_tuple(&mut name).unwrap();

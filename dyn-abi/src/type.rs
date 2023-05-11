@@ -94,9 +94,8 @@ impl DynSolType {
             (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(val)),
             (DynSolType::FixedBytes(len), DynSolValue::FixedBytes(word, size)) => {
                 if size != *len {
-                    return Err(crate::Error::custom_owned(format!(
-                        "Size mismatch for FixedBytes. Got {}, expected {}",
-                        size, len
+                    return Err(crate::Error::custom(format!(
+                        "Size mismatch for FixedBytes. Got {size}, expected {len}",
                     )));
                 }
                 Ok(word.into())
@@ -127,7 +126,7 @@ impl DynSolType {
             }
             (DynSolType::FixedArray(t, size), DynSolValue::FixedArray(tokens)) => {
                 if *size != tokens.len() {
-                    return Err(crate::Error::custom_owned(format!(
+                    return Err(crate::Error::custom(format!(
                         "Size mismatch for FixedArray. Got {}, expected {}",
                         tokens.len(),
                         size,
@@ -143,8 +142,8 @@ impl DynSolType {
             }
             (DynSolType::CustomStruct { name, tuple, .. }, DynSolValue::Tuple(tokens)) => {
                 if tuple.len() != tokens.len() {
-                    return Err(crate::Error::custom_owned(format!(
-                        "Tuple length mismatch for {} . Got {}, expected {}",
+                    return Err(crate::Error::custom(format!(
+                        "Tuple length mismatch for {}. Got {}, expected {}",
                         name,
                         tokens.len(),
                         tuple.len(),
@@ -170,21 +169,19 @@ impl DynSolType {
                     prop_names: prop_names_val,
                 },
             ) => {
-                if name != &name_val {
-                    return Err(crate::Error::custom_owned(format!(
-                        "Name mismatch for {} . Got {}, expected {}",
-                        name, name_val, name,
+                if *name != name_val {
+                    return Err(crate::Error::custom(format!(
+                        "Name mismatch for {name}. Got {name_val}, expected {name}",
                     )));
                 }
-                if prop_names != &prop_names_val {
-                    return Err(crate::Error::custom_owned(format!(
-                        "Prop names mismatch for {} . Got {:?}, expected {:?}",
-                        name, prop_names_val, prop_names,
+                if *prop_names != prop_names_val {
+                    return Err(crate::Error::custom(format!(
+                        "Prop names mismatch for {name}. Got {prop_names_val:?}, expected {prop_names:?}",
                     )));
                 }
                 if tuple.len() != tuple_val.len() {
-                    return Err(crate::Error::custom_owned(format!(
-                        "Tuple length mismatch for {} . Got {}, expected {}",
+                    return Err(crate::Error::custom(format!(
+                        "Tuple length mismatch for {}. Got {}, expected {}",
                         name,
                         tuple_val.len(),
                         tuple.len(),
@@ -205,18 +202,16 @@ impl DynSolType {
                     inner: inner_val,
                 },
             ) => {
-                if name != &name_val {
-                    return Err(crate::Error::custom_owned(format!(
-                        "Name mismatch for {} . Got {}, expected {}",
+                if *name != name_val {
+                    return Err(crate::Error::custom(format!(
+                        "Name mismatch for {}. Got {}, expected {}",
                         name, name_val, name,
                     )));
                 }
-                // A little hacky. A Custom value type is always encoded as a full 32-byte worc
+                // A little hacky. A Custom value type is always encoded as a full 32-byte word
                 Ok(DynSolType::FixedBytes(32).tokenize(DynSolValue::FixedBytes(inner_val, 32))?)
             }
-            _ => Err(crate::Error::Other(
-                "Invalid type on dynamic tokenization".into(),
-            )),
+            _ => Err(crate::Error::custom("Invalid type on dynamic tokenization")),
         }
     }
 

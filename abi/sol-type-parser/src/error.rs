@@ -42,12 +42,14 @@ impl Parse for Error {
 impl Error {
     fn expand(&self, attrs: &[Attribute]) -> TokenStream {
         self.fields.assert_resolved();
+
         let name = &self.name;
-        let name_s = name.as_string();
         let fields = self.fields.iter();
-        let args = self.fields.type_strings();
-        let selector = self.fields.selector(name_s.clone());
+
+        let (signature, selector) = self.fields.sig_and_sel(name.as_string());
+
         let size = self.fields.data_size(None);
+
         let converts = from_into_tuples(&name.0, &self.fields);
         quote! {
             #(#attrs)*
@@ -62,13 +64,12 @@ impl Error {
                 #converts
 
                 #[automatically_derived]
-                impl ::ethers_abi_enc::SolCall for #name {
+                impl ::ethers_abi_enc::SolError for #name {
                     type Tuple = UnderlyingSolTuple;
                     type Token = <UnderlyingSolTuple as ::ethers_abi_enc::SolType>::TokenType;
 
+                    const SIGNATURE: &'static str = #signature;
                     const SELECTOR: [u8; 4] = [#(#selector),*];
-                    const NAME: &'static str = #name_s;
-                    const ARGS: &'static [&'static str] = &[#(#args),*];
 
                     fn to_rust(&self) -> <Self::Tuple as ::ethers_abi_enc::SolType>::RustType {
                         self.clone().into()

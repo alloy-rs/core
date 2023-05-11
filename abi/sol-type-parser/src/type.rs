@@ -442,6 +442,9 @@ impl ToTokens for Type {
             Self::Bool(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_data::Bool },
             Self::String(span) => quote_spanned! {span=> ::ethers_abi_enc::sol_data::String },
 
+            Self::Bytes { span, size: None } => {
+                quote_spanned! {span=> ::ethers_abi_enc::sol_data::Bytes }
+            }
             Self::Bytes {
                 span,
                 size: Some(size),
@@ -451,9 +454,6 @@ impl ToTokens for Type {
                     ::ethers_abi_enc::sol_data::FixedBytes<#size>
                 }
             }
-            Self::Bytes { span, size: None } => quote_spanned! {span=>
-                ::ethers_abi_enc::sol_data::Bytes
-            },
 
             Self::Int { span, size } => {
                 let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
