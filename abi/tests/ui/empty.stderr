@@ -1,0 +1,13 @@
+error: unexpected end of input, expected at least one of: `type`, `struct`, `function`, `error`, Solidity type
+ --> tests/ui/empty.rs:3:1
+  |
+3 | sol! {}
+  | ^^^^^^^
+  |
+  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: unexpected end of input, defining empty structs is disallowed
+ --> tests/ui/empty.rs:6:25
+  |
+6 |     struct EmptyStruct {}
+  |                         ^

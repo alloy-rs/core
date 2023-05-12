@@ -15,20 +15,18 @@ use crate::{
 ///  We do not recommend implementing this trait directly. Instead, we recommend
 /// using the [`crate::sol`] proc macro to parse a solidity error definition.
 pub trait SolError: Sized {
-    /// The corresponding Token type
-    type Token: TokenSeq;
     /// The underlying tuple type which represents the error's members.
-    /// If the error is empty, this will be the unit type `()`
+    /// If the error has no arguments, this will be the unit type `()`
     type Tuple: SolDataType<TokenType = Self::Token>;
 
-    /// The error selector
+    /// The corresponding Token type
+    type Token: TokenSeq;
+
+    /// The error ABI signature
+    const SIGNATURE: &'static str;
+
+    /// The error selector: `keccak256(SIGNATURE)[0..4]`
     const SELECTOR: [u8; 4];
-
-    /// The error name
-    const NAME: &'static str;
-
-    /// The error fields
-    const FIELDS: &'static [&'static str];
 
     /// Convert to the tuple type used for ABI encoding/decoding
     fn to_rust(&self) -> <Self::Tuple as SolType>::RustType;
@@ -38,8 +36,7 @@ pub trait SolError: Sized {
     where
         Self: Sized;
 
-    /// The size (in bytes) of this data when encoded, NOT including the
-    /// selector
+    /// The size of the encoded data in bytes, selector excluded
     fn data_size(&self) -> usize;
 
     /// Decode an error contents from an ABI-encoded byte slice WITHOUT its
@@ -55,11 +52,11 @@ pub trait SolError: Sized {
         Self: Sized,
     {
         if data.len() < 4 {
-            return Err(crate::Error::type_check_fail(hex::encode(data), Self::NAME));
+            return Err(crate::Error::type_check_fail_sig(data, Self::SIGNATURE));
         }
         let data = data
             .strip_prefix(&Self::SELECTOR)
-            .ok_or_else(|| crate::Error::type_check_fail(hex::encode(&data[..4]), Self::NAME))?;
+            .ok_or_else(|| crate::Error::type_check_fail_sig(&data[..4], Self::SIGNATURE))?;
         Self::decode_raw(data, validate)
     }
 
@@ -117,15 +114,10 @@ impl From<String> for Revert {
 
 impl SolError for Revert {
     type Token = (PackedSeqToken,);
-
     type Tuple = (crate::sol_data::String,);
 
-    // Selector for `"Error(string)"`
+    const SIGNATURE: &'static str = "Error(string)";
     const SELECTOR: [u8; 4] = [0x08, 0xc3, 0x79, 0xa0];
-
-    const NAME: &'static str = "Error";
-
-    const FIELDS: &'static [&'static str] = &["reason"];
 
     fn to_rust(&self) -> <Self::Tuple as SolType>::RustType {
         (self.reason.clone(),)
@@ -174,6 +166,14 @@ impl Display for Panic {
     }
 }
 
+impl From<u64> for Panic {
+    fn from(value: u64) -> Self {
+        Self {
+            error_code: U256::from(value),
+        }
+    }
+}
+
 impl From<Panic> for U256 {
     fn from(value: Panic) -> Self {
         value.error_code
@@ -188,14 +188,10 @@ impl From<U256> for Panic {
 
 impl SolError for Panic {
     type Token = (WordToken,);
-
     type Tuple = (crate::sol_data::Uint<256>,);
 
+    const SIGNATURE: &'static str = "Panic(uint256)";
     const SELECTOR: [u8; 4] = [0x4e, 0x48, 0x7b, 0x71];
-
-    const NAME: &'static str = "Panic";
-
-    const FIELDS: &'static [&'static str] = &["errorCode"];
 
     fn to_rust(&self) -> <Self::Tuple as SolType>::RustType {
         (self.error_code,)
@@ -217,9 +213,8 @@ impl SolError for Panic {
 
 #[cfg(test)]
 mod test {
-    use ethers_primitives::keccak256;
-
     use super::*;
+    use ethers_primitives::keccak256;
 
     #[test]
     fn test_revert_encoding() {

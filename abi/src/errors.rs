@@ -7,66 +7,83 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#[cfg(feature = "std")]
-use thiserror::Error;
-
-#[cfg(feature = "std")]
-use std::borrow::Cow;
-
-#[cfg(not(feature = "std"))]
 use crate::no_std_prelude::*;
+use core::fmt;
 
 /// ABI result type
 pub type AbiResult<T> = core::result::Result<T, Error>;
 
 /// ABI Encoding and Decoding errors.
-#[cfg_attr(feature = "std", derive(Error))]
 #[derive(Debug)]
 pub enum Error {
     /// A typecheck detected a word that does not match the data type
-    #[cfg_attr(
-        feature = "std",
-        error("Type check failed. Expected {expected_type} but {data} is not valid for that type")
-    )]
     TypeCheckFail {
-        /// Hex-encoded data
-        data: Cow<'static, str>,
         /// The Solidity type we failed to produce
         expected_type: Cow<'static, str>,
+        /// Hex-encoded data
+        data: String,
     },
-    #[cfg_attr(feature = "std", error("Buffer overrun in deser"))]
-    /// Overran deser buffer
+
+    /// Overran deserialization buffer
     Overrun,
-    #[cfg_attr(feature = "std", error("Reserialization did not match original"))]
+
     /// Validation reserialization did not match input
     ReserMismatch,
-    /// FromHex
-    #[cfg_attr(feature = "std", error("{0}"))]
+
+    /// Hex error
     FromHexError(hex::FromHexError),
+
     /// Other errors.
-    #[cfg_attr(feature = "std", error("{0}"))]
     Other(Cow<'static, str>),
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::FromHexError(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TypeCheckFail {
+                expected_type,
+                data,
+            } => {
+                write!(
+                    f,
+                    "Type check failed for \"{expected_type}\" with data: {data}",
+                )
+            }
+            Self::Overrun => f.write_str("Buffer overrun while deserializing"),
+            Self::ReserMismatch => f.write_str("Reserialization did not match original"),
+            Self::FromHexError(e) => e.fmt(f),
+            Self::Other(e) => f.write_str(e),
+        }
+    }
 }
 
 impl Error {
     /// Instantiates a new error with a static str
-    pub fn custom(s: &'static str) -> Self {
-        Self::Other(s.into())
-    }
-
-    /// Instantiates a new error with a string
-    pub fn custom_owned(s: alloc::string::String) -> Self {
+    pub fn custom(s: impl Into<Cow<'static, str>>) -> Self {
         Self::Other(s.into())
     }
 
     /// Instantiates a [`Error::TypeCheckFail`] with the provided data
-    pub fn type_check_fail(
-        data: impl Into<Cow<'static, str>>,
-        expected_type: impl Into<Cow<'static, str>>,
-    ) -> Self {
+    pub fn type_check_fail_sig(data: &[u8], signature: &'static str) -> Self {
+        let expected_type = signature.split('(').next().unwrap_or(signature);
+        Self::type_check_fail(data, expected_type)
+    }
+
+    /// Instantiates a [`Error::TypeCheckFail`] with the provided data
+    pub fn type_check_fail(data: &[u8], expected_type: impl Into<Cow<'static, str>>) -> Self {
         Self::TypeCheckFail {
-            data: data.into(),
             expected_type: expected_type.into(),
+            data: hex::encode(data),
         }
     }
 }

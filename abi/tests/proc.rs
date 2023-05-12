@@ -1,7 +1,5 @@
 use ethers_abi_enc::{sol, SolStruct, SolType};
 
-use ethers_primitives::{Address, U256};
-
 sol!(
     /// Hello this is extra docs
     #[derive(Hash)]
@@ -61,10 +59,10 @@ fn strings() {
 
 #[test]
 fn proc_macro_expansion() {
+    use ethers_primitives::{Address, U256};
+
     // this is possible but not recomended :)
-    <sol! {
-        bool
-    }>::hex_encode_single(true);
+    <sol!(bool)>::hex_encode_single(true);
 
     let a = MyStruct {
         a: U256::from(1),

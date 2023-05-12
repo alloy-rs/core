@@ -19,13 +19,13 @@ sol-type-parser.workspace = true
 
 hex = { workspace = true, features = ["alloc"] }
 
-thiserror = { workspace = true, optional = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
 hex-literal.workspace = true
+trybuild = "1.0"
 
 [features]
 default = ["std", "hex/alloc"]
-std = ["ethers-primitives/std", "hex/std", "serde?/std", "thiserror"]
+std = ["ethers-primitives/std", "hex/std", "serde?/std"]
 eip712-serde = ["dep:serde", "serde?/alloc", "ethers-primitives/serde"]

@@ -209,6 +209,11 @@
 #[cfg_attr(not(feature = "std"), macro_use)]
 extern crate alloc;
 
+// `unused_crate_dependencies` bug workaround.
+// This crate is used in tests/compiletest.rs
+#[cfg(test)]
+use trybuild as _;
+
 #[cfg(not(feature = "std"))]
 #[doc(hidden)]
 pub mod no_std_prelude {
@@ -239,6 +244,7 @@ pub mod no_std_prelude {
 /// Rust types that implement [`SolType`].
 ///
 /// See the root crate docs for more information.
+#[doc(inline)]
 pub use sol_type_parser::sol;
 
 /// The Word type for ABI Encoding
@@ -255,8 +261,10 @@ pub use coder::{Decoder, Encoder};
 mod errors;
 pub use errors::{AbiResult, Error};
 
-mod sol_types;
-pub use sol_types::{sol_data, Panic, Revert, SolCall, SolDataType, SolError, SolStruct, SolType};
+mod types;
+pub use types::{
+    data_type as sol_data, Panic, Revert, SolCall, SolDataType, SolError, SolStruct, SolType,
+};
 
 mod util;
 

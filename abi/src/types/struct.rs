@@ -28,10 +28,10 @@ type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
 /// a struct with a nested struct must encode the nested struct's type as well.
 /// See: <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
 pub trait SolStruct {
-    /// The corresponding Tuple type, used for encoding/decoding
-    type Tuple: SolDataType<TokenType = Self::Token>;
     /// The corresponding Token type
     type Token: TokenSeq;
+    /// The corresponding Tuple type, used for encoding/decoding
+    type Tuple: SolDataType<TokenType = Self::Token>;
 
     /// The struct name
     const NAME: &'static str;

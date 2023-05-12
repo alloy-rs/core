@@ -807,11 +807,11 @@ impl SolType for () {
     }
 
     fn type_check(_token: &Self::TokenType) -> AbiResult<()> {
-        Err(crate::Error::type_check_fail("", "tuple()"))
+        Err(crate::Error::type_check_fail(b"", "tuple()"))
     }
 
     fn detokenize(_token: Self::TokenType) -> AbiResult<Self::RustType> {
-        Err(crate::Error::type_check_fail("", "tuple()"))
+        Err(crate::Error::type_check_fail(b"", "tuple()"))
     }
 
     fn tokenize<B>(_rust: B) -> Self::TokenType

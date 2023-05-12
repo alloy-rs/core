@@ -137,7 +137,7 @@ pub trait SolType {
 
     #[doc(hidden)]
     fn type_check_fail(data: &[u8]) -> crate::Error {
-        crate::Error::type_check_fail(hex::encode(data), Self::sol_type_name())
+        crate::Error::type_check_fail(data, Self::sol_type_name())
     }
 
     /// Detokenize

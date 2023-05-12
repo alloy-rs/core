@@ -1,0 +1,25 @@
+error: unexpected end of input, expected parentheses
+ --> tests/ui/error.rs:3:1
+  |
+3 | / sol! {
+4 | |     error MissingParens1
+5 | | }
+  | |_^
+  |
+  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected parentheses
+ --> tests/ui/error.rs:8:25
+  |
+8 |     error MissingParens2;
+  |                         ^
+
+error: expected `;`
+  --> tests/ui/error.rs:11:1
+   |
+11 | / sol! {
+12 | |     error MissingSemi()
+13 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)

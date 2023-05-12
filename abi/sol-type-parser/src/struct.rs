@@ -1,98 +1,73 @@
-use crate::r#type::SolDataType;
-use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned, ToTokens};
-use std::fmt::{self, Write};
+use crate::{
+    common::{from_into_tuples, Parameters, SolIdent, VariableDeclaration},
+    r#type::Type,
+};
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 use syn::{
     braced,
     parse::{Parse, ParseStream},
-    punctuated::Punctuated,
     token::Brace,
-    Attribute, Ident, Index, Result, Token,
+    Attribute, Result, Token,
 };
 
-#[derive(Debug, Clone)]
-pub struct SolStructField {
-    ty: SolDataType,
-    name: Ident,
+#[derive(Clone)]
+pub struct Struct {
+    struct_token: Token![struct],
+    pub name: SolIdent,
+    brace_token: Brace,
+    pub fields: Parameters<Token![;]>,
 }
 
-impl fmt::Display for SolStructField {
+impl PartialEq for Struct {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.fields == other.fields
+    }
+}
+
+impl Eq for Struct {}
+
+impl Hash for Struct {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.fields.hash(state);
+    }
+}
+
+impl fmt::Debug for Struct {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.ty, self.name)
+        f.debug_struct("Struct")
+            .field("name", &self.name)
+            .field("fields", &self.fields)
+            .finish()
     }
 }
 
-impl Parse for SolStructField {
-    fn parse(input: ParseStream) -> Result<Self> {
-        Ok(Self {
-            ty: input.parse()?,
-            name: input.parse()?,
-        })
-    }
-}
-
-impl ToTokens for SolStructField {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let name = &self.name;
-        let ty = &self.ty;
-        tokens.extend(quote! {
-            #name: <#ty as ::ethers_abi_enc::SolType>::RustType
-        });
-    }
-}
-
-pub struct SolStructDef {
-    _struct_token: Token![struct],
-    name: Ident,
-    _brace_token: Brace,
-    fields: Punctuated<SolStructField, Token![;]>,
-}
-
-impl Parse for SolStructDef {
+impl Parse for Struct {
     fn parse(input: ParseStream) -> Result<Self> {
         let content;
         Ok(Self {
-            _struct_token: input.parse()?,
+            struct_token: input.parse()?,
             name: input.parse()?,
-            _brace_token: braced!(content in input),
-            fields: content.parse_terminated(SolStructField::parse, Token![;])?,
+            brace_token: braced!(content in input),
+            fields: content.parse()?,
         })
     }
 }
 
-impl SolStructDef {
-    fn expand_from(&self) -> TokenStream {
-        let name = &self.name;
-        let field_names = self.fields.iter().map(|f| &f.name);
+impl Struct {
+    pub fn span(&self) -> Span {
+        self.name.span()
+    }
 
-        let field_ty = self.fields.iter().map(|f| &f.ty);
-        let field_ty2 = field_ty.clone();
-
-        let (f_no, f_name): (Vec<_>, Vec<_>) = self
-            .fields
-            .iter()
-            .enumerate()
-            .map(|(i, f)| (Index::from(i), &f.name))
-            .unzip();
-
-        quote! {
-            type UnderlyingSolTuple = (#(#field_ty,)*);
-            type UnderlyingRustTuple = (#(<#field_ty2 as ::ethers_abi_enc::SolType>::RustType,)*);
-
-            impl From<#name> for UnderlyingRustTuple {
-                fn from(value: #name) -> UnderlyingRustTuple {
-                    (#(value.#field_names,)*)
-                }
-            }
-
-            impl From<UnderlyingRustTuple> for #name {
-                fn from(tuple: UnderlyingRustTuple) -> Self {
-                    #name {
-                        #(#f_name: tuple.#f_no),*
-                    }
-                }
-            }
-        }
+    pub fn set_span(&mut self, span: Span) {
+        self.struct_token = Token![struct](span);
+        self.name.set_span(span);
+        self.brace_token = Brace(span);
     }
 
     fn expand_impl(&self, attrs: &[Attribute]) -> TokenStream {
@@ -105,14 +80,14 @@ impl SolStructDef {
         let (f_ty, f_name): (Vec<_>, Vec<_>) = self
             .fields
             .iter()
-            .map(|f| (f.ty.to_string(), f.name.to_string()))
+            .map(|f| (f.ty.to_string(), f.name.as_ref().unwrap().to_string()))
             .unzip();
 
         let props_tys: Vec<_> = self.fields.iter().map(|f| f.ty.clone()).collect();
         let props = self.fields.iter().map(|f| &f.name);
 
-        let encoded_type = self.signature();
-        let encode_type_impl = if self.fields.iter().any(|f| f.ty.is_non_primitive()) {
+        let encoded_type = self.fields.eip712_signature(self.name.to_string());
+        let encode_type_impl = if self.fields.iter().any(|f| f.ty.is_struct()) {
             quote! {
                 {
                     let mut encoded = String::from(#encoded_type);
@@ -129,9 +104,9 @@ impl SolStructDef {
         };
 
         let encode_data_impl = match self.fields.len() {
-            0 => quote! { vec![] },
+            0 => unreachable!(),
             1 => {
-                let SolStructField { ty, name } = self.fields.first().unwrap();
+                let VariableDeclaration { ty, name, .. } = self.fields.first().unwrap();
                 quote!(<#ty as ::ethers_abi_enc::SolDataType>::eip712_data_word(&self.#name).0.to_vec())
             }
             _ => quote! {
@@ -142,27 +117,29 @@ impl SolStructDef {
         };
 
         let attrs = attrs.iter();
-        let convert = self.expand_from();
+        let convert = from_into_tuples(&self.name.0, &self.fields);
+        let name_s = name.to_string();
         quote! {
             #[doc = #doc]
             #(#attrs)*
-            #[allow(non_snake_case)]
+            #[allow(non_camel_case_types, non_snake_case)]
             #[derive(Debug, Clone, PartialEq)] // TODO: Derive traits dynamically
             pub struct #name {
                 #(pub #fields),*
             }
 
-            #[allow(non_snake_case)]
+            #[allow(non_camel_case_types, non_snake_case)]
             const _: () = {
                 use ::ethers_abi_enc::no_std_prelude::*;
 
                 #convert
 
+                #[automatically_derived]
                 impl ::ethers_abi_enc::SolStruct for #name {
                     type Tuple = UnderlyingSolTuple;
                     type Token = <UnderlyingSolTuple as ::ethers_abi_enc::SolType>::TokenType;
 
-                    const NAME: &'static str = stringify!(#name);
+                    const NAME: &'static str = #name_s;
 
                     const FIELDS: &'static [(&'static str, &'static str)] = &[
                         #((#f_ty, #f_name)),*
@@ -188,26 +165,11 @@ impl SolStructDef {
         }
     }
 
-    fn signature(&self) -> String {
-        let mut out = self.name.to_string();
-        out.reserve(2 + self.fields.len() * 32);
-        out.push('(');
-        for (i, field) in self.fields.iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            write!(out, "{field}").unwrap();
-        }
-        out.push(')');
-        out
+    pub fn to_tokens(&self, tokens: &mut TokenStream, attrs: &[Attribute]) {
+        tokens.extend(self.expand_impl(attrs))
     }
 
-    pub fn to_tokens(&self, tokens: &mut TokenStream, attrs: &[Attribute]) {
-        if self.fields.is_empty() {
-            tokens.extend(quote_spanned! {self.name.span()=>
-                compile_error!("Defining empty structs is disallowed.");
-            });
-        }
-        tokens.extend(self.expand_impl(attrs))
+    pub fn ty(&self) -> Type {
+        Type::Tuple(self.fields.types().cloned().collect())
     }
 }
