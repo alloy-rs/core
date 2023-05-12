@@ -5,7 +5,7 @@ use ethers_primitives::U256;
 use crate::{
     no_std_prelude::*,
     token::{PackedSeqToken, TokenSeq, WordToken},
-    SolDataType, SolType,
+    SolType,
 };
 
 /// Solidity Error (a tuple with a selector)
@@ -17,7 +17,7 @@ use crate::{
 pub trait SolError: Sized {
     /// The underlying tuple type which represents the error's members.
     /// If the error has no arguments, this will be the unit type `()`
-    type Tuple: SolDataType<TokenType = Self::Token>;
+    type Tuple: SolType<TokenType = Self::Token>;
 
     /// The corresponding Token type
     type Token: TokenSeq;

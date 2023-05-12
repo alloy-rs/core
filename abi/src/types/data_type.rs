@@ -9,35 +9,6 @@ use std::{borrow::Borrow, string::String as RustString};
 
 use crate::{token::*, util, AbiResult, SolType, Word};
 
-/// This trait describes types that exist in normal Solidity operation
-/// (i.e. NOT events, errors, function calls)
-pub trait SolDataType: SolType {
-    /// The encoded struct type (as EIP-712), if any. None for non-structs
-    fn eip712_encode_type() -> Option<Cow<'static, str>> {
-        None
-    }
-
-    /// Encode this data according to EIP-712 `encodeData` rules, and hash it
-    /// if necessary.
-    ///
-    /// Implementer's note: All single-word types are encoded as their word.
-    /// All multi-word types are encoded as the hash the concatenated data
-    /// words for each element
-    ///
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word;
-
-    /// Implemens Solidity's `encodePacked()` function, writing into the given buffer.
-    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B);
-
-    /// Implements Solidity's `encodePacked()` function.
-    fn encode_packed<B: Borrow<Self::RustType>>(rust: B) -> Vec<u8> {
-        let mut res = Vec::new();
-        Self::encode_packed_to(&mut res, rust);
-        res
-    }
-}
-
 /// Address - `address`
 #[derive(Copy, Clone, Debug)]
 pub struct Address;
@@ -72,9 +43,7 @@ impl SolType for Address {
         }
         Ok(())
     }
-}
 
-impl SolDataType for Address {
     fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
@@ -118,9 +87,7 @@ impl SolType for Bytes {
     {
         rust.borrow().to_owned().into()
     }
-}
 
-impl SolDataType for Bytes {
     fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
@@ -175,9 +142,7 @@ macro_rules! impl_int_sol_type {
                 word[32 - bytes..].copy_from_slice(&slice);
                 word.into()
             }
-        }
 
-        impl SolDataType for Int<$bits> {
             fn eip712_data_word<B>(rust: B) -> Word
             where
                 B: Borrow<Self::RustType>
@@ -224,8 +189,7 @@ macro_rules! impl_int_sol_type {
             fn tokenize<B>(rust: B) -> Self::TokenType where B: Borrow<Self::RustType>{
                 rust.borrow().to_be_bytes().into()
             }
-        }
-        impl SolDataType for Int<$bits> {
+
             fn eip712_data_word<B>(rust: B) -> Word
             where
                 B: Borrow<Self::RustType>
@@ -308,8 +272,6 @@ macro_rules! impl_uint_sol_type {
                 word.into()
             }
 
-        }
-        impl SolDataType for Uint<$bits> {
             fn eip712_data_word<B>(rust: B) -> Word
             where
                 B: Borrow<Self::RustType>
@@ -354,8 +316,7 @@ macro_rules! impl_uint_sol_type {
             fn tokenize<B>(rust: B) -> Self::TokenType where B: Borrow<Self::RustType>{
                 (*rust.borrow()).into()
             }
-        }
-        impl SolDataType for Uint<$bits> {
+
             fn eip712_data_word<B>(rust: B) -> Word
             where
                 B: Borrow<Self::RustType>
@@ -430,9 +391,7 @@ impl SolType for Bool {
         word[31..32].copy_from_slice(&[*rust.borrow() as u8]);
         word.into()
     }
-}
 
-impl SolDataType for Bool {
     fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
@@ -489,12 +448,7 @@ where
             .collect::<Vec<_>>()
             .into()
     }
-}
 
-impl<T> SolDataType for Array<T>
-where
-    T: SolDataType,
-{
     fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
@@ -553,9 +507,7 @@ impl SolType for String {
     {
         rust.borrow().as_bytes().to_vec().into()
     }
-}
 
-impl SolDataType for String {
     fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
@@ -604,9 +556,7 @@ macro_rules! impl_fixed_bytes_sol_type {
                 word[..$bytes].copy_from_slice(&rust.borrow()[..]);
                 word.into()
             }
-        }
 
-        impl SolDataType for FixedBytes<$bytes> {
             fn eip712_data_word<B>(rust: B) -> Word where B: Borrow<Self::RustType> {
                 Self::tokenize(rust).inner()
             }
@@ -684,12 +634,7 @@ where
             Err(_) => unreachable!(),
         }
     }
-}
 
-impl<T, const N: usize> SolDataType for FixedArray<T, N>
-where
-    T: SolDataType,
-{
     fn eip712_data_word<B>(rust: B) -> Word
     where
         B: Borrow<Self::RustType>,
@@ -768,13 +713,11 @@ macro_rules! tuple_impls {
                     <$ty as SolType>::tokenize($ty),
                 )+)
             }
-        }
-        #[allow(non_snake_case)]
-        impl<$($ty: SolDataType,)+> SolDataType for ($($ty,)+) {
+
             fn eip712_data_word<B_: Borrow<Self::RustType>>(rust: B_) -> Word {
                 let ($(ref $ty,)+) = *rust.borrow();
                 let encoding: Vec<u8> = [$(
-                    <$ty as SolDataType>::eip712_data_word($ty).0,
+                    <$ty as SolType>::eip712_data_word($ty).0,
                 )+].concat();
                 keccak256(&encoding).into()
             }
@@ -783,7 +726,7 @@ macro_rules! tuple_impls {
                 let ($(ref $ty,)+) = *rust.borrow();
                 // TODO: Reserve
                 $(
-                    <$ty as SolDataType>::encode_packed_to(target, $ty);
+                    <$ty as SolType>::encode_packed_to(target, $ty);
                 )+
             }
         }
@@ -819,9 +762,7 @@ impl SolType for () {
         B: Borrow<Self::RustType>,
     {
     }
-}
 
-impl SolDataType for () {
     fn eip712_data_word<B>(_rust: B) -> Word
     where
         B: Borrow<Self::RustType>,

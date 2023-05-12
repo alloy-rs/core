@@ -92,7 +92,7 @@ impl Struct {
                 {
                     let mut encoded = String::from(#encoded_type);
                     #(
-                        if let Some(s) = <#props_tys as ::ethers_abi_enc::SolDataType>::eip712_encode_type() {
+                        if let Some(s) = <#props_tys as ::ethers_abi_enc::SolType>::eip712_encode_type() {
                             encoded.push_str(&s);
                         }
                     )*
@@ -107,11 +107,11 @@ impl Struct {
             0 => unreachable!(),
             1 => {
                 let VariableDeclaration { ty, name, .. } = self.fields.first().unwrap();
-                quote!(<#ty as ::ethers_abi_enc::SolDataType>::eip712_data_word(&self.#name).0.to_vec())
+                quote!(<#ty as ::ethers_abi_enc::SolType>::eip712_data_word(&self.#name).0.to_vec())
             }
             _ => quote! {
                 [#(
-                    <#props_tys as ::ethers_abi_enc::SolDataType>::eip712_data_word(&self.#props).0,
+                    <#props_tys as ::ethers_abi_enc::SolType>::eip712_data_word(&self.#props).0,
                 )*].concat()
             },
         };

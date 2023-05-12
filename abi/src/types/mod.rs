@@ -16,7 +16,6 @@ pub use r#struct::SolStruct;
 
 /// Solidity Primitives. These are the types that are built in to solidity.
 pub mod data_type;
-pub use data_type::SolDataType;
 
 /// Solidity user-defined value types
 // no export needed as only item is a macro
