@@ -262,9 +262,7 @@ mod errors;
 pub use errors::{AbiResult, Error};
 
 mod types;
-pub use types::{
-    data_type as sol_data, Panic, Revert, SolCall, SolDataType, SolError, SolStruct, SolType,
-};
+pub use types::{data_type as sol_data, Panic, Revert, SolCall, SolError, SolStruct, SolType};
 
 mod util;
 

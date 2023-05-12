@@ -41,7 +41,7 @@ macro_rules! define_udt {
             /// Return the packed encoding of this value, delegating to the
             /// underlying type
             pub fn encode_packed(&self) -> $crate::no_std_prelude::Vec<u8> {
-                <Self as $crate::SolDataType>::encode_packed(self.0)
+                <Self as $crate::SolType>::encode_packed(self.0)
             }
         }
 
@@ -77,9 +77,6 @@ macro_rules! define_udt {
                 <$underlying as $crate::SolType>::detokenize(token)
             }
 
-        }
-
-        impl $crate::SolDataType for $name {
             fn eip712_data_word<B>(rust: B) -> $crate::Word
             where
                 B: $crate::no_std_prelude::Borrow<Self::RustType>
@@ -91,7 +88,7 @@ macro_rules! define_udt {
             where
                 B: $crate::no_std_prelude::Borrow<Self::RustType>
             {
-                <$underlying as $crate::SolDataType>::encode_packed_to(target, rust)
+                <$underlying as $crate::SolType>::encode_packed_to(target, rust)
             }
         }
     };

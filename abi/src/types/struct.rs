@@ -3,7 +3,7 @@
 
 use ethers_primitives::{keccak256, B256};
 
-use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, SolDataType, Word};
+use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Word};
 
 use super::SolType;
 
@@ -31,7 +31,7 @@ pub trait SolStruct {
     /// The corresponding Token type
     type Token: TokenSeq;
     /// The corresponding Tuple type, used for encoding/decoding
-    type Tuple: SolDataType<TokenType = Self::Token>;
+    type Tuple: SolType<TokenType = Self::Token>;
 
     /// The struct name
     const NAME: &'static str;
@@ -141,12 +141,7 @@ where
         let tuple = rust.borrow().to_rust();
         TupleFor::<T>::tokenize(tuple)
     }
-}
 
-impl<T> SolDataType for T
-where
-    T: SolStruct,
-{
     fn eip712_encode_type() -> Option<Cow<'static, str>> {
         Some(Self::encode_type())
     }

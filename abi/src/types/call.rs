@@ -1,4 +1,4 @@
-use crate::{no_std_prelude::*, token::TokenSeq, SolDataType, SolType};
+use crate::{no_std_prelude::*, token::TokenSeq, SolType};
 
 /// Solidity Call (a tuple with a selector)
 ///
@@ -9,7 +9,7 @@ use crate::{no_std_prelude::*, token::TokenSeq, SolDataType, SolType};
 pub trait SolCall: Sized {
     /// The underlying tuple type which represents this type's members.
     /// If this type has no arguments, this will be the unit type `()`
-    type Tuple: SolDataType<TokenType = Self::Token>;
+    type Tuple: SolType<TokenType = Self::Token>;
     /// The corresponding Token type
     type Token: TokenSeq;
 

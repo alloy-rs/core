@@ -1,12 +1,10 @@
-use crate::{no_std_prelude::*, token::TokenSeq, AbiResult, TokenType};
+use crate::{no_std_prelude::*, token::TokenSeq, AbiResult, TokenType, Word};
 
 /// A Solidity Type, for ABI enc/decoding
 ///
 /// This trait is implemented by types that contain ABI enc/decoding info for
 /// solidity types. Types may be combined to express arbitrarily complex
 /// solidity types.
-///
-/// Future work will add derive for this trait :)
 ///
 /// ```
 /// use ethers_abi_enc::{SolType, sol_data::*};
@@ -29,88 +27,22 @@ use crate::{no_std_prelude::*, token::TokenSeq, AbiResult, TokenType};
 /// ### Implementer's Guide
 ///
 /// We do not recommend implementing this trait directly. Instead, we recommend
-/// using the [`crate::sol`] proc macro to parse a solidity structdef.
-///
-/// You may want to implement this on your own struct, for example, to encode a
-/// named solidity struct. Overall, implementing this trait is straightforward,
-/// because we can delegate to an underlying combination of primitive types.
+/// using the [`crate::sol`] proc macro to parse a solidity structdef into a
+/// native Rust struct.
 ///
 /// ```
-/// # use ethers_abi_enc::{AbiResult, SolType};
-/// # use ethers_abi_enc::sol_data::*;
-/// # use ethers_primitives::U256;
-///
-/// // This is the solidity type:
-/// //
-/// // struct MySolidityStruct {
-/// //    uint256 a;
-/// //    uint256 b;
-/// // }
-///
-/// // This should be a ZST. See note.
-/// pub struct MySolidityStruct;
-///
-/// // This will be the data type in rust.
-/// pub struct MyRustStruct {
-///    a: U256,
-///    b: U256,
-/// }
-///
-/// // We're going to get really cute here.
-/// //
-/// // Structs are encoded as Tuples. So we can entirely define this trait by
-/// // delegating to a tuple type!
-/// type UnderlyingTuple = (Uint<256>, Uint<256>);
-///
-/// impl SolType for MySolidityStruct {
-///     type RustType = MyRustStruct;
-///     type TokenType = <UnderlyingTuple as SolType>::TokenType;
-///
-///     // The name in solidity
-///     fn sol_type_name() -> std::borrow::Cow<'static, str> {
-///         "MySolidityStruct".into()
-///     }
-///
-///     // True if your type has a dynamic encoding length. This is dynamic
-///     // arrays, strings, bytes, dynamic tuple etc.
-///     //
-///     // Of course, we can cheat here by delegating to the tuple
-///     fn is_dynamic() -> bool {
-///         UnderlyingTuple::is_dynamic()
-///     }
-///
-///     // This function should check the data in the token and enforce any
-///     // type rules. For example, a bool should ONLY be 0 or 1. This function
-///     // should check the data, and return false if the bool is 2 or 3 or
-///     // whatever.
-///     //
-///     // It will be ignored if the decoder runs without validation
-///     fn type_check(token: &Self::TokenType) -> AbiResult<()> {
-///         UnderlyingTuple::type_check(token)
-///     }
-///
-///     // Convert from the token to the rust type. We cheat here again by
-///     // delegating.
-///     fn detokenize(token: Self::TokenType) -> AbiResult<Self::RustType> {
-///         let (a, b) = UnderlyingTuple::detokenize(token)?;
-///         Ok(MyRustStruct{ a, b })
-///     }
-///
-///     // Convert from the rust type to the token type. We cheat here AGAIN
-///     // by delegating.
-///     fn tokenize<B>(rust: B) -> Self::TokenType
-///     where
-///        B: std::borrow::Borrow<Self::RustType>,
-///     {
-///         let MyRustStruct { a, b } = *rust.borrow();
-///         UnderlyingTuple::tokenize((a, b))
+/// # use ethers_abi_enc::sol;
+/// sol! {
+///     struct MyStruct {
+///         bool a;
+///         bytes2 b;
 ///     }
 /// }
+///
+/// // This is the native rust representation of a Solidity type!
+/// // How cool is that!
+/// const MY_STRUCT: MyStruct = MyStruct { a: true, b: [0x01, 0x02] };
 /// ```
-///
-/// As you can see, because any NEW SolPrimitive corresponds to some
-/// combination of OLD sol types, it's really easy to implement
-/// [`SolPrimitive`] for anything you want!
 pub trait SolType {
     /// The corresponding Rust type. This type may be borrowed (e.g. `str`)
     type RustType;
@@ -145,6 +77,33 @@ pub trait SolType {
 
     /// Tokenize
     fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType;
+
+    /// The encoded struct type (as EIP-712), if any. None for non-structs
+    fn eip712_encode_type() -> Option<Cow<'static, str>> {
+        None
+    }
+
+    /// Encode this data according to EIP-712 `encodeData` rules, and hash it
+    /// if necessary.
+    ///
+    /// Implementer's note: All single-word types are encoded as their word.
+    /// All multi-word types are encoded as the hash the concatenated data
+    /// words for each element
+    ///
+    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word;
+
+    /// Implemens Solidity's `encodePacked()` function, writing into the given buffer.
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B);
+
+    /// Implements Solidity's `encodePacked()` function.
+    fn encode_packed<B: Borrow<Self::RustType>>(rust: B) -> Vec<u8> {
+        let mut res = Vec::new();
+        Self::encode_packed_to(&mut res, rust);
+        res
+    }
+
+    /* BOILERPLATE BELOW */
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence
     fn encode_single<B: Borrow<Self::RustType>>(rust: B) -> Vec<u8> {
