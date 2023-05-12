@@ -36,28 +36,31 @@ internals (e.g. `payable` and `memory`).
 
 - First-class solidity types
 
+  - All elementary, fixed-size, and non-fixed size
+    [ABI types](https://docs.soliditylang.org/en/latest/abi-spec.html#types).
   - EXCEPT
-    - [`function` types](https://docs.soliditylang.org/en/v0.8.17/types.html#function-types)
-    - [`fixed`](https://docs.soliditylang.org/en/v0.8.17/types.html#fixed-point-numbers)
-    - [enums](https://docs.soliditylang.org/en/v0.8.17/types.html#enums) (supported soon)
+    - [`function` types](https://docs.soliditylang.org/en/v0.8.17/types.html#function-types).
+    - [`fixed`](https://docs.soliditylang.org/en/v0.8.17/types.html#fixed-point-numbers).
 
 - Compound solidity types
 
   - Arrays `T[N]`
   - Dynamic arrays `T[]`
-  - tuples
+  - Tuples `(T, U, ..)`
 
 - User-defined Types
 
-  - [Structs](https://solidity-by-example.org/structs/)
-  - Function arguments
-  - [Errors](https://blog.soliditylang.org/2021/04/21/custom-errors/)
-  - [User-defined Value Types](https://blog.soliditylang.org/2021/09/27/user-defined-value-types/)
+  - [Structs](https://solidity-by-example.org/structs/) represented as a tuple
+    of the field types.
+  - [User-defined Value Types](https://blog.soliditylang.org/2021/09/27/user-defined-value-types/), encoded transparently.
+  - [Enums](https://docs.soliditylang.org/en/v0.8.17/types.html#enums) (TODO)
+    represented as `u8`.
 
 - Externalized Types
-  - Function calls
+  - Function arguments and returns, represented as selector-prefixed tuples.
+  - [Errors](https://blog.soliditylang.org/2021/04/21/custom-errors/),
+    represented as selector-prefixed tuples
   - Events (TODO)
-  -
 
 ## How?
 
@@ -84,10 +87,11 @@ system to disallow it.
 ### Trait Layout
 
 ```
+SolError
+SolCall
+SolEvent (TODO)
+
 SolType
-├── SolError
-├── SolCall
-├── SolEvent (TODO)
 └── SolDataType
     ├── SolStruct
     ├── SolEnum (TODO)
@@ -101,19 +105,19 @@ SolType
     ├── T[] (Dynamic Array)
     ├── string
     ├── bytesx
-    └── tuples
+    └── Tuples `(T, U, ..)`
 ```
 
 ### Trait Quick Reference
 
-- `SolType` - Provides type name and properties, and basic ABI coding
-- `SolDataType` - Provides EIP-712 and `encodePacked`
+- `SolType` - Provides type name and properties, and basic ABI coding.
+- `SolDataType` - Provides EIP-712 and `encodePacked`.
 - `SolError` - describes custom Error types with selector, and provides
-  specialized coding methods
+  specialized coding methods.
 - `SolCall` - describes function **arguments** with selector, and provides
-  specialized coding methods
+  specialized coding methods.
 - `SolEvent` - describes Event types with topic 0 and internal tuple, and
-  provides specialized coding methods
+  provides specialized coding methods.
 
 ## Implementing these traits
 
