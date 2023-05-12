@@ -8,8 +8,11 @@ and decoding.
 ### Examples
 
 ```rust
-/// Assign type aliases for
+// Assign type aliases for common sol types
 type B32 = sol!{ bytes32 }
+// This is equivalent to the following:
+type B32 = ethers_abi_enc::sol_data::Bytes<32>;
+
 type SolArrayOf<T> = sol! { T[] };
 type SolTuple = sol!{ tuple(address, bytes, string) }
 
@@ -28,4 +31,7 @@ sol! {
     bool
 }>::hex_encode_single(true);
 
+// Better:
+type MyTy = sol! { bool };
+MyTy::hex_encode_single(true);
 ```

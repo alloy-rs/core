@@ -28,9 +28,14 @@ runtime (including the eip712 `eth_signTypedData` json-rpc request), see the
 ### To what extent?
 
 We support types at the interface between Solidity and other systems. These are
-types that are commonly encoded/decoded. We do not support types that are
-internal-only (e.g. `mapping`) or solidity type modifications describing EVM
-internals (e.g. `payable` and `memory`).
+types that are commonly ABI encoded/decoded. We do not support types that are
+internal-only (e.g. array slices) or solidity type modifications describing EVM
+internals (e.g. `payable` and `memory`) except where they interact with
+external systems.
+
+Mappings and storage items are a special case, as public storage items imply
+the existence of a getter function. We do not currently support parsing storage
+defs into `SolCall` types, but may in the future.
 
 **Support overview:**
 
@@ -64,54 +69,57 @@ internals (e.g. `payable` and `memory`).
 
 ## How?
 
-Solidity is represented as a set of traits. The `SolType` trait is at the root
-of the type system, and contains functionality common to all solidity types.
-This includes type name, ABI (de)tokenization and coding, as well as Solidity
-type checking rules.
+Solidity has two basic categories: first-class and externalized. The
+first-class types are those that can be bound to variables, passed as
+arguments, used as fields in structs, stored (on the stack, in memory or in
+storage), etc. The externalized types are only used in EVM lifecycle events,
+and cannot be generally operated on beyond construction.
 
-From there we divide types into two categories: Data and non-Data. The data
-types implement `SolDataType`, and represent types that are computed on in a
-Solidity contract. These types exist on the stack or in memory or storage in
-Solidity, can be bound to variables, and can be struct properties or function arguments.
+The first-class types implement the `SolType` trait. This trait contains
+functionality common to all first-class Solidity types. This includes type
+name, ABI (de)tokenization and coding, Solidity type checking rules. These
+types include structs, enums, UDTs, address, bool, bytes, string, etc.
 
-The non-data types cannot be bound to variables or computed on. These are
-represented by the traits, `SolCall`, `SolEvent`, and `SolError`. These
-types enter or exit the EVM, and are not part of normal Solidity computation, but are still ABI coded/decoded.
+Externalized types are calls (function arguments and returns), events, and
+errors. These are each represented by a trait (`SolCall`, `SolEvent`, and
+`SolError`). These types enter or exit the EVM, or pass between callstack
+frames, and are not part of normal Solidity computation. However, they are
+composed of first-class types, and their ABI coding uses the first-class type's
+ABI coding;
 
-### Rough Edge:
+### ⚠️ Rough Edge ⚠️
 
 Currently, our representation supports using tuples as struct props. This is
 not allowed in Solidity, and future versions of this crate may change the type
 system to disallow it.
 
-### Trait Layout
+### Layout
 
 ```
-SolError
-SolCall
-SolEvent (TODO)
+- SolError
+- SolCall
+- SolEvent (TODO)
 
-SolType
-└── SolDataType
-    ├── SolStruct
-    ├── SolEnum (TODO)
-    ├── UDTs
-    ├── address
-    ├── bytes
-    ├── intx
-    ├── uintx
-    ├── bool
-    ├── T[N] (Array)
-    ├── T[] (Dynamic Array)
-    ├── string
-    ├── bytesx
-    └── Tuples `(T, U, ..)`
+- SolType
+  ├── SolStruct
+  ├── SolEnum (TODO)
+  ├── UDTs
+  ├── address
+  ├── bytes
+  ├── intX (8 - 256)
+  ├── uintX (8 - 256)
+  ├── bool
+  ├── T[N] (Array)
+  ├── T[] (Dynamic Array)
+  ├── string
+  ├── bytesX (1 - 32)
+  └── Tuples `(T, U, ..)`
 ```
 
 ### Trait Quick Reference
 
-- `SolType` - Provides type name and properties, and basic ABI coding.
-- `SolDataType` - Provides EIP-712 and `encodePacked`.
+- `SolType` - Provides type name and properties, ABI coding, packed encoding,
+  and EIP-712 encoding.
 - `SolError` - describes custom Error types with selector, and provides
   specialized coding methods.
 - `SolCall` - describes function **arguments** with selector, and provides
@@ -133,5 +141,3 @@ Solidity snippets at compile time.
 Users will typically want to interact with `SolType`. When using errors,
 events, or calls, users will want to import the relevant trait, and use the
 specialized coding methods
-
-Users will generally only need to import `SolDataType` for `encodePacked`.
