@@ -1,5 +1,5 @@
 [package]
-name = "sol-type-parser"
+name = "ethers-sol-type"
 version = "0.1.0"
 description = "Solidity type parsing & generation for the ethers-abi-enc"
 readme = "README.md"

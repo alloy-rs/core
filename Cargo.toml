@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["abi", "abi/sol-type-parser", "dyn-abi", "primitives", "rlp", "rlp/rlp-derive"]
+members = ["crates/*"]
 
 [workspace.package]
 edition = "2021"
@@ -12,12 +12,12 @@ repository = "https://github.com/ethers-rs/core"
 
 [workspace.dependencies]
 # workspace crates
-ethers-abi-enc = { version = "0.1.0", path = "abi", default-features = false }
-sol-type-parser = { version = "0.1.0", path = "abi/sol-type-parser", default-features = false }
-ethers-dyn-abi = { version = "0.1.0", path = "dyn-abi", default-features = false }
-ethers-primitives = { version = "0.1.0", path = "primitives", default-features = false }
-ethers-rlp = { version = "0.1.0", path = "rlp", default-features = false }
-ethers-rlp-derive = { version = "0.1.0", path = "rlp/rlp-derive", default-features = false }
+ethers-abi-enc = { version = "0.1.0", path = "crates/abi", default-features = false }
+ethers-dyn-abi = { version = "0.1.0", path = "crates/dyn-abi", default-features = false }
+ethers-primitives = { version = "0.1.0", path = "crates/primitives", default-features = false }
+ethers-rlp = { version = "0.1.0", path = "crates/rlp", default-features = false }
+ethers-rlp-derive = { version = "0.1.0", path = "crates/rlp-derive", default-features = false }
+ethers-sol-type = { version = "0.1.0", path = "crates/sol-type", default-features = false }
 
 ruint = { version = "1.8.0", default-features = false }
 ruint-macro = { version = "1.0.2", default-features = false }

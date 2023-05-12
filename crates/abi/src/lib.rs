@@ -245,7 +245,7 @@ pub mod no_std_prelude {
 ///
 /// See the root crate docs for more information.
 #[doc(inline)]
-pub use sol_type_parser::sol;
+pub use ethers_sol_type::sol;
 
 /// The Word type for ABI Encoding
 pub type Word = ethers_primitives::B256;
