@@ -1,15 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-    "abi",
-    "abi/sol-type-parser",
-    "dyn-abi",
-    "primitives",
-    "rlp",
-    "rlp/rlp-derive",
-    "uint",
-    "uint/ruint-macro",
-]
+members = ["abi", "abi/sol-type-parser", "dyn-abi", "primitives", "rlp", "rlp/rlp-derive"]
 
 [workspace.package]
 edition = "2021"
@@ -27,8 +18,9 @@ ethers-dyn-abi = { version = "0.1.0", path = "dyn-abi", default-features = false
 ethers-primitives = { version = "0.1.0", path = "primitives", default-features = false }
 ethers-rlp = { version = "0.1.0", path = "rlp", default-features = false }
 ethers-rlp-derive = { version = "0.1.0", path = "rlp/rlp-derive", default-features = false }
-ruint = { version = "1.0.2", path = "uint", default-features = false }
-ruint-macro = { version = "1.7.0", path = "uint/ruint-macro", default-features = false }
+
+ruint = { version = "1.8.0", default-features = false }
+ruint-macro = { version = "1.0.2", default-features = false }
 
 # serde
 serde = { version = "1.0", default-features = false }

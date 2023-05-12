@@ -1,3 +1,0 @@
-[submodule "uint"]
-	path = uint
-	url = git@github.com:ethers-rs/uint.git

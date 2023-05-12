@@ -520,7 +520,7 @@ mod tests {
         BigIntConversionError, ParseSignedError,
     };
     use ruint::{
-        aliases::{U0, U1, U128, U160, U192, U256},
+        aliases::{U0, U1, U128, U160, U256},
         BaseConvertError, ParseError,
     };
     use std::ops::Neg;
@@ -528,6 +528,9 @@ mod tests {
     // type U2 = Uint<2, 1>;
     type I96 = Signed<96, 2>;
     type U96 = Uint<96, 2>;
+
+    // TODO: ruint::aliases::U192 is bugged
+    type U192 = Uint<192, 3>;
 
     #[test]
     fn identities() {
