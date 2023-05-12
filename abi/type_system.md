@@ -140,4 +140,4 @@ Solidity snippets at compile time.
 
 Users will typically want to interact with `SolType`. When using errors,
 events, or calls, users will want to import the relevant trait, and use the
-specialized coding methods
+specialized coding methods.
