@@ -1,4 +1,4 @@
-# sol-type-parser
+# ethers-sol-type
 
 This crate provides a proc macro that parses solidity types and generates
 SolType types from them. This allows developers to specify complex solidity

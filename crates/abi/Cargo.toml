@@ -15,7 +15,7 @@ repository.workspace = true
 
 [dependencies]
 ethers-primitives.workspace = true
-sol-type-parser.workspace = true
+ethers-sol-type.workspace = true
 
 hex = { workspace = true, features = ["alloc"] }
 

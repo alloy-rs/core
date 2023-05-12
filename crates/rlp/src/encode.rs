@@ -33,7 +33,8 @@ pub unsafe trait MaxEncodedLenAssoc: Encodable {
 /// Use this to define length of an encoded entity
 ///
 /// # Safety
-/// Invalid value can cause the encoder to crash.
+///
+/// An invalid value can cause the encoder to crash.
 #[macro_export]
 macro_rules! impl_max_encoded_len {
     ($t:ty, $len:expr) => {
@@ -80,59 +81,7 @@ impl<'a, T: ?Sized + Encodable> Encodable for &'a mut T {
     }
 }
 
-#[cfg(feature = "alloc")]
-impl<'a, T: ?Sized + alloc::borrow::ToOwned + Encodable> Encodable for alloc::borrow::Cow<'a, T> {
-    fn encode(&self, out: &mut dyn BufMut) {
-        (**self).encode(out)
-    }
-
-    fn length(&self) -> usize {
-        (**self).length()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<T: ?Sized + Encodable> Encodable for alloc::boxed::Box<T> {
-    fn encode(&self, out: &mut dyn BufMut) {
-        (**self).encode(out)
-    }
-
-    fn length(&self) -> usize {
-        (**self).length()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<T: ?Sized + Encodable> Encodable for alloc::rc::Rc<T> {
-    fn encode(&self, out: &mut dyn BufMut) {
-        (**self).encode(out)
-    }
-
-    fn length(&self) -> usize {
-        (**self).length()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<T: ?Sized + Encodable> Encodable for alloc::sync::Arc<T> {
-    fn encode(&self, out: &mut dyn BufMut) {
-        (**self).encode(out)
-    }
-
-    fn length(&self) -> usize {
-        (**self).length()
-    }
-}
-
 impl Encodable for [u8] {
-    fn length(&self) -> usize {
-        let mut len = self.len();
-        if self.len() != 1 || self[0] >= EMPTY_STRING_CODE {
-            len += length_of_length(self.len());
-        }
-        len
-    }
-
     fn encode(&self, out: &mut dyn BufMut) {
         if self.len() != 1 || self[0] >= EMPTY_STRING_CODE {
             Header {
@@ -143,20 +92,50 @@ impl Encodable for [u8] {
         }
         out.put_slice(self);
     }
-}
 
-impl<const LEN: usize> Encodable for [u8; LEN] {
     fn length(&self) -> usize {
-        (self as &[u8]).length()
-    }
-
-    fn encode(&self, out: &mut dyn BufMut) {
-        (self as &[u8]).encode(out)
+        let mut len = self.len();
+        if self.len() != 1 || self[0] >= EMPTY_STRING_CODE {
+            len += length_of_length(self.len());
+        }
+        len
     }
 }
 
-unsafe impl<const LEN: usize> MaxEncodedLenAssoc for [u8; LEN] {
-    const LEN: usize = LEN + length_of_length(LEN);
+impl<const N: usize> Encodable for [u8; N] {
+    fn encode(&self, out: &mut dyn BufMut) {
+        Encodable::encode(&self[..], out)
+    }
+
+    fn length(&self) -> usize {
+        Encodable::length(&self[..])
+    }
+}
+
+impl Encodable for str {
+    fn encode(&self, out: &mut dyn BufMut) {
+        Encodable::encode(self.as_bytes(), out)
+    }
+
+    fn length(&self) -> usize {
+        Encodable::length(self.as_bytes())
+    }
+}
+
+unsafe impl<const N: usize> MaxEncodedLenAssoc for [u8; N] {
+    const LEN: usize = N + length_of_length(N);
+}
+
+impl Encodable for bool {
+    #[inline]
+    fn length(&self) -> usize {
+        1
+    }
+
+    #[inline]
+    fn encode(&self, out: &mut dyn BufMut) {
+        out.put_u8(*self as u8)
+    }
 }
 
 macro_rules! encodable_uint {
@@ -213,16 +192,6 @@ max_encoded_len_uint!(u64);
 encodable_uint!(u128);
 max_encoded_len_uint!(u128);
 
-impl Encodable for bool {
-    fn length(&self) -> usize {
-        (*self as u8).length()
-    }
-
-    fn encode(&self, out: &mut dyn BufMut) {
-        (*self as u8).encode(out)
-    }
-}
-
 impl_max_encoded_len!(bool, { <u8 as MaxEncodedLenAssoc>::LEN });
 
 #[cfg(feature = "std")]
@@ -271,6 +240,46 @@ mod std_support {
 mod alloc_support {
     use super::*;
 
+    impl<'a, T: ?Sized + alloc::borrow::ToOwned + Encodable> Encodable for alloc::borrow::Cow<'a, T> {
+        fn encode(&self, out: &mut dyn BufMut) {
+            (**self).encode(out)
+        }
+
+        fn length(&self) -> usize {
+            (**self).length()
+        }
+    }
+
+    impl<T: ?Sized + Encodable> Encodable for alloc::boxed::Box<T> {
+        fn encode(&self, out: &mut dyn BufMut) {
+            (**self).encode(out)
+        }
+
+        fn length(&self) -> usize {
+            (**self).length()
+        }
+    }
+
+    impl<T: ?Sized + Encodable> Encodable for alloc::rc::Rc<T> {
+        fn encode(&self, out: &mut dyn BufMut) {
+            (**self).encode(out)
+        }
+
+        fn length(&self) -> usize {
+            (**self).length()
+        }
+    }
+
+    impl<T: ?Sized + Encodable> Encodable for alloc::sync::Arc<T> {
+        fn encode(&self, out: &mut dyn BufMut) {
+            (**self).encode(out)
+        }
+
+        fn length(&self) -> usize {
+            (**self).length()
+        }
+    }
+
     impl<T: Encodable> Encodable for alloc::vec::Vec<T> {
         fn length(&self) -> usize {
             list_length(self)
@@ -292,25 +301,15 @@ mod alloc_support {
     }
 }
 
-impl Encodable for &str {
-    fn encode(&self, out: &mut dyn BufMut) {
-        self.as_bytes().encode(out);
-    }
-
-    fn length(&self) -> usize {
-        self.as_bytes().length()
-    }
-}
-
 macro_rules! slice_impl {
     ($t:ty) => {
         impl $crate::Encodable for $t {
-            fn length(&self) -> usize {
-                (&self[..]).length()
+            fn encode(&self, out: &mut dyn BufMut) {
+                Encodable::encode(&self[..], out)
             }
 
-            fn encode(&self, out: &mut dyn bytes::BufMut) {
-                (&self[..]).encode(out)
+            fn length(&self) -> usize {
+                Encodable::length(&self[..])
             }
         }
     };
@@ -391,12 +390,9 @@ pub fn encode_fixed_size<E: MaxEncodedLen<LEN>, const LEN: usize>(v: &E) -> Arra
     out
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod tests {
-    extern crate alloc;
-
     use super::*;
-    use alloc::vec;
     use bytes::BytesMut;
     use hex_literal::hex;
 

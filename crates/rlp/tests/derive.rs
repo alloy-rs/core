@@ -1,3 +1,5 @@
+#![cfg(feature = "derive")]
+
 use ethers_rlp::*;
 
 #[derive(RlpEncodable, RlpDecodable, RlpMaxEncodedLen, PartialEq, Debug)]

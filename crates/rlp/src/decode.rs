@@ -389,12 +389,11 @@ mod alloc_impl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod tests {
-    extern crate alloc;
-
     use super::*;
-    use alloc::vec;
+    use alloc::string::String;
+    use alloc::vec::Vec;
     use core::fmt::Debug;
     use hex_literal::hex;
 
@@ -414,10 +413,10 @@ mod tests {
     fn check_decode_list<T, IT>(fixtures: IT)
     where
         T: Decodable + PartialEq + Debug,
-        IT: IntoIterator<Item = (Result<alloc::vec::Vec<T>, DecodeError>, &'static [u8])>,
+        IT: IntoIterator<Item = (Result<Vec<T>, DecodeError>, &'static [u8])>,
     {
         for (expected, mut input) in fixtures {
-            assert_eq!(vec::Vec::<T>::decode(&mut input), expected);
+            assert_eq!(Vec::<T>::decode(&mut input), expected);
             if expected.is_ok() {
                 assert_eq!(input, &[]);
             }
