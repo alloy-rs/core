@@ -19,8 +19,8 @@ ethers-rlp = { version = "0.1.0", path = "crates/rlp", default-features = false 
 ethers-rlp-derive = { version = "0.1.0", path = "crates/rlp-derive", default-features = false }
 ethers-sol-type = { version = "0.1.0", path = "crates/sol-type", default-features = false }
 
-ruint = { version = "1.8.0", default-features = false }
-ruint-macro = { version = "1.0.2", default-features = false }
+ruint = { version = "1.8.0", git = "https://github.com/recmo/uint", default-features = false }
+ruint-macro = { version = "1.0.2", git = "https://github.com/recmo/uint", default-features = false }
 
 # serde
 serde = { version = "1.0", default-features = false }
