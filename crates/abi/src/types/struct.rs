@@ -19,13 +19,14 @@ type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
 ///
 /// # Note
 ///
-/// Special attention should be paid to `eip712_encode_type` for complex Solidity types.
+/// Special attention should be paid to [`eip712_encode_type`] for complex Solidity types.
 /// Nested Solidity structs **must** properly encode their type.
 ///
 /// To be clear, a struct with a nested struct must encode the nested struct's type as well.
 ///
 /// See [EIP-712#definition-of-encodetype][ref] for more details.
 ///
+/// [`eip712_encode_type`]: SolStruct::eip712_encode_type
 /// [ref]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
 pub trait SolStruct {
     /// The corresponding Token type.

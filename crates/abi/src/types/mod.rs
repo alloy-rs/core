@@ -13,5 +13,5 @@ pub use r#struct::SolStruct;
 pub mod data_type;
 
 // Solidity user-defined value types.
-// No export are needed as the only item is a macro.
+// No exports are needed as the only item is a macro.
 mod udt;

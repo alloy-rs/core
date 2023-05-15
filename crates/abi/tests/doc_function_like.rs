@@ -12,6 +12,7 @@ sol! {
     // Function definitions generate two types that implement `SolCall`:
     // 1. `<name>Call`: struct with the function arguments;
     // 2. `<name>Return`: struct with the return values.
+    // `<name>` is the case-preserved name of the function.
     //
     // Currently, return structs should only be used for decoding data using
     // `decode_raw`, as the generated signature is not valid.
