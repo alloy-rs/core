@@ -5,7 +5,8 @@ use crate::{no_std_prelude::*, token::TokenSeq, Result, SolType};
 /// ### Implementer's Guide
 ///
 /// We do not recommend implementing this trait directly. Instead, we recommend
-/// using the [`sol`][crate::sol] proc macro to parse a Solidity function definition.
+/// using the [`sol`][crate::sol] proc macro to parse a Solidity function
+/// definition.
 pub trait SolCall: Sized {
     /// The underlying tuple type which represents this type's members.
     ///
@@ -30,14 +31,16 @@ pub trait SolCall: Sized {
     /// The size of the encoded data in bytes, **without** its selector.
     fn data_size(&self) -> usize;
 
-    /// ABI decode this call's arguments from the given slice, **without** its selector.
+    /// ABI decode this call's arguments from the given slice, **without** its
+    /// selector.
     #[inline]
     fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
         let tuple = <Self::Tuple as SolType>::decode(data, validate)?;
         Ok(Self::from_rust(tuple))
     }
 
-    /// ABI decode this call's arguments from the given slice, **with** the selector.
+    /// ABI decode this call's arguments from the given slice, **with** the
+    /// selector.
     #[inline]
     fn decode(data: &[u8], validate: bool) -> Result<Self> {
         let data = data

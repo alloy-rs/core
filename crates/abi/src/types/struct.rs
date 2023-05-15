@@ -15,14 +15,16 @@ type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
 /// # Implementer's Guide
 ///
 /// We do not recommend implementing this trait directly. Instead, we recommend
-/// using the [`sol`][crate::sol] proc macro to parse a Solidity struct definition.
+/// using the [`sol`][crate::sol] proc macro to parse a Solidity struct
+/// definition.
 ///
 /// # Note
 ///
-/// Special attention should be paid to [`eip712_encode_type`] for complex Solidity types.
-/// Nested Solidity structs **must** properly encode their type.
+/// Special attention should be paid to [`eip712_encode_type`] for complex
+/// Solidity types. Nested Solidity structs **must** properly encode their type.
 ///
-/// To be clear, a struct with a nested struct must encode the nested struct's type as well.
+/// To be clear, a struct with a nested struct must encode the nested struct's
+/// type as well.
 ///
 /// See [EIP-712#definition-of-encodetype][ref] for more details.
 ///
@@ -41,7 +43,8 @@ pub trait SolStruct {
     const NAME: &'static str;
 
     /// The field types and names. Type is a Solidity string, and must conform
-    /// to the name of the Solidty type at the same index in the associated tuple.
+    /// to the name of the Solidty type at the same index in the associated
+    /// tuple.
     ///
     /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
     const FIELDS: &'static [(&'static str, &'static str)];

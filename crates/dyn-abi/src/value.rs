@@ -1,5 +1,4 @@
-use crate::no_std_prelude::*;
-use crate::Word;
+use crate::{no_std_prelude::*, Word};
 use ethers_primitives::{aliases::*, Address, I256, U256};
 
 /// This type represents a Solidity value that has been decoded into rust. It

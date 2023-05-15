@@ -72,7 +72,7 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<Signed<BITS, LIMBS>> for i12
 
     fn try_from(value: Signed<BITS, LIMBS>) -> Result<Self, Self::Error> {
         if value.bits() > 128 {
-            return Err(BigIntConversionError);
+            return Err(BigIntConversionError)
         }
 
         if value.is_positive() {
@@ -91,7 +91,7 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<i128> for Signed<BITS, LIMBS
     fn try_from(value: i128) -> Result<Self, Self::Error> {
         let u = value as u128;
         if value >= 0 {
-            return Self::try_from(u);
+            return Self::try_from(u)
         }
 
         // This is a bit messy :(
@@ -99,7 +99,7 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<i128> for Signed<BITS, LIMBS
         let stc = Uint::<128, 2>::saturating_from(tc);
         let (num, overflow) = Uint::<BITS, LIMBS>::overflowing_from_limbs_slice(stc.as_limbs());
         if overflow {
-            return Err(BigIntConversionError);
+            return Err(BigIntConversionError)
         }
         Ok(Signed(twos_complement(num)))
     }
@@ -110,14 +110,14 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<Signed<BITS, LIMBS>> for u12
 
     fn try_from(value: Signed<BITS, LIMBS>) -> Result<Self, Self::Error> {
         if value.is_negative() {
-            return Err(BigIntConversionError);
+            return Err(BigIntConversionError)
         }
 
         let saturated = Uint::<BITS, LIMBS>::saturating_from(u128::MAX);
 
         // if the value is greater than the saturated value, return an error
         if value > Signed(saturated) {
-            return Err(BigIntConversionError);
+            return Err(BigIntConversionError)
         }
 
         value
@@ -134,7 +134,7 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<u128> for Signed<BITS, LIMBS
         let saturated = Uint::<BITS, LIMBS>::saturating_from(value);
 
         if value != saturated.to::<u128>() {
-            return Err(BigIntConversionError);
+            return Err(BigIntConversionError)
         }
 
         Signed::try_from(saturated)

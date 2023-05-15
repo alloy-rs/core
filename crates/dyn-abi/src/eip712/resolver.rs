@@ -6,8 +6,7 @@ use crate::{
     DynAbiError, DynSolType, DynSolValue,
 };
 use alloc::collections::{BTreeMap, BTreeSet};
-use core::cmp::Ordering;
-use core::fmt;
+use core::{cmp::Ordering, fmt};
 use ethers_abi_enc::SolStruct;
 use ethers_primitives::{keccak256, B256};
 use serde::{Deserialize, Deserializer, Serialize};
@@ -79,7 +78,8 @@ pub struct TypeDef {
 }
 
 impl Ord for TypeDef {
-    // This is not a logic error because we know type names cannot be duplicated in the resolver map
+    // This is not a logic error because we know type names cannot be duplicated in
+    // the resolver map
     fn cmp(&self, other: &Self) -> Ordering {
         self.type_name.cmp(&other.type_name)
     }
@@ -146,7 +146,8 @@ impl TypeDef {
         s
     }
 
-    /// Formats the EIP-712 `encodeType` typestring for this type definition into `f`.
+    /// Formats the EIP-712 `encodeType` typestring for this type definition
+    /// into `f`.
     pub fn fmt_eip712_encode_type(&self, f: &mut impl fmt::Write) -> fmt::Result {
         f.write_str(&self.type_name)?;
         f.write_char('(')?;
@@ -192,7 +193,6 @@ struct DfsContext<'a> {
 #[derive(Debug, Clone, Default)]
 pub struct Resolver {
     /// Nodes in the graph
-    ///
     // NOTE: Non-duplication of names must be enforced. See note on impl of Ord
     // for TypeDef
     nodes: BTreeMap<String, TypeDef>,
@@ -256,10 +256,10 @@ impl Resolver {
         };
 
         if context.stack.contains(type_name) {
-            return true;
+            return true
         }
         if context.visited.contains(ty) {
-            return false;
+            return false
         }
 
         // update visited and stack
@@ -273,7 +273,7 @@ impl Resolver {
             .iter()
             .any(|edge| self.detect_cycle(edge, context))
         {
-            return true;
+            return true
         }
 
         context.stack.remove(type_name);
@@ -326,7 +326,7 @@ impl Resolver {
         root_type: RootType<'_>,
     ) -> Result<(), DynAbiError> {
         if root_type.try_basic_solidity().is_ok() {
-            return Ok(());
+            return Ok(())
         }
 
         let this_type = self
@@ -352,7 +352,7 @@ impl Resolver {
     pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>, DynAbiError> {
         let mut context = DfsContext::default();
         if self.detect_cycle(type_name, &mut context) {
-            return Err(DynAbiError::circular_dependency(type_name));
+            return Err(DynAbiError::circular_dependency(type_name))
         }
         let root_type = type_name.try_into()?;
         let mut resolution = vec![];
@@ -364,7 +364,7 @@ impl Resolver {
     /// struct.
     fn resolve_root_type(&self, root_type: RootType<'_>) -> Result<DynSolType, DynAbiError> {
         if root_type.try_basic_solidity().is_ok() {
-            return root_type.resolve_basic_solidity();
+            return root_type.resolve_basic_solidity()
         }
 
         let ty = self
@@ -411,7 +411,7 @@ impl Resolver {
     /// the type is mising, or contains a circular dependency.
     pub fn resolve(&self, type_name: &str) -> Result<DynSolType, DynAbiError> {
         if self.detect_cycle(type_name, &mut Default::default()) {
-            return Err(DynAbiError::circular_dependency(type_name));
+            return Err(DynAbiError::circular_dependency(type_name))
         }
         self.unchecked_resolve(type_name.try_into()?)
     }
@@ -464,7 +464,7 @@ impl Resolver {
     /// encoded as their `encodeData` hash.
     pub fn eip712_data_word(&self, value: &DynSolValue) -> Result<B256, DynAbiError> {
         if let Some(word) = value.as_word() {
-            return Ok(word);
+            return Ok(word)
         }
 
         match value {

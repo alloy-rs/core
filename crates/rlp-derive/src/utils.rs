@@ -28,7 +28,7 @@ pub(crate) fn attributes_include(attrs: &[Attribute], attr_name: &str) -> bool {
                     Ok(())
                 });
                 if is_attr {
-                    return true;
+                    return true
                 }
             }
         }

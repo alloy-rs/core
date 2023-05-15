@@ -61,8 +61,8 @@
 //! ## [`sol!`]
 //!
 //! The [`sol!`] procedural macro provides a convenient way to define
-//! custom [`SolType`]s and reference primitive ones. See [its documentation][sol!]
-//! for details on how to use it.
+//! custom [`SolType`]s and reference primitive ones. See
+//! [its documentation][sol!] for details on how to use it.
 //!
 //! ## [`SolStruct`]
 //!

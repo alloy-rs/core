@@ -16,8 +16,7 @@
 //! - Tuples (T, U, V, ...)
 //! - Dynamic-length byte arrays `u8[]`
 
-use crate::no_std_prelude::*;
-use crate::{Decoder, Encoder, Result, Word};
+use crate::{no_std_prelude::*, Decoder, Encoder, Result, Word};
 use core::fmt;
 use ethers_primitives::{Address, U256};
 

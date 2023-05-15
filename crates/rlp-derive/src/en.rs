@@ -33,7 +33,7 @@ pub(crate) fn impl_encodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
             return Err(Error::new_spanned(
                 field,
                 "All subsequent fields must be optional.",
-            ));
+            ))
         }
 
         length_stmts.push(encodable_length(i, field, is_opt, fields.clone()));

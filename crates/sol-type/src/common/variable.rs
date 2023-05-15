@@ -188,7 +188,8 @@ pub struct VariableDeclaration {
     pub ty: Type,
     /// The storage location, if any, of the variable.
     pub storage: Option<Storage>,
-    /// The name of the variable. This is always Some if parsed as part of [`Parameters`].
+    /// The name of the variable. This is always Some if parsed as part of
+    /// [`Parameters`].
     pub name: Option<SolIdent>,
 }
 
@@ -264,7 +265,7 @@ impl VariableDeclaration {
                     } else {
                         "data location can only be specified for array, struct or mapping types"
                     };
-                    return Err(Error::new(storage.span(), msg));
+                    return Err(Error::new(storage.span(), msg))
                 }
                 Some(storage)
             } else {

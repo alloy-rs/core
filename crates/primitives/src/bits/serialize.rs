@@ -16,7 +16,7 @@ impl<'de, const N: usize> serde::Deserialize<'de> for FixedBytes<N> {
             return Err(serde::de::Error::custom(format!(
                 "Expected exactly {expected} chars, including a 0x prefix. Got {}",
                 s.len()
-            )));
+            )))
         }
         s.parse().map_err(serde::de::Error::custom)
     }

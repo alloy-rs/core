@@ -34,11 +34,11 @@ impl Parse for SolPath {
         let mut segments = Punctuated::new();
         loop {
             if !input.peek(Ident::peek_any) {
-                break;
+                break
             }
             segments.push_value(input.parse()?);
             if !input.peek(Token![.]) {
-                break;
+                break
             }
             segments.push_punct(input.parse()?);
         }

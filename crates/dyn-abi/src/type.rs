@@ -96,7 +96,7 @@ impl DynSolType {
                 if size != *len {
                     return Err(crate::Error::custom(format!(
                         "Size mismatch for FixedBytes. Got {size}, expected {len}",
-                    )));
+                    )))
                 }
                 Ok(word.into())
             }
@@ -130,7 +130,7 @@ impl DynSolType {
                         "Size mismatch for FixedArray. Got {}, expected {}",
                         tokens.len(),
                         size,
-                    )));
+                    )))
                 }
                 Ok(DynToken::FixedSeq(
                     tokens
@@ -147,7 +147,7 @@ impl DynSolType {
                         name,
                         tokens.len(),
                         tuple.len(),
-                    )));
+                    )))
                 }
                 let len = tuple.len();
                 let tuple = tuple
@@ -172,7 +172,7 @@ impl DynSolType {
                 if *name != name_val {
                     return Err(crate::Error::custom(format!(
                         "Name mismatch for {name}. Got {name_val}, expected {name}",
-                    )));
+                    )))
                 }
                 if *prop_names != prop_names_val {
                     return Err(crate::Error::custom(format!(
@@ -185,7 +185,7 @@ impl DynSolType {
                         name,
                         tuple_val.len(),
                         tuple.len(),
-                    )));
+                    )))
                 }
                 let len = tuple.len();
                 let tuple = tuple
@@ -206,7 +206,7 @@ impl DynSolType {
                     return Err(crate::Error::custom(format!(
                         "Name mismatch for {}. Got {}, expected {}",
                         name, name_val, name,
-                    )));
+                    )))
                 }
                 // A little hacky. A Custom value type is always encoded as a full 32-byte word
                 Ok(DynSolType::FixedBytes(32).tokenize(DynSolValue::FixedBytes(inner_val, 32))?)
@@ -246,7 +246,7 @@ impl DynSolType {
                 if types.len() != tokens.len() {
                     return Err(crate::Error::custom(
                         "tuple length mismatch on dynamic detokenization",
-                    ));
+                    ))
                 }
                 Ok(DynSolValue::Tuple(
                     types
@@ -266,7 +266,7 @@ impl DynSolType {
                 if *size != tokens.len() {
                     return Err(crate::Error::custom(
                         "array length mismatch on dynamic detokenization",
-                    ));
+                    ))
                 }
                 Ok(DynSolValue::FixedArray(
                     tokens
@@ -286,7 +286,7 @@ impl DynSolType {
                 if len != tokens.len() || len != tuple.len() {
                     return Err(crate::Error::custom(
                         "custom length mismatch on dynamic detokenization",
-                    ));
+                    ))
                 }
                 let tuple = tuple
                     .iter()

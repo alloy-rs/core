@@ -107,7 +107,7 @@ impl<const N: usize> FixedBytes<N> {
         loop {
             result[i] = if i >= N { other.0[i - N] } else { self.0[i] };
             if i == Z {
-                break;
+                break
             }
         }
 
@@ -213,11 +213,11 @@ impl<const N: usize> FixedBytes<N> {
         let mut i = 0;
         loop {
             if self.0[i] != other.0[i] {
-                return false;
+                return false
             }
             i += 1;
             if i == N {
-                break;
+                break
             }
         }
 
@@ -238,7 +238,7 @@ impl<const N: usize> FixedBytes<N> {
             ret.0[i] = self.0[i] & rhs.0[i];
             i += 1;
             if i == N {
-                break;
+                break
             }
         }
         ret
@@ -252,7 +252,7 @@ impl<const N: usize> FixedBytes<N> {
             ret.0[i] = self.0[i] | rhs.0[i];
             i += 1;
             if i == N {
-                break;
+                break
             }
         }
         ret
@@ -266,7 +266,7 @@ impl<const N: usize> FixedBytes<N> {
             ret.0[i] = self.0[i] ^ rhs.0[i];
             i += 1;
             if i == N {
-                break;
+                break
             }
         }
         ret
@@ -284,7 +284,7 @@ impl<const N: usize> fmt::Display for FixedBytes<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // If the alternate flag is NOT set, we write the full hex.
         if N <= 4 || !f.alternate() {
-            return self.fmt_hex(f, true);
+            return self.fmt_hex(f, true)
         }
 
         // If the alternate flag is set, we use middle-out compression.

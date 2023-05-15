@@ -94,7 +94,8 @@ pub trait SolType {
     /// Non-standard Packed Mode ABI encoding.
     ///
     /// This is different from normal ABI encoding:
-    /// - types shorter than 32 bytes are concatenated directly, without padding or sign extension;
+    /// - types shorter than 32 bytes are concatenated directly, without padding
+    ///   or sign extension;
     /// - dynamic types are encoded in-place and without the length;
     /// - array elements are padded, but still encoded in-place.
     ///

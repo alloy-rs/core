@@ -16,7 +16,7 @@ pub(crate) fn address(value: &serde_json::Value) -> Result<DynSolValue, DynAbiEr
 
 pub(crate) fn bool(value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
     if let Some(bool) = value.as_bool() {
-        return Ok(DynSolValue::Bool(bool));
+        return Ok(DynSolValue::Bool(bool))
     }
 
     let bool = value
@@ -42,7 +42,7 @@ pub(crate) fn fixed_bytes(n: usize, value: &serde_json::Value) -> Result<DynSolV
         let mut word: Word = Default::default();
         let min = if buf.len() > n { n } else { buf.len() };
         word[..min].copy_from_slice(&buf[..min]);
-        return Ok(DynSolValue::FixedBytes(word, n));
+        return Ok(DynSolValue::FixedBytes(word, n))
     }
 
     Err(DynAbiError::type_mismatch(DynSolType::FixedBytes(n), value))
@@ -50,11 +50,11 @@ pub(crate) fn fixed_bytes(n: usize, value: &serde_json::Value) -> Result<DynSolV
 
 pub(crate) fn int(n: usize, value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
     if let Some(num) = value.as_i64() {
-        return Ok(DynSolValue::Int(I256::try_from(num).unwrap(), n));
+        return Ok(DynSolValue::Int(I256::try_from(num).unwrap(), n))
     }
 
     if let Some(Ok(i)) = value.as_str().map(|s| s.parse()) {
-        return Ok(DynSolValue::Int(i, n));
+        return Ok(DynSolValue::Int(i, n))
     }
 
     Err(DynAbiError::type_mismatch(DynSolType::Int(n), value))
@@ -62,16 +62,16 @@ pub(crate) fn int(n: usize, value: &serde_json::Value) -> Result<DynSolValue, Dy
 
 pub(crate) fn uint(n: usize, value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
     if let Some(num) = value.as_u64() {
-        return Ok(DynSolValue::Uint(U256::from(num), n));
+        return Ok(DynSolValue::Uint(U256::from(num), n))
     }
 
     if let Some(s) = value.as_str() {
         let s = s.strip_prefix("0x").unwrap_or(s);
         if let Ok(int) = U256::from_str_radix(s, 10) {
-            return Ok(DynSolValue::Uint(int, n));
+            return Ok(DynSolValue::Uint(int, n))
         }
         if let Ok(int) = U256::from_str_radix(s, 16) {
-            return Ok(DynSolValue::Uint(int, n));
+            return Ok(DynSolValue::Uint(int, n))
         }
     }
 
@@ -95,7 +95,7 @@ pub(crate) fn tuple(
             return Err(DynAbiError::type_mismatch(
                 DynSolType::Tuple(inner.to_vec()),
                 value,
-            ));
+            ))
         }
 
         let tuple = arr
@@ -104,7 +104,7 @@ pub(crate) fn tuple(
             .map(|(v, t)| t.coerce(v))
             .collect::<Result<Vec<_>, _>>()?;
 
-        return Ok(DynSolValue::Tuple(tuple));
+        return Ok(DynSolValue::Tuple(tuple))
     }
 
     Err(DynAbiError::type_mismatch(
@@ -123,7 +123,7 @@ pub(crate) fn array(
             .map(|v| inner.coerce(v))
             .collect::<Result<Vec<_>, _>>()?;
 
-        return Ok(DynSolValue::Array(array));
+        return Ok(DynSolValue::Array(array))
     }
 
     Err(DynAbiError::type_mismatch(
@@ -142,7 +142,7 @@ pub(crate) fn fixed_array(
             return Err(DynAbiError::type_mismatch(
                 DynSolType::FixedArray(Box::new(inner.clone()), n),
                 value,
-            ));
+            ))
         }
 
         let array = arr
@@ -150,7 +150,7 @@ pub(crate) fn fixed_array(
             .map(|v| inner.coerce(v))
             .collect::<Result<Vec<_>, _>>()?;
 
-        return Ok(DynSolValue::FixedArray(array));
+        return Ok(DynSolValue::FixedArray(array))
     }
 
     Err(DynAbiError::type_mismatch(
@@ -178,14 +178,14 @@ pub(crate) fn coerce_custom_struct(
                         tuple: inner.to_vec(),
                     },
                     value,
-                ));
+                ))
             }
         }
         return Ok(DynSolValue::CustomStruct {
             name: name.to_string(),
             prop_names: prop_names.to_vec(),
             tuple,
-        });
+        })
     }
 
     Err(DynAbiError::type_mismatch(
@@ -210,7 +210,7 @@ pub(crate) fn coerce_custom_value(
         return Ok(DynSolValue::CustomValue {
             name: name.to_string(),
             inner: word,
-        });
+        })
     }
 
     Err(DynAbiError::type_mismatch(
