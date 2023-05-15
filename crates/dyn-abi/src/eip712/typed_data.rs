@@ -5,8 +5,8 @@ use crate::{
     DynAbiError, DynSolType, DynSolValue,
 };
 use alloc::collections::BTreeMap;
-use ethers_abi_enc::{Eip712Domain, SolStruct};
 use ethers_primitives::{keccak256, B256};
+use ethers_sol_types::{Eip712Domain, SolStruct};
 use serde::{Deserialize, Serialize};
 
 /// Custom types for `TypedData`
@@ -229,7 +229,7 @@ impl TypedData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethers_abi_enc::sol;
+    use ethers_sol_types::sol;
     use serde_json::json;
 
     #[test]

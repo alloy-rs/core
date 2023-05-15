@@ -14,7 +14,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-ethers-abi-enc = { workspace = true, features = ["eip712-serde"] }
+ethers-sol-types = { workspace = true, features = ["eip712-serde"] }
 ethers-primitives.workspace = true
 
 hex.workspace = true
@@ -23,4 +23,4 @@ serde_json = { workspace = true, features = ["alloc"] }
 
 [features]
 default = ["std"]
-std = ["ethers-abi-enc/std", "ethers-primitives/std", "hex/std", "serde/std", "serde_json/std"]
+std = ["ethers-sol-types/std", "ethers-primitives/std", "hex/std", "serde/std", "serde_json/std"]

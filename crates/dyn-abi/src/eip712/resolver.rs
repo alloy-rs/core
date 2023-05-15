@@ -7,8 +7,8 @@ use crate::{
 };
 use alloc::collections::{BTreeMap, BTreeSet};
 use core::{cmp::Ordering, fmt};
-use ethers_abi_enc::SolStruct;
 use ethers_primitives::{keccak256, B256};
+use ethers_sol_types::SolStruct;
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// An EIP-712 property definition.
@@ -492,7 +492,7 @@ impl Resolver {
 
 #[cfg(test)]
 mod test {
-    use ethers_abi_enc::sol;
+    use ethers_sol_types::sol;
 
     use super::*;
 
