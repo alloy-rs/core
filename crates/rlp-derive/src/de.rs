@@ -42,7 +42,7 @@ pub(crate) fn impl_decodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
                 if !rlp_head.list {
                     return Err(ethers_rlp::DecodeError::UnexpectedString);
                 }
-                if b.remaining() < rlp_head.payload_length {
+                if ethers_rlp::Buf::remaining(b) < rlp_head.payload_length {
                     return Err(ethers_rlp::DecodeError::InputTooShort);
                 }
 

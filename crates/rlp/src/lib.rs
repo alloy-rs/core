@@ -5,8 +5,37 @@
     no_crate_inject,
     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 ))]
+#![doc = include_str!("../README.md")]
+// This doctest uses derive and alloc, so it cannot be in the README :(
+#![cfg_attr(
+    all(feature = "derive", feature = "std"),
+    doc = r##"
 
-//! RLP Encoding and Decoding
+## Usage Example
+
+```rust
+use ethers_rlp::{RlpEncodable, RlpDecodable, Decodable, Encodable};
+
+#[derive(Debug, RlpEncodable, RlpDecodable, PartialEq)]
+pub struct MyStruct {
+    pub a: u64,
+    pub b: Vec<u8>,
+}
+
+fn main() {
+    let my_struct = MyStruct {
+        a: 42,
+        b: vec![1, 2, 3],
+    };
+
+    let mut buffer = Vec::<u8>::new();
+    let encoded = my_struct.encode(&mut buffer);
+    let decoded = MyStruct::decode(&mut buffer.as_slice()).unwrap();
+    assert_eq!(my_struct, decoded);
+}
+```
+"##
+)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
