@@ -1,4 +1,4 @@
-## ethers-types
+# ethers-types
 
 Fundamental types shared by [reth], [revm], [ethers], and [foundry].
 
@@ -7,7 +7,7 @@ Fundamental types shared by [reth], [revm], [ethers], and [foundry].
 [ethers]: https://github.com/ethers-rs/core
 [foundry]: https://github.com/foundry-rs/foundry
 
-### Types
+## Types
 
 - Unsigned integers re-exported from [ruint](https://docs.rs/ruint)
 - Signed integers, as a wrapper around `ruint` integers
@@ -16,7 +16,7 @@ Fundamental types shared by [reth], [revm], [ethers], and [foundry].
   - [`Address`], which is a fixed-size byte array of 20 bytes, with EIP-55 and
     EIP-1191 checksum support
 
-### Usage
+## Examples
 
 This library has straightforward, basic, types. Usage is correspondingly simple. Please consult [the documentation][docs] for more information.
 
