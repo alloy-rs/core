@@ -9,10 +9,8 @@
     no_crate_inject,
     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 ))]
-
-//! Fundamental types shared by [reth](https://github.com/paradigmxyz/reth) [revm](https://github.com/bluealloy/revm) and [ethers](https://github.com/gakonst/ethers-rs).
-
 #![cfg_attr(not(feature = "std"), no_std)]
+#![doc = include_str!("../README.md")]
 
 #[macro_use]
 extern crate alloc;
