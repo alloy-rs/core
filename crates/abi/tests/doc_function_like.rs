@@ -17,6 +17,7 @@ sol! {
     // `decode_raw`, as the generated signature is not valid.
     function foo(uint256 a, uint256 b) external view returns (uint256);
 
+    #[derive(Debug, PartialEq)]
     error MyError(uint256 a, uint256 b);
 
     // TODO: events
