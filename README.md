@@ -67,16 +67,25 @@ contribution follows the linting rules and passes clippy. :)
 
 You should be able to build a wasm app that uses ethers-rs. If ethers fails to
 compile in WASM, please
-[open an issue](https://github.com/ethers-rs/core/issues/new). There is
+[open an issue]. There is
 currently no plan to provide an official JS/TS-accessible library interface. We
 believe [viem](https://viem.sh) or [ethers.js](https://docs.ethers.io/v6/)
 serves that need very well.
 
 Similarly, you should be able to build FFI bindings to ethers-rs. If ethers
 fails to compile in c lib formats, please
-[open an issue](https://github.com/ethers-rs/core/issues/new).
+[open an issue].
 There is currently no plan to provide official FFI bindings, and as ethers-rs is
 not yet stable 1.0.0, its interface may change significantly between versions.
+
+[open an issue]: https://github.com/ethers-rs/core/issues/new
+
+## Note on `no_std`
+
+We intend these crates to support `no_std` with `alloc`, and have written them
+with that in mind. However, a key dependency, `ruint`, does not yet support
+`no_std`. We strive to maintain `no_std` + `alloc` compatibility, and intend to
+contribute upstream PRs to achieve it in ruint.
 
 ## Credits
 
