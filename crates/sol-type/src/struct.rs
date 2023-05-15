@@ -153,11 +153,11 @@ impl Struct {
                         tuple.into()
                     }
 
-                    fn encode_type() -> Cow<'static, str> {
+                    fn eip712_encode_type() -> Cow<'static, str> {
                         #encode_type_impl.into()
                     }
 
-                    fn encode_data(&self) -> Vec<u8> {
+                    fn eip712_encode_data(&self) -> Vec<u8> {
                         #encode_data_impl
                     }
                 }

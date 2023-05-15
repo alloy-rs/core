@@ -1,7 +1,7 @@
 use ethers_abi_enc::{define_udt, domain};
 
 #[allow(clippy::missing_const_for_fn)]
-fn ret_ok<T>(_: T) -> ethers_abi_enc::AbiResult<()> {
+fn ret_ok<T>(_: T) -> ethers_abi_enc::Result<()> {
     Ok(())
 }
 
@@ -20,10 +20,11 @@ define_udt!(
 
 #[test]
 fn expand_and_use_macros() {
-    dbg!(domain! {
+    let domain = domain! {
         name: "Hello World",
-    });
+    };
+    assert_eq!(domain.name.as_deref(), Some("Hello World"));
 
     let a = AStruct::default();
-    dbg!(a);
+    assert_eq!(a.0, [0u8; 32]);
 }

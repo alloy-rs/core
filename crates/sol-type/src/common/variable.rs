@@ -192,7 +192,7 @@ pub struct VariableDeclaration {
     pub name: Option<SolIdent>,
 }
 
-/// Formats as an EIP712 field: `<ty> <name>`
+/// Formats as an EIP-712 field: `<ty> <name>`
 impl fmt::Display for VariableDeclaration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // important: Custom structs are encoded dynamically at run time.

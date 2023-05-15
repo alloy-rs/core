@@ -1,7 +1,7 @@
 use crate::{
     eip712::coerce::{self, coerce_custom_struct, coerce_custom_value},
     no_std_prelude::*,
-    AbiResult, DynAbiError, DynSolValue, DynToken, SolType, Word,
+    DynAbiError, DynSolValue, DynToken, Result, SolType, Word,
 };
 use ethers_abi_enc::sol_data;
 
@@ -12,7 +12,7 @@ struct StructProp {
 }
 
 /// A Dynamic SolType. Equivalent to an enum wrapper around all implementers of
-/// [`crate::SolType`]. This is used to represent solidity types that are not
+/// [`crate::SolType`]. This is used to represent Solidity types that are not
 /// known at compile time. It is used in conjunction with [`DynToken`] and
 /// [`DynSolValue`] to allow for dynamic ABI encoding and decoding.
 ///
@@ -22,9 +22,9 @@ struct StructProp {
 ///
 /// # Example
 /// ```
-/// # use ethers_dyn_abi::{DynSolType, DynSolValue, AbiResult};
+/// # use ethers_dyn_abi::{DynSolType, DynSolValue, Result};
 /// # use ethers_primitives::U256;
-/// # pub fn main() -> AbiResult<()> {
+/// # pub fn main() -> Result<()> {
 /// let my_type = DynSolType::Uint(256);
 /// let my_data: DynSolValue = U256::from(183).into();
 ///
@@ -83,7 +83,7 @@ pub enum DynSolType {
 
 impl DynSolType {
     /// Dynamic tokenization
-    pub fn tokenize(&self, value: DynSolValue) -> AbiResult<DynToken> {
+    pub fn tokenize(&self, value: DynSolValue) -> Result<DynToken> {
         match (self, value) {
             (DynSolType::Address, DynSolValue::Address(val)) => {
                 Ok(DynToken::Word(sol_data::Address::tokenize(val).inner()))
@@ -216,7 +216,7 @@ impl DynSolType {
     }
 
     /// Dynamic detokenization
-    pub fn detokenize(&self, token: DynToken) -> AbiResult<DynSolValue> {
+    pub fn detokenize(&self, token: DynToken) -> Result<DynSolValue> {
         match (self, token) {
             (DynSolType::Address, DynToken::Word(word)) => Ok(DynSolValue::Address(
                 sol_data::Address::detokenize(word.into())?,
@@ -359,14 +359,14 @@ impl DynSolType {
     }
 
     /// Encode a single value. Fails if the value does not match this type
-    pub fn encode_single(&self, value: DynSolValue) -> AbiResult<Vec<u8>> {
+    pub fn encode_single(&self, value: DynSolValue) -> Result<Vec<u8>> {
         let mut encoder = crate::Encoder::default();
         self.tokenize(value)?.encode_single(&mut encoder)?;
         Ok(encoder.into_bytes())
     }
 
     /// Decode a single value. Fails if the value does not match this type
-    pub fn decode_single(&self, data: &[u8]) -> AbiResult<DynSolValue> {
+    pub fn decode_single(&self, data: &[u8]) -> Result<DynSolValue> {
         let mut decoder = crate::Decoder::new(data, false);
         let mut toks = self.empty_dyn_token();
         toks.decode_single_populate(&mut decoder)?;
@@ -375,14 +375,14 @@ impl DynSolType {
 
     /// Encode a sequence of values. Fails if the values do not match this
     /// type. Is a no-op if this type or the values are not a sequence.
-    pub fn encode_sequence(&self, values: DynSolValue) -> AbiResult<Vec<u8>> {
+    pub fn encode_sequence(&self, values: DynSolValue) -> Result<Vec<u8>> {
         let mut encoder = crate::Encoder::default();
         self.tokenize(values)?.encode_sequence(&mut encoder)?;
         Ok(encoder.into_bytes())
     }
 
     /// Decode a sequence of values. Fails if the values do not match this type
-    pub fn decode_sequence(&self, data: &[u8]) -> AbiResult<DynSolValue> {
+    pub fn decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
         let mut decoder = crate::Decoder::new(data, false);
         let mut toks = self.empty_dyn_token();
         toks.decode_sequence_populate(&mut decoder)?;

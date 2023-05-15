@@ -1,37 +1,8 @@
 # ethers-sol-type
 
-This crate provides a proc macro that parses solidity types and generates
-SolType types from them. This allows developers to specify complex solidity
-types efficiently in their code. These types may then be used for safe encoding
-and decoding.
+This crate provides the [`sol`][sol] proc macro, which parses Solidity syntax
+to generate types that implement [`ethers-abi-enc`] traits.
 
-### Examples
+Refer to the [macro's documentation][sol] for more information.
 
-```rust
-// Assign type aliases for common sol types
-type B32 = sol!{ bytes32 }
-// This is equivalent to the following:
-type B32 = ethers_abi_enc::sol_data::Bytes<32>;
-
-type SolArrayOf<T> = sol! { T[] };
-type SolTuple = sol!{ tuple(address, bytes, string) }
-
-// Structs don't need type assignments
-sol! {
-    struct MyStruct {
-        uint256 a;
-        bytes32 b;
-        address[] c;
-    }
-}
-
-// Can be used in a type position, via < >, but this is not generally
-// recommended
-<sol! {
-    bool
-}>::hex_encode_single(true);
-
-// Better:
-type MyTy = sol! { bool };
-MyTy::hex_encode_single(true);
-```
+[sol]: https://docs.rs/ethers-sol-type/latest/ethers_sol_type/macro.sol.html

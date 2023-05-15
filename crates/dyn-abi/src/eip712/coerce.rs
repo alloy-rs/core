@@ -1,6 +1,5 @@
-use ethers_primitives::{Address, I256, U256};
-
 use crate::{no_std_prelude::*, DynAbiError, DynSolType, DynSolValue, Word};
+use ethers_primitives::{Address, I256, U256};
 
 /// Coerce a `serde_json::Value` to a `DynSolValue::Address`
 pub(crate) fn address(value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
@@ -33,18 +32,13 @@ pub(crate) fn bool(value: &serde_json::Value) -> Result<DynSolValue, DynAbiError
 pub(crate) fn bytes(value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
     let bytes = value
         .as_str()
-        .map(|s| s.strip_prefix("0x").unwrap_or(s))
         .map(|s| hex::decode(s).map_err(|_| DynAbiError::type_mismatch(DynSolType::Bytes, value)))
         .ok_or_else(|| DynAbiError::type_mismatch(DynSolType::Bytes, value))??;
     Ok(DynSolValue::Bytes(bytes))
 }
 
 pub(crate) fn fixed_bytes(n: usize, value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
-    if let Some(Ok(buf)) = value
-        .as_str()
-        .map(|s| s.strip_prefix("0x").unwrap_or(s))
-        .map(hex::decode)
-    {
+    if let Some(Ok(buf)) = value.as_str().map(hex::decode) {
         let mut word: Word = Default::default();
         let min = if buf.len() > n { n } else { buf.len() };
         word[..min].copy_from_slice(&buf[..min]);
@@ -208,11 +202,7 @@ pub(crate) fn coerce_custom_value(
     name: &str,
     value: &serde_json::Value,
 ) -> Result<DynSolValue, DynAbiError> {
-    if let Some(Ok(buf)) = value
-        .as_str()
-        .map(|s| s.strip_prefix("0x").unwrap_or(s))
-        .map(hex::decode)
-    {
+    if let Some(Ok(buf)) = value.as_str().map(hex::decode) {
         let mut word: Word = Default::default();
         let amnt = if buf.len() > 32 { 32 } else { buf.len() };
         word[..amnt].copy_from_slice(&buf[..amnt]);

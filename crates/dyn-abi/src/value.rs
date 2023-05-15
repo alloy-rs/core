@@ -1,10 +1,8 @@
+use crate::no_std_prelude::*;
+use crate::Word;
 use ethers_primitives::{aliases::*, Address, I256, U256};
 
-use crate::no_std_prelude::*;
-
-use crate::Word;
-
-/// This type represents a solidity value that has been decoded into rust. It
+/// This type represents a Solidity value that has been decoded into rust. It
 /// is broadly similar to `serde_json::Value` in that it is an enum of possible
 /// types, and the user must inspect and disambiguate
 #[derive(Debug, Clone, PartialEq)]
@@ -48,7 +46,7 @@ pub enum DynSolValue {
 }
 
 impl DynSolValue {
-    /// The solidity type name
+    /// The Solidity type name
     pub fn sol_type_name(&self) -> String {
         match self {
             Self::Address(_) => "address".to_string(),

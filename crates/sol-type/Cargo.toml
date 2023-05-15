@@ -1,7 +1,7 @@
 [package]
 name = "ethers-sol-type"
 version = "0.1.0"
-description = "Solidity type parsing & generation for the ethers-abi-enc"
+description = "Solidity to Rust proc-macro"
 readme = "README.md"
 keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
 categories = ["encoding", "cryptography::cryptocurrencies"]

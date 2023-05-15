@@ -18,7 +18,7 @@
 macro_rules! wrap_fixed_bytes {
     (
         $(#[$attrs:meta])*
-        $name:ident < $n:literal >
+        $name:ident<$n:literal>
     ) => {
         wrap_fixed_bytes!(
             name_str: stringify!($name),

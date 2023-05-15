@@ -5,7 +5,7 @@ This crate is built around a representation of the Solidity type system. This do
 ## Why?
 
 The ABI encoding scheme, is tailored to the EVM and to Solidity specifically.
-Its internals are complex and may not be well-understood by solidity devs.
+Its internals are complex and may not be well-understood by Solidity devs.
 However, Solidity devs generally do understand Solidity types. As a result, we
 decided the best way to represent ABI coding was as a method on Solidity types.
 
@@ -29,7 +29,7 @@ runtime (including the eip712 `eth_signTypedData` json-rpc request), see the
 
 We support types at the interface between Solidity and other systems. These are
 types that are commonly ABI encoded/decoded. We do not support types that are
-internal-only (e.g. array slices) or solidity type modifications describing EVM
+internal-only (e.g. array slices) or Solidity type modifications describing EVM
 internals (e.g. `payable` and `memory`) except where they interact with
 external systems.
 
@@ -39,7 +39,7 @@ defs into `SolCall` types, but may in the future.
 
 **Support overview:**
 
-- First-class solidity types
+- First-class Solidity types
 
   - All elementary, fixed-size, and non-fixed size
     [ABI types](https://docs.soliditylang.org/en/latest/abi-spec.html#types).
@@ -47,7 +47,7 @@ defs into `SolCall` types, but may in the future.
     - [`function` types](https://docs.soliditylang.org/en/v0.8.17/types.html#function-types).
     - [`fixed`](https://docs.soliditylang.org/en/v0.8.17/types.html#fixed-point-numbers).
 
-- Compound solidity types
+- Compound Solidity types
 
   - Arrays `T[N]`
   - Dynamic arrays `T[]`

@@ -11,10 +11,10 @@ use crate::no_std_prelude::*;
 use core::fmt;
 
 /// ABI result type
-pub type AbiResult<T> = core::result::Result<T, Error>;
+pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// ABI Encoding and Decoding errors.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     /// A typecheck detected a word that does not match the data type
     TypeCheckFail {
@@ -74,7 +74,10 @@ impl Error {
     }
 
     /// Instantiates a [`Error::TypeCheckFail`] with the provided data
-    pub fn type_check_fail_sig(data: &[u8], signature: &'static str) -> Self {
+    pub fn type_check_fail_sig(mut data: &[u8], signature: &'static str) -> Self {
+        if data.len() > 4 {
+            data = &data[..4];
+        }
         let expected_type = signature.split('(').next().unwrap_or(signature);
         Self::type_check_fail(data, expected_type)
     }
