@@ -5,7 +5,9 @@ use crate::{
     parser::{RootType, TypeSpecifier, TypeStem},
     DynAbiError, DynSolType, DynSolValue,
 };
+use alloc::collections::{BTreeMap, BTreeSet};
 use core::cmp::Ordering;
+use core::fmt;
 use ethers_abi_enc::SolStruct;
 use ethers_primitives::{keccak256, B256};
 use serde::{Deserialize, Deserializer, Serialize};

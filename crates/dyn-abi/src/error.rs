@@ -1,4 +1,5 @@
 use crate::{no_std_prelude::*, DynSolType};
+use core::fmt;
 
 /// Error when parsing EIP-712 `encodeType` strings
 ///

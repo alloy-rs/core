@@ -1,13 +1,13 @@
-use ethers_abi_enc::{Eip712Domain, SolStruct};
-use ethers_primitives::{keccak256, B256};
-use serde::{Deserialize, Serialize};
-
 use crate::{
     eip712::{PropertyDef, Resolver},
     no_std_prelude::*,
     parser::TypeSpecifier,
     DynAbiError, DynSolType, DynSolValue,
 };
+use alloc::collections::BTreeMap;
+use ethers_abi_enc::{Eip712Domain, SolStruct};
+use ethers_primitives::{keccak256, B256};
+use serde::{Deserialize, Serialize};
 
 /// Custom types for `TypedData`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
@@ -29,7 +29,7 @@ impl<'de> Deserialize<'de> for Eip712Types {
 
 impl IntoIterator for Eip712Types {
     type Item = (String, Vec<PropertyDef>);
-    type IntoIter = btree_map::IntoIter<String, Vec<PropertyDef>>;
+    type IntoIter = alloc::collections::btree_map::IntoIter<String, Vec<PropertyDef>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()

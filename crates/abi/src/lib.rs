@@ -163,28 +163,11 @@ extern crate alloc;
 #[cfg(test)]
 use trybuild as _;
 
-#[cfg(not(feature = "std"))]
 #[doc(hidden)]
 pub mod no_std_prelude {
     pub use alloc::{
         borrow::{Borrow, Cow, ToOwned},
-        format,
         string::{String, ToString},
-        vec,
-        vec::Vec,
-    };
-    pub use core::marker::PhantomData;
-}
-
-#[cfg(feature = "std")]
-#[doc(hidden)]
-pub mod no_std_prelude {
-    pub use std::{
-        borrow::{Borrow, Cow, ToOwned},
-        format,
-        marker::PhantomData,
-        string::{String, ToString},
-        vec,
         vec::Vec,
     };
 }

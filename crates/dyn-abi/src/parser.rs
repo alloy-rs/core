@@ -3,6 +3,7 @@
 //! This is a simple representation of Solidity type grammar.
 
 use crate::{no_std_prelude::*, DynAbiError, DynSolType};
+use core::fmt;
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type.
@@ -336,7 +337,7 @@ pub(crate) fn parse(s: &str) -> Result<DynSolType, DynAbiError> {
     ty.resolve_basic_solidity()
 }
 
-impl FromStr for DynSolType {
+impl core::str::FromStr for DynSolType {
     type Err = DynAbiError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
