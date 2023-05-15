@@ -6,7 +6,7 @@ use alloc::{
 use core::fmt;
 use core::str;
 
-/// Error type for address checksum validation
+/// Error type for address checksum validation.
 #[derive(Debug, Copy, Clone)]
 pub enum AddressError {
     /// Error while decoding hex.

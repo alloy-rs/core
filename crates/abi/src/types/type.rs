@@ -63,7 +63,7 @@ pub trait SolType {
         false
     }
 
-    /// Check a token to see if it can be detokenized with this type
+    /// Check a token to see if it can be detokenized with this type.
     fn type_check(token: &Self::TokenType) -> Result<()>;
 
     #[doc(hidden)]
@@ -71,13 +71,13 @@ pub trait SolType {
         crate::Error::type_check_fail(data, Self::sol_type_name())
     }
 
-    /// Detokenize
+    /// Detokenize.
     fn detokenize(token: Self::TokenType) -> Result<Self::RustType>;
 
-    /// Tokenize
+    /// Tokenize.
     fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType;
 
-    /// The encoded struct type (as EIP-712), if any. None for non-structs
+    /// The encoded struct type (as EIP-712), if any. None for non-structs.
     #[inline]
     fn eip712_encode_type() -> Option<Cow<'static, str>> {
         None
@@ -160,7 +160,7 @@ pub trait SolType {
         hex::encode_prefixed(Self::encode_params(rust))
     }
 
-    /// Decode a Rust type from an ABI blob
+    /// Decode a Rust type from an ABI blob.
     #[inline]
     fn decode(data: &[u8], validate: bool) -> Result<Self::RustType>
     where
@@ -173,7 +173,7 @@ pub trait SolType {
         Self::detokenize(decoded)
     }
 
-    /// Decode a Rust type from an ABI blob
+    /// Decode a Rust type from an ABI blob.
     #[inline]
     fn decode_params(data: &[u8], validate: bool) -> Result<Self::RustType>
     where
@@ -186,7 +186,7 @@ pub trait SolType {
         Self::detokenize(decoded)
     }
 
-    /// Decode a Rust type from an ABI blob
+    /// Decode a Rust type from an ABI blob.
     #[inline]
     fn decode_single(data: &[u8], validate: bool) -> Result<Self::RustType> {
         let decoded = crate::decode_single::<Self::TokenType>(data, validate)?;
@@ -196,7 +196,7 @@ pub trait SolType {
         Self::detokenize(decoded)
     }
 
-    /// Decode a Rust type from a hex-encoded ABI blob
+    /// Decode a Rust type from a hex-encoded ABI blob.
     #[inline]
     fn hex_decode(data: &str, validate: bool) -> Result<Self::RustType>
     where
@@ -207,7 +207,7 @@ pub trait SolType {
             .and_then(|buf| Self::decode(&buf, validate))
     }
 
-    /// Decode a Rust type from a hex-encoded ABI blob
+    /// Decode a Rust type from a hex-encoded ABI blob.
     #[inline]
     fn hex_decode_single(data: &str, validate: bool) -> Result<Self::RustType> {
         hex::decode(data)
@@ -215,7 +215,7 @@ pub trait SolType {
             .and_then(|buf| Self::decode_single(&buf, validate))
     }
 
-    /// Decode a Rust type from a hex-encoded ABI blob
+    /// Decode a Rust type from a hex-encoded ABI blob.
     #[inline]
     fn hex_decode_params(data: &str, validate: bool) -> Result<Self::RustType>
     where

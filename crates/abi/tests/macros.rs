@@ -6,14 +6,14 @@ fn ret_ok<T>(_: T) -> ethers_abi_enc::Result<()> {
 }
 
 define_udt!(
-    /// My Sol UDT
+    /// My Sol UDT.
     MyUdt,
     underlying: ethers_abi_enc::sol_data::Bool,
     type_check: ret_ok,
 );
 
 define_udt!(
-    /// Some Bytes
+    /// Some Bytes.
     #[derive(Hash)]
     AStruct,
 );

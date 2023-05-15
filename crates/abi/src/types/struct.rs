@@ -28,10 +28,10 @@ type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
 ///
 /// [ref]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
 pub trait SolStruct {
-    /// The corresponding Token type
+    /// The corresponding Token type.
     type Token: TokenSeq;
 
-    /// The corresponding Tuple type, used for encoding/decoding
+    /// The corresponding Tuple type, used for encoding/decoding.
     type Tuple: SolType<TokenType = Self::Token>;
 
     /// The struct name. Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].

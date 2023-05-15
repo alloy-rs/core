@@ -35,25 +35,25 @@ mod udt;
 ///
 /// Structs and enums:
 ///
-/// ```ignore
+/// ```ignore.
 #[doc = include_str!("../../abi/tests/doc_structs.rs")]
 /// ```
 ///
 /// UDVT and type aliases:
 ///
-/// ```ignore
+/// ```ignore.
 #[doc = include_str!("../../abi/tests/doc_types.rs")]
 /// ```
 ///
 /// Functions, errors, and events:
 ///
-/// ```ignore
+/// ```ignore.
 #[doc = include_str!("../../abi/tests/doc_function_like.rs")]
 /// ```
 ///
 /// Contracts/interfaces:
 ///
-/// ```ignore
+/// ```ignore.
 #[doc = include_str!("../../abi/tests/doc_contracts.rs")]
 /// ```
 #[proc_macro]

@@ -41,28 +41,28 @@ use sealed::Sealed;
 /// information necessary to encode & decode data. Tokens are an intermediate
 /// state between abi-encoded blobs, and rust types.
 pub trait TokenType: Sealed + Sized {
-    /// True if the token represents a dynamically-sized type
+    /// True if the token represents a dynamically-sized type.
     fn is_dynamic() -> bool;
 
-    /// Decode a token from a decoder
+    /// Decode a token from a decoder.
     fn decode_from(dec: &mut Decoder<'_>) -> Result<Self>;
 
-    /// Calculate the number of head words
+    /// Calculate the number of head words.
     fn head_words(&self) -> usize;
 
-    /// Calculate the number of tail words
+    /// Calculate the number of tail words.
     fn tail_words(&self) -> usize;
 
-    /// Calculate the total number of head and tail words
+    /// Calculate the total number of head and tail words.
     #[inline]
     fn total_words(&self) -> usize {
         self.head_words() + self.tail_words()
     }
 
-    /// Append head words to the encoder
+    /// Append head words to the encoder.
     fn head_append(&self, enc: &mut Encoder);
 
-    /// Append tail words to the encoder
+    /// Append tail words to the encoder.
     fn tail_append(&self, enc: &mut Encoder);
 }
 
@@ -81,7 +81,7 @@ pub trait TokenSeq: TokenType {
     fn decode_sequence<'a>(dec: &mut Decoder<'a>) -> Result<Self>;
 }
 
-/// A single EVM word - T for any value type
+/// A single EVM word - T for any value type.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct WordToken(pub Word);
 
@@ -179,13 +179,13 @@ impl TokenType for WordToken {
 }
 
 impl WordToken {
-    /// Returns a reference to the word as a slice
+    /// Returns a reference to the word as a slice.
     #[inline]
     pub const fn as_slice(&self) -> &[u8] {
         &self.0 .0
     }
 
-    /// Copy the inner word
+    /// Copy the inner word.
     #[inline]
     pub const fn inner(&self) -> Word {
         self.0
@@ -296,7 +296,7 @@ impl<T: TokenType, const N: usize> TokenSeq for FixedSeqToken<T, N> {
 }
 
 impl<T, const N: usize> FixedSeqToken<T, N> {
-    /// Take the backing array, consuming the token
+    /// Take the backing array, consuming the token.
     // https://github.com/rust-lang/rust-clippy/issues/4979
     #[allow(clippy::missing_const_for_fn)]
     #[inline]
@@ -304,13 +304,13 @@ impl<T, const N: usize> FixedSeqToken<T, N> {
         self.0
     }
 
-    /// Returns a reference to the array
+    /// Returns a reference to the array.
     #[inline]
     pub const fn as_array(&self) -> &[T; N] {
         &self.0
     }
 
-    /// Returns a reference to the array as a slice
+    /// Returns a reference to the array as a slice.
     #[inline]
     pub const fn as_slice(&self) -> &[T] {
         &self.0
@@ -393,7 +393,7 @@ impl<T: TokenType> TokenSeq for DynSeqToken<T> {
 }
 
 impl<T> DynSeqToken<T> {
-    /// Converts the sequence into the vector
+    /// Converts the sequence into the vector.
     // https://github.com/rust-lang/rust-clippy/issues/4979
     #[allow(clippy::missing_const_for_fn)]
     #[inline]
@@ -401,7 +401,7 @@ impl<T> DynSeqToken<T> {
         self.0
     }
 
-    /// Returns a reference to the backing slice
+    /// Returns a reference to the backing slice.
     #[inline]
     pub fn as_slice(&self) -> &[T] {
         &self.0
@@ -469,7 +469,7 @@ impl fmt::Debug for PackedSeqToken {
 }
 
 impl PackedSeqToken {
-    /// Consumes `self` to return the underlying vector
+    /// Consumes `self` to return the underlying vector.
     // https://github.com/rust-lang/rust-clippy/issues/4979
     #[allow(clippy::missing_const_for_fn)]
     #[inline]
@@ -477,7 +477,7 @@ impl PackedSeqToken {
         self.0
     }
 
-    /// Returns a reference to the slice
+    /// Returns a reference to the slice.
     #[inline]
     pub fn as_slice(&self) -> &[u8] {
         &self.0

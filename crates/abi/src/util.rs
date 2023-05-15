@@ -18,7 +18,7 @@ pub(crate) fn pad_u32(value: u32) -> Word {
     padded
 }
 
-/// Return Ok(()). Exists for the UDT macro's typecheck
+/// Return Ok(()). Exists for the UDT macro's typecheck.
 #[doc(hidden)]
 #[allow(clippy::missing_const_for_fn)] // clippy issue
 #[inline]

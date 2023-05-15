@@ -10,7 +10,7 @@ sol! {
         address[] baz;
     }
 
-    /// Nested struct
+    /// Nested struct.
     struct Nested {
         Foo[2] a;
         address b;

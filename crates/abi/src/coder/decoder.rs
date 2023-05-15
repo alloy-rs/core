@@ -104,7 +104,7 @@ impl<'a> Decoder<'a> {
         })
     }
 
-    /// Get a child decoder at the current offset
+    /// Get a child decoder at the current offset.
     #[inline]
     pub fn raw_child(&self) -> Decoder<'a> {
         self.child(self.offset).unwrap()
@@ -123,7 +123,7 @@ impl<'a> Decoder<'a> {
     }
 
     /// Peek a slice of size `len` from the buffer at a specific offset, without
-    /// advancing the offset
+    /// advancing the offset.
     #[inline]
     pub fn peek_len_at(&self, offset: usize, len: usize) -> Result<&'a [u8], Error> {
         self.peek(offset..offset + len)
@@ -136,7 +136,7 @@ impl<'a> Decoder<'a> {
     }
 
     /// Peek a word from the buffer at a specific offset, without advancing the
-    /// offset
+    /// offset.
     #[inline]
     pub fn peek_word_at(&self, offset: usize) -> Result<Word, Error> {
         Ok(Word::from_slice(
@@ -157,7 +157,7 @@ impl<'a> Decoder<'a> {
         util::as_u32(self.peek_word_at(offset)?, true)
     }
 
-    /// Peek the next word as a u32
+    /// Peek the next word as a u32.
     #[inline]
     pub fn peek_u32(&self) -> Result<u32> {
         util::as_u32(self.peek_word()?, true)
@@ -187,7 +187,7 @@ impl<'a> Decoder<'a> {
     }
 
     /// Takes a slice of bytes of the given length by consuming up to the next
-    /// word boundary
+    /// word boundary.
     pub fn take_slice(&mut self, len: usize) -> Result<&[u8], Error> {
         if self.validate {
             let padded_len = util::round_up_nearest_multiple(len, 32);
@@ -205,7 +205,7 @@ impl<'a> Decoder<'a> {
         Ok(res)
     }
 
-    /// True if this decoder is validating type correctness
+    /// True if this decoder is validating type correctness.
     #[inline]
     pub const fn validate(&self) -> bool {
         self.validate
@@ -266,7 +266,7 @@ pub fn decode_single<T: TokenType>(data: &[u8], validate: bool) -> Result<T> {
 }
 
 /// Decode top-level function args. Encodes as params if T is a tuple.
-/// Otherwise, wraps in a tuple and decodes
+/// Otherwise, wraps in a tuple and decodes.
 #[inline]
 pub fn decode_params<T: TokenSeq>(data: &[u8], validate: bool) -> Result<T> {
     if T::IS_TUPLE {

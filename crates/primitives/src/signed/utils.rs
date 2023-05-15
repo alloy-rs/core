@@ -47,7 +47,7 @@ pub const fn const_eq<const BITS: usize, const LIMBS: usize>(
     true
 }
 
-/// Compute the max value at compile time
+/// Compute the max value at compile time.
 pub(super) const fn max<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
     if LIMBS == 0 {
         return zero();

@@ -218,11 +218,11 @@ impl SolTuple {
 /// A custom type that implements `ethers_abi_enc::SolidityType`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CustomType {
-    /// A type that has not yet been resolved
+    /// A type that has not yet been resolved.
     Unresolved(Ident),
-    /// A user-defined type
+    /// A user-defined type.
     Udt(Box<Udt>),
-    /// A struct
+    /// A struct.
     Struct(Struct),
 }
 

@@ -72,7 +72,7 @@ pub trait SolError: Sized {
 /// `require(condition, reason)` statements in Solidity.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Revert {
-    /// The reason string, provided by the Solidity contract
+    /// The reason string, provided by the Solidity contract.
     pub reason: String,
 }
 

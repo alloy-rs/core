@@ -1,11 +1,11 @@
 use bytes::{BufMut, BytesMut};
 
-/// The header for an RLP item,
+/// The header for an RLP item,.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Header {
-    /// True if list, false otherwise
+    /// True if list, false otherwise.
     pub list: bool,
-    /// Length of the payload in bytes
+    /// Length of the payload in bytes.
     pub payload_length: usize,
 }
 
@@ -28,7 +28,7 @@ impl Header {
         }
     }
 
-    /// Returns the length of the encoded header
+    /// Returns the length of the encoded header.
     pub fn length(&self) -> usize {
         let mut out = BytesMut::new();
         self.encode(&mut out);

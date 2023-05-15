@@ -37,12 +37,12 @@ impl IntoIterator for Eip712Types {
 }
 
 impl Eip712Types {
-    /// Iterate over the underlying map
+    /// Iterate over the underlying map.
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<PropertyDef>)> {
         self.0.iter()
     }
 
-    /// Insert a new type
+    /// Insert a new type.
     pub fn insert(&mut self, key: String, value: Vec<PropertyDef>) {
         self.0.insert(key, value);
     }
@@ -156,7 +156,7 @@ impl TypedData {
         }
     }
 
-    /// Returns the domain for this typed data
+    /// Returns the domain for this typed data.
     pub const fn domain(&self) -> &Eip712Domain {
         &self.domain
     }
@@ -166,21 +166,21 @@ impl TypedData {
     }
 
     /// Coerce the message to the type specified by `primary_type`, using the
-    /// types map as a resolver
+    /// types map as a resolver.
     pub fn coerce(&self) -> Result<DynSolValue, DynAbiError> {
         let ty = self.resolve()?;
         ty.coerce(&self.message)
     }
 
     /// Calculate the `typeHash` for this value
-    /// Fails if this type is not a struct
+    /// Fails if this type is not a struct.
     pub fn type_hash(&self) -> Result<B256, DynAbiError> {
         let encode_type = self.resolver.encode_type(&self.primary_type)?;
         Ok(keccak256(encode_type))
     }
 
     /// Calculate the `hashStruct` for this value
-    /// Fails if this type is not a struct
+    /// Fails if this type is not a struct.
     pub fn hash_struct(&self) -> Result<B256, DynAbiError> {
         let mut type_hash = self.type_hash()?.to_vec();
         type_hash.extend(self.encode_data()?);

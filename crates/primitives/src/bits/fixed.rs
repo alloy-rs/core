@@ -85,7 +85,7 @@ impl<const N: usize> AsMut<[u8]> for FixedBytes<N> {
 }
 
 impl<const N: usize> FixedBytes<N> {
-    /// Array of Zero bytes
+    /// Array of Zero bytes.
     pub const ZERO: FixedBytes<N> = FixedBytes([0u8; N]);
 
     /// Instantiates a new fixed hash from the given bytes array.

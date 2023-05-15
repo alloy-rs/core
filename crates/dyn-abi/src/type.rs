@@ -45,44 +45,44 @@ struct StructProp {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DynSolType {
-    /// Address
+    /// Address.
     Address,
-    /// Dynamic bytes
+    /// Dynamic bytes.
     Bytes,
-    /// Signed Integer
+    /// Signed Integer.
     Int(usize),
-    /// Unsigned Integer
+    /// Unsigned Integer.
     Uint(usize),
-    /// Boolean
+    /// Boolean.
     Bool,
-    /// Dynamically sized array
+    /// Dynamically sized array.
     Array(Box<DynSolType>),
-    /// String
+    /// String.
     String,
-    /// Fixed-size bytes, up to 32
+    /// Fixed-size bytes, up to 32.
     FixedBytes(usize),
-    /// Fixed-sized array
+    /// Fixed-sized array.
     FixedArray(Box<DynSolType>, usize),
-    /// Tuple
+    /// Tuple.
     Tuple(Vec<DynSolType>),
-    /// User-defined struct
+    /// User-defined struct.
     CustomStruct {
-        /// Name of the struct
+        /// Name of the struct.
         name: String,
-        /// Prop names
+        /// Prop names.
         prop_names: Vec<String>,
-        /// Inner types
+        /// Inner types.
         tuple: Vec<DynSolType>,
     },
-    /// User-defined value
+    /// User-defined value.
     CustomValue {
-        /// Name of the value type
+        /// Name of the value type.
         name: String,
     },
 }
 
 impl DynSolType {
-    /// Dynamic tokenization
+    /// Dynamic tokenization.
     pub fn tokenize(&self, value: DynSolValue) -> Result<DynToken> {
         match (self, value) {
             (DynSolType::Address, DynSolValue::Address(val)) => {
@@ -215,7 +215,7 @@ impl DynSolType {
         }
     }
 
-    /// Dynamic detokenization
+    /// Dynamic detokenization.
     pub fn detokenize(&self, token: DynToken) -> Result<DynSolValue> {
         match (self, token) {
             (DynSolType::Address, DynToken::Word(word)) => Ok(DynSolValue::Address(
@@ -307,7 +307,7 @@ impl DynSolType {
         }
     }
 
-    /// Coerce a json value to a sol value via this type
+    /// Coerce a json value to a sol value via this type.
     pub fn coerce(&self, value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
         match self {
             DynSolType::Address => coerce::address(value),
@@ -329,7 +329,7 @@ impl DynSolType {
         }
     }
 
-    /// Instantiate an empty dyn token, to be decoded into
+    /// Instantiate an empty dyn token, to be decoded into.
     pub(crate) fn empty_dyn_token(&self) -> DynToken {
         match self {
             DynSolType::Address => DynToken::Word(Word::default()),
@@ -358,14 +358,14 @@ impl DynSolType {
         }
     }
 
-    /// Encode a single value. Fails if the value does not match this type
+    /// Encode a single value. Fails if the value does not match this type.
     pub fn encode_single(&self, value: DynSolValue) -> Result<Vec<u8>> {
         let mut encoder = crate::Encoder::default();
         self.tokenize(value)?.encode_single(&mut encoder)?;
         Ok(encoder.into_bytes())
     }
 
-    /// Decode a single value. Fails if the value does not match this type
+    /// Decode a single value. Fails if the value does not match this type.
     pub fn decode_single(&self, data: &[u8]) -> Result<DynSolValue> {
         let mut decoder = crate::Decoder::new(data, false);
         let mut toks = self.empty_dyn_token();
@@ -381,7 +381,7 @@ impl DynSolType {
         Ok(encoder.into_bytes())
     }
 
-    /// Decode a sequence of values. Fails if the values do not match this type
+    /// Decode a sequence of values. Fails if the values do not match this type.
     pub fn decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
         let mut decoder = crate::Decoder::new(data, false);
         let mut toks = self.empty_dyn_token();

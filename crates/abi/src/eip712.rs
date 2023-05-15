@@ -57,10 +57,10 @@ pub struct Eip712Domain {
 }
 
 impl Eip712Domain {
-    /// The name of the struct
+    /// The name of the struct.
     pub const NAME: &'static str = "EIP712Domain";
 
-    /// Instantiate a new domain
+    /// Instantiate a new domain.
     #[inline]
     pub const fn new(
         name: Option<Cow<'static, str>>,

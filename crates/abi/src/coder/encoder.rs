@@ -107,7 +107,7 @@ impl Encoder {
         unsafe { into_flattened::<32>(mem::transmute(self.buf)) }
     }
 
-    /// Determine the current suffix offset
+    /// Determine the current suffix offset.
     #[inline]
     pub fn suffix_offset(&self) -> u32 {
         *self.suffix_offset.last().unwrap()
@@ -125,7 +125,7 @@ impl Encoder {
         self.suffix_offset.pop()
     }
 
-    /// Bump the suffix offset by a given number of words
+    /// Bump the suffix offset by a given number of words.
     #[inline]
     pub fn bump_offset(&mut self, words: u32) {
         if let Some(last) = self.suffix_offset.last_mut() {
@@ -133,25 +133,25 @@ impl Encoder {
         }
     }
 
-    /// Append a word to the encoder
+    /// Append a word to the encoder.
     #[inline]
     pub fn append_word(&mut self, word: Word) {
         self.buf.push(word);
     }
 
-    /// Append a pointer to the current suffix offset
+    /// Append a pointer to the current suffix offset.
     #[inline]
     pub fn append_indirection(&mut self) {
         self.append_word(pad_u32(self.suffix_offset()));
     }
 
-    /// Append a sequence length
+    /// Append a sequence length.
     #[inline]
     pub fn append_seq_len<T>(&mut self, seq: &[T]) {
         self.append_word(pad_u32(seq.len() as u32));
     }
 
-    /// Append a seqeunce of bytes, padding to the next word
+    /// Append a seqeunce of bytes, padding to the next word.
     #[inline]
     fn append_bytes(&mut self, bytes: &[u8]) {
         let len = (bytes.len() + 31) / 32;
@@ -172,14 +172,14 @@ impl Encoder {
         }
     }
 
-    /// Append a sequence of bytes as a packed sequence with a length prefix
+    /// Append a sequence of bytes as a packed sequence with a length prefix.
     #[inline]
     pub fn append_packed_seq(&mut self, bytes: &[u8]) {
         self.append_seq_len(bytes);
         self.append_bytes(bytes);
     }
 
-    /// Shortcut for appending a token sequence
+    /// Shortcut for appending a token sequence.
     #[inline]
     pub fn append_head_tail<T: TokenSeq>(&mut self, token: &T) {
         token.encode_sequence(self);
@@ -201,7 +201,7 @@ pub fn encode_single<T: TokenType>(token: &T) -> Vec<u8> {
     encode::<(T,)>(unsafe { &*(token as *const T).cast::<(T,)>() })
 }
 
-/// Encode a tuple as ABI function params, suitable for passing to a function
+/// Encode a tuple as ABI function params, suitable for passing to a function.
 #[inline]
 pub fn encode_params<T: TokenSeq>(token: &T) -> Vec<u8> {
     if T::IS_TUPLE {

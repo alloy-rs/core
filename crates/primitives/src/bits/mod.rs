@@ -13,7 +13,7 @@ mod serialize;
 #[cfg(feature = "rlp")]
 mod rlp;
 
-/// 32-byte fixed array type
+/// 32-byte fixed array type.
 pub type B256 = FixedBytes<32>;
 
 impl From<crate::U256> for B256 {

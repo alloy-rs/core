@@ -21,30 +21,30 @@ macro_rules! define_udt {
         );
 
         impl $name {
-            /// The Solidity type name
+            /// The Solidity type name.
             pub const NAME: &'static str = stringify!($name);
 
-            /// Convert from the underlying value type
+            /// Convert from the underlying value type.
             #[inline]
             pub const fn from(value: <$underlying as $crate::SolType>::RustType) -> Self {
                 Self(value)
             }
 
-            /// Return the underlying value
+            /// Return the underlying value.
             #[inline]
             pub const fn into(self) -> <$underlying as $crate::SolType>::RustType {
                 self.0
             }
 
             /// Return the single encoding of this value, delegating to the
-            /// underlying type
+            /// underlying type.
             #[inline]
             pub fn encode_single(&self) -> $crate::no_std_prelude::Vec<u8> {
                 <Self as $crate::SolType>::encode_single(self.0)
             }
 
             /// Return the packed encoding of this value, delegating to the
-            /// underlying type
+            /// underlying type.
             #[inline]
             pub fn encode_packed(&self) -> $crate::no_std_prelude::Vec<u8> {
                 <Self as $crate::SolType>::encode_packed(self.0)
