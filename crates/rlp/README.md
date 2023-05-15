@@ -1,4 +1,4 @@
-## RLP crate
+## ethers-rlp
 
 This crate provides Ethereum RLP (de)serialization functionality. RLP is
 commonly used for Ethereum EL datastructures, and its documentation can be
