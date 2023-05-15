@@ -54,7 +54,7 @@ impl Parse for Parameters<Token![,]> {
     }
 }
 
-/// Struct: enforce semicolon after each field and field name
+/// Struct: enforce semicolon after each field and field name.
 impl Parse for Parameters<Token![;]> {
     fn parse(input: ParseStream) -> Result<Self> {
         let this = input.parse_terminated(VariableDeclaration::parse_for_struct, Token![;])?;
@@ -184,15 +184,15 @@ impl<P> Parameters<P> {
 /// `<ty> [storage] <name>`
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclaration {
-    /// The type of the variable
+    /// The type of the variable.
     pub ty: Type,
-    /// The storage location, if any, of the variable
+    /// The storage location, if any, of the variable.
     pub storage: Option<Storage>,
     /// The name of the variable. This is always Some if parsed as part of [`Parameters`].
     pub name: Option<SolIdent>,
 }
 
-/// Formats as an EIP712 field: `<ty> <name>`
+/// Formats as an EIP-712 field: `<ty> <name>`
 impl fmt::Display for VariableDeclaration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // important: Custom structs are encoded dynamically at run time.

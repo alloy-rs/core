@@ -53,8 +53,8 @@ impl Error {
         let converts = from_into_tuples(&name.0, &self.fields);
         quote! {
             #(#attrs)*
-            #[derive(Debug, Clone, PartialEq)] // TODO: Derive traits dynamically
             #[allow(non_camel_case_types, non_snake_case)]
+            #[derive(Clone)]
             pub struct #name {
                 #(pub #fields,)*
             }

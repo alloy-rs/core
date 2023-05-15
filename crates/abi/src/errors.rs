@@ -10,27 +10,27 @@
 use crate::no_std_prelude::*;
 use core::fmt;
 
-/// ABI result type
-pub type AbiResult<T> = core::result::Result<T, Error>;
+/// ABI result type.
+pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// ABI Encoding and Decoding errors.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
-    /// A typecheck detected a word that does not match the data type
+    /// A typecheck detected a word that does not match the data type.
     TypeCheckFail {
-        /// The Solidity type we failed to produce
+        /// The Solidity type we failed to produce.
         expected_type: Cow<'static, str>,
-        /// Hex-encoded data
+        /// Hex-encoded data.
         data: String,
     },
 
-    /// Overran deserialization buffer
+    /// Overran deserialization buffer.
     Overrun,
 
-    /// Validation reserialization did not match input
+    /// Validation reserialization did not match input.
     ReserMismatch,
 
-    /// Hex error
+    /// Hex error.
     FromHexError(hex::FromHexError),
 
     /// Other errors.
@@ -68,18 +68,21 @@ impl fmt::Display for Error {
 }
 
 impl Error {
-    /// Instantiates a new error with a static str
+    /// Instantiates a new error with a static str.
     pub fn custom(s: impl Into<Cow<'static, str>>) -> Self {
         Self::Other(s.into())
     }
 
-    /// Instantiates a [`Error::TypeCheckFail`] with the provided data
-    pub fn type_check_fail_sig(data: &[u8], signature: &'static str) -> Self {
+    /// Instantiates a [`Error::TypeCheckFail`] with the provided data.
+    pub fn type_check_fail_sig(mut data: &[u8], signature: &'static str) -> Self {
+        if data.len() > 4 {
+            data = &data[..4];
+        }
         let expected_type = signature.split('(').next().unwrap_or(signature);
         Self::type_check_fail(data, expected_type)
     }
 
-    /// Instantiates a [`Error::TypeCheckFail`] with the provided data
+    /// Instantiates a [`Error::TypeCheckFail`] with the provided data.
     pub fn type_check_fail(data: &[u8], expected_type: impl Into<Cow<'static, str>>) -> Self {
         Self::TypeCheckFail {
             expected_type: expected_type.into(),

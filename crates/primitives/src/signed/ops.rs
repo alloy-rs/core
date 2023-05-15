@@ -982,10 +982,7 @@ where
     T: Into<Signed<BITS, LIMBS>>,
 {
     #[track_caller]
-    fn sum<I>(iter: I) -> Self
-    where
-        I: Iterator<Item = T>,
-    {
+    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Signed::zero(), |acc, x| acc + x)
     }
 }
@@ -995,10 +992,7 @@ where
     T: Into<Signed<BITS, LIMBS>>,
 {
     #[track_caller]
-    fn product<I>(iter: I) -> Self
-    where
-        I: Iterator<Item = T>,
-    {
+    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Signed::one(), |acc, x| acc * x)
     }
 }

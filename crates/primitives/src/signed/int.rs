@@ -110,19 +110,19 @@ impl<const BITS: usize, const LIMBS: usize> fmt::UpperHex for Signed<BITS, LIMBS
 }
 
 impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
-    /// Mask for the highest limb
+    /// Mask for the highest limb.
     pub(crate) const MASK: u64 = mask(BITS);
 
-    /// Location of the sign bit within the highest limb
+    /// Location of the sign bit within the highest limb.
     pub(crate) const SIGN_BIT: u64 = sign_bit(BITS);
 
-    /// Number of bits
+    /// Number of bits.
     pub const BITS: usize = BITS;
 
-    /// The minimum value
+    /// The minimum value.
     pub const MIN: Self = min();
 
-    /// The maximum value
+    /// The maximum value.
     pub const MAX: Self = max();
 
     /// Zero (additive identity) of this type.
@@ -134,7 +134,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Minus one (multiplicative inverse) of this type.
     pub const MINUS_ONE: Self = Self(Uint::<BITS, LIMBS>::MAX);
 
-    /// Zero (additive iden
+    /// Zero (additive iden.
     #[inline(always)]
     pub const fn zero() -> Self {
         Self::ZERO
@@ -219,7 +219,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         Sign::Positive
     }
 
-    /// Determines if the integer is odd
+    /// Determines if the integer is odd.
     pub const fn is_odd(self) -> bool {
         if BITS == 0 {
             false
@@ -236,14 +236,14 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 
     /// Returns `true` if `self` is positive and `false` if the number is zero
-    /// or negative
+    /// or negative.
     #[inline(always)]
     pub const fn is_positive(self) -> bool {
         !self.is_zero() && matches!(self.sign(), Sign::Positive)
     }
 
     /// Returns `true` if `self` is negative and `false` if the number is zero
-    /// or positive
+    /// or positive.
     #[inline(always)]
     pub const fn is_negative(self) -> bool {
         matches!(self.sign(), Sign::Negative)
@@ -311,7 +311,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Return the least number of bits needed to represent the number
+    /// Return the least number of bits needed to represent the number.
     #[inline(always)]
     pub fn bits(self) -> u32 {
         let unsigned = self.unsigned_abs();
@@ -465,27 +465,27 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         Self(Uint::from_le_bytes::<BYTES>(bytes))
     }
 
-    /// Convert from a slice in BE format
+    /// Convert from a slice in BE format.
     pub fn try_from_be_slice(slice: &[u8]) -> Option<Self> {
         Some(Self(Uint::try_from_be_slice(slice)?))
     }
 
-    /// Convert from a slice in LE format
+    /// Convert from a slice in LE format.
     pub fn try_from_le_slice(slice: &[u8]) -> Option<Self> {
         Some(Self(Uint::try_from_le_slice(slice)?))
     }
 
-    /// Get a reference to the underlying limbs
+    /// Get a reference to the underlying limbs.
     pub const fn as_limbs(&self) -> &[u64; LIMBS] {
         self.0.as_limbs()
     }
 
-    /// Get the underlying limbs
+    /// Get the underlying limbs.
     pub const fn into_limbs(self) -> [u64; LIMBS] {
         self.0.into_limbs()
     }
 
-    /// Instantiate from limbs
+    /// Instantiate from limbs.
     pub const fn from_limbs(limbs: [u64; LIMBS]) -> Self {
         Self(Uint::from_limbs(limbs))
     }
@@ -493,20 +493,14 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
 #[cfg(feature = "serde")]
 impl<const BITS: usize, const LIMBS: usize> serde::Serialize for Signed<BITS, LIMBS> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.to_string().serialize(serializer)
     }
 }
 
 #[cfg(feature = "serde")]
 impl<'de, const BITS: usize, const LIMBS: usize> serde::Deserialize<'de> for Signed<BITS, LIMBS> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let s = String::deserialize(deserializer)?;
         s.parse().map_err(serde::de::Error::custom)
     }

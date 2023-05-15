@@ -1,4 +1,4 @@
-use core::{fmt, ops};
+use core::{fmt, ops, str};
 use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut};
 
 /// A bytearray of fixed length.
@@ -28,6 +28,7 @@ use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut};
     Index,
     IndexMut,
 )]
+#[repr(transparent)]
 pub struct FixedBytes<const N: usize>(pub [u8; N]);
 
 impl<const N: usize> Default for FixedBytes<N> {
@@ -84,7 +85,7 @@ impl<const N: usize> AsMut<[u8]> for FixedBytes<N> {
 }
 
 impl<const N: usize> FixedBytes<N> {
-    /// Array of Zero bytes
+    /// Array of Zero bytes.
     pub const ZERO: FixedBytes<N> = FixedBytes([0u8; N]);
 
     /// Instantiates a new fixed hash from the given bytes array.
@@ -118,51 +119,61 @@ impl<const N: usize> FixedBytes<N> {
     pub const fn repeat_byte(byte: u8) -> FixedBytes<N> {
         FixedBytes([byte; N])
     }
+
     /// Returns a new zero-initialized fixed hash.
     #[inline]
     pub const fn zero() -> FixedBytes<N> {
         FixedBytes::repeat_byte(0u8)
     }
+
     /// Returns the size of this hash in bytes.
     #[inline]
     pub const fn len_bytes() -> usize {
         N
     }
+
     /// Extracts a byte slice containing the entire fixed hash.
     #[inline]
     pub const fn as_bytes(&self) -> &[u8] {
         &self.0
     }
+
     /// Extracts a mutable byte slice containing the entire fixed hash.
     #[inline]
     pub fn as_bytes_mut(&mut self) -> &mut [u8] {
         &mut self.0
     }
+
     /// Extracts a reference to the byte array containing the entire fixed hash.
     #[inline]
     pub const fn as_fixed_bytes(&self) -> &[u8; N] {
         &self.0
     }
+
     /// Extracts a reference to the byte array containing the entire fixed hash.
     #[inline]
     pub fn as_fixed_bytes_mut(&mut self) -> &mut [u8; N] {
         &mut self.0
     }
+
     /// Returns the inner bytes array.
     #[inline]
     pub const fn to_fixed_bytes(self) -> [u8; N] {
         self.0
     }
+
     /// Returns a constant raw pointer to the value.
     #[inline]
     pub const fn as_ptr(&self) -> *const u8 {
         self.as_bytes().as_ptr()
     }
+
     /// Returns a mutable raw pointer to the value.
     #[inline]
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
         self.as_bytes_mut().as_mut_ptr()
     }
+
     /// Create a new fixed-hash from the given slice `src`.
     ///
     /// # Note
@@ -178,6 +189,7 @@ impl<const N: usize> FixedBytes<N> {
         ret.copy_from_slice(src);
         ret
     }
+
     /// Returns `true` if all bits set in `b` are also set in `self`.
 
     #[inline]
@@ -190,6 +202,10 @@ impl<const N: usize> FixedBytes<N> {
     pub fn is_zero(&self) -> bool {
         self.as_bytes().iter().all(|x| *x == 0)
     }
+
+    // TODO
+    // pub fn hex_encode(&self) -> String {
+    // }
 
     /// Compile-time equality. NOT constant-time equality.
     #[inline]
@@ -258,57 +274,44 @@ impl<const N: usize> FixedBytes<N> {
 }
 
 impl<const N: usize> fmt::Debug for FixedBytes<N> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:#x}", self)
+        self.fmt_hex(f, true)
     }
 }
 
 impl<const N: usize> fmt::Display for FixedBytes<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if N <= 4 {
-            return fmt::Debug::fmt(self, f);
-        }
-
         // If the alternate flag is NOT set, we write the full hex.
-        if !f.alternate() {
-            return write!(f, "{:#x}", self);
+        if N <= 4 || !f.alternate() {
+            return self.fmt_hex(f, true);
         }
 
         // If the alternate flag is set, we use middle-out compression.
-        write!(f, "0x")?;
-        for i in &self.0[0..2] {
-            write!(f, "{:02x}", i)?;
-        }
-        write!(f, "…")?;
-        for i in &self.0[N - 2..N] {
-            write!(f, "{:02x}", i)?;
-        }
+        const SEP_LEN: usize = '…'.len_utf8();
+        let mut buf = [0; 2 + 4 + SEP_LEN + 4];
+        buf[0] = b'0';
+        buf[1] = b'x';
+        hex::encode_to_slice(&self.0[0..2], &mut buf[2..6]).unwrap();
+        '…'.encode_utf8(&mut buf[6..]);
+        hex::encode_to_slice(&self.0[N - 2..N], &mut buf[6 + SEP_LEN..]).unwrap();
 
-        Ok(())
+        // SAFETY: always valid UTF-8
+        f.write_str(unsafe { str::from_utf8_unchecked(&buf) })
     }
 }
 
 impl<const N: usize> fmt::LowerHex for FixedBytes<N> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        for i in &self.0[..] {
-            write!(f, "{:02x}", i)?;
-        }
-        Ok(())
+        self.fmt_hex(f, f.alternate())
     }
 }
 
 impl<const N: usize> fmt::UpperHex for FixedBytes<N> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if f.alternate() {
-            write!(f, "0x")?;
-        }
-        for i in &self.0[..] {
-            write!(f, "{:02X}", i)?;
-        }
-        Ok(())
+        self.fmt_hex_upper(f, f.alternate())
     }
 }
 
@@ -369,5 +372,72 @@ impl<const N: usize> core::str::FromStr for FixedBytes<N> {
         let mut buf = [0u8; N];
         hex::decode_to_slice(s, &mut buf)?;
         Ok(Self(buf))
+    }
+}
+
+impl<const N: usize> FixedBytes<N> {
+    fn fmt_hex(&self, f: &mut fmt::Formatter<'_>, prefix: bool) -> fmt::Result {
+        if prefix {
+            f.write_str("0x")?;
+        }
+        let mut buf = hex::Buffer::new();
+        f.write_str(buf.format(&self.0))
+    }
+
+    fn fmt_hex_upper(&self, f: &mut fmt::Formatter<'_>, prefix: bool) -> fmt::Result {
+        if prefix {
+            f.write_str("0x")?;
+        }
+        let mut buf = hex::Buffer::new();
+        f.write_str(buf.format_upper(&self.0))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hex_literal::hex;
+
+    macro_rules! test_fmt {
+        ($($fmt:literal, $hex:literal => $expected:literal;)+) => {$(
+            assert_eq!(
+                format!($fmt, FixedBytes::from(hex!($hex))),
+                $expected
+            );
+        )+};
+    }
+
+    #[test]
+    fn display() {
+        test_fmt! {
+            "{}", "0123456789abcdef" => "0x0123456789abcdef";
+            "{:#}", "0123" => "0x0123";
+            "{:#}", "01234567" => "0x01234567";
+            "{:#}", "0123456789" => "0x0123…6789";
+        }
+    }
+
+    #[test]
+    fn debug() {
+        test_fmt! {
+            "{:?}", "0123456789abcdef" => "0x0123456789abcdef";
+            "{:#?}", "0123456789abcdef" => "0x0123456789abcdef";
+        }
+    }
+
+    #[test]
+    fn lower_hex() {
+        test_fmt! {
+            "{:x}", "0123456789abcdef" => "0123456789abcdef";
+            "{:#x}", "0123456789abcdef" => "0x0123456789abcdef";
+        }
+    }
+
+    #[test]
+    fn upper_hex() {
+        test_fmt! {
+            "{:X}", "0123456789abcdef" => "0123456789ABCDEF";
+            "{:#X}", "0123456789abcdef" => "0x0123456789ABCDEF";
+        }
     }
 }

@@ -27,7 +27,7 @@
 //! [`crate::decode_params()`] reverse this operation, decoding a tuple from a
 //! blob.
 //!
-//! This is used to encode the parameters for a solidity function
+//! This is used to encode the parameters for a Solidity function
 //!
 //! ### `encode/decode`
 //!
@@ -36,14 +36,14 @@
 //!
 //! This is the least useful one. Most users will not need it.
 
-#[cfg(not(feature = "std"))]
-use crate::no_std_prelude::*;
-use crate::{token::TokenSeq, util::pad_u32, TokenType, Word};
+use crate::{no_std_prelude::*, token::TokenSeq, util::pad_u32, TokenType, Word};
+use core::mem;
 
-/// An ABI encoder. This is not intended for public consumption. It should be
-/// used only by the token types. If you have found yourself here, you probably
-/// want to use the high-level [`crate::SolType`] interface (or its dynamic
-/// equivalent) instead.
+/// An ABI encoder.
+///
+/// This is not intended for public consumption. It should be used only by the
+/// token types. If you have found yourself here, you probably want to use the
+/// high-level [`crate::SolType`] interface (or its dynamic equivalent) instead.
 #[derive(Default, Clone, Debug)]
 pub struct Encoder {
     buf: Vec<Word>,
@@ -51,7 +51,17 @@ pub struct Encoder {
 }
 
 impl Encoder {
+    /// Instantiate a new empty encoder.
+    #[inline]
+    pub const fn new() -> Self {
+        Self {
+            buf: Vec::new(),
+            suffix_offset: Vec::new(),
+        }
+    }
+
     /// Instantiate a new encoder with a given capacity in words.
+    #[inline]
     pub fn with_capacity(size: usize) -> Self {
         Self {
             buf: Vec::with_capacity(size + 1),
@@ -59,57 +69,72 @@ impl Encoder {
         }
     }
 
-    /// Finish the encoding process, returning the encoded words
+    /// Finish the encoding process, returning the encoded words.
+    ///
+    /// Use `into_bytes` instead to flatten the words into bytes.
     // https://github.com/rust-lang/rust-clippy/issues/4979
     #[allow(clippy::missing_const_for_fn)]
+    #[inline]
     pub fn finish(self) -> Vec<Word> {
         self.buf
     }
 
-    /// Finish the encoding process, returning the encoded bytes
+    /// Finish the encoding process, returning the encoded bytes.
+    #[inline]
     pub fn into_bytes(self) -> Vec<u8> {
-        self.buf
-            .into_iter()
-            .flat_map(Word::to_fixed_bytes)
-            .collect()
+        // TODO: remove once `Vec::into_flattened` is stabilized.
+        // unsafe { mem::transmute::<Vec<_>, Vec<[u8; 32]>>(self.buf).into_flattened() }
+
+        // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`
+        unsafe { super::impl_core::into_flattened::<_, 32>(mem::transmute(self.buf)) }
     }
 
-    /// Determine the current suffix offset
+    /// Determine the current suffix offset.
+    #[inline]
     pub fn suffix_offset(&self) -> u32 {
         *self.suffix_offset.last().unwrap()
     }
 
-    /// Push a new suffix offset
+    /// Appends a suffix offset.
+    #[inline]
     pub fn push_offset(&mut self, words: u32) {
         self.suffix_offset.push(words * 32);
     }
 
-    /// Pop the last suffix offset
-    pub fn pop_offset(&mut self) -> u32 {
-        self.suffix_offset.pop().unwrap()
+    /// Removes the last offset and returns it.
+    #[inline]
+    pub fn pop_offset(&mut self) -> Option<u32> {
+        self.suffix_offset.pop()
     }
 
-    /// Bump the suffix offset by a given number of words
+    /// Bump the suffix offset by a given number of words.
+    #[inline]
     pub fn bump_offset(&mut self, words: u32) {
-        (*self.suffix_offset.last_mut().unwrap()) += words * 32;
+        if let Some(last) = self.suffix_offset.last_mut() {
+            *last += words * 32;
+        }
     }
 
-    /// Append a word to the encoder
+    /// Append a word to the encoder.
+    #[inline]
     pub fn append_word(&mut self, word: Word) {
         self.buf.push(word);
     }
 
-    /// Append a pointer to the current suffix offset
+    /// Append a pointer to the current suffix offset.
+    #[inline]
     pub fn append_indirection(&mut self) {
         self.append_word(pad_u32(self.suffix_offset()));
     }
 
-    /// Append a sequence length
+    /// Append a sequence length.
+    #[inline]
     pub fn append_seq_len<T>(&mut self, seq: &[T]) {
         self.append_word(pad_u32(seq.len() as u32));
     }
 
-    /// Append a seqeunce of bytes, padding to the next word
+    /// Append a seqeunce of bytes, padding to the next word.
+    #[inline]
     fn append_bytes(&mut self, bytes: &[u8]) {
         let len = (bytes.len() + 31) / 32;
         for i in 0..len {
@@ -129,61 +154,42 @@ impl Encoder {
         }
     }
 
-    /// Append a sequence of bytes as a packed sequence with a length prefix
+    /// Append a sequence of bytes as a packed sequence with a length prefix.
+    #[inline]
     pub fn append_packed_seq(&mut self, bytes: &[u8]) {
         self.append_seq_len(bytes);
         self.append_bytes(bytes);
     }
 
-    /// Shortcut for appending a token sequence
-    pub fn append_head_tail<T>(&mut self, token: &T)
-    where
-        T: TokenSeq,
-    {
+    /// Shortcut for appending a token sequence.
+    #[inline]
+    pub fn append_head_tail<T: TokenSeq>(&mut self, token: &T) {
         token.encode_sequence(self);
     }
 }
 
-/// Encodes vector of tokens into ABI-compliant vector of bytes.
-pub(crate) fn encode_impl<T>(tokens: T) -> Vec<u8>
-where
-    T: TokenSeq,
-{
+/// ABI-encode a token sequence.
+pub fn encode<T: TokenSeq>(tokens: &T) -> Vec<u8> {
     let mut enc = Encoder::with_capacity(tokens.total_words());
-
-    enc.append_head_tail(&tokens);
-
-    enc.finish()
-        .into_iter()
-        .flat_map(Word::to_fixed_bytes)
-        .collect()
+    enc.append_head_tail(tokens);
+    enc.into_bytes()
 }
 
-/// Encode an ABI token sequence
-pub fn encode<T>(token: T) -> Vec<u8>
-where
-    T: TokenSeq,
-{
-    encode_impl(token)
+/// ABI-encode a single token.
+#[inline]
+pub fn encode_single<T: TokenType>(token: &T) -> Vec<u8> {
+    // Same as [`core::array::from_ref`].
+    // SAFETY: Converting `&T` to `&(T,)` is sound.
+    encode::<(T,)>(unsafe { &*(token as *const T).cast::<(T,)>() })
 }
 
-/// Encode a single token
-pub fn encode_single<T>(token: T) -> Vec<u8>
-where
-    T: TokenType,
-{
-    encode((token,))
-}
-
-/// Encode a tuple as ABI function params, suitable for passing to a function
-pub fn encode_params<T>(token: T) -> Vec<u8>
-where
-    T: TokenSeq,
-{
-    if T::can_be_params() {
+/// Encode a tuple as ABI function params, suitable for passing to a function.
+#[inline]
+pub fn encode_params<T: TokenSeq>(token: &T) -> Vec<u8> {
+    if T::IS_TUPLE {
         encode(token)
     } else {
-        encode((token,))
+        encode_single(token)
     }
 }
 

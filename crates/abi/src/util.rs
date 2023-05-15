@@ -9,7 +9,7 @@
 
 //! Utils used by different modules.
 
-use crate::{AbiResult, Error, Word};
+use crate::{Error, Result, Word};
 
 /// Converts a u32 to a right aligned array of 32 bytes.
 pub(crate) fn pad_u32(value: u32) -> Word {
@@ -18,22 +18,25 @@ pub(crate) fn pad_u32(value: u32) -> Word {
     padded
 }
 
-// clippy issue
+/// Return Ok(()). Exists for the UDT macro's typecheck.
 #[doc(hidden)]
-#[allow(clippy::missing_const_for_fn)]
-/// Return Ok(()). Exists for the UDT macro's typecheck
-pub fn just_ok<T>(_: T) -> crate::AbiResult<()> {
+#[allow(clippy::missing_const_for_fn)] // clippy issue
+#[inline]
+pub fn just_ok<T>(_: T) -> crate::Result<()> {
     Ok(())
 }
 
+#[inline]
 pub(crate) fn check_zeroes(data: &[u8]) -> bool {
     data.iter().all(|b| *b == 0)
 }
 
+#[inline]
 pub(crate) const fn round_up_nearest_multiple(value: usize, padding: usize) -> usize {
     (value + padding - 1) / padding * padding
 }
 
+#[inline]
 pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
     if word.is_empty() {
         return true;
@@ -46,7 +49,8 @@ pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
     }
 }
 
-pub(crate) fn as_u32(word: Word, type_check: bool) -> AbiResult<u32> {
+#[inline]
+pub(crate) fn as_u32(word: Word, type_check: bool) -> Result<u32> {
     if type_check && !check_zeroes(&word[..28]) {
         return Err(Error::type_check_fail(
             &word[..],
@@ -55,13 +59,14 @@ pub(crate) fn as_u32(word: Word, type_check: bool) -> AbiResult<u32> {
     }
 
     let result = ((word[28] as u32) << 24)
-        + ((word[29] as u32) << 16)
-        + ((word[30] as u32) << 8)
-        + (word[31] as u32);
+        | ((word[29] as u32) << 16)
+        | ((word[30] as u32) << 8)
+        | (word[31] as u32);
 
     Ok(result)
 }
 
+#[inline]
 pub(crate) fn check_bool(slice: Word) -> bool {
     check_zeroes(&slice[..31])
 }

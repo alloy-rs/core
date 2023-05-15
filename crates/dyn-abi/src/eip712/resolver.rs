@@ -1,9 +1,3 @@
-use core::cmp::Ordering;
-
-use ethers_abi_enc::SolStruct;
-use ethers_primitives::{keccak256, B256};
-use serde::{Deserialize, Serialize};
-
 use crate::{
     eip712::typed_data::Eip712Types,
     eip712_parser::EncodeType,
@@ -11,42 +5,45 @@ use crate::{
     parser::{RootType, TypeSpecifier, TypeStem},
     DynAbiError, DynSolType, DynSolValue,
 };
+use alloc::collections::{BTreeMap, BTreeSet};
+use core::cmp::Ordering;
+use core::fmt;
+use ethers_abi_enc::SolStruct;
+use ethers_primitives::{keccak256, B256};
+use serde::{Deserialize, Deserializer, Serialize};
 
-/// An EIP-712 property definition
+/// An EIP-712 property definition.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
 pub struct PropertyDef {
-    /// Typename
+    /// Typename.
     #[serde(rename = "type")]
     type_name: String,
-    /// Property Name
+    /// Property Name.
     name: String,
 }
 
-impl<'de> serde::Deserialize<'de> for PropertyDef {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
+impl<'de> Deserialize<'de> for PropertyDef {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
         struct Helper {
             #[serde(rename = "type")]
             type_name: String,
             name: String,
         }
-        let h: Helper = serde::Deserialize::deserialize(deserializer)?;
+        let h: Helper = Deserialize::deserialize(deserializer)?;
         Self::new(h.type_name, h.name).map_err(serde::de::Error::custom)
     }
 }
 
 impl PropertyDef {
-    /// Instantiate a new name-type pair
+    /// Instantiate a new name-type pair.
     pub fn new(type_name: impl AsRef<str>, name: impl AsRef<str>) -> Result<Self, DynAbiError> {
         let type_name: TypeSpecifier<'_> = type_name.as_ref().try_into()?;
         Ok(Self::new_unchecked(type_name, name))
     }
 
     /// Instantiate a new name-type pair, without checking that the type name
-    /// is a valid root type
+    /// is a valid root type.
     pub fn new_unchecked(type_name: impl AsRef<str>, name: impl AsRef<str>) -> Self {
         Self {
             type_name: type_name.as_ref().to_owned(),
@@ -54,12 +51,12 @@ impl PropertyDef {
         }
     }
 
-    /// Returns the type name of the property
+    /// Returns the type name of the property.
     pub fn type_name(&self) -> &str {
         &self.type_name
     }
 
-    /// Returns the root type of the name/type pair, stripping any array
+    /// Returns the root type of the name/type pair, stripping any array.
     pub fn root_type_name(&self) -> &str {
         self.type_name
             .split_once('[')
@@ -67,7 +64,7 @@ impl PropertyDef {
             .unwrap_or(&self.type_name)
     }
 
-    /// Returns the name of the property
+    /// Returns the name of the property.
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -75,9 +72,9 @@ impl PropertyDef {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeDef {
-    /// Must always be a ROOT type name with any array stripped
+    /// Must always be a ROOT type name with any array stripped.
     type_name: String,
-    /// A list of property definitions
+    /// A list of property definitions.
     props: Vec<PropertyDef>,
 }
 
@@ -96,13 +93,13 @@ impl PartialOrd for TypeDef {
 
 impl fmt::Display for TypeDef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.encode_type())
+        self.fmt_eip712_encode_type(f)
     }
 }
 
 impl TypeDef {
     /// Instantiate a new type definition, checking that the type name is a
-    /// valid root type
+    /// valid root type.
     pub fn new(type_name: impl AsRef<str>, props: Vec<PropertyDef>) -> Result<Self, DynAbiError> {
         let _rt: RootType<'_> = type_name.as_ref().try_into()?;
         Ok(Self {
@@ -112,51 +109,69 @@ impl TypeDef {
     }
 
     /// Instantiate a new type definition, without checking that the type name
-    /// is a valid root type. This may result in bad behavior in a resolver
+    /// is a valid root type. This may result in bad behavior in a resolver.
     pub fn new_unchecked(type_name: String, props: Vec<PropertyDef>) -> Self {
         Self { type_name, props }
     }
 
-    /// Returns the type name of the type definition
+    /// Returns the type name of the type definition.
     pub fn type_name(&self) -> &str {
         &self.type_name
     }
 
-    /// Returns the property definitions of the type definition
+    /// Returns the property definitions of the type definition.
     pub fn props(&self) -> &[PropertyDef] {
         &self.props
     }
 
-    /// Returns the property names of the type definition
+    /// Returns the property names of the type definition.
     pub fn prop_names(&self) -> impl Iterator<Item = &str> + '_ {
         self.props.iter().map(|p| p.name())
     }
 
-    /// Returns the root property types of the type definition
+    /// Returns the root property types of the type definition.
     pub fn prop_root_types(&self) -> impl Iterator<Item = &str> + '_ {
         self.props.iter().map(|p| p.root_type_name())
     }
 
-    /// Returns the property types of the type definition
+    /// Returns the property types of the type definition.
     pub fn prop_types(&self) -> impl Iterator<Item = &str> + '_ {
         self.props.iter().map(|p| p.type_name())
     }
 
-    /// Produces the EIP-712 `encodeType` typestring for this type definition
-    pub fn encode_type(&self) -> String {
-        let mut encoded = format!("{}(", self.type_name);
-        for prop in self.props.iter() {
-            encoded.push_str(&format!("{} {},", prop.type_name(), prop.name()));
-        }
-        // if the props are not empty, there is a trailing comma
-        if !self.props.is_empty() {
-            encoded.pop();
-        }
-        encoded.push(')');
-        encoded
+    /// Produces the EIP-712 `encodeType` typestring for this type definition.
+    pub fn eip712_encode_type(&self) -> String {
+        let mut s = String::with_capacity(self.type_name.len() + 2 + self.props_bytes_len());
+        self.fmt_eip712_encode_type(&mut s).unwrap();
+        s
     }
 
-    /// Return the root type
+    /// Formats the EIP-712 `encodeType` typestring for this type definition into `f`.
+    pub fn fmt_eip712_encode_type(&self, f: &mut impl fmt::Write) -> fmt::Result {
+        f.write_str(&self.type_name)?;
+        f.write_char('(')?;
+        for (i, prop) in self.props.iter().enumerate() {
+            if i > 0 {
+                f.write_char(',')?;
+            }
+
+            f.write_str(prop.type_name())?;
+            f.write_char(' ')?;
+            f.write_str(prop.name())?;
+        }
+        f.write_char(')')
+    }
+
+    /// Returns the number of bytes that the properties of this type definition
+    /// will take up when formatted in the EIP-712 `encodeType` typestring.
+    pub fn props_bytes_len(&self) -> usize {
+        self.props
+            .iter()
+            .map(|p| p.type_name.len() + p.name.len() + 2)
+            .sum()
+    }
+
+    /// Return the root type.
     pub fn root_type(&self) -> RootType<'_> {
         self.type_name
             .as_str()
@@ -181,26 +196,20 @@ pub struct Resolver {
     // NOTE: Non-duplication of names must be enforced. See note on impl of Ord
     // for TypeDef
     nodes: BTreeMap<String, TypeDef>,
-    /// Edges from a type name to its dependencies
+    /// Edges from a type name to its dependencies.
     edges: BTreeMap<String, Vec<String>>,
 }
 
-impl serde::Serialize for Resolver {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
+impl Serialize for Resolver {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let types: Eip712Types = self.into();
         types.serialize(serializer)
     }
 }
 
-impl<'de> serde::Deserialize<'de> for Resolver {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let types: Eip712Types = serde::Deserialize::deserialize(deserializer)?;
+impl<'de> Deserialize<'de> for Resolver {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let types: Eip712Types = Deserialize::deserialize(deserializer)?;
         Ok(types.into())
     }
 }
@@ -233,17 +242,14 @@ impl From<&Resolver> for Eip712Types {
 
 impl Resolver {
     /// Instantiate a new resolver from a `SolStruct` type.
-    pub fn from_struct<S>() -> Self
-    where
-        S: SolStruct,
-    {
+    pub fn from_struct<S: SolStruct>() -> Self {
         let mut resolver = Resolver::default();
         resolver.ingest_sol_struct::<S>();
         resolver
     }
 
     /// Detect cycles in the subgraph rooted at `type_name`
-    fn detect_cycle<'a>(&'a self, type_name: &'_ str, context: &mut DfsContext<'a>) -> bool {
+    fn detect_cycle<'a>(&'a self, type_name: &str, context: &mut DfsContext<'a>) -> bool {
         let ty = match self.nodes.get(type_name) {
             Some(ty) => ty,
             None => return false,
@@ -283,15 +289,12 @@ impl Resolver {
         Ok(())
     }
 
-    /// Ingest a sol struct typedef
-    pub fn ingest_sol_struct<S>(&mut self)
-    where
-        S: SolStruct,
-    {
-        self.ingest_string(S::encode_type()).unwrap();
+    /// Ingest a sol struct typedef.
+    pub fn ingest_sol_struct<S: SolStruct>(&mut self) {
+        self.ingest_string(S::eip712_encode_type()).unwrap();
     }
 
-    /// Ingest a type
+    /// Ingest a type.
     pub fn ingest(&mut self, type_def: TypeDef) {
         let type_name = type_def.type_name.to_owned();
         // Insert the edges into the graph
@@ -307,7 +310,7 @@ impl Resolver {
         self.nodes.insert(type_name, type_def);
     }
 
-    /// Ingest a `Types` object into the resolver, discarding any invalid types
+    /// Ingest a `Types` object into the resolver, discarding any invalid types.
     pub fn ingest_types(&mut self, types: &Eip712Types) {
         for (type_name, props) in types.iter() {
             if let Ok(ty) = TypeDef::new(type_name.clone(), props.to_vec()) {
@@ -345,7 +348,7 @@ impl Resolver {
     }
 
     /// This function linearizes a type into a list of typedefs of its
-    /// dependencies
+    /// dependencies.
     pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>, DynAbiError> {
         let mut context = DfsContext::default();
         if self.detect_cycle(type_name, &mut context) {
@@ -357,8 +360,8 @@ impl Resolver {
         Ok(resolution)
     }
 
-    /// Resolves a root solidity type into either a basic type or a custom
-    /// struct
+    /// Resolves a root Solidity type into either a basic type or a custom
+    /// struct.
     fn resolve_root_type(&self, root_type: RootType<'_>) -> Result<DynSolType, DynAbiError> {
         if root_type.try_basic_solidity().is_ok() {
             return root_type.resolve_basic_solidity();
@@ -382,7 +385,7 @@ impl Resolver {
         })
     }
 
-    /// Resolve a type into a [`crate::DynSolType`] without checking for cycles
+    /// Resolve a type into a [`crate::DynSolType`] without checking for cycles.
     fn unchecked_resolve(&self, type_spec: TypeSpecifier<'_>) -> Result<DynSolType, DynAbiError> {
         let ty = match type_spec.root {
             TypeStem::Root(root) => self.resolve_root_type(root)?,
@@ -418,12 +421,12 @@ impl Resolver {
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     pub fn encode_type(&self, name: &str) -> Result<String, DynAbiError> {
         let linear = self.linearize(name)?;
-        let first = linear.first().unwrap().encode_type();
+        let first = linear.first().unwrap().eip712_encode_type();
 
         // Sort references by name (eip-712 encodeType spec)
         let mut sorted_refs = linear[1..]
             .iter()
-            .map(|t| t.encode_type())
+            .map(|t| t.eip712_encode_type())
             .collect::<Vec<String>>();
         sorted_refs.sort();
 
@@ -433,12 +436,12 @@ impl Resolver {
         }))
     }
 
-    /// Compute the keccak256 hash of the EIP-712 `encodeType` string
+    /// Compute the keccak256 hash of the EIP-712 `encodeType` string.
     pub fn type_hash(&self, name: &str) -> Result<B256, DynAbiError> {
         self.encode_type(name).map(keccak256)
     }
 
-    /// Encode the data according to EIP-712 `encodeData` rules
+    /// Encode the data according to EIP-712 `encodeData` rules.
     pub fn encode_data(&self, value: &DynSolValue) -> Result<Option<Vec<u8>>, DynAbiError> {
         match value {
             DynSolValue::CustomStruct { tuple: inner, .. }
@@ -640,7 +643,7 @@ mod test {
         graph.ingest_sol_struct::<MyStruct>();
         assert_eq!(
             graph.encode_type("MyStruct").unwrap(),
-            MyStruct::encode_type()
+            MyStruct::eip712_encode_type()
         );
     }
 }

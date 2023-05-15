@@ -8,7 +8,7 @@ pub(crate) fn zeroless_view(v: &impl AsRef<[u8]>) -> &[u8] {
     &v[v.iter().take_while(|&&b| b == 0).count()..]
 }
 
-/// Determine the length in bytes of the length prefix of an RLP item
+/// Determine the length in bytes of the length prefix of an RLP item.
 pub const fn length_of_length(payload_length: usize) -> usize {
     if payload_length < 56 {
         1
@@ -45,9 +45,9 @@ macro_rules! impl_max_encoded_len {
     };
 }
 
-/// A type that can be encoded via RLP
+/// A type that can be encoded via RLP.
 pub trait Encodable {
-    /// Encode the type into the `out` buffer
+    /// Encode the type into the `out` buffer.
     fn encode(&self, out: &mut dyn BufMut);
 
     /// Return the length of the type in bytes
@@ -333,7 +333,7 @@ where
     h
 }
 
-/// Calculate the length of a list
+/// Calculate the length of a list.
 pub fn list_length<E, K>(v: &[K]) -> usize
 where
     E: Encodable,
@@ -343,7 +343,7 @@ where
     length_of_length(payload_length) + payload_length
 }
 
-/// Encode a list of items
+/// Encode a list of items.
 pub fn encode_list<E, K>(v: &[K], out: &mut dyn BufMut)
 where
     E: Encodable + ?Sized,
@@ -356,7 +356,7 @@ where
     }
 }
 
-/// Encode all items from an iterator
+/// Encode all items from an iterator.
 ///
 /// This clones the iterator. Prefer [`encode_list`] if possible.
 pub fn encode_iter<K, I>(i: I, out: &mut dyn BufMut)
@@ -378,7 +378,7 @@ where
     }
 }
 
-/// Encode a type with a known maximum size
+/// Encode a type with a known maximum size.
 pub fn encode_fixed_size<E: MaxEncodedLen<LEN>, const LEN: usize>(v: &E) -> ArrayVec<u8, LEN> {
     let mut out = ArrayVec::from([0_u8; LEN]);
 

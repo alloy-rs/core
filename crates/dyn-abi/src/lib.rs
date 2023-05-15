@@ -24,14 +24,14 @@
 
 //! Dynamic Solidity Type Encoder
 //!
-//! This library provides a runtime encoder/decoder for solidity types. It is
-//! intended to be used when the solidity type is not known at compile time.
+//! This library provides a runtime encoder/decoder for Solidity types. It is
+//! intended to be used when the Solidity type is not known at compile time.
 //! This is particularly useful for EIP-712 signing interfaces.
 //!
 //! We **strongly** recommend using the static encoder/decoder when possible.
 //! The dyanmic encoder/decoder is significantly more expensive, especially for
 //! complex types. It is also significantly more error prone, as the mapping
-//! between solidity types and rust types is not enforced by the compiler.
+//! between Solidity types and rust types is not enforced by the compiler.
 //!
 //! ## Example
 //!
@@ -57,12 +57,12 @@
 //! ## How it works
 //!
 //! The dynamic encoder/decoder is implemented as a set of enums that represent
-//! solidity types, solidity values (in rust representation form), and ABI
+//! Solidity types, Solidity values (in rust representation form), and ABI
 //! tokens. Unlike the static encoder, each of these must be instantiated at
-//! runtime. The [`DynSolType`] enum represents a solidity type, and is
+//! runtime. The [`DynSolType`] enum represents a Solidity type, and is
 //! equivalent to an enum over types implementing the [`crate::SolType`] trait.
-//! The [`DynSolValue`] enum represents a solidity value, and describes the
-//! rust shapes of possible solidity values. It is similar to, but not
+//! The [`DynSolValue`] enum represents a Solidity value, and describes the
+//! rust shapes of possible Solidity values. It is similar to, but not
 //! equivalent to an enum over types used as [`crate::SolType::RustType`]. The
 //! [`DynToken`] enum represents an ABI token, and is equivalent to an enum over
 //! the types implementing the [`ethers_abi_enc::TokenType`] trait.
@@ -71,7 +71,7 @@
 //! the rust type system, the dynamic encoder/decoder encodes it as a concrete
 //! instance of [`DynSolType`]. This type is used to tokenize and detokenize
 //! [`DynSolValue`] instances. The [`std::str::FromStr`] impl is used to parse a
-//! solidity type string into a [`DynSolType`] object.
+//! Solidity type string into a [`DynSolType`] object.
 //!
 //! Tokenizing - `DynSolType + `DynSolValue` = `DynToken`
 //! Detokenizing - `DynSolType` + `DynToken` = `DynSolValue`
@@ -92,37 +92,14 @@
 //! recommend using the [`DynToken`] type directly. Instead, we recommend using
 //! the encoding and decoding methods on [`DynSolType`].
 
-#[cfg(not(feature = "std"))]
+#[macro_use]
 extern crate alloc;
 
-#[cfg(not(feature = "std"))]
-#[doc(hidden)]
-pub mod no_std_prelude {
-    pub use alloc::{
-        borrow::{Borrow, Cow, ToOwned},
+mod no_std_prelude {
+    pub(crate) use alloc::{
+        borrow::{Borrow, ToOwned},
         boxed::Box,
-        collections::{btree_map, BTreeMap, BTreeSet},
-        fmt, format,
-        str::FromStr,
         string::{String, ToString},
-        vec,
-        vec::Vec,
-    };
-    pub use core::marker::PhantomData;
-}
-
-#[cfg(feature = "std")]
-#[doc(hidden)]
-pub mod no_std_prelude {
-    pub use std::{
-        borrow::{Borrow, Cow, ToOwned},
-        boxed::Box,
-        collections::{btree_map, BTreeMap, BTreeSet},
-        fmt, format,
-        marker::PhantomData,
-        str::FromStr,
-        string::{String, ToString},
-        vec,
         vec::Vec,
     };
 }
@@ -130,7 +107,7 @@ pub mod no_std_prelude {
 mod error;
 pub use error::DynAbiError;
 
-pub use ethers_abi_enc::{AbiResult, Decoder, Eip712Domain, Encoder, Error, SolType, Word};
+pub use ethers_abi_enc::{Decoder, Eip712Domain, Encoder, Error, Result, SolType, Word};
 
 mod r#type;
 pub use r#type::DynSolType;
@@ -148,7 +125,7 @@ pub use eip712::{parser as eip712_parser, Resolver, TypedData};
 
 #[cfg(test)]
 mod test {
-    use crate::{no_std_prelude::*, Decoder, DynSolType, DynSolValue, Encoder};
+    use super::*;
 
     #[test]
     fn simple_e2e() {

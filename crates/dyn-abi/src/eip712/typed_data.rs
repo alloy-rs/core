@@ -1,23 +1,20 @@
-use ethers_abi_enc::{Eip712Domain, SolStruct};
-use ethers_primitives::{keccak256, B256};
-use serde::{Deserialize, Serialize};
-
 use crate::{
     eip712::{PropertyDef, Resolver},
     no_std_prelude::*,
     parser::TypeSpecifier,
     DynAbiError, DynSolType, DynSolValue,
 };
+use alloc::collections::BTreeMap;
+use ethers_abi_enc::{Eip712Domain, SolStruct};
+use ethers_primitives::{keccak256, B256};
+use serde::{Deserialize, Serialize};
 
 /// Custom types for `TypedData`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 pub struct Eip712Types(BTreeMap<String, Vec<PropertyDef>>);
 
 impl<'de> Deserialize<'de> for Eip712Types {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let map: BTreeMap<String, Vec<PropertyDef>> = BTreeMap::deserialize(deserializer)?;
 
         for key in map.keys() {
@@ -32,7 +29,7 @@ impl<'de> Deserialize<'de> for Eip712Types {
 
 impl IntoIterator for Eip712Types {
     type Item = (String, Vec<PropertyDef>);
-    type IntoIter = btree_map::IntoIter<String, Vec<PropertyDef>>;
+    type IntoIter = alloc::collections::btree_map::IntoIter<String, Vec<PropertyDef>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -40,12 +37,12 @@ impl IntoIterator for Eip712Types {
 }
 
 impl Eip712Types {
-    /// Iterate over the underlying map
+    /// Iterate over the underlying map.
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<PropertyDef>)> {
         self.0.iter()
     }
 
-    /// Insert a new type
+    /// Insert a new type.
     pub fn insert(&mut self, key: String, value: Vec<PropertyDef>) {
         self.0.insert(key, value);
     }
@@ -105,10 +102,7 @@ pub struct TypedData {
 /// See <https://github.com/MetaMask/metamask-extension/blob/0dfdd44ae7728ed02cbf32c564c75b74f37acf77/app/scripts/metamask-controller.js#L1736>
 /// In fact, ethers.js JSON stringifies the message at the time of writing.
 impl<'de> Deserialize<'de> for TypedData {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::de::Deserializer<'de>,
-    {
+    fn deserialize<D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
         #[allow(missing_debug_implementations)]
         struct TypedDataHelper {
@@ -153,10 +147,7 @@ impl<'de> Deserialize<'de> for TypedData {
 impl TypedData {
     /// Instantiate [`TypedData`] from a [`SolStruct`] that implements
     /// [`serde::Serialize`].
-    pub fn from_struct<S>(s: &S, domain: Option<Eip712Domain>) -> Self
-    where
-        S: SolStruct + Serialize,
-    {
+    pub fn from_struct<S: SolStruct + Serialize>(s: &S, domain: Option<Eip712Domain>) -> Self {
         Self {
             domain: domain.unwrap_or_default(),
             resolver: Resolver::from_struct::<S>(),
@@ -165,7 +156,7 @@ impl TypedData {
         }
     }
 
-    /// Returns the domain for this typed data
+    /// Returns the domain for this typed data.
     pub const fn domain(&self) -> &Eip712Domain {
         &self.domain
     }
@@ -175,33 +166,25 @@ impl TypedData {
     }
 
     /// Coerce the message to the type specified by `primary_type`, using the
-    /// types map as a resolver
+    /// types map as a resolver.
     pub fn coerce(&self) -> Result<DynSolValue, DynAbiError> {
         let ty = self.resolve()?;
         ty.coerce(&self.message)
     }
 
     /// Calculate the `typeHash` for this value
-    /// Fails if this type is not a struct
+    /// Fails if this type is not a struct.
     pub fn type_hash(&self) -> Result<B256, DynAbiError> {
-        Ok(keccak256(
-            self.resolver.encode_type(&self.primary_type)?.as_bytes(),
-        ))
+        let encode_type = self.resolver.encode_type(&self.primary_type)?;
+        Ok(keccak256(encode_type))
     }
 
     /// Calculate the `hashStruct` for this value
-    /// Fails if this type is not a struct
+    /// Fails if this type is not a struct.
     pub fn hash_struct(&self) -> Result<B256, DynAbiError> {
         let mut type_hash = self.type_hash()?.to_vec();
         type_hash.extend(self.encode_data()?);
         Ok(keccak256(type_hash))
-    }
-
-    /// Calculate the `encodeType` for this value
-    /// Fails if this type is not a struct
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    pub fn encode_type(&self) -> Result<String, DynAbiError> {
-        self.resolver.encode_type(&self.primary_type)
     }
 
     /// Calculate the `encodeData` for this value
@@ -215,8 +198,8 @@ impl TypedData {
     /// Calculate the `encodeType` for this value
     /// Fails if this type is not a struct
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    pub fn eip712_encode_type(&self) -> Result<String, DynAbiError> {
-        self.encode_type()
+    pub fn encode_type(&self) -> Result<String, DynAbiError> {
+        self.resolver.encode_type(&self.primary_type)
     }
 
     /// Calculate the eip712 signing hash for this value. This is the hash of
@@ -245,45 +228,45 @@ impl TypedData {
 // Adapted tests from <https://github.com/MetaMask/eth-sig-util/blob/main/src/sign-typed-data.test.ts>
 #[cfg(test)]
 mod tests {
-    use ethers_abi_enc::sol;
-
     use super::*;
+    use ethers_abi_enc::sol;
+    use serde_json::json;
 
     #[test]
     fn test_full_domain() {
-        let json = serde_json::json!({
-          "types": {
-            "EIP712Domain": [
-              {
-                "name": "name",
-                "type": "string"
-              },
-              {
-                "name": "version",
-                "type": "string"
-              },
-              {
-                "name": "chainId",
-                "type": "uint256"
-              },
-              {
-                "name": "verifyingContract",
-                "type": "address"
-              },
-              {
-                "name": "salt",
-                "type": "bytes32"
-              }
-            ]
-          },
-          "primaryType": "EIP712Domain",
-          "domain": {
-            "name": "example.metamask.io",
-            "version": "1",
-            "chainId": 1,
-            "verifyingContract": "0x0000000000000000000000000000000000000000"
-          },
-          "message": {}
+        let json = json!({
+            "types": {
+                "EIP712Domain": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "version",
+                        "type": "string"
+                    },
+                    {
+                        "name": "chainId",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "verifyingContract",
+                        "type": "address"
+                    },
+                    {
+                        "name": "salt",
+                        "type": "bytes32"
+                    }
+                ]
+            },
+            "primaryType": "EIP712Domain",
+            "domain": {
+                "name": "example.metamask.io",
+                "version": "1",
+                "chainId": 1,
+                "verifyingContract": "0x0000000000000000000000000000000000000000"
+            },
+            "message": {}
         });
 
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
@@ -297,7 +280,14 @@ mod tests {
 
     #[test]
     fn test_minimal_message() {
-        let json = serde_json::json!( {"types":{"EIP712Domain":[]},"primaryType":"EIP712Domain","domain":{},"message":{}});
+        let json = json!({
+            "types": {
+                "EIP712Domain": []
+            },
+            "primaryType": "EIP712Domain",
+            "domain": {},
+            "message": {}
+        });
 
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
 
@@ -310,30 +300,53 @@ mod tests {
 
     #[test]
     fn test_encode_custom_array_type() {
-        let json = serde_json::json!({
-            "domain":{},
-            "types":{
-                "EIP712Domain":[],
-                "Person":[
-                    {"name":"name","type":"string"},
-                    {"name":"wallet","type":"address[]"}
+        let json = json!({
+            "domain": {},
+            "types": {
+                "EIP712Domain": [],
+                "Person": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "wallet",
+                        "type": "address[]"
+                    }
                 ],
-                "Mail":[
-                    {"name":"from","type":"Person"},
-                    {"name":"to","type":"Person[]"},
-                    {"name":"contents","type":"string"}
+                "Mail": [
+                    {
+                        "name": "from",
+                        "type": "Person"
+                    },
+                    {
+                        "name": "to",
+                        "type": "Person[]"
+                    },
+                    {
+                        "name": "contents",
+                        "type": "string"
+                    }
                 ]
             },
-            "primaryType":"Mail",
-            "message":{
-                "from":{
-                    "name":"Cow",
-                    "wallet":["0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826","0xDD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"]
+            "primaryType": "Mail",
+            "message": {
+                "from": {
+                    "name": "Cow",
+                    "wallet": [
+                        "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826",
+                        "0xDD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
+                    ]
                 },
-                "to":[
-                    {"name":"Bob","wallet":["0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"]}
+                "to": [
+                    {
+                        "name": "Bob",
+                        "wallet": [
+                            "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
+                        ]
+                    }
                 ],
-                "contents":"Hello, Bob!"
+                "contents": "Hello, Bob!"
             }
         });
 
@@ -348,43 +361,43 @@ mod tests {
 
     #[test]
     fn test_hash_typed_message_with_data() {
-        let json = serde_json::json!( {
-          "types": {
-            "EIP712Domain": [
-              {
-                "name": "name",
-                "type": "string"
-              },
-              {
-                "name": "version",
-                "type": "string"
-              },
-              {
-                "name": "chainId",
-                "type": "uint256"
-              },
-              {
-                "name": "verifyingContract",
-                "type": "address"
-              }
-            ],
-            "Message": [
-              {
-                "name": "data",
-                "type": "string"
-              }
-            ]
-          },
-          "primaryType": "Message",
-          "domain": {
-            "name": "example.metamask.io",
-            "version": "1",
-            "chainId": "1",
-            "verifyingContract": "0x0000000000000000000000000000000000000000"
-          },
-          "message": {
-            "data": "Hello!"
-          }
+        let json = json!({
+            "types": {
+                "EIP712Domain": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "version",
+                        "type": "string"
+                    },
+                    {
+                        "name": "chainId",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "verifyingContract",
+                        "type": "address"
+                    }
+                ],
+                "Message": [
+                    {
+                        "name": "data",
+                        "type": "string"
+                    }
+                ]
+            },
+            "primaryType": "Message",
+            "domain": {
+                "name": "example.metamask.io",
+                "version": "1",
+                "chainId": "1",
+                "verifyingContract": "0x0000000000000000000000000000000000000000"
+            },
+            "message": {
+                "data": "Hello!"
+            }
         });
 
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
@@ -398,27 +411,46 @@ mod tests {
 
     #[test]
     fn test_hash_custom_data_type() {
-        let json = serde_json::json!({
-            "domain":{},
-            "types":{
-                "EIP712Domain":[],
-                "Person":[
-                    {"name":"name","type":"string"},{"name":"wallet","type":"address"}],
-                "Mail":[
-                    {"name":"from","type":"Person"},
-                    {"name":"to","type":"Person"},
-                    {"name":"contents","type":"string"}
+        let json = json!({
+            "domain": {},
+            "types": {
+                "EIP712Domain": [],
+                "Person": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "wallet",
+                        "type": "address"
+                    }
+                ],
+                "Mail": [
+                    {
+                        "name": "from",
+                        "type": "Person"
+                    },
+                    {
+                        "name": "to",
+                        "type": "Person"
+                    },
+                    {
+                        "name": "contents",
+                        "type": "string"
+                    }
                 ]
             },
-            "primaryType":"Mail",
-            "message":{
-                "from":{
-                    "name":"Cow","wallet":"0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
+            "primaryType": "Mail",
+            "message": {
+                "from": {
+                    "name": "Cow",
+                    "wallet": "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
                 },
-                "to":{
-                    "name":"Bob","wallet":"0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
+                "to": {
+                    "name": "Bob",
+                    "wallet": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
                 },
-                "contents":"Hello, Bob!"
+                "contents": "Hello, Bob!"
             }
         });
 
@@ -432,62 +464,62 @@ mod tests {
 
     #[test]
     fn test_hash_recursive_types() {
-        let json = serde_json::json!( {
-          "domain": {},
-          "types": {
-            "EIP712Domain": [],
-            "Person": [
-              {
-                "name": "name",
-                "type": "string"
-              },
-              {
-                "name": "wallet",
-                "type": "address"
-              }
-            ],
-            "Mail": [
-              {
-                "name": "from",
-                "type": "Person"
-              },
-              {
-                "name": "to",
-                "type": "Person"
-              },
-              {
-                "name": "contents",
-                "type": "string"
-              },
-              {
-                "name": "replyTo",
-                "type": "Mail"
-              }
-            ]
-          },
-          "primaryType": "Mail",
-          "message": {
-            "from": {
-              "name": "Cow",
-              "wallet": "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
+        let json = json!({
+            "domain": {},
+            "types": {
+                "EIP712Domain": [],
+                "Person": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "wallet",
+                        "type": "address"
+                    }
+                ],
+                "Mail": [
+                    {
+                        "name": "from",
+                        "type": "Person"
+                    },
+                    {
+                        "name": "to",
+                        "type": "Person"
+                    },
+                    {
+                        "name": "contents",
+                        "type": "string"
+                    },
+                    {
+                        "name": "replyTo",
+                        "type": "Mail"
+                    }
+                ]
             },
-            "to": {
-              "name": "Bob",
-              "wallet": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
-            },
-            "contents": "Hello, Bob!",
-            "replyTo": {
-              "to": {
-                "name": "Cow",
-                "wallet": "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
-              },
-              "from": {
-                "name": "Bob",
-                "wallet": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
-              },
-              "contents": "Hello!"
+            "primaryType": "Mail",
+            "message": {
+                "from": {
+                    "name": "Cow",
+                    "wallet": "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
+                },
+                "to": {
+                    "name": "Bob",
+                    "wallet": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
+                },
+                "contents": "Hello, Bob!",
+                "replyTo": {
+                    "to": {
+                        "name": "Cow",
+                        "wallet": "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
+                    },
+                    "from": {
+                        "name": "Bob",
+                        "wallet": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
+                    },
+                    "contents": "Hello!"
+                }
             }
-          }
         });
 
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
@@ -500,116 +532,116 @@ mod tests {
 
     #[test]
     fn test_hash_nested_struct_array() {
-        let json = serde_json::json!({
-          "types": {
-            "EIP712Domain": [
-              {
-                "name": "name",
-                "type": "string"
-              },
-              {
-                "name": "version",
-                "type": "string"
-              },
-              {
-                "name": "chainId",
-                "type": "uint256"
-              },
-              {
-                "name": "verifyingContract",
-                "type": "address"
-              }
-            ],
-            "OrderComponents": [
-              {
-                "name": "offerer",
-                "type": "address"
-              },
-              {
-                "name": "zone",
-                "type": "address"
-              },
-              {
-                "name": "offer",
-                "type": "OfferItem[]"
-              },
-              {
-                "name": "startTime",
-                "type": "uint256"
-              },
-              {
-                "name": "endTime",
-                "type": "uint256"
-              },
-              {
-                "name": "zoneHash",
-                "type": "bytes32"
-              },
-              {
-                "name": "salt",
-                "type": "uint256"
-              },
-              {
-                "name": "conduitKey",
-                "type": "bytes32"
-              },
-              {
-                "name": "counter",
-                "type": "uint256"
-              }
-            ],
-            "OfferItem": [
-              {
-                "name": "token",
-                "type": "address"
-              }
-            ],
-            "ConsiderationItem": [
-              {
-                "name": "token",
-                "type": "address"
-              },
-              {
-                "name": "identifierOrCriteria",
-                "type": "uint256"
-              },
-              {
-                "name": "startAmount",
-                "type": "uint256"
-              },
-              {
-                "name": "endAmount",
-                "type": "uint256"
-              },
-              {
-                "name": "recipient",
-                "type": "address"
-              }
-            ]
-          },
-          "primaryType": "OrderComponents",
-          "domain": {
-            "name": "Seaport",
-            "version": "1.1",
-            "chainId": "1",
-            "verifyingContract": "0x00000000006c3852cbEf3e08E8dF289169EdE581"
-          },
-          "message": {
-            "offerer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-            "offer": [
-              {
-                "token": "0xA604060890923Ff400e8c6f5290461A83AEDACec"
-              }
-            ],
-            "startTime": "1658645591",
-            "endTime": "1659250386",
-            "zone": "0x004C00500000aD104D7DBd00e3ae0A5C00560C00",
-            "zoneHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "salt": "16178208897136618",
-            "conduitKey": "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
-            "totalOriginalConsiderationItems": "2",
-            "counter": "0"
-          }
+        let json = json!({
+            "types": {
+                "EIP712Domain": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "version",
+                        "type": "string"
+                    },
+                    {
+                        "name": "chainId",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "verifyingContract",
+                        "type": "address"
+                    }
+                ],
+                "OrderComponents": [
+                    {
+                        "name": "offerer",
+                        "type": "address"
+                    },
+                    {
+                        "name": "zone",
+                        "type": "address"
+                    },
+                    {
+                        "name": "offer",
+                        "type": "OfferItem[]"
+                    },
+                    {
+                        "name": "startTime",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "endTime",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "zoneHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "name": "salt",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "conduitKey",
+                        "type": "bytes32"
+                    },
+                    {
+                        "name": "counter",
+                        "type": "uint256"
+                    }
+                ],
+                "OfferItem": [
+                    {
+                        "name": "token",
+                        "type": "address"
+                    }
+                ],
+                "ConsiderationItem": [
+                    {
+                        "name": "token",
+                        "type": "address"
+                    },
+                    {
+                        "name": "identifierOrCriteria",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "startAmount",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "endAmount",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "recipient",
+                        "type": "address"
+                    }
+                ]
+            },
+            "primaryType": "OrderComponents",
+            "domain": {
+                "name": "Seaport",
+                "version": "1.1",
+                "chainId": "1",
+                "verifyingContract": "0x00000000006c3852cbEf3e08E8dF289169EdE581"
+            },
+            "message": {
+                "offerer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                "offer": [
+                    {
+                        "token": "0xA604060890923Ff400e8c6f5290461A83AEDACec"
+                    }
+                ],
+                "startTime": "1658645591",
+                "endTime": "1659250386",
+                "zone": "0x004C00500000aD104D7DBd00e3ae0A5C00560C00",
+                "zoneHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "salt": "16178208897136618",
+                "conduitKey": "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
+                "totalOriginalConsiderationItems": "2",
+                "counter": "0"
+            }
         });
 
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
@@ -621,17 +653,16 @@ mod tests {
         );
     }
 
-    sol!(
-      /// Fancy struct
-      #[derive(serde::Serialize, serde::Deserialize)]
-      struct MyStruct {
-        string name;
-        string otherThing;
-      }
-    );
-
     #[test]
     fn from_sol_struct() {
+        sol! {
+            #[derive(Serialize, Deserialize)]
+            struct MyStruct {
+                string name;
+                string otherThing;
+            }
+        }
+
         let s = MyStruct {
             name: "hello".to_string(),
             otherThing: "world".to_string(),
@@ -644,25 +675,23 @@ mod tests {
         );
     }
 
-    sol! {
-      #[derive(serde::Serialize, serde::Deserialize)]
-      struct Person {
-        string name;
-        address wallet;
-      }
-    }
-
-    sol! {
-      #[derive(serde::Serialize, serde::Deserialize)]
-      struct Mail {
-        Person from;
-        Person to;
-        string contents;
-      }
-    }
-
     #[test]
     fn e2e_from_sol_struct() {
+        sol! {
+            #[derive(Serialize, Deserialize)]
+            struct Person {
+                string name;
+                address wallet;
+            }
+
+            #[derive(Serialize, Deserialize)]
+            struct Mail {
+                Person from;
+                Person to;
+                string contents;
+            }
+        }
+
         let sender = Person {
             name: "Cow".to_string(),
             wallet: "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"

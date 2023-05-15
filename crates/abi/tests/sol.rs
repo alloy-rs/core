@@ -1,5 +1,3 @@
-#![no_std]
-
 use ethers_abi_enc::{no_std_prelude::*, sol, SolCall, SolError, SolType};
 use ethers_primitives::{keccak256, Address, U256};
 

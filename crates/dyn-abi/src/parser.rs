@@ -1,10 +1,12 @@
 //! Contains utilities for parsing Solidity types.
 //!
-//! This is a simple representation of solidity type grammar.
+//! This is a simple representation of Solidity type grammar.
+
 use crate::{no_std_prelude::*, DynAbiError, DynSolType};
+use core::fmt;
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
-/// type
+/// type.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RootType<'a>(&'a str);
 
@@ -15,12 +17,12 @@ impl fmt::Display for RootType<'_> {
 }
 
 impl RootType<'_> {
-    /// The string underlying this type. The type name
+    /// The string underlying this type. The type name.
     pub const fn as_str(&self) -> &str {
         self.0
     }
 
-    /// An identifier in solidity has to start with a letter, a dollar-sign or
+    /// An identifier in Solidity has to start with a letter, a dollar-sign or
     /// an underscore and may additionally contain numbers after the first
     /// symbol.
     ///
@@ -42,7 +44,7 @@ impl RootType<'_> {
         }
     }
 
-    /// True if the type is a basic solidity type
+    /// True if the type is a basic Solidity type.
     pub fn try_basic_solidity(&self) -> Result<(), DynAbiError> {
         let type_name = self.0;
         match type_name {
@@ -89,7 +91,7 @@ impl RootType<'_> {
         }
     }
 
-    /// Resolve the type string into a basic solidity type
+    /// Resolve the type string into a basic Solidity type.
     pub fn resolve_basic_solidity(&self) -> Result<DynSolType, DynAbiError> {
         self.try_basic_solidity()?;
 
@@ -146,17 +148,17 @@ impl AsRef<str> for RootType<'_> {
 }
 
 /// A tuple specifier, with no array suffixes. Corresponds to a sequence of
-/// types
+/// types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TupleSpecifier<'a> {
-    /// The full span of the tuple specifier
+    /// The full span of the tuple specifier.
     pub span: &'a str,
-    /// The internal types
+    /// The internal types.
     pub types: Vec<TypeSpecifier<'a>>,
 }
 
 impl TupleSpecifier<'_> {
-    /// True if the type is a basic solidity type
+    /// True if the type is a basic Solidity type.
     pub fn try_basic_solidity(&self) -> Result<(), DynAbiError> {
         for ty in &self.types {
             ty.try_basic_solidity()?;
@@ -164,7 +166,7 @@ impl TupleSpecifier<'_> {
         Ok(())
     }
 
-    /// Resolve the type string into a basic solidity type if possible
+    /// Resolve the type string into a basic Solidity type if possible.
     pub fn resolve_basic_solidity(&self) -> Result<DynSolType, DynAbiError> {
         let tuple = self
             .types
@@ -205,13 +207,13 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
     }
 }
 
-/// This is the stem of a solidity array type. It is either a root type, or a
+/// This is the stem of a Solidity array type. It is either a root type, or a
 /// tuple type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeStem<'a> {
-    /// Root type
+    /// Root type.
     Root(RootType<'a>),
-    /// Tuple type
+    /// Tuple type.
     Tuple(TupleSpecifier<'a>),
 }
 
@@ -249,9 +251,9 @@ impl<'a> TryFrom<&'a str> for TypeStem<'a> {
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.typeName>
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeSpecifier<'a> {
-    /// The full span of the specifier
+    /// The full span of the specifier.
     pub span: &'a str,
-    /// The type stem, which is either a root type or a tuple type
+    /// The type stem, which is either a root type or a tuple type.
     pub root: TypeStem<'a>,
     /// Array sizes, in innermost-to-outermost order. If the size is `None`,
     /// then the array is dynamic. If the size is `Some`, then the array is
@@ -266,12 +268,12 @@ impl AsRef<str> for TypeSpecifier<'_> {
 }
 
 impl TypeSpecifier<'_> {
-    /// True if the type is a basic solidity type
+    /// True if the type is a basic Solidity type.
     pub fn try_basic_solidity(&self) -> Result<(), DynAbiError> {
         self.root.try_basic_solidity()
     }
 
-    /// Resolve the type string into a basic solidity type if possible
+    /// Resolve the type string into a basic Solidity type if possible.
     pub fn resolve_basic_solidity(&self) -> Result<DynSolType, DynAbiError> {
         let ty = self.root.resolve_basic_solidity()?;
         Ok(self.sizes.iter().fold(ty, |acc, item| match item {
@@ -335,7 +337,7 @@ pub(crate) fn parse(s: &str) -> Result<DynSolType, DynAbiError> {
     ty.resolve_basic_solidity()
 }
 
-impl FromStr for DynSolType {
+impl core::str::FromStr for DynSolType {
     type Err = DynAbiError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

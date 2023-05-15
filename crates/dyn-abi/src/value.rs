@@ -1,54 +1,52 @@
+use crate::no_std_prelude::*;
+use crate::Word;
 use ethers_primitives::{aliases::*, Address, I256, U256};
 
-use crate::no_std_prelude::*;
-
-use crate::Word;
-
-/// This type represents a solidity value that has been decoded into rust. It
+/// This type represents a Solidity value that has been decoded into rust. It
 /// is broadly similar to `serde_json::Value` in that it is an enum of possible
-/// types, and the user must inspect and disambiguate
+/// types, and the user must inspect and disambiguate.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DynSolValue {
-    /// An address
+    /// An address.
     Address(Address),
-    /// A boolean
+    /// A boolean.
     Bool(bool),
-    /// A dynamic-length byte array
+    /// A dynamic-length byte array.
     Bytes(Vec<u8>),
-    /// A fixed-length byte string
+    /// A fixed-length byte string.
     FixedBytes(Word, usize),
-    /// A signed integer
+    /// A signed integer.
     Int(I256, usize),
-    /// An unsigned integer
+    /// An unsigned integer.
     Uint(U256, usize),
-    /// A string
+    /// A string.
     String(String),
-    /// A tuple of values
+    /// A tuple of values.
     Tuple(Vec<DynSolValue>),
-    /// A dynamically-sized array of values
+    /// A dynamically-sized array of values.
     Array(Vec<DynSolValue>),
-    /// A fixed-size array of values
+    /// A fixed-size array of values.
     FixedArray(Vec<DynSolValue>),
-    /// A named struct, treated as a tuple with a name parameter
+    /// A named struct, treated as a tuple with a name parameter.
     CustomStruct {
-        /// The name of the struct
+        /// The name of the struct.
         name: String,
-        /// The struct's prop names, in declaration order
+        /// The struct's prop names, in declaration order.
         prop_names: Vec<String>,
-        /// A inner types
+        /// A inner types.
         tuple: Vec<DynSolValue>,
     },
     /// A user-defined value type.
     CustomValue {
-        /// The name of the custom value type
+        /// The name of the custom value type.
         name: String,
-        /// The value itself
+        /// The value itself.
         inner: Word,
     },
 }
 
 impl DynSolValue {
-    /// The solidity type name
+    /// The Solidity type name.
     pub fn sol_type_name(&self) -> String {
         match self {
             Self::Address(_) => "address".to_string(),
@@ -66,7 +64,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to a single word. Will succeed for any single-word type
+    /// Fallible cast to a single word. Will succeed for any single-word type.
     pub fn as_word(&self) -> Option<Word> {
         match self {
             Self::Address(a) => Some((*a).into()),
@@ -85,7 +83,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant DynSolValue {
+    /// Fallible cast to the contents of a variant DynSolValue {.
     pub const fn as_address(&self) -> Option<Address> {
         match self {
             Self::Address(a) => Some(*a),
@@ -93,7 +91,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub const fn as_bool(&self) -> Option<bool> {
         match self {
             Self::Bool(b) => Some(*b),
@@ -101,7 +99,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub fn as_bytes(&self) -> Option<&[u8]> {
         match self {
             Self::Bytes(b) => Some(b),
@@ -109,7 +107,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub const fn as_fixed_bytes(&self) -> Option<(&[u8], usize)> {
         match self {
             Self::FixedBytes(w, size) => Some((w.as_bytes(), *size)),
@@ -117,7 +115,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub const fn as_int(&self) -> Option<(I256, usize)> {
         match self {
             Self::Int(w, size) => Some((*w, *size)),
@@ -125,7 +123,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub const fn as_uint(&self) -> Option<(U256, usize)> {
         match self {
             Self::Uint(u, size) => Some((*u, *size)),
@@ -133,7 +131,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Self::String(s) => Some(s.as_str()),
@@ -141,7 +139,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub fn as_tuple(&self) -> Option<&[DynSolValue]> {
         match self {
             Self::Tuple(t) => Some(t.as_slice()),
@@ -149,7 +147,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub fn as_array(&self) -> Option<&[DynSolValue]> {
         match self {
             Self::Array(a) => Some(a.as_slice()),
@@ -157,7 +155,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub fn as_fixed_array(&self) -> Option<&[DynSolValue]> {
         match self {
             Self::FixedArray(a) => Some(a.as_slice()),
@@ -165,7 +163,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[DynSolValue])> {
         match self {
             Self::CustomStruct {
@@ -177,7 +175,7 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant
+    /// Fallible cast to the contents of a variant.
     pub fn as_custom_value(&self) -> Option<(&str, Word)> {
         match self {
             Self::CustomValue { name, inner } => Some((name.as_str(), *inner)),
@@ -185,7 +183,7 @@ impl DynSolValue {
         }
     }
 
-    /// Encodes the packed value and appends it to the end of a byte array
+    /// Encodes the packed value and appends it to the end of a byte array.
     pub fn encode_packed_to(&self, buf: &mut Vec<u8>) {
         match self {
             DynSolValue::Address(addr) => buf.extend_from_slice(addr.as_bytes()),
@@ -216,7 +214,7 @@ impl DynSolValue {
         }
     }
 
-    /// Encodes the value into a packed byte array
+    /// Encodes the value into a packed byte array.
     pub fn encode_packed(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         self.encode_packed_to(&mut buf);

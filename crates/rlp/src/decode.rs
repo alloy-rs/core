@@ -1,39 +1,39 @@
 use crate::types::Header;
 use bytes::{Buf, Bytes, BytesMut};
 
-/// A type that can be decoded from an RLP blob
+/// A type that can be decoded from an RLP blob.
 pub trait Decodable: Sized {
-    /// Decode the blob into the appropriate type
+    /// Decode the blob into the appropriate type.
     fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError>;
 }
 
-/// Errors for RLP decoding
+/// Errors for RLP decoding.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DecodeError {
-    /// Numeric Overflow
+    /// Numeric Overflow.
     Overflow,
-    /// Leading zero disallowed
+    /// Leading zero disallowed.
     LeadingZero,
-    /// Overran input while decoding
+    /// Overran input while decoding.
     InputTooShort,
-    /// Expected single byte, but got invalid value
+    /// Expected single byte, but got invalid value.
     NonCanonicalSingleByte,
-    /// Expected size, but got invalid value
+    /// Expected size, but got invalid value.
     NonCanonicalSize,
-    /// Expected a payload of a specific size, got an unexpected size
+    /// Expected a payload of a specific size, got an unexpected size.
     UnexpectedLength,
-    /// Expected another type, got a string instead
+    /// Expected another type, got a string instead.
     UnexpectedString,
-    /// Expected another type, got a list instead
+    /// Expected another type, got a list instead.
     UnexpectedList,
-    /// Got an unexpected number of items in a list
+    /// Got an unexpected number of items in a list.
     ListLengthMismatch {
-        /// Expected length
+        /// Expected length.
         expected: usize,
-        /// Actual length
+        /// Actual length.
         got: usize,
     },
-    /// Custom Err
+    /// Custom Err.
     Custom(&'static str),
 }
 
@@ -260,13 +260,13 @@ impl Decodable for Bytes {
     }
 }
 
-/// An active RLP decoder, with a specific slice of a payload
+/// An active RLP decoder, with a specific slice of a payload.
 pub struct Rlp<'a> {
     payload_view: &'a [u8],
 }
 
 impl<'a> Rlp<'a> {
-    /// Instantiate an RLP decoder with a payload slice
+    /// Instantiate an RLP decoder with a payload slice.
     pub fn new(mut payload: &'a [u8]) -> Result<Self, DecodeError> {
         let h = Header::decode(&mut payload)?;
         if !h.list {
@@ -277,11 +277,8 @@ impl<'a> Rlp<'a> {
         Ok(Self { payload_view })
     }
 
-    /// Decode the next item from the buffer
-    pub fn get_next<T>(&mut self) -> Result<Option<T>, DecodeError>
-    where
-        T: Decodable,
-    {
+    /// Decode the next item from the buffer.
+    pub fn get_next<T: Decodable>(&mut self) -> Result<Option<T>, DecodeError> {
         if self.payload_view.is_empty() {
             return Ok(None);
         }

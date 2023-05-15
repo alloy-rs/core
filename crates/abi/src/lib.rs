@@ -22,33 +22,32 @@
     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 ))]
 
-//! Solidity type modeling & ABI Coding implementation
+//! Solidity type modeling and ABI coding implementation.
 //!
-//! This library provides tools for expressing Solidity types in Rust, and for
+//! This crate provides tools for expressing Solidity types in Rust, and for
 //! encoding these representations into ABI blobs suitable for smart contract
 //! processing. In other words, you can represent your smart contract args in
 //! native Rust, easily encode them to pass to a smart contract, and easily
 //! decode the smart contract return values.
 //!
-//! We do this by representing solidity types in rust via the [`SolType`] trait.
+//! We do this by representing Solidity types in rust via the [`SolType`] trait.
 //! This trait maps Solidity types to Rust types via the associated
 //! [`SolType::RustType`].
 //!
 //! Each [`SolType`] also has an associated [`SolType::TokenType`]. This is the
 //! intermediate representation of the data suitable for ABI encoding. The ABI
-//! `encode` and `decode` methods operate on objects implementing
-//! [`TokenType`].
+//! `encode` and `decode` methods operate on objects implementing [`TokenType`].
 //!
 //! ```
 //! use ethers_abi_enc::{SolType, sol_data::*};
-//! # pub fn main() -> ethers_abi_enc::AbiResult<()> {
-//! // Represent a solidity type in rust
+//! # pub fn main() -> ethers_abi_enc::Result<()> {
+//! // Represent a Solidity type in rust
 //! type MySolType = FixedArray<Bool, 2>;
 //!
 //! let data = [true, false];
 //! let validate = true;
 //!
-//! // SolTypes expose their solidity name :)
+//! // SolTypes expose their Solidity name :)
 //! assert_eq!(&MySolType::sol_type_name(), "bool[2]");
 //!
 //! // SolTypes are used to transform Rust into ABI blobs, and back.
@@ -59,71 +58,21 @@
 //! # }
 //! ```
 //!
-//! ## `sol!` type parsing
+//! ## [`sol!`]
 //!
-//! The `sol!` proc macro parses complex soltypes from valid solidity. Right now
-//! it's limited to the solidity types defines in this library. It's useful for
-//! defining complex structures using familiar syntax.
+//! The [`sol!`] procedural macro provides a convenient way to define
+//! custom [`SolType`]s and reference primitive ones. See [its documentation][sol!]
+//! for details on how to use it.
 //!
-//! In the future, `sol!` will support macro definitions, functions, and more!
-//!
-//! ```
-//! # use ethers_abi_enc::{sol, sol_data, SolType};
-//! # pub fn main() {
-//! // outputs a type built that implements `SolType`
-//! type B32 = sol! {bytes32};
-//! assert_eq!(B32::sol_type_name(), "bytes32");
-//! assert_eq!
-//!     (B32::hex_encode_single([0; 32]),
-//!     "0x0000000000000000000000000000000000000000000000000000000000000000"
-//! ); // Wow!
-//!
-//! type Complex = sol! {((address, address)[],address)};
-//! assert_eq!(
-//!     Complex::sol_type_name(),
-//!     "tuple(tuple(address,address)[],address)"
-//! ); // Cool!
-//!
-//! type Gamut = sol! {
-//!     (
-//!         address, bool[], bytes15[12], uint256, uint24, int8, int56,
-//!         (bytes17, string, bytes,)
-//!     )
-//! };
-//!
-//! assert_eq!(
-//!     Gamut::sol_type_name(),
-//!     "tuple(address,bool[],bytes15[12],uint256,uint24,int8,int56,tuple(bytes17,string,bytes))"
-//! ); // Amazing!
-//!
-//! // `sol!` supports late binding of types, and your own custom types!
-//! type Abstract<A> = sol! { A[] };
-//!
-//! // Incredible!
-//! assert_eq!(Abstract::<sol_data::Address>::sol_type_name(), "address[]");
-//! # }
-//! ```
-//!
-//! ## [`sol!`] structs, the [`SolStruct`] trait, and the [`domain!`] macro
-//!
-//! The [`sol!`] macro also supports parsing structs. This is useful for
-//! defining complex types that you want to encode and decode. It also provides
-//! a convenient way to define EIP-712 structs at compile-time. It accepts a
-//! standard solidity `struct` definition, and generating a Rust struct that
-//! implements [`SolStruct`] and [`SolType`].
+//! ## [`SolStruct`]
 //!
 //! The [`SolStruct`] trait primarily provides EIP-712 signing support.
-//!
-//! ### Gotchas:
-//!
-//! Right now, sol! structs works only **outside** of function scope, due to
-//! rust import rules, and unfortunately, doesn't yet support late binding.
 //!
 //! ```
 //! # use ethers_abi_enc::{sol, SolStruct};
 //! # use ethers_primitives::U256;
 //! // `sol!` allows you to define struct types!
-//! // Usually you can just paste solidity into the macro :)
+//! // You can just paste Solidity into the macro and it should work :)
 //! sol! {
 //!     struct MyStruct {
 //!         uint256 a;
@@ -170,7 +119,7 @@
 //! ```
 //! # use ethers_abi_enc::{sol, sol_data, SolType};
 //! # use ethers_primitives::U256;
-//! // We also also support solidity value types
+//! // We also also support Solidity value types
 //! sol! {
 //!     type MyValueType is uint256;
 //! }
@@ -206,7 +155,7 @@
 //! recommend users use them wherever possible. We do not recommend that users
 //! interact with Tokens, except when implementing their own [`SolType`].
 
-#[cfg_attr(not(feature = "std"), macro_use)]
+#[macro_use]
 extern crate alloc;
 
 // `unused_crate_dependencies` bug workaround.
@@ -214,40 +163,19 @@ extern crate alloc;
 #[cfg(test)]
 use trybuild as _;
 
-#[cfg(not(feature = "std"))]
 #[doc(hidden)]
 pub mod no_std_prelude {
     pub use alloc::{
         borrow::{Borrow, Cow, ToOwned},
-        format,
         string::{String, ToString},
-        vec,
-        vec::Vec,
-    };
-    pub use core::marker::PhantomData;
-}
-
-#[cfg(feature = "std")]
-#[doc(hidden)]
-pub mod no_std_prelude {
-    pub use std::{
-        borrow::{Borrow, Cow, ToOwned},
-        format,
-        marker::PhantomData,
-        string::{String, ToString},
-        vec,
         vec::Vec,
     };
 }
 
-/// The `sol!` proc macro parses Solidity types and structdefs, and outputs
-/// Rust types that implement [`SolType`].
-///
-/// See the root crate docs for more information.
 #[doc(inline)]
 pub use ethers_sol_type::sol;
 
-/// The Word type for ABI Encoding
+/// The ABI word type.
 pub type Word = ethers_primitives::B256;
 
 mod coder;
@@ -259,7 +187,7 @@ pub use coder::{
 pub use coder::{Decoder, Encoder};
 
 mod errors;
-pub use errors::{AbiResult, Error};
+pub use errors::{Error, Result};
 
 mod types;
 pub use types::{data_type as sol_data, Panic, Revert, SolCall, SolError, SolStruct, SolType};

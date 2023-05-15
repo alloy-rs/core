@@ -9,9 +9,9 @@ use crate::{
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.
 #[derive(Debug, PartialEq, Eq)]
 pub struct PropDef<'a> {
-    /// The prop type specifier
+    /// The prop type specifier.
     pub ty: TypeSpecifier<'a>,
-    /// The prop name
+    /// The prop name.
     pub name: &'a str,
 }
 
@@ -42,7 +42,7 @@ impl<'a> TryFrom<&'a str> for PropDef<'a> {
 /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
 #[derive(Debug, PartialEq, Eq)]
 pub struct ComponentType<'a> {
-    /// The span
+    /// The span.
     pub span: &'a str,
     /// The name of the component type.
     pub type_name: &'a str,
@@ -51,7 +51,7 @@ pub struct ComponentType<'a> {
 }
 
 impl ComponentType<'_> {
-    /// Convert to an owned TypeDef
+    /// Convert to an owned TypeDef.
     pub fn to_owned(&self) -> TypeDef {
         TypeDef::new(
             self.type_name,

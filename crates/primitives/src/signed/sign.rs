@@ -58,7 +58,7 @@ impl fmt::Display for Sign {
 }
 
 impl Sign {
-    /// Equality at compile-time
+    /// Equality at compile-time.
     pub const fn const_eq(self, other: Self) -> bool {
         self as i8 == other as i8
     }

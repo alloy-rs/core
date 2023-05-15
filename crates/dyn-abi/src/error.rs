@@ -1,28 +1,29 @@
 use crate::{no_std_prelude::*, DynSolType};
+use core::fmt;
 
 /// Error when parsing EIP-712 `encodeType` strings
 ///
 /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
 #[derive(Debug, Clone, PartialEq)]
 pub enum DynAbiError {
-    /// Type mismatch during coercion
+    /// Type mismatch during coercion.
     TypeMismatch {
-        /// The expected type
+        /// The expected type.
         expected: DynSolType,
-        /// The actual type
+        /// The actual type.
         actual: serde_json::Value,
     },
-    /// Invalid size for a primitive type (intX, uintX, or bytesX)
+    /// Invalid size for a primitive type (intX, uintX, or bytesX).
     InvalidSize(String),
-    /// Invalid type string, extra chars, or invalid structure
+    /// Invalid type string, extra chars, or invalid structure.
     InvalidTypeString(String),
-    /// Unknown type referenced from another type
+    /// Unknown type referenced from another type.
     MissingType(String),
-    /// Detected circular dep during typegraph resolution
+    /// Detected circular dep during typegraph resolution.
     CircularDependency(String),
-    /// Invalid Property definition
+    /// Invalid Property definition.
     InvalidPropertyDefinition(String),
-    /// Hex
+    /// Hex.
     HexError(hex::FromHexError),
 }
 

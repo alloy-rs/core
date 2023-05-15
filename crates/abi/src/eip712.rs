@@ -57,10 +57,11 @@ pub struct Eip712Domain {
 }
 
 impl Eip712Domain {
-    /// The name of the struct
+    /// The name of the struct.
     pub const NAME: &'static str = "EIP712Domain";
 
-    /// Instantiate a new domain
+    /// Instantiate a new domain.
+    #[inline]
     pub const fn new(
         name: Option<Cow<'static, str>>,
         version: Option<Cow<'static, str>>,
@@ -78,6 +79,7 @@ impl Eip712Domain {
     }
 
     /// Calculate the domain separator for the domain object.
+    #[inline]
     pub fn separator(&self) -> B256 {
         self.hash_struct()
     }
@@ -85,31 +87,39 @@ impl Eip712Domain {
     /// EIP-712 `encodeType`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     pub fn encode_type(&self) -> String {
-        let mut ty = format!("{}(", Self::NAME);
-        if self.name.is_some() {
-            ty.push_str("string name,");
+        // commas not included
+        macro_rules! encode_type {
+            ($($field:ident => $repr:literal),+ $(,)?) => {
+                let mut ty = String::with_capacity(Self::NAME.len() + 2 $(+ $repr.len() * self.$field.is_some() as usize)+);
+                ty.push_str(Self::NAME);
+                ty.push('(');
+
+                $(
+                    if self.$field.is_some() {
+                        ty.push_str($repr);
+                    }
+                )+
+                if ty.ends_with(',') {
+                    ty.pop();
+                }
+
+                ty.push(')');
+                ty
+            };
         }
-        if self.version.is_some() {
-            ty.push_str("string version,");
+
+        encode_type! {
+            name               => "string name,",
+            version            => "string version,",
+            chain_id           => "uint256 chainId,",
+            verifying_contract => "address verifyingContract,",
+            salt               => "bytes32 salt",
         }
-        if self.chain_id.is_some() {
-            ty.push_str("uint256 chainId,");
-        }
-        if self.verifying_contract.is_some() {
-            ty.push_str("address verifyingContract,");
-        }
-        if self.salt.is_some() {
-            ty.push_str("bytes32 salt,");
-        }
-        if ty.ends_with(',') {
-            ty.pop();
-        }
-        ty.push(')');
-        ty
     }
 
     /// EIP-712 `typeHash`
     /// <https://eips.ethereum.org/EIPS/eip-712#rationale-for-typehash>
+    #[inline]
     pub fn type_hash(&self) -> B256 {
         keccak256(self.encode_type().as_bytes())
     }
@@ -375,6 +385,7 @@ impl Eip712Domain {
 
     /// EIP-712 `hashStruct`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct>
+    #[inline]
     pub fn hash_struct(&self) -> B256 {
         let mut type_hash = self.type_hash().to_vec();
         type_hash.extend(self.encode_data());

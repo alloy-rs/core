@@ -32,7 +32,7 @@
 //! [`decode_params()`] reverse this operation, decoding a tuple from a
 //! blob.
 //!
-//! This is used to encode/decode the parameters for a solidity function.
+//! This is used to encode/decode the parameters for a Solidity function.
 //!
 //! ### `encode/decode`
 //!
@@ -44,17 +44,8 @@
 //! [`crate::SolType::decode()`] and [`decode()`] reverse this, by attempting
 //! to decode the type from inside a tuple.
 
-use core::ops::Range;
-
-#[cfg(not(feature = "std"))]
-use crate::no_std_prelude::Cow;
-#[cfg(feature = "std")]
-use std::borrow::Cow;
-
-use crate::{
-    coder::encoder::encode_single, encode, encode_params, token::TokenSeq, util, AbiResult, Error,
-    TokenType, Word,
-};
+use crate::{encode, no_std_prelude::*, token::TokenSeq, util, Error, Result, TokenType, Word};
+use core::{fmt, slice::SliceIndex};
 
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
 /// deserialize the bytes into a sequence of tokens.
@@ -73,10 +64,10 @@ pub struct Decoder<'a> {
     validate: bool,
 }
 
-impl core::fmt::Debug for Decoder<'_> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl fmt::Debug for Decoder<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Decoder")
-            .field("buf", &format!("0x{}", hex::encode(self.buf)))
+            .field("buf", &hex::encode_prefixed(self.buf))
             .field("offset", &self.offset)
             .field("validate", &self.validate)
             .finish()
@@ -84,10 +75,12 @@ impl core::fmt::Debug for Decoder<'_> {
 }
 
 impl<'a> Decoder<'a> {
-    /// Instantiate a new decoder from a byte slice and a validation flag. If
-    /// Validation is set to true, the decoder will check that the bytes
-    /// conform to expected type limitations, and that the decoded values can be
-    /// re-encoded to an identical bytestring.
+    /// Instantiate a new decoder from a byte slice and a validation flag.
+    ///
+    /// If `validate` is true, the decoder will check that the bytes conform to
+    /// expected type limitations, and that the decoded values can be re-encoded
+    /// to an identical bytestring.
+    #[inline]
     pub const fn new(buf: &'a [u8], validate: bool) -> Self {
         Self {
             buf,
@@ -98,7 +91,8 @@ impl<'a> Decoder<'a> {
 
     /// Create a child decoder, starting at `offset` bytes from the current
     /// decoder's offset. The child decoder shares the buffer and validation
-    /// flag
+    /// flag.
+    #[inline]
     fn child(&self, offset: usize) -> Result<Decoder<'a>, Error> {
         if offset > self.buf.len() {
             return Err(Error::Overrun);
@@ -110,36 +104,40 @@ impl<'a> Decoder<'a> {
         })
     }
 
-    /// Get a child decoder at the current offset
+    /// Get a child decoder at the current offset.
+    #[inline]
     pub fn raw_child(&self) -> Decoder<'a> {
         self.child(self.offset).unwrap()
     }
 
-    /// Advance the offset by `len` bytes
+    /// Advance the offset by `len` bytes.
+    #[inline]
     fn increase_offset(&mut self, len: usize) {
         self.offset += len;
     }
 
-    /// Peek a range from the buffer
-    pub fn peek(&self, range: Range<usize>) -> Result<&'a [u8], Error> {
-        (self.buf.len() >= range.end)
-            .then(|| &self.buf[range])
-            .ok_or(Error::Overrun)
+    /// Peek into the buffer.
+    #[inline]
+    pub fn peek<I: SliceIndex<[u8]>>(&self, index: I) -> Result<&'a I::Output, Error> {
+        self.buf.get(index).ok_or(Error::Overrun)
     }
 
     /// Peek a slice of size `len` from the buffer at a specific offset, without
-    /// advancing the offset
+    /// advancing the offset.
+    #[inline]
     pub fn peek_len_at(&self, offset: usize, len: usize) -> Result<&'a [u8], Error> {
         self.peek(offset..offset + len)
     }
 
     /// Peek a slice of size `len` from the buffer without advancing the offset.
+    #[inline]
     pub fn peek_len(&self, len: usize) -> Result<&'a [u8], Error> {
         self.peek_len_at(self.offset, len)
     }
 
     /// Peek a word from the buffer at a specific offset, without advancing the
-    /// offset
+    /// offset.
+    #[inline]
     pub fn peek_word_at(&self, offset: usize) -> Result<Word, Error> {
         Ok(Word::from_slice(
             self.peek_len_at(offset, Word::len_bytes())?,
@@ -147,22 +145,26 @@ impl<'a> Decoder<'a> {
     }
 
     /// Peek the next word from the buffer without advancing the offset.
+    #[inline]
     pub fn peek_word(&self) -> Result<Word, Error> {
         self.peek_word_at(self.offset)
     }
 
     /// Peek a u32 from the buffer at a specific offset, without advancing the
     /// offset.
-    pub fn peek_u32_at(&self, offset: usize) -> AbiResult<u32> {
+    #[inline]
+    pub fn peek_u32_at(&self, offset: usize) -> Result<u32> {
         util::as_u32(self.peek_word_at(offset)?, true)
     }
 
-    /// Peek the next word as a u32
-    pub fn peek_u32(&self) -> AbiResult<u32> {
+    /// Peek the next word as a u32.
+    #[inline]
+    pub fn peek_u32(&self) -> Result<u32> {
         util::as_u32(self.peek_word()?, true)
     }
 
     /// Take a word from the buffer, advancing the offset.
+    #[inline]
     pub fn take_word(&mut self) -> Result<Word, Error> {
         let contents = self.peek_word()?;
         self.increase_offset(Word::len_bytes());
@@ -171,19 +173,21 @@ impl<'a> Decoder<'a> {
 
     /// Return a child decoder by consuming a word, interpreting it as a
     /// pointer, and following it.
+    #[inline]
     pub fn take_indirection(&mut self) -> Result<Decoder<'a>, Error> {
         let ptr = self.take_u32()? as usize;
         self.child(ptr)
     }
 
     /// Take a u32 from the buffer by consuming a word.
-    pub fn take_u32(&mut self) -> AbiResult<u32> {
+    #[inline]
+    pub fn take_u32(&mut self) -> Result<u32> {
         let word = self.take_word()?;
         util::as_u32(word, true)
     }
 
     /// Takes a slice of bytes of the given length by consuming up to the next
-    /// word boundary
+    /// word boundary.
     pub fn take_slice(&mut self, len: usize) -> Result<&[u8], Error> {
         if self.validate {
             let padded_len = util::round_up_nearest_multiple(len, 32);
@@ -201,105 +205,74 @@ impl<'a> Decoder<'a> {
         Ok(res)
     }
 
-    /// True if this decoder is validating type correctness
+    /// True if this decoder is validating type correctness.
+    #[inline]
     pub const fn validate(&self) -> bool {
         self.validate
     }
 
     /// Takes the offset from the child decoder and sets it as the current
     /// offset.
+    #[inline]
     pub fn take_offset(&mut self, child: Decoder<'a>) {
         self.set_offset(child.offset + (self.buf.len() - child.buf.len()))
     }
 
     /// Sets the current offset in the buffer.
+    #[inline]
     pub fn set_offset(&mut self, offset: usize) {
         self.offset = offset;
     }
 
     /// Returns the current offset in the buffer.
+    #[inline]
     pub const fn offset(&self) -> usize {
         self.offset
     }
 
     /// Decodes a single token from the underlying buffer.
-    pub fn decode<T>(&mut self, data: &[u8]) -> AbiResult<T>
-    where
-        T: TokenType,
-    {
+    #[inline]
+    pub fn decode<T: TokenType>(&mut self, data: &[u8]) -> Result<T> {
         if data.is_empty() {
             return Err(Error::Overrun);
         }
-
-        let token = T::decode_from(self)?;
-
-        Ok(token)
+        T::decode_from(self)
     }
 
     /// Decodes a sequence of tokens from the underlying buffer.
-    pub fn decode_sequence<T>(&mut self, data: &[u8]) -> AbiResult<T>
-    where
-        T: TokenType + TokenSeq,
-    {
+    #[inline]
+    pub fn decode_sequence<T: TokenType + TokenSeq>(&mut self, data: &[u8]) -> Result<T> {
         if data.is_empty() {
             return Err(Error::Overrun);
         }
-        let token = T::decode_sequence(self)?;
-
-        Ok(token)
+        T::decode_sequence(self)
     }
-}
-
-pub(crate) fn decode_impl<T>(data: &[u8], validate: bool) -> AbiResult<T>
-where
-    T: TokenType + TokenSeq,
-{
-    let mut decoder = Decoder::new(data, validate);
-    decoder.decode_sequence::<T>(data)
 }
 
 /// Decodes ABI compliant vector of bytes into vector of tokens described by types param.
-pub fn decode<T>(data: &[u8], validate: bool) -> AbiResult<T>
-where
-    T: TokenType + TokenSeq,
-{
-    let res = decode_impl::<T>(data, validate)?;
-    if validate && encode(res.clone()) != data {
+pub fn decode<T: TokenSeq>(data: &[u8], validate: bool) -> Result<T> {
+    let mut decoder = Decoder::new(data, validate);
+    let res = decoder.decode_sequence::<T>(data)?;
+    if validate && encode(&res) != data {
         return Err(Error::ReserMismatch);
     }
     Ok(res)
 }
 
-/// Decode a single token
-pub fn decode_single<T>(data: &[u8], validate: bool) -> AbiResult<T>
-where
-    T: TokenType,
-{
-    let res = decode_impl::<(T,)>(data, validate)?.0;
-    if validate && encode_single(res.clone()) != data {
-        return Err(Error::ReserMismatch);
-    }
-    Ok(res)
+/// Decode a single token.
+#[inline]
+pub fn decode_single<T: TokenType>(data: &[u8], validate: bool) -> Result<T> {
+    decode::<(T,)>(data, validate).map(|(t,)| t)
 }
 
 /// Decode top-level function args. Encodes as params if T is a tuple.
-/// Otherwise, wraps in a tuple and decodes
-pub fn decode_params<T>(data: &[u8], validate: bool) -> AbiResult<T>
-where
-    T: TokenType + TokenSeq,
-{
-    if T::can_be_params() {
-        let res = decode_impl::<T>(data, validate)?;
-        if validate && encode_params(res.clone()) != data {
-            return Err(Error::ReserMismatch);
-        }
-        Ok(res)
+/// Otherwise, wraps in a tuple and decodes.
+#[inline]
+pub fn decode_params<T: TokenSeq>(data: &[u8], validate: bool) -> Result<T> {
+    if T::IS_TUPLE {
+        decode(data, validate)
     } else {
-        let res = decode_impl::<(T,)>(data, validate)?;
-        if validate && encode_params::<(T,)>(res.clone()) != data {
-            return Err(Error::ReserMismatch);
-        }
-        Ok(res.0)
+        decode_single(data, validate)
     }
 }
 

@@ -73,8 +73,6 @@ impl Struct {
     fn expand_impl(&self, attrs: &[Attribute]) -> TokenStream {
         let name = &self.name;
 
-        let doc = format!("Represents the `{name}` Solidity struct type.");
-
         let fields = self.fields.iter();
 
         let (f_ty, f_name): (Vec<_>, Vec<_>) = self
@@ -120,10 +118,9 @@ impl Struct {
         let convert = from_into_tuples(&self.name.0, &self.fields);
         let name_s = name.to_string();
         quote! {
-            #[doc = #doc]
             #(#attrs)*
             #[allow(non_camel_case_types, non_snake_case)]
-            #[derive(Debug, Clone, PartialEq)] // TODO: Derive traits dynamically
+            #[derive(Clone)]
             pub struct #name {
                 #(pub #fields),*
             }
@@ -153,11 +150,11 @@ impl Struct {
                         tuple.into()
                     }
 
-                    fn encode_type() -> Cow<'static, str> {
+                    fn eip712_encode_type() -> Cow<'static, str> {
                         #encode_type_impl.into()
                     }
 
-                    fn encode_data(&self) -> Vec<u8> {
+                    fn eip712_encode_data(&self) -> Vec<u8> {
                         #encode_data_impl
                     }
                 }

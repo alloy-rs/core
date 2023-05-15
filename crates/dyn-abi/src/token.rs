@@ -1,4 +1,4 @@
-use crate::{no_std_prelude::*, AbiResult, Decoder, Encoder, Error, Word};
+use crate::{no_std_prelude::*, Decoder, Encoder, Error, Result, Word};
 use ethers_abi_enc::token::{PackedSeqToken, TokenType, WordToken};
 
 /// A dynamic token. Equivalent to an enum over all types implementing
@@ -8,18 +8,18 @@ use ethers_abi_enc::token::{PackedSeqToken, TokenType, WordToken};
 // implementing `Hash`, ignore the `template` prop in the `DynSeq` variant
 #[derive(Debug, Clone)]
 pub enum DynToken {
-    /// A single word
+    /// A single word.
     Word(Word),
-    /// A Fixed Sequence
+    /// A Fixed Sequence.
     FixedSeq(Vec<DynToken>, usize),
-    /// A dynamic-length sequence
+    /// A dynamic-length sequence.
     DynSeq {
-        /// The contents of the dynamic sequence
+        /// The contents of the dynamic sequence.
         contents: Vec<DynToken>,
-        /// The type of the dynamic sequence
+        /// The type of the dynamic sequence.
         template: Box<DynToken>,
     },
-    /// A packed sequence (string or bytes)
+    /// A packed sequence (string or bytes).
     PackedSeq(Vec<u8>),
 }
 
@@ -85,7 +85,7 @@ impl DynToken {
         }
     }
 
-    /// True if the type is dynamic, else false
+    /// True if the type is dynamic, else false.
     pub fn is_dynamic(&self) -> bool {
         match self {
             Self::Word(_) => false,
@@ -95,8 +95,8 @@ impl DynToken {
         }
     }
 
-    /// Decodes from a decoder, populating the structure with the decoded data
-    pub fn decode_populate(&mut self, dec: &mut Decoder<'_>) -> AbiResult<()> {
+    /// Decodes from a decoder, populating the structure with the decoded data.
+    pub fn decode_populate(&mut self, dec: &mut Decoder<'_>) -> Result<()> {
         let dynamic = self.is_dynamic();
         match self {
             DynToken::Word(w) => *w = WordToken::decode_from(dec)?.inner(),
@@ -121,12 +121,12 @@ impl DynToken {
                 }
                 *contents = new_toks;
             }
-            DynToken::PackedSeq(buf) => *buf = PackedSeqToken::decode_from(dec)?.take_vec(),
+            DynToken::PackedSeq(buf) => *buf = PackedSeqToken::decode_from(dec)?.into_vec(),
         }
         Ok(())
     }
 
-    /// Returns the number of words this type uses in the head of the ABI blob
+    /// Returns the number of words this type uses in the head of the ABI blob.
     pub fn head_words(&self) -> usize {
         match self {
             DynToken::Word(_) => 1,
@@ -142,7 +142,7 @@ impl DynToken {
         }
     }
 
-    /// Returns the number of words this type uses in the tail of the ABI blob
+    /// Returns the number of words this type uses in the tail of the ABI blob.
     pub fn tail_words(&self) -> usize {
         match self {
             DynToken::Word(_) => 0,
@@ -160,7 +160,7 @@ impl DynToken {
         }
     }
 
-    /// Append this data to the head of an in-progress blob via the encoder
+    /// Append this data to the head of an in-progress blob via the encoder.
     pub fn head_append(&self, enc: &mut Encoder) {
         match self {
             DynToken::Word(word) => enc.append_word(*word),
@@ -176,7 +176,7 @@ impl DynToken {
         }
     }
 
-    /// Append this data to the tail of an in-progress blob via the encoder
+    /// Append this data to the tail of an in-progress blob via the encoder.
     pub fn tail_append(&self, enc: &mut Encoder) {
         match self {
             DynToken::Word(_) => {}
@@ -193,8 +193,8 @@ impl DynToken {
         }
     }
 
-    /// Encode this data, if it is a sequence. Error otherwise
-    pub(crate) fn encode_sequence(&self, enc: &mut Encoder) -> AbiResult<()> {
+    /// Encode this data, if it is a sequence. Error otherwise.
+    pub(crate) fn encode_sequence(&self, enc: &mut Encoder) -> Result<()> {
         match self {
             DynToken::FixedSeq(tokens, _) => {
                 let head_words = tokens.iter().map(DynToken::head_words).sum::<usize>();
@@ -230,8 +230,8 @@ impl DynToken {
     }
 
     /// Decode a sequence from the decoder, populating the data by consuming
-    /// decoder words
-    pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'_>) -> AbiResult<()> {
+    /// decoder words.
+    pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'_>) -> Result<()> {
         match self {
             DynToken::FixedSeq(buf, _) => {
                 for item in buf.iter_mut() {
@@ -246,13 +246,13 @@ impl DynToken {
         }
     }
 
-    /// Encode a single item of this type, as a sequence of length 1
-    pub(crate) fn encode_single(&self, enc: &mut Encoder) -> AbiResult<()> {
+    /// Encode a single item of this type, as a sequence of length 1.
+    pub(crate) fn encode_single(&self, enc: &mut Encoder) -> Result<()> {
         DynToken::FixedSeq(vec![self.clone()], 1).encode_sequence(enc)
     }
 
-    /// Decode a single item of this type, as a sequence of length 1
-    pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder<'_>) -> AbiResult<()> {
+    /// Decode a single item of this type, as a sequence of length 1.
+    pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder<'_>) -> Result<()> {
         let mut tok = DynToken::FixedSeq(vec![self.clone()], 1);
         tok.decode_sequence_populate(dec)?;
         if let DynToken::FixedSeq(mut toks, _) = tok {
