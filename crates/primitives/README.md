@@ -1,6 +1,11 @@
 ## ethers-types
 
-Fundamental types shared by [reth](https://github.com/paradigmxyz/reth) [revm](https://github.com/bluealloy/revm) and [ethers](https://github.com/gakonst/ethers-rs).
+Fundamental types shared by [reth], [revm], [ethers], and [foundry].
+
+[reth]: https://github.com/paradigmxyz/reth
+[revm]: https://github.com/bluealloy/revm
+[ethers]: https://github.com/ethers-rs/core
+[foundry]: https://github.com/foundry-rs/foundry
 
 ### Types
 
@@ -13,7 +18,7 @@ Fundamental types shared by [reth](https://github.com/paradigmxyz/reth) [revm](h
 
 ### Usage
 
-This library has straightforward, basic, types. Usage is correspondingly simple. Please consult [the documentation](docs) for more information.
+This library has straightforward, basic, types. Usage is correspondingly simple. Please consult [the documentation][docs] for more information.
 
 [docs]: https://docs.rs/ethers-types/latest/ethers-types/
 

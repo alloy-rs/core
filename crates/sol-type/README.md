@@ -1,4 +1,4 @@
-# ethers-sol-type
+# ethers-sol-macro
 
 This crate provides the [`sol`][sol] proc macro, which parses Solidity syntax
 to generate types that implement [`ethers-abi-enc`] traits.
