@@ -357,6 +357,8 @@ where
 }
 
 /// Encode all items from an iterator
+///
+/// This clones the iterator. Prefer [`encode_list`] if possible.
 pub fn encode_iter<K, I>(i: I, out: &mut dyn BufMut)
 where
     K: Encodable,
