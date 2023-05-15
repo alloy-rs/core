@@ -4,7 +4,7 @@ members = ["crates/*"]
 
 [workspace.package]
 edition = "2021"
-rust-version = "1.65"
+rust-version = "1.65" # Remember to update .clippy.toml and workflows/ci.yml
 authors = []
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/ethers-rs/core"
