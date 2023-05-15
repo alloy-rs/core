@@ -56,13 +56,6 @@ pub trait SolType {
     /// True if the type is dynamic according to ABI rules.
     fn is_dynamic() -> bool;
 
-    /// Returns true if the type is a user defined type. These include structs,
-    /// enums, and user defined value types.
-    #[inline]
-    fn is_user_defined() -> bool {
-        false
-    }
-
     /// Check a token to see if it can be detokenized with this type.
     fn type_check(token: &Self::TokenType) -> Result<()>;
 

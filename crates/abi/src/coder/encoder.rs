@@ -83,28 +83,10 @@ impl Encoder {
     #[inline]
     pub fn into_bytes(self) -> Vec<u8> {
         // TODO: remove once `Vec::into_flattened` is stabilized.
-        /// See [`Vec::into_raw_parts`].
-        #[inline]
-        fn into_raw_parts<T>(vec: Vec<T>) -> (*mut T, usize, usize) {
-            let mut me = mem::ManuallyDrop::new(vec);
-            (me.as_mut_ptr(), me.len(), me.capacity())
-        }
-
-        /// See [`Vec::into_flattened`] and its safety comments.
-        #[inline]
-        fn into_flattened<const N: usize>(vec: Vec<[u8; N]>) -> Vec<u8> {
-            let (ptr, len, cap) = into_raw_parts(vec);
-            unsafe {
-                Vec::from_raw_parts(
-                    ptr.cast(),
-                    len.checked_mul(N).unwrap_unchecked(),
-                    cap.checked_mul(N).unwrap_unchecked(),
-                )
-            }
-        }
+        // unsafe { mem::transmute::<Vec<_>, Vec<[u8; 32]>>(self.buf).into_flattened() }
 
         // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`
-        unsafe { into_flattened::<32>(mem::transmute(self.buf)) }
+        unsafe { super::impl_core::into_flattened::<32>(mem::transmute(self.buf)) }
     }
 
     /// Determine the current suffix offset.

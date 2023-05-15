@@ -37,7 +37,7 @@ pub trait SolCall: Sized {
         Ok(Self::from_rust(tuple))
     }
 
-    /// ABI decode this call's arguments from the given slice, **** the selector.
+    /// ABI decode this call's arguments from the given slice, **with** the selector.
     #[inline]
     fn decode(data: &[u8], validate: bool) -> Result<Self> {
         let data = data

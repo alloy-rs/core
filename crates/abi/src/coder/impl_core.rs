@@ -53,6 +53,8 @@ where
     Ok(unsafe { array_assume_init(array) })
 }
 
+/* ----------------------------------------- MaybeUninit ---------------------------------------- */
+
 /// [`MaybeUninit::slice_assume_init_mut`]
 #[inline(always)]
 unsafe fn slice_assume_init_mut<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
@@ -79,6 +81,29 @@ unsafe fn array_assume_init<T, const N: usize>(array: [MaybeUninit<T>; N]) -> [T
     unsafe { transpose(array).assume_init() }
 }
 
+#[inline(always)]
 unsafe fn transpose<T, const N: usize>(array: [MaybeUninit<T>; N]) -> MaybeUninit<[T; N]> {
     mem::transmute_copy::<[MaybeUninit<T>; N], MaybeUninit<[T; N]>>(&mem::ManuallyDrop::new(&array))
+}
+
+/* --------------------------------------------- Vec -------------------------------------------- */
+
+/// [`Vec::into_flattened`].
+#[inline]
+pub(crate) fn into_flattened<const N: usize>(vec: Vec<[u8; N]>) -> Vec<u8> {
+    let (ptr, len, cap) = into_raw_parts(vec);
+    unsafe {
+        Vec::from_raw_parts(
+            ptr.cast(),
+            len.checked_mul(N).unwrap_unchecked(),
+            cap.checked_mul(N).unwrap_unchecked(),
+        )
+    }
+}
+
+/// [`Vec::into_raw_parts`]
+#[inline(always)]
+fn into_raw_parts<T>(vec: Vec<T>) -> (*mut T, usize, usize) {
+    let mut me = mem::ManuallyDrop::new(vec);
+    (me.as_mut_ptr(), me.len(), me.capacity())
 }

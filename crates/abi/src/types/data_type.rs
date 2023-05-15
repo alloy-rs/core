@@ -132,8 +132,7 @@ macro_rules! impl_int_sol_type {
             fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
                 let rust = *rust.borrow();
                 let bytes = (<$ity>::BITS / 8) as usize;
-                let mut word = if rust < 0 {
-                    // account for negative
+                let mut word = if rust.is_negative() {
                     Word::repeat_byte(0xff)
                 } else {
                     Word::default()

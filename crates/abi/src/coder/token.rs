@@ -25,9 +25,6 @@ mod sealed {
     use super::*;
 
     pub trait Sealed {}
-
-    impl<T: Sealed> Sealed for &'_ T {}
-
     impl Sealed for WordToken {}
     impl Sealed for () {}
     impl<T, const N: usize> Sealed for FixedSeqToken<T, N> {}

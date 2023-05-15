@@ -2,7 +2,7 @@
 //! Solidity structs logic, particularly for EIP-712 encoding/decoding.
 
 use super::SolType;
-use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Word};
+use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Result, Word};
 use ethers_primitives::{keccak256, B256};
 
 type TupleFor<T> = <T as SolStruct>::Tuple;
@@ -34,7 +34,9 @@ pub trait SolStruct {
     /// The corresponding Tuple type, used for encoding/decoding.
     type Tuple: SolType<TokenType = Self::Token>;
 
-    /// The struct name. Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
+    /// The struct name.
+    ///
+    /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
     const NAME: &'static str;
 
     /// The field types and names. Type is a Solidity string, and must conform
@@ -110,21 +112,14 @@ pub trait SolStruct {
 }
 
 // blanket impl
-impl<T> SolType for T
-where
-    T: SolStruct,
-{
+// TODO: Maybe move this to `sol!`?
+impl<T: SolStruct> SolType for T {
     type RustType = T;
     type TokenType = TupleTokenTypeFor<T>;
 
     #[inline]
     fn is_dynamic() -> bool {
         <<Self as SolStruct>::Tuple as SolType>::is_dynamic()
-    }
-
-    #[inline]
-    fn is_user_defined() -> bool {
-        true
     }
 
     #[inline]
@@ -138,13 +133,13 @@ where
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> crate::Result<Self::RustType> {
+    fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
         let tuple = TupleFor::<T>::detokenize(token)?;
         Ok(T::from_rust(tuple))
     }
 
     #[inline]
-    fn tokenize<Borrower: Borrow<Self::RustType>>(rust: Borrower) -> Self::TokenType {
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
         let tuple = rust.borrow().to_rust();
         TupleFor::<T>::tokenize(tuple)
     }
@@ -160,7 +155,7 @@ where
     }
 
     #[inline]
-    fn encode_packed_to<Borrower: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: Borrower) {
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
         let tuple = rust.borrow().to_rust();
         TupleFor::<T>::encode_packed_to(target, tuple)
     }

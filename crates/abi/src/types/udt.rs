@@ -66,11 +66,6 @@ macro_rules! define_udt {
             }
 
             #[inline]
-            fn is_user_defined() -> bool {
-                true
-            }
-
-            #[inline]
             fn type_check(token: &Self::TokenType) -> $crate::Result<()> {
                 <$underlying as $crate::SolType>::type_check(token)?;
                 $path(token)
