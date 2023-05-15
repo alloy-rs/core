@@ -31,10 +31,7 @@ impl SolType for Address {
     }
 
     #[inline]
-    fn tokenize<B>(rust: B) -> Self::TokenType
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
         WordToken::from(*rust.borrow())
     }
 
@@ -47,10 +44,7 @@ impl SolType for Address {
     }
 
     #[inline]
-    fn eip712_data_word<B>(rust: B) -> Word
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         Self::tokenize(rust).inner()
     }
 
@@ -90,18 +84,12 @@ impl SolType for Bytes {
     }
 
     #[inline]
-    fn tokenize<B>(rust: B) -> Self::TokenType
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
         rust.borrow().to_owned().into()
     }
 
     #[inline]
-    fn eip712_data_word<B>(rust: B) -> Word
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         keccak256(Self::encode_packed(rust.borrow()))
     }
 
@@ -381,28 +369,19 @@ impl SolType for Bool {
     }
 
     #[inline]
-    fn tokenize<B>(rust: B) -> Self::TokenType
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
         let mut word = Word::default();
         word[31] = *rust.borrow() as u8;
         word.into()
     }
 
     #[inline]
-    fn eip712_data_word<B>(rust: B) -> Word
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         Self::tokenize(rust).inner()
     }
 
     #[inline]
-    fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
         // write the bool as a u8
         target.push(*rust.borrow() as u8);
     }
@@ -443,10 +422,7 @@ where
     }
 
     #[inline]
-    fn tokenize<B>(rust: B) -> Self::TokenType
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
         rust.borrow()
             .iter()
             .map(|r| T::tokenize(r))
@@ -455,10 +431,7 @@ where
     }
 
     #[inline]
-    fn eip712_data_word<B>(rust: B) -> Word
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         let mut encoded = Vec::new();
         for item in rust.borrow() {
             encoded.extend(T::eip712_data_word(item).as_slice());
@@ -467,10 +440,7 @@ where
     }
 
     #[inline]
-    fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
         for item in rust.borrow() {
             T::encode_packed_to(target, item);
         }
@@ -513,26 +483,17 @@ impl SolType for String {
     }
 
     #[inline]
-    fn tokenize<B>(rust: B) -> Self::TokenType
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
         rust.borrow().as_bytes().to_vec().into()
     }
 
     #[inline]
-    fn eip712_data_word<B>(rust: B) -> Word
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         keccak256(Self::encode_packed(rust.borrow()))
     }
 
     #[inline]
-    fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
         target.extend(rust.borrow().as_bytes());
     }
 }
@@ -643,10 +604,7 @@ where
     }
 
     #[inline]
-    fn tokenize<B>(rust: B) -> Self::TokenType
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
         match rust
             .borrow()
             .iter()
@@ -660,10 +618,7 @@ where
     }
 
     #[inline]
-    fn eip712_data_word<B>(rust: B) -> Word
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         let rust = rust.borrow();
         let encoded = rust
             .iter()
@@ -673,10 +628,7 @@ where
     }
 
     #[inline]
-    fn encode_packed_to<B>(target: &mut Vec<u8>, rust: B)
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
         for item in rust.borrow() {
             T::encode_packed_to(target, item);
         }
@@ -788,24 +740,13 @@ impl SolType for () {
     }
 
     #[inline]
-    fn tokenize<B>(_rust: B) -> Self::TokenType
-    where
-        B: Borrow<Self::RustType>,
-    {
-    }
+    fn tokenize<B: Borrow<Self::RustType>>(_rust: B) -> Self::TokenType {}
 
     #[inline]
-    fn eip712_data_word<B>(_rust: B) -> Word
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn eip712_data_word<B: Borrow<Self::RustType>>(_rust: B) -> Word {
         Word::zero()
     }
 
     #[inline]
-    fn encode_packed_to<B>(_target: &mut Vec<u8>, _rust: B)
-    where
-        B: Borrow<Self::RustType>,
-    {
-    }
+    fn encode_packed_to<B: Borrow<Self::RustType>>(_target: &mut Vec<u8>, _rust: B) {}
 }

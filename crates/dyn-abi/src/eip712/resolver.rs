@@ -21,10 +21,7 @@ pub struct PropertyDef {
 }
 
 impl<'de> Deserialize<'de> for PropertyDef {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
         struct Helper {
             #[serde(rename = "type")]
@@ -202,20 +199,14 @@ pub struct Resolver {
 }
 
 impl Serialize for Resolver {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let types: Eip712Types = self.into();
         types.serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for Resolver {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let types: Eip712Types = Deserialize::deserialize(deserializer)?;
         Ok(types.into())
     }
@@ -249,10 +240,7 @@ impl From<&Resolver> for Eip712Types {
 
 impl Resolver {
     /// Instantiate a new resolver from a `SolStruct` type.
-    pub fn from_struct<S>() -> Self
-    where
-        S: SolStruct,
-    {
+    pub fn from_struct<S: SolStruct>() -> Self {
         let mut resolver = Resolver::default();
         resolver.ingest_sol_struct::<S>();
         resolver

@@ -144,10 +144,7 @@ where
     }
 
     #[inline]
-    fn tokenize<Borrower>(rust: Borrower) -> Self::TokenType
-    where
-        Borrower: Borrow<Self::RustType>,
-    {
+    fn tokenize<Borrower: Borrow<Self::RustType>>(rust: Borrower) -> Self::TokenType {
         let tuple = rust.borrow().to_rust();
         TupleFor::<T>::tokenize(tuple)
     }
@@ -158,18 +155,12 @@ where
     }
 
     #[inline]
-    fn eip712_data_word<B>(rust: B) -> Word
-    where
-        B: Borrow<Self::RustType>,
-    {
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         keccak256(SolStruct::eip712_hash_struct(rust.borrow()))
     }
 
     #[inline]
-    fn encode_packed_to<Borrower>(target: &mut Vec<u8>, rust: Borrower)
-    where
-        Borrower: Borrow<Self::RustType>,
-    {
+    fn encode_packed_to<Borrower: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: Borrower) {
         let tuple = rust.borrow().to_rust();
         TupleFor::<T>::encode_packed_to(target, tuple)
     }

@@ -278,10 +278,7 @@ impl<'a> Rlp<'a> {
     }
 
     /// Decode the next item from the buffer
-    pub fn get_next<T>(&mut self) -> Result<Option<T>, DecodeError>
-    where
-        T: Decodable,
-    {
+    pub fn get_next<T: Decodable>(&mut self) -> Result<Option<T>, DecodeError> {
         if self.payload_view.is_empty() {
             return Ok(None);
         }

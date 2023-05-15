@@ -252,19 +252,13 @@ macro_rules! impl_rlp {
 macro_rules! impl_serde {
     ($t:ty) => {
         impl serde::Serialize for $t {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: serde::Serializer,
-            {
+            fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                 serde::Serialize::serialize(&self.0, serializer)
             }
         }
 
         impl<'de> serde::Deserialize<'de> for $t {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
+            fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
                 serde::Deserialize::deserialize(deserializer).map(Self)
             }
         }

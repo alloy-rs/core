@@ -14,10 +14,7 @@ use crate::{
 pub struct Eip712Types(BTreeMap<String, Vec<PropertyDef>>);
 
 impl<'de> Deserialize<'de> for Eip712Types {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let map: BTreeMap<String, Vec<PropertyDef>> = BTreeMap::deserialize(deserializer)?;
 
         for key in map.keys() {
@@ -105,10 +102,7 @@ pub struct TypedData {
 /// See <https://github.com/MetaMask/metamask-extension/blob/0dfdd44ae7728ed02cbf32c564c75b74f37acf77/app/scripts/metamask-controller.js#L1736>
 /// In fact, ethers.js JSON stringifies the message at the time of writing.
 impl<'de> Deserialize<'de> for TypedData {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::de::Deserializer<'de>,
-    {
+    fn deserialize<D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
         #[allow(missing_debug_implementations)]
         struct TypedDataHelper {
@@ -153,10 +147,7 @@ impl<'de> Deserialize<'de> for TypedData {
 impl TypedData {
     /// Instantiate [`TypedData`] from a [`SolStruct`] that implements
     /// [`serde::Serialize`].
-    pub fn from_struct<S>(s: &S, domain: Option<Eip712Domain>) -> Self
-    where
-        S: SolStruct + Serialize,
-    {
+    pub fn from_struct<S: SolStruct + Serialize>(s: &S, domain: Option<Eip712Domain>) -> Self {
         Self {
             domain: domain.unwrap_or_default(),
             resolver: Resolver::from_struct::<S>(),
