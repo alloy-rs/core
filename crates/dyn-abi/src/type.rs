@@ -3,7 +3,7 @@ use crate::{
     no_std_prelude::*,
     DynAbiError, DynSolValue, DynToken, Result, SolType, Word,
 };
-use ethers_abi_enc::sol_data;
+use ethers_sol_types::sol_data;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct StructProp {

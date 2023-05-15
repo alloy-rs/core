@@ -38,7 +38,7 @@ mod no_std_prelude {
 mod error;
 pub use error::DynAbiError;
 
-pub use ethers_abi_enc::{Decoder, Eip712Domain, Encoder, Error, Result, SolType, Word};
+pub use ethers_sol_types::{Decoder, Eip712Domain, Encoder, Error, Result, SolType, Word};
 
 mod r#type;
 pub use r#type::DynSolType;
