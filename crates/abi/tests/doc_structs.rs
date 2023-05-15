@@ -28,17 +28,17 @@ sol! {
 
 #[test]
 fn structs() {
-    let foo = Foo {
+    let my_foo = Foo {
         bar: U256::from(42),
         baz: vec![Address::zero(); 2],
     };
 
     let _nested = Nested {
-        a: [foo.clone(), foo.clone()],
+        a: [my_foo.clone(), my_foo.clone()],
         b: Address::zero(),
     };
 
-    let abi_encoded = Foo::encode(foo);
+    let abi_encoded = Foo::encode(my_foo);
     assert_eq!(
         abi_encoded,
         hex! {

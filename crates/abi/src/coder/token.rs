@@ -78,7 +78,7 @@ pub trait TokenSeq: TokenType {
     fn encode_sequence(&self, enc: &mut Encoder);
 
     /// ABI-decode the token sequence from the encoder.
-    fn decode_sequence<'a>(dec: &mut Decoder<'a>) -> Result<Self>;
+    fn decode_sequence(dec: &mut Decoder<'_>) -> Result<Self>;
 }
 
 /// A single EVM word - T for any value type.
