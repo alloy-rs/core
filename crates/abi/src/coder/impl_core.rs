@@ -1,6 +1,15 @@
 //! Modified implementations of unstable libcore functions.
 
+use crate::no_std_prelude::*;
 use core::mem::{self, MaybeUninit};
+
+trait Ext {
+    const IS_ZST: bool;
+}
+
+impl<T> Ext for T {
+    const IS_ZST: bool = mem::size_of::<Self>() == 0;
+}
 
 /// [`core::array::try_from_fn`]
 pub(crate) fn try_from_fn<F, T, E, const N: usize>(mut cb: F) -> Result<[T; N], E>
@@ -81,6 +90,7 @@ unsafe fn array_assume_init<T, const N: usize>(array: [MaybeUninit<T>; N]) -> [T
     unsafe { transpose(array).assume_init() }
 }
 
+/// [`MaybeUninit::transpose`]
 #[inline(always)]
 unsafe fn transpose<T, const N: usize>(array: [MaybeUninit<T>; N]) -> MaybeUninit<[T; N]> {
     mem::transmute_copy::<[MaybeUninit<T>; N], MaybeUninit<[T; N]>>(&mem::ManuallyDrop::new(&array))
@@ -90,15 +100,30 @@ unsafe fn transpose<T, const N: usize>(array: [MaybeUninit<T>; N]) -> MaybeUnini
 
 /// [`Vec::into_flattened`].
 #[inline]
-pub(crate) fn into_flattened<const N: usize>(vec: Vec<[u8; N]>) -> Vec<u8> {
+pub(crate) fn into_flattened<T, const N: usize>(vec: Vec<[T; N]>) -> Vec<T> {
     let (ptr, len, cap) = into_raw_parts(vec);
-    unsafe {
-        Vec::from_raw_parts(
-            ptr.cast(),
-            len.checked_mul(N).unwrap_unchecked(),
-            cap.checked_mul(N).unwrap_unchecked(),
-        )
-    }
+    let (new_len, new_cap) = if T::IS_ZST {
+        (len.checked_mul(N).expect("vec len overflow"), usize::MAX)
+    } else {
+        // SAFETY:
+        // - `cap * N` cannot overflow because the allocation is already in
+        // the address space.
+        // - Each `[T; N]` has `N` valid elements, so there are `len * N`
+        // valid elements in the allocation.
+        unsafe {
+            (
+                len.checked_mul(N).unwrap_unchecked(),
+                cap.checked_mul(N).unwrap_unchecked(),
+            )
+        }
+    };
+    // SAFETY:
+    // - `ptr` was allocated by `self`
+    // - `ptr` is well-aligned because `[T; N]` has the same alignment as `T`.
+    // - `new_cap` refers to the same sized allocation as `cap` because
+    // `new_cap * size_of::<T>()` == `cap * size_of::<[T; N]>()`
+    // - `len` <= `cap`, so `len * N` <= `cap * N`.
+    unsafe { Vec::from_raw_parts(ptr.cast(), new_len, new_cap) }
 }
 
 /// [`Vec::into_raw_parts`]

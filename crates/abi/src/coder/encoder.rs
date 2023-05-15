@@ -86,7 +86,7 @@ impl Encoder {
         // unsafe { mem::transmute::<Vec<_>, Vec<[u8; 32]>>(self.buf).into_flattened() }
 
         // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`
-        unsafe { super::impl_core::into_flattened::<32>(mem::transmute(self.buf)) }
+        unsafe { super::impl_core::into_flattened::<_, 32>(mem::transmute(self.buf)) }
     }
 
     /// Determine the current suffix offset.
