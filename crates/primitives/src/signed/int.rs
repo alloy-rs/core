@@ -198,8 +198,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         self.try_into().unwrap()
     }
 
-    /// Returns the signed integer as a unsigned integer. If the value of `self` negative, then the
-    /// two's complement of its absolute value will be returned.
+    /// Returns the signed integer as a unsigned integer. If the value of `self`
+    /// negative, then the two's complement of its absolute value will be
+    /// returned.
     #[inline(always)]
     pub const fn into_raw(self) -> Uint<BITS, LIMBS> {
         self.0
@@ -213,7 +214,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         // check to avoid bit comparison
         if let Some(limb) = self.0.as_limbs().last() {
             if *limb >= Self::SIGN_BIT {
-                return Sign::Negative;
+                return Sign::Negative
             }
         }
         Sign::Positive
@@ -319,7 +320,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
         // NOTE: We need to deal with two special cases:
         //   - the number is 0
-        //   - the number is a negative power of `2`. These numbers are written as `0b11..1100..00`.
+        //   - the number is a negative power of `2`. These numbers are written as
+        //     `0b11..1100..00`.
         //   In the case of a negative power of two, the number of bits required
         //   to represent the negative signed value is equal to the number of
         //   bits required to represent its absolute value as an unsigned
@@ -395,7 +397,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         let value = value.strip_prefix("0x").unwrap_or(value);
 
         if value.len() > 64 {
-            return Err(errors::ParseSignedError::IntegerOverflow);
+            return Err(errors::ParseSignedError::IntegerOverflow)
         }
 
         let abs = Uint::<BITS, LIMBS>::from_str_radix(value, 16)?;

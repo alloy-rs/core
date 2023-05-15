@@ -1,7 +1,10 @@
 //! Solidity Primitives. These are the types that are built into Solidity.
 
-use crate::no_std_prelude::{String as RustString, *};
-use crate::{token::*, util, Result, SolType, Word};
+use crate::{
+    no_std_prelude::{String as RustString, *},
+    token::*,
+    util, Result, SolType, Word,
+};
 use alloc::borrow::Cow;
 use core::marker::PhantomData;
 use ethers_primitives::{keccak256, Address as RustAddress, I256, U256};
@@ -38,7 +41,7 @@ impl SolType for Address {
     #[inline]
     fn type_check(token: &Self::TokenType) -> Result<()> {
         if !util::check_zeroes(&token.inner()[..12]) {
-            return Err(Self::type_check_fail(token.as_slice()));
+            return Err(Self::type_check_fail(token.as_slice()))
         }
         Ok(())
     }
@@ -357,7 +360,7 @@ impl SolType for Bool {
     #[inline]
     fn type_check(token: &Self::TokenType) -> Result<()> {
         if !util::check_bool(token.inner()) {
-            return Err(Self::type_check_fail(token.as_slice()));
+            return Err(Self::type_check_fail(token.as_slice()))
         }
         Ok(())
     }
@@ -467,7 +470,7 @@ impl SolType for String {
     #[inline]
     fn type_check(token: &Self::TokenType) -> Result<()> {
         if core::str::from_utf8(token.as_slice()).is_err() {
-            return Err(Self::type_check_fail(token.as_slice()));
+            return Err(Self::type_check_fail(token.as_slice()))
         }
         Ok(())
     }

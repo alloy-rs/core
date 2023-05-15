@@ -62,10 +62,11 @@ impl core::fmt::Display for DecodeError {
 impl Header {
     /// Returns the decoded header.
     ///
-    /// Returns an error if the given `buf`'s len is less than the expected payload.
+    /// Returns an error if the given `buf`'s len is less than the expected
+    /// payload.
     pub fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
         if !buf.has_remaining() {
-            return Err(DecodeError::InputTooShort);
+            return Err(DecodeError::InputTooShort)
         }
 
         let b = buf[0];
@@ -84,10 +85,10 @@ impl Header {
 
                 if h.payload_length == 1 {
                     if !buf.has_remaining() {
-                        return Err(DecodeError::InputTooShort);
+                        return Err(DecodeError::InputTooShort)
                     }
                     if buf[0] < 0x80 {
-                        return Err(DecodeError::NonCanonicalSingleByte);
+                        return Err(DecodeError::NonCanonicalSingleByte)
                     }
                 }
 
@@ -96,7 +97,7 @@ impl Header {
                 buf.advance(1);
                 let len_of_len = b as usize - 0xB7;
                 if buf.len() < len_of_len {
-                    return Err(DecodeError::InputTooShort);
+                    return Err(DecodeError::InputTooShort)
                 }
                 let payload_length = usize::try_from(u64::from_be_bytes(
                     static_left_pad(&buf[..len_of_len]).ok_or(DecodeError::LeadingZero)?,
@@ -104,7 +105,7 @@ impl Header {
                 .map_err(|_| DecodeError::Custom("Input too big"))?;
                 buf.advance(len_of_len);
                 if payload_length < 56 {
-                    return Err(DecodeError::NonCanonicalSize);
+                    return Err(DecodeError::NonCanonicalSize)
                 }
 
                 Self {
@@ -122,7 +123,7 @@ impl Header {
                 let list = true;
                 let len_of_len = b as usize - 0xF7;
                 if buf.len() < len_of_len {
-                    return Err(DecodeError::InputTooShort);
+                    return Err(DecodeError::InputTooShort)
                 }
                 let payload_length = usize::try_from(u64::from_be_bytes(
                     static_left_pad(&buf[..len_of_len]).ok_or(DecodeError::LeadingZero)?,
@@ -130,7 +131,7 @@ impl Header {
                 .map_err(|_| DecodeError::Custom("Input too big"))?;
                 buf.advance(len_of_len);
                 if payload_length < 56 {
-                    return Err(DecodeError::NonCanonicalSize);
+                    return Err(DecodeError::NonCanonicalSize)
                 }
 
                 Self {
@@ -141,7 +142,7 @@ impl Header {
         };
 
         if buf.remaining() < h.payload_length {
-            return Err(DecodeError::InputTooShort);
+            return Err(DecodeError::InputTooShort)
         }
 
         Ok(h)
@@ -152,17 +153,17 @@ impl Header {
 /// is too long or if the first byte is 0.
 fn static_left_pad<const LEN: usize>(data: &[u8]) -> Option<[u8; LEN]> {
     if data.len() > LEN {
-        return None;
+        return None
     }
 
     let mut v = [0; LEN];
 
     if data.is_empty() {
-        return Some(v);
+        return Some(v)
     }
 
     if data[0] == 0 {
-        return None;
+        return None
     }
 
     v[LEN - data.len()..].copy_from_slice(data);
@@ -175,19 +176,19 @@ macro_rules! decode_integer {
             fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
                 let h = Header::decode(buf)?;
                 if h.list {
-                    return Err(DecodeError::UnexpectedList);
+                    return Err(DecodeError::UnexpectedList)
                 }
                 if h.payload_length > (<$t>::BITS as usize / 8) {
-                    return Err(DecodeError::Overflow);
+                    return Err(DecodeError::Overflow)
                 }
                 if buf.remaining() < h.payload_length {
-                    return Err(DecodeError::InputTooShort);
+                    return Err(DecodeError::InputTooShort)
                 }
-                // In the case of 0x80, the Header will be decoded, leaving h.payload_length to be
-                // zero.
+                // In the case of 0x80, the Header will be decoded, leaving h.payload_length to
+                // be zero.
                 // 0x80 is the canonical encoding of 0, so we return 0 here.
                 if h.payload_length == 0 {
-                    return Ok(<$t>::from(0u8));
+                    return Ok(<$t>::from(0u8))
                 }
                 let v = <$t>::from_be_bytes(
                     static_left_pad(&buf[..h.payload_length]).ok_or(DecodeError::LeadingZero)?,
@@ -220,13 +221,13 @@ impl<const N: usize> Decodable for [u8; N] {
     fn decode(from: &mut &[u8]) -> Result<Self, DecodeError> {
         let h = Header::decode(from)?;
         if h.list {
-            return Err(DecodeError::UnexpectedList);
+            return Err(DecodeError::UnexpectedList)
         }
         if h.payload_length != N {
-            return Err(DecodeError::UnexpectedLength);
+            return Err(DecodeError::UnexpectedLength)
         }
         if from.remaining() < N {
-            return Err(DecodeError::InputTooShort);
+            return Err(DecodeError::InputTooShort)
         }
 
         let mut to = [0_u8; N];
@@ -241,10 +242,10 @@ impl Decodable for BytesMut {
     fn decode(from: &mut &[u8]) -> Result<Self, DecodeError> {
         let h = Header::decode(from)?;
         if h.list {
-            return Err(DecodeError::UnexpectedList);
+            return Err(DecodeError::UnexpectedList)
         }
         if from.remaining() < h.payload_length {
-            return Err(DecodeError::InputTooShort);
+            return Err(DecodeError::InputTooShort)
         }
         let mut to = BytesMut::with_capacity(h.payload_length);
         to.extend_from_slice(&from[..h.payload_length]);
@@ -270,7 +271,7 @@ impl<'a> Rlp<'a> {
     pub fn new(mut payload: &'a [u8]) -> Result<Self, DecodeError> {
         let h = Header::decode(&mut payload)?;
         if !h.list {
-            return Err(DecodeError::UnexpectedString);
+            return Err(DecodeError::UnexpectedString)
         }
 
         let payload_view = &payload[..h.payload_length];
@@ -280,7 +281,7 @@ impl<'a> Rlp<'a> {
     /// Decode the next item from the buffer.
     pub fn get_next<T: Decodable>(&mut self) -> Result<Option<T>, DecodeError> {
         if self.payload_view.is_empty() {
-            return Ok(None);
+            return Ok(None)
         }
 
         Ok(Some(T::decode(&mut self.payload_view)?))
@@ -296,10 +297,10 @@ mod std_impl {
 
             let h = Header::decode(buf)?;
             if h.list {
-                return Err(DecodeError::UnexpectedList);
+                return Err(DecodeError::UnexpectedList)
             }
             if buf.remaining() < h.payload_length {
-                return Err(DecodeError::InputTooShort);
+                return Err(DecodeError::InputTooShort)
             }
             let o = match h.payload_length {
                 4 => {
@@ -331,10 +332,10 @@ mod alloc_impl {
         fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
             let h = Header::decode(buf)?;
             if !h.list {
-                return Err(DecodeError::UnexpectedString);
+                return Err(DecodeError::UnexpectedString)
             }
             if buf.remaining() < h.payload_length {
-                return Err(DecodeError::InputTooShort);
+                return Err(DecodeError::InputTooShort)
             }
 
             let payload_view = &mut &buf[..h.payload_length];
@@ -372,10 +373,10 @@ mod alloc_impl {
         fn decode(from: &mut &[u8]) -> Result<Self, DecodeError> {
             let h = Header::decode(from)?;
             if h.list {
-                return Err(DecodeError::UnexpectedList);
+                return Err(DecodeError::UnexpectedList)
             }
             if from.remaining() < h.payload_length {
-                return Err(DecodeError::InputTooShort);
+                return Err(DecodeError::InputTooShort)
             }
             let mut to = ::alloc::vec::Vec::with_capacity(h.payload_length);
             to.extend_from_slice(&from[..h.payload_length]);
@@ -389,8 +390,7 @@ mod alloc_impl {
 #[cfg(all(test, feature = "alloc"))]
 mod tests {
     use super::*;
-    use alloc::string::String;
-    use alloc::vec::Vec;
+    use alloc::{string::String, vec::Vec};
     use core::fmt::Debug;
     use hex_literal::hex;
 

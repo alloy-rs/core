@@ -3,8 +3,7 @@ use alloc::{
     borrow::Borrow,
     string::{String, ToString},
 };
-use core::fmt;
-use core::str;
+use core::{fmt, str};
 
 /// Error type for address checksum validation.
 #[derive(Debug, Copy, Clone)]
@@ -106,7 +105,8 @@ impl Address {
         let mut hash_hex = [0u8; 64];
         hex::encode_to_slice(hash.as_bytes(), &mut hash_hex).unwrap();
 
-        // generates significantly less code than zipping the two arrays, or `.into_iter()`
+        // generates significantly less code than zipping the two arrays, or
+        // `.into_iter()`
         for (i, x) in hash_hex.iter().enumerate().take(40) {
             if *x >= b'8' {
                 // SAFETY: `addr_buf` is 42 bytes long, `2..42` is always in range
@@ -149,7 +149,7 @@ impl Address {
     ) -> Result<Self, AddressError> {
         fn inner(s: &str, chain_id: Option<u64>) -> Result<Address, AddressError> {
             if !s.starts_with("0x") {
-                return Err(AddressError::Hex(hex::FromHexError::InvalidStringLength));
+                return Err(AddressError::Hex(hex::FromHexError::InvalidStringLength))
             }
 
             let address: Address = s.parse()?;

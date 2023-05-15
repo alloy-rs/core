@@ -18,7 +18,7 @@ where
 {
     if N == 0 {
         // SAFETY: An empty array is always inhabited and has no validity invariants.
-        return unsafe { Ok(mem::zeroed()) };
+        return unsafe { Ok(mem::zeroed()) }
     }
 
     struct Guard<'a, T, const N: usize> {
@@ -62,8 +62,6 @@ where
     Ok(unsafe { array_assume_init(array) })
 }
 
-/* ----------------------------------------- MaybeUninit ---------------------------------------- */
-
 /// [`MaybeUninit::slice_assume_init_mut`]
 #[inline(always)]
 unsafe fn slice_assume_init_mut<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
@@ -95,8 +93,6 @@ unsafe fn array_assume_init<T, const N: usize>(array: [MaybeUninit<T>; N]) -> [T
 unsafe fn transpose<T, const N: usize>(array: [MaybeUninit<T>; N]) -> MaybeUninit<[T; N]> {
     mem::transmute_copy::<[MaybeUninit<T>; N], MaybeUninit<[T; N]>>(&mem::ManuallyDrop::new(&array))
 }
-
-/* --------------------------------------------- Vec -------------------------------------------- */
 
 /// [`Vec::into_flattened`].
 #[inline]

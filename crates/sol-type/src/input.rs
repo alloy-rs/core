@@ -35,7 +35,7 @@ impl Parse for Input {
             let message = "\
                 expected at least one of: \
                 `type`, `struct`, `function`, `error`, Solidity type";
-            return Err(input.error(message));
+            return Err(input.error(message))
         }
 
         let mut this = Self {
@@ -61,7 +61,7 @@ impl Input {
     fn resolve(&mut self) {
         let types = self.custom_type_map();
         if types.is_empty() {
-            return;
+            return
         }
         // Resolves types in the order they were defined.
         for _i in 0..RESOLVE_LIMIT {
@@ -76,7 +76,7 @@ impl Input {
             });
             if !any {
                 // done
-                return;
+                return
             }
         }
         panic!(
@@ -191,7 +191,7 @@ impl Parse for InputKind {
         {
             Self::Type(input.parse()?)
         } else {
-            return Err(lookahead.error());
+            return Err(lookahead.error())
         };
         Ok(this)
     }

@@ -25,7 +25,8 @@ use de::*;
 use en::*;
 use proc_macro::TokenStream;
 
-/// Derives `Encodable` for the type which encodes the all fields as list: `<rlp-header, fields...>`
+/// Derives `Encodable` for the type which encodes the all fields as list:
+/// `<rlp-header, fields...>`
 #[proc_macro_derive(RlpEncodable, attributes(rlp))]
 pub fn encodable(input: TokenStream) -> TokenStream {
     syn::parse(input)
@@ -34,7 +35,8 @@ pub fn encodable(input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Derives `Encodable` for the type which encodes the fields as-is, without a header: `<fields...>`
+/// Derives `Encodable` for the type which encodes the fields as-is, without a
+/// header: `<fields...>`
 #[proc_macro_derive(RlpEncodableWrapper, attributes(rlp))]
 pub fn encodable_wrapper(input: TokenStream) -> TokenStream {
     syn::parse(input)
@@ -52,8 +54,8 @@ pub fn max_encoded_len(input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Derives `Decodable` for the type whose implementation expects an rlp-list input: `<rlp-header,
-/// fields...>`
+/// Derives `Decodable` for the type whose implementation expects an rlp-list
+/// input: `<rlp-header, fields...>`
 ///
 /// This is the inverse of `RlpEncodable`.
 #[proc_macro_derive(RlpDecodable, attributes(rlp))]
@@ -64,8 +66,8 @@ pub fn decodable(input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Derives `Decodable` for the type whose implementation expects only the individual fields
-/// encoded: `<fields...>`
+/// Derives `Decodable` for the type whose implementation expects only the
+/// individual fields encoded: `<fields...>`
 ///
 /// This is the inverse of `RlpEncodableWrapper`.
 #[proc_macro_derive(RlpDecodableWrapper, attributes(rlp))]

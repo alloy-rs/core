@@ -29,21 +29,21 @@ impl Parse for VariableAttributes {
                     if let Some(prev) =
                         attributes.get(&VariableAttribute::Immutable(Default::default()))
                     {
-                        return Err(error(prev));
+                        return Err(error(prev))
                     }
                 }
                 VariableAttribute::Immutable(_) => {
                     if let Some(prev) =
                         attributes.get(&VariableAttribute::Constant(Default::default()))
                     {
-                        return Err(error(prev));
+                        return Err(error(prev))
                     }
                 }
                 _ => {}
             }
 
             if let Some(prev) = attributes.get(&attribute) {
-                return Err(error(prev));
+                return Err(error(prev))
             }
             attributes.insert(attribute);
         }

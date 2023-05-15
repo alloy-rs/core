@@ -13,23 +13,24 @@ use ethers_primitives::{keccak256, Address, B256, U256};
 #[cfg_attr(feature = "eip712-serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "eip712-serde", serde(rename_all = "camelCase"))]
 pub struct Eip712Domain {
-    ///  The user readable name of signing domain, i.e. the name of the DApp or the protocol.
+    ///  The user readable name of signing domain, i.e. the name of the DApp or
+    /// the protocol.
     #[cfg_attr(
         feature = "eip712-serde",
         serde(default, skip_serializing_if = "Option::is_none")
     )]
     pub name: Option<Cow<'static, str>>,
 
-    /// The current major version of the signing domain. Signatures from different versions are not
-    /// compatible.
+    /// The current major version of the signing domain. Signatures from
+    /// different versions are not compatible.
     #[cfg_attr(
         feature = "eip712-serde",
         serde(default, skip_serializing_if = "Option::is_none")
     )]
     pub version: Option<Cow<'static, str>>,
 
-    /// The EIP-155 chain id. The user-agent should refuse signing if it does not match the
-    /// currently active chain.
+    /// The EIP-155 chain id. The user-agent should refuse signing if it does
+    /// not match the currently active chain.
     #[cfg_attr(
         feature = "eip712-serde",
         serde(
@@ -47,8 +48,8 @@ pub struct Eip712Domain {
     )]
     pub verifying_contract: Option<Address>,
 
-    /// A disambiguating salt for the protocol. This can be used as a domain separator of last
-    /// resort.
+    /// A disambiguating salt for the protocol. This can be used as a domain
+    /// separator of last resort.
     #[cfg_attr(
         feature = "eip712-serde",
         serde(default, skip_serializing_if = "Option::is_none")

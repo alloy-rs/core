@@ -387,7 +387,7 @@ impl Parse for Type {
                         match parse_size(s, span)? {
                             None => Self::custom(ident),
                             Some(Some(size)) if size.get() > 32 => {
-                                return Err(Error::new(span, "fixed bytes range is 1-32"));
+                                return Err(Error::new(span, "fixed bytes range is 1-32"))
                             }
                             Some(size) => Self::Bytes { span, size },
                         }
@@ -398,7 +398,7 @@ impl Parse for Type {
                                 return Err(Error::new(
                                     span,
                                     "intX must be a multiple of 8 up to 256",
-                                ));
+                                ))
                             }
                             Some(size) => Self::Int { span, size },
                         }
@@ -409,7 +409,7 @@ impl Parse for Type {
                                 return Err(Error::new(
                                     span,
                                     "uintX must be a multiple of 8 up to 256",
-                                ));
+                                ))
                             }
                             Some(size) => Self::Uint { span, size },
                         }
@@ -509,7 +509,8 @@ impl Type {
         }
     }
 
-    /// Returns whether a [Storage][crate::common::Storage] location can be specified for this type.
+    /// Returns whether a [Storage][crate::common::Storage] location can be
+    /// specified for this type.
     pub fn can_have_storage(&self) -> bool {
         self.is_dynamic() || self.is_struct()
     }
@@ -525,9 +526,11 @@ impl Type {
         matches!(self, Self::Custom(..))
     }
 
-    /// Returns the resolved type, which is the innermost type that is not `Custom`.
+    /// Returns the resolved type, which is the innermost type that is not
+    /// `Custom`.
     ///
-    /// Prefer using other methods which don't clone, like `data_size` or `Display::fmt`.
+    /// Prefer using other methods which don't clone, like `data_size` or
+    /// `Display::fmt`.
     pub fn resolved(&self) -> Self {
         match self {
             Self::Array(SolArray {
@@ -642,10 +645,12 @@ impl Type {
         }
     }
 
-    /// Asserts that this type is resolved, meaning no `CustomType::Unresolved` types are present.
+    /// Asserts that this type is resolved, meaning no `CustomType::Unresolved`
+    /// types are present.
     ///
-    /// This is only necessary when expanding code for `SolCall` or similar traits, which require
-    /// the fully resolved type to calculate the ABI signature and selector.
+    /// This is only necessary when expanding code for `SolCall` or similar
+    /// traits, which require the fully resolved type to calculate the ABI
+    /// signature and selector.
     pub fn assert_resolved(&self) {
         self.visit(&mut |ty| {
             if let Self::Custom(CustomType::Unresolved(ident)) = ty {

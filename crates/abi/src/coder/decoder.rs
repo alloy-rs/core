@@ -95,7 +95,7 @@ impl<'a> Decoder<'a> {
     #[inline]
     fn child(&self, offset: usize) -> Result<Decoder<'a>, Error> {
         if offset > self.buf.len() {
-            return Err(Error::Overrun);
+            return Err(Error::Overrun)
         }
         Ok(Self {
             buf: &self.buf[offset..],
@@ -192,12 +192,12 @@ impl<'a> Decoder<'a> {
         if self.validate {
             let padded_len = util::round_up_nearest_multiple(len, 32);
             if self.offset + padded_len > self.buf.len() {
-                return Err(Error::Overrun);
+                return Err(Error::Overrun)
             }
             if !util::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
                 return Err(Error::Other(Cow::Borrowed(
                     "Non-empty bytes after packed array",
-                )));
+                )))
             }
         }
         let res = self.peek_len(len)?;
@@ -234,7 +234,7 @@ impl<'a> Decoder<'a> {
     #[inline]
     pub fn decode<T: TokenType>(&mut self, data: &[u8]) -> Result<T> {
         if data.is_empty() {
-            return Err(Error::Overrun);
+            return Err(Error::Overrun)
         }
         T::decode_from(self)
     }
@@ -243,18 +243,19 @@ impl<'a> Decoder<'a> {
     #[inline]
     pub fn decode_sequence<T: TokenType + TokenSeq>(&mut self, data: &[u8]) -> Result<T> {
         if data.is_empty() {
-            return Err(Error::Overrun);
+            return Err(Error::Overrun)
         }
         T::decode_sequence(self)
     }
 }
 
-/// Decodes ABI compliant vector of bytes into vector of tokens described by types param.
+/// Decodes ABI compliant vector of bytes into vector of tokens described by
+/// types param.
 pub fn decode<T: TokenSeq>(data: &[u8], validate: bool) -> Result<T> {
     let mut decoder = Decoder::new(data, validate);
     let res = decoder.decode_sequence::<T>(data)?;
     if validate && encode(&res) != data {
-        return Err(Error::ReserMismatch);
+        return Err(Error::ReserMismatch)
     }
     Ok(res)
 }

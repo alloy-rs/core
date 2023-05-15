@@ -39,7 +39,7 @@ pub(crate) const fn round_up_nearest_multiple(value: usize, padding: usize) -> u
 #[inline]
 pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
     if word.is_empty() {
-        return true;
+        return true
     }
     match len {
         0 => panic!("cannot have bytes0"),
@@ -55,7 +55,7 @@ pub(crate) fn as_u32(word: Word, type_check: bool) -> Result<u32> {
         return Err(Error::type_check_fail(
             &word[..],
             "Solidity pointer (uint32)",
-        ));
+        ))
     }
 
     let result = ((word[28] as u32) << 24)

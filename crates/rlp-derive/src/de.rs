@@ -24,7 +24,7 @@ pub(crate) fn impl_decodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
             return Err(Error::new_spanned(
                 field,
                 "All subsequent fields must be either optional or default.",
-            ));
+            ))
         }
 
         stmts.push(decodable_field(i, field, is_opt));

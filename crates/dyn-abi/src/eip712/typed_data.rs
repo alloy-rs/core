@@ -50,8 +50,8 @@ impl Eip712Types {
 
 /// Represents the [EIP-712](https://eips.ethereum.org/EIPS/eip-712) typed data object.
 ///
-/// Typed data is a JSON object containing type information, domain separator parameters and the
-/// message object which has the following schema
+/// Typed data is a JSON object containing type information, domain separator
+/// parameters and the message object which has the following schema
 ///
 /// ```json
 /// {

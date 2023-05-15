@@ -29,7 +29,7 @@ impl RootType<'_> {
     /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier>
     fn legal_identifier(&self) -> Result<(), DynAbiError> {
         if self.0.is_empty() {
-            return Err(DynAbiError::invalid_type_string(self.0));
+            return Err(DynAbiError::invalid_type_string(self.0))
         }
 
         match self.0.chars().next().unwrap() {
@@ -54,35 +54,35 @@ impl RootType<'_> {
                     if let Some(len) = type_name.strip_prefix("bytes") {
                         if let Ok(len) = len.parse::<usize>() {
                             if len <= 32 {
-                                return Ok(());
+                                return Ok(())
                             }
-                            return Err(DynAbiError::invalid_size(type_name));
+                            return Err(DynAbiError::invalid_size(type_name))
                         }
                     }
                 }
                 if type_name.starts_with("uint") {
                     if let Some(len) = type_name.strip_prefix("uint") {
                         if len.is_empty() {
-                            return Ok(());
+                            return Ok(())
                         }
                         if let Ok(len) = len.parse::<usize>() {
                             if len <= 256 && len % 8 == 0 {
-                                return Ok(());
+                                return Ok(())
                             }
-                            return Err(DynAbiError::invalid_size(type_name));
+                            return Err(DynAbiError::invalid_size(type_name))
                         }
                     }
                 }
                 if type_name.starts_with("int") {
                     if let Some(len) = type_name.strip_prefix("int") {
                         if len.is_empty() {
-                            return Ok(());
+                            return Ok(())
                         }
                         if let Ok(len) = len.parse::<usize>() {
                             if len <= 256 && len % 8 == 0 {
-                                return Ok(());
+                                return Ok(())
                             }
-                            return Err(DynAbiError::invalid_size(type_name));
+                            return Err(DynAbiError::invalid_size(type_name))
                         }
                     }
                 }
@@ -98,12 +98,12 @@ impl RootType<'_> {
         let s = self.0;
         if let Some(s) = s.strip_prefix("int") {
             let len = s.trim().parse::<usize>().unwrap_or(256);
-            return Ok(DynSolType::Int(len));
+            return Ok(DynSolType::Int(len))
         }
 
         if let Some(s) = s.strip_prefix("uint") {
             let len = s.trim().parse::<usize>().unwrap_or(256);
-            return Ok(DynSolType::Uint(len));
+            return Ok(DynSolType::Uint(len))
         }
 
         match s {
@@ -119,7 +119,7 @@ impl RootType<'_> {
         if let Some(s) = s.strip_prefix("bytes") {
             return Ok(DynSolType::FixedBytes(
                 s.trim().parse().map_err(|_| DynAbiError::invalid_size(s))?,
-            ));
+            ))
         }
         Err(DynAbiError::missing_type(s))
     }
@@ -298,12 +298,12 @@ impl<'a> TryFrom<&'a str> for TypeSpecifier<'a> {
             if s.contains(')') {
                 let idx = value.rfind(')').unwrap();
                 root = &value[..=idx];
-                break;
+                break
             }
             // we've reached a root type that is not a tuple or array
             if !s.contains(']') {
                 root = s;
-                break;
+                break
             }
 
             let s = s

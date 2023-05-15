@@ -24,14 +24,15 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Computes the absolute value of `self`.
     ///
-    /// Returns a tuple of the absolute version of self along with a boolean indicating whether an
-    /// overflow happened. If self is the minimum value then the minimum value will be returned
-    /// again and true will be returned for an overflow happening.
+    /// Returns a tuple of the absolute version of self along with a boolean
+    /// indicating whether an overflow happened. If self is the minimum
+    /// value then the minimum value will be returned again and true will be
+    /// returned for an overflow happening.
     #[inline(always)]
     #[must_use]
     pub fn overflowing_abs(self) -> (Self, bool) {
         if BITS == 0 {
-            return (self, false);
+            return (self, false)
         }
         if self == Self::MIN {
             (self, true)
@@ -40,7 +41,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Checked absolute value. Computes `self.abs()`, returning `None` if `self == MIN`.
+    /// Checked absolute value. Computes `self.abs()`, returning `None` if `self
+    /// == MIN`.
     #[inline(always)]
     #[must_use]
     pub fn checked_abs(self) -> Option<Self> {
@@ -50,8 +52,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Saturating absolute value. Computes `self.abs()`, returning `MAX` if `self == MIN` instead
-    /// of overflowing.
+    /// Saturating absolute value. Computes `self.abs()`, returning `MAX` if
+    /// `self == MIN` instead of overflowing.
     #[inline(always)]
     #[must_use]
     pub fn saturating_abs(self) -> Self {
@@ -61,7 +63,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Wrapping absolute value. Computes `self.abs()`, wrapping around at the boundary of the type.
+    /// Wrapping absolute value. Computes `self.abs()`, wrapping around at the
+    /// boundary of the type.
     #[inline(always)]
     #[must_use]
     pub fn wrapping_abs(self) -> Self {
@@ -77,14 +80,15 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Negates self, overflowing if this is equal to the minimum value.
     ///
-    /// Returns a tuple of the negated version of self along with a boolean indicating whether an
-    /// overflow happened. If `self` is the minimum value, then the minimum value will be returned
-    /// again and `true` will be returned for an overflow happening.
+    /// Returns a tuple of the negated version of self along with a boolean
+    /// indicating whether an overflow happened. If `self` is the minimum
+    /// value, then the minimum value will be returned again and `true` will
+    /// be returned for an overflow happening.
     #[inline(always)]
     #[must_use]
     pub fn overflowing_neg(self) -> (Self, bool) {
         if BITS == 0 {
-            return (self, false);
+            return (self, false)
         }
         if self == Self::MIN {
             (self, true)
@@ -103,8 +107,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Saturating negation. Computes `-self`, returning `MAX` if `self == MIN` instead of
-    /// overflowing.
+    /// Saturating negation. Computes `-self`, returning `MAX` if `self == MIN`
+    /// instead of overflowing.
     #[inline(always)]
     #[must_use]
     pub fn saturating_neg(self) -> Self {
@@ -114,11 +118,13 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Wrapping (modular) negation. Computes `-self`, wrapping around at the boundary of the type.
+    /// Wrapping (modular) negation. Computes `-self`, wrapping around at the
+    /// boundary of the type.
     ///
-    /// The only case where such wrapping can occur is when one negates `MIN` on a signed type
-    /// (where `MIN` is the negative minimal value for the type); this is a positive value that is
-    /// too large to represent in the type. In such a case, this function returns `MIN` itself.
+    /// The only case where such wrapping can occur is when one negates `MIN` on
+    /// a signed type (where `MIN` is the negative minimal value for the
+    /// type); this is a positive value that is too large to represent in
+    /// the type. In such a case, this function returns `MIN` itself.
     #[inline(always)]
     #[must_use]
     pub fn wrapping_neg(self) -> Self {
@@ -127,8 +133,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Calculates `self` + `rhs`
     ///
-    /// Returns a tuple of the addition along with a boolean indicating whether an arithmetic
-    /// overflow would occur. If an overflow would have occurred then the wrapped value is returned.
+    /// Returns a tuple of the addition along with a boolean indicating whether
+    /// an arithmetic overflow would occur. If an overflow would have
+    /// occurred then the wrapped value is returned.
     #[inline(always)]
     #[must_use]
     pub fn overflowing_add(self, rhs: Self) -> (Self, bool) {
@@ -146,7 +153,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         (result, overflow)
     }
 
-    /// Checked integer addition. Computes `self + rhs`, returning `None` if overflow occurred.
+    /// Checked integer addition. Computes `self + rhs`, returning `None` if
+    /// overflow occurred.
     #[inline(always)]
     #[must_use]
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
@@ -156,8 +164,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Saturating integer addition. Computes `self + rhs`, saturating at the numeric bounds instead
-    /// of overflowing.
+    /// Saturating integer addition. Computes `self + rhs`, saturating at the
+    /// numeric bounds instead of overflowing.
     #[inline(always)]
     #[must_use]
     pub fn saturating_add(self, rhs: Self) -> Self {
@@ -172,8 +180,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Wrapping (modular) addition. Computes `self + rhs`, wrapping around at the boundary of the
-    /// type.
+    /// Wrapping (modular) addition. Computes `self + rhs`, wrapping around at
+    /// the boundary of the type.
     #[inline(always)]
     #[must_use]
     pub fn wrapping_add(self, rhs: Self) -> Self {
@@ -182,8 +190,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Calculates `self` - `rhs`
     ///
-    /// Returns a tuple of the subtraction along with a boolean indicating whether an arithmetic
-    /// overflow would occur. If an overflow would have occurred then the wrapped value is returned.
+    /// Returns a tuple of the subtraction along with a boolean indicating
+    /// whether an arithmetic overflow would occur. If an overflow would
+    /// have occurred then the wrapped value is returned.
     #[inline(always)]
     #[must_use]
     pub fn overflowing_sub(self, rhs: Self) -> (Self, bool) {
@@ -205,7 +214,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         (result, overflow)
     }
 
-    /// Checked integer subtraction. Computes `self - rhs`, returning `None` if overflow occurred.
+    /// Checked integer subtraction. Computes `self - rhs`, returning `None` if
+    /// overflow occurred.
     #[inline(always)]
     #[must_use]
     pub fn checked_sub(self, rhs: Self) -> Option<Self> {
@@ -215,8 +225,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Saturating integer subtraction. Computes `self - rhs`, saturating at the numeric bounds
-    /// instead of overflowing.
+    /// Saturating integer subtraction. Computes `self - rhs`, saturating at the
+    /// numeric bounds instead of overflowing.
     #[inline(always)]
     #[must_use]
     pub fn saturating_sub(self, rhs: Self) -> Self {
@@ -231,8 +241,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Wrapping (modular) subtraction. Computes `self - rhs`, wrapping around at the boundary of
-    /// the type.
+    /// Wrapping (modular) subtraction. Computes `self - rhs`, wrapping around
+    /// at the boundary of the type.
     #[inline(always)]
     #[must_use]
     pub fn wrapping_sub(self, rhs: Self) -> Self {
@@ -241,13 +251,14 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Calculates `self` * `rhs`
     ///
-    /// Returns a tuple of the multiplication along with a boolean indicating whether an arithmetic
-    /// overflow would occur. If an overflow would have occurred then the wrapped value is returned.
+    /// Returns a tuple of the multiplication along with a boolean indicating
+    /// whether an arithmetic overflow would occur. If an overflow would
+    /// have occurred then the wrapped value is returned.
     #[inline(always)]
     #[must_use]
     pub fn overflowing_mul(self, rhs: Self) -> (Self, bool) {
         if self.is_zero() || rhs.is_zero() {
-            return (Self::ZERO, false);
+            return (Self::ZERO, false)
         }
         let sign = self.sign() * rhs.sign();
         let (unsigned, overflow_mul) = self.unsigned_abs().overflowing_mul(rhs.unsigned_abs());
@@ -256,7 +267,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         (result, overflow_mul || overflow_conv)
     }
 
-    /// Checked integer multiplication. Computes `self * rhs`, returning None if overflow occurred.
+    /// Checked integer multiplication. Computes `self * rhs`, returning None if
+    /// overflow occurred.
     #[inline(always)]
     #[must_use]
     pub fn checked_mul(self, rhs: Self) -> Option<Self> {
@@ -266,8 +278,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Saturating integer multiplication. Computes `self * rhs`, saturating at the numeric bounds
-    /// instead of overflowing.
+    /// Saturating integer multiplication. Computes `self * rhs`, saturating at
+    /// the numeric bounds instead of overflowing.
     #[inline(always)]
     #[must_use]
     pub fn saturating_mul(self, rhs: Self) -> Self {
@@ -282,8 +294,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Wrapping (modular) multiplication. Computes `self * rhs`, wrapping around at the boundary of
-    /// the type.
+    /// Wrapping (modular) multiplication. Computes `self * rhs`, wrapping
+    /// around at the boundary of the type.
     #[inline(always)]
     #[must_use]
     pub fn wrapping_mul(self, rhs: Self) -> Self {
@@ -292,8 +304,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Calculates `self` / `rhs`
     ///
-    /// Returns a tuple of the divisor along with a boolean indicating whether an arithmetic
-    /// overflow would occur. If an overflow would occur then self is returned.
+    /// Returns a tuple of the divisor along with a boolean indicating whether
+    /// an arithmetic overflow would occur. If an overflow would occur then
+    /// self is returned.
     ///
     /// # Panics
     ///
@@ -313,8 +326,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         (result, overflow_conv && !result.is_zero())
     }
 
-    /// Checked integer division. Computes `self / rhs`, returning `None` if `rhs == 0` or the
-    /// division results in overflow.
+    /// Checked integer division. Computes `self / rhs`, returning `None` if
+    /// `rhs == 0` or the division results in overflow.
     #[inline(always)]
     #[must_use]
     pub fn checked_div(self, rhs: Self) -> Option<Self> {
@@ -325,8 +338,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Saturating integer division. Computes `self / rhs`, saturating at the numeric bounds instead
-    /// of overflowing.
+    /// Saturating integer division. Computes `self / rhs`, saturating at the
+    /// numeric bounds instead of overflowing.
     ///
     /// # Panics
     ///
@@ -342,12 +355,13 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Wrapping (modular) division. Computes `self / rhs`, wrapping around at the boundary of the
-    /// type.
+    /// Wrapping (modular) division. Computes `self / rhs`, wrapping around at
+    /// the boundary of the type.
     ///
-    /// The only case where such wrapping can occur is when one divides `MIN / -1` on a signed type
-    /// (where `MIN` is the negative minimal value for the type); this is equivalent to `-MIN`, a
-    /// positive value that is too large to represent in the type. In such a case, this function
+    /// The only case where such wrapping can occur is when one divides `MIN /
+    /// -1` on a signed type (where `MIN` is the negative minimal value for
+    /// the type); this is equivalent to `-MIN`, a positive value that is
+    /// too large to represent in the type. In such a case, this function
     /// returns `MIN` itself.
     ///
     /// # Panics
@@ -362,8 +376,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Calculates `self` % `rhs`
     ///
-    /// Returns a tuple of the remainder after dividing along with a boolean indicating whether an
-    /// arithmetic overflow would occur. If an overflow would occur then 0 is returned.
+    /// Returns a tuple of the remainder after dividing along with a boolean
+    /// indicating whether an arithmetic overflow would occur. If an
+    /// overflow would occur then 0 is returned.
     ///
     /// # Panics
     ///
@@ -380,8 +395,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Checked integer remainder. Computes `self % rhs`, returning `None` if `rhs == 0` or the
-    /// division results in overflow.
+    /// Checked integer remainder. Computes `self % rhs`, returning `None` if
+    /// `rhs == 0` or the division results in overflow.
     #[inline(always)]
     #[must_use]
     pub fn checked_rem(self, rhs: Self) -> Option<Self> {
@@ -392,12 +407,13 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Wrapping (modular) remainder. Computes `self % rhs`, wrapping around at the boundary of the
-    /// type.
+    /// Wrapping (modular) remainder. Computes `self % rhs`, wrapping around at
+    /// the boundary of the type.
     ///
-    /// Such wrap-around never actually occurs mathematically; implementation artifacts make `x % y`
-    /// invalid for `MIN / -1` on a signed type (where `MIN` is the negative minimal value). In such
-    /// a case, this function returns `0`.
+    /// Such wrap-around never actually occurs mathematically; implementation
+    /// artifacts make `x % y` invalid for `MIN / -1` on a signed type
+    /// (where `MIN` is the negative minimal value). In such a case, this
+    /// function returns `0`.
     ///
     /// # Panics
     ///
@@ -414,10 +430,10 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// This computes the integer `q` such that `self = q * rhs + r`, with
     /// `r = self.rem_euclid(rhs)` and `0 <= r < abs(rhs)`.
     ///
-    /// In other words, the result is `self / rhs` rounded to the integer `q` such that `self >= q *
-    /// rhs`.
-    /// If `self > 0`, this is equal to round towards zero (the default in Rust);
-    /// if `self < 0`, this is equal to round towards +/- infinity.
+    /// In other words, the result is `self / rhs` rounded to the integer `q`
+    /// such that `self >= q * rhs`.
+    /// If `self > 0`, this is equal to round towards zero (the default in
+    /// Rust); if `self < 0`, this is equal to round towards +/- infinity.
     ///
     /// # Panics
     ///
@@ -440,8 +456,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Calculates the quotient of Euclidean division `self.div_euclid(rhs)`.
     ///
-    /// Returns a tuple of the divisor along with a boolean indicating whether an arithmetic
-    /// overflow would occur. If an overflow would occur then `self` is returned.
+    /// Returns a tuple of the divisor along with a boolean indicating whether
+    /// an arithmetic overflow would occur. If an overflow would occur then
+    /// `self` is returned.
     ///
     /// # Panics
     ///
@@ -457,8 +474,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Checked Euclidean division. Computes `self.div_euclid(rhs)`, returning `None` if `rhs == 0`
-    /// or the division results in overflow.
+    /// Checked Euclidean division. Computes `self.div_euclid(rhs)`, returning
+    /// `None` if `rhs == 0` or the division results in overflow.
     #[inline(always)]
     #[must_use]
     pub fn checked_div_euclid(self, rhs: Self) -> Option<Self> {
@@ -472,9 +489,10 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Wrapping Euclidean division. Computes `self.div_euclid(rhs)`,
     /// wrapping around at the boundary of the type.
     ///
-    /// Wrapping will only occur in `MIN / -1` on a signed type (where `MIN` is the negative minimal
-    /// value for the type). This is equivalent to `-MIN`, a positive value that is too large to
-    /// represent in the type. In this case, this method returns `MIN` itself.
+    /// Wrapping will only occur in `MIN / -1` on a signed type (where `MIN` is
+    /// the negative minimal value for the type). This is equivalent to
+    /// `-MIN`, a positive value that is too large to represent in the type.
+    /// In this case, this method returns `MIN` itself.
     ///
     /// # Panics
     ///
@@ -488,8 +506,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Calculates the least nonnegative remainder of `self (mod rhs)`.
     ///
-    /// This is done as if by the Euclidean division algorithm -- given `r = self.rem_euclid(rhs)`,
-    /// `self = rhs * self.div_euclid(rhs) + r`, and `0 <= r < abs(rhs)`.
+    /// This is done as if by the Euclidean division algorithm -- given `r =
+    /// self.rem_euclid(rhs)`, `self = rhs * self.div_euclid(rhs) + r`, and
+    /// `0 <= r < abs(rhs)`.
     ///
     /// # Panics
     ///
@@ -512,8 +531,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Overflowing Euclidean remainder. Calculates `self.rem_euclid(rhs)`.
     ///
-    /// Returns a tuple of the remainder after dividing along with a boolean indicating whether an
-    /// arithmetic overflow would occur. If an overflow would occur then 0 is returned.
+    /// Returns a tuple of the remainder after dividing along with a boolean
+    /// indicating whether an arithmetic overflow would occur. If an
+    /// overflow would occur then 0 is returned.
     ///
     /// # Panics
     ///
@@ -529,11 +549,12 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Wrapping Euclidean remainder. Computes `self.rem_euclid(rhs)`, wrapping around at the
-    /// boundary of the type.
+    /// Wrapping Euclidean remainder. Computes `self.rem_euclid(rhs)`, wrapping
+    /// around at the boundary of the type.
     ///
-    /// Wrapping will only occur in `MIN % -1` on a signed type (where `MIN` is the negative minimal
-    /// value for the type). In this case, this method returns 0.
+    /// Wrapping will only occur in `MIN % -1` on a signed type (where `MIN` is
+    /// the negative minimal value for the type). In this case, this method
+    /// returns 0.
     ///
     /// # Panics
     ///
@@ -545,8 +566,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         self.overflowing_rem_euclid(rhs).0
     }
 
-    /// Checked Euclidean remainder. Computes `self.rem_euclid(rhs)`, returning `None` if `rhs == 0`
-    /// or the division results in overflow.
+    /// Checked Euclidean remainder. Computes `self.rem_euclid(rhs)`, returning
+    /// `None` if `rhs == 0` or the division results in overflow.
     #[inline(always)]
     #[must_use]
     pub fn checked_rem_euclid(self, rhs: Self) -> Option<Self> {
@@ -603,13 +624,13 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Raises self to the power of `exp`, using exponentiation by squaring.
     ///
-    /// Returns a tuple of the exponentiation along with a bool indicating whether an overflow
-    /// happened.
+    /// Returns a tuple of the exponentiation along with a bool indicating
+    /// whether an overflow happened.
     #[inline(always)]
     #[must_use]
     pub fn overflowing_pow(self, exp: Uint<BITS, LIMBS>) -> (Self, bool) {
         if BITS == 0 {
-            return (Self::zero(), false);
+            return (Self::zero(), false)
         }
 
         let sign = self.pow_sign(exp);
@@ -620,7 +641,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         (result, overflow_pow || overflow_conv)
     }
 
-    /// Checked exponentiation. Computes `self.pow(exp)`, returning `None` if overflow occurred.
+    /// Checked exponentiation. Computes `self.pow(exp)`, returning `None` if
+    /// overflow occurred.
     #[inline(always)]
     #[must_use]
     pub fn checked_pow(self, exp: Uint<BITS, LIMBS>) -> Option<Self> {
@@ -632,8 +654,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Saturating integer exponentiation. Computes `self.pow(exp)`, saturating at the numeric
-    /// bounds instead of overflowing.
+    /// Saturating integer exponentiation. Computes `self.pow(exp)`, saturating
+    /// at the numeric bounds instead of overflowing.
     #[inline(always)]
     #[must_use]
     pub fn saturating_pow(self, exp: Uint<BITS, LIMBS>) -> Self {
@@ -658,8 +680,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Shifts self left by `rhs` bits.
     ///
-    /// Returns a tuple of the shifted version of self along with a boolean indicating whether the
-    /// shift value was larger than or equal to the number of bits.
+    /// Returns a tuple of the shifted version of self along with a boolean
+    /// indicating whether the shift value was larger than or equal to the
+    /// number of bits.
     #[inline(always)]
     #[must_use]
     pub fn overflowing_shl(self, rhs: usize) -> (Self, bool) {
@@ -670,8 +693,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Checked shift left. Computes `self << rhs`, returning `None` if `rhs` is larger than or
-    /// equal to the number of bits in `self`.
+    /// Checked shift left. Computes `self << rhs`, returning `None` if `rhs` is
+    /// larger than or equal to the number of bits in `self`.
     #[inline(always)]
     #[must_use]
     pub fn checked_shl(self, rhs: usize) -> Option<Self> {
@@ -681,8 +704,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Wrapping shift left. Computes `self << rhs`, returning 0 if larger than or equal to the
-    /// number of bits in `self`.
+    /// Wrapping shift left. Computes `self << rhs`, returning 0 if larger than
+    /// or equal to the number of bits in `self`.
     #[inline(always)]
     #[must_use]
     pub fn wrapping_shl(self, rhs: usize) -> Self {
@@ -691,8 +714,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Shifts self right by `rhs` bits.
     ///
-    /// Returns a tuple of the shifted version of self along with a boolean indicating whether the
-    /// shift value was larger than or equal to the number of bits.
+    /// Returns a tuple of the shifted version of self along with a boolean
+    /// indicating whether the shift value was larger than or equal to the
+    /// number of bits.
     #[inline(always)]
     #[must_use]
     pub fn overflowing_shr(self, rhs: usize) -> (Self, bool) {
@@ -703,8 +727,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Checked shift right. Computes `self >> rhs`, returning `None` if `rhs` is larger than or
-    /// equal to the number of bits in `self`.
+    /// Checked shift right. Computes `self >> rhs`, returning `None` if `rhs`
+    /// is larger than or equal to the number of bits in `self`.
     #[inline(always)]
     #[must_use]
     pub fn checked_shr(self, rhs: usize) -> Option<Self> {
@@ -714,22 +738,23 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Wrapping shift right. Computes `self >> rhs`, returning 0 if larger than or equal to the
-    /// number of bits in `self`.
+    /// Wrapping shift right. Computes `self >> rhs`, returning 0 if larger than
+    /// or equal to the number of bits in `self`.
     #[inline(always)]
     #[must_use]
     pub fn wrapping_shr(self, rhs: usize) -> Self {
         self.overflowing_shr(rhs).0
     }
 
-    /// Arithmetic shift right operation. Computes `self >> rhs` maintaining the original sign. If
-    /// the number is positive this is the same as logic shift right.
+    /// Arithmetic shift right operation. Computes `self >> rhs` maintaining the
+    /// original sign. If the number is positive this is the same as logic
+    /// shift right.
     #[inline(always)]
     #[must_use]
     pub fn asr(self, rhs: usize) -> Self {
         // Avoid shifting if we are going to know the result regardless of the value.
         if rhs == 0 || BITS == 0 {
-            return self;
+            return self
         }
 
         if rhs >= BITS - 1 {
@@ -756,10 +781,11 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
-    /// Arithmetic shift left operation. Computes `self << rhs`, checking for overflow on the final
-    /// result.
+    /// Arithmetic shift left operation. Computes `self << rhs`, checking for
+    /// overflow on the final result.
     ///
-    /// Returns `None` if the operation overflowed (most significant bit changes).
+    /// Returns `None` if the operation overflowed (most significant bit
+    /// changes).
     #[inline(always)]
     #[must_use]
     pub fn asl(self, rhs: usize) -> Option<Self> {
@@ -788,7 +814,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 }
 
-// Implement Shl and Shr only for types <= usize, since U256 uses .as_usize() which panics
+// Implement Shl and Shr only for types <= usize, since U256 uses .as_usize()
+// which panics
 macro_rules! impl_shift {
     ($($t:ty),+) => {
         // We are OK with wrapping behaviour here because it's how Rust behaves with the primitive
