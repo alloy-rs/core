@@ -10,35 +10,31 @@ env:
 
 jobs:
     test:
-        name: test ${{ matrix.os }} ${{ matrix.flags }}
-        runs-on: ${{ matrix.os }}
+        name: test ${{ matrix.rust }} ${{ matrix.flags }}
+        runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+                rust: ["stable", "beta", "nightly", "1.65"] # MSRV
                 flags: ["--no-default-features", "", "--all-features"]
         steps:
             - uses: actions/checkout@v3
+            - uses: dtolnay/rust-toolchain@master
               with:
-                  submodules: "recursive"
-            - uses: dtolnay/rust-toolchain@stable
-            - uses: Swatinem/rust-cache@v2
+                  toolchain: ${{ matrix.rust }}
+            # "skip" a UI test because of differing output
+            - run: rm crates/sol-types/tests/ui/type.*
+              if: ${{ matrix.rust }} == '1.65'
             - name: test
-              run: cargo +stable test --workspace ${{ matrix.flags }}
+              run: cargo test --workspace ${{ matrix.flags }}
 
     clippy:
         name: clippy
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
-              with:
-                  submodules: "recursive"
-            - uses: dtolnay/rust-toolchain@nightly
-              with:
-                  components: clippy
-            - uses: Swatinem/rust-cache@v2
-            - name: clippy
-              run: cargo clippy --workspace --tests
+            - uses: dtolnay/rust-toolchain@clippy
+            - run: cargo clippy --workspace --tests
               env:
                   RUSTFLAGS: -Dwarnings
 
@@ -47,24 +43,19 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
-              with:
-                  submodules: "recursive"
             - uses: dtolnay/rust-toolchain@nightly
               with:
                   components: rust-docs
-            - uses: Swatinem/rust-cache@v2
-            - name: doc
-              run: cargo doc --workspace --no-deps --document-private-items
+            - run: cargo doc --workspace --no-deps --document-private-items
+              env:
+                  RUSTDOCFLAGS: "-D warnings"
 
     fmt:
         name: fmt
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
-              with:
-                  submodules: "recursive"
             - uses: dtolnay/rust-toolchain@nightly
               with:
                   components: rustfmt
-            - name: fmt --check
-              run: cargo fmt --all --check
+            - run: cargo fmt --all --check
