@@ -120,8 +120,25 @@ macro_rules! impl_int_sol_type {
             }
 
             #[inline]
-            fn type_check(_token: &Self::TokenType) -> Result<()> {
-                Ok(())
+            fn type_check(token: &Self::TokenType) -> Result<()> {
+                // check for 256 can be omitted as this macro expansion is not used for 256 bits
+
+                let bytes = token.as_slice();
+                let meaningful_idx = 32 - ($bits / 8);
+
+                let sign_extension = if bytes[meaningful_idx] & 0x80 == 0x80 {
+                    0xff
+                } else {
+                    0
+                };
+
+                // check that all upper bytes are an extension of the sign bit
+                bytes
+                    .iter()
+                    .take(meaningful_idx)
+                    .all(|byte| *byte == sign_extension)
+                    .then(|| ())
+                    .ok_or_else(|| Self::type_check_fail(bytes))
             }
 
             #[inline]
@@ -173,9 +190,27 @@ macro_rules! impl_int_sol_type {
             }
 
             #[inline]
-            fn type_check(_token: &Self::TokenType) -> Result<()> {
-                // TODO
-                Ok(())
+            fn type_check(token: &Self::TokenType) -> Result<()> {
+                if $bits == 256 {
+                    return Ok(())
+                }
+
+                let bytes = token.as_slice();
+                let meaningful_idx = 32 - ($bits / 8);
+
+                let sign_extension = if bytes[meaningful_idx] & 0x80 == 0x80 {
+                    0xff
+                } else {
+                    0
+                };
+
+                // check that all upper bytes are an extension of the sign bit
+                bytes
+                    .iter()
+                    .take(meaningful_idx)
+                    .all(|byte| *byte == sign_extension)
+                    .then(|| ())
+                    .ok_or_else(|| Self::type_check_fail(bytes))
             }
 
             #[inline]
