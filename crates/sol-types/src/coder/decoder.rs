@@ -580,4 +580,35 @@ mod tests {
         MyTy::decode_params(&input, true).unwrap_err();
         assert!(MyTy2::decode_params(&input, true).is_ok());
     }
+
+    #[test]
+    fn signed_int_dirty_high_bytes() {
+        type MyTy = sol_data::Int<8>;
+
+        let dirty_negative =
+            hex!("f0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+        assert_eq!(MyTy::decode_single(&dirty_negative, false).unwrap(), -1);
+
+        assert!(
+            matches!(
+                MyTy::decode_single(&dirty_negative, true),
+                Err(crate::Error::TypeCheckFail { .. }),
+            ),
+            "did not match error"
+        );
+
+        let dirty_positive =
+            hex!("700000000000000000000000000000000000000000000000000000000000007f");
+
+        assert_eq!(MyTy::decode_single(&dirty_positive, false).unwrap(), 127);
+
+        assert!(
+            matches!(
+                MyTy::decode_single(&dirty_positive, true),
+                Err(crate::Error::TypeCheckFail { .. }),
+            ),
+            "did not match error"
+        );
+    }
 }
