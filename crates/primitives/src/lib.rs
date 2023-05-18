@@ -18,6 +18,9 @@ extern crate alloc;
 mod bits;
 pub use bits::{Address, AddressError, FixedBytes, B256};
 
+#[cfg(feature = "serde")]
+pub mod serde;
+
 mod signed;
 pub use signed::{
     aliases::{self, I160, I256},

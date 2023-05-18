@@ -24,7 +24,7 @@ ruint-macro = { version = "1.0.2", git = "https://github.com/recmo/uint", defaul
 
 # serde
 serde = { version = "1.0", default-features = false }
-serde_json = { version = "1.0", default-features = false }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 # macros
 proc-macro2 = "1.0"
@@ -35,9 +35,9 @@ syn = "2.0"
 arbitrary = { version = "1.3", default-features = false }
 arrayvec = { version = "0.7.2", default-features = false }
 bytes = { version = "1.4", default-features = false }
-hex = { package = "const-hex", version = ">=1.3", default-features = false }
+hex = { package = "const-hex", version = ">=1.5", default-features = false, features = ["alloc"] }
 hex-literal = "0.4"
-proptest = { version = "1.1", default-features = false }
+proptest = { version = "1.1", default-features = false, features = ["alloc"] }
 proptest-derive = "0.3"
 thiserror = "1.0"
 tiny-keccak = "2.0"

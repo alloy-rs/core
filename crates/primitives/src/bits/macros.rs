@@ -66,33 +66,40 @@ macro_rules! wrap_fixed_bytes {
             $crate::derive_more::LowerHex,
             $crate::derive_more::UpperHex,
         )]
-        pub struct $name($crate::FixedBytes<$n>);
+        pub struct $name(pub $crate::FixedBytes<$n>);
 
-        impl<'a> From<[u8; $n]> for $name {
+        impl From<[u8; $n]> for $name {
             #[inline]
-            fn from(bytes: [u8; $n]) -> Self {
-                Self(bytes.into())
+            fn from(value: [u8; $n]) -> Self {
+                Self(value.into())
+            }
+        }
+
+        impl From<$name> for [u8; $n] {
+            #[inline]
+            fn from(value: $name) -> Self {
+                value.0.0
             }
         }
 
         impl<'a> From<&'a [u8; $n]> for $name {
             #[inline]
-            fn from(bytes: &'a [u8; $n]) -> Self {
-                Self(bytes.into())
+            fn from(value: &'a [u8; $n]) -> Self {
+                Self(value.into())
             }
         }
 
         impl AsRef<[u8]> for $name {
             #[inline]
             fn as_ref(&self) -> &[u8] {
-                self.as_bytes()
+                &self.0.0
             }
         }
 
         impl AsMut<[u8]> for $name {
             #[inline]
             fn as_mut(&mut self) -> &mut [u8] {
-                self.as_bytes_mut()
+                &mut self.0.0
             }
         }
 

@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Fundamental ethereum types shared by revm, reth and ethers"
 readme = "README.md"
 keywords = ["ethereum", "ethers", "revm", "reth"]
-categories = ["cryptography::cryptocurrencies"]
+categories = ["data-structures", "cryptography::cryptocurrencies"]
 
 edition.workspace = true
 rust-version.workspace = true
@@ -23,7 +23,7 @@ tiny-keccak = { workspace = true, features = ["keccak"] }
 hex.workspace = true
 itoa = "1"
 
-# optional
+# serde
 serde = { workspace = true, features = ["derive"], optional = true }
 
 # rlp support
@@ -37,12 +37,14 @@ proptest-derive = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex-literal = "0.4"
+serde_json = { workspace = true }
+proptest = { workspace = true }
 
 [features]
 default = ["std", "rlp", "serde", "hex/std"]
 std = ["serde/std", "ethers-rlp?/std", "bytes?/std", "proptest?/std"]
 rlp = ["dep:ethers-rlp", "dep:bytes"]
-serde = ["dep:serde", "ruint/serde"]
+serde = ["dep:serde", "ruint/serde", "hex/serde"]
 arbitrary = [
     "ruint/arbitrary",
     "ruint/proptest",

@@ -1,5 +1,5 @@
 use super::{errors, utils::*, Sign};
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use core::fmt;
 use ruint::Uint;
 
@@ -72,6 +72,10 @@ use ruint::Uint;
 /// To prevent this, we strongly recommend always prefixing hex strings with
 /// `0x` AFTER the sign (if any).
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "arbitrary",
+    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+)]
 pub struct Signed<const BITS: usize, const LIMBS: usize>(pub(crate) Uint<BITS, LIMBS>);
 
 // formatting
@@ -493,33 +497,19 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 }
 
-#[cfg(feature = "serde")]
-impl<const BITS: usize, const LIMBS: usize> serde::Serialize for Signed<BITS, LIMBS> {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.to_string().serialize(serializer)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de, const BITS: usize, const LIMBS: usize> serde::Deserialize<'de> for Signed<BITS, LIMBS> {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let s = String::deserialize(deserializer)?;
-        s.parse().map_err(serde::de::Error::custom)
-    }
-}
-
-#[cfg(all(test, feature = "std"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
         aliases::{I0, I1, I128, I160, I192, I256},
         BigIntConversionError, ParseSignedError,
     };
+    use alloc::string::ToString;
+    use core::ops::Neg;
     use ruint::{
         aliases::{U0, U1, U128, U160, U256},
         BaseConvertError, ParseError,
     };
-    use std::ops::Neg;
 
     // type U2 = Uint<2, 1>;
     type I96 = Signed<96, 2>;
@@ -1375,6 +1365,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn division_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
@@ -1506,6 +1497,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn div_euclid_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
@@ -1535,6 +1527,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn div_euclid_overflow() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
@@ -1552,6 +1545,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn mod_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {

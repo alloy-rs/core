@@ -3,7 +3,7 @@ name = "ethers-sol-macro"
 version = "0.1.0"
 description = "Solidity to Rust proc-macro"
 readme = "README.md"
-keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
+keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
 
 edition.workspace = true

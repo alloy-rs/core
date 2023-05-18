@@ -6,9 +6,8 @@ pub use fixed::FixedBytes;
 
 mod macros;
 
-// code stolen from: https://docs.rs/impl-serde/0.4.0/impl_serde/
 #[cfg(feature = "serde")]
-mod serialize;
+mod serde;
 
 #[cfg(feature = "rlp")]
 mod rlp;

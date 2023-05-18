@@ -3,7 +3,7 @@ name = "ethers-sol-types"
 version = "0.1.0"
 description = "Ethereum ABI encoding and decoding, with static typing"
 readme = "README.md"
-keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
+keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
 
 edition.workspace = true

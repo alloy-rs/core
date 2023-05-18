@@ -44,12 +44,6 @@ impl Borrow<[u8; 20]> for Address {
     }
 }
 
-impl From<Address> for [u8; 20] {
-    fn from(addr: Address) -> Self {
-        addr.0.into()
-    }
-}
-
 impl From<Address> for FixedBytes<32> {
     fn from(addr: Address) -> Self {
         let mut buf: FixedBytes<32> = Default::default();
@@ -77,10 +71,11 @@ impl Address {
         addr_buf[1] = b'x';
         hex::encode_to_slice(self.as_bytes(), &mut addr_buf[2..]).unwrap();
 
-        let hash = match chain_id {
+        let mut storage;
+        let to_hash = match chain_id {
             Some(chain_id) => {
                 // A decimal `u64` string is at most 20 bytes long: round up 20 + 42 to 64.
-                let mut prefixed = [0u8; 64];
+                storage = [0u8; 64];
 
                 // Format the `chain_id` into a stack-allocated buffer using `itoa`
                 let mut temp = itoa::Buffer::new();
@@ -89,19 +84,20 @@ impl Address {
                 debug_assert!(prefix_len <= 20);
                 let len = prefix_len + 42;
 
-                // SAFETY: prefix_len <= 20; len <= 62; prefixed.len() == 64
+                // SAFETY: prefix_len <= 20; len <= 62; storage.len() == 64
                 unsafe {
-                    prefixed
+                    storage
                         .get_unchecked_mut(..prefix_len)
                         .copy_from_slice(prefix_str.as_bytes());
-                    prefixed
+                    storage
                         .get_unchecked_mut(prefix_len..len)
                         .copy_from_slice(addr_buf);
                 }
-                keccak256(&prefixed[..len])
+                &storage[..len]
             }
-            None => keccak256(&addr_buf[2..]),
+            None => &addr_buf[2..],
         };
+        let hash = keccak256(to_hash);
         let mut hash_hex = [0u8; 64];
         hex::encode_to_slice(hash.as_bytes(), &mut hash_hex).unwrap();
 
