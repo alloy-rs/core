@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Fundamental ethereum types shared by revm, reth and ethers"
 readme = "README.md"
 keywords = ["ethereum", "ethers", "revm", "reth"]
-categories = ["cryptography::cryptocurrencies"]
+categories = ["data-structures", "cryptography::cryptocurrencies"]
 
 edition.workspace = true
 rust-version.workspace = true
@@ -30,7 +30,7 @@ derive_more.workspace = true
 # rlp
 ethers-rlp = { workspace = true, optional = true }
 
-# optional
+# serde
 serde = { workspace = true, features = ["derive"], optional = true }
 
 # arbitrary
@@ -43,10 +43,10 @@ hex-literal.workspace = true
 serde_json.workspace = true
 
 [features]
-default = ["std", "rlp", "serde"]
-std = ["bytes/std", "hex/std", "ethers-rlp?/std", "proptest?/std", "serde/std"]
+default = ["std", "rlp", "serde", "hex/std"]
+std = ["bytes/std", "serde/std", "ethers-rlp?/std", "proptest?/std"]
 rlp = ["dep:ethers-rlp"]
-serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
+serde = ["dep:serde", "ruint/serde", "hex/serde"]
 arbitrary = [
     "ruint/arbitrary",
     "ruint/proptest",

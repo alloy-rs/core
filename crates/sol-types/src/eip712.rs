@@ -33,11 +33,7 @@ pub struct Eip712Domain {
     /// not match the currently active chain.
     #[cfg_attr(
         feature = "eip712-serde",
-        serde(
-            default,
-            skip_serializing_if = "Option::is_none",
-            deserialize_with = "crate::util::deserialize_stringified_numeric_opt"
-        )
+        serde(default, skip_serializing_if = "Option::is_none")
     )]
     pub chain_id: Option<U256>,
 
