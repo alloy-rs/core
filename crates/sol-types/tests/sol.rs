@@ -97,27 +97,27 @@ fn function() {
         basic: U256::from(1),
         string_: "Hello World".to_owned(),
         longBytes: vec![0; 36],
-        array: vec![Address::zero(), Address::zero(), Address::zero()],
+        array: vec![Address::ZERO, Address::ZERO, Address::ZERO],
         fixedArray: [true, false],
         struct_: customStruct {
-            a: Address::zero(),
+            a: Address::ZERO,
             b: 2,
         },
         structArray: vec![
             customStruct {
-                a: Address::zero(),
+                a: Address::ZERO,
                 b: 3,
             },
             customStruct {
-                a: Address::zero(),
+                a: Address::ZERO,
                 b: 4,
             },
             customStruct {
-                a: Address::zero(),
+                a: Address::ZERO,
                 b: 5,
             },
             customStruct {
-                a: Address::zero(),
+                a: Address::ZERO,
                 b: 6,
             },
         ],

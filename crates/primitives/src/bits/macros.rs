@@ -20,7 +20,7 @@ macro_rules! wrap_fixed_bytes {
         $(#[$attrs:meta])*
         $name:ident<$n:literal>
     ) => {
-        wrap_fixed_bytes!(
+        $crate::wrap_fixed_bytes!(
             name_str: stringify!($name),
             num_str: stringify!($n),
             $(#[$attrs])*
@@ -39,7 +39,7 @@ macro_rules! wrap_fixed_bytes {
         #[doc = $sname]
         #[doc = " and containing "]
         #[doc = $sn]
-        #[doc = " bytes"]
+        #[doc = " bytes."]
         #[derive(
             $crate::derive_more::AsRef,
             $crate::derive_more::AsMut,
@@ -97,19 +97,31 @@ macro_rules! wrap_fixed_bytes {
         }
 
         impl $name {
+            /// Array of Zero bytes.
+            pub const ZERO: Self = Self($crate::FixedBytes::ZERO);
+
             /// Returns a new fixed hash from the given bytes array.
+            #[inline]
             pub const fn new(bytes: [u8; $n]) -> Self {
                 Self($crate::FixedBytes(bytes))
             }
+
+            /// Utility function to create a fixed hash with the first byte set to `x`.
+            #[inline]
+            pub fn with_first_byte(x: u8) -> Self {
+                Self($crate::FixedBytes::with_first_byte(x))
+            }
+
+            /// Instantiates a new fixed hash with cryptographically random content.
+            #[inline]
+            pub fn random() -> Self {
+                Self($crate::FixedBytes::random())
+            }
+
             /// Returns a new fixed hash where all bits are set to the given byte.
             #[inline]
             pub const fn repeat_byte(byte: u8) -> Self {
                 Self($crate::FixedBytes::repeat_byte(byte))
-            }
-            /// Returns a new zero-initialized fixed hash.
-            #[inline]
-            pub const fn zero() -> Self {
-                Self($crate::FixedBytes::repeat_byte(0u8))
             }
             /// Returns the size of this hash in bytes.
             #[inline]
