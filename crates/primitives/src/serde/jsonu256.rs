@@ -1,3 +1,5 @@
+// TODO: Remove once Uint supports serde with both numbers and strings.
+
 use crate::U256;
 use alloc::string::String;
 use core::fmt;
@@ -76,7 +78,9 @@ impl<'a> Visitor<'a> for JsonU256Visitor {
     }
 }
 
-/// Supports parsing `U256` numbers as strings via [JsonU256]
+/// Supports parsing `U256` numbers as strings via [JsonU256].
+///
+/// Use with `#[serde(with = "deserialize_json_u256")]`.
 pub fn deserialize_json_u256<'de, D>(deserializer: D) -> Result<U256, D::Error>
 where
     D: Deserializer<'de>,

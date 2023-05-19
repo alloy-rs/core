@@ -9,7 +9,9 @@ pub use jsonu256::*;
 mod num;
 pub use num::*;
 
-/// serde functions for handling primitive `u64` as [U64](crate::U64)
+/// [`serde`] functions for handling primitive `u64` as [`U64`](crate::U64).
+///
+/// Use with `#[serde(with = "u64_hex")]`.
 pub mod u64_hex {
     use crate::U64;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -30,7 +32,13 @@ pub mod u64_hex {
     }
 }
 
-pub use hex::serde as hex_bytes;
+/// [Hex][hex] encoding with [`serde`].
+///
+/// Use with `#[serde(with = "ethers_primitives::hex_bytes")]`.
+pub mod hex_bytes {
+    #[doc(no_inline)]
+    pub use hex::serde::*;
+}
 
 #[cfg(test)]
 mod tests {
