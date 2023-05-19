@@ -1,6 +1,8 @@
 //! Modified implementations of unstable libcore functions.
 
-use crate::no_std_prelude::*;
+#![allow(dead_code)]
+
+use alloc::vec::Vec;
 use core::mem::{self, MaybeUninit};
 
 trait Ext {
@@ -71,15 +73,15 @@ unsafe fn slice_assume_init_mut<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
 }
 
 /// [`MaybeUninit::uninit_array`]
-#[inline(always)]
-fn uninit_array<T, const N: usize>() -> [MaybeUninit<T>; N] {
+#[inline]
+pub(crate) fn uninit_array<T, const N: usize>() -> [MaybeUninit<T>; N] {
     // SAFETY: An uninitialized `[MaybeUninit<_>; N]` is valid.
     unsafe { MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init() }
 }
 
 /// [`MaybeUninit::array_assume_init`]
-#[inline(always)]
-unsafe fn array_assume_init<T, const N: usize>(array: [MaybeUninit<T>; N]) -> [T; N] {
+#[inline]
+pub(crate) unsafe fn array_assume_init<T, const N: usize>(array: [MaybeUninit<T>; N]) -> [T; N] {
     // SAFETY:
     // * The caller guarantees that all elements of the array are initialized
     // * `MaybeUninit<T>` and T are guaranteed to have the same layout

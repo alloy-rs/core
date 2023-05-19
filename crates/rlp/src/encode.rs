@@ -62,20 +62,24 @@ pub trait Encodable {
 }
 
 impl<'a, T: ?Sized + Encodable> Encodable for &'a T {
+    #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
         (**self).encode(out)
     }
 
+    #[inline]
     fn length(&self) -> usize {
         (**self).length()
     }
 }
 
 impl<'a, T: ?Sized + Encodable> Encodable for &'a mut T {
+    #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
         (**self).encode(out)
     }
 
+    #[inline]
     fn length(&self) -> usize {
         (**self).length()
     }
@@ -103,20 +107,24 @@ impl Encodable for [u8] {
 }
 
 impl<const N: usize> Encodable for [u8; N] {
+    #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
         Encodable::encode(&self[..], out)
     }
 
+    #[inline]
     fn length(&self) -> usize {
         Encodable::length(&self[..])
     }
 }
 
 impl Encodable for str {
+    #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
         Encodable::encode(self.as_bytes(), out)
     }
 
+    #[inline]
     fn length(&self) -> usize {
         Encodable::length(self.as_bytes())
     }
@@ -241,60 +249,72 @@ mod alloc_support {
     use super::*;
 
     impl<'a, T: ?Sized + alloc::borrow::ToOwned + Encodable> Encodable for alloc::borrow::Cow<'a, T> {
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             (**self).encode(out)
         }
 
+        #[inline]
         fn length(&self) -> usize {
             (**self).length()
         }
     }
 
     impl<T: ?Sized + Encodable> Encodable for alloc::boxed::Box<T> {
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             (**self).encode(out)
         }
 
+        #[inline]
         fn length(&self) -> usize {
             (**self).length()
         }
     }
 
     impl<T: ?Sized + Encodable> Encodable for alloc::rc::Rc<T> {
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             (**self).encode(out)
         }
 
+        #[inline]
         fn length(&self) -> usize {
             (**self).length()
         }
     }
 
     impl<T: ?Sized + Encodable> Encodable for alloc::sync::Arc<T> {
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             (**self).encode(out)
         }
 
+        #[inline]
         fn length(&self) -> usize {
             (**self).length()
         }
     }
 
     impl<T: Encodable> Encodable for alloc::vec::Vec<T> {
+        #[inline]
         fn length(&self) -> usize {
             list_length(self)
         }
 
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             encode_list(self, out)
         }
     }
 
     impl Encodable for alloc::string::String {
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             self.as_bytes().encode(out);
         }
 
+        #[inline]
         fn length(&self) -> usize {
             self.as_bytes().length()
         }
@@ -304,10 +324,12 @@ mod alloc_support {
 macro_rules! slice_impl {
     ($t:ty) => {
         impl $crate::Encodable for $t {
+            #[inline]
             fn encode(&self, out: &mut dyn BufMut) {
                 Encodable::encode(&self[..], out)
             }
 
+            #[inline]
             fn length(&self) -> usize {
                 Encodable::length(&self[..])
             }

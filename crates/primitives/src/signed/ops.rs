@@ -331,7 +331,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline(always)]
     #[must_use]
     pub fn checked_div(self, rhs: Self) -> Option<Self> {
-        if rhs.is_zero() || (self == Self::min_value() && rhs == Self::minus_one()) {
+        if rhs.is_zero() || (self == Self::MIN && rhs == Self::MINUS_ONE) {
             None
         } else {
             Some(self.overflowing_div(rhs).0)
@@ -387,8 +387,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[track_caller]
     #[must_use]
     pub fn overflowing_rem(self, rhs: Self) -> (Self, bool) {
-        if self == Self::MIN && rhs == Self::minus_one() {
-            (Self::zero(), true)
+        if self == Self::MIN && rhs == Self::MINUS_ONE {
+            (Self::ZERO, true)
         } else {
             let div_res = self / rhs;
             (self - div_res * rhs, false)
@@ -400,7 +400,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline(always)]
     #[must_use]
     pub fn checked_rem(self, rhs: Self) -> Option<Self> {
-        if rhs.is_zero() || (self == Self::MIN && rhs == Self::minus_one()) {
+        if rhs.is_zero() || (self == Self::MIN && rhs == Self::MINUS_ONE) {
             None
         } else {
             Some(self.overflowing_rem(rhs).0)
@@ -445,9 +445,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         let q = self / rhs;
         if (self % rhs).is_negative() {
             if rhs.is_positive() {
-                q - Self::one()
+                q - Self::ONE
             } else {
-                q + Self::one()
+                q + Self::ONE
             }
         } else {
             q
@@ -467,7 +467,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[track_caller]
     #[must_use]
     pub fn overflowing_div_euclid(self, rhs: Self) -> (Self, bool) {
-        if self == Self::min_value() && rhs == Self::minus_one() {
+        if self == Self::MIN && rhs == Self::MINUS_ONE {
             (self, true)
         } else {
             (self.div_euclid(rhs), false)
@@ -479,7 +479,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline(always)]
     #[must_use]
     pub fn checked_div_euclid(self, rhs: Self) -> Option<Self> {
-        if rhs.is_zero() || (self == Self::min_value() && rhs == Self::minus_one()) {
+        if rhs.is_zero() || (self == Self::MIN && rhs == Self::MINUS_ONE) {
             None
         } else {
             Some(self.div_euclid(rhs))
@@ -518,8 +518,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn rem_euclid(self, rhs: Self) -> Self {
         let r = self % rhs;
-        if r < Self::zero() {
-            if rhs < Self::zero() {
+        if r < Self::ZERO {
+            if rhs < Self::ZERO {
                 r - rhs
             } else {
                 r + rhs
@@ -542,8 +542,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[track_caller]
     #[must_use]
     pub fn overflowing_rem_euclid(self, rhs: Self) -> (Self, bool) {
-        if self == Self::min_value() && rhs == Self::minus_one() {
-            (Self::zero(), true)
+        if self == Self::MIN && rhs == Self::MINUS_ONE {
+            (Self::ZERO, true)
         } else {
             (self.rem_euclid(rhs), false)
         }
@@ -571,7 +571,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline(always)]
     #[must_use]
     pub fn checked_rem_euclid(self, rhs: Self) -> Option<Self> {
-        if rhs.is_zero() || (self == Self::min_value() && rhs == Self::minus_one()) {
+        if rhs.is_zero() || (self == Self::MIN && rhs == Self::MINUS_ONE) {
             None
         } else {
             Some(self.rem_euclid(rhs))
@@ -630,7 +630,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn overflowing_pow(self, exp: Uint<BITS, LIMBS>) -> (Self, bool) {
         if BITS == 0 {
-            return (Self::zero(), false)
+            return (Self::ZERO, false)
         }
 
         let sign = self.pow_sign(exp);
@@ -687,7 +687,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn overflowing_shl(self, rhs: usize) -> (Self, bool) {
         if rhs >= 256 {
-            (Self::zero(), true)
+            (Self::ZERO, true)
         } else {
             (Self(self.0 << rhs), false)
         }
@@ -721,7 +721,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn overflowing_shr(self, rhs: usize) -> (Self, bool) {
         if rhs >= 256 {
-            (Self::zero(), true)
+            (Self::ZERO, true)
         } else {
             (Self(self.0 >> rhs), false)
         }
@@ -759,8 +759,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
         if rhs >= BITS - 1 {
             match self.sign() {
-                Sign::Positive => return Self::zero(),
-                Sign::Negative => return Self::minus_one(),
+                Sign::Positive => return Self::ZERO,
+                Sign::Negative => return Self::MINUS_ONE,
             }
         }
 
@@ -1010,7 +1010,7 @@ where
 {
     #[track_caller]
     fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Signed::zero(), |acc, x| acc + x)
+        iter.fold(Signed::ZERO, |acc, x| acc + x)
     }
 }
 
@@ -1020,7 +1020,7 @@ where
 {
     #[track_caller]
     fn product<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Signed::one(), |acc, x| acc * x)
+        iter.fold(Signed::ONE, |acc, x| acc * x)
     }
 }
 

@@ -18,33 +18,36 @@ repository.workspace = true
 ruint = { workspace = true, features = ["rlp", "serde"] }
 
 # utility
-derive_more = "0.99"
-tiny-keccak = { workspace = true, features = ["keccak"] }
+bytes.workspace = true
+getrandom = "0.2"
 hex.workspace = true
 itoa = "1"
+tiny-keccak = { workspace = true, features = ["keccak"] }
+
+# macros
+derive_more.workspace = true
+
+# rlp
+ethers-rlp = { workspace = true, optional = true }
 
 # serde
 serde = { workspace = true, features = ["derive"], optional = true }
 
-# rlp support
-ethers-rlp = { workspace = true, optional = true }
-bytes = { workspace = true, optional = true }
-
-# prop tests
+# arbitrary
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
 [dev-dependencies]
-hex-literal = "0.4"
-serde_json = { workspace = true }
-proptest = { workspace = true }
+hex-literal.workspace = true
+proptest.workspace = true
+serde_json.workspace = true
 
 [features]
-default = ["std", "rlp", "serde", "hex/std"]
-std = ["serde/std", "ethers-rlp?/std", "bytes?/std", "proptest?/std"]
-rlp = ["dep:ethers-rlp", "dep:bytes"]
-serde = ["dep:serde", "ruint/serde", "hex/serde"]
+default = ["std", "rlp", "serde"]
+std = ["bytes/std", "hex/std", "ethers-rlp?/std", "proptest?/std", "serde/std"]
+rlp = ["dep:ethers-rlp"]
+serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
 arbitrary = [
     "ruint/arbitrary",
     "ruint/proptest",

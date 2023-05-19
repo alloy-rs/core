@@ -17,15 +17,12 @@ pub mod u64_hex {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     /// Deserializes an `u64` from [U64] accepting a hex quantity string with
-    /// optional 0x prefix
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<u64, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
+    /// optional 0x prefix.
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u64, D::Error> {
         U64::deserialize(deserializer).map(|val| val.into_limbs()[0])
     }
 
-    /// Serializes u64 as hex string
+    /// Serializes u64 as hex string.
     pub fn serialize<S: Serializer>(value: &u64, s: S) -> Result<S::Ok, S::Error> {
         // TODO: Uint serde
         U64::from(*value).serialize(s)

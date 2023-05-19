@@ -1,8 +1,5 @@
 //! This module contains a 256-bit signed integer implementation.
 
-/// Type aliases for signed integers whose bitsize is divisble by 8.
-pub mod aliases;
-
 /// Conversion implementations.
 mod conversions;
 

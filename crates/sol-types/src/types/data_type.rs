@@ -781,7 +781,7 @@ impl SolType for () {
 
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(_rust: B) -> Word {
-        Word::zero()
+        Word::ZERO
     }
 
     #[inline]
