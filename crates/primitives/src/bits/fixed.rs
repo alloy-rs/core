@@ -377,19 +377,13 @@ impl<const N: usize> core::str::FromStr for FixedBytes<N> {
 
 impl<const N: usize> FixedBytes<N> {
     fn fmt_hex(&self, f: &mut fmt::Formatter<'_>, prefix: bool) -> fmt::Result {
-        if prefix {
-            f.write_str("0x")?;
-        }
-        let mut buf = hex::Buffer::new();
-        f.write_str(buf.format(&self.0))
+        let mut buf = hex::Buffer::<N, true>::new();
+        f.write_str(&buf.format(&self.0)[(!prefix as usize) * 2..])
     }
 
     fn fmt_hex_upper(&self, f: &mut fmt::Formatter<'_>, prefix: bool) -> fmt::Result {
-        if prefix {
-            f.write_str("0x")?;
-        }
-        let mut buf = hex::Buffer::new();
-        f.write_str(buf.format_upper(&self.0))
+        let mut buf = hex::Buffer::<N, true>::new();
+        f.write_str(&buf.format_upper(&self.0)[(!prefix as usize) * 2..])
     }
 }
 
