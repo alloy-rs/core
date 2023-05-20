@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 #![warn(
     missing_docs,
     unreachable_pub,
@@ -6,7 +7,6 @@
 )]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![doc = include_str!("../README.md")]
 
 #[macro_use]
 extern crate alloc;

@@ -685,8 +685,8 @@ mod test {
     const _DOMAIN: Eip712Domain = domain! {
         name: "abcd",
         version: "1",
-        chain_id: U256::from_limbs([0u64, 0, 0, 1]),
-        verifying_contract: Address::new([0u8;20]),
-        salt: B256::new([0u8;32]),
+        chain_id: U256::from_limbs([1, 0, 0, 0]),
+        verifying_contract: Address::ZERO,
+        salt: B256::ZERO,
     };
 }

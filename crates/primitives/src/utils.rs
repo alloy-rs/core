@@ -6,7 +6,7 @@ pub use tiny_keccak::{Hasher, Keccak};
 /// Simple interface to the [`keccak256`] hash function.
 ///
 /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
-pub fn keccak256(bytes: impl AsRef<[u8]>) -> FixedBytes<32> {
+pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> FixedBytes<32> {
     fn keccak256(bytes: &[u8]) -> FixedBytes<32> {
         let mut output = [0u8; 32];
         let mut hasher = Keccak::v256();
@@ -33,22 +33,19 @@ pub fn create_address<T: Borrow<[u8; 20]>>(sender: T, nonce: u64) -> Address {
         let buf = &mut out as &mut dyn bytes::BufMut;
         sender.encode(buf);
         let _ = nonce;
-        #[cfg(TODO)]
+        #[cfg(TODO_UINT_RLP)]
         crate::U256::from(nonce).encode(buf);
         let hash = keccak256(&out);
-
-        let mut bytes = [0u8; 20];
-        bytes.copy_from_slice(&hash[12..]);
-        Address::from(bytes)
+        Address::from_word(hash)
     }
 
     create_address(sender.borrow(), nonce)
 }
 
-/// Returns the CREATE2 address of a smart contract as specified in
-/// [EIP1014](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md).
+/// Returns the `CREATE2` address of a smart contract as specified in
+/// [EIP1014](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md):
 ///
-/// `keccak256( 0xff ++ address ++ salt ++ keccak256(init_code))[12:]`
+/// `keccak256(0xff ++ address ++ salt ++ keccak256(init_code))[12:]`
 pub fn create2_address_from_code<A, S, C>(address: A, salt: S, init_code: C) -> Address
 where
     A: Borrow<[u8; 20]>,
@@ -58,11 +55,11 @@ where
     create2_address(address, salt, &keccak256(init_code.as_ref()).0)
 }
 
-/// Returns the CREATE2 address of a smart contract as specified in
+/// Returns the `CREATE2` address of a smart contract as specified in
 /// [EIP1014](https://eips.ethereum.org/EIPS/eip-1014),
-/// taking the pre-computed hash of the init code as input.
+/// taking the pre-computed hash of the init code as input:
 ///
-/// `keccak256( 0xff ++ address ++ salt ++ keccak256(init_code))[12:]`
+/// `keccak256(0xff ++ address ++ salt ++ init_code_hash)[12:]`
 pub fn create2_address<A, S, H>(address: A, salt: S, init_code_hash: H) -> Address
 where
     // not `AsRef` because `[u8; N]` does not implement `AsRef<[u8; N]>`
@@ -77,10 +74,7 @@ where
         bytes[21..53].copy_from_slice(salt);
         bytes[53..85].copy_from_slice(init_code_hash);
         let hash = keccak256(bytes);
-
-        let mut bytes = [0u8; 20];
-        bytes.copy_from_slice(&hash[12..]);
-        Address::from(bytes)
+        Address::from_word(hash)
     }
 
     create2_address(address.borrow(), salt.borrow(), init_code_hash.borrow())
@@ -159,7 +153,7 @@ mod tests {
             ),
         ] {
             let from = from.parse::<Address>().unwrap();
-            
+
             let salt = hex::decode(salt).unwrap();
             let salt: [u8; 32] = salt.try_into().unwrap();
 

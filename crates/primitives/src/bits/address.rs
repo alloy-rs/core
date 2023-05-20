@@ -39,6 +39,7 @@ wrap_fixed_bytes!(
 );
 
 impl Borrow<[u8; 20]> for Address {
+    #[inline]
     fn borrow(&self) -> &[u8; 20] {
         &self.0
     }
@@ -51,14 +52,27 @@ impl From<Address> for [u8; 20] {
 }
 
 impl From<Address> for FixedBytes<32> {
+    #[inline]
     fn from(addr: Address) -> Self {
-        let mut buf: FixedBytes<32> = Default::default();
-        buf[12..].copy_from_slice(addr.as_bytes());
-        buf
+        addr.into_word()
     }
 }
 
 impl Address {
+    /// Creates an Ethereum address from an EVM word's upper 20 bytes.
+    #[inline]
+    pub fn from_word(hash: FixedBytes<32>) -> Self {
+        Self(FixedBytes(hash[12..].try_into().unwrap()))
+    }
+
+    /// Left-pads the address to 32 bytes (EVM word size).
+    #[inline]
+    pub fn into_word(self) -> FixedBytes<32> {
+        let mut buf = [0; 32];
+        buf[12..].copy_from_slice(self.as_bytes());
+        FixedBytes(buf)
+    }
+
     /// Encodes an Ethereum address to its [EIP-55] checksum.
     ///
     /// You can optionally specify an [EIP-155 chain ID] to encode the address
