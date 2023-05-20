@@ -52,7 +52,7 @@ where
     S: Borrow<[u8; 32]>,
     C: AsRef<[u8]>,
 {
-    create2_address(address, salt, &keccak256(init_code.as_ref()).0)
+    create2_address(address, salt, keccak256(init_code.as_ref()).0)
 }
 
 /// Returns the `CREATE2` address of a smart contract as specified in

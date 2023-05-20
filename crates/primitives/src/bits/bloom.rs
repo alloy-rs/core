@@ -148,7 +148,7 @@ impl<'a> From<&'a Bloom> for BloomRef<'a> {
 }
 
 #[inline]
-fn log2(x: usize) -> u32 {
+const fn log2(x: usize) -> u32 {
     if x <= 1 {
         return 0
     }

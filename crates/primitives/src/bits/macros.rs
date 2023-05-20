@@ -108,7 +108,7 @@ macro_rules! wrap_fixed_bytes {
 
             /// Utility function to create a fixed hash with the first byte set to `x`.
             #[inline]
-            pub fn with_first_byte(x: u8) -> Self {
+            pub const fn with_first_byte(x: u8) -> Self {
                 Self($crate::FixedBytes::with_first_byte(x))
             }
 
