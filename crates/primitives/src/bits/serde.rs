@@ -21,3 +21,16 @@ impl<'de, const N: usize> serde::Deserialize<'de> for FixedBytes<N> {
         s.parse().map_err(serde::de::Error::custom)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serde() {
+        let bytes = FixedBytes([1, 35, 69, 103, 137, 171, 205, 239]);
+        let ser = serde_json::to_string(&bytes).unwrap();
+        assert_eq!(ser, "\"0x0123456789abcdef\"");
+        assert_eq!(serde_json::from_str::<FixedBytes<8>>(&ser).unwrap(), bytes);
+    }
+}

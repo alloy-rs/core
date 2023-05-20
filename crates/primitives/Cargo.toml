@@ -40,6 +40,7 @@ proptest-derive = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex-literal.workspace = true
+serde_json.workspace = true
 
 [features]
 default = ["std", "rlp", "serde"]
