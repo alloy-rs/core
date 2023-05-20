@@ -36,4 +36,19 @@ pub use ruint::{self, uint, Uint};
 
 // Not public API.
 #[doc(hidden)]
-pub use derive_more;
+pub mod private {
+    pub use derive_more;
+
+    #[cfg(feature = "rlp")]
+    pub use ethers_rlp;
+
+    #[cfg(feature = "serde")]
+    pub use serde;
+
+    #[cfg(feature = "arbitrary")]
+    pub use arbitrary;
+    #[cfg(feature = "arbitrary")]
+    pub use proptest;
+    #[cfg(feature = "arbitrary")]
+    pub use proptest_derive;
+}
