@@ -14,7 +14,7 @@ pub const BLOOM_SIZE: usize = 256;
 /// A 256-byte Ethereum bloom filter.
 pub type Bloom = FixedBytes<256>;
 
-/// BloomInput to the [`Bloom::accrue`] method.
+/// Input to the [`Bloom::accrue`] method.
 #[derive(Debug)]
 pub enum BloomInput<'a> {
     /// Raw input to be hashed.

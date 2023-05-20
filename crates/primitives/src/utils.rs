@@ -86,7 +86,8 @@ mod tests {
 
     #[test]
     #[ignore = "Uint RLP"]
-    fn contract_address() {
+    #[cfg(feature = "rlp")]
+    fn test_create_address() {
         // http://ethereum.stackexchange.com/questions/760/how-is-the-address-of-an-ethereum-contract-computed
         let from = "6ac7ea33f8831ea9dcc53393aaa88b25a785dbf0"
             .parse::<Address>()

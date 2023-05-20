@@ -118,31 +118,42 @@ macro_rules! wrap_fixed_bytes {
                 Self($crate::FixedBytes::random())
             }
 
+            /// Instantiates a new fixed hash with cryptographically random content.
+            #[inline]
+            pub fn try_random() -> ::core::result::Result<Self, $crate::private::getrandom::Error> {
+                $crate::FixedBytes::try_random().map(Self)
+            }
+
             /// Returns a new fixed hash where all bits are set to the given byte.
             #[inline]
             pub const fn repeat_byte(byte: u8) -> Self {
                 Self($crate::FixedBytes::repeat_byte(byte))
             }
+
             /// Returns the size of this hash in bytes.
             #[inline]
             pub const fn len_bytes() -> usize {
                 $n
             }
+
             /// Extracts a byte slice containing the entire fixed hash.
             #[inline]
             pub const fn as_bytes(&self) -> &[u8] {
                 self.0.as_bytes()
             }
+
             /// Extracts a mutable byte slice containing the entire fixed hash.
             #[inline]
             pub fn as_bytes_mut(&mut self) -> &mut [u8] {
                 self.0.as_bytes_mut()
             }
+
             /// Extracts a reference to the byte array containing the entire fixed hash.
             #[inline]
             pub const fn as_fixed_bytes(&self) -> &[u8; $n] {
                 self.0.as_fixed_bytes()
             }
+
             /// Extracts a reference to the byte array containing the entire fixed hash.
             #[inline]
             pub fn as_fixed_bytes_mut(&mut self) -> &mut [u8; $n] {
@@ -183,28 +194,34 @@ macro_rules! wrap_fixed_bytes {
             pub fn covers(&self, b: &Self) -> bool {
                 &(*b & *self) == b
             }
+
             /// Returns `true` if no bits are set.
             #[inline]
             pub fn is_zero(&self) -> bool {
                 self.as_bytes().iter().all(|&byte| byte == 0u8)
             }
+
             /// Compile-time equality. NOT constant-time equality.
             pub const fn const_eq(&self, other: Self) -> bool {
                 self.0.const_eq(other.0)
             }
+
             /// Returns `true` if no bits are set.
             #[inline]
             pub const fn const_is_zero(&self) -> bool {
                 self.0.const_is_zero()
             }
+
             /// Computes the bitwise AND of two `FixedBytes`.
             pub const fn bit_and(self, rhs: Self) -> Self {
                 Self(self.0.bit_and(rhs.0))
             }
+
             /// Computes the bitwise OR of two `FixedBytes`.
             pub const fn bit_or(self, rhs: Self) -> Self {
                 Self(self.0.bit_or(rhs.0))
             }
+
             /// Computes the bitwise XOR of two `FixedBytes`.
             pub const fn bit_xor(self, rhs: Self) -> Self {
                 Self(self.0.bit_xor(rhs.0))

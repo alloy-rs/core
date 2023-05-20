@@ -38,6 +38,7 @@ pub use ruint::{self, uint, Uint};
 #[doc(hidden)]
 pub mod private {
     pub use derive_more;
+    pub use getrandom;
 
     #[cfg(feature = "rlp")]
     pub use ethers_rlp;
