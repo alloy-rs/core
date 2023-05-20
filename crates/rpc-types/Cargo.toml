@@ -1,0 +1,42 @@
+[package]
+name = "ethers-rpc-types"
+version = "0.1.0"
+description = "Ethereum RPC types"
+readme = "README.md"
+keywords = ["ethereum", "abi", "encoding", "evm", "rpc"]
+categories = ["encoding", "cryptography::cryptocurrencies"]
+
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+# ethers
+ethers-primitives = { workspace = true, features = ["std", "rlp"] }
+ethers-rlp = { workspace = true, features = ["std", "derive"] }
+
+# misc
+serde = { workspace = true, features = ["std", "derive"] }
+serde_json = { workspace = true, features = ["std"] }
+bytes = { workspace = true, features = ["std"] }
+hex = { workspace = true, features = ["std"] }
+hex-literal.workspace = true
+once_cell = { workspace = true, features = ["std"] }
+
+# arbitrary
+arbitrary = { workspace = true, features = ["derive"], optional = true }
+proptest = { workspace = true, optional = true }
+proptest-derive = { workspace = true, optional = true }
+
+[dev-dependencies]
+ethers-primitives = { workspace = true, features = ["std", "arbitrary"] }
+arbitrary = { workspace = true, features = ["derive"] }
+proptest.workspace = true
+proptest-derive.workspace = true
+
+[features]
+arbitrary = ["ethers-primitives/arbitrary", "dep:arbitrary", "dep:proptest", "dep:proptest-derive"]
+test-utils = []

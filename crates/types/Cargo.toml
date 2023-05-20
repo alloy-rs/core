@@ -1,0 +1,65 @@
+[package]
+name = "ethers-types"
+version = "0.1.0"
+description = "Ethereum types"
+readme = "README.md"
+keywords = ["ethereum", "abi", "encoding", "evm", "eth"]
+categories = ["encoding", "cryptography::cryptocurrencies"]
+
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+# ethers
+ethers-primitives = { workspace = true, features = ["std", "serde", "rlp"] }
+ethers-rlp = { workspace = true, features = ["std", "derive"] }
+
+# crypto
+secp256k1 = { version = "0.27.0", features = ["recovery"] }
+
+# used for forkid
+crc = "3"
+
+# misc
+serde = { workspace = true, features = ["std", "derive"] }
+serde_json = { workspace = true, features = ["std"] }
+bytes = { workspace = true, features = ["std"] }
+hex = { workspace = true, features = ["std"] }
+hex-literal.workspace = true
+once_cell = { workspace = true, features = ["std"] }
+
+# macros
+derive_more.workspace = true
+num_enum.workspace = true
+strum.workspace = true
+thiserror.workspace = true
+
+# arbitrary
+arbitrary = { workspace = true, features = ["derive"], optional = true }
+proptest = { workspace = true, optional = true }
+proptest-derive = { workspace = true, optional = true }
+
+# TODO: remove or feature gate
+url = "2" # only `net` modules
+bitvec = "1" # only revm bytecode
+jsonrpsee-types = "0.18" # only conversions and `SubscriptionId`
+# sucds = "0.7" # only `primitives::integer_list`
+# lru = "0.9" # only `primitives::fee`
+# tokio = { version = "1", features = ["sync"] } # only `primitives::{fee, listener}`
+
+[dev-dependencies]
+assert_matches = "1"
+rand = "0.8"
+
+ethers-primitives = { workspace = true, features = ["std", "arbitrary"] }
+arbitrary = { workspace = true, features = ["derive"] }
+proptest.workspace = true
+proptest-derive.workspace = true
+
+[features]
+arbitrary = ["ethers-primitives/arbitrary", "dep:arbitrary", "dep:proptest", "dep:proptest-derive"]
+test-utils = []
