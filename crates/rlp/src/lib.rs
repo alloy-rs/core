@@ -1,6 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-#![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
-#![deny(unused_must_use, rust_2018_idioms)]
 #![doc = include_str!("../README.md")]
 // This doctest uses derive and alloc, so it cannot be in the README :(
 #![cfg_attr(
@@ -32,6 +29,9 @@ fn main() {
 ```
 "##
 )]
+#![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
+#![deny(unused_must_use, rust_2018_idioms)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

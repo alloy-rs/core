@@ -66,7 +66,7 @@ impl DynSolValue {
     /// Fallible cast to a single word. Will succeed for any single-word type.
     pub fn as_word(&self) -> Option<Word> {
         match self {
-            Self::Address(a) => Some((*a).into()),
+            Self::Address(a) => Some(a.into_word()),
             Self::Bool(b) => Some({
                 let mut buf = [0u8; 32];
                 if *b {

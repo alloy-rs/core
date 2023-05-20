@@ -7,17 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-#![warn(
-    missing_docs,
-    unreachable_pub,
-    unused_crate_dependencies,
-    missing_copy_implementations,
-    missing_debug_implementations,
-    clippy::missing_const_for_fn
-)]
-#![deny(unused_must_use, rust_2018_idioms)]
-
 //! Solidity type modeling and ABI coding implementation.
 //!
 //! This crate provides tools for expressing Solidity types in Rust, and for
@@ -150,6 +139,17 @@
 //! The [`SolType`] encoding and decoding methods operate on Rust types. We
 //! recommend users use them wherever possible. We do not recommend that users
 //! interact with Tokens, except when implementing their own [`SolType`].
+
+#![warn(
+    missing_docs,
+    unreachable_pub,
+    unused_crate_dependencies,
+    missing_copy_implementations,
+    missing_debug_implementations,
+    clippy::missing_const_for_fn
+)]
+#![deny(unused_must_use, rust_2018_idioms)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[macro_use]
 extern crate alloc;
