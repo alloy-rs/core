@@ -197,6 +197,44 @@ impl Bytes {
     }
 }
 
+#[cfg(feature = "arbitrary")]
+impl<'a> arbitrary::Arbitrary<'a> for Bytes {
+    #[inline]
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        u.arbitrary_iter()?
+            .collect::<arbitrary::Result<Vec<u8>>>()
+            .map(Into::into)
+    }
+
+    #[inline]
+    fn arbitrary_take_rest(u: arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        Ok(Self(u.take_rest().to_vec().into()))
+    }
+
+    #[inline]
+    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+        (0, None)
+    }
+}
+
+#[cfg(feature = "arbitrary")]
+impl proptest::arbitrary::Arbitrary for Bytes {
+    type Parameters = proptest::arbitrary::ParamsFor<Vec<u8>>;
+    type Strategy = proptest::arbitrary::Mapped<Vec<u8>, Self>;
+
+    #[inline]
+    fn arbitrary() -> Self::Strategy {
+        use proptest::strategy::Strategy;
+        proptest::arbitrary::any::<Vec<u8>>().prop_map(|vec| Self(vec.into()))
+    }
+
+    #[inline]
+    fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
+        use proptest::strategy::Strategy;
+        proptest::arbitrary::any_with::<Vec<u8>>(args).prop_map(|vec| Self(vec.into()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

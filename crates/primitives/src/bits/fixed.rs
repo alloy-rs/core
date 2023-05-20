@@ -11,12 +11,12 @@ use derive_more::{Deref, DerefMut, From, Index, IndexMut};
 /// byte arrays. Users looking to prevent type-confusion between byte arrays of
 /// different lengths should use the [`crate::wrap_fixed_bytes`] macro to
 /// create a new fixed-length byte array type.
+#[derive(
+    Deref, DerefMut, From, Hash, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Index, IndexMut,
+)]
 #[cfg_attr(
     feature = "arbitrary",
     derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
-)]
-#[derive(
-    Deref, DerefMut, From, Hash, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Index, IndexMut,
 )]
 #[repr(transparent)]
 pub struct FixedBytes<const N: usize>(pub [u8; N]);
