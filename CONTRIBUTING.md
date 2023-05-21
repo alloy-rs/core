@@ -3,24 +3,26 @@
 :balloon: Thanks for your help improving the project! We are so happy to have
 you!
 
-There are opportunities to contribute to ethers-rs at any level. It doesn't matter if
-you are just getting started with Rust or are the most weathered expert, we can
-use your help.
+There are opportunities to contribute to ethers-rs at any level. It doesn't
+matter if you are just getting started with Rust or are the most weathered
+expert, we can use your help.
 
 **No contribution is too small and all contributions are valued.**
 
 This guide will help you get started. **Do not let this guide intimidate you**.
 It should be considered a map to help you navigate the process.
 
-The [dev channel][dev] is available for any concerns not covered in this guide, please join
-us!
+The [dev channel][dev] is available for any concerns not covered in this guide,
+please join us!
 
 [dev]: https://t.me/ethers_rs
 
 ## Conduct
 
 The ethers-rs project adheres to the [Rust Code of Conduct][coc]. This describes
-the _minimum_ behavior expected from all contributors. Instances of violations of the Code of Conduct can be reported by contacting the project team at [james@prestwich](mailto:james@prestwi.ch).
+the _minimum_ behavior expected from all contributors. Instances of violations
+of the Code of Conduct can be reported by contacting the project team at
+[james@prestwich](mailto:james@prestwi.ch).
 
 [coc]: https://www.rust-lang.org/policies/code-of-conduct
 
@@ -205,8 +207,8 @@ in order to evaluate whether the changes are correct and necessary.
 Keep an eye out for comments from code owners to provide guidance on conflicting
 feedback.
 
-**Once the PR is open, do not rebase the commits**. See [Commit Squashing](#commit-squashing) for
-more details.
+**Once the PR is open, do not rebase the commits**. See
+[Commit Squashing](#commit-squashing) for more details.
 
 ### Commit Squashing
 
@@ -265,9 +267,9 @@ Specific performance optimization techniques, coding styles and conventions
 change over time. The first impression you give to a new contributor never does.
 
 Nits (requests for small changes that are not essential) are fine, but try to
-avoid stalling the Pull Request. Most nits can typically be fixed by the ethers-rs
-Collaborator landing the Pull Request but they can also be an opportunity for
-the contributor to learn a bit more about the project.
+avoid stalling the Pull Request. Most nits can typically be fixed by the
+ethers-rs Collaborator landing the Pull Request but they can also be an
+opportunity for the contributor to learn a bit more about the project.
 
 It is always good to clearly indicate nits when you comment: e.g.
 `Nit: change foo() to bar(). But this is not blocking.`
@@ -280,9 +282,9 @@ with the appropriate reason to keep the conversation flow concise and relevant.
 
 Be aware that _how_ you communicate requests and reviews in your feedback can
 have a significant impact on the success of the Pull Request. Yes, we may land
-a particular change that makes ethers-rs better, but the individual might just not
-want to have anything to do with ethers-rs ever again. The goal is not just having
-good code.
+a particular change that makes ethers-rs better, but the individual might just
+not want to have anything to do with ethers-rs ever again. The goal is not just
+having good code.
 
 ### Abandoned or Stalled Pull Requests
 
@@ -293,34 +295,8 @@ left). When doing so, it is courteous to give the original contributor credit
 for the work they started (either by preserving their name and email address in
 the commit log, or by using an `Author: ` meta-data tag in the commit.
 
-_Adapted from the [Tokio contributing guide](https://github.com/tokio-rs/tokio/blob/master/CONTRIBUTING.md)_.
+_Adapted from the [Tokio contributing guide]_.
 
 [hiding-a-comment]: https://help.github.com/articles/managing-disruptive-comments/#hiding-a-comment
 [documentation test]: https://doc.rust-lang.org/rustdoc/documentation-tests.html
-
-## Releasing
-
-Since the ethers-rs project consists of a number of crates, many of which depend on
-each other, releasing new versions to crates.io can involve some complexities.
-We use [`cargo-release`](https://github.com/crate-ci/cargo-release) to manage these
-complexities and the whole release process.
-
-When releasing the workspace:
-
-1. **Perform a final audit for breaking changes.** Compare the HEAD version of
-   crate with the Git tag for the most recent release version. If there are any
-   breaking API changes, determine if those changes can be made without breaking
-   existing APIs. If so, resolve those issues and make a `minor` change
-   release. Otherwise, if it is necessary to make a breaking release, make a
-   `major` change release.
-2. **Dry run the release.** Running the `cargo release` command without the
-   `--execute` flag will perform a dry run.
-3. **Release the crate.**
-   Run the `bin/release` script with the `--execute` flag.
-   This will update the package versions in the relevant manifests, create
-   git tags, automatically generate the [`CHANGELOG.md`](./CHANGELOG.md) file
-   with [git-cliff], and finally publish the crates to `crates.io`.
-   For more information, see the top comment in the script file.
-
-[keep-a-changelog]: https://github.com/olivierlacan/keep-a-changelog/blob/master/CHANGELOG.md
-[git-cliff]: https://github.com/orhun/git-cliff
+[Tokio contributing guide]: https://github.com/tokio-rs/tokio/blob/master/CONTRIBUTING.md
