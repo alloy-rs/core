@@ -46,10 +46,6 @@ proptest-derive = { workspace = true, optional = true }
 # TODO: remove or feature gate
 url = "2" # only `net` modules
 bitvec = "1" # only revm bytecode
-jsonrpsee-types = "0.18" # only conversions and `SubscriptionId`
-# sucds = "0.7" # only `primitives::integer_list`
-# lru = "0.9" # only `primitives::fee`
-# tokio = { version = "1", features = ["sync"] } # only `primitives::{fee, listener}`
 
 [dev-dependencies]
 assert_matches = "1"

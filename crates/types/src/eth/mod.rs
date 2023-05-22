@@ -5,8 +5,6 @@ mod block;
 mod call;
 pub mod engine;
 pub mod error;
-#[cfg(TODO)]
-mod fee;
 mod filter;
 mod index;
 mod log;
@@ -21,8 +19,6 @@ mod work;
 pub use account::*;
 pub use block::*;
 pub use call::CallRequest;
-#[cfg(TODO)]
-pub use fee::{FeeHistory, FeeHistoryCache, FeeHistoryCacheItem, TxGasAndReward};
 pub use filter::*;
 pub use index::Index;
 pub use log::Log;

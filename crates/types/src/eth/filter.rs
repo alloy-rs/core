@@ -1,7 +1,6 @@
 use super::Log as RpcLog;
 use crate::primitives::{BlockNumberOrTag, Log};
 use ethers_primitives::{keccak256, Address, Bloom, BloomInput, B256, U256, U64};
-use jsonrpsee_types::SubscriptionId;
 use serde::{
     de::{DeserializeOwned, MapAccess, Visitor},
     ser::SerializeStruct,
@@ -1032,35 +1031,6 @@ impl<'de> Deserialize<'de> for FilterChanges {
             }
         };
         Ok(changes)
-    }
-}
-
-/// Owned equivalent of [SubscriptionId]
-#[derive(Debug, PartialEq, Clone, Hash, Eq, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-#[serde(untagged)]
-pub enum FilterId {
-    /// Numeric id
-    Num(u64),
-    /// String id
-    Str(String),
-}
-
-impl From<FilterId> for SubscriptionId<'_> {
-    fn from(value: FilterId) -> Self {
-        match value {
-            FilterId::Num(n) => SubscriptionId::Num(n),
-            FilterId::Str(s) => SubscriptionId::Str(s.into()),
-        }
-    }
-}
-
-impl From<SubscriptionId<'_>> for FilterId {
-    fn from(value: SubscriptionId<'_>) -> Self {
-        match value {
-            SubscriptionId::Num(n) => FilterId::Num(n),
-            SubscriptionId::Str(s) => FilterId::Str(s.into_owned()),
-        }
     }
 }
 

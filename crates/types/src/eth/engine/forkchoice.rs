@@ -50,26 +50,26 @@ pub enum ForkchoiceUpdateError {
     UnknownFinalBlock,
 }
 
-impl From<ForkchoiceUpdateError> for jsonrpsee_types::error::ErrorObject<'static> {
-    fn from(value: ForkchoiceUpdateError) -> Self {
-        match value {
+impl ForkchoiceUpdateError {
+    /// Returns the error code for this error.
+    pub const fn code(self) -> i32 {
+        match self {
             ForkchoiceUpdateError::UpdatedInvalidPayloadAttributes => {
-                jsonrpsee_types::error::ErrorObject::owned(
-                    INVALID_PAYLOAD_ATTRIBUTES_ERROR,
-                    INVALID_PAYLOAD_ATTRIBUTES_ERROR_MSG,
-                    None::<()>,
-                )
+                INVALID_PAYLOAD_ATTRIBUTES_ERROR
             }
-            ForkchoiceUpdateError::InvalidState => jsonrpsee_types::error::ErrorObject::owned(
-                INVALID_FORK_CHOICE_STATE_ERROR,
-                INVALID_FORK_CHOICE_STATE_ERROR_MSG,
-                None::<()>,
-            ),
-            ForkchoiceUpdateError::UnknownFinalBlock => jsonrpsee_types::error::ErrorObject::owned(
-                INVALID_FORK_CHOICE_STATE_ERROR,
-                INVALID_FORK_CHOICE_STATE_ERROR_MSG,
-                None::<()>,
-            ),
+            ForkchoiceUpdateError::InvalidState => INVALID_FORK_CHOICE_STATE_ERROR,
+            ForkchoiceUpdateError::UnknownFinalBlock => INVALID_FORK_CHOICE_STATE_ERROR,
+        }
+    }
+
+    /// Returns the error message for this error.
+    pub const fn message(self) -> &'static str {
+        match self {
+            ForkchoiceUpdateError::UpdatedInvalidPayloadAttributes => {
+                INVALID_PAYLOAD_ATTRIBUTES_ERROR_MSG
+            }
+            ForkchoiceUpdateError::InvalidState => INVALID_FORK_CHOICE_STATE_ERROR_MSG,
+            ForkchoiceUpdateError::UnknownFinalBlock => INVALID_FORK_CHOICE_STATE_ERROR_MSG,
         }
     }
 }
