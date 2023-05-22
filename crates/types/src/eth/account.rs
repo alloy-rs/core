@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-use ethers_primitives::{serde::JsonStorageKey, Address, Bytes, B256, B512, U256, U64};
+use ethers_primitives::{Address, Bytes, B256, B512, U256, U64};
 use serde::{Deserialize, Serialize};
 
 /// Account information.
@@ -14,7 +14,7 @@ pub struct AccountInfo {
 #[serde(rename_all = "camelCase")]
 pub struct StorageProof {
     /// Storage key.
-    pub key: JsonStorageKey,
+    pub key: B256, // TODO: JsonStorageKey?
     /// Value that the key holds
     pub value: U256,
     /// proof for the pair

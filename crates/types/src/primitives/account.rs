@@ -1,5 +1,5 @@
 use crate::constants::KECCAK_EMPTY;
-use ethers_primitives::{B256, U256};
+use ethers_primitives::{B256, U256, U64};
 
 #[cfg(TODO)]
 mod temp {
@@ -13,7 +13,7 @@ mod temp {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct Account {
     /// Account nonce.
-    pub nonce: u64,
+    pub nonce: U64,
     /// Account balance.
     pub balance: U256,
     /// Hash of the account's bytecode.
@@ -34,7 +34,7 @@ impl Account {
             Some(hash) => hash == KECCAK_EMPTY,
         };
 
-        self.nonce == 0 && self.balance == U256::ZERO && is_bytecode_empty
+        self.nonce == U64::ZERO && self.balance == U256::ZERO && is_bytecode_empty
     }
 
     /// Returns an account bytecode's hash.

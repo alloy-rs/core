@@ -817,7 +817,7 @@ mod tests {
                     Address::from_str("0x1a26338f0d905e295fccb71fa9ea849ffa12aaf4").unwrap(),
                     GenesisAccount {
                         balance: U256::from_str("0x31").unwrap(),
-                        nonce: Some(0x32u64),
+                        nonce: Some(U64::from(0x32u64)),
                         code: None,
                         storage: None,
                     },

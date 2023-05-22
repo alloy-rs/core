@@ -1,3 +1,4 @@
+use crate::{goerli_nodes, mainnet_nodes, sepolia_nodes, NodeRecord};
 use ethers_primitives::Uint;
 use ethers_rlp::{Decodable, Encodable};
 use serde::{Deserialize, Serialize};
@@ -187,7 +188,6 @@ impl Chain {
     }
 
     /// Returns bootnodes for the given chain.
-    #[cfg(TODO)]
     #[inline]
     pub fn bootnodes(self) -> Option<Vec<NodeRecord>> {
         use NamedChain::*;

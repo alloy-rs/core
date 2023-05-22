@@ -1,4 +1,4 @@
-use ethers_primitives::{serde::from_int_or_hex_opt, Address, B256, U256};
+use ethers_primitives::{Address, B256, U256};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -21,19 +21,11 @@ pub struct DiffMode {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AccountState {
-    #[serde(
-        default,
-        deserialize_with = "from_int_or_hex_opt",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub balance: Option<U256>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub code: Option<String>,
-    #[serde(
-        default,
-        deserialize_with = "from_int_or_hex_opt",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub nonce: Option<U256>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub storage: Option<BTreeMap<B256, B256>>,

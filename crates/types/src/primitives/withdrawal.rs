@@ -1,5 +1,5 @@
 use crate::constants::GWEI_TO_WEI;
-use ethers_primitives::{serde::u64_hex, Address, U256};
+use ethers_primitives::{Address, U256, U64};
 use ethers_rlp::{RlpDecodable, RlpEncodable};
 use serde::{Deserialize, Serialize};
 
@@ -9,16 +9,14 @@ use serde::{Deserialize, Serialize};
 )]
 pub struct Withdrawal {
     /// Monotonically increasing identifier issued by consensus layer.
-    #[serde(with = "u64_hex")]
-    pub index: u64,
+    pub index: U64,
     /// Index of validator associated with withdrawal.
-    #[serde(with = "u64_hex", rename = "validatorIndex")]
-    pub validator_index: u64,
+    #[serde(rename = "validatorIndex")]
+    pub validator_index: U64,
     /// Target address for withdrawn ether.
     pub address: Address,
     /// Value of the withdrawal in gwei.
-    #[serde(with = "u64_hex")]
-    pub amount: u64,
+    pub amount: U64,
 }
 
 impl Withdrawal {

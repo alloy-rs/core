@@ -50,12 +50,12 @@ mod tests {
     #[test]
     fn serde_log() {
         let log = Log {
-            address: Address::with_first_byte(1),
-            topics: vec![B256::with_first_byte(2)],
-            data: Bytes::from(vec![0x12, 0x34]),
-            block_hash: Some(B256::with_first_byte(3)),
+            address: Address::with_last_byte(1),
+            topics: vec![B256::with_last_byte(2)],
+            data: Bytes::from_static(&[0x12, 0x34]),
+            block_hash: Some(B256::with_last_byte(3)),
             block_number: Some(U256::from(4)),
-            transaction_hash: Some(B256::with_first_byte(5)),
+            transaction_hash: Some(B256::with_last_byte(5)),
             transaction_index: Some(U256::from(6)),
             log_index: Some(U256::from(7)),
             removed: false,

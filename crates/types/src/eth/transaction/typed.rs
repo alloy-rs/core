@@ -75,7 +75,7 @@ pub struct LegacyTransactionRequest {
 }
 
 /// Represents an EIP-2930 transaction request
-#[derive(Debug, Clone, PartialEq, Eq)] // TODO_UINT_RLP
+#[derive(Debug, Clone, PartialEq, Eq, RlpDecodable, RlpEncodable)]
 pub struct EIP2930TransactionRequest {
     pub chain_id: u64,
     pub nonce: U256,
@@ -88,7 +88,7 @@ pub struct EIP2930TransactionRequest {
 }
 
 /// Represents an EIP-1559 transaction request
-#[derive(Debug, Clone, PartialEq, Eq)] // TODO_UINT_RLP
+#[derive(Debug, Clone, PartialEq, Eq, RlpDecodable, RlpEncodable)]
 pub struct EIP1559TransactionRequest {
     pub chain_id: u64,
     pub nonce: U256,

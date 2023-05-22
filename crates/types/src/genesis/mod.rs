@@ -91,20 +91,23 @@ impl Genesis {
 pub struct GenesisAccount {
     /// The nonce of the account at genesis.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub nonce: Option<u64>,
+    pub nonce: Option<U64>,
     /// The balance of the account at genesis.
     pub balance: U256,
     /// The account's bytecode at genesis.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub code: Option<Bytes>,
     /// The account's storage at genesis.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "genesis_storage_map",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub storage: Option<HashMap<B256, B256>>,
 }
 
 impl GenesisAccount {
     /// Determines the RLP payload length, without the RLP header.
-    #[cfg(TODO_UINT_RLP)]
     fn payload_len(&self) -> usize {
         let mut len = 0;
         len += self.nonce.unwrap_or_default().length();
@@ -121,7 +124,7 @@ impl GenesisAccount {
 
     /// Set the nonce.
     pub fn with_nonce(mut self, nonce: Option<u64>) -> Self {
-        self.nonce = nonce;
+        self.nonce = nonce.map(|x| U64::from_limbs([x]));
         self
     }
 
@@ -144,7 +147,6 @@ impl GenesisAccount {
     }
 }
 
-#[cfg(TODO_UINT_RLP)]
 impl Encodable for GenesisAccount {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         let header = RlpHeader {
@@ -161,11 +163,12 @@ impl Encodable for GenesisAccount {
                 if storage.is_empty() {
                     return EMPTY_ROOT
                 }
-                let storage_values = storage
+                let _storage_values = storage
                     .iter()
                     .filter(|(_k, &v)| v != B256::ZERO)
-                    .map(|(&k, v)| (k, encode_fixed_size(v)));
-                // TODO
+                    // .map(|(&k, v)| (k, encode_fixed_size(v)))
+                    ;
+                // TODO_TRIE
                 // sec_trie_root::<KeccakHasher, _, _, _>(storage_values)
                 todo!()
             })
@@ -192,6 +195,47 @@ impl From<GenesisAccount> for Account {
             bytecode_hash: value.code.map(keccak256),
         }
     }
+}
+
+/// Deserializes a `Option<HashMap<B256, B256>>`, where both the keys and values
+/// are not necessarily 32 bytes long.
+///
+/// This is needed for Geth's genesis format.
+fn genesis_storage_map<'de, D>(deserializer: D) -> Result<Option<HashMap<B256, B256>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let map = Option::<HashMap<Bytes, Bytes>>::deserialize(deserializer)?;
+    match map {
+        Some(mut map) => {
+            let mut res_map = HashMap::new();
+            for (k, v) in map.drain() {
+                let k_deserialized = from_bytes_to_b256::<'de, D>(k)?;
+                let v_deserialized = from_bytes_to_b256::<'de, D>(v)?;
+                res_map.insert(k_deserialized, v_deserialized);
+            }
+            Ok(Some(res_map))
+        }
+        None => Ok(None),
+    }
+}
+
+/// Converts a Bytes value into a H256, accepting inputs that are less than 32
+/// bytes long. These inputs will be left padded with zeros.
+fn from_bytes_to_b256<'de, D>(bytes: Bytes) -> Result<B256, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    if bytes.len() > 32 {
+        return Err(serde::de::Error::custom("input too long to be a H256"))
+    }
+
+    // left pad with zeros to 32 bytes
+    let mut padded = [0u8; 32];
+    padded[32 - bytes.len()..].copy_from_slice(&bytes.0);
+
+    // then convert to H256 without a panic
+    Ok(B256::from(padded))
 }
 
 #[cfg(test)]
@@ -242,7 +286,7 @@ mod tests {
         assert_eq!(custom_genesis.alloc.len(), 1);
         let same_address = first_address;
         let new_alloc_account = GenesisAccount {
-            nonce: Some(1),
+            nonce: Some(U64::from(1)),
             balance: U256::from(1),
             code: Some(Bytes::from(b"code")),
             storage: Some(HashMap::default()),
@@ -288,7 +332,7 @@ mod tests {
 
         assert_ne!(default_account, genesis_account);
         // check every field
-        assert_eq!(genesis_account.nonce, nonce);
+        assert_eq!(genesis_account.nonce.map(|x| x.to::<u64>()), nonce);
         assert_eq!(genesis_account.balance, balance);
         assert_eq!(genesis_account.code, code);
         assert_eq!(genesis_account.storage, storage);

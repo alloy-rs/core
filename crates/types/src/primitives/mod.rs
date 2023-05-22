@@ -11,7 +11,6 @@ pub mod contract;
 mod forkid;
 mod hardfork;
 mod header;
-pub mod listener;
 mod log;
 mod net;
 mod peer;

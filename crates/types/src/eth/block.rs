@@ -173,8 +173,6 @@ impl Block {
         total_difficulty: U256,
         transactions: BlockTransactions,
     ) -> Self {
-        let block_length = 0usize;
-        #[cfg(TODO_UINT_RLP)]
         let block_length = block.length();
         let uncles = block.ommers.into_iter().map(|h| h.hash_slow()).collect();
         let header = Header::from_primitive_with_hash(block.header.seal(block_hash));
@@ -198,13 +196,10 @@ impl Block {
     pub fn uncle_block_from_header(header: PrimitiveHeader) -> Self {
         let hash = header.hash_slow();
         let rpc_header = Header::from_primitive_with_hash(header.clone().seal(hash));
-        let size = Some(U256::ZERO);
-        #[cfg(TODO_UINT_RLP)]
         let uncle_block = PrimitiveBlock {
             header,
             ..Default::default()
         };
-        #[cfg(TODO_UINT_RLP)]
         let size = Some(U256::from(uncle_block.length()));
         Self {
             uncles: vec![],
@@ -429,28 +424,28 @@ mod tests {
     fn serde_block() {
         let block = Block {
             header: Header {
-                hash: Some(B256::with_first_byte(1)),
-                parent_hash: B256::with_first_byte(2),
-                uncles_hash: B256::with_first_byte(3),
-                miner: Address::with_first_byte(4),
-                state_root: B256::with_first_byte(5),
-                transactions_root: B256::with_first_byte(6),
-                receipts_root: B256::with_first_byte(7),
-                withdrawals_root: Some(B256::with_first_byte(8)),
+                hash: Some(B256::with_last_byte(1)),
+                parent_hash: B256::with_last_byte(2),
+                uncles_hash: B256::with_last_byte(3),
+                miner: Address::with_last_byte(4),
+                state_root: B256::with_last_byte(5),
+                transactions_root: B256::with_last_byte(6),
+                receipts_root: B256::with_last_byte(7),
+                withdrawals_root: Some(B256::with_last_byte(8)),
                 number: Some(U256::from(9)),
                 gas_used: U256::from(10),
                 gas_limit: U256::from(11),
-                extra_data: Bytes::from(vec![1, 2, 3]),
+                extra_data: Bytes::from_static(&[1, 2, 3]),
                 logs_bloom: Bloom::default(),
                 timestamp: U256::from(12),
                 difficulty: U256::from(13),
-                mix_hash: B256::with_first_byte(14),
-                nonce: Some(B64::with_first_byte(15)),
+                mix_hash: B256::with_last_byte(14),
+                nonce: Some(B64::with_last_byte(15)),
                 base_fee_per_gas: Some(U256::from(20)),
             },
             total_difficulty: Some(U256::from(100000)),
-            uncles: vec![B256::with_first_byte(17)],
-            transactions: BlockTransactions::Hashes(vec![B256::with_first_byte(18)]),
+            uncles: vec![B256::with_last_byte(17)],
+            transactions: BlockTransactions::Hashes(vec![B256::with_last_byte(18)]),
             size: Some(U256::from(19)),
             withdrawals: Some(vec![]),
         };
@@ -467,28 +462,28 @@ mod tests {
     fn serde_block_with_withdrawals_set_as_none() {
         let block = Block {
             header: Header {
-                hash: Some(B256::with_first_byte(1)),
-                parent_hash: B256::with_first_byte(2),
-                uncles_hash: B256::with_first_byte(3),
-                miner: Address::with_first_byte(4),
-                state_root: B256::with_first_byte(5),
-                transactions_root: B256::with_first_byte(6),
-                receipts_root: B256::with_first_byte(7),
+                hash: Some(B256::with_last_byte(1)),
+                parent_hash: B256::with_last_byte(2),
+                uncles_hash: B256::with_last_byte(3),
+                miner: Address::with_last_byte(4),
+                state_root: B256::with_last_byte(5),
+                transactions_root: B256::with_last_byte(6),
+                receipts_root: B256::with_last_byte(7),
                 withdrawals_root: None,
                 number: Some(U256::from(9)),
                 gas_used: U256::from(10),
                 gas_limit: U256::from(11),
-                extra_data: Bytes::from(vec![1, 2, 3]),
+                extra_data: Bytes::from_static(&[1, 2, 3]),
                 logs_bloom: Bloom::default(),
                 timestamp: U256::from(12),
                 difficulty: U256::from(13),
-                mix_hash: B256::with_first_byte(14),
-                nonce: Some(B64::with_first_byte(15)),
+                mix_hash: B256::with_last_byte(14),
+                nonce: Some(B64::with_last_byte(15)),
                 base_fee_per_gas: Some(U256::from(20)),
             },
             total_difficulty: Some(U256::from(100000)),
-            uncles: vec![B256::with_first_byte(17)],
-            transactions: BlockTransactions::Hashes(vec![B256::with_first_byte(18)]),
+            uncles: vec![B256::with_last_byte(17)],
+            transactions: BlockTransactions::Hashes(vec![B256::with_last_byte(18)]),
             size: Some(U256::from(19)),
             withdrawals: None,
         };

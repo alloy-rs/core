@@ -7,8 +7,19 @@ use serde::{Deserialize, Serialize};
 /// transaction and used to determine the sender of
 /// the transaction; formally Tr and Ts. This is expanded in Appendix F of
 /// yellow paper.
-// TODO_UINT_RLP RlpEncodable, RlpDecodable,
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    Default,
+    Serialize,
+    Deserialize,
+    RlpEncodable,
+    RlpDecodable,
+)]
 #[cfg_attr(
     any(test, feature = "arbitrary"),
     derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
@@ -26,27 +37,19 @@ impl Signature {
     /// Output the length of the signature without the length of the RLP header,
     /// using the legacy scheme with EIP-155 support depends on chain_id.
     pub(crate) fn payload_len_with_eip155_chain_id(&self, chain_id: Option<u64>) -> usize {
-        let _ = chain_id;
-        #[cfg(TODO_UINT_RLP)]
-        {
-            self.v(chain_id).length() + self.r.length() + self.s.length()
-        }
-        0
+        self.v(chain_id).length() + self.r.length() + self.s.length()
     }
 
     /// Encode the `v`, `r`, `s` values without a RLP header.
     /// Encodes the `v` value using the legacy scheme with EIP-155 support
     /// depends on chain_id.
-    #[cfg_attr(not(TODO_UINT_RLP), allow(unused))]
     pub(crate) fn encode_with_eip155_chain_id(
         &self,
         out: &mut dyn ethers_rlp::BufMut,
         chain_id: Option<u64>,
     ) {
         self.v(chain_id).encode(out);
-        #[cfg(TODO_UINT_RLP)]
         self.r.encode(out);
-        #[cfg(TODO_UINT_RLP)]
         self.s.encode(out);
     }
 
@@ -63,13 +66,6 @@ impl Signature {
 
     /// Decodes the `v`, `r`, `s` values without a RLP header.
     /// This will return a chain ID if the `v` value is [EIP-155](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md) compatible.
-    pub(crate) fn decode_with_eip155_chain_id(
-        buf: &mut &[u8],
-    ) -> Result<(Self, Option<u64>), DecodeError> {
-        let _ = buf;
-        todo!()
-    }
-    #[cfg(TODO_UINT_RLP)]
     pub(crate) fn decode_with_eip155_chain_id(
         buf: &mut &[u8],
     ) -> Result<(Self, Option<u64>), DecodeError> {
@@ -94,13 +90,11 @@ impl Signature {
     }
 
     /// Output the length of the signature without the length of the RLP header
-    #[cfg(TODO_UINT_RLP)]
     pub(crate) fn payload_len(&self) -> usize {
         self.odd_y_parity.length() + self.r.length() + self.s.length()
     }
 
     /// Encode the `odd_y_parity`, `r`, `s` values without a RLP header.
-    #[cfg(TODO_UINT_RLP)]
     pub(crate) fn encode(&self, out: &mut dyn ethers_rlp::BufMut) {
         self.odd_y_parity.encode(out);
         self.r.encode(out);
@@ -108,7 +102,6 @@ impl Signature {
     }
 
     /// Decodes the `odd_y_parity`, `r`, `s` values without a RLP header.
-    #[cfg(TODO_UINT_RLP)]
     pub(crate) fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
         Ok(Signature {
             odd_y_parity: Decodable::decode(buf)?,
@@ -181,7 +174,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(TODO_UINT_RLP)]
     fn test_encode_and_decode_with_eip155_chain_id() {
         let signature = Signature {
             r: U256::default(),
@@ -211,7 +203,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(TODO_UINT_RLP)]
     fn test_payload_len() {
         let signature = Signature {
             r: U256::default(),
@@ -222,7 +213,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(TODO_UINT_RLP)]
     fn test_encode_and_decode() {
         let signature = Signature {
             r: U256::default(),
@@ -233,6 +223,7 @@ mod tests {
         let mut encoded = BytesMut::new();
         signature.encode(&mut encoded);
         assert_eq!(encoded.len(), signature.payload_len());
+        eprintln!("{}", ethers_primitives::Bytes::from(encoded.to_vec()));
         let decoded = Signature::decode(&mut &*encoded).unwrap();
         assert_eq!(signature, decoded);
     }

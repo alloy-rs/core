@@ -201,7 +201,6 @@ pub enum Transaction {
 impl Transaction {
     /// This encodes the transaction _without_ the signature, and is only
     /// suitable for creating a hash intended for signing.
-    #[cfg(TODO_UINT_RLP)]
     pub fn encode_without_signature(&self, out: &mut dyn bytes::BufMut) {
         Encodable::encode(self, out);
     }
@@ -215,10 +214,6 @@ impl Transaction {
         out: &mut dyn bytes::BufMut,
         with_header: bool,
     ) {
-        let _ = signature;
-        let _ = with_header;
-        let _ = out;
-        #[cfg(TODO_UINT_RLP)]
         match self {
             Transaction::Legacy(TxLegacy { chain_id, .. }) => {
                 // do nothing w/ with_header
@@ -669,7 +664,7 @@ impl Transaction {
                 gas_limit.encode(out);
                 to.encode(out);
                 value.encode(out);
-                input.0.encode(out);
+                input.encode(out);
                 access_list.encode(out);
             }
         }
@@ -861,10 +856,10 @@ impl TransactionSigned {
     /// Returns the enveloped encoded transactions.
     ///
     /// See also [TransactionSigned::encode_enveloped]
-    pub fn envelope_encoded(&self) -> bytes::Bytes {
+    pub fn envelope_encoded(&self) -> Bytes {
         let mut buf = BytesMut::new();
         self.encode_enveloped(&mut buf);
-        buf.freeze()
+        buf.freeze().into()
     }
 
     /// Encodes the transaction into the "raw" format (e.g.
@@ -883,9 +878,6 @@ impl TransactionSigned {
     /// and for calculating hash that for eip2718 does not require rlp
     /// header
     pub(crate) fn encode_inner(&self, out: &mut dyn bytes::BufMut, with_header: bool) {
-        let _ = out;
-        let _ = with_header;
-        #[cfg(TODO_UINT_RLP)]
         self.transaction
             .encode_with_signature(&self.signature, out, with_header);
     }
@@ -901,8 +893,6 @@ impl TransactionSigned {
                 length_of_length(payload_length) + payload_length
             }
             _ => {
-                let payload_length = 0;
-                #[cfg(TODO_UINT_RLP)]
                 let payload_length = self.transaction.fields_len() + self.signature.payload_len();
                 // 'transaction type byte length' + 'header length' + 'payload length'
                 let len = 1 + length_of_length(payload_length) + payload_length;
@@ -1013,8 +1003,6 @@ impl TransactionSigned {
             _ => return Err(DecodeError::Custom("unsupported typed transaction type")),
         };
 
-        let signature = Default::default();
-        #[cfg(TODO_UINT_RLP)]
         let signature = Signature::decode(data)?;
 
         let hash = keccak256(&original_encoding[..tx_length]);
@@ -1242,6 +1230,12 @@ mod tests {
     use hex_literal::hex;
     use std::str::FromStr;
 
+    macro_rules! bytes {
+        ($($l:literal)+) => {
+            Bytes::from_static(&hex_literal::hex!($($l)+))
+        };
+    }
+
     #[test]
     fn test_decode_empty_typed_tx() {
         let input = [0x80u8];
@@ -1259,7 +1253,7 @@ mod tests {
             gas_limit: 2,
             to: TransactionKind::Create,
             value: 3,
-            input: Bytes::from(vec![1, 2]),
+            input: Bytes::from_static(&[1, 2]),
             access_list: Default::default(),
         });
         let signature = Signature {
@@ -1280,9 +1274,7 @@ mod tests {
     #[test]
     fn test_decode_create_goerli() {
         // test that an example create tx from goerli decodes properly
-        let tx_bytes =
-              hex::decode("b901f202f901ee05228459682f008459682f11830209bf8080b90195608060405234801561001057600080fd5b50610175806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c80630c49c36c14610030575b600080fd5b61003861004e565b604051610045919061011d565b60405180910390f35b60606020600052600f6020527f68656c6c6f2073746174656d696e64000000000000000000000000000000000060405260406000f35b600081519050919050565b600082825260208201905092915050565b60005b838110156100be5780820151818401526020810190506100a3565b838111156100cd576000848401525b50505050565b6000601f19601f8301169050919050565b60006100ef82610084565b6100f9818561008f565b93506101098185602086016100a0565b610112816100d3565b840191505092915050565b6000602082019050818103600083015261013781846100e4565b90509291505056fea264697066735822122051449585839a4ea5ac23cae4552ef8a96b64ff59d0668f76bfac3796b2bdbb3664736f6c63430008090033c080a0136ebffaa8fc8b9fda9124de9ccb0b1f64e90fbd44251b4c4ac2501e60b104f9a07eb2999eec6d185ef57e91ed099afb0a926c5b536f0155dd67e537c7476e1471")
-                  .unwrap();
+        let tx_bytes = bytes!("b901f202f901ee05228459682f008459682f11830209bf8080b90195608060405234801561001057600080fd5b50610175806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c80630c49c36c14610030575b600080fd5b61003861004e565b604051610045919061011d565b60405180910390f35b60606020600052600f6020527f68656c6c6f2073746174656d696e64000000000000000000000000000000000060405260406000f35b600081519050919050565b600082825260208201905092915050565b60005b838110156100be5780820151818401526020810190506100a3565b838111156100cd576000848401525b50505050565b6000601f19601f8301169050919050565b60006100ef82610084565b6100f9818561008f565b93506101098185602086016100a0565b610112816100d3565b840191505092915050565b6000602082019050818103600083015261013781846100e4565b90509291505056fea264697066735822122051449585839a4ea5ac23cae4552ef8a96b64ff59d0668f76bfac3796b2bdbb3664736f6c63430008090033c080a0136ebffaa8fc8b9fda9124de9ccb0b1f64e90fbd44251b4c4ac2501e60b104f9a07eb2999eec6d185ef57e91ed099afb0a926c5b536f0155dd67e537c7476e1471");
 
         let decoded = TransactionSigned::decode(&mut &tx_bytes[..]).unwrap();
         assert_eq!(tx_bytes.len(), decoded.length());
@@ -1290,7 +1282,7 @@ mod tests {
         let mut encoded = BytesMut::new();
         decoded.encode(&mut encoded);
 
-        assert_eq!(tx_bytes, encoded);
+        assert_eq!(tx_bytes, Bytes::from(encoded.freeze()));
     }
 
     #[test]
@@ -1302,7 +1294,7 @@ mod tests {
             gas_limit: 2,
             to: TransactionKind::Call(Address::default()),
             value: 3,
-            input: Bytes::from(vec![1, 2]),
+            input: Bytes::from_static(&[1, 2]),
             access_list: Default::default(),
         });
 
@@ -1470,20 +1462,13 @@ mod tests {
     #[test]
     fn decode_raw_tx_and_recover_signer() {
         // transaction is from ropsten
-
         let hash: B256 =
             hex!("559fb34c4a7f115db26cbf8505389475caaab3df45f5c7a0faa4abfa3835306c").into();
         let signer: Address = hex!("641c5d790f862a58ec7abcfd644c0442e9c201b3").into();
-        let raw =hex!("f88b8212b085028fa6ae00830f424094aad593da0c8116ef7d2d594dd6a63241bccfc26c80a48318b64b000000000000000000000000641c5d790f862a58ec7abcfd644c0442e9c201b32aa0a6ef9e170bca5ffb7ac05433b13b7043de667fbb0b4a5e45d3b54fb2d6efcc63a0037ec2c05c3d60c5f5f78244ce0a3859e3a18a36c61efb061b383507d3ce19d2");
-
-        let mut pointer = raw.as_ref();
-        let tx = TransactionSigned::decode(&mut pointer).unwrap();
-        assert_eq!(tx.hash(), hash, "Expected same hash");
-        assert_eq!(
-            tx.recover_signer(),
-            Some(signer),
-            "Recovering signer should pass."
-        );
+        let raw = hex!("f88b8212b085028fa6ae00830f424094aad593da0c8116ef7d2d594dd6a63241bccfc26c80a48318b64b000000000000000000000000641c5d790f862a58ec7abcfd644c0442e9c201b32aa0a6ef9e170bca5ffb7ac05433b13b7043de667fbb0b4a5e45d3b54fb2d6efcc63a0037ec2c05c3d60c5f5f78244ce0a3859e3a18a36c61efb061b383507d3ce19d2");
+        let tx = TransactionSigned::decode(&mut &raw[..]).unwrap();
+        assert_eq!(tx.hash(), hash);
+        assert_eq!(tx.recover_signer(), Some(signer),);
     }
 
     #[test]
@@ -1513,12 +1498,8 @@ mod tests {
         };
 
         let signed_tx = TransactionSigned::from_transaction_and_signature(tx, sig);
-        assert_eq!(signed_tx.hash(), hash, "Expected same hash");
-        assert_eq!(
-            signed_tx.recover_signer(),
-            Some(signer),
-            "Recovering signer should pass."
-        );
+        assert_eq!(signed_tx.hash(), hash);
+        assert_eq!(signed_tx.recover_signer(), Some(signer),);
     }
 
     #[test]
@@ -1548,18 +1529,14 @@ mod tests {
         };
 
         let signed_tx = TransactionSigned::from_transaction_and_signature(tx, sig);
-        assert_eq!(signed_tx.hash(), hash, "Expected same hash");
-        assert_eq!(
-            signed_tx.recover_signer(),
-            Some(signer),
-            "Recovering signer should pass."
-        );
+        assert_eq!(signed_tx.hash(), hash);
+        assert_eq!(signed_tx.recover_signer(), Some(signer),);
     }
 
     #[test]
     fn test_envelop_encode() {
         // random tx: <https://etherscan.io/getRawTx?tx=0x9448608d36e721ef403c53b00546068a6474d6cbab6816c3926de449898e7bce>
-        let input = hex::decode("02f871018302a90f808504890aef60826b6c94ddf4c5025d1a5742cf12f74eec246d4432c295e487e09c3bbcc12b2b80c080a0f21a4eacd0bf8fea9c5105c543be5a1d8c796516875710fafafdf16d16d8ee23a001280915021bb446d1973501a67f93d2b38894a514b976e7b46dc2fe54598d76").unwrap();
+        let input = Bytes::from_static(&hex!("02f871018302a90f808504890aef60826b6c94ddf4c5025d1a5742cf12f74eec246d4432c295e487e09c3bbcc12b2b80c080a0f21a4eacd0bf8fea9c5105c543be5a1d8c796516875710fafafdf16d16d8ee23a001280915021bb446d1973501a67f93d2b38894a514b976e7b46dc2fe54598d76"));
         let decoded = TransactionSigned::decode(&mut &input[..]).unwrap();
 
         let encoded = decoded.envelope_encoded();
