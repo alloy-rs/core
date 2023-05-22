@@ -124,11 +124,11 @@ impl<const N: usize> FixedBytes<N> {
         Self(bytes)
     }
 
-    /// Utility function to create a fixed hash with the first byte set to `x`.
+    /// Utility function to create a fixed hash with the last byte set to `x`.
     #[inline]
-    pub const fn with_first_byte(x: u8) -> Self {
+    pub const fn with_last_byte(x: u8) -> Self {
         let mut bytes = [0u8; N];
-        bytes[0] = x;
+        bytes[N - 1] = x;
         Self(bytes)
     }
 

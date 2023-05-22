@@ -113,10 +113,10 @@ macro_rules! wrap_fixed_bytes {
                 Self($crate::FixedBytes(bytes))
             }
 
-            /// Utility function to create a fixed hash with the first byte set to `x`.
+            /// Utility function to create a fixed hash with the last byte set to `x`.
             #[inline]
-            pub const fn with_first_byte(x: u8) -> Self {
-                Self($crate::FixedBytes::with_first_byte(x))
+            pub const fn with_last_byte(x: u8) -> Self {
+                Self($crate::FixedBytes::with_last_byte(x))
             }
 
             /// Instantiates a new fixed hash with cryptographically random content.

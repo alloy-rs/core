@@ -32,8 +32,6 @@ pub fn create_address<T: Borrow<[u8; 20]>>(sender: T, nonce: u64) -> Address {
         let mut out = alloc::vec::Vec::with_capacity(64);
         let buf = &mut out as &mut dyn bytes::BufMut;
         sender.encode(buf);
-        let _ = nonce;
-        #[cfg(TODO_UINT_RLP)]
         crate::U256::from(nonce).encode(buf);
         let hash = keccak256(&out);
         Address::from_word(hash)

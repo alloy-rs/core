@@ -11,7 +11,7 @@ impl<const N: usize> Decodable for FixedBytes<N> {
 impl<const N: usize> Encodable for FixedBytes<N> {
     #[inline]
     fn length(&self) -> usize {
-        N
+        self.0.length()
     }
 
     #[inline]

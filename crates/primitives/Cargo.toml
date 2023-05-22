@@ -15,7 +15,7 @@ repository.workspace = true
 
 [dependencies]
 # eth
-ruint = { workspace = true, features = ["rlp", "serde"] }
+ruint = { workspace = true, features = ["serde"] }
 
 # utility
 bytes.workspace = true
@@ -46,7 +46,7 @@ serde_json.workspace = true
 [features]
 default = ["std", "rlp", "serde"]
 std = ["bytes/std", "hex/std", "ethers-rlp?/std", "proptest?/std", "serde/std"]
-rlp = ["dep:ethers-rlp"]
+rlp = ["dep:ethers-rlp", "ruint/fastrlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
 arbitrary = [
     "ruint/arbitrary",
