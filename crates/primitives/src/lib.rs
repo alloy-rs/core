@@ -26,9 +26,6 @@ pub use bits::{
 mod bytes;
 pub use self::bytes::Bytes;
 
-#[cfg(feature = "serde")]
-pub mod serde;
-
 mod signed;
 pub use signed::{const_eq, BigIntConversionError, ParseSignedError, Sign, Signed};
 
@@ -41,6 +38,7 @@ pub use ruint::{self, uint, Uint};
 #[doc(hidden)]
 pub mod private {
     pub use derive_more;
+    pub use getrandom;
 
     #[cfg(feature = "rlp")]
     pub use ethers_rlp;

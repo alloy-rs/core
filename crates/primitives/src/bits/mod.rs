@@ -9,11 +9,11 @@ pub use fixed::FixedBytes;
 
 mod macros;
 
-#[cfg(feature = "serde")]
-mod serde;
-
 #[cfg(feature = "rlp")]
 mod rlp;
+
+#[cfg(feature = "serde")]
+mod serde;
 
 mod impl_core;
 

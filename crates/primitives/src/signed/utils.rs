@@ -35,14 +35,11 @@ pub const fn const_eq<const BITS: usize, const LIMBS: usize>(
     let mut i = 0;
     let llimbs = left.0.as_limbs();
     let rlimbs = right.0.as_limbs();
-    loop {
+    while i < LIMBS {
         if llimbs[i] != rlimbs[i] {
             return false
         }
         i += 1;
-        if i == LIMBS {
-            break
-        }
     }
     true
 }

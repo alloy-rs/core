@@ -4,11 +4,13 @@ use core::{borrow::Borrow, fmt, ops::Deref};
 #[cfg(feature = "rlp")]
 mod rlp;
 
+#[cfg(feature = "serde")]
+mod serde;
+
 /// Wrapper type around Bytes to deserialize/serialize "0x" prefixed ethereum
 /// hex strings.
 #[derive(Clone, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Bytes(#[cfg_attr(serde, serde(with = "hex"))] pub bytes::Bytes);
+pub struct Bytes(pub bytes::Bytes);
 
 impl fmt::Debug for Bytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -261,7 +263,7 @@ mod tests {
 
     #[test]
     fn debug() {
-        let b = Bytes::from(vec![1, 35, 69, 103, 137, 171, 205, 239]);
+        let b = Bytes::from_static(&[1, 35, 69, 103, 137, 171, 205, 239]);
         assert_eq!(format!("{b:?}"), "Bytes(0x0123456789abcdef)");
         assert_eq!(format!("{b:#?}"), "Bytes(0x0123456789abcdef)");
     }
