@@ -1,3 +1,5 @@
+//! Ethereum bloom filter and utility functions.
+
 use super::Log;
 use ethers_primitives::Bloom;
 

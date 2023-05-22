@@ -1,5 +1,5 @@
 use crate::primitives::Signature;
-use ethers_primitives::{keccak256, Address, B256, U256};
+use ethers_primitives::{keccak256, Address, U256};
 use secp256k1::{
     ecdsa::{RecoverableSignature, RecoveryId},
     Error, Message, Secp256k1, SecretKey,

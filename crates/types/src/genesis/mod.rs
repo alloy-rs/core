@@ -1,3 +1,5 @@
+//! Genesis block specification.
+
 use crate::{
     constants::{EMPTY_ROOT, KECCAK_EMPTY},
     Account,
@@ -147,6 +149,7 @@ impl GenesisAccount {
     }
 }
 
+#[cfg(feature = "proof")]
 impl Encodable for GenesisAccount {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         let header = RlpHeader {
@@ -163,14 +166,11 @@ impl Encodable for GenesisAccount {
                 if storage.is_empty() {
                     return EMPTY_ROOT
                 }
-                let _storage_values = storage
+                let storage_values = storage
                     .iter()
                     .filter(|(_k, &v)| v != B256::ZERO)
-                    // .map(|(&k, v)| (k, encode_fixed_size(v)))
-                    ;
-                // TODO_TRIE
-                // sec_trie_root::<KeccakHasher, _, _, _>(storage_values)
-                todo!()
+                    .map(|(&k, v)| (k, encode_fixed_size(v)));
+                triehash::sec_trie_root::<crate::proofs::KeccakHasher, _, _, _>(storage_values)
             })
             .encode(out);
         self.code
@@ -220,21 +220,21 @@ where
     }
 }
 
-/// Converts a Bytes value into a H256, accepting inputs that are less than 32
+/// Converts a Bytes value into a B256, accepting inputs that are less than 32
 /// bytes long. These inputs will be left padded with zeros.
 fn from_bytes_to_b256<'de, D>(bytes: Bytes) -> Result<B256, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     if bytes.len() > 32 {
-        return Err(serde::de::Error::custom("input too long to be a H256"))
+        return Err(serde::de::Error::custom("input too long to be a B256"))
     }
 
     // left pad with zeros to 32 bytes
     let mut padded = [0u8; 32];
     padded[32 - bytes.len()..].copy_from_slice(&bytes.0);
 
-    // then convert to H256 without a panic
+    // then convert to B256 without a panic
     Ok(B256::from(padded))
 }
 

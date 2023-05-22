@@ -2,12 +2,12 @@ use crate::{
     constants::{self, EIP1559_INITIAL_BASE_FEE, EMPTY_WITHDRAWALS},
     genesis::geth::Genesis as GethGenesis,
     primitives::{ForkFilter, ForkFilterKey, ForkHash, ForkId, Hardfork, Head, Header},
-    Chain, Genesis, GenesisAccount,
+    Chain, Genesis,
 };
-use ethers_primitives::{Address, BlockNumber, B256, U256, U64};
+use ethers_primitives::{BlockNumber, B256, U256};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 /// The Ethereum mainnet chain spec.
 pub static MAINNET: Lazy<ChainSpec> = Lazy::new(|| ChainSpec {
@@ -142,6 +142,7 @@ impl ChainSpec {
     }
 
     /// Get the header for the genesis block.
+    #[cfg(feature = "proof")]
     pub fn genesis_header(&self) -> Header {
         // If London is activated at genesis, we set the initial base fee as per
         // EIP-1559.
@@ -159,8 +160,7 @@ impl ChainSpec {
             difficulty: self.genesis.difficulty,
             nonce: self.genesis.nonce.to(),
             extra_data: self.genesis.extra_data.clone(),
-            #[cfg(TODO_TRIE)]
-            state_root: genesis_state_root(&self.genesis.alloc),
+            state_root: crate::proofs::genesis_state_root(&self.genesis.alloc),
             timestamp: self.genesis.timestamp.to(),
             mix_hash: self.genesis.mix_hash,
             beneficiary: self.genesis.coinbase,
@@ -178,6 +178,7 @@ impl ChainSpec {
     }
 
     /// Get the hash of the genesis block.
+    #[cfg(feature = "proof")]
     pub fn genesis_hash(&self) -> B256 {
         if let Some(hash) = self.genesis_hash {
             hash
@@ -220,6 +221,7 @@ impl ChainSpec {
 
     /// Creates a [`ForkFilter`](crate::ForkFilter) for the block described by
     /// [Head].
+    #[cfg(feature = "proof")]
     pub fn fork_filter(&self, head: Head) -> ForkFilter {
         let forks = self.forks_iter().filter_map(|(_, condition)| {
             // We filter out TTD-based forks w/o a pre-known block since those do not show
@@ -239,6 +241,7 @@ impl ChainSpec {
     }
 
     /// Compute the [`ForkId`] for the given [`Head`]
+    #[cfg(feature = "proof")]
     pub fn fork_id(&self, head: &Head) -> ForkId {
         let mut curr_forkhash = ForkHash::from(self.genesis_hash());
         let mut current_applied_value = 0;
@@ -678,7 +681,7 @@ impl ForkCondition {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "proof"))]
 mod tests {
     use super::*;
     use crate::{
@@ -686,7 +689,7 @@ mod tests {
         Genesis, Hardfork, Head, NamedChain, GOERLI, MAINNET, SEPOLIA,
     };
     use bytes::BytesMut;
-    use ethers_primitives::{B256, U256};
+    use ethers_primitives::{Address, B256, U256};
     use ethers_rlp::Encodable;
     use hex_literal::hex;
 

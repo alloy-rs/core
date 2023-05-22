@@ -5,6 +5,7 @@ use strum::{AsRefStr, EnumCount, EnumIter, EnumString, EnumVariantNames};
 
 pub use num_enum::{TryFromPrimitive, TryFromPrimitiveError};
 
+/// Error thrown when parsing a `NamedChain` from a string fails.
 pub type ParseChainError = TryFromPrimitiveError<NamedChain>;
 
 // When adding a new chain:
@@ -52,6 +53,7 @@ pub type ParseChainError = TryFromPrimitiveError<NamedChain>;
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "kebab-case")]
 #[repr(u64)]
+#[allow(missing_docs)]
 pub enum NamedChain {
     #[strum(to_string = "mainnet", serialize = "ethlive")]
     #[serde(alias = "ethlive")]
@@ -256,7 +258,7 @@ impl NamedChain {
     /// # Examples
     ///
     /// ```
-    /// use ethers_core::types::NamedChain;
+    /// use ethers_types::NamedChain;
     /// use std::time::Duration;
     ///
     /// assert_eq!(
@@ -301,7 +303,7 @@ impl NamedChain {
     /// # Examples
     ///
     /// ```
-    /// use ethers_core::types::NamedChain;
+    /// use ethers_types::NamedChain;
     ///
     /// assert!(!NamedChain::Mainnet.is_legacy());
     /// assert!(NamedChain::Celo.is_legacy());
@@ -364,7 +366,7 @@ impl NamedChain {
     /// # Examples
     ///
     /// ```
-    /// use ethers_core::types::NamedChain;
+    /// use ethers_types::NamedChain;
     ///
     /// assert_eq!(
     ///     NamedChain::Mainnet.etherscan_urls(),
@@ -603,7 +605,7 @@ impl NamedChain {
     /// # Examples
     ///
     /// ```
-    /// use ethers_core::types::NamedChain;
+    /// use ethers_types::NamedChain;
     ///
     /// assert_eq!(NamedChain::Mainnet.etherscan_api_key_name(), Some("ETHERSCAN_API_KEY"));
     /// assert_eq!(NamedChain::AnvilHardhat.etherscan_api_key_name(), None);
@@ -681,7 +683,7 @@ impl NamedChain {
     /// # Examples
     ///
     /// ```
-    /// use ethers_core::types::NamedChain;
+    /// use ethers_types::NamedChain;
     ///
     /// let chain = NamedChain::Mainnet;
     /// std::env::set_var(chain.etherscan_api_key_name().unwrap(), "KEY");

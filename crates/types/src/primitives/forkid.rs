@@ -73,6 +73,7 @@ where
 
 // TODO: Move
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[allow(missing_docs)]
 pub enum ForkFilterKey {
     Block(BlockNumber),
     Time(u64),

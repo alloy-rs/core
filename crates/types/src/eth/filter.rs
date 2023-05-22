@@ -192,61 +192,48 @@ impl Filter {
     ///
     /// Match only a specific block
     ///
-    /// ```rust
-    /// # use reth_rpc_types::Filter;
-    /// # fn main() {
+    /// ```
+    /// # use ethers_types::Filter;
     /// let filter = Filter::new().select(69u64);
-    /// # }
     /// ```
     /// This is the same as
     /// `Filter::new().from_block(1337u64).to_block(1337u64)`
     ///
     /// Match the latest block only
     ///
-    /// ```rust
-    /// # use ethers_primitives::BlockNumberOrTag;
-    /// # use reth_rpc_types::Filter;
-    /// # fn main() {
+    /// ```
+    /// # use ethers_types::{BlockNumberOrTag, Filter};
     /// let filter = Filter::new().select(BlockNumberOrTag::Latest);
-    /// # }
     /// ```
     ///
     /// Match a block by its hash
     ///
-    /// ```rust
+    /// ```
     /// # use ethers_primitives::B256;
-    /// # use reth_rpc_types::Filter;
-    /// # fn main() {
+    /// # use ethers_types::Filter;
     /// let filter = Filter::new().select(B256::ZERO);
-    /// # }
     /// ```
     /// This is the same as `at_block_hash`
     ///
     /// Match a range of blocks
     ///
-    /// ```rust
-    /// # use reth_rpc_types::Filter;
-    /// # fn main() {
+    /// ```
+    /// # use ethers_types::Filter;
     /// let filter = Filter::new().select(0u64..100u64);
-    /// # }
     /// ```
     ///
     /// Match all blocks in range `(1337..BlockNumberOrTag::Latest)`
     ///
-    /// ```rust
-    /// # use reth_rpc_types::Filter;
-    /// # fn main() {
+    /// ```
+    /// # use ethers_types::Filter;
     /// let filter = Filter::new().select(1337u64..);
-    /// # }
     /// ```
     ///
     /// Match all blocks in range `(BlockNumberOrTag::Earliest..1337)`
     ///
-    /// ```rust
-    /// # use reth_rpc_types::Filter;
-    /// # fn main() {
+    /// ```
+    /// # use ethers_types::Filter;
     /// let filter = Filter::new().select(..1337u64);
-    /// # }
     /// ```
     #[must_use]
     pub fn select(mut self, filter: impl Into<FilterBlockOption>) -> Self {
@@ -285,9 +272,9 @@ impl Filter {
     /// Match only a specific address
     /// `("0xAc4b3DacB91461209Ae9d41EC517c2B9Cb1B7DAF")`
     ///
-    /// ```rust
+    /// ```
     /// # use ethers_primitives::Address;
-    /// # use reth_rpc_types::Filter;
+    /// # use ethers_types::Filter;
     /// # fn main() {
     /// let filter = Filter::new().address("0xAc4b3DacB91461209Ae9d41EC517c2B9Cb1B7DAF".parse::<Address>().unwrap());
     /// # }
@@ -297,9 +284,9 @@ impl Filter {
     /// `(vec!["0xAc4b3DacB91461209Ae9d41EC517c2B9Cb1B7DAF",
     /// "0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8"])`
     ///
-    /// ```rust
+    /// ```
     /// # use ethers_primitives::Address;
-    /// # use reth_rpc_types::Filter;
+    /// # use ethers_types::Filter;
     /// # fn main() {
     /// let addresses = vec!["0xAc4b3DacB91461209Ae9d41EC517c2B9Cb1B7DAF".parse::<Address>().unwrap(),"0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8".parse::<Address>().unwrap()];
     /// let filter = Filter::new().address(addresses);

@@ -46,6 +46,7 @@ pub enum Hardfork {
 impl Hardfork {
     /// Get the [ForkId] for this hardfork in the given spec, if the fork is
     /// activated at any point.
+    #[cfg(feature = "proof")]
     pub fn fork_id(&self, spec: &ChainSpec) -> Option<ForkId> {
         match spec.fork(*self) {
             ForkCondition::Never => None,
@@ -55,6 +56,7 @@ impl Hardfork {
 
     /// Get the [ForkFilter] for this hardfork in the given spec, if the fork is
     /// activated at any point.
+    #[cfg(feature = "proof")]
     pub fn fork_filter(&self, spec: &ChainSpec) -> Option<ForkFilter> {
         match spec.fork(*self) {
             ForkCondition::Never => None,
@@ -156,6 +158,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "proof")]
     fn check_fork_id_chainspec_with_fork_condition_never() {
         let spec = ChainSpec {
             chain: Chain::mainnet(),
@@ -168,6 +171,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "proof")]
     fn check_fork_filter_chainspec_with_fork_condition_never() {
         let spec = ChainSpec {
             chain: Chain::mainnet(),

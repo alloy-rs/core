@@ -24,6 +24,9 @@ secp256k1 = { version = "0.27.0", features = ["recovery"] }
 # used for forkid
 crc = "3"
 
+# only "net" modules
+url = "2"
+
 # misc
 serde = { workspace = true, features = ["std", "derive"] }
 serde_json = { workspace = true, features = ["std"] }
@@ -38,14 +41,16 @@ num_enum.workspace = true
 strum.workspace = true
 thiserror.workspace = true
 
+# proof related
+triehash = { version = "0.8", optional = true }
+plain_hasher = { version = "0.2", optional = true }
+hash-db = { version = "0.15", optional = true }
+tracing = { version = "0.1", optional = true }
+
 # arbitrary
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
-
-# TODO: remove or feature gate
-url = "2" # only `net` modules
-bitvec = "1" # only revm bytecode
 
 [dev-dependencies]
 assert_matches = "1"
@@ -57,5 +62,7 @@ proptest.workspace = true
 proptest-derive.workspace = true
 
 [features]
+proof = ["triehash", "plain_hasher", "hash-db", "tracing"]
+
 arbitrary = ["ethers-primitives/arbitrary", "dep:arbitrary", "dep:proptest", "dep:proptest-derive"]
 test-utils = []

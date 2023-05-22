@@ -6,7 +6,6 @@ mod account;
 pub mod basefee;
 mod block;
 pub mod bloom;
-mod bytecode;
 pub mod contract;
 mod forkid;
 mod hardfork;
@@ -19,27 +18,23 @@ mod storage;
 mod transaction;
 mod withdrawal;
 
-/* Ethers ABI
-pub mod abi;
-*/
-
-/* Trie
+#[cfg(feature = "proof")]
 mod checkpoints;
-/// Helper function for calculating Merkle proofs and hashes
+#[cfg(feature = "proof")]
+pub use checkpoints::{
+    AccountHashingCheckpoint, MerkleCheckpoint, StageCheckpoint, StageUnitCheckpoint,
+    StorageHashingCheckpoint,
+};
+#[cfg(feature = "proof")]
 pub mod proofs;
+#[cfg(feature = "proof")]
 pub mod trie;
-*/
 
-/* sucds
-mod integer_list;
-*/
-
-pub use account::{Account, *}; // TODO
+pub use account::Account;
 pub use block::{
     Block, BlockBody, BlockHashOrNumber, BlockId, BlockNumHash, BlockNumberOrTag, BlockWithSenders,
     ForkBlock, SealedBlock, SealedBlockWithSenders,
 };
-pub use bytecode::{Bytecode, BytecodeState, JumpMap};
 pub use forkid::{ForkFilter, ForkFilterKey, ForkHash, ForkId, ForkTransition, ValidationError};
 pub use hardfork::Hardfork;
 pub use header::{Head, Header, HeadersDirection, SealedHeader};

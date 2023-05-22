@@ -1,4 +1,3 @@
-use bytes::Buf;
 use ethers_primitives::{Address, B256, U256};
 use ethers_rlp::{Decodable, DecodeError, Encodable, RlpDecodable, RlpEncodable};
 use serde::{Deserialize, Serialize};

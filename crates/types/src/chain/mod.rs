@@ -1,3 +1,7 @@
+//! Ethereum [EIP-155] chains and chain IDs.
+//!
+//! [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
+
 use crate::{goerli_nodes, mainnet_nodes, sepolia_nodes, NodeRecord};
 use ethers_primitives::Uint;
 use ethers_rlp::{Decodable, Encodable};
@@ -22,7 +26,9 @@ pub use spec::*;
 /// [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Chain {
+    /// A named chain.
     Named(NamedChain),
+    /// A chain ID.
     Id(u64),
 }
 
@@ -122,6 +128,7 @@ impl Decodable for Chain {
 }
 
 impl Chain {
+    /// Instantiates a new chain from a chain ID.
     #[inline]
     pub fn new(id: u64) -> Self {
         match NamedChain::try_from(id) {

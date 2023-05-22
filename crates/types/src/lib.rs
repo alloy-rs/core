@@ -1,17 +1,13 @@
 #![doc = include_str!("../README.md")]
-// TODO: no_std ?
-
-// TODO
-#![allow(unused_imports)]
 #![warn(
-    // TODO
-    // missing_docs,
-    // unreachable_pub,
+    missing_docs,
+    unreachable_pub,
     unused_crate_dependencies,
     missing_debug_implementations,
     clippy::missing_const_for_fn
 )]
 #![deny(unused_must_use, rust_2018_idioms)]
+// TODO: no_std ?
 
 /* --- Primitives --- */
 pub mod constants;

@@ -122,11 +122,13 @@ impl From<SealedBlock> for ExecutionPayload {
 /// block hash and comparing the value with `payload.block_hash`.
 ///
 /// See <https://github.com/ethereum/go-ethereum/blob/79a478bb6176425c2400e949890e668a3d9a3d05/core/beacon/types.go#L145>
-#[cfg(TODO_TRIE)]
+#[cfg(feature = "proof")]
 impl TryFrom<ExecutionPayload> for SealedBlock {
     type Error = PayloadError;
 
     fn try_from(payload: ExecutionPayload) -> Result<Self, Self::Error> {
+        use crate::proofs;
+
         if payload.extra_data.len() > 32 {
             return Err(PayloadError::ExtraData(payload.extra_data))
         }
@@ -437,18 +439,15 @@ pub enum PayloadValidationError {
     },
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(all(test, feature = "proof", TODO))]
+mod validation_tests {
     use super::*;
-    use assert_matches as _;
-    // TODO: TODO_TRIE disabled tests
-    // use crate::TransactionSigned;
-    // use assert_matches::assert_matches;
-    // use bytes::{Bytes, BytesMut};
-    // use ethers_primitives::B256;
-    // use ethers_rlp::{Decodable, DecodeError};
+    use crate::{proofs, TransactionSigned};
+    use assert_matches::assert_matches;
+    use bytes::{Bytes, BytesMut};
+    use ethers_primitives::B256;
+    use ethers_rlp::{Decodable, DecodeError};
 
-    #[cfg(TODO_TRIE)]
     fn transform_block<F: FnOnce(Block) -> Block>(src: SealedBlock, f: F) -> ExecutionPayload {
         let unsealed = src.unseal();
         let mut transformed: Block = f(unsealed);
@@ -466,7 +465,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(TODO_TRIE)]
     fn payload_body_roundtrip() {
         for block in random_block_range(0..=99, B256::default(), 0..2) {
             let unsealed = block.clone().unseal();
@@ -489,7 +487,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(TODO_TRIE)]
     fn payload_validation() {
         let block = random_block(100, Some(B256::random()), Some(3), Some(0));
 
@@ -572,6 +569,12 @@ mod tests {
         let valid_block = block;
         assert_matches!(TryInto::<SealedBlock>::try_into(valid_block), Ok(_));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use assert_matches as _;
 
     #[test]
     fn serde_payload_status() {

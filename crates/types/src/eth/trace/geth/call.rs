@@ -11,6 +11,7 @@ pub struct CallFrame {
     pub to: Option<Address>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<U256>,
+    #[serde(default)]
     pub gas: U256,
     #[serde(default, rename = "gasUsed")]
     pub gas_used: U256,

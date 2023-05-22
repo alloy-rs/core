@@ -1,3 +1,5 @@
+//! Types for representing the Geth genesis block and chain configuration.
+
 use super::GenesisAccount;
 use ethers_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
