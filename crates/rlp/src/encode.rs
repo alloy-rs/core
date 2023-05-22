@@ -38,7 +38,7 @@ pub unsafe trait MaxEncodedLenAssoc: Encodable {
 #[macro_export]
 macro_rules! impl_max_encoded_len {
     ($t:ty, $len:expr) => {
-        unsafe impl $crate::MaxEncodedLen<$len> for $t {}
+        unsafe impl $crate::MaxEncodedLen<{ $len }> for $t {}
         unsafe impl $crate::MaxEncodedLenAssoc for $t {
             const LEN: usize = $len;
         }
@@ -136,13 +136,13 @@ unsafe impl<const N: usize> MaxEncodedLenAssoc for [u8; N] {
 
 impl Encodable for bool {
     #[inline]
-    fn length(&self) -> usize {
-        1
+    fn encode(&self, out: &mut dyn BufMut) {
+        (*self as u8).encode(out)
     }
 
     #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        out.put_u8(*self as u8)
+    fn length(&self) -> usize {
+        (*self as u8).length()
     }
 }
 
@@ -200,7 +200,7 @@ max_encoded_len_uint!(u64);
 encodable_uint!(u128);
 max_encoded_len_uint!(u128);
 
-impl_max_encoded_len!(bool, { <u8 as MaxEncodedLenAssoc>::LEN });
+impl_max_encoded_len!(bool, <u8 as MaxEncodedLenAssoc>::LEN);
 
 #[cfg(feature = "std")]
 mod std_support {
@@ -431,7 +431,7 @@ mod tests {
         encode_list(t, &mut out1);
 
         let v = t.to_vec();
-        assert_eq!(out1.len(), Encodable::length(&v));
+        assert_eq!(out1.len(), v.length());
 
         let mut out2 = BytesMut::new();
         v.encode(&mut out2);
