@@ -154,7 +154,6 @@
 #[macro_use]
 extern crate alloc;
 
-// `unused_crate_dependencies` bug workaround.
 // This crate is used in tests/compiletest.rs
 #[cfg(test)]
 use trybuild as _;
