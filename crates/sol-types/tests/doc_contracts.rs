@@ -1,1 +1,4 @@
-// TODO
+#[test]
+fn contracts() {
+    // TODO
+}

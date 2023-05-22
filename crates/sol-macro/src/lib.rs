@@ -37,23 +37,22 @@ mod udt;
 /// [tests]: https://github.com/ethers-rs/core/tree/main/crates/sol-types/tests/
 ///
 /// Structs and enums:
-///
-/// ```ignore.
+/// ```ignore
 #[doc = include_str!("../../sol-types/tests/doc_structs.rs")]
 /// ```
 /// 
 /// UDVT and type aliases:
-/// ```ignore.
+/// ```ignore
 #[doc = include_str!("../../sol-types/tests/doc_types.rs")]
 /// ```
 /// 
 /// Functions, errors, and events:
-/// ```ignore.
+/// ```ignore
 #[doc = include_str!("../../sol-types/tests/doc_function_like.rs")]
 /// ```
 /// 
 /// Contracts/interfaces:
-/// ```ignore.
+/// ```ignore
 #[doc = include_str!("../../sol-types/tests/doc_contracts.rs")]
 /// ```
 #[proc_macro]

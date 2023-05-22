@@ -59,7 +59,7 @@ impl Error {
                 #(pub #fields,)*
             }
 
-            #[allow(non_camel_case_types, non_snake_case)]
+            #[allow(non_camel_case_types, non_snake_case, clippy::style)]
             const _: () = {
                 #converts
 
