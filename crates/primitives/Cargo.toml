@@ -31,7 +31,7 @@ derive_more.workspace = true
 ethers-rlp = { workspace = true, optional = true }
 
 # serde
-serde = { workspace = true, features = ["derive"], optional = true }
+serde = { workspace = true, optional = true }
 
 # arbitrary
 arbitrary = { workspace = true, features = ["derive"], optional = true }
