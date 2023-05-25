@@ -1,5 +1,5 @@
 use crate::{
-    common::{from_into_tuples, kw, FunctionAttributes, Parameters, SolIdent},
+    common::{from_into_tuples, kw, FunctionAttributes, Parameters, SemiOrBlock, SolIdent},
     r#type::{SolTuple, Type},
 };
 use proc_macro2::{Ident, Span, TokenStream};
@@ -9,7 +9,7 @@ use syn::{
     ext::IdentExt,
     parenthesized,
     parse::{Parse, ParseStream},
-    token::{Brace, Paren},
+    token::Paren,
     Attribute, Error, Result, Token,
 };
 
@@ -73,7 +73,7 @@ pub struct Function {
     pub arguments: Parameters<Token![,]>,
     pub attributes: FunctionAttributes,
     pub returns: Option<Returns>,
-    _semi_token: Token![;],
+    _remainder: SemiOrBlock,
 }
 
 impl fmt::Debug for Function {
@@ -89,26 +89,19 @@ impl fmt::Debug for Function {
 
 impl Parse for Function {
     fn parse(input: ParseStream) -> Result<Self> {
-        fn parse_check_brace<T: Parse>(input: ParseStream) -> Result<T> {
-            if input.peek(Brace) {
-                Err(input.error("functions cannot have an implementation"))
-            } else {
-                input.parse()
-            }
-        }
         let content;
         Ok(Self {
             _function_token: input.parse()?,
             name: input.parse()?,
             _paren_token: parenthesized!(content in input),
             arguments: content.parse()?,
-            attributes: parse_check_brace(input)?,
+            attributes: input.parse()?,
             returns: if input.peek(kw::returns) {
                 Some(input.parse()?)
             } else {
                 None
             },
-            _semi_token: parse_check_brace(input)?,
+            _remainder: input.parse()?,
         })
     }
 }

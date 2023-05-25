@@ -1,9 +1,11 @@
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
 use std::fmt;
 use syn::{
+    braced,
     parse::{Parse, ParseStream},
     spanned::Spanned,
-    Result,
+    token::Brace,
+    Result, Token,
 };
 
 mod attribute;
@@ -110,6 +112,28 @@ impl Storage {
             Self::Memory(_) => "memory",
             Self::Storage(_) => "storage",
             Self::Calldata(_) => "calldata",
+        }
+    }
+}
+
+/// Semicolon or braced block of anything
+pub enum SemiOrBlock {
+    /// Function declaration withiout body
+    Semi(Token![;]),
+    /// Function body
+    Body(Brace, TokenStream),
+}
+
+impl Parse for SemiOrBlock {
+    fn parse(input: ParseStream) -> Result<Self> {
+        if input.peek(Token![;]) {
+            Ok(Self::Semi(input.parse()?))
+        } else if input.peek(Brace) {
+            let content;
+            let brace = braced!(content in input);
+            Ok(Self::Body(brace, content.parse()?))
+        } else {
+            Err(input.error("expected `;` or `{`"))
         }
     }
 }

@@ -10,7 +10,7 @@ use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
     spanned::Spanned,
-    token::{Brace, Bracket},
+    token::Brace,
     Error, Ident, Result, Token,
 };
 
@@ -23,7 +23,7 @@ impl Parse for FunctionAttributes {
         while !(input.is_empty()
             || input.peek(kw::returns)
             || input.peek(Token![;])
-            || input.peek(Bracket))
+            || input.peek(Brace))
         {
             let attr = input.parse()?;
             if let Some(prev) = attributes.get(&attr) {
@@ -121,3 +121,25 @@ impl FunctionAttribute {
         }
     }
 }
+
+// /// Items in the function declaration that come AFTER the function parameters
+// pub enum FunctionPostfix {
+//     /// The function attributes
+//     Attributes(FunctionAttributes),
+//     /// The return type of the function (optional)
+//     Returns(syn::ReturnType),
+//     /// The end of the function definition. Either a semicolon or a block
+//     Terminator(SemiOrBlock),
+// }
+
+// impl Parse for FunctionPostfix {
+//     fn parse(input: ParseStream) -> Result<Self> {
+//         if input.peek(Token![;]) || input.peek(Brace) {
+//             Ok(Self::Terminator(input.parse()?))
+//         } else if input.peek(kw::returns) {
+//             Ok(Self::Returns(input.parse()?))
+//         } else {
+//             Ok(Self::Attributes(input.parse()?))
+//         }
+//     }
+// }
