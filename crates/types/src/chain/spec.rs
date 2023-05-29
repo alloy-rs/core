@@ -135,8 +135,8 @@ impl ChainSpec {
 
     /// Get the genesis block specification.
     ///
-    /// To get the header for the genesis block, use [`Self::genesis_header`]
-    /// instead.
+    /// To get the header for the genesis block, use `Self::genesis_header`
+    /// instead (`"proof"` feature only).
     pub fn genesis(&self) -> &Genesis {
         &self.genesis
     }
@@ -1664,7 +1664,7 @@ mod tests {
         let genesis = serde_json::from_str::<AllGenesisFormats>(hive_json).unwrap();
         let chainspec: ChainSpec = genesis.into();
         assert_eq!(chainspec.genesis_hash, None);
-        assert_eq!(Chain::Named(NamedChain::Optimism), chainspec.chain);
+        assert_eq!(Chain::named(NamedChain::Optimism), chainspec.chain);
         let expected_state_root: B256 =
             hex_literal::hex!("9a6049ac535e3dc7436c189eaa81c73f35abd7f282ab67c32944ff0301d63360")
                 .into();
