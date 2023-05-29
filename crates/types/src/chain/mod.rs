@@ -6,7 +6,11 @@ use crate::{goerli_nodes, mainnet_nodes, sepolia_nodes, NodeRecord};
 use ethers_primitives::Uint;
 use ethers_rlp::{Decodable, Encodable};
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+    time::Duration,
+};
 
 mod named;
 pub use named::{
@@ -19,40 +23,83 @@ pub use info::ChainInfo;
 mod spec;
 pub use spec::*;
 
-// TODO: `Chain` could be 8 bytes, not 16
-
 /// An Ethereum [EIP-155] chain or chain ID.
 ///
 /// [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum Chain {
-    /// A named chain.
-    Named(NamedChain),
-    /// A chain ID.
-    Id(u64),
-}
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub struct Chain(ChainRepr);
 
 impl Default for Chain {
     #[inline]
     fn default() -> Self {
-        Self::Named(NamedChain::Mainnet)
+        Self::mainnet()
+    }
+}
+
+impl fmt::Debug for Chain {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
 impl fmt::Display for Chain {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Named(chain) => chain.fmt(f),
-            Self::Id(id) => id.fmt(f),
+        match &self.0 {
+            ChainRepr::Named(chain) => chain.fmt(f),
+            ChainRepr::Id(id) => id.fmt(f),
         }
+    }
+}
+
+impl PartialEq for Chain {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.as_id() == other.as_id()
+    }
+}
+
+impl Eq for Chain {}
+
+impl PartialOrd for Chain {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.as_id().partial_cmp(other.as_id())
+    }
+}
+
+impl Ord for Chain {
+    #[inline]
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_id().cmp(other.as_id())
+    }
+}
+
+impl Hash for Chain {
+    #[inline]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.as_id().hash(state)
+    }
+}
+
+impl Serialize for Chain {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Chain {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        ChainRepr::deserialize(deserializer).map(Self)
     }
 }
 
 impl From<NamedChain> for Chain {
     #[inline]
     fn from(value: NamedChain) -> Self {
-        Self::Named(value)
+        Self::named(value)
     }
 }
 
@@ -84,12 +131,13 @@ impl<const BITS: usize, const LIMBS: usize> From<Chain> for Uint<BITS, LIMBS> {
 }
 
 impl TryFrom<Chain> for NamedChain {
-    type Error = <NamedChain as TryFrom<u64>>::Error;
+    type Error = ParseChainError;
 
+    #[inline]
     fn try_from(chain: Chain) -> Result<Self, Self::Error> {
-        match chain {
-            Chain::Named(chain) => Ok(chain),
-            Chain::Id(id) => id.try_into(),
+        match chain.0 {
+            ChainRepr::Named(chain) => Ok(chain),
+            ChainRepr::Id(number) => Err(ParseChainError { number }),
         }
     }
 }
@@ -99,10 +147,10 @@ impl std::str::FromStr for Chain {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(chain) = NamedChain::from_str(s) {
-            Ok(Chain::Named(chain))
+            Ok(Chain::named(chain))
         } else {
             s.parse()
-                .map(Self::Id)
+                .map(Self::new)
                 .map_err(|_| format!("Expected a known chain or chain ID, found: {s}"))
         }
     }
@@ -123,8 +171,22 @@ impl Encodable for Chain {
 impl Decodable for Chain {
     #[inline]
     fn decode(buf: &mut &[u8]) -> Result<Self, ethers_rlp::DecodeError> {
-        u64::decode(buf).map(Into::into)
+        u64::decode(buf).map(Self::new)
     }
+}
+
+macro_rules! fwd {
+    ($($vis:vis fn $name:ident($($arg:tt)*) -> $ret:ty;)+) => {$(
+        #[doc = concat!("See [`NamedChain::", stringify!($name), "()`].\n")]
+        #[doc = concat!("Will return `", stringify!($ret), "::default()` if the `self` not a [NamedChain].\n")]
+        #[inline]
+        $vis fn $name(self, $($arg)*) -> $ret {
+            match self.0 {
+                ChainRepr::Named(named) => NamedChain::$name(named, $($arg)*),
+                ChainRepr::Id(_) => <$ret>::default(),
+            }
+        }
+    )+};
 }
 
 impl Chain {
@@ -132,46 +194,100 @@ impl Chain {
     #[inline]
     pub fn new(id: u64) -> Self {
         match NamedChain::try_from(id) {
-            Ok(chain) => Self::Named(chain),
-            Err(_) => Self::Id(id),
+            Ok(chain) => Self(ChainRepr::Named(chain)),
+            Err(TryFromPrimitiveError { number }) => Self(ChainRepr::Id(number)),
         }
+    }
+
+    /// Instantiates a new chain from a [NamedChain].
+    #[inline]
+    pub const fn named(chain: NamedChain) -> Self {
+        Self(ChainRepr::Named(chain))
+    }
+
+    #[doc(hidden)]
+    #[deprecated(note = "Use `new` instead.")]
+    #[allow(non_snake_case)]
+    #[inline]
+    pub fn Id(id: u64) -> Self {
+        Self::new(id)
+    }
+
+    #[doc(hidden)]
+    #[deprecated(note = "Use `named` instead.")]
+    #[allow(non_snake_case)]
+    #[inline]
+    pub fn Named(named: NamedChain) -> Self {
+        Self::named(named)
     }
 
     /// Returns the mainnet chain.
     #[inline]
     pub const fn mainnet() -> Self {
-        Self::Named(NamedChain::Mainnet)
+        Self::named(NamedChain::Mainnet)
     }
 
     /// Returns the goerli chain.
     #[inline]
     pub const fn goerli() -> Self {
-        Self::Named(NamedChain::Goerli)
+        Self::named(NamedChain::Goerli)
     }
 
     /// Returns the sepolia chain.
     #[inline]
     pub const fn sepolia() -> Self {
-        Self::Named(NamedChain::Sepolia)
+        Self::named(NamedChain::Sepolia)
     }
 
-    /// The id of the chain
+    /// The ID of the chain.
     #[inline]
-    pub fn id(self) -> u64 {
-        match self {
-            Self::Named(chain) => chain as u64,
-            Self::Id(id) => id,
+    pub const fn id(self) -> u64 {
+        match self.0 {
+            ChainRepr::Named(chain) => chain as u64,
+            ChainRepr::Id(id) => id,
         }
     }
 
-    /// Helper function for checking if a chainid corresponds to a legacy
-    /// chainid without eip1559
+    /// The ID of the chain.
     #[inline]
-    pub fn is_legacy(&self) -> bool {
-        match self {
-            Self::Named(c) => c.is_legacy(),
-            Self::Id(_) => false,
+    pub const fn as_id(&self) -> &u64 {
+        match &self.0 {
+            ChainRepr::Named(chain) => unsafe { &*(chain as *const NamedChain as *const u64) },
+            ChainRepr::Id(id) => id,
         }
+    }
+
+    /// Returns the chain as a named chain, if possible.
+    #[inline]
+    pub fn as_named(self) -> Option<NamedChain> {
+        match self.0 {
+            ChainRepr::Named(named) => Some(named),
+            ChainRepr::Id(_) => None,
+        }
+    }
+
+    /// Returns the string representation of the chain.
+    #[inline]
+    pub fn as_str(self) -> Option<&'static str> {
+        match self.0 {
+            ChainRepr::Named(named) => Some(named.as_str()),
+            ChainRepr::Id(_) => None,
+        }
+    }
+
+    /// Returns `true` if the chain is a named chain.
+    #[inline]
+    pub const fn is_named(self) -> bool {
+        matches!(self.0, ChainRepr::Named(_))
+    }
+
+    fwd! {
+        pub fn average_blocktime_hint() -> Option<Duration>;
+        pub fn is_legacy() -> bool;
+        pub fn supports_push0() -> bool;
+        pub fn etherscan_urls() -> Option<(&'static str, &'static str)>;
+        pub fn etherscan_api_key_name() -> Option<&'static str>;
+        pub fn etherscan_api_key() -> Option<String>;
     }
 
     /// Returns the address of the public DNS node list for the given chain.
@@ -180,31 +296,40 @@ impl Chain {
     #[inline]
     pub fn public_dns_network_protocol(self) -> Option<String> {
         use NamedChain::*;
-        const DNS_PREFIX: &str = "enrtree://AKA3AM6LPBYEUDMVNU3BSVQJ5AD45Y7YPOHJLEF6W26QOE4VTUDPE@";
 
-        let named: NamedChain = self.try_into().ok()?;
-
-        if matches!(named, Mainnet | Goerli | Sepolia | Ropsten | Rinkeby) {
-            Some(format!(
-                "{DNS_PREFIX}all.{}.ethdisco.net",
-                named.as_ref().to_lowercase()
-            ))
-        } else {
-            None
-        }
+        let named = self.as_named()?;
+        matches!(named, Mainnet | Goerli | Sepolia | Ropsten | Rinkeby).then(|| {
+            format!(
+                "enrtree://AKA3AM6LPBYEUDMVNU3BSVQJ5AD45Y7YPOHJLEF6W26QOE4VTUDPE@all.{named}.ethdisco.net",
+            )
+        })
     }
 
     /// Returns bootnodes for the given chain.
     #[inline]
     pub fn bootnodes(self) -> Option<Vec<NodeRecord>> {
         use NamedChain::*;
-        match self.try_into().ok()? {
+        match self.as_named()? {
             Mainnet => Some(mainnet_nodes()),
             Goerli => Some(goerli_nodes()),
             Sepolia => Some(sepolia_nodes()),
             _ => None,
         }
     }
+}
+
+/// Representation of a chain.
+///
+/// This is private to enforce the invariant that the `Id` variant is never one
+/// of the named chains, e.g. this is just a wrapper around the
+/// `Result<NamedChain, u64>` of `NamedChain::try_from`.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(untagged)]
+enum ChainRepr {
+    /// A named chain.
+    Named(NamedChain),
+    /// A chain ID.
+    Id(u64),
 }
 
 #[cfg(any(test, feature = "arbitrary"))]
@@ -224,7 +349,7 @@ mod arbitrary {
 
         fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
             let named =
-                any::<Selector>().prop_map(move |sel| Chain::Named(sel.select(NamedChain::iter())));
+                any::<Selector>().prop_map(move |sel| Chain::named(sel.select(NamedChain::iter())));
             let id = any::<u64>().prop_map(Chain::from);
             proptest::strategy::Union::new_weighted(vec![(50, named.boxed()), (50, id.boxed())])
                 .boxed()
@@ -236,61 +361,60 @@ mod arbitrary {
             if u.ratio(1, 2)? {
                 let chain = u.int_in_range(0..=(NamedChain::COUNT - 1))?;
 
-                return Ok(Chain::Named(
+                return Ok(Chain::named(
                     NamedChain::iter().nth(chain).expect("in range"),
                 ))
             }
 
-            Ok(Self::Id(u64::arbitrary(u)?))
+            Ok(Self::new(u64::arbitrary(u)?))
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use ethers_primitives::{U256, U64};
-
     use super::*;
+    use ethers_primitives::{U256, U64};
 
     #[test]
     fn test_id() {
-        let chain = Chain::Id(1234);
+        let chain = Chain::new(1234);
         assert_eq!(chain.id(), 1234);
     }
 
     #[test]
     fn test_named_id() {
-        let chain = Chain::Named(NamedChain::Goerli);
+        let chain = Chain::named(NamedChain::Goerli);
         assert_eq!(chain.id(), 5);
     }
 
     #[test]
     fn test_legacy_named_chain() {
-        let chain = Chain::Named(NamedChain::Optimism);
+        let chain = Chain::named(NamedChain::Optimism);
         assert!(chain.is_legacy());
     }
 
     #[test]
     fn test_not_legacy_named_chain() {
-        let chain = Chain::Named(NamedChain::Mainnet);
+        let chain = Chain::named(NamedChain::Mainnet);
         assert!(!chain.is_legacy());
     }
 
     #[test]
     fn test_not_legacy_id_chain() {
-        let chain = Chain::Id(1234);
+        let chain = Chain::new(1234);
         assert!(!chain.is_legacy());
     }
 
     #[test]
     fn test_display_named_chain() {
-        let chain = Chain::Named(NamedChain::Mainnet);
+        let chain = Chain::named(NamedChain::Mainnet);
         assert_eq!(format!("{chain}"), "mainnet");
     }
 
     #[test]
     fn test_display_id_chain() {
-        let chain = Chain::Id(1234);
+        let chain = Chain::new(1234);
         assert_eq!(format!("{chain}"), "1234");
     }
 
@@ -298,14 +422,14 @@ mod tests {
     fn test_from_u256() {
         let n = U256::from(1234);
         let chain = Chain::from(n);
-        let expected = Chain::Id(1234);
+        let expected = Chain::new(1234);
 
         assert_eq!(chain, expected);
     }
 
     #[test]
     fn test_into_u256() {
-        let chain = Chain::Named(NamedChain::Goerli);
+        let chain = Chain::named(NamedChain::Goerli);
         let n: U256 = chain.into();
         let expected = U256::from(5);
 
@@ -315,7 +439,7 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn test_into_U64() {
-        let chain = Chain::Named(NamedChain::Goerli);
+        let chain = Chain::named(NamedChain::Goerli);
         let n: U64 = chain.into();
         let expected = U64::from(5);
 
@@ -326,13 +450,13 @@ mod tests {
     fn test_from_str_named_chain() {
         assert_eq!(
             "mainnet".parse::<Chain>().unwrap(),
-            Chain::Named(NamedChain::Mainnet)
+            Chain::named(NamedChain::Mainnet)
         );
     }
 
     #[test]
     fn test_from_str_id_chain() {
-        assert_eq!("1234".parse::<Chain>().unwrap(), Chain::Id(1234));
+        assert_eq!("1234".parse::<Chain>().unwrap(), Chain::new(1234));
     }
 
     #[test]
@@ -343,14 +467,14 @@ mod tests {
     #[test]
     fn test_default() {
         let default = Chain::default();
-        let expected = Chain::Named(NamedChain::Mainnet);
+        let expected = Chain::named(NamedChain::Mainnet);
 
         assert_eq!(default, expected);
     }
 
     #[test]
     fn test_id_chain_encodable_length() {
-        let chain = Chain::Id(1234);
+        let chain = Chain::new(1234);
 
         assert_eq!(chain.length(), 3);
     }

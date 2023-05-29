@@ -1,7 +1,7 @@
 use ethers_primitives::{Uint, U128, U256, U64};
 use serde::{Deserialize, Serialize, Serializer};
 use std::{fmt, time::Duration};
-use strum::{AsRefStr, EnumCount, EnumIter, EnumString, EnumVariantNames};
+use strum::{EnumCount, EnumIter, EnumString, EnumVariantNames, IntoStaticStr};
 
 pub use num_enum::{TryFromPrimitive, TryFromPrimitiveError};
 
@@ -42,7 +42,7 @@ pub type ParseChainError = TryFromPrimitiveError<NamedChain>;
     PartialOrd,
     Ord,
     Hash,
-    AsRefStr,         // AsRef<str>, fmt::Display and serde::Serialize
+    IntoStaticStr,    // AsRef<str>, fmt::Display and serde::Serialize
     EnumVariantNames, // NamedChain::VARIANTS
     EnumString,       // FromStr, TryFrom<&str>
     EnumIter,         // NamedChain::iter
@@ -173,6 +173,7 @@ pub enum NamedChain {
 // `TryFromPrimitive` where it treats the `#[default]` attribute as its own
 // `#[num_enum(default)]`
 impl Default for NamedChain {
+    #[inline]
     fn default() -> Self {
         Self::Mainnet
     }
@@ -203,6 +204,7 @@ macro_rules! impl_try_from_numeric {
 }
 
 impl From<NamedChain> for u64 {
+    #[inline]
     fn from(chain: NamedChain) -> Self {
         chain as u64
     }
@@ -230,8 +232,16 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<Uint<BITS, LIMBS>> for Named
 impl_try_from_numeric!(u8 u16 u32 usize);
 
 impl fmt::Display for NamedChain {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.pad(self.as_ref())
+        f.pad(self.as_str())
+    }
+}
+
+impl AsRef<str> for NamedChain {
+    #[inline]
+    fn as_ref(&self) -> &str {
+        self.as_str()
     }
 }
 
@@ -242,10 +252,16 @@ impl Serialize for NamedChain {
 }
 
 // NB: all utility functions *should* be explicitly exhaustive (not use `_`
-// matcher) so we don't     forget to update them when adding a new `NamedChain`
+// matcher) so we don't forget to update them when adding a new `NamedChain`
 // variant.
 #[allow(clippy::match_like_matches_macro)]
 impl NamedChain {
+    /// Returns the string representation of the chain.
+    #[inline]
+    pub fn as_str(self) -> &'static str {
+        self.into()
+    }
+
     /// Returns the chain's average blocktime, if applicable.
     ///
     /// It can be beneficial to know the average blocktime to adjust the polling
@@ -267,7 +283,7 @@ impl NamedChain {
     /// );
     /// assert_eq!(NamedChain::Optimism.average_blocktime_hint(), None);
     /// ```
-    pub const fn average_blocktime_hint(&self) -> Option<Duration> {
+    pub const fn average_blocktime_hint(self) -> Option<Duration> {
         use NamedChain::*;
 
         let ms = match self {
@@ -308,7 +324,7 @@ impl NamedChain {
     /// assert!(!NamedChain::Mainnet.is_legacy());
     /// assert!(NamedChain::Celo.is_legacy());
     /// ```
-    pub const fn is_legacy(&self) -> bool {
+    pub const fn is_legacy(self) -> bool {
         use NamedChain::*;
 
         match self {
@@ -358,6 +374,16 @@ impl NamedChain {
         }
     }
 
+    /// Returns whether the chain supports the `PUSH0` opcode or not.
+    ///
+    /// For more information, see [EIP-3855](https://eips.ethereum.org/EIPS/eip-3855).
+    pub const fn supports_push0(self) -> bool {
+        match self {
+            Self::Mainnet | Self::Goerli | Self::Sepolia => true,
+            _ => false,
+        }
+    }
+
     /// Returns the chain's blockchain explorer and its API (Etherscan and
     /// Etherscan-like) URLs.
     ///
@@ -378,7 +404,7 @@ impl NamedChain {
     /// );
     /// assert_eq!(NamedChain::AnvilHardhat.etherscan_urls(), None);
     /// ```
-    pub const fn etherscan_urls(&self) -> Option<(&'static str, &'static str)> {
+    pub const fn etherscan_urls(self) -> Option<(&'static str, &'static str)> {
         use NamedChain::*;
 
         let urls = match self {
@@ -610,7 +636,7 @@ impl NamedChain {
     /// assert_eq!(NamedChain::Mainnet.etherscan_api_key_name(), Some("ETHERSCAN_API_KEY"));
     /// assert_eq!(NamedChain::AnvilHardhat.etherscan_api_key_name(), None);
     /// ```
-    pub const fn etherscan_api_key_name(&self) -> Option<&'static str> {
+    pub const fn etherscan_api_key_name(self) -> Option<&'static str> {
         use NamedChain::*;
 
         let api_key_name = match self {
@@ -689,7 +715,7 @@ impl NamedChain {
     /// std::env::set_var(chain.etherscan_api_key_name().unwrap(), "KEY");
     /// assert_eq!(chain.etherscan_api_key().as_deref(), Some("KEY"));
     /// ```
-    pub fn etherscan_api_key(&self) -> Option<String> {
+    pub fn etherscan_api_key(self) -> Option<String> {
         self.etherscan_api_key_name()
             .and_then(|name| std::env::var(name).ok())
     }
