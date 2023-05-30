@@ -16,6 +16,7 @@ repository.workspace = true
 [dependencies]
 arrayvec.workspace = true
 bytes.workspace = true
+
 ethers-rlp-derive = { workspace = true, optional = true }
 
 [dev-dependencies]

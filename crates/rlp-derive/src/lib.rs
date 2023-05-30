@@ -1,10 +1,3 @@
-#![warn(missing_docs, unreachable_pub)]
-#![deny(unused_must_use, unused_crate_dependencies)]
-#![doc(test(
-    no_crate_inject,
-    attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
-))]
-
 //! Derive macro for `#[derive(RlpEncodable, RlpDecodable)]`.
 //!
 //! For example of usage see `./tests/rlp.rs`.
@@ -14,6 +7,9 @@
 //! with the caveat that we use the `Default` value if
 //! the field deserialization fails, as we don't serialize field
 //! names and there is no way to tell if it is present or not.
+
+#![warn(missing_docs, unreachable_pub)]
+#![deny(unused_must_use, unused_crate_dependencies)]
 
 extern crate proc_macro;
 

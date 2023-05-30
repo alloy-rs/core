@@ -38,7 +38,7 @@ pub unsafe trait MaxEncodedLenAssoc: Encodable {
 #[macro_export]
 macro_rules! impl_max_encoded_len {
     ($t:ty, $len:expr) => {
-        unsafe impl $crate::MaxEncodedLen<$len> for $t {}
+        unsafe impl $crate::MaxEncodedLen<{ $len }> for $t {}
         unsafe impl $crate::MaxEncodedLenAssoc for $t {
             const LEN: usize = $len;
         }
@@ -62,20 +62,24 @@ pub trait Encodable {
 }
 
 impl<'a, T: ?Sized + Encodable> Encodable for &'a T {
+    #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
         (**self).encode(out)
     }
 
+    #[inline]
     fn length(&self) -> usize {
         (**self).length()
     }
 }
 
 impl<'a, T: ?Sized + Encodable> Encodable for &'a mut T {
+    #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
         (**self).encode(out)
     }
 
+    #[inline]
     fn length(&self) -> usize {
         (**self).length()
     }
@@ -103,20 +107,24 @@ impl Encodable for [u8] {
 }
 
 impl<const N: usize> Encodable for [u8; N] {
+    #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
         Encodable::encode(&self[..], out)
     }
 
+    #[inline]
     fn length(&self) -> usize {
         Encodable::length(&self[..])
     }
 }
 
 impl Encodable for str {
+    #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
         Encodable::encode(self.as_bytes(), out)
     }
 
+    #[inline]
     fn length(&self) -> usize {
         Encodable::length(self.as_bytes())
     }
@@ -128,13 +136,14 @@ unsafe impl<const N: usize> MaxEncodedLenAssoc for [u8; N] {
 
 impl Encodable for bool {
     #[inline]
-    fn length(&self) -> usize {
-        1
+    fn encode(&self, out: &mut dyn BufMut) {
+        (*self as u8).encode(out)
     }
 
     #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        out.put_u8(*self as u8)
+    fn length(&self) -> usize {
+        // a `bool` is always `< EMPTY_STRING_CODE`
+        1
     }
 }
 
@@ -192,7 +201,7 @@ max_encoded_len_uint!(u64);
 encodable_uint!(u128);
 max_encoded_len_uint!(u128);
 
-impl_max_encoded_len!(bool, { <u8 as MaxEncodedLenAssoc>::LEN });
+impl_max_encoded_len!(bool, <u8 as MaxEncodedLenAssoc>::LEN);
 
 #[cfg(feature = "std")]
 mod std_support {
@@ -241,60 +250,72 @@ mod alloc_support {
     use super::*;
 
     impl<'a, T: ?Sized + alloc::borrow::ToOwned + Encodable> Encodable for alloc::borrow::Cow<'a, T> {
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             (**self).encode(out)
         }
 
+        #[inline]
         fn length(&self) -> usize {
             (**self).length()
         }
     }
 
     impl<T: ?Sized + Encodable> Encodable for alloc::boxed::Box<T> {
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             (**self).encode(out)
         }
 
+        #[inline]
         fn length(&self) -> usize {
             (**self).length()
         }
     }
 
     impl<T: ?Sized + Encodable> Encodable for alloc::rc::Rc<T> {
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             (**self).encode(out)
         }
 
+        #[inline]
         fn length(&self) -> usize {
             (**self).length()
         }
     }
 
     impl<T: ?Sized + Encodable> Encodable for alloc::sync::Arc<T> {
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             (**self).encode(out)
         }
 
+        #[inline]
         fn length(&self) -> usize {
             (**self).length()
         }
     }
 
     impl<T: Encodable> Encodable for alloc::vec::Vec<T> {
+        #[inline]
         fn length(&self) -> usize {
             list_length(self)
         }
 
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             encode_list(self, out)
         }
     }
 
     impl Encodable for alloc::string::String {
+        #[inline]
         fn encode(&self, out: &mut dyn BufMut) {
             self.as_bytes().encode(out);
         }
 
+        #[inline]
         fn length(&self) -> usize {
             self.as_bytes().length()
         }
@@ -304,10 +325,12 @@ mod alloc_support {
 macro_rules! slice_impl {
     ($t:ty) => {
         impl $crate::Encodable for $t {
+            #[inline]
             fn encode(&self, out: &mut dyn BufMut) {
                 Encodable::encode(&self[..], out)
             }
 
+            #[inline]
             fn length(&self) -> usize {
                 Encodable::length(&self[..])
             }
@@ -409,7 +432,7 @@ mod tests {
         encode_list(t, &mut out1);
 
         let v = t.to_vec();
-        assert_eq!(out1.len(), Encodable::length(&v));
+        assert_eq!(out1.len(), v.length());
 
         let mut out2 = BytesMut::new();
         v.encode(&mut out2);
