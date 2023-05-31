@@ -2,7 +2,9 @@
 
 use crate::{Signed, B256};
 
-pub use ruint::aliases::*;
+pub use ruint::aliases::{
+    U0, U1, U1024, U128, U16, U160, U192, U2048, U256, U32, U320, U384, U4096, U448, U512, U64, U8,
+};
 
 /// The 0-bit signed integer type, capable of representing 0.
 pub type I0 = Signed<0, 0>;
