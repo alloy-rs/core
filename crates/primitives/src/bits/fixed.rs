@@ -27,6 +27,7 @@ impl<const N: usize> Default for FixedBytes<N> {
     }
 }
 
+
 impl<'a, const N: usize> From<&'a [u8; N]> for FixedBytes<N> {
     /// Constructs a hash type from the given reference
     /// to the bytes array of fixed length.

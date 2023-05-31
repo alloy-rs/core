@@ -2,7 +2,7 @@ mod address;
 pub use address::{Address, AddressError};
 
 mod bloom;
-pub use bloom::{Bloom, BloomInput, BloomRef, BLOOM_BITS, BLOOM_SIZE};
+pub use bloom::{Bloom, BloomInput, BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS, BLOOM_SIZE_BYTES};
 
 mod fixed;
 pub use fixed::FixedBytes;
