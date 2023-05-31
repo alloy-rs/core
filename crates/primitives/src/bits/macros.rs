@@ -209,8 +209,8 @@ macro_rules! wrap_fixed_bytes {
             }
 
             /// Compile-time equality. NOT constant-time equality.
-            pub const fn const_eq(&self, other: Self) -> bool {
-                self.0.const_eq(other.0)
+            pub const fn const_eq(&self, other: &Self) -> bool {
+                self.0.const_eq(&other.0)
             }
 
             /// Returns `true` if no bits are set.

@@ -237,7 +237,6 @@ impl<const N: usize> FixedBytes<N> {
     }
 
     /// Returns `true` if all bits set in `b` are also set in `self`.
-
     #[inline]
     pub fn covers(&self, b: &Self) -> bool {
         &(*b & *self) == b
@@ -255,7 +254,7 @@ impl<const N: usize> FixedBytes<N> {
 
     /// Compile-time equality. NOT constant-time equality.
     #[inline]
-    pub const fn const_eq(&self, other: Self) -> bool {
+    pub const fn const_eq(&self, other: &Self) -> bool {
         let mut i = 0;
         loop {
             if self.0[i] != other.0[i] {
@@ -273,7 +272,7 @@ impl<const N: usize> FixedBytes<N> {
     /// Returns `true` if no bits are set.
     #[inline]
     pub const fn const_is_zero(&self) -> bool {
-        self.const_eq(Self::ZERO)
+        self.const_eq(&Self::ZERO)
     }
 
     /// Computes the bitwise AND of two `FixedBytes`.

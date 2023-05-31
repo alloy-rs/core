@@ -123,6 +123,10 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Number of bits.
     pub const BITS: usize = BITS;
 
+    /// The size of this integer type in bytes. Note that some bits may be
+    /// forced zero if BITS is not cleanly divisible by eight.
+    pub const BYTES: usize = Uint::<BITS, LIMBS>::BYTES;
+
     /// The minimum value.
     pub const MIN: Self = min();
 
@@ -397,14 +401,19 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         (sign, abs)
     }
 
-    /// Convert to a slice in BE format
+    /// Converts the [`Int`] to a big-endian byte array of size exactly
+    /// [`Self::BYTES`].
     ///
     /// # Panics
     ///
-    /// If the given slice is not exactly 32 bytes long.
+    /// Panics if the generic parameter `BYTES` is not exactly [`Self::BYTES`].
+    /// Ideally this would be a compile time error, but this is blocked by
+    /// Rust issue [#60551].
+    ///
+    /// [#60551]: https://github.com/rust-lang/rust/issues/60551
     #[inline(always)]
     #[track_caller]
-    pub fn to_be_bytes(self) -> [u8; 32] {
+    pub fn to_be_bytes<const BYTES: usize>(self) -> [u8; BYTES] {
         self.0.to_be_bytes()
     }
 
@@ -415,7 +424,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// If the given slice is not exactly 32 bytes long.
     #[inline(always)]
     #[track_caller]
-    pub fn to_le_bytes(self) -> [u8; 32] {
+    pub fn to_le_bytes<const BYTES: usize>(self) -> [u8; BYTES] {
         self.0.to_le_bytes()
     }
 
