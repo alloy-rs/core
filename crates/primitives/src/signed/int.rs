@@ -401,7 +401,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         (sign, abs)
     }
 
-    /// Converts the [`Int`] to a big-endian byte array of size exactly
+    /// Converts `self` to a big-endian byte array of size exactly
     /// [`Self::BYTES`].
     ///
     /// # Panics
@@ -417,11 +417,16 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         self.0.to_be_bytes()
     }
 
-    /// Convert to a slice in LE format
+    /// Converts `self` to a little-endian byte array of size exactly
+    /// [`Self::BYTES`].
     ///
     /// # Panics
     ///
-    /// If the given slice is not exactly 32 bytes long.
+    /// Panics if the generic parameter `BYTES` is not exactly [`Self::BYTES`].
+    /// Ideally this would be a compile time error, but this is blocked by
+    /// Rust issue [#60551].
+    ///
+    /// [#60551]: https://github.com/rust-lang/rust/issues/60551
     #[inline(always)]
     #[track_caller]
     pub fn to_le_bytes<const BYTES: usize>(self) -> [u8; BYTES] {
