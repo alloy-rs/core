@@ -2,16 +2,8 @@
 //!
 //! Adapted from <https://github.com/paritytech/parity-common/blob/2fb72eea96b6de4a085144ce239feb49da0cd39e/ethbloom/src/lib.rs>
 
-use crate::{keccak256, FixedBytes};
-use core::{
-    borrow::{Borrow, BorrowMut},
-    mem,
-};
-
-use derive_more::{
-    AsMut, AsRef, BitAnd, BitAndAssign, BitOr, BitOrAssign, FromStr, Index, IndexMut, LowerHex,
-    UpperHex,
-};
+use crate::{keccak256, wrap_fixed_bytes, FixedBytes};
+use core::borrow::{Borrow, BorrowMut};
 
 /// Number of bits to set per input in Ethereum bloom filter.
 pub const BLOOM_BITS_PER_ITEM: usize = 3;
@@ -29,7 +21,7 @@ const ITEM_BYTES: usize = (log2(BLOOM_SIZE_BITS) + 7) / 8;
 
 // BLOOM_SIZE_BYTES must be a power of 2
 #[allow(clippy::assertions_on_constants)]
-const _: () = assert!(BLOOM_SIZE_BYTES & (BLOOM_SIZE_BYTES - 1) == 0);
+const _: () = assert!(BLOOM_SIZE_BYTES.is_power_of_two());
 // Assertion for accrue. This is preserved from parity code, but I do not
 // understand its purpose.
 #[allow(clippy::assertions_on_constants)]
@@ -62,27 +54,7 @@ impl From<BloomInput<'_>> for Bloom {
     }
 }
 
-#[derive(
-    Debug,
-    Copy,
-    Clone,
-    Default,
-    AsMut,
-    AsRef,
-    BitAnd,
-    BitAndAssign,
-    BitOr,
-    BitOrAssign,
-    FromStr,
-    Index,
-    IndexMut,
-    LowerHex,
-    UpperHex,
-    PartialEq,
-    Eq,
-)]
-/// A 256-byte Ethereum bloom filter.
-pub struct Bloom(FixedBytes<BLOOM_SIZE_BYTES>);
+wrap_fixed_bytes!(Bloom<256>);
 
 impl Bloom {
     /// Returns a reference to the underlying data.
@@ -151,30 +123,6 @@ impl Bloom {
     }
 }
 
-impl From<[u8; 256]> for Bloom {
-    fn from(value: [u8; 256]) -> Self {
-        Self(FixedBytes(value))
-    }
-}
-
-impl From<FixedBytes<256>> for Bloom {
-    fn from(value: FixedBytes<256>) -> Self {
-        Self(value)
-    }
-}
-
-impl From<Bloom> for [u8; 256] {
-    fn from(value: Bloom) -> Self {
-        value.0 .0
-    }
-}
-
-impl From<Bloom> for FixedBytes<256> {
-    fn from(value: Bloom) -> Self {
-        value.0
-    }
-}
-
 impl Borrow<[u8; 256]> for Bloom {
     fn borrow(&self) -> &[u8; 256] {
         self.data()
@@ -184,12 +132,6 @@ impl Borrow<[u8; 256]> for Bloom {
 impl Borrow<[u8]> for Bloom {
     fn borrow(&self) -> &[u8] {
         self.data()
-    }
-}
-
-impl Borrow<FixedBytes<BLOOM_SIZE_BYTES>> for Bloom {
-    fn borrow(&self) -> &FixedBytes<BLOOM_SIZE_BYTES> {
-        &self.0
     }
 }
 
@@ -205,20 +147,13 @@ impl BorrowMut<[u8]> for Bloom {
     }
 }
 
-impl BorrowMut<FixedBytes<BLOOM_SIZE_BYTES>> for Bloom {
-    fn borrow_mut(&mut self) -> &mut FixedBytes<BLOOM_SIZE_BYTES> {
-        &mut self.0
-    }
-}
-
 #[inline]
 const fn log2(x: usize) -> usize {
     if x <= 1 {
         return 0
     }
 
-    let n = x.leading_zeros() as usize;
-    mem::size_of::<usize>() * 8 - n
+    (usize::BITS - x.leading_zeros()) as usize
 }
 
 #[cfg(test)]
