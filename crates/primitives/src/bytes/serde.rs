@@ -1,17 +1,15 @@
 use super::Bytes;
-use alloc::string::String;
 use core::result::Result;
 
 impl serde::Serialize for Bytes {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.collect_str(&format_args!("{}", self))
+        hex::serialize(self, serializer)
     }
 }
 
 impl<'de> serde::Deserialize<'de> for Bytes {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let s = String::deserialize(deserializer)?;
-        s.parse().map_err(serde::de::Error::custom)
+        hex::deserialize::<'de, D, alloc::vec::Vec<u8>>(deserializer).map(Into::into)
     }
 }
 

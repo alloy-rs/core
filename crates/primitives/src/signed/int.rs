@@ -314,7 +314,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
             unsigned_bits + 1
         };
 
-        bits as _
+        bits as u32
     }
 
     /// Creates a `Signed` from a sign and an absolute value. Returns the value

@@ -142,7 +142,8 @@ impl Encodable for bool {
 
     #[inline]
     fn length(&self) -> usize {
-        (*self as u8).length()
+        // a `bool` is always `< EMPTY_STRING_CODE`
+        1
     }
 }
 
