@@ -1,5 +1,5 @@
 mod error;
-pub use error::{Panic, Revert, SolError};
+pub use error::{Panic, PanicKind, Revert, SolError};
 
 mod call;
 pub use call::SolCall;

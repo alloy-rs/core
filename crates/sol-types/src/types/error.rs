@@ -3,7 +3,7 @@ use crate::{
     token::{PackedSeqToken, TokenSeq, WordToken},
     Result, SolType,
 };
-use core::fmt::Display;
+use core::fmt;
 use ethers_primitives::U256;
 
 /// Solidity Error (a tuple with a selector)
@@ -73,7 +73,7 @@ pub trait SolError: Sized {
 
 /// Represents a standard Solidity revert. These are thrown by
 /// `require(condition, reason)` statements in Solidity.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Revert {
     /// The reason string, provided by the Solidity contract.
     pub reason: String,
@@ -93,9 +93,16 @@ impl Borrow<str> for Revert {
     }
 }
 
-impl Display for Revert {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Revert: {}", self.reason)
+impl fmt::Debug for Revert {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Revert").field(&self.reason).finish()
+    }
+}
+
+impl fmt::Display for Revert {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Revert: ")?;
+        f.write_str(&self.reason)
     }
 }
 
@@ -110,6 +117,15 @@ impl From<String> for Revert {
     #[inline]
     fn from(reason: String) -> Self {
         Self { reason }
+    }
+}
+
+impl From<&str> for Revert {
+    #[inline]
+    fn from(value: &str) -> Self {
+        Self {
+            reason: value.into(),
+        }
     }
 }
 
@@ -137,35 +153,65 @@ impl SolError for Revert {
     }
 }
 
-/// Represents a Solidity Panic. These are thrown by
-/// `assert(condition, reason)` and by Solidity internal checks.
+/// A [Solidity panic].
 ///
-/// [Solidity Panic](https://docs.soliditylang.org/en/v0.8.6/control-structures.html#panic-via-assert-and-error-via-require)
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+/// These are thrown by `assert(condition)` and by internal Solidity checks,
+/// such as arithmetic overflow or array bounds checks.
+///
+/// The list of all known panic codes can be found in the [PanicKind] enum.
+///
+/// [Solidity panic]: https://docs.soliditylang.org/en/latest/control-structures.html#panic-via-assert-and-error-via-require
+#[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct Panic {
-    /// The panic code.
+    /// The [Solidity panic code].
     ///
-    /// [Solidity Panic Codes](https://docs.soliditylang.org/en/v0.8.6/control-structures.html#panic-via-assert-and-error-via-require)
-    pub error_code: U256,
+    /// [Solidity panic code]: https://docs.soliditylang.org/en/latest/control-structures.html#panic-via-assert-and-error-via-require
+    pub code: U256,
 }
 
 impl AsRef<U256> for Panic {
     #[inline]
     fn as_ref(&self) -> &U256 {
-        &self.error_code
+        &self.code
     }
 }
 
 impl Borrow<U256> for Panic {
     #[inline]
     fn borrow(&self) -> &U256 {
-        &self.error_code
+        &self.code
     }
 }
 
-impl Display for Panic {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Panic: {}", self.error_code)
+impl fmt::Debug for Panic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug = f.debug_tuple("Panic");
+        if let Some(kind) = self.kind() {
+            debug.field(&kind);
+        } else {
+            debug.field(&self.code);
+        }
+        debug.finish()
+    }
+}
+
+impl fmt::Display for Panic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Panic: ")?;
+        if let Some(kind) = self.kind() {
+            f.write_str(kind.as_str())
+        } else {
+            write!(f, "unknown code: {}", self.code)
+        }
+    }
+}
+
+impl From<PanicKind> for Panic {
+    #[inline]
+    fn from(value: PanicKind) -> Self {
+        Self {
+            code: U256::from(value as u64),
+        }
     }
 }
 
@@ -173,7 +219,7 @@ impl From<u64> for Panic {
     #[inline]
     fn from(value: u64) -> Self {
         Self {
-            error_code: U256::from(value),
+            code: U256::from(value),
         }
     }
 }
@@ -181,14 +227,14 @@ impl From<u64> for Panic {
 impl From<Panic> for U256 {
     #[inline]
     fn from(value: Panic) -> Self {
-        value.error_code
+        value.code
     }
 }
 
 impl From<U256> for Panic {
     #[inline]
-    fn from(error_code: U256) -> Self {
-        Self { error_code }
+    fn from(value: U256) -> Self {
+        Self { code: value }
     }
 }
 
@@ -201,19 +247,132 @@ impl SolError for Panic {
 
     #[inline]
     fn to_rust(&self) -> <Self::Tuple as SolType>::RustType {
-        (self.error_code,)
+        (self.code,)
     }
 
     #[inline]
     fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self {
-        Self {
-            error_code: tuple.0,
-        }
+        Self { code: tuple.0 }
     }
 
     #[inline]
     fn data_size(&self) -> usize {
         32
+    }
+}
+
+impl Panic {
+    /// Returns the [PanicKind] if this panic code is a known Solidity panic, as
+    /// described [in the Solidity documentation][ref].
+    ///
+    /// [ref]: https://docs.soliditylang.org/en/latest/control-structures.html#panic-via-assert-and-error-via-require
+    pub fn kind(&self) -> Option<PanicKind> {
+        // use try_from to avoid copying by using the `&` impl
+        u32::try_from(&self.code)
+            .ok()
+            .and_then(PanicKind::from_number)
+    }
+}
+
+/// Represents a [Solidity panic].
+/// Same as the [Solidity definition].
+///
+/// [Solidity panic]: https://docs.soliditylang.org/en/latest/control-structures.html#panic-via-assert-and-error-via-require
+/// [Solidity definition]: https://github.com/ethereum/solidity/blob/9eaa5cebdb1458457135097efdca1a3573af17c8/libsolutil/ErrorCodes.h#L25-L37
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(u32)]
+pub enum PanicKind {
+    // Docs extracted from the Solidity definition and documentation, linked above.
+    /// Generic / unspecified error.
+    ///
+    /// Generic compiler inserted panics.
+    #[default]
+    Generic = 0x00,
+    /// Used by the `assert()` builtin.
+    ///
+    /// Thrown when you call `assert` with an argument that evaluates to
+    /// `false`.
+    Assert = 0x01,
+    /// Arithmetic underflow or overflow.
+    ///
+    /// Thrown when an arithmetic operation results in underflow or overflow
+    /// outside of an `unchecked { ... }` block.
+    UnderOverflow = 0x11,
+    /// Division or modulo by zero.
+    ///
+    /// Thrown when you divide or modulo by zero (e.g. `5 / 0` or `23 % 0`).
+    DivisionByZero = 0x12,
+    /// Enum conversion error.
+    ///
+    /// Thrown when you convert a value that is too big or negative into an enum
+    /// type.
+    EnumConversionError = 0x21,
+    /// Invalid encoding in storage.
+    ///
+    /// Thrown when you access a storage byte array that is incorrectly encoded.
+    StorageEncodingError = 0x22,
+    /// Empty array pop.
+    ///
+    /// Thrown when you call `.pop()` on an empty array.
+    EmptyArrayPop = 0x31,
+    /// Array out of bounds access.
+    ///
+    /// Thrown when you access an array, `bytesN` or an array slice at an
+    /// out-of-bounds or negative index (i.e. `x[i]` where `i >= x.length` or
+    /// `i < 0`).
+    ArrayOutOfBounds = 0x32,
+    /// Resource error (too large allocation or too large array).
+    ///
+    /// Thrown when you allocate too much memory or create an array that is too
+    /// large.
+    ResourceError = 0x41,
+    /// Calling invalid internal function.
+    ///
+    /// Thrown when you call a zero-initialized variable of internal function
+    /// type.
+    InvalidInternalFunction = 0x51,
+}
+
+impl fmt::Display for PanicKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl PanicKind {
+    /// Returns the panic code for the given number if it is a known one.
+    pub const fn from_number(value: u32) -> Option<Self> {
+        match value {
+            0x00 => Some(Self::Generic),
+            0x01 => Some(Self::Assert),
+            0x11 => Some(Self::UnderOverflow),
+            0x12 => Some(Self::DivisionByZero),
+            0x21 => Some(Self::EnumConversionError),
+            0x22 => Some(Self::StorageEncodingError),
+            0x31 => Some(Self::EmptyArrayPop),
+            0x32 => Some(Self::ArrayOutOfBounds),
+            0x41 => Some(Self::ResourceError),
+            0x51 => Some(Self::InvalidInternalFunction),
+            _ => None,
+        }
+    }
+
+    /// Returns the panic code's string representation.
+    pub const fn as_str(self) -> &'static str {
+        // modified from the original Solidity comments:
+        // https://github.com/ethereum/solidity/blob/9eaa5cebdb1458457135097efdca1a3573af17c8/libsolutil/ErrorCodes.h#L25-L37
+        match self {
+            Self::Generic => "generic/unspecified error",
+            Self::Assert => "assertion failed",
+            Self::UnderOverflow => "arithmetic underflow or overflow",
+            Self::DivisionByZero => "division or modulo by zero",
+            Self::EnumConversionError => "failed to convert value into enum type",
+            Self::StorageEncodingError => "storage byte array incorrectly encoded",
+            Self::EmptyArrayPop => "called `.pop()` on an empty array",
+            Self::ArrayOutOfBounds => "array out-of-bounds access",
+            Self::ResourceError => "memory allocation error",
+            Self::InvalidInternalFunction => "called an invalid internal function",
+        }
     }
 }
 
@@ -224,7 +383,7 @@ mod test {
 
     #[test]
     fn test_revert_encoding() {
-        let revert = Revert::from("test".to_string());
+        let revert = Revert::from("test");
         let encoded = revert.encode();
         let decoded = Revert::decode(&encoded, true).unwrap();
         assert_eq!(encoded.len(), revert.data_size() + 4);
@@ -234,9 +393,8 @@ mod test {
 
     #[test]
     fn test_panic_encoding() {
-        let panic = Panic {
-            error_code: U256::from(0),
-        };
+        let panic = Panic { code: U256::ZERO };
+        assert_eq!(panic.kind(), Some(PanicKind::Generic));
         let encoded = panic.encode();
         let decoded = Panic::decode(&encoded, true).unwrap();
 
