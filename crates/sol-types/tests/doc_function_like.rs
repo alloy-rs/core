@@ -14,8 +14,9 @@ sol! {
     /// 2. `<name>Return`: struct with the return values;
     /// where `<name>` is the case-preserved name of the function.
     ///
-    /// In the case of overloaded functions, the index of the function will be
-    /// appended to `<name>`, like `foo0`, `foo1` etc.
+    /// In the case of overloaded functions, an underscore and the index of the
+    /// function will be appended to `<name>` (like `foo_0`, `foo_1`...) for
+    /// disambiguation, but the signature will remain the same.
     ///
     /// Both of these types will have the attributes of the function, like this
     /// doc comment, but this might change in the future.
