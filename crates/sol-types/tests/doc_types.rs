@@ -19,5 +19,5 @@ fn types() {
     let _ = <sol!(bool)>::encode_single(true);
     let _ = B32::encode_single([0; 32]);
     let _ = SolArrayOf::<sol!(bool)>::encode_single(vec![true, false]);
-    let _ = SolTuple::encode_single((Address::zero(), vec![0; 32], "hello".to_string()));
+    let _ = SolTuple::encode_single((Address::ZERO, vec![0; 32], "hello".to_string()));
 }

@@ -7,21 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-#![warn(
-    missing_docs,
-    unreachable_pub,
-    unused_crate_dependencies,
-    missing_copy_implementations,
-    missing_debug_implementations,
-    clippy::missing_const_for_fn
-)]
-#![deny(unused_must_use, rust_2018_idioms)]
-#![doc(test(
-    no_crate_inject,
-    attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
-))]
-
 //! Solidity type modeling and ABI coding implementation.
 //!
 //! This crate provides tools for expressing Solidity types in Rust, and for
@@ -155,10 +140,20 @@
 //! recommend users use them wherever possible. We do not recommend that users
 //! interact with Tokens, except when implementing their own [`SolType`].
 
+#![warn(
+    missing_docs,
+    unreachable_pub,
+    unused_crate_dependencies,
+    missing_copy_implementations,
+    missing_debug_implementations,
+    clippy::missing_const_for_fn
+)]
+#![deny(unused_must_use, rust_2018_idioms)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
 #[macro_use]
 extern crate alloc;
 
-// `unused_crate_dependencies` bug workaround.
 // This crate is used in tests/compiletest.rs
 #[cfg(test)]
 use trybuild as _;

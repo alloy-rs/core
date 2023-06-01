@@ -35,7 +35,7 @@ fn structs() {
 
     let _nested = Nested {
         a: [my_foo.clone(), my_foo.clone()],
-        b: Address::zero(),
+        b: Address::ZERO,
     };
 
     let abi_encoded = Foo::encode(my_foo);

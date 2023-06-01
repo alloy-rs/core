@@ -71,60 +71,6 @@ pub(crate) fn check_bool(slice: Word) -> bool {
     check_zeroes(&slice[..31])
 }
 
-#[cfg(feature = "eip712-serde")]
-pub(crate) use serde_helper::*;
-
-#[cfg(feature = "eip712-serde")]
-mod serde_helper {
-    use alloc::string::{String, ToString};
-    use ethers_primitives::U256;
-    use serde::{Deserialize, Deserializer};
-
-    /// Helper type to parse numeric strings, `u64` and `U256`
-    #[derive(Deserialize, Debug, Clone)]
-    #[serde(untagged)]
-    pub(crate) enum StringifiedNumeric {
-        Num(u64),
-        U256(U256),
-        String(String),
-    }
-
-    impl TryFrom<StringifiedNumeric> for U256 {
-        type Error = String;
-
-        fn try_from(value: StringifiedNumeric) -> Result<Self, Self::Error> {
-            match value {
-                StringifiedNumeric::Num(n) => Ok(U256::from(n)),
-                StringifiedNumeric::U256(n) => Ok(n),
-                // TODO: this is probably unreachable, due to ruint U256 deserializing from a string
-                StringifiedNumeric::String(s) => {
-                    if let Some(s) = s.strip_prefix("0x") {
-                        U256::from_str_radix(s, 16).map_err(|err| err.to_string())
-                    } else {
-                        U256::from_str_radix(&s, 10).map_err(|err| err.to_string())
-                    }
-                }
-            }
-        }
-    }
-
-    /// Supports parsing numbers as strings
-    ///
-    /// See <https://github.com/gakonst/ethers-rs/issues/1507>
-    pub(crate) fn deserialize_stringified_numeric_opt<'de, D>(
-        deserializer: D,
-    ) -> Result<Option<U256>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        if let Some(num) = Option::<StringifiedNumeric>::deserialize(deserializer)? {
-            num.try_into().map(Some).map_err(serde::de::Error::custom)
-        } else {
-            Ok(None)
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::pad_u32;

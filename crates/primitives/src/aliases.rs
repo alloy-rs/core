@@ -1,4 +1,10 @@
-use super::Signed;
+//! Type aliases for common primitive types.
+
+use crate::{Signed, B256};
+
+pub use ruint::aliases::{
+    U0, U1, U1024, U128, U16, U160, U192, U2048, U256, U32, U320, U384, U4096, U448, U512, U64, U8,
+};
 
 /// The 0-bit signed integer type, capable of representing 0.
 pub type I0 = Signed<0, 0>;
@@ -101,3 +107,31 @@ pub type I248 = Signed<248, 4>;
 
 /// 256-bit signed integer type.
 pub type I256 = Signed<256, 4>;
+
+/// A block hash.
+pub type BlockHash = B256;
+
+/// A block number.
+pub type BlockNumber = u64;
+
+/// A transaction hash is a kecack hash of an RLP encoded signed transaction.
+pub type TxHash = B256;
+
+/// The sequence number of all existing transactions.
+pub type TxNumber = u64;
+
+/// The index of transaction in a block.
+pub type TxIndex = u64;
+
+/// Chain identifier type (introduced in EIP-155).
+pub type ChainId = u64;
+
+/// An account storage key.
+pub type StorageKey = B256;
+
+/// An account storage value.
+pub type StorageValue = U256;
+
+/// Solidity contract functions are addressed using the first four byte of the
+/// Keccak-256 hash of their signature
+pub type Selector = [u8; 4];

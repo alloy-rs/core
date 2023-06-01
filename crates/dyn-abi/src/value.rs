@@ -1,5 +1,5 @@
 use crate::{no_std_prelude::*, Word};
-use ethers_primitives::{aliases::*, Address, I256, U256};
+use ethers_primitives::{Address, I256, U256};
 
 /// This type represents a Solidity value that has been decoded into rust. It
 /// is broadly similar to `serde_json::Value` in that it is an enum of possible
@@ -32,7 +32,7 @@ pub enum DynSolValue {
         name: String,
         /// The struct's prop names, in declaration order.
         prop_names: Vec<String>,
-        /// A inner types.
+        /// The inner types.
         tuple: Vec<DynSolValue>,
     },
     /// A user-defined value type.
@@ -66,7 +66,7 @@ impl DynSolValue {
     /// Fallible cast to a single word. Will succeed for any single-word type.
     pub fn as_word(&self) -> Option<Word> {
         match self {
-            Self::Address(a) => Some((*a).into()),
+            Self::Address(a) => Some(a.into_word()),
             Self::Bool(b) => Some({
                 let mut buf = [0u8; 32];
                 if *b {
@@ -185,12 +185,12 @@ impl DynSolValue {
     /// Encodes the packed value and appends it to the end of a byte array.
     pub fn encode_packed_to(&self, buf: &mut Vec<u8>) {
         match self {
-            DynSolValue::Address(addr) => buf.extend_from_slice(addr.as_bytes()),
-            DynSolValue::Bool(b) => buf.push(*b as u8),
-            DynSolValue::Bytes(bytes) => buf.extend_from_slice(bytes),
-            DynSolValue::FixedBytes(word, size) => buf.extend_from_slice(&word.as_bytes()[..*size]),
-            DynSolValue::Int(num, size) => {
-                let mut bytes = num.to_be_bytes();
+            Self::Address(addr) => buf.extend_from_slice(addr.as_bytes()),
+            Self::Bool(b) => buf.push(*b as u8),
+            Self::Bytes(bytes) => buf.extend_from_slice(bytes),
+            Self::FixedBytes(word, size) => buf.extend_from_slice(&word.as_bytes()[..*size]),
+            Self::Int(num, size) => {
+                let mut bytes = num.to_be_bytes::<32>();
                 let start = 32 - *size;
                 if num.is_negative() {
                     bytes[start] |= 0x80;
@@ -199,17 +199,17 @@ impl DynSolValue {
                 }
                 buf.extend_from_slice(&bytes[start..])
             }
-            DynSolValue::Uint(num, size) => {
+            Self::Uint(num, size) => {
                 buf.extend_from_slice(&num.to_be_bytes::<32>().as_slice()[(32 - *size)..])
             }
-            DynSolValue::String(s) => buf.extend_from_slice(s.as_bytes()),
-            DynSolValue::Tuple(inner)
-            | DynSolValue::Array(inner)
-            | DynSolValue::FixedArray(inner)
-            | DynSolValue::CustomStruct { tuple: inner, .. } => {
-                inner.iter().for_each(|v| v.encode_packed_to(buf));
+            Self::String(s) => buf.extend_from_slice(s.as_bytes()),
+            Self::Tuple(inner)
+            | Self::Array(inner)
+            | Self::FixedArray(inner)
+            | Self::CustomStruct { tuple: inner, .. } => {
+                inner.iter().for_each(|v| v.encode_packed_to(buf))
             }
-            DynSolValue::CustomValue { inner, .. } => buf.extend_from_slice(inner.as_bytes()),
+            Self::CustomValue { inner, .. } => buf.extend_from_slice(inner.as_bytes()),
         }
     }
 
@@ -222,65 +222,77 @@ impl DynSolValue {
 }
 
 impl From<Address> for DynSolValue {
+    #[inline]
     fn from(value: Address) -> Self {
         Self::Address(value)
     }
 }
 
 impl From<bool> for DynSolValue {
+    #[inline]
     fn from(value: bool) -> Self {
         Self::Bool(value)
     }
 }
 
 impl From<Vec<u8>> for DynSolValue {
+    #[inline]
     fn from(value: Vec<u8>) -> Self {
         Self::Bytes(value)
     }
 }
 
 macro_rules! impl_from_int {
-    ($size:ty) => {
-        impl From<$size> for DynSolValue {
-            fn from(value: $size) -> Self {
-                let bits = <$size>::BITS as usize;
-                let bytes = bits / 8;
+    ($($t:ty),+) => {$(
+        impl From<$t> for DynSolValue {
+            #[inline]
+            fn from(value: $t) -> Self {
+                const BITS: usize = <$t>::BITS as usize;
+                const BYTES: usize = BITS / 8;
+                const _: () = assert!(BYTES <= 32);
+
                 let mut word = if value.is_negative() {
                     ethers_primitives::B256::repeat_byte(0xff)
                 } else {
                     ethers_primitives::B256::default()
                 };
-                word[32 - bytes..].copy_from_slice(&value.to_be_bytes());
+                word[32 - BYTES..].copy_from_slice(&value.to_be_bytes());
 
-                Self::Int(I256::from_be_bytes(word.into()), bits)
+                Self::Int(I256::from_be_bytes(word.0), BITS)
             }
         }
-    };
-    ($($size:ty),+) => {
-        $(impl_from_int!($size);)+
-    };
+    )+};
 }
 
-impl_from_int!(
-    i8, i16, i32, i64, isize, i128, I24, I40, I48, I56, I72, I80, I88, I96, I104, I112, I120, I128,
-    I136, I144, I152, I160, I168, I176, I184, I192, I200, I208, I216, I224, I232, I240, I248, I256
-);
+impl_from_int!(i8, i16, i32, i64, isize, i128);
+
+impl From<I256> for DynSolValue {
+    #[inline]
+    fn from(value: I256) -> Self {
+        Self::Int(value, 256)
+    }
+}
 
 macro_rules! impl_from_uint {
-    ($size:ty) => {
-        impl From<$size> for DynSolValue {
-            fn from(value: $size) -> Self {
-                Self::Uint(U256::from(value), <$size>::BITS as usize)
+    ($($t:ty),+) => {$(
+        impl From<$t> for DynSolValue {
+            #[inline]
+            fn from(value: $t) -> Self {
+                Self::Uint(U256::from(value), <$t>::BITS as usize)
             }
         }
-    };
-    ($($size:ty),+) => {
-        $(impl_from_uint!($size);)+
-    };
+    )+};
 }
 
 // TODO: more?
-impl_from_uint!(u8, u16, u32, u64, usize, u128, U256);
+impl_from_uint!(u8, u16, u32, u64, usize, u128);
+
+impl From<U256> for DynSolValue {
+    #[inline]
+    fn from(value: U256) -> Self {
+        Self::Uint(value, 256)
+    }
+}
 
 impl From<String> for DynSolValue {
     fn from(value: String) -> Self {

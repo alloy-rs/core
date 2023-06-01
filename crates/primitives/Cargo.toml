@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Fundamental ethereum types shared by revm, reth and ethers"
 readme = "README.md"
 keywords = ["ethereum", "ethers", "revm", "reth"]
-categories = ["cryptography::cryptocurrencies"]
+categories = ["data-structures", "cryptography::cryptocurrencies"]
 
 edition.workspace = true
 rust-version.workspace = true
@@ -15,34 +15,38 @@ repository.workspace = true
 
 [dependencies]
 # eth
-ruint = { workspace = true, features = ["rlp", "serde"] }
+ruint = { workspace = true, features = ["serde"] }
 
 # utility
-derive_more = "0.99"
-tiny-keccak = { workspace = true, features = ["keccak"] }
+bytes.workspace = true
+getrandom = "0.2"
 hex.workspace = true
 itoa = "1"
+tiny-keccak = { workspace = true, features = ["keccak"] }
 
-# optional
-serde = { workspace = true, features = ["derive"], optional = true }
+# macros
+derive_more.workspace = true
 
-# rlp support
+# rlp
 ethers-rlp = { workspace = true, optional = true }
-bytes = { workspace = true, optional = true }
 
-# prop tests
+# serde
+serde = { workspace = true, optional = true }
+
+# arbitrary
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
 [dev-dependencies]
-hex-literal = "0.4"
+hex-literal.workspace = true
+serde_json.workspace = true
 
 [features]
-default = ["std", "rlp", "serde", "hex/std"]
-std = ["serde/std", "ethers-rlp?/std", "bytes?/std", "proptest?/std"]
-rlp = ["dep:ethers-rlp", "dep:bytes"]
-serde = ["dep:serde", "ruint/serde"]
+default = ["std", "rlp", "serde"]
+std = ["bytes/std", "hex/std", "ethers-rlp?/std", "proptest?/std", "serde/std"]
+rlp = ["dep:ethers-rlp", "ruint/fastrlp"]
+serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
 arbitrary = [
     "ruint/arbitrary",
     "ruint/proptest",

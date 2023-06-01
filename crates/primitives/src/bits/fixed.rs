@@ -1,5 +1,8 @@
-use core::{fmt, ops, str};
-use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut};
+use core::{
+    borrow::{Borrow, BorrowMut},
+    fmt, ops, str,
+};
+use derive_more::{Deref, DerefMut, From, Index, IndexMut};
 
 /// A bytearray of fixed length.
 ///
@@ -8,32 +11,19 @@ use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut};
 /// byte arrays. Users looking to prevent type-confusion between byte arrays of
 /// different lengths should use the [`crate::wrap_fixed_bytes`] macro to
 /// create a new fixed-length byte array type.
+#[derive(
+    Deref, DerefMut, From, Hash, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Index, IndexMut,
+)]
 #[cfg_attr(
     feature = "arbitrary",
     derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
-)]
-#[derive(
-    AsRef,
-    AsMut,
-    Deref,
-    DerefMut,
-    From,
-    Hash,
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Index,
-    IndexMut,
 )]
 #[repr(transparent)]
 pub struct FixedBytes<const N: usize>(pub [u8; N]);
 
 impl<const N: usize> Default for FixedBytes<N> {
     fn default() -> Self {
-        FixedBytes([0; N])
+        Self::ZERO
     }
 }
 
@@ -46,7 +36,7 @@ impl<'a, const N: usize> From<&'a [u8; N]> for FixedBytes<N> {
     /// The given bytes are interpreted in big endian order.
     #[inline]
     fn from(bytes: &'a [u8; N]) -> Self {
-        FixedBytes(*bytes)
+        Self(*bytes)
     }
 }
 
@@ -59,7 +49,7 @@ impl<'a, const N: usize> From<&'a mut [u8; N]> for FixedBytes<N> {
     /// The given bytes are interpreted in big endian order.
     #[inline]
     fn from(bytes: &'a mut [u8; N]) -> Self {
-        FixedBytes(*bytes)
+        Self(*bytes)
     }
 }
 
@@ -70,27 +60,90 @@ impl<const N: usize> From<FixedBytes<N>> for [u8; N] {
     }
 }
 
+// Borrow is not implemented for references
+macro_rules! borrow_impls {
+    (impl Borrow<$t:ty> for $($b:ty),+) => {$(
+        impl<const N: usize> Borrow<$t> for $b {
+            #[inline]
+            fn borrow(&self) -> &$t {
+                &self.0
+            }
+        }
+    )+};
+
+    (impl BorrowMut<$t:ty> for $($b:ty),+) => {$(
+        impl<const N: usize> BorrowMut<$t> for $b {
+            #[inline]
+            fn borrow_mut(&mut self) -> &mut $t {
+                &mut self.0
+            }
+        }
+    )+};
+}
+
+borrow_impls!(impl Borrow<[u8]>       for FixedBytes<N>, &mut FixedBytes<N>, &FixedBytes<N>);
+borrow_impls!(impl Borrow<[u8; N]>    for FixedBytes<N>, &mut FixedBytes<N>, &FixedBytes<N>);
+borrow_impls!(impl BorrowMut<[u8]>    for FixedBytes<N>, &mut FixedBytes<N>);
+borrow_impls!(impl BorrowMut<[u8; N]> for FixedBytes<N>, &mut FixedBytes<N>);
+
 impl<const N: usize> AsRef<[u8]> for FixedBytes<N> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
-        self.as_bytes()
+        &self.0
     }
 }
 
 impl<const N: usize> AsMut<[u8]> for FixedBytes<N> {
     #[inline]
     fn as_mut(&mut self) -> &mut [u8] {
-        self.as_bytes_mut()
+        &mut self.0
+    }
+}
+
+impl<const N: usize> AsRef<[u8; N]> for FixedBytes<N> {
+    #[inline]
+    fn as_ref(&self) -> &[u8; N] {
+        &self.0
+    }
+}
+
+impl<const N: usize> AsMut<[u8; N]> for FixedBytes<N> {
+    #[inline]
+    fn as_mut(&mut self) -> &mut [u8; N] {
+        &mut self.0
     }
 }
 
 impl<const N: usize> FixedBytes<N> {
     /// Array of Zero bytes.
-    pub const ZERO: FixedBytes<N> = FixedBytes([0u8; N]);
+    pub const ZERO: Self = Self([0u8; N]);
 
     /// Instantiates a new fixed hash from the given bytes array.
+    #[inline]
     pub const fn new(bytes: [u8; N]) -> Self {
-        FixedBytes(bytes)
+        Self(bytes)
+    }
+
+    /// Utility function to create a fixed hash with the last byte set to `x`.
+    #[inline]
+    pub const fn with_last_byte(x: u8) -> Self {
+        let mut bytes = [0u8; N];
+        bytes[N - 1] = x;
+        Self(bytes)
+    }
+
+    /// Instantiates a new fixed hash with cryptographically random content.
+    #[inline]
+    pub fn random() -> Self {
+        Self::try_random().unwrap()
+    }
+
+    /// Instantiates a new fixed hash with cryptographically random content.
+    pub fn try_random() -> Result<Self, getrandom::Error> {
+        let mut bytes: [_; N] = super::impl_core::uninit_array();
+        getrandom::getrandom_uninit(&mut bytes)?;
+        // SAFETY: The array is initialized by getrandom_uninit.
+        Ok(Self(unsafe { super::impl_core::array_assume_init(bytes) }))
     }
 
     /// Concatenate two `FixedBytes`. Due to rust constraints, the user must
@@ -99,31 +152,24 @@ impl<const N: usize> FixedBytes<N> {
         self,
         other: FixedBytes<M>,
     ) -> FixedBytes<Z> {
-        assert!(N + M == Z, "Output size must be sum of input sizes");
+        assert!(
+            N + M == Z,
+            "Output size `Z` must equal the sum of the input sizes `M` and `N`"
+        );
 
         let mut result = [0u8; Z];
-
-        let i = 0;
-        loop {
+        let mut i = 0;
+        while i < Z {
             result[i] = if i >= N { other.0[i - N] } else { self.0[i] };
-            if i == Z {
-                break
-            }
+            i += 1;
         }
-
         FixedBytes(result)
     }
 
     /// Returns a new fixed hash where all bits are set to the given byte.
     #[inline]
-    pub const fn repeat_byte(byte: u8) -> FixedBytes<N> {
-        FixedBytes([byte; N])
-    }
-
-    /// Returns a new zero-initialized fixed hash.
-    #[inline]
-    pub const fn zero() -> FixedBytes<N> {
-        FixedBytes::repeat_byte(0u8)
+    pub const fn repeat_byte(byte: u8) -> Self {
+        Self([byte; N])
     }
 
     /// Returns the size of this hash in bytes.
@@ -165,13 +211,13 @@ impl<const N: usize> FixedBytes<N> {
     /// Returns a constant raw pointer to the value.
     #[inline]
     pub const fn as_ptr(&self) -> *const u8 {
-        self.as_bytes().as_ptr()
+        self.0.as_ptr()
     }
 
     /// Returns a mutable raw pointer to the value.
     #[inline]
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
-        self.as_bytes_mut().as_mut_ptr()
+        self.0.as_mut_ptr()
     }
 
     /// Create a new fixed-hash from the given slice `src`.
@@ -185,13 +231,12 @@ impl<const N: usize> FixedBytes<N> {
     /// If the length of `src` and the number of bytes in `Self` do not match.
     #[track_caller]
     pub fn from_slice(src: &[u8]) -> Self {
-        let mut ret = Self::zero();
-        ret.copy_from_slice(src);
-        ret
+        let mut bytes = [0; N];
+        bytes.copy_from_slice(src);
+        Self(bytes)
     }
 
     /// Returns `true` if all bits set in `b` are also set in `self`.
-
     #[inline]
     pub fn covers(&self, b: &Self) -> bool {
         &(*b & *self) == b
@@ -209,7 +254,7 @@ impl<const N: usize> FixedBytes<N> {
 
     /// Compile-time equality. NOT constant-time equality.
     #[inline]
-    pub const fn const_eq(&self, other: Self) -> bool {
+    pub const fn const_eq(&self, other: &Self) -> bool {
         let mut i = 0;
         loop {
             if self.0[i] != other.0[i] {
@@ -227,7 +272,7 @@ impl<const N: usize> FixedBytes<N> {
     /// Returns `true` if no bits are set.
     #[inline]
     pub const fn const_is_zero(&self) -> bool {
-        self.const_eq(Self::ZERO)
+        self.const_eq(&Self::ZERO)
     }
 
     /// Computes the bitwise AND of two `FixedBytes`.
@@ -399,6 +444,16 @@ mod tests {
                 $expected
             );
         )+};
+    }
+
+    #[test]
+    fn concat_const() {
+        const A: FixedBytes<2> = FixedBytes(hex!("0123"));
+        const B: FixedBytes<2> = FixedBytes(hex!("4567"));
+        const EXPECTED: FixedBytes<4> = FixedBytes(hex!("01234567"));
+        const ACTUAL: FixedBytes<4> = A.concat_const(B);
+
+        assert_eq!(ACTUAL, EXPECTED);
     }
 
     #[test]

@@ -220,7 +220,7 @@ macro_rules! impl_int_sol_type {
 
             #[inline]
             fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-                rust.borrow().to_be_bytes().into()
+                rust.borrow().to_be_bytes::<32>().into()
             }
 
             #[inline]
@@ -230,7 +230,7 @@ macro_rules! impl_int_sol_type {
 
             #[inline]
             fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-                target.extend(rust.borrow().to_be_bytes());
+                target.extend(rust.borrow().to_be_bytes::<32>());
             }
         }
     )+};
@@ -781,7 +781,7 @@ impl SolType for () {
 
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(_rust: B) -> Word {
-        Word::zero()
+        Word::ZERO
     }
 
     #[inline]

@@ -20,7 +20,7 @@ macro_rules! wrap_fixed_bytes {
         $(#[$attrs:meta])*
         $name:ident<$n:literal>
     ) => {
-        wrap_fixed_bytes!(
+        $crate::wrap_fixed_bytes!(
             name_str: stringify!($name),
             num_str: stringify!($n),
             $(#[$attrs])*
@@ -39,13 +39,13 @@ macro_rules! wrap_fixed_bytes {
         #[doc = $sname]
         #[doc = " and containing "]
         #[doc = $sn]
-        #[doc = " bytes"]
+        #[doc = " bytes."]
         #[derive(
-            $crate::derive_more::AsRef,
-            $crate::derive_more::AsMut,
-            $crate::derive_more::Deref,
-            $crate::derive_more::DerefMut,
-            $crate::derive_more::From,
+            $crate::private::derive_more::AsRef,
+            $crate::private::derive_more::AsMut,
+            $crate::private::derive_more::Deref,
+            $crate::private::derive_more::DerefMut,
+            $crate::private::derive_more::From,
             Hash,
             Copy,
             Clone,
@@ -54,83 +54,113 @@ macro_rules! wrap_fixed_bytes {
             PartialOrd,
             Ord,
             Default,
-            $crate::derive_more::Index,
-            $crate::derive_more::IndexMut,
-            $crate::derive_more::BitAnd,
-            $crate::derive_more::BitOr,
-            $crate::derive_more::BitXor,
-            $crate::derive_more::BitAndAssign,
-            $crate::derive_more::BitOrAssign,
-            $crate::derive_more::BitXorAssign,
-            $crate::derive_more::FromStr,
-            $crate::derive_more::LowerHex,
-            $crate::derive_more::UpperHex,
+            $crate::private::derive_more::Index,
+            $crate::private::derive_more::IndexMut,
+            $crate::private::derive_more::BitAnd,
+            $crate::private::derive_more::BitOr,
+            $crate::private::derive_more::BitXor,
+            $crate::private::derive_more::BitAndAssign,
+            $crate::private::derive_more::BitOrAssign,
+            $crate::private::derive_more::BitXorAssign,
+            $crate::private::derive_more::FromStr,
+            $crate::private::derive_more::LowerHex,
+            $crate::private::derive_more::UpperHex,
         )]
-        pub struct $name($crate::FixedBytes<$n>);
+        pub struct $name(pub $crate::FixedBytes<$n>);
 
-        impl<'a> From<[u8; $n]> for $name {
+        impl From<[u8; $n]> for $name {
             #[inline]
-            fn from(bytes: [u8; $n]) -> Self {
-                Self(bytes.into())
+            fn from(value: [u8; $n]) -> Self {
+                Self(value.into())
+            }
+        }
+
+        impl From<$name> for [u8; $n] {
+            #[inline]
+            fn from(value: $name) -> Self {
+                value.0.0
             }
         }
 
         impl<'a> From<&'a [u8; $n]> for $name {
             #[inline]
-            fn from(bytes: &'a [u8; $n]) -> Self {
-                Self(bytes.into())
+            fn from(value: &'a [u8; $n]) -> Self {
+                Self(value.into())
             }
         }
 
         impl AsRef<[u8]> for $name {
             #[inline]
             fn as_ref(&self) -> &[u8] {
-                self.as_bytes()
+                &self.0.0
             }
         }
 
         impl AsMut<[u8]> for $name {
             #[inline]
             fn as_mut(&mut self) -> &mut [u8] {
-                self.as_bytes_mut()
+                &mut self.0.0
             }
         }
 
         impl $name {
+            /// Array of Zero bytes.
+            pub const ZERO: Self = Self($crate::FixedBytes::ZERO);
+
             /// Returns a new fixed hash from the given bytes array.
+            #[inline]
             pub const fn new(bytes: [u8; $n]) -> Self {
                 Self($crate::FixedBytes(bytes))
             }
+
+            /// Utility function to create a fixed hash with the last byte set to `x`.
+            #[inline]
+            pub const fn with_last_byte(x: u8) -> Self {
+                Self($crate::FixedBytes::with_last_byte(x))
+            }
+
+            /// Instantiates a new fixed hash with cryptographically random content.
+            #[inline]
+            pub fn random() -> Self {
+                Self($crate::FixedBytes::random())
+            }
+
+            /// Instantiates a new fixed hash with cryptographically random content.
+            #[inline]
+            pub fn try_random() -> ::core::result::Result<Self, $crate::private::getrandom::Error> {
+                $crate::FixedBytes::try_random().map(Self)
+            }
+
             /// Returns a new fixed hash where all bits are set to the given byte.
             #[inline]
             pub const fn repeat_byte(byte: u8) -> Self {
                 Self($crate::FixedBytes::repeat_byte(byte))
             }
-            /// Returns a new zero-initialized fixed hash.
-            #[inline]
-            pub const fn zero() -> Self {
-                Self($crate::FixedBytes::repeat_byte(0u8))
-            }
+
             /// Returns the size of this hash in bytes.
             #[inline]
             pub const fn len_bytes() -> usize {
                 $n
             }
+
             /// Extracts a byte slice containing the entire fixed hash.
             #[inline]
             pub const fn as_bytes(&self) -> &[u8] {
                 self.0.as_bytes()
             }
+
             /// Extracts a mutable byte slice containing the entire fixed hash.
             #[inline]
             pub fn as_bytes_mut(&mut self) -> &mut [u8] {
                 self.0.as_bytes_mut()
             }
+
             /// Extracts a reference to the byte array containing the entire fixed hash.
             #[inline]
             pub const fn as_fixed_bytes(&self) -> &[u8; $n] {
                 self.0.as_fixed_bytes()
             }
+
             /// Extracts a reference to the byte array containing the entire fixed hash.
             #[inline]
             pub fn as_fixed_bytes_mut(&mut self) -> &mut [u8; $n] {
@@ -171,48 +201,55 @@ macro_rules! wrap_fixed_bytes {
             pub fn covers(&self, b: &Self) -> bool {
                 &(*b & *self) == b
             }
+
             /// Returns `true` if no bits are set.
             #[inline]
             pub fn is_zero(&self) -> bool {
                 self.as_bytes().iter().all(|&byte| byte == 0u8)
             }
+
             /// Compile-time equality. NOT constant-time equality.
-            pub const fn const_eq(&self, other: Self) -> bool {
-                self.0.const_eq(other.0)
+            pub const fn const_eq(&self, other: &Self) -> bool {
+                self.0.const_eq(&other.0)
             }
+
             /// Returns `true` if no bits are set.
             #[inline]
             pub const fn const_is_zero(&self) -> bool {
                 self.0.const_is_zero()
             }
+
             /// Computes the bitwise AND of two `FixedBytes`.
             pub const fn bit_and(self, rhs: Self) -> Self {
                 Self(self.0.bit_and(rhs.0))
             }
+
             /// Computes the bitwise OR of two `FixedBytes`.
             pub const fn bit_or(self, rhs: Self) -> Self {
                 Self(self.0.bit_or(rhs.0))
             }
+
             /// Computes the bitwise XOR of two `FixedBytes`.
             pub const fn bit_xor(self, rhs: Self) -> Self {
                 Self(self.0.bit_xor(rhs.0))
             }
         }
 
-        impl core::fmt::Debug for $name {
+        impl ::core::fmt::Debug for $name {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                core::fmt::Debug::fmt(&self.0, f)
+                ::core::fmt::Debug::fmt(&self.0, f)
             }
         }
 
-        impl core::fmt::Display for $name {
+        impl ::core::fmt::Display for $name {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                core::fmt::Display::fmt(&self.0, f)
+                ::core::fmt::Display::fmt(&self.0, f)
             }
         }
 
         $crate::impl_rlp!($name);
         $crate::impl_serde!($name);
+        $crate::impl_arbitrary!($name, $n);
     };
 }
 
@@ -221,19 +258,22 @@ macro_rules! wrap_fixed_bytes {
 #[cfg(feature = "rlp")]
 macro_rules! impl_rlp {
     ($t:ty) => {
-        impl ethers_rlp::Decodable for $t {
-            fn decode(buf: &mut &[u8]) -> Result<Self, ethers_rlp::DecodeError> {
-                ethers_rlp::Decodable::decode(buf).map(Self)
+        impl $crate::private::ethers_rlp::Decodable for $t {
+            #[inline]
+            fn decode(buf: &mut &[u8]) -> Result<Self, $crate::private::ethers_rlp::DecodeError> {
+                $crate::private::ethers_rlp::Decodable::decode(buf).map(Self)
             }
         }
 
-        impl ethers_rlp::Encodable for $t {
+        impl $crate::private::ethers_rlp::Encodable for $t {
+            #[inline]
             fn length(&self) -> usize {
-                self.0.length()
+                $crate::private::ethers_rlp::Encodable::length(&self.0)
             }
 
+            #[inline]
             fn encode(&self, out: &mut dyn bytes::BufMut) {
-                self.0.encode(out)
+                $crate::private::ethers_rlp::Encodable::encode(&self.0, out)
             }
         }
     };
@@ -251,15 +291,19 @@ macro_rules! impl_rlp {
 #[cfg(feature = "serde")]
 macro_rules! impl_serde {
     ($t:ty) => {
-        impl serde::Serialize for $t {
+        impl $crate::private::serde::Serialize for $t {
+            #[inline]
             fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                serde::Serialize::serialize(&self.0, serializer)
+                $crate::private::serde::Serialize::serialize(&self.0, serializer)
             }
         }
 
-        impl<'de> serde::Deserialize<'de> for $t {
-            fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-                serde::Deserialize::deserialize(deserializer).map(Self)
+        impl<'de> $crate::private::serde::Deserialize<'de> for $t {
+            #[inline]
+            fn deserialize<D: $crate::private::serde::Deserializer<'de>>(
+                deserializer: D,
+            ) -> Result<Self, D::Error> {
+                $crate::private::serde::Deserialize::deserialize(deserializer).map(Self)
             }
         }
     };
@@ -270,4 +314,55 @@ macro_rules! impl_serde {
 #[cfg(not(feature = "serde"))]
 macro_rules! impl_serde {
     ($t:ty) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary {
+    ($t:ty, $n:literal) => {
+        impl<'a> $crate::private::arbitrary::Arbitrary<'a> for $t {
+            #[inline]
+            fn arbitrary(u: &mut $crate::private::arbitrary::Unstructured<'a>) -> $crate::private::arbitrary::Result<Self> {
+                <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::arbitrary(u).map(Self)
+            }
+
+            #[inline]
+            fn arbitrary_take_rest(u: $crate::private::arbitrary::Unstructured<'a>) -> $crate::private::arbitrary::Result<Self> {
+                <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::arbitrary_take_rest(u).map(Self)
+            }
+
+            #[inline]
+            fn size_hint(depth: usize) -> (usize, Option<usize>) {
+                <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::size_hint(depth)
+            }
+        }
+
+        impl $crate::private::proptest::arbitrary::Arbitrary for $t {
+            type Parameters = <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::Parameters;
+            type Strategy = $crate::private::proptest::strategy::Map<
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::Strategy,
+                fn($crate::FixedBytes<$n>) -> Self,
+            >;
+
+            #[inline]
+            fn arbitrary() -> Self::Strategy {
+                use $crate::private::proptest::strategy::Strategy;
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary().prop_map(Self)
+            }
+
+            #[inline]
+            fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
+                use $crate::private::proptest::strategy::Strategy;
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary_with(args).prop_map(Self)
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "arbitrary"))]
+macro_rules! impl_arbitrary {
+    ($t:ty, $n:literal) => {};
 }

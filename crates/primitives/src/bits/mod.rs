@@ -1,20 +1,33 @@
 mod address;
 pub use address::{Address, AddressError};
 
+mod bloom;
+pub use bloom::{Bloom, BloomInput, BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS, BLOOM_SIZE_BYTES};
+
 mod fixed;
 pub use fixed::FixedBytes;
 
 mod macros;
 
-// code stolen from: https://docs.rs/impl-serde/0.4.0/impl_serde/
-#[cfg(feature = "serde")]
-mod serialize;
-
 #[cfg(feature = "rlp")]
 mod rlp;
 
+#[cfg(feature = "serde")]
+mod serde;
+
+mod impl_core;
+
+/// 8-byte fixed array type.
+pub type B64 = FixedBytes<8>;
+
+/// 16-byte fixed array type.
+pub type B128 = FixedBytes<16>;
+
 /// 32-byte fixed array type.
 pub type B256 = FixedBytes<32>;
+
+/// 64-byte fixed array type.
+pub type B512 = FixedBytes<64>;
 
 impl From<crate::U256> for B256 {
     #[inline]
