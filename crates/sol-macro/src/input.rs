@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    common::kw,
+    common::{kw, SolIdent},
     error::Error,
     function::Function,
     r#struct::Struct,
@@ -137,7 +137,7 @@ impl Input {
     /// Resolves all [Function] overloads by appending the index at the end of
     /// the name.
     fn resolve_function_overloads(&mut self) -> Result<()> {
-        let all_orig_names: Vec<String> = self.functions().map(|f| f.name.as_string()).collect();
+        let all_orig_names: Vec<SolIdent> = self.functions().map(|f| f.name.clone()).collect();
         let mut all_functions_map = HashMap::with_capacity(self.inputs.len());
         for function in self.functions_mut() {
             all_functions_map
@@ -146,12 +146,12 @@ impl Input {
                 .push(function);
         }
 
-        for functions in all_functions_map.values_mut() {
-            // no overloads
-            if functions.len() < 2 {
-                continue
-            }
+        // Report all errors at the end.
+        // This is OK even if we mutate the functions in the loop, because we
+        // will return an error at the end anyway.
+        let mut errors = Vec::new();
 
+        for functions in all_functions_map.values_mut().filter(|fs| fs.len() >= 2) {
             // check for same parameters
             for (i, a) in functions.iter().enumerate() {
                 for b in functions.iter().skip(i + 1) {
@@ -163,7 +163,7 @@ impl Input {
                         let note = syn::Error::new(b.name.span(), msg);
 
                         err.combine(note);
-                        return Err(err)
+                        errors.push(err);
                     }
                 }
             }
@@ -171,19 +171,35 @@ impl Input {
             for (i, function) in functions.iter_mut().enumerate() {
                 let span = function.name.span();
                 let old_name = function.name.0.unraw();
-                let new_name = format!("{old_name}{i}");
-                if all_orig_names.contains(&new_name) {
+                let new_name = format!("{old_name}_{i}");
+                if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
                     let msg = format!(
                         "function `{old_name}` is overloaded, \
                          but the generated name `{new_name}` is already in use"
                     );
-                    return Err(syn::Error::new(span, msg))
+                    let mut err = syn::Error::new(old_name.span(), msg);
+
+                    let msg = "other declaration is here";
+                    let note = syn::Error::new(other.span(), msg);
+
+                    err.combine(note);
+                    errors.push(err);
                 }
                 function.name.0 = Ident::new(&new_name, span);
             }
         }
 
-        Ok(())
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors
+                .into_iter()
+                .reduce(|mut a, b| {
+                    a.combine(b);
+                    a
+                })
+                .unwrap())
+        }
     }
 
     fn functions(&self) -> impl Iterator<Item = &Function> {

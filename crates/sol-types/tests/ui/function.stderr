@@ -70,44 +70,62 @@ error: expected at least one return type
 47 |     function badReturn2() returns();
    |                                  ^^
 
-error: function `overloadTaken` is overloaded, but the generated name `overloadTaken0` is already in use
+error: function `overloadTaken` is overloaded, but the generated name `overloadTaken_0` is already in use
   --> tests/ui/function.rs:82:14
    |
 82 |     function overloadTaken();
    |              ^^^^^^^^^^^^^
 
-error: function with same name and parameter types defined twice
-  --> tests/ui/function.rs:89:14
+error: other declaration is here
+  --> tests/ui/function.rs:85:14
    |
-89 |     function sameFnOverload();
+85 |     function overloadTaken_0();
+   |              ^^^^^^^^^^^^^^^
+
+error: function `overloadTaken` is overloaded, but the generated name `overloadTaken_1` is already in use
+  --> tests/ui/function.rs:83:14
+   |
+83 |     function overloadTaken(uint256);
+   |              ^^^^^^^^^^^^^
+
+error: other declaration is here
+  --> tests/ui/function.rs:86:14
+   |
+86 |     function overloadTaken_1();
+   |              ^^^^^^^^^^^^^^^
+
+error: function with same name and parameter types defined twice
+  --> tests/ui/function.rs:91:14
+   |
+91 |     function sameFnOverload();
    |              ^^^^^^^^^^^^^^
 
 error: other declaration is here
-  --> tests/ui/function.rs:90:14
+  --> tests/ui/function.rs:92:14
    |
-90 |     function sameFnOverload();
+92 |     function sameFnOverload();
    |              ^^^^^^^^^^^^^^
 
 error: function with same name and parameter types defined twice
-  --> tests/ui/function.rs:94:14
+  --> tests/ui/function.rs:96:14
    |
-94 |     function sameFnTysOverload1(uint256[] memory a);
+96 |     function sameFnTysOverload1(uint256[] memory a);
    |              ^^^^^^^^^^^^^^^^^^
 
 error: other declaration is here
-  --> tests/ui/function.rs:95:14
+  --> tests/ui/function.rs:97:14
    |
-95 |     function sameFnTysOverload1(uint256[] storage b);
+97 |     function sameFnTysOverload1(uint256[] storage b);
    |              ^^^^^^^^^^^^^^^^^^
 
 error: function with same name and parameter types defined twice
-  --> tests/ui/function.rs:99:14
-   |
-99 |     function sameFnTysOverload2(string memory, string storage);
-   |              ^^^^^^^^^^^^^^^^^^
-
-error: other declaration is here
-   --> tests/ui/function.rs:100:14
+   --> tests/ui/function.rs:101:14
     |
-100 |     function sameFnTysOverload2(string storage b, string calldata);
+101 |     function sameFnTysOverload2(string memory, string storage);
+    |              ^^^^^^^^^^^^^^^^^^
+
+error: other declaration is here
+   --> tests/ui/function.rs:102:14
+    |
+102 |     function sameFnTysOverload2(string storage b, string calldata);
     |              ^^^^^^^^^^^^^^^^^^

@@ -82,7 +82,9 @@ sol! {
     function overloadTaken();
     function overloadTaken(uint256);
 
-    function overloadTaken0();
+    function overloadTaken_0();
+    function overloadTaken_1();
+    function overloadTaken_2();
 }
 
 sol! {

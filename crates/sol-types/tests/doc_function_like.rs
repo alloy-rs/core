@@ -24,8 +24,8 @@ sol! {
     /// `decode_raw`, as the generated signature is not valid.
     function foo(uint256 a, uint256 b) external view returns (uint256);
 
-    // These will be `overloaded0`, `overloaded1`, and `overloaded2`, but the
-    // signatures will be as declared.
+    // These will be interpreted as `overloaded_0`, `overloaded_1`, and
+    // `overloaded_2`, but the signatures will be as declared.
     function overloaded();
     function overloaded(uint256) returns (uint256);
     function overloaded(string);
@@ -54,15 +54,15 @@ fn function_like() {
     let call_data = call.encode();
 
     // the signatures are unaffected
-    let _ = overloaded0Call {};
-    assert_call_signature::<overloaded0Call>("overloaded()");
+    let _ = overloaded_0Call {};
+    assert_call_signature::<overloaded_0Call>("overloaded()");
 
-    let _ = overloaded1Call { _0: U256::from(1) };
-    let _ = overloaded1Return { _0: U256::from(2) };
-    assert_call_signature::<overloaded1Call>("overloaded(uint256)");
+    let _ = overloaded_1Call { _0: U256::from(1) };
+    let _ = overloaded_1Return { _0: U256::from(2) };
+    assert_call_signature::<overloaded_1Call>("overloaded(uint256)");
 
-    let _ = overloaded2Call { _0: "hello".into() };
-    assert_call_signature::<overloaded2Call>("overloaded(string)");
+    let _ = overloaded_2Call { _0: "hello".into() };
+    assert_call_signature::<overloaded_2Call>("overloaded(string)");
 
     // error
     assert_error_signature::<MyError>("MyError(uint256,uint256)");
