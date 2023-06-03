@@ -1,4 +1,7 @@
-use crate::{common::kw, r#struct::Struct, udt::Udt};
+use super::{
+    item::{Struct, Udt},
+    kw,
+};
 use proc_macro2::{Literal, Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use std::{
@@ -16,10 +19,11 @@ use syn::{
     Error, Ident, LitInt, Result, Token,
 };
 
+/// An array type.
 #[derive(Clone)]
 pub struct SolArray {
     pub ty: Box<Type>,
-    bracket_token: Bracket,
+    pub bracket_token: Bracket,
     pub size: Option<LitInt>,
 }
 
@@ -76,7 +80,7 @@ impl ToTokens for SolArray {
 }
 
 impl Parse for SolArray {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let ty = input.parse()?;
         Self::wrap(input, ty)
     }
@@ -96,7 +100,7 @@ impl SolArray {
         }
     }
 
-    pub fn wrap(input: ParseStream, ty: Type) -> Result<Self> {
+    pub fn wrap(input: ParseStream<'_>, ty: Type) -> Result<Self> {
         let content;
         Ok(Self {
             ty: Box::new(ty),
@@ -113,10 +117,11 @@ impl SolArray {
     }
 }
 
+/// A tuple type.
 #[derive(Clone)]
 pub struct SolTuple {
-    tuple_token: Option<kw::tuple>,
-    paren_token: Paren,
+    pub tuple_token: Option<kw::tuple>,
+    pub paren_token: Paren,
     pub types: Punctuated<Type, Token![,]>,
 }
 
@@ -154,7 +159,7 @@ impl fmt::Display for SolTuple {
 }
 
 impl Parse for SolTuple {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
         let this = Self {
             tuple_token: input.parse()?,
@@ -270,10 +275,13 @@ impl CustomType {
     }
 }
 
+/// A type name.
+///
+/// Solidity reference: <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.typeName>
 #[derive(Clone)]
 pub enum Type {
     /// `address`
-    Address(Span),
+    Address(Span, Option<kw::payable>),
     /// `bool`
     Bool(Span),
     /// `string`
@@ -300,6 +308,8 @@ pub enum Type {
     /// `(tuple)? ( $($type),* )`
     Tuple(SolTuple),
 
+    // TODO: function type
+    // Function(...),
     /// A custom type, that may or may not be resolved to a Solidity type.
     Custom(CustomType),
 }
@@ -307,7 +317,7 @@ pub enum Type {
 impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Address(_), Self::Address(_)) => true,
+            (Self::Address(..), Self::Address(..)) => true,
             (Self::Bool(_), Self::Bool(_)) => true,
             (Self::String(_), Self::String(_)) => true,
             (Self::Bytes { size: a, .. }, Self::Bytes { size: b, .. }) => a == b,
@@ -327,7 +337,7 @@ impl Hash for Type {
     fn hash<H: Hasher>(&self, state: &mut H) {
         std::mem::discriminant(self).hash(state);
         match self {
-            Self::Address(_) | Self::Bool(_) | Self::String(_) => {}
+            Self::Address(..) | Self::Bool(_) | Self::String(_) => {}
             Self::Bytes { size, .. } => size.hash(state),
             Self::Int { size, .. } => size.hash(state),
             Self::Uint { size, .. } => size.hash(state),
@@ -341,7 +351,8 @@ impl Hash for Type {
 impl fmt::Debug for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Address(_) => f.write_str("Address"),
+            Self::Address(_, None) => f.write_str("Address"),
+            Self::Address(_, Some(_)) => f.write_str("AddressPayable"),
             Self::Bool(_) => f.write_str("Bool"),
             Self::String(_) => f.write_str("String"),
             Self::Bytes { size, .. } => f.debug_tuple("Bytes").field(size).finish(),
@@ -357,7 +368,8 @@ impl fmt::Debug for Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Address(_) => f.write_str("address"),
+            Self::Address(_, None) => f.write_str("address"),
+            Self::Address(_, Some(_)) => f.write_str("address payable"),
             Self::Bool(_) => f.write_str("bool"),
             Self::String(_) => f.write_str("string"),
             Self::Bytes { size, .. } => write_opt(f, "bytes", *size),
@@ -371,7 +383,7 @@ impl fmt::Display for Type {
 }
 
 impl Parse for Type {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let mut candidate = if input.peek(Paren) || input.peek(kw::tuple) {
             Self::Tuple(input.parse()?)
         } else if input.peek(Ident::peek_any) {
@@ -379,7 +391,7 @@ impl Parse for Type {
             let span = ident.span();
             let s = ident.to_string();
             match s.as_str() {
-                "address" => Self::Address(span),
+                "address" => Self::Address(span, input.parse()?),
                 "bool" => Self::Bool(span),
                 "string" => Self::String(span),
                 s => {
@@ -438,7 +450,9 @@ impl Parse for Type {
 impl ToTokens for Type {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let expanded = match *self {
-            Self::Address(span) => quote_spanned! {span=> ::ethers_sol_types::sol_data::Address },
+            Self::Address(span, _) => {
+                quote_spanned! {span=> ::ethers_sol_types::sol_data::Address }
+            }
             Self::Bool(span) => quote_spanned! {span=> ::ethers_sol_types::sol_data::Bool },
             Self::String(span) => quote_spanned! {span=> ::ethers_sol_types::sol_data::String },
 
@@ -483,8 +497,10 @@ impl Type {
 
     pub fn span(&self) -> Span {
         match self {
-            Self::Address(span)
-            | Self::Bool(span)
+            &Self::Address(span, payable) => {
+                payable.and_then(|kw| span.join(kw.span)).unwrap_or(span)
+            }
+            Self::Bool(span)
             | Self::String(span)
             | Self::Bytes { span, .. }
             | Self::Int { span, .. }
@@ -497,8 +513,13 @@ impl Type {
 
     pub fn set_span(&mut self, new_span: Span) {
         match self {
-            Self::Address(span)
-            | Self::Bool(span)
+            Self::Address(span, payable) => {
+                *span = new_span;
+                if let Some(kw) = payable {
+                    kw.span = new_span;
+                }
+            }
+            Self::Bool(span)
             | Self::String(span)
             | Self::Bytes { span, .. }
             | Self::Int { span, .. }
@@ -509,7 +530,7 @@ impl Type {
         }
     }
 
-    /// Returns whether a [Storage][crate::common::Storage] location can be
+    /// Returns whether a [Storage][crate::ast::Storage] location can be
     /// specified for this type.
     pub fn can_have_storage(&self) -> bool {
         self.is_dynamic() || self.is_struct()
@@ -570,7 +591,7 @@ impl Type {
     pub fn base_data_size(&self) -> usize {
         match self {
             // static types: 1 word
-            Self::Address(_)
+            Self::Address(..)
             | Self::Bool(_)
             | Self::Int { .. }
             | Self::Uint { .. }
@@ -600,7 +621,7 @@ impl Type {
     pub fn data_size(&self, field: TokenStream) -> TokenStream {
         match self {
             // static types: 1 word
-            Self::Address(_)
+            Self::Address(..)
             | Self::Bool(_)
             | Self::Int { .. }
             | Self::Uint { .. }

@@ -1,59 +1,12 @@
+use super::kw;
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
     parse::{Parse, ParseStream},
-    spanned::Spanned,
     Result,
 };
 
-mod attribute;
-pub use attribute::{
-    FunctionAttribute, FunctionAttributes, Modifier, Mutability, Override, VariableAttribute,
-    VariableAttributes, Visibility,
-};
-
-mod ident;
-pub use ident::{is_id_continue, is_id_start, is_ident, SolIdent, SolPath};
-
-mod variable;
-pub use variable::{Parameters, VariableDeclaration};
-
-mod utils;
-pub use utils::*;
-
-pub mod kw {
-    use syn::custom_keyword;
-    pub use syn::token::{Override, Virtual};
-
-    custom_keyword!(is);
-
-    // Types
-    custom_keyword!(error);
-    custom_keyword!(function);
-    custom_keyword!(tuple);
-
-    // Visibility
-    custom_keyword!(external);
-    custom_keyword!(public);
-    custom_keyword!(internal);
-    custom_keyword!(private);
-
-    // Mutability
-    custom_keyword!(pure);
-    custom_keyword!(view);
-    custom_keyword!(constant);
-    custom_keyword!(payable);
-
-    // Function
-    custom_keyword!(immutable);
-    custom_keyword!(returns);
-
-    // Storage
-    custom_keyword!(memory);
-    custom_keyword!(storage);
-    custom_keyword!(calldata);
-}
-
+/// A storage location.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Storage {
     Memory(kw::memory),
@@ -74,7 +27,7 @@ impl fmt::Display for Storage {
 }
 
 impl Parse for Storage {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(kw::memory) {
             Ok(Self::Memory(input.parse()?))
@@ -91,9 +44,17 @@ impl Parse for Storage {
 impl Storage {
     pub fn span(&self) -> Span {
         match self {
-            Self::Memory(kw) => kw.span(),
-            Self::Storage(kw) => kw.span(),
-            Self::Calldata(kw) => kw.span(),
+            Self::Memory(kw) => kw.span,
+            Self::Storage(kw) => kw.span,
+            Self::Calldata(kw) => kw.span,
+        }
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        match self {
+            Self::Memory(kw) => kw.span = span,
+            Self::Storage(kw) => kw.span = span,
+            Self::Calldata(kw) => kw.span = span,
         }
     }
 

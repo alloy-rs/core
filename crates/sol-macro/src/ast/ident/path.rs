@@ -8,6 +8,7 @@ use syn::{
     Result, Token,
 };
 
+/// A path of identifiers, separated by dots.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct SolPath(pub Punctuated<SolIdent, Token![.]>);
 
@@ -29,7 +30,7 @@ impl fmt::Display for SolPath {
 }
 
 impl Parse for SolPath {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         // Modified from: `syn::Path::parse_mod_style`
         let mut segments = Punctuated::new();
         loop {
@@ -59,5 +60,11 @@ impl SolPath {
         let first = path.next().unwrap().span();
 
         path.fold(first, |span, ident| span.join(ident.span()).unwrap_or(span))
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        for ident in self.0.iter_mut() {
+            ident.set_span(span);
+        }
     }
 }

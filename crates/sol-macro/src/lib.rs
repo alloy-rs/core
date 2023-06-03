@@ -6,17 +6,15 @@
 //!
 //! Refer to the [macro's documentation][sol!] for more information.
 
+// #![warn(missing_docs)] // TODO: Enable for AST crate.
+#![deny(unused_must_use, rust_2018_idioms)]
+
 use proc_macro::TokenStream;
-use quote::ToTokens;
 use syn::parse_macro_input;
 
-mod common;
-mod error;
-mod function;
-mod input;
-mod r#struct;
-mod r#type;
-mod udt;
+mod ast;
+mod expand;
+mod utils;
 
 /// Parses Solidity syntax to generate types that implement [`ethers-sol-types`]
 /// traits.
@@ -36,27 +34,27 @@ mod udt;
 ///
 /// [tests]: https://github.com/ethers-rs/core/tree/main/crates/sol-types/tests/
 ///
-/// Structs and enums:
+/// ## Structs and enums
 /// ```ignore
 #[doc = include_str!("../../sol-types/tests/doc_structs.rs")]
 /// ```
 /// 
-/// UDVT and type aliases:
+/// ## UDVT and type aliases
 /// ```ignore
 #[doc = include_str!("../../sol-types/tests/doc_types.rs")]
 /// ```
 /// 
-/// Functions, errors, and events:
+/// ## Functions, errors, and events
 /// ```ignore
 #[doc = include_str!("../../sol-types/tests/doc_function_like.rs")]
 /// ```
 /// 
-/// Contracts/interfaces:
+/// ## Contracts/interfaces
 /// ```ignore
 #[doc = include_str!("../../sol-types/tests/doc_contracts.rs")]
 /// ```
 #[proc_macro]
 pub fn sol(input: TokenStream) -> TokenStream {
-    let s = parse_macro_input!(input as input::Input);
-    s.to_token_stream().into()
+    let ast = parse_macro_input!(input as ast::File);
+    expand::expand(ast).into()
 }
