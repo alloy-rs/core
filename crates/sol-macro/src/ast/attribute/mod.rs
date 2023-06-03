@@ -1,4 +1,4 @@
-use super::{ident::SolPath, kw};
+use super::{kw, SolPath};
 use proc_macro2::{Span, TokenStream};
 use std::{
     fmt,
@@ -19,6 +19,7 @@ pub use function::{FunctionAttribute, FunctionAttributes};
 mod variable;
 pub use variable::{VariableAttribute, VariableAttributes};
 
+/// A visibility attribute.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Visibility {
     External(kw::external),
@@ -40,7 +41,7 @@ impl fmt::Display for Visibility {
 }
 
 impl Parse for Visibility {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(kw::external) {
             Ok(Self::External(input.parse()?))
@@ -63,6 +64,15 @@ impl Visibility {
             Self::Public(kw) => kw.span(),
             Self::Internal(kw) => kw.span(),
             Self::Private(kw) => kw.span(),
+        }
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        match self {
+            Self::External(kw) => kw.span = span,
+            Self::Public(kw) => kw.span = span,
+            Self::Internal(kw) => kw.span = span,
+            Self::Private(kw) => kw.span = span,
         }
     }
 
@@ -106,7 +116,7 @@ impl fmt::Display for Mutability {
 }
 
 impl Parse for Mutability {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(kw::pure) {
             Ok(Self::Pure(input.parse()?))
@@ -132,6 +142,15 @@ impl Mutability {
         }
     }
 
+    pub fn set_span(&mut self, span: Span) {
+        match self {
+            Self::Pure(kw) => kw.span = span,
+            Self::View(kw) => kw.span = span,
+            Self::Constant(kw) => kw.span = span,
+            Self::Payable(kw) => kw.span = span,
+        }
+    }
+
     pub const fn as_debug_str(&self) -> &'static str {
         match self {
             Self::Pure(_) => "Pure",
@@ -151,11 +170,12 @@ impl Mutability {
     }
 }
 
+/// The `override` attribute.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Override {
-    override_token: kw::Override,
-    paren_token: Option<Paren>,
-    paths: Punctuated<SolPath, Token![,]>,
+    pub override_token: kw::Override,
+    pub paren_token: Option<Paren>,
+    pub paths: Punctuated<SolPath, Token![,]>,
 }
 
 impl fmt::Debug for Override {
@@ -182,7 +202,7 @@ impl fmt::Display for Override {
 }
 
 impl Parse for Override {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let override_token = input.parse()?;
         let this = if input.peek(Paren) {
             let content;
@@ -205,19 +225,26 @@ impl Parse for Override {
 impl Override {
     pub fn span(&self) -> Span {
         let span = self.override_token.span;
-        match &self.paren_token {
-            Some(paren_token) => span.join(paren_token.span.join()).unwrap_or(span),
-            None => span,
+        self.paren_token
+            .and_then(|paren_token| span.join(paren_token.span.join()))
+            .unwrap_or(span)
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.override_token.span = span;
+        if let Some(paren_token) = &mut self.paren_token {
+            *paren_token = Paren(span);
         }
     }
 }
 
+/// A modifier invocation, or an inheritance specifier.
 #[derive(Clone)]
 pub struct Modifier {
-    name: SolPath,
-    paren_token: Paren,
+    pub name: SolPath,
+    pub paren_token: Paren,
     // TODO: Expr
-    arguments: Punctuated<TokenStream, Token![,]>,
+    pub arguments: Punctuated<TokenStream, Token![,]>,
 }
 
 impl PartialEq for Modifier {
@@ -244,7 +271,7 @@ impl fmt::Debug for Modifier {
 }
 
 impl Parse for Modifier {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
         Ok(Self {
             name: input.parse()?,
@@ -258,5 +285,10 @@ impl Modifier {
     pub fn span(&self) -> Span {
         let span = self.name.span();
         span.join(self.paren_token.span.join()).unwrap_or(span)
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.name.set_span(span);
+        self.paren_token = Paren(span);
     }
 }

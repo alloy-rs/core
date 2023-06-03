@@ -1,5 +1,5 @@
-use super::{keccak256, kw, SolIdent, Storage};
-use crate::r#type::{CustomType, Type};
+use super::{kw, CustomType, SolIdent, Storage, Type};
+use crate::utils::keccak256;
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use std::{
@@ -13,6 +13,9 @@ use syn::{
     Error, Ident, Result, Token,
 };
 
+/// A list of [VariableDeclaration]s, separated by `P`.
+///
+/// Currently, `P` can only be `Token![,]` or `Token![;]`.
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Parameters<P>(Punctuated<VariableDeclaration, P>);
 
@@ -38,7 +41,7 @@ impl<P> fmt::Debug for Parameters<P> {
 
 /// Parameter list: fields names are set to `_{index}`
 impl Parse for Parameters<Token![,]> {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let mut list = input.parse_terminated(VariableDeclaration::parse, Token![,])?;
 
         // Set names for anonymous parameters
@@ -56,7 +59,7 @@ impl Parse for Parameters<Token![,]> {
 
 /// Struct: enforce semicolon after each field and field name.
 impl Parse for Parameters<Token![;]> {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let this = input.parse_terminated(VariableDeclaration::parse_for_struct, Token![;])?;
         if this.is_empty() {
             Err(input.error("defining empty structs is disallowed"))
@@ -181,12 +184,14 @@ impl<P> Parameters<P> {
     }
 }
 
+/// A variable declaration.
+///
 /// `<ty> [storage] <name>`
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclaration {
     /// The type of the variable.
     pub ty: Type,
-    /// The storage location, if any, of the variable.
+    /// The storage location of the variable, if any.
     pub storage: Option<Storage>,
     /// The name of the variable. This is always Some if parsed as part of
     /// [`Parameters`].
@@ -212,7 +217,7 @@ impl fmt::Display for VariableDeclaration {
 }
 
 impl Parse for VariableDeclaration {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         Self::_parse(input, false)
     }
 }
@@ -245,11 +250,21 @@ impl VariableDeclaration {
         .unwrap_or(span)
     }
 
-    pub fn parse_for_struct(input: ParseStream) -> Result<Self> {
+    pub fn set_span(&mut self, span: Span) {
+        self.ty.set_span(span);
+        if let Some(storage) = &mut self.storage {
+            storage.set_span(span);
+        }
+        if let Some(name) = &mut self.name {
+            name.set_span(span);
+        }
+    }
+
+    pub fn parse_for_struct(input: ParseStream<'_>) -> Result<Self> {
         Self::_parse(input, true)
     }
 
-    fn _parse(input: ParseStream, for_struct: bool) -> Result<Self> {
+    fn _parse(input: ParseStream<'_>, for_struct: bool) -> Result<Self> {
         let ty = input.parse::<Type>()?;
         let can_have_storage = ty.can_have_storage();
         let this = Self {

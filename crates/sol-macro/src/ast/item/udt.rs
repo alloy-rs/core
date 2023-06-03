@@ -1,9 +1,6 @@
-use crate::{
-    common::{kw, SolIdent},
-    r#type::Type,
-};
+use crate::ast::{kw, SolIdent, Type};
 use proc_macro2::{Span, TokenStream};
-use quote::quote;
+use quote::{quote, ToTokens};
 use std::{
     fmt,
     hash::{Hash, Hasher},
@@ -13,13 +10,18 @@ use syn::{
     Attribute, Result, Token,
 };
 
+/// A user-defined value type definition.
+///
+/// Solidity reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.userDefinedValueTypeDefinition>
 #[derive(Clone)]
 pub struct Udt {
-    type_token: Token![type],
+    pub attrs: Vec<Attribute>,
+    pub type_token: Token![type],
     pub name: SolIdent,
-    is: kw::is,
+    pub is_token: kw::is,
     pub ty: Type,
-    semi_token: Token![;],
+    pub semi_token: Token![;],
 }
 
 impl fmt::Debug for Udt {
@@ -47,11 +49,12 @@ impl Hash for Udt {
 }
 
 impl Parse for Udt {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let this = Self {
+            attrs: input.call(Attribute::parse_outer)?,
             type_token: input.parse()?,
             name: input.parse()?,
-            is: input.parse()?,
+            is_token: input.parse()?,
             ty: input.parse()?,
             semi_token: input.parse()?,
         };
@@ -72,21 +75,11 @@ impl Parse for Udt {
     }
 }
 
-impl Udt {
-    pub fn span(&self) -> Span {
-        self.name.span()
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.type_token = Token![type](span);
-        self.name.set_span(span);
-        self.is = kw::is(span);
-        self.ty.set_span(span);
-        self.semi_token = Token![;](span);
-    }
-
-    pub fn to_tokens(&self, tokens: &mut TokenStream, attrs: &[Attribute]) {
-        let Self { name, ty, .. } = self;
+impl ToTokens for Udt {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self {
+            name, ty, attrs, ..
+        } = self;
         tokens.extend(quote! {
             ::ethers_sol_types::define_udt! {
                 #(#attrs)*
@@ -94,5 +87,19 @@ impl Udt {
                 underlying: #ty,
             }
         });
+    }
+}
+
+impl Udt {
+    pub fn span(&self) -> Span {
+        self.name.span()
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.type_token.span = span;
+        self.name.set_span(span);
+        self.is_token.span = span;
+        self.ty.set_span(span);
+        self.semi_token.span = span;
     }
 }

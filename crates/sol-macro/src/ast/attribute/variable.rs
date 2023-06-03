@@ -1,4 +1,4 @@
-use crate::common::{kw, Override, Visibility};
+use super::{kw, Override, Visibility};
 use proc_macro2::Span;
 use std::{
     collections::HashSet,
@@ -11,10 +11,11 @@ use syn::{
     Error, Result,
 };
 
+/// A list of unique variable attributes.
 pub struct VariableAttributes(pub HashSet<VariableAttribute>);
 
 impl Parse for VariableAttributes {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let mut attributes = HashSet::new();
         while let Ok(attribute) = input.parse::<VariableAttribute>() {
             let error = |prev: &VariableAttribute| {
@@ -51,6 +52,7 @@ impl Parse for VariableAttributes {
     }
 }
 
+/// A variable attribute.
 #[derive(Clone)]
 pub enum VariableAttribute {
     Visibility(Visibility),
@@ -74,7 +76,7 @@ impl Hash for VariableAttribute {
 }
 
 impl Parse for VariableAttribute {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(kw::external)
             || lookahead.peek(kw::public)
@@ -101,6 +103,15 @@ impl VariableAttribute {
             Self::Constant(c) => c.span(),
             Self::Override(o) => o.span(),
             Self::Immutable(i) => i.span(),
+        }
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        match self {
+            Self::Visibility(v) => v.set_span(span),
+            Self::Constant(c) => c.span = span,
+            Self::Override(o) => o.set_span(span),
+            Self::Immutable(i) => i.span = span,
         }
     }
 }

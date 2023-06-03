@@ -1,4 +1,4 @@
-use crate::common::{kw, Modifier, Mutability, Override, Visibility};
+use super::{kw, Modifier, Mutability, Override, Visibility};
 use proc_macro2::Span;
 use std::{
     collections::HashSet,
@@ -14,11 +14,13 @@ use syn::{
     Error, Ident, Result, Token,
 };
 
+/// A list of unique function attributes. Used in
+/// [Function][crate::ast::item::Function].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FunctionAttributes(pub HashSet<FunctionAttribute>);
 
 impl Parse for FunctionAttributes {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let mut attributes = HashSet::<FunctionAttribute>::new();
         while !(input.is_empty()
             || input.peek(kw::returns)
@@ -37,6 +39,7 @@ impl Parse for FunctionAttributes {
     }
 }
 
+/// A function attribute.
 #[derive(Clone)]
 pub enum FunctionAttribute {
     Visibility(Visibility),
@@ -62,7 +65,10 @@ impl fmt::Debug for FunctionAttribute {
 
 impl PartialEq for FunctionAttribute {
     fn eq(&self, other: &Self) -> bool {
-        mem::discriminant(self) == mem::discriminant(other)
+        match (self, other) {
+            (Self::Modifier(a), Self::Modifier(b)) => a == b,
+            _ => mem::discriminant(self) == mem::discriminant(other),
+        }
     }
 }
 
@@ -78,7 +84,7 @@ impl Hash for FunctionAttribute {
 }
 
 impl Parse for FunctionAttribute {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(kw::external)
             || lookahead.peek(kw::public)
@@ -118,6 +124,17 @@ impl FunctionAttribute {
             Self::Override(o) => o.span(),
             Self::Immutable(i) => i.span(),
             Self::Modifier(m) => m.span(),
+        }
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        match self {
+            Self::Visibility(v) => v.set_span(span),
+            Self::Mutability(m) => m.set_span(span),
+            Self::Virtual(v) => v.span = span,
+            Self::Override(o) => o.set_span(span),
+            Self::Immutable(i) => i.span = span,
+            Self::Modifier(m) => m.set_span(span),
         }
     }
 }

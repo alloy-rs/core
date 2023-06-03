@@ -173,17 +173,17 @@ const KEYWORDS: &[&str] = &[
 ];
 
 /// Returns true if `c` is valid as a first character of an identifier.
-pub fn is_id_start(c: char) -> bool {
+fn is_id_start(c: char) -> bool {
     matches!(c, '$' | 'A'..='Z' | '_' | 'a'..='z')
 }
 
 /// Returns true if `c` is valid as a non-first character of an identifier.
-pub fn is_id_continue(c: char) -> bool {
+fn is_id_continue(c: char) -> bool {
     matches!(c, '$' | '0'..='9' | 'A'..='Z' | '_' | 'a'..='z')
 }
 
 /// Returns true if `s` is a valid Solidity identifier.
-pub fn is_ident(s: &str) -> bool {
+fn is_ident(s: &str) -> bool {
     let mut chars = s.chars();
     chars.next().map_or(false, |start| {
         is_id_start(start) && chars.all(is_id_continue)
@@ -208,7 +208,7 @@ impl fmt::Debug for SolIdent {
 }
 
 impl Parse for SolIdent {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let ident = input.call(Ident::parse_any)?;
         let s = ident.to_string();
         let s = s.as_str();
