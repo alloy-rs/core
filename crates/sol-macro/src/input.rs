@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    common::kw,
+    common::{kw, SolIdent},
     error::Error,
     function::Function,
     r#struct::Struct,
@@ -42,7 +42,8 @@ impl Parse for Input {
             inputs: parsed_inputs,
         };
         if this.inputs.len() > 1 {
-            this.resolve();
+            this.resolve_custom_types()?;
+            this.resolve_function_overloads()?;
         }
         Ok(this)
     }
@@ -58,12 +59,12 @@ impl ToTokens for Input {
 }
 
 impl Input {
-    fn resolve(&mut self) {
+    /// Resolves custom types in the order they were defined.
+    fn resolve_custom_types(&mut self) -> Result<()> {
         let types = self.custom_type_map();
         if types.is_empty() {
-            return
+            return Ok(())
         }
-        // Resolves types in the order they were defined.
         for _i in 0..RESOLVE_LIMIT {
             let mut any = false;
             self.visit_types(|ty| {
@@ -76,15 +77,17 @@ impl Input {
             });
             if !any {
                 // done
-                return
+                return Ok(())
             }
         }
-        panic!(
+
+        let msg = format!(
             "failed to resolve types after {RESOLVE_LIMIT} iterations.\n\
              This is likely due to an infinitely recursive type definition.\n\
              If you believe this is a bug, please file an issue at \
              https://github.com/ethers-rs/core/issues/new/choose"
         );
+        Err(syn::Error::new(proc_macro2::Span::call_site(), msg))
     }
 
     /// Constructs a map of custom types' names to their definitions.
@@ -101,6 +104,7 @@ impl Input {
         map
     }
 
+    /// Visits all [Type]s in the input.
     fn visit_types(&mut self, mut f: impl FnMut(&mut Type)) {
         for input in &mut self.inputs {
             match &mut input.kind {
@@ -128,6 +132,90 @@ impl Input {
                 }
             }
         }
+    }
+
+    /// Resolves all [Function] overloads by appending the index at the end of
+    /// the name.
+    fn resolve_function_overloads(&mut self) -> Result<()> {
+        let all_orig_names: Vec<SolIdent> = self.functions().map(|f| f.name.clone()).collect();
+        let mut all_functions_map = HashMap::with_capacity(self.inputs.len());
+        for function in self.functions_mut() {
+            all_functions_map
+                .entry(function.name.as_string())
+                .or_insert_with(Vec::new)
+                .push(function);
+        }
+
+        // Report all errors at the end.
+        // This is OK even if we mutate the functions in the loop, because we
+        // will return an error at the end anyway.
+        let mut errors = Vec::new();
+
+        for functions in all_functions_map.values_mut().filter(|fs| fs.len() >= 2) {
+            // check for same parameters
+            for (i, a) in functions.iter().enumerate() {
+                for b in functions.iter().skip(i + 1) {
+                    if a.arguments.types().eq(b.arguments.types()) {
+                        let msg = "function with same name and parameter types defined twice";
+                        let mut err = syn::Error::new(a.name.span(), msg);
+
+                        let msg = "other declaration is here";
+                        let note = syn::Error::new(b.name.span(), msg);
+
+                        err.combine(note);
+                        errors.push(err);
+                    }
+                }
+            }
+
+            for (i, function) in functions.iter_mut().enumerate() {
+                let span = function.name.span();
+                let old_name = function.name.0.unraw();
+                let new_name = format!("{old_name}_{i}");
+                if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
+                    let msg = format!(
+                        "function `{old_name}` is overloaded, \
+                         but the generated name `{new_name}` is already in use"
+                    );
+                    let mut err = syn::Error::new(old_name.span(), msg);
+
+                    let msg = "other declaration is here";
+                    let note = syn::Error::new(other.span(), msg);
+
+                    err.combine(note);
+                    errors.push(err);
+                }
+                function.name.0 = Ident::new(&new_name, span);
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors
+                .into_iter()
+                .reduce(|mut a, b| {
+                    a.combine(b);
+                    a
+                })
+                .unwrap())
+        }
+    }
+
+    fn functions(&self) -> impl Iterator<Item = &Function> {
+        self.inputs.iter().filter_map(|input| match &input.kind {
+            InputKind::Function(function) => Some(function),
+            _ => None,
+        })
+    }
+
+    fn functions_mut(&mut self) -> impl Iterator<Item = &mut Function> {
+        self.inputs
+            .iter_mut()
+            .filter_map(|input| match &mut input.kind {
+                InputKind::Function(function) => Some(function),
+                _ => None,
+            })
     }
 }
 

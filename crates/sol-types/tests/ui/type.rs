@@ -210,4 +210,14 @@ sol! {
     }
 }
 
+sol! {
+    struct RecursiveA {
+        RecursiveB b;
+    }
+
+    struct RecursiveB {
+        RecursiveA a;
+    }
+}
+
 fn main() {}

@@ -58,6 +58,22 @@ error: intX must be a multiple of 8 up to 256
 198 |         int7 a;
     |         ^^^^
 
+error: failed to resolve types after 16 iterations.
+       This is likely due to an infinitely recursive type definition.
+       If you believe this is a bug, please file an issue at https://github.com/ethers-rs/core/issues/new/choose
+   --> tests/ui/type.rs:213:1
+    |
+213 | / sol! {
+214 | |     struct RecursiveA {
+215 | |         RecursiveB b;
+216 | |     }
+...   |
+220 | |     }
+221 | | }
+    | |_^
+    |
+    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
 error[E0412]: cannot find type `bytes_` in this scope
    --> tests/ui/type.rs:204:9
     |

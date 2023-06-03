@@ -68,6 +68,9 @@ impl Returns {
 
 pub struct Function {
     _function_token: kw::function,
+    /// The original name of the function, before any overload renaming.
+    pub original_name: SolIdent,
+    /// The name of the function, after any overload renaming.
     pub name: SolIdent,
     _paren_token: Paren,
     pub arguments: Parameters<Token![,]>,
@@ -96,10 +99,15 @@ impl Parse for Function {
                 input.parse()
             }
         }
+        let name: SolIdent;
         let content;
         Ok(Self {
             _function_token: input.parse()?,
-            name: input.parse()?,
+            original_name: {
+                name = input.parse()?;
+                name.clone()
+            },
+            name,
             _paren_token: parenthesized!(content in input),
             arguments: content.parse()?,
             attributes: parse_check_brace(input)?,
@@ -124,7 +132,7 @@ impl Function {
 
         let fields = params.iter();
 
-        let (signature, selector) = params.sig_and_sel(self.name.as_string());
+        let (signature, selector) = params.sig_and_sel(self.original_name.as_string());
 
         let size = params.data_size(None);
 
@@ -138,7 +146,7 @@ impl Function {
                 #(pub #fields,)*
             }
 
-            #[allow(non_camel_case_types, non_snake_case)]
+            #[allow(non_camel_case_types, non_snake_case, clippy::style)]
             const _: () = {
                 #converts
 

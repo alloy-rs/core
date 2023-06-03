@@ -125,7 +125,7 @@ impl Struct {
                 #(pub #fields),*
             }
 
-            #[allow(non_camel_case_types, non_snake_case)]
+            #[allow(non_camel_case_types, non_snake_case, clippy::style)]
             const _: () = {
                 use ::ethers_sol_types::no_std_prelude::*;
 

@@ -9,15 +9,29 @@ use ethers_sol_types::{sol, SolCall, SolError};
 // generated at compile time.
 
 sol! {
-    // Function definitions generate two types that implement `SolCall`:
-    // 1. `<name>Call`: struct with the function arguments;
-    // 2. `<name>Return`: struct with the return values.
-    // `<name>` is the case-preserved name of the function.
-    //
-    // Currently, return structs should only be used for decoding data using
-    // `decode_raw`, as the generated signature is not valid.
+    /// Function definitions generate two types that implement [`SolCall`]:
+    /// 1. `<name>Call`: struct with the function arguments;
+    /// 2. `<name>Return`: struct with the return values;
+    /// where `<name>` is the case-preserved name of the function.
+    ///
+    /// In the case of overloaded functions, an underscore and the index of the
+    /// function will be appended to `<name>` (like `foo_0`, `foo_1`...) for
+    /// disambiguation, but the signature will remain the same.
+    ///
+    /// Both of these types will have the attributes of the function, like this
+    /// doc comment, but this might change in the future.
+    ///
+    /// Currently, return structs should only be used for decoding data using
+    /// `decode_raw`, as the generated signature is not valid.
     function foo(uint256 a, uint256 b) external view returns (uint256);
 
+    // These will be interpreted as `overloaded_0`, `overloaded_1`, and
+    // `overloaded_2`, but the signatures will be as declared.
+    function overloaded();
+    function overloaded(uint256) returns (uint256);
+    function overloaded(string);
+
+    /// Implements [`SolError`].
     #[derive(Debug, PartialEq)]
     error MyError(uint256 a, uint256 b);
 
@@ -28,11 +42,11 @@ sol! {
 #[test]
 fn function_like() {
     // function
-    let expected_signature = "foo(uint256,uint256)";
-    assert_eq!(fooCall::SIGNATURE, expected_signature);
-    assert_eq!(&fooCall::SELECTOR[..], &keccak256(expected_signature)[..4]);
-    // not actually a valid signature, and it shouldn't be relied upon
-    assert_eq!(fooReturn::SIGNATURE, "foo(uint256)");
+    assert_call_signature::<fooCall>("foo(uint256,uint256)");
+
+    // not actually a valid signature, and it shouldn't be relied upon for
+    // ABI encoding
+    assert_call_signature::<fooReturn>("foo(uint256)");
 
     let call = fooCall {
         a: U256::from(1),
@@ -40,10 +54,19 @@ fn function_like() {
     };
     let call_data = call.encode();
 
+    // the signatures are unaffected
+    let _ = overloaded_0Call {};
+    assert_call_signature::<overloaded_0Call>("overloaded()");
+
+    let _ = overloaded_1Call { _0: U256::from(1) };
+    let _ = overloaded_1Return { _0: U256::from(2) };
+    assert_call_signature::<overloaded_1Call>("overloaded(uint256)");
+
+    let _ = overloaded_2Call { _0: "hello".into() };
+    assert_call_signature::<overloaded_2Call>("overloaded(string)");
+
     // error
-    let expected_signature: &str = "MyError(uint256,uint256)";
-    assert_eq!(MyError::SIGNATURE, expected_signature);
-    assert_eq!(&MyError::SELECTOR[..], &keccak256(expected_signature)[..4]);
+    assert_error_signature::<MyError>("MyError(uint256,uint256)");
 
     assert!(MyError::decode(&call_data, true).is_err());
     assert_eq!(
@@ -53,4 +76,14 @@ fn function_like() {
             b: U256::from(2)
         })
     );
+}
+
+fn assert_call_signature<T: SolCall>(expected: &str) {
+    assert_eq!(T::SIGNATURE, expected);
+    assert_eq!(T::SELECTOR, keccak256(expected)[..4]);
+}
+
+fn assert_error_signature<T: SolError>(expected: &str) {
+    assert_eq!(T::SIGNATURE, expected);
+    assert_eq!(T::SELECTOR, keccak256(expected)[..4]);
 }
