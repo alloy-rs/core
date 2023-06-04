@@ -1,6 +1,5 @@
-use crate::ast::{kw, SolIdent, Type};
-use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens};
+use crate::{kw, SolIdent, Type};
+use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
@@ -10,12 +9,12 @@ use syn::{
     Attribute, Result, Token,
 };
 
-/// A user-defined value type definition.
+/// A user-defined value type definition: `type Foo is uint256;`
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.userDefinedValueTypeDefinition>
 #[derive(Clone)]
-pub struct Udt {
+pub struct ItemUdt {
     pub attrs: Vec<Attribute>,
     pub type_token: Token![type],
     pub name: SolIdent,
@@ -24,7 +23,7 @@ pub struct Udt {
     pub semi_token: Token![;],
 }
 
-impl fmt::Debug for Udt {
+impl fmt::Debug for ItemUdt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Udt")
             .field("name", &self.name)
@@ -33,22 +32,22 @@ impl fmt::Debug for Udt {
     }
 }
 
-impl PartialEq for Udt {
+impl PartialEq for ItemUdt {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.ty == other.ty
     }
 }
 
-impl Eq for Udt {}
+impl Eq for ItemUdt {}
 
-impl Hash for Udt {
+impl Hash for ItemUdt {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name.hash(state);
         self.ty.hash(state);
     }
 }
 
-impl Parse for Udt {
+impl Parse for ItemUdt {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let this = Self {
             attrs: input.call(Attribute::parse_outer)?,
@@ -75,22 +74,7 @@ impl Parse for Udt {
     }
 }
 
-impl ToTokens for Udt {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let Self {
-            name, ty, attrs, ..
-        } = self;
-        tokens.extend(quote! {
-            ::ethers_sol_types::define_udt! {
-                #(#attrs)*
-                #name,
-                underlying: #ty,
-            }
-        });
-    }
-}
-
-impl Udt {
+impl ItemUdt {
     pub fn span(&self) -> Span {
         self.name.span()
     }

@@ -22,9 +22,13 @@ pub use variable::{VariableAttribute, VariableAttributes};
 /// A visibility attribute.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Visibility {
+    /// `external`
     External(kw::external),
+    /// `public`
     Public(kw::public),
+    /// `internal`
     Internal(kw::internal),
+    /// `private`
     Private(kw::private),
 }
 
@@ -95,11 +99,16 @@ impl Visibility {
     }
 }
 
+/// A mutability attribute.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Mutability {
+    /// `pure`
     Pure(kw::pure),
+    /// `view`
     View(kw::view),
+    /// `constant`
     Constant(kw::constant),
+    /// `payable`
     Payable(kw::payable),
 }
 

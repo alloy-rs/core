@@ -1,4 +1,4 @@
-use crate::ast::{kw, Parameters, SolIdent};
+use crate::{kw, Parameters, SolIdent};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -8,11 +8,11 @@ use syn::{
     Attribute, Result, Token,
 };
 
-/// An error definition.
+/// An error definition: `error Foo(uint256 a, uint256 b);`
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.errorDefinition>
-pub struct Error {
+pub struct ItemError {
     pub attrs: Vec<Attribute>,
     pub error_token: kw::error,
     pub name: SolIdent,
@@ -21,7 +21,7 @@ pub struct Error {
     pub semi_token: Token![;],
 }
 
-impl fmt::Debug for Error {
+impl fmt::Debug for ItemError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Error")
             .field("name", &self.name)
@@ -30,7 +30,7 @@ impl fmt::Debug for Error {
     }
 }
 
-impl Parse for Error {
+impl Parse for ItemError {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
         Ok(Self {
@@ -44,8 +44,12 @@ impl Parse for Error {
     }
 }
 
-impl Error {
+impl ItemError {
     pub fn span(&self) -> Span {
         self.name.span()
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.name.set_span(span);
     }
 }

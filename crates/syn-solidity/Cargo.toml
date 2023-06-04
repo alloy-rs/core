@@ -1,0 +1,19 @@
+[package]
+name = "syn-solidity"
+version = "0.1.0"
+description = "syn-powered Solidity parser"
+readme = "README.md"
+keywords = ["ethereum", "evm", "syn", "solidity", "ast"]
+categories = ["data-structures", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/syn-solidity"
+
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+syn = { workspace = true, features = [] }

@@ -1,9 +1,9 @@
 use super::{
-    item::{Struct, Udt},
+    item::{ItemStruct, ItemUdt},
     kw,
 };
-use proc_macro2::{Literal, Span, TokenStream};
-use quote::{quote, quote_spanned, ToTokens};
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, ToTokens};
 use std::{
     fmt,
     hash::{Hash, Hasher},
@@ -59,23 +59,6 @@ impl fmt::Display for SolArray {
             f.write_str(s.base10_digits())?;
         }
         f.write_str("]")
-    }
-}
-
-impl ToTokens for SolArray {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let ty = &self.ty;
-        let span = self.span();
-        let expanded = if let Some(size) = &self.size {
-            quote_spanned! {span=>
-                ::ethers_sol_types::sol_data::FixedArray<#ty, #size>
-            }
-        } else {
-            quote_spanned! {span=>
-                ::ethers_sol_types::sol_data::Array<#ty>
-            }
-        };
-        tokens.extend(expanded);
     }
 }
 
@@ -180,13 +163,6 @@ impl Parse for SolTuple {
     }
 }
 
-impl ToTokens for SolTuple {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.paren_token
-            .surround(tokens, |tokens| self.types.to_tokens(tokens))
-    }
-}
-
 impl FromIterator<Type> for SolTuple {
     fn from_iter<T: IntoIterator<Item = Type>>(iter: T) -> Self {
         SolTuple {
@@ -214,7 +190,7 @@ impl SolTuple {
 
     pub fn set_span(&mut self, span: Span) {
         if let Some(tuple_token) = &mut self.tuple_token {
-            *tuple_token = kw::tuple(span);
+            tuple_token.span = span;
         }
         self.paren_token = Paren(span);
     }
@@ -226,9 +202,9 @@ pub enum CustomType {
     /// A type that has not yet been resolved.
     Unresolved(Ident),
     /// A user-defined type.
-    Udt(Box<Udt>),
+    Udt(Box<ItemUdt>),
     /// A struct.
-    Struct(Struct),
+    Struct(ItemStruct),
 }
 
 impl fmt::Display for CustomType {
@@ -280,7 +256,7 @@ impl CustomType {
 /// Solidity reference: <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.typeName>
 #[derive(Clone)]
 pub enum Type {
-    /// `address`
+    /// `address [payable]`
     Address(Span, Option<kw::payable>),
     /// `bool`
     Bool(Span),
@@ -447,51 +423,8 @@ impl Parse for Type {
     }
 }
 
-impl ToTokens for Type {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let expanded = match *self {
-            Self::Address(span, _) => {
-                quote_spanned! {span=> ::ethers_sol_types::sol_data::Address }
-            }
-            Self::Bool(span) => quote_spanned! {span=> ::ethers_sol_types::sol_data::Bool },
-            Self::String(span) => quote_spanned! {span=> ::ethers_sol_types::sol_data::String },
-
-            Self::Bytes { span, size: None } => {
-                quote_spanned! {span=> ::ethers_sol_types::sol_data::Bytes }
-            }
-            Self::Bytes {
-                span,
-                size: Some(size),
-            } => {
-                let size = Literal::u16_unsuffixed(size.get());
-                quote_spanned! {span=>
-                    ::ethers_sol_types::sol_data::FixedBytes<#size>
-                }
-            }
-
-            Self::Int { span, size } => {
-                let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
-                quote_spanned! {span=>
-                    ::ethers_sol_types::sol_data::Int<#size>
-                }
-            }
-            Self::Uint { span, size } => {
-                let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
-                quote_spanned! {span=>
-                    ::ethers_sol_types::sol_data::Uint<#size>
-                }
-            }
-
-            Self::Tuple(ref tuple) => return tuple.to_tokens(tokens),
-            Self::Array(ref array) => return array.to_tokens(tokens),
-            Self::Custom(ref custom) => return custom.ident().to_tokens(tokens),
-        };
-        tokens.extend(expanded);
-    }
-}
-
 impl Type {
-    pub fn custom(ident: Ident) -> Self {
+    pub const fn custom(ident: Ident) -> Self {
         Self::Custom(CustomType::Unresolved(ident))
     }
 
@@ -530,20 +463,20 @@ impl Type {
         }
     }
 
-    /// Returns whether a [Storage][crate::ast::Storage] location can be
+    /// Returns whether a [Storage][crate::Storage] location can be
     /// specified for this type.
-    pub fn can_have_storage(&self) -> bool {
+    pub const fn can_have_storage(&self) -> bool {
         self.is_dynamic() || self.is_struct()
     }
 
-    pub fn is_dynamic(&self) -> bool {
+    pub const fn is_dynamic(&self) -> bool {
         matches!(
             self,
             Self::String(_) | Self::Bytes { size: None, .. } | Self::Array(_)
         )
     }
 
-    pub fn is_struct(&self) -> bool {
+    pub const fn is_struct(&self) -> bool {
         matches!(self, Self::Custom(..))
     }
 

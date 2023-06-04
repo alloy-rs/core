@@ -29,7 +29,12 @@ fn main() {
 ```
 "##
 )]
-#![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
+#![warn(
+    missing_docs,
+    unreachable_pub,
+    unused_crate_dependencies,
+    clippy::missing_const_for_fn
+)]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(not(feature = "std"), no_std)]
 

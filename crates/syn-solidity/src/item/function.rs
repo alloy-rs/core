@@ -1,4 +1,4 @@
-use crate::ast::{kw, FunctionAttributes, Parameters, Returns, SolIdent, SolTuple, Type};
+use crate::{kw, FunctionAttributes, Parameters, Returns, SolIdent, SolTuple, Type};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -8,25 +8,26 @@ use syn::{
     Attribute, Result, Token,
 };
 
-/// A function definition.
+/// A function definition:
+/// `function helloWorld() external pure returns(string memory);`
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.functionDefinition>
-pub struct Function {
+pub struct ItemFunction {
+    /// The `syn` attributes of the function.
     pub attrs: Vec<Attribute>,
     pub function_token: kw::function,
-    /// The original name of the function, before any overload renaming.
-    pub original_name: SolIdent,
-    /// The name of the function, after any overload renaming.
     pub name: SolIdent,
     pub paren_token: Paren,
     pub arguments: Parameters<Token![,]>,
+    /// The Solidity attributes of the function.
     pub attributes: FunctionAttributes,
+    /// The optional return types of the function.
     pub returns: Option<Returns>,
     pub semi_token: Token![;],
 }
 
-impl fmt::Debug for Function {
+impl fmt::Debug for ItemFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Function")
             .field("name", &self.name)
@@ -37,7 +38,7 @@ impl fmt::Debug for Function {
     }
 }
 
-impl Parse for Function {
+impl Parse for ItemFunction {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         fn parse_check_brace<T: Parse>(input: ParseStream<'_>) -> Result<T> {
             if input.peek(Brace) {
@@ -47,16 +48,11 @@ impl Parse for Function {
             }
         }
 
-        let name: SolIdent;
         let content;
         Ok(Self {
             attrs: input.call(Attribute::parse_outer)?,
             function_token: input.parse()?,
-            original_name: {
-                name = input.parse()?;
-                name.clone()
-            },
-            name,
+            name: input.parse()?,
             paren_token: parenthesized!(content in input),
             arguments: content.parse()?,
             attributes: parse_check_brace(input)?,
@@ -70,11 +66,29 @@ impl Parse for Function {
     }
 }
 
-impl Function {
+impl ItemFunction {
     pub fn span(&self) -> Span {
         self.name.span()
     }
 
+    pub fn set_span(&mut self, span: Span) {
+        self.name.set_span(span);
+    }
+
+    /// Returns true if the function returns nothing.
+    pub fn is_void(&self) -> bool {
+        match &self.returns {
+            None => true,
+            Some(returns) => returns.returns.is_empty(),
+        }
+    }
+
+    /// Returns the function signature as a string.
+    pub fn signature(&self) -> String {
+        self.arguments.signature(self.name.as_string())
+    }
+
+    /// Returns the function's signature tuple type.
     pub fn call_type(&self) -> Type {
         let mut args = self
             .arguments

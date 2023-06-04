@@ -1,10 +1,10 @@
-//! A Solidity [`syn`] AST.
-//!
-//! Note that this is not intended to be a complete representation of the
-//! Solidity AST, but rather a subset of the AST that is useful for generating
-//! [`ethers-sol-types`]
+#![doc = include_str!("../README.md")]
+#![warn(unreachable_pub, unused_crate_dependencies)]
+#![deny(unused_must_use, rust_2018_idioms)]
 
-#![allow(dead_code)] // TODO: Remove once this is a separate crate.
+extern crate proc_macro;
+
+use syn::Result;
 
 mod attribute;
 pub use attribute::{
@@ -18,8 +18,8 @@ pub use ident::{SolIdent, SolPath};
 mod file;
 pub use file::File;
 
-pub mod item;
-pub use item::Item;
+mod item;
+pub use item::{Item, ItemError, ItemFunction, ItemStruct, ItemUdt};
 
 mod storage;
 pub use storage::Storage;
@@ -65,4 +65,14 @@ pub mod kw {
     custom_keyword!(memory);
     custom_keyword!(storage);
     custom_keyword!(calldata);
+}
+
+/// Parse a Solidity [`proc_macro::TokenStream`] into a [`File`].
+pub fn parse(input: proc_macro::TokenStream) -> Result<File> {
+    syn::parse(input)
+}
+
+/// Parse a Solidity [`proc_macro2::TokenStream`] into a [`File`].
+pub fn parse2(input: proc_macro2::TokenStream) -> Result<File> {
+    syn::parse2(input)
 }

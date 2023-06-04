@@ -1,7 +1,6 @@
 use super::{kw, CustomType, SolIdent, Storage, Type};
-use crate::utils::keccak256;
 use proc_macro2::{Span, TokenStream};
-use quote::{format_ident, quote, ToTokens};
+use quote::{format_ident, quote};
 use std::{
     fmt::{self, Write},
     ops::{Deref, DerefMut},
@@ -71,12 +70,6 @@ impl Parse for Parameters<Token![;]> {
     }
 }
 
-impl<P: ToTokens> ToTokens for Parameters<P> {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.0.to_tokens(tokens)
-    }
-}
-
 impl<P> IntoIterator for Parameters<P> {
     type IntoIter = <Punctuated<VariableDeclaration, P> as IntoIterator>::IntoIter;
     type Item = <Self::IntoIter as Iterator>::Item;
@@ -105,14 +98,8 @@ impl<'a, P> IntoIterator for &'a mut Parameters<P> {
 }
 
 impl<P> Parameters<P> {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self(Punctuated::new())
-    }
-
-    pub fn sig_and_sel(&self, name: String) -> (String, [u8; 4]) {
-        let sig = self.signature(name);
-        let sel = keccak256(sig.as_bytes())[..4].try_into().unwrap();
-        (sig, sel)
     }
 
     pub fn signature(&self, mut name: String) -> String {
@@ -130,11 +117,6 @@ impl<P> Parameters<P> {
             write!(f, "{}", var.ty)?;
         }
         f.write_char(')')
-    }
-
-    pub fn selector(&self, name: String) -> [u8; 4] {
-        let signature = self.signature(name);
-        keccak256(signature.as_bytes())[..4].try_into().unwrap()
     }
 
     pub fn eip712_signature(&self, mut name: String) -> String {
@@ -222,17 +204,8 @@ impl Parse for VariableDeclaration {
     }
 }
 
-impl ToTokens for VariableDeclaration {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let Self { ty, name, .. } = self;
-        tokens.extend(quote! {
-            #name: <#ty as ::ethers_sol_types::SolType>::RustType
-        });
-    }
-}
-
 impl VariableDeclaration {
-    pub fn new(ty: Type) -> Self {
+    pub const fn new(ty: Type) -> Self {
         Self {
             ty,
             storage: None,

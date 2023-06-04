@@ -6,13 +6,13 @@
 //!
 //! Refer to the [macro's documentation][sol!] for more information.
 
-// #![warn(missing_docs)] // TODO: Enable for AST crate.
+#![warn(missing_docs)]
 #![deny(unused_must_use, rust_2018_idioms)]
 
-use proc_macro::TokenStream;
-use syn::parse_macro_input;
+extern crate syn_solidity as ast;
 
-mod ast;
+use proc_macro::TokenStream;
+
 mod expand;
 mod utils;
 
@@ -55,6 +55,13 @@ mod utils;
 /// ```
 #[proc_macro]
 pub fn sol(input: TokenStream) -> TokenStream {
-    let ast = parse_macro_input!(input as ast::File);
-    expand::expand(ast).into()
+    match ast::parse(input.clone()) {
+        Ok(ast) => expand::expand(ast),
+        // TODO: Should we still support this?
+        Err(e) => match syn::parse::<ast::Type>(input) {
+            Ok(ty) => expand::expand_type(&ty),
+            Err(_) => e.into_compile_error(),
+        },
+    }
+    .into()
 }
