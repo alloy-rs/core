@@ -7,7 +7,6 @@ use std::{
 };
 use syn::{
     parse::{Parse, ParseStream},
-    spanned::Spanned,
     Error, Result,
 };
 
@@ -104,9 +103,9 @@ impl VariableAttribute {
     pub fn span(&self) -> Span {
         match self {
             Self::Visibility(v) => v.span(),
-            Self::Constant(c) => c.span(),
+            Self::Constant(c) => c.span,
             Self::Override(o) => o.span(),
-            Self::Immutable(i) => i.span(),
+            Self::Immutable(i) => i.span,
         }
     }
 
