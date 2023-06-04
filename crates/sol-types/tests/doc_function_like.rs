@@ -26,7 +26,7 @@ sol! {
     function foo(uint256 a, uint256 b) external view returns (uint256);
 
     // These will be interpreted as `overloaded_0`, `overloaded_1`, and
-    // `overloaded_2`, but the signatures will be as declared.
+    // `overloaded_2`, but the signatures will be the same.
     function overloaded();
     function overloaded(uint256) returns (uint256);
     function overloaded(string);

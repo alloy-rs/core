@@ -55,9 +55,13 @@ impl Parse for VariableAttributes {
 /// A variable attribute.
 #[derive(Clone)]
 pub enum VariableAttribute {
+    /// A [Visibility] attribute.
     Visibility(Visibility),
+    /// `constant`.
     Constant(kw::constant),
+    /// `immutable`.
     Immutable(kw::immutable),
+    /// An [Override] attribute.
     Override(Override),
 }
 

@@ -1,4 +1,4 @@
-use crate::ast::{kw, Parameters};
+use crate::{kw, Parameters};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -13,6 +13,7 @@ use syn::{
 pub struct Returns {
     pub returns_token: kw::returns,
     pub paren_token: Paren,
+    /// The returns of the function. This is cannot be parsed empty.
     pub returns: Parameters<Token![,]>,
 }
 

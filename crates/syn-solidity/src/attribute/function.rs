@@ -5,6 +5,7 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     mem,
+    ops::{Deref, DerefMut},
 };
 use syn::{
     ext::IdentExt,
@@ -15,9 +16,23 @@ use syn::{
 };
 
 /// A list of unique function attributes. Used in
-/// [Function][crate::ast::item::Function].
+/// [ItemFunction][crate::ItemFunction].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FunctionAttributes(pub HashSet<FunctionAttribute>);
+
+impl Deref for FunctionAttributes {
+    type Target = HashSet<FunctionAttribute>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for FunctionAttributes {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 impl Parse for FunctionAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
@@ -42,11 +57,17 @@ impl Parse for FunctionAttributes {
 /// A function attribute.
 #[derive(Clone)]
 pub enum FunctionAttribute {
+    /// A [Visibility] attribute.
     Visibility(Visibility),
+    /// A [Mutability] attribute.
     Mutability(Mutability),
+    /// `virtual`
     Virtual(kw::Virtual),
+    /// `immutable`
     Immutable(kw::immutable),
+    /// An [Override] attribute.
     Override(Override),
+    /// A [Modifier] attribute.
     Modifier(Modifier),
 }
 

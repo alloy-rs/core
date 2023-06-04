@@ -2,9 +2,10 @@ use ethers_sol_types::sol;
 
 sol! {
     struct BuiltinTypes {
+        address a;
+        address payable ap;
         string s;
         bool b;
-        address a;
 
         bytes b0;
         bytes1 b1;

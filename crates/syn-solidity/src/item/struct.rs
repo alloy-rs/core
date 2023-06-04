@@ -1,4 +1,4 @@
-use crate::ast::{Parameters, SolIdent, Type};
+use crate::{Parameters, SolIdent, Type};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -11,12 +11,12 @@ use syn::{
     Attribute, Result, Token,
 };
 
-/// A struct definition.
+/// A struct definition: `struct Foo { uint256 bar; }`
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.structDefinition>
 #[derive(Clone)]
-pub struct Struct {
+pub struct ItemStruct {
     pub attrs: Vec<Attribute>,
     pub struct_token: Token![struct],
     pub name: SolIdent,
@@ -24,22 +24,22 @@ pub struct Struct {
     pub fields: Parameters<Token![;]>,
 }
 
-impl PartialEq for Struct {
+impl PartialEq for ItemStruct {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.fields == other.fields
     }
 }
 
-impl Eq for Struct {}
+impl Eq for ItemStruct {}
 
-impl Hash for Struct {
+impl Hash for ItemStruct {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name.hash(state);
         self.fields.hash(state);
     }
 }
 
-impl fmt::Debug for Struct {
+impl fmt::Debug for ItemStruct {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Struct")
             .field("name", &self.name)
@@ -48,7 +48,7 @@ impl fmt::Debug for Struct {
     }
 }
 
-impl Parse for Struct {
+impl Parse for ItemStruct {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
         Ok(Self {
@@ -61,7 +61,7 @@ impl Parse for Struct {
     }
 }
 
-impl Struct {
+impl ItemStruct {
     pub fn span(&self) -> Span {
         self.name.span()
     }
