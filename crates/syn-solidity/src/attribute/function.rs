@@ -10,7 +10,6 @@ use std::{
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
-    spanned::Spanned,
     token::{Brace, Bracket},
     Error, Ident, Result, Token,
 };
@@ -141,9 +140,9 @@ impl FunctionAttribute {
         match self {
             Self::Visibility(v) => v.span(),
             Self::Mutability(m) => m.span(),
-            Self::Virtual(v) => v.span(),
+            Self::Virtual(v) => v.span,
             Self::Override(o) => o.span(),
-            Self::Immutable(i) => i.span(),
+            Self::Immutable(i) => i.span,
             Self::Modifier(m) => m.span(),
         }
     }

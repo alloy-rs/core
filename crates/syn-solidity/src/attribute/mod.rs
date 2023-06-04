@@ -8,7 +8,6 @@ use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    spanned::Spanned,
     token::Paren,
     Result, Token,
 };
@@ -64,10 +63,10 @@ impl Parse for Visibility {
 impl Visibility {
     pub fn span(&self) -> Span {
         match self {
-            Self::External(kw) => kw.span(),
-            Self::Public(kw) => kw.span(),
-            Self::Internal(kw) => kw.span(),
-            Self::Private(kw) => kw.span(),
+            Self::External(kw) => kw.span,
+            Self::Public(kw) => kw.span,
+            Self::Internal(kw) => kw.span,
+            Self::Private(kw) => kw.span,
         }
     }
 
@@ -100,7 +99,7 @@ impl Visibility {
 }
 
 /// A mutability attribute.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Mutability {
     /// `pure`
     Pure(kw::pure),
@@ -144,10 +143,10 @@ impl Parse for Mutability {
 impl Mutability {
     pub fn span(&self) -> Span {
         match self {
-            Self::Pure(kw) => kw.span(),
-            Self::View(kw) => kw.span(),
-            Self::Constant(kw) => kw.span(),
-            Self::Payable(kw) => kw.span(),
+            Self::Pure(kw) => kw.span,
+            Self::View(kw) => kw.span,
+            Self::Constant(kw) => kw.span,
+            Self::Payable(kw) => kw.span,
         }
     }
 
