@@ -48,6 +48,7 @@ std = ["bytes/std", "hex/std", "ethers-rlp?/std", "proptest?/std", "serde/std"]
 rlp = ["dep:ethers-rlp", "ruint/fastrlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
 arbitrary = [
+    "std",
     "ruint/arbitrary",
     "ruint/proptest",
     "dep:arbitrary",

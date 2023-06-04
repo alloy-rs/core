@@ -24,6 +24,5 @@ hex-literal.workspace = true
 
 [features]
 default = ["std", "derive"]
+std = ["arrayvec/std", "bytes/std"]
 derive = ["dep:ethers-rlp-derive"]
-std = ["alloc", "arrayvec/std", "bytes/std"]
-alloc = []

@@ -321,7 +321,6 @@ mod std_impl {
     }
 }
 
-#[cfg(feature = "alloc")]
 mod alloc_impl {
     use super::*;
 
@@ -387,7 +386,7 @@ mod alloc_impl {
     }
 }
 
-#[cfg(all(test, feature = "alloc"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use alloc::{string::String, vec::Vec};
@@ -498,6 +497,7 @@ mod tests {
             (Err(DecodeError::InputTooShort), &hex!("C1")[..]),
             (Err(DecodeError::InputTooShort), &hex!("D7")[..]),
         ]);
+        #[cfg(feature = "std")]
         check_decode::<std::net::IpAddr, _>(vec![
             (Err(DecodeError::InputTooShort), &hex!("C1")[..]),
             (Err(DecodeError::InputTooShort), &hex!("D7")[..]),

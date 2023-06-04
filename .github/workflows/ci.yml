@@ -28,6 +28,17 @@ jobs:
             - name: test
               run: cargo test --workspace ${{ matrix.flags }}
 
+    feature-checks:
+        name: feature checks
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - uses: dtolnay/rust-toolchain@stable
+            - uses: taiki-e/install-action@cargo-hack
+            - uses: Swatinem/rust-cache@v2
+            - name: cargo hack
+              run: cargo hack check --feature-powerset --depth 2 --all-targets
+
     clippy:
         name: clippy
         runs-on: ubuntu-latest

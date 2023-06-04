@@ -3,21 +3,16 @@ name: deps
 on:
     push:
         branches: [main]
-        paths: [Cargo.lock]
     pull_request:
         branches: [main]
-        paths: [Cargo.lock]
-
-concurrency: deps-${{ github.head_ref || github.run_id }}
+    schedule: [cron: "00 00 * * *"]
 
 jobs:
-    deny:
-        name: deny
+    cargo-deny:
+        name: cargo deny check
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
-              with:
-                  submodules: "recursive"
             - uses: EmbarkStudios/cargo-deny-action@v1
               with:
                   command: check all
