@@ -39,7 +39,6 @@ sol! {
 
 #[test]
 fn no_std_proc_macro() {
-    // this is possible but not recomended :)
     <sol!(bool)>::hex_encode_single(true);
 
     let a = MyStruct {

@@ -86,13 +86,13 @@ impl Parse for VariableAttribute {
             || lookahead.peek(kw::internal)
             || lookahead.peek(kw::private)
         {
-            Ok(Self::Visibility(input.parse()?))
+            input.parse().map(Self::Visibility)
         } else if lookahead.peek(kw::constant) {
-            Ok(Self::Constant(input.parse()?))
+            input.parse().map(Self::Constant)
         } else if lookahead.peek(kw::Override) {
-            Ok(Self::Override(input.parse()?))
+            input.parse().map(Self::Override)
         } else if lookahead.peek(kw::immutable) {
-            Ok(Self::Immutable(input.parse()?))
+            input.parse().map(Self::Immutable)
         } else {
             Err(lookahead.error())
         }

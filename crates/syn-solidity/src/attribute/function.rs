@@ -111,21 +111,21 @@ impl Parse for FunctionAttribute {
             || lookahead.peek(kw::internal)
             || lookahead.peek(kw::private)
         {
-            Ok(Self::Visibility(input.parse()?))
+            input.parse().map(Self::Visibility)
         } else if lookahead.peek(kw::pure)
             || lookahead.peek(kw::view)
             || lookahead.peek(kw::constant)
             || lookahead.peek(kw::payable)
         {
-            Ok(Self::Mutability(input.parse()?))
+            input.parse().map(Self::Mutability)
         } else if lookahead.peek(kw::Virtual) {
-            Ok(Self::Virtual(input.parse()?))
+            input.parse().map(Self::Virtual)
         } else if lookahead.peek(kw::Override) {
-            Ok(Self::Override(input.parse()?))
+            input.parse().map(Self::Override)
         } else if lookahead.peek(kw::immutable) {
-            Ok(Self::Immutable(input.parse()?))
+            input.parse().map(Self::Immutable)
         } else if !input.peek(kw::returns) && lookahead.peek(Ident::peek_any) {
-            Ok(Self::Modifier(input.parse()?))
+            input.parse().map(Self::Modifier)
         } else if input.peek(Brace) {
             // special case for function with implementation
             Err(input.error("functions cannot have an implementation"))

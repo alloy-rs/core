@@ -13,26 +13,41 @@ pub use attribute::{
     VariableAttributes, Visibility,
 };
 
-mod ident;
-pub use ident::{SolIdent, SolPath};
-
 mod file;
 pub use file::File;
 
+mod ident;
+pub use ident::{SolIdent, SolPath};
+
 mod item;
 pub use item::{Item, ItemError, ItemFunction, ItemStruct, ItemUdt};
+
+#[macro_use]
+mod macros;
 
 mod storage;
 pub use storage::Storage;
 
 mod r#type;
-pub use r#type::{CustomType, SolArray, SolTuple, Type};
+pub use r#type::{SolArray, SolTuple, Type};
+
+pub(crate) mod utils;
 
 mod returns;
 pub use returns::Returns;
 
 mod variable;
-pub use variable::{Parameters, VariableDeclaration};
+pub use variable::{FieldList, ParameterList, Parameters, VariableDeclaration};
+
+#[cfg(feature = "visit")]
+pub mod visit;
+#[cfg(feature = "visit")]
+pub use visit::Visit;
+
+#[cfg(feature = "visit-mut")]
+pub mod visit_mut;
+#[cfg(feature = "visit-mut")]
+pub use visit_mut::VisitMut;
 
 /// Solidity keywords.
 pub mod kw {

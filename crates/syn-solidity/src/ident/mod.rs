@@ -192,6 +192,7 @@ fn is_ident(s: &str) -> bool {
 
 /// A Solidity identifier.
 #[derive(Clone, PartialEq, Eq, Hash)]
+#[repr(transparent)]
 pub struct SolIdent(pub Ident);
 
 impl fmt::Display for SolIdent {
@@ -202,8 +203,13 @@ impl fmt::Display for SolIdent {
 
 impl fmt::Debug for SolIdent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Sol")?;
-        self.0.fmt(f)
+        f.debug_tuple("SolIdent").field(&self.to_string()).finish()
+    }
+}
+
+impl<T: ?Sized + AsRef<str>> PartialEq<T> for SolIdent {
+    fn eq(&self, other: &T) -> bool {
+        self.0 == other
     }
 }
 
@@ -229,6 +235,12 @@ impl Parse for SolIdent {
 impl ToTokens for SolIdent {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         self.0.to_tokens(tokens);
+    }
+}
+
+impl From<Ident> for SolIdent {
+    fn from(ident: Ident) -> Self {
+        Self(ident)
     }
 }
 

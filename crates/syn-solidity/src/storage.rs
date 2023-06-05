@@ -30,11 +30,11 @@ impl Parse for Storage {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(kw::memory) {
-            Ok(Self::Memory(input.parse()?))
+            input.parse().map(Self::Memory)
         } else if lookahead.peek(kw::storage) {
-            Ok(Self::Storage(input.parse()?))
+            input.parse().map(Self::Storage)
         } else if lookahead.peek(kw::calldata) {
-            Ok(Self::Calldata(input.parse()?))
+            input.parse().map(Self::Calldata)
         } else {
             Err(lookahead.error())
         }

@@ -18,3 +18,10 @@ pub fn selector<T: AsRef<[u8]>>(bytes: T) -> TokenStream {
     let selector: [u8; 4] = hash[..4].try_into().unwrap();
     quote!([#(#selector),*])
 }
+
+pub fn combine_errors(v: Vec<syn::Error>) -> Option<syn::Error> {
+    v.into_iter().reduce(|mut a, b| {
+        a.combine(b);
+        a
+    })
+}

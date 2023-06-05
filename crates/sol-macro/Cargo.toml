@@ -21,7 +21,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-syn-solidity.workspace = true
+syn-solidity = { workspace = true, features = ["visit", "visit-mut"] }
 
 proc-macro2.workspace = true
 quote.workspace = true

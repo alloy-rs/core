@@ -47,13 +47,13 @@ impl Parse for Visibility {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(kw::external) {
-            Ok(Self::External(input.parse()?))
+            input.parse().map(Self::External)
         } else if lookahead.peek(kw::public) {
-            Ok(Self::Public(input.parse()?))
+            input.parse().map(Self::Public)
         } else if lookahead.peek(kw::internal) {
-            Ok(Self::Internal(input.parse()?))
+            input.parse().map(Self::Internal)
         } else if lookahead.peek(kw::private) {
-            Ok(Self::Private(input.parse()?))
+            input.parse().map(Self::Private)
         } else {
             Err(lookahead.error())
         }
@@ -127,13 +127,13 @@ impl Parse for Mutability {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(kw::pure) {
-            Ok(Self::Pure(input.parse()?))
+            input.parse().map(Self::Pure)
         } else if lookahead.peek(kw::view) {
-            Ok(Self::View(input.parse()?))
+            input.parse().map(Self::View)
         } else if lookahead.peek(kw::constant) {
-            Ok(Self::Constant(input.parse()?))
+            input.parse().map(Self::Constant)
         } else if lookahead.peek(kw::payable) {
-            Ok(Self::Payable(input.parse()?))
+            input.parse().map(Self::Payable)
         } else {
             Err(lookahead.error())
         }
