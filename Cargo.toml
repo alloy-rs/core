@@ -10,6 +10,10 @@ license = "MIT OR Apache-2.0"
 homepage = "https://github.com/ethers-rs/core"
 repository = "https://github.com/ethers-rs/core"
 
+[workspace.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [workspace.dependencies]
 # workspace crates
 ethers-dyn-abi = { version = "0.1.0", path = "crates/dyn-abi", default-features = false }

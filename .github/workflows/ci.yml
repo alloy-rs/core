@@ -57,9 +57,9 @@ jobs:
             - uses: dtolnay/rust-toolchain@nightly
               with:
                   components: rust-docs
-            - run: cargo doc --workspace --no-deps --document-private-items
+            - run: cargo doc --workspace --all-features --no-deps --document-private-items
               env:
-                  RUSTDOCFLAGS: "-D warnings"
+                  RUSTDOCFLAGS: "--cfg docsrs -D warnings"
 
     fmt:
         name: fmt
