@@ -16,6 +16,10 @@ repository.workspace = true
 [lib]
 proc-macro = true
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [dependencies]
 proc-macro2.workspace = true
 quote.workspace = true
