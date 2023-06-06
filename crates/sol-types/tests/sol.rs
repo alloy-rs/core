@@ -1,5 +1,5 @@
-use ethers_primitives::{keccak256, Address, U256};
-use ethers_sol_types::{no_std_prelude::*, sol, SolCall, SolError, SolType};
+use alloy_primitives::{keccak256, Address, U256};
+use alloy_sol_types::{no_std_prelude::*, sol, SolCall, SolError, SolType};
 
 sol! {
     struct MyStruct {
@@ -65,7 +65,7 @@ fn no_std_proc_macro() {
     let mvt = MyValueType::from(U256::from(1));
     assert_eq!(
         mvt.encode_single(),
-        ethers_sol_types::sol_data::Uint::<256>::encode_single(U256::from(1))
+        alloy_sol_types::sol_data::Uint::<256>::encode_single(U256::from(1))
     );
 }
 

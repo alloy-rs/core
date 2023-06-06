@@ -1,6 +1,6 @@
 #![cfg(feature = "derive")]
 
-use ethers_rlp::*;
+use alloy_rlp::*;
 
 #[derive(RlpEncodable, RlpDecodable, RlpMaxEncodedLen, PartialEq, Debug)]
 pub struct MyThing(#[rlp] [u8; 12]);

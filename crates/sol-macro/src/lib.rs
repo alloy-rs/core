@@ -1,7 +1,7 @@
-//! # ethers-sol-macro
+//! # alloy-sol-macro
 //!
 //! This crate provides the [`sol`][sol!] procedural macro, which parses
-//! Solidity syntax to generate types that implement [`ethers-sol-types`]
+//! Solidity syntax to generate types that implement [`alloy-sol-types`]
 //! traits.
 //!
 //! Refer to the [macro's documentation][sol!] for more information.
@@ -17,7 +17,7 @@ use proc_macro::TokenStream;
 mod expand;
 mod utils;
 
-/// Parses Solidity syntax to generate types that implement [`ethers-sol-types`]
+/// Parses Solidity syntax to generate types that implement [`alloy-sol-types`]
 /// traits.
 ///
 /// These types may then be used for safe [ABI] and [EIP-712] encoding and
@@ -25,15 +25,15 @@ mod utils;
 ///
 /// [ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html
 /// [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
-/// [`ethers-sol-types`]: https://docs.rs/ethers-sol-types
+/// [`alloy-sol-types`]: https://docs.rs/alloy-sol-types
 ///
 /// # Examples
 ///
 /// Note: the following examples cannot tested here because the generated code
-/// references `ethers-sol-types`, so they are [tested in that crate][tests] and
+/// references `alloy-sol-types`, so they are [tested in that crate][tests] and
 /// included with `include_str!` in this doc instead.
 ///
-/// [tests]: https://github.com/ethers-rs/core/tree/main/crates/sol-types/tests/
+/// [tests]: https://github.com/alloy-rs/core/tree/main/crates/sol-types/tests/
 ///
 /// ## Structs and enums
 /// ```ignore

@@ -1,5 +1,5 @@
 use crate::{no_std_prelude::*, Word};
-use ethers_primitives::{Address, I256, U256};
+use alloy_primitives::{Address, I256, U256};
 
 /// This type represents a Solidity value that has been decoded into rust. It
 /// is broadly similar to `serde_json::Value` in that it is an enum of possible
@@ -252,9 +252,9 @@ macro_rules! impl_from_int {
                 const _: () = assert!(BYTES <= 32);
 
                 let mut word = if value.is_negative() {
-                    ethers_primitives::B256::repeat_byte(0xff)
+                    alloy_primitives::B256::repeat_byte(0xff)
                 } else {
-                    ethers_primitives::B256::default()
+                    alloy_primitives::B256::default()
                 };
                 word[32 - BYTES..].copy_from_slice(&value.to_be_bytes());
 

@@ -1,29 +1,30 @@
-# ethers-types
+# alloy-primitives
 
-Fundamental types shared by [reth], [revm], [ethers], and [foundry].
+Primitive types shared by [alloy], [foundry], [revm], and [reth].
 
-[reth]: https://github.com/paradigmxyz/reth
-[revm]: https://github.com/bluealloy/revm
-[ethers]: https://github.com/ethers-rs/core
+[alloy]: https://github.com/alloy-rs
 [foundry]: https://github.com/foundry-rs/foundry
+[revm]: https://github.com/bluealloy/revm
+[reth]: https://github.com/paradigmxyz/reth
 
 ## Types
 
-- Unsigned integers re-exported from [ruint](https://docs.rs/ruint)
+- Unsigned integers re-exported from [ruint](https://github.com/recmo/uint)
 - Signed integers, as a wrapper around `ruint` integers
 - Fixed-size byte arrays via [`FixedBytes`]
-  - a macro [`wrap_fixed_bytes`] for constructing named fixed bytes types
-  - [`Address`], which is a fixed-size byte array of 20 bytes, with EIP-55 and
-    EIP-1191 checksum support
+    - a macro [`wrap_fixed_bytes`] for constructing named fixed bytes types
+    - [`Address`], which is a fixed-size byte array of 20 bytes, with EIP-55 and
+      EIP-1191 checksum support
 
 ## Examples
 
-This library has straightforward, basic, types. Usage is correspondingly simple. Please consult [the documentation][docs] for more information.
+This library has straightforward, basic, types. Usage is correspondingly simple.
+Please consult [the documentation][docs] for more information.
 
-[docs]: https://docs.rs/ethers-types/latest/ethers-types/
+[docs]: https://docs.rs/alloy-types/latest/alloy-types/
 
 ```rust
-use ethers_primitives::{U256, Address, FixedBytes, I256};
+use alloy_primitives::{U256, Address, FixedBytes, I256};
 
 // FixedBytes
 let n: FixedBytes<6> = "0x1234567890ab".parse().unwrap();

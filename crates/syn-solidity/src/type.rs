@@ -196,7 +196,7 @@ impl SolTuple {
     }
 }
 
-/// A custom type that implements `ethers_sol_types::SolidityType`.
+/// A custom type that implements `alloy_sol_types::SolidityType`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CustomType {
     /// A type that has not yet been resolved.

@@ -166,7 +166,7 @@ impl Bytes {
     /// # Examples
     ///
     /// ```
-    /// use ethers_primitives::Bytes;
+    /// use alloy_primitives::Bytes;
     ///
     /// let b = Bytes::new();
     /// assert_eq!(&b[..], b"");
@@ -184,7 +184,7 @@ impl Bytes {
     /// # Examples
     ///
     /// ```
-    /// use ethers_primitives::Bytes;
+    /// use alloy_primitives::Bytes;
     ///
     /// let b = Bytes::from_static(b"hello");
     /// assert_eq!(&b[..], b"hello");

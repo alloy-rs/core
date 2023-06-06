@@ -1,84 +1,75 @@
-<h1 align="center"> ethers-rs core </h1>
+# Alloy
 
-This repository holds the core crates at the root of the the ethers-rs
-ecosystem. These types and libraries will be used by revm, reth, ethers, and
-foundry.
+Core libraries at the root of the Rust Ethereum ecosystem.
 
-## What's in the box?
+[![Build Status][actions-badge]][actions-url]
+[![Telegram chat][telegram-badge]][telegram-url]
+
+[actions-badge]: https://img.shields.io/github/actions/workflow/status/alloy-rs/core/ci.yml?branch=main&style=for-the-badge
+[actions-url]: https://github.com/alloy-rs/core/actions?query=branch%3Amain
+[telegram-badge]: https://img.shields.io/endpoint?color=neon&style=for-the-badge&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fethers_rs
+[telegram-url]: https://t.me/ethers_rs
+
+## Overview
 
 This repository contains the following crates:
 
-- **ethers-rlp** - A Rust implementation of the Ethereum RLP encoding.
-- **ethers-rlp-derive** - A derive macro for RLP encoding.
-- **ethers-primitives** - Signed & unsigned integers, and fixed-sized
-  bytearrays.
-- **ethers-sol-types** - Rust representation of Solidity types with ABI and
-  EIP-712 encoding.
-- **ethers-sol-macro** - A macro for generating Rust representations of Solidity
-  types by parsing Solidity snippets.
-- **ethers-dyn-abi** - ABI encoding and decoding of types that are not known at
-  runtime.
-- **ethers-serde-helpers** - Serde helpers for the ethers crates (coming soon).
+- [`alloy-primitives`] - Primitive integer and byte types
+- [`alloy-rlp`] - Implementation of [Ethereum RLP serialization][rlp]
+- [`alloy-rlp-derive`] - Derive macros for `alloy-rlp`
+- [`alloy-dyn-abi`] - Run-time ABI and [EIP-712] implementations
+- [`alloy-sol-types`] - Compile-time ABI and [EIP-712] implementations
+- [`alloy-sol-macro`] - The `sol!` procedural macro
+- [`syn-solidity`] - [`syn`]-powered Solidity parser, used by `alloy-sol-macro`
 
-## Developer Information
+[`alloy-primitives`]: ./crates/alloy-primitives
+[`alloy-rlp`]: ./crates/alloy-rlp
+[`alloy-rlp-derive`]: ./crates/alloy-rlp-derive
+[`alloy-sol-types`]: ./crates/alloy-sol-types
+[`alloy-sol-macro`]: ./crates/alloy-sol-macro
+[`alloy-dyn-abi`]: ./crates/alloy-dyn-abi
+[`syn-solidity`]: ./crates/syn-solidity
 
-No special actions needed. Clone the repo and make sure rust is installed
+[rlp]: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp
+[EIP-712]: https://eips.ethereum.org/EIPS/eip-712
+[`syn`]: https://github.com/dtolnay/syn
 
-### Build commands
+## Supported Rust Versions
 
-- `$ cargo clippy`
-- `$ cargo clippy --no-default-features`
-- `$ cargo clippy --all-features`
+<!--
+When updating this, also update:
+- .clippy.toml
+- Cargo.toml
+- .github/workflows/ci.yml
+-->
 
-### Testing commands
+Alloy will keep a rolling MSRV (minimum supported rust version) policy of **at
+least** 6 months. When increasing the MSRV, the new Rust version must have been
+released at least six months ago. The current MSRV is 1.65.0.
 
-- `$ cargo test`
-- `$ cargo test --no-default-features`
-- `$ cargo test --all-features`
-
-### MSRV
-
-We do not guarantee a specific MSRV. We like to keep up-to-date and take
-advantage of new features.
-
-### Features
-
-- `ethers-rlp/std` - `std` support for `ethers-rlp` Enabled by default.
-- `ethers-primitives/rlp` - `rlp` support for `ethers-primitives` Enabled by
-  default.
-- `ethers-primitives/serde` - `serde` support for `ethers-primitives` Enabled by
-  default.
-- `ethers-sol-types/eip712-serde` - `serde` support for the `Eip712Domain`
-  struct.
+Note that the MSRV is not increased automatically, and only as part of a minor
+release.
 
 ## Contributing
 
 Thanks for your help improving the project! We are so happy to have you! We have
 [a contributing guide](./CONTRIBUTING.md) to help you get involved in the
-ethers-rs project.
-
-If you open a Pull Request, do not forget to add your changes in the
-[CHANGELOG](./CHANGELOG.md).
+Alloy project.
 
 Pull requests will not be merged unless CI passes, so please ensure that your
-contribution follows the linting rules and passes clippy. :)
+contribution follows the linting rules and passes clippy.
 
-## Note on WASM and FFI bindings
+## Note on WASM
 
-You should be able to build a wasm app that uses ethers-rs. If ethers fails to
-compile in WASM, please
-[open an issue]. There is
-currently no plan to provide an official JS/TS-accessible library interface. We
-believe [viem](https://viem.sh) or [ethers.js](https://docs.ethers.io/v6/)
-serves that need very well.
+We provide full support for all the `wasm*-*` targets. If any crate does not
+build on a WASM target, please [open an issue].
 
-Similarly, you should be able to build FFI bindings to ethers-rs. If ethers
-fails to compile in c lib formats, please
-[open an issue].
-There is currently no plan to provide official FFI bindings, and as ethers-rs is
-not yet stable 1.0.0, its interface may change significantly between versions.
+There is currently no plan to provide an official JS/TS-accessible library
+interface, as we believe [viem] or [ethers.js] serve that need very well.
 
-[open an issue]: https://github.com/ethers-rs/core/issues/new
+[viem]: https://viem.sh
+[ethers.js]: https://docs.ethers.io/v6/
+[open an issue]: https://github.com/alloy-rs/core/issues/new
 
 ## Note on `no_std`
 
@@ -89,14 +80,10 @@ contribute upstream PRs to achieve it in ruint.
 
 ## Credits
 
-These librarires would not have been possible without the great work done in:
+None of these crates would have been possible without the great work done in:
 
 - [`ethers.js`](https://github.com/ethers-io/ethers.js/)
 - [`rust-web3`](https://github.com/tomusdrw/rust-web3/)
 - [`ethcontract-rs`](https://github.com/gnosis/ethcontract-rs/)
 - [`guac_rs`](https://github.com/althea-net/guac_rs/)
 - [`ruint`](https://github.com/recmo/uint)
-
-A lot of the code was inspired and adapted from them, to a unified and
-opinionated interface, built with async/await and std futures from the ground
-up.

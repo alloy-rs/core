@@ -7,7 +7,7 @@
 ## Usage Example
 
 ```rust
-use ethers_rlp::{RlpEncodable, RlpDecodable, Decodable, Encodable};
+use alloy_rlp::{RlpEncodable, RlpDecodable, Decodable, Encodable};
 
 #[derive(Debug, RlpEncodable, RlpDecodable, PartialEq)]
 pub struct MyStruct {
@@ -62,6 +62,6 @@ pub use encode::{
 pub use types::{Header, EMPTY_LIST_CODE, EMPTY_STRING_CODE};
 
 #[cfg(feature = "derive")]
-pub use ethers_rlp_derive::{
+pub use alloy_rlp_derive::{
     RlpDecodable, RlpDecodableWrapper, RlpEncodable, RlpEncodableWrapper, RlpMaxEncodedLen,
 };

@@ -1,25 +1,25 @@
 [package]
-name = "ethers-dyn-abi"
-version = "0.1.0"
-description = "Ethereum ABI encoding and decoding, with runtime typing"
-readme = "README.md"
+name = "alloy-dyn-abi"
+description = "Run-time ABI and EIP-712 implementations"
 keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
-categories = ["encoding", "cryptography::cryptocurrencies"]
+categories = ["no-std", "encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/dyn-abi"
 
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-ethers-sol-types = { workspace = true, features = ["eip712-serde"] }
-ethers-primitives.workspace = true
+alloy-sol-types = { workspace = true, features = ["eip712-serde"] }
+alloy-primitives.workspace = true
 
 hex.workspace = true
 serde.workspace = true
@@ -27,4 +27,4 @@ serde_json = { workspace = true, features = ["alloc"] }
 
 [features]
 default = ["std"]
-std = ["ethers-sol-types/std", "ethers-primitives/std", "hex/std", "serde/std", "serde_json/std"]
+std = ["alloy-sol-types/std", "alloy-primitives/std", "hex/std", "serde/std", "serde_json/std"]

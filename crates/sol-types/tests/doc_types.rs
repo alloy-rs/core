@@ -1,5 +1,5 @@
-use ethers_primitives::Address;
-use ethers_sol_types::{sol, SolType};
+use alloy_primitives::Address;
+use alloy_sol_types::{sol, SolType};
 
 // Type definition: generates a new struct that implements `SolType`
 sol! {
@@ -9,7 +9,7 @@ sol! {
 // Type aliases
 type B32 = sol! { bytes32 };
 // This is equivalent to the following:
-// type B32 = ethers_sol_types::sol_data::Bytes<32>;
+// type B32 = alloy_sol_types::sol_data::Bytes<32>;
 
 type SolArrayOf<T> = sol! { T[] };
 type SolTuple = sol! { tuple(address, bytes, string) };

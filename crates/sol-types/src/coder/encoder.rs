@@ -1,5 +1,5 @@
 // Copyright 2015-2020 Parity Technologies
-// Copyright 2023-2023 Ethers-rs Team
+// Copyright 2023-2023 Alloy Contributors
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -166,7 +166,7 @@ pub fn encode_params<T: TokenSeq>(token: &T) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use ethers_primitives::{Address, U256};
+    use alloy_primitives::{Address, U256};
     use hex_literal::hex;
 
     #[cfg(not(feature = "std"))]

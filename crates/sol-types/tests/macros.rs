@@ -1,14 +1,14 @@
-use ethers_sol_types::{define_udt, domain};
+use alloy_sol_types::{define_udt, domain};
 
 #[allow(clippy::missing_const_for_fn)]
-fn ret_ok<T>(_: T) -> ethers_sol_types::Result<()> {
+fn ret_ok<T>(_: T) -> alloy_sol_types::Result<()> {
     Ok(())
 }
 
 define_udt!(
     /// My Sol UDT.
     MyUdt,
-    underlying: ethers_sol_types::sol_data::Bool,
+    underlying: alloy_sol_types::sol_data::Bool,
     type_check: ret_ok,
 );
 

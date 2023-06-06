@@ -1,8 +1,8 @@
 use crate::{no_std_prelude::*, Decoder, Encoder, Error, Result, Word};
-use ethers_sol_types::token::{PackedSeqToken, TokenType, WordToken};
+use alloy_sol_types::token::{PackedSeqToken, TokenType, WordToken};
 
 /// A dynamic token. Equivalent to an enum over all types implementing
-/// [`ethers_sol_types::TokenType`]
+/// [`alloy_sol_types::TokenType`]
 // NOTE: do not derive `Hash` for this type. The derived version is not
 // compatible with the current `PartialEq` implementation. If manually
 // implementing `Hash`, ignore the `template` prop in the `DynSeq` variant

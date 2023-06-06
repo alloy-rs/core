@@ -7,7 +7,7 @@
 /// # Example
 ///
 /// ```
-/// use ethers_primitives::wrap_fixed_bytes;
+/// use alloy_primitives::wrap_fixed_bytes;
 ///
 /// // These hashes are the same length, and have the same functionality, but
 /// // are distinct types
@@ -258,22 +258,22 @@ macro_rules! wrap_fixed_bytes {
 #[cfg(feature = "rlp")]
 macro_rules! impl_rlp {
     ($t:ty) => {
-        impl $crate::private::ethers_rlp::Decodable for $t {
+        impl $crate::private::alloy_rlp::Decodable for $t {
             #[inline]
-            fn decode(buf: &mut &[u8]) -> Result<Self, $crate::private::ethers_rlp::DecodeError> {
-                $crate::private::ethers_rlp::Decodable::decode(buf).map(Self)
+            fn decode(buf: &mut &[u8]) -> Result<Self, $crate::private::alloy_rlp::DecodeError> {
+                $crate::private::alloy_rlp::Decodable::decode(buf).map(Self)
             }
         }
 
-        impl $crate::private::ethers_rlp::Encodable for $t {
+        impl $crate::private::alloy_rlp::Encodable for $t {
             #[inline]
             fn length(&self) -> usize {
-                $crate::private::ethers_rlp::Encodable::length(&self.0)
+                $crate::private::alloy_rlp::Encodable::length(&self.0)
             }
 
             #[inline]
             fn encode(&self, out: &mut dyn bytes::BufMut) {
-                $crate::private::ethers_rlp::Encodable::encode(&self.0, out)
+                $crate::private::alloy_rlp::Encodable::encode(&self.0, out)
             }
         }
     };
