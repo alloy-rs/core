@@ -1,7 +1,8 @@
 # alloy-dyn-abi
 
-Dynamic Solidity type encoder: Run-time representation of Ethereum's type
-system with ABI encoding & decoding.
+Dynamic Solidity type encoder.
+
+Run-time representation of Ethereum's type system with ABI encoding & decoding.
 
 This library provides a runtime encoder/decoder for solidity types. It is
 intended to be used when the solidity type is not known at compile time.

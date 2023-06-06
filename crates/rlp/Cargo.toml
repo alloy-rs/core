@@ -1,12 +1,11 @@
 [package]
 name = "alloy-rlp"
-version = "0.1.0"
-description = "A fast Rust implementation of the Ethereum RLP encoding"
-readme = "README.md"
+description = "Implementation of Ethereum RLP serialization"
 keywords = ["ethereum", "rlp", "serialization"]
-categories = ["encoding", "cryptography::cryptocurrencies"]
+categories = ["no-std", "encoding", "cryptography::cryptocurrencies"]
 homepage = "https://github.com/alloy-rs/core/tree/main/crates/rlp"
 
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true

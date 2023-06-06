@@ -1,16 +1,15 @@
 [package]
 name = "alloy-dyn-abi"
-version = "0.1.0"
-description = "Ethereum ABI encoding and decoding, with runtime typing"
-readme = "README.md"
+description = "Run-time ABI and EIP-712 implementations"
 keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
-categories = ["encoding", "cryptography::cryptocurrencies"]
+categories = ["no-std", "encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/dyn-abi"
 
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
 exclude.workspace = true
 

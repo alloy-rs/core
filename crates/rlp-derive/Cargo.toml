@@ -1,12 +1,11 @@
 [package]
 name = "alloy-rlp-derive"
-version = "0.1.0"
-description = "Procedural macros for alloy-rlp"
-readme = "README.md"
+description = "Derive macros for alloy-rlp"
 keywords = ["ethereum", "rlp", "serialization"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
 homepage = "https://github.com/alloy-rs/core/tree/main/crates/rlp-derive"
 
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true

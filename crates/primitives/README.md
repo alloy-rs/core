@@ -14,7 +14,7 @@ Primitive types shared by [alloy], [foundry], [revm], and [reth].
 - Fixed-size byte arrays via [`FixedBytes`]
     - a macro [`wrap_fixed_bytes`] for constructing named fixed bytes types
     - [`Address`], which is a fixed-size byte array of 20 bytes, with EIP-55 and
-        EIP-1191 checksum support
+      EIP-1191 checksum support
 
 ## Examples
 
