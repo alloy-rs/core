@@ -2,6 +2,7 @@ use super::{kw, Override, Visibility};
 use proc_macro2::Span;
 use std::{
     collections::HashSet,
+    fmt,
     hash::{Hash, Hasher},
     mem,
 };
@@ -11,6 +12,7 @@ use syn::{
 };
 
 /// A list of unique variable attributes.
+#[derive(Clone, Debug)]
 pub struct VariableAttributes(pub HashSet<VariableAttribute>);
 
 impl Parse for VariableAttributes {
@@ -62,6 +64,17 @@ pub enum VariableAttribute {
     Immutable(kw::immutable),
     /// An [Override] attribute.
     Override(Override),
+}
+
+impl fmt::Debug for VariableAttribute {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Visibility(v) => v.fmt(f),
+            Self::Constant(_) => f.write_str("constant"),
+            Self::Immutable(_) => f.write_str("immutable"),
+            Self::Override(o) => o.fmt(f),
+        }
+    }
 }
 
 impl PartialEq for VariableAttribute {

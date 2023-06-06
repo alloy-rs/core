@@ -13,6 +13,7 @@ use syn::{
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.functionDefinition>
+#[derive(Clone)]
 pub struct ItemFunction {
     /// The `syn` attributes of the function.
     pub attrs: Vec<Attribute>,

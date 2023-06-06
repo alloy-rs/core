@@ -1,5 +1,10 @@
 #![doc = include_str!("../README.md")]
-#![warn(unreachable_pub, unused_crate_dependencies)]
+#![warn(
+    missing_copy_implementations,
+    missing_debug_implementations,
+    unreachable_pub,
+    unused_crate_dependencies
+)]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
@@ -7,10 +12,13 @@ extern crate proc_macro;
 
 use syn::Result;
 
+#[macro_use]
+mod macros;
+
 mod attribute;
 pub use attribute::{
-    FunctionAttribute, FunctionAttributes, Modifier, Mutability, Override, VariableAttribute,
-    VariableAttributes, Visibility,
+    FunctionAttribute, FunctionAttributes, Modifier, Mutability, Override, Storage,
+    VariableAttribute, VariableAttributes, Visibility,
 };
 
 mod file;
@@ -21,12 +29,6 @@ pub use ident::{SolIdent, SolPath};
 
 mod item;
 pub use item::{Item, ItemError, ItemFunction, ItemStruct, ItemUdt};
-
-#[macro_use]
-mod macros;
-
-mod storage;
-pub use storage::Storage;
 
 mod r#type;
 pub use r#type::{SolArray, SolTuple, Type};

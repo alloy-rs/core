@@ -114,3 +114,84 @@ macro_rules! make_visitor {
         )*
     };
 }
+
+macro_rules! kw_enum {
+    (
+        $(#[$attr:meta])*
+        $vis:vis enum $name:ident {$(
+            $(#[$variant_attr:meta])*
+            $variant:ident(kw::$kw:ident)
+        ),+ $(,)?}
+    ) => {
+        $(#[$attr])*
+        #[derive(Clone, Copy, Eq)]
+        $vis enum $name {$(
+            $(#[$variant_attr])*
+            $variant($crate::kw::$kw),
+        )+}
+
+        impl ::core::cmp::PartialEq for $name {
+            fn eq(&self, other: &Self) -> bool {
+                ::core::mem::discriminant(self) == ::core::mem::discriminant(other)
+            }
+        }
+
+        impl ::core::hash::Hash for $name {
+            fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
+                ::core::hash::Hash::hash(&::core::mem::discriminant(self), state)
+            }
+        }
+
+        impl ::core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                ::core::fmt::Debug::fmt(self.as_debug_str(), f)
+            }
+        }
+
+        impl ::core::fmt::Display for $name {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                ::core::fmt::Display::fmt(self.as_str(), f)
+            }
+        }
+
+        impl ::syn::parse::Parse for $name {
+            fn parse(input: ::syn::parse::ParseStream<'_>) -> ::syn::Result<Self> {
+                let l = input.lookahead1();
+                $(
+                    if l.peek($crate::kw::$kw) {
+                        input.parse::<$crate::kw::$kw>().map(Self::$variant)
+                    } else
+                )+
+                {
+                    Err(l.error())
+                }
+            }
+        }
+
+        impl $name {
+            pub const fn span(self) -> ::proc_macro2::Span {
+                match self {$(
+                    Self::$variant(kw) => kw.span,
+                )+}
+            }
+
+            pub fn set_span(&mut self, span: ::proc_macro2::Span) {
+                match self {$(
+                    Self::$variant(kw) => kw.span = span,
+                )+}
+            }
+
+            pub const fn as_str(self) -> &'static str {
+                match self {$(
+                    Self::$variant(..) => stringify!($kw),
+                )+}
+            }
+
+            pub const fn as_debug_str(self) -> &'static str {
+                match self {$(
+                    Self::$variant(..) => stringify!($variant),
+                )+}
+            }
+        }
+    };
+}

@@ -12,6 +12,7 @@ use syn::{
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.errorDefinition>
+#[derive(Clone)]
 pub struct ItemError {
     pub attrs: Vec<Attribute>,
     pub error_token: kw::error,
