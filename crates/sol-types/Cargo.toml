@@ -5,13 +5,14 @@ description = "Ethereum ABI encoding and decoding, with static typing"
 readme = "README.md"
 keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/sol-types"
 
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

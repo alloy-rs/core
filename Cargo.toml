@@ -1,14 +1,15 @@
 [workspace]
-resolver = "2"
 members = ["crates/*"]
+resolver = "2"
 
 [workspace.package]
 edition = "2021"
 rust-version = "1.65" # Remember to update .clippy.toml and workflows/ci.yml
-authors = []
+authors = ["Alloy-rs Contributors"]
 license = "MIT OR Apache-2.0"
-homepage = "https://github.com/ethers-rs/core"
-repository = "https://github.com/ethers-rs/core"
+homepage = "https://github.com/alloy-rs/core"
+repository = "https://github.com/alloy-rs/core"
+exclude = ["benches/", "tests/"]
 
 [workspace.metadata.docs.rs]
 all-features = true

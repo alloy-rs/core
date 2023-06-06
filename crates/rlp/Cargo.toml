@@ -5,13 +5,14 @@ description = "A fast Rust implementation of the Ethereum RLP encoding"
 readme = "README.md"
 keywords = ["ethereum", "rlp", "serialization"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/rlp"
 
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

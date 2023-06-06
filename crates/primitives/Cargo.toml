@@ -5,13 +5,14 @@ description = "Fundamental ethereum types shared by revm, reth and ethers"
 readme = "README.md"
 keywords = ["ethereum", "ethers", "revm", "reth"]
 categories = ["data-structures", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/primitives"
 
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

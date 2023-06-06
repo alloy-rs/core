@@ -5,13 +5,14 @@ description = "Procedural macros for ethers-rlp"
 readme = "README.md"
 keywords = ["ethereum", "rlp", "serialization"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/rlp-derive"
 
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+exclude.workspace = true
 
 [lib]
 proc-macro = true
