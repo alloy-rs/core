@@ -1,25 +1,25 @@
 [package]
-name = "ethers-sol-types"
-version = "0.1.0"
-description = "Ethereum ABI encoding and decoding, with static typing"
-readme = "README.md"
+name = "alloy-sol-types"
+description = "Compile-time ABI and EIP-712 implementations"
 keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
-categories = ["encoding", "cryptography::cryptocurrencies"]
+categories = ["no-std", "encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/sol-types"
 
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-ethers-primitives.workspace = true
-ethers-sol-macro.workspace = true
+alloy-primitives.workspace = true
+alloy-sol-macro.workspace = true
 
 hex = { workspace = true, features = ["alloc"] }
 
@@ -31,5 +31,5 @@ trybuild = "1.0"
 
 [features]
 default = ["std", "hex/alloc"]
-std = ["ethers-primitives/std", "hex/std", "serde?/std"]
-eip712-serde = ["dep:serde", "serde?/alloc", "ethers-primitives/serde"]
+std = ["alloy-primitives/std", "hex/std", "serde?/std"]
+eip712-serde = ["dep:serde", "serde?/alloc", "alloy-primitives/serde"]

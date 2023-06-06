@@ -1,5 +1,5 @@
 // Copyright 2015-2020 Parity Technologies
-// Copyright 2023-2023 Ethers-rs Team
+// Copyright 2023-2023 Alloy Contributors
 
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -17,8 +17,8 @@
 //! - Dynamic-length byte arrays `u8[]`
 
 use crate::{no_std_prelude::*, Decoder, Encoder, Result, Word};
+use alloy_primitives::{Address, U256};
 use core::fmt;
-use ethers_primitives::{Address, U256};
 
 mod sealed {
     use super::*;
@@ -642,7 +642,7 @@ impl TokenSeq for () {
 mod tests {
     use super::*;
     use crate::{sol_data, SolType};
-    use ethers_primitives::B256;
+    use alloy_primitives::B256;
 
     macro_rules! assert_type_check {
         ($sol:ty, $token:expr $(,)?) => {

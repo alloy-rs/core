@@ -1,5 +1,5 @@
 // Copyright 2015-2020 Parity Technologies
-// Copyright 2023-2023 Ethers-rs Team
+// Copyright 2023-2023 Alloy Contributors
 
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -35,7 +35,7 @@ mod no_std_prelude {
 mod error;
 pub use error::DynAbiError;
 
-pub use ethers_sol_types::{Decoder, Eip712Domain, Encoder, Error, Result, SolType, Word};
+pub use alloy_sol_types::{Decoder, Eip712Domain, Encoder, Error, Result, SolType, Word};
 
 mod r#type;
 pub use r#type::DynSolType;

@@ -25,7 +25,7 @@ fn expand_var(var: &VariableDeclaration) -> TokenStream {
     let VariableDeclaration { ty, name, .. } = var;
     let ty = expand_type(ty);
     quote! {
-        #name: <#ty as ::ethers_sol_types::SolType>::RustType
+        #name: <#ty as ::alloy_sol_types::SolType>::RustType
     }
 }
 
@@ -112,18 +112,18 @@ impl<'ast> ExpCtxt<'ast> {
                 #converts
 
                 #[automatically_derived]
-                impl ::ethers_sol_types::SolError for #name {
+                impl ::alloy_sol_types::SolError for #name {
                     type Tuple = UnderlyingSolTuple;
-                    type Token = <UnderlyingSolTuple as ::ethers_sol_types::SolType>::TokenType;
+                    type Token = <UnderlyingSolTuple as ::alloy_sol_types::SolType>::TokenType;
 
                     const SIGNATURE: &'static str = #signature;
                     const SELECTOR: [u8; 4] = #selector;
 
-                    fn to_rust(&self) -> <Self::Tuple as ::ethers_sol_types::SolType>::RustType {
+                    fn to_rust(&self) -> <Self::Tuple as ::alloy_sol_types::SolType>::RustType {
                         self.clone().into()
                     }
 
-                    fn from_rust(tuple: <Self::Tuple as ::ethers_sol_types::SolType>::RustType) -> Self {
+                    fn from_rust(tuple: <Self::Tuple as ::alloy_sol_types::SolType>::RustType) -> Self {
                         tuple.into()
                     }
 
@@ -182,18 +182,18 @@ impl<'ast> ExpCtxt<'ast> {
                 #converts
 
                 #[automatically_derived]
-                impl ::ethers_sol_types::SolCall for #call_name {
+                impl ::alloy_sol_types::SolCall for #call_name {
                     type Tuple = UnderlyingSolTuple;
-                    type Token = <UnderlyingSolTuple as ::ethers_sol_types::SolType>::TokenType;
+                    type Token = <UnderlyingSolTuple as ::alloy_sol_types::SolType>::TokenType;
 
                     const SIGNATURE: &'static str = #signature;
                     const SELECTOR: [u8; 4] = #selector;
 
-                    fn to_rust(&self) -> <Self::Tuple as ::ethers_sol_types::SolType>::RustType {
+                    fn to_rust(&self) -> <Self::Tuple as ::alloy_sol_types::SolType>::RustType {
                         self.clone().into()
                     }
 
-                    fn from_rust(tuple: <Self::Tuple as ::ethers_sol_types::SolType>::RustType) -> Self {
+                    fn from_rust(tuple: <Self::Tuple as ::alloy_sol_types::SolType>::RustType) -> Self {
                         tuple.into()
                     }
 
@@ -229,7 +229,7 @@ impl<'ast> ExpCtxt<'ast> {
                 {
                     let mut encoded = String::from(#encoded_type);
                     #(
-                        if let Some(s) = <#props_tys as ::ethers_sol_types::SolType>::eip712_encode_type() {
+                        if let Some(s) = <#props_tys as ::alloy_sol_types::SolType>::eip712_encode_type() {
                             encoded.push_str(&s);
                         }
                     )*
@@ -245,11 +245,11 @@ impl<'ast> ExpCtxt<'ast> {
             1 => {
                 let VariableDeclaration { ty, name, .. } = fields.first().unwrap();
                 let ty = expand_type(ty);
-                quote!(<#ty as ::ethers_sol_types::SolType>::eip712_data_word(&self.#name).0.to_vec())
+                quote!(<#ty as ::alloy_sol_types::SolType>::eip712_data_word(&self.#name).0.to_vec())
             }
             _ => quote! {
                 [#(
-                    <#props_tys as ::ethers_sol_types::SolType>::eip712_data_word(&self.#props).0,
+                    <#props_tys as ::alloy_sol_types::SolType>::eip712_data_word(&self.#props).0,
                 )*].concat()
             },
         };
@@ -268,14 +268,14 @@ impl<'ast> ExpCtxt<'ast> {
 
             #[allow(non_camel_case_types, non_snake_case, clippy::style)]
             const _: () = {
-                use ::ethers_sol_types::no_std_prelude::*;
+                use ::alloy_sol_types::no_std_prelude::*;
 
                 #convert
 
                 #[automatically_derived]
-                impl ::ethers_sol_types::SolStruct for #name {
+                impl ::alloy_sol_types::SolStruct for #name {
                     type Tuple = UnderlyingSolTuple;
-                    type Token = <UnderlyingSolTuple as ::ethers_sol_types::SolType>::TokenType;
+                    type Token = <UnderlyingSolTuple as ::alloy_sol_types::SolType>::TokenType;
 
                     const NAME: &'static str = #name_s;
 
@@ -310,7 +310,7 @@ impl<'ast> ExpCtxt<'ast> {
         } = udt;
         let ty = expand_type(ty);
         let tokens = quote! {
-            ::ethers_sol_types::define_udt! {
+            ::alloy_sol_types::define_udt! {
                 #(#attrs)*
                 #name,
                 underlying: #ty,
@@ -518,7 +518,7 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
 
     quote! {
         type UnderlyingSolTuple = (#(#tys,)*);
-        type UnderlyingRustTuple = (#(<#tys2 as ::ethers_sol_types::SolType>::RustType,)*);
+        type UnderlyingRustTuple = (#(<#tys2 as ::alloy_sol_types::SolType>::RustType,)*);
 
         #[automatically_derived]
         impl ::core::convert::From<#name> for UnderlyingRustTuple {

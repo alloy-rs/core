@@ -45,23 +45,23 @@ pub(crate) fn impl_encodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
 
     let impl_block = quote! {
         trait E {
-            fn rlp_header(&self) -> ethers_rlp::Header;
+            fn rlp_header(&self) -> alloy_rlp::Header;
         }
 
         impl #impl_generics E for #name #ty_generics #where_clause {
-            fn rlp_header(&self) -> ethers_rlp::Header {
-                let mut rlp_head = ethers_rlp::Header { list: true, payload_length: 0 };
+            fn rlp_header(&self) -> alloy_rlp::Header {
+                let mut rlp_head = alloy_rlp::Header { list: true, payload_length: 0 };
                 #(#length_stmts)*
                 rlp_head
             }
         }
 
-        impl #impl_generics ethers_rlp::Encodable for #name #ty_generics #where_clause {
+        impl #impl_generics alloy_rlp::Encodable for #name #ty_generics #where_clause {
             fn length(&self) -> usize {
                 let rlp_head = E::rlp_header(self);
-                return ethers_rlp::length_of_length(rlp_head.payload_length) + rlp_head.payload_length;
+                return alloy_rlp::length_of_length(rlp_head.payload_length) + rlp_head.payload_length;
             }
-            fn encode(&self, out: &mut dyn ethers_rlp::BufMut) {
+            fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
                 E::rlp_header(self).encode(out);
                 #(#stmts)*
             }
@@ -70,7 +70,7 @@ pub(crate) fn impl_encodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
 
     Ok(quote! {
         const _: () = {
-            extern crate ethers_rlp;
+            extern crate alloy_rlp;
             #impl_block
         };
     })
@@ -93,11 +93,11 @@ pub(crate) fn impl_encodable_wrapper(ast: &syn::DeriveInput) -> Result<TokenStre
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let impl_block = quote! {
-        impl #impl_generics ethers_rlp::Encodable for #name #ty_generics #where_clause {
+        impl #impl_generics alloy_rlp::Encodable for #name #ty_generics #where_clause {
             fn length(&self) -> usize {
                 self.#ident.length()
             }
-            fn encode(&self, out: &mut dyn ethers_rlp::BufMut) {
+            fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
                 self.#ident.encode(out)
             }
         }
@@ -105,7 +105,7 @@ pub(crate) fn impl_encodable_wrapper(ast: &syn::DeriveInput) -> Result<TokenStre
 
     Ok(quote! {
         const _: () = {
-            extern crate ethers_rlp;
+            extern crate alloy_rlp;
             #impl_block
         };
     })
@@ -124,15 +124,15 @@ pub(crate) fn impl_max_encoded_len(ast: &syn::DeriveInput) -> Result<TokenStream
     let name = &ast.ident;
 
     let impl_block = quote! {
-        unsafe impl ethers_rlp::MaxEncodedLen<{ ethers_rlp::const_add(ethers_rlp::length_of_length(#(#stmts)*), #(#stmts)*) }> for #name {}
-        unsafe impl ethers_rlp::MaxEncodedLenAssoc for #name {
-            const LEN: usize = { ethers_rlp::const_add(ethers_rlp::length_of_length(#(#stmts)*), { #(#stmts)* }) };
+        unsafe impl alloy_rlp::MaxEncodedLen<{ alloy_rlp::const_add(alloy_rlp::length_of_length(#(#stmts)*), #(#stmts)*) }> for #name {}
+        unsafe impl alloy_rlp::MaxEncodedLenAssoc for #name {
+            const LEN: usize = { alloy_rlp::const_add(alloy_rlp::length_of_length(#(#stmts)*), { #(#stmts)* }) };
         }
     };
 
     Ok(quote! {
         const _: () = {
-            extern crate ethers_rlp;
+            extern crate alloy_rlp;
             #impl_block
         };
     })
@@ -154,9 +154,9 @@ fn encodable_length<'a>(
             quote! { 0 }
         };
 
-        quote! { rlp_head.payload_length += &self.#ident.as_ref().map(|val| ethers_rlp::Encodable::length(val)).unwrap_or(#default); }
+        quote! { rlp_head.payload_length += &self.#ident.as_ref().map(|val| alloy_rlp::Encodable::length(val)).unwrap_or(#default); }
     } else {
-        quote! { rlp_head.payload_length += ethers_rlp::Encodable::length(&self.#ident); }
+        quote! { rlp_head.payload_length += alloy_rlp::Encodable::length(&self.#ident); }
     }
 }
 
@@ -164,9 +164,9 @@ fn encodable_max_length(index: usize, field: &syn::Field) -> TokenStream {
     let fieldtype = &field.ty;
 
     if index == 0 {
-        quote! { <#fieldtype as ethers_rlp::MaxEncodedLenAssoc>::LEN }
+        quote! { <#fieldtype as alloy_rlp::MaxEncodedLenAssoc>::LEN }
     } else {
-        quote! { + <#fieldtype as ethers_rlp::MaxEncodedLenAssoc>::LEN }
+        quote! { + <#fieldtype as alloy_rlp::MaxEncodedLenAssoc>::LEN }
     }
 }
 
@@ -181,7 +181,7 @@ fn encodable_field<'a>(
     if is_opt {
         let if_some_encode = quote! {
             if let Some(val) = self.#ident.as_ref() {
-                ethers_rlp::Encodable::encode(val, out)
+                alloy_rlp::Encodable::encode(val, out)
             }
         };
 
@@ -197,7 +197,7 @@ fn encodable_field<'a>(
             quote! { #if_some_encode }
         }
     } else {
-        quote! { ethers_rlp::Encodable::encode(&self.#ident, out); }
+        quote! { alloy_rlp::Encodable::encode(&self.#ident, out); }
     }
 }
 

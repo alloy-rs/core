@@ -1,5 +1,5 @@
-use ethers_primitives::{keccak256, U256};
-use ethers_sol_types::{sol, SolCall, SolError};
+use alloy_primitives::{keccak256, U256};
+use alloy_sol_types::{sol, SolCall, SolError};
 
 // Unnamed arguments will be given a name based on their position,
 // e.g. `_0`, `_1`...

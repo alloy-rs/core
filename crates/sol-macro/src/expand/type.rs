@@ -14,13 +14,13 @@ pub fn expand_type(ty: &Type) -> TokenStream {
 fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
     let tts = match *ty {
         Type::Address(span, _) => quote_spanned! {span=>
-            ::ethers_sol_types::sol_data::Address
+            ::alloy_sol_types::sol_data::Address
         },
-        Type::Bool(span) => quote_spanned! {span=> ::ethers_sol_types::sol_data::Bool },
-        Type::String(span) => quote_spanned! {span=> ::ethers_sol_types::sol_data::String },
+        Type::Bool(span) => quote_spanned! {span=> ::alloy_sol_types::sol_data::Bool },
+        Type::String(span) => quote_spanned! {span=> ::alloy_sol_types::sol_data::String },
 
         Type::Bytes { span, size: None } => {
-            quote_spanned! {span=> ::ethers_sol_types::sol_data::Bytes }
+            quote_spanned! {span=> ::alloy_sol_types::sol_data::Bytes }
         }
         Type::Bytes {
             span,
@@ -28,20 +28,20 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
         } => {
             let size = Literal::u16_unsuffixed(size.get());
             quote_spanned! {span=>
-                ::ethers_sol_types::sol_data::FixedBytes<#size>
+                ::alloy_sol_types::sol_data::FixedBytes<#size>
             }
         }
 
         Type::Int { span, size } => {
             let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
             quote_spanned! {span=>
-                ::ethers_sol_types::sol_data::Int<#size>
+                ::alloy_sol_types::sol_data::Int<#size>
             }
         }
         Type::Uint { span, size } => {
             let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
             quote_spanned! {span=>
-                ::ethers_sol_types::sol_data::Uint<#size>
+                ::alloy_sol_types::sol_data::Uint<#size>
             }
         }
 
@@ -60,11 +60,11 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
             let span = array.span();
             if let Some(size) = &array.size {
                 quote_spanned! {span=>
-                    ::ethers_sol_types::sol_data::FixedArray<#ty, #size>
+                    ::alloy_sol_types::sol_data::FixedArray<#ty, #size>
                 }
             } else {
                 quote_spanned! {span=>
-                    ::ethers_sol_types::sol_data::Array<#ty>
+                    ::alloy_sol_types::sol_data::Array<#ty>
                 }
             }
         }

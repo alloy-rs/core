@@ -1,17 +1,17 @@
 [package]
-name = "ethers-rlp"
-version = "0.1.0"
-description = "A fast Rust implementation of the Ethereum RLP encoding"
-readme = "README.md"
+name = "alloy-rlp"
+description = "Implementation of Ethereum RLP serialization"
 keywords = ["ethereum", "rlp", "serialization"]
-categories = ["encoding", "cryptography::cryptocurrencies"]
+categories = ["no-std", "encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/rlp"
 
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
@@ -21,7 +21,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 arrayvec.workspace = true
 bytes.workspace = true
 
-ethers-rlp-derive = { workspace = true, optional = true }
+alloy-rlp-derive = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex-literal.workspace = true
@@ -29,4 +29,4 @@ hex-literal.workspace = true
 [features]
 default = ["std", "derive"]
 std = ["arrayvec/std", "bytes/std"]
-derive = ["dep:ethers-rlp-derive"]
+derive = ["dep:alloy-rlp-derive"]

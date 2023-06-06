@@ -1,5 +1,5 @@
-use ethers_primitives::{Address, U256};
-use ethers_sol_types::{sol, SolType};
+use alloy_primitives::{Address, U256};
+use alloy_sol_types::{sol, SolType};
 use hex_literal::hex;
 
 // Struct definitions will generate a struct with the same name and fields.

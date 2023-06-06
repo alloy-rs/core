@@ -1,5 +1,5 @@
 use crate::{no_std_prelude::*, DynAbiError, DynSolType, DynSolValue, Word};
-use ethers_primitives::{Address, I256, U256};
+use alloy_primitives::{Address, I256, U256};
 
 /// Coerce a `serde_json::Value` to a `DynSolValue::Address`
 pub(crate) fn address(value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {

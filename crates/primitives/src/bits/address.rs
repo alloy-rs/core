@@ -184,7 +184,7 @@ impl Address {
     #[cfg(feature = "rlp")]
     pub fn create<T: Borrow<[u8; 20]>>(sender: T, nonce: u64) -> Address {
         fn create(sender: &[u8; 20], nonce: u64) -> Address {
-            use ethers_rlp::Encodable;
+            use alloy_rlp::Encodable;
 
             let mut out = alloc::vec::Vec::with_capacity(64);
             let buf = &mut out as &mut dyn bytes::BufMut;

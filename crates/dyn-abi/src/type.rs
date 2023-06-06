@@ -3,7 +3,7 @@ use crate::{
     no_std_prelude::*,
     DynAbiError, DynSolValue, DynToken, Result, SolType, Word,
 };
-use ethers_sol_types::sol_data;
+use alloy_sol_types::sol_data;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct StructProp {
@@ -22,8 +22,8 @@ struct StructProp {
 ///
 /// # Example
 /// ```
-/// # use ethers_dyn_abi::{DynSolType, DynSolValue, Result};
-/// # use ethers_primitives::U256;
+/// # use alloy_dyn_abi::{DynSolType, DynSolValue, Result};
+/// # use alloy_primitives::U256;
 /// # pub fn main() -> Result<()> {
 /// let my_type = DynSolType::Uint(256);
 /// let my_data: DynSolValue = U256::from(183).into();
@@ -394,7 +394,7 @@ impl DynSolType {
 mod test {
     use super::*;
     use crate::*;
-    use ethers_primitives::Address;
+    use alloy_primitives::Address;
     use serde_json::json;
 
     #[test]

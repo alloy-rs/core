@@ -1,5 +1,5 @@
 // Copyright 2015-2020 Parity Technologies
-// Copyright 2023-2023 Ethers-rs Team
+// Copyright 2023-2023 Alloy Contributors
 
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -24,8 +24,8 @@
 //! `encode` and `decode` methods operate on objects implementing [`TokenType`].
 //!
 //! ```
-//! use ethers_sol_types::{SolType, sol_data::*};
-//! # pub fn main() -> ethers_sol_types::Result<()> {
+//! use alloy_sol_types::{SolType, sol_data::*};
+//! # pub fn main() -> alloy_sol_types::Result<()> {
 //! // Represent a Solidity type in rust
 //! type MySolType = FixedArray<Bool, 2>;
 //!
@@ -54,8 +54,8 @@
 //! The [`SolStruct`] trait primarily provides EIP-712 signing support.
 //!
 //! ```
-//! # use ethers_sol_types::{sol, SolStruct};
-//! # use ethers_primitives::U256;
+//! # use alloy_sol_types::{sol, SolStruct};
+//! # use alloy_primitives::U256;
 //! // `sol!` allows you to define struct types!
 //! // You can just paste Solidity into the macro and it should work :)
 //! sol! {
@@ -84,7 +84,7 @@
 //! };
 //!
 //! // The domain macro lets you easily define an EIP-712 domain object :)
-//! let my_domain = ethers_sol_types::domain!(
+//! let my_domain = alloy_sol_types::domain!(
 //!    name: "MyDomain",
 //!    version: "1",
 //! );
@@ -102,8 +102,8 @@
 //! features!
 //!
 //! ```
-//! # use ethers_sol_types::{sol, sol_data, SolType};
-//! # use ethers_primitives::U256;
+//! # use alloy_sol_types::{sol, sol_data, SolType};
+//! # use alloy_primitives::U256;
 //! // We also also support Solidity value types
 //! sol! {
 //!     type MyValueType is uint256;
@@ -169,10 +169,10 @@ pub mod no_std_prelude {
 }
 
 #[doc(inline)]
-pub use ethers_sol_macro::sol;
+pub use alloy_sol_macro::sol;
 
 /// The ABI word type.
-pub type Word = ethers_primitives::B256;
+pub type Word = alloy_primitives::B256;
 
 mod coder;
 pub use coder::{
@@ -193,7 +193,7 @@ pub use types::{
 mod util;
 
 #[doc(hidden)]
-pub use ethers_primitives::keccak256;
+pub use alloy_primitives::keccak256;
 #[doc(hidden)]
 pub use util::just_ok;
 

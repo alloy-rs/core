@@ -20,7 +20,7 @@ use ruint::Uint;
 /// # Usage
 ///
 /// ```
-/// # use ethers_primitives::I256;
+/// # use alloy_primitives::I256;
 /// // Instantiate from a number
 /// let a = I256::unchecked_from(1);
 /// // Use `try_from` if you're not sure it'll fit

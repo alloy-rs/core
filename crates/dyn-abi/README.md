@@ -1,7 +1,8 @@
-# ethers-dyn-abi
+# alloy-dyn-abi
 
-Dynamic Solidity type encoder: Run-time representation of Ethereum's type
-system with ABI encoding & decoding.
+Dynamic Solidity type encoder.
+
+Run-time representation of Ethereum's type system with ABI encoding & decoding.
 
 This library provides a runtime encoder/decoder for solidity types. It is
 intended to be used when the solidity type is not known at compile time.
@@ -12,12 +13,12 @@ The dyanmic encoder/decoder is significantly more expensive, especially for
 complex types. It is also significantly more error prone, as the mapping
 between solidity types and rust types is not enforced by the compiler.
 
-[abi]: https://docs.rs/ethers-sol-types/latest/ethers_sol_types/
+[abi]: https://docs.rs/alloy-sol-types/latest/alloy_sol_types/
 
 ## Usage
 
 ```rust
-use ethers_dyn_abi::{DynSolType, DynSolValue};
+use alloy_dyn_abi::{DynSolType, DynSolValue};
 
 // parse a type from a string
 // limitation: custom structs cannot currently be parsed this way.
@@ -47,7 +48,7 @@ The [`DynSolValue`] enum represents a solidity value, and describes the
 rust shapes of possible solidity values. It is similar to, but not
 equivalent to an enum over types used as [`crate::SolType::RustType`]. The
 [`DynToken`] enum represents an ABI token, and is equivalent to an enum over
-the types implementing the [`ethers_sol_types::TokenType`] trait.
+the types implementing the [`alloy_sol_types::TokenType`] trait.
 
 Where the static encoding system encodes the expected type information into
 the rust type system, the dynamic encoder/decoder encodes it as a concrete
@@ -55,8 +56,8 @@ instance of [`DynSolType`]. This type is used to tokenize and detokenize
 [`DynSolValue`] instances. The [`std::str::FromStr`] impl is used to parse a
 solidity type string into a [`DynSolType`] object.
 
-- Tokenizing   - `DynSolType` + `DynSolValue` = `DynToken`
-- Detokenizing - `DynSolType` + `DynToken`    = `DynSolValue`
+- Tokenizing:   `DynSolType` + `DynSolValue` = `DynToken`
+- Detokenizing: `DynSolType` + `DynToken`    = `DynSolValue`
 
 Users must manually handle the conversions between [`DynSolValue`] and their
 own rust types. We provide several `From`implementations, but they fall

@@ -46,7 +46,7 @@ pub mod private {
     pub use getrandom;
 
     #[cfg(feature = "rlp")]
-    pub use ethers_rlp;
+    pub use alloy_rlp;
 
     #[cfg(feature = "serde")]
     pub use serde;

@@ -1,17 +1,17 @@
 [package]
-name = "ethers-primitives"
-version = "0.1.0"
-description = "Fundamental ethereum types shared by revm, reth and ethers"
-readme = "README.md"
+name = "alloy-primitives"
+description = "Ethereum primitive types"
 keywords = ["ethereum", "ethers", "revm", "reth"]
-categories = ["data-structures", "cryptography::cryptocurrencies"]
+categories = ["no-std", "data-structures", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/primitives"
 
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
@@ -32,7 +32,7 @@ tiny-keccak = { workspace = true, features = ["keccak"] }
 derive_more.workspace = true
 
 # rlp
-ethers-rlp = { workspace = true, optional = true }
+alloy-rlp = { workspace = true, optional = true }
 
 # serde
 serde = { workspace = true, optional = true }
@@ -48,8 +48,8 @@ serde_json.workspace = true
 
 [features]
 default = ["std", "rlp", "serde"]
-std = ["bytes/std", "hex/std", "ethers-rlp?/std", "proptest?/std", "serde/std"]
-rlp = ["dep:ethers-rlp", "ruint/fastrlp"]
+std = ["bytes/std", "hex/std", "alloy-rlp?/std", "proptest?/std", "serde/std"]
+rlp = ["dep:alloy-rlp", "ruint/fastrlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
 arbitrary = [
     "std",
