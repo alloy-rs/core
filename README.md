@@ -1,4 +1,4 @@
-# alloy-rs
+# Alloy
 
 Core libraries at the root of the Rust Ethereum ecosystem.
 
@@ -54,7 +54,7 @@ release.
 
 Thanks for your help improving the project! We are so happy to have you! We have
 [a contributing guide](./CONTRIBUTING.md) to help you get involved in the
-alloy-rs project.
+Alloy project.
 
 Pull requests will not be merged unless CI passes, so please ensure that your
 contribution follows the linting rules and passes clippy.
