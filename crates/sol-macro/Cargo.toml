@@ -1,5 +1,5 @@
 [package]
-name = "ethers-sol-macro"
+name = "alloy-sol-macro"
 version = "0.1.0"
 description = "Solidity to Rust proc-macro"
 readme = "README.md"

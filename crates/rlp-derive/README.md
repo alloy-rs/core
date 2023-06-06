@@ -1,7 +1,7 @@
 ## RLP derive crate
 
 This crate provides derive macros for traits defined in
-[`ethers-rlp`](https://docs.rs/ethers-rlp). See that crate's documentation for
+[`alloy-rlp`](https://docs.rs/alloy-rlp). See that crate's documentation for
 more information.
 
 ### Provenance notes

@@ -3,8 +3,8 @@ use crate::{
     token::{PackedSeqToken, TokenSeq, WordToken},
     Result, SolType,
 };
+use alloy_primitives::U256;
 use core::fmt;
-use ethers_primitives::U256;
 
 /// Solidity Error (a tuple with a selector)
 ///
@@ -379,7 +379,7 @@ impl PanicKind {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ethers_primitives::keccak256;
+    use alloy_primitives::keccak256;
 
     #[test]
     fn test_revert_encoding() {

@@ -1,7 +1,7 @@
 [package]
-name = "ethers-rlp-derive"
+name = "alloy-rlp-derive"
 version = "0.1.0"
-description = "Procedural macros for ethers-rlp"
+description = "Procedural macros for alloy-rlp"
 readme = "README.md"
 keywords = ["ethereum", "rlp", "serialization"]
 categories = ["encoding", "cryptography::cryptocurrencies"]

@@ -7,7 +7,7 @@ use crate::{no_std_prelude::*, token::TokenSeq, Result, TokenType, Word};
 /// complex Solidity types.
 ///
 /// ```
-/// use ethers_sol_types::{SolType, sol_data::*};
+/// use alloy_sol_types::{SolType, sol_data::*};
 ///
 /// type DynUint256Array = Array<Uint<256>>;
 /// assert_eq!(&DynUint256Array::sol_type_name(), "uint256[]");
@@ -30,7 +30,7 @@ use crate::{no_std_prelude::*, token::TokenSeq, Result, TokenType, Word};
 /// native Rust struct.
 ///
 /// ```
-/// ethers_sol_types::sol! {
+/// alloy_sol_types::sol! {
 ///     struct MyStruct {
 ///         bool a;
 ///         bytes2 b;

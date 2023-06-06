@@ -23,7 +23,7 @@ this to be one of the fastest implementations for regular encoding/decoding. :)
 
 This crate works only with types known at compile-time. For types known only at
 runtime (including the eip712 `eth_signTypedData` json-rpc request), see the
-`ethers-dyn-abi` crate.
+`alloy-dyn-abi` crate.
 
 ### To what extent?
 
@@ -44,8 +44,8 @@ defs into `SolCall` types, but may in the future.
   - All elementary, fixed-size, and non-fixed size
     [ABI types](https://docs.soliditylang.org/en/latest/abi-spec.html#types).
   - EXCEPT
-    - [`function` types](https://docs.soliditylang.org/en/v0.8.17/types.html#function-types).
-    - [`fixed`](https://docs.soliditylang.org/en/v0.8.17/types.html#fixed-point-numbers).
+    - [`function` types](https://docs.soliditylang.org/en/latest/types.html#function-types).
+    - [`fixed`](https://docs.soliditylang.org/en/latest/types.html#fixed-point-numbers).
 
 - Compound Solidity types
 
@@ -55,17 +55,17 @@ defs into `SolCall` types, but may in the future.
 
 - User-defined Types
 
-  - [Structs](https://solidity-by-example.org/structs/) represented as a tuple
-    of the field types.
-  - [User-defined Value Types](https://blog.soliditylang.org/2021/09/27/user-defined-value-types/), encoded transparently.
-  - [Enums](https://docs.soliditylang.org/en/v0.8.17/types.html#enums) (TODO)
-    represented as `u8`.
+    - [Structs](https://solidity-by-example.org/structs/) represented as a tuple
+        of the field types.
+    - [User-defined Value Types](https://blog.soliditylang.org/2021/09/27/user-defined-value-types/), encoded transparently.
+    - [Enums](https://docs.soliditylang.org/en/latest/types.html#enums) (TODO)
+        represented as `u8`.
 
 - Externalized Types
-  - Function arguments and returns, represented as selector-prefixed tuples.
-  - [Errors](https://blog.soliditylang.org/2021/04/21/custom-errors/),
-    represented as selector-prefixed tuples
-  - Events (TODO)
+    - Function arguments and returns, represented as selector-prefixed tuples.
+    - [Errors](https://blog.soliditylang.org/2021/04/21/custom-errors/),
+        represented as selector-prefixed tuples
+    - Events (TODO)
 
 ## How?
 

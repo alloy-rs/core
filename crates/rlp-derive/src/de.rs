@@ -34,16 +34,16 @@ pub(crate) fn impl_decodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let impl_block = quote! {
-        impl #impl_generics ethers_rlp::Decodable for #name #ty_generics #where_clause {
-            fn decode(mut buf: &mut &[u8]) -> Result<Self, ethers_rlp::DecodeError> {
+        impl #impl_generics alloy_rlp::Decodable for #name #ty_generics #where_clause {
+            fn decode(mut buf: &mut &[u8]) -> Result<Self, alloy_rlp::DecodeError> {
                 let b = &mut &**buf;
-                let rlp_head = ethers_rlp::Header::decode(b)?;
+                let rlp_head = alloy_rlp::Header::decode(b)?;
 
                 if !rlp_head.list {
-                    return Err(ethers_rlp::DecodeError::UnexpectedString);
+                    return Err(alloy_rlp::DecodeError::UnexpectedString);
                 }
-                if ethers_rlp::Buf::remaining(b) < rlp_head.payload_length {
-                    return Err(ethers_rlp::DecodeError::InputTooShort);
+                if alloy_rlp::Buf::remaining(b) < rlp_head.payload_length {
+                    return Err(alloy_rlp::DecodeError::InputTooShort);
                 }
 
                 let started_len = b.len();
@@ -53,7 +53,7 @@ pub(crate) fn impl_decodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
 
                 let consumed = started_len - b.len();
                 if consumed != rlp_head.payload_length {
-                    return Err(ethers_rlp::DecodeError::ListLengthMismatch {
+                    return Err(alloy_rlp::DecodeError::ListLengthMismatch {
                         expected: rlp_head.payload_length,
                         got: consumed,
                     });
@@ -68,7 +68,7 @@ pub(crate) fn impl_decodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
 
     Ok(quote! {
         const _: () = {
-            extern crate ethers_rlp;
+            extern crate alloy_rlp;
             #impl_block
         };
     })
@@ -87,16 +87,16 @@ pub(crate) fn impl_decodable_wrapper(ast: &syn::DeriveInput) -> Result<TokenStre
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let impl_block = quote! {
-        impl #impl_generics ethers_rlp::Decodable for #name #ty_generics #where_clause {
-            fn decode(buf: &mut &[u8]) -> Result<Self, ethers_rlp::DecodeError> {
-                Ok(Self(ethers_rlp::Decodable::decode(buf)?))
+        impl #impl_generics alloy_rlp::Decodable for #name #ty_generics #where_clause {
+            fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::DecodeError> {
+                Ok(Self(alloy_rlp::Decodable::decode(buf)?))
             }
         }
     };
 
     Ok(quote! {
         const _: () = {
-            extern crate ethers_rlp;
+            extern crate alloy_rlp;
             #impl_block
         };
     })
@@ -114,13 +114,13 @@ fn decodable_field(index: usize, field: &syn::Field, is_opt: bool) -> TokenStrea
                     bytes::Buf::advance(b, 1);
                     None
                 } else {
-                    Some(ethers_rlp::Decodable::decode(b)?)
+                    Some(alloy_rlp::Decodable::decode(b)?)
                 }
             } else {
                 None
             },
         }
     } else {
-        quote! { #ident: ethers_rlp::Decodable::decode(b)?, }
+        quote! { #ident: alloy_rlp::Decodable::decode(b)?, }
     }
 }

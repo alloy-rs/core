@@ -3,7 +3,7 @@
 
 use super::SolType;
 use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Result, Word};
-use ethers_primitives::{keccak256, B256};
+use alloy_primitives::{keccak256, B256};
 
 type TupleFor<T> = <T as SolStruct>::Tuple;
 type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;

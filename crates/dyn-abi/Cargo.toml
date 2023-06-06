@@ -1,5 +1,5 @@
 [package]
-name = "ethers-dyn-abi"
+name = "alloy-dyn-abi"
 version = "0.1.0"
 description = "Ethereum ABI encoding and decoding, with runtime typing"
 readme = "README.md"
@@ -19,8 +19,8 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-ethers-sol-types = { workspace = true, features = ["eip712-serde"] }
-ethers-primitives.workspace = true
+alloy-sol-types = { workspace = true, features = ["eip712-serde"] }
+alloy-primitives.workspace = true
 
 hex.workspace = true
 serde.workspace = true
@@ -28,4 +28,4 @@ serde_json = { workspace = true, features = ["alloc"] }
 
 [features]
 default = ["std"]
-std = ["ethers-sol-types/std", "ethers-primitives/std", "hex/std", "serde/std", "serde_json/std"]
+std = ["alloy-sol-types/std", "alloy-primitives/std", "hex/std", "serde/std", "serde_json/std"]

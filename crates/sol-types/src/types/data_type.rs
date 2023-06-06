@@ -6,8 +6,8 @@ use crate::{
     util, Result, SolType, Word,
 };
 use alloc::borrow::Cow;
+use alloy_primitives::{keccak256, Address as RustAddress, I256, U256};
 use core::marker::PhantomData;
-use ethers_primitives::{keccak256, Address as RustAddress, I256, U256};
 
 /// Address - `address`
 #[derive(Copy, Clone, Debug)]
