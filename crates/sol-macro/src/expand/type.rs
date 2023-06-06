@@ -1,4 +1,4 @@
-use super::ExpCx;
+use super::ExpCtxt;
 use ast::{Item, SolArray, SolIdent, Type};
 use proc_macro2::{Literal, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
@@ -73,7 +73,7 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
     tokens.extend(tts);
 }
 
-impl ExpCx<'_> {
+impl ExpCtxt<'_> {
     fn get_item(&self, name: &SolIdent) -> &Item {
         match self.all_items.iter().find(|item| item.name() == name) {
             Some(item) => item,
@@ -189,12 +189,12 @@ impl ExpCx<'_> {
 }
 
 pub(super) struct TypePrinter<'ast> {
-    cx: &'ast ExpCx<'ast>,
+    cx: &'ast ExpCtxt<'ast>,
     ty: &'ast Type,
 }
 
 impl<'ast> TypePrinter<'ast> {
-    pub(super) fn new(cx: &'ast ExpCx<'ast>, ty: &'ast Type) -> Self {
+    pub(super) fn new(cx: &'ast ExpCtxt<'ast>, ty: &'ast Type) -> Self {
         Self { cx, ty }
     }
 }

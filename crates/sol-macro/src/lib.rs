@@ -56,13 +56,13 @@ mod utils;
 /// ```
 #[proc_macro]
 pub fn sol(input: TokenStream) -> TokenStream {
-    match ast::parse(input.clone()) {
+    let result = match ast::parse(input.clone()) {
         Ok(ast) => expand::expand(ast),
         // TODO: Should we still support this?
         Err(e) => match syn::parse::<ast::Type>(input) {
-            Ok(ty) => expand::expand_type(&ty),
-            Err(_) => e.into_compile_error(),
+            Ok(ast::Type::Custom(_)) | Err(_) => Err(e),
+            Ok(ty) => Ok(expand::expand_type(&ty)),
         },
-    }
-    .into()
+    };
+    result.unwrap_or_else(syn::Error::into_compile_error).into()
 }

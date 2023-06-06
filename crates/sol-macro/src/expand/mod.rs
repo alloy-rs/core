@@ -17,10 +17,8 @@ use r#type::TypePrinter;
 const RESOLVE_LIMIT: usize = 16;
 
 /// The [`sol!`][crate::sol!] expansion implementation.
-pub fn expand(ast: File) -> TokenStream {
-    ExpCx::new(&ast)
-        .expand()
-        .unwrap_or_else(|e| e.into_compile_error())
+pub fn expand(ast: File) -> Result<TokenStream> {
+    ExpCtxt::new(&ast).expand()
 }
 
 fn expand_var(var: &VariableDeclaration) -> TokenStream {
@@ -31,7 +29,7 @@ fn expand_var(var: &VariableDeclaration) -> TokenStream {
     }
 }
 
-struct ExpCx<'ast> {
+struct ExpCtxt<'ast> {
     all_items: Vec<&'ast Item>,
     custom_types: HashMap<SolIdent, Type>,
 
@@ -44,7 +42,7 @@ struct ExpCx<'ast> {
 }
 
 // expand
-impl<'ast> ExpCx<'ast> {
+impl<'ast> ExpCtxt<'ast> {
     fn new(ast: &'ast File) -> Self {
         Self {
             all_items: Vec::new(),
@@ -323,7 +321,7 @@ impl<'ast> ExpCx<'ast> {
 }
 
 // resolve
-impl<'ast> ExpCx<'ast> {
+impl<'ast> ExpCtxt<'ast> {
     fn mk_types_map(&mut self) {
         let mut map = std::mem::take(&mut self.custom_types);
         map.reserve(self.all_items.len());
@@ -466,7 +464,7 @@ impl<'ast> ExpCx<'ast> {
         let mut errors = Vec::new();
         params.visit_types(|ty| {
             if let Type::Custom(name) = ty {
-                if !self.custom_types.contains_key(name.into()) {
+                if !self.custom_types.contains_key(name) {
                     let e = syn::Error::new(name.span(), "unresolved type");
                     errors.push(e);
                 }
@@ -494,7 +492,7 @@ impl<'ast> ExpCx<'ast> {
     }
 }
 
-impl<'ast> Visit<'ast> for ExpCx<'ast> {
+impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
     fn visit_item(&mut self, item: &'ast Item) {
         self.all_items.push(item);
         ast::visit::visit_item(self, item);
