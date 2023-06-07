@@ -1,4 +1,4 @@
-use crate::{kw, FunctionAttributes, Parameters, Returns, SolIdent, SolTuple, Type};
+use crate::{kw, FunctionAttributes, Parameters, Returns, SolIdent, Type};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -13,6 +13,7 @@ use syn::{
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.functionDefinition>
+#[derive(Clone)]
 pub struct ItemFunction {
     /// The `syn` attributes of the function.
     pub attrs: Vec<Attribute>,
@@ -83,22 +84,21 @@ impl ItemFunction {
         }
     }
 
-    /// Returns the function signature as a string.
-    pub fn signature(&self) -> String {
-        self.arguments.signature(self.name.as_string())
+    /// Returns the function's arguments tuple type.
+    pub fn call_type(&self) -> Type {
+        Type::Tuple(self.arguments.iter().map(|arg| arg.ty.clone()).collect())
     }
 
-    /// Returns the function's signature tuple type.
-    pub fn call_type(&self) -> Type {
-        let mut args = self
-            .arguments
-            .iter()
-            .map(|arg| arg.ty.clone())
-            .collect::<SolTuple>();
-        // ensure trailing comma for single item tuple
-        if !args.types.trailing_punct() && args.types.len() == 1 {
-            args.types.push_punct(Default::default())
-        }
-        Type::Tuple(args)
+    /// Returns the function's return tuple type.
+    pub fn return_type(&self) -> Option<Type> {
+        self.returns.as_ref().map(|returns| {
+            Type::Tuple(
+                returns
+                    .returns
+                    .iter()
+                    .map(|returns| returns.ty.clone())
+                    .collect(),
+            )
+        })
     }
 }

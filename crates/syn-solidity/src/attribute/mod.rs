@@ -1,4 +1,4 @@
-use super::{kw, SolPath};
+use super::{kw, utils::DebugPunctuated, SolPath};
 use proc_macro2::{Span, TokenStream};
 use std::{
     fmt,
@@ -18,163 +18,43 @@ pub use function::{FunctionAttribute, FunctionAttributes};
 mod variable;
 pub use variable::{VariableAttribute, VariableAttributes};
 
-/// A visibility attribute.
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum Visibility {
-    /// `external`
-    External(kw::external),
-    /// `public`
-    Public(kw::public),
-    /// `internal`
-    Internal(kw::internal),
-    /// `private`
-    Private(kw::private),
-}
-
-impl fmt::Debug for Visibility {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_debug_str())
+kw_enum! {
+    /// A storage location.
+    pub enum Storage {
+        /// `memory`
+        Memory(kw::memory),
+        /// `storage`
+        Storage(kw::storage),
+        /// `calldata`
+        Calldata(kw::calldata),
     }
 }
 
-impl fmt::Display for Visibility {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
+kw_enum! {
+    /// A visibility attribute.
+    pub enum Visibility {
+        /// `external`
+        External(kw::external),
+        /// `public`
+        Public(kw::public),
+        /// `internal`
+        Internal(kw::internal),
+        /// `private`
+        Private(kw::private),
     }
 }
 
-impl Parse for Visibility {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let lookahead = input.lookahead1();
-        if lookahead.peek(kw::external) {
-            Ok(Self::External(input.parse()?))
-        } else if lookahead.peek(kw::public) {
-            Ok(Self::Public(input.parse()?))
-        } else if lookahead.peek(kw::internal) {
-            Ok(Self::Internal(input.parse()?))
-        } else if lookahead.peek(kw::private) {
-            Ok(Self::Private(input.parse()?))
-        } else {
-            Err(lookahead.error())
-        }
-    }
-}
-
-impl Visibility {
-    pub fn span(&self) -> Span {
-        match self {
-            Self::External(kw) => kw.span,
-            Self::Public(kw) => kw.span,
-            Self::Internal(kw) => kw.span,
-            Self::Private(kw) => kw.span,
-        }
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        match self {
-            Self::External(kw) => kw.span = span,
-            Self::Public(kw) => kw.span = span,
-            Self::Internal(kw) => kw.span = span,
-            Self::Private(kw) => kw.span = span,
-        }
-    }
-
-    pub const fn as_debug_str(&self) -> &'static str {
-        match self {
-            Self::External(_) => "External",
-            Self::Public(_) => "Public",
-            Self::Internal(_) => "Internal",
-            Self::Private(_) => "Private",
-        }
-    }
-
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::External(_) => "external",
-            Self::Public(_) => "public",
-            Self::Internal(_) => "internal",
-            Self::Private(_) => "private",
-        }
-    }
-}
-
-/// A mutability attribute.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Mutability {
-    /// `pure`
-    Pure(kw::pure),
-    /// `view`
-    View(kw::view),
-    /// `constant`
-    Constant(kw::constant),
-    /// `payable`
-    Payable(kw::payable),
-}
-
-impl fmt::Debug for Mutability {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_debug_str())
-    }
-}
-
-impl fmt::Display for Mutability {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl Parse for Mutability {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let lookahead = input.lookahead1();
-        if lookahead.peek(kw::pure) {
-            Ok(Self::Pure(input.parse()?))
-        } else if lookahead.peek(kw::view) {
-            Ok(Self::View(input.parse()?))
-        } else if lookahead.peek(kw::constant) {
-            Ok(Self::Constant(input.parse()?))
-        } else if lookahead.peek(kw::payable) {
-            Ok(Self::Payable(input.parse()?))
-        } else {
-            Err(lookahead.error())
-        }
-    }
-}
-
-impl Mutability {
-    pub fn span(&self) -> Span {
-        match self {
-            Self::Pure(kw) => kw.span,
-            Self::View(kw) => kw.span,
-            Self::Constant(kw) => kw.span,
-            Self::Payable(kw) => kw.span,
-        }
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        match self {
-            Self::Pure(kw) => kw.span = span,
-            Self::View(kw) => kw.span = span,
-            Self::Constant(kw) => kw.span = span,
-            Self::Payable(kw) => kw.span = span,
-        }
-    }
-
-    pub const fn as_debug_str(&self) -> &'static str {
-        match self {
-            Self::Pure(_) => "Pure",
-            Self::View(_) => "View",
-            Self::Constant(_) => "Constant",
-            Self::Payable(_) => "Payable",
-        }
-    }
-
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Pure(_) => "pure",
-            Self::View(_) => "view",
-            Self::Constant(_) => "constant",
-            Self::Payable(_) => "payable",
-        }
+kw_enum! {
+    /// A mutability attribute.
+    pub enum Mutability {
+        /// `pure`
+        Pure(kw::pure),
+        /// `view`
+        View(kw::view),
+        /// `constant`
+        Constant(kw::constant),
+        /// `payable`
+        Payable(kw::payable),
     }
 }
 
@@ -188,7 +68,9 @@ pub struct Override {
 
 impl fmt::Debug for Override {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Override").field(&self.paths).finish()
+        f.debug_tuple("Override")
+            .field(DebugPunctuated::new(&self.paths))
+            .finish()
     }
 }
 
@@ -273,7 +155,7 @@ impl fmt::Debug for Modifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Modifier")
             .field("name", &self.name)
-            .field("arguments", &self.arguments)
+            .field("arguments", DebugPunctuated::new(&self.arguments))
             .finish()
     }
 }

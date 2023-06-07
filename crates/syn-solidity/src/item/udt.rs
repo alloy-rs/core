@@ -58,15 +58,15 @@ impl Parse for ItemUdt {
             semi_token: input.parse()?,
         };
 
-        // Solidity doesn't allow this, and it would cause ambiguity in `CustomType`
-        let mut has_struct = this.ty.is_struct();
-        this.ty.visit(&mut |ty| {
-            has_struct |= ty.is_struct();
-        });
-        if has_struct {
+        // Solidity doesn't allow this, and it would cause ambiguity later on
+        #[allow(unused_mut)]
+        let mut has_custom = this.ty.is_custom();
+        #[cfg(feature = "visit")]
+        this.ty.visit(|ty| has_custom |= ty.is_custom());
+        if has_custom {
             return Err(syn::Error::new(
                 this.ty.span(),
-                "the underlying type for a user defined value type has to be an elementary value type",
+                "the underlying type for a user-defined value type has to be an elementary value type",
             ));
         }
 

@@ -133,12 +133,14 @@ impl<const N: usize> FixedBytes<N> {
     }
 
     /// Instantiates a new fixed hash with cryptographically random content.
+    #[cfg(feature = "getrandom")]
     #[inline]
     pub fn random() -> Self {
         Self::try_random().unwrap()
     }
 
     /// Instantiates a new fixed hash with cryptographically random content.
+    #[cfg(feature = "getrandom")]
     pub fn try_random() -> Result<Self, getrandom::Error> {
         let mut bytes: [_; N] = super::impl_core::uninit_array();
         getrandom::getrandom_uninit(&mut bytes)?;

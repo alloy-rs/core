@@ -25,6 +25,16 @@ hex.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, features = ["alloc"] }
 
+[dev-dependencies]
+hex-literal.workspace = true
+criterion = "0.5"
+ethabi = "18"
+
 [features]
 default = ["std"]
 std = ["alloy-sol-types/std", "alloy-primitives/std", "hex/std", "serde/std", "serde_json/std"]
+
+[[bench]]
+name = "abi"
+path = "benches/abi.rs"
+harness = false

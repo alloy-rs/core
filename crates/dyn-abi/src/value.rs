@@ -242,6 +242,27 @@ impl From<Vec<u8>> for DynSolValue {
     }
 }
 
+impl From<String> for DynSolValue {
+    #[inline]
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
+impl From<Vec<DynSolValue>> for DynSolValue {
+    #[inline]
+    fn from(value: Vec<DynSolValue>) -> Self {
+        Self::Array(value)
+    }
+}
+
+impl<const N: usize> From<[DynSolValue; N]> for DynSolValue {
+    #[inline]
+    fn from(value: [DynSolValue; N]) -> Self {
+        Self::FixedArray(value.to_vec())
+    }
+}
+
 macro_rules! impl_from_int {
     ($($t:ty),+) => {$(
         impl From<$t> for DynSolValue {
@@ -254,7 +275,7 @@ macro_rules! impl_from_int {
                 let mut word = if value.is_negative() {
                     alloy_primitives::B256::repeat_byte(0xff)
                 } else {
-                    alloy_primitives::B256::default()
+                    alloy_primitives::B256::ZERO
                 };
                 word[32 - BYTES..].copy_from_slice(&value.to_be_bytes());
 
@@ -284,70 +305,11 @@ macro_rules! impl_from_uint {
     )+};
 }
 
-// TODO: more?
 impl_from_uint!(u8, u16, u32, u64, usize, u128);
 
 impl From<U256> for DynSolValue {
     #[inline]
     fn from(value: U256) -> Self {
         Self::Uint(value, 256)
-    }
-}
-
-impl From<String> for DynSolValue {
-    fn from(value: String) -> Self {
-        Self::String(value)
-    }
-}
-
-macro_rules! impl_from_tuple {
-    ($num:expr, $( $ty:ident : $no:tt ),+ $(,)?) => {
-        impl<$($ty,)+> From<($( $ty, )+)> for DynSolValue
-        where
-            $(
-                $ty: Into<DynSolValue>,
-            )+
-        {
-            fn from(value: ($( $ty, )+)) -> Self {
-                Self::Tuple(vec![$( value.$no.into(), )+])
-            }
-        }
-    }
-}
-
-impl_from_tuple!(1, A:0, );
-impl_from_tuple!(2, A:0, B:1, );
-impl_from_tuple!(3, A:0, B:1, C:2, );
-impl_from_tuple!(4, A:0, B:1, C:2, D:3, );
-impl_from_tuple!(5, A:0, B:1, C:2, D:3, E:4, );
-impl_from_tuple!(6, A:0, B:1, C:2, D:3, E:4, F:5, );
-impl_from_tuple!(7, A:0, B:1, C:2, D:3, E:4, F:5, G:6, );
-impl_from_tuple!(8, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, );
-impl_from_tuple!(9, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, );
-impl_from_tuple!(10, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, );
-impl_from_tuple!(11, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, );
-impl_from_tuple!(12, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, );
-impl_from_tuple!(13, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, );
-impl_from_tuple!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, );
-impl_from_tuple!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
-impl_from_tuple!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
-impl_from_tuple!(17, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16,);
-impl_from_tuple!(18, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17,);
-impl_from_tuple!(19, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18,);
-impl_from_tuple!(20, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19,);
-impl_from_tuple!(21, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19, U:20,);
-
-impl From<Vec<DynSolValue>> for DynSolValue {
-    fn from(value: Vec<DynSolValue>) -> Self {
-        Self::Array(value)
-    }
-}
-
-impl<T, const N: usize> From<[T; N]> for DynSolValue
-where
-    T: Into<DynSolValue>,
-{
-    fn from(value: [T; N]) -> Self {
-        Self::Array(value.into_iter().map(|v| v.into()).collect())
     }
 }

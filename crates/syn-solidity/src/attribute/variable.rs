@@ -2,6 +2,7 @@ use super::{kw, Override, Visibility};
 use proc_macro2::Span;
 use std::{
     collections::HashSet,
+    fmt,
     hash::{Hash, Hasher},
     mem,
 };
@@ -11,6 +12,7 @@ use syn::{
 };
 
 /// A list of unique variable attributes.
+#[derive(Clone, Debug)]
 pub struct VariableAttributes(pub HashSet<VariableAttribute>);
 
 impl Parse for VariableAttributes {
@@ -64,6 +66,17 @@ pub enum VariableAttribute {
     Override(Override),
 }
 
+impl fmt::Debug for VariableAttribute {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Visibility(v) => v.fmt(f),
+            Self::Constant(_) => f.write_str("Constant"),
+            Self::Immutable(_) => f.write_str("Immutable"),
+            Self::Override(o) => o.fmt(f),
+        }
+    }
+}
+
 impl PartialEq for VariableAttribute {
     fn eq(&self, other: &Self) -> bool {
         mem::discriminant(self) == mem::discriminant(other)
@@ -81,18 +94,14 @@ impl Hash for VariableAttribute {
 impl Parse for VariableAttribute {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(kw::external)
-            || lookahead.peek(kw::public)
-            || lookahead.peek(kw::internal)
-            || lookahead.peek(kw::private)
-        {
-            Ok(Self::Visibility(input.parse()?))
+        if Visibility::peek(&lookahead) {
+            input.parse().map(Self::Visibility)
         } else if lookahead.peek(kw::constant) {
-            Ok(Self::Constant(input.parse()?))
+            input.parse().map(Self::Constant)
         } else if lookahead.peek(kw::Override) {
-            Ok(Self::Override(input.parse()?))
+            input.parse().map(Self::Override)
         } else if lookahead.peek(kw::immutable) {
-            Ok(Self::Immutable(input.parse()?))
+            input.parse().map(Self::Immutable)
         } else {
             Err(lookahead.error())
         }

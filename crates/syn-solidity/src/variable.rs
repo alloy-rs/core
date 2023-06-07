@@ -1,6 +1,6 @@
-use super::{kw, CustomType, SolIdent, Storage, Type};
-use proc_macro2::{Span, TokenStream};
-use quote::{format_ident, quote};
+use super::{kw, SolIdent, Storage, Type};
+use proc_macro2::Span;
+use quote::format_ident;
 use std::{
     fmt::{self, Write},
     ops::{Deref, DerefMut},
@@ -12,9 +12,20 @@ use syn::{
     Error, Ident, Result, Token,
 };
 
+/// A list of comma-separated [VariableDeclaration]s.
+///
+/// Solidity reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.parameterList>
+pub type ParameterList = Parameters<syn::token::Comma>;
+
+/// A list of semicolon-separated [VariableDeclaration]s.
+pub type FieldList = Parameters<syn::token::Semi>;
+
 /// A list of [VariableDeclaration]s, separated by `P`.
 ///
 /// Currently, `P` can only be `Token![,]` or `Token![;]`.
+///
+/// It is recommended to use the type aliases where possible instead.
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Parameters<P>(Punctuated<VariableDeclaration, P>);
 
@@ -102,23 +113,6 @@ impl<P> Parameters<P> {
         Self(Punctuated::new())
     }
 
-    pub fn signature(&self, mut name: String) -> String {
-        name.reserve(2 + self.len() * 16);
-        self.fmt_as_tuple(&mut name).unwrap();
-        name
-    }
-
-    pub fn fmt_as_tuple(&self, f: &mut impl fmt::Write) -> fmt::Result {
-        f.write_char('(')?;
-        for (i, var) in self.iter().enumerate() {
-            if i > 0 {
-                f.write_char(',')?;
-            }
-            write!(f, "{}", var.ty)?;
-        }
-        f.write_char(')')
-    }
-
     pub fn eip712_signature(&self, mut name: String) -> String {
         name.reserve(2 + self.len() * 32);
         name.push('(');
@@ -126,7 +120,7 @@ impl<P> Parameters<P> {
             if i > 0 {
                 name.push(',');
             }
-            write!(name, "{field}").unwrap();
+            field.fmt_eip712(&mut name).unwrap();
         }
         name.push(')');
         name
@@ -134,8 +128,8 @@ impl<P> Parameters<P> {
 
     pub fn names(
         &self,
-    ) -> impl ExactSizeIterator<Item = &Option<SolIdent>> + DoubleEndedIterator + Clone {
-        self.iter().map(|var| &var.name)
+    ) -> impl ExactSizeIterator<Item = Option<&SolIdent>> + DoubleEndedIterator + Clone {
+        self.iter().map(|var| var.name.as_ref())
     }
 
     pub fn types(&self) -> impl ExactSizeIterator<Item = &Type> + DoubleEndedIterator + Clone {
@@ -152,17 +146,14 @@ impl<P> Parameters<P> {
         self.iter().map(|var| var.ty.to_string())
     }
 
-    pub fn data_size(&self, base: Option<TokenStream>) -> TokenStream {
-        let base = base.unwrap_or_else(|| quote!(self));
-        let sizes = self.iter().map(|var| {
-            let field = var.name.as_ref().unwrap();
-            var.ty.data_size(quote!(#base.#field))
-        });
-        quote!(0usize #( + #sizes)*)
+    #[cfg(feature = "visit")]
+    pub fn visit_types(&self, mut f: impl FnMut(&Type)) {
+        self.types().for_each(|ty| ty.visit(&mut f))
     }
 
-    pub fn assert_resolved(&self) {
-        self.iter().for_each(|var| var.ty.assert_resolved())
+    #[cfg(feature = "visit-mut")]
+    pub fn visit_types_mut(&mut self, mut f: impl FnMut(&mut Type)) {
+        self.types_mut().for_each(|ty| ty.visit_mut(&mut f))
     }
 }
 
@@ -180,18 +171,15 @@ pub struct VariableDeclaration {
     pub name: Option<SolIdent>,
 }
 
-/// Formats as an EIP-712 field: `<ty> <name>`
 impl fmt::Display for VariableDeclaration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // important: Custom structs are encoded dynamically at run time.
-        // TODO: We can probably avoid doing this if we have all the resolved types.
-        match &self.ty {
-            Type::Custom(CustomType::Struct(s)) => s.name.fmt(f),
-            Type::Custom(other) => other.fmt(f),
-            ty => ty.fmt(f),
-        }?;
+        self.ty.fmt(f)?;
+        if let Some(storage) = &self.storage {
+            f.write_char(' ')?;
+            storage.fmt(f)?;
+        }
         if let Some(name) = &self.name {
-            f.write_str(" ")?;
+            f.write_char(' ')?;
             name.fmt(f)?;
         }
         Ok(())
@@ -231,6 +219,15 @@ impl VariableDeclaration {
         if let Some(name) = &mut self.name {
             name.set_span(span);
         }
+    }
+
+    /// Formats `self` as an EIP-712 field: `<ty> <name>`
+    pub fn fmt_eip712(&self, f: &mut impl Write) -> fmt::Result {
+        write!(f, "{}", self.ty)?;
+        if let Some(name) = &self.name {
+            write!(f, " {}", name)?;
+        }
+        Ok(())
     }
 
     pub fn parse_for_struct(input: ParseStream<'_>) -> Result<Self> {

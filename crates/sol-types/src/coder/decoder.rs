@@ -58,14 +58,14 @@ impl<'a> Decoder<'a> {
     /// flag.
     #[inline]
     fn child(&self, offset: usize) -> Result<Decoder<'a>, Error> {
-        if offset > self.buf.len() {
-            return Err(Error::Overrun)
-        }
-        Ok(Self {
-            buf: &self.buf[offset..],
-            offset: 0,
-            validate: self.validate,
-        })
+        self.buf
+            .get(offset..)
+            .map(|buf| Self {
+                buf,
+                offset: 0,
+                validate: self.validate,
+            })
+            .ok_or(Error::Overrun)
     }
 
     /// Get a child decoder at the current offset.
