@@ -25,8 +25,20 @@ jobs:
             # "skip" a UI test because of differing output
             - run: rm crates/sol-types/tests/ui/type.*
               if: ${{ matrix.rust }} == '1.65'
+            - uses: Swatinem/rust-cache@v2
             - name: test
               run: cargo test --workspace ${{ matrix.flags }}
+
+    wasm:
+        name: check WASM
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: wasm32-unknown-unknown
+            - name: check
+              run: cargo check --workspace --target wasm32-unknown-unknown
 
     feature-checks:
         name: feature checks
