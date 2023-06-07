@@ -21,7 +21,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 alloy-primitives.workspace = true
 alloy-sol-macro.workspace = true
 
-hex = { workspace = true, features = ["alloc"] }
+hex.workspace = true
 
 serde = { workspace = true, optional = true, features = ["derive"] }
 
@@ -30,6 +30,6 @@ hex-literal.workspace = true
 trybuild = "1.0"
 
 [features]
-default = ["std", "hex/alloc"]
+default = ["std"]
 std = ["alloy-primitives/std", "hex/std", "serde?/std"]
 eip712-serde = ["dep:serde", "serde?/alloc", "alloy-primitives/serde"]

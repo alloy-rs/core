@@ -152,7 +152,7 @@ impl TokenType for WordToken {
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'_>) -> Result<Self> {
-        dec.take_word().map(Into::into)
+        dec.take_word().map(Self)
     }
 
     #[inline]
@@ -183,7 +183,7 @@ impl WordToken {
 
     /// Copy the inner word.
     #[inline]
-    pub const fn inner(&self) -> Word {
+    pub const fn inner(self) -> Word {
         self.0
     }
 }
