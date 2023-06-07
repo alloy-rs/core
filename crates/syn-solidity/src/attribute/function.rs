@@ -106,17 +106,9 @@ impl Hash for FunctionAttribute {
 impl Parse for FunctionAttribute {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(kw::external)
-            || lookahead.peek(kw::public)
-            || lookahead.peek(kw::internal)
-            || lookahead.peek(kw::private)
-        {
+        if Visibility::peek(&lookahead) {
             input.parse().map(Self::Visibility)
-        } else if lookahead.peek(kw::pure)
-            || lookahead.peek(kw::view)
-            || lookahead.peek(kw::constant)
-            || lookahead.peek(kw::payable)
-        {
+        } else if Mutability::peek(&lookahead) {
             input.parse().map(Self::Mutability)
         } else if lookahead.peek(kw::Virtual) {
             input.parse().map(Self::Virtual)

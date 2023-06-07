@@ -94,11 +94,7 @@ impl Hash for VariableAttribute {
 impl Parse for VariableAttribute {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(kw::external)
-            || lookahead.peek(kw::public)
-            || lookahead.peek(kw::internal)
-            || lookahead.peek(kw::private)
-        {
+        if Visibility::peek(&lookahead) {
             input.parse().map(Self::Visibility)
         } else if lookahead.peek(kw::constant) {
             input.parse().map(Self::Constant)

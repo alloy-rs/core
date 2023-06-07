@@ -124,31 +124,37 @@ macro_rules! kw_enum {
         ),+ $(,)?}
     ) => {
         $(#[$attr])*
-        #[derive(Clone, Copy, Eq)]
+        #[derive(Clone, Copy)]
         $vis enum $name {$(
             $(#[$variant_attr])*
             $variant($crate::kw::$kw),
         )+}
 
         impl ::core::cmp::PartialEq for $name {
+            #[inline]
             fn eq(&self, other: &Self) -> bool {
                 ::core::mem::discriminant(self) == ::core::mem::discriminant(other)
             }
         }
 
+        impl ::core::cmp::Eq for $name {}
+
         impl ::core::hash::Hash for $name {
+            #[inline]
             fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
                 ::core::hash::Hash::hash(&::core::mem::discriminant(self), state)
             }
         }
 
         impl ::core::fmt::Debug for $name {
+            #[inline]
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 ::core::fmt::Debug::fmt(self.as_debug_str(), f)
             }
         }
 
         impl ::core::fmt::Display for $name {
+            #[inline]
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 ::core::fmt::Display::fmt(self.as_str(), f)
             }
@@ -156,19 +162,23 @@ macro_rules! kw_enum {
 
         impl ::syn::parse::Parse for $name {
             fn parse(input: ::syn::parse::ParseStream<'_>) -> ::syn::Result<Self> {
-                let l = input.lookahead1();
+                let lookahead = input.lookahead1();
                 $(
-                    if l.peek($crate::kw::$kw) {
+                    if lookahead.peek($crate::kw::$kw) {
                         input.parse::<$crate::kw::$kw>().map(Self::$variant)
                     } else
                 )+
                 {
-                    Err(l.error())
+                    Err(lookahead.error())
                 }
             }
         }
 
         impl $name {
+            pub fn peek(lookahead: &::syn::parse::Lookahead1<'_>) -> bool {
+                $( lookahead.peek($crate::kw::$kw) )||+
+            }
+
             pub const fn span(self) -> ::proc_macro2::Span {
                 match self {$(
                     Self::$variant(kw) => kw.span,
