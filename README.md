@@ -64,12 +64,17 @@ contribution follows the linting rules and passes clippy.
 We provide full support for all the `wasm*-*` targets. If any crate does not
 build on a WASM target, please [open an issue].
 
+When compiling for `wasm32-unknown-unknown`, compilation will fail on the
+`getrandom` crate. This is expected; see [their documentation][getrandom] on
+how to fix this and for more details.
+
 There is currently no plan to provide an official JS/TS-accessible library
 interface, as we believe [viem] or [ethers.js] serve that need very well.
 
+[open an issue]: https://github.com/alloy-rs/core/issues/new
+[getrandom]: https://docs.rs/getrandom/#webassembly-support
 [viem]: https://viem.sh
 [ethers.js]: https://docs.ethers.io/v6/
-[open an issue]: https://github.com/alloy-rs/core/issues/new
 
 ## Note on `no_std`
 
