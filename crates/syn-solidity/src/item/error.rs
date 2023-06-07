@@ -1,4 +1,4 @@
-use crate::{kw, Parameters, SolIdent};
+use crate::{kw, Parameters, SolIdent, Type};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -12,6 +12,7 @@ use syn::{
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.errorDefinition>
+#[derive(Clone)]
 pub struct ItemError {
     pub attrs: Vec<Attribute>,
     pub error_token: kw::error,
@@ -51,5 +52,9 @@ impl ItemError {
 
     pub fn set_span(&mut self, span: Span) {
         self.name.set_span(span);
+    }
+
+    pub fn as_type(&self) -> Type {
+        Type::Tuple(self.fields.types().cloned().collect())
     }
 }

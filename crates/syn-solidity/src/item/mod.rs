@@ -1,4 +1,4 @@
-use super::kw;
+use crate::{kw, SolIdent, Type};
 use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream},
@@ -76,6 +76,24 @@ impl Item {
             Self::Function(function) => function.set_span(span),
             Self::Struct(strukt) => strukt.set_span(span),
             Self::Udt(udt) => udt.set_span(span),
+        }
+    }
+
+    pub fn name(&self) -> &SolIdent {
+        match self {
+            Self::Error(ItemError { name, .. })
+            | Self::Function(ItemFunction { name, .. })
+            | Self::Struct(ItemStruct { name, .. })
+            | Self::Udt(ItemUdt { name, .. }) => name,
+        }
+    }
+
+    pub fn as_type(&self) -> Option<Type> {
+        match self {
+            Self::Struct(strukt) => Some(strukt.as_type()),
+            Self::Udt(udt) => Some(udt.ty.clone()),
+            Self::Error(error) => Some(error.as_type()),
+            Self::Function(_) => None,
         }
     }
 

@@ -72,7 +72,7 @@ impl ItemStruct {
         self.brace_token = Brace(span);
     }
 
-    pub fn ty(&self) -> Type {
+    pub fn as_type(&self) -> Type {
         Type::Tuple(self.fields.types().cloned().collect())
     }
 }

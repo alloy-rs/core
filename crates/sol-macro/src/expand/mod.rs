@@ -1,90 +1,24 @@
 //! Functions which generate Rust code from the Solidity AST.
 
 use ast::{
-    CustomType, File, Item, ItemError, ItemFunction, ItemStruct, ItemUdt, Parameters, SolIdent,
-    Type, VariableDeclaration,
+    File, Item, ItemError, ItemFunction, ItemStruct, ItemUdt, Parameters, SolIdent, Type,
+    VariableDeclaration, Visit,
 };
-use proc_macro2::{Ident, Literal, TokenStream};
-use quote::{format_ident, quote, quote_spanned, ToTokens};
-use std::{collections::HashMap, num::NonZeroU16};
-use syn::{Result, Token};
+use proc_macro2::{Ident, Span, TokenStream};
+use quote::{format_ident, quote, IdentFragment};
+use std::{collections::HashMap, fmt::Write};
+use syn::{Error, Result, Token};
+
+mod r#type;
+pub use r#type::expand_type;
+use r#type::TypePrinter;
 
 /// The limit for the number of times to resolve a type.
 const RESOLVE_LIMIT: usize = 16;
 
 /// The [`sol!`][crate::sol!] expansion implementation.
-pub fn expand(ast: File) -> TokenStream {
-    Context::new(ast)
-        .expand()
-        .unwrap_or_else(|e| e.into_compile_error())
-}
-
-pub fn expand_type(ty: &Type) -> TokenStream {
-    let mut tokens = TokenStream::new();
-    rec_expand_type(ty, &mut tokens);
-    tokens
-}
-
-fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
-    let tts = match *ty {
-        Type::Address(span, _) => quote_spanned! {span=>
-            ::alloy_sol_types::sol_data::Address
-        },
-        Type::Bool(span) => quote_spanned! {span=> ::alloy_sol_types::sol_data::Bool },
-        Type::String(span) => quote_spanned! {span=> ::alloy_sol_types::sol_data::String },
-
-        Type::Bytes { span, size: None } => {
-            quote_spanned! {span=> ::alloy_sol_types::sol_data::Bytes }
-        }
-        Type::Bytes {
-            span,
-            size: Some(size),
-        } => {
-            let size = Literal::u16_unsuffixed(size.get());
-            quote_spanned! {span=>
-                ::alloy_sol_types::sol_data::FixedBytes<#size>
-            }
-        }
-
-        Type::Int { span, size } => {
-            let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
-            quote_spanned! {span=>
-                ::alloy_sol_types::sol_data::Int<#size>
-            }
-        }
-        Type::Uint { span, size } => {
-            let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
-            quote_spanned! {span=>
-                ::alloy_sol_types::sol_data::Uint<#size>
-            }
-        }
-
-        Type::Tuple(ref tuple) => {
-            tuple.paren_token.surround(tokens, |tokens| {
-                for pair in tuple.types.pairs() {
-                    let (ty, comma) = pair.into_tuple();
-                    rec_expand_type(ty, tokens);
-                    comma.to_tokens(tokens);
-                }
-            });
-            return
-        }
-        Type::Array(ref array) => {
-            let ty = expand_type(&array.ty);
-            let span = array.span();
-            if let Some(size) = &array.size {
-                quote_spanned! {span=>
-                    ::alloy_sol_types::sol_data::FixedArray<#ty, #size>
-                }
-            } else {
-                quote_spanned! {span=>
-                    ::alloy_sol_types::sol_data::Array<#ty>
-                }
-            }
-        }
-        Type::Custom(ref custom) => return custom.ident().to_tokens(tokens),
-    };
-    tokens.extend(tts);
+pub fn expand(ast: File) -> Result<TokenStream> {
+    ExpCtxt::new(&ast).expand()
 }
 
 fn expand_var(var: &VariableDeclaration) -> TokenStream {
@@ -95,25 +29,35 @@ fn expand_var(var: &VariableDeclaration) -> TokenStream {
     }
 }
 
-struct Context {
-    /// `function.signature() => new_name`
-    overloads_map: HashMap<String, String>,
-    ast: File,
+struct ExpCtxt<'ast> {
+    all_items: Vec<&'ast Item>,
+    custom_types: HashMap<SolIdent, Type>,
+
+    /// `name => functions`
+    functions: HashMap<String, Vec<&'ast ItemFunction>>,
+    /// `function_signature => new_name`
+    function_overloads: HashMap<String, String>,
+
+    ast: &'ast File,
 }
 
 // expand
-impl Context {
-    fn new(ast: File) -> Self {
+impl<'ast> ExpCtxt<'ast> {
+    fn new(ast: &'ast File) -> Self {
         Self {
-            overloads_map: HashMap::new(),
+            all_items: Vec::new(),
+            custom_types: HashMap::new(),
+            functions: HashMap::new(),
+            function_overloads: HashMap::new(),
             ast,
         }
     }
 
     fn expand(mut self) -> Result<TokenStream> {
-        if self.ast.items.len() > 1 {
+        self.visit_file(self.ast);
+        if self.all_items.len() > 1 {
             self.resolve_custom_types()?;
-            self.resolve_function_overloads()?;
+            self.mk_overloads_map()?;
         }
 
         let mut tokens = TokenStream::new();
@@ -146,15 +90,14 @@ impl Context {
             attrs,
             ..
         } = error;
+        self.assert_resolved(fields)?;
 
-        fields.assert_resolved();
-
-        let signature = fields.signature(name.as_string());
+        let signature = self.signature(name.as_string(), fields);
         let selector = crate::utils::selector(&signature);
 
-        let size = fields.data_size(None);
+        let size = self.params_data_size(fields, None);
 
-        let converts = from_into_tuples(&name.0, fields);
+        let converts = expand_from_into_tuples(&name.0, fields);
         let fields = fields.iter().map(expand_var);
         let tokens = quote! {
             #(#attrs)*
@@ -195,12 +138,12 @@ impl Context {
 
     fn expand_function(&self, function: &ItemFunction) -> Result<TokenStream> {
         let function_name = self.function_name(function);
-        let call_name = format_ident!("{}Call", function_name);
+        let call_name = self.call_name(function_name.clone());
         let mut tokens = self.expand_call(function, &call_name, &function.arguments)?;
 
         if let Some(ret) = &function.returns {
             assert!(!ret.returns.is_empty());
-            let return_name = format_ident!("{}Return", function_name);
+            let return_name = self.return_name(function_name);
             let ret = self.expand_call(function, &return_name, &ret.returns)?;
             tokens.extend(ret);
         }
@@ -214,16 +157,16 @@ impl Context {
         call_name: &Ident,
         params: &Parameters<Token![,]>,
     ) -> Result<TokenStream> {
-        params.assert_resolved();
+        self.assert_resolved(params)?;
 
         let fields = params.iter().map(expand_var);
 
-        let signature = params.signature(function.name.as_string());
+        let signature = self.signature(function.name.as_string(), params);
         let selector = crate::utils::selector(&signature);
 
-        let size = params.data_size(None);
+        let size = self.params_data_size(params, None);
 
-        let converts = from_into_tuples(call_name, params);
+        let converts = expand_from_into_tuples(call_name, params);
 
         let attrs = &function.attrs;
         let tokens = quote! {
@@ -263,14 +206,6 @@ impl Context {
         Ok(tokens)
     }
 
-    /// Returns the name of the function, adjusted for overloads.
-    fn function_name(&self, function: &ItemFunction) -> String {
-        match self.overloads_map.get(&function.signature()) {
-            Some(name) => name.clone(),
-            None => function.name.as_string(),
-        }
-    }
-
     fn expand_struct(&self, s: &ItemStruct) -> Result<TokenStream> {
         let ItemStruct {
             name,
@@ -289,7 +224,7 @@ impl Context {
         let props = fields.iter().map(|f| &f.name);
 
         let encoded_type = fields.eip712_signature(name.to_string());
-        let encode_type_impl = if fields.iter().any(|f| f.ty.is_struct()) {
+        let encode_type_impl = if fields.iter().any(|f| f.ty.is_custom()) {
             quote! {
                 {
                     let mut encoded = String::from(#encoded_type);
@@ -320,7 +255,7 @@ impl Context {
         };
 
         let attrs = attrs.iter();
-        let convert = from_into_tuples(&name.0, fields);
+        let convert = expand_from_into_tuples(&name.0, fields);
         let name_s = name.to_string();
         let fields = fields.iter().map(expand_var);
         let tokens = quote! {
@@ -386,23 +321,34 @@ impl Context {
 }
 
 // resolve
-impl Context {
-    /// Resolves custom types in the order they were defined.
-    fn resolve_custom_types(&mut self) -> Result<()> {
-        let types = self.custom_type_map();
-        if types.is_empty() {
-            return Ok(())
+impl<'ast> ExpCtxt<'ast> {
+    fn mk_types_map(&mut self) {
+        let mut map = std::mem::take(&mut self.custom_types);
+        map.reserve(self.all_items.len());
+        for &item in &self.all_items {
+            if let Some(ty) = item.as_type() {
+                map.insert(item.name().clone(), ty);
+            }
         }
+        self.custom_types = map;
+    }
+
+    fn resolve_custom_types(&mut self) -> Result<()> {
+        self.mk_types_map();
         for _i in 0..RESOLVE_LIMIT {
             let mut any = false;
-            self.visit_types(|ty| {
-                let Type::Custom(ty @ CustomType::Unresolved(_)) = ty else { return };
-                let Some(resolved) = types.get(ty.ident()) else { return };
-                let old_span = ty.span();
-                ty.clone_from(resolved);
-                ty.set_span(old_span);
-                any = true;
-            });
+            // you won't get me this time, borrow checker
+            let map_ref: &mut HashMap<SolIdent, Type> =
+                unsafe { &mut *(&mut self.custom_types as *mut _) };
+            for ty in map_ref.values_mut() {
+                ty.visit_mut(|ty| {
+                    let ty @ Type::Custom(_) = ty else { return };
+                    let Type::Custom(name) = &*ty else { unreachable!() };
+                    let Some(resolved) = self.custom_types.get(name) else { return };
+                    ty.clone_from(resolved);
+                    any = true;
+                });
+            }
             if !any {
                 // done
                 return Ok(())
@@ -411,75 +357,26 @@ impl Context {
 
         let msg = format!(
             "failed to resolve types after {RESOLVE_LIMIT} iterations.\n\
-                 This is likely due to an infinitely recursive type definition.\n\
-                 If you believe this is a bug, please file an issue at \
-                 https://github.com/alloy-rs/core/issues/new/choose"
+             This is likely due to an infinitely recursive type definition.\n\
+             If you believe this is a bug, please file an issue at \
+             https://github.com/ethers-rs/core/issues/new/choose"
         );
-        Err(syn::Error::new(proc_macro2::Span::call_site(), msg))
+        Err(Error::new(Span::call_site(), msg))
     }
 
-    /// Constructs a map of custom types' names to their definitions.
-    fn custom_type_map(&self) -> HashMap<Ident, CustomType> {
-        let mut map = HashMap::with_capacity(self.ast.items.len());
-        for item in &self.ast.items {
-            let (name, ty) = match item {
-                Item::Udt(udt) => (&udt.name.0, CustomType::Udt(udt.clone().into())),
-                Item::Struct(strukt) => (&strukt.name.0, CustomType::Struct(strukt.clone())),
-                _ => continue,
-            };
-            map.insert(name.clone(), ty);
-        }
-        map
-    }
+    fn mk_overloads_map(&mut self) -> Result<()> {
+        let all_orig_names: Vec<SolIdent> = self
+            .functions
+            .values()
+            .flatten()
+            .map(|f| f.name.clone())
+            .collect();
+        let mut overloads_map = std::mem::take(&mut self.function_overloads);
 
-    /// Visits all [Type]s in the input.
-    fn visit_types(&mut self, mut f: impl FnMut(&mut Type)) {
-        for item in &mut self.ast.items {
-            match item {
-                Item::Udt(ItemUdt { ty, .. }) => ty.visit_mut(&mut f),
-
-                Item::Struct(strukt) => {
-                    for field in &mut strukt.fields {
-                        field.ty.visit_mut(&mut f);
-                    }
-                }
-                Item::Function(function) => {
-                    for arg in &mut function.arguments {
-                        arg.ty.visit_mut(&mut f);
-                    }
-                    if let Some(returns) = &mut function.returns {
-                        for ret in &mut returns.returns {
-                            ret.ty.visit_mut(&mut f);
-                        }
-                    }
-                }
-                Item::Error(error) => {
-                    for field in &mut error.fields {
-                        field.ty.visit_mut(&mut f);
-                    }
-                }
-            }
-        }
-    }
-
-    /// Resolves all [ItemFunction] overloads by appending the index at the end
-    /// of the name.
-    fn resolve_function_overloads(&mut self) -> Result<()> {
-        let all_orig_names: Vec<SolIdent> = self.functions().map(|f| f.name.clone()).collect();
-        let mut overloads_map = std::mem::take(&mut self.overloads_map);
-
-        let mut all_functions_map = HashMap::with_capacity(self.ast.items.len());
-        for function in self.functions_mut() {
-            all_functions_map
-                .entry(function.name.as_string())
-                .or_insert_with(Vec::new)
-                .push(function);
-        }
-
-        // Report all errors at the end.
+        // report all errors at the end
         let mut errors = Vec::new();
 
-        for functions in all_functions_map.values_mut().filter(|fs| fs.len() >= 2) {
+        for functions in self.functions.values().filter(|fs| fs.len() >= 2) {
             // check for same parameters
             for (i, a) in functions.iter().enumerate() {
                 for b in functions.iter().skip(i + 1) {
@@ -496,13 +393,13 @@ impl Context {
                 }
             }
 
-            for (i, function) in functions.iter_mut().enumerate() {
+            for (i, &function) in functions.iter().enumerate() {
                 let old_name = &function.name;
                 let new_name = format!("{old_name}_{i}");
                 if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
                     let msg = format!(
                         "function `{old_name}` is overloaded, \
-                             but the generated name `{new_name}` is already in use"
+                         but the generated name `{new_name}` is already in use"
                     );
                     let mut err = syn::Error::new(old_name.span(), msg);
 
@@ -513,41 +410,105 @@ impl Context {
                     errors.push(err);
                 }
 
-                overloads_map.insert(function.signature(), new_name);
+                overloads_map.insert(self.function_signature(function), new_name);
             }
         }
 
         if errors.is_empty() {
-            self.overloads_map = overloads_map;
+            self.function_overloads = overloads_map;
             Ok(())
         } else {
-            Err(errors
-                .into_iter()
-                .reduce(|mut a, b| {
-                    a.combine(b);
-                    a
-                })
-                .unwrap())
+            Err(crate::utils::combine_errors(errors).unwrap())
         }
     }
 
-    fn functions(&self) -> impl Iterator<Item = &ItemFunction> {
-        self.ast.items.iter().filter_map(|item| match item {
-            Item::Function(function) => Some(function),
-            _ => None,
-        })
+    /// Returns the name of the function, adjusted for overloads.
+    fn function_name(&self, function: &ItemFunction) -> String {
+        let sig = self.function_signature(function);
+        match self.function_overloads.get(&sig) {
+            Some(name) => name.clone(),
+            None => function.name.as_string(),
+        }
     }
 
-    fn functions_mut(&mut self) -> impl Iterator<Item = &mut ItemFunction> {
-        self.ast.items.iter_mut().filter_map(|item| match item {
-            Item::Function(function) => Some(function),
-            _ => None,
-        })
+    fn call_name(&self, function_name: impl IdentFragment + std::fmt::Display) -> Ident {
+        format_ident!("{function_name}Call")
+    }
+
+    fn return_name(&self, function_name: impl IdentFragment + std::fmt::Display) -> Ident {
+        format_ident!("{function_name}Return")
+    }
+
+    fn signature<P>(&self, mut name: String, params: &Parameters<P>) -> String {
+        name.reserve(2 + params.len() * 16);
+        name.push('(');
+        for (i, param) in params.iter().enumerate() {
+            if i > 0 {
+                name.push(',');
+            }
+            write!(name, "{}", TypePrinter::new(self, &param.ty)).unwrap();
+        }
+        name.push(')');
+        name
+    }
+
+    fn function_signature(&self, function: &ItemFunction) -> String {
+        self.signature(function.name.as_string(), &function.arguments)
+    }
+
+    /// Returns an error if any of the types in the parameters are unresolved.
+    ///
+    /// Provides a better error message than an `unwrap` or `expect` when we
+    /// know beforehand that we will be needing types to be resolved.
+    fn assert_resolved<P>(&self, params: &Parameters<P>) -> Result<()> {
+        let mut errors = Vec::new();
+        params.visit_types(|ty| {
+            if let Type::Custom(name) = ty {
+                if !self.custom_types.contains_key(name) {
+                    let e = syn::Error::new(name.span(), "unresolved type");
+                    errors.push(e);
+                }
+            }
+        });
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            let mut e = crate::utils::combine_errors(errors).unwrap();
+            let note =
+                "Custom types must be declared inside of the same scope they are referenced in,\n\
+                 or \"imported\" as a UDT with `type {ident} is (...);`";
+            e.combine(Error::new(Span::call_site(), note));
+            Err(e)
+        }
+    }
+
+    fn params_data_size<P>(&self, list: &Parameters<P>, base: Option<TokenStream>) -> TokenStream {
+        let base = base.unwrap_or_else(|| quote!(self));
+        let sizes = list.iter().map(|var| {
+            let field = var.name.as_ref().unwrap();
+            self.type_data_size(&var.ty, quote!(#base.#field))
+        });
+        quote!(0usize #( + #sizes)*)
+    }
+}
+
+impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
+    fn visit_item(&mut self, item: &'ast Item) {
+        self.all_items.push(item);
+        ast::visit::visit_item(self, item);
+    }
+
+    fn visit_item_function(&mut self, function: &'ast ItemFunction) {
+        self.functions
+            .entry(function.name.as_string())
+            .or_default()
+            .push(function);
+        ast::visit::visit_item_function(self, function);
     }
 }
 
 /// Expands `From` impls for a list of types and the corresponding tuple.
-fn from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStream {
+fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStream {
     let names = fields.names();
     let names2 = names.clone();
     let idxs = (0..fields.len()).map(syn::Index::from);
