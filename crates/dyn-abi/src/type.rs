@@ -83,7 +83,7 @@ pub enum DynSolType {
 
 impl DynSolType {
     /// Dynamic tokenization.
-    pub fn tokenize(&self, value: DynSolValue) -> Result<DynToken> {
+    pub fn tokenize(&self, value: DynSolValue) -> Result<DynToken<'_>> {
         match (self, value) {
             (DynSolType::Address, DynSolValue::Address(val)) => {
                 Ok(DynToken::Word(sol_data::Address::tokenize(val).inner()))
@@ -110,19 +110,22 @@ impl DynSolType {
             (DynSolType::Tuple(types), DynSolValue::Tuple(tokens)) => {
                 let tokens = types
                     .iter()
-                    .zip(tokens.into_iter())
+                    .zip(tokens)
                     .map(|(ty, token)| ty.tokenize(token))
                     .collect::<Result<_, _>>()?;
 
                 Ok(DynToken::FixedSeq(tokens, types.len()))
             }
             (DynSolType::Array(t), DynSolValue::Array(values)) => {
-                let contents: Vec<DynToken> = values
+                let contents: Vec<_> = values
                     .into_iter()
                     .map(|val| t.tokenize(val))
                     .collect::<Result<_, _>>()?;
                 let template = Box::new(contents.first().unwrap().clone());
-                Ok(DynToken::DynSeq { contents, template })
+                Ok(DynToken::DynSeq {
+                    contents: contents.into(),
+                    template,
+                })
             }
             (DynSolType::FixedArray(t, size), DynSolValue::FixedArray(tokens)) => {
                 if *size != tokens.len() {
@@ -152,7 +155,7 @@ impl DynSolType {
                 let len = tuple.len();
                 let tuple = tuple
                     .iter()
-                    .zip(tokens.into_iter())
+                    .zip(tokens)
                     .map(|(ty, token)| ty.tokenize(token))
                     .collect::<Result<_, _>>()?;
                 Ok(DynToken::FixedSeq(tuple, len))
@@ -216,7 +219,8 @@ impl DynSolType {
     }
 
     /// Dynamic detokenization.
-    pub fn detokenize(&self, token: DynToken) -> Result<DynSolValue> {
+    #[allow(clippy::unnecessary_to_owned)] // https://github.com/rust-lang/rust-clippy/issues/8148
+    pub fn detokenize(&self, token: DynToken<'_>) -> Result<DynSolValue> {
         match (self, token) {
             (DynSolType::Address, DynToken::Word(word)) => Ok(DynSolValue::Address(
                 sol_data::Address::detokenize(word.into())?,
@@ -251,13 +255,14 @@ impl DynSolType {
                 Ok(DynSolValue::Tuple(
                     types
                         .iter()
-                        .zip(tokens.into_iter())
+                        .zip(tokens.into_owned())
                         .map(|(t, w)| t.detokenize(w))
                         .collect::<Result<_, _>>()?,
                 ))
             }
             (DynSolType::Array(t), DynToken::DynSeq { contents, .. }) => Ok(DynSolValue::Array(
                 contents
+                    .into_owned()
                     .into_iter()
                     .map(|tok| t.detokenize(tok))
                     .collect::<Result<_, _>>()?,
@@ -270,6 +275,7 @@ impl DynSolType {
                 }
                 Ok(DynSolValue::FixedArray(
                     tokens
+                        .into_owned()
                         .into_iter()
                         .map(|tok| t.detokenize(tok))
                         .collect::<Result<_, _>>()?,
@@ -290,7 +296,7 @@ impl DynSolType {
                 }
                 let tuple = tuple
                     .iter()
-                    .zip(tokens.into_iter())
+                    .zip(tokens.into_owned())
                     .map(|(t, w)| t.detokenize(w))
                     .collect::<Result<_, _>>()?;
 
@@ -330,7 +336,7 @@ impl DynSolType {
     }
 
     /// Instantiate an empty dyn token, to be decoded into.
-    pub(crate) fn empty_dyn_token(&self) -> DynToken {
+    pub(crate) fn empty_dyn_token(&self) -> DynToken<'_> {
         match self {
             DynSolType::Address => DynToken::Word(Word::default()),
             DynSolType::Bool => DynToken::Word(Word::default()),
@@ -344,11 +350,11 @@ impl DynSolType {
                 types.len(),
             ),
             DynSolType::Array(t) => DynToken::DynSeq {
-                contents: vec![],
+                contents: Default::default(),
                 template: Box::new(t.empty_dyn_token()),
             },
             DynSolType::FixedArray(t, size) => {
-                DynToken::FixedSeq(vec![t.empty_dyn_token(); *size], *size)
+                DynToken::FixedSeq(vec![t.empty_dyn_token(); *size].into(), *size)
             }
             DynSolType::CustomStruct { tuple, .. } => DynToken::FixedSeq(
                 tuple.iter().map(|t| t.empty_dyn_token()).collect(),
@@ -368,9 +374,9 @@ impl DynSolType {
     /// Decode a single value. Fails if the value does not match this type.
     pub fn decode_single(&self, data: &[u8]) -> Result<DynSolValue> {
         let mut decoder = crate::Decoder::new(data, false);
-        let mut toks = self.empty_dyn_token();
-        toks.decode_single_populate(&mut decoder)?;
-        self.detokenize(toks)
+        let mut token = self.empty_dyn_token();
+        token.decode_single_populate(&mut decoder)?;
+        self.detokenize(token)
     }
 
     /// Encode a sequence of values. Fails if the values do not match this
@@ -384,9 +390,9 @@ impl DynSolType {
     /// Decode a sequence of values. Fails if the values do not match this type.
     pub fn decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
         let mut decoder = crate::Decoder::new(data, false);
-        let mut toks = self.empty_dyn_token();
-        toks.decode_sequence_populate(&mut decoder)?;
-        self.detokenize(toks)
+        let mut token = self.empty_dyn_token();
+        token.decode_sequence_populate(&mut decoder)?;
+        self.detokenize(token)
     }
 }
 
@@ -421,7 +427,7 @@ mod test {
             .unwrap();
         assert_eq!(
             token,
-            DynToken::FixedSeq(vec![DynToken::Word(word1), DynToken::Word(word2)], 2)
+            DynToken::FixedSeq(vec![DynToken::Word(word1), DynToken::Word(word2)].into(), 2)
         );
         let mut enc = crate::Encoder::default();
         token.encode_sequence(&mut enc).unwrap();
