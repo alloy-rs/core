@@ -119,18 +119,6 @@ macro_rules! wrap_fixed_bytes {
                 Self($crate::FixedBytes::with_last_byte(x))
             }
 
-            /// Instantiates a new fixed hash with cryptographically random content.
-            #[inline]
-            pub fn random() -> Self {
-                Self($crate::FixedBytes::random())
-            }
-
-            /// Instantiates a new fixed hash with cryptographically random content.
-            #[inline]
-            pub fn try_random() -> ::core::result::Result<Self, $crate::private::getrandom::Error> {
-                $crate::FixedBytes::try_random().map(Self)
-            }
-
             /// Returns a new fixed hash where all bits are set to the given byte.
             #[inline]
             pub const fn repeat_byte(byte: u8) -> Self {
@@ -166,16 +154,19 @@ macro_rules! wrap_fixed_bytes {
             pub fn as_fixed_bytes_mut(&mut self) -> &mut [u8; $n] {
                 self.0.as_fixed_bytes_mut()
             }
+
             /// Returns the inner bytes array.
             #[inline]
             pub const fn to_fixed_bytes(self) -> [u8; $n] {
                 self.0.to_fixed_bytes()
             }
+
             /// Returns a constant raw pointer to the value.
             #[inline]
             pub const fn as_ptr(&self) -> *const u8 {
                 self.as_bytes().as_ptr()
             }
+
             /// Returns a mutable raw pointer to the value.
             #[inline]
             pub fn as_mut_ptr(&mut self) -> *mut u8 {
@@ -247,10 +238,39 @@ macro_rules! wrap_fixed_bytes {
             }
         }
 
+        $crate::impl_getrandom!($name);
         $crate::impl_rlp!($name);
         $crate::impl_serde!($name);
         $crate::impl_arbitrary!($name, $n);
     };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "getrandom")]
+macro_rules! impl_getrandom {
+    ($t:ty) => {
+        impl $t {
+            /// Instantiates a new fixed hash with cryptographically random content.
+            #[inline]
+            pub fn random() -> Self {
+                Self($crate::FixedBytes::random())
+            }
+
+            /// Instantiates a new fixed hash with cryptographically random content.
+            #[inline]
+            pub fn try_random() -> ::core::result::Result<Self, $crate::private::getrandom::Error> {
+                $crate::FixedBytes::try_random().map(Self)
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "getrandom"))]
+macro_rules! impl_getrandom {
+    ($t:ty) => {};
 }
 
 #[doc(hidden)]

@@ -59,17 +59,29 @@ Alloy project.
 Pull requests will not be merged unless CI passes, so please ensure that your
 contribution follows the linting rules and passes clippy.
 
-## Note on WASM
+## WASM support
 
-We provide full support for all the `wasm*-*` targets. If any crate does not
+We provide full support for all the `wasm*-*` targets. If a crate does not
 build on a WASM target, please [open an issue].
+
+When building for the `wasm32-unknown-unknown` target and the `"getrandom"`
+feature is enabled, compilation for the `getrandom`  crate will fail. This is
+expected: see [their documentation][getrandom] for more details.
+
+To fix this, either disable the `"getrandom"` feature on `alloy-core` or add
+`getrandom` to your dependencies with the `"js"` feature enabled:
+
+```toml
+getrandom = { version = "0.2", features = ["js"] }
+```
 
 There is currently no plan to provide an official JS/TS-accessible library
 interface, as we believe [viem] or [ethers.js] serve that need very well.
 
+[open an issue]: https://github.com/alloy-rs/core/issues/new
+[getrandom]: https://docs.rs/getrandom/#webassembly-support
 [viem]: https://viem.sh
 [ethers.js]: https://docs.ethers.io/v6/
-[open an issue]: https://github.com/alloy-rs/core/issues/new
 
 ## Note on `no_std`
 
