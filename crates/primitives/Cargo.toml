@@ -23,7 +23,6 @@ ruint = { workspace = true, features = ["serde"] }
 
 # utility
 bytes.workspace = true
-getrandom = "0.2"
 hex.workspace = true
 itoa = "1"
 tiny-keccak = { workspace = true, features = ["keccak"] }
@@ -37,6 +36,9 @@ alloy-rlp = { workspace = true, optional = true }
 # serde
 serde = { workspace = true, optional = true }
 
+# getrandom
+getrandom = { workspace = true, optional = true }
+
 # arbitrary
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 proptest = { workspace = true, optional = true }
@@ -49,6 +51,7 @@ serde_json.workspace = true
 [features]
 default = ["std", "rlp", "serde"]
 std = ["bytes/std", "hex/std", "alloy-rlp?/std", "proptest?/std", "serde/std"]
+getrandom = ["dep:getrandom"]
 rlp = ["dep:alloy-rlp", "ruint/fastrlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
 arbitrary = [

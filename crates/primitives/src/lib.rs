@@ -43,6 +43,8 @@ pub use ruint::{self, uint, Uint};
 #[doc(hidden)]
 pub mod private {
     pub use derive_more;
+
+    #[cfg(feature = "getrandom")]
     pub use getrandom;
 
     #[cfg(feature = "rlp")]
