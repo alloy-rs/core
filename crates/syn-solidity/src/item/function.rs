@@ -84,12 +84,12 @@ impl ItemFunction {
         }
     }
 
-    /// Returns the function's signature tuple type.
+    /// Returns the function's arguments tuple type.
     pub fn call_type(&self) -> Type {
         Type::Tuple(self.arguments.iter().map(|arg| arg.ty.clone()).collect())
     }
 
-    /// Returns the function's signature tuple type.
+    /// Returns the function's return tuple type.
     pub fn return_type(&self) -> Option<Type> {
         self.returns.as_ref().map(|returns| {
             Type::Tuple(

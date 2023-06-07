@@ -70,8 +70,8 @@ impl fmt::Debug for VariableAttribute {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Visibility(v) => v.fmt(f),
-            Self::Constant(_) => f.write_str("constant"),
-            Self::Immutable(_) => f.write_str("immutable"),
+            Self::Constant(_) => f.write_str("Constant"),
+            Self::Immutable(_) => f.write_str("Immutable"),
             Self::Override(o) => o.fmt(f),
         }
     }

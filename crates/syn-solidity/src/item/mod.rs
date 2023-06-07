@@ -1,6 +1,4 @@
-use crate::{SolIdent, Type};
-
-use super::kw;
+use crate::{kw, SolIdent, Type};
 use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream},
