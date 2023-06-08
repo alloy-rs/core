@@ -1,5 +1,5 @@
 [package]
-name = "alloy-abi-json"
+name = "alloy-json-abi"
 description = "Ethereum ABI JSON file"
 keywords = ["ethereum", "abi", "serialization"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
