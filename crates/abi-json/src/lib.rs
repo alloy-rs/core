@@ -27,202 +27,36 @@
 )]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![deny(unused_must_use, rust_2018_idioms)]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
-use std::{borrow::Cow, collections::BTreeMap};
+#[macro_use]
+extern crate alloc;
 
-use serde::{
-    de::{SeqAccess, Visitor},
-    ser::SerializeSeq,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 
-/// Error JSON format
-pub mod error;
-/// Event JSON format
-pub mod event;
-/// Function JSON format
-pub mod functions;
-/// Param JSON format, used as components of functions, errors, structs, tuples.
-pub mod param;
+mod abi;
+pub use abi::AbiJson;
 
-/// The ABI JSON file format.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct AbiJson {
-    /// The constructor function.
-    pub constructor: Option<functions::Constructor>,
-    /// The fallback function.
-    pub fallback: Option<functions::Fallback>,
-    /// The receive function.
-    pub receive: Option<functions::Receive>,
-    /// The functions, indexed by the function name
-    pub functions: BTreeMap<String, Vec<functions::Function>>,
-    /// The events, indexed by the event name
-    pub events: BTreeMap<String, Vec<event::Event>>,
-    /// The errors, indexed by the error name
-    pub errors: BTreeMap<String, Vec<error::Error>>,
-}
+mod event_param;
+pub use event_param::{ComplexEventParam, EventParam, SimpleEventParam};
 
-impl AbiJson {
-    /// The total number of items (of any type)
-    pub fn len(&self) -> usize {
-        self.constructor.is_some() as usize
-            + self.fallback.is_some() as usize
-            + self.receive.is_some() as usize
-            + self.functions.values().map(|v| v.len()).sum::<usize>()
-            + self.events.values().map(|v| v.len()).sum::<usize>()
-            + self.errors.values().map(|v| v.len()).sum::<usize>()
-    }
+mod item;
+pub use item::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
 
-    /// True if the ABI contains no items
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-}
+mod param;
+pub use param::{ComplexParam, Param, SimpleParam};
 
-/// Abi Items
-#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
-#[serde(untagged)]
-pub enum AbiItem<'a> {
-    /// [`functions::Constructor`]
-    Constructor(Cow<'a, functions::Constructor>),
-    /// [`functions::Fallback`]
-    Fallback(Cow<'a, functions::Fallback>),
-    /// [`functions::Receive`]
-    Receive(Cow<'a, functions::Receive>),
-    /// [`functions::Function`]
-    Function(Cow<'a, functions::Function>),
-    /// [`event::Event`]
-    Event(Cow<'a, event::Event>),
-    /// [`error::Error`]
-    Error(Cow<'a, error::Error>),
-}
-
-struct AbiJsonVisitor;
-
-impl<'de> Visitor<'de> for AbiJsonVisitor {
-    type Value = AbiJson;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "a valid ABI JSON file")
-    }
-
-    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
-    {
-        let mut json_file = AbiJson::default();
-
-        while let Some(item) = seq.next_element()? {
-            match item {
-                AbiItem::Constructor(c) => {
-                    if json_file.constructor.is_some() {
-                        return Err(serde::de::Error::duplicate_field("constructor"))
-                    }
-                    json_file.constructor = Some(c.into_owned());
-                }
-                AbiItem::Fallback(f) => {
-                    if json_file.fallback.is_some() {
-                        return Err(serde::de::Error::duplicate_field("fallback"))
-                    }
-                    json_file.fallback = Some(f.into_owned());
-                }
-                AbiItem::Receive(r) => {
-                    if json_file.receive.is_some() {
-                        return Err(serde::de::Error::duplicate_field("receive"))
-                    }
-                    json_file.receive = Some(r.into_owned());
-                }
-                AbiItem::Function(f) => {
-                    json_file
-                        .functions
-                        .entry(f.name.clone())
-                        .or_default()
-                        .push(f.into_owned());
-                }
-                AbiItem::Event(e) => {
-                    json_file
-                        .events
-                        .entry(e.name.clone())
-                        .or_default()
-                        .push(e.into_owned());
-                }
-                AbiItem::Error(e) => {
-                    json_file
-                        .errors
-                        .entry(e.name.clone())
-                        .or_default()
-                        .push(e.into_owned());
-                }
-            }
-        }
-        Ok(json_file)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for AbiJson {
-    fn deserialize<D>(deserializer: D) -> Result<AbiJson, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_seq(AbiJsonVisitor)
-    }
-}
-
-impl Serialize for AbiJson {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut seq = serializer.serialize_seq(Some(self.len()))?;
-
-        if let Some(constructor) = &self.constructor {
-            seq.serialize_element(&AbiItem::Constructor(Cow::Borrowed(constructor)))?;
-        }
-        if let Some(fallback) = &self.fallback {
-            seq.serialize_element(&AbiItem::Fallback(Cow::Borrowed(fallback)))?;
-        }
-        if let Some(receive) = &self.receive {
-            seq.serialize_element(&AbiItem::Receive(Cow::Borrowed(receive)))?;
-        }
-
-        self.functions
-            .values()
-            .flatten()
-            .try_for_each(|f| seq.serialize_element(&AbiItem::Function(Cow::Borrowed(f))))?;
-
-        self.events
-            .values()
-            .flatten()
-            .try_for_each(|e| seq.serialize_element(&AbiItem::Event(Cow::Borrowed(e))))?;
-
-        self.errors
-            .values()
-            .flatten()
-            .try_for_each(|e| seq.serialize_element(&AbiItem::Error(Cow::Borrowed(e))))?;
-
-        seq.end()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::AbiJson;
-
-    const JSON: &str = include_str!("../test_data/seaport_1_3.abi.json");
-
-    #[test]
-    fn deserialize() {
-        let abi: AbiJson = serde_json::from_str(JSON).unwrap();
-        assert_eq!(abi.len(), 67);
-    }
-
-    #[test]
-    fn round_trip() {
-        let abi: AbiJson = serde_json::from_str(JSON).unwrap();
-
-        let json = serde_json::to_string_pretty(&abi).unwrap();
-        let abi2: AbiJson = serde_json::from_str(&json).unwrap();
-        assert_eq!(abi, abi2);
-    }
+/// A JSON ABI function's state mutability.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum StateMutability {
+    /// Pure functions promise not to read from or modify the state.
+    Pure,
+    /// View functions promise not to modify the state.
+    View,
+    /// Nonpayable functions promise not to receive Ether.
+    NonPayable,
+    /// Payable functions make no promises
+    Payable,
 }

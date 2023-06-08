@@ -1,6 +1,26 @@
+use alloc::{borrow::Cow, string::String, vec::Vec};
+use core::fmt;
+use serde::{Deserialize, Serialize};
+
+macro_rules! as_param_string {
+    ($self:expr) => {{
+        let mut s = String::with_capacity($self.internal_type.len() + $self.name.len() + 1);
+        s.push_str(&$self.internal_type);
+        s.push(' ');
+        s.push_str(&$self.name);
+        s
+    }};
+
+    ($self:expr, $f:expr) => {{
+        $f.write_str(&$self.internal_type)?;
+        $f.write_str(" ")?;
+        $f.write_str(&$self.name)
+    }};
+}
+
 /// A simple parameter. Simple params are not compound types, and have no
 /// sub-components.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SimpleParam {
     /// The name of the parameter.
     pub name: String,
@@ -14,17 +34,23 @@ pub struct SimpleParam {
     pub internal_type: String,
 }
 
+impl fmt::Display for SimpleParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        as_param_string!(self, f)
+    }
+}
+
 impl SimpleParam {
     /// Type used to encode the preimage of the function or error selector, or
     /// event topic
-    pub fn selector_type(&self) -> String {
-        self.ty.clone()
+    pub fn selector_type(&self) -> &str {
+        &self.ty
     }
 
     /// Returns a string representation of the parameter that can be used as a
     /// parameter in function signatures
     pub fn as_function_param(&self) -> String {
-        format!("{} {}", self.internal_type, self.name)
+        as_param_string!(self)
     }
 
     /// Returns a string representation of the parameter that can be used as a
@@ -32,13 +58,13 @@ impl SimpleParam {
     ///
     /// [encodeType]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
     pub fn as_eip712_param(&self) -> String {
-        format!("{} {}", self.internal_type, self.name)
+        as_param_string!(self)
     }
 }
 
 /// JSON specification of a complex parameter. Complex params are compound
 /// types, and their components are specified in the `components` field.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ComplexParam {
     /// The name of the parameter.
     pub name: String,
@@ -54,24 +80,29 @@ pub struct ComplexParam {
     pub components: Vec<Param>,
 }
 
+impl fmt::Display for ComplexParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        as_param_string!(self, f)
+    }
+}
+
 impl ComplexParam {
     /// Type used to encode the preimage of the function or error selector, or
     /// event topic
     pub fn selector_type(&self) -> String {
-        format!(
-            "({})",
-            self.components
-                .iter()
-                .map(|p| p.selector_type())
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
+        let mut s = String::with_capacity(2 + self.components.len() * 32);
+        s.push('(');
+        for component in &self.components {
+            s.push_str(&component.selector_type());
+        }
+        s.push(')');
+        s
     }
 
     /// Returns a string representation of the parameter that can be used as a
     /// parameter in function signatures
     pub fn as_function_param(&self) -> String {
-        format!("{} {}", self.internal_type, self.name)
+        as_param_string!(self)
     }
 
     /// Returns a string representation of the parameter that can be used as a
@@ -79,14 +110,14 @@ impl ComplexParam {
     ///
     /// [encodeType]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
     pub fn as_eip712_param(&self) -> String {
-        format!("{} {}", self.internal_type, self.name)
+        as_param_string!(self)
     }
 }
 
 /// JSON specification of a parameter. Used in functions, errors, structs, etc.
 /// A parameter may be either simple (contains no sub-components) or complex
 /// (contains sub-components).
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Param {
     /// [`ComplexParam`] variant
@@ -98,10 +129,10 @@ pub enum Param {
 impl Param {
     /// Type used to encode the preimage of the function or error selector, or
     /// event topic
-    pub fn selector_type(&self) -> String {
+    pub fn selector_type(&self) -> Cow<'_, str> {
         match self {
-            Param::Complex(c) => c.selector_type(),
-            Param::Simple(s) => s.selector_type(),
+            Param::Complex(c) => c.selector_type().into(),
+            Param::Simple(s) => s.selector_type().into(),
         }
     }
 
