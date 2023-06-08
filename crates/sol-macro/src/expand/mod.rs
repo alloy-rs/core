@@ -115,7 +115,7 @@ impl<'ast> ExpCtxt<'ast> {
         };
 
         let errors_enum = if errors.len() > 1 {
-            let mut attrs = d_attrs.clone();
+            let mut attrs = d_attrs;
             let doc_str = format!("Container for all the [`{name}`] custom errors.");
             attrs.push(parse_quote!(#[doc = #doc_str]));
             Some(self.expand_errors_enum(name, errors, &attrs))
@@ -142,9 +142,7 @@ impl<'ast> ExpCtxt<'ast> {
         functions: Vec<&ItemFunction>,
         attrs: &[Attribute],
     ) -> TokenStream {
-        let mut name = format_ident!("{name}Calls");
-        // TODO: Remove this
-        name.set_span(Span::call_site());
+        let name = format_ident!("{name}Calls");
 
         let variants: Vec<_> = functions
             .iter()
@@ -157,7 +155,7 @@ impl<'ast> ExpCtxt<'ast> {
             .max()
             .unwrap();
         let trt = Ident::new("SolCall", Span::call_site());
-        self.expand_call_like_enum(name, &variants, &types, min_data_len, trt, &attrs)
+        self.expand_call_like_enum(name, &variants, &types, min_data_len, trt, attrs)
     }
 
     fn expand_errors_enum(
@@ -174,7 +172,7 @@ impl<'ast> ExpCtxt<'ast> {
             .max()
             .unwrap();
         let trt = Ident::new("SolError", Span::call_site());
-        self.expand_call_like_enum(name, &variants, &variants, min_data_len, trt, &attrs)
+        self.expand_call_like_enum(name, &variants, &variants, min_data_len, trt, attrs)
     }
 
     fn expand_call_like_enum(
