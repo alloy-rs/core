@@ -3,6 +3,8 @@ error: expected parentheses
   |
 4 |     function missingParens;
   |                           ^
+  |
+  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `;`
  --> tests/ui/function.rs:7:1
@@ -39,93 +41,125 @@ error: functions cannot have an implementation
    |
 20 |     function semiNotBrace1() {}
    |                              ^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: functions cannot have an implementation
   --> tests/ui/function.rs:24:39
    |
 24 |     function semiNotBrace2() external {}
    |                                       ^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: functions cannot have an implementation
   --> tests/ui/function.rs:28:48
    |
 28 |     function semiNotBrace3() returns (uint256) {}
    |                                                ^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected a Solidity type: `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, a tuple, or a custom type name
   --> tests/ui/function.rs:32:26
    |
 32 |     function singleComma(,);
    |                          ^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected parentheses
   --> tests/ui/function.rs:43:34
    |
 43 |     function badReturn1() returns;
    |                                  ^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected at least one return type
   --> tests/ui/function.rs:47:34
    |
 47 |     function badReturn2() returns();
    |                                  ^^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: function `overloadTaken` is overloaded, but the generated name `overloadTaken_0` is already in use
   --> tests/ui/function.rs:82:14
    |
 82 |     function overloadTaken();
    |              ^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: other declaration is here
   --> tests/ui/function.rs:85:14
    |
 85 |     function overloadTaken_0();
    |              ^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: function `overloadTaken` is overloaded, but the generated name `overloadTaken_1` is already in use
   --> tests/ui/function.rs:83:14
    |
 83 |     function overloadTaken(uint256);
    |              ^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: other declaration is here
   --> tests/ui/function.rs:86:14
    |
 86 |     function overloadTaken_1();
    |              ^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: function with same name and parameter types defined twice
   --> tests/ui/function.rs:91:14
    |
 91 |     function sameFnOverload();
    |              ^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: other declaration is here
   --> tests/ui/function.rs:92:14
    |
 92 |     function sameFnOverload();
    |              ^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: function with same name and parameter types defined twice
   --> tests/ui/function.rs:96:14
    |
 96 |     function sameFnTysOverload1(uint256[] memory a);
    |              ^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: other declaration is here
   --> tests/ui/function.rs:97:14
    |
 97 |     function sameFnTysOverload1(uint256[] storage b);
    |              ^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: function with same name and parameter types defined twice
    --> tests/ui/function.rs:101:14
     |
 101 |     function sameFnTysOverload2(string memory, string storage);
     |              ^^^^^^^^^^^^^^^^^^
+    |
+    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: other declaration is here
    --> tests/ui/function.rs:102:14
     |
 102 |     function sameFnTysOverload2(string storage b, string calldata);
     |              ^^^^^^^^^^^^^^^^^^
+    |
+    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
