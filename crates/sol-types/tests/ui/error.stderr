@@ -13,8 +13,6 @@ error: expected parentheses
   |
 8 |     error MissingParens2;
   |                         ^
-  |
-  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `;`
   --> tests/ui/error.rs:11:1

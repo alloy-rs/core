@@ -3,77 +3,57 @@ error: empty tuples are not allowed
     |
 145 |         () t;
     |         ^^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: single element tuples must have a trailing comma
    --> tests/ui/type.rs:151:14
     |
 151 |         (bool) t;
     |              ^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid size: number would be zero for non-zero type
    --> tests/ui/type.rs:157:9
     |
 157 |         bytes0 a;
     |         ^^^^^^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: fixed bytes range is 1-32
    --> tests/ui/type.rs:163:9
     |
 163 |         bytes33 a;
     |         ^^^^^^^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid size: number would be zero for non-zero type
    --> tests/ui/type.rs:169:9
     |
 169 |         uint0 a;
     |         ^^^^^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: uintX must be a multiple of 8 up to 256
    --> tests/ui/type.rs:175:9
     |
 175 |         uint264 a;
     |         ^^^^^^^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: uintX must be a multiple of 8 up to 256
    --> tests/ui/type.rs:181:9
     |
 181 |         uint7 a;
     |         ^^^^^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: invalid size: number would be zero for non-zero type
    --> tests/ui/type.rs:187:9
     |
 187 |         int0 a;
     |         ^^^^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: intX must be a multiple of 8 up to 256
    --> tests/ui/type.rs:193:9
     |
 193 |         int264 a;
     |         ^^^^^^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: intX must be a multiple of 8 up to 256
    --> tests/ui/type.rs:199:9
     |
 199 |         int7 a;
     |         ^^^^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
