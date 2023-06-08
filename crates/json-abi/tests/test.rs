@@ -1,4 +1,4 @@
-use alloy_abi_json::{AbiJson, Error, Param, SimpleParam};
+use alloy_json_abi::{AbiJson, Error, Param, SimpleParam};
 
 const JSON: &str = include_str!("./seaport_1_3.abi.json");
 
