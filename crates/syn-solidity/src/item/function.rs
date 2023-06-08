@@ -108,7 +108,7 @@ impl ItemFunction {
 pub struct Returns {
     pub returns_token: kw::returns,
     pub paren_token: Paren,
-    /// The returns of the function. This is cannot be parsed empty.
+    /// The returns of the function. This cannot be parsed empty.
     pub returns: Parameters<Token![,]>,
 }
 
