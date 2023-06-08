@@ -106,6 +106,8 @@ abi_items! {
         /// A list of the event's inputs, in order.
         pub inputs: Vec<EventParam>,
         /// Whether the event is anonymous. Anonymous events do not have their
+        /// Signature included in the topic 0. Instead, the indexed arguments
+        /// are 0-indexed.
         pub anonymous: bool,
     }
 
