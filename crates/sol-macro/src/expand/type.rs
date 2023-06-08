@@ -1,5 +1,5 @@
 use super::ExpCtxt;
-use ast::{Item, SolArray, SolIdent, Type};
+use ast::{Item, Parameters, SolArray, SolPath, Type};
 use proc_macro2::{Literal, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use std::{fmt, num::NonZeroU16};
@@ -74,18 +74,27 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
 }
 
 impl ExpCtxt<'_> {
-    fn get_item(&self, name: &SolIdent) -> &Item {
+    fn get_item(&self, name: &SolPath) -> &Item {
+        let name = name.last_tmp();
         match self.all_items.iter().find(|item| item.name() == name) {
             Some(item) => item,
             None => panic!("unresolved item: {name}"),
         }
     }
 
-    fn custom_type(&self, name: &SolIdent) -> &Type {
-        match self.custom_types.get(name) {
+    fn custom_type(&self, name: &SolPath) -> &Type {
+        match self.custom_types.get(name.last_tmp()) {
             Some(item) => item,
             None => panic!("unresolved item: {name}"),
         }
+    }
+
+    pub(super) fn min_data_size<P>(&self, params: &Parameters<P>) -> usize {
+        params
+            .iter()
+            .map(|param| self.type_base_data_size(&param.ty))
+            .max()
+            .unwrap_or(0)
     }
 
     /// Recursively calculates the base ABI-encoded size of `self` in bytes.
@@ -127,7 +136,7 @@ impl ExpCtxt<'_> {
                     .map(|ty| self.type_base_data_size(ty))
                     .sum(),
                 Item::Udt(udt) => self.type_base_data_size(&udt.ty),
-                Item::Error(_) | Item::Function(_) => unreachable!(),
+                Item::Contract(_) | Item::Error(_) | Item::Function(_) => unreachable!(),
             },
         }
     }
@@ -182,7 +191,7 @@ impl ExpCtxt<'_> {
             Type::Custom(name) => match self.get_item(name) {
                 Item::Struct(strukt) => self.params_data_size(&strukt.fields, Some(field)),
                 Item::Udt(udt) => self.type_data_size(&udt.ty, field),
-                Item::Error(_) | Item::Function(_) => unreachable!(),
+                Item::Contract(_) | Item::Error(_) | Item::Function(_) => unreachable!(),
             },
         }
     }

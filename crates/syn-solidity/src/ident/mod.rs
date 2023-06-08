@@ -10,9 +10,19 @@ mod path;
 pub use path::SolPath;
 
 /// A Solidity identifier.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct SolIdent(pub Ident);
+
+impl quote::IdentFragment for SolIdent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+
+    fn span(&self) -> Option<Span> {
+        Some(self.span())
+    }
+}
 
 impl fmt::Display for SolIdent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -1,0 +1,17 @@
+error: cannot declare nested contracts
+ --> tests/ui/contract.rs:5:18
+  |
+5 |         contract Nested {}
+  |                  ^^^^^^
+
+error: cannot declare nested contracts
+  --> tests/ui/contract.rs:11:17
+   |
+11 |         library Nested {}
+   |                 ^^^^^^
+
+error: cannot declare nested contracts
+  --> tests/ui/contract.rs:17:19
+   |
+17 |         interface Nested {}
+   |                   ^^^^^^

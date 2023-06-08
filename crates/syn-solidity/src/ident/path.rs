@@ -11,9 +11,29 @@ use syn::{
     Result, Token,
 };
 
-/// A path of identifiers, separated by dots.
+/// Create a [`SolPath`] from a list of identifiers.
+#[macro_export]
+macro_rules! sol_path {
+    () => { $crate::SolPath::new() };
+
+    ($($e:expr),+) => {{
+        let mut path = $crate::SolPath::new();
+        $(path.push($crate::SolIdent::from($e));)+
+        path
+    }};
+
+    ($($id:ident).+) => {{
+        let mut path = $crate::SolPath::new();
+        $(path.push($crate::SolIdent::new(stringify!($id))));+
+        path
+    }};
+}
+
+/// A list of identifiers, separated by dots.
+///
+/// This is never parsed as empty.
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct SolPath(pub Punctuated<SolIdent, Token![.]>);
+pub struct SolPath(Punctuated<SolIdent, Token![.]>);
 
 impl Deref for SolPath {
     type Target = Punctuated<SolIdent, Token![.]>;
@@ -83,12 +103,38 @@ impl SolPath {
         Self(Punctuated::new())
     }
 
+    pub fn first(&self) -> &SolIdent {
+        self.0.first().unwrap()
+    }
+
+    pub fn first_mut(&mut self) -> &mut SolIdent {
+        self.0.first_mut().unwrap()
+    }
+
+    pub fn last(&self) -> &SolIdent {
+        self.0.last().unwrap()
+    }
+
+    // TODO: paths resolution
+    #[track_caller]
+    pub fn last_tmp(&self) -> &SolIdent {
+        if self.len() > 1 {
+            todo!()
+        }
+        self.last()
+    }
+
+    pub fn last_mut(&mut self) -> &mut SolIdent {
+        self.0.last_mut().unwrap()
+    }
+
     pub fn span(&self) -> Span {
-        let mut path = self.0.iter();
-        let Some(first) = path.next() else { return Span::call_site() };
-        path.fold(first.span(), |span, ident| {
-            span.join(ident.span()).unwrap_or(span)
-        })
+        let Some(first) = self.0.first() else { return Span::call_site() };
+        let span = first.span();
+        self.0
+            .last()
+            .and_then(|last| span.join(last.span()))
+            .unwrap_or(span)
     }
 
     pub fn set_span(&mut self, span: Span) {

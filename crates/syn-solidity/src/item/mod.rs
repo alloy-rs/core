@@ -5,6 +5,9 @@ use syn::{
     Attribute, Result, Token,
 };
 
+mod contract;
+pub use contract::ItemContract;
+
 mod error;
 pub use error::ItemError;
 
@@ -20,8 +23,12 @@ pub use udt::ItemUdt;
 /// An AST item. A more expanded version of a [Solidity source unit][ref].
 ///
 /// [ref]: https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.sourceUnit
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Item {
+    /// A contract, abstract contract, interface, or library definition:
+    /// `contract Foo is Bar, Baz { ... }`
+    Contract(ItemContract),
+
     /// An error definition: `error Foo(uint256 a, uint256 b);`
     Error(ItemError),
 
@@ -47,14 +54,16 @@ impl Parse for Item {
             input.parse().map(Self::Struct)
         } else if lookahead.peek(kw::error) {
             input.parse().map(Self::Error)
+        } else if contract::ContractKind::peek(&lookahead) {
+            input.parse().map(Self::Contract)
         } else if lookahead.peek(Token![type]) {
             input.parse().map(Self::Udt)
         } else {
             Err(lookahead.error())
         }?;
 
-        attrs.extend(item.replace_attrs(Vec::new()));
-        item.replace_attrs(attrs);
+        attrs.extend(std::mem::take(item.attrs_mut()));
+        *item.attrs_mut() = attrs;
 
         Ok(item)
     }
@@ -63,6 +72,7 @@ impl Parse for Item {
 impl Item {
     pub fn span(&self) -> Span {
         match self {
+            Self::Contract(contract) => contract.span(),
             Self::Error(error) => error.span(),
             Self::Function(function) => function.span(),
             Self::Struct(strukt) => strukt.span(),
@@ -72,6 +82,7 @@ impl Item {
 
     pub fn set_span(&mut self, span: Span) {
         match self {
+            Self::Contract(contract) => contract.set_span(span),
             Self::Error(error) => error.set_span(span),
             Self::Function(function) => function.set_span(span),
             Self::Struct(strukt) => strukt.set_span(span),
@@ -79,12 +90,53 @@ impl Item {
         }
     }
 
+    pub fn is_contract(&self) -> bool {
+        matches!(self, Self::Contract(_))
+    }
+
+    pub fn is_error(&self) -> bool {
+        matches!(self, Self::Error(_))
+    }
+
+    pub fn is_function(&self) -> bool {
+        matches!(self, Self::Function(_))
+    }
+
+    pub fn is_struct(&self) -> bool {
+        matches!(self, Self::Struct(_))
+    }
+
+    pub fn is_udt(&self) -> bool {
+        matches!(self, Self::Udt(_))
+    }
+
     pub fn name(&self) -> &SolIdent {
         match self {
-            Self::Error(ItemError { name, .. })
+            Self::Contract(ItemContract { name, .. })
+            | Self::Error(ItemError { name, .. })
             | Self::Function(ItemFunction { name, .. })
             | Self::Struct(ItemStruct { name, .. })
             | Self::Udt(ItemUdt { name, .. }) => name,
+        }
+    }
+
+    pub fn attrs(&self) -> &Vec<Attribute> {
+        match self {
+            Self::Contract(ItemContract { attrs, .. })
+            | Self::Function(ItemFunction { attrs, .. })
+            | Self::Error(ItemError { attrs, .. })
+            | Self::Struct(ItemStruct { attrs, .. })
+            | Self::Udt(ItemUdt { attrs, .. }) => attrs,
+        }
+    }
+
+    pub fn attrs_mut(&mut self) -> &mut Vec<Attribute> {
+        match self {
+            Self::Contract(ItemContract { attrs, .. })
+            | Self::Function(ItemFunction { attrs, .. })
+            | Self::Error(ItemError { attrs, .. })
+            | Self::Struct(ItemStruct { attrs, .. })
+            | Self::Udt(ItemUdt { attrs, .. }) => attrs,
         }
     }
 
@@ -93,16 +145,7 @@ impl Item {
             Self::Struct(strukt) => Some(strukt.as_type()),
             Self::Udt(udt) => Some(udt.ty.clone()),
             Self::Error(error) => Some(error.as_type()),
-            Self::Function(_) => None,
-        }
-    }
-
-    fn replace_attrs(&mut self, new: Vec<Attribute>) -> Vec<Attribute> {
-        match self {
-            Self::Struct(ItemStruct { attrs, .. })
-            | Self::Function(ItemFunction { attrs, .. })
-            | Self::Error(ItemError { attrs, .. })
-            | Self::Udt(ItemUdt { attrs, .. }) => std::mem::replace(attrs, new),
+            Self::Contract(_) | Self::Function(_) => None,
         }
     }
 }
