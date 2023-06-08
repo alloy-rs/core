@@ -143,7 +143,6 @@ impl<'ast> ExpCtxt<'ast> {
         attrs: &[Attribute],
     ) -> TokenStream {
         let name = format_ident!("{name}Calls");
-
         let variants: Vec<_> = functions
             .iter()
             .map(|f| self.function_name_ident(f).0)
