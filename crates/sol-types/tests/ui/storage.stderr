@@ -3,45 +3,33 @@ error: data locations are not allowed in struct definitions
   |
 5 |         bool memory a;
   |              ^^^^^^
-  |
-  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: data locations are not allowed in struct definitions
   --> tests/ui/storage.rs:11:14
    |
 11 |         bool storage a;
    |              ^^^^^^^
-   |
-   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: data locations are not allowed in struct definitions
   --> tests/ui/storage.rs:17:14
    |
 17 |         bool calldata a;
    |              ^^^^^^^^
-   |
-   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: data location can only be specified for array, struct or mapping types
   --> tests/ui/storage.rs:23:14
    |
 23 |         bool memory a,
    |              ^^^^^^
-   |
-   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: data location can only be specified for array, struct or mapping types
   --> tests/ui/storage.rs:29:14
    |
 29 |         bool storage a,
    |              ^^^^^^^
-   |
-   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: data location can only be specified for array, struct or mapping types
   --> tests/ui/storage.rs:35:14
    |
 35 |         bool calldata a,
    |              ^^^^^^^^
-   |
-   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)

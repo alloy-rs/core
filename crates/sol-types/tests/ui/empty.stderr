@@ -11,5 +11,3 @@ error: unexpected end of input, defining empty structs is disallowed
   |
 6 |     struct EmptyStruct {}
   |                         ^
-  |
-  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
