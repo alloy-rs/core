@@ -1,4 +1,5 @@
 use crate::param::Param;
+use alloc::{string::String, vec::Vec};
 use serde::{Deserialize, Serialize};
 
 /// A Solidity Event parameter.

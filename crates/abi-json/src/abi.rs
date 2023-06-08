@@ -1,9 +1,10 @@
+use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use serde::{
     de::{SeqAccess, Visitor},
     ser::SerializeSeq,
     Deserialize, Serialize,
 };
-use std::{borrow::Cow, collections::BTreeMap};
 
 /// The JSON contract ABI, as specified in the [Solidity documentation][ref].
 ///
@@ -55,29 +56,29 @@ impl Serialize for AbiJson {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
 
         if let Some(constructor) = &self.constructor {
-            seq.serialize_element(&AbiItem::Constructor(Cow::Borrowed(constructor)))?;
+            seq.serialize_element(constructor)?;
         }
         if let Some(fallback) = &self.fallback {
-            seq.serialize_element(&AbiItem::Fallback(Cow::Borrowed(fallback)))?;
+            seq.serialize_element(fallback)?;
         }
         if let Some(receive) = &self.receive {
-            seq.serialize_element(&AbiItem::Receive(Cow::Borrowed(receive)))?;
+            seq.serialize_element(receive)?;
         }
 
         self.functions
             .values()
             .flatten()
-            .try_for_each(|f| seq.serialize_element(&AbiItem::Function(Cow::Borrowed(f))))?;
+            .try_for_each(|f| seq.serialize_element(f))?;
 
         self.events
             .values()
             .flatten()
-            .try_for_each(|e| seq.serialize_element(&AbiItem::Event(Cow::Borrowed(e))))?;
+            .try_for_each(|e| seq.serialize_element(&e))?;
 
         self.errors
             .values()
             .flatten()
-            .try_for_each(|e| seq.serialize_element(&AbiItem::Error(Cow::Borrowed(e))))?;
+            .try_for_each(|e| seq.serialize_element(&e))?;
 
         seq.end()
     }
@@ -88,7 +89,7 @@ struct AbiJsonVisitor;
 impl<'de> Visitor<'de> for AbiJsonVisitor {
     type Value = AbiJson;
 
-    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(formatter, "a valid ABI JSON file")
     }
 

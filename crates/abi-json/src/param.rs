@@ -1,6 +1,6 @@
+use alloc::{borrow::Cow, string::String, vec::Vec};
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, fmt::Write};
 
 macro_rules! as_param_string {
     ($self:expr) => {{
@@ -13,7 +13,7 @@ macro_rules! as_param_string {
 
     ($self:expr, $f:expr) => {{
         $f.write_str(&$self.internal_type)?;
-        $f.write_char(' ')?;
+        $f.write_str(" ")?;
         $f.write_str(&$self.name)
     }};
 }

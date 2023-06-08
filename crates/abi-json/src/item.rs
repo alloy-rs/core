@@ -1,6 +1,6 @@
 use crate::{event_param::EventParam, param::Param, StateMutability};
+use alloc::{borrow::Cow, string::String, vec::Vec};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::borrow::Cow;
 
 macro_rules! abi_items {
     ($(
@@ -61,7 +61,6 @@ macro_rules! abi_items {
             #[doc = concat!("A JSON ABI [`", stringify!($name), "`].")]
             $name(Cow<'a, $name>),
         )*}
-
     };
 }
 
