@@ -1,0 +1,23 @@
+[package]
+name = "alloy-abi-json"
+description = "Ethereum ABI JSON file"
+keywords = ["ethereum", "abi", "serialization"]
+categories = ["encoding", "cryptography::cryptocurrencies"]
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { workspace = true, features = ["derive", "std"] }
+alloy-primitives.workspace = true
+
+
+[dev-dependencies]
+serde_json.workspace = true
