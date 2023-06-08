@@ -3,21 +3,15 @@ error: cannot declare nested contracts
   |
 5 |         contract Nested {}
   |                  ^^^^^^
-  |
-  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: cannot declare nested contracts
   --> tests/ui/contract.rs:11:17
    |
 11 |         library Nested {}
    |                 ^^^^^^
-   |
-   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: cannot declare nested contracts
   --> tests/ui/contract.rs:17:19
    |
 17 |         interface Nested {}
    |                   ^^^^^^
-   |
-   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
