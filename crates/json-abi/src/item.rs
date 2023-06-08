@@ -2,6 +2,8 @@ use crate::{event_param::EventParam, param::Param, StateMutability};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+// Serde order:
+// Public items -> public enum -> private enum -> private items
 macro_rules! abi_items {
     ($(
         $(#[$attr:meta])*
@@ -23,7 +25,7 @@ macro_rules! abi_items {
                     AbiItem::deserialize(deserializer).and_then(|item| match item {
                         AbiItem::$name(item) => Ok(item.into_owned()),
                         item => Err(serde::de::Error::invalid_type(
-                            serde::de::Unexpected::Other(&format!("{item:?}")),
+                            serde::de::Unexpected::Other(item.debug_name()),
                             &stringify!($name),
                         )),
                     })
@@ -132,6 +134,22 @@ impl<'de> Deserialize<'de> for AbiItem<'_> {
     }
 }
 
+impl AbiItem<'_> {
+    /// Returns the name of the item.
+    pub const fn debug_name(&self) -> &'static str {
+        match self {
+            AbiItem::Constructor(_) => "Constructor",
+            AbiItem::Fallback(_) => "Fallback",
+            AbiItem::Receive(_) => "Receive",
+            AbiItem::Function(_) => "Function",
+            AbiItem::Event(_) => "Event",
+            AbiItem::Error(_) => "Error",
+        }
+    }
+}
+
+// SAFETY: `AbiItem` and `private::AbiItem` have the exact same variants.
+// This is enforced by the macro.
 impl<'a> From<private::AbiItem<'a>> for AbiItem<'a> {
     #[inline(always)]
     fn from(item: private::AbiItem<'a>) -> AbiItem<'a> {
@@ -184,6 +202,7 @@ impl Function {
     }
 }
 
+/// `format!("{name}({inputs})")`
 fn preimage(name: &str, inputs: &[Param]) -> String {
     let mut preimage = String::with_capacity(name.len() + 2 + inputs.len() * 32);
     preimage.push_str(name);
@@ -202,7 +221,9 @@ fn preimage(name: &str, inputs: &[Param]) -> String {
     preimage
 }
 
+/// `keccak256({preimage})[..4]`
 fn selector(preimage: &str) -> [u8; 4] {
+    // SAFETY: splitting an array
     unsafe {
         alloy_primitives::keccak256(preimage.as_bytes())
             .0

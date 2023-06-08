@@ -31,6 +31,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 #[macro_use]
+#[allow(unused_imports)]
 extern crate alloc;
 
 use serde::{Deserialize, Serialize};
