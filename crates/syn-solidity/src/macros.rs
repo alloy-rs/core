@@ -12,6 +12,10 @@ macro_rules! make_visitor {
                     // nothing to do
                 }
 
+                fn visit_path(&mut v, ident: &'ast $($mut)? SolPath) {
+                    // nothing to do
+                }
+
                 fn visit_storage(&mut v, storage: &'ast $($mut)? Storage) {
                     // nothing to do
                 }
@@ -24,7 +28,7 @@ macro_rules! make_visitor {
                                 v.visit_type(ty);
                             }
                         },
-                        Type::Custom(name) => v.visit_ident(name),
+                        Type::Custom(name) => v.visit_path(name),
                         _ => {}
                     }
                 }
@@ -59,10 +63,18 @@ macro_rules! make_visitor {
 
                 fn visit_item(&mut v, item: &'ast $($mut)? Item) {
                     match item {
+                        Item::Contract(contract) => v.visit_item_contract(contract),
                         Item::Error(error) => v.visit_item_error(error),
                         Item::Function(function) => v.visit_item_function(function),
                         Item::Struct(strukt) => v.visit_item_struct(strukt),
                         Item::Udt(udt) => v.visit_item_udt(udt),
+                    }
+                }
+
+                fn visit_item_contract(&mut v, contract: &'ast $($mut)? ItemContract) {
+                    v.visit_ident(& $($mut)? contract.name);
+                    for item in & $($mut)? contract.body {
+                        v.visit_item(item);
                     }
                 }
 

@@ -2,20 +2,40 @@
 
 [`syn`]-powered parser for Solidity-like [`TokenStream`]s.
 
-**⚠️ Work in progress ⚠️**
-
 The parsed root element is the [`File`], which contains a list of [`Item`]s.
 [`Item`]s also support outer attributes, as shown below.
 
-This parser is compatible with Ethereum Solidity versions v0.5.x and above, but
-older versions may still parse successfully.
+**⚠️ Work in progress ⚠️**
 
 [`syn`]: https://github.com/dtolnay/syn
 [`TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
 
-```rust,ignore
+## Design
+
+This parser is specifically designed for Rust procedural macros. It aims to
+mimic the behavior of the official Solidity compiler (Solc) when it comes to
+parsing valid Solidity code. This means that all valid Solidity code, as
+recognized by Solc v0.5.*[^1] and above, will also be recognized and parsed
+correctly by `syn-solidity`.
+
+However, `syn-solidity` is more permissive and lenient compared to the official
+Solidity compiler and grammar specifications. Some examples of code patterns
+that are valid in `syn-solidity` but not in the official compiler include:
+- trailing punctuation, like commas (`,`) in function arguments or enums
+  definitions
+- certain variable and function attributes in certain contexts, like `internal`
+  functions or functions with implementations (`{ ... }`) in interfaces
+
+This lenient behavior is intentionally designed to facilitate usage within
+procedural macros, and to reduce general code complexity in the parser and AST.
+
+[^1]: Older versions may still parse successfully, but this is not guaranteed.
+
+## Example
+
+```rust,ignore TODO
 use quote::quote;
-use syn_solidity::{File, item::{Item, Function}};
+use syn_solidity::{File, Item};
 
 // Create a Solidity `TokenStream`
 let tokens = quote! {
@@ -30,7 +50,7 @@ let tokens = quote! {
 };
 
 // Parse the tokens into a `File`
-let ast: File = syn_solidity::parse2()?;
+let ast: File = syn_solidity::parse2(tokens)?;
 
 let items: &[Item] = &ast.items;
 let Some(Item::Contract(contract)) = items.first() else { unreachable!() };

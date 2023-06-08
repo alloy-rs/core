@@ -1,5 +1,5 @@
 use super::kw;
-use crate::{utils::DebugPunctuated, SolIdent};
+use crate::{sol_path, utils::DebugPunctuated, SolPath};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -231,7 +231,7 @@ pub enum Type {
     // TODO: function type
     // Function(...),
     /// A custom type.
-    Custom(SolIdent),
+    Custom(SolPath),
 }
 
 impl PartialEq for Type {
@@ -368,8 +368,8 @@ impl Parse for Type {
 }
 
 impl Type {
-    pub const fn custom(ident: Ident) -> Self {
-        Self::Custom(SolIdent(ident))
+    pub fn custom(ident: Ident) -> Self {
+        Self::Custom(sol_path![ident])
     }
 
     pub fn span(&self) -> Span {

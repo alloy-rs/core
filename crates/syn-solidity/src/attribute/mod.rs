@@ -132,7 +132,7 @@ impl Override {
 #[derive(Clone)]
 pub struct Modifier {
     pub name: SolPath,
-    pub paren_token: Paren,
+    pub paren_token: Option<Paren>,
     // TODO: Expr
     pub arguments: Punctuated<TokenStream, Token![,]>,
 }
@@ -162,23 +162,39 @@ impl fmt::Debug for Modifier {
 
 impl Parse for Modifier {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let content;
-        Ok(Self {
-            name: input.parse()?,
-            paren_token: parenthesized!(content in input),
-            arguments: content.parse_terminated(TokenStream::parse, Token![,])?,
-        })
+        let name = input.parse()?;
+        let this = if input.peek(Paren) {
+            let content;
+            let paren_token = parenthesized!(content in input);
+            let arguments = content.parse_terminated(TokenStream::parse, Token![,])?;
+            Self {
+                name,
+                paren_token: Some(paren_token),
+                arguments,
+            }
+        } else {
+            Self {
+                name,
+                paren_token: None,
+                arguments: Punctuated::new(),
+            }
+        };
+        Ok(this)
     }
 }
 
 impl Modifier {
     pub fn span(&self) -> Span {
         let span = self.name.span();
-        span.join(self.paren_token.span.join()).unwrap_or(span)
+        self.paren_token
+            .and_then(|paren_token| span.join(paren_token.span.join()))
+            .unwrap_or(span)
     }
 
     pub fn set_span(&mut self, span: Span) {
         self.name.set_span(span);
-        self.paren_token = Paren(span);
+        if let Some(paren_token) = &mut self.paren_token {
+            *paren_token = Paren(span);
+        }
     }
 }

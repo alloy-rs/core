@@ -28,15 +28,12 @@ mod ident;
 pub use ident::{SolIdent, SolPath};
 
 mod item;
-pub use item::{Item, ItemError, ItemFunction, ItemStruct, ItemUdt};
+pub use item::{Item, ItemContract, ItemError, ItemFunction, ItemStruct, ItemUdt};
 
 mod r#type;
 pub use r#type::{SolArray, SolTuple, Type};
 
 pub(crate) mod utils;
-
-mod returns;
-pub use returns::Returns;
 
 mod variable;
 pub use variable::{FieldList, ParameterList, Parameters, VariableDeclaration};
@@ -54,7 +51,7 @@ pub use visit_mut::VisitMut;
 /// Solidity keywords.
 pub mod kw {
     use syn::custom_keyword;
-    pub use syn::token::{Override, Virtual};
+    pub use syn::token::{Abstract, Override, Virtual};
 
     custom_keyword!(is);
 
@@ -83,6 +80,11 @@ pub mod kw {
     custom_keyword!(memory);
     custom_keyword!(storage);
     custom_keyword!(calldata);
+
+    // Contract
+    custom_keyword!(contract);
+    custom_keyword!(interface);
+    custom_keyword!(library);
 }
 
 /// Parse a Solidity [`proc_macro::TokenStream`] into a [`File`].

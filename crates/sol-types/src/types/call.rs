@@ -35,8 +35,7 @@ pub trait SolCall: Sized {
     /// selector.
     #[inline]
     fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        let tuple = <Self::Tuple as SolType>::decode(data, validate)?;
-        Ok(Self::from_rust(tuple))
+        <Self::Tuple as SolType>::decode(data, validate).map(Self::from_rust)
     }
 
     /// ABI decode this call's arguments from the given slice, **with** the
@@ -52,6 +51,7 @@ pub trait SolCall: Sized {
     /// ABI encode the call to the given buffer **without** its selector.
     #[inline]
     fn encode_raw(&self, out: &mut Vec<u8>) {
+        out.reserve(self.data_size());
         out.extend(<Self::Tuple as SolType>::encode(self.to_rust()));
     }
 

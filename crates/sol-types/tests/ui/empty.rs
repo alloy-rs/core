@@ -6,6 +6,11 @@ sol! {
     struct EmptyStruct {}
 }
 
+// OK
+sol! {
+    contract EmptyContract {}
+}
+
 sol! {
     error EmptyError();
 }
