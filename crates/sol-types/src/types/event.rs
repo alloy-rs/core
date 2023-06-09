@@ -2,20 +2,37 @@ use alloy_primitives::FixedBytes;
 
 use crate::{
     token::{TokenSeq, WordToken},
-    Result, SolType, Word,
+    Result, SolType,
 };
 
-trait TopicList: SolType + sealed::Sealed {
+use sealed::Sealed;
+
+/// A `TopicList` represents the topics of a Solidity event. A topic list may
+/// be 0-4 elements. Topics are included in log
+///
+/// This trait is sealed to prevent incorrect downstream implementations of
+/// `TopicList` from being created.
+pub trait TopicList: SolType + Sealed {
+    /// The number of topics
     const COUNT: usize;
 
-    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType;
+    /// Detokenize the topics into a tuple of rust types.
+    ///
+    /// This function accepts an iterator of `WordToken`
+    fn detokenize<I, D>(topics: I) -> Self::RustType
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>;
 }
 
 impl TopicList for () {
     const COUNT: usize = 0;
 
-    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType {
-        ()
+    fn detokenize<I, D>(_topics: I) -> Self::RustType
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
     }
 }
 
@@ -25,8 +42,12 @@ where
 {
     const COUNT: usize = 1;
 
-    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType {
-        let mut iter = topics.into_iter().copied();
+    fn detokenize<I, D>(topics: I) -> Self::RustType
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
+        let mut iter = topics.into_iter().map(Into::into);
         let topic0 = T::detokenize(iter.next().unwrap_or_default()).unwrap();
 
         (topic0,)
@@ -40,8 +61,13 @@ where
 {
     const COUNT: usize = 2;
 
-    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType {
-        let mut iter = topics.into_iter().copied();
+    fn detokenize<I, D>(topics: I) -> Self::RustType
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
+        let mut iter: core::iter::Map<<I as IntoIterator>::IntoIter, _> =
+            topics.into_iter().map(Into::into);
         let topic0 = T::detokenize(iter.next().unwrap_or_default()).unwrap();
         let topic1 = U::detokenize(iter.next().unwrap_or_default()).unwrap();
         (topic0, topic1)
@@ -56,8 +82,12 @@ where
 {
     const COUNT: usize = 3;
 
-    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType {
-        let mut iter = topics.into_iter().copied();
+    fn detokenize<I, D>(topics: I) -> Self::RustType
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
+        let mut iter = topics.into_iter().map(Into::into);
         let topic0 = T::detokenize(iter.next().unwrap_or_default()).unwrap();
         let topic1 = U::detokenize(iter.next().unwrap_or_default()).unwrap();
         let topic2 = V::detokenize(iter.next().unwrap_or_default()).unwrap();
@@ -74,8 +104,12 @@ where
 {
     const COUNT: usize = 4;
 
-    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType {
-        let mut iter = topics.into_iter().copied();
+    fn detokenize<I, D>(topics: I) -> Self::RustType
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
+        let mut iter = topics.into_iter().map(Into::into);
         let topic0 = T::detokenize(iter.next().unwrap_or_default()).unwrap();
         let topic1 = U::detokenize(iter.next().unwrap_or_default()).unwrap();
         let topic2 = V::detokenize(iter.next().unwrap_or_default()).unwrap();
@@ -133,9 +167,11 @@ pub trait SolEvent: Sized {
     fn encode_body(&self) -> Vec<u8>;
 
     /// Decode the topics of this event from the given data.
-    fn decode_topics<'a>(
-        topics: impl IntoIterator<Item = &'a WordToken>,
-    ) -> <Self::TopicList as SolType>::RustType {
+    fn decode_topics<I, D>(topics: I) -> <Self::TopicList as SolType>::RustType
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
         <Self::TopicList as TopicList>::detokenize(topics)
     }
 
@@ -148,11 +184,12 @@ pub trait SolEvent: Sized {
         body: <Self::DataTuple as SolType>::RustType,
     ) -> Self;
 
-    fn decode_log<'a>(
-        topics: impl IntoIterator<Item = &'a WordToken>,
-        body_data: &[u8],
-        validate: bool,
-    ) -> Result<Self> {
+    /// Decode the event from the given log info.
+    fn decode_log<I, D>(topics: I, body_data: &[u8], validate: bool) -> Result<Self>
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
         let topics = Self::decode_topics(topics);
         let body = Self::decode_body(body_data, validate)?;
 
@@ -160,6 +197,7 @@ pub trait SolEvent: Sized {
     }
 }
 
+#[allow(clippy::all)]
 mod example {
     use alloy_primitives::{FixedBytes, U256};
 
@@ -215,7 +253,7 @@ mod example {
 mod sealed {
     use super::*;
 
-    pub(crate) trait Sealed {}
+    pub trait Sealed {}
     impl Sealed for () {}
     impl<T> Sealed for (T,) where T: SolType<TokenType = WordToken> {}
     impl<T, U> Sealed for (T, U)

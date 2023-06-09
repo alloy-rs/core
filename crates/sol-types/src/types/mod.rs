@@ -20,4 +20,4 @@ pub use r#type::SolType;
 mod udt;
 
 mod event;
-pub use event::SolEvent;
+pub use event::{SolEvent, TopicList};
