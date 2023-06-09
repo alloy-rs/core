@@ -61,6 +61,18 @@ impl ItemEvent {
         self.anonymous.is_some()
     }
 
+    pub fn partition_params(&self) -> (Vec<&EventParameter>, Vec<&EventParameter>) {
+        self.parameters.iter().partition(|p| p.is_indexed())
+    }
+
+    pub fn non_indexed_params(&self) -> impl Iterator<Item = &EventParameter> {
+        self.parameters.iter().filter(|p| !p.is_indexed())
+    }
+
+    pub fn indexed_params(&self) -> impl Iterator<Item = &EventParameter> {
+        self.parameters.iter().filter(|p| p.is_indexed())
+    }
+
     pub fn as_type(&self) -> Type {
         Type::Tuple(self.parameters.iter().map(|arg| arg.ty.clone()).collect())
     }

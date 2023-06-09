@@ -145,19 +145,19 @@ pub trait SolEvent: Sized {
         <Self::TopicList as TopicList>::detokenize(topics)
     }
 
-    /// Decode the dynamic data of this event from the given .
+    /// Decode the dynamic data of this event from the given buffer.
     fn decode_data(data: &[u8], validate: bool) -> Result<<Self::DataTuple as SolType>::RustType> {
         <Self::DataTuple as SolType>::decode(data, validate)
     }
 
     /// Decode the event from the given log info.
-    fn decode_log<I, D>(topics: I, body_data: &[u8], validate: bool) -> Result<Self>
+    fn decode_log<I, D>(topics: I, data: &[u8], validate: bool) -> Result<Self>
     where
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,
     {
         let topics = Self::decode_topics(topics)?;
-        let body = Self::decode_data(body_data, validate)?;
+        let body = Self::decode_data(data, validate)?;
         Ok(Self::new(topics, body))
     }
 }

@@ -1,6 +1,5 @@
 use super::{kw, SolIdent, Storage, Type};
 use proc_macro2::Span;
-use quote::format_ident;
 use std::{
     fmt::{self, Write},
     ops::{Deref, DerefMut},
@@ -52,18 +51,9 @@ impl<P> fmt::Debug for Parameters<P> {
 /// Parameter list: fields names are set to `_{index}`
 impl Parse for Parameters<Token![,]> {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut list = input.parse_terminated(VariableDeclaration::parse, Token![,])?;
-
-        // Set names for anonymous parameters
-        for (i, var) in list.iter_mut().enumerate() {
-            if var.name.is_none() {
-                let mut ident = format_ident!("_{i}");
-                ident.set_span(var.span());
-                var.name = Some(SolIdent(ident));
-            }
-        }
-
-        Ok(Self(list))
+        input
+            .parse_terminated(VariableDeclaration::parse, Token![,])
+            .map(Self)
     }
 }
 

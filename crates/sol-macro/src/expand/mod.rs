@@ -1,13 +1,13 @@
 //! Functions which generate Rust code from the Solidity AST.
 
 use ast::{
-    File, Item, ItemContract, ItemError, ItemEvent, ItemFunction, ItemStruct, ItemUdt, Parameters,
-    SolIdent, Type, VariableDeclaration, Visit,
+    EventParameter, File, Item, ItemContract, ItemError, ItemEvent, ItemFunction, ItemStruct,
+    ItemUdt, Parameters, SolIdent, Type, VariableDeclaration, Visit,
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, IdentFragment};
 use std::{collections::HashMap, fmt::Write};
-use syn::{parse_quote, Attribute, Error, Result, Token};
+use syn::{parse_quote, punctuated::Punctuated, Attribute, Error, Result, Token};
 
 mod attr;
 
@@ -23,11 +23,34 @@ pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
 }
 
-fn expand_var(var: &VariableDeclaration) -> TokenStream {
-    let VariableDeclaration { ty, name, .. } = var;
+fn expand_params<P>(params: &Parameters<P>) -> impl Iterator<Item = TokenStream> + '_ {
+    params
+        .iter()
+        .enumerate()
+        .map(|(i, var)| expand_field(i, &var.ty, var.name.as_ref()))
+}
+
+fn expand_event_params<P>(
+    params: &Punctuated<EventParameter, P>,
+) -> impl Iterator<Item = TokenStream> + '_ {
+    params
+        .iter()
+        .enumerate()
+        .map(|(i, var)| expand_field(i, &var.ty, var.name.as_ref()))
+}
+
+fn expand_field(i: usize, ty: &Type, name: Option<&SolIdent>) -> TokenStream {
+    let name = anon_name((i, name));
     let ty = expand_type(ty);
     quote! {
         #name: <#ty as ::alloy_sol_types::SolType>::RustType
+    }
+}
+
+fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Ident {
+    match name {
+        Some(name) => name.clone().into(),
+        None => format_ident!("_{i}"),
     }
 }
 
@@ -268,7 +291,7 @@ impl<'ast> ExpCtxt<'ast> {
         let size = self.params_data_size(parameters, None);
 
         let converts = expand_from_into_tuples(&name.0, parameters);
-        let fields = parameters.iter().map(expand_var);
+        let fields = expand_params(parameters);
         let tokens = quote! {
             #(#attrs)*
             #[allow(non_camel_case_types, non_snake_case)]
@@ -307,8 +330,26 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn expand_event(&self, event: &ItemEvent) -> Result<TokenStream> {
-        let _ = event;
-        todo!()
+        let ItemEvent {
+            parameters,
+            name,
+            attrs,
+            ..
+        } = event;
+        let fields = expand_event_params(parameters);
+        let tokens = quote! {
+            #(#attrs)*
+            #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+            pub struct #name {#(
+                pub #fields,
+            )*}
+
+            #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+            const _: () = {
+
+            };
+        };
+        Ok(tokens)
     }
 
     fn expand_function(&self, function: &ItemFunction) -> Result<TokenStream> {
@@ -334,7 +375,7 @@ impl<'ast> ExpCtxt<'ast> {
     ) -> Result<TokenStream> {
         self.assert_resolved(params)?;
 
-        let fields = params.iter().map(expand_var);
+        let fields = expand_params(params);
 
         let signature = self.signature(function.name.as_string(), params);
         let selector = crate::utils::selector(&signature);
@@ -432,7 +473,7 @@ impl<'ast> ExpCtxt<'ast> {
         let attrs = attrs.iter();
         let convert = expand_from_into_tuples(&name.0, fields);
         let name_s = name.to_string();
-        let fields = fields.iter().map(expand_var);
+        let fields = expand_params(fields);
         let tokens = quote! {
             #(#attrs)*
             #[allow(non_camel_case_types, non_snake_case)]
@@ -660,7 +701,7 @@ impl<'ast> ExpCtxt<'ast> {
             let mut e = crate::utils::combine_errors(errors).unwrap();
             let note =
                 "Custom types must be declared inside of the same scope they are referenced in,\n\
-                 or \"imported\" as a UDT with `type {ident} is (...);`";
+                 or \"imported\" as a UDT with `type ... is (...);`";
             e.combine(Error::new(Span::call_site(), note));
             Err(e)
         }
@@ -668,8 +709,8 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn params_data_size<P>(&self, list: &Parameters<P>, base: Option<TokenStream>) -> TokenStream {
         let base = base.unwrap_or_else(|| quote!(self));
-        let sizes = list.iter().map(|var| {
-            let field = var.name.as_ref().unwrap();
+        let sizes = list.iter().enumerate().map(|(i, var)| {
+            let field = anon_name((i, var.name.as_ref()));
             self.type_data_size(&var.ty, quote!(#base.#field))
         });
         quote!(0usize #( + #sizes)*)
@@ -693,7 +734,7 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
 
 /// Expands `From` impls for a list of types and the corresponding tuple.
 fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStream {
-    let names = fields.names();
+    let names = fields.names().enumerate().map(anon_name);
     let names2 = names.clone();
     let idxs = (0..fields.len()).map(syn::Index::from);
 
@@ -701,10 +742,13 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
     let tys2 = tys.clone();
 
     quote! {
+        #[doc(hidden)]
         type UnderlyingSolTuple = (#(#tys,)*);
+        #[doc(hidden)]
         type UnderlyingRustTuple = (#(<#tys2 as ::alloy_sol_types::SolType>::RustType,)*);
 
         #[automatically_derived]
+        #[doc(hidden)]
         impl ::core::convert::From<#name> for UnderlyingRustTuple {
             fn from(value: #name) -> Self {
                 (#(value.#names,)*)
@@ -712,6 +756,7 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
         }
 
         #[automatically_derived]
+        #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple> for #name {
             fn from(tuple: UnderlyingRustTuple) -> Self {
                 #name {
