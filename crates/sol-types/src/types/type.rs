@@ -65,7 +65,7 @@ pub trait SolType {
     }
 
     /// Detokenize.
-    fn detokenize(token: Self::TokenType) -> Result<Self::RustType>;
+    fn detokenize(token: Self::TokenType) -> Self::RustType;
 
     /// Tokenize.
     fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType;
@@ -164,7 +164,7 @@ pub trait SolType {
         if validate {
             Self::type_check(&decoded)?;
         }
-        Self::detokenize(decoded)
+        Ok(Self::detokenize(decoded))
     }
 
     /// Decode a Rust type from an ABI blob.
@@ -177,7 +177,7 @@ pub trait SolType {
         if validate {
             Self::type_check(&decoded)?;
         }
-        Self::detokenize(decoded)
+        Ok(Self::detokenize(decoded))
     }
 
     /// Decode a Rust type from an ABI blob.
@@ -187,7 +187,7 @@ pub trait SolType {
         if validate {
             Self::type_check(&decoded)?;
         }
-        Self::detokenize(decoded)
+        Ok(Self::detokenize(decoded))
     }
 
     /// Decode a Rust type from a hex-encoded ABI blob.
