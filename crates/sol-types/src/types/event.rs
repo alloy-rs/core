@@ -203,6 +203,35 @@ pub trait SolEvent: Sized {
     }
 }
 
+mod sealed {
+    use super::*;
+
+    pub trait Sealed {}
+    impl Sealed for () {}
+    impl<T> Sealed for (T,) where T: SolType<TokenType = WordToken> {}
+    impl<T, U> Sealed for (T, U)
+    where
+        T: SolType<TokenType = WordToken>,
+        U: SolType<TokenType = WordToken>,
+    {
+    }
+    impl<T, U, V> Sealed for (T, U, V)
+    where
+        T: SolType<TokenType = WordToken>,
+        U: SolType<TokenType = WordToken>,
+        V: SolType<TokenType = WordToken>,
+    {
+    }
+    impl<T, U, V, W> Sealed for (T, U, V, W)
+    where
+        T: SolType<TokenType = WordToken>,
+        U: SolType<TokenType = WordToken>,
+        V: SolType<TokenType = WordToken>,
+        W: SolType<TokenType = WordToken>,
+    {
+    }
+}
+
 #[cfg(test)]
 mod compile_test {
     use alloy_primitives::{FixedBytes, U256};
@@ -262,34 +291,5 @@ mod compile_test {
                 d: body.1,
             }
         }
-    }
-}
-
-mod sealed {
-    use super::*;
-
-    pub trait Sealed {}
-    impl Sealed for () {}
-    impl<T> Sealed for (T,) where T: SolType<TokenType = WordToken> {}
-    impl<T, U> Sealed for (T, U)
-    where
-        T: SolType<TokenType = WordToken>,
-        U: SolType<TokenType = WordToken>,
-    {
-    }
-    impl<T, U, V> Sealed for (T, U, V)
-    where
-        T: SolType<TokenType = WordToken>,
-        U: SolType<TokenType = WordToken>,
-        V: SolType<TokenType = WordToken>,
-    {
-    }
-    impl<T, U, V, W> Sealed for (T, U, V, W)
-    where
-        T: SolType<TokenType = WordToken>,
-        U: SolType<TokenType = WordToken>,
-        V: SolType<TokenType = WordToken>,
-        W: SolType<TokenType = WordToken>,
-    {
     }
 }
