@@ -28,6 +28,7 @@ pub struct ItemContract {
 impl fmt::Debug for ItemContract {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Contract")
+            .field("attrs", &self.attrs)
             .field("kind", &self.kind)
             .field("name", &self.name)
             .field("inheritance", &self.inheritance)

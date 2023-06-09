@@ -18,15 +18,16 @@ pub struct ItemError {
     pub error_token: kw::error,
     pub name: SolIdent,
     pub paren_token: Paren,
-    pub fields: Parameters<Token![,]>,
+    pub parameters: Parameters<Token![,]>,
     pub semi_token: Token![;],
 }
 
 impl fmt::Debug for ItemError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Error")
+            .field("attrs", &self.attrs)
             .field("name", &self.name)
-            .field("fields", &self.fields)
+            .field("fields", &self.parameters)
             .finish()
     }
 }
@@ -39,7 +40,7 @@ impl Parse for ItemError {
             error_token: input.parse()?,
             name: input.parse()?,
             paren_token: parenthesized!(content in input),
-            fields: content.parse()?,
+            parameters: content.parse()?,
             semi_token: input.parse()?,
         })
     }
@@ -55,6 +56,6 @@ impl ItemError {
     }
 
     pub fn as_type(&self) -> Type {
-        Type::Tuple(self.fields.types().cloned().collect())
+        Type::Tuple(self.parameters.types().cloned().collect())
     }
 }
