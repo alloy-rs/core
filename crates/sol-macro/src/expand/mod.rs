@@ -255,20 +255,20 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn expand_error(&self, error: &ItemError) -> Result<TokenStream> {
         let ItemError {
-            parameters: fields,
+            parameters,
             name,
             attrs,
             ..
         } = error;
-        self.assert_resolved(fields)?;
+        self.assert_resolved(parameters)?;
 
-        let signature = self.signature(name.as_string(), fields);
+        let signature = self.signature(name.as_string(), parameters);
         let selector = crate::utils::selector(&signature);
 
-        let size = self.params_data_size(fields, None);
+        let size = self.params_data_size(parameters, None);
 
-        let converts = expand_from_into_tuples(&name.0, fields);
-        let fields = fields.iter().map(expand_var);
+        let converts = expand_from_into_tuples(&name.0, parameters);
+        let fields = parameters.iter().map(expand_var);
         let tokens = quote! {
             #(#attrs)*
             #[allow(non_camel_case_types, non_snake_case)]
