@@ -180,7 +180,8 @@ pub use errors::{Error, Result};
 
 mod types;
 pub use types::{
-    data_type as sol_data, Panic, PanicKind, Revert, SolCall, SolError, SolStruct, SolType,
+    data_type as sol_data, Panic, PanicKind, Revert, SolCall, SolError, SolEvent, SolStruct,
+    SolType, TopicList,
 };
 
 mod util;

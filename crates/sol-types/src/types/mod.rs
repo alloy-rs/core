@@ -18,3 +18,6 @@ pub use r#type::SolType;
 // Solidity user-defined value types.
 // No exports are needed as the only item is a macro.
 mod udt;
+
+mod event;
+pub use event::{SolEvent, TopicList};
