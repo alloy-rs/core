@@ -6,11 +6,16 @@ use alloc::{borrow::Cow, vec::Vec};
 use alloy_primitives::FixedBytes;
 use sealed::Sealed;
 
-/// A `TopicList` represents the topics of a Solidity event. A topic list may
-/// be 0-4 elements. Topics are included in log
+/// A `TopicList` represents the topics of a Solidity event.
 ///
-/// This trait is sealed to prevent incorrect downstream implementations of
-/// `TopicList` from being created.
+/// This trait is implemented only on tuples of arity up to 4. The tuples must
+/// contain only [`SolType`]s where the token is a [`WordToken`], and as such
+/// it is sealed to prevent prevent incorrect downstream implementations.
+///
+/// See the [Solidity event ABI specification][solevent] for more details on how
+/// events' topics are encoded.
+///
+/// [solevent]: https://docs.soliditylang.org/en/latest/abi-spec.html#events
 pub trait TopicList: SolType + Sealed {
     /// The number of topics.
     const COUNT: usize;
@@ -94,10 +99,7 @@ pub trait SolEvent: Sized {
     /// These are ABI encoded and included in the log struct returned by the
     /// RPC node.
     ///
-    /// Complex and dynamic indexed parameters are encoded according to [special
-    /// rules] and then hashed.
-    ///
-    /// [special rules]: https://docs.soliditylang.org/en/v0.8.18/abi-spec.html#indexed-event-encoding
+    /// See the [`TopicList`] trait for more details.
     type TopicList: TopicList;
 
     /// The event's ABI signature.
@@ -113,9 +115,6 @@ pub trait SolEvent: Sized {
 
     /// Whether the event is anonymous.
     const ANONYMOUS: bool;
-
-    /// The number of topics.
-    const TOPICS_LEN: usize;
 
     /// Convert decoded rust data to the event type.
     fn new(
@@ -168,6 +167,7 @@ pub trait SolEvent: Sized {
 mod compile_test {
     use super::*;
     use crate::{sol_data, SolEvent, SolType};
+    use alloc::string::String;
     use alloy_primitives::{FixedBytes, U256};
     use hex_literal::hex;
 
@@ -195,7 +195,6 @@ mod compile_test {
             "a0361149ae231b28afd460baabadd0a64949fcaed9a1d488cbf2747a9a8be6dd"
         ));
         const ANONYMOUS: bool = false;
-        const TOPICS_LEN: usize = 3;
 
         fn data_size(&self) -> usize {
             // abi encoded length of: b + c + d

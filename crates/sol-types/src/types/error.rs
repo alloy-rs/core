@@ -41,8 +41,7 @@ pub trait SolError: Sized {
     /// selector.
     #[inline]
     fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        let tuple = <Self::Tuple as SolType>::decode(data, validate)?;
-        Ok(Self::from_rust(tuple))
+        <Self::Tuple as SolType>::decode(data, validate).map(Self::from_rust)
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the
