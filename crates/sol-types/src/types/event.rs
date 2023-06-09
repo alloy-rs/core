@@ -1,6 +1,88 @@
-use alloy_primitives::B256;
+use alloy_primitives::FixedBytes;
 
-use crate::{token::TokenSeq, SolType};
+use crate::{
+    token::{TokenSeq, WordToken},
+    Result, SolType, Word,
+};
+
+trait TopicList: SolType + sealed::Sealed {
+    const COUNT: usize;
+
+    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType;
+}
+
+impl TopicList for () {
+    const COUNT: usize = 0;
+
+    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType {
+        ()
+    }
+}
+
+impl<T> TopicList for (T,)
+where
+    T: SolType<TokenType = WordToken>,
+{
+    const COUNT: usize = 1;
+
+    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType {
+        let mut iter = topics.into_iter().copied();
+        let topic0 = T::detokenize(iter.next().unwrap_or_default()).unwrap();
+
+        (topic0,)
+    }
+}
+
+impl<T, U> TopicList for (T, U)
+where
+    T: SolType<TokenType = WordToken>,
+    U: SolType<TokenType = WordToken>,
+{
+    const COUNT: usize = 2;
+
+    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType {
+        let mut iter = topics.into_iter().copied();
+        let topic0 = T::detokenize(iter.next().unwrap_or_default()).unwrap();
+        let topic1 = U::detokenize(iter.next().unwrap_or_default()).unwrap();
+        (topic0, topic1)
+    }
+}
+
+impl<T, U, V> TopicList for (T, U, V)
+where
+    T: SolType<TokenType = WordToken>,
+    U: SolType<TokenType = WordToken>,
+    V: SolType<TokenType = WordToken>,
+{
+    const COUNT: usize = 3;
+
+    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType {
+        let mut iter = topics.into_iter().copied();
+        let topic0 = T::detokenize(iter.next().unwrap_or_default()).unwrap();
+        let topic1 = U::detokenize(iter.next().unwrap_or_default()).unwrap();
+        let topic2 = V::detokenize(iter.next().unwrap_or_default()).unwrap();
+        (topic0, topic1, topic2)
+    }
+}
+
+impl<T, U, V, W> TopicList for (T, U, V, W)
+where
+    T: SolType<TokenType = WordToken>,
+    U: SolType<TokenType = WordToken>,
+    V: SolType<TokenType = WordToken>,
+    W: SolType<TokenType = WordToken>,
+{
+    const COUNT: usize = 4;
+
+    fn detokenize<'a>(topics: impl IntoIterator<Item = &'a WordToken>) -> Self::RustType {
+        let mut iter = topics.into_iter().copied();
+        let topic0 = T::detokenize(iter.next().unwrap_or_default()).unwrap();
+        let topic1 = U::detokenize(iter.next().unwrap_or_default()).unwrap();
+        let topic2 = V::detokenize(iter.next().unwrap_or_default()).unwrap();
+        let topic3 = W::detokenize(iter.next().unwrap_or_default()).unwrap();
+        (topic0, topic1, topic2, topic3)
+    }
+}
 
 /// Solidity event.
 ///
@@ -16,17 +98,25 @@ pub trait SolEvent: Sized {
     ///
     /// If this event has no non-indexed and no dynamically-sized parameters,
     /// this will be the unit type `()`.
-    type BodyTuple: SolType<TokenType = Self::BodyToken>;
+    type DataTuple: SolType<TokenType = Self::DataToken>;
 
     /// The [`TokenSeq`] type corresponding to the tuple.
-    type BodyToken: TokenSeq;
+    type DataToken: TokenSeq;
 
-    /// The event's ABI signature.
+    /// The underlying tuple type which represents this event's topics.
+    /// These are ABI encoded and included in the log structs
+    type TopicList: TopicList;
+
+    /// The event's ABI signature. For anonymous events, this is unused, but is
+    /// still present.
     const SIGNATURE: &'static str;
 
     /// The keccak256 hash of the event's ABI signature. For non-anonymous
-    /// events, this will be the topic0 of the event.
-    const SIGNATURE_HASH: [u8; 32];
+    /// events, this will be the topic0 of the event. For anonymous events, this
+    /// is unused, but is still present.
+    ///
+    /// Also called the event `selector`
+    const SIGNATURE_HASH: FixedBytes<32>;
 
     /// True if the event is anonymous.
     const ANONYMOUS: bool;
@@ -34,44 +124,44 @@ pub trait SolEvent: Sized {
     /// The number of topics.
     const TOPICS_LEN: usize;
 
-    /// Type of Topic 0. This is typically a [`B256`] representing the event's
-    /// signature. However, for anonymous events, this may be some other type.
-    /// If an anonymous event has no indexed parameters, this will be the unit
-    /// type `()`.
-    type Topic0: SolType;
-    /// Type of Topic 1. If the event does not have an indexed parameter at this
-    /// position, this will be the unit type `()`.
-    type Topic1: SolType;
-    /// Type of Topic 2. If the event does not have an indexed parameter at this
-    /// position, this will be the unit type `()`.
-    type Topic2: SolType;
-    /// Type of Topic 3. If the event does not have an indexed parameter at this
-    /// position, this will be the unit type `()`.
-    type Topic3: SolType;
+    /// Decode the body of this event from the given data.
+    fn decode_body(data: &[u8], validate: bool) -> Result<<Self::DataTuple as SolType>::RustType> {
+        <Self::DataTuple as SolType>::decode(data, validate)
+    }
 
-    /// Converts to the tuple type used for ABI encoding and decoding.
-    fn body_to_rust(&self) -> <Self::BodyTuple as SolType>::RustType;
+    /// Encode the body of this event.
+    fn encode_body(&self) -> Vec<u8>;
 
-    fn from_rust(
-        topic0: <Self::Topic0 as SolType>::RustType,
-        topic1: <Self::Topic1 as SolType>::RustType,
-        topic2: <Self::Topic2 as SolType>::RustType,
-        topic3: <Self::Topic3 as SolType>::RustType,
-        body: <Self::BodyTuple as SolType>::RustType,
-    ) -> Self;
+    /// Decode the topics of this event from the given data.
+    fn decode_topics<'a>(
+        topics: impl IntoIterator<Item = &'a WordToken>,
+    ) -> <Self::TopicList as SolType>::RustType {
+        <Self::TopicList as TopicList>::detokenize(topics)
+    }
 
     /// The size of the encoded body data in bytes.
     fn body_size(&self) -> usize;
 
-    fn topic_0(&self) -> <Self::Topic0 as SolType>::RustType;
-    fn topic_1(&self) -> <Self::Topic1 as SolType>::RustType;
-    fn topic_2(&self) -> <Self::Topic2 as SolType>::RustType;
-    fn topic_3(&self) -> <Self::Topic3 as SolType>::RustType;
+    /// Convert decoded rust data to the event type.
+    fn new(
+        topics: <Self::TopicList as SolType>::RustType,
+        body: <Self::DataTuple as SolType>::RustType,
+    ) -> Self;
+
+    fn decode_log<'a>(
+        topics: impl IntoIterator<Item = &'a WordToken>,
+        body_data: &[u8],
+        validate: bool,
+    ) -> Result<Self> {
+        let topics = Self::decode_topics(topics);
+        let body = Self::decode_body(body_data, validate)?;
+
+        Ok(Self::new(topics, body))
+    }
 }
 
 mod example {
-
-    use alloy_primitives::{keccak256, U256};
+    use alloy_primitives::{FixedBytes, U256};
 
     use crate::{sol_data, SolEvent, SolType};
 
@@ -84,59 +174,69 @@ mod example {
     }
 
     impl SolEvent for MyEvent {
-        type BodyTuple = (sol_data::Uint<256>, sol_data::String, sol_data::Bytes);
-        type BodyToken = (
+        type DataTuple = (sol_data::Uint<256>, sol_data::String, sol_data::Bytes);
+        type DataToken = (
             <sol_data::Uint<256> as SolType>::TokenType,
             <sol_data::String as SolType>::TokenType,
             <sol_data::Bytes as SolType>::TokenType,
         );
+
+        // this is a, and keccak256(c)
+        type TopicList = (sol_data::FixedBytes<32>, sol_data::FixedBytes<32>);
+
         const SIGNATURE: &'static str = "MyEvent(bytes32,uint256,string,bytes)";
-        const SIGNATURE_HASH: [u8; 32] = [0; 32]; // FIXME
+        const SIGNATURE_HASH: FixedBytes<32> = FixedBytes([0; 32]); // FIXME: caluclate it
         const ANONYMOUS: bool = false;
         const TOPICS_LEN: usize = 3;
-        type Topic0 = sol_data::FixedBytes<32>; // Signature hash
-        type Topic1 = sol_data::FixedBytes<32>; // Indexed bytes32 a
-        type Topic2 = sol_data::FixedBytes<32>; // Hash of indexed string c
-        type Topic3 = (); // no 4th topic
-
-        fn body_to_rust(&self) -> <Self::BodyTuple as SolType>::RustType {
-            (self.b, self.c.clone(), self.d.clone())
-        }
-
-        fn from_rust(
-            topic0: <Self::Topic0 as SolType>::RustType,
-            topic1: <Self::Topic1 as SolType>::RustType,
-            topic2: <Self::Topic2 as SolType>::RustType,
-            topic3: <Self::Topic3 as SolType>::RustType,
-            body: <Self::BodyTuple as SolType>::RustType,
-        ) -> Self {
-            Self {
-                a: topic1,
-                b: body.0,
-                c: body.1,
-                d: body.2,
-            }
-        }
 
         fn body_size(&self) -> usize {
             0
             // FIXME: as data_size for error.
         }
 
-        fn topic_0(&self) -> <Self::Topic0 as SolType>::RustType {
-            Self::SIGNATURE_HASH
+        fn encode_body(&self) -> Vec<u8> {
+            todo!()
         }
 
-        fn topic_1(&self) -> <Self::Topic1 as SolType>::RustType {
-            self.a
+        fn new(
+            topics: <Self::TopicList as SolType>::RustType,
+            body: <Self::DataTuple as SolType>::RustType,
+        ) -> Self {
+            Self {
+                a: topics.1,
+                b: body.0,
+                c: body.1,
+                d: body.2,
+            }
         }
+    }
+}
 
-        fn topic_2(&self) -> <Self::Topic2 as SolType>::RustType {
-            keccak256(self.c.as_bytes()).into()
-        }
+mod sealed {
+    use super::*;
 
-        fn topic_3(&self) -> <Self::Topic3 as SolType>::RustType {
-            ()
-        }
+    pub(crate) trait Sealed {}
+    impl Sealed for () {}
+    impl<T> Sealed for (T,) where T: SolType<TokenType = WordToken> {}
+    impl<T, U> Sealed for (T, U)
+    where
+        T: SolType<TokenType = WordToken>,
+        U: SolType<TokenType = WordToken>,
+    {
+    }
+    impl<T, U, V> Sealed for (T, U, V)
+    where
+        T: SolType<TokenType = WordToken>,
+        U: SolType<TokenType = WordToken>,
+        V: SolType<TokenType = WordToken>,
+    {
+    }
+    impl<T, U, V, W> Sealed for (T, U, V, W)
+    where
+        T: SolType<TokenType = WordToken>,
+        U: SolType<TokenType = WordToken>,
+        V: SolType<TokenType = WordToken>,
+        W: SolType<TokenType = WordToken>,
+    {
     }
 }
