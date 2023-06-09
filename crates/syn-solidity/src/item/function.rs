@@ -8,8 +8,8 @@ use syn::{
     Attribute, Error, Result, Token,
 };
 
-/// A function definition:
-/// `function helloWorld() external pure returns(string memory);`
+/// A function definition: `function helloWorld() external pure returns(string
+/// memory);`
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.functionDefinition>
@@ -31,6 +31,7 @@ pub struct ItemFunction {
 impl fmt::Debug for ItemFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Function")
+            .field("attrs", &self.attrs)
             .field("name", &self.name)
             .field("arguments", &self.arguments)
             .field("attributes", &self.attributes)
