@@ -2,7 +2,7 @@
 //! Solidity structs logic, particularly for EIP-712 encoding/decoding.
 
 use super::SolType;
-use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Result, Word};
+use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Word};
 use alloy_primitives::{keccak256, B256};
 
 type TupleFor<T> = <T as SolStruct>::Tuple;
@@ -137,9 +137,9 @@ impl<T: SolStruct> SolType for T {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
-        let tuple = TupleFor::<T>::detokenize(token)?;
-        Ok(T::from_rust(tuple))
+    fn detokenize(token: Self::TokenType) -> Self::RustType {
+        let tuple = TupleFor::<T>::detokenize(token);
+        T::from_rust(tuple)
     }
 
     #[inline]

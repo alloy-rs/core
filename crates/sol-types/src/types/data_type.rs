@@ -28,9 +28,9 @@ impl SolType for Address {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
+    fn detokenize(token: Self::TokenType) -> Self::RustType {
         let sli = &token.as_slice()[12..];
-        Ok(RustAddress::from_slice(sli))
+        RustAddress::from_slice(sli)
     }
 
     #[inline]
@@ -82,8 +82,8 @@ impl SolType for Bytes {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
-        Ok(token.into_vec())
+    fn detokenize(token: Self::TokenType) -> Self::RustType {
+        token.into_vec()
     }
 
     #[inline]
@@ -142,10 +142,10 @@ macro_rules! impl_int_sol_type {
             }
 
             #[inline]
-            fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
+            fn detokenize(token: Self::TokenType) -> Self::RustType {
                 let bytes = (<$ity>::BITS / 8) as usize;
                 let sli = &token.as_slice()[32 - bytes..];
-                Ok(<$ity>::from_be_bytes(sli.try_into().unwrap()))
+                <$ity>::from_be_bytes(sli.try_into().unwrap())
             }
 
             #[inline]
@@ -214,8 +214,8 @@ macro_rules! impl_int_sol_type {
             }
 
             #[inline]
-            fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
-                Ok(I256::from_be_bytes::<32>(token.into()))
+            fn detokenize(token: Self::TokenType) -> Self::RustType {
+                I256::from_be_bytes::<32>(token.into())
             }
 
             #[inline]
@@ -280,10 +280,10 @@ macro_rules! impl_uint_sol_type {
             }
 
             #[inline]
-            fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
+            fn detokenize(token: Self::TokenType) -> Self::RustType {
                 let bytes = (<$uty>::BITS / 8) as usize;
                 let sli = &token.as_slice()[32 - bytes..];
-                Ok(<$uty>::from_be_bytes(sli.try_into().unwrap()))
+                <$uty>::from_be_bytes(sli.try_into().unwrap())
             }
 
             #[inline]
@@ -334,8 +334,8 @@ macro_rules! impl_uint_sol_type {
             }
 
             #[inline]
-            fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
-                Ok(U256::from_be_bytes::<32>(*token.inner()))
+            fn detokenize(token: Self::TokenType) -> Self::RustType {
+                U256::from_be_bytes::<32>(*token.inner())
             }
 
             #[inline]
@@ -401,8 +401,8 @@ impl SolType for Bool {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
-        Ok(token.inner() != Word::repeat_byte(0))
+    fn detokenize(token: Self::TokenType) -> Self::RustType {
+        token.inner() != Word::repeat_byte(0)
     }
 
     #[inline]
@@ -454,7 +454,7 @@ where
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
+    fn detokenize(token: Self::TokenType) -> Self::RustType {
         token.into_vec().into_iter().map(T::detokenize).collect()
     }
 
@@ -511,12 +511,12 @@ impl SolType for String {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
+    fn detokenize(token: Self::TokenType) -> Self::RustType {
         // NOTE: We're decoding strings using lossy UTF-8 decoding to
         // prevent invalid strings written into contracts by either users or
         // Solidity bugs from causing graph-node to fail decoding event
         // data.
-        Ok(RustString::from_utf8_lossy(&Bytes::detokenize(token)?).into_owned())
+        RustString::from_utf8_lossy(&Bytes::detokenize(token)).into_owned()
     }
 
     #[inline]
@@ -560,11 +560,11 @@ macro_rules! impl_fixed_bytes_sol_type {
             }
 
             #[inline]
-            fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
+            fn detokenize(token: Self::TokenType) -> Self::RustType {
                 let word = token.as_slice();
                 let mut res = [0; $bytes];
                 res[..].copy_from_slice(&word[..$bytes]);
-                Ok(res)
+                res
             }
 
             #[inline]
@@ -627,16 +627,16 @@ where
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
+    fn detokenize(token: Self::TokenType) -> Self::RustType {
         let res = token
             .into_array()
             .into_iter()
             .map(|t| T::detokenize(t))
-            .collect::<Result<Vec<_>>>()?
+            .collect::<Vec<_>>()
             .try_into();
         match res {
-            Ok(tokens) => Ok(tokens),
-            Err(_) => panic!("input is exact len"),
+            Ok(tokens) => tokens,
+            Err(_) => unreachable!("input is exact len"),
         }
     }
 
@@ -715,11 +715,11 @@ macro_rules! tuple_impls {
                 Ok(())
             }
 
-            fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
+            fn detokenize(token: Self::TokenType) -> Self::RustType {
                 let ($($ty,)+) = token;
-                Ok(($(
-                    <$ty as SolType>::detokenize($ty)?,
-                )+))
+                ($(
+                    <$ty as SolType>::detokenize($ty),
+                )+)
             }
 
             fn tokenize<B_: Borrow<Self::RustType>>(rust: B_) -> Self::TokenType {
@@ -754,7 +754,7 @@ tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, }
 
 impl SolType for () {
     type RustType = ();
-    type TokenType = ();
+    type TokenType = FixedSeqToken<(), 0>;
 
     #[inline]
     fn is_dynamic() -> bool {
@@ -772,12 +772,12 @@ impl SolType for () {
     }
 
     #[inline]
-    fn detokenize(_token: Self::TokenType) -> Result<Self::RustType> {
-        Err(crate::Error::type_check_fail(b"", "tuple()"))
-    }
+    fn detokenize(_token: Self::TokenType) -> Self::RustType {}
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(_rust: B) -> Self::TokenType {}
+    fn tokenize<B: Borrow<Self::RustType>>(_rust: B) -> Self::TokenType {
+        [].into()
+    }
 
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(_rust: B) -> Word {

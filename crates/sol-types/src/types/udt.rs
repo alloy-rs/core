@@ -80,7 +80,7 @@ macro_rules! define_udt {
             }
 
             #[inline]
-            fn detokenize(token: Self::TokenType) -> $crate::Result<Self::RustType> {
+            fn detokenize(token: Self::TokenType) -> Self::RustType {
                 <$underlying as $crate::SolType>::detokenize(token)
             }
 
