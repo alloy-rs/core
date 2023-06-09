@@ -2,6 +2,7 @@ use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use std::fmt;
 use syn::{
+    ext::IdentExt,
     parse::{Parse, ParseStream},
     Result,
 };
@@ -90,5 +91,10 @@ impl SolIdent {
             s = s[2..].to_string();
         }
         s
+    }
+
+    /// See `[Ident::peek_any]`.
+    pub fn peek_any(input: ParseStream<'_>) -> bool {
+        input.peek(Ident::peek_any)
     }
 }

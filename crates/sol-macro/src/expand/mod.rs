@@ -1,8 +1,8 @@
 //! Functions which generate Rust code from the Solidity AST.
 
 use ast::{
-    File, Item, ItemContract, ItemError, ItemFunction, ItemStruct, ItemUdt, Parameters, SolIdent,
-    Type, VariableDeclaration, Visit,
+    File, Item, ItemContract, ItemError, ItemEvent, ItemFunction, ItemStruct, ItemUdt, Parameters,
+    SolIdent, Type, VariableDeclaration, Visit,
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, IdentFragment};
@@ -80,6 +80,7 @@ impl<'ast> ExpCtxt<'ast> {
         match item {
             Item::Contract(contract) => self.expand_contract(contract),
             Item::Error(error) => self.expand_error(error),
+            Item::Event(event) => self.expand_event(event),
             Item::Function(function) => self.expand_function(function),
             Item::Struct(s) => self.expand_struct(s),
             Item::Udt(udt) => self.expand_udt(udt),
@@ -167,7 +168,7 @@ impl<'ast> ExpCtxt<'ast> {
         let variants: Vec<_> = errors.iter().map(|error| error.name.0.clone()).collect();
         let min_data_len = errors
             .iter()
-            .map(|error| self.min_data_size(&error.fields))
+            .map(|error| self.min_data_size(&error.parameters))
             .max()
             .unwrap();
         let trt = Ident::new("SolError", Span::call_site());
@@ -254,7 +255,7 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn expand_error(&self, error: &ItemError) -> Result<TokenStream> {
         let ItemError {
-            fields,
+            parameters: fields,
             name,
             attrs,
             ..
@@ -303,6 +304,11 @@ impl<'ast> ExpCtxt<'ast> {
             };
         };
         Ok(tokens)
+    }
+
+    fn expand_event(&self, event: &ItemEvent) -> Result<TokenStream> {
+        let _ = event;
+        todo!()
     }
 
     fn expand_function(&self, function: &ItemFunction) -> Result<TokenStream> {

@@ -16,6 +16,10 @@ sol! {
 }
 
 sol! {
+    event EmptyEvent();
+}
+
+sol! {
     function emptyFunction();
 }
 

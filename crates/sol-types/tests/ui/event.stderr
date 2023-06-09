@@ -1,0 +1,97 @@
+error: unexpected end of input, expected parentheses
+ --> tests/ui/event.rs:3:1
+  |
+3 | / sol! {
+4 | |     event MissingParens1
+5 | | }
+  | |_^
+  |
+  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected parentheses
+ --> tests/ui/event.rs:8:25
+  |
+8 |     event MissingParens2;
+  |                         ^
+
+error: expected `;`
+  --> tests/ui/event.rs:11:1
+   |
+11 | / sol! {
+12 | |     event MissingSemi1()
+13 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected `;`
+  --> tests/ui/event.rs:15:1
+   |
+15 | / sol! {
+16 | |     event MissingSemi2() anonymous
+17 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: proc macro panicked
+  --> tests/ui/event.rs:19:1
+   |
+19 | / sol! {
+20 | |     event FourIndexedParameters(bool indexed, bool indexed, bool indexed, bool indexed);
+21 | | }
+   | |_^
+   |
+   = help: message: not yet implemented
+
+error: proc macro panicked
+  --> tests/ui/event.rs:23:1
+   |
+23 | / sol! {
+24 | |     event FiveIndexedParameters(bool indexed, bool indexed, bool indexed, bool indexed, bool indexed);
+25 | | }
+   | |_^
+   |
+   = help: message: not yet implemented
+
+error: proc macro panicked
+  --> tests/ui/event.rs:27:1
+   |
+27 | / sol! {
+28 | |     event FourIndexedParametersAnonymous(bool indexed, bool indexed, bool indexed, bool indexed) anonymous;
+29 | | }
+   | |_^
+   |
+   = help: message: not yet implemented
+
+error: proc macro panicked
+  --> tests/ui/event.rs:31:1
+   |
+31 | / sol! {
+32 | |     event FiveIndexedParametersAnonymous(bool indexed, bool indexed, bool indexed, bool indexed, bool indexed) anonymous;
+33 | | }
+   | |_^
+   |
+   = help: message: not yet implemented
+
+error: proc macro panicked
+  --> tests/ui/event.rs:35:1
+   |
+35 | / sol! {
+36 | |     event ALotOfParameters(bool, bool, bool, bool, bool, bool, bool, bool, bool, bool);
+37 | |     event ALotOfParametersAnonymous(bool, bool, bool, bool, bool, bool, bool, bool, bool, bool) anonymous;
+38 | | }
+   | |_^
+   |
+   = help: message: not yet implemented
+
+error: proc macro panicked
+  --> tests/ui/event.rs:40:1
+   |
+40 | / sol! {
+41 | |     event TrailingComma(uint256,);
+42 | |     event Valid(uint256);
+43 | | }
+   | |_^
+   |
+   = help: message: not yet implemented
