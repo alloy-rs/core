@@ -772,9 +772,7 @@ impl SolType for () {
     }
 
     #[inline]
-    fn detokenize(_token: Self::TokenType) -> Self::RustType {
-        ()
-    }
+    fn detokenize(_token: Self::TokenType) -> Self::RustType {}
 
     #[inline]
     fn tokenize<B: Borrow<Self::RustType>>(_rust: B) -> Self::TokenType {
