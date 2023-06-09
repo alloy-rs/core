@@ -1,13 +1,14 @@
 use crate::{no_std_prelude::*, token::TokenSeq, Result, SolType};
+use alloy_primitives::B256;
 
-/// Solidity call (a tuple with a selector).
+/// Solidity event.
 ///
 /// ### Implementer's Guide
 ///
 /// We do not recommend implementing this trait directly. Instead, we recommend
-/// using the [`sol`][crate::sol] proc macro to parse a Solidity function
+/// using the [`sol`][crate::sol] proc macro to parse a Solidity event
 /// definition.
-pub trait SolCall: Sized {
+pub trait SolEvent: Sized {
     /// The underlying tuple type which represents this type's members.
     ///
     /// If this type has no arguments, this will be the unit type `()`.
@@ -16,11 +17,11 @@ pub trait SolCall: Sized {
     /// The corresponding [TokenSeq] type.
     type Token: TokenSeq;
 
-    /// The function's ABI signature.
+    /// The event's ABI signature.
     const SIGNATURE: &'static str;
 
-    /// The function selector: `keccak256(SIGNATURE)[0..4]`
-    const SELECTOR: [u8; 4];
+    /// The event's first topic: `keccak256(SIGNATURE)`
+    const TOPIC_ZERO: B256;
 
     /// Converts to the tuple type used for ABI encoding and decoding.
     fn to_rust(&self) -> <Self::Tuple as SolType>::RustType;

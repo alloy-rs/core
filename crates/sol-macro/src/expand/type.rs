@@ -136,7 +136,9 @@ impl ExpCtxt<'_> {
                     .map(|ty| self.type_base_data_size(ty))
                     .sum(),
                 Item::Udt(udt) => self.type_base_data_size(&udt.ty),
-                Item::Contract(_) | Item::Error(_) | Item::Function(_) => unreachable!(),
+                Item::Contract(_) | Item::Error(_) | Item::Event(_) | Item::Function(_) => {
+                    unreachable!()
+                }
             },
         }
     }
@@ -191,7 +193,9 @@ impl ExpCtxt<'_> {
             Type::Custom(name) => match self.get_item(name) {
                 Item::Struct(strukt) => self.params_data_size(&strukt.fields, Some(field)),
                 Item::Udt(udt) => self.type_data_size(&udt.ty, field),
-                Item::Contract(_) | Item::Error(_) | Item::Function(_) => unreachable!(),
+                Item::Contract(_) | Item::Error(_) | Item::Event(_) | Item::Function(_) => {
+                    unreachable!()
+                }
             },
         }
     }

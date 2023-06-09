@@ -65,6 +65,7 @@ macro_rules! make_visitor {
                     match item {
                         Item::Contract(contract) => v.visit_item_contract(contract),
                         Item::Error(error) => v.visit_item_error(error),
+                        Item::Event(event) => v.visit_item_event(event),
                         Item::Function(function) => v.visit_item_function(function),
                         Item::Struct(strukt) => v.visit_item_struct(strukt),
                         Item::Udt(udt) => v.visit_item_udt(udt),
@@ -80,7 +81,17 @@ macro_rules! make_visitor {
 
                 fn visit_item_error(&mut v, error: &'ast $($mut)? ItemError) {
                     v.visit_ident(& $($mut)? error.name);
-                    v.visit_parameter_list(& $($mut)? error.fields);
+                    v.visit_parameter_list(& $($mut)? error.parameters);
+                }
+
+                fn visit_item_event(&mut v, event: &'ast $($mut)? ItemEvent) {
+                    v.visit_ident(& $($mut)? event.name);
+                    for EventParameter { name, ty, .. } in & $($mut)? event.parameters {
+                        v.visit_type(ty);
+                        if let Some(name) = name {
+                            v.visit_ident(name);
+                        }
+                    }
                 }
 
                 fn visit_item_function(&mut v, function: &'ast $($mut)? ItemFunction) {

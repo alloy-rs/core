@@ -2,7 +2,7 @@ error: unexpected end of input, expected curly braces
  --> tests/ui/contract.rs:3:1
   |
 3 | / sol! {
-4 | |     contract MissingBrackets1
+4 | |     contract MissingBraces1
 5 | | }
   | |_^
   |
@@ -12,7 +12,7 @@ error: unexpected end of input, expected curly braces
  --> tests/ui/contract.rs:7:1
   |
 7 | / sol! {
-8 | |     contract MissingBrackets2 is A
+8 | |     contract MissingBraces2 is A
 9 | | }
   | |_^
   |

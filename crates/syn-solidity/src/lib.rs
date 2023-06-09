@@ -28,7 +28,10 @@ mod ident;
 pub use ident::{SolIdent, SolPath};
 
 mod item;
-pub use item::{Item, ItemContract, ItemError, ItemFunction, ItemStruct, ItemUdt};
+pub use item::{
+    EventParameter, Item, ItemContract, ItemError, ItemEvent, ItemFunction, ItemStruct, ItemUdt,
+    Returns,
+};
 
 mod r#type;
 pub use r#type::{SolArray, SolTuple, Type};
@@ -53,12 +56,10 @@ pub mod kw {
     use syn::custom_keyword;
     pub use syn::token::{Abstract, Override, Virtual};
 
-    custom_keyword!(is);
-
-    // Types
-    custom_keyword!(error);
-    custom_keyword!(function);
-    custom_keyword!(tuple);
+    // Storage
+    custom_keyword!(memory);
+    custom_keyword!(storage);
+    custom_keyword!(calldata);
 
     // Visibility
     custom_keyword!(external);
@@ -72,19 +73,29 @@ pub mod kw {
     custom_keyword!(constant);
     custom_keyword!(payable);
 
-    // Function
-    custom_keyword!(immutable);
-    custom_keyword!(returns);
-
-    // Storage
-    custom_keyword!(memory);
-    custom_keyword!(storage);
-    custom_keyword!(calldata);
-
     // Contract
     custom_keyword!(contract);
     custom_keyword!(interface);
     custom_keyword!(library);
+
+    // Error
+    custom_keyword!(error);
+
+    // Event
+    custom_keyword!(event);
+    custom_keyword!(indexed);
+    custom_keyword!(anonymous);
+
+    // Function
+    custom_keyword!(immutable);
+    custom_keyword!(returns);
+    custom_keyword!(function);
+
+    // Types
+    custom_keyword!(tuple);
+
+    // Other
+    custom_keyword!(is);
 }
 
 /// Parse a Solidity [`proc_macro::TokenStream`] into a [`File`].
