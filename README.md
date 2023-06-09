@@ -96,6 +96,7 @@ None of these crates would have been possible without the great work done in:
 
 - [`ethers.js`](https://github.com/ethers-io/ethers.js/)
 - [`rust-web3`](https://github.com/tomusdrw/rust-web3/)
+- [`ruint`](https://github.com/recmo/uint)
+- [`ethabi`](https://github.com/rust-ethereum/ethabi)
 - [`ethcontract-rs`](https://github.com/gnosis/ethcontract-rs/)
 - [`guac_rs`](https://github.com/althea-net/guac_rs/)
-- [`ruint`](https://github.com/recmo/uint)
