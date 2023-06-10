@@ -105,7 +105,7 @@ impl<'a> DynToken<'a> {
     pub fn decode_populate(&mut self, dec: &mut Decoder<'_>) -> Result<()> {
         let dynamic = self.is_dynamic();
         match self {
-            Self::Word(w) => *w = WordToken::decode_from(dec)?.inner(),
+            Self::Word(w) => *w = WordToken::decode_from(dec)?.0,
             Self::FixedSeq(tokens, size) => {
                 let mut child = if dynamic {
                     dec.take_indirection()?

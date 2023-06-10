@@ -109,7 +109,7 @@ impl Encoder {
     fn append_bytes(&mut self, bytes: &[u8]) {
         let len = (bytes.len() + 31) / 32;
         for i in 0..len {
-            let mut padded = Word::default();
+            let mut padded = Word::ZERO;
 
             let to_copy = match i == len - 1 {
                 false => 32,
