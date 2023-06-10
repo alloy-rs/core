@@ -86,10 +86,10 @@ impl DynSolType {
     pub fn tokenize(&self, value: DynSolValue) -> Result<DynToken<'_>> {
         match (self, value) {
             (DynSolType::Address, DynSolValue::Address(val)) => {
-                Ok(DynToken::Word(sol_data::Address::tokenize(val).inner()))
+                Ok(DynToken::Word(sol_data::Address::tokenize(val).0))
             }
             (DynSolType::Bool, DynSolValue::Bool(val)) => {
-                Ok(DynToken::Word(sol_data::Bool::tokenize(val).inner()))
+                Ok(DynToken::Word(sol_data::Bool::tokenize(val).0))
             }
             (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(val)),
             (DynSolType::FixedBytes(len), DynSolValue::FixedBytes(word, size)) => {
@@ -338,12 +338,12 @@ impl DynSolType {
     /// Instantiate an empty dyn token, to be decoded into.
     pub(crate) fn empty_dyn_token(&self) -> DynToken<'_> {
         match self {
-            DynSolType::Address => DynToken::Word(Word::default()),
-            DynSolType::Bool => DynToken::Word(Word::default()),
+            DynSolType::Address => DynToken::Word(Word::ZERO),
+            DynSolType::Bool => DynToken::Word(Word::ZERO),
             DynSolType::Bytes => DynToken::PackedSeq(Vec::new()),
-            DynSolType::FixedBytes(_) => DynToken::Word(Word::default()),
-            DynSolType::Int(_) => DynToken::Word(Word::default()),
-            DynSolType::Uint(_) => DynToken::Word(Word::default()),
+            DynSolType::FixedBytes(_) => DynToken::Word(Word::ZERO),
+            DynSolType::Int(_) => DynToken::Word(Word::ZERO),
+            DynSolType::Uint(_) => DynToken::Word(Word::ZERO),
             DynSolType::String => DynToken::PackedSeq(Vec::new()),
             DynSolType::Tuple(types) => DynToken::FixedSeq(
                 types.iter().map(|t| t.empty_dyn_token()).collect(),
@@ -360,7 +360,7 @@ impl DynSolType {
                 tuple.iter().map(|t| t.empty_dyn_token()).collect(),
                 tuple.len(),
             ),
-            DynSolType::CustomValue { .. } => DynToken::Word(Word::default()),
+            DynSolType::CustomValue { .. } => DynToken::Word(Word::ZERO),
         }
     }
 

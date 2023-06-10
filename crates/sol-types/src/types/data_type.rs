@@ -1,5 +1,7 @@
 //! Solidity Primitives. These are the types that are built into Solidity.
 
+#![allow(missing_copy_implementations, missing_debug_implementations)]
+
 use crate::{
     no_std_prelude::{String as RustString, *},
     token::*,
@@ -7,10 +9,9 @@ use crate::{
 };
 use alloc::borrow::Cow;
 use alloy_primitives::{keccak256, Address as RustAddress, I256, U256};
-use core::marker::PhantomData;
+use core::{fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
 /// Address - `address`
-#[derive(Copy, Clone, Debug)]
 pub struct Address;
 
 impl SolType for Address {
@@ -29,8 +30,7 @@ impl SolType for Address {
 
     #[inline]
     fn detokenize(token: Self::TokenType) -> Self::RustType {
-        let sli = &token.as_slice()[12..];
-        RustAddress::from_slice(sli)
+        RustAddress::new(token.0[12..].try_into().unwrap())
     }
 
     #[inline]
@@ -40,26 +40,25 @@ impl SolType for Address {
 
     #[inline]
     fn type_check(token: &Self::TokenType) -> Result<()> {
-        if !util::check_zeroes(&token.inner()[..12]) {
-            return Err(Self::type_check_fail(token.as_slice()))
+        if util::check_zeroes(&token.0[..12]) {
+            Ok(())
+        } else {
+            Err(Self::type_check_fail(token.as_slice()))
         }
-        Ok(())
     }
 
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-        Self::tokenize(rust).inner()
+        Self::tokenize(rust).0
     }
 
     #[inline]
     fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-        // push the last 20 bytes of the word to the target
-        target.extend_from_slice(&rust.borrow().as_bytes()[12..]);
+        target.extend_from_slice(rust.borrow().as_ref());
     }
 }
 
 /// Bytes - `bytes`
-#[derive(Copy, Clone, Debug)]
 pub struct Bytes;
 
 impl SolType for Bytes {
@@ -98,284 +97,122 @@ impl SolType for Bytes {
 
     #[inline]
     fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-        // push the buf to the vec
         target.extend_from_slice(rust.borrow());
     }
 }
 
-macro_rules! impl_int_sol_type {
-    ($ity:ty, $bits:literal) => {
-        impl SolType for Int<$bits> {
-            type RustType = $ity;
-            type TokenType = WordToken;
-
-            #[inline]
-            fn is_dynamic() -> bool {
-                false
-            }
-
-            #[inline]
-            fn sol_type_name() -> Cow<'static, str> {
-                concat!("int", $bits).into()
-            }
-
-            #[inline]
-            fn type_check(token: &Self::TokenType) -> Result<()> {
-                // check for 256 can be omitted as this macro expansion is not used for 256 bits
-
-                let bytes = token.as_slice();
-                let meaningful_idx = 32 - ($bits / 8);
-
-                let sign_extension = if bytes[meaningful_idx] & 0x80 == 0x80 {
-                    0xff
-                } else {
-                    0
-                };
-
-                // check that all upper bytes are an extension of the sign bit
-                bytes
-                    .iter()
-                    .take(meaningful_idx)
-                    .all(|byte| *byte == sign_extension)
-                    .then(|| ())
-                    .ok_or_else(|| Self::type_check_fail(bytes))
-            }
-
-            #[inline]
-            fn detokenize(token: Self::TokenType) -> Self::RustType {
-                let bytes = (<$ity>::BITS / 8) as usize;
-                let sli = &token.as_slice()[32 - bytes..];
-                <$ity>::from_be_bytes(sli.try_into().unwrap())
-            }
-
-            #[inline]
-            fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-                let rust = *rust.borrow();
-                let bytes = (<$ity>::BITS / 8) as usize;
-                let mut word = if rust.is_negative() {
-                    Word::repeat_byte(0xff)
-                } else {
-                    Word::default()
-                };
-                let slice = rust.to_be_bytes();
-                word[32 - bytes..].copy_from_slice(&slice);
-                word.into()
-            }
-
-            #[inline]
-            fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-                Self::tokenize(rust).inner().into()
-            }
-
-            #[inline]
-            fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-                target.extend(rust.borrow().to_be_bytes());
-            }
-        }
-    };
-
-    ($($bits:literal),+ $(,)?) => {$(
-        impl SolType for Int<$bits> {
-            type RustType = I256;
-            type TokenType = WordToken;
-
-            #[inline]
-            fn is_dynamic() -> bool {
-                false
-            }
-
-            #[inline]
-            fn sol_type_name() -> Cow<'static, str> {
-                concat!("int", $bits).into()
-            }
-
-            #[inline]
-            fn type_check(token: &Self::TokenType) -> Result<()> {
-                if $bits == 256 {
-                    return Ok(())
-                }
-
-                let bytes = token.as_slice();
-                let meaningful_idx = 32 - ($bits / 8);
-
-                let sign_extension = if bytes[meaningful_idx] & 0x80 == 0x80 {
-                    0xff
-                } else {
-                    0
-                };
-
-                // check that all upper bytes are an extension of the sign bit
-                bytes
-                    .iter()
-                    .take(meaningful_idx)
-                    .all(|byte| *byte == sign_extension)
-                    .then(|| ())
-                    .ok_or_else(|| Self::type_check_fail(bytes))
-            }
-
-            #[inline]
-            fn detokenize(token: Self::TokenType) -> Self::RustType {
-                I256::from_be_bytes::<32>(token.into())
-            }
-
-            #[inline]
-            fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-                rust.borrow().to_be_bytes::<32>().into()
-            }
-
-            #[inline]
-            fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-                Self::tokenize(rust).inner().into()
-            }
-
-            #[inline]
-            fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-                target.extend(rust.borrow().to_be_bytes::<32>());
-            }
-        }
-    )+};
-}
-
 /// Int - `intX`
-#[derive(Copy, Clone, Debug)]
 pub struct Int<const BITS: usize>;
 
-impl_int_sol_type!(i8, 8);
-impl_int_sol_type!(i16, 16);
-impl_int_sol_type!(i32, 24);
-impl_int_sol_type!(i32, 32);
-impl_int_sol_type!(i64, 40);
-impl_int_sol_type!(i64, 48);
-impl_int_sol_type!(i64, 56);
-impl_int_sol_type!(i64, 64);
-impl_int_sol_type!(
-    72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224,
-    232, 240, 248, 256,
-);
+impl<const BITS: usize> SolType for Int<BITS>
+where
+    IntBitCount<BITS>: SupportedInt,
+{
+    type RustType = <IntBitCount<BITS> as SupportedInt>::Int;
+    type TokenType = WordToken;
 
-macro_rules! impl_uint_sol_type {
-    ($uty:ty, $bits:literal) => {
-        impl SolType for Uint<$bits> {
-            type RustType = $uty;
-            type TokenType = WordToken;
+    #[inline]
+    fn is_dynamic() -> bool {
+        false
+    }
 
-            #[inline]
-            fn is_dynamic() -> bool {
-                false
-            }
+    #[inline]
+    fn sol_type_name() -> Cow<'static, str> {
+        IntBitCount::<BITS>::INT_NAME.into()
+    }
 
-            #[inline]
-            fn sol_type_name() -> Cow<'static, str> {
-                concat!("uint", $bits).into()
-            }
-
-            #[inline]
-            fn type_check(token: &Self::TokenType) -> Result<()> {
-                let bytes = (<$uty>::BITS / 8) as usize;
-                let sli = &token.as_slice()[..32 - bytes];
-                if !util::check_zeroes(sli) {
-                    return Err(Self::type_check_fail(token.as_slice()));
-                }
-                Ok(())
-            }
-
-            #[inline]
-            fn detokenize(token: Self::TokenType) -> Self::RustType {
-                let bytes = (<$uty>::BITS / 8) as usize;
-                let sli = &token.as_slice()[32 - bytes..];
-                <$uty>::from_be_bytes(sli.try_into().unwrap())
-            }
-
-            #[inline]
-            fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-                let bytes = (<$uty>::BITS / 8) as usize;
-                let mut word = Word::default();
-                let slice = rust.borrow().to_be_bytes();
-                word[32 - bytes..].copy_from_slice(&slice);
-                word.into()
-            }
-
-            #[inline]
-            fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-                Self::tokenize(rust).inner().into()
-            }
-
-            #[inline]
-            fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-                // TODO: encode the rust to be bytes, strip leading zeroes, then push to the target
-                target.extend(rust.borrow().to_be_bytes());
-            }
+    #[inline]
+    fn type_check(token: &Self::TokenType) -> Result<()> {
+        if BITS == 256 {
+            return Ok(())
         }
-    };
 
-    ($($bits:literal),+ $(,)?) => {$(
-        impl SolType for Uint<$bits> {
-            type RustType = U256;
-            type TokenType = WordToken;
+        let sign_extension = (token.0[IntBitCount::<BITS>::MSB] & 0x80 == 0x80) as u8;
 
-            #[inline]
-            fn is_dynamic() -> bool {
-                false
-            }
-
-            #[inline]
-            fn sol_type_name() -> Cow<'static, str> {
-                concat!("uint", $bits).into()
-            }
-
-            #[inline]
-            fn type_check(token: &Self::TokenType) -> Result<()> {
-                let bytes = $bits / 8 as usize;
-                let sli = &token.as_slice()[..32 - bytes];
-                if !util::check_zeroes(sli) {
-                    return Err(Self::type_check_fail(token.as_slice()));
-                }
-                Ok(())
-            }
-
-            #[inline]
-            fn detokenize(token: Self::TokenType) -> Self::RustType {
-                U256::from_be_bytes::<32>(*token.inner())
-            }
-
-            #[inline]
-            fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-                (*rust.borrow()).into()
-            }
-
-            #[inline]
-            fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-                Self::tokenize(rust).inner().into()
-            }
-
-            #[inline]
-            fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-                // TODO: encode the rust to be bytes, strip leading zeroes, then push to the target
-                target.extend(rust.borrow().to_be_bytes::<{ $bits / 8 }>());
-            }
+        // check that all upper bytes are an extension of the sign bit
+        if token.0[..IntBitCount::<BITS>::MSB]
+            .iter()
+            .all(|byte| *byte == sign_extension)
+        {
+            Ok(())
+        } else {
+            Err(Self::type_check_fail(token.as_slice()))
         }
-    )+};
+    }
+
+    #[inline]
+    fn detokenize(token: Self::TokenType) -> Self::RustType {
+        IntBitCount::<BITS>::detokenize_int(token)
+    }
+
+    #[inline]
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
+        IntBitCount::<BITS>::tokenize_int(*rust.borrow())
+    }
+
+    #[inline]
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+        Self::tokenize(rust).0
+    }
+
+    #[inline]
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
+        IntBitCount::<BITS>::encode_packed_to_int(*rust.borrow(), target)
+    }
 }
 
 /// Uint - `uintX`
-#[derive(Copy, Clone, Debug)]
 pub struct Uint<const BITS: usize>;
 
-impl_uint_sol_type!(u8, 8);
-impl_uint_sol_type!(u16, 16);
-impl_uint_sol_type!(u32, 24);
-impl_uint_sol_type!(u32, 32);
-impl_uint_sol_type!(u64, 40);
-impl_uint_sol_type!(u64, 48);
-impl_uint_sol_type!(u64, 56);
-impl_uint_sol_type!(u64, 64);
-impl_uint_sol_type!(
-    72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224,
-    232, 240, 248, 256,
-);
+impl<const BITS: usize> SolType for Uint<BITS>
+where
+    IntBitCount<BITS>: SupportedInt,
+{
+    type RustType = <IntBitCount<BITS> as SupportedInt>::Uint;
+    type TokenType = WordToken;
+
+    #[inline]
+    fn is_dynamic() -> bool {
+        false
+    }
+
+    #[inline]
+    fn sol_type_name() -> Cow<'static, str> {
+        IntBitCount::<BITS>::UINT_NAME.into()
+    }
+
+    #[inline]
+    fn type_check(token: &Self::TokenType) -> Result<()> {
+        let sli = &token.0[..<IntBitCount<BITS> as SupportedInt>::MSB];
+        if util::check_zeroes(sli) {
+            Ok(())
+        } else {
+            Err(Self::type_check_fail(token.as_slice()))
+        }
+    }
+
+    #[inline]
+    fn detokenize(token: Self::TokenType) -> Self::RustType {
+        IntBitCount::<BITS>::detokenize_uint(token)
+    }
+
+    #[inline]
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
+        IntBitCount::<BITS>::tokenize_uint(*rust.borrow())
+    }
+
+    #[inline]
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+        Self::tokenize(rust).0
+    }
+
+    #[inline]
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
+        IntBitCount::<BITS>::encode_packed_to_uint(*rust.borrow(), target)
+    }
+}
 
 /// Bool - `bool`
-#[derive(Copy, Clone, Debug)]
 pub struct Bool;
 
 impl SolType for Bool {
@@ -394,38 +231,35 @@ impl SolType for Bool {
 
     #[inline]
     fn type_check(token: &Self::TokenType) -> Result<()> {
-        if !util::check_bool(token.inner()) {
-            return Err(Self::type_check_fail(token.as_slice()))
+        if util::check_bool(token.0) {
+            Ok(())
+        } else {
+            Err(Self::type_check_fail(token.as_slice()))
         }
-        Ok(())
     }
 
     #[inline]
     fn detokenize(token: Self::TokenType) -> Self::RustType {
-        token.inner() != Word::repeat_byte(0)
+        token.0 != Word::ZERO
     }
 
     #[inline]
     fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        let mut word = Word::default();
-        word[31] = *rust.borrow() as u8;
-        word.into()
+        Word::with_last_byte(*rust.borrow() as u8).into()
     }
 
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-        Self::tokenize(rust).inner()
+        Self::tokenize(rust).0
     }
 
     #[inline]
     fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-        // write the bool as a u8
         target.push(*rust.borrow() as u8);
     }
 }
 
 /// Array - `T[]`
-#[derive(Copy, Clone, Debug)]
 pub struct Array<T: SolType>(PhantomData<T>);
 
 impl<T> SolType for Array<T>
@@ -447,31 +281,25 @@ where
 
     #[inline]
     fn type_check(token: &Self::TokenType) -> Result<()> {
-        for token in token.as_slice() {
-            T::type_check(token)?;
-        }
-        Ok(())
+        token.0.iter().try_for_each(T::type_check)
     }
 
     #[inline]
     fn detokenize(token: Self::TokenType) -> Self::RustType {
-        token.into_vec().into_iter().map(T::detokenize).collect()
+        token.0.into_iter().map(T::detokenize).collect()
     }
 
     #[inline]
     fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        rust.borrow()
-            .iter()
-            .map(|r| T::tokenize(r))
-            .collect::<Vec<_>>()
-            .into()
+        let v = rust.borrow().iter().map(T::tokenize).collect();
+        DynSeqToken(v)
     }
 
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         let mut encoded = Vec::new();
         for item in rust.borrow() {
-            encoded.extend(T::eip712_data_word(item).as_slice());
+            encoded.extend_from_slice(T::eip712_data_word(item).as_slice());
         }
         keccak256(encoded)
     }
@@ -485,7 +313,6 @@ where
 }
 
 /// String - `string`
-#[derive(Copy, Clone, Debug)]
 pub struct String;
 
 impl SolType for String {
@@ -504,10 +331,11 @@ impl SolType for String {
 
     #[inline]
     fn type_check(token: &Self::TokenType) -> Result<()> {
-        if core::str::from_utf8(token.as_slice()).is_err() {
-            return Err(Self::type_check_fail(token.as_slice()))
+        if core::str::from_utf8(token.as_slice()).is_ok() {
+            Ok(())
+        } else {
+            Err(Self::type_check_fail(token.as_slice()))
         }
-        Ok(())
     }
 
     #[inline]
@@ -531,74 +359,65 @@ impl SolType for String {
 
     #[inline]
     fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-        target.extend(rust.borrow().as_bytes());
+        target.extend_from_slice(rust.borrow().as_bytes());
     }
 }
 
-macro_rules! impl_fixed_bytes_sol_type {
-    ($($bytes:literal),+ $(,)?) => {$(
-        impl SolType for FixedBytes<$bytes> {
-            type RustType = [u8; $bytes];
-            type TokenType = WordToken;
-
-            #[inline]
-            fn is_dynamic() -> bool {
-                false
-            }
-
-            #[inline]
-            fn sol_type_name() -> Cow<'static, str> {
-                concat!("bytes", $bytes).into()
-            }
-
-            #[inline]
-            fn type_check(token: &Self::TokenType) -> Result<()> {
-                if !util::check_fixed_bytes(token.inner(), $bytes) {
-                    return Err(Self::type_check_fail(token.as_slice()));
-                }
-                Ok(())
-            }
-
-            #[inline]
-            fn detokenize(token: Self::TokenType) -> Self::RustType {
-                let word = token.as_slice();
-                let mut res = [0; $bytes];
-                res[..].copy_from_slice(&word[..$bytes]);
-                res
-            }
-
-            #[inline]
-            fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-                let mut word = Word::default();
-                word[..$bytes].copy_from_slice(rust.borrow());
-                word.into()
-            }
-
-            #[inline]
-            fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-                Self::tokenize(rust).inner()
-            }
-
-            #[inline]
-            fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-                // write only the first n bytes
-                target.extend_from_slice(rust.borrow());
-            }
-        }
-    )+};
-}
-
 /// FixedBytes - `bytesX`
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct FixedBytes<const N: usize>;
 
-impl_fixed_bytes_sol_type!(
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
-    27, 28, 29, 30, 31, 32,
-);
+impl<const N: usize> SolType for FixedBytes<N>
+where
+    ByteCount<N>: SupportedFixedBytes,
+{
+    type RustType = [u8; N];
+    type TokenType = WordToken;
+
+    #[inline]
+    fn is_dynamic() -> bool {
+        false
+    }
+
+    #[inline]
+    fn sol_type_name() -> Cow<'static, str> {
+        <ByteCount<N>>::NAME.into()
+    }
+
+    #[inline]
+    fn type_check(token: &Self::TokenType) -> Result<()> {
+        if util::check_zeroes(&token.0[N..]) {
+            Ok(())
+        } else {
+            Err(Self::type_check_fail(token.as_slice()))
+        }
+    }
+
+    #[inline]
+    fn detokenize(token: Self::TokenType) -> Self::RustType {
+        token.0[..N].try_into().unwrap()
+    }
+
+    #[inline]
+    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
+        let mut word = Word::ZERO;
+        word[..N].copy_from_slice(rust.borrow());
+        word.into()
+    }
+
+    #[inline]
+    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+        Self::tokenize(rust).0
+    }
+
+    #[inline]
+    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
+        // write only the first n bytes
+        target.extend_from_slice(rust.borrow());
+    }
+}
 
 /// FixedArray - `T[M]`
-#[derive(Copy, Clone, Debug)]
 pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 
 impl<T, const N: usize> SolType for FixedArray<T, N>
@@ -787,3 +606,254 @@ impl SolType for () {
     #[inline]
     fn encode_packed_to<B: Borrow<Self::RustType>>(_target: &mut Vec<u8>, _rust: B) {}
 }
+
+mod sealed {
+    pub trait Sealed {}
+}
+use sealed::Sealed;
+
+/// Specifies the number of bytes in a [`FixedBytes`] array as a type.
+pub struct ByteCount<const N: usize>;
+
+impl<const N: usize> Sealed for ByteCount<N> {}
+
+/// Statically guarantees that a `FixedBytes` byte count is marked as supported.
+///
+/// This trait is *sealed*: the list of implementors below is total.
+///
+/// Users do not have the ability to mark additional [`ByteCount<N>`] values as
+/// supported. Only `FixedBytes` with supported byte counts are constructable.
+pub trait SupportedFixedBytes: Sealed {
+    /// The name of the `FixedBytes` type: `bytes<N>`
+    const NAME: &'static str;
+}
+
+macro_rules! supported_fixed_bytes {
+    ($($n:literal),+) => {$(
+        impl SupportedFixedBytes for ByteCount<$n> {
+            const NAME: &'static str = concat!("bytes", $n);
+        }
+    )+};
+}
+
+supported_fixed_bytes!(
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30, 31, 32
+);
+
+/// Specifies the number of bits in an [`Int`] or [`Uint`] as a type.
+pub struct IntBitCount<const N: usize>;
+
+impl<const N: usize> Sealed for IntBitCount<N> {}
+
+// Declares types with the same traits
+// TODO: Add more traits
+// TODO: Integrate `num_traits` (needs `ruint`)
+macro_rules! declare_int_types {
+    ($($(#[$attr:meta])* type $name:ident;)*) => {$(
+        $(#[$attr])*
+        type $name: Sized + Copy + PartialOrd + Ord + Eq + Hash
+            + Not + BitAnd + BitOr + BitXor
+            + Add + Sub + Mul + Div + Rem
+            + AddAssign + SubAssign + MulAssign + DivAssign + RemAssign
+            + Debug + Display + LowerHex + UpperHex + Octal + Binary;
+    )*};
+}
+
+/// Statically guarantees that a [`Int`] or [`Uint`] bit count is marked as
+/// supported.
+///
+/// This trait is *sealed*: the list of implementors below is total.
+///
+/// Users do not have the ability to mark additional [`IntBitCount<N>`] values
+/// as supported. Only `FixedBytes` with supported byte counts are
+/// constructable.
+pub trait SupportedInt: Sealed {
+    declare_int_types! {
+        /// A signed integer of at least `N` bits.
+        type Int;
+        /// An unsigned integer of at least `N` bits.
+        type Uint;
+    }
+
+    /// The name of the `Int` type: `int<N>`
+    const INT_NAME: &'static str;
+
+    /// The name of the `Uint` type: `uint<N>`
+    const UINT_NAME: &'static str;
+
+    /// The number of bits in the integer: `BITS`
+    ///
+    /// Note that this is not equal to `Self::Int::BITS`.
+    const BITS: usize;
+
+    /// The number of bytes in the integer: `BITS / 8`
+    const BYTES: usize = Self::BITS / 8;
+
+    /// The number of bytes in the integer: `(<$t>::BITS - N) / 8`
+    const SKIP_BYTES: usize;
+
+    /// The index of the most significant byte in the Word type.
+    const MSB: usize = 32 - Self::BYTES;
+
+    /// Tokenizes a signed integer.
+    fn tokenize_int(int: Self::Int) -> WordToken;
+    /// Detokenizes a signed integer.
+    fn detokenize_int(token: WordToken) -> Self::Int;
+    /// ABI-encode a signed integer in packed mode.
+    fn encode_packed_to_int(int: Self::Int, out: &mut Vec<u8>);
+
+    /// Tokenizes an unsigned integer.
+    fn tokenize_uint(uint: Self::Uint) -> WordToken;
+    /// Detokenizes an unsigned integer.
+    fn detokenize_uint(token: WordToken) -> Self::Uint;
+    /// ABI-encode an unsigned integer in packed mode.
+    fn encode_packed_to_uint(uint: Self::Uint, out: &mut Vec<u8>);
+}
+
+macro_rules! supported_int {
+    ($($n:literal => $i:ident, $u:ident;)+) => {
+        $(
+            impl SupportedInt for IntBitCount<$n> {
+                type Int = $i;
+                type Uint = $u;
+
+                const UINT_NAME: &'static str = concat!("uint", $n);
+                const INT_NAME: &'static str = concat!("int", $n);
+
+                const BITS: usize = $n;
+                const SKIP_BYTES: usize = (<$i>::BITS as usize - <Self as SupportedInt>::BITS) / 8;
+
+                int_impls2!($i);
+                int_impls2!($u);
+            }
+        )+
+    };
+}
+
+macro_rules! int_impls {
+    (@primitive_int $ity:ident) => {
+        #[inline]
+        fn tokenize_int(int: $ity) -> WordToken {
+            let mut word = [int.is_negative() as u8 * 0xff; 32];
+            word[Self::MSB..].copy_from_slice(&int.to_be_bytes());
+            WordToken(alloy_primitives::FixedBytes(word))
+        }
+
+        #[inline]
+        fn detokenize_int(token: WordToken) -> $ity {
+            let sli = &token.0[Self::MSB..];
+            <$ity>::from_be_bytes(sli.try_into().unwrap())
+        }
+
+        #[inline]
+        fn encode_packed_to_int(int: $ity, out: &mut Vec<u8>) {
+            out.extend_from_slice(&int.to_be_bytes()[Self::SKIP_BYTES..]);
+        }
+    };
+    (@primitive_uint $uty:ident) => {
+        #[inline]
+        fn tokenize_uint(uint: $uty) -> WordToken {
+            let mut word = Word::ZERO;
+            word[Self::MSB..].copy_from_slice(&uint.to_be_bytes());
+            WordToken(word)
+        }
+
+        #[inline]
+        fn detokenize_uint(token: WordToken) -> $uty {
+            let sli = &token.0[Self::MSB..];
+            <$uty>::from_be_bytes(sli.try_into().unwrap())
+        }
+
+        #[inline]
+        fn encode_packed_to_uint(uint: $uty, out: &mut Vec<u8>) {
+            out.extend_from_slice(&uint.to_be_bytes()[Self::SKIP_BYTES..]);
+        }
+    };
+
+    (@big_int $ity:ident) => {
+        #[inline]
+        fn tokenize_int(int: $ity) -> WordToken {
+            int.into()
+        }
+
+        #[inline]
+        fn detokenize_int(token: WordToken) -> $ity {
+            <$ity>::from_be_bytes::<32>(token.0 .0)
+        }
+
+        #[inline]
+        fn encode_packed_to_int(int: $ity, out: &mut Vec<u8>) {
+            out.extend_from_slice(&int.to_be_bytes::<32>()[Self::SKIP_BYTES..]);
+        }
+    };
+    (@big_uint $uty:ident) => {
+        #[inline]
+        fn tokenize_uint(uint: $uty) -> WordToken {
+            uint.into()
+        }
+
+        #[inline]
+        fn detokenize_uint(token: WordToken) -> $uty {
+            <$uty>::from_be_bytes::<32>(token.0 .0)
+        }
+
+        #[inline]
+        fn encode_packed_to_uint(uint: $uty, out: &mut Vec<u8>) {
+            out.extend_from_slice(&uint.to_be_bytes::<32>()[Self::SKIP_BYTES..]);
+        }
+    };
+}
+
+#[rustfmt::skip]
+macro_rules! int_impls2 {
+    (  i8) => { int_impls! { @primitive_int i8 } };
+    ( i16) => { int_impls! { @primitive_int i16 } };
+    ( i32) => { int_impls! { @primitive_int i32 } };
+    ( i64) => { int_impls! { @primitive_int i64 } };
+    (i128) => { int_impls! { @primitive_int i128 } };
+
+    (  u8) => { int_impls! { @primitive_uint u8 } };
+    ( u16) => { int_impls! { @primitive_uint u16 } };
+    ( u32) => { int_impls! { @primitive_uint u32 } };
+    ( u64) => { int_impls! { @primitive_uint u64 } };
+    (u128) => { int_impls! { @primitive_uint u128 } };
+
+    (I256) => { int_impls! { @big_int I256 } };
+    (U256) => { int_impls! { @big_uint U256 } };
+}
+
+supported_int!(
+      8 => i8, u8;
+     16 => i16, u16;
+     24 => i32, u32;
+     32 => i32, u32;
+     40 => i64, u64;
+     48 => i64, u64;
+     56 => i64, u64;
+     64 => i64, u64;
+     72 => i128, u128;
+     80 => i128, u128;
+     88 => i128, u128;
+     96 => i128, u128;
+    104 => i128, u128;
+    112 => i128, u128;
+    120 => i128, u128;
+    128 => i128, u128;
+    136 => I256, U256;
+    144 => I256, U256;
+    152 => I256, U256;
+    160 => I256, U256;
+    168 => I256, U256;
+    176 => I256, U256;
+    184 => I256, U256;
+    192 => I256, U256;
+    200 => I256, U256;
+    208 => I256, U256;
+    216 => I256, U256;
+    224 => I256, U256;
+    232 => I256, U256;
+    240 => I256, U256;
+    248 => I256, U256;
+    256 => I256, U256;
+);

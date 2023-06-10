@@ -13,7 +13,7 @@ use crate::{Error, Result, Word};
 
 /// Converts a u32 to a right aligned array of 32 bytes.
 pub(crate) fn pad_u32(value: u32) -> Word {
-    let mut padded = Word::default();
+    let mut padded = Word::ZERO;
     padded[28..32].copy_from_slice(&value.to_be_bytes());
     padded
 }
@@ -31,21 +31,12 @@ pub(crate) fn check_zeroes(data: &[u8]) -> bool {
     data.iter().all(|b| *b == 0)
 }
 
+/// See [`usize::next_multiple_of`]
 #[inline]
-pub(crate) const fn round_up_nearest_multiple(value: usize, padding: usize) -> usize {
-    (value + padding - 1) / padding * padding
-}
-
-#[inline]
-pub(crate) fn check_fixed_bytes(word: Word, len: usize) -> bool {
-    if word.is_empty() {
-        return true
-    }
-    match len {
-        0 => panic!("cannot have bytes0"),
-        1..=31 => check_zeroes(&word[len..]),
-        32 => true, // always valid
-        _ => panic!("cannot have bytes33 or higher"),
+pub(crate) const fn round_up_nearest_multiple(lhs: usize, rhs: usize) -> usize {
+    match lhs % rhs {
+        0 => lhs,
+        r => lhs + (rhs - r),
     }
 }
 

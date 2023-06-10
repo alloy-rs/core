@@ -155,6 +155,9 @@
 #[macro_use]
 extern crate alloc;
 
+#[doc(inline)]
+pub use alloy_sol_macro::sol;
+
 #[doc(hidden)]
 pub mod no_std_prelude {
     pub use alloc::{
@@ -163,12 +166,6 @@ pub mod no_std_prelude {
         vec::Vec,
     };
 }
-
-#[doc(inline)]
-pub use alloy_sol_macro::sol;
-
-/// The ABI word type.
-pub type Word = alloy_primitives::B256;
 
 mod coder;
 pub use coder::{
@@ -187,11 +184,14 @@ pub use types::{
 };
 
 mod util;
-
-#[doc(hidden)]
-pub use alloy_primitives::keccak256;
 #[doc(hidden)]
 pub use util::just_ok;
 
 mod eip712;
 pub use eip712::Eip712Domain;
+
+#[doc(hidden)]
+pub use alloy_primitives::{keccak256, B256};
+
+/// The ABI word type.
+pub type Word = alloy_primitives::B256;

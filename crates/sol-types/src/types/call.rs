@@ -1,6 +1,6 @@
 use crate::{no_std_prelude::*, token::TokenSeq, Result, SolType};
 
-/// Solidity Call (a tuple with a selector)
+/// Solidity call (a tuple with a selector).
 ///
 /// ### Implementer's Guide
 ///
