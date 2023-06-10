@@ -89,7 +89,7 @@ macro_rules! define_udt {
             where
                 B: $crate::no_std_prelude::Borrow<Self::RustType>
             {
-                <Self as $crate::SolType>::tokenize(rust).inner()
+                <Self as $crate::SolType>::tokenize(rust).0
             }
 
             #[inline]

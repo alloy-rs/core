@@ -173,7 +173,7 @@ impl TokenType for WordToken {
 
     #[inline]
     fn head_append(&self, enc: &mut Encoder) {
-        enc.append_word(self.inner());
+        enc.append_word(self.0);
     }
 
     #[inline]
@@ -185,12 +185,6 @@ impl WordToken {
     #[inline]
     pub const fn as_slice(&self) -> &[u8] {
         &self.0 .0
-    }
-
-    /// Copy the inner word.
-    #[inline]
-    pub const fn inner(self) -> Word {
-        self.0
     }
 }
 
@@ -395,14 +389,6 @@ impl<T: TokenType> TokenSeq for DynSeqToken<T> {
 }
 
 impl<T> DynSeqToken<T> {
-    /// Converts the sequence into the vector.
-    // https://github.com/rust-lang/rust-clippy/issues/4979
-    #[allow(clippy::missing_const_for_fn)]
-    #[inline]
-    pub fn into_vec(self) -> Vec<T> {
-        self.0
-    }
-
     /// Returns a reference to the backing slice.
     #[inline]
     pub fn as_slice(&self) -> &[T] {

@@ -106,10 +106,26 @@ impl<const BITS: usize, const LIMBS: usize> fmt::UpperHex for Signed<BITS, LIMBS
         let (sign, abs) = self.into_sign_and_abs();
         fmt::Display::fmt(&sign, f)?;
 
-        // NOTE: Work around `U256: !UpperHex`.
+        // NOTE: Work around `Uint: !UpperHex`.
         let mut buffer = format!("{abs:x}");
         buffer.make_ascii_uppercase();
         f.write_str(&buffer)
+    }
+}
+
+impl<const BITS: usize, const LIMBS: usize> fmt::Binary for Signed<BITS, LIMBS> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (sign, abs) = self.into_sign_and_abs();
+        fmt::Display::fmt(&sign, f)?;
+        write!(f, "{abs:b}")
+    }
+}
+
+impl<const BITS: usize, const LIMBS: usize> fmt::Octal for Signed<BITS, LIMBS> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (sign, abs) = self.into_sign_and_abs();
+        fmt::Display::fmt(&sign, f)?;
+        write!(f, "{abs:o}")
     }
 }
 
