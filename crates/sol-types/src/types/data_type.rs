@@ -155,7 +155,7 @@ where
 
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-        Self::tokenize(rust).inner().into()
+        Self::tokenize(rust).0
     }
 
     #[inline]
@@ -206,7 +206,7 @@ where
 
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-        Self::tokenize(rust).inner().into()
+        Self::tokenize(rust).0
     }
 
     #[inline]
