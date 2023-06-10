@@ -82,7 +82,7 @@ impl ExpCtxt<'_> {
         }
     }
 
-    fn custom_type(&self, name: &SolPath) -> &Type {
+    pub(super) fn custom_type(&self, name: &SolPath) -> &Type {
         match self.custom_types.get(name.last_tmp()) {
             Some(item) => item,
             None => panic!("unresolved item: {name}"),
@@ -156,6 +156,7 @@ impl ExpCtxt<'_> {
             // dynamic types: 1 offset word, 1 length word, length rounded up to word size
             Type::String(_) | Type::Bytes { size: None, .. } => {
                 let base = self.type_base_data_size(ty);
+                // TODO: replace with `.len().next_multiple_of(32)` once it's stable
                 quote!(#base + (#field.len() / 31) * 32)
             }
             Type::Array(SolArray {

@@ -288,8 +288,7 @@ impl fmt::Debug for Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Address(_, None) => f.write_str("address"),
-            Self::Address(_, Some(_)) => f.write_str("address payable"),
+            Self::Address(_, _) => f.write_str("address"),
             Self::Bool(_) => f.write_str("bool"),
             Self::String(_) => f.write_str("string"),
             Self::Bytes { size, .. } => write_opt(f, "bytes", *size),
@@ -410,18 +409,28 @@ impl Type {
     /// Returns whether a [Storage][crate::Storage] location can be
     /// specified for this type.
     pub const fn can_have_storage(&self) -> bool {
-        self.is_dynamic() || self.is_custom()
+        self.is_dynamic() || self.is_array() || self.is_custom()
     }
 
     pub const fn is_dynamic(&self) -> bool {
         matches!(
             self,
-            Self::String(_) | Self::Bytes { size: None, .. } | Self::Array(_)
+            Self::String(_)
+                | Self::Bytes { size: None, .. }
+                | Self::Array(SolArray { size: None, .. })
         )
     }
 
+    pub const fn is_array(&self) -> bool {
+        matches!(self, Self::Array(_))
+    }
+
+    pub const fn is_tuple(&self) -> bool {
+        matches!(self, Self::Tuple(_))
+    }
+
     pub const fn is_custom(&self) -> bool {
-        matches!(self, Self::Custom(..))
+        matches!(self, Self::Custom(_))
     }
 
     /// Traverses this type while calling `f`.

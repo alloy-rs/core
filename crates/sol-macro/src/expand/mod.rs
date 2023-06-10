@@ -5,9 +5,9 @@ use ast::{
     ItemUdt, Parameters, SolIdent, Type, VariableDeclaration, Visit,
 };
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote, IdentFragment};
+use quote::{format_ident, quote, quote_spanned, IdentFragment};
 use std::{collections::HashMap, fmt::Write};
-use syn::{parse_quote, punctuated::Punctuated, Attribute, Error, Result, Token};
+use syn::{parse_quote, Attribute, Error, Result, Token};
 
 mod attr;
 
@@ -23,16 +23,7 @@ pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
 }
 
-fn expand_params<P>(params: &Parameters<P>) -> impl Iterator<Item = TokenStream> + '_ {
-    params
-        .iter()
-        .enumerate()
-        .map(|(i, var)| expand_field(i, &var.ty, var.name.as_ref()))
-}
-
-fn expand_event_params<P>(
-    params: &Punctuated<EventParameter, P>,
-) -> impl Iterator<Item = TokenStream> + '_ {
+fn expand_fields<P>(params: &Parameters<P>) -> impl Iterator<Item = TokenStream> + '_ {
     params
         .iter()
         .enumerate()
@@ -213,9 +204,9 @@ impl<'ast> ExpCtxt<'ast> {
         let min_data_len = min_data_len.min(4);
         quote! {
             #(#attrs)*
-            pub enum #name {#(
-                #variants(#types),
-            )*}
+            pub enum #name {
+                #(#variants(#types),)*
+            }
 
             // TODO: Implement these functions using traits?
             #[automatically_derived]
@@ -291,7 +282,7 @@ impl<'ast> ExpCtxt<'ast> {
         let size = self.params_data_size(parameters, None);
 
         let converts = expand_from_into_tuples(&name.0, parameters);
-        let fields = expand_params(parameters);
+        let fields = expand_fields(parameters);
         let tokens = quote! {
             #(#attrs)*
             #[allow(non_camel_case_types, non_snake_case)]
@@ -330,26 +321,179 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn expand_event(&self, event: &ItemEvent) -> Result<TokenStream> {
-        let ItemEvent {
-            parameters,
-            name,
-            attrs,
-            ..
-        } = event;
-        let fields = expand_event_params(parameters);
+        let ItemEvent { name, attrs, .. } = event;
+        let parameters = event.params();
+
+        self.assert_resolved(&parameters)?;
+        event.assert_valid()?;
+
+        let signature = self.signature(name.as_string(), &parameters);
+        let selector = crate::utils::event_selector(&signature);
+        let anonymous = event.is_anonymous();
+
+        // prepend the first topic if not anonymous
+        let first_topic = (!anonymous).then(|| quote!(::alloy_sol_types::sol_data::FixedBytes<32>));
+        let topic_list = event
+            .indexed_params()
+            .map(|param| self.expand_event_topic_type(param));
+        let topic_list = first_topic.clone().into_iter().chain(topic_list);
+
+        let (data_tuple, _) = expand_tuple_types(self.event_dynamic_params(event).map(|p| &p.ty));
+        let data_size =
+            self.params_data_size(self.event_dynamic_params(event).map(|p| p.as_param()), None);
+
+        // skip first topic if not anonymous, which is the hash of the signature
+        let mut topic_i = !anonymous as usize;
+        let mut data_i = 0usize;
+        let new_impl = event.parameters.iter().enumerate().map(|(i, p)| {
+            let name = anon_name((i, p.name.as_ref()));
+            let param;
+            if self.is_event_param_dynamic(p) {
+                let i = syn::Index::from(data_i);
+                param = quote!(data.#i);
+                data_i += 1;
+            } else {
+                let i = syn::Index::from(topic_i);
+                param = quote!(topics.#i);
+                topic_i += 1;
+            }
+            quote!(#name: #param)
+        });
+
+        let data_tuple_names = self
+            .event_dynamic_params(event)
+            .map(|p| p.name.as_ref())
+            .enumerate()
+            .map(anon_name);
+
+        let encode_first_topic =
+            (!anonymous).then(|| quote!(::alloy_sol_types::token::WordToken(Self::SIGNATURE_HASH)));
+        let encode_topics_impl = event.indexed_params().enumerate().map(|(i, p)| {
+            let name = anon_name((i, p.name.as_ref()));
+            let ty = self.expand_event_topic_type(p);
+            // https://docs.soliditylang.org/en/latest/abi-spec.html#encoding-of-indexed-event-parameters
+            if self.is_event_param_dynamic(p) {
+                let hash = match &p.ty {
+                    Type::String(_) | Type::Bytes { .. } => {
+                        quote! { ::alloy_sol_types::keccak256(&self.#name[..]) }
+                    }
+                    _ => todo!(),
+                };
+                quote! {
+                    ::alloy_sol_types::token::WordToken(#hash)
+                }
+            } else {
+                quote! {
+                    <#ty as ::alloy_sol_types::SolType>::tokenize(&self.#name)
+                }
+            }
+        });
+        let encode_topics_impl = encode_first_topic
+            .into_iter()
+            .chain(encode_topics_impl)
+            .enumerate()
+            .map(|(i, assign)| quote!(out[#i] = #assign;));
+
+        let fields = expand_fields(&parameters);
         let tokens = quote! {
             #(#attrs)*
             #[allow(non_camel_case_types, non_snake_case, clippy::style)]
-            pub struct #name {#(
-                pub #fields,
-            )*}
+            pub struct #name {
+                #(pub #fields,)*
+            }
 
             #[allow(non_camel_case_types, non_snake_case, clippy::style)]
             const _: () = {
+                impl ::alloy_sol_types::SolEvent for #name {
+                    type DataTuple = #data_tuple;
+                    type DataToken = <Self::DataTuple as ::alloy_sol_types::SolType>::TokenType;
 
+                    type TopicList = (#(#topic_list,)*);
+
+                    const SIGNATURE: &'static str = #signature;
+                    const SIGNATURE_HASH: ::alloy_sol_types::B256 =
+                        ::alloy_sol_types::Word::new(#selector);
+
+                    const ANONYMOUS: bool = #anonymous;
+
+                    fn new(
+                        topics: <Self::TopicList as ::alloy_sol_types::SolType>::RustType,
+                        data: <Self::DataTuple as ::alloy_sol_types::SolType>::RustType,
+                    ) -> Self {
+                        Self {
+                            #(#new_impl,)*
+                        }
+                    }
+
+                    fn data_size(&self) -> usize {
+                        #data_size
+                    }
+
+                    fn encode_data_raw(&self, out: &mut Vec<u8>) {
+                        out.reserve(self.data_size());
+                        out.extend(
+                            <Self::DataTuple as ::alloy_sol_types::SolType>::encode(
+                                // TODO: Avoid cloning
+                                (#(self.#data_tuple_names.clone(),)*)
+                            )
+                        );
+                    }
+
+                    fn encode_topics_raw(
+                        &self,
+                        out: &mut [::alloy_sol_types::token::WordToken],
+                    ) -> ::alloy_sol_types::Result<()> {
+                        if out.len() < <Self::TopicList as ::alloy_sol_types::TopicList>::COUNT {
+                            return Err(::alloy_sol_types::Error::Overrun);
+                        }
+                        #(#encode_topics_impl)*
+                        Ok(())
+                    }
+                }
             };
         };
         Ok(tokens)
+    }
+
+    fn event_dynamic_params<'a>(
+        &'a self,
+        event: &'a ItemEvent,
+    ) -> impl Iterator<Item = &'a EventParameter> {
+        event
+            .parameters
+            .iter()
+            .filter(|param| self.is_event_param_dynamic(param))
+    }
+
+    /// Returns true if the event parameter has to be stored in the data
+    /// section.
+    ///
+    /// From [the Solidity reference][ref]:
+    ///
+    /// > all “complex” types or types of dynamic length, including all arrays,
+    /// > string, bytes and structs
+    ///
+    /// and all types that are not `indexed`.
+    ///
+    /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#events
+    fn is_event_param_dynamic<'a>(&'a self, param: &EventParameter) -> bool {
+        if !param.is_indexed() {
+            return true
+        }
+        let mut ty = &param.ty;
+        if let Type::Custom(name) = ty {
+            ty = self.custom_type(name);
+        }
+        ty.can_have_storage()
+    }
+
+    fn expand_event_topic_type(&self, param: &EventParameter) -> TokenStream {
+        debug_assert!(param.is_indexed());
+        if self.is_event_param_dynamic(param) {
+            quote_spanned! {param.ty.span()=> ::alloy_sol_types::sol_data::FixedBytes<32> }
+        } else {
+            expand_type(&param.ty)
+        }
     }
 
     fn expand_function(&self, function: &ItemFunction) -> Result<TokenStream> {
@@ -375,7 +519,7 @@ impl<'ast> ExpCtxt<'ast> {
     ) -> Result<TokenStream> {
         self.assert_resolved(params)?;
 
-        let fields = expand_params(params);
+        let fields = expand_fields(params);
 
         let signature = self.signature(function.name.as_string(), params);
         let selector = crate::utils::selector(&signature);
@@ -473,7 +617,7 @@ impl<'ast> ExpCtxt<'ast> {
         let attrs = attrs.iter();
         let convert = expand_from_into_tuples(&name.0, fields);
         let name_s = name.to_string();
-        let fields = expand_params(fields);
+        let fields = expand_fields(fields);
         let tokens = quote! {
             #(#attrs)*
             #[allow(non_camel_case_types, non_snake_case)]
@@ -664,14 +808,19 @@ impl<'ast> ExpCtxt<'ast> {
         format_ident!("{function_name}Return")
     }
 
-    fn signature<P>(&self, mut name: String, params: &Parameters<P>) -> String {
-        name.reserve(2 + params.len() * 16);
+    fn signature<'a, I: IntoIterator<Item = &'a VariableDeclaration>>(
+        &self,
+        mut name: String,
+        params: I,
+    ) -> String {
         name.push('(');
-        for (i, param) in params.iter().enumerate() {
-            if i > 0 {
+        let mut first = true;
+        for param in params {
+            if !first {
                 name.push(',');
             }
             write!(name, "{}", TypePrinter::new(self, &param.ty)).unwrap();
+            first = false;
         }
         name.push(')');
         name
@@ -685,16 +834,21 @@ impl<'ast> ExpCtxt<'ast> {
     ///
     /// Provides a better error message than an `unwrap` or `expect` when we
     /// know beforehand that we will be needing types to be resolved.
-    fn assert_resolved<P>(&self, params: &Parameters<P>) -> Result<()> {
+    fn assert_resolved<'a, I: IntoIterator<Item = &'a VariableDeclaration>>(
+        &self,
+        params: I,
+    ) -> Result<()> {
         let mut errors = Vec::new();
-        params.visit_types(|ty| {
-            if let Type::Custom(name) = ty {
-                if !self.custom_types.contains_key(name.last_tmp()) {
-                    let e = syn::Error::new(name.span(), "unresolved type");
-                    errors.push(e);
+        for param in params {
+            param.ty.visit(|ty| {
+                if let Type::Custom(name) = ty {
+                    if !self.custom_types.contains_key(name.last_tmp()) {
+                        let e = syn::Error::new(name.span(), "unresolved type");
+                        errors.push(e);
+                    }
                 }
-            }
-        });
+            });
+        }
         if errors.is_empty() {
             Ok(())
         } else {
@@ -707,9 +861,13 @@ impl<'ast> ExpCtxt<'ast> {
         }
     }
 
-    fn params_data_size<P>(&self, list: &Parameters<P>, base: Option<TokenStream>) -> TokenStream {
+    fn params_data_size<'a, I: IntoIterator<Item = &'a VariableDeclaration>>(
+        &self,
+        list: I,
+        base: Option<TokenStream>,
+    ) -> TokenStream {
         let base = base.unwrap_or_else(|| quote!(self));
-        let sizes = list.iter().enumerate().map(|(i, var)| {
+        let sizes = list.into_iter().enumerate().map(|(i, var)| {
             let field = anon_name((i, var.name.as_ref()));
             self.type_data_size(&var.ty, quote!(#base.#field))
         });
@@ -738,14 +896,12 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
     let names2 = names.clone();
     let idxs = (0..fields.len()).map(syn::Index::from);
 
-    let tys = fields.types().map(expand_type);
-    let tys2 = tys.clone();
-
+    let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types());
     quote! {
         #[doc(hidden)]
-        type UnderlyingSolTuple = (#(#tys,)*);
+        type UnderlyingSolTuple = #sol_tuple;
         #[doc(hidden)]
-        type UnderlyingRustTuple = (#(<#tys2 as ::alloy_sol_types::SolType>::RustType,)*);
+        type UnderlyingRustTuple = #rust_tuple;
 
         #[automatically_derived]
         #[doc(hidden)]
@@ -765,4 +921,20 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
             }
         }
     }
+}
+
+/// Returns
+/// - `(#(#expanded,)*)`
+/// - `(#(<#expanded as ::alloy_sol_types::SolType>::RustType,)*)`
+fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
+    types: I,
+) -> (TokenStream, TokenStream) {
+    let mut sol_tuple = TokenStream::new();
+    let mut rust_tuple = TokenStream::new();
+    for ty in types {
+        let expanded = expand_type(ty);
+        sol_tuple.extend(quote!(#expanded,));
+        rust_tuple.extend(quote!(<#expanded as ::alloy_sol_types::SolType>::RustType,));
+    }
+    (quote!((#sol_tuple)), quote!((#rust_tuple)))
 }

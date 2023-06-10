@@ -17,7 +17,7 @@
 //! - Dynamic-length byte arrays `u8[]`
 
 use crate::{no_std_prelude::*, Decoder, Encoder, Result, Word};
-use alloy_primitives::{Address, U256};
+use alloy_primitives::{Address, I256, U256};
 use core::fmt;
 
 mod sealed {
@@ -98,6 +98,12 @@ impl From<bool> for WordToken {
 impl From<U256> for WordToken {
     #[inline]
     fn from(value: U256) -> Self {
+        Self(value.to_be_bytes().into())
+    }
+}
+
+impl From<I256> for WordToken {
+    fn from(value: I256) -> Self {
         Self(value.to_be_bytes().into())
     }
 }

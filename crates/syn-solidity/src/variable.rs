@@ -98,6 +98,12 @@ impl<'a, P> IntoIterator for &'a mut Parameters<P> {
     }
 }
 
+impl<P: Default> FromIterator<VariableDeclaration> for Parameters<P> {
+    fn from_iter<T: IntoIterator<Item = VariableDeclaration>>(iter: T) -> Self {
+        Self(Punctuated::from_iter(iter))
+    }
+}
+
 impl<P> Parameters<P> {
     pub const fn new() -> Self {
         Self(Punctuated::new())
@@ -128,6 +134,12 @@ impl<P> Parameters<P> {
 
     pub fn types_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Type> + DoubleEndedIterator {
         self.iter_mut().map(|var| &mut var.ty)
+    }
+
+    pub fn types_and_names(
+        &self,
+    ) -> impl ExactSizeIterator<Item = (&Type, Option<&SolIdent>)> + DoubleEndedIterator {
+        self.iter().map(|p| (&p.ty, p.name.as_ref()))
     }
 
     pub fn type_strings(

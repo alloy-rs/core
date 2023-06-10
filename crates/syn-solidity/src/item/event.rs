@@ -1,4 +1,4 @@
-use crate::{kw, utils::DebugPunctuated, SolIdent, Type};
+use crate::{kw, utils::DebugPunctuated, ParameterList, SolIdent, Type, VariableDeclaration};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -6,7 +6,7 @@ use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
-    Attribute, Result, Token,
+    Attribute, Error, Result, Token,
 };
 
 #[derive(Clone)]
@@ -61,8 +61,47 @@ impl ItemEvent {
         self.anonymous.is_some()
     }
 
-    pub fn partition_params(&self) -> (Vec<&EventParameter>, Vec<&EventParameter>) {
-        self.parameters.iter().partition(|p| p.is_indexed())
+    /// Returns the maximum amount of indexed parameters this event can have.
+    ///
+    /// This is `4` if the event is anonymous, otherwise `3`.
+    #[inline]
+    pub fn max_indexed(&self) -> usize {
+        if self.is_anonymous() {
+            4
+        } else {
+            3
+        }
+    }
+
+    /// Returns `true` if the event has more indexed parameters than allowed by
+    /// Solidity.
+    ///
+    /// See [`Self::max_indexed`].
+    #[inline]
+    pub fn exceeds_max_indexed(&self) -> bool {
+        self.indexed_params().count() > self.max_indexed()
+    }
+
+    /// Asserts that the event has a valid amount of indexed parameters.
+    pub fn assert_valid(&self) -> Result<()> {
+        if self.exceeds_max_indexed() {
+            let msg = if self.is_anonymous() {
+                "more than 4 indexed arguments for anonymous event"
+            } else {
+                "more than 3 indexed arguments for event"
+            };
+            return Err(Error::new(self.span(), msg))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn params(&self) -> ParameterList {
+        self.parameters
+            .iter()
+            .map(EventParameter::as_param)
+            .cloned()
+            .collect()
     }
 
     pub fn non_indexed_params(&self) -> impl Iterator<Item = &EventParameter> {
@@ -129,6 +168,11 @@ impl EventParameter {
         if let Some(name) = &mut self.name {
             name.set_span(span);
         }
+    }
+
+    pub fn as_param(&self) -> &VariableDeclaration {
+        // Safety: both types are `(Type, Option<kw>, Option<SolIdent>)`.
+        unsafe { &*(self as *const Self as *const VariableDeclaration) }
     }
 
     /// Returns `true` if the parameter is indexed.

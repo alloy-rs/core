@@ -192,7 +192,7 @@ mod eip712;
 pub use eip712::Eip712Domain;
 
 #[doc(hidden)]
-pub use alloy_primitives::keccak256;
+pub use alloy_primitives::{keccak256, B256};
 
 /// The ABI word type.
 pub type Word = alloy_primitives::B256;

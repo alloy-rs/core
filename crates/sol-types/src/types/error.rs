@@ -57,6 +57,7 @@ pub trait SolError: Sized {
     /// ABI encode the error to the given buffer **without** its selector.
     #[inline]
     fn encode_raw(&self, out: &mut Vec<u8>) {
+        out.reserve(self.data_size());
         out.extend(<Self::Tuple as SolType>::encode(self.to_rust()));
     }
 

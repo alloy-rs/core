@@ -1,5 +1,6 @@
 use alloy_primitives::{keccak256, U256};
 use alloy_sol_types::{sol, SolCall, SolError};
+use hex_literal::hex;
 
 // Unnamed arguments will be given a name based on their position,
 // e.g. `_0`, `_1`...
@@ -34,14 +35,10 @@ sol! {
     /// Implements [`SolError`].
     #[derive(Debug, PartialEq)]
     error MyError(uint256 a, uint256 b);
-
-    // TODO: events
-    // event FooEvent(uint256 a, uint256 b);
 }
 
 #[test]
-fn function_like() {
-    // function
+fn function() {
     assert_call_signature::<fooCall>("foo(uint256,uint256)");
 
     // not actually a valid signature, and it shouldn't be relied upon for
@@ -52,7 +49,7 @@ fn function_like() {
         a: U256::from(1),
         b: U256::from(2),
     };
-    let call_data = call.encode();
+    let _call_data = call.encode();
 
     // the signatures are unaffected
     let _ = overloaded_0Call {};
@@ -64,13 +61,17 @@ fn function_like() {
 
     let _ = overloaded_2Call { _0: "hello".into() };
     assert_call_signature::<overloaded_2Call>("overloaded(string)");
+}
 
-    // error
+#[test]
+fn error() {
     assert_error_signature::<MyError>("MyError(uint256,uint256)");
-
-    assert!(MyError::decode(&call_data, true).is_err());
+    let call_data = hex!(
+        "0000000000000000000000000000000000000000000000000000000000000001"
+        "0000000000000000000000000000000000000000000000000000000000000002"
+    );
     assert_eq!(
-        MyError::decode_raw(&call_data[4..], true),
+        MyError::decode_raw(&call_data, true),
         Ok(MyError {
             a: U256::from(1),
             b: U256::from(2)

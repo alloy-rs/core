@@ -34,64 +34,20 @@ error: expected `;`
    |
    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: proc macro panicked
-  --> tests/ui/event.rs:19:1
+error: more than 3 indexed arguments for event
+  --> tests/ui/event.rs:20:11
    |
-19 | / sol! {
-20 | |     event FourIndexedParameters(bool indexed, bool indexed, bool indexed, bool indexed);
-21 | | }
-   | |_^
-   |
-   = help: message: not yet implemented
+20 |     event FourIndexedParameters(bool indexed, bool indexed, bool indexed, bool indexed);
+   |           ^^^^^^^^^^^^^^^^^^^^^
 
-error: proc macro panicked
-  --> tests/ui/event.rs:23:1
+error: more than 3 indexed arguments for event
+  --> tests/ui/event.rs:24:11
    |
-23 | / sol! {
-24 | |     event FiveIndexedParameters(bool indexed, bool indexed, bool indexed, bool indexed, bool indexed);
-25 | | }
-   | |_^
-   |
-   = help: message: not yet implemented
+24 |     event FiveIndexedParameters(bool indexed, bool indexed, bool indexed, bool indexed, bool indexed);
+   |           ^^^^^^^^^^^^^^^^^^^^^
 
-error: proc macro panicked
-  --> tests/ui/event.rs:27:1
+error: more than 4 indexed arguments for anonymous event
+  --> tests/ui/event.rs:32:11
    |
-27 | / sol! {
-28 | |     event FourIndexedParametersAnonymous(bool indexed, bool indexed, bool indexed, bool indexed) anonymous;
-29 | | }
-   | |_^
-   |
-   = help: message: not yet implemented
-
-error: proc macro panicked
-  --> tests/ui/event.rs:31:1
-   |
-31 | / sol! {
-32 | |     event FiveIndexedParametersAnonymous(bool indexed, bool indexed, bool indexed, bool indexed, bool indexed) anonymous;
-33 | | }
-   | |_^
-   |
-   = help: message: not yet implemented
-
-error: proc macro panicked
-  --> tests/ui/event.rs:35:1
-   |
-35 | / sol! {
-36 | |     event ALotOfParameters(bool, bool, bool, bool, bool, bool, bool, bool, bool, bool);
-37 | |     event ALotOfParametersAnonymous(bool, bool, bool, bool, bool, bool, bool, bool, bool, bool) anonymous;
-38 | | }
-   | |_^
-   |
-   = help: message: not yet implemented
-
-error: proc macro panicked
-  --> tests/ui/event.rs:40:1
-   |
-40 | / sol! {
-41 | |     event TrailingComma(uint256,);
-42 | |     event Valid(uint256);
-43 | | }
-   | |_^
-   |
-   = help: message: not yet implemented
+32 |     event FiveIndexedParametersAnonymous(bool indexed, bool indexed, bool indexed, bool indexed, bool indexed) anonymous;
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

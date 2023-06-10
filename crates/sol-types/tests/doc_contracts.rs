@@ -8,9 +8,8 @@ sol! {
     /// [the EIP]: https://eips.ethereum.org/EIPS/eip-20
     #[derive(Debug, PartialEq)]
     interface IERC20 {
-        // TODO: Events
-        // event Transfer(address indexed from, address indexed to, uint256 value);
-        // event Approval(address indexed owner, address indexed spender, uint256 value);
+        event Transfer(address indexed from, address indexed to, uint256 value);
+        event Approval(address indexed owner, address indexed spender, uint256 value);
 
         function totalSupply() external view returns (uint256);
         function balanceOf(address account) external view returns (uint256);

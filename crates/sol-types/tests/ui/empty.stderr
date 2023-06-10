@@ -11,13 +11,3 @@ error: unexpected end of input, defining empty structs is disallowed
   |
 6 |     struct EmptyStruct {}
   |                         ^
-
-error: proc macro panicked
-  --> tests/ui/empty.rs:18:1
-   |
-18 | / sol! {
-19 | |     event EmptyEvent();
-20 | | }
-   | |_^
-   |
-   = help: message: not yet implemented
