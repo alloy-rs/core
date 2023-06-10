@@ -9,7 +9,7 @@ use crate::{
 };
 use alloc::borrow::Cow;
 use alloy_primitives::{keccak256, Address as RustAddress, I256, U256};
-use core::{hash::Hash, marker::PhantomData};
+use core::{fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
 /// Address - `address`
 pub struct Address;
@@ -120,7 +120,7 @@ where
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
-        IntBitCount::<BITS>::UINT_NAME.into()
+        IntBitCount::<BITS>::INT_NAME.into()
     }
 
     #[inline]
@@ -659,10 +659,17 @@ pub struct IntBitCount<const N: usize>;
 
 impl<const N: usize> Sealed for IntBitCount<N> {}
 
+// Declares types with the same traits
+// TODO: Add more traits
+// TODO: Integrate `num_traits` (needs `ruint`)
 macro_rules! declare_int_types {
     ($($(#[$attr:meta])* type $name:ident;)*) => {$(
         $(#[$attr])*
-        type $name: Default + Copy + Eq + Ord + Hash;
+        type $name: Sized + Copy + PartialOrd + Ord + Eq + Hash
+            + Not + BitAnd + BitOr + BitXor
+            + Add + Sub + Mul + Div + Rem
+            + AddAssign + SubAssign + MulAssign + DivAssign + RemAssign
+            + Debug + Display + LowerHex + UpperHex + Octal + Binary;
     )*};
 }
 
