@@ -6,7 +6,7 @@ use ast::{
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, IdentFragment};
-use std::{collections::HashMap, fmt::Write};
+use std::{borrow::Borrow, collections::HashMap, fmt::Write};
 use syn::{parse_quote, Attribute, Error, Result, Token};
 
 mod attr;
@@ -861,13 +861,14 @@ impl<'ast> ExpCtxt<'ast> {
         }
     }
 
-    fn params_data_size<'a, I: IntoIterator<Item = &'a VariableDeclaration>>(
+    fn params_data_size<'a, I: IntoIterator<Item = T>, T: Borrow<VariableDeclaration>>(
         &self,
         list: I,
         base: Option<TokenStream>,
     ) -> TokenStream {
         let base = base.unwrap_or_else(|| quote!(self));
         let sizes = list.into_iter().enumerate().map(|(i, var)| {
+            let var = var.borrow();
             let field = anon_name((i, var.name.as_ref()));
             self.type_data_size(&var.ty, quote!(#base.#field))
         });

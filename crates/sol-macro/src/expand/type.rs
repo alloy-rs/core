@@ -157,7 +157,7 @@ impl ExpCtxt<'_> {
             Type::String(_) | Type::Bytes { size: None, .. } => {
                 let base = self.type_base_data_size(ty);
                 // TODO: replace with `.len().next_multiple_of(32)` once it's stable
-                quote!(#base + (#field.len() / 31) * 32)
+                quote! { (#base + (#field.len() / 31) * 32) }
             }
             Type::Array(SolArray {
                 ty: inner,
@@ -166,7 +166,7 @@ impl ExpCtxt<'_> {
             }) => {
                 let base = self.type_base_data_size(ty);
                 let inner_size = self.type_data_size(inner, field.clone());
-                quote!(#base + #field.len() * (#inner_size))
+                quote! { (#base + #field.len() * (#inner_size)) }
             }
 
             // fixed array: size * encoded size
@@ -178,7 +178,7 @@ impl ExpCtxt<'_> {
                 let base = self.type_base_data_size(ty);
                 let inner_size = self.type_data_size(inner, field);
                 let len: usize = size.base10_parse().unwrap();
-                quote!(#base + #len * (#inner_size))
+                quote! { (#base + #len * (#inner_size)) }
             }
 
             // tuple: sum of encoded sizes
@@ -188,7 +188,7 @@ impl ExpCtxt<'_> {
                     let field_name = quote!(#field.#index);
                     self.type_data_size(ty, field_name)
                 });
-                quote!(0usize #(+ #fields)*)
+                quote! { (0usize #(+ #fields)*) }
             }
 
             Type::Custom(name) => match self.get_item(name) {

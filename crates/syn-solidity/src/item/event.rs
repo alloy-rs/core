@@ -100,7 +100,6 @@ impl ItemEvent {
         self.parameters
             .iter()
             .map(EventParameter::as_param)
-            .cloned()
             .collect()
     }
 
@@ -170,9 +169,12 @@ impl EventParameter {
         }
     }
 
-    pub fn as_param(&self) -> &VariableDeclaration {
-        // Safety: both types are `(Type, Option<kw>, Option<SolIdent>)`.
-        unsafe { &*(self as *const Self as *const VariableDeclaration) }
+    pub fn as_param(&self) -> VariableDeclaration {
+        VariableDeclaration {
+            name: self.name.clone(),
+            storage: None,
+            ty: self.ty.clone(),
+        }
     }
 
     /// Returns `true` if the parameter is indexed.
