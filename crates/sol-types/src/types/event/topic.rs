@@ -166,6 +166,21 @@ macro_rules! tuple_impls {
     };
 }
 
+impl EventTopic for () {
+    #[inline]
+    fn topic_encoded_length(_: &Self::RustType) -> usize {
+        0
+    }
+
+    #[inline]
+    fn encode_topic_raw<B: Borrow<Self::RustType>>(_: B, _: &mut Vec<u8>) {}
+
+    #[inline]
+    fn encode_topic<B: Borrow<Self::RustType>>(_: B) -> WordToken {
+        WordToken::default()
+    }
+}
+
 all_the_tuples!(tuple_impls);
 
 fn encode_topic_bytes(sl: &[u8], out: &mut Vec<u8>) {
