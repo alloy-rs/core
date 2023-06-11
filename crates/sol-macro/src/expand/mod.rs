@@ -336,7 +336,7 @@ impl<'ast> ExpCtxt<'ast> {
         let topic_list = event
             .indexed_params()
             .map(|param| self.expand_event_topic_type(param));
-        let topic_list = first_topic.clone().into_iter().chain(topic_list);
+        let topic_list = first_topic.into_iter().chain(topic_list);
 
         let (data_tuple, _) = expand_tuple_types(self.event_dynamic_params(event).map(|p| &p.ty));
         let data_size =
@@ -476,7 +476,7 @@ impl<'ast> ExpCtxt<'ast> {
     /// and all types that are not `indexed`.
     ///
     /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#events
-    fn is_event_param_dynamic<'a>(&'a self, param: &EventParameter) -> bool {
+    fn is_event_param_dynamic<'a>(&'a self, param: &'a EventParameter) -> bool {
         if !param.is_indexed() {
             return true
         }

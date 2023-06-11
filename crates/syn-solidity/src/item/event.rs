@@ -90,7 +90,7 @@ impl ItemEvent {
             } else {
                 "more than 3 indexed arguments for event"
             };
-            return Err(Error::new(self.span(), msg))
+            Err(Error::new(self.span(), msg))
         } else {
             Ok(())
         }

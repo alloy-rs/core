@@ -1,3 +1,5 @@
+#![allow(clippy::assertions_on_constants)]
+
 use alloy_primitives::{keccak256, B256};
 use alloy_sol_types::{sol, token::WordToken, SolEvent};
 
