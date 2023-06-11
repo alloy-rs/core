@@ -473,9 +473,7 @@ impl PackedSeqToken {
 }
 
 macro_rules! tuple_impls {
-    () => {};
-    (@peel $_:ident, $($other:ident,)*) => { tuple_impls! { $($other,)* } };
-    ($($ty:ident,)+) => {
+    ($($ty:ident),+) => {
         impl<$($ty: TokenType,)+> Sealed for ($($ty,)+) {}
 
         #[allow(non_snake_case)]
@@ -583,12 +581,10 @@ macro_rules! tuple_impls {
                 )+))
             }
         }
-
-        tuple_impls! { @peel $($ty,)+ }
     };
 }
 
-tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, }
+all_the_tuples!(tuple_impls);
 
 impl TokenType for () {
     #[inline]

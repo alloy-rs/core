@@ -89,7 +89,7 @@ pub trait SolType {
     /// Non-standard Packed Mode ABI encoding.
     ///
     /// See [`encode_packed`][SolType::encode_packed] for more details.
-    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B);
+    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>);
 
     /// Non-standard Packed Mode ABI encoding.
     ///
@@ -101,9 +101,9 @@ pub trait SolType {
     ///
     /// More information can be found in the [Solidity docs](https://docs.soliditylang.org/en/latest/abi-spec.html#non-standard-packed-mode).
     fn encode_packed<B: Borrow<Self::RustType>>(rust: B) -> Vec<u8> {
-        let mut res = Vec::new();
-        Self::encode_packed_to(&mut res, rust);
-        res
+        let mut out = Vec::new();
+        Self::encode_packed_to(rust, &mut out);
+        out
     }
 
     /* BOILERPLATE BELOW */
