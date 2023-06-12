@@ -202,7 +202,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size((data,)));
     }
 
     #[test]
@@ -271,7 +271,7 @@ mod tests {
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
 
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size((data,)));
     }
 
     #[test]
@@ -300,7 +300,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size((data,)));
     }
 
     #[test]
@@ -330,7 +330,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size((data,)));
     }
 
     #[test]
@@ -361,7 +361,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size((data,)));
     }
 
     #[test]
@@ -449,7 +449,7 @@ mod tests {
         .to_vec();
 
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(MyTy0,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy0,)>::encoded_size((data,)));
 
         type MyTy = (
             sol_data::Array<sol_data::Address>,
@@ -524,7 +524,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(bytes,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size((bytes,)));
     }
 
     #[test]
@@ -551,7 +551,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(sol_data::String,)>::encoded_size(&(s,)));
+        assert_eq!(encoded.len(), <(sol_data::String,)>::encoded_size((s,)));
     }
 
     #[test]
@@ -567,7 +567,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(sol_data::Bytes,)>::encoded_size(&(bytes,)));
+        assert_eq!(encoded.len(), <(sol_data::Bytes,)>::encoded_size((bytes,)));
     }
 
     #[test]
@@ -590,7 +590,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(sol_data::Bytes,)>::encoded_size(&(bytes,)));
+        assert_eq!(encoded.len(), <(sol_data::Bytes,)>::encoded_size((bytes,)));
     }
 
     #[test]
@@ -768,7 +768,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size((data,)));
     }
 
     #[test]
@@ -802,7 +802,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size((data,)));
     }
 
     #[test]
@@ -811,7 +811,7 @@ mod tests {
         let data = (Address::from([0x11u8; 20]), Address::from([0x22u8; 20]));
 
         let encoded = MyTy::encode(data);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::encode_params(data);
 
         let expected = hex!(
             "
@@ -822,7 +822,7 @@ mod tests {
         .to_vec();
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::encoded_size(data));
     }
 
     #[test]
@@ -1051,7 +1051,7 @@ mod tests {
         );
 
         let encoded = MyTy::encode(data);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::encode_params(data);
 
         let expected = hex!(
             "
@@ -1068,7 +1068,7 @@ mod tests {
         // a static FixedSeq should NEVER indirect
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::encoded_size(data));
     }
 
     #[test]
