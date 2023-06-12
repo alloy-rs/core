@@ -45,9 +45,14 @@ mod utils;
 #[doc = include_str!("../../sol-types/tests/doc_types.rs")]
 /// ```
 /// 
-/// ## Functions, errors, and events
+/// ## Functions and errors
 /// ```ignore
 #[doc = include_str!("../../sol-types/tests/doc_function_like.rs")]
+/// ```
+/// 
+/// ## Events
+/// ```ignore
+#[doc = include_str!("../../sol-types/tests/doc_events.rs")]
 /// ```
 /// 
 /// ## Contracts/interfaces

@@ -90,11 +90,11 @@ macro_rules! define_udt {
             }
 
             #[inline]
-            fn encode_packed_to<B>(target: &mut $crate::no_std_prelude::Vec<u8>, rust: B)
+            fn encode_packed_to<B>(rust: B, out: &mut $crate::no_std_prelude::Vec<u8>)
             where
                 B: $crate::no_std_prelude::Borrow<Self::RustType>
             {
-                <$underlying as $crate::SolType>::encode_packed_to(target, rust)
+                <$underlying as $crate::SolType>::encode_packed_to(rust, out)
             }
         }
     };

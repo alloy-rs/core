@@ -26,6 +26,7 @@ pub struct ItemUdt {
 impl fmt::Debug for ItemUdt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Udt")
+            .field("attrs", &self.attrs)
             .field("name", &self.name)
             .field("ty", &self.ty)
             .finish()

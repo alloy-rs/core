@@ -167,6 +167,9 @@ pub mod no_std_prelude {
     };
 }
 
+#[macro_use]
+mod macros;
+
 mod coder;
 pub use coder::{
     decode, decode_params, decode_single, encode, encode_params, encode_single,
@@ -180,12 +183,13 @@ pub use errors::{Error, Result};
 
 mod types;
 pub use types::{
-    data_type as sol_data, Panic, PanicKind, Revert, SolCall, SolError, SolStruct, SolType,
+    data_type as sol_data, EventTopic, Panic, PanicKind, Revert, SolCall, SolError, SolEvent,
+    SolStruct, SolType, TopicList,
 };
 
 mod util;
 #[doc(hidden)]
-pub use util::just_ok;
+pub use util::{just_ok, next_multiple_of_32};
 
 mod eip712;
 pub use eip712::Eip712Domain;

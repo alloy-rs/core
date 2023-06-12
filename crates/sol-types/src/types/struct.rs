@@ -156,8 +156,8 @@ impl<T: SolStruct> SolType for T {
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
+    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
         let tuple = rust.borrow().to_rust();
-        TupleFor::<T>::encode_packed_to(target, tuple)
+        TupleFor::<T>::encode_packed_to(tuple, out)
     }
 }

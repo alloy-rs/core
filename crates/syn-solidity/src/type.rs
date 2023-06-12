@@ -80,6 +80,14 @@ impl SolArray {
         }
     }
 
+    /// See [`Type::is_abi_dynamic`].
+    pub fn is_abi_dynamic(&self) -> bool {
+        match self.size {
+            Some(_) => false,
+            None => self.ty.is_abi_dynamic(),
+        }
+    }
+
     pub fn wrap(input: ParseStream<'_>, ty: Type) -> Result<Self> {
         let content;
         Ok(Self {
@@ -193,6 +201,11 @@ impl SolTuple {
         }
         self.paren_token = Paren(span);
     }
+
+    /// See [`Type::is_abi_dynamic`].
+    pub fn is_abi_dynamic(&self) -> bool {
+        self.types.iter().any(Type::is_abi_dynamic)
+    }
 }
 
 /// A type name.
@@ -200,32 +213,26 @@ impl SolTuple {
 /// Solidity reference: <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.typeName>
 #[derive(Clone)]
 pub enum Type {
-    /// `address [payable]`
+    /// `address $(payable)?`
     Address(Span, Option<kw::payable>),
     /// `bool`
     Bool(Span),
     /// `string`
     String(Span),
 
-    /// `Some(size) => bytes<size>`, `None => bytes`
-    Bytes {
-        span: Span,
-        size: Option<NonZeroU16>,
-    },
-    /// `Some(size) => int<size>`, `None => int`
-    Int {
-        span: Span,
-        size: Option<NonZeroU16>,
-    },
-    /// `Some(size) => uint<size>`, `None => uint`
-    Uint {
-        span: Span,
-        size: Option<NonZeroU16>,
-    },
+    /// `bytes`
+    Bytes(Span),
+    /// `bytes<size>`
+    FixedBytes(Span, NonZeroU16),
 
-    /// `Some(size) => <type>[<size>]`, `None => <type>[]`
+    /// `int[size]`
+    Int(Span, Option<NonZeroU16>),
+    /// `uint[size]`
+    Uint(Span, Option<NonZeroU16>),
+
+    /// `$ty[$(size)?]`
     Array(SolArray),
-    /// `(tuple)? ( $($type),* )`
+    /// `$(tuple)? ( $($types,)* )`
     Tuple(SolTuple),
 
     // TODO: function type
@@ -240,12 +247,16 @@ impl PartialEq for Type {
             (Self::Address(..), Self::Address(..)) => true,
             (Self::Bool(_), Self::Bool(_)) => true,
             (Self::String(_), Self::String(_)) => true,
-            (Self::Bytes { size: a, .. }, Self::Bytes { size: b, .. }) => a == b,
-            (Self::Int { size: a, .. }, Self::Int { size: b, .. }) => a == b,
-            (Self::Uint { size: a, .. }, Self::Uint { size: b, .. }) => a == b,
+            (Self::Bytes { .. }, Self::Bytes { .. }) => true,
+
+            (Self::FixedBytes(_, a), Self::FixedBytes(_, b)) => a == b,
+            (Self::Int(_, a), Self::Int(_, b)) => a == b,
+            (Self::Uint(_, a), Self::Uint(_, b)) => a == b,
+
             (Self::Tuple(a), Self::Tuple(b)) => a == b,
             (Self::Array(a), Self::Array(b)) => a == b,
             (Self::Custom(a), Self::Custom(b)) => a == b,
+
             _ => false,
         }
     }
@@ -257,10 +268,12 @@ impl Hash for Type {
     fn hash<H: Hasher>(&self, state: &mut H) {
         std::mem::discriminant(self).hash(state);
         match self {
-            Self::Address(..) | Self::Bool(_) | Self::String(_) => {}
-            Self::Bytes { size, .. } => size.hash(state),
-            Self::Int { size, .. } => size.hash(state),
-            Self::Uint { size, .. } => size.hash(state),
+            Self::Address(..) | Self::Bool(_) | Self::String(_) | Self::Bytes(_) => {}
+
+            Self::FixedBytes(_, size) => size.hash(state),
+            Self::Int(_, size) => size.hash(state),
+            Self::Uint(_, size) => size.hash(state),
+
             Self::Tuple(tuple) => tuple.hash(state),
             Self::Array(array) => array.hash(state),
             Self::Custom(custom) => custom.hash(state),
@@ -275,9 +288,12 @@ impl fmt::Debug for Type {
             Self::Address(_, Some(_)) => f.write_str("AddressPayable"),
             Self::Bool(_) => f.write_str("Bool"),
             Self::String(_) => f.write_str("String"),
-            Self::Bytes { size, .. } => f.debug_tuple("Bytes").field(size).finish(),
-            Self::Int { size, .. } => f.debug_tuple("Int").field(size).finish(),
-            Self::Uint { size, .. } => f.debug_tuple("Uint").field(size).finish(),
+            Self::Bytes(_) => f.write_str("Bytes"),
+
+            Self::FixedBytes(_, size) => f.debug_tuple("FixedBytes").field(size).finish(),
+            Self::Int(_, size) => f.debug_tuple("Int").field(size).finish(),
+            Self::Uint(_, size) => f.debug_tuple("Uint").field(size).finish(),
+
             Self::Tuple(tuple) => tuple.fmt(f),
             Self::Array(array) => array.fmt(f),
             Self::Custom(custom) => f.debug_tuple("Custom").field(custom).finish(),
@@ -288,13 +304,15 @@ impl fmt::Debug for Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Address(_, None) => f.write_str("address"),
-            Self::Address(_, Some(_)) => f.write_str("address payable"),
+            Self::Address(_, _) => f.write_str("address"),
             Self::Bool(_) => f.write_str("bool"),
             Self::String(_) => f.write_str("string"),
-            Self::Bytes { size, .. } => write_opt(f, "bytes", *size),
-            Self::Int { size, .. } => write_opt(f, "int", *size),
-            Self::Uint { size, .. } => write_opt(f, "uint", *size),
+            Self::Bytes(_) => f.write_str("bytes"),
+
+            Self::FixedBytes(_, size) => write!(f, "bytes{size}"),
+            Self::Int(_, size) => write_opt(f, "int", *size),
+            Self::Uint(_, size) => write_opt(f, "uint", *size),
+
             Self::Tuple(tuple) => tuple.fmt(f),
             Self::Array(array) => array.fmt(f),
             Self::Custom(custom) => custom.fmt(f),
@@ -321,7 +339,8 @@ impl Parse for Type {
                             Some(Some(size)) if size.get() > 32 => {
                                 return Err(Error::new(span, "fixed bytes range is 1-32"))
                             }
-                            Some(size) => Self::Bytes { span, size },
+                            Some(None) => Self::Bytes(span),
+                            Some(Some(size)) => Self::FixedBytes(span, size),
                         }
                     } else if let Some(s) = s.strip_prefix("int") {
                         match parse_size(s, span)? {
@@ -332,7 +351,7 @@ impl Parse for Type {
                                     "intX must be a multiple of 8 up to 256",
                                 ))
                             }
-                            Some(size) => Self::Int { span, size },
+                            Some(size) => Self::Int(span, size),
                         }
                     } else if let Some(s) = s.strip_prefix("uint") {
                         match parse_size(s, span)? {
@@ -343,7 +362,7 @@ impl Parse for Type {
                                     "uintX must be a multiple of 8 up to 256",
                                 ))
                             }
-                            Some(size) => Self::Uint { span, size },
+                            Some(size) => Self::Uint(span, size),
                         }
                     } else {
                         Self::custom(ident)
@@ -379,9 +398,10 @@ impl Type {
             }
             Self::Bool(span)
             | Self::String(span)
-            | Self::Bytes { span, .. }
-            | Self::Int { span, .. }
-            | Self::Uint { span, .. } => *span,
+            | Self::Bytes(span)
+            | Self::FixedBytes(span, _)
+            | Self::Int(span, _)
+            | Self::Uint(span, _) => *span,
             Self::Tuple(tuple) => tuple.span(),
             Self::Array(array) => array.span(),
             Self::Custom(custom) => custom.span(),
@@ -398,30 +418,61 @@ impl Type {
             }
             Self::Bool(span)
             | Self::String(span)
-            | Self::Bytes { span, .. }
-            | Self::Int { span, .. }
-            | Self::Uint { span, .. } => *span = new_span,
+            | Self::Bytes(span)
+            | Self::FixedBytes(span, _)
+            | Self::Int(span, _)
+            | Self::Uint(span, _) => *span = new_span,
+
             Self::Tuple(tuple) => tuple.set_span(new_span),
             Self::Array(array) => array.set_span(new_span),
             Self::Custom(custom) => custom.set_span(new_span),
         }
     }
 
-    /// Returns whether a [Storage][crate::Storage] location can be
-    /// specified for this type.
-    pub const fn can_have_storage(&self) -> bool {
-        self.is_dynamic() || self.is_custom()
-    }
-
-    pub const fn is_dynamic(&self) -> bool {
+    /// Returns whether this type is ABI-encoded as a single EVM word (32
+    /// bytes).
+    pub const fn is_one_word(&self) -> bool {
         matches!(
             self,
-            Self::String(_) | Self::Bytes { size: None, .. } | Self::Array(_)
+            Self::Address(..)
+                | Self::Bool(_)
+                | Self::Int(..)
+                | Self::Uint(..)
+                | Self::FixedBytes(..)
         )
     }
 
+    /// Returns whether this type is encoded in the data section of an event.
+    pub const fn is_event_dynamic(&self) -> bool {
+        !self.is_one_word()
+    }
+
+    /// Returns whether this type is dynamic according to ABI rules.
+    pub fn is_abi_dynamic(&self) -> bool {
+        match self {
+            Self::Address(..)
+            | Self::Bool(_)
+            | Self::Int(..)
+            | Self::Uint(..)
+            | Self::FixedBytes(..) => false,
+
+            Self::String(_) | Self::Bytes(_) | Self::Custom(_) => true,
+
+            Self::Tuple(tuple) => tuple.is_abi_dynamic(),
+            Self::Array(array) => array.is_abi_dynamic(),
+        }
+    }
+
+    pub const fn is_array(&self) -> bool {
+        matches!(self, Self::Array(_))
+    }
+
+    pub const fn is_tuple(&self) -> bool {
+        matches!(self, Self::Tuple(_))
+    }
+
     pub const fn is_custom(&self) -> bool {
-        matches!(self, Self::Custom(..))
+        matches!(self, Self::Custom(_))
     }
 
     /// Traverses this type while calling `f`.

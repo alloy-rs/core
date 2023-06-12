@@ -473,9 +473,7 @@ impl PackedSeqToken {
 }
 
 macro_rules! tuple_impls {
-    () => {};
-    (@peel $_:ident, $($other:ident,)*) => { tuple_impls! { $($other,)* } };
-    ($($ty:ident,)+) => {
+    ($($ty:ident),+) => {
         impl<$($ty: TokenType,)+> Sealed for ($($ty,)+) {}
 
         #[allow(non_snake_case)]
@@ -510,7 +508,7 @@ macro_rules! tuple_impls {
                 if Self::is_dynamic() {
                     1
                 } else {
-                    let ($(ref $ty,)+) = *self;
+                    let ($($ty,)+) = self;
                     0 $( + $ty.head_words() )+
                 }
             }
@@ -526,7 +524,7 @@ macro_rules! tuple_impls {
 
             #[inline]
             fn total_words(&self) -> usize {
-                let ($(ref $ty,)+) = *self;
+                let ($($ty,)+) = self;
                 0 $( + $ty.total_words() )+
             }
 
@@ -534,7 +532,7 @@ macro_rules! tuple_impls {
                 if Self::is_dynamic() {
                     enc.append_indirection();
                 } else {
-                    let ($(ref $ty,)+) = *self;
+                    let ($($ty,)+) = self;
                     $(
                         $ty.head_append(enc);
                     )+
@@ -543,7 +541,7 @@ macro_rules! tuple_impls {
 
             fn tail_append(&self, enc: &mut Encoder) {
                 if Self::is_dynamic() {
-                    let ($(ref $ty,)+) = *self;
+                    let ($($ty,)+) = self;
                     let head_words = 0 $( + $ty.head_words() )+;
 
                     enc.push_offset(head_words as u32);
@@ -564,7 +562,7 @@ macro_rules! tuple_impls {
             const IS_TUPLE: bool = true;
 
             fn encode_sequence(&self, enc: &mut Encoder) {
-                let ($(ref $ty,)+) = *self;
+                let ($($ty,)+) = self;
                 let head_words = 0 $( + $ty.head_words() )+;
                 enc.push_offset(head_words as u32);
                 $(
@@ -583,12 +581,8 @@ macro_rules! tuple_impls {
                 )+))
             }
         }
-
-        tuple_impls! { @peel $($ty,)+ }
     };
 }
-
-tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, }
 
 impl TokenType for () {
     #[inline]
@@ -629,6 +623,8 @@ impl TokenSeq for () {
         Ok(())
     }
 }
+
+all_the_tuples!(tuple_impls);
 
 #[cfg(test)]
 mod tests {

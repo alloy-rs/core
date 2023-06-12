@@ -1,12 +1,12 @@
 //! Functions which generate Rust code from the Solidity AST.
 
 use ast::{
-    File, Item, ItemContract, ItemError, ItemFunction, ItemStruct, ItemUdt, Parameters, SolIdent,
-    Type, VariableDeclaration, Visit,
+    EventParameter, File, Item, ItemContract, ItemError, ItemEvent, ItemFunction, ItemStruct,
+    ItemUdt, Parameters, SolIdent, Type, VariableDeclaration, Visit,
 };
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote, IdentFragment};
-use std::{collections::HashMap, fmt::Write};
+use quote::{format_ident, quote, quote_spanned, IdentFragment};
+use std::{borrow::Borrow, collections::HashMap, fmt::Write};
 use syn::{parse_quote, Attribute, Error, Result, Token};
 
 mod attr;
@@ -23,11 +23,25 @@ pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
 }
 
-fn expand_var(var: &VariableDeclaration) -> TokenStream {
-    let VariableDeclaration { ty, name, .. } = var;
+fn expand_fields<P>(params: &Parameters<P>) -> impl Iterator<Item = TokenStream> + '_ {
+    params
+        .iter()
+        .enumerate()
+        .map(|(i, var)| expand_field(i, &var.ty, var.name.as_ref()))
+}
+
+fn expand_field(i: usize, ty: &Type, name: Option<&SolIdent>) -> TokenStream {
+    let name = anon_name((i, name));
     let ty = expand_type(ty);
     quote! {
         #name: <#ty as ::alloy_sol_types::SolType>::RustType
+    }
+}
+
+fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Ident {
+    match name {
+        Some(name) => name.clone().into(),
+        None => format_ident!("_{i}"),
     }
 }
 
@@ -80,6 +94,7 @@ impl<'ast> ExpCtxt<'ast> {
         match item {
             Item::Contract(contract) => self.expand_contract(contract),
             Item::Error(error) => self.expand_error(error),
+            Item::Event(event) => self.expand_event(event),
             Item::Function(function) => self.expand_function(function),
             Item::Struct(s) => self.expand_struct(s),
             Item::Udt(udt) => self.expand_udt(udt),
@@ -167,7 +182,7 @@ impl<'ast> ExpCtxt<'ast> {
         let variants: Vec<_> = errors.iter().map(|error| error.name.0.clone()).collect();
         let min_data_len = errors
             .iter()
-            .map(|error| self.min_data_size(&error.fields))
+            .map(|error| self.min_data_size(&error.parameters))
             .max()
             .unwrap();
         let trt = Ident::new("SolError", Span::call_site());
@@ -189,9 +204,9 @@ impl<'ast> ExpCtxt<'ast> {
         let min_data_len = min_data_len.min(4);
         quote! {
             #(#attrs)*
-            pub enum #name {#(
-                #variants(#types),
-            )*}
+            pub enum #name {
+                #(#variants(#types),)*
+            }
 
             // TODO: Implement these functions using traits?
             #[automatically_derived]
@@ -254,20 +269,20 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn expand_error(&self, error: &ItemError) -> Result<TokenStream> {
         let ItemError {
-            fields,
+            parameters,
             name,
             attrs,
             ..
         } = error;
-        self.assert_resolved(fields)?;
+        self.assert_resolved(parameters)?;
 
-        let signature = self.signature(name.as_string(), fields);
+        let signature = self.signature(name.as_string(), parameters);
         let selector = crate::utils::selector(&signature);
 
-        let size = self.params_data_size(fields, None);
+        let size = self.params_data_size(parameters, None);
 
-        let converts = expand_from_into_tuples(&name.0, fields);
-        let fields = fields.iter().map(expand_var);
+        let converts = expand_from_into_tuples(&name.0, parameters);
+        let fields = expand_fields(parameters);
         let tokens = quote! {
             #(#attrs)*
             #[allow(non_camel_case_types, non_snake_case)]
@@ -283,7 +298,7 @@ impl<'ast> ExpCtxt<'ast> {
                 #[automatically_derived]
                 impl ::alloy_sol_types::SolError for #name {
                     type Tuple = UnderlyingSolTuple;
-                    type Token = <UnderlyingSolTuple as ::alloy_sol_types::SolType>::TokenType;
+                    type Token = <Self::Tuple as ::alloy_sol_types::SolType>::TokenType;
 
                     const SIGNATURE: &'static str = #signature;
                     const SELECTOR: [u8; 4] = #selector;
@@ -303,6 +318,136 @@ impl<'ast> ExpCtxt<'ast> {
             };
         };
         Ok(tokens)
+    }
+
+    fn expand_event(&self, event: &ItemEvent) -> Result<TokenStream> {
+        let ItemEvent { name, attrs, .. } = event;
+        let parameters = event.params();
+
+        self.assert_resolved(&parameters)?;
+        event.assert_valid()?;
+
+        let signature = self.signature(name.as_string(), &parameters);
+        let selector = crate::utils::event_selector(&signature);
+        let anonymous = event.is_anonymous();
+
+        // prepend the first topic if not anonymous
+        let first_topic = (!anonymous).then(|| quote!(::alloy_sol_types::sol_data::FixedBytes<32>));
+        let topic_list = event
+            .indexed_params()
+            .map(|param| self.expand_event_topic_type(param));
+        let topic_list = first_topic.into_iter().chain(topic_list);
+
+        let (data_tuple, _) = expand_tuple_types(event.dynamic_params().map(|p| &p.ty));
+        let data_size = self.params_data_size(event.dynamic_params().map(|p| p.as_param()), None);
+
+        // skip first topic if not anonymous, which is the hash of the signature
+        let mut topic_i = !anonymous as usize;
+        let mut data_i = 0usize;
+        let new_impl = event.parameters.iter().enumerate().map(|(i, p)| {
+            let name = anon_name((i, p.name.as_ref()));
+            let param;
+            if p.is_dynamic() {
+                let i = syn::Index::from(data_i);
+                param = quote!(data.#i);
+                data_i += 1;
+            } else {
+                let i = syn::Index::from(topic_i);
+                param = quote!(topics.#i);
+                topic_i += 1;
+            }
+            quote!(#name: #param)
+        });
+
+        let data_tuple_names = event
+            .dynamic_params()
+            .map(|p| p.name.as_ref())
+            .enumerate()
+            .map(anon_name);
+
+        let encode_first_topic =
+            (!anonymous).then(|| quote!(::alloy_sol_types::token::WordToken(Self::SIGNATURE_HASH)));
+        let encode_topics_impl = event.indexed_params().enumerate().map(|(i, p)| {
+            let name = anon_name((i, p.name.as_ref()));
+            let ty = expand_type(&p.ty);
+            quote! {
+                <#ty as ::alloy_sol_types::EventTopic>::encode_topic(&self.#name)
+            }
+        });
+        let encode_topics_impl = encode_first_topic
+            .into_iter()
+            .chain(encode_topics_impl)
+            .enumerate()
+            .map(|(i, assign)| quote!(out[#i] = #assign;));
+
+        let fields = expand_fields(&parameters);
+        let tokens = quote! {
+            #(#attrs)*
+            #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+            pub struct #name {
+                #(pub #fields,)*
+            }
+
+            #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+            const _: () = {
+                impl ::alloy_sol_types::SolEvent for #name {
+                    type DataTuple = #data_tuple;
+                    type DataToken = <Self::DataTuple as ::alloy_sol_types::SolType>::TokenType;
+
+                    type TopicList = (#(#topic_list,)*);
+
+                    const SIGNATURE: &'static str = #signature;
+                    const SIGNATURE_HASH: ::alloy_sol_types::B256 =
+                        ::alloy_sol_types::Word::new(#selector);
+
+                    const ANONYMOUS: bool = #anonymous;
+
+                    fn new(
+                        topics: <Self::TopicList as ::alloy_sol_types::SolType>::RustType,
+                        data: <Self::DataTuple as ::alloy_sol_types::SolType>::RustType,
+                    ) -> Self {
+                        Self {
+                            #(#new_impl,)*
+                        }
+                    }
+
+                    fn data_size(&self) -> usize {
+                        #data_size
+                    }
+
+                    fn encode_data_raw(&self, out: &mut Vec<u8>) {
+                        out.reserve(self.data_size());
+                        out.extend(
+                            <Self::DataTuple as ::alloy_sol_types::SolType>::encode(
+                                // TODO: Avoid cloning
+                                (#(self.#data_tuple_names.clone(),)*)
+                            )
+                        );
+                    }
+
+                    fn encode_topics_raw(
+                        &self,
+                        out: &mut [::alloy_sol_types::token::WordToken],
+                    ) -> ::alloy_sol_types::Result<()> {
+                        if out.len() < <Self::TopicList as ::alloy_sol_types::TopicList>::COUNT {
+                            return Err(::alloy_sol_types::Error::Overrun);
+                        }
+                        #(#encode_topics_impl)*
+                        Ok(())
+                    }
+                }
+            };
+        };
+        Ok(tokens)
+    }
+
+    fn expand_event_topic_type(&self, param: &EventParameter) -> TokenStream {
+        debug_assert!(param.is_indexed());
+        if param.is_dynamic() {
+            quote_spanned! {param.ty.span()=> ::alloy_sol_types::sol_data::FixedBytes<32> }
+        } else {
+            expand_type(&param.ty)
+        }
     }
 
     fn expand_function(&self, function: &ItemFunction) -> Result<TokenStream> {
@@ -328,7 +473,7 @@ impl<'ast> ExpCtxt<'ast> {
     ) -> Result<TokenStream> {
         self.assert_resolved(params)?;
 
-        let fields = params.iter().map(expand_var);
+        let fields = expand_fields(params);
 
         let signature = self.signature(function.name.as_string(), params);
         let selector = crate::utils::selector(&signature);
@@ -353,7 +498,7 @@ impl<'ast> ExpCtxt<'ast> {
                 #[automatically_derived]
                 impl ::alloy_sol_types::SolCall for #call_name {
                     type Tuple = UnderlyingSolTuple;
-                    type Token = <UnderlyingSolTuple as ::alloy_sol_types::SolType>::TokenType;
+                    type Token = <Self::Tuple as ::alloy_sol_types::SolType>::TokenType;
 
                     const SIGNATURE: &'static str = #signature;
                     const SELECTOR: [u8; 4] = #selector;
@@ -383,22 +528,21 @@ impl<'ast> ExpCtxt<'ast> {
             ..
         } = s;
 
-        let (f_ty, f_name): (Vec<_>, Vec<_>) = s
-            .fields
+        let field_types_s = fields.iter().map(|f| f.ty.to_string());
+        let field_names_s = fields.iter().map(|f| f.name.as_ref().unwrap().to_string());
+
+        let (field_types, field_names): (Vec<_>, Vec<_>) = fields
             .iter()
-            .map(|f| (f.ty.to_string(), f.name.as_ref().unwrap().to_string()))
+            .map(|f| (expand_type(&f.ty), f.name.as_ref().unwrap()))
             .unzip();
 
-        let props_tys: Vec<_> = fields.iter().map(|f| expand_type(&f.ty)).collect();
-        let props = fields.iter().map(|f| &f.name);
-
-        let encoded_type = fields.eip712_signature(name.to_string());
+        let encoded_type = fields.eip712_signature(name.as_string());
         let encode_type_impl = if fields.iter().any(|f| f.ty.is_custom()) {
             quote! {
                 {
                     let mut encoded = String::from(#encoded_type);
                     #(
-                        if let Some(s) = <#props_tys as ::alloy_sol_types::SolType>::eip712_encode_type() {
+                        if let Some(s) = <#field_types as ::alloy_sol_types::SolType>::eip712_encode_type() {
                             encoded.push_str(&s);
                         }
                     )*
@@ -418,7 +562,7 @@ impl<'ast> ExpCtxt<'ast> {
             }
             _ => quote! {
                 [#(
-                    <#props_tys as ::alloy_sol_types::SolType>::eip712_data_word(&self.#props).0,
+                    <#field_types as ::alloy_sol_types::SolType>::eip712_data_word(&self.#field_names).0,
                 )*].concat()
             },
         };
@@ -426,7 +570,7 @@ impl<'ast> ExpCtxt<'ast> {
         let attrs = attrs.iter();
         let convert = expand_from_into_tuples(&name.0, fields);
         let name_s = name.to_string();
-        let fields = fields.iter().map(expand_var);
+        let fields = expand_fields(fields);
         let tokens = quote! {
             #(#attrs)*
             #[allow(non_camel_case_types, non_snake_case)]
@@ -444,12 +588,12 @@ impl<'ast> ExpCtxt<'ast> {
                 #[automatically_derived]
                 impl ::alloy_sol_types::SolStruct for #name {
                     type Tuple = UnderlyingSolTuple;
-                    type Token = <UnderlyingSolTuple as ::alloy_sol_types::SolType>::TokenType;
+                    type Token = <Self::Tuple as ::alloy_sol_types::SolType>::TokenType;
 
                     const NAME: &'static str = #name_s;
 
                     const FIELDS: &'static [(&'static str, &'static str)] = &[
-                        #((#f_ty, #f_name)),*
+                        #((#field_types_s, #field_names_s)),*
                     ];
 
                     fn to_rust(&self) -> UnderlyingRustTuple {
@@ -466,6 +610,38 @@ impl<'ast> ExpCtxt<'ast> {
 
                     fn eip712_encode_data(&self) -> Vec<u8> {
                         #encode_data_impl
+                    }
+                }
+
+                #[automatically_derived]
+                impl ::alloy_sol_types::EventTopic for #name {
+                    #[inline]
+                    fn topic_preimage_length<B: Borrow<Self::RustType>>(rust: B) -> usize {
+                        let b = rust.borrow();
+                        0usize
+                        #(
+                            + <#field_types as ::alloy_sol_types::EventTopic>::topic_preimage_length(&b.#field_names)
+                        )*
+                    }
+
+                    #[inline]
+                    fn encode_topic_preimage<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
+                        let b = rust.borrow();
+                        out.reserve(<Self as ::alloy_sol_types::EventTopic>::topic_preimage_length(b));
+                        #(
+                            <#field_types as ::alloy_sol_types::EventTopic>::encode_topic_preimage(&b.#field_names, out);
+                        )*
+                    }
+
+                    #[inline]
+                    fn encode_topic<B: Borrow<Self::RustType>>(
+                        rust: B
+                    ) -> ::alloy_sol_types::token::WordToken {
+                        let mut out = Vec::new();
+                        <Self as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust, &mut out);
+                        ::alloy_sol_types::token::WordToken(
+                            ::alloy_sol_types::keccak256(out)
+                        )
                     }
                 }
             };
@@ -617,14 +793,19 @@ impl<'ast> ExpCtxt<'ast> {
         format_ident!("{function_name}Return")
     }
 
-    fn signature<P>(&self, mut name: String, params: &Parameters<P>) -> String {
-        name.reserve(2 + params.len() * 16);
+    fn signature<'a, I: IntoIterator<Item = &'a VariableDeclaration>>(
+        &self,
+        mut name: String,
+        params: I,
+    ) -> String {
         name.push('(');
-        for (i, param) in params.iter().enumerate() {
-            if i > 0 {
+        let mut first = true;
+        for param in params {
+            if !first {
                 name.push(',');
             }
             write!(name, "{}", TypePrinter::new(self, &param.ty)).unwrap();
+            first = false;
         }
         name.push(')');
         name
@@ -638,32 +819,42 @@ impl<'ast> ExpCtxt<'ast> {
     ///
     /// Provides a better error message than an `unwrap` or `expect` when we
     /// know beforehand that we will be needing types to be resolved.
-    fn assert_resolved<P>(&self, params: &Parameters<P>) -> Result<()> {
+    fn assert_resolved<'a, I: IntoIterator<Item = &'a VariableDeclaration>>(
+        &self,
+        params: I,
+    ) -> Result<()> {
         let mut errors = Vec::new();
-        params.visit_types(|ty| {
-            if let Type::Custom(name) = ty {
-                if !self.custom_types.contains_key(name.last_tmp()) {
-                    let e = syn::Error::new(name.span(), "unresolved type");
-                    errors.push(e);
+        for param in params {
+            param.ty.visit(|ty| {
+                if let Type::Custom(name) = ty {
+                    if !self.custom_types.contains_key(name.last_tmp()) {
+                        let e = syn::Error::new(name.span(), "unresolved type");
+                        errors.push(e);
+                    }
                 }
-            }
-        });
+            });
+        }
         if errors.is_empty() {
             Ok(())
         } else {
             let mut e = crate::utils::combine_errors(errors).unwrap();
             let note =
                 "Custom types must be declared inside of the same scope they are referenced in,\n\
-                 or \"imported\" as a UDT with `type {ident} is (...);`";
+                 or \"imported\" as a UDT with `type ... is (...);`";
             e.combine(Error::new(Span::call_site(), note));
             Err(e)
         }
     }
 
-    fn params_data_size<P>(&self, list: &Parameters<P>, base: Option<TokenStream>) -> TokenStream {
+    fn params_data_size<I: IntoIterator<Item = T>, T: Borrow<VariableDeclaration>>(
+        &self,
+        list: I,
+        base: Option<TokenStream>,
+    ) -> TokenStream {
         let base = base.unwrap_or_else(|| quote!(self));
-        let sizes = list.iter().map(|var| {
-            let field = var.name.as_ref().unwrap();
+        let sizes = list.into_iter().enumerate().map(|(i, var)| {
+            let var = var.borrow();
+            let field = anon_name((i, var.name.as_ref()));
             self.type_data_size(&var.ty, quote!(#base.#field))
         });
         quote!(0usize #( + #sizes)*)
@@ -687,18 +878,19 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
 
 /// Expands `From` impls for a list of types and the corresponding tuple.
 fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStream {
-    let names = fields.names();
+    let names = fields.names().enumerate().map(anon_name);
     let names2 = names.clone();
     let idxs = (0..fields.len()).map(syn::Index::from);
 
-    let tys = fields.types().map(expand_type);
-    let tys2 = tys.clone();
-
+    let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types());
     quote! {
-        type UnderlyingSolTuple = (#(#tys,)*);
-        type UnderlyingRustTuple = (#(<#tys2 as ::alloy_sol_types::SolType>::RustType,)*);
+        #[doc(hidden)]
+        type UnderlyingSolTuple = #sol_tuple;
+        #[doc(hidden)]
+        type UnderlyingRustTuple = #rust_tuple;
 
         #[automatically_derived]
+        #[doc(hidden)]
         impl ::core::convert::From<#name> for UnderlyingRustTuple {
             fn from(value: #name) -> Self {
                 (#(value.#names,)*)
@@ -706,6 +898,7 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
         }
 
         #[automatically_derived]
+        #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple> for #name {
             fn from(tuple: UnderlyingRustTuple) -> Self {
                 #name {
@@ -714,4 +907,20 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
             }
         }
     }
+}
+
+/// Returns
+/// - `(#(#expanded,)*)`
+/// - `(#(<#expanded as ::alloy_sol_types::SolType>::RustType,)*)`
+fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
+    types: I,
+) -> (TokenStream, TokenStream) {
+    let mut sol_tuple = TokenStream::new();
+    let mut rust_tuple = TokenStream::new();
+    for ty in types {
+        let expanded = expand_type(ty);
+        sol_tuple.extend(quote!(#expanded,));
+        rust_tuple.extend(quote!(<#expanded as ::alloy_sol_types::SolType>::RustType,));
+    }
+    (quote!((#sol_tuple)), quote!((#rust_tuple)))
 }

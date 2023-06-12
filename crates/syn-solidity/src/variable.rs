@@ -1,6 +1,5 @@
 use super::{kw, SolIdent, Storage, Type};
 use proc_macro2::Span;
-use quote::format_ident;
 use std::{
     fmt::{self, Write},
     ops::{Deref, DerefMut},
@@ -9,7 +8,7 @@ use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Error, Ident, Result, Token,
+    Ident, Result, Token,
 };
 
 /// A list of comma-separated [VariableDeclaration]s.
@@ -52,18 +51,9 @@ impl<P> fmt::Debug for Parameters<P> {
 /// Parameter list: fields names are set to `_{index}`
 impl Parse for Parameters<Token![,]> {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut list = input.parse_terminated(VariableDeclaration::parse, Token![,])?;
-
-        // Set names for anonymous parameters
-        for (i, var) in list.iter_mut().enumerate() {
-            if var.name.is_none() {
-                let mut ident = format_ident!("_{i}");
-                ident.set_span(var.span());
-                var.name = Some(SolIdent(ident));
-            }
-        }
-
-        Ok(Self(list))
+        input
+            .parse_terminated(VariableDeclaration::parse, Token![,])
+            .map(Self)
     }
 }
 
@@ -108,6 +98,12 @@ impl<'a, P> IntoIterator for &'a mut Parameters<P> {
     }
 }
 
+impl<P: Default> FromIterator<VariableDeclaration> for Parameters<P> {
+    fn from_iter<T: IntoIterator<Item = VariableDeclaration>>(iter: T) -> Self {
+        Self(Punctuated::from_iter(iter))
+    }
+}
+
 impl<P> Parameters<P> {
     pub const fn new() -> Self {
         Self(Punctuated::new())
@@ -138,6 +134,12 @@ impl<P> Parameters<P> {
 
     pub fn types_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Type> + DoubleEndedIterator {
         self.iter_mut().map(|var| &mut var.ty)
+    }
+
+    pub fn types_and_names(
+        &self,
+    ) -> impl ExactSizeIterator<Item = (&Type, Option<&SolIdent>)> + DoubleEndedIterator {
+        self.iter().map(|p| (&p.ty, p.name.as_ref()))
     }
 
     pub fn type_strings(
@@ -235,24 +237,13 @@ impl VariableDeclaration {
     }
 
     fn _parse(input: ParseStream<'_>, for_struct: bool) -> Result<Self> {
-        let ty = input.parse::<Type>()?;
-        let can_have_storage = ty.can_have_storage();
-        let this = Self {
-            ty,
+        Ok(Self {
+            ty: input.parse()?,
             storage: if input.peek(kw::memory)
                 || input.peek(kw::storage)
                 || input.peek(kw::calldata)
             {
-                let storage = input.parse::<Storage>()?;
-                if for_struct || !can_have_storage {
-                    let msg = if for_struct {
-                        "data locations are not allowed in struct definitions"
-                    } else {
-                        "data location can only be specified for array, struct or mapping types"
-                    };
-                    return Err(Error::new(storage.span(), msg))
-                }
-                Some(storage)
+                Some(input.parse()?)
             } else {
                 None
             },
@@ -262,7 +253,6 @@ impl VariableDeclaration {
             } else {
                 None
             },
-        };
-        Ok(this)
+        })
     }
 }

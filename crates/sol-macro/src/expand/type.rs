@@ -13,33 +13,25 @@ pub fn expand_type(ty: &Type) -> TokenStream {
 
 fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
     let tts = match *ty {
-        Type::Address(span, _) => quote_spanned! {span=>
-            ::alloy_sol_types::sol_data::Address
-        },
+        Type::Address(span, _) => quote_spanned! {span=> ::alloy_sol_types::sol_data::Address },
         Type::Bool(span) => quote_spanned! {span=> ::alloy_sol_types::sol_data::Bool },
         Type::String(span) => quote_spanned! {span=> ::alloy_sol_types::sol_data::String },
+        Type::Bytes(span) => quote_spanned! {span=> ::alloy_sol_types::sol_data::Bytes },
 
-        Type::Bytes { span, size: None } => {
-            quote_spanned! {span=> ::alloy_sol_types::sol_data::Bytes }
-        }
-        Type::Bytes {
-            span,
-            size: Some(size),
-        } => {
+        Type::FixedBytes(span, size) => {
             let size = Literal::u16_unsuffixed(size.get());
             quote_spanned! {span=>
                 ::alloy_sol_types::sol_data::FixedBytes<#size>
             }
         }
-
-        Type::Int { span, size } => {
-            let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
+        Type::Int(span, size) => {
+            let size = Literal::u16_unsuffixed(size.map_or(256, NonZeroU16::get));
             quote_spanned! {span=>
                 ::alloy_sol_types::sol_data::Int<#size>
             }
         }
-        Type::Uint { span, size } => {
-            let size = Literal::u16_unsuffixed(size.map(NonZeroU16::get).unwrap_or(256));
+        Type::Uint(span, size) => {
+            let size = Literal::u16_unsuffixed(size.map_or(256, NonZeroU16::get));
             quote_spanned! {span=>
                 ::alloy_sol_types::sol_data::Uint<#size>
             }
@@ -82,7 +74,7 @@ impl ExpCtxt<'_> {
         }
     }
 
-    fn custom_type(&self, name: &SolPath) -> &Type {
+    pub(super) fn custom_type(&self, name: &SolPath) -> &Type {
         match self.custom_types.get(name.last_tmp()) {
             Some(item) => item,
             None => panic!("unresolved item: {name}"),
@@ -106,14 +98,12 @@ impl ExpCtxt<'_> {
             // static types: 1 word
             Type::Address(..)
             | Type::Bool(_)
-            | Type::Int { .. }
-            | Type::Uint { .. }
-            | Type::Bytes { size: Some(_), .. } => 32,
+            | Type::Int(..)
+            | Type::Uint(..)
+            | Type::FixedBytes(..) => 32,
 
             // dynamic types: 1 offset word, 1 length word
-            Type::String(_)
-            | Type::Bytes { size: None, .. }
-            | Type::Array(SolArray { size: None, .. }) => 64,
+            Type::String(_) | Type::Bytes(_) | Type::Array(SolArray { size: None, .. }) => 64,
 
             // fixed array: size * encoded size
             Type::Array(SolArray {
@@ -136,7 +126,9 @@ impl ExpCtxt<'_> {
                     .map(|ty| self.type_base_data_size(ty))
                     .sum(),
                 Item::Udt(udt) => self.type_base_data_size(&udt.ty),
-                Item::Contract(_) | Item::Error(_) | Item::Function(_) => unreachable!(),
+                Item::Contract(_) | Item::Error(_) | Item::Event(_) | Item::Function(_) => {
+                    unreachable!()
+                }
             },
         }
     }
@@ -149,12 +141,11 @@ impl ExpCtxt<'_> {
             | Type::Bool(_)
             | Type::Int { .. }
             | Type::Uint { .. }
-            | Type::Bytes { size: Some(_), .. } => self.type_base_data_size(ty).into_token_stream(),
+            | Type::FixedBytes(..) => quote!(32usize),
 
             // dynamic types: 1 offset word, 1 length word, length rounded up to word size
-            Type::String(_) | Type::Bytes { size: None, .. } => {
-                let base = self.type_base_data_size(ty);
-                quote!(#base + (#field.len() / 31) * 32)
+            Type::String(_) | Type::Bytes(..) => {
+                quote! { (64usize + ::alloy_sol_types::next_multiple_of_32(#field.len())) }
             }
             Type::Array(SolArray {
                 ty: inner,
@@ -163,7 +154,7 @@ impl ExpCtxt<'_> {
             }) => {
                 let base = self.type_base_data_size(ty);
                 let inner_size = self.type_data_size(inner, field.clone());
-                quote!(#base + #field.len() * (#inner_size))
+                quote! { (#base + #field.len() * (#inner_size)) }
             }
 
             // fixed array: size * encoded size
@@ -175,7 +166,7 @@ impl ExpCtxt<'_> {
                 let base = self.type_base_data_size(ty);
                 let inner_size = self.type_data_size(inner, field);
                 let len: usize = size.base10_parse().unwrap();
-                quote!(#base + #len * (#inner_size))
+                quote! { (#base + #len * (#inner_size)) }
             }
 
             // tuple: sum of encoded sizes
@@ -185,13 +176,15 @@ impl ExpCtxt<'_> {
                     let field_name = quote!(#field.#index);
                     self.type_data_size(ty, field_name)
                 });
-                quote!(0usize #(+ #fields)*)
+                quote! { (0usize #(+ #fields)*) }
             }
 
             Type::Custom(name) => match self.get_item(name) {
                 Item::Struct(strukt) => self.params_data_size(&strukt.fields, Some(field)),
                 Item::Udt(udt) => self.type_data_size(&udt.ty, field),
-                Item::Contract(_) | Item::Error(_) | Item::Function(_) => unreachable!(),
+                Item::Contract(_) | Item::Error(_) | Item::Event(_) | Item::Function(_) => {
+                    unreachable!()
+                }
             },
         }
     }

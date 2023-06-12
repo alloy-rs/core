@@ -31,12 +31,12 @@ pub(crate) fn check_zeroes(data: &[u8]) -> bool {
     data.iter().all(|b| *b == 0)
 }
 
-/// See [`usize::next_multiple_of`]
+/// See [`usize::next_multiple_of`].
 #[inline]
-pub(crate) const fn round_up_nearest_multiple(lhs: usize, rhs: usize) -> usize {
-    match lhs % rhs {
-        0 => lhs,
-        r => lhs + (rhs - r),
+pub const fn next_multiple_of_32(n: usize) -> usize {
+    match n % 32 {
+        0 => n,
+        r => n + (32 - r),
     }
 }
 

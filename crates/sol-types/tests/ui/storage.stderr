@@ -1,35 +1,5 @@
-error: data locations are not allowed in struct definitions
- --> tests/ui/storage.rs:5:14
+error: No fail cases
+ --> tests/ui/storage.rs:3:1
   |
-5 |         bool memory a;
-  |              ^^^^^^
-
-error: data locations are not allowed in struct definitions
-  --> tests/ui/storage.rs:11:14
-   |
-11 |         bool storage a;
-   |              ^^^^^^^
-
-error: data locations are not allowed in struct definitions
-  --> tests/ui/storage.rs:17:14
-   |
-17 |         bool calldata a;
-   |              ^^^^^^^^
-
-error: data location can only be specified for array, struct or mapping types
-  --> tests/ui/storage.rs:23:14
-   |
-23 |         bool memory a,
-   |              ^^^^^^
-
-error: data location can only be specified for array, struct or mapping types
-  --> tests/ui/storage.rs:29:14
-   |
-29 |         bool storage a,
-   |              ^^^^^^^
-
-error: data location can only be specified for array, struct or mapping types
-  --> tests/ui/storage.rs:35:14
-   |
-35 |         bool calldata a,
-   |              ^^^^^^^^
+3 | compile_error!("No fail cases");
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

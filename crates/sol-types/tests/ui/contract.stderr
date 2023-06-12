@@ -1,17 +1,53 @@
-error: cannot declare nested contracts
- --> tests/ui/contract.rs:5:18
+error: unexpected end of input, expected curly braces
+ --> tests/ui/contract.rs:3:1
   |
-5 |         contract Nested {}
-  |                  ^^^^^^
+3 | / sol! {
+4 | |     contract MissingBraces1
+5 | | }
+  | |_^
+  |
+  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: unexpected end of input, expected curly braces
+ --> tests/ui/contract.rs:7:1
+  |
+7 | / sol! {
+8 | |     contract MissingBraces2 is A
+9 | | }
+  | |_^
+  |
+  = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: unexpected end of input, expected identifier
+  --> tests/ui/contract.rs:11:1
+   |
+11 | / sol! {
+12 | |     contract MissingInheritance1 is
+13 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: expected identifier
+  --> tests/ui/contract.rs:16:36
+   |
+16 |     contract MissingInheritance2 is;
+   |                                    ^
 
 error: cannot declare nested contracts
-  --> tests/ui/contract.rs:11:17
+  --> tests/ui/contract.rs:21:18
    |
-11 |         library Nested {}
+21 |         contract Nested {}
+   |                  ^^^^^^
+
+error: cannot declare nested contracts
+  --> tests/ui/contract.rs:27:17
+   |
+27 |         library Nested {}
    |                 ^^^^^^
 
 error: cannot declare nested contracts
-  --> tests/ui/contract.rs:17:19
+  --> tests/ui/contract.rs:33:19
    |
-17 |         interface Nested {}
+33 |         interface Nested {}
    |                   ^^^^^^

@@ -154,7 +154,7 @@ impl<'a> Decoder<'a> {
     /// word boundary.
     pub fn take_slice(&mut self, len: usize) -> Result<&[u8], Error> {
         if self.validate {
-            let padded_len = util::round_up_nearest_multiple(len, 32);
+            let padded_len = util::next_multiple_of_32(len);
             if self.offset + padded_len > self.buf.len() {
                 return Err(Error::Overrun)
             }
