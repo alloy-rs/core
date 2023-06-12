@@ -36,8 +36,8 @@ that are valid in `syn-solidity` but not in the official compiler include:
 This lenient behavior is intentionally designed to facilitate usage within
 procedural macros, and to reduce general code complexity in the parser and AST.
 
-[^1]: Older versions may still parse successfully, but this is not guaranteed.
 [ethersjs-abi]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
+[^1]: Older versions may still parse successfully, but this is not guaranteed.
 
 ## Example
 
