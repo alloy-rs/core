@@ -121,10 +121,7 @@ impl<T: SolStruct> SolType for T {
     type RustType = T;
     type TokenType = TupleTokenTypeFor<T>;
 
-    #[inline]
-    fn is_dynamic() -> bool {
-        <<Self as SolStruct>::Tuple as SolType>::is_dynamic()
-    }
+    const DYNAMIC: bool = TupleFor::<T>::DYNAMIC;
 
     #[inline]
     fn type_check(token: &Self::TokenType) -> crate::Result<()> {
