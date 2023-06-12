@@ -24,6 +24,13 @@ pub(crate) const fn padded_len(data: &[u8]) -> usize {
     round_up_nearest_multiple(data.len(), 32)
 }
 
+/// `round_up_nearest_multiple` rounds a number up to the next multiple of
+/// `rhs`. This implementation panics when the sum of `lhs` and `rhs` is >
+/// `usize::MAX`.
+pub(crate) const fn round_up_nearest_multiple(lhs: usize, rhs: usize) -> usize {
+    (lhs + (rhs - 1)) / rhs
+}
+
 /// Converts a u32 to a right aligned array of 32 bytes.
 #[inline]
 pub(crate) fn pad_u32(value: u32) -> Word {

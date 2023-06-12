@@ -6,7 +6,7 @@ use ast::{
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, quote_spanned, IdentFragment};
-use std::{borrow::Borrow, collections::HashMap, fmt::Write};
+use std::{collections::HashMap, fmt::Write};
 use syn::{parse_quote, Attribute, Error, Result, Token};
 
 mod attr;
@@ -279,8 +279,6 @@ impl<'ast> ExpCtxt<'ast> {
         let signature = self.signature(name.as_string(), parameters);
         let selector = crate::utils::selector(&signature);
 
-        let size = self.params_data_size(parameters, None);
-
         let converts = expand_from_into_tuples(&name.0, parameters);
         let fields = expand_fields(parameters);
         let tokens = quote! {
@@ -310,10 +308,6 @@ impl<'ast> ExpCtxt<'ast> {
                     fn from_rust(tuple: <Self::Tuple as ::alloy_sol_types::SolType>::RustType) -> Self {
                         tuple.into()
                     }
-
-                    fn data_size(&self) -> usize {
-                        #size
-                    }
                 }
             };
         };
@@ -339,7 +333,7 @@ impl<'ast> ExpCtxt<'ast> {
         let topic_list = first_topic.into_iter().chain(topic_list);
 
         let (data_tuple, _) = expand_tuple_types(event.dynamic_params().map(|p| &p.ty));
-        let data_size = self.params_data_size(event.dynamic_params().map(|p| p.as_param()), None);
+        let data_size: TokenStream = quote! { TODO };
 
         // skip first topic if not anonymous, which is the hash of the signature
         let mut topic_i = !anonymous as usize;
@@ -478,8 +472,6 @@ impl<'ast> ExpCtxt<'ast> {
         let signature = self.signature(function.name.as_string(), params);
         let selector = crate::utils::selector(&signature);
 
-        let size = self.params_data_size(params, None);
-
         let converts = expand_from_into_tuples(call_name, params);
 
         let attrs = &function.attrs;
@@ -509,10 +501,6 @@ impl<'ast> ExpCtxt<'ast> {
 
                     fn from_rust(tuple: <Self::Tuple as ::alloy_sol_types::SolType>::RustType) -> Self {
                         tuple.into()
-                    }
-
-                    fn data_size(&self) -> usize {
-                        #size
                     }
                 }
             };
@@ -844,20 +832,6 @@ impl<'ast> ExpCtxt<'ast> {
             e.combine(Error::new(Span::call_site(), note));
             Err(e)
         }
-    }
-
-    fn params_data_size<I: IntoIterator<Item = T>, T: Borrow<VariableDeclaration>>(
-        &self,
-        list: I,
-        base: Option<TokenStream>,
-    ) -> TokenStream {
-        let base = base.unwrap_or_else(|| quote!(self));
-        let sizes = list.into_iter().enumerate().map(|(i, var)| {
-            let var = var.borrow();
-            let field = anon_name((i, var.name.as_ref()));
-            self.type_data_size(&var.ty, quote!(#base.#field))
-        });
-        quote!(0usize #( + #sizes)*)
     }
 }
 

@@ -55,6 +55,11 @@ pub trait SolStruct {
     /// Convert from the tuple type used for ABI encoding and decoding.
     fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self;
 
+    /// The size of the struct when encoded, in bytes
+    fn encoded_size(&self) -> usize {
+        <<Self as SolStruct>::Tuple as SolType>::encoded_size(self.to_rust())
+    }
+
     /// EIP-712 `encodeType`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     fn eip712_encode_type() -> Cow<'static, str> {
@@ -126,6 +131,12 @@ impl<T: SolStruct> SolType for T {
     #[inline]
     fn type_check(token: &Self::TokenType) -> crate::Result<()> {
         TupleFor::<T>::type_check(token)
+    }
+
+    #[inline]
+    fn encoded_size<B: Borrow<Self::RustType>>(rust: B) -> usize {
+        let tuple = rust.borrow().to_rust();
+        TupleFor::<T>::encoded_size(tuple)
     }
 
     #[inline]

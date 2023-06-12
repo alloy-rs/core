@@ -1,7 +1,7 @@
 use super::ExpCtxt;
 use ast::{Item, Parameters, SolArray, SolPath, Type};
 use proc_macro2::{Literal, TokenStream};
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{quote_spanned, ToTokens};
 use std::{fmt, num::NonZeroU16};
 
 /// Expands a single [`Type`] recursively.
@@ -126,62 +126,6 @@ impl ExpCtxt<'_> {
                     .map(|ty| self.type_base_data_size(ty))
                     .sum(),
                 Item::Udt(udt) => self.type_base_data_size(&udt.ty),
-                Item::Contract(_) | Item::Error(_) | Item::Event(_) | Item::Function(_) => {
-                    unreachable!()
-                }
-            },
-        }
-    }
-
-    /// Recursively calculates the ABI-encoded size of `ty` in bytes.
-    pub(super) fn type_data_size(&self, ty: &Type, field: TokenStream) -> TokenStream {
-        match ty {
-            // static types: 1 word
-            Type::Address(..)
-            | Type::Bool(_)
-            | Type::Int { .. }
-            | Type::Uint { .. }
-            | Type::FixedBytes(..) => quote!(32usize),
-
-            // dynamic types: 1 offset word, 1 length word, length rounded up to word size
-            Type::String(_) | Type::Bytes(..) => {
-                quote! { (64usize + ::alloy_sol_types::next_multiple_of_32(#field.len())) }
-            }
-            Type::Array(SolArray {
-                ty: inner,
-                size: None,
-                ..
-            }) => {
-                let base = self.type_base_data_size(ty);
-                let inner_size = self.type_data_size(inner, field.clone());
-                quote! { (#base + #field.len() * (#inner_size)) }
-            }
-
-            // fixed array: size * encoded size
-            Type::Array(SolArray {
-                ty: inner,
-                size: Some(size),
-                ..
-            }) => {
-                let base = self.type_base_data_size(ty);
-                let inner_size = self.type_data_size(inner, field);
-                let len: usize = size.base10_parse().unwrap();
-                quote! { (#base + #len * (#inner_size)) }
-            }
-
-            // tuple: sum of encoded sizes
-            Type::Tuple(tuple) => {
-                let fields = tuple.types.iter().enumerate().map(|(i, ty)| {
-                    let index = syn::Index::from(i);
-                    let field_name = quote!(#field.#index);
-                    self.type_data_size(ty, field_name)
-                });
-                quote! { (0usize #(+ #fields)*) }
-            }
-
-            Type::Custom(name) => match self.get_item(name) {
-                Item::Struct(strukt) => self.params_data_size(&strukt.fields, Some(field)),
-                Item::Udt(udt) => self.type_data_size(&udt.ty, field),
                 Item::Contract(_) | Item::Error(_) | Item::Event(_) | Item::Function(_) => {
                     unreachable!()
                 }
