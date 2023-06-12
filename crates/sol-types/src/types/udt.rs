@@ -55,14 +55,11 @@ macro_rules! define_udt {
             type RustType = <$underlying as $crate::SolType>::RustType;
             type TokenType = <$underlying as $crate::SolType>::TokenType;
 
+            const DYNAMIC: bool = false;
+
             #[inline]
             fn sol_type_name() -> $crate::no_std_prelude::Cow<'static, str> {
                 Self::NAME.into()
-            }
-
-            #[inline]
-            fn is_dynamic() -> bool {
-                false
             }
 
             #[inline]

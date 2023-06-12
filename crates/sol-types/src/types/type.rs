@@ -50,11 +50,11 @@ pub trait SolType {
     /// See implementers of [`TokenType`].
     type TokenType: TokenType;
 
+    /// True if the type is dynamically sized.
+    const DYNAMIC: bool = false;
+
     /// The name of the type in Solidity.
     fn sol_type_name() -> Cow<'static, str>;
-
-    /// True if the type is dynamic according to ABI rules.
-    fn is_dynamic() -> bool;
 
     /// Check a token to see if it can be detokenized with this type.
     fn type_check(token: &Self::TokenType) -> Result<()>;

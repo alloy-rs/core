@@ -24,11 +24,6 @@ impl SolType for Address {
     }
 
     #[inline]
-    fn is_dynamic() -> bool {
-        false
-    }
-
-    #[inline]
     fn detokenize(token: Self::TokenType) -> Self::RustType {
         RustAddress::new(token.0[12..].try_into().unwrap())
     }
@@ -65,10 +60,7 @@ impl SolType for Bytes {
     type RustType = Vec<u8>;
     type TokenType = PackedSeqToken;
 
-    #[inline]
-    fn is_dynamic() -> bool {
-        true
-    }
+    const DYNAMIC: bool = true;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -110,11 +102,6 @@ where
 {
     type RustType = <IntBitCount<BITS> as SupportedInt>::Int;
     type TokenType = WordToken;
-
-    #[inline]
-    fn is_dynamic() -> bool {
-        false
-    }
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -172,11 +159,6 @@ where
     type TokenType = WordToken;
 
     #[inline]
-    fn is_dynamic() -> bool {
-        false
-    }
-
-    #[inline]
     fn sol_type_name() -> Cow<'static, str> {
         IntBitCount::<BITS>::UINT_NAME.into()
     }
@@ -218,11 +200,6 @@ pub struct Bool;
 impl SolType for Bool {
     type RustType = bool;
     type TokenType = WordToken;
-
-    #[inline]
-    fn is_dynamic() -> bool {
-        false
-    }
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -269,10 +246,7 @@ where
     type RustType = Vec<T::RustType>;
     type TokenType = DynSeqToken<T::TokenType>;
 
-    #[inline]
-    fn is_dynamic() -> bool {
-        true
-    }
+    const DYNAMIC: bool = true;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -319,10 +293,7 @@ impl SolType for String {
     type RustType = RustString;
     type TokenType = PackedSeqToken;
 
-    #[inline]
-    fn is_dynamic() -> bool {
-        true
-    }
+    const DYNAMIC: bool = true;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -375,11 +346,6 @@ where
     type TokenType = WordToken;
 
     #[inline]
-    fn is_dynamic() -> bool {
-        false
-    }
-
-    #[inline]
     fn sol_type_name() -> Cow<'static, str> {
         <ByteCount<N>>::NAME.into()
     }
@@ -427,10 +393,7 @@ where
     type RustType = [T::RustType; N];
     type TokenType = FixedSeqToken<T::TokenType, N>;
 
-    #[inline]
-    fn is_dynamic() -> bool {
-        T::is_dynamic()
-    }
+    const DYNAMIC: bool = T::DYNAMIC;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -511,9 +474,9 @@ macro_rules! tuple_impls {
             type RustType = ($( $ty::RustType, )+);
             type TokenType = ($( $ty::TokenType, )+);
 
-            fn is_dynamic() -> bool {
-                $( <$ty as SolType>::is_dynamic() )||+
-            }
+            const DYNAMIC: bool = $(
+                <$ty as SolType>::DYNAMIC
+            )||+;
 
             fn sol_type_name() -> Cow<'static, str> {
                 format!(
@@ -574,11 +537,6 @@ tuple_impls! { A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, }
 impl SolType for () {
     type RustType = ();
     type TokenType = FixedSeqToken<(), 0>;
-
-    #[inline]
-    fn is_dynamic() -> bool {
-        false
-    }
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
