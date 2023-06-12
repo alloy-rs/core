@@ -252,8 +252,6 @@ mod tests {
             vec![Address::from([0x33u8; 20]), Address::from([0x44u8; 20])],
         ];
 
-        dbg!(MyTy::encoded_size(&data), MyTy::sol_type_name());
-
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
