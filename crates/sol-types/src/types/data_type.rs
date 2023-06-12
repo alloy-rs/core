@@ -60,11 +60,16 @@ impl SolType for Bytes {
     type RustType = Vec<u8>;
     type TokenType = PackedSeqToken;
 
-    const DYNAMIC: bool = true;
+    const ENCODED_SIZE: Option<usize> = None;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
         "bytes".into()
+    }
+
+    #[inline]
+    fn encoded_size<B: Borrow<Self::RustType>>(_data: B) -> usize {
+        32 + util::padded_len(_data.borrow())
     }
 
     #[inline]
@@ -246,11 +251,18 @@ where
     type RustType = Vec<T::RustType>;
     type TokenType = DynSeqToken<T::TokenType>;
 
-    const DYNAMIC: bool = true;
+    const ENCODED_SIZE: Option<usize> = None;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
         format!("{}[]", T::sol_type_name()).into()
+    }
+
+    #[inline]
+    fn encoded_size<B: Borrow<Self::RustType>>(rust: B) -> usize {
+        let data = rust.borrow();
+        32 + data.iter().map(T::encoded_size).sum::<usize>()
+            + (T::DYNAMIC as usize * 32 * data.len())
     }
 
     #[inline]
@@ -293,11 +305,16 @@ impl SolType for String {
     type RustType = RustString;
     type TokenType = PackedSeqToken;
 
-    const DYNAMIC: bool = true;
+    const ENCODED_SIZE: Option<usize> = None;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
         "string".into()
+    }
+
+    #[inline]
+    fn encoded_size<B: Borrow<Self::RustType>>(_data: B) -> usize {
+        32 + util::padded_len(_data.borrow().as_bytes())
     }
 
     #[inline]
@@ -393,7 +410,23 @@ where
     type RustType = [T::RustType; N];
     type TokenType = FixedSeqToken<T::TokenType, N>;
 
-    const DYNAMIC: bool = T::DYNAMIC;
+    const ENCODED_SIZE: Option<usize> = {
+        match T::ENCODED_SIZE {
+            Some(size) => Some(size * N),
+            None => None,
+        }
+    };
+
+    /// Calculate the encoded size of the data, counting both head and tail
+    /// words. For a single-word type this will always be 32.
+    #[inline]
+    fn encoded_size<B: Borrow<Self::RustType>>(rust: B) -> usize {
+        if let Some(size) = Self::ENCODED_SIZE {
+            return size
+        }
+
+        rust.borrow().iter().map(T::encoded_size).sum::<usize>() + (T::DYNAMIC as usize * N * 32)
+    }
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -453,9 +486,17 @@ macro_rules! tuple_impls {
             type RustType = ($( $ty::RustType, )+);
             type TokenType = ($( $ty::TokenType, )+);
 
-            const DYNAMIC: bool = $(
-                <$ty as SolType>::DYNAMIC
-            )||+;
+            const ENCODED_SIZE: Option<usize> = {
+                let mut acc = Some(0);
+                $(
+                    match (acc, <$ty as SolType>::ENCODED_SIZE) {
+                        (Some(i), Some(size)) => acc = Some(i + size),
+                        (Some(_), None) => acc = None,
+                        (None, _) => {}
+                    }
+                )+
+                acc
+            };
 
             fn sol_type_name() -> Cow<'static, str> {
                 format!(
@@ -466,6 +507,20 @@ macro_rules! tuple_impls {
                     ),
                     $(<$ty as SolType>::sol_type_name(),)+
                 ).into()
+            }
+
+            fn encoded_size<B_: Borrow<Self::RustType>>(rust: B_) -> usize {
+                if let Some(size) = Self::ENCODED_SIZE {
+                    return size
+                }
+
+                let ($(ref $ty,)+) = *rust.borrow();
+                0 $(
+                    + <$ty as SolType>::encoded_size($ty)
+                )+
+                $(
+                    + (32 * <$ty as SolType>::DYNAMIC as usize)
+                )+
             }
 
             fn type_check(token: &Self::TokenType) -> Result<()> {
@@ -512,6 +567,8 @@ macro_rules! tuple_impls {
 impl SolType for () {
     type RustType = ();
     type TokenType = FixedSeqToken<(), 0>;
+
+    const ENCODED_SIZE: Option<usize> = Some(0);
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {

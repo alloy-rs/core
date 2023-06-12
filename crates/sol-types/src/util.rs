@@ -11,7 +11,21 @@
 
 use crate::{Error, Result, Word};
 
+/// Calculates the padded length of a slice by rounding its length to the next
+/// word
+#[inline]
+pub(crate) fn words_for(data: &[u8]) -> usize {
+    (data.len() + 31) / 32
+}
+
+/// `padded_len` rounds a slice length up to the next multiple of 32
+#[inline]
+pub(crate) fn padded_len(data: &[u8]) -> usize {
+    round_up_nearest_multiple(data.len(), 32)
+}
+
 /// Converts a u32 to a right aligned array of 32 bytes.
+#[inline]
 pub(crate) fn pad_u32(value: u32) -> Word {
     let mut padded = Word::ZERO;
     padded[28..32].copy_from_slice(&value.to_be_bytes());
@@ -66,6 +80,14 @@ pub(crate) fn check_bool(slice: Word) -> bool {
 mod tests {
     use super::pad_u32;
     use hex_literal::hex;
+
+    #[test]
+    fn test_words_for() {
+        assert_eq!(super::words_for(&[]), 0);
+        assert_eq!(super::words_for(&[0; 31]), 1);
+        assert_eq!(super::words_for(&[0; 32]), 1);
+        assert_eq!(super::words_for(&[0; 33]), 2);
+    }
 
     #[test]
     fn test_pad_u32() {
