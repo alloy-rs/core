@@ -57,6 +57,11 @@ pub trait SolStruct {
 
     /// The size of the struct when encoded, in bytes
     fn encoded_size(&self) -> usize {
+        // This avoids unnecessary clones.
+        if let Some(size) = <Self::Tuple as SolType>::ENCODED_SIZE {
+            return size
+        }
+
         <<Self as SolStruct>::Tuple as SolType>::encoded_size(self.to_rust())
     }
 

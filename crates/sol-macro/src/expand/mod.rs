@@ -333,7 +333,6 @@ impl<'ast> ExpCtxt<'ast> {
         let topic_list = first_topic.into_iter().chain(topic_list);
 
         let (data_tuple, _) = expand_tuple_types(event.dynamic_params().map(|p| &p.ty));
-        let data_size: TokenStream = quote! { TODO };
 
         // skip first topic if not anonymous, which is the hash of the signature
         let mut topic_i = !anonymous as usize;
@@ -403,10 +402,6 @@ impl<'ast> ExpCtxt<'ast> {
                         Self {
                             #(#new_impl,)*
                         }
-                    }
-
-                    fn data_size(&self) -> usize {
-                        #data_size
                     }
 
                     fn encode_data_raw(&self, out: &mut Vec<u8>) {

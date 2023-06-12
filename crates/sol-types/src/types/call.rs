@@ -30,6 +30,11 @@ pub trait SolCall: Sized {
 
     /// The size of the encoded data in bytes, **without** its selector.
     fn encoded_size(&self) -> usize {
+        // This avoids unnecessary clones.
+        if let Some(size) = <Self::Tuple as SolType>::ENCODED_SIZE {
+            return size
+        }
+
         <<Self as SolCall>::Tuple as SolType>::encoded_size(self.to_rust())
     }
 
