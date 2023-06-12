@@ -1,5 +1,5 @@
 use crate::param::Param;
-use alloc::{string::String, vec::Vec};
+use alloc::{borrow::Cow, string::String, vec::Vec};
 use serde::{Deserialize, Serialize};
 
 /// A Solidity Event parameter.
@@ -11,13 +11,21 @@ pub struct SimpleEventParam {
     #[serde(rename = "type")]
     pub ty: String,
     /// Whether the parameter is indexed. Indexed parameters have their
-    ///value, or the hash of their value, stored in the log topics.
+    /// value, or the hash of their value, stored in the log topics.
     pub indexed: bool,
     /// The internal type of the parameter. This type represents the type that
     /// the author of the solidity contract specified. E.g. for a contract, this
     /// will be `contract MyContract` while the `type` field will be `address`.
     #[serde(rename = "internalType")]
     pub internal_type: String,
+}
+
+impl SimpleEventParam {
+    /// Type used to encode the preimage of the function or error selector, or
+    /// event topic
+    pub fn selector_type(&self) -> &str {
+        &self.ty
+    }
 }
 
 /// JSON representation of a complex event parameter.
@@ -41,6 +49,13 @@ pub struct ComplexEventParam {
     pub internal_type: String,
 }
 
+impl ComplexEventParam {
+    /// Type used to encode the preimage of the event selector.
+    pub fn selector_type(&self) -> String {
+        crate::utils::signature("", &self.components)
+    }
+}
+
 /// A Solidity Event parameter. Event parameters are distinct from function
 /// parameters in that they have an `indexed` field.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -50,4 +65,14 @@ pub enum EventParam {
     Complex(ComplexEventParam),
     /// [`SimpleEventParam`] variant
     Simple(SimpleEventParam),
+}
+
+impl EventParam {
+    /// Type used to encode the preimage of the event selector.
+    pub fn selector_type(&self) -> Cow<'_, str> {
+        match self {
+            Self::Complex(c) => c.selector_type().into(),
+            Self::Simple(s) => s.selector_type().into(),
+        }
+    }
 }

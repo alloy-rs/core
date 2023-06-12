@@ -90,13 +90,7 @@ impl ComplexParam {
     /// Type used to encode the preimage of the function or error selector, or
     /// event topic
     pub fn selector_type(&self) -> String {
-        let mut s = String::with_capacity(2 + self.components.len() * 32);
-        s.push('(');
-        for component in &self.components {
-            s.push_str(&component.selector_type());
-        }
-        s.push(')');
-        s
+        crate::utils::signature("", &self.components)
     }
 
     /// Returns a string representation of the parameter that can be used as a

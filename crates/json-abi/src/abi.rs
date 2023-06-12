@@ -6,7 +6,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-/// The JSON contract ABI, as specified in the [Solidity documentation][ref].
+/// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
 ///
 /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#json
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

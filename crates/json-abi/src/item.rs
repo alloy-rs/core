@@ -1,5 +1,6 @@
-use crate::{event_param::EventParam, param::Param, StateMutability};
+use crate::{event_param::EventParam, param::Param, utils::*, StateMutability};
 use alloc::{borrow::Cow, string::String, vec::Vec};
+use alloy_primitives::{keccak256, Selector, B256};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 // Serde order:
@@ -196,56 +197,46 @@ impl<'a, 'r> From<&'r AbiItem<'a>> for &'r private::AbiItem<'a> {
 }
 
 impl Error {
-    /// Generate the selector preimage for this error.
-    pub fn selector_preimage(&self) -> String {
-        preimage(&self.name, &self.inputs)
+    /// Computes this error's signature.
+    ///
+    /// This is the preimage input used to [compute the
+    /// selector](Self::selector).
+    pub fn signature(&self) -> String {
+        signature(&self.name, &self.inputs)
     }
 
-    /// Generate the selector for this error.
-    pub fn selector(&self) -> alloy_primitives::Selector {
-        selector(&self.selector_preimage())
+    /// Computes this error's selector: `keccak256(self.signature())[..4]`
+    pub fn selector(&self) -> Selector {
+        selector(&self.signature())
     }
 }
 
 impl Function {
-    /// Generate the selector preimage for this function.
-    pub fn selector_preimage(&self) -> String {
-        preimage(&self.name, &self.inputs)
+    /// Returns this function's signature.
+    ///
+    /// This is the preimage input used to [compute the
+    /// selector](Self::selector).
+    pub fn signature(&self) -> String {
+        signature(&self.name, &self.inputs)
     }
 
-    /// Generate the selector for this function.
-    pub fn selector(&self) -> alloy_primitives::Selector {
-        selector(&self.selector_preimage())
+    /// Computes this error's selector: `keccak256(self.signature())[..4]`
+    pub fn selector(&self) -> Selector {
+        selector(&self.signature())
     }
 }
 
-/// `format!("{name}({inputs.join(",")})")`
-fn preimage(name: &str, inputs: &[Param]) -> String {
-    let mut preimage = String::with_capacity(name.len() + 2 + inputs.len() * 32);
-    preimage.push_str(name);
-
-    preimage.push('(');
-    let mut first = true;
-    for input in inputs {
-        if !first {
-            preimage.push(',');
-        }
-        preimage.push_str(&input.selector_type());
-        first = false;
+impl Event {
+    /// Returns this event's signature.
+    ///
+    /// This is the preimage input used to [compute the
+    /// selector](Self::selector).
+    pub fn signature(&self) -> String {
+        event_signature(&self.name, &self.inputs)
     }
-    preimage.push(')');
 
-    preimage
-}
-
-/// `keccak256({preimage})[..4]`
-fn selector(preimage: &str) -> [u8; 4] {
-    // SAFETY: splitting an array
-    unsafe {
-        alloy_primitives::keccak256(preimage.as_bytes())
-            .0
-            .get_unchecked(..4)
-            .try_into()
-            .unwrap_unchecked()
+    /// Computes this event's selector: `keccak256(self.signature())`
+    pub fn selector(&self) -> B256 {
+        keccak256(self.signature().as_bytes())
     }
 }
