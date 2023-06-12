@@ -4,6 +4,13 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 // Serde order:
 // Public items -> public enum -> private enum -> private items
+//
+// Items are duplicated to be able to make use of the derived `serde` impl,
+// while enforcing that the public items emit their tag, as per the spec.
+//
+// They are all declared with `repr(C)` because the default repr (`Rust`) does
+// not have any layout guarantees, which we need to be able to transmute between
+// the private and public types.
 macro_rules! abi_items {
     ($(
         $(#[$attr:meta])*
@@ -15,6 +22,7 @@ macro_rules! abi_items {
         $(
             $(#[$attr])*
             #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+            #[repr(C)]
             $vis struct $name {$(
                 $(#[$fattr])*
                 $fvis $field: $type,
@@ -39,12 +47,14 @@ macro_rules! abi_items {
             }
         )*
 
+        #[doc(hidden)]
         mod private {
             use super::*;
 
             $(
                 #[derive(Clone, Serialize, Deserialize)]
                 #[serde(rename_all = "camelCase")]
+                #[repr(C)]
                 pub(super) struct $name {$(
                     $field: $type,
                 )*}
@@ -52,6 +62,7 @@ macro_rules! abi_items {
 
             #[derive(Serialize, Deserialize)]
             #[serde(tag = "type", rename_all = "lowercase")]
+            #[repr(C)]
             pub(super) enum AbiItem<'a> {$(
                 $name(Cow<'a, self::$name>),
             )*}
@@ -59,6 +70,7 @@ macro_rules! abi_items {
 
         /// A JSON ABI item.
         #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        #[repr(C)]
         pub enum AbiItem<'a> {$(
             #[doc = concat!("A JSON ABI [`", stringify!($name), "`].")]
             $name(Cow<'a, $name>),
@@ -148,8 +160,10 @@ impl AbiItem<'_> {
     }
 }
 
-// SAFETY: `AbiItem` and `private::AbiItem` have the exact same variants.
-// This is enforced by the macro.
+// SAFETY: `AbiItem` and `private::AbiItem` have the exact same variants, and
+// all the items use a non-Rust repr.
+// This is enforced in the macro.
+#[doc(hidden)]
 impl<'a> From<private::AbiItem<'a>> for AbiItem<'a> {
     #[inline(always)]
     fn from(item: private::AbiItem<'a>) -> AbiItem<'a> {
@@ -157,6 +171,7 @@ impl<'a> From<private::AbiItem<'a>> for AbiItem<'a> {
     }
 }
 
+#[doc(hidden)]
 impl<'a> From<AbiItem<'a>> for private::AbiItem<'a> {
     #[inline(always)]
     fn from(item: AbiItem<'a>) -> private::AbiItem<'a> {
@@ -164,6 +179,7 @@ impl<'a> From<AbiItem<'a>> for private::AbiItem<'a> {
     }
 }
 
+#[doc(hidden)]
 impl<'a, 'r> From<&'r private::AbiItem<'a>> for &'r AbiItem<'a> {
     #[inline(always)]
     fn from(item: &'r private::AbiItem<'a>) -> &'r AbiItem<'a> {
@@ -171,6 +187,7 @@ impl<'a, 'r> From<&'r private::AbiItem<'a>> for &'r AbiItem<'a> {
     }
 }
 
+#[doc(hidden)]
 impl<'a, 'r> From<&'r AbiItem<'a>> for &'r private::AbiItem<'a> {
     #[inline(always)]
     fn from(item: &'r AbiItem<'a>) -> &'r private::AbiItem<'a> {
@@ -202,7 +219,7 @@ impl Function {
     }
 }
 
-/// `format!("{name}({inputs})")`
+/// `format!("{name}({inputs.join(",")})")`
 fn preimage(name: &str, inputs: &[Param]) -> String {
     let mut preimage = String::with_capacity(name.len() + 2 + inputs.len() * 32);
     preimage.push_str(name);

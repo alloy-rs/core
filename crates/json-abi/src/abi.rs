@@ -73,12 +73,12 @@ impl Serialize for AbiJson {
         self.events
             .values()
             .flatten()
-            .try_for_each(|e| seq.serialize_element(&e))?;
+            .try_for_each(|e| seq.serialize_element(e))?;
 
         self.errors
             .values()
             .flatten()
-            .try_for_each(|e| seq.serialize_element(&e))?;
+            .try_for_each(|e| seq.serialize_element(e))?;
 
         seq.end()
     }
