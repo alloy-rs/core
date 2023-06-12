@@ -8,7 +8,7 @@ use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Error, Ident, Result, Token,
+    Ident, Result, Token,
 };
 
 /// A list of comma-separated [VariableDeclaration]s.
@@ -237,24 +237,13 @@ impl VariableDeclaration {
     }
 
     fn _parse(input: ParseStream<'_>, for_struct: bool) -> Result<Self> {
-        let ty = input.parse::<Type>()?;
-        let can_have_storage = ty.can_have_storage();
-        let this = Self {
-            ty,
+        Ok(Self {
+            ty: input.parse()?,
             storage: if input.peek(kw::memory)
                 || input.peek(kw::storage)
                 || input.peek(kw::calldata)
             {
-                let storage = input.parse::<Storage>()?;
-                if for_struct || !can_have_storage {
-                    let msg = if for_struct {
-                        "data locations are not allowed in struct definitions"
-                    } else {
-                        "data location can only be specified for array, struct or mapping types"
-                    };
-                    return Err(Error::new(storage.span(), msg))
-                }
-                Some(storage)
+                Some(input.parse()?)
             } else {
                 None
             },
@@ -264,7 +253,6 @@ impl VariableDeclaration {
             } else {
                 None
             },
-        };
-        Ok(this)
+        })
     }
 }

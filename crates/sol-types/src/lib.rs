@@ -189,7 +189,7 @@ pub use types::{
 
 mod util;
 #[doc(hidden)]
-pub use util::just_ok;
+pub use util::{just_ok, next_multiple_of_32};
 
 mod eip712;
 pub use eip712::Eip712Domain;

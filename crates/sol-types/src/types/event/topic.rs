@@ -93,7 +93,7 @@ macro_rules! bytes_impl {
     ($t:ty) => {
         #[inline]
         fn topic_preimage_length<B: Borrow<Self::RustType>>(rust: B) -> usize {
-            crate::util::next_multiple_of(rust.borrow().len(), 32)
+            crate::util::next_multiple_of_32(rust.borrow().len())
         }
 
         #[inline]

@@ -28,12 +28,16 @@ that are valid in `syn-solidity` but not in the official compiler include:
 - certain variable and function attributes in certain contexts, like `internal`
   functions or functions with implementations (`{ ... }`) in interfaces
 - parameter storage locations in item definitions, like `uint256[] memory` in
-  an error definition
+  a struct or error definition
+- the tuple type `(T, U, ..)` is allowed wherever a type is expected, and can
+  optionally be preceded by the `tuple` keyword.
+  This is the same as [`ethers.js`'s Human-Readable ABI][ethersjs-abi]
 
 This lenient behavior is intentionally designed to facilitate usage within
 procedural macros, and to reduce general code complexity in the parser and AST.
 
 [^1]: Older versions may still parse successfully, but this is not guaranteed.
+[ethersjs-abi]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
 
 ## Example
 

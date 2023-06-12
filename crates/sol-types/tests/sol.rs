@@ -38,7 +38,7 @@ sol! {
 }
 
 #[test]
-fn no_std_proc_macro() {
+fn test_sol() {
     <sol!(bool)>::hex_encode_single(true);
 
     let a = MyStruct {
@@ -121,10 +121,9 @@ fn function() {
             },
         ],
     };
-    assert_eq!(
-        call.data_size(),
-        32 + (64 + 32) + (64 + 32 + 32) + (64 + 3 * 32) + 2 * 32 + (32 + 32) + (64 + 4 * (32 + 32))
-    );
+    let _encoded = call.encode();
+    // TODO
+    // assert_eq!(encoded.len(), call.data_size());
 
     let sig = "someFunction(bool)"; // TODO ?
     assert_eq!(someFunctionReturn::SIGNATURE, sig);

@@ -5,7 +5,11 @@ sol! {
 }
 
 sol! {
-    event MissingParens2;
+    event MissingParens2 anonymous;
+}
+
+sol! {
+    event MissingParens3;
 }
 
 sol! {
@@ -43,3 +47,5 @@ sol! {
 }
 
 fn main() {}
+
+struct A {}

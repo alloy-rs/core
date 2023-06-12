@@ -199,6 +199,6 @@ impl EventParameter {
     ///
     /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#events
     pub const fn is_dynamic(&self) -> bool {
-        !self.is_indexed() || self.ty.is_dynamic()
+        !self.is_indexed() || self.ty.is_event_dynamic()
     }
 }
