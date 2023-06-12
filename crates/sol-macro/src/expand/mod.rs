@@ -298,7 +298,7 @@ impl<'ast> ExpCtxt<'ast> {
                 #[automatically_derived]
                 impl ::alloy_sol_types::SolError for #name {
                     type Tuple = UnderlyingSolTuple;
-                    type Token = <UnderlyingSolTuple as ::alloy_sol_types::SolType>::TokenType;
+                    type Token = <Self::Tuple as ::alloy_sol_types::SolType>::TokenType;
 
                     const SIGNATURE: &'static str = #signature;
                     const SELECTOR: [u8; 4] = #selector;
@@ -338,9 +338,8 @@ impl<'ast> ExpCtxt<'ast> {
             .map(|param| self.expand_event_topic_type(param));
         let topic_list = first_topic.into_iter().chain(topic_list);
 
-        let (data_tuple, _) = expand_tuple_types(self.event_dynamic_params(event).map(|p| &p.ty));
-        let data_size =
-            self.params_data_size(self.event_dynamic_params(event).map(|p| p.as_param()), None);
+        let (data_tuple, _) = expand_tuple_types(event.dynamic_params().map(|p| &p.ty));
+        let data_size = self.params_data_size(event.dynamic_params().map(|p| p.as_param()), None);
 
         // skip first topic if not anonymous, which is the hash of the signature
         let mut topic_i = !anonymous as usize;
@@ -348,7 +347,7 @@ impl<'ast> ExpCtxt<'ast> {
         let new_impl = event.parameters.iter().enumerate().map(|(i, p)| {
             let name = anon_name((i, p.name.as_ref()));
             let param;
-            if self.is_event_param_dynamic(p) {
+            if p.is_dynamic() {
                 let i = syn::Index::from(data_i);
                 param = quote!(data.#i);
                 data_i += 1;
@@ -360,8 +359,8 @@ impl<'ast> ExpCtxt<'ast> {
             quote!(#name: #param)
         });
 
-        let data_tuple_names = self
-            .event_dynamic_params(event)
+        let data_tuple_names = event
+            .dynamic_params()
             .map(|p| p.name.as_ref())
             .enumerate()
             .map(anon_name);
@@ -370,22 +369,9 @@ impl<'ast> ExpCtxt<'ast> {
             (!anonymous).then(|| quote!(::alloy_sol_types::token::WordToken(Self::SIGNATURE_HASH)));
         let encode_topics_impl = event.indexed_params().enumerate().map(|(i, p)| {
             let name = anon_name((i, p.name.as_ref()));
-            let ty = self.expand_event_topic_type(p);
-            // https://docs.soliditylang.org/en/latest/abi-spec.html#encoding-of-indexed-event-parameters
-            if self.is_event_param_dynamic(p) {
-                let hash = match &p.ty {
-                    Type::String(_) | Type::Bytes { .. } => {
-                        quote! { ::alloy_sol_types::keccak256(&self.#name[..]) }
-                    }
-                    _ => todo!(),
-                };
-                quote! {
-                    ::alloy_sol_types::token::WordToken(#hash)
-                }
-            } else {
-                quote! {
-                    <#ty as ::alloy_sol_types::SolType>::tokenize(&self.#name)
-                }
+            let ty = expand_type(&p.ty);
+            quote! {
+                <#ty as ::alloy_sol_types::EventTopic>::encode_topic(&self.#name)
             }
         });
         let encode_topics_impl = encode_first_topic
@@ -455,41 +441,9 @@ impl<'ast> ExpCtxt<'ast> {
         Ok(tokens)
     }
 
-    fn event_dynamic_params<'a>(
-        &'a self,
-        event: &'a ItemEvent,
-    ) -> impl Iterator<Item = &'a EventParameter> {
-        event
-            .parameters
-            .iter()
-            .filter(|param| self.is_event_param_dynamic(param))
-    }
-
-    /// Returns true if the event parameter has to be stored in the data
-    /// section.
-    ///
-    /// From [the Solidity reference][ref]:
-    ///
-    /// > all “complex” types or types of dynamic length, including all arrays,
-    /// > string, bytes and structs
-    ///
-    /// and all types that are not `indexed`.
-    ///
-    /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#events
-    fn is_event_param_dynamic<'a>(&'a self, param: &'a EventParameter) -> bool {
-        if !param.is_indexed() {
-            return true
-        }
-        let mut ty = &param.ty;
-        if let Type::Custom(name) = ty {
-            ty = self.custom_type(name);
-        }
-        ty.can_have_storage()
-    }
-
     fn expand_event_topic_type(&self, param: &EventParameter) -> TokenStream {
         debug_assert!(param.is_indexed());
-        if self.is_event_param_dynamic(param) {
+        if param.is_dynamic() {
             quote_spanned! {param.ty.span()=> ::alloy_sol_types::sol_data::FixedBytes<32> }
         } else {
             expand_type(&param.ty)
@@ -544,7 +498,7 @@ impl<'ast> ExpCtxt<'ast> {
                 #[automatically_derived]
                 impl ::alloy_sol_types::SolCall for #call_name {
                     type Tuple = UnderlyingSolTuple;
-                    type Token = <UnderlyingSolTuple as ::alloy_sol_types::SolType>::TokenType;
+                    type Token = <Self::Tuple as ::alloy_sol_types::SolType>::TokenType;
 
                     const SIGNATURE: &'static str = #signature;
                     const SELECTOR: [u8; 4] = #selector;
@@ -574,22 +528,21 @@ impl<'ast> ExpCtxt<'ast> {
             ..
         } = s;
 
-        let (f_ty, f_name): (Vec<_>, Vec<_>) = s
-            .fields
+        let field_types_s = fields.iter().map(|f| f.ty.to_string());
+        let field_names_s = fields.iter().map(|f| f.name.as_ref().unwrap().to_string());
+
+        let (field_types, field_names): (Vec<_>, Vec<_>) = fields
             .iter()
-            .map(|f| (f.ty.to_string(), f.name.as_ref().unwrap().to_string()))
+            .map(|f| (expand_type(&f.ty), f.name.as_ref().unwrap()))
             .unzip();
 
-        let props_tys: Vec<_> = fields.iter().map(|f| expand_type(&f.ty)).collect();
-        let props = fields.iter().map(|f| &f.name);
-
-        let encoded_type = fields.eip712_signature(name.to_string());
+        let encoded_type = fields.eip712_signature(name.as_string());
         let encode_type_impl = if fields.iter().any(|f| f.ty.is_custom()) {
             quote! {
                 {
                     let mut encoded = String::from(#encoded_type);
                     #(
-                        if let Some(s) = <#props_tys as ::alloy_sol_types::SolType>::eip712_encode_type() {
+                        if let Some(s) = <#field_types as ::alloy_sol_types::SolType>::eip712_encode_type() {
                             encoded.push_str(&s);
                         }
                     )*
@@ -609,7 +562,7 @@ impl<'ast> ExpCtxt<'ast> {
             }
             _ => quote! {
                 [#(
-                    <#props_tys as ::alloy_sol_types::SolType>::eip712_data_word(&self.#props).0,
+                    <#field_types as ::alloy_sol_types::SolType>::eip712_data_word(&self.#field_names).0,
                 )*].concat()
             },
         };
@@ -635,12 +588,12 @@ impl<'ast> ExpCtxt<'ast> {
                 #[automatically_derived]
                 impl ::alloy_sol_types::SolStruct for #name {
                     type Tuple = UnderlyingSolTuple;
-                    type Token = <UnderlyingSolTuple as ::alloy_sol_types::SolType>::TokenType;
+                    type Token = <Self::Tuple as ::alloy_sol_types::SolType>::TokenType;
 
                     const NAME: &'static str = #name_s;
 
                     const FIELDS: &'static [(&'static str, &'static str)] = &[
-                        #((#f_ty, #f_name)),*
+                        #((#field_types_s, #field_names_s)),*
                     ];
 
                     fn to_rust(&self) -> UnderlyingRustTuple {
@@ -657,6 +610,38 @@ impl<'ast> ExpCtxt<'ast> {
 
                     fn eip712_encode_data(&self) -> Vec<u8> {
                         #encode_data_impl
+                    }
+                }
+
+                #[automatically_derived]
+                impl ::alloy_sol_types::EventTopic for #name {
+                    #[inline]
+                    fn topic_preimage_length<B: Borrow<Self::RustType>>(rust: B) -> usize {
+                        let b = rust.borrow();
+                        0usize
+                        #(
+                            + <#field_types as ::alloy_sol_types::EventTopic>::topic_preimage_length(&b.#field_names)
+                        )*
+                    }
+
+                    #[inline]
+                    fn encode_topic_preimage<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
+                        let b = rust.borrow();
+                        out.reserve(<Self as ::alloy_sol_types::EventTopic>::topic_preimage_length(b));
+                        #(
+                            <#field_types as ::alloy_sol_types::EventTopic>::encode_topic_preimage(&b.#field_names, out);
+                        )*
+                    }
+
+                    #[inline]
+                    fn encode_topic<B: Borrow<Self::RustType>>(
+                        rust: B
+                    ) -> ::alloy_sol_types::token::WordToken {
+                        let mut out = Vec::new();
+                        <Self as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust, &mut out);
+                        ::alloy_sol_types::token::WordToken(
+                            ::alloy_sol_types::keccak256(out)
+                        )
                     }
                 }
             };

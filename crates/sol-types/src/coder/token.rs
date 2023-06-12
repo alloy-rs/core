@@ -584,8 +584,6 @@ macro_rules! tuple_impls {
     };
 }
 
-all_the_tuples!(tuple_impls);
-
 impl TokenType for () {
     #[inline]
     fn is_dynamic() -> bool {
@@ -625,6 +623,8 @@ impl TokenSeq for () {
         Ok(())
     }
 }
+
+all_the_tuples!(tuple_impls);
 
 #[cfg(test)]
 mod tests {

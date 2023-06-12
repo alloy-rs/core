@@ -33,7 +33,7 @@ pub(crate) fn check_zeroes(data: &[u8]) -> bool {
 
 /// See [`usize::next_multiple_of`]
 #[inline]
-pub(crate) const fn round_up_nearest_multiple(lhs: usize, rhs: usize) -> usize {
+pub(crate) const fn next_multiple_of(lhs: usize, rhs: usize) -> usize {
     match lhs % rhs {
         0 => lhs,
         r => lhs + (rhs - r),

@@ -66,6 +66,8 @@ pub trait SolEvent: Sized {
 
     /// Encode the topics of this event into the given buffer.
     ///
+    /// # Errors
+    ///
     /// This method should only fail if the buffer is too small.
     fn encode_topics_raw(&self, out: &mut [WordToken]) -> Result<()>;
 

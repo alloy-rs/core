@@ -111,6 +111,10 @@ impl ItemEvent {
         self.parameters.iter().filter(|p| p.is_indexed())
     }
 
+    pub fn dynamic_params(&self) -> impl Iterator<Item = &EventParameter> {
+        self.parameters.iter().filter(|p| p.is_dynamic())
+    }
+
     pub fn as_type(&self) -> Type {
         Type::Tuple(self.parameters.iter().map(|arg| arg.ty.clone()).collect())
     }
@@ -181,5 +185,20 @@ impl EventParameter {
     #[inline]
     pub const fn is_indexed(&self) -> bool {
         self.indexed.is_some()
+    }
+
+    /// Returns `true` if the event parameter has to be stored in the data
+    /// section.
+    ///
+    /// From [the Solidity reference][ref]:
+    ///
+    /// > all “complex” types or types of dynamic length, including all arrays,
+    /// > string, bytes and structs
+    ///
+    /// and all types that are not `indexed`.
+    ///
+    /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#events
+    pub const fn is_dynamic(&self) -> bool {
+        !self.is_indexed() || self.ty.is_dynamic()
     }
 }

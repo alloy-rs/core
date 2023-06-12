@@ -7,7 +7,19 @@ sol! {
     #[derive(Default)]
     event MyEvent(bytes32 indexed a, uint256 b, string indexed c, bytes d);
 
-    event MyAnonEvent(bool) anonymous;
+    event LogNote(
+        bytes4   indexed  sig,
+        address  indexed  guy,
+        bytes32  indexed  foo,
+        bytes32  indexed  bar,
+        uint              wad,
+        bytes             fax
+    ) anonymous;
+
+    struct Data {
+        bytes data;
+    }
+    event MyEvent2(Data indexed data, );
 }
 
 #[test]
@@ -24,14 +36,14 @@ fn event() {
             WordToken(keccak256(""))
         ]
     );
-    // dynamic data is `abi_encode(b, c, d)`
+    // dynamic data is `abi.encode(b, c, d)`
     assert_eq!(
         event.data_size(),
         32 + (64 + (event.c.len() / 31) * 32) + (64 + (event.d.len() / 31) * 32)
     );
 
-    assert_event_signature::<MyAnonEvent>("MyAnonEvent(bool)");
-    assert!(MyAnonEvent::ANONYMOUS);
+    assert_event_signature::<LogNote>("LogNote(bytes4,address,bytes32,bytes32,uint,bytes)");
+    assert!(LogNote::ANONYMOUS);
 }
 
 fn assert_event_signature<T: SolEvent>(expected: &str) {

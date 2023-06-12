@@ -421,6 +421,15 @@ impl Type {
         )
     }
 
+    /// Returns whether this type is ABI-encoded as a single EVM word (32
+    /// bytes).
+    pub const fn is_one_word(&self) -> bool {
+        matches!(
+            self,
+            Self::Address(..) | Self::Bool(_) | Self::Int { .. } | Self::Uint { .. }
+        )
+    }
+
     pub const fn is_array(&self) -> bool {
         matches!(self, Self::Array(_))
     }

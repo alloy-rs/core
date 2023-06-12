@@ -546,8 +546,6 @@ macro_rules! tuple_impls {
     };
 }
 
-all_the_tuples!(tuple_impls);
-
 impl SolType for () {
     type RustType = ();
     type TokenType = FixedSeqToken<(), 0>;
@@ -583,6 +581,8 @@ impl SolType for () {
     #[inline]
     fn encode_packed_to<B: Borrow<Self::RustType>>(_rust: B, _out: &mut Vec<u8>) {}
 }
+
+all_the_tuples!(tuple_impls);
 
 mod sealed {
     pub trait Sealed {}
