@@ -846,7 +846,7 @@ impl<'ast> ExpCtxt<'ast> {
         }
     }
 
-    fn params_data_size<'a, I: IntoIterator<Item = T>, T: Borrow<VariableDeclaration>>(
+    fn params_data_size<I: IntoIterator<Item = T>, T: Borrow<VariableDeclaration>>(
         &self,
         list: I,
         base: Option<TokenStream>,
