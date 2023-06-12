@@ -19,7 +19,7 @@ body:
               - primitives
               - syn-solidity
               - sol-type
-              - `sol!` macro
+              - sol! macro
               - dyn-abi
               - json-abi
               - Other (please provide more details)
