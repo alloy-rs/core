@@ -49,6 +49,7 @@ pub trait SolStruct {
     /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
     const FIELDS: &'static [(&'static str, &'static str)];
 
+    // TODO: avoid clones here
     /// Convert to the tuple type used for ABI encoding and decoding.
     fn to_rust(&self) -> <Self::Tuple as SolType>::RustType;
 

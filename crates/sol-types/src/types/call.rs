@@ -22,6 +22,7 @@ pub trait SolCall: Sized {
     /// The function selector: `keccak256(SIGNATURE)[0..4]`
     const SELECTOR: [u8; 4];
 
+    // TODO: avoid clones here
     /// Converts to the tuple type used for ABI encoding and decoding.
     fn to_rust(&self) -> <Self::Tuple as SolType>::RustType;
 
