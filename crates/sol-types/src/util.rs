@@ -21,14 +21,16 @@ pub(crate) const fn words_for(data: &[u8]) -> usize {
 /// `padded_len` rounds a slice length up to the next multiple of 32
 #[inline]
 pub(crate) const fn padded_len(data: &[u8]) -> usize {
-    round_up_nearest_multiple(data.len(), 32)
+    next_multiple_of_32(data.len())
 }
 
-/// `round_up_nearest_multiple` rounds a number up to the next multiple of
-/// `rhs`. This implementation panics when the sum of `lhs` and `rhs` is >
-/// `usize::MAX`.
-pub(crate) const fn round_up_nearest_multiple(lhs: usize, rhs: usize) -> usize {
-    (lhs + (rhs - 1)) / rhs
+/// See [`usize::next_multiple_of`].
+#[inline]
+pub const fn next_multiple_of_32(n: usize) -> usize {
+    match n % 32 {
+        0 => n,
+        r => n + (32 - r),
+    }
 }
 
 /// Converts a u32 to a right aligned array of 32 bytes.
@@ -50,15 +52,6 @@ pub fn just_ok<T>(_: T) -> crate::Result<()> {
 #[inline]
 pub(crate) fn check_zeroes(data: &[u8]) -> bool {
     data.iter().all(|b| *b == 0)
-}
-
-/// See [`usize::next_multiple_of`].
-#[inline]
-pub const fn next_multiple_of_32(n: usize) -> usize {
-    match n % 32 {
-        0 => n,
-        r => n + (32 - r),
-    }
 }
 
 #[inline]
