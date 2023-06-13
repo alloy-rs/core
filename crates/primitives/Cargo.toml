@@ -52,7 +52,7 @@ serde_json.workspace = true
 default = ["std", "rlp", "serde"]
 std = ["bytes/std", "hex/std", "alloy-rlp?/std", "proptest?/std", "serde/std"]
 getrandom = ["dep:getrandom"]
-rlp = ["dep:alloy-rlp", "ruint/fastrlp"]
+rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
 arbitrary = [
     "std",
