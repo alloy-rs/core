@@ -3,7 +3,7 @@
 //! Adapted from <https://github.com/paritytech/parity-common/blob/2fb72eea96b6de4a085144ce239feb49da0cd39e/ethbloom/src/lib.rs>
 
 use crate::{keccak256, wrap_fixed_bytes, FixedBytes};
-use core::borrow::{Borrow, BorrowMut};
+use core::borrow::Borrow;
 
 /// Number of bits to set per input in Ethereum bloom filter.
 pub const BLOOM_BITS_PER_ITEM: usize = 3;
@@ -54,7 +54,10 @@ impl From<BloomInput<'_>> for Bloom {
     }
 }
 
-wrap_fixed_bytes!(Bloom<256>);
+wrap_fixed_bytes!(
+    /// Ethereum 256 byte bloom filter.
+    pub struct Bloom<256>;
+);
 
 impl Bloom {
     /// Returns a reference to the underlying data.
@@ -120,30 +123,6 @@ impl Bloom {
             let bit = (h[i + 1] as usize + ((h[i] as usize) << 8)) & 0x7FF;
             self.0[BLOOM_SIZE_BYTES - 1 - bit / 8] |= 1 << (bit % 8);
         }
-    }
-}
-
-impl Borrow<[u8; 256]> for Bloom {
-    fn borrow(&self) -> &[u8; 256] {
-        self.data()
-    }
-}
-
-impl Borrow<[u8]> for Bloom {
-    fn borrow(&self) -> &[u8] {
-        self.data()
-    }
-}
-
-impl BorrowMut<[u8; 256]> for Bloom {
-    fn borrow_mut(&mut self) -> &mut [u8; 256] {
-        self.data_mut()
-    }
-}
-
-impl BorrowMut<[u8]> for Bloom {
-    fn borrow_mut(&mut self) -> &mut [u8] {
-        self.data_mut()
     }
 }
 
