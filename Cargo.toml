@@ -26,8 +26,8 @@ alloy-sol-macro = { version = "0.1.0", path = "crates/sol-macro", default-featur
 alloy-sol-types = { version = "0.1.0", path = "crates/sol-types", default-features = false }
 syn-solidity = { version = "0.1.0", path = "crates/syn-solidity", default-features = false }
 
-ruint = { version = "1.8.0", git = "https://github.com/recmo/uint", default-features = false }
-ruint-macro = { version = "1.0.2", git = "https://github.com/recmo/uint", default-features = false }
+ruint = { version = "1.8.0", package = "ruint2", default-features = false }
+ruint-macro = { version = "1.0.2", package = "ruint2-macro", default-features = false }
 
 # serde
 serde = { version = "1.0", default-features = false }
