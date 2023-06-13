@@ -192,7 +192,6 @@ impl EventParameter {
 
     /// Returns `true` if the event parameter is stored in the event data
     /// section.
-
     pub const fn is_non_indexed(&self) -> bool {
         self.indexed.is_none()
     }
