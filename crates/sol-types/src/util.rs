@@ -45,7 +45,7 @@ pub(crate) fn pad_u32(value: u32) -> Word {
 #[doc(hidden)]
 #[allow(clippy::missing_const_for_fn)] // clippy issue
 #[inline]
-pub fn just_ok<T>(_: T) -> crate::Result<()> {
+pub const fn just_ok<T>(_: &T) -> crate::Result<()> {
     Ok(())
 }
 
