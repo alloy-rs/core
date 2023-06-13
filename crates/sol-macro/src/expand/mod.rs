@@ -377,7 +377,7 @@ impl<'ast> ExpCtxt<'ast> {
             let name = anon_name((i, p.name.as_ref()));
             let ty = expand_type(&p.ty);
 
-            if p.is_dynamic() && p.is_indexed() {
+            if p.indexed_as_hash() {
                 quote! {
                     <::alloy_sol_types::sol_data::FixedBytes<32> as ::alloy_sol_types::EventTopic>::encode_topic(&self.#name)
                 }
@@ -457,7 +457,7 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn expand_event_topic_type(&self, param: &EventParameter) -> TokenStream {
         debug_assert!(param.is_indexed());
-        if param.is_dynamic() {
+        if param.is_abi_dynamic() {
             quote_spanned! {param.ty.span()=> ::alloy_sol_types::sol_data::FixedBytes<32> }
         } else {
             expand_type(&param.ty)
@@ -472,15 +472,14 @@ impl<'ast> ExpCtxt<'ast> {
     ) -> TokenStream {
         let name = anon_name((i, name));
 
-        match (param.is_indexed(), param.is_dynamic()) {
-            (true, true) => quote! {
+        if param.indexed_as_hash() {
+            quote! {
                 #name: <::alloy_sol_types::sol_data::FixedBytes<32> as ::alloy_sol_types::SolType>::RustType
-            },
-            _ => {
-                let ty = expand_type(&param.ty);
-                quote! {
-                    #name: <#ty as ::alloy_sol_types::SolType>::RustType
-                }
+            }
+        } else {
+            let ty = expand_type(&param.ty);
+            quote! {
+                #name: <#ty as ::alloy_sol_types::SolType>::RustType
             }
         }
     }
