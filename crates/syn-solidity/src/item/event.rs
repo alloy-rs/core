@@ -204,7 +204,7 @@ impl EventParameter {
 
     /// Returns `true` if the event parameter is indexed and dynamically sized.
     /// These types are hashed, and then stored in the topics as spcified in
-    /// [the solidity spec][ref].
+    /// [the Solidity spec][ref].
     ///
     /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#events
     pub fn indexed_as_hash(&self) -> bool {
