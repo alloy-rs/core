@@ -30,7 +30,7 @@ fn event() {
     let event = MyEvent {
         a: [0x11; 32],
         b: U256::from(1u64),
-        c: "Hello World".to_string(),
+        c: keccak256("Hello World".to_string()).into(),
         d: Vec::new(),
     };
     // topics are `(SELECTOR, a, keccak256(c))`

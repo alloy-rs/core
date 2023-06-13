@@ -332,7 +332,7 @@ impl<'ast> ExpCtxt<'ast> {
             .map(|param| self.expand_event_topic_type(param));
         let topic_list = first_topic.into_iter().chain(topic_list);
 
-        let (data_tuple, _) = expand_tuple_types(event.dynamic_params().map(|p| &p.ty));
+        let (data_tuple, _) = expand_tuple_types(event.non_indexed_params().map(|p| &p.ty));
 
         // skip first topic if not anonymous, which is the hash of the signature
         let mut topic_i = !anonymous as usize;
@@ -340,40 +340,66 @@ impl<'ast> ExpCtxt<'ast> {
         let new_impl = event.parameters.iter().enumerate().map(|(i, p)| {
             let name = anon_name((i, p.name.as_ref()));
             let param;
-            if p.is_dynamic() {
-                let i = syn::Index::from(data_i);
-                param = quote!(data.#i);
-                data_i += 1;
-            } else {
+            if p.is_indexed() {
                 let i = syn::Index::from(topic_i);
                 param = quote!(topics.#i);
                 topic_i += 1;
+            } else {
+                let i = syn::Index::from(data_i);
+                param = quote!(data.#i);
+                data_i += 1;
             }
             quote!(#name: #param)
         });
 
         let data_tuple_names = event
-            .dynamic_params()
+            .non_indexed_params()
             .map(|p| p.name.as_ref())
             .enumerate()
             .map(anon_name);
 
+        let topic_tuple_names = event
+            .indexed_params()
+            .map(|p| p.name.as_ref())
+            .enumerate()
+            .map(anon_name);
+
+        let topics_impl = if anonymous {
+            quote! {(#(self.#topic_tuple_names.clone(),)*)}
+        } else {
+            quote! {(Self::SIGNATURE_HASH.into(), #(self.#topic_tuple_names.clone(),)*)}
+        };
+
         let encode_first_topic =
             (!anonymous).then(|| quote!(::alloy_sol_types::token::WordToken(Self::SIGNATURE_HASH)));
+
         let encode_topics_impl = event.indexed_params().enumerate().map(|(i, p)| {
             let name = anon_name((i, p.name.as_ref()));
             let ty = expand_type(&p.ty);
-            quote! {
-                <#ty as ::alloy_sol_types::EventTopic>::encode_topic(&self.#name)
+
+            if p.is_dynamic() && p.is_indexed() {
+                quote! {
+                    <::alloy_sol_types::sol_data::FixedBytes<32> as ::alloy_sol_types::EventTopic>::encode_topic(&self.#name)
+                }
+            } else {
+                quote! {
+                    <#ty as ::alloy_sol_types::EventTopic>::encode_topic(&self.#name)
+                }
             }
         });
+
+        let fields = event
+            .parameters
+            .iter()
+            .enumerate()
+            .map(|(i, p)| self.expand_event_topic_field(i, p, p.name.as_ref()));
+
         let encode_topics_impl = encode_first_topic
             .into_iter()
             .chain(encode_topics_impl)
             .enumerate()
             .map(|(i, assign)| quote!(out[#i] = #assign;));
 
-        let fields = expand_fields(&parameters);
         let tokens = quote! {
             #(#attrs)*
             #[allow(non_camel_case_types, non_snake_case, clippy::style)]
@@ -404,14 +430,13 @@ impl<'ast> ExpCtxt<'ast> {
                         }
                     }
 
-                    fn encode_data_raw(&self, out: &mut Vec<u8>) {
-                        out.reserve(self.data_size());
-                        out.extend(
-                            <Self::DataTuple as ::alloy_sol_types::SolType>::encode(
-                                // TODO: Avoid cloning
-                                (#(self.#data_tuple_names.clone(),)*)
-                            )
-                        );
+                    fn body(&self) -> <Self::DataTuple as ::alloy_sol_types::SolType>::RustType {
+                        // TODO: Avoid cloning
+                        (#(self.#data_tuple_names.clone(),)*)
+                    }
+
+                    fn topics(&self) -> <Self::TopicList as ::alloy_sol_types::SolType>::RustType {
+                        #topics_impl
                     }
 
                     fn encode_topics_raw(
@@ -436,6 +461,27 @@ impl<'ast> ExpCtxt<'ast> {
             quote_spanned! {param.ty.span()=> ::alloy_sol_types::sol_data::FixedBytes<32> }
         } else {
             expand_type(&param.ty)
+        }
+    }
+
+    fn expand_event_topic_field(
+        &self,
+        i: usize,
+        param: &EventParameter,
+        name: Option<&SolIdent>,
+    ) -> TokenStream {
+        let name = anon_name((i, name));
+
+        match (param.is_indexed(), param.is_dynamic()) {
+            (true, true) => quote! {
+                #name: <::alloy_sol_types::sol_data::FixedBytes<32> as ::alloy_sol_types::SolType>::RustType
+            },
+            _ => {
+                let ty = expand_type(&param.ty);
+                quote! {
+                    #name: <#ty as ::alloy_sol_types::SolType>::RustType
+                }
+            }
         }
     }
 

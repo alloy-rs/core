@@ -121,7 +121,7 @@ fn function() {
             },
         ],
     };
-    let _encoded = call.encode();
+    let encoded = call.encode();
     assert_eq!(encoded.len(), call.encoded_size());
 
     assert_eq!(
