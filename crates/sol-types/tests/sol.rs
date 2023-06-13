@@ -122,7 +122,10 @@ fn function() {
         ],
     };
     let encoded = call.encode();
-    assert_eq!(encoded.len(), call.encoded_size());
+    assert_eq!(
+        encoded.len(),
+        someFunctionCall::SELECTOR.len() + call.encoded_size()
+    );
 
     assert_eq!(
         call.encoded_size(),
