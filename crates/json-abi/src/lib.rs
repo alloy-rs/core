@@ -15,7 +15,7 @@
 //! implement a JSON serialization scheme in rust. So while the internals are
 //! nearly-identical, the API is our own.
 //!
-//! [specification]: https://docs.soliditylang.org/en/v0.8.20/abi-spec.html#json
+//! [specification]: https://docs.soliditylang.org/en/latest/abi-spec.html#json
 //! [ethabi]: https://github.com/rust-ethereum/ethabi
 
 #![warn(
@@ -47,6 +47,8 @@ pub use item::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
 
 mod param;
 pub use param::{ComplexParam, Param, SimpleParam};
+
+pub(crate) mod utils;
 
 /// A JSON ABI function's state mutability.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
