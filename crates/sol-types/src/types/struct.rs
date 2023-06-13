@@ -131,6 +131,7 @@ pub trait SolStruct {
 impl<T: SolStruct> SolType for T {
     type RustType = T;
     type TokenType = TupleTokenTypeFor<T>;
+    type Encodable<'a> = T;
 
     const DYNAMIC: bool = TupleFor::<T>::DYNAMIC;
 
@@ -159,6 +160,11 @@ impl<T: SolStruct> SolType for T {
     #[inline]
     fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
         let tuple = rust.borrow().to_rust();
+        TupleFor::<T>::tokenize(tuple)
+    }
+
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+        let tuple = encodable.to_rust();
         TupleFor::<T>::tokenize(tuple)
     }
 

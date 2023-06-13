@@ -50,6 +50,10 @@ pub trait SolType {
     /// See implementers of [`TokenType`].
     type TokenType: TokenType;
 
+    /// Concrete rust types which can be encoded by this type.
+    // TODO: when default associated types are avilable, set the default
+    type Encodable<'a>; // = &'a Self::RustType;
+
     /// The encoded size of the type, if known at compile time
     const ENCODED_SIZE: Option<usize> = Some(32);
 
@@ -79,6 +83,9 @@ pub trait SolType {
 
     /// Tokenize.
     fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType;
+
+    /// Tokenize
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType;
 
     /// The encoded struct type (as EIP-712), if any. None for non-structs.
     #[inline]

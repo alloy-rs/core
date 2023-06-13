@@ -18,6 +18,8 @@ impl SolType for Address {
     type RustType = RustAddress;
     type TokenType = WordToken;
 
+    type Encodable<'a> = RustAddress;
+
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
         "address".into()
@@ -31,6 +33,10 @@ impl SolType for Address {
     #[inline]
     fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
         WordToken::from(*rust.borrow())
+    }
+
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+        WordToken::from(*encodable)
     }
 
     #[inline]
@@ -59,6 +65,7 @@ pub struct Bytes;
 impl SolType for Bytes {
     type RustType = Vec<u8>;
     type TokenType = PackedSeqToken;
+    type Encodable<'a> = &'a [u8];
 
     const ENCODED_SIZE: Option<usize> = None;
 
@@ -87,6 +94,10 @@ impl SolType for Bytes {
         rust.borrow().to_owned().into()
     }
 
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+        (*encodable).into()
+    }
+
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         keccak256(Self::encode_packed(rust.borrow()))
@@ -107,6 +118,7 @@ where
 {
     type RustType = <IntBitCount<BITS> as SupportedInt>::Int;
     type TokenType = WordToken;
+    type Encodable<'a> = Self::RustType;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -142,6 +154,10 @@ where
         IntBitCount::<BITS>::tokenize_int(*rust.borrow())
     }
 
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+        IntBitCount::<BITS>::tokenize_int(*encodable)
+    }
+
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         Self::tokenize(rust).0
@@ -162,6 +178,7 @@ where
 {
     type RustType = <IntBitCount<BITS> as SupportedInt>::Uint;
     type TokenType = WordToken;
+    type Encodable<'a> = Self::RustType;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -188,6 +205,10 @@ where
         IntBitCount::<BITS>::tokenize_uint(*rust.borrow())
     }
 
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+        IntBitCount::<BITS>::tokenize_uint(*encodable)
+    }
+
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         Self::tokenize(rust).0
@@ -205,6 +226,7 @@ pub struct Bool;
 impl SolType for Bool {
     type RustType = bool;
     type TokenType = WordToken;
+    type Encodable<'a> = Self::RustType;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -230,6 +252,10 @@ impl SolType for Bool {
         Word::with_last_byte(*rust.borrow() as u8).into()
     }
 
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+        Word::with_last_byte(*encodable as u8).into()
+    }
+
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         Self::tokenize(rust).0
@@ -247,9 +273,11 @@ pub struct Array<T: SolType>(PhantomData<T>);
 impl<T> SolType for Array<T>
 where
     T: SolType,
+    for<'a> <T as SolType>::Encodable<'a>: 'a,
 {
     type RustType = Vec<T::RustType>;
     type TokenType = DynSeqToken<T::TokenType>;
+    type Encodable<'a> = &'a [T::Encodable<'a>];
 
     const ENCODED_SIZE: Option<usize> = None;
 
@@ -281,6 +309,11 @@ where
         DynSeqToken(v)
     }
 
+    /// Tokenize
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+        encodable.into_iter().map(T::tokenize_2).collect()
+    }
+
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         let mut encoded = Vec::new();
@@ -304,6 +337,7 @@ pub struct String;
 impl SolType for String {
     type RustType = RustString;
     type TokenType = PackedSeqToken;
+    type Encodable<'a> = &'a str;
 
     const ENCODED_SIZE: Option<usize> = None;
 
@@ -340,6 +374,11 @@ impl SolType for String {
         rust.borrow().as_bytes().to_vec().into()
     }
 
+    /// Tokenize
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+        encodable.as_bytes().to_vec().into()
+    }
+
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         keccak256(Self::encode_packed(rust.borrow()))
@@ -361,6 +400,7 @@ where
 {
     type RustType = [u8; N];
     type TokenType = WordToken;
+    type Encodable<'a> = [u8; N];
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -388,6 +428,13 @@ where
         word.into()
     }
 
+    /// Tokenize
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+        let mut word = Word::ZERO;
+        word[..N].copy_from_slice(encodable);
+        word.into()
+    }
+
     #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         Self::tokenize(rust).0
@@ -406,9 +453,11 @@ pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 impl<T, const N: usize> SolType for FixedArray<T, N>
 where
     T: SolType,
+    for<'a> <T as SolType>::Encodable<'a>: 'a,
 {
     type RustType = [T::RustType; N];
     type TokenType = FixedSeqToken<T::TokenType, N>;
+    type Encodable<'a> = [T::Encodable<'a>; N];
 
     const ENCODED_SIZE: Option<usize> = {
         match T::ENCODED_SIZE {
@@ -453,6 +502,11 @@ where
     }
 
     #[inline]
+    fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+        FixedSeqToken::<_, N>(core::array::from_fn(|i| T::tokenize_2(&encodable[i])))
+    }
+
+    #[inline]
     fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
         let rust = rust.borrow();
         let encoded = rust
@@ -482,9 +536,15 @@ macro_rules! tuple_impls {
 
     ($($ty:ident),+) => {
         #[allow(non_snake_case)]
-        impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
+        impl<$($ty: SolType,)+> SolType for ($($ty,)+)
+        where
+            $(
+                for<'a> <$ty as SolType>::Encodable<'a>: 'a,
+            )+
+        {
             type RustType = ($( $ty::RustType, )+);
             type TokenType = ($( $ty::TokenType, )+);
+            type Encodable<'a> = ($( &'a $ty::Encodable<'a>, )+);
 
             const ENCODED_SIZE: Option<usize> = {
                 let mut acc = Some(0);
@@ -545,6 +605,13 @@ macro_rules! tuple_impls {
                 )+)
             }
 
+                fn tokenize_2<'a>(encodable: &Self::Encodable<'a>) -> Self::TokenType {
+                let ($($ty,)+) = encodable;
+                ($(
+                    <$ty as SolType>::tokenize_2($ty),
+                )+)
+            }
+
             fn eip712_data_word<B_: Borrow<Self::RustType>>(rust: B_) -> Word {
                 let ($($ty,)+) = rust.borrow();
                 let encoding: Vec<u8> = [$(
@@ -567,6 +634,7 @@ macro_rules! tuple_impls {
 impl SolType for () {
     type RustType = ();
     type TokenType = FixedSeqToken<(), 0>;
+    type Encodable<'a> = ();
 
     const ENCODED_SIZE: Option<usize> = Some(0);
 
@@ -585,6 +653,11 @@ impl SolType for () {
 
     #[inline]
     fn tokenize<B: Borrow<Self::RustType>>(_rust: B) -> Self::TokenType {
+        FixedSeqToken([])
+    }
+
+    /// Tokenize
+    fn tokenize_2<'a>(_encodable: &Self::Encodable<'a>) -> Self::TokenType {
         FixedSeqToken([])
     }
 

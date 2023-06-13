@@ -142,18 +142,30 @@ macro_rules! array_impl {
     };
 }
 
-impl<T: EventTopic> EventTopic for Array<T> {
+impl<T: EventTopic> EventTopic for Array<T>
+where
+    for<'a> <T as SolType>::Encodable<'a>: 'a,
+{
     array_impl!(T);
 }
 
-impl<T: EventTopic, const N: usize> EventTopic for FixedArray<T, N> {
+impl<T: EventTopic, const N: usize> EventTopic for FixedArray<T, N>
+where
+    for<'a> <T as SolType>::Encodable<'a>: 'a,
+{
     array_impl!(T);
 }
 
 macro_rules! tuple_impls {
     ($($t:ident),+) => {
         #[allow(non_snake_case)]
-        impl<$($t: EventTopic,)+> EventTopic for ($($t,)+) {
+        impl<$($t: EventTopic,)+> EventTopic for ($($t,)+)
+        where
+        $(
+            for<'a> <$t as SolType>::Encodable<'a>: 'a,
+        )+
+
+        {
             #[inline]
             fn topic_preimage_length<B: Borrow<Self::RustType>>(rust: B) -> usize {
                 let ($($t,)+) = rust.borrow();

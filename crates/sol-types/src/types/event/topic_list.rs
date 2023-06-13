@@ -32,7 +32,12 @@ mod sealed {
 macro_rules! impl_topic_list_tuples {
     ($($c:literal => $($t:ident),*;)+) => {$(
         impl<$($t: SolType<TokenType = WordToken>,)*> sealed::Sealed for ($($t,)*) {}
-        impl<$($t: SolType<TokenType = WordToken>,)*> TopicList for ($($t,)*) {
+        impl<$($t: SolType<TokenType = WordToken>,)*> TopicList for ($($t,)*)
+        where
+        $(
+            for<'a> <$t as SolType>::Encodable<'a>: 'a,
+        )+
+        {
             const COUNT: usize = $c;
 
             fn detokenize<I, D>(topics: I) -> Result<Self::RustType>

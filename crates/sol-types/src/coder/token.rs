@@ -317,6 +317,13 @@ impl<T, const N: usize> FixedSeqToken<T, N> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct DynSeqToken<T>(pub Vec<T>);
 
+impl<T> FromIterator<T> for DynSeqToken<T> {
+    #[inline]
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
+
 impl<T> From<Vec<T>> for DynSeqToken<T> {
     #[inline]
     fn from(value: Vec<T>) -> Self {
@@ -399,6 +406,12 @@ impl<T> DynSeqToken<T> {
 /// A Packed Sequence - `bytes` or `string`
 #[derive(Clone, PartialEq)]
 pub struct PackedSeqToken(pub Vec<u8>);
+
+impl From<&[u8]> for PackedSeqToken {
+    fn from(value: &[u8]) -> Self {
+        Self(value.to_vec())
+    }
+}
 
 impl From<Vec<u8>> for PackedSeqToken {
     fn from(value: Vec<u8>) -> Self {
