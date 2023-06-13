@@ -442,11 +442,6 @@ impl Type {
         )
     }
 
-    /// Returns whether this type is encoded in the data section of an event.
-    pub const fn is_event_dynamic(&self) -> bool {
-        !self.is_one_word()
-    }
-
     /// Returns whether this type is dynamic according to ABI rules.
     pub fn is_abi_dynamic(&self) -> bool {
         match self {

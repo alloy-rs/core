@@ -50,11 +50,21 @@ pub trait SolType {
     /// See implementers of [`TokenType`].
     type TokenType: TokenType;
 
-    /// True if the type is dynamically sized.
-    const DYNAMIC: bool = false;
+    /// The encoded size of the type, if known at compile time
+    const ENCODED_SIZE: Option<usize> = Some(32);
+
+    /// Whether the encoded size is dynamic.
+    const DYNAMIC: bool = { Self::ENCODED_SIZE.is_none() };
 
     /// The name of the type in Solidity.
     fn sol_type_name() -> Cow<'static, str>;
+
+    /// Calculate the encoded size of the data, counting both head and tail
+    /// words. For a single-word type this will always be 32.
+    #[inline]
+    fn encoded_size<B: Borrow<Self::RustType>>(_rust: B) -> usize {
+        Self::ENCODED_SIZE.unwrap()
+    }
 
     /// Check a token to see if it can be detokenized with this type.
     fn type_check(token: &Self::TokenType) -> Result<()>;

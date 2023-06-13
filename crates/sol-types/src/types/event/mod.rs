@@ -58,11 +58,29 @@ pub trait SolEvent: Sized {
         data: <Self::DataTuple as SolType>::RustType,
     ) -> Self;
 
+    // TODO: avoid clones here
+    /// The event's non-indexed parameters.
+    fn body(&self) -> <Self::DataTuple as SolType>::RustType;
+    // TODO: avoid clones here
+    /// The event's topics.
+    fn topics(&self) -> <Self::TopicList as SolType>::RustType;
+
     /// The size of the ABI-encoded dynamic data in bytes.
-    fn data_size(&self) -> usize;
+    fn encoded_size(&self) -> usize {
+        // This avoids unnecessary clones.
+        // TODO: also avoid necessary clones.
+        if let Some(size) = <Self::DataTuple as SolType>::ENCODED_SIZE {
+            return size
+        }
+        <Self::DataTuple>::encoded_size(&self.body())
+    }
 
     /// ABI-encode the dynamic data of this event into the given buffer.
-    fn encode_data_raw(&self, out: &mut Vec<u8>);
+    fn encode_data_to(&self, out: &mut Vec<u8>) {
+        let body = self.body();
+        out.reserve(<Self::DataTuple>::encoded_size(&body));
+        out.extend(<Self::DataTuple as SolType>::encode(&body));
+    }
 
     /// Encode the topics of this event into the given buffer.
     ///
@@ -74,8 +92,8 @@ pub trait SolEvent: Sized {
     /// ABI-encode the dynamic data of this event.
     #[inline]
     fn encode_data(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(self.data_size());
-        self.encode_data_raw(&mut out);
+        let mut out = Vec::with_capacity(self.encoded_size());
+        self.encode_data_to(&mut out);
         out
     }
 

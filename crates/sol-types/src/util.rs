@@ -11,7 +11,30 @@
 
 use crate::{Error, Result, Word};
 
+/// Calculates the padded length of a slice by rounding its length to the next
+/// word
+#[inline]
+pub(crate) const fn words_for(data: &[u8]) -> usize {
+    (data.len() + 31) / 32
+}
+
+/// `padded_len` rounds a slice length up to the next multiple of 32
+#[inline]
+pub(crate) const fn padded_len(data: &[u8]) -> usize {
+    next_multiple_of_32(data.len())
+}
+
+/// See [`usize::next_multiple_of`].
+#[inline]
+pub const fn next_multiple_of_32(n: usize) -> usize {
+    match n % 32 {
+        0 => n,
+        r => n + (32 - r),
+    }
+}
+
 /// Converts a u32 to a right aligned array of 32 bytes.
+#[inline]
 pub(crate) fn pad_u32(value: u32) -> Word {
     let mut padded = Word::ZERO;
     padded[28..32].copy_from_slice(&value.to_be_bytes());
@@ -22,22 +45,13 @@ pub(crate) fn pad_u32(value: u32) -> Word {
 #[doc(hidden)]
 #[allow(clippy::missing_const_for_fn)] // clippy issue
 #[inline]
-pub fn just_ok<T>(_: T) -> crate::Result<()> {
+pub const fn just_ok<T>(_: &T) -> crate::Result<()> {
     Ok(())
 }
 
 #[inline]
 pub(crate) fn check_zeroes(data: &[u8]) -> bool {
     data.iter().all(|b| *b == 0)
-}
-
-/// See [`usize::next_multiple_of`].
-#[inline]
-pub const fn next_multiple_of_32(n: usize) -> usize {
-    match n % 32 {
-        0 => n,
-        r => n + (32 - r),
-    }
 }
 
 #[inline]
@@ -66,6 +80,14 @@ pub(crate) fn check_bool(slice: Word) -> bool {
 mod tests {
     use super::pad_u32;
     use hex_literal::hex;
+
+    #[test]
+    fn test_words_for() {
+        assert_eq!(super::words_for(&[]), 0);
+        assert_eq!(super::words_for(&[0; 31]), 1);
+        assert_eq!(super::words_for(&[0; 32]), 1);
+        assert_eq!(super::words_for(&[0; 33]), 2);
+    }
 
     #[test]
     fn test_pad_u32() {

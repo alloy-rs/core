@@ -112,7 +112,7 @@ impl ItemEvent {
     }
 
     pub fn dynamic_params(&self) -> impl Iterator<Item = &EventParameter> {
-        self.parameters.iter().filter(|p| p.is_dynamic())
+        self.parameters.iter().filter(|p| p.is_abi_dynamic())
     }
 
     pub fn as_type(&self) -> Type {
@@ -155,6 +155,7 @@ impl Parse for EventParameter {
 }
 
 impl EventParameter {
+    /// Get the span of the event paramater
     pub fn span(&self) -> Span {
         let span = self.ty.span();
         self.name
@@ -163,6 +164,7 @@ impl EventParameter {
             .unwrap_or(span)
     }
 
+    /// Sets the span of the event parameter.
     pub fn set_span(&mut self, span: Span) {
         self.ty.set_span(span);
         if let Some(kw) = &mut self.indexed {
@@ -173,6 +175,7 @@ impl EventParameter {
         }
     }
 
+    /// Convert to a parameter declaration.
     pub fn as_param(&self) -> VariableDeclaration {
         VariableDeclaration {
             name: self.name.clone(),
@@ -187,18 +190,23 @@ impl EventParameter {
         self.indexed.is_some()
     }
 
-    /// Returns `true` if the event parameter has to be stored in the data
+    /// Returns `true` if the event parameter is stored in the event data
     /// section.
-    ///
-    /// From [the Solidity reference][ref]:
-    ///
-    /// > all “complex” types or types of dynamic length, including all arrays,
-    /// > string, bytes and structs
-    ///
-    /// and all types that are not `indexed`.
+    pub const fn is_non_indexed(&self) -> bool {
+        self.indexed.is_none()
+    }
+
+    /// Returns true if the event paramater is a dynamically sized type.
+    pub fn is_abi_dynamic(&self) -> bool {
+        self.ty.is_abi_dynamic()
+    }
+
+    /// Returns `true` if the event parameter is indexed and dynamically sized.
+    /// These types are hashed, and then stored in the topics as spcified in
+    /// [the Solidity spec][ref].
     ///
     /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#events
-    pub const fn is_dynamic(&self) -> bool {
-        !self.is_indexed() || self.ty.is_event_dynamic()
+    pub fn indexed_as_hash(&self) -> bool {
+        self.is_indexed() && self.is_abi_dynamic()
     }
 }

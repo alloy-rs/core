@@ -121,16 +121,23 @@ fn function() {
             },
         ],
     };
-    let _encoded = call.encode();
-    // TODO
-    // assert_eq!(encoded.len(), call.data_size());
+    let encoded = call.encode();
+    assert_eq!(
+        encoded.len(),
+        someFunctionCall::SELECTOR.len() + call.encoded_size()
+    );
+
+    assert_eq!(
+        call.encoded_size(),
+        32 + (64 + 32) + (64 + 32 + 32) + (64 + 3 * 32) + 2 * 32 + (32 + 32) + (64 + 4 * (32 + 32))
+    );
 
     let sig = "someFunction(bool)"; // TODO ?
     assert_eq!(someFunctionReturn::SIGNATURE, sig);
     assert_eq!(someFunctionReturn::SELECTOR, keccak256(sig)[..4]);
 
     let ret = someFunctionReturn { x: true };
-    assert_eq!(ret.data_size(), 32);
+    assert_eq!(ret.encoded_size(), 32);
 }
 
 #[test]
@@ -144,5 +151,5 @@ fn error() {
     assert_eq!(SomeError::SELECTOR, keccak256(sig)[..4]);
 
     let e = SomeError { a: U256::from(1) };
-    assert_eq!(e.data_size(), 32);
+    assert_eq!(e.encoded_size(), 32);
 }
