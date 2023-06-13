@@ -1,9 +1,30 @@
+//! [`ItemFunction`] expansion.
+
 use super::{expand_fields, expand_from_into_tuples, ExpCtxt};
 use ast::{ItemFunction, Parameters};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Result, Token};
 
+/// Expands an [`ItemFunction`]:
+///
+/// ```ignore,pseudo-code
+/// pub struct #{name}Call {
+///     #(pub #argument_name: #argument_type,)*
+/// }
+///
+/// impl SolCall for #{name}Call {
+///     ...
+/// }
+///
+/// pub struct #{name}Return {
+///     #(pub #return_name: #return_type,)*
+/// }
+///
+/// impl SolCall for #{name}Return {
+///     ...
+/// }
+/// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream> {
     let function_name = cx.function_name(function);
     let call_name = cx.call_name(function_name.clone());

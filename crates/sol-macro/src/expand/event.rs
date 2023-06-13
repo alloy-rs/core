@@ -1,9 +1,22 @@
+//! [`ItemEvent`] expansion.
+
 use super::{anon_name, expand_tuple_types, expand_type, ExpCtxt};
 use ast::{EventParameter, ItemEvent, SolIdent};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::Result;
 
+/// Expands an [`ItemEvent`]:
+///
+/// ```ignore,pseudo-code
+/// pub struct #name {
+///     #(pub #parameter_name: #parameter_type,)*
+/// }
+///
+/// impl SolEvent for #name {
+///     ...
+/// }
+/// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream> {
     let ItemEvent { name, attrs, .. } = event;
     let parameters = event.params();
@@ -17,9 +30,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 
     // prepend the first topic if not anonymous
     let first_topic = (!anonymous).then(|| quote!(::alloy_sol_types::sol_data::FixedBytes<32>));
-    let topic_list = event
-        .indexed_params()
-        .map(|param| expand_event_topic_type(param));
+    let topic_list = event.indexed_params().map(expand_event_topic_type);
     let topic_list = first_topic.into_iter().chain(topic_list);
 
     let (data_tuple, _) = expand_tuple_types(event.non_indexed_params().map(|p| &p.ty));

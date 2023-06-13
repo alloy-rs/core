@@ -1,3 +1,5 @@
+//! [`ItemUdt`] expansion.
+
 use super::{expand_type, ExpCtxt};
 use ast::ItemUdt;
 use proc_macro2::TokenStream;

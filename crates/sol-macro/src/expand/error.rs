@@ -1,9 +1,22 @@
+//! [`ItemError`] expansion.
+
 use super::{expand_fields, expand_from_into_tuples, ExpCtxt};
 use ast::ItemError;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Result;
 
+/// Expands an [`ItemError`]:
+///
+/// ```ignore,pseudo-code
+/// pub struct #name {
+///     #(pub #parameter_name: #parameter_type,)*
+/// }
+///
+/// impl SolError for #name {
+///     ...
+/// }
+/// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream> {
     let ItemError {
         parameters,

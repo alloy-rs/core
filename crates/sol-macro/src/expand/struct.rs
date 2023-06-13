@@ -1,9 +1,27 @@
+//! [`ItemStruct`] expansion.
+
 use super::{expand_fields, expand_from_into_tuples, expand_type, ExpCtxt};
 use ast::{ItemStruct, VariableDeclaration};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Result;
 
+/// Expands an [`ItemStruct`]:
+///
+/// ```ignore,pseudo-code
+/// pub struct #name {
+///     #(pub #field_name: #field_type,)*
+/// }
+///
+/// impl SolStruct for #name {
+///     ...
+/// }
+///
+/// // Needed to use in event parameters
+/// impl EventTopic for #name {
+///     ...
+/// }
+/// ```
 pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let ItemStruct {
         name,

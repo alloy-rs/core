@@ -1,11 +1,24 @@
-use crate::expand::r#type;
+//! [`ItemContract`] expansion.
 
-use super::{attr, ExpCtxt};
+use super::{attr, r#type, ExpCtxt};
 use ast::{Item, ItemContract, ItemError, ItemFunction, SolIdent};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{parse_quote, Attribute, Result};
 
+/// Expands an [`ItemContract`]:
+///
+/// ```ignore,pseudo-code
+/// pub mod #name {
+///     pub enum #{name}Calls {
+///         ...
+///    }
+///
+///     pub enum #{name}Errors {
+///         ...
+///    }
+/// }
+/// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenStream> {
     let ItemContract {
         attrs, name, body, ..

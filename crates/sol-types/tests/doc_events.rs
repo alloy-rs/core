@@ -55,7 +55,7 @@ fn event() {
         ),
     );
 
-    assert_event_signature::<LogNote>("LogNote(bytes4,address,bytes32,bytes32,uint,bytes)");
+    assert_event_signature::<LogNote>("LogNote(bytes4,address,bytes32,bytes32,uint256,bytes)");
     assert!(LogNote::ANONYMOUS);
 
     assert_event_signature::<MyEvent2>("MyEvent2((bytes))");
