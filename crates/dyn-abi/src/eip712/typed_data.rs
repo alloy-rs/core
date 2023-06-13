@@ -214,11 +214,11 @@ impl TypedData {
         let mut buf = [0u8; 66];
         buf[0] = 0x19;
         buf[1] = 0x01;
-        buf[2..34].copy_from_slice(self.domain.separator().as_bytes());
+        buf[2..34].copy_from_slice(self.domain.separator().as_slice());
 
         // compatibility with <https://github.com/MetaMask/eth-sig-util>
         let len = if self.primary_type != "EIP712Domain" {
-            buf[34..].copy_from_slice(self.hash_struct()?.as_bytes());
+            buf[34..].copy_from_slice(self.hash_struct()?.as_slice());
             66
         } else {
             34

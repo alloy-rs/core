@@ -11,97 +11,122 @@
 ///
 /// // These hashes are the same length, and have the same functionality, but
 /// // are distinct types
-/// wrap_fixed_bytes!(KeccakOutput<32>);
-/// wrap_fixed_bytes!(MerkleTreeItem<32>);
+/// wrap_fixed_bytes!(pub struct KeccakOutput<32>;);
+/// wrap_fixed_bytes!(pub struct MerkleTreeItem<32>;);
 /// ```
 #[macro_export]
 macro_rules! wrap_fixed_bytes {
     (
         $(#[$attrs:meta])*
-        $name:ident<$n:literal>
+        $vis:vis struct $name:ident<$n:literal>;
     ) => {
         $crate::wrap_fixed_bytes!(
-            name_str: stringify!($name),
-            num_str: stringify!($n),
+            extra_derives: [Display],
             $(#[$attrs])*
-            $name<$n>,
+            $vis struct $name<$n>;
         );
     };
 
     (
-        name_str: $sname:expr,
-        num_str: $sn:expr,
+        extra_derives: [$($extra_derives:ident),* $(,)?],
         $(#[$attrs:meta])*
-        $name:ident<$n:literal>,
+        $vis:vis struct $name:ident<$n:literal>;
     ) => {
         $(#[$attrs])*
-        #[doc = "A fixed byte array representing a "]
-        #[doc = $sname]
-        #[doc = " and containing "]
-        #[doc = $sn]
-        #[doc = " bytes."]
         #[derive(
-            $crate::private::derive_more::AsRef,
-            $crate::private::derive_more::AsMut,
-            $crate::private::derive_more::Deref,
-            $crate::private::derive_more::DerefMut,
-            $crate::private::derive_more::From,
-            Hash,
-            Copy,
             Clone,
+            Copy,
+            Default,
             PartialEq,
             Eq,
             PartialOrd,
             Ord,
-            Default,
+            Hash,
+            $crate::private::derive_more::AsMut,
+            $crate::private::derive_more::AsRef,
+            $crate::private::derive_more::BitAnd,
+            $crate::private::derive_more::BitAndAssign,
+            $crate::private::derive_more::BitOr,
+            $crate::private::derive_more::BitOrAssign,
+            $crate::private::derive_more::BitXor,
+            $crate::private::derive_more::BitXorAssign,
+            $crate::private::derive_more::Deref,
+            $crate::private::derive_more::DerefMut,
+            $crate::private::derive_more::From,
+            $crate::private::derive_more::FromStr,
             $crate::private::derive_more::Index,
             $crate::private::derive_more::IndexMut,
-            $crate::private::derive_more::BitAnd,
-            $crate::private::derive_more::BitOr,
-            $crate::private::derive_more::BitXor,
-            $crate::private::derive_more::BitAndAssign,
-            $crate::private::derive_more::BitOrAssign,
-            $crate::private::derive_more::BitXorAssign,
-            $crate::private::derive_more::FromStr,
+            $crate::private::derive_more::Into,
+            $crate::private::derive_more::IntoIterator,
             $crate::private::derive_more::LowerHex,
             $crate::private::derive_more::UpperHex,
+            $(
+                $crate::private::derive_more::$extra_derives,
+            )*
         )]
-        pub struct $name(pub $crate::FixedBytes<$n>);
+        #[repr(transparent)]
+        $vis struct $name(#[into_iterator(owned, ref, ref_mut)] pub $crate::FixedBytes<$n>);
 
-        impl From<[u8; $n]> for $name {
+        impl ::core::convert::From<[u8; $n]> for $name {
             #[inline]
             fn from(value: [u8; $n]) -> Self {
-                Self(value.into())
+                Self($crate::FixedBytes(value))
             }
         }
 
-        impl From<$name> for [u8; $n] {
+        impl ::core::convert::From<$name> for [u8; $n] {
             #[inline]
             fn from(value: $name) -> Self {
                 value.0.0
             }
         }
 
-        impl<'a> From<&'a [u8; $n]> for $name {
+        impl<'a> ::core::convert::From<&'a [u8; $n]> for $name {
             #[inline]
             fn from(value: &'a [u8; $n]) -> Self {
-                Self(value.into())
+                Self($crate::FixedBytes(*value))
             }
         }
 
-        impl AsRef<[u8]> for $name {
+        impl ::core::convert::AsRef<[u8; $n]> for $name {
+            #[inline]
+            fn as_ref(&self) -> &[u8; $n] {
+                &self.0.0
+            }
+        }
+
+        impl ::core::convert::AsMut<[u8; $n]> for $name {
+            #[inline]
+            fn as_mut(&mut self) -> &mut [u8; $n] {
+                &mut self.0.0
+            }
+        }
+
+        impl ::core::convert::AsRef<[u8]> for $name {
             #[inline]
             fn as_ref(&self) -> &[u8] {
                 &self.0.0
             }
         }
 
-        impl AsMut<[u8]> for $name {
+        impl ::core::convert::AsMut<[u8]> for $name {
             #[inline]
             fn as_mut(&mut self) -> &mut [u8] {
                 &mut self.0.0
             }
         }
+
+        impl ::core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                ::core::fmt::Debug::fmt(&self.0, f)
+            }
+        }
+
+        $crate::impl_fixed_bytes_traits!($name, $n);
+        $crate::impl_getrandom!($name);
+        $crate::impl_rlp!($name);
+        $crate::impl_serde!($name);
+        $crate::impl_arbitrary!($name, $n);
 
         impl $name {
             /// Array of Zero bytes.
@@ -131,48 +156,6 @@ macro_rules! wrap_fixed_bytes {
                 $n
             }
 
-            /// Extracts a byte slice containing the entire fixed hash.
-            #[inline]
-            pub const fn as_bytes(&self) -> &[u8] {
-                self.0.as_bytes()
-            }
-
-            /// Extracts a mutable byte slice containing the entire fixed hash.
-            #[inline]
-            pub fn as_bytes_mut(&mut self) -> &mut [u8] {
-                self.0.as_bytes_mut()
-            }
-
-            /// Extracts a reference to the byte array containing the entire fixed hash.
-            #[inline]
-            pub const fn as_fixed_bytes(&self) -> &[u8; $n] {
-                self.0.as_fixed_bytes()
-            }
-
-            /// Extracts a reference to the byte array containing the entire fixed hash.
-            #[inline]
-            pub fn as_fixed_bytes_mut(&mut self) -> &mut [u8; $n] {
-                self.0.as_fixed_bytes_mut()
-            }
-
-            /// Returns the inner bytes array.
-            #[inline]
-            pub const fn to_fixed_bytes(self) -> [u8; $n] {
-                self.0.to_fixed_bytes()
-            }
-
-            /// Returns a constant raw pointer to the value.
-            #[inline]
-            pub const fn as_ptr(&self) -> *const u8 {
-                self.as_bytes().as_ptr()
-            }
-
-            /// Returns a mutable raw pointer to the value.
-            #[inline]
-            pub fn as_mut_ptr(&mut self) -> *mut u8 {
-                self.as_bytes_mut().as_mut_ptr()
-            }
-
             /// Create a new fixed-hash from the given slice `src`.
             ///
             /// # Note
@@ -182,9 +165,15 @@ macro_rules! wrap_fixed_bytes {
             /// # Panics
             ///
             /// If the length of `src` and the number of bytes in `Self` do not match.
-            #[track_caller]
+            #[inline]
             pub fn from_slice(src: &[u8]) -> Self {
                 Self($crate::FixedBytes::from_slice(src))
+            }
+
+            /// Returns the inner bytes array.
+            #[inline]
+            pub const fn into_array(self) -> [u8; $n] {
+                self.0 .0
             }
 
             /// Returns `true` if all bits set in `b` are also set in `self`.
@@ -193,21 +182,9 @@ macro_rules! wrap_fixed_bytes {
                 &(*b & *self) == b
             }
 
-            /// Returns `true` if no bits are set.
-            #[inline]
-            pub fn is_zero(&self) -> bool {
-                self.as_bytes().iter().all(|&byte| byte == 0u8)
-            }
-
             /// Compile-time equality. NOT constant-time equality.
             pub const fn const_eq(&self, other: &Self) -> bool {
                 self.0.const_eq(&other.0)
-            }
-
-            /// Returns `true` if no bits are set.
-            #[inline]
-            pub const fn const_is_zero(&self) -> bool {
-                self.0.const_is_zero()
             }
 
             /// Computes the bitwise AND of two `FixedBytes`.
@@ -225,23 +202,102 @@ macro_rules! wrap_fixed_bytes {
                 Self(self.0.bit_xor(rhs.0))
             }
         }
+    };
+}
 
-        impl ::core::fmt::Debug for $name {
-            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                ::core::fmt::Debug::fmt(&self.0, f)
+// Extra traits that are cannot be derived automatically
+#[doc(hidden)]
+#[macro_export]
+macro_rules! impl_fixed_bytes_traits {
+    (impl<$($const:ident)?> Borrow<$t:ty> for $b:ty) => {
+        impl<$($const N: usize)?> ::core::borrow::Borrow<$t> for $b {
+            #[inline]
+            fn borrow(&self) -> &$t {
+                ::core::borrow::Borrow::borrow(&self.0)
+            }
+        }
+    };
+
+    (impl<$($const:ident)?> BorrowMut<$t:ty> for $b:ty) => {
+        impl<$($const N: usize)?> ::core::borrow::BorrowMut<$t> for $b {
+            #[inline]
+            fn borrow_mut(&mut self) -> &mut $t {
+                ::core::borrow::BorrowMut::borrow_mut(&mut self.0)
+            }
+        }
+    };
+
+    (impl<$($const:ident)?> cmp::$tr:ident<$a:ty> for $b:ty where fn $fn:ident -> $ret:ty $(, [$e:expr])?) => {
+        impl<$($const N: usize)?> ::core::cmp::$tr<$a> for $b {
+            #[inline]
+            fn $fn(&self, other: &$a) -> $ret {
+                ::core::cmp::$tr::$fn(&self.0 $([$e])?, other)
             }
         }
 
-        impl ::core::fmt::Display for $name {
-            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                ::core::fmt::Display::fmt(&self.0, f)
+        impl<$($const N: usize)?> ::core::cmp::$tr<$b> for $a {
+            #[inline]
+            fn $fn(&self, other: &$b) -> $ret {
+                ::core::cmp::$tr::$fn(self, &other.0 $([$e])?)
             }
         }
 
-        $crate::impl_getrandom!($name);
-        $crate::impl_rlp!($name);
-        $crate::impl_serde!($name);
-        $crate::impl_arbitrary!($name, $n);
+        impl<$($const N: usize)?> ::core::cmp::$tr<&$a> for $b {
+            #[inline]
+            fn $fn(&self, other: &&$a) -> $ret {
+                ::core::cmp::$tr::$fn(&self.0 $([$e])?, *other)
+            }
+        }
+
+        impl<$($const N: usize)?> ::core::cmp::$tr<$b> for &$a {
+            #[inline]
+            fn $fn(&self, other: &$b) -> $ret {
+                ::core::cmp::$tr::$fn(*self, &other.0 $([$e])?)
+            }
+        }
+
+        impl<$($const N: usize)?> ::core::cmp::$tr<$a> for &$b {
+            #[inline]
+            fn $fn(&self, other: &$a) -> $ret {
+                ::core::cmp::$tr::$fn(&self.0 $([$e])?, other)
+            }
+        }
+
+        impl<$($const N: usize)?> ::core::cmp::$tr<&$b> for $a {
+            #[inline]
+            fn $fn(&self, other: &&$b) -> $ret {
+                ::core::cmp::$tr::$fn(self, &other.0 $([$e])?)
+            }
+        }
+    };
+
+    ($t:ty, $n:tt $(, $const:ident)?) => {
+        // // Borrow is not automatically implemented for references
+        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for $t);
+        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for &$t);
+        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for &mut $t);
+        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8; $n]>    for $t);
+        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8; $n]>    for &$t);
+        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8; $n]>    for &mut $t);
+
+        $crate::impl_fixed_bytes_traits!(impl<$($const)?> BorrowMut<[u8]>     for $t);
+        $crate::impl_fixed_bytes_traits!(impl<$($const)?> BorrowMut<[u8]>     for &mut $t);
+        $crate::impl_fixed_bytes_traits!(impl<$($const)?> BorrowMut<[u8; $n]> for $t);
+        $crate::impl_fixed_bytes_traits!(impl<$($const)?> BorrowMut<[u8; $n]> for &mut $t);
+
+        // Implement PartialEq, PartialOrd, with slice and array
+        $crate::impl_fixed_bytes_traits!(
+            impl<$($const)?> cmp::PartialEq<[u8]> for $t where fn eq -> bool
+        );
+        $crate::impl_fixed_bytes_traits!(
+            impl<$($const)?> cmp::PartialEq<[u8; $n]> for $t where fn eq -> bool
+        );
+        $crate::impl_fixed_bytes_traits!(
+            impl<$($const)?> cmp::PartialOrd<[u8]> for $t
+            where
+                fn partial_cmp -> ::core::option::Option<::core::cmp::Ordering>,
+                [..] // slices $t
+        );
     };
 }
 

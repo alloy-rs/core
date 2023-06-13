@@ -34,16 +34,49 @@ impl fmt::Display for AddressError {
 }
 
 wrap_fixed_bytes!(
+    // we implement Display with the checksum, so we don't derive it
+    extra_derives: [],
     /// An Ethereum address, 20 bytes in length.
-    Address<20>
+    ///
+    /// This type is separate from [`FixedBytes<20>`] and is declared with the
+    /// [`wrap_fixed_bytes!`] macro. This allows us to implement address-specific
+    /// functionality.
+    ///
+    /// The main difference with the generic [`FixedBytes`] implementation is that
+    /// [`Display`] formats the address using its [EIP-55] checksum
+    /// ([`to_checksum`]).
+    /// Use [`Debug`] to display the raw bytes without the checksum.
+    ///
+    /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
+    /// [`Debug`]: fmt::Debug
+    /// [`Display`]: fmt::Display
+    /// [`to_checksum`]: Address::to_checksum
+    ///
+    /// # Examples
+    ///
+    /// Parsing and formatting:
+    ///
+    /// ```
+    /// use alloy_primitives::Address;
+    ///
+    /// let checksummed = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+    // TODO: use address macro
+    /// let expected = Address::new(hex_literal::hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// let address = Address::parse_checksummed(checksummed, None).expect("valid checksum");
+    /// assert_eq!(address, expected);
+    ///
+    /// // Format the address with the checksum
+    /// assert_eq!(address.to_string(), checksummed);
+    /// assert_eq!(address.to_checksum(None), checksummed);
+    ///
+    /// // Format the compressed checksummed address
+    /// assert_eq!(format!("{address:#}"), "0xd8dA…6045");
+    ///
+    /// // Format the address without the checksum
+    /// assert_eq!(format!("{address:?}"), "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// ```
+    pub struct Address<20>;
 );
-
-impl Borrow<[u8; 20]> for Address {
-    #[inline]
-    fn borrow(&self) -> &[u8; 20] {
-        &self.0
-    }
-}
 
 impl From<Address> for FixedBytes<32> {
     #[inline]
@@ -52,8 +85,25 @@ impl From<Address> for FixedBytes<32> {
     }
 }
 
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut buf = [0; 42];
+        let checksum = self.to_checksum_raw(&mut buf, None);
+        if f.alternate() {
+            // If the alternate flag is set, use middle-out compression
+            // "0x" + first 4 bytes + "…" + last 4 bytes
+            f.write_str(&checksum[..6])?;
+            f.write_str("…")?;
+            f.write_str(&checksum[38..])
+        } else {
+            f.write_str(checksum)
+        }
+    }
+}
+
 impl Address {
-    /// Creates an Ethereum address from an EVM word's upper 20 bytes.
+    /// Creates an Ethereum address from an EVM word's upper 20 bytes
+    /// (`hash[12..]`).
     #[inline]
     pub fn from_word(hash: FixedBytes<32>) -> Self {
         Self(FixedBytes(hash[12..].try_into().unwrap()))
@@ -63,7 +113,7 @@ impl Address {
     #[inline]
     pub fn into_word(self) -> FixedBytes<32> {
         let mut buf = [0; 32];
-        buf[12..].copy_from_slice(self.as_bytes());
+        buf[12..].copy_from_slice(self.as_slice());
         FixedBytes(buf)
     }
 
@@ -72,26 +122,41 @@ impl Address {
     /// You can optionally specify an [EIP-155 chain ID] to check the address
     /// using [EIP-1191].
     ///
-    /// # Errors
-    ///
-    /// If the provided string does not match the expected checksum.
-    ///
     /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
     /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
+    ///
+    /// # Errors
+    ///
+    /// This method returns an error if the provided string does not match the
+    /// expected checksum.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_primitives::Address;
+    /// # use hex_literal::hex;
+    /// let checksummed = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+    /// let address = Address::parse_checksummed(checksummed, None).unwrap();
+    // TODO: use address macro
+    /// let expected =
+    ///     Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// assert_eq!(address, expected);
+    /// ```
     pub fn parse_checksummed<S: AsRef<str>>(
         s: S,
         chain_id: Option<u64>,
     ) -> Result<Self, AddressError> {
         fn inner(s: &str, chain_id: Option<u64>) -> Result<Address, AddressError> {
+            // checksummed addresses always start with the "0x" prefix
             if !s.starts_with("0x") {
                 return Err(AddressError::Hex(hex::FromHexError::InvalidStringLength))
             }
 
             let address: Address = s.parse()?;
             let buf = &mut [0; 42];
-            let ss = address.to_checksum_raw(buf, chain_id);
-            if s == ss {
+            let expected = address.to_checksum_raw(buf, chain_id);
+            if s == expected {
                 Ok(address)
             } else {
                 Err(AddressError::InvalidChecksum)
@@ -106,18 +171,35 @@ impl Address {
     /// You can optionally specify an [EIP-155 chain ID] to encode the address
     /// using [EIP-1191].
     ///
-    /// # Panics
-    ///
-    /// If `addr_buf` is not 42 bytes long.
-    ///
     /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
     /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
-    pub fn to_checksum_raw<'a>(&self, addr_buf: &'a mut [u8], chain_id: Option<u64>) -> &'a str {
-        assert_eq!(addr_buf.len(), 42, "addr_buf must be 42 bytes long");
-        addr_buf[0] = b'0';
-        addr_buf[1] = b'x';
-        hex::encode_to_slice(self.as_bytes(), &mut addr_buf[2..]).unwrap();
+    ///
+    /// # Panics
+    ///
+    /// This method panics if `buf` is not exactly 42 bytes long.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_primitives::Address;
+    /// # use hex_literal::hex;
+    // TODO: use address macro
+    /// let address =
+    ///     Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// let mut buf = [0; 42];
+    ///
+    /// let checksummed: &str = address.to_checksum_raw(&mut buf, None);
+    /// assert_eq!(checksummed, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
+    ///
+    /// let checksummed: &str = address.to_checksum_raw(&mut buf, Some(1));
+    /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
+    /// ```
+    pub fn to_checksum_raw<'a>(&self, buf: &'a mut [u8], chain_id: Option<u64>) -> &'a str {
+        assert_eq!(buf.len(), 42, "addr_buf must be 42 bytes long");
+        buf[0] = b'0';
+        buf[1] = b'x';
+        hex::encode_to_slice(self, &mut buf[2..]).unwrap();
 
         let mut storage;
         let to_hash = match chain_id {
@@ -139,27 +221,27 @@ impl Address {
                         .copy_from_slice(prefix_str.as_bytes());
                     storage
                         .get_unchecked_mut(prefix_len..len)
-                        .copy_from_slice(addr_buf);
+                        .copy_from_slice(buf);
                 }
                 &storage[..len]
             }
-            None => &addr_buf[2..],
+            None => &buf[2..],
         };
         let hash = keccak256(to_hash);
         let mut hash_hex = [0u8; 64];
-        hex::encode_to_slice(hash.as_bytes(), &mut hash_hex).unwrap();
+        hex::encode_to_slice(hash, &mut hash_hex).unwrap();
 
         // generates significantly less code than zipping the two arrays, or
         // `.into_iter()`
         for (i, x) in hash_hex.iter().enumerate().take(40) {
             if *x >= b'8' {
                 // SAFETY: `addr_buf` is 42 bytes long, `2..42` is always in range
-                unsafe { addr_buf.get_unchecked_mut(i + 2).make_ascii_uppercase() };
+                unsafe { buf.get_unchecked_mut(i + 2).make_ascii_uppercase() };
             }
         }
 
         // SAFETY: All bytes in the buffer are valid UTF-8
-        unsafe { str::from_utf8_unchecked(addr_buf) }
+        unsafe { str::from_utf8_unchecked(buf) }
     }
 
     /// Encodes an Ethereum address to its [EIP-55] checksum.
@@ -170,6 +252,23 @@ impl Address {
     /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
     /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_primitives::Address;
+    /// # use hex_literal::hex;
+    // TODO: use address macro
+    /// let address =
+    ///     Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    ///
+    /// let checksummed: String = address.to_checksum(None);
+    /// assert_eq!(checksummed, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
+    ///
+    /// let checksummed: String = address.to_checksum(Some(1));
+    /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
+    /// ```
+    #[inline]
     pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
         let mut buf = [0u8; 42];
         self.to_checksum_raw(&mut buf, chain_id).to_string()
@@ -178,67 +277,60 @@ impl Address {
     /// Computes the `create` address for the given address and nonce.
     ///
     /// The address for an Ethereum contract is deterministically computed from
-    /// the address of its creator (sender) and how many transactions the
-    /// creator has sent (nonce). The sender and nonce are RLP encoded and
-    /// then hashed with [`keccak256`].
+    /// the address of its creator (`sender`, `self`) and how many transactions
+    /// the creator has sent (`nonce`). The sender and nonce are RLP encoded
+    /// and then hashed with [`keccak256`].
     #[cfg(feature = "rlp")]
-    pub fn create<T: Borrow<[u8; 20]>>(sender: T, nonce: u64) -> Address {
-        fn create(sender: &[u8; 20], nonce: u64) -> Address {
-            use alloy_rlp::Encodable;
+    pub fn create(&self, nonce: u64) -> Address {
+        use alloy_rlp::Encodable;
 
-            let mut out = alloc::vec::Vec::with_capacity(64);
-            let buf = &mut out as &mut dyn bytes::BufMut;
-            sender.encode(buf);
-            let _ = nonce;
-            #[cfg(TODO_UINT_RLP)]
-            crate::U256::from(nonce).encode(buf);
-            let hash = keccak256(&out);
-            Address::from_word(hash)
-        }
-
-        create(sender.borrow(), nonce)
+        let mut out = alloc::vec::Vec::with_capacity(64);
+        let buf = &mut out as &mut dyn bytes::BufMut;
+        self.encode(buf);
+        let _ = nonce;
+        #[cfg(TODO_UINT_RLP)]
+        crate::U256::from(nonce).encode(buf);
+        let hash = keccak256(&out);
+        Self::from_word(hash)
     }
 
-    /// Returns the `CREATE2` address of a smart contract as specified in
+    /// Computes the `CREATE2` address of a smart contract as specified in
     /// [EIP1014](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md):
     ///
     /// `keccak256(0xff ++ address ++ salt ++ keccak256(init_code))[12:]`
-    pub fn create2_from_code<A, S, C>(address: A, salt: S, init_code: C) -> Address
+    pub fn create2_from_code<S, C>(&self, salt: S, init_code: C) -> Address
     where
-        A: Borrow<[u8; 20]>,
         S: Borrow<[u8; 32]>,
         C: AsRef<[u8]>,
     {
-        Self::create2(address, salt, keccak256(init_code.as_ref()).0)
+        self._create2(salt.borrow(), &keccak256(init_code.as_ref()).0)
     }
 
-    /// Returns the `CREATE2` address of a smart contract as specified in
+    /// Computes the `CREATE2` address of a smart contract as specified in
     /// [EIP1014](https://eips.ethereum.org/EIPS/eip-1014),
     /// taking the pre-computed hash of the init code as input:
     ///
     /// `keccak256(0xff ++ address ++ salt ++ init_code_hash)[12:]`
-    pub fn create2<A, S, H>(address: A, salt: S, init_code_hash: H) -> Address
+    pub fn create2<S, H>(&self, salt: S, init_code_hash: H) -> Address
     where
         // not `AsRef` because `[u8; N]` does not implement `AsRef<[u8; N]>`
-        A: Borrow<[u8; 20]>,
         S: Borrow<[u8; 32]>,
         H: Borrow<[u8; 32]>,
     {
-        fn create2_address(
-            address: &[u8; 20],
-            salt: &[u8; 32],
-            init_code_hash: &[u8; 32],
-        ) -> Address {
-            let mut bytes = [0; 85];
-            bytes[0] = 0xff;
-            bytes[1..21].copy_from_slice(address);
-            bytes[21..53].copy_from_slice(salt);
-            bytes[53..85].copy_from_slice(init_code_hash);
-            let hash = keccak256(bytes);
-            Address::from_word(hash)
-        }
+        self._create2(salt.borrow(), init_code_hash.borrow())
+    }
 
-        create2_address(address.borrow(), salt.borrow(), init_code_hash.borrow())
+    // non-generic inner function
+    fn _create2(&self, salt: &[u8; 32], init_code_hash: &[u8; 32]) -> Address {
+        // note: creating a temporary buffer and copying everything over performs
+        // much better than calling `Keccak256::update` multiple times
+        let mut bytes = [0; 85];
+        bytes[0] = 0xff;
+        bytes[1..21].copy_from_slice(&self.0 .0);
+        bytes[21..53].copy_from_slice(salt);
+        bytes[53..85].copy_from_slice(init_code_hash);
+        let hash = keccak256(bytes);
+        Address::from_word(hash)
     }
 }
 
@@ -252,7 +344,7 @@ mod test {
             "0x0102030405060708090a0b0c0d0e0f1011121314"
                 .parse::<Address>()
                 .unwrap()
-                .to_fixed_bytes(),
+                .into_array(),
             hex_literal::hex!("0102030405060708090a0b0c0d0e0f1011121314")
         );
     }
@@ -356,7 +448,7 @@ mod test {
         .iter()
         .enumerate()
         {
-            let address = Address::create(from, nonce as u64);
+            let address = from.create(nonce as u64);
             assert_eq!(address, expected.parse::<Address>().unwrap());
         }
     }
@@ -364,7 +456,7 @@ mod test {
     // Test vectors from https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md#examples
     #[test]
     fn eip_1014_create2() {
-        for (from, salt, init_code, expected) in &[
+        for (from, salt, init_code, expected) in [
             (
                 "0000000000000000000000000000000000000000",
                 "0000000000000000000000000000000000000000000000000000000000000000",
@@ -418,8 +510,8 @@ mod test {
 
             let expected = expected.parse::<Address>().unwrap();
 
-            assert_eq!(expected, Address::create2(from, salt, init_code_hash));
-            assert_eq!(expected, Address::create2_from_code(from, salt, init_code));
+            assert_eq!(expected, from.create2(salt, init_code_hash));
+            assert_eq!(expected, from.create2_from_code(salt, init_code));
         }
     }
 }

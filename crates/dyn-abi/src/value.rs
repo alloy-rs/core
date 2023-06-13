@@ -109,7 +109,7 @@ impl DynSolValue {
     /// Fallible cast to the contents of a variant.
     pub const fn as_fixed_bytes(&self) -> Option<(&[u8], usize)> {
         match self {
-            Self::FixedBytes(w, size) => Some((w.as_bytes(), *size)),
+            Self::FixedBytes(w, size) => Some((w.as_slice(), *size)),
             _ => None,
         }
     }
@@ -185,10 +185,10 @@ impl DynSolValue {
     /// Encodes the packed value and appends it to the end of a byte array.
     pub fn encode_packed_to(&self, buf: &mut Vec<u8>) {
         match self {
-            Self::Address(addr) => buf.extend_from_slice(addr.as_bytes()),
+            Self::Address(addr) => buf.extend_from_slice(addr.as_slice()),
             Self::Bool(b) => buf.push(*b as u8),
             Self::Bytes(bytes) => buf.extend_from_slice(bytes),
-            Self::FixedBytes(word, size) => buf.extend_from_slice(&word.as_bytes()[..*size]),
+            Self::FixedBytes(word, size) => buf.extend_from_slice(&word.as_slice()[..*size]),
             Self::Int(num, size) => {
                 let mut bytes = num.to_be_bytes::<32>();
                 let start = 32 - *size;
@@ -209,7 +209,7 @@ impl DynSolValue {
             | Self::CustomStruct { tuple: inner, .. } => {
                 inner.iter().for_each(|v| v.encode_packed_to(buf))
             }
-            Self::CustomValue { inner, .. } => buf.extend_from_slice(inner.as_bytes()),
+            Self::CustomValue { inner, .. } => buf.extend_from_slice(inner.as_slice()),
         }
     }
 

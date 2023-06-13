@@ -457,7 +457,7 @@ where
         let rust = rust.borrow();
         let encoded = rust
             .iter()
-            .flat_map(|element| T::eip712_data_word(element).to_fixed_bytes())
+            .flat_map(|element| T::eip712_data_word(element).0)
             .collect::<Vec<u8>>();
         keccak256(encoded)
     }
