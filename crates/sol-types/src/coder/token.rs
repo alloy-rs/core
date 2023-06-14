@@ -38,7 +38,7 @@ use sealed::Sealed;
 /// state between abi-encoded blobs, and rust types.
 pub trait TokenType: Sealed + Sized {
     /// True if the token represents a dynamically-sized type.
-    fn is_dynamic() -> bool;
+    const DYNAMIC: bool;
 
     /// Decode a token from a decoder.
     fn decode_from(dec: &mut Decoder<'_>) -> Result<Self>;
@@ -151,10 +151,7 @@ impl AsRef<[u8]> for WordToken {
 }
 
 impl TokenType for WordToken {
-    #[inline]
-    fn is_dynamic() -> bool {
-        false
-    }
+    const DYNAMIC: bool = false;
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'_>) -> Result<Self> {
@@ -216,16 +213,11 @@ impl<T, const N: usize> AsRef<[T; N]> for FixedSeqToken<T, N> {
 }
 
 impl<T: TokenType, const N: usize> TokenType for FixedSeqToken<T, N> {
-    #[inline]
-    fn is_dynamic() -> bool {
-        T::is_dynamic()
-    }
+    const DYNAMIC: bool = T::DYNAMIC;
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'_>) -> Result<Self> {
-        let is_dynamic = Self::is_dynamic();
-
-        let mut child = if is_dynamic {
+        let mut child = if Self::DYNAMIC {
             dec.take_indirection()?
         } else {
             dec.raw_child()
@@ -236,7 +228,7 @@ impl<T: TokenType, const N: usize> TokenType for FixedSeqToken<T, N> {
 
     #[inline]
     fn head_words(&self) -> usize {
-        if Self::is_dynamic() {
+        if Self::DYNAMIC {
             1
         } else {
             self.0.iter().map(TokenType::head_words).sum()
@@ -245,7 +237,7 @@ impl<T: TokenType, const N: usize> TokenType for FixedSeqToken<T, N> {
 
     #[inline]
     fn tail_words(&self) -> usize {
-        if Self::is_dynamic() {
+        if Self::DYNAMIC {
             N
         } else {
             0
@@ -254,7 +246,7 @@ impl<T: TokenType, const N: usize> TokenType for FixedSeqToken<T, N> {
 
     #[inline]
     fn head_append(&self, enc: &mut Encoder) {
-        if Self::is_dynamic() {
+        if Self::DYNAMIC {
             enc.append_indirection();
         } else {
             self.0.iter().for_each(|inner| inner.head_append(enc))
@@ -263,7 +255,7 @@ impl<T: TokenType, const N: usize> TokenType for FixedSeqToken<T, N> {
 
     #[inline]
     fn tail_append(&self, enc: &mut Encoder) {
-        if Self::is_dynamic() {
+        if Self::DYNAMIC {
             self.encode_sequence(enc)
         }
     }
@@ -332,10 +324,7 @@ impl<T> AsRef<[T]> for DynSeqToken<T> {
 }
 
 impl<T: TokenType> TokenType for DynSeqToken<T> {
-    #[inline]
-    fn is_dynamic() -> bool {
-        true
-    }
+    const DYNAMIC: bool = true;
 
     fn decode_from(dec: &mut Decoder<'_>) -> Result<Self> {
         let mut child = dec.take_indirection()?;
@@ -413,10 +402,7 @@ impl AsRef<[u8]> for PackedSeqToken {
 }
 
 impl TokenType for PackedSeqToken {
-    #[inline]
-    fn is_dynamic() -> bool {
-        true
-    }
+    const DYNAMIC: bool = true;
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'_>) -> Result<Self> {
@@ -478,17 +464,13 @@ macro_rules! tuple_impls {
 
         #[allow(non_snake_case)]
         impl<$($ty: TokenType,)+> TokenType for ($($ty,)+) {
-            #[inline]
-            fn is_dynamic() -> bool {
-                $( <$ty as TokenType>::is_dynamic() )||+
-            }
+            const DYNAMIC: bool = $( <$ty as TokenType>::DYNAMIC )||+;
 
             #[inline]
             fn decode_from(dec: &mut Decoder<'_>) -> Result<Self> {
-                let is_dynamic = Self::is_dynamic();
                 // The first element in a dynamic Tuple is an offset to the Tuple's data
                 // For a static Tuple the data begins right away
-                let mut child = if is_dynamic {
+                let mut child = if Self::DYNAMIC {
                     dec.take_indirection()?
                 } else {
                     dec.raw_child()
@@ -496,7 +478,7 @@ macro_rules! tuple_impls {
 
                 let res = Self::decode_sequence(&mut child)?;
 
-                if !is_dynamic {
+                if !Self::DYNAMIC {
                     dec.take_offset(child);
                 }
 
@@ -505,7 +487,7 @@ macro_rules! tuple_impls {
 
             #[inline]
             fn head_words(&self) -> usize {
-                if Self::is_dynamic() {
+                if Self::DYNAMIC {
                     1
                 } else {
                     let ($($ty,)+) = self;
@@ -515,7 +497,7 @@ macro_rules! tuple_impls {
 
             #[inline]
             fn tail_words(&self) -> usize {
-                if Self::is_dynamic() {
+                if Self::DYNAMIC {
                     self.total_words()
                 } else {
                     0
@@ -529,7 +511,7 @@ macro_rules! tuple_impls {
             }
 
             fn head_append(&self, enc: &mut Encoder) {
-                if Self::is_dynamic() {
+                if Self::DYNAMIC {
                     enc.append_indirection();
                 } else {
                     let ($($ty,)+) = self;
@@ -540,7 +522,7 @@ macro_rules! tuple_impls {
             }
 
             fn tail_append(&self, enc: &mut Encoder) {
-                if Self::is_dynamic() {
+                if Self::DYNAMIC {
                     let ($($ty,)+) = self;
                     let head_words = 0 $( + $ty.head_words() )+;
 
@@ -585,10 +567,7 @@ macro_rules! tuple_impls {
 }
 
 impl TokenType for () {
-    #[inline]
-    fn is_dynamic() -> bool {
-        false
-    }
+    const DYNAMIC: bool = false;
 
     #[inline]
     fn decode_from(_dec: &mut Decoder<'_>) -> Result<Self> {

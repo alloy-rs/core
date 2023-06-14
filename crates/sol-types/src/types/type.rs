@@ -20,8 +20,8 @@ use crate::{no_std_prelude::*, token::TokenSeq, Result, TokenType, Word};
 /// ```
 ///
 /// These types are zero cost representations of Solidity types. They do not
-/// exist at runtime. They ONLY information about the type, they do not carry
-/// data
+/// exist at runtime. They ONLY contain information about the type, they do not
+/// carry any data.
 ///
 /// ### Implementer's Guide
 ///
@@ -54,7 +54,7 @@ pub trait SolType {
     const ENCODED_SIZE: Option<usize> = Some(32);
 
     /// Whether the encoded size is dynamic.
-    const DYNAMIC: bool = { Self::ENCODED_SIZE.is_none() };
+    const DYNAMIC: bool = Self::ENCODED_SIZE.is_none();
 
     /// The name of the type in Solidity.
     fn sol_type_name() -> Cow<'static, str>;
