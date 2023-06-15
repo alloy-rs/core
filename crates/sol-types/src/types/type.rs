@@ -13,10 +13,10 @@ use crate::{no_std_prelude::*, token::TokenSeq, Result, TokenType, Word};
 /// assert_eq!(&DynUint256Array::sol_type_name(), "uint256[]");
 ///
 /// type Erc20FunctionArgs = (Address, Uint<256>);
-/// assert_eq!(&Erc20FunctionArgs::sol_type_name(), "tuple(address,uint256)");
+/// assert_eq!(&Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
 ///
 /// type LargeComplexType = (FixedArray<Array<Bool>, 2>, (FixedBytes<13>, String));
-/// assert_eq!(&LargeComplexType::sol_type_name(), "tuple(bool[][2],tuple(bytes13,string))");
+/// assert_eq!(&LargeComplexType::sol_type_name(), "(bool[][2],(bytes13,string))");
 /// ```
 ///
 /// These types are zero cost representations of Solidity types. They do not

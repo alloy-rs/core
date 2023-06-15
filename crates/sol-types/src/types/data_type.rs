@@ -471,6 +471,8 @@ where
 }
 
 macro_rules! tuple_impls {
+    (@one $ty:ident) => { 1usize };
+
     // compile time `join(",")` format string
     (@fmt $other:ident) => { ",{}" };
     (@fmt $first:ident, $($other:ident,)*) => {
@@ -501,7 +503,7 @@ macro_rules! tuple_impls {
             fn sol_type_name() -> Cow<'static, str> {
                 format!(
                     concat!(
-                        "tuple(",
+                        "(",
                         tuple_impls! { @fmt $($ty,)+ },
                         ")",
                     ),
@@ -509,12 +511,12 @@ macro_rules! tuple_impls {
                 ).into()
             }
 
-            fn encoded_size<B_: Borrow<Self::RustType>>(rust: B_) -> usize {
+            fn encoded_size<B: Borrow<Self::RustType>>(rust: B) -> usize {
                 if let Some(size) = Self::ENCODED_SIZE {
                     return size
                 }
 
-                let ($(ref $ty,)+) = *rust.borrow();
+                let ($($ty,)+) = rust.borrow();
                 0 $(
                     + <$ty as SolType>::encoded_size($ty)
                 )+
@@ -538,22 +540,27 @@ macro_rules! tuple_impls {
                 )+)
             }
 
-            fn tokenize<B_: Borrow<Self::RustType>>(rust: B_) -> Self::TokenType {
+            fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
                 let ($($ty,)+) = rust.borrow();
                 ($(
                     <$ty as SolType>::tokenize($ty),
                 )+)
             }
 
-            fn eip712_data_word<B_: Borrow<Self::RustType>>(rust: B_) -> Word {
+            fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+                const COUNT: usize = 0usize $(+ tuple_impls!(@one $ty))+;
                 let ($($ty,)+) = rust.borrow();
-                let encoding: Vec<u8> = [$(
+                let encoding: [[u8; 32]; COUNT] = [$(
                     <$ty as SolType>::eip712_data_word($ty).0,
-                )+].concat();
-                keccak256(&encoding).into()
+                )+];
+                // SAFETY: Flattening [[u8; 32]; COUNT] to [u8; COUNT * 32] is valid
+                let ptr = encoding.as_ptr() as *const u8;
+                let len = COUNT * 32;
+                let encoding: &[u8] = unsafe { core::slice::from_raw_parts(ptr, len) };
+                keccak256(encoding).into()
             }
 
-            fn encode_packed_to<B_: Borrow<Self::RustType>>(rust: B_, out: &mut Vec<u8>) {
+            fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
                 let ($($ty,)+) = rust.borrow();
                 // TODO: Reserve
                 $(
@@ -572,12 +579,12 @@ impl SolType for () {
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
-        "tuple()".into()
+        "()".into()
     }
 
     #[inline]
     fn type_check(_token: &Self::TokenType) -> Result<()> {
-        Err(crate::Error::type_check_fail(b"", "tuple()"))
+        Ok(())
     }
 
     #[inline]
