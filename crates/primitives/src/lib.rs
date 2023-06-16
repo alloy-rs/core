@@ -56,6 +56,8 @@ pub mod private {
     #[cfg(feature = "arbitrary")]
     pub use arbitrary;
     #[cfg(feature = "arbitrary")]
+    pub use derive_arbitrary;
+    #[cfg(feature = "arbitrary")]
     pub use proptest;
     #[cfg(feature = "arbitrary")]
     pub use proptest_derive;
