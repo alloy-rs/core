@@ -18,13 +18,10 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-# eth
-ruint = { workspace = true, features = ["serde"] }
-
-# utility
 bytes.workspace = true
 hex.workspace = true
 itoa = "1"
+ruint.workspace = true
 tiny-keccak = { workspace = true, features = ["keccak"] }
 
 # macros
@@ -40,7 +37,8 @@ serde = { workspace = true, optional = true }
 getrandom = { workspace = true, optional = true }
 
 # arbitrary
-arbitrary = { workspace = true, features = ["derive"], optional = true }
+arbitrary = { workspace = true, optional = true }
+derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
@@ -49,8 +47,8 @@ hex-literal.workspace = true
 serde_json.workspace = true
 
 [features]
-default = ["std", "rlp", "serde"]
-std = ["bytes/std", "hex/std", "alloy-rlp?/std", "proptest?/std", "serde/std"]
+default = ["std"]
+std = ["bytes/std", "hex/std", "alloy-rlp?/std", "proptest?/std", "serde?/std"]
 getrandom = ["dep:getrandom"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
@@ -59,6 +57,7 @@ arbitrary = [
     "ruint/arbitrary",
     "ruint/proptest",
     "dep:arbitrary",
+    "dep:derive_arbitrary",
     "dep:proptest",
     "dep:proptest-derive",
 ]

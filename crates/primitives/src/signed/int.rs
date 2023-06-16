@@ -74,7 +74,7 @@ use ruint::Uint;
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "arbitrary",
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct Signed<const BITS: usize, const LIMBS: usize>(pub(crate) Uint<BITS, LIMBS>);
 

@@ -27,7 +27,7 @@ use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
 )]
 #[cfg_attr(
     feature = "arbitrary",
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 #[repr(transparent)]
 pub struct FixedBytes<const N: usize>(#[into_iterator(owned, ref, ref_mut)] pub [u8; N]);
