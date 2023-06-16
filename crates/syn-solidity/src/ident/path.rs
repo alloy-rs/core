@@ -119,7 +119,7 @@ impl SolPath {
     #[track_caller]
     pub fn last_tmp(&self) -> &SolIdent {
         if self.len() > 1 {
-            todo!()
+            todo!("path resolution")
         }
         self.last()
     }
