@@ -554,7 +554,6 @@ mod tests {
     }
 
     #[test]
-    // #[allow(clippy::cognitive_complexity)]
     fn std_num_conversion() {
         // test conversion from basic types
 

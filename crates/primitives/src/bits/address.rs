@@ -204,8 +204,8 @@ impl Address {
         let mut storage;
         let to_hash = match chain_id {
             Some(chain_id) => {
-                // A decimal `u64` string is at most 20 bytes long: round up 20 + 42 to 64.
-                storage = [0u8; 64];
+                // A decimal `u64` string is at most 20 bytes long
+                storage = [0u8; 2 + 40 + 20];
 
                 // Format the `chain_id` into a stack-allocated buffer using `itoa`
                 let mut temp = itoa::Buffer::new();
@@ -222,8 +222,8 @@ impl Address {
                     storage
                         .get_unchecked_mut(prefix_len..len)
                         .copy_from_slice(buf);
+                    storage.get_unchecked(..len)
                 }
-                &storage[..len]
             }
             None => &buf[2..],
         };
@@ -281,16 +281,29 @@ impl Address {
     /// the creator has sent (`nonce`). The sender and nonce are RLP encoded
     /// and then hashed with [`keccak256`].
     #[cfg(feature = "rlp")]
-    pub fn create(&self, nonce: u64) -> Address {
-        use alloy_rlp::Encodable;
+    #[inline]
+    pub fn create(&self, nonce: u64) -> Self {
+        use alloy_rlp::{Encodable, EMPTY_LIST_CODE, EMPTY_STRING_CODE};
 
-        let mut out = alloc::vec::Vec::with_capacity(64);
-        let buf = &mut out as &mut dyn bytes::BufMut;
-        self.encode(buf);
-        let _ = nonce;
-        #[cfg(TODO_UINT_RLP)]
-        crate::U256::from(nonce).encode(buf);
-        let hash = keccak256(&out);
+        let len = 22 + nonce.length();
+        const MAX_LEN: usize = 22 + 9;
+        debug_assert!(len <= MAX_LEN);
+
+        // max u64 length is `1 + u64::BYTES`
+        let mut out = [0u8; MAX_LEN];
+
+        // list header
+        // minus 1 to account for the list header itself
+        out[0] = EMPTY_LIST_CODE + len as u8 - 1;
+
+        // address header + address
+        out[1] = EMPTY_STRING_CODE + 20;
+        out[2..22].copy_from_slice(self.as_slice());
+
+        // nonce
+        nonce.encode(&mut &mut out[22..]);
+
+        let hash = keccak256(&out[..len]);
         Self::from_word(hash)
     }
 
@@ -298,8 +311,9 @@ impl Address {
     /// [EIP1014](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md):
     ///
     /// `keccak256(0xff ++ address ++ salt ++ keccak256(init_code))[12:]`
-    pub fn create2_from_code<S, C>(&self, salt: S, init_code: C) -> Address
+    pub fn create2_from_code<S, C>(&self, salt: S, init_code: C) -> Self
     where
+        // not `AsRef` because `[u8; N]` does not implement `AsRef<[u8; N]>`
         S: Borrow<[u8; 32]>,
         C: AsRef<[u8]>,
     {
@@ -311,7 +325,7 @@ impl Address {
     /// taking the pre-computed hash of the init code as input:
     ///
     /// `keccak256(0xff ++ address ++ salt ++ init_code_hash)[12:]`
-    pub fn create2<S, H>(&self, salt: S, init_code_hash: H) -> Address
+    pub fn create2<S, H>(&self, salt: S, init_code_hash: H) -> Self
     where
         // not `AsRef` because `[u8; N]` does not implement `AsRef<[u8; N]>`
         S: Borrow<[u8; 32]>,
@@ -321,16 +335,16 @@ impl Address {
     }
 
     // non-generic inner function
-    fn _create2(&self, salt: &[u8; 32], init_code_hash: &[u8; 32]) -> Address {
+    fn _create2(&self, salt: &[u8; 32], init_code_hash: &[u8; 32]) -> Self {
         // note: creating a temporary buffer and copying everything over performs
         // much better than calling `Keccak256::update` multiple times
         let mut bytes = [0; 85];
         bytes[0] = 0xff;
-        bytes[1..21].copy_from_slice(&self.0 .0);
+        bytes[1..21].copy_from_slice(self.as_slice());
         bytes[21..53].copy_from_slice(salt);
         bytes[53..85].copy_from_slice(init_code_hash);
         let hash = keccak256(bytes);
-        Address::from_word(hash)
+        Self::from_word(hash)
     }
 }
 
@@ -431,26 +445,49 @@ mod test {
         }
     }
 
+    // Test vectors from https://ethereum.stackexchange.com/questions/760/how-is-the-address-of-an-ethereum-contract-computed
     #[test]
-    #[ignore = "Uint RLP"]
     #[cfg(feature = "rlp")]
     fn create() {
-        // http://ethereum.stackexchange.com/questions/760/how-is-the-address-of-an-ethereum-contract-computed
-        let from = "6ac7ea33f8831ea9dcc53393aaa88b25a785dbf0"
+        let from = "0x6ac7ea33f8831ea9dcc53393aaa88b25a785dbf0"
             .parse::<Address>()
             .unwrap();
         for (nonce, expected) in [
-            "cd234a471b72ba2f1ccf0a70fcaba648a5eecd8d",
-            "343c43a37d37dff08ae8c4a11544c718abb4fcf8",
-            "f778b86fa74e846c4f0a1fbd1335fe81c00a0c91",
-            "fffd933a0bc612844eaf0c6fe3e5b8e9b6c1d19c",
+            "0xcd234a471b72ba2f1ccf0a70fcaba648a5eecd8d",
+            "0x343c43a37d37dff08ae8c4a11544c718abb4fcf8",
+            "0xf778b86fa74e846c4f0a1fbd1335fe81c00a0c91",
+            "0xfffd933a0bc612844eaf0c6fe3e5b8e9b6c1d19c",
         ]
-        .iter()
+        .into_iter()
         .enumerate()
         {
             let address = from.create(nonce as u64);
             assert_eq!(address, expected.parse::<Address>().unwrap());
         }
+    }
+
+    #[test]
+    #[cfg(all(feature = "rlp", feature = "arbitrary"))]
+    fn create_correctness() {
+        use alloy_rlp::Encodable;
+
+        fn create_slow(address: &Address, nonce: u64) -> Address {
+            let mut out = vec![];
+
+            alloy_rlp::Header {
+                list: true,
+                payload_length: address.length() + nonce.length(),
+            }
+            .encode(&mut out);
+            address.encode(&mut out);
+            nonce.encode(&mut out);
+
+            Address::from_word(keccak256(out))
+        }
+
+        proptest::proptest!(|(address: Address, nonce: u64)| {
+            proptest::prop_assert_eq!(address.create(nonce), create_slow(&address, nonce));
+        });
     }
 
     // Test vectors from https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md#examples

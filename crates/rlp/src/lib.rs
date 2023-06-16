@@ -43,11 +43,6 @@ fn main() {
 #[allow(unused_imports)]
 extern crate alloc;
 
-// Used in alloc tests.
-#[cfg(test)]
-#[allow(unused_extern_crates)]
-extern crate hex_literal;
-
 mod decode;
 mod encode;
 mod types;

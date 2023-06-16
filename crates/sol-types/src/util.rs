@@ -43,7 +43,6 @@ pub(crate) fn pad_u32(value: u32) -> Word {
 
 /// Return Ok(()). Exists for the UDT macro's typecheck.
 #[doc(hidden)]
-#[allow(clippy::missing_const_for_fn)] // clippy issue
 #[inline]
 pub const fn just_ok<T>(_: &T) -> crate::Result<()> {
     Ok(())
