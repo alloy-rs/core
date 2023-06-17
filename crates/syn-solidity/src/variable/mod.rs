@@ -6,7 +6,7 @@ use std::fmt::{self, Write};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
-    Ident, Result, Token,
+    Attribute, Ident, Result, Token,
 };
 
 mod list;
@@ -17,6 +17,8 @@ pub use list::{FieldList, ParameterList, Parameters};
 /// `<ty> [storage] <name>`
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclaration {
+    /// The attributes of the variable.
+    pub attrs: Vec<Attribute>,
     /// The type of the variable.
     pub ty: Type,
     /// The storage location of the variable, if any.
@@ -50,6 +52,7 @@ impl Parse for VariableDeclaration {
 impl VariableDeclaration {
     pub const fn new(ty: Type) -> Self {
         Self {
+            attrs: Vec::new(),
             ty,
             storage: None,
             name: None,
@@ -91,6 +94,7 @@ impl VariableDeclaration {
 
     fn _parse(input: ParseStream<'_>, for_struct: bool) -> Result<Self> {
         Ok(Self {
+            attrs: input.call(Attribute::parse_outer)?,
             ty: input.parse()?,
             storage: if input.peek(kw::memory)
                 || input.peek(kw::storage)

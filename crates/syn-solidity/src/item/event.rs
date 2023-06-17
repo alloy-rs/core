@@ -125,6 +125,7 @@ impl ItemEvent {
 /// `<ty> [indexed] [name]`
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct EventParameter {
+    pub attrs: Vec<Attribute>,
     pub ty: Type,
     pub indexed: Option<kw::indexed>,
     pub name: Option<SolIdent>,
@@ -133,6 +134,7 @@ pub struct EventParameter {
 impl fmt::Debug for EventParameter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EventParameter")
+            .field("attrs", &self.attrs)
             .field("ty", &self.ty)
             .field("indexed", &self.indexed.is_some())
             .field("name", &self.name)
@@ -143,6 +145,7 @@ impl fmt::Debug for EventParameter {
 impl Parse for EventParameter {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
+            attrs: input.call(Attribute::parse_outer)?,
             ty: input.parse()?,
             indexed: input.parse()?,
             name: if SolIdent::peek_any(input) {
@@ -178,6 +181,7 @@ impl EventParameter {
     /// Convert to a parameter declaration.
     pub fn as_param(&self) -> VariableDeclaration {
         VariableDeclaration {
+            attrs: self.attrs.clone(),
             name: self.name.clone(),
             storage: None,
             ty: self.ty.clone(),
