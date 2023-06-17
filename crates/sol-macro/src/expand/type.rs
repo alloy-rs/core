@@ -1,7 +1,7 @@
 //! [`Type`] expansion.
 
 use super::ExpCtxt;
-use ast::{Item, Parameters, SolArray, Type};
+use ast::{Item, Parameters, Type, TypeArray};
 use proc_macro2::{Literal, TokenStream};
 use quote::{quote_spanned, ToTokens};
 use std::{fmt, num::NonZeroU16};
@@ -68,6 +68,8 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
                 }
             }
         }
+        Type::Function(ref _function) => todo!(),
+        Type::Mapping(ref _mapping) => todo!(),
         Type::Custom(ref custom) => return custom.to_tokens(tokens),
     };
     tokens.extend(tts);
@@ -95,13 +97,14 @@ pub(super) fn type_base_data_size(cx: &ExpCtxt<'_>, ty: &Type) -> usize {
         | Type::Bool(_)
         | Type::Int(..)
         | Type::Uint(..)
-        | Type::FixedBytes(..) => 32,
+        | Type::FixedBytes(..)
+        | Type::Function(_) => 32,
 
         // dynamic types: 1 offset word, 1 length word
-        Type::String(_) | Type::Bytes(_) | Type::Array(SolArray { size: None, .. }) => 64,
+        Type::String(_) | Type::Bytes(_) | Type::Array(TypeArray { size: None, .. }) => 64,
 
         // fixed array: size * encoded size
-        Type::Array(SolArray {
+        Type::Array(TypeArray {
             ty: inner,
             size: Some(size),
             ..
@@ -121,10 +124,11 @@ pub(super) fn type_base_data_size(cx: &ExpCtxt<'_>, ty: &Type) -> usize {
                 .map(|ty| type_base_data_size(cx, ty))
                 .sum(),
             Item::Udt(udt) => type_base_data_size(cx, &udt.ty),
-            Item::Contract(_) | Item::Error(_) | Item::Event(_) | Item::Function(_) => {
-                unreachable!()
-            }
+            _ => unreachable!(),
         },
+
+        // not applicable
+        Type::Mapping(_) => 0,
     }
 }
 

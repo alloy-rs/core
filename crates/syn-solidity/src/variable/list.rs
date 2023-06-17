@@ -1,14 +1,13 @@
-use super::{kw, SolIdent, Storage, Type};
-use proc_macro2::Span;
+use super::VariableDeclaration;
+use crate::{SolIdent, Type};
 use std::{
-    fmt::{self, Write},
+    fmt,
     ops::{Deref, DerefMut},
 };
 use syn::{
-    ext::IdentExt,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Ident, Result, Token,
+    Result, Token,
 };
 
 /// A list of comma-separated [VariableDeclaration]s.
@@ -48,7 +47,7 @@ impl<P> fmt::Debug for Parameters<P> {
     }
 }
 
-/// Parameter list: fields names are set to `_{index}`
+/// Parameter list
 impl Parse for Parameters<Token![,]> {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         input
@@ -156,103 +155,5 @@ impl<P> Parameters<P> {
     #[cfg(feature = "visit-mut")]
     pub fn visit_types_mut(&mut self, mut f: impl FnMut(&mut Type)) {
         self.types_mut().for_each(|ty| ty.visit_mut(&mut f))
-    }
-}
-
-/// A variable declaration.
-///
-/// `<ty> [storage] <name>`
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct VariableDeclaration {
-    /// The type of the variable.
-    pub ty: Type,
-    /// The storage location of the variable, if any.
-    pub storage: Option<Storage>,
-    /// The name of the variable. This is always Some if parsed as part of
-    /// [`Parameters`].
-    pub name: Option<SolIdent>,
-}
-
-impl fmt::Display for VariableDeclaration {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.ty.fmt(f)?;
-        if let Some(storage) = &self.storage {
-            f.write_char(' ')?;
-            storage.fmt(f)?;
-        }
-        if let Some(name) = &self.name {
-            f.write_char(' ')?;
-            name.fmt(f)?;
-        }
-        Ok(())
-    }
-}
-
-impl Parse for VariableDeclaration {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Self::_parse(input, false)
-    }
-}
-
-impl VariableDeclaration {
-    pub const fn new(ty: Type) -> Self {
-        Self {
-            ty,
-            storage: None,
-            name: None,
-        }
-    }
-
-    pub fn span(&self) -> Span {
-        let span = self.ty.span();
-        match (&self.storage, &self.name) {
-            (Some(storage), None) => span.join(storage.span()),
-            (_, Some(name)) => span.join(name.span()),
-            (None, None) => Some(span),
-        }
-        .unwrap_or(span)
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.ty.set_span(span);
-        if let Some(storage) = &mut self.storage {
-            storage.set_span(span);
-        }
-        if let Some(name) = &mut self.name {
-            name.set_span(span);
-        }
-    }
-
-    /// Formats `self` as an EIP-712 field: `<ty> <name>`
-    pub fn fmt_eip712(&self, f: &mut impl Write) -> fmt::Result {
-        write!(f, "{}", self.ty)?;
-        if let Some(name) = &self.name {
-            write!(f, " {}", name)?;
-        }
-        Ok(())
-    }
-
-    pub fn parse_for_struct(input: ParseStream<'_>) -> Result<Self> {
-        Self::_parse(input, true)
-    }
-
-    fn _parse(input: ParseStream<'_>, for_struct: bool) -> Result<Self> {
-        Ok(Self {
-            ty: input.parse()?,
-            storage: if input.peek(kw::memory)
-                || input.peek(kw::storage)
-                || input.peek(kw::calldata)
-            {
-                Some(input.parse()?)
-            } else {
-                None
-            },
-            // structs must have field names
-            name: if for_struct || input.peek(Ident::peek_any) {
-                Some(input.parse()?)
-            } else {
-                None
-            },
-        })
     }
 }

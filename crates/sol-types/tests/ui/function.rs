@@ -16,14 +16,17 @@ sol! {
     function missingSemi3() returns (uint256)
 }
 
+// OK
 sol! {
     function semiNotBrace1() {}
 }
 
+// OK
 sol! {
     function semiNotBrace2() external {}
 }
 
+// OK
 sol! {
     function semiNotBrace3() returns (uint256) {}
 }

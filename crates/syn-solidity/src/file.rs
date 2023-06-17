@@ -17,10 +17,7 @@ impl Parse for File {
             items.push(input.parse()?);
         }
         if items.is_empty() {
-            let message = "\
-                expected at least one of: \
-                `type`, `struct`, `function`, `error`, Solidity type";
-            Err(input.error(message))
+            Err(input.parse::<Item>().unwrap_err())
         } else {
             Ok(Self { items })
         }

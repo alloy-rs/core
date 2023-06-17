@@ -63,7 +63,7 @@ impl Parse for ItemContract {
                 let mut body = Vec::new();
                 while !content.is_empty() {
                     let item: Item = content.parse()?;
-                    if item.is_contract() {
+                    if matches!(item, Item::Contract(_)) {
                         return Err(Error::new(item.span(), "cannot declare nested contracts"))
                     }
                     body.push(item);
@@ -256,7 +256,17 @@ impl fmt::Debug for Inheritance {
 impl Parse for Inheritance {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let is_token = input.parse()?;
-        let inheritance = input.parse_terminated(Modifier::parse, Token![,])?;
+        let mut inheritance = Punctuated::new();
+        loop {
+            if input.is_empty() || input.peek(Brace) {
+                break
+            }
+            inheritance.push_value(input.parse()?);
+            if input.is_empty() || input.peek(Brace) {
+                break
+            }
+            inheritance.push_punct(input.parse()?);
+        }
         if inheritance.is_empty() {
             Err(input.parse::<SolIdent>().unwrap_err())
         } else {

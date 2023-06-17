@@ -18,7 +18,7 @@ error: unexpected end of input, expected curly braces
   |
   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: unexpected end of input, expected identifier
+error: unexpected end of input, expected ident
   --> tests/ui/contract.rs:11:1
    |
 11 | / sol! {
@@ -28,7 +28,7 @@ error: unexpected end of input, expected identifier
    |
    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: expected identifier
+error: expected ident
   --> tests/ui/contract.rs:16:36
    |
 16 |     contract MissingInheritance2 is;

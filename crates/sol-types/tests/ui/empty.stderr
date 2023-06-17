@@ -1,4 +1,4 @@
-error: unexpected end of input, expected at least one of: `type`, `struct`, `function`, `error`, Solidity type
+error: unexpected end of input, expected one of: `constructor`, `function`, `fallback`, `receive`, `modifier`, `struct`, `event`, `error`, `abstract`, `contract`, `interface`, `library`, `enum`, `type`, `pragma`, `import`, `using`, parentheses, `tuple`, `function`, `mapping`, identifier
  --> tests/ui/empty.rs:3:1
   |
 3 | sol! {}

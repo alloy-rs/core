@@ -15,6 +15,7 @@ pub use r#type::expand_type;
 use r#type::TypePrinter;
 
 mod contract;
+mod r#enum;
 mod error;
 mod event;
 mod function;
@@ -77,11 +78,15 @@ impl<'ast> ExpCtxt<'ast> {
     fn expand_item(&self, item: &Item) -> Result<TokenStream> {
         match item {
             Item::Contract(contract) => contract::expand(self, contract),
+            Item::Enum(enumm) => r#enum::expand(self, enumm),
             Item::Error(error) => error::expand(self, error),
             Item::Event(event) => event::expand(self, event),
             Item::Function(function) => function::expand(self, function),
             Item::Struct(strukt) => r#struct::expand(self, strukt),
             Item::Udt(udt) => udt::expand(self, udt),
+            Item::Import(_) | Item::Pragma(_) | Item::Using(_) | Item::Variable(_) => {
+                Ok(TokenStream::new())
+            }
         }
     }
 }
@@ -92,9 +97,12 @@ impl<'ast> ExpCtxt<'ast> {
         let mut map = std::mem::take(&mut self.custom_types);
         map.reserve(self.all_items.len());
         for &item in &self.all_items {
-            if let Some(ty) = item.as_type() {
-                map.insert(item.name().clone(), ty);
-            }
+            let (name, ty) = match item {
+                Item::Struct(s) => (&s.name, s.as_type()),
+                Item::Udt(u) => (&u.name, u.ty.clone()),
+                _ => continue,
+            };
+            map.insert(name.clone(), ty);
         }
         self.custom_types = map;
     }
@@ -135,7 +143,7 @@ impl<'ast> ExpCtxt<'ast> {
             .functions
             .values()
             .flatten()
-            .map(|f| f.name.clone())
+            .map(|f| f.name().clone())
             .collect();
         let mut overloads_map = std::mem::take(&mut self.function_overloads);
 
@@ -148,10 +156,10 @@ impl<'ast> ExpCtxt<'ast> {
                 for b in functions.iter().skip(i + 1) {
                     if a.arguments.types().eq(b.arguments.types()) {
                         let msg = "function with same name and parameter types defined twice";
-                        let mut err = syn::Error::new(a.name.span(), msg);
+                        let mut err = syn::Error::new(a.span(), msg);
 
                         let msg = "other declaration is here";
-                        let note = syn::Error::new(b.name.span(), msg);
+                        let note = syn::Error::new(b.span(), msg);
 
                         err.combine(note);
                         errors.push(err);
@@ -160,7 +168,7 @@ impl<'ast> ExpCtxt<'ast> {
             }
 
             for (i, &function) in functions.iter().enumerate() {
-                let old_name = &function.name;
+                let old_name = function.name();
                 let new_name = format!("{old_name}_{i}");
                 if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
                     let msg = format!(
@@ -190,7 +198,7 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn get_item(&self, name: &SolPath) -> &Item {
         let name = name.last_tmp();
-        match self.all_items.iter().find(|item| item.name() == name) {
+        match self.all_items.iter().find(|item| item.name() == Some(name)) {
             Some(item) => item,
             None => panic!("unresolved item: {name}"),
         }
@@ -208,7 +216,7 @@ impl<'ast> ExpCtxt<'ast> {
         let sig = self.function_signature(function);
         match self.function_overloads.get(&sig) {
             Some(name) => name.clone(),
-            None => function.name.as_string(),
+            None => function.name().as_string(),
         }
     }
 
@@ -216,8 +224,8 @@ impl<'ast> ExpCtxt<'ast> {
     fn function_name_ident(&self, function: &ItemFunction) -> SolIdent {
         let sig = self.function_signature(function);
         match self.function_overloads.get(&sig) {
-            Some(name) => SolIdent::new_spanned(name, function.name.span()),
-            None => function.name.clone(),
+            Some(name) => SolIdent::new_spanned(name, function.name().span()),
+            None => function.name().clone(),
         }
     }
 
@@ -248,7 +256,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn function_signature(&self, function: &ItemFunction) -> String {
-        self.signature(function.name.as_string(), &function.arguments)
+        self.signature(function.name().as_string(), &function.arguments)
     }
 
     /// Returns an error if any of the types in the parameters are unresolved.
@@ -291,7 +299,7 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
 
     fn visit_item_function(&mut self, function: &'ast ItemFunction) {
         self.functions
-            .entry(function.name.as_string())
+            .entry(function.name().as_string())
             .or_default()
             .push(function);
         ast::visit::visit_item_function(self, function);
