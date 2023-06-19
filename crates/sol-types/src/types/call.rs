@@ -27,10 +27,10 @@ pub trait SolCall: Sized {
     fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType;
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn from_rust<'a>(tuple: <Self::Tuple<'a> as SolType>::RustType) -> Self;
+    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
 
     /// Tokenize the call's arguments.
-    fn tokenize<'a>(&'a self) -> Self::Token<'a>;
+    fn tokenize(&self) -> Self::Token<'_>;
 
     /// The size of the encoded data in bytes, **without** its selector.
     fn encoded_size<'a>(&self) -> usize {

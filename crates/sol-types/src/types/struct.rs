@@ -54,10 +54,10 @@ pub trait SolStruct: 'static {
     fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType;
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn from_rust<'a>(tuple: <Self::Tuple<'a> as SolType>::RustType) -> Self;
+    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
 
     /// Convert to the token type used for EIP-712 encoding and decoding.
-    fn tokenize<'a>(&'a self) -> Self::Token<'a>;
+    fn tokenize(&self) -> Self::Token<'_>;
 
     /// The size of the struct when encoded, in bytes
     fn encoded_size<'a>(&self) -> usize {
@@ -154,13 +154,13 @@ impl<T: SolStruct> SolType for T {
     }
 
     #[inline]
-    fn detokenize<'a>(token: Self::TokenType<'a>) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         let tuple = TupleFor::<T>::detokenize(token);
         T::from_rust(tuple)
     }
 
     #[inline]
-    fn tokenize<'a>(rust: &'a Self::RustType) -> Self::TokenType<'a> {
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
         <Self as SolStruct>::tokenize(rust)
     }
 

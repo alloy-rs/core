@@ -53,9 +53,9 @@ pub trait SolEvent: Sized {
     const ANONYMOUS: bool;
 
     /// Convert decoded rust data to the event type.
-    fn new<'a>(
+    fn new(
         topics: <Self::TopicList as SolType>::RustType,
-        data: <Self::DataTuple<'a> as SolType>::RustType,
+        data: <Self::DataTuple<'_> as SolType>::RustType,
     ) -> Self;
 
     // TODO: avoid clones here
@@ -63,7 +63,7 @@ pub trait SolEvent: Sized {
     fn body<'a>(&self) -> <Self::DataTuple<'a> as SolType>::RustType;
 
     /// Tokenize the event's non-indexed parameters.
-    fn tokenize_body<'a>(&'a self) -> Self::DataToken<'a>;
+    fn tokenize_body(&self) -> Self::DataToken<'_>;
 
     // TODO: avoid clones here
     /// The event's topics.

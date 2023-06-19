@@ -32,10 +32,10 @@ pub trait SolError: Sized {
     fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType;
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn from_rust<'a>(tuple: <Self::Tuple<'a> as SolType>::RustType) -> Self;
+    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
 
     /// Convert to the token type used for EIP-712 encoding and decoding.
-    fn tokenize<'a>(&'a self) -> Self::Token<'a>;
+    fn tokenize(&self) -> Self::Token<'_>;
 
     /// The size of the error params when encoded in bytes, **without** the
     /// selector.
@@ -148,12 +148,12 @@ impl SolError for Revert {
     }
 
     #[inline]
-    fn from_rust<'a>(tuple: <Self::Tuple<'a> as SolType>::RustType) -> Self {
+    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self {
         Self { reason: tuple.0 }
     }
 
     #[inline]
-    fn tokenize<'a>(&'a self) -> Self::Token<'a> {
+    fn tokenize(&self) -> Self::Token<'_> {
         (PackedSeqToken::from(self.reason.as_bytes()),)
     }
 
@@ -262,12 +262,12 @@ impl SolError for Panic {
     }
 
     #[inline]
-    fn from_rust<'a>(tuple: <Self::Tuple<'a> as SolType>::RustType) -> Self {
+    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self {
         Self { code: tuple.0 }
     }
 
     #[inline]
-    fn tokenize<'a>(&'a self) -> Self::Token<'a> {
+    fn tokenize(&self) -> Self::Token<'_> {
         (WordToken::from(self.code),)
     }
 

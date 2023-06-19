@@ -409,7 +409,7 @@ impl<'a> From<&'a Vec<u8>> for PackedSeqToken<'a> {
 
 impl<'a> AsRef<[u8]> for PackedSeqToken<'a> {
     fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
+        self.0
     }
 }
 
@@ -442,14 +442,14 @@ impl<'a> TokenType<'a> for PackedSeqToken<'a> {
 
     #[inline]
     fn tail_append(&self, enc: &mut Encoder) {
-        enc.append_packed_seq(&self.0)
+        enc.append_packed_seq(self.0)
     }
 }
 
 impl<'a> fmt::Debug for PackedSeqToken<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("PackedSeq")
-            .field(&hex::encode_prefixed(&self.0))
+            .field(&hex::encode_prefixed(self.0))
             .finish()
     }
 }
@@ -466,7 +466,7 @@ impl PackedSeqToken<'_> {
     /// Returns a reference to the slice.
     #[inline]
     pub fn as_slice(&self) -> &[u8] {
-        &self.0
+        self.0
     }
 }
 

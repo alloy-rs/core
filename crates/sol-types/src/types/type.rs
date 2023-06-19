@@ -62,7 +62,7 @@ pub trait SolType {
     /// Calculate the encoded size of the data, counting both head and tail
     /// words. For a single-word type this will always be 32.
     #[inline]
-    fn encoded_size<'a>(_rust: &'a Self::RustType) -> usize {
+    fn encoded_size(_rust: &Self::RustType) -> usize {
         Self::ENCODED_SIZE.unwrap()
     }
 
@@ -78,7 +78,7 @@ pub trait SolType {
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType;
 
     /// Tokenize.
-    fn tokenize<'a>(rust: &'a Self::RustType) -> Self::TokenType<'a>;
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_>;
 
     /// The encoded struct type (as EIP-712), if any. None for non-structs.
     #[inline]
@@ -94,12 +94,12 @@ pub trait SolType {
     /// words for each element
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
-    fn eip712_data_word<'a>(rust: &'a Self::RustType) -> Word;
+    fn eip712_data_word(rust: &Self::RustType) -> Word;
 
     /// Non-standard Packed Mode ABI encoding.
     ///
     /// See [`encode_packed`][SolType::encode_packed] for more details.
-    fn encode_packed_to<'a>(rust: &'a Self::RustType, out: &mut Vec<u8>);
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>);
 
     /// Non-standard Packed Mode ABI encoding.
     ///
@@ -110,7 +110,7 @@ pub trait SolType {
     /// - array elements are padded, but still encoded in-place.
     ///
     /// More information can be found in the [Solidity docs](https://docs.soliditylang.org/en/latest/abi-spec.html#non-standard-packed-mode).
-    fn encode_packed<'a>(rust: &'a Self::RustType) -> Vec<u8> {
+    fn encode_packed(rust: &Self::RustType) -> Vec<u8> {
         let mut out = Vec::new();
         Self::encode_packed_to(rust, &mut out);
         out
@@ -119,7 +119,7 @@ pub trait SolType {
     /* BOILERPLATE BELOW */
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence.
-    fn encode_single<'a>(rust: &'a Self::RustType) -> Vec<u8> {
+    fn encode_single(rust: &Self::RustType) -> Vec<u8> {
         crate::encode_single(&Self::tokenize(rust))
     }
 
@@ -148,7 +148,7 @@ pub trait SolType {
     }
 
     /// Hex output of [`encode_single`][SolType::encode_single].
-    fn hex_encode_single<'a>(rust: &'a Self::RustType) -> String {
+    fn hex_encode_single(rust: &Self::RustType) -> String {
         hex::encode_prefixed(Self::encode_single(rust))
     }
 
@@ -188,7 +188,7 @@ pub trait SolType {
 
     /// Decode a Rust type from an ABI blob.
     #[inline]
-    fn decode_single<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType> {
+    fn decode_single(data: &[u8], validate: bool) -> Result<Self::RustType> {
         let decoded = crate::decode_single::<Self::TokenType<'_>>(data, validate)?;
         if validate {
             Self::type_check(&decoded)?;
