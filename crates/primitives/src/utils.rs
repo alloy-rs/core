@@ -1,6 +1,5 @@
 use crate::bits::FixedBytes;
-
-pub use tiny_keccak::{Hasher, Keccak};
+use tiny_keccak::{Hasher, Keccak};
 
 /// Simple interface to the [`keccak256`] hash function.
 ///
