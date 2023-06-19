@@ -465,7 +465,7 @@ impl PackedSeqToken<'_> {
 
     /// Returns a reference to the slice.
     #[inline]
-    pub fn as_slice(&self) -> &[u8] {
+    pub const fn as_slice(&self) -> &[u8] {
         self.0
     }
 }

@@ -1,5 +1,7 @@
 //! [`ItemEvent`] expansion.
 
+use crate::expand::r#type::expand_event_tokenize_func;
+
 use super::{anon_name, expand_tuple_types, expand_type, ExpCtxt};
 use ast::{EventParameter, ItemEvent, SolIdent};
 use proc_macro2::TokenStream;
@@ -95,6 +97,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .enumerate()
         .map(|(i, p)| expand_event_topic_field(i, p, p.name.as_ref()));
 
+    let tokenize_body_impl = if event.parameters.iter().all(|p| p.is_indexed()) {
+        // special case for empty tuple
+        quote! {::core::convert::From::from([])}
+    } else {
+        expand_event_tokenize_func(event.parameters.iter())
+    };
+
     let encode_topics_impl = encode_first_topic
         .into_iter()
         .chain(encode_topics_impl)
@@ -111,8 +120,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         const _: () = {
             impl ::alloy_sol_types::SolEvent for #name {
-                type DataTuple = #data_tuple;
-                type DataToken = <Self::DataTuple as ::alloy_sol_types::SolType>::TokenType;
+                type DataTuple<'a> = #data_tuple;
+                type DataToken<'a> = <Self::DataTuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
 
                 type TopicList = (#(#topic_list,)*);
 
@@ -122,18 +131,23 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 
                 const ANONYMOUS: bool = #anonymous;
 
+                #[allow(unused_variables)]
                 fn new(
                     topics: <Self::TopicList as ::alloy_sol_types::SolType>::RustType,
-                    data: <Self::DataTuple as ::alloy_sol_types::SolType>::RustType,
+                    data: <Self::DataTuple<'_> as ::alloy_sol_types::SolType>::RustType,
                 ) -> Self {
                     Self {
                         #(#new_impl,)*
                     }
                 }
 
-                fn body(&self) -> <Self::DataTuple as ::alloy_sol_types::SolType>::RustType {
+                fn body(&self) -> <Self::DataTuple<'_> as ::alloy_sol_types::SolType>::RustType {
                     // TODO: Avoid cloning
                     (#(self.#data_tuple_names.clone(),)*)
+                }
+
+                fn tokenize_body(&self) -> Self::DataToken<'_> {
+                    #tokenize_body_impl
                 }
 
                 fn topics(&self) -> <Self::TopicList as ::alloy_sol_types::SolType>::RustType {

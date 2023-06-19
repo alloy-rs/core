@@ -326,11 +326,17 @@ fn expand_field(i: usize, ty: &Type, name: Option<&SolIdent>) -> TokenStream {
     }
 }
 
+#[inline]
+/// Generates an anonymous name from an integer. Used in `anon_name`
+pub fn generate_name(i: usize) -> Ident {
+    format_ident!("_{}", i)
+}
+
 /// Returns the name of a parameter, or a generated name if it is `None`.
 fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Ident {
     match name {
         Some(name) => name.clone().into(),
-        None => format_ident!("_{i}"),
+        None => generate_name(i),
     }
 }
 
@@ -345,13 +351,13 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
     let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types());
     quote! {
         #[doc(hidden)]
-        type UnderlyingSolTuple = #sol_tuple;
+        type UnderlyingSolTuple<'a> = #sol_tuple;
         #[doc(hidden)]
-        type UnderlyingRustTuple = #rust_tuple;
+        type UnderlyingRustTuple<'a> = #rust_tuple;
 
         #[automatically_derived]
         #[doc(hidden)]
-        impl ::core::convert::From<#name> for UnderlyingRustTuple {
+        impl ::core::convert::From<#name> for UnderlyingRustTuple<'_> {
             fn from(value: #name) -> Self {
                 (#(value.#names,)*)
             }
@@ -359,8 +365,8 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
 
         #[automatically_derived]
         #[doc(hidden)]
-        impl ::core::convert::From<UnderlyingRustTuple> for #name {
-            fn from(tuple: UnderlyingRustTuple) -> Self {
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for #name {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                 #name {
                     #(#names2: tuple.#idxs),*
                 }

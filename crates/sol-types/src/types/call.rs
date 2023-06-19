@@ -33,13 +33,13 @@ pub trait SolCall: Sized {
     fn tokenize(&self) -> Self::Token<'_>;
 
     /// The size of the encoded data in bytes, **without** its selector.
-    fn encoded_size<'a>(&self) -> usize {
+    fn encoded_size(&self) -> usize {
         // This avoids unnecessary clones.
-        if let Some(size) = <Self::Tuple<'a> as SolType>::ENCODED_SIZE {
+        if let Some(size) = <Self::Tuple<'_> as SolType>::ENCODED_SIZE {
             return size
         }
 
-        <<Self as SolCall>::Tuple<'a> as SolType>::encoded_size(&self.to_rust())
+        <<Self as SolCall>::Tuple<'_> as SolType>::encoded_size(&self.to_rust())
     }
 
     /// ABI decode this call's arguments from the given slice, **without** its

@@ -1,9 +1,11 @@
 //! [`Type`] expansion.
 
+use crate::expand::generate_name;
+
 use super::ExpCtxt;
-use ast::{Item, Parameters, Type, TypeArray};
+use ast::{EventParameter, Item, Parameters, Type, TypeArray, VariableDeclaration};
 use proc_macro2::{Literal, TokenStream};
-use quote::{quote_spanned, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 use std::{fmt, num::NonZeroU16};
 
 /// Expands a single [`Type`] recursively.
@@ -11,6 +13,52 @@ pub fn expand_type(ty: &Type) -> TokenStream {
     let mut tokens = TokenStream::new();
     rec_expand_type(ty, &mut tokens);
     tokens
+}
+
+/// Expands a [`VariableDeclaration`] into an invocation of its types tokenize
+/// method.
+fn expand_tokenize_statement(var: &VariableDeclaration, i: usize) -> TokenStream {
+    let ty = expand_type(&var.ty);
+
+    let name = var.name.clone().unwrap_or_else(|| generate_name(i).into());
+    quote! {
+        <#ty as ::alloy_sol_types::SolType>::tokenize(&self.#name)
+    }
+}
+
+/// Expand the tokenization function from an iterator of [`VariableDeclaration`]
+pub fn expand_tokenize_func<'a>(
+    iter: impl Iterator<Item = &'a VariableDeclaration>,
+) -> TokenStream {
+    let statements = iter
+        .enumerate()
+        .map(|(i, var)| expand_tokenize_statement(var, i));
+    quote! {
+        (#(#statements,)*)
+    }
+}
+
+/// Expand a event parameter into an invocation of its types tokenize method.
+fn expand_event_tokenize_statement(var: &EventParameter, i: usize) -> TokenStream {
+    let ty = expand_type(&var.ty);
+
+    let name = var.name.clone().unwrap_or_else(|| generate_name(i).into());
+    quote! {
+        <#ty as ::alloy_sol_types::SolType>::tokenize(&self.#name)
+    }
+}
+
+/// Expand the tokenization function from an iterator of [`EventParameter`]
+pub fn expand_event_tokenize_func<'a>(
+    iter: impl Iterator<Item = &'a EventParameter>,
+) -> TokenStream {
+    let statements = iter
+        .filter(|p| !p.is_indexed())
+        .enumerate()
+        .map(|(i, var)| expand_event_tokenize_statement(var, i));
+    quote! {
+        (#(#statements,)*)
+    }
 }
 
 /// The [`expand_type`] recursive implementation.

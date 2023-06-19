@@ -60,13 +60,13 @@ pub trait SolStruct: 'static {
     fn tokenize(&self) -> Self::Token<'_>;
 
     /// The size of the struct when encoded, in bytes
-    fn encoded_size<'a>(&self) -> usize {
+    fn encoded_size(&self) -> usize {
         // This avoids unnecessary clones.
-        if let Some(size) = <Self::Tuple<'a> as SolType>::ENCODED_SIZE {
+        if let Some(size) = <Self::Tuple<'_> as SolType>::ENCODED_SIZE {
             return size
         }
 
-        <<Self as SolStruct>::Tuple<'a> as SolType>::encoded_size(&self.to_rust())
+        <<Self as SolStruct>::Tuple<'_> as SolType>::encoded_size(&self.to_rust())
     }
 
     /// EIP-712 `encodeType`

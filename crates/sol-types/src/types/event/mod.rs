@@ -60,7 +60,7 @@ pub trait SolEvent: Sized {
 
     // TODO: avoid clones here
     /// The event's non-indexed parameters.
-    fn body<'a>(&self) -> <Self::DataTuple<'a> as SolType>::RustType;
+    fn body(&self) -> <Self::DataTuple<'_> as SolType>::RustType;
 
     /// Tokenize the event's non-indexed parameters.
     fn tokenize_body(&self) -> Self::DataToken<'_>;

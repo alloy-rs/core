@@ -1,6 +1,8 @@
 //! [`ItemStruct`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, expand_type, ExpCtxt};
+use super::{
+    expand_fields, expand_from_into_tuples, expand_type, r#type::expand_tokenize_func, ExpCtxt,
+};
 use ast::{ItemStruct, VariableDeclaration};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -55,6 +57,12 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
         quote!(#encoded_type)
     };
 
+    let tokenize_impl: TokenStream = if fields.is_empty() {
+        quote! { ::core::convert::From::from([]) }
+    } else {
+        expand_tokenize_func(fields.iter())
+    };
+
     let encode_data_impl = match fields.len() {
         0 => unreachable!(),
         1 => {
@@ -73,6 +81,7 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let convert = expand_from_into_tuples(&name.0, fields);
     let name_s = name.to_string();
     let fields = expand_fields(fields);
+
     let tokens = quote! {
         #(#attrs)*
         #[allow(non_camel_case_types, non_snake_case)]
@@ -89,8 +98,8 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
             #[automatically_derived]
             impl ::alloy_sol_types::SolStruct for #name {
-                type Tuple = UnderlyingSolTuple;
-                type Token = <Self::Tuple as ::alloy_sol_types::SolType>::TokenType;
+                type Tuple<'a> = UnderlyingSolTuple<'a>;
+                type Token<'a> = <Self::Tuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
 
                 const NAME: &'static str = #name_s;
 
@@ -98,12 +107,16 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                     #((#field_types_s, #field_names_s)),*
                 ];
 
-                fn to_rust(&self) -> UnderlyingRustTuple {
+                fn to_rust<'a>(&self) -> UnderlyingRustTuple<'a> {
                     self.clone().into()
                 }
 
-                fn from_rust(tuple: UnderlyingRustTuple) -> Self {
+                fn from_rust<'a>(tuple: UnderlyingRustTuple<'a>) -> Self {
                     tuple.into()
+                }
+
+                fn tokenize<'a>(&'a self) -> Self::Token<'a> {
+                    #tokenize_impl
                 }
 
                 fn eip712_encode_type() -> Cow<'static, str> {
@@ -118,7 +131,7 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
             #[automatically_derived]
             impl ::alloy_sol_types::EventTopic for #name {
                 #[inline]
-                fn topic_preimage_length<B: Borrow<Self::RustType>>(rust: B) -> usize {
+                fn topic_preimage_length(rust: &Self::RustType) -> usize {
                     let b = rust.borrow();
                     0usize
                     #(
@@ -127,7 +140,7 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 }
 
                 #[inline]
-                fn encode_topic_preimage<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
+                fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
                     let b = rust.borrow();
                     out.reserve(<Self as ::alloy_sol_types::EventTopic>::topic_preimage_length(b));
                     #(
@@ -136,8 +149,8 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 }
 
                 #[inline]
-                fn encode_topic<B: Borrow<Self::RustType>>(
-                    rust: B
+                fn encode_topic(
+                    rust: &Self::RustType
                 ) -> ::alloy_sol_types::token::WordToken {
                     let mut out = Vec::new();
                     <Self as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust, &mut out);

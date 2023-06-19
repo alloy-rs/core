@@ -1,6 +1,6 @@
 //! [`ItemError`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, ExpCtxt};
+use super::{expand_fields, expand_from_into_tuples, r#type::expand_tokenize_func, ExpCtxt};
 use ast::ItemError;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -19,18 +19,24 @@ use syn::Result;
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream> {
     let ItemError {
-        parameters,
+        parameters: params,
         name,
         attrs,
         ..
     } = error;
-    cx.assert_resolved(parameters)?;
+    cx.assert_resolved(params)?;
 
-    let signature = cx.signature(name.as_string(), parameters);
+    let tokenize_impl: TokenStream = if params.is_empty() {
+        quote! { ::core::convert::From::from([]) }
+    } else {
+        expand_tokenize_func(params.iter())
+    };
+
+    let signature = cx.signature(name.as_string(), params);
     let selector = crate::utils::selector(&signature);
 
-    let converts = expand_from_into_tuples(&name.0, parameters);
-    let fields = expand_fields(parameters);
+    let converts = expand_from_into_tuples(&name.0, params);
+    let fields = expand_fields(params);
     let tokens = quote! {
         #(#attrs)*
         #[allow(non_camel_case_types, non_snake_case)]
@@ -45,18 +51,22 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
 
             #[automatically_derived]
             impl ::alloy_sol_types::SolError for #name {
-                type Tuple = UnderlyingSolTuple;
-                type Token = <Self::Tuple as ::alloy_sol_types::SolType>::TokenType;
+                type Tuple<'a> = UnderlyingSolTuple<'a>;
+                type Token<'a> = <Self::Tuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
 
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
-                fn to_rust(&self) -> <Self::Tuple as ::alloy_sol_types::SolType>::RustType {
+                fn to_rust<'a>(&self) -> <Self::Tuple<'a> as ::alloy_sol_types::SolType>::RustType {
                     self.clone().into()
                 }
 
-                fn from_rust(tuple: <Self::Tuple as ::alloy_sol_types::SolType>::RustType) -> Self {
+                fn from_rust<'a>(tuple: <Self::Tuple<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
+                }
+
+                fn tokenize(&self) -> Self::Token<'_> {
+                    #tokenize_impl
                 }
             }
         };

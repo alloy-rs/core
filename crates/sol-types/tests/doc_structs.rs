@@ -38,7 +38,7 @@ fn structs() {
         b: Address::ZERO,
     };
 
-    let abi_encoded = Foo::encode(my_foo);
+    let abi_encoded = Foo::encode(&my_foo);
     assert_eq!(
         abi_encoded,
         hex! {

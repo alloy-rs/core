@@ -36,7 +36,7 @@
 //! assert_eq!(&MySolType::sol_type_name(), "bool[2]");
 //!
 //! // SolTypes are used to transform Rust into ABI blobs, and back.
-//! let encoded: Vec<u8> = MySolType::encode(data);
+//! let encoded: Vec<u8> = MySolType::encode(&data);
 //! let decoded: [bool; 2] = MySolType::decode(&encoded, validate)?;
 //! assert_eq!(data, decoded);
 //! # Ok(())
@@ -114,7 +114,7 @@
 //! let mvt = MyValueType::from(U256::from(1));
 //! assert_eq!(
 //!     mvt.encode_single(),
-//!     sol_data::Uint::<256>::encode_single(U256::from(1))
+//!     sol_data::Uint::<256>::encode_single(&U256::from(1))
 //! );
 //! # }
 //! ```

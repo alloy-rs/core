@@ -1,6 +1,6 @@
 //! [`ItemFunction`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, ExpCtxt};
+use super::{expand_fields, expand_from_into_tuples, r#type::expand_tokenize_func, ExpCtxt};
 use ast::{ItemFunction, Parameters};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -55,6 +55,12 @@ fn expand_call(
 
     let converts = expand_from_into_tuples(call_name, params);
 
+    let tokenize_impl = if params.is_empty() {
+        quote! { ::core::convert::From::from([]) }
+    } else {
+        expand_tokenize_func(params.iter())
+    };
+
     let attrs = &function.attrs;
     let tokens = quote! {
         #(#attrs)*
@@ -70,18 +76,22 @@ fn expand_call(
 
             #[automatically_derived]
             impl ::alloy_sol_types::SolCall for #call_name {
-                type Tuple = UnderlyingSolTuple;
-                type Token = <Self::Tuple as ::alloy_sol_types::SolType>::TokenType;
+                type Tuple<'a> = UnderlyingSolTuple<'a>;
+                type Token<'a> = <Self::Tuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
 
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
-                fn to_rust(&self) -> <Self::Tuple as ::alloy_sol_types::SolType>::RustType {
+                fn to_rust<'a>(&self) -> <Self::Tuple<'a> as ::alloy_sol_types::SolType>::RustType {
                     self.clone().into()
                 }
 
-                fn from_rust(tuple: <Self::Tuple as ::alloy_sol_types::SolType>::RustType) -> Self {
+                fn from_rust<'a>(tuple: <Self::Tuple<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
+                }
+
+                fn tokenize(&self) -> Self::Token<'_> {
+                    #tokenize_impl
                 }
             }
         };

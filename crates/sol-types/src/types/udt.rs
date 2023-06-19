@@ -40,20 +40,20 @@ macro_rules! define_udt {
             /// underlying type.
             #[inline]
             pub fn encode_single(&self) -> $crate::no_std_prelude::Vec<u8> {
-                <Self as $crate::SolType>::encode_single(self.0)
+                <Self as $crate::SolType>::encode_single(&self.0)
             }
 
             /// Return the packed encoding of this value, delegating to the
             /// underlying type.
             #[inline]
             pub fn encode_packed(&self) -> $crate::no_std_prelude::Vec<u8> {
-                <Self as $crate::SolType>::encode_packed(self.0)
+                <Self as $crate::SolType>::encode_packed(&self.0)
             }
         }
 
         impl $crate::SolType for $name {
             type RustType = <$underlying as $crate::SolType>::RustType;
-            type TokenType = <$underlying as $crate::SolType>::TokenType;
+            type TokenType<'a> = <$underlying as $crate::SolType>::TokenType<'a>;
 
             const DYNAMIC: bool = false;
 
@@ -63,36 +63,30 @@ macro_rules! define_udt {
             }
 
             #[inline]
-            fn type_check(token: &Self::TokenType) -> $crate::Result<()> {
+            fn type_check(token: &Self::TokenType<'_>) -> $crate::Result<()> {
                 <$underlying as $crate::SolType>::type_check(token)?;
                 $path(token)
             }
 
             #[inline]
-            fn tokenize<B>(rust: B) -> Self::TokenType
-            where
-                B: $crate::no_std_prelude::Borrow<Self::RustType>
+            fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_>
             {
                 <$underlying as $crate::SolType>::tokenize(rust)
             }
 
             #[inline]
-            fn detokenize(token: Self::TokenType) -> Self::RustType {
+            fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
                 <$underlying as $crate::SolType>::detokenize(token)
             }
 
             #[inline]
-            fn eip712_data_word<B>(rust: B) -> $crate::Word
-            where
-                B: $crate::no_std_prelude::Borrow<Self::RustType>
+            fn eip712_data_word(rust: &Self::RustType) -> $crate::Word
             {
                 <Self as $crate::SolType>::tokenize(rust).0
             }
 
             #[inline]
-            fn encode_packed_to<B>(rust: B, out: &mut $crate::no_std_prelude::Vec<u8>)
-            where
-                B: $crate::no_std_prelude::Borrow<Self::RustType>
+            fn encode_packed_to(rust: &Self::RustType, out: &mut $crate::no_std_prelude::Vec<u8>)
             {
                 <$underlying as $crate::SolType>::encode_packed_to(rust, out)
             }
