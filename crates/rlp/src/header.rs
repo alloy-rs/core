@@ -32,7 +32,7 @@ impl Header {
 
     /// Returns the length of the encoded header.
     #[inline]
-    pub fn length(&self) -> usize {
+    pub const fn length(&self) -> usize {
         crate::length_of_length(self.payload_length)
     }
 }
