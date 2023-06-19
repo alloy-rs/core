@@ -27,7 +27,7 @@ serde_json = { workspace = true, features = ["alloc"] }
 
 [dev-dependencies]
 hex-literal.workspace = true
-criterion = "0.5"
+criterion.workspace = true
 ethabi = "18"
 
 [features]

@@ -19,7 +19,14 @@ alloy-primitives.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+criterion.workspace = true
+ethabi = "18"
 
 [features]
 default = ["std"]
 std = ["serde/std", "alloy-primitives/std"]
+
+[[bench]]
+name = "json_abi"
+path = "benches/json_abi.rs"
+harness = false
