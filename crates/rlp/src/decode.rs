@@ -1,5 +1,6 @@
-use crate::types::Header;
+use crate::Header;
 use bytes::{Buf, Bytes, BytesMut};
+use core::fmt;
 
 /// A type that can be decoded from an RLP blob.
 pub trait Decodable: Sized {
@@ -68,8 +69,8 @@ pub enum DecodeError {
 #[cfg(feature = "std")]
 impl std::error::Error for DecodeError {}
 
-impl core::fmt::Display for DecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DecodeError::Overflow => f.write_str("overflow"),
             DecodeError::LeadingZero => f.write_str("leading zero"),

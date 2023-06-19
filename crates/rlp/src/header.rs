@@ -1,6 +1,7 @@
-use bytes::{BufMut, BytesMut};
+use crate::{EMPTY_LIST_CODE, EMPTY_STRING_CODE};
+use bytes::BufMut;
 
-/// The header for an RLP item,.
+/// The header of an RLP item.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Header {
     /// True if list, false otherwise.
@@ -32,14 +33,6 @@ impl Header {
     /// Returns the length of the encoded header.
     #[inline]
     pub fn length(&self) -> usize {
-        let mut out = BytesMut::new();
-        self.encode(&mut out);
-        out.len()
+        crate::length_of_length(self.payload_length)
     }
 }
-
-/// RLP prefix byte for 0-length string.
-pub const EMPTY_STRING_CODE: u8 = 0x80;
-
-/// RLP prefix byte for a 0-length array.
-pub const EMPTY_LIST_CODE: u8 = 0xC0;

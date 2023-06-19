@@ -1,4 +1,4 @@
-use crate::types::*;
+use crate::{Header, EMPTY_STRING_CODE};
 use arrayvec::ArrayVec;
 use bytes::{BufMut, Bytes, BytesMut};
 use core::borrow::Borrow;
