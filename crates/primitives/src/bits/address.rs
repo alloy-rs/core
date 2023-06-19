@@ -277,13 +277,13 @@ impl Address {
     /// ```
     /// # use alloy_primitives::Address;
     /// # use hex_literal::hex;
-    /// let address = Address::new(hex!("b20a608c624Ca5003905aA834De7156C68b2E1d0"));
+    /// let from = Address::new(hex!("b20a608c624Ca5003905aA834De7156C68b2E1d0"));
     ///
     /// let expected = Address::new(hex!("00000000219ab540356cBB839Cbe05303d7705Fa"));
-    /// assert_eq!(address.create(0), expected);
+    /// assert_eq!(from.create(0), expected);
     ///
     /// let expected = Address::new(hex!("e33c6e89e69d085897f98e92b06ebd541d1daa99"));
-    /// assert_eq!(address.create(1), expected);
+    /// assert_eq!(from.create(1), expected);
     /// ```
     #[cfg(feature = "rlp")]
     #[inline]
@@ -314,7 +314,7 @@ impl Address {
     }
 
     /// Computes the `CREATE2` address of a smart contract as specified in
-    /// [EIP-1014](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md):
+    /// [EIP-1014]:
     ///
     /// `keccak256(0xff ++ address ++ salt ++ keccak256(init_code))[12:]`
     ///
@@ -322,16 +322,18 @@ impl Address {
     /// bytecode that will be placed into the state, and which typically is used
     /// by high level languages to implement a ‘constructor’.
     ///
-    /// # Examples
+    /// [EIP-1014]: https://eips.ethereum.org/EIPS/eip-1014
     ///
-    /// ```ignore
+    /// # Examples
+    // TODO: use address macro
+    /// ```
     /// # use alloy_primitives::Address;
     /// # use hex_literal::hex;
-    /// let address = Address::new(hex!("5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"));
-    /// let salt = hex!("2b2f5776e38002e0c013d0d89828fdb06fee595ea2d5ed4b194e3883e823e350");
-    /// let init_code = hex!("60806040..."); // truncated
-    /// let expected = Address::new(hex!("0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"));
-    /// assert_eq!(address.create2_from_code(salt, init_code), expected);
+    /// let from = Address::new(hex!("8ba1f109551bD432803012645Ac136ddd64DBA72"));
+    /// let salt = hex!("7c5ea36004851c764c44143b1dcb59679b11c9a68e5f41497f6cf3d480715331");
+    /// let init_code = hex!("6394198df16000526103ff60206004601c335afa6040516060f3");
+    /// let expected = Address::new(hex!("533ae9d683B10C02EbDb05471642F85230071FC3"));
+    /// assert_eq!(from.create2_from_code(salt, init_code), expected);
     /// ```
     pub fn create2_from_code<S, C>(&self, salt: S, init_code: C) -> Self
     where
@@ -343,8 +345,7 @@ impl Address {
     }
 
     /// Computes the `CREATE2` address of a smart contract as specified in
-    /// [EIP-1014](https://eips.ethereum.org/EIPS/eip-1014),
-    /// taking the pre-computed hash of the init code as input:
+    /// [EIP-1014], taking the pre-computed hash of the init code as input:
     ///
     /// `keccak256(0xff ++ address ++ salt ++ init_code_hash)[12:]`
     ///
@@ -352,16 +353,18 @@ impl Address {
     /// bytecode that will be placed into the state, and which typically is used
     /// by high level languages to implement a ‘constructor’.
     ///
-    /// # Examples
+    /// [EIP-1014]: https://eips.ethereum.org/EIPS/eip-1014
     ///
+    /// # Examples
+    // TODO: use address macro
     /// ```
     /// # use alloy_primitives::Address;
     /// # use hex_literal::hex;
-    /// let address = Address::new(hex!("5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"));
+    /// let from = Address::new(hex!("5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"));
     /// let salt = hex!("2b2f5776e38002e0c013d0d89828fdb06fee595ea2d5ed4b194e3883e823e350");
     /// let init_code_hash = hex!("96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f");
     /// let expected = Address::new(hex!("0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"));
-    /// assert_eq!(address.create2(salt, init_code_hash), expected);
+    /// assert_eq!(from.create2(salt, init_code_hash), expected);
     /// ```
     pub fn create2<S, H>(&self, salt: S, init_code_hash: H) -> Self
     where
