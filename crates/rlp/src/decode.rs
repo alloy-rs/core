@@ -1,10 +1,39 @@
-use crate::types::Header;
+use crate::Header;
 use bytes::{Buf, Bytes, BytesMut};
+use core::fmt;
 
 /// A type that can be decoded from an RLP blob.
 pub trait Decodable: Sized {
     /// Decode the blob into the appropriate type.
     fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError>;
+}
+
+/// An active RLP decoder, with a specific slice of a payload.
+pub struct Rlp<'a> {
+    payload_view: &'a [u8],
+}
+
+impl<'a> Rlp<'a> {
+    /// Instantiate an RLP decoder with a payload slice.
+    pub fn new(mut payload: &'a [u8]) -> Result<Self, DecodeError> {
+        let h = Header::decode(&mut payload)?;
+        if !h.list {
+            return Err(DecodeError::UnexpectedString)
+        }
+
+        let payload_view = &payload[..h.payload_length];
+        Ok(Self { payload_view })
+    }
+
+    /// Decode the next item from the buffer.
+    #[inline]
+    pub fn get_next<T: Decodable>(&mut self) -> Result<Option<T>, DecodeError> {
+        if self.payload_view.is_empty() {
+            Ok(None)
+        } else {
+            T::decode(&mut self.payload_view).map(Some)
+        }
+    }
 }
 
 /// Errors for RLP decoding.
@@ -40,21 +69,21 @@ pub enum DecodeError {
 #[cfg(feature = "std")]
 impl std::error::Error for DecodeError {}
 
-impl core::fmt::Display for DecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DecodeError::Overflow => write!(f, "overflow"),
-            DecodeError::LeadingZero => write!(f, "leading zero"),
-            DecodeError::InputTooShort => write!(f, "input too short"),
-            DecodeError::NonCanonicalSingleByte => write!(f, "non-canonical single byte"),
-            DecodeError::NonCanonicalSize => write!(f, "non-canonical size"),
-            DecodeError::UnexpectedLength => write!(f, "unexpected length"),
-            DecodeError::UnexpectedString => write!(f, "unexpected string"),
-            DecodeError::UnexpectedList => write!(f, "unexpected list"),
+            DecodeError::Overflow => f.write_str("overflow"),
+            DecodeError::LeadingZero => f.write_str("leading zero"),
+            DecodeError::InputTooShort => f.write_str("input too short"),
+            DecodeError::NonCanonicalSingleByte => f.write_str("non-canonical single byte"),
+            DecodeError::NonCanonicalSize => f.write_str("non-canonical size"),
+            DecodeError::UnexpectedLength => f.write_str("unexpected length"),
+            DecodeError::UnexpectedString => f.write_str("unexpected string"),
+            DecodeError::UnexpectedList => f.write_str("unexpected list"),
             DecodeError::ListLengthMismatch { got, expected } => {
-                write!(f, "unexpected list len got {} expected: {}", got, expected)
+                write!(f, "unexpected list length (got {got}, expected {expected})")
             }
-            DecodeError::Custom(err) => write!(f, "{err}"),
+            DecodeError::Custom(err) => f.write_str(err),
         }
     }
 }
@@ -171,14 +200,15 @@ fn static_left_pad<const LEN: usize>(data: &[u8]) -> Option<[u8; LEN]> {
 }
 
 macro_rules! decode_integer {
-    ($t:ty) => {
+    ($($t:ty),+ $(,)?) => {$(
         impl Decodable for $t {
+            #[inline]
             fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
                 let h = Header::decode(buf)?;
                 if h.list {
                     return Err(DecodeError::UnexpectedList)
                 }
-                if h.payload_length > (<$t>::BITS as usize / 8) {
+                if h.payload_length > <$t>::BITS as usize / 8 {
                     return Err(DecodeError::Overflow)
                 }
                 if buf.remaining() < h.payload_length {
@@ -188,7 +218,7 @@ macro_rules! decode_integer {
                 // be zero.
                 // 0x80 is the canonical encoding of 0, so we return 0 here.
                 if h.payload_length == 0 {
-                    return Ok(<$t>::from(0u8))
+                    return Ok(0)
                 }
                 let v = <$t>::from_be_bytes(
                     static_left_pad(&buf[..h.payload_length]).ok_or(DecodeError::LeadingZero)?,
@@ -197,17 +227,13 @@ macro_rules! decode_integer {
                 Ok(v)
             }
         }
-    };
+    )+};
 }
 
-decode_integer!(usize);
-decode_integer!(u8);
-decode_integer!(u16);
-decode_integer!(u32);
-decode_integer!(u64);
-decode_integer!(u128);
+decode_integer!(u8, u16, u32, u64, usize, u128);
 
 impl Decodable for bool {
+    #[inline]
     fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
         Ok(match u8::decode(buf)? {
             0 => false,
@@ -218,6 +244,7 @@ impl Decodable for bool {
 }
 
 impl<const N: usize> Decodable for [u8; N] {
+    #[inline]
     fn decode(from: &mut &[u8]) -> Result<Self, DecodeError> {
         let h = Header::decode(from)?;
         if h.list {
@@ -239,6 +266,7 @@ impl<const N: usize> Decodable for [u8; N] {
 }
 
 impl Decodable for BytesMut {
+    #[inline]
     fn decode(from: &mut &[u8]) -> Result<Self, DecodeError> {
         let h = Header::decode(from)?;
         if h.list {
@@ -256,35 +284,78 @@ impl Decodable for BytesMut {
 }
 
 impl Decodable for Bytes {
+    #[inline]
     fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
         BytesMut::decode(buf).map(BytesMut::freeze)
     }
 }
 
-/// An active RLP decoder, with a specific slice of a payload.
-pub struct Rlp<'a> {
-    payload_view: &'a [u8],
+impl Decodable for alloc::string::String {
+    #[inline]
+    fn decode(from: &mut &[u8]) -> Result<Self, DecodeError> {
+        let h = Header::decode(from)?;
+        if h.list {
+            return Err(DecodeError::UnexpectedList)
+        }
+        if from.remaining() < h.payload_length {
+            return Err(DecodeError::InputTooShort)
+        }
+        let mut to = alloc::vec::Vec::with_capacity(h.payload_length);
+        to.extend_from_slice(&from[..h.payload_length]);
+        from.advance(h.payload_length);
+
+        Self::from_utf8(to).map_err(|_| DecodeError::Custom("invalid string"))
+    }
 }
 
-impl<'a> Rlp<'a> {
-    /// Instantiate an RLP decoder with a payload slice.
-    pub fn new(mut payload: &'a [u8]) -> Result<Self, DecodeError> {
-        let h = Header::decode(&mut payload)?;
+impl<E: Decodable> Decodable for alloc::vec::Vec<E> {
+    #[inline]
+    fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
+        let h = Header::decode(buf)?;
         if !h.list {
             return Err(DecodeError::UnexpectedString)
         }
-
-        let payload_view = &payload[..h.payload_length];
-        Ok(Self { payload_view })
-    }
-
-    /// Decode the next item from the buffer.
-    pub fn get_next<T: Decodable>(&mut self) -> Result<Option<T>, DecodeError> {
-        if self.payload_view.is_empty() {
-            return Ok(None)
+        if buf.remaining() < h.payload_length {
+            return Err(DecodeError::InputTooShort)
         }
 
-        Ok(Some(T::decode(&mut self.payload_view)?))
+        let payload_view = &mut &buf[..h.payload_length];
+
+        let mut to = alloc::vec::Vec::new();
+        while !payload_view.is_empty() {
+            to.push(E::decode(payload_view)?);
+        }
+
+        buf.advance(h.payload_length);
+
+        Ok(to)
+    }
+}
+
+macro_rules! wrap_impl {
+    ($([$($gen:tt)*] <$t:ty>::$new:ident),+ $(,)?) => {$(
+        impl<$($gen)*> Decodable for $t {
+            #[inline]
+            fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
+                 Decodable::decode(buf).map(<$t>::$new)
+            }
+        }
+    )+};
+}
+
+wrap_impl! {
+    [T: ?Sized + Decodable] <alloc::boxed::Box<T>>::new,
+    [T: ?Sized + Decodable] <alloc::rc::Rc<T>>::new,
+    [T: ?Sized + Decodable] <alloc::sync::Arc<T>>::new,
+}
+
+impl<T: ?Sized + alloc::borrow::ToOwned> Decodable for alloc::borrow::Cow<'_, T>
+where
+    T::Owned: Decodable,
+{
+    #[inline]
+    fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
+        T::Owned::decode(buf).map(Self::Owned)
     }
 }
 
@@ -317,71 +388,6 @@ mod std_impl {
             };
             buf.advance(h.payload_length);
             Ok(o)
-        }
-    }
-}
-
-mod alloc_impl {
-    use super::*;
-
-    impl<E> Decodable for alloc::vec::Vec<E>
-    where
-        E: Decodable,
-    {
-        fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
-            let h = Header::decode(buf)?;
-            if !h.list {
-                return Err(DecodeError::UnexpectedString)
-            }
-            if buf.remaining() < h.payload_length {
-                return Err(DecodeError::InputTooShort)
-            }
-
-            let payload_view = &mut &buf[..h.payload_length];
-
-            let mut to = alloc::vec::Vec::new();
-            while !payload_view.is_empty() {
-                to.push(E::decode(payload_view)?);
-            }
-
-            buf.advance(h.payload_length);
-
-            Ok(to)
-        }
-    }
-
-    impl<T> Decodable for ::alloc::boxed::Box<T>
-    where
-        T: Decodable + Sized,
-    {
-        fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
-            T::decode(buf).map(::alloc::boxed::Box::new)
-        }
-    }
-
-    impl<T> Decodable for ::alloc::sync::Arc<T>
-    where
-        T: Decodable + Sized,
-    {
-        fn decode(buf: &mut &[u8]) -> Result<Self, DecodeError> {
-            T::decode(buf).map(::alloc::sync::Arc::new)
-        }
-    }
-
-    impl Decodable for ::alloc::string::String {
-        fn decode(from: &mut &[u8]) -> Result<Self, DecodeError> {
-            let h = Header::decode(from)?;
-            if h.list {
-                return Err(DecodeError::UnexpectedList)
-            }
-            if from.remaining() < h.payload_length {
-                return Err(DecodeError::InputTooShort)
-            }
-            let mut to = ::alloc::vec::Vec::with_capacity(h.payload_length);
-            to.extend_from_slice(&from[..h.payload_length]);
-            from.advance(h.payload_length);
-
-            Self::from_utf8(to).map_err(|_| DecodeError::Custom("invalid string"))
         }
     }
 }

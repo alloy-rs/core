@@ -491,7 +491,7 @@ impl Resolver {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use alloy_sol_types::sol;
 
     use super::*;

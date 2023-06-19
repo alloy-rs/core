@@ -195,8 +195,6 @@ impl<const N: usize> core::str::FromStr for FixedBytes<N> {
     type Err = hex::FromHexError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = s.strip_prefix("0x").unwrap_or(s);
-
         let mut buf = [0u8; N];
         hex::decode_to_slice(s, &mut buf)?;
         Ok(Self(buf))

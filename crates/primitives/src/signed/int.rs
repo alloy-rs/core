@@ -215,7 +215,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 
     /// Determines if the integer is odd.
-    pub const fn is_odd(self) -> bool {
+    pub const fn is_odd(&self) -> bool {
         if BITS == 0 {
             false
         } else {
@@ -223,11 +223,17 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
+    /// Compile-time equality. NOT constant-time equality.
+    #[inline]
+    pub const fn const_eq(&self, other: &Self) -> bool {
+        const_eq(self, other)
+    }
+
     /// Returns `true` if `self` is zero and `false` if the number is negative
     /// or positive.
-    #[inline(always)]
-    pub const fn is_zero(self) -> bool {
-        const_eq(self, Self::ZERO)
+    #[inline]
+    pub const fn is_zero(&self) -> bool {
+        self.const_eq(&Self::ZERO)
     }
 
     /// Returns `true` if `self` is positive and `false` if the number is zero
@@ -554,7 +560,6 @@ mod tests {
     }
 
     #[test]
-    // #[allow(clippy::cognitive_complexity)]
     fn std_num_conversion() {
         // test conversion from basic types
 

@@ -107,7 +107,6 @@ pub struct TypedData {
 impl<'de> Deserialize<'de> for TypedData {
     fn deserialize<D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
-        #[allow(missing_debug_implementations)]
         struct TypedDataHelper {
             #[serde(default)]
             domain: Eip712Domain,

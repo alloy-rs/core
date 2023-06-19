@@ -380,7 +380,7 @@ impl PanicKind {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use alloy_primitives::keccak256;
 

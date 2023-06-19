@@ -397,7 +397,7 @@ impl DynSolType {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use crate::*;
     use alloy_primitives::Address;

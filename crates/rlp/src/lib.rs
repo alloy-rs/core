@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
-// This doctest uses derive and alloc, so it cannot be in the README :(
+// This doctest uses derive, so it cannot be in the README :(
 #![cfg_attr(
-    all(feature = "derive", feature = "std"),
+    feature = "derive",
     doc = r##"
 
 ## Usage Example
@@ -43,14 +43,9 @@ fn main() {
 #[allow(unused_imports)]
 extern crate alloc;
 
-// Used in alloc tests.
-#[cfg(test)]
-#[allow(unused_extern_crates)]
-extern crate hex_literal;
-
 mod decode;
 mod encode;
-mod types;
+mod header;
 
 pub use bytes::{Buf, BufMut};
 
@@ -59,9 +54,15 @@ pub use encode::{
     const_add, encode_fixed_size, encode_iter, encode_list, length_of_length, list_length,
     Encodable, MaxEncodedLen, MaxEncodedLenAssoc,
 };
-pub use types::{Header, EMPTY_LIST_CODE, EMPTY_STRING_CODE};
+pub use header::Header;
 
 #[cfg(feature = "derive")]
 pub use alloy_rlp_derive::{
     RlpDecodable, RlpDecodableWrapper, RlpEncodable, RlpEncodableWrapper, RlpMaxEncodedLen,
 };
+
+/// RLP prefix byte for 0-length string.
+pub const EMPTY_STRING_CODE: u8 = 0x80;
+
+/// RLP prefix byte for a 0-length array.
+pub const EMPTY_LIST_CODE: u8 = 0xC0;

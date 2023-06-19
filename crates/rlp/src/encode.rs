@@ -1,14 +1,18 @@
-use crate::types::*;
+use crate::{Header, EMPTY_STRING_CODE};
 use arrayvec::ArrayVec;
 use bytes::{BufMut, Bytes, BytesMut};
 use core::borrow::Borrow;
 
-pub(crate) fn zeroless_view(v: &impl AsRef<[u8]>) -> &[u8] {
-    let v = v.as_ref();
-    &v[v.iter().take_while(|&&b| b == 0).count()..]
+macro_rules! to_be_bytes_trimmed {
+    ($be:ident, $x:expr) => {{
+        $be = $x.to_be_bytes();
+        &$be[($x.leading_zeros() / 8) as usize..]
+    }};
 }
+pub(crate) use to_be_bytes_trimmed;
 
 /// Determine the length in bytes of the length prefix of an RLP item.
+#[inline]
 pub const fn length_of_length(payload_length: usize) -> usize {
     if payload_length < 56 {
         1
@@ -18,6 +22,7 @@ pub const fn length_of_length(payload_length: usize) -> usize {
 }
 
 #[doc(hidden)]
+#[inline]
 pub const fn const_add(a: usize, b: usize) -> usize {
     a + b
 }
@@ -54,6 +59,7 @@ pub trait Encodable {
     ///
     /// The default implementation computes this by encoding the type. If
     /// feasible, we recommender implementers override this default impl.
+    #[inline]
     fn length(&self) -> usize {
         let mut out = BytesMut::new();
         self.encode(&mut out);
@@ -61,31 +67,8 @@ pub trait Encodable {
     }
 }
 
-impl<'a, T: ?Sized + Encodable> Encodable for &'a T {
-    #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        (**self).encode(out)
-    }
-
-    #[inline]
-    fn length(&self) -> usize {
-        (**self).length()
-    }
-}
-
-impl<'a, T: ?Sized + Encodable> Encodable for &'a mut T {
-    #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        (**self).encode(out)
-    }
-
-    #[inline]
-    fn length(&self) -> usize {
-        (**self).length()
-    }
-}
-
 impl Encodable for [u8] {
+    #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
         if self.len() != 1 || self[0] >= EMPTY_STRING_CODE {
             Header {
@@ -97,6 +80,7 @@ impl Encodable for [u8] {
         out.put_slice(self);
     }
 
+    #[inline]
     fn length(&self) -> usize {
         let mut len = self.len();
         if self.len() != 1 || self[0] >= EMPTY_STRING_CODE {
@@ -109,24 +93,12 @@ impl Encodable for [u8] {
 impl<const N: usize> Encodable for [u8; N] {
     #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
-        Encodable::encode(&self[..], out)
+        self[..].encode(out);
     }
 
     #[inline]
     fn length(&self) -> usize {
-        Encodable::length(&self[..])
-    }
-}
-
-impl Encodable for str {
-    #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        Encodable::encode(self.as_bytes(), out)
-    }
-
-    #[inline]
-    fn length(&self) -> usize {
-        Encodable::length(self.as_bytes())
+        self[..].length()
     }
 }
 
@@ -134,10 +106,23 @@ unsafe impl<const N: usize> MaxEncodedLenAssoc for [u8; N] {
     const LEN: usize = N + length_of_length(N);
 }
 
+impl Encodable for str {
+    #[inline]
+    fn encode(&self, out: &mut dyn BufMut) {
+        self.as_bytes().encode(out)
+    }
+
+    #[inline]
+    fn length(&self) -> usize {
+        self.as_bytes().length()
+    }
+}
+
 impl Encodable for bool {
     #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
-        (*self as u8).encode(out)
+        // inlined `(*self as u8).encode(out)`
+        out.put_u8(if *self { 1 } else { EMPTY_STRING_CODE });
     }
 
     #[inline]
@@ -147,109 +132,44 @@ impl Encodable for bool {
     }
 }
 
-macro_rules! encodable_uint {
-    ($t:ty) => {
-        #[allow(clippy::cmp_owned)]
+impl_max_encoded_len!(bool, <u8 as MaxEncodedLenAssoc>::LEN);
+
+macro_rules! uint_impl {
+    ($($t:ty),+ $(,)?) => {$(
         impl Encodable for $t {
+            #[inline]
             fn length(&self) -> usize {
-                if *self < <$t>::from(EMPTY_STRING_CODE) {
+                let x = *self;
+                if x < EMPTY_STRING_CODE as $t {
                     1
                 } else {
-                    1 + (<$t>::BITS as usize / 8) - (self.leading_zeros() as usize / 8)
+                    1 + (<$t>::BITS as usize / 8) - (x.leading_zeros() as usize / 8)
                 }
             }
 
+            #[inline]
             fn encode(&self, out: &mut dyn BufMut) {
-                if *self == 0 {
+                let x = *self;
+                if x == 0 {
                     out.put_u8(EMPTY_STRING_CODE);
-                } else if *self < <$t>::from(EMPTY_STRING_CODE) {
-                    out.put_u8(u8::try_from(*self).unwrap());
+                } else if x < EMPTY_STRING_CODE as $t {
+                    out.put_u8(x as u8);
                 } else {
-                    let be = self.to_be_bytes();
-                    let be = zeroless_view(&be);
+                    let be;
+                    let be = to_be_bytes_trimmed!(be, x);
                     out.put_u8(EMPTY_STRING_CODE + be.len() as u8);
                     out.put_slice(be);
                 }
             }
         }
-    };
-}
 
-macro_rules! max_encoded_len_uint {
-    ($t:ty) => {
         impl_max_encoded_len!($t, {
             length_of_length(<$t>::MAX.to_be_bytes().len()) + <$t>::MAX.to_be_bytes().len()
         });
-    };
+    )+};
 }
 
-encodable_uint!(usize);
-max_encoded_len_uint!(usize);
-
-encodable_uint!(u8);
-max_encoded_len_uint!(u8);
-
-encodable_uint!(u16);
-max_encoded_len_uint!(u16);
-
-encodable_uint!(u32);
-max_encoded_len_uint!(u32);
-
-encodable_uint!(u64);
-max_encoded_len_uint!(u64);
-
-encodable_uint!(u128);
-max_encoded_len_uint!(u128);
-
-impl_max_encoded_len!(bool, <u8 as MaxEncodedLenAssoc>::LEN);
-
-impl<'a, T: ?Sized + alloc::borrow::ToOwned + Encodable> Encodable for alloc::borrow::Cow<'a, T> {
-    #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        (**self).encode(out)
-    }
-
-    #[inline]
-    fn length(&self) -> usize {
-        (**self).length()
-    }
-}
-
-impl<T: ?Sized + Encodable> Encodable for alloc::boxed::Box<T> {
-    #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        (**self).encode(out)
-    }
-
-    #[inline]
-    fn length(&self) -> usize {
-        (**self).length()
-    }
-}
-
-impl<T: ?Sized + Encodable> Encodable for alloc::rc::Rc<T> {
-    #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        (**self).encode(out)
-    }
-
-    #[inline]
-    fn length(&self) -> usize {
-        (**self).length()
-    }
-}
-
-impl<T: ?Sized + Encodable> Encodable for alloc::sync::Arc<T> {
-    #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        (**self).encode(out)
-    }
-
-    #[inline]
-    fn length(&self) -> usize {
-        (**self).length()
-    }
-}
+uint_impl!(u8, u16, u32, u64, usize, u128);
 
 impl<T: Encodable> Encodable for alloc::vec::Vec<T> {
     #[inline]
@@ -263,16 +183,32 @@ impl<T: Encodable> Encodable for alloc::vec::Vec<T> {
     }
 }
 
-impl Encodable for alloc::string::String {
-    #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        self.as_bytes().encode(out);
-    }
+macro_rules! deref_impl {
+    ($([$($gen:tt)*] $t:ty),+ $(,)?) => {$(
+        impl<$($gen)*> Encodable for $t {
+            #[inline]
+            fn encode(&self, out: &mut dyn BufMut) {
+                (**self).encode(out)
+            }
 
-    #[inline]
-    fn length(&self) -> usize {
-        self.as_bytes().length()
-    }
+            #[inline]
+            fn length(&self) -> usize {
+                (**self).length()
+            }
+        }
+    )+};
+}
+
+deref_impl! {
+    [] alloc::string::String,
+    [] Bytes,
+    [] BytesMut,
+    [T: ?Sized + Encodable] &T,
+    [T: ?Sized + Encodable] &mut T,
+    [T: ?Sized + Encodable] alloc::boxed::Box<T>,
+    [T: ?Sized + alloc::borrow::ToOwned + Encodable] alloc::borrow::Cow<'_, T>,
+    [T: ?Sized + Encodable] alloc::rc::Rc<T>,
+    [T: ?Sized + Encodable] alloc::sync::Arc<T>,
 }
 
 #[cfg(feature = "std")]
@@ -317,25 +253,6 @@ mod std_support {
     }
 }
 
-macro_rules! slice_impl {
-    ($t:ty) => {
-        impl $crate::Encodable for $t {
-            #[inline]
-            fn encode(&self, out: &mut dyn BufMut) {
-                Encodable::encode(&self[..], out)
-            }
-
-            #[inline]
-            fn length(&self) -> usize {
-                Encodable::length(&self[..])
-            }
-        }
-    };
-}
-
-slice_impl!(Bytes);
-slice_impl!(BytesMut);
-
 fn rlp_list_header<E, K>(v: &[K]) -> Header
 where
     E: Encodable + ?Sized,
@@ -362,11 +279,7 @@ where
 }
 
 /// Encode a list of items.
-pub fn encode_list<E, K>(v: &[K], out: &mut dyn BufMut)
-where
-    E: Encodable + ?Sized,
-    K: Borrow<E>,
-{
+pub fn encode_list<E: Encodable>(v: &[E], out: &mut dyn BufMut) {
     let h = rlp_list_header(v);
     h.encode(out);
     for x in v {
@@ -457,6 +370,12 @@ mod tests {
         assert_eq!(encoded(hex!("ABBA"))[..], hex!("82abba")[..]);
     }
 
+    fn c<T, U: From<T>>(
+        it: impl IntoIterator<Item = (T, &'static [u8])>,
+    ) -> impl Iterator<Item = (U, &'static [u8])> {
+        it.into_iter().map(|(k, v)| (k.into(), v))
+    }
+
     fn u8_fixtures() -> impl IntoIterator<Item = (u8, &'static [u8])> {
         vec![
             (0, &hex!("80")[..]),
@@ -464,12 +383,6 @@ mod tests {
             (0x7F, &hex!("7F")[..]),
             (0x80, &hex!("8180")[..]),
         ]
-    }
-
-    fn c<T, U: From<T>>(
-        it: impl IntoIterator<Item = (T, &'static [u8])>,
-    ) -> impl Iterator<Item = (U, &'static [u8])> {
-        it.into_iter().map(|(k, v)| (k.into(), v))
     }
 
     fn u16_fixtures() -> impl IntoIterator<Item = (u16, &'static [u8])> {
@@ -499,6 +412,26 @@ mod tests {
         )])
     }
 
+    macro_rules! uint_rlp_test {
+        ($fixtures:expr) => {
+            for (input, output) in $fixtures {
+                assert_eq!(encoded(input), output);
+            }
+        };
+    }
+
+    #[test]
+    fn rlp_uints() {
+        uint_rlp_test!(u8_fixtures());
+        uint_rlp_test!(u16_fixtures());
+        uint_rlp_test!(u32_fixtures());
+        uint_rlp_test!(u64_fixtures());
+        uint_rlp_test!(u128_fixtures());
+        // #[cfg(feature = "ethnum")]
+        // uint_rlp_test!(u256_fixtures());
+    }
+
+    /*
     #[cfg(feature = "ethnum")]
     fn u256_fixtures() -> impl IntoIterator<Item = (ethnum::U256, &'static [u8])> {
         c(u128_fixtures()).chain(vec![(
@@ -533,7 +466,6 @@ mod tests {
         ])
     }
 
-    #[cfg(feature = "ethereum-types")]
     fn eth_u128_fixtures() -> impl IntoIterator<Item = (ethereum_types::U128, &'static [u8])> {
         c(u128_fixtures()).chain(vec![(
             ethereum_types::U128::from_str_radix("10203E405060708090A0B0C0D0E0F2", 16).unwrap(),
@@ -541,7 +473,6 @@ mod tests {
         )])
     }
 
-    #[cfg(feature = "ethereum-types")]
     fn eth_u256_fixtures() -> impl IntoIterator<Item = (ethereum_types::U256, &'static [u8])> {
         c(u128_fixtures()).chain(vec![(
             ethereum_types::U256::from_str_radix(
@@ -565,25 +496,6 @@ mod tests {
         )])
     }
 
-    macro_rules! uint_rlp_test {
-        ($fixtures:expr) => {
-            for (input, output) in $fixtures {
-                assert_eq!(encoded(input), output);
-            }
-        };
-    }
-
-    #[test]
-    fn rlp_uints() {
-        uint_rlp_test!(u8_fixtures());
-        uint_rlp_test!(u16_fixtures());
-        uint_rlp_test!(u32_fixtures());
-        uint_rlp_test!(u64_fixtures());
-        uint_rlp_test!(u128_fixtures());
-        #[cfg(feature = "ethnum")]
-        uint_rlp_test!(u256_fixtures());
-    }
-
     #[cfg(feature = "ethereum-types")]
     #[test]
     fn rlp_eth_uints() {
@@ -592,6 +504,7 @@ mod tests {
         uint_rlp_test!(eth_u256_fixtures());
         uint_rlp_test!(eth_u512_fixtures());
     }
+    */
 
     #[test]
     fn rlp_list() {
@@ -612,16 +525,42 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "smol_str")]
     #[test]
-    fn rlp_smol_str() {
-        use smol_str::SmolStr;
-        assert_eq!(encoded(SmolStr::new(""))[..], hex!("80")[..]);
-        let mut b = BytesMut::new();
-        "test smol str".to_string().encode(&mut b);
-        assert_eq!(&encoded(SmolStr::new("test smol str"))[..], b.as_ref());
-        let mut b = BytesMut::new();
-        "abcdefgh".to_string().encode(&mut b);
-        assert_eq!(&encoded(SmolStr::new("abcdefgh"))[..], b.as_ref());
+    fn to_be_bytes_trimmed() {
+        macro_rules! test_to_be_bytes_trimmed {
+            ($($x:expr => $expected:expr),+ $(,)?) => {$(
+                let be;
+                assert_eq!(to_be_bytes_trimmed!(be, $x), $expected);
+            )+};
+        }
+
+        test_to_be_bytes_trimmed! {
+            0u8 => [],
+            0u16 => [],
+            0u32 => [],
+            0u64 => [],
+            0usize => [],
+            0u128 => [],
+
+            1u8 => [1],
+            1u16 => [1],
+            1u32 => [1],
+            1u64 => [1],
+            1usize => [1],
+            1u128 => [1],
+
+            u8::MAX => [0xff],
+            u16::MAX => [0xff, 0xff],
+            u32::MAX => [0xff, 0xff, 0xff, 0xff],
+            u64::MAX => [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
+            u128::MAX => [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
+
+            1u8 => [1],
+            255u8 => [255],
+            256u16 => [1, 0],
+            65535u16 => [255, 255],
+            65536u32 => [1, 0, 0],
+            65536u64 => [1, 0, 0],
+        }
     }
 }

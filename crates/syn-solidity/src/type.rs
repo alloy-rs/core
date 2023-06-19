@@ -470,6 +470,15 @@ impl Type {
         matches!(self, Self::Custom(_))
     }
 
+    pub fn has_custom(&self) -> bool {
+        match self {
+            Self::Custom(_) => true,
+            Self::Array(a) => a.ty.has_custom(),
+            Self::Tuple(t) => t.types.iter().any(Type::has_custom),
+            _ => false,
+        }
+    }
+
     /// Traverses this type while calling `f`.
     #[cfg(feature = "visit")]
     pub fn visit(&self, f: impl FnMut(&Self)) {

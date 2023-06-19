@@ -17,6 +17,7 @@ extern crate alloc;
 use serde_json as _;
 
 pub mod aliases;
+#[doc(no_inline)]
 pub use aliases::{
     BlockHash, BlockNumber, ChainId, Selector, StorageKey, StorageValue, TxHash, TxIndex, TxNumber,
     I128, I16, I256, I32, I64, I8, U128, U16, U256, U32, U512, U64, U8,
@@ -32,12 +33,16 @@ mod bytes;
 pub use self::bytes::Bytes;
 
 mod signed;
-pub use signed::{const_eq, BigIntConversionError, ParseSignedError, Sign, Signed};
+pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 mod utils;
-pub use utils::*;
+pub use utils::keccak256;
 
+#[doc(no_inline)]
 pub use ruint::{self, uint, Uint};
+
+#[doc(no_inline)]
+pub use tiny_keccak::{self, Hasher, Keccak};
 
 // Not public API.
 #[doc(hidden)]
