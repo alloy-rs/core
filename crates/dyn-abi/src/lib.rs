@@ -52,7 +52,7 @@ pub mod eip712;
 pub use eip712::{parser as eip712_parser, Resolver, TypedData};
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[test]

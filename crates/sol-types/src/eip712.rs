@@ -676,7 +676,7 @@ macro_rules! domain {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     const _DOMAIN: Eip712Domain = domain! {
         name: "abcd",

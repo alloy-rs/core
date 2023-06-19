@@ -346,7 +346,7 @@ impl core::str::FromStr for DynSolType {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     #[test]
     fn it_parses_solidity_types() {

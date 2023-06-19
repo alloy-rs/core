@@ -111,7 +111,7 @@ impl Address {
 
     /// Left-pads the address to 32 bytes (EVM word size).
     #[inline]
-    pub fn into_word(self) -> FixedBytes<32> {
+    pub fn into_word(&self) -> FixedBytes<32> {
         let mut buf = [0; 32];
         buf[12..].copy_from_slice(self.as_slice());
         FixedBytes(buf)
@@ -132,15 +132,13 @@ impl Address {
     /// expected checksum.
     ///
     /// # Examples
-    ///
+    // TODO: use address macro
     /// ```
     /// # use alloy_primitives::Address;
     /// # use hex_literal::hex;
     /// let checksummed = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
     /// let address = Address::parse_checksummed(checksummed, None).unwrap();
-    // TODO: use address macro
-    /// let expected =
-    ///     Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// let expected = Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
     /// assert_eq!(address, expected);
     /// ```
     pub fn parse_checksummed<S: AsRef<str>>(
@@ -180,13 +178,11 @@ impl Address {
     /// This method panics if `buf` is not exactly 42 bytes long.
     ///
     /// # Examples
-    ///
+    // TODO: use address macro
     /// ```
     /// # use alloy_primitives::Address;
     /// # use hex_literal::hex;
-    // TODO: use address macro
-    /// let address =
-    ///     Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// let address = Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
     /// let mut buf = [0; 42];
     ///
     /// let checksummed: &str = address.to_checksum_raw(&mut buf, None);
@@ -254,13 +250,11 @@ impl Address {
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
     ///
     /// # Examples
-    ///
+    // TODO: use address macro
     /// ```
     /// # use alloy_primitives::Address;
     /// # use hex_literal::hex;
-    // TODO: use address macro
-    /// let address =
-    ///     Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// let address = Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
     ///
     /// let checksummed: String = address.to_checksum(None);
     /// assert_eq!(checksummed, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
@@ -274,22 +268,34 @@ impl Address {
         self.to_checksum_raw(&mut buf, chain_id).to_string()
     }
 
-    /// Computes the `create` address for the given address and nonce.
+    /// Computes the `create` address for this address and nonce:
     ///
-    /// The address for an Ethereum contract is deterministically computed from
-    /// the address of its creator (`sender`, `self`) and how many transactions
-    /// the creator has sent (`nonce`). The sender and nonce are RLP encoded
-    /// and then hashed with [`keccak256`].
+    /// `keccak256(rlp([sender, nonce]))[12:]`
+    ///
+    /// # Examples
+    // TODO: use address macro
+    /// ```
+    /// # use alloy_primitives::Address;
+    /// # use hex_literal::hex;
+    /// let address = Address::new(hex!("b20a608c624Ca5003905aA834De7156C68b2E1d0"));
+    ///
+    /// let expected = Address::new(hex!("00000000219ab540356cBB839Cbe05303d7705Fa"));
+    /// assert_eq!(address.create(0), expected);
+    ///
+    /// let expected = Address::new(hex!("e33c6e89e69d085897f98e92b06ebd541d1daa99"));
+    /// assert_eq!(address.create(1), expected);
+    /// ```
     #[cfg(feature = "rlp")]
     #[inline]
     pub fn create(&self, nonce: u64) -> Self {
         use alloy_rlp::{Encodable, EMPTY_LIST_CODE, EMPTY_STRING_CODE};
 
+        // max u64 encoded length is `1 + u64::BYTES`
+        const MAX_LEN: usize = 1 + (1 + 20) + 9;
+
         let len = 22 + nonce.length();
-        const MAX_LEN: usize = 22 + 9;
         debug_assert!(len <= MAX_LEN);
 
-        // max u64 length is `1 + u64::BYTES`
         let mut out = [0u8; MAX_LEN];
 
         // list header
@@ -308,9 +314,25 @@ impl Address {
     }
 
     /// Computes the `CREATE2` address of a smart contract as specified in
-    /// [EIP1014](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md):
+    /// [EIP-1014](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md):
     ///
     /// `keccak256(0xff ++ address ++ salt ++ keccak256(init_code))[12:]`
+    ///
+    /// The `init_code` is the code that, when executed, produces the runtime
+    /// bytecode that will be placed into the state, and which typically is used
+    /// by high level languages to implement a ‘constructor’.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// # use alloy_primitives::Address;
+    /// # use hex_literal::hex;
+    /// let address = Address::new(hex!("5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"));
+    /// let salt = hex!("2b2f5776e38002e0c013d0d89828fdb06fee595ea2d5ed4b194e3883e823e350");
+    /// let init_code = hex!("60806040..."); // truncated
+    /// let expected = Address::new(hex!("0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"));
+    /// assert_eq!(address.create2_from_code(salt, init_code), expected);
+    /// ```
     pub fn create2_from_code<S, C>(&self, salt: S, init_code: C) -> Self
     where
         // not `AsRef` because `[u8; N]` does not implement `AsRef<[u8; N]>`
@@ -321,10 +343,26 @@ impl Address {
     }
 
     /// Computes the `CREATE2` address of a smart contract as specified in
-    /// [EIP1014](https://eips.ethereum.org/EIPS/eip-1014),
+    /// [EIP-1014](https://eips.ethereum.org/EIPS/eip-1014),
     /// taking the pre-computed hash of the init code as input:
     ///
     /// `keccak256(0xff ++ address ++ salt ++ init_code_hash)[12:]`
+    ///
+    /// The `init_code` is the code that, when executed, produces the runtime
+    /// bytecode that will be placed into the state, and which typically is used
+    /// by high level languages to implement a ‘constructor’.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_primitives::Address;
+    /// # use hex_literal::hex;
+    /// let address = Address::new(hex!("5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"));
+    /// let salt = hex!("2b2f5776e38002e0c013d0d89828fdb06fee595ea2d5ed4b194e3883e823e350");
+    /// let init_code_hash = hex!("96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f");
+    /// let expected = Address::new(hex!("0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"));
+    /// assert_eq!(address.create2(salt, init_code_hash), expected);
+    /// ```
     pub fn create2<S, H>(&self, salt: S, init_code_hash: H) -> Self
     where
         // not `AsRef` because `[u8; N]` does not implement `AsRef<[u8; N]>`
@@ -337,7 +375,7 @@ impl Address {
     // non-generic inner function
     fn _create2(&self, salt: &[u8; 32], init_code_hash: &[u8; 32]) -> Self {
         // note: creating a temporary buffer and copying everything over performs
-        // much better than calling `Keccak256::update` multiple times
+        // much better than calling `Keccak::update` multiple times
         let mut bytes = [0; 85];
         bytes[0] = 0xff;
         bytes[1..21].copy_from_slice(self.as_slice());
@@ -349,22 +387,31 @@ impl Address {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
+    use hex_literal::hex;
 
     #[test]
     fn parse() {
+        let expected = hex!("0102030405060708090a0b0c0d0e0f1011121314");
         assert_eq!(
-            "0x0102030405060708090a0b0c0d0e0f1011121314"
+            "0102030405060708090a0b0c0d0e0f1011121314"
                 .parse::<Address>()
                 .unwrap()
                 .into_array(),
-            hex_literal::hex!("0102030405060708090a0b0c0d0e0f1011121314")
+            expected
+        );
+        assert_eq!(
+            "0x0102030405060708090a0b0c0d0e0f1011121314"
+                .parse::<Address>()
+                .unwrap(),
+            expected
         );
     }
 
+    // https://eips.ethereum.org/EIPS/eip-55
     #[test]
-    fn eip_55() {
+    fn checksum() {
         let addresses = [
             // All caps
             "0x52908400098527886E0F7030069857D2E4169EE7",
@@ -386,8 +433,9 @@ mod test {
         }
     }
 
+    // https://eips.ethereum.org/EIPS/eip-1191
     #[test]
-    fn eip_1191() {
+    fn checksum_chain_id() {
         let eth_mainnet = [
             "0x27b1fdb04752bbc536007a920d24acb045561c26",
             "0x3599689E6292b81B2d85451025146515070129Bb",
@@ -445,7 +493,7 @@ mod test {
         }
     }
 
-    // Test vectors from https://ethereum.stackexchange.com/questions/760/how-is-the-address-of-an-ethereum-contract-computed
+    // https://ethereum.stackexchange.com/questions/760/how-is-the-address-of-an-ethereum-contract-computed
     #[test]
     #[cfg(feature = "rlp")]
     fn create() {
@@ -469,9 +517,9 @@ mod test {
     #[test]
     #[cfg(all(feature = "rlp", feature = "arbitrary"))]
     fn create_correctness() {
-        use alloy_rlp::Encodable;
-
         fn create_slow(address: &Address, nonce: u64) -> Address {
+            use alloy_rlp::Encodable;
+
             let mut out = vec![];
 
             alloy_rlp::Header {
@@ -490,10 +538,10 @@ mod test {
         });
     }
 
-    // Test vectors from https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md#examples
+    // https://eips.ethereum.org/EIPS/eip-1014
     #[test]
-    fn eip_1014_create2() {
-        for (from, salt, init_code, expected) in [
+    fn create2() {
+        let tests = [
             (
                 "0000000000000000000000000000000000000000",
                 "0000000000000000000000000000000000000000000000000000000000000000",
@@ -536,7 +584,8 @@ mod test {
                 "",
                 "E33C0C7F7df4809055C3ebA6c09CFe4BaF1BD9e0",
             ),
-        ] {
+        ];
+        for (from, salt, init_code, expected) in tests {
             let from = from.parse::<Address>().unwrap();
 
             let salt = hex::decode(salt).unwrap();
