@@ -86,10 +86,10 @@ impl DynSolType {
     pub fn tokenize(&self, value: DynSolValue) -> Result<DynToken<'_>> {
         match (self, value) {
             (DynSolType::Address, DynSolValue::Address(val)) => {
-                Ok(DynToken::Word(sol_data::Address::tokenize(val).0))
+                Ok(DynToken::Word(sol_data::Address::tokenize(&val).0))
             }
             (DynSolType::Bool, DynSolValue::Bool(val)) => {
-                Ok(DynToken::Word(sol_data::Bool::tokenize(val).0))
+                Ok(DynToken::Word(sol_data::Bool::tokenize(&val).0))
             }
             (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(val)),
             (DynSolType::FixedBytes(len), DynSolValue::FixedBytes(word, size)) => {
@@ -244,7 +244,7 @@ impl DynSolType {
             )),
 
             (DynSolType::String, DynToken::PackedSeq(buf)) => Ok(DynSolValue::String(
-                sol_data::String::detokenize(buf.into()),
+                sol_data::String::detokenize(buf.as_slice().into()),
             )),
             (DynSolType::Tuple(types), DynToken::FixedSeq(tokens, _)) => {
                 if types.len() != tokens.len() {

@@ -139,13 +139,13 @@ impl Encoder {
 
     /// Shortcut for appending a token sequence.
     #[inline]
-    pub fn append_head_tail<T: TokenSeq>(&mut self, token: &T) {
+    pub fn append_head_tail<'a, T: TokenSeq<'a>>(&mut self, token: &T) {
         token.encode_sequence(self);
     }
 }
 
 /// ABI-encode a token sequence.
-pub fn encode<T: TokenSeq>(tokens: &T) -> Vec<u8> {
+pub fn encode<'a, T: TokenSeq<'a>>(tokens: &T) -> Vec<u8> {
     let mut enc = Encoder::with_capacity(tokens.total_words());
     enc.append_head_tail(tokens);
     enc.into_bytes()
@@ -153,7 +153,7 @@ pub fn encode<T: TokenSeq>(tokens: &T) -> Vec<u8> {
 
 /// ABI-encode a single token.
 #[inline]
-pub fn encode_single<T: TokenType>(token: &T) -> Vec<u8> {
+pub fn encode_single<'a, T: TokenType<'a>>(token: &T) -> Vec<u8> {
     // Same as [`core::array::from_ref`].
     // SAFETY: Converting `&T` to `&(T,)` is sound.
     encode::<(T,)>(unsafe { &*(token as *const T).cast::<(T,)>() })
@@ -161,7 +161,7 @@ pub fn encode_single<T: TokenType>(token: &T) -> Vec<u8> {
 
 /// Encode a tuple as ABI function params, suitable for passing to a function.
 #[inline]
-pub fn encode_params<T: TokenSeq>(token: &T) -> Vec<u8> {
+pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
     if T::IS_TUPLE {
         encode(token)
     } else {
