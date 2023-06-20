@@ -1,6 +1,9 @@
-use crate::{kw, FunctionAttributes, Parameters, SolIdent, Type};
+use crate::{kw, Block, FunctionAttributes, Parameters, SolIdent, Type};
 use proc_macro2::Span;
-use std::fmt;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
@@ -8,8 +11,8 @@ use syn::{
     Attribute, Error, Result, Token,
 };
 
-/// A function definition: `function helloWorld() external pure returns(string
-/// memory);`
+/// A function, constructor, fallback, receive, or modifier definition:
+/// `function helloWorld() external pure returns(string memory);`
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.functionDefinition>
@@ -17,21 +20,22 @@ use syn::{
 pub struct ItemFunction {
     /// The `syn` attributes of the function.
     pub attrs: Vec<Attribute>,
-    pub function_token: kw::function,
-    pub name: SolIdent,
+    pub kind: FunctionKind,
+    pub name: Option<SolIdent>,
     pub paren_token: Paren,
     pub arguments: Parameters<Token![,]>,
     /// The Solidity attributes of the function.
     pub attributes: FunctionAttributes,
     /// The optional return types of the function.
     pub returns: Option<Returns>,
-    pub semi_token: Token![;],
+    pub body: FunctionBody,
 }
 
 impl fmt::Debug for ItemFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Function")
             .field("attrs", &self.attrs)
+            .field("kind", &self.kind)
             .field("name", &self.name)
             .field("arguments", &self.arguments)
             .field("attributes", &self.attributes)
@@ -42,39 +46,41 @@ impl fmt::Debug for ItemFunction {
 
 impl Parse for ItemFunction {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        fn parse_check_brace<T: Parse>(input: ParseStream<'_>) -> Result<T> {
-            if input.peek(Brace) {
-                Err(input.error("functions cannot have an implementation"))
-            } else {
-                input.parse()
-            }
-        }
-
         let content;
         Ok(Self {
             attrs: input.call(Attribute::parse_outer)?,
-            function_token: input.parse()?,
-            name: input.parse()?,
+            kind: input.parse()?,
+            name: input.call(SolIdent::parse_opt)?,
             paren_token: parenthesized!(content in input),
             arguments: content.parse()?,
-            attributes: parse_check_brace(input)?,
-            returns: if input.peek(kw::returns) {
-                Some(input.parse()?)
-            } else {
-                None
-            },
-            semi_token: parse_check_brace(input)?,
+            attributes: input.parse()?,
+            returns: input.call(Returns::parse_opt)?,
+            body: input.parse()?,
         })
     }
 }
 
 impl ItemFunction {
     pub fn span(&self) -> Span {
-        self.name.span()
+        if let Some(name) = &self.name {
+            name.span()
+        } else {
+            self.kind.span()
+        }
     }
 
     pub fn set_span(&mut self, span: Span) {
-        self.name.set_span(span);
+        self.kind.set_span(span);
+        if let Some(name) = &mut self.name {
+            name.set_span(span);
+        }
+    }
+
+    pub fn name(&self) -> &SolIdent {
+        match &self.name {
+            Some(name) => name,
+            None => panic!("function has no name: {self:?}"),
+        }
     }
 
     /// Returns true if the function returns nothing.
@@ -104,13 +110,43 @@ impl ItemFunction {
     }
 }
 
+kw_enum! {
+    /// The kind of function.
+    pub enum FunctionKind {
+        /// `constructor`
+        Constructor(kw::constructor),
+        /// `function`
+        Function(kw::function),
+        /// `fallback`
+        Fallback(kw::fallback),
+        /// `receive`
+        Receive(kw::receive),
+        /// `modifier`
+        Modifier(kw::modifier),
+    }
+}
+
 /// The `returns` attribute of a function.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Returns {
     pub returns_token: kw::returns,
     pub paren_token: Paren,
     /// The returns of the function. This cannot be parsed empty.
     pub returns: Parameters<Token![,]>,
+}
+
+impl PartialEq for Returns {
+    fn eq(&self, other: &Self) -> bool {
+        self.returns == other.returns
+    }
+}
+
+impl Eq for Returns {}
+
+impl Hash for Returns {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.returns.hash(state);
+    }
 }
 
 impl fmt::Debug for Returns {
@@ -160,5 +196,31 @@ impl Returns {
     pub fn set_span(&mut self, span: Span) {
         self.returns_token.span = span;
         self.paren_token = Paren(span);
+    }
+
+    pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
+        if input.peek(kw::returns) {
+            Ok(Some(input.parse()?))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum FunctionBody {
+    /// A function body delimited by curly braces.
+    Block(Block),
+    /// A function without implementation.
+    Empty(Token![;]),
+}
+
+impl Parse for FunctionBody {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        if input.peek(Brace) {
+            input.parse().map(Self::Block)
+        } else {
+            input.parse().map(Self::Empty)
+        }
     }
 }

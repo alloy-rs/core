@@ -45,7 +45,7 @@ impl<T: ?Sized + AsRef<str>> PartialEq<T> for SolIdent {
 
 impl Parse for SolIdent {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        input.parse().map(Self)
+        input.call(Ident::parse_any).map(Self)
     }
 }
 
@@ -96,5 +96,13 @@ impl SolIdent {
     /// See `[Ident::peek_any]`.
     pub fn peek_any(input: ParseStream<'_>) -> bool {
         input.peek(Ident::peek_any)
+    }
+
+    pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
+        if Self::peek_any(input) {
+            input.parse().map(Some)
+        } else {
+            Ok(None)
+        }
     }
 }

@@ -50,7 +50,7 @@ fn expand_call(
 
     let fields = expand_fields(params);
 
-    let signature = cx.signature(function.name.as_string(), params);
+    let signature = cx.signature(function.name().as_string(), params);
     let selector = crate::utils::selector(&signature);
 
     let converts = expand_from_into_tuples(call_name, params);

@@ -34,98 +34,80 @@ error: expected `;`
    |
    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: functions cannot have an implementation
-  --> tests/ui/function.rs:20:30
+error: expected a Solidity type: `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, `tuple`, `function`, `mapping`, or a custom type name
+  --> tests/ui/function.rs:35:26
    |
-20 |     function semiNotBrace1() {}
-   |                              ^
-
-error: functions cannot have an implementation
-  --> tests/ui/function.rs:24:39
-   |
-24 |     function semiNotBrace2() external {}
-   |                                       ^
-
-error: functions cannot have an implementation
-  --> tests/ui/function.rs:28:48
-   |
-28 |     function semiNotBrace3() returns (uint256) {}
-   |                                                ^
-
-error: expected a Solidity type: `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, a tuple, or a custom type name
-  --> tests/ui/function.rs:32:26
-   |
-32 |     function singleComma(,);
+35 |     function singleComma(,);
    |                          ^
 
 error: expected parentheses
-  --> tests/ui/function.rs:43:34
+  --> tests/ui/function.rs:46:34
    |
-43 |     function badReturn1() returns;
+46 |     function badReturn1() returns;
    |                                  ^
 
 error: expected at least one return type
-  --> tests/ui/function.rs:47:34
+  --> tests/ui/function.rs:50:34
    |
-47 |     function badReturn2() returns();
+50 |     function badReturn2() returns();
    |                                  ^^
 
 error: function `overloadTaken` is overloaded, but the generated name `overloadTaken_0` is already in use
-  --> tests/ui/function.rs:82:14
+  --> tests/ui/function.rs:85:14
    |
-82 |     function overloadTaken();
+85 |     function overloadTaken();
    |              ^^^^^^^^^^^^^
 
 error: other declaration is here
-  --> tests/ui/function.rs:85:14
+  --> tests/ui/function.rs:88:14
    |
-85 |     function overloadTaken_0();
+88 |     function overloadTaken_0();
    |              ^^^^^^^^^^^^^^^
 
 error: function `overloadTaken` is overloaded, but the generated name `overloadTaken_1` is already in use
-  --> tests/ui/function.rs:83:14
+  --> tests/ui/function.rs:86:14
    |
-83 |     function overloadTaken(uint256);
+86 |     function overloadTaken(uint256);
    |              ^^^^^^^^^^^^^
 
 error: other declaration is here
-  --> tests/ui/function.rs:86:14
+  --> tests/ui/function.rs:89:14
    |
-86 |     function overloadTaken_1();
+89 |     function overloadTaken_1();
    |              ^^^^^^^^^^^^^^^
 
 error: function with same name and parameter types defined twice
-  --> tests/ui/function.rs:91:14
+  --> tests/ui/function.rs:94:14
    |
-91 |     function sameFnOverload();
+94 |     function sameFnOverload();
    |              ^^^^^^^^^^^^^^
 
 error: other declaration is here
-  --> tests/ui/function.rs:92:14
+  --> tests/ui/function.rs:95:14
    |
-92 |     function sameFnOverload();
+95 |     function sameFnOverload();
    |              ^^^^^^^^^^^^^^
 
 error: function with same name and parameter types defined twice
-  --> tests/ui/function.rs:96:14
+  --> tests/ui/function.rs:99:14
    |
-96 |     function sameFnTysOverload1(uint256[] memory a);
+99 |     function sameFnTysOverload1(uint256[] memory a);
    |              ^^^^^^^^^^^^^^^^^^
 
 error: other declaration is here
-  --> tests/ui/function.rs:97:14
-   |
-97 |     function sameFnTysOverload1(uint256[] storage b);
-   |              ^^^^^^^^^^^^^^^^^^
-
-error: function with same name and parameter types defined twice
-   --> tests/ui/function.rs:101:14
+   --> tests/ui/function.rs:100:14
     |
-101 |     function sameFnTysOverload2(string memory, string storage);
+100 |     function sameFnTysOverload1(uint256[] storage b);
+    |              ^^^^^^^^^^^^^^^^^^
+
+error: function with same name and parameter types defined twice
+   --> tests/ui/function.rs:104:14
+    |
+104 |     function sameFnTysOverload2(string memory, string storage);
     |              ^^^^^^^^^^^^^^^^^^
 
 error: other declaration is here
-   --> tests/ui/function.rs:102:14
+   --> tests/ui/function.rs:105:14
     |
-102 |     function sameFnTysOverload2(string storage b, string calldata);
+105 |     function sameFnTysOverload2(string storage b, string calldata);
     |              ^^^^^^^^^^^^^^^^^^

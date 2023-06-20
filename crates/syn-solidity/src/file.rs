@@ -1,28 +1,29 @@
 use super::Item;
 use syn::{
     parse::{Parse, ParseStream},
-    Result,
+    Attribute, Result,
 };
 
 /// A Solidity file. The root of the AST.
 #[derive(Debug)]
 pub struct File {
+    /// The inner attributes of the file.
+    pub attrs: Vec<Attribute>,
+    /// The items in the file.
     pub items: Vec<Item>,
 }
 
 impl Parse for File {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let attrs = input.call(Attribute::parse_inner)?;
         let mut items = Vec::new();
         while !input.is_empty() {
             items.push(input.parse()?);
         }
         if items.is_empty() {
-            let message = "\
-                expected at least one of: \
-                `type`, `struct`, `function`, `error`, Solidity type";
-            Err(input.error(message))
+            Err(input.parse::<Item>().unwrap_err())
         } else {
-            Ok(Self { items })
+            Ok(Self { attrs, items })
         }
     }
 }

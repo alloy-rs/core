@@ -10,7 +10,7 @@ use std::{
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
-    token::{Brace, Bracket},
+    token::Brace,
     Error, Ident, Result, Token,
 };
 
@@ -39,7 +39,7 @@ impl Parse for FunctionAttributes {
         while !(input.is_empty()
             || input.peek(kw::returns)
             || input.peek(Token![;])
-            || input.peek(Bracket))
+            || input.peek(Brace))
         {
             let attr = input.parse()?;
             if let Some(prev) = attributes.get(&attr) {
@@ -68,6 +68,19 @@ pub enum FunctionAttribute {
     Override(Override),
     /// A [Modifier] attribute.
     Modifier(Modifier),
+}
+
+impl fmt::Display for FunctionAttribute {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Visibility(visibility) => visibility.fmt(f),
+            Self::Mutability(mutability) => mutability.fmt(f),
+            Self::Virtual(_) => f.write_str("virtual"),
+            Self::Immutable(_) => f.write_str("immutable"),
+            Self::Override(o) => o.fmt(f),
+            Self::Modifier(modifier) => modifier.fmt(f),
+        }
+    }
 }
 
 impl fmt::Debug for FunctionAttribute {
