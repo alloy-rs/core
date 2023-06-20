@@ -702,23 +702,21 @@ pub trait SupportedInt: Sealed {
 }
 
 macro_rules! supported_int {
-    ($($n:literal => $i:ident, $u:ident;)+) => {
-        $(
-            impl SupportedInt for IntBitCount<$n> {
-                type Int = $i;
-                type Uint = $u;
+    ($($n:literal => $i:ident, $u:ident;)+) => {$(
+        impl SupportedInt for IntBitCount<$n> {
+            type Int = $i;
+            type Uint = $u;
 
-                const UINT_NAME: &'static str = concat!("uint", $n);
-                const INT_NAME: &'static str = concat!("int", $n);
+            const UINT_NAME: &'static str = concat!("uint", $n);
+            const INT_NAME: &'static str = concat!("int", $n);
 
-                const BITS: usize = $n;
-                const SKIP_BYTES: usize = (<$i>::BITS as usize - <Self as SupportedInt>::BITS) / 8;
+            const BITS: usize = $n;
+            const SKIP_BYTES: usize = (<$i>::BITS as usize - <Self as SupportedInt>::BITS) / 8;
 
-                int_impls2!($i);
-                int_impls2!($u);
-            }
-        )+
-    };
+            int_impls2!($i);
+            int_impls2!($u);
+        }
+    )+};
 }
 
 macro_rules! int_impls {
@@ -771,7 +769,9 @@ macro_rules! int_impls {
     (@big_int $ity:ident) => {
         #[inline]
         fn tokenize_int(int: $ity) -> WordToken {
-            int.into()
+            let mut word = [int.is_negative() as u8 * 0xff; 32];
+            word[Self::WORD_MSB..].copy_from_slice(&int.to_be_bytes::<32>()[Self::SKIP_BYTES..]);
+            WordToken::new(word)
         }
 
         #[inline]
@@ -867,8 +867,68 @@ supported_int!(
 mod tests {
     use super::*;
 
+    macro_rules! roundtrip {
+        ($($name:ident($st:ty : $t:ty);)+) => {
+            proptest::proptest! {$(
+                #[test]
+                fn $name(i: $t) {
+                    proptest::prop_assert_eq!(<$st>::detokenize(<$st>::tokenize(&i)), i);
+                }
+            )+}
+        };
+    }
+
+    roundtrip! {
+        roundtrip_address(Address: RustAddress);
+        roundtrip_bool(Bool: bool);
+        roundtrip_bytes(Bytes: Vec<u8>);
+        roundtrip_string(String: RustString);
+        roundtrip_fixed_bytes_16(FixedBytes<16>: [u8; 16]);
+        roundtrip_fixed_bytes_32(FixedBytes<32>: [u8; 32]);
+
+        // can only test corresponding integers
+        roundtrip_u8(Uint<8>: u8);
+        roundtrip_i8(Int<8>: i8);
+        roundtrip_u16(Uint<16>: u16);
+        roundtrip_i16(Int<16>: i16);
+        roundtrip_u32(Uint<32>: u32);
+        roundtrip_i32(Int<32>: i32);
+        roundtrip_u64(Uint<64>: u64);
+        roundtrip_i64(Int<64>: i64);
+        roundtrip_u128(Uint<128>: u128);
+        roundtrip_i128(Int<128>: i128);
+        roundtrip_u256(Uint<256>: U256);
+        roundtrip_i256(Int<256>: I256);
+    }
+
     #[test]
-    fn uint_tokenization() {
+    fn tokenize_uint() {
+        macro_rules! test {
+            ($($n:literal: $x:expr => $l:literal),+ $(,)?) => {$(
+                assert_eq!(<Uint<$n>>::tokenize(&$x), WordToken::new(hex_literal::hex!($l)));
+                assert_eq!(<Int<$n>>::tokenize(&$x), WordToken::new(hex_literal::hex!($l)));
+            )+};
+        }
+
+        test! {
+             8: 0x00 => "0000000000000000000000000000000000000000000000000000000000000000",
+             8: 0x01 => "0000000000000000000000000000000000000000000000000000000000000001",
+            24: 0x01020304 => "0000000000000000000000000000000000000000000000000000000000020304",
+            32: 0x01020304 => "0000000000000000000000000000000000000000000000000000000001020304",
+            56: 0x0102030405060708 => "0000000000000000000000000000000000000000000000000002030405060708",
+            64: 0x0102030405060708 => "0000000000000000000000000000000000000000000000000102030405060708",
+
+            160: "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap()
+                => "0000000000000000000000000d0e0f101112131415161718191a1b1c1d1e1f20",
+            200: "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap()
+                => "0000000000000008090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+            256: "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap()
+                => "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        }
+    }
+
+    #[test]
+    fn detokenize_ints() {
         /*
         for i in range(1, 32 + 1):
             n = "0x"
@@ -929,7 +989,7 @@ mod tests {
     }
 
     #[test]
-    fn negative_int_tokenization() {
+    fn detokenize_negative_int() {
         let word = [0xff; 32];
         let token = WordToken::new(word);
         assert_eq!(<Int<8>>::detokenize(token), -1);
@@ -968,7 +1028,7 @@ mod tests {
 
     #[test]
     #[rustfmt::skip]
-    fn int_tokenization() {
+    fn detokenize_int() {
         let word = 
             core::array::from_fn(|i| (i | (0x80 * (i % 2 == 1) as usize)) as u8 + 1);
         let token = WordToken::new(word);
