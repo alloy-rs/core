@@ -29,9 +29,9 @@ mod utils;
 ///
 /// # Examples
 ///
-/// Note: the following examples cannot be tested here because the generated code
-/// references `alloy-sol-types`, so they are [tested in that crate][tests] and
-/// included with `include_str!` in this doc instead.
+/// Note: the following examples cannot be tested here because the generated
+/// code references `alloy-sol-types`, so they are [tested in that crate]
+/// [tests] and included with `include_str!` in this doc instead.
 ///
 /// [tests]: https://github.com/alloy-rs/core/tree/main/crates/sol-types/tests/
 ///
