@@ -178,8 +178,8 @@ impl Header {
     }
 }
 
-/// Left-pads a slice to a staticly known size array. Returns None if the slice
-/// is too long or if the first byte is 0.
+/// Left-pads a slice to a statically known size array. Returns None if the
+/// slice is too long or if the first byte is 0.
 fn static_left_pad<const LEN: usize>(data: &[u8]) -> Option<[u8; LEN]> {
     if data.len() > LEN {
         return None

@@ -158,7 +158,7 @@ impl Parse for EventParameter {
 }
 
 impl EventParameter {
-    /// Get the span of the event paramater
+    /// Get the span of the event parameter
     pub fn span(&self) -> Span {
         let span = self.ty.span();
         self.name
@@ -200,13 +200,13 @@ impl EventParameter {
         self.indexed.is_none()
     }
 
-    /// Returns true if the event paramater is a dynamically sized type.
+    /// Returns true if the event parameter is a dynamically sized type.
     pub fn is_abi_dynamic(&self) -> bool {
         self.ty.is_abi_dynamic()
     }
 
     /// Returns `true` if the event parameter is indexed and dynamically sized.
-    /// These types are hashed, and then stored in the topics as spcified in
+    /// These types are hashed, and then stored in the topics as specified in
     /// [the Solidity spec][ref].
     ///
     /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#events

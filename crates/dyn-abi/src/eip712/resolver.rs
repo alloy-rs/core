@@ -408,7 +408,7 @@ impl Resolver {
     }
 
     /// Resolve a typename into a [`crate::DynSolType`] or return an error if
-    /// the type is mising, or contains a circular dependency.
+    /// the type is missing, or contains a circular dependency.
     pub fn resolve(&self, type_name: &str) -> Result<DynSolType, DynAbiError> {
         if self.detect_cycle(type_name, &mut Default::default()) {
             return Err(DynAbiError::circular_dependency(type_name))

@@ -1,4 +1,4 @@
-//! Implementation of dyanmic EIP-712.
+//! Implementation of dynamic EIP-712.
 //!
 //! This allows for the encoding of EIP-712 messages without having to know the
 //! types at compile time. This is useful for things like off-chain signing.
