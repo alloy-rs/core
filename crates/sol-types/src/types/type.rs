@@ -43,7 +43,7 @@ use crate::{no_std_prelude::*, token::TokenSeq, Result, TokenType, Word};
 /// ```
 pub trait SolType {
     /// The corresponding Rust type.
-    type RustType: 'static;
+    type RustType;
 
     /// The corresponding ABI token type.
     ///

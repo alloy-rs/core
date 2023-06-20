@@ -66,8 +66,3 @@ fn assert_event_signature<T: SolEvent>(expected: &str) {
     assert_eq!(T::SIGNATURE, expected);
     assert_eq!(T::SIGNATURE_HASH, keccak256(expected));
 }
-
-sol! {
-    event ALotOfParameters(bool, bool, bool, bool, bool, bool, bool, bool, bool, bool);
-    event ALotOfParametersAnonymous(bool, bool, bool, bool, bool, bool, bool, bool, bool, bool) anonymous;
-}
