@@ -22,14 +22,13 @@ This repository contains the following crates:
 - [`alloy-sol-macro`] - The `sol!` procedural macro
 - [`syn-solidity`] - [`syn`]-powered Solidity parser, used by `alloy-sol-macro`
 
-[`alloy-primitives`]: ./crates/alloy-primitives
-[`alloy-rlp`]: ./crates/alloy-rlp
-[`alloy-rlp-derive`]: ./crates/alloy-rlp-derive
-[`alloy-sol-types`]: ./crates/alloy-sol-types
-[`alloy-sol-macro`]: ./crates/alloy-sol-macro
-[`alloy-dyn-abi`]: ./crates/alloy-dyn-abi
+[`alloy-primitives`]: ./crates/primitives
+[`alloy-rlp`]: ./crates/rlp
+[`alloy-rlp-derive`]: ./crates/rlp-derive
+[`alloy-sol-types`]: ./crates/sol-types
+[`alloy-sol-macro`]: ./crates/sol-macro
+[`alloy-dyn-abi`]: ./crates/dyn-abi
 [`syn-solidity`]: ./crates/syn-solidity
-
 [rlp]: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp
 [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
 [`syn`]: https://github.com/dtolnay/syn
@@ -65,7 +64,7 @@ We provide full support for all the `wasm*-*` targets. If a crate does not
 build on a WASM target, please [open an issue].
 
 When building for the `wasm32-unknown-unknown` target and the `"getrandom"`
-feature is enabled, compilation for the `getrandom`  crate will fail. This is
+feature is enabled, compilation for the `getrandom` crate will fail. This is
 expected: see [their documentation][getrandom] for more details.
 
 To fix this, either disable the `"getrandom"` feature on `alloy-core` or add
