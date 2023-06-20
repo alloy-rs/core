@@ -119,7 +119,8 @@ where
             return Ok(())
         }
 
-        let sign_extension = (token.0[IntBitCount::<BITS>::WORD_MSB] & 0x80 == 0x80) as u8;
+        let is_negative = token.0[IntBitCount::<BITS>::WORD_MSB] & 0x80 == 0x80;
+        let sign_extension = is_negative as u8 * 0xff;
 
         // check that all upper bytes are an extension of the sign bit
         if token.0[..IntBitCount::<BITS>::WORD_MSB]
@@ -660,9 +661,9 @@ macro_rules! declare_int_types {
 /// constructable.
 pub trait SupportedInt: Sealed {
     declare_int_types! {
-        /// A signed integer of at least `N` bits.
+        /// The signed integer Rust representation.
         type Int;
-        /// An unsigned integer of at least `N` bits.
+        /// The unsigned integer Rust representation.
         type Uint;
     }
 
@@ -680,10 +681,15 @@ pub trait SupportedInt: Sealed {
     /// The number of bytes in the integer: `BITS / 8`
     const BYTES: usize = Self::BITS / 8;
 
-    /// The number of bytes in the integer: `(<$t>::BITS - N) / 8`
+    /// The difference between the representation's and this integer's bytes:
+    /// `(Self::Int::BITS - Self::BITS) / 8`
+    ///
+    /// E.g.: `word[Self::WORD_MSB - Self::SKIP_BYTES..] == int.to_be_bytes()`
     const SKIP_BYTES: usize;
 
     /// The index of the most significant byte in the Word type.
+    ///
+    /// E.g.: `word[Self::WORD_MSB..] == int.to_be_bytes()[Self::SKIP_BYTES..]`
     const WORD_MSB: usize = 32 - Self::BYTES;
 
     /// Tokenizes a signed integer.
@@ -731,8 +737,10 @@ macro_rules! int_impls {
         #[inline]
         fn detokenize_int(mut token: WordToken) -> $ity {
             // sign extend bits to ignore
-            let sign_extension = (token.0[Self::WORD_MSB] & 0x80 == 0x80) as u8;
-            token.0[Self::WORD_MSB - Self::SKIP_BYTES..Self::WORD_MSB].fill(sign_extension * 0xff);
+            let is_negative = token.0[Self::WORD_MSB] & 0x80 == 0x80;
+            let sign_extension = is_negative as u8 * 0xff;
+            token.0[Self::WORD_MSB - Self::SKIP_BYTES..Self::WORD_MSB].fill(sign_extension);
+
             let s = &token.0[Self::WORD_MSB - Self::SKIP_BYTES..];
             <$ity>::from_be_bytes(s.try_into().unwrap())
         }
@@ -777,8 +785,10 @@ macro_rules! int_impls {
         #[inline]
         fn detokenize_int(mut token: WordToken) -> $ity {
             // sign extend bits to ignore
-            let sign_extension = (token.0[Self::WORD_MSB] & 0x80 == 0x80) as u8;
-            token.0[Self::WORD_MSB - Self::SKIP_BYTES..Self::WORD_MSB].fill(sign_extension * 0xff);
+            let is_negative = token.0[Self::WORD_MSB] & 0x80 == 0x80;
+            let sign_extension = is_negative as u8 * 0xff;
+            token.0[Self::WORD_MSB - Self::SKIP_BYTES..Self::WORD_MSB].fill(sign_extension);
+
             let s = &token.0[Self::WORD_MSB - Self::SKIP_BYTES..];
             <$ity>::from_be_bytes::<32>(s.try_into().unwrap())
         }
