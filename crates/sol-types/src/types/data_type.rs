@@ -119,10 +119,11 @@ where
             return Ok(())
         }
 
-        let sign_extension = (token.0[IntBitCount::<BITS>::MSB] & 0x80 == 0x80) as u8;
+        let is_negative = token.0[IntBitCount::<BITS>::WORD_MSB] & 0x80 == 0x80;
+        let sign_extension = is_negative as u8 * 0xff;
 
         // check that all upper bytes are an extension of the sign bit
-        if token.0[..IntBitCount::<BITS>::MSB]
+        if token.0[..IntBitCount::<BITS>::WORD_MSB]
             .iter()
             .all(|byte| *byte == sign_extension)
         {
@@ -170,8 +171,8 @@ where
 
     #[inline]
     fn type_check(token: &Self::TokenType) -> Result<()> {
-        let sli = &token.0[..<IntBitCount<BITS> as SupportedInt>::MSB];
-        if util::check_zeroes(sli) {
+        let s = &token.0[..<IntBitCount<BITS> as SupportedInt>::WORD_MSB];
+        if util::check_zeroes(s) {
             Ok(())
         } else {
             Err(Self::type_check_fail(token.as_slice()))
@@ -244,10 +245,7 @@ impl SolType for Bool {
 /// Array - `T[]`
 pub struct Array<T: SolType>(PhantomData<T>);
 
-impl<T> SolType for Array<T>
-where
-    T: SolType,
-{
+impl<T: SolType> SolType for Array<T> {
     type RustType = Vec<T::RustType>;
     type TokenType = DynSeqToken<T::TokenType>;
 
@@ -313,8 +311,8 @@ impl SolType for String {
     }
 
     #[inline]
-    fn encoded_size<B: Borrow<Self::RustType>>(_data: B) -> usize {
-        32 + util::padded_len(_data.borrow().as_bytes())
+    fn encoded_size<B: Borrow<Self::RustType>>(data: B) -> usize {
+        32 + util::padded_len(data.borrow().as_bytes())
     }
 
     #[inline]
@@ -395,7 +393,6 @@ where
 
     #[inline]
     fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        // write only the first n bytes
         out.extend_from_slice(rust.borrow());
     }
 }
@@ -403,10 +400,7 @@ where
 /// FixedArray - `T[M]`
 pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 
-impl<T, const N: usize> SolType for FixedArray<T, N>
-where
-    T: SolType,
-{
+impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     type RustType = [T::RustType; N];
     type TokenType = FixedSeqToken<T::TokenType, N>;
 
@@ -417,8 +411,6 @@ where
         }
     };
 
-    /// Calculate the encoded size of the data, counting both head and tail
-    /// words. For a single-word type this will always be 32.
     #[inline]
     fn encoded_size<B: Borrow<Self::RustType>>(rust: B) -> usize {
         if let Some(size) = Self::ENCODED_SIZE {
@@ -669,9 +661,9 @@ macro_rules! declare_int_types {
 /// constructable.
 pub trait SupportedInt: Sealed {
     declare_int_types! {
-        /// A signed integer of at least `N` bits.
+        /// The signed integer Rust representation.
         type Int;
-        /// An unsigned integer of at least `N` bits.
+        /// The unsigned integer Rust representation.
         type Uint;
     }
 
@@ -689,11 +681,16 @@ pub trait SupportedInt: Sealed {
     /// The number of bytes in the integer: `BITS / 8`
     const BYTES: usize = Self::BITS / 8;
 
-    /// The number of bytes in the integer: `(<$t>::BITS - N) / 8`
+    /// The difference between the representation's and this integer's bytes:
+    /// `(Self::Int::BITS - Self::BITS) / 8`
+    ///
+    /// E.g.: `word[Self::WORD_MSB - Self::SKIP_BYTES..] == int.to_be_bytes()`
     const SKIP_BYTES: usize;
 
     /// The index of the most significant byte in the Word type.
-    const MSB: usize = 32 - Self::BYTES;
+    ///
+    /// E.g.: `word[Self::WORD_MSB..] == int.to_be_bytes()[Self::SKIP_BYTES..]`
+    const WORD_MSB: usize = 32 - Self::BYTES;
 
     /// Tokenizes a signed integer.
     fn tokenize_int(int: Self::Int) -> WordToken;
@@ -711,23 +708,21 @@ pub trait SupportedInt: Sealed {
 }
 
 macro_rules! supported_int {
-    ($($n:literal => $i:ident, $u:ident;)+) => {
-        $(
-            impl SupportedInt for IntBitCount<$n> {
-                type Int = $i;
-                type Uint = $u;
+    ($($n:literal => $i:ident, $u:ident;)+) => {$(
+        impl SupportedInt for IntBitCount<$n> {
+            type Int = $i;
+            type Uint = $u;
 
-                const UINT_NAME: &'static str = concat!("uint", $n);
-                const INT_NAME: &'static str = concat!("int", $n);
+            const UINT_NAME: &'static str = concat!("uint", $n);
+            const INT_NAME: &'static str = concat!("int", $n);
 
-                const BITS: usize = $n;
-                const SKIP_BYTES: usize = (<$i>::BITS as usize - <Self as SupportedInt>::BITS) / 8;
+            const BITS: usize = $n;
+            const SKIP_BYTES: usize = (<$i>::BITS as usize - <Self as SupportedInt>::BITS) / 8;
 
-                int_impls2!($i);
-                int_impls2!($u);
-            }
-        )+
-    };
+            int_impls2!($i);
+            int_impls2!($u);
+        }
+    )+};
 }
 
 macro_rules! int_impls {
@@ -735,14 +730,19 @@ macro_rules! int_impls {
         #[inline]
         fn tokenize_int(int: $ity) -> WordToken {
             let mut word = [int.is_negative() as u8 * 0xff; 32];
-            word[Self::MSB..].copy_from_slice(&int.to_be_bytes());
-            WordToken(alloy_primitives::FixedBytes(word))
+            word[Self::WORD_MSB..].copy_from_slice(&int.to_be_bytes()[Self::SKIP_BYTES..]);
+            WordToken::new(word)
         }
 
         #[inline]
-        fn detokenize_int(token: WordToken) -> $ity {
-            let sli = &token.0[Self::MSB..];
-            <$ity>::from_be_bytes(sli.try_into().unwrap())
+        fn detokenize_int(mut token: WordToken) -> $ity {
+            // sign extend bits to ignore
+            let is_negative = token.0[Self::WORD_MSB] & 0x80 == 0x80;
+            let sign_extension = is_negative as u8 * 0xff;
+            token.0[Self::WORD_MSB - Self::SKIP_BYTES..Self::WORD_MSB].fill(sign_extension);
+
+            let s = &token.0[Self::WORD_MSB - Self::SKIP_BYTES..];
+            <$ity>::from_be_bytes(s.try_into().unwrap())
         }
 
         #[inline]
@@ -754,14 +754,18 @@ macro_rules! int_impls {
         #[inline]
         fn tokenize_uint(uint: $uty) -> WordToken {
             let mut word = Word::ZERO;
-            word[Self::MSB..].copy_from_slice(&uint.to_be_bytes());
+            word[Self::WORD_MSB..].copy_from_slice(&uint.to_be_bytes()[Self::SKIP_BYTES..]);
             WordToken(word)
         }
 
         #[inline]
-        fn detokenize_uint(token: WordToken) -> $uty {
-            let sli = &token.0[Self::MSB..];
-            <$uty>::from_be_bytes(sli.try_into().unwrap())
+        fn detokenize_uint(mut token: WordToken) -> $uty {
+            // zero out bits to ignore (u24):
+            // mov   byte ptr [rdi + 28], 0
+            // movbe eax, dword ptr [rdi + 28]
+            token.0[Self::WORD_MSB - Self::SKIP_BYTES..Self::WORD_MSB].fill(0);
+            let s = &token.0[Self::WORD_MSB - Self::SKIP_BYTES..];
+            <$uty>::from_be_bytes(s.try_into().unwrap())
         }
 
         #[inline]
@@ -773,12 +777,20 @@ macro_rules! int_impls {
     (@big_int $ity:ident) => {
         #[inline]
         fn tokenize_int(int: $ity) -> WordToken {
-            int.into()
+            let mut word = [int.is_negative() as u8 * 0xff; 32];
+            word[Self::WORD_MSB..].copy_from_slice(&int.to_be_bytes::<32>()[Self::SKIP_BYTES..]);
+            WordToken::new(word)
         }
 
         #[inline]
-        fn detokenize_int(token: WordToken) -> $ity {
-            <$ity>::from_be_bytes::<32>(token.0 .0)
+        fn detokenize_int(mut token: WordToken) -> $ity {
+            // sign extend bits to ignore
+            let is_negative = token.0[Self::WORD_MSB] & 0x80 == 0x80;
+            let sign_extension = is_negative as u8 * 0xff;
+            token.0[Self::WORD_MSB - Self::SKIP_BYTES..Self::WORD_MSB].fill(sign_extension);
+
+            let s = &token.0[Self::WORD_MSB - Self::SKIP_BYTES..];
+            <$ity>::from_be_bytes::<32>(s.try_into().unwrap())
         }
 
         #[inline]
@@ -789,11 +801,15 @@ macro_rules! int_impls {
     (@big_uint $uty:ident) => {
         #[inline]
         fn tokenize_uint(uint: $uty) -> WordToken {
-            uint.into()
+            let mut word = Word::ZERO;
+            word[Self::WORD_MSB..].copy_from_slice(&uint.to_be_bytes::<32>()[Self::SKIP_BYTES..]);
+            WordToken(word)
         }
 
         #[inline]
-        fn detokenize_uint(token: WordToken) -> $uty {
+        fn detokenize_uint(mut token: WordToken) -> $uty {
+            // zero out bits to ignore
+            token.0[..Self::SKIP_BYTES].fill(0);
             <$uty>::from_be_bytes::<32>(token.0 .0)
         }
 
@@ -856,3 +872,216 @@ supported_int!(
     248 => I256, U256;
     256 => I256, U256;
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! roundtrip {
+        ($($name:ident($st:ty : $t:ty);)+) => {
+            proptest::proptest! {$(
+                #[test]
+                fn $name(i: $t) {
+                    proptest::prop_assert_eq!(<$st>::detokenize(<$st>::tokenize(&i)), i);
+                }
+            )+}
+        };
+    }
+
+    roundtrip! {
+        roundtrip_address(Address: RustAddress);
+        roundtrip_bool(Bool: bool);
+        roundtrip_bytes(Bytes: Vec<u8>);
+        roundtrip_string(String: RustString);
+        roundtrip_fixed_bytes_16(FixedBytes<16>: [u8; 16]);
+        roundtrip_fixed_bytes_32(FixedBytes<32>: [u8; 32]);
+
+        // can only test corresponding integers
+        roundtrip_u8(Uint<8>: u8);
+        roundtrip_i8(Int<8>: i8);
+        roundtrip_u16(Uint<16>: u16);
+        roundtrip_i16(Int<16>: i16);
+        roundtrip_u32(Uint<32>: u32);
+        roundtrip_i32(Int<32>: i32);
+        roundtrip_u64(Uint<64>: u64);
+        roundtrip_i64(Int<64>: i64);
+        roundtrip_u128(Uint<128>: u128);
+        roundtrip_i128(Int<128>: i128);
+        roundtrip_u256(Uint<256>: U256);
+        roundtrip_i256(Int<256>: I256);
+    }
+
+    #[test]
+    fn tokenize_uint() {
+        macro_rules! test {
+            ($($n:literal: $x:expr => $l:literal),+ $(,)?) => {$(
+                assert_eq!(<Uint<$n>>::tokenize(&$x), WordToken::new(hex_literal::hex!($l)));
+                assert_eq!(<Int<$n>>::tokenize(&$x), WordToken::new(hex_literal::hex!($l)));
+            )+};
+        }
+
+        test! {
+             8: 0x00 => "0000000000000000000000000000000000000000000000000000000000000000",
+             8: 0x01 => "0000000000000000000000000000000000000000000000000000000000000001",
+            24: 0x01020304 => "0000000000000000000000000000000000000000000000000000000000020304",
+            32: 0x01020304 => "0000000000000000000000000000000000000000000000000000000001020304",
+            56: 0x0102030405060708 => "0000000000000000000000000000000000000000000000000002030405060708",
+            64: 0x0102030405060708 => "0000000000000000000000000000000000000000000000000102030405060708",
+
+            160: "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap()
+                => "0000000000000000000000000d0e0f101112131415161718191a1b1c1d1e1f20",
+            200: "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap()
+                => "0000000000000008090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+            256: "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap()
+                => "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        }
+    }
+
+    #[test]
+    fn detokenize_ints() {
+        /*
+        for i in range(1, 32 + 1):
+            n = "0x"
+            for j in range(32, 0, -1):
+                if j <= i:
+                    n += hex(33 - j)[2:].zfill(2)
+                else:
+                    n += "00"
+            if i > 16:
+                n = f'"{n}".parse().unwrap()'
+            else:
+                n = f" {n}"
+            print(f"{i * 8:4} => {n},")
+        */
+        let word = core::array::from_fn(|i| i as u8 + 1);
+        let token = WordToken::new(word);
+        macro_rules! test {
+            ($($n:literal => $x:expr),+ $(,)?) => {$(
+                assert_eq!(<Uint<$n>>::detokenize(token), $x);
+                assert_eq!(<Int<$n>>::detokenize(token), $x);
+            )+};
+        }
+        #[rustfmt::skip]
+        test! {
+             8 =>  0x0000000000000000000000000000000000000000000000000000000000000020,
+            16 =>  0x0000000000000000000000000000000000000000000000000000000000001f20,
+            24 =>  0x00000000000000000000000000000000000000000000000000000000001e1f20,
+            32 =>  0x000000000000000000000000000000000000000000000000000000001d1e1f20,
+            40 =>  0x0000000000000000000000000000000000000000000000000000001c1d1e1f20,
+            48 =>  0x00000000000000000000000000000000000000000000000000001b1c1d1e1f20,
+            56 =>  0x000000000000000000000000000000000000000000000000001a1b1c1d1e1f20,
+            64 =>  0x000000000000000000000000000000000000000000000000191a1b1c1d1e1f20,
+            72 =>  0x000000000000000000000000000000000000000000000018191a1b1c1d1e1f20,
+            80 =>  0x000000000000000000000000000000000000000000001718191a1b1c1d1e1f20,
+            88 =>  0x000000000000000000000000000000000000000000161718191a1b1c1d1e1f20,
+            96 =>  0x000000000000000000000000000000000000000015161718191a1b1c1d1e1f20,
+           104 =>  0x000000000000000000000000000000000000001415161718191a1b1c1d1e1f20,
+           112 =>  0x000000000000000000000000000000000000131415161718191a1b1c1d1e1f20,
+           120 =>  0x000000000000000000000000000000000012131415161718191a1b1c1d1e1f20,
+           128 =>  0x000000000000000000000000000000001112131415161718191a1b1c1d1e1f20,
+           136 => "0x000000000000000000000000000000101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           144 => "0x00000000000000000000000000000f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           152 => "0x000000000000000000000000000e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           160 => "0x0000000000000000000000000d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           168 => "0x00000000000000000000000c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           176 => "0x000000000000000000000b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           184 => "0x0000000000000000000a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           192 => "0x0000000000000000090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           200 => "0x0000000000000008090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           208 => "0x0000000000000708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           216 => "0x0000000000060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           224 => "0x0000000005060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           232 => "0x0000000405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           240 => "0x0000030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           248 => "0x0002030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+           256 => "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap(),
+        };
+    }
+
+    #[test]
+    fn detokenize_negative_int() {
+        let word = [0xff; 32];
+        let token = WordToken::new(word);
+        assert_eq!(<Int<8>>::detokenize(token), -1);
+        assert_eq!(<Int<16>>::detokenize(token), -1);
+        assert_eq!(<Int<24>>::detokenize(token), -1);
+        assert_eq!(<Int<32>>::detokenize(token), -1);
+        assert_eq!(<Int<40>>::detokenize(token), -1);
+        assert_eq!(<Int<48>>::detokenize(token), -1);
+        assert_eq!(<Int<56>>::detokenize(token), -1);
+        assert_eq!(<Int<64>>::detokenize(token), -1);
+        assert_eq!(<Int<72>>::detokenize(token), -1);
+        assert_eq!(<Int<80>>::detokenize(token), -1);
+        assert_eq!(<Int<88>>::detokenize(token), -1);
+        assert_eq!(<Int<96>>::detokenize(token), -1);
+        assert_eq!(<Int<104>>::detokenize(token), -1);
+        assert_eq!(<Int<112>>::detokenize(token), -1);
+        assert_eq!(<Int<120>>::detokenize(token), -1);
+        assert_eq!(<Int<128>>::detokenize(token), -1);
+        assert_eq!(<Int<136>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<144>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<152>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<160>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<168>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<176>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<184>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<192>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<200>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<208>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<216>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<224>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<232>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<240>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<248>>::detokenize(token), I256::MINUS_ONE);
+        assert_eq!(<Int<256>>::detokenize(token), I256::MINUS_ONE);
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn detokenize_int() {
+        let word = 
+            core::array::from_fn(|i| (i | (0x80 * (i % 2 == 1) as usize)) as u8 + 1);
+        let token = WordToken::new(word);
+        trait Conv {
+            fn as_u256_as_i256(&self) -> I256;
+        }
+        impl Conv for str {
+            fn as_u256_as_i256(&self) -> I256 {
+                I256::from_raw(self.parse::<U256>().unwrap())
+            }
+        }
+        assert_eq!(<Int<8>>::detokenize(token),    0x00000000000000000000000000000000000000000000000000000000000000a0_u8 as i8);
+        assert_eq!(<Int<16>>::detokenize(token),   0x0000000000000000000000000000000000000000000000000000000000001fa0_u16 as i16);
+        assert_eq!(<Int<24>>::detokenize(token),   0x00000000000000000000000000000000000000000000000000000000ff9e1fa0_u32 as i32);
+        assert_eq!(<Int<32>>::detokenize(token),   0x000000000000000000000000000000000000000000000000000000001d9e1fa0_u32 as i32);
+        assert_eq!(<Int<40>>::detokenize(token),   0x000000000000000000000000000000000000000000000000ffffff9c1d9e1fa0_u64 as i64);
+        assert_eq!(<Int<48>>::detokenize(token),   0x00000000000000000000000000000000000000000000000000001b9c1d9e1fa0_u64 as i64);
+        assert_eq!(<Int<56>>::detokenize(token),   0x000000000000000000000000000000000000000000000000ff9a1b9c1d9e1fa0_u64 as i64);
+        assert_eq!(<Int<64>>::detokenize(token),   0x000000000000000000000000000000000000000000000000199a1b9c1d9e1fa0_u64 as i64);
+        assert_eq!(<Int<72>>::detokenize(token),   0x00000000000000000000000000000000ffffffffffffff98199a1b9c1d9e1fa0_u128 as i128);
+        assert_eq!(<Int<80>>::detokenize(token),   0x000000000000000000000000000000000000000000001798199a1b9c1d9e1fa0_u128 as i128);
+        assert_eq!(<Int<88>>::detokenize(token),   0x00000000000000000000000000000000ffffffffff961798199a1b9c1d9e1fa0_u128 as i128);
+        assert_eq!(<Int<96>>::detokenize(token),   0x000000000000000000000000000000000000000015961798199a1b9c1d9e1fa0_u128 as i128);
+        assert_eq!(<Int<104>>::detokenize(token),  0x00000000000000000000000000000000ffffff9415961798199a1b9c1d9e1fa0_u128 as i128);
+        assert_eq!(<Int<112>>::detokenize(token),  0x000000000000000000000000000000000000139415961798199a1b9c1d9e1fa0_u128 as i128);
+        assert_eq!(<Int<120>>::detokenize(token),  0x00000000000000000000000000000000ff92139415961798199a1b9c1d9e1fa0_u128 as i128);
+        assert_eq!(<Int<128>>::detokenize(token),  0x000000000000000000000000000000001192139415961798199a1b9c1d9e1fa0_u128 as i128);
+        assert_eq!(<Int<136>>::detokenize(token), "0xffffffffffffffffffffffffffffff901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<144>>::detokenize(token), "0x00000000000000000000000000000f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<152>>::detokenize(token), "0xffffffffffffffffffffffffff8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<160>>::detokenize(token), "0x0000000000000000000000000d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<168>>::detokenize(token), "0xffffffffffffffffffffff8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<176>>::detokenize(token), "0x000000000000000000000b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<184>>::detokenize(token), "0xffffffffffffffffff8a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<192>>::detokenize(token), "0x0000000000000000098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<200>>::detokenize(token), "0xffffffffffffff88098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<208>>::detokenize(token), "0x0000000000000788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<216>>::detokenize(token), "0xffffffffff860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<224>>::detokenize(token), "0x0000000005860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<232>>::detokenize(token), "0xffffff8405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<240>>::detokenize(token), "0x0000038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<248>>::detokenize(token), "0xff82038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+        assert_eq!(<Int<256>>::detokenize(token), "0x0182038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+
+    }
+}

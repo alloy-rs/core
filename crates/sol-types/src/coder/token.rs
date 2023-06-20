@@ -17,7 +17,7 @@
 //! - Dynamic-length byte arrays `u8[]`
 
 use crate::{no_std_prelude::*, Decoder, Encoder, Result, Word};
-use alloy_primitives::{Address, I256, U256};
+use alloy_primitives::{Address, FixedBytes, I256, U256};
 use core::fmt;
 
 mod sealed {
@@ -178,6 +178,12 @@ impl TokenType for WordToken {
 }
 
 impl WordToken {
+    /// Create a new word token from a word.
+    #[inline]
+    pub const fn new(array: [u8; 32]) -> Self {
+        Self(FixedBytes(array))
+    }
+
     /// Returns a reference to the word as a slice.
     #[inline]
     pub const fn as_slice(&self) -> &[u8] {
