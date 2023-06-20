@@ -32,7 +32,7 @@ pub type B512 = FixedBytes<64>;
 impl From<crate::U256> for B256 {
     #[inline]
     fn from(value: crate::U256) -> Self {
-        Self::from(value.to_be_bytes())
+        Self(value.to_be_bytes())
     }
 }
 

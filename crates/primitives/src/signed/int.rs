@@ -80,6 +80,7 @@ pub struct Signed<const BITS: usize, const LIMBS: usize>(pub(crate) Uint<BITS, L
 
 // formatting
 impl<const BITS: usize, const LIMBS: usize> fmt::Debug for Signed<BITS, LIMBS> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }
@@ -88,44 +89,38 @@ impl<const BITS: usize, const LIMBS: usize> fmt::Debug for Signed<BITS, LIMBS> {
 impl<const BITS: usize, const LIMBS: usize> fmt::Display for Signed<BITS, LIMBS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (sign, abs) = self.into_sign_and_abs();
-        fmt::Display::fmt(&sign, f)?;
+        // sign must be formatted directly, instead of with `write!` due to the
+        // `sign_positive` flag
+        sign.fmt(f)?;
         write!(f, "{abs}")
     }
 }
 
-impl<const BITS: usize, const LIMBS: usize> fmt::LowerHex for Signed<BITS, LIMBS> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (sign, abs) = self.into_sign_and_abs();
-        fmt::Display::fmt(&sign, f)?;
-        write!(f, "{abs:x}")
-    }
-}
-
-impl<const BITS: usize, const LIMBS: usize> fmt::UpperHex for Signed<BITS, LIMBS> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (sign, abs) = self.into_sign_and_abs();
-        fmt::Display::fmt(&sign, f)?;
-
-        // NOTE: Work around `Uint: !UpperHex`.
-        let mut buffer = format!("{abs:x}");
-        buffer.make_ascii_uppercase();
-        f.write_str(&buffer)
-    }
-}
-
 impl<const BITS: usize, const LIMBS: usize> fmt::Binary for Signed<BITS, LIMBS> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (sign, abs) = self.into_sign_and_abs();
-        fmt::Display::fmt(&sign, f)?;
-        write!(f, "{abs:b}")
+        self.0.fmt(f)
     }
 }
 
 impl<const BITS: usize, const LIMBS: usize> fmt::Octal for Signed<BITS, LIMBS> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (sign, abs) = self.into_sign_and_abs();
-        fmt::Display::fmt(&sign, f)?;
-        write!(f, "{abs:o}")
+        self.0.fmt(f)
+    }
+}
+
+impl<const BITS: usize, const LIMBS: usize> fmt::LowerHex for Signed<BITS, LIMBS> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<const BITS: usize, const LIMBS: usize> fmt::UpperHex for Signed<BITS, LIMBS> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -517,9 +512,6 @@ mod tests {
     // type U2 = Uint<2, 1>;
     type I96 = Signed<96, 2>;
     type U96 = Uint<96, 2>;
-
-    // TODO: ruint::aliases::U192 is bugged
-    type U192 = Uint<192, 3>;
 
     #[test]
     fn identities() {
