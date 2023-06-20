@@ -16,7 +16,7 @@ pub struct Address;
 
 impl<T> Encodable<Address> for T
 where
-    T: Borrow<RustAddress>,
+    T: Borrow<[u8; 20]>,
 {
     #[inline]
     fn to_tokens(&self) -> WordToken {
@@ -225,13 +225,10 @@ where
 /// Bool - `bool`
 pub struct Bool;
 
-impl<T> Encodable<Bool> for T
-where
-    T: Borrow<bool>,
-{
+impl Encodable<Bool> for bool {
     #[inline]
     fn to_tokens(&self) -> WordToken {
-        Word::with_last_byte(*self.borrow() as u8).into()
+        Word::with_last_byte(*self as u8).into()
     }
 }
 
