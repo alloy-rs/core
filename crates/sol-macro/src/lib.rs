@@ -29,7 +29,7 @@ mod utils;
 ///
 /// # Examples
 ///
-/// Note: the following examples cannot tested here because the generated code
+/// Note: the following examples cannot be tested here because the generated code
 /// references `alloy-sol-types`, so they are [tested in that crate][tests] and
 /// included with `include_str!` in this doc instead.
 ///
