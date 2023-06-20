@@ -36,6 +36,15 @@ use sealed::Sealed;
 /// Abi-Encoding Tokens. This is a sealed trait. It contains the type
 /// information necessary to encode & decode data. Tokens are an intermediate
 /// state between abi-encoded blobs, and rust types.
+///
+/// A token with a lifetime borrows its data from elsewhere. During decoding,
+/// it borrows its data from the decoder. During encoding, it borrows its data
+/// from the rust value being encoded.
+///
+/// This trait allows us to encode and decode data with minimal copying. It
+/// may also be used to enable zero-copy decoding of data, or fast
+/// transformation of encoded blobs without full decoding (for, e.g., MEV
+/// Searching).
 pub trait TokenType<'de>: Sealed + Sized {
     /// True if the token represents a dynamically-sized type.
     const DYNAMIC: bool;
