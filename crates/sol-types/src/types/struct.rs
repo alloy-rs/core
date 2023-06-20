@@ -5,8 +5,8 @@ use super::SolType;
 use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Word};
 use alloy_primitives::{keccak256, B256};
 
-type TupleFor<T> = <T as SolStruct>::Tuple;
-type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
+type TupleFor<'a, T> = <T as SolStruct>::Tuple<'a>;
+type TupleTokenTypeFor<'a, T> = <TupleFor<'a, T> as SolType>::TokenType<'a>;
 
 /// A Solidity Struct.
 ///
@@ -32,10 +32,10 @@ type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
 /// [ref]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
 pub trait SolStruct {
     /// The corresponding Tuple type, used for encoding/decoding.
-    type Tuple: SolType<TokenType = Self::Token>;
+    type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
 
     /// The corresponding Token type.
-    type Token: TokenSeq;
+    type Token<'a>: TokenSeq<'a>;
 
     /// The struct name.
     ///
@@ -51,19 +51,22 @@ pub trait SolStruct {
 
     // TODO: avoid clones here
     /// Convert to the tuple type used for ABI encoding and decoding.
-    fn to_rust(&self) -> <Self::Tuple as SolType>::RustType;
+    fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType;
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self;
+    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
+
+    /// Convert to the token type used for EIP-712 encoding and decoding.
+    fn tokenize(&self) -> Self::Token<'_>;
 
     /// The size of the struct when encoded, in bytes
     fn encoded_size(&self) -> usize {
         // This avoids unnecessary clones.
-        if let Some(size) = <Self::Tuple as SolType>::ENCODED_SIZE {
+        if let Some(size) = <Self::Tuple<'_> as SolType>::ENCODED_SIZE {
             return size
         }
 
-        <<Self as SolStruct>::Tuple as SolType>::encoded_size(self.to_rust())
+        <<Self as SolStruct>::Tuple<'_> as SolType>::encoded_size(&self.to_rust())
     }
 
     /// EIP-712 `encodeType`
@@ -130,19 +133,19 @@ pub trait SolStruct {
 // TODO: Maybe move this to `sol!`?
 impl<T: SolStruct> SolType for T {
     type RustType = T;
-    type TokenType = TupleTokenTypeFor<T>;
+    type TokenType<'a> = TupleTokenTypeFor<'a, T>;
 
     const DYNAMIC: bool = TupleFor::<T>::DYNAMIC;
 
     #[inline]
-    fn type_check(token: &Self::TokenType) -> crate::Result<()> {
+    fn type_check(token: &Self::TokenType<'_>) -> crate::Result<()> {
         TupleFor::<T>::type_check(token)
     }
 
     #[inline]
-    fn encoded_size<B: Borrow<Self::RustType>>(rust: B) -> usize {
-        let tuple = rust.borrow().to_rust();
-        TupleFor::<T>::encoded_size(tuple)
+    fn encoded_size<'a>(rust: &Self::RustType) -> usize {
+        let tuple = rust.to_rust();
+        TupleFor::<T>::encoded_size(&tuple)
     }
 
     #[inline]
@@ -151,15 +154,14 @@ impl<T: SolStruct> SolType for T {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         let tuple = TupleFor::<T>::detokenize(token);
         T::from_rust(tuple)
     }
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        let tuple = rust.borrow().to_rust();
-        TupleFor::<T>::tokenize(tuple)
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
+        <Self as SolStruct>::tokenize(rust)
     }
 
     #[inline]
@@ -168,13 +170,13 @@ impl<T: SolStruct> SolType for T {
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+    fn eip712_data_word<'a>(rust: &Self::RustType) -> Word {
         keccak256(SolStruct::eip712_hash_struct(rust.borrow()))
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        let tuple = rust.borrow().to_rust();
-        TupleFor::<T>::encode_packed_to(tuple, out)
+    fn encode_packed_to<'a>(rust: &Self::RustType, out: &mut Vec<u8>) {
+        let tuple = rust.to_rust();
+        TupleFor::<T>::encode_packed_to(&tuple, out)
     }
 }

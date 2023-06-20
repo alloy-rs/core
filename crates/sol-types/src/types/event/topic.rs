@@ -19,7 +19,7 @@ pub trait EventTopic: SolType {
     /// construct the preimage of a complex topic.
     ///
     /// [`encode_topic_preimage`]: EventTopic::encode_topic_preimage
-    fn topic_preimage_length<B: Borrow<Self::RustType>>(rust: B) -> usize;
+    fn topic_preimage_length(rust: &Self::RustType) -> usize;
 
     /// Encodes this type as preimage bytes which are then hashed in
     /// complex types' [`encode_topic`][EventTopic::encode_topic].
@@ -27,7 +27,7 @@ pub trait EventTopic: SolType {
     /// See the [Solidity ABI spec][ref] for more details.
     ///
     /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#encoding-of-indexed-event-parameters
-    fn encode_topic_preimage<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>);
+    fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>);
 
     /// Indexed event parameter encoding.
     ///
@@ -36,24 +36,24 @@ pub trait EventTopic: SolType {
     ///
     /// [`encode_topic_preimage`]: EventTopic::encode_topic_preimage
     /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#encoding-of-indexed-event-parameters
-    fn encode_topic<B: Borrow<Self::RustType>>(rust: B) -> WordToken;
+    fn encode_topic(rust: &Self::RustType) -> WordToken;
 }
 
 // Single word types: encoded as just the single word
 macro_rules! word_impl {
     ($t:ty) => {
         #[inline]
-        fn topic_preimage_length<B: Borrow<Self::RustType>>(_: B) -> usize {
+        fn topic_preimage_length(_: &Self::RustType) -> usize {
             32
         }
 
         #[inline]
-        fn encode_topic_preimage<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
+        fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
             out.extend(<$t as SolType>::tokenize(rust).0 .0);
         }
 
         #[inline]
-        fn encode_topic<B: Borrow<Self::RustType>>(rust: B) -> WordToken {
+        fn encode_topic(rust: &Self::RustType) -> WordToken {
             <$t as SolType>::tokenize(rust)
         }
     };
@@ -92,18 +92,18 @@ where
 macro_rules! bytes_impl {
     ($t:ty) => {
         #[inline]
-        fn topic_preimage_length<B: Borrow<Self::RustType>>(rust: B) -> usize {
-            crate::util::next_multiple_of_32(rust.borrow().len())
+        fn topic_preimage_length(rust: &Self::RustType) -> usize {
+            crate::util::next_multiple_of_32(rust.len())
         }
 
         #[inline]
-        fn encode_topic_preimage<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-            encode_topic_bytes(rust.borrow().as_ref(), out);
+        fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
+            encode_topic_bytes(rust.as_ref(), out);
         }
 
         #[inline]
-        fn encode_topic<B: Borrow<Self::RustType>>(rust: B) -> WordToken {
-            WordToken(keccak256(rust.borrow()))
+        fn encode_topic(rust: &Self::RustType) -> WordToken {
+            WordToken(keccak256(rust))
         }
     };
 }
@@ -120,12 +120,12 @@ impl EventTopic for Bytes {
 macro_rules! array_impl {
     ($T:ident) => {
         #[inline]
-        fn topic_preimage_length<B: Borrow<Self::RustType>>(rust: B) -> usize {
-            rust.borrow().iter().map($T::topic_preimage_length).sum()
+        fn topic_preimage_length(rust: &Self::RustType) -> usize {
+            rust.iter().map($T::topic_preimage_length).sum()
         }
 
         #[inline]
-        fn encode_topic_preimage<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
+        fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
             let b = rust.borrow();
             out.reserve(Self::topic_preimage_length(b));
             for t in b {
@@ -134,7 +134,7 @@ macro_rules! array_impl {
         }
 
         #[inline]
-        fn encode_topic<B: Borrow<Self::RustType>>(rust: B) -> WordToken {
+        fn encode_topic(rust: &Self::RustType) -> WordToken {
             let mut out = Vec::new();
             Self::encode_topic_preimage(rust.borrow(), &mut out);
             WordToken(keccak256(out))
@@ -155,13 +155,13 @@ macro_rules! tuple_impls {
         #[allow(non_snake_case)]
         impl<$($t: EventTopic,)+> EventTopic for ($($t,)+) {
             #[inline]
-            fn topic_preimage_length<B: Borrow<Self::RustType>>(rust: B) -> usize {
+            fn topic_preimage_length(rust: &Self::RustType) -> usize {
                 let ($($t,)+) = rust.borrow();
                 0usize $( + <$t>::topic_preimage_length($t) )+
             }
 
             #[inline]
-            fn encode_topic_preimage<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
+            fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
                 let b @ ($($t,)+) = rust.borrow();
                 out.reserve(Self::topic_preimage_length(b));
                 $(
@@ -170,7 +170,7 @@ macro_rules! tuple_impls {
             }
 
             #[inline]
-            fn encode_topic<B: Borrow<Self::RustType>>(rust: B) -> WordToken {
+            fn encode_topic(rust: &Self::RustType) -> WordToken {
                 let mut out = Vec::new();
                 Self::encode_topic_preimage(rust.borrow(), &mut out);
                 WordToken(keccak256(out))
@@ -181,15 +181,15 @@ macro_rules! tuple_impls {
 
 impl EventTopic for () {
     #[inline]
-    fn topic_preimage_length<B: Borrow<Self::RustType>>(_: B) -> usize {
+    fn topic_preimage_length(_: &Self::RustType) -> usize {
         0
     }
 
     #[inline]
-    fn encode_topic_preimage<B: Borrow<Self::RustType>>(_: B, _: &mut Vec<u8>) {}
+    fn encode_topic_preimage(_: &Self::RustType, _: &mut Vec<u8>) {}
 
     #[inline]
-    fn encode_topic<B: Borrow<Self::RustType>>(_: B) -> WordToken {
+    fn encode_topic(_: &Self::RustType) -> WordToken {
         WordToken::default()
     }
 }

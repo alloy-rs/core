@@ -25,10 +25,10 @@ pub trait SolEvent: Sized {
     ///
     /// If this event has no non-indexed parameters, this will be the unit type
     /// `()`.
-    type DataTuple: SolType<TokenType = Self::DataToken>;
+    type DataTuple<'a>: SolType<TokenType<'a> = Self::DataToken<'a>>;
 
     /// The [`TokenSeq`] type corresponding to the tuple.
-    type DataToken: TokenSeq;
+    type DataToken<'a>: TokenSeq<'a>;
 
     /// The underlying tuple type which represents this event's topics.
     ///
@@ -55,12 +55,16 @@ pub trait SolEvent: Sized {
     /// Convert decoded rust data to the event type.
     fn new(
         topics: <Self::TopicList as SolType>::RustType,
-        data: <Self::DataTuple as SolType>::RustType,
+        data: <Self::DataTuple<'_> as SolType>::RustType,
     ) -> Self;
 
     // TODO: avoid clones here
     /// The event's non-indexed parameters.
-    fn body(&self) -> <Self::DataTuple as SolType>::RustType;
+    fn body(&self) -> <Self::DataTuple<'_> as SolType>::RustType;
+
+    /// Tokenize the event's non-indexed parameters.
+    fn tokenize_body(&self) -> Self::DataToken<'_>;
+
     // TODO: avoid clones here
     /// The event's topics.
     fn topics(&self) -> <Self::TopicList as SolType>::RustType;
@@ -69,17 +73,16 @@ pub trait SolEvent: Sized {
     fn encoded_size(&self) -> usize {
         // This avoids unnecessary clones.
         // TODO: also avoid necessary clones.
-        if let Some(size) = <Self::DataTuple as SolType>::ENCODED_SIZE {
+        if let Some(size) = <Self::DataTuple<'_> as SolType>::ENCODED_SIZE {
             return size
         }
-        <Self::DataTuple>::encoded_size(&self.body())
+        <Self::DataTuple<'_>>::encoded_size(&self.body())
     }
 
     /// ABI-encode the dynamic data of this event into the given buffer.
     fn encode_data_to(&self, out: &mut Vec<u8>) {
-        let body = self.body();
-        out.reserve(<Self::DataTuple>::encoded_size(&body));
-        out.extend(<Self::DataTuple as SolType>::encode(&body));
+        out.reserve(self.encoded_size());
+        out.extend(crate::encode(&self.tokenize_body()));
     }
 
     /// Encode the topics of this event into the given buffer.
@@ -132,8 +135,11 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the dynamic data of this event from the given buffer.
-    fn decode_data(data: &[u8], validate: bool) -> Result<<Self::DataTuple as SolType>::RustType> {
-        <Self::DataTuple as SolType>::decode(data, validate)
+    fn decode_data<'a>(
+        data: &'a [u8],
+        validate: bool,
+    ) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
+        <Self::DataTuple<'a> as SolType>::decode(data, validate)
     }
 
     /// Decode the event from the given log info.

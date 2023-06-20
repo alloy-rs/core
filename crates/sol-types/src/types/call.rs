@@ -11,10 +11,10 @@ pub trait SolCall: Sized {
     /// The underlying tuple type which represents this type's members.
     ///
     /// If this type has no arguments, this will be the unit type `()`.
-    type Tuple: SolType<TokenType = Self::Token>;
+    type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
 
     /// The corresponding [TokenSeq] type.
-    type Token: TokenSeq;
+    type Token<'a>: TokenSeq<'a>;
 
     /// The function's ABI signature.
     const SIGNATURE: &'static str;
@@ -24,26 +24,29 @@ pub trait SolCall: Sized {
 
     // TODO: avoid clones here
     /// Converts to the tuple type used for ABI encoding and decoding.
-    fn to_rust(&self) -> <Self::Tuple as SolType>::RustType;
+    fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType;
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self;
+    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
+
+    /// Tokenize the call's arguments.
+    fn tokenize(&self) -> Self::Token<'_>;
 
     /// The size of the encoded data in bytes, **without** its selector.
     fn encoded_size(&self) -> usize {
         // This avoids unnecessary clones.
-        if let Some(size) = <Self::Tuple as SolType>::ENCODED_SIZE {
+        if let Some(size) = <Self::Tuple<'_> as SolType>::ENCODED_SIZE {
             return size
         }
 
-        <<Self as SolCall>::Tuple as SolType>::encoded_size(self.to_rust())
+        <<Self as SolCall>::Tuple<'_> as SolType>::encoded_size(&self.to_rust())
     }
 
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector.
     #[inline]
     fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Tuple as SolType>::decode(data, validate).map(Self::from_rust)
+        <Self::Tuple<'_> as SolType>::decode(data, validate).map(Self::from_rust)
     }
 
     /// ABI decode this call's arguments from the given slice, **with** the
@@ -60,7 +63,7 @@ pub trait SolCall: Sized {
     #[inline]
     fn encode_raw(&self, out: &mut Vec<u8>) {
         out.reserve(self.encoded_size());
-        out.extend(<Self::Tuple as SolType>::encode(self.to_rust()));
+        out.extend(crate::encode(&self.tokenize()));
     }
 
     /// ABI encode the call to the given buffer **with** its selector.

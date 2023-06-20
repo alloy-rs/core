@@ -16,7 +16,7 @@ pub struct Address;
 
 impl SolType for Address {
     type RustType = RustAddress;
-    type TokenType = WordToken;
+    type TokenType<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -24,17 +24,17 @@ impl SolType for Address {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         RustAddress::new(token.0[12..].try_into().unwrap())
     }
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        WordToken::from(*rust.borrow())
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
+        WordToken::from(*rust)
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType) -> Result<()> {
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
         if util::check_zeroes(&token.0[..12]) {
             Ok(())
         } else {
@@ -43,13 +43,13 @@ impl SolType for Address {
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
         Self::tokenize(rust).0
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        out.extend_from_slice(rust.borrow().as_ref());
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        out.extend_from_slice(rust.as_ref());
     }
 }
 
@@ -58,7 +58,7 @@ pub struct Bytes;
 
 impl SolType for Bytes {
     type RustType = Vec<u8>;
-    type TokenType = PackedSeqToken;
+    type TokenType<'a> = PackedSeqToken<'a>;
 
     const ENCODED_SIZE: Option<usize> = None;
 
@@ -68,33 +68,33 @@ impl SolType for Bytes {
     }
 
     #[inline]
-    fn encoded_size<B: Borrow<Self::RustType>>(_data: B) -> usize {
+    fn encoded_size(_data: &Self::RustType) -> usize {
         32 + util::padded_len(_data.borrow())
     }
 
     #[inline]
-    fn type_check(_token: &Self::TokenType) -> Result<()> {
+    fn type_check(_token: &Self::TokenType<'_>) -> Result<()> {
         Ok(())
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         token.into_vec()
     }
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        rust.borrow().to_owned().into()
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
+        rust.into()
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-        keccak256(Self::encode_packed(rust.borrow()))
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
+        keccak256(Self::encode_packed(rust))
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        out.extend_from_slice(rust.borrow());
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        out.extend_from_slice(rust);
     }
 }
 
@@ -106,7 +106,7 @@ where
     IntBitCount<BITS>: SupportedInt,
 {
     type RustType = <IntBitCount<BITS> as SupportedInt>::Int;
-    type TokenType = WordToken;
+    type TokenType<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -114,7 +114,7 @@ where
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType) -> Result<()> {
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
         if BITS == 256 {
             return Ok(())
         }
@@ -134,23 +134,23 @@ where
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         IntBitCount::<BITS>::detokenize_int(token)
     }
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        IntBitCount::<BITS>::tokenize_int(*rust.borrow())
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
+        IntBitCount::<BITS>::tokenize_int(*rust)
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
         Self::tokenize(rust).0
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        IntBitCount::<BITS>::encode_packed_to_int(*rust.borrow(), out)
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        IntBitCount::<BITS>::encode_packed_to_int(*rust, out)
     }
 }
 
@@ -162,7 +162,7 @@ where
     IntBitCount<BITS>: SupportedInt,
 {
     type RustType = <IntBitCount<BITS> as SupportedInt>::Uint;
-    type TokenType = WordToken;
+    type TokenType<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -170,9 +170,9 @@ where
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType) -> Result<()> {
-        let s = &token.0[..<IntBitCount<BITS> as SupportedInt>::WORD_MSB];
-        if util::check_zeroes(s) {
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
+        let sli = &token.0[..<IntBitCount<BITS> as SupportedInt>::WORD_MSB];
+        if util::check_zeroes(sli) {
             Ok(())
         } else {
             Err(Self::type_check_fail(token.as_slice()))
@@ -180,23 +180,23 @@ where
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         IntBitCount::<BITS>::detokenize_uint(token)
     }
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        IntBitCount::<BITS>::tokenize_uint(*rust.borrow())
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
+        IntBitCount::<BITS>::tokenize_uint(*rust)
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
         Self::tokenize(rust).0
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        IntBitCount::<BITS>::encode_packed_to_uint(*rust.borrow(), out)
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        IntBitCount::<BITS>::encode_packed_to_uint(*rust, out)
     }
 }
 
@@ -205,7 +205,7 @@ pub struct Bool;
 
 impl SolType for Bool {
     type RustType = bool;
-    type TokenType = WordToken;
+    type TokenType<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -213,7 +213,7 @@ impl SolType for Bool {
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType) -> Result<()> {
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
         if util::check_bool(token.0) {
             Ok(())
         } else {
@@ -222,23 +222,23 @@ impl SolType for Bool {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         token.0 != Word::ZERO
     }
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        Word::with_last_byte(*rust.borrow() as u8).into()
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
+        Word::with_last_byte(*rust as u8).into()
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
         Self::tokenize(rust).0
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        out.push(*rust.borrow() as u8);
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        out.push(*rust as u8);
     }
 }
 
@@ -247,7 +247,7 @@ pub struct Array<T: SolType>(PhantomData<T>);
 
 impl<T: SolType> SolType for Array<T> {
     type RustType = Vec<T::RustType>;
-    type TokenType = DynSeqToken<T::TokenType>;
+    type TokenType<'a> = DynSeqToken<T::TokenType<'a>>;
 
     const ENCODED_SIZE: Option<usize> = None;
 
@@ -257,40 +257,40 @@ impl<T: SolType> SolType for Array<T> {
     }
 
     #[inline]
-    fn encoded_size<B: Borrow<Self::RustType>>(rust: B) -> usize {
-        let data = rust.borrow();
+    fn encoded_size(rust: &Self::RustType) -> usize {
+        let data = rust;
         32 + data.iter().map(T::encoded_size).sum::<usize>()
             + (T::DYNAMIC as usize * 32 * data.len())
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType) -> Result<()> {
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
         token.0.iter().try_for_each(T::type_check)
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         token.0.into_iter().map(T::detokenize).collect()
     }
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        let v = rust.borrow().iter().map(T::tokenize).collect();
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
+        let v = rust.iter().map(T::tokenize).collect();
         DynSeqToken(v)
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
         let mut encoded = Vec::new();
-        for item in rust.borrow() {
+        for item in rust {
             encoded.extend_from_slice(T::eip712_data_word(item).as_slice());
         }
         keccak256(encoded)
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        for item in rust.borrow() {
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        for item in rust {
             T::encode_packed_to(item, out);
         }
     }
@@ -301,7 +301,7 @@ pub struct String;
 
 impl SolType for String {
     type RustType = RustString;
-    type TokenType = PackedSeqToken;
+    type TokenType<'a> = PackedSeqToken<'a>;
 
     const ENCODED_SIZE: Option<usize> = None;
 
@@ -311,12 +311,12 @@ impl SolType for String {
     }
 
     #[inline]
-    fn encoded_size<B: Borrow<Self::RustType>>(data: B) -> usize {
-        32 + util::padded_len(data.borrow().as_bytes())
+    fn encoded_size(rust: &Self::RustType) -> usize {
+        32 + util::padded_len(rust.as_bytes())
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType) -> Result<()> {
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
         if core::str::from_utf8(token.as_slice()).is_ok() {
             Ok(())
         } else {
@@ -325,7 +325,7 @@ impl SolType for String {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         // NOTE: We're decoding strings using lossy UTF-8 decoding to
         // prevent invalid strings written into contracts by either users or
         // Solidity bugs from causing graph-node to fail decoding event
@@ -334,18 +334,18 @@ impl SolType for String {
     }
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        rust.borrow().as_bytes().to_vec().into()
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
+        rust.as_bytes().into()
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-        keccak256(Self::encode_packed(rust.borrow()))
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
+        keccak256(Self::encode_packed(rust))
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        out.extend_from_slice(rust.borrow().as_bytes());
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        out.extend_from_slice(rust.as_bytes());
     }
 }
 
@@ -358,7 +358,7 @@ where
     ByteCount<N>: SupportedFixedBytes,
 {
     type RustType = [u8; N];
-    type TokenType = WordToken;
+    type TokenType<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -366,7 +366,7 @@ where
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType) -> Result<()> {
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
         if util::check_zeroes(&token.0[N..]) {
             Ok(())
         } else {
@@ -375,25 +375,26 @@ where
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         token.0[..N].try_into().unwrap()
     }
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
         let mut word = Word::ZERO;
-        word[..N].copy_from_slice(rust.borrow());
+        word[..N].copy_from_slice(rust);
         word.into()
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
         Self::tokenize(rust).0
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        out.extend_from_slice(rust.borrow());
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        // write only the first n bytes
+        out.extend_from_slice(rust);
     }
 }
 
@@ -402,7 +403,7 @@ pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 
 impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     type RustType = [T::RustType; N];
-    type TokenType = FixedSeqToken<T::TokenType, N>;
+    type TokenType<'a> = FixedSeqToken<T::TokenType<'a>, N>;
 
     const ENCODED_SIZE: Option<usize> = {
         match T::ENCODED_SIZE {
@@ -412,12 +413,12 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     };
 
     #[inline]
-    fn encoded_size<B: Borrow<Self::RustType>>(rust: B) -> usize {
+    fn encoded_size(rust: &Self::RustType) -> usize {
         if let Some(size) = Self::ENCODED_SIZE {
             return size
         }
 
-        rust.borrow().iter().map(T::encoded_size).sum::<usize>() + (T::DYNAMIC as usize * N * 32)
+        rust.iter().map(T::encoded_size).sum::<usize>() + (T::DYNAMIC as usize * N * 32)
     }
 
     #[inline]
@@ -426,7 +427,7 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType) -> Result<()> {
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
         for token in token.as_array().iter() {
             T::type_check(token)?;
         }
@@ -434,19 +435,19 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Self::RustType {
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         token.0.map(T::detokenize)
     }
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        let arr: &[T::RustType; N] = rust.borrow();
+    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
+        let arr: &[T::RustType; N] = rust;
         FixedSeqToken::<_, N>(core::array::from_fn(|i| T::tokenize(&arr[i])))
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-        let rust = rust.borrow();
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
+        let rust = rust;
         let encoded = rust
             .iter()
             .flat_map(|element| T::eip712_data_word(element).0)
@@ -455,8 +456,8 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-        for item in rust.borrow() {
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        for item in rust {
             T::encode_packed_to(item, out);
         }
     }
@@ -478,7 +479,7 @@ macro_rules! tuple_impls {
         #[allow(non_snake_case)]
         impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
             type RustType = ($( $ty::RustType, )+);
-            type TokenType = ($( $ty::TokenType, )+);
+            type TokenType<'a> = ($( $ty::TokenType<'a>, )+);
 
             const ENCODED_SIZE: Option<usize> = {
                 let mut acc = Some(0);
@@ -503,12 +504,12 @@ macro_rules! tuple_impls {
                 ).into()
             }
 
-            fn encoded_size<B: Borrow<Self::RustType>>(rust: B) -> usize {
+            fn encoded_size(rust: &Self::RustType) -> usize {
                 if let Some(size) = Self::ENCODED_SIZE {
                     return size
                 }
 
-                let ($($ty,)+) = rust.borrow();
+                let ($($ty,)+) = rust;
                 0 $(
                     + <$ty as SolType>::encoded_size($ty)
                 )+
@@ -517,7 +518,7 @@ macro_rules! tuple_impls {
                 )+
             }
 
-            fn type_check(token: &Self::TokenType) -> Result<()> {
+            fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
                 let ($($ty,)+) = token;
                 $(
                     <$ty as SolType>::type_check($ty)?;
@@ -525,23 +526,23 @@ macro_rules! tuple_impls {
                 Ok(())
             }
 
-            fn detokenize(token: Self::TokenType) -> Self::RustType {
+            fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
                 let ($($ty,)+) = token;
                 ($(
                     <$ty as SolType>::detokenize($ty),
                 )+)
             }
 
-            fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-                let ($($ty,)+) = rust.borrow();
+            fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
+                let ($($ty,)+) = rust;
                 ($(
                     <$ty as SolType>::tokenize($ty),
                 )+)
             }
 
-            fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
+            fn eip712_data_word(rust: &Self::RustType) -> Word {
                 const COUNT: usize = 0usize $(+ tuple_impls!(@one $ty))+;
-                let ($($ty,)+) = rust.borrow();
+                let ($($ty,)+) = rust;
                 let encoding: [[u8; 32]; COUNT] = [$(
                     <$ty as SolType>::eip712_data_word($ty).0,
                 )+];
@@ -552,8 +553,8 @@ macro_rules! tuple_impls {
                 keccak256(encoding).into()
             }
 
-            fn encode_packed_to<B: Borrow<Self::RustType>>(rust: B, out: &mut Vec<u8>) {
-                let ($($ty,)+) = rust.borrow();
+            fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+                let ($($ty,)+) = rust;
                 // TODO: Reserve
                 $(
                     <$ty as SolType>::encode_packed_to($ty, out);
@@ -565,7 +566,7 @@ macro_rules! tuple_impls {
 
 impl SolType for () {
     type RustType = ();
-    type TokenType = FixedSeqToken<(), 0>;
+    type TokenType<'a> = FixedSeqToken<(), 0>;
 
     const ENCODED_SIZE: Option<usize> = Some(0);
 
@@ -575,25 +576,25 @@ impl SolType for () {
     }
 
     #[inline]
-    fn type_check(_token: &Self::TokenType) -> Result<()> {
+    fn type_check(_token: &Self::TokenType<'_>) -> Result<()> {
         Ok(())
     }
 
     #[inline]
-    fn detokenize(_token: Self::TokenType) -> Self::RustType {}
+    fn detokenize(_token: Self::TokenType<'_>) -> Self::RustType {}
 
     #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(_rust: B) -> Self::TokenType {
+    fn tokenize(_rust: &Self::RustType) -> Self::TokenType<'_> {
         FixedSeqToken([])
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(_rust: B) -> Word {
+    fn eip712_data_word(_rust: &Self::RustType) -> Word {
         Word::ZERO
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(_rust: B, _out: &mut Vec<u8>) {}
+    fn encode_packed_to(_rust: &Self::RustType, _out: &mut Vec<u8>) {}
 }
 
 all_the_tuples!(tuple_impls);
@@ -1039,7 +1040,7 @@ mod tests {
     #[test]
     #[rustfmt::skip]
     fn detokenize_int() {
-        let word = 
+        let word =
             core::array::from_fn(|i| (i | (0x80 * (i % 2 == 1) as usize)) as u8 + 1);
         let token = WordToken::new(word);
         trait Conv {

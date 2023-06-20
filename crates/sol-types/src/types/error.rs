@@ -17,10 +17,10 @@ pub trait SolError: Sized {
     /// The underlying tuple type which represents the error's members.
     ///
     /// If the error has no arguments, this will be the unit type `()`
-    type Tuple: SolType<TokenType = Self::Token>;
+    type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
 
     /// The corresponding [`TokenSeq`] type.
-    type Token: TokenSeq;
+    type Token<'a>: TokenSeq<'a>;
 
     /// The error's ABI signature.
     const SIGNATURE: &'static str;
@@ -29,22 +29,25 @@ pub trait SolError: Sized {
     const SELECTOR: [u8; 4];
 
     /// Convert to the tuple type used for ABI encoding and decoding.
-    fn to_rust(&self) -> <Self::Tuple as SolType>::RustType;
+    fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType;
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self;
+    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
+
+    /// Convert to the token type used for EIP-712 encoding and decoding.
+    fn tokenize(&self) -> Self::Token<'_>;
 
     /// The size of the error params when encoded in bytes, **without** the
     /// selector.
     fn encoded_size(&self) -> usize {
-        <Self::Tuple as SolType>::encoded_size(&self.to_rust())
+        <Self::Tuple<'_> as SolType>::encoded_size(&self.to_rust())
     }
 
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector.
     #[inline]
     fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Tuple as SolType>::decode(data, validate).map(Self::from_rust)
+        <Self::Tuple<'_> as SolType>::decode(data, validate).map(Self::from_rust)
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the
@@ -61,7 +64,7 @@ pub trait SolError: Sized {
     #[inline]
     fn encode_raw(&self, out: &mut Vec<u8>) {
         out.reserve(self.encoded_size());
-        out.extend(<Self::Tuple as SolType>::encode(self.to_rust()));
+        out.extend(crate::encode(&self.tokenize()));
     }
 
     /// ABI encode the error to the given buffer **with** its selector.
@@ -133,20 +136,25 @@ impl From<&str> for Revert {
 }
 
 impl SolError for Revert {
-    type Token = (PackedSeqToken,);
-    type Tuple = (crate::sol_data::String,);
+    type Token<'a> = (PackedSeqToken<'a>,);
+    type Tuple<'a> = (crate::sol_data::String,);
 
     const SIGNATURE: &'static str = "Error(string)";
     const SELECTOR: [u8; 4] = [0x08, 0xc3, 0x79, 0xa0];
 
     #[inline]
-    fn to_rust(&self) -> <Self::Tuple as SolType>::RustType {
+    fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType {
         (self.reason.clone(),)
     }
 
     #[inline]
-    fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self {
+    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self {
         Self { reason: tuple.0 }
+    }
+
+    #[inline]
+    fn tokenize(&self) -> Self::Token<'_> {
+        (PackedSeqToken::from(self.reason.as_bytes()),)
     }
 
     #[inline]
@@ -242,20 +250,25 @@ impl From<U256> for Panic {
 }
 
 impl SolError for Panic {
-    type Token = (WordToken,);
-    type Tuple = (crate::sol_data::Uint<256>,);
+    type Token<'a> = (WordToken,);
+    type Tuple<'a> = (crate::sol_data::Uint<256>,);
 
     const SIGNATURE: &'static str = "Panic(uint256)";
     const SELECTOR: [u8; 4] = [0x4e, 0x48, 0x7b, 0x71];
 
     #[inline]
-    fn to_rust(&self) -> <Self::Tuple as SolType>::RustType {
+    fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType {
         (self.code,)
     }
 
     #[inline]
-    fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self {
+    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self {
         Self { code: tuple.0 }
+    }
+
+    #[inline]
+    fn tokenize(&self) -> Self::Token<'_> {
+        (WordToken::from(self.code),)
     }
 
     #[inline]

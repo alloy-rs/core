@@ -31,8 +31,8 @@ mod sealed {
 
 macro_rules! impl_topic_list_tuples {
     ($($c:literal => $($t:ident),*;)+) => {$(
-        impl<$($t: SolType<TokenType = WordToken>,)*> sealed::Sealed for ($($t,)*) {}
-        impl<$($t: SolType<TokenType = WordToken>,)*> TopicList for ($($t,)*) {
+        impl<'aa, $($t: SolType<TokenType<'aa> = WordToken>,)*> sealed::Sealed for ($($t,)*) {}
+        impl<'aa, $($t: SolType<TokenType<'aa> = WordToken>,)*> TopicList for ($($t,)*) {
             const COUNT: usize = $c;
 
             fn detokenize<I, D>(topics: I) -> Result<Self::RustType>
@@ -43,7 +43,7 @@ macro_rules! impl_topic_list_tuples {
                 let err = || Error::Other(Cow::Borrowed("topic list length mismatch"));
                 let mut iter = topics.into_iter().map(Into::into);
                 Ok(($(
-                    iter.next().ok_or_else(err).map(<$t>::detokenize)?,
+                    iter.next().ok_or_else(err).map(|tok| <$t>::detokenize(tok))?,
                 )*))
             }
         }
