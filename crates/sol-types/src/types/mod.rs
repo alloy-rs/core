@@ -13,7 +13,7 @@ mod r#struct;
 pub use r#struct::SolStruct;
 
 mod r#type;
-pub use r#type::SolType;
+pub use r#type::{Encodable, SolType};
 
 // Solidity user-defined value types.
 // No exports are needed as the only item is a macro.

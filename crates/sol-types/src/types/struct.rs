@@ -1,7 +1,7 @@
 //! This module contains the [`SolStruct`] trait, which is used to implement
 //! Solidity structs logic, particularly for EIP-712 encoding/decoding.
 
-use super::SolType;
+use super::{r#type::Encodable, SolType};
 use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Word};
 use alloy_primitives::{keccak256, B256};
 
@@ -129,6 +129,12 @@ pub trait SolStruct: 'static {
     }
 }
 
+impl<T: SolStruct> Encodable<T> for T {
+    fn tokenize(&self) -> <Self as SolType>::TokenType<'_> {
+        <Self as SolStruct>::tokenize(self)
+    }
+}
+
 // blanket impl
 // TODO: Maybe move this to `sol!`?
 impl<T: SolStruct> SolType for T {
@@ -157,11 +163,6 @@ impl<T: SolStruct> SolType for T {
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         let tuple = TupleFor::<T>::detokenize(token);
         T::from_rust(tuple)
-    }
-
-    #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        <Self as SolStruct>::tokenize(rust)
     }
 
     #[inline]
