@@ -111,7 +111,7 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                     self.clone().into()
                 }
 
-                fn from_rust<'a>(tuple: UnderlyingRustTuple<'a>) -> Self {
+                fn new<'a>(tuple: UnderlyingRustTuple<'a>) -> Self {
                     tuple.into()
                 }
 

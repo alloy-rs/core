@@ -1,6 +1,6 @@
 use crate::{
     token::{TokenSeq, WordToken},
-    Result, SolType,
+    Result, SolType, TokenType, Word,
 };
 use alloc::vec::Vec;
 use alloy_primitives::{FixedBytes, B256};
@@ -58,10 +58,6 @@ pub trait SolEvent: Sized {
         data: <Self::DataTuple<'_> as SolType>::RustType,
     ) -> Self;
 
-    // TODO: avoid clones here
-    /// The event's non-indexed parameters.
-    fn body(&self) -> <Self::DataTuple<'_> as SolType>::RustType;
-
     /// Tokenize the event's non-indexed parameters.
     fn tokenize_body(&self) -> Self::DataToken<'_>;
 
@@ -76,7 +72,8 @@ pub trait SolEvent: Sized {
         if let Some(size) = <Self::DataTuple<'_> as SolType>::ENCODED_SIZE {
             return size
         }
-        <Self::DataTuple<'_>>::encoded_size(&self.body())
+
+        self.tokenize_body().total_words() * Word::len_bytes()
     }
 
     /// ABI-encode the dynamic data of this event into the given buffer.
