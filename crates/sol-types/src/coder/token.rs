@@ -481,14 +481,14 @@ impl PackedSeqToken<'_> {
 
 macro_rules! tuple_impls {
     ($($ty:ident),+) => {
-        impl<'dede, $($ty: TokenType<'dede>,)+> Sealed for ($($ty,)+) {}
+        impl<'de, $($ty: TokenType<'de>,)+> Sealed for ($($ty,)+) {}
 
         #[allow(non_snake_case)]
-        impl<'dede, $($ty: TokenType<'dede>,)+> TokenType<'dede> for ($($ty,)+) {
+        impl<'de, $($ty: TokenType<'de>,)+> TokenType<'de> for ($($ty,)+) {
             const DYNAMIC: bool = $( <$ty as TokenType>::DYNAMIC )||+;
 
             #[inline]
-            fn decode_from(dec: &mut Decoder<'dede>) -> Result<Self> {
+            fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
                 // The first element in a dynamic Tuple is an offset to the Tuple's data
                 // For a static Tuple the data begins right away
                 let mut child = if Self::DYNAMIC {
@@ -561,7 +561,7 @@ macro_rules! tuple_impls {
         }
 
         #[allow(non_snake_case)]
-        impl<'dede, $($ty: TokenType<'dede>,)+> TokenSeq<'dede> for ($($ty,)+) {
+        impl<'de, $($ty: TokenType<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
             const IS_TUPLE: bool = true;
 
             fn encode_sequence(&self, enc: &mut Encoder) {
@@ -578,7 +578,7 @@ macro_rules! tuple_impls {
                 enc.pop_offset();
             }
 
-            fn decode_sequence(dec: &mut Decoder<'dede>) -> Result<Self> {
+            fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
                 Ok(($(
                     <$ty as TokenType>::decode_from(dec)?,
                 )+))
