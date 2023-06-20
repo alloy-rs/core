@@ -5,7 +5,7 @@
 use crate::{
     no_std_prelude::{String as RustString, *},
     token::*,
-    util, Result, SolType, Word,
+    util, Encodable, Result, SolType, Word,
 };
 use alloc::borrow::Cow;
 use alloy_primitives::{keccak256, Address as RustAddress, I256, U256};
@@ -14,10 +14,13 @@ use core::{fmt::*, hash::Hash, marker::PhantomData, ops::*};
 /// Address - `address`
 pub struct Address;
 
-impl Encodable<Address> for RustAddress {
+impl<T> Encodable<Address> for T
+where
+    T: Borrow<RustAddress>,
+{
     #[inline]
-    fn tokenize(&self) -> WordToken {
-        WordToken::from(*self)
+    fn to_tokens(&self) -> WordToken {
+        WordToken::from(*self.borrow())
     }
 }
 
@@ -46,7 +49,7 @@ impl SolType for Address {
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::tokenize(rust).0
+        Encodable::<Self>::to_tokens(rust).0
     }
 
     #[inline]
@@ -63,7 +66,7 @@ where
     T: AsRef<[u8]>,
 {
     #[inline]
-    fn tokenize(&self) -> PackedSeqToken<'_> {
+    fn to_tokens(&self) -> PackedSeqToken<'_> {
         PackedSeqToken::from(self.as_ref())
     }
 }
@@ -108,13 +111,14 @@ impl SolType for Bytes {
 /// Int - `intX`
 pub struct Int<const BITS: usize>;
 
-impl<const BITS: usize> Encodable<Int<BITS>> for <IntBitCount<BITS> as SupportedInt>::Int
+impl<T, const BITS: usize> Encodable<Int<BITS>> for T
 where
+    T: Borrow<<IntBitCount<BITS> as SupportedInt>::Int>,
     IntBitCount<BITS>: SupportedInt,
 {
     #[inline]
-    fn tokenize(&self) -> WordToken {
-        IntBitCount::<BITS>::tokenize_int(*self)
+    fn to_tokens(&self) -> WordToken {
+        IntBitCount::<BITS>::tokenize_int(*self.borrow())
     }
 }
 
@@ -157,7 +161,7 @@ where
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::tokenize(rust).0
+        Encodable::<Self>::to_tokens(rust).0
     }
 
     #[inline]
@@ -169,13 +173,14 @@ where
 /// Uint - `uintX`
 pub struct Uint<const BITS: usize>;
 
-impl<const BITS: usize> Encodable<Uint<BITS>> for <IntBitCount<BITS> as SupportedInt>::Uint
+impl<const BITS: usize, T> Encodable<Uint<BITS>> for T
 where
+    T: Borrow<<IntBitCount<BITS> as SupportedInt>::Uint>,
     IntBitCount<BITS>: SupportedInt,
 {
     #[inline]
-    fn tokenize(&self) -> WordToken {
-        IntBitCount::<BITS>::tokenize_uint(*self)
+    fn to_tokens(&self) -> WordToken {
+        IntBitCount::<BITS>::tokenize_uint(*self.borrow())
     }
 }
 
@@ -208,7 +213,7 @@ where
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::tokenize(rust).0
+        Encodable::<Self>::to_tokens(rust).0
     }
 
     #[inline]
@@ -220,10 +225,13 @@ where
 /// Bool - `bool`
 pub struct Bool;
 
-impl Encodable<Bool> for bool {
+impl<T> Encodable<Bool> for T
+where
+    T: Borrow<bool>,
+{
     #[inline]
-    fn tokenize(&self) -> WordToken {
-        Word::with_last_byte(*self as u8).into()
+    fn to_tokens(&self) -> WordToken {
+        Word::with_last_byte(*self.borrow() as u8).into()
     }
 }
 
@@ -252,7 +260,7 @@ impl SolType for Bool {
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::tokenize(rust).0
+        Encodable::<Self>::to_tokens(rust).0
     }
 
     #[inline]
@@ -264,13 +272,14 @@ impl SolType for Bool {
 /// Array - `T[]`
 pub struct Array<T: SolType>(PhantomData<T>);
 
-impl<T> Encodable<Array<T>> for Vec<T::RustType>
+impl<T, U> Encodable<Array<T>> for Vec<U>
 where
     T: SolType,
+    U: Borrow<T::RustType>,
 {
     #[inline]
-    fn tokenize(&self) -> DynSeqToken<T::TokenType<'_>> {
-        DynSeqToken(self.iter().map(|r| r.tokenize()).collect())
+    fn to_tokens(&self) -> DynSeqToken<T::TokenType<'_>> {
+        DynSeqToken(self.iter().map(|r| r.borrow().to_tokens()).collect())
     }
 }
 
@@ -330,7 +339,7 @@ where
     T: AsRef<str>,
 {
     #[inline]
-    fn tokenize(&self) -> <String as SolType>::TokenType<'_> {
+    fn to_tokens(&self) -> <String as SolType>::TokenType<'_> {
         self.as_ref().as_bytes().into()
     }
 }
@@ -389,7 +398,7 @@ where
     ByteCount<N>: SupportedFixedBytes,
 {
     #[inline]
-    fn tokenize(&self) -> <FixedBytes<N> as SolType>::TokenType<'_> {
+    fn to_tokens(&self) -> <FixedBytes<N> as SolType>::TokenType<'_> {
         let mut word = Word::ZERO;
         word[..N].copy_from_slice(self);
         word.into()
@@ -424,7 +433,7 @@ where
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::tokenize(rust).0
+        Encodable::<Self>::to_tokens(rust).0
     }
 
     #[inline]
@@ -437,13 +446,16 @@ where
 /// FixedArray - `T[M]`
 pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 
-impl<T, const N: usize> Encodable<FixedArray<T, N>> for [T::RustType; N]
+impl<T, U, const N: usize> Encodable<FixedArray<T, N>> for [U; N]
 where
+    U: Borrow<T::RustType>,
     T: SolType,
 {
     #[inline]
-    fn tokenize(&self) -> <FixedArray<T, N> as SolType>::TokenType<'_> {
-        FixedSeqToken::<_, N>(core::array::from_fn(|i| Encodable::<T>::tokenize(&self[i])))
+    fn to_tokens(&self) -> <FixedArray<T, N> as SolType>::TokenType<'_> {
+        FixedSeqToken::<_, N>(core::array::from_fn(|i| {
+            Encodable::<T>::to_tokens(self[i].borrow())
+        }))
     }
 }
 
@@ -506,6 +518,26 @@ where
     }
 }
 
+macro_rules! tuple_encodable_impls {
+    ($(($ty:ident $uty:ident)),+) => {
+        #[allow(non_snake_case)]
+        impl<$($ty: SolType, $uty,)+> Encodable<($($ty,)+)> for ($( $uty, )+)
+        where
+            $($uty: $crate::Encodable<$ty>,)+
+         {
+            #[inline]
+            fn to_tokens(&self) -> <($($ty,)+) as SolType>::TokenType<'_> {
+                let ($($ty,)+) = self;
+                (
+                    $(
+                        Encodable::<$ty>::to_tokens($ty),
+                    )+
+                )
+            }
+        }
+    };
+}
+
 macro_rules! tuple_impls {
     (@one $ty:ident) => { 1usize };
 
@@ -519,20 +551,6 @@ macro_rules! tuple_impls {
     };
 
     ($($ty:ident),+) => {
-
-        #[allow(non_snake_case)]
-        impl<$($ty: SolType,)+> Encodable<($($ty,)+)> for ($( $ty::RustType, )+) {
-            #[inline]
-            fn tokenize(&self) -> <($($ty,)+) as SolType>::TokenType<'_> {
-                let ($($ty,)+) = self;
-                (
-                    $(
-                        <$ty as SolType>::tokenize($ty),
-                    )+
-                )
-            }
-        }
-
         #[allow(non_snake_case)]
         impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
             type RustType = ($( $ty::RustType, )+);
@@ -616,7 +634,7 @@ macro_rules! tuple_impls {
 
 impl Encodable<()> for () {
     #[inline]
-    fn tokenize(&self) -> <() as SolType>::TokenType<'_> {
+    fn to_tokens(&self) -> <() as SolType>::TokenType<'_> {
         FixedSeqToken([])
     }
 }
@@ -649,14 +667,13 @@ impl SolType for () {
     fn encode_packed_to(_rust: &Self::RustType, _out: &mut Vec<u8>) {}
 }
 
+all_the_tuples!(@double tuple_encodable_impls);
 all_the_tuples!(tuple_impls);
 
 mod sealed {
     pub trait Sealed {}
 }
 use sealed::Sealed;
-
-use super::r#type::Encodable;
 
 /// Specifies the number of bytes in a [`FixedBytes`] array as a type.
 pub struct ByteCount<const N: usize>;
@@ -932,6 +949,17 @@ supported_int!(
 mod tests {
     use super::*;
 
+    #[test]
+    fn tuple_of_refs() {
+        let a = (1u8,);
+        let b = (&1u8,);
+
+        type MyTy = (Uint<8>,);
+
+        MyTy::tokenize(&a);
+        MyTy::tokenize(&b);
+    }
+
     macro_rules! roundtrip {
         ($($name:ident($st:ty : $t:ty);)+) => {
             proptest::proptest! {$(
@@ -970,24 +998,35 @@ mod tests {
     fn tokenize_uint() {
         macro_rules! test {
             ($($n:literal: $x:expr => $l:literal),+ $(,)?) => {$(
-                assert_eq!(<Uint<$n>>::tokenize(&$x), WordToken::new(hex_literal::hex!($l)));
-                assert_eq!(<Int<$n>>::tokenize(&$x), WordToken::new(hex_literal::hex!($l)));
+                let uint: <Uint<$n> as SolType>::RustType = $x.into();
+                let int = <Int<$n> as SolType>::RustType::try_from(uint).unwrap();
+
+                assert_eq!(
+                    <Uint<$n>>::tokenize(&uint),
+                    WordToken::new(hex_literal::hex!($l))
+                );
+                assert_eq!(
+                    <Int<$n>>::tokenize(&int),
+                    WordToken::new(hex_literal::hex!($l))
+                );
             )+};
         }
 
-        test! {
-             8: 0x00 => "0000000000000000000000000000000000000000000000000000000000000000",
-             8: 0x01 => "0000000000000000000000000000000000000000000000000000000000000001",
-            24: 0x01020304 => "0000000000000000000000000000000000000000000000000000000000020304",
-            32: 0x01020304 => "0000000000000000000000000000000000000000000000000000000001020304",
-            56: 0x0102030405060708 => "0000000000000000000000000000000000000000000000000002030405060708",
-            64: 0x0102030405060708 => "0000000000000000000000000000000000000000000000000102030405060708",
+        let word: Word = Word::new(core::array::from_fn(|i| i as u8 + 1));
 
-            160: "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap()
+        test! {
+             8: 0x00u8 => "0000000000000000000000000000000000000000000000000000000000000000",
+             8: 0x01u8 => "0000000000000000000000000000000000000000000000000000000000000001",
+            24: 0x01020304u32 => "0000000000000000000000000000000000000000000000000000000000020304",
+            32: 0x01020304u32 => "0000000000000000000000000000000000000000000000000000000001020304",
+            56: 0x0102030405060708u64 => "0000000000000000000000000000000000000000000000000002030405060708",
+            64: 0x0102030405060708u64 => "0000000000000000000000000000000000000000000000000102030405060708",
+
+            160: word
                 => "0000000000000000000000000d0e0f101112131415161718191a1b1c1d1e1f20",
-            200: "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap()
+            200: word
                 => "0000000000000008090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
-            256: "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20".parse().unwrap()
+            256: word
                 => "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
         }
     }
@@ -1137,6 +1176,5 @@ mod tests {
         assert_eq!(<Int<240>>::detokenize(token), "0x0000038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
         assert_eq!(<Int<248>>::detokenize(token), "0xff82038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
         assert_eq!(<Int<256>>::detokenize(token), "0x0182038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
-
     }
 }

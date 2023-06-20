@@ -130,7 +130,7 @@ pub trait SolStruct {
 }
 
 impl<T: SolStruct> Encodable<T> for T {
-    fn tokenize(&self) -> <Self as SolType>::TokenType<'_> {
+    fn to_tokens(&self) -> <Self as SolType>::TokenType<'_> {
         <Self as SolStruct>::tokenize(self)
     }
 }

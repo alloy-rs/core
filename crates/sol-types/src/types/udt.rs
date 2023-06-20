@@ -22,8 +22,8 @@ macro_rules! define_udt {
 
         impl $crate::Encodable<$name> for <$underlying as $crate::SolType>::RustType {
             #[inline]
-            fn tokenize(&self) -> <$underlying as $crate::SolType>::TokenType<'_> {
-                $crate::Encodable::<$underlying>::tokenize(self)
+            fn to_tokens(&self) -> <$underlying as $crate::SolType>::TokenType<'_> {
+                $crate::Encodable::<$underlying>::to_tokens(self)
             }
         }
 

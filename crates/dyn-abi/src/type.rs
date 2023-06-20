@@ -85,12 +85,12 @@ impl DynSolType {
     /// Dynamic tokenization.
     pub fn tokenize(&self, value: DynSolValue) -> Result<DynToken<'_>> {
         match (self, value) {
-            (DynSolType::Address, DynSolValue::Address(val)) => {
-                Ok(DynToken::Word(sol_data::Address::tokenize(&val).0))
-            }
-            (DynSolType::Bool, DynSolValue::Bool(val)) => {
-                Ok(DynToken::Word(sol_data::Bool::tokenize(&val).0))
-            }
+            (DynSolType::Address, DynSolValue::Address(val)) => Ok(DynToken::Word(
+                alloy_sol_types::Encodable::<sol_data::Address>::to_tokens(&val).0,
+            )),
+            (DynSolType::Bool, DynSolValue::Bool(val)) => Ok(DynToken::Word(
+                alloy_sol_types::Encodable::<sol_data::Bool>::to_tokens(&val).0,
+            )),
             (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(val)),
             (DynSolType::FixedBytes(len), DynSolValue::FixedBytes(word, size)) => {
                 if size != *len {
