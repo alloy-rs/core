@@ -30,7 +30,7 @@ type TupleTokenTypeFor<'a, T> = <TupleFor<'a, T> as SolType>::TokenType<'a>;
 ///
 /// [`eip712_encode_type`]: SolStruct::eip712_encode_type
 /// [ref]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
-pub trait SolStruct {
+pub trait SolStruct: 'static {
     /// The corresponding Tuple type, used for encoding/decoding.
     type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
 

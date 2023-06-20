@@ -52,7 +52,7 @@ where
 /// ```
 pub trait SolType {
     /// The corresponding Rust type.
-    type RustType;
+    type RustType: Encodable<Self> + 'static;
 
     /// The corresponding ABI token type.
     ///
