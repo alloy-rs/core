@@ -1,5 +1,14 @@
 use crate::{no_std_prelude::*, token::TokenSeq, Result, TokenType, Word};
 
+/// An encodable is any type that may be encoded via a given `SolType`.
+pub trait Encodable<T>
+where
+    T: SolType + ?Sized,
+{
+    /// Convert the value to tokens.
+    fn to_tokens(&self) -> T::TokenType<'_>;
+}
+
 /// A Solidity Type, for ABI encoding and decoding
 ///
 /// This trait is implemented by types that contain ABI encoding and decoding
@@ -43,7 +52,7 @@ use crate::{no_std_prelude::*, token::TokenSeq, Result, TokenType, Word};
 /// ```
 pub trait SolType {
     /// The corresponding Rust type.
-    type RustType;
+    type RustType: Encodable<Self> + 'static;
 
     /// The corresponding ABI token type.
     ///
@@ -77,8 +86,13 @@ pub trait SolType {
     /// Detokenize.
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType;
 
-    /// Tokenize.
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_>;
+    /// Tokenize
+    fn tokenize<E>(rust: &E) -> Self::TokenType<'_>
+    where
+        E: Encodable<Self>,
+    {
+        Encodable::<Self>::to_tokens(rust)
+    }
 
     /// The encoded struct type (as EIP-712), if any. None for non-structs.
     #[inline]
@@ -120,7 +134,7 @@ pub trait SolType {
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence.
     fn encode_single(rust: &Self::RustType) -> Vec<u8> {
-        crate::encode_single(&Self::tokenize(rust))
+        crate::encode_single(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence.
@@ -128,7 +142,7 @@ pub trait SolType {
     where
         Self::TokenType<'a>: TokenSeq<'a>,
     {
-        crate::encode(&Self::tokenize(rust))
+        crate::encode(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence suitable for function parameters.
@@ -136,7 +150,7 @@ pub trait SolType {
     where
         Self::TokenType<'a>: TokenSeq<'a>,
     {
-        crate::encode_params(&Self::tokenize(rust))
+        crate::encode_params(&rust.to_tokens())
     }
 
     /// Hex output of [`encode`][SolType::encode].

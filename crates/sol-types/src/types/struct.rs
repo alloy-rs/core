@@ -1,7 +1,7 @@
 //! This module contains the [`SolStruct`] trait, which is used to implement
 //! Solidity structs logic, particularly for EIP-712 encoding/decoding.
 
-use super::SolType;
+use super::{r#type::Encodable, SolType};
 use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Word};
 use alloy_primitives::{keccak256, B256};
 
@@ -30,7 +30,7 @@ type TupleTokenTypeFor<'a, T> = <TupleFor<'a, T> as SolType>::TokenType<'a>;
 ///
 /// [`eip712_encode_type`]: SolStruct::eip712_encode_type
 /// [ref]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
-pub trait SolStruct {
+pub trait SolStruct: 'static {
     /// The corresponding Tuple type, used for encoding/decoding.
     type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
 
@@ -129,6 +129,12 @@ pub trait SolStruct {
     }
 }
 
+impl<T: SolStruct> Encodable<T> for T {
+    fn to_tokens(&self) -> <Self as SolType>::TokenType<'_> {
+        <Self as SolStruct>::tokenize(self)
+    }
+}
+
 // blanket impl
 // TODO: Maybe move this to `sol!`?
 impl<T: SolStruct> SolType for T {
@@ -157,11 +163,6 @@ impl<T: SolStruct> SolType for T {
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         let tuple = TupleFor::<T>::detokenize(token);
         T::from_rust(tuple)
-    }
-
-    #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        <Self as SolStruct>::tokenize(rust)
     }
 
     #[inline]

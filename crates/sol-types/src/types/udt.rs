@@ -20,6 +20,13 @@ macro_rules! define_udt {
             <$underlying as $crate::SolType>::RustType,
         );
 
+        impl $crate::Encodable<$name> for <$underlying as $crate::SolType>::RustType {
+            #[inline]
+            fn to_tokens(&self) -> <$underlying as $crate::SolType>::TokenType<'_> {
+                $crate::Encodable::<$underlying>::to_tokens(self)
+            }
+        }
+
         impl $name {
             /// The Solidity type name.
             pub const NAME: &'static str = stringify!($name);
@@ -66,12 +73,6 @@ macro_rules! define_udt {
             fn type_check(token: &Self::TokenType<'_>) -> $crate::Result<()> {
                 <$underlying as $crate::SolType>::type_check(token)?;
                 $path(token)
-            }
-
-            #[inline]
-            fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_>
-            {
-                <$underlying as $crate::SolType>::tokenize(rust)
             }
 
             #[inline]
