@@ -1,5 +1,14 @@
 use crate::{no_std_prelude::*, token::TokenSeq, Result, TokenType, Word};
 
+/// An encodable is any type that may be encoded as a given solidity type
+pub trait Encodable<T>
+where
+    T: SolType + ?Sized,
+{
+    /// Tokenize the value.
+    fn tokenize(&self) -> T::TokenType<'_>;
+}
+
 /// A Solidity Type, for ABI encoding and decoding
 ///
 /// This trait is implemented by types that contain ABI encoding and decoding
@@ -77,8 +86,11 @@ pub trait SolType {
     /// Detokenize.
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType;
 
-    /// Tokenize.
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_>;
+    /// Tokenize any data that is encodable with this type
+    #[inline]
+    fn tokenize<'a, E: Encodable<Self>>(rust: &'a E) -> Self::TokenType<'a> {
+        rust.tokenize()
+    }
 
     /// The encoded struct type (as EIP-712), if any. None for non-structs.
     #[inline]
@@ -120,7 +132,7 @@ pub trait SolType {
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence.
     fn encode_single(rust: &Self::RustType) -> Vec<u8> {
-        crate::encode_single(&Self::tokenize(rust))
+        crate::encode_single(&rust.tokenize())
     }
 
     /// Encode an ABI sequence.
@@ -128,7 +140,7 @@ pub trait SolType {
     where
         Self::TokenType<'a>: TokenSeq<'a>,
     {
-        crate::encode(&Self::tokenize(rust))
+        crate::encode(&rust.tokenize())
     }
 
     /// Encode an ABI sequence suitable for function parameters.
@@ -136,7 +148,7 @@ pub trait SolType {
     where
         Self::TokenType<'a>: TokenSeq<'a>,
     {
-        crate::encode_params(&Self::tokenize(rust))
+        crate::encode_params(&rust.tokenize())
     }
 
     /// Hex output of [`encode`][SolType::encode].

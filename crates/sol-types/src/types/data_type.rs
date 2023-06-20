@@ -14,6 +14,13 @@ use core::{fmt::*, hash::Hash, marker::PhantomData, ops::*};
 /// Address - `address`
 pub struct Address;
 
+impl Encodable<Address> for RustAddress {
+    #[inline]
+    fn tokenize(&self) -> WordToken {
+        WordToken::from(*self)
+    }
+}
+
 impl SolType for Address {
     type RustType = RustAddress;
     type TokenType<'a> = WordToken;
@@ -29,11 +36,6 @@ impl SolType for Address {
     }
 
     #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        WordToken::from(*rust)
-    }
-
-    #[inline]
     fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
         if util::check_zeroes(&token.0[..12]) {
             Ok(())
@@ -44,7 +46,7 @@ impl SolType for Address {
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Self::tokenize(rust).0
+        Encodable::<Self>::tokenize(rust).0
     }
 
     #[inline]
@@ -55,6 +57,16 @@ impl SolType for Address {
 
 /// Bytes - `bytes`
 pub struct Bytes;
+
+impl<T> Encodable<Bytes> for T
+where
+    T: AsRef<[u8]>,
+{
+    #[inline]
+    fn tokenize(&self) -> PackedSeqToken<'_> {
+        PackedSeqToken::from(self.as_ref())
+    }
+}
 
 impl SolType for Bytes {
     type RustType = Vec<u8>;
@@ -83,11 +95,6 @@ impl SolType for Bytes {
     }
 
     #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        rust.into()
-    }
-
-    #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
         keccak256(Self::encode_packed(rust))
     }
@@ -100,6 +107,16 @@ impl SolType for Bytes {
 
 /// Int - `intX`
 pub struct Int<const BITS: usize>;
+
+impl<const BITS: usize> Encodable<Int<BITS>> for <IntBitCount<BITS> as SupportedInt>::Int
+where
+    IntBitCount<BITS>: SupportedInt,
+{
+    #[inline]
+    fn tokenize(&self) -> WordToken {
+        IntBitCount::<BITS>::tokenize_int(*self)
+    }
+}
 
 impl<const BITS: usize> SolType for Int<BITS>
 where
@@ -139,13 +156,8 @@ where
     }
 
     #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        IntBitCount::<BITS>::tokenize_int(*rust)
-    }
-
-    #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Self::tokenize(rust).0
+        Encodable::<Self>::tokenize(rust).0
     }
 
     #[inline]
@@ -156,6 +168,16 @@ where
 
 /// Uint - `uintX`
 pub struct Uint<const BITS: usize>;
+
+impl<const BITS: usize> Encodable<Uint<BITS>> for <IntBitCount<BITS> as SupportedInt>::Uint
+where
+    IntBitCount<BITS>: SupportedInt,
+{
+    #[inline]
+    fn tokenize(&self) -> WordToken {
+        IntBitCount::<BITS>::tokenize_uint(*self)
+    }
+}
 
 impl<const BITS: usize> SolType for Uint<BITS>
 where
@@ -185,13 +207,8 @@ where
     }
 
     #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        IntBitCount::<BITS>::tokenize_uint(*rust)
-    }
-
-    #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Self::tokenize(rust).0
+        Encodable::<Self>::tokenize(rust).0
     }
 
     #[inline]
@@ -202,6 +219,13 @@ where
 
 /// Bool - `bool`
 pub struct Bool;
+
+impl Encodable<Bool> for bool {
+    #[inline]
+    fn tokenize(&self) -> WordToken {
+        Word::with_last_byte(*self as u8).into()
+    }
+}
 
 impl SolType for Bool {
     type RustType = bool;
@@ -227,13 +251,8 @@ impl SolType for Bool {
     }
 
     #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        Word::with_last_byte(*rust as u8).into()
-    }
-
-    #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Self::tokenize(rust).0
+        Encodable::<Self>::tokenize(rust).0
     }
 
     #[inline]
@@ -245,7 +264,20 @@ impl SolType for Bool {
 /// Array - `T[]`
 pub struct Array<T: SolType>(PhantomData<T>);
 
-impl<T: SolType> SolType for Array<T> {
+impl<T> Encodable<Array<T>> for Vec<T::RustType>
+where
+    T: SolType,
+{
+    #[inline]
+    fn tokenize(&self) -> DynSeqToken<T::TokenType<'_>> {
+        DynSeqToken(self.iter().map(|r| r.tokenize()).collect())
+    }
+}
+
+impl<T> SolType for Array<T>
+where
+    T: SolType,
+{
     type RustType = Vec<T::RustType>;
     type TokenType<'a> = DynSeqToken<T::TokenType<'a>>;
 
@@ -274,12 +306,6 @@ impl<T: SolType> SolType for Array<T> {
     }
 
     #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        let v = rust.iter().map(T::tokenize).collect();
-        DynSeqToken(v)
-    }
-
-    #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
         let mut encoded = Vec::new();
         for item in rust {
@@ -298,6 +324,16 @@ impl<T: SolType> SolType for Array<T> {
 
 /// String - `string`
 pub struct String;
+
+impl<T> Encodable<String> for T
+where
+    T: AsRef<str>,
+{
+    #[inline]
+    fn tokenize(&self) -> <String as SolType>::TokenType<'_> {
+        self.as_ref().as_bytes().into()
+    }
+}
 
 impl SolType for String {
     type RustType = RustString;
@@ -334,11 +370,6 @@ impl SolType for String {
     }
 
     #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        rust.as_bytes().into()
-    }
-
-    #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
         keccak256(Self::encode_packed(rust))
     }
@@ -352,6 +383,18 @@ impl SolType for String {
 /// FixedBytes - `bytesX`
 #[derive(Clone, Copy, Debug)]
 pub struct FixedBytes<const N: usize>;
+
+impl<const N: usize> Encodable<FixedBytes<N>> for [u8; N]
+where
+    ByteCount<N>: SupportedFixedBytes,
+{
+    #[inline]
+    fn tokenize(&self) -> <FixedBytes<N> as SolType>::TokenType<'_> {
+        let mut word = Word::ZERO;
+        word[..N].copy_from_slice(self);
+        word.into()
+    }
+}
 
 impl<const N: usize> SolType for FixedBytes<N>
 where
@@ -380,15 +423,8 @@ where
     }
 
     #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        let mut word = Word::ZERO;
-        word[..N].copy_from_slice(rust);
-        word.into()
-    }
-
-    #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Self::tokenize(rust).0
+        Encodable::<Self>::tokenize(rust).0
     }
 
     #[inline]
@@ -401,7 +437,20 @@ where
 /// FixedArray - `T[M]`
 pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 
-impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
+impl<T, const N: usize> Encodable<FixedArray<T, N>> for [T::RustType; N]
+where
+    T: SolType,
+{
+    #[inline]
+    fn tokenize(&self) -> <FixedArray<T, N> as SolType>::TokenType<'_> {
+        FixedSeqToken::<_, N>(core::array::from_fn(|i| Encodable::<T>::tokenize(&self[i])))
+    }
+}
+
+impl<T, const N: usize> SolType for FixedArray<T, N>
+where
+    T: SolType,
+{
     type RustType = [T::RustType; N];
     type TokenType<'a> = FixedSeqToken<T::TokenType<'a>, N>;
 
@@ -440,12 +489,6 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     }
 
     #[inline]
-    fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-        let arr: &[T::RustType; N] = rust;
-        FixedSeqToken::<_, N>(core::array::from_fn(|i| T::tokenize(&arr[i])))
-    }
-
-    #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
         let rust = rust;
         let encoded = rust
@@ -476,6 +519,20 @@ macro_rules! tuple_impls {
     };
 
     ($($ty:ident),+) => {
+
+        #[allow(non_snake_case)]
+        impl<$($ty: SolType,)+> Encodable<($($ty,)+)> for ($( $ty::RustType, )+) {
+            #[inline]
+            fn tokenize(&self) -> <($($ty,)+) as SolType>::TokenType<'_> {
+                let ($($ty,)+) = self;
+                (
+                    $(
+                        <$ty as SolType>::tokenize($ty),
+                    )+
+                )
+            }
+        }
+
         #[allow(non_snake_case)]
         impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
             type RustType = ($( $ty::RustType, )+);
@@ -533,13 +590,6 @@ macro_rules! tuple_impls {
                 )+)
             }
 
-            fn tokenize(rust: &Self::RustType) -> Self::TokenType<'_> {
-                let ($($ty,)+) = rust;
-                ($(
-                    <$ty as SolType>::tokenize($ty),
-                )+)
-            }
-
             fn eip712_data_word(rust: &Self::RustType) -> Word {
                 const COUNT: usize = 0usize $(+ tuple_impls!(@one $ty))+;
                 let ($($ty,)+) = rust;
@@ -564,6 +614,13 @@ macro_rules! tuple_impls {
     };
 }
 
+impl Encodable<()> for () {
+    #[inline]
+    fn tokenize(&self) -> <() as SolType>::TokenType<'_> {
+        FixedSeqToken([])
+    }
+}
+
 impl SolType for () {
     type RustType = ();
     type TokenType<'a> = FixedSeqToken<(), 0>;
@@ -584,11 +641,6 @@ impl SolType for () {
     fn detokenize(_token: Self::TokenType<'_>) -> Self::RustType {}
 
     #[inline]
-    fn tokenize(_rust: &Self::RustType) -> Self::TokenType<'_> {
-        FixedSeqToken([])
-    }
-
-    #[inline]
     fn eip712_data_word(_rust: &Self::RustType) -> Word {
         Word::ZERO
     }
@@ -603,6 +655,8 @@ mod sealed {
     pub trait Sealed {}
 }
 use sealed::Sealed;
+
+use super::r#type::Encodable;
 
 /// Specifies the number of bytes in a [`FixedBytes`] array as a type.
 pub struct ByteCount<const N: usize>;
