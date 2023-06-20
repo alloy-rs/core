@@ -9,7 +9,7 @@ intended to be used when the solidity type is not known at compile time.
 This is particularly useful for EIP-712 signing interfaces.
 
 We **strongly** recommend using the [static encoder/decoder][abi] when possible.
-The dyanmic encoder/decoder is significantly more expensive, especially for
+The dynamic encoder/decoder is significantly more expensive, especially for
 complex types. It is also significantly more error prone, as the mapping
 between solidity types and rust types is not enforced by the compiler.
 
@@ -60,7 +60,7 @@ solidity type string into a [`DynSolType`] object.
 - Detokenizing: `DynSolType` + `DynToken`    = `DynSolValue`
 
 Users must manually handle the conversions between [`DynSolValue`] and their
-own rust types. We provide several `From`implementations, but they fall
+own rust types. We provide several `From` implementations, but they fall
 short when dealing with arrays and tuples. We also provide fallible casts
 into the contents of each variant.
 
