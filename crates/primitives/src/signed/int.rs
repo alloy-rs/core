@@ -737,6 +737,7 @@ mod tests {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
                 let unsigned = <$u_struct>::from_str_radix("3141592653589793", 10).unwrap();
+                let unsigned_negative = -unsigned;
                 let positive = <$i_struct>::try_from(unsigned).unwrap();
                 let negative = -positive;
 
@@ -746,9 +747,9 @@ mod tests {
                 assert_eq!(format!("{negative:+}"), format!("-{unsigned}"));
 
                 assert_eq!(format!("{positive:x}"), format!("{unsigned:x}"));
-                assert_eq!(format!("{negative:x}"), format!("-{unsigned:x}"));
-                assert_eq!(format!("{positive:+x}"), format!("+{unsigned:x}"));
-                assert_eq!(format!("{negative:+x}"), format!("-{unsigned:x}"));
+                assert_eq!(format!("{negative:x}"), format!("{unsigned_negative:x}"));
+                assert_eq!(format!("{positive:+x}"), format!("{unsigned:x}"));
+                assert_eq!(format!("{negative:+x}"), format!("{unsigned_negative:x}"));
 
                 assert_eq!(
                     format!("{positive:X}"),
@@ -756,15 +757,15 @@ mod tests {
                 );
                 assert_eq!(
                     format!("{negative:X}"),
-                    format!("-{unsigned:x}").to_uppercase()
+                    format!("{unsigned_negative:x}").to_uppercase()
                 );
                 assert_eq!(
                     format!("{positive:+X}"),
-                    format!("+{unsigned:x}").to_uppercase()
+                    format!("{unsigned:x}").to_uppercase()
                 );
                 assert_eq!(
                     format!("{negative:+X}"),
-                    format!("-{unsigned:x}").to_uppercase()
+                    format!("{unsigned_negative:x}").to_uppercase()
                 );
             };
         }
