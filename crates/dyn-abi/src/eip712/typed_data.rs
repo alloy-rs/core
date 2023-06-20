@@ -86,7 +86,7 @@ impl Eip712Types {
 pub struct TypedData {
     /// Signing domain metadata. The signing domain is the intended context for
     /// the signature (e.g. the dapp, protocol, etc. that it's intended for).
-    /// This data is used to construct the domain seperator of the message.
+    /// This data is used to construct the domain separator of the message.
     pub domain: Eip712Domain,
 
     /// The custom types used by this message.

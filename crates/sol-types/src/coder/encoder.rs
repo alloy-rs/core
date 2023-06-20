@@ -109,7 +109,7 @@ impl Encoder {
         self.append_word(pad_u32(seq.len() as u32));
     }
 
-    /// Append a seqeunce of bytes, padding to the next word.
+    /// Append a sequence of bytes, padding to the next word.
     #[inline]
     fn append_bytes(&mut self, bytes: &[u8]) {
         let len = words_for(bytes);
