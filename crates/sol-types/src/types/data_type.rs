@@ -393,14 +393,15 @@ impl SolType for String {
 #[derive(Clone, Copy, Debug)]
 pub struct FixedBytes<const N: usize>;
 
-impl<const N: usize> Encodable<FixedBytes<N>> for [u8; N]
+impl<T, const N: usize> Encodable<FixedBytes<N>> for T
 where
     ByteCount<N>: SupportedFixedBytes,
+    T: Borrow<[u8; N]>,
 {
     #[inline]
     fn to_tokens(&self) -> <FixedBytes<N> as SolType>::TokenType<'_> {
         let mut word = Word::ZERO;
-        word[..N].copy_from_slice(self);
+        word[..N].copy_from_slice(self.borrow());
         word.into()
     }
 }

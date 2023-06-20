@@ -55,17 +55,17 @@ defs into `SolCall` types, but may in the future.
 
 - User-defined Types
 
-    - [Structs](https://solidity-by-example.org/structs/) represented as a tuple
-        of the field types.
-    - [User-defined Value Types](https://blog.soliditylang.org/2021/09/27/user-defined-value-types/), encoded transparently.
-    - [Enums](https://docs.soliditylang.org/en/latest/types.html#enums) (TODO)
-        represented as `u8`.
+  - [Structs](https://solidity-by-example.org/structs/) represented as a tuple
+    of the field types.
+  - [User-defined Value Types](https://blog.soliditylang.org/2021/09/27/user-defined-value-types/), encoded transparently.
+  - [Enums](https://docs.soliditylang.org/en/latest/types.html#enums) (TODO)
+    represented as `u8`.
 
 - Externalized Types
-    - Function arguments and returns, represented as selector-prefixed tuples.
-    - [Errors](https://blog.soliditylang.org/2021/04/21/custom-errors/),
-        represented as selector-prefixed tuples
-    - Events (TODO)
+  - Function arguments and returns, represented as selector-prefixed tuples.
+  - [Errors](https://blog.soliditylang.org/2021/04/21/custom-errors/),
+    represented as selector-prefixed tuples
+  - Events!
 
 ## How?
 
@@ -78,27 +78,53 @@ and cannot be generally operated on beyond construction.
 The first-class types implement the `SolType` trait. This trait contains
 functionality common to all first-class Solidity types. This includes type
 name, ABI (de)tokenization and coding, Solidity type checking rules. These
-types include structs, enums, UDTs, address, bool, bytes, string, etc.
+types include structs, enums, UDTs, address, bool, bytes, string, etc. Structs
+additionally implement `SolStruct` which provides field names and types, and
+specialized functions for eip712.
 
 Externalized types are calls (function arguments and returns), events, and
 errors. These are each represented by a trait (`SolCall`, `SolEvent`, and
 `SolError`). These types enter or exit the EVM, or pass between callstack
 frames, and are not part of normal Solidity computation. However, they are
 composed of first-class types, and their ABI coding uses the first-class type's
-ABI coding;
+ABI coding.
 
-### ⚠️ Rough Edge ⚠️
+### RustType & Encodable
 
-Currently, our representation supports using tuples as struct props. This is
-not allowed in Solidity, and future versions of this crate may change the type
-system to disallow it.
+We use the `SolType::RustType` associated type to represent the Rust type
+corresponding to a Solidity type. Decoding will ALWAYS produce this type. This
+type is the canonical rust representation of the Solidity data. Decoding is NOT
+permissive.
+
+To allow permissive encoding, we use the `Encodable<T>` trait. This trait is
+abstract over the `SolType`. Any type that implements `Encodable<T: SolType>`
+can be treated as a rust representation of that `T: SolType`. Library users can
+implement `Encodable<T>` for their own types, allowing more customizability of
+encoding setups.
+
+For example:
+`alloy_primitives::Address` implements all of `Encodable<Address>`,
+`Encodable<FixedBytes<20>>` and `Encodable<Bytes>`. It may be encoded as any of
+these. `<Bytes as SolType>::encode(my_rust_address)` will encode the address as
+a `bytes`. `<FixedBytes<20> as SolType>::encode(my_rust_address)` will encode
+it as a `bytes20`.
+
+### ⚠️ Rough Edges ⚠️
+
+Our solidity parser is not 1:1 with the official solc parser. As a result there
+are some edge cases that are not supported. These include:
+
+- Our representation supports using tuples as struct props. This is
+  not allowed in Solidity, and future versions of this crate may change the type
+  system to disallow it.
+- Solidity allows idents with `$`, while we do not.
 
 ### Layout
 
 ```
 - SolError
 - SolCall
-- SolEvent (TODO)
+- SolEvent
 
 - SolType
   ├── SolStruct
@@ -124,8 +150,8 @@ system to disallow it.
   specialized coding methods.
 - `SolCall` - describes function **arguments** with selector, and provides
   specialized coding methods.
-- `SolEvent` - describes Event types with topic 0 and internal tuple, and
-  provides specialized coding methods.
+- `SolEvent` - describes Event types with optional topics, optional internal
+  tuple, and provides specialized coding methods.
 
 ## Implementing these traits
 
@@ -141,3 +167,6 @@ Solidity snippets at compile time.
 Users will typically want to interact with `SolType`. When using errors,
 events, or calls, users will want to import the relevant trait, and use the
 specialized coding methods.
+
+Users of EIP-712 will need the `SolStruct` trait. It provides a full EIP-712
+implementation via `SolStruct::eip712_signing_hash`.
