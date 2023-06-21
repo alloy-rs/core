@@ -57,11 +57,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
-                fn to_rust<'a>(&self) -> <Self::Tuple<'a> as ::alloy_sol_types::SolType>::RustType {
-                    self.clone().into()
-                }
-
-                fn from_rust<'a>(tuple: <Self::Tuple<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
+                fn new<'a>(tuple: <Self::Tuple<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 

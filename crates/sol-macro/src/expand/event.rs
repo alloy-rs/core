@@ -55,12 +55,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         quote!(#name: #param)
     });
 
-    let data_tuple_names = event
-        .non_indexed_params()
-        .map(|p| p.name.as_ref())
-        .enumerate()
-        .map(anon_name);
-
     let topic_tuple_names = event
         .indexed_params()
         .map(|p| p.name.as_ref())
@@ -139,11 +133,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                     Self {
                         #(#new_impl,)*
                     }
-                }
-
-                fn body(&self) -> <Self::DataTuple<'_> as ::alloy_sol_types::SolType>::RustType {
-                    // TODO: Avoid cloning
-                    (#(self.#data_tuple_names.clone(),)*)
                 }
 
                 fn tokenize_body(&self) -> Self::DataToken<'_> {

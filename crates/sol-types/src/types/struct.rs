@@ -2,7 +2,7 @@
 //! Solidity structs logic, particularly for EIP-712 encoding/decoding.
 
 use super::{r#type::Encodable, SolType};
-use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Word};
+use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, TokenType, Word};
 use alloy_primitives::{keccak256, B256};
 
 type TupleFor<'a, T> = <T as SolStruct>::Tuple<'a>;
@@ -54,7 +54,7 @@ pub trait SolStruct: 'static {
     fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType;
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn from_rust(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
+    fn new(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
 
     /// Convert to the token type used for EIP-712 encoding and decoding.
     fn tokenize(&self) -> Self::Token<'_>;
@@ -65,8 +65,7 @@ pub trait SolStruct: 'static {
         if let Some(size) = <Self::Tuple<'_> as SolType>::ENCODED_SIZE {
             return size
         }
-
-        <<Self as SolStruct>::Tuple<'_> as SolType>::encoded_size(&self.to_rust())
+        self.tokenize().total_words() * Word::len_bytes()
     }
 
     /// EIP-712 `encodeType`
@@ -97,7 +96,7 @@ pub trait SolStruct: 'static {
     /// <https://eips.ethereum.org/EIPS/eip-712#rationale-for-typehash>
     #[inline]
     fn eip712_type_hash(&self) -> B256 {
-        keccak256(Self::eip712_encode_type().as_bytes())
+        keccak256(<Self as SolStruct>::eip712_encode_type().as_bytes())
     }
 
     /// EIP-712 `encodeData`
@@ -150,8 +149,7 @@ impl<T: SolStruct> SolType for T {
 
     #[inline]
     fn encoded_size<'a>(rust: &Self::RustType) -> usize {
-        let tuple = rust.to_rust();
-        TupleFor::<T>::encoded_size(&tuple)
+        rust.encoded_size()
     }
 
     #[inline]
@@ -162,17 +160,17 @@ impl<T: SolStruct> SolType for T {
     #[inline]
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
         let tuple = TupleFor::<T>::detokenize(token);
-        T::from_rust(tuple)
+        T::new(tuple)
     }
 
     #[inline]
     fn eip712_encode_type() -> Option<Cow<'static, str>> {
-        Some(Self::eip712_encode_type())
+        Some(<Self as SolStruct>::eip712_encode_type())
     }
 
     #[inline]
     fn eip712_data_word<'a>(rust: &Self::RustType) -> Word {
-        keccak256(SolStruct::eip712_hash_struct(rust.borrow()))
+        keccak256(rust.eip712_hash_struct())
     }
 
     #[inline]
