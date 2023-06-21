@@ -233,10 +233,6 @@ impl<'ast> ExpCtxt<'ast> {
         format_ident!("{function_name}Call")
     }
 
-    fn return_name(&self, function_name: impl IdentFragment + std::fmt::Display) -> Ident {
-        format_ident!("{function_name}Return")
-    }
-
     fn signature<'a, I: IntoIterator<Item = &'a VariableDeclaration>>(
         &self,
         mut name: String,

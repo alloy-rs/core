@@ -8,13 +8,21 @@ use crate::{no_std_prelude::*, token::TokenSeq, Result, SolType, TokenType, Word
 /// using the [`sol`][crate::sol] proc macro to parse a Solidity function
 /// definition.
 pub trait SolCall: Sized {
-    /// The underlying tuple type which represents this type's members.
+    /// The underlying tuple type which represents this type's argument's.
     ///
     /// If this type has no arguments, this will be the unit type `()`.
     type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
 
     /// The corresponding [TokenSeq] type.
     type Token<'a>: TokenSeq<'a>;
+
+    /// The underlying tuple type which represents this type's return values.
+    ///
+    /// If this type has no return values, this will be the unit type `()`.
+    type ReturnTuple<'a>: SolType<TokenType<'a> = Self::ReturnToken<'a>>;
+
+    /// The corresponding [TokenSeq] type.
+    type ReturnToken<'a>: TokenSeq<'a>;
 
     /// The function's ABI signature.
     const SIGNATURE: &'static str;
@@ -69,5 +77,20 @@ pub trait SolCall: Sized {
         out.extend(&Self::SELECTOR);
         self.encode_raw(&mut out);
         out
+    }
+
+    /// ABI decode this call's return values from the given slice.
+    #[inline]
+    fn decode_returns(
+        data: &[u8],
+        validate: bool,
+    ) -> Result<<Self::ReturnTuple<'_> as SolType>::RustType> {
+        <Self::ReturnTuple<'_> as SolType>::decode(data, validate)
+    }
+
+    /// ABI encode the call's return values to the given buffer.
+    #[inline]
+    fn encode_returns_to(&self) -> Vec<u8> {
+        crate::encode(&self.tokenize())
     }
 }

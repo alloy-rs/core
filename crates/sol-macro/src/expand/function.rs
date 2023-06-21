@@ -1,5 +1,7 @@
 //! [`ItemFunction`] expansion.
 
+use crate::expand::expand_tuple_types;
+
 use super::{expand_fields, expand_from_into_tuples, r#type::expand_tokenize_func, ExpCtxt};
 use ast::{ItemFunction, Parameters};
 use proc_macro2::{Ident, TokenStream};
@@ -28,14 +30,7 @@ use syn::{Result, Token};
 pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream> {
     let function_name = cx.function_name(function);
     let call_name = cx.call_name(function_name.clone());
-    let mut tokens = expand_call(cx, function, &call_name, &function.arguments)?;
-
-    if let Some(ret) = &function.returns {
-        assert!(!ret.returns.is_empty());
-        let return_name = cx.return_name(function_name);
-        let ret = expand_call(cx, function, &return_name, &ret.returns)?;
-        tokens.extend(ret);
-    }
+    let tokens = expand_call(cx, function, &call_name, &function.arguments)?;
 
     Ok(tokens)
 }
@@ -61,6 +56,16 @@ fn expand_call(
         expand_tokenize_func(params.iter())
     };
 
+    let return_tuple_type = function
+        .returns
+        .as_ref()
+        .map(|returns| {
+            let returns = &returns.returns;
+            let (fields, _) = expand_tuple_types(returns.types());
+            fields
+        })
+        .unwrap_or_else(|| quote! { () });
+
     let attrs = &function.attrs;
     let tokens = quote! {
         #(#attrs)*
@@ -78,6 +83,9 @@ fn expand_call(
             impl ::alloy_sol_types::SolCall for #call_name {
                 type Tuple<'a> = UnderlyingSolTuple<'a>;
                 type Token<'a> = <Self::Tuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
+
+                type ReturnTuple<'a> = #return_tuple_type;
+                type ReturnToken<'a> = <Self::ReturnTuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
 
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
