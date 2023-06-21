@@ -39,14 +39,11 @@ use serde::{Deserialize, Serialize};
 mod abi;
 pub use abi::AbiJson;
 
-mod event_param;
-pub use event_param::{ComplexEventParam, EventParam, SimpleEventParam};
-
 mod item;
 pub use item::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
 
 mod param;
-pub use param::{ComplexParam, Param, SimpleParam};
+pub use param::{EventParam, Param};
 
 pub(crate) mod utils;
 

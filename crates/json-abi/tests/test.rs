@@ -1,27 +1,28 @@
-use alloy_json_abi::{AbiItem, AbiJson, Error, Param, SimpleParam};
+use alloy_json_abi::{AbiItem, AbiJson, Error, Param};
 
 #[test]
 fn complex_error() {
     let json = r#"{
-    "inputs": [
-        {
-            "internalType": "string",
-            "name": "reason",
-            "type": "string"
-        }
-    ],
-    "name": "SomeName",
-    "type": "error"
-}"#;
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "reason",
+                "type": "string"
+            }
+        ],
+        "name": "SomeName",
+        "type": "error"
+    }"#;
     let decoded: Error = serde_json::from_str(json).unwrap();
     assert_eq!(
         decoded,
         Error {
-            inputs: vec![Param::Simple(SimpleParam {
-                internal_type: "string".into(),
+            inputs: vec![Param {
+                internal_type: Some("string".into()),
                 name: "reason".into(),
-                ty: "string".into()
-            })],
+                ty: "string".into(),
+                components: vec![],
+            }],
             name: "SomeName".into()
         }
     );
