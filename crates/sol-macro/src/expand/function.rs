@@ -29,7 +29,7 @@ use syn::{Result, Token};
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream> {
     let function_name = cx.function_name(function);
-    let call_name = cx.call_name(function_name.clone());
+    let call_name = cx.call_name(function_name);
     let tokens = expand_call(cx, function, &call_name, &function.arguments)?;
 
     Ok(tokens)
