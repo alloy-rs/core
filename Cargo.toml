@@ -30,7 +30,7 @@ ruint = { version = "1.9.0", package = "ruint2", default-features = false }
 ruint-macro = { version = "1.0.3", package = "ruint2-macro", default-features = false }
 
 # serde
-serde = { version = "1.0", default-features = false }
+serde = { version = "1.0", features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 # macros

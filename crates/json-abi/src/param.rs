@@ -1,4 +1,8 @@
-use alloc::{borrow::Cow, string::String, vec::Vec};
+use alloc::{
+    borrow::{Cow, ToOwned},
+    string::String,
+    vec::Vec,
+};
 use core::fmt;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
