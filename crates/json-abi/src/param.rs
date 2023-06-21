@@ -30,7 +30,7 @@ pub struct Param {
 impl fmt::Display for Param {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(internal_type) = &self.internal_type {
-            f.write_str(&internal_type)?;
+            f.write_str(internal_type)?;
             f.write_str(" ")?;
         }
         f.write_str(&self.name)
@@ -122,7 +122,7 @@ pub struct EventParam {
 impl fmt::Display for EventParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(internal_type) = &self.internal_type {
-            f.write_str(&internal_type)?;
+            f.write_str(internal_type)?;
             f.write_str(" ")?;
         }
         f.write_str(&self.name)
