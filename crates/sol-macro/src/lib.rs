@@ -6,6 +6,10 @@
 //!
 //! Refer to the [macro's documentation][sol!] for more information.
 
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
+    html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg"
+)]
 #![warn(missing_docs)]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
