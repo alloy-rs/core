@@ -13,7 +13,7 @@ pub trait SolCall: Sized {
     /// If this type has no arguments, this will be the unit type `()`.
     type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
 
-    /// The corresponding [TokenSeq] type.
+    /// The arguments' corresponding [TokenSeq] type.
     type Token<'a>: TokenSeq<'a>;
 
     /// The underlying tuple type which represents this type's return values.
