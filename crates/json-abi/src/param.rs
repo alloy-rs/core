@@ -1,154 +1,212 @@
-use alloc::{borrow::Cow, string::String, vec::Vec};
+use alloc::{
+    borrow::{Cow, ToOwned},
+    string::String,
+    vec::Vec,
+};
 use core::fmt;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-macro_rules! as_param_string {
-    ($self:expr) => {{
-        let mut s = String::with_capacity($self.internal_type.len() + $self.name.len() + 1);
-        s.push_str(&$self.internal_type);
-        s.push(' ');
-        s.push_str(&$self.name);
-        s
-    }};
-
-    ($self:expr, $f:expr) => {{
-        $f.write_str(&$self.internal_type)?;
-        $f.write_str(" ")?;
-        $f.write_str(&$self.name)
-    }};
-}
-
-/// A simple parameter. Simple params are not compound types, and have no
-/// sub-components.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct SimpleParam {
+/// JSON specification of a parameter.
+///
+/// Parameters are the inputs and outputs of [Function]s, and the fields of
+/// [Error]s.
+///
+/// [Function]: crate::Function
+/// [Error]: crate::Error
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct Param {
     /// The name of the parameter.
     pub name: String,
-    /// The Solidity type of the parameter.
-    #[serde(rename = "type")]
+    /// The canonical Solidity type of the parameter.
     pub ty: String,
-    /// The internal type of the parameter. This type represents the type that
-    /// the author of the solidity contract specified. E.g. for a contract, this
-    /// will be `contract MyContract` while the `type` field will be `address`.
-    #[serde(rename = "internalType")]
-    pub internal_type: String,
-}
-
-impl fmt::Display for SimpleParam {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        as_param_string!(self, f)
-    }
-}
-
-impl SimpleParam {
-    /// Type used to encode the preimage of the function or error selector, or
-    /// event topic
-    pub fn selector_type(&self) -> &str {
-        &self.ty
-    }
-
-    /// Returns a string representation of the parameter that can be used as a
-    /// parameter in function signatures
-    pub fn as_function_param(&self) -> String {
-        as_param_string!(self)
-    }
-
-    /// Returns a string representation of the parameter that can be used as a
-    /// parameter in EIP-712 [encodeType] strings
-    ///
-    /// [encodeType]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
-    pub fn as_eip712_param(&self) -> String {
-        as_param_string!(self)
-    }
-}
-
-/// JSON specification of a complex parameter. Complex params are compound
-/// types, and their components are specified in the `components` field.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ComplexParam {
-    /// The name of the parameter.
-    pub name: String,
-    /// The Solidity type of the parameter.
-    #[serde(rename = "type")]
-    pub ty: String,
-    /// The internal type of the parameter. This type represents the type that
-    /// the author of the solidity contract specified. E.g. for a contract, this
-    /// will be `contract MyContract` while the `type` field will be `address`.
-    #[serde(rename = "internalType")]
-    pub internal_type: String,
     /// A list of the parameter's components, in order.
     pub components: Vec<Param>,
+    /// The internal type of the parameter. This type represents the type that
+    /// the author of the solidity contract specified. E.g. for a contract, this
+    /// will be `contract MyContract` while the `type` field will be `address`.
+    pub internal_type: Option<String>,
 }
 
-impl fmt::Display for ComplexParam {
+impl fmt::Display for Param {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        as_param_string!(self, f)
+        if let Some(internal_type) = &self.internal_type {
+            f.write_str(internal_type)?;
+            f.write_str(" ")?;
+        }
+        f.write_str(&self.name)
     }
 }
 
-impl ComplexParam {
-    /// Type used to encode the preimage of the function or error selector, or
-    /// event topic
-    pub fn selector_type(&self) -> String {
-        crate::utils::signature("", &self.components)
-    }
-
-    /// Returns a string representation of the parameter that can be used as a
-    /// parameter in function signatures
-    pub fn as_function_param(&self) -> String {
-        as_param_string!(self)
-    }
-
-    /// Returns a string representation of the parameter that can be used as a
-    /// parameter in EIP-712 [encodeType] strings
-    ///
-    /// [encodeType]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
-    pub fn as_eip712_param(&self) -> String {
-        as_param_string!(self)
+impl<'de> Deserialize<'de> for Param {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        BorrowedParam::deserialize(deserializer).and_then(|inner| {
+            if inner.indexed.is_none() {
+                Ok(Self {
+                    name: inner.name.to_owned(),
+                    ty: inner.ty.to_owned(),
+                    internal_type: inner.internal_type.map(str::to_owned),
+                    components: inner.components.into_owned(),
+                })
+            } else {
+                Err(serde::de::Error::custom(
+                    "indexed is not supported in params",
+                ))
+            }
+        })
     }
 }
 
-/// JSON specification of a parameter. Used in functions, errors, structs, etc.
-/// A parameter may be either simple (contains no sub-components) or complex
-/// (contains sub-components).
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Param {
-    /// [`ComplexParam`] variant
-    Complex(ComplexParam),
-    /// [`SimpleParam`] variant
-    Simple(SimpleParam),
+impl Serialize for Param {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.as_inner().serialize(serializer)
+    }
 }
 
 impl Param {
-    /// Type used to encode the preimage of the function or error selector, or
-    /// event topic
-    pub fn selector_type(&self) -> Cow<'_, str> {
-        match self {
-            Param::Complex(c) => c.selector_type().into(),
-            Param::Simple(s) => s.selector_type().into(),
-        }
-    }
-
-    /// Returns a string representation of the parameter that can be used as a
-    /// parameter in function signatures
-    pub fn as_function_param(&self) -> String {
-        match self {
-            Param::Complex(c) => c.as_function_param(),
-            Param::Simple(s) => s.as_function_param(),
-        }
-    }
-
-    /// Returns a string representation of the parameter that can be used as a
-    /// parameter in EIP-712 [encodeType] strings
+    /// Formats the canonical type of this parameter into the given string.
     ///
-    /// [encodeType]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
-    pub fn as_eip712_param(&self) -> String {
-        match self {
-            Param::Complex(c) => c.as_eip712_param(),
-            Param::Simple(s) => s.as_eip712_param(),
+    /// This is used to encode the preimage of a function or error selector.
+    pub fn selector_type_raw(&self, s: &mut String) {
+        if self.components.is_empty() {
+            s.push_str(&self.ty)
+        } else {
+            crate::utils::signature_raw("", &self.components, s);
         }
     }
+
+    /// Returns the canonical type of this parameter.
+    ///
+    /// This is used to encode the preimage of a function or error selector.
+    pub fn selector_type(&self) -> Cow<'_, str> {
+        if self.components.is_empty() {
+            Cow::Borrowed(&self.ty)
+        } else {
+            Cow::Owned(crate::utils::signature("", &self.components))
+        }
+    }
+
+    #[inline]
+    fn as_inner(&self) -> BorrowedParam<'_, Param> {
+        BorrowedParam {
+            name: &self.name,
+            ty: &self.ty,
+            indexed: None,
+            internal_type: self.internal_type.as_deref(),
+            components: Cow::Borrowed(&self.components),
+        }
+    }
+}
+
+/// A Solidity Event parameter.
+///
+/// Event parameters are distinct from function parameters in that they have an
+/// `indexed` field.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct EventParam {
+    /// The name of the parameter.
+    pub name: String,
+    /// The canonical Solidity type of the parameter.
+    pub ty: String,
+    /// Whether the parameter is indexed. Indexed parameters have their
+    /// value, or the hash of their value, stored in the log topics.
+    pub indexed: bool,
+    /// A list of the parameter's components, in order. This is a tuple
+    /// definition, and sub-components will NOT have an `indexed` field.
+    pub components: Vec<Param>,
+    /// The internal type of the parameter. This type represents the type that
+    /// the author of the solidity contract specified. E.g. for a contract, this
+    /// will be `contract MyContract` while the `type` field will be `address`.
+    pub internal_type: Option<String>,
+}
+
+impl fmt::Display for EventParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(internal_type) = &self.internal_type {
+            f.write_str(internal_type)?;
+            f.write_str(" ")?;
+        }
+        f.write_str(&self.name)
+    }
+}
+
+impl<'de> Deserialize<'de> for EventParam {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        BorrowedParam::deserialize(deserializer).and_then(|gp| {
+            if let Some(indexed) = gp.indexed {
+                Ok(Self {
+                    name: gp.name.to_owned(),
+                    ty: gp.ty.to_owned(),
+                    indexed,
+                    internal_type: gp.internal_type.map(String::from),
+                    components: gp.components.into_owned(),
+                })
+            } else {
+                Err(serde::de::Error::custom(
+                    "indexed is required in event params",
+                ))
+            }
+        })
+    }
+}
+
+impl Serialize for EventParam {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.as_inner().serialize(serializer)
+    }
+}
+
+impl EventParam {
+    /// Formats the canonical type of this parameter into the given string.
+    ///
+    /// This is used to encode the preimage of the event selector.
+    pub fn selector_type_raw(&self, s: &mut String) {
+        if self.components.is_empty() {
+            s.push_str(&self.ty)
+        } else {
+            crate::utils::signature_raw("", &self.components, s)
+        }
+    }
+
+    /// Returns the canonical type of this parameter.
+    ///
+    /// This is used to encode the preimage of the event selector.
+    pub fn selector_type(&self) -> Cow<'_, str> {
+        if self.components.is_empty() {
+            Cow::Borrowed(&self.ty)
+        } else {
+            Cow::Owned(crate::utils::signature("", &self.components))
+        }
+    }
+
+    #[inline]
+    fn as_inner(&self) -> BorrowedParam<'_, Param> {
+        BorrowedParam {
+            name: &self.name,
+            ty: &self.ty,
+            indexed: Some(self.indexed),
+            internal_type: self.internal_type.as_deref(),
+            components: Cow::Borrowed(&self.components),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(bound(deserialize = "<[T] as ToOwned>::Owned: Default + Deserialize<'de>"))]
+struct BorrowedParam<'a, T: Clone> {
+    name: &'a str,
+    #[serde(rename = "type")]
+    ty: &'a str,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    indexed: Option<bool>,
+    #[serde(
+        rename = "internalType",
+        default,
+        skip_serializing_if = "Option::is_none",
+        borrow
+    )]
+    internal_type: Option<&'a str>,
+    #[serde(default, skip_serializing_if = "<[_]>::is_empty")]
+    components: Cow<'a, [T]>,
 }
 
 #[cfg(test)]
@@ -161,7 +219,7 @@ mod tests {
             "internalType": "string",
             "name": "reason",
             "type": "string"
-          }"#;
+        }"#;
         let _param = serde_json::from_str::<Param>(param).unwrap();
     }
 }

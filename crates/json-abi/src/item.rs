@@ -1,4 +1,4 @@
-use crate::{event_param::EventParam, param::Param, utils::*, StateMutability};
+use crate::{param::Param, utils::*, EventParam, StateMutability};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Selector, B256};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -29,7 +29,7 @@ macro_rules! abi_items {
                 $fvis $field: $type,
             )*}
 
-            impl<'de> serde::Deserialize<'de> for $name {
+            impl<'de> Deserialize<'de> for $name {
                 fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
                     AbiItem::deserialize(deserializer).and_then(|item| match item {
                         AbiItem::$name(item) => Ok(item.into_owned()),
