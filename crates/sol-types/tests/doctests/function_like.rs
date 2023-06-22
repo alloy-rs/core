@@ -1,5 +1,5 @@
 use alloy_primitives::{keccak256, U256};
-use alloy_sol_types::{sol, SolCall, SolError};
+use alloy_sol_types::{sol, SolError, SolFunction};
 use hex_literal::hex;
 
 // Unnamed arguments will be given a name based on their position,
@@ -18,7 +18,7 @@ sol! {
     /// disambiguation, but the signature will remain the same.
     ///
     /// E.g. if there are two functions named `foo`, the generated types will be
-    /// `foo_0Call` and `foo_1Call`, each of which will implement [`SolCall` ]
+    /// `foo_0Call` and `foo_1Call`, each of which will implement [`SolCall`]
     /// with their respective signatures.
     ///
     /// Both of these types will have the attributes of the function, like this
@@ -78,7 +78,7 @@ fn error() {
     );
 }
 
-fn assert_call_signature<T: SolCall>(expected: &str) {
+fn assert_call_signature<T: SolFunction>(expected: &str) {
     assert_eq!(T::SIGNATURE, expected);
     assert_eq!(T::SELECTOR, keccak256(expected)[..4]);
 }

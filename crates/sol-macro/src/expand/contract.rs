@@ -86,7 +86,7 @@ fn expand_functions_enum(
         .map(|function| r#type::params_min_data_size(cx, &function.arguments))
         .max()
         .unwrap();
-    let trt = Ident::new("SolCall", Span::call_site());
+    let trt = Ident::new("SolFunction", Span::call_site());
     expand_call_like_enum(name, &variants, &types, min_data_len, trt, attrs)
 }
 

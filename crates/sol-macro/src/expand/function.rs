@@ -15,7 +15,7 @@ use syn::{Result, Token};
 ///     #(pub #argument_name: #argument_type,)*
 /// }
 ///
-/// impl SolCall for #{name}Call {
+/// impl SolFunction for #{name}Call {
 ///     ...
 /// }
 ///
@@ -23,16 +23,14 @@ use syn::{Result, Token};
 ///     #(pub #return_name: #return_type,)*
 /// }
 ///
-/// impl SolCall for #{name}Return {
+/// impl SolFunction for #{name}Return {
 ///     ...
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream> {
     let function_name = cx.function_name(function);
     let call_name = cx.call_name(function_name);
-    let tokens = expand_call(cx, function, &call_name, &function.arguments)?;
-
-    Ok(tokens)
+    expand_call(cx, function, &call_name, &function.arguments)
 }
 
 fn expand_call(
@@ -80,7 +78,7 @@ fn expand_call(
             #converts
 
             #[automatically_derived]
-            impl ::alloy_sol_types::SolCall for #call_name {
+            impl ::alloy_sol_types::SolFunction for #call_name {
                 type Tuple<'a> = UnderlyingSolTuple<'a>;
                 type Token<'a> = <Self::Tuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
 

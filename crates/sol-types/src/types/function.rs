@@ -1,4 +1,4 @@
-use crate::{no_std_prelude::*, token::TokenSeq, Result, SolType, TokenType, Word};
+use crate::{no_std_prelude::*, token::TokenSeq, Encodable, Result, SolType, TokenType, Word};
 
 /// Solidity call (a tuple with a selector).
 ///
@@ -7,7 +7,7 @@ use crate::{no_std_prelude::*, token::TokenSeq, Result, SolType, TokenType, Word
 /// We do not recommend implementing this trait directly. Instead, we recommend
 /// using the [`sol`][crate::sol] proc macro to parse a Solidity function
 /// definition.
-pub trait SolCall: Sized {
+pub trait SolFunction: Sized {
     /// The underlying tuple type which represents this type's arguments.
     ///
     /// If this type has no arguments, this will be the unit type `()`.
@@ -21,7 +21,7 @@ pub trait SolCall: Sized {
     /// If this type has no return values, this will be the unit type `()`.
     type ReturnTuple<'a>: SolType<TokenType<'a> = Self::ReturnToken<'a>>;
 
-    /// The corresponding [TokenSeq] type.
+    /// The returns' corresponding [TokenSeq] type.
     type ReturnToken<'a>: TokenSeq<'a>;
 
     /// The function's ABI signature.
@@ -88,9 +88,12 @@ pub trait SolCall: Sized {
         <Self::ReturnTuple<'_> as SolType>::decode(data, validate)
     }
 
-    /// ABI encode the call's return values to the given buffer.
+    /// ABI encode the call's return values.
     #[inline]
-    fn encode_returns_to(&self) -> Vec<u8> {
-        crate::encode(&self.tokenize())
+    fn encode_returns<'a, E>(e: &'a E) -> Vec<u8>
+    where
+        E: Encodable<Self::ReturnTuple<'a>>,
+    {
+        crate::encode(&e.to_tokens())
     }
 }

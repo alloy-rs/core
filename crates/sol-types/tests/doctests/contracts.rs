@@ -1,5 +1,5 @@
 use alloy_primitives::{Address, U256};
-use alloy_sol_types::{sol, SolCall};
+use alloy_sol_types::{sol, SolFunction};
 use hex_literal::hex;
 
 sol! {
