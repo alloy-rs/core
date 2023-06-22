@@ -8,7 +8,7 @@ use crate::{no_std_prelude::*, token::TokenSeq, Result, SolType, TokenType, Word
 /// using the [`sol`][crate::sol] proc macro to parse a Solidity function
 /// definition.
 pub trait SolCall: Sized {
-    /// The underlying tuple type which represents this type's argument's.
+    /// The underlying tuple type which represents this type's arguments.
     ///
     /// If this type has no arguments, this will be the unit type `()`.
     type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
