@@ -18,6 +18,10 @@
 //! [specification]: https://docs.soliditylang.org/en/latest/abi-spec.html#json
 //! [ethabi]: https://github.com/rust-ethereum/ethabi
 
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
+    html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg"
+)]
 #![warn(
     missing_docs,
     unreachable_pub,
