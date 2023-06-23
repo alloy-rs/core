@@ -41,27 +41,27 @@ mod utils;
 ///
 /// ## Structs and enums
 /// ```ignore
-#[doc = include_str!("../doctests/doc_structs.rs")]
+#[doc = include_str!("../doctests/structs.rs")]
 /// ```
 /// 
 /// ## UDVT and type aliases
 /// ```ignore
-#[doc = include_str!("../doctests/doc_types.rs")]
+#[doc = include_str!("../doctests/types.rs")]
 /// ```
 /// 
 /// ## Functions and errors
 /// ```ignore
-#[doc = include_str!("../doctests/doc_function_like.rs")]
+#[doc = include_str!("../doctests/function_like.rs")]
 /// ```
 /// 
 /// ## Events
 /// ```ignore
-#[doc = include_str!("../doctests/doc_events.rs")]
+#[doc = include_str!("../doctests/events.rs")]
 /// ```
 /// 
 /// ## Contracts/interfaces
 /// ```ignore
-#[doc = include_str!("../doctests/doc_contracts.rs")]
+#[doc = include_str!("../doctests/contracts.rs")]
 /// ```
 #[proc_macro]
 pub fn sol(input: TokenStream) -> TokenStream {
