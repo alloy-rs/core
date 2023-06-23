@@ -3,7 +3,7 @@ members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.65"
 authors = ["Alloy Contributors"]
@@ -18,13 +18,13 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [workspace.dependencies]
 # workspace crates
-alloy-dyn-abi = { version = "0.1.0", path = "crates/dyn-abi", default-features = false }
-alloy-primitives = { version = "0.1.0", path = "crates/primitives", default-features = false }
-alloy-rlp = { version = "0.1.0", path = "crates/rlp", default-features = false }
-alloy-rlp-derive = { version = "0.1.0", path = "crates/rlp-derive", default-features = false }
-alloy-sol-macro = { version = "0.1.0", path = "crates/sol-macro", default-features = false }
-alloy-sol-types = { version = "0.1.0", path = "crates/sol-types", default-features = false }
-syn-solidity = { version = "0.1.0", path = "crates/syn-solidity", default-features = false }
+alloy-dyn-abi = { version = "0.2.0", path = "crates/dyn-abi", default-features = false }
+alloy-primitives = { version = "0.2.0", path = "crates/primitives", default-features = false }
+alloy-rlp = { version = "0.2.0", path = "crates/rlp", default-features = false }
+alloy-rlp-derive = { version = "0.2.0", path = "crates/rlp-derive", default-features = false }
+alloy-sol-macro = { version = "0.2.0", path = "crates/sol-macro", default-features = false }
+alloy-sol-types = { version = "0.2.0", path = "crates/sol-types", default-features = false }
+syn-solidity = { version = "0.2.0", path = "crates/syn-solidity", default-features = false }
 
 ruint = { version = "1.9.0", package = "ruint2", default-features = false }
 ruint-macro = { version = "1.0.3", package = "ruint2-macro", default-features = false }
