@@ -25,9 +25,29 @@ sol! {
     /// doc comment, but this might change in the future.
     ///
     /// The [`SolCall`] implementation may be used to decode the return values
-    /// via [`SolCall::decode_returns`]. The return value is a tuple of the
-    /// return types, e.g. `returns (uint256)`  will have a return type of
-    /// `(sol_data::Uint<256>,)` and a decoded type of `(U256,)`.
+    /// via [`SolCall::decode_returns`]. The return value is a struct containing
+    /// the return values, in the same order as the function definition. Unnamed
+    /// return values will be named based on their position, e.g. `_0`, `_1`,
+    /// like the arguments.
+    ///
+    /// For example this will generate
+    ///
+    /// ```ignore,pseudo-code
+    ///
+    /// struct fooCall {
+    ///     a: U256,
+    ///     a: U256,
+    /// }
+    ///
+    /// struct fooReturn {
+    ///     _0: U256,
+    /// }
+    ///
+    /// impl SolCall for fooCall {
+    ///     type Return = fooReturn;
+    /// }
+    ///
+    /// ```
     function foo(uint256 a, uint256 b) external view returns (uint256);
 
     // These will be interpreted as `overloaded_0`, `overloaded_1`, and
