@@ -49,20 +49,20 @@ pub enum DynSolValue {
 
 impl DynSolValue {
     /// The Solidity type name.
-    pub fn sol_type_name(&self) -> String {
+    pub fn sol_type_name(&self) -> Cow<'_, str> {
         match self {
-            Self::Address(_) => "address".to_string(),
-            Self::Bool(_) => "bool".to_string(),
-            Self::Bytes(_) => "bytes".to_string(),
-            Self::FixedBytes(_, size) => format!("bytes{}", size),
-            Self::Int(_, size) => format!("int{}", size),
-            Self::Uint(_, size) => format!("uint{}", size),
-            Self::String(_) => "string".to_string(),
-            Self::Tuple(_) => "tuple".to_string(),
-            Self::Array(_) => "array".to_string(),
-            Self::FixedArray(_) => "fixed_array".to_string(),
-            Self::CustomStruct { name, .. } => name.clone(),
-            Self::CustomValue { name, .. } => name.clone(),
+            Self::Address(_) => Cow::Borrowed("address"),
+            Self::Bool(_) => Cow::Borrowed("bool"),
+            Self::Bytes(_) => Cow::Borrowed("bytes"),
+            Self::FixedBytes(_, size) => Cow::Owned(format!("bytes{}", size)),
+            Self::Int(_, size) => Cow::Owned(format!("int{}", size)),
+            Self::Uint(_, size) => Cow::Owned(format!("uint{}", size)),
+            Self::String(_) => Cow::Borrowed("string"),
+            Self::Tuple(_) => Cow::Borrowed("tuple"),
+            Self::Array(_) => Cow::Borrowed("array"),
+            Self::FixedArray(_) => Cow::Borrowed("fixed_array"),
+            Self::CustomStruct { name, .. } => Cow::Borrowed(name),
+            Self::CustomValue { name, .. } => Cow::Borrowed(name),
         }
     }
 
@@ -301,11 +301,6 @@ impl DynSolValue {
             .expect("tokens is definitely a sequence");
 
         Some(encoder.into_bytes())
-    }
-
-    ///
-    pub fn detokenize_populate() -> Self {
-        todo!()
     }
 }
 
