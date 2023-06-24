@@ -1,5 +1,5 @@
 mod function;
-pub use function::SolFunction;
+pub use function::SolCall;
 
 pub mod data_type;
 

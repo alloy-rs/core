@@ -187,8 +187,8 @@ pub use errors::{Error, Result};
 
 mod types;
 pub use types::{
-    data_type as sol_data, Encodable, EventTopic, Panic, PanicKind, Revert, SolError, SolEvent,
-    SolFunction, SolStruct, SolType, TopicList,
+    data_type as sol_data, Encodable, EventTopic, Panic, PanicKind, Revert, SolCall, SolError,
+    SolEvent, SolStruct, SolType, TopicList,
 };
 
 mod util;

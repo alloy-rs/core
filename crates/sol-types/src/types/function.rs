@@ -7,7 +7,7 @@ use crate::{no_std_prelude::*, token::TokenSeq, Encodable, Result, SolType, Toke
 /// We do not recommend implementing this trait directly. Instead, we recommend
 /// using the [`sol`][crate::sol] proc macro to parse a Solidity function
 /// definition.
-pub trait SolFunction: Sized {
+pub trait SolCall: Sized {
     /// The underlying tuple type which represents this type's arguments.
     ///
     /// If this type has no arguments, this will be the unit type `()`.
@@ -15,6 +15,9 @@ pub trait SolFunction: Sized {
 
     /// The arguments' corresponding [TokenSeq] type.
     type Token<'a>: TokenSeq<'a>;
+
+    /// The function's return struct.
+    type Return;
 
     /// The underlying tuple type which represents this type's return values.
     ///
@@ -80,13 +83,7 @@ pub trait SolFunction: Sized {
     }
 
     /// ABI decode this call's return values from the given slice.
-    #[inline]
-    fn decode_returns(
-        data: &[u8],
-        validate: bool,
-    ) -> Result<<Self::ReturnTuple<'_> as SolType>::RustType> {
-        <Self::ReturnTuple<'_> as SolType>::decode(data, validate)
-    }
+    fn decode_returns(data: &[u8], validate: bool) -> Result<Self::Return>;
 
     /// ABI encode the call's return values.
     #[inline]

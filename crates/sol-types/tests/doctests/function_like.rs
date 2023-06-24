@@ -1,5 +1,5 @@
 use alloy_primitives::{keccak256, U256};
-use alloy_sol_types::{sol, SolError, SolFunction};
+use alloy_sol_types::{sol, SolCall, SolError};
 use hex_literal::hex;
 
 // Unnamed arguments will be given a name based on their position,
@@ -78,7 +78,7 @@ fn error() {
     );
 }
 
-fn assert_call_signature<T: SolFunction>(expected: &str) {
+fn assert_call_signature<T: SolCall>(expected: &str) {
     assert_eq!(T::SIGNATURE, expected);
     assert_eq!(T::SELECTOR, keccak256(expected)[..4]);
 }
