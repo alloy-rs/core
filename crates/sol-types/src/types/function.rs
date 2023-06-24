@@ -11,7 +11,7 @@ pub trait SolCall: Sized {
     /// The underlying tuple type which represents this type's arguments.
     ///
     /// If this type has no arguments, this will be the unit type `()`.
-    type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
+    type Arguments<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
 
     /// The arguments' corresponding [TokenSeq] type.
     type Token<'a>: TokenSeq<'a>;
@@ -34,7 +34,7 @@ pub trait SolCall: Sized {
     const SELECTOR: [u8; 4];
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn new(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
+    fn new(tuple: <Self::Arguments<'_> as SolType>::RustType) -> Self;
 
     /// Tokenize the call's arguments.
     fn tokenize(&self) -> Self::Token<'_>;
@@ -42,7 +42,7 @@ pub trait SolCall: Sized {
     /// The size of the encoded data in bytes, **without** its selector.
     fn encoded_size(&self) -> usize {
         // This avoids unnecessary clones.
-        if let Some(size) = <Self::Tuple<'_> as SolType>::ENCODED_SIZE {
+        if let Some(size) = <Self::Arguments<'_> as SolType>::ENCODED_SIZE {
             return size
         }
 
@@ -53,7 +53,7 @@ pub trait SolCall: Sized {
     /// selector.
     #[inline]
     fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Tuple<'_> as SolType>::decode(data, validate).map(Self::new)
+        <Self::Arguments<'_> as SolType>::decode(data, validate).map(Self::new)
     }
 
     /// ABI decode this call's arguments from the given slice, **with** the

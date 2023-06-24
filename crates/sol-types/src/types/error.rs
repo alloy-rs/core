@@ -17,7 +17,7 @@ pub trait SolError: Sized {
     /// The underlying tuple type which represents the error's members.
     ///
     /// If the error has no arguments, this will be the unit type `()`
-    type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
+    type Parameters<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
 
     /// The corresponding [`TokenSeq`] type.
     type Token<'a>: TokenSeq<'a>;
@@ -29,7 +29,7 @@ pub trait SolError: Sized {
     const SELECTOR: [u8; 4];
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn new(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
+    fn new(tuple: <Self::Parameters<'_> as SolType>::RustType) -> Self;
 
     /// Convert to the token type used for EIP-712 encoding and decoding.
     fn tokenize(&self) -> Self::Token<'_>;
@@ -38,7 +38,7 @@ pub trait SolError: Sized {
     /// selector.
     fn encoded_size(&self) -> usize {
         // This avoids unnecessary clones.
-        if let Some(size) = <Self::Tuple<'_> as SolType>::ENCODED_SIZE {
+        if let Some(size) = <Self::Parameters<'_> as SolType>::ENCODED_SIZE {
             return size
         }
         self.tokenize().total_words() * Word::len_bytes()
@@ -48,7 +48,7 @@ pub trait SolError: Sized {
     /// selector.
     #[inline]
     fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Tuple<'_> as SolType>::decode(data, validate).map(Self::new)
+        <Self::Parameters<'_> as SolType>::decode(data, validate).map(Self::new)
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the
@@ -137,14 +137,14 @@ impl From<&str> for Revert {
 }
 
 impl SolError for Revert {
+    type Parameters<'a> = (crate::sol_data::String,);
     type Token<'a> = (PackedSeqToken<'a>,);
-    type Tuple<'a> = (crate::sol_data::String,);
 
     const SIGNATURE: &'static str = "Error(string)";
     const SELECTOR: [u8; 4] = [0x08, 0xc3, 0x79, 0xa0];
 
     #[inline]
-    fn new(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self {
+    fn new(tuple: <Self::Parameters<'_> as SolType>::RustType) -> Self {
         Self { reason: tuple.0 }
     }
 
@@ -246,14 +246,14 @@ impl From<U256> for Panic {
 }
 
 impl SolError for Panic {
+    type Parameters<'a> = (crate::sol_data::Uint<256>,);
     type Token<'a> = (WordToken,);
-    type Tuple<'a> = (crate::sol_data::Uint<256>,);
 
     const SIGNATURE: &'static str = "Panic(uint256)";
     const SELECTOR: [u8; 4] = [0x4e, 0x48, 0x7b, 0x71];
 
     #[inline]
-    fn new(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self {
+    fn new(tuple: <Self::Parameters<'_> as SolType>::RustType) -> Self {
         Self { code: tuple.0 }
     }
 
