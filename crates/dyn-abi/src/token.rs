@@ -265,12 +265,6 @@ impl<'a> DynToken<'a> {
         }
     }
 
-    /// Encode a single item of this type, as a sequence of length 1.
-    #[inline]
-    pub(crate) fn encode_single(&'a self, enc: &mut Encoder) -> Result<()> {
-        Self::FixedSeq(core::slice::from_ref(self).into(), 1).encode_sequence(enc)
-    }
-
     /// Decode a single item of this type, as a sequence of length 1.
     #[inline]
     pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {

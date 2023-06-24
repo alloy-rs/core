@@ -74,9 +74,7 @@ mod tests {
         assert_eq!(detokenized, my_values);
 
         // encode
-        let mut encoder = Encoder::default();
-        tokens.encode_single(&mut encoder).unwrap();
-        let encoded = encoder.into_bytes();
+        let encoded = my_values.encode_single();
 
         // decode
         let mut decoder = Decoder::new(&encoded, true);

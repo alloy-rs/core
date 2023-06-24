@@ -28,7 +28,7 @@ struct StructProp {
 /// let my_type = DynSolType::Uint(256);
 /// let my_data: DynSolValue = U256::from(183).into();
 ///
-/// let encoded = my_type.encode_single(&my_data)?;
+/// let encoded = my_data.encode_single();
 /// let decoded = my_type.decode_single(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
@@ -36,7 +36,7 @@ struct StructProp {
 /// let my_type = DynSolType::Array(Box::new(DynSolType::Uint(256)));
 /// let my_data = DynSolValue::Array(vec![my_data.clone()]);
 ///
-/// let encoded = my_type.encode_single(&my_data)?;
+/// let encoded = my_data.encode_single();
 /// let decoded = my_type.decode_single(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
@@ -366,27 +366,12 @@ impl DynSolType {
         }
     }
 
-    /// Encode a single value. Fails if the value does not match this type.
-    pub fn encode_single(&self, value: &DynSolValue) -> Result<Vec<u8>> {
-        let mut encoder = crate::Encoder::default();
-        self.tokenize(value)?.encode_single(&mut encoder)?;
-        Ok(encoder.into_bytes())
-    }
-
     /// Decode a single value. Fails if the value does not match this type.
     pub fn decode_single(&self, data: &[u8]) -> Result<DynSolValue> {
         let mut decoder = crate::Decoder::new(data, false);
         let mut token = self.empty_dyn_token();
         token.decode_single_populate(&mut decoder)?;
         self.detokenize(token)
-    }
-
-    /// Encode a sequence of values. Fails if the values do not match this
-    /// type. Is a no-op if this type or the values are not a sequence.
-    pub fn encode_sequence(&self, values: &DynSolValue) -> Result<Vec<u8>> {
-        let mut encoder = crate::Encoder::default();
-        self.tokenize(values)?.encode_sequence(&mut encoder)?;
-        Ok(encoder.into_bytes())
     }
 
     /// Decode a sequence of values. Fails if the values do not match this type.

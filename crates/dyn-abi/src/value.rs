@@ -185,6 +185,14 @@ impl DynSolValue {
         }
     }
 
+    /// Returns true if the value is a sequence type.
+    pub const fn is_sequence(&self) -> bool {
+        matches!(
+            self,
+            Self::Array(_) | Self::FixedArray(_) | Self::Tuple(_) | Self::CustomStruct { .. }
+        )
+    }
+
     /// Encodes the packed value and appends it to the end of a byte array.
     pub fn encode_packed_to(&self, buf: &mut Vec<u8>) {
         match self {
@@ -241,22 +249,58 @@ impl DynSolValue {
         }
     }
 
-    /// Encode this value into a byte array.
-    pub fn encode(&self) -> Vec<u8> {
+    /// Encode this value into a byte array by wrapping it into a 1-element
+    /// sequence.
+    pub fn encode_single(&self) -> Vec<u8> {
         let tokens = self.tokenize();
         let mut encoder = Default::default();
 
-        match &tokens {
-            DynToken::Word(_) | DynToken::PackedSeq(_) => {
-                DynToken::FixedSeq(Cow::Borrowed(&[tokens]), 1)
-                    .encode_sequence(&mut encoder)
-                    .unwrap()
-            }
-            DynToken::FixedSeq(_, _) | DynToken::DynSeq { .. } => {
-                tokens.encode_sequence(&mut encoder).unwrap()
-            }
-        }
+        DynToken::FixedSeq(Cow::Borrowed(&[tokens]), 1)
+            .encode_sequence(&mut encoder)
+            .expect("always Ok() for sequences");
         encoder.into_bytes()
+    }
+
+    /// Encode this value into a byte array suitable for passing to a function.
+    /// If this value is a tuple, it is encoded as is. Otherwise, it is wrapped
+    /// into a 1-element sequence.
+    ///
+    /// ### Example
+    ///
+    /// ```ignore,pseudo-code
+    /// 
+    /// // Encoding for function foo(address)
+    /// DynSolValue::Address(_).encode_params()
+    ///
+    /// // Encoding for function foo(address, uint256)
+    /// DynSolValue::Tuple(
+    ///     vec![
+    ///         DynSolValue::Address(_),
+    ///         DynSolValue::Uint(_, 256),
+    ///     ]
+    /// ).encode_params();
+    /// ```
+    pub fn encode_params(&self) -> Vec<u8> {
+        match self {
+            Self::Tuple(_) => self.encode().expect("tuple is definitely a sequence"),
+            _ => self.encode_single(),
+        }
+    }
+
+    /// If this value is a sequence, encode it into a byte array. If this value
+    /// is not a sequence, return `None`
+    pub fn encode(&self) -> Option<Vec<u8>> {
+        if !self.is_sequence() {
+            return None
+        }
+
+        let mut encoder = Default::default();
+        let tokens = self.tokenize();
+        tokens
+            .encode_sequence(&mut encoder)
+            .expect("tokens is definitely a sequence");
+
+        Some(encoder.into_bytes())
     }
 
     ///
