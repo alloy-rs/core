@@ -36,7 +36,6 @@ sol! {
     /// Will produce Rust code similar to this:
     ///
     /// ```ignore,pseudo-code
-    ///
     /// struct fooCall {
     ///     a: U256,
     ///     a: U256,
