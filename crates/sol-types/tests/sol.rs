@@ -130,13 +130,6 @@ fn function() {
         call.encoded_size(),
         32 + (64 + 32) + (64 + 32 + 32) + (64 + 3 * 32) + 2 * 32 + (32 + 32) + (64 + 4 * (32 + 32))
     );
-
-    let sig = "someFunction(bool)"; // TODO ?
-    assert_eq!(someFunctionReturn::SIGNATURE, sig);
-    assert_eq!(someFunctionReturn::SELECTOR, keccak256(sig)[..4]);
-
-    let ret = someFunctionReturn { x: true };
-    assert_eq!(ret.encoded_size(), 32);
 }
 
 #[test]

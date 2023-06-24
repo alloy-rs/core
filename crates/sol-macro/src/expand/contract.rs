@@ -80,7 +80,9 @@ fn expand_functions_enum(
         .iter()
         .map(|f| cx.function_name_ident(f).0)
         .collect();
-    let types: Vec<_> = variants.iter().map(|name| cx.call_name(name)).collect();
+
+    let types: Vec<_> = variants.iter().map(|name| cx.raw_call_name(name)).collect();
+
     let min_data_len = functions
         .iter()
         .map(|function| r#type::params_min_data_size(cx, &function.arguments))

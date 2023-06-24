@@ -229,12 +229,22 @@ impl<'ast> ExpCtxt<'ast> {
         }
     }
 
-    fn call_name(&self, function_name: impl IdentFragment + std::fmt::Display) -> Ident {
+    fn raw_call_name(&self, function_name: impl IdentFragment + std::fmt::Display) -> Ident {
         format_ident!("{function_name}Call")
     }
 
-    fn return_name(&self, function_name: impl IdentFragment + std::fmt::Display) -> Ident {
+    fn call_name(&self, function: &ItemFunction) -> Ident {
+        let function_name = self.function_name(function);
+        self.raw_call_name(function_name)
+    }
+
+    fn raw_return_name(&self, function_name: impl IdentFragment + std::fmt::Display) -> Ident {
         format_ident!("{function_name}Return")
+    }
+
+    fn return_name(&self, function: &ItemFunction) -> Ident {
+        let function_name = self.function_name(function);
+        self.raw_return_name(function_name)
     }
 
     fn signature<'a, I: IntoIterator<Item = &'a VariableDeclaration>>(
@@ -340,15 +350,52 @@ fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Ident {
     }
 }
 
+/// Expands `From` impls for an empty struct and the unit type.
+fn expand_from_into_unit(name: &Ident) -> TokenStream {
+    quote! {
+        #[doc(hidden)]
+        type UnderlyingSolTuple<'a> = ();
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = ();
+
+        impl From<()> for #name {
+            fn from(_: ()) -> Self {
+                Self {}
+            }
+        }
+
+        impl From<#name> for () {
+            fn from(_: #name) -> Self {
+                ()
+            }
+        }
+
+        impl ::alloy_sol_types::Encodable<()> for #name {
+            fn to_tokens(&self) -> <() as ::alloy_sol_types::SolType>::TokenType<'_> {
+                ::alloy_sol_types::token::FixedSeqToken::from([])
+            }
+        }
+    }
+}
+
 /// Expands `From` impls for a list of types and the corresponding tuple.
 ///
 /// See [`expand_from_into_tuples`].
 fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStream {
+    if fields.is_empty() {
+        return expand_from_into_unit(name)
+    }
+
     let names = fields.names().enumerate().map(anon_name);
+
     let names2 = names.clone();
     let idxs = (0..fields.len()).map(syn::Index::from);
 
+    let names3 = names.clone();
+    let field_tys = fields.types().map(expand_type);
+
     let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types());
+
     quote! {
         #[doc(hidden)]
         type UnderlyingSolTuple<'a> = #sol_tuple;
@@ -370,6 +417,14 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
                 #name {
                     #(#names2: tuple.#idxs),*
                 }
+            }
+        }
+
+        impl ::alloy_sol_types::Encodable<UnderlyingSolTuple<'_>> for #name {
+            fn to_tokens(&self) -> <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::TokenType<'_> {
+                (#(
+                    ::alloy_sol_types::Encodable::<#field_tys>::to_tokens(&self.#names3),
+                )*)
             }
         }
     }
