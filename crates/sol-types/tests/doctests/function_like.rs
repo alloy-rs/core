@@ -30,7 +30,10 @@ sol! {
     /// return values will be named based on their position, e.g. `_0`, `_1`,
     /// like the arguments.
     ///
-    /// For example this will generate
+    /// For example the following input:
+    ///  `function foo(uint256 a, uint256 b) external view returns (uint256);`
+    ///
+    /// Will produce Rust code similar to this:
     ///
     /// ```ignore,pseudo-code
     ///
@@ -46,7 +49,6 @@ sol! {
     /// impl SolCall for fooCall {
     ///     type Return = fooReturn;
     /// }
-    ///
     /// ```
     function foo(uint256 a, uint256 b) external view returns (uint256);
 
