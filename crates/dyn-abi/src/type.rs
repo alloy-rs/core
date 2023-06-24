@@ -82,144 +82,6 @@ pub enum DynSolType {
 }
 
 impl DynSolType {
-    /// Dynamic tokenization.
-    pub fn tokenize<'a>(&self, value: &'a DynSolValue) -> Result<DynToken<'a>> {
-        match (self, value) {
-            (DynSolType::Address, DynSolValue::Address(val)) => Ok(DynToken::Word(
-                alloy_sol_types::Encodable::<sol_data::Address>::to_tokens(&val).0,
-            )),
-            (DynSolType::Bool, DynSolValue::Bool(val)) => Ok(DynToken::Word(
-                alloy_sol_types::Encodable::<sol_data::Bool>::to_tokens(val).0,
-            )),
-            (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(val)),
-            (DynSolType::FixedBytes(len), DynSolValue::FixedBytes(word, size)) => {
-                if size != len {
-                    return Err(crate::Error::custom(format!(
-                        "Size mismatch for FixedBytes. Got {size}, expected {len}",
-                    )))
-                }
-                Ok(DynToken::Word(*word))
-            }
-            (DynSolType::Int(_), DynSolValue::Int(word, _)) => {
-                Ok(DynToken::Word(word.to_be_bytes().into()))
-            }
-            (DynSolType::Uint(_), DynSolValue::Uint(num, _)) => {
-                Ok(DynToken::Word(num.to_be_bytes().into()))
-            }
-            (DynSolType::String, DynSolValue::String(buf)) => {
-                Ok(DynToken::PackedSeq(buf.as_bytes()))
-            }
-            (DynSolType::Tuple(types), DynSolValue::Tuple(tokens)) => {
-                let tokens = types
-                    .iter()
-                    .zip(tokens)
-                    .map(|(ty, token)| ty.tokenize(token))
-                    .collect::<Result<_, _>>()?;
-
-                Ok(DynToken::FixedSeq(tokens, types.len()))
-            }
-            (DynSolType::Array(t), DynSolValue::Array(values)) => {
-                let contents: Vec<_> = values
-                    .iter()
-                    .map(|val| t.tokenize(val))
-                    .collect::<Result<_, _>>()?;
-                let template = Box::new(contents.first().unwrap().clone());
-                Ok(DynToken::DynSeq {
-                    contents: contents.into(),
-                    template,
-                })
-            }
-            (DynSolType::FixedArray(t, size), DynSolValue::FixedArray(tokens)) => {
-                if *size != tokens.len() {
-                    return Err(crate::Error::custom(format!(
-                        "Size mismatch for FixedArray. Got {}, expected {}",
-                        tokens.len(),
-                        size,
-                    )))
-                }
-                Ok(DynToken::FixedSeq(
-                    tokens
-                        .iter()
-                        .map(|token| t.tokenize(token))
-                        .collect::<Result<_, _>>()?,
-                    *size,
-                ))
-            }
-            (DynSolType::CustomStruct { name, tuple, .. }, DynSolValue::Tuple(tokens)) => {
-                if tuple.len() != tokens.len() {
-                    return Err(crate::Error::custom(format!(
-                        "Tuple length mismatch for {}. Got {}, expected {}",
-                        name,
-                        tokens.len(),
-                        tuple.len(),
-                    )))
-                }
-                let len = tuple.len();
-                let tuple = tuple
-                    .iter()
-                    .zip(tokens)
-                    .map(|(ty, token)| ty.tokenize(token))
-                    .collect::<Result<_, _>>()?;
-                Ok(DynToken::FixedSeq(tuple, len))
-            }
-            (
-                DynSolType::CustomStruct {
-                    name,
-                    tuple,
-                    prop_names,
-                },
-                DynSolValue::CustomStruct {
-                    name: name_val,
-                    tuple: tuple_val,
-                    prop_names: prop_names_val,
-                },
-            ) => {
-                if name != name_val {
-                    return Err(crate::Error::custom(format!(
-                        "Name mismatch for {name}. Got {name_val}, expected {name}",
-                    )))
-                }
-                if prop_names != prop_names_val {
-                    return Err(crate::Error::custom(format!(
-                        "Prop names mismatch for {name}. Got {prop_names_val:?}, expected {prop_names:?}",
-                    )));
-                }
-                if tuple.len() != tuple_val.len() {
-                    return Err(crate::Error::custom(format!(
-                        "Tuple length mismatch for {}. Got {}, expected {}",
-                        name,
-                        tuple_val.len(),
-                        tuple.len(),
-                    )))
-                }
-                let len = tuple.len();
-                let tuple = tuple
-                    .iter()
-                    .zip(tuple_val.iter())
-                    .map(|(ty, token)| ty.tokenize(token))
-                    .collect::<Result<_, _>>()?;
-                Ok(DynToken::FixedSeq(tuple, len))
-            }
-            (
-                DynSolType::CustomValue { name },
-                DynSolValue::CustomValue {
-                    name: name_val,
-                    inner: inner_val,
-                },
-            ) => {
-                if name != name_val {
-                    return Err(crate::Error::custom(format!(
-                        "Name mismatch for {}. Got {}, expected {}",
-                        name, name_val, name,
-                    )))
-                }
-                // A little hacky. A Custom value type is always encoded as a full 32-byte word
-                Ok(DynToken::Word(*inner_val))
-            }
-            _ => Err(crate::Error::custom("Invalid type on dynamic tokenization")),
-        }
-    }
-
     /// Dynamic detokenization.
     #[allow(clippy::unnecessary_to_owned)] // https://github.com/rust-lang/rust-clippy/issues/8148
     pub fn detokenize(&self, token: DynToken<'_>) -> Result<DynSolValue> {
@@ -399,19 +261,16 @@ mod tests {
             .parse()
             .unwrap();
 
-        let sol_type = DynSolType::Address;
         let val = DynSolValue::Address(Address::repeat_byte(0x01));
-        let token = sol_type.tokenize(&val).unwrap();
+        let token = val.tokenize();
         assert_eq!(token, DynToken::from(word1));
-
-        let sol_type = DynSolType::FixedArray(Box::new(DynSolType::Address), 2);
 
         let val = DynSolValue::FixedArray(vec![
             Address::repeat_byte(0x01).into(),
             Address::repeat_byte(0x02).into(),
         ]);
 
-        let token = sol_type.tokenize(&val).unwrap();
+        let token = val.tokenize();
         assert_eq!(
             token,
             DynToken::FixedSeq(vec![DynToken::Word(word1), DynToken::Word(word2)].into(), 2)
