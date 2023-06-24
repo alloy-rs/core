@@ -21,7 +21,7 @@ pub enum DynToken<'a> {
         template: Box<DynToken<'a>>,
     },
     /// A packed sequence (string or bytes).
-    PackedSeq(Vec<u8>),
+    PackedSeq(&'a [u8]),
 }
 
 impl<'a> PartialEq<DynToken<'a>> for DynToken<'a> {
@@ -102,7 +102,7 @@ impl<'a> DynToken<'a> {
     }
 
     /// Decodes from a decoder, populating the structure with the decoded data.
-    pub fn decode_populate(&mut self, dec: &mut Decoder<'_>) -> Result<()> {
+    pub fn decode_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
         let dynamic = self.is_dynamic();
         match self {
             Self::Word(w) => *w = WordToken::decode_from(dec)?.0,
@@ -127,7 +127,7 @@ impl<'a> DynToken<'a> {
                 }
                 *contents = new_tokens.into();
             }
-            Self::PackedSeq(buf) => *buf = PackedSeqToken::decode_from(dec)?.into_vec(),
+            Self::PackedSeq(buf) => *buf = PackedSeqToken::decode_from(dec)?.0,
         }
         Ok(())
     }
@@ -234,7 +234,7 @@ impl<'a> DynToken<'a> {
 
     /// Decode a sequence from the decoder, populating the data by consuming
     /// decoder words.
-    pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'_>) -> Result<()> {
+    pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
         match self {
             Self::FixedSeq(buf, _) => {
                 for item in buf.to_mut().iter_mut() {
@@ -257,7 +257,7 @@ impl<'a> DynToken<'a> {
 
     /// Decode a single item of this type, as a sequence of length 1.
     #[inline]
-    pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder<'_>) -> Result<()> {
+    pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
         // This is what `Self::FixedSeq(vec![self.clone()], 1).decode_populate()`
         // would do, so we skip the allocation.
         self.decode_populate(dec)

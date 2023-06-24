@@ -69,7 +69,7 @@ mod tests {
         let my_values = DynSolValue::Array(vec![uints]);
 
         // tokenize and detokenize
-        let tokens = my_type.tokenize(my_values.clone()).unwrap();
+        let tokens = my_type.tokenize(&my_values).unwrap();
         let detokenized = my_type.detokenize(tokens.clone()).unwrap();
         assert_eq!(detokenized, my_values);
 

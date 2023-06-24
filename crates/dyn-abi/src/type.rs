@@ -28,7 +28,7 @@ struct StructProp {
 /// let my_type = DynSolType::Uint(256);
 /// let my_data: DynSolValue = U256::from(183).into();
 ///
-/// let encoded = my_type.encode_single(my_data.clone())?;
+/// let encoded = my_type.encode_single(&my_data)?;
 /// let decoded = my_type.decode_single(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
@@ -36,7 +36,7 @@ struct StructProp {
 /// let my_type = DynSolType::Array(Box::new(DynSolType::Uint(256)));
 /// let my_data = DynSolValue::Array(vec![my_data.clone()]);
 ///
-/// let encoded = my_type.encode_single(my_data.clone())?;
+/// let encoded = my_type.encode_single(&my_data)?;
 /// let decoded = my_type.decode_single(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
@@ -83,22 +83,22 @@ pub enum DynSolType {
 
 impl DynSolType {
     /// Dynamic tokenization.
-    pub fn tokenize(&self, value: DynSolValue) -> Result<DynToken<'_>> {
+    pub fn tokenize<'a>(&self, value: &'a DynSolValue) -> Result<DynToken<'a>> {
         match (self, value) {
             (DynSolType::Address, DynSolValue::Address(val)) => Ok(DynToken::Word(
                 alloy_sol_types::Encodable::<sol_data::Address>::to_tokens(&val).0,
             )),
             (DynSolType::Bool, DynSolValue::Bool(val)) => Ok(DynToken::Word(
-                alloy_sol_types::Encodable::<sol_data::Bool>::to_tokens(&val).0,
+                alloy_sol_types::Encodable::<sol_data::Bool>::to_tokens(val).0,
             )),
-            (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(val)),
+            (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(&val)),
             (DynSolType::FixedBytes(len), DynSolValue::FixedBytes(word, size)) => {
-                if size != *len {
+                if size != len {
                     return Err(crate::Error::custom(format!(
                         "Size mismatch for FixedBytes. Got {size}, expected {len}",
                     )))
                 }
-                Ok(word.into())
+                Ok(DynToken::Word(*word))
             }
             (DynSolType::Int(_), DynSolValue::Int(word, _)) => {
                 Ok(DynToken::Word(word.to_be_bytes().into()))
@@ -106,7 +106,9 @@ impl DynSolType {
             (DynSolType::Uint(_), DynSolValue::Uint(num, _)) => {
                 Ok(DynToken::Word(num.to_be_bytes().into()))
             }
-            (DynSolType::String, DynSolValue::String(buf)) => Ok(DynToken::PackedSeq(buf.into())),
+            (DynSolType::String, DynSolValue::String(buf)) => {
+                Ok(DynToken::PackedSeq(buf.as_bytes()))
+            }
             (DynSolType::Tuple(types), DynSolValue::Tuple(tokens)) => {
                 let tokens = types
                     .iter()
@@ -172,12 +174,12 @@ impl DynSolType {
                     prop_names: prop_names_val,
                 },
             ) => {
-                if *name != name_val {
+                if name != name_val {
                     return Err(crate::Error::custom(format!(
                         "Name mismatch for {name}. Got {name_val}, expected {name}",
                     )))
                 }
-                if *prop_names != prop_names_val {
+                if prop_names != prop_names_val {
                     return Err(crate::Error::custom(format!(
                         "Prop names mismatch for {name}. Got {prop_names_val:?}, expected {prop_names:?}",
                     )));
@@ -205,14 +207,14 @@ impl DynSolType {
                     inner: inner_val,
                 },
             ) => {
-                if *name != name_val {
+                if name != name_val {
                     return Err(crate::Error::custom(format!(
                         "Name mismatch for {}. Got {}, expected {}",
                         name, name_val, name,
                     )))
                 }
                 // A little hacky. A Custom value type is always encoded as a full 32-byte word
-                Ok(DynSolType::FixedBytes(32).tokenize(DynSolValue::FixedBytes(inner_val, 32))?)
+                Ok(DynToken::Word(*inner_val))
             }
             _ => Err(crate::Error::custom("Invalid type on dynamic tokenization")),
         }
@@ -228,7 +230,7 @@ impl DynSolType {
             (DynSolType::Bool, DynToken::Word(word)) => {
                 Ok(DynSolValue::Bool(sol_data::Bool::detokenize(word.into())))
             }
-            (DynSolType::Bytes, DynToken::PackedSeq(buf)) => Ok(DynSolValue::Bytes(buf)),
+            (DynSolType::Bytes, DynToken::PackedSeq(buf)) => Ok(DynSolValue::Bytes(buf.to_vec())),
             (DynSolType::FixedBytes(size), DynToken::Word(word)) => Ok(DynSolValue::FixedBytes(
                 sol_data::FixedBytes::<32>::detokenize(word.into()).into(),
                 *size,
@@ -244,7 +246,7 @@ impl DynSolType {
             )),
 
             (DynSolType::String, DynToken::PackedSeq(buf)) => Ok(DynSolValue::String(
-                sol_data::String::detokenize(buf.as_slice().into()),
+                sol_data::String::detokenize(buf.into()),
             )),
             (DynSolType::Tuple(types), DynToken::FixedSeq(tokens, _)) => {
                 if types.len() != tokens.len() {
@@ -340,11 +342,11 @@ impl DynSolType {
         match self {
             DynSolType::Address => DynToken::Word(Word::ZERO),
             DynSolType::Bool => DynToken::Word(Word::ZERO),
-            DynSolType::Bytes => DynToken::PackedSeq(Vec::new()),
+            DynSolType::Bytes => DynToken::PackedSeq(&[]),
             DynSolType::FixedBytes(_) => DynToken::Word(Word::ZERO),
             DynSolType::Int(_) => DynToken::Word(Word::ZERO),
             DynSolType::Uint(_) => DynToken::Word(Word::ZERO),
-            DynSolType::String => DynToken::PackedSeq(Vec::new()),
+            DynSolType::String => DynToken::PackedSeq(&[]),
             DynSolType::Tuple(types) => DynToken::FixedSeq(
                 types.iter().map(|t| t.empty_dyn_token()).collect(),
                 types.len(),
@@ -365,7 +367,7 @@ impl DynSolType {
     }
 
     /// Encode a single value. Fails if the value does not match this type.
-    pub fn encode_single(&self, value: DynSolValue) -> Result<Vec<u8>> {
+    pub fn encode_single(&self, value: &DynSolValue) -> Result<Vec<u8>> {
         let mut encoder = crate::Encoder::default();
         self.tokenize(value)?.encode_single(&mut encoder)?;
         Ok(encoder.into_bytes())
@@ -381,9 +383,9 @@ impl DynSolType {
 
     /// Encode a sequence of values. Fails if the values do not match this
     /// type. Is a no-op if this type or the values are not a sequence.
-    pub fn encode_sequence(&self, values: DynSolValue) -> Result<Vec<u8>> {
+    pub fn encode_sequence(&self, values: &DynSolValue) -> Result<Vec<u8>> {
         let mut encoder = crate::Encoder::default();
-        self.tokenize(values)?.encode_sequence(&mut encoder)?;
+        self.tokenize(&values)?.encode_sequence(&mut encoder)?;
         Ok(encoder.into_bytes())
     }
 
@@ -413,18 +415,18 @@ mod tests {
             .unwrap();
 
         let sol_type = DynSolType::Address;
-        let token = sol_type
-            .tokenize(DynSolValue::Address(Address::repeat_byte(0x01)))
-            .unwrap();
+        let val = DynSolValue::Address(Address::repeat_byte(0x01));
+        let token = sol_type.tokenize(&val).unwrap();
         assert_eq!(token, DynToken::from(word1));
 
         let sol_type = DynSolType::FixedArray(Box::new(DynSolType::Address), 2);
-        let token = sol_type
-            .tokenize(DynSolValue::FixedArray(vec![
-                Address::repeat_byte(0x01).into(),
-                Address::repeat_byte(0x02).into(),
-            ]))
-            .unwrap();
+
+        let val = DynSolValue::FixedArray(vec![
+            Address::repeat_byte(0x01).into(),
+            Address::repeat_byte(0x02).into(),
+        ]);
+
+        let token = sol_type.tokenize(&val).unwrap();
         assert_eq!(
             token,
             DynToken::FixedSeq(vec![DynToken::Word(word1), DynToken::Word(word2)].into(), 2)

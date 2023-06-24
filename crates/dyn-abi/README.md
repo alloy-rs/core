@@ -29,7 +29,7 @@ let uints = DynSolValue::FixedArray(vec![0u8.into(), 1u8.into()]);
 let my_values = DynSolValue::Array(vec![uints]);
 
 // encode
-let encoded = my_type.encode_single(my_values.clone()).unwrap();
+let encoded = my_type.encode_single(&my_values).unwrap();
 
 // decode
 let decoded = my_type.decode_single(&encoded).unwrap();
@@ -56,8 +56,8 @@ instance of [`DynSolType`]. This type is used to tokenize and detokenize
 [`DynSolValue`] instances. The [`std::str::FromStr`] impl is used to parse a
 solidity type string into a [`DynSolType`] object.
 
-- Tokenizing:   `DynSolType` + `DynSolValue` = `DynToken`
-- Detokenizing: `DynSolType` + `DynToken`    = `DynSolValue`
+- Tokenizing: `DynSolType` + `DynSolValue` = `DynToken`
+- Detokenizing: `DynSolType` + `DynToken` = `DynSolValue`
 
 Users must manually handle the conversions between [`DynSolValue`] and their
 own rust types. We provide several `From` implementations, but they fall
