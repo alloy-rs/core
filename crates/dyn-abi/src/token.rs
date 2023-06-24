@@ -1,4 +1,4 @@
-use crate::{no_std_prelude::*, Decoder, Encoder, Error, Result, Word};
+use crate::{no_std_prelude::*, Decoder, DynSolValue, Encoder, Error, Result, Word};
 use alloc::borrow::Cow;
 use alloy_sol_types::token::{PackedSeqToken, TokenType, WordToken};
 
@@ -24,6 +24,12 @@ pub enum DynToken<'a> {
     PackedSeq(&'a [u8]),
 }
 
+impl<T: Into<Word>> From<T> for DynToken<'_> {
+    fn from(value: T) -> Self {
+        Self::Word(value.into())
+    }
+}
+
 impl<'a> PartialEq<DynToken<'a>> for DynToken<'a> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -47,13 +53,23 @@ impl<'a> PartialEq<DynToken<'a>> for DynToken<'a> {
 
 impl Eq for DynToken<'_> {}
 
-impl From<Word> for DynToken<'_> {
-    fn from(value: Word) -> Self {
-        Self::Word(value)
-    }
-}
-
 impl<'a> DynToken<'a> {
+    /// Instantiate a DynToken from a fixed sequence of values.
+    pub fn from_fixed_seq(seq: &'a [DynSolValue]) -> Self {
+        let tokens = seq.iter().map(|v| v.tokenize()).collect::<Vec<_>>();
+        Self::FixedSeq(Cow::Owned(tokens), seq.len())
+    }
+
+    /// Instantiate a DynToken from a dynamic sequence of values.
+    pub fn from_dyn_seq(seq: &'a [DynSolValue]) -> Self {
+        let tokens = seq.iter().map(|v| v.tokenize()).collect::<Vec<_>>();
+        let template = Box::new(tokens[0].clone());
+        Self::DynSeq {
+            contents: Cow::Owned(tokens),
+            template,
+        }
+    }
+
     /// Attempt to cast to a word.
     #[inline]
     pub const fn as_word(&self) -> Option<Word> {
@@ -83,7 +99,7 @@ impl<'a> DynToken<'a> {
 
     /// Fallible cast into a packed sequence.
     #[inline]
-    pub fn as_packed_seq(&self) -> Option<&[u8]> {
+    pub const fn as_packed_seq(&self) -> Option<&[u8]> {
         match self {
             Self::PackedSeq(bytes) => Some(bytes),
             _ => None,
@@ -258,7 +274,8 @@ impl<'a> DynToken<'a> {
     /// Decode a single item of this type, as a sequence of length 1.
     #[inline]
     pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
-        // This is what `Self::FixedSeq(vec![self.clone()], 1).decode_populate()`
+        // This is what
+        // `Self::FixedSeq(vec![self.clone()], 1).decode_populate()`
         // would do, so we skip the allocation.
         self.decode_populate(dec)
     }

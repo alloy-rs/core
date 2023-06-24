@@ -29,7 +29,7 @@ extern crate alloc;
 
 mod no_std_prelude {
     pub(crate) use alloc::{
-        borrow::{Borrow, ToOwned},
+        borrow::{Borrow, Cow, ToOwned},
         boxed::Box,
         string::{String, ToString},
         vec::Vec,

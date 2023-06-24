@@ -56,7 +56,7 @@ fn dyn_abi_encode(c: &mut Criterion) {
         b.iter(|| {
             let ty = DynSolType::String;
             let value = DynSolValue::String(input.clone());
-            ty.encode_single(black_box(value))
+            ty.encode_single(black_box(&value))
         });
     });
 
@@ -74,7 +74,7 @@ fn dyn_abi_encode(c: &mut Criterion) {
         let ty = DynSolType::Tuple(tys);
         let input = encode_struct_sol_values();
         let input = DynSolValue::Tuple(input.to_vec());
-        b.iter(|| ty.encode_single(black_box(&input).clone()));
+        b.iter(|| ty.encode_single(black_box(&input)));
     });
 
     g.finish();

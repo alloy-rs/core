@@ -1,4 +1,7 @@
-use crate::{no_std_prelude::*, Word};
+use crate::{
+    no_std_prelude::{Cow, *},
+    DynToken, Word,
+};
 use alloy_primitives::{Address, I256, U256};
 
 /// This type represents a Solidity value that has been decoded into rust. It
@@ -218,6 +221,47 @@ impl DynSolValue {
         let mut buf = Vec::new();
         self.encode_packed_to(&mut buf);
         buf
+    }
+
+    /// Tokenize this value into a [`DynToken`].
+    pub fn tokenize(&self) -> DynToken<'_> {
+        match self {
+            DynSolValue::Address(a) => (*a).into(),
+            DynSolValue::Bool(b) => Word::with_last_byte(*b as u8).into(),
+            DynSolValue::Bytes(buf) => DynToken::PackedSeq(buf),
+            DynSolValue::FixedBytes(buf, _) => (*buf).into(),
+            DynSolValue::Int(int, _) => int.to_be_bytes::<32>().into(),
+            DynSolValue::Uint(uint, _) => uint.to_be_bytes::<32>().into(),
+            DynSolValue::String(s) => DynToken::PackedSeq(s.as_bytes()),
+            DynSolValue::Tuple(t) => DynToken::from_fixed_seq(t),
+            DynSolValue::Array(t) => DynToken::from_dyn_seq(t),
+            DynSolValue::FixedArray(t) => DynToken::from_fixed_seq(t),
+            DynSolValue::CustomStruct { tuple, .. } => DynToken::from_fixed_seq(tuple),
+            DynSolValue::CustomValue { inner, .. } => (*inner).into(),
+        }
+    }
+
+    /// Encode this value into a byte array.
+    pub fn encode(&self) -> Vec<u8> {
+        let tokens = self.tokenize();
+        let mut encoder = Default::default();
+
+        match &tokens {
+            DynToken::Word(_) | DynToken::PackedSeq(_) => {
+                DynToken::FixedSeq(Cow::Borrowed(&[tokens]), 1)
+                    .encode_sequence(&mut encoder)
+                    .unwrap()
+            }
+            DynToken::FixedSeq(_, _) | DynToken::DynSeq { .. } => {
+                tokens.encode_sequence(&mut encoder).unwrap()
+            }
+        }
+        encoder.into_bytes()
+    }
+
+    ///
+    pub fn detokenize_populate() -> Self {
+        todo!()
     }
 }
 

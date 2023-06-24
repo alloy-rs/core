@@ -91,7 +91,7 @@ impl DynSolType {
             (DynSolType::Bool, DynSolValue::Bool(val)) => Ok(DynToken::Word(
                 alloy_sol_types::Encodable::<sol_data::Bool>::to_tokens(val).0,
             )),
-            (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(&val)),
+            (DynSolType::Bytes, DynSolValue::Bytes(val)) => Ok(DynToken::PackedSeq(val)),
             (DynSolType::FixedBytes(len), DynSolValue::FixedBytes(word, size)) => {
                 if size != len {
                     return Err(crate::Error::custom(format!(
@@ -120,7 +120,7 @@ impl DynSolType {
             }
             (DynSolType::Array(t), DynSolValue::Array(values)) => {
                 let contents: Vec<_> = values
-                    .into_iter()
+                    .iter()
                     .map(|val| t.tokenize(val))
                     .collect::<Result<_, _>>()?;
                 let template = Box::new(contents.first().unwrap().clone());
@@ -139,7 +139,7 @@ impl DynSolType {
                 }
                 Ok(DynToken::FixedSeq(
                     tokens
-                        .into_iter()
+                        .iter()
                         .map(|token| t.tokenize(token))
                         .collect::<Result<_, _>>()?,
                     *size,
@@ -195,7 +195,7 @@ impl DynSolType {
                 let len = tuple.len();
                 let tuple = tuple
                     .iter()
-                    .zip(tuple_val.into_iter())
+                    .zip(tuple_val.iter())
                     .map(|(ty, token)| ty.tokenize(token))
                     .collect::<Result<_, _>>()?;
                 Ok(DynToken::FixedSeq(tuple, len))
@@ -385,7 +385,7 @@ impl DynSolType {
     /// type. Is a no-op if this type or the values are not a sequence.
     pub fn encode_sequence(&self, values: &DynSolValue) -> Result<Vec<u8>> {
         let mut encoder = crate::Encoder::default();
-        self.tokenize(&values)?.encode_sequence(&mut encoder)?;
+        self.tokenize(values)?.encode_sequence(&mut encoder)?;
         Ok(encoder.into_bytes())
     }
 
