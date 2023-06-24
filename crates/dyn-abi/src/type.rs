@@ -215,7 +215,7 @@ impl DynSolType {
             ),
             DynSolType::Array(t) => DynToken::DynSeq {
                 contents: Default::default(),
-                template: Box::new(t.empty_dyn_token()),
+                template: Some(Box::new(t.empty_dyn_token())),
             },
             DynSolType::FixedArray(t, size) => {
                 DynToken::FixedSeq(vec![t.empty_dyn_token(); *size].into(), *size)

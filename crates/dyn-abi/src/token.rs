@@ -17,8 +17,11 @@ pub enum DynToken<'a> {
     DynSeq {
         /// The contents of the dynamic sequence.
         contents: Cow<'a, [DynToken<'a>]>,
-        /// The type of the dynamic sequence.
-        template: Box<DynToken<'a>>,
+        /// The type template of the dynamic sequence.
+        /// This is used only when decoding. It indicates what the token type
+        /// of the sequence is. During tokenization of data, the type of the
+        /// contents is known, so this is not needed.
+        template: Option<Box<DynToken<'a>>>,
     },
     /// A packed sequence (string or bytes).
     PackedSeq(&'a [u8]),
@@ -30,22 +33,22 @@ impl<T: Into<Word>> From<T> for DynToken<'_> {
     }
 }
 
-impl<'a> PartialEq<DynToken<'a>> for DynToken<'a> {
-    fn eq(&self, other: &Self) -> bool {
+impl<'a> PartialEq<DynToken<'a>> for DynToken<'_> {
+    fn eq(&self, other: &DynToken<'_>) -> bool {
         match (self, other) {
-            (Self::Word(l0), Self::Word(r0)) => l0 == r0,
-            (Self::FixedSeq(l0, l1), Self::FixedSeq(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::Word(l0), DynToken::Word(r0)) => l0 == r0,
+            (Self::FixedSeq(l0, l1), DynToken::FixedSeq(r0, r1)) => l0 == r0 && l1 == r1,
             (
                 Self::DynSeq {
                     contents: l_contents,
                     ..
                 },
-                Self::DynSeq {
+                DynToken::DynSeq {
                     contents: r_contents,
                     ..
                 },
             ) => l_contents == r_contents,
-            (Self::PackedSeq(l0), Self::PackedSeq(r0)) => l0 == r0,
+            (Self::PackedSeq(l0), DynToken::PackedSeq(r0)) => l0 == r0,
             _ => false,
         }
     }
@@ -63,10 +66,9 @@ impl<'a> DynToken<'a> {
     /// Instantiate a DynToken from a dynamic sequence of values.
     pub fn from_dyn_seq(seq: &'a [DynSolValue]) -> Self {
         let tokens = seq.iter().map(|v| v.tokenize()).collect::<Vec<_>>();
-        let template = Box::new(tokens[0].clone());
         Self::DynSeq {
             contents: Cow::Owned(tokens),
-            template,
+            template: None,
         }
     }
 
@@ -135,9 +137,13 @@ impl<'a> DynToken<'a> {
             Self::DynSeq { contents, template } => {
                 let mut child = dec.take_indirection()?;
                 let size = child.take_u32()? as usize;
-                let mut new_tokens = Vec::with_capacity(size);
+                let mut new_tokens: Vec<DynToken<'a>> = Vec::with_capacity(size);
                 for _ in 0..size {
-                    let mut t = (**template).clone();
+                    let mut t = if let Some(item) = new_tokens.first() {
+                        item.clone()
+                    } else {
+                        *(template.take().unwrap())
+                    };
                     t.decode_populate(&mut child)?;
                     new_tokens.push(t);
                 }
