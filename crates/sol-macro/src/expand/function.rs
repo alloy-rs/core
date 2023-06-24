@@ -125,8 +125,8 @@ fn expand_call(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream>
 
             #[automatically_derived]
             impl ::alloy_sol_types::SolCall for #call_name {
-                type Tuple<'a> = #call_tuple;
-                type Token<'a> = <Self::Tuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
+                type Arguments<'a> = #call_tuple;
+                type Token<'a> = <Self::Arguments<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
 
                 type Return = #return_name;
 
@@ -136,7 +136,7 @@ fn expand_call(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream>
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
-                fn new<'a>(tuple: <Self::Tuple<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
+                fn new<'a>(tuple: <Self::Arguments<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 

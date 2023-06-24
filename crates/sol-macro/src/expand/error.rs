@@ -51,13 +51,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
 
             #[automatically_derived]
             impl ::alloy_sol_types::SolError for #name {
-                type Tuple<'a> = UnderlyingSolTuple<'a>;
-                type Token<'a> = <Self::Tuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
+                type Parameters<'a> = UnderlyingSolTuple<'a>;
+                type Token<'a> = <Self::Parameters<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
 
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
-                fn new<'a>(tuple: <Self::Tuple<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
+                fn new<'a>(tuple: <Self::Parameters<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 
