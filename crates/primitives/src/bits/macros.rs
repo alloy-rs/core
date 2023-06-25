@@ -77,7 +77,7 @@ macro_rules! wrap_fixed_bytes {
         impl ::core::convert::From<$name> for [u8; $n] {
             #[inline]
             fn from(value: $name) -> Self {
-                value.0.0
+                value.0 .0
             }
         }
 
@@ -91,28 +91,28 @@ macro_rules! wrap_fixed_bytes {
         impl ::core::convert::AsRef<[u8; $n]> for $name {
             #[inline]
             fn as_ref(&self) -> &[u8; $n] {
-                &self.0.0
+                &self.0 .0
             }
         }
 
         impl ::core::convert::AsMut<[u8; $n]> for $name {
             #[inline]
             fn as_mut(&mut self) -> &mut [u8; $n] {
-                &mut self.0.0
+                &mut self.0 .0
             }
         }
 
         impl ::core::convert::AsRef<[u8]> for $name {
             #[inline]
             fn as_ref(&self) -> &[u8] {
-                &self.0.0
+                &self.0 .0
             }
         }
 
         impl ::core::convert::AsMut<[u8]> for $name {
             #[inline]
             fn as_mut(&mut self) -> &mut [u8] {
-                &mut self.0.0
+                &mut self.0 .0
             }
         }
 
@@ -173,7 +173,7 @@ macro_rules! wrap_fixed_bytes {
             /// Returns the inner bytes array.
             #[inline]
             pub const fn into_array(self) -> [u8; $n] {
-                self.0.0
+                self.0 .0
             }
 
             /// Returns `true` if all bits set in `b` are also set in `self`.
