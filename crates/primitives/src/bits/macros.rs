@@ -173,7 +173,7 @@ macro_rules! wrap_fixed_bytes {
             /// Returns the inner bytes array.
             #[inline]
             pub const fn into_array(self) -> [u8; $n] {
-                self.0 .0
+                self.0.0
             }
 
             /// Returns `true` if all bits set in `b` are also set in `self`.
@@ -205,7 +205,7 @@ macro_rules! wrap_fixed_bytes {
     };
 }
 
-// Extra traits that are cannot be derived automatically
+// Extra traits that cannot be derived automatically
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_fixed_bytes_traits {
@@ -272,7 +272,7 @@ macro_rules! impl_fixed_bytes_traits {
     };
 
     ($t:ty, $n:tt $(, $const:ident)?) => {
-        // // Borrow is not automatically implemented for references
+        // Borrow is not automatically implemented for references
         $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for $t);
         $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for &$t);
         $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for &mut $t);
