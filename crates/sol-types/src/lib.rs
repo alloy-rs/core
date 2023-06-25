@@ -83,8 +83,9 @@
 //!     c: vec![Default::default()],
 //! };
 //!
-//! // The domain macro lets you easily define an EIP-712 domain object :)
-//! let my_domain = alloy_sol_types::domain!(
+//! // The `eip712_domain` macro lets you easily define an EIP-712 domain
+//! // object :)
+//! let my_domain = alloy_sol_types::eip712_domain!(
 //!    name: "MyDomain",
 //!    version: "1",
 //! );
