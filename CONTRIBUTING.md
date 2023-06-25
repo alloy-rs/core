@@ -114,6 +114,12 @@ usually a good idea to first open an issue describing the change to solicit
 feedback and guidance. This will increase the likelihood of the PR getting
 merged.
 
+When opening a PR **please select the "Allow Edits From Maintainers" option**.
+Alloy maintains strict standards for code quality and style, as well as
+commit signing. This option allows us to make small changes to your PR to bring
+it in line with these standards. It helps us get your PR in faster, and with
+less work from you.
+
 ### Cargo Commands
 
 This section lists some commonly needed commands.
