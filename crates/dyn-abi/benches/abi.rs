@@ -59,10 +59,22 @@ fn dyn_abi_encode(c: &mut Criterion) {
         });
     });
 
-    g.bench_function("struct", |b| {
+    g.bench_function("tokenize_struct", |b| {
+        let input = encode_struct_sol_values();
+        let input = DynSolValue::Tuple(input.to_vec());
+        b.iter(|| black_box(&input).tokenize());
+    });
+
+    g.bench_function("new_struct", |b| {
         let input = encode_struct_sol_values();
         let input = DynSolValue::Tuple(input.to_vec());
         b.iter(|| black_box(&input).encode());
+    });
+
+    g.bench_function("struct", |b| {
+        let input = encode_struct_sol_values();
+        let input = DynSolValue::Tuple(input.to_vec());
+        b.iter(|| black_box(&input).old_encode());
     });
 
     g.finish();

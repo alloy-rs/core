@@ -3,6 +3,7 @@ use crate::{
     DynToken, Word,
 };
 use alloy_primitives::{Address, I256, U256};
+use alloy_sol_types::Encoder;
 
 /// This type represents a Solidity value that has been decoded into rust. It
 /// is broadly similar to `serde_json::Value` in that it is an enum of possible
@@ -64,6 +65,19 @@ impl DynSolValue {
             Self::CustomStruct { name, .. } => Cow::Borrowed(name),
             Self::CustomValue { name, .. } => Cow::Borrowed(name),
         }
+    }
+
+    /// Trust if this value is encoded as a single word. False otherwise.
+    pub fn is_word(&self) -> bool {
+        matches!(
+            self,
+            Self::Address(_)
+                | Self::Bool(_)
+                | Self::FixedBytes(_, _)
+                | Self::Int(_, _)
+                | Self::Uint(_, _)
+                | Self::CustomValue { .. }
+        )
     }
 
     /// Fallible cast to a single word. Will succeed for any single-word type.
@@ -193,6 +207,26 @@ impl DynSolValue {
         )
     }
 
+    /// Fallible cast to a fixed-size array. Any of a FixedArray, a Tuple, or a
+    /// `CustomStruct.
+    pub fn as_fixed_seq(&self) -> Option<&[DynSolValue]> {
+        match self {
+            Self::FixedArray(inner) => Some(inner.as_slice()),
+            Self::Tuple(inner) => Some(inner.as_slice()),
+            Self::CustomStruct { tuple, .. } => Some(tuple.as_slice()),
+            _ => None,
+        }
+    }
+
+    /// Fallible cast to a packed sequence. Any of a String, or a Bytes.
+    pub fn as_packed_seq(&self) -> Option<&[u8]> {
+        match self {
+            Self::String(s) => Some(s.as_bytes()),
+            Self::Bytes(b) => Some(b.as_slice()),
+            _ => None,
+        }
+    }
+
     /// Encodes the packed value and appends it to the end of a byte array.
     pub fn encode_packed_to(&self, buf: &mut Vec<u8>) {
         match self {
@@ -247,60 +281,6 @@ impl DynSolValue {
             DynSolValue::CustomStruct { tuple, .. } => DynToken::from_fixed_seq(tuple),
             DynSolValue::CustomValue { inner, .. } => (*inner).into(),
         }
-    }
-
-    /// Encode this value into a byte array by wrapping it into a 1-element
-    /// sequence.
-    pub fn encode_single(&self) -> Vec<u8> {
-        let tokens = self.tokenize();
-        let mut encoder = Default::default();
-
-        DynToken::FixedSeq(Cow::Borrowed(&[tokens]), 1)
-            .encode_sequence(&mut encoder)
-            .expect("always Ok() for sequences");
-        encoder.into_bytes()
-    }
-
-    /// Encode this value into a byte array suitable for passing to a function.
-    /// If this value is a tuple, it is encoded as is. Otherwise, it is wrapped
-    /// into a 1-element sequence.
-    ///
-    /// ### Example
-    ///
-    /// ```ignore,pseudo-code
-    /// 
-    /// // Encoding for function foo(address)
-    /// DynSolValue::Address(_).encode_params()
-    ///
-    /// // Encoding for function foo(address, uint256)
-    /// DynSolValue::Tuple(
-    ///     vec![
-    ///         DynSolValue::Address(_),
-    ///         DynSolValue::Uint(_, 256),
-    ///     ]
-    /// ).encode_params();
-    /// ```
-    pub fn encode_params(&self) -> Vec<u8> {
-        match self {
-            Self::Tuple(_) => self.encode().expect("tuple is definitely a sequence"),
-            _ => self.encode_single(),
-        }
-    }
-
-    /// If this value is a sequence, encode it into a byte array. If this value
-    /// is not a sequence, return `None`
-    pub fn encode(&self) -> Option<Vec<u8>> {
-        if !self.is_sequence() {
-            return None
-        }
-
-        let mut encoder = Default::default();
-        let tokens = self.tokenize();
-        tokens
-            .encode_sequence(&mut encoder)
-            .expect("tokens is definitely a sequence");
-
-        Some(encoder.into_bytes())
     }
 }
 
@@ -394,5 +374,180 @@ impl From<U256> for DynSolValue {
     #[inline]
     fn from(value: U256) -> Self {
         Self::Uint(value, 256)
+    }
+}
+
+impl DynSolValue {
+    /// Returns `true` if the value is an instance of a dynamically sized type.
+    #[inline]
+    pub fn is_dynamic(&self) -> bool {
+        match self {
+            Self::Address(_) => false,
+            Self::Bool(_) => false,
+            Self::Bytes(_) => true,
+            Self::FixedBytes(_, _) => false,
+            Self::Int(_, _) => false,
+            Self::Uint(_, _) => false,
+            Self::String(_) => true,
+            Self::Tuple(inner) => inner.iter().any(|v| v.is_dynamic()),
+            Self::Array(_) => true,
+            Self::FixedArray(inner) => inner.iter().any(|v| v.is_dynamic()),
+            Self::CustomStruct { tuple, .. } => tuple.iter().any(|v| v.is_dynamic()),
+            Self::CustomValue { .. } => false,
+        }
+    }
+
+    /// Returns the number of words this type uses in the head of the ABI blob.
+    #[inline]
+    pub fn head_words(&self) -> usize {
+        match self.as_fixed_seq() {
+            Some(_) if self.is_dynamic() => 1,
+            Some(inner) => inner.iter().map(Self::head_words).sum(),
+            None => 1,
+        }
+    }
+
+    /// Returns the number of words this type uses in the tail of the ABI blob.
+    #[inline]
+    pub fn tail_words(&self) -> usize {
+        if self.is_word() {
+            return 0
+        }
+
+        if let Some(buf) = self.as_packed_seq() {
+            return 1 + (buf.len() + 31) / 32
+        }
+
+        if let Some(vals) = self.as_fixed_seq() {
+            return self.is_dynamic() as usize * vals.len()
+        }
+
+        if let Some(vals) = self.as_array() {
+            return 1 + vals.iter().map(Self::tail_words).sum::<usize>()
+        }
+
+        unreachable!()
+    }
+
+    /// Append this data to the head of an in-progress blob via the encoder.
+    #[inline]
+    pub fn head_append(&self, enc: &mut Encoder) {
+        if let Some(word) = self.as_word() {
+            return enc.append_word(word)
+        }
+
+        if self.is_dynamic() {
+            return enc.append_indirection()
+        }
+
+        let seq = self
+            .as_fixed_seq()
+            .expect("is definitely a non-dynamic fixed sequence");
+        seq.iter().for_each(|inner| inner.head_append(enc))
+    }
+
+    /// Append this data to the tail of an in-progress blob via the encoder.
+    #[inline]
+    pub fn tail_append(&self, enc: &mut Encoder) {
+        if self.is_word() {
+            return
+        }
+
+        if let Some(buf) = self.as_packed_seq() {
+            return enc.append_packed_seq(buf)
+        }
+
+        if let Some(_) = self.as_fixed_seq() {
+            if self.is_dynamic() {
+                self.encode_sequence(enc).expect("known to be sequence");
+            }
+            return
+        }
+
+        if let Some(sli) = self.as_array() {
+            enc.append_seq_len(sli);
+            self.encode_sequence(enc).expect("known to be sequence");
+        }
+
+        unreachable!()
+    }
+
+    /// Encode this data, if it is a sequence. Error otherwise.
+    pub(crate) fn encode_sequence(&self, enc: &mut Encoder) -> crate::Result<()> {
+        let contents = self
+            .as_fixed_seq()
+            .or_else(|| self.as_array())
+            .ok_or_else(|| crate::Error::custom("Called encode_sequence on non-sequence token"))?;
+
+        let head_words = contents.iter().map(Self::head_words).sum::<usize>();
+        enc.push_offset(head_words as u32);
+
+        contents.iter().for_each(|t| {
+            t.head_append(enc);
+            enc.bump_offset(t.tail_words() as u32);
+        });
+        contents.iter().for_each(|t| t.tail_append(enc));
+        enc.pop_offset();
+
+        Ok(())
+    }
+
+    // TODO
+
+    /// Encode this value into a byte array by wrapping it into a 1-element
+    /// sequence.
+    pub fn encode_single(&self) -> Vec<u8> {
+        let mut encoder = Default::default();
+        let tokens = self.tokenize();
+        DynToken::FixedSeq(Cow::Borrowed(&[tokens]), 1)
+            .encode_sequence(&mut encoder)
+            .expect("always Ok() for sequences");
+        encoder.into_bytes()
+    }
+
+    // TODO:
+
+    /// Encode this value into a byte array suitable for passing to a function.
+    /// If this value is a tuple, it is encoded as is. Otherwise, it is wrapped
+    /// into a 1-element sequence.
+    ///
+    /// ### Example
+    ///
+    /// ```ignore,pseudo-code
+    /// 
+    /// // Encoding for function foo(address)
+    /// DynSolValue::Address(_).encode_params()
+    ///
+    /// // Encoding for function foo(address, uint256)
+    /// DynSolValue::Tuple(
+    ///     vec![
+    ///         DynSolValue::Address(_),
+    ///         DynSolValue::Uint(_, 256),
+    ///     ]
+    /// ).encode_params();
+    /// ```
+    pub fn encode_params(&self) -> Vec<u8> {
+        match self {
+            Self::Tuple(_) => self.encode().expect(
+                "tuple is definitely a
+    sequence",
+            ),
+            _ => self.encode_single(),
+        }
+    }
+
+    /// If this value is a sequence, encode it into a byte array. If this value
+    /// is not a sequence, return `None`
+    pub fn encode(&self) -> Option<Vec<u8>> {
+        let mut encoder = Default::default();
+        self.encode_sequence(&mut encoder).ok();
+        Some(encoder.into_bytes())
+    }
+
+    /// Encode_2
+    pub fn old_encode(&self) -> Option<Vec<u8>> {
+        let mut encoder = Default::default();
+        self.tokenize().encode_sequence(&mut encoder).ok()?;
+        Some(encoder.into_bytes())
     }
 }

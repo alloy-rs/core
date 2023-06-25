@@ -99,6 +99,15 @@ impl<'a> DynToken<'a> {
         }
     }
 
+    /// Fallible cast into a sequence, dynamic or fixed-size
+    pub fn as_token_seq(&self) -> Option<&[DynToken<'a>]> {
+        match self {
+            Self::FixedSeq(tokens, _) => Some(tokens),
+            Self::DynSeq { contents, .. } => Some(contents),
+            _ => None,
+        }
+    }
+
     /// Fallible cast into a packed sequence.
     #[inline]
     pub const fn as_packed_seq(&self) -> Option<&[u8]> {
@@ -120,6 +129,7 @@ impl<'a> DynToken<'a> {
     }
 
     /// Decodes from a decoder, populating the structure with the decoded data.
+    #[inline]
     pub fn decode_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
         let dynamic = self.is_dynamic();
         match self {
@@ -158,7 +168,6 @@ impl<'a> DynToken<'a> {
     #[inline]
     pub fn head_words(&self) -> usize {
         match self {
-            Self::Word(_) => 1,
             Self::FixedSeq(tokens, _) => {
                 if self.is_dynamic() {
                     1
@@ -166,8 +175,7 @@ impl<'a> DynToken<'a> {
                     tokens.iter().map(Self::head_words).sum()
                 }
             }
-            Self::DynSeq { .. } => 1,
-            Self::PackedSeq(_) => 1,
+            _ => 1,
         }
     }
 
@@ -185,6 +193,7 @@ impl<'a> DynToken<'a> {
     }
 
     /// Append this data to the head of an in-progress blob via the encoder.
+    #[inline]
     pub fn head_append(&self, enc: &mut Encoder) {
         match self {
             Self::Word(word) => enc.append_word(*word),
@@ -195,8 +204,7 @@ impl<'a> DynToken<'a> {
                     tokens.iter().for_each(|inner| inner.head_append(enc))
                 }
             }
-            Self::DynSeq { .. } => enc.append_indirection(),
-            Self::PackedSeq(_) => enc.append_indirection(),
+            _ => enc.append_indirection(),
         }
     }
 
@@ -219,43 +227,30 @@ impl<'a> DynToken<'a> {
     }
 
     /// Encode this data, if it is a sequence. Error otherwise.
-    pub(crate) fn encode_sequence(&self, enc: &mut Encoder) -> Result<()> {
-        match self {
-            Self::FixedSeq(tokens, _) => {
-                let head_words = tokens.iter().map(Self::head_words).sum::<usize>();
-                enc.push_offset(head_words as u32);
-                for t in tokens.iter() {
-                    t.head_append(enc);
-                    enc.bump_offset(t.tail_words() as u32);
-                }
-                for t in tokens.iter() {
-                    t.tail_append(enc);
-                }
-                enc.pop_offset();
+    #[inline]
+    pub fn encode_sequence(&self, enc: &mut Encoder) -> Result<()> {
+        if let Some(contents) = self.as_token_seq() {
+            let head_words = contents.iter().map(Self::head_words).sum::<usize>();
+            enc.push_offset(head_words as u32);
+            for t in contents.iter() {
+                t.head_append(enc);
+                enc.bump_offset(t.tail_words() as u32);
             }
-            Self::DynSeq { contents, .. } => {
-                let head_words = contents.iter().map(Self::head_words).sum::<usize>();
-                enc.push_offset(head_words as u32);
-                for t in contents.iter() {
-                    t.head_append(enc);
-                    enc.bump_offset(t.tail_words() as u32);
-                }
-                for t in contents.iter() {
-                    t.tail_append(enc);
-                }
-                enc.pop_offset();
+            for t in contents.iter() {
+                t.tail_append(enc);
             }
-            _ => {
-                return Err(Error::custom(
-                    "Called encode_sequence on non-sequence token",
-                ))
-            }
+            enc.pop_offset();
+            Ok(())
+        } else {
+            Err(Error::custom(
+                "Called encode_sequence on non-sequence token",
+            ))
         }
-        Ok(())
     }
 
     /// Decode a sequence from the decoder, populating the data by consuming
     /// decoder words.
+    #[inline]
     pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
         match self {
             Self::FixedSeq(buf, _) => {
