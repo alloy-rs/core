@@ -1,4 +1,4 @@
-use alloy_sol_types::{define_udt, domain};
+use alloy_sol_types::{define_udt, eip712_domain};
 
 #[allow(clippy::missing_const_for_fn)]
 fn ret_ok<T>(_: T) -> alloy_sol_types::Result<()> {
@@ -20,7 +20,7 @@ define_udt!(
 
 #[test]
 fn expand_and_use_macros() {
-    let domain = domain! {
+    let domain = eip712_domain! {
         name: "Hello World",
     };
     assert_eq!(domain.name.as_deref(), Some("Hello World"));
