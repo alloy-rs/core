@@ -1,50 +1,47 @@
-//! Solidity Primitives. These are the types that are built into Solidity.
+//! Solidity types.
+//!
+//! These are the types that are [built into Solidity][ref].
+//!
+//! [ref]: https://docs.soliditylang.org/en/latest/types.html
 
 #![allow(missing_copy_implementations, missing_debug_implementations)]
 
-use crate::{
-    no_std_prelude::{String as RustString, *},
-    token::*,
-    util, Encodable, Result, SolType, Word,
-};
-use alloc::borrow::Cow;
+use crate::{token::*, util, Encodable, Result, SolType, Word};
+use alloc::{borrow::Cow, string::String as RustString, vec::Vec};
 use alloy_primitives::{keccak256, Address as RustAddress, I256, U256};
-use core::{fmt::*, hash::Hash, marker::PhantomData, ops::*};
+use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
-/// Address - `address`
-pub struct Address;
+/// Bool - `bool`
+pub struct Bool;
 
-impl<T> Encodable<Address> for T
-where
-    T: Borrow<[u8; 20]>,
-{
+impl Encodable<Bool> for bool {
     #[inline]
     fn to_tokens(&self) -> WordToken {
-        WordToken::from(*self.borrow())
+        WordToken(Word::with_last_byte(*self as u8))
     }
 }
 
-impl SolType for Address {
-    type RustType = RustAddress;
+impl SolType for Bool {
+    type RustType = bool;
     type TokenType<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
-        "address".into()
-    }
-
-    #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
-        RustAddress::new(token.0[12..].try_into().unwrap())
+        "bool".into()
     }
 
     #[inline]
     fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        if util::check_zeroes(&token.0[..12]) {
+        if util::check_bool(token.0) {
             Ok(())
         } else {
             Err(Self::type_check_fail(token.as_slice()))
         }
+    }
+
+    #[inline]
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+        token.0 != Word::ZERO
     }
 
     #[inline]
@@ -54,57 +51,7 @@ impl SolType for Address {
 
     #[inline]
     fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
-        out.extend_from_slice(rust.as_ref());
-    }
-}
-
-/// Bytes - `bytes`
-pub struct Bytes;
-
-impl<T> Encodable<Bytes> for T
-where
-    T: AsRef<[u8]>,
-{
-    #[inline]
-    fn to_tokens(&self) -> PackedSeqToken<'_> {
-        PackedSeqToken::from(self.as_ref())
-    }
-}
-
-impl SolType for Bytes {
-    type RustType = Vec<u8>;
-    type TokenType<'a> = PackedSeqToken<'a>;
-
-    const ENCODED_SIZE: Option<usize> = None;
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        "bytes".into()
-    }
-
-    #[inline]
-    fn encoded_size(_data: &Self::RustType) -> usize {
-        32 + util::padded_len(_data.borrow())
-    }
-
-    #[inline]
-    fn type_check(_token: &Self::TokenType<'_>) -> Result<()> {
-        Ok(())
-    }
-
-    #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
-        token.into_vec()
-    }
-
-    #[inline]
-    fn eip712_data_word(rust: &Self::RustType) -> Word {
-        keccak256(Self::encode_packed(rust))
-    }
-
-    #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
-        out.extend_from_slice(rust);
+        out.push(*rust as u8);
     }
 }
 
@@ -222,37 +169,37 @@ where
     }
 }
 
-/// Bool - `bool`
-pub struct Bool;
+/// Address - `address`
+pub struct Address;
 
-impl Encodable<Bool> for bool {
+impl<T: Borrow<[u8; 20]>> Encodable<Address> for T {
     #[inline]
     fn to_tokens(&self) -> WordToken {
-        Word::with_last_byte(*self as u8).into()
+        WordToken::from(*self.borrow())
     }
 }
 
-impl SolType for Bool {
-    type RustType = bool;
+impl SolType for Address {
+    type RustType = RustAddress;
     type TokenType<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
-        "bool".into()
-    }
-
-    #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        if util::check_bool(token.0) {
-            Ok(())
-        } else {
-            Err(Self::type_check_fail(token.as_slice()))
-        }
+        "address".into()
     }
 
     #[inline]
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
-        token.0 != Word::ZERO
+        RustAddress::from_word(token.0)
+    }
+
+    #[inline]
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
+        if util::check_zeroes(&token.0[..12]) {
+            Ok(())
+        } else {
+            Err(Self::type_check_fail(token.as_slice()))
+        }
     }
 
     #[inline]
@@ -262,14 +209,61 @@ impl SolType for Bool {
 
     #[inline]
     fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
-        out.push(*rust as u8);
+        out.extend_from_slice(rust.as_ref());
+    }
+}
+
+/// Bytes - `bytes`
+pub struct Bytes;
+
+impl<T: AsRef<[u8]>> Encodable<Bytes> for T {
+    #[inline]
+    fn to_tokens(&self) -> PackedSeqToken<'_> {
+        PackedSeqToken(self.as_ref())
+    }
+}
+
+impl SolType for Bytes {
+    type RustType = Vec<u8>;
+    type TokenType<'a> = PackedSeqToken<'a>;
+
+    const ENCODED_SIZE: Option<usize> = None;
+
+    #[inline]
+    fn sol_type_name() -> Cow<'static, str> {
+        "bytes".into()
+    }
+
+    #[inline]
+    fn encoded_size(_data: &Self::RustType) -> usize {
+        32 + util::padded_len(_data.borrow())
+    }
+
+    #[inline]
+    fn type_check(_token: &Self::TokenType<'_>) -> Result<()> {
+        Ok(())
+    }
+
+    #[inline]
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+        token.into_vec()
+    }
+
+    #[inline]
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
+        keccak256(Self::encode_packed(rust))
+    }
+
+    #[inline]
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        out.extend_from_slice(rust);
     }
 }
 
 /// Array - `T[]`
 pub struct Array<T: SolType>(PhantomData<T>);
 
-impl<T, U> Encodable<Array<T>> for Vec<U>
+impl<T, U> Encodable<Array<T>> for [U]
 where
     T: SolType,
     U: Borrow<T::RustType>,
@@ -280,10 +274,18 @@ where
     }
 }
 
-impl<T> SolType for Array<T>
+impl<T, U> Encodable<Array<T>> for Vec<U>
 where
     T: SolType,
+    U: Borrow<T::RustType>,
 {
+    #[inline]
+    fn to_tokens(&self) -> DynSeqToken<T::TokenType<'_>> {
+        <[U] as Encodable<Array<T>>>::to_tokens(self)
+    }
+}
+
+impl<T: SolType> SolType for Array<T> {
     type RustType = Vec<T::RustType>;
     type TokenType<'a> = DynSeqToken<T::TokenType<'a>>;
 
@@ -331,10 +333,7 @@ where
 /// String - `string`
 pub struct String;
 
-impl<T> Encodable<String> for T
-where
-    T: AsRef<str>,
-{
+impl<T: AsRef<str>> Encodable<String> for T {
     #[inline]
     fn to_tokens(&self) -> <String as SolType>::TokenType<'_> {
         self.as_ref().as_bytes().into()
@@ -390,14 +389,15 @@ impl SolType for String {
 #[derive(Clone, Copy, Debug)]
 pub struct FixedBytes<const N: usize>;
 
-impl<const N: usize> Encodable<FixedBytes<N>> for [u8; N]
+impl<const N: usize, T> Encodable<FixedBytes<N>> for T
 where
     ByteCount<N>: SupportedFixedBytes,
+    T: Borrow<[u8; N]>,
 {
     #[inline]
     fn to_tokens(&self) -> <FixedBytes<N> as SolType>::TokenType<'_> {
         let mut word = Word::ZERO;
-        word[..N].copy_from_slice(self);
+        word[..N].copy_from_slice(self.borrow());
         word.into()
     }
 }
@@ -445,8 +445,8 @@ pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 
 impl<T, U, const N: usize> Encodable<FixedArray<T, N>> for [U; N]
 where
-    U: Borrow<T::RustType>,
     T: SolType,
+    U: Borrow<T::RustType>,
 {
     #[inline]
     fn to_tokens(&self) -> <FixedArray<T, N> as SolType>::TokenType<'_> {
@@ -456,10 +456,7 @@ where
     }
 }
 
-impl<T, const N: usize> SolType for FixedArray<T, N>
-where
-    T: SolType,
-{
+impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     type RustType = [T::RustType; N];
     type TokenType<'a> = FixedSeqToken<T::TokenType<'a>, N>;
 
@@ -1019,12 +1016,9 @@ mod tests {
             56: 0x0102030405060708u64 => "0000000000000000000000000000000000000000000000000002030405060708",
             64: 0x0102030405060708u64 => "0000000000000000000000000000000000000000000000000102030405060708",
 
-            160: word
-                => "0000000000000000000000000d0e0f101112131415161718191a1b1c1d1e1f20",
-            200: word
-                => "0000000000000008090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
-            256: word
-                => "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+            160: word => "0000000000000000000000000d0e0f101112131415161718191a1b1c1d1e1f20",
+            200: word => "0000000000000008090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+            256: word => "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
         }
     }
 

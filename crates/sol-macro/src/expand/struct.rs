@@ -92,7 +92,7 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         const _: () = {
-            use ::alloy_sol_types::no_std_prelude::*;
+            use ::alloy_sol_types::private::*;
 
             #convert
 
@@ -155,7 +155,7 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                     let mut out = Vec::new();
                     <Self as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust, &mut out);
                     ::alloy_sol_types::token::WordToken(
-                        ::alloy_sol_types::keccak256(out)
+                        ::alloy_sol_types::private::keccak256(out)
                     )
                 }
             }

@@ -254,6 +254,17 @@ macro_rules! kw_enum {
         }
 
         impl $name {
+            pub fn parse_opt(input: ::syn::parse::ParseStream<'_>) -> ::syn::Result<Option<Self>> {
+                $(
+                    if input.peek($crate::kw::$kw) {
+                        input.parse::<$crate::kw::$kw>().map(|kw| Some(Self::$variant(kw)))
+                    } else
+                )+
+                {
+                    Ok(None)
+                }
+            }
+
             pub fn peek(lookahead: &::syn::parse::Lookahead1<'_>) -> bool {
                 $( lookahead.peek($crate::kw::$kw) )||+
             }

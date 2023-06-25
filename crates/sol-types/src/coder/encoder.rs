@@ -8,11 +8,11 @@
 // except according to those terms.
 
 use crate::{
-    no_std_prelude::*,
     token::TokenSeq,
     util::{pad_u32, words_for},
     TokenType, Word,
 };
+use alloc::vec::Vec;
 use core::mem;
 
 /// An ABI encoder.
@@ -171,12 +171,10 @@ pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+    use crate::{sol_data, SolType};
+    use alloc::{borrow::ToOwned, string::ToString};
     use alloy_primitives::{Address, U256};
     use hex_literal::hex;
-
-    #[cfg(not(feature = "std"))]
-    use crate::no_std_prelude::*;
-    use crate::{sol_data, SolType};
 
     #[test]
     fn encode_address() {

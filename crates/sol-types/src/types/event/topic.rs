@@ -1,7 +1,6 @@
 use crate::{sol_data::*, token::WordToken, SolType};
 use alloc::vec::Vec;
 use alloy_primitives::keccak256;
-use core::borrow::Borrow;
 
 /// A Solidity event topic.
 ///
@@ -126,9 +125,8 @@ macro_rules! array_impl {
 
         #[inline]
         fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
-            let b = rust.borrow();
-            out.reserve(Self::topic_preimage_length(b));
-            for t in b {
+            out.reserve(Self::topic_preimage_length(rust));
+            for t in rust {
                 $T::encode_topic_preimage(t, out);
             }
         }
@@ -136,7 +134,7 @@ macro_rules! array_impl {
         #[inline]
         fn encode_topic(rust: &Self::RustType) -> WordToken {
             let mut out = Vec::new();
-            Self::encode_topic_preimage(rust.borrow(), &mut out);
+            Self::encode_topic_preimage(rust, &mut out);
             WordToken(keccak256(out))
         }
     };
@@ -156,13 +154,13 @@ macro_rules! tuple_impls {
         impl<$($t: EventTopic,)+> EventTopic for ($($t,)+) {
             #[inline]
             fn topic_preimage_length(rust: &Self::RustType) -> usize {
-                let ($($t,)+) = rust.borrow();
+                let ($($t,)+) = rust;
                 0usize $( + <$t>::topic_preimage_length($t) )+
             }
 
             #[inline]
             fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
-                let b @ ($($t,)+) = rust.borrow();
+                let b @ ($($t,)+) = rust;
                 out.reserve(Self::topic_preimage_length(b));
                 $(
                     <$t>::encode_topic_preimage($t, out);
@@ -172,7 +170,7 @@ macro_rules! tuple_impls {
             #[inline]
             fn encode_topic(rust: &Self::RustType) -> WordToken {
                 let mut out = Vec::new();
-                Self::encode_topic_preimage(rust.borrow(), &mut out);
+                Self::encode_topic_preimage(rust, &mut out);
                 WordToken(keccak256(out))
             }
         }

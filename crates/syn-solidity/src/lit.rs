@@ -1,12 +1,10 @@
-use std::fmt;
-
+use crate::kw;
 use proc_macro2::Span;
+use std::fmt;
 use syn::{
     parse::{Parse, ParseStream},
     Result,
 };
-
-use crate::kw;
 
 /// A string literal.
 #[derive(Clone)]

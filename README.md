@@ -1,6 +1,7 @@
 # Alloy
 
 Core libraries at the root of the Rust Ethereum ecosystem.
+
 Alloy is a rewrite of ethers-rs from the ground up, with exciting new features,
 high performance & excellent docs.
 Ethers-rs will continue to be maintained until we have feature-parity in Alloy.

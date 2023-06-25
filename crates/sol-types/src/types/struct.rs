@@ -2,7 +2,8 @@
 //! Solidity structs logic, particularly for EIP-712 encoding/decoding.
 
 use super::{r#type::Encodable, SolType};
-use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, TokenType, Word};
+use crate::{token::TokenSeq, Eip712Domain, TokenType, Word};
+use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, B256};
 
 type TupleFor<'a, T> = <T as SolStruct>::Tuple<'a>;

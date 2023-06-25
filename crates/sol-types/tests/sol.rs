@@ -1,5 +1,5 @@
 use alloy_primitives::{keccak256, Address, U256};
-use alloy_sol_types::{no_std_prelude::*, sol, SolCall, SolError, SolType};
+use alloy_sol_types::{sol, SolCall, SolError, SolType};
 
 sol! {
     struct MyStruct {

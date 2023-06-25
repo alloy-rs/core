@@ -1,10 +1,8 @@
-use crate::{no_std_prelude::*, token::TokenSeq, Result, TokenType, Word};
+use crate::{token::TokenSeq, Result, TokenType, Word};
+use alloc::{borrow::Cow, string::String, vec::Vec};
 
 /// An encodable is any type that may be encoded via a given `SolType`.
-pub trait Encodable<T>
-where
-    T: SolType + ?Sized,
-{
+pub trait Encodable<T: ?Sized + SolType> {
     /// Convert the value to tokens.
     fn to_tokens(&self) -> T::TokenType<'_>;
 }
@@ -86,12 +84,9 @@ pub trait SolType {
     /// Detokenize.
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType;
 
-    /// Tokenize
-    fn tokenize<E>(rust: &E) -> Self::TokenType<'_>
-    where
-        E: Encodable<Self>,
-    {
-        Encodable::<Self>::to_tokens(rust)
+    /// Tokenize.
+    fn tokenize<E: Encodable<Self>>(rust: &E) -> Self::TokenType<'_> {
+        rust.to_tokens()
     }
 
     /// The encoded struct type (as EIP-712), if any. None for non-structs.

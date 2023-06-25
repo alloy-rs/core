@@ -46,14 +46,14 @@ macro_rules! define_udt {
             /// Return the single encoding of this value, delegating to the
             /// underlying type.
             #[inline]
-            pub fn encode_single(&self) -> $crate::no_std_prelude::Vec<u8> {
+            pub fn encode_single(&self) -> $crate::private::Vec<u8> {
                 <Self as $crate::SolType>::encode_single(&self.0)
             }
 
             /// Return the packed encoding of this value, delegating to the
             /// underlying type.
             #[inline]
-            pub fn encode_packed(&self) -> $crate::no_std_prelude::Vec<u8> {
+            pub fn encode_packed(&self) -> $crate::private::Vec<u8> {
                 <Self as $crate::SolType>::encode_packed(&self.0)
             }
         }
@@ -65,7 +65,7 @@ macro_rules! define_udt {
             const DYNAMIC: bool = false;
 
             #[inline]
-            fn sol_type_name() -> $crate::no_std_prelude::Cow<'static, str> {
+            fn sol_type_name() -> $crate::private::Cow<'static, str> {
                 Self::NAME.into()
             }
 
@@ -87,7 +87,7 @@ macro_rules! define_udt {
             }
 
             #[inline]
-            fn encode_packed_to(rust: &Self::RustType, out: &mut $crate::no_std_prelude::Vec<u8>)
+            fn encode_packed_to(rust: &Self::RustType, out: &mut $crate::private::Vec<u8>)
             {
                 <$underlying as $crate::SolType>::encode_packed_to(rust, out)
             }
@@ -103,7 +103,7 @@ macro_rules! define_udt {
             $(#[$outer])*
             $name,
             underlying: $underlying,
-            type_check: $crate::just_ok,
+            type_check: $crate::private::just_ok,
         );
     };
 
@@ -138,7 +138,7 @@ macro_rules! define_udt {
         $crate::define_udt!(
             $(#[$outer])*
             $name,
-            type_check: $crate::just_ok,
+            type_check: $crate::private::just_ok,
         );
     };
 
