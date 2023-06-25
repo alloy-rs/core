@@ -150,66 +150,7 @@ impl fmt::Display for Type {
 
 impl Parse for Type {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut candidate = if input.peek(Paren) || input.peek(kw::tuple) {
-            Self::Tuple(input.parse()?)
-        } else if input.peek(kw::function) {
-            Self::Function(input.parse()?)
-        } else if input.peek(kw::mapping) {
-            Self::Mapping(input.parse()?)
-        } else if input.peek2(Token![.]) {
-            Self::Custom(input.parse()?)
-        } else if input.peek(Ident::peek_any) {
-            let ident = input.call(Ident::parse_any)?;
-            let span = ident.span();
-            let s = ident.to_string();
-            match s.as_str() {
-                "address" => Self::Address(span, input.parse()?),
-                "bool" => Self::Bool(span),
-                "string" => Self::String(span),
-                s => {
-                    if let Some(s) = s.strip_prefix("bytes") {
-                        match parse_size(s, span)? {
-                            None => Self::custom(ident),
-                            Some(Some(size)) if size.get() > 32 => {
-                                return Err(Error::new(span, "fixed bytes range is 1-32"))
-                            }
-                            Some(None) => Self::Bytes(span),
-                            Some(Some(size)) => Self::FixedBytes(span, size),
-                        }
-                    } else if let Some(s) = s.strip_prefix("int") {
-                        match parse_size(s, span)? {
-                            None => Self::custom(ident),
-                            Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
-                                return Err(Error::new(
-                                    span,
-                                    "intX must be a multiple of 8 up to 256",
-                                ))
-                            }
-                            Some(size) => Self::Int(span, size),
-                        }
-                    } else if let Some(s) = s.strip_prefix("uint") {
-                        match parse_size(s, span)? {
-                            None => Self::custom(ident),
-                            Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
-                                return Err(Error::new(
-                                    span,
-                                    "uintX must be a multiple of 8 up to 256",
-                                ))
-                            }
-                            Some(size) => Self::Uint(span, size),
-                        }
-                    } else {
-                        Self::custom(ident)
-                    }
-                }
-            }
-        } else {
-            return Err(input.error(
-                "expected a Solidity type: \
-                 `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, \
-                 `tuple`, `function`, `mapping`, or a custom type name",
-            ))
-        };
+        let mut candidate = Self::parse_simple(input)?;
 
         // while the next token is a bracket, parse an array size and nest the
         // candidate into an array
@@ -357,6 +298,72 @@ impl Type {
             }
         }
         VisitTypeMut(f).visit_type(self);
+    }
+
+    /// Parses a type from the input, without recursing into arrays.
+    #[inline]
+    fn parse_simple(input: ParseStream<'_>) -> Result<Self> {
+        if input.peek(Paren) || input.peek(kw::tuple) {
+            input.parse().map(Self::Tuple)
+        } else if input.peek(kw::function) {
+            input.parse().map(Self::Function)
+        } else if input.peek(kw::mapping) {
+            input.parse().map(Self::Mapping)
+        } else if input.peek2(Token![.]) {
+            input.parse().map(Self::Custom)
+        } else if input.peek(Ident::peek_any) {
+            let ident = input.call(Ident::parse_any)?;
+            let span = ident.span();
+            let s = ident.to_string();
+            let ret = match s.as_str() {
+                "address" => Self::Address(span, input.parse()?),
+                "bool" => Self::Bool(span),
+                "string" => Self::String(span),
+                s => {
+                    if let Some(s) = s.strip_prefix("bytes") {
+                        match parse_size(s, span)? {
+                            None => Self::custom(ident),
+                            Some(Some(size)) if size.get() > 32 => {
+                                return Err(Error::new(span, "fixed bytes range is 1-32"))
+                            }
+                            Some(None) => Self::Bytes(span),
+                            Some(Some(size)) => Self::FixedBytes(span, size),
+                        }
+                    } else if let Some(s) = s.strip_prefix("int") {
+                        match parse_size(s, span)? {
+                            None => Self::custom(ident),
+                            Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
+                                return Err(Error::new(
+                                    span,
+                                    "intX must be a multiple of 8 up to 256",
+                                ))
+                            }
+                            Some(size) => Self::Int(span, size),
+                        }
+                    } else if let Some(s) = s.strip_prefix("uint") {
+                        match parse_size(s, span)? {
+                            None => Self::custom(ident),
+                            Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
+                                return Err(Error::new(
+                                    span,
+                                    "uintX must be a multiple of 8 up to 256",
+                                ))
+                            }
+                            Some(size) => Self::Uint(span, size),
+                        }
+                    } else {
+                        Self::custom(ident)
+                    }
+                }
+            };
+            Ok(ret)
+        } else {
+            Err(input.error(
+                "expected a Solidity type: \
+                 `address`, `bool`, `string`, `bytesN`, `intN`, `uintN`, \
+                 `tuple`, `function`, `mapping`, or a custom type name",
+            ))
+        }
     }
 }
 

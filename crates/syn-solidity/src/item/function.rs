@@ -91,6 +91,11 @@ impl ItemFunction {
         }
     }
 
+    /// Returns true if the function has a body.
+    pub fn has_implementation(&self) -> bool {
+        matches!(self.body, FunctionBody::Block(_))
+    }
+
     /// Returns the function's arguments tuple type.
     pub fn call_type(&self) -> Type {
         Type::Tuple(self.arguments.iter().map(|arg| arg.ty.clone()).collect())
@@ -200,7 +205,7 @@ impl Returns {
 
     pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
         if input.peek(kw::returns) {
-            Ok(Some(input.parse()?))
+            input.parse().map(Some)
         } else {
             Ok(None)
         }
@@ -217,10 +222,13 @@ pub enum FunctionBody {
 
 impl Parse for FunctionBody {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        if input.peek(Brace) {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(Brace) {
             input.parse().map(Self::Block)
-        } else {
+        } else if lookahead.peek(Token![;]) {
             input.parse().map(Self::Empty)
+        } else {
+            Err(lookahead.error())
         }
     }
 }

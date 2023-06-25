@@ -1,8 +1,7 @@
 //! [`ItemEvent`] expansion.
 
-use crate::expand::r#type::expand_event_tokenize_func;
-
 use super::{anon_name, expand_tuple_types, expand_type, ExpCtxt};
+use crate::expand::r#type::expand_event_tokenize_func;
 use ast::{EventParameter, ItemEvent, SolIdent};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};

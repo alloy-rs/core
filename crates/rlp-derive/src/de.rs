@@ -1,8 +1,7 @@
+use crate::utils::{attributes_include, field_ident, is_optional, parse_struct, EMPTY_STRING_CODE};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Error, Result};
-
-use crate::utils::{attributes_include, field_ident, is_optional, parse_struct, EMPTY_STRING_CODE};
 
 pub(crate) fn impl_decodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
     let body = parse_struct(ast, "RlpDecodable")?;

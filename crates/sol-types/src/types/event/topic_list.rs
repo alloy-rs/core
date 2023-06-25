@@ -1,5 +1,9 @@
 use crate::{token::WordToken, Error, Result, SolType};
 use alloc::borrow::Cow;
+
+mod sealed {
+    pub trait Sealed {}
+}
 use sealed::Sealed;
 
 /// A `TopicList` represents the topics of a Solidity event.
@@ -25,14 +29,10 @@ pub trait TopicList: SolType + Sealed {
         D: Into<WordToken>;
 }
 
-mod sealed {
-    pub trait Sealed {}
-}
-
 macro_rules! impl_topic_list_tuples {
     ($($c:literal => $($t:ident),*;)+) => {$(
-        impl<'aa, $($t: SolType<TokenType<'aa> = WordToken>,)*> sealed::Sealed for ($($t,)*) {}
-        impl<'aa, $($t: SolType<TokenType<'aa> = WordToken>,)*> TopicList for ($($t,)*) {
+        impl<$($t,)*> Sealed for ($($t,)*) {}
+        impl<'a, $($t: SolType<TokenType<'a> = WordToken>,)*> TopicList for ($($t,)*) {
             const COUNT: usize = $c;
 
             fn detokenize<I, D>(topics: I) -> Result<Self::RustType>
@@ -50,7 +50,7 @@ macro_rules! impl_topic_list_tuples {
     )+};
 }
 
-impl sealed::Sealed for () {}
+impl Sealed for () {}
 impl TopicList for () {
     const COUNT: usize = 0;
 

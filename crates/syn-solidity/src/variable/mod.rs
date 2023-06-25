@@ -1,6 +1,5 @@
+use super::{SolIdent, Storage, Type};
 use crate::{utils::tts_until_semi, VariableAttributes};
-
-use super::{kw, SolIdent, Storage, Type};
 use proc_macro2::{Span, TokenStream};
 use std::fmt::{self, Write};
 use syn::{
@@ -96,14 +95,7 @@ impl VariableDeclaration {
         Ok(Self {
             attrs: input.call(Attribute::parse_outer)?,
             ty: input.parse()?,
-            storage: if input.peek(kw::memory)
-                || input.peek(kw::storage)
-                || input.peek(kw::calldata)
-            {
-                Some(input.parse()?)
-            } else {
-                None
-            },
+            storage: input.call(Storage::parse_opt)?,
             // structs must have field names
             name: if for_struct || input.peek(Ident::peek_any) {
                 Some(input.parse()?)
