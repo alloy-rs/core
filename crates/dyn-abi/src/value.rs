@@ -68,7 +68,7 @@ impl DynSolValue {
     }
 
     /// Trust if this value is encoded as a single word. False otherwise.
-    pub fn is_word(&self) -> bool {
+    pub const fn is_word(&self) -> bool {
         matches!(
             self,
             Self::Address(_)
@@ -457,7 +457,7 @@ impl DynSolValue {
             return enc.append_packed_seq(buf)
         }
 
-        if let Some(_) = self.as_fixed_seq() {
+        if self.as_fixed_seq().is_some() {
             if self.is_dynamic() {
                 self.encode_sequence(enc).expect("known to be sequence");
             }
@@ -467,8 +467,10 @@ impl DynSolValue {
         if let Some(sli) = self.as_array() {
             enc.append_seq_len(sli);
             self.encode_sequence(enc).expect("known to be sequence");
+            return
         }
 
+        dbg!(self);
         unreachable!()
     }
 
@@ -492,20 +494,17 @@ impl DynSolValue {
         Ok(())
     }
 
-    // TODO
-
     /// Encode this value into a byte array by wrapping it into a 1-element
     /// sequence.
-    pub fn encode_single(&self) -> Vec<u8> {
-        let mut encoder = Default::default();
-        let tokens = self.tokenize();
-        DynToken::FixedSeq(Cow::Borrowed(&[tokens]), 1)
-            .encode_sequence(&mut encoder)
-            .expect("always Ok() for sequences");
-        encoder.into_bytes()
-    }
+    pub fn encode_single(self) -> Vec<u8> {
+        let mut enc = Default::default();
 
-    // TODO:
+        DynSolValue::FixedArray(vec![self])
+            .encode_sequence(&mut enc)
+            .expect("is definitely a sequence");
+
+        enc.into_bytes()
+    }
 
     /// Encode this value into a byte array suitable for passing to a function.
     /// If this value is a tuple, it is encoded as is. Otherwise, it is wrapped
@@ -526,12 +525,9 @@ impl DynSolValue {
     ///     ]
     /// ).encode_params();
     /// ```
-    pub fn encode_params(&self) -> Vec<u8> {
+    pub fn encode_params(self) -> Vec<u8> {
         match self {
-            Self::Tuple(_) => self.encode().expect(
-                "tuple is definitely a
-    sequence",
-            ),
+            Self::Tuple(_) => self.encode().expect("tuple is definitely a sequence"),
             _ => self.encode_single(),
         }
     }
@@ -541,13 +537,6 @@ impl DynSolValue {
     pub fn encode(&self) -> Option<Vec<u8>> {
         let mut encoder = Default::default();
         self.encode_sequence(&mut encoder).ok();
-        Some(encoder.into_bytes())
-    }
-
-    /// Encode_2
-    pub fn old_encode(&self) -> Option<Vec<u8>> {
-        let mut encoder = Default::default();
-        self.tokenize().encode_sequence(&mut encoder).ok()?;
         Some(encoder.into_bytes())
     }
 }

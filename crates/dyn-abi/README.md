@@ -29,7 +29,7 @@ let uints = DynSolValue::FixedArray(vec![0u8.into(), 1u8.into()]);
 let my_values = DynSolValue::Array(vec![uints]);
 
 // encode
-let encoded = my_values.encode_single();
+let encoded = my_values.clone().encode_single();
 
 // decode
 let decoded = my_type.decode_single(&encoded).unwrap();

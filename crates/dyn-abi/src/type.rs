@@ -28,7 +28,7 @@ struct StructProp {
 /// let my_type = DynSolType::Uint(256);
 /// let my_data: DynSolValue = U256::from(183).into();
 ///
-/// let encoded = my_data.encode_single();
+/// let encoded = my_data.clone().encode_single();
 /// let decoded = my_type.decode_single(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
@@ -36,7 +36,7 @@ struct StructProp {
 /// let my_type = DynSolType::Array(Box::new(DynSolType::Uint(256)));
 /// let my_data = DynSolValue::Array(vec![my_data.clone()]);
 ///
-/// let encoded = my_data.encode_single();
+/// let encoded = my_data.clone().encode_single();
 /// let decoded = my_type.decode_single(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
@@ -276,7 +276,7 @@ mod tests {
             DynToken::FixedSeq(vec![DynToken::Word(word1), DynToken::Word(word2)].into(), 2)
         );
         let mut enc = crate::Encoder::default();
-        token.encode_sequence(&mut enc).unwrap();
+        val.encode_sequence(&mut enc).unwrap();
         assert_eq!(enc.finish(), vec![word1, word2]);
     }
 

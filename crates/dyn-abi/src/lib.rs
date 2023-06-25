@@ -74,7 +74,7 @@ mod tests {
         assert_eq!(detokenized, my_values);
 
         // encode
-        let encoded = my_values.encode_single();
+        let encoded = my_values.clone().encode_single();
 
         // decode
         let mut decoder = Decoder::new(&encoded, true);

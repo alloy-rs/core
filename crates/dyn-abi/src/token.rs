@@ -1,4 +1,4 @@
-use crate::{no_std_prelude::*, Decoder, DynSolValue, Encoder, Error, Result, Word};
+use crate::{no_std_prelude::*, Decoder, DynSolValue, Error, Result, Word};
 use alloc::borrow::Cow;
 use alloy_sol_types::token::{PackedSeqToken, TokenType, WordToken};
 
@@ -162,90 +162,6 @@ impl<'a> DynToken<'a> {
             Self::PackedSeq(buf) => *buf = PackedSeqToken::decode_from(dec)?.0,
         }
         Ok(())
-    }
-
-    /// Returns the number of words this type uses in the head of the ABI blob.
-    #[inline]
-    pub fn head_words(&self) -> usize {
-        match self {
-            Self::FixedSeq(tokens, _) => {
-                if self.is_dynamic() {
-                    1
-                } else {
-                    tokens.iter().map(Self::head_words).sum()
-                }
-            }
-            _ => 1,
-        }
-    }
-
-    /// Returns the number of words this type uses in the tail of the ABI blob.
-    #[inline]
-    pub fn tail_words(&self) -> usize {
-        match self {
-            Self::Word(_) => 0,
-            Self::FixedSeq(_, size) => self.is_dynamic() as usize * *size,
-            Self::DynSeq { contents, .. } => {
-                1 + contents.iter().map(Self::tail_words).sum::<usize>()
-            }
-            Self::PackedSeq(buf) => 1 + (buf.len() + 31) / 32,
-        }
-    }
-
-    /// Append this data to the head of an in-progress blob via the encoder.
-    #[inline]
-    pub fn head_append(&self, enc: &mut Encoder) {
-        match self {
-            Self::Word(word) => enc.append_word(*word),
-            Self::FixedSeq(tokens, _) => {
-                if self.is_dynamic() {
-                    enc.append_indirection();
-                } else {
-                    tokens.iter().for_each(|inner| inner.head_append(enc))
-                }
-            }
-            _ => enc.append_indirection(),
-        }
-    }
-
-    /// Append this data to the tail of an in-progress blob via the encoder.
-    #[inline]
-    pub fn tail_append(&self, enc: &mut Encoder) {
-        match self {
-            Self::Word(_) => {}
-            Self::FixedSeq(_, _) => {
-                if self.is_dynamic() {
-                    self.encode_sequence(enc).expect("known to be sequence");
-                }
-            }
-            Self::DynSeq { contents, .. } => {
-                enc.append_seq_len(contents);
-                self.encode_sequence(enc).expect("known to be sequence");
-            }
-            Self::PackedSeq(buf) => enc.append_packed_seq(buf),
-        }
-    }
-
-    /// Encode this data, if it is a sequence. Error otherwise.
-    #[inline]
-    pub fn encode_sequence(&self, enc: &mut Encoder) -> Result<()> {
-        if let Some(contents) = self.as_token_seq() {
-            let head_words = contents.iter().map(Self::head_words).sum::<usize>();
-            enc.push_offset(head_words as u32);
-            for t in contents.iter() {
-                t.head_append(enc);
-                enc.bump_offset(t.tail_words() as u32);
-            }
-            for t in contents.iter() {
-                t.tail_append(enc);
-            }
-            enc.pop_offset();
-            Ok(())
-        } else {
-            Err(Error::custom(
-                "Called encode_sequence on non-sequence token",
-            ))
-        }
     }
 
     /// Decode a sequence from the decoder, populating the data by consuming
