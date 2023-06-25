@@ -1,10 +1,10 @@
 use crate::{
-    no_std_prelude::*,
     token::{PackedSeqToken, TokenSeq, WordToken},
     Result, SolType, TokenType, Word,
 };
+use alloc::{string::String, vec::Vec};
 use alloy_primitives::U256;
-use core::fmt;
+use core::{borrow::Borrow, fmt};
 
 /// Solidity Error (a tuple with a selector)
 ///

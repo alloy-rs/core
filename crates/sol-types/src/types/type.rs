@@ -1,4 +1,5 @@
-use crate::{no_std_prelude::*, token::TokenSeq, Result, TokenType, Word};
+use crate::{token::TokenSeq, Result, TokenType, Word};
+use alloc::{borrow::Cow, string::String, vec::Vec};
 
 /// An encodable is any type that may be encoded via a given `SolType`.
 pub trait Encodable<T: ?Sized + SolType> {

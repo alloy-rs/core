@@ -7,7 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use crate::no_std_prelude::*;
+use alloc::{borrow::Cow, string::String};
 use core::fmt;
 
 /// ABI result type.

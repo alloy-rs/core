@@ -6,14 +6,10 @@
 
 #![allow(missing_copy_implementations, missing_debug_implementations)]
 
-use crate::{
-    no_std_prelude::{String as RustString, *},
-    token::*,
-    util, Encodable, Result, SolType, Word,
-};
-use alloc::borrow::Cow;
+use crate::{token::*, util, Encodable, Result, SolType, Word};
+use alloc::{borrow::Cow, string::String as RustString, vec::Vec};
 use alloy_primitives::{keccak256, Address as RustAddress, I256, U256};
-use core::{fmt::*, hash::Hash, marker::PhantomData, ops::*};
+use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
 /// Bool - `bool`
 pub struct Bool;

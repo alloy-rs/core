@@ -1,4 +1,5 @@
-use crate::{no_std_prelude::*, token::TokenSeq, Encodable, Result, SolType, TokenType, Word};
+use crate::{token::TokenSeq, Encodable, Result, SolType, TokenType, Word};
+use alloc::vec::Vec;
 
 /// Solidity call (a tuple with a selector).
 ///

@@ -119,8 +119,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                 type TopicList = (#(#topic_list,)*);
 
                 const SIGNATURE: &'static str = #signature;
-                const SIGNATURE_HASH: ::alloy_sol_types::B256 =
-                    ::alloy_sol_types::Word::new(#selector);
+                const SIGNATURE_HASH: ::alloy_sol_types::private::B256 =
+                    ::alloy_sol_types::private::B256::new(#selector);
 
                 const ANONYMOUS: bool = #anonymous;
 

@@ -163,15 +163,6 @@ extern crate alloc;
 #[doc(inline)]
 pub use alloy_sol_macro::sol;
 
-#[doc(hidden)]
-pub mod no_std_prelude {
-    pub use alloc::{
-        borrow::{Borrow, Cow, ToOwned},
-        string::{String, ToString},
-        vec::Vec,
-    };
-}
-
 #[macro_use]
 mod macros;
 
@@ -193,14 +184,30 @@ pub use types::{
 };
 
 mod util;
-#[doc(hidden)]
-pub use util::{just_ok, next_multiple_of_32};
 
 mod eip712;
 pub use eip712::Eip712Domain;
 
-#[doc(hidden)]
-pub use alloy_primitives::{keccak256, B256};
-
 /// The ABI word type.
 pub type Word = alloy_primitives::B256;
+
+// Not public API.
+#[doc(hidden)]
+pub mod private {
+    pub use super::util::{just_ok, next_multiple_of_32};
+    pub use alloc::{
+        borrow::{Borrow, Cow, ToOwned},
+        string::{String, ToString},
+        vec::Vec,
+    };
+    pub use alloy_primitives::{keccak256, FixedBytes, B256, U256};
+    pub use core::{convert::From, default::Default, option::Option, result::Result};
+
+    pub use Option::{None, Some};
+    pub use Result::{Err, Ok};
+
+    #[inline(always)]
+    pub const fn u256(n: u64) -> U256 {
+        U256::from_limbs([n, 0, 0, 0])
+    }
+}

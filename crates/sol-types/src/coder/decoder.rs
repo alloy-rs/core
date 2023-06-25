@@ -8,7 +8,8 @@
 // except according to those terms.
 //
 
-use crate::{encode, no_std_prelude::*, token::TokenSeq, util, Error, Result, TokenType, Word};
+use crate::{encode, token::TokenSeq, util, Error, Result, TokenType, Word};
+use alloc::borrow::Cow;
 use core::{fmt, slice::SliceIndex};
 
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
@@ -243,12 +244,10 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> 
 
 #[cfg(test)]
 mod tests {
+    use crate::{sol_data, util::pad_u32, SolType};
+    use alloc::string::ToString;
     use alloy_primitives::{Address, B256, U256};
     use hex_literal::hex;
-
-    #[cfg(not(feature = "std"))]
-    use crate::no_std_prelude::*;
-    use crate::{sol_data, util::pad_u32, SolType};
 
     #[test]
     fn decode_static_tuple_of_addresses_and_uints() {
