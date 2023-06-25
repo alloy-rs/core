@@ -457,16 +457,16 @@ impl DynSolValue {
             return enc.append_packed_seq(buf)
         }
 
-        if self.as_fixed_seq().is_some() {
+        if let Some(sli) = self.as_fixed_seq() {
             if self.is_dynamic() {
-                self.encode_sequence(enc).expect("known to be sequence");
+                Self::encode_sequence(sli, enc);
             }
             return
         }
 
         if let Some(sli) = self.as_array() {
             enc.append_seq_len(sli);
-            self.encode_sequence(enc).expect("known to be sequence");
+            Self::encode_sequence(sli, enc);
             return
         }
 
@@ -474,12 +474,7 @@ impl DynSolValue {
     }
 
     /// Encode this data, if it is a sequence. Error otherwise.
-    pub(crate) fn encode_sequence(&self, enc: &mut Encoder) -> crate::Result<()> {
-        let contents = self
-            .as_fixed_seq()
-            .or_else(|| self.as_array())
-            .ok_or_else(|| crate::Error::custom("Called encode_sequence on non-sequence token"))?;
-
+    pub(crate) fn encode_sequence(contents: &[Self], enc: &mut Encoder) {
         let head_words = contents.iter().map(Self::head_words).sum::<usize>();
         enc.push_offset(head_words as u32);
 
@@ -489,8 +484,6 @@ impl DynSolValue {
         });
         contents.iter().for_each(|t| t.tail_append(enc));
         enc.pop_offset();
-
-        Ok(())
     }
 
     /// Encode this value into a byte array by wrapping it into a 1-element
@@ -498,9 +491,7 @@ impl DynSolValue {
     pub fn encode_single(self) -> Vec<u8> {
         let mut enc = Default::default();
 
-        DynSolValue::FixedArray(vec![self])
-            .encode_sequence(&mut enc)
-            .expect("is definitely a sequence");
+        Self::encode_sequence(&[self], &mut enc);
 
         enc.into_bytes()
     }
@@ -531,11 +522,13 @@ impl DynSolValue {
         }
     }
 
-    /// If this value is a sequence, encode it into a byte array. If this value
-    /// is not a sequence, return `None`
+    /// If this value is a fixed sequence, encode it into a byte array. If this
+    /// value is not a fixed sequence, return `None`
     pub fn encode(&self) -> Option<Vec<u8>> {
-        let mut encoder = Default::default();
-        self.encode_sequence(&mut encoder).ok();
-        Some(encoder.into_bytes())
+        self.as_fixed_seq().map(|seq| {
+            let mut encoder = Default::default();
+            Self::encode_sequence(seq, &mut encoder);
+            encoder.into_bytes()
+        })
     }
 }

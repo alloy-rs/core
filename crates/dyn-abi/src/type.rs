@@ -276,7 +276,7 @@ mod tests {
             DynToken::FixedSeq(vec![DynToken::Word(word1), DynToken::Word(word2)].into(), 2)
         );
         let mut enc = crate::Encoder::default();
-        val.encode_sequence(&mut enc).unwrap();
+        DynSolValue::encode_sequence(val.as_fixed_seq().unwrap(), &mut enc);
         assert_eq!(enc.finish(), vec![word1, word2]);
     }
 
