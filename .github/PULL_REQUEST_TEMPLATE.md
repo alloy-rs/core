@@ -10,6 +10,8 @@ The contributors guide includes instructions for running rustfmt and building th
 documentation.
 -->
 
+<!-- ** Please select "Allow edits from maintainers" in the PR Options ** -->
+
 ## Motivation
 
 <!--
