@@ -77,7 +77,7 @@ macro_rules! wrap_fixed_bytes {
         impl ::core::convert::From<$name> for [u8; $n] {
             #[inline]
             fn from(value: $name) -> Self {
-                value.0.0
+                value.0 .0
             }
         }
 
@@ -91,28 +91,28 @@ macro_rules! wrap_fixed_bytes {
         impl ::core::convert::AsRef<[u8; $n]> for $name {
             #[inline]
             fn as_ref(&self) -> &[u8; $n] {
-                &self.0.0
+                &self.0 .0
             }
         }
 
         impl ::core::convert::AsMut<[u8; $n]> for $name {
             #[inline]
             fn as_mut(&mut self) -> &mut [u8; $n] {
-                &mut self.0.0
+                &mut self.0 .0
             }
         }
 
         impl ::core::convert::AsRef<[u8]> for $name {
             #[inline]
             fn as_ref(&self) -> &[u8] {
-                &self.0.0
+                &self.0 .0
             }
         }
 
         impl ::core::convert::AsMut<[u8]> for $name {
             #[inline]
             fn as_mut(&mut self) -> &mut [u8] {
-                &mut self.0.0
+                &mut self.0 .0
             }
         }
 
@@ -205,7 +205,7 @@ macro_rules! wrap_fixed_bytes {
     };
 }
 
-// Extra traits that are cannot be derived automatically
+// Extra traits that cannot be derived automatically
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_fixed_bytes_traits {
@@ -272,7 +272,7 @@ macro_rules! impl_fixed_bytes_traits {
     };
 
     ($t:ty, $n:tt $(, $const:ident)?) => {
-        // // Borrow is not automatically implemented for references
+        // Borrow is not automatically implemented for references
         $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for $t);
         $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for &$t);
         $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for &mut $t);
