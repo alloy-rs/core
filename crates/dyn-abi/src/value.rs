@@ -49,6 +49,75 @@ pub enum DynSolValue {
 }
 
 impl DynSolValue {
+    /// The Solidity type. This returns the solidity type corresponding to this
+    /// value, if it is known. A type will not be known if the value contains
+    /// an empty sequence, e.g. `T[0]`.
+    pub fn sol_type(&self) -> Option<DynSolType> {
+        let ty = match self {
+            Self::Address(_) => DynSolType::Address,
+            Self::Bool(_) => DynSolType::Bool,
+            Self::Bytes(_) => DynSolType::Bytes,
+            Self::FixedBytes(_, size) => DynSolType::FixedBytes(*size),
+            Self::Int(_, size) => DynSolType::Int(*size),
+            Self::Uint(_, size) => DynSolType::Uint(*size),
+            Self::String(_) => DynSolType::String,
+            Self::Tuple(inner) => DynSolType::Tuple(
+                inner
+                    .iter()
+                    .map(Self::sol_type)
+                    .collect::<Option<Vec<_>>>()?,
+            ),
+            Self::Array(inner) => DynSolType::Array(Box::new(Self::sol_type(inner.first()?)?)),
+            Self::FixedArray(inner) => {
+                DynSolType::FixedArray(Box::new(Self::sol_type(inner.first()?)?), inner.len())
+            }
+            Self::CustomStruct {
+                name,
+                prop_names,
+                tuple,
+            } => DynSolType::CustomStruct {
+                name: name.clone(),
+                prop_names: prop_names.clone(),
+                tuple: tuple
+                    .iter()
+                    .map(Self::sol_type)
+                    .collect::<Option<Vec<_>>>()?,
+            },
+            Self::CustomValue { name, .. } => DynSolType::CustomValue { name: name.clone() },
+        };
+        Some(ty)
+    }
+
+    /// The Solidity type name. This returns the solidity type corresponding to
+    /// this value, if it is known. A type will not be known if the value
+    /// contains an empty sequence, e.g. `T[0]`.
+    pub fn sol_type_name(&self) -> Option<Cow<'_, str>> {
+        let ty = match self {
+            Self::Address(_) => Cow::Borrowed("address"),
+            Self::Bool(_) => Cow::Borrowed("bool"),
+            Self::Bytes(_) => Cow::Borrowed("bytes"),
+            Self::FixedBytes(_, size) => Cow::Owned(format!("bytes{}", size)),
+            Self::Int(_, size) => Cow::Owned(format!("int{}", size)),
+            Self::Uint(_, size) => Cow::Owned(format!("uint{}", size)),
+            Self::String(_) => Cow::Borrowed("string"),
+            Self::Tuple(inner) => Cow::Owned(format!(
+                "({})",
+                inner
+                    .iter()
+                    .map(|v| v.sol_type_name())
+                    .collect::<Option<Vec<_>>>()?
+                    .join(", ")
+            )),
+            Self::Array(t) => Cow::Owned(format!("{}[]", t.first()?.sol_type_name()?)),
+            Self::FixedArray(t) => {
+                Cow::Owned(format!("{}[{}]", t.first()?.sol_type_name()?, t.len()))
+            }
+            Self::CustomStruct { name, .. } => Cow::Borrowed(name.as_str()),
+            Self::CustomValue { name, .. } => Cow::Borrowed(name.as_str()),
+        };
+        Some(ty)
+    }
+
     /// Trust if this value is encoded as a single word. False otherwise.
     pub const fn is_word(&self) -> bool {
         matches!(

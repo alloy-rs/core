@@ -82,6 +82,55 @@ pub enum DynSolType {
 }
 
 impl DynSolType {
+    /// Check that a given [`DynSolValue`] matches this type.
+    pub fn matches(&self, value: &DynSolValue) -> bool {
+        match self {
+            Self::Address => matches!(value, DynSolValue::Address(_)),
+            Self::Bytes => matches!(value, DynSolValue::Bytes(_)),
+            Self::Int(size) => matches!(value, DynSolValue::Int(_, s) if s == size),
+            Self::Uint(size) => matches!(value, DynSolValue::Uint(_, s) if s == size),
+            Self::Bool => matches!(value, DynSolValue::Bool(_)),
+            Self::Array(t) => {
+                matches!(value, DynSolValue::Array(v) if v.iter().all(|v| t.matches(v)))
+            }
+            Self::String => matches!(value, DynSolValue::String(_)),
+            Self::FixedBytes(size) => matches!(value, DynSolValue::FixedBytes(_, s) if s == size),
+            Self::FixedArray(t, size) => {
+                matches!(value, DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v)))
+            }
+            Self::Tuple(types) => {
+                if let DynSolValue::CustomStruct { tuple: t, .. } = value {
+                    types.iter().zip(t).all(|(t, v)| t.matches(v))
+                } else if let DynSolValue::Tuple(v) = value {
+                    types.iter().zip(v).all(|(t, v)| t.matches(v))
+                } else {
+                    false
+                }
+            }
+            Self::CustomStruct {
+                name,
+                prop_names,
+                tuple,
+            } => {
+                if let DynSolValue::CustomStruct {
+                    name: n,
+                    prop_names: p,
+                    tuple: t,
+                } = value
+                {
+                    name == n && prop_names == p && tuple.iter().zip(t).all(|(a, b)| a.matches(b))
+                } else if let DynSolValue::Tuple(v) = value {
+                    v.iter().zip(tuple).all(|(v, t)| t.matches(v))
+                } else {
+                    false
+                }
+            }
+            Self::CustomValue { name } => {
+                matches! {value, DynSolValue::CustomValue { name: n, .. } if name == n}
+            }
+        }
+    }
+
     /// Dynamic detokenization.
     #[allow(clippy::unnecessary_to_owned)] // https://github.com/rust-lang/rust-clippy/issues/8148
     pub fn detokenize(&self, token: DynToken<'_>) -> Result<DynSolValue> {
