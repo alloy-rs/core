@@ -1,6 +1,6 @@
 use crate::{
     no_std_prelude::{Cow, *},
-    DynToken, Word,
+    DynSolType, DynToken, Word,
 };
 use alloy_primitives::{Address, I256, U256};
 use alloy_sol_types::Encoder;
@@ -49,24 +49,6 @@ pub enum DynSolValue {
 }
 
 impl DynSolValue {
-    /// The Solidity type name.
-    pub fn sol_type_name(&self) -> Cow<'_, str> {
-        match self {
-            Self::Address(_) => Cow::Borrowed("address"),
-            Self::Bool(_) => Cow::Borrowed("bool"),
-            Self::Bytes(_) => Cow::Borrowed("bytes"),
-            Self::FixedBytes(_, size) => Cow::Owned(format!("bytes{}", size)),
-            Self::Int(_, size) => Cow::Owned(format!("int{}", size)),
-            Self::Uint(_, size) => Cow::Owned(format!("uint{}", size)),
-            Self::String(_) => Cow::Borrowed("string"),
-            Self::Tuple(_) => Cow::Borrowed("tuple"),
-            Self::Array(_) => Cow::Borrowed("array"),
-            Self::FixedArray(_) => Cow::Borrowed("fixed_array"),
-            Self::CustomStruct { name, .. } => Cow::Borrowed(name),
-            Self::CustomValue { name, .. } => Cow::Borrowed(name),
-        }
-    }
-
     /// Trust if this value is encoded as a single word. False otherwise.
     pub const fn is_word(&self) -> bool {
         matches!(
