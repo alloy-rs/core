@@ -4,7 +4,7 @@ error: expected parentheses
 4 |     function missingParens;
   |                           ^
 
-error: expected `;`
+error: unexpected end of input, expected curly braces or `;`
  --> tests/ui/function.rs:7:1
   |
 7 | / sol! {
@@ -14,7 +14,7 @@ error: expected `;`
   |
   = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: expected `;`
+error: unexpected end of input, expected curly braces or `;`
   --> tests/ui/function.rs:11:1
    |
 11 | / sol! {
@@ -24,7 +24,7 @@ error: expected `;`
    |
    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: expected `;`
+error: unexpected end of input, expected curly braces or `;`
   --> tests/ui/function.rs:15:1
    |
 15 | / sol! {
