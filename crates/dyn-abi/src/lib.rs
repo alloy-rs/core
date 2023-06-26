@@ -30,7 +30,7 @@ extern crate alloc;
 
 mod no_std_prelude {
     pub(crate) use alloc::{
-        borrow::{Borrow, ToOwned},
+        borrow::{Borrow, Cow, ToOwned},
         boxed::Box,
         string::{String, ToString},
         vec::Vec,
@@ -70,14 +70,12 @@ mod tests {
         let my_values = DynSolValue::Array(vec![uints]);
 
         // tokenize and detokenize
-        let tokens = my_type.tokenize(my_values.clone()).unwrap();
+        let tokens = my_values.tokenize();
         let detokenized = my_type.detokenize(tokens.clone()).unwrap();
         assert_eq!(detokenized, my_values);
 
         // encode
-        let mut encoder = Encoder::default();
-        tokens.encode_single(&mut encoder).unwrap();
-        let encoded = encoder.into_bytes();
+        let encoded = my_values.clone().encode_single();
 
         // decode
         let mut decoder = Decoder::new(&encoded, true);

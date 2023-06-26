@@ -29,7 +29,7 @@ let uints = DynSolValue::FixedArray(vec![0u8.into(), 1u8.into()]);
 let my_values = DynSolValue::Array(vec![uints]);
 
 // encode
-let encoded = my_type.encode_single(my_values.clone()).unwrap();
+let encoded = my_values.clone().encode_single();
 
 // decode
 let decoded = my_type.decode_single(&encoded).unwrap();
@@ -51,18 +51,15 @@ equivalent to an enum over types used as [`crate::SolType::RustType`]. The
 the types implementing the [`alloy_sol_types::TokenType`] trait.
 
 Where the static encoding system encodes the expected type information into
-the rust type system, the dynamic encoder/decoder encodes it as a concrete
-instance of [`DynSolType`]. This type is used to tokenize and detokenize
-[`DynSolValue`] instances. The [`std::str::FromStr`] impl is used to parse a
-solidity type string into a [`DynSolType`] object.
+the Rust type system, the dynamic encoder/decoder encodes it as a concrete
+instance of [`DynSolType`].
 
-- Tokenizing:   `DynSolType` + `DynSolValue` = `DynToken`
-- Detokenizing: `DynSolType` + `DynToken`    = `DynSolValue`
+- Detokenizing: `DynSolType` + `DynToken` = `DynSolValue`
 
 Users must manually handle the conversions between [`DynSolValue`] and their
 own rust types. We provide several `From` implementations, but they fall
-short when dealing with arrays and tuples. We also provide fallible casts
-into the contents of each variant.
+short when dealing with arrays, tuples and structs. We also provide fallible
+casts into the contents of each variant.
 
 ## `DynToken::decode_populate`
 
