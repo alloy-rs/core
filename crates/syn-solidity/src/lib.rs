@@ -7,7 +7,8 @@
     missing_copy_implementations,
     missing_debug_implementations,
     unreachable_pub,
-    unused_crate_dependencies
+    unused_crate_dependencies,
+    rustdoc::all
 )]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
