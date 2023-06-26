@@ -56,6 +56,8 @@ impl ItemError {
     }
 
     pub fn as_type(&self) -> Type {
-        Type::Tuple(self.parameters.types().cloned().collect())
+        let mut ty = Type::Tuple(self.parameters.types().cloned().collect());
+        ty.set_span(self.span());
+        ty
     }
 }

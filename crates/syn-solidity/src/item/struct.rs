@@ -74,6 +74,8 @@ impl ItemStruct {
     }
 
     pub fn as_type(&self) -> Type {
-        Type::Tuple(self.fields.types().cloned().collect())
+        let mut ty = Type::Tuple(self.fields.types().cloned().collect());
+        ty.set_span(self.span());
+        ty
     }
 }
