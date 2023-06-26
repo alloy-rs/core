@@ -14,6 +14,7 @@ impl<T> Ext for T {
 }
 
 /// [`core::array::try_from_fn`]
+#[inline]
 pub(crate) fn try_from_fn<F, T, E, const N: usize>(mut cb: F) -> Result<[T; N], E>
 where
     F: FnMut(usize) -> Result<T, E>,
@@ -62,6 +63,15 @@ where
     mem::forget(guard);
     // SAFETY: all elements are initialized.
     Ok(unsafe { array_assume_init(array) })
+}
+
+/// [`slice::split_array_ref`]
+#[inline]
+#[track_caller]
+pub(crate) fn split_array_ref<T, const N: usize>(slice: &[T]) -> (&[T; N], &[T]) {
+    let (a, b) = slice.split_at(N);
+    // SAFETY: a points to [T; N]? Yes it's [T] of length N (checked by split_at)
+    unsafe { (&*(a.as_ptr() as *const [T; N]), b) }
 }
 
 /// [`MaybeUninit::slice_assume_init_mut`]

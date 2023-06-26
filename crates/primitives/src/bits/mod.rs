@@ -15,8 +15,6 @@ mod rlp;
 #[cfg(feature = "serde")]
 mod serde;
 
-mod impl_core;
-
 /// 8-byte fixed array type.
 pub type B64 = FixedBytes<8>;
 

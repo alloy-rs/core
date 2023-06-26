@@ -177,6 +177,8 @@ pub use coder::{Decoder, Encoder};
 mod errors;
 pub use errors::{Error, Result};
 
+mod impl_core;
+
 mod types;
 pub use types::{
     data_type as sol_data, Encodable, EventTopic, Panic, PanicKind, Revert, SolCall, SolError,

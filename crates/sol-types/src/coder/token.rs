@@ -293,9 +293,7 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, 
     }
 
     fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
-        // TODO: None of this is necessary if `core::array::try_from_fn` is stabilized.
-        // core::array::try_from_fn(|_| T::decode_from(dec)).map(Self)
-        super::impl_core::try_from_fn(|_| T::decode_from(dec)).map(Self)
+        crate::impl_core::try_from_fn(|_| T::decode_from(dec)).map(Self)
     }
 }
 
