@@ -40,6 +40,14 @@ pub enum Error {
         max: u8,
     },
 
+    /// Unknown selector.
+    UnknownSelector {
+        /// The type name.
+        name: &'static str,
+        /// The unknown selector.
+        selector: alloy_primitives::FixedBytes<4>,
+    },
+
     /// Hex error.
     FromHexError(hex::FromHexError),
 
@@ -73,6 +81,9 @@ impl fmt::Display for Error {
                 f,
                 "`{value}` is not a valid {name} enum value (max: `{max}`)"
             ),
+            Self::UnknownSelector { name, selector } => {
+                write!(f, "Unknown selector `{selector}` for {name}")
+            }
             Self::FromHexError(e) => e.fmt(f),
             Self::Other(e) => f.write_str(e),
         }
@@ -102,6 +113,15 @@ impl Error {
         Self::TypeCheckFail {
             expected_type: expected_type.into(),
             data: hex::encode(data),
+        }
+    }
+
+    /// Instantiates a [`Error::UnknownSelector`] with the provided data.
+    #[inline]
+    pub fn unknown_selector(name: &'static str, selector: [u8; 4]) -> Self {
+        Self::UnknownSelector {
+            name,
+            selector: selector.into(),
         }
     }
 }

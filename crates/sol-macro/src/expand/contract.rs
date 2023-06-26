@@ -40,7 +40,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
     let functions_enum = if functions.len() > 1 {
         let mut attrs = d_attrs.clone();
-        let doc_str = format!("Container for all the [`{name}`] function calls.");
+        let doc_str = format!("Container for all the `{name}` function calls.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         Some(expand_functions_enum(cx, name, functions, &attrs))
     } else {
@@ -49,7 +49,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
     let errors_enum = if errors.len() > 1 {
         let mut attrs = d_attrs;
-        let doc_str = format!("Container for all the [`{name}`] custom errors.");
+        let doc_str = format!("Container for all the `{name}` custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         Some(expand_errors_enum(cx, name, errors, &attrs))
     } else {
@@ -71,11 +71,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
 fn expand_functions_enum(
     cx: &ExpCtxt<'_>,
-    name: &SolIdent,
+    contract_name: &SolIdent,
     functions: Vec<&ItemFunction>,
     attrs: &[Attribute],
 ) -> TokenStream {
-    let name = format_ident!("{name}Calls");
+    let name = format_ident!("{contract_name}Calls");
     let variants: Vec<_> = functions
         .iter()
         .map(|f| cx.function_name_ident(f).0)
@@ -86,7 +86,7 @@ fn expand_functions_enum(
     let min_data_len = functions
         .iter()
         .map(|function| r#type::params_min_data_size(cx, &function.arguments))
-        .max()
+        .min()
         .unwrap();
     let trt = Ident::new("SolCall", Span::call_site());
     expand_call_like_enum(name, &variants, &types, min_data_len, trt, attrs)
@@ -94,16 +94,16 @@ fn expand_functions_enum(
 
 fn expand_errors_enum(
     cx: &ExpCtxt<'_>,
-    name: &SolIdent,
+    contract_name: &SolIdent,
     errors: Vec<&ItemError>,
     attrs: &[Attribute],
 ) -> TokenStream {
-    let name = format_ident!("{name}Errors");
+    let name = format_ident!("{contract_name}Errors");
     let variants: Vec<_> = errors.iter().map(|error| error.name.0.clone()).collect();
     let min_data_len = errors
         .iter()
         .map(|error| r#type::params_min_data_size(cx, &error.parameters))
-        .max()
+        .min()
         .unwrap();
     let trt = Ident::new("SolError", Span::call_site());
     expand_call_like_enum(name, &variants, &variants, min_data_len, trt, attrs)
@@ -120,57 +120,67 @@ fn expand_call_like_enum(
     assert_eq!(variants.len(), types.len());
     let name_s = name.to_string();
     let count = variants.len();
-    let min_data_len = min_data_len.min(4);
     quote! {
         #(#attrs)*
         pub enum #name {
             #(#variants(#types),)*
         }
 
-        // TODO: Implement these functions using traits?
         #[automatically_derived]
-        impl #name {
-            /// The number of variants.
-            pub const COUNT: usize = #count;
+        impl ::alloy_sol_types::SolCalls for #name {
+            const NAME: &'static str = #name_s;
+            const MIN_DATA_LENGTH: usize = #min_data_len;
+            const COUNT: usize = #count;
 
-            // no decode_raw is possible because we need the selector to know which variant to
-            // decode into
-
-            /// ABI-decodes the given data into one of the variants of `self`.
-            pub fn decode(data: &[u8], validate: bool) -> ::alloy_sol_types::Result<Self> {
-                if data.len() >= #min_data_len {
-                    // TODO: Replace with `data.split_array_ref` once it's stable
-                    let (selector, data) = data.split_at(4);
-                    let selector: &[u8; 4] =
-                        ::core::convert::TryInto::try_into(selector).expect("unreachable");
-                    match *selector {
-                        #(<#types as ::alloy_sol_types::#trt>::SELECTOR => {
-                            return <#types as ::alloy_sol_types::#trt>::decode_raw(data, validate)
-                                .map(Self::#variants)
-                        })*
-                        _ => {}
-                    }
-                }
-                ::core::result::Result::Err(::alloy_sol_types::Error::type_check_fail(
-                    data,
-                    #name_s,
-                ))
-            }
-
-            /// ABI-encodes `self` into the given buffer.
-            pub fn encode_raw(&self, out: &mut Vec<u8>) {
+            #[inline]
+            fn selector(&self) -> [u8; 4] {
                 match self {#(
-                    Self::#variants(inner) =>
-                        <#types as ::alloy_sol_types::#trt>::encode_raw(inner, out),
+                    Self::#variants(_) => <#types as ::alloy_sol_types::#trt>::SELECTOR,
                 )*}
             }
 
-            /// ABI-encodes `self` into the given buffer.
             #[inline]
-            pub fn encode(&self) -> Vec<u8> {
+            fn type_check(selector: [u8; 4]) -> ::alloy_sol_types::Result<()> {
+                match selector {
+                    #(<#types as ::alloy_sol_types::#trt>::SELECTOR)|* => Ok(()),
+                    s => ::core::result::Result::Err(::alloy_sol_types::Error::unknown_selector(
+                        Self::NAME,
+                        s,
+                    )),
+                }
+            }
+
+            #[inline]
+            fn decode_raw(
+                selector: [u8; 4],
+                data: &[u8],
+                validate: bool
+            )-> ::alloy_sol_types::Result<Self> {
+                match selector {
+                    #(<#types as ::alloy_sol_types::#trt>::SELECTOR => {
+                        <#types as ::alloy_sol_types::#trt>::decode_raw(data, validate)
+                            .map(Self::#variants)
+                    })*
+                    s => ::core::result::Result::Err(::alloy_sol_types::Error::unknown_selector(
+                        Self::NAME,
+                        s,
+                    )),
+                }
+            }
+
+            #[inline]
+            fn encoded_size(&self) -> usize {
                 match self {#(
                     Self::#variants(inner) =>
-                        <#types as ::alloy_sol_types::#trt>::encode(inner),
+                        <#types as ::alloy_sol_types::#trt>::encoded_size(inner),
+                )*}
+            }
+
+            #[inline]
+            fn encode_raw(&self, out: &mut Vec<u8>) {
+                match self {#(
+                    Self::#variants(inner) =>
+                        <#types as ::alloy_sol_types::#trt>::encode_raw(inner, out),
                 )*}
             }
         }
@@ -178,6 +188,7 @@ fn expand_call_like_enum(
         #(
             #[automatically_derived]
             impl From<#types> for #name {
+                #[inline]
                 fn from(value: #types) -> Self {
                     Self::#variants(value)
                 }

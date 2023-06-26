@@ -1,3 +1,6 @@
+mod calls;
+pub use calls::{ContractError, SolCalls};
+
 pub mod data_type;
 
 mod r#enum;
