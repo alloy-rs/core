@@ -16,7 +16,8 @@ use syn::Result;
 ///     #(pub #argument_name: #argument_type,)*
 /// }
 ///
-/// impl Sol for #{name}Call {
+/// impl SolCall for #{name}Call {
+///     type Return = #{name}Return;
 ///     ...
 /// }
 ///
