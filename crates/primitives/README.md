@@ -21,7 +21,7 @@ Primitive types shared by [alloy], [foundry], [revm], and [reth].
 This library has straightforward, basic, types. Usage is correspondingly simple.
 Please consult [the documentation][docs] for more information.
 
-[docs]: https://docs.rs/alloy-types/latest/alloy-types/
+[docs]: https://docs.rs/alloy-primitives/latest/alloy_primitives/
 
 ```rust
 use alloy_primitives::{U256, Address, FixedBytes, I256};
