@@ -129,3 +129,130 @@ impl<T: SolCalls> SolCalls for ContractError<T> {
         }
     }
 }
+
+impl<T> ContractError<T> {
+    /// Returns `true` if `self` matches [`CustomError`](Self::CustomError).
+    #[inline]
+    pub fn is_custom_error(&self) -> bool {
+        match self {
+            Self::CustomError(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns an immutable reference to the inner [`CustomError`] if `self`
+    /// matches [`CustomError`](Self::CustomError).
+    #[inline]
+    pub fn as_custom_error(&self) -> Option<&T> {
+        match self {
+            Self::CustomError(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    /// Returns a mutable reference to the inner [`CustomError`] if `self`
+    /// matches [`CustomError`](Self::CustomError).
+    #[inline]
+    pub fn as_custom_error_mut(&mut self) -> Option<&mut T> {
+        match self {
+            Self::CustomError(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    /// Returns `true` if `self` matches [`Revert`](Self::Revert).
+    #[inline]
+    pub fn is_revert(&self) -> bool {
+        match self {
+            Self::Revert(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns an immutable reference to the inner [`Revert`] if `self` matches
+    /// [`Revert`](Self::Revert).
+    #[inline]
+    pub fn as_revert(&self) -> Option<&Revert> {
+        match self {
+            Self::Revert(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    /// Returns a mutable reference to the inner [`Revert`] if `self` matches
+    /// [`Revert`](Self::Revert).
+    #[inline]
+    pub fn as_revert_mut(&mut self) -> Option<&mut Revert> {
+        match self {
+            Self::Revert(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    /// Returns `true` if `self` matches [`Panic`](Self::Panic).
+    #[inline]
+    pub fn is_panic(&self) -> bool {
+        match self {
+            Self::Panic(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns an immutable reference to the inner [`Panic`] if `self` matches
+    /// [`Panic`](Self::Panic).
+    #[inline]
+    pub fn as_panic(&self) -> Option<&Panic> {
+        match self {
+            Self::Panic(inner) => Some(inner),
+            _ => None,
+        }
+    }
+
+    /// Returns a mutable reference to the inner [`Panic`] if `self` matches
+    /// [`Panic`](Self::Panic).
+    #[inline]
+    pub fn as_panic_mut(&mut self) -> Option<&mut Panic> {
+        match self {
+            Self::Panic(inner) => Some(inner),
+            _ => None,
+        }
+    }
+}
+
+impl<T> From<Revert> for ContractError<T> {
+    #[inline]
+    fn from(value: Revert) -> Self {
+        Self::Revert(value)
+    }
+}
+
+impl<T> TryFrom<ContractError<T>> for Revert {
+    type Error = ContractError<T>;
+
+    #[inline]
+    fn try_from(value: ContractError<T>) -> Result<Revert, Self::Error> {
+        match value {
+            ContractError::Revert(inner) => Ok(inner),
+            _ => Err(value),
+        }
+    }
+}
+
+impl<T> From<Panic> for ContractError<T> {
+    #[inline]
+    fn from(value: Panic) -> Self {
+        Self::Panic(value)
+    }
+}
+
+impl<T> TryFrom<ContractError<T>> for Panic {
+    type Error = ContractError<T>;
+
+    #[inline]
+    fn try_from(value: ContractError<T>) -> Result<Panic, Self::Error> {
+        match value {
+            ContractError::Panic(inner) => Ok(inner),
+            _ => Err(value),
+        }
+    }
+}

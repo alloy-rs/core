@@ -4,7 +4,7 @@ use super::{attr, r#type, ExpCtxt};
 use ast::{Item, ItemContract, ItemError, ItemFunction, SolIdent};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
-use syn::{parse_quote, Attribute, Result};
+use syn::{ext::IdentExt, parse_quote, Attribute, Result};
 
 /// Expands an [`ItemContract`]:
 ///
@@ -120,6 +120,7 @@ fn expand_call_like_enum(
     assert_eq!(variants.len(), types.len());
     let name_s = name.to_string();
     let count = variants.len();
+    let methods = variants.iter().zip(types).map(generate_variant_methods);
     quote! {
         #(#attrs)*
         pub enum #name {
@@ -185,14 +186,75 @@ fn expand_call_like_enum(
             }
         }
 
+        #[automatically_derived]
+        impl #name {
+            #(#methods)*
+        }
+
         #(
             #[automatically_derived]
-            impl From<#types> for #name {
+            impl ::core::convert::From<#types> for #name {
                 #[inline]
                 fn from(value: #types) -> Self {
                     Self::#variants(value)
                 }
             }
+
+            #[automatically_derived]
+            impl ::core::convert::TryFrom<#name> for #types {
+                type Error = #name;
+
+                #[inline]
+                fn try_from(value: #name) -> ::core::result::Result<Self, Self::Error> {
+                    match value {
+                        #name::#variants(value) => ::core::result::Result::Ok(value),
+                        _ => ::core::result::Result::Err(value),
+                    }
+                }
+            }
         )*
+    }
+}
+
+fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
+    let name = variant.unraw();
+
+    let is_variant = format_ident!("is_{name}");
+    let is_variant_doc = format!("Returns `true` if `self` matches [`{name}`](Self::{name}).");
+
+    let as_variant = format_ident!("as_{name}");
+    let as_variant_doc = format!(
+        "Returns an immutable reference to the inner [`{ty}`] if `self` matches [`{name}`](Self::{name})."
+    );
+
+    let as_variant_mut = format_ident!("as_{name}_mut");
+    let as_variant_mut_doc = format!(
+        "Returns a mutable reference to the inner [`{ty}`] if `self` matches [`{name}`](Self::{name})."
+    );
+
+    quote! {
+        #[doc = #is_variant_doc]
+        #[inline]
+        pub fn #is_variant(&self) -> bool {
+            ::core::matches!(self, Self::#variant(_))
+        }
+
+        #[doc = #as_variant_doc]
+        #[inline]
+        pub fn #as_variant(&self) -> ::core::option::Option<&#ty> {
+            match self {
+                Self::#variant(inner) => ::core::option::Option::Some(inner),
+                _ => ::core::option::Option::None,
+            }
+        }
+
+        #[doc = #as_variant_mut_doc]
+        #[inline]
+        pub fn #as_variant_mut(&mut self) -> ::core::option::Option<&mut #ty> {
+            match self {
+                Self::#variant(inner) => ::core::option::Option::Some(inner),
+                _ => ::core::option::Option::None,
+            }
+        }
     }
 }
