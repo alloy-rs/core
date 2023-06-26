@@ -258,8 +258,8 @@ impl DynSolValue {
         )
     }
 
-    /// Fallible cast to a fixed-size array. Any of a FixedArray, a Tuple, or a
-    /// `CustomStruct.
+    /// Fallible cast to a fixed-size array. Any of a `FixedArray`, a `Tuple`,
+    /// or a `CustomStruct`.
     pub fn as_fixed_seq(&self) -> Option<&[DynSolValue]> {
         match self {
             Self::FixedArray(inner) => Some(inner.as_slice()),
