@@ -125,6 +125,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                 const ANONYMOUS: bool = #anonymous;
 
                 #[allow(unused_variables)]
+                #[inline]
                 fn new(
                     topics: <Self::TopicList as ::alloy_sol_types::SolType>::RustType,
                     data: <Self::DataTuple<'_> as ::alloy_sol_types::SolType>::RustType,
@@ -134,14 +135,17 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                     }
                 }
 
+                #[inline]
                 fn tokenize_body(&self) -> Self::DataToken<'_> {
                     #tokenize_body_impl
                 }
 
+                #[inline]
                 fn topics(&self) -> <Self::TopicList as ::alloy_sol_types::SolType>::RustType {
                     #topics_impl
                 }
 
+                #[inline]
                 fn encode_topics_raw(
                     &self,
                     out: &mut [::alloy_sol_types::token::WordToken],

@@ -57,10 +57,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
+                #[inline]
                 fn new<'a>(tuple: <Self::Parameters<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 
+                #[inline]
                 fn tokenize(&self) -> Self::Token<'_> {
                     #tokenize_impl
                 }
