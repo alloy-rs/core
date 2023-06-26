@@ -1,3 +1,6 @@
+#[macro_use]
+mod macros;
+
 mod address;
 pub use address::{Address, AddressError};
 
@@ -6,8 +9,6 @@ pub use bloom::{Bloom, BloomInput, BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS, BLOOM_S
 
 mod fixed;
 pub use fixed::FixedBytes;
-
-mod macros;
 
 #[cfg(feature = "rlp")]
 mod rlp;

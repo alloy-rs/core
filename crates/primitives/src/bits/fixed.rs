@@ -431,12 +431,11 @@ impl<const N: usize> FixedBytes<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::hex;
 
     macro_rules! test_fmt {
         ($($fmt:literal, $hex:literal => $expected:literal;)+) => {$(
             assert_eq!(
-                format!($fmt, FixedBytes::from(hex!($hex))),
+                format!($fmt, fixed_bytes!($hex)),
                 $expected
             );
         )+};
@@ -444,9 +443,9 @@ mod tests {
 
     #[test]
     fn concat_const() {
-        const A: FixedBytes<2> = FixedBytes(hex!("0123"));
-        const B: FixedBytes<2> = FixedBytes(hex!("4567"));
-        const EXPECTED: FixedBytes<4> = FixedBytes(hex!("01234567"));
+        const A: FixedBytes<2> = fixed_bytes!("0123");
+        const B: FixedBytes<2> = fixed_bytes!("4567");
+        const EXPECTED: FixedBytes<4> = fixed_bytes!("01234567");
         const ACTUAL: FixedBytes<4> = A.concat_const(B);
 
         assert_eq!(ACTUAL, EXPECTED);
