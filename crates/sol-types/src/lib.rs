@@ -150,7 +150,8 @@
     unreachable_pub,
     missing_copy_implementations,
     missing_debug_implementations,
-    clippy::missing_const_for_fn
+    clippy::missing_const_for_fn,
+    rustdoc::all
 )]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![deny(unused_must_use, rust_2018_idioms)]
