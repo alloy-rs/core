@@ -40,6 +40,7 @@ pub trait SolCalls: Sized {
     fn encode_raw(&self, out: &mut Vec<u8>);
 
     /// ABI-encodes `self` into the given buffer.
+    #[inline]
     fn encode(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(4 + self.encoded_size());
         out.extend(self.selector());

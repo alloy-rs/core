@@ -43,7 +43,6 @@ pub trait SolCall: Sized {
     /// The size of the encoded data in bytes, **without** its selector.
     #[inline]
     fn encoded_size(&self) -> usize {
-        // This avoids unnecessary clones.
         if let Some(size) = <Self::Arguments<'_> as SolType>::ENCODED_SIZE {
             return size
         }
