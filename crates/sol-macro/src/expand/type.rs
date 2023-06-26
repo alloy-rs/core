@@ -122,14 +122,12 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
     tokens.extend(tts);
 }
 
-/// Recursively calculates the minimum ABI-encoded size of the given
-/// parameters in bytes.
+/// Calculates the minimum ABI-encoded size of the given parameters in bytes.
 pub(super) fn params_min_data_size<P>(cx: &ExpCtxt<'_>, params: &Parameters<P>) -> usize {
     params
         .iter()
         .map(|param| type_base_data_size(cx, &param.ty))
-        .max()
-        .unwrap_or(0)
+        .sum()
 }
 
 /// Recursively calculates the base ABI-encoded size of the given parameter
@@ -165,6 +163,7 @@ pub(super) fn type_base_data_size(cx: &ExpCtxt<'_>, ty: &Type) -> usize {
             .sum(),
 
         Type::Custom(name) => match cx.get_item(name) {
+            Item::Enum(_) => 32,
             Item::Struct(strukt) => strukt
                 .fields
                 .types()

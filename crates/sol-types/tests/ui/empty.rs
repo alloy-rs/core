@@ -6,6 +6,10 @@ sol! {
     struct EmptyStruct {}
 }
 
+sol! {
+    enum EmptyEnum {}
+}
+
 // OK
 sol! {
     contract EmptyContract {}
