@@ -32,12 +32,28 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream>
     if count == 0 {
         return Err(syn::Error::new(enumm.span(), "enum has no variants"))
     }
-
-    let max = count - 1;
-    if max > u8::MAX as usize {
+    if count > 256 {
         return Err(syn::Error::new(enumm.span(), "enum has too many variants"))
     }
-    let max = max as u8;
+    let max = (count - 1) as u8;
+
+    let has_invalid_variant = max != u8::MAX;
+    let invalid_variant = has_invalid_variant.then(|| {
+        let comma = (!variants.trailing_punct()).then(syn::token::Comma::default);
+        quote! {
+            #comma
+            /// Invalid variant.
+            ///
+            /// This is only used when decoding an out-of-range `u8` value.
+            #[doc(hidden)]
+            __Invalid = u8::MAX,
+        }
+    });
+    let detokenize_unwrap = if has_invalid_variant {
+        quote! { unwrap_or(Self::__Invalid) }
+    } else {
+        quote! { expect("unreachable") }
+    };
 
     let uint8 = quote!(::alloy_sol_types::sol_data::Uint<8>);
     let uint8_st = quote!(<#uint8 as ::alloy_sol_types::SolType>);
@@ -49,6 +65,7 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream>
         #[repr(u8)]
         pub enum #name {
             #variants
+            #invalid_variant
         }
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
@@ -102,13 +119,17 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream>
 
                 #[inline]
                 fn type_check(token: &Self::TokenType<'_>) -> ::alloy_sol_types::Result<()> {
-                    #uint8_st::type_check(token)
+                    #uint8_st::type_check(token)?;
+                    <Self as ::core::convert::TryFrom<u8>>::try_from(
+                        #uint8_st::detokenize(*token)
+                    ).map(::core::mem::drop)
                 }
 
                 #[inline]
                 fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
-                    let x = #uint8_st::detokenize(token);
-                    todo!()
+                    <Self as ::core::convert::TryFrom<u8>>::try_from(
+                        #uint8_st::detokenize(token)
+                    ).#detokenize_unwrap
                 }
 
                 #[inline]
@@ -123,10 +144,13 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream>
             }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::SolEnum for #name {}
+            impl ::alloy_sol_types::SolEnum for #name {
+                const COUNT: usize = #count;
+            }
 
             #[automatically_derived]
             impl #name {
+                #[allow(unsafe_code, clippy::inline_always)]
                 #[inline(always)]
                 fn as_u8(&self) -> &u8 {
                     unsafe { ::core::mem::transmute::<&Self, &u8>(self) }

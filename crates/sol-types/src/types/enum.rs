@@ -9,6 +9,11 @@ use alloc::vec::Vec;
 /// using the [`sol`][crate::sol] proc macro to parse a Solidity error
 /// definition.
 pub trait SolEnum: Sized + Copy + Into<u8> + TryFrom<u8, Error = crate::Error> {
+    /// The number of variants in the enum.
+    ///
+    /// This is generally between 1 and 256 inclusive.
+    const COUNT: usize;
+
     /// Tokenize the enum.
     #[inline]
     fn tokenize(self) -> WordToken {

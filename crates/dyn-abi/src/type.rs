@@ -95,18 +95,15 @@ impl DynSolType {
             }
             Self::String => matches!(value, DynSolValue::String(_)),
             Self::FixedBytes(size) => matches!(value, DynSolValue::FixedBytes(_, s) if s == size),
-            Self::FixedArray(t, size) => {
-                matches!(value, DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v)))
-            }
-            Self::Tuple(types) => {
-                if let DynSolValue::CustomStruct { tuple: t, .. } = value {
-                    types.iter().zip(t).all(|(t, v)| t.matches(v))
-                } else if let DynSolValue::Tuple(v) = value {
-                    types.iter().zip(v).all(|(t, v)| t.matches(v))
-                } else {
-                    false
-                }
-            }
+            Self::FixedArray(t, size) => matches!(
+                value,
+                DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v))
+            ),
+            Self::Tuple(types) => matches!(
+                value,
+                DynSolValue::CustomStruct { tuple, .. } | DynSolValue::Tuple(tuple)
+                    if types.iter().zip(tuple).all(|(t, v)| t.matches(v))
+            ),
             Self::CustomStruct {
                 name,
                 prop_names,
@@ -126,7 +123,7 @@ impl DynSolType {
                 }
             }
             Self::CustomValue { name } => {
-                matches! {value, DynSolValue::CustomValue { name: n, .. } if name == n}
+                matches!(value, DynSolValue::CustomValue { name: n, .. } if name == n)
             }
         }
     }
@@ -165,34 +162,31 @@ impl DynSolType {
                         "tuple length mismatch on dynamic detokenization",
                     ))
                 }
-                Ok(DynSolValue::Tuple(
-                    types
-                        .iter()
-                        .zip(tokens.into_owned())
-                        .map(|(t, w)| t.detokenize(w))
-                        .collect::<Result<_, _>>()?,
-                ))
+                types
+                    .iter()
+                    .zip(tokens.into_owned())
+                    .map(|(t, w)| t.detokenize(w))
+                    .collect::<Result<_>>()
+                    .map(DynSolValue::Tuple)
             }
-            (DynSolType::Array(t), DynToken::DynSeq { contents, .. }) => Ok(DynSolValue::Array(
-                contents
-                    .into_owned()
-                    .into_iter()
-                    .map(|tok| t.detokenize(tok))
-                    .collect::<Result<_, _>>()?,
-            )),
+            (DynSolType::Array(t), DynToken::DynSeq { contents, .. }) => contents
+                .into_owned()
+                .into_iter()
+                .map(|tok| t.detokenize(tok))
+                .collect::<Result<_>>()
+                .map(DynSolValue::Array),
             (DynSolType::FixedArray(t, size), DynToken::FixedSeq(tokens, _)) => {
                 if *size != tokens.len() {
                     return Err(crate::Error::custom(
                         "array length mismatch on dynamic detokenization",
                     ))
                 }
-                Ok(DynSolValue::FixedArray(
-                    tokens
-                        .into_owned()
-                        .into_iter()
-                        .map(|tok| t.detokenize(tok))
-                        .collect::<Result<_, _>>()?,
-                ))
+                tokens
+                    .into_owned()
+                    .into_iter()
+                    .map(|tok| t.detokenize(tok))
+                    .collect::<Result<_>>()
+                    .map(DynSolValue::FixedArray)
             }
             (
                 DynSolType::CustomStruct {
@@ -211,7 +205,7 @@ impl DynSolType {
                     .iter()
                     .zip(tokens.into_owned())
                     .map(|(t, w)| t.detokenize(w))
-                    .collect::<Result<_, _>>()?;
+                    .collect::<Result<_>>()?;
 
                 Ok(DynSolValue::CustomStruct {
                     name: name.clone(),
