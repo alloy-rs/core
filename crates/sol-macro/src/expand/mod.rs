@@ -359,21 +359,20 @@ fn expand_from_into_unit(name: &Ident) -> TokenStream {
         type UnderlyingRustTuple<'a> = ();
 
         impl From<()> for #name {
-            fn from(_: ()) -> Self {
+            #[inline]
+            fn from((): ()) -> Self {
                 Self {}
             }
         }
 
         impl From<#name> for () {
-            fn from(_: #name) -> Self {
-                ()
-            }
+            #[inline]
+            fn from(#name {}: #name) {}
         }
 
         impl ::alloy_sol_types::Encodable<()> for #name {
-            fn to_tokens(&self) -> <() as ::alloy_sol_types::SolType>::TokenType<'_> {
-                ::alloy_sol_types::token::FixedSeqToken::from([])
-            }
+            #[inline]
+            fn to_tokens(&self) {}
         }
     }
 }

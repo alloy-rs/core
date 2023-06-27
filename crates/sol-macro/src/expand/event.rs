@@ -90,12 +90,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .enumerate()
         .map(|(i, p)| expand_event_topic_field(i, p, p.name.as_ref()));
 
-    let tokenize_body_impl = if event.parameters.iter().all(|p| p.is_indexed()) {
-        // special case for empty tuple
-        quote! {::core::convert::From::from([])}
-    } else {
-        expand_event_tokenize_func(event.parameters.iter())
-    };
+    let tokenize_body_impl = expand_event_tokenize_func(event.parameters.iter());
 
     let encode_topics_impl = encode_first_topic
         .into_iter()
