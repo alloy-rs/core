@@ -21,14 +21,14 @@ macro_rules! wrap_fixed_bytes {
         $vis:vis struct $name:ident<$n:literal>;
     ) => {
         $crate::wrap_fixed_bytes!(
-            extra_derives: [Display],
+            extra_derives: [$crate::private::derive_more::Display],
             $(#[$attrs])*
             $vis struct $name<$n>;
         );
     };
 
     (
-        extra_derives: [$($extra_derives:ident),* $(,)?],
+        extra_derives: [$($extra_derives:path),* $(,)?],
         $(#[$attrs:meta])*
         $vis:vis struct $name:ident<$n:literal>;
     ) => {
@@ -61,7 +61,7 @@ macro_rules! wrap_fixed_bytes {
             $crate::private::derive_more::LowerHex,
             $crate::private::derive_more::UpperHex,
             $(
-                $crate::private::derive_more::$extra_derives,
+                $extra_derives,
             )*
         )]
         #[repr(transparent)]
@@ -441,4 +441,70 @@ macro_rules! impl_arbitrary {
 #[cfg(not(feature = "arbitrary"))]
 macro_rules! impl_arbitrary {
     ($t:ty, $n:literal) => {};
+}
+
+macro_rules! fixed_bytes_macros {
+    ($d:tt $($(#[$attr:meta])* macro $name:ident($ty:ident);)*) => {$(
+        /// Converts a sequence of string literals containing hex-encoded data
+        #[doc = concat!(
+            "into a new [`", stringify!($ty), "`][crate::", stringify!($ty), "].\n",
+        )]
+        ///
+        /// Note that the strings cannot be prefixed with `0x`.
+        ///
+        /// See [`hex_literal::hex!`] for more information.
+        $(#[$attr])*
+        #[macro_export]
+        macro_rules! $name {
+            ($d ($d s:literal)*) => {
+                $crate::$ty::new($crate::hex!($d ($d s)*))
+            };
+        }
+    )*};
+}
+
+fixed_bytes_macros! { $
+    macro address(Address);
+
+    macro b64(B64);
+
+    macro b128(B128);
+
+    macro b256(B256);
+
+    macro b512(B512);
+
+    macro bloom(Bloom);
+
+    macro fixed_bytes(FixedBytes);
+}
+
+/// Converts a sequence of string literals containing hex-encoded data into a
+/// new [`Bytes`][crate::Bytes].
+///
+/// Note that the strings cannot be prefixed with `0x`.
+///
+/// See [`hex_literal::hex!`] for more information.
+#[macro_export]
+macro_rules! bytes {
+    ($($s:literal)*) => {
+        $crate::Bytes::from_static(&$crate::hex!($($s)*))
+    };
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Address, Bytes};
+    use hex_literal::hex;
+
+    #[test]
+    fn fixed_byte_macros() {
+        const A1: Address = address!("0102030405060708090a0b0c0d0e0f1011121314");
+        const A2: Address = Address(fixed_bytes!("0102030405060708090a0b0c0d0e0f1011121314"));
+        assert_eq!(A1, A2);
+        assert_eq!(A1, hex!("0102030405060708090a0b0c0d0e0f1011121314"));
+
+        static B: Bytes = bytes!("112233");
+        assert_eq!(B[..], [0x11, 0x22, 0x33]);
+    }
 }
