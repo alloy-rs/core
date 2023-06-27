@@ -13,16 +13,16 @@ use syn::{
 };
 
 mod array;
-pub use array::TypeArray;
+pub use array::*;
 
 mod function;
-pub use function::TypeFunction;
+pub use function::*;
 
 mod mapping;
-pub use mapping::TypeMapping;
+pub use mapping::*;
 
 mod tuple;
-pub use tuple::TypeTuple;
+pub use tuple::*;
 
 /// A type name.
 ///

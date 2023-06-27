@@ -13,10 +13,10 @@ use syn::{
 };
 
 mod function;
-pub use function::{FunctionAttribute, FunctionAttributes};
+pub use function::*;
 
 mod variable;
-pub use variable::{VariableAttribute, VariableAttributes};
+pub use variable::*;
 
 kw_enum! {
     /// A storage location.

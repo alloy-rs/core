@@ -8,7 +8,7 @@ use syn::{
 };
 
 mod path;
-pub use path::SolPath;
+pub use path::*;
 
 /// A Solidity identifier.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
