@@ -2,6 +2,7 @@
 
 use super::{attr, r#type, ExpCtxt};
 use ast::{Item, ItemContract, ItemError, ItemFunction, SolIdent};
+use heck::ToSnakeCase;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{ext::IdentExt, parse_quote, Attribute, Result};
@@ -217,7 +218,7 @@ fn expand_call_like_enum(
 }
 
 fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
-    let name = variant.unraw();
+    let name = variant.unraw().to_string().to_snake_case();
 
     let is_variant = format_ident!("is_{name}");
     let is_variant_doc = format!("Returns `true` if `self` matches [`{name}`](Self::{name}).");
@@ -235,13 +236,13 @@ fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
     quote! {
         #[doc = #is_variant_doc]
         #[inline]
-        pub fn #is_variant(&self) -> bool {
+        pub const fn #is_variant(&self) -> bool {
             ::core::matches!(self, Self::#variant(_))
         }
 
         #[doc = #as_variant_doc]
         #[inline]
-        pub fn #as_variant(&self) -> ::core::option::Option<&#ty> {
+        pub const fn #as_variant(&self) -> ::core::option::Option<&#ty> {
             match self {
                 Self::#variant(inner) => ::core::option::Option::Some(inner),
                 _ => ::core::option::Option::None,
