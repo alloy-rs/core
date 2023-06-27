@@ -39,6 +39,9 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream>
     }
     let max = max as u8;
 
+    let uint8 = quote!(::alloy_sol_types::sol_data::Uint<8>);
+    let uint8_st = quote!(<#uint8 as ::alloy_sol_types::SolType>);
+
     let tokens = quote! {
         #(#attrs)*
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
@@ -66,9 +69,9 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream>
                 #[inline]
                 fn try_from(v: u8) -> ::alloy_sol_types::Result<Self> {
                     if v <= #max {
-                        Ok(unsafe { ::core::mem::transmute(v) })
+                        ::core::result::Result::Ok(unsafe { ::core::mem::transmute(v) })
                     } else {
-                        Err(::alloy_sol_types::Error::InvalidEnumValue {
+                        ::core::result::Result::Err(::alloy_sol_types::Error::InvalidEnumValue {
                             name: #name_s,
                             value: v,
                             max: #max,
@@ -78,7 +81,57 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream>
             }
 
             #[automatically_derived]
+            impl ::alloy_sol_types::Encodable<#name> for #name {
+                #[inline]
+                fn to_tokens(&self) -> #uint8_st::TokenType<'_> {
+                    ::alloy_sol_types::Word::with_last_byte(*self as u8).into()
+                }
+            }
+
+            #[automatically_derived]
+            impl ::alloy_sol_types::SolType for #name {
+                type RustType = #name;
+                type TokenType<'a> = #uint8_st::TokenType<'a>;
+
+                const ENCODED_SIZE: ::core::option::Option<usize> = #uint8_st::ENCODED_SIZE;
+
+                #[inline]
+                fn sol_type_name() -> ::alloy_sol_types::private::Cow<'static, str> {
+                    #uint8_st::sol_type_name()
+                }
+
+                #[inline]
+                fn type_check(token: &Self::TokenType<'_>) -> ::alloy_sol_types::Result<()> {
+                    #uint8_st::type_check(token)
+                }
+
+                #[inline]
+                fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+                    let x = #uint8_st::detokenize(token);
+                    todo!()
+                }
+
+                #[inline]
+                fn eip712_data_word(rust: &Self::RustType) -> ::alloy_sol_types::Word {
+                    #uint8_st::eip712_data_word(rust.as_u8())
+                }
+
+                #[inline]
+                fn encode_packed_to(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                    out.push(*rust as u8);
+                }
+            }
+
+            #[automatically_derived]
             impl ::alloy_sol_types::SolEnum for #name {}
+
+            #[automatically_derived]
+            impl #name {
+                #[inline(always)]
+                fn as_u8(&self) -> &u8 {
+                    unsafe { ::core::mem::transmute::<&Self, &u8>(self) }
+                }
+            }
         };
     };
     Ok(tokens)
