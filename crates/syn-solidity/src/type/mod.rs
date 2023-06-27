@@ -12,16 +12,16 @@ use syn::{
     Error, Ident, Result, Token,
 };
 
-mod array;
+pub mod array;
 pub use array::*;
 
-mod function;
+pub mod function;
 pub use function::*;
 
-mod mapping;
+pub mod mapping;
 pub use mapping::*;
 
-mod tuple;
+pub mod tuple;
 pub use tuple::*;
 
 /// A type name.

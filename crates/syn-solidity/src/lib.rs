@@ -20,32 +20,32 @@ use syn::Result;
 #[macro_use]
 mod macros;
 
-mod attribute;
+pub mod attribute;
 pub use attribute::*;
 
-mod file;
+pub mod file;
 pub use file::*;
 
-mod ident;
+pub mod ident;
 pub use ident::*;
 
-mod item;
+pub mod item;
 pub use item::*;
-mod lit;
+pub mod lit;
 pub use lit::*;
 
 pub mod kw;
 pub use kw::*;
 
-mod stmt;
+pub mod stmt;
 pub use stmt::*;
 
-mod r#type;
+pub mod r#type;
 pub use r#type::*;
 
 pub(crate) mod utils;
 
-mod variable;
+pub mod variable;
 pub use variable::*;
 
 #[cfg(feature = "visit")]
