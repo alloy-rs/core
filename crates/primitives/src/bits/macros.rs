@@ -504,7 +504,7 @@ mod tests {
         assert_eq!(A1, A2);
         assert_eq!(A1, hex!("0102030405060708090a0b0c0d0e0f1011121314"));
 
-        const B: Bytes = bytes!("112233");
+        static B: Bytes = bytes!("112233");
         assert_eq!(B[..], [0x11, 0x22, 0x33]);
     }
 }
