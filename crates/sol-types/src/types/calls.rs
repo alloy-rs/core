@@ -4,6 +4,9 @@ use alloc::vec::Vec;
 /// A collection of ABI-encoded call-like types. This currently includes
 /// [`SolCall`] and [`SolError`].
 ///
+/// This trait assumes that the implementing type always has a selector, and
+/// thus encoded/decoded data is always at least 4 bytes long.
+///
 /// [`SolCall`]: crate::SolCall
 /// [`SolError`]: crate::SolError
 ///
@@ -71,14 +74,19 @@ pub enum ContractError<T> {
     Revert(Revert),
     /// A panic. See [`Panic`] for more information.
     Panic(Panic),
-    /// An revert containing no data.
-    Empty,
 }
 
 impl<T: SolCalls> SolCalls for ContractError<T> {
     const NAME: &'static str = "ContractError";
-    const MIN_DATA_LENGTH: usize = 0;
-    const COUNT: usize = T::COUNT + 3;
+
+    // revert is 64, panic is 32
+    const MIN_DATA_LENGTH: usize = if T::MIN_DATA_LENGTH < 32 {
+        T::MIN_DATA_LENGTH
+    } else {
+        32
+    };
+
+    const COUNT: usize = T::COUNT + 2;
 
     #[inline]
     fn selector(&self) -> [u8; 4] {
@@ -86,7 +94,6 @@ impl<T: SolCalls> SolCalls for ContractError<T> {
             Self::CustomError(error) => error.selector(),
             Self::Panic(_) => Panic::SELECTOR,
             Self::Revert(_) => Revert::SELECTOR,
-            Self::Empty => [0; 4],
         }
     }
 
@@ -108,24 +115,11 @@ impl<T: SolCalls> SolCalls for ContractError<T> {
     }
 
     #[inline]
-    fn decode(data: &[u8], validate: bool) -> Result<Self> {
-        match data.len() {
-            0 => Ok(Self::Empty),
-            1..=3 => Err(crate::Error::type_check_fail(data, Self::NAME)),
-            _ => {
-                let (selector, data) = crate::impl_core::split_array_ref(data);
-                Self::decode_raw(*selector, data, validate)
-            }
-        }
-    }
-
-    #[inline]
     fn encoded_size(&self) -> usize {
         match self {
             Self::CustomError(error) => error.encoded_size(),
             Self::Panic(panic) => panic.encoded_size(),
             Self::Revert(revert) => revert.encoded_size(),
-            Self::Empty => 0,
         }
     }
 
@@ -135,7 +129,6 @@ impl<T: SolCalls> SolCalls for ContractError<T> {
             Self::CustomError(error) => error.encode_raw(out),
             Self::Panic(panic) => panic.encode_raw(out),
             Self::Revert(revert) => revert.encode_raw(out),
-            Self::Empty => {}
         }
     }
 }
@@ -225,14 +218,6 @@ impl<T> ContractError<T> {
         match self {
             Self::Panic(inner) => Some(inner),
             _ => None,
-        }
-    }
-
-    /// Returns `true` if `self` matches [`Empty`](Self::Empty).
-    pub fn is_empty(&self) -> bool {
-        match self {
-            Self::Empty => true,
-            _ => false,
         }
     }
 }
