@@ -108,11 +108,7 @@ fn expand_call(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream>
     let signature = cx.signature(function.name().as_string(), &function.arguments);
     let selector = crate::utils::selector(&signature);
 
-    let tokenize_impl = if function.arguments.is_empty() {
-        quote! { ::core::convert::From::from([]) }
-    } else {
-        expand_tokenize_func(function.arguments.iter())
-    };
+    let tokenize_impl = expand_tokenize_func(function.arguments.iter());
 
     let tokens = quote! {
         #struct_def
@@ -147,7 +143,6 @@ fn expand_call(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream>
                 fn decode_returns(data: &[u8], validate: bool) -> ::alloy_sol_types::Result<Self::Return> {
                     <Self::ReturnTuple<'_> as ::alloy_sol_types::SolType>::decode(data, validate).map(Into::into)
                 }
-
             }
         };
     };

@@ -27,6 +27,6 @@ alloy-rlp-derive = { workspace = true, optional = true }
 hex-literal.workspace = true
 
 [features]
-default = ["std", "derive"]
+default = ["std"]
 std = ["arrayvec/std", "bytes/std"]
 derive = ["dep:alloy-rlp-derive"]
