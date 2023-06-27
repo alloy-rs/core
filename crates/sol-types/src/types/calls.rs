@@ -136,24 +136,21 @@ impl<T: SolCalls> SolCalls for ContractError<T> {
 impl<T> ContractError<T> {
     /// Returns `true` if `self` matches [`CustomError`](Self::CustomError).
     #[inline]
-    pub fn is_custom_error(&self) -> bool {
-        match self {
-            Self::CustomError(_) => true,
-            _ => false,
-        }
+    pub const fn is_custom_error(&self) -> bool {
+        matches!(self, Self::CustomError(_))
     }
 
-    /// Returns an immutable reference to the inner [`CustomError`] if `self`
+    /// Returns an immutable reference to the inner custom error if `self`
     /// matches [`CustomError`](Self::CustomError).
     #[inline]
-    pub fn as_custom_error(&self) -> Option<&T> {
+    pub const fn as_custom_error(&self) -> Option<&T> {
         match self {
             Self::CustomError(inner) => Some(inner),
             _ => None,
         }
     }
 
-    /// Returns a mutable reference to the inner [`CustomError`] if `self`
+    /// Returns a mutable reference to the inner custom error if `self`
     /// matches [`CustomError`](Self::CustomError).
     #[inline]
     pub fn as_custom_error_mut(&mut self) -> Option<&mut T> {
@@ -165,17 +162,14 @@ impl<T> ContractError<T> {
 
     /// Returns `true` if `self` matches [`Revert`](Self::Revert).
     #[inline]
-    pub fn is_revert(&self) -> bool {
-        match self {
-            Self::Revert(_) => true,
-            _ => false,
-        }
+    pub const fn is_revert(&self) -> bool {
+        matches!(self, Self::Revert(_))
     }
 
     /// Returns an immutable reference to the inner [`Revert`] if `self` matches
     /// [`Revert`](Self::Revert).
     #[inline]
-    pub fn as_revert(&self) -> Option<&Revert> {
+    pub const fn as_revert(&self) -> Option<&Revert> {
         match self {
             Self::Revert(inner) => Some(inner),
             _ => None,
@@ -194,17 +188,14 @@ impl<T> ContractError<T> {
 
     /// Returns `true` if `self` matches [`Panic`](Self::Panic).
     #[inline]
-    pub fn is_panic(&self) -> bool {
-        match self {
-            Self::Panic(_) => true,
-            _ => false,
-        }
+    pub const fn is_panic(&self) -> bool {
+        matches!(self, Self::Panic(_))
     }
 
     /// Returns an immutable reference to the inner [`Panic`] if `self` matches
     /// [`Panic`](Self::Panic).
     #[inline]
-    pub fn as_panic(&self) -> Option<&Panic> {
+    pub const fn as_panic(&self) -> Option<&Panic> {
         match self {
             Self::Panic(inner) => Some(inner),
             _ => None,
