@@ -60,19 +60,11 @@ error: intX must be a multiple of 8 up to 256
 
 error: failed to resolve types.
        This is likely due to an infinitely recursive type definition.
-       If you believe this is a bug, please file an issue at https://github.com/ethers-rs/core/issues/new/choose
-   --> tests/ui/type.rs:214:1
+       If you believe this is a bug, please file an issue at https://github.com/alloy-rs/core/issues/new/choose
+   --> tests/ui/type.rs:215:12
     |
-214 | / sol! {
-215 | |     struct RecursiveA {
-216 | |         RecursiveB b;
-217 | |     }
-...   |
-221 | |     }
-222 | | }
-    | |_^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+215 |     struct RecursiveA {
+    |            ^^^^^^^^^^
 
 error: enum has too many variants
    --> tests/ui/type.rs:486:10

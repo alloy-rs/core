@@ -134,7 +134,7 @@ impl<'ast> ExpCtxt<'ast> {
                     failed to resolve types.\n\
                     This is likely due to an infinitely recursive type definition.\n\
                     If you believe this is a bug, please file an issue at \
-                    https://github.com/ethers-rs/core/issues/new/choose";
+                    https://github.com/alloy-rs/core/issues/new/choose";
                 return Err(Error::new(ty.span(), msg))
             }
         }
