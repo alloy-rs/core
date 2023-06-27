@@ -1,3 +1,4 @@
+use crate::aliases;
 use core::{fmt, ops, str};
 use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
 
@@ -64,6 +65,56 @@ impl<'a, const N: usize> From<&'a mut [u8; N]> for FixedBytes<N> {
     fn from(bytes: &'a mut [u8; N]) -> Self {
         Self(*bytes)
     }
+}
+
+// Ideally this would be:
+// `impl<const N: usize> From<FixedBytes<N>> for Uint<N * 8>`
+// `impl<const N: usize> From<Uint<N / 8>> for FixedBytes<N>`
+macro_rules! fixed_bytes_uint_conversions {
+    ($($u:ty => $b:ty),* $(,)?) => {$(
+        impl From<$u> for $b {
+            #[inline]
+            fn from(value: $u) -> Self {
+                Self(value.to_be_bytes())
+            }
+        }
+
+        impl From<$b> for $u {
+            #[inline]
+            fn from(value: $b) -> Self {
+                Self::from_be_bytes(value.0)
+            }
+        }
+
+        const _: () = assert!(<$u>::BITS == <$b>::len_bytes() * 8);
+    )*};
+}
+
+fixed_bytes_uint_conversions! {
+    aliases::U8   => aliases::B8,
+    aliases::I8   => aliases::B8,
+
+    aliases::U16  => aliases::B16,
+    aliases::I16  => aliases::B16,
+
+    aliases::U32  => aliases::B32,
+    aliases::I32  => aliases::B32,
+
+    aliases::U64  => aliases::B64,
+    aliases::I64  => aliases::B64,
+
+    aliases::U128 => aliases::B128,
+    aliases::I128 => aliases::B128,
+
+    aliases::U160 => aliases::B160,
+    aliases::I160 => aliases::B160,
+
+    aliases::U256 => aliases::B256,
+    aliases::I256 => aliases::B256,
+
+    aliases::U512 => aliases::B512,
+    aliases::I512 => aliases::B512,
+
 }
 
 impl<const N: usize> From<FixedBytes<N>> for [u8; N] {
@@ -380,12 +431,11 @@ impl<const N: usize> FixedBytes<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::hex;
 
     macro_rules! test_fmt {
         ($($fmt:literal, $hex:literal => $expected:literal;)+) => {$(
             assert_eq!(
-                format!($fmt, FixedBytes::from(hex!($hex))),
+                format!($fmt, fixed_bytes!($hex)),
                 $expected
             );
         )+};
@@ -393,9 +443,9 @@ mod tests {
 
     #[test]
     fn concat_const() {
-        const A: FixedBytes<2> = FixedBytes(hex!("0123"));
-        const B: FixedBytes<2> = FixedBytes(hex!("4567"));
-        const EXPECTED: FixedBytes<4> = FixedBytes(hex!("01234567"));
+        const A: FixedBytes<2> = fixed_bytes!("0123");
+        const B: FixedBytes<2> = fixed_bytes!("4567");
+        const EXPECTED: FixedBytes<4> = fixed_bytes!("01234567");
         const ACTUAL: FixedBytes<4> = A.concat_const(B);
 
         assert_eq!(ACTUAL, EXPECTED);

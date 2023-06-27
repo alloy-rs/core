@@ -26,11 +26,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     } = error;
     cx.assert_resolved(params)?;
 
-    let tokenize_impl: TokenStream = if params.is_empty() {
-        quote! { ::core::convert::From::from([]) }
-    } else {
-        expand_tokenize_func(params.iter())
-    };
+    let tokenize_impl = expand_tokenize_func(params.iter());
 
     let signature = cx.signature(name.as_string(), params);
     let selector = crate::utils::selector(&signature);

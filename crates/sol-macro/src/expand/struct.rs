@@ -57,11 +57,7 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
         quote!(#encoded_type)
     };
 
-    let tokenize_impl: TokenStream = if fields.is_empty() {
-        quote! { ::core::convert::From::from([]) }
-    } else {
-        expand_tokenize_func(fields.iter())
-    };
+    let tokenize_impl = expand_tokenize_func(fields.iter());
 
     let encode_data_impl = match fields.len() {
         0 => unreachable!(),

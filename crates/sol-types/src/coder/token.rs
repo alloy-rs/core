@@ -108,13 +108,13 @@ impl From<bool> for WordToken {
 impl From<U256> for WordToken {
     #[inline]
     fn from(value: U256) -> Self {
-        Self(value.to_be_bytes().into())
+        Self(value.into())
     }
 }
 
 impl From<I256> for WordToken {
     fn from(value: I256) -> Self {
-        Self(value.to_be_bytes().into())
+        Self(value.into())
     }
 }
 

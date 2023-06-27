@@ -57,11 +57,10 @@ wrap_fixed_bytes!(
     /// Parsing and formatting:
     ///
     /// ```
-    /// use alloy_primitives::Address;
+    /// use alloy_primitives::{address, Address};
     ///
     /// let checksummed = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
-    // TODO: use address macro
-    /// let expected = Address::new(hex_literal::hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// let expected = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// let address = Address::parse_checksummed(checksummed, None).expect("valid checksum");
     /// assert_eq!(address, expected);
     ///
@@ -103,18 +102,41 @@ impl fmt::Display for Address {
 
 impl Address {
     /// Creates an Ethereum address from an EVM word's upper 20 bytes
-    /// (`hash[12..]`).
+    /// (`word[12..]`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_primitives::{address, b256, Address};
+    /// let word = b256!("000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// assert_eq!(
+    ///     Address::from_word(word),
+    ///     address!("d8da6bf26964af9d7eed9e03e53415d37aa96045")
+    /// );
+    /// ```
     #[inline]
-    pub fn from_word(hash: FixedBytes<32>) -> Self {
-        Self(FixedBytes(hash[12..].try_into().unwrap()))
+    #[must_use]
+    pub fn from_word(word: FixedBytes<32>) -> Self {
+        Self(FixedBytes(word[12..].try_into().unwrap()))
     }
 
     /// Left-pads the address to 32 bytes (EVM word size).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_primitives::{address, b256, Address};
+    /// assert_eq!(
+    ///     address!("d8da6bf26964af9d7eed9e03e53415d37aa96045").into_word(),
+    ///     b256!("000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045"),
+    /// );
+    /// ```
     #[inline]
+    #[must_use]
     pub fn into_word(&self) -> FixedBytes<32> {
-        let mut buf = [0; 32];
-        buf[12..].copy_from_slice(self.as_slice());
-        FixedBytes(buf)
+        let mut word = [0; 32];
+        word[12..].copy_from_slice(self.as_slice());
+        FixedBytes(word)
     }
 
     /// Parse an Ethereum address, verifying its [EIP-55] checksum.
@@ -132,13 +154,12 @@ impl Address {
     /// expected checksum.
     ///
     /// # Examples
-    // TODO: use address macro
+    ///
     /// ```
-    /// # use alloy_primitives::Address;
-    /// # use hex_literal::hex;
+    /// # use alloy_primitives::{address, Address};
     /// let checksummed = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
     /// let address = Address::parse_checksummed(checksummed, None).unwrap();
-    /// let expected = Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// let expected = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// assert_eq!(address, expected);
     /// ```
     pub fn parse_checksummed<S: AsRef<str>>(
@@ -178,11 +199,10 @@ impl Address {
     /// This method panics if `buf` is not exactly 42 bytes long.
     ///
     /// # Examples
-    // TODO: use address macro
+    ///
     /// ```
-    /// # use alloy_primitives::Address;
-    /// # use hex_literal::hex;
-    /// let address = Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// # use alloy_primitives::{address, Address};
+    /// let address = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// let mut buf = [0; 42];
     ///
     /// let checksummed: &str = address.to_checksum_raw(&mut buf, None);
@@ -191,6 +211,7 @@ impl Address {
     /// let checksummed: &str = address.to_checksum_raw(&mut buf, Some(1));
     /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
     /// ```
+    #[must_use]
     pub fn to_checksum_raw<'a>(&self, buf: &'a mut [u8], chain_id: Option<u64>) -> &'a str {
         assert_eq!(buf.len(), 42, "addr_buf must be 42 bytes long");
         buf[0] = b'0';
@@ -208,7 +229,7 @@ impl Address {
                 let prefix_str = temp.format(chain_id);
                 let prefix_len = prefix_str.len();
                 debug_assert!(prefix_len <= 20);
-                let len = prefix_len + 42;
+                let len = 2 + 40 + prefix_len;
 
                 // SAFETY: prefix_len <= 20; len <= 62; storage.len() == 64
                 unsafe {
@@ -250,11 +271,10 @@ impl Address {
     /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
     ///
     /// # Examples
-    // TODO: use address macro
+    ///
     /// ```
-    /// # use alloy_primitives::Address;
-    /// # use hex_literal::hex;
-    /// let address = Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// # use alloy_primitives::{address, Address};
+    /// let address = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
     ///
     /// let checksummed: String = address.to_checksum(None);
     /// assert_eq!(checksummed, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
@@ -263,6 +283,7 @@ impl Address {
     /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
     /// ```
     #[inline]
+    #[must_use]
     pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
         let mut buf = [0u8; 42];
         self.to_checksum_raw(&mut buf, chain_id).to_string()
@@ -273,20 +294,20 @@ impl Address {
     /// `keccak256(rlp([sender, nonce]))[12:]`
     ///
     /// # Examples
-    // TODO: use address macro
+    ///
     /// ```
-    /// # use alloy_primitives::Address;
-    /// # use hex_literal::hex;
-    /// let from = Address::new(hex!("b20a608c624Ca5003905aA834De7156C68b2E1d0"));
+    /// # use alloy_primitives::{address, Address};
+    /// let sender = address!("b20a608c624Ca5003905aA834De7156C68b2E1d0");
     ///
-    /// let expected = Address::new(hex!("00000000219ab540356cBB839Cbe05303d7705Fa"));
-    /// assert_eq!(from.create(0), expected);
+    /// let expected = address!("00000000219ab540356cBB839Cbe05303d7705Fa");
+    /// assert_eq!(sender.create(0), expected);
     ///
-    /// let expected = Address::new(hex!("e33c6e89e69d085897f98e92b06ebd541d1daa99"));
-    /// assert_eq!(from.create(1), expected);
+    /// let expected = address!("e33c6e89e69d085897f98e92b06ebd541d1daa99");
+    /// assert_eq!(sender.create(1), expected);
     /// ```
     #[cfg(feature = "rlp")]
     #[inline]
+    #[must_use]
     pub fn create(&self, nonce: u64) -> Self {
         use alloy_rlp::{Encodable, EMPTY_LIST_CODE, EMPTY_STRING_CODE};
 
@@ -325,16 +346,16 @@ impl Address {
     /// [EIP-1014]: https://eips.ethereum.org/EIPS/eip-1014
     ///
     /// # Examples
-    // TODO: use address macro
+    ///
     /// ```
-    /// # use alloy_primitives::Address;
-    /// # use hex_literal::hex;
-    /// let from = Address::new(hex!("8ba1f109551bD432803012645Ac136ddd64DBA72"));
-    /// let salt = hex!("7c5ea36004851c764c44143b1dcb59679b11c9a68e5f41497f6cf3d480715331");
-    /// let init_code = hex!("6394198df16000526103ff60206004601c335afa6040516060f3");
-    /// let expected = Address::new(hex!("533ae9d683B10C02EbDb05471642F85230071FC3"));
-    /// assert_eq!(from.create2_from_code(salt, init_code), expected);
+    /// # use alloy_primitives::{address, b256, bytes, Address};
+    /// let address = address!("8ba1f109551bD432803012645Ac136ddd64DBA72");
+    /// let salt = b256!("7c5ea36004851c764c44143b1dcb59679b11c9a68e5f41497f6cf3d480715331");
+    /// let init_code = bytes!("6394198df16000526103ff60206004601c335afa6040516060f3");
+    /// let expected = address!("533ae9d683B10C02EbDb05471642F85230071FC3");
+    /// assert_eq!(address.create2_from_code(salt, init_code), expected);
     /// ```
+    #[must_use]
     pub fn create2_from_code<S, C>(&self, salt: S, init_code: C) -> Self
     where
         // not `AsRef` because `[u8; N]` does not implement `AsRef<[u8; N]>`
@@ -356,16 +377,16 @@ impl Address {
     /// [EIP-1014]: https://eips.ethereum.org/EIPS/eip-1014
     ///
     /// # Examples
-    // TODO: use address macro
+    ///
     /// ```
-    /// # use alloy_primitives::Address;
-    /// # use hex_literal::hex;
-    /// let from = Address::new(hex!("5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"));
-    /// let salt = hex!("2b2f5776e38002e0c013d0d89828fdb06fee595ea2d5ed4b194e3883e823e350");
-    /// let init_code_hash = hex!("96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f");
-    /// let expected = Address::new(hex!("0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"));
-    /// assert_eq!(from.create2(salt, init_code_hash), expected);
+    /// # use alloy_primitives::{address, b256, Address};
+    /// let address = address!("5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f");
+    /// let salt = b256!("2b2f5776e38002e0c013d0d89828fdb06fee595ea2d5ed4b194e3883e823e350");
+    /// let init_code_hash = b256!("96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f");
+    /// let expected = address!("0d4a11d5EEaaC28EC3F61d100daF4d40471f1852");
+    /// assert_eq!(address.create2(salt, init_code_hash), expected);
     /// ```
+    #[must_use]
     pub fn create2<S, H>(&self, salt: S, init_code_hash: H) -> Self
     where
         // not `AsRef` because `[u8; N]` does not implement `AsRef<[u8; N]>`

@@ -19,6 +19,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 bytes.workspace = true
+hex-literal.workspace = true
 hex.workspace = true
 itoa = "1"
 ruint.workspace = true
@@ -43,7 +44,6 @@ proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
 [dev-dependencies]
-hex-literal.workspace = true
 serde_json.workspace = true
 
 [features]

@@ -54,27 +54,15 @@ fn dyn_abi_encode(c: &mut Criterion) {
     g.bench_function("single", |b| {
         let input = encode_single_input();
         b.iter(|| {
-            let ty = DynSolType::String;
             let value = DynSolValue::String(input.clone());
-            ty.encode_single(black_box(value))
+            black_box(value).encode_single()
         });
     });
 
     g.bench_function("struct", |b| {
-        let tys = vec![
-            DynSolType::Address,
-            DynSolType::Address,
-            DynSolType::Uint(24),
-            DynSolType::Address,
-            DynSolType::Uint(256),
-            DynSolType::Uint(256),
-            DynSolType::Uint(256),
-            DynSolType::Uint(160),
-        ];
-        let ty = DynSolType::Tuple(tys);
         let input = encode_struct_sol_values();
         let input = DynSolValue::Tuple(input.to_vec());
-        b.iter(|| ty.encode_single(black_box(&input).clone()));
+        b.iter(|| black_box(&input).encode());
     });
 
     g.finish();
