@@ -28,7 +28,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
 
     let tokenize_impl = expand_tokenize_func(params.iter());
 
-    let signature = cx.signature(name.as_string(), params);
+    let signature = cx.error_signature(error);
     let selector = crate::utils::selector(&signature);
 
     let converts = expand_from_into_tuples(&name.0, params);

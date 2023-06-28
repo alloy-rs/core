@@ -1,7 +1,9 @@
 //! Functions which generate Rust code from the Solidity AST.
 
+use crate::utils::ExprArray;
 use ast::{
-    File, Item, ItemFunction, Parameters, SolIdent, SolPath, Type, VariableDeclaration, Visit,
+    File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath, Type,
+    VariableDeclaration, Visit,
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, IdentFragment};
@@ -12,7 +14,6 @@ mod attr;
 
 mod r#type;
 pub use r#type::expand_type;
-use r#type::TypePrinter;
 
 mod contract;
 mod r#enum;
@@ -84,9 +85,11 @@ impl<'ast> ExpCtxt<'ast> {
             Item::Function(function) => function::expand(self, function),
             Item::Struct(strukt) => r#struct::expand(self, strukt),
             Item::Udt(udt) => udt::expand(self, udt),
-            Item::Import(_) | Item::Pragma(_) | Item::Using(_) | Item::Variable(_) => {
+            Item::Variable(_) => {
+                // TODO: Expand getter function for public variables
                 Ok(TokenStream::new())
             }
+            Item::Import(_) | Item::Pragma(_) | Item::Using(_) => Ok(TokenStream::new()),
         }
     }
 }
@@ -114,6 +117,8 @@ impl<'ast> ExpCtxt<'ast> {
     fn resolve_custom_types(&mut self) -> Result<()> {
         self.mk_types_map();
         // you won't get me this time, borrow checker
+        // SAFETY: no data races, we don't modify the map while we're iterating
+        // I think this is safe anyway
         let map_ref: &mut HashMap<SolIdent, Type> =
             unsafe { &mut *(&mut self.custom_types as *mut _) };
         let map = &self.custom_types;
@@ -261,7 +266,7 @@ impl<'ast> ExpCtxt<'ast> {
             if !first {
                 name.push(',');
             }
-            write!(name, "{}", TypePrinter::new(self, &param.ty)).unwrap();
+            write!(name, "{}", r#type::TypePrinter::new(self, &param.ty)).unwrap();
             first = false;
         }
         name.push(')');
@@ -270,6 +275,28 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn function_signature(&self, function: &ItemFunction) -> String {
         self.signature(function.name().as_string(), &function.arguments)
+    }
+
+    fn function_selector(&self, function: &ItemFunction) -> ExprArray<u8, 4> {
+        crate::utils::selector(self.function_signature(function))
+    }
+
+    fn error_signature(&self, error: &ItemError) -> String {
+        self.signature(error.name.as_string(), &error.parameters)
+    }
+
+    fn error_selector(&self, error: &ItemError) -> ExprArray<u8, 4> {
+        crate::utils::selector(self.error_signature(error))
+    }
+
+    #[allow(dead_code)]
+    fn event_signature(&self, event: &ItemEvent) -> String {
+        self.signature(event.name.as_string(), &event.params())
+    }
+
+    #[allow(dead_code)]
+    fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8, 32> {
+        crate::utils::event_selector(self.event_signature(event))
     }
 
     /// Returns an error if any of the types in the parameters are unresolved.

@@ -13,11 +13,11 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> [u8; 32] {
     output
 }
 
-pub fn selector<T: AsRef<[u8]>>(bytes: T) -> impl ToTokens {
-    ExprArray::<_, 4>::new(keccak256(bytes)[..4].try_into().unwrap())
+pub fn selector<T: AsRef<[u8]>>(bytes: T) -> ExprArray<u8, 4> {
+    ExprArray::new(keccak256(bytes)[..4].try_into().unwrap())
 }
 
-pub fn event_selector<T: AsRef<[u8]>>(bytes: T) -> impl ToTokens {
+pub fn event_selector<T: AsRef<[u8]>>(bytes: T) -> ExprArray<u8, 32> {
     ExprArray::new(keccak256(bytes))
 }
 
@@ -28,9 +28,9 @@ pub fn combine_errors(v: Vec<syn::Error>) -> Option<syn::Error> {
     })
 }
 
-struct ExprArray<T, const N: usize> {
-    array: [T; N],
-    span: Span,
+pub struct ExprArray<T, const N: usize> {
+    pub array: [T; N],
+    pub span: Span,
 }
 
 impl<T, const N: usize> ExprArray<T, N> {

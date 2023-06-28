@@ -106,7 +106,7 @@ fn expand_call(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream>
         .map(|returns| expand_from_into_tuples(&return_name, &returns.returns))
         .unwrap_or_else(|| expand_from_into_unit(&return_name));
 
-    let signature = cx.signature(function.name().as_string(), &function.arguments);
+    let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);
 
     let tokenize_impl = expand_tokenize_func(function.arguments.iter());

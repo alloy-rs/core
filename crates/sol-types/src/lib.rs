@@ -158,11 +158,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
+#[allow(unused_extern_crates)]
+extern crate self as alloy_sol_types;
+
 #[macro_use]
 extern crate alloc;
-
-#[doc(inline)]
-pub use alloy_sol_macro::sol;
 
 #[macro_use]
 mod macros;
@@ -193,6 +193,9 @@ pub use eip712::Eip712Domain;
 
 /// The ABI word type.
 pub type Word = alloy_primitives::B256;
+
+#[doc(inline)]
+pub use alloy_sol_macro::sol;
 
 // Not public API.
 #[doc(hidden)]

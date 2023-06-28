@@ -1,5 +1,6 @@
 use crate::{Panic, Result, Revert, SolError};
 use alloc::vec::Vec;
+use core::{fmt, iter::FusedIterator, marker::PhantomData};
 
 /// A collection of ABI-encoded call-like types. This currently includes
 /// [`SolCall`] and [`SolError`].
@@ -30,6 +31,10 @@ pub trait SolCalls: Sized {
     /// The selector of this type.
     fn selector(&self) -> [u8; 4];
 
+    /// The selector of this type at the given index, used in
+    /// [`selectors`](Self::selectors).
+    fn selector_at(i: usize) -> Option<[u8; 4]>;
+
     /// Checks if the given selector is known to this type.
     fn type_check(selector: [u8; 4]) -> Result<()>;
 
@@ -41,6 +46,12 @@ pub trait SolCalls: Sized {
 
     /// ABI-encodes `self` into the given buffer, *without* any selectors.
     fn encode_raw(&self, out: &mut Vec<u8>);
+
+    /// Returns an iterator over the selectors of this type.
+    #[inline]
+    fn selectors() -> Selectors<Self> {
+        Selectors::new()
+    }
 
     /// ABI-encodes `self` into the given buffer.
     #[inline]
@@ -98,6 +109,19 @@ impl<T: SolCalls> SolCalls for ContractError<T> {
     }
 
     #[inline]
+    fn selector_at(i: usize) -> Option<[u8; 4]> {
+        if i < T::COUNT {
+            T::selector_at(i)
+        } else {
+            match i - T::COUNT {
+                0 => Some(Revert::SELECTOR),
+                1 => Some(Panic::SELECTOR),
+                _ => None,
+            }
+        }
+    }
+
+    #[inline]
     fn type_check(selector: [u8; 4]) -> Result<()> {
         match selector {
             Revert::SELECTOR | Panic::SELECTOR => Ok(()),
@@ -129,6 +153,51 @@ impl<T: SolCalls> SolCalls for ContractError<T> {
             Self::CustomError(error) => error.encode_raw(out),
             Self::Panic(panic) => panic.encode_raw(out),
             Self::Revert(revert) => revert.encode_raw(out),
+        }
+    }
+}
+
+impl<T: SolCalls> From<T> for ContractError<T> {
+    #[inline]
+    fn from(value: T) -> Self {
+        Self::CustomError(value)
+    }
+}
+
+impl<T> From<Revert> for ContractError<T> {
+    #[inline]
+    fn from(value: Revert) -> Self {
+        Self::Revert(value)
+    }
+}
+
+impl<T> TryFrom<ContractError<T>> for Revert {
+    type Error = ContractError<T>;
+
+    #[inline]
+    fn try_from(value: ContractError<T>) -> Result<Revert, Self::Error> {
+        match value {
+            ContractError::Revert(inner) => Ok(inner),
+            _ => Err(value),
+        }
+    }
+}
+
+impl<T> From<Panic> for ContractError<T> {
+    #[inline]
+    fn from(value: Panic) -> Self {
+        Self::Panic(value)
+    }
+}
+
+impl<T> TryFrom<ContractError<T>> for Panic {
+    type Error = ContractError<T>;
+
+    #[inline]
+    fn try_from(value: ContractError<T>) -> Result<Panic, Self::Error> {
+        match value {
+            ContractError::Panic(inner) => Ok(inner),
+            _ => Err(value),
         }
     }
 }
@@ -213,40 +282,102 @@ impl<T> ContractError<T> {
     }
 }
 
-impl<T> From<Revert> for ContractError<T> {
-    #[inline]
-    fn from(value: Revert) -> Self {
-        Self::Revert(value)
-    }
+/// Iterator over the function or error selectors of a [`SolCalls`] type.
+///
+/// This `struct` is created by the [`selectors`] method on [`SolCalls`].
+/// See its documentation for more.
+///
+/// [`selectors`]: SolCalls::selectors
+pub struct Selectors<T> {
+    index: usize,
+    _marker: PhantomData<T>,
 }
 
-impl<T> TryFrom<ContractError<T>> for Revert {
-    type Error = ContractError<T>;
-
-    #[inline]
-    fn try_from(value: ContractError<T>) -> Result<Revert, Self::Error> {
-        match value {
-            ContractError::Revert(inner) => Ok(inner),
-            _ => Err(value),
+impl<T> Clone for Selectors<T> {
+    fn clone(&self) -> Self {
+        Self {
+            index: self.index,
+            _marker: PhantomData,
         }
     }
 }
 
-impl<T> From<Panic> for ContractError<T> {
-    #[inline]
-    fn from(value: Panic) -> Self {
-        Self::Panic(value)
+impl<T> fmt::Debug for Selectors<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Selectors")
+            .field("index", &self.index)
+            .finish()
     }
 }
 
-impl<T> TryFrom<ContractError<T>> for Panic {
-    type Error = ContractError<T>;
+impl<T> Selectors<T> {
+    fn new() -> Self {
+        Self {
+            index: 0,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<T: SolCalls> Iterator for Selectors<T> {
+    type Item = [u8; 4];
 
     #[inline]
-    fn try_from(value: ContractError<T>) -> Result<Panic, Self::Error> {
-        match value {
-            ContractError::Panic(inner) => Ok(inner),
-            _ => Err(value),
+    fn next(&mut self) -> Option<Self::Item> {
+        let selector = T::selector_at(self.index)?;
+        self.index += 1;
+        Some(selector)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.len();
+        (remaining, Some(remaining))
+    }
+}
+
+impl<T: SolCalls> ExactSizeIterator for Selectors<T> {
+    #[inline]
+    fn len(&self) -> usize {
+        T::COUNT - self.index
+    }
+}
+
+impl<T: SolCalls> FusedIterator for Selectors<T> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_primitives::keccak256;
+
+    fn sel(s: &str) -> [u8; 4] {
+        keccak256(s)[..4].try_into().unwrap()
+    }
+
+    #[test]
+    fn contract_error_enum() {
+        crate::sol! {
+            contract C {
+                error Err1();
+                error Err2(uint256);
+            }
         }
+
+        assert_eq!(C::CErrors::COUNT, 2);
+        assert_eq!(C::CErrors::MIN_DATA_LENGTH, 0);
+        assert_eq!(ContractError::<C::CErrors>::COUNT, 2 + 2);
+        assert_eq!(ContractError::<C::CErrors>::MIN_DATA_LENGTH, 0);
+
+        // sorted by selector
+        assert_eq!(C::CErrors::SELECTORS, [sel("Err2(uint256)"), sel("Err1()")]);
+        assert_eq!(
+            ContractError::<C::CErrors>::selectors().collect::<Vec<_>>(),
+            vec![
+                sel("Err2(uint256)"),
+                sel("Err1()"),
+                sel("Error(string)"),
+                sel("Panic(uint256)"),
+            ]
+        );
     }
 }
