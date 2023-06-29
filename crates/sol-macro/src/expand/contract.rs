@@ -28,12 +28,15 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
     let mut functions = Vec::with_capacity(contract.body.len());
     let mut errors = Vec::with_capacity(contract.body.len());
+    // let mut events = Vec::with_capacity(contract.body.len());
+
     let mut item_tokens = TokenStream::new();
     let d_attrs: Vec<Attribute> = attr::derives(attrs).cloned().collect();
     for item in body {
         match item {
             Item::Function(function) => functions.push(function),
             Item::Error(error) => errors.push(error),
+            // Item::Event(event) => events.push(event),
             _ => {}
         }
         if !d_attrs.is_empty() {
@@ -56,13 +59,15 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         CallLikeExpander::from_errors(cx, name, errors).expand(&attrs)
     });
 
-    // TODO: events enum
-    // let events_enum = (events.len() > 1).then(|| {
-    //     let mut attrs = d_attrs;
-    //     let doc_str = format!("Container for all the `{name}` events.");
-    //     attrs.push(parse_quote!(#[doc = #doc_str]));
-    //     CallLikeExpander::from_events(cx, name, events).expand(&attrs)
-    // });
+    // TODO
+    /*
+    let events_enum = (events.len() > 1).then(|| {
+        let mut attrs = d_attrs;
+        let doc_str = format!("Container for all the `{name}` events.");
+        attrs.push(parse_quote!(#[doc = #doc_str]));
+        CallLikeExpander::from_events(cx, name, events).expand(&attrs)
+    });
+    */
 
     let mod_attrs = attr::docs(attrs);
     let tokens = quote! {
@@ -77,6 +82,25 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     Ok(tokens)
 }
 
+/// Expands a `SolInterface` enum:
+///
+/// ```ignore,pseudo-code
+/// #name = #{contract_name}Calls | #{contract_name}Errors /* | #{contract_name}Events */;
+///
+/// pub enum #name {
+///    #(#variants(#types),)*
+/// }
+///
+/// impl SolInterface for #name {
+///     ...
+/// }
+///
+/// impl #name {
+///     #(
+///         pub fn #is_variant,#as_variant,#as_variant_mut(...) -> ... { ... }
+///     )*
+/// }
+/// ```
 struct CallLikeExpander {
     name: Ident,
     variants: Vec<Ident>,
@@ -93,9 +117,11 @@ enum CallLikeExpanderData {
     Error {
         selectors: Vec<ExprArray<u8, 4>>,
     },
-    // Event {
-    //     selectors: Vec<ExprArray<u8, 32>>,
-    // },
+    /*
+    Event {
+        selectors: Vec<ExprArray<u8, 32>>,
+    },
+    */
 }
 
 impl CallLikeExpander {
@@ -144,6 +170,25 @@ impl CallLikeExpander {
         }
     }
 
+    /*
+    fn from_events(cx: &ExpCtxt<'_>, contract_name: &SolIdent, events: Vec<&ItemEvent>) -> Self {
+        let mut selectors: Vec<_> = events.iter().map(|e| cx.event_selector(e)).collect();
+        selectors.sort_unstable_by_key(|a| a.array);
+
+        Self {
+            name: format_ident!("{contract_name}Events"),
+            variants: events.iter().map(|event| event.name.0.clone()).collect(),
+            min_data_len: events
+                .iter()
+                .map(|event| ty::params_base_data_size(cx, &event.params()))
+                .min()
+                .unwrap(),
+            trait_: Ident::new("SolEvent", Span::call_site()),
+            data: CallLikeExpanderData::Event { selectors },
+        }
+    }
+    */
+
     fn expand(self, attrs: &[Attribute]) -> TokenStream {
         let Self {
             name,
@@ -155,10 +200,12 @@ impl CallLikeExpander {
         let types = match &data {
             CallLikeExpanderData::Function { types, .. } => types,
             CallLikeExpanderData::Error { .. } => &variants,
+            // CallLikeExpanderData::Event { .. } => unreachable!(),
         };
         let selectors = match &data {
             CallLikeExpanderData::Function { selectors, .. }
             | CallLikeExpanderData::Error { selectors } => selectors,
+            // CallLikeExpanderData::Event { .. } => unreachable!(),
         };
 
         assert_eq!(variants.len(), types.len());
@@ -270,6 +317,18 @@ impl CallLikeExpander {
             }
         }
     }
+
+    /*
+    fn expand_event(self, attrs: &[Attribute]) -> TokenStream {
+        let Self {
+            name,
+            variants,
+            min_data_len,
+            trait_,
+            data,
+        } = self;
+    }
+    */
 }
 
 fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
