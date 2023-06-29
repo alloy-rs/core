@@ -182,8 +182,8 @@ mod impl_core;
 
 mod types;
 pub use types::{
-    data_type as sol_data, ContractError, Encodable, EventTopic, Panic, PanicKind, Revert, SolCall,
-    SolCalls, SolEnum, SolError, SolEvent, SolStruct, SolType, TopicList,
+    data_type as sol_data, ContractError, Encodable, EventTopic, Panic, PanicKind, Revert,
+    Selectors, SolCall, SolCalls, SolEnum, SolError, SolEvent, SolStruct, SolType, TopicList,
 };
 
 mod util;

@@ -1,5 +1,5 @@
 mod calls;
-pub use calls::{ContractError, SolCalls};
+pub use calls::{ContractError, Selectors, SolCalls};
 
 pub mod data_type;
 

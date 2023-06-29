@@ -33,6 +33,9 @@ pub trait SolCalls: Sized {
 
     /// The selector of this type at the given index, used in
     /// [`selectors`](Self::selectors).
+    ///
+    /// This **must** return `None` if `i >= Self::COUNT`, and `Some` with a
+    /// different selector otherwise.
     fn selector_at(i: usize) -> Option<[u8; 4]>;
 
     /// Checks if the given selector is known to this type.
@@ -311,7 +314,8 @@ impl<T> fmt::Debug for Selectors<T> {
 }
 
 impl<T> Selectors<T> {
-    fn new() -> Self {
+    #[inline]
+    const fn new() -> Self {
         Self {
             index: 0,
             _marker: PhantomData,
@@ -331,8 +335,13 @@ impl<T: SolCalls> Iterator for Selectors<T> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.len();
-        (remaining, Some(remaining))
+        let exact = self.len();
+        (exact, Some(exact))
+    }
+
+    #[inline]
+    fn count(self) -> usize {
+        self.len()
     }
 }
 
