@@ -16,7 +16,7 @@ use core::{fmt, iter::FusedIterator, marker::PhantomData};
 /// We do not recommend implementing this trait directly. Instead, we recommend
 /// using the [`sol`][crate::sol] proc macro to parse a Solidity contract
 /// definition.
-pub trait SolCalls: Sized {
+pub trait SolInterface: Sized {
     /// The name of this type.
     const NAME: &'static str;
 
@@ -90,7 +90,7 @@ pub enum ContractError<T> {
     Panic(Panic),
 }
 
-impl<T: SolCalls> SolCalls for ContractError<T> {
+impl<T: SolInterface> SolInterface for ContractError<T> {
     const NAME: &'static str = "ContractError";
 
     // revert is 64, panic is 32
@@ -160,7 +160,7 @@ impl<T: SolCalls> SolCalls for ContractError<T> {
     }
 }
 
-impl<T: SolCalls> From<T> for ContractError<T> {
+impl<T: SolInterface> From<T> for ContractError<T> {
     #[inline]
     fn from(value: T) -> Self {
         Self::CustomError(value)
@@ -285,12 +285,12 @@ impl<T> ContractError<T> {
     }
 }
 
-/// Iterator over the function or error selectors of a [`SolCalls`] type.
+/// Iterator over the function or error selectors of a [`SolInterface`] type.
 ///
-/// This `struct` is created by the [`selectors`] method on [`SolCalls`].
+/// This `struct` is created by the [`selectors`] method on [`SolInterface`].
 /// See its documentation for more.
 ///
-/// [`selectors`]: SolCalls::selectors
+/// [`selectors`]: SolInterface::selectors
 pub struct Selectors<T> {
     index: usize,
     _marker: PhantomData<T>,
@@ -323,7 +323,7 @@ impl<T> Selectors<T> {
     }
 }
 
-impl<T: SolCalls> Iterator for Selectors<T> {
+impl<T: SolInterface> Iterator for Selectors<T> {
     type Item = [u8; 4];
 
     #[inline]
@@ -345,14 +345,14 @@ impl<T: SolCalls> Iterator for Selectors<T> {
     }
 }
 
-impl<T: SolCalls> ExactSizeIterator for Selectors<T> {
+impl<T: SolInterface> ExactSizeIterator for Selectors<T> {
     #[inline]
     fn len(&self) -> usize {
         T::COUNT - self.index
     }
 }
 
-impl<T: SolCalls> FusedIterator for Selectors<T> {}
+impl<T: SolInterface> FusedIterator for Selectors<T> {}
 
 #[cfg(test)]
 mod tests {

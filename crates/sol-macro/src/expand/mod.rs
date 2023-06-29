@@ -12,8 +12,8 @@ use syn::{Error, Result};
 
 mod attr;
 
-mod r#type;
-pub use r#type::expand_type;
+mod ty;
+pub use ty::expand_type;
 
 mod contract;
 mod r#enum;
@@ -266,7 +266,7 @@ impl<'ast> ExpCtxt<'ast> {
             if !first {
                 name.push(',');
             }
-            write!(name, "{}", r#type::TypePrinter::new(self, &param.ty)).unwrap();
+            write!(name, "{}", ty::TypePrinter::new(self, &param.ty)).unwrap();
             first = false;
         }
         name.push(')');

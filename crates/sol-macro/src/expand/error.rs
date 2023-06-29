@@ -1,6 +1,6 @@
 //! [`ItemError`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, r#type::expand_tokenize_func, ExpCtxt};
+use super::{expand_fields, expand_from_into_tuples, ty::expand_tokenize_func, ExpCtxt};
 use ast::ItemError;
 use proc_macro2::TokenStream;
 use quote::quote;

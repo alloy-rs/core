@@ -1,5 +1,5 @@
 use alloy_primitives::{Address, U256};
-use alloy_sol_types::{sol, SolCall, SolCalls};
+use alloy_sol_types::{sol, SolCall, SolInterface};
 use hex_literal::hex;
 
 // Contracts generate a module with the same name, which contains all the items.

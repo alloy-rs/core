@@ -1,6 +1,6 @@
 //! [`ItemContract`] expansion.
 
-use super::{attr, r#type, ExpCtxt};
+use super::{attr, ty, ExpCtxt};
 use crate::utils::ExprArray;
 use ast::{Item, ItemContract, ItemError, ItemFunction, SolIdent};
 use heck::ToSnakeCase;
@@ -119,7 +119,7 @@ impl CallLikeExpander {
             variants,
             min_data_len: functions
                 .iter()
-                .map(|function| r#type::params_base_data_size(cx, &function.arguments))
+                .map(|function| ty::params_base_data_size(cx, &function.arguments))
                 .min()
                 .unwrap(),
             trait_: Ident::new("SolCall", Span::call_site()),
@@ -136,7 +136,7 @@ impl CallLikeExpander {
             variants: errors.iter().map(|error| error.name.0.clone()).collect(),
             min_data_len: errors
                 .iter()
-                .map(|error| r#type::params_base_data_size(cx, &error.parameters))
+                .map(|error| ty::params_base_data_size(cx, &error.parameters))
                 .min()
                 .unwrap(),
             trait_: Ident::new("SolError", Span::call_site()),
@@ -172,7 +172,7 @@ impl CallLikeExpander {
             }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::SolCalls for #name {
+            impl ::alloy_sol_types::SolInterface for #name {
                 const NAME: &'static str = #name_s;
                 const MIN_DATA_LENGTH: usize = #min_data_len;
                 const COUNT: usize = #count;

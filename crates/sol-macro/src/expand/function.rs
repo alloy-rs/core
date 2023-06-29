@@ -2,7 +2,7 @@
 
 use super::{
     expand_fields, expand_from_into_tuples, expand_from_into_unit, expand_tuple_types,
-    r#type::expand_tokenize_func, ExpCtxt,
+    ty::expand_tokenize_func, ExpCtxt,
 };
 use ast::ItemFunction;
 use proc_macro2::TokenStream;
