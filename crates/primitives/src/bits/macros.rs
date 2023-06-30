@@ -88,6 +88,50 @@ macro_rules! wrap_fixed_bytes {
             }
         }
 
+        impl ::core::convert::TryFrom<&[u8]> for $name {
+            type Error = ::core::array::TryFromSliceError;
+
+            #[inline]
+            fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+                <&Self>::try_from(slice).map(|this| *this)
+            }
+        }
+
+        impl ::core::convert::TryFrom<&mut [u8]> for $name {
+            type Error = ::core::array::TryFromSliceError;
+
+            #[inline]
+            fn try_from(slice: &mut [u8]) -> Result<Self, Self::Error> {
+                Self::try_from(&*slice)
+            }
+        }
+
+        impl<'a> ::core::convert::TryFrom<&'a [u8]> for &'a $name {
+            type Error = ::core::array::TryFromSliceError;
+
+            #[inline]
+            #[allow(unsafe_code)]
+            fn try_from(slice: &'a [u8]) -> Result<&'a $name, Self::Error> {
+                // SAFETY: `$name` is `repr(transparent)` for `FixedBytes<$n>`
+                // and consequently `[u8; $n]`
+                <&[u8; $n] as ::core::convert::TryFrom<&[u8]>>::try_from(slice)
+                    .map(|array_ref| unsafe { core::mem::transmute(array_ref) })
+            }
+        }
+
+        impl<'a> ::core::convert::TryFrom<&'a mut [u8]> for &'a mut $name {
+            type Error = ::core::array::TryFromSliceError;
+
+            #[inline]
+            #[allow(unsafe_code)]
+            fn try_from(slice: &'a mut [u8]) -> Result<&'a mut $name, Self::Error> {
+                // SAFETY: `$name` is `repr(transparent)` for `FixedBytes<$n>`
+                // and consequently `[u8; $n]`
+                <&mut [u8; $n] as ::core::convert::TryFrom<&mut [u8]>>::try_from(slice)
+                    .map(|array_ref| unsafe { core::mem::transmute(array_ref) })
+            }
+        }
+
         impl ::core::convert::AsRef<[u8; $n]> for $name {
             #[inline]
             fn as_ref(&self) -> &[u8; $n] {

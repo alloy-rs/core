@@ -1,4 +1,4 @@
-use crate::{utils::keccak256, wrap_fixed_bytes, FixedBytes};
+use crate::{aliases::U160, utils::keccak256, wrap_fixed_bytes, FixedBytes};
 use alloc::{
     borrow::Borrow,
     string::{String, ToString},
@@ -76,6 +76,20 @@ wrap_fixed_bytes!(
     /// ```
     pub struct Address<20>;
 );
+
+impl From<U160> for Address {
+    #[inline]
+    fn from(value: U160) -> Self {
+        Self(FixedBytes(value.to_be_bytes()))
+    }
+}
+
+impl From<Address> for U160 {
+    #[inline]
+    fn from(value: Address) -> Self {
+        Self::from_be_bytes(value.0 .0)
+    }
+}
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
