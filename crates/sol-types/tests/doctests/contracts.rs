@@ -6,7 +6,7 @@ use hex_literal::hex;
 // This module will also contain 3 container enums, one for each:
 // - functions: `<contract_name>Calls`
 // - errors: `<contract_name>Errors`
-// - events: `<contract_name>Events` (TODO)
+// - events: `<contract_name>Events`
 sol! {
     /// Interface of the ERC20 standard as defined in [the EIP].
     ///

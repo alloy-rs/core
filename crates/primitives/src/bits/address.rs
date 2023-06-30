@@ -77,13 +77,6 @@ wrap_fixed_bytes!(
     pub struct Address<20>;
 );
 
-impl From<Address> for FixedBytes<32> {
-    #[inline]
-    fn from(addr: Address) -> Self {
-        addr.into_word()
-    }
-}
-
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut buf = [0; 42];

@@ -18,7 +18,7 @@
 
 use crate::{Decoder, Encoder, Result, Word};
 use alloc::vec::Vec;
-use alloy_primitives::{Address, FixedBytes, I256, U256};
+use alloy_primitives::{FixedBytes, I256, U256};
 use core::fmt;
 
 mod sealed {
@@ -115,20 +115,6 @@ impl From<U256> for WordToken {
 impl From<I256> for WordToken {
     fn from(value: I256) -> Self {
         Self(value.into())
-    }
-}
-
-impl From<Address> for WordToken {
-    #[inline]
-    fn from(value: Address) -> Self {
-        Self(value.into())
-    }
-}
-
-impl From<[u8; 20]> for WordToken {
-    #[inline]
-    fn from(value: [u8; 20]) -> Self {
-        Self(Address::from(value).into())
     }
 }
 

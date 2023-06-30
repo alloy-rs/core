@@ -2,7 +2,7 @@
 
 use super::{attr, ty, ExpCtxt};
 use crate::utils::ExprArray;
-use ast::{Item, ItemContract, ItemError, ItemFunction, SolIdent};
+use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent};
 use heck::ToSnakeCase;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
@@ -28,7 +28,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
     let mut functions = Vec::with_capacity(contract.body.len());
     let mut errors = Vec::with_capacity(contract.body.len());
-    // let mut events = Vec::with_capacity(contract.body.len());
+    let mut events = Vec::with_capacity(contract.body.len());
 
     let mut item_tokens = TokenStream::new();
     let d_attrs: Vec<Attribute> = attr::derives(attrs).cloned().collect();
@@ -36,7 +36,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         match item {
             Item::Function(function) => functions.push(function),
             Item::Error(error) => errors.push(error),
-            // Item::Event(event) => events.push(event),
+            Item::Event(event) => events.push(event),
             _ => {}
         }
         if !d_attrs.is_empty() {
@@ -53,21 +53,18 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     });
 
     let errors_enum = (errors.len() > 1).then(|| {
-        let mut attrs = d_attrs;
+        let mut attrs = d_attrs.clone();
         let doc_str = format!("Container for all the `{name}` custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         CallLikeExpander::from_errors(cx, name, errors).expand(&attrs)
     });
 
-    // TODO
-    /*
     let events_enum = (events.len() > 1).then(|| {
         let mut attrs = d_attrs;
         let doc_str = format!("Container for all the `{name}` events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
-        CallLikeExpander::from_events(cx, name, events).expand(&attrs)
+        CallLikeExpander::from_events(cx, name, events).expand_event(&attrs)
     });
-    */
 
     let mod_attrs = attr::docs(attrs);
     let tokens = quote! {
@@ -77,15 +74,19 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             #item_tokens
             #functions_enum
             #errors_enum
+            #events_enum
         }
     };
     Ok(tokens)
 }
 
+// note that item impls generated here do not need to be wrapped in an anonymous
+// constant (`const _: () = { ... };`) because they are in one already
+
 /// Expands a `SolInterface` enum:
 ///
 /// ```ignore,pseudo-code
-/// #name = #{contract_name}Calls | #{contract_name}Errors /* | #{contract_name}Events */;
+/// #name = #{contract_name}Calls | #{contract_name}Errors | #{contract_name}Events;
 ///
 /// pub enum #name {
 ///    #(#variants(#types),)*
@@ -117,11 +118,9 @@ enum CallLikeExpanderData {
     Error {
         selectors: Vec<ExprArray<u8, 4>>,
     },
-    /*
     Event {
         selectors: Vec<ExprArray<u8, 32>>,
     },
-    */
 }
 
 impl CallLikeExpander {
@@ -170,7 +169,6 @@ impl CallLikeExpander {
         }
     }
 
-    /*
     fn from_events(cx: &ExpCtxt<'_>, contract_name: &SolIdent, events: Vec<&ItemEvent>) -> Self {
         let mut selectors: Vec<_> = events.iter().map(|e| cx.event_selector(e)).collect();
         selectors.sort_unstable_by_key(|a| a.array);
@@ -187,7 +185,15 @@ impl CallLikeExpander {
             data: CallLikeExpanderData::Event { selectors },
         }
     }
-    */
+
+    /// Type name overrides. Currently only functions support this through
+    /// overloading.
+    fn types(&self) -> &[Ident] {
+        match &self.data {
+            CallLikeExpanderData::Function { types, .. } => types,
+            _ => &self.variants,
+        }
+    }
 
     fn expand(self, attrs: &[Attribute]) -> TokenStream {
         let Self {
@@ -195,28 +201,16 @@ impl CallLikeExpander {
             variants,
             min_data_len,
             trait_,
-            data,
-        } = self;
-        let types = match &data {
-            CallLikeExpanderData::Function { types, .. } => types,
-            CallLikeExpanderData::Error { .. } => &variants,
-            // CallLikeExpanderData::Event { .. } => unreachable!(),
-        };
-        let selectors = match &data {
-            CallLikeExpanderData::Function { selectors, .. }
-            | CallLikeExpanderData::Error { selectors } => selectors,
-            // CallLikeExpanderData::Event { .. } => unreachable!(),
-        };
+            ..
+        } = &self;
+        let types = self.types();
 
         assert_eq!(variants.len(), types.len());
         let name_s = name.to_string();
         let count = variants.len();
-        let methods = variants.iter().zip(types).map(generate_variant_methods);
+        let def = self.generate_enum(attrs);
         quote! {
-            #(#attrs)*
-            pub enum #name {
-                #(#variants(#types),)*
-            }
+            #def
 
             #[automatically_derived]
             impl ::alloy_sol_types::SolInterface for #name {
@@ -281,29 +275,45 @@ impl CallLikeExpander {
                     )*}
                 }
             }
+        }
+    }
 
-            #(
-                #[automatically_derived]
-                impl ::core::convert::From<#types> for #name {
-                    #[inline]
-                    fn from(value: #types) -> Self {
-                        Self::#variants(value)
-                    }
-                }
+    fn expand_event(self, attrs: &[Attribute]) -> TokenStream {
+        // TODO: SolInterface for events
+        self.generate_enum(attrs)
+    }
 
-                #[automatically_derived]
-                impl ::core::convert::TryFrom<#name> for #types {
-                    type Error = #name;
+    fn generate_enum(&self, attrs: &[Attribute]) -> TokenStream {
+        let Self {
+            name,
+            variants,
+            data,
+            ..
+        } = self;
+        let (selectors, selector_type) = match data {
+            CallLikeExpanderData::Function { selectors, .. }
+            | CallLikeExpanderData::Error { selectors } => {
+                (quote!(#(#selectors,)*), quote!([u8; 4]))
+            }
+            CallLikeExpanderData::Event { selectors } => {
+                (quote!(#(#selectors,)*), quote!([u8; 32]))
+            }
+        };
 
-                    #[inline]
-                    fn try_from(value: #name) -> ::core::result::Result<Self, Self::Error> {
-                        match value {
-                            #name::#variants(value) => ::core::result::Result::Ok(value),
-                            _ => ::core::result::Result::Err(value),
-                        }
-                    }
-                }
-            )*
+        let types = self.types();
+        let conversions = variants
+            .iter()
+            .zip(types)
+            .map(|(v, t)| generate_variant_conversions(name, v, t));
+        let methods = variants.iter().zip(types).map(generate_variant_methods);
+
+        quote! {
+            #(#attrs)*
+            pub enum #name {
+                #(#variants(#types),)*
+            }
+
+            #(#conversions)*
 
             #[automatically_derived]
             impl #name {
@@ -311,41 +321,59 @@ impl CallLikeExpander {
                 ///
                 /// Note that the selectors might not be in the same order as the
                 /// variants, as they are sorted instead of ordered by definition.
-                pub const SELECTORS: &'static [[u8; 4]] = &[#(#selectors,)*];
+                pub const SELECTORS: &'static [#selector_type] = &[#selectors];
 
                 #(#methods)*
             }
         }
     }
+}
 
-    /*
-    fn expand_event(self, attrs: &[Attribute]) -> TokenStream {
-        let Self {
-            name,
-            variants,
-            min_data_len,
-            trait_,
-            data,
-        } = self;
+fn generate_variant_conversions(name: &Ident, variant: &Ident, ty: &Ident) -> TokenStream {
+    quote! {
+        #[automatically_derived]
+        impl ::core::convert::From<#ty> for #name {
+            #[inline]
+            fn from(value: #ty) -> Self {
+                Self::#variant(value)
+            }
+        }
+
+        #[automatically_derived]
+        impl ::core::convert::TryFrom<#name> for #ty {
+            type Error = #name;
+
+            #[inline]
+            fn try_from(value: #name) -> ::core::result::Result<Self, #name> {
+                match value {
+                    #name::#variant(value) => ::core::result::Result::Ok(value),
+                    _ => ::core::result::Result::Err(value),
+                }
+            }
+        }
     }
-    */
 }
 
 fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
-    let name = variant.unraw().to_string().to_snake_case();
+    let name = variant.unraw();
+    let name_snake = name.to_string().to_snake_case();
 
-    let is_variant = format_ident!("is_{name}");
+    let is_variant = format_ident!("is_{name_snake}");
     let is_variant_doc = format!("Returns `true` if `self` matches [`{name}`](Self::{name}).");
 
-    let as_variant = format_ident!("as_{name}");
+    let as_variant = format_ident!("as_{name_snake}");
     let as_variant_doc = format!(
         "Returns an immutable reference to the inner [`{ty}`] if `self` matches [`{name}`](Self::{name})."
     );
 
-    let as_variant_mut = format_ident!("as_{name}_mut");
+    let as_variant_mut = format_ident!("as_{name_snake}_mut");
     let as_variant_mut_doc = format!(
         "Returns a mutable reference to the inner [`{ty}`] if `self` matches [`{name}`](Self::{name})."
     );
+
+    let try_into_variant = format_ident!("try_into_{name_snake}");
+    let try_into_variant_doc =
+        format!("Unwraps the inner [`{ty}`] if `self` matches [`{name}`](Self::{name}).");
 
     quote! {
         #[doc = #is_variant_doc]
@@ -369,6 +397,15 @@ fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
             match self {
                 Self::#variant(inner) => ::core::option::Option::Some(inner),
                 _ => ::core::option::Option::None,
+            }
+        }
+
+        #[doc = #try_into_variant_doc]
+        #[inline]
+        pub const fn #try_into_variant(self) -> ::core::result::Result<#ty, Self> {
+            match self {
+                Self::#variant(inner) => ::core::result::Result::Ok(inner),
+                _ => ::core::result::Result::Err(self),
             }
         }
     }

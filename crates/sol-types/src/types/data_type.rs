@@ -175,7 +175,7 @@ pub struct Address;
 impl<T: Borrow<[u8; 20]>> Encodable<Address> for T {
     #[inline]
     fn to_tokens(&self) -> WordToken {
-        WordToken::from(*self.borrow())
+        WordToken(RustAddress::new(*self.borrow()).into_word())
     }
 }
 
@@ -204,7 +204,7 @@ impl SolType for Address {
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::to_tokens(rust).0
+        rust.into_word()
     }
 
     #[inline]
