@@ -48,11 +48,17 @@ mod utils;
 pub use utils::keccak256;
 
 #[doc(no_inline)]
+pub use ::hex;
+#[doc(no_inline)]
 pub use hex_literal::{self, hex};
 #[doc(no_inline)]
 pub use ruint::{self, uint, Uint};
 #[doc(no_inline)]
 pub use tiny_keccak::{self, Hasher, Keccak};
+
+#[cfg(feature = "serde")]
+#[doc(no_inline)]
+pub use ::hex::serde as serde_hex;
 
 // Not public API.
 #[doc(hidden)]
