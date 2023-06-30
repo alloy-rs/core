@@ -2,7 +2,7 @@
 
 use super::{
     expand_fields, expand_from_into_tuples, expand_from_into_unit, expand_tuple_types,
-    r#type::expand_tokenize_func, ExpCtxt,
+    ty::expand_tokenize_func, ExpCtxt,
 };
 use ast::ItemFunction;
 use proc_macro2::TokenStream;
@@ -16,7 +16,8 @@ use syn::Result;
 ///     #(pub #argument_name: #argument_type,)*
 /// }
 ///
-/// impl Sol for #{name}Call {
+/// impl SolCall for #{name}Call {
+///     type Return = #{name}Return;
 ///     ...
 /// }
 ///
@@ -105,7 +106,7 @@ fn expand_call(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream>
         .map(|returns| expand_from_into_tuples(&return_name, &returns.returns))
         .unwrap_or_else(|| expand_from_into_unit(&return_name));
 
-    let signature = cx.signature(function.name().as_string(), &function.arguments);
+    let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);
 
     let tokenize_impl = expand_tokenize_func(function.arguments.iter());

@@ -57,3 +57,98 @@ error: intX must be a multiple of 8 up to 256
     |
 199 |         int7 a;
     |         ^^^^
+
+error: failed to resolve types.
+       This is likely due to an infinitely recursive type definition.
+       If you believe this is a bug, please file an issue at https://github.com/alloy-rs/core/issues/new/choose
+   --> tests/ui/type.rs:215:12
+    |
+215 |     struct RecursiveA {
+    |            ^^^^^^^^^^
+
+error: enum has too many variants
+   --> tests/ui/type.rs:486:10
+    |
+486 |     enum TooBigEnum {
+    |          ^^^^^^^^^^
+
+error[E0412]: cannot find type `bytes_` in this scope
+   --> tests/ui/type.rs:205:9
+    |
+205 |         bytes_ a;
+    |         ^^^^^^ not found in this scope
+
+error[E0412]: cannot find type `bytes_32` in this scope
+   --> tests/ui/type.rs:206:9
+    |
+206 |         bytes_32 b;
+    |         ^^^^^^^^ not found in this scope
+
+error[E0412]: cannot find type `uint_` in this scope
+   --> tests/ui/type.rs:207:9
+    |
+207 |         uint_ c;
+    |         ^^^^^ not found in this scope
+
+error[E0412]: cannot find type `uint_256` in this scope
+   --> tests/ui/type.rs:208:9
+    |
+208 |         uint_256 d;
+    |         ^^^^^^^^ not found in this scope
+
+error[E0412]: cannot find type `int_` in this scope
+   --> tests/ui/type.rs:209:9
+    |
+209 |         int_ e;
+    |         ^^^^ not found in this scope
+
+error[E0412]: cannot find type `int_256` in this scope
+   --> tests/ui/type.rs:210:9
+    |
+210 |         int_256 f;
+    |         ^^^^^^^ not found in this scope
+
+error[E0277]: the trait bound `(Address, Address, alloy_sol_types::sol_data::String, Bool, alloy_sol_types::sol_data::Bytes, alloy_sol_types::sol_data::FixedBytes<1>, alloy_sol_types::sol_data::FixedBytes<2>, alloy_sol_types::sol_data::FixedBytes<3>, alloy_sol_types::sol_data::FixedBytes<4>, alloy_sol_types::sol_data::FixedBytes<5>, alloy_sol_types::sol_data::FixedBytes<6>, alloy_sol_types::sol_data::FixedBytes<7>, alloy_sol_types::sol_data::FixedBytes<8>, alloy_sol_types::sol_data::FixedBytes<9>, alloy_sol_types::sol_data::FixedBytes<10>, alloy_sol_types::sol_data::FixedBytes<11>, alloy_sol_types::sol_data::FixedBytes<12>, alloy_sol_types::sol_data::FixedBytes<13>, alloy_sol_types::sol_data::FixedBytes<14>, alloy_sol_types::sol_data::FixedBytes<15>, alloy_sol_types::sol_data::FixedBytes<16>, alloy_sol_types::sol_data::FixedBytes<17>, alloy_sol_types::sol_data::FixedBytes<18>, alloy_sol_types::sol_data::FixedBytes<19>, alloy_sol_types::sol_data::FixedBytes<20>, alloy_sol_types::sol_data::FixedBytes<21>, alloy_sol_types::sol_data::FixedBytes<22>, alloy_sol_types::sol_data::FixedBytes<23>, alloy_sol_types::sol_data::FixedBytes<24>, alloy_sol_types::sol_data::FixedBytes<25>, alloy_sol_types::sol_data::FixedBytes<26>, alloy_sol_types::sol_data::FixedBytes<27>, alloy_sol_types::sol_data::FixedBytes<28>, alloy_sol_types::sol_data::FixedBytes<29>, alloy_sol_types::sol_data::FixedBytes<30>, alloy_sol_types::sol_data::FixedBytes<31>, alloy_sol_types::sol_data::FixedBytes<32>, Int<256>, Int<8>, Int<16>, Int<24>, Int<32>, Int<40>, Int<48>, Int<56>, Int<64>, Int<72>, Int<80>, Int<88>, Int<96>, Int<104>, Int<112>, Int<120>, Int<128>, Int<136>, Int<144>, Int<152>, Int<160>, Int<168>, Int<176>, Int<184>, Int<192>, Int<200>, Int<208>, Int<216>, Int<224>, Int<232>, Int<240>, Int<248>, Int<256>, Uint<256>, Uint<8>, Uint<16>, Uint<24>, Uint<32>, Uint<40>, Uint<48>, Uint<56>, Uint<64>, Uint<72>, Uint<80>, Uint<88>, Uint<96>, Uint<104>, Uint<112>, Uint<120>, Uint<128>, Uint<136>, Uint<144>, Uint<152>, Uint<160>, Uint<168>, Uint<176>, Uint<184>, Uint<192>, Uint<200>, Uint<208>, Uint<216>, Uint<224>, Uint<232>, Uint<240>, Uint<248>, Uint<256>): SolStruct` is not satisfied
+   --> tests/ui/type.rs:3:1
+    |
+3   | / sol! {
+4   | |     struct BuiltinTypes {
+5   | |         address a;
+6   | |         address payable ap;
+...   |
+111 | |     }
+112 | | }
+    | |_^ the trait `SolStruct` is not implemented for `(Address, Address, alloy_sol_types::sol_data::String, Bool, alloy_sol_types::sol_data::Bytes, alloy_sol_types::sol_data::FixedBytes<1>, alloy_sol_types::sol_data::FixedBytes<2>, alloy_sol_types::sol_data::FixedBytes<3>, alloy_sol_types::sol_data::FixedBytes<4>, alloy_sol_types::sol_data::FixedBytes<5>, alloy_sol_types::sol_data::FixedBytes<6>, alloy_sol_types::sol_data::FixedBytes<7>, alloy_sol_types::sol_data::FixedBytes<8>, alloy_sol_types::sol_data::FixedBytes<9>, alloy_sol_types::sol_data::FixedBytes<10>, alloy_sol_types::sol_data::FixedBytes<11>, alloy_sol_types::sol_data::FixedBytes<12>, alloy_sol_types::sol_data::FixedBytes<13>, alloy_sol_types::sol_data::FixedBytes<14>, alloy_sol_types::sol_data::FixedBytes<15>, alloy_sol_types::sol_data::FixedBytes<16>, alloy_sol_types::sol_data::FixedBytes<17>, alloy_sol_types::sol_data::FixedBytes<18>, alloy_sol_types::sol_data::FixedBytes<19>, alloy_sol_types::sol_data::FixedBytes<20>, alloy_sol_types::sol_data::FixedBytes<21>, alloy_sol_types::sol_data::FixedBytes<22>, alloy_sol_types::sol_data::FixedBytes<23>, alloy_sol_types::sol_data::FixedBytes<24>, alloy_sol_types::sol_data::FixedBytes<25>, alloy_sol_types::sol_data::FixedBytes<26>, alloy_sol_types::sol_data::FixedBytes<27>, alloy_sol_types::sol_data::FixedBytes<28>, alloy_sol_types::sol_data::FixedBytes<29>, alloy_sol_types::sol_data::FixedBytes<30>, alloy_sol_types::sol_data::FixedBytes<31>, alloy_sol_types::sol_data::FixedBytes<32>, Int<256>, Int<8>, Int<16>, Int<24>, Int<32>, Int<40>, Int<48>, Int<56>, Int<64>, Int<72>, Int<80>, Int<88>, Int<96>, Int<104>, Int<112>, Int<120>, Int<128>, Int<136>, Int<144>, Int<152>, Int<160>, Int<168>, Int<176>, Int<184>, Int<192>, Int<200>, Int<208>, Int<216>, Int<224>, Int<232>, Int<240>, Int<248>, Int<256>, Uint<256>, Uint<8>, Uint<16>, Uint<24>, Uint<32>, Uint<40>, Uint<48>, Uint<56>, Uint<64>, Uint<72>, Uint<80>, Uint<88>, Uint<96>, Uint<104>, Uint<112>, Uint<120>, Uint<128>, Uint<136>, Uint<144>, Uint<152>, Uint<160>, Uint<168>, Uint<176>, Uint<184>, Uint<192>, Uint<200>, Uint<208>, Uint<216>, Uint<224>, Uint<232>, Uint<240>, Uint<248>, Uint<256>)`
+    |
+    = help: the following other types implement trait `SolStruct`:
+              ArrayTypes
+              BuiltinTypes
+              CustomTypes
+              TupleTypes
+    = note: required for `(Address, ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ...)` to implement `SolType`
+note: required by a bound in `Encodable`
+   --> src/types/type.rs
+    |
+    | pub trait Encodable<T: ?Sized + SolType> {
+    |                                 ^^^^^^^ required by this bound in `Encodable`
+    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `(Address, Address, alloy_sol_types::sol_data::String, Bool, alloy_sol_types::sol_data::Bytes, alloy_sol_types::sol_data::FixedBytes<1>, alloy_sol_types::sol_data::FixedBytes<2>, alloy_sol_types::sol_data::FixedBytes<3>, alloy_sol_types::sol_data::FixedBytes<4>, alloy_sol_types::sol_data::FixedBytes<5>, alloy_sol_types::sol_data::FixedBytes<6>, alloy_sol_types::sol_data::FixedBytes<7>, alloy_sol_types::sol_data::FixedBytes<8>, alloy_sol_types::sol_data::FixedBytes<9>, alloy_sol_types::sol_data::FixedBytes<10>, alloy_sol_types::sol_data::FixedBytes<11>, alloy_sol_types::sol_data::FixedBytes<12>, alloy_sol_types::sol_data::FixedBytes<13>, alloy_sol_types::sol_data::FixedBytes<14>, alloy_sol_types::sol_data::FixedBytes<15>, alloy_sol_types::sol_data::FixedBytes<16>, alloy_sol_types::sol_data::FixedBytes<17>, alloy_sol_types::sol_data::FixedBytes<18>, alloy_sol_types::sol_data::FixedBytes<19>, alloy_sol_types::sol_data::FixedBytes<20>, alloy_sol_types::sol_data::FixedBytes<21>, alloy_sol_types::sol_data::FixedBytes<22>, alloy_sol_types::sol_data::FixedBytes<23>, alloy_sol_types::sol_data::FixedBytes<24>, alloy_sol_types::sol_data::FixedBytes<25>, alloy_sol_types::sol_data::FixedBytes<26>, alloy_sol_types::sol_data::FixedBytes<27>, alloy_sol_types::sol_data::FixedBytes<28>, alloy_sol_types::sol_data::FixedBytes<29>, alloy_sol_types::sol_data::FixedBytes<30>, alloy_sol_types::sol_data::FixedBytes<31>, alloy_sol_types::sol_data::FixedBytes<32>, Int<256>, Int<8>, Int<16>, Int<24>, Int<32>, Int<40>, Int<48>, Int<56>, Int<64>, Int<72>, Int<80>, Int<88>, Int<96>, Int<104>, Int<112>, Int<120>, Int<128>, Int<136>, Int<144>, Int<152>, Int<160>, Int<168>, Int<176>, Int<184>, Int<192>, Int<200>, Int<208>, Int<216>, Int<224>, Int<232>, Int<240>, Int<248>, Int<256>, Uint<256>, Uint<8>, Uint<16>, Uint<24>, Uint<32>, Uint<40>, Uint<48>, Uint<56>, Uint<64>, Uint<72>, Uint<80>, Uint<88>, Uint<96>, Uint<104>, Uint<112>, Uint<120>, Uint<128>, Uint<136>, Uint<144>, Uint<152>, Uint<160>, Uint<168>, Uint<176>, Uint<184>, Uint<192>, Uint<200>, Uint<208>, Uint<216>, Uint<224>, Uint<232>, Uint<240>, Uint<248>, Uint<256>): SolStruct` is not satisfied
+   --> tests/ui/type.rs:3:1
+    |
+3   | / sol! {
+4   | |     struct BuiltinTypes {
+5   | |         address a;
+6   | |         address payable ap;
+...   |
+111 | |     }
+112 | | }
+    | |_^ the trait `SolStruct` is not implemented for `(Address, Address, alloy_sol_types::sol_data::String, Bool, alloy_sol_types::sol_data::Bytes, alloy_sol_types::sol_data::FixedBytes<1>, alloy_sol_types::sol_data::FixedBytes<2>, alloy_sol_types::sol_data::FixedBytes<3>, alloy_sol_types::sol_data::FixedBytes<4>, alloy_sol_types::sol_data::FixedBytes<5>, alloy_sol_types::sol_data::FixedBytes<6>, alloy_sol_types::sol_data::FixedBytes<7>, alloy_sol_types::sol_data::FixedBytes<8>, alloy_sol_types::sol_data::FixedBytes<9>, alloy_sol_types::sol_data::FixedBytes<10>, alloy_sol_types::sol_data::FixedBytes<11>, alloy_sol_types::sol_data::FixedBytes<12>, alloy_sol_types::sol_data::FixedBytes<13>, alloy_sol_types::sol_data::FixedBytes<14>, alloy_sol_types::sol_data::FixedBytes<15>, alloy_sol_types::sol_data::FixedBytes<16>, alloy_sol_types::sol_data::FixedBytes<17>, alloy_sol_types::sol_data::FixedBytes<18>, alloy_sol_types::sol_data::FixedBytes<19>, alloy_sol_types::sol_data::FixedBytes<20>, alloy_sol_types::sol_data::FixedBytes<21>, alloy_sol_types::sol_data::FixedBytes<22>, alloy_sol_types::sol_data::FixedBytes<23>, alloy_sol_types::sol_data::FixedBytes<24>, alloy_sol_types::sol_data::FixedBytes<25>, alloy_sol_types::sol_data::FixedBytes<26>, alloy_sol_types::sol_data::FixedBytes<27>, alloy_sol_types::sol_data::FixedBytes<28>, alloy_sol_types::sol_data::FixedBytes<29>, alloy_sol_types::sol_data::FixedBytes<30>, alloy_sol_types::sol_data::FixedBytes<31>, alloy_sol_types::sol_data::FixedBytes<32>, Int<256>, Int<8>, Int<16>, Int<24>, Int<32>, Int<40>, Int<48>, Int<56>, Int<64>, Int<72>, Int<80>, Int<88>, Int<96>, Int<104>, Int<112>, Int<120>, Int<128>, Int<136>, Int<144>, Int<152>, Int<160>, Int<168>, Int<176>, Int<184>, Int<192>, Int<200>, Int<208>, Int<216>, Int<224>, Int<232>, Int<240>, Int<248>, Int<256>, Uint<256>, Uint<8>, Uint<16>, Uint<24>, Uint<32>, Uint<40>, Uint<48>, Uint<56>, Uint<64>, Uint<72>, Uint<80>, Uint<88>, Uint<96>, Uint<104>, Uint<112>, Uint<120>, Uint<128>, Uint<136>, Uint<144>, Uint<152>, Uint<160>, Uint<168>, Uint<176>, Uint<184>, Uint<192>, Uint<200>, Uint<208>, Uint<216>, Uint<224>, Uint<232>, Uint<240>, Uint<248>, Uint<256>)`
+    |
+    = help: the following other types implement trait `SolStruct`:
+              ArrayTypes
+              BuiltinTypes
+              CustomTypes
+              TupleTypes
+    = note: required for `(Address, ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ...)` to implement `SolType`
+    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)

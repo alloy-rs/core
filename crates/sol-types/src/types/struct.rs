@@ -1,7 +1,7 @@
 //! This module contains the [`SolStruct`] trait, which is used to implement
 //! Solidity structs logic, particularly for EIP-712 encoding/decoding.
 
-use super::{r#type::Encodable, SolType};
+use super::{Encodable, SolType};
 use crate::{token::TokenSeq, Eip712Domain, TokenType, Word};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, B256};
@@ -61,11 +61,12 @@ pub trait SolStruct: 'static {
     fn tokenize(&self) -> Self::Token<'_>;
 
     /// The size of the struct when encoded, in bytes
+    #[inline]
     fn encoded_size(&self) -> usize {
-        // This avoids unnecessary clones.
         if let Some(size) = <Self::Tuple<'_> as SolType>::ENCODED_SIZE {
             return size
         }
+
         self.tokenize().total_words() * Word::len_bytes()
     }
 
@@ -130,6 +131,7 @@ pub trait SolStruct: 'static {
 }
 
 impl<T: SolStruct> Encodable<T> for T {
+    #[inline]
     fn to_tokens(&self) -> <Self as SolType>::TokenType<'_> {
         <Self as SolStruct>::tokenize(self)
     }

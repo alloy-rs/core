@@ -1,7 +1,7 @@
 //! [`ItemStruct`] expansion.
 
 use super::{
-    expand_fields, expand_from_into_tuples, expand_type, r#type::expand_tokenize_func, ExpCtxt,
+    expand_fields, expand_from_into_tuples, expand_type, ty::expand_tokenize_func, ExpCtxt,
 };
 use ast::{ItemStruct, VariableDeclaration};
 use proc_macro2::TokenStream;

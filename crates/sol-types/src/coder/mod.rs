@@ -27,8 +27,6 @@
 //!
 //! This is the least useful one. Most users will not need it.
 
-mod impl_core;
-
 mod encoder;
 pub use encoder::{encode, encode_params, encode_single, Encoder};
 

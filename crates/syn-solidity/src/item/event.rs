@@ -116,7 +116,9 @@ impl ItemEvent {
     }
 
     pub fn as_type(&self) -> Type {
-        Type::Tuple(self.parameters.iter().map(|arg| arg.ty.clone()).collect())
+        let mut ty = Type::Tuple(self.parameters.iter().map(|arg| arg.ty.clone()).collect());
+        ty.set_span(self.span());
+        ty
     }
 }
 

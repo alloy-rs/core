@@ -119,6 +119,7 @@ pub trait SolType {
     /// - array elements are padded, but still encoded in-place.
     ///
     /// More information can be found in the [Solidity docs](https://docs.soliditylang.org/en/latest/abi-spec.html#non-standard-packed-mode).
+    #[inline]
     fn encode_packed(rust: &Self::RustType) -> Vec<u8> {
         let mut out = Vec::new();
         Self::encode_packed_to(rust, &mut out);
@@ -128,11 +129,13 @@ pub trait SolType {
     /* BOILERPLATE BELOW */
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence.
+    #[inline]
     fn encode_single(rust: &Self::RustType) -> Vec<u8> {
         crate::encode_single(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence.
+    #[inline]
     fn encode<'a>(rust: &'a Self::RustType) -> Vec<u8>
     where
         Self::TokenType<'a>: TokenSeq<'a>,
@@ -141,6 +144,7 @@ pub trait SolType {
     }
 
     /// Encode an ABI sequence suitable for function parameters.
+    #[inline]
     fn encode_params<'a>(rust: &'a Self::RustType) -> Vec<u8>
     where
         Self::TokenType<'a>: TokenSeq<'a>,
@@ -149,6 +153,7 @@ pub trait SolType {
     }
 
     /// Hex output of [`encode`][SolType::encode].
+    #[inline]
     fn hex_encode<'a>(rust: &'a Self::RustType) -> String
     where
         Self::TokenType<'a>: TokenSeq<'a>,
@@ -157,11 +162,13 @@ pub trait SolType {
     }
 
     /// Hex output of [`encode_single`][SolType::encode_single].
+    #[inline]
     fn hex_encode_single(rust: &Self::RustType) -> String {
         hex::encode_prefixed(Self::encode_single(rust))
     }
 
     /// Hex output of [`encode_params`][SolType::encode_params].
+    #[inline]
     fn hex_encode_params<'a>(rust: &'a Self::RustType) -> String
     where
         Self::TokenType<'a>: TokenSeq<'a>,

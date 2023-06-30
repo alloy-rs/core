@@ -15,5 +15,3 @@ mod rlp;
 
 #[cfg(feature = "serde")]
 mod serde;
-
-mod impl_core;

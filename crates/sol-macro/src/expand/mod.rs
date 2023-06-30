@@ -1,18 +1,19 @@
 //! Functions which generate Rust code from the Solidity AST.
 
+use crate::utils::ExprArray;
 use ast::{
-    File, Item, ItemFunction, Parameters, SolIdent, SolPath, Type, VariableDeclaration, Visit,
+    File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath, Type,
+    VariableDeclaration, Visit,
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, IdentFragment};
-use std::{collections::HashMap, fmt::Write};
+use std::{collections::HashMap, fmt::Write, num::NonZeroU16};
 use syn::{Error, Result};
 
 mod attr;
 
-mod r#type;
-pub use r#type::expand_type;
-use r#type::TypePrinter;
+mod ty;
+pub use ty::expand_type;
 
 mod contract;
 mod r#enum;
@@ -23,7 +24,7 @@ mod r#struct;
 mod udt;
 
 /// The limit for the number of times to resolve a type.
-const RESOLVE_LIMIT: usize = 16;
+const RESOLVE_LIMIT: usize = 8;
 
 /// The [`sol!`][crate::sol!] expansion implementation.
 pub fn expand(ast: File) -> Result<TokenStream> {
@@ -84,9 +85,11 @@ impl<'ast> ExpCtxt<'ast> {
             Item::Function(function) => function::expand(self, function),
             Item::Struct(strukt) => r#struct::expand(self, strukt),
             Item::Udt(udt) => udt::expand(self, udt),
-            Item::Import(_) | Item::Pragma(_) | Item::Using(_) | Item::Variable(_) => {
+            Item::Variable(_) => {
+                // TODO: Expand getter function for public variables
                 Ok(TokenStream::new())
             }
+            Item::Import(_) | Item::Pragma(_) | Item::Using(_) => Ok(TokenStream::new()),
         }
     }
 }
@@ -98,6 +101,10 @@ impl<'ast> ExpCtxt<'ast> {
         map.reserve(self.all_items.len());
         for &item in &self.all_items {
             let (name, ty) = match item {
+                Item::Enum(e) => (
+                    &e.name,
+                    Type::Uint(e.span(), Some(NonZeroU16::new(8).unwrap())),
+                ),
                 Item::Struct(s) => (&s.name, s.as_type()),
                 Item::Udt(u) => (&u.name, u.ty.clone()),
                 _ => continue,
@@ -109,33 +116,34 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn resolve_custom_types(&mut self) -> Result<()> {
         self.mk_types_map();
-        for _i in 0..RESOLVE_LIMIT {
-            let mut any = false;
-            // you won't get me this time, borrow checker
-            let map_ref: &mut HashMap<SolIdent, Type> =
-                unsafe { &mut *(&mut self.custom_types as *mut _) };
-            for ty in map_ref.values_mut() {
-                ty.visit_mut(|ty| {
-                    let ty @ Type::Custom(_) = ty else { return };
-                    let Type::Custom(name) = &*ty else { unreachable!() };
-                    let Some(resolved) = self.custom_types.get(name.last_tmp()) else { return };
-                    ty.clone_from(resolved);
-                    any = true;
-                });
-            }
-            if !any {
-                // done
-                return Ok(())
+        // you won't get me this time, borrow checker
+        // SAFETY: no data races, we don't modify the map while we're iterating
+        // I think this is safe anyway
+        let map_ref: &mut HashMap<SolIdent, Type> =
+            unsafe { &mut *(&mut self.custom_types as *mut _) };
+        let map = &self.custom_types;
+        for ty in map_ref.values_mut() {
+            let mut i = 0;
+            ty.visit_mut(|ty| {
+                if i >= RESOLVE_LIMIT {
+                    return
+                }
+                let ty @ Type::Custom(_) = ty else { return };
+                let Type::Custom(name) = &*ty else { unreachable!() };
+                let Some(resolved) = map.get(name.last_tmp()) else { return };
+                ty.clone_from(resolved);
+                i += 1;
+            });
+            if i >= RESOLVE_LIMIT {
+                let msg = "\
+                    failed to resolve types.\n\
+                    This is likely due to an infinitely recursive type definition.\n\
+                    If you believe this is a bug, please file an issue at \
+                    https://github.com/alloy-rs/core/issues/new/choose";
+                return Err(Error::new(ty.span(), msg))
             }
         }
-
-        let msg = format!(
-            "failed to resolve types after {RESOLVE_LIMIT} iterations.\n\
-             This is likely due to an infinitely recursive type definition.\n\
-             If you believe this is a bug, please file an issue at \
-             https://github.com/ethers-rs/core/issues/new/choose"
-        );
-        Err(Error::new(Span::call_site(), msg))
+        Ok(())
     }
 
     fn mk_overloads_map(&mut self) -> Result<()> {
@@ -258,7 +266,7 @@ impl<'ast> ExpCtxt<'ast> {
             if !first {
                 name.push(',');
             }
-            write!(name, "{}", TypePrinter::new(self, &param.ty)).unwrap();
+            write!(name, "{}", ty::TypePrinter::new(self, &param.ty)).unwrap();
             first = false;
         }
         name.push(')');
@@ -267,6 +275,28 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn function_signature(&self, function: &ItemFunction) -> String {
         self.signature(function.name().as_string(), &function.arguments)
+    }
+
+    fn function_selector(&self, function: &ItemFunction) -> ExprArray<u8, 4> {
+        crate::utils::selector(self.function_signature(function))
+    }
+
+    fn error_signature(&self, error: &ItemError) -> String {
+        self.signature(error.name.as_string(), &error.parameters)
+    }
+
+    fn error_selector(&self, error: &ItemError) -> ExprArray<u8, 4> {
+        crate::utils::selector(self.error_signature(error))
+    }
+
+    #[allow(dead_code)]
+    fn event_signature(&self, event: &ItemEvent) -> String {
+        self.signature(event.name.as_string(), &event.params())
+    }
+
+    #[allow(dead_code)]
+    fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8, 32> {
+        crate::utils::event_selector(self.event_signature(event))
     }
 
     /// Returns an error if any of the types in the parameters are unresolved.
@@ -336,8 +366,8 @@ fn expand_field(i: usize, ty: &Type, name: Option<&SolIdent>) -> TokenStream {
     }
 }
 
-#[inline]
 /// Generates an anonymous name from an integer. Used in `anon_name`
+#[inline]
 pub fn generate_name(i: usize) -> Ident {
     format_ident!("_{}", i)
 }

@@ -1,7 +1,12 @@
 use alloy_primitives::{Address, U256};
-use alloy_sol_types::{sol, SolCall};
+use alloy_sol_types::{sol, SolCall, SolInterface};
 use hex_literal::hex;
 
+// Contracts generate a module with the same name, which contains all the items.
+// This module will also contain 3 container enums, one for each:
+// - functions: `<contract_name>Calls`
+// - errors: `<contract_name>Errors`
+// - events: `<contract_name>Events`
 sol! {
     /// Interface of the ERC20 standard as defined in [the EIP].
     ///

@@ -41,9 +41,9 @@ macro_rules! impl_topic_list_tuples {
                 D: Into<WordToken>
             {
                 let err = || Error::Other(Cow::Borrowed("topic list length mismatch"));
-                let mut iter = topics.into_iter().map(Into::into);
+                let mut iter = topics.into_iter();
                 Ok(($(
-                    iter.next().ok_or_else(err).map(|tok| <$t>::detokenize(tok))?,
+                    <$t>::detokenize(iter.next().ok_or_else(err)?.into()),
                 )*))
             }
         }

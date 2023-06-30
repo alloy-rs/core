@@ -38,6 +38,9 @@ pub use bits::{
 mod bytes;
 pub use self::bytes::Bytes;
 
+#[cfg(feature = "getrandom")]
+mod impl_core;
+
 mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 

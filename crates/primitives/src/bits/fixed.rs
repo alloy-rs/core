@@ -280,10 +280,10 @@ impl<const N: usize> FixedBytes<N> {
     /// Instantiates a new fixed hash with cryptographically random content.
     #[cfg(feature = "getrandom")]
     pub fn try_random() -> Result<Self, getrandom::Error> {
-        let mut bytes: [_; N] = super::impl_core::uninit_array();
+        let mut bytes: [_; N] = crate::impl_core::uninit_array();
         getrandom::getrandom_uninit(&mut bytes)?;
         // SAFETY: The array is initialized by getrandom_uninit.
-        Ok(Self(unsafe { super::impl_core::array_assume_init(bytes) }))
+        Ok(Self(unsafe { crate::impl_core::array_assume_init(bytes) }))
     }
 
     /// Concatenate two `FixedBytes`.
