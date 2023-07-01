@@ -42,7 +42,7 @@ extern crate alloc;
 use serde::{Deserialize, Serialize};
 
 mod abi;
-pub use abi::AbiJson;
+pub use abi::JsonAbi;
 
 mod item;
 pub use item::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};

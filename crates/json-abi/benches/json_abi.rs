@@ -6,7 +6,7 @@ trait Group: Serialize + DeserializeOwned {
     const NAME: &'static str;
 }
 
-impl Group for alloy_json_abi::AbiJson {
+impl Group for alloy_json_abi::JsonAbi {
     const NAME: &'static str = "alloy";
 }
 impl Group for ethabi::Contract {
@@ -37,7 +37,7 @@ fn bench<T: Group>(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    bench::<alloy_json_abi::AbiJson>,
+    bench::<alloy_json_abi::JsonAbi>,
     bench::<ethabi::Contract>
 );
 criterion_main!(benches);

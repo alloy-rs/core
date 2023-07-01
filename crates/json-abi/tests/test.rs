@@ -1,4 +1,4 @@
-use alloy_json_abi::{AbiItem, AbiJson, Error, Param};
+use alloy_json_abi::{AbiItem, Error, JsonAbi, Param};
 
 #[test]
 fn complex_error() {
@@ -54,14 +54,14 @@ fn parse_test(s: &str, len: usize) {
     assert_eq!(abi_items.len(), len);
 
     let json = serde_json::to_string(&abi_items).unwrap();
-    let abi1: AbiJson = serde_json::from_str(&json).unwrap();
+    let abi1: JsonAbi = serde_json::from_str(&json).unwrap();
 
-    let abi2: AbiJson = serde_json::from_str(s).unwrap();
+    let abi2: JsonAbi = serde_json::from_str(s).unwrap();
 
     assert_eq!(abi_items.len(), abi2.len());
     assert_eq!(abi1, abi2);
 
     let json = serde_json::to_string(&abi2).unwrap();
-    let abi3: AbiJson = serde_json::from_str(&json).unwrap();
+    let abi3: JsonAbi = serde_json::from_str(&json).unwrap();
     assert_eq!(abi2, abi3);
 }

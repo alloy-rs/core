@@ -10,7 +10,7 @@ use serde::{
 ///
 /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#json
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct AbiJson {
+pub struct JsonAbi {
     /// The constructor function.
     pub constructor: Option<Constructor>,
     /// The fallback function.
@@ -25,7 +25,7 @@ pub struct AbiJson {
     pub errors: BTreeMap<String, Vec<Error>>,
 }
 
-impl AbiJson {
+impl JsonAbi {
     /// The total number of items (of any type)
     pub fn len(&self) -> usize {
         self.constructor.is_some() as usize
@@ -42,13 +42,13 @@ impl AbiJson {
     }
 }
 
-impl<'de> Deserialize<'de> for AbiJson {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<AbiJson, D::Error> {
+impl<'de> Deserialize<'de> for JsonAbi {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<JsonAbi, D::Error> {
         deserializer.deserialize_seq(AbiJsonVisitor)
     }
 }
 
-impl Serialize for AbiJson {
+impl Serialize for JsonAbi {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -87,7 +87,7 @@ impl Serialize for AbiJson {
 struct AbiJsonVisitor;
 
 impl<'de> Visitor<'de> for AbiJsonVisitor {
-    type Value = AbiJson;
+    type Value = JsonAbi;
 
     fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(formatter, "a valid ABI JSON file")
@@ -97,7 +97,7 @@ impl<'de> Visitor<'de> for AbiJsonVisitor {
     where
         A: SeqAccess<'de>,
     {
-        let mut json_file = AbiJson::default();
+        let mut json_file = JsonAbi::default();
 
         while let Some(item) = seq.next_element()? {
             match item {
