@@ -14,8 +14,8 @@ repository.workspace = true
 exclude.workspace = true
 
 [dependencies]
+alloy-primitives = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
-alloy-primitives.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

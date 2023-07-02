@@ -22,10 +22,23 @@ macro_rules! make_visitor {
 
                 fn visit_type(&mut v, ty: &'ast $($mut)? Type) {
                     match ty {
+                        Type::Address(..)
+                        | Type::Bool(_)
+                        | Type::Uint(..)
+                        | Type::Int(..)
+                        | Type::String(_)
+                        | Type::Bytes(_)
+                        | Type::FixedBytes(..) => {},
                         Type::Array(TypeArray { ty, .. }) => v.visit_type(ty),
                         Type::Tuple(TypeTuple { types, .. }) => {
                             for ty in types {
                                 v.visit_type(ty);
+                            }
+                        },
+                        Type::Function(TypeFunction { arguments, returns, .. }) => {
+                            v.visit_parameter_list(arguments);
+                            if let Some(returns) = returns {
+                                v.visit_parameter_list(& $($mut)? returns.returns);
                             }
                         },
                         Type::Mapping(TypeMapping { key, key_name, value, value_name, .. }) => {
@@ -39,7 +52,6 @@ macro_rules! make_visitor {
                             }
                         },
                         Type::Custom(name) => v.visit_path(name),
-                        _ => {}
                     }
                 }
 

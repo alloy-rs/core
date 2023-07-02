@@ -95,18 +95,15 @@ impl DynSolType {
             }
             Self::String => matches!(value, DynSolValue::String(_)),
             Self::FixedBytes(size) => matches!(value, DynSolValue::FixedBytes(_, s) if s == size),
-            Self::FixedArray(t, size) => {
-                matches!(value, DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v)))
-            }
-            Self::Tuple(types) => {
-                if let DynSolValue::CustomStruct { tuple: t, .. } = value {
-                    types.iter().zip(t).all(|(t, v)| t.matches(v))
-                } else if let DynSolValue::Tuple(v) = value {
-                    types.iter().zip(v).all(|(t, v)| t.matches(v))
-                } else {
-                    false
-                }
-            }
+            Self::FixedArray(t, size) => matches!(
+                value,
+                DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v))
+            ),
+            Self::Tuple(types) => matches!(
+                value,
+                DynSolValue::CustomStruct { tuple, .. } | DynSolValue::Tuple(tuple)
+                    if types.iter().zip(tuple).all(|(t, v)| t.matches(v))
+            ),
             Self::CustomStruct {
                 name,
                 prop_names,
@@ -126,7 +123,7 @@ impl DynSolType {
                 }
             }
             Self::CustomValue { name } => {
-                matches! {value, DynSolValue::CustomValue { name: n, .. } if name == n}
+                matches!(value, DynSolValue::CustomValue { name: n, .. } if name == n)
             }
         }
     }
@@ -165,34 +162,31 @@ impl DynSolType {
                         "tuple length mismatch on dynamic detokenization",
                     ))
                 }
-                Ok(DynSolValue::Tuple(
-                    types
-                        .iter()
-                        .zip(tokens.into_owned())
-                        .map(|(t, w)| t.detokenize(w))
-                        .collect::<Result<_, _>>()?,
-                ))
+                types
+                    .iter()
+                    .zip(tokens.into_owned())
+                    .map(|(t, w)| t.detokenize(w))
+                    .collect::<Result<_>>()
+                    .map(DynSolValue::Tuple)
             }
-            (DynSolType::Array(t), DynToken::DynSeq { contents, .. }) => Ok(DynSolValue::Array(
-                contents
-                    .into_owned()
-                    .into_iter()
-                    .map(|tok| t.detokenize(tok))
-                    .collect::<Result<_, _>>()?,
-            )),
+            (DynSolType::Array(t), DynToken::DynSeq { contents, .. }) => contents
+                .into_owned()
+                .into_iter()
+                .map(|tok| t.detokenize(tok))
+                .collect::<Result<_>>()
+                .map(DynSolValue::Array),
             (DynSolType::FixedArray(t, size), DynToken::FixedSeq(tokens, _)) => {
                 if *size != tokens.len() {
                     return Err(crate::Error::custom(
                         "array length mismatch on dynamic detokenization",
                     ))
                 }
-                Ok(DynSolValue::FixedArray(
-                    tokens
-                        .into_owned()
-                        .into_iter()
-                        .map(|tok| t.detokenize(tok))
-                        .collect::<Result<_, _>>()?,
-                ))
+                tokens
+                    .into_owned()
+                    .into_iter()
+                    .map(|tok| t.detokenize(tok))
+                    .collect::<Result<_>>()
+                    .map(DynSolValue::FixedArray)
             }
             (
                 DynSolType::CustomStruct {
@@ -211,7 +205,7 @@ impl DynSolType {
                     .iter()
                     .zip(tokens.into_owned())
                     .map(|(t, w)| t.detokenize(w))
-                    .collect::<Result<_, _>>()?;
+                    .collect::<Result<_>>()?;
 
                 Ok(DynSolValue::CustomStruct {
                     name: name.clone(),
@@ -277,7 +271,39 @@ impl DynSolType {
         }
     }
 
-    /// Decode a single value. Fails if the value does not match this type.
+    /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
+    /// match this type.
+    ///
+    /// This method is used for decoding function arguments. It tries to
+    /// determine whether the user intended to decode a sequence or an
+    /// individual value. If the `self` type is a tuple, the `data` will be
+    /// decoded as a sequence, otherwise it will be decoded as a single value.
+    ///
+    /// ## Example
+    ///
+    /// ```ignore
+    /// // This function takes a single simple param. The user should use
+    /// // DynSolType::Uint(256).decode_params(data) to decode the param.
+    /// function myFunc(uint256 a) public;
+    ///
+    /// // This function takes 2 params. The user should use
+    /// // DynSolType::Tuple(
+    /// //    vec![DynSolType::Uint(256), DynSolType::Bool])
+    /// // .decode_params(data)
+    /// function myFunc(uint256 b, bool c) public;
+    /// ```
+    pub fn decode_params(&self, data: &[u8]) -> Result<DynSolValue> {
+        match self {
+            DynSolType::Tuple(_) => self.decode_sequence(data),
+            _ => self.decode_single(data),
+        }
+    }
+
+    /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
+    /// match this type.
+    ///
+    /// This method is used for decoding single values. It assumes the `data`
+    /// argument is an encoded single-element sequence wrapping the `self` type.
     pub fn decode_single(&self, data: &[u8]) -> Result<DynSolValue> {
         let mut decoder = crate::Decoder::new(data, false);
         let mut token = self.empty_dyn_token();
@@ -285,7 +311,8 @@ impl DynSolType {
         self.detokenize(token)
     }
 
-    /// Decode a sequence of values. Fails if the values do not match this type.
+    /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
+    /// match this type.
     pub fn decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
         let mut decoder = crate::Decoder::new(data, false);
         let mut token = self.empty_dyn_token();

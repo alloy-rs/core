@@ -1,5 +1,9 @@
 use alloc::{string::String, vec::Vec};
-use core::{borrow::Borrow, fmt, ops::Deref};
+use core::{
+    borrow::Borrow,
+    fmt,
+    ops::{Deref, DerefMut},
+};
 
 #[cfg(feature = "rlp")]
 mod rlp;
@@ -33,33 +37,44 @@ impl fmt::LowerHex for Bytes {
 }
 
 impl Deref for Bytes {
-    type Target = [u8];
+    type Target = bytes::Bytes;
 
     #[inline]
-    fn deref(&self) -> &[u8] {
-        self.as_ref()
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Bytes {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
 impl AsRef<[u8]> for Bytes {
+    #[inline]
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
     }
 }
 
 impl Borrow<[u8]> for Bytes {
+    #[inline]
     fn borrow(&self) -> &[u8] {
         self.as_ref()
     }
 }
 
 impl FromIterator<u8> for Bytes {
+    #[inline]
     fn from_iter<T: IntoIterator<Item = u8>>(iter: T) -> Self {
-        Self(iter.into_iter().collect::<bytes::Bytes>())
+        Self(bytes::Bytes::from_iter(iter))
     }
 }
 
 impl<'a> FromIterator<&'a u8> for Bytes {
+    #[inline]
     fn from_iter<T: IntoIterator<Item = &'a u8>>(iter: T) -> Self {
         Self(iter.into_iter().copied().collect::<bytes::Bytes>())
     }
@@ -69,6 +84,7 @@ impl IntoIterator for Bytes {
     type Item = u8;
     type IntoIter = bytes::buf::IntoIter<bytes::Bytes>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
@@ -78,72 +94,84 @@ impl<'a> IntoIterator for &'a Bytes {
     type Item = &'a u8;
     type IntoIter = core::slice::Iter<'a, u8>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.as_ref().iter()
     }
 }
 
 impl From<bytes::Bytes> for Bytes {
+    #[inline]
     fn from(src: bytes::Bytes) -> Self {
         Self(src)
     }
 }
 
 impl From<Vec<u8>> for Bytes {
+    #[inline]
     fn from(src: Vec<u8>) -> Self {
         Self(src.into())
     }
 }
 
 impl<const N: usize> From<[u8; N]> for Bytes {
+    #[inline]
     fn from(src: [u8; N]) -> Self {
         src.to_vec().into()
     }
 }
 
 impl<'a, const N: usize> From<&'a [u8; N]> for Bytes {
+    #[inline]
     fn from(src: &'a [u8; N]) -> Self {
         src.to_vec().into()
     }
 }
 
 impl From<&'static [u8]> for Bytes {
+    #[inline]
     fn from(value: &'static [u8]) -> Self {
         Self(value.into())
     }
 }
 
 impl From<&'static str> for Bytes {
+    #[inline]
     fn from(value: &'static str) -> Self {
         Self(value.into())
     }
 }
 
 impl PartialEq<[u8]> for Bytes {
+    #[inline]
     fn eq(&self, other: &[u8]) -> bool {
         self[..] == *other
     }
 }
 
 impl PartialEq<Bytes> for [u8] {
+    #[inline]
     fn eq(&self, other: &Bytes) -> bool {
         *self == other[..]
     }
 }
 
 impl PartialEq<Vec<u8>> for Bytes {
+    #[inline]
     fn eq(&self, other: &Vec<u8>) -> bool {
         self[..] == other[..]
     }
 }
 
 impl PartialEq<Bytes> for Vec<u8> {
+    #[inline]
     fn eq(&self, other: &Bytes) -> bool {
         *other == *self
     }
 }
 
 impl PartialEq<bytes::Bytes> for Bytes {
+    #[inline]
     fn eq(&self, other: &bytes::Bytes) -> bool {
         other == self.as_ref()
     }
@@ -194,6 +222,13 @@ impl Bytes {
         Self(bytes::Bytes::from_static(bytes))
     }
 
+    /// Creates a new `Bytes` instance from a slice by copying it.
+    #[inline]
+    pub fn copy_from_slice(src: &[u8]) -> Self {
+        Self(bytes::Bytes::copy_from_slice(src))
+    }
+
+    #[inline]
     fn hex_encode(&self) -> String {
         hex::encode_prefixed(self.0.as_ref())
     }

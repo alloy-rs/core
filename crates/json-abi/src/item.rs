@@ -29,7 +29,22 @@ macro_rules! abi_items {
                 $fvis $field: $type,
             )*}
 
+            impl From<$name> for AbiItem<'_> {
+                #[inline]
+                fn from(item: $name) -> Self {
+                    AbiItem::$name(Cow::Owned(item))
+                }
+            }
+
+            impl<'a> From<&'a $name> for AbiItem<'a> {
+                #[inline]
+                fn from(item: &'a $name) -> Self {
+                    AbiItem::$name(Cow::Borrowed(item))
+                }
+            }
+
             impl<'de> Deserialize<'de> for $name {
+                #[inline]
                 fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
                     AbiItem::deserialize(deserializer).and_then(|item| match item {
                         AbiItem::$name(item) => Ok(item.into_owned()),
@@ -42,11 +57,20 @@ macro_rules! abi_items {
             }
 
             impl Serialize for $name {
+                #[inline]
                 fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                     AbiItem::$name(Cow::Borrowed(self)).serialize(serializer)
                 }
             }
         )*
+
+        /// A JSON ABI item.
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        #[repr(C)]
+        pub enum AbiItem<'a> {$(
+            #[doc = concat!("A JSON ABI [`", stringify!($name), "`].")]
+            $name(Cow<'a, $name>),
+        )*}
 
         #[doc(hidden)]
         mod private {
@@ -62,20 +86,12 @@ macro_rules! abi_items {
             )*
 
             #[derive(Serialize, Deserialize)]
-            #[serde(tag = "type", rename_all = "lowercase")]
+            #[serde(rename_all = "lowercase", tag = "type")]
             #[repr(C)]
             pub(super) enum AbiItem<'a> {$(
                 $name(Cow<'a, self::$name>),
             )*}
         }
-
-        /// A JSON ABI item.
-        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-        #[repr(C)]
-        pub enum AbiItem<'a> {$(
-            #[doc = concat!("A JSON ABI [`", stringify!($name), "`].")]
-            $name(Cow<'a, $name>),
-        )*}
     };
 }
 
@@ -136,28 +152,16 @@ abi_items! {
 }
 
 impl Serialize for AbiItem<'_> {
+    #[inline]
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         <&private::AbiItem<'_>>::from(self).serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for AbiItem<'_> {
+    #[inline]
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         private::AbiItem::deserialize(deserializer).map(Into::into)
-    }
-}
-
-impl AbiItem<'_> {
-    /// Returns the name of the item.
-    pub const fn debug_name(&self) -> &'static str {
-        match self {
-            AbiItem::Constructor(_) => "Constructor",
-            AbiItem::Fallback(_) => "Fallback",
-            AbiItem::Receive(_) => "Receive",
-            AbiItem::Function(_) => "Function",
-            AbiItem::Event(_) => "Event",
-            AbiItem::Error(_) => "Error",
-        }
     }
 }
 
@@ -196,16 +200,169 @@ impl<'a, 'r> From<&'r AbiItem<'a>> for &'r private::AbiItem<'a> {
     }
 }
 
+impl AbiItem<'_> {
+    /// Returns the debug name of the item.
+    #[inline]
+    pub const fn debug_name(&self) -> &'static str {
+        match self {
+            AbiItem::Constructor(_) => "Constructor",
+            AbiItem::Fallback(_) => "Fallback",
+            AbiItem::Receive(_) => "Receive",
+            AbiItem::Function(_) => "Function",
+            AbiItem::Event(_) => "Event",
+            AbiItem::Error(_) => "Error",
+        }
+    }
+
+    /// Returns an immutable reference to the name of the item.
+    #[inline]
+    pub fn name(&self) -> Option<&String> {
+        match self {
+            Self::Event(item) => Some(&item.name),
+            Self::Error(item) => Some(&item.name),
+            Self::Function(item) => Some(&item.name),
+            Self::Constructor(_) | Self::Fallback(_) | Self::Receive(_) => None,
+        }
+    }
+
+    /// Returns a mutable reference to the name of the item.
+    ///
+    /// Clones the item if it is not already owned.
+    #[inline]
+    pub fn name_mut(&mut self) -> Option<&mut String> {
+        match self {
+            Self::Event(item) => Some(&mut item.to_mut().name),
+            Self::Error(item) => Some(&mut item.to_mut().name),
+            Self::Function(item) => Some(&mut item.to_mut().name),
+            Self::Constructor(_) | Self::Fallback(_) | Self::Receive(_) => None,
+        }
+    }
+
+    /// Returns the state mutability of the item.
+    #[inline]
+    pub fn state_mutability(&self) -> Option<StateMutability> {
+        match self {
+            Self::Constructor(item) => Some(item.state_mutability),
+            Self::Fallback(item) => Some(item.state_mutability),
+            Self::Receive(item) => Some(item.state_mutability),
+            Self::Function(item) => Some(item.state_mutability),
+            Self::Event(_) | Self::Error(_) => None,
+        }
+    }
+
+    /// Returns a mutable reference to the state mutability of the item.
+    ///
+    /// Clones the item if it is not already owned.
+    #[inline]
+    pub fn state_mutability_mut(&mut self) -> Option<&mut StateMutability> {
+        match self {
+            Self::Constructor(item) => Some(&mut item.to_mut().state_mutability),
+            Self::Fallback(item) => Some(&mut item.to_mut().state_mutability),
+            Self::Receive(item) => Some(&mut item.to_mut().state_mutability),
+            Self::Function(item) => Some(&mut item.to_mut().state_mutability),
+            Self::Event(_) | Self::Error(_) => None,
+        }
+    }
+
+    /// Returns an immutable reference to the inputs of the item.
+    ///
+    /// Use [`event_inputs`](Self::event_inputs) for events instead.
+    #[inline]
+    pub fn inputs(&self) -> Option<&Vec<Param>> {
+        match self {
+            Self::Error(item) => Some(&item.inputs),
+            Self::Constructor(item) => Some(&item.inputs),
+            Self::Function(item) => Some(&item.inputs),
+            Self::Event(_) | Self::Fallback(_) | Self::Receive(_) => None,
+        }
+    }
+
+    /// Returns a mutable reference to the inputs of the item.
+    ///
+    /// Clones the item if it is not already owned.
+    ///
+    /// Use [`event_inputs`](Self::event_inputs) for events instead.
+    #[inline]
+    pub fn inputs_mut(&mut self) -> Option<&mut Vec<Param>> {
+        match self {
+            Self::Error(item) => Some(&mut item.to_mut().inputs),
+            Self::Constructor(item) => Some(&mut item.to_mut().inputs),
+            Self::Function(item) => Some(&mut item.to_mut().inputs),
+            Self::Event(_) | Self::Fallback(_) | Self::Receive(_) => None,
+        }
+    }
+
+    /// Returns an immutable reference to the event inputs of the item.
+    ///
+    /// Use [`inputs`](Self::inputs) for other items instead.
+    #[inline]
+    pub fn event_inputs(&self) -> Option<&Vec<EventParam>> {
+        match self {
+            Self::Event(item) => Some(&item.inputs),
+            Self::Constructor(_)
+            | Self::Fallback(_)
+            | Self::Receive(_)
+            | Self::Error(_)
+            | Self::Function(_) => None,
+        }
+    }
+
+    /// Returns a mutable reference to the event inputs of the item.
+    ///
+    /// Clones the item if it is not already owned.
+    ///
+    /// Use [`inputs`](Self::inputs) for other items instead.
+    #[inline]
+    pub fn event_inputs_mut(&mut self) -> Option<&mut Vec<EventParam>> {
+        match self {
+            Self::Event(item) => Some(&mut item.to_mut().inputs),
+            Self::Constructor(_)
+            | Self::Fallback(_)
+            | Self::Receive(_)
+            | Self::Error(_)
+            | Self::Function(_) => None,
+        }
+    }
+
+    /// Returns an immutable reference to the outputs of the item.
+    #[inline]
+    pub fn outputs(&self) -> Option<&Vec<Param>> {
+        match self {
+            Self::Function(item) => Some(&item.outputs),
+            Self::Constructor(_)
+            | Self::Fallback(_)
+            | Self::Receive(_)
+            | Self::Error(_)
+            | Self::Event(_) => None,
+        }
+    }
+
+    /// Returns an immutable reference to the outputs of the item.
+    #[inline]
+    pub fn outputs_mut(&mut self) -> Option<&mut Vec<Param>> {
+        match self {
+            Self::Function(item) => Some(&mut item.to_mut().outputs),
+            Self::Constructor(_)
+            | Self::Fallback(_)
+            | Self::Receive(_)
+            | Self::Error(_)
+            | Self::Event(_) => None,
+        }
+    }
+}
+
 impl Error {
     /// Computes this error's signature.
     ///
     /// This is the preimage input used to [compute the
     /// selector](Self::selector).
+    #[inline]
     pub fn signature(&self) -> String {
         signature(&self.name, &self.inputs)
     }
 
     /// Computes this error's selector: `keccak256(self.signature())[..4]`
+    #[inline]
     pub fn selector(&self) -> Selector {
         selector(&self.signature())
     }
@@ -216,11 +373,13 @@ impl Function {
     ///
     /// This is the preimage input used to [compute the
     /// selector](Self::selector).
+    #[inline]
     pub fn signature(&self) -> String {
         signature(&self.name, &self.inputs)
     }
 
     /// Computes this error's selector: `keccak256(self.signature())[..4]`
+    #[inline]
     pub fn selector(&self) -> Selector {
         selector(&self.signature())
     }
@@ -231,11 +390,13 @@ impl Event {
     ///
     /// This is the preimage input used to [compute the
     /// selector](Self::selector).
+    #[inline]
     pub fn signature(&self) -> String {
         event_signature(&self.name, &self.inputs)
     }
 
     /// Computes this event's selector: `keccak256(self.signature())`
+    #[inline]
     pub fn selector(&self) -> B256 {
         keccak256(self.signature().as_bytes())
     }

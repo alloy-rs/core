@@ -1,6 +1,6 @@
 //! [`ItemError`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, r#type::expand_tokenize_func, ExpCtxt};
+use super::{expand_fields, expand_from_into_tuples, ty::expand_tokenize_func, ExpCtxt};
 use ast::ItemError;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -26,13 +26,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     } = error;
     cx.assert_resolved(params)?;
 
-    let tokenize_impl: TokenStream = if params.is_empty() {
-        quote! { ::core::convert::From::from([]) }
-    } else {
-        expand_tokenize_func(params.iter())
-    };
+    let tokenize_impl = expand_tokenize_func(params.iter());
 
-    let signature = cx.signature(name.as_string(), params);
+    let signature = cx.error_signature(error);
     let selector = crate::utils::selector(&signature);
 
     let converts = expand_from_into_tuples(&name.0, params);
@@ -57,10 +53,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
+                #[inline]
                 fn new<'a>(tuple: <Self::Parameters<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 
+                #[inline]
                 fn tokenize(&self) -> Self::Token<'_> {
                     #tokenize_impl
                 }

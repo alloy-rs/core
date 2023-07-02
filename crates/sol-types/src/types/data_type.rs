@@ -175,7 +175,7 @@ pub struct Address;
 impl<T: Borrow<[u8; 20]>> Encodable<Address> for T {
     #[inline]
     fn to_tokens(&self) -> WordToken {
-        WordToken::from(*self.borrow())
+        WordToken(RustAddress::new(*self.borrow()).into_word())
     }
 }
 
@@ -204,7 +204,7 @@ impl SolType for Address {
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::to_tokens(rust).0
+        rust.into_word()
     }
 
     #[inline]
@@ -628,14 +628,14 @@ macro_rules! tuple_impls {
 
 impl Encodable<()> for () {
     #[inline]
-    fn to_tokens(&self) -> <() as SolType>::TokenType<'_> {
-        FixedSeqToken([])
-    }
+    fn to_tokens(&self) {}
 }
+
+all_the_tuples!(@double tuple_encodable_impls);
 
 impl SolType for () {
     type RustType = ();
-    type TokenType<'a> = FixedSeqToken<(), 0>;
+    type TokenType<'a> = ();
 
     const ENCODED_SIZE: Option<usize> = Some(0);
 
@@ -661,7 +661,6 @@ impl SolType for () {
     fn encode_packed_to(_rust: &Self::RustType, _out: &mut Vec<u8>) {}
 }
 
-all_the_tuples!(@double tuple_encodable_impls);
 all_the_tuples!(tuple_impls);
 
 mod sealed {

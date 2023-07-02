@@ -145,3 +145,14 @@ fn error() {
     let e = SomeError { a: U256::from(1) };
     assert_eq!(e.encoded_size(), 32);
 }
+
+sol! {
+    interface WETH {
+        function deposit() external payable;
+    }
+}
+
+#[test]
+fn empty_call() {
+    WETH::depositCall::decode(&WETH::depositCall::SELECTOR, true).expect("it should work");
+}

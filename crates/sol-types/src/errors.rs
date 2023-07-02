@@ -30,6 +30,24 @@ pub enum Error {
     /// Validation reserialization did not match input.
     ReserMismatch,
 
+    /// Invalid enum value.
+    InvalidEnumValue {
+        /// The name of the enum.
+        name: &'static str,
+        /// The invalid value.
+        value: u8,
+        /// The maximum valid value.
+        max: u8,
+    },
+
+    /// Unknown selector.
+    UnknownSelector {
+        /// The type name.
+        name: &'static str,
+        /// The unknown selector.
+        selector: alloy_primitives::FixedBytes<4>,
+    },
+
     /// Hex error.
     FromHexError(hex::FromHexError),
 
@@ -53,14 +71,19 @@ impl fmt::Display for Error {
             Self::TypeCheckFail {
                 expected_type,
                 data,
-            } => {
-                write!(
-                    f,
-                    "Type check failed for \"{expected_type}\" with data: {data}",
-                )
-            }
+            } => write!(
+                f,
+                "Type check failed for \"{expected_type}\" with data: {data}",
+            ),
             Self::Overrun => f.write_str("Buffer overrun while deserializing"),
             Self::ReserMismatch => f.write_str("Reserialization did not match original"),
+            Self::InvalidEnumValue { name, value, max } => write!(
+                f,
+                "`{value}` is not a valid {name} enum value (max: `{max}`)"
+            ),
+            Self::UnknownSelector { name, selector } => {
+                write!(f, "Unknown selector `{selector}` for {name}")
+            }
             Self::FromHexError(e) => e.fmt(f),
             Self::Other(e) => f.write_str(e),
         }
@@ -69,11 +92,13 @@ impl fmt::Display for Error {
 
 impl Error {
     /// Instantiates a new error with a static str.
+    #[inline]
     pub fn custom(s: impl Into<Cow<'static, str>>) -> Self {
         Self::Other(s.into())
     }
 
     /// Instantiates a [`Error::TypeCheckFail`] with the provided data.
+    #[inline]
     pub fn type_check_fail_sig(mut data: &[u8], signature: &'static str) -> Self {
         if data.len() > 4 {
             data = &data[..4];
@@ -83,10 +108,20 @@ impl Error {
     }
 
     /// Instantiates a [`Error::TypeCheckFail`] with the provided data.
+    #[inline]
     pub fn type_check_fail(data: &[u8], expected_type: impl Into<Cow<'static, str>>) -> Self {
         Self::TypeCheckFail {
             expected_type: expected_type.into(),
             data: hex::encode(data),
+        }
+    }
+
+    /// Instantiates a [`Error::UnknownSelector`] with the provided data.
+    #[inline]
+    pub fn unknown_selector(name: &'static str, selector: [u8; 4]) -> Self {
+        Self::UnknownSelector {
+            name,
+            selector: selector.into(),
         }
     }
 }

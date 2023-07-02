@@ -197,19 +197,13 @@ impl<'de> Decoder<'de> {
 
     /// Decodes a single token from the underlying buffer.
     #[inline]
-    pub fn decode<T: TokenType<'de>>(&mut self, data: &[u8]) -> Result<T> {
-        if data.is_empty() {
-            return Err(Error::Overrun)
-        }
+    pub fn decode<T: TokenType<'de>>(&mut self) -> Result<T> {
         T::decode_from(self)
     }
 
     /// Decodes a sequence of tokens from the underlying buffer.
     #[inline]
-    pub fn decode_sequence<T: TokenType<'de> + TokenSeq<'de>>(&mut self, data: &[u8]) -> Result<T> {
-        if data.is_empty() {
-            return Err(Error::Overrun)
-        }
+    pub fn decode_sequence<T: TokenType<'de> + TokenSeq<'de>>(&mut self) -> Result<T> {
         T::decode_sequence(self)
     }
 }
@@ -218,7 +212,7 @@ impl<'de> Decoder<'de> {
 /// types param.
 pub fn decode<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     let mut decoder = Decoder::new(data, validate);
-    let res = decoder.decode_sequence::<T>(data)?;
+    let res = decoder.decode_sequence::<T>()?;
     if validate && encode(&res) != data {
         return Err(Error::ReserMismatch)
     }

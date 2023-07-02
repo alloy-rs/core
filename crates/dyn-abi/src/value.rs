@@ -319,7 +319,7 @@ impl DynSolValue {
     /// Tokenize this value into a [`DynToken`].
     pub fn tokenize(&self) -> DynToken<'_> {
         match self {
-            DynSolValue::Address(a) => (*a).into(),
+            DynSolValue::Address(a) => a.into_word().into(),
             DynSolValue::Bool(b) => Word::with_last_byte(*b as u8).into(),
             DynSolValue::Bytes(buf) => DynToken::PackedSeq(buf),
             DynSolValue::FixedBytes(buf, _) => (*buf).into(),

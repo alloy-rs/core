@@ -268,7 +268,20 @@ impl Type {
             Self::Custom(_) => true,
             Self::Array(a) => a.ty.has_custom(),
             Self::Tuple(t) => t.types.iter().any(Type::has_custom),
-            _ => false,
+            Self::Function(f) => {
+                f.arguments.iter().any(|arg| arg.ty.has_custom())
+                    || f.returns.as_ref().map_or(false, |ret| {
+                        ret.returns.iter().any(|arg| arg.ty.has_custom())
+                    })
+            }
+            Self::Mapping(m) => m.key.has_custom() || m.value.has_custom(),
+            Self::Address(..)
+            | Self::Bool(_)
+            | Self::Uint(..)
+            | Self::Int(..)
+            | Self::String(_)
+            | Self::Bytes(_)
+            | Self::FixedBytes(..) => false,
         }
     }
 

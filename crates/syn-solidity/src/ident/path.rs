@@ -129,7 +129,9 @@ impl SolPath {
     }
 
     pub fn span(&self) -> Span {
-        let Some(first) = self.0.first() else { return Span::call_site() };
+        let Some(first) = self.0.first() else {
+            return Span::call_site()
+        };
         let span = first.span();
         self.0
             .last()

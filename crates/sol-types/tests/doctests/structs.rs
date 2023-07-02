@@ -1,10 +1,10 @@
 use alloy_primitives::{Address, U256};
-use alloy_sol_types::{sol, SolType};
+use alloy_sol_types::{sol, SolEnum, SolType};
 use hex_literal::hex;
 
-// Struct definitions will generate a struct with the same name and fields.
-// No casing convention is enforced.
 sol! {
+    /// Struct definitions will generate a struct with the same name and fields.
+    /// No casing convention is enforced.
     struct Foo {
         uint256 bar;
         address[] baz;
@@ -16,14 +16,12 @@ sol! {
         address b;
     }
 
-    // TODO: enums
-    /*
+    /// Enum definitions will generate a `#[repr(u8)]` enum with the same name and variants.
     enum Enum {
         A,
         B,
         C,
     }
-    */
 }
 
 #[test]
@@ -48,5 +46,13 @@ fn structs() {
             "0000000000000000000000001111111111111111111111111111111111111111" // baz[0]
             "0000000000000000000000002222222222222222222222222222222222222222" // baz[1]
         }
-    )
+    );
+
+    let abi_encoded_enum = Enum::B.encode();
+    assert_eq!(
+        abi_encoded_enum,
+        hex! {
+            "0000000000000000000000000000000000000000000000000000000000000001"
+        }
+    );
 }

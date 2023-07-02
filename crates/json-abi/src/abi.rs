@@ -1,32 +1,35 @@
 use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
-use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use alloc::{collections::btree_map, string::String, vec::Vec};
+use alloy_primitives::Bytes;
+use btree_map::BTreeMap;
+use core::{fmt, iter};
 use serde::{
-    de::{SeqAccess, Visitor},
+    de::{MapAccess, SeqAccess, Visitor},
     ser::SerializeSeq,
-    Deserialize, Serialize,
+    Deserialize, Deserializer, Serialize,
 };
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
 ///
 /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#json
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct AbiJson {
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct JsonAbi {
     /// The constructor function.
     pub constructor: Option<Constructor>,
     /// The fallback function.
     pub fallback: Option<Fallback>,
     /// The receive function.
     pub receive: Option<Receive>,
-    /// The functions, indexed by the function name
+    /// The functions, indexed by the function name.
     pub functions: BTreeMap<String, Vec<Function>>,
-    /// The events, indexed by the event name
+    /// The events, indexed by the event name.
     pub events: BTreeMap<String, Vec<Event>>,
-    /// The errors, indexed by the error name
+    /// The errors, indexed by the error name.
     pub errors: BTreeMap<String, Vec<Error>>,
 }
 
-impl AbiJson {
-    /// The total number of items (of any type)
+impl JsonAbi {
+    /// Returns the total number of items (of any type).
     pub fn len(&self) -> usize {
         self.constructor.is_some() as usize
             + self.fallback.is_some() as usize
@@ -36,19 +39,168 @@ impl AbiJson {
             + self.errors.values().map(Vec::len).sum::<usize>()
     }
 
-    /// True if the ABI contains no items
+    /// Returns true if the ABI contains no items.
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-}
 
-impl<'de> Deserialize<'de> for AbiJson {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<AbiJson, D::Error> {
-        deserializer.deserialize_seq(AbiJsonVisitor)
+    /// Returns an iterator over all of the items in the ABI.
+    #[inline]
+    pub fn items(&self) -> Items<'_> {
+        Items {
+            len: self.len(),
+            constructor: self.constructor.as_ref(),
+            fallback: self.fallback.as_ref(),
+            receive: self.receive.as_ref(),
+            functions: self.functions.values().flatten(),
+            events: self.events.values().flatten(),
+            errors: self.errors.values().flatten(),
+        }
+    }
+
+    /// Returns an iterator over all of the items in the ABI.
+    #[inline]
+    pub fn into_items(self) -> IntoItems {
+        IntoItems {
+            len: self.len(),
+            constructor: self.constructor,
+            fallback: self.fallback,
+            receive: self.receive,
+            functions: self.functions.into_values().flatten(),
+            events: self.events.into_values().flatten(),
+            errors: self.errors.into_values().flatten(),
+        }
     }
 }
 
-impl Serialize for AbiJson {
+macro_rules! next_item {
+    ($self:ident; $($ident:ident.$f:ident()),* $(,)?) => {$(
+        if let Some(next) = $self.$ident.$f() {
+            // SAFETY: length is valid
+            $self.len = unsafe { $self.len.checked_sub(1).unwrap_unchecked() };
+            return Some(next.into())
+        }
+    )*};
+}
+
+macro_rules! iter_impl {
+    (front) => {
+        fn next(&mut self) -> Option<Self::Item> {
+            next_item!(self;
+                constructor.take(),
+                fallback.take(),
+                receive.take(),
+                functions.next(),
+                events.next(),
+                errors.next(),
+            );
+            debug_assert_eq!(self.len, 0);
+            None
+        }
+
+        #[inline]
+        fn count(self) -> usize {
+            self.len
+        }
+
+        #[inline]
+        fn last(mut self) -> Option<Self::Item> {
+            self.next_back()
+        }
+
+        #[inline]
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.len, Some(self.len))
+        }
+    };
+    (back) => {
+        fn next_back(&mut self) -> Option<Self::Item> {
+            next_item!(self;
+                errors.next_back(),
+                events.next_back(),
+                functions.next_back(),
+                receive.take(),
+                fallback.take(),
+                constructor.take(),
+            );
+            debug_assert_eq!(self.len, 0);
+            None
+        }
+    };
+    (traits $ty:ty) => {
+        impl DoubleEndedIterator for $ty {
+            iter_impl!(back);
+        }
+
+        impl ExactSizeIterator for $ty {
+            #[inline]
+            fn len(&self) -> usize {
+                self.len
+            }
+        }
+
+        impl iter::FusedIterator for $ty {}
+    };
+}
+
+type FlattenValues<'a, V> = iter::Flatten<btree_map::Values<'a, String, Vec<V>>>;
+
+/// An iterator over all of the items in the ABI.
+///
+/// This `struct` is created by [`JsonAbi::items`]. See its documentation for
+/// more.
+#[derive(Clone, Debug)] // TODO(MSRV-1.70): derive Default
+pub struct Items<'a> {
+    len: usize,
+    constructor: Option<&'a Constructor>,
+    fallback: Option<&'a Fallback>,
+    receive: Option<&'a Receive>,
+    functions: FlattenValues<'a, Function>,
+    events: FlattenValues<'a, Event>,
+    errors: FlattenValues<'a, Error>,
+}
+
+impl<'a> Iterator for Items<'a> {
+    type Item = AbiItem<'a>;
+
+    iter_impl!(front);
+}
+
+iter_impl!(traits Items<'_>);
+
+type FlattenIntoValues<V> = iter::Flatten<btree_map::IntoValues<String, Vec<V>>>;
+
+/// An iterator over all of the items in the ABI.
+///
+/// This `struct` is created by [`JsonAbi::into_items`]. See its documentation
+/// for more.
+#[derive(Debug)] // TODO(MSRV-1.70): derive Default
+pub struct IntoItems {
+    len: usize,
+    constructor: Option<Constructor>,
+    fallback: Option<Fallback>,
+    receive: Option<Receive>,
+    functions: FlattenIntoValues<Function>,
+    events: FlattenIntoValues<Event>,
+    errors: FlattenIntoValues<Error>,
+}
+
+impl Iterator for IntoItems {
+    type Item = AbiItem<'static>;
+
+    iter_impl!(front);
+}
+
+iter_impl!(traits IntoItems);
+
+impl<'de> Deserialize<'de> for JsonAbi {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<JsonAbi, D::Error> {
+        deserializer.deserialize_seq(JsonAbiVisitor)
+    }
+}
+
+impl Serialize for JsonAbi {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -84,64 +236,160 @@ impl Serialize for AbiJson {
     }
 }
 
-struct AbiJsonVisitor;
+macro_rules! set_if_none {
+    ($opt:expr, $val:expr) => { set_if_none!(stringify!($opt) => $opt, $val) };
+    ($name:expr => $opt:expr, $val:expr) => {{
+        if $opt.is_some() {
+            return Err(serde::de::Error::duplicate_field($name))
+        }
+        $opt = Some($val);
+    }};
+}
 
-impl<'de> Visitor<'de> for AbiJsonVisitor {
-    type Value = AbiJson;
+/// Equivalent of `map.entry(v.name.clone()).or_default().push(v.into_owned())`
+/// but without cloning the key for when the entry is occupied.
+macro_rules! map_default_and_push {
+    ($map:expr, $v:expr) => {
+        match $map.get_mut(&$v.name) {
+            Some(values) => values.push($v.into_owned()),
+            None => {
+                let mut vec = Vec::with_capacity(8);
+                let name = $v.name.clone();
+                vec.push($v.into_owned());
+                $map.insert(name, vec);
+            }
+        }
+    };
+}
 
-    fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(formatter, "a valid ABI JSON file")
+struct JsonAbiVisitor;
+
+impl<'de> Visitor<'de> for JsonAbiVisitor {
+    type Value = JsonAbi;
+
+    #[inline]
+    fn expecting(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "a valid JSON ABI sequence")
     }
 
-    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
-    {
-        let mut json_file = AbiJson::default();
-
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+        let mut abi = JsonAbi::default();
         while let Some(item) = seq.next_element()? {
             match item {
-                AbiItem::Constructor(c) => {
-                    if json_file.constructor.is_some() {
-                        return Err(serde::de::Error::duplicate_field("constructor"))
+                AbiItem::Constructor(c) => set_if_none!(abi.constructor, c.into_owned()),
+                AbiItem::Fallback(f) => set_if_none!(abi.fallback, f.into_owned()),
+                AbiItem::Receive(r) => set_if_none!(abi.receive, r.into_owned()),
+                AbiItem::Function(f) => map_default_and_push!(abi.functions, f),
+                AbiItem::Event(e) => map_default_and_push!(abi.events, e),
+                AbiItem::Error(e) => map_default_and_push!(abi.errors, e),
+            }
+        }
+        Ok(abi)
+    }
+}
+
+/// Represents a generic contract's ABI, bytecode and deployed bytecode.
+///
+/// Can be deserialized from both an ABI array, and a JSON object with the `abi`
+/// field with optionally the bytecode fields.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContractObject {
+    /// The contract ABI.
+    pub abi: JsonAbi,
+    /// The contract bytecode.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bytecode: Option<Bytes>,
+    /// The contract deployed bytecode.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deployed_bytecode: Option<Bytes>,
+}
+
+impl<'de> Deserialize<'de> for ContractObject {
+    #[inline]
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserializer.deserialize_any(ContractAbiObjectVisitor)
+    }
+}
+
+// Modified from `ethers_core::abi::raw`:
+// https://github.com/gakonst/ethers-rs/blob/311086466871204c3965065b8c81e47418261412/ethers-core/src/abi/raw.rs#L154
+struct ContractAbiObjectVisitor;
+
+impl<'de> Visitor<'de> for ContractAbiObjectVisitor {
+    type Value = ContractObject;
+
+    #[inline]
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("a sequence or map with `abi` key")
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Bytecode {
+            Bytes(Bytes),
+            Object { object: Bytes },
+        }
+
+        impl Bytecode {
+            #[allow(clippy::missing_const_for_fn)]
+            fn bytes(self) -> Bytes {
+                let (Self::Object { object: bytes } | Self::Bytes(bytes)) = self;
+                bytes
+            }
+        }
+
+        /// Represents nested bytecode objects of the `evm` value.
+        #[derive(Deserialize)]
+        struct EvmObj {
+            bytecode: Option<Bytecode>,
+            #[serde(rename = "deployedBytecode")]
+            deployed_bytecode: Option<Bytecode>,
+        }
+
+        let mut abi = None;
+        let mut bytecode = None;
+        let mut deployed_bytecode = None;
+
+        while let Some(key) = map.next_key::<&str>()? {
+            match key {
+                "abi" => set_if_none!(abi, map.next_value()?),
+                "evm" => {
+                    let evm = map.next_value::<EvmObj>()?;
+                    if let Some(bytes) = evm.bytecode {
+                        set_if_none!(bytecode, bytes.bytes());
                     }
-                    json_file.constructor = Some(c.into_owned());
-                }
-                AbiItem::Fallback(f) => {
-                    if json_file.fallback.is_some() {
-                        return Err(serde::de::Error::duplicate_field("fallback"))
+                    if let Some(bytes) = evm.deployed_bytecode {
+                        set_if_none!(deployed_bytecode, bytes.bytes());
                     }
-                    json_file.fallback = Some(f.into_owned());
                 }
-                AbiItem::Receive(r) => {
-                    if json_file.receive.is_some() {
-                        return Err(serde::de::Error::duplicate_field("receive"))
-                    }
-                    json_file.receive = Some(r.into_owned());
+                "byteCode" | "bytecode" | "bin" => {
+                    set_if_none!(bytecode, map.next_value::<Bytecode>()?.bytes());
                 }
-                AbiItem::Function(f) => {
-                    json_file
-                        .functions
-                        .entry(f.name.clone())
-                        .or_default()
-                        .push(f.into_owned());
+                "deployedBytecode" | "deployedbytecode" | "runtimeBin" | "runtimebin" => {
+                    set_if_none!(deployed_bytecode, map.next_value::<Bytecode>()?.bytes());
                 }
-                AbiItem::Event(e) => {
-                    json_file
-                        .events
-                        .entry(e.name.clone())
-                        .or_default()
-                        .push(e.into_owned());
-                }
-                AbiItem::Error(e) => {
-                    json_file
-                        .errors
-                        .entry(e.name.clone())
-                        .or_default()
-                        .push(e.into_owned());
+                _ => {
+                    map.next_value::<serde::de::IgnoredAny>()?;
                 }
             }
         }
-        Ok(json_file)
+
+        let abi = abi.ok_or_else(|| serde::de::Error::missing_field("abi"))?;
+        Ok(ContractObject {
+            abi,
+            bytecode,
+            deployed_bytecode,
+        })
+    }
+
+    #[inline]
+    fn visit_seq<A: SeqAccess<'de>>(self, seq: A) -> Result<Self::Value, A::Error> {
+        JsonAbiVisitor.visit_seq(seq).map(|abi| ContractObject {
+            abi,
+            bytecode: None,
+            deployed_bytecode: None,
+        })
     }
 }

@@ -36,11 +36,12 @@ pub trait SolError: Sized {
 
     /// The size of the error params when encoded in bytes, **without** the
     /// selector.
+    #[inline]
     fn encoded_size(&self) -> usize {
-        // This avoids unnecessary clones.
         if let Some(size) = <Self::Parameters<'_> as SolType>::ENCODED_SIZE {
             return size
         }
+
         self.tokenize().total_words() * Word::len_bytes()
     }
 
@@ -155,8 +156,7 @@ impl SolError for Revert {
 
     #[inline]
     fn encoded_size(&self) -> usize {
-        let body_words = (self.reason.len() + 31) / 32;
-        (2 + body_words) * 32
+        64 + crate::util::next_multiple_of_32(self.reason.len())
     }
 }
 

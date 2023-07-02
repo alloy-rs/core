@@ -66,9 +66,8 @@ pub trait SolEvent: Sized {
     fn topics(&self) -> <Self::TopicList as SolType>::RustType;
 
     /// The size of the ABI-encoded dynamic data in bytes.
+    #[inline]
     fn encoded_size(&self) -> usize {
-        // This avoids unnecessary clones.
-        // TODO: also avoid necessary clones.
         if let Some(size) = <Self::DataTuple<'_> as SolType>::ENCODED_SIZE {
             return size
         }
@@ -77,17 +76,11 @@ pub trait SolEvent: Sized {
     }
 
     /// ABI-encode the dynamic data of this event into the given buffer.
+    #[inline]
     fn encode_data_to(&self, out: &mut Vec<u8>) {
         out.reserve(self.encoded_size());
         out.extend(crate::encode(&self.tokenize_body()));
     }
-
-    /// Encode the topics of this event into the given buffer.
-    ///
-    /// # Errors
-    ///
-    /// This method should only fail if the buffer is too small.
-    fn encode_topics_raw(&self, out: &mut [WordToken]) -> Result<()>;
 
     /// ABI-encode the dynamic data of this event.
     #[inline]
@@ -96,6 +89,13 @@ pub trait SolEvent: Sized {
         self.encode_data_to(&mut out);
         out
     }
+
+    /// Encode the topics of this event into the given buffer.
+    ///
+    /// # Errors
+    ///
+    /// This method should return an error only if the buffer is too small.
+    fn encode_topics_raw(&self, out: &mut [WordToken]) -> Result<()>;
 
     /// Encode the topics of this event.
     ///
@@ -123,6 +123,7 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the topics of this event from the given data.
+    #[inline]
     fn decode_topics<I, D>(topics: I) -> Result<<Self::TopicList as SolType>::RustType>
     where
         I: IntoIterator<Item = D>,
@@ -132,6 +133,7 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the dynamic data of this event from the given buffer.
+    #[inline]
     fn decode_data<'a>(
         data: &'a [u8],
         validate: bool,

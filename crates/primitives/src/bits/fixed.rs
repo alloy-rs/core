@@ -1,3 +1,4 @@
+use crate::aliases;
 use core::{fmt, ops, str};
 use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
 
@@ -35,35 +36,120 @@ pub struct FixedBytes<const N: usize>(#[into_iterator(owned, ref, ref_mut)] pub 
 crate::impl_fixed_bytes_traits!(FixedBytes<N>, N, const);
 
 impl<const N: usize> Default for FixedBytes<N> {
+    #[inline]
     fn default() -> Self {
         Self::ZERO
     }
 }
 
-impl<'a, const N: usize> From<&'a [u8; N]> for FixedBytes<N> {
-    /// Constructs a hash type from the given reference
-    /// to the bytes array of fixed length.
-    ///
-    /// # Note
-    ///
-    /// The given bytes are interpreted in big endian order.
+impl<const N: usize> From<&[u8; N]> for FixedBytes<N> {
     #[inline]
-    fn from(bytes: &'a [u8; N]) -> Self {
+    fn from(bytes: &[u8; N]) -> Self {
         Self(*bytes)
     }
 }
 
-impl<'a, const N: usize> From<&'a mut [u8; N]> for FixedBytes<N> {
-    /// Constructs a hash type from the given reference
-    /// to the mutable bytes array of fixed length.
-    ///
-    /// # Note
-    ///
-    /// The given bytes are interpreted in big endian order.
+impl<const N: usize> From<&mut [u8; N]> for FixedBytes<N> {
     #[inline]
-    fn from(bytes: &'a mut [u8; N]) -> Self {
+    fn from(bytes: &mut [u8; N]) -> Self {
         Self(*bytes)
     }
+}
+
+/// Tries to create a `FixedBytes<N>` by copying from a slice `&[u8]`. Succeeds
+/// if `slice.len() == N`.
+impl<const N: usize> TryFrom<&[u8]> for FixedBytes<N> {
+    type Error = core::array::TryFromSliceError;
+
+    #[inline]
+    fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+        <&Self>::try_from(slice).map(|this| *this)
+    }
+}
+
+/// Tries to create a `FixedBytes<N>` by copying from a mutable slice `&mut
+/// [u8]`. Succeeds if `slice.len() == N`.
+impl<const N: usize> TryFrom<&mut [u8]> for FixedBytes<N> {
+    type Error = core::array::TryFromSliceError;
+
+    #[inline]
+    fn try_from(slice: &mut [u8]) -> Result<Self, Self::Error> {
+        Self::try_from(&*slice)
+    }
+}
+
+/// Tries to create a ref `FixedBytes<N>` by copying from a slice `&[u8]`.
+/// Succeeds if `slice.len() == N`.
+impl<'a, const N: usize> TryFrom<&'a [u8]> for &'a FixedBytes<N> {
+    type Error = core::array::TryFromSliceError;
+
+    #[inline]
+    fn try_from(slice: &'a [u8]) -> Result<&'a FixedBytes<N>, Self::Error> {
+        // SAFETY: `FixedBytes<N>` is `repr(transparent)` for `[u8; N]`
+        <&[u8; N]>::try_from(slice).map(|array_ref| unsafe { core::mem::transmute(array_ref) })
+    }
+}
+
+/// Tries to create a ref `FixedBytes<N>` by copying from a mutable slice `&mut
+/// [u8]`. Succeeds if `slice.len() == N`.
+impl<'a, const N: usize> TryFrom<&'a mut [u8]> for &'a mut FixedBytes<N> {
+    type Error = core::array::TryFromSliceError;
+
+    #[inline]
+    fn try_from(slice: &'a mut [u8]) -> Result<&'a mut FixedBytes<N>, Self::Error> {
+        // SAFETY: `FixedBytes<N>` is `repr(transparent)` for `[u8; N]`
+        <&mut [u8; N]>::try_from(slice).map(|array_ref| unsafe { core::mem::transmute(array_ref) })
+    }
+}
+
+// Ideally this would be:
+// `impl<const N: usize> From<FixedBytes<N>> for Uint<N * 8>`
+// `impl<const N: usize> From<Uint<N / 8>> for FixedBytes<N>`
+macro_rules! fixed_bytes_uint_conversions {
+    ($($u:ty => $b:ty),* $(,)?) => {$(
+        impl From<$u> for $b {
+            #[inline]
+            fn from(value: $u) -> Self {
+                Self(value.to_be_bytes())
+            }
+        }
+
+        impl From<$b> for $u {
+            #[inline]
+            fn from(value: $b) -> Self {
+                Self::from_be_bytes(value.0)
+            }
+        }
+
+        const _: () = assert!(<$u>::BITS == <$b>::len_bytes() * 8);
+    )*};
+}
+
+fixed_bytes_uint_conversions! {
+    aliases::U8   => aliases::B8,
+    aliases::I8   => aliases::B8,
+
+    aliases::U16  => aliases::B16,
+    aliases::I16  => aliases::B16,
+
+    aliases::U32  => aliases::B32,
+    aliases::I32  => aliases::B32,
+
+    aliases::U64  => aliases::B64,
+    aliases::I64  => aliases::B64,
+
+    aliases::U128 => aliases::B128,
+    aliases::I128 => aliases::B128,
+
+    aliases::U160 => aliases::B160,
+    aliases::I160 => aliases::B160,
+
+    aliases::U256 => aliases::B256,
+    aliases::I256 => aliases::B256,
+
+    aliases::U512 => aliases::B512,
+    aliases::I512 => aliases::B512,
+
 }
 
 impl<const N: usize> From<FixedBytes<N>> for [u8; N] {
@@ -229,10 +315,10 @@ impl<const N: usize> FixedBytes<N> {
     /// Instantiates a new fixed hash with cryptographically random content.
     #[cfg(feature = "getrandom")]
     pub fn try_random() -> Result<Self, getrandom::Error> {
-        let mut bytes: [_; N] = super::impl_core::uninit_array();
+        let mut bytes: [_; N] = crate::impl_core::uninit_array();
         getrandom::getrandom_uninit(&mut bytes)?;
         // SAFETY: The array is initialized by getrandom_uninit.
-        Ok(Self(unsafe { super::impl_core::array_assume_init(bytes) }))
+        Ok(Self(unsafe { crate::impl_core::array_assume_init(bytes) }))
     }
 
     /// Concatenate two `FixedBytes`.
@@ -380,12 +466,11 @@ impl<const N: usize> FixedBytes<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::hex;
 
     macro_rules! test_fmt {
         ($($fmt:literal, $hex:literal => $expected:literal;)+) => {$(
             assert_eq!(
-                format!($fmt, FixedBytes::from(hex!($hex))),
+                format!($fmt, fixed_bytes!($hex)),
                 $expected
             );
         )+};
@@ -393,9 +478,9 @@ mod tests {
 
     #[test]
     fn concat_const() {
-        const A: FixedBytes<2> = FixedBytes(hex!("0123"));
-        const B: FixedBytes<2> = FixedBytes(hex!("4567"));
-        const EXPECTED: FixedBytes<4> = FixedBytes(hex!("01234567"));
+        const A: FixedBytes<2> = fixed_bytes!("0123");
+        const B: FixedBytes<2> = fixed_bytes!("4567");
+        const EXPECTED: FixedBytes<4> = fixed_bytes!("01234567");
         const ACTUAL: FixedBytes<4> = A.concat_const(B);
 
         assert_eq!(ACTUAL, EXPECTED);

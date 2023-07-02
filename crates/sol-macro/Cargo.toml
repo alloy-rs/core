@@ -23,6 +23,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dependencies]
 syn-solidity = { workspace = true, features = ["visit", "visit-mut"] }
 
+heck = "0.4"
 proc-macro2.workspace = true
 quote.workspace = true
 syn = { workspace = true, features = ["extra-traits"] }

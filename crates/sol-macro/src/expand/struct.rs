@@ -1,7 +1,7 @@
 //! [`ItemStruct`] expansion.
 
 use super::{
-    expand_fields, expand_from_into_tuples, expand_type, r#type::expand_tokenize_func, ExpCtxt,
+    expand_fields, expand_from_into_tuples, expand_type, ty::expand_tokenize_func, ExpCtxt,
 };
 use ast::{ItemStruct, VariableDeclaration};
 use proc_macro2::TokenStream;
@@ -57,11 +57,7 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
         quote!(#encoded_type)
     };
 
-    let tokenize_impl: TokenStream = if fields.is_empty() {
-        quote! { ::core::convert::From::from([]) }
-    } else {
-        expand_tokenize_func(fields.iter())
-    };
+    let tokenize_impl = expand_tokenize_func(fields.iter());
 
     let encode_data_impl = match fields.len() {
         0 => unreachable!(),

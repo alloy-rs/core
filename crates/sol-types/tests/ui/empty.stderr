@@ -11,3 +11,9 @@ error: unexpected end of input, defining empty structs is disallowed
   |
 6 |     struct EmptyStruct {}
   |                         ^
+
+error: enum has no variants
+  --> tests/ui/empty.rs:10:10
+   |
+10 |     enum EmptyEnum {}
+   |          ^^^^^^^^^
