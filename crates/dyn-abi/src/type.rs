@@ -335,6 +335,7 @@ mod tests {
             let t: DynSolType = $ty.parse().expect("parsing failed");
             let dec = t.decode_params(&$encoded).expect("decoding failed");
 
+            assert_eq!(dec.total_words() * 32, $encoded.len());
             let re_encoded = dec.encode_params();
             if (re_encoded != $encoded) {
                 println!("correct: {}", hex::encode(&$encoded));
