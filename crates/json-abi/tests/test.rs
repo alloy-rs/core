@@ -50,7 +50,7 @@ abi_parse_tests! {
 
 #[track_caller]
 fn parse_test(s: &str, len: usize) {
-    let abi_items: Vec<AbiItem> = serde_json::from_str(s).unwrap();
+    let abi_items: Vec<AbiItem<'_>> = serde_json::from_str(s).unwrap();
     assert_eq!(abi_items.len(), len);
 
     let json = serde_json::to_string(&abi_items).unwrap();
@@ -58,10 +58,32 @@ fn parse_test(s: &str, len: usize) {
 
     let abi2: JsonAbi = serde_json::from_str(s).unwrap();
 
-    assert_eq!(abi_items.len(), abi2.len());
+    assert_eq!(len, abi2.len());
     assert_eq!(abi1, abi2);
 
     let json = serde_json::to_string(&abi2).unwrap();
     let abi3: JsonAbi = serde_json::from_str(&json).unwrap();
     assert_eq!(abi2, abi3);
+
+    iterator_test(abi1.items(), abi1.items().rev(), len);
+    iterator_test(abi1.clone().into_items(), abi1.into_items().rev(), len);
+}
+
+fn iterator_test<T, I, R>(mut items: I, rev: R, len: usize)
+where
+    T: PartialEq + std::fmt::Debug,
+    I: Iterator<Item = T> + DoubleEndedIterator + ExactSizeIterator,
+    R: Iterator<Item = T>,
+{
+    assert_eq!(items.len(), len);
+    assert_eq!(items.size_hint(), (len, Some(len)));
+
+    items.next();
+    assert_eq!(items.len(), len - 1);
+    assert_eq!(items.size_hint(), (len - 1, Some(len - 1)));
+
+    let mut items2: Vec<_> = items.collect();
+    assert_eq!(items2.len(), len);
+    items2.reverse();
+    assert_eq!(items2, rev.skip(1).collect::<Vec<_>>());
 }

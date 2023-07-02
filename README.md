@@ -24,16 +24,19 @@ This repository contains the following crates:
 - [`alloy-rlp-derive`] - Derive macros for `alloy-rlp`
 - [`alloy-dyn-abi`] - Run-time ABI and [EIP-712] implementations
 - [`alloy-sol-types`] - Compile-time ABI and [EIP-712] implementations
+- [`alloy-json-abi`] - [JSON-ABI] implementation
 - [`alloy-sol-macro`] - The `sol!` procedural macro
 - [`syn-solidity`] - [`syn`]-powered Solidity parser, used by `alloy-sol-macro`
 
 [`alloy-primitives`]: ./crates/primitives
 [`alloy-rlp`]: ./crates/rlp
 [`alloy-rlp-derive`]: ./crates/rlp-derive
-[`alloy-sol-types`]: ./crates/sol-types
-[`alloy-sol-macro`]: ./crates/sol-macro
 [`alloy-dyn-abi`]: ./crates/dyn-abi
+[`alloy-sol-types`]: ./crates/sol-types
+[`alloy-json-abi`]: ./crates/json-abi
+[`alloy-sol-macro`]: ./crates/sol-macro
 [`syn-solidity`]: ./crates/syn-solidity
+
 [rlp]: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp
 [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
 [`syn`]: https://github.com/dtolnay/syn
@@ -82,7 +85,7 @@ getrandom = { version = "0.2", features = ["js"] }
 There is currently no plan to provide an official JS/TS-accessible library
 interface, as we believe [viem] or [ethers.js] serve that need very well.
 
-[open an issue]: https://github.com/alloy-rs/core/issues/new
+[open an issue]: https://github.com/alloy-rs/core/issues/new/choose
 [getrandom]: https://docs.rs/getrandom/#webassembly-support
 [viem]: https://viem.sh
 [ethers.js]: https://docs.ethers.io/v6/
