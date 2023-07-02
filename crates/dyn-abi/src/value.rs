@@ -470,14 +470,21 @@ impl DynSolValue {
         }
 
         if let Some(vals) = self.as_fixed_seq() {
-            return self.is_dynamic() as usize * vals.len()
+            return self.is_dynamic() as usize * vals.iter().map(Self::total_words).sum::<usize>()
         }
 
         if let Some(vals) = self.as_array() {
-            return 1 + vals.iter().map(Self::tail_words).sum::<usize>()
+            // 1 for the length. Then all words for all elements.
+            return 1 + vals.iter().map(Self::total_words).sum::<usize>()
         }
 
         unreachable!()
+    }
+
+    /// Returns the total number of words this type uses in the ABI blob.
+    #[inline]
+    pub fn total_words(&self) -> usize {
+        self.head_words() + self.tail_words()
     }
 
     /// Append this data to the head of an in-progress blob via the encoder.
