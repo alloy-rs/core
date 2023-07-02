@@ -425,8 +425,6 @@ mod tests {
         )
         .to_vec();
 
-        dbg!(MyTy::sol_type_name());
-
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
