@@ -3,7 +3,7 @@ use crate::{
     DynSolType, DynToken, Word,
 };
 use alloy_primitives::{Address, I256, U256};
-use alloy_sol_types::Encoder;
+use alloy_sol_types::{private::next_multiple_of_32, Encoder};
 
 /// This type represents a Solidity value that has been decoded into rust. It
 /// is broadly similar to `serde_json::Value` in that it is an enum of possible
@@ -466,10 +466,13 @@ impl DynSolValue {
         }
 
         if let Some(buf) = self.as_packed_seq() {
-            return 1 + (buf.len() + 31) / 32
+            // 1 for the length, then the body padded to the next word.
+            return 1 + next_multiple_of_32(buf.len())
         }
 
         if let Some(vals) = self.as_fixed_seq() {
+            // if static, 0.
+            // If dynamic, all words for all elements.
             return self.is_dynamic() as usize * vals.iter().map(Self::total_words).sum::<usize>()
         }
 
