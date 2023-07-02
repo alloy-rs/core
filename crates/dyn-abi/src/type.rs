@@ -335,7 +335,17 @@ mod tests {
             let t: DynSolType = $ty.parse().expect("parsing failed");
             let dec = t.decode_params(&$encoded).expect("decoding failed");
 
-            assert_eq!(dec.total_words() * 32, $encoded.len());
+            // Tuples are treated as top-level lists. So if we encounter a
+            // dynamic tuple, the total length of the encoded data will include
+            // the offset, but the encoding/decoding process will not. To
+            // account for this, we add 32 bytes to the expected length when
+            // the type is a dynamic tuple.
+            if dec.as_tuple().is_some() && dec.is_dynamic() {
+                assert_eq!(dec.total_words() * 32, $encoded.len() + 32);
+            } else {
+                assert_eq!(dec.total_words() * 32, $encoded.len());
+            }
+
             let re_encoded = dec.encode_params();
             assert_eq!(re_encoded, $encoded);
         };
@@ -599,21 +609,31 @@ mod tests {
         encoder_test!("address[2][2]", encoded);
     }
 
-    // #[test]
-    // fn fixed_array_of_fixed_arrays2() {
-    //     let encoded = hex!(
-    //         "
-    // 		0000000000000000000000000000000000000000000000000000000005930cc5
-    // 		0000000000000000000000000000000000000000000000000000000015002967
-    // 		0000000000000000000000004444444444444444444444444444444444444444
-    // 		000000000000000000000000000000000000000000000000000000000000307b
-    // 		00000000000000000000000000000000000000000000000000000000000001c3
-    // 		0000000000000000000000002222222222222222222222222222222222222222
-    // 		00000000000000000000000000000000000000000000000000000000000000e0
-    // 		0000000000000000000000000000000000000000000000000000000000000009
-    // 		6761766f66796f726b0000000000000000000000000000000000000000000000
-    // 	"
-    //     );
-    //     encoder_test!("((uint256, uint256, address)[2], string)", encoded);
-    // }
+    #[test]
+    fn fixed_array_of_fixed_arrays2() {
+        let encoded = hex!(
+            "
+    		0000000000000000000000000000000000000000000000000000000005930cc5
+    		0000000000000000000000000000000000000000000000000000000015002967
+    		0000000000000000000000004444444444444444444444444444444444444444
+    		000000000000000000000000000000000000000000000000000000000000307b
+    		00000000000000000000000000000000000000000000000000000000000001c3
+    		0000000000000000000000002222222222222222222222222222222222222222
+    		00000000000000000000000000000000000000000000000000000000000000e0
+    		0000000000000000000000000000000000000000000000000000000000000009
+    		6761766f66796f726b0000000000000000000000000000000000000000000000
+    	"
+        );
+        let val = "((uint256,uint256,address)[2],string)"
+            .parse::<DynSolType>()
+            .unwrap()
+            .decode_params(&encoded)
+            .unwrap();
+
+        dbg!(&val);
+        dbg!(&val.total_words());
+        dbg!(val.encode().unwrap().len());
+
+        encoder_test!("((uint256,uint256,address)[2],string)", encoded);
+    }
 }

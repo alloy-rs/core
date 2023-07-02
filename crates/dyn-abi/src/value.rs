@@ -3,7 +3,7 @@ use crate::{
     DynSolType, DynToken, Word,
 };
 use alloy_primitives::{Address, I256, U256};
-use alloy_sol_types::{private::next_multiple_of_32, Encoder};
+use alloy_sol_types::{private::words_for, Encoder};
 
 /// This type represents a Solidity value that has been decoded into rust. It
 /// is broadly similar to `serde_json::Value` in that it is an enum of possible
@@ -450,7 +450,7 @@ impl DynSolValue {
 
     /// Returns the number of words this type uses in the head of the ABI blob.
     #[inline]
-    pub fn head_words(&self) -> usize {
+    pub(crate) fn head_words(&self) -> usize {
         match self.as_fixed_seq() {
             Some(_) if self.is_dynamic() => 1,
             Some(inner) => inner.iter().map(Self::head_words).sum(),
@@ -460,14 +460,14 @@ impl DynSolValue {
 
     /// Returns the number of words this type uses in the tail of the ABI blob.
     #[inline]
-    pub fn tail_words(&self) -> usize {
+    pub(crate) fn tail_words(&self) -> usize {
         if self.is_word() {
             return 0
         }
 
         if let Some(buf) = self.as_packed_seq() {
             // 1 for the length, then the body padded to the next word.
-            return 1 + next_multiple_of_32(buf.len())
+            return 1 + words_for(buf)
         }
 
         if let Some(vals) = self.as_fixed_seq() {
@@ -484,10 +484,15 @@ impl DynSolValue {
         unreachable!()
     }
 
-    /// Returns the total number of words this type uses in the ABI blob.
+    /// Returns the total number of words this type uses in the ABI blob,
+    /// assuming it is not the top-level
     #[inline]
-    pub fn total_words(&self) -> usize {
-        self.head_words() + self.tail_words()
+    pub(crate) fn total_words(&self) -> usize {
+        let h = self.head_words();
+        let t = self.tail_words();
+        println!("{}, {} {}", self.sol_type_name().unwrap(), h, t);
+        h + t
+        // self.head_words() + self.tail_words()
     }
 
     /// Append this data to the head of an in-progress blob via the encoder.

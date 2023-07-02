@@ -150,9 +150,9 @@ impl<'a> DynToken<'a> {
             Self::DynSeq { contents, template } => {
                 let mut child = dec.take_indirection()?;
                 let size = child.take_u32()? as usize;
-                // This appears to be a bug in the solidity spec. The spec
-                // specifies that offsets are relative to the first word of
-                // `enc(X)`. But known-good test vectors do relative to the
+                // This appears to be an unclarity in the solidity spec. The
+                // spec specifies that offsets are relative to the beginning of
+                // `enc(X)`. But known-good test vectors have it relative to the
                 // word AFTER the array size
                 let mut child = child.raw_child();
 
