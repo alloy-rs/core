@@ -150,7 +150,7 @@ type FlattenValues<'a, V> = iter::Flatten<btree_map::Values<'a, String, Vec<V>>>
 ///
 /// This `struct` is created by [`JsonAbi::items`]. See its documentation for
 /// more.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)] // TODO(MSRV-1.70): derive Default
 pub struct Items<'a> {
     len: usize,
     constructor: Option<&'a Constructor>,
@@ -175,7 +175,7 @@ type FlattenIntoValues<V> = iter::Flatten<btree_map::IntoValues<String, Vec<V>>>
 ///
 /// This `struct` is created by [`JsonAbi::into_items`]. See its documentation
 /// for more.
-#[derive(Debug, Default)]
+#[derive(Debug)] // TODO(MSRV-1.70): derive Default
 pub struct IntoItems {
     len: usize,
     constructor: Option<Constructor>,
