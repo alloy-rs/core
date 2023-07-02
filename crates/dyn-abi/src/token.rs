@@ -150,6 +150,10 @@ impl<'a> DynToken<'a> {
             Self::DynSeq { contents, template } => {
                 let mut child = dec.take_indirection()?;
                 let size = child.take_u32()? as usize;
+                // This appears to be a bug in the solidity spec. The spec
+                // specifies that offsets are relative to the first word of
+                // `enc(X)`. But known-good test vectors do relative to the
+                // word AFTER the array size
                 let mut child = child.raw_child();
 
                 let mut new_tokens: Vec<_> = Vec::with_capacity(size);

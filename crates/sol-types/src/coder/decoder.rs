@@ -8,7 +8,7 @@
 // except according to those terms.
 //
 
-use crate::{encode, token::TokenSeq, util, Error, Result, TokenType, Word};
+use crate::{encode, private::Vec, token::TokenSeq, util, Error, Result, TokenType, Word};
 use alloc::borrow::Cow;
 use core::{fmt, slice::SliceIndex};
 

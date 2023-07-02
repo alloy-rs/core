@@ -328,6 +328,10 @@ impl<'de, T: TokenType<'de>> TokenType<'de> for DynSeqToken<T> {
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
         let mut child = dec.take_indirection()?;
         let len = child.take_u32()? as usize;
+        // This appears to be a bug in the solidity spec. The spec
+        // specifies that offsets are relative to the first word of
+        // `enc(X)`. But known-good test vectors do relative to the
+        // word AFTER the array size
         let mut child = child.raw_child();
         (0..len)
             .map(|_| T::decode_from(&mut child))
