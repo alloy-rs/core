@@ -129,8 +129,12 @@ impl<'ast> ExpCtxt<'ast> {
                     return
                 }
                 let ty @ Type::Custom(_) = ty else { return };
-                let Type::Custom(name) = &*ty else { unreachable!() };
-                let Some(resolved) = map.get(name.last_tmp()) else { return };
+                let Type::Custom(name) = &*ty else {
+                    unreachable!()
+                };
+                let Some(resolved) = map.get(name.last_tmp()) else {
+                    return
+                };
                 ty.clone_from(resolved);
                 i += 1;
             });

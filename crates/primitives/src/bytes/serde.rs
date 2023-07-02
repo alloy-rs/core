@@ -2,12 +2,14 @@ use super::Bytes;
 use core::result::Result;
 
 impl serde::Serialize for Bytes {
+    #[inline]
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         hex::serialize(self, serializer)
     }
 }
 
 impl<'de> serde::Deserialize<'de> for Bytes {
+    #[inline]
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         hex::deserialize::<'de, D, alloc::vec::Vec<u8>>(deserializer).map(Into::into)
     }

@@ -19,6 +19,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [workspace.dependencies]
 # workspace crates
 alloy-dyn-abi = { version = "0.2.0", path = "crates/dyn-abi", default-features = false }
+alloy-json-abi = { version = "0.2.0", path = "crates/json-abi", default-features = false }
 alloy-primitives = { version = "0.2.0", path = "crates/primitives", default-features = false }
 alloy-rlp = { version = "0.2.0", path = "crates/rlp", default-features = false }
 alloy-rlp-derive = { version = "0.2.0", path = "crates/rlp-derive", default-features = false }

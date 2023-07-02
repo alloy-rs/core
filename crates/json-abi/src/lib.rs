@@ -42,7 +42,7 @@ extern crate alloc;
 use serde::{Deserialize, Serialize};
 
 mod abi;
-pub use abi::AbiJson;
+pub use abi::{ContractObject, IntoItems, Items, JsonAbi};
 
 mod item;
 pub use item::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
@@ -64,4 +64,17 @@ pub enum StateMutability {
     NonPayable,
     /// Payable functions make no promises
     Payable,
+}
+
+impl StateMutability {
+    /// Returns the string representation of the state mutability.
+    #[inline]
+    pub const fn as_str(self) -> Option<&'static str> {
+        match self {
+            Self::Pure => Some("pure"),
+            Self::View => Some("view"),
+            Self::Payable => Some("payable"),
+            Self::NonPayable => None,
+        }
+    }
 }

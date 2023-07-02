@@ -127,7 +127,7 @@ error[E0277]: the trait bound `(Address, Address, alloy_sol_types::sol_data::Str
               TupleTypes
     = note: required for `(Address, ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ...)` to implement `SolType`
 note: required by a bound in `Encodable`
-   --> src/types/type.rs
+   --> src/types/ty.rs
     |
     | pub trait Encodable<T: ?Sized + SolType> {
     |                                 ^^^^^^^ required by this bound in `Encodable`
