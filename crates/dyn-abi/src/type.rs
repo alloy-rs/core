@@ -610,7 +610,7 @@ mod tests {
     }
 
     #[test]
-    fn fixed_array_of_fixed_arrays2() {
+    fn fixed_array_of_static_tuples_followed_by_dynamic_type() {
         let encoded = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000005930cc5
@@ -630,10 +630,30 @@ mod tests {
             .decode_params(&encoded)
             .unwrap();
 
-        dbg!(&val);
-        dbg!(&val.total_words());
-        dbg!(val.encode().unwrap().len());
-
         encoder_test!("((uint256,uint256,address)[2],string)", encoded);
+    }
+
+    #[test]
+    fn empty_array() {
+        let expected = hex!(
+            "
+    		0000000000000000000000000000000000000000000000000000000000000020
+    		0000000000000000000000000000000000000000000000000000000000000000
+    	    "
+        );
+        encoder_test!("address[]", expected);
+    }
+
+    #[test]
+    fn empty_array_2() {
+        let expected = hex!(
+            "
+    		0000000000000000000000000000000000000000000000000000000000000040
+    		0000000000000000000000000000000000000000000000000000000000000060
+    		0000000000000000000000000000000000000000000000000000000000000000
+    		0000000000000000000000000000000000000000000000000000000000000000
+    	    "
+        );
+        encoder_test!("address[][]", expected);
     }
 }

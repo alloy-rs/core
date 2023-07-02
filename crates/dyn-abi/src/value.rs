@@ -488,11 +488,7 @@ impl DynSolValue {
     /// assuming it is not the top-level
     #[inline]
     pub(crate) fn total_words(&self) -> usize {
-        let h = self.head_words();
-        let t = self.tail_words();
-        println!("{}, {} {}", self.sol_type_name().unwrap(), h, t);
-        h + t
-        // self.head_words() + self.tail_words()
+        self.head_words() + self.tail_words()
     }
 
     /// Append this data to the head of an in-progress blob via the encoder.
