@@ -941,6 +941,7 @@ supported_int!(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hex_literal::hex;
 
     #[test]
     fn tuple_of_refs() {
@@ -1166,5 +1167,56 @@ mod tests {
         assert_eq!(<Int<240>>::detokenize(token), "0x0000038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
         assert_eq!(<Int<248>>::detokenize(token), "0xff82038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
         assert_eq!(<Int<256>>::detokenize(token), "0x0182038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+    }
+
+    macro_rules! packed_encoder_test {
+        ($t:ty, $input:expr, $expected:expr) => {
+            assert_eq!(<$t>::encode_packed(&$input), $expected);
+        };
+    }
+
+    #[test]
+    fn bool_packed() {
+        packed_encoder_test!(Bool, true, hex! {"01"});
+        packed_encoder_test!(Bool, false, hex! {"00"});
+    }
+
+    #[test]
+    fn int_packed() {
+        packed_encoder_test!(Int<8>, 0, hex! {"00"});
+        packed_encoder_test!(Int<8>, 1, hex! {"01"});
+        packed_encoder_test!(Int<8>, -1, hex! {"ff"});
+
+        packed_encoder_test!(Int<16>, 0, hex! {"0000"});
+        packed_encoder_test!(Int<16>, 1, hex! {"0001"});
+        packed_encoder_test!(Int<16>, -1, hex! {"ffff"});
+        packed_encoder_test!(Int<16>, -256, hex! {"ff00"});
+
+        packed_encoder_test!(Int<24>, 0, hex! {"000000"});
+
+        packed_encoder_test!(Int<32>, 0, hex! {"00000000"});
+        packed_encoder_test!(Int<32>, 1, hex! {"00000001"});
+        packed_encoder_test!(Int<32>, -1, hex! {"ffffffff"});
+        packed_encoder_test!(Int<32>, -256, hex! {"ffffff00"});
+
+        packed_encoder_test!(Int<40>, 0, hex! {"0000000000"});
+        packed_encoder_test!(Int<48>, 0, hex! {"000000000000"});
+        packed_encoder_test!(Int<56>, 0, hex! {"00000000000000"});
+
+        packed_encoder_test!(Int<64>, 0, hex! {"0000000000000000"});
+        packed_encoder_test!(Int<64>, 1, hex! {"0000000000000001"});
+        packed_encoder_test!(Int<64>, -1, hex! {"ffffffffffffffff"});
+        packed_encoder_test!(Int<64>, -256, hex! {"ffffffffffffff00"});
+
+        packed_encoder_test!(Int<72>, 0, hex! {"000000000000000000"});
+        packed_encoder_test!(Int<80>, 0, hex! {"00000000000000000000"});
+        packed_encoder_test!(Int<88>, 0, hex! {"0000000000000000000000"});
+        packed_encoder_test!(Int<96>, 0, hex! {"000000000000000000000000"});
+        packed_encoder_test!(Int<104>, 0, hex! {"00000000000000000000000000"});
+        packed_encoder_test!(Int<112>, 0, hex! {"0000000000000000000000000000"});
+        packed_encoder_test!(Int<120>, 0, hex! {"000000000000000000000000000000"});
+
+        packed_encoder_test!(Int<128>, 0, hex! {"00000000000000000000000000000000"});
+        packed_encoder_test!(Int<128>, 1, hex! {"00000000000000000000000000000001"});
     }
 }
