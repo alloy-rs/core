@@ -166,7 +166,7 @@ impl<'a> DynToken<'a> {
 
                 new_tokens
                     .iter_mut()
-                    .for_each(|t| t.decode_populate(&mut child).unwrap());
+                    .try_for_each(|t| t.decode_populate(&mut child))?;
 
                 *contents = new_tokens.into();
             }
