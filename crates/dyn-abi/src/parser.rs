@@ -227,7 +227,7 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
             return Err(DynAbiError::invalid_type_string(value))
         }
 
-        // handle termina commas in tuples
+        // handle trailing commas in tuples
         let candidate = value[start..].trim();
         if !candidate.is_empty() {
             types.push(candidate.try_into()?);
