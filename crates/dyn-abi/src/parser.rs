@@ -413,6 +413,38 @@ mod tests {
     }
 
     #[test]
+    fn nested_tuples() {
+        assert_eq!(
+            parse("(bool,(uint256,uint256))").unwrap(),
+            DynSolType::Tuple(vec![
+                DynSolType::Bool,
+                DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)])
+            ])
+        );
+        assert_eq!(
+            parse("(((bool),),)").unwrap(),
+            DynSolType::Tuple(vec![DynSolType::Tuple(vec![DynSolType::Tuple(vec![
+                DynSolType::Bool
+            ])])])
+        );
+    }
+
+    #[test]
+    fn empty_tuples() {
+        assert_eq!(parse("()").unwrap(), DynSolType::Tuple(vec![]));
+        assert_eq!(
+            parse("((),())").unwrap(),
+            DynSolType::Tuple(vec![DynSolType::Tuple(vec![]), DynSolType::Tuple(vec![])])
+        );
+        assert_eq!(
+            parse("((()))"),
+            Ok(DynSolType::Tuple(vec![DynSolType::Tuple(vec![
+                DynSolType::Tuple(vec![])
+            ])]))
+        );
+    }
+
+    #[test]
     fn it_parses_simple_types() {
         assert_eq!(parse("uint256").unwrap(), DynSolType::Uint(256));
         assert_eq!(parse("uint8").unwrap(), DynSolType::Uint(8));
