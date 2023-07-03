@@ -48,7 +48,7 @@ impl fmt::Debug for Decoder<'_> {
 
 impl fmt::Display for Decoder<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "\nAbi Decode Buffer")?;
+        writeln!(f, "Abi Decode Buffer")?;
 
         for (i, chunk) in self.buf.chunks(32).enumerate() {
             writeln!(
