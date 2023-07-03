@@ -184,18 +184,36 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
         // flexible for `a, b` or `(a, b)`, or `tuple(a, b)`
         // or any missing parenthesis
         let value = value.trim();
-        let value = value.strip_suffix(')').unwrap_or(value);
-        let value = value.strip_prefix("tuple").unwrap_or(value);
-        let value = value.strip_prefix('(').unwrap_or(value);
+
+        // if we strip a trailing paren we MUST strip a leading paren
+        let value = if let Some(val) = value.strip_suffix(')') {
+            val.strip_prefix("tuple")
+                .unwrap_or(val)
+                .strip_prefix('(')
+                .ok_or_else(|| DynAbiError::invalid_type_string(value))?
+        } else {
+            value
+        };
+
+        let value = value
+            .strip_suffix(')')
+            .and_then(|val| val.strip_prefix('('))
+            .and_then(|val| val.strip_prefix("tuple"))
+            .unwrap_or(value);
 
         // passes over nested tuples
-        let mut types = vec![];
+        let mut types: Vec<TypeSpecifier<'_>> = vec![];
         let mut start = 0;
-        let mut depth = 0;
+        let mut depth: usize = 0;
         for (i, c) in value.char_indices() {
             match c {
                 '(' => depth += 1,
-                ')' => depth -= 1,
+                ')' => {
+                    // handle extra closing paren
+                    depth = depth
+                        .checked_sub(1)
+                        .ok_or_else(|| DynAbiError::invalid_type_string(value))?;
+                }
                 ',' if depth == 0 => {
                     types.push(value[start..i].try_into()?);
                     start = i + 1;
@@ -203,6 +221,12 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
                 _ => {}
             }
         }
+
+        // handle extra open paren
+        if depth != 0 {
+            return Err(DynAbiError::invalid_type_string(value))
+        }
+
         // handle termina commas in tuples
         let candidate = value[start..].trim();
         if !candidate.is_empty() {
@@ -353,6 +377,24 @@ impl core::str::FromStr for DynSolType {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn extra_close_parens() {
+        let test_str = "bool,uint256))";
+        assert_eq!(
+            parse(test_str),
+            Err(DynAbiError::invalid_type_string(test_str))
+        );
+    }
+
+    #[test]
+    fn extra_open_parents() {
+        let test_str = "(bool,uint256";
+        assert_eq!(
+            parse(test_str),
+            Err(DynAbiError::invalid_type_string(test_str))
+        );
+    }
 
     #[test]
     fn it_parses_tuples() {

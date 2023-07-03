@@ -130,7 +130,7 @@ impl<'a> DynToken<'a> {
 
     /// Decodes from a decoder, populating the structure with the decoded data.
     #[inline]
-    pub fn decode_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
+    pub(crate) fn decode_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
         let dynamic = self.is_dynamic();
         match self {
             Self::Word(w) => *w = WordToken::decode_from(dec)?.0,
@@ -157,7 +157,12 @@ impl<'a> DynToken<'a> {
                 let mut child = child.raw_child();
 
                 let mut new_tokens: Vec<_> = Vec::with_capacity(size);
-                new_tokens.resize(size, *(template.take().unwrap()));
+                // This expect is safe because this is only invoked after
+                // `empty_dyn_token()` which always sets template
+                let t = template
+                    .take()
+                    .expect("No template. This is an alloy bug. Please report it.");
+                new_tokens.resize(size, *t);
 
                 new_tokens
                     .iter_mut()
