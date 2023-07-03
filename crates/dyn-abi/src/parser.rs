@@ -195,12 +195,6 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
             value
         };
 
-        let value = value
-            .strip_suffix(')')
-            .and_then(|val| val.strip_prefix('('))
-            .and_then(|val| val.strip_prefix("tuple"))
-            .unwrap_or(value);
-
         // passes over nested tuples
         let mut types: Vec<TypeSpecifier<'_>> = vec![];
         let mut start = 0;
