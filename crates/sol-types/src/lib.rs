@@ -200,7 +200,7 @@ pub use alloy_sol_macro::sol;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
-    pub use super::util::{just_ok, next_multiple_of_32};
+    pub use super::util::{just_ok, next_multiple_of_32, words_for, words_for_len};
     pub use alloc::{
         borrow::{Borrow, Cow, ToOwned},
         string::{String, ToString},

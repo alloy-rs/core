@@ -8,7 +8,7 @@
 // except according to those terms.
 //
 
-use crate::{encode, token::TokenSeq, util, Error, Result, TokenType, Word};
+use crate::{encode, private::Vec, token::TokenSeq, util, Error, Result, TokenType, Word};
 use alloc::borrow::Cow;
 use core::{fmt, slice::SliceIndex};
 
@@ -31,11 +31,39 @@ pub struct Decoder<'de> {
 
 impl fmt::Debug for Decoder<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut body = self
+            .buf
+            .chunks(32)
+            .map(hex::encode_prefixed)
+            .collect::<Vec<_>>();
+        body[self.offset / 32].push_str(" <-- Next Word");
+
         f.debug_struct("Decoder")
-            .field("buf", &hex::encode_prefixed(self.buf))
+            .field("buf", &body)
             .field("offset", &self.offset)
             .field("validate", &self.validate)
             .finish()
+    }
+}
+
+impl fmt::Display for Decoder<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Abi Decode Buffer")?;
+
+        for (i, chunk) in self.buf.chunks(32).enumerate() {
+            writeln!(
+                f,
+                "0x{:04x}: {} {}",
+                i * 32,
+                hex::encode_prefixed(chunk),
+                if i * 32 == self.offset {
+                    " <-- Next Word"
+                } else {
+                    ""
+                }
+            )?;
+        }
+        Ok(())
     }
 }
 
@@ -242,6 +270,33 @@ mod tests {
     use alloc::string::ToString;
     use alloy_primitives::{Address, B256, U256};
     use hex_literal::hex;
+
+    #[test]
+    fn dynamic_array_of_dynamic_arrays() {
+        type MyTy = sol_data::Array<sol_data::Array<sol_data::Address>>;
+        let encoded = hex!(
+            "
+    		0000000000000000000000000000000000000000000000000000000000000020
+    		0000000000000000000000000000000000000000000000000000000000000002
+    		0000000000000000000000000000000000000000000000000000000000000040
+    		0000000000000000000000000000000000000000000000000000000000000080
+    		0000000000000000000000000000000000000000000000000000000000000001
+    		0000000000000000000000001111111111111111111111111111111111111111
+    		0000000000000000000000000000000000000000000000000000000000000001
+    		0000000000000000000000002222222222222222222222222222222222222222
+    	"
+        );
+
+        assert_eq!(
+            MyTy::encode_params(&vec![
+                vec![Address::repeat_byte(0x11)],
+                vec![Address::repeat_byte(0x22)],
+            ]),
+            encoded
+        );
+
+        MyTy::decode_params(&encoded, false).unwrap();
+    }
 
     #[test]
     fn decode_static_tuple_of_addresses_and_uints() {

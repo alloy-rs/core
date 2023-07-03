@@ -184,17 +184,30 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
         // flexible for `a, b` or `(a, b)`, or `tuple(a, b)`
         // or any missing parenthesis
         let value = value.trim();
-        let value = value.strip_suffix(')').unwrap_or(value);
-        let value = value.strip_prefix("tuple").unwrap_or(value);
-        let value = value.strip_prefix('(').unwrap_or(value);
 
-        let mut types = vec![];
+        // if we strip a trailing paren we MUST strip a leading paren
+        let value = if let Some(val) = value.strip_suffix(')') {
+            val.strip_prefix("tuple")
+                .unwrap_or(val)
+                .strip_prefix('(')
+                .ok_or_else(|| DynAbiError::invalid_type_string(value))?
+        } else {
+            value
+        };
+
+        // passes over nested tuples
+        let mut types: Vec<TypeSpecifier<'_>> = vec![];
         let mut start = 0;
-        let mut depth = 0;
+        let mut depth: usize = 0;
         for (i, c) in value.char_indices() {
             match c {
                 '(' => depth += 1,
-                ')' => depth -= 1,
+                ')' => {
+                    // handle extra closing paren
+                    depth = depth
+                        .checked_sub(1)
+                        .ok_or_else(|| DynAbiError::invalid_type_string(value))?;
+                }
                 ',' if depth == 0 => {
                     types.push(value[start..i].try_into()?);
                     start = i + 1;
@@ -202,7 +215,17 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
                 _ => {}
             }
         }
-        types.push(value[start..].try_into()?);
+
+        // handle extra open paren
+        if depth != 0 {
+            return Err(DynAbiError::invalid_type_string(value))
+        }
+
+        // handle trailing commas in tuples
+        let candidate = value[start..].trim();
+        if !candidate.is_empty() {
+            types.push(candidate.try_into()?);
+        }
         Ok(Self { span: value, types })
     }
 }
@@ -348,8 +371,81 @@ impl core::str::FromStr for DynSolType {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
-    fn it_parses_solidity_types() {
+    fn extra_close_parens() {
+        let test_str = "bool,uint256))";
+        assert_eq!(
+            parse(test_str),
+            Err(DynAbiError::invalid_type_string(test_str))
+        );
+    }
+
+    #[test]
+    fn extra_open_parents() {
+        let test_str = "(bool,uint256";
+        assert_eq!(
+            parse(test_str),
+            Err(DynAbiError::invalid_type_string(test_str))
+        );
+    }
+
+    #[test]
+    fn it_parses_tuples() {
+        assert_eq!(
+            parse("(bool,)").unwrap(),
+            DynSolType::Tuple(vec![DynSolType::Bool])
+        );
+        assert_eq!(
+            parse("(uint256,uint256)").unwrap(),
+            DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)])
+        );
+        assert_eq!(
+            parse("(uint256,uint256)[2]").unwrap(),
+            DynSolType::FixedArray(
+                Box::new(DynSolType::Tuple(vec![
+                    DynSolType::Uint(256),
+                    DynSolType::Uint(256)
+                ])),
+                2
+            )
+        );
+    }
+
+    #[test]
+    fn nested_tuples() {
+        assert_eq!(
+            parse("(bool,(uint256,uint256))").unwrap(),
+            DynSolType::Tuple(vec![
+                DynSolType::Bool,
+                DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)])
+            ])
+        );
+        assert_eq!(
+            parse("(((bool),),)").unwrap(),
+            DynSolType::Tuple(vec![DynSolType::Tuple(vec![DynSolType::Tuple(vec![
+                DynSolType::Bool
+            ])])])
+        );
+    }
+
+    #[test]
+    fn empty_tuples() {
+        assert_eq!(parse("()").unwrap(), DynSolType::Tuple(vec![]));
+        assert_eq!(
+            parse("((),())").unwrap(),
+            DynSolType::Tuple(vec![DynSolType::Tuple(vec![]), DynSolType::Tuple(vec![])])
+        );
+        assert_eq!(
+            parse("((()))"),
+            Ok(DynSolType::Tuple(vec![DynSolType::Tuple(vec![
+                DynSolType::Tuple(vec![])
+            ])]))
+        );
+    }
+
+    #[test]
+    fn it_parses_simple_types() {
         assert_eq!(parse("uint256").unwrap(), DynSolType::Uint(256));
         assert_eq!(parse("uint8").unwrap(), DynSolType::Uint(8));
         assert_eq!(parse("uint").unwrap(), DynSolType::Uint(256));
@@ -358,6 +454,10 @@ mod tests {
         assert_eq!(parse("string").unwrap(), DynSolType::String);
         assert_eq!(parse("bytes").unwrap(), DynSolType::Bytes);
         assert_eq!(parse("bytes32").unwrap(), DynSolType::FixedBytes(32));
+    }
+
+    #[test]
+    fn it_parses_complex_solidity_types() {
         assert_eq!(
             parse("uint256[]").unwrap(),
             DynSolType::Array(Box::new(DynSolType::Uint(256)))
@@ -379,20 +479,7 @@ mod tests {
                 Box::new(DynSolType::Uint(256))
             )))))
         );
-        assert_eq!(
-            parse("(uint256,uint256)").unwrap(),
-            DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)])
-        );
-        assert_eq!(
-            parse("(uint256,uint256)[2]").unwrap(),
-            DynSolType::FixedArray(
-                Box::new(DynSolType::Tuple(vec![
-                    DynSolType::Uint(256),
-                    DynSolType::Uint(256)
-                ])),
-                2
-            )
-        );
+
         assert_eq!(
             parse(r#"tuple(address,bytes, (bool, (string, uint256)[][3]))[2]"#),
             Ok(DynSolType::FixedArray(
