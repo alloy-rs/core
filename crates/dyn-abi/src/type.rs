@@ -862,7 +862,7 @@ mod tests {
     		6761766f66796f726b0000000000000000000000000000000000000000000000
     	"
         );
-        encoder_test!("(string,string)", encoded);
+        encoder_test!("((string,string),)", encoded);
     }
 
     #[test]
@@ -880,7 +880,7 @@ mod tests {
     		6666666666660000000000000000000000000000000000000000000000000000
     	"
         );
-        encoder_test!("(bytes,bytes)", encoded);
+        encoder_test!("((bytes,bytes),)", encoded);
     }
 
     #[test]
@@ -896,7 +896,7 @@ mod tests {
     		6761766f66796f726b0000000000000000000000000000000000000000000000
     	"
         );
-        encoder_test!("(uint256,string,address,address)", encoded);
+        encoder_test!("((uint256,string,address,address),)", encoded);
     }
 
     #[test]
@@ -928,7 +928,7 @@ mod tests {
     	"
         );
         encoder_test!(
-            "(string,bool,string,(string,string,(string,string)))",
+            "((string,bool,string,(string,string,(string,string))),)",
             encoded
         );
     }
@@ -969,7 +969,7 @@ mod tests {
     		0000000000000000000000004444444444444444444444444444444444444444
     	"
         );
-        encoder_test!("(address,(address,bool,bool),address,address", encoded);
+        encoder_test!("(address,(address,bool,bool),address,address)", encoded);
     }
 
     #[test]
@@ -985,6 +985,6 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000001337
     	"
         );
-        encoder_test!("(((bool,uint16),), uint16[])", encoded);
+        encoder_test!("((((bool,uint16),), uint16[]),)", encoded);
     }
 }

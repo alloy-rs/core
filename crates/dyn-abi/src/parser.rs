@@ -188,6 +188,7 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
         let value = value.strip_prefix("tuple").unwrap_or(value);
         let value = value.strip_prefix('(').unwrap_or(value);
 
+        // passes over nested tuples
         let mut types = vec![];
         let mut start = 0;
         let mut depth = 0;
@@ -202,7 +203,11 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
                 _ => {}
             }
         }
-        types.push(value[start..].try_into()?);
+        // handle termina commas in tuples
+        let candidate = value[start..].trim();
+        if !candidate.is_empty() {
+            types.push(candidate.try_into()?);
+        }
         Ok(Self { span: value, types })
     }
 }
@@ -348,8 +353,31 @@ impl core::str::FromStr for DynSolType {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
-    fn it_parses_solidity_types() {
+    fn it_parses_tuples() {
+        assert_eq!(
+            parse("(bool,)").unwrap(),
+            DynSolType::Tuple(vec![DynSolType::Bool])
+        );
+        assert_eq!(
+            parse("(uint256,uint256)").unwrap(),
+            DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)])
+        );
+        assert_eq!(
+            parse("(uint256,uint256)[2]").unwrap(),
+            DynSolType::FixedArray(
+                Box::new(DynSolType::Tuple(vec![
+                    DynSolType::Uint(256),
+                    DynSolType::Uint(256)
+                ])),
+                2
+            )
+        );
+    }
+
+    #[test]
+    fn it_parses_simple_types() {
         assert_eq!(parse("uint256").unwrap(), DynSolType::Uint(256));
         assert_eq!(parse("uint8").unwrap(), DynSolType::Uint(8));
         assert_eq!(parse("uint").unwrap(), DynSolType::Uint(256));
@@ -358,6 +386,10 @@ mod tests {
         assert_eq!(parse("string").unwrap(), DynSolType::String);
         assert_eq!(parse("bytes").unwrap(), DynSolType::Bytes);
         assert_eq!(parse("bytes32").unwrap(), DynSolType::FixedBytes(32));
+    }
+
+    #[test]
+    fn it_parses_complex_solidity_types() {
         assert_eq!(
             parse("uint256[]").unwrap(),
             DynSolType::Array(Box::new(DynSolType::Uint(256)))
@@ -379,20 +411,7 @@ mod tests {
                 Box::new(DynSolType::Uint(256))
             )))))
         );
-        assert_eq!(
-            parse("(uint256,uint256)").unwrap(),
-            DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)])
-        );
-        assert_eq!(
-            parse("(uint256,uint256)[2]").unwrap(),
-            DynSolType::FixedArray(
-                Box::new(DynSolType::Tuple(vec![
-                    DynSolType::Uint(256),
-                    DynSolType::Uint(256)
-                ])),
-                2
-            )
-        );
+
         assert_eq!(
             parse(r#"tuple(address,bytes, (bool, (string, uint256)[][3]))[2]"#),
             Ok(DynSolType::FixedArray(
