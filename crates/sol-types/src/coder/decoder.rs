@@ -48,15 +48,22 @@ impl fmt::Debug for Decoder<'_> {
 
 impl fmt::Display for Decoder<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut body = self
-            .buf
-            .chunks(32)
-            .enumerate()
-            .map(|(i, chunk)| format!("0x{:0>4x}: {}", i * 32, hex::encode_prefixed(chunk)))
-            .collect::<Vec<_>>();
-        body[self.offset / 32].push_str(" <-- Next Word");
         writeln!(f, "\nAbi Decode Buffer")?;
-        writeln!(f, "{}", body.join("\n"))
+
+        for (i, chunk) in self.buf.chunks(32).enumerate() {
+            writeln!(
+                f,
+                "0x{:04x}: {} {}",
+                i * 32,
+                hex::encode_prefixed(chunk),
+                if i * 32 == self.offset {
+                    " <-- Next Word"
+                } else {
+                    ""
+                }
+            )?;
+        }
+        Ok(())
     }
 }
 
