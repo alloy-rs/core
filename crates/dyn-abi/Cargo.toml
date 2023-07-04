@@ -28,6 +28,11 @@ itoa.workspace = true
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 
+# arbitrary
+arbitrary = { workspace = true, optional = true }
+derive_arbitrary = { workspace = true, optional = true }
+proptest = { workspace = true, optional = true }
+
 [dev-dependencies]
 hex-literal.workspace = true
 criterion.workspace = true
@@ -37,6 +42,13 @@ ethabi = "18"
 default = ["std"]
 std = ["alloy-sol-types/std", "alloy-primitives/std", "hex/std", "serde?/std", "serde_json?/std"]
 eip712 = ["alloy-sol-types/eip712-serde", "dep:serde", "dep:serde_json"]
+arbitrary = [
+    "std",
+    "alloy-sol-types/arbitrary",
+    "dep:arbitrary",
+    "dep:derive_arbitrary",
+    "dep:proptest",
+]
 
 [[bench]]
 name = "abi"

@@ -143,7 +143,7 @@ impl DynSolValue {
     /// The Solidity type. This returns the solidity type corresponding to this
     /// value, if it is known. A type will not be known if the value contains
     /// an empty sequence, e.g. `T[0]`.
-    pub fn sol_type(&self) -> Option<DynSolType> {
+    pub fn as_type(&self) -> Option<DynSolType> {
         let ty = match self {
             Self::Address(_) => DynSolType::Address,
             Self::Bool(_) => DynSolType::Bool,
@@ -155,13 +155,13 @@ impl DynSolValue {
             Self::Tuple(inner) => {
                 return inner
                     .iter()
-                    .map(Self::sol_type)
+                    .map(Self::as_type)
                     .collect::<Option<Vec<_>>>()
                     .map(DynSolType::Tuple)
             }
-            Self::Array(inner) => DynSolType::Array(Box::new(Self::sol_type(inner.first()?)?)),
+            Self::Array(inner) => DynSolType::Array(Box::new(Self::as_type(inner.first()?)?)),
             Self::FixedArray(inner) => {
-                DynSolType::FixedArray(Box::new(Self::sol_type(inner.first()?)?), inner.len())
+                DynSolType::FixedArray(Box::new(Self::as_type(inner.first()?)?), inner.len())
             }
             Self::CustomStruct {
                 name,
@@ -172,7 +172,7 @@ impl DynSolValue {
                 prop_names: prop_names.clone(),
                 tuple: tuple
                     .iter()
-                    .map(Self::sol_type)
+                    .map(Self::as_type)
                     .collect::<Option<Vec<_>>>()?,
             },
             Self::CustomValue { name, .. } => DynSolType::CustomValue { name: name.clone() },

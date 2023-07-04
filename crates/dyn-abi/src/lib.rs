@@ -28,6 +28,9 @@
 #[macro_use]
 extern crate alloc;
 
+#[cfg(feature = "arbitrary")]
+mod arbitrary;
+
 mod error;
 pub use error::{DynAbiError, DynAbiResult};
 
