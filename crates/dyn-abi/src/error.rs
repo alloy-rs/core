@@ -23,11 +23,15 @@ pub enum DynAbiError {
         actual: serde_json::Value,
     },
     /// Unknown type referenced from another type.
+    #[cfg(feature = "eip712")]
     MissingType(String),
     /// Detected circular dep during typegraph resolution.
+    #[cfg(feature = "eip712")]
     CircularDependency(String),
     /// Invalid Property definition.
+    #[cfg(feature = "eip712")]
     InvalidPropertyDefinition(String),
+
     /// Hex.
     HexError(hex::FromHexError),
 }
@@ -53,8 +57,11 @@ impl fmt::Display for DynAbiError {
             DynAbiError::TypeMismatch { expected, actual } => {
                 write!(f, "Type mismatch, expected: {expected:?}, actual: {actual}")
             }
+            #[cfg(feature = "eip712")]
             DynAbiError::MissingType(name) => write!(f, "Missing type in type resolution: {name}"),
+            #[cfg(feature = "eip712")]
             DynAbiError::CircularDependency(dep) => write!(f, "Circular dependency: {dep}"),
+            #[cfg(feature = "eip712")]
             DynAbiError::InvalidPropertyDefinition(def) => {
                 write!(f, "Invalid property definition: {def}")
             }
@@ -91,14 +98,17 @@ impl DynAbiError {
         }
     }
 
+    #[cfg(feature = "eip712")]
     pub(crate) fn invalid_property_def(def: impl ToString) -> DynAbiError {
         DynAbiError::InvalidPropertyDefinition(def.to_string())
     }
 
+    #[cfg(feature = "eip712")]
     pub(crate) fn missing_type(name: impl ToString) -> DynAbiError {
         DynAbiError::MissingType(name.to_string())
     }
 
+    #[cfg(feature = "eip712")]
     pub(crate) fn circular_dependency(dep: impl ToString) -> DynAbiError {
         DynAbiError::CircularDependency(dep.to_string())
     }

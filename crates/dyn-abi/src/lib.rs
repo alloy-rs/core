@@ -31,6 +31,7 @@ extern crate alloc;
 mod error;
 pub use error::{DynAbiError, DynAbiResult};
 
+#[doc(no_inline)]
 pub use alloy_sol_types::{Decoder, Eip712Domain, Encoder, Error, Result, SolType, Word};
 
 mod r#type;
