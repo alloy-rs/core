@@ -3,9 +3,10 @@ use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::{Address, I256, U256};
 use alloy_sol_types::{utils::words_for_len, Encoder};
 
-/// This type represents a Solidity value that has been decoded into rust. It
-/// is broadly similar to `serde_json::Value` in that it is an enum of possible
-/// types, and the user must inspect and disambiguate.
+/// A dynamic Solidity value.
+///
+/// It is broadly similar to `serde_json::Value` in that it is an enum of
+/// possible types, and the user must inspect and disambiguate.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DynSolValue {
     /// An address.
@@ -180,7 +181,7 @@ impl DynSolValue {
         Some(ty)
     }
 
-    #[inline]
+    #[inline(always)]
     fn sol_type_name_simple(&self) -> Option<&str> {
         match self {
             Self::Address(_) => Some("address"),
@@ -188,7 +189,6 @@ impl DynSolValue {
             Self::Bytes(_) => Some("bytes"),
             Self::String(_) => Some("string"),
             Self::CustomStruct { name, .. } | Self::CustomValue { name, .. } => Some(name.as_str()),
-
             _ => None,
         }
     }
@@ -217,9 +217,6 @@ impl DynSolValue {
             }
 
             Self::Tuple(inner) => {
-                if inner.is_empty() {
-                    return false
-                }
                 out.push('(');
                 for (i, val) in inner.iter().enumerate() {
                     if i > 0 {
@@ -267,7 +264,11 @@ impl DynSolValue {
         if let Some(s) = self.sol_type_name_simple() {
             Some(Cow::Borrowed(s))
         } else {
-            let mut s = String::with_capacity(64);
+            let capacity = match self {
+                Self::Tuple(_) => 256,
+                _ => 16,
+            };
+            let mut s = String::with_capacity(capacity);
             if self.sol_type_name_raw(&mut s) {
                 Some(Cow::Owned(s))
             } else {

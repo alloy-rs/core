@@ -262,6 +262,7 @@ impl AsRef<str> for TypeStem<'_> {
 
 impl<'a> TypeStem<'a> {
     /// Parse a type stem from a string.
+    #[inline]
     pub fn parse(s: &'a str) -> DynAbiResult<Self> {
         if s.starts_with('(') || s.starts_with("tuple") {
             s.try_into().map(Self::Tuple)
@@ -356,15 +357,15 @@ impl<'a> TypeSpecifier<'a> {
                 .trim()
                 .strip_suffix(']')
                 .ok_or_else(|| DynAbiError::invalid_type_string(value))?;
-
-            if s.is_empty() {
-                sizes.push(None);
+            let size = if s.is_empty() {
+                None
             } else {
-                sizes.push(Some(
+                Some(
                     s.parse()
                         .map_err(|_| DynAbiError::invalid_type_string(value))?,
-                ));
-            }
+                )
+            };
+            sizes.push(size);
         }
 
         sizes.reverse();
@@ -388,12 +389,16 @@ impl<'a> TypeSpecifier<'a> {
     }
 
     /// Resolve the type string into a basic Solidity type if possible.
+    #[inline]
     pub fn resolve_basic_solidity(&self) -> Result<DynSolType, DynAbiError> {
-        let ty = self.root.resolve_basic_solidity()?;
-        Ok(self.sizes.iter().fold(ty, |acc, item| match item {
-            Some(size) => DynSolType::FixedArray(Box::new(acc), size.get()),
-            _ => DynSolType::Array(Box::new(acc)),
-        }))
+        let mut ty = self.root.resolve_basic_solidity()?;
+        for size in &self.sizes {
+            ty = match size {
+                Some(size) => DynSolType::FixedArray(Box::new(ty), size.get()),
+                None => DynSolType::Array(Box::new(ty)),
+            };
+        }
+        Ok(ty)
     }
 }
 

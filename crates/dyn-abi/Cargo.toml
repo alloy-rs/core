@@ -37,6 +37,7 @@ proptest = { workspace = true, optional = true }
 hex-literal.workspace = true
 criterion.workspace = true
 ethabi = "18"
+rand = "0.8"
 
 [features]
 default = ["std"]
@@ -53,4 +54,9 @@ arbitrary = [
 [[bench]]
 name = "abi"
 path = "benches/abi.rs"
+harness = false
+
+[[bench]]
+name = "types"
+path = "benches/types.rs"
 harness = false

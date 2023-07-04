@@ -3,6 +3,7 @@ use crate::{
 };
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_sol_types::sol_data;
+use core::{fmt, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct StructProp {
@@ -10,20 +11,43 @@ struct StructProp {
     ty: DynSolType,
 }
 
-/// A Dynamic SolType. Equivalent to an enum wrapper around all implementers of
-/// [`crate::SolType`]. This is used to represent Solidity types that are not
-/// known at compile time. It is used in conjunction with [`DynToken`] and
-/// [`DynSolValue`] to allow for dynamic ABI encoding and decoding.
+/// A dynamic Solidity type.
 ///
-/// Users will generally want to instantiate via the [`std::str::FromStr`] impl
-/// on [`DynSolType`]. This will parse a string into a [`DynSolType`].
-/// User-defined types can be instantiated directly.
+/// Equivalent to an enum wrapper around all implementers of [`crate::SolType`].
 ///
-/// # Example
+/// This is used to represent Solidity types that are not known at compile time.
+/// It is used in conjunction with [`DynToken`] and [`DynSolValue`] to allow for
+/// dynamic ABI encoding and decoding.
+///
+/// # Examples
+///
+/// Parsing Solidity type strings:
+///
+/// ```
+/// use alloy_dyn_abi::DynSolType;
+///
+/// let type_name = "(bool,address)[]";
+/// let ty = DynSolType::parse(type_name)?;
+/// assert_eq!(
+///     ty,
+///     DynSolType::Array(Box::new(DynSolType::Tuple(vec![
+///          DynSolType::Bool,
+///          DynSolType::Address,
+///     ])))
+/// );
+/// assert_eq!(ty.sol_type_name(), type_name);
+///
+/// // alternatively, you can use the FromStr impl
+/// let ty2 = type_name.parse::<DynSolType>()?;
+/// assert_eq!(ty, ty2);
+/// # Ok::<_, alloy_dyn_abi::DynAbiError>(())
+/// ```
+///
+/// Decoding dynamic types:
+///
 /// ```
 /// # use alloy_dyn_abi::{DynSolType, DynSolValue, Result};
 /// # use alloy_primitives::U256;
-/// # pub fn main() -> Result<()> {
 /// let my_type = DynSolType::Uint(256);
 /// let my_data: DynSolValue = U256::from(183).into();
 ///
@@ -32,15 +56,14 @@ struct StructProp {
 ///
 /// assert_eq!(decoded, my_data);
 ///
-/// let my_type = DynSolType::Array(Box::new(DynSolType::Uint(256)));
+/// let my_type = DynSolType::Array(Box::new(my_type));
 /// let my_data = DynSolValue::Array(vec![my_data.clone()]);
 ///
 /// let encoded = my_data.clone().encode_single();
 /// let decoded = my_type.decode_single(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
-/// # Ok(())
-/// # }
+/// # Ok::<_, alloy_dyn_abi::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DynSolType {
@@ -80,16 +103,40 @@ pub enum DynSolType {
     },
 }
 
-impl core::str::FromStr for DynSolType {
+impl fmt::Display for DynSolType {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.sol_type_name())
+    }
+}
+
+impl FromStr for DynSolType {
     type Err = DynAbiError;
 
     #[inline]
     fn from_str(s: &str) -> DynAbiResult<Self, Self::Err> {
-        TypeSpecifier::try_from(s).and_then(|t| t.resolve_basic_solidity())
+        Self::parse(s)
     }
 }
 
 impl DynSolType {
+    /// Parses a Solidity type name string into a [`DynSolType`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_dyn_abi::DynSolType;
+    /// let type_name = "uint256";
+    /// let ty = DynSolType::parse(type_name)?;
+    /// assert_eq!(ty, DynSolType::Uint(256));
+    /// assert_eq!(ty.sol_type_name(), type_name);
+    /// # Ok::<_, alloy_dyn_abi::DynAbiError>(())
+    /// ```
+    #[inline]
+    pub fn parse(s: &str) -> DynAbiResult<Self> {
+        TypeSpecifier::try_from(s).and_then(|t| t.resolve_basic_solidity())
+    }
+
     /// Check that a given [`DynSolValue`] matches this type.
     pub fn matches(&self, value: &DynSolValue) -> bool {
         match self {
@@ -228,7 +275,7 @@ impl DynSolType {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn sol_type_name_simple(&self) -> Option<&str> {
         match self {
             Self::Address => Some("address"),
@@ -296,10 +343,24 @@ impl DynSolType {
         if let Some(s) = self.sol_type_name_simple() {
             Cow::Borrowed(s)
         } else {
-            let mut s = String::with_capacity(64);
+            let capacity = match self {
+                Self::Tuple(_) => 256,
+                _ => 16,
+            };
+            let mut s = String::with_capacity(capacity);
             self.sol_type_name_raw(&mut s);
             Cow::Owned(s)
         }
+    }
+
+    /// The Solidity type name, as a `String`.
+    ///
+    /// Note: this shadows the inherent `ToString` implementation, derived from
+    /// [`fmt::Display`], for performance reasons.
+    #[inline]
+    #[allow(clippy::inherent_to_string_shadow_display)]
+    pub fn to_string(&self) -> String {
+        self.sol_type_name().into_owned()
     }
 
     /// Instantiate an empty dyn token, to be decoded into.
