@@ -21,7 +21,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 bytes.workspace = true
 hex-literal.workspace = true
 hex.workspace = true
-itoa = "1"
+itoa.workspace = true
 ruint.workspace = true
 tiny-keccak = { workspace = true, features = ["keccak"] }
 

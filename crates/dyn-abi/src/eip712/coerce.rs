@@ -1,4 +1,10 @@
-use crate::{no_std_prelude::*, DynAbiError, DynSolType, DynSolValue, Word};
+use crate::{DynAbiError, DynSolType, DynSolValue, Word};
+use alloc::{
+    borrow::{ToOwned},
+    boxed::Box,
+    string::{String, ToString},
+    vec::Vec,
+};
 use alloy_primitives::{Address, I256, U256};
 
 /// Coerce a `serde_json::Value` to a `DynSolValue::Address`

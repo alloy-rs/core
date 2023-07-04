@@ -186,7 +186,7 @@ pub use types::{
     Selectors, SolCall, SolEnum, SolError, SolEvent, SolInterface, SolStruct, SolType, TopicList,
 };
 
-mod util;
+pub mod utils;
 
 mod eip712;
 pub use eip712::Eip712Domain;
@@ -200,7 +200,7 @@ pub use alloy_sol_macro::sol;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
-    pub use super::util::{just_ok, next_multiple_of_32, words_for, words_for_len};
+    pub use super::utils::{just_ok, next_multiple_of_32, words_for, words_for_len};
     pub use alloc::{
         borrow::{Borrow, Cow, ToOwned},
         string::{String, ToString},

@@ -1,9 +1,11 @@
+//! EIP-712 specific parsing structures.
+
 use crate::{
     eip712::resolver::{PropertyDef, TypeDef},
-    no_std_prelude::*,
     parser::TypeSpecifier,
     DynAbiError,
 };
+use alloc::vec::Vec;
 
 /// A property is a type and a name. Of the form `type name`. E.g.
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.
