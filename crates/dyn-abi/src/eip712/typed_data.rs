@@ -1,10 +1,13 @@
 use crate::{
     eip712::{PropertyDef, Resolver},
-    no_std_prelude::*,
     parser::TypeSpecifier,
     DynAbiError, DynSolType, DynSolValue,
 };
-use alloc::collections::BTreeMap;
+use alloc::{
+    collections::BTreeMap,
+    string::{String, ToString},
+    vec::Vec,
+};
 use alloy_primitives::{keccak256, B256};
 use alloy_sol_types::{Eip712Domain, SolStruct};
 use serde::{Deserialize, Serialize};

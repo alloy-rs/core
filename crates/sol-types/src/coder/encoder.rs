@@ -9,7 +9,7 @@
 
 use crate::{
     token::TokenSeq,
-    util::{pad_u32, words_for},
+    utils::{pad_u32, words_for},
     TokenType, Word,
 };
 use alloc::vec::Vec;
@@ -40,8 +40,8 @@ impl Encoder {
     #[inline]
     pub fn with_capacity(size: usize) -> Self {
         Self {
-            buf: Vec::with_capacity(size + 1),
-            suffix_offset: vec![],
+            buf: Vec::with_capacity(size),
+            suffix_offset: Vec::with_capacity(8),
         }
     }
 
@@ -62,7 +62,7 @@ impl Encoder {
         // unsafe { mem::transmute::<Vec<_>, Vec<[u8; 32]>>(self.buf).into_flattened() }
 
         // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`
-        unsafe { crate::impl_core::into_flattened::<_, 32>(mem::transmute(self.buf)) }
+        unsafe { crate::impl_core::into_flattened::<u8, 32>(mem::transmute(self.buf)) }
     }
 
     /// Determine the current suffix offset.

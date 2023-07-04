@@ -28,17 +28,8 @@
 #[macro_use]
 extern crate alloc;
 
-mod no_std_prelude {
-    pub(crate) use alloc::{
-        borrow::{Borrow, Cow, ToOwned},
-        boxed::Box,
-        string::{String, ToString},
-        vec::Vec,
-    };
-}
-
 mod error;
-pub use error::DynAbiError;
+pub use error::{DynAbiError, DynAbiResult};
 
 pub use alloy_sol_types::{Decoder, Eip712Domain, Encoder, Error, Result, SolType, Word};
 

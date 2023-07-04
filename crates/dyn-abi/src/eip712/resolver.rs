@@ -1,11 +1,16 @@
 use crate::{
     eip712::typed_data::Eip712Types,
     eip712_parser::EncodeType,
-    no_std_prelude::*,
     parser::{RootType, TypeSpecifier, TypeStem},
     DynAbiError, DynSolType, DynSolValue,
 };
-use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::{
+    borrow::ToOwned,
+    boxed::Box,
+    collections::{BTreeMap, BTreeSet},
+    string::{String, ToString},
+    vec::Vec,
+};
 use alloy_primitives::{keccak256, B256};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
@@ -400,7 +405,7 @@ impl Resolver {
         };
 
         let ty = type_spec.sizes.iter().fold(ty, |acc, item| match item {
-            Some(size) => DynSolType::FixedArray(Box::new(acc), *size),
+            Some(size) => DynSolType::FixedArray(Box::new(acc), size.get()),
             None => DynSolType::Array(Box::new(acc)),
         });
 

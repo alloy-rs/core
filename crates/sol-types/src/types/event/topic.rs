@@ -92,7 +92,7 @@ macro_rules! bytes_impl {
     ($t:ty) => {
         #[inline]
         fn topic_preimage_length(rust: &Self::RustType) -> usize {
-            crate::util::next_multiple_of_32(rust.len())
+            crate::utils::next_multiple_of_32(rust.len())
         }
 
         #[inline]

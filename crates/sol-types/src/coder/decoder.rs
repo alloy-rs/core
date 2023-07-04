@@ -8,8 +8,8 @@
 // except according to those terms.
 //
 
-use crate::{encode, private::Vec, token::TokenSeq, util, Error, Result, TokenType, Word};
-use alloc::borrow::Cow;
+use crate::{encode, token::TokenSeq, utils, Error, Result, TokenType, Word};
+use alloc::{borrow::Cow, vec::Vec};
 use core::{fmt, slice::SliceIndex};
 
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
@@ -147,13 +147,13 @@ impl<'de> Decoder<'de> {
     /// offset.
     #[inline]
     pub fn peek_u32_at(&self, offset: usize) -> Result<u32> {
-        util::as_u32(self.peek_word_at(offset)?, true)
+        utils::as_u32(self.peek_word_at(offset)?, true)
     }
 
     /// Peek the next word as a u32.
     #[inline]
     pub fn peek_u32(&self) -> Result<u32> {
-        util::as_u32(self.peek_word()?, true)
+        utils::as_u32(self.peek_word()?, true)
     }
 
     /// Take a word from the buffer, advancing the offset.
@@ -176,18 +176,18 @@ impl<'de> Decoder<'de> {
     #[inline]
     pub fn take_u32(&mut self) -> Result<u32> {
         let word = self.take_word()?;
-        util::as_u32(word, true)
+        utils::as_u32(word, true)
     }
 
     /// Takes a slice of bytes of the given length by consuming up to the next
     /// word boundary.
     pub fn take_slice(&mut self, len: usize) -> Result<&[u8], Error> {
         if self.validate {
-            let padded_len = util::next_multiple_of_32(len);
+            let padded_len = utils::next_multiple_of_32(len);
             if self.offset + padded_len > self.buf.len() {
                 return Err(Error::Overrun)
             }
-            if !util::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
+            if !utils::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
                 return Err(Error::Other(Cow::Borrowed(
                     "Non-empty bytes after packed array",
                 )))
@@ -266,7 +266,7 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> 
 
 #[cfg(test)]
 mod tests {
-    use crate::{sol_data, util::pad_u32, SolType};
+    use crate::{sol_data, utils::pad_u32, SolType};
     use alloc::string::ToString;
     use alloy_primitives::{Address, B256, U256};
     use hex_literal::hex;

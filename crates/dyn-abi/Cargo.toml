@@ -22,6 +22,7 @@ alloy-sol-types = { workspace = true, features = ["eip712-serde"] }
 alloy-primitives.workspace = true
 
 hex.workspace = true
+itoa.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, features = ["alloc"] }
 

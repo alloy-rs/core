@@ -1,5 +1,9 @@
-use crate::{no_std_prelude::*, DynSolType};
+use crate::DynSolType;
+use alloc::string::{String, ToString};
 use core::fmt;
+
+/// Dynamic ABI result type.
+pub type DynAbiResult<T, E = DynAbiError> = core::result::Result<T, E>;
 
 /// Error when parsing EIP-712 `encodeType` strings
 ///
@@ -28,7 +32,15 @@ pub enum DynAbiError {
 }
 
 #[cfg(feature = "std")]
-impl std::error::Error for DynAbiError {}
+impl std::error::Error for DynAbiError {
+    #[inline]
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::HexError(e) => Some(e),
+            _ => None,
+        }
+    }
+}
 
 impl fmt::Display for DynAbiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
