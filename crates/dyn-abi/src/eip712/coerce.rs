@@ -7,6 +7,30 @@ use alloc::{
 };
 use alloy_primitives::{Address, I256, U256};
 
+impl DynSolType {
+    /// Coerce a json value to a sol value via this type.
+    pub fn coerce(&self, value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
+        match self {
+            DynSolType::Address => address(value),
+            DynSolType::Bytes => bytes(value),
+            DynSolType::Int(n) => int(*n, value),
+            DynSolType::Uint(n) => uint(*n, value),
+            DynSolType::Bool => bool(value),
+            DynSolType::Array(inner) => array(inner, value),
+            DynSolType::String => string(value),
+            DynSolType::FixedBytes(n) => fixed_bytes(*n, value),
+            DynSolType::FixedArray(inner, n) => fixed_array(inner, *n, value),
+            DynSolType::Tuple(inner) => tuple(inner, value),
+            DynSolType::CustomStruct {
+                name,
+                prop_names,
+                tuple,
+            } => coerce_custom_struct(name, prop_names, tuple, value),
+            DynSolType::CustomValue { name } => coerce_custom_value(name, value),
+        }
+    }
+}
+
 /// Coerce a `serde_json::Value` to a `DynSolValue::Address`
 pub(crate) fn address(value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
     let address = value
@@ -225,4 +249,118 @@ pub(crate) fn coerce_custom_value(
         },
         value,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::{borrow::ToOwned, string::ToString};
+    use serde_json::json;
+
+    #[test]
+    fn it_coerces() {
+        let j = json!({
+            "message": {
+                "contents": "Hello, Bob!",
+                "attachedMoneyInEth": 4.2,
+                "from": {
+                    "name": "Cow",
+                    "wallets": [
+                        "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826",
+                        "0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF",
+                    ]
+                },
+                "to": [{
+                    "name": "Bob",
+                    "wallets": [
+                        "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
+                        "0xB0BdaBea57B0BDABeA57b0bdABEA57b0BDabEa57",
+                        "0xB0B0b0b0b0b0B000000000000000000000000000",
+                    ]
+                }]
+            }
+        });
+
+        let ty = DynSolType::CustomStruct {
+            name: "Message".to_owned(),
+            prop_names: vec!["contents".to_string(), "from".to_string(), "to".to_string()],
+            tuple: vec![
+                DynSolType::String,
+                DynSolType::CustomStruct {
+                    name: "Person".to_owned(),
+                    prop_names: vec!["name".to_string(), "wallets".to_string()],
+                    tuple: vec![
+                        DynSolType::String,
+                        DynSolType::Array(Box::new(DynSolType::Address)),
+                    ],
+                },
+                DynSolType::Array(Box::new(DynSolType::CustomStruct {
+                    name: "Person".to_owned(),
+                    prop_names: vec!["name".to_string(), "wallets".to_string()],
+                    tuple: vec![
+                        DynSolType::String,
+                        DynSolType::Array(Box::new(DynSolType::Address)),
+                    ],
+                })),
+            ],
+        };
+        let top = j.as_object().unwrap().get("message").unwrap();
+
+        assert_eq!(
+            ty.coerce(top).unwrap(),
+            DynSolValue::CustomStruct {
+                name: "Message".to_owned(),
+                prop_names: vec!["contents".to_string(), "from".to_string(), "to".to_string()],
+                tuple: vec![
+                    DynSolValue::String("Hello, Bob!".to_string()),
+                    DynSolValue::CustomStruct {
+                        name: "Person".to_owned(),
+                        prop_names: vec!["name".to_string(), "wallets".to_string()],
+                        tuple: vec![
+                            DynSolValue::String("Cow".to_string()),
+                            vec![
+                                DynSolValue::Address(
+                                    "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
+                                        .parse()
+                                        .unwrap()
+                                ),
+                                DynSolValue::Address(
+                                    "0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF"
+                                        .parse()
+                                        .unwrap()
+                                ),
+                            ]
+                            .into()
+                        ]
+                    },
+                    vec![DynSolValue::CustomStruct {
+                        name: "Person".to_owned(),
+                        prop_names: vec!["name".to_string(), "wallets".to_string()],
+                        tuple: vec![
+                            DynSolValue::String("Bob".to_string()),
+                            vec![
+                                DynSolValue::Address(
+                                    "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
+                                        .parse()
+                                        .unwrap()
+                                ),
+                                DynSolValue::Address(
+                                    "0xB0BdaBea57B0BDABeA57b0bdABEA57b0BDabEa57"
+                                        .parse()
+                                        .unwrap()
+                                ),
+                                DynSolValue::Address(
+                                    "0xB0B0b0b0b0b0B000000000000000000000000000"
+                                        .parse()
+                                        .unwrap()
+                                ),
+                            ]
+                            .into()
+                        ]
+                    }]
+                    .into()
+                ]
+            }
+        )
+    }
 }

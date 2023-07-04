@@ -44,7 +44,9 @@ pub use token::DynToken;
 
 pub mod parser;
 
+#[cfg(feature = "eip712")]
 pub mod eip712;
+#[cfg(feature = "eip712")]
 pub use eip712::{parser as eip712_parser, Resolver, TypedData};
 
 #[cfg(test)]
