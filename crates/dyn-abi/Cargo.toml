@@ -18,13 +18,15 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-alloy-sol-types = { workspace = true, features = ["eip712-serde"] }
+alloy-sol-types.workspace = true
 alloy-primitives.workspace = true
 
 hex.workspace = true
 itoa.workspace = true
-serde.workspace = true
-serde_json = { workspace = true, features = ["alloc"] }
+
+# eip712
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex-literal.workspace = true
@@ -33,7 +35,8 @@ ethabi = "18"
 
 [features]
 default = ["std"]
-std = ["alloy-sol-types/std", "alloy-primitives/std", "hex/std", "serde/std", "serde_json/std"]
+std = ["alloy-sol-types/std", "alloy-primitives/std", "hex/std", "serde?/std", "serde_json?/std"]
+eip712 = ["alloy-sol-types/eip712-serde", "dep:serde", "dep:serde_json"]
 
 [[bench]]
 name = "abi"

@@ -31,6 +31,7 @@ extern crate alloc;
 mod error;
 pub use error::{DynAbiError, DynAbiResult};
 
+#[doc(no_inline)]
 pub use alloy_sol_types::{Decoder, Eip712Domain, Encoder, Error, Result, SolType, Word};
 
 mod r#type;
@@ -44,7 +45,9 @@ pub use token::DynToken;
 
 pub mod parser;
 
+#[cfg(feature = "eip712")]
 pub mod eip712;
+#[cfg(feature = "eip712")]
 pub use eip712::{parser as eip712_parser, Resolver, TypedData};
 
 #[cfg(test)]
