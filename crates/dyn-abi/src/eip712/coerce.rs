@@ -1,6 +1,6 @@
 use crate::{DynAbiError, DynSolType, DynSolValue, Word};
 use alloc::{
-    borrow::{ToOwned},
+    borrow::ToOwned,
     boxed::Box,
     string::{String, ToString},
     vec::Vec,
@@ -46,7 +46,7 @@ pub(crate) fn bytes(value: &serde_json::Value) -> Result<DynSolValue, DynAbiErro
 pub(crate) fn fixed_bytes(n: usize, value: &serde_json::Value) -> Result<DynSolValue, DynAbiError> {
     if let Some(Ok(buf)) = value.as_str().map(hex::decode) {
         let mut word: Word = Default::default();
-        let min = if buf.len() > n { n } else { buf.len() };
+        let min = n.min(buf.len());
         word[..min].copy_from_slice(&buf[..min]);
         return Ok(DynSolValue::FixedBytes(word, n))
     }

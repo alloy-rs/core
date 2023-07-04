@@ -165,7 +165,7 @@ impl<'a> DynToken<'a> {
                 // `empty_dyn_token()` which always sets template
                 let t = template
                     .take()
-                    .expect("No template. This is an alloy bug. Please report it.");
+                    .expect("No template. This is a bug, please report it.");
                 new_tokens.resize(size, *t);
 
                 new_tokens

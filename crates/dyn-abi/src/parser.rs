@@ -7,12 +7,12 @@ use alloc::{boxed::Box, vec::Vec};
 use core::{fmt, num::NonZeroUsize};
 
 #[inline]
-fn is_id_start(c: char) -> bool {
+const fn is_id_start(c: char) -> bool {
     matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '$')
 }
 
 #[inline]
-fn is_id_continue(c: char) -> bool {
+const fn is_id_continue(c: char) -> bool {
     matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$')
 }
 

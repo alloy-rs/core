@@ -1,10 +1,7 @@
+use super::{utils::twos_complement, BigIntConversionError, ParseSignedError, Sign, Signed};
+use alloc::string::String;
 use core::str::FromStr;
 use ruint::Uint;
-
-#[cfg(not(feature = "std"))]
-use alloc::string::String;
-
-use super::{utils::twos_complement, BigIntConversionError, ParseSignedError, Sign, Signed};
 
 impl<const BITS: usize, const LIMBS: usize> TryFrom<Uint<BITS, LIMBS>> for Signed<BITS, LIMBS> {
     type Error = BigIntConversionError;
