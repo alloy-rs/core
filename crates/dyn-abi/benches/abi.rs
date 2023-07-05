@@ -96,7 +96,7 @@ fn sol_types_encode(c: &mut Criterion) {
 
     g.bench_function("struct", |b| {
         let input = encode_struct_input();
-        b.iter(|| Input::encode(&input));
+        b.iter(|| Input::encode(black_box(&input)));
     });
 
     g.finish();

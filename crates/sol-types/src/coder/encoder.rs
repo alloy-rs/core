@@ -68,7 +68,8 @@ impl Encoder {
     /// Determine the current suffix offset.
     #[inline]
     pub fn suffix_offset(&self) -> u32 {
-        *self.suffix_offset.last().unwrap()
+        debug_assert!(!self.suffix_offset.is_empty());
+        unsafe { *self.suffix_offset.last().unwrap_unchecked() }
     }
 
     /// Appends a suffix offset.

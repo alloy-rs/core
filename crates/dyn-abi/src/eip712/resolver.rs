@@ -2,11 +2,10 @@ use crate::{
     eip712::typed_data::Eip712Types,
     eip712_parser::EncodeType,
     parser::{RootType, TypeSpecifier, TypeStem},
-    DynAbiError, DynSolType, DynSolValue,
+    DynAbiError, DynAbiResult, DynSolType, DynSolValue,
 };
 use alloc::{
     borrow::ToOwned,
-    boxed::Box,
     collections::{BTreeMap, BTreeSet},
     string::{String, ToString},
     vec::Vec,
@@ -17,7 +16,7 @@ use core::{cmp::Ordering, fmt};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// An EIP-712 property definition.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
 pub struct PropertyDef {
     /// Typename.
     #[serde(rename = "type")]
@@ -41,39 +40,54 @@ impl<'de> Deserialize<'de> for PropertyDef {
 
 impl PropertyDef {
     /// Instantiate a new name-type pair.
-    pub fn new(type_name: impl AsRef<str>, name: impl AsRef<str>) -> Result<Self, DynAbiError> {
-        let type_name: TypeSpecifier<'_> = type_name.as_ref().try_into()?;
+    #[inline]
+    pub fn new<T, N>(type_name: T, name: N) -> DynAbiResult<Self>
+    where
+        T: Into<String>,
+        N: Into<String>,
+    {
+        let type_name = type_name.into();
+        TypeSpecifier::try_from(type_name.as_str())?;
         Ok(Self::new_unchecked(type_name, name))
     }
 
     /// Instantiate a new name-type pair, without checking that the type name
     /// is a valid root type.
-    pub fn new_unchecked(type_name: impl AsRef<str>, name: impl AsRef<str>) -> Self {
+    #[inline]
+    pub fn new_unchecked<T, N>(type_name: T, name: N) -> Self
+    where
+        T: Into<String>,
+        N: Into<String>,
+    {
         Self {
-            type_name: type_name.as_ref().to_owned(),
-            name: name.as_ref().to_owned(),
+            type_name: type_name.into(),
+            name: name.into(),
         }
     }
 
+    /// Returns the name of the property.
+    #[inline]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     /// Returns the type name of the property.
+    #[inline]
     pub fn type_name(&self) -> &str {
         &self.type_name
     }
 
     /// Returns the root type of the name/type pair, stripping any array.
+    #[inline]
     pub fn root_type_name(&self) -> &str {
         self.type_name
             .split_once('[')
             .map(|t| t.0)
             .unwrap_or(&self.type_name)
     }
-
-    /// Returns the name of the property.
-    pub fn name(&self) -> &str {
-        &self.name
-    }
 }
 
+/// An EIP-712 type definition.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeDef {
     /// Must always be a ROOT type name with any array stripped.
@@ -105,46 +119,52 @@ impl fmt::Display for TypeDef {
 impl TypeDef {
     /// Instantiate a new type definition, checking that the type name is a
     /// valid root type.
-    pub fn new(type_name: impl AsRef<str>, props: Vec<PropertyDef>) -> Result<Self, DynAbiError> {
-        let _rt: RootType<'_> = type_name.as_ref().try_into()?;
-        Ok(Self {
-            type_name: type_name.as_ref().to_owned(),
-            props,
-        })
+    #[inline]
+    pub fn new<S: Into<String>>(type_name: S, props: Vec<PropertyDef>) -> DynAbiResult<Self> {
+        let type_name = type_name.into();
+        RootType::try_from(type_name.as_str())?;
+        Ok(Self { type_name, props })
     }
 
     /// Instantiate a new type definition, without checking that the type name
     /// is a valid root type. This may result in bad behavior in a resolver.
+    #[inline]
     pub fn new_unchecked(type_name: String, props: Vec<PropertyDef>) -> Self {
         Self { type_name, props }
     }
 
     /// Returns the type name of the type definition.
+    #[inline]
     pub fn type_name(&self) -> &str {
         &self.type_name
     }
 
     /// Returns the property definitions of the type definition.
+    #[inline]
     pub fn props(&self) -> &[PropertyDef] {
         &self.props
     }
 
     /// Returns the property names of the type definition.
+    #[inline]
     pub fn prop_names(&self) -> impl Iterator<Item = &str> + '_ {
         self.props.iter().map(|p| p.name())
     }
 
     /// Returns the root property types of the type definition.
+    #[inline]
     pub fn prop_root_types(&self) -> impl Iterator<Item = &str> + '_ {
         self.props.iter().map(|p| p.root_type_name())
     }
 
     /// Returns the property types of the type definition.
+    #[inline]
     pub fn prop_types(&self) -> impl Iterator<Item = &str> + '_ {
         self.props.iter().map(|p| p.type_name())
     }
 
     /// Produces the EIP-712 `encodeType` typestring for this type definition.
+    #[inline]
     pub fn eip712_encode_type(&self) -> String {
         let mut s = String::with_capacity(self.type_name.len() + 2 + self.props_bytes_len());
         self.fmt_eip712_encode_type(&mut s).unwrap();
@@ -170,6 +190,7 @@ impl TypeDef {
 
     /// Returns the number of bytes that the properties of this type definition
     /// will take up when formatted in the EIP-712 `encodeType` typestring.
+    #[inline]
     pub fn props_bytes_len(&self) -> usize {
         self.props
             .iter()
@@ -178,6 +199,7 @@ impl TypeDef {
     }
 
     /// Return the root type.
+    #[inline]
     pub fn root_type(&self) -> RootType<'_> {
         self.type_name
             .as_str()
@@ -285,11 +307,11 @@ impl Resolver {
         false
     }
 
-    /// Ingest types from an EIP-712 `encodeType`
-    pub fn ingest_string(&mut self, s: impl AsRef<str>) -> Result<(), DynAbiError> {
+    /// Ingest types from an EIP-712 `encodeType`.
+    pub fn ingest_string(&mut self, s: impl AsRef<str>) -> DynAbiResult<()> {
         let encode_type: EncodeType<'_> = s.as_ref().try_into()?;
-        for type_def in encode_type.types.into_iter().map(|t| t.to_owned()) {
-            self.ingest(type_def);
+        for t in encode_type.types {
+            self.ingest(t.to_owned());
         }
         Ok(())
     }
@@ -329,7 +351,7 @@ impl Resolver {
         &'a self,
         resolution: &mut Vec<&'a TypeDef>,
         root_type: RootType<'_>,
-    ) -> Result<(), DynAbiError> {
+    ) -> DynAbiResult<()> {
         if root_type.try_basic_solidity().is_ok() {
             return Ok(())
         }
@@ -354,7 +376,7 @@ impl Resolver {
 
     /// This function linearizes a type into a list of typedefs of its
     /// dependencies.
-    pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>, DynAbiError> {
+    pub fn linearize(&self, type_name: &str) -> DynAbiResult<Vec<&TypeDef>> {
         let mut context = DfsContext::default();
         if self.detect_cycle(type_name, &mut context) {
             return Err(DynAbiError::circular_dependency(type_name))
@@ -365,11 +387,34 @@ impl Resolver {
         Ok(resolution)
     }
 
+    /// Resolve a typename into a [`crate::DynSolType`] or return an error if
+    /// the type is missing, or contains a circular dependency.
+    pub fn resolve(&self, type_name: &str) -> DynAbiResult<DynSolType> {
+        if self.detect_cycle(type_name, &mut Default::default()) {
+            return Err(DynAbiError::circular_dependency(type_name))
+        }
+        self.unchecked_resolve(&type_name.try_into()?)
+    }
+
+    /// Resolve a type into a [`crate::DynSolType`] without checking for cycles.
+    fn unchecked_resolve(&self, type_spec: &TypeSpecifier<'_>) -> DynAbiResult<DynSolType> {
+        let ty = match &type_spec.root {
+            TypeStem::Root(root) => self.resolve_root_type(*root),
+            TypeStem::Tuple(tuple) => tuple
+                .types
+                .iter()
+                .map(|ty| self.unchecked_resolve(ty))
+                .collect::<Result<_, _>>()
+                .map(DynSolType::Tuple),
+        }?;
+        Ok(type_spec.wrap_type(ty))
+    }
+
     /// Resolves a root Solidity type into either a basic type or a custom
     /// struct.
-    fn resolve_root_type(&self, root_type: RootType<'_>) -> Result<DynSolType, DynAbiError> {
-        if root_type.try_basic_solidity().is_ok() {
-            return root_type.resolve_basic_solidity()
+    fn resolve_root_type(&self, root_type: RootType<'_>) -> DynAbiResult<DynSolType> {
+        if let Ok(ty) = root_type.resolve_basic_solidity() {
+            return Ok(ty)
         }
 
         let ty = self
@@ -377,11 +422,11 @@ impl Resolver {
             .get(root_type.as_str())
             .ok_or_else(|| DynAbiError::missing_type(root_type.as_str()))?;
 
-        let prop_names = ty.prop_names().map(str::to_string).collect();
-        let tuple = ty
+        let prop_names: Vec<_> = ty.prop_names().map(str::to_string).collect();
+        let tuple: Vec<_> = ty
             .prop_types()
-            .map(|ty| self.unchecked_resolve(ty.try_into()?))
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(|ty| self.unchecked_resolve(&ty.try_into()?))
+            .collect::<Result<_, _>>()?;
 
         Ok(DynSolType::CustomStruct {
             name: ty.type_name.clone(),
@@ -390,41 +435,10 @@ impl Resolver {
         })
     }
 
-    /// Resolve a type into a [`crate::DynSolType`] without checking for cycles.
-    fn unchecked_resolve(&self, type_spec: TypeSpecifier<'_>) -> Result<DynSolType, DynAbiError> {
-        let ty = match type_spec.root {
-            TypeStem::Root(root) => self.resolve_root_type(root)?,
-            TypeStem::Tuple(tuple) => {
-                let tuple = tuple
-                    .types
-                    .into_iter()
-                    .map(|ty| self.unchecked_resolve(ty))
-                    .collect::<Result<Vec<_>, _>>()?;
-                DynSolType::Tuple(tuple)
-            }
-        };
-
-        let ty = type_spec.sizes.iter().fold(ty, |acc, item| match item {
-            Some(size) => DynSolType::FixedArray(Box::new(acc), size.get()),
-            None => DynSolType::Array(Box::new(acc)),
-        });
-
-        Ok(ty)
-    }
-
-    /// Resolve a typename into a [`crate::DynSolType`] or return an error if
-    /// the type is missing, or contains a circular dependency.
-    pub fn resolve(&self, type_name: &str) -> Result<DynSolType, DynAbiError> {
-        if self.detect_cycle(type_name, &mut Default::default()) {
-            return Err(DynAbiError::circular_dependency(type_name))
-        }
-        self.unchecked_resolve(type_name.try_into()?)
-    }
-
     /// Encode the type into an EIP-712 `encodeType` string
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    pub fn encode_type(&self, name: &str) -> Result<String, DynAbiError> {
+    pub fn encode_type(&self, name: &str) -> DynAbiResult<String> {
         let linear = self.linearize(name)?;
         let first = linear.first().unwrap().eip712_encode_type();
 
@@ -442,64 +456,65 @@ impl Resolver {
     }
 
     /// Compute the keccak256 hash of the EIP-712 `encodeType` string.
-    pub fn type_hash(&self, name: &str) -> Result<B256, DynAbiError> {
+    pub fn type_hash(&self, name: &str) -> DynAbiResult<B256> {
         self.encode_type(name).map(keccak256)
     }
 
     /// Encode the data according to EIP-712 `encodeData` rules.
-    pub fn encode_data(&self, value: &DynSolValue) -> Result<Option<Vec<u8>>, DynAbiError> {
-        match value {
+    pub fn encode_data(&self, value: &DynSolValue) -> DynAbiResult<Option<Vec<u8>>> {
+        Ok(match value {
             DynSolValue::CustomStruct { tuple: inner, .. }
             | DynSolValue::Array(inner)
             | DynSolValue::FixedArray(inner) => {
-                let inner = inner.iter().try_fold(Vec::new(), |mut acc, v| {
-                    acc.extend(self.eip712_data_word(v)?.as_slice());
-                    Ok::<_, DynAbiError>(acc)
-                })?;
-                Ok(Some(inner))
+                let mut bytes = Vec::with_capacity(inner.len() * 32);
+                for v in inner {
+                    bytes.extend(self.eip712_data_word(v)?.as_slice());
+                }
+                Some(bytes)
             }
-            DynSolValue::Bytes(buf) => Ok(Some(buf.to_vec())),
-            DynSolValue::String(s) => Ok(Some(s.as_bytes().to_vec())),
-            _ => Ok(None),
-        }
+            DynSolValue::Bytes(buf) => Some(buf.to_vec()),
+            DynSolValue::String(s) => Some(s.as_bytes().to_vec()),
+            _ => None,
+        })
     }
 
     /// Encode the data as a struct property according to EIP-712 `encodeData`
     /// rules. Atomic types are encoded as-is, while non-atomic types are
     /// encoded as their `encodeData` hash.
-    pub fn eip712_data_word(&self, value: &DynSolValue) -> Result<B256, DynAbiError> {
+    pub fn eip712_data_word(&self, value: &DynSolValue) -> DynAbiResult<B256> {
         if let Some(word) = value.as_word() {
             return Ok(word)
         }
 
-        match value {
+        let mut bytes;
+        let to_hash = match value {
             DynSolValue::CustomStruct { name, tuple, .. } => {
-                let type_hash = self.type_hash(name)?.to_vec();
-                let inner = tuple.iter().try_fold(type_hash, |mut acc, v| {
-                    acc.extend(self.eip712_data_word(v)?.as_slice());
-                    Ok::<_, DynAbiError>(acc)
-                })?;
-                Ok(keccak256(inner))
+                bytes = self.type_hash(name)?.to_vec();
+                for v in tuple {
+                    bytes.extend(self.eip712_data_word(v)?.as_slice());
+                }
+                &bytes[..]
             }
             DynSolValue::Array(inner) | DynSolValue::FixedArray(inner) => {
-                let inner = inner.iter().try_fold(Vec::new(), |mut acc, v| {
-                    acc.extend(self.eip712_data_word(v)?.as_slice());
-                    Ok::<_, DynAbiError>(acc)
-                })?;
-                Ok(keccak256(inner))
+                bytes = Vec::with_capacity(inner.len() * 32);
+                for v in inner {
+                    bytes.extend(self.eip712_data_word(v)?);
+                }
+                &bytes[..]
             }
-            DynSolValue::Bytes(buf) => Ok(keccak256(buf)),
-            DynSolValue::String(s) => Ok(keccak256(s.as_bytes())),
+            DynSolValue::Bytes(buf) => buf,
+            DynSolValue::String(s) => s.as_bytes(),
             _ => unreachable!("all types are words or covered in the match"),
-        }
+        };
+        Ok(keccak256(to_hash))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use alloy_sol_types::sol;
-
     use super::*;
+    use alloc::boxed::Box;
+    use alloy_sol_types::sol;
 
     #[test]
     fn it_detects_cycles() {
@@ -636,14 +651,14 @@ mod tests {
         assert_eq!(graph.encode_type("Transaction").unwrap(), ENCODE_TYPE_2);
     }
 
-    sol!(
-        struct MyStruct {
-            uint256 a;
-        }
-    );
-
     #[test]
     fn it_ingests_sol_structs() {
+        sol!(
+            struct MyStruct {
+                uint256 a;
+            }
+        );
+
         let mut graph = Resolver::default();
         graph.ingest_sol_struct::<MyStruct>();
         assert_eq!(

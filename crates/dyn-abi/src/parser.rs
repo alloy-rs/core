@@ -6,13 +6,16 @@ use crate::{DynAbiError, DynAbiResult, DynSolType};
 use alloc::{boxed::Box, vec::Vec};
 use core::{fmt, num::NonZeroUsize};
 
+/// Returns `true` if the given character is valid at the start of a Solidity
+/// identfier.
 #[inline]
-const fn is_id_start(c: char) -> bool {
+pub const fn is_id_start(c: char) -> bool {
     matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '$')
 }
 
+/// Returns `true` if the given character is valid in a Solidity identfier.
 #[inline]
-const fn is_id_continue(c: char) -> bool {
+pub const fn is_id_continue(c: char) -> bool {
     matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$')
 }
 
@@ -22,7 +25,7 @@ const fn is_id_continue(c: char) -> bool {
 ///
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier>
 #[inline]
-fn is_valid_identifier(s: &str) -> bool {
+pub fn is_valid_identifier(s: &str) -> bool {
     let mut chars = s.chars();
     if let Some(first) = chars.next() {
         is_id_start(first) && chars.all(is_id_continue)
@@ -391,14 +394,19 @@ impl<'a> TypeSpecifier<'a> {
     /// Resolve the type string into a basic Solidity type if possible.
     #[inline]
     pub fn resolve_basic_solidity(&self) -> Result<DynSolType, DynAbiError> {
-        let mut ty = self.root.resolve_basic_solidity()?;
+        let ty = self.root.resolve_basic_solidity()?;
+        Ok(self.wrap_type(ty))
+    }
+
+    #[inline]
+    pub(crate) fn wrap_type(&self, mut ty: DynSolType) -> DynSolType {
         for size in &self.sizes {
             ty = match size {
                 Some(size) => DynSolType::FixedArray(Box::new(ty), size.get()),
                 None => DynSolType::Array(Box::new(ty)),
             };
         }
-        Ok(ty)
+        ty
     }
 }
 

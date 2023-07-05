@@ -31,7 +31,6 @@ impl<'a> TryFrom<&'a str> for PropDef<'a> {
         let (ty, name) = input
             .rsplit_once(' ')
             .ok_or_else(|| DynAbiError::invalid_property_def(input))?;
-
         Ok(PropDef {
             ty: ty.trim().try_into()?,
             name: name.trim(),
