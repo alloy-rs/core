@@ -191,6 +191,7 @@ impl DynSolValue {
     }
 
     #[inline]
+    #[allow(clippy::missing_const_for_fn)]
     fn sol_type_name_simple(&self) -> Option<&str> {
         match self {
             Self::Address(_) => Some("address"),
