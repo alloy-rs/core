@@ -13,6 +13,6 @@ mod typed_data;
 pub use typed_data::{Eip712Types, TypedData};
 
 mod resolver;
-pub use resolver::{PropertyDef, Resolver};
+pub use resolver::{PropertyDef, Resolver, TypeDef};
 
 pub(crate) mod coerce;

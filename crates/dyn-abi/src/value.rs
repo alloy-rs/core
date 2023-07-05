@@ -3,6 +3,19 @@ use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::{Address, I256, U256};
 use alloy_sol_types::{utils::words_for_len, Encoder};
 
+#[cfg(feature = "eip712")]
+macro_rules! as_fixed_seq {
+    ($tuple:tt) => {
+        Self::CustomStruct { tuple: $tuple, .. } | Self::FixedArray($tuple) | Self::Tuple($tuple)
+    };
+}
+#[cfg(not(feature = "eip712"))]
+macro_rules! as_fixed_seq {
+    ($tuple:tt) => {
+        Self::FixedArray($tuple) | Self::Tuple($tuple)
+    };
+}
+
 /// This type represents a Solidity value that has been decoded into rust. It
 /// is broadly similar to `serde_json::Value` in that it is an enum of possible
 /// types, and the user must inspect and disambiguate.
@@ -12,23 +25,27 @@ pub enum DynSolValue {
     Address(Address),
     /// A boolean.
     Bool(bool),
-    /// A dynamic-length byte array.
-    Bytes(Vec<u8>),
-    /// A fixed-length byte string.
-    FixedBytes(Word, usize),
     /// A signed integer.
     Int(I256, usize),
     /// An unsigned integer.
     Uint(U256, usize),
+    /// A fixed-length byte string.
+    FixedBytes(Word, usize),
+
+    /// A dynamic-length byte array.
+    Bytes(Vec<u8>),
     /// A string.
     String(String),
-    /// A tuple of values.
-    Tuple(Vec<DynSolValue>),
+
     /// A dynamically-sized array of values.
     Array(Vec<DynSolValue>),
     /// A fixed-size array of values.
     FixedArray(Vec<DynSolValue>),
+    /// A tuple of values.
+    Tuple(Vec<DynSolValue>),
+
     /// A named struct, treated as a tuple with a name parameter.
+    #[cfg(feature = "eip712")]
     CustomStruct {
         /// The name of the struct.
         name: String,
@@ -36,13 +53,6 @@ pub enum DynSolValue {
         prop_names: Vec<String>,
         /// The inner types.
         tuple: Vec<DynSolValue>,
-    },
-    /// A user-defined value type.
-    CustomValue {
-        /// The name of the custom value type.
-        name: String,
-        /// The value itself.
-        inner: Word,
     },
 }
 
@@ -163,6 +173,7 @@ impl DynSolValue {
             Self::FixedArray(inner) => {
                 DynSolType::FixedArray(Box::new(Self::sol_type(inner.first()?)?), inner.len())
             }
+            #[cfg(feature = "eip712")]
             Self::CustomStruct {
                 name,
                 prop_names,
@@ -175,7 +186,6 @@ impl DynSolValue {
                     .map(Self::sol_type)
                     .collect::<Option<Vec<_>>>()?,
             },
-            Self::CustomValue { name, .. } => DynSolType::CustomValue { name: name.clone() },
         };
         Some(ty)
     }
@@ -187,8 +197,8 @@ impl DynSolValue {
             Self::Bool(_) => Some("bool"),
             Self::Bytes(_) => Some("bytes"),
             Self::String(_) => Some("string"),
-            Self::CustomStruct { name, .. } | Self::CustomValue { name, .. } => Some(name.as_str()),
-
+            #[cfg(feature = "eip712")]
+            Self::CustomStruct { name, .. } => Some(name.as_str()),
             _ => None,
         }
     }
@@ -196,12 +206,16 @@ impl DynSolValue {
     #[inline]
     fn sol_type_name_raw(&self, out: &mut String) -> bool {
         match self {
+            #[cfg(not(feature = "eip712"))]
+            Self::Address(_) | Self::Bool(_) | Self::Bytes(_) | Self::String(_) => {
+                out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
+            }
+            #[cfg(feature = "eip712")]
             Self::Address(_)
             | Self::Bool(_)
             | Self::Bytes(_)
             | Self::String(_)
-            | Self::CustomStruct { .. }
-            | Self::CustomValue { .. } => {
+            | Self::CustomStruct { .. } => {
                 out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
             }
 
@@ -286,7 +300,6 @@ impl DynSolValue {
                 | Self::FixedBytes(_, _)
                 | Self::Int(_, _)
                 | Self::Uint(_, _)
-                | Self::CustomValue { .. }
         )
     }
 
@@ -299,7 +312,6 @@ impl DynSolValue {
             Self::FixedBytes(w, _) => Some(w),
             Self::Int(i, _) => Some(i.into()),
             Self::Uint(u, _) => Some(u.into()),
-            Self::CustomValue { inner, .. } => Some(inner),
             _ => None,
         }
     }
@@ -396,6 +408,7 @@ impl DynSolValue {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
+    #[cfg(feature = "eip712")]
     pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[DynSolValue])> {
         match self {
             Self::CustomStruct {
@@ -407,22 +420,13 @@ impl DynSolValue {
         }
     }
 
-    /// Fallible cast to the contents of a variant.
-    #[inline]
-    pub fn as_custom_value(&self) -> Option<(&str, Word)> {
-        match self {
-            Self::CustomValue { name, inner } => Some((name, *inner)),
-            _ => None,
-        }
-    }
-
     /// Returns true if the value is a sequence type.
     #[inline]
     pub const fn is_sequence(&self) -> bool {
-        matches!(
-            self,
-            Self::Array(_) | Self::FixedArray(_) | Self::Tuple(_) | Self::CustomStruct { .. }
-        )
+        match self {
+            as_fixed_seq!(_) | Self::Array(_) => true,
+            _ => false,
+        }
     }
 
     /// Fallible cast to a fixed-size array. Any of a `FixedArray`, a `Tuple`,
@@ -430,9 +434,7 @@ impl DynSolValue {
     #[inline]
     pub fn as_fixed_seq(&self) -> Option<&[DynSolValue]> {
         match self {
-            Self::FixedArray(tuple) | Self::Tuple(tuple) | Self::CustomStruct { tuple, .. } => {
-                Some(tuple)
-            }
+            as_fixed_seq!(tuple) => Some(tuple),
             _ => None,
         }
     }
@@ -453,14 +455,11 @@ impl DynSolValue {
         match self {
             Self::Address(_)
             | Self::Bool(_)
-            | Self::Int(_, _)
-            | Self::Uint(_, _)
-            | Self::FixedBytes(_, _)
-            | Self::CustomValue { .. } => false,
+            | Self::Int(..)
+            | Self::Uint(..)
+            | Self::FixedBytes(..) => false,
             Self::Bytes(_) | Self::String(_) | Self::Array(_) => true,
-            Self::Tuple(tuple) | Self::FixedArray(tuple) | Self::CustomStruct { tuple, .. } => {
-                tuple.iter().any(Self::is_dynamic)
-            }
+            as_fixed_seq!(tuple) => tuple.iter().any(Self::is_dynamic),
         }
     }
 
@@ -495,8 +494,7 @@ impl DynSolValue {
             | Self::Bool(_)
             | Self::FixedBytes(_, _)
             | Self::Int(_, _)
-            | Self::Uint(_, _)
-            | Self::CustomValue { .. } => 0,
+            | Self::Uint(_, _) => 0,
 
             // `self.as_packed_seq()`
             // 1 for the length, then the body padded to the next word.
@@ -506,7 +504,7 @@ impl DynSolValue {
             // `self.as_fixed_seq()`
             // if static, 0.
             // If dynamic, all words for all elements.
-            Self::FixedArray(tuple) | Self::Tuple(tuple) | Self::CustomStruct { tuple, .. } => {
+            as_fixed_seq!(tuple) => {
                 // `is_dynamic` iterates over all elements, and we need to sum all elements'
                 // total words, so do both things at once
                 let mut any_dynamic = false;
@@ -583,7 +581,6 @@ impl DynSolValue {
             Self::String(s) => buf.extend_from_slice(s.as_bytes()),
             Self::Bytes(bytes) => buf.extend_from_slice(bytes),
             Self::FixedBytes(word, size) => buf.extend_from_slice(&word[..*size]),
-            Self::CustomValue { inner, .. } => buf.extend_from_slice(inner.as_slice()),
             Self::Int(num, size) => {
                 let mut bytes = num.to_be_bytes::<32>();
                 let start = 32 - *size;
@@ -598,10 +595,7 @@ impl DynSolValue {
                 buf.extend_from_slice(&num.to_be_bytes::<32>()[(32 - *size)..])
             }
 
-            Self::Tuple(inner)
-            | Self::Array(inner)
-            | Self::FixedArray(inner)
-            | Self::CustomStruct { tuple: inner, .. } => {
+            as_fixed_seq!(inner) | Self::Array(inner) => {
                 inner.iter().for_each(|v| v.encode_packed_to(buf))
             }
         }
@@ -626,11 +620,8 @@ impl DynSolValue {
             Self::Int(int, _) => int.to_be_bytes::<32>().into(),
             Self::Uint(uint, _) => uint.to_be_bytes::<32>().into(),
             Self::String(s) => DynToken::PackedSeq(s.as_bytes()),
-            Self::Tuple(t) => DynToken::from_fixed_seq(t),
             Self::Array(t) => DynToken::from_dyn_seq(t),
-            Self::FixedArray(t) => DynToken::from_fixed_seq(t),
-            Self::CustomStruct { tuple, .. } => DynToken::from_fixed_seq(tuple),
-            Self::CustomValue { inner, .. } => (*inner).into(),
+            as_fixed_seq!(t) => DynToken::from_fixed_seq(t),
         }
     }
 
