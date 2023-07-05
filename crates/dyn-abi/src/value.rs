@@ -297,9 +297,9 @@ impl DynSolValue {
             self,
             Self::Address(_)
                 | Self::Bool(_)
-                | Self::FixedBytes(_, _)
-                | Self::Int(_, _)
-                | Self::Uint(_, _)
+                | Self::FixedBytes(..)
+                | Self::Int(..)
+                | Self::Uint(..)
         )
     }
 
@@ -423,10 +423,7 @@ impl DynSolValue {
     /// Returns true if the value is a sequence type.
     #[inline]
     pub const fn is_sequence(&self) -> bool {
-        match self {
-            as_fixed_seq!(_) | Self::Array(_) => true,
-            _ => false,
-        }
+        matches!(self, as_fixed_seq!(_) | Self::Array(_))
     }
 
     /// Fallible cast to a fixed-size array. Any of a `FixedArray`, a `Tuple`,
@@ -492,9 +489,9 @@ impl DynSolValue {
             // `self.is_word()`
             Self::Address(_)
             | Self::Bool(_)
-            | Self::FixedBytes(_, _)
-            | Self::Int(_, _)
-            | Self::Uint(_, _) => 0,
+            | Self::FixedBytes(..)
+            | Self::Int(..)
+            | Self::Uint(..) => 0,
 
             // `self.as_packed_seq()`
             // 1 for the length, then the body padded to the next word.

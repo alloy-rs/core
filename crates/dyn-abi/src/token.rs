@@ -138,7 +138,7 @@ impl<'a> DynToken<'a> {
         let dynamic = self.is_dynamic();
         match self {
             Self::Word(w) => *w = WordToken::decode_from(dec)?.0,
-            Self::FixedSeq(_, _) => {
+            Self::FixedSeq(..) => {
                 let mut child = if dynamic {
                     dec.take_indirection()?
                 } else {

@@ -414,7 +414,7 @@ impl Resolver {
     /// struct.
     fn resolve_root_type(&self, root_type: RootType<'_>) -> DynAbiResult<DynSolType> {
         if let Ok(ty) = root_type.resolve_basic_solidity() {
-            return Ok(ty.into())
+            return Ok(ty)
         }
 
         let ty = self

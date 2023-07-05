@@ -148,7 +148,7 @@ fn array(inner: &DynSolType, value: &serde_json::Value) -> DynAbiResult<DynSolVa
     }
 
     Err(DynAbiError::type_mismatch(
-        DynSolType::Array(Box::new(inner.clone().into())),
+        DynSolType::Array(Box::new(inner.clone())),
         value,
     ))
 }
