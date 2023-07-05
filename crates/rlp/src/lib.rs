@@ -3,36 +3,6 @@
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
-// This doctest uses derive, so it cannot be in the README :(
-#![cfg_attr(
-    feature = "derive",
-    doc = r##"
-
-## Usage Example
-
-```rust
-use alloy_rlp::{RlpEncodable, RlpDecodable, Decodable, Encodable};
-
-#[derive(Debug, RlpEncodable, RlpDecodable, PartialEq)]
-pub struct MyStruct {
-    pub a: u64,
-    pub b: Vec<u8>,
-}
-
-fn main() {
-    let my_struct = MyStruct {
-        a: 42,
-        b: vec![1, 2, 3],
-    };
-
-    let mut buffer = Vec::<u8>::new();
-    let encoded = my_struct.encode(&mut buffer);
-    let decoded = MyStruct::decode(&mut buffer.as_slice()).unwrap();
-    assert_eq!(my_struct, decoded);
-}
-```
-"##
-)]
 #![warn(
     missing_docs,
     unreachable_pub,
