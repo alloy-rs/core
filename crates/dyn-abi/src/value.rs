@@ -529,45 +529,49 @@ impl DynSolValue {
     /// Append this data to the head of an in-progress blob via the encoder.
     #[inline]
     pub fn head_append(&self, enc: &mut Encoder) {
-        if let Some(word) = self.as_word() {
-            return enc.append_word(word)
-        }
+        match self {
+            Self::Address(_)
+            | Self::Bool(_)
+            | Self::FixedBytes(..)
+            | Self::Int(..)
+            | Self::Uint(..) => enc.append_word(unsafe { self.as_word().unwrap_unchecked() }),
 
-        if self.is_dynamic() {
-            return enc.append_indirection()
-        }
+            Self::String(_) | Self::Bytes(_) | Self::Array(_) => enc.append_indirection(),
 
-        let seq = self
-            .as_fixed_seq()
-            .expect("is definitely a non-dynamic fixed sequence");
-        seq.iter().for_each(|inner| inner.head_append(enc))
+            as_fixed_seq!(s) => {
+                if s.iter().any(Self::is_dynamic) {
+                    enc.append_indirection()
+                } else {
+                    s.iter().for_each(|inner| inner.head_append(enc))
+                }
+            }
+        }
     }
 
     /// Append this data to the tail of an in-progress blob via the encoder.
     #[inline]
     pub fn tail_append(&self, enc: &mut Encoder) {
-        if self.is_word() {
-            return
-        }
+        match self {
+            Self::Address(_)
+            | Self::Bool(_)
+            | Self::FixedBytes(..)
+            | Self::Int(..)
+            | Self::Uint(..) => {}
 
-        if let Some(buf) = self.as_packed_seq() {
-            return enc.append_packed_seq(buf)
-        }
+            Self::String(string) => enc.append_packed_seq(string.as_bytes()),
+            Self::Bytes(bytes) => enc.append_packed_seq(bytes),
 
-        if let Some(sli) = self.as_fixed_seq() {
-            if self.is_dynamic() {
-                Self::encode_sequence(sli, enc);
+            as_fixed_seq!(s) => {
+                if self.is_dynamic() {
+                    Self::encode_sequence(s, enc);
+                }
             }
-            return
-        }
 
-        if let Some(sli) = self.as_array() {
-            enc.append_seq_len(sli);
-            Self::encode_sequence(sli, enc);
-            return
+            Self::Array(array) => {
+                enc.append_seq_len(array);
+                Self::encode_sequence(array, enc);
+            }
         }
-
-        unreachable!()
     }
 
     /// Encodes the packed value and appends it to the end of a byte array.
@@ -591,7 +595,6 @@ impl DynSolValue {
             Self::Uint(num, size) => {
                 buf.extend_from_slice(&num.to_be_bytes::<32>()[(32 - *size)..])
             }
-
             as_fixed_seq!(inner) | Self::Array(inner) => {
                 inner.iter().for_each(|v| v.encode_packed_to(buf))
             }
