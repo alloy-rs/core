@@ -46,25 +46,29 @@ struct StructProp {
 pub enum DynSolType {
     /// Address.
     Address,
-    /// Dynamic bytes.
-    Bytes,
+    /// Boolean.
+    Bool,
     /// Signed Integer.
     Int(usize),
     /// Unsigned Integer.
     Uint(usize),
-    /// Boolean.
-    Bool,
-    /// Dynamically sized array.
-    Array(Box<DynSolType>),
-    /// String.
-    String,
     /// Fixed-size bytes, up to 32.
     FixedBytes(usize),
+
+    /// Dynamic bytes.
+    Bytes,
+    /// String.
+    String,
+
+    /// Dynamically sized array.
+    Array(Box<DynSolType>),
     /// Fixed-sized array.
     FixedArray(Box<DynSolType>, usize),
     /// Tuple.
     Tuple(Vec<DynSolType>),
+
     /// User-defined struct.
+    #[cfg(feature = "eip712")]
     CustomStruct {
         /// Name of the struct.
         name: String,
@@ -72,11 +76,6 @@ pub enum DynSolType {
         prop_names: Vec<String>,
         /// Inner types.
         tuple: Vec<DynSolType>,
-    },
-    /// User-defined value.
-    CustomValue {
-        /// Name of the value type.
-        name: String,
     },
 }
 
@@ -107,11 +106,16 @@ impl DynSolType {
                 value,
                 DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v))
             ),
-            Self::Tuple(types) => matches!(
-                value,
-                DynSolValue::CustomStruct { tuple, .. } | DynSolValue::Tuple(tuple)
-                    if types.iter().zip(tuple).all(|(t, v)| t.matches(v))
-            ),
+            Self::Tuple(types) => match value {
+                #[cfg(feature = "eip712")]
+                DynSolValue::Tuple(tuple) | DynSolValue::CustomStruct { tuple, .. } => {
+                    types.iter().zip(tuple).all(|(t, v)| t.matches(v))
+                }
+                #[cfg(not(feature = "eip712"))]
+                DynSolValue::Tuple(tuple) => types.iter().zip(tuple).all(|(t, v)| t.matches(v)),
+                _ => false,
+            },
+            #[cfg(feature = "eip712")]
             Self::CustomStruct {
                 name,
                 prop_names,
@@ -129,9 +133,6 @@ impl DynSolType {
                 } else {
                     false
                 }
-            }
-            Self::CustomValue { name } => {
-                matches!(value, DynSolValue::CustomValue { name: n, .. } if name == n)
             }
         }
     }
@@ -196,6 +197,7 @@ impl DynSolType {
                     .collect::<Result<_>>()
                     .map(DynSolValue::FixedArray)
             }
+            #[cfg(feature = "eip712")]
             (
                 DynSolType::CustomStruct {
                     name,
@@ -221,7 +223,6 @@ impl DynSolType {
                     tuple,
                 })
             }
-            (DynSolType::CustomValue { .. }, token) => DynSolType::FixedBytes(32).detokenize(token),
             _ => Err(crate::Error::custom(
                 "mismatched types on dynamic detokenization",
             )),
@@ -229,13 +230,15 @@ impl DynSolType {
     }
 
     #[inline]
+    #[allow(clippy::missing_const_for_fn)]
     fn sol_type_name_simple(&self) -> Option<&str> {
         match self {
             Self::Address => Some("address"),
             Self::Bool => Some("bool"),
             Self::Bytes => Some("bytes"),
             Self::String => Some("string"),
-            Self::CustomStruct { name, .. } | Self::CustomValue { name, .. } => Some(name),
+            #[cfg(feature = "eip712")]
+            Self::CustomStruct { name, .. } => Some(name),
             _ => None,
         }
     }
@@ -243,12 +246,12 @@ impl DynSolType {
     #[inline]
     fn sol_type_name_raw(&self, out: &mut String) {
         match self {
-            Self::Address
-            | Self::Bool
-            | Self::Bytes
-            | Self::String
-            | Self::CustomStruct { .. }
-            | Self::CustomValue { .. } => {
+            #[cfg(feature = "eip712")]
+            Self::Address | Self::Bool | Self::Bytes | Self::String | Self::CustomStruct { .. } => {
+                out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
+            }
+            #[cfg(not(feature = "eip712"))]
+            Self::Address | Self::Bool | Self::Bytes | Self::String => {
                 out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
             }
 
@@ -323,11 +326,11 @@ impl DynSolType {
             DynSolType::FixedArray(t, size) => {
                 DynToken::FixedSeq(vec![t.empty_dyn_token(); *size].into(), *size)
             }
+            #[cfg(feature = "eip712")]
             DynSolType::CustomStruct { tuple, .. } => DynToken::FixedSeq(
                 tuple.iter().map(|t| t.empty_dyn_token()).collect(),
                 tuple.len(),
             ),
-            DynSolType::CustomValue { .. } => DynToken::Word(Word::ZERO),
         }
     }
 

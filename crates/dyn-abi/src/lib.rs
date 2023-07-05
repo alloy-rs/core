@@ -48,7 +48,7 @@ pub mod parser;
 #[cfg(feature = "eip712")]
 pub mod eip712;
 #[cfg(feature = "eip712")]
-pub use eip712::{parser as eip712_parser, Resolver, TypedData};
+pub use eip712::{parser as eip712_parser, Eip712Types, PropertyDef, Resolver, TypeDef, TypedData};
 
 #[cfg(test)]
 mod tests {

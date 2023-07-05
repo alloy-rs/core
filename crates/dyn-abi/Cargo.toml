@@ -25,6 +25,7 @@ hex.workspace = true
 itoa.workspace = true
 
 # eip712
+derive_more = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 
@@ -36,7 +37,7 @@ ethabi = "18"
 [features]
 default = ["std"]
 std = ["alloy-sol-types/std", "alloy-primitives/std", "hex/std", "serde?/std", "serde_json?/std"]
-eip712 = ["alloy-sol-types/eip712-serde", "dep:serde", "dep:serde_json"]
+eip712 = ["alloy-sol-types/eip712-serde", "dep:derive_more", "dep:serde", "dep:serde_json"]
 
 [[bench]]
 name = "abi"

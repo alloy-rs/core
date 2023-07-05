@@ -10,11 +10,14 @@ use alloc::{
 };
 use alloy_primitives::{keccak256, B256};
 use alloy_sol_types::{Eip712Domain, SolStruct};
+use derive_more::{Deref, DerefMut, From, Into, IntoIterator};
 use serde::{Deserialize, Serialize};
 
-/// Custom types for `TypedData`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
-pub struct Eip712Types(BTreeMap<String, Vec<PropertyDef>>);
+/// Custom types for `TypedData`.
+#[derive(
+    Clone, Debug, Default, PartialEq, Eq, Serialize, Deref, DerefMut, From, Into, IntoIterator,
+)]
+pub struct Eip712Types(#[into_iterator(ref, ref mut, owned)] BTreeMap<String, Vec<PropertyDef>>);
 
 impl<'de> Deserialize<'de> for Eip712Types {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
@@ -30,31 +33,10 @@ impl<'de> Deserialize<'de> for Eip712Types {
     }
 }
 
-impl IntoIterator for Eip712Types {
-    type Item = (String, Vec<PropertyDef>);
-    type IntoIter = alloc::collections::btree_map::IntoIter<String, Vec<PropertyDef>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl Eip712Types {
-    /// Iterate over the underlying map.
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<PropertyDef>)> {
-        self.0.iter()
-    }
-
-    /// Insert a new type.
-    pub fn insert(&mut self, key: String, value: Vec<PropertyDef>) {
-        self.0.insert(key, value);
-    }
-}
-
 /// Represents the [EIP-712](https://eips.ethereum.org/EIPS/eip-712) typed data object.
 ///
 /// Typed data is a JSON object containing type information, domain separator
-/// parameters and the message object which has the following schema
+/// parameters and the message object which has the following schema:
 ///
 /// ```json
 /// {
@@ -85,7 +67,7 @@ impl Eip712Types {
 ///     "required": ["types", "primaryType", "domain", "message"]
 /// }
 /// ```
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TypedData {
     /// Signing domain metadata. The signing domain is the intended context for
     /// the signature (e.g. the dapp, protocol, etc. that it's intended for).
@@ -238,7 +220,6 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    #[ignore = "Uint Serde"]
     fn test_full_domain() {
         let json = json!({
             "types": {
