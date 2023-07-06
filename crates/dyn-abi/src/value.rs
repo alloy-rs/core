@@ -439,7 +439,7 @@ impl DynSolValue {
         }
     }
 
-    /// Returns wheter this type is contains a custom struct.
+    /// Returns whether this type is contains a custom struct.
     #[inline]
     #[allow(clippy::missing_const_for_fn)]
     pub fn has_custom_struct(&self) -> bool {

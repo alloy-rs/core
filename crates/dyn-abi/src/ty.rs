@@ -174,7 +174,7 @@ impl DynSolType {
         }
     }
 
-    /// Returns wheter this type is contains a custom struct.
+    /// Returns whether this type is contains a custom struct.
     #[inline]
     #[allow(clippy::missing_const_for_fn)]
     pub fn has_custom_struct(&self) -> bool {
@@ -593,7 +593,7 @@ mod tests {
             0000000000000000000000002222222222222222222222222222222222222222
         "),
 
-        fixed_array_of_dyanmic_arrays_of_addresses("address[][2]", "
+        fixed_array_of_dynamic_arrays_of_addresses("address[][2]", "
             0000000000000000000000000000000000000000000000000000000000000020
             0000000000000000000000000000000000000000000000000000000000000040
             00000000000000000000000000000000000000000000000000000000000000a0
