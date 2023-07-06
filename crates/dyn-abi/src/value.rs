@@ -87,14 +87,14 @@ impl From<String> for DynSolValue {
 
 impl From<Vec<DynSolValue>> for DynSolValue {
     #[inline]
-    fn from(value: Vec<DynSolValue>) -> Self {
+    fn from(value: Vec<Self>) -> Self {
         Self::Array(value)
     }
 }
 
 impl<const N: usize> From<[DynSolValue; N]> for DynSolValue {
     #[inline]
-    fn from(value: [DynSolValue; N]) -> Self {
+    fn from(value: [Self; N]) -> Self {
         Self::FixedArray(value.to_vec())
     }
 }
@@ -384,7 +384,7 @@ impl DynSolValue {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
-    pub fn as_tuple(&self) -> Option<&[DynSolValue]> {
+    pub fn as_tuple(&self) -> Option<&[Self]> {
         match self {
             Self::Tuple(t) => Some(t),
             _ => None,
@@ -393,7 +393,7 @@ impl DynSolValue {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
-    pub fn as_array(&self) -> Option<&[DynSolValue]> {
+    pub fn as_array(&self) -> Option<&[Self]> {
         match self {
             Self::Array(a) => Some(a),
             _ => None,
@@ -402,7 +402,7 @@ impl DynSolValue {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
-    pub fn as_fixed_array(&self) -> Option<&[DynSolValue]> {
+    pub fn as_fixed_array(&self) -> Option<&[Self]> {
         match self {
             Self::FixedArray(a) => Some(a),
             _ => None,
@@ -411,15 +411,36 @@ impl DynSolValue {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
-    #[cfg(feature = "eip712")]
-    pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[DynSolValue])> {
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[Self])> {
         match self {
+            #[cfg(feature = "eip712")]
             Self::CustomStruct {
                 name,
                 prop_names,
                 tuple,
             } => Some((name, prop_names, tuple)),
             _ => None,
+        }
+    }
+
+    /// Returns wheter this type is contains a custom struct.
+    #[inline]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn has_custom_struct(&self) -> bool {
+        #[cfg(feature = "eip712")]
+        {
+            match self {
+                Self::CustomStruct { .. } => true,
+                Self::Array(t) | Self::FixedArray(t) | Self::Tuple(t) => {
+                    t.iter().any(Self::has_custom_struct)
+                }
+                _ => false,
+            }
+        }
+        #[cfg(not(feature = "eip712"))]
+        {
+            false
         }
     }
 
@@ -432,7 +453,7 @@ impl DynSolValue {
     /// Fallible cast to a fixed-size array. Any of a `FixedArray`, a `Tuple`,
     /// or a `CustomStruct`.
     #[inline]
-    pub fn as_fixed_seq(&self) -> Option<&[DynSolValue]> {
+    pub fn as_fixed_seq(&self) -> Option<&[Self]> {
         match self {
             as_fixed_seq!(tuple) => Some(tuple),
             _ => None,
@@ -571,7 +592,7 @@ impl DynSolValue {
             }
 
             Self::Array(array) => {
-                enc.append_seq_len(array);
+                enc.append_seq_len(array.len());
                 Self::encode_sequence(array, enc);
             }
         }

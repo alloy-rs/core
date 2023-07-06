@@ -6,6 +6,11 @@ use crate::{DynAbiError, DynAbiResult, DynSolType};
 use alloc::{boxed::Box, vec::Vec};
 use core::{fmt, num::NonZeroUsize};
 
+/// The regular expression for a Solidity identfier.
+///
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier>
+pub const IDENT_REGEX: &str = "[a-zA-Z$_][a-zA-Z0-9$_]*";
+
 /// Returns `true` if the given character is valid at the start of a Solidity
 /// identfier.
 #[inline]
@@ -24,14 +29,17 @@ pub const fn is_id_continue(c: char) -> bool {
 /// symbol.
 ///
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier>
-#[inline]
-pub fn is_valid_identifier(s: &str) -> bool {
-    let mut chars = s.chars();
-    if let Some(first) = chars.next() {
-        is_id_start(first) && chars.all(is_id_continue)
-    } else {
-        false
+pub fn is_valid_identifier<S: AsRef<str>>(s: S) -> bool {
+    fn is_valid_identifier(s: &str) -> bool {
+        let mut chars = s.chars();
+        if let Some(first) = chars.next() {
+            is_id_start(first) && chars.all(is_id_continue)
+        } else {
+            false
+        }
     }
+
+    is_valid_identifier(s.as_ref())
 }
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence

@@ -356,7 +356,7 @@ impl<'de, T: TokenType<'de>> TokenType<'de> for DynSeqToken<T> {
 
     #[inline]
     fn tail_append(&self, enc: &mut Encoder) {
-        enc.append_seq_len(&self.0);
+        enc.append_seq_len(self.0.len());
         self.encode_sequence(enc);
     }
 }
