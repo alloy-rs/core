@@ -33,6 +33,7 @@ serde_json = { workspace = true, optional = true }
 hex-literal.workspace = true
 criterion.workspace = true
 ethabi = "18"
+rand = "0.8"
 
 [features]
 default = ["std"]
@@ -42,4 +43,9 @@ eip712 = ["alloy-sol-types/eip712-serde", "dep:derive_more", "dep:serde", "dep:s
 [[bench]]
 name = "abi"
 path = "benches/abi.rs"
+harness = false
+
+[[bench]]
+name = "types"
+path = "benches/types.rs"
 harness = false

@@ -13,8 +13,8 @@ fn ethabi_encode(c: &mut Criterion) {
     g.bench_function("single", |b| {
         let input = encode_single_input();
         b.iter(|| {
-            let token = ethabi::Token::String(black_box(&input).clone());
-            ethabi::encode(&[token])
+            let token = ethabi::Token::String(input.clone());
+            ethabi::encode(&[black_box(token)])
         });
     });
 

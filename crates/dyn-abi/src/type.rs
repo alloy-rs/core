@@ -89,6 +89,23 @@ impl core::str::FromStr for DynSolType {
 }
 
 impl DynSolType {
+    /// Parses a Solidity type name string into a [`DynSolType`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_dyn_abi::DynSolType;
+    /// let type_name = "uint256";
+    /// let ty = DynSolType::parse(type_name)?;
+    /// assert_eq!(ty, DynSolType::Uint(256));
+    /// assert_eq!(ty.sol_type_name(), type_name);
+    /// # Ok::<_, alloy_dyn_abi::DynAbiError>(())
+    /// ```
+    #[inline]
+    pub fn parse(s: &str) -> DynAbiResult<Self> {
+        TypeSpecifier::try_from(s).and_then(|t| t.resolve_basic_solidity())
+    }
+
     /// Check that a given [`DynSolValue`] matches this type.
     pub fn matches(&self, value: &DynSolValue) -> bool {
         match self {
