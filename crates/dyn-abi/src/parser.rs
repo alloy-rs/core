@@ -96,46 +96,43 @@ impl<'a> RootType<'a> {
 
     /// Resolve the type string into a basic Solidity type.
     pub fn resolve_basic_solidity(self) -> DynAbiResult<DynSolType> {
-        let type_name = self.0;
-        match type_name {
+        match self.0 {
             "address" => Ok(DynSolType::Address),
             "bool" => Ok(DynSolType::Bool),
             "string" => Ok(DynSolType::String),
             "bytes" => Ok(DynSolType::Bytes),
             "uint" => Ok(DynSolType::Uint(256)),
             "int" => Ok(DynSolType::Int(256)),
-            _ => {
-                if let Some(sz) = type_name.strip_prefix("bytes") {
-                    if let Ok(sz) = sz.parse::<usize>() {
-                        return if sz != 0 && sz <= 32 {
-                            Ok(DynSolType::FixedBytes(sz))
-                        } else {
-                            Err(DynAbiError::invalid_size(type_name))
+            name => {
+                if let Some(sz) = name.strip_prefix("bytes") {
+                    if let Ok(sz) = sz.parse() {
+                        if sz != 0 && sz <= 32 {
+                            return Ok(DynSolType::FixedBytes(sz))
                         }
                     }
+                    return Err(DynAbiError::invalid_size(name))
                 }
 
                 // fast path both integer types
-                let (s, is_uint) = if let Some(s) = type_name.strip_prefix('u') {
+                let (s, is_uint) = if let Some(s) = name.strip_prefix('u') {
                     (s, true)
                 } else {
-                    (type_name, false)
+                    (name, false)
                 };
                 if let Some(sz) = s.strip_prefix("int") {
-                    if let Ok(sz) = sz.parse::<usize>() {
-                        return if sz != 0 && sz <= 256 && sz % 8 == 0 {
-                            if is_uint {
+                    if let Ok(sz) = sz.parse() {
+                        if sz != 0 && sz <= 256 && sz % 8 == 0 {
+                            return if is_uint {
                                 Ok(DynSolType::Uint(sz))
                             } else {
                                 Ok(DynSolType::Int(sz))
                             }
-                        } else {
-                            Err(DynAbiError::invalid_size(type_name))
                         }
                     }
+                    Err(DynAbiError::invalid_size(name))
+                } else {
+                    Err(DynAbiError::invalid_type_string(name))
                 }
-
-                Err(DynAbiError::invalid_type_string(type_name))
             }
         }
     }

@@ -30,6 +30,8 @@ fn parse(c: &mut Criterion) {
             DynSolType::parse(black_box(*complex)).unwrap()
         })
     });
+
+    g.finish();
 }
 
 fn format(c: &mut Criterion) {
@@ -60,6 +62,8 @@ fn format(c: &mut Criterion) {
             black_box(complex).sol_type_name()
         })
     });
+
+    g.finish();
 }
 
 fn group<'a>(c: &'a mut Criterion, group_name: &str) -> BenchmarkGroup<'a, WallTime> {

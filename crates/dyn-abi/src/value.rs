@@ -20,6 +20,21 @@ macro_rules! as_fixed_seq {
 ///
 /// It is broadly similar to `serde_json::Value` in that it is an enum of
 /// possible types, and the user must inspect and disambiguate.
+///
+/// # Examples
+///
+/// ```
+/// use alloy_dyn_abi::{DynSolType, DynSolValue};
+///
+/// let my_type: DynSolType = "uint64".parse()?;
+/// let my_data: DynSolValue = 183u64.into();
+///
+/// let encoded = my_data.encode_single();
+/// let decoded = my_type.decode_single(&encoded)?;
+///
+/// assert_eq!(decoded, my_data);
+/// # Ok::<_, Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub enum DynSolValue {
     /// An address.

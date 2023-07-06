@@ -26,7 +26,7 @@ struct StructProp {
 
 /// A dynamic Solidity type.
 ///
-/// Equivalent to an enum wrapper around all implementers of [`crate::SolType`].
+/// Equivalent to an enum wrapper around all implementers of [`SolType`].
 ///
 /// This is used to represent Solidity types that are not known at compile time.
 /// It is used in conjunction with [`DynToken`] and [`DynSolValue`] to allow for
@@ -59,12 +59,13 @@ struct StructProp {
 /// Decoding dynamic types:
 ///
 /// ```
-/// # use alloy_dyn_abi::{DynSolType, DynSolValue, Result};
-/// # use alloy_primitives::U256;
-/// let my_type = DynSolType::Uint(256);
-/// let my_data: DynSolValue = U256::from(183).into();
+/// use alloy_dyn_abi::{DynSolType, DynSolValue};
+/// use alloy_primitives::U256;
 ///
-/// let encoded = my_data.clone().encode_single();
+/// let my_type = DynSolType::Uint(256);
+/// let my_data: DynSolValue = U256::from(183u64).into();
+///
+/// let encoded = my_data.encode_single();
 /// let decoded = my_type.decode_single(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
@@ -72,7 +73,7 @@ struct StructProp {
 /// let my_type = DynSolType::Array(Box::new(my_type));
 /// let my_data = DynSolValue::Array(vec![my_data.clone()]);
 ///
-/// let encoded = my_data.clone().encode_single();
+/// let encoded = my_data.encode_single();
 /// let decoded = my_type.decode_single(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
