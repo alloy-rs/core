@@ -1,7 +1,8 @@
 use crate::{
-    parser::TypeSpecifier, DynAbiError, DynAbiResult, DynSolValue, DynToken, Result, SolType, Word,
+    resolver::Resolve, DynAbiError, DynAbiResult, DynSolValue, DynToken, Result, SolType, Word,
 };
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
+use alloy_sol_type_str::TypeSpecifier;
 use alloy_sol_types::sol_data;
 use core::{fmt, str::FromStr};
 
@@ -147,7 +148,7 @@ impl DynSolType {
     /// ```
     #[inline]
     pub fn parse(s: &str) -> DynAbiResult<Self> {
-        TypeSpecifier::try_from(s).and_then(|t| t.resolve_basic_solidity())
+        TypeSpecifier::try_from(s)?.resolve()
     }
 
     /// Fallible cast to the contents of a variant.

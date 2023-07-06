@@ -1,8 +1,6 @@
 use crate::{
-    eip712::typed_data::Eip712Types,
-    eip712_parser::EncodeType,
-    parser::{RootType, TypeSpecifier, TypeStem},
-    DynAbiError, DynAbiResult, DynSolType, DynSolValue,
+    eip712::typed_data::Eip712Types, eip712_parser::EncodeType, resolver::Resolve, DynAbiError,
+    DynAbiResult, DynSolType, DynSolValue,
 };
 use alloc::{
     borrow::ToOwned,
@@ -11,6 +9,7 @@ use alloc::{
     vec::Vec,
 };
 use alloy_primitives::{keccak256, B256};
+use alloy_sol_type_str::{RootType, TypeSpecifier, TypeStem};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
 use serde::{Deserialize, Deserializer, Serialize};
@@ -413,7 +412,7 @@ impl Resolver {
     /// Resolves a root Solidity type into either a basic type or a custom
     /// struct.
     fn resolve_root_type(&self, root_type: RootType<'_>) -> DynAbiResult<DynSolType> {
-        if let Ok(ty) = root_type.resolve_basic_solidity() {
+        if let Ok(ty) = root_type.resolve() {
             return Ok(ty)
         }
 

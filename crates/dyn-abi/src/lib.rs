@@ -46,7 +46,7 @@ pub use value::DynSolValue;
 mod token;
 pub use token::DynToken;
 
-pub mod parser;
+pub mod resolver;
 
 #[cfg(feature = "eip712")]
 pub mod eip712;
