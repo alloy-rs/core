@@ -1,4 +1,4 @@
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use core::fmt;
 
 /// Dynamic ABI result type.
@@ -79,15 +79,18 @@ impl From<hex::FromHexError> for DynAbiError {
 
 #[allow(dead_code)]
 impl DynAbiError {
-    pub(crate) fn invalid_size(ty: impl ToString) -> DynAbiError {
-        DynAbiError::InvalidSize(ty.to_string())
+    #[inline]
+    pub(crate) fn invalid_size(ty: &str) -> DynAbiError {
+        DynAbiError::InvalidSize(ty.into())
     }
 
-    pub(crate) fn invalid_type_string(ty: impl ToString) -> DynAbiError {
-        DynAbiError::InvalidTypeString(ty.to_string())
+    #[inline]
+    pub(crate) fn invalid_type_string(ty: &str) -> DynAbiError {
+        DynAbiError::InvalidTypeString(ty.into())
     }
 
     #[cfg(feature = "eip712")]
+    #[inline]
     pub(crate) fn type_mismatch(
         expected: crate::DynSolType,
         actual: &serde_json::Value,
@@ -99,17 +102,20 @@ impl DynAbiError {
     }
 
     #[cfg(feature = "eip712")]
-    pub(crate) fn invalid_property_def(def: impl ToString) -> DynAbiError {
-        DynAbiError::InvalidPropertyDefinition(def.to_string())
+    #[inline]
+    pub(crate) fn invalid_property_def(def: &str) -> DynAbiError {
+        DynAbiError::InvalidPropertyDefinition(def.into())
     }
 
     #[cfg(feature = "eip712")]
-    pub(crate) fn missing_type(name: impl ToString) -> DynAbiError {
-        DynAbiError::MissingType(name.to_string())
+    #[inline]
+    pub(crate) fn missing_type(name: &str) -> DynAbiError {
+        DynAbiError::MissingType(name.into())
     }
 
     #[cfg(feature = "eip712")]
-    pub(crate) fn circular_dependency(dep: impl ToString) -> DynAbiError {
-        DynAbiError::CircularDependency(dep.to_string())
+    #[inline]
+    pub(crate) fn circular_dependency(dep: &str) -> DynAbiError {
+        DynAbiError::CircularDependency(dep.into())
     }
 }

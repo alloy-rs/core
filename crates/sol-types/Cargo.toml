@@ -36,3 +36,4 @@ trybuild = "1.0"
 default = ["std"]
 std = ["alloy-primitives/std", "hex/std", "serde?/std"]
 eip712-serde = ["dep:serde", "serde?/alloc", "alloy-primitives/serde"]
+arbitrary = ["alloy-primitives/arbitrary"]

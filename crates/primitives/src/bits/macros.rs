@@ -468,13 +468,15 @@ macro_rules! impl_arbitrary {
             #[inline]
             fn arbitrary() -> Self::Strategy {
                 use $crate::private::proptest::strategy::Strategy;
-                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary().prop_map(Self)
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary()
+                    .prop_map(Self)
             }
 
             #[inline]
             fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
                 use $crate::private::proptest::strategy::Strategy;
-                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary_with(args).prop_map(Self)
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary_with(args)
+                    .prop_map(Self)
             }
         }
     };

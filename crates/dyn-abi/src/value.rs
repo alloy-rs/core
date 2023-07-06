@@ -16,9 +16,25 @@ macro_rules! as_fixed_seq {
     };
 }
 
-/// This type represents a Solidity value that has been decoded into rust. It
-/// is broadly similar to `serde_json::Value` in that it is an enum of possible
-/// types, and the user must inspect and disambiguate.
+/// A dynamic Solidity value.
+///
+/// It is broadly similar to `serde_json::Value` in that it is an enum of
+/// possible types, and the user must inspect and disambiguate.
+///
+/// # Examples
+///
+/// ```
+/// use alloy_dyn_abi::{DynSolType, DynSolValue};
+///
+/// let my_type: DynSolType = "uint64".parse().unwrap();
+/// let my_data: DynSolValue = 183u64.into();
+///
+/// let encoded = my_data.encode_single();
+/// let decoded = my_type.decode_single(&encoded)?;
+///
+/// assert_eq!(decoded, my_data);
+/// # Ok::<(), alloy_dyn_abi::Error>(())
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub enum DynSolValue {
     /// An address.
@@ -86,14 +102,14 @@ impl From<String> for DynSolValue {
 
 impl From<Vec<DynSolValue>> for DynSolValue {
     #[inline]
-    fn from(value: Vec<DynSolValue>) -> Self {
+    fn from(value: Vec<Self>) -> Self {
         Self::Array(value)
     }
 }
 
 impl<const N: usize> From<[DynSolValue; N]> for DynSolValue {
     #[inline]
-    fn from(value: [DynSolValue; N]) -> Self {
+    fn from(value: [Self; N]) -> Self {
         Self::FixedArray(value.to_vec())
     }
 }
@@ -153,7 +169,7 @@ impl DynSolValue {
     /// The Solidity type. This returns the solidity type corresponding to this
     /// value, if it is known. A type will not be known if the value contains
     /// an empty sequence, e.g. `T[0]`.
-    pub fn sol_type(&self) -> Option<DynSolType> {
+    pub fn as_type(&self) -> Option<DynSolType> {
         let ty = match self {
             Self::Address(_) => DynSolType::Address,
             Self::Bool(_) => DynSolType::Bool,
@@ -165,13 +181,13 @@ impl DynSolValue {
             Self::Tuple(inner) => {
                 return inner
                     .iter()
-                    .map(Self::sol_type)
+                    .map(Self::as_type)
                     .collect::<Option<Vec<_>>>()
                     .map(DynSolType::Tuple)
             }
-            Self::Array(inner) => DynSolType::Array(Box::new(Self::sol_type(inner.first()?)?)),
+            Self::Array(inner) => DynSolType::Array(Box::new(Self::as_type(inner.first()?)?)),
             Self::FixedArray(inner) => {
-                DynSolType::FixedArray(Box::new(Self::sol_type(inner.first()?)?), inner.len())
+                DynSolType::FixedArray(Box::new(Self::as_type(inner.first()?)?), inner.len())
             }
             #[cfg(feature = "eip712")]
             Self::CustomStruct {
@@ -183,7 +199,7 @@ impl DynSolValue {
                 prop_names: prop_names.clone(),
                 tuple: tuple
                     .iter()
-                    .map(Self::sol_type)
+                    .map(Self::as_type)
                     .collect::<Option<Vec<_>>>()?,
             },
         };
@@ -232,9 +248,6 @@ impl DynSolValue {
             }
 
             Self::Tuple(inner) => {
-                if inner.is_empty() {
-                    return false
-                }
                 out.push('(');
                 for (i, val) in inner.iter().enumerate() {
                     if i > 0 {
@@ -282,7 +295,11 @@ impl DynSolValue {
         if let Some(s) = self.sol_type_name_simple() {
             Some(Cow::Borrowed(s))
         } else {
-            let mut s = String::with_capacity(64);
+            let capacity = match self {
+                Self::Tuple(_) => 256,
+                _ => 16,
+            };
+            let mut s = String::with_capacity(capacity);
             if self.sol_type_name_raw(&mut s) {
                 Some(Cow::Owned(s))
             } else {
@@ -382,7 +399,7 @@ impl DynSolValue {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
-    pub fn as_tuple(&self) -> Option<&[DynSolValue]> {
+    pub fn as_tuple(&self) -> Option<&[Self]> {
         match self {
             Self::Tuple(t) => Some(t),
             _ => None,
@@ -391,7 +408,7 @@ impl DynSolValue {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
-    pub fn as_array(&self) -> Option<&[DynSolValue]> {
+    pub fn as_array(&self) -> Option<&[Self]> {
         match self {
             Self::Array(a) => Some(a),
             _ => None,
@@ -400,7 +417,7 @@ impl DynSolValue {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
-    pub fn as_fixed_array(&self) -> Option<&[DynSolValue]> {
+    pub fn as_fixed_array(&self) -> Option<&[Self]> {
         match self {
             Self::FixedArray(a) => Some(a),
             _ => None,
@@ -409,15 +426,36 @@ impl DynSolValue {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
-    #[cfg(feature = "eip712")]
-    pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[DynSolValue])> {
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[Self])> {
         match self {
+            #[cfg(feature = "eip712")]
             Self::CustomStruct {
                 name,
                 prop_names,
                 tuple,
             } => Some((name, prop_names, tuple)),
             _ => None,
+        }
+    }
+
+    /// Returns whether this type is contains a custom struct.
+    #[inline]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn has_custom_struct(&self) -> bool {
+        #[cfg(feature = "eip712")]
+        {
+            match self {
+                Self::CustomStruct { .. } => true,
+                Self::Array(t) | Self::FixedArray(t) | Self::Tuple(t) => {
+                    t.iter().any(Self::has_custom_struct)
+                }
+                _ => false,
+            }
+        }
+        #[cfg(not(feature = "eip712"))]
+        {
+            false
         }
     }
 
@@ -430,7 +468,7 @@ impl DynSolValue {
     /// Fallible cast to a fixed-size array. Any of a `FixedArray`, a `Tuple`,
     /// or a `CustomStruct`.
     #[inline]
-    pub fn as_fixed_seq(&self) -> Option<&[DynSolValue]> {
+    pub fn as_fixed_seq(&self) -> Option<&[Self]> {
         match self {
             as_fixed_seq!(tuple) => Some(tuple),
             _ => None,
@@ -569,7 +607,7 @@ impl DynSolValue {
             }
 
             Self::Array(array) => {
-                enc.append_seq_len(array);
+                enc.append_seq_len(array.len());
                 Self::encode_sequence(array, enc);
             }
         }

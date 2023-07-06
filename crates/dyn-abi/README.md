@@ -13,28 +13,42 @@ The dynamic encoder/decoder is significantly more expensive, especially for
 complex types. It is also significantly more error prone, as the mapping
 between solidity types and rust types is not enforced by the compiler.
 
-[abi]: https://docs.rs/alloy-sol-types/latest/alloy_sol_types/
+[abi]: https://docs.rs/alloy-sol-types
 
-## Usage
+## Examples
+
+Basic usage:
 
 ```rust
 use alloy_dyn_abi::{DynSolType, DynSolValue};
+use alloy_primitives::hex;
 
 // parse a type from a string
-// limitation: custom structs cannot currently be parsed this way.
-let my_type: DynSolType = "uint8[2][]".parse().unwrap();
-
-// set values
-let uints = DynSolValue::FixedArray(vec![0u8.into(), 1u8.into()]);
-let my_values = DynSolValue::Array(vec![uints]);
-
-// encode
-let encoded = my_values.clone().encode_single();
+// note: eip712 `CustomStruct`s cannot be parsed this way.
+let my_type: DynSolType = "uint16[2][]".parse().unwrap();
 
 // decode
-let decoded = my_type.decode_single(&encoded).unwrap();
+let my_data = hex!(
+    "0000000000000000000000000000000000000000000000000000000000000020" // offset
+    "0000000000000000000000000000000000000000000000000000000000000001" // length
+    "0000000000000000000000000000000000000000000000000000000000000002" // .[0][0]
+    "0000000000000000000000000000000000000000000000000000000000000003" // .[0][1]
+);
+let decoded = my_type.decode_single(&my_data)?;
 
-assert_eq!(decoded, my_values);
+let expected = DynSolValue::Array(vec![DynSolValue::FixedArray(vec![2u16.into(), 3u16.into()])]);
+assert_eq!(decoded, expected);
+
+// roundtrip
+let encoded = decoded.encode_single();
+assert_eq!(encoded, my_data);
+# Ok::<(), alloy_dyn_abi::Error>(())
+```
+
+EIP-712:
+
+```rust,ignore
+todo!()
 ```
 
 ## How it works

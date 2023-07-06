@@ -66,7 +66,12 @@ impl Encoder {
     }
 
     /// Determine the current suffix offset.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if there is no current suffix offset.
     #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
     pub fn suffix_offset(&self) -> u32 {
         debug_assert!(!self.suffix_offset.is_empty());
         unsafe { *self.suffix_offset.last().unwrap_unchecked() }
@@ -99,15 +104,20 @@ impl Encoder {
     }
 
     /// Append a pointer to the current suffix offset.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if there is no current suffix offset.
     #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
     pub fn append_indirection(&mut self) {
         self.append_word(pad_u32(self.suffix_offset()));
     }
 
     /// Append a sequence length.
     #[inline]
-    pub fn append_seq_len<T>(&mut self, seq: &[T]) {
-        self.append_word(pad_u32(seq.len() as u32));
+    pub fn append_seq_len(&mut self, len: usize) {
+        self.append_word(pad_u32(len as u32));
     }
 
     /// Append a sequence of bytes, padding to the next word.
@@ -134,7 +144,7 @@ impl Encoder {
     /// Append a sequence of bytes as a packed sequence with a length prefix.
     #[inline]
     pub fn append_packed_seq(&mut self, bytes: &[u8]) {
-        self.append_seq_len(bytes);
+        self.append_seq_len(bytes.len());
         self.append_bytes(bytes);
     }
 
