@@ -941,6 +941,7 @@ supported_int!(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_primitives::Signed;
     use hex_literal::hex;
 
     #[test]
@@ -1218,5 +1219,88 @@ mod tests {
 
         packed_encoder_test!(Int<128>, 0, hex! {"00000000000000000000000000000000"});
         packed_encoder_test!(Int<128>, 1, hex! {"00000000000000000000000000000001"});
+        packed_encoder_test!(Int<128>, -1, hex! {"ffffffffffffffffffffffffffffffff"});
+        packed_encoder_test!(Int<128>, -256, hex! {"ffffffffffffffffffffffffffffff00"});
+
+        packed_encoder_test!(
+            Int<136>,
+            Signed::unchecked_from(0),
+            hex! {"0000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<144>,
+            Signed::unchecked_from(0),
+            hex! {"000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<152>,
+            Signed::unchecked_from(0),
+            hex! {"00000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<160>,
+            Signed::unchecked_from(0),
+            hex! {"0000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<168>,
+            Signed::unchecked_from(0),
+            hex! {"000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<176>,
+            Signed::unchecked_from(0),
+            hex! {"00000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<184>,
+            Signed::unchecked_from(0),
+            hex! {"0000000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<192>,
+            Signed::unchecked_from(0),
+            hex! {"000000000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<200>,
+            Signed::unchecked_from(0),
+            hex! {"00000000000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<208>,
+            Signed::unchecked_from(0),
+            hex! {"0000000000000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<216>,
+            Signed::unchecked_from(0),
+            hex! {"000000000000000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<224>,
+            Signed::unchecked_from(0),
+            hex! {"00000000000000000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<232>,
+            Signed::unchecked_from(0),
+            hex! {"0000000000000000000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<240>,
+            Signed::unchecked_from(0),
+            hex! {"000000000000000000000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<248>,
+            Signed::unchecked_from(0),
+            hex! {"00000000000000000000000000000000000000000000000000000000000000"}
+        );
+        packed_encoder_test!(
+            Int<256>,
+            Signed::unchecked_from(0),
+            hex! {"0000000000000000000000000000000000000000000000000000000000000000"}
+        );
     }
 }
