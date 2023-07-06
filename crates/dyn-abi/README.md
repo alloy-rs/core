@@ -48,7 +48,7 @@ assert_eq!(encoded, my_data);
 EIP-712:
 
 ```rust,ignore
-// TODO
+todo!()
 ```
 
 ## How it works

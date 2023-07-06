@@ -116,6 +116,6 @@ impl DynAbiError {
     #[cfg(feature = "eip712")]
     #[inline]
     pub(crate) fn circular_dependency(dep: &str) -> DynAbiError {
-        DynAbiError::CircularDependency(dep.to_string())
+        DynAbiError::CircularDependency(dep.into())
     }
 }
