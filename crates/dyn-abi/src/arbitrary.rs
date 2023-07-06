@@ -517,6 +517,7 @@ fn int_strategy<T: Arbitrary>() -> impl Strategy<Value = (ValueOfStrategy<T::Str
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "eip712")]
     use crate::parser::{is_id_continue, is_id_start, is_valid_identifier};
 
     proptest! {
