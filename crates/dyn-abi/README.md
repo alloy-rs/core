@@ -25,7 +25,7 @@ use alloy_primitives::hex;
 
 // parse a type from a string
 // note: eip712 `CustomStruct`s cannot be parsed this way.
-let my_type: DynSolType = "uint16[2][]".parse()?;
+let my_type: DynSolType = "uint16[2][]".parse().unwrap();
 
 // decode
 let my_data = hex!(
@@ -42,7 +42,7 @@ assert_eq!(decoded, expected);
 // roundtrip
 let encoded = decoded.encode_single();
 assert_eq!(encoded, my_data);
-# Ok::<(), Box<dyn std::error::Error>>(())
+# Ok::<(), alloy_dyn_abi::Error>(())
 ```
 
 EIP-712:

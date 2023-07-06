@@ -26,14 +26,14 @@ macro_rules! as_fixed_seq {
 /// ```
 /// use alloy_dyn_abi::{DynSolType, DynSolValue};
 ///
-/// let my_type: DynSolType = "uint64".parse()?;
+/// let my_type: DynSolType = "uint64".parse().unwrap();
 /// let my_data: DynSolValue = 183u64.into();
 ///
 /// let encoded = my_data.encode_single();
 /// let decoded = my_type.decode_single(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
-/// # Ok::<_, Box<dyn std::error::Error>>(())
+/// # Ok::<(), alloy_dyn_abi::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub enum DynSolValue {
