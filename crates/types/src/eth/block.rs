@@ -2,8 +2,8 @@ use super::Transaction;
 use crate::primitives::{
     Block as PrimitiveBlock, Header as PrimitiveHeader, SealedHeader, Withdrawal,
 };
-use ethers_primitives::{Address, Bloom, Bytes, B256, B64, U256, U64};
-use ethers_rlp::Encodable;
+use alloy_primitives::{Address, Bloom, Bytes, B256, B64, U256, U64};
+use alloy_rlp::Encodable;
 use serde::{ser::Error, Deserialize, Serialize, Serializer};
 use std::{collections::BTreeMap, ops::Deref};
 
@@ -59,7 +59,7 @@ pub enum BlockError {
     InvalidSignature,
     /// A raw block failed to decode
     #[error("failed to decode raw block {0}")]
-    RlpDecodeRawBlock(ethers_rlp::DecodeError),
+    RlpDecodeRawBlock(alloy_rlp::DecodeError),
 }
 
 /// Block representation
@@ -110,7 +110,7 @@ impl Block {
     }
 
     /// Create a new [Block] response from a [primitive
-    /// block](ethers_primitives::Block), using the total difficulty to
+    /// block](alloy_primitives::Block), using the total difficulty to
     /// populate its field in the rpc response.
     ///
     /// This will populate the `transactions` field with only the hashes of the
@@ -132,7 +132,7 @@ impl Block {
     }
 
     /// Create a new [Block] response from a [primitive
-    /// block](ethers_primitives::Block), using the total difficulty to
+    /// block](alloy_primitives::Block), using the total difficulty to
     /// populate its field in the rpc response.
     ///
     /// This will populate the `transactions` field with the _full_

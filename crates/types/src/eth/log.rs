@@ -1,4 +1,4 @@
-use ethers_primitives::{Address, Bytes, B256, U256};
+use alloy_primitives::{Address, Bytes, B256, U256};
 use serde::{Deserialize, Serialize};
 
 /// Ethereum Log emitted by a transaction

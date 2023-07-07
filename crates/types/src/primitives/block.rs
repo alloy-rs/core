@@ -1,6 +1,6 @@
 use super::{Header, SealedHeader, TransactionSigned, Withdrawal};
-use ethers_primitives::{Address, BlockHash, BlockNumber, B256, U64};
-use ethers_rlp::{Decodable, DecodeError, Encodable, RlpDecodable, RlpEncodable};
+use alloy_primitives::{Address, BlockHash, BlockNumber, B256, U64};
+use alloy_rlp::{Decodable, DecodeError, Encodable, RlpDecodable, RlpEncodable};
 use serde::{
     de::{MapAccess, Visitor},
     ser::SerializeStruct,

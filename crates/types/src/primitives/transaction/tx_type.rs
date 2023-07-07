@@ -1,4 +1,4 @@
-use ethers_primitives::U8;
+use alloy_primitives::U8;
 use serde::{Deserialize, Serialize};
 
 /// Identifier for legacy transaction, however [TxLegacy](crate::TxLegacy) this

@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 /// Check the `reth-trie` crate for more info on hash builder.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct HashBuilderState {
     /// The current key.

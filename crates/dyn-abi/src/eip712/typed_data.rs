@@ -220,7 +220,6 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    #[ignore = "Uint Serde"]
     fn test_full_domain() {
         let json = json!({
             "types": {

@@ -1,6 +1,6 @@
 use crate::constants::GWEI_TO_WEI;
-use ethers_primitives::{Address, U256, U64};
-use ethers_rlp::{RlpDecodable, RlpEncodable};
+use alloy_primitives::{Address, U256, U64};
+use alloy_rlp::{RlpDecodable, RlpEncodable};
 use serde::{Deserialize, Serialize};
 
 /// Withdrawal represents a validator withdrawal from the consensus layer.

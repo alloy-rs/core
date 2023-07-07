@@ -1,5 +1,5 @@
 use crate::{NodeRecord, PeerId};
-use ethers_primitives::{B256, U256};
+use alloy_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,

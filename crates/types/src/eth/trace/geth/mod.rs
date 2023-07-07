@@ -2,7 +2,7 @@
 
 use crate::{state::StateOverride, BlockOverrides};
 /// Geth tracing types
-use ethers_primitives::{Bytes, B256, U256};
+use alloy_primitives::{Bytes, B256, U256};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 

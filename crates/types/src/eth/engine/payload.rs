@@ -3,8 +3,8 @@ use crate::{
     primitives::{Block, Header},
     SealedBlock, TransactionSigned, Withdrawal,
 };
-use ethers_primitives::{Address, Bloom, Bytes, B256, B64, U256, U64};
-use ethers_rlp::{Decodable, Encodable};
+use alloy_primitives::{Address, Bloom, Bytes, B256, B64, U256, U64};
+use alloy_rlp::{Decodable, Encodable};
 use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
 
 /// The execution payload body response that allows for `null` values.
@@ -211,7 +211,7 @@ pub enum PayloadError {
     },
     /// Encountered decoding error.
     #[error(transparent)]
-    Decode(#[from] ethers_rlp::DecodeError),
+    Decode(#[from] alloy_rlp::DecodeError),
 }
 
 impl PayloadError {
@@ -443,10 +443,10 @@ pub enum PayloadValidationError {
 mod validation_tests {
     use super::*;
     use crate::{proofs, TransactionSigned};
+    use alloy_primitives::B256;
+    use alloy_rlp::{Decodable, DecodeError};
     use assert_matches::assert_matches;
     use bytes::{Bytes, BytesMut};
-    use ethers_primitives::B256;
-    use ethers_rlp::{Decodable, DecodeError};
 
     fn transform_block<F: FnOnce(Block) -> Block>(src: SealedBlock, f: F) -> ExecutionPayload {
         let unsealed = src.unseal();

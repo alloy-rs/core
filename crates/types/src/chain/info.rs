@@ -1,4 +1,4 @@
-use ethers_primitives::{BlockNumber, B256};
+use alloy_primitives::{BlockNumber, B256};
 
 /// Current status of the blockchain's head.
 #[derive(Default, Clone, Debug, Eq, PartialEq)]

@@ -3,7 +3,7 @@ use super::{
     BranchNodeCompact, Nibbles, TrieMask,
 };
 use crate::proofs::EMPTY_ROOT;
-use ethers_primitives::{keccak256, B256};
+use alloy_primitives::{keccak256, B256};
 use std::{collections::HashMap, fmt::Debug};
 
 mod state;
@@ -429,8 +429,7 @@ impl HashBuilder {
 mod tests {
     use super::*;
     use crate::proofs::KeccakHasher;
-    use ethers_primitives::{B256, U256};
-    use hex_literal::hex;
+    use alloy_primitives::{hex, B256, U256};
     use proptest::prelude::*;
     use std::collections::{BTreeMap, HashMap};
 
@@ -458,7 +457,7 @@ mod tests {
             .map(|(k, v)| {
                 (
                     keccak256(k.as_ref()),
-                    ethers_rlp::encode_fixed_size(v).to_vec(),
+                    alloy_rlp::encode_fixed_size(v).to_vec(),
                 )
             })
             // Collect into a btree map to sort the data
@@ -613,8 +612,8 @@ mod tests {
         // Manually create the branch node that should be there after the first 2 leaves
         // are added. Skip the 0th element given in this example they have a
         // common prefix and will collapse to a Branch node.
+        use alloy_rlp::Encodable;
         use bytes::BytesMut;
-        use ethers_rlp::Encodable;
         let leaf1 = LeafNode::new(&Nibbles::unpack(&raw_input[0].0[1..]), input[0].1);
         let leaf2 = LeafNode::new(&Nibbles::unpack(&raw_input[1].0[1..]), input[1].1);
         let mut branch: [&dyn Encodable; 17] = [b""; 17];
@@ -624,7 +623,7 @@ mod tests {
         branch[4] = &leaf1;
         branch[7] = &leaf2;
         let mut branch_node_rlp = BytesMut::new();
-        ethers_rlp::encode_list::<dyn Encodable, _>(&branch, &mut branch_node_rlp);
+        alloy_rlp::encode_list(&branch, &mut branch_node_rlp);
         let branch_node_hash = keccak256(branch_node_rlp);
 
         let mut hb2 = HashBuilder::default();

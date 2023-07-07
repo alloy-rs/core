@@ -1,5 +1,5 @@
 use crate::constants::KECCAK_EMPTY;
-use ethers_primitives::{B256, U256, U64};
+use alloy_primitives::{B256, U256, U64};
 
 /// An Ethereum account.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]

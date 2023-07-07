@@ -1,5 +1,5 @@
-use ethers_primitives::{Address, Bytes, B256};
-use ethers_rlp::{RlpDecodable, RlpEncodable};
+use alloy_primitives::{Address, Bytes, B256};
+use alloy_rlp::{RlpDecodable, RlpEncodable};
 use serde::{Deserialize, Serialize};
 
 /// Ethereum Log

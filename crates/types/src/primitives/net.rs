@@ -1,5 +1,5 @@
 use crate::PeerId;
-use ethers_rlp::{RlpDecodable, RlpEncodable};
+use alloy_rlp::{RlpDecodable, RlpEncodable};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use serde::{
     de::{Error, Visitor},
@@ -62,7 +62,7 @@ impl<'de> Visitor<'de> for NodeRecordVisitor {
 impl fmt::Display for NodeRecord {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("enode://")?;
-        hex::encode(self.id.as_bytes()).fmt(f)?;
+        write!(f, "{:x}", self.id)?;
         f.write_char('@')?;
         match self.address {
             IpAddr::V4(ip) => {
@@ -261,8 +261,8 @@ impl FromStr for NodeRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_rlp::{Decodable, Encodable};
     use bytes::BytesMut;
-    use ethers_rlp::{Decodable, Encodable};
     use rand::{thread_rng, Rng, RngCore};
 
     #[test]

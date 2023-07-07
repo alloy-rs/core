@@ -1,7 +1,7 @@
 //! Types for representing the Geth genesis block and chain configuration.
 
 use super::GenesisAccount;
-use ethers_primitives::{Address, Bytes, B256, U256, U64};
+use alloy_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -117,7 +117,7 @@ impl Genesis {
         // There are 65 bytes of zeros after the signer address, which is usually
         // populated with the proposer signature. Because the genesis does not
         // have a proposer signature, it will be populated with zeros.
-        let extra_data_bytes = [&[0u8; 32][..], signer_addr.as_bytes(), &[0u8; 65][..]].concat();
+        let extra_data_bytes = [&[0u8; 32][..], signer_addr.as_slice(), &[0u8; 65][..]].concat();
         let extra_data = Bytes::from(extra_data_bytes);
 
         Genesis {

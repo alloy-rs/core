@@ -1,6 +1,6 @@
 use super::{super::TrieMask, rlp_node, CHILD_INDEX_RANGE};
-use ethers_primitives::B256;
-use ethers_rlp::{BufMut, EMPTY_STRING_CODE};
+use alloy_primitives::B256;
+use alloy_rlp::{BufMut, EMPTY_STRING_CODE};
 use serde::{Deserialize, Serialize};
 
 /// A Branch node is only a pointer to the stack of nodes and is used to
@@ -46,7 +46,7 @@ impl<'a> BranchNode<'a> {
         // Create the RLP header from the mask elements present.
         let mut i = first_child_idx;
         let header = CHILD_INDEX_RANGE.fold(
-            ethers_rlp::Header {
+            alloy_rlp::Header {
                 list: true,
                 payload_length: 1,
             },

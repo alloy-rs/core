@@ -1,5 +1,5 @@
 use crate::AccessList;
-use ethers_primitives::{Address, Bytes, U256, U64, U8};
+use alloy_primitives::{Address, Bytes, U256, U64, U8};
 use serde::{Deserialize, Serialize};
 
 /// Call request

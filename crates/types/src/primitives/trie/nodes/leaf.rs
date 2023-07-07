@@ -1,5 +1,5 @@
 use super::{super::Nibbles, rlp_node};
-use ethers_rlp::{BufMut, Encodable};
+use alloy_rlp::{BufMut, Encodable};
 
 /// A leaf node represents the endpoint or terminal node in the trie. In other
 /// words, a leaf node is where actual values are stored.
@@ -38,7 +38,7 @@ impl<'a> LeafNode<'a> {
 // Handroll because `key` must be encoded as a slice
 impl Encodable for LeafNode<'_> {
     fn encode(&self, out: &mut dyn BufMut) {
-        #[derive(ethers_rlp::RlpEncodable)]
+        #[derive(alloy_rlp::RlpEncodable)]
         struct S<'a> {
             encoded_path: &'a [u8],
             value: &'a [u8],
@@ -63,7 +63,7 @@ impl std::fmt::Debug for LeafNode<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::hex;
+    use alloy_primitives::hex;
 
     // From manual regression test
     #[test]

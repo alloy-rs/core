@@ -1,10 +1,9 @@
 //! Ethereum protocol-related constants.
 
+use alloy_primitives::{b256, FixedBytes, B256, U256};
 use core::time::Duration;
-use ethers_primitives::{FixedBytes, B256, U256};
-use hex_literal::hex;
 
-pub use ethers_primitives::{BLOOM_BITS, BLOOM_SIZE};
+pub use alloy_primitives::{BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS, BLOOM_SIZE_BYTES};
 
 /// The first four bytes of the call data for a function call specifies the
 /// function to be called.
@@ -54,34 +53,28 @@ pub const ETH_TO_WEI: u128 = FINNEY_TO_WEI * 1000;
 pub const MGAS_TO_GAS: u64 = 1_000_000u64;
 
 /// The Ethereum mainnet genesis hash.
-pub const MAINNET_GENESIS: B256 = FixedBytes(hex!(
-    "d4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3"
-));
+pub const MAINNET_GENESIS: B256 =
+    b256!("d4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3");
 
 /// Goerli genesis hash.
-pub const GOERLI_GENESIS: B256 = FixedBytes(hex!(
-    "bf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a"
-));
+pub const GOERLI_GENESIS: B256 =
+    b256!("bf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a");
 
 /// Sepolia genesis hash.
-pub const SEPOLIA_GENESIS: B256 = FixedBytes(hex!(
-    "25a5cc106eea7138acab33231d7160d69cb777ee0c2c553fcddf5138993e6dd9"
-));
+pub const SEPOLIA_GENESIS: B256 =
+    b256!("25a5cc106eea7138acab33231d7160d69cb777ee0c2c553fcddf5138993e6dd9");
 
 /// Keccak256 over empty array.
-pub const KECCAK_EMPTY: B256 = FixedBytes(hex!(
-    "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
-));
+pub const KECCAK_EMPTY: B256 =
+    b256!("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
 
 /// Hash of an empty RLP set: `keccak256(rlp([]))`
-const EMPTY_SET_HASH: B256 = FixedBytes(hex!(
-    "56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
-));
+const EMPTY_SET_HASH: B256 =
+    b256!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
 /// Hash of an empty RLP list: `keccak256("\xc0")`
-pub const EMPTY_LIST_HASH: B256 = FixedBytes(hex!(
-    "1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
-));
+pub const EMPTY_LIST_HASH: B256 =
+    b256!("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347");
 
 /// Root hash of an empty trie.
 pub const EMPTY_ROOT: B256 = EMPTY_SET_HASH;

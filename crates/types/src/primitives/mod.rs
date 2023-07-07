@@ -6,7 +6,6 @@ mod account;
 pub mod basefee;
 mod block;
 pub mod bloom;
-pub mod contract;
 mod forkid;
 mod hardfork;
 mod header;

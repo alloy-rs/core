@@ -1,6 +1,6 @@
+use alloy_primitives::Bytes;
+use alloy_rlp::RlpEncodableWrapper;
 use derive_more::{Deref, DerefMut, From, Index};
-use ethers_primitives::Bytes;
-use ethers_rlp::RlpEncodableWrapper;
 use serde::{Deserialize, Serialize};
 
 /// The nibbles are the keys for the AccountsTrie and the subkeys for the

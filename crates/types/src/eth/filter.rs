@@ -1,6 +1,6 @@
 use super::Log as RpcLog;
 use crate::primitives::{BlockNumberOrTag, Log};
-use ethers_primitives::{keccak256, Address, Bloom, BloomInput, B256, U256, U64};
+use alloy_primitives::{keccak256, Address, Bloom, BloomInput, B256, U256, U64};
 use serde::{
     de::{DeserializeOwned, MapAccess, Visitor},
     ser::SerializeStruct,
@@ -193,7 +193,7 @@ impl Filter {
     /// Match only a specific block
     ///
     /// ```
-    /// # use ethers_types::Filter;
+    /// # use alloy_types::Filter;
     /// let filter = Filter::new().select(69u64);
     /// ```
     /// This is the same as
@@ -202,15 +202,15 @@ impl Filter {
     /// Match the latest block only
     ///
     /// ```
-    /// # use ethers_types::{BlockNumberOrTag, Filter};
+    /// # use alloy_types::{BlockNumberOrTag, Filter};
     /// let filter = Filter::new().select(BlockNumberOrTag::Latest);
     /// ```
     ///
     /// Match a block by its hash
     ///
     /// ```
-    /// # use ethers_primitives::B256;
-    /// # use ethers_types::Filter;
+    /// # use alloy_primitives::B256;
+    /// # use alloy_types::Filter;
     /// let filter = Filter::new().select(B256::ZERO);
     /// ```
     /// This is the same as `at_block_hash`
@@ -218,21 +218,21 @@ impl Filter {
     /// Match a range of blocks
     ///
     /// ```
-    /// # use ethers_types::Filter;
+    /// # use alloy_types::Filter;
     /// let filter = Filter::new().select(0u64..100u64);
     /// ```
     ///
     /// Match all blocks in range `(1337..BlockNumberOrTag::Latest)`
     ///
     /// ```
-    /// # use ethers_types::Filter;
+    /// # use alloy_types::Filter;
     /// let filter = Filter::new().select(1337u64..);
     /// ```
     ///
     /// Match all blocks in range `(BlockNumberOrTag::Earliest..1337)`
     ///
     /// ```
-    /// # use ethers_types::Filter;
+    /// # use alloy_types::Filter;
     /// let filter = Filter::new().select(..1337u64);
     /// ```
     #[must_use]
@@ -273,8 +273,8 @@ impl Filter {
     /// `("0xAc4b3DacB91461209Ae9d41EC517c2B9Cb1B7DAF")`
     ///
     /// ```
-    /// # use ethers_primitives::Address;
-    /// # use ethers_types::Filter;
+    /// # use alloy_primitives::Address;
+    /// # use alloy_types::Filter;
     /// # fn main() {
     /// let filter = Filter::new().address("0xAc4b3DacB91461209Ae9d41EC517c2B9Cb1B7DAF".parse::<Address>().unwrap());
     /// # }
@@ -285,8 +285,8 @@ impl Filter {
     /// "0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8"])`
     ///
     /// ```
-    /// # use ethers_primitives::Address;
-    /// # use ethers_types::Filter;
+    /// # use alloy_primitives::Address;
+    /// # use alloy_types::Filter;
     /// # fn main() {
     /// let addresses = vec!["0xAc4b3DacB91461209Ae9d41EC517c2B9Cb1B7DAF".parse::<Address>().unwrap(),"0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8".parse::<Address>().unwrap()];
     /// let filter = Filter::new().address(addresses);
@@ -637,7 +637,7 @@ impl<I: Into<B256>> From<Vec<I>> for Topic {
 impl From<Address> for Topic {
     fn from(src: Address) -> Self {
         let mut bytes = [0; 32];
-        bytes[12..32].copy_from_slice(src.as_bytes());
+        bytes[12..32].copy_from_slice(src.as_slice());
         ValueOrArray::Value(Some(B256::from(bytes)))
     }
 }
@@ -745,10 +745,7 @@ impl FilteredParams {
         for filter in topic_filters.iter() {
             let mut is_match = false;
             for maybe_bloom in filter {
-                is_match = maybe_bloom
-                    .as_ref()
-                    .map(|b| bloom.contains_bloom(b))
-                    .unwrap_or(true);
+                is_match = maybe_bloom.as_ref().map_or(true, |b| bloom.contains(b));
                 if !is_match {
                     break
                 }
@@ -763,19 +760,15 @@ impl FilteredParams {
     /// Returns `true` if the bloom contains the address
     pub fn matches_address(bloom: Bloom, address_filter: &BloomFilter) -> bool {
         if address_filter.is_empty() {
-            return true
+            true
         } else {
             for maybe_bloom in address_filter {
-                if maybe_bloom
-                    .as_ref()
-                    .map(|b| bloom.contains_bloom(b))
-                    .unwrap_or(true)
-                {
+                if maybe_bloom.as_ref().map_or(true, |b| bloom.contains(b)) {
                     return true
                 }
             }
+            false
         }
-        false
     }
 
     /// Replace None values - aka wildcards - for the log input value in that
@@ -1024,6 +1017,7 @@ impl<'de> Deserialize<'de> for FilterChanges {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_primitives::address;
     use serde_json::json;
 
     fn serialize<T: serde::Serialize>(t: &T) -> serde_json::Value {
@@ -1054,18 +1048,12 @@ mod tests {
 
     #[test]
     fn filter_serialization_test() {
-        let t1 = "9729a6fbefefc8f6005933898b13dc45c3a2c8b7"
-            .parse::<Address>()
-            .unwrap();
+        let t1 = address!("9729a6fbefefc8f6005933898b13dc45c3a2c8b7");
         let t2 = B256::from([0; 32]);
         let t3 = U256::from(123);
 
-        let t1_padded = B256::from(t1);
-        let t3_padded = B256::from({
-            let mut x = [0; 32];
-            x[31] = 123;
-            x
-        });
+        let t1_padded = t1.into_word();
+        let t3_padded = B256::with_last_byte(123);
 
         let event = "ValueChanged(address,string,string)";
         let t0 = keccak256(event.as_bytes());

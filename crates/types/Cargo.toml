@@ -1,22 +1,21 @@
 [package]
-name = "ethers-types"
-version = "0.1.0"
+name = "alloy-types"
 description = "Ethereum types"
-readme = "README.md"
 keywords = ["ethereum", "abi", "encoding", "evm", "eth"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/types"
 
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+exclude.workspace = true
 
 [dependencies]
-# ethers
-ethers-primitives = { workspace = true, features = ["std", "serde", "rlp"] }
-ethers-rlp = { workspace = true, features = ["std", "derive"] }
+alloy-primitives = { workspace = true, features = ["std", "serde", "rlp"] }
+alloy-rlp = { workspace = true, features = ["std", "derive"] }
 
 # crypto
 secp256k1 = { version = "0.27.0", features = ["recovery"] }
@@ -32,7 +31,6 @@ serde = { workspace = true, features = ["std", "derive"] }
 serde_json = { workspace = true, features = ["std"] }
 bytes = { workspace = true, features = ["std"] }
 hex = { workspace = true, features = ["std"] }
-hex-literal.workspace = true
 once_cell = { workspace = true, features = ["std"] }
 
 # macros
@@ -48,7 +46,8 @@ hash-db = { version = "0.15", optional = true }
 tracing = { version = "0.1", optional = true }
 
 # arbitrary
-arbitrary = { workspace = true, features = ["derive"], optional = true }
+arbitrary = { workspace = true, optional = true }
+derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
@@ -56,13 +55,18 @@ proptest-derive = { workspace = true, optional = true }
 assert_matches = "1"
 rand = "0.8"
 
-ethers-primitives = { workspace = true, features = ["std", "arbitrary"] }
+alloy-primitives = { workspace = true, features = ["std", "arbitrary", "getrandom"] }
 arbitrary = { workspace = true, features = ["derive"] }
 proptest.workspace = true
 proptest-derive.workspace = true
 
 [features]
-proof = ["triehash", "plain_hasher", "hash-db", "tracing"]
-
-arbitrary = ["ethers-primitives/arbitrary", "dep:arbitrary", "dep:proptest", "dep:proptest-derive"]
+proof = ["dep:triehash", "dep:plain_hasher", "dep:hash-db", "dep:tracing"]
+arbitrary = [
+    "alloy-primitives/arbitrary",
+    "dep:arbitrary",
+    "dep:derive_arbitrary",
+    "dep:proptest",
+    "dep:proptest-derive",
+]
 test-utils = []

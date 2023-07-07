@@ -23,9 +23,11 @@ alloy-json-abi = { version = "0.2.0", path = "crates/json-abi", default-features
 alloy-primitives = { version = "0.2.0", path = "crates/primitives", default-features = false }
 alloy-rlp = { version = "0.2.0", path = "crates/rlp", default-features = false }
 alloy-rlp-derive = { version = "0.2.0", path = "crates/rlp-derive", default-features = false }
+alloy-rpc-types = { version = "0.2.0", path = "crates/rpc-types", default-features = false }
 alloy-sol-macro = { version = "0.2.0", path = "crates/sol-macro", default-features = false }
 alloy-sol-types = { version = "0.2.0", path = "crates/sol-types", default-features = false }
 syn-solidity = { version = "0.2.0", path = "crates/syn-solidity", default-features = false }
+alloy-types = { version = "0.2.0", path = "crates/types", default-features = false }
 
 ruint = { version = "1.9.0", package = "ruint2", default-features = false }
 ruint-macro = { version = "1.0.3", package = "ruint2-macro", default-features = false }
@@ -62,3 +64,5 @@ tiny-keccak = "2.0"
 # make ruint2 depend on the local alloy-rlp
 [patch.crates-io]
 alloy-rlp = { path = "crates/rlp" }
+alloy-rlp-derive = { path = "crates/rlp-derive" }
+ruint2 = { path = "../uint/crates/ruint" }

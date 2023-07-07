@@ -5,8 +5,8 @@
 //! container type [`TypedTransactionRequest`].
 
 use crate::primitives::{AccessList, Transaction, TxEip1559, TxEip2930, TxLegacy};
-use ethers_primitives::{Address, Bytes, U128, U256};
-use ethers_rlp::{BufMut, Decodable, DecodeError, Encodable, RlpDecodable, RlpEncodable};
+use alloy_primitives::{Address, Bytes, U128, U256};
+use alloy_rlp::{BufMut, Decodable, DecodeError, Encodable, RlpDecodable, RlpEncodable};
 use serde::{Deserialize, Serialize};
 
 /// Container type for various Ethereum transaction requests

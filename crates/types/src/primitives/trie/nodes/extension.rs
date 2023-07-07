@@ -1,5 +1,5 @@
 use super::{super::Nibbles, rlp_node};
-use ethers_rlp::{BufMut, Encodable};
+use alloy_rlp::{BufMut, Encodable};
 
 /// An intermediate node that exists solely to compress the trie's paths. It
 /// contains a path segment (a shared prefix of keys) and a single child
@@ -36,7 +36,7 @@ impl<'a> ExtensionNode<'a> {
 
 impl Encodable for ExtensionNode<'_> {
     fn encode(&self, out: &mut dyn BufMut) {
-        let h = ethers_rlp::Header {
+        let h = alloy_rlp::Header {
             list: true,
             payload_length: self.prefix.as_slice().length() + self.node.len(),
         };

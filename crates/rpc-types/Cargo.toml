@@ -1,22 +1,22 @@
 [package]
-name = "ethers-rpc-types"
-version = "0.1.0"
+name = "alloy-rpc-types"
 description = "Ethereum RPC types"
 readme = "README.md"
 keywords = ["ethereum", "abi", "encoding", "evm", "rpc"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/rpc-types"
 
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
+exclude.workspace = true
 
 [dependencies]
-# ethers
-ethers-primitives = { workspace = true, features = ["std", "rlp"] }
-ethers-rlp = { workspace = true, features = ["std", "derive"] }
+alloy-primitives = { workspace = true, features = ["std", "rlp"] }
+alloy-rlp = { workspace = true, features = ["std", "derive"] }
 
 # misc
 serde = { workspace = true, features = ["std", "derive"] }
@@ -32,11 +32,11 @@ proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
 [dev-dependencies]
-ethers-primitives = { workspace = true, features = ["std", "arbitrary"] }
+alloy-primitives = { workspace = true, features = ["std", "arbitrary"] }
 arbitrary = { workspace = true, features = ["derive"] }
 proptest.workspace = true
 proptest-derive.workspace = true
 
 [features]
-arbitrary = ["ethers-primitives/arbitrary", "dep:arbitrary", "dep:proptest", "dep:proptest-derive"]
+arbitrary = ["alloy-primitives/arbitrary", "dep:arbitrary", "dep:proptest", "dep:proptest-derive"]
 test-utils = []

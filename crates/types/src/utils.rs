@@ -1,5 +1,5 @@
 use crate::primitives::Signature;
-use ethers_primitives::{keccak256, Address, U256};
+use alloy_primitives::{keccak256, Address, U256};
 use secp256k1::{
     ecdsa::{RecoverableSignature, RecoveryId},
     Error, Message, Secp256k1, SecretKey,
@@ -36,8 +36,7 @@ fn as_message(msg_hash: &[u8; 32]) -> &Message {
 
 #[cfg(test)]
 mod tests {
-    use ethers_primitives::Address;
-    use hex_literal::hex;
+    use alloy_primitives::{hex, Address};
 
     #[test]
     fn recover_signer() {

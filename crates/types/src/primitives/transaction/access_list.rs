@@ -1,5 +1,5 @@
-use ethers_primitives::{Address, B256, U256};
-use ethers_rlp::{RlpDecodable, RlpDecodableWrapper, RlpEncodable, RlpEncodableWrapper};
+use alloy_primitives::{Address, B256, U256};
+use alloy_rlp::{RlpDecodable, RlpDecodableWrapper, RlpEncodable, RlpEncodableWrapper};
 use serde::{Deserialize, Serialize};
 
 /// A list of addresses and storage keys that the transaction plans to access.
@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 )]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct AccessListItem {
     /// Account addresses that would be loaded at the start of execution
@@ -33,8 +33,8 @@ pub struct AccessListItem {
     Serialize,
 )]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct AccessList(pub Vec<AccessListItem>);
 
@@ -60,8 +60,8 @@ impl AccessList {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct AccessListWithGasUsed {
     /// List with accounts accessed during transaction.

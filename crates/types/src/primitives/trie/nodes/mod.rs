@@ -1,5 +1,5 @@
-use ethers_primitives::{keccak256, B256};
-use ethers_rlp::EMPTY_STRING_CODE;
+use alloy_primitives::{keccak256, B256};
+use alloy_rlp::EMPTY_STRING_CODE;
 use std::ops::Range;
 
 mod branch;

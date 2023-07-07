@@ -3,11 +3,9 @@ use crate::{
     constants::{EMPTY_LIST_HASH, EMPTY_ROOT},
     BlockNumHash,
 };
+use alloy_primitives::{keccak256, Address, BlockHash, BlockNumber, Bloom, Bytes, B256, B64, U256};
+use alloy_rlp::{length_of_length, Decodable, Encodable, EMPTY_STRING_CODE};
 use bytes::{Buf, BufMut, BytesMut};
-use ethers_primitives::{
-    keccak256, Address, BlockHash, BlockNumber, Bloom, Bytes, B256, B64, U256,
-};
-use ethers_rlp::{length_of_length, Decodable, Encodable, EMPTY_STRING_CODE};
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
@@ -36,8 +34,8 @@ pub struct Head {
 /// Block header
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct Header {
     /// The Keccak 256-bit hash of the parent
@@ -224,7 +222,7 @@ impl Header {
 
 impl Encodable for Header {
     fn encode(&self, out: &mut dyn BufMut) {
-        let list_header = ethers_rlp::Header {
+        let list_header = alloy_rlp::Header {
             list: true,
             payload_length: self.header_payload_length(),
         };
@@ -267,10 +265,10 @@ impl Encodable for Header {
 }
 
 impl Decodable for Header {
-    fn decode(buf: &mut &[u8]) -> Result<Self, ethers_rlp::DecodeError> {
-        let rlp_head = ethers_rlp::Header::decode(buf)?;
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::DecodeError> {
+        let rlp_head = alloy_rlp::Header::decode(buf)?;
         if !rlp_head.list {
-            return Err(ethers_rlp::DecodeError::UnexpectedString)
+            return Err(alloy_rlp::DecodeError::UnexpectedString)
         }
         let started_len = buf.len();
         let mut this = Self {
@@ -308,7 +306,7 @@ impl Decodable for Header {
         }
         let consumed = started_len - buf.len();
         if consumed != rlp_head.payload_length {
-            return Err(ethers_rlp::DecodeError::ListLengthMismatch {
+            return Err(alloy_rlp::DecodeError::ListLengthMismatch {
                 expected: rlp_head.payload_length,
                 got: consumed,
             })
@@ -344,7 +342,7 @@ impl SealedHeader {
     }
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(feature = "arbitrary")]
 impl proptest::arbitrary::Arbitrary for SealedHeader {
     type Parameters = ();
     type Strategy = proptest::strategy::BoxedStrategy<SealedHeader>;
@@ -358,7 +356,7 @@ impl proptest::arbitrary::Arbitrary for SealedHeader {
     }
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(feature = "arbitrary")]
 impl<'a> arbitrary::Arbitrary<'a> for SealedHeader {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         Ok(Header::arbitrary(u)?.seal_slow())
@@ -378,7 +376,7 @@ impl Encodable for SealedHeader {
 }
 
 impl Decodable for SealedHeader {
-    fn decode(buf: &mut &[u8]) -> Result<Self, ethers_rlp::DecodeError> {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::DecodeError> {
         let b = &mut &**buf;
         let started_len = buf.len();
 
@@ -474,7 +472,7 @@ impl Encodable for HeadersDirection {
 }
 
 impl Decodable for HeadersDirection {
-    fn decode(buf: &mut &[u8]) -> Result<Self, ethers_rlp::DecodeError> {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::DecodeError> {
         let value: bool = Decodable::decode(buf)?;
         Ok(value.into())
     }
@@ -498,7 +496,7 @@ impl From<HeadersDirection> for bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethers_primitives::{Address, U256};
+    use alloy_primitives::{Address, U256};
     use hex::{self, FromHex};
     use std::str::FromStr;
 

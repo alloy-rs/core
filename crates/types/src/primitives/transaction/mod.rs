@@ -1,9 +1,9 @@
-use bytes::{Buf, BytesMut};
-use derive_more::{AsRef, Deref};
-use ethers_primitives::{keccak256, Address, Bytes, ChainId, TxHash, B256};
-use ethers_rlp::{
+use alloy_primitives::{keccak256, Address, Bytes, ChainId, TxHash, B256};
+use alloy_rlp::{
     length_of_length, Decodable, DecodeError, Encodable, Header, EMPTY_LIST_CODE, EMPTY_STRING_CODE,
 };
+use bytes::{Buf, BytesMut};
+use derive_more::{AsRef, Deref};
 use serde::{Deserialize, Serialize};
 
 mod access_list;
@@ -21,8 +21,8 @@ pub use tx_type::{TxType, EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID, LEGACY_TX_TYPE
 /// Legacy transaction.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct TxLegacy {
     /// Added as EIP-155: Simple replay attack protection
@@ -69,8 +69,8 @@ pub struct TxLegacy {
 /// Transaction with an [`AccessList`] ([EIP-2930](https://eips.ethereum.org/EIPS/eip-2930)).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct TxEip2930 {
     /// Added as EIP-pub 155: Simple replay attack protection
@@ -123,8 +123,8 @@ pub struct TxEip2930 {
 /// A transaction with a priority fee ([EIP-1559](https://eips.ethereum.org/EIPS/eip-1559)).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct TxEip1559 {
     /// Added as EIP-pub 155: Simple replay attack protection
@@ -186,8 +186,8 @@ pub struct TxEip1559 {
 /// Transaction types were introduced in [EIP-2718](https://eips.ethereum.org/EIPS/eip-2718).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub enum Transaction {
     /// Legacy transaction.
@@ -694,8 +694,8 @@ impl TxEip1559 {
 /// Whether or not the transaction is a contract creation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub enum TransactionKind {
     /// A transaction that creates a contract.
@@ -717,7 +717,7 @@ impl TransactionKind {
 }
 
 impl Encodable for TransactionKind {
-    fn encode(&self, out: &mut dyn ethers_rlp::BufMut) {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         match self {
             TransactionKind::Call(to) => to.encode(out),
             TransactionKind::Create => out.put_u8(EMPTY_STRING_CODE),
@@ -1078,7 +1078,7 @@ impl Decodable for TransactionSigned {
     }
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(feature = "arbitrary")]
 impl proptest::arbitrary::Arbitrary for TransactionSigned {
     type Parameters = ();
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
@@ -1104,7 +1104,7 @@ impl proptest::arbitrary::Arbitrary for TransactionSigned {
     type Strategy = proptest::strategy::BoxedStrategy<TransactionSigned>;
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(feature = "arbitrary")]
 impl<'a> arbitrary::Arbitrary<'a> for TransactionSigned {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let mut transaction = Transaction::arbitrary(u)?;
@@ -1224,17 +1224,10 @@ impl IntoRecoveredTransaction for TransactionSignedEcRecovered {
 mod tests {
     use super::*;
     use crate::{AccessList, TransactionSigned, TransactionSignedEcRecovered};
+    use alloy_primitives::{bytes, hex, Address, Bytes, B256, U256};
+    use alloy_rlp::{Decodable, DecodeError, Encodable};
     use bytes::BytesMut;
-    use ethers_primitives::{Address, Bytes, B256, U256};
-    use ethers_rlp::{Decodable, DecodeError, Encodable};
-    use hex_literal::hex;
     use std::str::FromStr;
-
-    macro_rules! bytes {
-        ($($l:literal)+) => {
-            Bytes::from_static(&hex_literal::hex!($($l)+))
-        };
-    }
 
     #[test]
     fn test_decode_empty_typed_tx() {

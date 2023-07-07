@@ -1,5 +1,5 @@
-use ethers_primitives::{Address, B256, U256};
-use ethers_rlp::{Decodable, DecodeError, Encodable, RlpDecodable, RlpEncodable};
+use alloy_primitives::{Address, B256, U256};
+use alloy_rlp::{Decodable, DecodeError, Encodable, RlpDecodable, RlpEncodable};
 use serde::{Deserialize, Serialize};
 
 /// r, s: Values corresponding to the signature of the
@@ -20,8 +20,8 @@ use serde::{Deserialize, Serialize};
     RlpDecodable,
 )]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct Signature {
     /// The R field of the signature; the point on the curve.
@@ -44,7 +44,7 @@ impl Signature {
     /// depends on chain_id.
     pub(crate) fn encode_with_eip155_chain_id(
         &self,
-        out: &mut dyn ethers_rlp::BufMut,
+        out: &mut dyn alloy_rlp::BufMut,
         chain_id: Option<u64>,
     ) {
         self.v(chain_id).encode(out);
@@ -94,7 +94,7 @@ impl Signature {
     }
 
     /// Encode the `odd_y_parity`, `r`, `s` values without a RLP header.
-    pub(crate) fn encode(&self, out: &mut dyn ethers_rlp::BufMut) {
+    pub(crate) fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         self.odd_y_parity.encode(out);
         self.r.encode(out);
         self.s.encode(out);
@@ -118,7 +118,7 @@ impl Signature {
         // NOTE: we are removing error from underlying crypto library as it will
         // restrain primitive errors and we care only if recovery is passing or
         // not.
-        crate::recover_signer(&sig, self.odd_y_parity as i32, hash.as_fixed_bytes()).ok()
+        crate::recover_signer(&sig, self.odd_y_parity as i32, &hash).ok()
     }
 
     /// Turn this signature into its byte
@@ -136,8 +136,8 @@ impl Signature {
 #[cfg(test)]
 mod tests {
     use crate::primitives::Signature;
+    use alloy_primitives::{Address, B256, U256};
     use bytes::BytesMut;
-    use ethers_primitives::{Address, B256, U256};
     use std::str::FromStr;
 
     #[test]
@@ -222,7 +222,7 @@ mod tests {
         let mut encoded = BytesMut::new();
         signature.encode(&mut encoded);
         assert_eq!(encoded.len(), signature.payload_len());
-        eprintln!("{}", ethers_primitives::Bytes::from(encoded.to_vec()));
+        eprintln!("{}", alloy_primitives::Bytes::from(encoded.to_vec()));
         let decoded = Signature::decode(&mut &*encoded).unwrap();
         assert_eq!(signature, decoded);
     }

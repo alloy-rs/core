@@ -1,8 +1,8 @@
 use super::Log;
 use crate::{bloom::logs_bloom, TxType};
+use alloy_primitives::Bloom;
+use alloy_rlp::{length_of_length, Decodable, Encodable};
 use bytes::{Buf, BufMut, BytesMut};
-use ethers_primitives::Bloom;
-use ethers_rlp::{length_of_length, Decodable, Encodable};
 use std::cmp::Ordering;
 
 /// Receipt containing result of transaction execution.
@@ -82,18 +82,18 @@ impl ReceiptWithBloom {
     }
 
     /// Decodes the receipt payload
-    fn decode_receipt(buf: &mut &[u8], tx_type: TxType) -> Result<Self, ethers_rlp::DecodeError> {
+    fn decode_receipt(buf: &mut &[u8], tx_type: TxType) -> Result<Self, alloy_rlp::DecodeError> {
         let b = &mut &**buf;
-        let rlp_head = ethers_rlp::Header::decode(b)?;
+        let rlp_head = alloy_rlp::Header::decode(b)?;
         if !rlp_head.list {
-            return Err(ethers_rlp::DecodeError::UnexpectedString)
+            return Err(alloy_rlp::DecodeError::UnexpectedString)
         }
         let started_len = b.len();
 
-        let success = ethers_rlp::Decodable::decode(b)?;
-        let cumulative_gas_used = ethers_rlp::Decodable::decode(b)?;
+        let success = alloy_rlp::Decodable::decode(b)?;
+        let cumulative_gas_used = alloy_rlp::Decodable::decode(b)?;
         let bloom = Decodable::decode(b)?;
-        let logs = ethers_rlp::Decodable::decode(b)?;
+        let logs = alloy_rlp::Decodable::decode(b)?;
 
         let this = Self {
             receipt: Receipt {
@@ -106,7 +106,7 @@ impl ReceiptWithBloom {
         };
         let consumed = started_len - b.len();
         if consumed != rlp_head.payload_length {
-            return Err(ethers_rlp::DecodeError::ListLengthMismatch {
+            return Err(alloy_rlp::DecodeError::ListLengthMismatch {
                 expected: rlp_head.payload_length,
                 got: consumed,
             })
@@ -126,19 +126,19 @@ impl Encodable for ReceiptWithBloom {
 }
 
 impl Decodable for ReceiptWithBloom {
-    fn decode(buf: &mut &[u8]) -> Result<Self, ethers_rlp::DecodeError> {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::DecodeError> {
         // a receipt is either encoded as a string (non legacy) or a list (legacy).
         // We should not consume the buffer if we are decoding a legacy receipt, so
         // let's check if the first byte is between 0x80 and 0xbf.
-        let rlp_type = *buf.first().ok_or(ethers_rlp::DecodeError::Custom(
+        let rlp_type = *buf.first().ok_or(alloy_rlp::DecodeError::Custom(
             "cannot decode a receipt from empty bytes",
         ))?;
 
-        match rlp_type.cmp(&ethers_rlp::EMPTY_LIST_CODE) {
+        match rlp_type.cmp(&alloy_rlp::EMPTY_LIST_CODE) {
             Ordering::Less => {
                 // strip out the string header
-                let _header = ethers_rlp::Header::decode(buf)?;
-                let receipt_type = *buf.first().ok_or(ethers_rlp::DecodeError::Custom(
+                let _header = alloy_rlp::Header::decode(buf)?;
+                let receipt_type = *buf.first().ok_or(alloy_rlp::DecodeError::Custom(
                     "typed receipt cannot be decoded from an empty slice",
                 ))?;
                 if receipt_type == 0x01 {
@@ -148,10 +148,10 @@ impl Decodable for ReceiptWithBloom {
                     buf.advance(1);
                     Self::decode_receipt(buf, TxType::EIP1559)
                 } else {
-                    Err(ethers_rlp::DecodeError::Custom("invalid receipt type"))
+                    Err(alloy_rlp::DecodeError::Custom("invalid receipt type"))
                 }
             }
-            Ordering::Equal => Err(ethers_rlp::DecodeError::Custom(
+            Ordering::Equal => Err(alloy_rlp::DecodeError::Custom(
                 "an empty list is not a valid receipt encoding",
             )),
             Ordering::Greater => Self::decode_receipt(buf, TxType::Legacy),
@@ -211,8 +211,8 @@ struct ReceiptWithBloomEncoder<'a> {
 
 impl<'a> ReceiptWithBloomEncoder<'a> {
     /// Returns the rlp header for the receipt payload.
-    fn receipt_rlp_header(&self) -> ethers_rlp::Header {
-        let mut rlp_head = ethers_rlp::Header {
+    fn receipt_rlp_header(&self) -> alloy_rlp::Header {
+        let mut rlp_head = alloy_rlp::Header {
             list: true,
             payload_length: 0,
         };
@@ -246,7 +246,7 @@ impl<'a> ReceiptWithBloomEncoder<'a> {
 
         if with_header {
             let payload_length = payload.len() + 1;
-            let header = ethers_rlp::Header {
+            let header = alloy_rlp::Header {
                 list: false,
                 payload_length,
             };
@@ -292,9 +292,8 @@ impl<'a> Encodable for ReceiptWithBloomEncoder<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethers_primitives::{Address, Bytes, B256};
-    use ethers_rlp::{Decodable, Encodable};
-    use hex_literal::hex;
+    use alloy_primitives::{hex, Address, Bytes, B256};
+    use alloy_rlp::{Decodable, Encodable};
     use std::str::FromStr;
 
     // Test vector from: https://eips.ethereum.org/EIPS/eip-2481

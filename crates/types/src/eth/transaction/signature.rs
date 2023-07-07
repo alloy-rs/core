@@ -1,7 +1,7 @@
 //! Signature related RPC values
 
 use crate::primitives::{Signature as PrimitiveSignature, TxType};
-use ethers_primitives::U256;
+use alloy_primitives::U256;
 use serde::{Deserialize, Serialize};
 
 /// Container type for all signature fields in RPC
@@ -22,7 +22,7 @@ pub struct Signature {
 
 impl Signature {
     /// Creates a new rpc signature from a legacy [primitive
-    /// signature](ethers_primitives::Signature), using the give chain id to
+    /// signature](alloy_primitives::Signature), using the give chain id to
     /// compute the signature's recovery id.
     ///
     /// If the chain id is `Some`, the recovery id is computed according to [EIP-155](https://eips.ethereum.org/EIPS/eip-155).
@@ -38,7 +38,7 @@ impl Signature {
     }
 
     /// Creates a new rpc signature from a non-legacy [primitive
-    /// signature](ethers_primitives::Signature). This sets the `v` value to `0`
+    /// signature](alloy_primitives::Signature). This sets the `v` value to `0`
     /// or `1` depending on the signature's `odd_y_parity`.
     pub(crate) fn from_typed_primitive_signature(signature: PrimitiveSignature) -> Self {
         Self {
@@ -49,7 +49,7 @@ impl Signature {
     }
 
     /// Creates a new rpc signature from a legacy [primitive
-    /// signature](ethers_primitives::Signature).
+    /// signature](alloy_primitives::Signature).
     ///
     /// The tx type is used to determine whether or not to use the `chain_id` to
     /// compute the signature's recovery id.

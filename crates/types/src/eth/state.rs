@@ -1,6 +1,6 @@
 //! bindings for state overrides in eth_call
 
-use ethers_primitives::{Address, Bytes, B256, U256, U64};
+use alloy_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

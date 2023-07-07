@@ -14,7 +14,7 @@ use crate::primitives::{
     AccessListItem, Transaction as PrimitiveTransaction, TransactionKind,
     TransactionSignedEcRecovered, TxType,
 };
-use ethers_primitives::{Address, BlockNumber, Bytes, B256, U128, U256, U64};
+use alloy_primitives::{Address, BlockNumber, Bytes, B256, U128, U256, U64};
 use serde::{Deserialize, Serialize};
 
 /// Transaction object used in RPC

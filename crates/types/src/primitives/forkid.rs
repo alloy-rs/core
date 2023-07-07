@@ -3,9 +3,9 @@
 //! Previously version of Apache licenced [`ethereum-forkid`](https://crates.io/crates/ethereum-forkid).
 
 use crate::Head;
+use alloy_primitives::{BlockNumber, B256};
+use alloy_rlp::*;
 use crc::*;
-use ethers_primitives::{BlockNumber, B256};
-use ethers_rlp::*;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
@@ -396,7 +396,7 @@ impl Cache {
 mod tests {
     use super::*;
     use crate::constants::MAINNET_GENESIS;
-    use hex_literal::hex;
+    use alloy_primitives::hex;
 
     // EIP test vectors.
     #[test]

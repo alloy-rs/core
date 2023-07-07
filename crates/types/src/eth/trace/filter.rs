@@ -1,5 +1,5 @@
 //! `trace_filter` types and support
-use ethers_primitives::{Address, BlockNumber};
+use alloy_primitives::{Address, BlockNumber};
 use serde::{Deserialize, Serialize};
 
 /// Trace filter.

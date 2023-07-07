@@ -1,4 +1,4 @@
-use ethers_primitives::U256;
+use alloy_primitives::U256;
 
 /// Represents error variants that can happen when trying to validate a
 /// [Transaction](crate::Transaction)

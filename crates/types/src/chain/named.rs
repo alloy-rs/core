@@ -1,4 +1,4 @@
-use ethers_primitives::{Uint, U128, U256, U64};
+use alloy_primitives::{Uint, U128, U256, U64};
 use serde::{Deserialize, Serialize, Serializer};
 use std::{fmt, time::Duration};
 use strum::{EnumCount, EnumIter, EnumString, EnumVariantNames, IntoStaticStr};
@@ -221,7 +221,7 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<Uint<BITS, LIMBS>> for Named
             1 => value.into_limbs()[0].try_into(),
             _ => match u64::try_from(value) {
                 Ok(v) => v.try_into(),
-                Err(ethers_primitives::ruint::FromUintError::Overflow(_, number, _)) => {
+                Err(alloy_primitives::ruint::FromUintError::Overflow(_, number, _)) => {
                     Err(ParseChainError { number })
                 }
             },
@@ -274,7 +274,7 @@ impl NamedChain {
     /// # Examples
     ///
     /// ```
-    /// use ethers_types::NamedChain;
+    /// use alloy_types::NamedChain;
     /// use std::time::Duration;
     ///
     /// assert_eq!(
@@ -319,7 +319,7 @@ impl NamedChain {
     /// # Examples
     ///
     /// ```
-    /// use ethers_types::NamedChain;
+    /// use alloy_types::NamedChain;
     ///
     /// assert!(!NamedChain::Mainnet.is_legacy());
     /// assert!(NamedChain::Celo.is_legacy());
@@ -392,7 +392,7 @@ impl NamedChain {
     /// # Examples
     ///
     /// ```
-    /// use ethers_types::NamedChain;
+    /// use alloy_types::NamedChain;
     ///
     /// assert_eq!(
     ///     NamedChain::Mainnet.etherscan_urls(),
@@ -631,7 +631,7 @@ impl NamedChain {
     /// # Examples
     ///
     /// ```
-    /// use ethers_types::NamedChain;
+    /// use alloy_types::NamedChain;
     ///
     /// assert_eq!(NamedChain::Mainnet.etherscan_api_key_name(), Some("ETHERSCAN_API_KEY"));
     /// assert_eq!(NamedChain::AnvilHardhat.etherscan_api_key_name(), None);
@@ -709,7 +709,7 @@ impl NamedChain {
     /// # Examples
     ///
     /// ```
-    /// use ethers_types::NamedChain;
+    /// use alloy_types::NamedChain;
     ///
     /// let chain = NamedChain::Mainnet;
     /// std::env::set_var(chain.etherscan_api_key_name().unwrap(), "KEY");

@@ -5,7 +5,7 @@
 ///
 /// Encodes the concatenation of the x and y components of the affine point
 /// in bytes.
-pub type PeerId = ethers_primitives::B512;
+pub type PeerId = alloy_primitives::B512;
 
 /// Generic wrapper with peer id
 #[derive(Debug)]

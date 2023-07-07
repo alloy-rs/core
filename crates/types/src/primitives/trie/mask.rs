@@ -26,8 +26,8 @@ use serde::{Deserialize, Serialize};
     Not,
 )]
 #[cfg_attr(
-    any(test, feature = "arbitrary"),
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    feature = "arbitrary",
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct TrieMask(u16);
 

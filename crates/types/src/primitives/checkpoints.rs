@@ -1,5 +1,5 @@
 use crate::trie::{hash_builder::HashBuilderState, StoredSubNode};
-use ethers_primitives::{Address, BlockNumber, TxNumber, B256};
+use alloy_primitives::{Address, BlockNumber, TxNumber, B256};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

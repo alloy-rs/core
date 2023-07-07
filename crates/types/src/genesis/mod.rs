@@ -4,8 +4,8 @@ use crate::{
     constants::{EMPTY_ROOT, KECCAK_EMPTY},
     Account,
 };
-use ethers_primitives::{keccak256, Address, Bytes, B256, U256, U64};
-use ethers_rlp::{encode_fixed_size, length_of_length, Encodable, Header as RlpHeader};
+use alloy_primitives::{keccak256, Address, Bytes, B256, U256, U64};
+use alloy_rlp::{encode_fixed_size, length_of_length, Encodable, Header as RlpHeader};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -110,6 +110,7 @@ pub struct GenesisAccount {
 
 impl GenesisAccount {
     /// Determines the RLP payload length, without the RLP header.
+    #[cfg(feature = "proof")]
     fn payload_len(&self) -> usize {
         let mut len = 0;
         len += self.nonce.unwrap_or_default().length();
@@ -241,7 +242,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::hex;
+    use alloy_primitives::hex;
 
     #[test]
     fn test_genesis() {

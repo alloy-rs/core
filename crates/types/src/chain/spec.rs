@@ -4,7 +4,7 @@ use crate::{
     primitives::{ForkFilter, ForkFilterKey, ForkHash, ForkId, Hardfork, Head, Header},
     Chain, Genesis,
 };
-use ethers_primitives::{BlockNumber, B256, U256};
+use alloy_primitives::{BlockNumber, B256, U256};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -688,10 +688,9 @@ mod tests {
         AllGenesisFormats, Chain, ChainSpec, ChainSpecBuilder, ForkCondition, ForkHash, ForkId,
         Genesis, Hardfork, Head, NamedChain, GOERLI, MAINNET, SEPOLIA,
     };
+    use alloy_primitives::{b256, hex, Address, B256, U256};
+    use alloy_rlp::Encodable;
     use bytes::BytesMut;
-    use ethers_primitives::{Address, B256, U256};
-    use ethers_rlp::Encodable;
-    use hex_literal::hex;
 
     fn test_fork_ids(spec: &ChainSpec, cases: &[(Head, ForkId)]) {
         for (block, expected_id) in cases {
@@ -1584,22 +1583,19 @@ mod tests {
         }
 
         assert_eq!(chainspec.genesis_hash, None);
-        let expected_state_root: B256 =
-            hex_literal::hex!("078dc6061b1d8eaa8493384b59c9c65ceb917201221d08b80c4de6770b6ec7e7")
-                .into();
+        let expected_state_root =
+            b256!("078dc6061b1d8eaa8493384b59c9c65ceb917201221d08b80c4de6770b6ec7e7");
         assert_eq!(chainspec.genesis_header().state_root, expected_state_root);
 
-        let expected_withdrawals_hash: B256 =
-            hex_literal::hex!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-                .into();
+        let expected_withdrawals_hash =
+            b256!("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
         assert_eq!(
             chainspec.genesis_header().withdrawals_root,
             Some(expected_withdrawals_hash)
         );
 
-        let expected_hash: B256 =
-            hex_literal::hex!("1fc027d65f820d3eef441ebeec139ebe09e471cf98516dce7b5643ccb27f418c")
-                .into();
+        let expected_hash =
+            b256!("1fc027d65f820d3eef441ebeec139ebe09e471cf98516dce7b5643ccb27f418c");
         let hash = chainspec.genesis_hash();
         assert_eq!(hash, expected_hash);
     }
@@ -1666,8 +1662,7 @@ mod tests {
         assert_eq!(chainspec.genesis_hash, None);
         assert_eq!(Chain::named(NamedChain::Optimism), chainspec.chain);
         let expected_state_root: B256 =
-            hex_literal::hex!("9a6049ac535e3dc7436c189eaa81c73f35abd7f282ab67c32944ff0301d63360")
-                .into();
+            b256!("9a6049ac535e3dc7436c189eaa81c73f35abd7f282ab67c32944ff0301d63360");
         assert_eq!(chainspec.genesis_header().state_root, expected_state_root);
         let hard_forks = vec![
             Hardfork::Byzantium,
@@ -1683,9 +1678,8 @@ mod tests {
             );
         }
 
-        let expected_hash: B256 =
-            hex_literal::hex!("5ae31c6522bd5856129f66be3d582b842e4e9faaa87f21cce547128339a9db3c")
-                .into();
+        let expected_hash =
+            b256!("5ae31c6522bd5856129f66be3d582b842e4e9faaa87f21cce547128339a9db3c");
         let hash = chainspec.genesis_header().hash_slow();
         assert_eq!(hash, expected_hash);
     }

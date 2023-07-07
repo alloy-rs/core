@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-use ethers_primitives::{Address, Bytes, B256, B512, U256, U64};
+use alloy_primitives::{Address, Bytes, B256, B512, U256, U64};
 use serde::{Deserialize, Serialize};
 
 /// Account information.

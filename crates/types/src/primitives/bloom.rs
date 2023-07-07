@@ -1,15 +1,15 @@
 //! Ethereum bloom filter and utility functions.
 
 use super::Log;
-use ethers_primitives::Bloom;
+use alloy_primitives::Bloom;
 
 /// Calculate receipt logs bloom.
 pub fn logs_bloom<'a, I: IntoIterator<Item = &'a Log>>(logs: I) -> Bloom {
     let mut bloom = Bloom::ZERO;
     for log in logs {
-        bloom.m3_2048(log.address.as_bytes());
+        bloom.m3_2048(log.address.as_slice());
         for topic in &log.topics {
-            bloom.m3_2048(topic.as_bytes());
+            bloom.m3_2048(topic.as_slice());
         }
     }
     bloom
@@ -18,7 +18,7 @@ pub fn logs_bloom<'a, I: IntoIterator<Item = &'a Log>>(logs: I) -> Bloom {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::hex;
+    use alloy_primitives::hex;
 
     #[test]
     fn hardcoded_bloom() {

@@ -3,8 +3,8 @@
 //! [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
 
 use crate::{goerli_nodes, mainnet_nodes, sepolia_nodes, NodeRecord};
-use ethers_primitives::Uint;
-use ethers_rlp::{Decodable, Encodable};
+use alloy_primitives::Uint;
+use alloy_rlp::{Decodable, Encodable};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt,
@@ -158,7 +158,7 @@ impl std::str::FromStr for Chain {
 
 impl Encodable for Chain {
     #[inline]
-    fn encode(&self, out: &mut dyn ethers_rlp::BufMut) {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         self.id().encode(out)
     }
 
@@ -170,7 +170,7 @@ impl Encodable for Chain {
 
 impl Decodable for Chain {
     #[inline]
-    fn decode(buf: &mut &[u8]) -> Result<Self, ethers_rlp::DecodeError> {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::DecodeError> {
         u64::decode(buf).map(Self::new)
     }
 }
@@ -332,7 +332,7 @@ enum ChainRepr {
     Id(u64),
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(feature = "arbitrary")]
 mod arbitrary {
     use super::*;
     use proptest::{
@@ -374,7 +374,7 @@ mod arbitrary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethers_primitives::{U256, U64};
+    use alloy_primitives::{U256, U64};
 
     #[test]
     fn test_id() {

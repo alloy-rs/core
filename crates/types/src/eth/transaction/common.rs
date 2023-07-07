@@ -2,7 +2,7 @@
 //! are often required when working with RPC types, such as
 //! [Transaction](crate::Transaction)
 
-use ethers_primitives::{TxHash, B256};
+use alloy_primitives::{TxHash, B256};
 
 /// Additional fields in the context of a block that contains this transaction.
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
