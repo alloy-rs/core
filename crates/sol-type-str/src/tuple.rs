@@ -125,7 +125,7 @@ mod test {
         let test_str = "bool,uint256))";
         assert_eq!(
             TupleSpecifier::try_from(test_str),
-            Err(crate::Error::invalid_type_string(test_str).into())
+            Err(crate::Error::invalid_type_string(test_str))
         );
     }
 
@@ -134,7 +134,7 @@ mod test {
         let test_str = "(bool,uint256";
         assert_eq!(
             TupleSpecifier::try_from(test_str),
-            Err(Error::invalid_type_string(test_str).into())
+            Err(Error::invalid_type_string(test_str))
         );
     }
 
@@ -164,7 +164,7 @@ mod test {
         let test_str = "bool,uint256";
         assert_eq!(
             TupleSpecifier::try_from(test_str),
-            Err(crate::Error::invalid_type_string(test_str).into())
+            Err(crate::Error::invalid_type_string(test_str))
         );
     }
 }
