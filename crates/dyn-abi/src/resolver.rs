@@ -2,7 +2,9 @@
 //!
 //! This is a simple representation of Solidity type grammar.
 
-use alloy_sol_type_str::{RootType, TupleSpecifier, TypeSpecifier, TypeStem};
+use alloy_sol_type_str::{
+    Error as TypeStrError, RootType, TupleSpecifier, TypeSpecifier, TypeStem,
+};
 
 use crate::{DynAbiError, DynSolType};
 
@@ -13,49 +15,56 @@ pub(crate) trait Resolve {
 
 impl Resolve for RootType<'_> {
     fn resolve(&self) -> Result<DynSolType, DynAbiError> {
-        self.try_basic_solidity()?;
+        let type_name = self.span();
+        match type_name {
+            "address" => Ok(DynSolType::Address),
+            "bool" => Ok(DynSolType::Bool),
+            "string" => Ok(DynSolType::String),
+            "bytes" => Ok(DynSolType::Bytes),
+            "uint" => Ok(DynSolType::Uint(256)),
+            "int" => Ok(DynSolType::Int(256)),
+            _ => {
+                if let Some(sz) = type_name.strip_prefix("bytes") {
+                    if let Ok(sz) = sz.parse::<usize>() {
+                        return (sz != 0 && sz <= 32)
+                            .then(|| DynSolType::FixedBytes(sz))
+                            .ok_or_else(|| TypeStrError::invalid_size(type_name).into())
+                    }
+                }
 
-        let s = self.as_str();
-        if let Some(s) = s.strip_prefix("int") {
-            let len = s.trim().parse::<usize>().unwrap_or(256);
-            return Ok(DynSolType::Int(len))
+                // fast path both integer types
+                let (s, is_uint) = if let Some(s) = type_name.strip_prefix('u') {
+                    (s, true)
+                } else {
+                    (type_name, false)
+                };
+                if let Some(sz) = s.strip_prefix("int") {
+                    if let Ok(sz) = sz.parse::<usize>() {
+                        return (sz != 0 && sz <= 256 && sz % 8 == 0)
+                            .then(|| {
+                                if is_uint {
+                                    DynSolType::Uint(sz)
+                                } else {
+                                    DynSolType::Int(sz)
+                                }
+                            })
+                            .ok_or_else(|| TypeStrError::invalid_size(type_name).into())
+                    }
+                }
+                Err(TypeStrError::invalid_type_string(type_name).into())
+            }
         }
-
-        if let Some(s) = s.strip_prefix("uint") {
-            let len = s.trim().parse::<usize>().unwrap_or(256);
-            return Ok(DynSolType::Uint(len))
-        }
-
-        match s {
-            "address" => return Ok(DynSolType::Address),
-            "bool" => return Ok(DynSolType::Bool),
-            "string" => return Ok(DynSolType::String),
-            "bytes" => return Ok(DynSolType::Bytes),
-            _ => {}
-        }
-
-        // This block must come after the match statement, as the `bytes`
-        // prefix is shared between two types
-        if let Some(s) = s.strip_prefix("bytes") {
-            return Ok(DynSolType::FixedBytes(
-                s.trim()
-                    .parse()
-                    .map_err(|_| alloy_sol_type_str::Error::invalid_size(s))?,
-            ))
-        }
-        Err(DynAbiError::missing_type(s))
     }
 }
 
 impl Resolve for TupleSpecifier<'_> {
     /// Resolve the type string into a basic Solidity type if possible.
     fn resolve(&self) -> Result<DynSolType, DynAbiError> {
-        let tuple = self
-            .types
+        self.types
             .iter()
             .map(|ty| ty.resolve())
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(DynSolType::Tuple(tuple))
+            .collect::<Result<Vec<_>, _>>()
+            .map(DynSolType::Tuple)
     }
 }
 

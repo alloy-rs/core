@@ -2,6 +2,31 @@ use core::fmt;
 
 use crate::{error::Error, Result};
 
+#[inline]
+const fn is_id_start(c: char) -> bool {
+    matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '$')
+}
+
+#[inline]
+const fn is_id_continue(c: char) -> bool {
+    matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$')
+}
+
+/// An identifier in Solidity has to start with a letter, a dollar-sign or
+/// an underscore and may additionally contain numbers after the first
+/// symbol.
+///
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier>
+#[inline]
+fn is_valid_identifier(s: &str) -> bool {
+    let mut chars = s.chars();
+    if let Some(first) = chars.next() {
+        is_id_start(first) && chars.all(is_id_continue)
+    } else {
+        false
+    }
+}
+
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type. This is the most basic type specifier.
 ///
@@ -31,8 +56,23 @@ use crate::{error::Error, Result};
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
 pub struct RootType<'a>(&'a str);
+
+impl AsRef<str> for RootType<'_> {
+    fn as_ref(&self) -> &str {
+        self.0
+    }
+}
+
+impl<'a> TryFrom<&'a str> for RootType<'a> {
+    type Error = Error;
+
+    fn try_from(value: &'a str) -> Result<Self> {
+        Self::parse(value)
+    }
+}
 
 impl fmt::Display for RootType<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -40,15 +80,27 @@ impl fmt::Display for RootType<'_> {
     }
 }
 
-impl RootType<'_> {
+impl<'a> RootType<'a> {
     /// The full span of the root type.
+    #[inline]
     pub const fn span(&self) -> &str {
         self.0
     }
 
     /// The string underlying this type. The type name.
+    #[inline]
     pub const fn as_str(&self) -> &str {
         self.0
+    }
+
+    /// Parse a root type from a string.
+    #[inline]
+    pub fn parse(value: &'a str) -> Result<Self> {
+        if is_valid_identifier(value) {
+            Ok(Self(value))
+        } else {
+            Err(Error::invalid_type_string(value))
+        }
     }
 
     /// An identifier in Solidity has to start with a letter, a dollar-sign or
@@ -75,6 +127,7 @@ impl RootType<'_> {
 
     /// Ok(()) if the type is a basic Solidity type, otherwise an error that
     /// indicates the source of the parser failure.
+    #[inline]
     pub fn try_basic_solidity(&self) -> Result<()> {
         let type_name = self.0;
         match type_name {
@@ -122,29 +175,14 @@ impl RootType<'_> {
     }
 
     /// Returns true if the type is a basic Solidity type, otherwise false.
+    #[inline]
     pub fn is_basic_solidity(&self) -> bool {
         self.try_basic_solidity().is_ok()
     }
 }
 
-impl<'a> TryFrom<&'a str> for RootType<'a> {
-    type Error = Error;
-
-    fn try_from(value: &'a str) -> Result<Self> {
-        let s = Self(value.trim());
-        s.legal_identifier()?;
-        Ok(s)
-    }
-}
-
 impl core::borrow::Borrow<str> for RootType<'_> {
     fn borrow(&self) -> &str {
-        self.0
-    }
-}
-
-impl AsRef<str> for RootType<'_> {
-    fn as_ref(&self) -> &str {
         self.0
     }
 }

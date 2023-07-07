@@ -38,30 +38,23 @@ impl AsRef<str> for TupleSpecifier<'_> {
     }
 }
 
-impl TupleSpecifier<'_> {
-    /// The full span of the tuple specifier.
-    pub fn span(&self) -> &str {
-        self.span
-    }
-
-    /// True if the type is a basic Solidity type.
-    pub fn try_basic_solidity(&self) -> Result<()> {
-        for ty in &self.types {
-            ty.try_basic_solidity()?;
-        }
-        Ok(())
-    }
-}
-
 impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
     type Error = Error;
 
     fn try_from(span: &'a str) -> Result<Self> {
+        Self::parse(span)
+    }
+}
+
+impl<'a> TupleSpecifier<'a> {
+    /// Parse a tuple specifier from a string.
+    pub fn parse(span: &'a str) -> Result<Self> {
         // flexible for `(a, b)`, or `tuple(a, b)`
-        let span = span.trim();
+        // or any missing parenthesis
+        let value = span.trim();
 
         // if we strip a trailing paren we MUST strip a leading paren
-        let value = if let Some(val) = span.strip_suffix(')') {
+        let value = if let Some(val) = value.strip_suffix(')') {
             val.strip_prefix("tuple")
                 .unwrap_or(val)
                 .strip_prefix('(')
@@ -84,7 +77,9 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
                         .ok_or_else(|| Error::invalid_type_string(value))?;
                 }
                 ',' if depth == 0 => {
-                    types.push(value[start..i].try_into()?);
+                    // SAFETY: `char_indices` always returns a valid char boundary
+                    let v = unsafe { value.get_unchecked(start..i) };
+                    types.push(v.try_into()?);
                     start = i + 1;
                 }
                 _ => {}
@@ -102,6 +97,21 @@ impl<'a> TryFrom<&'a str> for TupleSpecifier<'a> {
             types.push(candidate.try_into()?);
         }
         Ok(Self { span, types })
+    }
+
+    /// The full span of the tuple specifier.
+    #[inline]
+    pub const fn span(&self) -> &str {
+        self.span
+    }
+
+    /// True if the type is a basic Solidity type.
+    #[inline]
+    pub fn try_basic_solidity(&self) -> Result<()> {
+        for ty in &self.types {
+            ty.try_basic_solidity()?;
+        }
+        Ok(())
     }
 }
 

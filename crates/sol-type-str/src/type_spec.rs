@@ -48,30 +48,28 @@ pub struct TypeSpecifier<'a> {
     pub sizes: Vec<Option<usize>>,
 }
 
-impl AsRef<str> for TypeSpecifier<'_> {
-    fn as_ref(&self) -> &str {
-        self.span
-    }
-}
-
-impl TypeSpecifier<'_> {
-    /// The full span of the specifier.
-    pub fn span(&self) -> &str {
-        self.span
-    }
-
-    /// True if the type is a basic Solidity type.
-    pub fn try_basic_solidity(&self) -> Result<()> {
-        self.stem.try_basic_solidity()
-    }
-}
-
 impl<'a> TryFrom<&'a str> for TypeSpecifier<'a> {
     type Error = Error;
 
-    fn try_from(value: &'a str) -> Result<Self> {
-        let value = value.trim();
-        let mut root = value;
+    #[inline]
+    fn try_from(s: &'a str) -> Result<Self> {
+        Self::parse(s)
+    }
+}
+
+impl AsRef<str> for TypeSpecifier<'_> {
+    #[inline]
+    fn as_ref(&self) -> &str {
+        self.span()
+    }
+}
+
+impl<'a> TypeSpecifier<'a> {
+    /// Parse a type specifier from a string.
+    pub fn parse(span: &'a str) -> Result<Self> {
+        let span = span.trim();
+
+        let mut root = span;
         let mut sizes = vec![];
 
         // an iterator of string slices split by `[`
@@ -79,8 +77,8 @@ impl<'a> TryFrom<&'a str> for TypeSpecifier<'a> {
             // we've reached a root tuple so we need to include the closing
             // paren
             if s.contains(')') {
-                let idx = value.rfind(')').unwrap();
-                root = &value[..=idx];
+                let idx = span.rfind(')').unwrap();
+                root = &span[..=idx];
                 break
             }
             // we've reached a root type that is not a tuple or array
@@ -92,23 +90,35 @@ impl<'a> TryFrom<&'a str> for TypeSpecifier<'a> {
             let s = s
                 .trim()
                 .strip_suffix(']')
-                .ok_or_else(|| Error::invalid_type_string(value))?;
+                .ok_or_else(|| Error::invalid_type_string(span))?;
 
             if s.is_empty() {
                 sizes.push(None);
             } else {
                 sizes.push(Some(
-                    s.parse().map_err(|_| Error::invalid_type_string(value))?,
+                    s.parse().map_err(|_| Error::invalid_type_string(span))?,
                 ));
             }
         }
 
         sizes.reverse();
         Ok(Self {
-            span: value,
+            span,
             stem: root.try_into()?,
             sizes,
         })
+    }
+
+    /// The full span of the specifier.
+    #[inline]
+    pub fn span(&self) -> &str {
+        self.span
+    }
+
+    /// True if the type is a basic Solidity type.
+    #[inline]
+    pub fn try_basic_solidity(&self) -> Result<()> {
+        self.stem.try_basic_solidity()
     }
 }
 

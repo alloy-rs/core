@@ -30,8 +30,34 @@ pub enum TypeStem<'a> {
     Tuple(TupleSpecifier<'a>),
 }
 
-impl TypeStem<'_> {
+impl<'a> TryFrom<&'a str> for TypeStem<'a> {
+    type Error = Error;
+
+    #[inline]
+    fn try_from(value: &'a str) -> Result<Self> {
+        Self::parse(value)
+    }
+}
+
+impl AsRef<str> for TypeStem<'_> {
+    #[inline]
+    fn as_ref(&self) -> &str {
+        self.span()
+    }
+}
+
+impl<'a> TypeStem<'a> {
+    /// Parse a type stem from a string.
+    pub fn parse(s: &'a str) -> Result<Self> {
+        if s.starts_with('(') || s.starts_with("tuple") {
+            s.try_into().map(Self::Tuple)
+        } else {
+            s.try_into().map(Self::Root)
+        }
+    }
+
     /// Fallible conversion to root type.
+    #[inline]
     pub fn as_root(&self) -> Option<&RootType<'_>> {
         match self {
             Self::Root(root) => Some(root),
@@ -40,6 +66,7 @@ impl TypeStem<'_> {
     }
 
     /// Fallible conversion to tuple type.
+    #[inline]
     pub fn as_tuple(&self) -> Option<&TupleSpecifier<'_>> {
         match self {
             Self::Tuple(tuple) => Some(tuple),
@@ -48,29 +75,19 @@ impl TypeStem<'_> {
     }
 
     /// The full span of the type stem
-    pub fn span(&self) -> &str {
+    #[inline]
+    pub const fn span(&self) -> &str {
         match self {
             Self::Root(root) => root.span(),
             Self::Tuple(tuple) => tuple.span(),
         }
     }
 
+    #[inline]
     pub(crate) fn try_basic_solidity(&self) -> Result<()> {
         match self {
             Self::Root(root) => root.try_basic_solidity(),
             Self::Tuple(tuple) => tuple.try_basic_solidity(),
-        }
-    }
-}
-
-impl<'a> TryFrom<&'a str> for TypeStem<'a> {
-    type Error = Error;
-
-    fn try_from(value: &'a str) -> Result<Self> {
-        if value.starts_with('(') || value.starts_with("tuple(") {
-            Ok(Self::Tuple(value.try_into()?))
-        } else {
-            Ok(Self::Root(value.try_into()?))
         }
     }
 }
