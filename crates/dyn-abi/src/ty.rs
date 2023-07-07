@@ -1,9 +1,10 @@
 use crate::{
-    parser::TypeSpecifier, DynAbiError, DynAbiResult, DynSolValue, DynToken, Result, SolType, Word,
+    parser::Resolve, DynAbiError, DynAbiResult, DynSolValue, DynToken, Result, SolType, Word,
 };
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
+use alloy_sol_type_str::TypeSpecifier;
 use alloy_sol_types::sol_data;
-use core::{fmt, str::FromStr};
+use core::{fmt, num::NonZeroUsize, str::FromStr};
 
 #[cfg(feature = "eip712")]
 macro_rules! as_tuple {
@@ -133,6 +134,22 @@ impl FromStr for DynSolType {
 }
 
 impl DynSolType {
+    /// Wrap in an array of the specified size
+    pub(crate) fn array_wrap(self, size: Option<NonZeroUsize>) -> Self {
+        match size {
+            Some(size) => Self::FixedArray(Box::new(self), size.get()),
+            None => Self::Array(Box::new(self)),
+        }
+    }
+
+    /// Iteratively wrap in arrays.
+    pub(crate) fn array_wrap_from_iter(
+        self,
+        iter: impl Iterator<Item = Option<NonZeroUsize>>,
+    ) -> Self {
+        iter.into_iter().fold(self, |ty, size| ty.array_wrap(size))
+    }
+
     /// Parses a Solidity type name string into a [`DynSolType`].
     ///
     /// # Examples
@@ -147,7 +164,7 @@ impl DynSolType {
     /// ```
     #[inline]
     pub fn parse(s: &str) -> DynAbiResult<Self> {
-        TypeSpecifier::try_from(s).and_then(|t| t.resolve_basic_solidity())
+        TypeSpecifier::parse(s)?.resolve()
     }
 
     /// Fallible cast to the contents of a variant.
