@@ -11,6 +11,7 @@ pub enum PreStateFrame {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PreStateMode(pub BTreeMap<Address, AccountState>);
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -55,11 +56,11 @@ mod tests {
         opts.tracing_options.tracer = Some(GethDebugTracerType::BuiltInTracer(
             GethDebugBuiltInTracerType::PreStateTracer,
         ));
-        opts.tracing_options.tracer_config = Some(GethDebugTracerConfig::BuiltInTracer(
-            GethDebugBuiltInTracerConfig::PreStateTracer(PreStateConfig {
-                diff_mode: Some(true),
-            }),
-        ));
+        opts.tracing_options.tracer_config = serde_json::to_value(PreStateConfig {
+            diff_mode: Some(true),
+        })
+        .unwrap()
+        .into();
 
         assert_eq!(
             serde_json::to_string(&opts).unwrap(),

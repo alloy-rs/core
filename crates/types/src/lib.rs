@@ -42,3 +42,6 @@ pub use admin::*;
 
 mod eth;
 pub use eth::*;
+
+mod rpc;
+pub use rpc::*;

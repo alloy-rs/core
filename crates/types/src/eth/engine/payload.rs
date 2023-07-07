@@ -1,5 +1,5 @@
 use crate::{
-    constants::{EMPTY_LIST_HASH, MIN_PROTOCOL_BASE_FEE_U256},
+    constants::{EMPTY_LIST_HASH, MAXIMUM_EXTRA_DATA_SIZE, MIN_PROTOCOL_BASE_FEE_U256},
     primitives::{Block, Header},
     SealedBlock, TransactionSigned, Withdrawal,
 };
@@ -129,7 +129,7 @@ impl TryFrom<ExecutionPayload> for SealedBlock {
     fn try_from(payload: ExecutionPayload) -> Result<Self, Self::Error> {
         use crate::proofs;
 
-        if payload.extra_data.len() > 32 {
+        if payload.extra_data.len() > MAXIMUM_EXTRA_DATA_SIZE {
             return Err(PayloadError::ExtraData(payload.extra_data))
         }
 
@@ -311,6 +311,16 @@ impl PayloadStatus {
     }
 }
 
+impl std::fmt::Display for PayloadStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "PayloadStatus {{ status: {}, latestValidHash: {:?} }}",
+            self.status, self.latest_valid_hash
+        )
+    }
+}
+
 impl Serialize for PayloadStatus {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -326,13 +336,8 @@ impl Serialize for PayloadStatus {
 
 impl From<PayloadError> for PayloadStatusEnum {
     fn from(error: PayloadError) -> Self {
-        match error {
-            error @ PayloadError::BlockHash { .. } => PayloadStatusEnum::InvalidBlockHash {
-                validation_error: error.to_string(),
-            },
-            _ => PayloadStatusEnum::Invalid {
-                validation_error: error.to_string(),
-            },
+        PayloadStatusEnum::Invalid {
+            validation_error: error.to_string(),
         }
     }
 }
@@ -368,10 +373,6 @@ pub enum PayloadStatusEnum {
     ///   - newPayloadV1: if the payload was accepted, but not processed (side
     ///     chain)
     Accepted,
-    InvalidBlockHash {
-        #[serde(rename = "validationError")]
-        validation_error: String,
-    },
 }
 
 impl PayloadStatusEnum {
@@ -382,15 +383,13 @@ impl PayloadStatusEnum {
             PayloadStatusEnum::Invalid { .. } => "INVALID",
             PayloadStatusEnum::Syncing => "SYNCING",
             PayloadStatusEnum::Accepted => "ACCEPTED",
-            PayloadStatusEnum::InvalidBlockHash { .. } => "INVALID_BLOCK_HASH",
         }
     }
 
     /// Returns the validation error if the payload status is invalid.
     pub fn validation_error(&self) -> Option<&str> {
         match self {
-            PayloadStatusEnum::InvalidBlockHash { validation_error }
-            | PayloadStatusEnum::Invalid { validation_error } => Some(validation_error),
+            PayloadStatusEnum::Invalid { validation_error } => Some(validation_error),
             _ => None,
         }
     }
@@ -409,10 +408,18 @@ impl PayloadStatusEnum {
     pub fn is_invalid(&self) -> bool {
         matches!(self, PayloadStatusEnum::Invalid { .. })
     }
+}
 
-    /// Returns true if the payload status is invalid block hash.
-    pub fn is_invalid_block_hash(&self) -> bool {
-        matches!(self, PayloadStatusEnum::InvalidBlockHash { .. })
+impl std::fmt::Display for PayloadStatusEnum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PayloadStatusEnum::Invalid { validation_error } => {
+                f.write_str(self.as_str())?;
+                f.write_str(": ")?;
+                f.write_str(validation_error.as_str())
+            }
+            _ => f.write_str(self.as_str()),
+        }
     }
 }
 
@@ -437,138 +444,6 @@ pub enum PayloadValidationError {
         /// The state root of the payload that we computed locally.
         local: B256,
     },
-}
-
-#[cfg(all(test, feature = "proof", TODO))]
-mod validation_tests {
-    use super::*;
-    use crate::{proofs, TransactionSigned};
-    use alloy_primitives::B256;
-    use alloy_rlp::{Decodable, DecodeError};
-    use assert_matches::assert_matches;
-    use bytes::{Bytes, BytesMut};
-
-    fn transform_block<F: FnOnce(Block) -> Block>(src: SealedBlock, f: F) -> ExecutionPayload {
-        let unsealed = src.unseal();
-        let mut transformed: Block = f(unsealed);
-        // Recalculate roots
-        transformed.header.transactions_root =
-            proofs::calculate_transaction_root(&transformed.body);
-        transformed.header.ommers_hash = proofs::calculate_ommers_root(&transformed.ommers);
-        SealedBlock {
-            header: transformed.header.seal_slow(),
-            body: transformed.body,
-            ommers: transformed.ommers,
-            withdrawals: transformed.withdrawals,
-        }
-        .into()
-    }
-
-    #[test]
-    fn payload_body_roundtrip() {
-        for block in random_block_range(0..=99, B256::default(), 0..2) {
-            let unsealed = block.clone().unseal();
-            let payload_body: ExecutionPayloadBody = unsealed.into();
-
-            assert_eq!(
-                Ok(block.body),
-                payload_body
-                    .transactions
-                    .iter()
-                    .map(|x| TransactionSigned::decode(&mut &x[..]))
-                    .collect::<Result<Vec<_>, _>>(),
-            );
-
-            assert_eq!(
-                block.withdrawals.unwrap_or_default(),
-                payload_body.withdrawals
-            );
-        }
-    }
-
-    #[test]
-    fn payload_validation() {
-        let block = random_block(100, Some(B256::random()), Some(3), Some(0));
-
-        // Valid extra data
-        let block_with_valid_extra_data = transform_block(block.clone(), |mut b| {
-            b.header.extra_data = BytesMut::zeroed(32).freeze().into();
-            b
-        });
-        assert_matches!(
-            TryInto::<SealedBlock>::try_into(block_with_valid_extra_data),
-            Ok(_)
-        );
-
-        // Invalid extra data
-        let block_with_invalid_extra_data: Bytes = BytesMut::zeroed(33).freeze();
-        let invalid_extra_data_block = transform_block(block.clone(), |mut b| {
-            b.header.extra_data = block_with_invalid_extra_data.clone().into();
-            b
-        });
-        assert_matches!(
-            TryInto::<SealedBlock>::try_into(invalid_extra_data_block),
-            Err(PayloadError::ExtraData(data)) if data == block_with_invalid_extra_data
-        );
-
-        // Zero base fee
-        let block_with_zero_base_fee = transform_block(block.clone(), |mut b| {
-            b.header.base_fee_per_gas = Some(0);
-            b
-        });
-        assert_matches!(
-            TryInto::<SealedBlock>::try_into(block_with_zero_base_fee),
-            Err(PayloadError::BaseFee(val)) if val == U256::ZERO
-        );
-
-        // Invalid encoded transactions
-        let mut payload_with_invalid_txs: ExecutionPayload = block.clone().into();
-        payload_with_invalid_txs
-            .transactions
-            .iter_mut()
-            .for_each(|tx| {
-                *tx = Bytes::new().into();
-            });
-        assert_matches!(
-            TryInto::<SealedBlock>::try_into(payload_with_invalid_txs),
-            Err(PayloadError::Decode(DecodeError::InputTooShort))
-        );
-
-        // Non empty ommers
-        let block_with_ommers = transform_block(block.clone(), |mut b| {
-            b.ommers.push(random_header(100, None).unseal());
-            b
-        });
-        assert_matches!(
-            TryInto::<SealedBlock>::try_into(block_with_ommers.clone()),
-            Err(PayloadError::BlockHash { consensus, .. })
-                if consensus == block_with_ommers.block_hash
-        );
-
-        // None zero difficulty
-        let block_with_difficulty = transform_block(block.clone(), |mut b| {
-            b.header.difficulty = U256::from(1);
-            b
-        });
-        assert_matches!(
-            TryInto::<SealedBlock>::try_into(block_with_difficulty.clone()),
-            Err(PayloadError::BlockHash { consensus, .. }) if consensus == block_with_difficulty.block_hash
-        );
-
-        // None zero nonce
-        let block_with_nonce = transform_block(block.clone(), |mut b| {
-            b.header.nonce = 1;
-            b
-        });
-        assert_matches!(
-            TryInto::<SealedBlock>::try_into(block_with_nonce.clone()),
-            Err(PayloadError::BlockHash { consensus, .. }) if consensus == block_with_nonce.block_hash
-        );
-
-        // Valid block
-        let valid_block = block;
-        assert_matches!(TryInto::<SealedBlock>::try_into(valid_block), Ok(_));
-    }
 }
 
 #[cfg(test)]

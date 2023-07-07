@@ -222,11 +222,11 @@ mod tests {
             max_priority_fee_per_gas: Some(U128::from(22)),
         };
         let serialized = serde_json::to_string(&transaction).unwrap();
-        let deserialized: Transaction = serde_json::from_str(&serialized).unwrap();
-        assert_eq!(transaction, deserialized);
         assert_eq!(
             serialized,
             r#"{"hash":"0x0000000000000000000000000000000000000000000000000000000000000001","nonce":"0x2","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000003","blockNumber":"0x4","transactionIndex":"0x5","from":"0x0000000000000000000000000000000000000006","to":"0x0000000000000000000000000000000000000007","value":"0x8","gasPrice":"0x9","gas":"0xa","maxFeePerGas":"0x15","maxPriorityFeePerGas":"0x16","input":"0x0b0c0d","r":"0xe","s":"0xe","v":"0xe","chainId":"0x11","type":"0x14"}"#
         );
+        let deserialized: Transaction = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(transaction, deserialized);
     }
 }

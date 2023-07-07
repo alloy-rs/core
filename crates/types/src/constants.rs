@@ -9,6 +9,12 @@ pub use alloy_primitives::{BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS, BLOOM_SIZE_BYTE
 /// function to be called.
 pub const SELECTOR_LEN: usize = 4;
 
+/// Maximum extra data size in a block after genesis
+pub const MAXIMUM_EXTRA_DATA_SIZE: usize = 32;
+
+/// An EPOCH is a series of 32 slots.
+pub const EPOCH_SLOTS: u64 = 32;
+
 /// The duration of a slot in seconds.
 ///
 /// This is the time period of 12 seconds in which a randomly chosen validator
@@ -16,10 +22,16 @@ pub const SELECTOR_LEN: usize = 4;
 pub const SLOT_DURATION: Duration = Duration::from_secs(12);
 
 /// An EPOCH is a series of 32 slots (~6.4min).
-pub const EPOCH_DURATION: Duration = Duration::from_secs(12 * 32);
+pub const EPOCH_DURATION: Duration = Duration::from_secs(12 * EPOCH_SLOTS);
 
-/// The default block nonce in the beacon consensus.
+/// The default block nonce in the beacon consensus
 pub const BEACON_NONCE: u64 = 0u64;
+
+/// The default Ethereum block gas limit.
+///
+/// TODO: This should be a chain spec parameter.
+/// See <https://github.com/paradigmxyz/reth/issues/3233>.
+pub const ETHEREUM_BLOCK_GAS_LIMIT: u64 = 30_000_000;
 
 /// The minimal value the basefee can decrease to.
 ///
@@ -31,13 +43,13 @@ pub const MIN_PROTOCOL_BASE_FEE: u128 = 7;
 /// Same as [MIN_PROTOCOL_BASE_FEE] but as a U256.
 pub const MIN_PROTOCOL_BASE_FEE_U256: U256 = U256::from_limbs([7u64, 0, 0, 0]);
 
-/// Initial base fee as defined in [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559).
+/// Initial base fee as defined in [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559)
 pub const EIP1559_INITIAL_BASE_FEE: u64 = 1_000_000_000;
 
-/// Base fee max change denominator as defined in [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559).
+/// Base fee max change denominator as defined in [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559)
 pub const EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR: u64 = 8;
 
-/// Elasticity multiplier as defined in [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559).
+/// Elasticity multiplier as defined in [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559)
 pub const EIP1559_ELASTICITY_MULTIPLIER: u64 = 2;
 
 /// Multiplier for converting gwei to wei.
