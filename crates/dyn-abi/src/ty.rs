@@ -1,5 +1,6 @@
 use crate::{
-    parser::Resolve, DynAbiError, DynAbiResult, DynSolValue, DynToken, Result, SolType, Word,
+    resolve::ResolveSolType, DynAbiError, DynAbiResult, DynSolValue, DynToken, Result, SolType,
+    Word,
 };
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_sol_type_str::TypeSpecifier;

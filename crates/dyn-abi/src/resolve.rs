@@ -5,15 +5,16 @@
 use crate::{DynAbiError, DynAbiResult, DynSolType};
 use alloc::vec::Vec;
 
+use alloy_json_abi::{EventParam, Param};
 use alloy_sol_type_str::{
     Error as TypeStrError, RootType, TupleSpecifier, TypeSpecifier, TypeStem,
 };
 
-pub(crate) trait Resolve {
+pub(crate) trait ResolveSolType {
     fn resolve(&self) -> DynAbiResult<DynSolType>;
 }
 
-impl Resolve for RootType<'_> {
+impl ResolveSolType for RootType<'_> {
     /// Resolve the type string into a basic Solidity type.
     fn resolve(&self) -> DynAbiResult<DynSolType> {
         match self.span() {
@@ -59,7 +60,7 @@ impl Resolve for RootType<'_> {
     }
 }
 
-impl Resolve for TupleSpecifier<'_> {
+impl ResolveSolType for TupleSpecifier<'_> {
     /// Resolve the type string into a basic Solidity type if possible.
     #[inline]
     fn resolve(&self) -> DynAbiResult<DynSolType> {
@@ -71,7 +72,7 @@ impl Resolve for TupleSpecifier<'_> {
     }
 }
 
-impl Resolve for TypeStem<'_> {
+impl ResolveSolType for TypeStem<'_> {
     /// Resolve the type string into a basic Solidity type if possible.
     #[inline]
     fn resolve(&self) -> Result<DynSolType, DynAbiError> {
@@ -82,12 +83,78 @@ impl Resolve for TypeStem<'_> {
     }
 }
 
-impl Resolve for TypeSpecifier<'_> {
+impl ResolveSolType for TypeSpecifier<'_> {
     /// Resolve the type string into a basic Solidity type if possible.
     #[inline]
     fn resolve(&self) -> Result<DynSolType, DynAbiError> {
         let ty = self.stem.resolve()?;
         Ok(ty.array_wrap_from_iter(self.sizes.iter().copied()))
+    }
+}
+
+impl ResolveSolType for Param {
+    fn resolve(&self) -> DynAbiResult<DynSolType> {
+        let ty = TypeSpecifier::try_from(self.ty.as_str()).expect("always valid");
+
+        // type is simple, and we can resolve it via the specifier
+        if self.is_simple_type() {
+            return ty.resolve()
+        }
+
+        // type is complex
+        let tuple = self
+            .components
+            .iter()
+            .map(|c| c.resolve())
+            .collect::<Result<Vec<_>, _>>()?;
+
+        #[cfg(feature = "eip712")]
+        {
+            let prop_names = self.components.iter().map(|c| c.name.clone()).collect();
+            if let Some(spec) = self.struct_specifier() {
+                return Ok(DynSolType::CustomStruct {
+                    name: spec.stem.as_root().unwrap().to_string(),
+                    prop_names,
+                    tuple,
+                }
+                .array_wrap_from_iter(spec.sizes.iter().copied()))
+            }
+        }
+
+        Ok(DynSolType::Tuple(tuple).array_wrap_from_iter(ty.sizes.iter().copied()))
+    }
+}
+
+impl ResolveSolType for EventParam {
+    fn resolve(&self) -> DynAbiResult<DynSolType> {
+        let ty = TypeSpecifier::try_from(self.ty.as_str()).expect("always valid");
+
+        // type is simple, and we can resolve it via the specifier
+        if self.is_simple_type() {
+            return ty.resolve()
+        }
+
+        // type is complex
+        let tuple = self
+            .components
+            .iter()
+            .map(|c| c.resolve())
+            .collect::<Result<Vec<_>, _>>()?;
+
+        #[cfg(feature = "eip712")]
+        {
+            let prop_names = self.components.iter().map(|c| c.name.clone()).collect();
+            if let Some(spec) = self.struct_specifier() {
+                return Ok(DynSolType::CustomStruct {
+                    name: spec.stem.as_root().unwrap().to_string(),
+                    prop_names,
+                    tuple,
+                }
+                .array_wrap_from_iter(spec.sizes.iter().copied()))
+            }
+        }
+
+        Ok(DynSolType::Tuple(tuple).array_wrap_from_iter(ty.sizes.iter().copied()))
     }
 }
 

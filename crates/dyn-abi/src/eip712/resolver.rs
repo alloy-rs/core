@@ -1,6 +1,6 @@
 use crate::{
-    eip712::typed_data::Eip712Types, eip712_parser::EncodeType, parser::Resolve, DynAbiError,
-    DynAbiResult, DynSolType, DynSolValue,
+    eip712::typed_data::Eip712Types, eip712_parser::EncodeType, resolve::ResolveSolType,
+    DynAbiError, DynAbiResult, DynSolType, DynSolValue,
 };
 use alloc::{
     borrow::ToOwned,

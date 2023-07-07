@@ -3,6 +3,7 @@ use alloc::{
     string::String,
     vec::Vec,
 };
+use alloy_sol_type_str::TypeSpecifier;
 use core::fmt;
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -72,6 +73,37 @@ impl Serialize for Param {
 }
 
 impl Param {
+    /// True if the event parameter is a struct
+    pub fn is_struct(&self) -> bool {
+        self.internal_type
+            .as_ref()
+            .map(|t| t.contains("struct "))
+            .unwrap_or_default()
+    }
+
+    /// The struct specifier is a type specifier containing the struct name and
+    /// any array sizes. It is computed from the `internal_type`
+    pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
+        TypeSpecifier::try_from(
+            self.internal_type
+                .as_ref()
+                .and_then(|t| t.strip_prefix("struct "))?,
+        )
+        .ok()
+    }
+
+    /// True if the type is simple
+    #[inline]
+    pub fn is_simple_type(&self) -> bool {
+        self.components.is_empty()
+    }
+
+    /// True if the type is complex (tuple or struct)
+    #[inline]
+    pub fn is_complex_type(&self) -> bool {
+        !self.components.is_empty()
+    }
+
     /// Formats the canonical type of this parameter into the given string.
     ///
     /// This is used to encode the preimage of a function or error selector.
@@ -112,9 +144,8 @@ impl Param {
 /// `indexed` field.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct EventParam {
-    /// The name of the parameter. If this parameter is a struct, this field
-    /// will contain the Struct's name in the solidity contract. This field
-    /// always contains either the empty string, or a valid Solidity identifier.
+    /// The name of the parameter. This field always contains either the empty
+    /// string, or a valid Solidity identifier.
     pub name: String,
     /// The canonical Solidity type of the parameter, using the word "tuple" to
     /// represent complex types. E.g. `uint256` or `bytes[2]` or `tuple` or
@@ -174,6 +205,37 @@ impl Serialize for EventParam {
 }
 
 impl EventParam {
+    /// True if the event parameter is a struct
+    pub fn is_struct(&self) -> bool {
+        self.internal_type
+            .as_ref()
+            .map(|t| t.contains("struct "))
+            .unwrap_or_default()
+    }
+
+    /// The struct specifier is a type specifier containing the struct name and
+    /// any array sizes. It is computed from the `internal_type`
+    pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
+        TypeSpecifier::try_from(
+            self.internal_type
+                .as_ref()
+                .and_then(|t| t.strip_prefix("struct "))?,
+        )
+        .ok()
+    }
+
+    /// True if the type is simple
+    #[inline]
+    pub fn is_simple_type(&self) -> bool {
+        self.components.is_empty()
+    }
+
+    /// True if the type is complex (tuple or struct)
+    #[inline]
+    pub fn is_complex_type(&self) -> bool {
+        !self.components.is_empty()
+    }
+
     /// Formats the canonical type of this parameter into the given string.
     ///
     /// This is used to encode the preimage of the event selector.
