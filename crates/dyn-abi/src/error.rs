@@ -18,13 +18,13 @@ pub enum DynAbiError {
     },
     /// Unknown type referenced from another type.
     #[cfg(feature = "eip712")]
-    MissingType(String),
+    MissingType(alloc::string::String),
     /// Detected circular dep during typegraph resolution.
     #[cfg(feature = "eip712")]
-    CircularDependency(String),
+    CircularDependency(alloc::string::String),
     /// Invalid Property definition.
     #[cfg(feature = "eip712")]
-    InvalidPropertyDefinition(String),
+    InvalidPropertyDefinition(alloc::string::String),
 
     /// Hex.
     HexError(hex::FromHexError),
