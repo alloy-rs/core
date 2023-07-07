@@ -1,14 +1,13 @@
-# ethers-sol-types
+# alloy-sol-types
 
-Compile-time representation of Ethereum's type system with ABI coding and
-EIP-712 support.
+Compile-time representation of Ethereum's type system with ABI and EIP-712
+support.
 
 This crate provides a developer-friendly interface to Ethereum's type system,
-by representing Solidity types. See [type_system.md] for a rundown, and the
+by representing Solidity types. See [type_system.md](./type_system.md) for a rundown, and the
 [crate docs] for more information
 
-[type_system.md]: https://github.com/ethers-rs/core/blob/main/crates/abi/type_system.md
-[crate docs]: https://docs.rs/ethers-sol-types/latest/ethers_sol_types/
+[crate docs]: https://docs.rs/alloy-sol-types/latest/alloy_sol_types/
 
 ### Features
 

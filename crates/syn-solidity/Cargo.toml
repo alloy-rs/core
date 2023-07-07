@@ -1,0 +1,27 @@
+[package]
+name = "syn-solidity"
+description = "syn-powered Solidity parser"
+keywords = ["ethereum", "evm", "syn", "solidity", "ast"]
+categories = ["data-structures", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/syn-solidity"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+syn = { workspace = true, features = ["extra-traits"] }
+
+[features]
+visit = []
+visit-mut = []

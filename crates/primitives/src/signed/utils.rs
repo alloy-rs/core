@@ -24,9 +24,9 @@ pub(super) fn twos_complement<const BITS: usize, const LIMBS: usize>(
 
 /// Compile-time equality of signed integers.
 #[inline(always)]
-pub const fn const_eq<const BITS: usize, const LIMBS: usize>(
-    left: Signed<BITS, LIMBS>,
-    right: Signed<BITS, LIMBS>,
+pub(super) const fn const_eq<const BITS: usize, const LIMBS: usize>(
+    left: &Signed<BITS, LIMBS>,
+    right: &Signed<BITS, LIMBS>,
 ) -> bool {
     if BITS == 0 {
         return true

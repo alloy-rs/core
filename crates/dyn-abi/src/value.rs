@@ -1,88 +1,341 @@
-use crate::{no_std_prelude::*, Word};
-use ethers_primitives::{aliases::*, Address, I256, U256};
+use crate::{DynSolType, DynToken, Word};
+use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
+use alloy_primitives::{Address, I256, U256};
+use alloy_sol_types::{utils::words_for_len, Encoder};
 
-/// This type represents a Solidity value that has been decoded into rust. It
-/// is broadly similar to `serde_json::Value` in that it is an enum of possible
-/// types, and the user must inspect and disambiguate.
+#[cfg(feature = "eip712")]
+macro_rules! as_fixed_seq {
+    ($tuple:tt) => {
+        Self::CustomStruct { tuple: $tuple, .. } | Self::FixedArray($tuple) | Self::Tuple($tuple)
+    };
+}
+#[cfg(not(feature = "eip712"))]
+macro_rules! as_fixed_seq {
+    ($tuple:tt) => {
+        Self::FixedArray($tuple) | Self::Tuple($tuple)
+    };
+}
+
+/// A dynamic Solidity value.
+///
+/// It is broadly similar to `serde_json::Value` in that it is an enum of
+/// possible types, and the user must inspect and disambiguate.
+///
+/// # Examples
+///
+/// ```
+/// use alloy_dyn_abi::{DynSolType, DynSolValue};
+///
+/// let my_type: DynSolType = "uint64".parse().unwrap();
+/// let my_data: DynSolValue = 183u64.into();
+///
+/// let encoded = my_data.encode_single();
+/// let decoded = my_type.decode_single(&encoded)?;
+///
+/// assert_eq!(decoded, my_data);
+/// # Ok::<(), alloy_dyn_abi::Error>(())
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub enum DynSolValue {
     /// An address.
     Address(Address),
     /// A boolean.
     Bool(bool),
-    /// A dynamic-length byte array.
-    Bytes(Vec<u8>),
-    /// A fixed-length byte string.
-    FixedBytes(Word, usize),
     /// A signed integer.
     Int(I256, usize),
     /// An unsigned integer.
     Uint(U256, usize),
+    /// A fixed-length byte string.
+    FixedBytes(Word, usize),
+
+    /// A dynamic-length byte array.
+    Bytes(Vec<u8>),
     /// A string.
     String(String),
-    /// A tuple of values.
-    Tuple(Vec<DynSolValue>),
+
     /// A dynamically-sized array of values.
     Array(Vec<DynSolValue>),
     /// A fixed-size array of values.
     FixedArray(Vec<DynSolValue>),
+    /// A tuple of values.
+    Tuple(Vec<DynSolValue>),
+
     /// A named struct, treated as a tuple with a name parameter.
+    #[cfg(feature = "eip712")]
     CustomStruct {
         /// The name of the struct.
         name: String,
         /// The struct's prop names, in declaration order.
         prop_names: Vec<String>,
-        /// A inner types.
+        /// The inner types.
         tuple: Vec<DynSolValue>,
-    },
-    /// A user-defined value type.
-    CustomValue {
-        /// The name of the custom value type.
-        name: String,
-        /// The value itself.
-        inner: Word,
     },
 }
 
+impl From<Address> for DynSolValue {
+    #[inline]
+    fn from(value: Address) -> Self {
+        Self::Address(value)
+    }
+}
+
+impl From<bool> for DynSolValue {
+    #[inline]
+    fn from(value: bool) -> Self {
+        Self::Bool(value)
+    }
+}
+
+impl From<Vec<u8>> for DynSolValue {
+    #[inline]
+    fn from(value: Vec<u8>) -> Self {
+        Self::Bytes(value)
+    }
+}
+
+impl From<String> for DynSolValue {
+    #[inline]
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
+impl From<Vec<DynSolValue>> for DynSolValue {
+    #[inline]
+    fn from(value: Vec<Self>) -> Self {
+        Self::Array(value)
+    }
+}
+
+impl<const N: usize> From<[DynSolValue; N]> for DynSolValue {
+    #[inline]
+    fn from(value: [Self; N]) -> Self {
+        Self::FixedArray(value.to_vec())
+    }
+}
+
+macro_rules! impl_from_int {
+    ($($t:ty),+) => {$(
+        impl From<$t> for DynSolValue {
+            #[inline]
+            fn from(value: $t) -> Self {
+                const BITS: usize = <$t>::BITS as usize;
+                const BYTES: usize = BITS / 8;
+                const _: () = assert!(BYTES <= 32);
+
+                let mut word = if value.is_negative() {
+                    alloy_primitives::B256::repeat_byte(0xff)
+                } else {
+                    alloy_primitives::B256::ZERO
+                };
+                word[32 - BYTES..].copy_from_slice(&value.to_be_bytes());
+
+                Self::Int(I256::from_be_bytes(word.0), BITS)
+            }
+        }
+    )+};
+}
+
+impl_from_int!(i8, i16, i32, i64, isize, i128);
+
+impl From<I256> for DynSolValue {
+    #[inline]
+    fn from(value: I256) -> Self {
+        Self::Int(value, 256)
+    }
+}
+
+macro_rules! impl_from_uint {
+    ($($t:ty),+) => {$(
+        impl From<$t> for DynSolValue {
+            #[inline]
+            fn from(value: $t) -> Self {
+                Self::Uint(U256::from(value), <$t>::BITS as usize)
+            }
+        }
+    )+};
+}
+
+impl_from_uint!(u8, u16, u32, u64, usize, u128);
+
+impl From<U256> for DynSolValue {
+    #[inline]
+    fn from(value: U256) -> Self {
+        Self::Uint(value, 256)
+    }
+}
+
 impl DynSolValue {
-    /// The Solidity type name.
-    pub fn sol_type_name(&self) -> String {
+    /// The Solidity type. This returns the solidity type corresponding to this
+    /// value, if it is known. A type will not be known if the value contains
+    /// an empty sequence, e.g. `T[0]`.
+    pub fn as_type(&self) -> Option<DynSolType> {
+        let ty = match self {
+            Self::Address(_) => DynSolType::Address,
+            Self::Bool(_) => DynSolType::Bool,
+            Self::Bytes(_) => DynSolType::Bytes,
+            Self::FixedBytes(_, size) => DynSolType::FixedBytes(*size),
+            Self::Int(_, size) => DynSolType::Int(*size),
+            Self::Uint(_, size) => DynSolType::Uint(*size),
+            Self::String(_) => DynSolType::String,
+            Self::Tuple(inner) => {
+                return inner
+                    .iter()
+                    .map(Self::as_type)
+                    .collect::<Option<Vec<_>>>()
+                    .map(DynSolType::Tuple)
+            }
+            Self::Array(inner) => DynSolType::Array(Box::new(Self::as_type(inner.first()?)?)),
+            Self::FixedArray(inner) => {
+                DynSolType::FixedArray(Box::new(Self::as_type(inner.first()?)?), inner.len())
+            }
+            #[cfg(feature = "eip712")]
+            Self::CustomStruct {
+                name,
+                prop_names,
+                tuple,
+            } => DynSolType::CustomStruct {
+                name: name.clone(),
+                prop_names: prop_names.clone(),
+                tuple: tuple
+                    .iter()
+                    .map(Self::as_type)
+                    .collect::<Option<Vec<_>>>()?,
+            },
+        };
+        Some(ty)
+    }
+
+    #[inline]
+    #[allow(clippy::missing_const_for_fn)]
+    fn sol_type_name_simple(&self) -> Option<&str> {
         match self {
-            Self::Address(_) => "address".to_string(),
-            Self::Bool(_) => "bool".to_string(),
-            Self::Bytes(_) => "bytes".to_string(),
-            Self::FixedBytes(_, size) => format!("bytes{}", size),
-            Self::Int(_, size) => format!("int{}", size),
-            Self::Uint(_, size) => format!("uint{}", size),
-            Self::String(_) => "string".to_string(),
-            Self::Tuple(_) => "tuple".to_string(),
-            Self::Array(_) => "array".to_string(),
-            Self::FixedArray(_) => "fixed_array".to_string(),
-            Self::CustomStruct { name, .. } => name.clone(),
-            Self::CustomValue { name, .. } => name.clone(),
+            Self::Address(_) => Some("address"),
+            Self::Bool(_) => Some("bool"),
+            Self::Bytes(_) => Some("bytes"),
+            Self::String(_) => Some("string"),
+            #[cfg(feature = "eip712")]
+            Self::CustomStruct { name, .. } => Some(name.as_str()),
+            _ => None,
         }
     }
 
-    /// Fallible cast to a single word. Will succeed for any single-word type.
-    pub fn as_word(&self) -> Option<Word> {
+    #[inline]
+    fn sol_type_name_raw(&self, out: &mut String) -> bool {
         match self {
-            Self::Address(a) => Some(a.into_word()),
-            Self::Bool(b) => Some({
-                let mut buf = [0u8; 32];
-                if *b {
-                    buf[31] = 1;
+            #[cfg(not(feature = "eip712"))]
+            Self::Address(_) | Self::Bool(_) | Self::Bytes(_) | Self::String(_) => {
+                out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
+            }
+            #[cfg(feature = "eip712")]
+            Self::Address(_)
+            | Self::Bool(_)
+            | Self::Bytes(_)
+            | Self::String(_)
+            | Self::CustomStruct { .. } => {
+                out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
+            }
+
+            Self::FixedBytes(_, size) | Self::Int(_, size) | Self::Uint(_, size) => {
+                let prefix = match self {
+                    Self::FixedBytes(..) => "bytes",
+                    Self::Int(..) => "int",
+                    Self::Uint(..) => "uint",
+                    _ => unreachable!(),
+                };
+                out.push_str(prefix);
+                out.push_str(itoa::Buffer::new().format(*size));
+            }
+
+            Self::Tuple(inner) => {
+                out.push('(');
+                for (i, val) in inner.iter().enumerate() {
+                    if i > 0 {
+                        out.push(',');
+                    }
+                    if !val.sol_type_name_raw(out) {
+                        return false
+                    }
                 }
-                buf.into()
-            }),
-            Self::FixedBytes(w, _) => Some(*w),
-            Self::Int(w, _) => Some(w.to_be_bytes().into()),
-            Self::Uint(u, _) => Some(u.to_be_bytes::<32>().into()),
-            Self::CustomValue { inner, .. } => Some(*inner),
+                if inner.len() == 1 {
+                    out.push(',');
+                }
+                out.push(')');
+            }
+            Self::Array(t) => {
+                if let Some(first) = t.first() {
+                    if !first.sol_type_name_raw(out) {
+                        return false
+                    }
+                    out.push_str("[]");
+                } else {
+                    return false
+                }
+            }
+            Self::FixedArray(t) => {
+                if let Some(first) = t.first() {
+                    if !first.sol_type_name_raw(out) {
+                        return false
+                    }
+                    out.push('[');
+                    out.push_str(itoa::Buffer::new().format(t.len()));
+                    out.push(']');
+                } else {
+                    return false
+                }
+            }
+        }
+        true
+    }
+
+    /// The Solidity type name. This returns the solidity type corresponding to
+    /// this value, if it is known. A type will not be known if the value
+    /// contains an empty sequence, e.g. `T[0]`.
+    pub fn sol_type_name(&self) -> Option<Cow<'_, str>> {
+        if let Some(s) = self.sol_type_name_simple() {
+            Some(Cow::Borrowed(s))
+        } else {
+            let capacity = match self {
+                Self::Tuple(_) => 256,
+                _ => 16,
+            };
+            let mut s = String::with_capacity(capacity);
+            if self.sol_type_name_raw(&mut s) {
+                Some(Cow::Owned(s))
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Trust if this value is encoded as a single word. False otherwise.
+    #[inline]
+    pub const fn is_word(&self) -> bool {
+        matches!(
+            self,
+            Self::Address(_)
+                | Self::Bool(_)
+                | Self::FixedBytes(..)
+                | Self::Int(..)
+                | Self::Uint(..)
+        )
+    }
+
+    /// Fallible cast to a single word. Will succeed for any single-word type.
+    #[inline]
+    pub fn as_word(&self) -> Option<Word> {
+        match *self {
+            Self::Address(a) => Some(a.into_word()),
+            Self::Bool(b) => Some(Word::with_last_byte(b as u8)),
+            Self::FixedBytes(w, _) => Some(w),
+            Self::Int(i, _) => Some(i.into()),
+            Self::Uint(u, _) => Some(u.into()),
             _ => None,
         }
     }
 
     /// Fallible cast to the contents of a variant DynSolValue {.
+    #[inline]
     pub const fn as_address(&self) -> Option<Address> {
         match self {
             Self::Address(a) => Some(*a),
@@ -91,6 +344,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant.
+    #[inline]
     pub const fn as_bool(&self) -> Option<bool> {
         match self {
             Self::Bool(b) => Some(*b),
@@ -99,6 +353,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant.
+    #[inline]
     pub fn as_bytes(&self) -> Option<&[u8]> {
         match self {
             Self::Bytes(b) => Some(b),
@@ -107,14 +362,16 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant.
+    #[inline]
     pub const fn as_fixed_bytes(&self) -> Option<(&[u8], usize)> {
         match self {
-            Self::FixedBytes(w, size) => Some((w.as_bytes(), *size)),
+            Self::FixedBytes(w, size) => Some((w.as_slice(), *size)),
             _ => None,
         }
     }
 
     /// Fallible cast to the contents of a variant.
+    #[inline]
     pub const fn as_int(&self) -> Option<(I256, usize)> {
         match self {
             Self::Int(w, size) => Some((*w, *size)),
@@ -123,6 +380,7 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant.
+    #[inline]
     pub const fn as_uint(&self) -> Option<(U256, usize)> {
         match self {
             Self::Uint(u, size) => Some((*u, *size)),
@@ -131,66 +389,240 @@ impl DynSolValue {
     }
 
     /// Fallible cast to the contents of a variant.
+    #[inline]
     pub fn as_str(&self) -> Option<&str> {
         match self {
-            Self::String(s) => Some(s.as_str()),
+            Self::String(s) => Some(s),
             _ => None,
         }
     }
 
     /// Fallible cast to the contents of a variant.
-    pub fn as_tuple(&self) -> Option<&[DynSolValue]> {
+    #[inline]
+    pub fn as_tuple(&self) -> Option<&[Self]> {
         match self {
-            Self::Tuple(t) => Some(t.as_slice()),
+            Self::Tuple(t) => Some(t),
             _ => None,
         }
     }
 
     /// Fallible cast to the contents of a variant.
-    pub fn as_array(&self) -> Option<&[DynSolValue]> {
+    #[inline]
+    pub fn as_array(&self) -> Option<&[Self]> {
         match self {
-            Self::Array(a) => Some(a.as_slice()),
+            Self::Array(a) => Some(a),
             _ => None,
         }
     }
 
     /// Fallible cast to the contents of a variant.
-    pub fn as_fixed_array(&self) -> Option<&[DynSolValue]> {
+    #[inline]
+    pub fn as_fixed_array(&self) -> Option<&[Self]> {
         match self {
-            Self::FixedArray(a) => Some(a.as_slice()),
+            Self::FixedArray(a) => Some(a),
             _ => None,
         }
     }
 
     /// Fallible cast to the contents of a variant.
-    pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[DynSolValue])> {
+    #[inline]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[Self])> {
         match self {
+            #[cfg(feature = "eip712")]
             Self::CustomStruct {
                 name,
                 prop_names,
                 tuple,
-            } => Some((name.as_str(), prop_names.as_slice(), tuple.as_slice())),
+            } => Some((name, prop_names, tuple)),
             _ => None,
         }
     }
 
-    /// Fallible cast to the contents of a variant.
-    pub fn as_custom_value(&self) -> Option<(&str, Word)> {
+    /// Returns whether this type is contains a custom struct.
+    #[inline]
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn has_custom_struct(&self) -> bool {
+        #[cfg(feature = "eip712")]
+        {
+            match self {
+                Self::CustomStruct { .. } => true,
+                Self::Array(t) | Self::FixedArray(t) | Self::Tuple(t) => {
+                    t.iter().any(Self::has_custom_struct)
+                }
+                _ => false,
+            }
+        }
+        #[cfg(not(feature = "eip712"))]
+        {
+            false
+        }
+    }
+
+    /// Returns true if the value is a sequence type.
+    #[inline]
+    pub const fn is_sequence(&self) -> bool {
+        matches!(self, as_fixed_seq!(_) | Self::Array(_))
+    }
+
+    /// Fallible cast to a fixed-size array. Any of a `FixedArray`, a `Tuple`,
+    /// or a `CustomStruct`.
+    #[inline]
+    pub fn as_fixed_seq(&self) -> Option<&[Self]> {
         match self {
-            Self::CustomValue { name, inner } => Some((name.as_str(), *inner)),
+            as_fixed_seq!(tuple) => Some(tuple),
             _ => None,
+        }
+    }
+
+    /// Fallible cast to a packed sequence. Any of a String, or a Bytes.
+    #[inline]
+    pub fn as_packed_seq(&self) -> Option<&[u8]> {
+        match self {
+            Self::String(s) => Some(s.as_bytes()),
+            Self::Bytes(b) => Some(b),
+            _ => None,
+        }
+    }
+
+    /// Returns `true` if the value is an instance of a dynamically sized type.
+    #[inline]
+    pub fn is_dynamic(&self) -> bool {
+        match self {
+            Self::Address(_)
+            | Self::Bool(_)
+            | Self::Int(..)
+            | Self::Uint(..)
+            | Self::FixedBytes(..) => false,
+            Self::Bytes(_) | Self::String(_) | Self::Array(_) => true,
+            as_fixed_seq!(tuple) => tuple.iter().any(Self::is_dynamic),
+        }
+    }
+
+    /// Returns the number of words this type uses in the head of the ABI blob.
+    #[inline]
+    pub(crate) fn head_words(&self) -> usize {
+        match self.as_fixed_seq() {
+            // If dynamic 1 for the length, otherwise the sum of all head words.
+            Some(vals) => {
+                // `is_dynamic` iterates over all elements, and we need to sum all elements'
+                // head words, so do both things at once
+                let mut sum = 0;
+                for val in vals {
+                    if val.is_dynamic() {
+                        return 1
+                    }
+                    sum += val.head_words()
+                }
+                sum
+            }
+            // Just a single word
+            None => 1,
+        }
+    }
+
+    /// Returns the number of words this type uses in the tail of the ABI blob.
+    #[inline]
+    pub(crate) fn tail_words(&self) -> usize {
+        match self {
+            // `self.is_word()`
+            Self::Address(_)
+            | Self::Bool(_)
+            | Self::FixedBytes(..)
+            | Self::Int(..)
+            | Self::Uint(..) => 0,
+
+            // `self.as_packed_seq()`
+            // 1 for the length, then the body padded to the next word.
+            Self::String(s) => 1 + words_for_len(s.len()),
+            Self::Bytes(b) => 1 + words_for_len(b.len()),
+
+            // `self.as_fixed_seq()`
+            // if static, 0.
+            // If dynamic, all words for all elements.
+            as_fixed_seq!(tuple) => {
+                // `is_dynamic` iterates over all elements, and we need to sum all elements'
+                // total words, so do both things at once
+                let mut any_dynamic = false;
+                let mut sum = 0;
+                for val in tuple {
+                    any_dynamic = any_dynamic || val.is_dynamic();
+                    sum += val.total_words()
+                }
+                any_dynamic as usize * sum
+            }
+
+            // `self.as_array()`
+            // 1 for the length. Then all words for all elements.
+            Self::Array(vals) => 1 + vals.iter().map(Self::total_words).sum::<usize>(),
+        }
+    }
+
+    /// Returns the total number of words this type uses in the ABI blob,
+    /// assuming it is not the top-level
+    #[inline]
+    pub(crate) fn total_words(&self) -> usize {
+        self.head_words() + self.tail_words()
+    }
+
+    /// Append this data to the head of an in-progress blob via the encoder.
+    #[inline]
+    pub fn head_append(&self, enc: &mut Encoder) {
+        match self {
+            Self::Address(_)
+            | Self::Bool(_)
+            | Self::FixedBytes(..)
+            | Self::Int(..)
+            | Self::Uint(..) => enc.append_word(unsafe { self.as_word().unwrap_unchecked() }),
+
+            Self::String(_) | Self::Bytes(_) | Self::Array(_) => enc.append_indirection(),
+
+            as_fixed_seq!(s) => {
+                if s.iter().any(Self::is_dynamic) {
+                    enc.append_indirection()
+                } else {
+                    s.iter().for_each(|inner| inner.head_append(enc))
+                }
+            }
+        }
+    }
+
+    /// Append this data to the tail of an in-progress blob via the encoder.
+    #[inline]
+    pub fn tail_append(&self, enc: &mut Encoder) {
+        match self {
+            Self::Address(_)
+            | Self::Bool(_)
+            | Self::FixedBytes(..)
+            | Self::Int(..)
+            | Self::Uint(..) => {}
+
+            Self::String(string) => enc.append_packed_seq(string.as_bytes()),
+            Self::Bytes(bytes) => enc.append_packed_seq(bytes),
+
+            as_fixed_seq!(s) => {
+                if self.is_dynamic() {
+                    Self::encode_sequence(s, enc);
+                }
+            }
+
+            Self::Array(array) => {
+                enc.append_seq_len(array.len());
+                Self::encode_sequence(array, enc);
+            }
         }
     }
 
     /// Encodes the packed value and appends it to the end of a byte array.
     pub fn encode_packed_to(&self, buf: &mut Vec<u8>) {
         match self {
-            DynSolValue::Address(addr) => buf.extend_from_slice(addr.as_bytes()),
-            DynSolValue::Bool(b) => buf.push(*b as u8),
-            DynSolValue::Bytes(bytes) => buf.extend_from_slice(bytes),
-            DynSolValue::FixedBytes(word, size) => buf.extend_from_slice(&word.as_bytes()[..*size]),
-            DynSolValue::Int(num, size) => {
-                let mut bytes = num.to_be_bytes();
+            Self::Address(addr) => buf.extend_from_slice(addr.as_slice()),
+            Self::Bool(b) => buf.push(*b as u8),
+            Self::String(s) => buf.extend_from_slice(s.as_bytes()),
+            Self::Bytes(bytes) => buf.extend_from_slice(bytes),
+            Self::FixedBytes(word, size) => buf.extend_from_slice(&word[..*size]),
+            Self::Int(num, size) => {
+                let mut bytes = num.to_be_bytes::<32>();
                 let start = 32 - *size;
                 if num.is_negative() {
                     bytes[start] |= 0x80;
@@ -199,143 +631,92 @@ impl DynSolValue {
                 }
                 buf.extend_from_slice(&bytes[start..])
             }
-            DynSolValue::Uint(num, size) => {
-                buf.extend_from_slice(&num.to_be_bytes::<32>().as_slice()[(32 - *size)..])
+            Self::Uint(num, size) => {
+                buf.extend_from_slice(&num.to_be_bytes::<32>()[(32 - *size)..])
             }
-            DynSolValue::String(s) => buf.extend_from_slice(s.as_bytes()),
-            DynSolValue::Tuple(inner)
-            | DynSolValue::Array(inner)
-            | DynSolValue::FixedArray(inner)
-            | DynSolValue::CustomStruct { tuple: inner, .. } => {
-                inner.iter().for_each(|v| v.encode_packed_to(buf));
+            as_fixed_seq!(inner) | Self::Array(inner) => {
+                inner.iter().for_each(|v| v.encode_packed_to(buf))
             }
-            DynSolValue::CustomValue { inner, .. } => buf.extend_from_slice(inner.as_bytes()),
         }
     }
 
     /// Encodes the value into a packed byte array.
+    #[inline]
     pub fn encode_packed(&self) -> Vec<u8> {
+        // TODO: capacity
         let mut buf = Vec::new();
         self.encode_packed_to(&mut buf);
         buf
     }
-}
 
-impl From<Address> for DynSolValue {
-    fn from(value: Address) -> Self {
-        Self::Address(value)
-    }
-}
-
-impl From<bool> for DynSolValue {
-    fn from(value: bool) -> Self {
-        Self::Bool(value)
-    }
-}
-
-impl From<Vec<u8>> for DynSolValue {
-    fn from(value: Vec<u8>) -> Self {
-        Self::Bytes(value)
-    }
-}
-
-macro_rules! impl_from_int {
-    ($size:ty) => {
-        impl From<$size> for DynSolValue {
-            fn from(value: $size) -> Self {
-                let bits = <$size>::BITS as usize;
-                let bytes = bits / 8;
-                let mut word = if value.is_negative() {
-                    ethers_primitives::B256::repeat_byte(0xff)
-                } else {
-                    ethers_primitives::B256::default()
-                };
-                word[32 - bytes..].copy_from_slice(&value.to_be_bytes());
-
-                Self::Int(I256::from_be_bytes(word.into()), bits)
-            }
-        }
-    };
-    ($($size:ty),+) => {
-        $(impl_from_int!($size);)+
-    };
-}
-
-impl_from_int!(
-    i8, i16, i32, i64, isize, i128, I24, I40, I48, I56, I72, I80, I88, I96, I104, I112, I120, I128,
-    I136, I144, I152, I160, I168, I176, I184, I192, I200, I208, I216, I224, I232, I240, I248, I256
-);
-
-macro_rules! impl_from_uint {
-    ($size:ty) => {
-        impl From<$size> for DynSolValue {
-            fn from(value: $size) -> Self {
-                Self::Uint(U256::from(value), <$size>::BITS as usize)
-            }
-        }
-    };
-    ($($size:ty),+) => {
-        $(impl_from_uint!($size);)+
-    };
-}
-
-// TODO: more?
-impl_from_uint!(u8, u16, u32, u64, usize, u128, U256);
-
-impl From<String> for DynSolValue {
-    fn from(value: String) -> Self {
-        Self::String(value)
-    }
-}
-
-macro_rules! impl_from_tuple {
-    ($num:expr, $( $ty:ident : $no:tt ),+ $(,)?) => {
-        impl<$($ty,)+> From<($( $ty, )+)> for DynSolValue
-        where
-            $(
-                $ty: Into<DynSolValue>,
-            )+
-        {
-            fn from(value: ($( $ty, )+)) -> Self {
-                Self::Tuple(vec![$( value.$no.into(), )+])
-            }
+    /// Tokenize this value into a [`DynToken`].
+    pub fn tokenize(&self) -> DynToken<'_> {
+        match self {
+            Self::Address(a) => a.into_word().into(),
+            Self::Bool(b) => Word::with_last_byte(*b as u8).into(),
+            Self::Bytes(buf) => DynToken::PackedSeq(buf),
+            Self::FixedBytes(buf, _) => (*buf).into(),
+            Self::Int(int, _) => int.to_be_bytes::<32>().into(),
+            Self::Uint(uint, _) => uint.to_be_bytes::<32>().into(),
+            Self::String(s) => DynToken::PackedSeq(s.as_bytes()),
+            Self::Array(t) => DynToken::from_dyn_seq(t),
+            as_fixed_seq!(t) => DynToken::from_fixed_seq(t),
         }
     }
-}
 
-impl_from_tuple!(1, A:0, );
-impl_from_tuple!(2, A:0, B:1, );
-impl_from_tuple!(3, A:0, B:1, C:2, );
-impl_from_tuple!(4, A:0, B:1, C:2, D:3, );
-impl_from_tuple!(5, A:0, B:1, C:2, D:3, E:4, );
-impl_from_tuple!(6, A:0, B:1, C:2, D:3, E:4, F:5, );
-impl_from_tuple!(7, A:0, B:1, C:2, D:3, E:4, F:5, G:6, );
-impl_from_tuple!(8, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, );
-impl_from_tuple!(9, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, );
-impl_from_tuple!(10, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, );
-impl_from_tuple!(11, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, );
-impl_from_tuple!(12, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, );
-impl_from_tuple!(13, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, );
-impl_from_tuple!(14, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, );
-impl_from_tuple!(15, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, );
-impl_from_tuple!(16, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, );
-impl_from_tuple!(17, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16,);
-impl_from_tuple!(18, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17,);
-impl_from_tuple!(19, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18,);
-impl_from_tuple!(20, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19,);
-impl_from_tuple!(21, A:0, B:1, C:2, D:3, E:4, F:5, G:6, H:7, I:8, J:9, K:10, L:11, M:12, N:13, O:14, P:15, Q:16, R:17, S:18, T:19, U:20,);
+    /// Encode this data as a sequence.
+    pub(crate) fn encode_sequence(contents: &[Self], enc: &mut Encoder) {
+        let head_words = contents.iter().map(Self::head_words).sum::<usize>();
+        enc.push_offset(head_words as u32);
 
-impl From<Vec<DynSolValue>> for DynSolValue {
-    fn from(value: Vec<DynSolValue>) -> Self {
-        Self::Array(value)
+        contents.iter().for_each(|t| {
+            t.head_append(enc);
+            enc.bump_offset(t.tail_words() as u32);
+        });
+        contents.iter().for_each(|t| t.tail_append(enc));
+        enc.pop_offset();
     }
-}
 
-impl<T, const N: usize> From<[T; N]> for DynSolValue
-where
-    T: Into<DynSolValue>,
-{
-    fn from(value: [T; N]) -> Self {
-        Self::Array(value.into_iter().map(|v| v.into()).collect())
+    /// Encode this value into a byte array suitable for passing to a function.
+    /// If this value is a tuple, it is encoded as is. Otherwise, it is wrapped
+    /// into a 1-element sequence.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore (pseudo-code)
+    /// // Encoding for function foo(address)
+    /// DynSolValue::Address(_).encode_params();
+    ///
+    /// // Encoding for function foo(address, uint256)
+    /// DynSolValue::Tuple(vec![
+    ///     DynSolValue::Address(_),
+    ///     DynSolValue::Uint(_, 256),
+    /// ]).encode_params();
+    /// ```
+    #[inline]
+    pub fn encode_params(&self) -> Vec<u8> {
+        match self {
+            Self::Tuple(_) => self.encode().expect("tuple is definitely a sequence"),
+            _ => self.encode_single(),
+        }
+    }
+
+    /// Encode this value into a byte array by wrapping it into a 1-element
+    /// sequence.
+    pub fn encode_single(&self) -> Vec<u8> {
+        let mut encoder = Encoder::with_capacity(self.total_words());
+        Self::encode_sequence(core::slice::from_ref(self), &mut encoder);
+        encoder.into_bytes()
+    }
+
+    /// If this value is a fixed sequence, encode it into a byte array. If this
+    /// value is not a fixed sequence, return `None`.
+    pub fn encode(&self) -> Option<Vec<u8>> {
+        self.as_fixed_seq().map(|seq| {
+            let sz = seq.iter().map(Self::total_words).sum();
+            let mut encoder = Encoder::with_capacity(sz);
+            Self::encode_sequence(seq, &mut encoder);
+            encoder.into_bytes()
+        })
     }
 }

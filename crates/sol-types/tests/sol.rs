@@ -1,5 +1,5 @@
-use ethers_primitives::{keccak256, Address, U256};
-use ethers_sol_types::{no_std_prelude::*, sol, SolCall, SolError, SolType};
+use alloy_primitives::{keccak256, Address, U256};
+use alloy_sol_types::{sol, SolCall, SolError, SolType};
 
 sol! {
     struct MyStruct {
@@ -38,9 +38,8 @@ sol! {
 }
 
 #[test]
-fn no_std_proc_macro() {
-    // this is possible but not recomended :)
-    <sol!(bool)>::hex_encode_single(true);
+fn test_sol() {
+    <sol!(bool)>::hex_encode_single(&true);
 
     let a = MyStruct {
         a: U256::from(1),
@@ -48,24 +47,23 @@ fn no_std_proc_macro() {
         c: Vec::new(),
     };
 
-    MyTuple::hex_encode((a.clone(), [0; 32]));
+    MyTuple::hex_encode(&(a.clone(), [0; 32]));
+    MyStruct::hex_encode(&a);
 
-    MyStruct::hex_encode(a.clone());
+    LateBinding::<MyStruct>::hex_encode(&(vec![a.clone(), a.clone()], Address::default()));
 
-    LateBinding::<MyStruct>::hex_encode((vec![a.clone(), a.clone()], Address::default()));
-
-    MyStruct2::hex_encode(MyStruct2 {
+    MyStruct2::hex_encode(&MyStruct2 {
         a,
         b: [0; 32],
         c: vec![],
     });
 
-    NestedArray::hex_encode(vec![[true, false], [true, false], [true, false]]);
+    NestedArray::hex_encode(&vec![[true, false], [true, false], [true, false]]);
 
     let mvt = MyValueType::from(U256::from(1));
     assert_eq!(
         mvt.encode_single(),
-        ethers_sol_types::sol_data::Uint::<256>::encode_single(U256::from(1))
+        alloy_sol_types::sol_data::Uint::<256>::encode_single(&U256::from(1))
     );
 }
 
@@ -122,17 +120,16 @@ fn function() {
             },
         ],
     };
+    let encoded = call.encode();
     assert_eq!(
-        call.data_size(),
-        32 + (64 + 32) + (64 + 32 + 32) + (64 + 3 * 32) + 2 * 32 + (32 + 32) + (64 + 4 * (32 + 32))
+        encoded.len(),
+        someFunctionCall::SELECTOR.len() + call.encoded_size()
     );
 
-    let sig = "someFunction(bool)"; // TODO ?
-    assert_eq!(someFunctionReturn::SIGNATURE, sig);
-    assert_eq!(someFunctionReturn::SELECTOR, keccak256(sig)[..4]);
-
-    let ret = someFunctionReturn { x: true };
-    assert_eq!(ret.data_size(), 32);
+    assert_eq!(
+        call.encoded_size(),
+        32 + (64 + 32) + (64 + 32 + 32) + (64 + 3 * 32) + 2 * 32 + (32 + 32) + (64 + 4 * (32 + 32))
+    );
 }
 
 #[test]
@@ -146,5 +143,16 @@ fn error() {
     assert_eq!(SomeError::SELECTOR, keccak256(sig)[..4]);
 
     let e = SomeError { a: U256::from(1) };
-    assert_eq!(e.data_size(), 32);
+    assert_eq!(e.encoded_size(), 32);
+}
+
+sol! {
+    interface WETH {
+        function deposit() external payable;
+    }
+}
+
+#[test]
+fn empty_call() {
+    WETH::depositCall::decode(&WETH::depositCall::SELECTOR, true).expect("it should work");
 }

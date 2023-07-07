@@ -20,7 +20,7 @@ use ruint::Uint;
 /// # Usage
 ///
 /// ```
-/// # use ethers_primitives::I256;
+/// # use alloy_primitives::I256;
 /// // Instantiate from a number
 /// let a = I256::unchecked_from(1);
 /// // Use `try_from` if you're not sure it'll fit
@@ -74,12 +74,13 @@ use ruint::Uint;
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "arbitrary",
-    derive(arbitrary::Arbitrary, proptest_derive::Arbitrary)
+    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
 )]
 pub struct Signed<const BITS: usize, const LIMBS: usize>(pub(crate) Uint<BITS, LIMBS>);
 
 // formatting
 impl<const BITS: usize, const LIMBS: usize> fmt::Debug for Signed<BITS, LIMBS> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }
@@ -88,28 +89,38 @@ impl<const BITS: usize, const LIMBS: usize> fmt::Debug for Signed<BITS, LIMBS> {
 impl<const BITS: usize, const LIMBS: usize> fmt::Display for Signed<BITS, LIMBS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (sign, abs) = self.into_sign_and_abs();
-        fmt::Display::fmt(&sign, f)?;
+        // sign must be formatted directly, instead of with `write!` due to the
+        // `sign_positive` flag
+        sign.fmt(f)?;
         write!(f, "{abs}")
     }
 }
 
-impl<const BITS: usize, const LIMBS: usize> fmt::LowerHex for Signed<BITS, LIMBS> {
+impl<const BITS: usize, const LIMBS: usize> fmt::Binary for Signed<BITS, LIMBS> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (sign, abs) = self.into_sign_and_abs();
-        fmt::Display::fmt(&sign, f)?;
-        write!(f, "{abs:x}")
+        self.0.fmt(f)
+    }
+}
+
+impl<const BITS: usize, const LIMBS: usize> fmt::Octal for Signed<BITS, LIMBS> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<const BITS: usize, const LIMBS: usize> fmt::LowerHex for Signed<BITS, LIMBS> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
 impl<const BITS: usize, const LIMBS: usize> fmt::UpperHex for Signed<BITS, LIMBS> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (sign, abs) = self.into_sign_and_abs();
-        fmt::Display::fmt(&sign, f)?;
-
-        // NOTE: Work around `U256: !UpperHex`.
-        let mut buffer = format!("{abs:x}");
-        buffer.make_ascii_uppercase();
-        f.write_str(&buffer)
+        self.0.fmt(f)
     }
 }
 
@@ -122,6 +133,10 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Number of bits.
     pub const BITS: usize = BITS;
+
+    /// The size of this integer type in bytes. Note that some bits may be
+    /// forced zero if BITS is not cleanly divisible by eight.
+    pub const BYTES: usize = Uint::<BITS, LIMBS>::BYTES;
 
     /// The minimum value.
     pub const MIN: Self = min();
@@ -195,7 +210,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 
     /// Determines if the integer is odd.
-    pub const fn is_odd(self) -> bool {
+    pub const fn is_odd(&self) -> bool {
         if BITS == 0 {
             false
         } else {
@@ -203,11 +218,17 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         }
     }
 
+    /// Compile-time equality. NOT constant-time equality.
+    #[inline]
+    pub const fn const_eq(&self, other: &Self) -> bool {
+        const_eq(self, other)
+    }
+
     /// Returns `true` if `self` is zero and `false` if the number is negative
     /// or positive.
-    #[inline(always)]
-    pub const fn is_zero(self) -> bool {
-        const_eq(self, Self::ZERO)
+    #[inline]
+    pub const fn is_zero(&self) -> bool {
+        self.const_eq(&Self::ZERO)
     }
 
     /// Returns `true` if `self` is positive and `false` if the number is zero
@@ -397,25 +418,35 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         (sign, abs)
     }
 
-    /// Convert to a slice in BE format
+    /// Converts `self` to a big-endian byte array of size exactly
+    /// [`Self::BYTES`].
     ///
     /// # Panics
     ///
-    /// If the given slice is not exactly 32 bytes long.
+    /// Panics if the generic parameter `BYTES` is not exactly [`Self::BYTES`].
+    /// Ideally this would be a compile time error, but this is blocked by
+    /// Rust issue [#60551].
+    ///
+    /// [#60551]: https://github.com/rust-lang/rust/issues/60551
     #[inline(always)]
     #[track_caller]
-    pub fn to_be_bytes(self) -> [u8; 32] {
+    pub fn to_be_bytes<const BYTES: usize>(self) -> [u8; BYTES] {
         self.0.to_be_bytes()
     }
 
-    /// Convert to a slice in LE format
+    /// Converts `self` to a little-endian byte array of size exactly
+    /// [`Self::BYTES`].
     ///
     /// # Panics
     ///
-    /// If the given slice is not exactly 32 bytes long.
+    /// Panics if the generic parameter `BYTES` is not exactly [`Self::BYTES`].
+    /// Ideally this would be a compile time error, but this is blocked by
+    /// Rust issue [#60551].
+    ///
+    /// [#60551]: https://github.com/rust-lang/rust/issues/60551
     #[inline(always)]
     #[track_caller]
-    pub fn to_le_bytes(self) -> [u8; 32] {
+    pub fn to_le_bytes<const BYTES: usize>(self) -> [u8; BYTES] {
         self.0.to_le_bytes()
     }
 
@@ -482,9 +513,6 @@ mod tests {
     type I96 = Signed<96, 2>;
     type U96 = Uint<96, 2>;
 
-    // TODO: ruint::aliases::U192 is bugged
-    type U192 = Uint<192, 3>;
-
     #[test]
     fn identities() {
         macro_rules! test_identities {
@@ -524,7 +552,6 @@ mod tests {
     }
 
     #[test]
-    // #[allow(clippy::cognitive_complexity)]
     fn std_num_conversion() {
         // test conversion from basic types
 
@@ -710,6 +737,7 @@ mod tests {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
                 let unsigned = <$u_struct>::from_str_radix("3141592653589793", 10).unwrap();
+                let unsigned_negative = -unsigned;
                 let positive = <$i_struct>::try_from(unsigned).unwrap();
                 let negative = -positive;
 
@@ -719,9 +747,9 @@ mod tests {
                 assert_eq!(format!("{negative:+}"), format!("-{unsigned}"));
 
                 assert_eq!(format!("{positive:x}"), format!("{unsigned:x}"));
-                assert_eq!(format!("{negative:x}"), format!("-{unsigned:x}"));
-                assert_eq!(format!("{positive:+x}"), format!("+{unsigned:x}"));
-                assert_eq!(format!("{negative:+x}"), format!("-{unsigned:x}"));
+                assert_eq!(format!("{negative:x}"), format!("{unsigned_negative:x}"));
+                assert_eq!(format!("{positive:+x}"), format!("{unsigned:x}"));
+                assert_eq!(format!("{negative:+x}"), format!("{unsigned_negative:x}"));
 
                 assert_eq!(
                     format!("{positive:X}"),
@@ -729,15 +757,15 @@ mod tests {
                 );
                 assert_eq!(
                     format!("{negative:X}"),
-                    format!("-{unsigned:x}").to_uppercase()
+                    format!("{unsigned_negative:x}").to_uppercase()
                 );
                 assert_eq!(
                     format!("{positive:+X}"),
-                    format!("+{unsigned:x}").to_uppercase()
+                    format!("{unsigned:x}").to_uppercase()
                 );
                 assert_eq!(
                     format!("{negative:+X}"),
-                    format!("-{unsigned:x}").to_uppercase()
+                    format!("{unsigned_negative:x}").to_uppercase()
                 );
             };
         }

@@ -1,0 +1,238 @@
+--- a/crates/syn-solidity/tests/contracts/UniswapV3PoolDeployer.sol
++++ b/crates/syn-solidity/tests/contracts/UniswapV3PoolDeployer.sol
+@@ -474,7 +474,7 @@ abstract contract NoDelegateCall {
+ 
+     constructor() {
+         // Immutables are computed in the init code of the contract, and then inlined into the deployed bytecode.
+-        // In other words, this variable won't change when it's checked at runtime.
++        // In other words, this variable won"t change when it"s checked at runtime.
+         original = address(this);
+     }
+ 
+@@ -582,7 +582,7 @@ library TickMath {
+     /// at the given tick
+     function getSqrtRatioAtTick(int24 tick) internal pure returns (uint160 sqrtPriceX96) {
+         uint256 absTick = tick < 0 ? uint256(-int256(tick)) : uint256(int256(tick));
+-        require(absTick <= uint256(MAX_TICK), 'T');
++        require(absTick <= uint256(MAX_TICK), "T");
+ 
+         uint256 ratio = absTick & 0x1 != 0 ? 0xfffcb933bd6fad37aa2d162d1a594001 : 0x100000000000000000000000000000000;
+         if (absTick & 0x2 != 0) ratio = (ratio * 0xfff97272373d413259a46990580e213a) >> 128;
+@@ -620,7 +620,7 @@ library TickMath {
+     /// @return tick The greatest tick for which the ratio is less than or equal to the input ratio
+     function getTickAtSqrtRatio(uint160 sqrtPriceX96) internal pure returns (int24 tick) {
+         // second inequality must be < because the price can never reach the price at the max tick
+-        require(sqrtPriceX96 >= MIN_SQRT_RATIO && sqrtPriceX96 < MAX_SQRT_RATIO, 'R');
++        require(sqrtPriceX96 >= MIN_SQRT_RATIO && sqrtPriceX96 < MAX_SQRT_RATIO, "R");
+         uint256 ratio = uint256(sqrtPriceX96) << 32;
+ 
+         uint256 r = ratio;
+@@ -772,9 +772,9 @@ library LiquidityMath {
+     /// @return z The liquidity delta
+     function addDelta(uint128 x, int128 y) internal pure returns (uint128 z) {
+         if (y < 0) {
+-            require((z = x - uint128(-y)) < x, 'LS');
++            require((z = x - uint128(-y)) < x, "LS");
+         } else {
+-            require((z = x + uint128(y)) >= x, 'LA');
++            require((z = x + uint128(y)) >= x, "LA");
+         }
+     }
+ }
+@@ -876,7 +876,7 @@ library Tick {
+     /// @param secondsPerLiquidityCumulativeX128 The all-time seconds per max(1, liquidity) of the pool
+     /// @param tickCumulative The tick * time elapsed since the pool was first initialized
+     /// @param time The current block timestamp cast to a uint32
+-    /// @param upper true for updating a position's upper tick, or false for updating a position's lower tick
++    /// @param upper true for updating a position"s upper tick, or false for updating a position"s lower tick
+     /// @param maxLiquidity The maximum liquidity allocation for a single tick
+     /// @return flipped Whether the tick was flipped from initialized to uninitialized, or vice versa
+     function update(
+@@ -897,7 +897,7 @@ library Tick {
+         uint128 liquidityGrossBefore = info.liquidityGross;
+         uint128 liquidityGrossAfter = LiquidityMath.addDelta(liquidityGrossBefore, liquidityDelta);
+ 
+-        require(liquidityGrossAfter <= maxLiquidity, 'LO');
++        require(liquidityGrossAfter <= maxLiquidity, "LO");
+ 
+         flipped = (liquidityGrossAfter == 0) != (liquidityGrossBefore == 0);
+ 
+@@ -1296,7 +1296,7 @@ library Position {
+ 
+         uint128 liquidityNext;
+         if (liquidityDelta == 0) {
+-            require(_self.liquidity > 0, 'NP'); // disallow pokes for 0 liquidity positions
++            require(_self.liquidity > 0, "NP"); // disallow pokes for 0 liquidity positions
+             liquidityNext = _self.liquidity;
+         } else {
+             liquidityNext = LiquidityMath.addDelta(_self.liquidity, liquidityDelta);
+@@ -1441,7 +1441,7 @@ library Oracle {
+         uint16 current,
+         uint16 next
+     ) internal returns (uint16) {
+-        require(current > 0, 'I');
++        require(current > 0, "I");
+         // no-op if the passed next value isn't greater than the current next value
+         if (next <= current) return current;
+         // store in each slot to prevent fresh SSTOREs in swaps
+@@ -1554,7 +1554,7 @@ library Oracle {
+         if (!beforeOrAt.initialized) beforeOrAt = self[0];
+ 
+         // ensure that the target is chronologically at or after the oldest observation
+-        require(lte(time, beforeOrAt.blockTimestamp, target), 'OLD');
++        require(lte(time, beforeOrAt.blockTimestamp, target), "OLD");
+ 
+         // if we've reached this point, we have to binary search
+         return binarySearch(self, time, target, index, cardinality);
+@@ -1637,7 +1637,7 @@ library Oracle {
+         uint128 liquidity,
+         uint16 cardinality
+     ) internal view returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) {
+-        require(cardinality > 0, 'I');
++        require(cardinality > 0, "I");
+ 
+         tickCumulatives = new int56[](secondsAgos.length);
+         secondsPerLiquidityCumulativeX128s = new uint160[](secondsAgos.length);
+@@ -1720,7 +1720,7 @@ library TransferHelper {
+     ) internal {
+         (bool success, bytes memory data) =
+             token.call(abi.encodeWithSelector(IERC20Minimal.transfer.selector, to, value));
+-        require(success && (data.length == 0 || abi.decode(data, (bool))), 'TF');
++        require(success && (data.length == 0 || abi.decode(data, (bool))), "TF");
+     }
+ }
+ 
+@@ -2260,7 +2260,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+     /// to a function before the pool is initialized. The reentrancy guard is required throughout the contract because
+     /// we use balance checks to determine the payment status of interactions such as mint, swap and flash.
+     modifier lock() {
+-        require(slot0.unlocked, 'LOK');
++        require(slot0.unlocked, "LOK");
+         slot0.unlocked = false;
+         _;
+         slot0.unlocked = true;
+@@ -2282,9 +2282,9 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+ 
+     /// @dev Common checks for valid tick inputs.
+     function checkTicks(int24 tickLower, int24 tickUpper) private pure {
+-        require(tickLower < tickUpper, 'TLU');
+-        require(tickLower >= TickMath.MIN_TICK, 'TLM');
+-        require(tickUpper <= TickMath.MAX_TICK, 'TUM');
++        require(tickLower < tickUpper, "TLU");
++        require(tickLower >= TickMath.MIN_TICK, "TLM");
++        require(tickUpper <= TickMath.MAX_TICK, "TUM");
+     }
+ 
+     /// @dev Returns the block timestamp truncated to 32 bits, i.e. mod 2**32. This method is overridden in tests.
+@@ -2427,7 +2427,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+     /// @inheritdoc IUniswapV3PoolActions
+     /// @dev not locked because it initializes unlocked
+     function initialize(uint160 sqrtPriceX96) external override {
+-        require(slot0.sqrtPriceX96 == 0, 'AI');
++        require(slot0.sqrtPriceX96 == 0, "AI");
+ 
+         int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+ 
+@@ -2485,7 +2485,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+         if (params.liquidityDelta != 0) {
+             if (_slot0.tick < params.tickLower) {
+                 // current tick is below the passed range; liquidity can only become in range by crossing from left to
+-                // right, when we'll need _more_ token0 (it's becoming more valuable) so user must provide it
++                // right, when we"ll need _more_ token0 (it"s becoming more valuable) so user must provide it
+                 amount0 = SqrtPriceMath.getAmount0Delta(
+                     TickMath.getSqrtRatioAtTick(params.tickLower),
+                     TickMath.getSqrtRatioAtTick(params.tickUpper),
+@@ -2519,7 +2519,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+                 liquidity = LiquidityMath.addDelta(liquidityBefore, params.liquidityDelta);
+             } else {
+                 // current tick is above the passed range; liquidity can only become in range by crossing from right to
+-                // left, when we'll need _more_ token1 (it's becoming more valuable) so user must provide it
++                // left, when we"ll need _more_ token1 (it"s becoming more valuable) so user must provide it
+                 amount1 = SqrtPriceMath.getAmount1Delta(
+                     TickMath.getSqrtRatioAtTick(params.tickLower),
+                     TickMath.getSqrtRatioAtTick(params.tickUpper),
+@@ -2638,8 +2638,8 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+         if (amount0 > 0) balance0Before = balance0();
+         if (amount1 > 0) balance1Before = balance1();
+         IUniswapV3MintCallback(msg.sender).uniswapV3MintCallback(amount0, amount1, data);
+-        if (amount0 > 0) require(balance0Before.add(amount0) <= balance0(), 'M0');
+-        if (amount1 > 0) require(balance1Before.add(amount1) <= balance1(), 'M1');
++        if (amount0 > 0) require(balance0Before.add(amount0) <= balance0(), "M0");
++        if (amount1 > 0) require(balance1Before.add(amount1) <= balance1(), "M1");
+ 
+         emit Mint(msg.sender, recipient, tickLower, tickUpper, amount, amount0, amount1);
+     }
+@@ -2758,16 +2758,16 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+         uint160 sqrtPriceLimitX96,
+         bytes calldata data
+     ) external override noDelegateCall returns (int256 amount0, int256 amount1) {
+-        require(amountSpecified != 0, 'AS');
++        require(amountSpecified != 0, "AS");
+ 
+         Slot0 memory slot0Start = slot0;
+ 
+-        require(slot0Start.unlocked, 'LOK');
++        require(slot0Start.unlocked, "LOK");
+         require(
+             zeroForOne
+                 ? sqrtPriceLimitX96 < slot0Start.sqrtPriceX96 && sqrtPriceLimitX96 > TickMath.MIN_SQRT_RATIO
+                 : sqrtPriceLimitX96 > slot0Start.sqrtPriceX96 && sqrtPriceLimitX96 < TickMath.MAX_SQRT_RATIO,
+-            'SPL'
++            "SPL"
+         );
+ 
+         slot0.unlocked = false;
+@@ -2795,7 +2795,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+                 liquidity: cache.liquidityStart
+             });
+ 
+-        // continue swapping as long as we haven't used the entire input/output and haven't reached the price limit
++        // continue swapping as long as we haven"t used the entire input/output and haven"t reached the price limit
+         while (state.amountSpecifiedRemaining != 0 && state.sqrtPriceX96 != sqrtPriceLimitX96) {
+             StepComputations memory step;
+ 
+@@ -2882,7 +2882,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+ 
+                 state.tick = zeroForOne ? step.tickNext - 1 : step.tickNext;
+             } else if (state.sqrtPriceX96 != step.sqrtPriceStartX96) {
+-                // recompute unless we're on a lower tick boundary (i.e. already transitioned ticks), and haven't moved
++                // recompute unless we"re on a lower tick boundary (i.e. already transitioned ticks), and haven"t moved
+                 state.tick = TickMath.getTickAtSqrtRatio(state.sqrtPriceX96);
+             }
+         }
+@@ -2932,13 +2932,13 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+ 
+             uint256 balance0Before = balance0();
+             IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
+-            require(balance0Before.add(uint256(amount0)) <= balance0(), 'IIA');
++            require(balance0Before.add(uint256(amount0)) <= balance0(), "IIA");
+         } else {
+             if (amount0 < 0) TransferHelper.safeTransfer(token0, recipient, uint256(-amount0));
+ 
+             uint256 balance1Before = balance1();
+             IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
+-            require(balance1Before.add(uint256(amount1)) <= balance1(), 'IIA');
++            require(balance1Before.add(uint256(amount1)) <= balance1(), "IIA");
+         }
+ 
+         emit Swap(msg.sender, recipient, amount0, amount1, state.sqrtPriceX96, state.liquidity, state.tick);
+@@ -2953,7 +2953,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+         bytes calldata data
+     ) external override lock noDelegateCall {
+         uint128 _liquidity = liquidity;
+-        require(_liquidity > 0, 'L');
++        require(_liquidity > 0, "L");
+ 
+         uint256 fee0 = FullMath.mulDivRoundingUp(amount0, fee, 1e6);
+         uint256 fee1 = FullMath.mulDivRoundingUp(amount1, fee, 1e6);
+@@ -2968,8 +2968,8 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
+         uint256 balance0After = balance0();
+         uint256 balance1After = balance1();
+ 
+-        require(balance0Before.add(fee0) <= balance0After, 'F0');
+-        require(balance1Before.add(fee1) <= balance1After, 'F1');
++        require(balance0Before.add(fee0) <= balance0After, "F0");
++        require(balance1Before.add(fee1) <= balance1After, "F1");
+ 
+         // sub is safe because we know balanceAfter is gt balanceBefore by at least fee
+         uint256 paid0 = balance0After - balance0Before;

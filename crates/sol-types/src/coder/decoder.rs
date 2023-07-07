@@ -1,5 +1,5 @@
 // Copyright 2015-2020 Parity Technologies
-// Copyright 2023-2023 Ethers-rs Team
+// Copyright 2023-2023 Alloy Contributors
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -8,7 +8,8 @@
 // except according to those terms.
 //
 
-use crate::{encode, no_std_prelude::*, token::TokenSeq, util, Error, Result, TokenType, Word};
+use crate::{encode, token::TokenSeq, utils, Error, Result, TokenType, Word};
+use alloc::{borrow::Cow, vec::Vec};
 use core::{fmt, slice::SliceIndex};
 
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
@@ -19,9 +20,9 @@ use core::{fmt, slice::SliceIndex};
 /// While the Decoder contains the necessary info, the actual deserialization
 /// is done in the [`crate::SolType`] trait.
 #[derive(Clone, Copy)]
-pub struct Decoder<'a> {
+pub struct Decoder<'de> {
     // the underlying buffer
-    buf: &'a [u8],
+    buf: &'de [u8],
     // the current offset in the buffer
     offset: usize,
     // true if we validate type correctness and blob re-encoding
@@ -30,22 +31,50 @@ pub struct Decoder<'a> {
 
 impl fmt::Debug for Decoder<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut body = self
+            .buf
+            .chunks(32)
+            .map(hex::encode_prefixed)
+            .collect::<Vec<_>>();
+        body[self.offset / 32].push_str(" <-- Next Word");
+
         f.debug_struct("Decoder")
-            .field("buf", &hex::encode_prefixed(self.buf))
+            .field("buf", &body)
             .field("offset", &self.offset)
             .field("validate", &self.validate)
             .finish()
     }
 }
 
-impl<'a> Decoder<'a> {
+impl fmt::Display for Decoder<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Abi Decode Buffer")?;
+
+        for (i, chunk) in self.buf.chunks(32).enumerate() {
+            writeln!(
+                f,
+                "0x{:04x}: {} {}",
+                i * 32,
+                hex::encode_prefixed(chunk),
+                if i * 32 == self.offset {
+                    " <-- Next Word"
+                } else {
+                    ""
+                }
+            )?;
+        }
+        Ok(())
+    }
+}
+
+impl<'de> Decoder<'de> {
     /// Instantiate a new decoder from a byte slice and a validation flag.
     ///
     /// If `validate` is true, the decoder will check that the bytes conform to
     /// expected type limitations, and that the decoded values can be re-encoded
     /// to an identical bytestring.
     #[inline]
-    pub const fn new(buf: &'a [u8], validate: bool) -> Self {
+    pub const fn new(buf: &'de [u8], validate: bool) -> Self {
         Self {
             buf,
             offset: 0,
@@ -57,20 +86,20 @@ impl<'a> Decoder<'a> {
     /// decoder's offset. The child decoder shares the buffer and validation
     /// flag.
     #[inline]
-    fn child(&self, offset: usize) -> Result<Decoder<'a>, Error> {
-        if offset > self.buf.len() {
-            return Err(Error::Overrun)
-        }
-        Ok(Self {
-            buf: &self.buf[offset..],
-            offset: 0,
-            validate: self.validate,
-        })
+    fn child(&self, offset: usize) -> Result<Decoder<'de>, Error> {
+        self.buf
+            .get(offset..)
+            .map(|buf| Self {
+                buf,
+                offset: 0,
+                validate: self.validate,
+            })
+            .ok_or(Error::Overrun)
     }
 
     /// Get a child decoder at the current offset.
     #[inline]
-    pub fn raw_child(&self) -> Decoder<'a> {
+    pub fn raw_child(&self) -> Decoder<'de> {
         self.child(self.offset).unwrap()
     }
 
@@ -82,20 +111,20 @@ impl<'a> Decoder<'a> {
 
     /// Peek into the buffer.
     #[inline]
-    pub fn peek<I: SliceIndex<[u8]>>(&self, index: I) -> Result<&'a I::Output, Error> {
+    pub fn peek<I: SliceIndex<[u8]>>(&self, index: I) -> Result<&'de I::Output, Error> {
         self.buf.get(index).ok_or(Error::Overrun)
     }
 
     /// Peek a slice of size `len` from the buffer at a specific offset, without
     /// advancing the offset.
     #[inline]
-    pub fn peek_len_at(&self, offset: usize, len: usize) -> Result<&'a [u8], Error> {
+    pub fn peek_len_at(&self, offset: usize, len: usize) -> Result<&'de [u8], Error> {
         self.peek(offset..offset + len)
     }
 
     /// Peek a slice of size `len` from the buffer without advancing the offset.
     #[inline]
-    pub fn peek_len(&self, len: usize) -> Result<&'a [u8], Error> {
+    pub fn peek_len(&self, len: usize) -> Result<&'de [u8], Error> {
         self.peek_len_at(self.offset, len)
     }
 
@@ -118,13 +147,13 @@ impl<'a> Decoder<'a> {
     /// offset.
     #[inline]
     pub fn peek_u32_at(&self, offset: usize) -> Result<u32> {
-        util::as_u32(self.peek_word_at(offset)?, true)
+        utils::as_u32(self.peek_word_at(offset)?, true)
     }
 
     /// Peek the next word as a u32.
     #[inline]
     pub fn peek_u32(&self) -> Result<u32> {
-        util::as_u32(self.peek_word()?, true)
+        utils::as_u32(self.peek_word()?, true)
     }
 
     /// Take a word from the buffer, advancing the offset.
@@ -138,7 +167,7 @@ impl<'a> Decoder<'a> {
     /// Return a child decoder by consuming a word, interpreting it as a
     /// pointer, and following it.
     #[inline]
-    pub fn take_indirection(&mut self) -> Result<Decoder<'a>, Error> {
+    pub fn take_indirection(&mut self) -> Result<Decoder<'de>, Error> {
         let ptr = self.take_u32()? as usize;
         self.child(ptr)
     }
@@ -147,18 +176,18 @@ impl<'a> Decoder<'a> {
     #[inline]
     pub fn take_u32(&mut self) -> Result<u32> {
         let word = self.take_word()?;
-        util::as_u32(word, true)
+        utils::as_u32(word, true)
     }
 
     /// Takes a slice of bytes of the given length by consuming up to the next
     /// word boundary.
     pub fn take_slice(&mut self, len: usize) -> Result<&[u8], Error> {
         if self.validate {
-            let padded_len = util::round_up_nearest_multiple(len, 32);
+            let padded_len = utils::next_multiple_of_32(len);
             if self.offset + padded_len > self.buf.len() {
                 return Err(Error::Overrun)
             }
-            if !util::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
+            if !utils::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
                 return Err(Error::Other(Cow::Borrowed(
                     "Non-empty bytes after packed array",
                 )))
@@ -178,7 +207,7 @@ impl<'a> Decoder<'a> {
     /// Takes the offset from the child decoder and sets it as the current
     /// offset.
     #[inline]
-    pub fn take_offset(&mut self, child: Decoder<'a>) {
+    pub fn take_offset(&mut self, child: Decoder<'de>) {
         self.set_offset(child.offset + (self.buf.len() - child.buf.len()))
     }
 
@@ -196,28 +225,22 @@ impl<'a> Decoder<'a> {
 
     /// Decodes a single token from the underlying buffer.
     #[inline]
-    pub fn decode<T: TokenType>(&mut self, data: &[u8]) -> Result<T> {
-        if data.is_empty() {
-            return Err(Error::Overrun)
-        }
+    pub fn decode<T: TokenType<'de>>(&mut self) -> Result<T> {
         T::decode_from(self)
     }
 
     /// Decodes a sequence of tokens from the underlying buffer.
     #[inline]
-    pub fn decode_sequence<T: TokenType + TokenSeq>(&mut self, data: &[u8]) -> Result<T> {
-        if data.is_empty() {
-            return Err(Error::Overrun)
-        }
+    pub fn decode_sequence<T: TokenType<'de> + TokenSeq<'de>>(&mut self) -> Result<T> {
         T::decode_sequence(self)
     }
 }
 
 /// Decodes ABI compliant vector of bytes into vector of tokens described by
 /// types param.
-pub fn decode<T: TokenSeq>(data: &[u8], validate: bool) -> Result<T> {
+pub fn decode<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     let mut decoder = Decoder::new(data, validate);
-    let res = decoder.decode_sequence::<T>(data)?;
+    let res = decoder.decode_sequence::<T>()?;
     if validate && encode(&res) != data {
         return Err(Error::ReserMismatch)
     }
@@ -226,14 +249,14 @@ pub fn decode<T: TokenSeq>(data: &[u8], validate: bool) -> Result<T> {
 
 /// Decode a single token.
 #[inline]
-pub fn decode_single<T: TokenType>(data: &[u8], validate: bool) -> Result<T> {
+pub fn decode_single<'de, T: TokenType<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     decode::<(T,)>(data, validate).map(|(t,)| t)
 }
 
 /// Decode top-level function args. Encodes as params if T is a tuple.
 /// Otherwise, wraps in a tuple and decodes.
 #[inline]
-pub fn decode_params<T: TokenSeq>(data: &[u8], validate: bool) -> Result<T> {
+pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     if T::IS_TUPLE {
         decode(data, validate)
     } else {
@@ -243,12 +266,37 @@ pub fn decode_params<T: TokenSeq>(data: &[u8], validate: bool) -> Result<T> {
 
 #[cfg(test)]
 mod tests {
-    use ethers_primitives::{Address, B256, U256};
+    use crate::{sol_data, utils::pad_u32, SolType};
+    use alloc::string::ToString;
+    use alloy_primitives::{Address, B256, U256};
     use hex_literal::hex;
 
-    #[cfg(not(feature = "std"))]
-    use crate::no_std_prelude::*;
-    use crate::{sol_data, util::pad_u32, SolType};
+    #[test]
+    fn dynamic_array_of_dynamic_arrays() {
+        type MyTy = sol_data::Array<sol_data::Array<sol_data::Address>>;
+        let encoded = hex!(
+            "
+    		0000000000000000000000000000000000000000000000000000000000000020
+    		0000000000000000000000000000000000000000000000000000000000000002
+    		0000000000000000000000000000000000000000000000000000000000000040
+    		0000000000000000000000000000000000000000000000000000000000000080
+    		0000000000000000000000000000000000000000000000000000000000000001
+    		0000000000000000000000001111111111111111111111111111111111111111
+    		0000000000000000000000000000000000000000000000000000000000000001
+    		0000000000000000000000002222222222222222222222222222222222222222
+    	"
+        );
+
+        assert_eq!(
+            MyTy::encode_params(&vec![
+                vec![Address::repeat_byte(0x11)],
+                vec![Address::repeat_byte(0x22)],
+            ]),
+            encoded
+        );
+
+        MyTy::decode_params(&encoded, false).unwrap();
+    }
 
     #[test]
     fn decode_static_tuple_of_addresses_and_uints() {

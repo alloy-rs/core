@@ -1,29 +1,37 @@
 [workspace]
-resolver = "2"
 members = ["crates/*"]
+resolver = "2"
 
 [workspace.package]
+version = "0.2.0"
 edition = "2021"
-rust-version = "1.65" # Remember to update .clippy.toml and workflows/ci.yml
-authors = []
+rust-version = "1.65"
+authors = ["Alloy Contributors"]
 license = "MIT OR Apache-2.0"
-homepage = "https://github.com/ethers-rs/core"
-repository = "https://github.com/ethers-rs/core"
+homepage = "https://github.com/alloy-rs/core"
+repository = "https://github.com/alloy-rs/core"
+exclude = ["benches/", "tests/"]
+
+[workspace.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [workspace.dependencies]
 # workspace crates
-ethers-dyn-abi = { version = "0.1.0", path = "crates/dyn-abi", default-features = false }
-ethers-primitives = { version = "0.1.0", path = "crates/primitives", default-features = false }
-ethers-rlp = { version = "0.1.0", path = "crates/rlp", default-features = false }
-ethers-rlp-derive = { version = "0.1.0", path = "crates/rlp-derive", default-features = false }
-ethers-sol-macro = { version = "0.1.0", path = "crates/sol-macro", default-features = false }
-ethers-sol-types = { version = "0.1.0", path = "crates/sol-types", default-features = false }
+alloy-dyn-abi = { version = "0.2.0", path = "crates/dyn-abi", default-features = false }
+alloy-json-abi = { version = "0.2.0", path = "crates/json-abi", default-features = false }
+alloy-primitives = { version = "0.2.0", path = "crates/primitives", default-features = false }
+alloy-rlp = { version = "0.2.0", path = "crates/rlp", default-features = false }
+alloy-rlp-derive = { version = "0.2.0", path = "crates/rlp-derive", default-features = false }
+alloy-sol-macro = { version = "0.2.0", path = "crates/sol-macro", default-features = false }
+alloy-sol-types = { version = "0.2.0", path = "crates/sol-types", default-features = false }
+syn-solidity = { version = "0.2.0", path = "crates/syn-solidity", default-features = false }
 
-ruint = { version = "1.8.0", git = "https://github.com/recmo/uint", default-features = false }
-ruint-macro = { version = "1.0.2", git = "https://github.com/recmo/uint", default-features = false }
+ruint = { version = "1.9.0", package = "ruint2", default-features = false }
+ruint-macro = { version = "1.0.3", package = "ruint2-macro", default-features = false }
 
 # serde
-serde = { version = "1.0", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 # macros
@@ -33,16 +41,24 @@ syn = "2.0"
 
 derive_more = "0.99"
 hex-literal = "0.4"
-strum = { version = "0.24", features = ["derive"] }
+strum = { version = "0.25", features = ["derive"] }
 num_enum = "0.6"
 thiserror = "1.0"
 
 # misc
-arbitrary = { version = "1.3", default-features = false }
-arrayvec = { version = "0.7.2", default-features = false }
+arbitrary = "1.3"
+arrayvec = { version = "0.7", default-features = false }
 bytes = { version = "1.4", default-features = false }
+criterion = "0.5"
+derive_arbitrary = "1.3"
+getrandom = "0.2"
 hex = { package = "const-hex", version = ">=1.5", default-features = false, features = ["alloc"] }
-once_cell = "1.17"
-proptest = "1.1"
+itoa = "1"
+once_cell = "1"
+proptest = "1"
 proptest-derive = "0.3"
 tiny-keccak = "2.0"
+
+# make ruint2 depend on the local alloy-rlp
+[patch.crates-io]
+alloy-rlp = { path = "crates/rlp" }

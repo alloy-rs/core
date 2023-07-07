@@ -1,17 +1,23 @@
 use crate::{
     eip712::{PropertyDef, Resolver},
-    no_std_prelude::*,
     parser::TypeSpecifier,
     DynAbiError, DynSolType, DynSolValue,
 };
-use alloc::collections::BTreeMap;
-use ethers_primitives::{keccak256, B256};
-use ethers_sol_types::{Eip712Domain, SolStruct};
+use alloc::{
+    collections::BTreeMap,
+    string::{String, ToString},
+    vec::Vec,
+};
+use alloy_primitives::{keccak256, B256};
+use alloy_sol_types::{Eip712Domain, SolStruct};
+use derive_more::{Deref, DerefMut, From, Into, IntoIterator};
 use serde::{Deserialize, Serialize};
 
-/// Custom types for `TypedData`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
-pub struct Eip712Types(BTreeMap<String, Vec<PropertyDef>>);
+/// Custom types for `TypedData`.
+#[derive(
+    Clone, Debug, Default, PartialEq, Eq, Serialize, Deref, DerefMut, From, Into, IntoIterator,
+)]
+pub struct Eip712Types(#[into_iterator(ref, ref mut, owned)] BTreeMap<String, Vec<PropertyDef>>);
 
 impl<'de> Deserialize<'de> for Eip712Types {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
@@ -27,31 +33,10 @@ impl<'de> Deserialize<'de> for Eip712Types {
     }
 }
 
-impl IntoIterator for Eip712Types {
-    type Item = (String, Vec<PropertyDef>);
-    type IntoIter = alloc::collections::btree_map::IntoIter<String, Vec<PropertyDef>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl Eip712Types {
-    /// Iterate over the underlying map.
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<PropertyDef>)> {
-        self.0.iter()
-    }
-
-    /// Insert a new type.
-    pub fn insert(&mut self, key: String, value: Vec<PropertyDef>) {
-        self.0.insert(key, value);
-    }
-}
-
 /// Represents the [EIP-712](https://eips.ethereum.org/EIPS/eip-712) typed data object.
 ///
 /// Typed data is a JSON object containing type information, domain separator
-/// parameters and the message object which has the following schema
+/// parameters and the message object which has the following schema:
 ///
 /// ```json
 /// {
@@ -82,11 +67,11 @@ impl Eip712Types {
 ///     "required": ["types", "primaryType", "domain", "message"]
 /// }
 /// ```
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TypedData {
     /// Signing domain metadata. The signing domain is the intended context for
     /// the signature (e.g. the dapp, protocol, etc. that it's intended for).
-    /// This data is used to construct the domain seperator of the message.
+    /// This data is used to construct the domain separator of the message.
     pub domain: Eip712Domain,
 
     /// The custom types used by this message.
@@ -107,7 +92,6 @@ pub struct TypedData {
 impl<'de> Deserialize<'de> for TypedData {
     fn deserialize<D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
-        #[allow(missing_debug_implementations)]
         struct TypedDataHelper {
             #[serde(default)]
             domain: Eip712Domain,
@@ -214,11 +198,11 @@ impl TypedData {
         let mut buf = [0u8; 66];
         buf[0] = 0x19;
         buf[1] = 0x01;
-        buf[2..34].copy_from_slice(self.domain.separator().as_bytes());
+        buf[2..34].copy_from_slice(self.domain.separator().as_slice());
 
         // compatibility with <https://github.com/MetaMask/eth-sig-util>
         let len = if self.primary_type != "EIP712Domain" {
-            buf[34..].copy_from_slice(self.hash_struct()?.as_bytes());
+            buf[34..].copy_from_slice(self.hash_struct()?.as_slice());
             66
         } else {
             34
@@ -232,7 +216,7 @@ impl TypedData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethers_sol_types::sol;
+    use alloy_sol_types::sol;
     use serde_json::json;
 
     #[test]

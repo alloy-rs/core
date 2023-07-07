@@ -1,4 +1,4 @@
-use ethers_sol_types::sol;
+use alloy_sol_types::sol;
 
 sol! {}
 
@@ -7,7 +7,20 @@ sol! {
 }
 
 sol! {
+    enum EmptyEnum {}
+}
+
+// OK
+sol! {
+    contract EmptyContract {}
+}
+
+sol! {
     error EmptyError();
+}
+
+sol! {
+    event EmptyEvent();
 }
 
 sol! {

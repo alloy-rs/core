@@ -24,4 +24,3 @@ mod serde;
 
 /// Utility functions used in the signed integer implementation.
 pub(crate) mod utils;
-pub use utils::const_eq;

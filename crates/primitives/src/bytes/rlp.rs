@@ -1,5 +1,5 @@
 use super::Bytes;
-use ethers_rlp::{Decodable, Encodable};
+use alloy_rlp::{Decodable, Encodable};
 
 impl Encodable for Bytes {
     fn length(&self) -> usize {
@@ -12,7 +12,7 @@ impl Encodable for Bytes {
 }
 
 impl Decodable for Bytes {
-    fn decode(buf: &mut &[u8]) -> Result<Self, ethers_rlp::DecodeError> {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::DecodeError> {
         Ok(Self(bytes::Bytes::decode(buf)?))
     }
 }

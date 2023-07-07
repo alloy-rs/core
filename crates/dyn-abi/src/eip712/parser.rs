@@ -1,9 +1,11 @@
+//! EIP-712 specific parsing structures.
+
 use crate::{
     eip712::resolver::{PropertyDef, TypeDef},
-    no_std_prelude::*,
     parser::TypeSpecifier,
     DynAbiError,
 };
+use alloc::vec::Vec;
 
 /// A property is a type and a name. Of the form `type name`. E.g.
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.
@@ -29,7 +31,6 @@ impl<'a> TryFrom<&'a str> for PropDef<'a> {
         let (ty, name) = input
             .rsplit_once(' ')
             .ok_or_else(|| DynAbiError::invalid_property_def(input))?;
-
         Ok(PropDef {
             ty: ty.trim().try_into()?,
             name: name.trim(),
@@ -127,7 +128,7 @@ impl<'a> TryFrom<&'a str> for EncodeType<'a> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     const EXAMPLE: &str = "Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)";

@@ -2,30 +2,47 @@
 //!
 //! Adapted from <https://github.com/paritytech/parity-common/blob/2fb72eea96b6de4a085144ce239feb49da0cd39e/ethbloom/src/lib.rs>
 
-use crate::{keccak256, FixedBytes};
-use alloc::borrow::Cow;
-use core::mem;
+use crate::{keccak256, wrap_fixed_bytes, FixedBytes};
+use core::borrow::Borrow;
 
-/// Length of bloom filter used for Ethereum.
-pub const BLOOM_BITS: u32 = 3;
+/// Number of bits to set per input in Ethereum bloom filter.
+pub const BLOOM_BITS_PER_ITEM: usize = 3;
 /// Size of the bloom filter in bytes.
-pub const BLOOM_SIZE: usize = 256;
+pub const BLOOM_SIZE_BYTES: usize = 256;
+/// Size of the bloom filter in bits
+pub const BLOOM_SIZE_BITS: usize = BLOOM_SIZE_BYTES * 8;
 
-/// A 256-byte Ethereum bloom filter.
-pub type Bloom = FixedBytes<256>;
+/// Size of the keccak256 hash in bytes, used in accrue
+const ITEM_HASH_LEN: usize = 32;
+/// Mask, used in accrue
+const MASK: usize = BLOOM_SIZE_BITS - 1;
+/// Number of bytes per item, used in accrue
+const ITEM_BYTES: usize = (log2(BLOOM_SIZE_BITS) + 7) / 8;
+
+// BLOOM_SIZE_BYTES must be a power of 2
+#[allow(clippy::assertions_on_constants)]
+const _: () = assert!(BLOOM_SIZE_BYTES.is_power_of_two());
+// Assertion for accrue. This is preserved from parity code, but I do not
+// understand its purpose.
+#[allow(clippy::assertions_on_constants)]
+const _: () = assert!(BLOOM_BITS_PER_ITEM * ITEM_BYTES <= ITEM_HASH_LEN);
 
 /// Input to the [`Bloom::accrue`] method.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum BloomInput<'a> {
     /// Raw input to be hashed.
     Raw(&'a [u8]),
     /// Already hashed input.
-    Hash(&'a [u8; 32]),
+    Hash(FixedBytes<ITEM_HASH_LEN>),
 }
 
-impl PartialEq<BloomRef<'_>> for Bloom {
-    fn eq(&self, other: &BloomRef<'_>) -> bool {
-        self.0 == *other.0
+impl BloomInput<'_> {
+    /// Consume the input, converting it to the hash.
+    pub fn into_hash(self) -> FixedBytes<ITEM_HASH_LEN> {
+        match self {
+            BloomInput::Raw(raw) => keccak256(raw),
+            BloomInput::Hash(hash) => hash,
+        }
     }
 }
 
@@ -37,67 +54,65 @@ impl From<BloomInput<'_>> for Bloom {
     }
 }
 
+wrap_fixed_bytes!(
+    /// Ethereum 256 byte bloom filter.
+    pub struct Bloom<256>;
+);
+
 impl Bloom {
-    /// Returns the underlying data.
+    /// Returns a reference to the underlying data.
     #[inline]
-    pub const fn data(&self) -> &[u8; BLOOM_SIZE] {
-        &self.0
+    pub const fn data(&self) -> &[u8; BLOOM_SIZE_BYTES] {
+        &self.0 .0
     }
 
-    /// Returns whether the bloom filter contains the given input.
+    /// Returns a mutable reference to the underlying data.
+    #[inline]
+    pub fn data_mut(&mut self) -> &mut [u8; BLOOM_SIZE_BYTES] {
+        &mut self.0 .0
+    }
+
+    /// Returns whether the bloom filter contains the given input (allowing for
+    /// false positives)
     pub fn contains_input(&self, input: BloomInput<'_>) -> bool {
         let bloom: Bloom = input.into();
-        self.contains_bloom(&bloom)
+        self.contains(bloom)
     }
 
-    /// Returns whether the bloom filter contains the given input.
-    pub fn contains_bloom<'a, B: Into<BloomRef<'a>>>(&self, bloom: B) -> bool {
-        self.contains_bloom_ref(bloom.into())
+    /// True if this bloom filter is a possible superset of the other bloom
+    /// filter, admitting false positives.
+    pub const fn const_contains(self, other: Self) -> bool {
+        // (self & other) == other
+        other.0.const_eq(&self.0.bit_and(other.0))
     }
 
-    fn contains_bloom_ref(&self, bloom: BloomRef<'_>) -> bool {
-        let self_ref: BloomRef<'_> = self.into();
-        self_ref.contains_bloom(bloom)
+    /// Returns whether the bloom filter is a superset of the given bloom
+    /// filter (allowing for false positives)
+    pub fn contains<B: Borrow<Self>>(&self, other: B) -> bool {
+        self.const_contains(*(other.borrow()))
     }
 
     /// Accrues the input into the bloom filter.
     pub fn accrue(&mut self, input: BloomInput<'_>) {
-        let p = BLOOM_BITS;
-
-        let m = self.0.len();
-        let bloom_bits = m * 8;
-        let mask = bloom_bits - 1;
-        let bloom_bytes = (log2(bloom_bits) + 7) / 8;
-
-        let hash = match input {
-            BloomInput::Raw(raw) => Cow::Owned(keccak256(raw).0),
-            BloomInput::Hash(hash) => Cow::Borrowed(hash),
-        };
-
-        // must be a power of 2
-        assert_eq!(m & (m - 1), 0);
-        // out of range
-        assert!(p * bloom_bytes <= hash.len() as u32);
+        let hash = input.into_hash();
 
         let mut ptr = 0;
 
         for _ in 0..3 {
             let mut index = 0_usize;
-            for _ in 0..bloom_bytes {
+            for _ in 0..ITEM_BYTES {
                 index = (index << 8) | hash[ptr] as usize;
                 ptr += 1;
             }
-            index &= mask;
-            self.0[m - 1 - index / 8] |= 1 << (index % 8);
+            index &= MASK;
+            self.0[BLOOM_SIZE_BYTES - 1 - index / 8] |= 1 << (index % 8);
         }
     }
 
     /// Accrues the input into the bloom filter.
-    pub fn accrue_bloom<'a, B: Into<BloomRef<'a>>>(&mut self, bloom: B) {
-        let bloom_ref: BloomRef<'_> = bloom.into();
-        for i in 0..BLOOM_SIZE {
-            self.0[i] |= bloom_ref.0[i];
-        }
+    pub fn accrue_bloom<B: Borrow<Bloom>>(&mut self, bloom: B) {
+        let other = bloom.borrow();
+        *self |= *other;
     }
 
     /// See Section 4.3.1 "Transaction Receipt" of the Ethereum Yellow Paper.
@@ -106,55 +121,18 @@ impl Bloom {
         let h: &[u8; 32] = hash.as_ref();
         for i in [0, 2, 4] {
             let bit = (h[i + 1] as usize + ((h[i] as usize) << 8)) & 0x7FF;
-            self.0[BLOOM_SIZE - 1 - bit / 8] |= 1 << (bit % 8);
+            self.0[BLOOM_SIZE_BYTES - 1 - bit / 8] |= 1 << (bit % 8);
         }
     }
 }
 
-/// A reference to a bloom filter. Can be
-#[derive(Clone, Copy, Debug)]
-pub struct BloomRef<'a>(pub &'a [u8; BLOOM_SIZE]);
-
-impl<'a> BloomRef<'a> {
-    /// Returns whether the bloom filter contains the given input.
-    pub fn contains_bloom<'b, B: Into<BloomRef<'b>>>(self, bloom: B) -> bool {
-        let bloom_ref: BloomRef<'_> = bloom.into();
-        self.0.iter().zip(bloom_ref.0).all(|(&a, &b)| (a & b) == b)
-    }
-
-    /// Returns the underlying data.
-    #[inline]
-    pub const fn data(self) -> &'a [u8; BLOOM_SIZE] {
-        self.0
-    }
-
-    /// Returns `true` if bloom only consists only of `0`.
-    #[inline]
-    pub fn is_empty(self) -> bool {
-        self.0.iter().all(|x| *x == 0)
-    }
-}
-
-impl<'a> From<&'a [u8; BLOOM_SIZE]> for BloomRef<'a> {
-    fn from(data: &'a [u8; BLOOM_SIZE]) -> Self {
-        Self(data)
-    }
-}
-
-impl<'a> From<&'a Bloom> for BloomRef<'a> {
-    fn from(bloom: &'a Bloom) -> Self {
-        Self(&bloom.0)
-    }
-}
-
 #[inline]
-const fn log2(x: usize) -> u32 {
+const fn log2(x: usize) -> usize {
     if x <= 1 {
         return 0
     }
 
-    let n = x.leading_zeros();
-    mem::size_of::<usize>() as u32 * 8 - n
+    (usize::BITS - x.leading_zeros()) as usize
 }
 
 #[cfg(test)]
@@ -164,7 +142,7 @@ mod tests {
 
     #[test]
     fn works() {
-        let bloom: Bloom = hex!(
+        let bloom = bloom!(
             "00000000000000000000000000000000
              00000000100000000000000000000000
              00000000000000000000000000000000
@@ -181,8 +159,7 @@ mod tests {
              00000000000000000000000000000000
              00000000000000000000000000000000
              00000000000000000000000000000000"
-        )
-        .into();
+        );
         let address = hex!("ef2d6d194084c2de36e0dabfce45d046b37d1106");
         let topic = hex!("02c69be41d0b7e40352fc85be1cd65eb03d40ef8427a0ca4596b1ead9a00e9fc");
 

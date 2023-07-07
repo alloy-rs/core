@@ -1,12 +1,13 @@
 //! This module contains the [`SolStruct`] trait, which is used to implement
 //! Solidity structs logic, particularly for EIP-712 encoding/decoding.
 
-use super::SolType;
-use crate::{no_std_prelude::*, token::TokenSeq, Eip712Domain, Result, Word};
-use ethers_primitives::{keccak256, B256};
+use super::{Encodable, SolType};
+use crate::{token::TokenSeq, Eip712Domain, TokenType, Word};
+use alloc::{borrow::Cow, string::String, vec::Vec};
+use alloy_primitives::{keccak256, B256};
 
-type TupleFor<T> = <T as SolStruct>::Tuple;
-type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
+type TupleFor<'a, T> = <T as SolStruct>::Tuple<'a>;
+type TupleTokenTypeFor<'a, T> = <TupleFor<'a, T> as SolType>::TokenType<'a>;
 
 /// A Solidity Struct.
 ///
@@ -30,12 +31,12 @@ type TupleTokenTypeFor<T> = <TupleFor<T> as SolType>::TokenType;
 ///
 /// [`eip712_encode_type`]: SolStruct::eip712_encode_type
 /// [ref]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
-pub trait SolStruct {
-    /// The corresponding Token type.
-    type Token: TokenSeq;
-
+pub trait SolStruct: 'static {
     /// The corresponding Tuple type, used for encoding/decoding.
-    type Tuple: SolType<TokenType = Self::Token>;
+    type Tuple<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
+
+    /// The corresponding Token type.
+    type Token<'a>: TokenSeq<'a>;
 
     /// The struct name.
     ///
@@ -49,11 +50,25 @@ pub trait SolStruct {
     /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
     const FIELDS: &'static [(&'static str, &'static str)];
 
+    // TODO: avoid clones here
     /// Convert to the tuple type used for ABI encoding and decoding.
-    fn to_rust(&self) -> <Self::Tuple as SolType>::RustType;
+    fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType;
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn from_rust(tuple: <Self::Tuple as SolType>::RustType) -> Self;
+    fn new(tuple: <Self::Tuple<'_> as SolType>::RustType) -> Self;
+
+    /// Convert to the token type used for EIP-712 encoding and decoding.
+    fn tokenize(&self) -> Self::Token<'_>;
+
+    /// The size of the struct when encoded, in bytes
+    #[inline]
+    fn encoded_size(&self) -> usize {
+        if let Some(size) = <Self::Tuple<'_> as SolType>::ENCODED_SIZE {
+            return size
+        }
+
+        self.tokenize().total_words() * Word::len_bytes()
+    }
 
     /// EIP-712 `encodeType`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
@@ -83,7 +98,7 @@ pub trait SolStruct {
     /// <https://eips.ethereum.org/EIPS/eip-712#rationale-for-typehash>
     #[inline]
     fn eip712_type_hash(&self) -> B256 {
-        keccak256(Self::eip712_encode_type().as_bytes())
+        keccak256(<Self as SolStruct>::eip712_encode_type().as_bytes())
     }
 
     /// EIP-712 `encodeData`
@@ -115,20 +130,29 @@ pub trait SolStruct {
     }
 }
 
+impl<T: SolStruct> Encodable<T> for T {
+    #[inline]
+    fn to_tokens(&self) -> <Self as SolType>::TokenType<'_> {
+        <Self as SolStruct>::tokenize(self)
+    }
+}
+
 // blanket impl
 // TODO: Maybe move this to `sol!`?
 impl<T: SolStruct> SolType for T {
     type RustType = T;
-    type TokenType = TupleTokenTypeFor<T>;
+    type TokenType<'a> = TupleTokenTypeFor<'a, T>;
+
+    const DYNAMIC: bool = TupleFor::<T>::DYNAMIC;
 
     #[inline]
-    fn is_dynamic() -> bool {
-        <<Self as SolStruct>::Tuple as SolType>::is_dynamic()
+    fn type_check(token: &Self::TokenType<'_>) -> crate::Result<()> {
+        TupleFor::<T>::type_check(token)
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType) -> crate::Result<()> {
-        TupleFor::<T>::type_check(token)
+    fn encoded_size<'a>(rust: &Self::RustType) -> usize {
+        rust.encoded_size()
     }
 
     #[inline]
@@ -137,30 +161,24 @@ impl<T: SolStruct> SolType for T {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType) -> Result<Self::RustType> {
-        let tuple = TupleFor::<T>::detokenize(token)?;
-        Ok(T::from_rust(tuple))
-    }
-
-    #[inline]
-    fn tokenize<B: Borrow<Self::RustType>>(rust: B) -> Self::TokenType {
-        let tuple = rust.borrow().to_rust();
-        TupleFor::<T>::tokenize(tuple)
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+        let tuple = TupleFor::<T>::detokenize(token);
+        T::new(tuple)
     }
 
     #[inline]
     fn eip712_encode_type() -> Option<Cow<'static, str>> {
-        Some(Self::eip712_encode_type())
+        Some(<Self as SolStruct>::eip712_encode_type())
     }
 
     #[inline]
-    fn eip712_data_word<B: Borrow<Self::RustType>>(rust: B) -> Word {
-        keccak256(SolStruct::eip712_hash_struct(rust.borrow()))
+    fn eip712_data_word<'a>(rust: &Self::RustType) -> Word {
+        keccak256(rust.eip712_hash_struct())
     }
 
     #[inline]
-    fn encode_packed_to<B: Borrow<Self::RustType>>(target: &mut Vec<u8>, rust: B) {
-        let tuple = rust.borrow().to_rust();
-        TupleFor::<T>::encode_packed_to(target, tuple)
+    fn encode_packed_to<'a>(rust: &Self::RustType, out: &mut Vec<u8>) {
+        let tuple = rust.to_rust();
+        TupleFor::<T>::encode_packed_to(&tuple, out)
     }
 }

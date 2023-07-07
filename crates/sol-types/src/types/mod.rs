@@ -1,16 +1,25 @@
+pub mod data_type;
+
+mod r#enum;
+pub use r#enum::SolEnum;
+
 mod error;
 pub use error::{Panic, PanicKind, Revert, SolError};
 
-mod call;
-pub use call::SolCall;
+mod event;
+pub use event::{EventTopic, SolEvent, TopicList};
 
-mod r#type;
-pub use r#type::SolType;
+mod function;
+pub use function::SolCall;
+
+mod interface;
+pub use interface::{ContractError, Selectors, SolInterface};
 
 mod r#struct;
 pub use r#struct::SolStruct;
 
-pub mod data_type;
+mod ty;
+pub use ty::{Encodable, SolType};
 
 // Solidity user-defined value types.
 // No exports are needed as the only item is a macro.

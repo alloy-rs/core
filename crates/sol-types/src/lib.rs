@@ -1,5 +1,5 @@
 // Copyright 2015-2020 Parity Technologies
-// Copyright 2023-2023 Ethers-rs Team
+// Copyright 2023-2023 Alloy Contributors
 
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -24,8 +24,8 @@
 //! `encode` and `decode` methods operate on objects implementing [`TokenType`].
 //!
 //! ```
-//! use ethers_sol_types::{SolType, sol_data::*};
-//! # pub fn main() -> ethers_sol_types::Result<()> {
+//! use alloy_sol_types::{SolType, sol_data::*};
+//! # pub fn main() -> alloy_sol_types::Result<()> {
 //! // Represent a Solidity type in rust
 //! type MySolType = FixedArray<Bool, 2>;
 //!
@@ -36,7 +36,7 @@
 //! assert_eq!(&MySolType::sol_type_name(), "bool[2]");
 //!
 //! // SolTypes are used to transform Rust into ABI blobs, and back.
-//! let encoded: Vec<u8> = MySolType::encode(data);
+//! let encoded: Vec<u8> = MySolType::encode(&data);
 //! let decoded: [bool; 2] = MySolType::decode(&encoded, validate)?;
 //! assert_eq!(data, decoded);
 //! # Ok(())
@@ -54,8 +54,8 @@
 //! The [`SolStruct`] trait primarily provides EIP-712 signing support.
 //!
 //! ```
-//! # use ethers_sol_types::{sol, SolStruct};
-//! # use ethers_primitives::U256;
+//! # use alloy_sol_types::{sol, SolStruct};
+//! # use alloy_primitives::U256;
 //! // `sol!` allows you to define struct types!
 //! // You can just paste Solidity into the macro and it should work :)
 //! sol! {
@@ -83,8 +83,9 @@
 //!     c: vec![Default::default()],
 //! };
 //!
-//! // The domain macro lets you easily define an EIP-712 domain object :)
-//! let my_domain = ethers_sol_types::domain!(
+//! // The `eip712_domain` macro lets you easily define an EIP-712 domain
+//! // object :)
+//! let my_domain = alloy_sol_types::eip712_domain!(
 //!    name: "MyDomain",
 //!    version: "1",
 //! );
@@ -102,8 +103,8 @@
 //! features!
 //!
 //! ```
-//! # use ethers_sol_types::{sol, sol_data, SolType};
-//! # use ethers_primitives::U256;
+//! # use alloy_sol_types::{sol, sol_data, SolType};
+//! # use alloy_primitives::U256;
 //! // We also also support Solidity value types
 //! sol! {
 //!     type MyValueType is uint256;
@@ -114,7 +115,7 @@
 //! let mvt = MyValueType::from(U256::from(1));
 //! assert_eq!(
 //!     mvt.encode_single(),
-//!     sol_data::Uint::<256>::encode_single(U256::from(1))
+//!     sol_data::Uint::<256>::encode_single(&U256::from(1))
 //! );
 //! # }
 //! ```
@@ -140,38 +141,31 @@
 //! recommend users use them wherever possible. We do not recommend that users
 //! interact with Tokens, except when implementing their own [`SolType`].
 
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
+    html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
+)]
 #![warn(
     missing_docs,
     unreachable_pub,
-    unused_crate_dependencies,
     missing_copy_implementations,
     missing_debug_implementations,
-    clippy::missing_const_for_fn
+    clippy::missing_const_for_fn,
+    rustdoc::all
 )]
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+
+#[allow(unused_extern_crates)]
+extern crate self as alloy_sol_types;
 
 #[macro_use]
 extern crate alloc;
 
-// This crate is used in tests/compiletest.rs
-#[cfg(test)]
-use trybuild as _;
-
-#[doc(hidden)]
-pub mod no_std_prelude {
-    pub use alloc::{
-        borrow::{Borrow, Cow, ToOwned},
-        string::{String, ToString},
-        vec::Vec,
-    };
-}
-
-#[doc(inline)]
-pub use ethers_sol_macro::sol;
-
-/// The ABI word type.
-pub type Word = ethers_primitives::B256;
+#[macro_use]
+mod macros;
 
 mod coder;
 pub use coder::{
@@ -184,17 +178,42 @@ pub use coder::{Decoder, Encoder};
 mod errors;
 pub use errors::{Error, Result};
 
+mod impl_core;
+
 mod types;
 pub use types::{
-    data_type as sol_data, Panic, PanicKind, Revert, SolCall, SolError, SolStruct, SolType,
+    data_type as sol_data, ContractError, Encodable, EventTopic, Panic, PanicKind, Revert,
+    Selectors, SolCall, SolEnum, SolError, SolEvent, SolInterface, SolStruct, SolType, TopicList,
 };
 
-mod util;
-
-#[doc(hidden)]
-pub use ethers_primitives::keccak256;
-#[doc(hidden)]
-pub use util::just_ok;
+pub mod utils;
 
 mod eip712;
 pub use eip712::Eip712Domain;
+
+/// The ABI word type.
+pub type Word = alloy_primitives::B256;
+
+#[doc(inline)]
+pub use alloy_sol_macro::sol;
+
+// Not public API.
+#[doc(hidden)]
+pub mod private {
+    pub use super::utils::{just_ok, next_multiple_of_32, words_for, words_for_len};
+    pub use alloc::{
+        borrow::{Borrow, Cow, ToOwned},
+        string::{String, ToString},
+        vec::Vec,
+    };
+    pub use alloy_primitives::{keccak256, FixedBytes, B256, U256};
+    pub use core::{convert::From, default::Default, option::Option, result::Result};
+
+    pub use Option::{None, Some};
+    pub use Result::{Err, Ok};
+
+    #[inline(always)]
+    pub const fn u256(n: u64) -> U256 {
+        U256::from_limbs([n, 0, 0, 0])
+    }
+}

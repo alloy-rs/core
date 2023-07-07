@@ -1,4 +1,4 @@
-//! Implementation of dyanmic EIP-712.
+//! Implementation of dynamic EIP-712.
 //!
 //! This allows for the encoding of EIP-712 messages without having to know the
 //! types at compile time. This is useful for things like off-chain signing.
@@ -7,13 +7,12 @@
 //!
 //! <https://eips.ethereum.org/EIPS/eip-712#specification-of-the-eth_signtypeddata-json-rpc>
 
-/// EIP-712 specific parsing structures.
 pub mod parser;
 
 mod typed_data;
 pub use typed_data::{Eip712Types, TypedData};
 
 mod resolver;
-pub use resolver::{PropertyDef, Resolver};
+pub use resolver::{PropertyDef, Resolver, TypeDef};
 
 pub(crate) mod coerce;

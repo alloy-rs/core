@@ -8,8 +8,13 @@
 //! the field deserialization fails, as we don't serialize field
 //! names and there is no way to tell if it is present or not.
 
-#![warn(missing_docs, unreachable_pub)]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
+    html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
+)]
+#![warn(missing_docs, unreachable_pub, rustdoc::all)]
 #![deny(unused_must_use, unused_crate_dependencies)]
+#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 extern crate proc_macro;
 

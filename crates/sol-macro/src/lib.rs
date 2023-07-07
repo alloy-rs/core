@@ -1,24 +1,27 @@
-//! # ethers-sol-macro
+//! # alloy-sol-macro
 //!
 //! This crate provides the [`sol`][sol!] procedural macro, which parses
-//! Solidity syntax to generate types that implement [`ethers-sol-types`]
+//! Solidity syntax to generate types that implement [`alloy-sol-types`]
 //! traits.
 //!
 //! Refer to the [macro's documentation][sol!] for more information.
 
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
+    html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
+)]
+#![warn(missing_docs, rustdoc::all)]
+#![deny(unused_must_use, rust_2018_idioms)]
+#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+
+extern crate syn_solidity as ast;
+
 use proc_macro::TokenStream;
-use quote::ToTokens;
-use syn::parse_macro_input;
 
-mod common;
-mod error;
-mod function;
-mod input;
-mod r#struct;
-mod r#type;
-mod udt;
+mod expand;
+mod utils;
 
-/// Parses Solidity syntax to generate types that implement [`ethers-sol-types`]
+/// Parses Solidity syntax to generate types that implement [`alloy-sol-types`]
 /// traits.
 ///
 /// These types may then be used for safe [ABI] and [EIP-712] encoding and
@@ -26,38 +29,49 @@ mod udt;
 ///
 /// [ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html
 /// [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
-/// [`ethers-sol-types`]: https://docs.rs/ethers-sol-types
+/// [`alloy-sol-types`]: https://docs.rs/alloy-sol-types
 ///
 /// # Examples
 ///
-/// Note: the following examples cannot tested here because the generated code
-/// references `ethers-sol-types`, so they are [tested in that crate][tests] and
-/// included with `include_str!` in this doc instead.
+/// Note: the following examples cannot be tested here because the generated
+/// code references `alloy-sol-types`, so they are [tested in that crate]
+/// [tests] and included with `include_str!` in this doc instead.
 ///
-/// [tests]: https://github.com/ethers-rs/core/tree/main/crates/sol-types/tests/
+/// [tests]: https://github.com/alloy-rs/core/tree/main/crates/sol-types/tests/
 ///
-/// Structs and enums:
-///
-/// ```ignore.
-#[doc = include_str!("../../sol-types/tests/doc_structs.rs")]
+/// ## Structs and enums
+/// ```ignore
+#[doc = include_str!("../doctests/structs.rs")]
 /// ```
 /// 
-/// UDVT and type aliases:
-/// ```ignore.
-#[doc = include_str!("../../sol-types/tests/doc_types.rs")]
+/// ## UDVT and type aliases
+/// ```ignore
+#[doc = include_str!("../doctests/types.rs")]
 /// ```
 /// 
-/// Functions, errors, and events:
-/// ```ignore.
-#[doc = include_str!("../../sol-types/tests/doc_function_like.rs")]
+/// ## Functions and errors
+/// ```ignore
+#[doc = include_str!("../doctests/function_like.rs")]
 /// ```
 /// 
-/// Contracts/interfaces:
-/// ```ignore.
-#[doc = include_str!("../../sol-types/tests/doc_contracts.rs")]
+/// ## Events
+/// ```ignore
+#[doc = include_str!("../doctests/events.rs")]
+/// ```
+/// 
+/// ## Contracts/interfaces
+/// ```ignore
+#[doc = include_str!("../doctests/contracts.rs")]
 /// ```
 #[proc_macro]
 pub fn sol(input: TokenStream) -> TokenStream {
-    let s = parse_macro_input!(input as input::Input);
-    s.to_token_stream().into()
+    let result = match ast::parse(input.clone()) {
+        Ok(ast) => expand::expand(ast),
+        // TODO: Should we still support this?
+        Err(e) => match syn::parse::<ast::Type>(input) {
+            Ok(ast::Type::Custom(_)) | Err(_) => Err(e),
+            Ok(ty) => Ok(expand::expand_type(&ty)),
+        },
+    };
+    result.unwrap_or_else(syn::Error::into_compile_error).into()
 }

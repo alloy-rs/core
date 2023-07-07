@@ -1,49 +1,26 @@
 #![doc = include_str!("../README.md")]
-// This doctest uses derive and alloc, so it cannot be in the README :(
-#![cfg_attr(
-    all(feature = "derive", feature = "std"),
-    doc = r##"
-
-## Usage Example
-
-```rust
-use ethers_rlp::{RlpEncodable, RlpDecodable, Decodable, Encodable};
-
-#[derive(Debug, RlpEncodable, RlpDecodable, PartialEq)]
-pub struct MyStruct {
-    pub a: u64,
-    pub b: Vec<u8>,
-}
-
-fn main() {
-    let my_struct = MyStruct {
-        a: 42,
-        b: vec![1, 2, 3],
-    };
-
-    let mut buffer = Vec::<u8>::new();
-    let encoded = my_struct.encode(&mut buffer);
-    let decoded = MyStruct::decode(&mut buffer.as_slice()).unwrap();
-    assert_eq!(my_struct, decoded);
-}
-```
-"##
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
+    html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
-#![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
+#![warn(
+    missing_docs,
+    unreachable_pub,
+    unused_crate_dependencies,
+    clippy::missing_const_for_fn,
+    rustdoc::all
+)]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
-#[cfg(feature = "alloc")]
+#[macro_use]
+#[allow(unused_imports)]
 extern crate alloc;
-
-// Used in alloc tests.
-#[cfg(test)]
-#[allow(unused_extern_crates)]
-extern crate hex_literal;
 
 mod decode;
 mod encode;
-mod types;
+mod header;
 
 pub use bytes::{Buf, BufMut};
 
@@ -52,9 +29,15 @@ pub use encode::{
     const_add, encode_fixed_size, encode_iter, encode_list, length_of_length, list_length,
     Encodable, MaxEncodedLen, MaxEncodedLenAssoc,
 };
-pub use types::{Header, EMPTY_LIST_CODE, EMPTY_STRING_CODE};
+pub use header::Header;
 
 #[cfg(feature = "derive")]
-pub use ethers_rlp_derive::{
+pub use alloy_rlp_derive::{
     RlpDecodable, RlpDecodableWrapper, RlpEncodable, RlpEncodableWrapper, RlpMaxEncodedLen,
 };
+
+/// RLP prefix byte for 0-length string.
+pub const EMPTY_STRING_CODE: u8 = 0x80;
+
+/// RLP prefix byte for a 0-length array.
+pub const EMPTY_LIST_CODE: u8 = 0xC0;

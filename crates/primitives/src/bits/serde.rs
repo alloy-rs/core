@@ -20,9 +20,9 @@ mod tests {
 
     #[test]
     fn serde() {
-        let bytes = FixedBytes([1, 35, 69, 103, 137, 171, 205, 239]);
+        let bytes = FixedBytes([0, 0, 0, 0, 1, 35, 69, 103, 137, 171, 205, 239]);
         let ser = serde_json::to_string(&bytes).unwrap();
-        assert_eq!(ser, "\"0x0123456789abcdef\"");
-        assert_eq!(serde_json::from_str::<FixedBytes<8>>(&ser).unwrap(), bytes);
+        assert_eq!(ser, "\"0x000000000123456789abcdef\"");
+        assert_eq!(serde_json::from_str::<FixedBytes<12>>(&ser).unwrap(), bytes);
     }
 }

@@ -1,8 +1,6 @@
-use crate::{
-    no_std_prelude::{Cow, String, Vec},
-    sol_data, SolType,
-};
-use ethers_primitives::{keccak256, Address, B256, U256};
+use crate::{sol_data, SolType};
+use alloc::{borrow::Cow, string::String, vec::Vec};
+use alloy_primitives::{keccak256, Address, B256, U256};
 
 /// Eip712 Domain attributes used in determining the domain separator;
 /// Unused fields are left out of the struct type.
@@ -135,61 +133,57 @@ impl Eip712Domain {
         ) {
             (None, None, None, None, None) => vec![],
             (None, None, None, None, Some(salt)) => {
-                <(sol_data::FixedBytes<32>,)>::encode((salt.0,))
+                <(sol_data::FixedBytes<32>,)>::encode(&(salt.0,))
             }
             (None, None, None, Some(verifying_contract), None) => {
-                <(sol_data::Address,)>::encode((verifying_contract,))
+                <(sol_data::Address,)>::encode(&(verifying_contract,))
             }
             (None, None, None, Some(verifying_contract), Some(salt)) => {
-                <(sol_data::Address, sol_data::FixedBytes<32>)>::encode((
+                <(sol_data::Address, sol_data::FixedBytes<32>)>::encode(&(
                     verifying_contract,
                     salt.0,
                 ))
             }
             (None, None, Some(chain_id), None, None) => {
-                <(sol_data::Uint<256>,)>::encode((chain_id,))
+                <(sol_data::Uint<256>,)>::encode(&(chain_id,))
             }
             (None, None, Some(chain_id), None, Some(salt)) => {
-                <(sol_data::Uint<256>, sol_data::FixedBytes<32>)>::encode((chain_id, salt.0))
+                <(sol_data::Uint<256>, sol_data::FixedBytes<32>)>::encode(&(chain_id, salt.0))
             }
             (None, None, Some(chain_id), Some(verifying_contract), None) => {
-                <(sol_data::Uint<256>, sol_data::Address)>::encode((chain_id, verifying_contract))
+                <(sol_data::Uint<256>, sol_data::Address)>::encode(&(chain_id, verifying_contract))
             }
             (None, None, Some(chain_id), Some(verifying_contract), Some(salt)) => {
                 <(
                     sol_data::Uint<256>,
                     sol_data::Address,
                     sol_data::FixedBytes<32>,
-                )>::encode((chain_id, verifying_contract, salt.0))
+                )>::encode(&(chain_id, verifying_contract, salt.0))
             }
             (None, Some(version), None, None, None) => {
-                <(sol_data::FixedBytes<32>,)>::encode((keccak256(version.as_bytes()).0,))
+                <(sol_data::FixedBytes<32>,)>::encode(&(keccak256(version.as_bytes()).0,))
             }
             (None, Some(version), None, None, Some(salt)) => {
-                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode(&(
                     keccak256(version.as_bytes()).0,
                     salt.0,
                 ))
             }
             (None, Some(version), None, Some(verifying_contract), None) => {
-                <(sol_data::FixedBytes<32>, sol_data::Address)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::Address)>::encode(&(
                     keccak256(version.as_bytes()).0,
                     verifying_contract,
                 ))
             }
-            (None, Some(version), None, Some(verifying_contract), Some(salt)) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::Address,
-                    sol_data::FixedBytes<32>,
-                )>::encode((
-                    keccak256(version.as_bytes()).0,
-                    verifying_contract,
-                    salt.0,
-                ))
-            }
+            (None, Some(version), None, Some(verifying_contract), Some(salt)) => <(
+                sol_data::FixedBytes<32>,
+                sol_data::Address,
+                sol_data::FixedBytes<32>,
+            )>::encode(
+                &(keccak256(version.as_bytes()).0, verifying_contract, salt.0),
+            ),
             (None, Some(version), Some(chain_id), None, None) => {
-                <(sol_data::FixedBytes<32>, sol_data::Uint<256>)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::Uint<256>)>::encode(&(
                     keccak256(version.as_bytes()).0,
                     chain_id,
                 ))
@@ -199,14 +193,14 @@ impl Eip712Domain {
                     sol_data::FixedBytes<32>,
                     sol_data::Uint<256>,
                     sol_data::FixedBytes<32>,
-                )>::encode((keccak256(version.as_bytes()).0, chain_id, salt.0))
+                )>::encode(&(keccak256(version.as_bytes()).0, chain_id, salt.0))
             }
             (None, Some(version), Some(chain_id), Some(verifying_contract), None) => {
                 <(
                     sol_data::FixedBytes<32>,
                     sol_data::Uint<256>,
                     sol_data::Address,
-                )>::encode((
+                )>::encode(&(
                     keccak256(version.as_bytes()).0,
                     chain_id,
                     verifying_contract,
@@ -218,7 +212,7 @@ impl Eip712Domain {
                     sol_data::Uint<256>,
                     sol_data::Address,
                     sol_data::FixedBytes<32>,
-                )>::encode((
+                )>::encode(&(
                     keccak256(version.as_bytes()).0,
                     chain_id,
                     verifying_contract,
@@ -226,33 +220,29 @@ impl Eip712Domain {
                 ))
             }
             (Some(name), None, None, None, None) => {
-                <(sol_data::FixedBytes<32>,)>::encode((keccak256(name.as_bytes()).0,))
+                <(sol_data::FixedBytes<32>,)>::encode(&(keccak256(name.as_bytes()).0,))
             }
             (Some(name), None, None, None, Some(salt)) => {
-                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode(&(
                     keccak256(name.as_bytes()).0,
                     salt.0,
                 ))
             }
             (Some(name), None, None, Some(verifying_contract), None) => {
-                <(sol_data::FixedBytes<32>, sol_data::Address)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::Address)>::encode(&(
                     keccak256(name.as_bytes()).0,
                     verifying_contract,
                 ))
             }
-            (Some(name), None, None, Some(verifying_contract), Some(salt)) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::Address,
-                    sol_data::FixedBytes<32>,
-                )>::encode((
-                    keccak256(name.as_bytes()).0,
-                    verifying_contract,
-                    salt.0,
-                ))
-            }
+            (Some(name), None, None, Some(verifying_contract), Some(salt)) => <(
+                sol_data::FixedBytes<32>,
+                sol_data::Address,
+                sol_data::FixedBytes<32>,
+            )>::encode(
+                &(keccak256(name.as_bytes()).0, verifying_contract, salt.0),
+            ),
             (Some(name), None, Some(chain_id), None, None) => {
-                <(sol_data::FixedBytes<32>, sol_data::Uint<256>)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::Uint<256>)>::encode(&(
                     keccak256(name.as_bytes()).0,
                     chain_id,
                 ))
@@ -262,26 +252,22 @@ impl Eip712Domain {
                     sol_data::FixedBytes<32>,
                     sol_data::Uint<256>,
                     sol_data::FixedBytes<32>,
-                )>::encode((keccak256(name.as_bytes()).0, chain_id, salt.0))
+                )>::encode(&(keccak256(name.as_bytes()).0, chain_id, salt.0))
             }
-            (Some(name), None, Some(chain_id), Some(verifying_contract), None) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::Uint<256>,
-                    sol_data::Address,
-                )>::encode((
-                    keccak256(name.as_bytes()).0,
-                    chain_id,
-                    verifying_contract,
-                ))
-            }
+            (Some(name), None, Some(chain_id), Some(verifying_contract), None) => <(
+                sol_data::FixedBytes<32>,
+                sol_data::Uint<256>,
+                sol_data::Address,
+            )>::encode(
+                &(keccak256(name.as_bytes()).0, chain_id, verifying_contract),
+            ),
             (Some(name), None, Some(chain_id), Some(verifying_contract), Some(salt)) => {
                 <(
                     sol_data::FixedBytes<32>,
                     sol_data::Uint<256>,
                     sol_data::Address,
                     sol_data::FixedBytes<32>,
-                )>::encode((
+                )>::encode(&(
                     keccak256(name.as_bytes()).0,
                     chain_id,
                     verifying_contract,
@@ -289,7 +275,7 @@ impl Eip712Domain {
                 ))
             }
             (Some(name), Some(version), None, None, None) => {
-                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode((
+                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode(&(
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
                 ))
@@ -298,7 +284,7 @@ impl Eip712Domain {
                 sol_data::FixedBytes<32>,
                 sol_data::FixedBytes<32>,
                 sol_data::FixedBytes<32>,
-            )>::encode((
+            )>::encode(&(
                 keccak256(name.as_bytes()).0,
                 keccak256(version.as_bytes()).0,
                 salt.0,
@@ -308,7 +294,7 @@ impl Eip712Domain {
                     sol_data::FixedBytes<32>,
                     sol_data::FixedBytes<32>,
                     sol_data::Address,
-                )>::encode((
+                )>::encode(&(
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
                     verifying_contract,
@@ -320,7 +306,7 @@ impl Eip712Domain {
                     sol_data::FixedBytes<32>,
                     sol_data::Address,
                     sol_data::FixedBytes<32>,
-                )>::encode((
+                )>::encode(&(
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
                     verifying_contract,
@@ -331,7 +317,7 @@ impl Eip712Domain {
                 sol_data::FixedBytes<32>,
                 sol_data::FixedBytes<32>,
                 sol_data::Uint<256>,
-            )>::encode((
+            )>::encode(&(
                 keccak256(name.as_bytes()).0,
                 keccak256(version.as_bytes()).0,
                 chain_id,
@@ -342,7 +328,7 @@ impl Eip712Domain {
                     sol_data::FixedBytes<32>,
                     sol_data::Uint<256>,
                     sol_data::FixedBytes<32>,
-                )>::encode((
+                )>::encode(&(
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
                     chain_id,
@@ -355,7 +341,7 @@ impl Eip712Domain {
                     sol_data::FixedBytes<32>,
                     sol_data::Uint<256>,
                     sol_data::Address,
-                )>::encode((
+                )>::encode(&(
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
                     chain_id,
@@ -369,7 +355,7 @@ impl Eip712Domain {
                     sol_data::Uint<256>,
                     sol_data::Address,
                     sol_data::FixedBytes<32>,
-                )>::encode((
+                )>::encode(&(
                     keccak256(name.as_bytes()).0,
                     keccak256(version.as_bytes()).0,
                     chain_id,
@@ -390,298 +376,134 @@ impl Eip712Domain {
     }
 }
 
-// This was generated by excel meta-programming
-/// Instantiate an EIP-712 domain.
+/// Convenience macro to instantiate an EIP-712 domain.
+///
+/// This macro allows you to instantiate an Eip712Domain struct without
+/// manually writing `None` for unused fields. It may be used to declare
+/// a domain with any combination of fields. Each field must be labeled
+/// with the name of the field, and the fields must be in order. The
+/// fields for the domain are:
+/// - `name`
+/// - `version`
+/// - `chain_id`
+/// - `verifying_contract`
+/// - `salt`
+///
+/// ```
+/// # use alloy_sol_types::{Eip712Domain, eip712_domain};
+/// # use alloy_primitives::keccak256;
+///
+/// const MY_DOMAIN: Eip712Domain = eip712_domain!{
+///     name: "MyCoolProtocol",
+/// };
+///
+/// # fn main() {
+/// let my_other_domain: Eip712Domain = eip712_domain!{
+///     name: "MyCoolProtocol",
+///     version: "1.0.0",
+///     salt: keccak256("my domain salt"),
+/// };
+/// # }
+/// ```
 #[macro_export]
-macro_rules! domain {
-    (salt: $salt:expr,) => {
+macro_rules! eip712_domain {
+    (@opt) => { $crate::private::None };
+    (@opt $e:expr) => { $crate::private::Some($e) };
+
+    (
+        $(name: $name:expr,)?
+        $(version: $version:expr,)?
+        $(chain_id: $chain_id:expr,)?
+        $(verifying_contract: $verifying_contract:expr,)?
+        $(salt: $salt:expr)?
+        $(,)?
+    ) => {
         $crate::Eip712Domain::new(
-            None,
-            None,
-            None,
-            None,
-            Some($salt),
-        )
-    };
-    (verifying_contract: $verifying_contract:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            None,
-            None,
-            Some($verifying_contract),
-            None,
-        )
-    };
-    (verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            None,
-            None,
-            Some($verifying_contract),
-            Some($salt),
-        )
-    };
-    (chain_id: $chain_id:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            None,
-            Some($chain_id)
-            None,
-            None,
-        )
-    };
-    (chain_id: $chain_id:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            None,
-            Some($chain_id)
-            None,
-            Some($salt),
-        )
-    };
-    (chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            None,
-            Some($chain_id),
-            Some($verifying_contract),
-            None,
-        )
-    };
-    (chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            None,
-            Some($chain_id),
-            Some($verifying_contract),
-            Some($salt),
-        )
-    };
-    (version: $version:literal,) => {
-        $crate::Eip712Domain::new(
-            None,
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            None,
-            None,
-            None,
-        )
-    };
-    (version: $version:literal,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            None,
-            None,
-            Some($salt),
-        )
-    };
-    (version: $version:literal,verifying_contract: $verifying_contract:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            None,
-            Some($verifying_contract),
-            None,
-        )
-};
-    (version: $version:literal,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            None,
-            Some($verifying_contract),
-            Some($salt),
-        )
-    };
-    (version: $version:literal,chain_id: $chain_id:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            Some($chain_id)
-            None,
-            None,
-        )
-    };
-    (version: $version:literal,chain_id: $chain_id:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            Some($chain_id)
-            None,
-            Some($salt),
-        )
-    };
-    (version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            Some($chain_id),
-            Some($verifying_contract),
-            None,
-        )
-    };
-    (version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            None,
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            Some($chain_id),
-            Some($verifying_contract),
-            Some($salt),
-        )
-    };
-    (name: $name:literal,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            None,
-            None,
-            None,
-            None,
-        )
-    };
-    (name: $name:literal,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            None,
-            None,
-            None,
-            Some($salt),
-        )
-    };
-    (name: $name:literal,verifying_contract: $verifying_contract:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            None,
-            None,
-            Some($verifying_contract),
-            None,
-        )
-    };
-    (name: $name:literal,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            None,
-            None,
-            Some($verifying_contract),
-            Some($salt),
-        )
-    };
-    (name: $name:literal,chain_id: $chain_id:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            None,
-            Some($chain_id)
-            None,
-            None,
-        )
-    };
-    (name: $name:literal,chain_id: $chain_id:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            None,
-            Some($chain_id)
-            None,
-            Some($salt),
-        )
-    };
-    (name: $name:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            None,
-            Some($chain_id),
-            Some($verifying_contract),
-            None,
-        )
-    };
-    (name: $name:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            None,
-            Some($chain_id),
-            Some($verifying_contract),
-            Some($salt),
-        )
-    };
-    (name: $name:literal,version: $version:literal,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            None,
-            None,
-            None,
-        )
-    };
-    (name: $name:literal,version: $version:literal,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            None,
-            None,
-            Some($salt),
-        )
-    };
-    (name: $name:literal,version: $version:literal,verifying_contract: $verifying_contract:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            None,
-            Some($verifying_contract),
-            None,
-        )
-    };
-    (name: $name:literal,version: $version:literal,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            None,
-            Some($verifying_contract),
-            Some($salt),
-        )
-    };
-    (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            Some($chain_id)
-            None,
-            None,
-        )
-    };
-    (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            Some($chain_id)
-            None,
-            Some($salt),
-        )
-    };
-    (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            Some($chain_id),
-            Some($verifying_contract),
-            None,
-        )
-    };
-    (name: $name:literal,version: $version:literal,chain_id: $chain_id:expr,verifying_contract: $verifying_contract:expr,salt: $salt:expr,) => {
-        $crate::Eip712Domain::new(
-            Some($crate::no_std_prelude::Cow::Borrowed($name)),
-            Some($crate::no_std_prelude::Cow::Borrowed($version)),
-            Some($chain_id),
-            Some($verifying_contract),
-            Some($salt),
+            $crate::eip712_domain!(@opt $($crate::private::Cow::Borrowed($name))?),
+            $crate::eip712_domain!(@opt $($crate::private::Cow::Borrowed($version))?),
+            $crate::eip712_domain!(@opt $($crate::private::u256($chain_id))?),
+            $crate::eip712_domain!(@opt $($verifying_contract)?),
+            $crate::eip712_domain!(@opt $($salt)?),
         )
     };
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
-    const _DOMAIN: Eip712Domain = domain! {
+
+    const _: Eip712Domain = eip712_domain! {
+        name: "abcd",
+    };
+    const _: Eip712Domain = eip712_domain! {
         name: "abcd",
         version: "1",
-        chain_id: U256::from_limbs([1, 0, 0, 0]),
+    };
+    const _: Eip712Domain = eip712_domain! {
+        name: "abcd",
+        version: "1",
+        chain_id: 1,
+    };
+    const _: Eip712Domain = eip712_domain! {
+        name: "abcd",
+        version: "1",
+        chain_id: 1,
+        verifying_contract: Address::ZERO,
+    };
+    const _: Eip712Domain = eip712_domain! {
+        name: "abcd",
+        version: "1",
+        chain_id: 1,
+        verifying_contract: Address::ZERO,
+        salt: B256::ZERO // no trailing comma
+    };
+    const _: Eip712Domain = eip712_domain! {
+        name: "abcd",
+        version: "1",
+        chain_id: 1,
+        verifying_contract: Address::ZERO,
+        salt: B256::ZERO, // trailing comma
+    };
+
+    const _: Eip712Domain = eip712_domain! {
+        name: "abcd",
+        version: "1",
+        // chain_id: 1,
+        verifying_contract: Address::ZERO,
+        salt: B256::ZERO,
+    };
+    const _: Eip712Domain = eip712_domain! {
+        name: "abcd",
+        // version: "1",
+        chain_id: 1,
+        verifying_contract: Address::ZERO,
+        salt: B256::ZERO,
+    };
+    const _: Eip712Domain = eip712_domain! {
+        name: "abcd",
+        // version: "1",
+        // chain_id: 1,
+        verifying_contract: Address::ZERO,
+        salt: B256::ZERO,
+    };
+    const _: Eip712Domain = eip712_domain! {
+        name: "abcd",
+        // version: "1",
+        // chain_id: 1,
+        // verifying_contract: Address::ZERO,
+        salt: B256::ZERO,
+    };
+    const _: Eip712Domain = eip712_domain! {
+        // name: "abcd",
+        version: "1",
+        // chain_id: 1,
+        // verifying_contract: Address::ZERO,
+        salt: B256::ZERO,
+    };
+    const _: Eip712Domain = eip712_domain! {
+        // name: "abcd",
+        version: "1",
+        // chain_id: 1,
         verifying_contract: Address::ZERO,
         salt: B256::ZERO,
     };
