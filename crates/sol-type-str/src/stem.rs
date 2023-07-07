@@ -58,7 +58,7 @@ impl<'a> TypeStem<'a> {
 
     /// Fallible conversion to root type.
     #[inline]
-    pub fn as_root(&self) -> Option<&RootType<'_>> {
+    pub const fn as_root(&self) -> Option<&RootType<'_>> {
         match self {
             Self::Root(root) => Some(root),
             _ => None,
@@ -67,7 +67,7 @@ impl<'a> TypeStem<'a> {
 
     /// Fallible conversion to tuple type.
     #[inline]
-    pub fn as_tuple(&self) -> Option<&TupleSpecifier<'_>> {
+    pub const fn as_tuple(&self) -> Option<&TupleSpecifier<'_>> {
         match self {
             Self::Tuple(tuple) => Some(tuple),
             _ => None,

@@ -2,6 +2,8 @@ use alloy_sol_type_str::Error as TypeStrError;
 
 use core::fmt;
 
+use alloc::string::String;
+
 /// Dynamic ABI result type.
 pub type DynAbiResult<T, E = DynAbiError> = core::result::Result<T, E>;
 

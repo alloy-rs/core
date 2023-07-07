@@ -33,6 +33,7 @@ pub struct TupleSpecifier<'a> {
 }
 
 impl AsRef<str> for TupleSpecifier<'_> {
+    #[inline]
     fn as_ref(&self) -> &str {
         self.span
     }

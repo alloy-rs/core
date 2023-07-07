@@ -111,7 +111,7 @@ impl<'a> TypeSpecifier<'a> {
 
     /// The full span of the specifier.
     #[inline]
-    pub fn span(&self) -> &str {
+    pub const fn span(&self) -> &str {
         self.span
     }
 

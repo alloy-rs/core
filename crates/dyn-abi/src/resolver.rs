@@ -1,12 +1,11 @@
-//! Contains utilities for parsing Solidity types.
-//!
-//! This is a simple representation of Solidity type grammar.
+//! Contains utilities for resolving Solidity types from type strings.
 
+use crate::{DynAbiError, DynSolType};
+
+use alloc::{boxed::Box, vec::Vec};
 use alloy_sol_type_str::{
     Error as TypeStrError, RootType, TupleSpecifier, TypeSpecifier, TypeStem,
 };
-
-use crate::{DynAbiError, DynSolType};
 
 pub(crate) trait Resolve {
     /// Resolve the type string into a Solidity type.
