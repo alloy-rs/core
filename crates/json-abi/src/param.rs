@@ -4,7 +4,9 @@ use alloc::{
     vec::Vec,
 };
 use core::fmt;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
+
+use crate::utils::{validate_identifier, validate_ty};
 
 /// JSON specification of a parameter.
 ///
@@ -41,6 +43,8 @@ impl<'de> Deserialize<'de> for Param {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         BorrowedParam::deserialize(deserializer).and_then(|inner| {
             if inner.indexed.is_none() {
+                validate_identifier!(inner.name);
+                validate_ty!(inner.ty);
                 Ok(Self {
                     name: inner.name.to_owned(),
                     ty: inner.ty.to_owned(),
@@ -133,6 +137,8 @@ impl<'de> Deserialize<'de> for EventParam {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         BorrowedParam::deserialize(deserializer).and_then(|gp| {
             if let Some(indexed) = gp.indexed {
+                validate_identifier!(gp.name);
+                validate_ty!(gp.ty);
                 Ok(Self {
                     name: gp.name.to_owned(),
                     ty: gp.ty.to_owned(),
@@ -190,7 +196,7 @@ impl EventParam {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(bound(deserialize = "<[T] as ToOwned>::Owned: Default + Deserialize<'de>"))]
 struct BorrowedParam<'a, T: Clone> {
     name: &'a str,

@@ -66,7 +66,7 @@ impl<'a> TypeStem<'a> {
     /// Parse a type stem from a string.
     #[inline]
     pub fn parse(s: &'a str) -> Result<Self> {
-        if s.starts_with('(') || s.starts_with("tuple") {
+        if s.starts_with('(') || s.starts_with("tuple(") {
             s.try_into().map(Self::Tuple)
         } else {
             s.try_into().map(Self::Root)

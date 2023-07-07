@@ -199,4 +199,9 @@ mod test {
             }
         );
     }
+
+    #[test]
+    fn a_type_named_tuple() {
+        TypeSpecifier::try_from("tuple").unwrap();
+    }
 }

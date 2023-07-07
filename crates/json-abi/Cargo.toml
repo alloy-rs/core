@@ -15,6 +15,7 @@ exclude.workspace = true
 
 [dependencies]
 alloy-primitives = { workspace = true, features = ["serde"] }
+alloy-sol-type-str.workspace = true
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
