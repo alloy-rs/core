@@ -94,6 +94,7 @@ impl Resolve for TypeSpecifier<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::boxed::Box;
 
     fn parse(s: &str) -> Result<DynSolType, DynAbiError> {
         s.parse()

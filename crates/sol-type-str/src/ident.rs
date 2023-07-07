@@ -6,13 +6,13 @@ pub const IDENT_REGEX: &str = "[a-zA-Z$_][a-zA-Z0-9$_]*";
 /// Returns `true` if the given character is valid at the start of a Solidity
 /// identfier.
 #[inline]
-const fn is_id_start(c: char) -> bool {
+pub const fn is_id_start(c: char) -> bool {
     matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '$')
 }
 
 /// Returns `true` if the given character is valid in a Solidity identfier.
 #[inline]
-const fn is_id_continue(c: char) -> bool {
+pub const fn is_id_continue(c: char) -> bool {
     matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$')
 }
 

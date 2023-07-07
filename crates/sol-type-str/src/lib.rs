@@ -25,7 +25,7 @@ pub use error::{Error, Result};
 
 /// Solidity ident rules.
 mod ident;
-pub use ident::{is_valid_identifier, IDENT_REGEX};
+pub use ident::{is_id_continue, is_id_start, is_valid_identifier, IDENT_REGEX};
 
 /// Root type specifier.
 mod root;
