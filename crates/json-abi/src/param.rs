@@ -73,7 +73,18 @@ impl Serialize for Param {
 }
 
 impl Param {
-    /// True if the event parameter is a struct
+    /// True if the parameter is a UDT (user-defined type).
+    ///
+    /// A UDT will have
+    /// - an internal type that does not match its canonical type
+    /// - no space in its internal type (as it does not have a keyword prefix)
+    pub fn is_udt(&self) -> bool {
+        self.internal_type()
+            .map(|ty| self.is_simple_type() && !ty.contains(' ') && ty != self.ty)
+            .unwrap_or_default()
+    }
+
+    /// True if the parameter is a struct.
     pub fn is_struct(&self) -> bool {
         self.internal_type
             .as_ref()
@@ -81,15 +92,67 @@ impl Param {
             .unwrap_or_default()
     }
 
-    /// The struct specifier is a type specifier containing the struct name and
-    /// any array sizes. It is computed from the `internal_type`
+    /// True if the parameter is an enum.
+    pub fn is_enum(&self) -> bool {
+        self.internal_type
+            .as_ref()
+            .map(|t| t.contains("enum "))
+            .unwrap_or_default()
+    }
+
+    /// True if the parameter is a contract.
+    pub fn is_contract(&self) -> bool {
+        self.internal_type
+            .as_ref()
+            .map(|t| t.contains("contract "))
+            .unwrap_or_default()
+    }
+
+    /// Borrow the internal type, if any
+    pub fn internal_type(&self) -> Option<&str> {
+        self.internal_type.as_deref()
+    }
+
+    /// The UDT specifier is a [`TypeSpecifier`] containing the UDT name and any
+    /// array sizes. It is computed from the `internal_type`. If this param is
+    /// not a UDT, this function will return `None`.
+    pub fn udt_specifier(&self) -> Option<TypeSpecifier<'_>> {
+        // UDTs are more annoying to check for, so we reuse logic here.
+        if !self.is_udt() {
+            return None
+        }
+        TypeSpecifier::try_from(self.internal_type()?).ok()
+    }
+
+    /// The struct specifier is a [`TypeSpecifier`] containing the struct name
+    /// and any array sizes. It is computed from the `internal_type` If this
+    /// param is not a struct, this function will return `None`.
     pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
-        TypeSpecifier::try_from(
-            self.internal_type
-                .as_ref()
-                .and_then(|t| t.strip_prefix("struct "))?,
-        )
-        .ok()
+        let spec = TypeSpecifier::try_from(self.internal_type()?).ok()?;
+        if spec.keyword != Some("struct") {
+            return None
+        }
+        Some(spec)
+    }
+    /// The enum specifier is a [`TypeSpecifier`] containing the enum name and
+    /// any array sizes. It is computed from the `internal_type`. If this param
+    /// is not a enum, this function will return `None`.
+    pub fn enum_specifier(&self) -> Option<TypeSpecifier<'_>> {
+        let spec = TypeSpecifier::try_from(self.internal_type()?).ok()?;
+        if spec.keyword != Some("enum") {
+            return None
+        }
+        Some(spec)
+    }
+    /// The struct specifier is a [`TypeSpecifier`] containing the contract name
+    /// and any array sizes. It is computed from the `internal_type` If this
+    /// param is not a struct, this function will return `None`.
+    pub fn contract_specifier(&self) -> Option<TypeSpecifier<'_>> {
+        let spec = TypeSpecifier::try_from(self.internal_type()?).ok()?;
+        if spec.keyword != Some("contract") {
+            return None
+        }
+        Some(spec)
     }
 
     /// True if the type is simple
@@ -205,7 +268,18 @@ impl Serialize for EventParam {
 }
 
 impl EventParam {
-    /// True if the event parameter is a struct
+    /// True if the parameter is a UDT (user-defined type).
+    ///
+    /// A UDT will have
+    /// - an internal type that does not match its canonical type
+    /// - no space in its internal type (as it does not have a keyword prefix)
+    pub fn is_udt(&self) -> bool {
+        self.internal_type()
+            .map(|ty| self.is_simple_type() && !ty.contains(' ') && ty != self.ty)
+            .unwrap_or_default()
+    }
+
+    /// True if the parameter is a struct.
     pub fn is_struct(&self) -> bool {
         self.internal_type
             .as_ref()
@@ -213,17 +287,70 @@ impl EventParam {
             .unwrap_or_default()
     }
 
-    /// The struct specifier is a type specifier containing the struct name and
-    /// any array sizes. It is computed from the `internal_type`
-    pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
-        TypeSpecifier::try_from(
-            self.internal_type
-                .as_ref()
-                .and_then(|t| t.strip_prefix("struct "))?,
-        )
-        .ok()
+    /// True if the parameter is an enum.
+    pub fn is_enum(&self) -> bool {
+        self.internal_type
+            .as_ref()
+            .map(|t| t.contains("enum "))
+            .unwrap_or_default()
     }
 
+    /// True if the parameter is a contract.
+    pub fn is_contract(&self) -> bool {
+        self.internal_type
+            .as_ref()
+            .map(|t| t.contains("contract "))
+            .unwrap_or_default()
+    }
+
+    /// Borrow the internal type, if any
+    pub fn internal_type(&self) -> Option<&str> {
+        self.internal_type.as_deref()
+    }
+
+    /// The UDT specifier is a [`TypeSpecifier`] containing the UDT name and any
+    /// array sizes. It is computed from the `internal_type`. If this param is
+    /// not a UDT, this function will return `None`.
+    pub fn udt_specifier(&self) -> Option<TypeSpecifier<'_>> {
+        // UDTs are more annoying to check for, so we reuse logic here.
+        if !self.is_udt() {
+            return None
+        }
+        TypeSpecifier::try_from(self.internal_type()?).ok()
+    }
+
+    /// The struct specifier is a [`TypeSpecifier`] containing the struct name
+    /// and any array sizes. It is computed from the `internal_type` If this
+    /// param is not a struct, this function will return `None`.
+    pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
+        let spec = TypeSpecifier::try_from(self.internal_type()?).ok()?;
+        if spec.keyword != Some("struct") {
+            return None
+        }
+        Some(spec)
+    }
+
+    /// The enum specifier is a [`TypeSpecifier`] containing the enum name and
+    /// any array sizes. It is computed from the `internal_type`. If this param
+    /// is not a enum, this function will return `None`.
+    pub fn enum_specifier(&self) -> Option<TypeSpecifier<'_>> {
+        let spec = TypeSpecifier::try_from(self.internal_type()?).ok()?;
+        if spec.keyword != Some("enum") {
+            return None
+        }
+        Some(spec)
+    }
+
+    /// The struct specifier is a [`TypeSpecifier`] containing the contract name
+    /// and any array sizes. It is computed from the `internal_type` If this
+    /// param is not a struct, this function will return `None`.
+    pub fn contract_specifier(&self) -> Option<TypeSpecifier<'_>> {
+        let spec = TypeSpecifier::try_from(self.internal_type()?).ok()?;
+        if spec.keyword != Some("contract") {
+            return None
+        }
+        Some(spec)
+    }
     /// True if the type is simple
     #[inline]
     pub fn is_simple_type(&self) -> bool {

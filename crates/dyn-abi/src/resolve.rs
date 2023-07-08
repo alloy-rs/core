@@ -113,7 +113,7 @@ impl ResolveSolType for Param {
             let prop_names = self.components.iter().map(|c| c.name.clone()).collect();
             if let Some(spec) = self.struct_specifier() {
                 return Ok(DynSolType::CustomStruct {
-                    name: spec.stem.as_root().unwrap().to_string(),
+                    name: spec.stem.span().to_owned(),
                     prop_names,
                     tuple,
                 }
@@ -134,18 +134,21 @@ impl ResolveSolType for EventParam {
             return ty.resolve()
         }
 
-        // type is complex
+        // type is complex. First extract the tuple of inner types
         let tuple = self
             .components
             .iter()
             .map(|c| c.resolve())
             .collect::<Result<Vec<_>, _>>()?;
 
+        // if we have a struct specifier, we can use it to get the name of the
+        // struct
         #[cfg(feature = "eip712")]
         {
             let prop_names = self.components.iter().map(|c| c.name.clone()).collect();
             if let Some(spec) = self.struct_specifier() {
                 return Ok(DynSolType::CustomStruct {
+                    // a specifier in the abi json will always be root type
                     name: spec.stem.as_root().unwrap().to_string(),
                     prop_names,
                     tuple,
