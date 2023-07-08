@@ -32,8 +32,13 @@ pub enum InternalType {
         /// Struct name
         ty: String,
     },
-    /// Other.
-    Other(String),
+    /// Other. Possible of the form `contract.other`.
+    Other {
+        /// Contract qualifier, if any
+        contract: Option<String>,
+        /// Struct name
+        ty: String,
+    },
 }
 
 impl From<BorrowedInternalType<'_>> for InternalType {
@@ -49,7 +54,10 @@ impl From<BorrowedInternalType<'_>> for InternalType {
                 contract: contract.map(String::from),
                 ty: (*ty).to_owned(),
             },
-            BorrowedInternalType::Other(s) => InternalType::Other((*s).to_owned()),
+            BorrowedInternalType::Other { contract, ty } => InternalType::Other {
+                contract: contract.map(String::from),
+                ty: (*ty).to_owned(),
+            },
         }
     }
 }
@@ -101,7 +109,7 @@ impl InternalType {
 
     /// True if the instance is a `other` variant.
     pub fn is_other(&self) -> bool {
-        matches!(self, InternalType::Other(_))
+        matches!(self, InternalType::Other { .. })
     }
 
     /// Fallible conversion to a variant.
@@ -129,9 +137,9 @@ impl InternalType {
     }
 
     /// Fallible conversion to a variant.
-    pub fn as_other(&self) -> Option<&str> {
+    pub fn as_other(&self) -> Option<(Option<&str>, &str)> {
         match self {
-            InternalType::Other(s) => Some(s),
+            InternalType::Other { contract, ty } => Some((contract.as_deref(), ty)),
             _ => None,
         }
     }
@@ -162,7 +170,7 @@ impl InternalType {
     /// without additional context.
     pub fn other_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_other()
-            .and_then(|s| TypeSpecifier::try_from(s).ok())
+            .and_then(|s| TypeSpecifier::try_from(s.1).ok())
     }
 
     pub(crate) fn as_borrowed(&self) -> BorrowedInternalType<'_> {
@@ -177,7 +185,10 @@ impl InternalType {
                 contract: contract.as_deref(),
                 ty,
             },
-            InternalType::Other(s) => BorrowedInternalType::Other(s),
+            InternalType::Other { contract, ty } => BorrowedInternalType::Other {
+                contract: contract.as_deref(),
+                ty,
+            },
         }
     }
 }
@@ -194,7 +205,10 @@ pub(crate) enum BorrowedInternalType<'a> {
         contract: Option<&'a str>,
         ty: &'a str,
     },
-    Other(&'a str),
+    Other {
+        contract: Option<&'a str>,
+        ty: &'a str,
+    },
 }
 
 impl fmt::Display for BorrowedInternalType<'_> {
@@ -216,7 +230,13 @@ impl fmt::Display for BorrowedInternalType<'_> {
                     write!(f, "struct {}", ty)
                 }
             }
-            BorrowedInternalType::Other(s) => write!(f, "{}", s),
+            BorrowedInternalType::Other { contract, ty } => {
+                if let Some(c) = contract {
+                    write!(f, "{}.{}", c, ty)
+                } else {
+                    write!(f, "{}", ty)
+                }
+            }
         }
     }
 }
@@ -282,7 +302,17 @@ impl<'de> Visitor<'de> for ItVisitor {
         } else if let Some(body) = v.strip_prefix("contract ") {
             Ok(BorrowedInternalType::Contract(body))
         } else {
-            Ok(BorrowedInternalType::Other(v))
+            if let Some((contract, ty)) = v.split_once('.') {
+                Ok(BorrowedInternalType::Other {
+                    contract: Some(contract),
+                    ty,
+                })
+            } else {
+                Ok(BorrowedInternalType::Other {
+                    contract: None,
+                    ty: v,
+                })
+            }
         }
     }
 }

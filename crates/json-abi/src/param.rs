@@ -88,10 +88,13 @@ impl Param {
     /// A UDT will have
     /// - an internal type that does not match its canonical type
     /// - no space in its internal type (as it does not have a keyword body)
+    ///
+    /// Any `Other` specifier will definitely be a UDT if it contains a
+    /// contract.
     #[inline]
     pub fn is_udt(&self) -> bool {
         match self.internal_type().and_then(|it| it.as_other()) {
-            Some(ty) => self.is_simple_type() && ty != self.ty,
+            Some((contract, ty)) => contract.is_some() || (self.is_simple_type() && ty != self.ty),
             _ => false,
         }
     }
@@ -288,10 +291,13 @@ impl EventParam {
     /// A UDT will have
     /// - an internal type that does not match its canonical type
     /// - no space in its internal type (as it does not have a keyword body)
+    ///
+    /// Any `Other` specifier will definitely be a UDT if it contains a
+    /// contract.
     #[inline]
     pub fn is_udt(&self) -> bool {
         match self.internal_type().and_then(|it| it.as_other()) {
-            Some(ty) => self.is_simple_type() && ty != self.ty,
+            Some((contract, ty)) => contract.is_some() || (self.is_simple_type() && ty != self.ty),
             _ => false,
         }
     }

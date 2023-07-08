@@ -18,7 +18,10 @@ fn complex_error() {
         decoded,
         Error {
             inputs: vec![Param {
-                internal_type: Some(alloy_json_abi::InternalType::Other("string".into())),
+                internal_type: Some(alloy_json_abi::InternalType::Other {
+                    contract: None,
+                    ty: "string".into()
+                }),
                 name: "reason".into(),
                 ty: "string".into(),
                 components: vec![],
