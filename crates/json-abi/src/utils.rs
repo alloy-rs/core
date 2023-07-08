@@ -30,12 +30,16 @@ pub(crate) use validate_identifier;
 
 macro_rules! validate_ty {
     ($ty:expr) => {
-        alloy_sol_type_str::TypeSpecifier::parse($ty).map_err(|_| {
-            serde::de::Error::invalid_value(
-                Unexpected::Str($ty),
-                &"a valid solidity type specifier",
-            )
-        })?;
+        // dirty hacks to allow `address payable` in the ABI JSON internalType
+        // field
+        if $ty != "address payable" {
+            alloy_sol_type_str::TypeSpecifier::parse($ty).map_err(|_| {
+                serde::de::Error::invalid_value(
+                    Unexpected::Str($ty),
+                    &"a valid solidity type specifier",
+                )
+            })?;
+        }
     };
 }
 

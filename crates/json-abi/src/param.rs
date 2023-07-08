@@ -51,6 +51,9 @@ impl<'de> Deserialize<'de> for Param {
             if inner.indexed.is_none() {
                 validate_identifier!(inner.name);
                 validate_ty!(inner.ty);
+                if let Some(ty) = inner.internal_type {
+                    validate_ty!(ty);
+                }
                 Ok(Self {
                     name: inner.name.to_owned(),
                     ty: inner.ty.to_owned(),
@@ -245,6 +248,9 @@ impl<'de> Deserialize<'de> for EventParam {
             if let Some(indexed) = gp.indexed {
                 validate_identifier!(gp.name);
                 validate_ty!(gp.ty);
+                if let Some(ty) = gp.internal_type {
+                    validate_ty!(ty);
+                }
                 Ok(Self {
                     name: gp.name.to_owned(),
                     ty: gp.ty.to_owned(),
