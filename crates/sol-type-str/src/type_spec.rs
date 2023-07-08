@@ -95,6 +95,7 @@ impl<'a> TypeSpecifier<'a> {
             Some((kw, body)) if kw == "struct" || kw == "enum" || kw == "contract" => {
                 (Some(kw), body)
             }
+            Some(_) => return Err(Error::invalid_type_string(span)),
             _ => (None, span),
         };
 
@@ -306,5 +307,11 @@ mod test {
     }
 
     #[test]
-    fn json_internal_type_errors() {}
+    fn json_internal_type_errors() {
+        TypeSpecifier::try_from("enum A A").unwrap_err();
+        TypeSpecifier::try_from("enum A.").unwrap_err();
+        TypeSpecifier::try_from("struct A..A").unwrap_err();
+        TypeSpecifier::try_from("contract A.A").unwrap_err();
+        TypeSpecifier::try_from("notAKeyword A.B").unwrap_err();
+    }
 }
