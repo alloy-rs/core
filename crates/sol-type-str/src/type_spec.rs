@@ -52,16 +52,8 @@ use core::num::NonZeroUsize;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeSpecifier<'a> {
-    /// A keyword that may precede the type specifier. These are primarily used
-    /// in the ABI JSON `internalType` field. The valid keywords are `struct`,
-    /// `enum`, and `contract`.
-    pub keyword: Option<&'a str>,
     /// The full span of the specifier.
     pub span: &'a str,
-    /// The contract name, if the type is a member of another contract.
-    /// These types may be UDVTs, enums, or structs. If the type is qualified
-    /// with a contract name, it will be of the format `Contract.Name`
-    pub contract: Option<&'a str>,
     /// The type stem, which is either a root type or a tuple type.
     pub stem: TypeStem<'a>,
     /// Array sizes, in innermost-to-outermost order. If the size is `None`,
@@ -91,25 +83,7 @@ impl<'a> TypeSpecifier<'a> {
     pub fn parse(span: &'a str) -> Result<Self> {
         let span = span.trim();
 
-        let (keyword, body) = match span.split_once(' ') {
-            Some((kw, body)) if kw == "struct" || kw == "enum" || kw == "contract" => {
-                (Some(kw), body)
-            }
-            Some(_) => return Err(Error::invalid_type_string(span)),
-            _ => (None, span),
-        };
-
-        let (contract, body) = match body.split_once('.') {
-            Some((contract, body)) => (Some(contract), body),
-            None => (None, body),
-        };
-
-        // "contract A.B" is never a legal type string
-        if keyword == Some("contract") && contract.is_some() {
-            return Err(Error::invalid_type_string(span))
-        }
-
-        let mut root = body;
+        let mut root = span;
         let mut sizes = vec![];
 
         // an iterator of string slices split by `[`
@@ -141,9 +115,7 @@ impl<'a> TypeSpecifier<'a> {
 
         sizes.reverse();
         Ok(Self {
-            keyword,
             span,
-            contract,
             stem: root.try_into()?,
             sizes,
         })
@@ -179,9 +151,7 @@ mod test {
         assert_eq!(
             super::TypeSpecifier::try_from("uint256").unwrap(),
             super::TypeSpecifier {
-                keyword: None,
                 span: "uint256",
-                contract: None,
                 stem: TypeStem::try_from("uint256").unwrap(),
                 sizes: vec![],
             }
@@ -190,9 +160,7 @@ mod test {
         assert_eq!(
             super::TypeSpecifier::try_from("uint256[2]").unwrap(),
             super::TypeSpecifier {
-                keyword: None,
                 span: "uint256[2]",
-                contract: None,
                 stem: TypeStem::try_from("uint256").unwrap(),
                 sizes: vec![NonZeroUsize::new(2)],
             }
@@ -201,9 +169,7 @@ mod test {
         assert_eq!(
             super::TypeSpecifier::try_from("uint256[2][]").unwrap(),
             super::TypeSpecifier {
-                keyword: None,
                 span: "uint256[2][]",
-                contract: None,
                 stem: TypeStem::try_from("uint256").unwrap(),
                 sizes: vec![NonZeroUsize::new(2), None],
             }
@@ -212,9 +178,7 @@ mod test {
         assert_eq!(
             super::TypeSpecifier::try_from("(uint256,uint256)").unwrap(),
             super::TypeSpecifier {
-                keyword: None,
                 span: "(uint256,uint256)",
-                contract: None,
                 stem: TypeStem::Tuple(TupleSpecifier::try_from("(uint256,uint256)").unwrap()),
                 sizes: vec![],
             }
@@ -223,9 +187,7 @@ mod test {
         assert_eq!(
             super::TypeSpecifier::try_from("(uint256,uint256)[2]").unwrap(),
             super::TypeSpecifier {
-                keyword: None,
                 span: "(uint256,uint256)[2]",
-                contract: None,
                 stem: TypeStem::Tuple(TupleSpecifier::try_from("(uint256,uint256)").unwrap()),
                 sizes: vec![NonZeroUsize::new(2)],
             }
@@ -234,9 +196,7 @@ mod test {
         assert_eq!(
             super::TypeSpecifier::try_from("MyStruct").unwrap(),
             super::TypeSpecifier {
-                keyword: None,
                 span: "MyStruct",
-                contract: None,
                 stem: TypeStem::try_from("MyStruct").unwrap(),
                 sizes: vec![],
             }
@@ -245,9 +205,7 @@ mod test {
         assert_eq!(
             super::TypeSpecifier::try_from("MyStruct[2]").unwrap(),
             super::TypeSpecifier {
-                keyword: None,
                 span: "MyStruct[2]",
-                contract: None,
                 stem: TypeStem::try_from("MyStruct").unwrap(),
                 sizes: vec![NonZeroUsize::new(2)],
             }
@@ -257,61 +215,5 @@ mod test {
     #[test]
     fn a_type_named_tuple() {
         TypeSpecifier::try_from("tuple").unwrap();
-    }
-
-    #[test]
-    fn json_internal_type_compatibility() {
-        assert_eq!(
-            TypeSpecifier::try_from("enum A.B").unwrap(),
-            TypeSpecifier {
-                keyword: Some("enum"),
-                span: "enum A.B",
-                contract: Some("A"),
-                stem: TypeStem::try_from("B").unwrap(),
-                sizes: vec![],
-            }
-        );
-
-        assert_eq!(
-            TypeSpecifier::try_from("struct A.B").unwrap(),
-            TypeSpecifier {
-                keyword: Some("struct"),
-                span: "struct A.B",
-                contract: Some("A"),
-                stem: TypeStem::try_from("B").unwrap(),
-                sizes: vec![],
-            }
-        );
-
-        assert_eq!(
-            TypeSpecifier::try_from("contract B").unwrap(),
-            TypeSpecifier {
-                keyword: Some("contract"),
-                span: "contract B",
-                contract: None,
-                stem: TypeStem::try_from("B").unwrap(),
-                sizes: vec![],
-            }
-        );
-
-        assert_eq!(
-            TypeSpecifier::try_from("enum A.B[2]").unwrap(),
-            TypeSpecifier {
-                keyword: Some("enum"),
-                span: "enum A.B[2]",
-                contract: Some("A"),
-                stem: TypeStem::try_from("B").unwrap(),
-                sizes: vec![NonZeroUsize::new(2)],
-            }
-        );
-    }
-
-    #[test]
-    fn json_internal_type_errors() {
-        TypeSpecifier::try_from("enum A A").unwrap_err();
-        TypeSpecifier::try_from("enum A.").unwrap_err();
-        TypeSpecifier::try_from("struct A..A").unwrap_err();
-        TypeSpecifier::try_from("contract A.A").unwrap_err();
-        TypeSpecifier::try_from("notAKeyword A.B").unwrap_err();
     }
 }

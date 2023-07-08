@@ -18,7 +18,7 @@ fn complex_error() {
         decoded,
         Error {
             inputs: vec![Param {
-                internal_type: Some("string".into()),
+                internal_type: Some(alloy_json_abi::InternalType::Other("string".into())),
                 name: "reason".into(),
                 ty: "string".into(),
                 components: vec![],
@@ -119,6 +119,9 @@ fn test_param(param: &Param) {
 
     if param.is_struct() {
         assert!(param.ty.contains("tuple"));
+        if param.struct_specifier().is_none() {
+            println!("{:#?}", param.internal_type);
+        }
         assert!(param.struct_specifier().is_some());
     }
 
