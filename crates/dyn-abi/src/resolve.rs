@@ -74,8 +74,7 @@ where
     }
 }
 
-#[cfg(feature = "std")]
-impl<T> ResolveSolType for std::sync::Arc<T>
+impl<T> ResolveSolType for alloc::sync::Arc<T>
 where
     T: ResolveSolType,
 {
