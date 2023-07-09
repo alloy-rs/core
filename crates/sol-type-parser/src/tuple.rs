@@ -10,8 +10,8 @@ use alloc::vec::Vec;
 ///
 /// ## Example
 /// ```
-/// # use alloy_sol_type_str::TupleSpecifier;
-/// # fn main() -> alloy_sol_type_str::Result<()> {
+/// # use alloy_sol_type_parser::TupleSpecifier;
+/// # fn main() -> alloy_sol_type_parser::Result<()> {
 /// let spec = TupleSpecifier::try_from("(uint256,uint256)")?;
 /// assert_eq!(spec.span(), "(uint256,uint256)");
 /// assert_eq!(spec.types.len(), 2);

@@ -20,7 +20,7 @@ type as well as the sizes of array dimensions. A `TypeSpecifier` is expected to
 handle any valid Solidity type string.
 
 ```rust
-use alloy_sol_type_str::TypeSpecifier;
+use alloy_sol_type_parser::TypeSpecifier;
 use core::num::NonZeroUsize;
 
 // Parse a type specifier from a string

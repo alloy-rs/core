@@ -39,9 +39,9 @@ use core::num::NonZeroUsize;
 /// ## Example
 ///
 /// ```
-/// # use alloy_sol_type_str::TypeSpecifier;
+/// # use alloy_sol_type_parser::TypeSpecifier;
 /// # use core::num::NonZeroUsize;
-/// # fn main() -> alloy_sol_type_str::Result<()> {
+/// # fn main() -> alloy_sol_type_parser::Result<()> {
 /// let spec = TypeSpecifier::try_from("uint256[2][]")?;
 /// assert_eq!(spec.span(), "uint256[2][]");
 /// assert_eq!(spec.stem.span(), "uint256");

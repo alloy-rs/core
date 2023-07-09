@@ -6,8 +6,8 @@ use crate::{Error, Result, RootType, TupleSpecifier};
 /// ## Example
 ///
 /// ```
-/// # use alloy_sol_type_str::{TypeStem, RootType, TupleSpecifier};
-/// # fn main() -> alloy_sol_type_str::Result<()> {
+/// # use alloy_sol_type_parser::{TypeStem, RootType, TupleSpecifier};
+/// # fn main() -> alloy_sol_type_parser::Result<()> {
 /// let stem = TypeStem::try_from("uint256")?;
 /// assert_eq!(stem.span(), "uint256");
 /// assert!(matches!(stem, TypeStem::Root(_)));

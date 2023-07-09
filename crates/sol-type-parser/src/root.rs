@@ -8,8 +8,8 @@ use core::fmt;
 /// Examples:
 ///
 /// ```
-/// # use alloy_sol_type_str::RootType;
-/// # fn main() -> alloy_sol_type_str::Result<()> {
+/// # use alloy_sol_type_parser::RootType;
+/// # fn main() -> alloy_sol_type_parser::Result<()> {
 /// let root_type = RootType::try_from("uint256")?;
 /// assert_eq!(root_type.span(), "uint256");
 ///
