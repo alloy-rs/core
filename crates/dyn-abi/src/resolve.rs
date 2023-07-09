@@ -56,6 +56,34 @@ where
     }
 }
 
+impl<T> ResolveSolType for &mut T
+where
+    T: ResolveSolType,
+{
+    fn resolve(&self) -> DynAbiResult<DynSolType> {
+        (**self).resolve()
+    }
+}
+
+impl<T> ResolveSolType for alloc::boxed::Box<T>
+where
+    T: ResolveSolType,
+{
+    fn resolve(&self) -> DynAbiResult<DynSolType> {
+        (**self).resolve()
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T> ResolveSolType for std::sync::Arc<T>
+where
+    T: ResolveSolType,
+{
+    fn resolve(&self) -> DynAbiResult<DynSolType> {
+        (**self).resolve()
+    }
+}
+
 impl ResolveSolType for RootType<'_> {
     /// Resolve the type string into a basic Solidity type.
     fn resolve(&self) -> DynAbiResult<DynSolType> {
