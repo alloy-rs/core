@@ -380,7 +380,7 @@ macro_rules! impl_rlp {
     ($t:ty) => {
         impl $crate::private::alloy_rlp::Decodable for $t {
             #[inline]
-            fn decode(buf: &mut &[u8]) -> Result<Self, $crate::private::alloy_rlp::DecodeError> {
+            fn decode(buf: &mut &[u8]) -> $crate::private::alloy_rlp::Result<Self> {
                 $crate::private::alloy_rlp::Decodable::decode(buf).map(Self)
             }
         }

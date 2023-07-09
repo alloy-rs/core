@@ -19,19 +19,27 @@
 extern crate alloc;
 
 mod decode;
+pub use decode::{Decodable, Rlp};
+
+mod error;
+pub use error::{Error, Result};
+
 mod encode;
-mod header;
-
-pub use bytes::{Buf, BufMut};
-
-pub use decode::{Decodable, DecodeError, Rlp};
+#[cfg(feature = "arrayvec")]
+pub use encode::encode_fixed_size;
 pub use encode::{
-    const_add, encode_fixed_size, encode_iter, encode_list, length_of_length, list_length,
-    Encodable, MaxEncodedLen, MaxEncodedLenAssoc,
+    encode_iter, encode_list, length_of_length, list_length, Encodable, MaxEncodedLen,
+    MaxEncodedLenAssoc,
 };
+
+mod header;
 pub use header::Header;
 
+#[doc(no_inline)]
+pub use bytes::{self, Buf, BufMut, Bytes, BytesMut};
+
 #[cfg(feature = "derive")]
+#[doc(no_inline)]
 pub use alloy_rlp_derive::{
     RlpDecodable, RlpDecodableWrapper, RlpEncodable, RlpEncodableWrapper, RlpMaxEncodedLen,
 };
@@ -41,3 +49,14 @@ pub const EMPTY_STRING_CODE: u8 = 0x80;
 
 /// RLP prefix byte for a 0-length array.
 pub const EMPTY_LIST_CODE: u8 = 0xC0;
+
+// Not public API.
+#[doc(hidden)]
+#[inline]
+pub const fn const_add(a: usize, b: usize) -> usize {
+    a + b
+}
+
+#[doc(hidden)]
+#[deprecated(since = "0.3.0", note = "use `Error` instead")]
+pub type DecodeError = Error;

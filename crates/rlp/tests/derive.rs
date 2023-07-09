@@ -17,7 +17,7 @@ fn simple_derive() {
 
     // does not panic on short input
     assert_eq!(
-        Err(DecodeError::InputTooShort),
+        Err(Error::InputTooShort),
         MyThing::decode(&mut [0x8c; 11].as_ref())
     )
 }

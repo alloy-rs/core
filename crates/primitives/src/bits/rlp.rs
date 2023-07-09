@@ -3,7 +3,7 @@ use alloy_rlp::{impl_max_encoded_len, length_of_length, Decodable, Encodable};
 
 impl<const N: usize> Decodable for FixedBytes<N> {
     #[inline]
-    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::DecodeError> {
+    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
         Decodable::decode(buf).map(Self)
     }
 }
