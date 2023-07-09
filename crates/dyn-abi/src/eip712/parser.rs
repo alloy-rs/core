@@ -5,7 +5,7 @@ use crate::{
     DynAbiError,
 };
 use alloc::vec::Vec;
-use alloy_sol_type_str::TypeSpecifier;
+use alloy_sol_type_parser::{Error as TypeParserError, TypeSpecifier};
 
 /// A property is a type and a name. Of the form `type name`. E.g.
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.
@@ -68,7 +68,7 @@ impl<'a> TryFrom<&'a str> for ComponentType<'a> {
 
     fn try_from(input: &'a str) -> Result<Self, Self::Error> {
         let (name, props_str) = input.split_once('(').ok_or_else(|| {
-            DynAbiError::TypeStrError(alloy_sol_type_str::Error::invalid_type_string(input))
+            DynAbiError::TypeParserError(TypeParserError::invalid_type_string(input))
         })?;
 
         let mut props = vec![];

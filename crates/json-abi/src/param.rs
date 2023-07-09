@@ -3,7 +3,7 @@ use alloc::{
     string::String,
     vec::Vec,
 };
-use alloy_sol_type_str::TypeSpecifier;
+use alloy_sol_type_parser::TypeSpecifier;
 use core::fmt;
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -28,7 +28,7 @@ pub struct Param {
     /// The canonical Solidity type of the parameter, using the word "tuple" to
     /// represent complex types. E.g. `uint256` or `bytes[2]` or `tuple` or
     /// `tuple[2]`. This field always contains a valid
-    /// [`alloy_sol_type_str::TypeSpecifier`].
+    /// [`alloy_sol_type_parser::TypeSpecifier`].
     pub ty: String,
     /// If the paramaeter is a compound type (a struct or tuple), a list of the
     /// parameter's components, in order. Empty otherwise
@@ -225,7 +225,7 @@ pub struct EventParam {
     /// The canonical Solidity type of the parameter, using the word "tuple" to
     /// represent complex types. E.g. `uint256` or `bytes[2]` or `tuple` or
     /// `tuple[2]`. This field always contains a valid
-    /// [`alloy_sol_type_str::TypeSpecifier`].
+    /// [`alloy_sol_type_parser::TypeSpecifier`].
     pub ty: String,
     /// Whether the parameter is indexed. Indexed parameters have their
     /// value, or the hash of their value, stored in the log topics.

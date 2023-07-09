@@ -3,7 +3,7 @@ use crate::{
     Word,
 };
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
-use alloy_sol_type_str::TypeSpecifier;
+use alloy_sol_type_parser::TypeSpecifier;
 use alloy_sol_types::sol_data;
 use core::{fmt, num::NonZeroUsize, str::FromStr};
 
@@ -165,7 +165,9 @@ impl DynSolType {
     /// ```
     #[inline]
     pub fn parse(s: &str) -> DynAbiResult<Self> {
-        TypeSpecifier::parse(s)?.resolve()
+        TypeSpecifier::try_from(s)
+            .map_err(DynAbiError::TypeParserError)
+            .and_then(|t| t.resolve())
     }
 
     /// Fallible cast to the contents of a variant.

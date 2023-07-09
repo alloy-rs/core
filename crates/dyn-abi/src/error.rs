@@ -1,5 +1,7 @@
 use core::fmt;
 
+use alloy_sol_type_parser::Error as TypeParserError;
+
 /// Dynamic ABI result type.
 pub type DynAbiResult<T, E = DynAbiError> = core::result::Result<T, E>;
 
@@ -29,13 +31,13 @@ pub enum DynAbiError {
     /// Hex.
     HexError(hex::FromHexError),
     /// Type Str Error
-    TypeStrError(alloy_sol_type_str::Error),
+    TypeParserError(TypeParserError),
 }
 
-impl From<alloy_sol_type_str::Error> for DynAbiError {
+impl From<TypeParserError> for DynAbiError {
     #[inline]
-    fn from(e: alloy_sol_type_str::Error) -> Self {
-        Self::TypeStrError(e)
+    fn from(e: TypeParserError) -> Self {
+        Self::TypeParserError(e)
     }
 }
 
@@ -46,7 +48,7 @@ impl std::error::Error for DynAbiError {
         #[allow(unreachable_patterns)]
         match self {
             Self::HexError(e) => Some(e),
-            Self::TypeStrError(e) => Some(e),
+            Self::TypeParserError(e) => Some(e),
             _ => None,
         }
     }
@@ -69,7 +71,7 @@ impl fmt::Display for DynAbiError {
             }
 
             DynAbiError::HexError(h) => h.fmt(f),
-            DynAbiError::TypeStrError(e) => e.fmt(f),
+            DynAbiError::TypeParserError(e) => e.fmt(f),
         }
     }
 }

@@ -75,7 +75,7 @@ impl<'a> RootType<'a> {
         self.0
     }
 
-    /// Returns true if the type is a basic Solidity type.
+    /// Returns `Ok(())` if the type is a basic Solidity type.
     #[inline]
     pub fn try_basic_solidity(self) -> Result<()> {
         match self.0 {

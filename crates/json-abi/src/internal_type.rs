@@ -2,7 +2,7 @@ use core::fmt;
 
 use alloc::string::{String, ToString};
 
-use alloy_sol_type_str::TypeSpecifier;
+use alloy_sol_type_parser::TypeSpecifier;
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -42,6 +42,7 @@ pub enum InternalType {
 }
 
 impl From<BorrowedInternalType<'_>> for InternalType {
+    #[inline]
     fn from(borrowed: BorrowedInternalType<'_>) -> InternalType {
         match borrowed {
             BorrowedInternalType::AddressPayable(s) => InternalType::AddressPayable(s.to_string()),
@@ -88,36 +89,43 @@ impl<'de> Deserialize<'de> for InternalType {
 
 impl InternalType {
     /// Parse a string into an instance, taking ownership of data
+    #[inline]
     pub fn parse(s: &str) -> Option<Self> {
         BorrowedInternalType::parse(s).map(Into::into)
     }
 
     /// True if the instance is a `struct` variant.
+    #[inline]
     pub const fn is_struct(&self) -> bool {
         matches!(self, InternalType::Struct { .. })
     }
 
     /// True if the instance is a `enum` variant.
+    #[inline]
     pub const fn is_enum(&self) -> bool {
         matches!(self, InternalType::Enum { .. })
     }
 
     /// True if the instance is a `contract` variant.
+    #[inline]
     pub const fn is_contract(&self) -> bool {
         matches!(self, InternalType::Contract(_))
     }
 
     /// True if the instance is a `address payable` variant.
+    #[inline]
     pub const fn is_address_payable(&self) -> bool {
         matches!(self, InternalType::AddressPayable(_))
     }
 
     /// True if the instance is a `other` variant.
+    #[inline]
     pub const fn is_other(&self) -> bool {
         matches!(self, InternalType::Other { .. })
     }
 
     /// Fallible conversion to a variant.
+    #[inline]
     pub fn as_struct(&self) -> Option<(Option<&str>, &str)> {
         match self {
             InternalType::Struct { contract, ty } => Some((contract.as_deref(), ty)),
@@ -126,6 +134,7 @@ impl InternalType {
     }
 
     /// Fallible conversion to a variant.
+    #[inline]
     pub fn as_enum(&self) -> Option<(Option<&str>, &str)> {
         match self {
             InternalType::Enum { contract, ty } => Some((contract.as_deref(), ty)),
@@ -134,6 +143,7 @@ impl InternalType {
     }
 
     /// Fallible conversion to a variant.
+    #[inline]
     pub fn as_contract(&self) -> Option<&str> {
         match self {
             InternalType::Contract(s) => Some(s),
@@ -142,6 +152,7 @@ impl InternalType {
     }
 
     /// Fallible conversion to a variant.
+    #[inline]
     pub fn as_other(&self) -> Option<(Option<&str>, &str)> {
         match self {
             InternalType::Other { contract, ty } => Some((contract.as_deref(), ty)),
@@ -151,12 +162,14 @@ impl InternalType {
 
     /// Return a [`TypeSpecifier`] describing the struct if this type is a
     /// struct.
+    #[inline]
     pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_struct()
             .and_then(|s| TypeSpecifier::try_from(s.1).ok())
     }
 
     /// Return a [`TypeSpecifier`] describing the enum if this type is an enum.
+    #[inline]
     pub fn enum_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_enum()
             .and_then(|s| TypeSpecifier::try_from(s.1).ok())
@@ -164,6 +177,7 @@ impl InternalType {
 
     /// Return a [`TypeSpecifier`] describing the contract if this type is a
     /// contract.
+    #[inline]
     pub fn contract_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_contract()
             .and_then(|s| TypeSpecifier::try_from(s).ok())
@@ -173,11 +187,13 @@ impl InternalType {
     /// other. An "other" specifier indicates EITHER a regular solidity type OR
     /// a user-defined type. It is not possible to distinguish between the two
     /// without additional context.
+    #[inline]
     pub fn other_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_other()
             .and_then(|s| TypeSpecifier::try_from(s.1).ok())
     }
 
+    #[inline]
     pub(crate) fn as_borrowed(&self) -> BorrowedInternalType<'_> {
         match self {
             InternalType::AddressPayable(s) => BorrowedInternalType::AddressPayable(s),

@@ -9,7 +9,7 @@ use alloc::{
     vec::Vec,
 };
 use alloy_primitives::{keccak256, B256};
-use alloy_sol_type_str::{RootType, TypeSpecifier, TypeStem};
+use alloy_sol_type_parser::{RootType, TypeSpecifier, TypeStem};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
 use serde::{Deserialize, Deserializer, Serialize};

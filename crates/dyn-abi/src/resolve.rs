@@ -6,7 +6,7 @@ use crate::{DynAbiError, DynAbiResult, DynSolType};
 use alloc::vec::Vec;
 
 use alloy_json_abi::{EventParam, Param};
-use alloy_sol_type_str::{
+use alloy_sol_type_parser::{
     Error as TypeStrError, RootType, TupleSpecifier, TypeSpecifier, TypeStem,
 };
 
@@ -24,7 +24,7 @@ use alloy_sol_type_str::{
 ///
 /// ```
 /// # use alloy_dyn_abi::{DynSolType, ResolveSolType, DynAbiResult};
-/// # use alloy_sol_type_str::{RootType, TypeSpecifier};
+/// # use alloy_sol_type_parser::{RootType, TypeSpecifier};
 /// # fn main() -> DynAbiResult<()> {
 /// let my_ty = TypeSpecifier::try_from("bool")?.resolve()?;
 /// assert_eq!(my_ty, DynSolType::Bool);
@@ -207,7 +207,7 @@ mod tests {
         let test_str = "bool,uint256))";
         assert_eq!(
             parse(test_str),
-            Err(alloy_sol_type_str::Error::invalid_type_string(test_str).into())
+            Err(alloy_sol_type_parser::Error::invalid_type_string(test_str).into())
         );
     }
 
@@ -216,7 +216,7 @@ mod tests {
         let test_str = "(bool,uint256";
         assert_eq!(
             parse(test_str),
-            Err(alloy_sol_type_str::Error::invalid_type_string(test_str).into())
+            Err(alloy_sol_type_parser::Error::invalid_type_string(test_str).into())
         );
     }
 

@@ -1,9 +1,9 @@
 [package]
-name = "alloy-sol-type-str"
+name = "alloy-sol-type-parser"
 description = "Solidity type specifier string parsing."
 keywords = ["ethereum", "abi", "EVM", "solidity"]
 categories = ["no-std", "cryptography::cryptocurrencies"]
-homepage = "https://github.com/alloy-rs/core/tree/main/crates/sol-type-str"
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/sol-type-parser"
 
 version.workspace = true
 edition.workspace = true

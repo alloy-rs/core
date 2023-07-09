@@ -18,7 +18,7 @@ macro_rules! signature {
 
 macro_rules! validate_identifier {
     ($name:expr) => {
-        if !$name.is_empty() && !alloy_sol_type_str::is_valid_identifier($name) {
+        if !$name.is_empty() && !alloy_sol_type_parser::is_valid_identifier($name) {
             return Err(serde::de::Error::invalid_value(
                 serde::de::Unexpected::Str($name),
                 &"a valid solidity identifier in the name field",
@@ -33,7 +33,7 @@ macro_rules! validate_ty {
         // dirty hacks to allow `address payable` in the ABI JSON internalType
         // field
         if $ty != "address payable" {
-            alloy_sol_type_str::TypeSpecifier::parse($ty).map_err(|_| {
+            alloy_sol_type_parser::TypeSpecifier::parse($ty).map_err(|_| {
                 serde::de::Error::invalid_value(
                     Unexpected::Str($ty),
                     &"a valid solidity type specifier",
