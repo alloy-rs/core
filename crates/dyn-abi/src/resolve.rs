@@ -10,8 +10,41 @@ use alloy_sol_type_str::{
     Error as TypeStrError, RootType, TupleSpecifier, TypeSpecifier, TypeStem,
 };
 
-pub(crate) trait ResolveSolType {
+/// The ResolveSolType trait is implemented by types that can be resolved into
+/// a [`DynSolType`]. ABI and related systems have many different ways of
+/// encoding solidity types. This trait provides a single pattern for resolving
+/// those encodings into solidity types.
+///
+/// This trait is implemented for [`RootType`], [`TupleSpecifier`],
+/// [`TypeStem`], and [`TypeSpecifier`], as well as the [`EventParam`] and
+/// [`Param`] structs. The impl on `&str` parses a [`TypeSpecifier`] from the
+/// string and resolves it.
+///
+/// ## Example
+///
+/// ```
+/// # use alloy_dyn_abi::{DynSolType, ResolveSolType, DynAbiResult};
+/// # use alloy_sol_type_str::{RootType, TypeSpecifier};
+/// # fn main() -> DynAbiResult<()> {
+/// let my_ty = TypeSpecifier::try_from("bool")?.resolve()?;
+/// assert_eq!(my_ty, DynSolType::Bool);
+///
+/// let my_ty = RootType::try_from("uint256")?.resolve()?;
+/// assert_eq!(my_ty, DynSolType::Uint(256));
+///
+/// assert_eq!("bytes32".resolve()?, DynSolType::FixedBytes(32));
+/// # Ok(())
+/// # }
+/// ```
+pub trait ResolveSolType {
+    /// Resolve this object into a [`DynSolType`].
     fn resolve(&self) -> DynAbiResult<DynSolType>;
+}
+
+impl ResolveSolType for &str {
+    fn resolve(&self) -> DynAbiResult<DynSolType> {
+        TypeSpecifier::try_from(*self)?.resolve()
+    }
 }
 
 impl ResolveSolType for RootType<'_> {
