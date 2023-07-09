@@ -284,8 +284,8 @@ where
 /// Calculate the length of a list.
 pub fn list_length<T, E>(list: &[T]) -> usize
 where
-    E: ?Sized + Encodable,
     T: Borrow<E>,
+    E: ?Sized + Encodable,
 {
     let payload_length = rlp_list_header(list).payload_length;
     length_of_length(payload_length) + payload_length
