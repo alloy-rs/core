@@ -79,7 +79,7 @@ impl Serialize for Param {
 impl Param {
     /// The internal type of the parameter.
     #[inline]
-    pub fn internal_type(&self) -> Option<&InternalType> {
+    pub const fn internal_type(&self) -> Option<&InternalType> {
         self.internal_type.as_ref()
     }
 
@@ -101,7 +101,7 @@ impl Param {
 
     /// True if the parameter is a struct.
     #[inline]
-    pub fn is_struct(&self) -> bool {
+    pub const fn is_struct(&self) -> bool {
         match self.internal_type() {
             Some(ty) => ty.is_struct(),
             None => false,
@@ -110,7 +110,7 @@ impl Param {
 
     /// True if the parameter is an enum.
     #[inline]
-    pub fn is_enum(&self) -> bool {
+    pub const fn is_enum(&self) -> bool {
         match self.internal_type() {
             Some(ty) => ty.is_enum(),
             None => false,
@@ -119,7 +119,7 @@ impl Param {
 
     /// True if the parameter is a contract.
     #[inline]
-    pub fn is_contract(&self) -> bool {
+    pub const fn is_contract(&self) -> bool {
         match self.internal_type() {
             Some(ty) => ty.is_contract(),
             None => false,
@@ -282,7 +282,7 @@ impl Serialize for EventParam {
 impl EventParam {
     /// The internal type of the parameter.
     #[inline]
-    pub fn internal_type(&self) -> Option<&InternalType> {
+    pub const fn internal_type(&self) -> Option<&InternalType> {
         self.internal_type.as_ref()
     }
 
@@ -304,7 +304,7 @@ impl EventParam {
 
     /// True if the parameter is a struct.
     #[inline]
-    pub fn is_struct(&self) -> bool {
+    pub const fn is_struct(&self) -> bool {
         match self.internal_type() {
             Some(ty) => ty.is_struct(),
             None => false,
@@ -313,7 +313,7 @@ impl EventParam {
 
     /// True if the parameter is an enum.
     #[inline]
-    pub fn is_enum(&self) -> bool {
+    pub const fn is_enum(&self) -> bool {
         match self.internal_type() {
             Some(ty) => ty.is_enum(),
             None => false,
@@ -322,7 +322,7 @@ impl EventParam {
 
     /// True if the parameter is a contract.
     #[inline]
-    pub fn is_contract(&self) -> bool {
+    pub const fn is_contract(&self) -> bool {
         match self.internal_type() {
             Some(ty) => ty.is_contract(),
             None => false,

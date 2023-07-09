@@ -1,6 +1,6 @@
 use core::fmt;
 
-use alloc::string::String;
+use alloc::string::{String, ToString};
 
 use alloy_sol_type_str::TypeSpecifier;
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
@@ -45,18 +45,18 @@ impl From<BorrowedInternalType<'_>> for InternalType {
     fn from(borrowed: BorrowedInternalType<'_>) -> InternalType {
         match borrowed {
             BorrowedInternalType::AddressPayable => InternalType::AddressPayable,
-            BorrowedInternalType::Contract(s) => InternalType::Contract((*s).to_owned()),
+            BorrowedInternalType::Contract(s) => InternalType::Contract(s.to_string()),
             BorrowedInternalType::Enum { contract, ty } => InternalType::Enum {
                 contract: contract.map(String::from),
-                ty: (*ty).to_owned(),
+                ty: ty.to_string(),
             },
             BorrowedInternalType::Struct { contract, ty } => InternalType::Struct {
                 contract: contract.map(String::from),
-                ty: (*ty).to_owned(),
+                ty: ty.to_string(),
             },
             BorrowedInternalType::Other { contract, ty } => InternalType::Other {
                 contract: contract.map(String::from),
-                ty: (*ty).to_owned(),
+                ty: ty.to_string(),
             },
         }
     }
@@ -88,27 +88,27 @@ impl<'de> Deserialize<'de> for InternalType {
 
 impl InternalType {
     /// True if the instance is a `struct` variant.
-    pub fn is_struct(&self) -> bool {
+    pub const fn is_struct(&self) -> bool {
         matches!(self, InternalType::Struct { .. })
     }
 
     /// True if the instance is a `enum` variant.
-    pub fn is_enum(&self) -> bool {
+    pub const fn is_enum(&self) -> bool {
         matches!(self, InternalType::Enum { .. })
     }
 
     /// True if the instance is a `contract` variant.
-    pub fn is_contract(&self) -> bool {
+    pub const fn is_contract(&self) -> bool {
         matches!(self, InternalType::Contract(_))
     }
 
     /// True if the instance is a `address payable` variant.
-    pub fn is_address_payable(&self) -> bool {
+    pub const fn is_address_payable(&self) -> bool {
         matches!(self, InternalType::AddressPayable)
     }
 
     /// True if the instance is a `other` variant.
-    pub fn is_other(&self) -> bool {
+    pub const fn is_other(&self) -> bool {
         matches!(self, InternalType::Other { .. })
     }
 
@@ -301,18 +301,16 @@ impl<'de> Visitor<'de> for ItVisitor {
             }
         } else if let Some(body) = v.strip_prefix("contract ") {
             Ok(BorrowedInternalType::Contract(body))
+        } else if let Some((contract, ty)) = v.split_once('.') {
+            Ok(BorrowedInternalType::Other {
+                contract: Some(contract),
+                ty,
+            })
         } else {
-            if let Some((contract, ty)) = v.split_once('.') {
-                Ok(BorrowedInternalType::Other {
-                    contract: Some(contract),
-                    ty,
-                })
-            } else {
-                Ok(BorrowedInternalType::Other {
-                    contract: None,
-                    ty: v,
-                })
-            }
+            Ok(BorrowedInternalType::Other {
+                contract: None,
+                ty: v,
+            })
         }
     }
 }
