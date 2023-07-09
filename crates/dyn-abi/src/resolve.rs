@@ -113,7 +113,7 @@ impl ResolveSolType for Param {
             let prop_names = self.components.iter().map(|c| c.name.clone()).collect();
             if let Some(spec) = self.struct_specifier() {
                 return Ok(DynSolType::CustomStruct {
-                    name: spec.stem.span().to_owned(),
+                    name: spec.stem.span().into(),
                     prop_names,
                     tuple,
                 }
@@ -148,8 +148,7 @@ impl ResolveSolType for EventParam {
             let prop_names = self.components.iter().map(|c| c.name.clone()).collect();
             if let Some(spec) = self.struct_specifier() {
                 return Ok(DynSolType::CustomStruct {
-                    // a specifier in the abi json will always be root type
-                    name: spec.stem.as_root().unwrap().to_string(),
+                    name: spec.stem.span().into(),
                     prop_names,
                     tuple,
                 }
