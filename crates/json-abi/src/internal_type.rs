@@ -271,7 +271,7 @@ impl Serialize for BorrowedInternalType<'_> {
     }
 }
 
-impl<'de> Deserialize<'de> for BorrowedInternalType<'de> {
+impl<'de: 'a, 'a> Deserialize<'de> for BorrowedInternalType<'a> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

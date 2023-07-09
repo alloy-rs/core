@@ -163,7 +163,7 @@ impl Serialize for AbiItem<'_> {
     }
 }
 
-impl<'de> Deserialize<'de> for AbiItem<'_> {
+impl<'de: 'a, 'a> Deserialize<'de> for AbiItem<'a> {
     #[inline]
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         private::AbiItem::deserialize(deserializer).map(Into::into)

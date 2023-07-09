@@ -43,7 +43,6 @@ impl fmt::Display for Param {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(internal_type) = &self.internal_type {
             write!(f, "{} ", internal_type)?;
-            f.write_str(" ")?;
         }
         f.write_str(&self.name)
     }
@@ -245,7 +244,6 @@ impl fmt::Display for EventParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(internal_type) = &self.internal_type {
             write!(f, "{} ", internal_type)?;
-            f.write_str(" ")?;
         }
         f.write_str(&self.name)
     }
@@ -417,7 +415,7 @@ impl EventParam {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-#[serde(bound(deserialize = "<[T] as ToOwned>::Owned: Default + Deserialize<'de>, 'a: 'de"))]
+#[serde(bound(deserialize = "<[T] as ToOwned>::Owned: Default + Deserialize<'de>"))]
 struct BorrowedParam<'a, T: Clone> {
     name: &'a str,
     #[serde(rename = "type")]

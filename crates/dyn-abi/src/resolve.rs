@@ -41,9 +41,18 @@ pub trait ResolveSolType {
     fn resolve(&self) -> DynAbiResult<DynSolType>;
 }
 
-impl ResolveSolType for &str {
+impl ResolveSolType for str {
     fn resolve(&self) -> DynAbiResult<DynSolType> {
-        TypeSpecifier::try_from(*self)?.resolve()
+        TypeSpecifier::try_from(self)?.resolve()
+    }
+}
+
+impl<T> ResolveSolType for &T
+where
+    T: ResolveSolType,
+{
+    fn resolve(&self) -> DynAbiResult<DynSolType> {
+        (*self).resolve()
     }
 }
 
@@ -94,7 +103,6 @@ impl ResolveSolType for RootType<'_> {
 }
 
 impl ResolveSolType for TupleSpecifier<'_> {
-    /// Resolve the type string into a basic Solidity type if possible.
     #[inline]
     fn resolve(&self) -> DynAbiResult<DynSolType> {
         self.types
@@ -106,7 +114,6 @@ impl ResolveSolType for TupleSpecifier<'_> {
 }
 
 impl ResolveSolType for TypeStem<'_> {
-    /// Resolve the type string into a basic Solidity type if possible.
     #[inline]
     fn resolve(&self) -> Result<DynSolType, DynAbiError> {
         match self {
@@ -117,7 +124,6 @@ impl ResolveSolType for TypeStem<'_> {
 }
 
 impl ResolveSolType for TypeSpecifier<'_> {
-    /// Resolve the type string into a basic Solidity type if possible.
     #[inline]
     fn resolve(&self) -> Result<DynSolType, DynAbiError> {
         let ty = self.stem.resolve()?;
