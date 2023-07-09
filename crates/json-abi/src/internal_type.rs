@@ -15,7 +15,7 @@ use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 /// the underlying ABI type.
 pub enum InternalType {
     /// Address payable.
-    AddressPayable,
+    AddressPayable(String),
     /// Contract.
     Contract(String),
     /// Enum. Possibly of the form `contract.enum`.
@@ -44,7 +44,7 @@ pub enum InternalType {
 impl From<BorrowedInternalType<'_>> for InternalType {
     fn from(borrowed: BorrowedInternalType<'_>) -> InternalType {
         match borrowed {
-            BorrowedInternalType::AddressPayable => InternalType::AddressPayable,
+            BorrowedInternalType::AddressPayable(s) => InternalType::AddressPayable(s.to_string()),
             BorrowedInternalType::Contract(s) => InternalType::Contract(s.to_string()),
             BorrowedInternalType::Enum { contract, ty } => InternalType::Enum {
                 contract: contract.map(String::from),
@@ -87,6 +87,11 @@ impl<'de> Deserialize<'de> for InternalType {
 }
 
 impl InternalType {
+    /// Parse a string into an instance, taking ownership of data
+    pub fn parse(s: &str) -> Option<Self> {
+        BorrowedInternalType::parse(s).map(Into::into)
+    }
+
     /// True if the instance is a `struct` variant.
     pub const fn is_struct(&self) -> bool {
         matches!(self, InternalType::Struct { .. })
@@ -104,7 +109,7 @@ impl InternalType {
 
     /// True if the instance is a `address payable` variant.
     pub const fn is_address_payable(&self) -> bool {
-        matches!(self, InternalType::AddressPayable)
+        matches!(self, InternalType::AddressPayable(_))
     }
 
     /// True if the instance is a `other` variant.
@@ -175,7 +180,7 @@ impl InternalType {
 
     pub(crate) fn as_borrowed(&self) -> BorrowedInternalType<'_> {
         match self {
-            InternalType::AddressPayable => BorrowedInternalType::AddressPayable,
+            InternalType::AddressPayable(s) => BorrowedInternalType::AddressPayable(s),
             InternalType::Contract(s) => BorrowedInternalType::Contract(s),
             InternalType::Enum { contract, ty } => BorrowedInternalType::Enum {
                 contract: contract.as_deref(),
@@ -195,7 +200,7 @@ impl InternalType {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum BorrowedInternalType<'a> {
-    AddressPayable,
+    AddressPayable(&'a str),
     Contract(&'a str),
     Enum {
         contract: Option<&'a str>,
@@ -214,7 +219,7 @@ pub(crate) enum BorrowedInternalType<'a> {
 impl fmt::Display for BorrowedInternalType<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BorrowedInternalType::AddressPayable => write!(f, "address payable"),
+            BorrowedInternalType::AddressPayable(s) => f.write_str(s),
             BorrowedInternalType::Contract(s) => write!(f, "contract {}", s),
             BorrowedInternalType::Enum { contract, ty } => {
                 if let Some(c) = contract {
@@ -259,6 +264,52 @@ impl<'de> Deserialize<'de> for BorrowedInternalType<'de> {
     }
 }
 
+impl<'a> BorrowedInternalType<'a> {
+    /// Instantiate a borrowed internal type by parsing a string.
+    fn parse(v: &'a str) -> Option<Self> {
+        if v.starts_with("address payable") {
+            return Some(BorrowedInternalType::AddressPayable(v))
+        }
+        if let Some(body) = v.strip_prefix("enum ") {
+            if let Some((contract, ty)) = body.split_once('.') {
+                Some(BorrowedInternalType::Enum {
+                    contract: Some(contract),
+                    ty,
+                })
+            } else {
+                Some(BorrowedInternalType::Enum {
+                    contract: None,
+                    ty: body,
+                })
+            }
+        } else if let Some(body) = v.strip_prefix("struct ") {
+            if let Some((contract, ty)) = body.split_once('.') {
+                Some(BorrowedInternalType::Struct {
+                    contract: Some(contract),
+                    ty,
+                })
+            } else {
+                Some(BorrowedInternalType::Struct {
+                    contract: None,
+                    ty: body,
+                })
+            }
+        } else if let Some(body) = v.strip_prefix("contract ") {
+            Some(BorrowedInternalType::Contract(body))
+        } else if let Some((contract, ty)) = v.split_once('.') {
+            Some(BorrowedInternalType::Other {
+                contract: Some(contract),
+                ty,
+            })
+        } else {
+            Some(BorrowedInternalType::Other {
+                contract: None,
+                ty: v,
+            })
+        }
+    }
+}
+
 pub(crate) struct ItVisitor;
 
 impl<'de> Visitor<'de> for ItVisitor {
@@ -272,45 +323,75 @@ impl<'de> Visitor<'de> for ItVisitor {
     where
         E: serde::de::Error,
     {
-        if v == "address payable" {
-            return Ok(BorrowedInternalType::AddressPayable)
-        }
-        if let Some(body) = v.strip_prefix("enum ") {
-            if let Some((contract, ty)) = body.split_once('.') {
-                Ok(BorrowedInternalType::Enum {
-                    contract: Some(contract),
-                    ty,
-                })
-            } else {
-                Ok(BorrowedInternalType::Enum {
-                    contract: None,
-                    ty: body,
-                })
-            }
-        } else if let Some(body) = v.strip_prefix("struct ") {
-            if let Some((contract, ty)) = body.split_once('.') {
-                Ok(BorrowedInternalType::Struct {
-                    contract: Some(contract),
-                    ty,
-                })
-            } else {
-                Ok(BorrowedInternalType::Struct {
-                    contract: None,
-                    ty: body,
-                })
-            }
-        } else if let Some(body) = v.strip_prefix("contract ") {
-            Ok(BorrowedInternalType::Contract(body))
-        } else if let Some((contract, ty)) = v.split_once('.') {
-            Ok(BorrowedInternalType::Other {
-                contract: Some(contract),
-                ty,
-            })
-        } else {
-            Ok(BorrowedInternalType::Other {
+        BorrowedInternalType::parse(v).ok_or_else(|| {
+            E::invalid_value(serde::de::Unexpected::Str(v), &"a valid internal type")
+        })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    macro_rules! parser_test {
+        ($test_str:expr, $expected:expr) => {
+            assert_eq!(InternalType::parse($test_str).unwrap(), $expected);
+        };
+    }
+
+    #[test]
+    fn parse_simple_internal_types() {
+        parser_test!(
+            "struct SpentItem[]",
+            InternalType::Struct {
                 contract: None,
-                ty: v,
-            })
-        }
+                ty: "SpentItem[]".into()
+            }
+        );
+        parser_test!(
+            "struct Contract.Item",
+            InternalType::Struct {
+                contract: Some("Contract".into()),
+                ty: "Item".into()
+            }
+        );
+        parser_test!(
+            "enum ItemType[32]",
+            InternalType::Enum {
+                contract: None,
+                ty: "ItemType[32]".into()
+            }
+        );
+        parser_test!(
+            "enum Contract.Item",
+            InternalType::Enum {
+                contract: Some("Contract".into()),
+                ty: "Item".into()
+            }
+        );
+
+        parser_test!("contract Item", InternalType::Contract("Item".into()));
+        parser_test!(
+            "address payable",
+            InternalType::AddressPayable("address payable".to_string())
+        );
+        parser_test!(
+            "address payable[][][][][]",
+            InternalType::AddressPayable("address payable[][][][][]".into())
+        );
+        parser_test!(
+            "Item",
+            InternalType::Other {
+                contract: None,
+                ty: "Item".into()
+            }
+        );
+        parser_test!(
+            "Contract.Item[][33]",
+            InternalType::Other {
+                contract: Some("Contract".into()),
+                ty: "Item[][33]".into()
+            }
+        );
     }
 }
