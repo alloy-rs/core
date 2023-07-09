@@ -417,7 +417,7 @@ impl<'a> AsRef<[u8]> for PackedSeqToken<'a> {
     }
 }
 
-impl<'de> TokenType<'de> for PackedSeqToken<'de> {
+impl<'de: 'a, 'a> TokenType<'de> for PackedSeqToken<'a> {
     const DYNAMIC: bool = true;
 
     #[inline]
