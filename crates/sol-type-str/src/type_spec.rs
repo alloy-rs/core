@@ -32,8 +32,8 @@ use core::num::NonZeroUsize;
 /// - `contract MyContract`
 /// - `struct MyStruct`
 /// - `enum MyEnum`
-/// - `struct MyContract.MyStruct[333]
-/// - `enum MyContract.MyEnum[][][][][][]
+/// - `struct MyContract.MyStruct\[333\]`
+/// - `enum MyContract.MyEnum[][][][][][]`
 /// - `MyValueType`
 ///
 /// ## Example
