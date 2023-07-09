@@ -52,11 +52,14 @@ pub const EMPTY_LIST_CODE: u8 = 0xC0;
 
 // Not public API.
 #[doc(hidden)]
-#[inline]
-pub const fn const_add(a: usize, b: usize) -> usize {
-    a + b
-}
-
-#[doc(hidden)]
 #[deprecated(since = "0.3.0", note = "use `Error` instead")]
 pub type DecodeError = Error;
+
+#[doc(hidden)]
+pub mod private {
+    pub use core::{
+        default::Default,
+        option::Option::{self, None, Some},
+        result::Result::{self, Err, Ok},
+    };
+}

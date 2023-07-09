@@ -7,13 +7,14 @@ use arrayvec::ArrayVec;
 
 /// A type that can be encoded via RLP.
 pub trait Encodable {
-    /// Encode the type into the `out` buffer.
+    /// Encodes the type into the `out` buffer.
     fn encode(&self, out: &mut dyn BufMut);
 
-    /// Return the length of the type in bytes
+    /// Returns the length of the encoding of this type in bytes.
     ///
-    /// The default implementation computes this by encoding the type. If
-    /// feasible, we recommender implementers override this default impl.
+    /// The default implementation computes this by encoding the type.
+    /// When possible, we recommender implementers override this with a
+    /// specialized implementation.
     #[inline]
     fn length(&self) -> usize {
         let mut out = alloc::vec::Vec::new();

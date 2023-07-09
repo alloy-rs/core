@@ -1,6 +1,9 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Attribute, DataStruct, Error, Field, Meta, Result, Type, TypePath};
+use syn::{
+    parse_quote, Attribute, DataStruct, Error, Field, GenericParam, Generics, Meta, Result, Type,
+    TypePath,
+};
 
 pub(crate) const EMPTY_STRING_CODE: u8 = 0x80;
 
@@ -54,4 +57,20 @@ pub(crate) fn field_ident(index: usize, field: &syn::Field) -> TokenStream {
         let index = syn::Index::from(index);
         quote! { #index }
     }
+}
+
+pub(crate) fn make_generics(generics: &Generics, trait_name: TokenStream) -> Generics {
+    let mut generics = generics.clone();
+    generics.make_where_clause();
+    let mut where_clause = generics.where_clause.take().unwrap();
+
+    for generic in &generics.params {
+        if let GenericParam::Type(ty) = &generic {
+            let t = &ty.ident;
+            let pred = parse_quote!(#t: #trait_name);
+            where_clause.predicates.push(pred);
+        }
+    }
+    generics.where_clause = Some(where_clause);
+    generics
 }
