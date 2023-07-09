@@ -18,15 +18,17 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-arrayvec.workspace = true
 bytes.workspace = true
-
 alloy-rlp-derive = { workspace = true, optional = true }
+arrayvec = { workspace = true, optional = true }
+smol_str = { version = "0.2", default-features = false, optional = true }
 
 [dev-dependencies]
 hex-literal.workspace = true
 
 [features]
 default = ["std"]
-std = ["arrayvec/std", "bytes/std"]
+std = ["bytes/std", "arrayvec?/std", "smol_str?/std"]
 derive = ["dep:alloy-rlp-derive"]
+arrayvec = ["dep:arrayvec"]
+smol_str = ["dep:smol_str"]

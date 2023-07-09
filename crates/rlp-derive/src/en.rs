@@ -1,4 +1,6 @@
-use crate::utils::{attributes_include, field_ident, is_optional, parse_struct, EMPTY_STRING_CODE};
+use crate::utils::{
+    attributes_include, field_ident, is_optional, make_generics, parse_struct, EMPTY_STRING_CODE,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::iter::Peekable;
@@ -17,59 +19,59 @@ pub(crate) fn impl_encodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
     let supports_trailing_opt = attributes_include(&ast.attrs, "trailing");
 
     let mut encountered_opt_item = false;
-    let mut length_stmts = Vec::with_capacity(body.fields.len());
-    let mut stmts = Vec::with_capacity(body.fields.len());
+    let mut length_exprs = Vec::with_capacity(body.fields.len());
+    let mut encode_exprs = Vec::with_capacity(body.fields.len());
 
     while let Some((i, field)) = fields.next() {
         let is_opt = is_optional(field);
         if is_opt {
             if !supports_trailing_opt {
-                return Err(Error::new_spanned(field, "Optional fields are disabled. Add `#[rlp(trailing)]` attribute to the struct in order to enable"));
+                let msg = "optional fields are disabled.\nAdd the `#[rlp(trailing)]` attribute to the struct in order to enable optional fields";
+                return Err(Error::new_spanned(field, msg))
             }
             encountered_opt_item = true;
         } else if encountered_opt_item {
-            return Err(Error::new_spanned(
-                field,
-                "All subsequent fields must be optional.",
-            ))
+            let msg = "all the fields after the first optional field must be optional";
+            return Err(Error::new_spanned(field, msg))
         }
 
-        length_stmts.push(encodable_length(i, field, is_opt, fields.clone()));
-        stmts.push(encodable_field(i, field, is_opt, fields.clone()));
+        length_exprs.push(encodable_length(i, field, is_opt, fields.clone()));
+        encode_exprs.push(encodable_field(i, field, is_opt, fields.clone()));
     }
 
     let name = &ast.ident;
-    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-
-    let impl_block = quote! {
-        trait E {
-            fn rlp_header(&self) -> alloy_rlp::Header;
-        }
-
-        impl #impl_generics E for #name #ty_generics #where_clause {
-            fn rlp_header(&self) -> alloy_rlp::Header {
-                let mut rlp_head = alloy_rlp::Header { list: true, payload_length: 0 };
-                #(#length_stmts)*
-                rlp_head
-            }
-        }
-
-        impl #impl_generics alloy_rlp::Encodable for #name #ty_generics #where_clause {
-            fn length(&self) -> usize {
-                let rlp_head = E::rlp_header(self);
-                return alloy_rlp::length_of_length(rlp_head.payload_length) + rlp_head.payload_length;
-            }
-            fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-                E::rlp_header(self).encode(out);
-                #(#stmts)*
-            }
-        }
-    };
+    let generics = make_generics(&ast.generics, quote!(alloy_rlp::Encodable));
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     Ok(quote! {
         const _: () = {
             extern crate alloy_rlp;
-            #impl_block
+
+            impl #impl_generics alloy_rlp::Encodable for #name #ty_generics #where_clause {
+                #[inline]
+                fn length(&self) -> usize {
+                    let payload_length = self._alloy_rlp_payload_length();
+                    payload_length + alloy_rlp::length_of_length(payload_length)
+                }
+
+                #[inline]
+                fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+                    alloy_rlp::Header {
+                        list: true,
+                        payload_length: self._alloy_rlp_payload_length(),
+                    }
+                    .encode(out);
+                    #(#encode_exprs)*
+                }
+            }
+
+            impl #impl_generics #name #ty_generics #where_clause {
+                #[allow(unused_parens)]
+                #[inline]
+                fn _alloy_rlp_payload_length(&self) -> usize {
+                    0usize #( + #length_exprs)*
+                }
+            }
         };
     })
 }
@@ -77,34 +79,35 @@ pub(crate) fn impl_encodable(ast: &syn::DeriveInput) -> Result<TokenStream> {
 pub(crate) fn impl_encodable_wrapper(ast: &syn::DeriveInput) -> Result<TokenStream> {
     let body = parse_struct(ast, "RlpEncodableWrapper")?;
 
+    let name = &ast.ident;
+    let generics = make_generics(&ast.generics, quote!(alloy_rlp::Encodable));
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let ident = {
         let fields: Vec<_> = body.fields.iter().collect();
-        if fields.len() == 1 {
-            let field = fields.first().expect("fields.len() == 1; qed");
+        if let [field] = fields[..] {
             field_ident(0, field)
         } else {
-            panic!("#[derive(RlpEncodableWrapper)] is only defined for structs with one field.")
-        }
-    };
-
-    let name = &ast.ident;
-    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
-
-    let impl_block = quote! {
-        impl #impl_generics alloy_rlp::Encodable for #name #ty_generics #where_clause {
-            fn length(&self) -> usize {
-                self.#ident.length()
-            }
-            fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-                self.#ident.encode(out)
-            }
+            let msg = "`RlpEncodableWrapper` is only derivable for structs with one field";
+            return Err(Error::new(name.span(), msg))
         }
     };
 
     Ok(quote! {
         const _: () = {
             extern crate alloy_rlp;
-            #impl_block
+
+            impl #impl_generics alloy_rlp::Encodable for #name #ty_generics #where_clause {
+                #[inline]
+                fn length(&self) -> usize {
+                    alloy_rlp::Encodable::length(&self.#ident)
+                }
+
+                #[inline]
+                fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+                    alloy_rlp::Encodable::encode(&self.#ident, out)
+                }
+            }
         };
     })
 }
@@ -112,26 +115,45 @@ pub(crate) fn impl_encodable_wrapper(ast: &syn::DeriveInput) -> Result<TokenStre
 pub(crate) fn impl_max_encoded_len(ast: &syn::DeriveInput) -> Result<TokenStream> {
     let body = parse_struct(ast, "RlpMaxEncodedLen")?;
 
-    let stmts: Vec<_> = body
+    let tys = body
         .fields
         .iter()
-        .enumerate()
-        .filter(|(_, field)| !attributes_include(&field.attrs, "skip"))
-        .map(|(index, field)| encodable_max_length(index, field))
-        .collect();
+        .filter(|field| !attributes_include(&field.attrs, "skip"))
+        .map(|field| &field.ty);
+
     let name = &ast.ident;
 
-    let impl_block = quote! {
-        unsafe impl alloy_rlp::MaxEncodedLen<{ alloy_rlp::const_add(alloy_rlp::length_of_length(#(#stmts)*), #(#stmts)*) }> for #name {}
-        unsafe impl alloy_rlp::MaxEncodedLenAssoc for #name {
-            const LEN: usize = { alloy_rlp::const_add(alloy_rlp::length_of_length(#(#stmts)*), { #(#stmts)* }) };
+    let generics = make_generics(&ast.generics, quote!(alloy_rlp::MaxEncodedLenAssoc));
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let imp = quote! {{
+        let _sz = 0usize #( + <#tys as alloy_rlp::MaxEncodedLenAssoc>::LEN )*;
+        _sz + alloy_rlp::length_of_length(_sz)
+    }};
+
+    // can't do operations with const generic params / associated consts in the
+    // non-associated impl
+    let can_derive_non_assoc = ast
+        .generics
+        .params
+        .iter()
+        .all(|g| !matches!(g, syn::GenericParam::Type(_) | syn::GenericParam::Const(_)));
+    let non_assoc_impl =  can_derive_non_assoc.then(|| {
+        quote! {
+            unsafe impl #impl_generics alloy_rlp::MaxEncodedLen<#imp> for #name #ty_generics #where_clause {}
         }
-    };
+    });
 
     Ok(quote! {
+        #[allow(unsafe_code)]
         const _: () = {
             extern crate alloy_rlp;
-            #impl_block
+
+            #non_assoc_impl
+
+            unsafe impl #impl_generics alloy_rlp::MaxEncodedLenAssoc for #name #ty_generics #where_clause {
+                const LEN: usize = #imp;
+            }
         };
     })
 }
@@ -147,24 +169,14 @@ fn encodable_length<'a>(
     if is_opt {
         let default = if remaining.peek().is_some() {
             let condition = remaining_opt_fields_some_condition(remaining);
-            quote! { #condition as usize }
+            quote! { (#condition) as usize }
         } else {
             quote! { 0 }
         };
 
-        quote! { rlp_head.payload_length += &self.#ident.as_ref().map(|val| alloy_rlp::Encodable::length(val)).unwrap_or(#default); }
+        quote! { self.#ident.as_ref().map(|val| alloy_rlp::Encodable::length(val)).unwrap_or(#default) }
     } else {
-        quote! { rlp_head.payload_length += alloy_rlp::Encodable::length(&self.#ident); }
-    }
-}
-
-fn encodable_max_length(index: usize, field: &syn::Field) -> TokenStream {
-    let fieldtype = &field.ty;
-
-    if index == 0 {
-        quote! { <#fieldtype as alloy_rlp::MaxEncodedLenAssoc>::LEN }
-    } else {
-        quote! { + <#fieldtype as alloy_rlp::MaxEncodedLenAssoc>::LEN }
+        quote! { alloy_rlp::Encodable::length(&self.#ident) }
     }
 }
 
@@ -206,5 +218,5 @@ fn remaining_opt_fields_some_condition<'a>(
         let ident = field_ident(index, field);
         quote! { self.#ident.is_some() }
     });
-    quote! { #(#conditions) ||* }
+    quote! { #(#conditions)||* }
 }

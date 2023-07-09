@@ -1,45 +1,54 @@
 use crate::{Header, EMPTY_STRING_CODE};
-use arrayvec::ArrayVec;
 use bytes::{BufMut, Bytes, BytesMut};
 use core::borrow::Borrow;
 
-macro_rules! to_be_bytes_trimmed {
-    ($be:ident, $x:expr) => {{
-        $be = $x.to_be_bytes();
-        &$be[($x.leading_zeros() / 8) as usize..]
-    }};
-}
-pub(crate) use to_be_bytes_trimmed;
+#[cfg(feature = "arrayvec")]
+use arrayvec::ArrayVec;
 
-/// Determine the length in bytes of the length prefix of an RLP item.
-#[inline]
-pub const fn length_of_length(payload_length: usize) -> usize {
-    if payload_length < 56 {
-        1
-    } else {
-        1 + 8 - payload_length.leading_zeros() as usize / 8
+/// A type that can be encoded via RLP.
+pub trait Encodable {
+    /// Encodes the type into the `out` buffer.
+    fn encode(&self, out: &mut dyn BufMut);
+
+    /// Returns the length of the encoding of this type in bytes.
+    ///
+    /// The default implementation computes this by encoding the type.
+    /// When possible, we recommender implementers override this with a
+    /// specialized implementation.
+    #[inline]
+    fn length(&self) -> usize {
+        let mut out = alloc::vec::Vec::new();
+        self.encode(&mut out);
+        out.len()
     }
 }
 
-#[doc(hidden)]
-#[inline]
-pub const fn const_add(a: usize, b: usize) -> usize {
-    a + b
-}
+// The existence of this function makes the compiler catch if the Encodable
+// trait is "object-safe" or not.
+fn _assert_trait_object(_b: &dyn Encodable) {}
 
-#[doc(hidden)]
-pub unsafe trait MaxEncodedLen<const LEN: usize>: Encodable {}
-
-#[doc(hidden)]
-pub unsafe trait MaxEncodedLenAssoc: Encodable {
-    const LEN: usize;
-}
-
-/// Use this to define length of an encoded entity
+/// Defines the max length of an [`Encodable`] type as a const generic.
 ///
 /// # Safety
 ///
-/// An invalid value can cause the encoder to crash.
+/// An invalid value can cause the encoder to panic.
+pub unsafe trait MaxEncodedLen<const LEN: usize>: Encodable {}
+
+/// Defines the max length of an [`Encodable`] type as an associated constant.
+///
+/// # Safety
+///
+/// An invalid value can cause the encoder to panic.
+pub unsafe trait MaxEncodedLenAssoc: Encodable {
+    /// The maximum length.
+    const LEN: usize;
+}
+
+/// Implement [`MaxEncodedLen`] and [`MaxEncodedLenAssoc`] for a type.
+///
+/// # Safety
+///
+/// An invalid value can cause the encoder to panic.
 #[macro_export]
 macro_rules! impl_max_encoded_len {
     ($t:ty, $len:expr) => {
@@ -50,24 +59,24 @@ macro_rules! impl_max_encoded_len {
     };
 }
 
-/// A type that can be encoded via RLP.
-pub trait Encodable {
-    /// Encode the type into the `out` buffer.
-    fn encode(&self, out: &mut dyn BufMut);
-
-    /// Return the length of the type in bytes
-    ///
-    /// The default implementation computes this by encoding the type. If
-    /// feasible, we recommender implementers override this default impl.
-    #[inline]
-    fn length(&self) -> usize {
-        let mut out = BytesMut::new();
-        self.encode(&mut out);
-        out.len()
-    }
+macro_rules! to_be_bytes_trimmed {
+    ($be:ident, $x:expr) => {{
+        $be = $x.to_be_bytes();
+        &$be[($x.leading_zeros() / 8) as usize..]
+    }};
 }
+pub(crate) use to_be_bytes_trimmed;
 
 impl Encodable for [u8] {
+    #[inline]
+    fn length(&self) -> usize {
+        let mut len = self.len();
+        if len != 1 || self[0] >= EMPTY_STRING_CODE {
+            len += length_of_length(len);
+        }
+        len
+    }
+
     #[inline]
     fn encode(&self, out: &mut dyn BufMut) {
         if self.len() != 1 || self[0] >= EMPTY_STRING_CODE {
@@ -79,26 +88,17 @@ impl Encodable for [u8] {
         }
         out.put_slice(self);
     }
-
-    #[inline]
-    fn length(&self) -> usize {
-        let mut len = self.len();
-        if self.len() != 1 || self[0] >= EMPTY_STRING_CODE {
-            len += length_of_length(self.len());
-        }
-        len
-    }
 }
 
 impl<const N: usize> Encodable for [u8; N] {
     #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        self[..].encode(out);
+    fn length(&self) -> usize {
+        self[..].length()
     }
 
     #[inline]
-    fn length(&self) -> usize {
-        self[..].length()
+    fn encode(&self, out: &mut dyn BufMut) {
+        self[..].encode(out);
     }
 }
 
@@ -108,27 +108,27 @@ unsafe impl<const N: usize> MaxEncodedLenAssoc for [u8; N] {
 
 impl Encodable for str {
     #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        self.as_bytes().encode(out)
+    fn length(&self) -> usize {
+        self.as_bytes().length()
     }
 
     #[inline]
-    fn length(&self) -> usize {
-        self.as_bytes().length()
+    fn encode(&self, out: &mut dyn BufMut) {
+        self.as_bytes().encode(out)
     }
 }
 
 impl Encodable for bool {
     #[inline]
-    fn encode(&self, out: &mut dyn BufMut) {
-        // inlined `(*self as u8).encode(out)`
-        out.put_u8(if *self { 1 } else { EMPTY_STRING_CODE });
-    }
-
-    #[inline]
     fn length(&self) -> usize {
         // a `bool` is always `< EMPTY_STRING_CODE`
         1
+    }
+
+    #[inline]
+    fn encode(&self, out: &mut dyn BufMut) {
+        // inlined `(*self as u8).encode(out)`
+        out.put_u8(if *self { 1 } else { EMPTY_STRING_CODE });
     }
 }
 
@@ -164,7 +164,8 @@ macro_rules! uint_impl {
         }
 
         impl_max_encoded_len!($t, {
-            length_of_length(<$t>::MAX.to_be_bytes().len()) + <$t>::MAX.to_be_bytes().len()
+            let bytes = <$t>::BITS as usize / 8;
+            bytes + length_of_length(bytes)
         });
     )+};
 }
@@ -184,16 +185,17 @@ impl<T: Encodable> Encodable for alloc::vec::Vec<T> {
 }
 
 macro_rules! deref_impl {
-    ($([$($gen:tt)*] $t:ty),+ $(,)?) => {$(
+    ($($(#[$attr:meta])* [$($gen:tt)*] $t:ty),+ $(,)?) => {$(
+        $(#[$attr])*
         impl<$($gen)*> Encodable for $t {
-            #[inline]
-            fn encode(&self, out: &mut dyn BufMut) {
-                (**self).encode(out)
-            }
-
             #[inline]
             fn length(&self) -> usize {
                 (**self).length()
+            }
+
+            #[inline]
+            fn encode(&self, out: &mut dyn BufMut) {
+                (**self).encode(out)
             }
         }
     )+};
@@ -203,6 +205,10 @@ deref_impl! {
     [] alloc::string::String,
     [] Bytes,
     [] BytesMut,
+    #[cfg(feature = "smol_str")]
+    [] smol_str::SmolStr,
+    #[cfg(feature = "arrayvec")]
+    [const N: usize] ArrayVec<u8, N>,
     [T: ?Sized + Encodable] &T,
     [T: ?Sized + Encodable] &mut T,
     [T: ?Sized + Encodable] alloc::boxed::Box<T>,
@@ -217,46 +223,53 @@ mod std_support {
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
     impl Encodable for IpAddr {
-        fn encode(&self, out: &mut dyn BufMut) {
-            match self {
-                IpAddr::V4(ip) => ip.encode(out),
-                IpAddr::V6(ip) => ip.encode(out),
-            }
-        }
-
+        #[inline]
         fn length(&self) -> usize {
             match self {
                 IpAddr::V4(ip) => ip.length(),
                 IpAddr::V6(ip) => ip.length(),
             }
         }
+
+        #[inline]
+        fn encode(&self, out: &mut dyn BufMut) {
+            match self {
+                IpAddr::V4(ip) => ip.encode(out),
+                IpAddr::V6(ip) => ip.encode(out),
+            }
+        }
     }
 
     impl Encodable for Ipv4Addr {
-        fn encode(&self, out: &mut dyn BufMut) {
-            Encodable::encode(&self.octets()[..], out)
+        #[inline]
+        fn length(&self) -> usize {
+            self.octets().length()
         }
 
-        fn length(&self) -> usize {
-            Encodable::length(&self.octets()[..])
+        #[inline]
+        fn encode(&self, out: &mut dyn BufMut) {
+            self.octets().encode(out)
         }
     }
 
     impl Encodable for Ipv6Addr {
-        fn encode(&self, out: &mut dyn BufMut) {
-            Encodable::encode(&self.octets()[..], out)
+        #[inline]
+        fn length(&self) -> usize {
+            self.octets().length()
         }
 
-        fn length(&self) -> usize {
-            Encodable::length(&self.octets()[..])
+        #[inline]
+        fn encode(&self, out: &mut dyn BufMut) {
+            self.octets().encode(out)
         }
     }
 }
 
-fn rlp_list_header<E, K>(v: &[K]) -> Header
+#[inline]
+fn rlp_list_header<T, E>(v: &[T]) -> Header
 where
-    E: Encodable + ?Sized,
-    K: Borrow<E>,
+    T: Borrow<E>,
+    E: ?Sized + Encodable,
 {
     let mut h = Header {
         list: true,
@@ -269,47 +282,53 @@ where
 }
 
 /// Calculate the length of a list.
-pub fn list_length<E, K>(v: &[K]) -> usize
+pub fn list_length<T, E>(list: &[T]) -> usize
 where
-    E: Encodable,
-    K: Borrow<E>,
+    T: Borrow<E>,
+    E: ?Sized + Encodable,
 {
-    let payload_length = rlp_list_header(v).payload_length;
+    let payload_length = rlp_list_header(list).payload_length;
     length_of_length(payload_length) + payload_length
 }
 
 /// Encode a list of items.
-pub fn encode_list<E: Encodable>(v: &[E], out: &mut dyn BufMut) {
-    let h = rlp_list_header(v);
+pub fn encode_list<T, E>(list: &[T], out: &mut dyn BufMut)
+where
+    T: Borrow<E>,
+    E: ?Sized + Encodable,
+{
+    let h = rlp_list_header(list);
     h.encode(out);
-    for x in v {
-        x.borrow().encode(out);
+    for t in list {
+        t.borrow().encode(out);
     }
 }
 
 /// Encode all items from an iterator.
 ///
 /// This clones the iterator. Prefer [`encode_list`] if possible.
-pub fn encode_iter<K, I>(i: I, out: &mut dyn BufMut)
+pub fn encode_iter<I, T, E>(iter: I, out: &mut dyn BufMut)
 where
-    K: Encodable,
-    I: Iterator<Item = K> + Clone,
+    I: Iterator<Item = T> + Clone,
+    T: Borrow<E>,
+    E: ?Sized + Encodable,
 {
     let mut h = Header {
         list: true,
         payload_length: 0,
     };
-    for x in i.clone() {
-        h.payload_length += x.length();
+    for t in iter.clone() {
+        h.payload_length += t.borrow().length();
     }
 
     h.encode(out);
-    for x in i {
-        x.encode(out);
+    for t in iter {
+        t.borrow().encode(out);
     }
 }
 
 /// Encode a type with a known maximum size.
+#[cfg(feature = "arrayvec")]
 pub fn encode_fixed_size<E: MaxEncodedLen<LEN>, const LEN: usize>(v: &E) -> ArrayVec<u8, LEN> {
     let mut out = ArrayVec::from([0_u8; LEN]);
 
@@ -321,6 +340,16 @@ pub fn encode_fixed_size<E: MaxEncodedLen<LEN>, const LEN: usize>(v: &E) -> Arra
     out.truncate(final_len);
 
     out
+}
+
+/// Determine the length in bytes of the length prefix of an RLP item.
+#[inline]
+pub const fn length_of_length(payload_length: usize) -> usize {
+    if payload_length < 56 {
+        1
+    } else {
+        1 + 8 - payload_length.leading_zeros() as usize / 8
+    }
 }
 
 #[cfg(test)]
@@ -349,7 +378,7 @@ mod tests {
         out1
     }
 
-    fn encoded_iter<'a, T: Encodable + 'a>(iter: impl Iterator<Item = &'a T> + Clone) -> BytesMut {
+    fn encoded_iter<T: Encodable>(iter: impl Iterator<Item = T> + Clone) -> BytesMut {
         let mut out = BytesMut::new();
         encode_iter(iter, &mut out);
         out
@@ -360,6 +389,21 @@ mod tests {
         assert_eq!(encoded("")[..], hex!("80")[..]);
         assert_eq!(encoded("{")[..], hex!("7b")[..]);
         assert_eq!(encoded("test str")[..], hex!("887465737420737472")[..]);
+    }
+
+    #[cfg(feature = "smol_str")]
+    #[test]
+    fn rlp_smol_str() {
+        use alloc::string::ToString;
+        use smol_str::SmolStr;
+
+        assert_eq!(encoded(SmolStr::new(""))[..], hex!("80")[..]);
+        let mut b = BytesMut::new();
+        "test smol str".to_string().encode(&mut b);
+        assert_eq!(&encoded(SmolStr::new("test smol str"))[..], b.as_ref());
+        let mut b = BytesMut::new();
+        "abcdefgh".to_string().encode(&mut b);
+        assert_eq!(&encoded(SmolStr::new("abcdefgh"))[..], b.as_ref());
     }
 
     #[test]
@@ -518,7 +562,7 @@ mod tests {
 
     #[test]
     fn rlp_iter() {
-        assert_eq!(encoded_iter::<u64>([].iter()), &hex!("c0")[..]);
+        assert_eq!(encoded_iter::<u64>([].into_iter()), &hex!("c0")[..]);
         assert_eq!(
             encoded_iter([0xFFCCB5_u64, 0xFFC0B5_u64].iter()),
             &hex!("c883ffccb583ffc0b5")[..]

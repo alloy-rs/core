@@ -168,7 +168,7 @@ macro_rules! wrap_fixed_bytes {
 
         $crate::impl_fixed_bytes_traits!($name, $n);
         $crate::impl_getrandom!($name);
-        $crate::impl_rlp!($name);
+        $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
         $crate::impl_arbitrary!($name, $n);
 
@@ -377,10 +377,10 @@ macro_rules! impl_getrandom {
 #[macro_export]
 #[cfg(feature = "rlp")]
 macro_rules! impl_rlp {
-    ($t:ty) => {
+    ($t:ty, $n:literal) => {
         impl $crate::private::alloy_rlp::Decodable for $t {
             #[inline]
-            fn decode(buf: &mut &[u8]) -> Result<Self, $crate::private::alloy_rlp::DecodeError> {
+            fn decode(buf: &mut &[u8]) -> $crate::private::alloy_rlp::Result<Self> {
                 $crate::private::alloy_rlp::Decodable::decode(buf).map(Self)
             }
         }
@@ -396,6 +396,10 @@ macro_rules! impl_rlp {
                 $crate::private::alloy_rlp::Encodable::encode(&self.0, out)
             }
         }
+
+        $crate::private::alloy_rlp::impl_max_encoded_len!($t, {
+            $n + $crate::private::alloy_rlp::length_of_length($n)
+        });
     };
 }
 
@@ -403,7 +407,7 @@ macro_rules! impl_rlp {
 #[macro_export]
 #[cfg(not(feature = "rlp"))]
 macro_rules! impl_rlp {
-    ($t:ty) => {};
+    ($t:ty, $n:literal) => {};
 }
 
 #[doc(hidden)]
