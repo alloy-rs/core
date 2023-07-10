@@ -1,10 +1,7 @@
-use alloy_primitives::{Address, U256};
+use alloy_primitives::{hex, Address, U256};
 use alloy_sol_types::{sol, SolEnum, SolType};
-use hex_literal::hex;
 
 sol! {
-    /// Struct definitions will generate a struct with the same name and fields.
-    /// No casing convention is enforced.
     struct Foo {
         uint256 bar;
         address[] baz;
@@ -16,7 +13,6 @@ sol! {
         address b;
     }
 
-    /// Enum definitions will generate a `#[repr(u8)]` enum with the same name and variants.
     enum Enum {
         A,
         B,

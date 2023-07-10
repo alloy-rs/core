@@ -1,16 +1,17 @@
 //! Functions which generate Rust code from the Solidity AST.
 
-use crate::utils::ExprArray;
+use crate::{
+    attr::{self, SolAttrs},
+    utils::ExprArray,
+};
 use ast::{
     File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath, Type,
     VariableDeclaration, Visit,
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, IdentFragment};
-use std::{collections::HashMap, fmt::Write, num::NonZeroU16};
-use syn::{Error, Result};
-
-mod attr;
+use std::{borrow::Borrow, collections::HashMap, fmt::Write};
+use syn::{parse_quote, Attribute, Error, Result};
 
 mod ty;
 pub use ty::expand_type;
@@ -40,6 +41,7 @@ struct ExpCtxt<'ast> {
     /// `function_signature => new_name`
     function_overloads: HashMap<String, String>,
 
+    attrs: SolAttrs,
     ast: &'ast File,
 }
 
@@ -51,18 +53,24 @@ impl<'ast> ExpCtxt<'ast> {
             custom_types: HashMap::new(),
             functions: HashMap::new(),
             function_overloads: HashMap::new(),
+            attrs: SolAttrs::default(),
             ast,
         }
     }
 
     fn expand(mut self) -> Result<TokenStream> {
+        let mut tokens = TokenStream::new();
+
+        if let Err(e) = self.parse_file_attributes() {
+            tokens.extend(e.into_compile_error());
+        }
+
         self.visit_file(self.ast);
         if self.all_items.len() > 1 {
             self.resolve_custom_types()?;
             self.mk_overloads_map()?;
         }
 
-        let mut tokens = TokenStream::new();
         for item in &self.ast.items {
             let t = match self.expand_item(item) {
                 Ok(t) => t,
@@ -95,16 +103,28 @@ impl<'ast> ExpCtxt<'ast> {
 }
 
 // resolve
-impl<'ast> ExpCtxt<'ast> {
+impl ExpCtxt<'_> {
+    fn parse_file_attributes(&mut self) -> Result<()> {
+        let (attrs, others) = attr::SolAttrs::parse(&self.ast.attrs)?;
+        self.attrs = attrs;
+
+        let errs = others
+            .iter()
+            .map(|attr| Error::new_spanned(attr, "unexpected attribute"))
+            .collect::<Vec<_>>();
+        if errs.is_empty() {
+            Ok(())
+        } else {
+            Err(crate::utils::combine_errors(errs).unwrap())
+        }
+    }
+
     fn mk_types_map(&mut self) {
         let mut map = std::mem::take(&mut self.custom_types);
         map.reserve(self.all_items.len());
         for &item in &self.all_items {
             let (name, ty) = match item {
-                Item::Enum(e) => (
-                    &e.name,
-                    Type::Uint(e.span(), Some(NonZeroU16::new(8).unwrap())),
-                ),
+                Item::Enum(e) => (&e.name, e.as_type()),
                 Item::Struct(s) => (&s.name, s.as_type()),
                 Item::Udt(u) => (&u.name, u.ty.clone()),
                 _ => continue,
@@ -207,13 +227,38 @@ impl<'ast> ExpCtxt<'ast> {
             Err(crate::utils::combine_errors(errors).unwrap())
         }
     }
+}
 
+impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
+    fn visit_item(&mut self, item: &'ast Item) {
+        self.all_items.push(item);
+        ast::visit::visit_item(self, item);
+    }
+
+    fn visit_item_function(&mut self, function: &'ast ItemFunction) {
+        self.functions
+            .entry(function.name().as_string())
+            .or_default()
+            .push(function);
+        ast::visit::visit_item_function(self, function);
+    }
+}
+
+// utils
+impl ExpCtxt<'_> {
     fn get_item(&self, name: &SolPath) -> &Item {
-        let name = name.last_tmp();
-        match self.all_items.iter().find(|item| item.name() == Some(name)) {
+        match self.try_get_item(name) {
             Some(item) => item,
             None => panic!("unresolved item: {name}"),
         }
+    }
+
+    fn try_get_item(&self, name: &SolPath) -> Option<&Item> {
+        let name = name.last_tmp();
+        self.all_items
+            .iter()
+            .find(|item| item.name() == Some(name))
+            .copied()
     }
 
     fn custom_type(&self, name: &SolPath) -> &Type {
@@ -303,14 +348,69 @@ impl<'ast> ExpCtxt<'ast> {
         crate::utils::event_selector(self.event_signature(event))
     }
 
+    /// Extends `attrs` with all possible derive attributes for the given type
+    /// if `#[sol(all_derives)]` was passed.
+    ///
+    /// The following traits are only implemented on tuples of arity 12 or less:
+    /// - [PartialEq](https://doc.rust-lang.org/stable/std/cmp/trait.PartialEq.html)
+    /// - [Eq](https://doc.rust-lang.org/stable/std/cmp/trait.Eq.html)
+    /// - [PartialOrd](https://doc.rust-lang.org/stable/std/cmp/trait.PartialOrd.html)
+    /// - [Ord](https://doc.rust-lang.org/stable/std/cmp/trait.Ord.html)
+    /// - [Debug](https://doc.rust-lang.org/stable/std/fmt/trait.Debug.html)
+    /// - [Default](https://doc.rust-lang.org/stable/std/default/trait.Default.html)
+    /// - [Hash](https://doc.rust-lang.org/stable/std/hash/trait.Hash.html)
+    ///
+    /// while the `Default` trait is only implemented on arrays of length 32 or
+    /// less.
+    ///
+    /// Tuple reference: <https://doc.rust-lang.org/stable/std/primitive.tuple.html#trait-implementations-1>
+    ///
+    /// Array reference: <https://doc.rust-lang.org/stable/std/primitive.array.html>
+    ///
+    /// `derive_default` should be set to false when calling this for enums.
+    fn derives<'a, I>(&self, attrs: &mut Vec<Attribute>, params: I, derive_default: bool)
+    where
+        I: IntoIterator<Item = &'a VariableDeclaration>,
+    {
+        self.type_derives(attrs, params.into_iter().map(|p| &p.ty), derive_default)
+    }
+
+    fn type_derives<T, I>(&self, attrs: &mut Vec<Attribute>, types: I, mut derive_default: bool)
+    where
+        I: IntoIterator<Item = T>,
+        T: Borrow<Type>,
+    {
+        if self.attrs.all_derives.is_none() {
+            return
+        }
+
+        let mut derives = Vec::with_capacity(5);
+        let mut derive_others = true;
+        for ty in types {
+            if !derive_default && !derive_others {
+                break
+            }
+            derive_default = derive_default && ty::can_derive_default(self, ty.borrow());
+            derive_others = derive_others && ty::can_derive_builtin_traits(self, ty.borrow());
+        }
+        if derive_default {
+            derives.push("Default");
+        }
+        if derive_others {
+            derives.extend(["Debug", "PartialEq", "Eq", "Hash"]);
+        }
+        let derives = derives.iter().map(|s| Ident::new(s, Span::call_site()));
+        attrs.push(parse_quote! { #[derive(#(#derives),*)] });
+    }
+
     /// Returns an error if any of the types in the parameters are unresolved.
     ///
     /// Provides a better error message than an `unwrap` or `expect` when we
     /// know beforehand that we will be needing types to be resolved.
-    fn assert_resolved<'a, I: IntoIterator<Item = &'a VariableDeclaration>>(
-        &self,
-        params: I,
-    ) -> Result<()> {
+    fn assert_resolved<'a, I>(&self, params: I) -> Result<()>
+    where
+        I: IntoIterator<Item = &'a VariableDeclaration>,
+    {
         let mut errors = Vec::new();
         for param in params {
             param.ty.visit(|ty| {
@@ -332,21 +432,6 @@ impl<'ast> ExpCtxt<'ast> {
             e.combine(Error::new(Span::call_site(), note));
             Err(e)
         }
-    }
-}
-
-impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
-    fn visit_item(&mut self, item: &'ast Item) {
-        self.all_items.push(item);
-        ast::visit::visit_item(self, item);
-    }
-
-    fn visit_item_function(&mut self, function: &'ast ItemFunction) {
-        self.functions
-            .entry(function.name().as_string())
-            .or_default()
-            .push(function);
-        ast::visit::visit_item_function(self, function);
     }
 }
 
@@ -447,12 +532,13 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for #name {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                #name {
+                Self {
                     #(#names2: tuple.#idxs),*
                 }
             }
         }
 
+        #[automatically_derived]
         impl ::alloy_sol_types::Encodable<UnderlyingSolTuple<'_>> for #name {
             fn to_tokens(&self) -> <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::TokenType<'_> {
                 (#(

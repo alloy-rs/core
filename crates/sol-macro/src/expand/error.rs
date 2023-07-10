@@ -8,7 +8,7 @@ use syn::Result;
 
 /// Expands an [`ItemError`]:
 ///
-/// ```ignore,pseudo-code
+/// ```ignore (pseudo-code)
 /// pub struct #name {
 ///     #(pub #parameter_name: #parameter_type,)*
 /// }
@@ -25,6 +25,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
         ..
     } = error;
     cx.assert_resolved(params)?;
+
+    let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    cx.derives(&mut attrs, params, true);
 
     let tokenize_impl = expand_tokenize_func(params.iter());
 

@@ -212,16 +212,6 @@ sol! {
 }
 
 sol! {
-    struct RecursiveA {
-        RecursiveB b;
-    }
-
-    struct RecursiveB {
-        RecursiveA a;
-    }
-}
-
-sol! {
     enum MaxEnum {
         _0,
         _1,

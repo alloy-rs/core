@@ -16,6 +16,7 @@ pub enum Error {
 impl Error {
     /// Instantiate an invalid type string error. Invalid type string errors are
     /// for type strings that are not valid type strings. E.g. "uint256))))[".
+    #[inline(always)]
     pub fn invalid_type_string(ty: impl ToString) -> Self {
         Self::InvalidTypeString(ty.to_string())
     }
@@ -23,6 +24,7 @@ impl Error {
     /// Instantiate an invalid size error. Invalid size errors are for valid
     /// primitive types with invalid sizes. E.g. `"uint7"` or `"bytes1337"` or
     /// `"string[aaaaaa]"`.
+    #[inline(always)]
     pub fn invalid_size(ty: impl ToString) -> Self {
         Self::InvalidSize(ty.to_string())
     }
@@ -34,7 +36,7 @@ impl std::error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidTypeString(s) => write!(f, "Invalid type string: {}", s),
+            Self::InvalidTypeString(s) => write!(f, "Invalid type string: {s}"),
             Self::InvalidSize(ty) => write!(f, "Invalid size for type: {ty}"),
         }
     }

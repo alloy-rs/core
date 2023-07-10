@@ -1,8 +1,6 @@
-use core::fmt;
-
 use alloc::string::{String, ToString};
-
 use alloy_sol_type_parser::TypeSpecifier;
+use core::fmt;
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
 /// The contract internal type. This could be a regular solidity type, a
@@ -196,17 +194,17 @@ impl InternalType {
     #[inline]
     pub(crate) fn as_borrowed(&self) -> BorrowedInternalType<'_> {
         match self {
-            InternalType::AddressPayable(s) => BorrowedInternalType::AddressPayable(s),
-            InternalType::Contract(s) => BorrowedInternalType::Contract(s),
-            InternalType::Enum { contract, ty } => BorrowedInternalType::Enum {
+            Self::AddressPayable(s) => BorrowedInternalType::AddressPayable(s),
+            Self::Contract(s) => BorrowedInternalType::Contract(s),
+            Self::Enum { contract, ty } => BorrowedInternalType::Enum {
                 contract: contract.as_deref(),
                 ty,
             },
-            InternalType::Struct { contract, ty } => BorrowedInternalType::Struct {
+            Self::Struct { contract, ty } => BorrowedInternalType::Struct {
                 contract: contract.as_deref(),
                 ty,
             },
-            InternalType::Other { contract, ty } => BorrowedInternalType::Other {
+            Self::Other { contract, ty } => BorrowedInternalType::Other {
                 contract: contract.as_deref(),
                 ty,
             },
@@ -234,48 +232,41 @@ pub(crate) enum BorrowedInternalType<'a> {
 
 impl fmt::Display for BorrowedInternalType<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            BorrowedInternalType::AddressPayable(s) => f.write_str(s),
-            BorrowedInternalType::Contract(s) => write!(f, "contract {}", s),
-            BorrowedInternalType::Enum { contract, ty } => {
-                if let Some(c) = contract {
-                    write!(f, "enum {}.{}", c, ty)
-                } else {
-                    write!(f, "enum {}", ty)
-                }
+        match *self {
+            Self::AddressPayable(s) => f.write_str(s),
+            Self::Contract(s) => {
+                f.write_str("contract ")?;
+                f.write_str(s)
             }
-            BorrowedInternalType::Struct { contract, ty } => {
-                if let Some(c) = contract {
-                    write!(f, "struct {}.{}", c, ty)
-                } else {
-                    write!(f, "struct {}", ty)
+            Self::Enum { contract, ty }
+            | Self::Struct { contract, ty }
+            | Self::Other { contract, ty } => {
+                match self {
+                    Self::Enum { .. } => f.write_str("enum ")?,
+                    Self::Struct { .. } => f.write_str("struct ")?,
+                    Self::Other { .. } => {}
+                    _ => unreachable!(),
                 }
-            }
-            BorrowedInternalType::Other { contract, ty } => {
                 if let Some(c) = contract {
-                    write!(f, "{}.{}", c, ty)
-                } else {
-                    write!(f, "{}", ty)
+                    f.write_str(c)?;
+                    f.write_str(".")?;
                 }
+                f.write_str(ty)
             }
         }
     }
 }
 
 impl Serialize for BorrowedInternalType<'_> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
+    #[inline]
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.collect_str(self)
     }
 }
 
 impl<'de: 'a, 'a> Deserialize<'de> for BorrowedInternalType<'a> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
+    #[inline]
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         deserializer.deserialize_str(ItVisitor)
     }
 }
@@ -284,41 +275,41 @@ impl<'a> BorrowedInternalType<'a> {
     /// Instantiate a borrowed internal type by parsing a string.
     fn parse(v: &'a str) -> Option<Self> {
         if v.starts_with("address payable") {
-            return Some(BorrowedInternalType::AddressPayable(v))
+            return Some(Self::AddressPayable(v))
         }
         if let Some(body) = v.strip_prefix("enum ") {
             if let Some((contract, ty)) = body.split_once('.') {
-                Some(BorrowedInternalType::Enum {
+                Some(Self::Enum {
                     contract: Some(contract),
                     ty,
                 })
             } else {
-                Some(BorrowedInternalType::Enum {
+                Some(Self::Enum {
                     contract: None,
                     ty: body,
                 })
             }
         } else if let Some(body) = v.strip_prefix("struct ") {
             if let Some((contract, ty)) = body.split_once('.') {
-                Some(BorrowedInternalType::Struct {
+                Some(Self::Struct {
                     contract: Some(contract),
                     ty,
                 })
             } else {
-                Some(BorrowedInternalType::Struct {
+                Some(Self::Struct {
                     contract: None,
                     ty: body,
                 })
             }
         } else if let Some(body) = v.strip_prefix("contract ") {
-            Some(BorrowedInternalType::Contract(body))
+            Some(Self::Contract(body))
         } else if let Some((contract, ty)) = v.split_once('.') {
-            Some(BorrowedInternalType::Other {
+            Some(Self::Other {
                 contract: Some(contract),
                 ty,
             })
         } else {
-            Some(BorrowedInternalType::Other {
+            Some(Self::Other {
                 contract: None,
                 ty: v,
             })
@@ -335,10 +326,7 @@ impl<'de> Visitor<'de> for ItVisitor {
         write!(formatter, "a valid internal type")
     }
 
-    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
+    fn visit_borrowed_str<E: serde::de::Error>(self, v: &'de str) -> Result<Self::Value, E> {
         BorrowedInternalType::parse(v).ok_or_else(|| {
             E::invalid_value(serde::de::Unexpected::Str(v), &"a valid internal type")
         })

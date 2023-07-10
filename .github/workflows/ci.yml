@@ -61,7 +61,7 @@ jobs:
         steps:
             - uses: actions/checkout@v3
             - uses: dtolnay/rust-toolchain@clippy
-            - run: cargo clippy --workspace --all-targets
+            - run: cargo clippy --workspace --all-targets --all-features
               env:
                   RUSTFLAGS: -Dwarnings
 

@@ -18,7 +18,6 @@ pub fn expand_type(ty: &Type) -> TokenStream {
 /// method.
 fn expand_tokenize_statement(var: &VariableDeclaration, i: usize) -> TokenStream {
     let ty = expand_type(&var.ty);
-
     let name = var.name.clone().unwrap_or_else(|| generate_name(i).into());
     quote! {
         <#ty as ::alloy_sol_types::SolType>::tokenize(&self.#name)
@@ -40,7 +39,6 @@ pub fn expand_tokenize_func<'a>(
 /// Expand a event parameter into an invocation of its types tokenize method.
 fn expand_event_tokenize_statement(var: &EventParameter, i: usize) -> TokenStream {
     let ty = expand_type(&var.ty);
-
     let name = var.name.clone().unwrap_or_else(|| generate_name(i).into());
     quote! {
         <#ty as ::alloy_sol_types::SolType>::tokenize(&self.#name)
@@ -93,14 +91,13 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
         }
 
         Type::Tuple(ref tuple) => {
-            tuple.paren_token.surround(tokens, |tokens| {
+            return tuple.paren_token.surround(tokens, |tokens| {
                 for pair in tuple.types.pairs() {
                     let (ty, comma) = pair.into_tuple();
                     rec_expand_type(ty, tokens);
                     comma.to_tokens(tokens);
                 }
-            });
-            return
+            })
         }
         Type::Array(ref array) => {
             let ty = expand_type(&array.ty);
@@ -177,6 +174,68 @@ pub(super) fn type_base_data_size(cx: &ExpCtxt<'_>, ty: &Type) -> usize {
 
         // not applicable
         Type::Mapping(_) => 0,
+    }
+}
+
+const MAX_SUPPORTED_ARRAY_LEN: usize = 32;
+const MAX_SUPPORTED_TUPLE_LEN: usize = 12;
+
+/// Returns whether the given type can derive the [`Default`] trait.
+pub(super) fn can_derive_default(cx: &ExpCtxt<'_>, ty: &Type) -> bool {
+    match ty {
+        Type::Array(a) => {
+            a.size().map_or(true, |sz| sz <= MAX_SUPPORTED_ARRAY_LEN)
+                && can_derive_default(cx, &a.ty)
+        }
+        Type::Tuple(tuple) => {
+            if tuple.types.len() > MAX_SUPPORTED_TUPLE_LEN {
+                false
+            } else {
+                tuple.types.iter().all(|ty| can_derive_default(cx, ty))
+            }
+        }
+
+        Type::Custom(name) => match cx.try_get_item(name) {
+            Some(Item::Enum(_)) => false,
+            Some(Item::Struct(strukt)) => {
+                strukt.fields.types().all(|ty| can_derive_default(cx, ty))
+            }
+            Some(Item::Udt(udt)) => can_derive_default(cx, &udt.ty),
+            Some(_) => unreachable!(),
+            None => false,
+        },
+
+        _ => true,
+    }
+}
+
+/// Returns whether the given type can derive the builtin traits listed in
+/// `ExprCtxt::derives`, minus `Default`.
+pub(super) fn can_derive_builtin_traits(cx: &ExpCtxt<'_>, ty: &Type) -> bool {
+    match ty {
+        Type::Array(a) => can_derive_builtin_traits(cx, &a.ty),
+        Type::Tuple(tuple) => {
+            if tuple.types.len() > MAX_SUPPORTED_TUPLE_LEN {
+                false
+            } else {
+                tuple
+                    .types
+                    .iter()
+                    .all(|ty| can_derive_builtin_traits(cx, ty))
+            }
+        }
+
+        Type::Custom(name) => match cx.try_get_item(name) {
+            Some(Item::Enum(_)) => true,
+            Some(Item::Struct(strukt)) => {
+                strukt.fields.types().all(|ty| can_derive_default(cx, ty))
+            }
+            Some(Item::Udt(udt)) => can_derive_default(cx, &udt.ty),
+            Some(_) => unreachable!(),
+            None => false,
+        },
+
+        _ => true,
     }
 }
 
