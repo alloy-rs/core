@@ -52,7 +52,7 @@ where
     T: ResolveSolType,
 {
     fn resolve(&self) -> DynAbiResult<DynSolType> {
-        (*self).resolve()
+        (**self).resolve()
     }
 }
 

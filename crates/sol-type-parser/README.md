@@ -1,4 +1,4 @@
-# alloy-sol-type-str
+# alloy-sol-type-parser
 
 Solidity type string parsing.
 
@@ -8,6 +8,10 @@ primarily a dependency for the user-facing APIs in [`alloy-json-abi`] and
 [`alloy-dyn-abi`]. Please see the documentation for those crates for
 more information.
 
+This parser generally follows the [solidity spec], however, it supports only a
+subset of possible types, chosen to support ABI coding.
+
+[solidity spec]: https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.typeName
 [`alloy-json-abi`]: https://docs.rs/alloy-json-abi/latest/alloy_json_abi/
 [`alloy-dyn-abi`]: https://docs.rs/alloy-dyn-abi/latest/alloy_dyn_abi/
 

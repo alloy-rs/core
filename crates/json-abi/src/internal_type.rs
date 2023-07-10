@@ -5,7 +5,6 @@ use alloc::string::{String, ToString};
 use alloy_sol_type_parser::TypeSpecifier;
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 /// The contract internal type. This could be a regular solidity type, a
 /// user-defined type, an enum, a struct, a contract, or an address payable.
 ///
@@ -13,6 +12,7 @@ use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 /// of the memory or storage keywords. It is used to convey the application dev
 /// and user-facing type, while the json param "type" field is used to convey
 /// the underlying ABI type.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum InternalType {
     /// Address payable.
     AddressPayable(String),
@@ -267,7 +267,7 @@ impl Serialize for BorrowedInternalType<'_> {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&format!("{}", self))
+        serializer.collect_str(self)
     }
 }
 
