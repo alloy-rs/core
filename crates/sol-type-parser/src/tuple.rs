@@ -1,5 +1,4 @@
 use crate::{Error, Result, TypeSpecifier};
-
 use alloc::vec::Vec;
 
 /// A tuple specifier, with no array suffixes. Corresponds to a sequence of
@@ -8,10 +7,10 @@ use alloc::vec::Vec;
 /// The internal types are all [`TypeSpecifier`], and may be arbitrarily
 /// complex.
 ///
-/// ## Example
+/// # Examples
+///
 /// ```
 /// # use alloy_sol_type_parser::TupleSpecifier;
-/// # fn main() -> alloy_sol_type_parser::Result<()> {
 /// let spec = TupleSpecifier::try_from("(uint256,uint256)")?;
 /// assert_eq!(spec.span(), "(uint256,uint256)");
 /// assert_eq!(spec.types.len(), 2);
@@ -21,8 +20,7 @@ use alloc::vec::Vec;
 /// assert!(
 ///    TupleSpecifier::try_from("(uint256,uint256)[]").is_err()
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TupleSpecifier<'a> {

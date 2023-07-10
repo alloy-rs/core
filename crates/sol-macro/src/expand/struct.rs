@@ -10,7 +10,7 @@ use syn::Result;
 
 /// Expands an [`ItemStruct`]:
 ///
-/// ```ignore,pseudo-code
+/// ```ignore (pseudo-code)
 /// pub struct #name {
 ///     #(pub #field_name: #field_type,)*
 /// }
@@ -24,13 +24,16 @@ use syn::Result;
 ///     ...
 /// }
 /// ```
-pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
+pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let ItemStruct {
         name,
         fields,
         attrs,
         ..
     } = s;
+
+    let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    cx.derives(&mut attrs, fields, true);
 
     let field_types_s = fields.iter().map(|f| f.ty.to_string());
     let field_names_s = fields.iter().map(|f| f.name.as_ref().unwrap().to_string());
@@ -88,8 +91,6 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         const _: () = {
-            use ::alloy_sol_types::private::*;
-
             #convert
 
             #[automatically_derived]
@@ -115,7 +116,7 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                     #tokenize_impl
                 }
 
-                fn eip712_encode_type() -> Cow<'static, str> {
+                fn eip712_encode_type() -> ::alloy_sol_types::private::Cow<'static, str> {
                     #encode_type_impl.into()
                 }
 
@@ -128,19 +129,17 @@ pub(super) fn expand(_cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
             impl ::alloy_sol_types::EventTopic for #name {
                 #[inline]
                 fn topic_preimage_length(rust: &Self::RustType) -> usize {
-                    let b = rust.borrow();
                     0usize
                     #(
-                        + <#field_types as ::alloy_sol_types::EventTopic>::topic_preimage_length(&b.#field_names)
+                        + <#field_types as ::alloy_sol_types::EventTopic>::topic_preimage_length(&rust.#field_names)
                     )*
                 }
 
                 #[inline]
                 fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
-                    let b = rust.borrow();
-                    out.reserve(<Self as ::alloy_sol_types::EventTopic>::topic_preimage_length(b));
+                    out.reserve(<Self as ::alloy_sol_types::EventTopic>::topic_preimage_length(rust));
                     #(
-                        <#field_types as ::alloy_sol_types::EventTopic>::encode_topic_preimage(&b.#field_names, out);
+                        <#field_types as ::alloy_sol_types::EventTopic>::encode_topic_preimage(&rust.#field_names, out);
                     )*
                 }
 

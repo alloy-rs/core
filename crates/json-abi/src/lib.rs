@@ -55,6 +55,8 @@ pub use internal_type::InternalType;
 
 pub(crate) mod utils;
 
+pub use alloy_sol_type_parser as parser;
+
 /// A JSON ABI function's state mutability.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

@@ -4,7 +4,6 @@
 
 use crate::{DynAbiError, DynAbiResult, DynSolType};
 use alloc::vec::Vec;
-
 use alloy_json_abi::{EventParam, Param};
 use alloy_sol_type_parser::{
     Error as TypeStrError, RootType, TupleSpecifier, TypeSpecifier, TypeStem,

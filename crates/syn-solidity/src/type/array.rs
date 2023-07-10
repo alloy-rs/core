@@ -3,7 +3,7 @@ use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
-    num::NonZeroU64,
+    num::NonZeroUsize,
 };
 use syn::{
     bracketed,
@@ -76,6 +76,11 @@ impl TypeArray {
         }
     }
 
+    /// Returns the size of the array, or None if dynamic.
+    pub fn size(&self) -> Option<usize> {
+        self.size.as_ref().map(|s| s.base10_parse().unwrap())
+    }
+
     /// See [`Type::is_abi_dynamic`].
     pub fn is_abi_dynamic(&self) -> bool {
         match self.size {
@@ -84,6 +89,7 @@ impl TypeArray {
         }
     }
 
+    /// Parses an array type from the given input stream, wrapping `ty` with it.
     pub fn wrap(input: ParseStream<'_>, ty: Type) -> Result<Self> {
         let content;
         Ok(Self {
@@ -93,7 +99,7 @@ impl TypeArray {
                 let size = content.parse::<Option<syn::LitInt>>()?;
                 // Validate the size
                 if let Some(sz) = &size {
-                    sz.base10_parse::<NonZeroU64>()?;
+                    sz.base10_parse::<NonZeroUsize>()?;
                 }
                 size
             },

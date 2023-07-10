@@ -1,15 +1,13 @@
 use crate::{is_valid_identifier, Error, Result};
-
 use core::fmt;
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type. This is the most basic type specifier.
 ///
-/// Examples:
+/// # Examples
 ///
 /// ```
 /// # use alloy_sol_type_parser::RootType;
-/// # fn main() -> alloy_sol_type_parser::Result<()> {
 /// let root_type = RootType::try_from("uint256")?;
 /// assert_eq!(root_type.span(), "uint256");
 ///
@@ -28,8 +26,7 @@ use core::fmt;
 /// assert!(
 ///    RootType::try_from("(uint256,uint256)").is_err()
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
@@ -79,12 +76,7 @@ impl<'a> RootType<'a> {
     #[inline]
     pub fn try_basic_solidity(self) -> Result<()> {
         match self.0 {
-            "address" => Ok(()),
-            "bool" => Ok(()),
-            "string" => Ok(()),
-            "bytes" => Ok(()),
-            "uint" => Ok(()),
-            "int" => Ok(()),
+            "address" | "bool" | "string" | "bytes" | "uint" | "int" => Ok(()),
             name => {
                 if let Some(sz) = name.strip_prefix("bytes") {
                     if let Ok(sz) = sz.parse::<usize>() {

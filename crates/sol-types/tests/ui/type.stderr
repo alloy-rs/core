@@ -58,18 +58,10 @@ error: intX must be a multiple of 8 up to 256
 199 |         int7 a;
     |         ^^^^
 
-error: failed to resolve types.
-       This is likely due to an infinitely recursive type definition.
-       If you believe this is a bug, please file an issue at https://github.com/alloy-rs/core/issues/new/choose
-   --> tests/ui/type.rs:215:12
-    |
-215 |     struct RecursiveA {
-    |            ^^^^^^^^^^
-
 error: enum has too many variants
-   --> tests/ui/type.rs:486:10
+   --> tests/ui/type.rs:476:10
     |
-486 |     enum TooBigEnum {
+476 |     enum TooBigEnum {
     |          ^^^^^^^^^^
 
 error[E0412]: cannot find type `bytes_` in this scope

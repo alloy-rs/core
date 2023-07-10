@@ -194,7 +194,7 @@ pub use eip712::Eip712Domain;
 /// The ABI word type.
 pub type Word = alloy_primitives::B256;
 
-#[doc(inline)]
+#[doc(no_inline)]
 pub use alloy_sol_macro::sol;
 
 // Not public API.
@@ -206,7 +206,7 @@ pub mod private {
         string::{String, ToString},
         vec::Vec,
     };
-    pub use alloy_primitives::{keccak256, FixedBytes, B256, U256};
+    pub use alloy_primitives::{bytes, keccak256, Bytes, FixedBytes, B256, U256};
     pub use core::{convert::From, default::Default, option::Option, result::Result};
 
     pub use Option::{None, Some};

@@ -1,3 +1,8 @@
+use crate::{
+    internal_type::BorrowedInternalType,
+    utils::{validate_identifier, validate_ty},
+    InternalType,
+};
 use alloc::{
     borrow::{Cow, ToOwned},
     string::String,
@@ -6,12 +11,6 @@ use alloc::{
 use alloy_sol_type_parser::TypeSpecifier;
 use core::fmt;
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
-
-use crate::{
-    internal_type::BorrowedInternalType,
-    utils::{validate_identifier, validate_ty},
-    InternalType,
-};
 
 /// JSON specification of a parameter.
 ///

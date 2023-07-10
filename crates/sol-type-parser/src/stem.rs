@@ -1,13 +1,11 @@
 use crate::{Error, Result, RootType, TupleSpecifier};
 
-/// This is the stem of a Solidity array type. It is either a root type, or a
-/// tuple type.
+/// A stem of a Solidity array type. It is either a root type, or a tuple type.
 ///
-/// ## Example
+/// # Examples
 ///
 /// ```
 /// # use alloy_sol_type_parser::{TypeStem, RootType, TupleSpecifier};
-/// # fn main() -> alloy_sol_type_parser::Result<()> {
 /// let stem = TypeStem::try_from("uint256")?;
 /// assert_eq!(stem.span(), "uint256");
 /// assert!(matches!(stem, TypeStem::Root(_)));
@@ -20,8 +18,8 @@ use crate::{Error, Result, RootType, TupleSpecifier};
 ///     stem.as_tuple(),
 ///     Some(&TupleSpecifier::try_from("(uint256,bool)").unwrap())
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, alloy_sol_type_parser::Error>(())
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeStem<'a> {
     /// Root type.
@@ -48,6 +46,7 @@ impl AsRef<str> for TypeStem<'_> {
 
 impl<'a> TypeStem<'a> {
     /// Fallible conversion to a root type
+    #[inline]
     pub const fn as_root(&self) -> Option<&RootType<'a>> {
         match self {
             Self::Root(root) => Some(root),
@@ -56,6 +55,7 @@ impl<'a> TypeStem<'a> {
     }
 
     /// Fallible conversion to a tuple type
+    #[inline]
     pub const fn as_tuple(&self) -> Option<&TupleSpecifier<'a>> {
         match self {
             Self::Root(_) => None,

@@ -39,9 +39,28 @@ procedural macros, and to reduce general code complexity in the parser and AST.
 [ethersjs-abi]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
 [^1]: Older versions may still parse successfully, but this is not guaranteed.
 
-## Example
+## Known limitations
 
-```rust,ignore TODO
+This parser is limited to only valid Rust tokens, meaning that certain Solidity
+constructs are not supported. Some examples include, but are not limited to:
+- single quote strings
+- `hex` and `unicode` string literal prefixes.
+  Literal prefixes are [reserved in Rust edition 2021 and above][reserved-2021].
+- `"\uXXXX"` unicode escapes. Rust uses `"\u{XXXX}"` for unicode codepoints
+- invalid nested block comments. For example, `/*/*/` does not parse.
+
+For the most part, you can copy-paste Solidity code and expect it to parse
+correctly most of the time. You can see a few examples of Solidity code that
+parses correctly (after some very light patching) in the [tests] directory.
+
+[reserved-2021]: https://doc.rust-lang.org/edition-guide/rust-2021/reserving-syntax.html
+[tests]: https://github.com/alloy-rs/core/tree/main/crates/syn-solidity/tests/contracts
+
+## Examples
+
+Basic usage:
+
+```rust
 use quote::quote;
 use syn_solidity::{File, Item};
 
@@ -63,14 +82,14 @@ let ast: File = syn_solidity::parse2(tokens)?;
 let items: &[Item] = &ast.items;
 let Some(Item::Contract(contract)) = items.first() else { unreachable!() };
 assert_eq!(contract.name, "HelloWorld");
-assert_eq!(contract.attrs.len(), 2);
+assert_eq!(contract.attrs.len(), 2); // doc comments
 
 let body: &[Item] = &contract.body;
-let Some(Item::Function(function)) = items.first() else { unreachable!() };
-assert_eq!(function.attrs.len(), 1);
-assert_eq!(function.name, "helloWorld");
-assert!(function.arguments.is_empty());
-assert_eq!(function.attributes.len(), 3);
-
+let Some(Item::Function(function)) = body.first() else { unreachable!() };
+assert_eq!(function.attrs.len(), 1); // doc comment
+assert_eq!(function.name.as_ref().unwrap(), "helloWorld");
+assert!(function.arguments.is_empty());   // ()
+assert_eq!(function.attributes.len(), 2); // external pure
+assert!(function.returns.is_some());
 # syn::Result::Ok(())
 ```

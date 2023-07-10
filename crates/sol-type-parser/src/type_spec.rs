@@ -1,5 +1,4 @@
 use crate::{Error, Result, TypeStem};
-
 use alloc::vec::Vec;
 use core::num::NonZeroUsize;
 
@@ -36,19 +35,17 @@ use core::num::NonZeroUsize;
 /// - `enum MyContract.MyEnum[][][][][][]`
 /// - `MyValueType`
 ///
-/// ## Example
+/// # Examples
 ///
 /// ```
 /// # use alloy_sol_type_parser::TypeSpecifier;
 /// # use core::num::NonZeroUsize;
-/// # fn main() -> alloy_sol_type_parser::Result<()> {
 /// let spec = TypeSpecifier::try_from("uint256[2][]")?;
 /// assert_eq!(spec.span(), "uint256[2][]");
 /// assert_eq!(spec.stem.span(), "uint256");
 /// // The sizes are in innermost-to-outermost order.
 /// assert_eq!(spec.sizes.as_slice(), &[NonZeroUsize::new(2), None]);
-/// # Ok(())
-/// # }
+/// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeSpecifier<'a> {
@@ -128,6 +125,7 @@ impl<'a> TypeSpecifier<'a> {
     }
 
     /// Returns the type stem.
+    #[inline]
     pub const fn stem(&self) -> &TypeStem<'_> {
         &self.stem
     }
@@ -141,10 +139,8 @@ impl<'a> TypeSpecifier<'a> {
 
 #[cfg(test)]
 mod test {
-
-    use crate::TupleSpecifier;
-
     use super::*;
+    use crate::TupleSpecifier;
 
     #[test]
     fn parse_test() {

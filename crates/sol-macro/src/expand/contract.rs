@@ -1,7 +1,7 @@
 //! [`ItemContract`] expansion.
 
-use super::{attr, ty, ExpCtxt};
-use crate::utils::ExprArray;
+use super::{ty, ExpCtxt};
+use crate::{attr, utils::ExprArray};
 use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent};
 use heck::ToSnakeCase;
 use proc_macro2::{Ident, Span, TokenStream};
@@ -10,7 +10,7 @@ use syn::{ext::IdentExt, parse_quote, Attribute, Result};
 
 /// Expands an [`ItemContract`]:
 ///
-/// ```ignore,pseudo-code
+/// ```ignore (pseudo-code)
 /// pub mod #name {
 ///     pub enum #{name}Calls {
 ///         ...
@@ -26,12 +26,29 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         attrs, name, body, ..
     } = contract;
 
+    let (sol_attrs, attrs) = crate::attr::SolAttrs::parse(attrs)?;
+
+    let bytecode = sol_attrs.bytecode.map(|lit| {
+        let name = Ident::new("BYTECODE", lit.span());
+        quote! {
+            /// The creation / init code of the contract.
+            pub static #name: ::alloy_sol_types::private::Bytes = ::alloy_sol_types::private::bytes!(#lit);
+        }
+    });
+    let deployed_bytecode = sol_attrs.deployed_bytecode.map(|lit| {
+        let name = Ident::new("DEPLOYED_BYTECODE", lit.span());
+        quote! {
+            /// The runtime bytecode of the contract.
+            pub static #name: ::alloy_sol_types::private::Bytes = ::alloy_sol_types::private::bytes!(#lit);
+        }
+    });
+
     let mut functions = Vec::with_capacity(contract.body.len());
     let mut errors = Vec::with_capacity(contract.body.len());
     let mut events = Vec::with_capacity(contract.body.len());
 
     let mut item_tokens = TokenStream::new();
-    let d_attrs: Vec<Attribute> = attr::derives(attrs).cloned().collect();
+    let d_attrs: Vec<Attribute> = attr::derives(&attrs).cloned().collect();
     for item in body {
         match item {
             Item::Function(function) => functions.push(function),
@@ -49,28 +66,31 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         let mut attrs = d_attrs.clone();
         let doc_str = format!("Container for all the `{name}` function calls.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
-        CallLikeExpander::from_functions(cx, name, functions).expand(&attrs)
+        CallLikeExpander::from_functions(cx, name, functions).expand(attrs)
     });
 
     let errors_enum = (errors.len() > 1).then(|| {
         let mut attrs = d_attrs.clone();
         let doc_str = format!("Container for all the `{name}` custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
-        CallLikeExpander::from_errors(cx, name, errors).expand(&attrs)
+        CallLikeExpander::from_errors(cx, name, errors).expand(attrs)
     });
 
     let events_enum = (events.len() > 1).then(|| {
         let mut attrs = d_attrs;
         let doc_str = format!("Container for all the `{name}` events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
-        CallLikeExpander::from_events(cx, name, events).expand_event(&attrs)
+        CallLikeExpander::from_events(cx, name, events).expand_event(attrs)
     });
 
-    let mod_attrs = attr::docs(attrs);
+    let mod_attrs = attr::docs(&attrs);
     let tokens = quote! {
         #(#mod_attrs)*
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         pub mod #name {
+            #bytecode
+            #deployed_bytecode
+
             #item_tokens
             #functions_enum
             #errors_enum
@@ -85,7 +105,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
 /// Expands a `SolInterface` enum:
 ///
-/// ```ignore,pseudo-code
+/// ```ignore (pseudo-code)
 /// #name = #{contract_name}Calls | #{contract_name}Errors | #{contract_name}Events;
 ///
 /// pub enum #name {
@@ -102,7 +122,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 ///     )*
 /// }
 /// ```
-struct CallLikeExpander {
+struct CallLikeExpander<'a> {
+    cx: &'a ExpCtxt<'a>,
     name: Ident,
     variants: Vec<Ident>,
     min_data_len: usize,
@@ -123,9 +144,9 @@ enum CallLikeExpanderData {
     },
 }
 
-impl CallLikeExpander {
+impl<'a> CallLikeExpander<'a> {
     fn from_functions(
-        cx: &ExpCtxt<'_>,
+        cx: &'a ExpCtxt<'a>,
         contract_name: &SolIdent,
         functions: Vec<&ItemFunction>,
     ) -> Self {
@@ -140,6 +161,7 @@ impl CallLikeExpander {
         selectors.sort_unstable_by_key(|a| a.array);
 
         Self {
+            cx,
             name: format_ident!("{contract_name}Calls"),
             variants,
             min_data_len: functions
@@ -152,11 +174,12 @@ impl CallLikeExpander {
         }
     }
 
-    fn from_errors(cx: &ExpCtxt<'_>, contract_name: &SolIdent, errors: Vec<&ItemError>) -> Self {
+    fn from_errors(cx: &'a ExpCtxt<'a>, contract_name: &SolIdent, errors: Vec<&ItemError>) -> Self {
         let mut selectors: Vec<_> = errors.iter().map(|e| cx.error_selector(e)).collect();
         selectors.sort_unstable_by_key(|a| a.array);
 
         Self {
+            cx,
             name: format_ident!("{contract_name}Errors"),
             variants: errors.iter().map(|error| error.name.0.clone()).collect(),
             min_data_len: errors
@@ -169,11 +192,12 @@ impl CallLikeExpander {
         }
     }
 
-    fn from_events(cx: &ExpCtxt<'_>, contract_name: &SolIdent, events: Vec<&ItemEvent>) -> Self {
+    fn from_events(cx: &'a ExpCtxt<'a>, contract_name: &SolIdent, events: Vec<&ItemEvent>) -> Self {
         let mut selectors: Vec<_> = events.iter().map(|e| cx.event_selector(e)).collect();
         selectors.sort_unstable_by_key(|a| a.array);
 
         Self {
+            cx,
             name: format_ident!("{contract_name}Events"),
             variants: events.iter().map(|event| event.name.0.clone()).collect(),
             min_data_len: events
@@ -195,7 +219,7 @@ impl CallLikeExpander {
         }
     }
 
-    fn expand(self, attrs: &[Attribute]) -> TokenStream {
+    fn expand(self, attrs: Vec<Attribute>) -> TokenStream {
         let Self {
             name,
             variants,
@@ -278,12 +302,12 @@ impl CallLikeExpander {
         }
     }
 
-    fn expand_event(self, attrs: &[Attribute]) -> TokenStream {
+    fn expand_event(self, attrs: Vec<Attribute>) -> TokenStream {
         // TODO: SolInterface for events
         self.generate_enum(attrs)
     }
 
-    fn generate_enum(&self, attrs: &[Attribute]) -> TokenStream {
+    fn generate_enum(&self, mut attrs: Vec<Attribute>) -> TokenStream {
         let Self {
             name,
             variants,
@@ -301,6 +325,12 @@ impl CallLikeExpander {
         };
 
         let types = self.types();
+        self.cx.type_derives(
+            &mut attrs,
+            types.iter().cloned().map(ast::Type::custom),
+            false,
+        );
+
         let conversions = variants
             .iter()
             .zip(types)
@@ -371,10 +401,6 @@ fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
         "Returns a mutable reference to the inner [`{ty}`] if `self` matches [`{name}`](Self::{name})."
     );
 
-    let try_into_variant = format_ident!("try_into_{name_snake}");
-    let try_into_variant_doc =
-        format!("Unwraps the inner [`{ty}`] if `self` matches [`{name}`](Self::{name}).");
-
     quote! {
         #[doc = #is_variant_doc]
         #[inline]
@@ -397,15 +423,6 @@ fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
             match self {
                 Self::#variant(inner) => ::core::option::Option::Some(inner),
                 _ => ::core::option::Option::None,
-            }
-        }
-
-        #[doc = #try_into_variant_doc]
-        #[inline]
-        pub const fn #try_into_variant(self) -> ::core::result::Result<#ty, Self> {
-            match self {
-                Self::#variant(inner) => ::core::result::Result::Ok(inner),
-                _ => ::core::result::Result::Err(self),
             }
         }
     }

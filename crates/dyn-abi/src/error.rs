@@ -1,6 +1,5 @@
-use core::fmt;
-
 use alloy_sol_type_parser::Error as TypeParserError;
+use core::fmt;
 
 /// Dynamic ABI result type.
 pub type DynAbiResult<T, E = DynAbiError> = core::result::Result<T, E>;

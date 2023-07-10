@@ -11,109 +11,80 @@ use syn::Result;
 
 /// Expands an [`ItemFunction`]:
 ///
-/// ```ignore,pseudo-code
+/// ```ignore (pseudo-code)
 /// pub struct #{name}Call {
 ///     #(pub #argument_name: #argument_type,)*
+/// }
+///
+/// pub struct #{name}Return {
+///     #(pub #return_name: #return_type,)*
 /// }
 ///
 /// impl SolCall for #{name}Call {
 ///     type Return = #{name}Return;
 ///     ...
 /// }
-///
-/// pub struct #{name}Return {
-///     #(pub #return_name: #return_type,)*
-/// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream> {
-    expand_call(cx, function)
-}
-
-/// Expands parameters into a struct def and tuple conversions
-///
-/// ```ignore,pseudo-code
-/// 
-/// pub struct #{name}Call {
-///     #(pub #argument_name: #argument_type,)*
-/// }
-///
-/// impl From<#tuple> for #{name}Call {
-///     ...
-/// }
-///
-/// impl From<#{name}Call> for #tuple {
-///     ...
-/// }
-/// ```
-fn expand_call_struct_def(cx: &ExpCtxt<'_>, function: &ItemFunction) -> TokenStream {
-    let attrs = &function.attrs;
-    let call_name = cx.call_name(function);
-    let fields = expand_fields(&function.arguments);
-
-    quote! {
-        #(#attrs)*
-        #[allow(non_camel_case_types, non_snake_case)]
-        #[derive(Clone)]
-        pub struct #call_name {
-            #(pub #fields,)*
-        }
+    let ItemFunction {
+        attrs,
+        arguments,
+        returns,
+        ..
+    } = function;
+    cx.assert_resolved(arguments)?;
+    if let Some(returns) = returns {
+        cx.assert_resolved(&returns.returns)?;
     }
-}
 
-fn expand_return_struct_def(cx: &ExpCtxt<'_>, function: &ItemFunction) -> TokenStream {
-    let attrs = &function.attrs;
+    let (_sol_attrs, mut call_attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let mut return_attrs = call_attrs.clone();
+    cx.derives(&mut call_attrs, arguments, true);
+    if let Some(returns) = returns {
+        cx.derives(&mut return_attrs, &returns.returns, true);
+    }
+
+    let call_name = cx.call_name(function);
     let return_name = cx.return_name(function);
-    let fields = if let Some(ref returns) = function.returns {
+
+    let call_fields = expand_fields(arguments);
+    let return_fields = if let Some(returns) = returns {
         expand_fields(&returns.returns).collect::<Vec<_>>()
     } else {
         vec![]
     };
 
-    quote! {
-        #(#attrs)*
-        #[allow(non_camel_case_types, non_snake_case)]
-        #[derive(Clone)]
-        pub struct #return_name {
-            #(pub #fields,)*
-        }
-    }
-}
-
-fn expand_call(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream> {
-    cx.assert_resolved(&function.arguments)?;
-    if let Some(ref returns) = function.returns {
-        cx.assert_resolved(&returns.returns)?;
-    }
-
-    let call_name = cx.call_name(function);
-    let return_name = cx.return_name(function);
-
-    let struct_def = expand_call_struct_def(cx, function);
-    let return_def = expand_return_struct_def(cx, function);
-
-    let call_tuple = expand_tuple_types(function.arguments.types()).0;
-    let return_tuple = if let Some(returns) = &function.returns {
+    let call_tuple = expand_tuple_types(arguments.types()).0;
+    let return_tuple = if let Some(returns) = returns {
         expand_tuple_types(returns.returns.types()).0
     } else {
         quote! { () }
     };
 
-    let converts = expand_from_into_tuples(&call_name, &function.arguments);
-
-    let return_converts = function
-        .returns
+    let converts = expand_from_into_tuples(&call_name, arguments);
+    let return_converts = returns
         .as_ref()
         .map(|returns| expand_from_into_tuples(&return_name, &returns.returns))
         .unwrap_or_else(|| expand_from_into_unit(&return_name));
 
     let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);
-
-    let tokenize_impl = expand_tokenize_func(function.arguments.iter());
+    let tokenize_impl = expand_tokenize_func(arguments.iter());
 
     let tokens = quote! {
-        #struct_def
-        #return_def
+        #(#call_attrs)*
+        #[allow(non_camel_case_types, non_snake_case)]
+        #[derive(Clone)]
+        pub struct #call_name {
+            #(pub #call_fields,)*
+        }
+
+        #(#return_attrs)*
+        #[allow(non_camel_case_types, non_snake_case)]
+        #[derive(Clone)]
+        pub struct #return_name {
+            #(pub #return_fields,)*
+        }
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         const _: () = {

@@ -49,6 +49,7 @@ abi_parse_tests! {
     large_structs("abi/LargeStructs.json", 4)
     large_tuple("abi/LargeTuple.json", 1)
     seaport("abi/Seaport.json", 69)
+    udvts("abi/Udvts.json", 1)
 }
 
 fn parse_test(s: &str, len: usize) {

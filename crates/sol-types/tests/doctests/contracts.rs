@@ -1,12 +1,7 @@
-use alloy_primitives::{Address, U256};
+use alloy_primitives::{address, U256};
 use alloy_sol_types::{sol, SolCall, SolInterface};
 use hex_literal::hex;
 
-// Contracts generate a module with the same name, which contains all the items.
-// This module will also contain 3 container enums, one for each:
-// - functions: `<contract_name>Calls`
-// - errors: `<contract_name>Errors`
-// - events: `<contract_name>Events`
 sol! {
     /// Interface of the ERC20 standard as defined in [the EIP].
     ///
@@ -35,7 +30,7 @@ fn contracts() {
         "0000000000000000000000000000000000000000000000000000000253c51700"
     );
     let expected = IERC20::transferCall {
-        to: Address::from(hex!("8bc47be1e3abbaba182069c89d08a61fa6c2b292")),
+        to: address!("8bc47be1e3abbaba182069c89d08a61fa6c2b292"),
         amount: U256::from(9995360000_u64),
     };
 
