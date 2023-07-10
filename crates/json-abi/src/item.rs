@@ -46,12 +46,17 @@ macro_rules! abi_items {
             impl<'de> Deserialize<'de> for $name {
                 #[inline]
                 fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-                    AbiItem::deserialize(deserializer).and_then(|item| match item {
-                        AbiItem::$name(item) => Ok(item.into_owned()),
-                        item => Err(serde::de::Error::invalid_type(
-                            serde::de::Unexpected::Other(item.debug_name()),
-                            &stringify!($name),
-                        )),
+                    AbiItem::deserialize(deserializer).and_then(|item| {
+                        if let Some(name) = item.name() {
+                            validate_identifier!(name);
+                        };
+                        match item {
+                            AbiItem::$name(item) => Ok(item.into_owned()),
+                            item => Err(serde::de::Error::invalid_type(
+                                serde::de::Unexpected::Other(item.debug_name()),
+                                &stringify!($name),
+                            )),
+                        }
                     })
                 }
             }
@@ -158,7 +163,7 @@ impl Serialize for AbiItem<'_> {
     }
 }
 
-impl<'de> Deserialize<'de> for AbiItem<'_> {
+impl<'de: 'a, 'a> Deserialize<'de> for AbiItem<'a> {
     #[inline]
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         private::AbiItem::deserialize(deserializer).map(Into::into)

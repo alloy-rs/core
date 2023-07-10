@@ -15,6 +15,7 @@ exclude.workspace = true
 
 [dependencies]
 alloy-primitives = { workspace = true, features = ["serde"] }
+alloy-sol-type-parser.workspace = true
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
@@ -24,7 +25,7 @@ ethabi = "18"
 
 [features]
 default = ["std"]
-std = ["serde/std", "alloy-primitives/std"]
+std = ["serde/std", "alloy-primitives/std", "alloy-sol-type-parser/std"]
 
 [[bench]]
 name = "json_abi"

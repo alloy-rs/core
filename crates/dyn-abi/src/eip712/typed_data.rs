@@ -1,6 +1,5 @@
 use crate::{
     eip712::{PropertyDef, Resolver},
-    parser::TypeSpecifier,
     DynAbiError, DynSolType, DynSolValue,
 };
 use alloc::{
@@ -9,6 +8,7 @@ use alloc::{
     vec::Vec,
 };
 use alloy_primitives::{keccak256, B256};
+use alloy_sol_type_parser::TypeSpecifier;
 use alloy_sol_types::{Eip712Domain, SolStruct};
 use derive_more::{Deref, DerefMut, From, Into, IntoIterator};
 use serde::{Deserialize, Serialize};

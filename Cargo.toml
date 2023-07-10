@@ -24,6 +24,7 @@ alloy-primitives = { version = "0.2.0", path = "crates/primitives", default-feat
 alloy-rlp = { version = "0.2.0", path = "crates/rlp", default-features = false }
 alloy-rlp-derive = { version = "0.2.0", path = "crates/rlp-derive", default-features = false }
 alloy-sol-macro = { version = "0.2.0", path = "crates/sol-macro", default-features = false }
+alloy-sol-type-parser = { version = "0.2.0", path = "crates/sol-type-parser", default-features = false }
 alloy-sol-types = { version = "0.2.0", path = "crates/sol-types", default-features = false }
 syn-solidity = { version = "0.2.0", path = "crates/syn-solidity", default-features = false }
 

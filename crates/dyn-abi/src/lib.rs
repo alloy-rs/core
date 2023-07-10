@@ -46,7 +46,10 @@ pub use value::DynSolValue;
 mod token;
 pub use token::DynToken;
 
-pub mod parser;
+pub mod resolve;
+pub use resolve::ResolveSolType;
+
+pub use alloy_sol_type_parser as parser;
 
 #[cfg(feature = "eip712")]
 pub mod eip712;

@@ -1,5 +1,6 @@
-use alloc::string::String;
 use core::fmt;
+
+use alloy_sol_type_parser::Error as TypeParserError;
 
 /// Dynamic ABI result type.
 pub type DynAbiResult<T, E = DynAbiError> = core::result::Result<T, E>;
@@ -9,11 +10,6 @@ pub type DynAbiResult<T, E = DynAbiError> = core::result::Result<T, E>;
 /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
 #[derive(Debug, Clone, PartialEq)]
 pub enum DynAbiError {
-    /// Invalid size for a primitive type (intX, uintX, or bytesX).
-    InvalidSize(String),
-    /// Invalid type string, extra chars, or invalid structure.
-    InvalidTypeString(String),
-
     /// Type mismatch during coercion.
     #[cfg(feature = "eip712")]
     TypeMismatch {
@@ -24,24 +20,35 @@ pub enum DynAbiError {
     },
     /// Unknown type referenced from another type.
     #[cfg(feature = "eip712")]
-    MissingType(String),
+    MissingType(alloc::string::String),
     /// Detected circular dep during typegraph resolution.
     #[cfg(feature = "eip712")]
-    CircularDependency(String),
+    CircularDependency(alloc::string::String),
     /// Invalid Property definition.
     #[cfg(feature = "eip712")]
-    InvalidPropertyDefinition(String),
+    InvalidPropertyDefinition(alloc::string::String),
 
     /// Hex.
     HexError(hex::FromHexError),
+    /// Type Str Error
+    TypeParserError(TypeParserError),
+}
+
+impl From<TypeParserError> for DynAbiError {
+    #[inline]
+    fn from(e: TypeParserError) -> Self {
+        Self::TypeParserError(e)
+    }
 }
 
 #[cfg(feature = "std")]
 impl std::error::Error for DynAbiError {
     #[inline]
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        #[allow(unreachable_patterns)]
         match self {
             Self::HexError(e) => Some(e),
+            Self::TypeParserError(e) => Some(e),
             _ => None,
         }
     }
@@ -50,9 +57,6 @@ impl std::error::Error for DynAbiError {
 impl fmt::Display for DynAbiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DynAbiError::InvalidSize(ty) => write!(f, "Invalid size for type: {ty}"),
-            DynAbiError::InvalidTypeString(ty) => write!(f, "Invalid type string: {ty}"),
-
             #[cfg(feature = "eip712")]
             DynAbiError::TypeMismatch { expected, actual } => {
                 write!(f, "Type mismatch, expected: {expected:?}, actual: {actual}")
@@ -67,6 +71,7 @@ impl fmt::Display for DynAbiError {
             }
 
             DynAbiError::HexError(h) => h.fmt(f),
+            DynAbiError::TypeParserError(e) => e.fmt(f),
         }
     }
 }
@@ -79,16 +84,6 @@ impl From<hex::FromHexError> for DynAbiError {
 
 #[allow(dead_code)]
 impl DynAbiError {
-    #[inline]
-    pub(crate) fn invalid_size(ty: &str) -> DynAbiError {
-        DynAbiError::InvalidSize(ty.into())
-    }
-
-    #[inline]
-    pub(crate) fn invalid_type_string(ty: &str) -> DynAbiError {
-        DynAbiError::InvalidTypeString(ty.into())
-    }
-
     #[cfg(feature = "eip712")]
     #[inline]
     pub(crate) fn type_mismatch(

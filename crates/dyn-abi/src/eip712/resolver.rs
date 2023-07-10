@@ -1,7 +1,5 @@
 use crate::{
-    eip712::typed_data::Eip712Types,
-    eip712_parser::EncodeType,
-    parser::{RootType, TypeSpecifier, TypeStem},
+    eip712::typed_data::Eip712Types, eip712_parser::EncodeType, resolve::ResolveSolType,
     DynAbiError, DynAbiResult, DynSolType, DynSolValue,
 };
 use alloc::{
@@ -11,6 +9,7 @@ use alloc::{
     vec::Vec,
 };
 use alloy_primitives::{keccak256, B256};
+use alloy_sol_type_parser::{RootType, TypeSpecifier, TypeStem};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
 use serde::{Deserialize, Deserializer, Serialize};
@@ -358,10 +357,10 @@ impl Resolver {
 
         let this_type = self
             .nodes
-            .get(root_type.as_str())
-            .ok_or_else(|| DynAbiError::missing_type(root_type.as_str()))?;
+            .get(root_type.span())
+            .ok_or_else(|| DynAbiError::missing_type(root_type.span()))?;
 
-        let edges: &Vec<String> = self.edges.get(root_type.as_str()).unwrap();
+        let edges: &Vec<String> = self.edges.get(root_type.span()).unwrap();
 
         if !resolution.contains(&this_type) {
             resolution.push(this_type);
@@ -398,7 +397,7 @@ impl Resolver {
 
     /// Resolve a type into a [`crate::DynSolType`] without checking for cycles.
     fn unchecked_resolve(&self, type_spec: &TypeSpecifier<'_>) -> DynAbiResult<DynSolType> {
-        let ty = match &type_spec.root {
+        let ty = match &type_spec.stem {
             TypeStem::Root(root) => self.resolve_root_type(*root),
             TypeStem::Tuple(tuple) => tuple
                 .types
@@ -407,20 +406,20 @@ impl Resolver {
                 .collect::<Result<_, _>>()
                 .map(DynSolType::Tuple),
         }?;
-        Ok(type_spec.wrap_type(ty))
+        Ok(ty.array_wrap_from_iter(type_spec.sizes.iter().copied()))
     }
 
     /// Resolves a root Solidity type into either a basic type or a custom
     /// struct.
     fn resolve_root_type(&self, root_type: RootType<'_>) -> DynAbiResult<DynSolType> {
-        if let Ok(ty) = root_type.resolve_basic_solidity() {
+        if let Ok(ty) = root_type.resolve() {
             return Ok(ty)
         }
 
         let ty = self
             .nodes
-            .get(root_type.as_str())
-            .ok_or_else(|| DynAbiError::missing_type(root_type.as_str()))?;
+            .get(root_type.span())
+            .ok_or_else(|| DynAbiError::missing_type(root_type.span()))?;
 
         let prop_names: Vec<_> = ty.prop_names().map(str::to_string).collect();
         let tuple: Vec<_> = ty

@@ -232,7 +232,7 @@ type Flat<S, T> = Flatten<StratMap<S, T>>;
 type Rec<T, S> = Recursive<T, fn(BoxedStrategy<T>) -> S>;
 
 #[cfg(feature = "eip712")]
-const IDENT_STRATEGY: &str = crate::parser::IDENT_REGEX;
+const IDENT_STRATEGY: &str = alloy_sol_type_parser::IDENT_REGEX;
 #[cfg(feature = "eip712")]
 type CustomStructStrategy<T> = BoxedStrategy<T>;
 
@@ -518,7 +518,7 @@ fn int_strategy<T: Arbitrary>() -> impl Strategy<Value = (ValueOfStrategy<T::Str
 mod tests {
     use super::*;
     #[cfg(feature = "eip712")]
-    use crate::parser::{is_id_continue, is_id_start, is_valid_identifier};
+    use alloy_sol_type_parser::{is_id_continue, is_id_start, is_valid_identifier};
 
     proptest! {
         #![proptest_config(ProptestConfig {

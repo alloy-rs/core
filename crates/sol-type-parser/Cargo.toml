@@ -1,0 +1,24 @@
+[package]
+name = "alloy-sol-type-parser"
+description = "Solidity type specifier string parsing."
+keywords = ["ethereum", "abi", "EVM", "solidity"]
+categories = ["no-std", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/sol-type-parser"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+
+[features]
+default = ["std"]
+std = []
