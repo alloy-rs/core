@@ -27,6 +27,7 @@ tiny-keccak = { workspace = true, features = ["keccak"] }
 
 # macros
 derive_more.workspace = true
+cfg-if.workspace = true
 
 # rlp
 alloy-rlp = { workspace = true, optional = true }
@@ -49,6 +50,8 @@ serde_json.workspace = true
 [features]
 default = ["std"]
 std = ["bytes/std", "hex/std", "alloy-rlp?/std", "proptest?/std", "serde?/std"]
+tiny-keccak = []
+native-keccak = []
 getrandom = ["dep:getrandom"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
