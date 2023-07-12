@@ -49,6 +49,7 @@ serde_json.workspace = true
 [features]
 default = ["std"]
 std = ["bytes/std", "hex/std", "alloy-rlp?/std", "proptest?/std", "serde?/std"]
+native-keccak = []
 getrandom = ["dep:getrandom"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
