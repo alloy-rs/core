@@ -20,8 +20,6 @@ No action is needed from devs.
 This repository contains the following crates:
 
 - [`alloy-primitives`] - Primitive integer and byte types
-- [`alloy-rlp`] - Implementation of [Ethereum RLP serialization][rlp]
-- [`alloy-rlp-derive`] - Derive macros for `alloy-rlp`
 - [`alloy-sol-type-parser`] - A simple parser for Solidity type strings
 - [`alloy-json-abi`] - [JSON-ABI] implementation
 - [`alloy-dyn-abi`] - Run-time ABI and [EIP-712] implementations
@@ -30,15 +28,12 @@ This repository contains the following crates:
 - [`syn-solidity`] - [`syn`]-powered Solidity parser, used by `alloy-sol-macro`
 
 [`alloy-primitives`]: ./crates/primitives
-[`alloy-rlp`]: ./crates/rlp
-[`alloy-rlp-derive`]: ./crates/rlp-derive
 [`alloy-json-abi`]: ./crates/json-abi
 [`alloy-sol-type-parser`]: ./crates/sol-type-parser
 [`alloy-dyn-abi`]: ./crates/dyn-abi
 [`alloy-sol-types`]: ./crates/sol-types
 [`alloy-sol-macro`]: ./crates/sol-macro
 [`syn-solidity`]: ./crates/syn-solidity
-[rlp]: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp
 [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
 [`syn`]: https://github.com/dtolnay/syn
 
