@@ -1,6 +1,6 @@
 use crate::bits::FixedBytes;
 
-#[cfg(feature = "native-keccak")]
+#[cfg(all(feature = "native-keccak", not(feature = "tiny-keccak")))]
 #[link(wasm_import_module = "vm_hooks")]
 extern "C" {
     /// When targeting VMs with native keccak hooks, the `native-keccak` feature
@@ -22,7 +22,7 @@ extern "C" {
 ///
 /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
 pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> FixedBytes<32> {
-    #[cfg(not(feature = "native-keccak"))]
+    #[cfg(any(feature = "tiny-keccak", not(feature = "native-keccak")))]
     fn keccak256(bytes: &[u8]) -> FixedBytes<32> {
         use tiny_keccak::{Hasher, Keccak};
 
@@ -33,7 +33,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> FixedBytes<32> {
         output.into()
     }
 
-    #[cfg(feature = "native-keccak")]
+    #[cfg(all(feature = "native-keccak", not(feature = "tiny-keccak")))]
     fn keccak256(bytes: &[u8]) -> FixedBytes<32> {
         let mut output = [0u8; 32];
 
