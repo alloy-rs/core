@@ -27,6 +27,7 @@ tiny-keccak = { workspace = true, features = ["keccak"] }
 
 # macros
 derive_more.workspace = true
+cfg-if.workspace = true
 
 # rlp
 alloy-rlp = { workspace = true, optional = true }
