@@ -13,7 +13,6 @@ body:
       description: What component is the feature for?
       multiple: true
       options:
-        - rlp
         - primitives
         - syn-solidity
         - sol-type
