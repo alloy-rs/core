@@ -3,8 +3,6 @@
 crates/dyn-abi/      @prestwich
 crates/json-abi/     @prestwich
 crates/primitives/   @danipopes @prestwich
-crates/rlp/          @prestwich
-crates/rlp-derive/   @prestwich
 crates/sol-macro/    @danipopes
 crates/sol-types/    @danipopes @prestwich
 crates/syn-solidity/ @danipopes
