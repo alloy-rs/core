@@ -41,49 +41,13 @@ pub trait ResolveSolType {
 }
 
 impl ResolveSolType for str {
+    #[inline]
     fn resolve(&self) -> DynAbiResult<DynSolType> {
-        TypeSpecifier::try_from(self)?.resolve()
-    }
-}
-
-impl<T> ResolveSolType for &T
-where
-    T: ResolveSolType,
-{
-    fn resolve(&self) -> DynAbiResult<DynSolType> {
-        (**self).resolve()
-    }
-}
-
-impl<T> ResolveSolType for &mut T
-where
-    T: ResolveSolType,
-{
-    fn resolve(&self) -> DynAbiResult<DynSolType> {
-        (**self).resolve()
-    }
-}
-
-impl<T> ResolveSolType for alloc::boxed::Box<T>
-where
-    T: ResolveSolType,
-{
-    fn resolve(&self) -> DynAbiResult<DynSolType> {
-        (**self).resolve()
-    }
-}
-
-impl<T> ResolveSolType for alloc::sync::Arc<T>
-where
-    T: ResolveSolType,
-{
-    fn resolve(&self) -> DynAbiResult<DynSolType> {
-        (**self).resolve()
+        TypeSpecifier::parse(self)?.resolve()
     }
 }
 
 impl ResolveSolType for RootType<'_> {
-    /// Resolve the type string into a basic Solidity type.
     fn resolve(&self) -> DynAbiResult<DynSolType> {
         match self.span() {
             "address" => Ok(DynSolType::Address),
@@ -152,8 +116,9 @@ impl ResolveSolType for TypeStem<'_> {
 impl ResolveSolType for TypeSpecifier<'_> {
     #[inline]
     fn resolve(&self) -> Result<DynSolType, DynAbiError> {
-        let ty = self.stem.resolve()?;
-        Ok(ty.array_wrap_from_iter(self.sizes.iter().copied()))
+        self.stem
+            .resolve()
+            .map(|ty| ty.array_wrap_from_iter(self.sizes.iter().copied()))
     }
 }
 
@@ -223,6 +188,28 @@ impl ResolveSolType for EventParam {
 
         Ok(DynSolType::Tuple(tuple).array_wrap_from_iter(ty.sizes.iter().copied()))
     }
+}
+
+macro_rules! deref_impl {
+    ($($(#[$attr:meta])* [$($gen:tt)*] $t:ty),+ $(,)?) => {$(
+        $(#[$attr])*
+        impl<$($gen)*> ResolveSolType for $t {
+            #[inline]
+            fn resolve(&self) -> DynAbiResult<DynSolType> {
+                (**self).resolve()
+            }
+        }
+    )+};
+}
+
+deref_impl! {
+    [] alloc::string::String,
+    [T: ?Sized + ResolveSolType] &T,
+    [T: ?Sized + ResolveSolType] &mut T,
+    [T: ?Sized + ResolveSolType] alloc::boxed::Box<T>,
+    [T: ?Sized + alloc::borrow::ToOwned + ResolveSolType] alloc::borrow::Cow<'_, T>,
+    [T: ?Sized + ResolveSolType] alloc::rc::Rc<T>,
+    [T: ?Sized + ResolveSolType] alloc::sync::Arc<T>,
 }
 
 #[cfg(test)]
