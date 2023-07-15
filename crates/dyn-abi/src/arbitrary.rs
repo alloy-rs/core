@@ -3,7 +3,10 @@
 //! These implementations are guaranteed to be valid, including `CustomStruct`
 //! identifiers.
 
-// TODO: remove this after updating `ruint2`.
+// TODO: Maybe make array sizes configurable? Also change parameters type from
+// tuple to a struct
+
+// `prop_oneof!` / `TupleUnion` uses `Arc`s for cheap cloning
 #![allow(clippy::arc_with_non_send_sync)]
 
 use crate::{DynSolType, DynSolValue};
@@ -274,7 +277,8 @@ type TypeRecurseStrategy = TupleUnion<
 >;
 type TypeStrategy = Rec<DynSolType, TypeRecurseStrategy>;
 
-type ValueArrayStrategy = Flat<BoxedStrategy<DynSolValue>, VecStrategy<BoxedStrategy<DynSolValue>>>;
+type ValueArrayStrategy =
+    Flat<BoxedStrategy<DynSolValue>, VecStrategy<SBoxedStrategy<DynSolValue>>>;
 
 type ValueRecurseStrategy = TupleUnion<
     tuple_type_cfg![
@@ -400,36 +404,35 @@ impl DynSolValue {
         }
     }
 
-    // TODO: make this `SBoxedStrategy` after updating `ruint2`.
     /// Create a [proptest strategy][Strategy] to generate [`DynSolValue`]s from
     /// the given type.
-    pub fn type_strategy(ty: &DynSolType) -> BoxedStrategy<Self> {
+    pub fn type_strategy(ty: &DynSolType) -> SBoxedStrategy<Self> {
         match ty {
-            DynSolType::Bool => any::<bool>().prop_map(Self::Bool).boxed(),
-            DynSolType::Address => any::<Address>().prop_map(Self::Address).boxed(),
-            &DynSolType::Int(sz) => any::<I256>().prop_map(move |x| Self::Int(x, sz)).boxed(),
-            &DynSolType::Uint(sz) => any::<U256>().prop_map(move |x| Self::Uint(x, sz)).boxed(),
+            DynSolType::Bool => any::<bool>().prop_map(Self::Bool).sboxed(),
+            DynSolType::Address => any::<Address>().prop_map(Self::Address).sboxed(),
+            &DynSolType::Int(sz) => any::<I256>().prop_map(move |x| Self::Int(x, sz)).sboxed(),
+            &DynSolType::Uint(sz) => any::<U256>().prop_map(move |x| Self::Uint(x, sz)).sboxed(),
             &DynSolType::FixedBytes(sz) => any::<B256>()
                 .prop_map(move |x| Self::FixedBytes(x, sz))
-                .boxed(),
-            DynSolType::Bytes => any::<Vec<u8>>().prop_map(Self::Bytes).boxed(),
-            DynSolType::String => any::<String>().prop_map(Self::String).boxed(),
+                .sboxed(),
+            DynSolType::Bytes => any::<Vec<u8>>().prop_map(Self::Bytes).sboxed(),
+            DynSolType::String => any::<String>().prop_map(Self::String).sboxed(),
             DynSolType::Array(ty) => {
                 let element = Self::type_strategy(ty);
-                vec_strategy(element, 1..=16).prop_map(Self::Array).boxed()
+                vec_strategy(element, 1..=16).prop_map(Self::Array).sboxed()
             }
             DynSolType::FixedArray(ty, sz) => {
                 let element = Self::type_strategy(ty);
                 vec_strategy(element, *sz)
                     .prop_map(Self::FixedArray)
-                    .boxed()
+                    .sboxed()
             }
             DynSolType::Tuple(tys) => tys
                 .iter()
                 .map(Self::type_strategy)
                 .collect::<Vec<_>>()
                 .prop_map(Self::Tuple)
-                .boxed(),
+                .sboxed(),
             #[cfg(feature = "eip712")]
             DynSolType::CustomStruct { tuple, .. } => {
                 let types = tuple.iter().map(Self::type_strategy).collect::<Vec<_>>();
@@ -440,7 +443,7 @@ impl DynSolValue {
                         prop_names,
                         tuple,
                     })
-                    .boxed()
+                    .sboxed()
             }
         }
     }
@@ -448,7 +451,7 @@ impl DynSolValue {
     /// Create a [proptest strategy][Strategy] to generate [`DynSolValue`]s from
     /// the given value's type.
     #[inline]
-    pub fn value_strategy(&self) -> BoxedStrategy<Self> {
+    pub fn value_strategy(&self) -> SBoxedStrategy<Self> {
         Self::type_strategy(&self.as_type().unwrap())
     }
 
