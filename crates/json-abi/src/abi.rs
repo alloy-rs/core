@@ -1,8 +1,11 @@
 use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
 use alloc::{collections::btree_map, string::String, vec::Vec};
+use alloc::collections::btree_map::Values;
 use alloy_primitives::Bytes;
 use btree_map::BTreeMap;
 use core::{fmt, iter};
+use std::io;
+use std::iter::Flatten;
 use serde::{
     de::{MapAccess, SeqAccess, Visitor},
     ser::SerializeSeq,
@@ -72,6 +75,47 @@ impl JsonAbi {
             errors: self.errors.into_values().flatten(),
         }
     }
+
+    /// Creates constructor call builder.
+    pub fn constructor(&self) -> Option<&Constructor> {
+        self.constructor.as_ref()
+    }
+
+    /// Loads contract from json
+    pub fn load<T: io::Read>(reader: T) -> Option<Self> {
+        serde_json::from_reader(reader).ok()
+    }
+
+    /// Gets all the functions with the given name.
+    pub fn function(&self, name: &str) -> Option<&[Function]> {
+        self.functions.get(name).map(Vec::as_slice)
+    }
+
+    /// Gets all the events with the given name.
+    pub fn event(&self, name: &str) -> Option<&[Event]> {
+        self.events.get(name).map(Vec::as_slice)
+    }
+
+    /// Gets all the errors with the given name.
+    pub fn error(&self, name: &str) -> Option<&[Error]> {
+        self.errors.get(name).map(Vec::as_slice)
+    }
+
+    /// Iterates over all the functions of the contract in arbitrary order.
+    pub fn functions(&self) -> Flatten<Values<'_, String, Vec<Function>>> {
+        self.functions.values().flatten()
+    }
+
+    /// Iterates over all the events of the contract in arbitrary order.
+    pub fn events(&self) -> Flatten<Values<'_, String, Vec<Event>>> {
+        self.events.values().flatten()
+    }
+
+    /// Iterates over all the errors of the contract in arbitrary order.
+    pub fn errors(&self) -> Flatten<Values<'_, String, Vec<Error>>> {
+        self.errors.values().flatten()
+    }
+
 }
 
 macro_rules! next_item {
