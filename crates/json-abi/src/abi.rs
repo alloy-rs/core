@@ -1,6 +1,9 @@
 use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
-use alloc::collections::btree_map::Values;
-use alloc::{collections::btree_map, string::String, vec::Vec};
+use alloc::{
+    collections::{btree_map, btree_map::Values},
+    string::String,
+    vec::Vec,
+};
 use alloy_primitives::Bytes;
 use btree_map::BTreeMap;
 use core::{fmt, iter};
@@ -9,8 +12,7 @@ use serde::{
     ser::SerializeSeq,
     Deserialize, Deserializer, Serialize,
 };
-use std::io;
-use std::iter::Flatten;
+use std::{io, iter::Flatten};
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
 ///
