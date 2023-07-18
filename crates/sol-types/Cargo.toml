@@ -30,6 +30,7 @@ alloy-primitives = { workspace = true, features = ["arbitrary"] }
 
 hex-literal.workspace = true
 proptest.workspace = true
+rustversion = "1.0"
 trybuild = "1.0"
 
 [features]
