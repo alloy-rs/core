@@ -1,16 +1,16 @@
 use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
-use alloc::{collections::btree_map, string::String, vec::Vec};
 use alloc::collections::btree_map::Values;
+use alloc::{collections::btree_map, string::String, vec::Vec};
 use alloy_primitives::Bytes;
 use btree_map::BTreeMap;
 use core::{fmt, iter};
-use std::io;
-use std::iter::Flatten;
 use serde::{
     de::{MapAccess, SeqAccess, Visitor},
     ser::SerializeSeq,
     Deserialize, Deserializer, Serialize,
 };
+use std::io;
+use std::iter::Flatten;
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
 ///
@@ -115,7 +115,6 @@ impl JsonAbi {
     pub fn errors(&self) -> Flatten<Values<'_, String, Vec<Error>>> {
         self.errors.values().flatten()
     }
-
 }
 
 macro_rules! next_item {
