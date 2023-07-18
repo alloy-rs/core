@@ -127,7 +127,7 @@ impl fmt::Display for ContractKind {
 
 impl PartialOrd for ContractKind {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.idx().partial_cmp(&other.idx())
+        Some(self.cmp(other))
     }
 }
 
