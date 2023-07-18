@@ -39,6 +39,7 @@ jobs:
             - uses: dtolnay/rust-toolchain@stable
               with:
                   targets: wasm32-unknown-unknown
+            - uses: Swatinem/rust-cache@v2
             - name: check
               run: cargo check --workspace --target wasm32-unknown-unknown
 
