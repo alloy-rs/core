@@ -35,6 +35,7 @@ custom_keywords!(
 
     // Error
     error,
+    panic,
 
     // Event
     event,
@@ -70,4 +71,5 @@ custom_keywords!(
     // Other
     is,
     unicode,
+    catch,
 );

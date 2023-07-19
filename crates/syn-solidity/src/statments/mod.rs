@@ -1,6 +1,11 @@
+pub mod assignment;
+pub mod binop;
+pub mod binops;
 pub mod expr;
+pub mod field;
 pub mod r#for;
 pub mod r#if;
-pub mod operators;
+pub mod index;
+pub mod method_call;
+pub mod try_catch;
 pub mod r#while;
-pub mod cast;
