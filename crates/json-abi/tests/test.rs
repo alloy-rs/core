@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufReader};
 use alloy_json_abi::{AbiItem, Error, EventParam, JsonAbi, Param};
 
 #[test]
@@ -52,6 +55,25 @@ abi_parse_tests! {
     udvts("abi/Udvts.json", 1)
 }
 
+#[test]
+// TODO: Fix "from_reader" not parsing correctly -> "Error("invalid type: string \"string\", expected a valid internal type"
+fn test_constructor() {
+    // Parse the ABI JSON file
+    let file_wo_constructor = File::open("tests/abi/Abiencoderv2Test.json").unwrap();
+    let file_w_constructor = File::open("tests/abi/Seaport.json").unwrap();
+
+    let abi_wo_constructor: JsonAbi = serde_json::from_reader(BufReader::new(file_wo_constructor))
+        .expect("Failed to parse ABI JSON file");
+    let abi_w_constructor: JsonAbi = serde_json::from_reader(BufReader::new(file_w_constructor))
+        .expect("Failed to parse ABI JSON file");
+
+    // Check that the ABI JSON file has no constructor
+    assert!(abi_wo_constructor.constructor().is_none());
+
+    // Check that the ABI JSON file has a constructor
+    assert!(abi_w_constructor.constructor().is_some());
+}
+
 fn parse_test(s: &str, len: usize) {
     let abi_items: Vec<AbiItem<'_>> = serde_json::from_str(s).unwrap();
     assert_eq!(abi_items.len(), len);
@@ -69,6 +91,7 @@ fn parse_test(s: &str, len: usize) {
     assert_eq!(abi2, abi3);
 
     param_tests(&abi1);
+    method_tests(&abi1);
 
     iterator_test(abi1.items(), abi1.items().rev(), len);
     iterator_test(abi1.items().skip(1), abi1.items().skip(1).rev(), len - 1);
@@ -100,6 +123,60 @@ fn param_tests(abi: &JsonAbi) {
         AbiItem::Error(e) => e.inputs.iter().for_each(test_param),
         _ => {}
     })
+}
+
+fn method_tests(abi: &JsonAbi) {
+    test_functions(abi);
+    test_events(abi);
+    test_errors(abi);
+}
+
+fn test_functions(abi: &JsonAbi) {
+    abi.functions().for_each(|f| {
+        f.inputs.iter().for_each(test_param);
+        f.outputs.iter().for_each(test_param);
+    });
+
+    abi.functions()
+        .map(|f| f.name.clone())
+        .fold(HashMap::new(), |mut freq_count, name| {
+            *freq_count.entry(name).or_insert(0) += 1;
+            freq_count
+        })
+        .into_iter()
+        .for_each(|(name, freq)| {
+            assert_eq!(abi.function(&name).unwrap().len(), freq);
+        });
+}
+
+fn test_errors(abi: &JsonAbi) {
+    abi.errors().for_each(|e| e.inputs.iter().for_each(test_param));
+
+    abi.errors()
+        .map(|e| e.name.clone())
+        .fold(HashMap::new(), |mut freq_count, name| {
+            *freq_count.entry(name).or_insert(0) += 1;
+            freq_count
+        })
+        .into_iter()
+        .for_each(|(name, freq)| {
+            assert_eq!(abi.error(&name).unwrap().len(), freq);
+        });
+}
+
+fn test_events(abi: &JsonAbi) {
+    abi.events().for_each(|e| e.inputs.iter().for_each(test_event_param));
+
+    abi.events()
+        .map(|e| e.name.clone())
+        .fold(HashMap::new(), |mut freq_count, name| {
+            *freq_count.entry(name).or_insert(0) += 1;
+            freq_count
+        })
+        .into_iter()
+        .for_each(|(name, freq)| {
+            assert_eq!(abi.event(&name).unwrap().len(), freq);
+        });
 }
 
 fn test_event_param(param: &EventParam) {
