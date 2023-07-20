@@ -3,7 +3,7 @@
 
 use super::{Encodable, SolType};
 use crate::{token::TokenSeq, Eip712Domain, TokenType, Word};
-use alloc::{borrow::Cow, string::String, vec::Vec};
+use alloc::{borrow::Cow, vec::Vec};
 use alloy_primitives::{keccak256, B256};
 
 type TupleFor<'a, T> = <T as SolStruct>::Tuple<'a>;
@@ -43,13 +43,6 @@ pub trait SolStruct: 'static {
     /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
     const NAME: &'static str;
 
-    /// The field types and names. Type is a Solidity string, and must conform
-    /// to the name of the Solidty type at the same index in the associated
-    /// tuple.
-    ///
-    /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
-    const FIELDS: &'static [(&'static str, &'static str)];
-
     // TODO: avoid clones here
     /// Convert to the tuple type used for ABI encoding and decoding.
     fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType;
@@ -72,27 +65,7 @@ pub trait SolStruct: 'static {
 
     /// EIP-712 `encodeType`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    fn eip712_encode_type() -> Cow<'static, str> {
-        let capacity = Self::FIELDS
-            .iter()
-            .map(|(ty, name)| ty.len() + name.len() + 1)
-            .sum::<usize>()
-            + Self::NAME.len()
-            + 2;
-        let mut out = String::with_capacity(capacity);
-        out.push_str(Self::NAME);
-        out.push('(');
-        for (i, &(ty, name)) in Self::FIELDS.iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            out.push_str(ty);
-            out.push(' ');
-            out.push_str(name);
-        }
-        out.push(')');
-        out.into()
-    }
+    fn eip712_encode_type() -> Cow<'static, str>;
 
     /// EIP-712 `typeHash`
     /// <https://eips.ethereum.org/EIPS/eip-712#rationale-for-typehash>
