@@ -14,7 +14,10 @@ pub enum CallArgs {
 }
 
 #[derive(Debug, Clone)]
-pub struct MapArgs(Punctuated<Map, Token![,]>);
+pub struct ListArgs(pub Punctuated<Expr, Token![,]>);
+
+#[derive(Debug, Clone)]
+pub struct MapArgs(pub Punctuated<Map, Token![,]>);
 
 #[derive(Debug, Clone)]
 pub struct Map {
@@ -23,17 +26,11 @@ pub struct Map {
     pub value: Box<Expr>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ListArgs(Punctuated<Expr, Token![,]>);
-
 impl Parse for CallArgs {
     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
-        // map
         if input.peek2(Brace) {
             Ok(Self::Map(input.parse()?))
-        }
-        // list
-        else if input.peek(Paren) {
+        } else if input.peek(Paren) {
             Ok(Self::List(input.parse()?))
         } else {
             Err(Error::new(input.span(), "invalid call args"))
@@ -42,13 +39,33 @@ impl Parse for CallArgs {
 }
 impl Parse for MapArgs {
     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
-        while input.peek(token)
+        let mut map = Punctuated::new();
+        while input.peek2(Token![:]) {
+            let entry = input.parse()?;
+            map.push(entry);
+        }
 
+        Ok(Self(map))
     }
 }
+
 impl Parse for Map {
-    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {}
+    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+        Ok(Self {
+            key: input.parse()?,
+            semi: input.parse()?,
+            value: input.parse()?,
+        })
+    }
 }
+
 impl Parse for ListArgs {
-    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {}
+    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+        let mut list = Punctuated::new();
+        while input.peek(Token![,]) {
+            list.push(input.parse()?);
+        }
+        list.push(input.parse()?);
+        Ok(Self(list))
+    }
 }
