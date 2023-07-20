@@ -35,9 +35,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
     cx.derives(&mut attrs, fields, true);
 
-    let field_types_s = fields.iter().map(|f| f.ty.to_string());
-    let field_names_s = fields.iter().map(|f| f.name.as_ref().unwrap().to_string());
-
     let (field_types, field_names): (Vec<_>, Vec<_>) = fields
         .iter()
         .map(|f| (expand_type(&f.ty), f.name.as_ref().unwrap()))
@@ -99,10 +96,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 type Token<'a> = <Self::Tuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
 
                 const NAME: &'static str = #name_s;
-
-                const FIELDS: &'static [(&'static str, &'static str)] = &[
-                    #((#field_types_s, #field_names_s)),*
-                ];
 
                 fn to_rust<'a>(&self) -> UnderlyingRustTuple<'a> {
                     self.clone().into()

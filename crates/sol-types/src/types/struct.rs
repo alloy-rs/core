@@ -43,13 +43,6 @@ pub trait SolStruct: 'static {
     /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
     const NAME: &'static str;
 
-    /// The field types and names. Type is a Solidity string, and must conform
-    /// to the name of the Solidty type at the same index in the associated
-    /// tuple.
-    ///
-    /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
-    const FIELDS: &'static [(&'static str, &'static str)];
-
     // TODO: avoid clones here
     /// Convert to the tuple type used for ABI encoding and decoding.
     fn to_rust<'a>(&self) -> <Self::Tuple<'a> as SolType>::RustType;
