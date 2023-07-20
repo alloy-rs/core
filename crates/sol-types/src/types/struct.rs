@@ -72,27 +72,7 @@ pub trait SolStruct: 'static {
 
     /// EIP-712 `encodeType`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    fn eip712_encode_type() -> Cow<'static, str> {
-        let capacity = Self::FIELDS
-            .iter()
-            .map(|(ty, name)| ty.len() + name.len() + 1)
-            .sum::<usize>()
-            + Self::NAME.len()
-            + 2;
-        let mut out = String::with_capacity(capacity);
-        out.push_str(Self::NAME);
-        out.push('(');
-        for (i, &(ty, name)) in Self::FIELDS.iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            out.push_str(ty);
-            out.push(' ');
-            out.push_str(name);
-        }
-        out.push(')');
-        out.into()
-    }
+    fn eip712_encode_type() -> Cow<'static, str>;
 
     /// EIP-712 `typeHash`
     /// <https://eips.ethereum.org/EIPS/eip-712#rationale-for-typehash>
