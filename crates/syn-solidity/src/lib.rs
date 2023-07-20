@@ -20,6 +20,7 @@ use syn::Result;
 #[macro_use]
 mod macros;
 
+pub mod literals;
 pub mod attribute;
 pub use attribute::*;
 

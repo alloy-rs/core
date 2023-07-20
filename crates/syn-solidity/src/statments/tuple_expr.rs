@@ -1,10 +1,10 @@
-use syn::{parenthesized, parse::Parse, punctuated::Punctuated, token::Paren};
+use syn::{parenthesized, parse::Parse, punctuated::Punctuated, token::Paren, Token};
 
-use crate::{expr::Expr, Parameters};
+use crate::expr::Expr;
 
 #[derive(Debug, Clone)]
 pub struct TupleExpr {
-    paran: Paren,
+    paren: Paren,
     exprs: Punctuated<Expr, Token![,]>,
 }
 
@@ -13,13 +13,13 @@ impl Parse for TupleExpr {
         let content;
         let paren = parenthesized!(content in input);
 
-        let exprs = Punctuated::new();
+        let mut exprs = Punctuated::new();
         exprs.push(input.parse()?);
         while input.peek(Token![,]) {
             exprs.push(input.parse()?);
         }
         exprs.push(input.parse()?);
 
-        Ok(Self { exprs, paran })
+        Ok(Self { exprs, paren })
     }
 }

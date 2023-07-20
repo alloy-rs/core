@@ -13,7 +13,7 @@ use crate::{
     r#while::{DoWhile, While},
     revert::Revert,
     tuple_expr::TupleExpr,
-    unchecked::Unchecked,
+    unchecked::Unchecked, literals::lits::Literals,
 };
 
 use syn::{
@@ -40,6 +40,7 @@ pub enum Expr {
     Tuple(TupleExpr),
     InlineArray(InlineArrayExpr),
     New(New),
+    Lit(Literals),
 }
 
 impl Parse for Expr {
