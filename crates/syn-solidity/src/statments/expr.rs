@@ -1,12 +1,19 @@
 use crate::{
     assignment::AssignmentExpr,
     binop::BinopExpr,
-    binops::{pow::PowOps, Binop},
+    emit::Emit,
     index::Index,
+    inline_array_expr::InlineArrayExpr,
+    loop_ops::LoopOps,
     method_call::MethodCall,
+    new::New,
     r#for::ForStmt,
     r#if::IfStmt,
+    r#return::Return,
     r#while::{DoWhile, While},
+    revert::Revert,
+    tuple_expr::TupleExpr,
+    unchecked::Unchecked,
 };
 
 use syn::{
@@ -21,16 +28,18 @@ pub enum Expr {
     DoWhile(DoWhile),
     If(IfStmt),
     ForLoop(ForStmt),
+    LoopOps(LoopOps),
     Assign(AssignmentExpr),
     Index(Index),
     Binop(BinopExpr),
     MethodCall(MethodCall),
-}
-
-impl<T: Parse> Parse for Vec<T> {
-    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
-        todo!()
-    }
+    Return(Return),
+    Emit(Emit),
+    Unchecked(Unchecked),
+    Revert(Revert),
+    Tuple(TupleExpr),
+    InlineArray(InlineArrayExpr),
+    New(New),
 }
 
 impl Parse for Expr {
@@ -74,7 +83,7 @@ impl Parse for Expr {
             || input.peek2(Token!(&&))
             || input.peek2(Token!(||))
         {
-            return Ok(Self::Binop(Binop::parse(input)?))
+            return Ok(Self::Binop(BinopExpr::parse(input)?))
         } else {
             Err(syn::Error::new(
                 input.span(),

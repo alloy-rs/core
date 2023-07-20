@@ -1,6 +1,8 @@
 pub mod pow;
 pub mod ternary;
 
+use crate::kw;
+
 use self::pow::PowOps;
 
 use super::binops::ternary::Ternary;
@@ -36,35 +38,35 @@ pub enum Binop {
     Ternary(Ternary),
     // don't have in rust but swag
     Exponent(PowOps),
+    Delete(kw::delete),
 }
 
-impl Parse for Binop {
-    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
-        || {
-            input.peek(Token![~])
-                || input.peek2(Token!(=))
-                || input.peek2(Token!(+))
-                || input.peek2(Token!(+=))
-                || input.peek2(Token!(-))
-                || input.peek2(Token!(-=))
-                || input.peek2(Token!(*))
-                || input.peek2(Token!(*=))
-                || input.peek2(Token!(/))
-                || input.peek2(Token!(/=))
-                || input.peek2(Token!(%))
-                || input.peek2(Token!(%=))
-                || input.peek2(Token!(&))
-                || input.peek2(Token!(&=))
-                || input.peek2(Token!(^))
-                || input.peek2(Token!(^=))
-                || input.peek2(Token!(|))
-                || input.peek2(Token!(<<))
-                || input.peek2(Token!(<<=))
-                || input.peek2(Token!(>>))
-                || input.peek2(Token!(>>=))
-                || input.peek2(Token!(==))
-                || input.peek2(Token!(&&))
-                || input.peek2(Token!(||))
-        }
-    }
-}
+// impl Parse for Binop {
+//     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+//             input.peek(Token![~])
+//                 || input.peek2(Token!(=))
+//                 || input.peek2(Token!(+))
+//                 || input.peek2(Token!(+=))
+//                 || input.peek2(Token!(-))
+//                 || input.peek2(Token!(-=))
+//                 || input.peek2(Token!(*))
+//                 || input.peek2(Token!(*=))
+//                 || input.peek2(Token!(/))
+//                 || input.peek2(Token!(/=))
+//                 || input.peek2(Token!(%))
+//                 || input.peek2(Token!(%=))
+//                 || input.peek2(Token!(&))
+//                 || input.peek2(Token!(&=))
+//                 || input.peek2(Token!(^))
+//                 || input.peek2(Token!(^=))
+//                 || input.peek2(Token!(|))
+//                 || input.peek2(Token!(<<))
+//                 || input.peek2(Token!(<<=))
+//                 || input.peek2(Token!(>>))
+//                 || input.peek2(Token!(>>=))
+//                 || input.peek2(Token!(==))
+//                 || input.peek2(Token!(&&))
+//                 || input.peek2(Token!(||))
+//         }
+//     }
+// }

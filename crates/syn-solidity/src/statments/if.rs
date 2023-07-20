@@ -34,6 +34,7 @@ impl Parse for IfStmt {
         let init = input.parse()?;
         let mut optional = Vec::new();
 
+        // this wrong
         let fork = input.fork();
         while let Ok(stmt) = fork.parse::<IfStmtType>() {
             optional.push(stmt);
@@ -42,7 +43,7 @@ impl Parse for IfStmt {
         Ok(Self {
             init,
             optional_stmts: optional,
-            expr: input.parse(),
+            expr: input.parse()?,
         })
     }
 }

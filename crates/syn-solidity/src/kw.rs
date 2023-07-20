@@ -72,4 +72,10 @@ custom_keywords!(
     is,
     unicode,
     catch,
+    delete,
+    unchecked,
+    new,
+    emit,
+    revert,
+    assembly,
 );

@@ -9,6 +9,7 @@ pub struct TryCatch {
     pub catch: Catch,
 }
 
+#[derive(Debug, Clone)]
 pub struct Catch {
     pub error: Option<kw::error>,
     pub panic: Option<kw::panic>,

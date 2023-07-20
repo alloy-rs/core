@@ -1,5 +1,5 @@
 use crate::{assignment::AssignmentExpr, expr::Expr, Block};
-use syn::{parse::Parse, token::Paren, Token};
+use syn::{parenthesized, parse::Parse, token::Paren, Token};
 
 #[derive(Debug, Clone)]
 pub struct ForStmt {
@@ -29,8 +29,9 @@ impl Parse for ForStmt {
 
 impl Parse for ForAssignment {
     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+        let content;
         Ok(Self {
-            brace: input.parse()?,
+            brace: parenthesized!(content in input),
             iter_asign: input.parse()?,
             semi: input.parse()?,
             cond: Box::new(input.parse()?),

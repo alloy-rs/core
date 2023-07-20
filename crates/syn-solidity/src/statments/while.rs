@@ -1,15 +1,10 @@
-use syn::{
-    parse::Parse,
-    token::{Brace, Paren},
-    Token,
-};
+use syn::{parenthesized, parse::Parse, token::Paren, Token};
 
 use crate::{expr::Expr, Block};
 
 #[derive(Debug, Clone)]
 pub struct DoWhile {
     pub do_token: Token![do],
-    pub brace: Brace,
     pub block: Block,
     pub while_token: Token![while],
     pub paren: Paren,
@@ -18,16 +13,16 @@ pub struct DoWhile {
 
 impl Parse for DoWhile {
     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+        let content;
         let do_token = input.parse()?;
-        let brace = input.parse()?;
         let block = input.parse()?;
         let while_token = input.parse()?;
-        let paren = input.parse()?;
+
+        let paren = parenthesized!(content in input);
         let expr = Box::new(input.parse()?);
 
         Ok(Self {
             do_token,
-            brace,
             block,
             while_token,
             paren,
@@ -46,8 +41,9 @@ pub struct While {
 
 impl Parse for While {
     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+        let content;
         let while_token = input.parse()?;
-        let paren = input.parse()?;
+        let paren = parenthesized!(content in input);
         let expr = input.parse()?;
         let block = input.parse()?;
 

@@ -23,12 +23,15 @@ impl fmt::Debug for Block {
 impl Parse for Block {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
+        let mut exprs = Vec::new();
 
-        let fork = input.fork();
+        while !input.peek(Brace) {
+            exprs.push(input.parse()?);
+        }
 
         Ok(Self {
             brace_token: syn::braced!(content in input),
-            stmts: content.parse()?,
+            stmts: exprs,
         })
     }
 }
