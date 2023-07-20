@@ -46,6 +46,7 @@ proptest-derive = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json.workspace = true
+serde = { workspace = true, features = ["derive"] }
 
 [features]
 default = ["std"]

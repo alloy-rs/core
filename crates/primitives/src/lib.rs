@@ -19,6 +19,8 @@ extern crate alloc;
 
 // Used in Serde tests.
 #[cfg(test)]
+use serde as _;
+#[cfg(test)]
 use serde_json as _;
 
 pub mod aliases;
