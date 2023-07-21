@@ -86,8 +86,8 @@ pub trait SolStruct: 'static {
         components.dedup();
         Cow::Owned(
             core::iter::once(root_type)
-                .chain(components.into_iter())
-                .collect::<String>(),
+                .chain(components)
+                .collect::<crate::private::String>(),
         )
     }
 
