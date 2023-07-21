@@ -1,6 +1,5 @@
 use crate::{
     assembly::Assembly,
-    assignment::AssignmentExpr,
     binop::BinopExpr,
     emit::Emit,
     index::Index,
@@ -34,7 +33,6 @@ pub enum Expr {
     If(IfStmt),
     ForLoop(ForStmt),
     LoopOps(LoopOps),
-    Assign(AssignmentExpr),
     Index(Index),
     Binop(BinopExpr),
     MethodCall(MethodCall),

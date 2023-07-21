@@ -1,6 +1,6 @@
 use syn::{parse::Parse, Error, Token};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum LoopOps {
     Continue {
         kw: Token!(continue),

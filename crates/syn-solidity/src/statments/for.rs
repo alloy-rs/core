@@ -1,4 +1,4 @@
-use crate::{assignment::AssignmentExpr, expr::Expr, Block};
+use crate::{binop::BinopExpr, expr::Expr, Block};
 use syn::{parenthesized, parse::Parse, token::Paren, Token};
 
 #[derive(Debug, Clone)]
@@ -10,7 +10,7 @@ pub struct ForStmt {
 #[derive(Debug, Clone)]
 pub struct ForAssignment {
     pub brace: Paren,
-    pub iter_asign: AssignmentExpr,
+    pub iter_asign: BinopExpr,
     pub semi: Token![;],
     pub cond: Box<Expr>,
     pub semi2: Token![;],

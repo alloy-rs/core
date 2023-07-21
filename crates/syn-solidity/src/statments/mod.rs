@@ -1,5 +1,4 @@
 pub mod assembly;
-pub mod assignment;
 pub mod binop;
 pub mod binops;
 pub mod call_args;
