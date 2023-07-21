@@ -67,7 +67,7 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
                 let v = v.strip_prefix("0x").unwrap_or(v);
 
                 let v = hex::decode(v).map_err(|_| {
-                    de::Error::invalid_value(de::Unexpected::Str(&v), &"a valid hex string")
+                    de::Error::invalid_value(de::Unexpected::Str(v), &"a valid hex string")
                 })?;
                 <[u8; N]>::try_from(v.as_slice())
                     .map_err(|_| {
