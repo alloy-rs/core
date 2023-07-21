@@ -80,7 +80,7 @@ pub trait SolStruct: 'static {
         components.dedup();
 
         Cow::Owned(
-            std::iter::once(Self::eip712_root_type())
+            core::iter::once(Self::eip712_root_type())
                 .chain(components.into_iter())
                 .collect::<Vec<_>>()
                 .join(""),
