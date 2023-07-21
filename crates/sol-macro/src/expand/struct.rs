@@ -172,17 +172,17 @@ fn expand_eip712_components(fields: &ast::Parameters<syn::token::Semi>) -> Token
         .map(|field| {
             let ty = expand_type(&field.ty);
             quote! {
-                components.push(<#ty>::eip712_root_type());
-                components.extend(<#ty>::eip712_components());
+                components.push(<#ty as ::alloy_sol_types::SolStruct>::eip712_root_type());
+                components.extend(<#ty as ::alloy_sol_types::SolStruct>::eip712_components());
             }
         })
         .collect();
 
     if bits.is_empty() {
-        quote! {vec![]}
+        quote! { ::alloy_sol_types::private::Vec::with_capacity(0) }
     } else {
         quote! {
-            let mut components = vec![];
+            let mut components = ::alloy_sol_types::private::Vec::new();
             #(#bits)*
             components
         }

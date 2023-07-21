@@ -75,15 +75,19 @@ pub trait SolStruct: 'static {
     /// EIP-712 `encodeType`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     fn eip712_encode_type() -> Cow<'static, str> {
+        let root_type = Self::eip712_root_type();
         let mut components = Self::eip712_components();
+
+        if components.is_empty() {
+            return root_type
+        }
+
         components.sort();
         components.dedup();
-
         Cow::Owned(
-            core::iter::once(Self::eip712_root_type())
+            core::iter::once(root_type)
                 .chain(components.into_iter())
-                .collect::<Vec<_>>()
-                .join(""),
+                .collect::<String>(),
         )
     }
 
