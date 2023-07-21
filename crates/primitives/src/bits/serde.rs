@@ -26,7 +26,7 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(
                     formatter,
-                    "{} bytes, represented as an array of u8, a buffer, or a hex string of length {}",
+                    "{} bytes, represented as a hex string of length {}, an array of u8, or raw bytes",
                     N,
                     N * 2
                 )
