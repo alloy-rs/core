@@ -1,4 +1,4 @@
-use crate::{kw, utils::DebugPunctuated, Type};
+use crate::{kw, r#type::Type, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::{
     fmt,

@@ -1,4 +1,4 @@
-use super::{SolIdent, Storage, Type};
+use super::{r#type::Type, SolIdent, Storage};
 use crate::{utils::tts_until_semi, VariableAttributes};
 use proc_macro2::{Span, TokenStream};
 use std::fmt::{self, Write};

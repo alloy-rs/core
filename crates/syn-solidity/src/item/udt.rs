@@ -1,4 +1,4 @@
-use crate::{kw, SolIdent, Type};
+use crate::{kw, r#type::Type, SolIdent};
 use proc_macro2::Span;
 use std::{
     fmt,

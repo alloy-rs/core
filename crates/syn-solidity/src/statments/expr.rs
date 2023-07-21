@@ -17,16 +17,18 @@ use crate::{
     revert::Revert,
     tuple_expr::TupleExpr,
     unchecked::Unchecked,
+    Block,
 };
 
 use syn::{
     parse::Parse,
-    token::{Bracket, Paren},
+    token::{Brace, Bracket, Paren},
     Ident, LitBool, LitInt, LitStr, Token,
 };
 
 #[derive(Clone, Debug)]
 pub enum Expr {
+    Block(Block),
     While(While),
     DoWhile(DoWhile),
     If(IfStmt),
@@ -51,6 +53,9 @@ impl Parse for Expr {
     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
         if input.peek(Token![while]) {
             return Ok(Self::While(While::parse(input)?))
+        // this prob wrong lol
+        } else if input.peek(Brace) {
+            return Ok(Self::Block(Block::parse(input)?))
         } else if input.peek(Token![do]) {
             return Ok(Self::DoWhile(DoWhile::parse(input)?))
         } else if input.peek(Token![if]) {

@@ -9,6 +9,7 @@
 #![allow(unused_variables)]
 
 use super::*;
+use crate::r#type::*;
 
 make_visitor! {
     /// Syntax tree traversal to mutate an exclusive borrow of a syntax tree in

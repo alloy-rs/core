@@ -8,6 +8,7 @@
 #![allow(unused_variables)]
 
 use super::*;
+use crate::r#type::*;
 
 make_visitor! {
     /// Syntax tree traversal to walk a shared borrow of a syntax tree.

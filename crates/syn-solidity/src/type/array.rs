@@ -1,4 +1,4 @@
-use crate::Type;
+use crate::r#type::Type;
 use proc_macro2::Span;
 use std::{
     fmt,

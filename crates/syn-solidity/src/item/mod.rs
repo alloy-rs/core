@@ -102,7 +102,7 @@ impl Parse for Item {
             input.parse().map(Self::Import)
         } else if lookahead.peek(kw::using) {
             input.parse().map(Self::Using)
-        } else if crate::Type::peek(&lookahead) {
+        } else if crate::r#type::Type::peek(&lookahead) {
             input.parse().map(Self::Variable)
         } else {
             Err(lookahead.error())
