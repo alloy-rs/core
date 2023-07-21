@@ -7,8 +7,12 @@ use serde::{
 
 impl<const N: usize> Serialize for FixedBytes<N> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut buf = hex::Buffer::<N, true>::new();
-        serializer.serialize_str(buf.format(&self.0))
+        if serializer.is_human_readable() {
+            let mut buf = hex::Buffer::<N, true>::new();
+            serializer.serialize_str(buf.format(&self.0))
+        } else {
+            serializer.serialize_bytes(self.as_slice())
+        }
     }
 }
 
@@ -22,7 +26,7 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(
                     formatter,
-                    "{} bytes, represented as an array of u8, or a hex string of length {}",
+                    "{} bytes, represented as an array of u8, a buffer, or a hex string of length {}",
                     N,
                     N * 2
                 )
@@ -64,8 +68,6 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
             where
                 E: de::Error,
             {
-                let v = v.strip_prefix("0x").unwrap_or(v);
-
                 let v = hex::decode(v).map_err(|_| {
                     de::Error::invalid_value(de::Unexpected::Str(v), &"a valid hex string")
                 })?;
