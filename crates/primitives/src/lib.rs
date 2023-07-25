@@ -65,6 +65,7 @@ pub use ::hex::serde as serde_hex;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
+    pub use core;
     pub use derive_more;
 
     #[cfg(feature = "getrandom")]

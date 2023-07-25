@@ -1,5 +1,5 @@
 use super::FixedBytes;
-use alloc::fmt;
+use core::fmt;
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
@@ -32,19 +32,13 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
                 )
             }
 
-            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
+            fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
                 <[u8; N]>::try_from(v)
                     .map(FixedBytes)
                     .map_err(de::Error::custom)
             }
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: de::SeqAccess<'de>,
-            {
+            fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
                 let mut bytes = [0u8; N];
 
                 bytes.iter_mut().enumerate().try_for_each(|(i, b)| {
@@ -64,23 +58,11 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
                 Ok(FixedBytes(bytes))
             }
 
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                let v = hex::decode(v).map_err(|_| {
-                    de::Error::invalid_value(de::Unexpected::Str(v), &"a valid hex string")
-                })?;
-                <[u8; N]>::try_from(v.as_slice())
-                    .map_err(|_| {
-                        de::Error::invalid_length(
-                            v.len(),
-                            &format!("exactly {} bytes, as {} hex chars", N, N * 2).as_str(),
-                        )
-                    })
-                    .map(FixedBytes)
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                <FixedBytes<N> as hex::FromHex>::from_hex(v).map_err(de::Error::custom)
             }
         }
+
         deserializer.deserialize_any(FixedVisitor::<N>)
     }
 }

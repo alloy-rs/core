@@ -1,9 +1,7 @@
-use serde::de::{self, Visitor};
-
-use core::result::Result;
-
 use crate::Bytes;
 use alloc::vec::Vec;
+use core::fmt;
+use serde::de::{self, Visitor};
 
 impl serde::Serialize for Bytes {
     #[inline]
@@ -24,29 +22,20 @@ impl<'de> serde::Deserialize<'de> for Bytes {
         impl<'de> Visitor<'de> for BytesVisitor {
             type Value = Bytes;
 
-            fn expecting(&self, formatter: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result {
-                formatter.write_str("a variable number of bytes, represented as a hex string, an array of u8, or raw bytes")
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a variable number of bytes represented as a hex string, an array of u8, or raw bytes")
             }
 
-            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
+            fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
                 Ok(Bytes::from(v.to_vec()))
             }
 
-            fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
+            fn visit_byte_buf<E: de::Error>(self, v: Vec<u8>) -> Result<Self::Value, E> {
                 Ok(Bytes::from(v))
             }
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: serde::de::SeqAccess<'de>,
-            {
-                let mut bytes = Vec::new();
+            fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+                let mut bytes = Vec::with_capacity(seq.size_hint().unwrap_or(0));
 
                 while let Some(byte) = seq.next_element()? {
                     bytes.push(byte);
@@ -55,10 +44,7 @@ impl<'de> serde::Deserialize<'de> for Bytes {
                 Ok(Bytes::from(bytes))
             }
 
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
                 hex::decode(v)
                     .map_err(|_| {
                         de::Error::invalid_value(de::Unexpected::Str(v), &"a valid hex string")
