@@ -67,28 +67,28 @@ macro_rules! wrap_fixed_bytes {
         #[repr(transparent)]
         $vis struct $name(#[into_iterator(owned, ref, ref_mut)] pub $crate::FixedBytes<$n>);
 
-        impl $crate::private::core::convert::From<[u8; $n]> for $name {
+        impl $crate::private::From<[u8; $n]> for $name {
             #[inline]
             fn from(value: [u8; $n]) -> Self {
                 Self($crate::FixedBytes(value))
             }
         }
 
-        impl $crate::private::core::convert::From<$name> for [u8; $n] {
+        impl $crate::private::From<$name> for [u8; $n] {
             #[inline]
             fn from(value: $name) -> Self {
                 value.0 .0
             }
         }
 
-        impl<'a> $crate::private::core::convert::From<&'a [u8; $n]> for $name {
+        impl<'a> $crate::private::From<&'a [u8; $n]> for $name {
             #[inline]
             fn from(value: &'a [u8; $n]) -> Self {
                 Self($crate::FixedBytes(*value))
             }
         }
 
-        impl $crate::private::core::convert::TryFrom<&[u8]> for $name {
+        impl $crate::private::TryFrom<&[u8]> for $name {
             type Error = $crate::private::core::array::TryFromSliceError;
 
             #[inline]
@@ -97,7 +97,7 @@ macro_rules! wrap_fixed_bytes {
             }
         }
 
-        impl $crate::private::core::convert::TryFrom<&mut [u8]> for $name {
+        impl $crate::private::TryFrom<&mut [u8]> for $name {
             type Error = $crate::private::core::array::TryFromSliceError;
 
             #[inline]
@@ -106,7 +106,7 @@ macro_rules! wrap_fixed_bytes {
             }
         }
 
-        impl<'a> $crate::private::core::convert::TryFrom<&'a [u8]> for &'a $name {
+        impl<'a> $crate::private::TryFrom<&'a [u8]> for &'a $name {
             type Error = $crate::private::core::array::TryFromSliceError;
 
             #[inline]
@@ -114,12 +114,12 @@ macro_rules! wrap_fixed_bytes {
             fn try_from(slice: &'a [u8]) -> Result<&'a $name, Self::Error> {
                 // SAFETY: `$name` is `repr(transparent)` for `FixedBytes<$n>`
                 // and consequently `[u8; $n]`
-                <&[u8; $n] as $crate::private::core::convert::TryFrom<&[u8]>>::try_from(slice)
+                <&[u8; $n] as $crate::private::TryFrom<&[u8]>>::try_from(slice)
                     .map(|array_ref| unsafe { core::mem::transmute(array_ref) })
             }
         }
 
-        impl<'a> $crate::private::core::convert::TryFrom<&'a mut [u8]> for &'a mut $name {
+        impl<'a> $crate::private::TryFrom<&'a mut [u8]> for &'a mut $name {
             type Error = $crate::private::core::array::TryFromSliceError;
 
             #[inline]
@@ -127,33 +127,33 @@ macro_rules! wrap_fixed_bytes {
             fn try_from(slice: &'a mut [u8]) -> Result<&'a mut $name, Self::Error> {
                 // SAFETY: `$name` is `repr(transparent)` for `FixedBytes<$n>`
                 // and consequently `[u8; $n]`
-                <&mut [u8; $n] as $crate::private::core::convert::TryFrom<&mut [u8]>>::try_from(slice)
+                <&mut [u8; $n] as $crate::private::TryFrom<&mut [u8]>>::try_from(slice)
                     .map(|array_ref| unsafe { core::mem::transmute(array_ref) })
             }
         }
 
-        impl $crate::private::core::convert::AsRef<[u8; $n]> for $name {
+        impl $crate::private::AsRef<[u8; $n]> for $name {
             #[inline]
             fn as_ref(&self) -> &[u8; $n] {
                 &self.0 .0
             }
         }
 
-        impl $crate::private::core::convert::AsMut<[u8; $n]> for $name {
+        impl $crate::private::AsMut<[u8; $n]> for $name {
             #[inline]
             fn as_mut(&mut self) -> &mut [u8; $n] {
                 &mut self.0 .0
             }
         }
 
-        impl $crate::private::core::convert::AsRef<[u8]> for $name {
+        impl $crate::private::AsRef<[u8]> for $name {
             #[inline]
             fn as_ref(&self) -> &[u8] {
                 &self.0 .0
             }
         }
 
-        impl $crate::private::core::convert::AsMut<[u8]> for $name {
+        impl $crate::private::AsMut<[u8]> for $name {
             #[inline]
             fn as_mut(&mut self) -> &mut [u8] {
                 &mut self.0 .0
@@ -254,63 +254,63 @@ macro_rules! wrap_fixed_bytes {
 #[macro_export]
 macro_rules! impl_fixed_bytes_traits {
     (impl<$($const:ident)?> Borrow<$t:ty> for $b:ty) => {
-        impl<$($const N: usize)?> $crate::private::core::borrow::Borrow<$t> for $b {
+        impl<$($const N: usize)?> $crate::private::Borrow<$t> for $b {
             #[inline]
             fn borrow(&self) -> &$t {
-                $crate::private::core::borrow::Borrow::borrow(&self.0)
+                $crate::private::Borrow::borrow(&self.0)
             }
         }
     };
 
     (impl<$($const:ident)?> BorrowMut<$t:ty> for $b:ty) => {
-        impl<$($const N: usize)?> $crate::private::core::borrow::BorrowMut<$t> for $b {
+        impl<$($const N: usize)?> $crate::private::BorrowMut<$t> for $b {
             #[inline]
             fn borrow_mut(&mut self) -> &mut $t {
-                $crate::private::core::borrow::BorrowMut::borrow_mut(&mut self.0)
+                $crate::private::BorrowMut::borrow_mut(&mut self.0)
             }
         }
     };
 
     (impl<$($const:ident)?> cmp::$tr:ident<$a:ty> for $b:ty where fn $fn:ident -> $ret:ty $(, [$e:expr])?) => {
-        impl<$($const N: usize)?> $crate::private::core::cmp::$tr<$a> for $b {
+        impl<$($const N: usize)?> $crate::private::$tr<$a> for $b {
             #[inline]
             fn $fn(&self, other: &$a) -> $ret {
-                $crate::private::core::cmp::$tr::$fn(&self.0 $([$e])?, other)
+                $crate::private::$tr::$fn(&self.0 $([$e])?, other)
             }
         }
 
-        impl<$($const N: usize)?> $crate::private::core::cmp::$tr<$b> for $a {
+        impl<$($const N: usize)?> $crate::private::$tr<$b> for $a {
             #[inline]
             fn $fn(&self, other: &$b) -> $ret {
-                $crate::private::core::cmp::$tr::$fn(self, &other.0 $([$e])?)
+                $crate::private::$tr::$fn(self, &other.0 $([$e])?)
             }
         }
 
-        impl<$($const N: usize)?> $crate::private::core::cmp::$tr<&$a> for $b {
+        impl<$($const N: usize)?> $crate::private::$tr<&$a> for $b {
             #[inline]
             fn $fn(&self, other: &&$a) -> $ret {
-                $crate::private::core::cmp::$tr::$fn(&self.0 $([$e])?, *other)
+                $crate::private::$tr::$fn(&self.0 $([$e])?, *other)
             }
         }
 
-        impl<$($const N: usize)?> $crate::private::core::cmp::$tr<$b> for &$a {
+        impl<$($const N: usize)?> $crate::private::$tr<$b> for &$a {
             #[inline]
             fn $fn(&self, other: &$b) -> $ret {
-                $crate::private::core::cmp::$tr::$fn(*self, &other.0 $([$e])?)
+                $crate::private::$tr::$fn(*self, &other.0 $([$e])?)
             }
         }
 
-        impl<$($const N: usize)?> $crate::private::core::cmp::$tr<$a> for &$b {
+        impl<$($const N: usize)?> $crate::private::$tr<$a> for &$b {
             #[inline]
             fn $fn(&self, other: &$a) -> $ret {
-                $crate::private::core::cmp::$tr::$fn(&self.0 $([$e])?, other)
+                $crate::private::$tr::$fn(&self.0 $([$e])?, other)
             }
         }
 
-        impl<$($const N: usize)?> $crate::private::core::cmp::$tr<&$b> for $a {
+        impl<$($const N: usize)?> $crate::private::$tr<&$b> for $a {
             #[inline]
             fn $fn(&self, other: &&$b) -> $ret {
-                $crate::private::core::cmp::$tr::$fn(self, &other.0 $([$e])?)
+                $crate::private::$tr::$fn(self, &other.0 $([$e])?)
             }
         }
     };
@@ -339,7 +339,7 @@ macro_rules! impl_fixed_bytes_traits {
         $crate::impl_fixed_bytes_traits!(
             impl<$($const)?> cmp::PartialOrd<[u8]> for $t
             where
-                fn partial_cmp -> $crate::private::core::option::Option<$crate::private::core::cmp::Ordering>,
+                fn partial_cmp -> $crate::private::Option<$crate::private::Ordering>,
                 [..] // slices $t
         );
 
@@ -349,7 +349,7 @@ macro_rules! impl_fixed_bytes_traits {
             #[inline]
             fn from_hex<T>(hex: T) -> Result<Self, Self::Error>
             where
-                T: $crate::private::core::convert::AsRef<[u8]>
+                T: $crate::private::AsRef<[u8]>
             {
                 $crate::hex::FromHex::from_hex(hex).map(Self)
             }
@@ -371,8 +371,7 @@ macro_rules! impl_getrandom {
 
             /// Instantiates a new fixed hash with cryptographically random content.
             #[inline]
-            pub fn try_random(
-            ) -> $crate::private::core::result::Result<Self, $crate::private::getrandom::Error>
+            pub fn try_random() -> $crate::private::Result<Self, $crate::private::getrandom::Error>
             {
                 $crate::FixedBytes::try_random().map(Self)
             }
