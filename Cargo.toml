@@ -56,6 +56,6 @@ itoa = "1"
 once_cell = "1"
 proptest = "1"
 proptest-derive = "0.3"
-ruint = { version = "1.9.0", package = "ruint2", default-features = false }
-ruint-macro = { version = "1.0.3", package = "ruint2-macro", default-features = false }
+ruint = { version = "1.9.0", default-features = false }
+ruint-macro = { version = "1", default-features = false }
 tiny-keccak = "2.0"
