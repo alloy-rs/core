@@ -282,3 +282,38 @@ fn abigen_json() {
         "callWithLongArray(uint64[128])"
     );
 }
+
+#[test]
+fn eip712_encode_type_nesting() {
+    sol! {
+        struct A {
+            uint256 a;
+        }
+
+        struct B {
+            bytes32 b;
+        }
+
+        struct C {
+            A a;
+            B b;
+        }
+
+        struct D {
+            C c;
+            A a;
+            B b;
+        }
+    }
+
+    assert_eq!(A::eip712_encode_type().unwrap(), "A(uint256 a)");
+    assert_eq!(B::eip712_encode_type().unwrap(), "B(bytes32 b)");
+    assert_eq!(
+        C::eip712_encode_type().unwrap(),
+        "C(A a,B b)A(uint256 a)B(bytes32 b)"
+    );
+    assert_eq!(
+        D::eip712_encode_type().unwrap(),
+        "D(C c,A a,B b)A(uint256 a)B(bytes32 b)C(A a,B b)"
+    );
+}

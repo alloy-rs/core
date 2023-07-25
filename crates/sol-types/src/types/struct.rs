@@ -40,7 +40,7 @@ pub trait SolStruct: 'static {
 
     /// The struct name.
     ///
-    /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
+    /// Used in [`eip712_encode_type`][SolType::sol_type_name].
     const NAME: &'static str;
 
     // TODO: avoid clones here
@@ -63,9 +63,33 @@ pub trait SolStruct: 'static {
         self.tokenize().total_words() * Word::len_bytes()
     }
 
+    /// Returns component EIP-712 types. These types are used to construct
+    /// the `encodeType` string. These are the types of the struct's fields,
+    /// and should not include the root type.
+    fn eip712_components() -> Vec<Cow<'static, str>>;
+
+    /// Return the root EIP-712 type. This type is used to construct the
+    /// `encodeType` string.
+    fn eip712_root_type() -> Cow<'static, str>;
+
     /// EIP-712 `encodeType`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    fn eip712_encode_type() -> Cow<'static, str>;
+    fn eip712_encode_type() -> Cow<'static, str> {
+        let root_type = Self::eip712_root_type();
+        let mut components = Self::eip712_components();
+
+        if components.is_empty() {
+            return root_type
+        }
+
+        components.sort();
+        components.dedup();
+        Cow::Owned(
+            core::iter::once(root_type)
+                .chain(components)
+                .collect::<crate::private::String>(),
+        )
+    }
 
     /// EIP-712 `typeHash`
     /// <https://eips.ethereum.org/EIPS/eip-712#rationale-for-typehash>

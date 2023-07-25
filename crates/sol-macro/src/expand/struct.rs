@@ -40,22 +40,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
         .map(|f| (expand_type(&f.ty), f.name.as_ref().unwrap()))
         .unzip();
 
-    let encoded_type = fields.eip712_signature(name.as_string());
-    let encode_type_impl = if fields.iter().any(|f| f.ty.is_custom()) {
-        quote! {
-            {
-                let mut encoded = String::from(#encoded_type);
-                #(
-                    if let Some(s) = <#field_types as ::alloy_sol_types::SolType>::eip712_encode_type() {
-                        encoded.push_str(&s);
-                    }
-                )*
-                encoded
-            }
-        }
-    } else {
-        quote!(#encoded_type)
-    };
+    let eip712_encode_type_fns: TokenStream = expand_encode_type_fns(fields, name);
 
     let tokenize_impl = expand_tokenize_func(fields.iter());
 
@@ -109,9 +94,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                     #tokenize_impl
                 }
 
-                fn eip712_encode_type() -> ::alloy_sol_types::private::Cow<'static, str> {
-                    #encode_type_impl.into()
-                }
+                #eip712_encode_type_fns
 
                 fn eip712_encode_data(&self) -> Vec<u8> {
                     #encode_data_impl
@@ -150,4 +133,58 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
         };
     };
     Ok(tokens)
+}
+
+fn expand_encode_type_fns(
+    fields: &ast::Parameters<syn::token::Semi>,
+    name: &ast::SolIdent,
+) -> TokenStream {
+    let components_impl = expand_eip712_components(fields);
+    let root_type_impl = fields.eip712_signature(name.as_string());
+
+    let encode_type_impl_opt: Option<TokenStream> = if fields.iter().any(|f| f.ty.is_custom()) {
+        None
+    } else {
+        Some(quote! {
+            fn eip712_encode_type() -> ::alloy_sol_types::private::Cow<'static, str> {
+                Self::eip712_root_type()
+            }
+        })
+    };
+
+    quote! {
+        fn eip712_components() -> ::alloy_sol_types::private::Vec<::alloy_sol_types::private::Cow<'static, str>> {
+            #components_impl
+        }
+
+        fn eip712_root_type() -> ::alloy_sol_types::private::Cow<'static, str> {
+            #root_type_impl.into()
+        }
+
+        #encode_type_impl_opt
+    }
+}
+
+fn expand_eip712_components(fields: &ast::Parameters<syn::token::Semi>) -> TokenStream {
+    let bits: Vec<TokenStream> = fields
+        .iter()
+        .filter(|f| f.ty.is_custom())
+        .map(|field| {
+            let ty = expand_type(&field.ty);
+            quote! {
+                components.push(<#ty as ::alloy_sol_types::SolStruct>::eip712_root_type());
+                components.extend(<#ty as ::alloy_sol_types::SolStruct>::eip712_components());
+            }
+        })
+        .collect();
+
+    if bits.is_empty() {
+        quote! { ::alloy_sol_types::private::Vec::with_capacity(0) }
+    } else {
+        quote! {
+            let mut components = ::alloy_sol_types::private::Vec::new();
+            #(#bits)*
+            components
+        }
+    }
 }
