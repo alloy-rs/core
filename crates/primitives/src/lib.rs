@@ -19,6 +19,8 @@ extern crate alloc;
 
 // Used in Serde tests.
 #[cfg(test)]
+use serde as _;
+#[cfg(test)]
 use serde_json as _;
 
 pub mod aliases;
@@ -63,6 +65,12 @@ pub use ::hex::serde as serde_hex;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
+    pub use core::{
+        self,
+        borrow::{Borrow, BorrowMut},
+        cmp::Ordering,
+        prelude::rust_2021::*,
+    };
     pub use derive_more;
 
     #[cfg(feature = "getrandom")]

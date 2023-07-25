@@ -186,6 +186,15 @@ impl core::str::FromStr for Bytes {
     }
 }
 
+impl hex::FromHex for Bytes {
+    type Error = hex::FromHexError;
+
+    #[inline]
+    fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
+        hex::decode(hex).map(Self::from)
+    }
+}
+
 impl Bytes {
     /// Creates a new empty `Bytes`.
     ///
