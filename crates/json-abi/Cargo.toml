@@ -1,6 +1,6 @@
 [package]
 name = "alloy-json-abi"
-description = "Ethereum ABI JSON file (de)serialization"
+description = "Full Ethereum JSON-ABI implementation"
 keywords = ["ethereum", "abi", "serialization"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
 homepage = "https://github.com/alloy-rs/core/tree/main/crates/json-abi"
