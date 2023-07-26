@@ -7,12 +7,12 @@ use alloc::{
 use alloy_primitives::Bytes;
 use btree_map::BTreeMap;
 use core::{fmt, iter::Flatten, iter};
+use std::io;
 use serde::{
     de::{MapAccess, SeqAccess, Visitor},
     ser::SerializeSeq,
     Deserialize, Deserializer, Serialize,
 };
-use std::io;
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
 ///
@@ -84,6 +84,7 @@ impl JsonAbi {
     }
 
     /// Loads contract from json
+    #[cfg(feature = "std")]
     pub fn load<T: io::Read>(reader: T) -> Option<Self> {
         serde_json::from_reader(reader).ok()
     }
