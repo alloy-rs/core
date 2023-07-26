@@ -56,16 +56,13 @@ abi_parse_tests! {
 }
 
 #[test]
-// TODO: Fix "from_reader" not parsing correctly -> "Error("invalid type: string \"string\", expected a valid internal type"
 fn test_constructor() {
     // Parse the ABI JSON file
-    let file_wo_constructor = File::open("tests/abi/Abiencoderv2Test.json").unwrap();
-    let file_w_constructor = File::open("tests/abi/Seaport.json").unwrap();
+    let abi_items_wo_constructor = include_str!("abi/Abiencoderv2Test.json");
+    let abi_items_w_constructor = include_str!("abi/Seaport.json");
 
-    let abi_wo_constructor: JsonAbi = serde_json::from_reader(BufReader::new(file_wo_constructor))
-        .expect("Failed to parse ABI JSON file");
-    let abi_w_constructor: JsonAbi = serde_json::from_reader(BufReader::new(file_w_constructor))
-        .expect("Failed to parse ABI JSON file");
+    let abi_wo_constructor: JsonAbi = serde_json::from_str(abi_items_wo_constructor).expect("Failed to parse ABI JSON string");
+    let abi_w_constructor: JsonAbi = serde_json::from_str(abi_items_w_constructor).expect("Failed to parse ABI JSON string");
 
     // Check that the ABI JSON file has no constructor
     assert!(abi_wo_constructor.constructor().is_none());
@@ -78,7 +75,7 @@ fn parse_test(s: &str, len: usize) {
     let abi_items: Vec<AbiItem<'_>> = serde_json::from_str(s).unwrap();
     assert_eq!(abi_items.len(), len);
 
-    let json = serde_json::to_string(&abi_items).unwrap();
+    let json: String = serde_json::to_string(&abi_items).unwrap();
     let abi1: JsonAbi = serde_json::from_str(&json).unwrap();
 
     let abi2: JsonAbi = serde_json::from_str(s).unwrap();
@@ -86,7 +83,7 @@ fn parse_test(s: &str, len: usize) {
     assert_eq!(len, abi2.len());
     assert_eq!(abi1, abi2);
 
-    let json = serde_json::to_string(&abi2).unwrap();
+    let json: String = serde_json::to_string(&abi2).unwrap();
     let abi3: JsonAbi = serde_json::from_str(&json).unwrap();
     assert_eq!(abi2, abi3);
 

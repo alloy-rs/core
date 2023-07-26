@@ -6,13 +6,13 @@ use alloc::{
 };
 use alloy_primitives::Bytes;
 use btree_map::BTreeMap;
-use core::{fmt, iter};
+use core::{fmt, iter::Flatten, iter};
 use serde::{
     de::{MapAccess, SeqAccess, Visitor},
     ser::SerializeSeq,
     Deserialize, Deserializer, Serialize,
 };
-use std::{io, iter::Flatten};
+use std::io;
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
 ///
@@ -189,7 +189,7 @@ macro_rules! iter_impl {
     };
 }
 
-type FlattenValues<'a, V> = iter::Flatten<btree_map::Values<'a, String, Vec<V>>>;
+type FlattenValues<'a, V> = Flatten<btree_map::Values<'a, String, Vec<V>>>;
 
 /// An iterator over all of the items in the ABI.
 ///
@@ -214,7 +214,7 @@ impl<'a> Iterator for Items<'a> {
 
 iter_impl!(traits Items<'_>);
 
-type FlattenIntoValues<V> = iter::Flatten<btree_map::IntoValues<String, Vec<V>>>;
+type FlattenIntoValues<V> = Flatten<btree_map::IntoValues<String, Vec<V>>>;
 
 /// An iterator over all of the items in the ABI.
 ///
