@@ -331,6 +331,18 @@ impl<'de> Visitor<'de> for ItVisitor {
             E::invalid_value(serde::de::Unexpected::Str(v), &"a valid internal type")
         })
     }
+
+    fn visit_str<E>(self, _v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        // `from_reader` copies the bytes into a Vec before calling this
+        // method. Because the lifetime is unspecified, we can't borrow from it.
+        // As a result, we don't support `from_reader`.
+        Err(serde::de::Error::custom(
+            "Using serde_json::from_reader is not supported. Instead, buffer the reader contents into a string, as in alloy_json_abi::JsonAbi::load.",
+        ))
+    }
 }
 
 #[cfg(test)]

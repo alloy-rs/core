@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufReader};
 use alloy_json_abi::{AbiItem, Error, EventParam, JsonAbi, Param};
+use std::{collections::HashMap, fs::File, io::BufReader};
 
 #[test]
 fn complex_error() {
@@ -61,8 +59,10 @@ fn test_constructor() {
     let abi_items_wo_constructor = include_str!("abi/Abiencoderv2Test.json");
     let abi_items_w_constructor = include_str!("abi/Seaport.json");
 
-    let abi_wo_constructor: JsonAbi = serde_json::from_str(abi_items_wo_constructor).expect("Failed to parse ABI JSON string");
-    let abi_w_constructor: JsonAbi = serde_json::from_str(abi_items_w_constructor).expect("Failed to parse ABI JSON string");
+    let abi_wo_constructor: JsonAbi =
+        serde_json::from_str(abi_items_wo_constructor).expect("Failed to parse ABI JSON string");
+    let abi_w_constructor: JsonAbi =
+        serde_json::from_str(abi_items_w_constructor).expect("Failed to parse ABI JSON string");
 
     // Check that the ABI JSON file has no constructor
     assert!(abi_wo_constructor.constructor().is_none());
@@ -147,7 +147,8 @@ fn test_functions(abi: &JsonAbi) {
 }
 
 fn test_errors(abi: &JsonAbi) {
-    abi.errors().for_each(|e| e.inputs.iter().for_each(test_param));
+    abi.errors()
+        .for_each(|e| e.inputs.iter().for_each(test_param));
 
     abi.errors()
         .map(|e| e.name.clone())
@@ -162,7 +163,8 @@ fn test_errors(abi: &JsonAbi) {
 }
 
 fn test_events(abi: &JsonAbi) {
-    abi.events().for_each(|e| e.inputs.iter().for_each(test_event_param));
+    abi.events()
+        .for_each(|e| e.inputs.iter().for_each(test_event_param));
 
     abi.events()
         .map(|e| e.name.clone())
@@ -204,4 +206,18 @@ fn test_param(param: &Param) {
     }
 
     param.components.iter().for_each(test_param);
+}
+
+#[test]
+fn no_from_reader() {
+    let path = "abi/Abiencoderv2Test.json";
+    let file_path: String = format!("tests/{}", path);
+    let file: File = File::open(file_path).unwrap();
+    let buffer: BufReader<File> = BufReader::new(file);
+
+    let res = serde_json::from_reader::<_, JsonAbi>(buffer);
+    assert!(res.is_err());
+    assert!(
+        format!("{}", res.unwrap_err()).contains("Using serde_json::from_reader is not supported.")
+    );
 }
