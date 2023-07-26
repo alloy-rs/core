@@ -14,6 +14,7 @@ mod serde;
 /// Wrapper type around Bytes to deserialize/serialize "0x" prefixed ethereum
 /// hex strings.
 #[derive(Clone, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
 pub struct Bytes(pub bytes::Bytes);
 
 impl fmt::Debug for Bytes {
