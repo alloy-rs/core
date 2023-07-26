@@ -7,17 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! ABI JSON file format for Solidity contracts.
-//!
-//! Please consult the [specification] for full details.
-//!
-//! This crate is a reimplementation of [ethabi]. There's only one right way to
-//! implement a JSON serialization scheme in rust. So while the internals are
-//! nearly-identical, the API is our own.
-//!
-//! [specification]: https://docs.soliditylang.org/en/latest/abi-spec.html#json
-//! [ethabi]: https://github.com/rust-ethereum/ethabi
-
+#![doc = include_str!("../README.md")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"

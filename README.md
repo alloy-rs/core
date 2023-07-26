@@ -26,7 +26,7 @@ This repository contains the following crates:
 - [`alloy-sol-types`] - Compile-time [ABI] and [EIP-712] implementations
 - [`alloy-sol-macro`] - The [`sol!`] procedural macro
 - [`alloy-dyn-abi`] - Run-time [ABI] and [EIP-712] implementations
-- [`alloy-json-abi`] - [JSON-ABI] implementation
+- [`alloy-json-abi`] - Full Ethereum [JSON-ABI] implementation
 - [`alloy-sol-type-parser`] - A simple parser for Solidity type strings
 - [`syn-solidity`] - [`syn`]-powered Solidity parser
 
