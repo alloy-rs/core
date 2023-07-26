@@ -2,7 +2,7 @@ use alloc::{string::String, vec::Vec};
 use core::{
     borrow::Borrow,
     fmt,
-    ops::{Deref, DerefMut},
+    ops::{Deref, DerefMut, RangeBounds},
 };
 
 #[cfg(feature = "rlp")]
@@ -14,6 +14,7 @@ mod serde;
 /// Wrapper type around Bytes to deserialize/serialize "0x" prefixed ethereum
 /// hex strings.
 #[derive(Clone, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
 pub struct Bytes(pub bytes::Bytes);
 
 impl fmt::Debug for Bytes {
@@ -235,6 +236,32 @@ impl Bytes {
     #[inline]
     pub fn copy_from_slice(src: &[u8]) -> Self {
         Self(bytes::Bytes::copy_from_slice(src))
+    }
+
+    /// Returns a slice of self for the provided range.
+    #[inline]
+    pub fn slice(&self, range: impl RangeBounds<usize>) -> Self {
+        Self(self.0.slice(range))
+    }
+
+    /// Returns a slice of self that is equivalent to the given `subset`.
+    #[inline]
+    pub fn slice_ref(&self, subset: &[u8]) -> Self {
+        Self(self.0.slice_ref(subset))
+    }
+
+    /// Splits the bytes into two at the given index.
+    #[must_use = "consider Bytes::truncate if you don't need the other half"]
+    #[inline]
+    pub fn split_off(&mut self, at: usize) -> Self {
+        Self(self.0.split_off(at))
+    }
+
+    /// Splits the bytes into two at the given index.
+    #[must_use = "consider Bytes::advance if you don't need the other half"]
+    #[inline]
+    pub fn split_to(&mut self, at: usize) -> Self {
+        Self(self.0.split_to(at))
     }
 
     #[inline]
