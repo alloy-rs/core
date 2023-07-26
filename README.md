@@ -2,10 +2,13 @@
 
 Core libraries at the root of the Rust Ethereum ecosystem.
 
-Alloy is a rewrite of ethers-rs from the ground up, with exciting new features,
-high performance & excellent docs.
-Ethers-rs will continue to be maintained until we have feature-parity in Alloy.
-No action is needed from devs.
+Alloy is a rewrite of [`ethers-rs`] from the ground up, with exciting new
+features, high performance, and excellent docs.
+
+[`ethers-rs`] will continue to be maintained until we have achieved
+feature-parity in Alloy. No action is currently needed from devs.
+
+[`ethers-rs`]: https://github.com/gakonst/ethers-rs
 
 [![Build Status][actions-badge]][actions-url]
 [![Telegram chat][telegram-badge]][telegram-url]
@@ -20,21 +23,25 @@ No action is needed from devs.
 This repository contains the following crates:
 
 - [`alloy-primitives`] - Primitive integer and byte types
-- [`alloy-sol-type-parser`] - A simple parser for Solidity type strings
+- [`alloy-sol-types`] - Compile-time [ABI] and [EIP-712] implementations
+- [`alloy-sol-macro`] - The [`sol!`] procedural macro
+- [`alloy-dyn-abi`] - Run-time [ABI] and [EIP-712] implementations
 - [`alloy-json-abi`] - [JSON-ABI] implementation
-- [`alloy-dyn-abi`] - Run-time ABI and [EIP-712] implementations
-- [`alloy-sol-types`] - Compile-time ABI and [EIP-712] implementations
-- [`alloy-sol-macro`] - The `sol!` procedural macro
-- [`syn-solidity`] - [`syn`]-powered Solidity parser, used by `alloy-sol-macro`
+- [`alloy-sol-type-parser`] - A simple parser for Solidity type strings
+- [`syn-solidity`] - [`syn`]-powered Solidity parser
 
 [`alloy-primitives`]: ./crates/primitives
-[`alloy-json-abi`]: ./crates/json-abi
-[`alloy-sol-type-parser`]: ./crates/sol-type-parser
-[`alloy-dyn-abi`]: ./crates/dyn-abi
 [`alloy-sol-types`]: ./crates/sol-types
 [`alloy-sol-macro`]: ./crates/sol-macro
+[`alloy-dyn-abi`]: ./crates/dyn-abi
+[`alloy-json-abi`]: ./crates/json-abi
+[`alloy-sol-type-parser`]: ./crates/sol-type-parser
 [`syn-solidity`]: ./crates/syn-solidity
+
+[JSON-ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html#json
+[ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html
 [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
+[`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/macro.sol.html
 [`syn`]: https://github.com/dtolnay/syn
 
 ## Supported Rust Versions
