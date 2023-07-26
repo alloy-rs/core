@@ -1,0 +1,6 @@
+# Configuration for `cargo-release`
+# See <https://github.com/crate-ci/cargo-release/blob/master/docs/reference.md>
+# Release using `cargo release --workspace`
+allow-branch = ["main"]
+shared-version = true
+tag-prefix = "" # tag only once instead of per every crate
