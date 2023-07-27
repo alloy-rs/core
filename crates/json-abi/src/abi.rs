@@ -80,7 +80,7 @@ impl JsonAbi {
     }
 
     /// Creates constructor call builder.
-    pub fn constructor(&self) -> Option<&Constructor> {
+    pub const fn constructor(&self) -> Option<&Constructor> {
         self.constructor.as_ref()
     }
 
