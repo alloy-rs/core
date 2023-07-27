@@ -71,6 +71,16 @@ fn test_constructor() {
     assert!(abi_w_constructor.constructor().is_some());
 }
 
+#[cfg(feature = "std")]
+fn load_test(path: &str, abi: &JsonAbi) {
+    let file_path: String = format!("tests/{}", path);
+    let file: File = File::open(file_path).unwrap();
+    let buffer: BufReader<File> = BufReader::new(file);
+    let loaded_abi: JsonAbi = JsonAbi::load( buffer).unwrap();
+
+    assert_eq!(*abi, loaded_abi);
+}
+
 fn parse_test(s: &str, len: usize, path: &str) {
     let abi_items: Vec<AbiItem<'_>> = serde_json::from_str(s).unwrap();
     assert_eq!(abi_items.len(), len);
@@ -83,11 +93,8 @@ fn parse_test(s: &str, len: usize, path: &str) {
     assert_eq!(len, abi2.len());
     assert_eq!(abi1, abi2);
 
-    let file_path: String = format!("tests/{}", path);
-    let file: File = File::open(file_path).unwrap();
-    let buffer: BufReader<File> = BufReader::new(file);
-    let loaded_abi: JsonAbi = JsonAbi::load( buffer).unwrap();
-    assert_eq!(abi1, loaded_abi);
+    #[cfg(feature = "std")]
+    load_test(path, &abi1);
 
     let json: String = serde_json::to_string(&abi2).unwrap();
     let abi3: JsonAbi = serde_json::from_str(&json).unwrap();
