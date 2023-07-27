@@ -12,6 +12,7 @@ use serde::{
     ser::SerializeSeq,
     Deserialize, Deserializer, Serialize,
 };
+#[cfg(feature = "std")]
 use std::io;
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
