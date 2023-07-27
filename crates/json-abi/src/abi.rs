@@ -7,6 +7,7 @@ use alloc::{
 use alloy_primitives::Bytes;
 use btree_map::BTreeMap;
 use core::{fmt, iter, iter::Flatten};
+use serde_json as _;
 use serde::{
     de::{MapAccess, SeqAccess, Visitor},
     ser::SerializeSeq,
