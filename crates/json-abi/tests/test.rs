@@ -76,7 +76,7 @@ fn load_test(path: &str, abi: &JsonAbi) {
     let file_path: String = format!("tests/{}", path);
     let file: File = File::open(file_path).unwrap();
     let buffer: BufReader<File> = BufReader::new(file);
-    let loaded_abi: JsonAbi = JsonAbi::load( buffer).unwrap();
+    let loaded_abi: JsonAbi = JsonAbi::load(buffer).unwrap();
 
     assert_eq!(*abi, loaded_abi);
 }
