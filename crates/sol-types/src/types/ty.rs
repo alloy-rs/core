@@ -1,8 +1,9 @@
 use crate::{token::TokenSeq, Result, TokenType, Word};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 
-/// An encodable is any type that may be encoded via a given [`SolType`]. The
-/// [`SolType`] trait contains encoding logic for a single associated
+/// An encodable is any type that may be encoded via a given [`SolType`].
+///
+/// The [`SolType`] trait contains encoding logic for a single associated
 /// `RustType`. This trait allows us to plug in encoding logic for other
 /// `RustTypes`. Consumers of this library may impl `Encodable<T>` for their
 /// types.
@@ -16,8 +17,8 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 /// ### Usage Note
 ///
 /// Rust data may not have a 1:1 mapping to Solidity types. The easiest example
-/// of this is [`u64`] which may correspond to any of `uint{40,48,56,64}`.
-/// Similarly [`u128`] covers `uint72-128`. Because of this, usage of this
+/// of this is [`u64`], which may correspond to any of `uint{40,48,56,64}`.
+/// Similarly, [`u128`] covers `uint72-128`. Because of this, usage of this
 /// trait is always ambiguous for certain types.
 ///
 /// ```compile_fail
@@ -41,8 +42,8 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 /// ```
 ///
 /// To resolve this, specify the related [`SolType`]. When specifying T it is
-/// recommend that you invoke the [`SolType`] methods on `T`, rather than the
-/// [`Encodable`] methods on.
+/// recommended that you invoke the [`SolType`] methods on `T`, rather than the
+/// [`Encodable`] methods.
 ///
 /// ```
 /// # use alloy_sol_types::{SolType, Encodable, sol_data::*};
@@ -66,7 +67,7 @@ pub trait Encodable<T: ?Sized + SolType> {
     /// See the [`Encodable`] trait docs for more details.
     fn to_tokens(&self) -> T::TokenType<'_>;
 
-    /// Return the Solidity type name.
+    /// Return the Solidity type name of this value.
     ///
     /// ### Usage Note
     ///
