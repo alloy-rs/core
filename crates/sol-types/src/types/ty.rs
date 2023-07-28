@@ -4,7 +4,7 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 /// An encodable is any type that may be encoded via a given [`SolType`]. The
 /// [`SolType`] trait contains encoding logic for a single associated
 /// `RustType. This trait allows us to plug in encoding logic for other
-/// `RustTypes`. Consumers of this library may `impl Encodable<T>` for their
+/// `RustTypes`. Consumers of this library may impl `Encodable` for their
 /// types.
 ///
 /// ### Why no `Decodable<T>`?
