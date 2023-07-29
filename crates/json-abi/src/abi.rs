@@ -95,7 +95,7 @@ impl JsonAbi {
         // https://docs.rs/serde_json/latest/serde_json/fn.from_reader.html
         // serde_json docs recommend buffering the whole reader to a string
         // This also prevents a borrowing issue when deserializing from a reader
-        let mut json = String::with_capacity(1000);
+        let mut json = String::with_capacity(1024);
         reader
             .read_to_string(&mut json)
             .map_err(serde_json::Error::io)?;
