@@ -1,8 +1,12 @@
 use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
-use alloc::{collections::btree_map, string::String, vec::Vec};
+use alloc::{
+    collections::{btree_map, btree_map::Values},
+    string::String,
+    vec::Vec,
+};
 use alloy_primitives::Bytes;
 use btree_map::BTreeMap;
-use core::{fmt, iter};
+use core::{fmt, iter, iter::Flatten};
 use serde::{
     de::{MapAccess, SeqAccess, Visitor},
     ser::SerializeSeq,
@@ -71,6 +75,62 @@ impl JsonAbi {
             events: self.events.into_values().flatten(),
             errors: self.errors.into_values().flatten(),
         }
+    }
+
+    /// Creates constructor call builder.
+    pub const fn constructor(&self) -> Option<&Constructor> {
+        self.constructor.as_ref()
+    }
+
+    /// Parse the ABI json from a `str`. This is a convenience wrapper around
+    /// [`serde_json::from_str`].
+    #[cfg(feature = "serde_json")]
+    pub fn from_json_str(json: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json)
+    }
+
+    /// Loads contract from json
+    #[cfg(all(feature = "std", feature = "serde_json"))]
+    pub fn load<T: std::io::Read>(mut reader: T) -> Result<Self, serde_json::Error> {
+        // https://docs.rs/serde_json/latest/serde_json/fn.from_reader.html
+        // serde_json docs recommend buffering the whole reader to a string
+        // This also prevents a borrowing issue when deserializing from a reader
+        let mut json = String::with_capacity(1024);
+        reader
+            .read_to_string(&mut json)
+            .map_err(serde_json::Error::io)?;
+
+        Self::from_json_str(&json)
+    }
+
+    /// Gets all the functions with the given name.
+    pub fn function(&self, name: &str) -> Option<&[Function]> {
+        self.functions.get(name).map(Vec::as_slice)
+    }
+
+    /// Gets all the events with the given name.
+    pub fn event(&self, name: &str) -> Option<&[Event]> {
+        self.events.get(name).map(Vec::as_slice)
+    }
+
+    /// Gets all the errors with the given name.
+    pub fn error(&self, name: &str) -> Option<&[Error]> {
+        self.errors.get(name).map(Vec::as_slice)
+    }
+
+    /// Iterates over all the functions of the contract in arbitrary order.
+    pub fn functions(&self) -> Flatten<Values<'_, String, Vec<Function>>> {
+        self.functions.values().flatten()
+    }
+
+    /// Iterates over all the events of the contract in arbitrary order.
+    pub fn events(&self) -> Flatten<Values<'_, String, Vec<Event>>> {
+        self.events.values().flatten()
+    }
+
+    /// Iterates over all the errors of the contract in arbitrary order.
+    pub fn errors(&self) -> Flatten<Values<'_, String, Vec<Error>>> {
+        self.errors.values().flatten()
     }
 }
 
@@ -144,7 +204,7 @@ macro_rules! iter_impl {
     };
 }
 
-type FlattenValues<'a, V> = iter::Flatten<btree_map::Values<'a, String, Vec<V>>>;
+type FlattenValues<'a, V> = Flatten<btree_map::Values<'a, String, Vec<V>>>;
 
 /// An iterator over all of the items in the ABI.
 ///
@@ -169,7 +229,7 @@ impl<'a> Iterator for Items<'a> {
 
 iter_impl!(traits Items<'_>);
 
-type FlattenIntoValues<V> = iter::Flatten<btree_map::IntoValues<String, Vec<V>>>;
+type FlattenIntoValues<V> = Flatten<btree_map::IntoValues<String, Vec<V>>>;
 
 /// An iterator over all of the items in the ABI.
 ///

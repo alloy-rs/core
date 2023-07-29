@@ -1,4 +1,5 @@
 use alloy_json_abi::{AbiItem, Error, EventParam, JsonAbi, Param};
+use std::{collections::HashMap, fs::File, io::BufReader};
 
 #[test]
 fn complex_error() {
@@ -35,7 +36,7 @@ macro_rules! abi_parse_tests {
     ($($name:ident($path:literal, $len:literal))*) => {$(
         #[test]
         fn $name() {
-            parse_test(include_str!($path), $len);
+            parse_test(include_str!($path), $len, $path);
         }
     )*};
 }
@@ -52,11 +53,42 @@ abi_parse_tests! {
     udvts("abi/Udvts.json", 1)
 }
 
-fn parse_test(s: &str, len: usize) {
+#[test]
+fn test_constructor() {
+    // Parse the ABI JSON file
+    let abi_items_wo_constructor = include_str!("abi/Abiencoderv2Test.json");
+    let abi_items_w_constructor = include_str!("abi/Seaport.json");
+
+    let abi_wo_constructor: JsonAbi =
+        serde_json::from_str(abi_items_wo_constructor).expect("Failed to parse ABI JSON string");
+    let abi_w_constructor: JsonAbi =
+        serde_json::from_str(abi_items_w_constructor).expect("Failed to parse ABI JSON string");
+
+    // Check that the ABI JSON file has no constructor
+    assert!(abi_wo_constructor.constructor().is_none());
+
+    // Check that the ABI JSON file has a constructor
+    assert!(abi_w_constructor.constructor().is_some());
+}
+
+#[allow(unused_variables)]
+fn load_test(path: &str, abi: &JsonAbi) {
+    #[cfg(all(feature = "std", feature = "serde_json"))]
+    {
+        let file_path: String = format!("tests/{}", path);
+        let file: File = File::open(file_path).unwrap();
+        let buffer: BufReader<File> = BufReader::new(file);
+        let loaded_abi: JsonAbi = JsonAbi::load(buffer).unwrap();
+
+        assert_eq!(*abi, loaded_abi);
+    }
+}
+
+fn parse_test(s: &str, len: usize, path: &str) {
     let abi_items: Vec<AbiItem<'_>> = serde_json::from_str(s).unwrap();
     assert_eq!(abi_items.len(), len);
 
-    let json = serde_json::to_string(&abi_items).unwrap();
+    let json: String = serde_json::to_string(&abi_items).unwrap();
     let abi1: JsonAbi = serde_json::from_str(&json).unwrap();
 
     let abi2: JsonAbi = serde_json::from_str(s).unwrap();
@@ -64,11 +96,14 @@ fn parse_test(s: &str, len: usize) {
     assert_eq!(len, abi2.len());
     assert_eq!(abi1, abi2);
 
-    let json = serde_json::to_string(&abi2).unwrap();
+    load_test(path, &abi1);
+
+    let json: String = serde_json::to_string(&abi2).unwrap();
     let abi3: JsonAbi = serde_json::from_str(&json).unwrap();
     assert_eq!(abi2, abi3);
 
     param_tests(&abi1);
+    method_tests(&abi1);
 
     iterator_test(abi1.items(), abi1.items().rev(), len);
     iterator_test(abi1.items().skip(1), abi1.items().skip(1).rev(), len - 1);
@@ -102,6 +137,62 @@ fn param_tests(abi: &JsonAbi) {
     })
 }
 
+fn method_tests(abi: &JsonAbi) {
+    test_functions(abi);
+    test_events(abi);
+    test_errors(abi);
+}
+
+fn test_functions(abi: &JsonAbi) {
+    abi.functions().for_each(|f| {
+        f.inputs.iter().for_each(test_param);
+        f.outputs.iter().for_each(test_param);
+    });
+
+    abi.functions()
+        .map(|f| f.name.clone())
+        .fold(HashMap::new(), |mut freq_count, name| {
+            *freq_count.entry(name).or_insert(0) += 1;
+            freq_count
+        })
+        .into_iter()
+        .for_each(|(name, freq)| {
+            assert_eq!(abi.function(&name).unwrap().len(), freq);
+        });
+}
+
+fn test_errors(abi: &JsonAbi) {
+    abi.errors()
+        .for_each(|e| e.inputs.iter().for_each(test_param));
+
+    abi.errors()
+        .map(|e| e.name.clone())
+        .fold(HashMap::new(), |mut freq_count, name| {
+            *freq_count.entry(name).or_insert(0) += 1;
+            freq_count
+        })
+        .into_iter()
+        .for_each(|(name, freq)| {
+            assert_eq!(abi.error(&name).unwrap().len(), freq);
+        });
+}
+
+fn test_events(abi: &JsonAbi) {
+    abi.events()
+        .for_each(|e| e.inputs.iter().for_each(test_event_param));
+
+    abi.events()
+        .map(|e| e.name.clone())
+        .fold(HashMap::new(), |mut freq_count, name| {
+            *freq_count.entry(name).or_insert(0) += 1;
+            freq_count
+        })
+        .into_iter()
+        .for_each(|(name, freq)| {
+            assert_eq!(abi.event(&name).unwrap().len(), freq);
+        });
+}
+
 fn test_event_param(param: &EventParam) {
     if param.components.is_empty() {
         assert!(!param.ty.contains("tuple"));
@@ -130,4 +221,18 @@ fn test_param(param: &Param) {
     }
 
     param.components.iter().for_each(test_param);
+}
+
+#[test]
+fn no_from_reader() {
+    let path = "abi/Abiencoderv2Test.json";
+    let file_path: String = format!("tests/{}", path);
+    let file: File = File::open(file_path).unwrap();
+    let buffer: BufReader<File> = BufReader::new(file);
+
+    let res = serde_json::from_reader::<_, JsonAbi>(buffer);
+    assert!(res.is_err());
+    assert!(
+        format!("{}", res.unwrap_err()).contains("Using serde_json::from_reader is not supported.")
+    );
 }
