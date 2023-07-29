@@ -7,14 +7,11 @@ use alloc::{
 use alloy_primitives::Bytes;
 use btree_map::BTreeMap;
 use core::{fmt, iter, iter::Flatten};
-use serde_json as _;
 use serde::{
     de::{MapAccess, SeqAccess, Visitor},
     ser::SerializeSeq,
     Deserialize, Deserializer, Serialize,
 };
-#[cfg(feature = "std")]
-use std::io;
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
 ///
@@ -85,9 +82,16 @@ impl JsonAbi {
         self.constructor.as_ref()
     }
 
+    /// Parse the ABI json from a `str`. This is a convenience wrapper around
+    /// [`serde_json::from_str`].
+    #[cfg(feature = "serde_json")]
+    pub fn from_json_str(json: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json)
+    }
+
     /// Loads contract from json
-    #[cfg(feature = "std")]
-    pub fn load<T: io::Read>(mut reader: T) -> Result<Self, serde_json::Error> {
+    #[cfg(all(feature = "std", feature = "serde_json"))]
+    pub fn load<T: std::io::Read>(mut reader: T) -> Result<Self, serde_json::Error> {
         // https://docs.rs/serde_json/latest/serde_json/fn.from_reader.html
         // serde_json docs recommend buffering the whole reader to a string
         // This also prevents a borrowing issue when deserializing from a reader
@@ -96,7 +100,7 @@ impl JsonAbi {
             .read_to_string(&mut json)
             .map_err(serde_json::Error::io)?;
 
-        serde_json::from_str(&json)
+        Self::from_json_str(&json)
     }
 
     /// Gets all the functions with the given name.
