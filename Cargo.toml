@@ -28,7 +28,7 @@ syn-solidity = { version = "0.2.0", path = "crates/syn-solidity", default-featur
 
 # serde
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
-serde_json = { version = "1.0", default-features = false, features = ["alloc", "std"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 # macros
 proc-macro2 = "1.0"
