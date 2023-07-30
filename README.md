@@ -37,7 +37,6 @@ This repository contains the following crates:
 [`alloy-json-abi`]: ./crates/json-abi
 [`alloy-sol-type-parser`]: ./crates/sol-type-parser
 [`syn-solidity`]: ./crates/syn-solidity
-
 [JSON-ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html#json
 [ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html
 [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
@@ -95,10 +94,11 @@ interface, as we believe [viem] or [ethers.js] serve that need very well.
 
 ## Note on `no_std`
 
-We intend these crates to support `no_std` with `alloc`, and have written them
-with that in mind. However, a key dependency, `ruint`, does not yet support
-`no_std`. We strive to maintain `no_std` + `alloc` compatibility, and intend to
-contribute upstream PRs to achieve it in ruint.
+All crates in this workspace should support `no_std` environments, with the
+`alloc` crate. If you find a crate that does not support `no_std`, please
+[open an issue].
+
+[open an issue]: https://github.com/alloy-rs/core/issues/new/choose
 
 ## Credits
 
