@@ -163,7 +163,7 @@ fn empty_call() {
 }
 
 #[test]
-fn abigen_sol() {
+fn abigen_sol_multicall() {
     sol!("../syn-solidity/tests/contracts/Multicall.sol");
 
     sol! {
@@ -275,13 +275,19 @@ fn abigen_sol() {
 
 #[test]
 #[cfg(feature = "json")]
-fn abigen_json() {
+fn abigen_json_large_array() {
     sol!(Contract, "../json-abi/tests/abi/LargeArray.json");
     assert_eq!(
         Contract::callWithLongArrayCall::SIGNATURE,
         "callWithLongArray(uint64[128])"
     );
 }
+
+// #[test]
+// #[cfg(feature = "json")]
+// fn abigen_json_seaport() {
+//     sol!(Contract, "../json-abi/tests/abi/Seaport.json");
+// }
 
 #[test]
 fn eip712_encode_type_nesting() {

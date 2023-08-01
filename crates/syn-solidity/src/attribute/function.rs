@@ -16,7 +16,7 @@ use syn::{
 
 /// A list of unique function attributes. Used in
 /// [ItemFunction][crate::ItemFunction].
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FunctionAttributes(pub HashSet<FunctionAttribute>);
 
 impl Deref for FunctionAttributes {

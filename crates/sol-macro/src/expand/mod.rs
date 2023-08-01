@@ -261,6 +261,7 @@ impl<'ast> ast::VisitMut<'ast> for MutateAst {
 }
 
 impl MutateAst {
+    #[allow(clippy::single_match)]
     fn visit_items(items: &mut Vec<Item>) {
         // add a getter function for each public variable
         let mut functions = Vec::new();
