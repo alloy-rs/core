@@ -276,17 +276,18 @@ fn abigen_sol_multicall() {
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_large_array() {
-    sol!(Contract, "../json-abi/tests/abi/LargeArray.json");
+    sol!(LargeArray, "../json-abi/tests/abi/LargeArray.json");
     assert_eq!(
-        Contract::callWithLongArrayCall::SIGNATURE,
+        LargeArray::callWithLongArrayCall::SIGNATURE,
         "callWithLongArray(uint64[128])"
     );
 }
 
+// TODO
 // #[test]
 // #[cfg(feature = "json")]
 // fn abigen_json_seaport() {
-//     sol!(Contract, "../json-abi/tests/abi/Seaport.json");
+//     sol!(Seaport, "../json-abi/tests/abi/Seaport.json");
 // }
 
 #[test]

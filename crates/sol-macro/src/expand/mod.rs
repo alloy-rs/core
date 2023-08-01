@@ -200,7 +200,9 @@ impl ExpCtxt<'_> {
             }
 
             for (i, &function) in functions.iter().enumerate() {
-                let old_name = function.name();
+                let Some(old_name) = function.name.as_ref() else {
+                    continue
+                };
                 let new_name = format!("{old_name}_{i}");
                 if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
                     let msg = format!(
@@ -286,6 +288,7 @@ impl MutateAst {
 
 // utils
 impl ExpCtxt<'_> {
+    #[allow(dead_code)]
     fn get_item(&self, name: &SolPath) -> &Item {
         match self.try_get_item(name) {
             Some(item) => item,

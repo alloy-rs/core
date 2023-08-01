@@ -11,8 +11,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
         name, ty, attrs, ..
     } = udt;
 
-    let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
-    cx.type_derives(&mut attrs, Some(ty), true);
+    // TODO: Uncomment after migrating `define_udt!`
+    let _ = cx;
+    // let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    // cx.type_derives(&mut attrs, Some(ty), true);
 
     let ty = expand_type(ty);
     let tokens = quote! {

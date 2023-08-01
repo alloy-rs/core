@@ -51,7 +51,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     let d_attrs: Vec<Attribute> = attr::derives(&attrs).cloned().collect();
     for item in body {
         match item {
-            Item::Function(function) => functions.push(function),
+            Item::Function(function) if function.name.is_some() => functions.push(function),
             Item::Error(error) => errors.push(error),
             Item::Event(event) => events.push(event),
             _ => {}

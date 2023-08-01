@@ -57,9 +57,9 @@ impl JsonAbi {
             constructor: self.constructor.as_ref(),
             fallback: self.fallback.as_ref(),
             receive: self.receive.as_ref(),
-            functions: self.functions.values().flatten(),
-            events: self.events.values().flatten(),
-            errors: self.errors.values().flatten(),
+            functions: self.functions(),
+            events: self.events(),
+            errors: self.errors(),
         }
     }
 
