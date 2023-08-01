@@ -76,6 +76,12 @@ impl ItemFunction {
         }
     }
 
+    /// Returns the name of the function.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the function has no name. This is the case when `kind` is not
+    /// `Function`.
     pub fn name(&self) -> &SolIdent {
         match &self.name {
             Some(name) => name,

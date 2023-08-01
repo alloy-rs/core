@@ -175,7 +175,7 @@ impl ExpCtxt<'_> {
             .functions
             .values()
             .flatten()
-            .map(|f| f.name().clone())
+            .flat_map(|f| f.name.clone())
             .collect();
         let mut overloads_map = std::mem::take(&mut self.function_overloads);
 
@@ -236,10 +236,12 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
     }
 
     fn visit_item_function(&mut self, function: &'ast ItemFunction) {
-        self.functions
-            .entry(function.name().as_string())
-            .or_default()
-            .push(function);
+        if let Some(name) = &function.name {
+            self.functions
+                .entry(name.as_string())
+                .or_default()
+                .push(function);
+        }
         ast::visit::visit_item_function(self, function);
     }
 }

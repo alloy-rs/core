@@ -30,8 +30,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         attrs,
         arguments,
         returns,
+        name: Some(_),
         ..
-    } = function;
+    } = function
+    else {
+        // ignore functions without names (constructors, modifiers...)
+        return Ok(quote!())
+    };
+
     cx.assert_resolved(arguments)?;
     if let Some(returns) = returns {
         cx.assert_resolved(&returns.returns)?;
