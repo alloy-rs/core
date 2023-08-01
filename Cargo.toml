@@ -38,6 +38,7 @@ syn = "2.0"
 cfg-if = "1.0.0"
 derive_more = "0.99"
 hex-literal = "0.4"
+paste = "1.0"
 strum = { version = "0.25", features = ["derive"] }
 num_enum = "0.6"
 thiserror = "1.0"

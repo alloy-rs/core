@@ -34,10 +34,10 @@ pub use ident::{SolIdent, SolPath};
 
 mod item;
 pub use item::{
-    EventParameter, ImportAlias, ImportAliases, ImportDirective, ImportGlob, ImportPath,
-    ImportPlain, Item, ItemContract, ItemEnum, ItemError, ItemEvent, ItemFunction, ItemStruct,
-    ItemUdt, PragmaDirective, PragmaTokens, Returns, UserDefinableOperator, UsingDirective,
-    UsingList, UsingListItem, UsingType,
+    EventParameter, FunctionKind, ImportAlias, ImportAliases, ImportDirective, ImportGlob,
+    ImportPath, ImportPlain, Item, ItemContract, ItemEnum, ItemError, ItemEvent, ItemFunction,
+    ItemStruct, ItemUdt, PragmaDirective, PragmaTokens, Returns, UserDefinableOperator,
+    UsingDirective, UsingList, UsingListItem, UsingType,
 };
 
 mod lit;

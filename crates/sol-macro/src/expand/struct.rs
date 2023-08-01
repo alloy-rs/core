@@ -135,10 +135,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     Ok(tokens)
 }
 
-fn expand_encode_type_fns(
-    fields: &ast::Parameters<syn::token::Semi>,
-    name: &ast::SolIdent,
-) -> TokenStream {
+fn expand_encode_type_fns(fields: &ast::FieldList, name: &ast::SolIdent) -> TokenStream {
     let components_impl = expand_eip712_components(fields);
     let root_type_impl = fields.eip712_signature(name.as_string());
 
@@ -165,7 +162,7 @@ fn expand_encode_type_fns(
     }
 }
 
-fn expand_eip712_components(fields: &ast::Parameters<syn::token::Semi>) -> TokenStream {
+fn expand_eip712_components(fields: &ast::FieldList) -> TokenStream {
     let bits: Vec<TokenStream> = fields
         .iter()
         .filter(|f| f.ty.is_custom())
