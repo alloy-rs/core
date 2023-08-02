@@ -17,66 +17,45 @@ impl serde::Serialize for Bytes {
 impl<'de> serde::Deserialize<'de> for Bytes {
     #[inline]
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        if deserializer.is_human_readable() {
-            struct BytesVisitor;
+        struct BytesVisitor;
 
-            impl<'de> Visitor<'de> for BytesVisitor {
-                type Value = Bytes;
+        impl<'de> Visitor<'de> for BytesVisitor {
+            type Value = Bytes;
 
-                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    formatter.write_str("a variable number of bytes represented as a hex string, an array of u8, or raw bytes")
-                }
-
-                fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
-                    Ok(Bytes::from(v.to_vec()))
-                }
-
-                fn visit_byte_buf<E: de::Error>(self, v: Vec<u8>) -> Result<Self::Value, E> {
-                    Ok(Bytes::from(v))
-                }
-
-                fn visit_seq<A: de::SeqAccess<'de>>(
-                    self,
-                    mut seq: A,
-                ) -> Result<Self::Value, A::Error> {
-                    let mut bytes = Vec::with_capacity(seq.size_hint().unwrap_or(0));
-
-                    while let Some(byte) = seq.next_element()? {
-                        bytes.push(byte);
-                    }
-
-                    Ok(Bytes::from(bytes))
-                }
-
-                fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-                    hex::decode(v)
-                        .map_err(|_| {
-                            de::Error::invalid_value(de::Unexpected::Str(v), &"a valid hex string")
-                        })
-                        .map(From::from)
-                }
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a variable number of bytes represented as a hex string, an array of u8, or raw bytes")
             }
 
+            fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
+                Ok(Bytes::from(v.to_vec()))
+            }
+
+            fn visit_byte_buf<E: de::Error>(self, v: Vec<u8>) -> Result<Self::Value, E> {
+                Ok(Bytes::from(v))
+            }
+
+            fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+                let mut bytes = Vec::with_capacity(seq.size_hint().unwrap_or(0));
+
+                while let Some(byte) = seq.next_element()? {
+                    bytes.push(byte);
+                }
+
+                Ok(Bytes::from(bytes))
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                hex::decode(v)
+                    .map_err(|_| {
+                        de::Error::invalid_value(de::Unexpected::Str(v), &"a valid hex string")
+                    })
+                    .map(From::from)
+            }
+        }
+
+        if deserializer.is_human_readable() {
             deserializer.deserialize_any(BytesVisitor)
         } else {
-            struct BytesVisitor;
-
-            impl<'de> Visitor<'de> for BytesVisitor {
-                type Value = Bytes;
-
-                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    formatter.write_str("byte array")
-                }
-
-                fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
-                    Ok(Bytes::from(v.to_vec()))
-                }
-
-                fn visit_byte_buf<E: de::Error>(self, v: Vec<u8>) -> Result<Self::Value, E> {
-                    Ok(Bytes::from(v))
-                }
-            }
-
             deserializer.deserialize_byte_buf(BytesVisitor)
         }
     }
