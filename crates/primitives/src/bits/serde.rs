@@ -25,11 +25,11 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(
-                        formatter,
+                    formatter,
                     "{} bytes, represented as a hex string of length {}, an array of u8, or raw bytes",
-                        N,
-                        N * 2
-                    )
+                    N,
+                    N * 2
+                )
             }
 
             fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
