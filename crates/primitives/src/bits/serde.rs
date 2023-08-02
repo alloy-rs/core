@@ -18,58 +18,82 @@ impl<const N: usize> Serialize for FixedBytes<N> {
 
 impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        struct FixedVisitor<const N: usize>;
+        if deserializer.is_human_readable() {
+            struct FixedVisitor<const N: usize>;
 
-        impl<'de, const N: usize> Visitor<'de> for FixedVisitor<N> {
-            type Value = FixedBytes<N>;
+            impl<'de, const N: usize> Visitor<'de> for FixedVisitor<N> {
+                type Value = FixedBytes<N>;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(
-                    formatter,
+                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    write!(
+                        formatter,
                     "{} bytes, represented as a hex string of length {}, an array of u8, or raw bytes",
-                    N,
-                    N * 2
-                )
-            }
-
-            fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
-                <[u8; N]>::try_from(v)
-                    .map(FixedBytes)
-                    .map_err(de::Error::custom)
-            }
-
-            fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-                let mut bytes = [0u8; N];
-
-                bytes.iter_mut().enumerate().try_for_each(|(i, b)| {
-                    *b = seq.next_element()?.ok_or_else(|| {
-                        de::Error::invalid_length(i, &format!("exactly {} bytes", N).as_str())
-                    })?;
-                    Ok(())
-                })?;
-
-                if let Ok(Some(_)) = seq.next_element::<u8>() {
-                    return Err(de::Error::invalid_length(
-                        N + 1,
-                        &format!("exactly {} bytes", N).as_str(),
-                    ))
+                        N,
+                        N * 2
+                    )
                 }
 
-                Ok(FixedBytes(bytes))
+                fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
+                    <[u8; N]>::try_from(v)
+                        .map(FixedBytes)
+                        .map_err(de::Error::custom)
+                }
+
+                fn visit_seq<A: de::SeqAccess<'de>>(
+                    self,
+                    mut seq: A,
+                ) -> Result<Self::Value, A::Error> {
+                    let mut bytes = [0u8; N];
+
+                    bytes.iter_mut().enumerate().try_for_each(|(i, b)| {
+                        *b = seq.next_element()?.ok_or_else(|| {
+                            de::Error::invalid_length(i, &format!("exactly {} bytes", N).as_str())
+                        })?;
+                        Ok(())
+                    })?;
+
+                    if let Ok(Some(_)) = seq.next_element::<u8>() {
+                        return Err(de::Error::invalid_length(
+                            N + 1,
+                            &format!("exactly {} bytes", N).as_str(),
+                        ))
+                    }
+
+                    Ok(FixedBytes(bytes))
+                }
+
+                fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                    <FixedBytes<N> as hex::FromHex>::from_hex(v).map_err(de::Error::custom)
+                }
             }
 
-            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-                <FixedBytes<N> as hex::FromHex>::from_hex(v).map_err(de::Error::custom)
+            deserializer.deserialize_any(FixedVisitor::<N>)
+        } else {
+            struct FixedVisitor<const N: usize>;
+
+            impl<'de, const N: usize> Visitor<'de> for FixedVisitor<N> {
+                type Value = FixedBytes<N>;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    formatter.write_str("byte array")
+                }
+
+                fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
+                    <[u8; N]>::try_from(v)
+                        .map(FixedBytes)
+                        .map_err(de::Error::custom)
+                }
             }
+
+            deserializer.deserialize_bytes(FixedVisitor::<N>)
         }
-
-        deserializer.deserialize_any(FixedVisitor::<N>)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bincode as _;
     use serde::Deserialize;
     #[derive(Debug, Deserialize)]
     struct TestCase<const N: usize> {
@@ -82,6 +106,13 @@ mod tests {
         let ser = serde_json::to_string(&bytes).unwrap();
         assert_eq!(ser, "\"0x000000000123456789abcdef\"");
         assert_eq!(serde_json::from_str::<FixedBytes<12>>(&ser).unwrap(), bytes);
+
+        let val = serde_json::to_value(&bytes).unwrap();
+        assert_eq!(val, serde_json::json! {"0x000000000123456789abcdef"});
+        assert_eq!(
+            serde_json::from_value::<FixedBytes<12>>(val).unwrap(),
+            bytes
+        );
     }
 
     #[test]
@@ -100,5 +131,13 @@ mod tests {
             serde_json::from_value::<TestCase<4>>(json.clone()).unwrap_err()
         )
         .contains("invalid length 5, expected exactly 4 bytes"),);
+    }
+
+    #[test]
+    fn test_bincode_roundtrip() {
+        let bytes = FixedBytes([0, 0, 0, 0, 1, 35, 69, 103, 137, 171, 205, 239]);
+
+        let bin = bincode::serialize(&bytes).unwrap();
+        assert_eq!(bincode::deserialize::<FixedBytes<12>>(&bin).unwrap(), bytes);
     }
 }
