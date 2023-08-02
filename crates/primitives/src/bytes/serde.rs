@@ -60,7 +60,7 @@ impl<'de> serde::Deserialize<'de> for Bytes {
             deserializer.deserialize_any(BytesVisitor)
         } else {
             struct BytesVisitor;
-            
+
             impl<'de> Visitor<'de> for BytesVisitor {
                 type Value = Bytes;
 
