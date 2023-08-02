@@ -11,7 +11,6 @@ macro_rules! define_udt {
         underlying: $underlying:ty,
         type_check: $path:path,
     ) => {
-
         $(#[$outer])*
         /// This struct is a Solidity user-defined value type. It wraps
         /// an underlying type.
@@ -90,6 +89,23 @@ macro_rules! define_udt {
             fn encode_packed_to(rust: &Self::RustType, out: &mut $crate::private::Vec<u8>)
             {
                 <$underlying as $crate::SolType>::encode_packed_to(rust, out)
+            }
+        }
+
+        impl $crate::EventTopic for $name {
+            #[inline]
+            fn topic_preimage_length(rust: &Self::RustType) -> usize {
+                <$underlying as $crate::EventTopic>::topic_preimage_length(rust)
+            }
+
+            #[inline]
+            fn encode_topic_preimage(rust: &Self::RustType, out: &mut $crate::private::Vec<u8>) {
+                <$underlying as $crate::EventTopic>::encode_topic_preimage(rust, out)
+            }
+
+            #[inline]
+            fn encode_topic(rust: &Self::RustType) -> $crate::token::WordToken {
+                <$underlying as $crate::EventTopic>::encode_topic(rust)
             }
         }
     };

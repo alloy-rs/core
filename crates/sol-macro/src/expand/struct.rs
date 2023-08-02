@@ -3,9 +3,10 @@
 use super::{
     expand_fields, expand_from_into_tuples, expand_type, ty::expand_tokenize_func, ExpCtxt,
 };
-use ast::{ItemStruct, VariableDeclaration};
+use ast::{Item, ItemStruct, Type, VariableDeclaration};
 use proc_macro2::TokenStream;
 use quote::quote;
+use std::num::NonZeroU16;
 use syn::Result;
 
 /// Expands an [`ItemStruct`]:
@@ -40,7 +41,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
         .map(|f| (expand_type(&f.ty), f.name.as_ref().unwrap()))
         .unzip();
 
-    let eip712_encode_type_fns = expand_encode_type_fns(fields, name);
+    let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, name);
 
     let tokenize_impl = expand_tokenize_func(fields.iter());
 
@@ -135,53 +136,76 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     Ok(tokens)
 }
 
-fn expand_encode_type_fns(fields: &ast::FieldList, name: &ast::SolIdent) -> TokenStream {
-    let components_impl = expand_eip712_components(fields);
-    let root_type_impl = fields.eip712_signature(name.as_string());
-
-    let encode_type_impl_opt = if fields.iter().any(|f| f.ty.is_custom()) {
-        None
-    } else {
-        Some(quote! {
-            fn eip712_encode_type() -> ::alloy_sol_types::private::Cow<'static, str> {
-                Self::eip712_root_type()
-            }
-        })
-    };
-
-    quote! {
-        fn eip712_components() -> ::alloy_sol_types::private::Vec<::alloy_sol_types::private::Cow<'static, str>> {
-            #components_impl
+fn expand_encode_type_fns(
+    cx: &ExpCtxt<'_>,
+    fields: &ast::Parameters<syn::token::Semi>,
+    name: &ast::SolIdent,
+) -> TokenStream {
+    // account for UDVTs and enums which do not implement SolStruct
+    let mut fields = fields.clone();
+    fields.visit_types_mut(|ty| {
+        let Type::Custom(name) = ty else { return };
+        match cx.try_get_item(name) {
+            // keep as custom
+            Some(Item::Struct(_)) | None => {}
+            // convert to underlying
+            Some(Item::Enum(_)) => *ty = Type::Uint(ty.span(), NonZeroU16::new(8)),
+            Some(Item::Udt(udt)) => *ty = udt.ty.clone(),
+            Some(item) => panic!("Invalid type in struct field: {item:?}"),
         }
+    });
 
-        fn eip712_root_type() -> ::alloy_sol_types::private::Cow<'static, str> {
-            #root_type_impl.into()
-        }
+    let root = fields.eip712_signature(name.as_string());
 
-        #encode_type_impl_opt
-    }
-}
+    let custom = fields.iter().filter(|f| f.ty.has_custom());
+    let n_custom = custom.clone().count();
 
-fn expand_eip712_components(fields: &ast::FieldList) -> TokenStream {
-    let bits: Vec<TokenStream> = fields
-        .iter()
-        .filter(|f| f.ty.is_custom())
-        .map(|field| {
-            let ty = expand_type(&field.ty);
+    let components_impl = if n_custom > 0 {
+        let bits = custom.map(|field| {
+            // need to recurse to find the inner custom type
+            let mut ty = None;
+            field.ty.visit(|field_ty| {
+                if ty.is_none() && field_ty.is_custom() {
+                    ty = Some(field_ty.clone());
+                }
+            });
+            // cannot panic as this field is guaranteed to contain a custom type
+            let ty = expand_type(&ty.unwrap());
+
             quote! {
                 components.push(<#ty as ::alloy_sol_types::SolStruct>::eip712_root_type());
                 components.extend(<#ty as ::alloy_sol_types::SolStruct>::eip712_components());
             }
-        })
-        .collect();
-
-    if bits.is_empty() {
-        quote! { ::alloy_sol_types::private::Vec::new() }
-    } else {
+        });
+        let capacity = proc_macro2::Literal::usize_unsuffixed(n_custom);
         quote! {
-            let mut components = ::alloy_sol_types::private::Vec::new();
+            let mut components = ::alloy_sol_types::private::Vec::with_capacity(#capacity);
             #(#bits)*
             components
         }
+    } else {
+        quote! { ::alloy_sol_types::private::Vec::new() }
+    };
+
+    let encode_type_impl_opt = (n_custom == 0).then(|| {
+        quote! {
+            #[inline]
+            fn eip712_encode_type() -> ::alloy_sol_types::private::Cow<'static, str> {
+                <Self as ::alloy_sol_types::SolStruct>::eip712_root_type()
+            }
+        }
+    });
+
+    quote! {
+        #[inline]
+        fn eip712_root_type() -> ::alloy_sol_types::private::Cow<'static, str> {
+            ::alloy_sol_types::private::Cow::Borrowed(#root)
+        }
+
+        fn eip712_components() -> ::alloy_sol_types::private::Vec<::alloy_sol_types::private::Cow<'static, str>> {
+            #components_impl
+        }
+
+        #encode_type_impl_opt
     }
 }

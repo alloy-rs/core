@@ -496,12 +496,13 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        let rust = rust;
+        // TODO: collect into an array of [u8; 32] and flatten it to a slice like in
+        // tuple impl
         let encoded = rust
             .iter()
-            .flat_map(|element| T::eip712_data_word(element).0)
-            .collect::<Vec<u8>>();
-        keccak256(encoded)
+            .map(|element| T::eip712_data_word(element).0)
+            .collect::<Vec<[u8; 32]>>();
+        keccak256(crate::impl_core::into_flattened(encoded))
     }
 
     #[inline]
@@ -609,9 +610,7 @@ macro_rules! tuple_impls {
                     <$ty as SolType>::eip712_data_word($ty).0,
                 )+];
                 // SAFETY: Flattening [[u8; 32]; COUNT] to [u8; COUNT * 32] is valid
-                let ptr = encoding.as_ptr() as *const u8;
-                let len = COUNT * 32;
-                let encoding: &[u8] = unsafe { core::slice::from_raw_parts(ptr, len) };
+                let encoding: &[u8] = unsafe { core::slice::from_raw_parts(encoding.as_ptr().cast(), COUNT * 32) };
                 keccak256(encoding).into()
             }
 

@@ -82,13 +82,9 @@ pub trait SolStruct: 'static {
             return root_type
         }
 
-        components.sort();
+        components.sort_unstable();
         components.dedup();
-        Cow::Owned(
-            core::iter::once(root_type)
-                .chain(components)
-                .collect::<crate::private::String>(),
-        )
+        Cow::Owned(core::iter::once(root_type).chain(components).collect())
     }
 
     /// EIP-712 `typeHash`
