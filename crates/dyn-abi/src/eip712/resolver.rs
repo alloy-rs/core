@@ -325,7 +325,7 @@ impl Resolver {
         let type_name = type_def.type_name.to_owned();
         // Insert the edges into the graph
         {
-            let entry = self.edges.entry(type_name.clone()).or_insert_with(Vec::new);
+            let entry = self.edges.entry(type_name.clone()).or_default();
             type_def
                 .props
                 .iter()

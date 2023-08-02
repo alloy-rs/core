@@ -263,6 +263,7 @@ impl Type {
         matches!(self, Self::Custom(_))
     }
 
+    /// Recurses into this type and returns whether it contains a custom type.
     pub fn has_custom(&self) -> bool {
         match self {
             Self::Custom(_) => true,

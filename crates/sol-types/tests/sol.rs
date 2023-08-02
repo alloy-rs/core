@@ -283,12 +283,33 @@ fn abigen_json_large_array() {
     );
 }
 
-// TODO
-// #[test]
-// #[cfg(feature = "json")]
-// fn abigen_json_seaport() {
-//     sol!(Seaport, "../json-abi/tests/abi/Seaport.json");
-// }
+#[test]
+#[cfg(feature = "json")]
+fn abigen_json_seaport() {
+    use alloy_sol_types::SolStruct;
+    use std::borrow::Cow;
+    use Seaport::*;
+
+    sol!(Seaport, "../json-abi/tests/abi/Seaport.json");
+
+    // BasicOrderType is a uint8 UDVT
+    let _ = BasicOrderType::from(0u8);
+
+    // BasicOrderParameters is a struct that contains UDVTs (basicOrderType) and a
+    // struct array. The only component should be the struct of the struct array.
+    let root_type = "BasicOrderParameters(address considerationToken,uint256 considerationIdentifier,uint256 considerationAmount,address offerer,address zone,address offerToken,uint256 offerIdentifier,uint256 offerAmount,uint8 basicOrderType,uint256 startTime,uint256 endTime,bytes32 zoneHash,uint256 salt,bytes32 offererConduitKey,bytes32 fulfillerConduitKey,uint256 totalOriginalAdditionalRecipients,AdditionalRecipient[] additionalRecipients,bytes signature)";
+    let component = "AdditionalRecipient(uint256 amount,address recipient)";
+
+    assert_eq!(BasicOrderParameters::eip712_root_type(), root_type);
+    assert_eq!(
+        BasicOrderParameters::eip712_components(),
+        [Cow::Borrowed(component)]
+    );
+    assert_eq!(
+        <BasicOrderParameters as SolStruct>::eip712_encode_type(),
+        root_type.to_string() + component
+    );
+}
 
 #[test]
 fn eip712_encode_type_nesting() {
