@@ -1,8 +1,7 @@
 /// Calls the given macro with all the tuples.
 #[rustfmt::skip]
 macro_rules! all_the_tuples {
-    (@double $name:ident) =>
-    {
+    (@double $name:ident) => {
         $name!((T1 U1));
         $name!((T1 U1), (T2 U2));
         $name!((T1 U1), (T2 U2), (T3 U3));

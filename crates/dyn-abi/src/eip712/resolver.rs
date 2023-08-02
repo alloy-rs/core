@@ -27,12 +27,12 @@ pub struct PropertyDef {
 impl<'de> Deserialize<'de> for PropertyDef {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
-        struct Helper {
+        struct PropertyDefHelper {
             #[serde(rename = "type")]
             type_name: String,
             name: String,
         }
-        let h: Helper = Deserialize::deserialize(deserializer)?;
+        let h = PropertyDefHelper::deserialize(deserializer)?;
         Self::new(h.type_name, h.name).map_err(serde::de::Error::custom)
     }
 }
@@ -216,7 +216,7 @@ struct DfsContext<'a> {
 /// A dependency graph built from the `Eip712Types` object. This is used to
 /// safely resolve JSON into a [`crate::DynSolType`] by detecting cycles in the
 /// type graph and traversing the dep graph.
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Resolver {
     /// Nodes in the graph
     // NOTE: Non-duplication of names must be enforced. See note on impl of Ord
@@ -227,16 +227,16 @@ pub struct Resolver {
 }
 
 impl Serialize for Resolver {
+    #[inline]
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let types: Eip712Types = self.into();
-        types.serialize(serializer)
+        Eip712Types::from(self).serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for Resolver {
+    #[inline]
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let types: Eip712Types = Deserialize::deserialize(deserializer)?;
-        Ok(types.into())
+        Eip712Types::deserialize(deserializer).map(Into::into)
     }
 }
 
