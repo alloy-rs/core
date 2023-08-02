@@ -112,8 +112,8 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
                 }
             }
         }
-        Type::Function(ref _function) => todo!(),
-        Type::Mapping(ref _mapping) => todo!(),
+        Type::Function(ref function) => todo!("function types: {function:?}"),
+        Type::Mapping(ref mapping) => todo!("mapping types: {mapping:?}"),
         Type::Custom(ref custom) => return custom.to_tokens(tokens),
     };
     tokens.extend(tts);
@@ -161,15 +161,26 @@ pub(super) fn type_base_data_size(cx: &ExpCtxt<'_>, ty: &Type) -> usize {
             .map(|ty| type_base_data_size(cx, ty))
             .sum(),
 
-        Type::Custom(name) => match cx.get_item(name) {
-            Item::Enum(_) => 32,
-            Item::Struct(strukt) => strukt
+        Type::Custom(name) => match cx.try_get_item(name) {
+            Some(Item::Enum(_)) => 32,
+            Some(Item::Error(error)) => error
+                .parameters
+                .types()
+                .map(|ty| type_base_data_size(cx, ty))
+                .sum(),
+            Some(Item::Event(event)) => event
+                .parameters
+                .iter()
+                .map(|p| type_base_data_size(cx, &p.ty))
+                .sum(),
+            Some(Item::Struct(strukt)) => strukt
                 .fields
                 .types()
                 .map(|ty| type_base_data_size(cx, ty))
                 .sum(),
-            Item::Udt(udt) => type_base_data_size(cx, &udt.ty),
-            _ => unreachable!(),
+            Some(Item::Udt(udt)) => type_base_data_size(cx, &udt.ty),
+            Some(item) => panic!("Invalid item in param list: {item:?}"),
+            None => 0,
         },
 
         // not applicable
@@ -197,12 +208,20 @@ pub(super) fn can_derive_default(cx: &ExpCtxt<'_>, ty: &Type) -> bool {
 
         Type::Custom(name) => match cx.try_get_item(name) {
             Some(Item::Enum(_)) => false,
+            Some(Item::Error(error)) => error
+                .parameters
+                .types()
+                .all(|ty| can_derive_default(cx, ty)),
+            Some(Item::Event(event)) => event
+                .parameters
+                .iter()
+                .all(|p| can_derive_default(cx, &p.ty)),
             Some(Item::Struct(strukt)) => {
                 strukt.fields.types().all(|ty| can_derive_default(cx, ty))
             }
             Some(Item::Udt(udt)) => can_derive_default(cx, &udt.ty),
-            Some(_) => unreachable!(),
-            None => false,
+            Some(item) => panic!("Invalid item in param list: {item:?}"),
+            _ => false,
         },
 
         _ => true,
@@ -227,12 +246,21 @@ pub(super) fn can_derive_builtin_traits(cx: &ExpCtxt<'_>, ty: &Type) -> bool {
 
         Type::Custom(name) => match cx.try_get_item(name) {
             Some(Item::Enum(_)) => true,
-            Some(Item::Struct(strukt)) => {
-                strukt.fields.types().all(|ty| can_derive_default(cx, ty))
-            }
-            Some(Item::Udt(udt)) => can_derive_default(cx, &udt.ty),
-            Some(_) => unreachable!(),
-            None => false,
+            Some(Item::Error(error)) => error
+                .parameters
+                .types()
+                .all(|ty| can_derive_builtin_traits(cx, ty)),
+            Some(Item::Event(event)) => event
+                .parameters
+                .iter()
+                .all(|p| can_derive_builtin_traits(cx, &p.ty)),
+            Some(Item::Struct(strukt)) => strukt
+                .fields
+                .types()
+                .all(|ty| can_derive_builtin_traits(cx, ty)),
+            Some(Item::Udt(udt)) => can_derive_builtin_traits(cx, &udt.ty),
+            Some(item) => panic!("Invalid item in param list: {item:?}"),
+            _ => false,
         },
 
         _ => true,

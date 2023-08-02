@@ -1,4 +1,4 @@
-use super::{kw, Override, Visibility};
+use super::{kw, Override, SolPath, Visibility};
 use proc_macro2::Span;
 use std::{
     collections::HashSet,
@@ -50,6 +50,40 @@ impl Parse for VariableAttributes {
             attributes.insert(attribute);
         }
         Ok(Self(attributes))
+    }
+}
+
+impl VariableAttributes {
+    pub fn visibility(&self) -> Option<Visibility> {
+        self.0.iter().find_map(VariableAttribute::visibility)
+    }
+
+    pub fn has_external(&self) -> bool {
+        self.0.iter().any(VariableAttribute::is_external)
+    }
+
+    pub fn has_internal(&self) -> bool {
+        self.0.iter().any(VariableAttribute::is_internal)
+    }
+
+    pub fn has_private(&self) -> bool {
+        self.0.iter().any(VariableAttribute::is_private)
+    }
+
+    pub fn has_public(&self) -> bool {
+        self.0.iter().any(VariableAttribute::is_public)
+    }
+
+    pub fn has_constant(&self) -> bool {
+        self.0.iter().any(VariableAttribute::is_constant)
+    }
+
+    pub fn has_immutable(&self) -> bool {
+        self.0.iter().any(VariableAttribute::is_immutable)
+    }
+
+    pub fn has_override(&self, path: Option<&SolPath>) -> bool {
+        self.0.iter().any(|attr| attr.is_override(path))
     }
 }
 
@@ -125,5 +159,59 @@ impl VariableAttribute {
             Self::Override(o) => o.set_span(span),
             Self::Immutable(i) => i.span = span,
         }
+    }
+
+    #[inline]
+    pub const fn visibility(&self) -> Option<Visibility> {
+        match self {
+            Self::Visibility(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub const fn r#override(&self) -> Option<&Override> {
+        match self {
+            Self::Override(o) => Some(o),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub const fn is_external(&self) -> bool {
+        matches!(self, Self::Visibility(Visibility::External(_)))
+    }
+
+    #[inline]
+    pub const fn is_public(&self) -> bool {
+        matches!(self, Self::Visibility(Visibility::Public(_)))
+    }
+
+    #[inline]
+    pub const fn is_internal(&self) -> bool {
+        matches!(self, Self::Visibility(Visibility::Internal(_)))
+    }
+
+    #[inline]
+    pub const fn is_private(&self) -> bool {
+        matches!(self, Self::Visibility(Visibility::Private(_)))
+    }
+
+    #[inline]
+    pub const fn is_constant(&self) -> bool {
+        matches!(self, Self::Constant(_))
+    }
+
+    #[inline]
+    pub const fn is_immutable(&self) -> bool {
+        matches!(self, Self::Immutable(_))
+    }
+
+    #[inline]
+    pub fn is_override(&self, path: Option<&SolPath>) -> bool {
+        self.r#override().map_or(false, |o| match path {
+            Some(path) => o.paths.iter().any(|p| p == path),
+            None => true,
+        })
     }
 }

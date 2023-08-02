@@ -40,12 +40,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
         .map(|f| (expand_type(&f.ty), f.name.as_ref().unwrap()))
         .unzip();
 
-    let eip712_encode_type_fns: TokenStream = expand_encode_type_fns(fields, name);
+    let eip712_encode_type_fns = expand_encode_type_fns(fields, name);
 
     let tokenize_impl = expand_tokenize_func(fields.iter());
 
     let encode_data_impl = match fields.len() {
-        0 => unreachable!(),
+        0 => unreachable!("struct with zero fields"),
         1 => {
             let VariableDeclaration { ty, name, .. } = fields.first().unwrap();
             let ty = expand_type(ty);
@@ -135,14 +135,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     Ok(tokens)
 }
 
-fn expand_encode_type_fns(
-    fields: &ast::Parameters<syn::token::Semi>,
-    name: &ast::SolIdent,
-) -> TokenStream {
+fn expand_encode_type_fns(fields: &ast::FieldList, name: &ast::SolIdent) -> TokenStream {
     let components_impl = expand_eip712_components(fields);
     let root_type_impl = fields.eip712_signature(name.as_string());
 
-    let encode_type_impl_opt: Option<TokenStream> = if fields.iter().any(|f| f.ty.is_custom()) {
+    let encode_type_impl_opt = if fields.iter().any(|f| f.ty.is_custom()) {
         None
     } else {
         Some(quote! {
@@ -165,7 +162,7 @@ fn expand_encode_type_fns(
     }
 }
 
-fn expand_eip712_components(fields: &ast::Parameters<syn::token::Semi>) -> TokenStream {
+fn expand_eip712_components(fields: &ast::FieldList) -> TokenStream {
     let bits: Vec<TokenStream> = fields
         .iter()
         .filter(|f| f.ty.is_custom())
@@ -179,7 +176,7 @@ fn expand_eip712_components(fields: &ast::Parameters<syn::token::Semi>) -> Token
         .collect();
 
     if bits.is_empty() {
-        quote! { ::alloy_sol_types::private::Vec::with_capacity(0) }
+        quote! { ::alloy_sol_types::private::Vec::new() }
     } else {
         quote! {
             let mut components = ::alloy_sol_types::private::Vec::new();

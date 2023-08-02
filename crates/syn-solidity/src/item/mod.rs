@@ -18,7 +18,7 @@ mod event;
 pub use event::{EventParameter, ItemEvent};
 
 mod function;
-pub use function::{ItemFunction, Returns};
+pub use function::{FunctionKind, ItemFunction, Returns};
 
 mod import;
 pub use import::{
@@ -84,7 +84,7 @@ impl Parse for Item {
         let mut attrs = input.call(Attribute::parse_outer)?;
 
         let lookahead = input.lookahead1();
-        let mut item = if function::FunctionKind::peek(&lookahead) {
+        let mut item = if FunctionKind::peek(&lookahead) {
             input.parse().map(Self::Function)
         } else if lookahead.peek(Token![struct]) {
             input.parse().map(Self::Struct)

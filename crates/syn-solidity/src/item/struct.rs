@@ -1,4 +1,4 @@
-use crate::{Parameters, SolIdent, Type};
+use crate::{FieldList, SolIdent, Type};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -21,7 +21,7 @@ pub struct ItemStruct {
     pub struct_token: Token![struct],
     pub name: SolIdent,
     pub brace_token: Brace,
-    pub fields: Parameters<Token![;]>,
+    pub fields: FieldList,
 }
 
 impl PartialEq for ItemStruct {

@@ -1,4 +1,4 @@
-use crate::{kw, Parameters, SolIdent, Type};
+use crate::{kw, ParameterList, SolIdent, Type};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -18,7 +18,7 @@ pub struct ItemError {
     pub error_token: kw::error,
     pub name: SolIdent,
     pub paren_token: Paren,
-    pub parameters: Parameters<Token![,]>,
+    pub parameters: ParameterList,
     pub semi_token: Token![;],
 }
 

@@ -28,7 +28,8 @@ mod udt;
 const RESOLVE_LIMIT: usize = 8;
 
 /// The [`sol!`][crate::sol!] expansion implementation.
-pub fn expand(ast: File) -> Result<TokenStream> {
+pub fn expand(mut ast: File) -> Result<TokenStream> {
+    ast::VisitMut::visit_file(&mut MutateAst, &mut ast);
     ExpCtxt::new(&ast).expand()
 }
 
@@ -93,11 +94,10 @@ impl<'ast> ExpCtxt<'ast> {
             Item::Function(function) => function::expand(self, function),
             Item::Struct(strukt) => r#struct::expand(self, strukt),
             Item::Udt(udt) => udt::expand(self, udt),
-            Item::Variable(_) => {
-                // TODO: Expand getter function for public variables
+            // public variables have their own getter function
+            Item::Variable(_) | Item::Import(_) | Item::Pragma(_) | Item::Using(_) => {
                 Ok(TokenStream::new())
             }
-            Item::Import(_) | Item::Pragma(_) | Item::Using(_) => Ok(TokenStream::new()),
         }
     }
 }
@@ -200,7 +200,9 @@ impl ExpCtxt<'_> {
             }
 
             for (i, &function) in functions.iter().enumerate() {
-                let old_name = function.name();
+                let Some(old_name) = function.name.as_ref() else {
+                    continue
+                };
                 let new_name = format!("{old_name}_{i}");
                 if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
                     let msg = format!(
@@ -246,8 +248,47 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
     }
 }
 
+struct MutateAst;
+
+impl<'ast> ast::VisitMut<'ast> for MutateAst {
+    fn visit_file(&mut self, file: &'ast mut File) {
+        Self::visit_items(&mut file.items);
+        ast::visit_mut::visit_file(self, file);
+    }
+
+    fn visit_item_contract(&mut self, contract: &'ast mut ast::ItemContract) {
+        Self::visit_items(&mut contract.body);
+        ast::visit_mut::visit_item_contract(self, contract);
+    }
+}
+
+impl MutateAst {
+    #[allow(clippy::single_match)]
+    fn visit_items(items: &mut Vec<Item>) {
+        // add a getter function for each public variable
+        let mut functions = Vec::new();
+        for (i, item) in items.iter().enumerate() {
+            match item {
+                Item::Variable(var) => {
+                    if matches!(
+                        var.attributes.visibility(),
+                        Some(ast::Visibility::Public(_) | ast::Visibility::External(_))
+                    ) {
+                        functions.push((i + 1, ItemFunction::from_variable_definition(var)))
+                    }
+                }
+                _ => {}
+            }
+        }
+        for (i, function) in functions.into_iter().rev() {
+            items.insert(i, Item::Function(function));
+        }
+    }
+}
+
 // utils
 impl ExpCtxt<'_> {
+    #[allow(dead_code)]
     fn get_item(&self, name: &SolPath) -> &Item {
         match self.try_get_item(name) {
             Some(item) => item,

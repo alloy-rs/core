@@ -48,7 +48,7 @@ impl<P> fmt::Debug for Parameters<P> {
 }
 
 /// Parameter list
-impl Parse for Parameters<Token![,]> {
+impl Parse for ParameterList {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         input
             .parse_terminated(VariableDeclaration::parse, Token![,])
@@ -57,7 +57,7 @@ impl Parse for Parameters<Token![,]> {
 }
 
 /// Struct: enforce semicolon after each field and field name.
-impl Parse for Parameters<Token![;]> {
+impl Parse for FieldList {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let this = input.parse_terminated(VariableDeclaration::parse_for_struct, Token![;])?;
         if this.is_empty() {

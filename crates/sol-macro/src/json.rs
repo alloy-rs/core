@@ -78,8 +78,8 @@ fn expand_abi(name: &Ident, abi: JsonAbi) -> Result<TokenStream> {
     let udvts = udvts.iter().map(expand_udvt);
 
     let structs = structs.iter().map(expand_struct);
-    let events = abi.events.values().flatten().map(expand_event);
-    let errors = abi.errors.values().flatten().map(expand_error);
+    let events = abi.events().map(expand_event);
+    let errors = abi.errors().map(expand_error);
 
     let constructor = abi
         .constructor
@@ -93,10 +93,9 @@ fn expand_abi(name: &Ident, abi: JsonAbi) -> Result<TokenStream> {
         .receive
         .as_ref()
         .map(|r| AbiFunction::Receive.expand(r.state_mutability));
-    let functions =
-        abi.functions.values().flatten().map(|f| {
-            AbiFunction::Function(&f.name, &f.inputs, &f.outputs).expand(f.state_mutability)
-        });
+    let functions = abi
+        .functions()
+        .map(|f| AbiFunction::Function(&f.name, &f.inputs, &f.outputs).expand(f.state_mutability));
 
     let tokens = quote! {
         interface #name {

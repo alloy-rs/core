@@ -133,6 +133,15 @@ impl Parse for VariableDefinition {
 }
 
 impl VariableDefinition {
+    pub fn as_declaration(&self) -> VariableDeclaration {
+        VariableDeclaration {
+            attrs: Vec::new(),
+            ty: self.ty.clone(),
+            storage: None,
+            name: Some(self.name.clone()),
+        }
+    }
+
     pub fn span(&self) -> Span {
         let span = self.ty.span();
         span.join(self.semi_token.span).unwrap_or(span)

@@ -266,6 +266,15 @@ macro_rules! kw_enum {
         }
 
         impl $name {
+            ::paste::paste! {
+                $(
+                    #[inline]
+                    pub fn [<new_ $variant:lower>](span: ::proc_macro2::Span) -> Self {
+                        Self::$variant(kw::$kw(span))
+                    }
+                )+
+            }
+
             pub fn parse_opt(input: ::syn::parse::ParseStream<'_>) -> ::syn::Result<Option<Self>> {
                 $(
                     if input.peek($crate::kw::$kw) {
@@ -304,6 +313,15 @@ macro_rules! kw_enum {
                     Self::$variant(_) => stringify!($variant),
                 )+}
             }
+
+            ::paste::paste! {
+                $(
+                    #[inline]
+                    pub const fn [<is_ $variant:lower>](self) -> bool {
+                        matches!(self, Self::$variant(_))
+                    }
+                )+
+            }
         }
     };
 }
@@ -320,7 +338,7 @@ macro_rules! op_enum {
         #[derive(Clone, Copy)]
         $vis enum $name {$(
             #[doc = concat!("`", stringify!($t), "`")]
-            $variant(Token![$op]),
+            $variant(::syn::Token![$op]),
         )+}
 
         impl ::core::cmp::PartialEq for $name {
@@ -368,6 +386,15 @@ macro_rules! op_enum {
         }
 
         impl $name {
+            ::paste::paste! {
+                $(
+                    #[inline]
+                    pub fn [<new_ $variant:lower>](span: ::proc_macro2::Span) -> Self {
+                        Self::$variant(::syn::Token![$op](span))
+                    }
+                )+
+            }
+
             pub const fn as_str(self) -> &'static str {
                 match self {$(
                     Self::$variant(_) => stringify!($op),
@@ -378,6 +405,15 @@ macro_rules! op_enum {
                 match self {$(
                     Self::$variant(_) => stringify!($variant),
                 )+}
+            }
+
+            ::paste::paste! {
+                $(
+                    #[inline]
+                    pub const fn [<is_ $variant:lower>](self) -> bool {
+                        matches!(self, Self::$variant(_))
+                    }
+                )+
             }
         }
     };
