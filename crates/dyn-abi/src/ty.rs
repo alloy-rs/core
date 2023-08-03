@@ -85,6 +85,8 @@ struct StructProp {
 pub enum DynSolType {
     /// Address.
     Address,
+    /// Function.
+    Function,
     /// Boolean.
     Bool,
     /// Signed Integer.
@@ -222,6 +224,7 @@ impl DynSolType {
     pub fn matches(&self, value: &DynSolValue) -> bool {
         match self {
             Self::Address => matches!(value, DynSolValue::Address(_)),
+            Self::Function => matches!(value, DynSolValue::Function(_)),
             Self::Bytes => matches!(value, DynSolValue::Bytes(_)),
             Self::Int(size) => matches!(value, DynSolValue::Int(_, s) if s == size),
             Self::Uint(size) => matches!(value, DynSolValue::Uint(_, s) if s == size),
@@ -271,6 +274,9 @@ impl DynSolType {
         match (self, token) {
             (Self::Address, DynToken::Word(word)) => Ok(DynSolValue::Address(
                 sol_data::Address::detokenize(word.into()),
+            )),
+            (Self::Function, DynToken::Word(word)) => Ok(DynSolValue::Function(
+                sol_data::Function::detokenize(word.into()),
             )),
             (Self::Bool, DynToken::Word(word)) => {
                 Ok(DynSolValue::Bool(sol_data::Bool::detokenize(word.into())))
@@ -362,6 +368,7 @@ impl DynSolType {
     fn sol_type_name_simple(&self) -> Option<&str> {
         match self {
             Self::Address => Some("address"),
+            Self::Function => Some("function"),
             Self::Bool => Some("bool"),
             Self::Bytes => Some("bytes"),
             Self::String => Some("string"),
@@ -375,11 +382,16 @@ impl DynSolType {
     fn sol_type_name_raw(&self, out: &mut String) {
         match self {
             #[cfg(feature = "eip712")]
-            Self::Address | Self::Bool | Self::Bytes | Self::String | Self::CustomStruct { .. } => {
+            Self::Address
+            | Self::Function
+            | Self::Bool
+            | Self::Bytes
+            | Self::String
+            | Self::CustomStruct { .. } => {
                 out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
             }
             #[cfg(not(feature = "eip712"))]
-            Self::Address | Self::Bool | Self::Bytes | Self::String => {
+            Self::Address | Self::Function | Self::Bool | Self::Bytes | Self::String => {
                 out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
             }
 
@@ -450,9 +462,12 @@ impl DynSolType {
     /// Instantiate an empty dyn token, to be decoded into.
     pub(crate) fn empty_dyn_token(&self) -> DynToken<'_> {
         match self {
-            Self::Address | Self::Bool | Self::FixedBytes(_) | Self::Int(_) | Self::Uint(_) => {
-                DynToken::Word(Word::ZERO)
-            }
+            Self::Address
+            | Self::Function
+            | Self::Bool
+            | Self::FixedBytes(_)
+            | Self::Int(_)
+            | Self::Uint(_) => DynToken::Word(Word::ZERO),
 
             Self::Bytes | Self::String => DynToken::PackedSeq(&[]),
 
