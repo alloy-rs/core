@@ -53,13 +53,18 @@ impl<'de> serde::Deserialize<'de> for Bytes {
             }
         }
 
-        deserializer.deserialize_any(BytesVisitor)
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_any(BytesVisitor)
+        } else {
+            deserializer.deserialize_byte_buf(BytesVisitor)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bincode as _;
     use serde::Deserialize;
     #[derive(Debug, Deserialize)]
     struct TestCase {
@@ -72,6 +77,10 @@ mod tests {
         let ser = serde_json::to_string(&bytes).unwrap();
         assert_eq!(ser, "\"0x0123456789abcdef\"");
         assert_eq!(serde_json::from_str::<Bytes>(&ser).unwrap(), bytes);
+
+        let val = serde_json::to_value(&bytes).unwrap();
+        assert_eq!(val, serde_json::json! {"0x0123456789abcdef"});
+        assert_eq!(serde_json::from_value::<Bytes>(val).unwrap(), bytes);
     }
 
     #[test]
@@ -84,5 +93,13 @@ mod tests {
                 .variable,
             Bytes::from(Vec::from([0, 1, 2, 3, 4]))
         );
+    }
+
+    #[test]
+    fn test_bincode_roundtrip() {
+        let bytes = Bytes::from_static(&[1, 35, 69, 103, 137, 171, 205, 239]);
+
+        let bin = bincode::serialize(&bytes).unwrap();
+        assert_eq!(bincode::deserialize::<Bytes>(&bin).unwrap(), bytes);
     }
 }
