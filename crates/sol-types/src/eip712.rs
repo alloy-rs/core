@@ -79,7 +79,7 @@ impl Eip712Domain {
         self.hash_struct()
     }
 
-    /// EIP-712 `encodeType`
+    /// EIP-712 `encodeType`:
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     pub fn encode_type(&self) -> String {
         // commas not included
@@ -112,14 +112,14 @@ impl Eip712Domain {
         }
     }
 
-    /// EIP-712 `typeHash`
+    /// EIP-712 `typeHash`:
     /// <https://eips.ethereum.org/EIPS/eip-712#rationale-for-typehash>
     #[inline]
     pub fn type_hash(&self) -> B256 {
         keccak256(self.encode_type().as_bytes())
     }
 
-    /// EIP-712 `encodeData`
+    /// EIP-712 `encodeData`:
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
     pub fn encode_data(&self) -> Vec<u8> {
         // This giant match block was produced with excel-based
@@ -366,7 +366,7 @@ impl Eip712Domain {
         }
     }
 
-    /// EIP-712 `hashStruct`
+    /// EIP-712 `hashStruct`:
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct>
     #[inline]
     pub fn hash_struct(&self) -> B256 {
@@ -399,7 +399,7 @@ impl Eip712Domain {
 ///
 /// # fn main() {
 /// let my_other_domain: Eip712Domain = eip712_domain!{
-///     name: "MyCoolProtocol",
+///     name: String::from("MyCoolProtocol"),
 ///     version: "1.0.0",
 ///     salt: keccak256("my domain salt"),
 /// };
@@ -410,6 +410,11 @@ macro_rules! eip712_domain {
     (@opt) => { $crate::private::None };
     (@opt $e:expr) => { $crate::private::Some($e) };
 
+    // special case literals to allow calling this in const contexts
+    (@cow) => { $crate::private::None };
+    (@cow $l:literal) => { $crate::private::Some($crate::private::Cow::Borrowed($l)) };
+    (@cow $e:expr) => { $crate::private::Some(<$crate::private::Cow<'static, str> as $crate::private::From<_>>::from($e)) };
+
     (
         $(name: $name:expr,)?
         $(version: $version:expr,)?
@@ -419,8 +424,8 @@ macro_rules! eip712_domain {
         $(,)?
     ) => {
         $crate::Eip712Domain::new(
-            $crate::eip712_domain!(@opt $($crate::private::Cow::Borrowed($name))?),
-            $crate::eip712_domain!(@opt $($crate::private::Cow::Borrowed($version))?),
+            $crate::eip712_domain!(@cow $($name)?),
+            $crate::eip712_domain!(@cow $($version)?),
             $crate::eip712_domain!(@opt $($crate::private::u256($chain_id))?),
             $crate::eip712_domain!(@opt $($verifying_contract)?),
             $crate::eip712_domain!(@opt $($salt)?),
@@ -507,4 +512,24 @@ mod tests {
         verifying_contract: Address::ZERO,
         salt: B256::ZERO,
     };
+
+    #[test]
+    fn runtime_domains() {
+        let _: Eip712Domain = eip712_domain! {
+            name: String::new(),
+            version: String::new(),
+        };
+
+        let my_string = String::from("!@#$%^&*()_+");
+        let _: Eip712Domain = eip712_domain! {
+            name: my_string.clone(),
+            version: my_string,
+        };
+
+        let my_cow = Cow::from("my_cow");
+        let _: Eip712Domain = eip712_domain! {
+            name: my_cow.clone(),
+            version: my_cow.into_owned(),
+        };
+    }
 }

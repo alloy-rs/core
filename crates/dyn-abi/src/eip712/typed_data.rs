@@ -1,12 +1,8 @@
 use crate::{
     eip712::{PropertyDef, Resolver},
-    DynAbiError, DynSolType, DynSolValue,
+    DynAbiResult, DynSolType, DynSolValue,
 };
-use alloc::{
-    collections::BTreeMap,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use alloy_primitives::{keccak256, B256};
 use alloy_sol_type_parser::TypeSpecifier;
 use alloy_sol_types::{Eip712Domain, SolStruct};
@@ -25,8 +21,7 @@ impl<'de> Deserialize<'de> for Eip712Types {
 
         for key in map.keys() {
             // ensure that all types are valid specifiers
-            let _rt: TypeSpecifier<'_> =
-                key.as_str().try_into().map_err(serde::de::Error::custom)?;
+            let _ = TypeSpecifier::parse(key).map_err(serde::de::Error::custom)?;
         }
 
         Ok(Self(map))
@@ -85,17 +80,19 @@ pub struct TypedData {
     pub message: serde_json::Value,
 }
 
-/// According to the MetaMask implementation,
-/// the message parameter may be JSON stringified in versions later than V1
-/// See <https://github.com/MetaMask/metamask-extension/blob/0dfdd44ae7728ed02cbf32c564c75b74f37acf77/app/scripts/metamask-controller.js#L1736>
-/// In fact, ethers.js JSON stringifies the message at the time of writing.
+/// `TypedData` is most likely going to be a stringified JSON object, so we have
+/// to implement Deserialize manually to parse the string first.
+///
+/// See:
+/// - Ethers.js: <https://github.com/ethers-io/ethers.js/blob/17969fe4169b44389dbd4da1dd85682eb3284d6f/src.ts/providers/provider-jsonrpc.ts#L415>
+/// - Viem: <https://github.com/wagmi-dev/viem/blob/9aba19289832b22422e57265258fdf4beba83570/src/actions/wallet/signTypedData.ts#L178-L185>
 impl<'de> Deserialize<'de> for TypedData {
     fn deserialize<D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
         struct TypedDataHelper {
             #[serde(default)]
             domain: Eip712Domain,
-            types: Eip712Types,
+            types: Resolver,
             #[serde(rename = "primaryType")]
             primary_type: String,
             #[serde(default)]
@@ -106,7 +103,7 @@ impl<'de> Deserialize<'de> for TypedData {
             fn from(value: TypedDataHelper) -> Self {
                 Self {
                     domain: value.domain,
-                    resolver: Resolver::from(&value.types),
+                    resolver: value.types,
                     primary_type: value.primary_type,
                     message: value.message,
                 }
@@ -115,19 +112,17 @@ impl<'de> Deserialize<'de> for TypedData {
 
         #[derive(Deserialize)]
         #[serde(untagged)]
-        enum ValOrString {
+        enum StrOrVal {
+            Str(String),
             Val(TypedDataHelper),
-            String(String),
         }
 
-        match ValOrString::deserialize(deserializer)? {
-            ValOrString::Val(v) => Ok(v.into()),
-            ValOrString::String(s) => {
-                let v = serde_json::from_str::<TypedDataHelper>(&s)
-                    .map_err(serde::de::Error::custom)?;
-                Ok(v.into())
-            }
+        match StrOrVal::deserialize(deserializer) {
+            Ok(StrOrVal::Str(s)) => serde_json::from_str(&s).map_err(serde::de::Error::custom),
+            Ok(StrOrVal::Val(v)) => Ok(v),
+            Err(e) => Err(e),
         }
+        .map(Into::into)
     }
 }
 
@@ -138,7 +133,7 @@ impl TypedData {
         Self {
             domain: domain.unwrap_or_default(),
             resolver: Resolver::from_struct::<S>(),
-            primary_type: S::NAME.to_string(),
+            primary_type: S::NAME.into(),
             message: serde_json::to_value(s).unwrap(),
         }
     }
@@ -148,53 +143,61 @@ impl TypedData {
         &self.domain
     }
 
-    fn resolve(&self) -> Result<DynSolType, DynAbiError> {
+    fn resolve(&self) -> DynAbiResult<DynSolType> {
         self.resolver.resolve(&self.primary_type)
     }
 
     /// Coerce the message to the type specified by `primary_type`, using the
     /// types map as a resolver.
-    pub fn coerce(&self) -> Result<DynSolValue, DynAbiError> {
+    pub fn coerce(&self) -> DynAbiResult<DynSolValue> {
         let ty = self.resolve()?;
         ty.coerce(&self.message)
     }
 
-    /// Calculate the `typeHash` for this value
+    /// Calculate the Keccak-256 hash of [`encodeType`] for this value.
+    ///
     /// Fails if this type is not a struct.
-    pub fn type_hash(&self) -> Result<B256, DynAbiError> {
-        let encode_type = self.resolver.encode_type(&self.primary_type)?;
-        Ok(keccak256(encode_type))
+    ///
+    /// [`encodeType`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
+    pub fn type_hash(&self) -> DynAbiResult<B256> {
+        self.encode_type().map(keccak256)
     }
 
-    /// Calculate the `hashStruct` for this value
+    /// Calculate the [`hashStruct`] for this value.
+    ///
     /// Fails if this type is not a struct.
-    pub fn hash_struct(&self) -> Result<B256, DynAbiError> {
+    ///
+    /// [`hashStruct`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct
+    pub fn hash_struct(&self) -> DynAbiResult<B256> {
         let mut type_hash = self.type_hash()?.to_vec();
         type_hash.extend(self.encode_data()?);
         Ok(keccak256(type_hash))
     }
 
-    /// Calculate the `encodeData` for this value
-    /// Fails if this type is not a struct
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
-    pub fn encode_data(&self) -> Result<Vec<u8>, DynAbiError> {
+    /// Calculate the [`encodeData`] for this value.
+    ///
+    /// Fails if this type is not a struct.
+    ///
+    /// [`encodeData`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata
+    pub fn encode_data(&self) -> DynAbiResult<Vec<u8>> {
         let s = self.coerce()?;
         Ok(self.resolver.encode_data(&s)?.unwrap())
     }
 
-    /// Calculate the `encodeType` for this value
-    /// Fails if this type is not a struct
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-    pub fn encode_type(&self) -> Result<String, DynAbiError> {
+    /// Calculate the [`encodeType`] for this value.
+    ///
+    /// Fails if this type is not a struct.
+    ///
+    /// [`encodeType`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
+    pub fn encode_type(&self) -> DynAbiResult<String> {
         self.resolver.encode_type(&self.primary_type)
     }
 
-    /// Calculate the eip712 signing hash for this value. This is the hash of
-    /// the magic bytes 0x1901 concatenated with the domain separator and the
-    /// `hashStruct`.
+    /// Calculate the EIP-712 signing hash for this value.
     ///
-    /// <https://eips.ethereum.org/EIPS/eip-712#specification>
-    pub fn eip712_signing_hash(&self) -> Result<B256, DynAbiError> {
+    /// This is the hash of the magic bytes 0x1901 concatenated with the domain
+    /// separator and the `hashStruct` result.
+    pub fn eip712_signing_hash(&self) -> DynAbiResult<B256> {
         let mut buf = [0u8; 66];
         buf[0] = 0x19;
         buf[1] = 0x01;
@@ -212,10 +215,12 @@ impl TypedData {
     }
 }
 
-// Adapted tests from <https://github.com/MetaMask/eth-sig-util/blob/main/src/sign-typed-data.test.ts>
+// Adapted tests from https://github.com/MetaMask/eth-sig-util/blob/dd8bd0e1ca7ca3ed81631b279b8e3a63a2b16b7f/src/sign-typed-data.test.ts
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DynAbiError;
+    use alloc::string::ToString;
     use alloy_sol_types::sol;
     use serde_json::json;
 
@@ -260,8 +265,8 @@ mod tests {
 
         let hash = typed_data.eip712_signing_hash().unwrap();
         assert_eq!(
+            hex::encode(&hash[..]),
             "122d1c8ef94b76dad44dcb03fa772361e20855c63311a15d5afe02d1b38f6077",
-            hex::encode(&hash[..])
         );
     }
 
@@ -280,8 +285,8 @@ mod tests {
 
         let hash = typed_data.eip712_signing_hash().unwrap();
         assert_eq!(
+            hex::encode(&hash[..]),
             "8d4a3f4082945b7879e2b55f181c31a77c8c0a464b70669458abbaaf99de4c38",
-            hex::encode(&hash[..])
         );
     }
 
@@ -341,8 +346,8 @@ mod tests {
 
         let hash = typed_data.eip712_signing_hash().unwrap();
         assert_eq!(
+            hex::encode(&hash[..]),
             "80a3aeb51161cfc47884ddf8eac0d2343d6ae640efe78b6a69be65e3045c1321",
-            hex::encode(&hash[..])
         );
     }
 
@@ -391,8 +396,8 @@ mod tests {
 
         let hash = typed_data.eip712_signing_hash().unwrap();
         assert_eq!(
+            hex::encode(&hash[..]),
             "232cd3ec058eb935a709f093e3536ce26cc9e8e193584b0881992525f6236eef",
-            hex::encode(&hash[..])
         );
     }
 
@@ -442,10 +447,11 @@ mod tests {
         });
 
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
+
         let hash = typed_data.eip712_signing_hash().unwrap();
         assert_eq!(
+            hex::encode(&hash[..]),
             "25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775",
-            hex::encode(&hash[..])
         );
     }
 
@@ -513,7 +519,7 @@ mod tests {
 
         assert_eq!(
             typed_data.eip712_signing_hash(),
-            Err(DynAbiError::CircularDependency("Mail".into()))
+            Err(DynAbiError::CircularDependency("Mail".into())),
         );
     }
 
@@ -635,8 +641,8 @@ mod tests {
 
         let hash = typed_data.eip712_signing_hash().unwrap();
         assert_eq!(
+            hex::encode(&hash[..]),
             "0b8aa9f3712df0034bc29fe5b24dd88cfdba02c7f499856ab24632e2969709a8",
-            hex::encode(&hash[..])
         );
     }
 
@@ -658,7 +664,7 @@ mod tests {
         let typed_data = TypedData::from_struct(&s, None);
         assert_eq!(
             typed_data.encode_type().unwrap(),
-            "MyStruct(string name,string otherThing)"
+            "MyStruct(string name,string otherThing)",
         );
     }
 
@@ -701,8 +707,8 @@ mod tests {
 
         let hash = typed_data.eip712_signing_hash().unwrap();
         assert_eq!(
+            hex::encode(&hash[..]),
             "25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775",
-            hex::encode(&hash[..])
         );
     }
 }
