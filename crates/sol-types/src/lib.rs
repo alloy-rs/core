@@ -186,7 +186,7 @@ pub use types::{
     Selectors, SolCall, SolEnum, SolError, SolEvent, SolInterface, SolStruct, SolType, TopicList,
 };
 
-mod util;
+pub mod utils;
 
 mod eip712;
 pub use eip712::Eip712Domain;
@@ -194,19 +194,19 @@ pub use eip712::Eip712Domain;
 /// The ABI word type.
 pub type Word = alloy_primitives::B256;
 
-#[doc(inline)]
+#[doc(no_inline)]
 pub use alloy_sol_macro::sol;
 
 // Not public API.
 #[doc(hidden)]
 pub mod private {
-    pub use super::util::{just_ok, next_multiple_of_32};
+    pub use super::utils::{just_ok, next_multiple_of_32, words_for, words_for_len};
     pub use alloc::{
         borrow::{Borrow, Cow, ToOwned},
         string::{String, ToString},
         vec::Vec,
     };
-    pub use alloy_primitives::{keccak256, FixedBytes, B256, U256};
+    pub use alloy_primitives::{bytes, keccak256, Bytes, FixedBytes, B256, U256};
     pub use core::{convert::From, default::Default, option::Option, result::Result};
 
     pub use Option::{None, Some};

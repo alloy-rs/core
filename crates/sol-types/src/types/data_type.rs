@@ -6,7 +6,7 @@
 
 #![allow(missing_copy_implementations, missing_debug_implementations)]
 
-use crate::{token::*, util, Encodable, Result, SolType, Word};
+use crate::{token::*, utils, Encodable, Result, SolType, Word};
 use alloc::{borrow::Cow, string::String as RustString, vec::Vec};
 use alloy_primitives::{keccak256, Address as RustAddress, I256, U256};
 use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
@@ -32,7 +32,7 @@ impl SolType for Bool {
 
     #[inline]
     fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        if util::check_bool(token.0) {
+        if utils::check_bool(token.0) {
             Ok(())
         } else {
             Err(Self::type_check_fail(token.as_slice()))
@@ -146,7 +146,7 @@ where
     #[inline]
     fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
         let sli = &token.0[..<IntBitCount<BITS> as SupportedInt>::WORD_MSB];
-        if util::check_zeroes(sli) {
+        if utils::check_zeroes(sli) {
             Ok(())
         } else {
             Err(Self::type_check_fail(token.as_slice()))
@@ -195,7 +195,7 @@ impl SolType for Address {
 
     #[inline]
     fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        if util::check_zeroes(&token.0[..12]) {
+        if utils::check_zeroes(&token.0[..12]) {
             Ok(())
         } else {
             Err(Self::type_check_fail(token.as_slice()))
@@ -236,7 +236,7 @@ impl SolType for Bytes {
 
     #[inline]
     fn encoded_size(_data: &Self::RustType) -> usize {
-        32 + util::padded_len(_data.borrow())
+        32 + utils::padded_len(_data.borrow())
     }
 
     #[inline]
@@ -353,7 +353,7 @@ impl SolType for String {
 
     #[inline]
     fn encoded_size(rust: &Self::RustType) -> usize {
-        32 + util::padded_len(rust.as_bytes())
+        32 + utils::padded_len(rust.as_bytes())
     }
 
     #[inline]
@@ -416,7 +416,7 @@ where
 
     #[inline]
     fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        if util::check_zeroes(&token.0[N..]) {
+        if utils::check_zeroes(&token.0[N..]) {
             Ok(())
         } else {
             Err(Self::type_check_fail(token.as_slice()))
@@ -496,12 +496,13 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        let rust = rust;
+        // TODO: collect into an array of [u8; 32] and flatten it to a slice like in
+        // tuple impl
         let encoded = rust
             .iter()
-            .flat_map(|element| T::eip712_data_word(element).0)
-            .collect::<Vec<u8>>();
-        keccak256(encoded)
+            .map(|element| T::eip712_data_word(element).0)
+            .collect::<Vec<[u8; 32]>>();
+        keccak256(crate::impl_core::into_flattened(encoded))
     }
 
     #[inline]
@@ -609,9 +610,7 @@ macro_rules! tuple_impls {
                     <$ty as SolType>::eip712_data_word($ty).0,
                 )+];
                 // SAFETY: Flattening [[u8; 32]; COUNT] to [u8; COUNT * 32] is valid
-                let ptr = encoding.as_ptr() as *const u8;
-                let len = COUNT * 32;
-                let encoding: &[u8] = unsafe { core::slice::from_raw_parts(ptr, len) };
+                let encoding: &[u8] = unsafe { core::slice::from_raw_parts(encoding.as_ptr().cast(), COUNT * 32) };
                 keccak256(encoding).into()
             }
 

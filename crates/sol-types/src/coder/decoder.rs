@@ -8,8 +8,8 @@
 // except according to those terms.
 //
 
-use crate::{encode, token::TokenSeq, util, Error, Result, TokenType, Word};
-use alloc::borrow::Cow;
+use crate::{encode, token::TokenSeq, utils, Error, Result, TokenType, Word};
+use alloc::{borrow::Cow, vec::Vec};
 use core::{fmt, slice::SliceIndex};
 
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
@@ -31,11 +31,39 @@ pub struct Decoder<'de> {
 
 impl fmt::Debug for Decoder<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut body = self
+            .buf
+            .chunks(32)
+            .map(hex::encode_prefixed)
+            .collect::<Vec<_>>();
+        body[self.offset / 32].push_str(" <-- Next Word");
+
         f.debug_struct("Decoder")
-            .field("buf", &hex::encode_prefixed(self.buf))
+            .field("buf", &body)
             .field("offset", &self.offset)
             .field("validate", &self.validate)
             .finish()
+    }
+}
+
+impl fmt::Display for Decoder<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Abi Decode Buffer")?;
+
+        for (i, chunk) in self.buf.chunks(32).enumerate() {
+            writeln!(
+                f,
+                "0x{:04x}: {} {}",
+                i * 32,
+                hex::encode_prefixed(chunk),
+                if i * 32 == self.offset {
+                    " <-- Next Word"
+                } else {
+                    ""
+                }
+            )?;
+        }
+        Ok(())
     }
 }
 
@@ -119,13 +147,13 @@ impl<'de> Decoder<'de> {
     /// offset.
     #[inline]
     pub fn peek_u32_at(&self, offset: usize) -> Result<u32> {
-        util::as_u32(self.peek_word_at(offset)?, true)
+        utils::as_u32(self.peek_word_at(offset)?, true)
     }
 
     /// Peek the next word as a u32.
     #[inline]
     pub fn peek_u32(&self) -> Result<u32> {
-        util::as_u32(self.peek_word()?, true)
+        utils::as_u32(self.peek_word()?, true)
     }
 
     /// Take a word from the buffer, advancing the offset.
@@ -148,18 +176,18 @@ impl<'de> Decoder<'de> {
     #[inline]
     pub fn take_u32(&mut self) -> Result<u32> {
         let word = self.take_word()?;
-        util::as_u32(word, true)
+        utils::as_u32(word, true)
     }
 
     /// Takes a slice of bytes of the given length by consuming up to the next
     /// word boundary.
     pub fn take_slice(&mut self, len: usize) -> Result<&[u8], Error> {
         if self.validate {
-            let padded_len = util::next_multiple_of_32(len);
+            let padded_len = utils::next_multiple_of_32(len);
             if self.offset + padded_len > self.buf.len() {
                 return Err(Error::Overrun)
             }
-            if !util::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
+            if !utils::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
                 return Err(Error::Other(Cow::Borrowed(
                     "Non-empty bytes after packed array",
                 )))
@@ -238,10 +266,37 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> 
 
 #[cfg(test)]
 mod tests {
-    use crate::{sol_data, util::pad_u32, SolType};
+    use crate::{sol_data, utils::pad_u32, SolType};
     use alloc::string::ToString;
     use alloy_primitives::{Address, B256, U256};
     use hex_literal::hex;
+
+    #[test]
+    fn dynamic_array_of_dynamic_arrays() {
+        type MyTy = sol_data::Array<sol_data::Array<sol_data::Address>>;
+        let encoded = hex!(
+            "
+    		0000000000000000000000000000000000000000000000000000000000000020
+    		0000000000000000000000000000000000000000000000000000000000000002
+    		0000000000000000000000000000000000000000000000000000000000000040
+    		0000000000000000000000000000000000000000000000000000000000000080
+    		0000000000000000000000000000000000000000000000000000000000000001
+    		0000000000000000000000001111111111111111111111111111111111111111
+    		0000000000000000000000000000000000000000000000000000000000000001
+    		0000000000000000000000002222222222222222222222222222222222222222
+    	"
+        );
+
+        assert_eq!(
+            MyTy::encode_params(&vec![
+                vec![Address::repeat_byte(0x11)],
+                vec![Address::repeat_byte(0x22)],
+            ]),
+            encoded
+        );
+
+        MyTy::decode_params(&encoded, false).unwrap();
+    }
 
     #[test]
     fn decode_static_tuple_of_addresses_and_uints() {

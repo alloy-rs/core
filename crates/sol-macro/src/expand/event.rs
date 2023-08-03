@@ -9,7 +9,7 @@ use syn::Result;
 
 /// Expands an [`ItemEvent`]:
 ///
-/// ```ignore,pseudo-code
+/// ```ignore (pseudo-code)
 /// pub struct #name {
 ///     #(pub #parameter_name: #parameter_type,)*
 /// }
@@ -20,12 +20,15 @@ use syn::Result;
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream> {
     let ItemEvent { name, attrs, .. } = event;
-    let parameters = event.params();
+    let params = event.params();
 
-    cx.assert_resolved(&parameters)?;
+    let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    cx.derives(&mut attrs, &params, true);
+
+    cx.assert_resolved(&params)?;
     event.assert_valid()?;
 
-    let signature = cx.signature(name.as_string(), &parameters);
+    let signature = cx.signature(name.as_string(), &params);
     let selector = crate::utils::event_selector(&signature);
     let anonymous = event.is_anonymous();
 

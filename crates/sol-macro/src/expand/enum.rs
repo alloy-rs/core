@@ -8,7 +8,7 @@ use syn::Result;
 
 /// Expands an [`ItemEnum`]:
 ///
-/// ```ignore,pseudo-code
+/// ```ignore (pseudo-code)
 /// #[repr(u8)]
 /// pub enum #name {
 ///     #(#variant,)*
@@ -18,13 +18,16 @@ use syn::Result;
 ///     ...
 /// }
 /// ```
-pub(super) fn expand(_cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> {
+pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> {
     let ItemEnum {
         name,
         variants,
         attrs,
         ..
     } = enumm;
+
+    let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    cx.derives(&mut attrs, [], false);
 
     let name_s = name.to_string();
 

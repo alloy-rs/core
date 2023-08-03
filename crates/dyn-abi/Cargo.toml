@@ -18,23 +18,48 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-alloy-sol-types = { workspace = true, features = ["eip712-serde"] }
+alloy-json-abi.workspace = true
+alloy-sol-type-parser.workspace = true
+alloy-sol-types.workspace = true
 alloy-primitives.workspace = true
 
 hex.workspace = true
-serde.workspace = true
-serde_json = { workspace = true, features = ["alloc"] }
+itoa.workspace = true
+
+# eip712
+derive_more = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+
+# arbitrary
+arbitrary = { workspace = true, optional = true }
+derive_arbitrary = { workspace = true, optional = true }
+proptest = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex-literal.workspace = true
 criterion.workspace = true
 ethabi = "18"
+rand = "0.8"
 
 [features]
 default = ["std"]
-std = ["alloy-sol-types/std", "alloy-primitives/std", "hex/std", "serde/std", "serde_json/std"]
+std = ["alloy-json-abi/std", "alloy-sol-types/std", "alloy-sol-type-parser/std", "alloy-primitives/std", "hex/std", "serde?/std", "serde_json?/std"]
+eip712 = ["alloy-sol-types/eip712-serde", "dep:derive_more", "dep:serde", "dep:serde_json"]
+arbitrary = [
+    "std",
+    "alloy-sol-types/arbitrary",
+    "dep:arbitrary",
+    "dep:derive_arbitrary",
+    "dep:proptest",
+]
 
 [[bench]]
 name = "abi"
 path = "benches/abi.rs"
+harness = false
+
+[[bench]]
+name = "types"
+path = "benches/types.rs"
 harness = false

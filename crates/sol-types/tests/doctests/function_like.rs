@@ -2,57 +2,12 @@ use alloy_primitives::{keccak256, U256};
 use alloy_sol_types::{sol, SolCall, SolError};
 use hex_literal::hex;
 
-// Unnamed arguments will be given a name based on their position,
-// e.g. `_0`, `_1`...
-//
-// A current limitation for these types is that custom types, like structs,
-// must be defined in the same macro scope, otherwise a signature cannot be
-// generated at compile time.
-
 sol! {
-    /// Function definitions generate a type that implements [`SolCall`]
-    /// named `<name>Call`. This struct will contain the  function arguments
-    ///
-    /// In the case of overloaded functions, an underscore and the index of the
-    /// function will be appended to `<name>` (like `foo_0`, `foo_1`...) for
-    /// disambiguation, but the signature will remain the same.
-    ///
-    /// E.g. if there are two functions named `foo`, the generated types will be
-    /// `foo_0Call` and `foo_1Call`, each of which will implement [`SolCall`]
-    /// with their respective signatures.
-    ///
-    /// Both of these types will have the attributes of the function, like this
-    /// doc comment, but this might change in the future.
-    ///
-    /// The [`SolCall`] implementation may be used to decode the return values
-    /// via [`SolCall::decode_returns`]. The return value is a struct containing
-    /// the return values, in the same order as the function definition. Unnamed
-    /// return values will be named based on their position, e.g. `_0`, `_1`,
-    /// like the arguments.
-    ///
-    /// For example the following input:
-    ///  `function foo(uint256 a, uint256 b) external view returns (uint256);`
-    ///
-    /// Will produce Rust code similar to this:
-    ///
-    /// ```ignore,pseudo-code
-    /// struct fooCall {
-    ///     a: U256,
-    ///     a: U256,
-    /// }
-    ///
-    /// struct fooReturn {
-    ///     _0: U256,
-    /// }
-    ///
-    /// impl SolCall for fooCall {
-    ///     type Return = fooReturn;
-    /// }
-    /// ```
     function foo(uint256 a, uint256 b) external view returns (uint256);
 
-    // These will be interpreted as `overloaded_0`, `overloaded_1`, and
-    // `overloaded_2`, each with a different signature.
+    // These will generate structs prefixed with `overloaded_0`, `overloaded_1`,
+    // and `overloaded_2` by default, but each signature is calculated with
+    // `overloaded` as the function name.
     function overloaded();
     function overloaded(uint256) returns (uint256);
     function overloaded(string);

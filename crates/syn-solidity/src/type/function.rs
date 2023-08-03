@@ -1,4 +1,4 @@
-use crate::{kw, FunctionAttributes, Parameters, Returns};
+use crate::{kw, FunctionAttributes, ParameterList, Returns};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -8,7 +8,7 @@ use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
     token::Paren,
-    Result, Token,
+    Result,
 };
 
 /// A function type: `function() returns (string memory)`
@@ -19,7 +19,7 @@ use syn::{
 pub struct TypeFunction {
     pub function_token: kw::function,
     pub paren_token: Paren,
-    pub arguments: Parameters<Token![,]>,
+    pub arguments: ParameterList,
     /// The Solidity attributes of the function.
     pub attributes: FunctionAttributes,
     /// The optional return types of the function.

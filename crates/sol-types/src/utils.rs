@@ -7,15 +7,22 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! Utils used by different modules.
+//! Utilities used by different modules.
 
 use crate::{Error, Result, Word};
 
 /// Calculates the padded length of a slice by rounding its length to the next
-/// word
+/// word.
 #[inline]
-pub(crate) const fn words_for(data: &[u8]) -> usize {
-    (data.len() + 31) / 32
+pub const fn words_for(data: &[u8]) -> usize {
+    words_for_len(data.len())
+}
+
+/// Calculates the padded length of a slice of a specific length by rounding its
+/// length to the next word.
+#[inline]
+pub const fn words_for_len(len: usize) -> usize {
+    (len + 31) / 32
 }
 
 /// `padded_len` rounds a slice length up to the next multiple of 32
@@ -77,35 +84,35 @@ pub(crate) fn check_bool(slice: Word) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::pad_u32;
-    use hex_literal::hex;
+    use super::*;
+    use alloy_primitives::b256;
 
     #[test]
     fn test_words_for() {
-        assert_eq!(super::words_for(&[]), 0);
-        assert_eq!(super::words_for(&[0; 31]), 1);
-        assert_eq!(super::words_for(&[0; 32]), 1);
-        assert_eq!(super::words_for(&[0; 33]), 2);
+        assert_eq!(words_for(&[]), 0);
+        assert_eq!(words_for(&[0; 31]), 1);
+        assert_eq!(words_for(&[0; 32]), 1);
+        assert_eq!(words_for(&[0; 33]), 2);
     }
 
     #[test]
     fn test_pad_u32() {
         // this will fail if endianness is not supported
         assert_eq!(
-            pad_u32(0).to_vec(),
-            hex!("0000000000000000000000000000000000000000000000000000000000000000").to_vec()
+            pad_u32(0),
+            b256!("0000000000000000000000000000000000000000000000000000000000000000")
         );
         assert_eq!(
-            pad_u32(1).to_vec(),
-            hex!("0000000000000000000000000000000000000000000000000000000000000001").to_vec()
+            pad_u32(1),
+            b256!("0000000000000000000000000000000000000000000000000000000000000001")
         );
         assert_eq!(
-            pad_u32(0x100).to_vec(),
-            hex!("0000000000000000000000000000000000000000000000000000000000000100").to_vec()
+            pad_u32(0x100),
+            b256!("0000000000000000000000000000000000000000000000000000000000000100")
         );
         assert_eq!(
-            pad_u32(0xffffffff).to_vec(),
-            hex!("00000000000000000000000000000000000000000000000000000000ffffffff").to_vec()
+            pad_u32(0xffffffff),
+            b256!("00000000000000000000000000000000000000000000000000000000ffffffff")
         );
     }
 }

@@ -3,7 +3,7 @@
 
 use super::{Encodable, SolType};
 use crate::{token::TokenSeq, Eip712Domain, TokenType, Word};
-use alloc::{borrow::Cow, string::String, vec::Vec};
+use alloc::{borrow::Cow, vec::Vec};
 use alloy_primitives::{keccak256, B256};
 
 type TupleFor<'a, T> = <T as SolStruct>::Tuple<'a>;
@@ -40,15 +40,8 @@ pub trait SolStruct: 'static {
 
     /// The struct name.
     ///
-    /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
+    /// Used in [`eip712_encode_type`][SolType::sol_type_name].
     const NAME: &'static str;
-
-    /// The field types and names. Type is a Solidity string, and must conform
-    /// to the name of the Solidty type at the same index in the associated
-    /// tuple.
-    ///
-    /// Used in [`eip712_encode_type`][SolStruct::eip712_encode_type].
-    const FIELDS: &'static [(&'static str, &'static str)];
 
     // TODO: avoid clones here
     /// Convert to the tuple type used for ABI encoding and decoding.
@@ -70,28 +63,28 @@ pub trait SolStruct: 'static {
         self.tokenize().total_words() * Word::len_bytes()
     }
 
+    /// Returns component EIP-712 types. These types are used to construct
+    /// the `encodeType` string. These are the types of the struct's fields,
+    /// and should not include the root type.
+    fn eip712_components() -> Vec<Cow<'static, str>>;
+
+    /// Return the root EIP-712 type. This type is used to construct the
+    /// `encodeType` string.
+    fn eip712_root_type() -> Cow<'static, str>;
+
     /// EIP-712 `encodeType`
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     fn eip712_encode_type() -> Cow<'static, str> {
-        let capacity = Self::FIELDS
-            .iter()
-            .map(|(ty, name)| ty.len() + name.len() + 1)
-            .sum::<usize>()
-            + Self::NAME.len()
-            + 2;
-        let mut out = String::with_capacity(capacity);
-        out.push_str(Self::NAME);
-        out.push('(');
-        for (i, &(ty, name)) in Self::FIELDS.iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            out.push_str(ty);
-            out.push(' ');
-            out.push_str(name);
+        let root_type = Self::eip712_root_type();
+        let mut components = Self::eip712_components();
+
+        if components.is_empty() {
+            return root_type
         }
-        out.push(')');
-        out.into()
+
+        components.sort_unstable();
+        components.dedup();
+        Cow::Owned(core::iter::once(root_type).chain(components).collect())
     }
 
     /// EIP-712 `typeHash`

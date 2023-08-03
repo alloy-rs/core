@@ -156,7 +156,7 @@ impl SolError for Revert {
 
     #[inline]
     fn encoded_size(&self) -> usize {
-        64 + crate::util::next_multiple_of_32(self.reason.len())
+        64 + crate::utils::next_multiple_of_32(self.reason.len())
     }
 }
 

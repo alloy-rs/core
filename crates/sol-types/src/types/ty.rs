@@ -1,10 +1,83 @@
 use crate::{token::TokenSeq, Result, TokenType, Word};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 
-/// An encodable is any type that may be encoded via a given `SolType`.
+/// An encodable is any type that may be encoded via a given [`SolType`].
+///
+/// The [`SolType`] trait contains encoding logic for a single associated
+/// `RustType`. This trait allows us to plug in encoding logic for other
+/// `RustTypes`. Consumers of this library may impl `Encodable<T>` for their
+/// types.
+///
+/// ### Why no `Decodable<T>`?
+///
+/// We believe in permissive encoders and restrictive decoders. To avoid type
+/// ambiguity during the decoding process, we do not allow decoding into
+/// arbitrary types. Users desiring this behavior should convert after decoding.
+///
+/// ### Usage Note
+///
+/// Rust data may not have a 1:1 mapping to Solidity types. The easiest example
+/// of this is [`u64`], which may correspond to any of `uint{40,48,56,64}`.
+/// Similarly, [`u128`] covers `uint72-128`. Because of this, usage of this
+/// trait is always ambiguous for certain types.
+///
+/// ```compile_fail
+/// # use alloy_sol_types::{SolType, Encodable, sol_data::*};
+/// # fn main() -> Result<(), alloy_sol_types::Error> {
+/// // Compilation fails due to ambiguity
+/// //  error[E0284]: type annotations needed
+/// // |
+/// // 6 | 100u64.to_tokens();
+/// // |        ^^^^^^^^^
+/// // |
+/// // = note: cannot satisfy `<_ as SolType>::TokenType<'_> == _`
+/// // help: try using a fully qualified path to specify the expected types
+/// // |
+/// // 6 | <u64 as Encodable<T>>::to_tokens(&100u64);
+/// // | ++++++++++++++++++++++++++++++++++      ~
+/// //
+/// 100u64.to_tokens();
+/// # Ok(())
+/// # }
+/// ```
+///
+/// To resolve this, specify the related [`SolType`]. When specifying T it is
+/// recommended that you invoke the [`SolType`] methods on `T`, rather than the
+/// [`Encodable`] methods.
+///
+/// ```
+/// # use alloy_sol_types::{SolType, Encodable, sol_data::*};
+/// # fn main() -> Result<(), alloy_sol_types::Error> {
+/// // Not recommended:
+/// Encodable::<Uint<64>>::to_tokens(&100u64);
+///
+/// // Recommended:
+/// Uint::<64>::tokenize(&100u64);
+/// # Ok(())
+/// # }
+/// ```
 pub trait Encodable<T: ?Sized + SolType> {
     /// Convert the value to tokens.
+    ///
+    /// ### Usage Note
+    ///
+    /// Rust data may not have a 1:1 mapping to Solidity types. Using this
+    /// trait without qualifying `T` will often result in type ambiguities.
+    ///
+    /// See the [`Encodable`] trait docs for more details.
     fn to_tokens(&self) -> T::TokenType<'_>;
+
+    /// Return the Solidity type name of this value.
+    ///
+    /// ### Usage Note
+    ///
+    /// Rust data may not have a 1:1 mapping to Solidity types. Using this
+    /// trait without qualifying `T` will often result in type ambiguities.
+    ///
+    /// See the [`Encodable`] trait docs for more details.
+    fn sol_type_name(&self) -> Cow<'static, str> {
+        T::sol_type_name()
+    }
 }
 
 /// A Solidity Type, for ABI encoding and decoding

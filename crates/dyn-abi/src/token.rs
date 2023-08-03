@@ -1,5 +1,5 @@
-use crate::{no_std_prelude::*, Decoder, DynSolValue, Error, Result, Word};
-use alloc::borrow::Cow;
+use crate::{Decoder, DynSolValue, Error, Result, Word};
+use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use alloy_sol_types::token::{PackedSeqToken, TokenType, WordToken};
 
 /// A dynamic token. Equivalent to an enum over all types implementing
@@ -21,6 +21,7 @@ pub enum DynToken<'a> {
         /// This is used only when decoding. It indicates what the token type
         /// of the sequence is. During tokenization of data, the type of the
         /// contents is known, so this is not needed.
+        #[doc(hidden)]
         template: Option<Box<DynToken<'a>>>,
     },
     /// A packed sequence (string or bytes).
@@ -28,12 +29,14 @@ pub enum DynToken<'a> {
 }
 
 impl<T: Into<Word>> From<T> for DynToken<'_> {
+    #[inline]
     fn from(value: T) -> Self {
         Self::Word(value.into())
     }
 }
 
 impl<'a> PartialEq<DynToken<'a>> for DynToken<'_> {
+    #[inline]
     fn eq(&self, other: &DynToken<'_>) -> bool {
         match (self, other) {
             (Self::Word(l0), DynToken::Word(r0)) => l0 == r0,
@@ -58,14 +61,16 @@ impl Eq for DynToken<'_> {}
 
 impl<'a> DynToken<'a> {
     /// Instantiate a DynToken from a fixed sequence of values.
+    #[inline]
     pub fn from_fixed_seq(seq: &'a [DynSolValue]) -> Self {
-        let tokens = seq.iter().map(|v| v.tokenize()).collect::<Vec<_>>();
+        let tokens = seq.iter().map(DynSolValue::tokenize).collect();
         Self::FixedSeq(Cow::Owned(tokens), seq.len())
     }
 
     /// Instantiate a DynToken from a dynamic sequence of values.
+    #[inline]
     pub fn from_dyn_seq(seq: &'a [DynSolValue]) -> Self {
-        let tokens = seq.iter().map(|v| v.tokenize()).collect::<Vec<_>>();
+        let tokens = seq.iter().map(DynSolValue::tokenize).collect();
         Self::DynSeq {
             contents: Cow::Owned(tokens),
             template: None,
@@ -100,10 +105,10 @@ impl<'a> DynToken<'a> {
     }
 
     /// Fallible cast into a sequence, dynamic or fixed-size
+    #[inline]
     pub fn as_token_seq(&self) -> Option<&[DynToken<'a>]> {
         match self {
-            Self::FixedSeq(tokens, _) => Some(tokens),
-            Self::DynSeq { contents, .. } => Some(contents),
+            Self::FixedSeq(contents, _) | Self::DynSeq { contents, .. } => Some(contents),
             _ => None,
         }
     }
@@ -122,41 +127,51 @@ impl<'a> DynToken<'a> {
     pub fn is_dynamic(&self) -> bool {
         match self {
             Self::Word(_) => false,
-            Self::FixedSeq(inner, _) => inner.iter().any(|i| i.is_dynamic()),
-            Self::DynSeq { .. } => true,
-            Self::PackedSeq(_) => true,
+            Self::FixedSeq(inner, _) => inner.iter().any(Self::is_dynamic),
+            Self::DynSeq { .. } | Self::PackedSeq(_) => true,
         }
     }
 
     /// Decodes from a decoder, populating the structure with the decoded data.
     #[inline]
-    pub fn decode_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
+    pub(crate) fn decode_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
         let dynamic = self.is_dynamic();
         match self {
             Self::Word(w) => *w = WordToken::decode_from(dec)?.0,
-            Self::FixedSeq(tokens, size) => {
+            Self::FixedSeq(..) => {
                 let mut child = if dynamic {
                     dec.take_indirection()?
                 } else {
                     dec.raw_child()
                 };
-                for token in tokens.to_mut().iter_mut().take(*size) {
-                    token.decode_populate(&mut child)?;
+
+                self.decode_sequence_populate(&mut child)?;
+
+                if !dynamic {
+                    dec.take_offset(child);
                 }
             }
             Self::DynSeq { contents, template } => {
                 let mut child = dec.take_indirection()?;
                 let size = child.take_u32()? as usize;
-                let mut new_tokens: Vec<DynToken<'a>> = Vec::with_capacity(size);
-                for _ in 0..size {
-                    let mut t = if let Some(item) = new_tokens.first() {
-                        item.clone()
-                    } else {
-                        *(template.take().unwrap())
-                    };
-                    t.decode_populate(&mut child)?;
-                    new_tokens.push(t);
-                }
+                // This appears to be an unclarity in the solidity spec. The
+                // spec specifies that offsets are relative to the beginning of
+                // `enc(X)`. But known-good test vectors have it relative to the
+                // word AFTER the array size
+                let mut child = child.raw_child();
+
+                let mut new_tokens: Vec<_> = Vec::with_capacity(size);
+                // This expect is safe because this is only invoked after
+                // `empty_dyn_token()` which always sets template
+                let t = template
+                    .take()
+                    .expect("No template. This is a bug, please report it.");
+                new_tokens.resize(size, *t);
+
+                new_tokens
+                    .iter_mut()
+                    .try_for_each(|t| t.decode_populate(&mut child))?;
+
                 *contents = new_tokens.into();
             }
             Self::PackedSeq(buf) => *buf = PackedSeqToken::decode_from(dec)?.0,
@@ -169,8 +184,8 @@ impl<'a> DynToken<'a> {
     #[inline]
     pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
         match self {
-            Self::FixedSeq(buf, _) => {
-                for item in buf.to_mut().iter_mut() {
+            Self::FixedSeq(buf, size) => {
+                for item in buf.to_mut().iter_mut().take(*size) {
                     item.decode_populate(dec)?;
                 }
                 Ok(())

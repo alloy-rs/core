@@ -13,8 +13,8 @@ fn ethabi_encode(c: &mut Criterion) {
     g.bench_function("single", |b| {
         let input = encode_single_input();
         b.iter(|| {
-            let token = ethabi::Token::String(black_box(&input).clone());
-            ethabi::encode(&[token])
+            let token = ethabi::Token::String(input.clone());
+            ethabi::encode(&[black_box(token)])
         });
     });
 
@@ -96,7 +96,7 @@ fn sol_types_encode(c: &mut Criterion) {
 
     g.bench_function("struct", |b| {
         let input = encode_struct_input();
-        b.iter(|| Input::encode(&input));
+        b.iter(|| Input::encode(black_box(&input)));
     });
 
     g.finish();

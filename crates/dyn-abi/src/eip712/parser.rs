@@ -1,9 +1,11 @@
+//! EIP-712 specific parsing structures.
+
 use crate::{
     eip712::resolver::{PropertyDef, TypeDef},
-    no_std_prelude::*,
-    parser::TypeSpecifier,
     DynAbiError,
 };
+use alloc::vec::Vec;
+use alloy_sol_type_parser::{Error as TypeParserError, TypeSpecifier};
 
 /// A property is a type and a name. Of the form `type name`. E.g.
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.
@@ -29,7 +31,6 @@ impl<'a> TryFrom<&'a str> for PropDef<'a> {
         let (ty, name) = input
             .rsplit_once(' ')
             .ok_or_else(|| DynAbiError::invalid_property_def(input))?;
-
         Ok(PropDef {
             ty: ty.trim().try_into()?,
             name: name.trim(),
@@ -66,9 +67,9 @@ impl<'a> TryFrom<&'a str> for ComponentType<'a> {
     type Error = DynAbiError;
 
     fn try_from(input: &'a str) -> Result<Self, Self::Error> {
-        let (name, props_str) = input
-            .split_once('(')
-            .ok_or_else(|| DynAbiError::invalid_type_string(input))?;
+        let (name, props_str) = input.split_once('(').ok_or_else(|| {
+            DynAbiError::TypeParserError(TypeParserError::invalid_type_string(input))
+        })?;
 
         let mut props = vec![];
         let mut depth = 1; // 1 to account for the ( in the split above

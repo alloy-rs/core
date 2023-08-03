@@ -1,0 +1,29 @@
+error: empty input is not allowed
+ --> tests/ui/json/abigen.rs:3:16
+  |
+3 | sol!(EmptyStr, "");
+  |                ^^
+
+error: failed to canonicalize path: No such file or directory (os error 2)
+ --> tests/ui/json/abigen.rs:5:24
+  |
+5 | sol!(PathDoesNotExist, "???");
+  |                        ^^^^^
+
+error: failed to canonicalize path: No such file or directory (os error 2)
+ --> tests/ui/json/abigen.rs:6:6
+  |
+6 | sol!("pragma solidity ^0.8.0");
+  |      ^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: failed to canonicalize path: No such file or directory (os error 2)
+ --> tests/ui/json/abigen.rs:7:6
+  |
+7 | sol!("pragma solidity ^0.8.0;");
+  |      ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invalid JSON: missing field `abi` at line 1 column 2
+ --> tests/ui/json/abigen.rs:9:22
+  |
+9 | sol!(NoJsonFeature1, "{}");
+  |                      ^^^^

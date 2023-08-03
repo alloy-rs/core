@@ -2,10 +2,13 @@
 
 Core libraries at the root of the Rust Ethereum ecosystem.
 
-Alloy is a rewrite of ethers-rs from the ground up, with exciting new features,
-high performance & excellent docs.
-Ethers-rs will continue to be maintained until we have feature-parity in Alloy.
-No action is needed from devs.
+Alloy is a rewrite of [`ethers-rs`] from the ground up, with exciting new
+features, high performance, and excellent docs.
+
+[`ethers-rs`] will continue to be maintained until we have achieved
+feature-parity in Alloy. No action is currently needed from devs.
+
+[`ethers-rs`]: https://github.com/gakonst/ethers-rs
 
 [![Build Status][actions-badge]][actions-url]
 [![Telegram chat][telegram-badge]][telegram-url]
@@ -20,25 +23,24 @@ No action is needed from devs.
 This repository contains the following crates:
 
 - [`alloy-primitives`] - Primitive integer and byte types
-- [`alloy-rlp`] - Implementation of [Ethereum RLP serialization][rlp]
-- [`alloy-rlp-derive`] - Derive macros for `alloy-rlp`
-- [`alloy-dyn-abi`] - Run-time ABI and [EIP-712] implementations
-- [`alloy-sol-types`] - Compile-time ABI and [EIP-712] implementations
-- [`alloy-json-abi`] - [JSON-ABI] implementation
-- [`alloy-sol-macro`] - The `sol!` procedural macro
-- [`syn-solidity`] - [`syn`]-powered Solidity parser, used by `alloy-sol-macro`
+- [`alloy-sol-types`] - Compile-time [ABI] and [EIP-712] implementations
+- [`alloy-sol-macro`] - The [`sol!`] procedural macro
+- [`alloy-dyn-abi`] - Run-time [ABI] and [EIP-712] implementations
+- [`alloy-json-abi`] - Full Ethereum [JSON-ABI] implementation
+- [`alloy-sol-type-parser`] - A simple parser for Solidity type strings
+- [`syn-solidity`] - [`syn`]-powered Solidity parser
 
 [`alloy-primitives`]: ./crates/primitives
-[`alloy-rlp`]: ./crates/rlp
-[`alloy-rlp-derive`]: ./crates/rlp-derive
-[`alloy-dyn-abi`]: ./crates/dyn-abi
 [`alloy-sol-types`]: ./crates/sol-types
-[`alloy-json-abi`]: ./crates/json-abi
 [`alloy-sol-macro`]: ./crates/sol-macro
+[`alloy-dyn-abi`]: ./crates/dyn-abi
+[`alloy-json-abi`]: ./crates/json-abi
+[`alloy-sol-type-parser`]: ./crates/sol-type-parser
 [`syn-solidity`]: ./crates/syn-solidity
-
-[rlp]: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp
+[JSON-ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html#json
+[ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html
 [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
+[`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/macro.sol.html
 [`syn`]: https://github.com/dtolnay/syn
 
 ## Supported Rust Versions
@@ -92,10 +94,11 @@ interface, as we believe [viem] or [ethers.js] serve that need very well.
 
 ## Note on `no_std`
 
-We intend these crates to support `no_std` with `alloc`, and have written them
-with that in mind. However, a key dependency, `ruint`, does not yet support
-`no_std`. We strive to maintain `no_std` + `alloc` compatibility, and intend to
-contribute upstream PRs to achieve it in ruint.
+All crates in this workspace should support `no_std` environments, with the
+`alloc` crate. If you find a crate that does not support `no_std`, please
+[open an issue].
+
+[open an issue]: https://github.com/alloy-rs/core/issues/new/choose
 
 ## Credits
 
@@ -107,3 +110,18 @@ None of these crates would have been possible without the great work done in:
 - [`ethabi`](https://github.com/rust-ethereum/ethabi)
 - [`ethcontract-rs`](https://github.com/gnosis/ethcontract-rs/)
 - [`guac_rs`](https://github.com/althea-net/guac_rs/)
+
+#### License
+
+<sup>
+Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
+2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
+</sup>
+
+<br>
+
+<sub>
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in these crates by you, as defined in the Apache-2.0 license,
+shall be dual licensed as above, without any additional terms or conditions.
+</sub>

@@ -1,4 +1,4 @@
-use super::{kw, Modifier, Mutability, Override, Visibility};
+use super::{kw, Modifier, Mutability, Override, SolPath, VariableAttribute, Visibility};
 use proc_macro2::Span;
 use std::{
     collections::HashSet,
@@ -16,7 +16,7 @@ use syn::{
 
 /// A list of unique function attributes. Used in
 /// [ItemFunction][crate::ItemFunction].
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FunctionAttributes(pub HashSet<FunctionAttribute>);
 
 impl Deref for FunctionAttributes {
@@ -50,6 +50,61 @@ impl Parse for FunctionAttributes {
             attributes.insert(attr);
         }
         Ok(Self(attributes))
+    }
+}
+
+impl FunctionAttributes {
+    #[inline]
+    pub fn new() -> Self {
+        Self(HashSet::new())
+    }
+
+    pub fn visibility(&self) -> Option<Visibility> {
+        self.0.iter().find_map(FunctionAttribute::visibility)
+    }
+
+    pub fn mutability(&self) -> Option<Mutability> {
+        self.0.iter().find_map(FunctionAttribute::mutability)
+    }
+
+    pub fn r#override(&self) -> Option<&Override> {
+        self.0.iter().find_map(FunctionAttribute::r#override)
+    }
+
+    pub fn modifier(&self) -> Option<&Modifier> {
+        self.0.iter().find_map(FunctionAttribute::modifier)
+    }
+
+    pub fn has_external(&self) -> bool {
+        self.0.iter().any(FunctionAttribute::is_external)
+    }
+
+    pub fn has_internal(&self) -> bool {
+        self.0.iter().any(FunctionAttribute::is_internal)
+    }
+
+    pub fn has_private(&self) -> bool {
+        self.0.iter().any(FunctionAttribute::is_private)
+    }
+
+    pub fn has_public(&self) -> bool {
+        self.0.iter().any(FunctionAttribute::is_public)
+    }
+
+    pub fn has_virtual(&self) -> bool {
+        self.0.iter().any(FunctionAttribute::is_virtual)
+    }
+
+    pub fn has_immutable(&self) -> bool {
+        self.0.iter().any(FunctionAttribute::is_immutable)
+    }
+
+    pub fn has_override(&self, path: Option<&SolPath>) -> bool {
+        self.0.iter().any(|attr| attr.is_override(path))
+    }
+
+    pub fn has_modifier(&self, path: Option<&SolPath>) -> bool {
+        self.0.iter().any(|attr| attr.is_modifier(path))
     }
 }
 
@@ -140,6 +195,17 @@ impl Parse for FunctionAttribute {
     }
 }
 
+impl From<VariableAttribute> for FunctionAttribute {
+    fn from(value: VariableAttribute) -> Self {
+        match value {
+            VariableAttribute::Visibility(v) => Self::Visibility(v),
+            VariableAttribute::Constant(c) => Self::Immutable(kw::immutable(c.span)),
+            VariableAttribute::Immutable(i) => Self::Immutable(i),
+            VariableAttribute::Override(o) => Self::Override(o),
+        }
+    }
+}
+
 impl FunctionAttribute {
     pub fn span(&self) -> Span {
         match self {
@@ -161,5 +227,83 @@ impl FunctionAttribute {
             Self::Immutable(i) => i.span = span,
             Self::Modifier(m) => m.set_span(span),
         }
+    }
+
+    #[inline]
+    pub const fn visibility(&self) -> Option<Visibility> {
+        match self {
+            Self::Visibility(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub const fn mutability(&self) -> Option<Mutability> {
+        match self {
+            Self::Mutability(m) => Some(*m),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub const fn r#override(&self) -> Option<&Override> {
+        match self {
+            Self::Override(o) => Some(o),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub const fn modifier(&self) -> Option<&Modifier> {
+        match self {
+            Self::Modifier(m) => Some(m),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub const fn is_external(&self) -> bool {
+        matches!(self, Self::Visibility(Visibility::External(_)))
+    }
+
+    #[inline]
+    pub const fn is_public(&self) -> bool {
+        matches!(self, Self::Visibility(Visibility::Public(_)))
+    }
+
+    #[inline]
+    pub const fn is_internal(&self) -> bool {
+        matches!(self, Self::Visibility(Visibility::Internal(_)))
+    }
+
+    #[inline]
+    pub const fn is_private(&self) -> bool {
+        matches!(self, Self::Visibility(Visibility::Private(_)))
+    }
+
+    #[inline]
+    pub const fn is_virtual(&self) -> bool {
+        matches!(self, Self::Virtual(_))
+    }
+
+    #[inline]
+    pub const fn is_immutable(&self) -> bool {
+        matches!(self, Self::Immutable(_))
+    }
+
+    #[inline]
+    pub fn is_override(&self, path: Option<&SolPath>) -> bool {
+        self.r#override().map_or(false, |o| match path {
+            Some(path) => o.paths.iter().any(|p| p == path),
+            None => true,
+        })
+    }
+
+    #[inline]
+    pub fn is_modifier(&self, path: Option<&SolPath>) -> bool {
+        self.modifier().map_or(false, |m| match path {
+            Some(path) => m.name == *path,
+            None => true,
+        })
     }
 }

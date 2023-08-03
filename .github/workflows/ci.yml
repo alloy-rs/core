@@ -23,9 +23,6 @@ jobs:
             - uses: dtolnay/rust-toolchain@master
               with:
                   toolchain: ${{ matrix.rust }}
-            # "skip" a UI test because of differing output
-            - run: rm crates/sol-types/tests/ui/type.*
-              if: ${{ matrix.rust }} == '1.65'
             - uses: Swatinem/rust-cache@v2
             - name: test
               run: cargo test --workspace ${{ matrix.flags }}
@@ -39,6 +36,7 @@ jobs:
             - uses: dtolnay/rust-toolchain@stable
               with:
                   targets: wasm32-unknown-unknown
+            - uses: Swatinem/rust-cache@v2
             - name: check
               run: cargo check --workspace --target wasm32-unknown-unknown
 
@@ -61,7 +59,7 @@ jobs:
         steps:
             - uses: actions/checkout@v3
             - uses: dtolnay/rust-toolchain@clippy
-            - run: cargo clippy --workspace --all-targets
+            - run: cargo clippy --workspace --all-targets --all-features
               env:
                   RUSTFLAGS: -Dwarnings
 

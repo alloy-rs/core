@@ -30,9 +30,12 @@ alloy-primitives = { workspace = true, features = ["arbitrary"] }
 
 hex-literal.workspace = true
 proptest.workspace = true
+rustversion = "1.0"
 trybuild = "1.0"
 
 [features]
 default = ["std"]
 std = ["alloy-primitives/std", "hex/std", "serde?/std"]
-eip712-serde = ["dep:serde", "serde?/alloc", "alloy-primitives/serde"]
+json = ["alloy-sol-macro/json"]
+eip712-serde = ["dep:serde", "alloy-primitives/serde"]
+arbitrary = ["alloy-primitives/arbitrary"]

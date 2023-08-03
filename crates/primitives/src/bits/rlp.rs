@@ -1,9 +1,9 @@
 use super::FixedBytes;
-use alloy_rlp::{impl_max_encoded_len, length_of_length, Decodable, Encodable};
+use alloy_rlp::{length_of_length, Decodable, Encodable, MaxEncodedLen, MaxEncodedLenAssoc};
 
 impl<const N: usize> Decodable for FixedBytes<N> {
     #[inline]
-    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::DecodeError> {
+    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
         Decodable::decode(buf).map(Self)
     }
 }
@@ -24,8 +24,12 @@ impl<const N: usize> Encodable for FixedBytes<N> {
 // https://github.com/rust-lang/rust/issues/76560
 macro_rules! fixed_bytes_max_encoded_len {
     ($($sz:literal),+) => {$(
-        impl_max_encoded_len!(FixedBytes<$sz>, $sz + length_of_length($sz));
+        unsafe impl MaxEncodedLen<{ $sz + length_of_length($sz) }> for FixedBytes<$sz> {}
     )+};
 }
 
 fixed_bytes_max_encoded_len!(0, 1, 2, 4, 8, 16, 20, 32, 64, 128, 256, 512, 1024);
+
+unsafe impl<const N: usize> MaxEncodedLenAssoc for FixedBytes<N> {
+    const LEN: usize = N + length_of_length(N);
+}
