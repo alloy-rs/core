@@ -88,7 +88,7 @@ mod tests {
         assert_eq!(ser, "\"0x000000000123456789abcdef\"");
         assert_eq!(serde_json::from_str::<FixedBytes<12>>(&ser).unwrap(), bytes);
 
-        let val = serde_json::to_value(&bytes).unwrap();
+        let val = serde_json::to_value(bytes).unwrap();
         assert_eq!(val, serde_json::json! {"0x000000000123456789abcdef"});
         assert_eq!(
             serde_json::from_value::<FixedBytes<12>>(val).unwrap(),
