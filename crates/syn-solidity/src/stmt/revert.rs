@@ -1,10 +1,10 @@
-use crate::{call_args::CallArgs, expr::Expr, kw};
+use crate::{call_args::CallArgs, expr::Stmt, kw};
 use syn::{parse::Parse, Token};
 
 #[derive(Clone, Debug)]
 pub struct Revert {
     kw: kw::revert,
-    expr: Box<Expr>,
+    expr: Box<Stmt>,
     args: CallArgs,
     semi: Token![;],
 }

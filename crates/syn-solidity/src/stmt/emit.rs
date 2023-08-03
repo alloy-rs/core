@@ -1,10 +1,10 @@
-use crate::{call_args::CallArgs, expr::Expr, kw};
+use crate::{call_args::CallArgs, expr::Stmt, kw};
 use syn::{parse::Parse, Token};
 
 #[derive(Debug, Clone)]
 pub struct Emit {
     keyword: kw::emit,
-    expr: Box<Expr>,
+    expr: Box<Stmt>,
     args: CallArgs,
     semi: Token!(;),
 }

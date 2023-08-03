@@ -1,10 +1,10 @@
-use crate::expr::Expr;
+use crate::expr::Stmt;
 use syn::{bracketed, parse::Parse, punctuated::Punctuated, token::Bracket, Token};
 
 #[derive(Debug, Clone)]
 pub struct InlineArrayExpr {
     bracket: Bracket,
-    exprs: Punctuated<Expr, Token![,]>,
+    exprs: Punctuated<Stmt, Token![,]>,
 }
 
 impl Parse for InlineArrayExpr {

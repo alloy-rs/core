@@ -1,5 +1,5 @@
 use super::VariableDeclaration;
-use crate::{r#type::Type, SolIdent};
+use crate::{SolIdent, Type};
 use std::{
     fmt,
     ops::{Deref, DerefMut},

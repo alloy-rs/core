@@ -18,3 +18,8 @@ pub mod try_catch;
 pub mod tuple_expr;
 pub mod unchecked;
 pub mod r#while;
+
+mod block;
+pub use block::Block;
+
+pub use expr::Stmt;

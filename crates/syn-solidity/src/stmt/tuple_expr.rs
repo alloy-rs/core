@@ -1,11 +1,11 @@
 use syn::{parenthesized, parse::Parse, punctuated::Punctuated, token::Paren, Token};
 
-use crate::expr::Expr;
+use crate::expr::Stmt;
 
 #[derive(Debug, Clone)]
 pub struct TupleExpr {
     paren: Paren,
-    exprs: Punctuated<Expr, Token![,]>,
+    exprs: Punctuated<Stmt, Token![,]>,
 }
 
 impl Parse for TupleExpr {

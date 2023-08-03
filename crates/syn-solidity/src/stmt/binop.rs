@@ -1,13 +1,13 @@
 use crate::binops::Binop;
 use syn::parse::Parse;
 
-use crate::expr::Expr;
+use crate::expr::Stmt;
 
 #[derive(Debug, Clone)]
 pub struct BinopExpr {
-    pub left: Box<Expr>,
+    pub left: Box<Stmt>,
     pub op: Binop,
-    pub right: Box<Expr>,
+    pub right: Box<Stmt>,
 }
 
 impl Parse for BinopExpr {

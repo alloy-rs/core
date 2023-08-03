@@ -1,10 +1,10 @@
-use crate::expr::Expr;
+use crate::expr::Stmt;
 use proc_macro2::Ident;
 use syn::{parse::Parse, Token};
 
 #[derive(Debug, Clone)]
 pub struct Field {
-    pub base: Box<Expr>,
+    pub base: Box<Stmt>,
     pub dot: Token![.],
     pub name: Ident,
 }

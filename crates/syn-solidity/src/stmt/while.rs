@@ -1,6 +1,6 @@
 use syn::{parenthesized, parse::Parse, token::Paren, Token};
 
-use crate::{expr::Expr, Block};
+use crate::{expr::Stmt, Block};
 
 #[derive(Debug, Clone)]
 pub struct DoWhile {
@@ -8,7 +8,7 @@ pub struct DoWhile {
     pub block: Block,
     pub while_token: Token![while],
     pub paren: Paren,
-    pub expr: Box<Expr>,
+    pub expr: Box<Stmt>,
 }
 
 impl Parse for DoWhile {
@@ -35,7 +35,7 @@ impl Parse for DoWhile {
 pub struct While {
     pub while_token: Token![while],
     pub paren: Paren,
-    pub expr: Box<Expr>,
+    pub expr: Box<Stmt>,
     pub block: Block,
 }
 

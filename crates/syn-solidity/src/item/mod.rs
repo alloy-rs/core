@@ -6,34 +6,36 @@ use syn::{
 };
 
 mod contract;
-pub use contract::*;
+pub use contract::ItemContract;
 
 mod r#enum;
-pub use r#enum::*;
+pub use r#enum::ItemEnum;
 
 mod error;
-pub use error::*;
+pub use error::ItemError;
 
 mod event;
-pub use event::*;
+pub use event::{EventParameter, ItemEvent};
 
 mod function;
 pub use function::{FunctionKind, ItemFunction, Returns};
 
 mod import;
-pub use import::*;
+pub use import::{
+    ImportAlias, ImportAliases, ImportDirective, ImportGlob, ImportPath, ImportPlain,
+};
 
 mod pragma;
-pub use pragma::*;
+pub use pragma::{PragmaDirective, PragmaTokens};
 
 mod r#struct;
-pub use r#struct::*;
+pub use r#struct::ItemStruct;
 
 mod udt;
-pub use udt::*;
+pub use udt::ItemUdt;
 
 mod using;
-pub use using::*;
+pub use using::{UserDefinableOperator, UsingDirective, UsingList, UsingListItem, UsingType};
 
 /// An AST item. A more expanded version of a [Solidity source unit][ref].
 ///
@@ -102,7 +104,7 @@ impl Parse for Item {
             input.parse().map(Self::Import)
         } else if lookahead.peek(kw::using) {
             input.parse().map(Self::Using)
-        } else if crate::r#type::Type::peek(&lookahead) {
+        } else if crate::Type::peek(&lookahead) {
             input.parse().map(Self::Variable)
         } else {
             Err(lookahead.error())

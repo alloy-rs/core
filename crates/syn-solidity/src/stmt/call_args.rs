@@ -5,7 +5,7 @@ use syn::{
     Error, Ident, Token,
 };
 
-use crate::expr::Expr;
+use crate::expr::Stmt;
 
 #[derive(Debug, Clone)]
 pub enum CallArgs {
@@ -14,7 +14,7 @@ pub enum CallArgs {
 }
 
 #[derive(Debug, Clone)]
-pub struct ListArgs(pub Punctuated<Expr, Token![,]>);
+pub struct ListArgs(pub Punctuated<Stmt, Token![,]>);
 
 #[derive(Debug, Clone)]
 pub struct MapArgs(pub Punctuated<Map, Token![,]>);
@@ -23,7 +23,7 @@ pub struct MapArgs(pub Punctuated<Map, Token![,]>);
 pub struct Map {
     pub key: Ident,
     pub semi: Token![:],
-    pub value: Box<Expr>,
+    pub value: Box<Stmt>,
 }
 
 impl Parse for CallArgs {

@@ -20,15 +20,17 @@ use syn::Result;
 #[macro_use]
 mod macros;
 
-pub mod attribute;
-pub mod literals;
-pub use attribute::*;
+mod attribute;
+pub use attribute::{
+    FunctionAttribute, FunctionAttributes, Modifier, Mutability, Override, Storage,
+    VariableAttribute, VariableAttributes, Visibility,
+};
 
-pub mod statments;
-pub use statments::*;
+mod file;
+pub use file::File;
 
-pub mod file;
-pub use file::*;
+mod ident;
+pub use ident::{SolIdent, SolPath};
 
 mod item;
 pub use item::{
@@ -38,23 +40,21 @@ pub use item::{
     UsingDirective, UsingList, UsingListItem, UsingType,
 };
 
-pub mod item;
-pub use item::*;
-pub mod lit;
-pub use lit::*;
+mod lit;
+pub use lit::LitStr;
 
 pub mod kw;
 
-pub mod stmt;
+mod stmt;
 pub use stmt::*;
 
-pub mod r#type;
-pub use r#type::Type;
+mod r#type;
+pub use r#type::{Type, TypeArray, TypeFunction, TypeMapping, TypeTuple};
 
 pub(crate) mod utils;
 
-pub mod variable;
-pub use variable::*;
+mod variable;
+pub use variable::{FieldList, ParameterList, Parameters, VariableDeclaration, VariableDefinition};
 
 #[cfg(feature = "visit")]
 pub mod visit;

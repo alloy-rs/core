@@ -1,6 +1,4 @@
-use crate::{
-    kw, r#type::Type, utils::DebugPunctuated, ParameterList, SolIdent, VariableDeclaration,
-};
+use crate::{kw, utils::DebugPunctuated, ParameterList, SolIdent, Type, VariableDeclaration};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{

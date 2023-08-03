@@ -1,4 +1,4 @@
-use crate::{kw, r#type::Type, SolPath};
+use crate::{kw, SolPath, Type};
 use proc_macro2::Span;
 use syn::{
     braced,

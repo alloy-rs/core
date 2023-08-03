@@ -26,7 +26,7 @@ use syn::{
 };
 
 #[derive(Clone, Debug)]
-pub enum Expr {
+pub enum Stmt {
     Block(Block),
     While(While),
     DoWhile(DoWhile),
@@ -47,7 +47,7 @@ pub enum Expr {
     Assembly(Assembly),
 }
 
-impl Parse for Expr {
+impl Parse for Stmt {
     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
         if input.peek(Token![while]) {
             return Ok(Self::While(While::parse(input)?))

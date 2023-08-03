@@ -1,13 +1,13 @@
 use proc_macro2::Ident;
 use syn::{bracketed, parse::Parse, token::Bracket};
 
-use crate::expr::Expr;
+use crate::expr::Stmt;
 
 #[derive(Debug, Clone)]
 pub struct Index {
     pub name: Ident,
     pub bracket: Bracket,
-    pub index_by: Box<Expr>,
+    pub index_by: Box<Stmt>,
 }
 
 impl Parse for Index {

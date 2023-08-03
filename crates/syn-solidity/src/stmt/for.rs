@@ -1,4 +1,4 @@
-use crate::{binop::BinopExpr, expr::Expr, Block};
+use crate::{binop::BinopExpr, expr::Stmt, Block};
 use syn::{parenthesized, parse::Parse, token::Paren, Token};
 
 #[derive(Debug, Clone)]
@@ -12,9 +12,9 @@ pub struct ForAssignment {
     pub brace: Paren,
     pub iter_asign: BinopExpr,
     pub semi: Token![;],
-    pub cond: Box<Expr>,
+    pub cond: Box<Stmt>,
     pub semi2: Token![;],
-    pub up_cond: Option<Box<Expr>>,
+    pub up_cond: Option<Box<Stmt>>,
     pub block: Block,
 }
 

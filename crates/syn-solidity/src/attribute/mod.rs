@@ -13,10 +13,10 @@ use syn::{
 };
 
 mod function;
-pub use function::*;
+pub use function::{FunctionAttribute, FunctionAttributes};
 
 mod variable;
-pub use variable::*;
+pub use variable::{VariableAttribute, VariableAttributes};
 
 kw_enum! {
     /// A storage location.
@@ -137,23 +137,6 @@ pub struct Modifier {
     pub arguments: Punctuated<TokenStream, Token![,]>,
 }
 
-impl fmt::Display for Modifier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.name.fmt(f)?;
-        if self.paren_token.is_some() {
-            f.write_str("(")?;
-            for (i, arg) in self.arguments.iter().enumerate() {
-                if i > 0 {
-                    f.write_str(", ")?;
-                }
-                arg.fmt(f)?;
-            }
-            f.write_str(")")?;
-        }
-        Ok(())
-    }
-}
-
 impl PartialEq for Modifier {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
@@ -174,6 +157,23 @@ impl fmt::Debug for Modifier {
             .field("name", &self.name)
             .field("arguments", DebugPunctuated::new(&self.arguments))
             .finish()
+    }
+}
+
+impl fmt::Display for Modifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.name.fmt(f)?;
+        if self.paren_token.is_some() {
+            f.write_str("(")?;
+            for (i, arg) in self.arguments.iter().enumerate() {
+                if i > 0 {
+                    f.write_str(", ")?;
+                }
+                arg.fmt(f)?;
+            }
+            f.write_str(")")?;
+        }
+        Ok(())
     }
 }
 
