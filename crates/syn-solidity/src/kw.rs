@@ -66,14 +66,17 @@ custom_keywords!(
     using,
     global,
 
-    // Other
-    is,
+    // Literals
     unicode,
+    hex,
+
+    // Other
+    assembly,
     catch,
     delete,
-    unchecked,
-    new,
     emit,
+    is,
+    new,
     revert,
-    assembly,
+    unchecked,
 );

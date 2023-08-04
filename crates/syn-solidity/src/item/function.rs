@@ -14,7 +14,7 @@ use syn::{
 };
 
 /// A function, constructor, fallback, receive, or modifier definition:
-/// `function helloWorld() external pure returns(string memory);`
+/// `function helloWorld() external pure returns(string memory);`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.functionDefinition>
@@ -86,7 +86,7 @@ impl ItemFunction {
         let span = name.span();
         let kind = FunctionKind::new_function(span);
 
-        let mut function = ItemFunction::new(kind, Some(name));
+        let mut function = Self::new(kind, Some(name));
 
         let mut returns = ParameterList::new();
         returns.push(var.as_declaration());

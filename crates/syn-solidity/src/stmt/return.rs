@@ -6,7 +6,7 @@ use syn::{
     Result, Token,
 };
 
-/// A return statement: `return 42;`
+/// A return statement: `return 42;`.
 ///
 /// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.returnStatement>

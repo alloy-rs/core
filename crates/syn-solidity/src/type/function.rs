@@ -11,7 +11,7 @@ use syn::{
     Result,
 };
 
-/// A function type: `function() returns (string memory)`
+/// A function type: `function() returns (string memory)`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.functionTypeName>

@@ -8,6 +8,7 @@ use syn::{
     Result, Token,
 };
 
+/// An assembly block, with optional flags: `assembly "evmasm" { ... }`.
 #[derive(Clone)]
 pub struct StmtAssembly {
     pub assembly_token: kw::assembly,

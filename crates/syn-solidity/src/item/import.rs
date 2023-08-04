@@ -9,7 +9,7 @@ use syn::{
     Result, Token,
 };
 
-/// An import directive: `import "foo.sol";`
+/// An import directive: `import "foo.sol";`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.importDirective>

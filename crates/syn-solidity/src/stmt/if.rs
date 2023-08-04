@@ -1,4 +1,4 @@
-use crate::{Block, Expr, Stmt};
+use crate::{Expr, Stmt};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -7,12 +7,14 @@ use syn::{
     Result, Token,
 };
 
+/// An `if` statement with an optional `else` block: `if (expr) { ... } else {
+/// ... }`.
 #[derive(Clone)]
 pub struct StmtIf {
     pub if_token: Token![if],
     pub paren_token: Paren,
     pub cond: Expr,
-    pub then_branch: Block,
+    pub then_branch: Box<Stmt>,
     pub else_branch: Option<(Token![else], Box<Stmt>)>,
 }
 

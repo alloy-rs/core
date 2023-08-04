@@ -7,7 +7,7 @@ use syn::{
     Result, Token,
 };
 
-/// A for statement: `for (uint256 i; i < 42; ++i) { ... }`
+/// A for statement: `for (uint256 i; i < 42; ++i) { ... }`.
 ///
 /// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.forStatement>

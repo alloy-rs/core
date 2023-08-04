@@ -11,7 +11,7 @@ use syn::{
 };
 
 /// A contract, abstract contract, interface, or library definition:
-/// `contract Foo is Bar("foo"), Baz { ... }`
+/// `contract Foo is Bar("foo"), Baz { ... }`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.contractDefinition>

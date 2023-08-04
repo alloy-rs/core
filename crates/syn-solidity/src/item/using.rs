@@ -8,7 +8,7 @@ use syn::{
     Result, Token,
 };
 
-/// A `using` directive: `using { A, B.mul as * } for uint256 global;`
+/// A `using` directive: `using { A, B.mul as * } for uint256 global;`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.usingDirective>

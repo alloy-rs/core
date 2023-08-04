@@ -1,4 +1,5 @@
-use proc_macro2::{TokenStream, TokenTree};
+use crate::Spanned;
+use proc_macro2::{Span, TokenStream, TokenTree};
 use std::fmt;
 use syn::{
     parse::{Parse, ParseStream},
@@ -32,13 +33,32 @@ pub(crate) fn tts_until_semi(input: ParseStream<'_>) -> TokenStream {
 }
 
 pub(crate) fn parse_vec<T: Parse>(input: ParseStream<'_>, allow_empty: bool) -> Result<Vec<T>> {
-    let mut vec = Vec::<T>::new();
+    let mut vec = Vec::new();
+    if !allow_empty {
+        vec.push(input.parse()?);
+    }
     while !input.is_empty() {
         vec.push(input.parse()?);
     }
-    if !allow_empty && vec.is_empty() {
-        Err(input.parse::<T>().err().expect("unreachable"))
-    } else {
-        Ok(vec)
+    Ok(vec)
+}
+
+pub(crate) fn _join_spans<T: Spanned, I: IntoIterator<Item = T>>(items: I) -> Span {
+    let mut iter = items.into_iter();
+    let Some(first) = iter.next() else {
+        return Span::call_site()
+    };
+    let first = first.span();
+    iter.last()
+        .and_then(|last| first.join(last.span()))
+        .unwrap_or(first)
+}
+
+pub(crate) fn _set_spans<'a, T: Spanned + 'a, I: IntoIterator<Item = &'a mut T>>(
+    items: I,
+    set_to: Span,
+) {
+    for item in items {
+        item.set_span(set_to);
     }
 }

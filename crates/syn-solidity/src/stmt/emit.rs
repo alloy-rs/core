@@ -1,4 +1,4 @@
-use crate::{kw, CallArgumentList, Expr};
+use crate::{kw, ArgList, Expr};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -6,7 +6,7 @@ use syn::{
     Result, Token,
 };
 
-/// An emit statement: `emit FooBar(42);`
+/// An emit statement: `emit FooBar(42);`.
 ///
 /// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.emitStatement>
@@ -14,7 +14,7 @@ use syn::{
 pub struct StmtEmit {
     pub emit_token: kw::emit,
     pub expr: Expr,
-    pub list: CallArgumentList,
+    pub list: ArgList,
     pub semi_token: Token![;],
 }
 

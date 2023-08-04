@@ -9,7 +9,7 @@ use syn::{
     Attribute, Result, Token,
 };
 
-/// A user-defined value type definition: `type Foo is uint256;`
+/// A user-defined value type definition: `type Foo is uint256;`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.userDefinedValueTypeDefinition>

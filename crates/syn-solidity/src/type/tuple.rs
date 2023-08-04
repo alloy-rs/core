@@ -79,7 +79,7 @@ impl Parse for TypeTuple {
 
 impl FromIterator<Type> for TypeTuple {
     fn from_iter<T: IntoIterator<Item = Type>>(iter: T) -> Self {
-        TypeTuple {
+        Self {
             tuple_token: None,
             paren_token: Paren::default(),
             types: {

@@ -11,7 +11,7 @@ use syn::{
     Attribute, Result, Token,
 };
 
-/// A struct definition: `struct Foo { uint256 bar; }`
+/// A struct definition: `struct Foo { uint256 bar; }`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.structDefinition>

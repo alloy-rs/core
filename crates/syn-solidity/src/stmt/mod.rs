@@ -48,27 +48,57 @@ use syn::{
     Result, Token,
 };
 
-/// A statement.
+/// A statement, usually ending in a semicolon.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.statement>
 #[derive(Clone, Debug)]
 pub enum Stmt {
-    Block(Block),
-    UncheckedBlock(UncheckedBlock),
-    VarDecl(StmtVarDecl),
-    Expr(StmtExpr),
-    If(StmtIf),
-    For(StmtFor),
-    While(StmtWhile),
-    DoWhile(StmtDoWhile),
-    Continue(StmtContinue),
-    Break(StmtBreak),
-    Try(StmtTry),
-    Return(StmtReturn),
-    Emit(StmtEmit),
-    Revert(StmtRevert),
+    /// An assembly block, with optional flags: `assembly "evmasm" { ... }`.
     Assembly(StmtAssembly),
+
+    /// A blocked scope: `{ ... }`.
+    Block(Block),
+
+    /// A break statement: `break;`.
+    Break(StmtBreak),
+
+    /// A continue statement: `continue;`.
+    Continue(StmtContinue),
+
+    /// A do-while statement: `do { ... } while (condition);`.
+    DoWhile(StmtDoWhile),
+
+    /// An emit statement: `emit FooBar(42);`.
+    Emit(StmtEmit),
+
+    /// An expression with a trailing semicolon.
+    Expr(StmtExpr),
+
+    /// A for statement: `for (uint256 i; i < 42; ++i) { ... }`.
+    For(StmtFor),
+
+    /// An `if` statement with an optional `else` block: `if (expr) { ... } else
+    /// { ... }`.
+    If(StmtIf),
+
+    /// A return statement: `return 42;`.
+    Return(StmtReturn),
+
+    /// A revert statement: `revert("error");`.
+    Revert(StmtRevert),
+
+    /// A try statement: `try fooBar(42) catch { ... }`.
+    Try(StmtTry),
+
+    /// An unchecked block: `unchecked { ... }`.
+    UncheckedBlock(UncheckedBlock),
+
+    /// A variable declaration statement: `uint256 foo = 42;`.
+    VarDecl(StmtVarDecl),
+
+    /// A while statement: `while (i < 42) { ... }`.
+    While(StmtWhile),
 }
 
 impl Parse for Stmt {
@@ -131,41 +161,41 @@ impl Parse for Stmt {
 impl Stmt {
     pub fn span(&self) -> Span {
         match self {
-            Stmt::Block(block) => block.span(),
-            Stmt::UncheckedBlock(block) => block.span(),
-            Stmt::VarDecl(stmt) => stmt.span(),
-            Stmt::Expr(stmt) => stmt.span(),
-            Stmt::If(stmt) => stmt.span(),
-            Stmt::For(stmt) => stmt.span(),
-            Stmt::While(stmt) => stmt.span(),
-            Stmt::DoWhile(stmt) => stmt.span(),
-            Stmt::Continue(stmt) => stmt.span(),
-            Stmt::Break(stmt) => stmt.span(),
-            Stmt::Try(stmt) => stmt.span(),
-            Stmt::Return(stmt) => stmt.span(),
-            Stmt::Emit(stmt) => stmt.span(),
-            Stmt::Revert(stmt) => stmt.span(),
-            Stmt::Assembly(stmt) => stmt.span(),
+            Self::Assembly(stmt) => stmt.span(),
+            Self::Block(block) => block.span(),
+            Self::Break(stmt) => stmt.span(),
+            Self::Continue(stmt) => stmt.span(),
+            Self::DoWhile(stmt) => stmt.span(),
+            Self::Emit(stmt) => stmt.span(),
+            Self::Expr(stmt) => stmt.span(),
+            Self::For(stmt) => stmt.span(),
+            Self::If(stmt) => stmt.span(),
+            Self::Return(stmt) => stmt.span(),
+            Self::Revert(stmt) => stmt.span(),
+            Self::Try(stmt) => stmt.span(),
+            Self::UncheckedBlock(block) => block.span(),
+            Self::VarDecl(stmt) => stmt.span(),
+            Self::While(stmt) => stmt.span(),
         }
     }
 
     pub fn set_span(&mut self, span: Span) {
         match self {
-            Stmt::Block(block) => block.set_span(span),
-            Stmt::UncheckedBlock(block) => block.set_span(span),
-            Stmt::VarDecl(stmt) => stmt.set_span(span),
-            Stmt::Expr(stmt) => stmt.set_span(span),
-            Stmt::If(stmt) => stmt.set_span(span),
-            Stmt::For(stmt) => stmt.set_span(span),
-            Stmt::While(stmt) => stmt.set_span(span),
-            Stmt::DoWhile(stmt) => stmt.set_span(span),
-            Stmt::Continue(stmt) => stmt.set_span(span),
-            Stmt::Break(stmt) => stmt.set_span(span),
-            Stmt::Try(stmt) => stmt.set_span(span),
-            Stmt::Return(stmt) => stmt.set_span(span),
-            Stmt::Emit(stmt) => stmt.set_span(span),
-            Stmt::Revert(stmt) => stmt.set_span(span),
-            Stmt::Assembly(stmt) => stmt.set_span(span),
+            Self::Assembly(stmt) => stmt.set_span(span),
+            Self::Block(block) => block.set_span(span),
+            Self::Break(stmt) => stmt.set_span(span),
+            Self::Continue(stmt) => stmt.set_span(span),
+            Self::DoWhile(stmt) => stmt.set_span(span),
+            Self::Emit(stmt) => stmt.set_span(span),
+            Self::Expr(stmt) => stmt.set_span(span),
+            Self::For(stmt) => stmt.set_span(span),
+            Self::If(stmt) => stmt.set_span(span),
+            Self::Return(stmt) => stmt.set_span(span),
+            Self::Revert(stmt) => stmt.set_span(span),
+            Self::Try(stmt) => stmt.set_span(span),
+            Self::UncheckedBlock(block) => block.set_span(span),
+            Self::VarDecl(stmt) => stmt.set_span(span),
+            Self::While(stmt) => stmt.set_span(span),
         }
     }
 }

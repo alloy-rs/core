@@ -5,7 +5,7 @@ use syn::{
     Result, Token,
 };
 
-/// A break statement: `break;`
+/// A break statement: `break;`.
 ///
 /// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.breakStatement>

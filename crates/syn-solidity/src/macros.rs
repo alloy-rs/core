@@ -269,7 +269,7 @@ macro_rules! kw_enum {
             ::paste::paste! {
                 $(
                     #[inline]
-                    pub fn [<new_ $variant:lower>](span: ::proc_macro2::Span) -> Self {
+                    pub fn [<new_ $variant:snake>](span: ::proc_macro2::Span) -> Self {
                         Self::$variant(kw::$kw(span))
                     }
                 )+
@@ -317,7 +317,7 @@ macro_rules! kw_enum {
             ::paste::paste! {
                 $(
                     #[inline]
-                    pub const fn [<is_ $variant:lower>](self) -> bool {
+                    pub const fn [<is_ $variant:snake>](self) -> bool {
                         matches!(self, Self::$variant(_))
                     }
                 )+
@@ -327,18 +327,40 @@ macro_rules! kw_enum {
 }
 
 macro_rules! op_enum {
+    (@skip $($tt:tt)*) => {};
+    (@first $first:tt $($rest:tt)*) => { ::syn::Token![$first] };
+
+    (@peek $input:ident, $lookahead:ident, $a:tt) => {
+        $lookahead.peek(::syn::Token![$a])
+    };
+    (@peek $input:ident, $lookahead:ident, $a:tt $b:tt) => {
+        $lookahead.peek(::syn::Token![$a])
+            && $input.peek2(::syn::Token![$b])
+    };
+    (@peek $input:ident, $lookahead:ident, $a:tt $b:tt $c:tt) => {
+        $lookahead.peek(::syn::Token![$a])
+            && $input.peek2(::syn::Token![$b])
+            && $input.peek3(::syn::Token![$c])
+    };
+    (@peek $input:ident, $lookahead:ident, $($t:tt)*) => {
+        compile_error!(
+            "too many tokens in operator: ",
+            concat!($(stringify!($t)),*),
+        )
+    };
+
     (
         $(#[$attr:meta])*
         $vis:vis enum $name:ident {$(
             $(#[$variant_attr:meta])*
-            $variant:ident($op:tt)
+            $variant:ident($($op:tt)+)
         ),+ $(,)?}
     ) => {
         $(#[$attr])*
         #[derive(Clone, Copy)]
         $vis enum $name {$(
-            #[doc = concat!("`", stringify!($t), "`")]
-            $variant(::syn::Token![$op]),
+            #[doc = concat!("`", $(stringify!($op),)+ "`")]
+            $variant($(::syn::Token![$op]),+),
         )+}
 
         impl ::core::cmp::PartialEq for $name {
@@ -375,8 +397,10 @@ macro_rules! op_enum {
             fn parse(input: ::syn::parse::ParseStream<'_>) -> ::syn::Result<Self> {
                 let lookahead = input.lookahead1();
                 $(
-                    if lookahead.peek(Token![$op]) {
-                        input.parse().map(Self::$variant)
+                    if op_enum!(@peek input, lookahead, $($op)+) {
+                        Ok(Self::$variant(
+                            $(input.parse::<::syn::Token![$op]>()?),+
+                        ))
                     } else
                 )+
                 {
@@ -389,29 +413,51 @@ macro_rules! op_enum {
             ::paste::paste! {
                 $(
                     #[inline]
-                    pub fn [<new_ $variant:lower>](span: ::proc_macro2::Span) -> Self {
-                        Self::$variant(::syn::Token![$op](span))
+                    pub fn [<new_ $variant:snake>](span: ::proc_macro2::Span) -> Self {
+                        Self::$variant($(::syn::Token![$op](span)),+)
                     }
                 )+
             }
 
+            #[allow(unused_parens, unused_variables)]
+            pub fn peek(input: syn::parse::ParseStream<'_>, lookahead: &::syn::parse::Lookahead1<'_>) -> bool {
+                $((
+                    op_enum!(@peek input, lookahead, $($op)+)
+                ))||+
+            }
+
             pub const fn as_str(self) -> &'static str {
                 match self {$(
-                    Self::$variant(_) => stringify!($op),
+                    Self::$variant(..) => concat!($(stringify!($op)),+),
                 )+}
             }
 
             pub const fn as_debug_str(self) -> &'static str {
                 match self {$(
-                    Self::$variant(_) => stringify!($variant),
+                    Self::$variant(..) => stringify!($variant),
                 )+}
+            }
+
+            pub const fn span(self) -> ::proc_macro2::Span {
+                todo!()
+                // match self {$(
+                //     Self::$variant(kw, ..) => kw.span(),
+                // )+}
+            }
+
+            pub fn set_span(&mut self, span: ::proc_macro2::Span) {
+                let _ = span;
+                todo!()
+                // match self {$(
+                //     Self::$variant(kw, ..) => kw.set_span(span),
+                // )+}
             }
 
             ::paste::paste! {
                 $(
                     #[inline]
-                    pub const fn [<is_ $variant:lower>](self) -> bool {
-                        matches!(self, Self::$variant(_))
+                    pub const fn [<is_ $variant:snake>](self) -> bool {
+                        matches!(self, Self::$variant(..))
                     }
                 )+
             }

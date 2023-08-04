@@ -5,7 +5,7 @@ use syn::{
     Result, Token,
 };
 
-/// A continue statement: `continue;`
+/// A continue statement: `continue;`.
 ///
 /// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.continueStatement>

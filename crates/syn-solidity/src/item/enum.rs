@@ -9,7 +9,7 @@ use syn::{
     Attribute, Result, Token,
 };
 
-/// An enum definition: `enum Foo { A, B, C }`
+/// An enum definition: `enum Foo { A, B, C }`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.enumDefinition>

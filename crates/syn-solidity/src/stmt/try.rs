@@ -8,7 +8,7 @@ use syn::{
     Result, Token,
 };
 
-/// A try statement: `try fooBar(42) catch { ... }`
+/// A try statement: `try fooBar(42) catch { ... }`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.tryStatement>
@@ -64,7 +64,7 @@ impl StmtTry {
     }
 }
 
-/// A catch clause of a [`StmtTry`]: `catch  { ... }`
+/// A catch clause of a [`StmtTry`]: `catch  { ... }`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.tryStatement>

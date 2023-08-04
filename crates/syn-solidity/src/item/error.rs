@@ -8,7 +8,7 @@ use syn::{
     Attribute, Result, Token,
 };
 
-/// An error definition: `error Foo(uint256 a, uint256 b);`
+/// An error definition: `error Foo(uint256 a, uint256 b);`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.errorDefinition>

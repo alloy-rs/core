@@ -7,7 +7,7 @@ use syn::{
     Result, Token,
 };
 
-/// A do-while statement: `do { ... } while (condition);`
+/// A do-while statement: `do { ... } while (condition);`.
 ///
 /// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.doWhileStatement>

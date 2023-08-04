@@ -1,4 +1,4 @@
-use crate::{kw, CallArgumentList, Expr};
+use crate::{kw, ArgList, Expr};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -6,7 +6,7 @@ use syn::{
     Result, Token,
 };
 
-/// A revert statement: `revert("error");`
+/// A revert statement: `revert("error");`.
 ///
 /// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.revertStatement>
@@ -14,7 +14,7 @@ use syn::{
 pub struct StmtRevert {
     pub revert_token: kw::revert,
     pub expr: Expr,
-    pub list: CallArgumentList,
+    pub list: ArgList,
     pub semi_token: Token![;],
 }
 

@@ -1,4 +1,4 @@
-use crate::{Expr, SolIdent};
+use crate::{kw, Expr, SolIdent};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -9,16 +9,96 @@ use syn::{
     Result, Token,
 };
 
+/// A function call expression: `foo(42)` or `foo({ bar: 42 })`.
+#[derive(Clone, Debug)]
+pub struct ExprCall {
+    pub expr: Box<Expr>,
+    pub args: ArgList,
+}
+
+impl Parse for ExprCall {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        Ok(Self {
+            expr: input.parse()?,
+            args: input.parse()?,
+        })
+    }
+}
+
+impl ExprCall {
+    pub fn span(&self) -> Span {
+        let span = self.expr.span();
+        span.join(self.args.span()).unwrap_or(span)
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.expr.set_span(span);
+        self.args.set_span(span);
+    }
+}
+
+/// A `payable` expression: `payable(address(0x...))`.
 #[derive(Clone)]
-pub struct CallArgumentList {
+pub struct ExprPayable {
+    pub payable_token: kw::payable,
+    pub args: ArgList,
+}
+
+impl fmt::Debug for ExprPayable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ExprPayable")
+            .field("args", &self.args)
+            .finish()
+    }
+}
+
+impl From<ExprPayable> for ExprCall {
+    fn from(value: ExprPayable) -> Self {
+        Self {
+            expr: Box::new(Expr::Ident(SolIdent::new_spanned(
+                "payable",
+                value.payable_token.span,
+            ))),
+            args: value.args,
+        }
+    }
+}
+
+impl Parse for ExprPayable {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        Ok(Self {
+            payable_token: input.parse()?,
+            args: input.parse()?,
+        })
+    }
+}
+
+impl ExprPayable {
+    pub fn span(&self) -> Span {
+        let span = self.payable_token.span;
+        span.join(self.args.span()).unwrap_or(span)
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.payable_token.span = span;
+        self.args.set_span(span);
+    }
+}
+
+/// A list of named or unnamed arguments: `{ foo: 42, bar: 64 }` or `(42, 64)`.
+///
+/// Solidity reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.callArgumentList>
+#[derive(Clone)]
+pub struct ArgList {
     pub paren_token: Paren,
     /// The list of arguments. Can be named or unnamed.
     ///
     /// When empty, this is an empty unnamed list.
-    pub list: CallArgumentListImpl,
+    pub list: ArgListImpl,
 }
 
-impl fmt::Debug for CallArgumentList {
+impl fmt::Debug for ArgList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CallArgumentList")
             .field("list", &self.list)
@@ -26,7 +106,7 @@ impl fmt::Debug for CallArgumentList {
     }
 }
 
-impl Parse for CallArgumentList {
+impl Parse for ArgList {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
         Ok(Self {
@@ -36,7 +116,7 @@ impl Parse for CallArgumentList {
     }
 }
 
-impl CallArgumentList {
+impl ArgList {
     pub fn span(&self) -> Span {
         self.paren_token.span.join()
     }
@@ -46,20 +126,17 @@ impl CallArgumentList {
     }
 }
 
+/// A list of either unnamed or named arguments.
 #[derive(Clone, Debug)]
-pub enum CallArgumentListImpl {
+pub enum ArgListImpl {
     Unnamed(Punctuated<Expr, Token![,]>),
-    Named(Brace, Punctuated<NamedArg, Token![,]>),
+    Named(NamedArgList),
 }
 
-impl Parse for CallArgumentListImpl {
+impl Parse for ArgListImpl {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         if input.peek(Brace) {
-            let content;
-            Ok(Self::Named(
-                braced!(content in input),
-                content.parse_terminated(NamedArg::parse, Token![,])?,
-            ))
+            input.parse().map(Self::Named)
         } else {
             input
                 .parse_terminated(Expr::parse, Token![,])
@@ -68,7 +145,70 @@ impl Parse for CallArgumentListImpl {
     }
 }
 
-/// A named argument in an argument list: `foo: uint256(42)`
+/// A struct expression: `Foo { bar: 1, baz: 2 }`.
+#[derive(Clone, Debug)]
+pub struct ExprStruct {
+    pub expr: Box<Expr>,
+    pub args: NamedArgList,
+}
+
+impl Parse for ExprStruct {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        Ok(Self {
+            expr: input.parse()?,
+            args: input.parse()?,
+        })
+    }
+}
+
+impl ExprStruct {
+    pub fn span(&self) -> Span {
+        let span = self.expr.span();
+        span.join(self.args.span()).unwrap_or(span)
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.expr.set_span(span);
+        self.args.set_span(span);
+    }
+}
+
+/// A named argument list: `{ foo: uint256(42), bar: true }`.
+#[derive(Clone)]
+pub struct NamedArgList {
+    pub brace_token: Brace,
+    pub list: Punctuated<NamedArg, Token![,]>,
+}
+
+impl fmt::Debug for NamedArgList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NamedArgumentList")
+            .field("list", &self.list)
+            .finish()
+    }
+}
+
+impl Parse for NamedArgList {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let content;
+        Ok(Self {
+            brace_token: braced!(content in input),
+            list: content.parse_terminated(NamedArg::parse, Token![,])?,
+        })
+    }
+}
+
+impl NamedArgList {
+    pub fn span(&self) -> Span {
+        self.brace_token.span.join()
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.brace_token = Brace(span);
+    }
+}
+
+/// A named argument in an argument list: `foo: uint256(42)`.
 #[derive(Clone)]
 pub struct NamedArg {
     pub name: SolIdent,

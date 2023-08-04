@@ -268,7 +268,7 @@ impl Type {
         match self {
             Self::Custom(_) => true,
             Self::Array(a) => a.ty.has_custom(),
-            Self::Tuple(t) => t.types.iter().any(Type::has_custom),
+            Self::Tuple(t) => t.types.iter().any(Self::has_custom),
             Self::Function(f) => {
                 f.arguments.iter().any(|arg| arg.ty.has_custom())
                     || f.returns.as_ref().map_or(false, |ret| {

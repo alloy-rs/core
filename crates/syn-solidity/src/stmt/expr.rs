@@ -6,6 +6,7 @@ use syn::{
     Result, Token,
 };
 
+/// An expression with a trailing semicolon.
 #[derive(Clone)]
 pub struct StmtExpr {
     pub expr: Expr,

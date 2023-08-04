@@ -9,7 +9,7 @@ use syn::{
     Result, Token,
 };
 
-/// A variable declaration statement: `uint256 foo = 42;`
+/// A variable declaration statement: `uint256 foo = 42;`.
 ///
 /// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.variableDeclarationStatement>
@@ -97,7 +97,7 @@ impl VarDeclDecl {
     }
 }
 
-/// A declaration of variables in a tuple: `(,,uint256 foo,string memory bar)`
+/// A declaration of variables in a tuple: `(,,uint256 foo,string memory bar)`.
 ///
 /// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.variableDeclarationTuple>

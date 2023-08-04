@@ -7,7 +7,7 @@ use syn::{
     Result, Token,
 };
 
-/// A while statement: `while (i < 42) { ... }`
+/// A while statement: `while (i < 42) { ... }`.
 ///
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.whileStatement>
 #[derive(Clone)]

@@ -7,7 +7,7 @@ use syn::{
     Result,
 };
 
-/// A curly-braced block of statements.
+/// A curly-braced block of statements: `{ ... }`.
 #[derive(Clone)]
 pub struct Block {
     pub brace_token: Brace,
@@ -40,6 +40,7 @@ impl Block {
     }
 }
 
+/// An unchecked block: `unchecked { ... }`.
 #[derive(Clone)]
 pub struct UncheckedBlock {
     pub unchecked_token: kw::unchecked,

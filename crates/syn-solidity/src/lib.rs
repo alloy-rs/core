@@ -43,9 +43,12 @@ pub use item::{
 };
 
 mod lit;
-pub use lit::LitStr;
+pub use lit::{HexStr, Lit, LitHex, LitStr, LitUnicode, UnicodeStr};
 
 pub mod kw;
+
+mod spanned;
+pub use spanned::Spanned;
 
 mod stmt;
 pub use stmt::*;
