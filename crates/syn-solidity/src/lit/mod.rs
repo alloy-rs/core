@@ -1,4 +1,4 @@
-use crate::kw;
+use crate::{kw, Spanned};
 use proc_macro2::Span;
 use syn::{
     parse::{Lookahead1, Parse, ParseStream},
@@ -40,12 +40,8 @@ impl Parse for Lit {
     }
 }
 
-impl Lit {
-    pub fn peek(lookahead: &Lookahead1<'_>) -> bool {
-        lookahead.peek(syn::Lit) || lookahead.peek(kw::unicode) || lookahead.peek(kw::hex)
-    }
-
-    pub fn span(&self) -> Span {
+impl Spanned for Lit {
+    fn span(&self) -> Span {
         match self {
             Self::Str(lit) => lit.span(),
             Self::Int(lit) => lit.span(),
@@ -56,7 +52,7 @@ impl Lit {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::Str(lit) => lit.set_span(span),
             Self::Int(lit) => lit.set_span(span),
@@ -65,5 +61,11 @@ impl Lit {
             Self::Hex(lit) => lit.set_span(span),
             Self::Unicode(lit) => lit.set_span(span),
         }
+    }
+}
+
+impl Lit {
+    pub fn peek(lookahead: &Lookahead1<'_>) -> bool {
+        lookahead.peek(syn::Lit) || lookahead.peek(kw::unicode) || lookahead.peek(kw::hex)
     }
 }

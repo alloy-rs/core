@@ -43,7 +43,7 @@ pub(crate) fn parse_vec<T: Parse>(input: ParseStream<'_>, allow_empty: bool) -> 
     Ok(vec)
 }
 
-pub(crate) fn _join_spans<T: Spanned, I: IntoIterator<Item = T>>(items: I) -> Span {
+pub(crate) fn join_spans<T: Spanned, I: IntoIterator<Item = T>>(items: I) -> Span {
     let mut iter = items.into_iter();
     let Some(first) = iter.next() else {
         return Span::call_site()
@@ -54,11 +54,27 @@ pub(crate) fn _join_spans<T: Spanned, I: IntoIterator<Item = T>>(items: I) -> Sp
         .unwrap_or(first)
 }
 
-pub(crate) fn _set_spans<'a, T: Spanned + 'a, I: IntoIterator<Item = &'a mut T>>(
-    items: I,
-    set_to: Span,
-) {
+pub(crate) fn set_spans<'a, T, I>(items: I, span: Span)
+where
+    T: Spanned + 'a,
+    I: IntoIterator<Item = &'a mut T>,
+{
     for item in items {
-        item.set_span(set_to);
+        item.set_span(span);
     }
+}
+
+pub(crate) fn set_spans_clone<'a, T, I>(items: &mut I, span: Span)
+where
+    T: Spanned + 'a,
+    I: Clone + IntoIterator<Item = T> + FromIterator<T>,
+{
+    *items = items
+        .clone()
+        .into_iter()
+        .map(|mut item| {
+            item.set_span(span);
+            item
+        })
+        .collect();
 }

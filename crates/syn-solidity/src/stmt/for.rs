@@ -1,4 +1,4 @@
-use crate::{Expr, Stmt, StmtExpr, StmtVarDecl};
+use crate::{Expr, Spanned, Stmt, StmtExpr, StmtVarDecl};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -40,13 +40,13 @@ impl Parse for StmtFor {
     }
 }
 
-impl StmtFor {
-    pub fn span(&self) -> Span {
+impl Spanned for StmtFor {
+    fn span(&self) -> Span {
         let span = self.for_token.span;
         span.join(self.body.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.for_token.span = span;
         self.body.set_span(span);
     }

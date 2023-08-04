@@ -1,4 +1,4 @@
-use crate::{kw, SolIdent, Type};
+use crate::{kw, SolIdent, Spanned, Type};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -71,12 +71,12 @@ impl Parse for ItemUdt {
     }
 }
 
-impl ItemUdt {
-    pub fn span(&self) -> Span {
+impl Spanned for ItemUdt {
+    fn span(&self) -> Span {
         self.name.span()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.type_token.span = span;
         self.name.set_span(span);
         self.is_token.span = span;

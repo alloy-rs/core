@@ -1,4 +1,4 @@
-use crate::{kw, variable::VariableDefinition, SolIdent};
+use crate::{kw, variable::VariableDefinition, SolIdent, Spanned};
 use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream},
@@ -117,8 +117,8 @@ impl Parse for Item {
     }
 }
 
-impl Item {
-    pub fn span(&self) -> Span {
+impl Spanned for Item {
+    fn span(&self) -> Span {
         match self {
             Self::Contract(contract) => contract.span(),
             Self::Enum(enumm) => enumm.span(),
@@ -134,7 +134,7 @@ impl Item {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::Contract(contract) => contract.set_span(span),
             Self::Enum(enumm) => enumm.set_span(span),
@@ -149,7 +149,9 @@ impl Item {
             Self::Variable(variable) => variable.set_span(span),
         }
     }
+}
 
+impl Item {
     pub fn name(&self) -> Option<&SolIdent> {
         match self {
             Self::Contract(ItemContract { name, .. })

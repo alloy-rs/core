@@ -30,7 +30,7 @@ pub use r#type::{ExprNew, ExprTypeCall};
 mod unary;
 pub use unary::{ExprDelete, ExprPostfix, ExprUnary, PostUnOp, UnOp};
 
-use crate::{kw, Lit, SolIdent, Type};
+use crate::{kw, Lit, SolIdent, Spanned, Type};
 
 /// An expression.
 ///
@@ -151,8 +151,10 @@ impl Expr {
             Err(lookahead.error())
         }
     }
+}
 
-    pub fn span(&self) -> Span {
+impl Spanned for Expr {
+    fn span(&self) -> Span {
         match self {
             Self::Index(expr) => expr.span(),
             Self::Member(expr) => expr.span(),
@@ -174,7 +176,7 @@ impl Expr {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::Index(expr) => expr.set_span(span),
             Self::Member(expr) => expr.set_span(span),

@@ -1,21 +1,5 @@
-use proc_macro2::Span;
-use syn::Token;
-
-fn join_spans<I: IntoIterator<Item = Span>>(spans: I) -> Span {
-    let mut iter = spans.into_iter();
-    let Some(first) = iter.next() else {
-        return Span::call_site()
-    };
-    iter.last()
-        .and_then(|last| first.join(last))
-        .unwrap_or(first)
-}
-
-fn set_spans<'a, I: IntoIterator<Item = &'a mut Span>>(spans: I, set_to: Span) {
-    for span in spans {
-        *span = set_to;
-    }
-}
+use proc_macro2::{Span, TokenStream, TokenTree};
+use syn::{punctuated::Punctuated, Token};
 
 /// A trait for getting and setting the span of a syntax tree node.
 pub trait Spanned {
@@ -38,6 +22,30 @@ impl Spanned for Span {
     }
 }
 
+impl Spanned for TokenStream {
+    #[inline]
+    fn span(&self) -> Span {
+        syn::spanned::Spanned::span(self)
+    }
+
+    #[inline]
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans_clone(self, span);
+    }
+}
+
+impl Spanned for TokenTree {
+    #[inline]
+    fn span(&self) -> Span {
+        TokenTree::span(self)
+    }
+
+    #[inline]
+    fn set_span(&mut self, span: Span) {
+        TokenTree::set_span(self, span)
+    }
+}
+
 impl<T: Spanned> Spanned for Option<T> {
     #[inline]
     fn span(&self) -> Span {
@@ -52,6 +60,31 @@ impl<T: Spanned> Spanned for Option<T> {
         if let Some(t) = self {
             t.set_span(span);
         }
+    }
+}
+
+impl<T: ?Sized + Spanned + Clone> Spanned for &T {
+    #[inline]
+    fn span(&self) -> Span {
+        (**self).span()
+    }
+
+    #[inline]
+    fn set_span(&mut self, _span: Span) {
+        unimplemented!(
+            "cannot set span of borrowed Spanned: {:?}",
+            std::any::type_name::<T>()
+        )
+    }
+}
+
+impl<T: Spanned + Clone, P> Spanned for Punctuated<T, P> {
+    fn span(&self) -> Span {
+        crate::utils::join_spans(self)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans(self, span)
     }
 }
 
@@ -223,4 +256,20 @@ kw_impl! {
     [__more *=]
     [~]
     [_]
+}
+
+fn join_spans<I: IntoIterator<Item = Span>>(spans: I) -> Span {
+    let mut iter = spans.into_iter();
+    let Some(first) = iter.next() else {
+        return Span::call_site()
+    };
+    iter.last()
+        .and_then(|last| first.join(last))
+        .unwrap_or(first)
+}
+
+fn set_spans<'a, I: IntoIterator<Item = &'a mut Span>>(spans: I, set_to: Span) {
+    for span in spans {
+        *span = set_to;
+    }
 }

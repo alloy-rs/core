@@ -1,4 +1,4 @@
-use crate::{kw, Type};
+use crate::{kw, Spanned, Type};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -35,13 +35,13 @@ impl Parse for ExprTypeCall {
     }
 }
 
-impl ExprTypeCall {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprTypeCall {
+    fn span(&self) -> Span {
         let span = self.type_token.span;
         span.join(self.paren_token.span.join()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.type_token.span = span;
         self.paren_token = Paren(span);
     }
@@ -71,13 +71,13 @@ impl Parse for ExprNew {
     }
 }
 
-impl ExprNew {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprNew {
+    fn span(&self) -> Span {
         let span = self.new_token.span;
         span.join(self.ty.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.new_token.span = span;
         self.ty.set_span(span);
     }

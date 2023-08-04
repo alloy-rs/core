@@ -1,4 +1,4 @@
-use crate::{kw, ParameterList, SolIdent, Type};
+use crate::{kw, ParameterList, SolIdent, Spanned, Type};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -46,15 +46,17 @@ impl Parse for ItemError {
     }
 }
 
-impl ItemError {
-    pub fn span(&self) -> Span {
+impl Spanned for ItemError {
+    fn span(&self) -> Span {
         self.name.span()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.name.set_span(span);
     }
+}
 
+impl ItemError {
     pub fn as_type(&self) -> Type {
         let mut ty = Type::Tuple(self.parameters.types().cloned().collect());
         ty.set_span(self.span());

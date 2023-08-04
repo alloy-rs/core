@@ -1,4 +1,4 @@
-use super::{kw, Modifier, Mutability, Override, SolPath, VariableAttribute, Visibility};
+use crate::{kw, Modifier, Mutability, Override, SolPath, Spanned, VariableAttribute, Visibility};
 use proc_macro2::Span;
 use std::{
     collections::HashSet,
@@ -50,6 +50,16 @@ impl Parse for FunctionAttributes {
             attributes.insert(attr);
         }
         Ok(Self(attributes))
+    }
+}
+
+impl Spanned for FunctionAttributes {
+    fn span(&self) -> Span {
+        crate::utils::join_spans(&self.0)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans_clone(&mut self.0, span)
     }
 }
 
@@ -206,8 +216,8 @@ impl From<VariableAttribute> for FunctionAttribute {
     }
 }
 
-impl FunctionAttribute {
-    pub fn span(&self) -> Span {
+impl Spanned for FunctionAttribute {
+    fn span(&self) -> Span {
         match self {
             Self::Visibility(v) => v.span(),
             Self::Mutability(m) => m.span(),
@@ -218,7 +228,7 @@ impl FunctionAttribute {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::Visibility(v) => v.set_span(span),
             Self::Mutability(m) => m.set_span(span),
@@ -228,7 +238,9 @@ impl FunctionAttribute {
             Self::Modifier(m) => m.set_span(span),
         }
     }
+}
 
+impl FunctionAttribute {
     #[inline]
     pub const fn visibility(&self) -> Option<Visibility> {
         match self {

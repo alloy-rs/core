@@ -1,5 +1,5 @@
-use super::VariableDeclaration;
-use crate::{SolIdent, Type};
+use crate::{SolIdent, Spanned, Type, VariableDeclaration};
+use proc_macro2::Span;
 use std::{
     fmt,
     ops::{Deref, DerefMut},
@@ -67,6 +67,16 @@ impl Parse for FieldList {
         } else {
             Ok(Self(this))
         }
+    }
+}
+
+impl<P> Spanned for Parameters<P> {
+    fn span(&self) -> Span {
+        crate::utils::join_spans(&self.0)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans(&mut self.0, span);
     }
 }
 

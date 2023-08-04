@@ -1,5 +1,4 @@
-use super::{SolIdent, Storage, Type};
-use crate::{Expr, VariableAttributes};
+use crate::{Expr, SolIdent, Spanned, Storage, Type, VariableAttributes};
 use proc_macro2::Span;
 use std::fmt::{self, Write};
 use syn::{
@@ -48,17 +47,8 @@ impl Parse for VariableDeclaration {
     }
 }
 
-impl VariableDeclaration {
-    pub const fn new(ty: Type) -> Self {
-        Self {
-            attrs: Vec::new(),
-            ty,
-            storage: None,
-            name: None,
-        }
-    }
-
-    pub fn span(&self) -> Span {
+impl Spanned for VariableDeclaration {
+    fn span(&self) -> Span {
         let span = self.ty.span();
         match (&self.storage, &self.name) {
             (Some(storage), None) => span.join(storage.span()),
@@ -68,13 +58,24 @@ impl VariableDeclaration {
         .unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.ty.set_span(span);
         if let Some(storage) = &mut self.storage {
             storage.set_span(span);
         }
         if let Some(name) = &mut self.name {
             name.set_span(span);
+        }
+    }
+}
+
+impl VariableDeclaration {
+    pub const fn new(ty: Type) -> Self {
+        Self {
+            attrs: Vec::new(),
+            ty,
+            storage: None,
+            name: None,
         }
     }
 
@@ -131,6 +132,18 @@ impl Parse for VariableDefinition {
     }
 }
 
+impl Spanned for VariableDefinition {
+    fn span(&self) -> Span {
+        let span = self.ty.span();
+        span.join(self.semi_token.span).unwrap_or(span)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.ty.set_span(span);
+        self.semi_token.span = span;
+    }
+}
+
 impl VariableDefinition {
     pub fn as_declaration(&self) -> VariableDeclaration {
         VariableDeclaration {
@@ -139,15 +152,5 @@ impl VariableDefinition {
             storage: None,
             name: Some(self.name.clone()),
         }
-    }
-
-    pub fn span(&self) -> Span {
-        let span = self.ty.span();
-        span.join(self.semi_token.span).unwrap_or(span)
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.ty.set_span(span);
-        self.semi_token.span = span;
     }
 }

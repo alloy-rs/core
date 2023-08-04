@@ -1,4 +1,4 @@
-use crate::{kw, ArgList, Expr};
+use crate::{kw, ArgList, Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -38,13 +38,13 @@ impl Parse for StmtEmit {
     }
 }
 
-impl StmtEmit {
-    pub fn span(&self) -> Span {
+impl Spanned for StmtEmit {
+    fn span(&self) -> Span {
         let span = self.emit_token.span;
         span.join(self.semi_token.span).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.emit_token.span = span;
         self.semi_token.span = span;
     }

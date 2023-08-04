@@ -1,4 +1,4 @@
-use crate::{kw, SolPath, Type};
+use crate::{kw, SolPath, Spanned, Type};
 use proc_macro2::Span;
 use syn::{
     braced,
@@ -35,13 +35,13 @@ impl Parse for UsingDirective {
     }
 }
 
-impl UsingDirective {
-    pub fn span(&self) -> Span {
+impl Spanned for UsingDirective {
+    fn span(&self) -> Span {
         let span = self.using_token.span;
         span.join(self.semi_token.span).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.using_token.span = span;
         self.semi_token.span = span;
     }
@@ -67,6 +67,28 @@ impl Parse for UsingList {
     }
 }
 
+impl Spanned for UsingList {
+    fn span(&self) -> Span {
+        match self {
+            Self::Single(path) => path.span(),
+            Self::Multiple(brace, list) => {
+                let span = brace.span.join();
+                span.join(list.span()).unwrap_or(span)
+            }
+        }
+    }
+
+    fn set_span(&mut self, span: Span) {
+        match self {
+            Self::Single(path) => path.set_span(span),
+            Self::Multiple(brace, list) => {
+                *brace = Brace(span);
+                list.set_span(span);
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct UsingListItem {
     pub path: SolPath,
@@ -86,6 +108,16 @@ impl Parse for UsingListItem {
     }
 }
 
+impl Spanned for UsingListItem {
+    fn span(&self) -> Span {
+        self.path.span()
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.path.set_span(span);
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum UsingType {
     Star(Token![*]),
@@ -98,6 +130,22 @@ impl Parse for UsingType {
             input.parse().map(Self::Star)
         } else {
             input.parse().map(Self::Type)
+        }
+    }
+}
+
+impl Spanned for UsingType {
+    fn span(&self) -> Span {
+        match self {
+            Self::Star(star) => star.span,
+            Self::Type(ty) => ty.span(),
+        }
+    }
+
+    fn set_span(&mut self, span: Span) {
+        match self {
+            Self::Star(star) => star.span = span,
+            Self::Type(ty) => ty.set_span(span),
         }
     }
 }

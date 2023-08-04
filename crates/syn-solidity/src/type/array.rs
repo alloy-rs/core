@@ -1,4 +1,4 @@
-use crate::Type;
+use crate::{Spanned, Type};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -62,20 +62,22 @@ impl Parse for TypeArray {
     }
 }
 
-impl TypeArray {
-    pub fn span(&self) -> Span {
+impl Spanned for TypeArray {
+    fn span(&self) -> Span {
         let span = self.ty.span();
         span.join(self.bracket_token.span.join()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.ty.set_span(span);
         self.bracket_token = Bracket(span);
         if let Some(size) = &mut self.size {
             size.set_span(span);
         }
     }
+}
 
+impl TypeArray {
     /// Returns the size of the array, or None if dynamic.
     pub fn size(&self) -> Option<usize> {
         self.size.as_ref().map(|s| s.base10_parse().unwrap())

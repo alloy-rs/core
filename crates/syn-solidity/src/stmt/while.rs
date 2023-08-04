@@ -1,4 +1,4 @@
-use crate::{Expr, Stmt};
+use crate::{Expr, Spanned, Stmt};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -39,13 +39,13 @@ impl Parse for StmtWhile {
     }
 }
 
-impl StmtWhile {
-    pub fn span(&self) -> Span {
+impl Spanned for StmtWhile {
+    fn span(&self) -> Span {
         let span = self.while_token.span;
         span.join(self.body.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.while_token.span = span;
         self.body.set_span(span);
     }

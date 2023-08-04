@@ -1,4 +1,4 @@
-use crate::{kw, Expr};
+use crate::{kw, Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -22,13 +22,13 @@ impl Parse for ExprUnary {
     }
 }
 
-impl ExprUnary {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprUnary {
+    fn span(&self) -> Span {
         let span = self.op.span();
         span.join(self.expr.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.op.set_span(span);
         self.expr.set_span(span);
     }
@@ -58,13 +58,13 @@ impl Parse for ExprDelete {
     }
 }
 
-impl ExprDelete {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprDelete {
+    fn span(&self) -> Span {
         let span = self.delete_token.span;
         span.join(self.expr.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.delete_token.span = span;
         self.expr.set_span(span);
     }
@@ -86,13 +86,13 @@ impl Parse for ExprPostfix {
     }
 }
 
-impl ExprPostfix {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprPostfix {
+    fn span(&self) -> Span {
         let span = self.op.span();
         span.join(self.expr.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.op.set_span(span);
         self.expr.set_span(span);
     }

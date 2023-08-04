@@ -1,4 +1,4 @@
-use crate::{kw, LitStr, YulBlock};
+use crate::{kw, LitStr, Spanned, YulBlock};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -38,13 +38,13 @@ impl Parse for StmtAssembly {
     }
 }
 
-impl StmtAssembly {
-    pub fn span(&self) -> Span {
+impl Spanned for StmtAssembly {
+    fn span(&self) -> Span {
         let span = self.assembly_token.span;
         span.join(self.block.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.assembly_token.span = span;
         self.block.set_span(span);
     }
@@ -71,6 +71,16 @@ impl Parse for AssemblyFlags {
             paren_token: syn::parenthesized!(content in input),
             strings: content.parse_terminated(LitStr::parse, Token![,])?,
         })
+    }
+}
+
+impl Spanned for AssemblyFlags {
+    fn span(&self) -> Span {
+        self.paren_token.span.join()
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.paren_token = Paren(span);
     }
 }
 

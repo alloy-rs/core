@@ -1,9 +1,21 @@
 //! Solidity keywords.
 
 macro_rules! custom_keywords {
-    ($($name:ident),+ $(,)?) => {
-        $(syn::custom_keyword!($name);)+
-    };
+    ($($name:ident),+ $(,)?) => {$(
+        syn::custom_keyword!($name);
+
+        impl $crate::Spanned for $name {
+            #[inline]
+            fn span(&self) -> ::proc_macro2::Span {
+                self.span
+            }
+
+            #[inline]
+            fn set_span(&mut self, span: ::proc_macro2::Span) {
+                self.span = span;
+            }
+        }
+    )+};
 }
 
 #[rustfmt::skip]

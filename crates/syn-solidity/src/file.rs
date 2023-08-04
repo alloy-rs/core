@@ -1,4 +1,5 @@
-use super::Item;
+use crate::{Item, Spanned};
+use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream},
     Attribute, Result,
@@ -25,5 +26,15 @@ impl Parse for File {
         } else {
             Ok(Self { attrs, items })
         }
+    }
+}
+
+impl Spanned for File {
+    fn span(&self) -> Span {
+        crate::utils::join_spans(&self.items)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans(&mut self.items, span);
     }
 }

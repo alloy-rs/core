@@ -1,4 +1,4 @@
-use crate::Expr;
+use crate::{Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -34,12 +34,12 @@ impl Parse for ExprTuple {
     }
 }
 
-impl ExprTuple {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprTuple {
+    fn span(&self) -> Span {
         self.paren_token.span.join()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.paren_token = Paren(span);
     }
 }

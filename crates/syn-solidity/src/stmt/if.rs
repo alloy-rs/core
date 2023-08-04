@@ -1,4 +1,4 @@
-use crate::{Expr, Stmt};
+use crate::{Expr, Spanned, Stmt};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -45,8 +45,8 @@ impl Parse for StmtIf {
     }
 }
 
-impl StmtIf {
-    pub fn span(&self) -> Span {
+impl Spanned for StmtIf {
+    fn span(&self) -> Span {
         let span = self.if_token.span;
         self.else_branch
             .as_ref()
@@ -55,7 +55,7 @@ impl StmtIf {
             .unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.if_token.span = span;
         self.then_branch.set_span(span);
         if let Some((_, stmt)) = &mut self.else_branch {

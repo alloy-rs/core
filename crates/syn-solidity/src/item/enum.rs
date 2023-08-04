@@ -1,4 +1,4 @@
-use crate::{utils::DebugPunctuated, SolIdent, Type};
+use crate::{utils::DebugPunctuated, SolIdent, Spanned, Type};
 use proc_macro2::Span;
 use std::{fmt, num::NonZeroU16};
 use syn::{
@@ -45,15 +45,17 @@ impl Parse for ItemEnum {
     }
 }
 
-impl ItemEnum {
-    pub fn span(&self) -> Span {
+impl Spanned for ItemEnum {
+    fn span(&self) -> Span {
         self.name.span()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.name.set_span(span);
     }
+}
 
+impl ItemEnum {
     pub fn as_type(&self) -> Type {
         Type::Uint(self.span(), Some(NonZeroU16::new(8).unwrap()))
     }

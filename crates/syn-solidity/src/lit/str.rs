@@ -1,4 +1,4 @@
-use crate::{kw, utils::parse_vec};
+use crate::{kw, utils::parse_vec, Spanned};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -40,16 +40,8 @@ macro_rules! str_lit {
             }
         }
 
-        impl $name {
-            pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
-                if $(input.peek(kw::$kw) || )? input.peek(syn::LitStr) {
-                    input.parse().map(Some)
-                } else {
-                    Ok(None)
-                }
-            }
-
-            pub fn span(&self) -> Span {
+        impl Spanned for $name {
+            fn span(&self) -> Span {
                 let mut span = self.values.first().unwrap().span();
                 for value in &self.values[1..] {
                     span = span.join(value.span()).unwrap_or(span);
@@ -57,9 +49,19 @@ macro_rules! str_lit {
                 span
             }
 
-            pub fn set_span(&mut self, span: Span) {
+            fn set_span(&mut self, span: Span) {
                 for value in &mut self.values {
                     value.set_span(span);
+                }
+            }
+        }
+
+        impl $name {
+            pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
+                if $(input.peek(kw::$kw) || )? input.peek(syn::LitStr) {
+                    input.parse().map(Some)
+                } else {
+                    Ok(None)
                 }
             }
 
@@ -114,13 +116,13 @@ macro_rules! wrap_str {
             }
         }
 
-        impl $name {
-            pub fn span(&self) -> Span {
+        impl Spanned for $name {
+            fn span(&self) -> Span {
                 let span = self.$token.span;
                 span.join(self.value.span()).unwrap_or(span)
             }
 
-            pub fn set_span(&mut self, span: Span) {
+            fn set_span(&mut self, span: Span) {
                 self.$token.span = span;
                 self.value.set_span(span);
             }

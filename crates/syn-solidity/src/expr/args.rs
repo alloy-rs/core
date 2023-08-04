@@ -1,4 +1,4 @@
-use crate::{kw, Expr, SolIdent};
+use crate::{kw, Expr, SolIdent, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -25,13 +25,13 @@ impl Parse for ExprCall {
     }
 }
 
-impl ExprCall {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprCall {
+    fn span(&self) -> Span {
         let span = self.expr.span();
         span.join(self.args.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.expr.set_span(span);
         self.args.set_span(span);
     }
@@ -73,13 +73,13 @@ impl Parse for ExprPayable {
     }
 }
 
-impl ExprPayable {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprPayable {
+    fn span(&self) -> Span {
         let span = self.payable_token.span;
         span.join(self.args.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.payable_token.span = span;
         self.args.set_span(span);
     }
@@ -116,12 +116,12 @@ impl Parse for ArgList {
     }
 }
 
-impl ArgList {
-    pub fn span(&self) -> Span {
+impl Spanned for ArgList {
+    fn span(&self) -> Span {
         self.paren_token.span.join()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.paren_token = Paren(span);
     }
 }
@@ -161,13 +161,13 @@ impl Parse for ExprStruct {
     }
 }
 
-impl ExprStruct {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprStruct {
+    fn span(&self) -> Span {
         let span = self.expr.span();
         span.join(self.args.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.expr.set_span(span);
         self.args.set_span(span);
     }
@@ -198,12 +198,12 @@ impl Parse for NamedArgList {
     }
 }
 
-impl NamedArgList {
-    pub fn span(&self) -> Span {
+impl Spanned for NamedArgList {
+    fn span(&self) -> Span {
         self.brace_token.span.join()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.brace_token = Brace(span);
     }
 }
@@ -235,13 +235,13 @@ impl Parse for NamedArg {
     }
 }
 
-impl NamedArg {
-    pub fn span(&self) -> Span {
+impl Spanned for NamedArg {
+    fn span(&self) -> Span {
         let span = self.name.span();
         span.join(self.arg.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.name.set_span(span);
         self.arg.set_span(span);
     }

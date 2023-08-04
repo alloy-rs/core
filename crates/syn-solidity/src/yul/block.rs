@@ -1,3 +1,4 @@
+use crate::Spanned;
 use proc_macro2::{Span, TokenStream};
 use std::fmt;
 use syn::{
@@ -32,12 +33,12 @@ impl Parse for YulBlock {
     }
 }
 
-impl YulBlock {
-    pub fn span(&self) -> Span {
+impl Spanned for YulBlock {
+    fn span(&self) -> Span {
         self.brace_token.span.join()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.brace_token = Brace(span);
     }
 }

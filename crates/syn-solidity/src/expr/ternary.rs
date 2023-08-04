@@ -1,4 +1,4 @@
-use crate::Expr;
+use crate::{Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -38,13 +38,13 @@ impl Parse for ExprTernary {
     }
 }
 
-impl ExprTernary {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprTernary {
+    fn span(&self) -> Span {
         let span = self.cond.span();
         span.join(self.if_false.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.cond.set_span(span);
         self.if_false.set_span(span);
     }

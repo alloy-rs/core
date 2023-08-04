@@ -1,4 +1,4 @@
-use crate::{kw, Stmt};
+use crate::{kw, Spanned, Stmt};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -30,12 +30,12 @@ impl Parse for Block {
     }
 }
 
-impl Block {
-    pub fn span(&self) -> Span {
+impl Spanned for Block {
+    fn span(&self) -> Span {
         self.brace_token.span.join()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.brace_token = Brace(span);
     }
 }
@@ -64,13 +64,13 @@ impl Parse for UncheckedBlock {
     }
 }
 
-impl UncheckedBlock {
-    pub fn span(&self) -> Span {
+impl Spanned for UncheckedBlock {
+    fn span(&self) -> Span {
         let span = self.unchecked_token.span;
         span.join(self.block.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.unchecked_token.span = span;
         self.block.set_span(span);
     }

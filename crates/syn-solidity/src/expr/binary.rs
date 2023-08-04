@@ -1,4 +1,4 @@
-use crate::Expr;
+use crate::{Expr, Spanned};
 use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream},
@@ -23,13 +23,13 @@ impl Parse for ExprBinary {
     }
 }
 
-impl ExprBinary {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprBinary {
+    fn span(&self) -> Span {
         let span = self.left.span();
         span.join(self.right.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.left.set_span(span);
         self.right.set_span(span);
     }

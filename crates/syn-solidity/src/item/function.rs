@@ -1,5 +1,6 @@
 use crate::{
-    kw, Block, FunctionAttributes, ParameterList, Parameters, SolIdent, Type, VariableDefinition,
+    kw, Block, FunctionAttributes, ParameterList, Parameters, SolIdent, Spanned, Type,
+    VariableDefinition,
 };
 use proc_macro2::Span;
 use std::{
@@ -62,6 +63,23 @@ impl Parse for ItemFunction {
     }
 }
 
+impl Spanned for ItemFunction {
+    fn span(&self) -> Span {
+        if let Some(name) = &self.name {
+            name.span()
+        } else {
+            self.kind.span()
+        }
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.kind.set_span(span);
+        if let Some(name) = &mut self.name {
+            name.set_span(span);
+        }
+    }
+}
+
 impl ItemFunction {
     pub fn new(kind: FunctionKind, name: Option<SolIdent>) -> Self {
         let span = name
@@ -99,21 +117,6 @@ impl ItemFunction {
             .extend(var.attributes.0.iter().cloned().map(Into::into));
 
         function
-    }
-
-    pub fn span(&self) -> Span {
-        if let Some(name) = &self.name {
-            name.span()
-        } else {
-            self.kind.span()
-        }
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.kind.set_span(span);
-        if let Some(name) = &mut self.name {
-            name.set_span(span);
-        }
     }
 
     /// Returns the name of the function.
@@ -238,6 +241,18 @@ impl Parse for Returns {
     }
 }
 
+impl Spanned for Returns {
+    fn span(&self) -> Span {
+        let span = self.returns_token.span;
+        span.join(self.paren_token.span.join()).unwrap_or(span)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.returns_token.span = span;
+        self.paren_token = Paren(span);
+    }
+}
+
 impl Returns {
     pub fn new(span: Span, returns: ParameterList) -> Self {
         Self {
@@ -245,16 +260,6 @@ impl Returns {
             paren_token: Paren(span),
             returns,
         }
-    }
-
-    pub fn span(&self) -> Span {
-        let span = self.returns_token.span;
-        span.join(self.paren_token.span.join()).unwrap_or(span)
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.returns_token.span = span;
-        self.paren_token = Paren(span);
     }
 
     pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {

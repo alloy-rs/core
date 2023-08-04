@@ -1,4 +1,4 @@
-use super::{kw, Override, SolPath, Visibility};
+use crate::{kw, Override, SolPath, Spanned, Visibility};
 use proc_macro2::Span;
 use std::{
     collections::HashSet,
@@ -50,6 +50,16 @@ impl Parse for VariableAttributes {
             attributes.insert(attribute);
         }
         Ok(Self(attributes))
+    }
+}
+
+impl Spanned for VariableAttributes {
+    fn span(&self) -> Span {
+        crate::utils::join_spans(&self.0)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans_clone(&mut self.0, span)
     }
 }
 
@@ -142,8 +152,8 @@ impl Parse for VariableAttribute {
     }
 }
 
-impl VariableAttribute {
-    pub fn span(&self) -> Span {
+impl Spanned for VariableAttribute {
+    fn span(&self) -> Span {
         match self {
             Self::Visibility(v) => v.span(),
             Self::Constant(c) => c.span,
@@ -152,7 +162,7 @@ impl VariableAttribute {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::Visibility(v) => v.set_span(span),
             Self::Constant(c) => c.span = span,
@@ -160,7 +170,9 @@ impl VariableAttribute {
             Self::Immutable(i) => i.span = span,
         }
     }
+}
 
+impl VariableAttribute {
     #[inline]
     pub const fn visibility(&self) -> Option<Visibility> {
         match self {

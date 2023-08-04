@@ -1,4 +1,4 @@
-use crate::Expr;
+use crate::{Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -34,12 +34,12 @@ impl Parse for ExprArray {
     }
 }
 
-impl ExprArray {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprArray {
+    fn span(&self) -> Span {
         self.bracket_token.span.join()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.bracket_token = Bracket(span);
     }
 }
@@ -83,13 +83,13 @@ impl Parse for ExprIndex {
     }
 }
 
-impl ExprIndex {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprIndex {
+    fn span(&self) -> Span {
         let span = self.expr.span();
         span.join(self.bracket_token.span.join()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.expr.set_span(span);
         self.bracket_token = Bracket(span);
     }

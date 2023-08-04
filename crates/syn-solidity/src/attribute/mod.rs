@@ -1,4 +1,4 @@
-use super::{kw, utils::DebugPunctuated, SolPath};
+use crate::{kw, utils::DebugPunctuated, SolPath, Spanned};
 use proc_macro2::{Span, TokenStream};
 use std::{
     fmt,
@@ -112,15 +112,15 @@ impl Parse for Override {
     }
 }
 
-impl Override {
-    pub fn span(&self) -> Span {
+impl Spanned for Override {
+    fn span(&self) -> Span {
         let span = self.override_token.span;
         self.paren_token
             .and_then(|paren_token| span.join(paren_token.span.join()))
             .unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.override_token.span = span;
         if let Some(paren_token) = &mut self.paren_token {
             *paren_token = Paren(span);
@@ -200,15 +200,15 @@ impl Parse for Modifier {
     }
 }
 
-impl Modifier {
-    pub fn span(&self) -> Span {
+impl Spanned for Modifier {
+    fn span(&self) -> Span {
         let span = self.name.span();
         self.paren_token
             .and_then(|paren_token| span.join(paren_token.span.join()))
             .unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.name.set_span(span);
         if let Some(paren_token) = &mut self.paren_token {
             *paren_token = Paren(span);

@@ -40,7 +40,7 @@ pub use var_decl::StmtVarDecl;
 mod r#while;
 pub use r#while::StmtWhile;
 
-use crate::kw;
+use crate::{kw, Spanned};
 use proc_macro2::Span;
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
@@ -158,8 +158,8 @@ impl Parse for Stmt {
     }
 }
 
-impl Stmt {
-    pub fn span(&self) -> Span {
+impl Spanned for Stmt {
+    fn span(&self) -> Span {
         match self {
             Self::Assembly(stmt) => stmt.span(),
             Self::Block(block) => block.span(),
@@ -179,7 +179,7 @@ impl Stmt {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::Assembly(stmt) => stmt.set_span(span),
             Self::Block(block) => block.set_span(span),

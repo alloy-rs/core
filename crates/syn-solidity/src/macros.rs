@@ -265,9 +265,24 @@ macro_rules! kw_enum {
             }
         }
 
+        impl $crate::Spanned for $name {
+            fn span(&self) -> ::proc_macro2::Span {
+                match self {$(
+                    Self::$variant(kw) => kw.span,
+                )+}
+            }
+
+            fn set_span(&mut self, span: ::proc_macro2::Span) {
+                match self {$(
+                    Self::$variant(kw) => kw.span = span,
+                )+}
+            }
+        }
+
         impl $name {
             ::paste::paste! {
                 $(
+                    #[doc = concat!("Creates a new `", stringify!($variant), "` keyword with the given `span`.")]
                     #[inline]
                     pub fn [<new_ $variant:snake>](span: ::proc_macro2::Span) -> Self {
                         Self::$variant(kw::$kw(span))
@@ -290,18 +305,6 @@ macro_rules! kw_enum {
                 $( lookahead.peek($crate::kw::$kw) )||+
             }
 
-            pub const fn span(self) -> ::proc_macro2::Span {
-                match self {$(
-                    Self::$variant(kw) => kw.span,
-                )+}
-            }
-
-            pub fn set_span(&mut self, span: ::proc_macro2::Span) {
-                match self {$(
-                    Self::$variant(kw) => kw.span = span,
-                )+}
-            }
-
             pub const fn as_str(self) -> &'static str {
                 match self {$(
                     Self::$variant(_) => stringify!($kw),
@@ -316,6 +319,7 @@ macro_rules! kw_enum {
 
             ::paste::paste! {
                 $(
+                    #[doc = concat!("Returns true if `self` matches `Self::", stringify!($variant), "`.")]
                     #[inline]
                     pub const fn [<is_ $variant:snake>](self) -> bool {
                         matches!(self, Self::$variant(_))
@@ -409,9 +413,27 @@ macro_rules! op_enum {
             }
         }
 
+        impl $crate::Spanned for $name {
+            fn span(&self) -> ::proc_macro2::Span {
+                todo!()
+                // match self {$(
+                //     Self::$variant(kw, ..) => kw.span(),
+                // )+}
+            }
+
+            fn set_span(&mut self, span: ::proc_macro2::Span) {
+                let _ = span;
+                todo!()
+                // match self {$(
+                //     Self::$variant(kw, ..) => kw.set_span(span),
+                // )+}
+            }
+        }
+
         impl $name {
             ::paste::paste! {
                 $(
+                    #[doc = concat!("Creates a new `", stringify!($variant), "` operator with the given `span`.")]
                     #[inline]
                     pub fn [<new_ $variant:snake>](span: ::proc_macro2::Span) -> Self {
                         Self::$variant($(::syn::Token![$op](span)),+)
@@ -438,23 +460,9 @@ macro_rules! op_enum {
                 )+}
             }
 
-            pub const fn span(self) -> ::proc_macro2::Span {
-                todo!()
-                // match self {$(
-                //     Self::$variant(kw, ..) => kw.span(),
-                // )+}
-            }
-
-            pub fn set_span(&mut self, span: ::proc_macro2::Span) {
-                let _ = span;
-                todo!()
-                // match self {$(
-                //     Self::$variant(kw, ..) => kw.set_span(span),
-                // )+}
-            }
-
             ::paste::paste! {
                 $(
+                    #[doc = concat!("Returns true if `self` matches `Self::", stringify!($variant), "`.")]
                     #[inline]
                     pub const fn [<is_ $variant:snake>](self) -> bool {
                         matches!(self, Self::$variant(..))

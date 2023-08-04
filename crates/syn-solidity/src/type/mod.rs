@@ -1,4 +1,4 @@
-use crate::{kw, sol_path, SolPath};
+use crate::{kw, sol_path, SolPath, Spanned};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -162,20 +162,8 @@ impl Parse for Type {
     }
 }
 
-impl Type {
-    pub fn peek(lookahead: &Lookahead1<'_>) -> bool {
-        lookahead.peek(syn::token::Paren)
-            || lookahead.peek(kw::tuple)
-            || lookahead.peek(kw::function)
-            || lookahead.peek(kw::mapping)
-            || lookahead.peek(Ident::peek_any)
-    }
-
-    pub fn custom(ident: Ident) -> Self {
-        Self::Custom(sol_path![ident])
-    }
-
-    pub fn span(&self) -> Span {
+impl Spanned for Type {
+    fn span(&self) -> Span {
         match self {
             &Self::Address(span, payable) => {
                 payable.and_then(|kw| span.join(kw.span)).unwrap_or(span)
@@ -194,7 +182,7 @@ impl Type {
         }
     }
 
-    pub fn set_span(&mut self, new_span: Span) {
+    fn set_span(&mut self, new_span: Span) {
         match self {
             Self::Address(span, payable) => {
                 *span = new_span;
@@ -215,6 +203,20 @@ impl Type {
             Self::Mapping(mapping) => mapping.set_span(new_span),
             Self::Custom(custom) => custom.set_span(new_span),
         }
+    }
+}
+
+impl Type {
+    pub fn peek(lookahead: &Lookahead1<'_>) -> bool {
+        lookahead.peek(syn::token::Paren)
+            || lookahead.peek(kw::tuple)
+            || lookahead.peek(kw::function)
+            || lookahead.peek(kw::mapping)
+            || lookahead.peek(Ident::peek_any)
+    }
+
+    pub fn custom(ident: Ident) -> Self {
+        Self::Custom(sol_path![ident])
     }
 
     /// Returns whether this type is ABI-encoded as a single EVM word (32

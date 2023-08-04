@@ -1,3 +1,4 @@
+use ast::Spanned;
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::path::PathBuf;

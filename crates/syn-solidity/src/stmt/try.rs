@@ -1,4 +1,4 @@
-use crate::{kw, Block, Expr, ParameterList, Returns, SolIdent};
+use crate::{kw, Block, Expr, ParameterList, Returns, SolIdent, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -52,13 +52,13 @@ impl Parse for StmtTry {
     }
 }
 
-impl StmtTry {
-    pub fn span(&self) -> Span {
+impl Spanned for StmtTry {
+    fn span(&self) -> Span {
         let span = self.try_token.span;
         span.join(self.block.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.try_token.span = span;
         self.block.set_span(span);
     }
@@ -108,13 +108,13 @@ impl Parse for CatchClause {
     }
 }
 
-impl CatchClause {
-    pub fn span(&self) -> Span {
+impl Spanned for CatchClause {
+    fn span(&self) -> Span {
         let span = self.catch_token.span;
         span.join(self.block.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.catch_token.span = span;
         self.block.set_span(span);
     }

@@ -1,4 +1,4 @@
-use crate::{FieldList, SolIdent, Type};
+use crate::{FieldList, SolIdent, Spanned, Type};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -62,17 +62,19 @@ impl Parse for ItemStruct {
     }
 }
 
-impl ItemStruct {
-    pub fn span(&self) -> Span {
+impl Spanned for ItemStruct {
+    fn span(&self) -> Span {
         self.name.span()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.struct_token = Token![struct](span);
         self.name.set_span(span);
         self.brace_token = Brace(span);
     }
+}
 
+impl ItemStruct {
     pub fn as_type(&self) -> Type {
         let mut ty = Type::Tuple(self.fields.types().cloned().collect());
         ty.set_span(self.span());

@@ -1,4 +1,4 @@
-use crate::Expr;
+use crate::{Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -33,8 +33,8 @@ impl Parse for ExprMember {
     }
 }
 
-impl ExprMember {
-    pub fn span(&self) -> Span {
+impl Spanned for ExprMember {
+    fn span(&self) -> Span {
         self.expr
             .span()
             .join(self.member.span())
@@ -46,7 +46,7 @@ impl ExprMember {
             })
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.expr.set_span(span);
     }
 }

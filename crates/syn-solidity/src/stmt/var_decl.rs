@@ -1,4 +1,4 @@
-use crate::{Expr, VariableDeclaration};
+use crate::{Expr, Spanned, VariableDeclaration};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -45,8 +45,8 @@ impl Parse for StmtVarDecl {
     }
 }
 
-impl StmtVarDecl {
-    pub fn span(&self) -> Span {
+impl Spanned for StmtVarDecl {
+    fn span(&self) -> Span {
         let span = self.declaration.span();
         self.assignment
             .as_ref()
@@ -54,7 +54,7 @@ impl StmtVarDecl {
             .unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.declaration.set_span(span);
         if let Some((eq, expr)) = &mut self.assignment {
             eq.span = span;
@@ -81,15 +81,15 @@ impl Parse for VarDeclDecl {
     }
 }
 
-impl VarDeclDecl {
-    pub fn span(&self) -> Span {
+impl Spanned for VarDeclDecl {
+    fn span(&self) -> Span {
         match self {
             Self::VarDecl(decl) => decl.span(),
             Self::Expression(decl) => decl.span(),
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::VarDecl(decl) => decl.set_span(span),
             Self::Expression(decl) => decl.set_span(span),
@@ -127,15 +127,17 @@ impl Parse for VarDeclTuple {
     }
 }
 
-impl VarDeclTuple {
-    pub fn span(&self) -> Span {
+impl Spanned for VarDeclTuple {
+    fn span(&self) -> Span {
         self.paren_token.span.join()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.paren_token = Paren(span);
     }
+}
 
+impl VarDeclTuple {
     fn parse_var_opt(input: ParseStream<'_>) -> Result<Option<VariableDeclaration>> {
         if input.peek(Token![,]) {
             Ok(None)
