@@ -1,21 +1,51 @@
-use crate::{call_args::CallArgs, expr::Stmt, kw};
-use syn::{parse::Parse, Token};
+use crate::{kw, CallArgumentList, Expr};
+use proc_macro2::Span;
+use std::fmt;
+use syn::{
+    parse::{Parse, ParseStream},
+    Result, Token,
+};
 
-#[derive(Clone, Debug)]
-pub struct Revert {
-    kw: kw::revert,
-    expr: Box<Stmt>,
-    args: CallArgs,
-    semi: Token![;],
+/// A revert statement: `revert("error");`
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.revertStatement>
+#[derive(Clone)]
+pub struct StmtRevert {
+    pub revert_token: kw::revert,
+    pub expr: Expr,
+    pub list: CallArgumentList,
+    pub semi_token: Token![;],
 }
 
-impl Parse for Revert {
-    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+impl fmt::Debug for StmtRevert {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StmtRevert")
+            .field("expr", &self.expr)
+            .field("list", &self.list)
+            .finish()
+    }
+}
+
+impl Parse for StmtRevert {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
-            kw: input.parse()?,
-            expr: Box::new(input.parse()?),
-            args: input.parse()?,
-            semi: input.parse()?,
+            revert_token: input.parse()?,
+            expr: input.parse()?,
+            list: input.parse()?,
+            semi_token: input.parse()?,
         })
+    }
+}
+
+impl StmtRevert {
+    pub fn span(&self) -> Span {
+        let span = self.revert_token.span;
+        span.join(self.semi_token.span).unwrap_or(span)
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.revert_token.span = span;
+        self.semi_token.span = span;
     }
 }

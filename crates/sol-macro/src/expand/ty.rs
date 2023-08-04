@@ -2,10 +2,7 @@
 
 use super::ExpCtxt;
 use crate::expand::generate_name;
-use ast::{
-    r#type::{Type, TypeArray},
-    EventParameter, Item, Parameters, VariableDeclaration,
-};
+use ast::{EventParameter, Item, Parameters, Type, TypeArray, VariableDeclaration};
 use proc_macro2::{Literal, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use std::{fmt, num::NonZeroU16};

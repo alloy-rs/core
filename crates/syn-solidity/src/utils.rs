@@ -1,6 +1,10 @@
 use proc_macro2::{TokenStream, TokenTree};
 use std::fmt;
-use syn::{parse::ParseStream, punctuated::Punctuated, Token};
+use syn::{
+    parse::{Parse, ParseStream},
+    punctuated::Punctuated,
+    Result, Token,
+};
 
 #[repr(transparent)]
 pub(crate) struct DebugPunctuated<T, P>(Punctuated<T, P>);
@@ -25,4 +29,16 @@ pub(crate) fn tts_until_semi(input: ParseStream<'_>) -> TokenStream {
         tts.extend(std::iter::once(tt));
     }
     tts
+}
+
+pub(crate) fn parse_vec<T: Parse>(input: ParseStream<'_>, allow_empty: bool) -> Result<Vec<T>> {
+    let mut vec = Vec::<T>::new();
+    while !input.is_empty() {
+        vec.push(input.parse()?);
+    }
+    if !allow_empty && vec.is_empty() {
+        Err(input.parse::<T>().err().expect("unreachable"))
+    } else {
+        Ok(vec)
+    }
 }

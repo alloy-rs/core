@@ -8,7 +8,7 @@ use std::{
 };
 use syn::{
     parse::{Parse, ParseStream},
-    Error, Result,
+    Error, Result, Token,
 };
 
 /// A list of unique variable attributes.
@@ -132,7 +132,7 @@ impl Parse for VariableAttribute {
             input.parse().map(Self::Visibility)
         } else if lookahead.peek(kw::constant) {
             input.parse().map(Self::Constant)
-        } else if lookahead.peek(kw::Override) {
+        } else if lookahead.peek(Token![override]) {
             input.parse().map(Self::Override)
         } else if lookahead.peek(kw::immutable) {
             input.parse().map(Self::Immutable)

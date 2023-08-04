@@ -1,7 +1,5 @@
 //! Solidity keywords.
 
-pub use syn::token::{Abstract, Override, Virtual};
-
 macro_rules! custom_keywords {
     ($($name:ident),+ $(,)?) => {
         $(syn::custom_keyword!($name);)+

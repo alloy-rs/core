@@ -1,6 +1,6 @@
 use super::{SolIdent, Storage, Type};
-use crate::{utils::tts_until_semi, VariableAttributes};
-use proc_macro2::{Span, TokenStream};
+use crate::{Expr, VariableAttributes};
+use proc_macro2::Span;
 use std::fmt::{self, Write};
 use syn::{
     ext::IdentExt,
@@ -23,7 +23,7 @@ pub struct VariableDeclaration {
     /// The storage location of the variable, if any.
     pub storage: Option<Storage>,
     /// The name of the variable. This is always Some if parsed as part of
-    /// [`Parameters`].
+    /// [`Parameters`] or a [`Stmt`][crate::Stmt].
     pub name: Option<SolIdent>,
 }
 
@@ -111,8 +111,7 @@ pub struct VariableDefinition {
     pub ty: Type,
     pub attributes: VariableAttributes,
     pub name: SolIdent,
-    // TODO: Expr
-    pub initializer: Option<(Token![=], TokenStream)>,
+    pub initializer: Option<(Token![=], Expr)>,
     pub semi_token: Token![;],
 }
 
@@ -123,7 +122,7 @@ impl Parse for VariableDefinition {
             attributes: input.parse()?,
             name: input.parse()?,
             initializer: if input.peek(Token![=]) {
-                Some((input.parse()?, tts_until_semi(input)))
+                Some((input.parse()?, input.parse()?))
             } else {
                 None
             },

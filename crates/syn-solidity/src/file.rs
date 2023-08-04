@@ -5,7 +5,7 @@ use syn::{
 };
 
 /// A Solidity file. The root of the AST.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct File {
     /// The inner attributes of the file.
     pub attrs: Vec<Attribute>,

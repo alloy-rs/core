@@ -1,21 +1,51 @@
-use crate::{call_args::CallArgs, expr::Stmt, kw};
-use syn::{parse::Parse, Token};
+use crate::{kw, CallArgumentList, Expr};
+use proc_macro2::Span;
+use std::fmt;
+use syn::{
+    parse::{Parse, ParseStream},
+    Result, Token,
+};
 
-#[derive(Debug, Clone)]
-pub struct Emit {
-    keyword: kw::emit,
-    expr: Box<Stmt>,
-    args: CallArgs,
-    semi: Token!(;),
+/// An emit statement: `emit FooBar(42);`
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.emitStatement>
+#[derive(Clone)]
+pub struct StmtEmit {
+    pub emit_token: kw::emit,
+    pub expr: Expr,
+    pub list: CallArgumentList,
+    pub semi_token: Token![;],
 }
 
-impl Parse for Emit {
-    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+impl fmt::Debug for StmtEmit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StmtEmit")
+            .field("expr", &self.expr)
+            .field("list", &self.list)
+            .finish()
+    }
+}
+
+impl Parse for StmtEmit {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
-            keyword: input.parse()?,
-            expr: Box::new(input.parse()?),
-            args: input.parse()?,
-            semi: input.parse()?,
+            emit_token: input.parse()?,
+            expr: input.parse()?,
+            list: input.parse()?,
+            semi_token: input.parse()?,
         })
+    }
+}
+
+impl StmtEmit {
+    pub fn span(&self) -> Span {
+        let span = self.emit_token.span;
+        span.join(self.semi_token.span).unwrap_or(span)
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.emit_token.span = span;
+        self.semi_token.span = span;
     }
 }

@@ -61,7 +61,7 @@ kw_enum! {
 /// The `override` attribute.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Override {
-    pub override_token: kw::Override,
+    pub override_token: Token![override],
     pub paren_token: Option<Paren>,
     pub paths: Punctuated<SolPath, Token![,]>,
 }

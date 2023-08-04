@@ -116,7 +116,7 @@ pub enum FunctionAttribute {
     /// A [Mutability] attribute.
     Mutability(Mutability),
     /// `virtual`
-    Virtual(kw::Virtual),
+    Virtual(Token![virtual]),
     /// `immutable`
     Immutable(kw::immutable),
     /// An [Override] attribute.
@@ -178,9 +178,9 @@ impl Parse for FunctionAttribute {
             input.parse().map(Self::Visibility)
         } else if Mutability::peek(&lookahead) {
             input.parse().map(Self::Mutability)
-        } else if lookahead.peek(kw::Virtual) {
+        } else if lookahead.peek(Token![virtual]) {
             input.parse().map(Self::Virtual)
-        } else if lookahead.peek(kw::Override) {
+        } else if lookahead.peek(Token![override]) {
             input.parse().map(Self::Override)
         } else if lookahead.peek(kw::immutable) {
             input.parse().map(Self::Immutable)

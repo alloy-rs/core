@@ -107,7 +107,7 @@ impl ItemContract {
 /// The kind of contract.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ContractKind {
-    AbstractContract(kw::Abstract, kw::contract),
+    AbstractContract(Token![abstract], kw::contract),
     Contract(kw::contract),
     Interface(kw::interface),
     Library(kw::library),
@@ -140,7 +140,7 @@ impl Ord for ContractKind {
 impl Parse for ContractKind {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(kw::Abstract) {
+        if lookahead.peek(Token![abstract]) {
             Ok(Self::AbstractContract(input.parse()?, input.parse()?))
         } else if lookahead.peek(kw::contract) {
             input.parse().map(Self::Contract)
@@ -156,7 +156,7 @@ impl Parse for ContractKind {
 
 impl ContractKind {
     pub fn peek(lookahead: &Lookahead1<'_>) -> bool {
-        lookahead.peek(kw::Abstract)
+        lookahead.peek(Token![abstract])
             || lookahead.peek(kw::contract)
             || lookahead.peek(kw::interface)
             || lookahead.peek(kw::library)

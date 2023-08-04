@@ -1,43 +1,65 @@
-use crate::{binop::BinopExpr, expr::Stmt, Block};
-use syn::{parenthesized, parse::Parse, token::Paren, Token};
+use crate::{Expr, Stmt, StmtExpr, StmtVarDecl};
+use proc_macro2::Span;
+use std::fmt;
+use syn::{
+    parse::{Parse, ParseStream},
+    token::Paren,
+    Result, Token,
+};
 
-#[derive(Debug, Clone)]
-pub struct ForStmt {
+/// A for statement: `for (uint256 i; i < 42; ++i) { ... }`
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.forStatement>
+#[derive(Clone)]
+pub struct StmtFor {
     pub for_token: Token![for],
-    pub for_assign: ForAssignment,
+    pub paren_token: Paren,
+    pub init: Option<ForInitStmt>,
+    pub semi_token1: Token![;],
+    pub cond: Option<Expr>,
+    pub semi_token2: Token![;],
+    pub post: Option<Expr>,
+    pub body: Box<Stmt>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ForAssignment {
-    pub brace: Paren,
-    pub iter_asign: BinopExpr,
-    pub semi: Token![;],
-    pub cond: Box<Stmt>,
-    pub semi2: Token![;],
-    pub up_cond: Option<Box<Stmt>>,
-    pub block: Block,
-}
-
-impl Parse for ForStmt {
-    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
-        Ok(Self {
-            for_token: input.parse()?,
-            for_assign: input.parse()?,
-        })
+impl fmt::Debug for StmtFor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StmtFor")
+            .field("init", &self.init)
+            .field("cond", &self.cond)
+            .field("post", &self.post)
+            .field("body", &self.body)
+            .finish()
     }
 }
 
-impl Parse for ForAssignment {
-    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
-        let content;
-        Ok(Self {
-            brace: parenthesized!(content in input),
-            iter_asign: input.parse()?,
-            semi: input.parse()?,
-            cond: Box::new(input.parse()?),
-            semi2: input.parse()?,
-            up_cond: input.parse().ok(),
-            block: input.parse()?,
-        })
+impl Parse for StmtFor {
+    fn parse(_input: ParseStream<'_>) -> Result<Self> {
+        todo!()
+    }
+}
+
+impl StmtFor {
+    pub fn span(&self) -> Span {
+        let span = self.for_token.span;
+        span.join(self.body.span()).unwrap_or(span)
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.for_token.span = span;
+        self.body.set_span(span);
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum ForInitStmt {
+    VarDecl(StmtVarDecl),
+    Expression(StmtExpr),
+}
+
+impl Parse for ForInitStmt {
+    fn parse(_input: ParseStream<'_>) -> Result<Self> {
+        todo!()
     }
 }

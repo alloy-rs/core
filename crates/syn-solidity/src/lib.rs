@@ -4,7 +4,6 @@
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
 #![warn(
-    missing_copy_implementations,
     missing_debug_implementations,
     unreachable_pub,
     unused_crate_dependencies,
@@ -25,6 +24,9 @@ pub use attribute::{
     FunctionAttribute, FunctionAttributes, Modifier, Mutability, Override, Storage,
     VariableAttribute, VariableAttributes, Visibility,
 };
+
+mod expr;
+pub use expr::*;
 
 mod file;
 pub use file::File;
@@ -65,6 +67,9 @@ pub use visit::Visit;
 pub mod visit_mut;
 #[cfg(feature = "visit-mut")]
 pub use visit_mut::VisitMut;
+
+mod yul;
+pub use yul::YulBlock;
 
 /// Parse a Solidity [`proc_macro::TokenStream`] into a [`File`].
 pub fn parse(input: proc_macro::TokenStream) -> Result<File> {

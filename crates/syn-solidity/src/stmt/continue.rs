@@ -1,4 +1,3 @@
-use crate::Expr;
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -6,37 +5,39 @@ use syn::{
     Result, Token,
 };
 
+/// A continue statement: `continue;`
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.continueStatement>
 #[derive(Clone)]
-pub struct StmtExpr {
-    pub expr: Expr,
+pub struct StmtContinue {
+    pub continue_token: Token![continue],
     pub semi_token: Token![;],
 }
 
-impl fmt::Debug for StmtExpr {
+impl fmt::Debug for StmtContinue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("StmtExpr")
-            .field("expr", &self.expr)
-            .finish()
+        f.debug_struct("StmtContinue").finish()
     }
 }
 
-impl Parse for StmtExpr {
+impl Parse for StmtContinue {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
-            expr: input.parse()?,
+            continue_token: input.parse()?,
             semi_token: input.parse()?,
         })
     }
 }
 
-impl StmtExpr {
+impl StmtContinue {
     pub fn span(&self) -> Span {
-        let span = self.expr.span();
+        let span = self.continue_token.span;
         span.join(self.semi_token.span).unwrap_or(span)
     }
 
     pub fn set_span(&mut self, span: Span) {
-        self.expr.set_span(span);
+        self.continue_token.span = span;
         self.semi_token.span = span;
     }
 }

@@ -50,6 +50,14 @@ impl Parse for LitStr {
 }
 
 impl LitStr {
+    pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
+        if input.peek(kw::unicode) || input.peek(syn::LitStr) {
+            input.parse().map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
     pub fn span(&self) -> Span {
         let mut span = if let Some(kw) = &self.unicode_token {
             kw.span
