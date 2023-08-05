@@ -9,55 +9,13 @@ use syn::{
 // TODO: Fixed point numbers
 
 /// An integer or fixed-point number literal: `1` or `1.0`.
-#[derive(Clone, Debug)]
-pub struct LitNumber {
-    pub kind: LitNumberKind,
-    pub denom: Option<SubDenomination>,
-}
-
-impl Parse for LitNumber {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            kind: input.parse()?,
-            denom: input.call(SubDenomination::parse_opt)?,
-        })
-    }
-}
-
-impl Spanned for LitNumber {
-    fn span(&self) -> Span {
-        let span = self.kind.span();
-        self.denom
-            .as_ref()
-            .and_then(|d| d.span().join(span))
-            .unwrap_or(span)
-    }
-
-    fn set_span(&mut self, span: Span) {
-        self.kind.set_span(span);
-        if let Some(denom) = &mut self.denom {
-            denom.set_span(span);
-        }
-    }
-}
-
-impl LitNumber {
-    pub fn new(kind: LitNumberKind) -> Self {
-        Self { kind, denom: None }
-    }
-
-    pub fn peek(lookahead: &Lookahead1<'_>) -> bool {
-        LitNumberKind::peek(lookahead)
-    }
-}
-
 #[derive(Clone)]
-pub enum LitNumberKind {
+pub enum LitNumber {
     Int(LitInt),
     Float(LitFloat),
 }
 
-impl fmt::Debug for LitNumberKind {
+impl fmt::Debug for LitNumber {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Int(lit) => lit.fmt(f),
@@ -66,7 +24,7 @@ impl fmt::Debug for LitNumberKind {
     }
 }
 
-impl Parse for LitNumberKind {
+impl Parse for LitNumber {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(LitInt) {
@@ -79,7 +37,7 @@ impl Parse for LitNumberKind {
     }
 }
 
-impl Spanned for LitNumberKind {
+impl Spanned for LitNumber {
     fn span(&self) -> Span {
         match self {
             Self::Int(lit) => lit.span(),
@@ -95,7 +53,7 @@ impl Spanned for LitNumberKind {
     }
 }
 
-impl LitNumberKind {
+impl LitNumber {
     pub fn new_int(repr: &str, span: Span) -> Self {
         Self::Int(LitInt::new(repr, span))
     }
@@ -144,6 +102,33 @@ impl LitNumberKind {
             Self::Int(lit) => lit.token(),
             Self::Float(lit) => lit.token(),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct LitDenominated {
+    pub number: LitNumber,
+    pub denom: SubDenomination,
+}
+
+impl Parse for LitDenominated {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        Ok(Self {
+            number: input.parse()?,
+            denom: input.parse()?,
+        })
+    }
+}
+
+impl Spanned for LitDenominated {
+    fn span(&self) -> Span {
+        let span = self.number.span();
+        span.join(self.denom.span()).unwrap_or(span)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.number.set_span(span);
+        self.denom.set_span(span);
     }
 }
 

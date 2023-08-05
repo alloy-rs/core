@@ -1,14 +1,13 @@
-use std::fmt;
-
 use crate::{kw, Spanned};
 use proc_macro2::Span;
+use std::fmt;
 use syn::{
     parse::{Lookahead1, Parse, ParseStream},
     LitBool, Result,
 };
 
 mod number;
-pub use number::{LitNumber, LitNumberKind, SubDenomination};
+pub use number::{LitDenominated, LitNumber, SubDenomination};
 
 mod str;
 pub use self::str::{HexStr, LitHexStr, LitStr, LitUnicodeStr, UnicodeStr};

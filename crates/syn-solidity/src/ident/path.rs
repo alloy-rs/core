@@ -21,12 +21,6 @@ macro_rules! sol_path {
         $(path.push($crate::SolIdent::from($e));)+
         path
     }};
-
-    ($($id:ident).+) => {{
-        let mut path = $crate::SolPath::new();
-        $(path.push($crate::SolIdent::new(stringify!($id))));+
-        path
-    }};
 }
 
 /// A list of identifiers, separated by dots.

@@ -11,8 +11,6 @@ use syn::{
 mod path;
 pub use path::SolPath;
 
-// TODO: Deny Solidity keywords
-
 /// A Solidity identifier.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
@@ -58,9 +56,16 @@ impl From<SolIdent> for Ident {
     }
 }
 
+impl From<&str> for SolIdent {
+    fn from(value: &str) -> Self {
+        Self::new(value)
+    }
+}
+
 impl Parse for SolIdent {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        input.call(Ident::parse_any).map(Self)
+        // TODO: Deny Solidity keywords
+        Self::parse_any(input)
     }
 }
 
@@ -98,7 +103,12 @@ impl SolIdent {
         s
     }
 
-    /// See `[Ident::peek_any]`.
+    /// Parses any identifier including keywords.
+    pub fn parse_any(input: ParseStream<'_>) -> Result<Self> {
+        input.call(Ident::parse_any).map(Self)
+    }
+
+    /// Peeks any identifier including keywords.
     pub fn peek_any(input: ParseStream<'_>) -> bool {
         input.peek(Ident::peek_any)
     }

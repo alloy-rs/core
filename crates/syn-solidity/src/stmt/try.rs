@@ -15,7 +15,7 @@ use syn::{
 #[derive(Clone)]
 pub struct StmtTry {
     pub try_token: Token![try],
-    pub expr: Expr,
+    pub expr: Box<Expr>,
     pub returns: Option<Returns>,
     /// The try block.
     pub block: Block,

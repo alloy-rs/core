@@ -49,7 +49,7 @@ pub use item::{
 
 mod lit;
 pub use lit::{
-    HexStr, Lit, LitHexStr, LitNumber, LitNumberKind, LitStr, LitUnicodeStr, SubDenomination,
+    HexStr, Lit, LitDenominated, LitHexStr, LitNumber, LitStr, LitUnicodeStr, SubDenomination,
     UnicodeStr,
 };
 

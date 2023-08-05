@@ -1,7 +1,6 @@
 use crate::{kw, Modifier, Mutability, Override, SolPath, Spanned, VariableAttribute, Visibility};
 use proc_macro2::Span;
 use std::{
-    collections::HashSet,
     fmt,
     hash::{Hash, Hasher},
     mem,
@@ -17,7 +16,7 @@ use syn::{
 /// A list of unique function attributes. Used in
 /// [ItemFunction][crate::ItemFunction].
 #[derive(Clone, Default, PartialEq, Eq)]
-pub struct FunctionAttributes(pub HashSet<FunctionAttribute>);
+pub struct FunctionAttributes(pub Vec<FunctionAttribute>);
 
 impl fmt::Debug for FunctionAttributes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -26,7 +25,7 @@ impl fmt::Debug for FunctionAttributes {
 }
 
 impl Deref for FunctionAttributes {
-    type Target = HashSet<FunctionAttribute>;
+    type Target = Vec<FunctionAttribute>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -41,19 +40,19 @@ impl DerefMut for FunctionAttributes {
 
 impl Parse for FunctionAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut attributes = HashSet::<FunctionAttribute>::new();
+        let mut attributes = Vec::<FunctionAttribute>::new();
         while !(input.is_empty()
             || input.peek(kw::returns)
             || input.peek(Token![;])
             || input.peek(Brace))
         {
-            let attr = input.parse()?;
-            if let Some(prev) = attributes.get(&attr) {
+            let attr: FunctionAttribute = input.parse()?;
+            if let Some(prev) = attributes.iter().find(|a| **a == attr) {
                 let mut e = Error::new(attr.span(), "duplicate attribute");
                 e.combine(Error::new(prev.span(), "previous declaration is here"));
                 return Err(e)
             }
-            attributes.insert(attr);
+            attributes.push(attr);
         }
         Ok(Self(attributes))
     }
@@ -72,7 +71,7 @@ impl Spanned for FunctionAttributes {
 impl FunctionAttributes {
     #[inline]
     pub fn new() -> Self {
-        Self(HashSet::new())
+        Self(Vec::new())
     }
 
     pub fn visibility(&self) -> Option<Visibility> {

@@ -16,10 +16,10 @@ use syn::{
 pub struct StmtFor {
     pub for_token: Token![for],
     pub paren_token: Paren,
-    pub init: ForInitStmt,
-    pub cond: Option<Expr>,
+    pub init: Box<ForInitStmt>,
+    pub cond: Option<Box<Expr>>,
     pub semi_token: Token![;],
-    pub post: Option<Expr>,
+    pub post: Option<Box<Expr>>,
     pub body: Box<Stmt>,
 }
 

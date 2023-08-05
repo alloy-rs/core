@@ -1,7 +1,4 @@
-use syn_solidity::{SolIdent, SolPath};
-
-#[macro_use]
-mod macros;
+use syn_solidity::{sol_path, SolIdent, SolPath};
 
 #[test]
 fn ident() {
@@ -12,7 +9,7 @@ fn ident() {
 #[test]
 fn ident_path() {
     let path: SolPath = syn::parse_str("a.b.c").unwrap();
-    assert_eq!(path, path![a, b, c]);
+    assert_eq!(path, sol_path!["a", "b", "c"]);
 }
 
 #[test]

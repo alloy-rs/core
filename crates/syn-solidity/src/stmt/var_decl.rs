@@ -15,7 +15,7 @@ use syn::{
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.variableDeclarationStatement>
 #[derive(Clone)]
 pub struct StmtVarDecl {
-    pub declaration: VarDeclDecl,
+    pub declaration: Box<VarDeclDecl>,
     pub assignment: Option<(Token![=], Expr)>,
     pub semi_token: Token![;],
 }
@@ -43,7 +43,7 @@ impl Parse for StmtVarDecl {
         let semi_token = input.parse()?;
 
         Ok(Self {
-            declaration,
+            declaration: Box::new(declaration),
             assignment,
             semi_token,
         })

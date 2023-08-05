@@ -1,4 +1,6 @@
-use crate::{kw, utils::ParseNested, Lit, SolIdent, Spanned, Type};
+use crate::{
+    kw, utils::ParseNested, Lit, LitDenominated, SolIdent, Spanned, SubDenomination, Type,
+};
 use proc_macro2::{Ident, Span};
 use std::fmt;
 use syn::{
@@ -64,6 +66,9 @@ pub enum Expr {
     /// A literal: `hex"1234"`.
     Lit(Lit),
 
+    /// A number literal with a sub-denomination: `1 ether`.
+    LitDenominated(LitDenominated),
+
     /// Access of a named member: `obj.k`.
     Member(ExprMember),
 
@@ -106,6 +111,7 @@ impl fmt::Debug for Expr {
             Self::Ident(ident) => ident.fmt(f),
             Self::Index(expr) => expr.fmt(f),
             Self::Lit(lit) => lit.fmt(f),
+            Self::LitDenominated(lit) => lit.fmt(f),
             Self::Member(expr) => expr.fmt(f),
             Self::New(expr) => expr.fmt(f),
             Self::Payable(expr) => expr.fmt(f),
@@ -150,6 +156,7 @@ impl Spanned for Expr {
             Self::Ident(ident) => ident.span(),
             Self::Index(expr) => expr.span(),
             Self::Lit(lit) => lit.span(),
+            Self::LitDenominated(lit) => lit.span(),
             Self::Member(expr) => expr.span(),
             Self::New(expr) => expr.span(),
             Self::Payable(expr) => expr.span(),
@@ -172,6 +179,7 @@ impl Spanned for Expr {
             Self::Ident(ident) => ident.set_span(span),
             Self::Index(expr) => expr.set_span(span),
             Self::Lit(lit) => lit.set_span(span),
+            Self::LitDenominated(lit) => lit.set_span(span),
             Self::Member(expr) => expr.set_span(span),
             Self::New(expr) => expr.set_span(span),
             Self::Payable(expr) => expr.set_span(span),
@@ -195,7 +203,16 @@ impl Expr {
         } else if UnOp::peek(input, &lookahead) {
             input.parse().map(Self::Unary)
         } else if Lit::peek(&lookahead) {
-            input.parse().map(Self::Lit)
+            match (input.parse()?, input.call(SubDenomination::parse_opt)?) {
+                (Lit::Number(number), Some(denom)) => {
+                    Ok(Self::LitDenominated(LitDenominated { number, denom }))
+                }
+                (lit, None) => Ok(Self::Lit(lit)),
+                (_, Some(denom)) => Err(syn::Error::new(
+                    denom.span(),
+                    "unexpected subdenomination for literal",
+                )),
+            }
         } else if lookahead.peek(kw::payable) {
             input.parse().map(Self::Payable)
         } else if lookahead.peek(Token![type]) {

@@ -1,7 +1,6 @@
 use crate::{kw, Override, SolPath, Spanned, Visibility};
 use proc_macro2::Span;
 use std::{
-    collections::HashSet,
     fmt,
     hash::{Hash, Hasher},
     mem,
@@ -13,11 +12,11 @@ use syn::{
 
 /// A list of unique variable attributes.
 #[derive(Clone, Debug)]
-pub struct VariableAttributes(pub HashSet<VariableAttribute>);
+pub struct VariableAttributes(pub Vec<VariableAttribute>);
 
 impl Parse for VariableAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut attributes = HashSet::new();
+        let mut attributes = Vec::new();
         while let Ok(attribute) = input.parse::<VariableAttribute>() {
             let error = |prev: &VariableAttribute| {
                 let mut e = Error::new(attribute.span(), "duplicate attribute");
@@ -28,15 +27,17 @@ impl Parse for VariableAttributes {
             // Only one of: `constant`, `immutable`
             match attribute {
                 VariableAttribute::Constant(_) => {
-                    if let Some(prev) =
-                        attributes.get(&VariableAttribute::Immutable(Default::default()))
+                    if let Some(prev) = attributes
+                        .iter()
+                        .find(|a| matches!(a, VariableAttribute::Immutable(_)))
                     {
                         return Err(error(prev))
                     }
                 }
                 VariableAttribute::Immutable(_) => {
-                    if let Some(prev) =
-                        attributes.get(&VariableAttribute::Constant(Default::default()))
+                    if let Some(prev) = attributes
+                        .iter()
+                        .find(|a| matches!(a, VariableAttribute::Constant(_)))
                     {
                         return Err(error(prev))
                     }
@@ -44,10 +45,10 @@ impl Parse for VariableAttributes {
                 _ => {}
             }
 
-            if let Some(prev) = attributes.get(&attribute) {
+            if let Some(prev) = attributes.iter().find(|a| **a == attribute) {
                 return Err(error(prev))
             }
-            attributes.insert(attribute);
+            attributes.push(attribute);
         }
         Ok(Self(attributes))
     }
