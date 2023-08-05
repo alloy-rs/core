@@ -1,11 +1,11 @@
-use crate::{kw, utils::parse_vec, Spanned};
+use crate::{kw, Spanned};
 use proc_macro2::Span;
 use std::{
     fmt,
     ops::{Deref, DerefMut},
 };
 use syn::{
-    parse::{Parse, ParseStream},
+    parse::{Lookahead1, Parse, ParseStream},
     Result,
 };
 
@@ -34,31 +34,31 @@ macro_rules! str_lit {
 
         impl Parse for $name {
             fn parse(input: ParseStream<'_>) -> Result<Self> {
-                Ok(Self {
-                    values: parse_vec(input, false)?,
-                })
+                let mut values = Vec::new();
+                while Self::peek(&input.lookahead1()) {
+                    values.push(input.parse()?);
+                }
+                Ok(Self { values })
             }
         }
 
         impl Spanned for $name {
             fn span(&self) -> Span {
-                let mut span = self.values.first().unwrap().span();
-                for value in &self.values[1..] {
-                    span = span.join(value.span()).unwrap_or(span);
-                }
-                span
+                crate::utils::join_spans(&self.values)
             }
 
             fn set_span(&mut self, span: Span) {
-                for value in &mut self.values {
-                    value.set_span(span);
-                }
+                crate::utils::set_spans(&mut self.values, span)
             }
         }
 
         impl $name {
+            pub fn peek(lookahead: &Lookahead1<'_>) -> bool {
+                $(lookahead.peek(kw::$kw) || )? lookahead.peek(syn::LitStr)
+            }
+
             pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
-                if $(input.peek(kw::$kw) || )? input.peek(syn::LitStr) {
+                if Self::peek(&input.lookahead1()) {
                     input.parse().map(Some)
                 } else {
                     Ok(None)

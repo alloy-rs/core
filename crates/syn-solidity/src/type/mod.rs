@@ -30,6 +30,7 @@ pub use tuple::TypeTuple;
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.typeName>
 #[derive(Clone)]
 pub enum Type {
+    // TODO: `fixed` and `ufixed`
     /// `address $(payable)?`
     Address(Span, Option<kw::payable>),
     /// `bool`
@@ -106,6 +107,7 @@ impl Hash for Type {
 
 impl fmt::Debug for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Type::")?;
         match self {
             Self::Address(_, None) => f.write_str("Address"),
             Self::Address(_, Some(_)) => f.write_str("AddressPayable"),
@@ -207,6 +209,10 @@ impl Spanned for Type {
 }
 
 impl Type {
+    pub fn custom(ident: Ident) -> Self {
+        Self::Custom(sol_path![ident])
+    }
+
     pub fn peek(lookahead: &Lookahead1<'_>) -> bool {
         lookahead.peek(syn::token::Paren)
             || lookahead.peek(kw::tuple)
@@ -215,8 +221,61 @@ impl Type {
             || lookahead.peek(Ident::peek_any)
     }
 
-    pub fn custom(ident: Ident) -> Self {
-        Self::Custom(sol_path![ident])
+    /// Parses an identifier as an [elementary type name][ref].
+    ///
+    /// Note that you will have to check for the existence of a `payable`
+    /// keyword separately.
+    ///
+    /// [ref]: https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.elementaryTypeName
+    pub fn parse_ident(ident: Ident) -> Result<Self> {
+        let span = ident.span();
+        let s = ident.to_string();
+        let ret = match s.as_str() {
+            "address" => Self::Address(span, None),
+            "bool" => Self::Bool(span),
+            "string" => Self::String(span),
+            s => {
+                if let Some(s) = s.strip_prefix("bytes") {
+                    match parse_size(s, span)? {
+                        None => Self::custom(ident),
+                        Some(Some(size)) if size.get() > 32 => {
+                            return Err(Error::new(span, "fixed bytes range is 1-32"))
+                        }
+                        Some(Some(size)) => Self::FixedBytes(span, size),
+                        Some(None) => Self::Bytes(span),
+                    }
+                } else if let Some(s) = s.strip_prefix("int") {
+                    match parse_size(s, span)? {
+                        None => Self::custom(ident),
+                        Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
+                            return Err(Error::new(span, "intX must be a multiple of 8 up to 256"))
+                        }
+                        Some(size) => Self::Int(span, size),
+                    }
+                } else if let Some(s) = s.strip_prefix("uint") {
+                    match parse_size(s, span)? {
+                        None => Self::custom(ident),
+                        Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
+                            return Err(Error::new(span, "uintX must be a multiple of 8 up to 256"))
+                        }
+                        Some(size) => Self::Uint(span, size),
+                    }
+                } else {
+                    Self::custom(ident)
+                }
+            }
+        };
+        Ok(ret)
+    }
+
+    /// Parses the `payable` keyword from the input stream if this type is an
+    /// address.
+    pub fn parse_payable(mut self, input: ParseStream<'_>) -> Result<Self> {
+        match &mut self {
+            Self::Address(_, opt @ None) => *opt = input.parse()?,
+            _ => {}
+        }
+        Ok(self)
     }
 
     /// Returns whether this type is ABI-encoded as a single EVM word (32
@@ -329,50 +388,7 @@ impl Type {
             input.parse().map(Self::Custom)
         } else if input.peek(Ident::peek_any) {
             let ident = input.call(Ident::parse_any)?;
-            let span = ident.span();
-            let s = ident.to_string();
-            let ret = match s.as_str() {
-                "address" => Self::Address(span, input.parse()?),
-                "bool" => Self::Bool(span),
-                "string" => Self::String(span),
-                s => {
-                    if let Some(s) = s.strip_prefix("bytes") {
-                        match parse_size(s, span)? {
-                            None => Self::custom(ident),
-                            Some(Some(size)) if size.get() > 32 => {
-                                return Err(Error::new(span, "fixed bytes range is 1-32"))
-                            }
-                            Some(None) => Self::Bytes(span),
-                            Some(Some(size)) => Self::FixedBytes(span, size),
-                        }
-                    } else if let Some(s) = s.strip_prefix("int") {
-                        match parse_size(s, span)? {
-                            None => Self::custom(ident),
-                            Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
-                                return Err(Error::new(
-                                    span,
-                                    "intX must be a multiple of 8 up to 256",
-                                ))
-                            }
-                            Some(size) => Self::Int(span, size),
-                        }
-                    } else if let Some(s) = s.strip_prefix("uint") {
-                        match parse_size(s, span)? {
-                            None => Self::custom(ident),
-                            Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
-                                return Err(Error::new(
-                                    span,
-                                    "uintX must be a multiple of 8 up to 256",
-                                ))
-                            }
-                            Some(size) => Self::Uint(span, size),
-                        }
-                    } else {
-                        Self::custom(ident)
-                    }
-                }
-            };
-            Ok(ret)
+            Self::parse_ident(ident)?.parse_payable(input)
         } else {
             Err(input.error(
                 "expected a Solidity type: \

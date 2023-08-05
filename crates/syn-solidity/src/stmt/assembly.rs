@@ -1,4 +1,4 @@
-use crate::{kw, LitStr, Spanned, YulBlock};
+use crate::{kw, utils::DebugPunctuated, LitStr, Spanned, YulBlock};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -59,7 +59,7 @@ pub struct AssemblyFlags {
 impl fmt::Debug for AssemblyFlags {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AssemblyFlags")
-            .field("strings", &self.strings)
+            .field("strings", DebugPunctuated::new(&self.strings))
             .finish()
     }
 }

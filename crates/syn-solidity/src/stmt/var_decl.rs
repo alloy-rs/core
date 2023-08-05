@@ -1,9 +1,10 @@
-use crate::{Expr, Spanned, VariableDeclaration};
-use proc_macro2::Span;
+use crate::{kw, utils::DebugPunctuated, Expr, Spanned, VariableDeclaration};
+use proc_macro2::{Ident, Span};
 use std::fmt;
 use syn::{
+    ext::IdentExt,
     parenthesized,
-    parse::{Parse, ParseStream},
+    parse::{Lookahead1, Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
     Result, Token,
@@ -64,6 +65,18 @@ impl Spanned for StmtVarDecl {
     }
 }
 
+impl StmtVarDecl {
+    pub fn peek(input: ParseStream<'_>, lookahead: &Lookahead1<'_>) -> bool {
+        lookahead.peek(kw::tuple)
+            || lookahead.peek(kw::function)
+            || lookahead.peek(kw::mapping)
+            || (lookahead.peek(Paren) && input.peek2(Token![=]))
+            || (input.peek(Ident::peek_any)
+                && input.peek2(Ident::peek_any)
+                && (input.peek3(Token![=]) || input.peek3(Token![;])))
+    }
+}
+
 /// The declaration of the variable(s) in a [`StmtVarDecl`].
 #[derive(Clone, Debug)]
 pub enum VarDeclDecl {
@@ -111,8 +124,8 @@ pub struct VarDeclTuple {
 
 impl fmt::Debug for VarDeclTuple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TupleVarDecl")
-            .field("vars", &self.vars)
+        f.debug_struct("VarDeclTuple")
+            .field("vars", DebugPunctuated::new(&self.vars))
             .finish()
     }
 }

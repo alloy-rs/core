@@ -2,6 +2,7 @@ use crate::{Expr, Spanned, Stmt, StmtExpr, StmtVarDecl};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
+    parenthesized,
     parse::{Parse, ParseStream},
     token::Paren,
     Result, Token,
@@ -15,10 +16,9 @@ use syn::{
 pub struct StmtFor {
     pub for_token: Token![for],
     pub paren_token: Paren,
-    pub init: Option<ForInitStmt>,
-    pub semi_token1: Token![;],
+    pub init: ForInitStmt,
     pub cond: Option<Expr>,
-    pub semi_token2: Token![;],
+    pub semi_token: Token![;],
     pub post: Option<Expr>,
     pub body: Box<Stmt>,
 }
@@ -35,8 +35,25 @@ impl fmt::Debug for StmtFor {
 }
 
 impl Parse for StmtFor {
-    fn parse(_input: ParseStream<'_>) -> Result<Self> {
-        todo!()
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let content;
+        Ok(Self {
+            for_token: input.parse()?,
+            paren_token: parenthesized!(content in input),
+            init: content.parse()?,
+            cond: if content.peek(Token![;]) {
+                None
+            } else {
+                Some(content.parse()?)
+            },
+            semi_token: content.parse()?,
+            post: if content.is_empty() {
+                None
+            } else {
+                Some(content.parse()?)
+            },
+            body: input.parse()?,
+        })
     }
 }
 
@@ -56,10 +73,18 @@ impl Spanned for StmtFor {
 pub enum ForInitStmt {
     VarDecl(StmtVarDecl),
     Expression(StmtExpr),
+    Empty(Token![;]),
 }
 
 impl Parse for ForInitStmt {
-    fn parse(_input: ParseStream<'_>) -> Result<Self> {
-        todo!()
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(Token![;]) {
+            input.parse().map(Self::Empty)
+        } else if StmtVarDecl::peek(input, &lookahead) {
+            input.parse().map(Self::VarDecl)
+        } else {
+            input.parse().map(Self::Expression)
+        }
     }
 }

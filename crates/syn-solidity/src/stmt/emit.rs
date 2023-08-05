@@ -1,4 +1,4 @@
-use crate::{kw, ArgList, Expr, Spanned};
+use crate::{kw, Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -14,7 +14,7 @@ use syn::{
 pub struct StmtEmit {
     pub emit_token: kw::emit,
     pub expr: Expr,
-    pub list: ArgList,
+    // pub list: ArgList, // TODO
     pub semi_token: Token![;],
 }
 
@@ -22,7 +22,7 @@ impl fmt::Debug for StmtEmit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("StmtEmit")
             .field("expr", &self.expr)
-            .field("list", &self.list)
+            // .field("list", &self.list)
             .finish()
     }
 }
@@ -32,7 +32,7 @@ impl Parse for StmtEmit {
         Ok(Self {
             emit_token: input.parse()?,
             expr: input.parse()?,
-            list: input.parse()?,
+            // list: input.parse()?,
             semi_token: input.parse()?,
         })
     }

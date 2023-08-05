@@ -1,4 +1,4 @@
-use crate::{Expr, Spanned};
+use crate::{utils::ParseNested, Expr, Spanned};
 use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream},
@@ -13,15 +13,17 @@ pub struct ExprBinary {
     pub right: Box<Expr>,
 }
 
-impl Parse for ExprBinary {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
+impl ParseNested for ExprBinary {
+    fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
-            left: input.parse()?,
+            left: expr,
             op: input.parse()?,
             right: input.parse()?,
         })
     }
 }
+
+derive_parse!(ExprBinary);
 
 impl Spanned for ExprBinary {
     fn span(&self) -> Span {
@@ -38,26 +40,14 @@ impl Spanned for ExprBinary {
 op_enum! {
     /// A binary operator: `+`, `+=`, `&`.
     pub enum BinOp {
-        Add(+),
-        Sub(-),
-        Mul(*),
-        Div(/),
-        Rem(%),
-        Pow(**),
-
-        Sar(>>>),
-        Shr(>>),
-        Shl(<<),
-        BitAnd(&),
-        BitOr(|),
-        BitXor(^),
-
-        Lt(<),
-        Gt(>),
         Le(<=),
         Ge(>=),
+        Lt(<),
+        Gt(>),
         Eq(==),
         Neq(!=),
+        Or(||),
+        And(&&),
 
         Assign(=),
         AddAssign(+=),
@@ -71,5 +61,19 @@ op_enum! {
         ShlAssign(<<=),
         ShrAssign(>>=),
         SarAssign(>>>=),
+
+        Add(+),
+        Sub(-),
+        Pow(**),
+        Mul(*),
+        Div(/),
+        Rem(%),
+
+        Sar(>>>),
+        Shr(>>),
+        Shl(<<),
+        BitAnd(&),
+        BitOr(|),
+        BitXor(^),
     }
 }

@@ -83,3 +83,5 @@ pub fn parse(input: proc_macro::TokenStream) -> Result<File> {
 pub fn parse2(input: proc_macro2::TokenStream) -> Result<File> {
     syn::parse2(input)
 }
+
+const DEBUG: bool = true;

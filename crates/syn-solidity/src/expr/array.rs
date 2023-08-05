@@ -1,4 +1,7 @@
-use crate::{Expr, Spanned};
+use crate::{
+    utils::{DebugPunctuated, ParseNested},
+    Expr, Spanned,
+};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -19,7 +22,7 @@ pub struct ExprArray {
 impl fmt::Debug for ExprArray {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ExprArray")
-            .field("elems", &self.elems)
+            .field("elems", DebugPunctuated::new(&self.elems))
             .finish()
     }
 }
@@ -63,11 +66,11 @@ impl fmt::Debug for ExprIndex {
     }
 }
 
-impl Parse for ExprIndex {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
+impl ParseNested for ExprIndex {
+    fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
         let content;
         Ok(Self {
-            expr: input.parse()?,
+            expr,
             bracket_token: bracketed!(content in input),
             start: if content.is_empty() || content.peek(Token![:]) {
                 None
@@ -82,6 +85,8 @@ impl Parse for ExprIndex {
         })
     }
 }
+
+derive_parse!(ExprIndex);
 
 impl Spanned for ExprIndex {
     fn span(&self) -> Span {

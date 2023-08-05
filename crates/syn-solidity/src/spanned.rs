@@ -37,12 +37,22 @@ impl Spanned for TokenStream {
 impl Spanned for TokenTree {
     #[inline]
     fn span(&self) -> Span {
-        TokenTree::span(self)
+        self.span()
     }
 
     #[inline]
     fn set_span(&mut self, span: Span) {
-        TokenTree::set_span(self, span)
+        self.set_span(span);
+    }
+}
+
+impl Spanned for syn::LitStr {
+    fn span(&self) -> Span {
+        self.span()
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.set_span(span);
     }
 }
 

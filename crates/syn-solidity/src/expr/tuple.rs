@@ -1,4 +1,4 @@
-use crate::{Expr, Spanned};
+use crate::{utils::DebugPunctuated, Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -19,7 +19,7 @@ pub struct ExprTuple {
 impl fmt::Debug for ExprTuple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ExprTuple")
-            .field("elems", &self.elems)
+            .field("elems", DebugPunctuated::new(&self.elems))
             .finish()
     }
 }

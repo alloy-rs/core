@@ -415,18 +415,15 @@ macro_rules! op_enum {
 
         impl $crate::Spanned for $name {
             fn span(&self) -> ::proc_macro2::Span {
-                todo!()
-                // match self {$(
-                //     Self::$variant(kw, ..) => kw.span(),
-                // )+}
+                match self {$(
+                    Self::$variant(kw, ..) => kw.span(),
+                )+}
             }
 
             fn set_span(&mut self, span: ::proc_macro2::Span) {
-                let _ = span;
-                todo!()
-                // match self {$(
-                //     Self::$variant(kw, ..) => kw.set_span(span),
-                // )+}
+                match self {$(
+                    Self::$variant(kw, ..) => kw.set_span(span),
+                )+}
             }
         }
 
@@ -469,6 +466,27 @@ macro_rules! op_enum {
                     }
                 )+
             }
+        }
+    };
+}
+
+macro_rules! derive_parse {
+    ($($t:ty),+ $(,)?) => {$(
+        impl Parse for $t {
+            fn parse(input: ParseStream<'_>) -> Result<Self> {
+                <Self as $crate::utils::ParseNested>::parse_nested(
+                    input.parse()?,
+                    input,
+                )
+            }
+        }
+    )+};
+}
+
+macro_rules! debug {
+    ($($t:tt)*) => {
+        if $crate::DEBUG {
+            eprintln!($($t)*)
         }
     };
 }

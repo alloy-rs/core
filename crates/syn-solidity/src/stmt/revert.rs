@@ -1,4 +1,4 @@
-use crate::{kw, ArgList, Expr, Spanned};
+use crate::{kw, Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -14,7 +14,7 @@ use syn::{
 pub struct StmtRevert {
     pub revert_token: kw::revert,
     pub expr: Expr,
-    pub list: ArgList,
+    // pub list: ArgList, // TODO
     pub semi_token: Token![;],
 }
 
@@ -22,7 +22,7 @@ impl fmt::Debug for StmtRevert {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("StmtRevert")
             .field("expr", &self.expr)
-            .field("list", &self.list)
+            // .field("list", &self.list)
             .finish()
     }
 }
@@ -32,7 +32,7 @@ impl Parse for StmtRevert {
         Ok(Self {
             revert_token: input.parse()?,
             expr: input.parse()?,
-            list: input.parse()?,
+            // list: input.parse()?,
             semi_token: input.parse()?,
         })
     }

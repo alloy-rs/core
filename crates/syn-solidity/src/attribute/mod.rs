@@ -1,5 +1,5 @@
-use crate::{kw, utils::DebugPunctuated, SolPath, Spanned};
-use proc_macro2::{Span, TokenStream};
+use crate::{kw, utils::DebugPunctuated, Expr, SolPath, Spanned};
+use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
@@ -133,8 +133,7 @@ impl Spanned for Override {
 pub struct Modifier {
     pub name: SolPath,
     pub paren_token: Option<Paren>,
-    // TODO: Expr
-    pub arguments: Punctuated<TokenStream, Token![,]>,
+    pub arguments: Punctuated<Expr, Token![,]>,
 }
 
 impl PartialEq for Modifier {
@@ -169,7 +168,8 @@ impl fmt::Display for Modifier {
                 if i > 0 {
                     f.write_str(", ")?;
                 }
-                arg.fmt(f)?;
+                // TODO: impl fmt::Display for Expr
+                write!(f, "{arg:?}")?;
             }
             f.write_str(")")?;
         }
@@ -183,7 +183,7 @@ impl Parse for Modifier {
         let this = if input.peek(Paren) {
             let content;
             let paren_token = parenthesized!(content in input);
-            let arguments = content.parse_terminated(TokenStream::parse, Token![,])?;
+            let arguments = content.parse_terminated(Expr::parse, Token![,])?;
             Self {
                 name,
                 paren_token: Some(paren_token),

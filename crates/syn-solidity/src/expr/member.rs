@@ -1,4 +1,4 @@
-use crate::{Expr, Spanned};
+use crate::{utils::ParseNested, Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -23,15 +23,17 @@ impl fmt::Debug for ExprMember {
     }
 }
 
-impl Parse for ExprMember {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
+impl ParseNested for ExprMember {
+    fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
-            expr: input.parse()?,
+            expr,
             dot_token: input.parse()?,
             member: input.parse()?,
         })
     }
 }
+
+derive_parse!(ExprMember);
 
 impl Spanned for ExprMember {
     fn span(&self) -> Span {

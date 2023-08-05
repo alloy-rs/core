@@ -36,13 +36,27 @@ fn contracts() {
     let mut failed = false;
     for file in files {
         let path = file.path();
-        match parse_file(&path) {
-            Ok(()) => {}
-            Err(e) => {
-                let name = path.file_name().unwrap().to_str().unwrap();
+        let name = path.file_name().unwrap().to_str().unwrap();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| parse_file(&path))) {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
                 eprintln!("failed to parse {name}: {e} ({e:?})");
                 failed = true;
             }
+            Err(payload) => {
+                let msg = match payload.downcast_ref::<&'static str>() {
+                    Some(s) => *s,
+                    None => match payload.downcast_ref::<String>() {
+                        Some(s) => &s[..],
+                        None => "Box<dyn Any>",
+                    },
+                };
+                eprintln!("panicked while parsing {name}: {msg}");
+                failed = true;
+            }
+        }
+        if failed {
+            break
         }
     }
 

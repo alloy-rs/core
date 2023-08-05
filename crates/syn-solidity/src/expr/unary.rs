@@ -1,4 +1,4 @@
-use crate::{kw, Expr, Spanned};
+use crate::{kw, utils::ParseNested, Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -77,14 +77,16 @@ pub struct ExprPostfix {
     pub op: PostUnOp,
 }
 
-impl Parse for ExprPostfix {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
+impl ParseNested for ExprPostfix {
+    fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
-            expr: input.parse()?,
+            expr,
             op: input.parse()?,
         })
     }
 }
+
+derive_parse!(ExprPostfix);
 
 impl Spanned for ExprPostfix {
     fn span(&self) -> Span {

@@ -25,7 +25,16 @@ impl Parse for Block {
         let content;
         Ok(Self {
             brace_token: syn::braced!(content in input),
-            stmts: crate::utils::parse_vec(&content, true)?,
+            stmts: {
+                let mut vec = Vec::new();
+                while !content.is_empty() {
+                    debug!(">>> {:?}", content.to_string());
+                    let r = content.parse();
+                    debug!("<<< {r:?}\n");
+                    vec.push(r?);
+                }
+                vec
+            },
         })
     }
 }

@@ -1,4 +1,6 @@
 mod assembly;
+use std::fmt;
+
 pub use assembly::StmtAssembly;
 
 mod blocks;
@@ -43,7 +45,7 @@ pub use r#while::StmtWhile;
 use crate::{kw, Spanned};
 use proc_macro2::Span;
 use syn::{
-    parse::{discouraged::Speculative, Parse, ParseStream},
+    parse::{Parse, ParseStream},
     token::{Brace, Paren},
     Result, Token,
 };
@@ -52,7 +54,7 @@ use syn::{
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.statement>
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum Stmt {
     /// An assembly block, with optional flags: `assembly "evmasm" { ... }`.
     Assembly(StmtAssembly),
@@ -101,6 +103,29 @@ pub enum Stmt {
     While(StmtWhile),
 }
 
+impl fmt::Debug for Stmt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Stmt::")?;
+        match self {
+            Self::Assembly(stmt) => stmt.fmt(f),
+            Self::Block(block) => block.fmt(f),
+            Self::Break(stmt) => stmt.fmt(f),
+            Self::Continue(stmt) => stmt.fmt(f),
+            Self::DoWhile(stmt) => stmt.fmt(f),
+            Self::Emit(stmt) => stmt.fmt(f),
+            Self::Expr(stmt) => stmt.fmt(f),
+            Self::For(stmt) => stmt.fmt(f),
+            Self::If(stmt) => stmt.fmt(f),
+            Self::Return(stmt) => stmt.fmt(f),
+            Self::Revert(stmt) => stmt.fmt(f),
+            Self::Try(stmt) => stmt.fmt(f),
+            Self::UncheckedBlock(block) => block.fmt(f),
+            Self::VarDecl(stmt) => stmt.fmt(f),
+            Self::While(stmt) => stmt.fmt(f),
+        }
+    }
+}
+
 impl Parse for Stmt {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
@@ -136,24 +161,10 @@ impl Parse for Stmt {
             input.parse().map(Self::Revert)
         } else if lookahead.peek(kw::assembly) {
             input.parse().map(Self::Assembly)
-        } else if lookahead.peek(kw::tuple)
-            || lookahead.peek(kw::function)
-            || lookahead.peek(kw::mapping)
-        {
+        } else if StmtVarDecl::peek(input, &lookahead) {
             input.parse().map(Self::VarDecl)
         } else {
-            // TODO: Handle this better
-            let start = input.fork();
-            match input.parse() {
-                Ok(var) => Ok(Self::VarDecl(var)),
-                Err(_) => match start.parse() {
-                    Ok(expr) => {
-                        input.advance_to(&start);
-                        Ok(Self::Expr(expr))
-                    }
-                    Err(_) => Err(lookahead.error()),
-                },
-            }
+            input.parse().map(Self::Expr)
         }
     }
 }

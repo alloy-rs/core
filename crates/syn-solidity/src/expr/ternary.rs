@@ -1,4 +1,4 @@
-use crate::{Expr, Spanned};
+use crate::{utils::ParseNested, Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -26,10 +26,10 @@ impl fmt::Debug for ExprTernary {
     }
 }
 
-impl Parse for ExprTernary {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
+impl ParseNested for ExprTernary {
+    fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
-            cond: input.parse()?,
+            cond: expr,
             question_token: input.parse()?,
             if_true: input.parse()?,
             colon_token: input.parse()?,
@@ -37,6 +37,8 @@ impl Parse for ExprTernary {
         })
     }
 }
+
+derive_parse!(ExprTernary);
 
 impl Spanned for ExprTernary {
     fn span(&self) -> Span {

@@ -1,4 +1,8 @@
-use crate::{kw, Expr, SolIdent, Spanned};
+use crate::{
+    kw,
+    utils::{DebugPunctuated, ParseNested},
+    Expr, SolIdent, Spanned,
+};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -16,14 +20,16 @@ pub struct ExprCall {
     pub args: ArgList,
 }
 
-impl Parse for ExprCall {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
+impl ParseNested for ExprCall {
+    fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
-            expr: input.parse()?,
+            expr,
             args: input.parse()?,
         })
     }
 }
+
+derive_parse!(ExprCall);
 
 impl Spanned for ExprCall {
     fn span(&self) -> Span {
@@ -100,9 +106,7 @@ pub struct ArgList {
 
 impl fmt::Debug for ArgList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CallArgumentList")
-            .field("list", &self.list)
-            .finish()
+        f.debug_struct("ArgList").field("list", &self.list).finish()
     }
 }
 
@@ -127,10 +131,22 @@ impl Spanned for ArgList {
 }
 
 /// A list of either unnamed or named arguments.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum ArgListImpl {
     Unnamed(Punctuated<Expr, Token![,]>),
     Named(NamedArgList),
+}
+
+impl fmt::Debug for ArgListImpl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Unnamed(list) => f
+                .debug_tuple("Unnamed")
+                .field(DebugPunctuated::new(list))
+                .finish(),
+            Self::Named(list) => f.debug_tuple("Named").field(list).finish(),
+        }
+    }
 }
 
 impl Parse for ArgListImpl {
@@ -152,14 +168,16 @@ pub struct ExprStruct {
     pub args: NamedArgList,
 }
 
-impl Parse for ExprStruct {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
+impl ParseNested for ExprStruct {
+    fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
-            expr: input.parse()?,
+            expr,
             args: input.parse()?,
         })
     }
 }
+
+derive_parse!(ExprStruct);
 
 impl Spanned for ExprStruct {
     fn span(&self) -> Span {
@@ -182,8 +200,8 @@ pub struct NamedArgList {
 
 impl fmt::Debug for NamedArgList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("NamedArgumentList")
-            .field("list", &self.list)
+        f.debug_struct("NamedArgList")
+            .field("list", DebugPunctuated::new(&self.list))
             .finish()
     }
 }
