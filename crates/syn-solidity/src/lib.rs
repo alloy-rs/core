@@ -26,7 +26,11 @@ pub use attribute::{
 };
 
 mod expr;
-pub use expr::*;
+pub use expr::{
+    ArgList, ArgListImpl, BinOp, Expr, ExprArray, ExprBinary, ExprCall, ExprCallOptions,
+    ExprDelete, ExprIndex, ExprMember, ExprNew, ExprPayable, ExprPostfix, ExprTernary, ExprTuple,
+    ExprTypeCall, ExprUnary, NamedArg, NamedArgList, PostUnOp, UnOp,
+};
 
 mod file;
 pub use file::File;
@@ -36,14 +40,18 @@ pub use ident::{SolIdent, SolPath};
 
 mod item;
 pub use item::{
-    EventParameter, FunctionKind, ImportAlias, ImportAliases, ImportDirective, ImportGlob,
-    ImportPath, ImportPlain, Item, ItemContract, ItemEnum, ItemError, ItemEvent, ItemFunction,
-    ItemStruct, ItemUdt, PragmaDirective, PragmaTokens, Returns, UserDefinableOperator,
-    UsingDirective, UsingList, UsingListItem, UsingType,
+    ContractKind, EventParameter, FunctionBody, FunctionKind, ImportAlias, ImportAliases,
+    ImportDirective, ImportGlob, ImportPath, ImportPlain, Inheritance, Item, ItemContract,
+    ItemEnum, ItemError, ItemEvent, ItemFunction, ItemStruct, ItemUdt, PragmaDirective,
+    PragmaTokens, Returns, UserDefinableOperator, UsingDirective, UsingList, UsingListItem,
+    UsingType,
 };
 
 mod lit;
-pub use lit::{HexStr, Lit, LitHex, LitStr, LitUnicode, UnicodeStr};
+pub use lit::{
+    HexStr, Lit, LitHexStr, LitNumber, LitNumberKind, LitStr, LitUnicodeStr, SubDenomination,
+    UnicodeStr,
+};
 
 pub mod kw;
 
@@ -51,7 +59,11 @@ mod spanned;
 pub use spanned::Spanned;
 
 mod stmt;
-pub use stmt::*;
+pub use stmt::{
+    AssemblyFlags, Block, CatchClause, ForInitStmt, Stmt, StmtAssembly, StmtBreak, StmtContinue,
+    StmtDoWhile, StmtEmit, StmtExpr, StmtFor, StmtIf, StmtReturn, StmtRevert, StmtTry, StmtVarDecl,
+    StmtWhile, UncheckedBlock, VarDeclDecl, VarDeclTuple,
+};
 
 mod r#type;
 pub use r#type::{Type, TypeArray, TypeFunction, TypeMapping, TypeTuple};
@@ -84,4 +96,4 @@ pub fn parse2(input: proc_macro2::TokenStream) -> Result<File> {
     syn::parse2(input)
 }
 
-const DEBUG: bool = true;
+const DEBUG: bool = option_env!("SYN_SOLIDITY_DEBUG").is_some();

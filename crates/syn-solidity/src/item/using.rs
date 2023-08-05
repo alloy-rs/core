@@ -1,5 +1,6 @@
 use crate::{kw, SolPath, Spanned, Type};
 use proc_macro2::Span;
+use std::fmt;
 use syn::{
     braced,
     parse::{Parse, ParseStream},
@@ -12,7 +13,7 @@ use syn::{
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.usingDirective>
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct UsingDirective {
     pub using_token: kw::using,
     pub list: UsingList,
@@ -20,6 +21,16 @@ pub struct UsingDirective {
     pub ty: UsingType,
     pub global_token: Option<kw::global>,
     pub semi_token: Token![;],
+}
+
+impl fmt::Debug for UsingDirective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UsingDirective")
+            .field("list", &self.list)
+            .field("ty", &self.ty)
+            .field("global", &self.global_token.is_some())
+            .finish()
+    }
 }
 
 impl Parse for UsingDirective {

@@ -217,6 +217,8 @@ macro_rules! kw_enum {
         $(#[$attr])*
         #[derive(Clone, Copy)]
         $vis enum $name {$(
+            #[doc = concat!("`", stringify!($kw), "`")]
+            ///
             $(#[$variant_attr])*
             $variant($crate::kw::$kw),
         )+}
@@ -337,33 +339,26 @@ macro_rules! op_enum {
     (@peek $input:ident, $lookahead:ident, $a:tt) => {
         $lookahead.peek(::syn::Token![$a])
     };
-    (@peek $input:ident, $lookahead:ident, $a:tt $b:tt) => {
+    // can't use `peek2` for `BinOp::Sar` (`>>>`) since the first token is 2 characters,
+    // so take it in as input
+    (@peek $input:ident, $lookahead:ident, $a:tt $b:tt $peek:ident) => {
         $lookahead.peek(::syn::Token![$a])
-            && $input.peek2(::syn::Token![$b])
-    };
-    (@peek $input:ident, $lookahead:ident, $a:tt $b:tt $c:tt) => {
-        $lookahead.peek(::syn::Token![$a])
-            && $input.peek2(::syn::Token![$b])
-            && $input.peek3(::syn::Token![$c])
-    };
-    (@peek $input:ident, $lookahead:ident, $($t:tt)*) => {
-        compile_error!(
-            "too many tokens in operator: ",
-            concat!($(stringify!($t)),*),
-        )
+            && $input.$peek(::syn::Token![$b])
     };
 
     (
         $(#[$attr:meta])*
         $vis:vis enum $name:ident {$(
             $(#[$variant_attr:meta])*
-            $variant:ident($($op:tt)+)
+            $variant:ident($($op:tt)+) $($peek:ident)?
         ),+ $(,)?}
     ) => {
         $(#[$attr])*
         #[derive(Clone, Copy)]
         $vis enum $name {$(
             #[doc = concat!("`", $(stringify!($op),)+ "`")]
+            ///
+            $(#[$variant_attr])*
             $variant($(::syn::Token![$op]),+),
         )+}
 
@@ -401,7 +396,7 @@ macro_rules! op_enum {
             fn parse(input: ::syn::parse::ParseStream<'_>) -> ::syn::Result<Self> {
                 let lookahead = input.lookahead1();
                 $(
-                    if op_enum!(@peek input, lookahead, $($op)+) {
+                    if op_enum!(@peek input, lookahead, $($op)+ $($peek)?) {
                         Ok(Self::$variant(
                             $(input.parse::<::syn::Token![$op]>()?),+
                         ))
@@ -440,9 +435,9 @@ macro_rules! op_enum {
 
             #[allow(unused_parens, unused_variables)]
             pub fn peek(input: syn::parse::ParseStream<'_>, lookahead: &::syn::parse::Lookahead1<'_>) -> bool {
-                $((
-                    op_enum!(@peek input, lookahead, $($op)+)
-                ))||+
+                $(
+                    (op_enum!(@peek input, lookahead, $($op)+ $($peek)?))
+                )||+
             }
 
             pub const fn as_str(self) -> &'static str {

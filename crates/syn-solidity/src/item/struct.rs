@@ -41,7 +41,7 @@ impl Hash for ItemStruct {
 
 impl fmt::Debug for ItemStruct {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Struct")
+        f.debug_struct("ItemStruct")
             .field("attrs", &self.attrs)
             .field("name", &self.name)
             .field("fields", &self.fields)

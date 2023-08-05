@@ -1,5 +1,5 @@
 use crate::{
-    kw, Block, FunctionAttributes, ParameterList, Parameters, SolIdent, Spanned, Type,
+    kw, Block, FunctionAttributes, ParameterList, Parameters, SolIdent, Spanned, Stmt, Type,
     VariableDefinition,
 };
 use proc_macro2::Span;
@@ -36,13 +36,14 @@ pub struct ItemFunction {
 
 impl fmt::Debug for ItemFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Function")
+        f.debug_struct("ItemFunction")
             .field("attrs", &self.attrs)
             .field("kind", &self.kind)
             .field("name", &self.name)
             .field("arguments", &self.arguments)
             .field("attributes", &self.attributes)
             .field("returns", &self.returns)
+            .field("body", &self.body)
             .finish()
     }
 }
@@ -162,6 +163,29 @@ impl ItemFunction {
             )
         })
     }
+
+    /// Returns a reference to the function's body, if any.
+    pub fn body(&self) -> Option<&[Stmt]> {
+        match &self.body {
+            FunctionBody::Block(block) => Some(&block.stmts),
+            _ => None,
+        }
+    }
+
+    /// Returns a mutable reference to the function's body, if any.
+    pub fn body_mut(&mut self) -> Option<&mut Vec<Stmt>> {
+        match &mut self.body {
+            FunctionBody::Block(block) => Some(&mut block.stmts),
+            _ => None,
+        }
+    }
+
+    pub fn into_body(self) -> std::result::Result<Vec<Stmt>, Self> {
+        match self.body {
+            FunctionBody::Block(block) => Ok(block.stmts),
+            _ => Err(self),
+        }
+    }
 }
 
 kw_enum! {
@@ -271,12 +295,23 @@ impl Returns {
     }
 }
 
-#[derive(Clone, Debug)]
+/// The body of a function.
+#[derive(Clone)]
 pub enum FunctionBody {
     /// A function body delimited by curly braces.
     Block(Block),
     /// A function without implementation.
     Empty(Token![;]),
+}
+
+impl fmt::Debug for FunctionBody {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("FunctionBody::")?;
+        match self {
+            Self::Block(block) => block.fmt(f),
+            Self::Empty(_) => f.write_str("Empty"),
+        }
+    }
 }
 
 impl Parse for FunctionBody {

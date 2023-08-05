@@ -82,6 +82,17 @@ custom_keywords!(
     unicode,
     hex,
 
+    // Sub-denominations
+    wei,
+    gwei,
+    ether,
+    seconds,
+    minutes,
+    hours,
+    days,
+    weeks,
+    years,
+
     // Other
     assembly,
     catch,

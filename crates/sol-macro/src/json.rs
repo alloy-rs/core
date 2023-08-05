@@ -62,7 +62,6 @@ fn expand_abi(name: &Ident, abi: JsonAbi) -> Result<TokenStream> {
                     // `Other` is a UDVT if it's not a basic Solidity type
                     if let Some(it) = internal_type.other_specifier() {
                         if it.try_basic_solidity().is_err() {
-                            let _ = dbg!(it.try_basic_solidity());
                             udvts.insert(struct_ident(ty).to_owned(), real_ty.to_owned());
                         }
                     }

@@ -1,22 +1,48 @@
+use std::fmt;
+
 use crate::{kw, Spanned};
 use proc_macro2::Span;
 use syn::{
     parse::{Lookahead1, Parse, ParseStream},
-    LitBool, LitFloat, LitInt, Result,
+    LitBool, Result,
 };
 
-mod str;
-pub use str::{HexStr, LitHex, LitStr, LitUnicode, UnicodeStr};
+mod number;
+pub use number::{LitNumber, LitNumberKind, SubDenomination};
 
-/// A literal.
-#[derive(Clone, Debug)]
+mod str;
+pub use str::{HexStr, LitHexStr, LitStr, LitUnicodeStr, UnicodeStr};
+
+/// A Solidity literal such as a string or integer or boolean.
+#[derive(Clone)]
 pub enum Lit {
-    Str(LitStr),
-    Int(LitInt),
-    Float(LitFloat),
+    /// A boolean literal: `true` or `false`.
     Bool(LitBool),
-    Hex(LitHex),
-    Unicode(LitUnicode),
+
+    /// A hex string literal: `hex"1234"`.
+    Hex(LitHexStr),
+
+    /// An integer or fixed-point number literal: `1` or `1.0`.
+    Number(LitNumber),
+
+    /// A string literal.
+    Str(LitStr),
+
+    /// A unicode string literal.
+    Unicode(LitUnicodeStr),
+}
+
+impl fmt::Debug for Lit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Lit::")?;
+        match self {
+            Self::Bool(lit) => lit.fmt(f),
+            Self::Hex(lit) => lit.fmt(f),
+            Self::Number(lit) => lit.fmt(f),
+            Self::Str(lit) => lit.fmt(f),
+            Self::Unicode(lit) => lit.fmt(f),
+        }
+    }
 }
 
 impl Parse for Lit {
@@ -24,10 +50,8 @@ impl Parse for Lit {
         let lookahead = input.lookahead1();
         if lookahead.peek(syn::LitStr) {
             input.parse().map(Self::Str)
-        } else if lookahead.peek(LitInt) {
-            input.parse().map(Self::Int)
-        } else if lookahead.peek(LitFloat) {
-            input.parse().map(Self::Float)
+        } else if LitNumber::peek(&lookahead) {
+            input.parse().map(Self::Number)
         } else if lookahead.peek(LitBool) {
             input.parse().map(Self::Bool)
         } else if lookahead.peek(kw::unicode) {
@@ -43,22 +67,20 @@ impl Parse for Lit {
 impl Spanned for Lit {
     fn span(&self) -> Span {
         match self {
-            Self::Str(lit) => lit.span(),
-            Self::Int(lit) => lit.span(),
-            Self::Float(lit) => lit.span(),
             Self::Bool(lit) => lit.span(),
             Self::Hex(lit) => lit.span(),
+            Self::Number(lit) => lit.span(),
+            Self::Str(lit) => lit.span(),
             Self::Unicode(lit) => lit.span(),
         }
     }
 
     fn set_span(&mut self, span: Span) {
         match self {
-            Self::Str(lit) => lit.set_span(span),
-            Self::Int(lit) => lit.set_span(span),
-            Self::Float(lit) => lit.set_span(span),
             Self::Bool(lit) => lit.set_span(span),
             Self::Hex(lit) => lit.set_span(span),
+            Self::Number(lit) => lit.set_span(span),
+            Self::Str(lit) => lit.set_span(span),
             Self::Unicode(lit) => lit.set_span(span),
         }
     }

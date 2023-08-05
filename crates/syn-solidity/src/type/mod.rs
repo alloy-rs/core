@@ -157,7 +157,7 @@ impl Parse for Type {
         // while the next token is a bracket, parse an array size and nest the
         // candidate into an array
         while input.peek(Bracket) {
-            candidate = Self::Array(TypeArray::wrap(input, candidate)?);
+            candidate = Self::Array(TypeArray::parse_nested(Box::new(candidate), input)?);
         }
 
         Ok(candidate)

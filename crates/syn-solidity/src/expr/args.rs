@@ -161,14 +161,14 @@ impl Parse for ArgListImpl {
     }
 }
 
-/// A struct expression: `Foo { bar: 1, baz: 2 }`.
+/// Function call options: `foo.bar{ value: 1, gas: 2 }`.
 #[derive(Clone, Debug)]
-pub struct ExprStruct {
+pub struct ExprCallOptions {
     pub expr: Box<Expr>,
     pub args: NamedArgList,
 }
 
-impl ParseNested for ExprStruct {
+impl ParseNested for ExprCallOptions {
     fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             expr,
@@ -177,9 +177,9 @@ impl ParseNested for ExprStruct {
     }
 }
 
-derive_parse!(ExprStruct);
+derive_parse!(ExprCallOptions);
 
-impl Spanned for ExprStruct {
+impl Spanned for ExprCallOptions {
     fn span(&self) -> Span {
         let span = self.expr.span();
         span.join(self.args.span()).unwrap_or(span)

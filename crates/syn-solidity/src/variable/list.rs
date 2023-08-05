@@ -59,7 +59,7 @@ impl Parse for ParameterList {
 /// Struct: enforce semicolon after each field and field name.
 impl Parse for FieldList {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let this = input.parse_terminated(VariableDeclaration::parse_for_struct, Token![;])?;
+        let this = input.parse_terminated(VariableDeclaration::parse_with_name, Token![;])?;
         if this.is_empty() {
             Err(input.error("defining empty structs is disallowed"))
         } else if !this.trailing_punct() {

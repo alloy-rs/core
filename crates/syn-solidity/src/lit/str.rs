@@ -137,7 +137,7 @@ str_lit! {
 
 str_lit! {
     /// A unicode string literal.
-    pub struct LitUnicode(UnicodeStr): unicode
+    pub struct LitUnicodeStr(UnicodeStr): unicode
 }
 
 wrap_str! {
@@ -149,7 +149,7 @@ wrap_str! {
 
 str_lit! {
     /// A hex string literal.
-    pub struct LitHex(HexStr): hex
+    pub struct LitHexStr(HexStr): hex
 }
 
 wrap_str! {

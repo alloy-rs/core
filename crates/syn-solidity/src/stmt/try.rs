@@ -43,7 +43,9 @@ impl Parse for StmtTry {
             block: input.parse()?,
             catch: {
                 let mut catch = Vec::new();
-                while input.peek(kw::catch) {
+                let mut first = true;
+                while first || input.peek(kw::catch) {
+                    first = false;
                     catch.push(input.parse()?);
                 }
                 catch

@@ -10,9 +10,7 @@ use syn::{
 mod list;
 pub use list::{FieldList, ParameterList, Parameters};
 
-/// A variable declaration.
-///
-/// `<ty> [storage] <name>`
+/// A variable declaration: `string memory hello`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclaration {
     /// The attributes of the variable.
@@ -88,17 +86,16 @@ impl VariableDeclaration {
         Ok(())
     }
 
-    pub fn parse_for_struct(input: ParseStream<'_>) -> Result<Self> {
+    pub fn parse_with_name(input: ParseStream<'_>) -> Result<Self> {
         Self::_parse(input, true)
     }
 
-    fn _parse(input: ParseStream<'_>, for_struct: bool) -> Result<Self> {
+    fn _parse(input: ParseStream<'_>, require_name: bool) -> Result<Self> {
         Ok(Self {
             attrs: input.call(Attribute::parse_outer)?,
             ty: input.parse()?,
             storage: input.call(Storage::parse_opt)?,
-            // structs must have field names
-            name: if for_struct || input.peek(Ident::peek_any) {
+            name: if require_name || input.peek(Ident::peek_any) {
                 Some(input.parse()?)
             } else {
                 None

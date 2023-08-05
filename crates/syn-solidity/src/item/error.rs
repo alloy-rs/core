@@ -24,7 +24,7 @@ pub struct ItemError {
 
 impl fmt::Debug for ItemError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Error")
+        f.debug_struct("ItemError")
             .field("attrs", &self.attrs)
             .field("name", &self.name)
             .field("fields", &self.parameters)

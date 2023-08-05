@@ -10,10 +10,11 @@ fn contracts() {
         .parent()
         .unwrap();
 
-    let files: Vec<_> = fs::read_dir(PATH)
+    let mut files: Vec<_> = fs::read_dir(PATH)
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
+    files.sort_by_key(|e| e.path());
     let patches = files
         .iter()
         .filter(|p| p.path().extension() == Some("patch".as_ref()));
@@ -43,15 +44,8 @@ fn contracts() {
                 eprintln!("failed to parse {name}: {e} ({e:?})");
                 failed = true;
             }
-            Err(payload) => {
-                let msg = match payload.downcast_ref::<&'static str>() {
-                    Some(s) => *s,
-                    None => match payload.downcast_ref::<String>() {
-                        Some(s) => &s[..],
-                        None => "Box<dyn Any>",
-                    },
-                };
-                eprintln!("panicked while parsing {name}: {msg}");
+            Err(_) => {
+                eprintln!("panicked while parsing {name}");
                 failed = true;
             }
         }

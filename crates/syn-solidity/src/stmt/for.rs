@@ -69,11 +69,14 @@ impl Spanned for StmtFor {
     }
 }
 
+/// A for statement initializer.
+///
+/// This can either be empty, a variable declaration, or an expression.
 #[derive(Clone, Debug)]
 pub enum ForInitStmt {
-    VarDecl(StmtVarDecl),
-    Expression(StmtExpr),
     Empty(Token![;]),
+    VarDecl(StmtVarDecl),
+    Expr(StmtExpr),
 }
 
 impl Parse for ForInitStmt {
@@ -81,10 +84,12 @@ impl Parse for ForInitStmt {
         let lookahead = input.lookahead1();
         if lookahead.peek(Token![;]) {
             input.parse().map(Self::Empty)
-        } else if StmtVarDecl::peek(input, &lookahead) {
-            input.parse().map(Self::VarDecl)
         } else {
-            input.parse().map(Self::Expression)
+            match StmtVarDecl::parse_or_expr(input)? {
+                Stmt::VarDecl(decl) => Ok(Self::VarDecl(decl)),
+                Stmt::Expr(expr) => Ok(Self::Expr(expr)),
+                s => unreachable!("StmtVarDecl::parse_or_expr: invalid output {s:?}"),
+            }
         }
     }
 }

@@ -18,14 +18,12 @@ impl Parse for File {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let attrs = input.call(Attribute::parse_inner)?;
         let mut items = Vec::new();
-        while !input.is_empty() {
+        let mut first = true;
+        while first || !input.is_empty() {
+            first = false;
             items.push(input.parse()?);
         }
-        if items.is_empty() {
-            Err(input.parse::<Item>().unwrap_err())
-        } else {
-            Ok(Self { attrs, items })
-        }
+        Ok(Self { attrs, items })
     }
 }
 

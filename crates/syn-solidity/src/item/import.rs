@@ -13,11 +13,19 @@ use syn::{
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.importDirective>
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ImportDirective {
     pub import_token: kw::import,
     pub path: ImportPath,
     pub semi_token: Token![;],
+}
+
+impl fmt::Debug for ImportDirective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ImportDirective")
+            .field("path", &self.path)
+            .finish()
+    }
 }
 
 impl Parse for ImportDirective {

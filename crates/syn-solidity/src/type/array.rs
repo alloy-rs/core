@@ -58,7 +58,7 @@ impl fmt::Display for TypeArray {
 impl Parse for TypeArray {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let ty = input.parse()?;
-        Self::wrap(input, ty)
+        Self::parse_nested(Box::new(ty), input)
     }
 }
 
@@ -92,13 +92,17 @@ impl TypeArray {
     }
 
     /// Parses an array type from the given input stream, wrapping `ty` with it.
-    pub fn wrap(input: ParseStream<'_>, ty: Type) -> Result<Self> {
+    pub fn parse_nested(ty: Box<Type>, input: ParseStream<'_>) -> Result<Self> {
         let content;
         Ok(Self {
-            ty: Box::new(ty),
+            ty,
             bracket_token: bracketed!(content in input),
             size: {
-                let size = content.parse::<Option<syn::LitInt>>()?;
+                let size = if content.is_empty() {
+                    None
+                } else {
+                    Some(content.parse::<LitInt>()?)
+                };
                 // Validate the size
                 if let Some(sz) = &size {
                     sz.base10_parse::<NonZeroUsize>()?;

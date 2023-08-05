@@ -28,7 +28,7 @@ impl fmt::Debug for ItemEvent {
             .field("attrs", &self.attrs)
             .field("name", &self.name)
             .field("arguments", DebugPunctuated::new(&self.parameters))
-            .field("anonymous", &self.anonymous.is_some())
+            .field("anonymous", &self.is_anonymous())
             .finish()
     }
 }

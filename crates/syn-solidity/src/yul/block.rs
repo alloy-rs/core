@@ -18,7 +18,8 @@ pub struct YulBlock {
 impl fmt::Debug for YulBlock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulBlock")
-            .field("stmts", &self.stmts)
+            // .field("stmts", &self.stmts)
+            .field("stmts", &self.stmts.to_string())
             .finish()
     }
 }

@@ -1,10 +1,9 @@
-use crate::{kw, utils::DebugPunctuated, Expr, Spanned, VariableDeclaration};
-use proc_macro2::{Ident, Span};
+use crate::{utils::DebugPunctuated, Expr, Spanned, Stmt, VariableDeclaration};
+use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    ext::IdentExt,
     parenthesized,
-    parse::{Lookahead1, Parse, ParseStream},
+    parse::{discouraged::Speculative, Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
     Result, Token,
@@ -32,16 +31,21 @@ impl fmt::Debug for StmtVarDecl {
 
 impl Parse for StmtVarDecl {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let declaration: VarDeclDecl = input.parse()?;
+
+        // tuple requires assignment
+        let assignment = if matches!(declaration, VarDeclDecl::Tuple(_)) || input.peek(Token![=]) {
+            Some((input.parse()?, input.parse()?))
+        } else {
+            None
+        };
+
+        let semi_token = input.parse()?;
+
         Ok(Self {
-            declaration: input.parse()?,
-            assignment: {
-                if input.peek(Token![=]) {
-                    Some((input.parse()?, input.parse()?))
-                } else {
-                    None
-                }
-            },
-            semi_token: input.parse()?,
+            declaration,
+            assignment,
+            semi_token,
         })
     }
 }
@@ -66,30 +70,44 @@ impl Spanned for StmtVarDecl {
 }
 
 impl StmtVarDecl {
-    pub fn peek(input: ParseStream<'_>, lookahead: &Lookahead1<'_>) -> bool {
-        lookahead.peek(kw::tuple)
-            || lookahead.peek(kw::function)
-            || lookahead.peek(kw::mapping)
-            || (lookahead.peek(Paren) && input.peek2(Token![=]))
-            || (input.peek(Ident::peek_any)
-                && input.peek2(Ident::peek_any)
-                && (input.peek3(Token![=]) || input.peek3(Token![;])))
+    pub fn parse_or_expr(input: ParseStream<'_>) -> Result<Stmt> {
+        // TODO: Figure if we can do this without forking
+        let speculative_parse = || {
+            let fork = input.fork();
+            match fork.parse() {
+                Ok(var) => {
+                    input.advance_to(&fork);
+                    Ok(Stmt::VarDecl(var))
+                }
+                Err(_) => input.parse().map(Stmt::Expr),
+            }
+        };
+
+        if input.peek(Paren) {
+            if input.peek2(Token![=]) {
+                speculative_parse()
+            } else {
+                input.parse().map(Stmt::Expr)
+            }
+        } else {
+            speculative_parse()
+        }
     }
 }
 
-/// The declaration of the variable(s) in a [`StmtVarDecl`].
+/// The declaration of the variable(s) in a variable declaration statement.
 #[derive(Clone, Debug)]
 pub enum VarDeclDecl {
     VarDecl(VariableDeclaration),
-    Expression(VarDeclTuple),
+    Tuple(VarDeclTuple),
 }
 
 impl Parse for VarDeclDecl {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         if input.peek(Paren) {
-            input.parse().map(Self::Expression)
+            input.parse().map(Self::Tuple)
         } else {
-            input.parse().map(Self::VarDecl)
+            VariableDeclaration::parse_with_name(input).map(Self::VarDecl)
         }
     }
 }
@@ -98,14 +116,14 @@ impl Spanned for VarDeclDecl {
     fn span(&self) -> Span {
         match self {
             Self::VarDecl(decl) => decl.span(),
-            Self::Expression(decl) => decl.span(),
+            Self::Tuple(decl) => decl.span(),
         }
     }
 
     fn set_span(&mut self, span: Span) {
         match self {
             Self::VarDecl(decl) => decl.set_span(span),
-            Self::Expression(decl) => decl.set_span(span),
+            Self::Tuple(decl) => decl.set_span(span),
         }
     }
 }

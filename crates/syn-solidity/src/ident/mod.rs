@@ -1,3 +1,4 @@
+use crate::Spanned;
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use std::fmt;
@@ -10,7 +11,7 @@ use syn::{
 mod path;
 pub use path::SolPath;
 
-use crate::Spanned;
+// TODO: Deny Solidity keywords
 
 /// A Solidity identifier.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -1,6 +1,6 @@
-use std::fmt;
-
+use crate::{kw, utils::ParseNested, Lit, SolIdent, Spanned, Type};
 use proc_macro2::{Ident, Span};
+use std::fmt;
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
@@ -12,7 +12,9 @@ mod array;
 pub use array::{ExprArray, ExprIndex};
 
 mod args;
-pub use args::{ArgList, ArgListImpl, ExprCall, ExprPayable, ExprStruct, NamedArg, NamedArgList};
+pub use args::{
+    ArgList, ArgListImpl, ExprCall, ExprCallOptions, ExprPayable, NamedArg, NamedArgList,
+};
 
 mod binary;
 pub use binary::{BinOp, ExprBinary};
@@ -32,8 +34,6 @@ pub use r#type::{ExprNew, ExprTypeCall};
 mod unary;
 pub use unary::{ExprDelete, ExprPostfix, ExprUnary, PostUnOp, UnOp};
 
-use crate::{kw, utils::ParseNested, Lit, SolIdent, Spanned, Type};
-
 /// An expression.
 ///
 /// Solidity reference:
@@ -48,6 +48,9 @@ pub enum Expr {
 
     /// A function call expression: `foo(42)` or `foo({ bar: 42 })`.
     Call(ExprCall),
+
+    /// Function call options: `foo.bar{ value: 1, gas: 2 }`.
+    CallOptions(ExprCallOptions),
 
     /// A unary `delete` expression: `delete vector`.
     Delete(ExprDelete),
@@ -72,9 +75,6 @@ pub enum Expr {
 
     /// A postfix unary expression: `foo++`.
     Postfix(ExprPostfix),
-
-    /// A struct expression: `Foo { bar: 1, baz: 2 }`.
-    Struct(ExprStruct),
 
     /// A ternary (AKA conditional) expression: `foo ? bar : baz`.
     Ternary(ExprTernary),
@@ -101,6 +101,7 @@ impl fmt::Debug for Expr {
             Self::Array(expr) => expr.fmt(f),
             Self::Binary(expr) => expr.fmt(f),
             Self::Call(expr) => expr.fmt(f),
+            Self::CallOptions(expr) => expr.fmt(f),
             Self::Delete(expr) => expr.fmt(f),
             Self::Ident(ident) => ident.fmt(f),
             Self::Index(expr) => expr.fmt(f),
@@ -109,7 +110,6 @@ impl fmt::Debug for Expr {
             Self::New(expr) => expr.fmt(f),
             Self::Payable(expr) => expr.fmt(f),
             Self::Postfix(expr) => expr.fmt(f),
-            Self::Struct(expr) => expr.fmt(f),
             Self::Ternary(expr) => expr.fmt(f),
             Self::Tuple(expr) => expr.fmt(f),
             Self::Type(ty) => ty.fmt(f),
@@ -124,13 +124,13 @@ impl Parse for Expr {
         // skip any attributes
         let _ = input.call(syn::Attribute::parse_outer)?;
 
-        debug!(" >> {:?}", input.to_string());
+        debug!("  > Expr: {:?}", input.to_string());
         let mut expr = Self::parse_simple(input)?;
-        debug!("  > {expr:?}");
+        debug!("  < Expr: {expr:?}");
         loop {
             let (new, cont) = Self::parse_nested(expr, input)?;
             if cont {
-                debug!("  > {new:?}");
+                debug!(" << Expr: {new:?}");
                 expr = new;
             } else {
                 return Ok(new)
@@ -145,6 +145,7 @@ impl Spanned for Expr {
             Self::Array(expr) => expr.span(),
             Self::Binary(expr) => expr.span(),
             Self::Call(expr) => expr.span(),
+            Self::CallOptions(expr) => expr.span(),
             Self::Delete(expr) => expr.span(),
             Self::Ident(ident) => ident.span(),
             Self::Index(expr) => expr.span(),
@@ -153,7 +154,6 @@ impl Spanned for Expr {
             Self::New(expr) => expr.span(),
             Self::Payable(expr) => expr.span(),
             Self::Postfix(expr) => expr.span(),
-            Self::Struct(expr) => expr.span(),
             Self::Ternary(expr) => expr.span(),
             Self::Tuple(expr) => expr.span(),
             Self::Type(ty) => ty.span(),
@@ -167,6 +167,7 @@ impl Spanned for Expr {
             Self::Array(expr) => expr.set_span(span),
             Self::Binary(expr) => expr.set_span(span),
             Self::Call(expr) => expr.set_span(span),
+            Self::CallOptions(expr) => expr.set_span(span),
             Self::Delete(expr) => expr.set_span(span),
             Self::Ident(ident) => ident.set_span(span),
             Self::Index(expr) => expr.set_span(span),
@@ -175,7 +176,6 @@ impl Spanned for Expr {
             Self::New(expr) => expr.set_span(span),
             Self::Payable(expr) => expr.set_span(span),
             Self::Postfix(expr) => expr.set_span(span),
-            Self::Struct(expr) => expr.set_span(span),
             Self::Ternary(expr) => expr.set_span(span),
             Self::Tuple(expr) => expr.set_span(span),
             Self::Type(ty) => ty.set_span(span),
@@ -204,7 +204,8 @@ impl Expr {
             input.parse().map(Self::New)
         } else if lookahead.peek(kw::delete) {
             input.parse().map(Self::Delete)
-        } else if let Ok(ident) = input.call(Ident::parse_any) {
+        } else if lookahead.peek(Ident::peek_any) {
+            let ident = input.call(Ident::parse_any)?;
             match Type::parse_ident(ident.clone()) {
                 Ok(ty) if !ty.is_custom() => ty.parse_payable(input).map(Self::Type),
                 _ => Ok(Self::Ident(ident.into())),
@@ -218,26 +219,38 @@ impl Expr {
     ///
     /// Returns `(ParseResult, continue_parsing)`
     fn parse_nested(expr: Self, input: ParseStream<'_>) -> Result<(Self, bool)> {
-        let mut cont = true;
+        macro_rules! parse {
+            (break) => {
+                Ok((expr, false))
+            };
+
+            ($map:expr) => {
+                ParseNested::parse_nested(expr.into(), input).map(|e| ($map(e), true))
+            };
+        }
+
         let lookahead = input.lookahead1();
         if lookahead.peek(Bracket) {
-            ParseNested::parse_nested(expr.into(), input).map(Self::Index)
+            parse!(Self::Index)
         } else if lookahead.peek(Brace) {
-            ParseNested::parse_nested(expr.into(), input).map(Self::Struct)
+            // Special case: `try` stmt block
+            if input.peek2(kw::catch) {
+                parse!(break)
+            } else {
+                parse!(Self::CallOptions)
+            }
         } else if lookahead.peek(Paren) {
-            ParseNested::parse_nested(expr.into(), input).map(Self::Call)
+            parse!(Self::Call)
         } else if lookahead.peek(Token![.]) {
-            ParseNested::parse_nested(expr.into(), input).map(Self::Member)
+            parse!(Self::Member)
         } else if lookahead.peek(Token![?]) {
-            ParseNested::parse_nested(expr.into(), input).map(Self::Ternary)
+            parse!(Self::Ternary)
         } else if PostUnOp::peek(input, &lookahead) {
-            ParseNested::parse_nested(expr.into(), input).map(Self::Postfix)
+            parse!(Self::Postfix)
         } else if BinOp::peek(input, &lookahead) {
-            ParseNested::parse_nested(expr.into(), input).map(Self::Binary)
+            parse!(Self::Binary)
         } else {
-            cont = false;
-            Ok(expr)
+            parse!(break)
         }
-        .map(|expr| (expr, cont))
     }
 }

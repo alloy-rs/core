@@ -42,8 +42,6 @@ op_enum! {
     pub enum BinOp {
         Le(<=),
         Ge(>=),
-        Lt(<),
-        Gt(>),
         Eq(==),
         Neq(!=),
         Or(||),
@@ -58,22 +56,25 @@ op_enum! {
         BitAndAssign(&=),
         BitOrAssign(|=),
         BitXorAssign(^=),
+        SarAssign(>>>=) peek3,
         ShlAssign(<<=),
         ShrAssign(>>=),
-        SarAssign(>>>=),
 
-        Add(+),
-        Sub(-),
-        Pow(**),
-        Mul(*),
-        Div(/),
-        Rem(%),
-
-        Sar(>>>),
+        Sar(>>>) peek3,
         Shr(>>),
         Shl(<<),
         BitAnd(&),
         BitOr(|),
         BitXor(^),
+
+        Lt(<),
+        Gt(>),
+
+        Add(+),
+        Sub(-),
+        Pow(**) peek2,
+        Mul(*),
+        Div(/),
+        Rem(%),
     }
 }

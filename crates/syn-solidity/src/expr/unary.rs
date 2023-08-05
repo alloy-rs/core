@@ -103,8 +103,8 @@ impl Spanned for ExprPostfix {
 op_enum! {
     /// Unary operators.
     pub enum UnOp {
-        Increment(++),
-        Decrement(--),
+        Increment(++) peek2,
+        Decrement(--) peek2,
         Not(!),
         BitNot(~),
         Neg(-),
@@ -114,7 +114,7 @@ op_enum! {
 op_enum! {
     /// Postfix unary operators.
     pub enum PostUnOp {
-        Increment(++),
-        Decrement(--),
+        Increment(++) peek2,
+        Decrement(--) peek2,
     }
 }

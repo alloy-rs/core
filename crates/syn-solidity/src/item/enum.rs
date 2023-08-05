@@ -24,7 +24,7 @@ pub struct ItemEnum {
 
 impl fmt::Debug for ItemEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Enum")
+        f.debug_struct("ItemEnum")
             .field("attrs", &self.attrs)
             .field("name", &self.name)
             .field("variants", DebugPunctuated::new(&self.variants))

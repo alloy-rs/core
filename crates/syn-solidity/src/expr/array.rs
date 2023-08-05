@@ -53,7 +53,8 @@ pub struct ExprIndex {
     pub expr: Box<Expr>,
     pub bracket_token: Bracket,
     pub start: Option<Box<Expr>>,
-    pub end: Option<(Token![:], Box<Expr>)>,
+    pub colon_token: Option<Token![:]>,
+    pub end: Option<Box<Expr>>,
 }
 
 impl fmt::Debug for ExprIndex {
@@ -69,19 +70,28 @@ impl fmt::Debug for ExprIndex {
 impl ParseNested for ExprIndex {
     fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
         let content;
+        let bracket_token = bracketed!(content in input);
+        let start = if content.is_empty() || content.peek(Token![:]) {
+            None
+        } else {
+            Some(content.parse()?)
+        };
+        let colon_token = if content.is_empty() {
+            None
+        } else {
+            Some(content.parse()?)
+        };
+        let end = if content.is_empty() || colon_token.is_none() {
+            None
+        } else {
+            Some(content.parse()?)
+        };
         Ok(Self {
             expr,
-            bracket_token: bracketed!(content in input),
-            start: if content.is_empty() || content.peek(Token![:]) {
-                None
-            } else {
-                Some(content.parse()?)
-            },
-            end: if content.is_empty() {
-                None
-            } else {
-                Some((content.parse()?, content.parse()?))
-            },
+            bracket_token,
+            start,
+            colon_token,
+            end,
         })
     }
 }
@@ -97,5 +107,11 @@ impl Spanned for ExprIndex {
     fn set_span(&mut self, span: Span) {
         self.expr.set_span(span);
         self.bracket_token = Bracket(span);
+    }
+}
+
+impl ExprIndex {
+    pub fn is_range(&self) -> bool {
+        self.colon_token.is_some()
     }
 }

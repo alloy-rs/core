@@ -27,12 +27,11 @@ impl Parse for Block {
             brace_token: syn::braced!(content in input),
             stmts: {
                 let mut vec = Vec::new();
+                debug!("> Block: {:?}", content.to_string());
                 while !content.is_empty() {
-                    debug!(">>> {:?}", content.to_string());
-                    let r = content.parse();
-                    debug!("<<< {r:?}\n");
-                    vec.push(r?);
+                    vec.push(content.parse()?);
                 }
+                debug!("< Block: {} stmts\n", vec.len());
                 vec
             },
         })

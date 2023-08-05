@@ -16,8 +16,14 @@ use syn::{
 
 /// A list of unique function attributes. Used in
 /// [ItemFunction][crate::ItemFunction].
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct FunctionAttributes(pub HashSet<FunctionAttribute>);
+
+impl fmt::Debug for FunctionAttributes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl Deref for FunctionAttributes {
     type Target = HashSet<FunctionAttribute>;

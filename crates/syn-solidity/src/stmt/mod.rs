@@ -1,7 +1,14 @@
-mod assembly;
+use crate::{kw, Spanned};
+use proc_macro2::Span;
 use std::fmt;
+use syn::{
+    parse::{Parse, ParseStream},
+    token::{Brace, Bracket, Paren},
+    Result, Token,
+};
 
-pub use assembly::StmtAssembly;
+mod assembly;
+pub use assembly::{AssemblyFlags, StmtAssembly};
 
 mod blocks;
 pub use blocks::{Block, UncheckedBlock};
@@ -22,7 +29,7 @@ mod expr;
 pub use expr::StmtExpr;
 
 mod r#for;
-pub use r#for::StmtFor;
+pub use r#for::{ForInitStmt, StmtFor};
 
 mod r#if;
 pub use r#if::StmtIf;
@@ -34,21 +41,13 @@ mod revert;
 pub use revert::StmtRevert;
 
 mod r#try;
-pub use r#try::StmtTry;
+pub use r#try::{CatchClause, StmtTry};
 
 mod var_decl;
-pub use var_decl::StmtVarDecl;
+pub use var_decl::{StmtVarDecl, VarDeclDecl, VarDeclTuple};
 
 mod r#while;
 pub use r#while::StmtWhile;
-
-use crate::{kw, Spanned};
-use proc_macro2::Span;
-use syn::{
-    parse::{Parse, ParseStream},
-    token::{Brace, Paren},
-    Result, Token,
-};
 
 /// A statement, usually ending in a semicolon.
 ///
@@ -128,44 +127,13 @@ impl fmt::Debug for Stmt {
 
 impl Parse for Stmt {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let lookahead = input.lookahead1();
-        if lookahead.peek(Brace) {
-            input.parse().map(Self::Block)
-        } else if lookahead.peek(Paren) {
-            if input.peek2(Token![=]) {
-                input.parse().map(Self::VarDecl)
-            } else {
-                input.parse().map(Self::Expr)
-            }
-        } else if lookahead.peek(kw::unchecked) {
-            input.parse().map(Self::UncheckedBlock)
-        } else if lookahead.peek(Token![if]) {
-            input.parse().map(Self::If)
-        } else if lookahead.peek(Token![for]) {
-            input.parse().map(Self::For)
-        } else if lookahead.peek(Token![while]) {
-            input.parse().map(Self::While)
-        } else if lookahead.peek(Token![do]) {
-            input.parse().map(Self::DoWhile)
-        } else if lookahead.peek(Token![continue]) {
-            input.parse().map(Self::Continue)
-        } else if lookahead.peek(Token![break]) {
-            input.parse().map(Self::Break)
-        } else if lookahead.peek(Token![try]) {
-            input.parse().map(Self::Try)
-        } else if lookahead.peek(Token![return]) {
-            input.parse().map(Self::Return)
-        } else if lookahead.peek(kw::emit) {
-            input.parse().map(Self::Emit)
-        } else if lookahead.peek(kw::revert) {
-            input.parse().map(Self::Revert)
-        } else if lookahead.peek(kw::assembly) {
-            input.parse().map(Self::Assembly)
-        } else if StmtVarDecl::peek(input, &lookahead) {
-            input.parse().map(Self::VarDecl)
-        } else {
-            input.parse().map(Self::Expr)
-        }
+        // skip any attributes
+        let _ = input.call(syn::Attribute::parse_outer)?;
+
+        debug!("  > Stmt: {:?}", input.to_string());
+        let stmt = Self::parse_simple(input)?;
+        debug!("  < Stmt: {stmt:?}\n");
+        Ok(stmt)
     }
 }
 
@@ -207,6 +175,45 @@ impl Spanned for Stmt {
             Self::UncheckedBlock(block) => block.set_span(span),
             Self::VarDecl(stmt) => stmt.set_span(span),
             Self::While(stmt) => stmt.set_span(span),
+        }
+    }
+}
+
+impl Stmt {
+    fn parse_simple(input: ParseStream<'_>) -> Result<Self> {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(Brace) {
+            input.parse().map(Self::Block)
+        } else if lookahead.peek(Paren) {
+            StmtVarDecl::parse_or_expr(input)
+        } else if lookahead.peek(Bracket) {
+            input.parse().map(Self::Expr)
+        } else if lookahead.peek(kw::unchecked) {
+            input.parse().map(Self::UncheckedBlock)
+        } else if lookahead.peek(Token![if]) {
+            input.parse().map(Self::If)
+        } else if lookahead.peek(Token![for]) {
+            input.parse().map(Self::For)
+        } else if lookahead.peek(Token![while]) {
+            input.parse().map(Self::While)
+        } else if lookahead.peek(Token![do]) {
+            input.parse().map(Self::DoWhile)
+        } else if lookahead.peek(Token![continue]) {
+            input.parse().map(Self::Continue)
+        } else if lookahead.peek(Token![break]) {
+            input.parse().map(Self::Break)
+        } else if lookahead.peek(Token![try]) {
+            input.parse().map(Self::Try)
+        } else if lookahead.peek(Token![return]) {
+            input.parse().map(Self::Return)
+        } else if lookahead.peek(kw::emit) {
+            input.parse().map(Self::Emit)
+        } else if lookahead.peek(kw::revert) {
+            input.parse().map(Self::Revert)
+        } else if lookahead.peek(kw::assembly) {
+            input.parse().map(Self::Assembly)
+        } else {
+            StmtVarDecl::parse_or_expr(input)
         }
     }
 }

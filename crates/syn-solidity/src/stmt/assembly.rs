@@ -50,6 +50,7 @@ impl Spanned for StmtAssembly {
     }
 }
 
+/// A list of flags of an assembly statement.
 #[derive(Clone)]
 pub struct AssemblyFlags {
     pub paren_token: Paren,
