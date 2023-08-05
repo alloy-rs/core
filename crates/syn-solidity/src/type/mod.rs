@@ -271,9 +271,8 @@ impl Type {
     /// Parses the `payable` keyword from the input stream if this type is an
     /// address.
     pub fn parse_payable(mut self, input: ParseStream<'_>) -> Result<Self> {
-        match &mut self {
-            Self::Address(_, opt @ None) => *opt = input.parse()?,
-            _ => {}
+        if let Self::Address(_, opt @ None) = &mut self {
+            *opt = input.parse()?
         }
         Ok(self)
     }
