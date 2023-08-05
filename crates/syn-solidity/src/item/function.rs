@@ -191,15 +191,10 @@ impl ItemFunction {
 kw_enum! {
     /// The kind of function.
     pub enum FunctionKind {
-        /// `constructor`
         Constructor(kw::constructor),
-        /// `function`
         Function(kw::function),
-        /// `fallback`
         Fallback(kw::fallback),
-        /// `receive`
         Receive(kw::receive),
-        /// `modifier`
         Modifier(kw::modifier),
     }
 }

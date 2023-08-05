@@ -95,7 +95,7 @@ pub enum Expr {
     /// A `type()` expression: `type(uint256)`
     TypeCall(ExprTypeCall),
 
-    /// A unary operation: `!x`, `*x`.
+    /// A unary operation: `!x`, `-x`.
     Unary(ExprUnary),
 }
 

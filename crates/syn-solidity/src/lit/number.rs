@@ -133,6 +133,7 @@ impl Spanned for LitDenominated {
 }
 
 kw_enum! {
+    /// A sub-denomination suffix for a number literal.
     pub enum SubDenomination {
         Wei(kw::wei),
         Gwei(kw::gwei),

@@ -6,7 +6,7 @@ use syn::{
     Result,
 };
 
-/// A unary operation: `!x`, `*x`.
+/// A unary operation: `!x`, `-x`.
 #[derive(Clone, Debug)]
 pub struct ExprUnary {
     pub op: UnOp,

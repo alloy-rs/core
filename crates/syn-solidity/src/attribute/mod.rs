@@ -21,11 +21,8 @@ pub use variable::{VariableAttribute, VariableAttributes};
 kw_enum! {
     /// A storage location.
     pub enum Storage {
-        /// `memory`
         Memory(kw::memory),
-        /// `storage`
         Storage(kw::storage),
-        /// `calldata`
         Calldata(kw::calldata),
     }
 }
@@ -33,13 +30,9 @@ kw_enum! {
 kw_enum! {
     /// A visibility attribute.
     pub enum Visibility {
-        /// `external`
         External(kw::external),
-        /// `public`
         Public(kw::public),
-        /// `internal`
         Internal(kw::internal),
-        /// `private`
         Private(kw::private),
     }
 }
@@ -47,13 +40,9 @@ kw_enum! {
 kw_enum! {
     /// A mutability attribute.
     pub enum Mutability {
-        /// `pure`
         Pure(kw::pure),
-        /// `view`
         View(kw::view),
-        /// `constant`
         Constant(kw::constant),
-        /// `payable`
         Payable(kw::payable),
     }
 }
