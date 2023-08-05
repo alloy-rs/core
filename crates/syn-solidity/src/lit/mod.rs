@@ -11,7 +11,7 @@ mod number;
 pub use number::{LitNumber, LitNumberKind, SubDenomination};
 
 mod str;
-pub use str::{HexStr, LitHexStr, LitStr, LitUnicodeStr, UnicodeStr};
+pub use self::str::{HexStr, LitHexStr, LitStr, LitUnicodeStr, UnicodeStr};
 
 /// A Solidity literal such as a string or integer or boolean.
 #[derive(Clone)]
