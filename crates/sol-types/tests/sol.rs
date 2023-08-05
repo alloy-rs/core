@@ -163,6 +163,23 @@ fn empty_call() {
 }
 
 #[test]
+fn function_names() {
+    sol! {
+        contract LeadingUnderscores {
+            function f();
+            function _f();
+            function __f();
+        }
+    }
+    use LeadingUnderscores::*;
+
+    let call = LeadingUnderscoresCalls::f(fCall {});
+    assert!(call.is_f());
+    assert!(!call.is__f());
+    assert!(!call.is___f());
+}
+
+#[test]
 fn abigen_sol_multicall() {
     sol!("../syn-solidity/tests/contracts/Multicall.sol");
 

@@ -435,7 +435,7 @@ fn snakify(s: &str) -> String {
 
     let mut num_starts = vec![];
     for (pos, c) in output.iter().enumerate() {
-        if pos != 0 && c.is_digit(10) && !output[pos - 1].is_digit(10) {
+        if pos != 0 && c.is_ascii_digit() && !output[pos - 1].is_ascii_digit() {
             num_starts.push(pos);
         }
     }
