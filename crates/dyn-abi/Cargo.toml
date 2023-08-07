@@ -41,11 +41,25 @@ hex-literal.workspace = true
 criterion.workspace = true
 ethabi = "18"
 rand = "0.8"
+serde_json = { workspace = true }
 
 [features]
 default = ["std"]
-std = ["alloy-json-abi/std", "alloy-sol-types/std", "alloy-sol-type-parser/std", "alloy-primitives/std", "hex/std", "serde?/std", "serde_json?/std"]
-eip712 = ["alloy-sol-types/eip712-serde", "dep:derive_more", "dep:serde", "dep:serde_json"]
+std = [
+    "alloy-json-abi/std",
+    "alloy-sol-types/std",
+    "alloy-sol-type-parser/std",
+    "alloy-primitives/std",
+    "hex/std",
+    "serde?/std",
+    "serde_json?/std",
+]
+eip712 = [
+    "alloy-sol-types/eip712-serde",
+    "dep:derive_more",
+    "dep:serde",
+    "dep:serde_json",
+]
 arbitrary = [
     "std",
     "alloy-sol-types/arbitrary",
