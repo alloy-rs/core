@@ -505,7 +505,7 @@ mod tests {
             "type": "function"
         }"#;
 
-        let func: Function = serde_json::from_str(&json).unwrap();
+        let func: Function = serde_json::from_str(json).unwrap();
         assert_eq!(2, func.inputs.len());
         assert_eq!(1, func.outputs.len());
 
