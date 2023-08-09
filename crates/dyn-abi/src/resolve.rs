@@ -203,7 +203,7 @@ pub trait FunctionExt {
 impl FunctionExt for Function {
     fn encode_input(&self, args: DynSolValue) -> Result<Vec<u8>> {
         // if the function has no input params, it should take and args
-        if self.inputs.len() == 0 {
+        if self.inputs.is_empty() {
             return Err(Error::Other("no inputs expected for this function".into()))
         }
 
@@ -217,7 +217,7 @@ impl FunctionExt for Function {
         // since the above may result in a vec of 1 type, we check here
         // to prepare for the check below
         let param_type = match resolved_params.len() {
-            1 => resolved_params[0].to_owned(),
+            1 => resolved_params[0].clone(),
             _ => DynSolType::Tuple(resolved_params),
         };
 
@@ -231,9 +231,9 @@ impl FunctionExt for Function {
         // ABI encode the call
         let encoded = self
             .selector()
-            .to_vec()
-            .into_iter()
-            .chain(args.encode_params().into_iter())
+            .iter()
+            .copied()
+            .chain(args.encode_params())
             .collect::<Vec<_>>();
 
         Ok(encoded)
@@ -249,7 +249,7 @@ impl FunctionExt for Function {
         // since the above may result in a vec of 1 type, we check here
         // to prepare for the check below
         let param_type = match resolved_params.len() {
-            1 => resolved_params[0].to_owned(),
+            1 => resolved_params[0].clone(),
             _ => DynSolType::Tuple(resolved_params),
         };
 
