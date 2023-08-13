@@ -137,8 +137,7 @@ impl JsonAbi {
 macro_rules! next_item {
     ($self:ident; $($ident:ident.$f:ident()),* $(,)?) => {$(
         if let Some(next) = $self.$ident.$f() {
-            // SAFETY: length is valid
-            $self.len = unsafe { $self.len.checked_sub(1).unwrap_unchecked() };
+            $self.len -= 1;
             return Some(next.into())
         }
     )*};
