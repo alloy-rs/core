@@ -11,7 +11,7 @@ use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
     token::Brace,
-    Error, Ident, Result, Token,
+    Error, Ident, Result,
 };
 
 /// A list of unique function attributes. Used in
@@ -36,11 +36,7 @@ impl DerefMut for FunctionAttributes {
 impl Parse for FunctionAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let mut attributes = HashSet::<FunctionAttribute>::new();
-        while !(input.is_empty()
-            || input.peek(kw::returns)
-            || input.peek(Token![;])
-            || input.peek(Brace))
-        {
+        while !(input.is_empty() || input.peek(kw::returns) || !input.peek(Ident::peek_any)) {
             let attr = input.parse()?;
             if let Some(prev) = attributes.get(&attr) {
                 let mut e = Error::new(attr.span(), "duplicate attribute");

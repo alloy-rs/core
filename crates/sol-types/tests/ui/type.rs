@@ -734,4 +734,22 @@ sol! {
     }
 }
 
+sol! {
+    struct Mappings {
+        mapping(mapping(a b => c d) e => mapping(f g => h i) j) map;
+    }
+}
+
+sol! {
+    function mappings(mapping(uint256 a => bool b), mapping(bool => bool) x);
+}
+
+sol! {
+    struct FunctionTypes {
+        function(function(bool) external pure returns (function(function())) f) external returns (function()) c;
+    }
+
+    function functionTypes(FunctionTypes f) returns (function(function(function(), function())), function(function(), function()));
+}
+
 fn main() {}

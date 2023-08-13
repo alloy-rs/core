@@ -76,7 +76,7 @@ impl<'a> RootType<'a> {
     #[inline]
     pub fn try_basic_solidity(self) -> Result<()> {
         match self.0 {
-            "address" | "bool" | "string" | "bytes" | "uint" | "int" => Ok(()),
+            "address" | "bool" | "string" | "bytes" | "uint" | "int" | "function" => Ok(()),
             name => {
                 if let Some(sz) = name.strip_prefix("bytes") {
                     if let Ok(sz) = sz.parse::<usize>() {
@@ -96,10 +96,10 @@ impl<'a> RootType<'a> {
                             return Ok(())
                         }
                     }
-                    Err(Error::invalid_size(name))
-                } else {
-                    Err(Error::invalid_type_string(name))
+                    return Err(Error::invalid_size(name))
                 }
+
+                Err(Error::invalid_type_string(name))
             }
         }
     }

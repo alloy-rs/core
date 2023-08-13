@@ -10,7 +10,7 @@
 #![allow(clippy::arc_with_non_send_sync)]
 
 use crate::{DynSolType, DynSolValue};
-use alloy_primitives::{Address, B256, I256, U256};
+use alloy_primitives::{Address, Function, B256, I256, U256};
 use arbitrary::{size_hint, Unstructured};
 use core::ops::RangeInclusive;
 use proptest::{
@@ -133,6 +133,7 @@ enum Choice {
     Int,
     Uint,
     Address,
+    Function,
     FixedBytes,
     Bytes,
     String,
@@ -151,6 +152,7 @@ impl<'a> arbitrary::Arbitrary<'a> for DynSolType {
             Choice::Int => u.arbitrary().map(int_size).map(Self::Int),
             Choice::Uint => u.arbitrary().map(int_size).map(Self::Uint),
             Choice::Address => Ok(Self::Address),
+            Choice::Function => Ok(Self::Function),
             Choice::FixedBytes => Ok(Self::FixedBytes(u.int_in_range(1..=32)?)),
             Choice::Bytes => Ok(Self::Bytes),
             Choice::String => Ok(Self::String),
@@ -359,6 +361,7 @@ impl DynSolValue {
         match ty {
             DynSolType::Bool => u.arbitrary().map(Self::Bool),
             DynSolType::Address => u.arbitrary().map(Self::Address),
+            DynSolType::Function => u.arbitrary().map(Self::Function),
             &DynSolType::Int(sz) => u.arbitrary().map(|x| Self::Int(x, sz)),
             &DynSolType::Uint(sz) => u.arbitrary().map(|x| Self::Uint(x, sz)),
             &DynSolType::FixedBytes(sz) => u.arbitrary().map(|x| Self::FixedBytes(x, sz)),
@@ -410,6 +413,7 @@ impl DynSolValue {
         match ty {
             DynSolType::Bool => any::<bool>().prop_map(Self::Bool).sboxed(),
             DynSolType::Address => any::<Address>().prop_map(Self::Address).sboxed(),
+            DynSolType::Function => any::<Function>().prop_map(Self::Function).sboxed(),
             &DynSolType::Int(sz) => any::<I256>().prop_map(move |x| Self::Int(x, sz)).sboxed(),
             &DynSolType::Uint(sz) => any::<U256>().prop_map(move |x| Self::Uint(x, sz)).sboxed(),
             &DynSolType::FixedBytes(sz) => any::<B256>()

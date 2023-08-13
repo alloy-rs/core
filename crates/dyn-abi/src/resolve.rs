@@ -51,6 +51,7 @@ impl ResolveSolType for RootType<'_> {
     fn resolve(&self) -> DynAbiResult<DynSolType> {
         match self.span() {
             "address" => Ok(DynSolType::Address),
+            "function" => Ok(DynSolType::Function),
             "bool" => Ok(DynSolType::Bool),
             "string" => Ok(DynSolType::String),
             "bytes" => Ok(DynSolType::Bytes),
