@@ -40,7 +40,7 @@ use core::num::NonZeroUsize;
 /// ```
 /// # use alloy_sol_type_parser::TypeSpecifier;
 /// # use core::num::NonZeroUsize;
-/// let spec = TypeSpecifier::try_from("uint256[2][]")?;
+/// let spec = TypeSpecifier::parse("uint256[2][]")?;
 /// assert_eq!(spec.span(), "uint256[2][]");
 /// assert_eq!(spec.stem.span(), "uint256");
 /// // The sizes are in innermost-to-outermost order.
@@ -79,43 +79,62 @@ impl<'a> TypeSpecifier<'a> {
     /// Parse a type specifier from a string.
     pub fn parse(span: &'a str) -> Result<Self> {
         let span = span.trim();
+        let err = || Error::invalid_type_string(span);
 
-        let mut root = span;
+        // i is the start of the array sizes
+        let (i, is_tuple) = if let Some(i) = span.rfind(')') {
+            // ')' is 1 byte
+            (i + 1, true)
+        } else {
+            (span.find('[').unwrap_or(span.len()), false)
+        };
+        // spit_at_unchecked(i)
+        let (l, r) = unsafe { (span.get_unchecked(..i), span.get_unchecked(i..)) };
+        // avoids double check in `TypeStem::parse`
+        let stem = if is_tuple {
+            l.try_into().map(TypeStem::Tuple)
+        } else {
+            l.try_into().map(TypeStem::Root)
+        }?;
+
         let mut sizes = vec![];
-
-        // an iterator of string slices split by `[`
-        for s in root.rsplit('[') {
-            // we've reached a root tuple so we need to include the closing
-            // paren
-            if s.contains(')') {
-                let idx = span.rfind(')').unwrap();
-                root = &span[..=idx];
-                break
+        let mut chars = r.char_indices();
+        while let Some((i, next)) = chars.next() {
+            match next {
+                '[' => {
+                    let mut j = 0;
+                    let mut closed = false;
+                    for (idx, c) in chars.by_ref() {
+                        match c {
+                            ']' => {
+                                closed = true;
+                                break
+                            }
+                            c if c.is_ascii_digit() => j = idx,
+                            c if c.is_whitespace() => continue,
+                            _ => return Err(err()),
+                        }
+                    }
+                    if !closed {
+                        return Err(err())
+                    }
+                    let size = if j == 0 {
+                        None
+                    } else {
+                        // i and j are the index of '[' and the last digit respectively,
+                        // '[' and ASCII digits are 1 byte
+                        let s = unsafe { r.get_unchecked(i + 1..j + 1) };
+                        // end is trimmed in the loop above
+                        Some(s.trim_start().parse().map_err(|_| err())?)
+                    };
+                    sizes.push(size);
+                }
+                c if c.is_whitespace() => continue,
+                _ => return Err(err()),
             }
-            // we've reached a root type that is not a tuple or array
-            if !s.contains(']') {
-                root = s;
-                break
-            }
-
-            let s = s
-                .trim()
-                .strip_suffix(']')
-                .ok_or_else(|| Error::invalid_type_string(span))?;
-            let size = if s.is_empty() {
-                None
-            } else {
-                Some(s.parse().map_err(|_| Error::invalid_type_string(span))?)
-            };
-            sizes.push(size);
         }
 
-        sizes.reverse();
-        Ok(Self {
-            span,
-            stem: root.try_into()?,
-            sizes,
-        })
+        Ok(Self { span, stem, sizes })
     }
 
     /// Returns the type stem as a string.
@@ -145,64 +164,64 @@ mod test {
     #[test]
     fn parse_test() {
         assert_eq!(
-            super::TypeSpecifier::try_from("uint256").unwrap(),
-            super::TypeSpecifier {
+            TypeSpecifier::parse("uint256").unwrap(),
+            TypeSpecifier {
                 span: "uint256",
-                stem: TypeStem::try_from("uint256").unwrap(),
+                stem: TypeStem::parse("uint256").unwrap(),
                 sizes: vec![],
             }
         );
 
         assert_eq!(
-            super::TypeSpecifier::try_from("uint256[2]").unwrap(),
-            super::TypeSpecifier {
+            TypeSpecifier::parse("uint256[2]").unwrap(),
+            TypeSpecifier {
                 span: "uint256[2]",
-                stem: TypeStem::try_from("uint256").unwrap(),
+                stem: TypeStem::parse("uint256").unwrap(),
                 sizes: vec![NonZeroUsize::new(2)],
             }
         );
 
         assert_eq!(
-            super::TypeSpecifier::try_from("uint256[2][]").unwrap(),
-            super::TypeSpecifier {
+            TypeSpecifier::parse("uint256[2][]").unwrap(),
+            TypeSpecifier {
                 span: "uint256[2][]",
-                stem: TypeStem::try_from("uint256").unwrap(),
+                stem: TypeStem::parse("uint256").unwrap(),
                 sizes: vec![NonZeroUsize::new(2), None],
             }
         );
 
         assert_eq!(
-            super::TypeSpecifier::try_from("(uint256,uint256)").unwrap(),
-            super::TypeSpecifier {
+            TypeSpecifier::parse("(uint256,uint256)").unwrap(),
+            TypeSpecifier {
                 span: "(uint256,uint256)",
-                stem: TypeStem::Tuple(TupleSpecifier::try_from("(uint256,uint256)").unwrap()),
+                stem: TypeStem::Tuple(TupleSpecifier::parse("(uint256,uint256)").unwrap()),
                 sizes: vec![],
             }
         );
 
         assert_eq!(
-            super::TypeSpecifier::try_from("(uint256,uint256)[2]").unwrap(),
-            super::TypeSpecifier {
+            TypeSpecifier::parse("(uint256,uint256)[2]").unwrap(),
+            TypeSpecifier {
                 span: "(uint256,uint256)[2]",
-                stem: TypeStem::Tuple(TupleSpecifier::try_from("(uint256,uint256)").unwrap()),
+                stem: TypeStem::Tuple(TupleSpecifier::parse("(uint256,uint256)").unwrap()),
                 sizes: vec![NonZeroUsize::new(2)],
             }
         );
 
         assert_eq!(
-            super::TypeSpecifier::try_from("MyStruct").unwrap(),
-            super::TypeSpecifier {
+            TypeSpecifier::parse("MyStruct").unwrap(),
+            TypeSpecifier {
                 span: "MyStruct",
-                stem: TypeStem::try_from("MyStruct").unwrap(),
+                stem: TypeStem::parse("MyStruct").unwrap(),
                 sizes: vec![],
             }
         );
 
         assert_eq!(
-            super::TypeSpecifier::try_from("MyStruct[2]").unwrap(),
-            super::TypeSpecifier {
+            TypeSpecifier::parse("MyStruct[2]").unwrap(),
+            TypeSpecifier {
                 span: "MyStruct[2]",
-                stem: TypeStem::try_from("MyStruct").unwrap(),
+                stem: TypeStem::parse("MyStruct").unwrap(),
                 sizes: vec![NonZeroUsize::new(2)],
             }
         );
@@ -210,6 +229,6 @@ mod test {
 
     #[test]
     fn a_type_named_tuple() {
-        TypeSpecifier::try_from("tuple").unwrap();
+        TypeSpecifier::parse("tuple").unwrap();
     }
 }
