@@ -86,7 +86,7 @@ impl<'a> TypeSpecifier<'a> {
             // ')' is 1 byte
             (i + 1, true)
         } else {
-            (span.find('[').unwrap_or_else(|| span.len()), false)
+            (span.find('[').unwrap_or(span.len()), false)
         };
         // spit_at_unchecked(i)
         let (l, r) = unsafe { (span.get_unchecked(..i), span.get_unchecked(i..)) };
@@ -104,7 +104,7 @@ impl<'a> TypeSpecifier<'a> {
                 '[' => {
                     let mut j = 0;
                     let mut closed = false;
-                    while let Some((idx, c)) = chars.next() {
+                    for (idx, c) in chars.by_ref() {
                         match c {
                             ']' => {
                                 closed = true;
@@ -124,7 +124,7 @@ impl<'a> TypeSpecifier<'a> {
                         // i and j are the index of '[' and the last digit respectively,
                         // '[' and ASCII digits are 1 byte
                         let s = unsafe { r.get_unchecked(i + 1..j + 1) };
-                        // end is trimmed above
+                        // end is trimmed in the loop above
                         Some(s.trim_start().parse().map_err(|_| err())?)
                     };
                     sizes.push(size);
