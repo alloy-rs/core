@@ -7,13 +7,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use crate::{
-    token::TokenSeq,
-    utils::{pad_u32, words_for},
-    TokenType, Word,
-};
+use crate::{token::TokenSeq, utils, TokenType, Word};
 use alloc::vec::Vec;
-use core::mem;
+use core::{mem, ptr};
 
 /// An ABI encoder.
 ///
@@ -111,34 +107,13 @@ impl Encoder {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn append_indirection(&mut self) {
-        self.append_word(pad_u32(self.suffix_offset()));
+        self.append_word(utils::pad_u32(self.suffix_offset()));
     }
 
     /// Append a sequence length.
     #[inline]
     pub fn append_seq_len(&mut self, len: usize) {
-        self.append_word(pad_u32(len as u32));
-    }
-
-    /// Append a sequence of bytes, padding to the next word.
-    #[inline]
-    fn append_bytes(&mut self, bytes: &[u8]) {
-        let len = words_for(bytes);
-        for i in 0..len {
-            let mut padded = Word::ZERO;
-
-            let to_copy = match i == len - 1 {
-                false => 32,
-                true => match bytes.len() % 32 {
-                    0 => 32,
-                    x => x,
-                },
-            };
-
-            let offset = 32 * i;
-            padded[..to_copy].copy_from_slice(&bytes[offset..offset + to_copy]);
-            self.append_word(padded);
-        }
+        self.append_word(utils::pad_u32(len as u32));
     }
 
     /// Append a sequence of bytes as a packed sequence with a length prefix.
@@ -152,6 +127,31 @@ impl Encoder {
     #[inline]
     pub fn append_head_tail<'a, T: TokenSeq<'a>>(&mut self, token: &T) {
         token.encode_sequence(self);
+    }
+
+    /// Append a sequence of bytes, padding to the next word.
+    #[inline(always)]
+    fn append_bytes(&mut self, bytes: &[u8]) {
+        let n_words = utils::words_for(bytes);
+        self.buf.reserve(n_words);
+        unsafe {
+            // set length before copying
+            // this is fine because we reserved above and we don't panic below
+            let len = self.buf.len();
+            self.buf.set_len(len + n_words);
+
+            // copy
+            let cnt = bytes.len();
+            let dst = self.buf.as_mut_ptr().add(len).cast::<u8>();
+            ptr::copy_nonoverlapping(bytes.as_ptr(), dst, cnt);
+
+            // set remaining bytes to zero if necessary
+            let rem = cnt % 32;
+            if rem != 0 {
+                let pad = 32 - rem;
+                ptr::write_bytes(dst.add(cnt), 0, pad);
+            }
+        }
     }
 }
 

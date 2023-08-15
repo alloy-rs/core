@@ -13,26 +13,26 @@ use crate::{Error, Result, Word};
 
 /// Calculates the padded length of a slice by rounding its length to the next
 /// word.
-#[inline]
+#[inline(always)]
 pub const fn words_for(data: &[u8]) -> usize {
     words_for_len(data.len())
 }
 
 /// Calculates the padded length of a slice of a specific length by rounding its
 /// length to the next word.
-#[inline]
+#[inline(always)]
 pub const fn words_for_len(len: usize) -> usize {
     (len + 31) / 32
 }
 
 /// `padded_len` rounds a slice length up to the next multiple of 32
-#[inline]
+#[inline(always)]
 pub(crate) const fn padded_len(data: &[u8]) -> usize {
     next_multiple_of_32(data.len())
 }
 
 /// See [`usize::next_multiple_of`].
-#[inline]
+#[inline(always)]
 pub const fn next_multiple_of_32(n: usize) -> usize {
     match n % 32 {
         0 => n,

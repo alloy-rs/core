@@ -7,7 +7,7 @@ use alloy_sol_types::token::{PackedSeqToken, TokenType, WordToken};
 // NOTE: do not derive `Hash` for this type. The derived version is not
 // compatible with the current `PartialEq` implementation. If manually
 // implementing `Hash`, ignore the `template` prop in the `DynSeq` variant
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum DynToken<'a> {
     /// A single word.
     Word(Word),
@@ -135,10 +135,10 @@ impl<'a> DynToken<'a> {
     /// Decodes from a decoder, populating the structure with the decoded data.
     #[inline]
     pub(crate) fn decode_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
-        let dynamic = self.is_dynamic();
         match self {
             Self::Word(w) => *w = WordToken::decode_from(dec)?.0,
             Self::FixedSeq(..) => {
+                let dynamic = self.is_dynamic();
                 let mut child = if dynamic {
                     dec.take_indirection()?
                 } else {
@@ -154,23 +154,31 @@ impl<'a> DynToken<'a> {
             Self::DynSeq { contents, template } => {
                 let mut child = dec.take_indirection()?;
                 let size = child.take_u32()? as usize;
+                if size == 0 {
+                    // should already be empty from `empty_dyn_token`
+                    debug_assert!(contents.is_empty());
+                    return Ok(())
+                }
+
                 // This appears to be an unclarity in the solidity spec. The
                 // spec specifies that offsets are relative to the beginning of
                 // `enc(X)`. But known-good test vectors have it relative to the
                 // word AFTER the array size
                 let mut child = child.raw_child();
 
-                let mut new_tokens: Vec<_> = Vec::with_capacity(size);
                 // This expect is safe because this is only invoked after
                 // `empty_dyn_token()` which always sets template
-                let t = template
-                    .take()
-                    .expect("No template. This is a bug, please report it.");
-                new_tokens.resize(size, *t);
+                let t = template.take().expect("no template for dynamic sequence");
+                let mut new_tokens = if size == 1 {
+                    // re-use the box allocation
+                    unsafe { Vec::from_raw_parts(Box::into_raw(t), 1, 1) }
+                } else {
+                    vec![*t; size]
+                };
 
-                new_tokens
-                    .iter_mut()
-                    .try_for_each(|t| t.decode_populate(&mut child))?;
+                for t in &mut new_tokens {
+                    t.decode_populate(&mut child)?;
+                }
 
                 *contents = new_tokens.into();
             }
@@ -184,12 +192,11 @@ impl<'a> DynToken<'a> {
     #[inline]
     pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
         match self {
-            Self::FixedSeq(buf, size) => {
-                for item in buf.to_mut().iter_mut().take(*size) {
-                    item.decode_populate(dec)?;
-                }
-                Ok(())
-            }
+            Self::FixedSeq(buf, size) => buf
+                .to_mut()
+                .iter_mut()
+                .take(*size)
+                .try_for_each(|item| item.decode_populate(dec)),
             Self::DynSeq { .. } => self.decode_populate(dec),
             _ => Err(Error::custom(
                 "Called decode_sequence_populate on non-sequence token",
