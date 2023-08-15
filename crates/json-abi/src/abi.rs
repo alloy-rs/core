@@ -52,8 +52,14 @@ impl JsonAbi {
     /// Returns an iterator over all of the items in the ABI.
     #[inline]
     pub fn items(&self) -> Items<'_> {
+        self.items_with_len(self.len())
+    }
+
+    // `len` must be `self.len()`
+    #[inline]
+    fn items_with_len(&self, len: usize) -> Items<'_> {
         Items {
-            len: self.len(),
+            len,
             constructor: self.constructor.as_ref(),
             fallback: self.fallback.as_ref(),
             receive: self.receive.as_ref(),
@@ -78,6 +84,7 @@ impl JsonAbi {
     }
 
     /// Creates constructor call builder.
+    #[inline]
     pub const fn constructor(&self) -> Option<&Constructor> {
         self.constructor.as_ref()
     }
@@ -85,6 +92,7 @@ impl JsonAbi {
     /// Parse the ABI json from a `str`. This is a convenience wrapper around
     /// [`serde_json::from_str`].
     #[cfg(feature = "serde_json")]
+    #[inline]
     pub fn from_json_str(json: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json)
     }
@@ -104,31 +112,37 @@ impl JsonAbi {
     }
 
     /// Gets all the functions with the given name.
+    #[inline]
     pub fn function(&self, name: &str) -> Option<&[Function]> {
         self.functions.get(name).map(Vec::as_slice)
     }
 
     /// Gets all the events with the given name.
+    #[inline]
     pub fn event(&self, name: &str) -> Option<&[Event]> {
         self.events.get(name).map(Vec::as_slice)
     }
 
     /// Gets all the errors with the given name.
+    #[inline]
     pub fn error(&self, name: &str) -> Option<&[Error]> {
         self.errors.get(name).map(Vec::as_slice)
     }
 
     /// Iterates over all the functions of the contract in arbitrary order.
+    #[inline]
     pub fn functions(&self) -> Flatten<Values<'_, String, Vec<Function>>> {
         self.functions.values().flatten()
     }
 
     /// Iterates over all the events of the contract in arbitrary order.
+    #[inline]
     pub fn events(&self) -> Flatten<Values<'_, String, Vec<Event>>> {
         self.events.values().flatten()
     }
 
     /// Iterates over all the errors of the contract in arbitrary order.
+    #[inline]
     pub fn errors(&self) -> Flatten<Values<'_, String, Vec<Error>>> {
         self.errors.values().flatten()
     }
@@ -260,37 +274,12 @@ impl<'de> Deserialize<'de> for JsonAbi {
 }
 
 impl Serialize for JsonAbi {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut seq = serializer.serialize_seq(Some(self.len()))?;
-
-        if let Some(constructor) = &self.constructor {
-            seq.serialize_element(constructor)?;
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let len = self.len();
+        let mut seq = serializer.serialize_seq(Some(len))?;
+        for item in self.items_with_len(len) {
+            seq.serialize_element(&item)?;
         }
-        if let Some(fallback) = &self.fallback {
-            seq.serialize_element(fallback)?;
-        }
-        if let Some(receive) = &self.receive {
-            seq.serialize_element(receive)?;
-        }
-
-        self.functions
-            .values()
-            .flatten()
-            .try_for_each(|f| seq.serialize_element(f))?;
-
-        self.events
-            .values()
-            .flatten()
-            .try_for_each(|e| seq.serialize_element(e))?;
-
-        self.errors
-            .values()
-            .flatten()
-            .try_for_each(|e| seq.serialize_element(e))?;
-
         seq.end()
     }
 }

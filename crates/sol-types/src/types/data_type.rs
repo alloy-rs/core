@@ -260,7 +260,7 @@ impl SolType for Function {
 /// Bytes - `bytes`
 pub struct Bytes;
 
-impl<T: AsRef<[u8]>> Encodable<Bytes> for T {
+impl<T: ?Sized + AsRef<[u8]>> Encodable<Bytes> for T {
     #[inline]
     fn to_tokens(&self) -> PackedSeqToken<'_> {
         PackedSeqToken(self.as_ref())
@@ -377,10 +377,10 @@ impl<T: SolType> SolType for Array<T> {
 /// String - `string`
 pub struct String;
 
-impl<T: AsRef<str>> Encodable<String> for T {
+impl<T: ?Sized + AsRef<str>> Encodable<String> for T {
     #[inline]
-    fn to_tokens(&self) -> <String as SolType>::TokenType<'_> {
-        self.as_ref().as_bytes().into()
+    fn to_tokens(&self) -> PackedSeqToken<'_> {
+        PackedSeqToken(self.as_ref().as_bytes())
     }
 }
 
