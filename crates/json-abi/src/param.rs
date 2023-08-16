@@ -443,7 +443,6 @@ struct BorrowedParam<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::Value;
 
     #[test]
     fn test_complex_param() {
