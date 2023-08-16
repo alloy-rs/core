@@ -33,8 +33,8 @@ pub use aliases::{
 
 mod bits;
 pub use bits::{
-    Address, AddressError, Bloom, BloomInput, FixedBytes, BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS,
-    BLOOM_SIZE_BYTES,
+    Address, AddressError, Bloom, BloomInput, FixedBytes, Function, BLOOM_BITS_PER_ITEM,
+    BLOOM_SIZE_BITS, BLOOM_SIZE_BYTES,
 };
 
 mod bytes;

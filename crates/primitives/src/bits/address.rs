@@ -16,13 +16,22 @@ pub enum AddressError {
 }
 
 impl From<hex::FromHexError> for AddressError {
+    #[inline]
     fn from(value: hex::FromHexError) -> Self {
         Self::Hex(value)
     }
 }
 
 #[cfg(feature = "std")]
-impl std::error::Error for AddressError {}
+impl std::error::Error for AddressError {
+    #[inline]
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Hex(err) => Some(err),
+            Self::InvalidChecksum => None,
+        }
+    }
+}
 
 impl fmt::Display for AddressError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -173,23 +182,21 @@ impl Address {
         s: S,
         chain_id: Option<u64>,
     ) -> Result<Self, AddressError> {
-        fn inner(s: &str, chain_id: Option<u64>) -> Result<Address, AddressError> {
+        fn parse_checksummed(s: &str, chain_id: Option<u64>) -> Result<Address, AddressError> {
             // checksummed addresses always start with the "0x" prefix
             if !s.starts_with("0x") {
                 return Err(AddressError::Hex(hex::FromHexError::InvalidStringLength))
             }
 
             let address: Address = s.parse()?;
-            let buf = &mut [0; 42];
-            let expected = address.to_checksum_raw(buf, chain_id);
-            if s == expected {
+            if s == address.to_checksum_raw(&mut [0; 42], chain_id) {
                 Ok(address)
             } else {
                 Err(AddressError::InvalidChecksum)
             }
         }
 
-        inner(s.as_ref(), chain_id)
+        parse_checksummed(s.as_ref(), chain_id)
     }
 
     /// Encodes an Ethereum address to its [EIP-55] checksum.
@@ -292,8 +299,7 @@ impl Address {
     #[inline]
     #[must_use]
     pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
-        let mut buf = [0u8; 42];
-        self.to_checksum_raw(&mut buf, chain_id).to_string()
+        self.to_checksum_raw(&mut [0u8; 42], chain_id).to_string()
     }
 
     /// Computes the `create` address for this address and nonce:

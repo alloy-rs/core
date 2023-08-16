@@ -1,6 +1,6 @@
 use crate::{DynSolType, DynToken, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
-use alloy_primitives::{Address, I256, U256};
+use alloy_primitives::{Address, Function, I256, U256};
 use alloy_sol_types::{utils::words_for_len, Encoder};
 
 #[cfg(feature = "eip712")]
@@ -39,6 +39,8 @@ macro_rules! as_fixed_seq {
 pub enum DynSolValue {
     /// An address.
     Address(Address),
+    /// A function pointer.
+    Function(Function),
     /// A boolean.
     Bool(bool),
     /// A signed integer.
@@ -172,6 +174,7 @@ impl DynSolValue {
     pub fn as_type(&self) -> Option<DynSolType> {
         let ty = match self {
             Self::Address(_) => DynSolType::Address,
+            Self::Function(_) => DynSolType::Function,
             Self::Bool(_) => DynSolType::Bool,
             Self::Bytes(_) => DynSolType::Bytes,
             Self::FixedBytes(_, size) => DynSolType::FixedBytes(*size),
@@ -211,6 +214,7 @@ impl DynSolValue {
     fn sol_type_name_simple(&self) -> Option<&str> {
         match self {
             Self::Address(_) => Some("address"),
+            Self::Function(_) => Some("function"),
             Self::Bool(_) => Some("bool"),
             Self::Bytes(_) => Some("bytes"),
             Self::String(_) => Some("string"),
@@ -224,11 +228,16 @@ impl DynSolValue {
     fn sol_type_name_raw(&self, out: &mut String) -> bool {
         match self {
             #[cfg(not(feature = "eip712"))]
-            Self::Address(_) | Self::Bool(_) | Self::Bytes(_) | Self::String(_) => {
+            Self::Address(_)
+            | Self::Function(_)
+            | Self::Bool(_)
+            | Self::Bytes(_)
+            | Self::String(_) => {
                 out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
             }
             #[cfg(feature = "eip712")]
             Self::Address(_)
+            | Self::Function(_)
             | Self::Bool(_)
             | Self::Bytes(_)
             | Self::String(_)
@@ -326,6 +335,7 @@ impl DynSolValue {
     pub fn as_word(&self) -> Option<Word> {
         match *self {
             Self::Address(a) => Some(a.into_word()),
+            Self::Function(f) => Some(f.into_word()),
             Self::Bool(b) => Some(Word::with_last_byte(b as u8)),
             Self::FixedBytes(w, _) => Some(w),
             Self::Int(i, _) => Some(i.into()),
@@ -490,6 +500,7 @@ impl DynSolValue {
     pub fn is_dynamic(&self) -> bool {
         match self {
             Self::Address(_)
+            | Self::Function(_)
             | Self::Bool(_)
             | Self::Int(..)
             | Self::Uint(..)
@@ -527,6 +538,7 @@ impl DynSolValue {
         match self {
             // `self.is_word()`
             Self::Address(_)
+            | Self::Function(_)
             | Self::Bool(_)
             | Self::FixedBytes(..)
             | Self::Int(..)
@@ -570,6 +582,7 @@ impl DynSolValue {
     pub fn head_append(&self, enc: &mut Encoder) {
         match self {
             Self::Address(_)
+            | Self::Function(_)
             | Self::Bool(_)
             | Self::FixedBytes(..)
             | Self::Int(..)
@@ -592,6 +605,7 @@ impl DynSolValue {
     pub fn tail_append(&self, enc: &mut Encoder) {
         match self {
             Self::Address(_)
+            | Self::Function(_)
             | Self::Bool(_)
             | Self::FixedBytes(..)
             | Self::Int(..)
@@ -617,6 +631,7 @@ impl DynSolValue {
     pub fn encode_packed_to(&self, buf: &mut Vec<u8>) {
         match self {
             Self::Address(addr) => buf.extend_from_slice(addr.as_slice()),
+            Self::Function(func) => buf.extend_from_slice(func.as_slice()),
             Self::Bool(b) => buf.push(*b as u8),
             Self::String(s) => buf.extend_from_slice(s.as_bytes()),
             Self::Bytes(bytes) => buf.extend_from_slice(bytes),
@@ -653,6 +668,7 @@ impl DynSolValue {
     pub fn tokenize(&self) -> DynToken<'_> {
         match self {
             Self::Address(a) => a.into_word().into(),
+            Self::Function(f) => f.into_word().into(),
             Self::Bool(b) => Word::with_last_byte(*b as u8).into(),
             Self::Bytes(buf) => DynToken::PackedSeq(buf),
             Self::FixedBytes(buf, _) => (*buf).into(),
@@ -669,11 +685,15 @@ impl DynSolValue {
         let head_words = contents.iter().map(Self::head_words).sum::<usize>();
         enc.push_offset(head_words as u32);
 
-        contents.iter().for_each(|t| {
+        for t in contents {
             t.head_append(enc);
             enc.bump_offset(t.tail_words() as u32);
-        });
-        contents.iter().for_each(|t| t.tail_append(enc));
+        }
+
+        for t in contents {
+            t.tail_append(enc);
+        }
+
         enc.pop_offset();
     }
 

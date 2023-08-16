@@ -51,7 +51,15 @@ impl fmt::Debug for TypeMapping {
 
 impl fmt::Display for TypeMapping {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "mapping({} => {})", self.key, self.value)
+        write!(f, "mapping({} ", self.key)?;
+        if let Some(key_name) = &self.key_name {
+            write!(f, "{key_name} ")?;
+        }
+        write!(f, "=> {} ", self.value)?;
+        if let Some(value_name) = &self.value_name {
+            write!(f, "{value_name}")?;
+        }
+        f.write_str(")")
     }
 }
 

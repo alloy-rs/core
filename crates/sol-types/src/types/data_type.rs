@@ -8,7 +8,7 @@
 
 use crate::{token::*, utils, Encodable, Result, SolType, Word};
 use alloc::{borrow::Cow, string::String as RustString, vec::Vec};
-use alloy_primitives::{keccak256, Address as RustAddress, I256, U256};
+use alloy_primitives::{keccak256, Address as RustAddress, Function as RustFunction, I256, U256};
 use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
 /// Bool - `bool`
@@ -209,14 +209,58 @@ impl SolType for Address {
 
     #[inline]
     fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
-        out.extend_from_slice(rust.as_ref());
+        out.extend_from_slice(rust.as_slice());
+    }
+}
+
+/// Function - `function`
+pub struct Function;
+
+impl<T: Borrow<[u8; 24]>> Encodable<Function> for T {
+    #[inline]
+    fn to_tokens(&self) -> WordToken {
+        WordToken(RustFunction::new(*self.borrow()).into_word())
+    }
+}
+
+impl SolType for Function {
+    type RustType = RustFunction;
+    type TokenType<'a> = WordToken;
+
+    #[inline]
+    fn sol_type_name() -> Cow<'static, str> {
+        "function".into()
+    }
+
+    #[inline]
+    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+        RustFunction::from_word(token.0)
+    }
+
+    #[inline]
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
+        if utils::check_zeroes(&token.0[24..]) {
+            Ok(())
+        } else {
+            Err(Self::type_check_fail(token.as_slice()))
+        }
+    }
+
+    #[inline]
+    fn eip712_data_word(rust: &Self::RustType) -> Word {
+        rust.into_word()
+    }
+
+    #[inline]
+    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+        out.extend_from_slice(rust.as_slice());
     }
 }
 
 /// Bytes - `bytes`
 pub struct Bytes;
 
-impl<T: AsRef<[u8]>> Encodable<Bytes> for T {
+impl<T: ?Sized + AsRef<[u8]>> Encodable<Bytes> for T {
     #[inline]
     fn to_tokens(&self) -> PackedSeqToken<'_> {
         PackedSeqToken(self.as_ref())
@@ -333,10 +377,10 @@ impl<T: SolType> SolType for Array<T> {
 /// String - `string`
 pub struct String;
 
-impl<T: AsRef<str>> Encodable<String> for T {
+impl<T: ?Sized + AsRef<str>> Encodable<String> for T {
     #[inline]
-    fn to_tokens(&self) -> <String as SolType>::TokenType<'_> {
-        self.as_ref().as_bytes().into()
+    fn to_tokens(&self) -> PackedSeqToken<'_> {
+        PackedSeqToken(self.as_ref().as_bytes())
     }
 }
 

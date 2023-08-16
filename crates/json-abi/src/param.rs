@@ -40,9 +40,12 @@ pub struct Param {
 
 impl fmt::Display for Param {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(internal_type) = &self.internal_type {
-            write!(f, "{} ", internal_type)?;
-        }
+        if let Some(it) = &self.internal_type {
+            it.fmt(f)
+        } else {
+            f.write_str(&self.ty)
+        }?;
+        f.write_str(" ")?;
         f.write_str(&self.name)
     }
 }
@@ -69,6 +72,7 @@ impl<'de> Deserialize<'de> for Param {
 }
 
 impl Serialize for Param {
+    #[inline]
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.as_inner().serialize(serializer)
     }
@@ -195,12 +199,13 @@ impl Param {
         }
     }
 
+    #[inline]
     fn borrowed_internal_type(&self) -> Option<BorrowedInternalType<'_>> {
         self.internal_type().as_ref().map(|it| it.as_borrowed())
     }
 
     #[inline]
-    fn as_inner(&self) -> BorrowedParam<'_, Param> {
+    fn as_inner(&self) -> BorrowedParam<'_> {
         BorrowedParam {
             name: &self.name,
             ty: &self.ty,
@@ -241,9 +246,12 @@ pub struct EventParam {
 
 impl fmt::Display for EventParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(internal_type) = &self.internal_type {
-            write!(f, "{} ", internal_type)?;
-        }
+        if let Some(it) = &self.internal_type {
+            it.fmt(f)
+        } else {
+            f.write_str(&self.ty)
+        }?;
+        f.write_str(" ")?;
         f.write_str(&self.name)
     }
 }
@@ -271,6 +279,7 @@ impl<'de> Deserialize<'de> for EventParam {
 }
 
 impl Serialize for EventParam {
+    #[inline]
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.as_inner().serialize(serializer)
     }
@@ -397,12 +406,13 @@ impl EventParam {
         }
     }
 
+    #[inline]
     fn borrowed_internal_type(&self) -> Option<BorrowedInternalType<'_>> {
         self.internal_type().as_ref().map(|it| it.as_borrowed())
     }
 
     #[inline]
-    fn as_inner(&self) -> BorrowedParam<'_, Param> {
+    fn as_inner(&self) -> BorrowedParam<'_> {
         BorrowedParam {
             name: &self.name,
             ty: &self.ty,
@@ -413,9 +423,8 @@ impl EventParam {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(bound(deserialize = "<[T] as ToOwned>::Owned: Default + Deserialize<'de>"))]
-struct BorrowedParam<'a, T: Clone> {
+#[derive(Deserialize, Serialize)]
+struct BorrowedParam<'a> {
     name: &'a str,
     #[serde(rename = "type")]
     ty: &'a str,
@@ -424,12 +433,11 @@ struct BorrowedParam<'a, T: Clone> {
     #[serde(
         rename = "internalType",
         default,
-        skip_serializing_if = "Option::is_none",
-        borrow
+        skip_serializing_if = "Option::is_none"
     )]
     internal_type: Option<BorrowedInternalType<'a>>,
     #[serde(default, skip_serializing_if = "<[_]>::is_empty")]
-    components: Cow<'a, [T]>,
+    components: Cow<'a, [Param]>,
 }
 
 #[cfg(test)]

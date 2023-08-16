@@ -4,13 +4,14 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::{Address, I256, U256};
+use alloy_primitives::{Address, Function, I256, U256};
 
 impl DynSolType {
     /// Coerce a [`serde_json::Value`] to a [`DynSolValue`] via this type.
     pub fn coerce(&self, value: &serde_json::Value) -> DynAbiResult<DynSolValue> {
         match self {
             DynSolType::Address => address(value),
+            DynSolType::Function => function(value),
             DynSolType::Bool => bool(value),
             DynSolType::Int(n) => int(*n, value),
             DynSolType::Uint(n) => uint(*n, value),
@@ -39,6 +40,18 @@ fn address(value: &serde_json::Value) -> DynAbiResult<DynSolValue> {
         .ok_or_else(|| DynAbiError::type_mismatch(DynSolType::Address, value))??;
 
     Ok(DynSolValue::Address(address))
+}
+
+fn function(value: &serde_json::Value) -> DynAbiResult<DynSolValue> {
+    let function = value
+        .as_str()
+        .map(|s| {
+            s.parse::<Function>()
+                .map_err(|_| DynAbiError::type_mismatch(DynSolType::Function, value))
+        })
+        .ok_or_else(|| DynAbiError::type_mismatch(DynSolType::Function, value))??;
+
+    Ok(DynSolValue::Function(function))
 }
 
 fn bool(value: &serde_json::Value) -> DynAbiResult<DynSolValue> {

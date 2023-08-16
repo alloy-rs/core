@@ -40,7 +40,7 @@ pub trait EventTopic: SolType {
 
 // Single word types: encoded as just the single word
 macro_rules! word_impl {
-    ($t:ty) => {
+    () => {
         #[inline]
         fn topic_preimage_length(_: &Self::RustType) -> usize {
             32
@@ -48,48 +48,52 @@ macro_rules! word_impl {
 
         #[inline]
         fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
-            out.extend($crate::Encodable::<$t>::to_tokens(rust).0 .0);
+            out.extend($crate::Encodable::<Self>::to_tokens(rust).0 .0);
         }
 
         #[inline]
         fn encode_topic(rust: &Self::RustType) -> WordToken {
-            $crate::Encodable::<$t>::to_tokens(rust)
+            $crate::Encodable::<Self>::to_tokens(rust)
         }
     };
 }
 
 impl EventTopic for Address {
-    word_impl!(Address);
+    word_impl!();
+}
+
+impl EventTopic for Function {
+    word_impl!();
 }
 
 impl EventTopic for Bool {
-    word_impl!(Bool);
+    word_impl!();
 }
 
 impl<const BITS: usize> EventTopic for Int<BITS>
 where
     IntBitCount<BITS>: SupportedInt,
 {
-    word_impl!(Int<BITS>);
+    word_impl!();
 }
 
 impl<const BITS: usize> EventTopic for Uint<BITS>
 where
     IntBitCount<BITS>: SupportedInt,
 {
-    word_impl!(Uint<BITS>);
+    word_impl!();
 }
 
 impl<const N: usize> EventTopic for FixedBytes<N>
 where
     ByteCount<N>: SupportedFixedBytes,
 {
-    word_impl!(FixedBytes<N>);
+    word_impl!();
 }
 
 // Bytes-like types - preimage encoding: bytes padded to 32; hash: the bytes
 macro_rules! bytes_impl {
-    ($t:ty) => {
+    () => {
         #[inline]
         fn topic_preimage_length(rust: &Self::RustType) -> usize {
             crate::utils::next_multiple_of_32(rust.len())
@@ -108,11 +112,11 @@ macro_rules! bytes_impl {
 }
 
 impl EventTopic for String {
-    bytes_impl!(String);
+    bytes_impl!();
 }
 
 impl EventTopic for Bytes {
-    bytes_impl!(Bytes);
+    bytes_impl!();
 }
 
 // Complex types - preimage encoding and hash: iter each element

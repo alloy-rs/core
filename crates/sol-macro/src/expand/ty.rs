@@ -112,8 +112,13 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
                 }
             }
         }
-        Type::Function(ref function) => todo!("function types: {function:?}"),
-        Type::Mapping(ref mapping) => todo!("mapping types: {mapping:?}"),
+        Type::Function(ref function) => {
+            let span = function.span();
+            quote_spanned! {span=>
+                ::alloy_sol_types::sol_data::Function
+            }
+        }
+        Type::Mapping(ref mapping) => panic!("mapping types are unsupported: {mapping:?}"),
         Type::Custom(ref custom) => return custom.to_tokens(tokens),
     };
     tokens.extend(tts);
