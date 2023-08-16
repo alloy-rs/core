@@ -5,9 +5,9 @@ use alloy_json_abi::{InternalType::Struct, Param};
 #[test]
 fn param_simple() {
     let s = r#"{
-			"name": "foo",
-			"type": "address"
-		}"#;
+            "name": "foo",
+            "type": "address"
+        }"#;
 
     let deserialized: Param = serde_json::from_str(s).unwrap();
 
@@ -27,10 +27,10 @@ fn param_simple() {
 #[test]
 fn param_simple_internal_type() {
     let s = r#"{
-			"name": "foo",
-			"type": "address",
-			"internalType": "struct Verifier.Proof"
-		}"#;
+            "name": "foo",
+            "type": "address",
+            "internalType": "struct Verifier.Proof"
+        }"#;
 
     let deserialized: Param = serde_json::from_str(s).unwrap();
 
@@ -53,25 +53,25 @@ fn param_simple_internal_type() {
 #[test]
 fn param_tuple() {
     let s = r#"{
-			"name": "foo",
-			"type": "tuple",
-			"components": [
-				{
-			        "name": "a",
-					"type": "uint48"
-				},
-				{
-			        "name": "b",
-					"type": "tuple",
-					"components": [
-						{
-							"type": "address",
-			                "name": "c"
-						}
-					]
-				}
-			]
-		}"#;
+            "name": "foo",
+            "type": "tuple",
+            "components": [
+                {
+                    "name": "a",
+                    "type": "uint48"
+                },
+                {
+                    "name": "b",
+                    "type": "tuple",
+                    "components": [
+                        {
+                            "type": "address",
+                            "name": "c"
+                        }
+                    ]
+                }
+            ]
+        }"#;
 
     let deserialized: Param = serde_json::from_str(s).unwrap();
 
@@ -109,26 +109,26 @@ fn param_tuple() {
 #[test]
 fn param_tuple_internal_type() {
     let s = r#"{
-			"name": "foo",
-			"type": "tuple",
-			"internalType": "struct Pairing.G1Point[]",
-			"components": [
-				{
-			        "name": "a",
-					"type": "uint48"
-				},
-				{
-			        "name": "b",
-					"type": "tuple",
-					"components": [
-						{
-			                "name": "c",
-							"type": "address"
-						}
-					]
-				}
-			]
-		}"#;
+            "name": "foo",
+            "type": "tuple",
+            "internalType": "struct Pairing.G1Point[]",
+            "components": [
+                {
+                    "name": "a",
+                    "type": "uint48"
+                },
+                {
+                    "name": "b",
+                    "type": "tuple",
+                    "components": [
+                        {
+                            "name": "c",
+                            "type": "address"
+                        }
+                    ]
+                }
+            ]
+        }"#;
 
     let deserialized: Param = serde_json::from_str(s).unwrap();
 
@@ -169,25 +169,25 @@ fn param_tuple_internal_type() {
 #[test]
 fn param_tuple_named() {
     let s = r#"{
-			"name": "foo",
-			"type": "tuple",
-			"components": [
-				{
-					"name": "amount",
-					"type": "uint48"
-				},
-				{
-					"name": "things",
-					"type": "tuple",
-					"components": [
-						{
-							"name": "baseTupleParam",
-							"type": "address"
-						}
-					]
-				}
-			]
-		}"#;
+            "name": "foo",
+            "type": "tuple",
+            "components": [
+                {
+                    "name": "amount",
+                    "type": "uint48"
+                },
+                {
+                    "name": "things",
+                    "type": "tuple",
+                    "components": [
+                        {
+                            "name": "baseTupleParam",
+                            "type": "address"
+                        }
+                    ]
+                }
+            ]
+        }"#;
 
     let deserialized: Param = serde_json::from_str(s).unwrap();
 
@@ -225,23 +225,23 @@ fn param_tuple_named() {
 #[test]
 fn param_tuple_array() {
     let s = r#"{
-			"name": "foo",
-			"type": "tuple[]",
-			"components": [
-				{
-			        "name": "a",
-					"type": "uint48"
-				},
-				{
-			        "name": "b",
-					"type": "address"
-				},
-				{
-			        "name": "c",
-					"type": "address"
-				}
-			]
-		}"#;
+            "name": "foo",
+            "type": "tuple[]",
+            "components": [
+                {
+                    "name": "a",
+                    "type": "uint48"
+                },
+                {
+                    "name": "b",
+                    "type": "address"
+                },
+                {
+                    "name": "c",
+                    "type": "address"
+                }
+            ]
+        }"#;
 
     let deserialized: Param = serde_json::from_str(s).unwrap();
 
@@ -280,19 +280,19 @@ fn param_tuple_array() {
 #[test]
 fn param_array_of_array_of_tuple() {
     let s = r#"{
-			"name": "foo",
-			"type": "tuple[][]",
-			"components": [
-				{
-			        "name": "a",
-					"type": "uint8"
-				},
-				{
-			        "name": "b",
-					"type": "uint16"
-				}
-			]
-		}"#;
+            "name": "foo",
+            "type": "tuple[][]",
+            "components": [
+                {
+                    "name": "a",
+                    "type": "uint8"
+                },
+                {
+                    "name": "b",
+                    "type": "uint16"
+                }
+            ]
+        }"#;
 
     let deserialized: Param = serde_json::from_str(s).unwrap();
     assert_eq!(
@@ -324,23 +324,23 @@ fn param_array_of_array_of_tuple() {
 #[test]
 fn param_tuple_fixed_array() {
     let s = r#"{
-			"name": "foo",
-			"type": "tuple[2]",
-			"components": [
-				{
-			        "name": "a",
-					"type": "uint48"
-				},
-				{
-			        "name": "b",
-					"type": "address"
-				},
-				{
-			        "name": "c",
-					"type": "address"
-				}
-			]
-		}"#;
+            "name": "foo",
+            "type": "tuple[2]",
+            "components": [
+                {
+                    "name": "a",
+                    "type": "uint48"
+                },
+                {
+                    "name": "b",
+                    "type": "address"
+                },
+                {
+                    "name": "c",
+                    "type": "address"
+                }
+            ]
+        }"#;
 
     let deserialized: Param = serde_json::from_str(s).unwrap();
 
@@ -379,31 +379,31 @@ fn param_tuple_fixed_array() {
 #[test]
 fn param_tuple_with_nested_tuple_arrays() {
     let s = r#"{
-			"name": "foo",
-			"type": "tuple",
-			"components": [
-				{
-			        "name": "a",
-					"type": "tuple[]",
-					"components": [
-						{
-			                "name": "b",
-							"type": "address"
-						}
-					]
-				},
-				{
-			        "name": "c",
-					"type": "tuple[42]",
-					"components": [
-						{
-			                "name": "d",
-							"type": "address"
-						}
-					]
-				}
-			]
-		}"#;
+            "name": "foo",
+            "type": "tuple",
+            "components": [
+                {
+                    "name": "a",
+                    "type": "tuple[]",
+                    "components": [
+                        {
+                            "name": "b",
+                            "type": "address"
+                        }
+                    ]
+                },
+                {
+                    "name": "c",
+                    "type": "tuple[42]",
+                    "components": [
+                        {
+                            "name": "d",
+                            "type": "address"
+                        }
+                    ]
+                }
+            ]
+        }"#;
 
     let deserialized: Param = serde_json::from_str(s).unwrap();
 

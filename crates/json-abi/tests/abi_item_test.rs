@@ -10,15 +10,15 @@ use std::borrow::Cow;
 #[test]
 fn operation() {
     let s = r#"{
-			"type":"function",
-			"inputs": [{
-				"name":"a",
-				"type":"address"
-			}],
-			"name":"foo",
-			"outputs": [],
+            "type":"function",
+            "inputs": [{
+                "name":"a",
+                "type":"address"
+            }],
+            "name":"foo",
+            "outputs": [],
             "stateMutability": "nonpayable"
-		}"#;
+        }"#;
 
     let deserialized: AbiItem<'static> = serde_json::from_str(s).unwrap();
 
@@ -45,41 +45,41 @@ fn operation() {
 #[test]
 fn event_operation_with_tuple_array_input() {
     let s = r#"{
-			"type":"event",
-			"inputs": [
-				{
-					"name":"a",
-					"type":"address",
-					"indexed":true
-				},
-				{
-				  "components": [
-					{
-					  "internalType": "address",
-					  "name": "to",
-					  "type": "address"
-					},
-					{
-					  "internalType": "uint256",
-					  "name": "value",
-					  "type": "uint256"
-					},
-					{
-					  "internalType": "bytes",
-					  "name": "data",
-					  "type": "bytes"
-					}
-				  ],
-				  "indexed": false,
-				  "internalType": "struct Action[]",
-				  "name": "b",
-				  "type": "tuple[]"
-				}
-			],
-			"name":"E",
-			"outputs": [],
-			"anonymous": false
-		}"#;
+            "type":"event",
+            "inputs": [
+                {
+                    "name":"a",
+                    "type":"address",
+                    "indexed":true
+                },
+                {
+                  "components": [
+                    {
+                      "internalType": "address",
+                      "name": "to",
+                      "type": "address"
+                    },
+                    {
+                      "internalType": "uint256",
+                      "name": "value",
+                      "type": "uint256"
+                    },
+                    {
+                      "internalType": "bytes",
+                      "name": "data",
+                      "type": "bytes"
+                    }
+                  ],
+                  "indexed": false,
+                  "internalType": "struct Action[]",
+                  "name": "b",
+                  "type": "tuple[]"
+                }
+            ],
+            "name":"E",
+            "outputs": [],
+            "anonymous": false
+        }"#;
 
     let deserialized: AbiItem<'static> = serde_json::from_str(s).unwrap();
 
@@ -144,14 +144,14 @@ fn event_operation_with_tuple_array_input() {
 //     fn test_sanitize_function_name(name: &str, expected: &str) {
 //         let s = format!(
 //             r#"{{
-// 				"type":"function",
-// 				"inputs": [{{
-// 					"name":"a",
-// 					"type":"address"
-// 				}}],
-// 				"name":"{}",
-// 				"outputs": []
-// 			}}"#,
+//              "type":"function",
+//              "inputs": [{{
+//                  "name":"a",
+//                  "type":"address"
+//              }}],
+//              "name":"{}",
+//              "outputs": []
+//          }}"#,
 //             name
 //         );
 
@@ -177,16 +177,16 @@ fn event_operation_with_tuple_array_input() {
 //     fn test_sanitize_event_name(name: &str, expected: &str) {
 //         let s = format!(
 //             r#"{{
-// 				"type":"event",
-// 					"inputs": [{{
-// 						"name":"a",
-// 						"type":"address",
-// 						"indexed":true
-// 					}}],
-// 					"name":"{}",
-// 					"outputs": [],
-// 					"anonymous": false
-// 			}}"#,
+//              "type":"event",
+//                  "inputs": [{{
+//                      "name":"a",
+//                      "type":"address",
+//                      "indexed":true
+//                  }}],
+//                  "name":"{}",
+//                  "outputs": [],
+//                  "anonymous": false
+//          }}"#,
 //             name
 //         );
 
@@ -206,3 +206,4 @@ fn event_operation_with_tuple_array_input() {
 //     test_sanitize_event_name("()", "");
 //     test_sanitize_event_name("", "");
 // }
+

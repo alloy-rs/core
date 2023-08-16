@@ -30,19 +30,19 @@ fn empty() {
 #[test]
 fn constructor() {
     let json = r#"
-			[
-				{
-					"type": "constructor",
-					"inputs": [
-						{
-							"name":"a",
-							"type":"address"
-						}
-					],
-                    "stateMutability": "nonpayable"
-				}
-			]
-		"#;
+        [
+            {
+                "type": "constructor",
+                "inputs": [
+                    {
+                        "name":"a",
+                        "type":"address"
+                    }
+                ],
+                "stateMutability": "nonpayable"
+            }
+        ]
+    "#;
 
     let deserialized: JsonAbi = serde_json::from_str(json).unwrap();
 
@@ -72,33 +72,33 @@ fn constructor() {
 #[test]
 fn functions() {
     let json = r#"
-			[
-				{
-					"type": "function",
-					"name": "foo",
-					"inputs": [
-						{
-							"name":"a",
-							"type":"address"
-						}
-					],
-					"outputs": [
-						{
-							"name": "res",
-							"type":"address"
-						}
-					],
+            [
+                {
+                    "type": "function",
+                    "name": "foo",
+                    "inputs": [
+                        {
+                            "name":"a",
+                            "type":"address"
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "res",
+                            "type":"address"
+                        }
+                    ],
                     "stateMutability": "nonpayable"
-				},
-				{
-					"type": "function",
-					"name": "bar",
-					"inputs": [],
-					"outputs": [],
+                },
+                {
+                    "type": "function",
+                    "name": "bar",
+                    "inputs": [],
+                    "outputs": [],
                     "stateMutability": "nonpayable"
-				}
-			]
-		"#;
+                }
+            ]
+        "#;
 
     let deserialized: JsonAbi = serde_json::from_str(json).unwrap();
 
@@ -149,33 +149,33 @@ fn functions() {
 #[test]
 fn functions_overloads() {
     let json = r#"
-			[
-				{
-					"type": "function",
-					"name": "foo",
-					"inputs": [
-						{
-							"name":"a",
-							"type":"address"
-						}
-					],
-					"outputs": [
-						{
-							"name": "res",
-							"type":"address"
-						}
-					],
+            [
+                {
+                    "type": "function",
+                    "name": "foo",
+                    "inputs": [
+                        {
+                            "name":"a",
+                            "type":"address"
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "res",
+                            "type":"address"
+                        }
+                    ],
                     "stateMutability": "nonpayable"
-				},
-				{
-					"type": "function",
-					"name": "foo",
-					"inputs": [],
-					"outputs": [],
+                },
+                {
+                    "type": "function",
+                    "name": "foo",
+                    "inputs": [],
+                    "outputs": [],
                     "stateMutability": "nonpayable"
-				}
-			]
-		"#;
+                }
+            ]
+        "#;
 
     let deserialized: JsonAbi = serde_json::from_str(json).unwrap();
 
@@ -223,33 +223,33 @@ fn functions_overloads() {
 #[test]
 fn events() {
     let json = r#"
-    		[
-    			{
-    				"type": "event",
-    				"name": "foo",
-    				"inputs": [
-    					{
-    						"name":"a",
-    						"type":"address",
-    						"indexed": false
-    					}
-    				],
-    				"anonymous": false
-    			},
-    			{
-    				"type": "event",
-    				"name": "bar",
-    				"inputs": [
-    					{
-    						"name":"a",
-    						"type":"address",
-    						"indexed": true
-    					}
-    				],
-    				"anonymous": false
-    			}
-    		]
-    	"#;
+            [
+                {
+                    "type": "event",
+                    "name": "foo",
+                    "inputs": [
+                        {
+                            "name":"a",
+                            "type":"address",
+                            "indexed": false
+                        }
+                    ],
+                    "anonymous": false
+                },
+                {
+                    "type": "event",
+                    "name": "bar",
+                    "inputs": [
+                        {
+                            "name":"a",
+                            "type":"address",
+                            "indexed": true
+                        }
+                    ],
+                    "anonymous": false
+                }
+            ]
+        "#;
 
     let deserialized: JsonAbi = serde_json::from_str(json).unwrap();
 
@@ -300,33 +300,33 @@ fn events() {
 #[test]
 fn events_overload() {
     let json = r#"
-			[
-				{
-					"type": "event",
-					"name": "foo",
-					"inputs": [
-						{
-							"name":"a",
-							"type":"address",
-							"indexed": false
-						}
-					],
-					"anonymous": false
-				},
-				{
-					"type": "event",
-					"name": "foo",
-					"inputs": [
-						{
-							"name":"a",
-							"type":"address",
-							"indexed": true
-						}
-					],
-					"anonymous": false
-				}
-			]
-		"#;
+            [
+                {
+                    "type": "event",
+                    "name": "foo",
+                    "inputs": [
+                        {
+                            "name":"a",
+                            "type":"address",
+                            "indexed": false
+                        }
+                    ],
+                    "anonymous": false
+                },
+                {
+                    "type": "event",
+                    "name": "foo",
+                    "inputs": [
+                        {
+                            "name":"a",
+                            "type":"address",
+                            "indexed": true
+                        }
+                    ],
+                    "anonymous": false
+                }
+            ]
+        "#;
 
     let deserialized: JsonAbi = serde_json::from_str(json).unwrap();
 
@@ -404,7 +404,7 @@ fn errors() {
                 "name": "bar"
               }
             ]
-		"#;
+        "#;
 
     let deserialized: JsonAbi = serde_json::from_str(json).unwrap();
 
@@ -467,33 +467,33 @@ fn errors() {
 #[test]
 fn errors_overload() {
     let json = r#"
-			[
-			  {
-				"type": "error",
-				"inputs": [
-				  {
-					"name": "a",
-					"type": "uint256"
-				  }
-				],
-				"name": "foo"
-			  },
-			  {
-				"type": "error",
-				"inputs": [
-				  {
-					"name": "a",
-					"type": "uint256"
-				  },
-				  {
-					"name": "b",
-					"type": "address"
-				  }
-				],
-				"name": "foo"
-			  }
-			]
-		"#;
+            [
+              {
+                "type": "error",
+                "inputs": [
+                  {
+                    "name": "a",
+                    "type": "uint256"
+                  }
+                ],
+                "name": "foo"
+              },
+              {
+                "type": "error",
+                "inputs": [
+                  {
+                    "name": "a",
+                    "type": "uint256"
+                  },
+                  {
+                    "name": "b",
+                    "type": "address"
+                  }
+                ],
+                "name": "foo"
+              }
+            ]
+        "#;
 
     let deserialized: JsonAbi = serde_json::from_str(json).unwrap();
 
@@ -545,13 +545,13 @@ fn errors_overload() {
 #[test]
 fn receive() {
     let json = r#"
-			[
-				{
+            [
+                {
                     "type": "receive",
                     "stateMutability": "nonpayable"
                 }
-			]
-		"#;
+            ]
+        "#;
 
     let deserialized: JsonAbi = serde_json::from_str(json).unwrap();
 
@@ -575,13 +575,13 @@ fn receive() {
 #[test]
 fn fallback() {
     let json = r#"
-			[
-				{
+            [
+                {
                     "type": "fallback",
                     "stateMutability": "nonpayable"
                 }
-			]
-		"#;
+            ]
+        "#;
 
     let deserialized: JsonAbi = serde_json::from_str(json).unwrap();
 

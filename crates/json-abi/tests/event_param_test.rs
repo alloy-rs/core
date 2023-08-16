@@ -5,10 +5,10 @@ use alloy_json_abi::{EventParam, Param};
 #[test]
 fn event_param_deserialization() {
     let s = r#"{
-			"name": "foo",
-			"type": "address",
-			"indexed": true
-		}"#;
+            "name": "foo",
+            "type": "address",
+            "indexed": true
+        }"#;
 
     let deserialized: EventParam = serde_json::from_str(s).unwrap();
 
@@ -29,26 +29,26 @@ fn event_param_deserialization() {
 #[test]
 fn event_param_tuple_deserialization() {
     let s = r#"{
-			"name": "foo",
-			"type": "tuple",
-			"indexed": true,
-			"components": [
-				{
+            "name": "foo",
+            "type": "tuple",
+            "indexed": true,
+            "components": [
+                {
                     "name": "a",
-					"type": "uint48"
-				},
-				{
+                    "type": "uint48"
+                },
+                {
                     "name": "b",
-					"type": "tuple",
-					"components": [
-						{
+                    "type": "tuple",
+                    "components": [
+                        {
                             "name": "c",
-							"type": "address"
-						}
-					]
-				}
-			]
-		}"#;
+                            "type": "address"
+                        }
+                    ]
+                }
+            ]
+        }"#;
 
     let deserialized: EventParam = serde_json::from_str(s).unwrap();
 
@@ -87,79 +87,79 @@ fn event_param_tuple_deserialization() {
 #[test]
 fn event_param_tuple_array_deserialization() {
     let s = r#"{
-			"components": [
-				{
+            "components": [
+                {
                     "type": "uint256",
                     "name": "a"
                 },
-				{
+                {
                     "type": "address",
                     "name": "b"
                 },
-				{
-					"components": [
-						{
+                {
+                    "components": [
+                        {
                             "type": "address",
                             "name": "c"
                         },
-						{
+                        {
                             "type": "address",
                             "name": "d"
                         }
-					],
-					"type": "tuple",
+                    ],
+                    "type": "tuple",
                     "name": "e"
-				},
-				{
+                },
+                {
                     "type": "uint256",
                     "name": "f"
                 },
-				{
-					"components": [
-						{
-							"components": [
-								{
+                {
+                    "components": [
+                        {
+                            "components": [
+                                {
                                     "type": "address",
                                     "name": "g"
                                 },
-								{
+                                {
                                     "type": "bytes",
                                     "name": "h"
                                 }
-							],
-							"type": "tuple[]",
+                            ],
+                            "type": "tuple[]",
                             "name": "i"
-						},
-						{
-							"components": [
-								{
+                        },
+                        {
+                            "components": [
+                                {
                                     "type": "address",
                                     "name": "j"
                                 },
-								{
+                                {
                                     "type": "uint256",
                                     "name": "k"
                                 }
-							],
-							"type": "tuple[]",
+                            ],
+                            "type": "tuple[]",
                             "name": "l"
-						},
-						{
+                        },
+                        {
                             "type": "uint256",
                             "name": "m"
                         }
-					],
-					"type": "tuple[]",
+                    ],
+                    "type": "tuple[]",
                     "name": "n"
-				},
-				{
+                },
+                {
                     "type": "uint256",
                     "name": "o"
                 }
-			],
-			"indexed": false,
-			"name": "LogTaskSubmitted",
-			"type": "tuple"
+            ],
+            "indexed": false,
+            "name": "LogTaskSubmitted",
+            "type": "tuple"
         }"#;
 
     let deserialized: EventParam = serde_json::from_str(s).unwrap();

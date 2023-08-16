@@ -5,13 +5,13 @@ use alloy_json_abi::StateMutability;
 #[test]
 fn state_mutability() {
     let json = r#"
-			[
-				"pure",
-				"view",
-				"nonpayable",
-				"payable"
-			]
-		"#;
+            [
+                "pure",
+                "view",
+                "nonpayable",
+                "payable"
+            ]
+        "#;
 
     let deserialized: Vec<StateMutability> = serde_json::from_str(json).unwrap();
 
