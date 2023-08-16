@@ -1,13 +1,9 @@
+mod test_helpers;
+
 #[cfg(test)]
 mod tests {
+    use crate::assert_json_eq;
     use alloy_json_abi::{EventParam, Param};
-    use serde_json::Value;
-
-    fn assert_json_eq(left: &str, right: &str) {
-        let left: Value = serde_json::from_str(left).unwrap();
-        let right: Value = serde_json::from_str(right).unwrap();
-        assert_eq!(left, right);
-    }
 
     #[test]
     fn event_param_deserialization() {
@@ -30,7 +26,7 @@ mod tests {
             }
         );
 
-        assert_json_eq(s, serde_json::to_string(&deserialized).unwrap().as_str());
+        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
     }
 
     #[test]
@@ -88,7 +84,7 @@ mod tests {
             }
         );
 
-        assert_json_eq(s, serde_json::to_string(&deserialized).unwrap().as_str());
+        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
     }
 
     #[test]
@@ -277,6 +273,6 @@ mod tests {
             }
         );
 
-        assert_json_eq(s, serde_json::to_string(&deserialized).unwrap().as_str());
+        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
     }
 }

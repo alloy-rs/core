@@ -1,14 +1,9 @@
+mod test_helpers;
+
 #[cfg(all(test))]
 mod test {
-    use serde_json::Value;
-
-    use crate::StateMutability;
-
-    fn assert_json_eq(left: &str, right: &str) {
-        let left: Value = serde_json::from_str(left).unwrap();
-        let right: Value = serde_json::from_str(right).unwrap();
-        assert_eq!(left, right);
-    }
+    use crate::assert_json_eq;
+    use alloy_json_abi::StateMutability;
 
     #[test]
     fn state_mutability() {
@@ -33,6 +28,6 @@ mod test {
             ]
         );
 
-        assert_json_eq(json, &serde_json::to_string(&deserialized).unwrap());
+        assert_json_eq!(json, &serde_json::to_string(&deserialized).unwrap());
     }
 }

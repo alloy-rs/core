@@ -1,20 +1,13 @@
+mod test_helpers;
+
 #[cfg(all(test))]
 mod test {
+    use crate::assert_ser_de;
     use alloy_json_abi::{
         Constructor, Error, Event, EventParam, Fallback, Function, JsonAbi, Param, Receive,
         StateMutability,
     };
-    use serde::{Deserialize, Serialize};
-    use std::{collections::BTreeMap, fmt::Debug};
-
-    fn assert_ser_de<T>(canon: &T)
-    where
-        T: Serialize + for<'a> Deserialize<'a> + PartialEq + Debug,
-    {
-        let ser = serde_json::to_string(canon).unwrap();
-        let de = serde_json::from_str(&ser).unwrap();
-        assert_eq!(canon, &de);
-    }
+    use std::collections::BTreeMap;
 
     #[test]
     fn empty() {
@@ -34,7 +27,7 @@ mod test {
             }
         );
 
-        assert_ser_de(&deserialized);
+        assert_ser_de!(JsonAbi, deserialized);
     }
 
     #[test]
@@ -76,7 +69,7 @@ mod test {
             }
         );
 
-        assert_ser_de(&deserialized);
+        assert_ser_de!(JsonAbi, deserialized);
     }
 
     #[test]
@@ -153,7 +146,7 @@ mod test {
             }
         );
 
-        assert_ser_de(&deserialized);
+        assert_ser_de!(JsonAbi, deserialized);
     }
 
     #[test]
@@ -227,7 +220,7 @@ mod test {
             }
         );
 
-        assert_ser_de(&deserialized);
+        assert_ser_de!(JsonAbi, deserialized);
     }
 
     #[test]
@@ -304,7 +297,7 @@ mod test {
             }
         );
 
-        assert_ser_de(&deserialized);
+        assert_ser_de!(JsonAbi, deserialized);
     }
 
     #[test]
@@ -378,7 +371,7 @@ mod test {
             }
         );
 
-        assert_ser_de(&deserialized);
+        assert_ser_de!(JsonAbi, deserialized);
     }
 
     #[test]
@@ -471,7 +464,7 @@ mod test {
             }
         );
 
-        assert_ser_de(&deserialized);
+        assert_ser_de!(JsonAbi, deserialized);
     }
 
     #[test]
@@ -549,7 +542,7 @@ mod test {
             }
         );
 
-        assert_ser_de(&deserialized);
+        assert_ser_de!(JsonAbi, deserialized);
     }
 
     #[test]
@@ -579,7 +572,7 @@ mod test {
             }
         );
 
-        assert_ser_de(&deserialized);
+        assert_ser_de!(JsonAbi, deserialized);
     }
 
     #[test]
@@ -609,6 +602,6 @@ mod test {
             }
         );
 
-        assert_ser_de(&deserialized);
+        assert_ser_de!(JsonAbi, deserialized);
     }
 }

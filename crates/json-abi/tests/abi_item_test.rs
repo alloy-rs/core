@@ -1,22 +1,14 @@
+mod test_helpers;
+
 #[cfg(test)]
 mod test {
+    use crate::assert_ser_de;
     use alloy_json_abi::{
         AbiItem, Event, EventParam, Function,
         InternalType::{Other, Struct},
         Param, StateMutability,
     };
     use std::borrow::Cow;
-
-    macro_rules! assert_ser_de {
-        ($value:expr) => {{
-            let ser = serde_json::to_string(&$value).unwrap();
-            let de: AbiItem<'_> = serde_json::from_str(&ser).unwrap();
-            assert_eq!(
-                &$value, &de,
-                "Original value and deserialized value do not match."
-            );
-        }};
-    }
 
     #[test]
     fn operation() {
@@ -50,7 +42,7 @@ mod test {
         let ser = serde_json::to_string(&deserialized).unwrap();
         let de: AbiItem<'_> = serde_json::from_str(&ser).unwrap();
         assert_eq!(&deserialized, &de);
-        assert_ser_de!(deserialized);
+        assert_ser_de!(AbiItem<'_>, deserialized);
     }
 
     #[test]
@@ -147,7 +139,7 @@ mod test {
         };
 
         assert_eq!(deserialized, AbiItem::Event(Cow::Owned(event)));
-        assert_ser_de!(deserialized);
+        assert_ser_de!(AbiItem<'_>, deserialized);
     }
 
     // #[test]
