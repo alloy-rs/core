@@ -1,60 +1,58 @@
 mod test_helpers;
 
-mod tests {
-    use crate::{assert_json_eq, assert_ser_de};
-    use alloy_json_abi::{InternalType::Struct, Param};
+use alloy_json_abi::{InternalType::Struct, Param};
 
-    #[test]
-    fn param_simple() {
-        let s = r#"{
+#[test]
+fn param_simple() {
+    let s = r#"{
 			"name": "foo",
 			"type": "address"
 		}"#;
 
-        let deserialized: Param = serde_json::from_str(s).unwrap();
+    let deserialized: Param = serde_json::from_str(s).unwrap();
 
-        assert_eq!(
-            deserialized,
-            Param {
-                name: "foo".to_owned(),
-                internal_type: None,
-                ty: "address".into(),
-                components: vec![]
-            }
-        );
+    assert_eq!(
+        deserialized,
+        Param {
+            name: "foo".to_owned(),
+            internal_type: None,
+            ty: "address".into(),
+            components: vec![]
+        }
+    );
 
-        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
-    }
+    assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
+}
 
-    #[test]
-    fn param_simple_internal_type() {
-        let s = r#"{
+#[test]
+fn param_simple_internal_type() {
+    let s = r#"{
 			"name": "foo",
 			"type": "address",
 			"internalType": "struct Verifier.Proof"
 		}"#;
 
-        let deserialized: Param = serde_json::from_str(s).unwrap();
+    let deserialized: Param = serde_json::from_str(s).unwrap();
 
-        assert_eq!(
-            deserialized,
-            Param {
-                name: "foo".to_owned(),
-                internal_type: Some(Struct {
-                    contract: Some("Verifier".into()),
-                    ty: "Proof".into(),
-                }),
-                ty: "address".into(),
-                components: vec![]
-            }
-        );
+    assert_eq!(
+        deserialized,
+        Param {
+            name: "foo".to_owned(),
+            internal_type: Some(Struct {
+                contract: Some("Verifier".into()),
+                ty: "Proof".into(),
+            }),
+            ty: "address".into(),
+            components: vec![]
+        }
+    );
 
-        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
-    }
+    assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
+}
 
-    #[test]
-    fn param_tuple() {
-        let s = r#"{
+#[test]
+fn param_tuple() {
+    let s = r#"{
 			"name": "foo",
 			"type": "tuple",
 			"components": [
@@ -75,42 +73,42 @@ mod tests {
 			]
 		}"#;
 
-        let deserialized: Param = serde_json::from_str(s).unwrap();
+    let deserialized: Param = serde_json::from_str(s).unwrap();
 
-        assert_eq!(
-            deserialized,
-            Param {
-                name: "foo".to_owned(),
-                internal_type: None,
-                ty: "tuple".into(),
-                components: vec![
-                    Param {
-                        name: "a".to_owned(),
+    assert_eq!(
+        deserialized,
+        Param {
+            name: "foo".to_owned(),
+            internal_type: None,
+            ty: "tuple".into(),
+            components: vec![
+                Param {
+                    name: "a".to_owned(),
+                    internal_type: None,
+                    ty: "uint48".into(),
+                    components: vec![],
+                },
+                Param {
+                    name: "b".to_owned(),
+                    internal_type: None,
+                    ty: "tuple".into(),
+                    components: vec![Param {
+                        name: "c".to_owned(),
                         internal_type: None,
-                        ty: "uint48".into(),
+                        ty: "address".into(),
                         components: vec![],
-                    },
-                    Param {
-                        name: "b".to_owned(),
-                        internal_type: None,
-                        ty: "tuple".into(),
-                        components: vec![Param {
-                            name: "c".to_owned(),
-                            internal_type: None,
-                            ty: "address".into(),
-                            components: vec![],
-                        },],
-                    },
-                ]
-            }
-        );
+                    },],
+                },
+            ]
+        }
+    );
 
-        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
-    }
+    assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
+}
 
-    #[test]
-    fn param_tuple_internal_type() {
-        let s = r#"{
+#[test]
+fn param_tuple_internal_type() {
+    let s = r#"{
 			"name": "foo",
 			"type": "tuple",
 			"internalType": "struct Pairing.G1Point[]",
@@ -132,45 +130,45 @@ mod tests {
 			]
 		}"#;
 
-        let deserialized: Param = serde_json::from_str(s).unwrap();
+    let deserialized: Param = serde_json::from_str(s).unwrap();
 
-        assert_eq!(
-            deserialized,
-            Param {
-                name: "foo".to_owned(),
-                internal_type: Some(Struct {
-                    contract: Some("Pairing".into()),
-                    ty: "G1Point[]".into(),
-                }),
-                ty: "tuple".into(),
-                components: vec![
-                    Param {
-                        name: "a".to_owned(),
+    assert_eq!(
+        deserialized,
+        Param {
+            name: "foo".to_owned(),
+            internal_type: Some(Struct {
+                contract: Some("Pairing".into()),
+                ty: "G1Point[]".into(),
+            }),
+            ty: "tuple".into(),
+            components: vec![
+                Param {
+                    name: "a".to_owned(),
+                    internal_type: None,
+                    ty: "uint48".into(),
+                    components: vec![]
+                },
+                Param {
+                    name: "b".to_owned(),
+                    internal_type: None,
+                    ty: "tuple".into(),
+                    components: vec![Param {
+                        name: "c".to_owned(),
                         internal_type: None,
-                        ty: "uint48".into(),
+                        ty: "address".into(),
                         components: vec![]
-                    },
-                    Param {
-                        name: "b".to_owned(),
-                        internal_type: None,
-                        ty: "tuple".into(),
-                        components: vec![Param {
-                            name: "c".to_owned(),
-                            internal_type: None,
-                            ty: "address".into(),
-                            components: vec![]
-                        }]
-                    }
-                ]
-            }
-        );
+                    }]
+                }
+            ]
+        }
+    );
 
-        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
-    }
+    assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
+}
 
-    #[test]
-    fn param_tuple_named() {
-        let s = r#"{
+#[test]
+fn param_tuple_named() {
+    let s = r#"{
 			"name": "foo",
 			"type": "tuple",
 			"components": [
@@ -191,42 +189,42 @@ mod tests {
 			]
 		}"#;
 
-        let deserialized: Param = serde_json::from_str(s).unwrap();
+    let deserialized: Param = serde_json::from_str(s).unwrap();
 
-        assert_eq!(
-            deserialized,
-            Param {
-                name: "foo".to_owned(),
-                internal_type: None,
-                ty: "tuple".into(),
-                components: vec![
-                    Param {
-                        name: "amount".to_owned(),
+    assert_eq!(
+        deserialized,
+        Param {
+            name: "foo".to_owned(),
+            internal_type: None,
+            ty: "tuple".into(),
+            components: vec![
+                Param {
+                    name: "amount".to_owned(),
+                    internal_type: None,
+                    ty: "uint48".into(),
+                    components: vec![]
+                },
+                Param {
+                    name: "things".to_owned(),
+                    internal_type: None,
+                    ty: "tuple".into(),
+                    components: vec![Param {
+                        name: "baseTupleParam".to_owned(),
                         internal_type: None,
-                        ty: "uint48".into(),
+                        ty: "address".into(),
                         components: vec![]
-                    },
-                    Param {
-                        name: "things".to_owned(),
-                        internal_type: None,
-                        ty: "tuple".into(),
-                        components: vec![Param {
-                            name: "baseTupleParam".to_owned(),
-                            internal_type: None,
-                            ty: "address".into(),
-                            components: vec![]
-                        },]
-                    },
-                ]
-            }
-        );
+                    },]
+                },
+            ]
+        }
+    );
 
-        assert_ser_de!(Param, deserialized);
-    }
+    assert_ser_de!(Param, deserialized);
+}
 
-    #[test]
-    fn param_tuple_array() {
-        let s = r#"{
+#[test]
+fn param_tuple_array() {
+    let s = r#"{
 			"name": "foo",
 			"type": "tuple[]",
 			"components": [
@@ -245,43 +243,43 @@ mod tests {
 			]
 		}"#;
 
-        let deserialized: Param = serde_json::from_str(s).unwrap();
+    let deserialized: Param = serde_json::from_str(s).unwrap();
 
-        assert_eq!(
-            deserialized,
-            Param {
-                name: "foo".to_owned(),
-                internal_type: None,
-                ty: "tuple[]".into(),
-                components: vec![
-                    Param {
-                        name: "a".to_owned(),
-                        internal_type: None,
-                        ty: "uint48".into(),
-                        components: vec![]
-                    },
-                    Param {
-                        name: "b".to_owned(),
-                        internal_type: None,
-                        ty: "address".into(),
-                        components: vec![]
-                    },
-                    Param {
-                        name: "c".to_owned(),
-                        internal_type: None,
-                        ty: "address".into(),
-                        components: vec![]
-                    }
-                ]
-            }
-        );
+    assert_eq!(
+        deserialized,
+        Param {
+            name: "foo".to_owned(),
+            internal_type: None,
+            ty: "tuple[]".into(),
+            components: vec![
+                Param {
+                    name: "a".to_owned(),
+                    internal_type: None,
+                    ty: "uint48".into(),
+                    components: vec![]
+                },
+                Param {
+                    name: "b".to_owned(),
+                    internal_type: None,
+                    ty: "address".into(),
+                    components: vec![]
+                },
+                Param {
+                    name: "c".to_owned(),
+                    internal_type: None,
+                    ty: "address".into(),
+                    components: vec![]
+                }
+            ]
+        }
+    );
 
-        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
-    }
+    assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
+}
 
-    #[test]
-    fn param_array_of_array_of_tuple() {
-        let s = r#"{
+#[test]
+fn param_array_of_array_of_tuple() {
+    let s = r#"{
 			"name": "foo",
 			"type": "tuple[][]",
 			"components": [
@@ -296,36 +294,36 @@ mod tests {
 			]
 		}"#;
 
-        let deserialized: Param = serde_json::from_str(s).unwrap();
-        assert_eq!(
-            deserialized,
-            Param {
-                name: "foo".to_owned(),
-                internal_type: None,
-                ty: "tuple[][]".into(),
-                components: vec![
-                    Param {
-                        name: "a".to_owned(),
-                        internal_type: None,
-                        ty: "uint8".into(),
-                        components: vec![]
-                    },
-                    Param {
-                        name: "b".to_owned(),
-                        internal_type: None,
-                        ty: "uint16".into(),
-                        components: vec![]
-                    }
-                ]
-            }
-        );
+    let deserialized: Param = serde_json::from_str(s).unwrap();
+    assert_eq!(
+        deserialized,
+        Param {
+            name: "foo".to_owned(),
+            internal_type: None,
+            ty: "tuple[][]".into(),
+            components: vec![
+                Param {
+                    name: "a".to_owned(),
+                    internal_type: None,
+                    ty: "uint8".into(),
+                    components: vec![]
+                },
+                Param {
+                    name: "b".to_owned(),
+                    internal_type: None,
+                    ty: "uint16".into(),
+                    components: vec![]
+                }
+            ]
+        }
+    );
 
-        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
-    }
+    assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
+}
 
-    #[test]
-    fn param_tuple_fixed_array() {
-        let s = r#"{
+#[test]
+fn param_tuple_fixed_array() {
+    let s = r#"{
 			"name": "foo",
 			"type": "tuple[2]",
 			"components": [
@@ -344,43 +342,43 @@ mod tests {
 			]
 		}"#;
 
-        let deserialized: Param = serde_json::from_str(s).unwrap();
+    let deserialized: Param = serde_json::from_str(s).unwrap();
 
-        assert_eq!(
-            deserialized,
-            Param {
-                name: "foo".to_owned(),
-                internal_type: None,
-                ty: "tuple[2]".into(),
-                components: vec![
-                    Param {
-                        name: "a".to_owned(),
-                        internal_type: None,
-                        ty: "uint48".into(),
-                        components: vec![]
-                    },
-                    Param {
-                        name: "b".to_owned(),
-                        internal_type: None,
-                        ty: "address".into(),
-                        components: vec![]
-                    },
-                    Param {
-                        name: "c".to_owned(),
-                        internal_type: None,
-                        ty: "address".into(),
-                        components: vec![]
-                    }
-                ]
-            }
-        );
+    assert_eq!(
+        deserialized,
+        Param {
+            name: "foo".to_owned(),
+            internal_type: None,
+            ty: "tuple[2]".into(),
+            components: vec![
+                Param {
+                    name: "a".to_owned(),
+                    internal_type: None,
+                    ty: "uint48".into(),
+                    components: vec![]
+                },
+                Param {
+                    name: "b".to_owned(),
+                    internal_type: None,
+                    ty: "address".into(),
+                    components: vec![]
+                },
+                Param {
+                    name: "c".to_owned(),
+                    internal_type: None,
+                    ty: "address".into(),
+                    components: vec![]
+                }
+            ]
+        }
+    );
 
-        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
-    }
+    assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
+}
 
-    #[test]
-    fn param_tuple_with_nested_tuple_arrays() {
-        let s = r#"{
+#[test]
+fn param_tuple_with_nested_tuple_arrays() {
+    let s = r#"{
 			"name": "foo",
 			"type": "tuple",
 			"components": [
@@ -407,41 +405,40 @@ mod tests {
 			]
 		}"#;
 
-        let deserialized: Param = serde_json::from_str(s).unwrap();
+    let deserialized: Param = serde_json::from_str(s).unwrap();
 
-        assert_eq!(
-            deserialized,
-            Param {
-                name: "foo".to_owned(),
-                internal_type: None,
-                ty: "tuple".into(),
-                components: vec![
-                    Param {
-                        name: "a".to_owned(),
+    assert_eq!(
+        deserialized,
+        Param {
+            name: "foo".to_owned(),
+            internal_type: None,
+            ty: "tuple".into(),
+            components: vec![
+                Param {
+                    name: "a".to_owned(),
+                    internal_type: None,
+                    ty: "tuple[]".into(),
+                    components: vec![Param {
+                        name: "b".to_owned(),
                         internal_type: None,
-                        ty: "tuple[]".into(),
-                        components: vec![Param {
-                            name: "b".to_owned(),
-                            internal_type: None,
-                            ty: "address".into(),
-                            components: vec![]
-                        },]
-                    },
-                    Param {
-                        name: "c".to_owned(),
+                        ty: "address".into(),
+                        components: vec![]
+                    },]
+                },
+                Param {
+                    name: "c".to_owned(),
+                    internal_type: None,
+                    ty: "tuple[42]".into(),
+                    components: vec![Param {
+                        name: "d".to_owned(),
                         internal_type: None,
-                        ty: "tuple[42]".into(),
-                        components: vec![Param {
-                            name: "d".to_owned(),
-                            internal_type: None,
-                            ty: "address".into(),
-                            components: vec![]
-                        }]
-                    }
-                ]
-            }
-        );
+                        ty: "address".into(),
+                        components: vec![]
+                    }]
+                }
+            ]
+        }
+    );
 
-        assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
-    }
+    assert_json_eq!(s, serde_json::to_string(&deserialized).unwrap().as_str());
 }

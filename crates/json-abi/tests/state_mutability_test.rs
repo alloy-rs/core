@@ -1,13 +1,10 @@
 mod test_helpers;
 
-#[cfg(all(test))]
-mod test {
-    use crate::assert_json_eq;
-    use alloy_json_abi::StateMutability;
+use alloy_json_abi::StateMutability;
 
-    #[test]
-    fn state_mutability() {
-        let json = r#"
+#[test]
+fn state_mutability() {
+    let json = r#"
 			[
 				"pure",
 				"view",
@@ -16,18 +13,17 @@ mod test {
 			]
 		"#;
 
-        let deserialized: Vec<StateMutability> = serde_json::from_str(json).unwrap();
+    let deserialized: Vec<StateMutability> = serde_json::from_str(json).unwrap();
 
-        assert_eq!(
-            deserialized,
-            vec![
-                StateMutability::Pure,
-                StateMutability::View,
-                StateMutability::NonPayable,
-                StateMutability::Payable,
-            ]
-        );
+    assert_eq!(
+        deserialized,
+        vec![
+            StateMutability::Pure,
+            StateMutability::View,
+            StateMutability::NonPayable,
+            StateMutability::Payable,
+        ]
+    );
 
-        assert_json_eq!(json, &serde_json::to_string(&deserialized).unwrap());
-    }
+    assert_json_eq!(json, &serde_json::to_string(&deserialized).unwrap());
 }
