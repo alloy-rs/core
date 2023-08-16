@@ -206,4 +206,3 @@ fn event_operation_with_tuple_array_input() {
 //     test_sanitize_event_name("()", "");
 //     test_sanitize_event_name("", "");
 // }
-
