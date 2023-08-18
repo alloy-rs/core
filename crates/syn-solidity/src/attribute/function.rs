@@ -41,7 +41,7 @@ impl DerefMut for FunctionAttributes {
 impl Parse for FunctionAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let mut attributes = Vec::<FunctionAttribute>::new();
-        while !(input.is_empty() || input.peek(kw::returns) || input.peek(Ident::peek_any)) {
+        while !input.is_empty() && !input.peek(kw::returns) && input.peek(Ident::peek_any) {
             let attr: FunctionAttribute = input.parse()?;
             if let Some(prev) = attributes.iter().find(|a| **a == attr) {
                 let mut e = Error::new(attr.span(), "duplicate attribute");
