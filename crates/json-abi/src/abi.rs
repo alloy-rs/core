@@ -294,19 +294,11 @@ macro_rules! set_if_none {
     }};
 }
 
-/// Equivalent of `map.entry(v.name.clone()).or_default().push(v.into_owned())`
-/// but without cloning the key for when the entry is occupied.
-macro_rules! map_default_and_push {
+macro_rules! entry_and_push {
     ($map:expr, $v:expr) => {
-        match $map.get_mut(&$v.name) {
-            Some(values) => values.push($v.into_owned()),
-            None => {
-                let mut vec = Vec::with_capacity(8);
-                let name = $v.name.clone();
-                vec.push($v.into_owned());
-                $map.insert(name, vec);
-            }
-        }
+        $map.entry($v.name.clone())
+            .or_default()
+            .push($v.into_owned())
     };
 }
 
@@ -317,7 +309,7 @@ impl<'de> Visitor<'de> for JsonAbiVisitor {
 
     #[inline]
     fn expecting(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "a valid JSON ABI sequence")
+        f.write_str("a valid JSON ABI sequence")
     }
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
@@ -327,9 +319,9 @@ impl<'de> Visitor<'de> for JsonAbiVisitor {
                 AbiItem::Constructor(c) => set_if_none!(abi.constructor, c.into_owned()),
                 AbiItem::Fallback(f) => set_if_none!(abi.fallback, f.into_owned()),
                 AbiItem::Receive(r) => set_if_none!(abi.receive, r.into_owned()),
-                AbiItem::Function(f) => map_default_and_push!(abi.functions, f),
-                AbiItem::Event(e) => map_default_and_push!(abi.events, e),
-                AbiItem::Error(e) => map_default_and_push!(abi.errors, e),
+                AbiItem::Function(f) => entry_and_push!(abi.functions, f),
+                AbiItem::Event(e) => entry_and_push!(abi.events, e),
+                AbiItem::Error(e) => entry_and_push!(abi.errors, e),
             }
         }
         Ok(abi)
