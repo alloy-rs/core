@@ -216,7 +216,15 @@ impl DynSolType {
         }
     }
 
-    /// Check that a given [`DynSolValue`] matches this type.
+    /// Check that the given [`DynSolValue`]s match these types.
+    ///
+    /// See [`Self::matches`] for more information.
+    #[inline]
+    pub fn matches_many(types: &[Self], values: &[DynSolValue]) -> bool {
+        types.len() == values.len() && types.iter().zip(values).all(|(t, v)| t.matches(v))
+    }
+
+    /// Check that the given [`DynSolValue`] matches this type.
     ///
     /// Note: this will not check any names, but just the types; e.g for
     /// `CustomStruct`, when the "eip712" feature is enabled, this will only
@@ -238,10 +246,9 @@ impl DynSolType {
                 value,
                 DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v))
             ),
-            Self::Tuple(types) => match value {
-                as_tuple!(DynSolValue tuple) => types.iter().zip(tuple).all(|(t, v)| t.matches(v)),
-                _ => false,
-            },
+            Self::Tuple(types) => {
+                matches!(value, as_tuple!(DynSolValue tuple) if types.iter().zip(tuple).all(|(t, v)| t.matches(v)))
+            }
             #[cfg(feature = "eip712")]
             Self::CustomStruct {
                 name: _,

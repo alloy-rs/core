@@ -510,6 +510,24 @@ impl DynSolValue {
         }
     }
 
+    /// Check that these values have the same type as the given [`DynSolType`]s.
+    ///
+    /// See [`DynSolType::matches`] for more information.
+    #[doc(alias = "types_check")] // from ethabi
+    #[inline(always)]
+    pub fn matches_many(values: &[Self], types: &[DynSolType]) -> bool {
+        DynSolType::matches_many(types, values)
+    }
+
+    /// Check that this value has the same type as the given [`DynSolType`].
+    ///
+    /// See [`DynSolType::matches`] for more information.
+    #[doc(alias = "type_check")] // from ethabi
+    #[inline(always)]
+    pub fn matches(&self, ty: &DynSolType) -> bool {
+        ty.matches(self)
+    }
+
     /// Returns the number of words this type uses in the head of the ABI blob.
     #[inline]
     pub(crate) fn head_words(&self) -> usize {
