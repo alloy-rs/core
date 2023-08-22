@@ -1,5 +1,5 @@
 use alloy_json_abi::{AbiItem, EventParam, JsonAbi, Param};
-use std::{collections::HashMap, fs::File, io::BufReader};
+use std::collections::HashMap;
 
 macro_rules! abi_parse_tests {
     ($($name:ident($path:literal, $len:literal))*) => {$(
@@ -26,6 +26,7 @@ abi_parse_tests! {
 fn load_test(path: &str, abi: &JsonAbi) {
     #[cfg(all(feature = "std", feature = "serde_json"))]
     {
+        use std::{fs::File, io::BufReader};
         let file_path: String = format!("tests/{}", path);
         let file: File = File::open(file_path).unwrap();
         let buffer: BufReader<File> = BufReader::new(file);
