@@ -181,11 +181,9 @@ impl Param {
         } else {
             crate::utils::signature_raw("", &self.components, s);
             // checked during deserialization, but might be invalid from a user
-            debug_assert!(
-                self.ty.starts_with("tuple"),
-                "expected tuple param type to start with \"tuple\"",
-            );
-            s.push_str(unsafe { self.ty.get_unchecked(5..) });
+            if let Some(suffix) = self.ty.strip_prefix("tuple") {
+                s.push_str(suffix);
+            }
         }
     }
 
@@ -395,11 +393,9 @@ impl EventParam {
         } else {
             crate::utils::signature_raw("", &self.components, s);
             // checked during deserialization, but might be invalid from a user
-            debug_assert!(
-                self.ty.starts_with("tuple"),
-                "expected tuple param type to start with \"tuple\"",
-            );
-            s.push_str(unsafe { self.ty.get_unchecked(5..) });
+            if let Some(suffix) = self.ty.strip_prefix("tuple") {
+                s.push_str(suffix);
+            }
         }
     }
 
