@@ -21,29 +21,12 @@ macro_rules! validate_identifier {
         if !$name.is_empty() && !alloy_sol_type_parser::is_valid_identifier($name) {
             return Err(serde::de::Error::invalid_value(
                 serde::de::Unexpected::Str($name),
-                &"a valid solidity identifier in the name field",
+                &"a valid Solidity identifier",
             ))
         }
     };
 }
 pub(crate) use validate_identifier;
-
-macro_rules! validate_ty {
-    ($ty:expr) => {
-        // dirty hacks to allow `address payable` in the ABI JSON internalType
-        // field
-        if $ty != "address payable" {
-            alloy_sol_type_parser::TypeSpecifier::parse($ty).map_err(|_| {
-                serde::de::Error::invalid_value(
-                    Unexpected::Str($ty),
-                    &"a valid solidity type specifier",
-                )
-            })?;
-        }
-    };
-}
-
-pub(crate) use validate_ty;
 
 pub(crate) fn signature(name: &str, inputs: &[Param]) -> String {
     let mut preimage = String::with_capacity(name.len() + 2 + inputs.len() * 32);
@@ -95,7 +78,7 @@ mod tests {
         let components = components.into_iter().map(param).collect();
         crate::Param {
             name: "param".to_string(),
-            ty: "ty".to_string(),
+            ty: "tuple".to_string(),
             internal_type: None,
             components,
         }

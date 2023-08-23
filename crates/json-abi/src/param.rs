@@ -1,8 +1,4 @@
-use crate::{
-    internal_type::BorrowedInternalType,
-    utils::{validate_identifier, validate_ty},
-    InternalType,
-};
+use crate::{internal_type::BorrowedInternalType, utils::validate_identifier, InternalType};
 use alloc::{
     borrow::{Cow, ToOwned},
     string::String,
@@ -54,8 +50,7 @@ impl<'de> Deserialize<'de> for Param {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         BorrowedParam::deserialize(deserializer).and_then(|inner| {
             if inner.indexed.is_none() {
-                validate_identifier!(inner.name);
-                validate_ty!(inner.ty);
+                inner.validate_fields()?;
                 Ok(Self {
                     name: inner.name.to_owned(),
                     ty: inner.ty.to_owned(),
@@ -147,6 +142,7 @@ impl Param {
     pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.internal_type().and_then(|ty| ty.struct_specifier())
     }
+
     /// The enum specifier is a [`TypeSpecifier`] containing the enum name and
     /// any array sizes. It is computed from the `internal_type`. If this param
     /// is not a enum, this function will return `None`.
@@ -184,6 +180,10 @@ impl Param {
             s.push_str(&self.ty)
         } else {
             crate::utils::signature_raw("", &self.components, s);
+            // checked during deserialization, but might be invalid from a user
+            if let Some(suffix) = self.ty.strip_prefix("tuple") {
+                s.push_str(suffix);
+            }
         }
     }
 
@@ -195,7 +195,9 @@ impl Param {
         if self.components.is_empty() {
             Cow::Borrowed(&self.ty)
         } else {
-            Cow::Owned(crate::utils::signature("", &self.components))
+            let mut s = String::with_capacity(self.components.len() * 32);
+            self.selector_type_raw(&mut s);
+            Cow::Owned(s)
         }
     }
 
@@ -258,16 +260,15 @@ impl fmt::Display for EventParam {
 
 impl<'de> Deserialize<'de> for EventParam {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        BorrowedParam::deserialize(deserializer).and_then(|gp| {
-            if let Some(indexed) = gp.indexed {
-                validate_identifier!(gp.name);
-                validate_ty!(gp.ty);
+        BorrowedParam::deserialize(deserializer).and_then(|inner| {
+            if let Some(indexed) = inner.indexed {
+                inner.validate_fields()?;
                 Ok(Self {
-                    name: gp.name.to_owned(),
-                    ty: gp.ty.to_owned(),
+                    name: inner.name.to_owned(),
+                    ty: inner.ty.to_owned(),
                     indexed,
-                    internal_type: gp.internal_type.map(Into::into),
-                    components: gp.components.into_owned(),
+                    internal_type: inner.internal_type.map(Into::into),
+                    components: inner.components.into_owned(),
                 })
             } else {
                 Err(serde::de::Error::custom(
@@ -390,7 +391,11 @@ impl EventParam {
         if self.components.is_empty() {
             s.push_str(&self.ty)
         } else {
-            crate::utils::signature_raw("", &self.components, s)
+            crate::utils::signature_raw("", &self.components, s);
+            // checked during deserialization, but might be invalid from a user
+            if let Some(suffix) = self.ty.strip_prefix("tuple") {
+                s.push_str(suffix);
+            }
         }
     }
 
@@ -402,7 +407,9 @@ impl EventParam {
         if self.components.is_empty() {
             Cow::Borrowed(&self.ty)
         } else {
-            Cow::Owned(crate::utils::signature("", &self.components))
+            let mut s = String::with_capacity(self.components.len() * 32);
+            self.selector_type_raw(&mut s);
+            Cow::Owned(s)
         }
     }
 
@@ -440,17 +447,58 @@ struct BorrowedParam<'a> {
     components: Cow<'a, [Param]>,
 }
 
+impl BorrowedParam<'_> {
+    #[inline(always)]
+    fn validate_fields<E: serde::de::Error>(&self) -> Result<(), E> {
+        validate_identifier!(self.name);
+
+        // any components means type is "tuple" + maybe brackets, so we can skip
+        // parsing with TypeSpecifier
+        if self.components.is_empty() {
+            if alloy_sol_type_parser::TypeSpecifier::parse(self.ty).is_err() {
+                return Err(E::invalid_value(
+                    Unexpected::Str(self.ty),
+                    &"a valid Solidity type specifier",
+                ))
+            }
+        } else {
+            // https://docs.soliditylang.org/en/latest/abi-spec.html#handling-tuple-types
+            // checking for "tuple" prefix should be enough
+            if !self.ty.starts_with("tuple") {
+                return Err(E::invalid_value(
+                    Unexpected::Str(self.ty),
+                    &"a string prefixed with `tuple`, optionally followed by a sequence of `[]` or `[k]` with integers `k`",
+                ))
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_complex_param() {
+    fn param() {
         let param = r#"{
             "internalType": "string",
             "name": "reason",
             "type": "string"
         }"#;
-        let _param = serde_json::from_str::<Param>(param).unwrap();
+        let param = serde_json::from_str::<Param>(param).unwrap();
+        assert_eq!(
+            param,
+            Param {
+                name: "reason".into(),
+                ty: "string".into(),
+                internal_type: Some(InternalType::Other {
+                    contract: None,
+                    ty: "string".into()
+                }),
+                components: vec![],
+            }
+        );
     }
 }
