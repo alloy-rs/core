@@ -33,6 +33,34 @@ pub struct JsonAbi {
 }
 
 impl JsonAbi {
+    /// Creates an empty ABI object.
+    #[inline]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Parse the ABI json from a `str`. This is a convenience wrapper around
+    /// [`serde_json::from_str`].
+    #[cfg(feature = "serde_json")]
+    #[inline]
+    pub fn from_json_str(json: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json)
+    }
+
+    /// Loads contract from json
+    #[cfg(all(feature = "std", feature = "serde_json"))]
+    pub fn load<T: std::io::Read>(mut reader: T) -> Result<Self, serde_json::Error> {
+        // https://docs.rs/serde_json/latest/serde_json/fn.from_reader.html
+        // serde_json docs recommend buffering the whole reader to a string
+        // This also prevents a borrowing issue when deserializing from a reader
+        let mut json = String::with_capacity(1024);
+        reader
+            .read_to_string(&mut json)
+            .map_err(serde_json::Error::io)?;
+
+        Self::from_json_str(&json)
+    }
+
     /// Returns the total number of items (of any type).
     pub fn len(&self) -> usize {
         self.constructor.is_some() as usize
@@ -83,32 +111,54 @@ impl JsonAbi {
         }
     }
 
+    /// Formats this JSON ABI as a Solidity interface.
+    ///
+    /// The order of the definitions is not guaranteed.
+    ///
+    /// Generates:
+    ///
+    /// ```solidity
+    /// interface <name> {
+    ///     <enums>...
+    ///     <UDVTs>...
+    ///     <structs>...
+    ///     <errors>...
+    ///     <events>...
+    ///     <fallback>
+    ///     <receive>
+    ///     <functions>...
+    /// }
+    /// ```
+    ///
+    /// Note that enums are going to be identical to `uint8` UDVTs, since no
+    /// other information about enums is present in the ABI.
+    #[inline]
+    pub fn to_sol(&self, name: &str) -> String {
+        let mut out = String::new();
+        self.to_sol_raw(name, &mut out);
+        out
+    }
+
+    /// Formats this JSON ABI as a Solidity interface into the given string.
+    ///
+    /// See [`to_sol`](JsonAbi::to_sol) for more information.
+    pub fn to_sol_raw(&self, name: &str, out: &mut String) {
+        let len = self.len();
+        out.reserve((len + 1) * 128);
+
+        out.push_str("interface ");
+        out.push_str(name);
+        out.push('{');
+        if len != 0 {
+            crate::to_sol::ToSol::to_sol(self, out);
+        }
+        out.push('}');
+    }
+
     /// Creates constructor call builder.
     #[inline]
     pub const fn constructor(&self) -> Option<&Constructor> {
         self.constructor.as_ref()
-    }
-
-    /// Parse the ABI json from a `str`. This is a convenience wrapper around
-    /// [`serde_json::from_str`].
-    #[cfg(feature = "serde_json")]
-    #[inline]
-    pub fn from_json_str(json: &str) -> Result<Self, serde_json::Error> {
-        serde_json::from_str(json)
-    }
-
-    /// Loads contract from json
-    #[cfg(all(feature = "std", feature = "serde_json"))]
-    pub fn load<T: std::io::Read>(mut reader: T) -> Result<Self, serde_json::Error> {
-        // https://docs.rs/serde_json/latest/serde_json/fn.from_reader.html
-        // serde_json docs recommend buffering the whole reader to a string
-        // This also prevents a borrowing issue when deserializing from a reader
-        let mut json = String::with_capacity(1024);
-        reader
-            .read_to_string(&mut json)
-            .map_err(serde_json::Error::io)?;
-
-        Self::from_json_str(&json)
     }
 
     /// Gets all the functions with the given name.

@@ -154,6 +154,12 @@ impl<'a> TypeSpecifier<'a> {
     pub fn try_basic_solidity(&self) -> Result<()> {
         self.stem.try_basic_solidity()
     }
+
+    /// Returns true if this type is an array.
+    #[inline]
+    pub fn is_array(&self) -> bool {
+        !self.sizes.is_empty()
+    }
 }
 
 #[cfg(test)]

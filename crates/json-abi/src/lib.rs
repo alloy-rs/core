@@ -43,6 +43,8 @@ pub use param::{EventParam, Param};
 mod internal_type;
 pub use internal_type::InternalType;
 
+mod to_sol;
+
 pub(crate) mod utils;
 
 pub use alloy_sol_type_parser as parser;
