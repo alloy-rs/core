@@ -33,8 +33,9 @@ int_aliases! {
 }
 
 macro_rules! fixed_bytes_aliases {
-    ($($name:ident<$N:literal>),* $(,)?) => {$(
+    ($($(#[$attr:meta])* $name:ident<$N:literal>),* $(,)?) => {$(
         #[doc = concat!($N, "-byte [fixed byte-array][FixedBytes] type.")]
+        $(#[$attr])*
         pub type $name = FixedBytes<$N>;
     )*};
 }
@@ -46,6 +47,9 @@ fixed_bytes_aliases! {
     B64<8>,
     B96<12>,
     B128<16>,
+    /// See [`crate::B160`] as to why you likely want to use
+    /// [`Address`](crate::Address) instead.
+    #[doc(hidden)]
     B160<20>,
     B192<24>,
     B224<28>,
@@ -79,6 +83,6 @@ pub type StorageKey = B256;
 /// An account storage value.
 pub type StorageValue = U256;
 
-/// Solidity contract functions are addressed using the first four byte of the
-/// Keccak-256 hash of their signature
+/// Solidity contract functions are addressed using the first four bytes of the
+/// Keccak-256 hash of their signature.
 pub type Selector = [u8; 4];
