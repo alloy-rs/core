@@ -4,7 +4,7 @@
 
 use crate::{DynSolType, Result};
 use alloc::vec::Vec;
-use alloy_json_abi::{EventParam, Param};
+use alloy_json_abi::{EventParam, InternalType, Param};
 use alloy_sol_type_parser::{
     Error as TypeStrError, RootType, TupleSpecifier, TypeSpecifier, TypeStem,
 };
@@ -123,72 +123,46 @@ impl ResolveSolType for TypeSpecifier<'_> {
 
 impl ResolveSolType for Param {
     fn resolve(&self) -> Result<DynSolType> {
-        let ty = TypeSpecifier::parse(&self.ty)?;
-
-        // type is simple, and we can resolve it via the specifier
-        if self.is_simple_type() {
-            return ty.resolve()
-        }
-
-        // type is complex
-        let tuple = self
-            .components
-            .iter()
-            .map(Self::resolve)
-            .collect::<Result<Vec<_>, _>>()?;
-
-        #[cfg(feature = "eip712")]
-        let resolved = if let Some((_, name)) = self.internal_type().and_then(|i| i.as_struct()) {
-            DynSolType::CustomStruct {
-                // skip array sizes, since we have them already from parsing `ty`
-                name: name.split('[').next().unwrap().into(),
-                prop_names: self.components.iter().map(|c| c.name.clone()).collect(),
-                tuple,
-            }
-        } else {
-            DynSolType::Tuple(tuple)
-        };
-
-        #[cfg(not(feature = "eip712"))]
-        let resolved = DynSolType::Tuple(tuple);
-
-        Ok(resolved.array_wrap_from_iter(ty.sizes))
+        resolve_param(&self.ty, &self.components, self.internal_type())
     }
 }
 
 impl ResolveSolType for EventParam {
     fn resolve(&self) -> Result<DynSolType> {
-        let ty = TypeSpecifier::try_from(self.ty.as_str()).expect("always valid");
-
-        // type is simple, and we can resolve it via the specifier
-        if self.is_simple_type() {
-            return ty.resolve()
-        }
-
-        // type is complex. First extract the tuple of inner types
-        let tuple = self
-            .components
-            .iter()
-            .map(|c| c.resolve())
-            .collect::<Result<Vec<_>, _>>()?;
-
-        // if we have a struct specifier, we can use it to get the name of the
-        // struct
-        #[cfg(feature = "eip712")]
-        {
-            let prop_names = self.components.iter().map(|c| c.name.clone()).collect();
-            if let Some(spec) = self.struct_specifier() {
-                return Ok(DynSolType::CustomStruct {
-                    name: spec.stem.span().into(),
-                    prop_names,
-                    tuple,
-                }
-                .array_wrap_from_iter(spec.sizes.iter().copied()))
-            }
-        }
-
-        Ok(DynSolType::Tuple(tuple).array_wrap_from_iter(ty.sizes.iter().copied()))
+        resolve_param(&self.ty, &self.components, self.internal_type())
     }
+}
+
+fn resolve_param(ty: &str, components: &[Param], _it: Option<&InternalType>) -> Result<DynSolType> {
+    let ty = TypeSpecifier::parse(ty)?;
+
+    // type is simple, and we can resolve it via the specifier
+    if components.is_empty() {
+        return ty.resolve()
+    }
+
+    // type is complex
+    let tuple = components
+        .iter()
+        .map(Param::resolve)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    #[cfg(feature = "eip712")]
+    let resolved = if let Some((_, name)) = _it.and_then(|i| i.as_struct()) {
+        DynSolType::CustomStruct {
+            // skip array sizes, since we have them already from parsing `ty`
+            name: name.split('[').next().unwrap().into(),
+            prop_names: components.iter().map(|c| c.name.clone()).collect(),
+            tuple,
+        }
+    } else {
+        DynSolType::Tuple(tuple)
+    };
+
+    #[cfg(not(feature = "eip712"))]
+    let resolved = DynSolType::Tuple(tuple);
+
+    Ok(resolved.array_wrap_from_iter(ty.sizes))
 }
 
 macro_rules! deref_impl {
