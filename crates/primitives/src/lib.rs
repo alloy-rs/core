@@ -27,8 +27,8 @@ pub mod aliases;
 #[doc(no_inline)]
 pub use aliases::{
     BlockHash, BlockNumber, ChainId, Selector, StorageKey, StorageValue, TxHash, TxIndex, TxNumber,
-    B128, B160, B256, B512, B64, I128, I16, I160, I256, I32, I64, I8, U128, U16, U160, U256, U32,
-    U512, U64, U8,
+    B128, B256, B512, B64, I128, I16, I160, I256, I32, I64, I8, U128, U16, U160, U256, U32, U512,
+    U64, U8,
 };
 
 mod bits;
@@ -61,6 +61,22 @@ pub use tiny_keccak::{self, Hasher, Keccak};
 #[cfg(feature = "serde")]
 #[doc(no_inline)]
 pub use ::hex::serde as serde_hex;
+
+/// 20-byte [fixed byte-array][FixedBytes] type.
+///
+/// You'll likely want to use [`Address`] instead, as it is a different type
+/// from `FixedBytes<20>`, and implements methods useful for working with
+/// Ethereum addresses.
+///
+/// If you are sure you want to use this type, and you don't want the
+/// deprecation warning, you can use `aliases::B160`.
+#[deprecated(
+    since = "0.3.2",
+    note = "you likely want to use `Address` instead. \
+            `B160` and `Address` are different types, \
+            see this type's documentation for more."
+)]
+pub type B160 = FixedBytes<20>;
 
 // Not public API.
 #[doc(hidden)]
