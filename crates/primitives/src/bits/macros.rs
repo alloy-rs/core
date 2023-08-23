@@ -375,7 +375,9 @@ macro_rules! impl_fb_traits {
             where
                 T: $crate::private::AsRef<[u8]>
             {
-                $crate::hex::FromHex::from_hex(hex).map(Self)
+                let mut buf = [0u8; $n];
+                $crate::hex::decode_to_slice(hex.as_ref(), &mut buf)?;
+                Ok(Self::new(buf))
             }
         }
     };
