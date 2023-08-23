@@ -636,13 +636,13 @@ impl DynSolValue {
 
             as_fixed_seq!(s) => {
                 if self.is_dynamic() {
-                    Self::encode_sequence(s, enc);
+                    Self::encode_sequence_to(s, enc);
                 }
             }
 
             Self::Array(array) => {
                 enc.append_seq_len(array.len());
-                Self::encode_sequence(array, enc);
+                Self::encode_sequence_to(array, enc);
             }
         }
     }
@@ -703,7 +703,15 @@ impl DynSolValue {
     }
 
     /// Encode this data as a sequence.
-    pub(crate) fn encode_sequence(contents: &[Self], enc: &mut Encoder) {
+    pub(crate) fn encode_sequence(seq: &[Self]) -> Vec<u8> {
+        let sz = seq.iter().map(Self::total_words).sum();
+        let mut encoder = Encoder::with_capacity(sz);
+        Self::encode_sequence_to(seq, &mut encoder);
+        encoder.into_bytes()
+    }
+
+    /// Encode this data as a sequence into the given encoder.
+    pub(crate) fn encode_sequence_to(contents: &[Self], enc: &mut Encoder) {
         let head_words = contents.iter().map(Self::head_words).sum::<usize>();
         enc.push_offset(head_words as u32);
 
@@ -745,20 +753,15 @@ impl DynSolValue {
 
     /// Encode this value into a byte array by wrapping it into a 1-element
     /// sequence.
+    #[inline]
     pub fn encode_single(&self) -> Vec<u8> {
-        let mut encoder = Encoder::with_capacity(self.total_words());
-        Self::encode_sequence(core::slice::from_ref(self), &mut encoder);
-        encoder.into_bytes()
+        Self::encode_sequence(core::slice::from_ref(self))
     }
 
     /// If this value is a fixed sequence, encode it into a byte array. If this
     /// value is not a fixed sequence, return `None`.
+    #[inline]
     pub fn encode(&self) -> Option<Vec<u8>> {
-        self.as_fixed_seq().map(|seq| {
-            let sz = seq.iter().map(Self::total_words).sum();
-            let mut encoder = Encoder::with_capacity(sz);
-            Self::encode_sequence(seq, &mut encoder);
-            encoder.into_bytes()
-        })
+        self.as_fixed_seq().map(Self::encode_sequence)
     }
 }

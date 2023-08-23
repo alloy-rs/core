@@ -2,7 +2,7 @@
 
 use crate::{
     eip712::resolver::{PropertyDef, TypeDef},
-    DynAbiError,
+    Error,
 };
 use alloc::vec::Vec;
 use alloy_sol_type_parser::{Error as TypeParserError, TypeSpecifier};
@@ -25,12 +25,12 @@ impl PropDef<'_> {
 }
 
 impl<'a> TryFrom<&'a str> for PropDef<'a> {
-    type Error = DynAbiError;
+    type Error = Error;
 
     fn try_from(input: &'a str) -> Result<Self, Self::Error> {
         let (ty, name) = input
             .rsplit_once(' ')
-            .ok_or_else(|| DynAbiError::invalid_property_def(input))?;
+            .ok_or_else(|| Error::invalid_property_def(input))?;
         Ok(PropDef {
             ty: ty.trim().try_into()?,
             name: name.trim(),
@@ -64,12 +64,12 @@ impl ComponentType<'_> {
 
 // This impl handles
 impl<'a> TryFrom<&'a str> for ComponentType<'a> {
-    type Error = DynAbiError;
+    type Error = Error;
 
     fn try_from(input: &'a str) -> Result<Self, Self::Error> {
-        let (name, props_str) = input.split_once('(').ok_or_else(|| {
-            DynAbiError::TypeParserError(TypeParserError::invalid_type_string(input))
-        })?;
+        let (name, props_str) = input
+            .split_once('(')
+            .ok_or_else(|| Error::TypeParser(TypeParserError::invalid_type_string(input)))?;
 
         let mut props = vec![];
         let mut depth = 1; // 1 to account for the ( in the split above
@@ -112,7 +112,7 @@ pub struct EncodeType<'a> {
 }
 
 impl<'a> TryFrom<&'a str> for EncodeType<'a> {
-    type Error = DynAbiError;
+    type Error = Error;
 
     fn try_from(input: &'a str) -> Result<Self, Self::Error> {
         let mut types = vec![];
