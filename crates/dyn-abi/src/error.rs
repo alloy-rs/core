@@ -112,6 +112,8 @@ impl Error {
 
     #[cfg(feature = "eip712")]
     pub(crate) fn type_mismatch(expected: &crate::DynSolType, actual: &serde_json::Value) -> Self {
+        #[allow(unused_imports)]
+        use alloc::string::ToString;
         Self::TypeMismatch {
             expected: expected.sol_type_name().into_owned(),
             actual: actual.to_string(),
