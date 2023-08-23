@@ -88,12 +88,19 @@ macro_rules! wrap_fixed_bytes {
             }
         }
 
+        impl<'a> $crate::private::From<&'a mut [u8; $n]> for $name {
+            #[inline]
+            fn from(value: &'a mut [u8; $n]) -> Self {
+                Self($crate::FixedBytes(*value))
+            }
+        }
+
         impl $crate::private::TryFrom<&[u8]> for $name {
             type Error = $crate::private::core::array::TryFromSliceError;
 
             #[inline]
             fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-                <&Self>::try_from(slice).map(|this| *this)
+                <&Self as $crate::private::TryFrom<&[u8]>>::try_from(slice).copied()
             }
         }
 
@@ -102,7 +109,7 @@ macro_rules! wrap_fixed_bytes {
 
             #[inline]
             fn try_from(slice: &mut [u8]) -> Result<Self, Self::Error> {
-                Self::try_from(&*slice)
+                <Self as $crate::private::TryFrom<&[u8]>>::try_from(&*slice)
             }
         }
 
@@ -115,7 +122,7 @@ macro_rules! wrap_fixed_bytes {
                 // SAFETY: `$name` is `repr(transparent)` for `FixedBytes<$n>`
                 // and consequently `[u8; $n]`
                 <&[u8; $n] as $crate::private::TryFrom<&[u8]>>::try_from(slice)
-                    .map(|array_ref| unsafe { core::mem::transmute(array_ref) })
+                    .map(|array_ref| unsafe { $crate::private::core::mem::transmute(array_ref) })
             }
         }
 
@@ -128,7 +135,7 @@ macro_rules! wrap_fixed_bytes {
                 // SAFETY: `$name` is `repr(transparent)` for `FixedBytes<$n>`
                 // and consequently `[u8; $n]`
                 <&mut [u8; $n] as $crate::private::TryFrom<&mut [u8]>>::try_from(slice)
-                    .map(|array_ref| unsafe { core::mem::transmute(array_ref) })
+                    .map(|array_ref| unsafe { $crate::private::core::mem::transmute(array_ref) })
             }
         }
 
@@ -166,7 +173,7 @@ macro_rules! wrap_fixed_bytes {
             }
         }
 
-        $crate::impl_fixed_bytes_traits!($name, $n);
+        $crate::impl_fb_traits!($name, $n);
         $crate::impl_getrandom!($name);
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
@@ -252,7 +259,7 @@ macro_rules! wrap_fixed_bytes {
 // Extra traits that cannot be derived automatically
 #[doc(hidden)]
 #[macro_export]
-macro_rules! impl_fixed_bytes_traits {
+macro_rules! impl_fb_traits {
     (impl<$($const:ident)?> Borrow<$t:ty> for $b:ty) => {
         impl<$($const N: usize)?> $crate::private::Borrow<$t> for $b {
             #[inline]
@@ -267,6 +274,17 @@ macro_rules! impl_fixed_bytes_traits {
             #[inline]
             fn borrow_mut(&mut self) -> &mut $t {
                 $crate::private::BorrowMut::borrow_mut(&mut self.0)
+            }
+        }
+    };
+
+    (unsafe impl<$lt:lifetime, $($const:ident)?> From<$a:ty> for $b:ty) => {
+        impl<$lt, $($const N: usize)?> $crate::private::From<$a> for $b {
+            #[inline]
+            #[allow(unsafe_code)]
+            fn from(value: $a) -> $b {
+                // SAFETY: guaranteed by caller
+                unsafe { $crate::private::core::mem::transmute::<$a, $b>(value) }
             }
         }
     };
@@ -317,26 +335,32 @@ macro_rules! impl_fixed_bytes_traits {
 
     ($t:ty, $n:tt $(, $const:ident)?) => {
         // Borrow is not automatically implemented for references
-        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for $t);
-        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for &$t);
-        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8]>        for &mut $t);
-        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8; $n]>    for $t);
-        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8; $n]>    for &$t);
-        $crate::impl_fixed_bytes_traits!(impl<$($const)?> Borrow<[u8; $n]>    for &mut $t);
+        $crate::impl_fb_traits!(impl<$($const)?> Borrow<[u8]>        for $t);
+        $crate::impl_fb_traits!(impl<$($const)?> Borrow<[u8]>        for &$t);
+        $crate::impl_fb_traits!(impl<$($const)?> Borrow<[u8]>        for &mut $t);
+        $crate::impl_fb_traits!(impl<$($const)?> Borrow<[u8; $n]>    for $t);
+        $crate::impl_fb_traits!(impl<$($const)?> Borrow<[u8; $n]>    for &$t);
+        $crate::impl_fb_traits!(impl<$($const)?> Borrow<[u8; $n]>    for &mut $t);
 
-        $crate::impl_fixed_bytes_traits!(impl<$($const)?> BorrowMut<[u8]>     for $t);
-        $crate::impl_fixed_bytes_traits!(impl<$($const)?> BorrowMut<[u8]>     for &mut $t);
-        $crate::impl_fixed_bytes_traits!(impl<$($const)?> BorrowMut<[u8; $n]> for $t);
-        $crate::impl_fixed_bytes_traits!(impl<$($const)?> BorrowMut<[u8; $n]> for &mut $t);
+        $crate::impl_fb_traits!(impl<$($const)?> BorrowMut<[u8]>     for $t);
+        $crate::impl_fb_traits!(impl<$($const)?> BorrowMut<[u8]>     for &mut $t);
+        $crate::impl_fb_traits!(impl<$($const)?> BorrowMut<[u8; $n]> for $t);
+        $crate::impl_fb_traits!(impl<$($const)?> BorrowMut<[u8; $n]> for &mut $t);
+
+        // Implement conversion traits for references with `mem::transmute`
+        // SAFETY: `repr(transparent)`
+        $crate::impl_fb_traits!(unsafe impl<'a, $($const)?> From<&'a [u8; $n]>     for &'a $t);
+        $crate::impl_fb_traits!(unsafe impl<'a, $($const)?> From<&'a mut [u8; $n]> for &'a $t);
+        $crate::impl_fb_traits!(unsafe impl<'a, $($const)?> From<&'a mut [u8; $n]> for &'a mut $t);
+
+        $crate::impl_fb_traits!(unsafe impl<'a, $($const)?> From<&'a $t>           for &'a [u8; $n]);
+        $crate::impl_fb_traits!(unsafe impl<'a, $($const)?> From<&'a mut $t>       for &'a [u8; $n]);
+        $crate::impl_fb_traits!(unsafe impl<'a, $($const)?> From<&'a mut $t>       for &'a mut [u8; $n]);
 
         // Implement PartialEq, PartialOrd, with slice and array
-        $crate::impl_fixed_bytes_traits!(
-            impl<$($const)?> cmp::PartialEq<[u8]> for $t where fn eq -> bool
-        );
-        $crate::impl_fixed_bytes_traits!(
-            impl<$($const)?> cmp::PartialEq<[u8; $n]> for $t where fn eq -> bool
-        );
-        $crate::impl_fixed_bytes_traits!(
+        $crate::impl_fb_traits!(impl<$($const)?> cmp::PartialEq<[u8]> for $t where fn eq -> bool);
+        $crate::impl_fb_traits!(impl<$($const)?> cmp::PartialEq<[u8; $n]> for $t where fn eq -> bool);
+        $crate::impl_fb_traits!(
             impl<$($const)?> cmp::PartialOrd<[u8]> for $t
             where
                 fn partial_cmp -> $crate::private::Option<$crate::private::Ordering>,
