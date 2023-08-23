@@ -52,7 +52,7 @@ struct StructProp {
 /// // alternatively, you can use the FromStr impl
 /// let ty2 = type_name.parse::<DynSolType>()?;
 /// assert_eq!(ty, ty2);
-/// # Ok::<_, alloy_dyn_abi::DynAbiError>(())
+/// # Ok::<_, alloy_dyn_abi::Error>(())
 /// ```
 ///
 /// Decoding dynamic types:
@@ -160,7 +160,7 @@ impl DynSolType {
     /// let ty = DynSolType::parse(type_name)?;
     /// assert_eq!(ty, DynSolType::Uint(256));
     /// assert_eq!(ty.sol_type_name(), type_name);
-    /// # Ok::<_, alloy_dyn_abi::DynAbiError>(())
+    /// # Ok::<_, alloy_dyn_abi::Error>(())
     /// ```
     #[inline]
     pub fn parse(s: &str) -> Result<Self> {
@@ -273,9 +273,7 @@ impl DynSolType {
     }
 
     /// Dynamic detokenization.
-    ///
-    /// This should not fail when using a token created by
-    /// [`Self::empty_dyn_token`].
+    // This should not fail when using a token created by `Self::empty_dyn_token`.
     #[allow(clippy::unnecessary_to_owned)] // https://github.com/rust-lang/rust-clippy/issues/8148
     pub fn detokenize(&self, token: DynToken<'_>) -> Result<DynSolValue> {
         match (self, token) {

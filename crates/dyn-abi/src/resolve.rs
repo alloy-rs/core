@@ -22,9 +22,8 @@ use alloy_sol_type_parser::{
 /// ## Example
 ///
 /// ```
-/// # use alloy_dyn_abi::{DynSolType, ResolveSolType, DynAbiResult};
+/// # use alloy_dyn_abi::{DynSolType, ResolveSolType};
 /// # use alloy_sol_type_parser::{RootType, TypeSpecifier};
-/// # fn main() -> DynAbiResult<()> {
 /// let my_ty = TypeSpecifier::try_from("bool")?.resolve()?;
 /// assert_eq!(my_ty, DynSolType::Bool);
 ///
@@ -32,8 +31,7 @@ use alloy_sol_type_parser::{
 /// assert_eq!(my_ty, DynSolType::Uint(256));
 ///
 /// assert_eq!("bytes32".resolve()?, DynSolType::FixedBytes(32));
-/// # Ok(())
-/// # }
+/// # Ok::<_, alloy_dyn_abi::Error>(())
 /// ```
 pub trait ResolveSolType {
     /// Resolve this object into a [`DynSolType`].
