@@ -515,7 +515,7 @@ impl DynSolType {
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn decode_params(&self, data: &[u8]) -> Result<DynSolValue> {
         match self {
-            as_tuple!(Self _) => self.decode_sequence(data),
+            Self::Tuple(_) => self.decode_sequence(data),
             _ => self.decode_single(data),
         }
     }
