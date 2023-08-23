@@ -66,3 +66,7 @@ arbitrary = [
     "dep:proptest",
     "dep:proptest-derive",
 ]
+
+# `const-hex` compatibility feature for `hex`.
+# Should not be needed most of the time.
+hex-compat = ["hex/hex"]
