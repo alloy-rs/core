@@ -2,12 +2,13 @@
 //!
 //! This is a simple representation of Solidity type grammar.
 
-use crate::{DynAbiError, DynAbiResult, DynSolType};
+use crate::{DynAbiError, DynAbiResult, DynSolType, DynSolValue};
 use alloc::vec::Vec;
-use alloy_json_abi::{EventParam, Param};
+use alloy_json_abi::{EventParam, Function, Param};
 use alloy_sol_type_parser::{
     Error as TypeStrError, RootType, TupleSpecifier, TypeSpecifier, TypeStem,
 };
+use alloy_sol_types::{Error, Result};
 
 /// The ResolveSolType trait is implemented by types that can be resolved into
 /// a [`DynSolType`]. ABI and related systems have many different ways of
@@ -191,6 +192,81 @@ impl ResolveSolType for EventParam {
     }
 }
 
+/// Implement to provide encoding and decoding for an ABI Function
+pub trait FunctionExt {
+    /// Create the ABI call with the given input arguments.
+    fn encode_input(&self, args: DynSolValue) -> Result<Vec<u8>>;
+
+    /// Parse the ABI output into DynSolValues
+    fn decode_output(&self, data: &[u8]) -> Result<DynSolValue>;
+}
+
+impl FunctionExt for Function {
+    fn encode_input(&self, args: DynSolValue) -> Result<Vec<u8>> {
+        // if the function has no input params, it should take and args
+        if self.inputs.is_empty() {
+            return Err(Error::Other("no inputs expected for this function".into()))
+        }
+
+        // resolve params into their respective DynSolTypes
+        let resolved_params = self
+            .inputs
+            .iter()
+            .map(|i| i.resolve().expect("resolve to DynSolType"))
+            .collect::<Vec<_>>();
+
+        // since the above may result in a vec of 1 type, we check here
+        // to prepare for the check below
+        let param_type = match resolved_params.len() {
+            1 => resolved_params[0].clone(),
+            _ => DynSolType::Tuple(resolved_params),
+        };
+
+        // check the expected type(s) match input args
+        if !param_type.matches(&args) {
+            return Err(Error::Other(
+                "input arguments do not match the expected input types".into(),
+            ))
+        }
+
+        // ABI encode the call
+        let encoded = self
+            .selector()
+            .iter()
+            .copied()
+            .chain(args.encode_params())
+            .collect::<Vec<_>>();
+
+        Ok(encoded)
+    }
+
+    fn decode_output(&self, data: &[u8]) -> Result<DynSolValue> {
+        let resolved_params = self
+            .outputs
+            .iter()
+            .map(|p| p.resolve().expect("resolve to DynSolType"))
+            .collect::<Vec<_>>();
+
+        // since the above may result in a vec of 1 type, we check here
+        // to prepare for the check below
+        let param_type = match resolved_params.len() {
+            1 => resolved_params[0].clone(),
+            _ => DynSolType::Tuple(resolved_params),
+        };
+
+        let result = param_type.decode_params(data)?;
+
+        // check the expected type(s) match output params
+        if !param_type.matches(&result) {
+            return Err(Error::Other(
+                "decoded data does not match the expected output types".into(),
+            ))
+        }
+
+        Ok(result)
+    }
+}
+
 macro_rules! deref_impl {
     ($($(#[$attr:meta])* [$($gen:tt)*] $t:ty),+ $(,)?) => {$(
         $(#[$attr])*
@@ -217,6 +293,7 @@ deref_impl! {
 mod tests {
     use super::*;
     use alloc::boxed::Box;
+    use alloy_primitives::{Address, U256};
 
     fn parse(s: &str) -> Result<DynSolType, DynAbiError> {
         s.parse()
@@ -400,5 +477,66 @@ mod tests {
                 .try_basic_solidity(),
             Err(TypeStrError::invalid_type_string("MyStruct"))
         );
+    }
+
+    #[test]
+    fn can_encode_decode_functions() {
+        let json = r#"{
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "allowance",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        }"#;
+
+        let func: Function = serde_json::from_str(json).unwrap();
+        assert_eq!(2, func.inputs.len());
+        assert_eq!(1, func.outputs.len());
+
+        // encode
+        let expected = vec![
+            221, 98, 237, 62, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        ];
+        let input = DynSolValue::Tuple(vec![
+            DynSolValue::Address(Address::repeat_byte(1u8)),
+            DynSolValue::Address(Address::repeat_byte(2u8)),
+        ]);
+        let result = func.encode_input(input).unwrap();
+        assert_eq!(expected, result);
+
+        // Fail on unexpected input
+        let wrong_input = DynSolValue::Tuple(vec![
+            DynSolValue::Uint(U256::from(10u8), 256),
+            DynSolValue::Address(Address::repeat_byte(2u8)),
+        ]);
+        assert!(func.encode_input(wrong_input).is_err());
+
+        // decode
+        let response = U256::from(1u8).to_be_bytes_vec();
+        let decoded = func.decode_output(&response).unwrap();
+        assert_eq!(DynSolValue::Uint(U256::from(1u8), 256), decoded);
+
+        // Fail on wrong response type
+        let bad_response = Address::repeat_byte(3u8).to_vec();
+        assert!(func.decode_output(&bad_response).is_err());
     }
 }

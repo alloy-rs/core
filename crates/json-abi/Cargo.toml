@@ -26,7 +26,12 @@ ethabi = "18"
 
 [features]
 default = ["std"]
-std = ["serde/std", "alloy-primitives/std", "alloy-sol-type-parser/std", "serde_json?/std"]
+std = [
+    "serde/std",
+    "alloy-primitives/std",
+    "alloy-sol-type-parser/std",
+    "serde_json?/std",
+]
 serde_json = ["dep:serde_json"]
 
 [[bench]]
