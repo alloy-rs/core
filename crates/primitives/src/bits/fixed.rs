@@ -33,7 +33,7 @@ use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
 #[repr(transparent)]
 pub struct FixedBytes<const N: usize>(#[into_iterator(owned, ref, ref_mut)] pub [u8; N]);
 
-crate::impl_fixed_bytes_traits!(FixedBytes<N>, N, const);
+crate::impl_fb_traits!(FixedBytes<N>, N, const);
 
 impl<const N: usize> Default for FixedBytes<N> {
     #[inline]
