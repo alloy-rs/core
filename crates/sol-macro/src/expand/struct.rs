@@ -3,7 +3,7 @@
 use super::{
     expand_fields, expand_from_into_tuples, expand_type, ty::expand_tokenize_func, ExpCtxt,
 };
-use ast::{Item, ItemStruct, Type, VariableDeclaration};
+use ast::{Item, ItemStruct, Spanned, Type, VariableDeclaration};
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::num::NonZeroU16;

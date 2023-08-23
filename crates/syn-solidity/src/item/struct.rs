@@ -1,4 +1,4 @@
-use crate::{FieldList, SolIdent, Type};
+use crate::{FieldList, SolIdent, Spanned, Type};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -11,7 +11,7 @@ use syn::{
     Attribute, Result, Token,
 };
 
-/// A struct definition: `struct Foo { uint256 bar; }`
+/// A struct definition: `struct Foo { uint256 bar; }`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.structDefinition>
@@ -41,7 +41,7 @@ impl Hash for ItemStruct {
 
 impl fmt::Debug for ItemStruct {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Struct")
+        f.debug_struct("ItemStruct")
             .field("attrs", &self.attrs)
             .field("name", &self.name)
             .field("fields", &self.fields)
@@ -62,17 +62,19 @@ impl Parse for ItemStruct {
     }
 }
 
-impl ItemStruct {
-    pub fn span(&self) -> Span {
+impl Spanned for ItemStruct {
+    fn span(&self) -> Span {
         self.name.span()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.struct_token = Token![struct](span);
         self.name.set_span(span);
         self.brace_token = Brace(span);
     }
+}
 
+impl ItemStruct {
     pub fn as_type(&self) -> Type {
         let mut ty = Type::Tuple(self.fields.types().cloned().collect());
         ty.set_span(self.span());

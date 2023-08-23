@@ -1,4 +1,4 @@
-use crate::{kw, LitStr, SolIdent};
+use crate::{kw, LitStr, SolIdent, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -9,15 +9,23 @@ use syn::{
     Result, Token,
 };
 
-/// An import directive: `import "foo.sol";`
+/// An import directive: `import "foo.sol";`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.importDirective>
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ImportDirective {
     pub import_token: kw::import,
     pub path: ImportPath,
     pub semi_token: Token![;],
+}
+
+impl fmt::Debug for ImportDirective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ImportDirective")
+            .field("path", &self.path)
+            .finish()
+    }
 }
 
 impl Parse for ImportDirective {
@@ -30,13 +38,13 @@ impl Parse for ImportDirective {
     }
 }
 
-impl ImportDirective {
-    pub fn span(&self) -> Span {
+impl Spanned for ImportDirective {
+    fn span(&self) -> Span {
         let span = self.import_token.span;
         span.join(self.semi_token.span).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.import_token.span = span;
         self.path.set_span(span);
         self.semi_token.span = span;
@@ -67,8 +75,8 @@ impl Parse for ImportPath {
     }
 }
 
-impl ImportPath {
-    pub fn span(&self) -> Span {
+impl Spanned for ImportPath {
+    fn span(&self) -> Span {
         match self {
             Self::Plain(p) => p.span(),
             Self::Aliases(p) => p.span(),
@@ -76,14 +84,16 @@ impl ImportPath {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::Plain(p) => p.set_span(span),
             Self::Aliases(p) => p.set_span(span),
             Self::Glob(p) => p.set_span(span),
         }
     }
+}
 
+impl ImportPath {
     pub fn path(&self) -> &LitStr {
         match self {
             Self::Plain(ImportPlain { path, .. })
@@ -123,17 +133,19 @@ impl Parse for ImportAlias {
     }
 }
 
-impl ImportAlias {
-    pub fn span(&self) -> Span {
+impl Spanned for ImportAlias {
+    fn span(&self) -> Span {
         let span = self.as_token.span;
         span.join(self.alias.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.as_token.span = span;
         self.alias.set_span(span);
     }
+}
 
+impl ImportAlias {
     pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
         if input.peek(Token![as]) {
             input.parse().map(Some)
@@ -168,8 +180,8 @@ impl Parse for ImportPlain {
     }
 }
 
-impl ImportPlain {
-    pub fn span(&self) -> Span {
+impl Spanned for ImportPlain {
+    fn span(&self) -> Span {
         let span = self.path.span();
         if let Some(alias) = &self.alias {
             span.join(alias.span()).unwrap_or(span)
@@ -178,7 +190,7 @@ impl ImportPlain {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.path.set_span(span);
         if let Some(alias) = &mut self.alias {
             alias.set_span(span);
@@ -216,13 +228,13 @@ impl Parse for ImportAliases {
     }
 }
 
-impl ImportAliases {
-    pub fn span(&self) -> Span {
+impl Spanned for ImportAliases {
+    fn span(&self) -> Span {
         let span = self.brace_token.span.join();
         span.join(self.path.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.brace_token = Brace(span);
         self.from_token.span = span;
         self.path.set_span(span);
@@ -258,13 +270,13 @@ impl Parse for ImportGlob {
     }
 }
 
-impl ImportGlob {
-    pub fn span(&self) -> Span {
+impl Spanned for ImportGlob {
+    fn span(&self) -> Span {
         let span = self.star_token.span;
         span.join(self.path.span()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.star_token.span = span;
         self.alias.set_span(span);
         self.from_token.span = span;

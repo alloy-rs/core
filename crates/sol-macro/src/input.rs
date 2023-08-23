@@ -1,11 +1,13 @@
+use ast::Spanned;
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::path::PathBuf;
 use syn::{
-    parse::{Parse, ParseStream},
+    parse::{discouraged::Speculative, Parse, ParseStream},
     Error, Ident, LitStr, Result, Token,
 };
 
+#[derive(Clone, Debug)]
 pub enum SolInputKind {
     Sol(ast::File),
     Type(ast::Type),
@@ -16,15 +18,15 @@ pub enum SolInputKind {
 // doesn't parse Json
 impl Parse for SolInputKind {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let start = input.fork();
-        match input.parse() {
-            Ok(file) => Ok(Self::Sol(file)),
-            Err(e) => match start.parse() {
+        let fork = input.fork();
+        match fork.parse() {
+            Ok(file) => {
+                input.advance_to(&fork);
+                Ok(Self::Sol(file))
+            }
+            Err(e) => match input.parse() {
                 Ok(ast::Type::Custom(_)) | Err(_) => Err(e),
 
-                Ok(ast::Type::Function(f)) => {
-                    Err(Error::new(f.span(), "function types are not yet supported"))
-                }
                 Ok(ast::Type::Mapping(m)) => {
                     Err(Error::new(m.span(), "mapping types are not yet supported"))
                 }
@@ -35,6 +37,7 @@ impl Parse for SolInputKind {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct SolInput {
     pub path: Option<PathBuf>,
     pub kind: SolInputKind,

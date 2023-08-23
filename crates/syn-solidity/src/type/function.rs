@@ -1,4 +1,4 @@
-use crate::{kw, FunctionAttributes, ParameterList, Returns};
+use crate::{kw, FunctionAttributes, ParameterList, Returns, Spanned};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -11,7 +11,7 @@ use syn::{
     Result,
 };
 
-/// A function type: `function() returns (string memory)`
+/// A function type: `function() returns (string memory)`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.functionTypeName>
@@ -84,12 +84,12 @@ impl Parse for TypeFunction {
     }
 }
 
-impl TypeFunction {
-    pub fn span(&self) -> Span {
+impl Spanned for TypeFunction {
+    fn span(&self) -> Span {
         self.function_token.span
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.function_token.span = span;
     }
 }

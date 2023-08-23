@@ -1,5 +1,6 @@
 use crate::{
-    kw, Block, FunctionAttributes, ParameterList, Parameters, SolIdent, Type, VariableDefinition,
+    kw, Block, FunctionAttributes, ParameterList, Parameters, SolIdent, Spanned, Stmt, Type,
+    VariableDefinition,
 };
 use proc_macro2::Span;
 use std::{
@@ -14,7 +15,7 @@ use syn::{
 };
 
 /// A function, constructor, fallback, receive, or modifier definition:
-/// `function helloWorld() external pure returns(string memory);`
+/// `function helloWorld() external pure returns(string memory);`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.functionDefinition>
@@ -35,13 +36,14 @@ pub struct ItemFunction {
 
 impl fmt::Debug for ItemFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Function")
+        f.debug_struct("ItemFunction")
             .field("attrs", &self.attrs)
             .field("kind", &self.kind)
             .field("name", &self.name)
             .field("arguments", &self.arguments)
             .field("attributes", &self.attributes)
             .field("returns", &self.returns)
+            .field("body", &self.body)
             .finish()
     }
 }
@@ -59,6 +61,23 @@ impl Parse for ItemFunction {
             returns: input.call(Returns::parse_opt)?,
             body: input.parse()?,
         })
+    }
+}
+
+impl Spanned for ItemFunction {
+    fn span(&self) -> Span {
+        if let Some(name) = &self.name {
+            name.span()
+        } else {
+            self.kind.span()
+        }
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.kind.set_span(span);
+        if let Some(name) = &mut self.name {
+            name.set_span(span);
+        }
     }
 }
 
@@ -86,7 +105,7 @@ impl ItemFunction {
         let span = name.span();
         let kind = FunctionKind::new_function(span);
 
-        let mut function = ItemFunction::new(kind, Some(name));
+        let mut function = Self::new(kind, Some(name));
 
         let mut returns = ParameterList::new();
         returns.push(var.as_declaration());
@@ -99,21 +118,6 @@ impl ItemFunction {
             .extend(var.attributes.0.iter().cloned().map(Into::into));
 
         function
-    }
-
-    pub fn span(&self) -> Span {
-        if let Some(name) = &self.name {
-            name.span()
-        } else {
-            self.kind.span()
-        }
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.kind.set_span(span);
-        if let Some(name) = &mut self.name {
-            name.set_span(span);
-        }
     }
 
     /// Returns the name of the function.
@@ -159,20 +163,38 @@ impl ItemFunction {
             )
         })
     }
+
+    /// Returns a reference to the function's body, if any.
+    pub fn body(&self) -> Option<&[Stmt]> {
+        match &self.body {
+            FunctionBody::Block(block) => Some(&block.stmts),
+            _ => None,
+        }
+    }
+
+    /// Returns a mutable reference to the function's body, if any.
+    pub fn body_mut(&mut self) -> Option<&mut Vec<Stmt>> {
+        match &mut self.body {
+            FunctionBody::Block(block) => Some(&mut block.stmts),
+            _ => None,
+        }
+    }
+
+    pub fn into_body(self) -> std::result::Result<Vec<Stmt>, Self> {
+        match self.body {
+            FunctionBody::Block(block) => Ok(block.stmts),
+            _ => Err(self),
+        }
+    }
 }
 
 kw_enum! {
     /// The kind of function.
     pub enum FunctionKind {
-        /// `constructor`
         Constructor(kw::constructor),
-        /// `function`
         Function(kw::function),
-        /// `fallback`
         Fallback(kw::fallback),
-        /// `receive`
         Receive(kw::receive),
-        /// `modifier`
         Modifier(kw::modifier),
     }
 }
@@ -238,6 +260,18 @@ impl Parse for Returns {
     }
 }
 
+impl Spanned for Returns {
+    fn span(&self) -> Span {
+        let span = self.returns_token.span;
+        span.join(self.paren_token.span.join()).unwrap_or(span)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.returns_token.span = span;
+        self.paren_token = Paren(span);
+    }
+}
+
 impl Returns {
     pub fn new(span: Span, returns: ParameterList) -> Self {
         Self {
@@ -245,16 +279,6 @@ impl Returns {
             paren_token: Paren(span),
             returns,
         }
-    }
-
-    pub fn span(&self) -> Span {
-        let span = self.returns_token.span;
-        span.join(self.paren_token.span.join()).unwrap_or(span)
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.returns_token.span = span;
-        self.paren_token = Paren(span);
     }
 
     pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
@@ -266,12 +290,23 @@ impl Returns {
     }
 }
 
-#[derive(Clone, Debug)]
+/// The body of a function.
+#[derive(Clone)]
 pub enum FunctionBody {
     /// A function body delimited by curly braces.
     Block(Block),
     /// A function without implementation.
     Empty(Token![;]),
+}
+
+impl fmt::Debug for FunctionBody {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("FunctionBody::")?;
+        match self {
+            Self::Block(block) => block.fmt(f),
+            Self::Empty(_) => f.write_str("Empty"),
+        }
+    }
 }
 
 impl Parse for FunctionBody {

@@ -1,3 +1,4 @@
+use crate::Spanned;
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use std::fmt;
@@ -21,7 +22,7 @@ impl quote::IdentFragment for SolIdent {
     }
 
     fn span(&self) -> Option<Span> {
-        Some(self.span())
+        Some(self.0.span())
     }
 }
 
@@ -43,18 +44,6 @@ impl<T: ?Sized + AsRef<str>> PartialEq<T> for SolIdent {
     }
 }
 
-impl Parse for SolIdent {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
-        input.call(Ident::parse_any).map(Self)
-    }
-}
-
-impl ToTokens for SolIdent {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.0.to_tokens(tokens);
-    }
-}
-
 impl From<Ident> for SolIdent {
     fn from(value: Ident) -> Self {
         Self(value)
@@ -67,6 +56,35 @@ impl From<SolIdent> for Ident {
     }
 }
 
+impl From<&str> for SolIdent {
+    fn from(value: &str) -> Self {
+        Self::new(value)
+    }
+}
+
+impl Parse for SolIdent {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        // TODO: Deny Solidity keywords
+        Self::parse_any(input)
+    }
+}
+
+impl ToTokens for SolIdent {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.0.to_tokens(tokens);
+    }
+}
+
+impl Spanned for SolIdent {
+    fn span(&self) -> Span {
+        self.0.span()
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.0.set_span(span);
+    }
+}
+
 impl SolIdent {
     pub fn new(s: &str) -> Self {
         Self(Ident::new(s, Span::call_site()))
@@ -74,14 +92,6 @@ impl SolIdent {
 
     pub fn new_spanned(s: &str, span: Span) -> Self {
         Self(Ident::new(s, span))
-    }
-
-    pub fn span(&self) -> Span {
-        self.0.span()
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.0.set_span(span);
     }
 
     /// Returns the identifier as a string, without the `r#` prefix if present.
@@ -93,7 +103,12 @@ impl SolIdent {
         s
     }
 
-    /// See `[Ident::peek_any]`.
+    /// Parses any identifier including keywords.
+    pub fn parse_any(input: ParseStream<'_>) -> Result<Self> {
+        input.call(Ident::parse_any).map(Self)
+    }
+
+    /// Peeks any identifier including keywords.
     pub fn peek_any(input: ParseStream<'_>) -> bool {
         input.peek(Ident::peek_any)
     }

@@ -1,11 +1,12 @@
-use super::Item;
+use crate::{Item, Spanned};
+use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream},
     Attribute, Result,
 };
 
 /// A Solidity file. The root of the AST.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct File {
     /// The inner attributes of the file.
     pub attrs: Vec<Attribute>,
@@ -17,13 +18,21 @@ impl Parse for File {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let attrs = input.call(Attribute::parse_inner)?;
         let mut items = Vec::new();
-        while !input.is_empty() {
+        let mut first = true;
+        while first || !input.is_empty() {
+            first = false;
             items.push(input.parse()?);
         }
-        if items.is_empty() {
-            Err(input.parse::<Item>().unwrap_err())
-        } else {
-            Ok(Self { attrs, items })
-        }
+        Ok(Self { attrs, items })
+    }
+}
+
+impl Spanned for File {
+    fn span(&self) -> Span {
+        crate::utils::join_spans(&self.items)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans(&mut self.items, span);
     }
 }

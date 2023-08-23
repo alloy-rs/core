@@ -2,7 +2,7 @@
 
 use super::{anon_name, expand_tuple_types, expand_type, ExpCtxt};
 use crate::expand::ty::expand_event_tokenize_func;
-use ast::{EventParameter, ItemEvent, SolIdent};
+use ast::{EventParameter, ItemEvent, SolIdent, Spanned};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::Result;

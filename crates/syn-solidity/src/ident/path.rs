@@ -1,4 +1,4 @@
-use super::SolIdent;
+use crate::{SolIdent, Spanned};
 use proc_macro2::{Ident, Span};
 use std::{
     fmt,
@@ -19,12 +19,6 @@ macro_rules! sol_path {
     ($($e:expr),+) => {{
         let mut path = $crate::SolPath::new();
         $(path.push($crate::SolIdent::from($e));)+
-        path
-    }};
-
-    ($($id:ident).+) => {{
-        let mut path = $crate::SolPath::new();
-        $(path.push($crate::SolIdent::new(stringify!($id))));+
         path
     }};
 }
@@ -98,6 +92,16 @@ impl Parse for SolPath {
     }
 }
 
+impl Spanned for SolPath {
+    fn span(&self) -> Span {
+        crate::utils::join_spans(&self.0)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans(&mut self.0, span);
+    }
+}
+
 impl SolPath {
     pub const fn new() -> Self {
         Self(Punctuated::new())
@@ -126,22 +130,5 @@ impl SolPath {
 
     pub fn last_mut(&mut self) -> &mut SolIdent {
         self.0.last_mut().unwrap()
-    }
-
-    pub fn span(&self) -> Span {
-        let Some(first) = self.0.first() else {
-            return Span::call_site()
-        };
-        let span = first.span();
-        self.0
-            .last()
-            .and_then(|last| span.join(last.span()))
-            .unwrap_or(span)
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        for ident in self.0.iter_mut() {
-            ident.set_span(span);
-        }
     }
 }

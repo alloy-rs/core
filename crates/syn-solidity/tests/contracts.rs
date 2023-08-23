@@ -10,10 +10,11 @@ fn contracts() {
         .parent()
         .unwrap();
 
-    let files: Vec<_> = fs::read_dir(PATH)
+    let mut files: Vec<_> = fs::read_dir(PATH)
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
+    files.sort_by_key(|e| e.path());
     let patches = files
         .iter()
         .filter(|p| p.path().extension() == Some("patch".as_ref()));
@@ -36,13 +37,20 @@ fn contracts() {
     let mut failed = false;
     for file in files {
         let path = file.path();
-        match parse_file(&path) {
-            Ok(()) => {}
-            Err(e) => {
-                let name = path.file_name().unwrap().to_str().unwrap();
+        let name = path.file_name().unwrap().to_str().unwrap();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| parse_file(&path))) {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
                 eprintln!("failed to parse {name}: {e} ({e:?})");
                 failed = true;
             }
+            Err(_) => {
+                eprintln!("panicked while parsing {name}");
+                failed = true;
+            }
+        }
+        if failed {
+            break
         }
     }
 

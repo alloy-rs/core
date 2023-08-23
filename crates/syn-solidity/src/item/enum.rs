@@ -1,4 +1,4 @@
-use crate::{utils::DebugPunctuated, SolIdent, Type};
+use crate::{utils::DebugPunctuated, SolIdent, Spanned, Type};
 use proc_macro2::Span;
 use std::{fmt, num::NonZeroU16};
 use syn::{
@@ -9,7 +9,7 @@ use syn::{
     Attribute, Result, Token,
 };
 
-/// An enum definition: `enum Foo { A, B, C }`
+/// An enum definition: `enum Foo { A, B, C }`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.enumDefinition>
@@ -24,7 +24,7 @@ pub struct ItemEnum {
 
 impl fmt::Debug for ItemEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Enum")
+        f.debug_struct("ItemEnum")
             .field("attrs", &self.attrs)
             .field("name", &self.name)
             .field("variants", DebugPunctuated::new(&self.variants))
@@ -45,15 +45,17 @@ impl Parse for ItemEnum {
     }
 }
 
-impl ItemEnum {
-    pub fn span(&self) -> Span {
+impl Spanned for ItemEnum {
+    fn span(&self) -> Span {
         self.name.span()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.name.set_span(span);
     }
+}
 
+impl ItemEnum {
     pub fn as_type(&self) -> Type {
         Type::Uint(self.span(), Some(NonZeroU16::new(8).unwrap()))
     }

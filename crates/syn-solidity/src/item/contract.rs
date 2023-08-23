@@ -1,5 +1,4 @@
-use super::Item;
-use crate::{kw, utils::DebugPunctuated, Modifier, SolIdent};
+use crate::{kw, utils::DebugPunctuated, Item, Modifier, SolIdent, Spanned};
 use proc_macro2::Span;
 use std::{cmp::Ordering, fmt};
 use syn::{
@@ -11,7 +10,7 @@ use syn::{
 };
 
 /// A contract, abstract contract, interface, or library definition:
-/// `contract Foo is Bar("foo"), Baz { ... }`
+/// `contract Foo is Bar("foo"), Baz { ... }`.
 ///
 /// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.contractDefinition>
@@ -27,7 +26,7 @@ pub struct ItemContract {
 
 impl fmt::Debug for ItemContract {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Contract")
+        f.debug_struct("ItemContract")
             .field("attrs", &self.attrs)
             .field("kind", &self.kind)
             .field("name", &self.name)
@@ -74,15 +73,17 @@ impl Parse for ItemContract {
     }
 }
 
-impl ItemContract {
-    pub fn span(&self) -> Span {
+impl Spanned for ItemContract {
+    fn span(&self) -> Span {
         self.name.span()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.name.set_span(span);
     }
+}
 
+impl ItemContract {
     /// Returns true if `self` is an abstract contract.
     pub fn is_abstract_contract(&self) -> bool {
         self.kind.is_abstract_contract()
@@ -107,7 +108,7 @@ impl ItemContract {
 /// The kind of contract.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ContractKind {
-    AbstractContract(kw::Abstract, kw::contract),
+    AbstractContract(Token![abstract], kw::contract),
     Contract(kw::contract),
     Interface(kw::interface),
     Library(kw::library),
@@ -140,7 +141,7 @@ impl Ord for ContractKind {
 impl Parse for ContractKind {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(kw::Abstract) {
+        if lookahead.peek(Token![abstract]) {
             Ok(Self::AbstractContract(input.parse()?, input.parse()?))
         } else if lookahead.peek(kw::contract) {
             input.parse().map(Self::Contract)
@@ -154,15 +155,8 @@ impl Parse for ContractKind {
     }
 }
 
-impl ContractKind {
-    pub fn peek(lookahead: &Lookahead1<'_>) -> bool {
-        lookahead.peek(kw::Abstract)
-            || lookahead.peek(kw::contract)
-            || lookahead.peek(kw::interface)
-            || lookahead.peek(kw::library)
-    }
-
-    pub fn span(self) -> Span {
+impl Spanned for ContractKind {
+    fn span(&self) -> Span {
         match self {
             Self::AbstractContract(kw_abstract, kw_contract) => {
                 let span = kw_abstract.span;
@@ -174,7 +168,7 @@ impl ContractKind {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::AbstractContract(kw_abstract, kw_contract) => {
                 kw_abstract.span = span;
@@ -184,6 +178,15 @@ impl ContractKind {
             Self::Interface(kw) => kw.span = span,
             Self::Library(kw) => kw.span = span,
         }
+    }
+}
+
+impl ContractKind {
+    pub fn peek(lookahead: &Lookahead1<'_>) -> bool {
+        lookahead.peek(Token![abstract])
+            || lookahead.peek(kw::contract)
+            || lookahead.peek(kw::interface)
+            || lookahead.peek(kw::library)
     }
 
     /// Returns true if `self` is an abstract contract.
@@ -278,8 +281,8 @@ impl Parse for Inheritance {
     }
 }
 
-impl Inheritance {
-    pub fn span(&self) -> Span {
+impl Spanned for Inheritance {
+    fn span(&self) -> Span {
         let span = self.is_token.span;
         self.inheritance
             .last()
@@ -287,7 +290,7 @@ impl Inheritance {
             .unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.is_token.span = span;
     }
 }

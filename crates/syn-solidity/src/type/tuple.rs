@@ -1,4 +1,4 @@
-use crate::{kw, utils::DebugPunctuated, Type};
+use crate::{kw, utils::DebugPunctuated, Spanned, Type};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -79,7 +79,7 @@ impl Parse for TypeTuple {
 
 impl FromIterator<Type> for TypeTuple {
     fn from_iter<T: IntoIterator<Item = Type>>(iter: T) -> Self {
-        TypeTuple {
+        Self {
             tuple_token: None,
             paren_token: Paren::default(),
             types: {
@@ -94,21 +94,23 @@ impl FromIterator<Type> for TypeTuple {
     }
 }
 
-impl TypeTuple {
-    pub fn span(&self) -> Span {
+impl Spanned for TypeTuple {
+    fn span(&self) -> Span {
         let span = self.paren_token.span.join();
         self.tuple_token
             .and_then(|tuple_token| tuple_token.span.join(span))
             .unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         if let Some(tuple_token) = &mut self.tuple_token {
             tuple_token.span = span;
         }
         self.paren_token = Paren(span);
     }
+}
 
+impl TypeTuple {
     /// See [`Type::is_abi_dynamic`].
     pub fn is_abi_dynamic(&self) -> bool {
         self.types.iter().any(Type::is_abi_dynamic)

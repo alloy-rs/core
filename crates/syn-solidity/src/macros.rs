@@ -217,6 +217,8 @@ macro_rules! kw_enum {
         $(#[$attr])*
         #[derive(Clone, Copy)]
         $vis enum $name {$(
+            #[doc = concat!("`", stringify!($kw), "`")]
+            ///
             $(#[$variant_attr])*
             $variant($crate::kw::$kw),
         )+}
@@ -265,11 +267,26 @@ macro_rules! kw_enum {
             }
         }
 
+        impl $crate::Spanned for $name {
+            fn span(&self) -> ::proc_macro2::Span {
+                match self {$(
+                    Self::$variant(kw) => kw.span,
+                )+}
+            }
+
+            fn set_span(&mut self, span: ::proc_macro2::Span) {
+                match self {$(
+                    Self::$variant(kw) => kw.span = span,
+                )+}
+            }
+        }
+
         impl $name {
             ::paste::paste! {
                 $(
+                    #[doc = concat!("Creates a new `", stringify!($variant), "` keyword with the given `span`.")]
                     #[inline]
-                    pub fn [<new_ $variant:lower>](span: ::proc_macro2::Span) -> Self {
+                    pub fn [<new_ $variant:snake>](span: ::proc_macro2::Span) -> Self {
                         Self::$variant(kw::$kw(span))
                     }
                 )+
@@ -290,18 +307,6 @@ macro_rules! kw_enum {
                 $( lookahead.peek($crate::kw::$kw) )||+
             }
 
-            pub const fn span(self) -> ::proc_macro2::Span {
-                match self {$(
-                    Self::$variant(kw) => kw.span,
-                )+}
-            }
-
-            pub fn set_span(&mut self, span: ::proc_macro2::Span) {
-                match self {$(
-                    Self::$variant(kw) => kw.span = span,
-                )+}
-            }
-
             pub const fn as_str(self) -> &'static str {
                 match self {$(
                     Self::$variant(_) => stringify!($kw),
@@ -316,8 +321,9 @@ macro_rules! kw_enum {
 
             ::paste::paste! {
                 $(
+                    #[doc = concat!("Returns true if `self` matches `Self::", stringify!($variant), "`.")]
                     #[inline]
-                    pub const fn [<is_ $variant:lower>](self) -> bool {
+                    pub const fn [<is_ $variant:snake>](self) -> bool {
                         matches!(self, Self::$variant(_))
                     }
                 )+
@@ -327,18 +333,33 @@ macro_rules! kw_enum {
 }
 
 macro_rules! op_enum {
+    (@skip $($tt:tt)*) => {};
+    (@first $first:tt $($rest:tt)*) => { ::syn::Token![$first] };
+
+    (@peek $input:ident, $lookahead:ident, $a:tt) => {
+        $lookahead.peek(::syn::Token![$a])
+    };
+    // can't use `peek2` for `BinOp::Sar` (`>>>`) since the first token is 2 characters,
+    // so take it in as input
+    (@peek $input:ident, $lookahead:ident, $a:tt $b:tt $peek:ident) => {
+        $lookahead.peek(::syn::Token![$a])
+            && $input.$peek(::syn::Token![$b])
+    };
+
     (
         $(#[$attr:meta])*
         $vis:vis enum $name:ident {$(
             $(#[$variant_attr:meta])*
-            $variant:ident($op:tt)
+            $variant:ident($($op:tt)+) $($peek:ident)?
         ),+ $(,)?}
     ) => {
         $(#[$attr])*
         #[derive(Clone, Copy)]
         $vis enum $name {$(
-            #[doc = concat!("`", stringify!($t), "`")]
-            $variant(::syn::Token![$op]),
+            #[doc = concat!("`", $(stringify!($op),)+ "`")]
+            ///
+            $(#[$variant_attr])*
+            $variant($(::syn::Token![$op]),+),
         )+}
 
         impl ::core::cmp::PartialEq for $name {
@@ -375,8 +396,10 @@ macro_rules! op_enum {
             fn parse(input: ::syn::parse::ParseStream<'_>) -> ::syn::Result<Self> {
                 let lookahead = input.lookahead1();
                 $(
-                    if lookahead.peek(Token![$op]) {
-                        input.parse().map(Self::$variant)
+                    if op_enum!(@peek input, lookahead, $($op)+ $($peek)?) {
+                        Ok(Self::$variant(
+                            $(input.parse::<::syn::Token![$op]>()?),+
+                        ))
                     } else
                 )+
                 {
@@ -385,36 +408,80 @@ macro_rules! op_enum {
             }
         }
 
+        impl $crate::Spanned for $name {
+            fn span(&self) -> ::proc_macro2::Span {
+                match self {$(
+                    Self::$variant(kw, ..) => kw.span(),
+                )+}
+            }
+
+            fn set_span(&mut self, span: ::proc_macro2::Span) {
+                match self {$(
+                    Self::$variant(kw, ..) => kw.set_span(span),
+                )+}
+            }
+        }
+
         impl $name {
             ::paste::paste! {
                 $(
+                    #[doc = concat!("Creates a new `", stringify!($variant), "` operator with the given `span`.")]
                     #[inline]
-                    pub fn [<new_ $variant:lower>](span: ::proc_macro2::Span) -> Self {
-                        Self::$variant(::syn::Token![$op](span))
+                    pub fn [<new_ $variant:snake>](span: ::proc_macro2::Span) -> Self {
+                        Self::$variant($(::syn::Token![$op](span)),+)
                     }
                 )+
             }
 
+            #[allow(unused_parens, unused_variables)]
+            pub fn peek(input: syn::parse::ParseStream<'_>, lookahead: &::syn::parse::Lookahead1<'_>) -> bool {
+                $(
+                    (op_enum!(@peek input, lookahead, $($op)+ $($peek)?))
+                )||+
+            }
+
             pub const fn as_str(self) -> &'static str {
                 match self {$(
-                    Self::$variant(_) => stringify!($op),
+                    Self::$variant(..) => concat!($(stringify!($op)),+),
                 )+}
             }
 
             pub const fn as_debug_str(self) -> &'static str {
                 match self {$(
-                    Self::$variant(_) => stringify!($variant),
+                    Self::$variant(..) => stringify!($variant),
                 )+}
             }
 
             ::paste::paste! {
                 $(
+                    #[doc = concat!("Returns true if `self` matches `Self::", stringify!($variant), "`.")]
                     #[inline]
-                    pub const fn [<is_ $variant:lower>](self) -> bool {
-                        matches!(self, Self::$variant(_))
+                    pub const fn [<is_ $variant:snake>](self) -> bool {
+                        matches!(self, Self::$variant(..))
                     }
                 )+
             }
+        }
+    };
+}
+
+macro_rules! derive_parse {
+    ($($t:ty),+ $(,)?) => {$(
+        impl Parse for $t {
+            fn parse(input: ParseStream<'_>) -> Result<Self> {
+                <Self as $crate::utils::ParseNested>::parse_nested(
+                    input.parse()?,
+                    input,
+                )
+            }
+        }
+    )+};
+}
+
+macro_rules! debug {
+    ($($t:tt)*) => {
+        if $crate::DEBUG {
+            eprintln!($($t)*)
         }
     };
 }

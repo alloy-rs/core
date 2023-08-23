@@ -1,7 +1,7 @@
 //! [`ItemEnum`] expansion.
 
 use super::ExpCtxt;
-use ast::ItemEnum;
+use ast::{ItemEnum, Spanned};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Result;

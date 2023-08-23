@@ -74,7 +74,7 @@ error: proc macro panicked
 741 | | }
     | |_^
     |
-    = help: message: mapping types are unsupported: TypeMapping { key: TypeMapping { key: Custom([SolIdent("a")]), key_name: Some(SolIdent("b")), value: Custom([SolIdent("c")]), value_name: Some(SolIdent("d")) }, key_name: Some(SolIdent("e")), value: TypeMapping { key: Custom([SolIdent("f")]), key_name: Some(SolIdent("g")), value: Custom([SolIdent("h")]), value_name: Some(SolIdent("i")) }, value_name: Some(SolIdent("j")) }
+    = help: message: mapping types are unsupported: TypeMapping { key: Type::TypeMapping { key: Type::Custom([SolIdent("a")]), key_name: Some(SolIdent("b")), value: Type::Custom([SolIdent("c")]), value_name: Some(SolIdent("d")) }, key_name: Some(SolIdent("e")), value: Type::TypeMapping { key: Type::Custom([SolIdent("f")]), key_name: Some(SolIdent("g")), value: Type::Custom([SolIdent("h")]), value_name: Some(SolIdent("i")) }, value_name: Some(SolIdent("j")) }
 
 error: proc macro panicked
    --> tests/ui/type.rs:743:1
@@ -84,7 +84,7 @@ error: proc macro panicked
 745 | | }
     | |_^
     |
-    = help: message: mapping types are unsupported: TypeMapping { key: Uint(Some(256)), key_name: Some(SolIdent("a")), value: Bool, value_name: Some(SolIdent("b")) }
+    = help: message: mapping types are unsupported: TypeMapping { key: Type::Uint(Some(256)), key_name: Some(SolIdent("a")), value: Type::Bool, value_name: Some(SolIdent("b")) }
 
 error[E0412]: cannot find type `bytes_` in this scope
    --> tests/ui/type.rs:205:9

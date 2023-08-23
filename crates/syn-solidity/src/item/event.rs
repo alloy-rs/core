@@ -1,4 +1,6 @@
-use crate::{kw, utils::DebugPunctuated, ParameterList, SolIdent, Type, VariableDeclaration};
+use crate::{
+    kw, utils::DebugPunctuated, ParameterList, SolIdent, Spanned, Type, VariableDeclaration,
+};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -26,7 +28,7 @@ impl fmt::Debug for ItemEvent {
             .field("attrs", &self.attrs)
             .field("name", &self.name)
             .field("arguments", DebugPunctuated::new(&self.parameters))
-            .field("anonymous", &self.anonymous.is_some())
+            .field("anonymous", &self.is_anonymous())
             .finish()
     }
 }
@@ -46,15 +48,17 @@ impl Parse for ItemEvent {
     }
 }
 
-impl ItemEvent {
-    pub fn span(&self) -> Span {
+impl Spanned for ItemEvent {
+    fn span(&self) -> Span {
         self.name.span()
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.name.set_span(span);
     }
+}
 
+impl ItemEvent {
     /// Returns `true` if the event is anonymous.
     #[inline]
     pub const fn is_anonymous(&self) -> bool {
@@ -159,9 +163,9 @@ impl Parse for EventParameter {
     }
 }
 
-impl EventParameter {
+impl Spanned for EventParameter {
     /// Get the span of the event parameter
-    pub fn span(&self) -> Span {
+    fn span(&self) -> Span {
         let span = self.ty.span();
         self.name
             .as_ref()
@@ -170,7 +174,7 @@ impl EventParameter {
     }
 
     /// Sets the span of the event parameter.
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.ty.set_span(span);
         if let Some(kw) = &mut self.indexed {
             kw.span = span;
@@ -179,7 +183,9 @@ impl EventParameter {
             name.set_span(span);
         }
     }
+}
 
+impl EventParameter {
     /// Convert to a parameter declaration.
     pub fn as_param(&self) -> VariableDeclaration {
         VariableDeclaration {

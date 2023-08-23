@@ -1,9 +1,8 @@
-use crate::{kw, utils::tts_until_semi, SolIdent};
+use crate::{kw, utils::tts_until_semi, SolIdent, Spanned};
 use proc_macro2::{Span, TokenStream};
 use std::fmt;
 use syn::{
     parse::{Parse, ParseStream},
-    spanned::Spanned,
     Result, Token,
 };
 
@@ -17,7 +16,9 @@ pub struct PragmaDirective {
 
 impl fmt::Debug for PragmaDirective {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Pragma").field(&self.tokens).finish()
+        f.debug_tuple("PragmaDirective")
+            .field(&self.tokens)
+            .finish()
     }
 }
 
@@ -31,13 +32,13 @@ impl Parse for PragmaDirective {
     }
 }
 
-impl PragmaDirective {
-    pub fn span(&self) -> Span {
+impl Spanned for PragmaDirective {
+    fn span(&self) -> Span {
         let span = self.pragma_token.span;
         span.join(self.semi_token.span).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.pragma_token.span = span;
         self.tokens.set_span(span);
         self.semi_token.span = span;
@@ -72,8 +73,8 @@ impl Parse for PragmaTokens {
     }
 }
 
-impl PragmaTokens {
-    pub fn span(&self) -> Span {
+impl Spanned for PragmaTokens {
+    fn span(&self) -> Span {
         match self {
             Self::Version(solidity, version) => {
                 let span = solidity.span;
@@ -91,7 +92,7 @@ impl PragmaTokens {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::Version(solidity, _version) => {
                 solidity.span = span;

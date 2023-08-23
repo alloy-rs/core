@@ -1,7 +1,6 @@
-use super::{kw, Modifier, Mutability, Override, SolPath, VariableAttribute, Visibility};
+use crate::{kw, Modifier, Mutability, Override, SolPath, Spanned, VariableAttribute, Visibility};
 use proc_macro2::Span;
 use std::{
-    collections::HashSet,
     fmt,
     hash::{Hash, Hasher},
     mem,
@@ -11,16 +10,22 @@ use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
     token::Brace,
-    Error, Ident, Result,
+    Error, Ident, Result, Token,
 };
 
 /// A list of unique function attributes. Used in
 /// [ItemFunction][crate::ItemFunction].
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct FunctionAttributes(pub HashSet<FunctionAttribute>);
+#[derive(Clone, Default, PartialEq, Eq)]
+pub struct FunctionAttributes(pub Vec<FunctionAttribute>);
+
+impl fmt::Debug for FunctionAttributes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl Deref for FunctionAttributes {
-    type Target = HashSet<FunctionAttribute>;
+    type Target = Vec<FunctionAttribute>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -35,24 +40,34 @@ impl DerefMut for FunctionAttributes {
 
 impl Parse for FunctionAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut attributes = HashSet::<FunctionAttribute>::new();
-        while !(input.is_empty() || input.peek(kw::returns) || !input.peek(Ident::peek_any)) {
-            let attr = input.parse()?;
-            if let Some(prev) = attributes.get(&attr) {
+        let mut attributes = Vec::<FunctionAttribute>::new();
+        while !input.is_empty() && !input.peek(kw::returns) && input.peek(Ident::peek_any) {
+            let attr: FunctionAttribute = input.parse()?;
+            if let Some(prev) = attributes.iter().find(|a| **a == attr) {
                 let mut e = Error::new(attr.span(), "duplicate attribute");
                 e.combine(Error::new(prev.span(), "previous declaration is here"));
                 return Err(e)
             }
-            attributes.insert(attr);
+            attributes.push(attr);
         }
         Ok(Self(attributes))
+    }
+}
+
+impl Spanned for FunctionAttributes {
+    fn span(&self) -> Span {
+        crate::utils::join_spans(&self.0)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans_clone(&mut self.0, span)
     }
 }
 
 impl FunctionAttributes {
     #[inline]
     pub fn new() -> Self {
-        Self(HashSet::new())
+        Self(Vec::new())
     }
 
     pub fn visibility(&self) -> Option<Visibility> {
@@ -112,7 +127,7 @@ pub enum FunctionAttribute {
     /// A [Mutability] attribute.
     Mutability(Mutability),
     /// `virtual`
-    Virtual(kw::Virtual),
+    Virtual(Token![virtual]),
     /// `immutable`
     Immutable(kw::immutable),
     /// An [Override] attribute.
@@ -174,9 +189,9 @@ impl Parse for FunctionAttribute {
             input.parse().map(Self::Visibility)
         } else if Mutability::peek(&lookahead) {
             input.parse().map(Self::Mutability)
-        } else if lookahead.peek(kw::Virtual) {
+        } else if lookahead.peek(Token![virtual]) {
             input.parse().map(Self::Virtual)
-        } else if lookahead.peek(kw::Override) {
+        } else if lookahead.peek(Token![override]) {
             input.parse().map(Self::Override)
         } else if lookahead.peek(kw::immutable) {
             input.parse().map(Self::Immutable)
@@ -202,8 +217,8 @@ impl From<VariableAttribute> for FunctionAttribute {
     }
 }
 
-impl FunctionAttribute {
-    pub fn span(&self) -> Span {
+impl Spanned for FunctionAttribute {
+    fn span(&self) -> Span {
         match self {
             Self::Visibility(v) => v.span(),
             Self::Mutability(m) => m.span(),
@@ -214,7 +229,7 @@ impl FunctionAttribute {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::Visibility(v) => v.set_span(span),
             Self::Mutability(m) => m.set_span(span),
@@ -224,7 +239,9 @@ impl FunctionAttribute {
             Self::Modifier(m) => m.set_span(span),
         }
     }
+}
 
+impl FunctionAttribute {
     #[inline]
     pub const fn visibility(&self) -> Option<Visibility> {
         match self {

@@ -5,11 +5,11 @@ use crate::{
     utils::ExprArray,
 };
 use ast::{
-    File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath, Type,
+    File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath, Spanned, Type,
     VariableDeclaration, Visit,
 };
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote, IdentFragment};
+use quote::{format_ident, quote};
 use std::{borrow::Borrow, collections::HashMap, fmt::Write};
 use syn::{parse_quote, Attribute, Error, Result};
 
@@ -329,7 +329,7 @@ impl ExpCtxt<'_> {
         }
     }
 
-    fn raw_call_name(&self, function_name: impl IdentFragment + std::fmt::Display) -> Ident {
+    fn raw_call_name(&self, function_name: impl quote::IdentFragment + std::fmt::Display) -> Ident {
         format_ident!("{function_name}Call")
     }
 
@@ -338,7 +338,10 @@ impl ExpCtxt<'_> {
         self.raw_call_name(function_name)
     }
 
-    fn raw_return_name(&self, function_name: impl IdentFragment + std::fmt::Display) -> Ident {
+    fn raw_return_name(
+        &self,
+        function_name: impl quote::IdentFragment + std::fmt::Display,
+    ) -> Ident {
         format_ident!("{function_name}Return")
     }
 

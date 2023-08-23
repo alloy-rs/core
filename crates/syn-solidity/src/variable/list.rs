@@ -1,5 +1,5 @@
-use super::VariableDeclaration;
-use crate::{SolIdent, Type};
+use crate::{SolIdent, Spanned, Type, VariableDeclaration};
+use proc_macro2::Span;
 use std::{
     fmt,
     ops::{Deref, DerefMut},
@@ -59,7 +59,7 @@ impl Parse for ParameterList {
 /// Struct: enforce semicolon after each field and field name.
 impl Parse for FieldList {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let this = input.parse_terminated(VariableDeclaration::parse_for_struct, Token![;])?;
+        let this = input.parse_terminated(VariableDeclaration::parse_with_name, Token![;])?;
         if this.is_empty() {
             Err(input.error("defining empty structs is disallowed"))
         } else if !this.trailing_punct() {
@@ -67,6 +67,16 @@ impl Parse for FieldList {
         } else {
             Ok(Self(this))
         }
+    }
+}
+
+impl<P> Spanned for Parameters<P> {
+    fn span(&self) -> Span {
+        crate::utils::join_spans(&self.0)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans(&mut self.0, span);
     }
 }
 

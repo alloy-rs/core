@@ -1,23 +1,22 @@
-use super::{kw, Override, SolPath, Visibility};
+use crate::{kw, Override, SolPath, Spanned, Visibility};
 use proc_macro2::Span;
 use std::{
-    collections::HashSet,
     fmt,
     hash::{Hash, Hasher},
     mem,
 };
 use syn::{
     parse::{Parse, ParseStream},
-    Error, Result,
+    Error, Result, Token,
 };
 
 /// A list of unique variable attributes.
 #[derive(Clone, Debug)]
-pub struct VariableAttributes(pub HashSet<VariableAttribute>);
+pub struct VariableAttributes(pub Vec<VariableAttribute>);
 
 impl Parse for VariableAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let mut attributes = HashSet::new();
+        let mut attributes = Vec::new();
         while let Ok(attribute) = input.parse::<VariableAttribute>() {
             let error = |prev: &VariableAttribute| {
                 let mut e = Error::new(attribute.span(), "duplicate attribute");
@@ -28,15 +27,17 @@ impl Parse for VariableAttributes {
             // Only one of: `constant`, `immutable`
             match attribute {
                 VariableAttribute::Constant(_) => {
-                    if let Some(prev) =
-                        attributes.get(&VariableAttribute::Immutable(Default::default()))
+                    if let Some(prev) = attributes
+                        .iter()
+                        .find(|a| matches!(a, VariableAttribute::Immutable(_)))
                     {
                         return Err(error(prev))
                     }
                 }
                 VariableAttribute::Immutable(_) => {
-                    if let Some(prev) =
-                        attributes.get(&VariableAttribute::Constant(Default::default()))
+                    if let Some(prev) = attributes
+                        .iter()
+                        .find(|a| matches!(a, VariableAttribute::Constant(_)))
                     {
                         return Err(error(prev))
                     }
@@ -44,12 +45,22 @@ impl Parse for VariableAttributes {
                 _ => {}
             }
 
-            if let Some(prev) = attributes.get(&attribute) {
+            if let Some(prev) = attributes.iter().find(|a| **a == attribute) {
                 return Err(error(prev))
             }
-            attributes.insert(attribute);
+            attributes.push(attribute);
         }
         Ok(Self(attributes))
+    }
+}
+
+impl Spanned for VariableAttributes {
+    fn span(&self) -> Span {
+        crate::utils::join_spans(&self.0)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        crate::utils::set_spans_clone(&mut self.0, span)
     }
 }
 
@@ -132,7 +143,7 @@ impl Parse for VariableAttribute {
             input.parse().map(Self::Visibility)
         } else if lookahead.peek(kw::constant) {
             input.parse().map(Self::Constant)
-        } else if lookahead.peek(kw::Override) {
+        } else if lookahead.peek(Token![override]) {
             input.parse().map(Self::Override)
         } else if lookahead.peek(kw::immutable) {
             input.parse().map(Self::Immutable)
@@ -142,8 +153,8 @@ impl Parse for VariableAttribute {
     }
 }
 
-impl VariableAttribute {
-    pub fn span(&self) -> Span {
+impl Spanned for VariableAttribute {
+    fn span(&self) -> Span {
         match self {
             Self::Visibility(v) => v.span(),
             Self::Constant(c) => c.span,
@@ -152,7 +163,7 @@ impl VariableAttribute {
         }
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             Self::Visibility(v) => v.set_span(span),
             Self::Constant(c) => c.span = span,
@@ -160,7 +171,9 @@ impl VariableAttribute {
             Self::Immutable(i) => i.span = span,
         }
     }
+}
 
+impl VariableAttribute {
     #[inline]
     pub const fn visibility(&self) -> Option<Visibility> {
         match self {

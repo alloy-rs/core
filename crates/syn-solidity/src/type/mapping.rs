@@ -1,4 +1,4 @@
-use crate::{kw, SolIdent, Type};
+use crate::{kw, SolIdent, Spanned, Type};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -78,13 +78,13 @@ impl Parse for TypeMapping {
     }
 }
 
-impl TypeMapping {
-    pub fn span(&self) -> Span {
+impl Spanned for TypeMapping {
+    fn span(&self) -> Span {
         let span = self.mapping_token.span;
         span.join(self.paren_token.span.join()).unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.mapping_token.span = span;
         self.paren_token = Paren(span);
         self.key.set_span(span);

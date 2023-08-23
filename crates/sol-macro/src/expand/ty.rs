@@ -2,7 +2,7 @@
 
 use super::ExpCtxt;
 use crate::expand::generate_name;
-use ast::{EventParameter, Item, Parameters, Type, TypeArray, VariableDeclaration};
+use ast::{EventParameter, Item, Parameters, Spanned, Type, TypeArray, VariableDeclaration};
 use proc_macro2::{Literal, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use std::{fmt, num::NonZeroU16};
@@ -102,7 +102,7 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
         Type::Array(ref array) => {
             let ty = expand_type(&array.ty);
             let span = array.span();
-            if let Some(size) = &array.size {
+            if let Some(size) = array.size() {
                 quote_spanned! {span=>
                     ::alloy_sol_types::sol_data::FixedArray<#ty, #size>
                 }
@@ -153,11 +153,13 @@ pub(super) fn type_base_data_size(cx: &ExpCtxt<'_>, ty: &Type) -> usize {
         Type::String(_) | Type::Bytes(_) | Type::Array(TypeArray { size: None, .. }) => 64,
 
         // fixed array: size * encoded size
-        Type::Array(TypeArray {
-            ty: inner,
-            size: Some(size),
-            ..
-        }) => type_base_data_size(cx, inner) * size.base10_parse::<usize>().unwrap(),
+        Type::Array(
+            a @ TypeArray {
+                ty: inner,
+                size: Some(_),
+                ..
+            },
+        ) => type_base_data_size(cx, inner) * a.size().unwrap(),
 
         // tuple: sum of encoded sizes
         Type::Tuple(tuple) => tuple
@@ -295,7 +297,7 @@ impl fmt::Display for TypePrinter<'_> {
             Type::Array(array) => {
                 Self::new(self.cx, &array.ty).fmt(f)?;
                 f.write_str("[")?;
-                if let Some(size) = &array.size {
+                if let Some(size) = array.size() {
                     size.fmt(f)?;
                 }
                 f.write_str("]")

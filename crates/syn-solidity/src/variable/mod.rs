@@ -1,6 +1,5 @@
-use super::{SolIdent, Storage, Type};
-use crate::{utils::tts_until_semi, VariableAttributes};
-use proc_macro2::{Span, TokenStream};
+use crate::{Expr, SolIdent, Spanned, Storage, Type, VariableAttributes};
+use proc_macro2::Span;
 use std::fmt::{self, Write};
 use syn::{
     ext::IdentExt,
@@ -11,9 +10,7 @@ use syn::{
 mod list;
 pub use list::{FieldList, ParameterList, Parameters};
 
-/// A variable declaration.
-///
-/// `<ty> [storage] <name>`
+/// A variable declaration: `string memory hello`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclaration {
     /// The attributes of the variable.
@@ -23,7 +20,7 @@ pub struct VariableDeclaration {
     /// The storage location of the variable, if any.
     pub storage: Option<Storage>,
     /// The name of the variable. This is always Some if parsed as part of
-    /// [`Parameters`].
+    /// [`Parameters`] or a [`Stmt`][crate::Stmt].
     pub name: Option<SolIdent>,
 }
 
@@ -48,17 +45,8 @@ impl Parse for VariableDeclaration {
     }
 }
 
-impl VariableDeclaration {
-    pub const fn new(ty: Type) -> Self {
-        Self {
-            attrs: Vec::new(),
-            ty,
-            storage: None,
-            name: None,
-        }
-    }
-
-    pub fn span(&self) -> Span {
+impl Spanned for VariableDeclaration {
+    fn span(&self) -> Span {
         let span = self.ty.span();
         match (&self.storage, &self.name) {
             (Some(storage), None) => span.join(storage.span()),
@@ -68,13 +56,24 @@ impl VariableDeclaration {
         .unwrap_or(span)
     }
 
-    pub fn set_span(&mut self, span: Span) {
+    fn set_span(&mut self, span: Span) {
         self.ty.set_span(span);
         if let Some(storage) = &mut self.storage {
             storage.set_span(span);
         }
         if let Some(name) = &mut self.name {
             name.set_span(span);
+        }
+    }
+}
+
+impl VariableDeclaration {
+    pub const fn new(ty: Type) -> Self {
+        Self {
+            attrs: Vec::new(),
+            ty,
+            storage: None,
+            name: None,
         }
     }
 
@@ -87,17 +86,16 @@ impl VariableDeclaration {
         Ok(())
     }
 
-    pub fn parse_for_struct(input: ParseStream<'_>) -> Result<Self> {
+    pub fn parse_with_name(input: ParseStream<'_>) -> Result<Self> {
         Self::_parse(input, true)
     }
 
-    fn _parse(input: ParseStream<'_>, for_struct: bool) -> Result<Self> {
+    fn _parse(input: ParseStream<'_>, require_name: bool) -> Result<Self> {
         Ok(Self {
             attrs: input.call(Attribute::parse_outer)?,
             ty: input.parse()?,
             storage: input.call(Storage::parse_opt)?,
-            // structs must have field names
-            name: if for_struct || input.peek(Ident::peek_any) {
+            name: if require_name || input.peek(Ident::peek_any) {
                 Some(input.parse()?)
             } else {
                 None
@@ -111,8 +109,7 @@ pub struct VariableDefinition {
     pub ty: Type,
     pub attributes: VariableAttributes,
     pub name: SolIdent,
-    // TODO: Expr
-    pub initializer: Option<(Token![=], TokenStream)>,
+    pub initializer: Option<(Token![=], Expr)>,
     pub semi_token: Token![;],
 }
 
@@ -123,12 +120,24 @@ impl Parse for VariableDefinition {
             attributes: input.parse()?,
             name: input.parse()?,
             initializer: if input.peek(Token![=]) {
-                Some((input.parse()?, tts_until_semi(input)))
+                Some((input.parse()?, input.parse()?))
             } else {
                 None
             },
             semi_token: input.parse()?,
         })
+    }
+}
+
+impl Spanned for VariableDefinition {
+    fn span(&self) -> Span {
+        let span = self.ty.span();
+        span.join(self.semi_token.span).unwrap_or(span)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.ty.set_span(span);
+        self.semi_token.span = span;
     }
 }
 
@@ -140,15 +149,5 @@ impl VariableDefinition {
             storage: None,
             name: Some(self.name.clone()),
         }
-    }
-
-    pub fn span(&self) -> Span {
-        let span = self.ty.span();
-        span.join(self.semi_token.span).unwrap_or(span)
-    }
-
-    pub fn set_span(&mut self, span: Span) {
-        self.ty.set_span(span);
-        self.semi_token.span = span;
     }
 }
