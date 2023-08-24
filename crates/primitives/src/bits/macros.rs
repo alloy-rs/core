@@ -533,20 +533,39 @@ macro_rules! impl_arbitrary {
 }
 
 macro_rules! fixed_bytes_macros {
-    ($d:tt $($(#[$attr:meta])* macro $name:ident($ty:ident);)*) => {$(
+    ($d:tt $($(#[$attr:meta])* macro $name:ident($ty:ident $($rest:tt)*);)*) => {$(
         /// Converts a sequence of string literals containing hex-encoded data
         #[doc = concat!(
-            "into a new [`", stringify!($ty), "`][crate::", stringify!($ty), "].\n",
+            "into a new [`", stringify!($ty), "`][crate::", stringify!($ty), "] at compile time.\n",
         )]
+        ///
+        /// If the input is empty, a zero-initialized array is returned.
         ///
         /// Note that the strings cannot be prefixed with `0x`.
         ///
         /// See [`hex_literal::hex!`] for more information.
+        ///
+        /// # Examples
+        ///
+        /// ```
+        #[doc = concat!("use alloy_primitives::{", stringify!($name), ", ", stringify!($ty), "};")]
+        ///
+        #[doc = concat!("const ZERO: ", stringify!($ty $($rest)*), " = ", stringify!($name), "!();")]
+        #[doc = concat!("assert_eq!(ZERO, ", stringify!($ty), "::ZERO);")]
+        ///
+        /// # stringify!(
+        #[doc = concat!("let byte_array: ", stringify!($ty), " = ", stringify!($name), "!(\"…\");")]
+        /// # );
+        /// ```
         $(#[$attr])*
         #[macro_export]
         macro_rules! $name {
-            ($d ($d s:literal)*) => {
-                $crate::$ty::new($crate::hex!($d ($d s)*))
+            () => {
+                $crate::$ty::ZERO
+            };
+
+            ($d ($d s:literal)+) => {
+                $crate::$ty::new($crate::hex!($d ($d s)+))
             };
         }
     )*};
@@ -565,35 +584,54 @@ fixed_bytes_macros! { $
 
     macro bloom(Bloom);
 
-    macro fixed_bytes(FixedBytes);
+    macro fixed_bytes(FixedBytes<0>); // <0> is just for the doctest
 }
 
 /// Converts a sequence of string literals containing hex-encoded data into a
-/// new [`Bytes`][crate::Bytes].
+/// new [`Bytes`][crate::Bytes] at compile time.
+///
+/// If the input is empty, an empty instance is returned.
 ///
 /// Note that the strings cannot be prefixed with `0x`.
 ///
 /// See [`hex_literal::hex!`] for more information.
 #[macro_export]
 macro_rules! bytes {
-    ($($s:literal)*) => {
-        $crate::Bytes::from_static(&$crate::hex!($($s)*))
+    () => {
+        $crate::Bytes::new()
     };
+
+    ($($s:literal)+) => {{
+        // force const eval
+        const STATIC_BYTES: &'static [u8] = &$crate::hex!($($s)+);
+        $crate::Bytes::from_static(STATIC_BYTES)
+    }};
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{Address, Bytes};
+    use crate::{Address, Bytes, FixedBytes};
     use hex_literal::hex;
 
     #[test]
     fn fixed_byte_macros() {
+        const A0: Address = address!();
+        assert_eq!(A0, Address::ZERO);
+
         const A1: Address = address!("0102030405060708090a0b0c0d0e0f1011121314");
         const A2: Address = Address(fixed_bytes!("0102030405060708090a0b0c0d0e0f1011121314"));
+        const A3: Address = Address(FixedBytes(hex!("0102030405060708090a0b0c0d0e0f1011121314")));
         assert_eq!(A1, A2);
+        assert_eq!(A1, A3);
         assert_eq!(A1, hex!("0102030405060708090a0b0c0d0e0f1011121314"));
 
         static B: Bytes = bytes!("112233");
         assert_eq!(B[..], [0x11, 0x22, 0x33]);
+
+        static EMPTY_BYTES1: Bytes = bytes!();
+        static EMPTY_BYTES2: Bytes = bytes!("");
+        assert_eq!(EMPTY_BYTES1, EMPTY_BYTES2);
+        assert_eq!(EMPTY_BYTES1, Bytes::new());
+        assert!(EMPTY_BYTES1.is_empty());
     }
 }
