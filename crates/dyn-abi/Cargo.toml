@@ -38,6 +38,8 @@ proptest = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex-literal.workspace = true
+clap.workspace = true
+clap_lex.workspace = true
 criterion.workspace = true
 ethabi = "18"
 rand = "0.8"
@@ -54,12 +56,7 @@ std = [
     "serde?/std",
     "serde_json?/std",
 ]
-eip712 = [
-    "alloy-sol-types/eip712-serde",
-    "dep:derive_more",
-    "dep:serde",
-    "dep:serde_json",
-]
+eip712 = ["alloy-sol-types/eip712-serde", "dep:derive_more", "dep:serde", "dep:serde_json"]
 arbitrary = [
     "std",
     "alloy-sol-types/arbitrary",
