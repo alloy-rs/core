@@ -765,12 +765,13 @@ macro_rules! declare_int_types {
 /// This trait is *sealed*: the list of implementors below is total.
 ///
 /// Users do not have the ability to mark additional [`IntBitCount<N>`] values
-/// as supported. Only `FixedBytes` with supported byte counts are
+/// as supported. Only `Int` and `Uint` with supported byte counts are
 /// constructable.
 pub trait SupportedInt: Sealed {
     declare_int_types! {
         /// The signed integer Rust representation.
         type Int;
+
         /// The unsigned integer Rust representation.
         type Uint;
     }
@@ -930,19 +931,19 @@ macro_rules! int_impls {
 
 #[rustfmt::skip]
 macro_rules! int_impls2 {
-    (  i8) => { int_impls! { @primitive_int i8 } };
-    ( i16) => { int_impls! { @primitive_int i16 } };
-    ( i32) => { int_impls! { @primitive_int i32 } };
-    ( i64) => { int_impls! { @primitive_int i64 } };
-    (i128) => { int_impls! { @primitive_int i128 } };
+    (  i8) => { int_impls! { @primitive_int    i8 } };
+    ( i16) => { int_impls! { @primitive_int   i16 } };
+    ( i32) => { int_impls! { @primitive_int   i32 } };
+    ( i64) => { int_impls! { @primitive_int   i64 } };
+    (i128) => { int_impls! { @primitive_int  i128 } };
 
-    (  u8) => { int_impls! { @primitive_uint u8 } };
-    ( u16) => { int_impls! { @primitive_uint u16 } };
-    ( u32) => { int_impls! { @primitive_uint u32 } };
-    ( u64) => { int_impls! { @primitive_uint u64 } };
+    (  u8) => { int_impls! { @primitive_uint   u8 } };
+    ( u16) => { int_impls! { @primitive_uint  u16 } };
+    ( u32) => { int_impls! { @primitive_uint  u32 } };
+    ( u64) => { int_impls! { @primitive_uint  u64 } };
     (u128) => { int_impls! { @primitive_uint u128 } };
 
-    (I256) => { int_impls! { @big_int I256 } };
+    (I256) => { int_impls! { @big_int  I256 } };
     (U256) => { int_impls! { @big_uint U256 } };
 }
 
