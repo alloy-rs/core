@@ -71,7 +71,7 @@ where
 pub(crate) fn split_array_ref<T, const N: usize>(slice: &[T]) -> (&[T; N], &[T]) {
     let (a, b) = slice.split_at(N);
     // SAFETY: a points to [T; N]? Yes it's [T] of length N (checked by split_at)
-    unsafe { (&*(a.as_ptr() as *const [T; N]), b) }
+    unsafe { (&*a.as_ptr().cast::<[T; N]>(), b) }
 }
 
 /// [`MaybeUninit::slice_assume_init_mut`]

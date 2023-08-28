@@ -9,7 +9,7 @@ impl Encodable for Bytes {
 
     #[inline]
     fn encode(&self, out: &mut dyn bytes::BufMut) {
-        self.0.encode(out)
+        self.0.encode(out);
     }
 }
 

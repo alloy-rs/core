@@ -16,7 +16,7 @@ impl<const N: usize> Encodable for FixedBytes<N> {
 
     #[inline]
     fn encode(&self, out: &mut dyn bytes::BufMut) {
-        self.0.encode(out)
+        self.0.encode(out);
     }
 }
 

@@ -14,7 +14,7 @@ fn contracts() {
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
-    files.sort_by_key(|e| e.path());
+    files.sort_by_key(std::fs::DirEntry::path);
     let patches = files
         .iter()
         .filter(|p| p.path().extension() == Some("patch".as_ref()));
@@ -29,9 +29,7 @@ fn contracts() {
             .arg(patch.path())
             .status()
             .unwrap();
-        if !s.success() {
-            panic!("failed to apply patch: {s}")
-        }
+        assert!(s.success(), "failed to apply patch: {s}");
     }
 
     let mut failed = false;
@@ -62,14 +60,10 @@ fn contracts() {
             .arg(patch.path())
             .status()
             .unwrap();
-        if !s.success() {
-            panic!("failed to reset patch: {s}")
-        }
+        assert!(s.success(), "failed to reset patch: {s}");
     }
 
-    if failed {
-        panic!();
-    }
+    assert!(!failed);
 }
 
 fn parse_file(path: &Path) -> Result<(), Box<dyn std::error::Error>> {

@@ -175,7 +175,7 @@ impl ExpCtxt<'_> {
             .functions
             .values()
             .flatten()
-            .flat_map(|f| f.name.clone())
+            .filter_map(|f| f.name.clone())
             .collect();
         let mut overloads_map = std::mem::take(&mut self.function_overloads);
 
@@ -274,7 +274,7 @@ impl MutateAst {
                         var.attributes.visibility(),
                         Some(ast::Visibility::Public(_) | ast::Visibility::External(_))
                     ) {
-                        functions.push((i + 1, ItemFunction::from_variable_definition(var)))
+                        functions.push((i + 1, ItemFunction::from_variable_definition(var)));
                     }
                 }
                 _ => {}
@@ -418,7 +418,7 @@ impl ExpCtxt<'_> {
     where
         I: IntoIterator<Item = &'a VariableDeclaration>,
     {
-        self.type_derives(attrs, params.into_iter().map(|p| &p.ty), derive_default)
+        self.type_derives(attrs, params.into_iter().map(|p| &p.ty), derive_default);
     }
 
     fn type_derives<T, I>(&self, attrs: &mut Vec<Attribute>, types: I, mut derive_default: bool)

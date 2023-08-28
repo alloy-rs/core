@@ -315,9 +315,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[track_caller]
     #[must_use]
     pub fn overflowing_div(self, rhs: Self) -> (Self, bool) {
-        if rhs.is_zero() {
-            panic!("attempt to divide by zero");
-        }
+        assert!(!rhs.is_zero(), "attempt to divide by zero");
         let sign = self.sign() * rhs.sign();
         // Note, signed division can't overflow!
         let unsigned = self.unsigned_abs() / rhs.unsigned_abs();
@@ -912,7 +910,7 @@ where
 {
     #[track_caller]
     fn add_assign(&mut self, rhs: T) {
-        *self = *self + rhs
+        *self = *self + rhs;
     }
 }
 
