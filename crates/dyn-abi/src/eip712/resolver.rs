@@ -326,7 +326,7 @@ impl Resolver {
         {
             let entry = self.edges.entry(type_name.clone()).or_default();
             for prop in &type_def.props {
-                entry.push(prop.type_name().to_owned());
+                entry.push(prop.root_type_name().to_owned());
             }
         } // entry dropped here
 
