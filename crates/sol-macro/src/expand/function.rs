@@ -1,8 +1,7 @@
 //! [`ItemFunction`] expansion.
 
 use super::{
-    expand_fields, expand_from_into_tuples, expand_from_into_unit, expand_tuple_types,
-    ty::expand_tokenize_func, ExpCtxt,
+    expand_fields, expand_from_into_tuples, expand_tuple_types, ty::expand_tokenize_func, ExpCtxt,
 };
 use ast::ItemFunction;
 use proc_macro2::TokenStream;
@@ -68,10 +67,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     };
 
     let converts = expand_from_into_tuples(&call_name, arguments);
-    let return_converts = returns
+    let return_params = returns
         .as_ref()
-        .map(|returns| expand_from_into_tuples(&return_name, &returns.returns))
-        .unwrap_or_else(|| expand_from_into_unit(&return_name));
+        .map(|returns| &returns.returns)
+        .unwrap_or_default();
+    let return_converts = expand_from_into_tuples(&return_name, &return_params);
 
     let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);

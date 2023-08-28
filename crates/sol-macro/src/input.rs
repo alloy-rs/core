@@ -4,7 +4,7 @@ use quote::quote;
 use std::path::PathBuf;
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
-    Error, Ident, LitStr, Result, Token,
+    Attribute, Error, Ident, LitStr, Result, Token,
 };
 
 #[derive(Clone, Debug)]
@@ -39,25 +39,33 @@ impl Parse for SolInputKind {
 
 #[derive(Clone, Debug)]
 pub struct SolInput {
+    pub attrs: Vec<Attribute>,
     pub path: Option<PathBuf>,
     pub kind: SolInputKind,
 }
 
 impl Parse for SolInput {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let attrs = Attribute::parse_inner(input)?;
         if input.peek(LitStr)
             || (input.peek(Ident) && input.peek2(Token![,]) && input.peek3(LitStr))
         {
-            Self::parse_abigen(input)
+            Self::parse_abigen(attrs, input)
         } else {
-            input.parse().map(|kind| Self { path: None, kind })
+            input.parse().map(|kind| Self {
+                attrs,
+                path: None,
+                kind,
+            })
         }
     }
 }
 
 impl SolInput {
     /// `abigen`-like syntax: `sol!(name, "path/to/file")`
-    fn parse_abigen(input: ParseStream<'_>) -> Result<Self> {
+    fn parse_abigen(mut attrs: Vec<Attribute>, input: ParseStream<'_>) -> Result<Self> {
+        attrs.extend(Attribute::parse_outer(input)?);
+
         let name = input.parse::<Option<Ident>>()?;
         if name.is_some() {
             input.parse::<Token![,]>()?;
@@ -92,7 +100,7 @@ impl SolInput {
         let s = value.trim();
         if s.is_empty() {
             let msg = if is_path {
-                "file is empty"
+                "file path is empty"
             } else {
                 "empty input is not allowed"
             };
@@ -106,6 +114,7 @@ impl SolInput {
                     .map_err(|e| Error::new(span, format!("invalid JSON: {e}")))?;
                 let name = name.ok_or_else(|| Error::new(span, "need a name for JSON ABI"))?;
                 Ok(Self {
+                    attrs,
                     path,
                     kind: SolInputKind::Json(name, json),
                 })
@@ -124,21 +133,35 @@ impl SolInput {
                 let msg = format!("expected a valid JSON ABI string or Solidity string: {e}");
                 Error::new(span, msg)
             })?;
-            Ok(Self { path, kind })
+            Ok(Self { attrs, path, kind })
         }
     }
 
     pub fn expand(self) -> Result<TokenStream> {
-        let Self { path, kind } = self;
+        let Self { attrs, path, kind } = self;
+
         let include = path.map(|p| {
             let p = p.to_str().unwrap();
             quote! { const _: () = { ::core::include_bytes!(#p); }; }
         });
+
         let tokens = match kind {
-            SolInputKind::Sol(file) => crate::expand::expand(file),
-            SolInputKind::Type(ty) => Ok(crate::expand::expand_type(&ty)),
+            SolInputKind::Sol(mut file) => {
+                file.attrs.extend(attrs);
+                crate::expand::expand(file)
+            }
+            SolInputKind::Type(ty) => {
+                if attrs.is_empty() {
+                    Ok(crate::expand::expand_type(&ty))
+                } else {
+                    Err(Error::new_spanned(
+                        attrs.first().unwrap(),
+                        "attributes are not allowed here",
+                    ))
+                }
+            }
             #[cfg(feature = "json")]
-            SolInputKind::Json(name, json) => crate::json::expand(name, json),
+            SolInputKind::Json(name, json) => crate::json::expand(name, json, attrs),
         }?;
 
         Ok(quote! {

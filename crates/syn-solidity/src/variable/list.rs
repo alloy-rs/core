@@ -27,6 +27,22 @@ pub type FieldList = Parameters<syn::token::Semi>;
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Parameters<P>(Punctuated<VariableDeclaration, P>);
 
+impl Default for &ParameterList {
+    #[inline]
+    fn default() -> Self {
+        const NEW: &ParameterList = &ParameterList::new();
+        NEW
+    }
+}
+
+impl Default for &FieldList {
+    #[inline]
+    fn default() -> Self {
+        const NEW: &FieldList = &FieldList::new();
+        NEW
+    }
+}
+
 impl<P> Deref for Parameters<P> {
     type Target = Punctuated<VariableDeclaration, P>;
 

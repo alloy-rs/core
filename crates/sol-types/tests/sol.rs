@@ -165,6 +165,7 @@ fn empty_call() {
 #[test]
 fn function_names() {
     sol! {
+        #[sol(extra_methods)]
         contract LeadingUnderscores {
             function f();
             function _f();

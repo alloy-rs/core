@@ -27,6 +27,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     } = contract;
 
     let (sol_attrs, attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let extra_methods = sol_attrs
+        .extra_methods
+        .or(cx.attrs.extra_methods)
+        .unwrap_or(false);
 
     let bytecode = sol_attrs.bytecode.map(|lit| {
         let name = Ident::new("BYTECODE", lit.span());
@@ -66,21 +70,21 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         let mut attrs = d_attrs.clone();
         let doc_str = format!("Container for all the `{name}` function calls.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
-        CallLikeExpander::from_functions(cx, name, functions).expand(attrs)
+        CallLikeExpander::from_functions(cx, name, functions).expand(attrs, extra_methods)
     });
 
     let errors_enum = (errors.len() > 1).then(|| {
         let mut attrs = d_attrs.clone();
         let doc_str = format!("Container for all the `{name}` custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
-        CallLikeExpander::from_errors(cx, name, errors).expand(attrs)
+        CallLikeExpander::from_errors(cx, name, errors).expand(attrs, extra_methods)
     });
 
     let events_enum = (events.len() > 1).then(|| {
         let mut attrs = d_attrs;
         let doc_str = format!("Container for all the `{name}` events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
-        CallLikeExpander::from_events(cx, name, events).expand_event(attrs)
+        CallLikeExpander::from_events(cx, name, events).expand_event(attrs, extra_methods)
     });
 
     let mod_attrs = attr::docs(&attrs);
@@ -92,6 +96,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             #deployed_bytecode
 
             #item_tokens
+
             #functions_enum
             #errors_enum
             #events_enum
@@ -117,10 +122,21 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 /// }
 ///
 /// impl #name {
+///     pub const SELECTORS: &'static [[u8; _]] = &[...];
+/// }
+///
+/// #if extra_methods
+/// #(
+///     impl From<#types> for #name { ... }
+///     impl TryFrom<#name> for #types { ... }
+/// )*
+///
+/// impl #name {
 ///     #(
 ///         pub fn #is_variant,#as_variant,#as_variant_mut(...) -> ... { ... }
 ///     )*
 /// }
+/// #endif
 /// ```
 struct CallLikeExpander<'a> {
     cx: &'a ExpCtxt<'a>,
@@ -219,7 +235,7 @@ impl<'a> CallLikeExpander<'a> {
         }
     }
 
-    fn expand(self, attrs: Vec<Attribute>) -> TokenStream {
+    fn expand(self, attrs: Vec<Attribute>, extra_methods: bool) -> TokenStream {
         let Self {
             name,
             variants,
@@ -232,7 +248,7 @@ impl<'a> CallLikeExpander<'a> {
         assert_eq!(variants.len(), types.len());
         let name_s = name.to_string();
         let count = variants.len();
-        let def = self.generate_enum(attrs);
+        let def = self.generate_enum(attrs, extra_methods);
         quote! {
             #def
 
@@ -302,12 +318,12 @@ impl<'a> CallLikeExpander<'a> {
         }
     }
 
-    fn expand_event(self, attrs: Vec<Attribute>) -> TokenStream {
+    fn expand_event(self, attrs: Vec<Attribute>, extra_methods: bool) -> TokenStream {
         // TODO: SolInterface for events
-        self.generate_enum(attrs)
+        self.generate_enum(attrs, extra_methods)
     }
 
-    fn generate_enum(&self, mut attrs: Vec<Attribute>) -> TokenStream {
+    fn generate_enum(&self, mut attrs: Vec<Attribute>, extra_methods: bool) -> TokenStream {
         let Self {
             name,
             variants,
@@ -330,20 +346,11 @@ impl<'a> CallLikeExpander<'a> {
             types.iter().cloned().map(ast::Type::custom),
             false,
         );
-
-        let conversions = variants
-            .iter()
-            .zip(types)
-            .map(|(v, t)| generate_variant_conversions(name, v, t));
-        let methods = variants.iter().zip(types).map(generate_variant_methods);
-
-        quote! {
+        let tokens = quote! {
             #(#attrs)*
             pub enum #name {
                 #(#variants(#types),)*
             }
-
-            #(#conversions)*
 
             #[automatically_derived]
             impl #name {
@@ -352,9 +359,27 @@ impl<'a> CallLikeExpander<'a> {
                 /// Note that the selectors might not be in the same order as the
                 /// variants, as they are sorted instead of ordered by definition.
                 pub const SELECTORS: &'static [#selector_type] = &[#selectors];
-
-                #(#methods)*
             }
+        };
+
+        if extra_methods {
+            let conversions = variants
+                .iter()
+                .zip(types)
+                .map(|(v, t)| generate_variant_conversions(name, v, t));
+            let methods = variants.iter().zip(types).map(generate_variant_methods);
+            quote! {
+                #tokens
+
+                #(#conversions)*
+
+                #[automatically_derived]
+                impl #name {
+                    #(#methods)*
+                }
+            }
+        } else {
+            tokens
         }
     }
 }
@@ -430,12 +455,17 @@ fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
 
 /// `heck` doesn't treat numbers as new words, and discards leading underscores.
 fn snakify(s: &str) -> String {
-    let leading = s.chars().take_while(|c| *c == '_');
-    let mut output: Vec<char> = leading.chain(s.to_snake_case().chars()).collect();
+    let leading_n = s.chars().take_while(|c| *c == '_').count();
+    let (leading, s) = s.split_at(leading_n);
+    let mut output: Vec<char> = leading.chars().chain(s.to_snake_case().chars()).collect();
 
     let mut num_starts = vec![];
     for (pos, c) in output.iter().enumerate() {
-        if pos != 0 && c.is_ascii_digit() && !output[pos - 1].is_ascii_digit() {
+        if pos != 0
+            && c.is_ascii_digit()
+            && !output[pos - 1].is_ascii_digit()
+            && !output[pos - 1].is_ascii_punctuation()
+        {
             num_starts.push(pos);
         }
     }

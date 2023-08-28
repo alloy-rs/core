@@ -1,9 +1,9 @@
 use alloy_json_abi::{ContractObject, JsonAbi};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
-use syn::Result;
+use syn::{Attribute, Result};
 
-pub fn expand(name: Ident, json: ContractObject) -> Result<TokenStream> {
+pub fn expand(name: Ident, json: ContractObject, attrs: Vec<Attribute>) -> Result<TokenStream> {
     let ContractObject {
         abi,
         bytecode,
@@ -21,8 +21,7 @@ pub fn expand(name: Ident, json: ContractObject) -> Result<TokenStream> {
     });
 
     let tokens = quote! {
-        #![sol(all_derives)]
-
+        #(#attrs)*
         #[sol(#bytecode #deployed_bytecode)]
         #abi
     };
