@@ -52,10 +52,10 @@ impl fmt::Display for TypeFunction {
         }
         f.write_str(")")?;
         for attr in &self.attributes.0 {
-            write!(f, " {}", attr)?;
+            write!(f, " {attr}")?;
         }
         if let Some(returns) = &self.returns {
-            write!(f, " {}", returns)?;
+            write!(f, " {returns}")?;
         }
         Ok(())
     }

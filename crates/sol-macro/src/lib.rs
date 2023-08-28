@@ -90,7 +90,12 @@ mod utils;
 /// but this may change in the future.
 ///
 /// List of all `#[sol(...)]` supported attributes:
-/// - `all_derives`: adds `#[derive(...)]` attributes to all generated types
+/// - `all_derives`: adds all possible `#[derive(...)]` attributes to all
+///   generated types. May significantly increase compile times due to all the
+///   extra generated code. This is the default behaviour of [`abigen`][abigen]
+/// - `extra_methods`: adds extra implementations and methods to all applicable
+///   generated types, such as `From` impls and `as_<variant>` methods. May
+///   significantly increase compile times due to all the extra generated code
 /// - `bytecode = <hex string literal>`: specifies the creation/init bytecode of
 ///   a contract. This will emit a `static` item with the specified bytes.
 /// - `deployed_bytecode = <hex string literal>`: specifies the deployed
@@ -158,18 +163,20 @@ mod utils;
 /// ## JSON ABI
 ///
 /// Contracts can also be generated from ABI JSON strings and files, similar to
-/// the [ethers-rs `abigen!` macro](https://docs.rs/ethers/latest/ethers/contract/macro.abigen.html).
+/// the [ethers-rs `abigen!` macro][abigen].
 ///
 /// JSON objects containing the `abi`, `evm`, `bytecode`, `deployedBytecode`,
 /// and similar keys are also supported.
 ///
 /// Note that only valid JSON is supported, and not the human-readable ABI
-/// format, also used by `abigen!`. This should instead be easily converted to
+/// format, also used by [`abigen!`][abigen]. This should instead be easily converted to
 /// [normal Solidity input](#solidity).
 ///
 /// Prefer using [Solidity input](#solidity) when possible, as the JSON ABI
 /// format omits some information which is useful to this macro, such as enum
 /// variants and visibility modifiers on functions.
+///
+/// [abigen]: https://docs.rs/ethers/latest/ethers/contract/macro.abigen.html
 /// ```ignore
 #[doc = include_str!("../doctests/json.rs")]
 /// ```

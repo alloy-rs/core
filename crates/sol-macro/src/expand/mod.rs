@@ -504,7 +504,7 @@ fn expand_field(i: usize, ty: &Type, name: Option<&SolIdent>) -> TokenStream {
 /// Generates an anonymous name from an integer. Used in `anon_name`
 #[inline]
 pub fn generate_name(i: usize) -> Ident {
-    format_ident!("_{}", i)
+    format_ident!("_{i}")
 }
 
 /// Returns the name of a parameter, or a generated name if it is `None`.
@@ -515,41 +515,8 @@ fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Ident {
     }
 }
 
-/// Expands `From` impls for an empty struct and the unit type.
-fn expand_from_into_unit(name: &Ident) -> TokenStream {
-    quote! {
-        #[doc(hidden)]
-        type UnderlyingSolTuple<'a> = ();
-        #[doc(hidden)]
-        type UnderlyingRustTuple<'a> = ();
-
-        impl From<()> for #name {
-            #[inline]
-            fn from((): ()) -> Self {
-                Self {}
-            }
-        }
-
-        impl From<#name> for () {
-            #[inline]
-            fn from(#name {}: #name) {}
-        }
-
-        impl ::alloy_sol_types::Encodable<()> for #name {
-            #[inline]
-            fn to_tokens(&self) {}
-        }
-    }
-}
-
 /// Expands `From` impls for a list of types and the corresponding tuple.
-///
-/// See [`expand_from_into_tuples`].
 fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStream {
-    if fields.is_empty() {
-        return expand_from_into_unit(name)
-    }
-
     let names = fields.names().enumerate().map(anon_name);
 
     let names2 = names.clone();

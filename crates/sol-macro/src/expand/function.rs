@@ -1,8 +1,7 @@
 //! [`ItemFunction`] expansion.
 
 use super::{
-    expand_fields, expand_from_into_tuples, expand_from_into_unit, expand_tuple_types,
-    ty::expand_tokenize_func, ExpCtxt,
+    expand_fields, expand_from_into_tuples, expand_tuple_types, ty::expand_tokenize_func, ExpCtxt,
 };
 use ast::ItemFunction;
 use proc_macro2::TokenStream;
@@ -37,41 +36,31 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         // ignore functions without names (constructors, modifiers...)
         return Ok(quote!())
     };
+    let returns = returns.as_ref().map(|r| &r.returns).unwrap_or_default();
 
     cx.assert_resolved(arguments)?;
-    if let Some(returns) = returns {
-        cx.assert_resolved(&returns.returns)?;
+    if !returns.is_empty() {
+        cx.assert_resolved(returns)?;
     }
 
     let (_sol_attrs, mut call_attrs) = crate::attr::SolAttrs::parse(attrs)?;
     let mut return_attrs = call_attrs.clone();
     cx.derives(&mut call_attrs, arguments, true);
-    if let Some(returns) = returns {
-        cx.derives(&mut return_attrs, &returns.returns, true);
+    if !returns.is_empty() {
+        cx.derives(&mut return_attrs, returns, true);
     }
 
     let call_name = cx.call_name(function);
     let return_name = cx.return_name(function);
 
     let call_fields = expand_fields(arguments);
-    let return_fields = if let Some(returns) = returns {
-        expand_fields(&returns.returns).collect::<Vec<_>>()
-    } else {
-        vec![]
-    };
+    let return_fields = expand_fields(returns);
 
     let call_tuple = expand_tuple_types(arguments.types()).0;
-    let return_tuple = if let Some(returns) = returns {
-        expand_tuple_types(returns.returns.types()).0
-    } else {
-        quote! { () }
-    };
+    let return_tuple = expand_tuple_types(returns.types()).0;
 
     let converts = expand_from_into_tuples(&call_name, arguments);
-    let return_converts = returns
-        .as_ref()
-        .map(|returns| expand_from_into_tuples(&return_name, &returns.returns))
-        .unwrap_or_else(|| expand_from_into_unit(&return_name));
+    let return_converts = expand_from_into_tuples(&return_name, returns);
 
     let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);

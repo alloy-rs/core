@@ -1,5 +1,8 @@
 use heck::{ToKebabCase, ToLowerCamelCase, ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
-use syn::{Attribute, Error, LitStr, Result};
+use syn::{Attribute, Error, LitBool, LitStr, Result};
+
+const DUPLICATE_ERROR: &str = "duplicate attribute";
+const UNKNOWN_ERROR: &str = "unknown `sol` attribute";
 
 pub fn docs(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|attr| attr.path().is_ident("doc"))
@@ -9,17 +12,20 @@ pub fn derives(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|attr| attr.path().is_ident("derive"))
 }
 
-/// `#[sol(...)]` attributes.
-///
-/// When adding a new attribute:
-/// 1. add a field to this struct,
-/// 2. add a match arm in the `parse` function below,
-/// 3. add test cases in the `tests` module at the bottom of this file,
-/// 4. implement the attribute in the `expand` module,
-/// 5. document the attribute in the [`crate::sol!`] macro docs.
+// When adding a new attribute:
+// 1. add a field to this struct,
+// 2. add a match arm in the `parse` function below,
+// 3. add test cases in the `tests` module at the bottom of this file,
+// 4. implement the attribute in the `expand` module,
+// 5. document the attribute in the [`crate::sol!`] macro docs.
+
+/// `#[sol(...)]` attributes. See [`crate::sol!`] for a list of all possible
+/// attributes.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct SolAttrs {
-    pub all_derives: Option<()>,
+    pub all_derives: Option<bool>,
+    pub extra_methods: Option<bool>,
+
     // TODO: Implement
     pub rename: Option<LitStr>,
     // TODO: Implement
@@ -51,17 +57,29 @@ impl SolAttrs {
                         match s.as_str() {
                             $(
                                 stringify!($l) => if this.$l.is_some() {
-                                    return Err(meta.error("duplicate attribute"))
+                                    return Err(meta.error(DUPLICATE_ERROR))
                                 } else {
                                     this.$l = Some($e);
                                 },
                             )*
-                            _ => return Err(meta.error("unknown `sol` attribute")),
+                            _ => return Err(meta.error(UNKNOWN_ERROR)),
                         }
                     };
                 }
 
+                // `path` => true, `path = <bool>` => <bool>
+                let bool = || {
+                    if let Ok(input) = meta.value() {
+                        input.parse::<LitBool>().map(|lit| lit.value)
+                    } else {
+                        Ok(true)
+                    }
+                };
+
+                // `path = "<str>"`
                 let lit = || meta.value()?.parse::<LitStr>();
+
+                // `path = "0x<hex>"`
                 let bytes = || {
                     let lit = lit()?;
                     let v = lit.value();
@@ -76,7 +94,9 @@ impl SolAttrs {
                 };
 
                 match_! {
-                    all_derives => (),
+                    all_derives => bool()?,
+                    extra_methods => bool()?,
+
                     rename => lit()?,
                     rename_all => CasingStyle::from_lit(&lit()?)?,
 
@@ -154,6 +174,13 @@ mod tests {
     use syn::parse_quote;
 
     macro_rules! test_sol_attrs {
+        ($($group:ident { $($t:tt)* })+) => {$(
+            #[test]
+            fn $group() {
+                test_sol_attrs! { $($t)* }
+            }
+        )+};
+
         ($( $(#[$attr:meta])* => $expected:expr ),+ $(,)?) => {$(
             run_test(
                 &[$(stringify!(#[$attr])),*],
@@ -189,15 +216,20 @@ mod tests {
             .collect();
         match (SolAttrs::parse(&attrs), expected) {
             (Ok((actual, _)), Ok(expected)) => assert_eq!(actual, expected, "{attrs_s:?}"),
-            (Err(actual), Err(expected)) => assert_eq!(actual.to_string(), expected, "{attrs_s:?}"),
+            (Err(actual), Err(expected)) => {
+                if !expected.is_empty() {
+                    assert_eq!(actual.to_string(), expected, "{attrs_s:?}")
+                }
+            }
             (a, b) => panic!("assertion failed: `{a:?} != {b:?}`: {attrs_s:?}"),
         }
     }
 
-    #[test]
-    fn sol_attrs() {
-        test_sol_attrs! {
+    test_sol_attrs! {
+        top_level {
+            #[cfg] => Ok(SolAttrs::default()),
             #[cfg()] => Ok(SolAttrs::default()),
+            #[cfg = ""] => Ok(SolAttrs::default()),
             #[derive()] #[sol()] => Ok(SolAttrs::default()),
             #[sol()] => Ok(SolAttrs::default()),
             #[sol()] #[sol()] => Ok(SolAttrs::default()),
@@ -206,17 +238,32 @@ mod tests {
 
             #[sol(() = "")] => Err("unexpected token in nested attribute, expected ident"),
             #[sol(? = "")] => Err("unexpected token in nested attribute, expected ident"),
+            #[sol(::a)] => Err("expected ident"),
+            #[sol(::a = "")] => Err("expected ident"),
             #[sol(a::b = "")] => Err("expected ident"),
+        }
 
-            #[sol(all_derives)] => Ok(sol_attrs! { all_derives: () }),
-            #[sol(all_derives)] #[sol(all_derives)] => Err("duplicate attribute"),
+        extra {
+            #[sol(all_derives)] => Ok(sol_attrs! { all_derives: true }),
+            #[sol(all_derives = true)] => Ok(sol_attrs! { all_derives: true }),
+            #[sol(all_derives = false)] => Ok(sol_attrs! { all_derives: false }),
+            #[sol(all_derives = "false")] => Err("expected boolean literal"),
+            #[sol(all_derives)] #[sol(all_derives)] => Err(DUPLICATE_ERROR),
 
+            #[sol(extra_methods)] => Ok(sol_attrs! { extra_methods: true }),
+            #[sol(extra_methods = true)] => Ok(sol_attrs! { extra_methods: true }),
+            #[sol(extra_methods = false)] => Ok(sol_attrs! { extra_methods: false }),
+        }
+
+        rename {
             #[sol(rename = "foo")] => Ok(sol_attrs! { rename: parse_quote!("foo") }),
 
             #[sol(rename_all = "foo")] => Err("unsupported casing: foo"),
             #[sol(rename_all = "camelcase")] => Ok(sol_attrs! { rename_all: CasingStyle::Camel }),
-            #[sol(rename_all = "camelCase")] #[sol(rename_all = "PascalCase")] => Err("duplicate attribute"),
+            #[sol(rename_all = "camelCase")] #[sol(rename_all = "PascalCase")] => Err(DUPLICATE_ERROR),
+        }
 
+        bytecode {
             #[sol(deployed_bytecode = "0x1234")] => Ok(sol_attrs! { deployed_bytecode: parse_quote!("1234") }),
             #[sol(bytecode = "0x1234")] => Ok(sol_attrs! { bytecode: parse_quote!("1234") }),
             #[sol(bytecode = "1234")] => Ok(sol_attrs! { bytecode: parse_quote!("1234") }),
