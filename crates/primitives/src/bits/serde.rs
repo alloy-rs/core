@@ -103,11 +103,12 @@ mod tests {
             FixedBytes([0, 1, 2, 3, 4])
         );
 
-        assert!(format!(
-            "{}",
-            serde_json::from_value::<TestCase<4>>(json).unwrap_err()
-        )
-        .contains("invalid length 5, expected exactly 4 bytes"),);
+        let e = serde_json::from_value::<TestCase<4>>(json).unwrap_err();
+        assert!(
+            e.to_string()
+                .contains("invalid length 5, expected exactly 4 bytes"),
+            "{e}"
+        );
     }
 
     #[test]
