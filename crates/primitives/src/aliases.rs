@@ -65,7 +65,7 @@ pub type BlockHash = B256;
 /// A block number.
 pub type BlockNumber = u64;
 
-/// A transaction hash is a kecack hash of an RLP encoded signed transaction.
+/// A transaction hash is a keccak hash of an RLP encoded signed transaction.
 pub type TxHash = B256;
 
 /// The sequence number of all existing transactions.
