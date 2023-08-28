@@ -251,7 +251,9 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenType<'de> for FixedSeqToken<T,
         if Self::DYNAMIC {
             enc.append_indirection();
         } else {
-            self.0.iter().for_each(|inner| inner.head_append(enc));
+            for inner in &self.0 {
+                inner.head_append(enc);
+            }
         }
     }
 
@@ -268,11 +270,13 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, 
         let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
         enc.push_offset(head_words as u32);
 
-        self.0.iter().for_each(|t| {
-            t.head_append(enc);
-            enc.bump_offset(t.tail_words() as u32);
-        });
-        self.0.iter().for_each(|t| t.tail_append(enc));
+        for inner in &self.0 {
+            inner.head_append(enc);
+            enc.bump_offset(inner.tail_words() as u32);
+        }
+        for inner in &self.0 {
+            inner.tail_append(enc);
+        }
 
         enc.pop_offset();
     }
@@ -365,11 +369,15 @@ impl<'de, T: TokenType<'de>> TokenSeq<'de> for DynSeqToken<T> {
     fn encode_sequence(&self, enc: &mut Encoder) {
         let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
         enc.push_offset(head_words as u32);
-        self.0.iter().for_each(|t| {
-            t.head_append(enc);
-            enc.bump_offset(t.tail_words() as u32);
-        });
-        self.0.iter().for_each(|t| t.tail_append(enc));
+
+        for inner in &self.0 {
+            inner.head_append(enc);
+            enc.bump_offset(inner.tail_words() as u32);
+        }
+        for inner in &self.0 {
+            inner.tail_append(enc);
+        }
+
         enc.pop_offset();
     }
 

@@ -326,10 +326,9 @@ impl Resolver {
         // Insert the edges into the graph
         {
             let entry = self.edges.entry(type_name.clone()).or_default();
-            type_def
-                .props
-                .iter()
-                .for_each(|prop| entry.push(prop.root_type_name().to_owned()));
+            for prop in type_def.props.iter() {
+                entry.push(prop.type_name().to_owned());
+            }
         } // entry dropped here
 
         // Insert the node into the graph

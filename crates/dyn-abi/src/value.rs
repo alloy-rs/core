@@ -612,7 +612,9 @@ impl DynSolValue {
                 if s.iter().any(Self::is_dynamic) {
                     enc.append_indirection();
                 } else {
-                    s.iter().for_each(|inner| inner.head_append(enc));
+                    for inner in s {
+                        inner.head_append(enc);
+                    }
                 }
             }
         }
@@ -668,7 +670,9 @@ impl DynSolValue {
                 buf.extend_from_slice(&num.to_be_bytes::<32>()[(32 - *size)..]);
             }
             as_fixed_seq!(inner) | Self::Array(inner) => {
-                inner.iter().for_each(|v| v.encode_packed_to(buf));
+                for val in inner {
+                    val.encode_packed_to(buf);
+                }
             }
         }
     }

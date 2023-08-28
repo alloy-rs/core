@@ -1,5 +1,5 @@
 use crate::aliases;
-use core::{fmt, ops, str};
+use core::{fmt, iter, ops, str};
 use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
 
 /// A byte array of fixed length (`[u8; N]`).
@@ -232,48 +232,49 @@ impl<const N: usize> fmt::UpperHex for FixedBytes<N> {
 impl<const N: usize> ops::BitAnd for FixedBytes<N> {
     type Output = Self;
 
-    fn bitand(self, rhs: Self) -> Self::Output {
-        let mut other = self;
-        other.iter_mut().zip(rhs.iter()).for_each(|(a, b)| *a &= *b);
-        other
+    #[inline]
+    fn bitand(mut self, rhs: Self) -> Self::Output {
+        self &= rhs;
+        self
     }
 }
 
 impl<const N: usize> ops::BitAndAssign for FixedBytes<N> {
+    #[inline]
     fn bitand_assign(&mut self, rhs: Self) {
-        self.iter_mut().zip(rhs.iter()).for_each(|(a, b)| *a &= *b);
+        iter::zip(self, &rhs).for_each(|(a, b)| *a &= *b);
     }
 }
 
 impl<const N: usize> ops::BitOr for FixedBytes<N> {
     type Output = Self;
 
-    fn bitor(self, rhs: Self) -> Self::Output {
-        let mut other = self;
-        other.iter_mut().zip(rhs.iter()).for_each(|(a, b)| *a |= *b);
-        other
+    #[inline]
+    fn bitor(mut self, rhs: Self) -> Self::Output {
+        self |= rhs;
+        self
     }
 }
 
 impl<const N: usize> ops::BitOrAssign for FixedBytes<N> {
+    #[inline]
     fn bitor_assign(&mut self, rhs: Self) {
-        self.iter_mut().zip(rhs.iter()).for_each(|(a, b)| *a |= *b);
+        iter::zip(self, rhs).for_each(|(a, b)| *a |= b);
     }
 }
 
 impl<const N: usize> ops::BitXor for FixedBytes<N> {
     type Output = Self;
 
-    fn bitxor(self, rhs: Self) -> Self::Output {
-        let mut other = self;
-        other.iter_mut().zip(rhs.iter()).for_each(|(a, b)| *a ^= *b);
-        other
+    fn bitxor(mut self, rhs: Self) -> Self::Output {
+        self ^= rhs;
+        self
     }
 }
 
 impl<const N: usize> ops::BitXorAssign for FixedBytes<N> {
     fn bitxor_assign(&mut self, rhs: Self) {
-        self.iter_mut().zip(rhs.iter()).for_each(|(a, b)| *a ^= *b);
+        iter::zip(self, rhs).for_each(|(a, b)| *a ^= b);
     }
 }
 
