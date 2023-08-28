@@ -504,7 +504,7 @@ fn expand_field(i: usize, ty: &Type, name: Option<&SolIdent>) -> TokenStream {
 /// Generates an anonymous name from an integer. Used in `anon_name`
 #[inline]
 pub fn generate_name(i: usize) -> Ident {
-    format_ident!("_{}", i)
+    format_ident!("_{i}")
 }
 
 /// Returns the name of a parameter, or a generated name if it is `None`.
