@@ -71,7 +71,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         .as_ref()
         .map(|returns| &returns.returns)
         .unwrap_or_default();
-    let return_converts = expand_from_into_tuples(&return_name, &return_params);
+    let return_converts = expand_from_into_tuples(&return_name, return_params);
 
     let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);
