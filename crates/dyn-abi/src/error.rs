@@ -85,10 +85,7 @@ impl From<hex::FromHexError> for DynAbiError {
 impl DynAbiError {
     #[cfg(feature = "eip712")]
     #[inline]
-    pub(crate) fn type_mismatch(
-        expected: crate::DynSolType,
-        actual: &serde_json::Value,
-    ) -> Self {
+    pub(crate) fn type_mismatch(expected: crate::DynSolType, actual: &serde_json::Value) -> Self {
         Self::TypeMismatch {
             expected,
             actual: actual.clone(),
