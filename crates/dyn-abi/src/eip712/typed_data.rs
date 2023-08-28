@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 #[derive(
     Clone, Debug, Default, PartialEq, Eq, Serialize, Deref, DerefMut, From, Into, IntoIterator,
 )]
-pub struct Eip712Types(#[into_iterator(ref, ref mut, owned)] BTreeMap<String, Vec<PropertyDef>>);
+pub struct Eip712Types(#[into_iterator(owned, ref, ref_mut)] BTreeMap<String, Vec<PropertyDef>>);
 
 impl<'de> Deserialize<'de> for Eip712Types {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {

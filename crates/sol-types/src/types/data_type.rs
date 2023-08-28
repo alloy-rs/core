@@ -527,10 +527,7 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
 
     #[inline]
     fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        for token in token.as_array().iter() {
-            T::type_check(token)?;
-        }
-        Ok(())
+        token.as_array().iter().try_for_each(T::type_check)
     }
 
     #[inline]

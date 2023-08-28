@@ -242,13 +242,12 @@ impl<'de> Deserialize<'de> for Resolver {
 
 impl From<Eip712Types> for Resolver {
     fn from(types: Eip712Types) -> Self {
-        let mut graph = Self::default();
-        graph.ingest_types(&types);
-        graph
+        Self::from(&types)
     }
 }
 
 impl From<&Eip712Types> for Resolver {
+    #[inline]
     fn from(types: &Eip712Types) -> Self {
         let mut graph = Self::default();
         graph.ingest_types(types);
@@ -259,7 +258,7 @@ impl From<&Eip712Types> for Resolver {
 impl From<&Resolver> for Eip712Types {
     fn from(resolver: &Resolver) -> Self {
         let mut types = Self::default();
-        for (name, ty) in resolver.nodes.iter() {
+        for (name, ty) in &resolver.nodes {
             types.insert(name.clone(), ty.props.clone());
         }
         types
@@ -326,7 +325,7 @@ impl Resolver {
         // Insert the edges into the graph
         {
             let entry = self.edges.entry(type_name.clone()).or_default();
-            for prop in type_def.props.iter() {
+            for prop in &type_def.props {
                 entry.push(prop.type_name().to_owned());
             }
         } // entry dropped here
@@ -337,7 +336,7 @@ impl Resolver {
 
     /// Ingest a `Types` object into the resolver, discarding any invalid types.
     pub fn ingest_types(&mut self, types: &Eip712Types) {
-        for (type_name, props) in types.iter() {
+        for (type_name, props) in types {
             if let Ok(ty) = TypeDef::new(type_name.clone(), props.to_vec()) {
                 self.ingest(ty);
             }
@@ -363,7 +362,7 @@ impl Resolver {
 
         if !resolution.contains(&this_type) {
             resolution.push(this_type);
-            for edge in edges.iter() {
+            for edge in edges {
                 let rt = edge.as_str().try_into()?;
                 self.linearize_into(resolution, rt)?;
             }

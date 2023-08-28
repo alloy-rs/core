@@ -242,7 +242,7 @@ impl<const N: usize> ops::BitAnd for FixedBytes<N> {
 impl<const N: usize> ops::BitAndAssign for FixedBytes<N> {
     #[inline]
     fn bitand_assign(&mut self, rhs: Self) {
-        iter::zip(self, &rhs).for_each(|(a, b)| *a &= *b);
+        iter::zip(self, rhs).for_each(|(a, b)| *a &= b);
     }
 }
 
