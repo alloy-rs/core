@@ -113,7 +113,7 @@ where
 
     #[inline]
     fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
-        IntBitCount::<BITS>::encode_packed_to_int(*rust, out)
+        IntBitCount::<BITS>::encode_packed_to_int(*rust, out);
     }
 }
 
@@ -165,7 +165,7 @@ where
 
     #[inline]
     fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
-        IntBitCount::<BITS>::encode_packed_to_uint(*rust, out)
+        IntBitCount::<BITS>::encode_packed_to_uint(*rust, out);
     }
 }
 

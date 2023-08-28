@@ -60,7 +60,7 @@ impl Spanned for VariableAttributes {
     }
 
     fn set_span(&mut self, span: Span) {
-        crate::utils::set_spans_clone(&mut self.0, span)
+        crate::utils::set_spans_clone(&mut self.0, span);
     }
 }
 
@@ -132,7 +132,7 @@ impl Eq for VariableAttribute {}
 
 impl Hash for VariableAttribute {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        mem::discriminant(self).hash(state)
+        mem::discriminant(self).hash(state);
     }
 }
 

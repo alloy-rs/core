@@ -159,11 +159,11 @@ impl<P> Parameters<P> {
 
     #[cfg(feature = "visit")]
     pub fn visit_types(&self, mut f: impl FnMut(&Type)) {
-        self.types().for_each(|ty| ty.visit(&mut f))
+        self.types().for_each(|ty| ty.visit(&mut f));
     }
 
     #[cfg(feature = "visit-mut")]
     pub fn visit_types_mut(&mut self, mut f: impl FnMut(&mut Type)) {
-        self.types_mut().for_each(|ty| ty.visit_mut(&mut f))
+        self.types_mut().for_each(|ty| ty.visit_mut(&mut f));
     }
 }

@@ -251,14 +251,14 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenType<'de> for FixedSeqToken<T,
         if Self::DYNAMIC {
             enc.append_indirection();
         } else {
-            self.0.iter().for_each(|inner| inner.head_append(enc))
+            self.0.iter().for_each(|inner| inner.head_append(enc));
         }
     }
 
     #[inline]
     fn tail_append(&self, enc: &mut Encoder) {
         if Self::DYNAMIC {
-            self.encode_sequence(enc)
+            self.encode_sequence(enc);
         }
     }
 }
@@ -446,7 +446,7 @@ impl<'de: 'a, 'a> TokenType<'de> for PackedSeqToken<'a> {
 
     #[inline]
     fn tail_append(&self, enc: &mut Encoder) {
-        enc.append_packed_seq(self.0)
+        enc.append_packed_seq(self.0);
     }
 }
 

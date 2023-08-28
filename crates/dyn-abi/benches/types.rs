@@ -22,13 +22,13 @@ fn parse(c: &mut Criterion) {
         b.iter(|| {
             let kw = KEYWORDS.choose(rng).unwrap();
             DynSolType::parse(black_box(*kw)).unwrap()
-        })
+        });
     });
     g.bench_function("complex", |b| {
         b.iter(|| {
             let complex = COMPLEX.choose(rng).unwrap();
             DynSolType::parse(black_box(*complex)).unwrap()
-        })
+        });
     });
 
     g.finish();
@@ -48,7 +48,7 @@ fn format(c: &mut Criterion) {
         b.iter(|| {
             let kw = unsafe { keyword_types.choose(rng).unwrap_unchecked() };
             black_box(kw).sol_type_name()
-        })
+        });
     });
     g.bench_function("complex", |b| {
         let complex_types = COMPLEX
@@ -60,7 +60,7 @@ fn format(c: &mut Criterion) {
         b.iter(|| {
             let complex = unsafe { complex_types.choose(rng).unwrap_unchecked() };
             black_box(complex).sol_type_name()
-        })
+        });
     });
 
     g.finish();

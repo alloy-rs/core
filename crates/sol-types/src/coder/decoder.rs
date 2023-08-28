@@ -208,7 +208,7 @@ impl<'de> Decoder<'de> {
     /// offset.
     #[inline]
     pub fn take_offset(&mut self, child: Decoder<'de>) {
-        self.set_offset(child.offset + (self.buf.len() - child.buf.len()))
+        self.set_offset(child.offset + (self.buf.len() - child.buf.len()));
     }
 
     /// Sets the current offset in the buffer.

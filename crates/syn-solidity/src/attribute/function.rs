@@ -60,7 +60,7 @@ impl Spanned for FunctionAttributes {
     }
 
     fn set_span(&mut self, span: Span) {
-        crate::utils::set_spans_clone(&mut self.0, span)
+        crate::utils::set_spans_clone(&mut self.0, span);
     }
 }
 
