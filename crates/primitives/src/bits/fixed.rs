@@ -292,28 +292,43 @@ impl<const N: usize> FixedBytes<N> {
     /// Array of Zero bytes.
     pub const ZERO: Self = Self([0u8; N]);
 
-    /// Instantiates a new fixed hash from the given bytes array.
+    /// Instantiates a new [`FixedBytes`] from the given bytes array.
     #[inline]
     pub const fn new(bytes: [u8; N]) -> Self {
         Self(bytes)
     }
 
-    /// Utility function to create a fixed hash with the last byte set to `x`.
+    /// Utility function to create a [`FixedBytes`] with the last byte set to
+    /// `x`.
     #[inline]
     pub const fn with_last_byte(x: u8) -> Self {
         let mut bytes = [0u8; N];
-        bytes[N - 1] = x;
+        if N > 0 {
+            bytes[N - 1] = x;
+        }
         Self(bytes)
     }
 
-    /// Instantiates a new fixed hash with cryptographically random content.
+    /// Returns a new [`FixedBytes`] where all bits are set to the given byte.
+    #[inline]
+    pub const fn repeat_byte(byte: u8) -> Self {
+        Self([byte; N])
+    }
+
+    /// Returns the size of this byte array (`N`).
+    #[inline(always)]
+    pub const fn len_bytes() -> usize {
+        N
+    }
+
+    /// Instantiates a new [`FixedBytes`] with cryptographically random content.
     #[cfg(feature = "getrandom")]
     #[inline]
     pub fn random() -> Self {
         Self::try_random().unwrap()
     }
 
-    /// Instantiates a new fixed hash with cryptographically random content.
+    /// Instantiates a new [`FixedBytes`] with cryptographically random content.
     #[cfg(feature = "getrandom")]
     pub fn try_random() -> Result<Self, getrandom::Error> {
         let mut bytes: [_; N] = crate::impl_core::uninit_array();
@@ -348,19 +363,7 @@ impl<const N: usize> FixedBytes<N> {
         FixedBytes(result)
     }
 
-    /// Returns a new fixed hash where all bits are set to the given byte.
-    #[inline]
-    pub const fn repeat_byte(byte: u8) -> Self {
-        Self([byte; N])
-    }
-
-    /// Returns the size of this hash in bytes.
-    #[inline]
-    pub const fn len_bytes() -> usize {
-        N
-    }
-
-    /// Create a new fixed-hash from the given slice `src`.
+    /// Create a new [`FixedBytes`] from the given slice `src`.
     ///
     /// # Note
     ///
@@ -371,8 +374,8 @@ impl<const N: usize> FixedBytes<N> {
     /// If the length of `src` and the number of bytes in `Self` do not match.
     #[track_caller]
     #[inline]
-    pub fn from_slice(src: &[u8]) -> Self {
-        Self(src.try_into().unwrap())
+    pub fn from_slice(value: &[u8]) -> Self {
+        Self::try_from(value).unwrap()
     }
 
     /// Returns a slice containing the entire array. Equivalent to `&s[..]`.
@@ -391,7 +394,7 @@ impl<const N: usize> FixedBytes<N> {
     /// Returns `true` if all bits set in `b` are also set in `self`.
     #[inline]
     pub fn covers(&self, b: &Self) -> bool {
-        &(*b & *self) == b
+        (*b & *self) == *b
     }
 
     /// Returns `true` if no bits are set.
@@ -410,7 +413,6 @@ impl<const N: usize> FixedBytes<N> {
             }
             i += 1;
         }
-
         true
     }
 
@@ -460,7 +462,8 @@ impl<const N: usize> FixedBytes<N> {
         } else {
             buf.format(self)
         };
-        f.write_str(&s[(!prefix as usize) * 2..])
+        // SAFETY: The buffer is guaranteed to be at least 2 bytes in length.
+        f.write_str(unsafe { s.get_unchecked((!prefix as usize) * 2..) })
     }
 }
 

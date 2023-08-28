@@ -7,15 +7,16 @@ use core::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(i8)]
 pub enum Sign {
-    /// Greater than or equal to zero.
-    Positive = 1,
     /// Less than zero.
     Negative = -1,
+    /// Greater than or equal to zero.
+    Positive = 1,
 }
 
 impl ops::Mul for Sign {
     type Output = Self;
 
+    #[inline]
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::Positive, Self::Positive) => Self::Positive,
@@ -29,6 +30,7 @@ impl ops::Mul for Sign {
 impl ops::Neg for Sign {
     type Output = Self;
 
+    #[inline]
     fn neg(self) -> Self::Output {
         match self {
             Self::Positive => Self::Negative,
@@ -40,6 +42,7 @@ impl ops::Neg for Sign {
 impl ops::Not for Sign {
     type Output = Self;
 
+    #[inline]
     fn not(self) -> Self::Output {
         match self {
             Self::Positive => Self::Negative,
@@ -59,24 +62,25 @@ impl fmt::Display for Sign {
 
 impl Sign {
     /// Equality at compile-time.
+    #[inline]
     pub const fn const_eq(self, other: Self) -> bool {
         self as i8 == other as i8
     }
 
     /// Returns whether the sign is positive.
-    #[inline(always)]
+    #[inline]
     pub const fn is_positive(&self) -> bool {
         matches!(self, Self::Positive)
     }
 
     /// Returns whether the sign is negative.
-    #[inline(always)]
+    #[inline]
     pub const fn is_negative(&self) -> bool {
         matches!(self, Self::Negative)
     }
 
     /// Returns the sign character.
-    #[inline(always)]
+    #[inline]
     pub const fn as_char(&self) -> char {
         match self {
             Self::Positive => '+',
