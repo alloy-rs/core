@@ -13,10 +13,10 @@ pub enum Sign {
     Negative = -1,
 }
 
-impl ops::Mul<Sign> for Sign {
-    type Output = Sign;
+impl ops::Mul for Sign {
+    type Output = Self;
 
-    fn mul(self, rhs: Sign) -> Self::Output {
+    fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::Positive, Self::Positive) => Self::Positive,
             (Self::Positive, Self::Negative) => Self::Negative,
@@ -27,7 +27,7 @@ impl ops::Mul<Sign> for Sign {
 }
 
 impl ops::Neg for Sign {
-    type Output = Sign;
+    type Output = Self;
 
     fn neg(self) -> Self::Output {
         match self {
@@ -38,7 +38,7 @@ impl ops::Neg for Sign {
 }
 
 impl ops::Not for Sign {
-    type Output = Sign;
+    type Output = Self;
 
     fn not(self) -> Self::Output {
         match self {

@@ -102,14 +102,14 @@ impl From<String> for DynSolValue {
     }
 }
 
-impl From<Vec<DynSolValue>> for DynSolValue {
+impl From<Vec<Self>> for DynSolValue {
     #[inline]
     fn from(value: Vec<Self>) -> Self {
         Self::Array(value)
     }
 }
 
-impl<const N: usize> From<[DynSolValue; N]> for DynSolValue {
+impl<const N: usize> From<[Self; N]> for DynSolValue {
     #[inline]
     fn from(value: [Self; N]) -> Self {
         Self::FixedArray(value.to_vec())

@@ -105,7 +105,7 @@ mod tests {
 
         assert!(format!(
             "{}",
-            serde_json::from_value::<TestCase<4>>(json.clone()).unwrap_err()
+            serde_json::from_value::<TestCase<4>>(json).unwrap_err()
         )
         .contains("invalid length 5, expected exactly 4 bytes"),);
     }

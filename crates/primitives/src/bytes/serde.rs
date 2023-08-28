@@ -88,7 +88,7 @@ mod tests {
         let json = serde_json::json! {{"variable": [0,1,2,3,4]}};
 
         assert_eq!(
-            serde_json::from_value::<TestCase>(json.clone())
+            serde_json::from_value::<TestCase>(json)
                 .unwrap()
                 .variable,
             Bytes::from(Vec::from([0, 1, 2, 3, 4]))

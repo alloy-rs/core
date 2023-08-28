@@ -5,7 +5,7 @@ use core::fmt;
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// A type string parsing error.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     /// Invalid type string, extra chars, or invalid structure.
     InvalidTypeString(String),

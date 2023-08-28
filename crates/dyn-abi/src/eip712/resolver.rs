@@ -242,7 +242,7 @@ impl<'de> Deserialize<'de> for Resolver {
 
 impl From<Eip712Types> for Resolver {
     fn from(types: Eip712Types) -> Self {
-        let mut graph = Resolver::default();
+        let mut graph = Self::default();
         graph.ingest_types(&types);
         graph
     }
@@ -250,7 +250,7 @@ impl From<Eip712Types> for Resolver {
 
 impl From<&Eip712Types> for Resolver {
     fn from(types: &Eip712Types) -> Self {
-        let mut graph = Resolver::default();
+        let mut graph = Self::default();
         graph.ingest_types(types);
         graph
     }
@@ -258,7 +258,7 @@ impl From<&Eip712Types> for Resolver {
 
 impl From<&Resolver> for Eip712Types {
     fn from(resolver: &Resolver) -> Self {
-        let mut types = Eip712Types::default();
+        let mut types = Self::default();
         for (name, ty) in resolver.nodes.iter() {
             types.insert(name.clone(), ty.props.clone());
         }
@@ -269,7 +269,7 @@ impl From<&Resolver> for Eip712Types {
 impl Resolver {
     /// Instantiate a new resolver from a `SolStruct` type.
     pub fn from_struct<S: SolStruct>() -> Self {
-        let mut resolver = Resolver::default();
+        let mut resolver = Self::default();
         resolver.ingest_sol_struct::<S>();
         resolver
     }

@@ -13,7 +13,7 @@ sol! {
     function overloaded(string);
 
     /// Implements [`SolError`].
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Eq)]
     error MyError(uint256 a, uint256 b);
 }
 

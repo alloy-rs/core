@@ -2,7 +2,7 @@ use core::fmt;
 use ruint::BaseConvertError;
 
 /// The error type that is returned when parsing a signed integer.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ParseSignedError {
     /// Error that occurs when an invalid digit is encountered while parsing.
     Ruint(ruint::ParseError),

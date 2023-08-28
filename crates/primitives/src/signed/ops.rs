@@ -894,7 +894,7 @@ impl<const BITS: usize, const LIMBS: usize> cmp::Ord for Signed<BITS, LIMBS> {
 // arithmetic ops - implemented above
 impl<T, const BITS: usize, const LIMBS: usize> ops::Add<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     type Output = Self;
 
@@ -906,7 +906,7 @@ where
 
 impl<T, const BITS: usize, const LIMBS: usize> ops::AddAssign<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     #[track_caller]
     fn add_assign(&mut self, rhs: T) {
@@ -916,7 +916,7 @@ where
 
 impl<T, const BITS: usize, const LIMBS: usize> ops::Sub<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     type Output = Self;
 
@@ -928,7 +928,7 @@ where
 
 impl<T, const BITS: usize, const LIMBS: usize> ops::SubAssign<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     #[track_caller]
     fn sub_assign(&mut self, rhs: T) {
@@ -938,7 +938,7 @@ where
 
 impl<T, const BITS: usize, const LIMBS: usize> ops::Mul<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     type Output = Self;
 
@@ -950,7 +950,7 @@ where
 
 impl<T, const BITS: usize, const LIMBS: usize> ops::MulAssign<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     #[track_caller]
     fn mul_assign(&mut self, rhs: T) {
@@ -960,7 +960,7 @@ where
 
 impl<T, const BITS: usize, const LIMBS: usize> ops::Div<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     type Output = Self;
 
@@ -972,7 +972,7 @@ where
 
 impl<T, const BITS: usize, const LIMBS: usize> ops::DivAssign<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     #[track_caller]
     fn div_assign(&mut self, rhs: T) {
@@ -982,7 +982,7 @@ where
 
 impl<T, const BITS: usize, const LIMBS: usize> ops::Rem<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     type Output = Self;
 
@@ -994,7 +994,7 @@ where
 
 impl<T, const BITS: usize, const LIMBS: usize> ops::RemAssign<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     #[track_caller]
     fn rem_assign(&mut self, rhs: T) {
@@ -1004,21 +1004,21 @@ where
 
 impl<T, const BITS: usize, const LIMBS: usize> iter::Sum<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     #[track_caller]
     fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Signed::ZERO, |acc, x| acc + x)
+        iter.fold(Self::ZERO, |acc, x| acc + x)
     }
 }
 
 impl<T, const BITS: usize, const LIMBS: usize> iter::Product<T> for Signed<BITS, LIMBS>
 where
-    T: Into<Signed<BITS, LIMBS>>,
+    T: Into<Self>,
 {
     #[track_caller]
     fn product<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Signed::ONE, |acc, x| acc * x)
+        iter.fold(Self::ONE, |acc, x| acc * x)
     }
 }
 
@@ -1028,7 +1028,7 @@ impl<const BITS: usize, const LIMBS: usize> ops::BitAnd for Signed<BITS, LIMBS> 
 
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self::Output {
-        Signed(self.0 & rhs.0)
+        Self(self.0 & rhs.0)
     }
 }
 
@@ -1044,7 +1044,7 @@ impl<const BITS: usize, const LIMBS: usize> ops::BitOr for Signed<BITS, LIMBS> {
 
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
-        Signed(self.0 | rhs.0)
+        Self(self.0 | rhs.0)
     }
 }
 
@@ -1060,7 +1060,7 @@ impl<const BITS: usize, const LIMBS: usize> ops::BitXor for Signed<BITS, LIMBS> 
 
     #[inline(always)]
     fn bitxor(self, rhs: Self) -> Self::Output {
-        Signed(self.0 ^ rhs.0)
+        Self(self.0 ^ rhs.0)
     }
 }
 
@@ -1073,7 +1073,7 @@ impl<const BITS: usize, const LIMBS: usize> ops::BitXorAssign for Signed<BITS, L
 
 // unary ops
 impl<const BITS: usize, const LIMBS: usize> ops::Neg for Signed<BITS, LIMBS> {
-    type Output = Signed<BITS, LIMBS>;
+    type Output = Self;
 
     #[inline(always)]
     #[track_caller]
@@ -1083,10 +1083,10 @@ impl<const BITS: usize, const LIMBS: usize> ops::Neg for Signed<BITS, LIMBS> {
 }
 
 impl<const BITS: usize, const LIMBS: usize> ops::Not for Signed<BITS, LIMBS> {
-    type Output = Signed<BITS, LIMBS>;
+    type Output = Self;
 
     #[inline(always)]
     fn not(self) -> Self::Output {
-        Signed(!self.0)
+        Self(!self.0)
     }
 }

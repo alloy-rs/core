@@ -6,7 +6,7 @@ sol! {
     /// Interface of the ERC20 standard as defined in [the EIP].
     ///
     /// [the EIP]: https://eips.ethereum.org/EIPS/eip-20
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Eq)]
     interface IERC20 {
         event Transfer(address indexed from, address indexed to, uint256 value);
         event Approval(address indexed owner, address indexed spender, uint256 value);

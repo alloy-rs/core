@@ -318,7 +318,7 @@ impl Iterator for IntoItems {
 iter_impl!(traits IntoItems);
 
 impl<'de> Deserialize<'de> for JsonAbi {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<JsonAbi, D::Error> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         deserializer.deserialize_seq(JsonAbiVisitor)
     }
 }

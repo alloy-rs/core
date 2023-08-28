@@ -88,7 +88,7 @@ pub trait TokenSeq<'a>: TokenType<'a> {
 }
 
 /// A single EVM word - T for any value type.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct WordToken(pub Word);
 
 impl From<Word> for WordToken {
@@ -188,7 +188,7 @@ impl WordToken {
 }
 
 /// A Fixed Sequence - `T[N]`
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FixedSeqToken<T, const N: usize>(pub [T; N]);
 
 impl<T, const N: usize> TryFrom<Vec<T>> for FixedSeqToken<T, N> {
@@ -305,7 +305,7 @@ impl<T, const N: usize> FixedSeqToken<T, N> {
 }
 
 /// A Dynamic Sequence - `T[]`
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DynSeqToken<T>(pub Vec<T>);
 
 impl<T> From<Vec<T>> for DynSeqToken<T> {
@@ -388,7 +388,7 @@ impl<T> DynSeqToken<T> {
 }
 
 /// A Packed Sequence - `bytes` or `string`
-#[derive(Clone, PartialEq, Copy)]
+#[derive(Clone, PartialEq, Eq, Copy)]
 pub struct PackedSeqToken<'a>(pub &'a [u8]);
 
 impl<'a> fmt::Debug for PackedSeqToken<'a> {
