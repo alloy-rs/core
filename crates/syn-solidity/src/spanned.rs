@@ -94,7 +94,7 @@ impl<T: Spanned + Clone, P> Spanned for Punctuated<T, P> {
     }
 
     fn set_span(&mut self, span: Span) {
-        crate::utils::set_spans(self, span)
+        crate::utils::set_spans(self, span);
     }
 }
 
@@ -129,7 +129,9 @@ impl<T: Spanned> Spanned for [T] {
 
     #[inline]
     fn set_span(&mut self, span: Span) {
-        self.iter_mut().for_each(|item| item.set_span(span));
+        for item in self {
+            item.set_span(span);
+        }
     }
 }
 

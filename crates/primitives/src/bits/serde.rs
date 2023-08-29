@@ -70,8 +70,9 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bincode as _;
+    use alloc::string::ToString;
     use serde::Deserialize;
+
     #[derive(Debug, Deserialize)]
     struct TestCase<const N: usize> {
         fixed: FixedBytes<N>,
@@ -103,11 +104,12 @@ mod tests {
             FixedBytes([0, 1, 2, 3, 4])
         );
 
-        assert!(format!(
-            "{}",
-            serde_json::from_value::<TestCase<4>>(json.clone()).unwrap_err()
-        )
-        .contains("invalid length 5, expected exactly 4 bytes"),);
+        let e = serde_json::from_value::<TestCase<4>>(json).unwrap_err();
+        let es = e.to_string();
+        assert!(
+            es.contains("invalid length 5, expected exactly 4 bytes"),
+            "{es}"
+        );
     }
 
     #[test]

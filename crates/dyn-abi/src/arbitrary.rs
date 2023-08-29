@@ -163,7 +163,7 @@ impl<'a> arbitrary::Arbitrary<'a> for DynSolType {
             Choice::CustomStruct => {
                 let name = u.arbitrary::<AString>()?.0;
                 let (prop_names, tuple) = u
-                    .arbitrary_iter::<(AString, DynSolType)>()?
+                    .arbitrary_iter::<(AString, Self)>()?
                     .flatten()
                     .map(|(a, b)| (a.0, b))
                     .unzip();
@@ -466,7 +466,7 @@ impl DynSolValue {
             any::<Address>().prop_map(Self::Address),
             int_strategy::<I256>().prop_map(|(x, sz)| Self::Int(x, sz)),
             int_strategy::<U256>().prop_map(|(x, sz)| Self::Uint(x, sz)),
-            (any::<B256>(), 1..=32usize).prop_map(|(x, sz)| DynSolValue::FixedBytes(x, sz)),
+            (any::<B256>(), 1..=32usize).prop_map(|(x, sz)| Self::FixedBytes(x, sz)),
             any::<Vec<u8>>().prop_map(Self::Bytes),
             any::<String>().prop_map(Self::String),
         ]

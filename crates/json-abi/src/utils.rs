@@ -35,7 +35,7 @@ pub(crate) fn signature(name: &str, inputs: &[Param]) -> String {
 }
 
 pub(crate) fn signature_raw(name: &str, inputs: &[Param], preimage: &mut String) {
-    signature!(name, inputs, preimage)
+    signature!(name, inputs, preimage);
 }
 
 pub(crate) fn event_signature(name: &str, inputs: &[EventParam]) -> String {
@@ -45,7 +45,7 @@ pub(crate) fn event_signature(name: &str, inputs: &[EventParam]) -> String {
 }
 
 pub(crate) fn event_signature_raw(name: &str, inputs: &[EventParam], preimage: &mut String) {
-    signature!(name, inputs, preimage)
+    signature!(name, inputs, preimage);
 }
 
 /// `keccak256(preimage)[..4]`

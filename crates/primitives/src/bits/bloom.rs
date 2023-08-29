@@ -47,8 +47,8 @@ impl BloomInput<'_> {
 }
 
 impl From<BloomInput<'_>> for Bloom {
-    fn from(input: BloomInput<'_>) -> Bloom {
-        let mut bloom = Bloom::default();
+    fn from(input: BloomInput<'_>) -> Self {
+        let mut bloom = Self::default();
         bloom.accrue(input);
         bloom
     }
@@ -75,7 +75,7 @@ impl Bloom {
     /// Returns whether the bloom filter contains the given input (allowing for
     /// false positives)
     pub fn contains_input(&self, input: BloomInput<'_>) -> bool {
-        let bloom: Bloom = input.into();
+        let bloom: Self = input.into();
         self.contains(bloom)
     }
 
@@ -110,7 +110,7 @@ impl Bloom {
     }
 
     /// Accrues the input into the bloom filter.
-    pub fn accrue_bloom<B: Borrow<Bloom>>(&mut self, bloom: B) {
+    pub fn accrue_bloom<B: Borrow<Self>>(&mut self, bloom: B) {
         let other = bloom.borrow();
         *self |= *other;
     }

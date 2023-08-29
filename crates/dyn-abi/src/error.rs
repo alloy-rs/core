@@ -57,27 +57,27 @@ impl fmt::Display for DynAbiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             #[cfg(feature = "eip712")]
-            DynAbiError::TypeMismatch { expected, actual } => {
+            Self::TypeMismatch { expected, actual } => {
                 write!(f, "Type mismatch, expected: {expected:?}, actual: {actual}")
             }
             #[cfg(feature = "eip712")]
-            DynAbiError::MissingType(name) => write!(f, "Missing type in type resolution: {name}"),
+            Self::MissingType(name) => write!(f, "Missing type in type resolution: {name}"),
             #[cfg(feature = "eip712")]
-            DynAbiError::CircularDependency(dep) => write!(f, "Circular dependency: {dep}"),
+            Self::CircularDependency(dep) => write!(f, "Circular dependency: {dep}"),
             #[cfg(feature = "eip712")]
-            DynAbiError::InvalidPropertyDefinition(def) => {
+            Self::InvalidPropertyDefinition(def) => {
                 write!(f, "Invalid property definition: {def}")
             }
 
-            DynAbiError::HexError(h) => h.fmt(f),
-            DynAbiError::TypeParserError(e) => e.fmt(f),
+            Self::HexError(h) => h.fmt(f),
+            Self::TypeParserError(e) => e.fmt(f),
         }
     }
 }
 
 impl From<hex::FromHexError> for DynAbiError {
     fn from(e: hex::FromHexError) -> Self {
-        DynAbiError::HexError(e)
+        Self::HexError(e)
     }
 }
 
@@ -85,11 +85,8 @@ impl From<hex::FromHexError> for DynAbiError {
 impl DynAbiError {
     #[cfg(feature = "eip712")]
     #[inline]
-    pub(crate) fn type_mismatch(
-        expected: crate::DynSolType,
-        actual: &serde_json::Value,
-    ) -> DynAbiError {
-        DynAbiError::TypeMismatch {
+    pub(crate) fn type_mismatch(expected: crate::DynSolType, actual: &serde_json::Value) -> Self {
+        Self::TypeMismatch {
             expected,
             actual: actual.clone(),
         }
@@ -97,19 +94,19 @@ impl DynAbiError {
 
     #[cfg(feature = "eip712")]
     #[inline]
-    pub(crate) fn invalid_property_def(def: &str) -> DynAbiError {
-        DynAbiError::InvalidPropertyDefinition(def.into())
+    pub(crate) fn invalid_property_def(def: &str) -> Self {
+        Self::InvalidPropertyDefinition(def.into())
     }
 
     #[cfg(feature = "eip712")]
     #[inline]
-    pub(crate) fn missing_type(name: &str) -> DynAbiError {
-        DynAbiError::MissingType(name.into())
+    pub(crate) fn missing_type(name: &str) -> Self {
+        Self::MissingType(name.into())
     }
 
     #[cfg(feature = "eip712")]
     #[inline]
-    pub(crate) fn circular_dependency(dep: &str) -> DynAbiError {
-        DynAbiError::CircularDependency(dep.into())
+    pub(crate) fn circular_dependency(dep: &str) -> Self {
+        Self::CircularDependency(dep.into())
     }
 }

@@ -472,7 +472,7 @@ fn snakify(s: &str) -> String {
     // need to do in reverse, because after inserting, all chars after the point of
     // insertion are off
     for i in num_starts.into_iter().rev() {
-        output.insert(i, '_')
+        output.insert(i, '_');
     }
     output.into_iter().collect()
 }

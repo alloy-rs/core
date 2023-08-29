@@ -172,6 +172,6 @@ impl<T: SolStruct> SolType for T {
     #[inline]
     fn encode_packed_to<'a>(rust: &Self::RustType, out: &mut Vec<u8>) {
         let tuple = rust.to_rust();
-        TupleFor::<T>::encode_packed_to(&tuple, out)
+        TupleFor::<T>::encode_packed_to(&tuple, out);
     }
 }

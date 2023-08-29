@@ -86,7 +86,7 @@ impl FromIterator<Type> for TypeTuple {
                 let mut types = iter.into_iter().collect::<Punctuated<_, _>>();
                 // ensure trailing comma for single item tuple
                 if !types.trailing_punct() && types.len() == 1 {
-                    types.push_punct(Default::default())
+                    types.push_punct(Default::default());
                 }
                 types
             },

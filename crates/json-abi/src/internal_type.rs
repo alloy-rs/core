@@ -41,19 +41,19 @@ pub enum InternalType {
 
 impl From<BorrowedInternalType<'_>> for InternalType {
     #[inline]
-    fn from(borrowed: BorrowedInternalType<'_>) -> InternalType {
+    fn from(borrowed: BorrowedInternalType<'_>) -> Self {
         match borrowed {
-            BorrowedInternalType::AddressPayable(s) => InternalType::AddressPayable(s.to_string()),
-            BorrowedInternalType::Contract(s) => InternalType::Contract(s.to_string()),
-            BorrowedInternalType::Enum { contract, ty } => InternalType::Enum {
+            BorrowedInternalType::AddressPayable(s) => Self::AddressPayable(s.to_string()),
+            BorrowedInternalType::Contract(s) => Self::Contract(s.to_string()),
+            BorrowedInternalType::Enum { contract, ty } => Self::Enum {
                 contract: contract.map(String::from),
                 ty: ty.to_string(),
             },
-            BorrowedInternalType::Struct { contract, ty } => InternalType::Struct {
+            BorrowedInternalType::Struct { contract, ty } => Self::Struct {
                 contract: contract.map(String::from),
                 ty: ty.to_string(),
             },
-            BorrowedInternalType::Other { contract, ty } => InternalType::Other {
+            BorrowedInternalType::Other { contract, ty } => Self::Other {
                 contract: contract.map(String::from),
                 ty: ty.to_string(),
             },
@@ -77,7 +77,7 @@ impl Serialize for InternalType {
 }
 
 impl<'de> Deserialize<'de> for InternalType {
-    fn deserialize<D>(deserializer: D) -> Result<InternalType, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -95,38 +95,38 @@ impl InternalType {
     /// True if the instance is a `struct` variant.
     #[inline]
     pub const fn is_struct(&self) -> bool {
-        matches!(self, InternalType::Struct { .. })
+        matches!(self, Self::Struct { .. })
     }
 
     /// True if the instance is a `enum` variant.
     #[inline]
     pub const fn is_enum(&self) -> bool {
-        matches!(self, InternalType::Enum { .. })
+        matches!(self, Self::Enum { .. })
     }
 
     /// True if the instance is a `contract` variant.
     #[inline]
     pub const fn is_contract(&self) -> bool {
-        matches!(self, InternalType::Contract(_))
+        matches!(self, Self::Contract(_))
     }
 
     /// True if the instance is a `address payable` variant.
     #[inline]
     pub const fn is_address_payable(&self) -> bool {
-        matches!(self, InternalType::AddressPayable(_))
+        matches!(self, Self::AddressPayable(_))
     }
 
     /// True if the instance is a `other` variant.
     #[inline]
     pub const fn is_other(&self) -> bool {
-        matches!(self, InternalType::Other { .. })
+        matches!(self, Self::Other { .. })
     }
 
     /// Fallible conversion to a variant.
     #[inline]
     pub fn as_struct(&self) -> Option<(Option<&str>, &str)> {
         match self {
-            InternalType::Struct { contract, ty } => Some((contract.as_deref(), ty)),
+            Self::Struct { contract, ty } => Some((contract.as_deref(), ty)),
             _ => None,
         }
     }
@@ -135,7 +135,7 @@ impl InternalType {
     #[inline]
     pub fn as_enum(&self) -> Option<(Option<&str>, &str)> {
         match self {
-            InternalType::Enum { contract, ty } => Some((contract.as_deref(), ty)),
+            Self::Enum { contract, ty } => Some((contract.as_deref(), ty)),
             _ => None,
         }
     }
@@ -144,7 +144,7 @@ impl InternalType {
     #[inline]
     pub fn as_contract(&self) -> Option<&str> {
         match self {
-            InternalType::Contract(s) => Some(s),
+            Self::Contract(s) => Some(s),
             _ => None,
         }
     }
@@ -153,7 +153,7 @@ impl InternalType {
     #[inline]
     pub fn as_other(&self) -> Option<(Option<&str>, &str)> {
         match self {
-            InternalType::Other { contract, ty } => Some((contract.as_deref(), ty)),
+            Self::Other { contract, ty } => Some((contract.as_deref(), ty)),
             _ => None,
         }
     }
@@ -213,7 +213,7 @@ impl InternalType {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum BorrowedInternalType<'a> {
+pub enum BorrowedInternalType<'a> {
     AddressPayable(&'a str),
     Contract(&'a str),
     Enum {

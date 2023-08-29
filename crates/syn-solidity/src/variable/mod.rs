@@ -81,7 +81,7 @@ impl VariableDeclaration {
     pub fn fmt_eip712(&self, f: &mut impl Write) -> fmt::Result {
         write!(f, "{}", self.ty)?;
         if let Some(name) = &self.name {
-            write!(f, " {}", name)?;
+            write!(f, " {name}")?;
         }
         Ok(())
     }

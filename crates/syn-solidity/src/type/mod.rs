@@ -272,7 +272,7 @@ impl Type {
     /// address.
     pub fn parse_payable(mut self, input: ParseStream<'_>) -> Result<Self> {
         if let Self::Address(_, opt @ None) = &mut self {
-            *opt = input.parse()?
+            *opt = input.parse()?;
         }
         Ok(self)
     }
@@ -357,7 +357,7 @@ impl Type {
                 crate::visit::visit_type(self, ty);
             }
         }
-        VisitType(f).visit_type(self)
+        VisitType(f).visit_type(self);
     }
 
     /// Traverses this type while calling `f`.

@@ -88,7 +88,7 @@ pub trait TokenSeq<'a>: TokenType<'a> {
 }
 
 /// A single EVM word - T for any value type.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct WordToken(pub Word);
 
 impl From<Word> for WordToken {
@@ -188,7 +188,7 @@ impl WordToken {
 }
 
 /// A Fixed Sequence - `T[N]`
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FixedSeqToken<T, const N: usize>(pub [T; N]);
 
 impl<T, const N: usize> TryFrom<Vec<T>> for FixedSeqToken<T, N> {
@@ -251,14 +251,16 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenType<'de> for FixedSeqToken<T,
         if Self::DYNAMIC {
             enc.append_indirection();
         } else {
-            self.0.iter().for_each(|inner| inner.head_append(enc))
+            for inner in &self.0 {
+                inner.head_append(enc);
+            }
         }
     }
 
     #[inline]
     fn tail_append(&self, enc: &mut Encoder) {
         if Self::DYNAMIC {
-            self.encode_sequence(enc)
+            self.encode_sequence(enc);
         }
     }
 }
@@ -268,11 +270,13 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, 
         let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
         enc.push_offset(head_words as u32);
 
-        self.0.iter().for_each(|t| {
-            t.head_append(enc);
-            enc.bump_offset(t.tail_words() as u32);
-        });
-        self.0.iter().for_each(|t| t.tail_append(enc));
+        for inner in &self.0 {
+            inner.head_append(enc);
+            enc.bump_offset(inner.tail_words() as u32);
+        }
+        for inner in &self.0 {
+            inner.tail_append(enc);
+        }
 
         enc.pop_offset();
     }
@@ -305,7 +309,7 @@ impl<T, const N: usize> FixedSeqToken<T, N> {
 }
 
 /// A Dynamic Sequence - `T[]`
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DynSeqToken<T>(pub Vec<T>);
 
 impl<T> From<Vec<T>> for DynSeqToken<T> {
@@ -365,11 +369,15 @@ impl<'de, T: TokenType<'de>> TokenSeq<'de> for DynSeqToken<T> {
     fn encode_sequence(&self, enc: &mut Encoder) {
         let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
         enc.push_offset(head_words as u32);
-        self.0.iter().for_each(|t| {
-            t.head_append(enc);
-            enc.bump_offset(t.tail_words() as u32);
-        });
-        self.0.iter().for_each(|t| t.tail_append(enc));
+
+        for inner in &self.0 {
+            inner.head_append(enc);
+            enc.bump_offset(inner.tail_words() as u32);
+        }
+        for inner in &self.0 {
+            inner.tail_append(enc);
+        }
+
         enc.pop_offset();
     }
 
@@ -388,7 +396,7 @@ impl<T> DynSeqToken<T> {
 }
 
 /// A Packed Sequence - `bytes` or `string`
-#[derive(Clone, PartialEq, Copy)]
+#[derive(Clone, PartialEq, Eq, Copy)]
 pub struct PackedSeqToken<'a>(pub &'a [u8]);
 
 impl<'a> fmt::Debug for PackedSeqToken<'a> {
@@ -446,7 +454,7 @@ impl<'de: 'a, 'a> TokenType<'de> for PackedSeqToken<'a> {
 
     #[inline]
     fn tail_append(&self, enc: &mut Encoder) {
-        enc.append_packed_seq(self.0)
+        enc.append_packed_seq(self.0);
     }
 }
 

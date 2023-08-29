@@ -49,6 +49,6 @@ impl<T: ToTokens, const N: usize> ToTokens for ExprArray<T, N> {
                 t.to_tokens(tokens);
                 syn::token::Comma(self.span).to_tokens(tokens);
             }
-        })
+        });
     }
 }

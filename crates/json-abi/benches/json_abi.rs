@@ -16,18 +16,18 @@ fn serde_(g: &mut BenchmarkGroup<'_, WallTime>, name: &str, s: &str) {
 
     g.bench_function(format!("{name}/ser/alloy"), |b| {
         let abi = serde_json::from_str::<A>(s).unwrap();
-        b.iter(|| serde_json::to_string(black_box(&abi)).unwrap())
+        b.iter(|| serde_json::to_string(black_box(&abi)).unwrap());
     });
     g.bench_function(format!("{name}/ser/ethabi"), |b| {
         let abi = serde_json::from_str::<E>(s).unwrap();
-        b.iter(|| serde_json::to_string(black_box(&abi)).unwrap())
+        b.iter(|| serde_json::to_string(black_box(&abi)).unwrap());
     });
 
     g.bench_function(format!("{name}/de/alloy"), |b| {
-        b.iter(|| -> A { serde_json::from_str(black_box(s)).unwrap() })
+        b.iter(|| -> A { serde_json::from_str(black_box(s)).unwrap() });
     });
     g.bench_function(format!("{name}/de/ethabi"), |b| {
-        b.iter(|| -> E { serde_json::from_str(black_box(s)).unwrap() })
+        b.iter(|| -> E { serde_json::from_str(black_box(s)).unwrap() });
     });
 }
 
@@ -55,10 +55,10 @@ fn signature_(g: &mut BenchmarkGroup<'_, WallTime>, name: &str, s: &str) {
     assert_eq!(alloy.signature(), ethabi.signature());
 
     g.bench_function(format!("{name}/alloy"), |b| {
-        b.iter(|| black_box(&alloy).signature())
+        b.iter(|| black_box(&alloy).signature());
     });
     g.bench_function(format!("{name}/ethabi"), |b| {
-        b.iter(|| black_box(&ethabi).signature())
+        b.iter(|| black_box(&ethabi).signature());
     });
 }
 

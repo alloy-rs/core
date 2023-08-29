@@ -162,6 +162,6 @@ mod tests {
                     "Person(address wallet,string name)".try_into().unwrap(),
                 ]
             }
-        )
+        );
     }
 }

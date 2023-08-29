@@ -10,18 +10,18 @@ impl DynSolType {
     /// Coerce a [`serde_json::Value`] to a [`DynSolValue`] via this type.
     pub fn coerce(&self, value: &serde_json::Value) -> DynAbiResult<DynSolValue> {
         match self {
-            DynSolType::Address => address(value),
-            DynSolType::Function => function(value),
-            DynSolType::Bool => bool(value),
-            DynSolType::Int(n) => int(*n, value),
-            DynSolType::Uint(n) => uint(*n, value),
-            DynSolType::FixedBytes(n) => fixed_bytes(*n, value),
-            DynSolType::String => string(value),
-            DynSolType::Bytes => bytes(value),
-            DynSolType::Array(inner) => array(inner, value),
-            DynSolType::FixedArray(inner, n) => fixed_array(inner, *n, value),
-            DynSolType::Tuple(inner) => tuple(inner, value),
-            DynSolType::CustomStruct {
+            Self::Address => address(value),
+            Self::Function => function(value),
+            Self::Bool => bool(value),
+            Self::Int(n) => int(*n, value),
+            Self::Uint(n) => uint(*n, value),
+            Self::FixedBytes(n) => fixed_bytes(*n, value),
+            Self::String => string(value),
+            Self::Bytes => bytes(value),
+            Self::Array(inner) => array(inner, value),
+            Self::FixedArray(inner, n) => fixed_array(inner, *n, value),
+            Self::Tuple(inner) => tuple(inner, value),
+            Self::CustomStruct {
                 name,
                 prop_names,
                 tuple,
@@ -342,6 +342,6 @@ mod tests {
                     .into()
                 ]
             }
-        )
+        );
     }
 }

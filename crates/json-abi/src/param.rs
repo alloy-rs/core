@@ -177,7 +177,7 @@ impl Param {
     #[inline]
     pub fn selector_type_raw(&self, s: &mut String) {
         if self.components.is_empty() {
-            s.push_str(&self.ty)
+            s.push_str(&self.ty);
         } else {
             crate::utils::signature_raw("", &self.components, s);
             // checked during deserialization, but might be invalid from a user
@@ -389,7 +389,7 @@ impl EventParam {
     #[inline]
     pub fn selector_type_raw(&self, s: &mut String) {
         if self.components.is_empty() {
-            s.push_str(&self.ty)
+            s.push_str(&self.ty);
         } else {
             crate::utils::signature_raw("", &self.components, s);
             // checked during deserialization, but might be invalid from a user

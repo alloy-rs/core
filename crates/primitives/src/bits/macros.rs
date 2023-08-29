@@ -1,8 +1,8 @@
 /// Wrap a fixed-size byte array in a newtype, delegating all methods to the
 /// underlying [`crate::FixedBytes`].
 ///
-/// This functionally creates a new named FixedBytes that cannot be
-/// type-confused for another named FixedBytes.
+/// This functionally creates a new named `FixedBytes` that cannot be
+/// type-confused for another named `FixedBytes`.
 ///
 /// # Example
 ///

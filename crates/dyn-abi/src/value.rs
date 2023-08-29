@@ -102,14 +102,14 @@ impl From<String> for DynSolValue {
     }
 }
 
-impl From<Vec<DynSolValue>> for DynSolValue {
+impl From<Vec<Self>> for DynSolValue {
     #[inline]
     fn from(value: Vec<Self>) -> Self {
         Self::Array(value)
     }
 }
 
-impl<const N: usize> From<[DynSolValue; N]> for DynSolValue {
+impl<const N: usize> From<[Self; N]> for DynSolValue {
     #[inline]
     fn from(value: [Self; N]) -> Self {
         Self::FixedArray(value.to_vec())
@@ -541,7 +541,7 @@ impl DynSolValue {
                     if val.is_dynamic() {
                         return 1
                     }
-                    sum += val.head_words()
+                    sum += val.head_words();
                 }
                 sum
             }
@@ -577,7 +577,7 @@ impl DynSolValue {
                 let mut sum = 0;
                 for val in tuple {
                     any_dynamic = any_dynamic || val.is_dynamic();
-                    sum += val.total_words()
+                    sum += val.total_words();
                 }
                 any_dynamic as usize * sum
             }
@@ -610,9 +610,11 @@ impl DynSolValue {
 
             as_fixed_seq!(s) => {
                 if s.iter().any(Self::is_dynamic) {
-                    enc.append_indirection()
+                    enc.append_indirection();
                 } else {
-                    s.iter().for_each(|inner| inner.head_append(enc))
+                    for inner in s {
+                        inner.head_append(enc);
+                    }
                 }
             }
         }
@@ -662,13 +664,15 @@ impl DynSolValue {
                 } else {
                     bytes[start] &= 0x7f;
                 }
-                buf.extend_from_slice(&bytes[start..])
+                buf.extend_from_slice(&bytes[start..]);
             }
             Self::Uint(num, size) => {
-                buf.extend_from_slice(&num.to_be_bytes::<32>()[(32 - *size)..])
+                buf.extend_from_slice(&num.to_be_bytes::<32>()[(32 - *size)..]);
             }
             as_fixed_seq!(inner) | Self::Array(inner) => {
-                inner.iter().for_each(|v| v.encode_packed_to(buf))
+                for val in inner {
+                    val.encode_packed_to(buf);
+                }
             }
         }
     }

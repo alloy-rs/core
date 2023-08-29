@@ -64,8 +64,8 @@ impl<'de> serde::Deserialize<'de> for Bytes {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bincode as _;
     use serde::Deserialize;
+
     #[derive(Debug, Deserialize)]
     struct TestCase {
         variable: Bytes,
@@ -88,9 +88,7 @@ mod tests {
         let json = serde_json::json! {{"variable": [0,1,2,3,4]}};
 
         assert_eq!(
-            serde_json::from_value::<TestCase>(json.clone())
-                .unwrap()
-                .variable,
+            serde_json::from_value::<TestCase>(json).unwrap().variable,
             Bytes::from(Vec::from([0, 1, 2, 3, 4]))
         );
     }

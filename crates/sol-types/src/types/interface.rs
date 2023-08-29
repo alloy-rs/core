@@ -178,7 +178,7 @@ impl<T> TryFrom<ContractError<T>> for Revert {
     type Error = ContractError<T>;
 
     #[inline]
-    fn try_from(value: ContractError<T>) -> Result<Revert, Self::Error> {
+    fn try_from(value: ContractError<T>) -> Result<Self, Self::Error> {
         match value {
             ContractError::Revert(inner) => Ok(inner),
             _ => Err(value),
@@ -197,7 +197,7 @@ impl<T> TryFrom<ContractError<T>> for Panic {
     type Error = ContractError<T>;
 
     #[inline]
-    fn try_from(value: ContractError<T>) -> Result<Panic, Self::Error> {
+    fn try_from(value: ContractError<T>) -> Result<Self, Self::Error> {
         match value {
             ContractError::Panic(inner) => Ok(inner),
             _ => Err(value),
