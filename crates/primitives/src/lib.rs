@@ -19,9 +19,7 @@ extern crate alloc;
 
 // Used in Serde tests.
 #[cfg(test)]
-use serde as _;
-#[cfg(test)]
-use serde_json as _;
+use {bincode as _, serde as _, serde_json as _};
 
 pub mod aliases;
 #[doc(no_inline)]

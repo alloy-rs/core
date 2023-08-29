@@ -64,8 +64,8 @@ impl<'de> serde::Deserialize<'de> for Bytes {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bincode as _;
     use serde::Deserialize;
+
     #[derive(Debug, Deserialize)]
     struct TestCase {
         variable: Bytes,
