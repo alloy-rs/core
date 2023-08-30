@@ -1,6 +1,6 @@
 use crate::{
     eip712::{PropertyDef, Resolver},
-    DynAbiResult, DynSolType, DynSolValue,
+    DynSolType, DynSolValue, Result,
 };
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use alloy_primitives::{keccak256, B256};
@@ -143,13 +143,13 @@ impl TypedData {
         &self.domain
     }
 
-    fn resolve(&self) -> DynAbiResult<DynSolType> {
+    fn resolve(&self) -> Result<DynSolType> {
         self.resolver.resolve(&self.primary_type)
     }
 
     /// Coerce the message to the type specified by `primary_type`, using the
     /// types map as a resolver.
-    pub fn coerce(&self) -> DynAbiResult<DynSolValue> {
+    pub fn coerce(&self) -> Result<DynSolValue> {
         let ty = self.resolve()?;
         ty.coerce(&self.message)
     }
@@ -159,7 +159,7 @@ impl TypedData {
     /// Fails if this type is not a struct.
     ///
     /// [`encodeType`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
-    pub fn type_hash(&self) -> DynAbiResult<B256> {
+    pub fn type_hash(&self) -> Result<B256> {
         self.encode_type().map(keccak256)
     }
 
@@ -168,7 +168,7 @@ impl TypedData {
     /// Fails if this type is not a struct.
     ///
     /// [`hashStruct`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct
-    pub fn hash_struct(&self) -> DynAbiResult<B256> {
+    pub fn hash_struct(&self) -> Result<B256> {
         let mut type_hash = self.type_hash()?.to_vec();
         type_hash.extend(self.encode_data()?);
         Ok(keccak256(type_hash))
@@ -179,7 +179,7 @@ impl TypedData {
     /// Fails if this type is not a struct.
     ///
     /// [`encodeData`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata
-    pub fn encode_data(&self) -> DynAbiResult<Vec<u8>> {
+    pub fn encode_data(&self) -> Result<Vec<u8>> {
         let s = self.coerce()?;
         Ok(self.resolver.encode_data(&s)?.unwrap())
     }
@@ -189,7 +189,7 @@ impl TypedData {
     /// Fails if this type is not a struct.
     ///
     /// [`encodeType`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype
-    pub fn encode_type(&self) -> DynAbiResult<String> {
+    pub fn encode_type(&self) -> Result<String> {
         self.resolver.encode_type(&self.primary_type)
     }
 
@@ -197,7 +197,7 @@ impl TypedData {
     ///
     /// This is the hash of the magic bytes 0x1901 concatenated with the domain
     /// separator and the `hashStruct` result.
-    pub fn eip712_signing_hash(&self) -> DynAbiResult<B256> {
+    pub fn eip712_signing_hash(&self) -> Result<B256> {
         let mut buf = [0u8; 66];
         buf[0] = 0x19;
         buf[1] = 0x01;
@@ -219,7 +219,7 @@ impl TypedData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::DynAbiError;
+    use crate::Error;
     use alloc::string::ToString;
     use alloy_sol_types::sol;
     use serde_json::json;
@@ -519,7 +519,7 @@ mod tests {
 
         assert_eq!(
             typed_data.eip712_signing_hash(),
-            Err(DynAbiError::CircularDependency("Mail".into())),
+            Err(Error::CircularDependency("Mail".into())),
         );
     }
 

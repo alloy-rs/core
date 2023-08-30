@@ -171,9 +171,8 @@ mod coder;
 pub use coder::{
     decode, decode_params, decode_single, encode, encode_params, encode_single,
     token::{self, TokenType},
+    Decoder, Encoder,
 };
-#[doc(hidden)]
-pub use coder::{Decoder, Encoder};
 
 mod errors;
 pub use errors::{Error, Result};

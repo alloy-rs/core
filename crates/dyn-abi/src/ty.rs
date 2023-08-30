@@ -1,10 +1,7 @@
-use crate::{
-    resolve::ResolveSolType, DynAbiError, DynAbiResult, DynSolValue, DynToken, Result, SolType,
-    Word,
-};
+use crate::{resolve::ResolveSolType, DynSolValue, DynToken, Error, Result, SolType, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_sol_type_parser::TypeSpecifier;
-use alloy_sol_types::sol_data;
+use alloy_sol_types::{sol_data, Decoder};
 use core::{fmt, num::NonZeroUsize, str::FromStr};
 
 #[cfg(feature = "eip712")]
@@ -55,7 +52,7 @@ struct StructProp {
 /// // alternatively, you can use the FromStr impl
 /// let ty2 = type_name.parse::<DynSolType>()?;
 /// assert_eq!(ty, ty2);
-/// # Ok::<_, alloy_dyn_abi::DynAbiError>(())
+/// # Ok::<_, alloy_dyn_abi::Error>(())
 /// ```
 ///
 /// Decoding dynamic types:
@@ -128,10 +125,10 @@ impl fmt::Display for DynSolType {
 }
 
 impl FromStr for DynSolType {
-    type Err = DynAbiError;
+    type Err = Error;
 
     #[inline]
-    fn from_str(s: &str) -> DynAbiResult<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::parse(s)
     }
 }
@@ -148,9 +145,9 @@ impl DynSolType {
     /// Iteratively wrap in arrays.
     pub(crate) fn array_wrap_from_iter(
         self,
-        iter: impl Iterator<Item = Option<NonZeroUsize>>,
+        iter: impl IntoIterator<Item = Option<NonZeroUsize>>,
     ) -> Self {
-        iter.into_iter().fold(self, |ty, size| ty.array_wrap(size))
+        iter.into_iter().fold(self, Self::array_wrap)
     }
 
     /// Parses a Solidity type name string into a [`DynSolType`].
@@ -163,12 +160,12 @@ impl DynSolType {
     /// let ty = DynSolType::parse(type_name)?;
     /// assert_eq!(ty, DynSolType::Uint(256));
     /// assert_eq!(ty.sol_type_name(), type_name);
-    /// # Ok::<_, alloy_dyn_abi::DynAbiError>(())
+    /// # Ok::<_, alloy_dyn_abi::Error>(())
     /// ```
     #[inline]
-    pub fn parse(s: &str) -> DynAbiResult<Self> {
+    pub fn parse(s: &str) -> Result<Self> {
         TypeSpecifier::try_from(s)
-            .map_err(DynAbiError::TypeParserError)
+            .map_err(Error::TypeParser)
             .and_then(|t| t.resolve())
     }
 
@@ -276,6 +273,7 @@ impl DynSolType {
     }
 
     /// Dynamic detokenization.
+    // This should not fail when using a token created by `Self::empty_dyn_token`.
     #[allow(clippy::unnecessary_to_owned)] // https://github.com/rust-lang/rust-clippy/issues/8148
     pub fn detokenize(&self, token: DynToken<'_>) -> Result<DynSolValue> {
         match (self, token) {
@@ -467,7 +465,7 @@ impl DynSolType {
     }
 
     /// Instantiate an empty dyn token, to be decoded into.
-    pub(crate) fn empty_dyn_token(&self) -> DynToken<'_> {
+    pub(crate) fn empty_dyn_token<'a>(&self) -> DynToken<'a> {
         match self {
             Self::Address
             | Self::Function
@@ -514,6 +512,7 @@ impl DynSolType {
     /// function myFunc(uint256 b, bool c) public;
     /// ```
     #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
     pub fn decode_params(&self, data: &[u8]) -> Result<DynSolValue> {
         match self {
             Self::Tuple(_) => self.decode_sequence(data),
@@ -526,20 +525,40 @@ impl DynSolType {
     ///
     /// This method is used for decoding single values. It assumes the `data`
     /// argument is an encoded single-element sequence wrapping the `self` type.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
     pub fn decode_single(&self, data: &[u8]) -> Result<DynSolValue> {
-        let mut decoder = crate::Decoder::new(data, false);
-        let mut token = self.empty_dyn_token();
-        token.decode_single_populate(&mut decoder)?;
-        self.detokenize(token)
+        self.decode(
+            &mut Decoder::new(data, false),
+            DynToken::decode_single_populate,
+        )
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
     /// match this type.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
     pub fn decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        let mut decoder = crate::Decoder::new(data, false);
+        self.decode(
+            &mut Decoder::new(data, false),
+            DynToken::decode_sequence_populate,
+        )
+    }
+
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub(crate) fn decode<'d, F>(&self, decoder: &mut Decoder<'d>, f: F) -> Result<DynSolValue>
+    where
+        F: FnOnce(&mut DynToken<'d>, &mut Decoder<'d>) -> Result<()>,
+    {
         let mut token = self.empty_dyn_token();
-        token.decode_sequence_populate(&mut decoder)?;
-        self.detokenize(token)
+        f(&mut token, decoder)?;
+        let value = self.detokenize(token).expect("invalid empty_dyn_token");
+        debug_assert!(
+            self.matches(&value),
+            "decoded value does not match type:\n  - type: {self:?}\n  - value: {value:?}"
+        );
+        Ok(value)
     }
 }
 
@@ -572,7 +591,7 @@ mod tests {
             DynToken::FixedSeq(vec![DynToken::Word(word1), DynToken::Word(word2)].into(), 2)
         );
         let mut enc = crate::Encoder::default();
-        DynSolValue::encode_sequence(val.as_fixed_seq().unwrap(), &mut enc);
+        DynSolValue::encode_sequence_to(val.as_fixed_seq().unwrap(), &mut enc);
         assert_eq!(enc.finish(), vec![word1, word2]);
     }
 

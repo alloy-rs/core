@@ -14,7 +14,7 @@ use core::fmt;
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// ABI Encoding and Decoding errors.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     /// A typecheck detected a word that does not match the data type.
     TypeCheckFail {

@@ -32,10 +32,10 @@ extern crate alloc;
 mod arbitrary;
 
 mod error;
-pub use error::{DynAbiError, DynAbiResult};
+pub use error::{Error, Result};
 
-#[doc(no_inline)]
-pub use alloy_sol_types::{Decoder, Eip712Domain, Encoder, Error, Result, SolType, Word};
+mod ext;
+pub use ext::{FunctionExt, JsonAbiExt};
 
 mod ty;
 pub use ty::DynSolType;
@@ -49,9 +49,12 @@ pub use token::DynToken;
 pub mod resolve;
 pub use resolve::ResolveSolType;
 
-pub use alloy_sol_type_parser as parser;
-
 #[cfg(feature = "eip712")]
 pub mod eip712;
 #[cfg(feature = "eip712")]
 pub use eip712::{parser as eip712_parser, Eip712Types, PropertyDef, Resolver, TypeDef, TypedData};
+
+#[doc(no_inline)]
+pub use alloy_sol_type_parser as parser;
+#[doc(no_inline)]
+pub use alloy_sol_types::{Decoder, Eip712Domain, Encoder, SolType, Word};
