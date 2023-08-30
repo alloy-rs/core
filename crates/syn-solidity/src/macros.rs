@@ -149,14 +149,18 @@ macro_rules! make_visitor {
                             }
                         }
                         ImportPath::Aliases(ImportAliases { imports, path, .. }) => {
-                            for (name, ImportAlias { alias, .. }) in imports {
+                            for (name, alias) in imports {
                                 v.visit_ident(name);
-                                v.visit_ident(alias);
+                                if let Some(ImportAlias { alias, .. }) = alias {
+                                    v.visit_ident(alias);
+                                }
                             }
                             v.visit_lit_str(path);
                         }
-                        ImportPath::Glob(ImportGlob { alias: ImportAlias { alias, .. }, path, .. }) => {
-                            v.visit_ident(alias);
+                        ImportPath::Glob(ImportGlob { alias, path, .. }) => {
+                            if let Some(ImportAlias { alias, .. }) = alias {
+                                v.visit_ident(alias);
+                            }
                             v.visit_lit_str(path);
                         }
                     }

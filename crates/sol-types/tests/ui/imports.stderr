@@ -1,0 +1,17 @@
+error: expected `from`
+ --> tests/ui/imports.rs:4:13
+  |
+4 |     import *;
+  |             ^
+
+error: expected `from`
+ --> tests/ui/imports.rs:8:20
+  |
+8 |     import * as foo;
+  |                    ^
+
+error: expected string literal
+  --> tests/ui/imports.rs:12:25
+   |
+12 |     import * as foo from;
+   |                         ^

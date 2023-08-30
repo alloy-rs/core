@@ -54,11 +54,11 @@ impl Spanned for ImportDirective {
 /// The path of an import directive.
 #[derive(Clone, Debug)]
 pub enum ImportPath {
-    /// A plain import directive: `import "foo.sol" as Foo;`
+    /// A plain import directive: `import "foo.sol" as Foo;`.
     Plain(ImportPlain),
-    /// A list of import aliases: `import { Foo as Bar, Baz } from "foo.sol";`
+    /// A list of import aliases: `import { Foo as Bar, Baz } from "foo.sol";`.
     Aliases(ImportAliases),
-    /// A glob import directive: `import * as Foo from "foo.sol";`
+    /// A glob import directive: `import * as Foo from "foo.sol";`.
     Glob(ImportGlob),
 }
 
@@ -155,7 +155,7 @@ impl ImportAlias {
     }
 }
 
-/// A plain import directive: `import "foo.sol" as Foo;`
+/// A plain import directive: `import "foo.sol" as Foo;`.
 #[derive(Clone)]
 pub struct ImportPlain {
     pub path: LitStr,
@@ -198,11 +198,11 @@ impl Spanned for ImportPlain {
     }
 }
 
-/// A list of import aliases: `import { Foo as Bar, Baz } from "foo.sol";`
+/// A list of import aliases: `import { Foo as Bar, Baz } from "foo.sol";`.
 #[derive(Clone)]
 pub struct ImportAliases {
     pub brace_token: Brace,
-    pub imports: Punctuated<(SolIdent, ImportAlias), Token![,]>,
+    pub imports: Punctuated<(SolIdent, Option<ImportAlias>), Token![,]>,
     pub from_token: kw::from,
     pub path: LitStr,
 }
@@ -221,7 +221,10 @@ impl Parse for ImportAliases {
         let content;
         Ok(Self {
             brace_token: braced!(content in input),
-            imports: content.parse_terminated(|c| Ok((c.parse()?, c.parse()?)), Token![,])?,
+            imports: content.parse_terminated(
+                |c| Ok((c.parse()?, c.call(ImportAlias::parse_opt)?)),
+                Token![,],
+            )?,
             from_token: input.parse()?,
             path: input.parse()?,
         })
@@ -241,11 +244,11 @@ impl Spanned for ImportAliases {
     }
 }
 
-/// A glob import directive: `import * as Foo from "foo.sol";`
+/// A glob import directive: `import * as Foo from "foo.sol";`.
 #[derive(Clone)]
 pub struct ImportGlob {
     pub star_token: Token![*],
-    pub alias: ImportAlias,
+    pub alias: Option<ImportAlias>,
     pub from_token: kw::from,
     pub path: LitStr,
 }
@@ -263,7 +266,7 @@ impl Parse for ImportGlob {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             star_token: input.parse()?,
-            alias: input.parse()?,
+            alias: input.call(ImportAlias::parse_opt)?,
             from_token: input.parse()?,
             path: input.parse()?,
         })
