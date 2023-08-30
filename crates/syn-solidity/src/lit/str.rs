@@ -35,7 +35,9 @@ macro_rules! str_lit {
         impl Parse for $name {
             fn parse(input: ParseStream<'_>) -> Result<Self> {
                 let mut values = Vec::new();
-                while Self::peek(&input.lookahead1()) {
+                let mut first = true;
+                while first || Self::peek(&input.lookahead1()) {
+                    first = false;
                     values.push(input.parse()?);
                 }
                 Ok(Self { values })
