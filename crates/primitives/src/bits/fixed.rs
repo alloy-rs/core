@@ -246,7 +246,8 @@ impl<const N: usize> ops::BitAnd for FixedBytes<N> {
 impl<const N: usize> ops::BitAndAssign for FixedBytes<N> {
     #[inline]
     fn bitand_assign(&mut self, rhs: Self) {
-        iter::zip(self, rhs).for_each(|(a, b)| *a &= b);
+        // Note: `slice::Iter` has better codegen than `array::IntoIter`
+        iter::zip(self, &rhs).for_each(|(a, b)| *a &= *b);
     }
 }
 
@@ -263,13 +264,15 @@ impl<const N: usize> ops::BitOr for FixedBytes<N> {
 impl<const N: usize> ops::BitOrAssign for FixedBytes<N> {
     #[inline]
     fn bitor_assign(&mut self, rhs: Self) {
-        iter::zip(self, rhs).for_each(|(a, b)| *a |= b);
+        // Note: `slice::Iter` has better codegen than `array::IntoIter`
+        iter::zip(self, &rhs).for_each(|(a, b)| *a |= *b);
     }
 }
 
 impl<const N: usize> ops::BitXor for FixedBytes<N> {
     type Output = Self;
 
+    #[inline]
     fn bitxor(mut self, rhs: Self) -> Self::Output {
         self ^= rhs;
         self
@@ -277,14 +280,17 @@ impl<const N: usize> ops::BitXor for FixedBytes<N> {
 }
 
 impl<const N: usize> ops::BitXorAssign for FixedBytes<N> {
+    #[inline]
     fn bitxor_assign(&mut self, rhs: Self) {
-        iter::zip(self, rhs).for_each(|(a, b)| *a ^= b);
+        // Note: `slice::Iter` has better codegen than `array::IntoIter`
+        iter::zip(self, &rhs).for_each(|(a, b)| *a ^= *b);
     }
 }
 
 impl<const N: usize> core::str::FromStr for FixedBytes<N> {
     type Err = hex::FromHexError;
 
+    #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut buf = [0u8; N];
         hex::decode_to_slice(s, &mut buf)?;

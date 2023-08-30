@@ -184,8 +184,8 @@ impl ExpCtxt<'_> {
 
         for functions in self.functions.values().filter(|fs| fs.len() >= 2) {
             // check for same parameters
-            for (i, a) in functions.iter().enumerate() {
-                for b in functions.iter().skip(i + 1) {
+            for (i, &a) in functions.iter().enumerate() {
+                for &b in functions.iter().skip(i + 1) {
                     if a.arguments.types().eq(b.arguments.types()) {
                         let msg = "function with same name and parameter types defined twice";
                         let mut err = syn::Error::new(a.span(), msg);
