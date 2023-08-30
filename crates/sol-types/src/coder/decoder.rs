@@ -51,12 +51,12 @@ impl fmt::Display for Decoder<'_> {
         writeln!(f, "Abi Decode Buffer")?;
 
         for (i, chunk) in self.buf.chunks(32).enumerate() {
+            let idx = i * 32;
             writeln!(
                 f,
-                "0x{:04x}: {} {}",
-                i * 32,
+                "0x{idx:04x}: {}{}",
                 hex::encode_prefixed(chunk),
-                if i * 32 == self.offset {
+                if idx == self.offset {
                     " <-- Next Word"
                 } else {
                     ""
