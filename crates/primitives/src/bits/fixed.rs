@@ -106,22 +106,26 @@ impl<'a, const N: usize> TryFrom<&'a mut [u8]> for &'a mut FixedBytes<N> {
 // `impl<const N: usize> From<FixedBytes<N>> for Uint<N * 8>`
 // `impl<const N: usize> From<Uint<N / 8>> for FixedBytes<N>`
 macro_rules! fixed_bytes_uint_conversions {
-    ($($u:ty => $b:ty),* $(,)?) => {$(
-        impl From<$u> for $b {
+    ($($int:ty => $fb:ty),* $(,)?) => {$(
+        impl From<$int> for $fb {
+            /// Converts a fixed-width unsigned integer into a fixed byte array
+            /// by interpreting the bytes as big-endian.
             #[inline]
-            fn from(value: $u) -> Self {
+            fn from(value: $int) -> Self {
                 Self(value.to_be_bytes())
             }
         }
 
-        impl From<$b> for $u {
+        impl From<$fb> for $int {
+            /// Converts a fixed byte array into a fixed-width unsigned integer
+            /// by interpreting the bytes as big-endian.
             #[inline]
-            fn from(value: $b) -> Self {
+            fn from(value: $fb) -> Self {
                 Self::from_be_bytes(value.0)
             }
         }
 
-        const _: () = assert!(<$u>::BITS == <$b>::len_bytes() * 8);
+        const _: () = assert!(<$int>::BITS == <$fb>::len_bytes() * 8);
     )*};
 }
 
@@ -292,14 +296,13 @@ impl<const N: usize> FixedBytes<N> {
     /// Array of Zero bytes.
     pub const ZERO: Self = Self([0u8; N]);
 
-    /// Instantiates a new [`FixedBytes`] from the given bytes array.
+    /// Wraps the given byte array in [`FixedBytes`].
     #[inline]
     pub const fn new(bytes: [u8; N]) -> Self {
         Self(bytes)
     }
 
-    /// Utility function to create a [`FixedBytes`] with the last byte set to
-    /// `x`.
+    /// Creates a new [`FixedBytes`] with the last byte set to `x`.
     #[inline]
     pub const fn with_last_byte(x: u8) -> Self {
         let mut bytes = [0u8; N];
@@ -309,7 +312,7 @@ impl<const N: usize> FixedBytes<N> {
         Self(bytes)
     }
 
-    /// Returns a new [`FixedBytes`] where all bits are set to the given byte.
+    /// Creates a new [`FixedBytes`] where all bytes are set to `byte`.
     #[inline]
     pub const fn repeat_byte(byte: u8) -> Self {
         Self([byte; N])
@@ -321,14 +324,25 @@ impl<const N: usize> FixedBytes<N> {
         N
     }
 
-    /// Instantiates a new [`FixedBytes`] with cryptographically random content.
+    /// Creates a new [`FixedBytes`] with cryptographically random content.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the underlying call to
+    /// [`getrandom_uninit`](getrandom::getrandom_uninit) fails.
     #[cfg(feature = "getrandom")]
     #[inline]
     pub fn random() -> Self {
         Self::try_random().unwrap()
     }
 
-    /// Instantiates a new [`FixedBytes`] with cryptographically random content.
+    /// Tries to create a new [`FixedBytes`] with cryptographically random
+    /// content.
+    ///
+    /// # Errors
+    ///
+    /// This function only propagates the error from the underlying call to
+    /// [`getrandom_uninit`](getrandom::getrandom_uninit).
     #[cfg(feature = "getrandom")]
     pub fn try_random() -> Result<Self, getrandom::Error> {
         let mut bytes: [_; N] = crate::impl_core::uninit_array();
