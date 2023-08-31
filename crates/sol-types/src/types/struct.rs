@@ -166,7 +166,7 @@ impl<T: SolStruct> SolType for T {
 
     #[inline]
     fn eip712_data_word<'a>(rust: &Self::RustType) -> Word {
-        keccak256(rust.eip712_hash_struct())
+        rust.eip712_hash_struct()
     }
 
     #[inline]

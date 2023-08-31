@@ -1,5 +1,7 @@
-use alloy_primitives::{keccak256, Address, U256};
-use alloy_sol_types::{sol, SolCall, SolError, SolType};
+use std::str::FromStr;
+
+use alloy_primitives::{keccak256, Address, B256, U256};
+use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolType};
 
 #[test]
 fn e2e() {
@@ -362,4 +364,42 @@ fn eip712_encode_type_nesting() {
         D::eip712_encode_type().unwrap(),
         "D(C c,A a,B b)A(uint256 a)B(bytes32 b)C(A a,B b)"
     );
+}
+
+#[test]
+fn eip712_encode_data_nesting() {
+    sol! {
+        struct Person {
+            string name;
+            address wallet;
+        }
+
+        struct Mail {
+            Person from;
+            Person to;
+            string contents;
+        }
+    }
+    let domain = eip712_domain! {};
+
+    let mail = Mail {
+        from: Person {
+            name: "Cow".to_owned(),
+            wallet: "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
+                .parse()
+                .unwrap(),
+        },
+        to: Person {
+            name: "Bob".to_owned(),
+            wallet: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
+                .parse()
+                .unwrap(),
+        },
+        contents: "Hello, Bob!".to_owned(),
+    };
+
+    assert_eq!(
+        alloy_sol_types::SolStruct::eip712_signing_hash(&mail, &domain),
+        B256::from_str("25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775").unwrap()
+    )
 }
