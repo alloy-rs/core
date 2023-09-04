@@ -6,6 +6,7 @@ use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
+    num::NonZeroU16,
 };
 use syn::{
     parenthesized,
@@ -123,14 +124,26 @@ impl ItemFunction {
             FunctionAttribute::Mutability(Mutability::new_view(span)),
         ];
 
-        // Recurse into mappings to generate the getter arguments and return type
+        // Recurse into mappings and arrays to generate arguments and the return type
         let mut ty = ty;
         let mut return_name = None;
-        while let Type::Mapping(map) = ty {
-            let key = VariableDeclaration::new_with(*map.key, None, map.key_name);
-            function.arguments.push(key);
-            ty = *map.value;
-            return_name = map.value_name;
+        loop {
+            match ty {
+                // mapping(k => v) -> arguments += k, ty = v
+                Type::Mapping(map) => {
+                    let key = VariableDeclaration::new_with(*map.key, None, map.key_name);
+                    function.arguments.push(key);
+                    return_name = map.value_name;
+                    ty = *map.value;
+                }
+                // inner[] -> arguments += uint256, ty = inner
+                Type::Array(array) => {
+                    let uint256 = Type::Uint(span, NonZeroU16::new(256));
+                    function.arguments.push(VariableDeclaration::new(uint256));
+                    ty = *array.ty;
+                }
+                _ => break,
+            }
         }
         let mut returns = ParameterList::new();
         returns.push(VariableDeclaration::new_with(ty, None, return_name));
@@ -383,6 +396,13 @@ mod tests {
                 => "function nested2(uint256 k1, uint256 k2) public view returns (bool v);",
             "mapping(uint256 k1 => mapping(uint256 k2 => mapping(uint256 k3 => bool v) ignored1) ignored2) public nested3;"
                 => "function nested3(uint256 k1, uint256 k2, uint256 k3) public view returns (bool v);",
+
+            "bool[] public boolArray;"
+                => "function boolArray(uint256) public view returns(bool);",
+            "mapping(bool => bytes2)[] public mapArray;"
+                => "function mapArray(uint256, bool) public view returns(bytes2);",
+            "mapping(bool => mapping(address => int[])[])[][] public nestedMapArray;"
+                => "function nestedMapArray(uint256, uint256, bool, uint256, address, uint256) public view returns(int);",
         }
     }
 
