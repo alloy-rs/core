@@ -274,7 +274,10 @@ impl MutateAst {
                         var.attributes.visibility(),
                         Some(ast::Visibility::Public(_) | ast::Visibility::External(_))
                     ) {
-                        functions.push((i + 1, ItemFunction::from_variable_definition(var)));
+                        // TODO: Move this to `expand_item` as we need the context to expand struct
+                        // return types
+                        functions
+                            .push((i + 1, ItemFunction::from_variable_definition(var.clone())));
                     }
                 }
                 _ => {}

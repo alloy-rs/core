@@ -106,10 +106,6 @@ impl FunctionAttributes {
         self.0.iter().any(FunctionAttribute::is_virtual)
     }
 
-    pub fn has_immutable(&self) -> bool {
-        self.0.iter().any(FunctionAttribute::is_immutable)
-    }
-
     pub fn has_override(&self, path: Option<&SolPath>) -> bool {
         self.0.iter().any(|attr| attr.is_override(path))
     }
@@ -126,14 +122,12 @@ pub enum FunctionAttribute {
     Visibility(Visibility),
     /// A [Mutability] attribute.
     Mutability(Mutability),
-    /// `virtual`
-    Virtual(Token![virtual]),
-    /// `immutable`
-    Immutable(kw::immutable),
-    /// An [Override] attribute.
-    Override(Override),
     /// A [Modifier] attribute.
     Modifier(Modifier),
+    /// `virtual`
+    Virtual(Token![virtual]),
+    /// An [Override] attribute.
+    Override(Override),
 }
 
 impl fmt::Display for FunctionAttribute {
@@ -142,7 +136,6 @@ impl fmt::Display for FunctionAttribute {
             Self::Visibility(visibility) => visibility.fmt(f),
             Self::Mutability(mutability) => mutability.fmt(f),
             Self::Virtual(_) => f.write_str("virtual"),
-            Self::Immutable(_) => f.write_str("immutable"),
             Self::Override(o) => o.fmt(f),
             Self::Modifier(modifier) => modifier.fmt(f),
         }
@@ -155,7 +148,6 @@ impl fmt::Debug for FunctionAttribute {
             Self::Visibility(visibility) => f.debug_tuple("Visibility").field(visibility).finish(),
             Self::Mutability(mutability) => f.debug_tuple("Mutability").field(mutability).finish(),
             Self::Virtual(_) => f.write_str("Virtual"),
-            Self::Immutable(_) => f.write_str("immutable"),
             Self::Override(o) => o.fmt(f),
             Self::Modifier(modifier) => modifier.fmt(f),
         }
@@ -193,8 +185,6 @@ impl Parse for FunctionAttribute {
             input.parse().map(Self::Virtual)
         } else if lookahead.peek(Token![override]) {
             input.parse().map(Self::Override)
-        } else if lookahead.peek(kw::immutable) {
-            input.parse().map(Self::Immutable)
         } else if !input.peek(kw::returns) && lookahead.peek(Ident::peek_any) {
             input.parse().map(Self::Modifier)
         } else if input.peek(Brace) {
@@ -207,11 +197,15 @@ impl Parse for FunctionAttribute {
 }
 
 impl From<VariableAttribute> for FunctionAttribute {
+    /// Converts a variable attribute to its corresponding function attribute.
+    ///
+    /// - `constant` -> `pure`
+    /// - `immutable` -> `view`
     fn from(value: VariableAttribute) -> Self {
         match value {
             VariableAttribute::Visibility(v) => Self::Visibility(v),
-            VariableAttribute::Constant(c) => Self::Immutable(kw::immutable(c.span)),
-            VariableAttribute::Immutable(i) => Self::Immutable(i),
+            VariableAttribute::Constant(c) => Self::Mutability(Mutability::new_pure(c.span)),
+            VariableAttribute::Immutable(i) => Self::Mutability(Mutability::new_view(i.span)),
             VariableAttribute::Override(o) => Self::Override(o),
         }
     }
@@ -224,7 +218,6 @@ impl Spanned for FunctionAttribute {
             Self::Mutability(m) => m.span(),
             Self::Virtual(v) => v.span,
             Self::Override(o) => o.span(),
-            Self::Immutable(i) => i.span,
             Self::Modifier(m) => m.span(),
         }
     }
@@ -235,7 +228,6 @@ impl Spanned for FunctionAttribute {
             Self::Mutability(m) => m.set_span(span),
             Self::Virtual(v) => v.span = span,
             Self::Override(o) => o.set_span(span),
-            Self::Immutable(i) => i.span = span,
             Self::Modifier(m) => m.set_span(span),
         }
     }
@@ -297,11 +289,6 @@ impl FunctionAttribute {
     #[inline]
     pub const fn is_virtual(&self) -> bool {
         matches!(self, Self::Virtual(_))
-    }
-
-    #[inline]
-    pub const fn is_immutable(&self) -> bool {
-        matches!(self, Self::Immutable(_))
     }
 
     #[inline]

@@ -54,7 +54,7 @@ pub enum Type {
     Tuple(TypeTuple),
     /// `function($($arguments),*) $($attributes)* $(returns ($($returns),+))?`
     Function(TypeFunction),
-    /// `mapping ($key $($key_name)? => $value $($value_name)?)`
+    /// `mapping($key $($key_name)? => $value $($value_name)?)`
     Mapping(TypeMapping),
 
     /// A custom type.
