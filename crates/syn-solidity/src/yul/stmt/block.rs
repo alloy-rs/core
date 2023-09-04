@@ -1,5 +1,5 @@
 use crate::Spanned;
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::Span;
 use std::fmt;
 use syn::{
     braced,
@@ -8,18 +8,18 @@ use syn::{
     Result,
 };
 
+use super::YulStmt;
+
 #[derive(Clone)]
 pub struct YulBlock {
     pub brace_token: Brace,
-    // TODO
-    pub stmts: TokenStream,
+    pub stmt: Box<YulStmt>,
 }
 
 impl fmt::Debug for YulBlock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulBlock")
-            // .field("stmts", &self.stmts)
-            .field("stmts", &self.stmts.to_string())
+            .field("stmt", &self.stmt)
             .finish()
     }
 }
@@ -29,7 +29,7 @@ impl Parse for YulBlock {
         let content;
         Ok(Self {
             brace_token: braced!(content in input),
-            stmts: content.parse()?,
+            stmt: content.parse()?,
         })
     }
 }
