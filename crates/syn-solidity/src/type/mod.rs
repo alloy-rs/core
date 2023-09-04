@@ -346,6 +346,25 @@ impl Type {
         }
     }
 
+    /// Same as [`has_custom`](Self::has_custom), but `Function` returns false
+    /// rather than recursing into its arguments and return types.
+    pub fn has_custom_simple(&self) -> bool {
+        match self {
+            Self::Custom(_) => true,
+            Self::Array(a) => a.ty.has_custom_simple(),
+            Self::Tuple(t) => t.types.iter().any(Self::has_custom_simple),
+            Self::Mapping(m) => m.key.has_custom_simple() || m.value.has_custom_simple(),
+            Self::Address(..)
+            | Self::Bool(_)
+            | Self::Uint(..)
+            | Self::Int(..)
+            | Self::String(_)
+            | Self::Bytes(_)
+            | Self::FixedBytes(..)
+            | Self::Function(_) => false,
+        }
+    }
+
     /// Traverses this type while calling `f`.
     #[cfg(feature = "visit")]
     pub fn visit(&self, f: impl FnMut(&Self)) {
