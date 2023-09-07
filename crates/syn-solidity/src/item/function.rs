@@ -1,11 +1,12 @@
 use crate::{
-    kw, Block, FunctionAttributes, ParameterList, Parameters, SolIdent, Spanned, Stmt, Type,
-    VariableDefinition,
+    kw, Block, FunctionAttribute, FunctionAttributes, Mutability, ParameterList, Parameters,
+    SolIdent, Spanned, Stmt, Type, VariableDeclaration, VariableDefinition, Visibility,
 };
 use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
+    num::NonZeroU16,
 };
 use syn::{
     parenthesized,
@@ -82,6 +83,7 @@ impl Spanned for ItemFunction {
 }
 
 impl ItemFunction {
+    /// Create a new function of the given kind.
     pub fn new(kind: FunctionKind, name: Option<SolIdent>) -> Self {
         let span = name
             .as_ref()
@@ -98,26 +100,67 @@ impl ItemFunction {
         }
     }
 
-    /// Creates a new function from a variable definition. The function will
-    /// have the same name and the variable type's will be the return type.
-    pub fn from_variable_definition(var: &VariableDefinition) -> Self {
-        let name = var.name.clone();
+    /// Create a new function with the given name and arguments.
+    ///
+    /// Note that:
+    /// - the type is not validated
+    /// - structs/array of structs in return position are not expanded
+    /// - the body is not set
+    ///
+    /// The attributes are set to `public view`.
+    ///
+    /// See [the Solidity documentation][ref] for more details on how getters
+    /// are generated.
+    ///
+    /// [ref]: https://docs.soliditylang.org/en/latest/contracts.html#getter-functions
+    pub fn new_getter(name: SolIdent, ty: Type) -> Self {
         let span = name.span();
         let kind = FunctionKind::new_function(span);
-
         let mut function = Self::new(kind, Some(name));
 
+        // `public view`
+        function.attributes.0 = vec![
+            FunctionAttribute::Visibility(Visibility::new_public(span)),
+            FunctionAttribute::Mutability(Mutability::new_view(span)),
+        ];
+
+        // Recurse into mappings and arrays to generate arguments and the return type
+        let mut ty = ty;
+        let mut return_name = None;
+        loop {
+            match ty {
+                // mapping(k => v) -> arguments += k, ty = v
+                Type::Mapping(map) => {
+                    let key = VariableDeclaration::new_with(*map.key, None, map.key_name);
+                    function.arguments.push(key);
+                    return_name = map.value_name;
+                    ty = *map.value;
+                }
+                // inner[] -> arguments += uint256, ty = inner
+                Type::Array(array) => {
+                    let uint256 = Type::Uint(span, NonZeroU16::new(256));
+                    function.arguments.push(VariableDeclaration::new(uint256));
+                    ty = *array.ty;
+                }
+                _ => break,
+            }
+        }
         let mut returns = ParameterList::new();
-        returns.push(var.as_declaration());
-        let returns = Returns::new(span, returns);
-        function.returns = Some(returns);
+        returns.push(VariableDeclaration::new_with(ty, None, return_name));
+        function.returns = Some(Returns::new(span, returns));
 
         function
-            .attributes
-            .0
-            .extend(var.attributes.0.iter().cloned().map(Into::into));
+    }
 
-        function
+    /// Creates a new function from a variable definition.
+    ///
+    /// The function will have the same name and the variable type's will be the
+    /// return type. The variable attributes are ignored, and instead will
+    /// always generate `public returns`.
+    ///
+    /// See [`new_getter`](Self::new_getter) for more details.
+    pub fn from_variable_definition(var: VariableDefinition) -> Self {
+        Self::new_getter(var.name, var.ty)
     }
 
     /// Returns the name of the function.
@@ -148,20 +191,14 @@ impl ItemFunction {
 
     /// Returns the function's arguments tuple type.
     pub fn call_type(&self) -> Type {
-        Type::Tuple(self.arguments.iter().map(|arg| arg.ty.clone()).collect())
+        Type::Tuple(self.arguments.types().cloned().collect())
     }
 
     /// Returns the function's return tuple type.
     pub fn return_type(&self) -> Option<Type> {
-        self.returns.as_ref().map(|returns| {
-            Type::Tuple(
-                returns
-                    .returns
-                    .iter()
-                    .map(|returns| returns.ty.clone())
-                    .collect(),
-            )
-        })
+        self.returns
+            .as_ref()
+            .map(|returns| Type::Tuple(returns.returns.types().cloned().collect()))
     }
 
     /// Returns a reference to the function's body, if any.
@@ -318,6 +355,101 @@ impl Parse for FunctionBody {
             input.parse().map(Self::Empty)
         } else {
             Err(lookahead.error())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+    use std::{
+        error::Error,
+        io::Write,
+        process::{Command, Stdio},
+    };
+
+    #[test]
+    fn getters() {
+        macro_rules! test_getters {
+            ($($var:literal => $f:literal),* $(,)?) => {
+                let vars: &[&str] = &[$($var),*];
+                let fns: &[&str] = &[$($f),*];
+                let run_solc = run_solc();
+                for (var, f) in std::iter::zip(vars, fns) {
+                    test_getter(var, f, run_solc);
+                }
+            };
+        }
+
+        test_getters! {
+            "bool public getter;"
+                => "function getter() public view returns (bool);",
+            "bool public constant publicConstantAttr = false;"
+                => "function publicConstantAttr() public view returns (bool);",
+
+            "mapping(address => bool) public map;"
+                => "function map(address) public view returns (bool);",
+            "mapping(address a => bool b) public mapWithNames;"
+                => "function mapWithNames(address a) public view returns (bool b);",
+            "mapping(uint256 k1 => mapping(uint256 k2 => bool v) ignored) public nested2;"
+                => "function nested2(uint256 k1, uint256 k2) public view returns (bool v);",
+            "mapping(uint256 k1 => mapping(uint256 k2 => mapping(uint256 k3 => bool v) ignored1) ignored2) public nested3;"
+                => "function nested3(uint256 k1, uint256 k2, uint256 k3) public view returns (bool v);",
+
+            "bool[] public boolArray;"
+                => "function boolArray(uint256) public view returns(bool);",
+            "mapping(bool => bytes2)[] public mapArray;"
+                => "function mapArray(uint256, bool) public view returns(bytes2);",
+            "mapping(bool => mapping(address => int[])[])[][] public nestedMapArray;"
+                => "function nestedMapArray(uint256, uint256, bool, uint256, address, uint256) public view returns(int);",
+        }
+    }
+
+    fn test_getter(var_s: &str, fn_s: &str, run_solc: bool) {
+        let var = syn::parse_str::<VariableDefinition>(var_s).unwrap();
+        let getter = ItemFunction::from_variable_definition(var);
+        let f = syn::parse_str::<ItemFunction>(fn_s).unwrap();
+        assert_eq!(format!("{getter:#?}"), format!("{f:#?}"));
+        // test that the ABIs are the same
+        if run_solc {
+            match (wrap_and_compile(var_s, true), wrap_and_compile(fn_s, false)) {
+                (Ok(a), Ok(b)) => {
+                    assert_eq!(a.trim(), b.trim(), "\nleft:  {var_s:?}\nright: {fn_s:?}")
+                }
+                (Err(e), _) | (_, Err(e)) => panic!("{e}"),
+            }
+        }
+    }
+
+    fn run_solc() -> bool {
+        let Ok(status) = Command::new("solc").arg("--version").status() else {
+            return false
+        };
+        status.success()
+    }
+
+    fn wrap_and_compile(s: &str, var: bool) -> std::result::Result<String, Box<dyn Error>> {
+        let contract = if var {
+            format!("contract C {{ {s} }}")
+        } else {
+            format!(
+                "abstract contract C {{ {} }}",
+                s.replace("returns", "virtual returns")
+            )
+        };
+        let mut cmd = Command::new("solc")
+            .args(["--abi", "--pretty-json", "-"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+        cmd.stdin.as_mut().unwrap().write_all(contract.as_bytes())?;
+        let output = cmd.wait_with_output()?;
+        if output.status.success() {
+            String::from_utf8(output.stdout).map_err(Into::into)
+        } else {
+            Err(String::from_utf8(output.stderr)?.into())
         }
     }
 }

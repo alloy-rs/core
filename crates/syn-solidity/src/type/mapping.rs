@@ -1,4 +1,4 @@
-use crate::{kw, SolIdent, Spanned, Type};
+use crate::{kw, SolIdent, Spanned, Type, VariableDeclaration};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -95,5 +95,17 @@ impl Spanned for TypeMapping {
         if let Some(value_name) = &mut self.value_name {
             value_name.set_span(span);
         }
+    }
+}
+
+impl TypeMapping {
+    /// Returns a `VariableDeclaration` corresponding to this mapping's key.
+    pub fn key_var(&self) -> VariableDeclaration {
+        VariableDeclaration::new_with((*self.key).clone(), None, self.key_name.clone())
+    }
+
+    /// Returns a `VariableDeclaration` corresponding to this mapping's value.
+    pub fn value_var(&self) -> VariableDeclaration {
+        VariableDeclaration::new_with((*self.value).clone(), None, self.value_name.clone())
     }
 }

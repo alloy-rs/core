@@ -69,11 +69,15 @@ impl Spanned for VariableDeclaration {
 
 impl VariableDeclaration {
     pub const fn new(ty: Type) -> Self {
+        Self::new_with(ty, None, None)
+    }
+
+    pub const fn new_with(ty: Type, storage: Option<Storage>, name: Option<SolIdent>) -> Self {
         Self {
             attrs: Vec::new(),
             ty,
-            storage: None,
-            name: None,
+            storage,
+            name,
         }
     }
 
