@@ -11,6 +11,10 @@ pub use block::YulBlock;
 mod var_decl;
 pub use var_decl::YulVarDecl;
 
+mod r#for;
+
+mod switch;
+
 #[derive(Clone)]
 pub enum YulStmt {
     If(YulIf),

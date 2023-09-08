@@ -102,6 +102,9 @@ custom_keywords!(
     new,
     revert,
     unchecked,
+    switch,
+    case,
+    default,
 
     // EVM opcodes
     stop,
@@ -146,6 +149,7 @@ custom_keywords!(
     callvalue,
     calldataload,
     calldatasize,
+    calldatacopy,
     extcodesize,
     extcodecopy,
     returndatasize,
