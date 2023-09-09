@@ -15,6 +15,10 @@ mod r#for;
 
 mod switch;
 
+mod assignment;
+
+mod walrus_token;
+
 #[derive(Clone)]
 pub enum YulStmt {
     If(YulIf),

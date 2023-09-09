@@ -11,6 +11,8 @@ use crate::{
     Spanned,
 };
 
+use super::walrus_token::WalrusToken;
+
 // Declaration of one or more Yul variables with optional initial value.
 // If multiple variables are declared, only a function call is a valid initial
 // value.
@@ -62,7 +64,7 @@ impl Spanned for YulVarDecl {
 pub struct SingleVarDecl {
     pub let_token: Token![let],
     pub name: YulIdent,
-    pub assignment: Option<(WalrusOperator, YulExpr)>,
+    pub assignment: Option<(WalrusToken, YulExpr)>,
 }
 
 impl Parse for SingleVarDecl {
@@ -113,7 +115,7 @@ impl fmt::Debug for SingleVarDecl {
 pub struct ManyVarDecl {
     pub let_token: Token![let],
     pub vars: Punctuated<YulIdent, Token![,]>,
-    pub assignment: Option<(WalrusOperator, YulFnCall)>,
+    pub assignment: Option<(WalrusToken, YulFnCall)>,
 }
 
 impl Parse for ManyVarDecl {
@@ -157,35 +159,5 @@ impl fmt::Debug for ManyVarDecl {
             .field("vars", &self.vars)
             .field("assignment", &self.assignment)
             .finish()
-    }
-}
-
-// Represents the walrus operator `:=`
-#[derive(Clone, Debug)]
-pub struct WalrusOperator {
-    pub colon: Token![:],
-    pub equals: Token![=],
-}
-
-impl Parse for WalrusOperator {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let colon = input.parse()?;
-        let equals = input.parse()?;
-
-        Ok(Self { colon, equals })
-    }
-}
-
-impl Spanned for WalrusOperator {
-    fn span(&self) -> Span {
-        self.colon
-            .span()
-            .join(self.equals.span())
-            .unwrap_or(self.colon.span())
-    }
-
-    fn set_span(&mut self, span: Span) {
-        self.colon.set_span(span);
-        self.equals.set_span(span);
     }
 }
