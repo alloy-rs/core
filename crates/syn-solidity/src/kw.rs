@@ -102,11 +102,14 @@ custom_keywords!(
     new,
     revert,
     unchecked,
+
+    // Yul other
     switch,
     case,
     default,
+    leave,
 
-    // EVM opcodes
+    // Yul-EVM-builtin opcodes
     stop,
     add,
     sub,

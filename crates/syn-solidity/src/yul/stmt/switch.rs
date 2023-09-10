@@ -21,11 +21,11 @@ use crate::{
 // Solidity Reference:
 // <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulSwitchStatement>
 #[derive(Clone)]
-struct YulSwitch {
+pub struct YulSwitch {
     switch_token: kw::switch,
     selector: YulExpr,
-    branches: Vec<SwitchBranch>,
-    default_case: Option<SwitchDefault>,
+    branches: Vec<YulSwitchBranch>,
+    default_case: Option<YulSwitchDefault>,
 }
 
 impl Parse for YulSwitch {
@@ -68,15 +68,26 @@ impl Spanned for YulSwitch {
     }
 }
 
+impl fmt::Debug for YulSwitch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("YulSwitch")
+            .field("switch_token", &self.switch_token)
+            .field("selector", &self.selector)
+            .field("branches", &self.branches)
+            .field("default_case", &self.default_case)
+            .finish()
+    }
+}
+
 // represents a non-default case of a Yul switch stmt.
 #[derive(Clone)]
-struct SwitchBranch {
+pub struct YulSwitchBranch {
     case_token: kw::case,
     constant: YulLit,
     body: YulBlock,
 }
 
-impl Parse for SwitchBranch {
+impl Parse for YulSwitchBranch {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             case_token: input.parse()?,
@@ -86,7 +97,7 @@ impl Parse for SwitchBranch {
     }
 }
 
-impl fmt::Debug for SwitchBranch {
+impl fmt::Debug for YulSwitchBranch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SwitchBranch")
             .field("case_token", &self.case_token)
@@ -96,7 +107,7 @@ impl fmt::Debug for SwitchBranch {
     }
 }
 
-impl Spanned for SwitchBranch {
+impl Spanned for YulSwitchBranch {
     fn span(&self) -> Span {
         let span = self.case_token.span();
         span.join(self.body.span()).unwrap_or(span)
@@ -111,12 +122,12 @@ impl Spanned for SwitchBranch {
 
 // represents the default case of a Yul switch stmt.
 #[derive(Clone)]
-struct SwitchDefault {
+pub struct YulSwitchDefault {
     default_token: kw::default,
     body: YulBlock,
 }
 
-impl Parse for SwitchDefault {
+impl Parse for YulSwitchDefault {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             default_token: input.parse()?,
@@ -125,7 +136,7 @@ impl Parse for SwitchDefault {
     }
 }
 
-impl fmt::Debug for SwitchDefault {
+impl fmt::Debug for YulSwitchDefault {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SwitchDefault")
             .field("default_token", &self.default_token)
@@ -134,7 +145,7 @@ impl fmt::Debug for SwitchDefault {
     }
 }
 
-impl Spanned for SwitchDefault {
+impl Spanned for YulSwitchDefault {
     fn span(&self) -> Span {
         let span = self.default_token.span();
         span.join(self.body.span()).unwrap_or(span)

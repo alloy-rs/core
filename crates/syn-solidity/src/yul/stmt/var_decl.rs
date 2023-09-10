@@ -22,9 +22,9 @@ use super::walrus_token::WalrusToken;
 #[derive(Clone, Debug)]
 pub enum YulVarDecl {
     // Declare a single variable.
-    Single(SingleVarDecl),
+    Single(YulSingleDecl),
     // Declare many variables, initialized only via function call.
-    Many(ManyVarDecl),
+    Many(YulMultiDecl),
 }
 
 impl Parse for YulVarDecl {
@@ -61,13 +61,13 @@ impl Spanned for YulVarDecl {
 }
 
 #[derive(Clone)]
-pub struct SingleVarDecl {
+pub struct YulSingleDecl {
     pub let_token: Token![let],
     pub name: YulIdent,
     pub assignment: Option<(WalrusToken, YulExpr)>,
 }
 
-impl Parse for SingleVarDecl {
+impl Parse for YulSingleDecl {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             let_token: input.parse()?,
@@ -81,7 +81,7 @@ impl Parse for SingleVarDecl {
     }
 }
 
-impl Spanned for SingleVarDecl {
+impl Spanned for YulSingleDecl {
     fn span(&self) -> Span {
         let span = self.let_token.span();
         match &self.assignment {
@@ -101,7 +101,7 @@ impl Spanned for SingleVarDecl {
     }
 }
 
-impl fmt::Debug for SingleVarDecl {
+impl fmt::Debug for YulSingleDecl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SingleVarDecl")
             .field("let_token", &self.let_token)
@@ -112,13 +112,13 @@ impl fmt::Debug for SingleVarDecl {
 }
 
 #[derive(Clone)]
-pub struct ManyVarDecl {
+pub struct YulMultiDecl {
     pub let_token: Token![let],
     pub vars: Punctuated<YulIdent, Token![,]>,
     pub assignment: Option<(WalrusToken, YulFnCall)>,
 }
 
-impl Parse for ManyVarDecl {
+impl Parse for YulMultiDecl {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             let_token: input.parse()?,
@@ -132,7 +132,7 @@ impl Parse for ManyVarDecl {
     }
 }
 
-impl Spanned for ManyVarDecl {
+impl Spanned for YulMultiDecl {
     fn span(&self) -> Span {
         let span = self.let_token.span();
         match &self.assignment {
@@ -152,7 +152,7 @@ impl Spanned for ManyVarDecl {
     }
 }
 
-impl fmt::Debug for ManyVarDecl {
+impl fmt::Debug for YulMultiDecl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ManyVarDecl")
             .field("let_token", &self.let_token)

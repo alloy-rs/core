@@ -22,9 +22,9 @@ use super::walrus_token::WalrusToken;
 #[derive(Clone, Debug)]
 pub enum YulVarAssign {
     // Assignare a single variable.
-    Single(SingleVarAssign),
+    Single(YulSingleAssign),
     // Assignare many variables, initialized only via function call.
-    Many(ManyVarAssign),
+    Many(YulMultiAssign),
 }
 
 impl Parse for YulVarAssign {
@@ -61,13 +61,13 @@ impl Spanned for YulVarAssign {
 }
 
 #[derive(Clone)]
-pub struct SingleVarAssign {
+pub struct YulSingleAssign {
     pub name: YulIdent,
     pub walrus_token: WalrusToken,
     pub assigned_value: YulExpr,
 }
 
-impl Parse for SingleVarAssign {
+impl Parse for YulSingleAssign {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             name: input.parse()?,
@@ -77,7 +77,7 @@ impl Parse for SingleVarAssign {
     }
 }
 
-impl Spanned for SingleVarAssign {
+impl Spanned for YulSingleAssign {
     fn span(&self) -> Span {
         let span = self.name.span();
         span.join(self.assigned_value.span()).unwrap_or(span)
@@ -90,7 +90,7 @@ impl Spanned for SingleVarAssign {
     }
 }
 
-impl fmt::Debug for SingleVarAssign {
+impl fmt::Debug for YulSingleAssign {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SingleVarAssign")
             .field("name", &self.name)
@@ -101,13 +101,13 @@ impl fmt::Debug for SingleVarAssign {
 }
 
 #[derive(Clone)]
-pub struct ManyVarAssign {
+pub struct YulMultiAssign {
     pub variables: Punctuated<YulExpr, Token![,]>,
     pub walrus_token: WalrusToken,
     pub assigned_value: YulFnCall,
 }
 
-impl Parse for ManyVarAssign {
+impl Parse for YulMultiAssign {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             variables: Punctuated::parse_separated_nonempty(input)?,
@@ -117,7 +117,7 @@ impl Parse for ManyVarAssign {
     }
 }
 
-impl Spanned for ManyVarAssign {
+impl Spanned for YulMultiAssign {
     fn span(&self) -> Span {
         let span = self.variables.span();
         span.join(self.assigned_value.span()).unwrap_or(span)
@@ -130,7 +130,7 @@ impl Spanned for ManyVarAssign {
     }
 }
 
-impl fmt::Debug for ManyVarAssign {
+impl fmt::Debug for YulMultiAssign {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ManyVarAssign")
             .field("variables", &self.variables)
