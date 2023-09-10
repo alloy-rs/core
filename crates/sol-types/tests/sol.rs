@@ -294,6 +294,31 @@ fn abigen_sol_multicall() {
 }
 
 #[test]
+fn struct_derive_with_field_attrs() {
+    use serde::Serialize;
+    use serde_json::{self, Value};
+    sol! {
+        #[derive(Serialize, Default)]
+        struct MyStruct {
+            #[serde(skip)]
+            uint256 a;
+            bytes32 b;
+            address[] c;
+        }
+    }
+
+    assert_eq!(
+        serde_json::from_str::<Value>(
+            serde_json::to_string(&MyStruct::default())
+                .unwrap()
+                .as_str()
+        )
+        .unwrap()["a"],
+        Value::Null
+    );
+}
+
+#[test]
 #[cfg(feature = "json")]
 fn abigen_json_large_array() {
     sol!(LargeArray, "../json-abi/tests/abi/LargeArray.json");

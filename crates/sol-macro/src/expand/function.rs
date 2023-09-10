@@ -71,14 +71,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         #[allow(non_camel_case_types, non_snake_case)]
         #[derive(Clone)]
         pub struct #call_name {
-            #(pub #call_fields,)*
+            #(#call_fields),*
         }
 
         #(#return_attrs)*
         #[allow(non_camel_case_types, non_snake_case)]
         #[derive(Clone)]
         pub struct #return_name {
-            #(pub #return_fields,)*
+            #(#return_fields),*
         }
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]

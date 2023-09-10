@@ -492,15 +492,21 @@ fn expand_fields<P>(params: &Parameters<P>) -> impl Iterator<Item = TokenStream>
     params
         .iter()
         .enumerate()
-        .map(|(i, var)| expand_field(i, &var.ty, var.name.as_ref()))
+        .map(|(i, var)| expand_field(i, &var.ty, var.name.as_ref(), var.attrs.as_ref()))
 }
 
 /// Expands a single parameter into a struct field.
-fn expand_field(i: usize, ty: &Type, name: Option<&SolIdent>) -> TokenStream {
+fn expand_field(
+    i: usize,
+    ty: &Type,
+    name: Option<&SolIdent>,
+    attrs: &Vec<Attribute>,
+) -> TokenStream {
     let name = anon_name((i, name));
     let ty = expand_type(ty);
     quote! {
-        #name: <#ty as ::alloy_sol_types::SolType>::RustType
+        #(#attrs)*
+        pub #name: <#ty as ::alloy_sol_types::SolType>::RustType
     }
 }
 
