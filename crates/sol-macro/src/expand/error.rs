@@ -41,7 +41,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
         #[allow(non_camel_case_types, non_snake_case)]
         #[derive(Clone)]
         pub struct #name {
-            #(pub #fields,)*
+            #(#fields),*
         }
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
