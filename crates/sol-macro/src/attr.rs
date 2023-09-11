@@ -1,5 +1,5 @@
 use heck::{ToKebabCase, ToLowerCamelCase, ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
-use syn::{Attribute, Error, LitBool, LitStr, Result};
+use syn::{punctuated::Punctuated, Attribute, Error, LitBool, LitStr, Path, Result, Token};
 
 const DUPLICATE_ERROR: &str = "duplicate attribute";
 const UNKNOWN_ERROR: &str = "unknown `sol` attribute";
@@ -10,6 +10,13 @@ pub fn docs(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
 
 pub fn derives(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|attr| attr.path().is_ident("derive"))
+}
+
+pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {
+    derives(attrs).flat_map(|attr| {
+        attr.parse_args_with(Punctuated::<Path, Token![,]>::parse_terminated)
+            .unwrap_or_default()
+    })
 }
 
 // When adding a new attribute:

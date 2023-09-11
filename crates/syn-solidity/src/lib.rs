@@ -44,7 +44,7 @@ pub use item::{
     ImportDirective, ImportGlob, ImportPath, ImportPlain, Inheritance, Item, ItemContract,
     ItemEnum, ItemError, ItemEvent, ItemFunction, ItemStruct, ItemUdt, PragmaDirective,
     PragmaTokens, Returns, UserDefinableOperator, UsingDirective, UsingList, UsingListItem,
-    UsingType,
+    UsingType, Variant,
 };
 
 mod lit;

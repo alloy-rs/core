@@ -1,5 +1,6 @@
 use crate::{utils::DebugPunctuated, SolIdent, Spanned, Type};
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
+use quote::ToTokens;
 use std::{fmt, num::NonZeroU16};
 use syn::{
     braced,
@@ -19,7 +20,7 @@ pub struct ItemEnum {
     pub enum_token: Token![enum],
     pub name: SolIdent,
     pub brace_token: Brace,
-    pub variants: Punctuated<SolIdent, Token![,]>,
+    pub variants: Punctuated<Variant, Token![,]>,
 }
 
 impl fmt::Debug for ItemEnum {
@@ -40,7 +41,7 @@ impl Parse for ItemEnum {
             enum_token: input.parse()?,
             name: input.parse()?,
             brace_token: braced!(content in input),
-            variants: content.parse_terminated(SolIdent::parse, Token![,])?,
+            variants: content.parse_terminated(Variant::parse, Token![,])?,
         })
     }
 }
@@ -58,5 +59,42 @@ impl Spanned for ItemEnum {
 impl ItemEnum {
     pub fn as_type(&self) -> Type {
         Type::Uint(self.span(), Some(NonZeroU16::new(8).unwrap()))
+    }
+}
+
+/// An enum variant.
+#[derive(Clone, Debug)]
+pub struct Variant {
+    pub attrs: Vec<Attribute>,
+
+    /// Name of the variant.
+    pub ident: SolIdent,
+}
+
+impl Parse for Variant {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        Ok(Self {
+            attrs: input.call(Attribute::parse_outer)?,
+            ident: input.parse()?,
+        })
+    }
+}
+
+impl ToTokens for Variant {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        for attr in &self.attrs {
+            attr.to_tokens(tokens);
+        }
+        self.ident.to_tokens(tokens);
+    }
+}
+
+impl Spanned for Variant {
+    fn span(&self) -> Span {
+        self.ident.span()
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.ident.set_span(span);
     }
 }

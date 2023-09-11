@@ -110,8 +110,8 @@ macro_rules! make_visitor {
 
                 fn visit_item_enum(&mut v, enumm: &'ast $($mut)? ItemEnum) {
                     v.visit_ident(& $($mut)? enumm.name);
-                    for variant in & $($mut)? enumm.variants {
-                        v.visit_ident(variant);
+                    for Variant { ident, .. } in & $($mut)? enumm.variants {
+                        v.visit_ident(ident);
                     }
                 }
 
