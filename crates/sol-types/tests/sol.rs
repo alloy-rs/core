@@ -1,7 +1,7 @@
-use std::str::FromStr;
-
 use alloy_primitives::{keccak256, Address, B256, U256};
 use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolType};
+use serde::Serialize;
+use serde_json::Value;
 
 #[test]
 fn e2e() {
@@ -68,7 +68,7 @@ fn e2e() {
 #[test]
 fn function() {
     sol! {
-        struct customStruct {
+        struct CustomStruct {
             address a;
             uint64 b;
         }
@@ -79,8 +79,8 @@ fn function() {
             bytes calldata longBytes,
             address[] memory array,
             bool[2] memory fixedArray,
-            customStruct struct_,
-            customStruct[] structArray,
+            CustomStruct struct_,
+            CustomStruct[] structArray,
         ) returns (bool x);
     }
 
@@ -95,24 +95,24 @@ fn function() {
         longBytes: vec![0; 36],
         array: vec![Address::ZERO, Address::ZERO, Address::ZERO],
         fixedArray: [true, false],
-        struct_: customStruct {
+        struct_: CustomStruct {
             a: Address::ZERO,
             b: 2,
         },
         structArray: vec![
-            customStruct {
+            CustomStruct {
                 a: Address::ZERO,
                 b: 3,
             },
-            customStruct {
+            CustomStruct {
                 a: Address::ZERO,
                 b: 4,
             },
-            customStruct {
+            CustomStruct {
                 a: Address::ZERO,
                 b: 5,
             },
-            customStruct {
+            CustomStruct {
                 a: Address::ZERO,
                 b: 6,
             },
@@ -294,9 +294,7 @@ fn abigen_sol_multicall() {
 }
 
 #[test]
-fn struct_derive_with_field_attrs() {
-    use serde::Serialize;
-    use serde_json::{self, Value};
+fn struct_field_attrs() {
     sol! {
         #[derive(Serialize, Default)]
         struct MyStruct {
@@ -316,6 +314,23 @@ fn struct_derive_with_field_attrs() {
         .unwrap()["a"],
         Value::Null
     );
+}
+
+#[test]
+fn enum_variant_attrs() {
+    sol! {
+        #[derive(Default, Debug, PartialEq, Eq, Serialize)]
+        enum MyEnum {
+            A,
+            #[default]
+            B,
+            #[serde(skip)]
+            C,
+        }
+    }
+
+    assert_eq!(MyEnum::default(), MyEnum::B);
+    assert!(serde_json::to_string(&MyEnum::C).is_err());
 }
 
 #[test]
@@ -425,6 +440,8 @@ fn eip712_encode_data_nesting() {
 
     assert_eq!(
         alloy_sol_types::SolStruct::eip712_signing_hash(&mail, &domain),
-        B256::from_str("25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775").unwrap()
+        "25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775"
+            .parse::<B256>()
+            .unwrap()
     )
 }

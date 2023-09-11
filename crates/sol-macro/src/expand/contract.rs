@@ -26,7 +26,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         attrs, name, body, ..
     } = contract;
 
-    let (sol_attrs, attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, attrs) = attr::SolAttrs::parse(attrs)?;
     let extra_methods = sol_attrs
         .extra_methods
         .or(cx.attrs.extra_methods)

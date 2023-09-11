@@ -10,7 +10,7 @@ mod contract;
 pub use contract::{ContractKind, Inheritance, ItemContract};
 
 mod r#enum;
-pub use r#enum::ItemEnum;
+pub use r#enum::{ItemEnum, Variant};
 
 mod error;
 pub use error::ItemError;

@@ -1,6 +1,7 @@
 //! [`ItemEnum`] expansion.
 
 use super::ExpCtxt;
+use crate::attr;
 use ast::{ItemEnum, Spanned};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -43,12 +44,22 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
     let has_invalid_variant = max != u8::MAX;
     let invalid_variant = has_invalid_variant.then(|| {
         let comma = (!variants.trailing_punct()).then(syn::token::Comma::default);
+
+        let has_serde = attr::derives_mapped(&attrs).any(|path| {
+            let Some(last) = path.segments.last() else {
+                return false
+            };
+            last.ident == "Serialize" || last.ident == "Deserialize"
+        });
+        let serde_other = has_serde.then(|| quote!(#[serde(other)]));
+
         quote! {
             #comma
             /// Invalid variant.
             ///
             /// This is only used when decoding an out-of-range `u8` value.
             #[doc(hidden)]
+            #serde_other
             __Invalid = u8::MAX,
         }
     });

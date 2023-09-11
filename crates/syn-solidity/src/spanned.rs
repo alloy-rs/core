@@ -80,6 +80,7 @@ impl<T: ?Sized + Spanned + Clone> Spanned for &T {
     }
 
     #[inline]
+    #[track_caller]
     fn set_span(&mut self, _span: Span) {
         unimplemented!(
             "cannot set span of borrowed Spanned: {:?}",
