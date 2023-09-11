@@ -1,3 +1,6 @@
+use std::fmt;
+
+use proc_macro2::Span;
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
@@ -6,7 +9,7 @@ use syn::{
     Result, Token,
 };
 
-use crate::{kw, yul::ident::YulIdent, YulBlock};
+use crate::{kw, yul::ident::YulIdent, Spanned, YulBlock};
 
 // Yul function definition.
 //
@@ -36,11 +39,39 @@ impl Parse for YulFunctionDef {
     }
 }
 
+impl fmt::Debug for YulFunctionDef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("YulFunctionDef")
+            .field("function_token", &self.function_token)
+            .field("ident", &self.ident)
+            .field("paren_token", &self.paren_token)
+            .field("arguments", &self.arguments)
+            .field("returns", &self.returns)
+            .field("body", &self.body)
+            .finish()
+    }
+}
+
+impl Spanned for YulFunctionDef {
+    fn span(&self) -> Span {
+        let span = self.function_token.span();
+        span.join(self.body.span()).unwrap_or(span)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.function_token.set_span(span);
+        self.ident.set_span(span);
+        self.paren_token = Paren(span);
+        self.arguments.set_span(span);
+        self.returns.set_span(span);
+        self.body.set_span(span);
+    }
+}
+
 // The return attribute of a Yul function defenition.
 #[derive(Clone)]
 pub struct YulReturns {
     pub arrow_token: Token![->],
-    // cannot be parsed as empty
     pub returns: Punctuated<YulIdent, Token![,]>,
 }
 
@@ -63,5 +94,26 @@ impl Parse for YulReturns {
             arrow_token: input.parse()?,
             returns: Punctuated::parse_separated_nonempty(input)?,
         })
+    }
+}
+
+impl fmt::Debug for YulReturns {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("YulReturns")
+            .field("arrow_token", &self.arrow_token)
+            .field("returns", &self.returns)
+            .finish()
+    }
+}
+
+impl Spanned for YulReturns {
+    fn span(&self) -> Span {
+        let span = self.arrow_token.span();
+        span.join(self.returns.span()).unwrap_or(span)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.arrow_token.set_span(span);
+        self.returns.set_span(span);
     }
 }

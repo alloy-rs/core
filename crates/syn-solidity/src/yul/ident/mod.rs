@@ -31,7 +31,7 @@ impl fmt::Display for YulIdent {
 
 impl fmt::Debug for YulIdent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("SolIdent").field(&self.to_string()).finish()
+        f.debug_tuple("YulIdent").field(&self.0).finish()
     }
 }
 
@@ -61,7 +61,6 @@ impl From<&str> for YulIdent {
 
 impl Parse for YulIdent {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        // TODO: Deny Solidity keywords
         Self::parse_any(input)
     }
 }
