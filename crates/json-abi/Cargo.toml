@@ -21,10 +21,13 @@ serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json.workspace = true
-clap.workspace = true
-clap_lex.workspace = true
 criterion.workspace = true
 ethabi = "18"
+
+# MSRV support
+clap.workspace = true
+clap_lex.workspace = true
+anstyle.workspace = true
 
 [features]
 default = ["std"]
