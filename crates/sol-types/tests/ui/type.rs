@@ -741,6 +741,14 @@ sol! {
 }
 
 sol! {
+    mapping(bool => mapping(address => uint256[])[])[][] public nestedMapArray;
+}
+
+sol! {
+    mapping(mapping(int => int) => int) public mapKeyOfMap;
+}
+
+sol! {
     function mappings(mapping(uint256 a => bool b), mapping(bool => bool) x);
 }
 

@@ -23,13 +23,13 @@ mod event;
 mod function;
 mod r#struct;
 mod udt;
+mod var_def;
 
 /// The limit for the number of times to resolve a type.
 const RESOLVE_LIMIT: usize = 8;
 
 /// The [`sol!`][crate::sol!] expansion implementation.
-pub fn expand(mut ast: File) -> Result<TokenStream> {
-    ast::VisitMut::visit_file(&mut MutateAst, &mut ast);
+pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
 }
 
@@ -94,10 +94,8 @@ impl<'ast> ExpCtxt<'ast> {
             Item::Function(function) => function::expand(self, function),
             Item::Struct(strukt) => r#struct::expand(self, strukt),
             Item::Udt(udt) => udt::expand(self, udt),
-            // public variables have their own getter function
-            Item::Variable(_) | Item::Import(_) | Item::Pragma(_) | Item::Using(_) => {
-                Ok(TokenStream::new())
-            }
+            Item::Variable(var_def) => var_def::expand(self, var_def),
+            Item::Import(_) | Item::Pragma(_) | Item::Using(_) => Ok(TokenStream::new()),
         }
     }
 }
@@ -245,47 +243,6 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
                 .push(function);
         }
         ast::visit::visit_item_function(self, function);
-    }
-}
-
-struct MutateAst;
-
-impl<'ast> ast::VisitMut<'ast> for MutateAst {
-    fn visit_file(&mut self, file: &'ast mut File) {
-        Self::visit_items(&mut file.items);
-        ast::visit_mut::visit_file(self, file);
-    }
-
-    fn visit_item_contract(&mut self, contract: &'ast mut ast::ItemContract) {
-        Self::visit_items(&mut contract.body);
-        ast::visit_mut::visit_item_contract(self, contract);
-    }
-}
-
-impl MutateAst {
-    #[allow(clippy::single_match)]
-    fn visit_items(items: &mut Vec<Item>) {
-        // add a getter function for each public variable
-        let mut functions = Vec::new();
-        for (i, item) in items.iter().enumerate() {
-            match item {
-                Item::Variable(var) => {
-                    if matches!(
-                        var.attributes.visibility(),
-                        Some(ast::Visibility::Public(_) | ast::Visibility::External(_))
-                    ) {
-                        // TODO: Move this to `expand_item` as we need the context to expand struct
-                        // return types
-                        functions
-                            .push((i + 1, ItemFunction::from_variable_definition(var.clone())));
-                    }
-                }
-                _ => {}
-            }
-        }
-        for (i, function) in functions.into_iter().rev() {
-            items.insert(i, Item::Function(function));
-        }
     }
 }
 

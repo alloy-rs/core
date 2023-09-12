@@ -183,6 +183,44 @@ fn function_names() {
 }
 
 #[test]
+fn getters() {
+    // modified from https://docs.soliditylang.org/en/latest/contracts.html#getter-functions
+    sol! {
+        struct Data {
+            uint a;
+            bytes3 b;
+            uint[3] c;
+            uint[] d;
+            bytes e;
+        }
+        mapping(uint => mapping(bool => Data[])) public data1;
+        mapping(uint => mapping(bool => Data)) public data2;
+
+        mapping(bool => mapping(address => uint256[])[])[][] public nestedMapArray;
+    }
+
+    assert_eq!(data1Call::SIGNATURE, "data1(uint256,bool,uint256)");
+    let _ = data1Return {
+        _0: U256::ZERO,
+        _1: [0, 0, 0],
+        _2: vec![],
+    };
+
+    assert_eq!(data2Call::SIGNATURE, "data2(uint256,bool)");
+    let _ = data2Return {
+        _0: U256::ZERO,
+        _1: [0, 0, 0],
+        _2: vec![],
+    };
+
+    assert_eq!(
+        nestedMapArrayCall::SIGNATURE,
+        "nestedMapArray(uint256,uint256,bool,uint256,address,uint256)"
+    );
+    let _ = nestedMapArrayReturn { _0: U256::ZERO };
+}
+
+#[test]
 fn abigen_sol_multicall() {
     sol!("../syn-solidity/tests/contracts/Multicall.sol");
 

@@ -1,0 +1,5 @@
+error: invalid state variable type
+  --> tests/ui/var_def.rs:18:37
+   |
+18 |     mapping(int => Complex1) public complexMap;
+   |                                     ^^^^^^^^^^
