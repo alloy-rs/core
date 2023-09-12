@@ -51,8 +51,11 @@ pub use utils::keccak256;
 pub use ::hex;
 #[doc(no_inline)]
 pub use hex_literal::{self, hex};
+/// Re-export of `ruint::uint` for convenience. Note that users of the [`uint`]
+/// macro must also add `ruint` to their `Cargo.toml` as a dependency.
+pub use ruint::uint;
 #[doc(no_inline)]
-pub use ruint::{self, uint, Uint};
+pub use ruint::{self, Uint};
 #[doc(no_inline)]
 pub use tiny_keccak::{self, Hasher, Keccak};
 
