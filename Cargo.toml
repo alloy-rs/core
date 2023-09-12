@@ -62,7 +62,9 @@ ruint = { version = "1.10.1", default-features = false, features = ["alloc"] }
 ruint-macro = { version = "1", default-features = false }
 tiny-keccak = "2.0"
 
-# These dependencies have higher a MSRV (clap@4.4.0, clap_lex@0.5.1),
+# This crates are dependencies of criterion, with a higher MSRV
+# (clap@4.4.0, clap_lex@0.5.1, anstyle@1.0.3),
 # but are only used by dev-dependencies so we can just pin them
 clap = "~4.3"
 clap_lex = "<=0.5.0"
+anstyle = "<=1.0.2"

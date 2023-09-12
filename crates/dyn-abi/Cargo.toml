@@ -38,12 +38,15 @@ proptest = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex-literal.workspace = true
-clap.workspace = true
-clap_lex.workspace = true
 criterion.workspace = true
 ethabi = "18"
 rand = "0.8"
 serde_json = { workspace = true }
+
+# MSRV support
+clap.workspace = true
+clap_lex.workspace = true
+anstyle.workspace = true
 
 [features]
 default = ["std"]
