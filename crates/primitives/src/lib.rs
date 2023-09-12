@@ -51,8 +51,9 @@ pub use utils::keccak256;
 pub use ::hex;
 #[doc(no_inline)]
 pub use hex_literal::{self, hex};
-/// Re-export of `ruint::uint` for convenience. Note that users of the [`uint`]
-/// macro must also add `ruint` to their `Cargo.toml` as a dependency.
+/// Re-export of [`ruint::uint`] for convenience. Note that users of this macro
+/// must also add [`ruint`] to their `Cargo.toml` as a dependency.
+#[doc(inline)]
 pub use ruint::uint;
 #[doc(no_inline)]
 pub use ruint::{self, Uint};
