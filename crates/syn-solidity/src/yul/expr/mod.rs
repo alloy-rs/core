@@ -6,13 +6,21 @@ use syn::{
     token::Paren,
 };
 
+mod fn_call;
+pub use fn_call::YulFnCall;
+
+mod path;
+pub use path::YulPath;
+
 use crate::Spanned;
 
-use super::{fn_call::YulFnCall, ident::YulIdent, lit::YulLit};
+use super::lit::YulLit;
 
+// Solidity Reference:
+// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulExpression>
 #[derive(Clone)]
 pub enum YulExpr {
-    Path(YulIdent),
+    Path(YulPath),
     Call(YulFnCall),
     Literal(YulLit),
 }
@@ -20,10 +28,16 @@ pub enum YulExpr {
 impl Parse for YulExpr {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         if input.peek2(Paren) {
-            input.parse().map(Self::Call)
+            return input.parse().map(Self::Call)
         }
 
         // fork to find next type
+        let fork = input.fork();
+        if fork.parse::<YulLit>().is_ok() {
+            return input.parse().map(Self::Literal)
+        }
+
+        input.parse().map(Self::Path)
     }
 }
 

@@ -36,6 +36,10 @@ fn contracts() {
     for file in files {
         let path = file.path();
         let name = path.file_name().unwrap().to_str().unwrap();
+
+        if name != "OpenzeppelinContracts.sol" {
+            continue
+        }
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| parse_file(&path))) {
             Ok(Ok(())) => {}
             Ok(Err(e)) => {

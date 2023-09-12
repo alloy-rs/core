@@ -1,5 +1,6 @@
 use std::fmt;
 
+use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream, Result},
     token::{Brace, Paren},
@@ -29,7 +30,7 @@ pub use walrus_token::WalrusToken;
 
 use crate::{kw, Spanned};
 
-use super::{fn_call::YulFnCall, r#type::function::YulFunctionDef};
+use super::{expr::YulFnCall, r#type::function::YulFunctionDef};
 
 #[derive(Clone)]
 pub enum YulStmt {
@@ -75,7 +76,7 @@ impl Parse for YulStmt {
 }
 
 impl Spanned for YulStmt {
-    fn span(&self) -> proc_macro2::Span {
+    fn span(&self) -> Span {
         match self {
             YulStmt::Block(block) => block.span(),
             YulStmt::Decl(decl) => decl.span(),
@@ -91,7 +92,7 @@ impl Spanned for YulStmt {
         }
     }
 
-    fn set_span(&mut self, span: proc_macro2::Span) {
+    fn set_span(&mut self, span: Span) {
         match self {
             YulStmt::Block(block) => block.set_span(span),
             YulStmt::Decl(decl) => decl.set_span(span),

@@ -9,9 +9,12 @@ use syn::{
     Token,
 };
 
-use crate::Spanned;
+use crate::{
+    yul::{ident::YulIdent, r#type::evm_builtin::YulEVMBuiltIn},
+    Spanned,
+};
 
-use super::{expr::YulExpr, ident::YulIdent, r#type::evm_builtin::YulEVMBuiltIn};
+use super::YulExpr;
 
 // Yul function call.
 //
@@ -47,7 +50,11 @@ impl Spanned for YulFnCall {
 
 impl fmt::Debug for YulFnCall {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("YulFnCall").finish()
+        f.debug_struct("YulFnCall")
+            .field("function_type", &self.function_type)
+            .field("paren_token", &self.paren_token)
+            .field("arguments", &self.arguments)
+            .finish()
     }
 }
 

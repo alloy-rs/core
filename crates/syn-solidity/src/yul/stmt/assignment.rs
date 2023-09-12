@@ -7,7 +7,10 @@ use syn::{
 };
 
 use crate::{
-    yul::{expr::YulExpr, fn_call::YulFnCall, ident::YulIdent},
+    yul::{
+        expr::{YulExpr, YulFnCall, YulPath},
+        ident::YulIdent,
+    },
     Spanned,
 };
 
@@ -31,8 +34,7 @@ impl Parse for YulVarAssign {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         // TODO: Figure if we can do this without forking
         let lookahead = input.fork();
-        // both declarations share same first two tokens
-        lookahead.parse::<Token![let]>()?;
+        // both declarations share same first token
         lookahead.parse::<YulIdent>()?;
 
         // declaration type is then judged based on next token
@@ -62,7 +64,7 @@ impl Spanned for YulVarAssign {
 
 #[derive(Clone)]
 pub struct YulSingleAssign {
-    pub name: YulIdent,
+    pub name: YulPath,
     pub walrus_token: WalrusToken,
     pub assigned_value: YulExpr,
 }
@@ -102,7 +104,7 @@ impl fmt::Debug for YulSingleAssign {
 
 #[derive(Clone)]
 pub struct YulMultiAssign {
-    pub variables: Punctuated<YulExpr, Token![,]>,
+    pub variables: Punctuated<YulPath, Token![,]>,
     pub walrus_token: WalrusToken,
     pub assigned_value: YulFnCall,
 }

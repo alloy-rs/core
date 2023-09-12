@@ -7,6 +7,4 @@ mod lit;
 
 mod ident;
 
-mod fn_call;
-
 mod r#type;

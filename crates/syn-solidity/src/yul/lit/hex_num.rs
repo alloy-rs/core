@@ -46,7 +46,7 @@ impl fmt::Debug for YulHexNum {
 
 // Represents the `0x` prefix
 #[derive(Clone)]
-struct ZeroExPrefix {
+pub struct ZeroExPrefix {
     zero_token: LitInt,
     x_token: Punct,
 }

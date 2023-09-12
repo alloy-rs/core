@@ -7,7 +7,10 @@ use syn::{
 };
 
 use crate::{
-    yul::{expr::YulExpr, fn_call::YulFnCall, ident::YulIdent},
+    yul::{
+        expr::{YulExpr, YulFnCall},
+        ident::YulIdent,
+    },
     Spanned,
 };
 

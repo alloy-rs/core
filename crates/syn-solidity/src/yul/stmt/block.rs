@@ -13,13 +13,13 @@ use super::YulStmt;
 #[derive(Clone)]
 pub struct YulBlock {
     pub brace_token: Brace,
-    pub stmt: Box<YulStmt>,
+    pub stmts: Vec<YulStmt>,
 }
 
 impl fmt::Debug for YulBlock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulBlock")
-            .field("stmt", &self.stmt)
+            .field("stmt", &self.stmts)
             .finish()
     }
 }
@@ -29,7 +29,15 @@ impl Parse for YulBlock {
         let content;
         Ok(Self {
             brace_token: braced!(content in input),
-            stmt: content.parse()?,
+            stmts: {
+                let mut stmts = Vec::new();
+                while !content.is_empty() {
+                    let stmt: YulStmt = content.parse()?;
+                    println!("stmt:{:#?}", stmt);
+                    stmts.push(stmt);
+                }
+                stmts
+            },
         })
     }
 }
