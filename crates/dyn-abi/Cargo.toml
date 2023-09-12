@@ -43,11 +43,6 @@ ethabi = "18"
 rand = "0.8"
 serde_json = { workspace = true }
 
-# MSRV support
-clap.workspace = true
-clap_lex.workspace = true
-anstyle.workspace = true
-
 [features]
 default = ["std"]
 std = [

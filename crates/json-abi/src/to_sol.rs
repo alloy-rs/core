@@ -12,7 +12,7 @@ pub(crate) trait ToSol {
 }
 
 impl ToSol for JsonAbi {
-    #[allow(for_loops_over_fallibles, unknown_lints)]
+    #[allow(unknown_lints, for_loops_over_fallibles)]
     #[inline]
     fn to_sol(&self, out: &mut String) {
         macro_rules! fmt {

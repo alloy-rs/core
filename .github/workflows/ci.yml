@@ -24,7 +24,12 @@ jobs:
               with:
                   toolchain: ${{ matrix.rust }}
             - uses: Swatinem/rust-cache@v2
+            # Only run tests on latest stable and above
+            - name: check
+              if: ${{ matrix.rust == '1.65' }} # MSRV
+              run: cargo check --workspace ${{ matrix.flags }}
             - name: test
+              if: ${{ matrix.rust != '1.65' }} # MSRV
               run: cargo test --workspace ${{ matrix.flags }}
 
     wasm:

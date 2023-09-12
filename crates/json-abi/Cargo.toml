@@ -24,11 +24,6 @@ serde_json.workspace = true
 criterion.workspace = true
 ethabi = "18"
 
-# MSRV support
-clap.workspace = true
-clap_lex.workspace = true
-anstyle.workspace = true
-
 [features]
 default = ["std"]
 std = ["serde/std", "alloy-primitives/std", "alloy-sol-type-parser/std", "serde_json?/std"]
