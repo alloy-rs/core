@@ -15,7 +15,10 @@ use syn::{
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulPath>
 #[derive(Clone)]
 pub enum YulPath {
+    /// Dotless path, references a declared varaible inside the assembly block.
     SimplePath(YulIdent),
+
+    /// Dotted path, references a declared variable outside the assembly block.
     DottedPath(Punctuated<YulIdent, Token![.]>),
 }
 

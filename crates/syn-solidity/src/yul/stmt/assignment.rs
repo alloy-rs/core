@@ -18,6 +18,7 @@ use syn::{
 pub enum YulVarAssign {
     /// Assign a single variable.
     Single(YulSingleAssign),
+
     /// Assign many variables, only assignable via function call.
     Multi(YulMultiAssign),
 }
@@ -60,7 +61,7 @@ impl fmt::Debug for YulVarAssign {
     }
 }
 
-/// Assign value to a single Yul variable: `x := 0`.
+/// Assign a value to a single Yul variable: `x := 0`.
 #[derive(Clone)]
 pub struct YulSingleAssign {
     pub name: YulPath,
