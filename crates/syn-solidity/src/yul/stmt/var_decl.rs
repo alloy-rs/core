@@ -1,3 +1,5 @@
+use crate::{Spanned, WalrusToken, YulExpr, YulFnCall, YulIdent};
+
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -6,41 +8,23 @@ use syn::{
     Result, Token,
 };
 
-use crate::{
-    yul::{
-        expr::{YulExpr, YulFnCall},
-        ident::YulIdent,
-    },
-    Spanned,
-};
-
-use super::walrus_token::WalrusToken;
-
-// Declaration of one or more Yul variables with optional initial value.
-// If multiple variables are declared, only a function call is a valid initial
-// value.
-//
-// Solidity Reference:
-// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulVariableDeclaration>
-#[derive(Clone, Debug)]
+/// Declaration of one or more Yul variables with optional initial value.
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulVariableDeclaration>
+#[derive(Clone)]
 pub enum YulVarDecl {
-    // Declare a single variable.
+    /// Declare a single yul variable.
     Single(YulSingleDecl),
-    // Declare many variables, initialized only via function call.
-    Many(YulMultiDecl),
+
+    /// Declare many yul vars, values only set via function call.
+    Multi(YulMultiDecl),
 }
 
 impl Parse for YulVarDecl {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        // TODO: Figure if we can do this without forking
-        let lookahead = input.fork();
-        // both declarations share same first two tokens
-        lookahead.parse::<Token![let]>()?;
-        lookahead.parse::<YulIdent>()?;
-
-        // declaration type is then judged based on next token
-        if lookahead.peek(Token![,]) {
-            Ok(YulVarDecl::Many(input.parse()?))
+        if input.peek3(Token![,]) {
+            Ok(YulVarDecl::Multi(input.parse()?))
         } else {
             Ok(YulVarDecl::Single(input.parse()?))
         }
@@ -51,18 +35,29 @@ impl Spanned for YulVarDecl {
     fn span(&self) -> Span {
         match self {
             Self::Single(decl) => decl.span(),
-            Self::Many(decl) => decl.span(),
+            Self::Multi(decl) => decl.span(),
         }
     }
 
     fn set_span(&mut self, span: Span) {
         match self {
             Self::Single(decl) => decl.set_span(span),
-            Self::Many(decl) => decl.set_span(span),
+            Self::Multi(decl) => decl.set_span(span),
         }
     }
 }
 
+impl fmt::Debug for YulVarDecl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("YulVarDecl::")?;
+        match self {
+            Self::Single(decl) => decl.fmt(f),
+            Self::Multi(decl) => decl.fmt(f),
+        }
+    }
+}
+
+/// Declare a single Yul variable: `let x := 0` or `let x`.
 #[derive(Clone)]
 pub struct YulSingleDecl {
     pub let_token: Token![let],
@@ -106,7 +101,7 @@ impl Spanned for YulSingleDecl {
 
 impl fmt::Debug for YulSingleDecl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SingleVarDecl")
+        f.debug_struct("YulSingleDecl")
             .field("let_token", &self.let_token)
             .field("name", &self.name)
             .field("assignment", &self.assignment)
@@ -114,6 +109,7 @@ impl fmt::Debug for YulSingleDecl {
     }
 }
 
+/// Declare multiple Yul variables: `let x, y := foo()` or `let x, y, z`.
 #[derive(Clone)]
 pub struct YulMultiDecl {
     pub let_token: Token![let],
@@ -157,7 +153,7 @@ impl Spanned for YulMultiDecl {
 
 impl fmt::Debug for YulMultiDecl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ManyVarDecl")
+        f.debug_struct("YulMultiDecl")
             .field("let_token", &self.let_token)
             .field("vars", &self.vars)
             .field("assignment", &self.assignment)

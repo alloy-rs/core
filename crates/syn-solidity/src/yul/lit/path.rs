@@ -1,3 +1,0 @@
-enum YulPath {
-    SimplePath(YulIdent),
-}

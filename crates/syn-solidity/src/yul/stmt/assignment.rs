@@ -1,3 +1,5 @@
+use crate::{Spanned, WalrusToken, YulExpr, YulFnCall, YulPath};
+
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -6,41 +8,27 @@ use syn::{
     Result, Token,
 };
 
-use crate::{
-    yul::{
-        expr::{YulExpr, YulFnCall, YulPath},
-        ident::YulIdent,
-    },
-    Spanned,
-};
-
-use super::walrus_token::WalrusToken;
-
-// Assignaration of one or more Yul variables with optional initial value.
-// If multiple variables are declared, only a function call is a valid initial
-// value.
-//
-// Solidity Reference:
-// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulVariableAssignaration>
-#[derive(Clone, Debug)]
+/// Assignaration of one or more Yul variables with optional initial value.
+/// If multiple variables are declared, only a function call is a valid initial
+/// value.
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulVariableAssignaration>
+#[derive(Clone)]
 pub enum YulVarAssign {
-    // Assignare a single variable.
+    /// Assign a single variable.
     Single(YulSingleAssign),
-    // Assignare many variables, initialized only via function call.
-    Many(YulMultiAssign),
+    /// Assign many variables, only assignable via function call.
+    Multi(YulMultiAssign),
 }
 
 impl Parse for YulVarAssign {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        // TODO: Figure if we can do this without forking
-        let lookahead = input.fork();
-        // both declarations share same first token
-        lookahead.parse::<YulIdent>()?;
-
-        // declaration type is then judged based on next token
-        if lookahead.peek(Token![,]) {
-            Ok(YulVarAssign::Many(input.parse()?))
+        if input.peek2(Token![,]) {
+            // if an identifier is followed by a comma, parse as Multi
+            Ok(YulVarAssign::Multi(input.parse()?))
         } else {
+            // otherwise, parse as Single
             Ok(YulVarAssign::Single(input.parse()?))
         }
     }
@@ -49,19 +37,30 @@ impl Parse for YulVarAssign {
 impl Spanned for YulVarAssign {
     fn span(&self) -> Span {
         match self {
-            Self::Single(decl) => decl.span(),
-            Self::Many(decl) => decl.span(),
+            Self::Single(asgn) => asgn.span(),
+            Self::Multi(asgn) => asgn.span(),
         }
     }
 
     fn set_span(&mut self, span: Span) {
         match self {
-            Self::Single(decl) => decl.set_span(span),
-            Self::Many(decl) => decl.set_span(span),
+            Self::Single(asgn) => asgn.set_span(span),
+            Self::Multi(asgn) => asgn.set_span(span),
         }
     }
 }
 
+impl fmt::Debug for YulVarAssign {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("YulVarAssign::")?;
+        match self {
+            Self::Single(asgn) => asgn.fmt(f),
+            Self::Multi(asgn) => asgn.fmt(f),
+        }
+    }
+}
+
+/// Assign value to a single Yul variable: `x := 0`.
 #[derive(Clone)]
 pub struct YulSingleAssign {
     pub name: YulPath,
@@ -102,6 +101,7 @@ impl fmt::Debug for YulSingleAssign {
     }
 }
 
+/// Assign values to multiple Yul variables via funciton call: `x, y := foo()`.
 #[derive(Clone)]
 pub struct YulMultiAssign {
     pub variables: Punctuated<YulPath, Token![,]>,

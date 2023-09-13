@@ -1,4 +1,5 @@
 use crate::Spanned;
+
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use std::fmt;
@@ -8,7 +9,13 @@ use syn::{
     Result,
 };
 
-/// A Solidity identifier.
+mod path;
+pub use path::YulPath;
+
+/// A Yul identifier.
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.YulIdentifier>
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct YulIdent(pub Ident);

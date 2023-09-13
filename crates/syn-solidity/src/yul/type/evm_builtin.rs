@@ -1,14 +1,17 @@
+use crate::{kw, Spanned};
+
 use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream},
     Result, Token,
 };
 
-use crate::{kw, Spanned};
-
 macro_rules! yul_evm_builtin_enum_builder {
     ($( $variant:ident($($token:tt)* ) ),* $(,)?) => {
-        // Generate the enum
+        /// Respresentation of an EVM builtin opcode.
+        ///
+        /// Solidity Reference:
+        /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.YulEVMBuiltin>
         #[derive(Clone, Debug)]
         pub enum YulEVMBuiltIn {
             $( $variant($($token)*), )*
@@ -43,10 +46,6 @@ macro_rules! yul_evm_builtin_enum_builder {
     };
 }
 
-// Respresentation of an EVM builtin opcode
-//
-// Solidity Reference:
-// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.YulEVMBuiltin>
 yul_evm_builtin_enum_builder!(
     Stop(kw::stop),
     Add(kw::add),

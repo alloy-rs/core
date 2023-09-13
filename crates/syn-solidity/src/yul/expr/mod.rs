@@ -1,23 +1,20 @@
+use crate::{Spanned, YulLit, YulPath};
+
 use std::fmt;
 
 use proc_macro2::Span;
 use syn::{
-    parse::{Parse, ParseStream, Result},
+    parse::{discouraged::Speculative, Parse, ParseStream, Result},
     token::Paren,
 };
 
 mod fn_call;
 pub use fn_call::YulFnCall;
 
-mod path;
-pub use path::YulPath;
-
-use crate::Spanned;
-
-use super::lit::YulLit;
-
-// Solidity Reference:
-// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulExpression>
+/// A Yul expression.
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulExpression>
 #[derive(Clone)]
 pub enum YulExpr {
     Path(YulPath),
@@ -31,10 +28,11 @@ impl Parse for YulExpr {
             return input.parse().map(Self::Call)
         }
 
-        // fork to find next type
-        let fork = input.fork();
-        if fork.parse::<YulLit>().is_ok() {
-            return input.parse().map(Self::Literal)
+        let speculative_parse = input.fork();
+
+        if let Ok(lit) = speculative_parse.parse::<YulLit>() {
+            input.advance_to(&speculative_parse);
+            return Ok(Self::Literal(lit))
         }
 
         input.parse().map(Self::Path)

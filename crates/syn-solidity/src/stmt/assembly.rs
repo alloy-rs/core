@@ -1,4 +1,4 @@
-use crate::{kw, utils::DebugPunctuated, LitStr, Spanned, yul::YulBlock};
+use crate::{kw, utils::DebugPunctuated, yul::YulBlock, LitStr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{

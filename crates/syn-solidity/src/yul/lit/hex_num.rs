@@ -1,13 +1,16 @@
-use std::fmt;
+use crate::Spanned;
 
 use proc_macro2::{Ident, Punct, Span};
+use std::fmt;
 use syn::{
     parse::{Parse, ParseStream},
     LitInt, Result,
 };
 
-use crate::Spanned;
-
+/// A hexadecimal number prefixed with `0x`: 0xbadf00d
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.YulHexNumber>
 #[derive(Clone)]
 pub struct YulHexNum {
     pub prefix_token: ZeroExPrefix,
@@ -44,7 +47,7 @@ impl fmt::Debug for YulHexNum {
     }
 }
 
-// Represents the `0x` prefix
+/// Represents the `0x` prefix/token
 #[derive(Clone)]
 pub struct ZeroExPrefix {
     zero_token: LitInt,
@@ -53,12 +56,13 @@ pub struct ZeroExPrefix {
 
 impl Parse for ZeroExPrefix {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        // capture the 0 prefix (and sanitize)
+        // capture the `0` token (and verify)
         let zero_token: LitInt = input.parse()?;
         if zero_token.base10_parse::<u8>()? != 0 {
             return Err(input.error("expected `0x` prefix"))
         }
 
+        // capture the `x` token (and verify)
         let x_token: Punct = input.parse()?;
         if x_token.as_char() != 'x' {
             return Err(input.error("expected `0x` prefix"))

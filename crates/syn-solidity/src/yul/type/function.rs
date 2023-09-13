@@ -1,6 +1,7 @@
-use std::fmt;
+use crate::{kw, Spanned, YulBlock, YulIdent};
 
 use proc_macro2::Span;
+use std::fmt;
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
@@ -9,12 +10,10 @@ use syn::{
     Result, Token,
 };
 
-use crate::{kw, yul::ident::YulIdent, Spanned, YulBlock};
-
-// Yul function definition.
-//
-// Solitify Reference:
-// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulFunctionDefinition>
+/// Yul function definition: `function f() -> a, b { ... }`.
+///
+/// Solitify Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulFunctionDefinition>
 #[derive(Clone)]
 pub struct YulFunctionDef {
     pub function_token: kw::function,
@@ -32,23 +31,10 @@ impl Parse for YulFunctionDef {
             function_token: input.parse()?,
             ident: input.parse()?,
             paren_token: parenthesized!(content in input),
-            arguments: Punctuated::parse_separated_nonempty(&content)?,
+            arguments: Punctuated::parse_terminated(&content)?,
             returns: input.call(YulReturns::parse_opt)?,
             body: input.parse()?,
         })
-    }
-}
-
-impl fmt::Debug for YulFunctionDef {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("YulFunctionDef")
-            .field("function_token", &self.function_token)
-            .field("ident", &self.ident)
-            .field("paren_token", &self.paren_token)
-            .field("arguments", &self.arguments)
-            .field("returns", &self.returns)
-            .field("body", &self.body)
-            .finish()
     }
 }
 
@@ -68,7 +54,20 @@ impl Spanned for YulFunctionDef {
     }
 }
 
-// The return attribute of a Yul function defenition.
+impl fmt::Debug for YulFunctionDef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("YulFunctionDef")
+            .field("function_token", &self.function_token)
+            .field("ident", &self.ident)
+            .field("paren_token", &self.paren_token)
+            .field("arguments", &self.arguments)
+            .field("returns", &self.returns)
+            .field("body", &self.body)
+            .finish()
+    }
+}
+
+/// The return attribute of a Yul function defenition.
 #[derive(Clone)]
 pub struct YulReturns {
     pub arrow_token: Token![->],
@@ -97,15 +96,6 @@ impl Parse for YulReturns {
     }
 }
 
-impl fmt::Debug for YulReturns {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("YulReturns")
-            .field("arrow_token", &self.arrow_token)
-            .field("returns", &self.returns)
-            .finish()
-    }
-}
-
 impl Spanned for YulReturns {
     fn span(&self) -> Span {
         let span = self.arrow_token.span();
@@ -115,5 +105,14 @@ impl Spanned for YulReturns {
     fn set_span(&mut self, span: Span) {
         self.arrow_token.set_span(span);
         self.returns.set_span(span);
+    }
+}
+
+impl fmt::Debug for YulReturns {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("YulReturns")
+            .field("arrow_token", &self.arrow_token)
+            .field("returns", &self.returns)
+            .finish()
     }
 }

@@ -1,19 +1,18 @@
-use std::fmt;
+use crate::{kw, LitHexStr, LitStr, Spanned};
 
 use proc_macro2::Span;
+use std::fmt;
 use syn::{
     parse::{Parse, ParseStream, Result},
     LitBool, LitInt,
 };
 
-use crate::{kw, LitHexStr, LitStr, Spanned};
-
 mod hex_num;
 pub use hex_num::YulHexNum;
 
-/// Yul literals e.g. 0x123, 42 or "abc"
+/// Yul literals e.g. 0x123, 42 or "abc".
 ///
-/// Reference:
+/// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulLiteral>
 #[derive(Clone)]
 pub enum YulLit {

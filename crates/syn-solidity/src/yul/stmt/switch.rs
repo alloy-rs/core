@@ -1,30 +1,28 @@
+use crate::{kw, Spanned, YulBlock, YulExpr, YulLit};
+
 use proc_macro2::Span;
 use std::fmt;
 use syn::parse::{Parse, ParseStream, Result};
 
-use crate::{
-    kw,
-    yul::{expr::YulExpr, lit::YulLit},
-    Spanned, YulBlock,
-};
-
-// A Yul switch statement can consist of only a default-case or one
-// or more non-default cases optionally followed by a default-case.
-//
-// Example switch statement in Yul:
-//
-// switch exponent
-// case 0 { result := 1 }
-// case 1 { result := base }
-// default { revert(0, 0) }
-//
-// Solidity Reference:
-// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulSwitchStatement>
+/// A Yul switch statement can consist of only a default-case or one
+/// or more non-default cases optionally followed by a default-case.
+///
+/// Example switch statement in Yul:
+///
+/// ```solidity
+/// switch exponent
+/// case 0 { result := 1 }
+/// case 1 { result := base }
+/// default { revert(0, 0) }
+/// ```
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulSwitchStatement>
 #[derive(Clone)]
 pub struct YulSwitch {
     switch_token: kw::switch,
     selector: YulExpr,
-    branches: Vec<YulSwitchBranch>,
+    branches: Vec<YulCaseBranch>,
     default_case: Option<YulSwitchDefault>,
 }
 
@@ -79,15 +77,15 @@ impl fmt::Debug for YulSwitch {
     }
 }
 
-// represents a non-default case of a Yul switch stmt.
+/// Represents a non-default case of a Yul switch statement.
 #[derive(Clone)]
-pub struct YulSwitchBranch {
+pub struct YulCaseBranch {
     case_token: kw::case,
     constant: YulLit,
     body: YulBlock,
 }
 
-impl Parse for YulSwitchBranch {
+impl Parse for YulCaseBranch {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             case_token: input.parse()?,
@@ -97,17 +95,7 @@ impl Parse for YulSwitchBranch {
     }
 }
 
-impl fmt::Debug for YulSwitchBranch {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SwitchBranch")
-            .field("case_token", &self.case_token)
-            .field("constant", &self.constant)
-            .field("body", &self.body)
-            .finish()
-    }
-}
-
-impl Spanned for YulSwitchBranch {
+impl Spanned for YulCaseBranch {
     fn span(&self) -> Span {
         let span = self.case_token.span();
         span.join(self.body.span()).unwrap_or(span)
@@ -120,7 +108,17 @@ impl Spanned for YulSwitchBranch {
     }
 }
 
-// represents the default case of a Yul switch stmt.
+impl fmt::Debug for YulCaseBranch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("YulCaseBranch")
+            .field("case_token", &self.case_token)
+            .field("constant", &self.constant)
+            .field("body", &self.body)
+            .finish()
+    }
+}
+
+/// Represents the default case of a Yul switch statement.
 #[derive(Clone)]
 pub struct YulSwitchDefault {
     default_token: kw::default,
@@ -136,15 +134,6 @@ impl Parse for YulSwitchDefault {
     }
 }
 
-impl fmt::Debug for YulSwitchDefault {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SwitchDefault")
-            .field("default_token", &self.default_token)
-            .field("body", &self.body)
-            .finish()
-    }
-}
-
 impl Spanned for YulSwitchDefault {
     fn span(&self) -> Span {
         let span = self.default_token.span();
@@ -154,5 +143,14 @@ impl Spanned for YulSwitchDefault {
     fn set_span(&mut self, span: Span) {
         self.default_token.set_span(span);
         self.body.set_span(span);
+    }
+}
+
+impl fmt::Debug for YulSwitchDefault {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SwitchDefault")
+            .field("default_token", &self.default_token)
+            .field("body", &self.body)
+            .finish()
     }
 }

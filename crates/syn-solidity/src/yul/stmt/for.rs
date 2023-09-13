@@ -1,3 +1,5 @@
+use crate::{Spanned, YulBlock, YulExpr};
+
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
@@ -5,13 +7,11 @@ use syn::{
     Result, Token,
 };
 
-use crate::{yul::expr::YulExpr, Spanned, YulBlock};
-
-// Yul for loop e.g `for {let i := 0} lt(i,10) {i := add(i,1)} {mstore(i,7)}`
-//
-// Solidity Reference:
-// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulForStatement>
-// breakdown of parts: <https://docs.soliditylang.org/en/latest/yul.html#loops>
+/// Yul for loop e.g `for {let i := 0} lt(i,10) {i := add(i,1)} {mstore(i,7)}`.
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulForStatement>
+/// breakdown of parts: <https://docs.soliditylang.org/en/latest/yul.html#loops>
 #[derive(Clone)]
 pub struct YulFor {
     for_token: Token![for],
@@ -33,18 +33,6 @@ impl Parse for YulFor {
     }
 }
 
-impl fmt::Debug for YulFor {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("YulFor")
-            .field("for_token", &self.for_token)
-            .field("initialization", &self.initialization)
-            .field("condition", &self.condition)
-            .field("post_iteration", &self.post_iteration)
-            .field("body", &self.body)
-            .finish()
-    }
-}
-
 impl Spanned for YulFor {
     fn span(&self) -> Span {
         let span = self.for_token.span();
@@ -57,5 +45,17 @@ impl Spanned for YulFor {
         self.condition.set_span(span);
         self.post_iteration.set_span(span);
         self.body.set_span(span);
+    }
+}
+
+impl fmt::Debug for YulFor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("YulFor")
+            .field("for_token", &self.for_token)
+            .field("initialization", &self.initialization)
+            .field("condition", &self.condition)
+            .field("post_iteration", &self.post_iteration)
+            .field("body", &self.body)
+            .finish()
     }
 }

@@ -1,3 +1,5 @@
+use crate::{kw, Spanned, YulFnCall, YulFunctionDef};
+
 use std::fmt;
 
 use proc_macro2::Span;
@@ -20,7 +22,7 @@ mod r#for;
 pub use r#for::YulFor;
 
 mod switch;
-pub use switch::{YulSwitch, YulSwitchBranch, YulSwitchDefault};
+pub use switch::{YulCaseBranch, YulSwitch, YulSwitchDefault};
 
 mod assignment;
 pub use assignment::{YulMultiAssign, YulSingleAssign, YulVarAssign};
@@ -28,27 +30,50 @@ pub use assignment::{YulMultiAssign, YulSingleAssign, YulVarAssign};
 mod walrus_token;
 pub use walrus_token::WalrusToken;
 
-use crate::{kw, Spanned};
-
-use super::{expr::YulFnCall, r#type::function::YulFunctionDef};
-
+/// A Yul statement.
+///
+/// Solidity Reference:
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulStatement>
 #[derive(Clone)]
 pub enum YulStmt {
+    /// A Yul blocked scope: `{ ... }`.
     Block(YulBlock),
+
+    /// A variable declaration statement: `let x := 0`.
     Decl(YulVarDecl),
+
+    /// A variable assignment statement: `x := 1`.
     Assign(YulVarAssign),
+
+    /// A function call statement: `foo(a, b)`.
     Call(YulFnCall),
+
+    /// A if statement: `if lt(a, b) { ... }`.
     If(YulIf),
+
+    /// A for statement: `for {let i := 0} lt(i,10) {i := add(i,1)} { ... }`.
     For(YulFor),
+
+    /// A switch statement: `switch expr case 0 { ... } default { ... }`.
     Switch(YulSwitch),
+
+    /// A leave statement: `leave`.
     Leave(kw::leave),
+
+    /// A break statement: `break`.
     Break(Token![break]),
+
+    /// A continue statement: `continue`.
     Continue(Token![continue]),
+
+    /// A function defenition statement: `function f() { ... }`.
     FunctionDef(YulFunctionDef),
 }
 
 impl Parse for YulStmt {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let _ = input.call(syn::Attribute::parse_outer)?;
+
         if input.peek(Brace) {
             input.parse().map(Self::Block)
         } else if input.peek(Token![let]) {

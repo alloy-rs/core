@@ -1,21 +1,16 @@
-use crate::yul::expr::YulExpr;
-use std::fmt;
+use crate::{Spanned, YulBlock, YulExpr};
 
 use proc_macro2::Span;
+use std::fmt;
 use syn::{
     parse::{Parse, ParseStream},
     Result, Token,
 };
 
-use crate::Spanned;
-
-use super::YulBlock;
-
-/// A Yul `if` statement. `else` keyword aren't supported.
-/// e.g: if lt(a, b) { sstore(0, 1) }
+/// A Yul if statement: `if lt(a, b) { sstore(0, 1) }`.
 ///
 /// Reference:
-/// https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulIfStatement
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulIfStatement>
 #[derive(Clone)]
 pub struct YulIf {
     pub if_token: Token![if],
