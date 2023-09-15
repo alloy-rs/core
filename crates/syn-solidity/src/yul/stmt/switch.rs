@@ -20,10 +20,10 @@ use syn::parse::{Parse, ParseStream, Result};
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulSwitchStatement>
 #[derive(Clone)]
 pub struct YulSwitch {
-    switch_token: kw::switch,
-    selector: YulExpr,
-    branches: Vec<YulCaseBranch>,
-    default_case: Option<YulSwitchDefault>,
+    pub switch_token: kw::switch,
+    pub selector: YulExpr,
+    pub branches: Vec<YulCaseBranch>,
+    pub default_case: Option<YulSwitchDefault>,
 }
 
 impl Parse for YulSwitch {
@@ -80,9 +80,9 @@ impl fmt::Debug for YulSwitch {
 /// Represents a non-default case of a Yul switch statement.
 #[derive(Clone)]
 pub struct YulCaseBranch {
-    case_token: kw::case,
-    constant: YulLit,
-    body: YulBlock,
+    pub case_token: kw::case,
+    pub constant: YulLit,
+    pub body: YulBlock,
 }
 
 impl Parse for YulCaseBranch {
@@ -121,8 +121,8 @@ impl fmt::Debug for YulCaseBranch {
 /// Represents the default case of a Yul switch statement.
 #[derive(Clone)]
 pub struct YulSwitchDefault {
-    default_token: kw::default,
-    body: YulBlock,
+    pub default_token: kw::default,
+    pub body: YulBlock,
 }
 
 impl Parse for YulSwitchDefault {
