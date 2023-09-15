@@ -67,7 +67,7 @@ impl fmt::Debug for YulFunctionDef {
     }
 }
 
-/// The return attribute of a Yul function defenition.
+/// The return attribute of a Yul function definition.
 #[derive(Clone)]
 pub struct YulReturns {
     pub arrow_token: Token![->],
