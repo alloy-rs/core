@@ -13,7 +13,7 @@ use syn::{
 /// value.
 ///
 /// Solidity Reference:
-/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulVariableAssignaration>
+/// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulAssignment>
 #[derive(Clone)]
 pub enum YulVarAssign {
     /// Assign a single variable.
