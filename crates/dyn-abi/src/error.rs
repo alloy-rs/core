@@ -1,4 +1,5 @@
 use alloc::{borrow::Cow, string::String};
+use alloy_primitives::B256;
 use alloy_sol_type_parser::Error as TypeParserError;
 use alloy_sol_types::Error as SolTypesError;
 use core::fmt;
@@ -35,6 +36,21 @@ pub enum Error {
         expected: usize,
         /// The actual length.
         actual: usize,
+    },
+
+    /// Length mismatch during event topic decoding.
+    TopicLengthMismatch {
+        /// The expected length.
+        expected: usize,
+        /// The actual length.
+        actual: usize,
+    },
+    /// Invalid event signature.
+    EventSignatureMismatch {
+        /// The expected signature.
+        expected: B256,
+        /// The actual signature.
+        actual: B256,
     },
 
     /// [`hex`] error.
@@ -88,11 +104,20 @@ impl fmt::Display for Error {
 
             Self::TypeMismatch { expected, actual } => write!(
                 f,
-                "type mismatch, expected type {expected:?}, got value with type {actual:?}",
+                "type mismatch: expected type {expected:?}, got value with type {actual:?}",
             ),
             &Self::EncodeLengthMismatch { expected, actual } => write!(
                 f,
-                "encode length mismatch, expected {expected} types, got {actual}",
+                "encode length mismatch: expected {expected} types, got {actual}",
+            ),
+
+            &Self::TopicLengthMismatch { expected, actual } => write!(
+                f,
+                "invalid log topic list length: expected {expected} topics, got {actual}",
+            ),
+            Self::EventSignatureMismatch { expected, actual } => write!(
+                f,
+                "invalid event signature: expected {expected}, got {actual}",
             ),
 
             Self::Hex(e) => e.fmt(f),

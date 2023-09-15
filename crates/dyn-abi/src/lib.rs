@@ -35,7 +35,7 @@ mod error;
 pub use error::{Error, Result};
 
 mod ext;
-pub use ext::{FunctionExt, JsonAbiExt};
+pub use ext::{EventExt, FunctionExt, JsonAbiExt};
 
 mod ty;
 pub use ty::DynSolType;
