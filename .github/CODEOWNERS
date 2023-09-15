@@ -1,8 +1,9 @@
 * @danipopes @gakonst @prestwich
 
-crates/dyn-abi/      @prestwich
-crates/json-abi/     @prestwich
-crates/primitives/   @danipopes @prestwich
-crates/sol-macro/    @danipopes
-crates/sol-types/    @danipopes @prestwich
-crates/syn-solidity/ @danipopes
+crates/dyn-abi/         @prestwich
+crates/json-abi/        @prestwich
+crates/primitives/      @danipopes @prestwich
+crates/sol-macro/       @danipopes
+crates/sol-type-parser/ @danipopes @prestwich
+crates/sol-types/       @danipopes @prestwich
+crates/syn-solidity/    @danipopes
