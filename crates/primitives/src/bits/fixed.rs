@@ -287,7 +287,7 @@ impl<const N: usize> ops::BitXorAssign for FixedBytes<N> {
     }
 }
 
-impl<const N: usize> core::str::FromStr for FixedBytes<N> {
+impl<const N: usize> str::FromStr for FixedBytes<N> {
     type Err = hex::FromHexError;
 
     #[inline]
