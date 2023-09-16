@@ -14,48 +14,26 @@ use syn::{
 /// Solidity Reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulPath>
 #[derive(Clone)]
-pub enum YulPath {
-    /// Dotless path, references a declared varaible inside the assembly block.
-    SimplePath(YulIdent),
-
-    /// Dotted path, references a declared variable outside the assembly block.
-    DottedPath(Punctuated<YulIdent, Token![.]>),
-}
+pub struct YulPath(Punctuated<YulIdent, Token![.]>);
 
 impl Parse for YulPath {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        if input.peek2(Token![.]) {
-            Ok(Self::DottedPath(Punctuated::parse_separated_nonempty(
-                input,
-            )?))
-        } else {
-            input.parse().map(Self::SimplePath)
-        }
+        Ok(Self(Punctuated::parse_separated_nonempty(input)?))
     }
 }
 
 impl Spanned for YulPath {
     fn span(&self) -> Span {
-        match self {
-            YulPath::SimplePath(path) => path.span(),
-            YulPath::DottedPath(path) => path.span(),
-        }
+        crate::utils::join_spans(&self.0)
     }
 
     fn set_span(&mut self, span: Span) {
-        match self {
-            YulPath::SimplePath(path) => path.set_span(span),
-            YulPath::DottedPath(path) => path.set_span(span),
-        }
+        crate::utils::set_spans(&mut self.0, span)
     }
 }
 
 impl fmt::Debug for YulPath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("YulPath::")?;
-        match self {
-            Self::SimplePath(path) => path.fmt(f),
-            Self::DottedPath(path) => path.fmt(f),
-        }
+        f.debug_tuple("YulPath").field(&self.0).finish()
     }
 }
