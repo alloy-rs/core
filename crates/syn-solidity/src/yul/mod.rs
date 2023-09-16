@@ -7,9 +7,6 @@ pub use stmt::{
     YulVarAssign, YulVarDecl,
 };
 
-mod lit;
-pub use lit::{YulHexNum, YulLit};
-
 mod ident;
 pub use ident::{YulIdent, YulPath};
 

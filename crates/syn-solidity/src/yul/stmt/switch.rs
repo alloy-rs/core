@@ -1,4 +1,4 @@
-use crate::{kw, Spanned, YulBlock, YulExpr, YulLit};
+use crate::{kw, Lit, Spanned, YulBlock, YulExpr};
 
 use proc_macro2::Span;
 use std::fmt;
@@ -89,7 +89,7 @@ impl fmt::Debug for YulSwitch {
 #[derive(Clone)]
 pub struct YulCaseBranch {
     pub case_token: kw::case,
-    pub constant: YulLit,
+    pub constant: Lit,
     pub body: YulBlock,
 }
 

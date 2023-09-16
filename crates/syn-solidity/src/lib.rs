@@ -86,8 +86,8 @@ pub use visit_mut::VisitMut;
 mod yul;
 pub use yul::{
     WalrusToken, YulBlock, YulCaseBranch, YulEVMBuiltIn, YulExpr, YulFnCall, YulFor,
-    YulFunctionDef, YulHexNum, YulIdent, YulIf, YulLit, YulPath, YulReturns, YulStmt, YulSwitch,
-    YulSwitchDefault, YulVarAssign, YulVarDecl,
+    YulFunctionDef, YulIdent, YulIf, YulPath, YulReturns, YulStmt, YulSwitch, YulSwitchDefault,
+    YulVarAssign, YulVarDecl,
 };
 
 /// Parse a Solidity [`proc_macro::TokenStream`] into a [`File`].

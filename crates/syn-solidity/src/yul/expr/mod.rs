@@ -1,4 +1,4 @@
-use crate::{Spanned, YulLit, YulPath};
+use crate::{Lit, Spanned, YulPath};
 
 use std::fmt;
 
@@ -19,7 +19,7 @@ pub use fn_call::YulFnCall;
 pub enum YulExpr {
     Path(YulPath),
     Call(YulFnCall),
-    Literal(YulLit),
+    Literal(Lit),
 }
 
 impl Parse for YulExpr {
@@ -30,7 +30,7 @@ impl Parse for YulExpr {
 
         let speculative_parse = input.fork();
 
-        if let Ok(lit) = speculative_parse.parse::<YulLit>() {
+        if let Ok(lit) = speculative_parse.parse::<Lit>() {
             input.advance_to(&speculative_parse);
             return Ok(Self::Literal(lit))
         }
