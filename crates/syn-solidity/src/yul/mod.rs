@@ -3,8 +3,8 @@ pub use expr::{YulExpr, YulFnCall};
 
 mod stmt;
 pub use stmt::{
-    WalrusToken, YulBlock, YulCaseBranch, YulFor, YulIf, YulMultiAssign, YulSingleAssign, YulStmt,
-    YulSwitch, YulSwitchDefault, YulVarAssign, YulVarDecl,
+    WalrusToken, YulBlock, YulCaseBranch, YulFor, YulIf, YulStmt, YulSwitch, YulSwitchDefault,
+    YulVarAssign, YulVarDecl,
 };
 
 mod lit;

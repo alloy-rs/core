@@ -69,7 +69,6 @@ impl Spanned for YulSwitch {
 impl fmt::Debug for YulSwitch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulSwitch")
-            .field("switch_token", &self.switch_token)
             .field("selector", &self.selector)
             .field("branches", &self.branches)
             .field("default_case", &self.default_case)
@@ -111,7 +110,6 @@ impl Spanned for YulCaseBranch {
 impl fmt::Debug for YulCaseBranch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulCaseBranch")
-            .field("case_token", &self.case_token)
             .field("constant", &self.constant)
             .field("body", &self.body)
             .finish()
@@ -149,7 +147,6 @@ impl Spanned for YulSwitchDefault {
 impl fmt::Debug for YulSwitchDefault {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SwitchDefault")
-            .field("default_token", &self.default_token)
             .field("body", &self.body)
             .finish()
     }

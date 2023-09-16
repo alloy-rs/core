@@ -1,5 +1,3 @@
-use std::fmt;
-
 use crate::Spanned;
 
 use proc_macro2::Span;
@@ -9,7 +7,7 @@ use syn::{
 };
 
 /// Represents the walrus operator `:=`.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WalrusToken {
     pub colon: Token![:],
     pub equals: Token![=],
@@ -35,14 +33,5 @@ impl Spanned for WalrusToken {
     fn set_span(&mut self, span: Span) {
         self.colon.set_span(span);
         self.equals.set_span(span);
-    }
-}
-
-impl fmt::Debug for WalrusToken {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("WalrusToken")
-            .field("colon", &self.colon)
-            .field("equals", &self.equals)
-            .finish()
     }
 }

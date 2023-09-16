@@ -51,7 +51,6 @@ impl Spanned for YulFor {
 impl fmt::Debug for YulFor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulFor")
-            .field("for_token", &self.for_token)
             .field("initialization", &self.initialization)
             .field("condition", &self.condition)
             .field("post_iteration", &self.post_iteration)

@@ -41,14 +41,13 @@ impl Spanned for YulHexNum {
 impl fmt::Debug for YulHexNum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulHexNum")
-            .field("prefix_token", &self.prefix_token)
             .field("value", &self.value)
             .finish()
     }
 }
 
 /// Represents the `0x` prefix/token
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ZeroExPrefix {
     zero_token: LitInt,
     x_token: Punct,
@@ -84,14 +83,5 @@ impl Spanned for ZeroExPrefix {
     fn set_span(&mut self, span: Span) {
         self.zero_token.set_span(span);
         self.x_token.set_span(span);
-    }
-}
-
-impl fmt::Debug for ZeroExPrefix {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ZeroExPrefix")
-            .field("zero_token", &self.zero_token)
-            .field("x_token", &self.x_token)
-            .finish()
     }
 }

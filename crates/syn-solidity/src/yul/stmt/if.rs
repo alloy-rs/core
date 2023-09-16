@@ -18,15 +18,6 @@ pub struct YulIf {
     pub then_branch: Box<YulBlock>,
 }
 
-impl fmt::Debug for YulIf {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("YulIf")
-            .field("cond", &self.cond)
-            .field("then_branch", &self.then_branch)
-            .finish()
-    }
-}
-
 impl Parse for YulIf {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
@@ -47,5 +38,14 @@ impl Spanned for YulIf {
         self.if_token.set_span(span);
         self.cond.set_span(span);
         self.then_branch.set_span(span);
+    }
+}
+
+impl fmt::Debug for YulIf {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("YulIf")
+            .field("cond", &self.cond)
+            .field("then_branch", &self.then_branch)
+            .finish()
     }
 }

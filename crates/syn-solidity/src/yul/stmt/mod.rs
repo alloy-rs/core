@@ -25,7 +25,7 @@ mod switch;
 pub use switch::{YulCaseBranch, YulSwitch, YulSwitchDefault};
 
 mod assignment;
-pub use assignment::{YulMultiAssign, YulSingleAssign, YulVarAssign};
+pub use assignment::YulVarAssign;
 
 mod walrus_token;
 pub use walrus_token::WalrusToken;

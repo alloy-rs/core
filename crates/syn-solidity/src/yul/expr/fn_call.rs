@@ -1,4 +1,4 @@
-use crate::{Spanned, YulEVMBuiltIn, YulExpr, YulIdent};
+use crate::{utils::DebugPunctuated, Spanned, YulEVMBuiltIn, YulExpr, YulIdent};
 
 use proc_macro2::Span;
 use std::fmt;
@@ -49,8 +49,7 @@ impl fmt::Debug for YulFnCall {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulFnCall")
             .field("function_type", &self.function_type)
-            .field("paren_token", &self.paren_token)
-            .field("arguments", &self.arguments)
+            .field("arguments", DebugPunctuated::new(&self.arguments))
             .finish()
     }
 }

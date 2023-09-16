@@ -1,4 +1,4 @@
-use crate::{kw, Spanned, YulBlock, YulIdent};
+use crate::{kw, utils::DebugPunctuated, Spanned, YulBlock, YulIdent};
 
 use proc_macro2::Span;
 use std::fmt;
@@ -57,10 +57,8 @@ impl Spanned for YulFunctionDef {
 impl fmt::Debug for YulFunctionDef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulFunctionDef")
-            .field("function_token", &self.function_token)
             .field("ident", &self.ident)
-            .field("paren_token", &self.paren_token)
-            .field("arguments", &self.arguments)
+            .field("arguments", DebugPunctuated::new(&self.arguments))
             .field("returns", &self.returns)
             .field("body", &self.body)
             .finish()
@@ -111,8 +109,7 @@ impl Spanned for YulReturns {
 impl fmt::Debug for YulReturns {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulReturns")
-            .field("arrow_token", &self.arrow_token)
-            .field("returns", &self.returns)
+            .field("returns", DebugPunctuated::new(&self.returns))
             .finish()
     }
 }
