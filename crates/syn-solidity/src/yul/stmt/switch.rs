@@ -28,23 +28,32 @@ pub struct YulSwitch {
 
 impl Parse for YulSwitch {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let switch_token = input.parse()?;
+        let selector = input.parse()?;
+        let branches = {
+            let mut branches = vec![];
+            while input.peek(kw::case) {
+                branches.push(input.parse()?);
+            }
+            branches
+        };
+        let default_case = {
+            if input.peek(kw::default) {
+                Some(input.parse()?)
+            } else {
+                None
+            }
+        };
+
+        if branches.is_empty() && default_case.is_none() {
+            return Err(input.error("Must have at least one case or a default case."))
+        }
+
         Ok(Self {
-            switch_token: input.parse()?,
-            selector: input.parse()?,
-            branches: {
-                let mut branches = vec![];
-                while input.peek(kw::case) {
-                    branches.push(input.parse()?);
-                }
-                branches
-            },
-            default_case: {
-                if input.peek(kw::default) {
-                    Some(input.parse()?)
-                } else {
-                    None
-                }
-            },
+            switch_token,
+            selector,
+            branches,
+            default_case,
         })
     }
 }
