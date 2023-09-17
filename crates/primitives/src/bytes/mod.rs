@@ -11,8 +11,7 @@ mod rlp;
 #[cfg(feature = "serde")]
 mod serde;
 
-/// Wrapper type around Bytes to deserialize/serialize "0x" prefixed ethereum
-/// hex strings.
+/// Wrapper type around [`bytes::Bytes`] to support "0x" prefixed hex strings.
 #[derive(Clone, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Bytes(pub bytes::Bytes);
@@ -97,49 +96,56 @@ impl<'a> IntoIterator for &'a Bytes {
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
-        self.as_ref().iter()
+        self.iter()
     }
 }
 
 impl From<bytes::Bytes> for Bytes {
     #[inline]
-    fn from(src: bytes::Bytes) -> Self {
-        Self(src)
+    fn from(value: bytes::Bytes) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Bytes> for bytes::Bytes {
+    #[inline]
+    fn from(value: Bytes) -> Self {
+        value.0
     }
 }
 
 impl From<Vec<u8>> for Bytes {
     #[inline]
-    fn from(src: Vec<u8>) -> Self {
-        Self(src.into())
+    fn from(value: Vec<u8>) -> Self {
+        Self(value.into())
     }
 }
 
 impl<const N: usize> From<[u8; N]> for Bytes {
     #[inline]
-    fn from(src: [u8; N]) -> Self {
-        src.to_vec().into()
+    fn from(value: [u8; N]) -> Self {
+        value.to_vec().into()
     }
 }
 
-impl<'a, const N: usize> From<&'a [u8; N]> for Bytes {
+impl<const N: usize> From<&'static [u8; N]> for Bytes {
     #[inline]
-    fn from(src: &'a [u8; N]) -> Self {
-        src.to_vec().into()
+    fn from(value: &'static [u8; N]) -> Self {
+        Self::from_static(value)
     }
 }
 
 impl From<&'static [u8]> for Bytes {
     #[inline]
     fn from(value: &'static [u8]) -> Self {
-        Self(value.into())
+        Self::from_static(value)
     }
 }
 
 impl From<&'static str> for Bytes {
     #[inline]
     fn from(value: &'static str) -> Self {
-        Self(value.into())
+        Self::from_static(value.as_bytes())
     }
 }
 
@@ -234,8 +240,8 @@ impl Bytes {
 
     /// Creates a new `Bytes` instance from a slice by copying it.
     #[inline]
-    pub fn copy_from_slice(src: &[u8]) -> Self {
-        Self(bytes::Bytes::copy_from_slice(src))
+    pub fn copy_from_slice(data: &[u8]) -> Self {
+        Self(bytes::Bytes::copy_from_slice(data))
     }
 
     /// Returns a slice of self for the provided range.
