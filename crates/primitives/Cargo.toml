@@ -38,6 +38,9 @@ serde = { workspace = true, optional = true }
 # getrandom
 getrandom = { workspace = true, optional = true }
 
+# rand
+rand = { workspace = true, optional = true, features = ["getrandom"] }
+
 # arbitrary
 arbitrary = { workspace = true, optional = true }
 derive_arbitrary = { workspace = true, optional = true }
@@ -51,10 +54,11 @@ serde = { workspace = true, features = ["derive"] }
 
 [features]
 default = ["std"]
-std = ["bytes/std", "hex/std", "alloy-rlp?/std", "proptest?/std", "serde?/std"]
+std = ["bytes/std", "hex/std", "alloy-rlp?/std", "proptest?/std", "rand?/std", "serde?/std"]
 tiny-keccak = []
 native-keccak = []
 getrandom = ["dep:getrandom"]
+rand = ["dep:rand", "getrandom"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
 arbitrary = [

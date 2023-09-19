@@ -298,6 +298,16 @@ impl<const N: usize> str::FromStr for FixedBytes<N> {
     }
 }
 
+#[cfg(feature = "rand")]
+impl<const N: usize> rand::distributions::Distribution<FixedBytes<N>>
+    for rand::distributions::Standard
+{
+    #[inline]
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> FixedBytes<N> {
+        FixedBytes::random_with(rng)
+    }
+}
+
 impl<const N: usize> FixedBytes<N> {
     /// Array of Zero bytes.
     pub const ZERO: Self = Self([0u8; N]);
@@ -338,6 +348,7 @@ impl<const N: usize> FixedBytes<N> {
     /// [`getrandom_uninit`](getrandom::getrandom_uninit) fails.
     #[cfg(feature = "getrandom")]
     #[inline]
+    #[track_caller]
     pub fn random() -> Self {
         Self::try_random().unwrap()
     }
@@ -350,11 +361,53 @@ impl<const N: usize> FixedBytes<N> {
     /// This function only propagates the error from the underlying call to
     /// [`getrandom_uninit`](getrandom::getrandom_uninit).
     #[cfg(feature = "getrandom")]
+    #[inline]
     pub fn try_random() -> Result<Self, getrandom::Error> {
-        let mut bytes: [_; N] = crate::impl_core::uninit_array();
-        getrandom::getrandom_uninit(&mut bytes)?;
-        // SAFETY: The array is initialized by getrandom_uninit.
-        Ok(Self(unsafe { crate::impl_core::array_assume_init(bytes) }))
+        let mut bytes = Self::ZERO;
+        bytes.try_randomize()?;
+        Ok(bytes)
+    }
+
+    /// Creates a new [`FixedBytes`] with the given random number generator.
+    #[cfg(feature = "rand")]
+    #[inline]
+    #[doc(alias = "random_using")]
+    pub fn random_with<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
+        let mut bytes = Self::ZERO;
+        bytes.randomize_with(rng);
+        bytes
+    }
+
+    /// Fills this [`FixedBytes`] with cryptographically random content.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the underlying call to
+    /// [`getrandom_uninit`](getrandom::getrandom_uninit) fails.
+    #[inline]
+    #[cfg(feature = "getrandom")]
+    #[track_caller]
+    pub fn randomize(&mut self) {
+        self.try_randomize().unwrap()
+    }
+
+    /// Tries to fill this [`FixedBytes`] with cryptographically random content.
+    ///
+    /// # Errors
+    ///
+    /// This function only propagates the error from the underlying call to
+    /// [`getrandom_uninit`](getrandom::getrandom_uninit).
+    #[inline]
+    #[cfg(feature = "getrandom")]
+    pub fn try_randomize(&mut self) -> Result<(), getrandom::Error> {
+        getrandom::getrandom(&mut self.0)
+    }
+
+    /// Fills this [`FixedBytes`] with the given random number generator.
+    #[cfg(feature = "rand")]
+    #[doc(alias = "randomize_using")]
+    pub fn randomize_with<R: rand::Rng + ?Sized>(&mut self, rng: &mut R) {
+        rng.fill_bytes(&mut self.0);
     }
 
     /// Concatenate two `FixedBytes`.
