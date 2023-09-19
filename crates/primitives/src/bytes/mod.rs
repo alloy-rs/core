@@ -1,4 +1,4 @@
-use alloc::{string::String, vec::Vec};
+use alloc::{boxed::Box, string::String, vec::Vec};
 use core::{
     borrow::Borrow,
     fmt,
@@ -146,6 +146,27 @@ impl From<&'static str> for Bytes {
     #[inline]
     fn from(value: &'static str) -> Self {
         Self::from_static(value.as_bytes())
+    }
+}
+
+impl From<Box<[u8]>> for Bytes {
+    #[inline]
+    fn from(value: Box<[u8]>) -> Self {
+        Self(value.into())
+    }
+}
+
+impl From<String> for Bytes {
+    #[inline]
+    fn from(value: String) -> Self {
+        Self(value.into())
+    }
+}
+
+impl From<Bytes> for Vec<u8> {
+    #[inline]
+    fn from(value: Bytes) -> Self {
+        value.0.into()
     }
 }
 
