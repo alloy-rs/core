@@ -35,8 +35,9 @@ pub use bits::{
     BLOOM_SIZE_BITS, BLOOM_SIZE_BYTES,
 };
 
-mod bytes;
-pub use self::bytes::Bytes;
+#[path = "bytes/mod.rs"]
+mod bytes_;
+pub use self::bytes_::Bytes;
 
 #[cfg(feature = "getrandom")]
 mod impl_core;
@@ -47,6 +48,8 @@ pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 mod utils;
 pub use utils::keccak256;
 
+#[doc(no_inline)]
+pub use ::bytes;
 #[doc(no_inline)]
 pub use ::hex;
 #[doc(no_inline)]
