@@ -268,7 +268,7 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> 
 mod tests {
     use crate::{sol_data, utils::pad_u32, SolType};
     use alloc::string::ToString;
-    use alloy_primitives::{Address, B256, U256};
+    use alloy_primitives::{address, Address, B256, U256};
     use hex_literal::hex;
 
     #[test]
@@ -559,9 +559,9 @@ mod tests {
         assert_eq!(
             MyTy::decode_params(&encoded, false).unwrap(),
             (
-                hex!("8497afefdc5ac170a664a231f6efb25526ef813f").into(),
-                B256::repeat_byte(0x01).into(),
-                [0x02; 4],
+                address!("8497afefdc5ac170a664a231f6efb25526ef813f"),
+                B256::repeat_byte(0x01),
+                [0x02; 4].into(),
                 "0x0000001F".into(),
             )
         );

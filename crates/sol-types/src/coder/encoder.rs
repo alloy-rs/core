@@ -538,12 +538,12 @@ mod tests {
 
     #[test]
     fn encode_fixed_bytes() {
-        let encoded = sol_data::FixedBytes::<2>::encode_single(&[0x12, 0x34]);
+        let encoded = sol_data::FixedBytes::<2>::encode_single(&[0x12, 0x34].into());
         let expected = hex!("1234000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
         assert_eq!(
             encoded.len(),
-            sol_data::FixedBytes::<2>::encoded_size(&[0x12, 0x34])
+            sol_data::FixedBytes::<2>::encoded_size(&[0x12, 0x34].into())
         );
     }
 

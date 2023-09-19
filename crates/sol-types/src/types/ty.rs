@@ -119,7 +119,7 @@ pub trait Encodable<T: ?Sized + SolType> {
 ///
 /// // This is the native rust representation of a Solidity type!
 /// // How cool is that!
-/// const MY_STRUCT: MyStruct = MyStruct { a: true, b: [0x01, 0x02] };
+/// const MY_STRUCT: MyStruct = MyStruct { a: true, b: alloy_primitives::FixedBytes([0x01, 0x02]) };
 /// ```
 pub trait SolType {
     /// The corresponding Rust type.

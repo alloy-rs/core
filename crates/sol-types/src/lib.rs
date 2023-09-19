@@ -79,7 +79,7 @@
 //! // `crate::SolStruct`. This means you get eip-712 signing for freeeeee
 //! let my_struct = MyStruct {
 //!     a: U256::from(1),
-//!     b: [0; 32],
+//!     b: [0; 32].into(),
 //!     c: vec![Default::default()],
 //! };
 //!

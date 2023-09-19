@@ -41,18 +41,18 @@ fn e2e() {
 
     let a = MyStruct {
         a: U256::from(1),
-        b: [0; 32],
+        b: [0; 32].into(),
         c: Vec::new(),
     };
 
-    MyTuple::hex_encode(&(a.clone(), [0; 32]));
+    MyTuple::hex_encode(&(a.clone(), [0; 32].into()));
     MyStruct::hex_encode(&a);
 
     LateBinding::<MyStruct>::hex_encode(&(vec![a.clone(), a.clone()], Address::default()));
 
     MyStruct2::hex_encode(&MyStruct2 {
         a,
-        b: [0; 32],
+        b: [0; 32].into(),
         c: vec![],
     });
 
@@ -202,14 +202,14 @@ fn getters() {
     assert_eq!(data1Call::SIGNATURE, "data1(uint256,bool,uint256)");
     let _ = data1Return {
         _0: U256::ZERO,
-        _1: [0, 0, 0],
+        _1: [0, 0, 0].into(),
         _2: vec![],
     };
 
     assert_eq!(data2Call::SIGNATURE, "data2(uint256,bool)");
     let _ = data2Return {
         _0: U256::ZERO,
-        _1: [0, 0, 0],
+        _1: [0, 0, 0].into(),
         _2: vec![],
     };
 
