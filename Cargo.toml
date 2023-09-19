@@ -40,24 +40,24 @@ derive_more = "0.99"
 hex-literal = "0.4"
 paste = "1.0"
 strum = { version = "0.25", features = ["derive"] }
-num_enum = "0.6"
+num_enum = "0.7"
 thiserror = "1.0"
 
 # misc
-alloy-rlp = { version = "0.3.0", default-features = false }
-alloy-rlp-derive = { version = "0.3.0", default-features = false }
+alloy-rlp = { version = "0.3", default-features = false }
+alloy-rlp-derive = { version = "0.3", default-features = false }
 arbitrary = "1.3"
 arrayvec = { version = "0.7", default-features = false }
 bincode = "1.3"
-bytes = { version = "1.4", default-features = false }
+bytes = { version = "1", default-features = false }
 criterion = "0.5"
 derive_arbitrary = "1.3"
 getrandom = "0.2"
-hex = { package = "const-hex", version = ">=1.5", default-features = false, features = ["alloc"] }
+hex = { package = "const-hex", version = "1.5", default-features = false, features = ["alloc"] }
 itoa = "1"
 once_cell = "1"
 proptest = "1"
-proptest-derive = "0.3"
+proptest-derive = "0.4"
 ruint = { version = "1.10.1", default-features = false, features = ["alloc"] }
 ruint-macro = { version = "1", default-features = false }
 tiny-keccak = "2.0"
