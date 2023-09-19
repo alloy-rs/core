@@ -223,6 +223,28 @@ impl hex::FromHex for Bytes {
     }
 }
 
+impl bytes::Buf for Bytes {
+    #[inline]
+    fn remaining(&self) -> usize {
+        self.0.len()
+    }
+
+    #[inline]
+    fn chunk(&self) -> &[u8] {
+        self.0.chunk()
+    }
+
+    #[inline]
+    fn advance(&mut self, cnt: usize) {
+        self.0.advance(cnt)
+    }
+
+    #[inline]
+    fn copy_to_bytes(&mut self, len: usize) -> bytes::Bytes {
+        self.0.copy_to_bytes(len)
+    }
+}
+
 impl Bytes {
     /// Creates a new empty `Bytes`.
     ///
