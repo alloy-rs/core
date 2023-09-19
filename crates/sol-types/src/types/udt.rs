@@ -45,8 +45,8 @@ macro_rules! define_udt {
             /// Return the single encoding of this value, delegating to the
             /// underlying type.
             #[inline]
-            pub fn encode_single(&self) -> $crate::private::Vec<u8> {
-                <Self as $crate::SolType>::encode_single(&self.0)
+            pub fn encode(&self) -> $crate::private::Vec<u8> {
+                <Self as $crate::SolType>::encode(&self.0)
             }
 
             /// Return the packed encoding of this value, delegating to the

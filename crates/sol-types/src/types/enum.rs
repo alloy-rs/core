@@ -23,8 +23,7 @@ pub trait SolEnum: Sized + Copy + Into<u8> + TryFrom<u8, Error = crate::Error> {
     /// ABI decode the enum from the given buffer.
     #[inline]
     fn decode(data: &[u8], validate: bool) -> Result<Self> {
-        <crate::sol_data::Uint<8> as SolType>::decode_single(data, validate)
-            .and_then(Self::try_from)
+        <crate::sol_data::Uint<8> as SolType>::decode(data, validate).and_then(Self::try_from)
     }
 
     /// ABI encode the enum into the given buffer.

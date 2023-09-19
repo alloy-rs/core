@@ -101,7 +101,7 @@ impl From<Word> for WordToken {
 impl From<bool> for WordToken {
     #[inline]
     fn from(value: bool) -> Self {
-        U256::from(value as usize).into()
+        U256::from(value as u64).into()
     }
 }
 

@@ -29,8 +29,8 @@ macro_rules! as_fixed_seq {
 /// let my_type: DynSolType = "uint64".parse().unwrap();
 /// let my_data: DynSolValue = 183u64.into();
 ///
-/// let encoded = my_data.encode_single();
-/// let decoded = my_type.decode_single(&encoded)?;
+/// let encoded = my_data.encode();
+/// let decoded = my_type.decode(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
 /// # Ok::<(), alloy_dyn_abi::Error>(())
@@ -636,13 +636,13 @@ impl DynSolValue {
 
             as_fixed_seq!(s) => {
                 if self.is_dynamic() {
-                    Self::encode_sequence_to(s, enc);
+                    Self::encode_seq_to(s, enc);
                 }
             }
 
             Self::Array(array) => {
                 enc.append_seq_len(array.len());
-                Self::encode_sequence_to(array, enc);
+                Self::encode_seq_to(array, enc);
             }
         }
     }
@@ -703,15 +703,15 @@ impl DynSolValue {
     }
 
     /// Encode this data as a sequence.
-    pub(crate) fn encode_sequence(seq: &[Self]) -> Vec<u8> {
+    pub(crate) fn encode_seq(seq: &[Self]) -> Vec<u8> {
         let sz = seq.iter().map(Self::total_words).sum();
         let mut encoder = Encoder::with_capacity(sz);
-        Self::encode_sequence_to(seq, &mut encoder);
+        Self::encode_seq_to(seq, &mut encoder);
         encoder.into_bytes()
     }
 
     /// Encode this data as a sequence into the given encoder.
-    pub(crate) fn encode_sequence_to(contents: &[Self], enc: &mut Encoder) {
+    pub(crate) fn encode_seq_to(contents: &[Self], enc: &mut Encoder) {
         let head_words = contents.iter().map(Self::head_words).sum::<usize>();
         enc.push_offset(head_words as u32);
 
@@ -746,22 +746,24 @@ impl DynSolValue {
     #[inline]
     pub fn encode_params(&self) -> Vec<u8> {
         match self {
-            Self::Tuple(_) => self.encode().expect("tuple is definitely a sequence"),
-            _ => self.encode_single(),
+            Self::Tuple(_) => self
+                .encode_sequence()
+                .expect("tuple is definitely a sequence"),
+            _ => self.encode(),
         }
     }
 
     /// Encode this value into a byte array by wrapping it into a 1-element
     /// sequence.
     #[inline]
-    pub fn encode_single(&self) -> Vec<u8> {
-        Self::encode_sequence(core::slice::from_ref(self))
+    pub fn encode(&self) -> Vec<u8> {
+        Self::encode_seq(core::slice::from_ref(self))
     }
 
     /// If this value is a fixed sequence, encode it into a byte array. If this
     /// value is not a fixed sequence, return `None`.
     #[inline]
-    pub fn encode(&self) -> Option<Vec<u8>> {
-        self.as_fixed_seq().map(Self::encode_sequence)
+    pub fn encode_sequence(&self) -> Option<Vec<u8>> {
+        self.as_fixed_seq().map(Self::encode_seq)
     }
 }

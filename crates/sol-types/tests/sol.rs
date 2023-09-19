@@ -37,7 +37,7 @@ fn e2e() {
         type MyValueType is uint256;
     }
 
-    <sol!(bool)>::hex_encode_single(&true);
+    <sol!(bool)>::encode(&true);
 
     let a = MyStruct {
         a: U256::from(1),
@@ -45,23 +45,23 @@ fn e2e() {
         c: Vec::new(),
     };
 
-    MyTuple::hex_encode(&(a.clone(), [0; 32].into()));
-    MyStruct::hex_encode(&a);
+    MyTuple::encode(&(a.clone(), [0; 32]));
+    MyStruct::encode(&a);
 
-    LateBinding::<MyStruct>::hex_encode(&(vec![a.clone(), a.clone()], Address::default()));
+    LateBinding::<MyStruct>::encode(&(vec![a.clone(), a.clone()], Address::default()));
 
-    MyStruct2::hex_encode(&MyStruct2 {
+    MyStruct2::encode(&MyStruct2 {
         a,
         b: [0; 32].into(),
         c: vec![],
     });
 
-    NestedArray::hex_encode(&vec![[true, false], [true, false], [true, false]]);
+    NestedArray::encode(&vec![[true, false], [true, false], [true, false]]);
 
     let mvt = MyValueType::from(U256::from(1));
     assert_eq!(
-        mvt.encode_single(),
-        alloy_sol_types::sol_data::Uint::<256>::encode_single(&U256::from(1))
+        mvt.encode(),
+        alloy_sol_types::sol_data::Uint::<256>::encode(&U256::from(1))
     );
 }
 

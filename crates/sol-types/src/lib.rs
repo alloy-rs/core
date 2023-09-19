@@ -114,8 +114,8 @@
 //! // UDTs are encoded as their underlying type
 //! let mvt = MyValueType::from(U256::from(1));
 //! assert_eq!(
-//!     mvt.encode_single(),
-//!     sol_data::Uint::<256>::encode_single(&U256::from(1))
+//!     mvt.encode(),
+//!     sol_data::Uint::<256>::encode(&U256::from(1))
 //! );
 //! # }
 //! ```
@@ -169,7 +169,7 @@ mod macros;
 
 mod coder;
 pub use coder::{
-    decode, decode_params, decode_single, encode, encode_params, encode_single,
+    decode, decode_params, decode_sequence, encode, encode_params, encode_sequence,
     token::{self, TokenType},
     Decoder, Encoder,
 };
