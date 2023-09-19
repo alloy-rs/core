@@ -21,11 +21,14 @@ pub fn event_selector<T: AsRef<[u8]>>(bytes: T) -> ExprArray<u8, 32> {
     ExprArray::new(keccak256(bytes))
 }
 
-pub fn combine_errors(v: Vec<syn::Error>) -> Option<syn::Error> {
-    v.into_iter().reduce(|mut a, b| {
+pub fn combine_errors(v: impl IntoIterator<Item = syn::Error>) -> syn::Result<()> {
+    match v.into_iter().reduce(|mut a, b| {
         a.combine(b);
         a
-    })
+    }) {
+        Some(e) => Err(e),
+        None => Ok(()),
+    }
 }
 
 pub struct ExprArray<T, const N: usize> {
