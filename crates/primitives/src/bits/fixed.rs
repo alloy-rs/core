@@ -125,24 +125,34 @@ macro_rules! fixed_bytes_uint_conversions {
             }
         }
 
-        const _: () = assert!(<$int>::BITS == <$fb>::len_bytes() * 8);
+        const _: () = assert!(<$int>::BITS as usize == <$fb>::len_bytes() * 8);
     )*};
 }
 
 fixed_bytes_uint_conversions! {
+    u8            => aliases::B8,
     aliases::U8   => aliases::B8,
+    i8            => aliases::B8,
     aliases::I8   => aliases::B8,
 
+    u16           => aliases::B16,
     aliases::U16  => aliases::B16,
+    i16           => aliases::B16,
     aliases::I16  => aliases::B16,
 
+    u32           => aliases::B32,
     aliases::U32  => aliases::B32,
+    i32           => aliases::B32,
     aliases::I32  => aliases::B32,
 
+    u64           => aliases::B64,
     aliases::U64  => aliases::B64,
+    i64           => aliases::B64,
     aliases::I64  => aliases::B64,
 
+    u128          => aliases::B128,
     aliases::U128 => aliases::B128,
+    i128          => aliases::B128,
     aliases::I128 => aliases::B128,
 
     aliases::U160 => aliases::B160,
