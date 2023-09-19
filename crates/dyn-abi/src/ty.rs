@@ -288,7 +288,7 @@ impl DynSolType {
             }
             (Self::Bytes, DynToken::PackedSeq(buf)) => Ok(DynSolValue::Bytes(buf.to_vec())),
             (Self::FixedBytes(size), DynToken::Word(word)) => Ok(DynSolValue::FixedBytes(
-                sol_data::FixedBytes::<32>::detokenize(word.into()).into(),
+                sol_data::FixedBytes::<32>::detokenize(word.into()),
                 *size,
             )),
             // cheating here, but it's ok

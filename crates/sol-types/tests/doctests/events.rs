@@ -28,9 +28,9 @@ fn event() {
     assert_event_signature::<MyEvent>("MyEvent(bytes32,uint256,string,bytes)");
     assert!(!MyEvent::ANONYMOUS);
     let event = MyEvent {
-        a: [0x11; 32],
+        a: [0x11; 32].into(),
         b: U256::from(1u64),
-        c: keccak256("Hello World").into(),
+        c: keccak256("Hello World"),
         d: Vec::new(),
     };
     // topics are `(SELECTOR, a, keccak256(c))`

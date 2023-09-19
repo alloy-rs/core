@@ -8,7 +8,10 @@
 
 use crate::{token::*, utils, Encodable, Result, SolType, Word};
 use alloc::{borrow::Cow, string::String as RustString, vec::Vec};
-use alloy_primitives::{keccak256, Address as RustAddress, Function as RustFunction, I256, U256};
+use alloy_primitives::{
+    keccak256, Address as RustAddress, FixedBytes as RustFixedBytes, Function as RustFunction,
+    I256, U256,
+};
 use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
 /// Bool - `bool`
@@ -450,7 +453,7 @@ impl<const N: usize> SolType for FixedBytes<N>
 where
     ByteCount<N>: SupportedFixedBytes,
 {
-    type RustType = [u8; N];
+    type RustType = RustFixedBytes<N>;
     type TokenType<'a> = WordToken;
 
     #[inline]
@@ -480,7 +483,7 @@ where
     #[inline]
     fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         // write only the first n bytes
-        out.extend_from_slice(rust);
+        out.extend_from_slice(rust.as_slice());
     }
 }
 
