@@ -505,6 +505,7 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
         }
 
         #[automatically_derived]
+        #[doc(hidden)]
         impl ::alloy_sol_types::Encodable<UnderlyingSolTuple<'_>> for #name {
             fn to_tokens(&self) -> <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::TokenType<'_> {
                 (#(
