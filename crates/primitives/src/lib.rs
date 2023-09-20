@@ -94,6 +94,9 @@ pub mod private {
     #[cfg(feature = "getrandom")]
     pub use getrandom;
 
+    #[cfg(feature = "rand")]
+    pub use rand;
+
     #[cfg(feature = "rlp")]
     pub use alloy_rlp;
 

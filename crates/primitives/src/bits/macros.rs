@@ -177,6 +177,7 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
         $crate::impl_arbitrary!($name, $n);
+        $crate::impl_rand!($name);
 
         impl $name {
             /// Array of Zero bytes.
@@ -207,6 +208,7 @@ macro_rules! wrap_fixed_bytes {
             }
 
             $crate::impl_getrandom!();
+            $crate::impl_rand!();
 
             /// Create a new fixed-hash from the given slice `src`.
             ///
@@ -397,6 +399,7 @@ macro_rules! impl_getrandom {
         /// This function panics if the underlying call to `getrandom_uninit`
         /// fails.
         #[inline]
+        #[track_caller]
         pub fn random() -> Self {
             Self($crate::FixedBytes::random())
         }
@@ -412,6 +415,30 @@ macro_rules! impl_getrandom {
         pub fn try_random() -> $crate::private::Result<Self, $crate::private::getrandom::Error> {
             $crate::FixedBytes::try_random().map(Self)
         }
+
+        /// Fills this fixed byte array with cryptographically random content.
+        ///
+        /// # Panics
+        ///
+        /// This function panics if the underlying call to `getrandom_uninit` fails.
+        #[inline]
+        #[track_caller]
+        pub fn randomize(&mut self) {
+            self.try_randomize().unwrap()
+        }
+
+        /// Tries to fill this fixed byte array with cryptographically random content.
+        ///
+        /// # Errors
+        ///
+        /// This function only propagates the error from the underlying call to
+        /// `getrandom_uninit`.
+        #[inline]
+        pub fn try_randomize(
+            &mut self,
+        ) -> $crate::private::Result<(), $crate::private::getrandom::Error> {
+            self.0.try_randomize()
+        }
     };
 }
 
@@ -420,6 +447,45 @@ macro_rules! impl_getrandom {
 #[cfg(not(feature = "getrandom"))]
 macro_rules! impl_getrandom {
     () => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "rand")]
+macro_rules! impl_rand {
+    () => {
+        /// Creates a new fixed byte array with the given random number generator.
+        #[inline]
+        #[doc(alias = "random_using")]
+        pub fn random_with<R: $crate::private::rand::Rng + ?Sized>(rng: &mut R) -> Self {
+            Self($crate::FixedBytes::random_with(rng))
+        }
+
+        /// Fills this fixed byte array with the given random number generator.
+        #[inline]
+        #[doc(alias = "randomize_using")]
+        pub fn randomize_with<R: $crate::private::rand::Rng + ?Sized>(&mut self, rng: &mut R) {
+            self.0.randomize_with(rng);
+        }
+    };
+
+    ($t:ty) => {
+        impl $crate::private::rand::distributions::Distribution<$t>
+            for $crate::private::rand::distributions::Standard
+        {
+            #[inline]
+            fn sample<R: $crate::private::rand::Rng + ?Sized>(&self, rng: &mut R) -> $t {
+                <$t>::random_with(rng)
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "rand"))]
+macro_rules! impl_rand {
+    ($($t:tt)*) => {};
 }
 
 #[doc(hidden)]
