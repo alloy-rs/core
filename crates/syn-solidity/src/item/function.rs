@@ -26,7 +26,9 @@ pub struct ItemFunction {
     pub attrs: Vec<Attribute>,
     pub kind: FunctionKind,
     pub name: Option<SolIdent>,
-    pub paren_token: Paren,
+    /// Parens are optional for modifiers:
+    /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.modifierDefinition>
+    pub paren_token: Option<Paren>,
     pub arguments: ParameterList,
     /// The Solidity attributes of the function.
     pub attributes: FunctionAttributes,
@@ -51,16 +53,30 @@ impl fmt::Debug for ItemFunction {
 
 impl Parse for ItemFunction {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let content;
+        let attrs = input.call(Attribute::parse_outer)?;
+        let kind: FunctionKind = input.parse()?;
+        let name = input.call(SolIdent::parse_opt)?;
+
+        let (paren_token, arguments) = if kind.is_modifier() && !input.peek(Paren) {
+            (None, ParameterList::new())
+        } else {
+            let content;
+            (Some(parenthesized!(content in input)), content.parse()?)
+        };
+
+        let attributes = input.parse()?;
+        let returns = input.call(Returns::parse_opt)?;
+        let body = input.parse()?;
+
         Ok(Self {
-            attrs: input.call(Attribute::parse_outer)?,
-            kind: input.parse()?,
-            name: input.call(SolIdent::parse_opt)?,
-            paren_token: parenthesized!(content in input),
-            arguments: content.parse()?,
-            attributes: input.parse()?,
-            returns: input.call(Returns::parse_opt)?,
-            body: input.parse()?,
+            attrs,
+            kind,
+            name,
+            paren_token,
+            arguments,
+            attributes,
+            returns,
+            body,
         })
     }
 }
@@ -92,7 +108,7 @@ impl ItemFunction {
             attrs: Vec::new(),
             kind,
             name,
-            paren_token: Paren(span),
+            paren_token: Some(Paren(span)),
             arguments: Parameters::new(),
             attributes: FunctionAttributes::new(),
             returns: None,
