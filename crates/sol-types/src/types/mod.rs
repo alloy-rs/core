@@ -13,7 +13,7 @@ mod function;
 pub use function::SolCall;
 
 mod interface;
-pub use interface::{ContractError, Selectors, SolInterface};
+pub use interface::{ContractError, GenericContractError, Selectors, SolInterface};
 
 mod r#struct;
 pub use r#struct::SolStruct;

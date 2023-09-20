@@ -79,13 +79,29 @@ pub trait SolError: Sized {
     }
 }
 
-/// Represents a standard Solidity revert. These are thrown by
-/// `require(condition, reason)` statements in Solidity.
+/// Represents a standard Solidity revert. These are thrown by `revert(reason)`
+/// or `require(condition, reason)` statements in Solidity.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Revert {
     /// The reason string, provided by the Solidity contract.
     pub reason: String,
 }
+
+impl fmt::Debug for Revert {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Revert").field(&self.reason).finish()
+    }
+}
+
+impl fmt::Display for Revert {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("revert: ")?;
+        f.write_str(self.reason())
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Revert {}
 
 impl AsRef<str> for Revert {
     #[inline]
@@ -98,19 +114,6 @@ impl Borrow<str> for Revert {
     #[inline]
     fn borrow(&self) -> &str {
         &self.reason
-    }
-}
-
-impl fmt::Debug for Revert {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Revert").field(&self.reason).finish()
-    }
-}
-
-impl fmt::Display for Revert {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Revert: ")?;
-        f.write_str(&self.reason)
     }
 }
 
@@ -160,6 +163,18 @@ impl SolError for Revert {
     }
 }
 
+impl Revert {
+    /// Returns the revert reason string, or `"<empty>"` if empty.
+    #[inline]
+    pub fn reason(&self) -> &str {
+        if self.reason.is_empty() {
+            "<empty>"
+        } else {
+            &self.reason
+        }
+    }
+}
+
 /// A [Solidity panic].
 ///
 /// These are thrown by `assert(condition)` and by internal Solidity checks,
@@ -187,29 +202,6 @@ impl Borrow<U256> for Panic {
     #[inline]
     fn borrow(&self) -> &U256 {
         &self.code
-    }
-}
-
-impl fmt::Debug for Panic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut debug = f.debug_tuple("Panic");
-        if let Some(kind) = self.kind() {
-            debug.field(&kind);
-        } else {
-            debug.field(&self.code);
-        }
-        debug.finish()
-    }
-}
-
-impl fmt::Display for Panic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Panic: ")?;
-        if let Some(kind) = self.kind() {
-            f.write_str(kind.as_str())
-        } else {
-            write!(f, "unknown code: {}", self.code)
-        }
     }
 }
 
@@ -244,6 +236,39 @@ impl From<U256> for Panic {
         Self { code: value }
     }
 }
+
+impl fmt::Debug for Panic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug = f.debug_tuple("Panic");
+        if let Some(kind) = self.kind() {
+            debug.field(&kind);
+        } else {
+            debug.field(&self.code);
+        }
+        debug.finish()
+    }
+}
+
+impl fmt::Display for Panic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("panic: ")?;
+
+        let kind = self.kind();
+        let msg = kind.map(PanicKind::as_str).unwrap_or("unknown code");
+        f.write_str(msg)?;
+
+        f.write_str(" (0x")?;
+        if let Some(kind) = kind {
+            write!(f, "{:02x}", kind as u32)
+        } else {
+            write!(f, "{:x}", self.code)
+        }?;
+        f.write_str(")")
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Panic {}
 
 impl SolError for Panic {
     type Parameters<'a> = (crate::sol_data::Uint<256>,);

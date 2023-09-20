@@ -66,21 +66,21 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         item_tokens.extend(cx.expand_item(item)?);
     }
 
-    let functions_enum = (functions.len() > 1).then(|| {
+    let functions_enum = (!functions.is_empty()).then(|| {
         let mut attrs = d_attrs.clone();
         let doc_str = format!("Container for all the `{name}` function calls.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         CallLikeExpander::from_functions(cx, name, functions).expand(attrs, extra_methods)
     });
 
-    let errors_enum = (errors.len() > 1).then(|| {
+    let errors_enum = (!errors.is_empty()).then(|| {
         let mut attrs = d_attrs.clone();
         let doc_str = format!("Container for all the `{name}` custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         CallLikeExpander::from_errors(cx, name, errors).expand(attrs, extra_methods)
     });
 
-    let events_enum = (events.len() > 1).then(|| {
+    let events_enum = (!events.is_empty()).then(|| {
         let mut attrs = d_attrs;
         let doc_str = format!("Container for all the `{name}` events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));

@@ -1,12 +1,18 @@
-use crate::{Panic, Result, Revert, SolError};
+use crate::{Error, Panic, Result, Revert, SolError};
 use alloc::vec::Vec;
-use core::{fmt, iter::FusedIterator, marker::PhantomData};
+use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
+
+#[cfg(feature = "std")]
+use std::error::Error as StdError;
 
 /// A collection of ABI-encoded call-like types. This currently includes
 /// [`SolCall`] and [`SolError`].
 ///
 /// This trait assumes that the implementing type always has a selector, and
 /// thus encoded/decoded data is always at least 4 bytes long.
+///
+/// This trait is implemented for [`Infallible`] to represent an empty
+/// interface. This is used by [`GenericContractError`].
 ///
 /// [`SolCall`]: crate::SolCall
 /// [`SolError`]: crate::SolError
@@ -77,9 +83,60 @@ pub trait SolInterface: Sized {
     }
 }
 
+/// An empty [`SolInterface`] implementation. Used by [`GenericContractError`].
+impl SolInterface for Infallible {
+    // better than "Infallible" since it shows up in error messages
+    const NAME: &'static str = "GenericContractError";
+
+    // no selectors or data are valid
+    const MIN_DATA_LENGTH: usize = usize::MAX;
+    const COUNT: usize = 0;
+
+    #[inline]
+    fn selector(&self) -> [u8; 4] {
+        match *self {}
+    }
+
+    #[inline]
+    fn selector_at(_i: usize) -> Option<[u8; 4]> {
+        None
+    }
+
+    #[inline]
+    fn type_check(selector: [u8; 4]) -> Result<()> {
+        Err(Error::UnknownSelector {
+            name: Self::NAME,
+            selector: selector.into(),
+        })
+    }
+
+    #[inline]
+    fn decode_raw(selector: [u8; 4], _data: &[u8], _validate: bool) -> Result<Self> {
+        Self::type_check(selector).map(|()| unreachable!())
+    }
+
+    #[inline]
+    fn encoded_size(&self) -> usize {
+        match *self {}
+    }
+
+    #[inline]
+    fn encode_raw(&self, _out: &mut Vec<u8>) {
+        match *self {}
+    }
+}
+
+/// A generic contract error.
+///
+/// Contains a [`Revert`] or [`Panic`] error.
+pub type GenericContractError = ContractError<Infallible>;
+
 /// A generic contract error.
 ///
 /// Contains a [`Revert`] or [`Panic`] error, or a custom error.
+///
+/// If you want an empty [`CustomError`](ContractError::CustomError) variant,
+/// use [`GenericContractError`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ContractError<T> {
     /// A contract's custom error.
@@ -88,6 +145,73 @@ pub enum ContractError<T> {
     Revert(Revert),
     /// A panic. See [`Panic`] for more information.
     Panic(Panic),
+}
+
+impl<T: SolInterface> From<T> for ContractError<T> {
+    #[inline]
+    fn from(value: T) -> Self {
+        Self::CustomError(value)
+    }
+}
+
+impl<T> From<Revert> for ContractError<T> {
+    #[inline]
+    fn from(value: Revert) -> Self {
+        Self::Revert(value)
+    }
+}
+
+impl<T> TryFrom<ContractError<T>> for Revert {
+    type Error = ContractError<T>;
+
+    #[inline]
+    fn try_from(value: ContractError<T>) -> Result<Self, Self::Error> {
+        match value {
+            ContractError::Revert(inner) => Ok(inner),
+            _ => Err(value),
+        }
+    }
+}
+
+impl<T> From<Panic> for ContractError<T> {
+    #[inline]
+    fn from(value: Panic) -> Self {
+        Self::Panic(value)
+    }
+}
+
+impl<T> TryFrom<ContractError<T>> for Panic {
+    type Error = ContractError<T>;
+
+    #[inline]
+    fn try_from(value: ContractError<T>) -> Result<Self, Self::Error> {
+        match value {
+            ContractError::Panic(inner) => Ok(inner),
+            _ => Err(value),
+        }
+    }
+}
+
+impl<T: fmt::Display> fmt::Display for ContractError<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CustomError(error) => error.fmt(f),
+            Self::Panic(panic) => panic.fmt(f),
+            Self::Revert(revert) => revert.fmt(f),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T: StdError + 'static> StdError for ContractError<T> {
+    #[inline]
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            Self::CustomError(error) => Some(error),
+            Self::Panic(panic) => Some(panic),
+            Self::Revert(revert) => Some(revert),
+        }
+    }
 }
 
 impl<T: SolInterface> SolInterface for ContractError<T> {
@@ -156,51 +280,6 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
             Self::CustomError(error) => error.encode_raw(out),
             Self::Panic(panic) => panic.encode_raw(out),
             Self::Revert(revert) => revert.encode_raw(out),
-        }
-    }
-}
-
-impl<T: SolInterface> From<T> for ContractError<T> {
-    #[inline]
-    fn from(value: T) -> Self {
-        Self::CustomError(value)
-    }
-}
-
-impl<T> From<Revert> for ContractError<T> {
-    #[inline]
-    fn from(value: Revert) -> Self {
-        Self::Revert(value)
-    }
-}
-
-impl<T> TryFrom<ContractError<T>> for Revert {
-    type Error = ContractError<T>;
-
-    #[inline]
-    fn try_from(value: ContractError<T>) -> Result<Self, Self::Error> {
-        match value {
-            ContractError::Revert(inner) => Ok(inner),
-            _ => Err(value),
-        }
-    }
-}
-
-impl<T> From<Panic> for ContractError<T> {
-    #[inline]
-    fn from(value: Panic) -> Self {
-        Self::Panic(value)
-    }
-}
-
-impl<T> TryFrom<ContractError<T>> for Panic {
-    type Error = ContractError<T>;
-
-    #[inline]
-    fn try_from(value: ContractError<T>) -> Result<Self, Self::Error> {
-        match value {
-            ContractError::Panic(inner) => Ok(inner),
-            _ => Err(value),
         }
     }
 }
@@ -364,7 +443,35 @@ mod tests {
     }
 
     #[test]
-    fn contract_error_enum() {
+    fn generic_contract_error_enum() {
+        assert_eq!(
+            GenericContractError::selectors().collect::<Vec<_>>(),
+            [sel("Error(string)"), sel("Panic(uint256)")]
+        );
+    }
+
+    #[test]
+    fn contract_error_enum_1() {
+        crate::sol! {
+            contract C {
+                error Err1();
+            }
+        }
+
+        assert_eq!(C::CErrors::COUNT, 1);
+        assert_eq!(C::CErrors::MIN_DATA_LENGTH, 0);
+        assert_eq!(ContractError::<C::CErrors>::COUNT, 1 + 2);
+        assert_eq!(ContractError::<C::CErrors>::MIN_DATA_LENGTH, 0);
+
+        assert_eq!(C::CErrors::SELECTORS, [sel("Err1()")]);
+        assert_eq!(
+            ContractError::<C::CErrors>::selectors().collect::<Vec<_>>(),
+            vec![sel("Err1()"), sel("Error(string)"), sel("Panic(uint256)")],
+        );
+    }
+
+    #[test]
+    fn contract_error_enum_2() {
         crate::sol! {
             contract C {
                 error Err1();
@@ -386,7 +493,7 @@ mod tests {
                 sel("Err1()"),
                 sel("Error(string)"),
                 sel("Panic(uint256)"),
-            ]
+            ],
         );
     }
 }
