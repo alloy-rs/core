@@ -2,6 +2,9 @@ use crate::{Error, Panic, Result, Revert, SolError};
 use alloc::vec::Vec;
 use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
 
+#[cfg(feature = "std")]
+use std::error::Error as StdError;
+
 /// A collection of ABI-encoded call-like types. This currently includes
 /// [`SolCall`] and [`SolError`].
 ///
@@ -144,6 +147,73 @@ pub enum ContractError<T> {
     Panic(Panic),
 }
 
+impl<T: SolInterface> From<T> for ContractError<T> {
+    #[inline]
+    fn from(value: T) -> Self {
+        Self::CustomError(value)
+    }
+}
+
+impl<T> From<Revert> for ContractError<T> {
+    #[inline]
+    fn from(value: Revert) -> Self {
+        Self::Revert(value)
+    }
+}
+
+impl<T> TryFrom<ContractError<T>> for Revert {
+    type Error = ContractError<T>;
+
+    #[inline]
+    fn try_from(value: ContractError<T>) -> Result<Self, Self::Error> {
+        match value {
+            ContractError::Revert(inner) => Ok(inner),
+            _ => Err(value),
+        }
+    }
+}
+
+impl<T> From<Panic> for ContractError<T> {
+    #[inline]
+    fn from(value: Panic) -> Self {
+        Self::Panic(value)
+    }
+}
+
+impl<T> TryFrom<ContractError<T>> for Panic {
+    type Error = ContractError<T>;
+
+    #[inline]
+    fn try_from(value: ContractError<T>) -> Result<Self, Self::Error> {
+        match value {
+            ContractError::Panic(inner) => Ok(inner),
+            _ => Err(value),
+        }
+    }
+}
+
+impl<T: fmt::Display> fmt::Display for ContractError<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CustomError(error) => error.fmt(f),
+            Self::Panic(panic) => panic.fmt(f),
+            Self::Revert(revert) => revert.fmt(f),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T: StdError + 'static> StdError for ContractError<T> {
+    #[inline]
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            Self::CustomError(error) => Some(error),
+            Self::Panic(panic) => Some(panic),
+            Self::Revert(revert) => Some(revert),
+        }
+    }
+}
+
 impl<T: SolInterface> SolInterface for ContractError<T> {
     const NAME: &'static str = "ContractError";
 
@@ -210,51 +280,6 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
             Self::CustomError(error) => error.encode_raw(out),
             Self::Panic(panic) => panic.encode_raw(out),
             Self::Revert(revert) => revert.encode_raw(out),
-        }
-    }
-}
-
-impl<T: SolInterface> From<T> for ContractError<T> {
-    #[inline]
-    fn from(value: T) -> Self {
-        Self::CustomError(value)
-    }
-}
-
-impl<T> From<Revert> for ContractError<T> {
-    #[inline]
-    fn from(value: Revert) -> Self {
-        Self::Revert(value)
-    }
-}
-
-impl<T> TryFrom<ContractError<T>> for Revert {
-    type Error = ContractError<T>;
-
-    #[inline]
-    fn try_from(value: ContractError<T>) -> Result<Self, Self::Error> {
-        match value {
-            ContractError::Revert(inner) => Ok(inner),
-            _ => Err(value),
-        }
-    }
-}
-
-impl<T> From<Panic> for ContractError<T> {
-    #[inline]
-    fn from(value: Panic) -> Self {
-        Self::Panic(value)
-    }
-}
-
-impl<T> TryFrom<ContractError<T>> for Panic {
-    type Error = ContractError<T>;
-
-    #[inline]
-    fn try_from(value: ContractError<T>) -> Result<Self, Self::Error> {
-        match value {
-            ContractError::Panic(inner) => Ok(inner),
-            _ => Err(value),
         }
     }
 }
