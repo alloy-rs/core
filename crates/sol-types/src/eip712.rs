@@ -1,6 +1,6 @@
-use crate::{sol_data, SolType};
+use crate::{sol_data, token::WordToken, Encodable, SolType};
 use alloc::{borrow::Cow, string::String, vec::Vec};
-use alloy_primitives::{keccak256, Address, B256, U256};
+use alloy_primitives::{keccak256, Address, FixedBytes, B256, U256};
 
 /// Eip712 Domain attributes used in determining the domain separator;
 /// Unused fields are left out of the struct type.
@@ -119,242 +119,59 @@ impl Eip712Domain {
         keccak256(self.encode_type().as_bytes())
     }
 
+    /// Returns the number of words that will be used to encode the domain.
+    #[inline]
+    pub const fn num_words(&self) -> usize {
+        self.name.is_some() as usize
+            + self.version.is_some() as usize
+            + self.chain_id.is_some() as usize
+            + self.verifying_contract.is_some() as usize
+            + self.salt.is_some() as usize
+    }
+
+    /// Returns the number of bytes that will be used to encode the domain.
+    #[inline]
+    pub const fn encoded_size(&self) -> usize {
+        self.num_words() * 32
+    }
+
+    /// EIP-712 `encodeData` into the given buffer:
+    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
+    pub fn encode_data_to(&self, out: &mut Vec<u8>) {
+        // This only works because all of the fields are encoded as words.
+        #[inline]
+        fn encode_opt<S, T>(opt: Option<&T>, out: &mut Vec<u8>)
+        where
+            S: for<'a> SolType<TokenType<'a> = WordToken>,
+            T: Encodable<S>,
+        {
+            if let Some(t) = opt {
+                out.extend_from_slice(t.to_tokens().as_slice());
+            }
+        }
+
+        #[inline]
+        #[allow(clippy::ptr_arg)]
+        fn cow_keccak256(s: &Cow<'_, str>) -> FixedBytes<32> {
+            keccak256(s.as_bytes())
+        }
+
+        out.reserve(self.encoded_size());
+        let name = self.name.as_ref().map(cow_keccak256);
+        encode_opt::<sol_data::FixedBytes<32>, _>(name.as_ref(), out);
+        let version = self.version.as_ref().map(cow_keccak256);
+        encode_opt::<sol_data::FixedBytes<32>, _>(version.as_ref(), out);
+        encode_opt::<sol_data::Uint<256>, _>(self.chain_id.as_ref(), out);
+        encode_opt::<sol_data::Address, _>(self.verifying_contract.as_ref(), out);
+        encode_opt::<sol_data::FixedBytes<32>, _>(self.salt.as_ref(), out);
+    }
+
     /// EIP-712 `encodeData`:
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
     pub fn encode_data(&self) -> Vec<u8> {
-        // This giant match block was produced with excel-based
-        // meta-programming lmao
-        match (
-            self.name.as_ref(),
-            self.version.as_ref(),
-            self.chain_id,
-            self.verifying_contract,
-            self.salt,
-        ) {
-            (None, None, None, None, None) => vec![],
-            (None, None, None, None, Some(salt)) => <(sol_data::FixedBytes<32>,)>::encode(&(salt,)),
-            (None, None, None, Some(verifying_contract), None) => {
-                <(sol_data::Address,)>::encode(&(verifying_contract,))
-            }
-            (None, None, None, Some(verifying_contract), Some(salt)) => {
-                <(sol_data::Address, sol_data::FixedBytes<32>)>::encode(&(verifying_contract, salt))
-            }
-            (None, None, Some(chain_id), None, None) => {
-                <(sol_data::Uint<256>,)>::encode(&(chain_id,))
-            }
-            (None, None, Some(chain_id), None, Some(salt)) => {
-                <(sol_data::Uint<256>, sol_data::FixedBytes<32>)>::encode(&(chain_id, salt))
-            }
-            (None, None, Some(chain_id), Some(verifying_contract), None) => {
-                <(sol_data::Uint<256>, sol_data::Address)>::encode(&(chain_id, verifying_contract))
-            }
-            (None, None, Some(chain_id), Some(verifying_contract), Some(salt)) => {
-                <(
-                    sol_data::Uint<256>,
-                    sol_data::Address,
-                    sol_data::FixedBytes<32>,
-                )>::encode(&(chain_id, verifying_contract, salt))
-            }
-            (None, Some(version), None, None, None) => {
-                <(sol_data::FixedBytes<32>,)>::encode(&(keccak256(version.as_bytes()),))
-            }
-            (None, Some(version), None, None, Some(salt)) => {
-                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode(&(
-                    keccak256(version.as_bytes()),
-                    salt,
-                ))
-            }
-            (None, Some(version), None, Some(verifying_contract), None) => {
-                <(sol_data::FixedBytes<32>, sol_data::Address)>::encode(&(
-                    keccak256(version.as_bytes()),
-                    verifying_contract,
-                ))
-            }
-            (None, Some(version), None, Some(verifying_contract), Some(salt)) => <(
-                sol_data::FixedBytes<32>,
-                sol_data::Address,
-                sol_data::FixedBytes<32>,
-            )>::encode(
-                &(keccak256(version.as_bytes()), verifying_contract, salt),
-            ),
-            (None, Some(version), Some(chain_id), None, None) => {
-                <(sol_data::FixedBytes<32>, sol_data::Uint<256>)>::encode(&(
-                    keccak256(version.as_bytes()),
-                    chain_id,
-                ))
-            }
-            (None, Some(version), Some(chain_id), None, Some(salt)) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::Uint<256>,
-                    sol_data::FixedBytes<32>,
-                )>::encode(&(keccak256(version.as_bytes()), chain_id, salt))
-            }
-            (None, Some(version), Some(chain_id), Some(verifying_contract), None) => <(
-                sol_data::FixedBytes<32>,
-                sol_data::Uint<256>,
-                sol_data::Address,
-            )>::encode(
-                &(keccak256(version.as_bytes()), chain_id, verifying_contract),
-            ),
-            (None, Some(version), Some(chain_id), Some(verifying_contract), Some(salt)) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::Uint<256>,
-                    sol_data::Address,
-                    sol_data::FixedBytes<32>,
-                )>::encode(&(
-                    keccak256(version.as_bytes()),
-                    chain_id,
-                    verifying_contract,
-                    salt,
-                ))
-            }
-            (Some(name), None, None, None, None) => {
-                <(sol_data::FixedBytes<32>,)>::encode(&(keccak256(name.as_bytes()),))
-            }
-            (Some(name), None, None, None, Some(salt)) => {
-                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode(&(
-                    keccak256(name.as_bytes()),
-                    salt,
-                ))
-            }
-            (Some(name), None, None, Some(verifying_contract), None) => {
-                <(sol_data::FixedBytes<32>, sol_data::Address)>::encode(&(
-                    keccak256(name.as_bytes()),
-                    verifying_contract,
-                ))
-            }
-            (Some(name), None, None, Some(verifying_contract), Some(salt)) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::Address,
-                    sol_data::FixedBytes<32>,
-                )>::encode(&(keccak256(name.as_bytes()), verifying_contract, salt))
-            }
-            (Some(name), None, Some(chain_id), None, None) => {
-                <(sol_data::FixedBytes<32>, sol_data::Uint<256>)>::encode(&(
-                    keccak256(name.as_bytes()),
-                    chain_id,
-                ))
-            }
-            (Some(name), None, Some(chain_id), None, Some(salt)) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::Uint<256>,
-                    sol_data::FixedBytes<32>,
-                )>::encode(&(keccak256(name.as_bytes()), chain_id, salt))
-            }
-            (Some(name), None, Some(chain_id), Some(verifying_contract), None) => <(
-                sol_data::FixedBytes<32>,
-                sol_data::Uint<256>,
-                sol_data::Address,
-            )>::encode(
-                &(keccak256(name.as_bytes()), chain_id, verifying_contract),
-            ),
-            (Some(name), None, Some(chain_id), Some(verifying_contract), Some(salt)) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::Uint<256>,
-                    sol_data::Address,
-                    sol_data::FixedBytes<32>,
-                )>::encode(&(
-                    keccak256(name.as_bytes()),
-                    chain_id,
-                    verifying_contract,
-                    salt,
-                ))
-            }
-            (Some(name), Some(version), None, None, None) => {
-                <(sol_data::FixedBytes<32>, sol_data::FixedBytes<32>)>::encode(&(
-                    keccak256(name.as_bytes()),
-                    keccak256(version.as_bytes()),
-                ))
-            }
-            (Some(name), Some(version), None, None, Some(salt)) => <(
-                sol_data::FixedBytes<32>,
-                sol_data::FixedBytes<32>,
-                sol_data::FixedBytes<32>,
-            )>::encode(&(
-                keccak256(name.as_bytes()),
-                keccak256(version.as_bytes()),
-                salt,
-            )),
-            (Some(name), Some(version), None, Some(verifying_contract), None) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::FixedBytes<32>,
-                    sol_data::Address,
-                )>::encode(&(
-                    keccak256(name.as_bytes()),
-                    keccak256(version.as_bytes()),
-                    verifying_contract,
-                ))
-            }
-            (Some(name), Some(version), None, Some(verifying_contract), Some(salt)) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::FixedBytes<32>,
-                    sol_data::Address,
-                    sol_data::FixedBytes<32>,
-                )>::encode(&(
-                    keccak256(name.as_bytes()),
-                    keccak256(version.as_bytes()),
-                    verifying_contract,
-                    salt,
-                ))
-            }
-            (Some(name), Some(version), Some(chain_id), None, None) => <(
-                sol_data::FixedBytes<32>,
-                sol_data::FixedBytes<32>,
-                sol_data::Uint<256>,
-            )>::encode(&(
-                keccak256(name.as_bytes()),
-                keccak256(version.as_bytes()),
-                chain_id,
-            )),
-            (Some(name), Some(version), Some(chain_id), None, Some(salt)) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::FixedBytes<32>,
-                    sol_data::Uint<256>,
-                    sol_data::FixedBytes<32>,
-                )>::encode(&(
-                    keccak256(name.as_bytes()),
-                    keccak256(version.as_bytes()),
-                    chain_id,
-                    salt,
-                ))
-            }
-            (Some(name), Some(version), Some(chain_id), Some(verifying_contract), None) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::FixedBytes<32>,
-                    sol_data::Uint<256>,
-                    sol_data::Address,
-                )>::encode(&(
-                    keccak256(name.as_bytes()),
-                    keccak256(version.as_bytes()),
-                    chain_id,
-                    verifying_contract,
-                ))
-            }
-            (Some(name), Some(version), Some(chain_id), Some(verifying_contract), Some(salt)) => {
-                <(
-                    sol_data::FixedBytes<32>,
-                    sol_data::FixedBytes<32>,
-                    sol_data::Uint<256>,
-                    sol_data::Address,
-                    sol_data::FixedBytes<32>,
-                )>::encode(&(
-                    keccak256(name.as_bytes()),
-                    keccak256(version.as_bytes()),
-                    chain_id,
-                    verifying_contract,
-                    salt,
-                ))
-            }
-        }
+        let mut out = Vec::new();
+        self.encode_data_to(&mut out);
+        out
     }
 
     /// EIP-712 `hashStruct`:
