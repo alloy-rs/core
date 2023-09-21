@@ -2,7 +2,7 @@
 
 use crate::{
     attr::{self, SolAttrs},
-    utils::ExprArray,
+    utils::{self, ExprArray},
 };
 use ast::{
     File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath, Spanned, Type,
@@ -108,13 +108,8 @@ impl ExpCtxt<'_> {
 
         let errs = others
             .iter()
-            .map(|attr| Error::new_spanned(attr, "unexpected attribute"))
-            .collect::<Vec<_>>();
-        if errs.is_empty() {
-            Ok(())
-        } else {
-            Err(crate::utils::combine_errors(errs).unwrap())
-        }
+            .map(|attr| Error::new_spanned(attr, "unexpected attribute"));
+        utils::combine_errors(errs)
     }
 
     fn mk_types_map(&mut self) {
@@ -220,12 +215,9 @@ impl ExpCtxt<'_> {
             }
         }
 
-        if errors.is_empty() {
+        utils::combine_errors(errors).map(|()| {
             self.function_overloads = overloads_map;
-            Ok(())
-        } else {
-            Err(crate::utils::combine_errors(errors).unwrap())
-        }
+        })
     }
 }
 
@@ -333,7 +325,7 @@ impl ExpCtxt<'_> {
     }
 
     fn function_selector(&self, function: &ItemFunction) -> ExprArray<u8, 4> {
-        crate::utils::selector(self.function_signature(function))
+        utils::selector(self.function_signature(function))
     }
 
     fn error_signature(&self, error: &ItemError) -> String {
@@ -341,7 +333,7 @@ impl ExpCtxt<'_> {
     }
 
     fn error_selector(&self, error: &ItemError) -> ExprArray<u8, 4> {
-        crate::utils::selector(self.error_signature(error))
+        utils::selector(self.error_signature(error))
     }
 
     #[allow(dead_code)]
@@ -351,7 +343,7 @@ impl ExpCtxt<'_> {
 
     #[allow(dead_code)]
     fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8, 32> {
-        crate::utils::event_selector(self.event_signature(event))
+        utils::event_selector(self.event_signature(event))
     }
 
     /// Extends `attrs` with all possible derive attributes for the given type
@@ -386,18 +378,16 @@ impl ExpCtxt<'_> {
         I: IntoIterator<Item = T>,
         T: Borrow<Type>,
     {
-        if self.attrs.all_derives.is_none() {
+        let Some(true) = self.attrs.all_derives else {
             return
-        }
+        };
 
         let mut derives = Vec::with_capacity(5);
         let mut derive_others = true;
         for ty in types {
-            if !derive_default && !derive_others {
-                break
-            }
-            derive_default = derive_default && ty::can_derive_default(self, ty.borrow());
-            derive_others = derive_others && ty::can_derive_builtin_traits(self, ty.borrow());
+            let ty = ty.borrow();
+            derive_default = derive_default && ty::can_derive_default(self, ty);
+            derive_others = derive_others && ty::can_derive_builtin_traits(self, ty);
         }
         if derive_default {
             derives.push("Default");
@@ -428,16 +418,13 @@ impl ExpCtxt<'_> {
                 }
             });
         }
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            let mut e = crate::utils::combine_errors(errors).unwrap();
+        utils::combine_errors(errors).map_err(|mut e| {
             let note =
                 "Custom types must be declared inside of the same scope they are referenced in,\n\
                  or \"imported\" as a UDT with `type ... is (...);`";
             e.combine(Error::new(Span::call_site(), note));
-            Err(e)
-        }
+            e
+        })
     }
 }
 

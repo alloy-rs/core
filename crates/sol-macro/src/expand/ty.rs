@@ -313,7 +313,7 @@ impl fmt::Display for TypePrinter<'_> {
                 f.write_str(")")
             }
 
-            Type::Custom(name) => self.cx.custom_type(name).fmt(f),
+            Type::Custom(name) => Self::new(self.cx, self.cx.custom_type(name)).fmt(f),
 
             ty => ty.fmt(f),
         }
