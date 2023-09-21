@@ -1,4 +1,4 @@
-use crate::FixedBytes;
+use crate::{Address, FixedBytes, Selector};
 use core::borrow::Borrow;
 
 wrap_fixed_bytes! {
@@ -55,5 +55,43 @@ impl Function {
         bytes[..20].copy_from_slice(address.borrow());
         bytes[20..].copy_from_slice(selector.borrow());
         Self(FixedBytes(bytes))
+    }
+
+    /// Returns references to the address and selector of the function.
+    #[inline]
+    pub fn as_address_and_selector(&self) -> (&Address, &Selector) {
+        // SAFETY: Function (24) = Address (20) + Selector (4)
+        unsafe { (&*self.as_ptr().cast(), &*self.as_ptr().add(20).cast()) }
+    }
+
+    /// Returns the address and selector of the function.
+    #[inline]
+    pub fn to_address_and_selector(&self) -> (Address, Selector) {
+        let (a, s) = self.as_address_and_selector();
+        (*a, *s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::hex;
+
+    #[test]
+    fn function_parts() {
+        let f = Function::new(hex!(
+            "
+            ffffffffffffffffffffffffffffffffffffffff
+            12345678
+        "
+        ));
+
+        let (a1, s1) = f.as_address_and_selector();
+        assert_eq!(a1, hex!("ffffffffffffffffffffffffffffffffffffffff"));
+        assert_eq!(s1, &hex!("12345678"));
+
+        let (a2, s2) = f.to_address_and_selector();
+        assert_eq!(a2, *a1);
+        assert_eq!(s2, *s1);
     }
 }
