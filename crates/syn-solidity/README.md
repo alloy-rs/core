@@ -43,6 +43,7 @@ procedural macros, and to reduce general code complexity in the parser and AST.
 
 This parser is limited to only valid Rust tokens, meaning that certain Solidity
 constructs are not supported. Some examples include, but are not limited to:
+- dollar signs (`$`) inside of identifiers
 - single quote strings
 - `hex` and `unicode` string literal prefixes.
   Literal prefixes are [reserved in Rust edition 2021 and above][reserved-2021].
