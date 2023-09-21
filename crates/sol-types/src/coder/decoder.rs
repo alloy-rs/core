@@ -8,7 +8,7 @@
 // except according to those terms.
 //
 
-use crate::{encode, token::TokenSeq, utils, Error, Result, TokenType, Word};
+use crate::{encode_sequence, token::TokenSeq, utils, Error, Result, TokenType, Word};
 use alloc::{borrow::Cow, vec::Vec};
 use core::{fmt, slice::SliceIndex};
 
@@ -238,10 +238,10 @@ impl<'de> Decoder<'de> {
 
 /// Decodes ABI compliant vector of bytes into vector of tokens described by
 /// types param.
-pub fn decode<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
+pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     let mut decoder = Decoder::new(data, validate);
     let res = decoder.decode_sequence::<T>()?;
-    if validate && encode(&res) != data {
+    if validate && encode_sequence(&res) != data {
         return Err(Error::ReserMismatch)
     }
     Ok(res)
@@ -249,8 +249,8 @@ pub fn decode<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<
 
 /// Decode a single token.
 #[inline]
-pub fn decode_single<'de, T: TokenType<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
-    decode::<(T,)>(data, validate).map(|(t,)| t)
+pub fn decode<'de, T: TokenType<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
+    decode_sequence::<(T,)>(data, validate).map(|(t,)| t)
 }
 
 /// Decode top-level function args. Encodes as params if T is a tuple.
@@ -258,9 +258,9 @@ pub fn decode_single<'de, T: TokenType<'de>>(data: &'de [u8], validate: bool) ->
 #[inline]
 pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     if T::IS_TUPLE {
-        decode(data, validate)
+        decode_sequence(data, validate)
     } else {
-        decode_single(data, validate)
+        decode(data, validate)
     }
 }
 
@@ -313,7 +313,7 @@ mod tests {
         let address2 = Address::from([0x22u8; 20]);
         let uint = U256::from_be_bytes::<32>([0x11u8; 32]);
         let expected = (address1, address2, uint);
-        let decoded = MyTy::decode(&encoded, true).unwrap();
+        let decoded = MyTy::decode_sequence(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -336,7 +336,7 @@ mod tests {
         let expected = (string1, string2);
 
         // this test vector contains a top-level indirect
-        let decoded = MyTy::decode_single(&encoded, true).unwrap();
+        let decoded = MyTy::decode(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -390,7 +390,7 @@ mod tests {
         let inner_tuple = (string3, string4, deep_tuple);
         let expected = (string1, bool, string2, inner_tuple);
 
-        let decoded = MyTy::decode_single(&encoded, true).unwrap();
+        let decoded = MyTy::decode(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -420,7 +420,7 @@ mod tests {
         let address2 = Address::from([0x22u8; 20]);
         let expected = (uint, string, address1, address2);
 
-        let decoded = MyTy::decode_single(&encoded, true).unwrap();
+        let decoded = MyTy::decode(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -533,7 +533,7 @@ mod tests {
         "
         );
 
-        assert_eq!(MyTy::decode(&encoded, false).unwrap(), data,);
+        assert_eq!(MyTy::decode_sequence(&encoded, false).unwrap(), data,);
     }
 
     #[test]
@@ -578,7 +578,7 @@ mod tests {
         );
 
         assert_eq!(
-            sol_data::String::decode_single(&encoded, false).unwrap(),
+            sol_data::String::decode(&encoded, false).unwrap(),
             "不�".to_string()
         );
     }
@@ -598,7 +598,7 @@ mod tests {
     	0000000000000000000000000000000000000000000000000000000000000002
         "
         );
-        assert!(MyTy::decode(&encoded, true).is_err());
+        assert!(MyTy::decode_sequence(&encoded, true).is_err());
     }
 
     #[test]
@@ -609,9 +609,9 @@ mod tests {
     	0000000000000000000000000000000000000000000000000000000000054321
     	"
         );
-        assert!(sol_data::Address::decode_single(&input, false).is_ok());
-        assert!(sol_data::Address::decode_single(&input, true).is_err());
-        assert!(<(sol_data::Address, sol_data::Address)>::decode_single(&input, true).is_ok());
+        assert!(sol_data::Address::decode(&input, false).is_ok());
+        assert!(sol_data::Address::decode(&input, true).is_err());
+        assert!(<(sol_data::Address, sol_data::Address)>::decode(&input, true).is_ok());
     }
 
     #[test]
@@ -636,11 +636,11 @@ mod tests {
         let dirty_negative =
             hex!("f0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
-        assert_eq!(MyTy::decode_single(&dirty_negative, false).unwrap(), -1);
+        assert_eq!(MyTy::decode(&dirty_negative, false).unwrap(), -1);
 
         assert!(
             matches!(
-                MyTy::decode_single(&dirty_negative, true),
+                MyTy::decode(&dirty_negative, true),
                 Err(crate::Error::TypeCheckFail { .. }),
             ),
             "did not match error"
@@ -649,11 +649,11 @@ mod tests {
         let dirty_positive =
             hex!("700000000000000000000000000000000000000000000000000000000000007f");
 
-        assert_eq!(MyTy::decode_single(&dirty_positive, false).unwrap(), 127);
+        assert_eq!(MyTy::decode(&dirty_positive, false).unwrap(), 127);
 
         assert!(
             matches!(
-                MyTy::decode_single(&dirty_positive, true),
+                MyTy::decode(&dirty_positive, true),
                 Err(crate::Error::TypeCheckFail { .. }),
             ),
             "did not match error"

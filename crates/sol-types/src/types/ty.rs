@@ -1,5 +1,5 @@
 use crate::{token::TokenSeq, Result, TokenType, Word};
-use alloc::{borrow::Cow, string::String, vec::Vec};
+use alloc::{borrow::Cow, vec::Vec};
 
 /// An encodable is any type that may be encoded via a given [`SolType`].
 ///
@@ -21,9 +21,8 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 /// Similarly, [`u128`] covers `uint72-128`. Because of this, usage of this
 /// trait is always ambiguous for certain types.
 ///
-/// ```compile_fail
+/// ```compile_fail,E0284
 /// # use alloy_sol_types::{SolType, Encodable, sol_data::*};
-/// # fn main() -> Result<(), alloy_sol_types::Error> {
 /// // Compilation fails due to ambiguity
 /// //  error[E0284]: type annotations needed
 /// // |
@@ -37,8 +36,7 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 /// // | ++++++++++++++++++++++++++++++++++      ~
 /// //
 /// 100u64.to_tokens();
-/// # Ok(())
-/// # }
+/// # Ok::<_, alloy_sol_types::Error>(())
 /// ```
 ///
 /// To resolve this, specify the related [`SolType`]. When specifying T it is
@@ -203,58 +201,31 @@ pub trait SolType {
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence.
     #[inline]
-    fn encode_single(rust: &Self::RustType) -> Vec<u8> {
-        crate::encode_single(&rust.to_tokens())
+    fn encode<E: Encodable<Self>>(rust: &E) -> Vec<u8> {
+        crate::encode(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence.
     #[inline]
-    fn encode<'a>(rust: &'a Self::RustType) -> Vec<u8>
+    fn encode_sequence<E: Encodable<Self>>(rust: &E) -> Vec<u8>
     where
-        Self::TokenType<'a>: TokenSeq<'a>,
+        for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
-        crate::encode(&rust.to_tokens())
+        crate::encode_sequence(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence suitable for function parameters.
     #[inline]
-    fn encode_params<'a>(rust: &'a Self::RustType) -> Vec<u8>
+    fn encode_params<E: Encodable<Self>>(rust: &E) -> Vec<u8>
     where
-        Self::TokenType<'a>: TokenSeq<'a>,
+        for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
         crate::encode_params(&rust.to_tokens())
     }
 
-    /// Hex output of [`encode`][SolType::encode].
-    #[inline]
-    fn hex_encode<'a>(rust: &'a Self::RustType) -> String
-    where
-        Self::TokenType<'a>: TokenSeq<'a>,
-    {
-        hex::encode_prefixed(Self::encode(rust))
-    }
-
-    /// Hex output of [`encode_single`][SolType::encode_single].
-    #[inline]
-    fn hex_encode_single(rust: &Self::RustType) -> String {
-        hex::encode_prefixed(Self::encode_single(rust))
-    }
-
-    /// Hex output of [`encode_params`][SolType::encode_params].
-    #[inline]
-    fn hex_encode_params<'a>(rust: &'a Self::RustType) -> String
-    where
-        Self::TokenType<'a>: TokenSeq<'a>,
-    {
-        hex::encode_prefixed(Self::encode_params(rust))
-    }
-
     /// Decode a Rust type from an ABI blob.
     #[inline]
-    fn decode<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
-    where
-        Self::TokenType<'de>: TokenSeq<'de>,
-    {
+    fn decode(data: &[u8], validate: bool) -> Result<Self::RustType> {
         let decoded = crate::decode::<Self::TokenType<'_>>(data, validate)?;
         if validate {
             Self::type_check(&decoded)?;
@@ -264,11 +235,11 @@ pub trait SolType {
 
     /// Decode a Rust type from an ABI blob.
     #[inline]
-    fn decode_params(data: &[u8], validate: bool) -> Result<Self::RustType>
+    fn decode_sequence<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
     where
-        for<'de> Self::TokenType<'de>: TokenSeq<'de>,
+        Self::TokenType<'de>: TokenSeq<'de>,
     {
-        let decoded = crate::decode_params::<Self::TokenType<'_>>(data, validate)?;
+        let decoded = crate::decode_sequence::<Self::TokenType<'_>>(data, validate)?;
         if validate {
             Self::type_check(&decoded)?;
         }
@@ -277,41 +248,14 @@ pub trait SolType {
 
     /// Decode a Rust type from an ABI blob.
     #[inline]
-    fn decode_single(data: &[u8], validate: bool) -> Result<Self::RustType> {
-        let decoded = crate::decode_single::<Self::TokenType<'_>>(data, validate)?;
+    fn decode_params<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
+    where
+        Self::TokenType<'de>: TokenSeq<'de>,
+    {
+        let decoded = crate::decode_params::<Self::TokenType<'_>>(data, validate)?;
         if validate {
             Self::type_check(&decoded)?;
         }
         Ok(Self::detokenize(decoded))
-    }
-
-    /// Decode a Rust type from a hex-encoded ABI blob.
-    #[inline]
-    fn hex_decode(data: &str, validate: bool) -> Result<Self::RustType>
-    where
-        for<'de> Self::TokenType<'de>: TokenSeq<'de>,
-    {
-        hex::decode(data)
-            .map_err(Into::into)
-            .and_then(|buf| Self::decode(&buf, validate))
-    }
-
-    /// Decode a Rust type from a hex-encoded ABI blob.
-    #[inline]
-    fn hex_decode_single(data: &str, validate: bool) -> Result<Self::RustType> {
-        hex::decode(data)
-            .map_err(Into::into)
-            .and_then(|buf| Self::decode_single(&buf, validate))
-    }
-
-    /// Decode a Rust type from a hex-encoded ABI blob.
-    #[inline]
-    fn hex_decode_params(data: &str, validate: bool) -> Result<Self::RustType>
-    where
-        for<'de> Self::TokenType<'de>: TokenSeq<'de>,
-    {
-        hex::decode(data)
-            .map_err(Into::into)
-            .and_then(|buf| Self::decode_params(&buf, validate))
     }
 }

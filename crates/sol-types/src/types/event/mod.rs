@@ -79,7 +79,7 @@ pub trait SolEvent: Sized {
     #[inline]
     fn encode_data_to(&self, out: &mut Vec<u8>) {
         out.reserve(self.encoded_size());
-        out.extend(crate::encode(&self.tokenize_body()));
+        out.extend(crate::encode_sequence(&self.tokenize_body()));
     }
 
     /// ABI-encode the dynamic data of this event.
@@ -138,7 +138,7 @@ pub trait SolEvent: Sized {
         data: &'a [u8],
         validate: bool,
     ) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
-        <Self::DataTuple<'a> as SolType>::decode(data, validate)
+        <Self::DataTuple<'a> as SolType>::decode_sequence(data, validate)
     }
 
     /// Decode the event from the given log info.

@@ -1,6 +1,6 @@
 use alloy_dyn_abi::{DynSolType, DynSolValue};
 use alloy_primitives::U256;
-use alloy_sol_types::{sol, SolType};
+use alloy_sol_types::{sol, sol_data, SolType};
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
@@ -55,14 +55,14 @@ fn dyn_abi_encode(c: &mut Criterion) {
         let input = encode_single_input();
         b.iter(|| {
             let value = DynSolValue::String(input.clone());
-            black_box(value).encode_single()
+            black_box(value).encode()
         });
     });
 
     g.bench_function("struct", |b| {
         let input = encode_struct_sol_values();
         let input = DynSolValue::Tuple(input.to_vec());
-        b.iter(|| black_box(&input).encode());
+        b.iter(|| black_box(&input).encode_sequence());
     });
 
     g.finish();
@@ -74,13 +74,13 @@ fn dyn_abi_decode(c: &mut Criterion) {
     g.bench_function("word", |b| {
         let ty = DynSolType::Uint(256);
         let input = decode_word_input();
-        b.iter(|| ty.decode_single(black_box(&input)).unwrap());
+        b.iter(|| ty.decode(black_box(&input)).unwrap());
     });
 
     g.bench_function("dynamic", |b| {
         let ty = DynSolType::String;
         let input = decode_dynamic_input();
-        b.iter(|| ty.decode_single(black_box(&input)).unwrap());
+        b.iter(|| ty.decode(black_box(&input)).unwrap());
     });
 
     g.finish();
@@ -91,7 +91,7 @@ fn sol_types_encode(c: &mut Criterion) {
 
     g.bench_function("single", |b| {
         let input = encode_single_input();
-        b.iter(|| alloy_sol_types::sol_data::String::encode_single(black_box(&input)));
+        b.iter(|| alloy_sol_types::sol_data::String::encode(black_box(&input)));
     });
 
     g.bench_function("struct", |b| {
@@ -107,16 +107,12 @@ fn sol_types_decode(c: &mut Criterion) {
 
     g.bench_function("word", |b| {
         let input = decode_word_input();
-        b.iter(|| {
-            alloy_sol_types::sol_data::Uint::<256>::decode_single(black_box(&input), false).unwrap()
-        });
+        b.iter(|| sol_data::Uint::<256>::decode(black_box(&input), false).unwrap());
     });
 
     g.bench_function("dynamic", |b| {
         let input = decode_dynamic_input();
-        b.iter(|| {
-            alloy_sol_types::sol_data::String::decode_single(black_box(&input), false).unwrap()
-        });
+        b.iter(|| sol_data::String::decode(black_box(&input), false).unwrap());
     });
 
     g.finish();

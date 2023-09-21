@@ -54,7 +54,7 @@ pub trait SolCall: Sized {
     /// selector.
     #[inline]
     fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Arguments<'_> as SolType>::decode(data, validate).map(Self::new)
+        <Self::Arguments<'_> as SolType>::decode_sequence(data, validate).map(Self::new)
     }
 
     /// ABI decode this call's arguments from the given slice, **with** the
@@ -71,7 +71,7 @@ pub trait SolCall: Sized {
     #[inline]
     fn encode_raw(&self, out: &mut Vec<u8>) {
         out.reserve(self.encoded_size());
-        out.extend(crate::encode(&self.tokenize()));
+        out.extend(crate::encode_sequence(&self.tokenize()));
     }
 
     /// ABI encode the call to the given buffer **with** its selector.
@@ -92,6 +92,6 @@ pub trait SolCall: Sized {
     where
         E: Encodable<Self::ReturnTuple<'a>>,
     {
-        crate::encode(&e.to_tokens())
+        crate::encode_sequence(&e.to_tokens())
     }
 }

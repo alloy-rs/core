@@ -179,7 +179,7 @@ fn encode_typeck(params: &[Param], values: &[DynSolValue]) -> Result<Vec<u8>> {
 
 #[inline]
 fn encode(values: &[DynSolValue]) -> Vec<u8> {
-    DynSolValue::encode_sequence(values)
+    DynSolValue::encode_seq(values)
 }
 
 fn decode(data: &[u8], params: &[Param]) -> Result<Vec<DynSolValue>> {
@@ -187,7 +187,7 @@ fn decode(data: &[u8], params: &[Param]) -> Result<Vec<DynSolValue>> {
     let mut decoder = Decoder::new(data, false);
     for param in params {
         let ty = param.resolve()?;
-        let value = ty.decode(&mut decoder, crate::DynToken::decode_single_populate)?;
+        let value = ty._decode(&mut decoder, crate::DynToken::decode_single_populate)?;
         values.push(value);
     }
     Ok(values)

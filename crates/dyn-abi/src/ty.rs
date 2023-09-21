@@ -64,16 +64,16 @@ struct StructProp {
 /// let my_type = DynSolType::Uint(256);
 /// let my_data: DynSolValue = U256::from(183u64).into();
 ///
-/// let encoded = my_data.encode_single();
-/// let decoded = my_type.decode_single(&encoded)?;
+/// let encoded = my_data.encode();
+/// let decoded = my_type.decode(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
 ///
 /// let my_type = DynSolType::Array(Box::new(my_type));
 /// let my_data = DynSolValue::Array(vec![my_data.clone()]);
 ///
-/// let encoded = my_data.encode_single();
-/// let decoded = my_type.decode_single(&encoded)?;
+/// let encoded = my_data.encode();
+/// let decoded = my_type.decode(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
 /// # Ok::<_, alloy_dyn_abi::Error>(())
@@ -456,8 +456,8 @@ impl DynSolType {
 
     /// The Solidity type name, as a `String`.
     ///
-    /// Note: this shadows the inherent `ToString` implementation, derived from
-    /// [`fmt::Display`], for performance reasons.
+    /// Note: this shadows the inherent [`ToString`] implementation, derived
+    /// from [`fmt::Display`], for performance reasons.
     #[inline]
     #[allow(clippy::inherent_to_string_shadow_display)]
     pub fn to_string(&self) -> String {
@@ -516,7 +516,7 @@ impl DynSolType {
     pub fn decode_params(&self, data: &[u8]) -> Result<DynSolValue> {
         match self {
             Self::Tuple(_) => self.decode_sequence(data),
-            _ => self.decode_single(data),
+            _ => self.decode(data),
         }
     }
 
@@ -527,8 +527,8 @@ impl DynSolType {
     /// argument is an encoded single-element sequence wrapping the `self` type.
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub fn decode_single(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.decode(
+    pub fn decode(&self, data: &[u8]) -> Result<DynSolValue> {
+        self._decode(
             &mut Decoder::new(data, false),
             DynToken::decode_single_populate,
         )
@@ -539,7 +539,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.decode(
+        self._decode(
             &mut Decoder::new(data, false),
             DynToken::decode_sequence_populate,
         )
@@ -547,7 +547,7 @@ impl DynSolType {
 
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub(crate) fn decode<'d, F>(&self, decoder: &mut Decoder<'d>, f: F) -> Result<DynSolValue>
+    pub(crate) fn _decode<'d, F>(&self, decoder: &mut Decoder<'d>, f: F) -> Result<DynSolValue>
     where
         F: FnOnce(&mut DynToken<'d>, &mut Decoder<'d>) -> Result<()>,
     {
@@ -556,7 +556,7 @@ impl DynSolType {
         let value = self.detokenize(token).expect("invalid empty_dyn_token");
         debug_assert!(
             self.matches(&value),
-            "decoded value does not match type:\n  - type: {self:?}\n  - value: {value:?}"
+            "decoded value does not match type:\n   type: {self:?}\n  value: {value:?}"
         );
         Ok(value)
     }
@@ -591,7 +591,7 @@ mod tests {
             DynToken::FixedSeq(vec![DynToken::Word(word1), DynToken::Word(word2)].into(), 2)
         );
         let mut enc = crate::Encoder::default();
-        DynSolValue::encode_sequence_to(val.as_fixed_seq().unwrap(), &mut enc);
+        DynSolValue::encode_seq_to(val.as_fixed_seq().unwrap(), &mut enc);
         assert_eq!(enc.finish(), vec![word1, word2]);
     }
 

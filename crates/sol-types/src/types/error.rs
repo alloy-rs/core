@@ -49,7 +49,7 @@ pub trait SolError: Sized {
     /// selector.
     #[inline]
     fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Parameters<'_> as SolType>::decode(data, validate).map(Self::new)
+        <Self::Parameters<'_> as SolType>::decode_sequence(data, validate).map(Self::new)
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the
@@ -66,7 +66,7 @@ pub trait SolError: Sized {
     #[inline]
     fn encode_raw(&self, out: &mut Vec<u8>) {
         out.reserve(self.encoded_size());
-        out.extend(crate::encode(&self.tokenize()));
+        out.extend(crate::encode_sequence(&self.tokenize()));
     }
 
     /// ABI encode the error to the given buffer **with** its selector.
