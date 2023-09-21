@@ -1,5 +1,6 @@
 use crate::{EventParam, Param};
 use alloc::string::String;
+use alloy_primitives::Selector;
 
 macro_rules! signature {
     ($name:expr, $inputs:expr, $preimage:expr) => {{
@@ -49,7 +50,7 @@ pub(crate) fn event_signature_raw(name: &str, inputs: &[EventParam], preimage: &
 }
 
 /// `keccak256(preimage)[..4]`
-pub(crate) fn selector(preimage: &str) -> [u8; 4] {
+pub(crate) fn selector(preimage: &str) -> Selector {
     // SAFETY: splitting an array
     unsafe {
         alloy_primitives::keccak256(preimage.as_bytes())

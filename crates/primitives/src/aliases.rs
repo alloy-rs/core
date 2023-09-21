@@ -85,4 +85,4 @@ pub type StorageValue = U256;
 
 /// Solidity contract functions are addressed using the first four bytes of the
 /// Keccak-256 hash of their signature.
-pub type Selector = [u8; 4];
+pub type Selector = FixedBytes<4>;

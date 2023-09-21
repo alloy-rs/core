@@ -355,6 +355,7 @@ impl EventParam {
     pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.internal_type().and_then(|ty| ty.struct_specifier())
     }
+
     /// The enum specifier is a [`TypeSpecifier`] containing the enum name and
     /// any array sizes. It is computed from the `internal_type`. If this param
     /// is not a enum, this function will return `None`.

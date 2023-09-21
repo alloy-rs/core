@@ -19,7 +19,7 @@
 #[macro_use]
 extern crate alloc;
 
-/// Errors
+/// Errors.
 mod error;
 pub use error::{Error, Result};
 
@@ -31,13 +31,13 @@ pub use ident::{is_id_continue, is_id_start, is_valid_identifier, IDENT_REGEX};
 mod root;
 pub use root::RootType;
 
-/// Tuple type specifier.
-mod tuple;
-pub use tuple::TupleSpecifier;
-
 /// Type stem.
 mod stem;
 pub use stem::TypeStem;
+
+/// Tuple type specifier.
+mod tuple;
+pub use tuple::TupleSpecifier;
 
 /// Type specifier.
 mod type_spec;

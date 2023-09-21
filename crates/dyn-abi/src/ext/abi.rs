@@ -1,6 +1,7 @@
 use crate::{DynSolValue, Error as CrateError, ResolveSolType, Result};
 use alloc::vec::Vec;
 use alloy_json_abi::{Constructor, Error, Function, Param};
+use alloy_primitives::Selector;
 use alloy_sol_types::Decoder;
 
 mod sealed {
@@ -144,11 +145,11 @@ impl FunctionExt for Function {
 }
 
 #[inline]
-fn prefix_selector(selector: [u8; 4]) -> impl FnOnce(Vec<u8>) -> Vec<u8> {
+fn prefix_selector(selector: Selector) -> impl FnOnce(Vec<u8>) -> Vec<u8> {
     move |data| {
         let mut new = Vec::with_capacity(data.len() + 4);
-        new.extend_from_slice(&selector);
-        new.extend_from_slice(&data);
+        new.extend_from_slice(&selector[..]);
+        new.extend_from_slice(&data[..]);
         new
     }
 }
