@@ -357,13 +357,13 @@ impl AbiItem<'_> {
 }
 
 impl Error {
-    /// Computes this error's signature.
+    /// Computes this error's signature: `$name($($inputs),*)`.
     ///
     /// This is the preimage input used to [compute the
     /// selector](Self::selector).
     #[inline]
     pub fn signature(&self) -> String {
-        signature(&self.name, &self.inputs)
+        signature(&self.name, &self.inputs, None)
     }
 
     /// Computes this error's selector: `keccak256(self.signature())[..4]`
@@ -374,13 +374,23 @@ impl Error {
 }
 
 impl Function {
-    /// Returns this function's signature.
+    /// Returns this function's signature: `$name($($inputs),*)`.
     ///
     /// This is the preimage input used to [compute the
     /// selector](Self::selector).
     #[inline]
     pub fn signature(&self) -> String {
-        signature(&self.name, &self.inputs)
+        signature(&self.name, &self.inputs, None)
+    }
+
+    /// Returns this function's full signature:
+    /// `$name($($inputs),*)($(outputs),*)`.
+    ///
+    /// This is the same as [`signature`](Self::signature), but also includes
+    /// the output types.
+    #[inline]
+    pub fn signature_full(&self) -> String {
+        signature(&self.name, &self.inputs, Some(&self.outputs))
     }
 
     /// Computes this error's selector: `keccak256(self.signature())[..4]`
@@ -391,7 +401,7 @@ impl Function {
 }
 
 impl Event {
-    /// Returns this event's signature.
+    /// Returns this event's signature: `$name($($inputs),*)`.
     ///
     /// This is the preimage input used to [compute the
     /// selector](Self::selector).
