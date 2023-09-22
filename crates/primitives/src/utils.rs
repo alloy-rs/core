@@ -1,8 +1,8 @@
 use crate::bits::FixedBytes;
 
-/// Simple interface to the [`keccak256`] hash function.
+/// Simple interface to the [`Keccak-256`] hash function.
 ///
-/// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
+/// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> FixedBytes<32> {
     cfg_if::cfg_if! {
         if #[cfg(all(feature = "native-keccak", not(feature = "tiny-keccak")))] {
