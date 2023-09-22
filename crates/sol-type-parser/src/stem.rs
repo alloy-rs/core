@@ -1,4 +1,5 @@
 use crate::{Error, Result, RootType, TupleSpecifier};
+use winnow::{trace::trace, PResult, Parser};
 
 /// A stem of a Solidity array type. It is either a root type, or a tuple type.
 ///
@@ -45,6 +46,29 @@ impl AsRef<str> for TypeStem<'_> {
 }
 
 impl<'a> TypeStem<'a> {
+    /// Parse a type stem from a string.
+    #[inline]
+    pub fn parse(input: &'a str) -> Result<Self> {
+        if input.starts_with('(') || input.starts_with("tuple(") {
+            input.try_into().map(Self::Tuple)
+        } else {
+            input.try_into().map(Self::Root)
+        }
+    }
+
+    pub(crate) fn parser(input: &mut &'a str) -> PResult<Self> {
+        let name = "TypeStem";
+        if input.starts_with('(') || input.starts_with("tuple(") {
+            trace(name, TupleSpecifier::parser)
+                .parse_next(input)
+                .map(Self::Tuple)
+        } else {
+            trace(name, RootType::parser)
+                .parse_next(input)
+                .map(Self::Root)
+        }
+    }
+
     /// Fallible conversion to a root type
     #[inline]
     pub const fn as_root(&self) -> Option<&RootType<'a>> {
@@ -60,16 +84,6 @@ impl<'a> TypeStem<'a> {
         match self {
             Self::Root(_) => None,
             Self::Tuple(tuple) => Some(tuple),
-        }
-    }
-
-    /// Parse a type stem from a string.
-    #[inline]
-    pub fn parse(s: &'a str) -> Result<Self> {
-        if s.starts_with('(') || s.starts_with("tuple(") {
-            s.try_into().map(Self::Tuple)
-        } else {
-            s.try_into().map(Self::Root)
         }
     }
 
@@ -89,5 +103,36 @@ impl<'a> TypeStem<'a> {
             Self::Root(root) => root.try_basic_solidity(),
             Self::Tuple(tuple) => tuple.try_basic_solidity(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tuple() {
+        // empty tuple
+        assert_eq!(
+            TypeStem::parse("()"),
+            Ok(TypeStem::Tuple(TupleSpecifier {
+                span: "()",
+                types: vec![]
+            }))
+        );
+        TypeStem::parse("tuple(").unwrap_err();
+        assert_eq!(
+            TypeStem::parse("tuple()"),
+            Ok(TypeStem::Tuple(TupleSpecifier {
+                span: "tuple()",
+                types: vec![]
+            }))
+        );
+
+        // type named tuple
+        assert_eq!(
+            TypeStem::parse("tuple"),
+            Ok(TypeStem::Root(RootType::parse("tuple").unwrap()))
+        )
     }
 }

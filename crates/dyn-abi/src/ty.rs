@@ -134,22 +134,6 @@ impl FromStr for DynSolType {
 }
 
 impl DynSolType {
-    /// Wrap in an array of the specified size
-    pub(crate) fn array_wrap(self, size: Option<NonZeroUsize>) -> Self {
-        match size {
-            Some(size) => Self::FixedArray(Box::new(self), size.get()),
-            None => Self::Array(Box::new(self)),
-        }
-    }
-
-    /// Iteratively wrap in arrays.
-    pub(crate) fn array_wrap_from_iter(
-        self,
-        iter: impl IntoIterator<Item = Option<NonZeroUsize>>,
-    ) -> Self {
-        iter.into_iter().fold(self, Self::array_wrap)
-    }
-
     /// Parses a Solidity type name string into a [`DynSolType`].
     ///
     /// # Examples
@@ -167,6 +151,24 @@ impl DynSolType {
         TypeSpecifier::try_from(s)
             .map_err(Error::TypeParser)
             .and_then(|t| t.resolve())
+    }
+
+    /// Wrap in an array of the specified size
+    #[inline]
+    pub(crate) fn array_wrap(self, size: Option<NonZeroUsize>) -> Self {
+        match size {
+            Some(size) => Self::FixedArray(Box::new(self), size.get()),
+            None => Self::Array(Box::new(self)),
+        }
+    }
+
+    /// Iteratively wrap in arrays.
+    #[inline]
+    pub(crate) fn array_wrap_from_iter(
+        self,
+        iter: impl IntoIterator<Item = Option<NonZeroUsize>>,
+    ) -> Self {
+        iter.into_iter().fold(self, Self::array_wrap)
     }
 
     /// Fallible cast to the contents of a variant.

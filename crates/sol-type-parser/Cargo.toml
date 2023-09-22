@@ -18,7 +18,9 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
+winnow = { version = "0.5", default-features = false, features = ["alloc"] }
 
 [features]
 default = ["std"]
-std = []
+std = ["winnow/std"]
+debug = ["winnow/debug"]
