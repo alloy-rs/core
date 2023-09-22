@@ -298,7 +298,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse("tuple(address,bytes, (bool, (string, uint256)[][3]))[2]"),
+            parse("tuple(address,bytes,(bool,(string,uint256)[][3]))[2]"),
             Ok(DynSolType::FixedArray(
                 Box::new(DynSolType::Tuple(vec![
                     DynSolType::Address,
@@ -352,7 +352,7 @@ mod tests {
             Ok(())
         );
         assert_eq!(
-            TypeSpecifier::try_from("tuple(address,bytes, (bool, (string, uint256)[][3]))[2]")
+            TypeSpecifier::try_from("tuple(address,bytes,(bool,(string,uint256)[][3]))[2]")
                 .unwrap()
                 .try_basic_solidity(),
             Ok(())

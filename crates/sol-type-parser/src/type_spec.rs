@@ -210,7 +210,43 @@ mod test {
     }
 
     #[test]
-    fn a_type_named_tuple() {
-        TypeSpecifier::parse("tuple").unwrap();
+    fn sizes() {
+        TypeSpecifier::parse("a[").unwrap_err();
+        TypeSpecifier::parse("a[][").unwrap_err();
+
+        assert_eq!(
+            TypeSpecifier::parse("a[]"),
+            Ok(TypeSpecifier {
+                span: "a[]",
+                stem: TypeStem::parse("a").unwrap(),
+                sizes: vec![None],
+            }),
+        );
+
+        assert_eq!(
+            TypeSpecifier::parse("a[1]"),
+            Ok(TypeSpecifier {
+                span: "a[1]",
+                stem: TypeStem::parse("a").unwrap(),
+                sizes: vec![NonZeroUsize::new(1)],
+            }),
+        );
+
+        TypeSpecifier::parse("a[0]").unwrap_err();
+
+        TypeSpecifier::parse("a[ ]").unwrap_err();
+        TypeSpecifier::parse("a[  ]").unwrap_err();
+        TypeSpecifier::parse("a[ 0]").unwrap_err();
+        TypeSpecifier::parse("a[0 ]").unwrap_err();
+
+        TypeSpecifier::parse("a[a]").unwrap_err();
+        TypeSpecifier::parse("a[ a]").unwrap_err();
+        TypeSpecifier::parse("a[a ]").unwrap_err();
+
+        TypeSpecifier::parse("a[ 1]").unwrap_err();
+        TypeSpecifier::parse("a[1 ]").unwrap_err();
+
+        TypeSpecifier::parse(&format!("a[{}]", usize::MAX)).unwrap();
+        TypeSpecifier::parse(&format!("a[{}0]", usize::MAX)).unwrap_err();
     }
 }
