@@ -1,6 +1,5 @@
-use alloy_primitives::{keccak256, U256};
+use alloy_primitives::{hex, keccak256, U256};
 use alloy_sol_types::{sol, SolCall, SolError};
-use hex_literal::hex;
 
 sol! {
     function foo(uint256 a, uint256 b) external view returns (uint256);

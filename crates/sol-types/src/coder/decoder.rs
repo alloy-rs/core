@@ -268,8 +268,7 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> 
 mod tests {
     use crate::{sol_data, utils::pad_u32, SolType};
     use alloc::string::ToString;
-    use alloy_primitives::{address, Address, B256, U256};
-    use hex_literal::hex;
+    use alloy_primitives::{address, hex, Address, B256, U256};
 
     #[test]
     fn dynamic_array_of_dynamic_arrays() {

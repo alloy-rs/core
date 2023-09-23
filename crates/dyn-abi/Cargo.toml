@@ -37,7 +37,6 @@ derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 
 [dev-dependencies]
-hex-literal.workspace = true
 criterion.workspace = true
 ethabi = "18"
 rand = "0.8"

@@ -1040,11 +1040,11 @@ mod tests {
 
                 assert_eq!(
                     <Uint<$n>>::tokenize(&uint),
-                    WordToken::new(hex_literal::hex!($l))
+                    WordToken::new(alloy_primitives::hex!($l))
                 );
                 assert_eq!(
                     <Int<$n>>::tokenize(&int),
-                    WordToken::new(hex_literal::hex!($l))
+                    WordToken::new(alloy_primitives::hex!($l))
                 );
             )+};
         }

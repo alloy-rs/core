@@ -1,6 +1,5 @@
-use alloy_primitives::{address, U256};
+use alloy_primitives::{address, hex, U256};
 use alloy_sol_types::{sol, SolCall, SolInterface};
-use hex_literal::hex;
 
 sol! {
     /// Interface of the ERC20 standard as defined in [the EIP].

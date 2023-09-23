@@ -231,7 +231,7 @@ mod tests {
         assert_eq!(func.signature(), "allowance(address,address)");
 
         // encode
-        let expected = hex_literal::hex!(
+        let expected = alloy_primitives::hex!(
             "dd62ed3e"
             "0000000000000000000000001111111111111111111111111111111111111111"
             "0000000000000000000000002222222222222222222222222222222222222222"

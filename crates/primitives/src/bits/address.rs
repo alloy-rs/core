@@ -426,7 +426,7 @@ impl Address {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::hex;
+    use crate::hex;
 
     #[test]
     fn parse() {

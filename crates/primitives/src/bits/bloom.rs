@@ -138,7 +138,7 @@ const fn log2(x: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex_literal::hex;
+    use crate::hex;
 
     #[test]
     fn works() {

@@ -1,10 +1,9 @@
 use alloy_dyn_abi::{DynSolType, DynSolValue};
-use alloy_primitives::U256;
+use alloy_primitives::{hex, U256};
 use alloy_sol_types::{sol, sol_data, SolType};
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
-use hex_literal::hex;
 use std::{hint::black_box, time::Duration};
 
 fn ethabi_encode(c: &mut Criterion) {
