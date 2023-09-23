@@ -1,6 +1,6 @@
 [package]
 name = "alloy-sol-type-parser"
-description = "Solidity type specifier string parsing."
+description = "Solidity type specifier string parser"
 keywords = ["ethereum", "abi", "EVM", "solidity"]
 categories = ["no-std", "cryptography::cryptocurrencies"]
 homepage = "https://github.com/alloy-rs/core/tree/main/crates/sol-type-parser"
@@ -18,7 +18,9 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
+winnow = { version = "0.5", default-features = false, features = ["alloc"] }
 
 [features]
 default = ["std"]
-std = []
+std = ["winnow/std"]
+debug = ["std", "winnow/debug"] # WARNING: Bumps MSRV to at least 1.70

@@ -20,14 +20,14 @@ fn parse(c: &mut Criterion) {
 
     g.bench_function("keywords", |b| {
         b.iter(|| {
-            let kw = KEYWORDS.choose(rng).unwrap();
-            DynSolType::parse(black_box(*kw)).unwrap()
+            let kw = *KEYWORDS.choose(rng).unwrap();
+            DynSolType::parse(black_box(kw)).unwrap()
         });
     });
     g.bench_function("complex", |b| {
         b.iter(|| {
-            let complex = COMPLEX.choose(rng).unwrap();
-            DynSolType::parse(black_box(*complex)).unwrap()
+            let complex = *COMPLEX.choose(rng).unwrap();
+            DynSolType::parse(black_box(complex)).unwrap()
         });
     });
 

@@ -1,5 +1,6 @@
-use crate::{is_valid_identifier, Error, Result};
+use crate::{ident::parse_identifier, is_valid_identifier, Error, Result};
 use core::fmt;
+use winnow::{trace::trace, PResult, Parser};
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type. This is the most basic type specifier.
@@ -58,12 +59,18 @@ impl fmt::Display for RootType<'_> {
 impl<'a> RootType<'a> {
     /// Parse a root type from a string.
     #[inline]
-    pub fn parse(value: &'a str) -> Result<Self> {
-        if is_valid_identifier(value) {
-            Ok(Self(value))
+    pub fn parse(input: &'a str) -> Result<Self> {
+        if is_valid_identifier(input) {
+            Ok(Self(input))
         } else {
-            Err(Error::invalid_type_string(value))
+            Err(Error::invalid_type_string(input))
         }
+    }
+
+    pub(crate) fn parser(input: &mut &'a str) -> PResult<Self> {
+        trace("RootType", parse_identifier)
+            .parse_next(input)
+            .map(Self)
     }
 
     /// The string underlying this type. The type name.

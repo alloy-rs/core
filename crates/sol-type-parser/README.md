@@ -48,10 +48,10 @@ assert_eq!(
 );
 
 // Type specifiers also work for complex tuples!
-let my_tuple = TypeSpecifier::try_from("(uint8, (uint8[], bool))[39]").unwrap();
+let my_tuple = TypeSpecifier::try_from("(uint8,(uint8[],bool))[39]").unwrap();
 assert_eq!(
     my_tuple.stem.span(),
-    "(uint8, (uint8[], bool))"
+    "(uint8,(uint8[],bool))"
 );
 
 // Types are NOT resolved, so you can parse custom structs just by name.

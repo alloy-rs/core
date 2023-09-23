@@ -113,7 +113,6 @@ impl ResolveSolType for TypeStem<'_> {
 }
 
 impl ResolveSolType for TypeSpecifier<'_> {
-    #[inline]
     fn resolve(&self) -> Result<DynSolType> {
         self.stem
             .resolve()
@@ -122,12 +121,14 @@ impl ResolveSolType for TypeSpecifier<'_> {
 }
 
 impl ResolveSolType for Param {
+    #[inline]
     fn resolve(&self) -> Result<DynSolType> {
         resolve_param(&self.ty, &self.components, self.internal_type())
     }
 }
 
 impl ResolveSolType for EventParam {
+    #[inline]
     fn resolve(&self) -> Result<DynSolType> {
         resolve_param(&self.ty, &self.components, self.internal_type())
     }
@@ -198,20 +199,12 @@ mod tests {
 
     #[test]
     fn extra_close_parens() {
-        let test_str = "bool,uint256))";
-        assert_eq!(
-            parse(test_str),
-            Err(alloy_sol_type_parser::Error::invalid_type_string(test_str).into())
-        );
+        parse("bool,uint256))").unwrap_err();
     }
 
     #[test]
     fn extra_open_parents() {
-        let test_str = "(bool,uint256";
-        assert_eq!(
-            parse(test_str),
-            Err(alloy_sol_type_parser::Error::invalid_type_string(test_str).into())
-        );
+        parse("(bool,uint256").unwrap_err();
     }
 
     #[test]
@@ -305,7 +298,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse("tuple(address,bytes, (bool, (string, uint256)[][3]))[2]"),
+            parse("tuple(address,bytes,(bool,(string,uint256)[][3]))[2]"),
             Ok(DynSolType::FixedArray(
                 Box::new(DynSolType::Tuple(vec![
                     DynSolType::Address,
@@ -359,7 +352,7 @@ mod tests {
             Ok(())
         );
         assert_eq!(
-            TypeSpecifier::try_from("tuple(address,bytes, (bool, (string, uint256)[][3]))[2]")
+            TypeSpecifier::try_from("tuple(address,bytes,(bool,(string,uint256)[][3]))[2]")
                 .unwrap()
                 .try_basic_solidity(),
             Ok(())

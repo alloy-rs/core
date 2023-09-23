@@ -1,5 +1,10 @@
-use crate::{Error, Result, TypeSpecifier};
+use crate::{spanned, str_parser, Error, Result, TypeSpecifier};
 use alloc::vec::Vec;
+use winnow::{
+    combinator::{cut_err, delimited, opt, separated0},
+    trace::trace,
+    PResult, Parser,
+};
 
 /// A tuple specifier, with no array suffixes. Corresponds to a sequence of
 /// types.
@@ -48,55 +53,31 @@ impl AsRef<str> for TupleSpecifier<'_> {
 
 impl<'a> TupleSpecifier<'a> {
     /// Parse a tuple specifier from a string.
-    pub fn parse(span: &'a str) -> Result<Self> {
-        // flexible for or `(a, b)`, or `tuple(a, b)`
-        // or any missing parenthesis
-        let span = span.trim();
+    #[inline]
+    pub fn parse(input: &'a str) -> Result<Self> {
+        Self::parser.parse(input).map_err(Error::parser)
+    }
 
-        // if we strip a trailing paren we MUST strip a leading paren
-        let value = if let Some(val) = span.strip_suffix(')') {
-            val.strip_prefix("tuple")
-                .unwrap_or(val)
-                .strip_prefix('(')
-                .ok_or_else(|| Error::invalid_type_string(span))?
-        } else {
-            return Err(Error::invalid_type_string(span))
-        };
+    pub(crate) fn parser(input: &mut &'a str) -> PResult<Self> {
+        trace("TupleSpecifier", spanned(Self::parse_types))
+            .parse_next(input)
+            .map(|(span, types)| Self { span, types })
+    }
 
-        // passes over nested tuples
-        let mut types: Vec<TypeSpecifier<'_>> = vec![];
-        let mut start = 0;
-        let mut depth: usize = 0;
-        for (i, c) in value.char_indices() {
-            match c {
-                '(' => depth += 1,
-                ')' => {
-                    // handle extra closing paren
-                    depth = depth
-                        .checked_sub(1)
-                        .ok_or_else(|| Error::invalid_type_string(value))?;
-                }
-                ',' if depth == 0 => {
-                    // SAFETY: `char_indices` always returns a valid char boundary
-                    let v = unsafe { value.get_unchecked(start..i) };
-                    types.push(v.try_into()?);
-                    start = i + 1;
-                }
-                _ => {}
-            }
+    #[inline]
+    fn parse_types(input: &mut &'a str) -> PResult<Vec<TypeSpecifier<'a>>> {
+        if let Some(stripped) = input.strip_prefix("tuple") {
+            *input = stripped;
         }
-
-        // handle extra open paren
-        if depth != 0 {
-            return Err(Error::invalid_type_string(value))
-        }
-
-        // handle trailing commas in tuples
-        let candidate = value[start..].trim();
-        if !candidate.is_empty() {
-            types.push(candidate.try_into()?);
-        }
-        Ok(Self { span, types })
+        trace(
+            "tuple",
+            delimited(
+                str_parser("("),
+                cut_err(separated0(TypeSpecifier::parser, str_parser(","))),
+                (opt(","), cut_err(str_parser(")"))),
+            ),
+        )
+        .parse_next(input)
     }
 
     /// Returns the tuple specifier as a string.
@@ -120,20 +101,12 @@ mod test {
 
     #[test]
     fn extra_close_parens() {
-        let test_str = "bool,uint256))";
-        assert_eq!(
-            TupleSpecifier::try_from(test_str),
-            Err(crate::Error::invalid_type_string(test_str))
-        );
+        TupleSpecifier::try_from("bool,uint256))").unwrap_err();
     }
 
     #[test]
     fn extra_open_parents() {
-        let test_str = "(bool,uint256";
-        assert_eq!(
-            TupleSpecifier::try_from(test_str),
-            Err(Error::invalid_type_string(test_str))
-        );
+        TupleSpecifier::try_from("(bool,uint256").unwrap_err();
     }
 
     #[test]
@@ -159,10 +132,6 @@ mod test {
 
     #[test]
     fn does_not_parse_missing_parens() {
-        let test_str = "bool,uint256";
-        assert_eq!(
-            TupleSpecifier::try_from(test_str),
-            Err(crate::Error::invalid_type_string(test_str))
-        );
+        TupleSpecifier::try_from("bool,uint256").unwrap_err();
     }
 }

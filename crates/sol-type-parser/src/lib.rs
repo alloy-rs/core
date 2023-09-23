@@ -19,6 +19,13 @@
 #[macro_use]
 extern crate alloc;
 
+use core::{slice, str};
+use winnow::{
+    error::{AddContext, ParserError, StrContext, StrContextValue},
+    trace::trace,
+    Parser,
+};
+
 /// Errors.
 mod error;
 pub use error::{Error, Result};
@@ -42,3 +49,37 @@ pub use tuple::TupleSpecifier;
 /// Type specifier.
 mod type_spec;
 pub use type_spec::TypeSpecifier;
+
+#[inline]
+pub(crate) fn spanned<'a, O, E>(
+    mut f: impl Parser<&'a str, O, E>,
+) -> impl Parser<&'a str, (&'a str, O), E> {
+    trace("spanned", move |input: &mut &'a str| {
+        let start = input.as_ptr();
+
+        let mut len = input.len();
+        let r = f.parse_next(input)?;
+        len -= input.len();
+
+        // SAFETY: str invariant
+        unsafe {
+            let span = slice::from_raw_parts(start, len);
+            debug_assert!(str::from_utf8(span).is_ok());
+            Ok((str::from_utf8_unchecked(span), r))
+        }
+    })
+}
+
+#[inline]
+pub(crate) fn str_parser<'a, E: ParserError<&'a str> + AddContext<&'a str, StrContext>>(
+    s: &'static str,
+) -> impl Parser<&'a str, &'a str, E> {
+    #[cfg(feature = "debug")]
+    let name = format!("str={s:?}");
+    #[cfg(not(feature = "debug"))]
+    let name = "str";
+    trace(
+        name,
+        s.context(StrContext::Expected(StrContextValue::StringLiteral(s))),
+    )
+}
