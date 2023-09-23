@@ -76,12 +76,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
         const _: () = {
             #convert
 
+            #[automatically_derived]
             impl ::alloy_sol_types::Encodable<Self> for #name {
                 fn to_tokens(&self) -> <Self as ::alloy_sol_types::SolType>::TokenType<'_> {
                     #tokenize_impl
                 }
             }
 
+            #[automatically_derived]
             impl ::alloy_sol_types::SolType for #name {
                 type RustType = Self;
                 type TokenType<'a> = <UnderlyingSolTuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
