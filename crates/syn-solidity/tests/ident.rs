@@ -16,3 +16,13 @@ fn ident_path() {
 fn ident_path_trailing() {
     let _e = syn::parse_str::<SolPath>("a.b.").unwrap_err();
 }
+
+#[test]
+fn ident_dollar() {
+    let id: Result<SolIdent, _> = syn::parse_str("$hello");
+    assert!(id.is_err());
+    assert!(id
+        .unwrap_err()
+        .to_string()
+        .contains("Solidity identifiers starting with `$` are unsupported."));
+}

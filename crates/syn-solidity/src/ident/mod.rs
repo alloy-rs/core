@@ -5,7 +5,7 @@ use std::fmt;
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
-    Result,
+    Result, Token,
 };
 
 mod path;
@@ -105,6 +105,7 @@ impl SolIdent {
 
     /// Parses any identifier including keywords.
     pub fn parse_any(input: ParseStream<'_>) -> Result<Self> {
+        check_dollar(input)?;
         input.call(Ident::parse_any).map(Self)
     }
 
@@ -119,5 +120,13 @@ impl SolIdent {
         } else {
             Ok(None)
         }
+    }
+}
+
+fn check_dollar(input: ParseStream<'_>) -> Result<()> {
+    if input.peek(Token![$]) {
+        Err(input.error("Solidity identifiers starting with `$` are unsupported. This is a known limitation of syn-solidity."))
+    } else {
+        Ok(())
     }
 }
