@@ -21,40 +21,54 @@ pub const fn is_id_continue(c: char) -> bool {
     matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$')
 }
 
+/// Returns `true` if the given string is a valid Solidity identifier.
+///
 /// An identifier in Solidity has to start with a letter, a dollar-sign or
 /// an underscore and may additionally contain numbers after the first
 /// symbol.
 ///
+/// Solidity reference:
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier>
-pub fn is_valid_identifier<S: AsRef<str>>(s: S) -> bool {
-    fn is_valid_identifier(s: &str) -> bool {
-        let mut chars = s.chars();
-        if let Some(first) = chars.next() {
-            is_id_start(first) && chars.all(is_id_continue)
-        } else {
-            false
-        }
+pub const fn is_valid_identifier(s: &str) -> bool {
+    // Note: valid idents can only contain ASCII characters, so we can
+    // use the byte representation here.
+    let [first, rest @ ..] = s.as_bytes() else {
+        return false
+    };
+
+    if !is_id_start(*first as char) {
+        return false
     }
 
-    is_valid_identifier(s.as_ref())
+    let mut i = 0;
+    while i < rest.len() {
+        if !is_id_continue(rest[i] as char) {
+            return false
+        }
+        i += 1;
+    }
+
+    true
 }
 
 #[inline]
 pub(crate) fn parse_identifier<'a>(input: &mut &'a str) -> PResult<&'a str> {
-    let mut chars = input.chars();
-    if let Some(first) = chars.next() {
-        if is_id_start(first) {
-            // 1 for the first character, we know it's ASCII
-            let len = 1 + chars.take_while(|c| is_id_continue(*c)).count();
-            // SAFETY: Only ASCII characters are valid in identifiers
-            unsafe {
-                let ident = input.get_unchecked(..len);
-                *input = input.get_unchecked(len..);
-                return Ok(ident)
-            }
-        }
+    // See note in `is_valid_identifier` above.
+    // Use the faster `slice::Iter` instead of `str::Chars`.
+    let mut chars = input.as_bytes().iter().map(|b| *b as char);
+
+    let Some(true) = chars.next().map(is_id_start) else {
+        return Err(ErrMode::from_error_kind(input, ErrorKind::Fail))
+    };
+
+    // 1 for the first character, we know it's ASCII
+    let len = 1 + chars.take_while(|c| is_id_continue(*c)).count();
+    // SAFETY: Only ASCII characters are valid in identifiers
+    unsafe {
+        let ident = input.get_unchecked(..len);
+        *input = input.get_unchecked(len..);
+        Ok(ident)
     }
-    Err(ErrMode::from_error_kind(input, ErrorKind::Fail))
 }
 
 #[cfg(test)]

@@ -57,6 +57,17 @@ impl fmt::Display for RootType<'_> {
 }
 
 impl<'a> RootType<'a> {
+    /// Create a new root type from a string without checking if it's valid.
+    ///
+    /// # Safety
+    ///
+    /// The string passed in must be a valid Solidity identifier. See
+    /// [`is_valid_identifier`].
+    pub const unsafe fn new_unchecked(s: &'a str) -> Self {
+        debug_assert!(is_valid_identifier(s));
+        Self(s)
+    }
+
     /// Parse a root type from a string.
     #[inline]
     pub fn parse(input: &'a str) -> Result<Self> {
