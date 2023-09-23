@@ -500,7 +500,7 @@ impl DynSolType {
     /// individual value. If the `self` type is a tuple, the `data` will be
     /// decoded as a sequence, otherwise it will be decoded as a single value.
     ///
-    /// ## Example
+    /// # Examples
     ///
     /// ```ignore
     /// // This function takes a single simple param. The user should use
