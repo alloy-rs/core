@@ -210,48 +210,54 @@ mod tests {
     #[test]
     fn it_parses_tuples() {
         assert_eq!(
-            parse("(bool,)").unwrap(),
-            DynSolType::Tuple(vec![DynSolType::Bool])
+            parse("(bool,)"),
+            Ok(DynSolType::Tuple(vec![DynSolType::Bool]))
         );
         assert_eq!(
-            parse("(uint256,uint256)").unwrap(),
-            DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)])
+            parse("(uint256,uint256)"),
+            Ok(DynSolType::Tuple(vec![
+                DynSolType::Uint(256),
+                DynSolType::Uint(256)
+            ]))
         );
         assert_eq!(
-            parse("(uint256,uint256)[2]").unwrap(),
-            DynSolType::FixedArray(
+            parse("(uint256,uint256)[2]"),
+            Ok(DynSolType::FixedArray(
                 Box::new(DynSolType::Tuple(vec![
                     DynSolType::Uint(256),
                     DynSolType::Uint(256)
                 ])),
                 2
-            )
+            ))
         );
     }
 
     #[test]
     fn nested_tuples() {
         assert_eq!(
-            parse("(bool,(uint256,uint256))").unwrap(),
-            DynSolType::Tuple(vec![
+            parse("(bool,(uint256,uint256))"),
+            Ok(DynSolType::Tuple(vec![
                 DynSolType::Bool,
                 DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)])
-            ])
+            ]))
         );
         assert_eq!(
-            parse("(((bool),),)").unwrap(),
-            DynSolType::Tuple(vec![DynSolType::Tuple(vec![DynSolType::Tuple(vec![
-                DynSolType::Bool
-            ])])])
+            parse("(((bool),),)"),
+            Ok(DynSolType::Tuple(vec![DynSolType::Tuple(vec![
+                DynSolType::Tuple(vec![DynSolType::Bool])
+            ])]))
         );
     }
 
     #[test]
     fn empty_tuples() {
-        assert_eq!(parse("()").unwrap(), DynSolType::Tuple(vec![]));
+        assert_eq!(parse("()"), Ok(DynSolType::Tuple(vec![])));
         assert_eq!(
-            parse("((),())").unwrap(),
-            DynSolType::Tuple(vec![DynSolType::Tuple(vec![]), DynSolType::Tuple(vec![])])
+            parse("((),())"),
+            Ok(DynSolType::Tuple(vec![
+                DynSolType::Tuple(vec![]),
+                DynSolType::Tuple(vec![])
+            ]))
         );
         assert_eq!(
             parse("((()))"),
@@ -263,37 +269,37 @@ mod tests {
 
     #[test]
     fn it_parses_simple_types() {
-        assert_eq!(parse("uint256").unwrap(), DynSolType::Uint(256));
-        assert_eq!(parse("uint8").unwrap(), DynSolType::Uint(8));
-        assert_eq!(parse("uint").unwrap(), DynSolType::Uint(256));
-        assert_eq!(parse("address").unwrap(), DynSolType::Address);
-        assert_eq!(parse("bool").unwrap(), DynSolType::Bool);
-        assert_eq!(parse("string").unwrap(), DynSolType::String);
-        assert_eq!(parse("bytes").unwrap(), DynSolType::Bytes);
-        assert_eq!(parse("bytes32").unwrap(), DynSolType::FixedBytes(32));
+        assert_eq!(parse("uint256"), Ok(DynSolType::Uint(256)));
+        assert_eq!(parse("uint8"), Ok(DynSolType::Uint(8)));
+        assert_eq!(parse("uint"), Ok(DynSolType::Uint(256)));
+        assert_eq!(parse("address"), Ok(DynSolType::Address));
+        assert_eq!(parse("bool"), Ok(DynSolType::Bool));
+        assert_eq!(parse("string"), Ok(DynSolType::String));
+        assert_eq!(parse("bytes"), Ok(DynSolType::Bytes));
+        assert_eq!(parse("bytes32"), Ok(DynSolType::FixedBytes(32)));
     }
 
     #[test]
     fn it_parses_complex_solidity_types() {
         assert_eq!(
-            parse("uint256[]").unwrap(),
-            DynSolType::Array(Box::new(DynSolType::Uint(256)))
+            parse("uint256[]"),
+            Ok(DynSolType::Array(Box::new(DynSolType::Uint(256))))
         );
         assert_eq!(
-            parse("uint256[2]").unwrap(),
-            DynSolType::FixedArray(Box::new(DynSolType::Uint(256)), 2)
+            parse("uint256[2]"),
+            Ok(DynSolType::FixedArray(Box::new(DynSolType::Uint(256)), 2))
         );
         assert_eq!(
-            parse("uint256[2][3]").unwrap(),
-            DynSolType::FixedArray(
+            parse("uint256[2][3]"),
+            Ok(DynSolType::FixedArray(
                 Box::new(DynSolType::FixedArray(Box::new(DynSolType::Uint(256)), 2)),
                 3
-            )
+            ))
         );
         assert_eq!(
-            parse("uint256[][][]").unwrap(),
-            DynSolType::Array(Box::new(DynSolType::Array(Box::new(DynSolType::Array(
-                Box::new(DynSolType::Uint(256))
+            parse("uint256[][][]"),
+            Ok(DynSolType::Array(Box::new(DynSolType::Array(Box::new(
+                DynSolType::Array(Box::new(DynSolType::Uint(256)))
             )))))
         );
 

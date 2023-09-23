@@ -136,8 +136,8 @@ mod tests {
     #[test]
     fn test_component_type() {
         assert_eq!(
-            ComponentType::try_from("Transaction(Person from,Person to,Asset tx)").unwrap(),
-            ComponentType {
+            ComponentType::try_from("Transaction(Person from,Person to,Asset tx)"),
+            Ok(ComponentType {
                 span: "Transaction(Person from,Person to,Asset tx)",
                 type_name: "Transaction",
                 props: vec![
@@ -145,15 +145,15 @@ mod tests {
                     "Person to".try_into().unwrap(),
                     "Asset tx".try_into().unwrap(),
                 ],
-            }
+            })
         );
     }
 
     #[test]
     fn test_encode_type() {
         assert_eq!(
-            EncodeType::try_from(EXAMPLE).unwrap(),
-            EncodeType {
+            EncodeType::try_from(EXAMPLE),
+            Ok(EncodeType {
                 types: vec![
                     "Transaction(Person from,Person to,Asset tx)"
                         .try_into()
@@ -161,7 +161,7 @@ mod tests {
                     "Asset(address token,uint256 amount)".try_into().unwrap(),
                     "Person(address wallet,string name)".try_into().unwrap(),
                 ]
-            }
+            })
         );
     }
 }

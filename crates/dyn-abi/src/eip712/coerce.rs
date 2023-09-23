@@ -284,8 +284,8 @@ mod tests {
         let top = j.as_object().unwrap().get("message").unwrap();
 
         assert_eq!(
-            ty.coerce(top).unwrap(),
-            DynSolValue::CustomStruct {
+            ty.coerce(top),
+            Ok(DynSolValue::CustomStruct {
                 name: "Message".to_owned(),
                 prop_names: vec!["contents".to_string(), "from".to_string(), "to".to_string()],
                 tuple: vec![
@@ -337,7 +337,7 @@ mod tests {
                     }]
                     .into()
                 ]
-            }
+            })
         );
     }
 }
