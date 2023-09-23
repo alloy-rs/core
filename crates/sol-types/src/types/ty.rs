@@ -160,12 +160,6 @@ pub trait SolType {
         rust.to_tokens()
     }
 
-    /// The encoded struct type (as EIP-712), if any. None for non-structs.
-    #[inline]
-    fn eip712_encode_type() -> Option<Cow<'static, str>> {
-        None
-    }
-
     /// Encode this data according to EIP-712 `encodeData` rules, and hash it
     /// if necessary.
     ///

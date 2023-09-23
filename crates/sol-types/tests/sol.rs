@@ -1,5 +1,5 @@
 use alloy_primitives::{keccak256, Address, B256, U256};
-use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolType};
+use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolStruct, SolType};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -432,14 +432,14 @@ fn eip712_encode_type_nesting() {
         }
     }
 
-    assert_eq!(A::eip712_encode_type().unwrap(), "A(uint256 a)");
-    assert_eq!(B::eip712_encode_type().unwrap(), "B(bytes32 b)");
+    assert_eq!(A::eip712_encode_type(), "A(uint256 a)");
+    assert_eq!(B::eip712_encode_type(), "B(bytes32 b)");
     assert_eq!(
-        C::eip712_encode_type().unwrap(),
+        C::eip712_encode_type(),
         "C(A a,B b)A(uint256 a)B(bytes32 b)"
     );
     assert_eq!(
-        D::eip712_encode_type().unwrap(),
+        D::eip712_encode_type(),
         "D(C c,A a,B b)A(uint256 a)B(bytes32 b)C(A a,B b)"
     );
 }

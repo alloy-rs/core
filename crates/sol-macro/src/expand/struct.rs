@@ -112,11 +112,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 }
 
                 #[inline]
-                fn eip712_encode_type() -> ::core::option::Option<::alloy_sol_types::private::Cow<'static, str>> {
-                    ::core::option::Option::Some(<Self as ::alloy_sol_types::SolStruct>::eip712_encode_type())
-                }
-
-                #[inline]
                 fn eip712_data_word(rust: &Self::RustType) -> ::alloy_sol_types::Word {
                     <Self as ::alloy_sol_types::SolStruct>::eip712_hash_struct(rust)
                 }

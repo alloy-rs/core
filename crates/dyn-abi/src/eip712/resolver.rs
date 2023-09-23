@@ -316,8 +316,7 @@ impl Resolver {
 
     /// Ingest a sol struct typedef.
     pub fn ingest_sol_struct<S: SolStruct>(&mut self) {
-        self.ingest_string(<S as SolStruct>::eip712_encode_type())
-            .unwrap();
+        self.ingest_string(S::eip712_encode_type()).unwrap();
     }
 
     /// Ingest a type.
