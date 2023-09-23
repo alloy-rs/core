@@ -170,7 +170,8 @@ pub fn encode<'a, T: TokenType<'a>>(token: &T) -> Vec<u8> {
     encode_sequence::<(T,)>(unsafe { &*(token as *const T).cast::<(T,)>() })
 }
 
-/// Encode a tuple as ABI function params, suitable for passing to a function.
+/// ABI-encode a tuple as ABI function params, suitable for passing to a
+/// function.
 #[inline]
 pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
     if T::IS_TUPLE {
