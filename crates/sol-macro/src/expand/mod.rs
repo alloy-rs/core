@@ -506,9 +506,7 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
     }
 }
 
-/// Returns
-/// - `(#(#expanded,)*)`
-/// - `(#(<#expanded as ::alloy_sol_types::SolType>::RustType,)*)`
+/// Returns `(sol_tuple, rust_tuple)`
 fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
     types: I,
 ) -> (TokenStream, TokenStream) {
@@ -522,8 +520,7 @@ fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
         ty::rec_expand_rust_type(ty, &mut rust);
         rust.append(comma.clone());
     }
-    (
-        TokenStream::from(TokenTree::Group(Group::new(Delimiter::Parenthesis, sol))),
-        TokenStream::from(TokenTree::Group(Group::new(Delimiter::Parenthesis, rust))),
-    )
+    let wrap_in_parens =
+        |stream| TokenStream::from(TokenTree::Group(Group::new(Delimiter::Parenthesis, stream)));
+    (wrap_in_parens(sol), wrap_in_parens(rust))
 }
