@@ -71,32 +71,10 @@ error: Mapping types are not supported here
     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error: Mapping types are not supported here
-   --> tests/ui/type.rs:737:1
-    |
-737 | / sol! {
-738 | |     struct Mappings {
-739 | |         mapping(mapping(a b => c d) e => mapping(f g => h i) j) map;
-740 | |     }
-741 | | }
-    | |_^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error: Mapping types are not supported here
    --> tests/ui/type.rs:748:13
     |
 748 |     mapping(mapping(int => int) => int) public mapKeyOfMap;
     |             ^^^^^^^^^^^^^^^^^^^
-
-error: Mapping types are not supported here
-   --> tests/ui/type.rs:747:1
-    |
-747 | / sol! {
-748 | |     mapping(mapping(int => int) => int) public mapKeyOfMap;
-749 | | }
-    | |_^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: Mapping types are not supported here
    --> tests/ui/type.rs:752:23
@@ -109,16 +87,6 @@ error: Mapping types are not supported here
     |
 752 |     function mappings(mapping(uint256 a => bool b), mapping(bool => bool) x);
     |                                                     ^^^^^^^^^^^^^^^^^^^^^
-
-error: Mapping types are not supported here
-   --> tests/ui/type.rs:751:1
-    |
-751 | / sol! {
-752 | |     function mappings(mapping(uint256 a => bool b), mapping(bool => bool) x);
-753 | | }
-    | |_^
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0412]: cannot find type `bytes_` in this scope
    --> tests/ui/type.rs:205:9
@@ -155,90 +123,6 @@ error[E0412]: cannot find type `int_256` in this scope
     |
 210 |         int_256 f;
     |         ^^^^^^^ not found in this scope
-
-error[E0412]: cannot find type `bytes_` in this scope
-   --> tests/ui/type.rs:203:1
-    |
-203 | / sol! {
-204 | |     struct CustomTypes {
-205 | |         bytes_ a;
-206 | |         bytes_32 b;
-...   |
-211 | |     }
-212 | | }
-    | |_^ not found in this scope
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0412]: cannot find type `bytes_32` in this scope
-   --> tests/ui/type.rs:203:1
-    |
-203 | / sol! {
-204 | |     struct CustomTypes {
-205 | |         bytes_ a;
-206 | |         bytes_32 b;
-...   |
-211 | |     }
-212 | | }
-    | |_^ not found in this scope
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0412]: cannot find type `uint_` in this scope
-   --> tests/ui/type.rs:203:1
-    |
-203 | / sol! {
-204 | |     struct CustomTypes {
-205 | |         bytes_ a;
-206 | |         bytes_32 b;
-...   |
-211 | |     }
-212 | | }
-    | |_^ not found in this scope
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0412]: cannot find type `uint_256` in this scope
-   --> tests/ui/type.rs:203:1
-    |
-203 | / sol! {
-204 | |     struct CustomTypes {
-205 | |         bytes_ a;
-206 | |         bytes_32 b;
-...   |
-211 | |     }
-212 | | }
-    | |_^ not found in this scope
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0412]: cannot find type `int_` in this scope
-   --> tests/ui/type.rs:203:1
-    |
-203 | / sol! {
-204 | |     struct CustomTypes {
-205 | |         bytes_ a;
-206 | |         bytes_32 b;
-...   |
-211 | |     }
-212 | | }
-    | |_^ not found in this scope
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0412]: cannot find type `int_256` in this scope
-   --> tests/ui/type.rs:203:1
-    |
-203 | / sol! {
-204 | |     struct CustomTypes {
-205 | |         bytes_ a;
-206 | |         bytes_32 b;
-...   |
-211 | |     }
-212 | | }
-    | |_^ not found in this scope
-    |
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0412]: cannot find type `a` in this scope
    --> tests/ui/type.rs:739:25
