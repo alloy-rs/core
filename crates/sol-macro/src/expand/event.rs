@@ -162,7 +162,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 }
 
 fn expand_event_topic_type(param: &EventParameter) -> TokenStream {
-    debug_assert!(param.is_indexed());
+    assert!(param.is_indexed());
     if param.is_abi_dynamic() {
         quote_spanned! {param.ty.span()=> ::alloy_sol_types::sol_data::FixedBytes<32> }
     } else {

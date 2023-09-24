@@ -29,10 +29,10 @@ impl Parse for File {
 
 impl Spanned for File {
     fn span(&self) -> Span {
-        crate::utils::join_spans(&self.items)
+        self.items.span()
     }
 
     fn set_span(&mut self, span: Span) {
-        crate::utils::set_spans(&mut self.items, span);
+        self.items.set_span(span);
     }
 }
