@@ -594,9 +594,9 @@ mod tests {
             prop_names: vec!["myB".to_string()],
             tuple: vec![b.clone()],
         };
-        assert_eq!(graph.resolve("A").unwrap(), a);
-        assert_eq!(graph.resolve("B").unwrap(), b);
-        assert_eq!(graph.resolve("C").unwrap(), c);
+        assert_eq!(graph.resolve("A"), Ok(a));
+        assert_eq!(graph.resolve("B"), Ok(b));
+        assert_eq!(graph.resolve("C"), Ok(c));
     }
 
     #[test]
@@ -630,9 +630,9 @@ mod tests {
             prop_names: vec!["myB".to_string()],
             tuple: vec![b.clone()],
         };
-        assert_eq!(graph.resolve("C").unwrap(), c);
-        assert_eq!(graph.resolve("B").unwrap(), b);
-        assert_eq!(graph.resolve("A").unwrap(), a);
+        assert_eq!(graph.resolve("C"), Ok(c));
+        assert_eq!(graph.resolve("B"), Ok(b));
+        assert_eq!(graph.resolve("A"), Ok(a));
     }
 
     #[test]
