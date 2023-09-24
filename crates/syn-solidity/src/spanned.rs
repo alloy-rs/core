@@ -361,7 +361,7 @@ pub fn join_spans<T: Spanned, I: IntoIterator<Item = T>>(items: I) -> Span {
         .into_iter()
         .map(|t| t.span())
         .reduce(|span, other| span.join(other).unwrap_or(span))
-        .unwrap_or_else(|| Span::call_site())
+        .unwrap_or_else(Span::call_site)
 }
 
 /// Sets the span of each item in the given iterator.
