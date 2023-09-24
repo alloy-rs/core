@@ -1,4 +1,4 @@
-use alloy_primitives::{keccak256, Address, B256, U256};
+use alloy_primitives::{keccak256, Address, B256, I256, U256};
 use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolStruct, SolType};
 use serde::Serialize;
 use serde_json::Value;
@@ -133,15 +133,18 @@ fn function() {
 #[test]
 fn error() {
     sol! {
-        error SomeError(uint256 a);
+        error SomeError(int a, bool b);
     }
 
-    let sig = "SomeError(uint256)";
+    let sig = "SomeError(int256,bool)";
     assert_eq!(SomeError::SIGNATURE, sig);
     assert_eq!(SomeError::SELECTOR, keccak256(sig)[..4]);
 
-    let e = SomeError { a: U256::from(1) };
-    assert_eq!(e.encoded_size(), 32);
+    let e = SomeError {
+        a: I256::ZERO,
+        b: false,
+    };
+    assert_eq!(e.encoded_size(), 64);
 }
 
 // https://github.com/alloy-rs/core/issues/158
