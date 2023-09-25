@@ -3,12 +3,8 @@
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
-#![warn(
-    missing_debug_implementations,
-    unreachable_pub,
-    unused_crate_dependencies,
-    rustdoc::all
-)]
+#![warn(missing_debug_implementations, unreachable_pub, rustdoc::all)]
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 

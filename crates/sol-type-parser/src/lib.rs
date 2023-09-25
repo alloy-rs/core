@@ -4,10 +4,10 @@
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
 #![warn(
-    missing_docs,
-    unreachable_pub,
     missing_copy_implementations,
     missing_debug_implementations,
+    missing_docs,
+    unreachable_pub,
     clippy::missing_const_for_fn,
     rustdoc::all
 )]
