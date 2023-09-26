@@ -63,7 +63,7 @@ impl Spanned for YulVarDecl {
 
     fn set_span(&mut self, span: Span) {
         self.let_token.set_span(span);
-        crate::utils::set_spans(&mut self.vars, span);
+        self.vars.set_span(span);
         if let Some((walrus_token, init_value)) = &mut self.init_value {
             walrus_token.set_span(span);
             init_value.set_span(span);

@@ -51,7 +51,7 @@ pub use lit::{
 
 pub mod kw;
 
-mod spanned;
+pub mod spanned;
 pub use spanned::Spanned;
 
 mod stmt;

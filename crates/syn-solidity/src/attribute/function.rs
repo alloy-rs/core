@@ -56,11 +56,11 @@ impl Parse for FunctionAttributes {
 
 impl Spanned for FunctionAttributes {
     fn span(&self) -> Span {
-        crate::utils::join_spans(&self.0)
+        self.0.span()
     }
 
     fn set_span(&mut self, span: Span) {
-        crate::utils::set_spans_clone(&mut self.0, span);
+        self.0.set_span(span);
     }
 }
 

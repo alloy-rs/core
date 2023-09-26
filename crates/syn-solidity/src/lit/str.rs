@@ -46,11 +46,11 @@ macro_rules! str_lit {
 
         impl Spanned for $name {
             fn span(&self) -> Span {
-                crate::utils::join_spans(&self.values)
+                self.values.span()
             }
 
             fn set_span(&mut self, span: Span) {
-                crate::utils::set_spans(&mut self.values, span)
+                self.values.set_span(span);
             }
         }
 

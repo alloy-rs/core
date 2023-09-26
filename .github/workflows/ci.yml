@@ -18,6 +18,10 @@ jobs:
             matrix:
                 rust: ["stable", "beta", "nightly", "1.65"] # MSRV
                 flags: ["--no-default-features", "", "--all-features"]
+                exclude:
+                    # Skip because some features have highest MSRV.
+                    - rust: "1.65" # MSRV
+                      flags: "--all-features"
         steps:
             - uses: actions/checkout@v3
             - uses: dtolnay/rust-toolchain@master
@@ -26,7 +30,7 @@ jobs:
             - uses: Swatinem/rust-cache@v2
             # Only run tests on latest stable and above
             - name: check
-              if: ${{ matrix.flags != '--all-features' && matrix.rust == '1.65' }} # MSRV
+              if: ${{ matrix.rust == '1.65' }} # MSRV
               run: cargo check --workspace ${{ matrix.flags }}
             - name: test
               if: ${{ matrix.rust != '1.65' }} # MSRV

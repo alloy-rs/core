@@ -86,13 +86,13 @@ impl Parse for FieldList {
     }
 }
 
-impl<P> Spanned for Parameters<P> {
+impl<P: Spanned> Spanned for Parameters<P> {
     fn span(&self) -> Span {
-        crate::utils::join_spans(&self.0)
+        self.0.span()
     }
 
     fn set_span(&mut self, span: Span) {
-        crate::utils::set_spans(&mut self.0, span);
+        self.0.set_span(span);
     }
 }
 
