@@ -637,7 +637,7 @@ mod tests {
                 tuple,
             } => {
                 prop_assert!(is_valid_identifier(name));
-                prop_assert!(prop_names.iter().all(is_valid_identifier));
+                prop_assert!(prop_names.iter().all(|s| is_valid_identifier(s)));
                 prop_assert_eq!(prop_names.len(), tuple.len());
             }
             _ => {}
