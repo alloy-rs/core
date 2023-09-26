@@ -1,9 +1,9 @@
 use crate::{
     token::{PackedSeqToken, TokenSeq, WordToken},
-    Result, SolType, TokenType, Word, GenericContractError, SolInterface,
+    GenericContractError, Result, SolInterface, SolType, TokenType, Word,
 };
 use alloc::{string::String, vec::Vec};
-use alloy_primitives::{U256, Selector};
+use alloy_primitives::{Selector, U256};
 use core::{borrow::Borrow, fmt};
 
 /// Solidity Error (a tuple with a selector)
@@ -408,9 +408,9 @@ impl PanicKind {
     }
 }
 
-/// Returns the revert reason from the given output data, if it's an abi encoded String. Returns
-/// `None` if the output is not long enough to contain a function selector or the content is not a
-/// valid abi encoded String.
+/// Returns the revert reason from the given output data, if it's an abi encoded
+/// String. Returns `None` if the output is not long enough to contain a
+/// function selector or the content is not a valid abi encoded String.
 ///
 /// **Note:** it's assumed the `out` buffer starts with the call's signature
 pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
