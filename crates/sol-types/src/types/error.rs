@@ -408,8 +408,9 @@ impl PanicKind {
     }
 }
 
-/// Returns the revert reason from the given output data, if it's an abi encoded
-/// String. Returns `None` if the content is not a valid abi encoded String.
+/// Returns the revert reason from the given output data. Returns `None` if the
+/// content is not a valid abi encoded String or a regular utf8 string (for
+/// Vyper reverts).
 pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
     // Try to decode as a generic contract error.
     if let Ok(error) = GenericContractError::decode(out, true) {
