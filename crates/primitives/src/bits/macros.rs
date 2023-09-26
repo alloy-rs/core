@@ -4,7 +4,7 @@
 /// This functionally creates a new named `FixedBytes` that cannot be
 /// type-confused for another named `FixedBytes`.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```
 /// use alloy_primitives::wrap_fixed_bytes;

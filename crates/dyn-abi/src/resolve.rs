@@ -4,22 +4,26 @@
 
 use crate::{DynSolType, Result};
 use alloc::vec::Vec;
-use alloy_json_abi::{EventParam, InternalType, Param};
+use alloy_json_abi::{EventParam, Param};
 use alloy_sol_type_parser::{
     Error as TypeStrError, RootType, TupleSpecifier, TypeSpecifier, TypeStem,
 };
 
-/// The ResolveSolType trait is implemented by types that can be resolved into
-/// a [`DynSolType`]. ABI and related systems have many different ways of
-/// encoding solidity types. This trait provides a single pattern for resolving
-/// those encodings into solidity types.
+#[cfg(feature = "eip712")]
+use alloy_json_abi::InternalType;
+
+/// Types that can be resolved into a [`DynSolType`].
 ///
-/// This trait is implemented for [`RootType`], [`TupleSpecifier`],
-/// [`TypeStem`], and [`TypeSpecifier`], as well as the [`EventParam`] and
-/// [`Param`] structs. The impl on `&str` parses a [`TypeSpecifier`] from the
-/// string and resolves it.
+/// ABI and related systems have many different ways of encoding solidity types.
+/// This trait provides a single pattern for resolving those encodings into
+/// solidity types.
 ///
-/// ## Example
+/// This trait is implemented for all the [`alloy_sol_type_parser`] types, the
+/// [`Param`] and [`EventParam`] structs, and [`str`].
+///
+/// The [`str`] implementation calls [`DynSolType::parse`].
+///
+/// # Examples
 ///
 /// ```
 /// # use alloy_dyn_abi::{DynSolType, ResolveSolType};
@@ -35,13 +39,15 @@ use alloy_sol_type_parser::{
 /// ```
 pub trait ResolveSolType {
     /// Resolve this object into a [`DynSolType`].
+    ///
+    /// See the [trait documentation](ResolveSolType) for more details.
     fn resolve(&self) -> Result<DynSolType>;
 }
 
 impl ResolveSolType for str {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
-        TypeSpecifier::parse(self)?.resolve()
+        DynSolType::parse(self)
     }
 }
 
@@ -123,18 +129,32 @@ impl ResolveSolType for TypeSpecifier<'_> {
 impl ResolveSolType for Param {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
-        resolve_param(&self.ty, &self.components, self.internal_type())
+        resolve_param(
+            &self.ty,
+            &self.components,
+            #[cfg(feature = "eip712")]
+            self.internal_type(),
+        )
     }
 }
 
 impl ResolveSolType for EventParam {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
-        resolve_param(&self.ty, &self.components, self.internal_type())
+        resolve_param(
+            &self.ty,
+            &self.components,
+            #[cfg(feature = "eip712")]
+            self.internal_type(),
+        )
     }
 }
 
-fn resolve_param(ty: &str, components: &[Param], _it: Option<&InternalType>) -> Result<DynSolType> {
+fn resolve_param(
+    ty: &str,
+    components: &[Param],
+    #[cfg(feature = "eip712")] it: Option<&InternalType>,
+) -> Result<DynSolType> {
     let ty = TypeSpecifier::parse(ty)?;
 
     // type is simple, and we can resolve it via the specifier
@@ -149,7 +169,7 @@ fn resolve_param(ty: &str, components: &[Param], _it: Option<&InternalType>) -> 
         .collect::<Result<Vec<_>, _>>()?;
 
     #[cfg(feature = "eip712")]
-    let resolved = if let Some((_, name)) = _it.and_then(|i| i.as_struct()) {
+    let resolved = if let Some((_, name)) = it.and_then(|i| i.as_struct()) {
         DynSolType::CustomStruct {
             // skip array sizes, since we have them already from parsing `ty`
             name: name.split('[').next().unwrap().into(),
@@ -199,11 +219,15 @@ mod tests {
 
     #[test]
     fn extra_close_parens() {
+        parse("(bool,uint256))").unwrap_err();
         parse("bool,uint256))").unwrap_err();
+        parse("bool,uint256)").unwrap_err();
     }
 
     #[test]
     fn extra_open_parents() {
+        parse("((bool,uint256)").unwrap_err();
+        parse("((bool,uint256").unwrap_err();
         parse("(bool,uint256").unwrap_err();
     }
 
