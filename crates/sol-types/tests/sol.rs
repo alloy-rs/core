@@ -375,6 +375,41 @@ fn enum_variant_attrs() {
 }
 
 #[test]
+fn nested_items() {
+    // This has to be in a module (not a function) because of Rust import rules
+    mod nested {
+        alloy_sol_types::sol! {
+            #[derive(Debug, PartialEq)]
+            struct FilAddress {
+                bytes data;
+            }
+
+            #[derive(Debug, PartialEq)]
+            struct BigInt {
+                bytes val;
+                bool neg;
+            }
+
+            #[derive(Debug, PartialEq)]
+            interface InterfaceTest {
+                function f1(FilAddress memory fAddress, uint256 value) public payable;
+
+                function f2(BigInt memory b) public returns (BigInt memory);
+            }
+        }
+    }
+    use nested::{InterfaceTest::*, *};
+
+    let _ = FilAddress { data: vec![] };
+    let _ = BigInt {
+        val: vec![],
+        neg: false,
+    };
+    assert_eq!(f1Call::SIGNATURE, "f1((bytes),uint256)");
+    assert_eq!(f2Call::SIGNATURE, "f2((bytes,bool))");
+}
+
+#[test]
 #[cfg(feature = "json")]
 fn abigen_json_large_array() {
     sol!(LargeArray, "../json-abi/tests/abi/LargeArray.json");

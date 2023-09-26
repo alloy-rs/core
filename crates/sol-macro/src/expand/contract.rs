@@ -92,6 +92,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         #(#mod_attrs)*
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         pub mod #name {
+            use super::*;
+
             #bytecode
             #deployed_bytecode
 
