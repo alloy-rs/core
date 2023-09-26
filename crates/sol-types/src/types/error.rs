@@ -1,8 +1,11 @@
 use crate::{
     token::{PackedSeqToken, TokenSeq, WordToken},
-    Result, SolType, TokenType, Word,
+    GenericContractError, Result, SolInterface, SolType, TokenType, Word,
 };
-use alloc::{string::String, vec::Vec};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 use alloy_primitives::U256;
 use core::{borrow::Borrow, fmt};
 
@@ -408,6 +411,24 @@ impl PanicKind {
     }
 }
 
+/// Returns the revert reason from the given output data. Returns `None` if the
+/// content is not a valid abi encoded String or a regular utf8 string (for
+/// Vyper reverts).
+pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
+    // Try to decode as a generic contract error.
+    if let Ok(error) = GenericContractError::decode(out, true) {
+        return Some(error.to_string())
+    }
+
+    // If that fails, try to decode as a regular string.
+    if let Ok(decoded_string) = core::str::from_utf8(out) {
+        return Some(decoded_string.to_string())
+    }
+
+    // If both attempts fail, return None.
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -447,5 +468,27 @@ mod tests {
             &keccak256(b"Panic(uint256)")[..4],
             "Panic selector is incorrect"
         );
+    }
+
+    #[test]
+    fn test_decode_solidity_revert_reason() {
+        let revert = Revert::from("test_revert_reason");
+        let encoded = revert.encode();
+        let decoded = decode_revert_reason(&encoded).unwrap();
+        assert_eq!(decoded, String::from("revert: test_revert_reason"));
+    }
+
+    #[test]
+    fn test_decode_random_revert_reason() {
+        let revert_reason = String::from("test_revert_reason");
+        let decoded = decode_revert_reason(revert_reason.as_bytes()).unwrap();
+        assert_eq!(decoded, String::from("test_revert_reason"));
+    }
+
+    #[test]
+    fn test_decode_non_utf8_revert_reason() {
+        let revert_reason = [0xFF];
+        let decoded = decode_revert_reason(&revert_reason);
+        assert_eq!(decoded, None);
     }
 }
