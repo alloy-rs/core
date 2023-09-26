@@ -486,9 +486,9 @@ mod tests {
     }
 
     #[test]
-    fn test_decode_too_short_revert_reason() {
-        let revert_reason = String::from("");
-        let decoded = decode_revert_reason(revert_reason.as_bytes());
+    fn test_decode_non_utf8_revert_reason() {
+        let revert_reason = [0xFF];
+        let decoded = decode_revert_reason(&revert_reason);
         assert_eq!(decoded, None);
     }
 }
