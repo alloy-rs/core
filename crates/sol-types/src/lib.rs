@@ -183,7 +183,7 @@ mod types;
 pub use types::{
     data_type as sol_data, ContractError, Encodable, EventTopic, GenericContractError, Panic,
     PanicKind, Revert, Selectors, SolCall, SolEnum, SolError, SolEvent, SolInterface, SolStruct,
-    SolType, TopicList,
+    SolType, TopicList, decode_revert_reason,
 };
 
 pub mod utils;
