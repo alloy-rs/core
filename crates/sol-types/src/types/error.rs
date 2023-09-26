@@ -2,7 +2,10 @@ use crate::{
     token::{PackedSeqToken, TokenSeq, WordToken},
     GenericContractError, Result, SolInterface, SolType, TokenType, Word,
 };
-use alloc::{string::{String, ToString}, vec::Vec};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 use alloy_primitives::U256;
 use core::{borrow::Borrow, fmt};
 
