@@ -48,7 +48,7 @@ mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 mod utils;
-pub use utils::keccak256;
+pub use utils::{eip191_hash_message, keccak256};
 
 #[doc(no_inline)]
 pub use ::bytes;

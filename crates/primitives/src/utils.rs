@@ -1,4 +1,28 @@
-use crate::bits::FixedBytes;
+use crate::{bits::FixedBytes, B256};
+use alloc::{string::ToString, vec::Vec};
+/// The prefix used for hashing messages according to EIP-191.
+const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
+
+/// Hash a message according to [EIP-191] (version `0x01`).
+///
+/// The final message is a UTF-8 string, encoded as follows:
+/// `"\x19Ethereum Signed Message:\n" + message.length + message`
+///
+/// This message is then hashed using [Keccak-256](keccak256).
+///
+/// [EIP-191]: https://eips.ethereum.org/EIPS/eip-191
+pub fn eip191_hash_message<T: AsRef<[u8]>>(message: T) -> B256 {
+    let message = message.as_ref();
+    let len = message.len();
+    let len_string = len.to_string();
+
+    let mut eth_message = Vec::with_capacity(EIP191_PREFIX.len() + len_string.len() + len);
+    eth_message.extend_from_slice(EIP191_PREFIX.as_bytes());
+    eth_message.extend_from_slice(len_string.as_bytes());
+    eth_message.extend_from_slice(message);
+
+    keccak256(&eth_message)
+}
 
 /// Simple interface to the [`keccak256`] hash function.
 ///
@@ -51,4 +75,18 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> FixedBytes<32> {
     }
 
     keccak256(bytes.as_ref())
+}
+
+// test vector taken from:
+// https://web3js.readthedocs.io/en/v1.2.2/web3-eth-accounts.html#hashmessage
+#[test]
+fn test_hash_message() {
+    let hash = eip191_hash_message("Hello World");
+
+    assert_eq!(
+        hash,
+        "a1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2"
+            .parse::<B256>()
+            .unwrap()
+    );
 }
