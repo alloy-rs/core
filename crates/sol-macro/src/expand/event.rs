@@ -1,7 +1,6 @@
 //! [`ItemEvent`] expansion.
 
-use super::{anon_name, expand_tuple_types, expand_type, ExpCtxt};
-use crate::expand::ty::expand_event_tokenize_func;
+use super::{anon_name, expand_tuple_types, expand_type, ty, ExpCtxt};
 use ast::{EventParameter, ItemEvent, SolIdent, Spanned};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
@@ -93,7 +92,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .enumerate()
         .map(|(i, p)| expand_event_topic_field(i, p, p.name.as_ref()));
 
-    let tokenize_body_impl = expand_event_tokenize_func(event.parameters.iter());
+    let tokenize_body_impl = ty::expand_event_tokenize_func(event.parameters.iter());
 
     let encode_topics_impl = encode_first_topic
         .into_iter()
@@ -176,15 +175,13 @@ fn expand_event_topic_field(
     name: Option<&SolIdent>,
 ) -> TokenStream {
     let name = anon_name((i, name));
-
-    if param.indexed_as_hash() {
-        quote! {
-            #name: <::alloy_sol_types::sol_data::FixedBytes<32> as ::alloy_sol_types::SolType>::RustType
-        }
+    let ty = if param.indexed_as_hash() {
+        ty::expand_rust_type(&ast::Type::FixedBytes(
+            name.span(),
+            core::num::NonZeroU16::new(32).unwrap(),
+        ))
     } else {
-        let ty = expand_type(&param.ty);
-        quote! {
-            #name: <#ty as ::alloy_sol_types::SolType>::RustType
-        }
-    }
+        ty::expand_rust_type(&param.ty)
+    };
+    quote!(#name: #ty)
 }

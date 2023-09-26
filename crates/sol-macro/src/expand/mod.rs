@@ -2,14 +2,15 @@
 
 use crate::{
     attr::{self, SolAttrs},
+    expand::ty::expand_rust_type,
     utils::{self, ExprArray},
 };
 use ast::{
     File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath, Spanned, Type,
     VariableDeclaration, Visit,
 };
-use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote};
+use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
+use quote::{format_ident, quote, TokenStreamExt};
 use std::{borrow::Borrow, collections::HashMap, fmt::Write};
 use syn::{parse_quote, Attribute, Error, Result};
 
@@ -429,32 +430,21 @@ impl ExpCtxt<'_> {
 }
 
 // helper functions
+
 /// Expands a list of parameters into a list of struct fields.
-///
-/// See [`expand_field`].
 fn expand_fields<P>(params: &Parameters<P>) -> impl Iterator<Item = TokenStream> + '_ {
-    params
-        .iter()
-        .enumerate()
-        .map(|(i, var)| expand_field(i, &var.ty, var.name.as_ref(), var.attrs.as_ref()))
+    params.iter().enumerate().map(|(i, var)| {
+        let name = anon_name((i, var.name.as_ref()));
+        let ty = expand_rust_type(&var.ty);
+        let attrs = &var.attrs;
+        quote! {
+            #(#attrs)*
+            pub #name: #ty
+        }
+    })
 }
 
-/// Expands a single parameter into a struct field.
-fn expand_field(
-    i: usize,
-    ty: &Type,
-    name: Option<&SolIdent>,
-    attrs: &Vec<Attribute>,
-) -> TokenStream {
-    let name = anon_name((i, name));
-    let ty = expand_type(ty);
-    quote! {
-        #(#attrs)*
-        pub #name: <#ty as ::alloy_sol_types::SolType>::RustType
-    }
-}
-
-/// Generates an anonymous name from an integer. Used in `anon_name`
+/// Generates an anonymous name from an integer. Used in [`anon_name`].
 #[inline]
 pub fn generate_name(i: usize) -> Ident {
     format_ident!("_{i}")
@@ -516,18 +506,21 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
     }
 }
 
-/// Returns
-/// - `(#(#expanded,)*)`
-/// - `(#(<#expanded as ::alloy_sol_types::SolType>::RustType,)*)`
+/// Returns `(sol_tuple, rust_tuple)`
 fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
     types: I,
 ) -> (TokenStream, TokenStream) {
-    let mut sol_tuple = TokenStream::new();
-    let mut rust_tuple = TokenStream::new();
+    let mut sol = TokenStream::new();
+    let mut rust = TokenStream::new();
+    let comma = Punct::new(',', Spacing::Alone);
     for ty in types {
-        let expanded = expand_type(ty);
-        sol_tuple.extend(quote!(#expanded,));
-        rust_tuple.extend(quote!(<#expanded as ::alloy_sol_types::SolType>::RustType,));
+        ty::rec_expand_type(ty, &mut sol);
+        sol.append(comma.clone());
+
+        ty::rec_expand_rust_type(ty, &mut rust);
+        rust.append(comma.clone());
     }
-    (quote!((#sol_tuple)), quote!((#rust_tuple)))
+    let wrap_in_parens =
+        |stream| TokenStream::from(TokenTree::Group(Group::new(Delimiter::Parenthesis, stream)));
+    (wrap_in_parens(sol), wrap_in_parens(rust))
 }

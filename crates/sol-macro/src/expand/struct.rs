@@ -3,7 +3,7 @@
 use super::{
     expand_fields, expand_from_into_tuples, expand_type, ty::expand_tokenize_func, ExpCtxt,
 };
-use ast::{Item, ItemStruct, Spanned, Type, VariableDeclaration};
+use ast::{Item, ItemStruct, Spanned, Type};
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::num::NonZeroU16;
@@ -48,8 +48,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let encode_data_impl = match fields.len() {
         0 => unreachable!("struct with zero fields"),
         1 => {
-            let VariableDeclaration { ty, name, .. } = fields.first().unwrap();
-            let ty = expand_type(ty);
+            let name = *field_names.first().unwrap();
+            let ty = field_types.first().unwrap();
             quote!(<#ty as ::alloy_sol_types::SolType>::eip712_data_word(&self.#name).0.to_vec())
         }
         _ => quote! {

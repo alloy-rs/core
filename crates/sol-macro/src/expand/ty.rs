@@ -3,14 +3,26 @@
 use super::ExpCtxt;
 use crate::expand::generate_name;
 use ast::{EventParameter, Item, Parameters, Spanned, Type, TypeArray, VariableDeclaration};
-use proc_macro2::{Literal, TokenStream};
+use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use std::{fmt, num::NonZeroU16};
 
-/// Expands a single [`Type`] recursively.
+/// Expands a single [`Type`] recursively to its `alloy_sol_types::sol_data`
+/// equivalent.
 pub fn expand_type(ty: &Type) -> TokenStream {
     let mut tokens = TokenStream::new();
     rec_expand_type(ty, &mut tokens);
+    tokens
+}
+
+/// Expands a single [`Type`] recursively to its Rust type equivalent.
+///
+/// This is the same as `<#expand_type(ty) as SolType>::RustType`, but generates
+/// nicer code for documentation and IDE/LSP support when the type is not
+/// ambiguous.
+pub fn expand_rust_type(ty: &Type) -> TokenStream {
+    let mut tokens = TokenStream::new();
+    rec_expand_rust_type(ty, &mut tokens);
     tokens
 }
 
@@ -59,7 +71,7 @@ pub fn expand_event_tokenize_func<'a>(
 }
 
 /// The [`expand_type`] recursive implementation.
-fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
+pub fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
     let tts = match *ty {
         Type::Address(span, _) => quote_spanned! {span=> ::alloy_sol_types::sol_data::Address },
         Type::Bool(span) => quote_spanned! {span=> ::alloy_sol_types::sol_data::Bool },
@@ -67,11 +79,9 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
         Type::Bytes(span) => quote_spanned! {span=> ::alloy_sol_types::sol_data::Bytes },
 
         Type::FixedBytes(span, size) => {
-            debug_assert!(size.get() <= 32);
+            assert!(size.get() <= 32);
             let size = Literal::u16_unsuffixed(size.get());
-            quote_spanned! {span=>
-                ::alloy_sol_types::sol_data::FixedBytes<#size>
-            }
+            quote_spanned! {span=> ::alloy_sol_types::sol_data::FixedBytes<#size> }
         }
         Type::Int(span, size) | Type::Uint(span, size) => {
             let name = match ty {
@@ -79,15 +89,13 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
                 Type::Uint(..) => "Uint",
                 _ => unreachable!(),
             };
-            let name = syn::Ident::new(name, span);
+            let name = Ident::new(name, span);
 
             let size = size.map_or(256, NonZeroU16::get);
-            debug_assert!(size <= 256 && size % 8 == 0);
+            assert!(size <= 256 && size % 8 == 0);
             let size = Literal::u16_unsuffixed(size);
 
-            quote_spanned! {span=>
-                ::alloy_sol_types::sol_data::#name<#size>
-            }
+            quote_spanned! {span=> ::alloy_sol_types::sol_data::#name<#size> }
         }
 
         Type::Tuple(ref tuple) => {
@@ -103,13 +111,9 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
             let ty = expand_type(&array.ty);
             let span = array.span();
             if let Some(size) = array.size() {
-                quote_spanned! {span=>
-                    ::alloy_sol_types::sol_data::FixedArray<#ty, #size>
-                }
+                quote_spanned! {span=> ::alloy_sol_types::sol_data::FixedArray<#ty, #size> }
             } else {
-                quote_spanned! {span=>
-                    ::alloy_sol_types::sol_data::Array<#ty>
-                }
+                quote_spanned! {span=> ::alloy_sol_types::sol_data::Array<#ty> }
             }
         }
         Type::Function(ref function) => quote_spanned! {function.span()=>
@@ -120,6 +124,82 @@ fn rec_expand_type(ty: &Type, tokens: &mut TokenStream) {
         },
 
         Type::Custom(ref custom) => return custom.to_tokens(tokens),
+    };
+    tokens.extend(tts);
+}
+
+// IMPORTANT: Keep in sync with `sol-types/src/types/data_type.rs`
+/// The [`expand_rust_type`] recursive implementation.
+pub fn rec_expand_rust_type(ty: &Type, tokens: &mut TokenStream) {
+    // Display sizes that match with the Rust type, otherwise we lose information
+    // (e.g. `uint24` displays the same as `uint32` because both use `u32`)
+    fn allowed_int_size(size: Option<NonZeroU16>) -> bool {
+        matches!(
+            size.map_or(256, NonZeroU16::get),
+            8 | 16 | 32 | 64 | 128 | 256
+        )
+    }
+
+    let tts = match *ty {
+        Type::Address(span, _) => quote_spanned! {span=> ::alloy_sol_types::private::Address },
+        Type::Bool(span) => return Ident::new("bool", span).to_tokens(tokens),
+        Type::String(span) => quote_spanned! {span=> ::alloy_sol_types::private::String },
+        Type::Bytes(span) => quote_spanned! {span=> ::alloy_sol_types::private::Vec<u8> },
+
+        Type::FixedBytes(span, size) => {
+            assert!(size.get() <= 32);
+            let size = Literal::u16_unsuffixed(size.get());
+            quote_spanned! {span=> ::alloy_sol_types::private::FixedBytes<#size> }
+        }
+        Type::Int(span, size) | Type::Uint(span, size) if allowed_int_size(size) => {
+            let size = size.map_or(256, NonZeroU16::get);
+            if size <= 128 {
+                let name = match ty {
+                    Type::Int(..) => "i",
+                    Type::Uint(..) => "u",
+                    _ => unreachable!(),
+                };
+                return Ident::new(&format!("{name}{size}"), span).to_tokens(tokens)
+            }
+            assert_eq!(size, 256);
+            match ty {
+                Type::Int(..) => quote_spanned! {span=> ::alloy_sol_types::private::I256 },
+                Type::Uint(..) => quote_spanned! {span=> ::alloy_sol_types::private::U256 },
+                _ => unreachable!(),
+            }
+        }
+
+        Type::Tuple(ref tuple) => {
+            return tuple.paren_token.surround(tokens, |tokens| {
+                for pair in tuple.types.pairs() {
+                    let (ty, comma) = pair.into_tuple();
+                    rec_expand_rust_type(ty, tokens);
+                    comma.to_tokens(tokens);
+                }
+            })
+        }
+        Type::Array(ref array) => {
+            let ty = expand_rust_type(&array.ty);
+            let span = array.span();
+            if let Some(size) = array.size() {
+                quote_spanned! {span=> [#ty; #size] }
+            } else {
+                quote_spanned! {span=> ::alloy_sol_types::private::Vec<#ty> }
+            }
+        }
+        Type::Function(ref function) => quote_spanned! {function.span()=>
+            ::alloy_sol_types::private::Function
+        },
+        Type::Mapping(ref mapping) => quote_spanned! {mapping.span()=>
+            ::core::compile_error!("Mapping types are not supported here")
+        },
+
+        // Exhaustive fallback to `SolType::RustType`
+        ref ty @ (Type::Int(..) | Type::Uint(..) | Type::Custom(_)) => {
+            let span = ty.span();
+            let ty = expand_type(ty);
+            quote_spanned! {span=> <#ty as ::alloy_sol_types::SolType>::RustType }
+        }
     };
     tokens.extend(tts);
 }

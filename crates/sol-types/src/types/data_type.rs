@@ -14,6 +14,9 @@ use alloy_primitives::{
 };
 use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
+// IMPORTANT: Keep in sync with `rec_expand_rust_type` in
+// `sol-macro/src/expand/ty.rs`
+
 /// Bool - `bool`
 pub struct Bool;
 

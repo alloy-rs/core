@@ -206,7 +206,9 @@ pub mod private {
         string::{String, ToString},
         vec::Vec,
     };
-    pub use alloy_primitives::{bytes, keccak256, Bytes, FixedBytes, B256, U256};
+    pub use alloy_primitives::{
+        bytes, keccak256, Address, Bytes, FixedBytes, Function, Signed, Uint, B256, I256, U256,
+    };
     pub use core::{convert::From, default::Default, option::Option, result::Result};
 
     pub use Option::{None, Some};
