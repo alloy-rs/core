@@ -598,16 +598,15 @@ macro_rules! tuple_impls {
             type RustType = ($( $ty::RustType, )+);
             type TokenType<'a> = ($( $ty::TokenType<'a>, )+);
 
-            const ENCODED_SIZE: Option<usize> = {
-                let mut acc = Some(0);
+            const ENCODED_SIZE: Option<usize> = 'l: {
+                let mut acc = 0;
                 $(
-                    match (acc, <$ty as SolType>::ENCODED_SIZE) {
-                        (Some(i), Some(size)) => acc = Some(i + size),
-                        (Some(_), None) => acc = None,
-                        (None, _) => {}
+                    match <$ty as SolType>::ENCODED_SIZE {
+                        Some(size) => acc += size,
+                        None => break 'l None,
                     }
                 )+
-                acc
+                Some(acc)
             };
 
             fn sol_type_name() -> Cow<'static, str> {
