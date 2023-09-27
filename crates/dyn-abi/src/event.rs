@@ -59,7 +59,6 @@ impl DynSolEvent {
         if validate {
             match topics.size_hint() {
                 (n, Some(m)) if n == m && n != num_topics => {
-                    dbg!("yo");
                     return Err(Error::TopicLengthMismatch {
                         expected: num_topics,
                         actual: n,
@@ -113,7 +112,6 @@ impl DynSolEvent {
         if validate {
             let remaining = topics.count();
             if remaining > 0 {
-                dbg!("this one");
                 return Err(Error::TopicLengthMismatch {
                     expected: num_topics,
                     actual: num_topics + remaining,
@@ -194,8 +192,6 @@ mod test {
                 DynSolType::Address,
             ])]),
         };
-
-        dbg!(event.is_anonymous());
 
         let decoded = event.decode_log(&log, true).unwrap();
         assert_eq!(
