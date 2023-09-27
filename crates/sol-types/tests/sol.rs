@@ -37,7 +37,7 @@ fn e2e() {
         type MyValueType is uint256;
     }
 
-    <sol!(bool)>::encode(&true);
+    <sol!(bool)>::abi_encode(&true);
 
     let a = MyStruct {
         a: U256::from(1),
@@ -45,23 +45,23 @@ fn e2e() {
         c: Vec::new(),
     };
 
-    MyTuple::encode(&(a.clone(), [0; 32]));
-    MyStruct::encode(&a);
+    MyTuple::abi_encode(&(a.clone(), [0; 32]));
+    MyStruct::abi_encode(&a);
 
-    LateBinding::<MyStruct>::encode(&(vec![a.clone(), a.clone()], Address::default()));
+    LateBinding::<MyStruct>::abi_encode(&(vec![a.clone(), a.clone()], Address::default()));
 
-    MyStruct2::encode(&MyStruct2 {
+    MyStruct2::abi_encode(&MyStruct2 {
         a,
         b: [0; 32].into(),
         c: vec![],
     });
 
-    NestedArray::encode(&vec![[true, false], [true, false], [true, false]]);
+    NestedArray::abi_encode(&vec![[true, false], [true, false], [true, false]]);
 
     let mvt = MyValueType::from(U256::from(1));
     assert_eq!(
         mvt.abi_encode(),
-        alloy_sol_types::sol_data::Uint::<256>::encode(&U256::from(1))
+        alloy_sol_types::sol_data::Uint::<256>::abi_encode(&U256::from(1))
     );
 }
 

@@ -36,8 +36,8 @@
 //! assert_eq!(&MySolType::sol_type_name(), "bool[2]");
 //!
 //! // SolTypes are used to transform Rust into ABI blobs, and back.
-//! let encoded: Vec<u8> = MySolType::encode(&data);
-//! let decoded: [bool; 2] = MySolType::decode(&encoded, validate)?;
+//! let encoded: Vec<u8> = MySolType::abi_encode(&data);
+//! let decoded: [bool; 2] = MySolType::abi_decode(&encoded, validate)?;
 //! assert_eq!(data, decoded);
 //! # Ok(())
 //! # }
@@ -110,14 +110,12 @@
 //!     type MyValueType is uint256;
 //! }
 //!
-//! # pub fn main() {
 //! // UDTs are encoded as their underlying type
 //! let mvt = MyValueType::from(U256::from(1));
 //! assert_eq!(
 //!     mvt.abi_encode(),
-//!     sol_data::Uint::<256>::encode(&U256::from(1))
+//!     sol_data::Uint::<256>::abi_encode(&U256::from(1))
 //! );
-//! # }
 //! ```
 //!
 //! ## Tokenization/Detokenization

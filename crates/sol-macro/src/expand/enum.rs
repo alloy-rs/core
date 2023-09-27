@@ -157,7 +157,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
                 }
 
                 #[inline]
-                fn encode_packed_to(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                fn abi_encode_packed_to(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
                     out.push(*rust as u8);
                 }
             }

@@ -172,8 +172,8 @@ pub trait SolType {
 
     /// Non-standard Packed Mode ABI encoding.
     ///
-    /// See [`encode_packed`][SolType::encode_packed] for more details.
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>);
+    /// See [`abi_encode_packed`][SolType::abi_encode_packed] for more details.
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>);
 
     /// Non-standard Packed Mode ABI encoding.
     ///
@@ -185,21 +185,21 @@ pub trait SolType {
     ///
     /// More information can be found in the [Solidity docs](https://docs.soliditylang.org/en/latest/abi-spec.html#non-standard-packed-mode).
     #[inline]
-    fn encode_packed(rust: &Self::RustType) -> Vec<u8> {
+    fn abi_encode_packed(rust: &Self::RustType) -> Vec<u8> {
         let mut out = Vec::new();
-        Self::encode_packed_to(rust, &mut out);
+        Self::abi_encode_packed_to(rust, &mut out);
         out
     }
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence.
     #[inline]
-    fn encode<E: Encodable<Self>>(rust: &E) -> Vec<u8> {
+    fn abi_encode<E: Encodable<Self>>(rust: &E) -> Vec<u8> {
         abi::encode(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence.
     #[inline]
-    fn encode_sequence<E: Encodable<Self>>(rust: &E) -> Vec<u8>
+    fn abi_encode_sequence<E: Encodable<Self>>(rust: &E) -> Vec<u8>
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
@@ -208,7 +208,7 @@ pub trait SolType {
 
     /// Encode an ABI sequence suitable for function parameters.
     #[inline]
-    fn encode_params<E: Encodable<Self>>(rust: &E) -> Vec<u8>
+    fn abi_encode_params<E: Encodable<Self>>(rust: &E) -> Vec<u8>
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {

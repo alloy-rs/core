@@ -648,7 +648,7 @@ impl DynSolValue {
     }
 
     /// Encodes the packed value and appends it to the end of a byte array.
-    pub fn encode_packed_to(&self, buf: &mut Vec<u8>) {
+    pub fn abi_encode_packed_to(&self, buf: &mut Vec<u8>) {
         match self {
             Self::Address(addr) => buf.extend_from_slice(addr.as_slice()),
             Self::Function(func) => buf.extend_from_slice(func.as_slice()),
@@ -671,7 +671,7 @@ impl DynSolValue {
             }
             as_fixed_seq!(inner) | Self::Array(inner) => {
                 for val in inner {
-                    val.encode_packed_to(buf);
+                    val.abi_encode_packed_to(buf);
                 }
             }
         }
@@ -679,10 +679,10 @@ impl DynSolValue {
 
     /// Encodes the value into a packed byte array.
     #[inline]
-    pub fn encode_packed(&self) -> Vec<u8> {
+    pub fn abi_encode_packed(&self) -> Vec<u8> {
         // TODO: capacity
         let mut buf = Vec::new();
-        self.encode_packed_to(&mut buf);
+        self.abi_encode_packed_to(&mut buf);
         buf
     }
 

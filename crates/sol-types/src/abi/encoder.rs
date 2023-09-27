@@ -194,7 +194,7 @@ mod tests {
     fn encode_address() {
         let address = Address::from([0x11u8; 20]);
         let expected = hex!("0000000000000000000000001111111111111111111111111111111111111111");
-        let encoded = sol_data::Address::encode(&address);
+        let encoded = sol_data::Address::abi_encode(&address);
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), sol_data::Address::abi_encoded_size(&address));
     }
@@ -203,7 +203,7 @@ mod tests {
     fn encode_dynamic_array_of_addresses() {
         type MyTy = sol_data::Array<sol_data::Address>;
         let data = vec![Address::from([0x11u8; 20]), Address::from([0x22u8; 20])];
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         let expected = hex!(
             "
 			0000000000000000000000000000000000000000000000000000000000000020
@@ -223,8 +223,8 @@ mod tests {
 
         let addresses = [Address::from([0x11u8; 20]), Address::from([0x22u8; 20])];
 
-        let encoded = MyTy::encode(&addresses);
-        let encoded_params = MyTy::encode_params(&addresses);
+        let encoded = MyTy::abi_encode(&addresses);
+        let encoded_params = MyTy::abi_encode_params(&addresses);
         let expected = hex!(
             "
     		0000000000000000000000001111111111111111111111111111111111111111
@@ -242,8 +242,8 @@ mod tests {
         type MyTy = (sol_data::Address, sol_data::Address);
         let addresses = (Address::from([0x11u8; 20]), Address::from([0x22u8; 20]));
 
-        let encoded = MyTy::encode_sequence(&addresses);
-        let encoded_params = MyTy::encode_params(&addresses);
+        let encoded = MyTy::abi_encode_sequence(&addresses);
+        let encoded_params = MyTy::abi_encode_params(&addresses);
         let expected = hex!(
             "
     		0000000000000000000000001111111111111111111111111111111111111111
@@ -278,9 +278,9 @@ mod tests {
     	"
         )
         .to_vec();
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
 
         assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
@@ -308,9 +308,9 @@ mod tests {
         )
         .to_vec();
         // a DynSeq at top level ALWAYS has extra indirection
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
@@ -338,9 +338,9 @@ mod tests {
         )
         .to_vec();
         // a DynSeq at top level ALWAYS has extra indirection
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
@@ -369,9 +369,9 @@ mod tests {
         )
         .to_vec();
         // a DynSeq at top level ALWAYS has extra indirection
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
@@ -385,8 +385,8 @@ mod tests {
             [Address::from([0x33u8; 20]), Address::from([0x44u8; 20])],
         ];
 
-        let encoded = MyTy::encode_sequence(&fixed);
-        let encoded_params = MyTy::encode_params(&fixed);
+        let encoded = MyTy::abi_encode_sequence(&fixed);
+        let encoded_params = MyTy::abi_encode_params(&fixed);
         let expected = hex!(
             "
     		0000000000000000000000001111111111111111111111111111111111111111
@@ -439,7 +439,7 @@ mod tests {
         )
         .to_vec();
 
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
@@ -451,7 +451,7 @@ mod tests {
         let data = vec![];
 
         // Empty arrays
-        let encoded = MyTy0::encode_params(&data);
+        let encoded = MyTy0::abi_encode_params(&data);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -480,10 +480,10 @@ mod tests {
         .to_vec();
 
         // Empty arrays
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         assert_ne!(encoded, expected);
 
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
         assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
@@ -512,9 +512,9 @@ mod tests {
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
         // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
-        let encoded = MyTy2::encode(&data);
+        let encoded = MyTy2::abi_encode(&data);
         assert_ne!(encoded, expected);
-        let encoded_params = MyTy2::encode_params(&data);
+        let encoded_params = MyTy2::abi_encode_params(&data);
 
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
@@ -526,7 +526,7 @@ mod tests {
         type MyTy = sol_data::Bytes;
         let bytes = vec![0x12, 0x34];
 
-        let encoded = MyTy::encode(&bytes);
+        let encoded = MyTy::abi_encode(&bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -541,7 +541,7 @@ mod tests {
 
     #[test]
     fn encode_fixed_bytes() {
-        let encoded = sol_data::FixedBytes::<2>::encode(&[0x12, 0x34]);
+        let encoded = sol_data::FixedBytes::<2>::abi_encode(&[0x12, 0x34]);
         let expected = hex!("1234000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
         assert_eq!(
@@ -553,7 +553,7 @@ mod tests {
     #[test]
     fn encode_string() {
         let s = "gavofyork".to_string();
-        let encoded = sol_data::String::encode(&s);
+        let encoded = sol_data::String::abi_encode(&s);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -572,7 +572,7 @@ mod tests {
     #[test]
     fn encode_bytes2() {
         let bytes = hex!("10000000000000000000000000000000000000000000000000000000000002").to_vec();
-        let encoded = sol_data::Bytes::encode(&bytes);
+        let encoded = sol_data::Bytes::abi_encode(&bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -597,7 +597,7 @@ mod tests {
     	"
         )
         .to_vec();
-        let encoded = sol_data::Bytes::encode(&bytes);
+        let encoded = sol_data::Bytes::abi_encode(&bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
@@ -622,8 +622,8 @@ mod tests {
             hex!("10000000000000000000000000000000000000000000000000000000000002").to_vec(),
             hex!("0010000000000000000000000000000000000000000000000000000000000002").to_vec(),
         );
-        let encoded = MyTy::encode(&bytes);
-        let encoded_params = MyTy::encode_params(&bytes);
+        let encoded = MyTy::abi_encode(&bytes);
+        let encoded_params = MyTy::abi_encode_params(&bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000040
@@ -647,7 +647,7 @@ mod tests {
     #[test]
     fn encode_uint() {
         let uint = 4;
-        let encoded = sol_data::Uint::<8>::encode(&uint);
+        let encoded = sol_data::Uint::<8>::abi_encode(&uint);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000004");
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), sol_data::Uint::<8>::abi_encoded_size(&uint));
@@ -656,7 +656,7 @@ mod tests {
     #[test]
     fn encode_int() {
         let int = 4;
-        let encoded = sol_data::Int::<8>::encode(&int);
+        let encoded = sol_data::Int::<8>::abi_encode(&int);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000004");
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), sol_data::Int::<8>::abi_encoded_size(&int));
@@ -664,7 +664,7 @@ mod tests {
 
     #[test]
     fn encode_bool() {
-        let encoded = sol_data::Bool::encode(&true);
+        let encoded = sol_data::Bool::abi_encode(&true);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000001");
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), sol_data::Bool::abi_encoded_size(&true));
@@ -672,7 +672,7 @@ mod tests {
 
     #[test]
     fn encode_bool2() {
-        let encoded = sol_data::Bool::encode(&false);
+        let encoded = sol_data::Bool::abi_encode(&false);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), sol_data::Bool::abi_encoded_size(&false));
@@ -697,8 +697,8 @@ mod tests {
 
         let data = (5, bytes.clone(), 3, bytes);
 
-        let encoded = MyTy::encode(&data);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded = MyTy::abi_encode(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
 
         let expected = hex!(
             "
@@ -757,9 +757,9 @@ mod tests {
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
         // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         assert_ne!(encoded, expected);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
         assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
@@ -785,9 +785,9 @@ mod tests {
         )
         .to_vec();
         // a DynSeq at top level ALWAYS has extra indirection
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
@@ -819,9 +819,9 @@ mod tests {
         )
         .to_vec();
         // a DynSeq at top level ALWAYS has extra indirection
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
@@ -831,8 +831,8 @@ mod tests {
         type MyTy = (sol_data::Address, sol_data::Address);
         let data = (Address::from([0x11u8; 20]), Address::from([0x22u8; 20]));
 
-        let encoded = MyTy::encode_sequence(&data);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded = MyTy::abi_encode_sequence(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
 
         let expected = hex!(
             "
@@ -865,9 +865,9 @@ mod tests {
         .to_vec();
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded.
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
         assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
@@ -884,8 +884,8 @@ mod tests {
                 .to_vec(),
         );
 
-        let encoded = MyTy::encode(&data);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded = MyTy::abi_encode(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
 
         let expected = hex!(
             "
@@ -939,9 +939,9 @@ mod tests {
         .to_vec();
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded.
-        let encoded = MyTy::encode(&data);
+        let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
         assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
@@ -971,8 +971,8 @@ mod tests {
             ),
         );
 
-        let encoded = MyTy::encode(&data);
-        let encoded_params = MyTy::encode_sequence(&data);
+        let encoded = MyTy::abi_encode(&data);
+        let encoded_params = MyTy::abi_encode_sequence(&data);
 
         let expected = hex!(
             "
@@ -1026,8 +1026,8 @@ mod tests {
             false,
         );
 
-        let encoded_single = MyTy::encode(&data);
-        let encoded = MyTy::encode_sequence(&data);
+        let encoded_single = MyTy::abi_encode(&data);
+        let encoded = MyTy::abi_encode_sequence(&data);
 
         let expected = hex!(
             "
@@ -1071,8 +1071,8 @@ mod tests {
             Address::from([0x44u8; 20]),
         );
 
-        let encoded = MyTy::encode_sequence(&data);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded = MyTy::abi_encode_sequence(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
 
         let expected = hex!(
             "
@@ -1101,8 +1101,8 @@ mod tests {
 
         let data = (((false, 0x777),), vec![0x42, 0x1337]);
 
-        let encoded = MyTy::encode(&data);
-        let encoded_params = MyTy::encode_params(&data);
+        let encoded = MyTy::abi_encode(&data);
+        let encoded_params = MyTy::abi_encode_params(&data);
 
         let expected = hex!(
             "

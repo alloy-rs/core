@@ -90,12 +90,12 @@ fn sol_types_encode(c: &mut Criterion) {
 
     g.bench_function("single", |b| {
         let input = encode_single_input();
-        b.iter(|| alloy_sol_types::sol_data::String::encode(black_box(&input)));
+        b.iter(|| alloy_sol_types::sol_data::String::abi_encode(black_box(&input)));
     });
 
     g.bench_function("struct", |b| {
         let input = encode_struct_input();
-        b.iter(|| Input::encode(black_box(&input)));
+        b.iter(|| Input::abi_encode(black_box(&input)));
     });
 
     g.finish();

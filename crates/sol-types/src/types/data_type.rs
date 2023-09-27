@@ -52,7 +52,7 @@ impl SolType for Bool {
     }
 
     #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         out.push(*rust as u8);
     }
 }
@@ -109,7 +109,7 @@ where
     }
 
     #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         IntBitCount::<BITS>::encode_packed_to_int(*rust, out);
     }
 }
@@ -156,7 +156,7 @@ where
     }
 
     #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         IntBitCount::<BITS>::encode_packed_to_uint(*rust, out);
     }
 }
@@ -196,7 +196,7 @@ impl SolType for Address {
     }
 
     #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         out.extend_from_slice(rust.as_slice());
     }
 }
@@ -236,7 +236,7 @@ impl SolType for Function {
     }
 
     #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         out.extend_from_slice(rust.as_slice());
     }
 }
@@ -279,11 +279,11 @@ impl SolType for Bytes {
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        keccak256(Self::encode_packed(rust))
+        keccak256(Self::abi_encode_packed(rust))
     }
 
     #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         out.extend_from_slice(rust);
     }
 }
@@ -294,18 +294,18 @@ pub struct Array<T: SolType>(PhantomData<T>);
 impl<T, U> Encodable<Array<T>> for [U]
 where
     T: SolType,
-    U: Borrow<T::RustType>,
+    U: Encodable<T>,
 {
     #[inline]
     fn to_tokens(&self) -> DynSeqToken<T::TokenType<'_>> {
-        DynSeqToken(self.iter().map(|r| r.borrow().to_tokens()).collect())
+        DynSeqToken(self.iter().map(|r| r.to_tokens()).collect())
     }
 }
 
 impl<T, U> Encodable<Array<T>> for Vec<U>
 where
     T: SolType,
-    U: Borrow<T::RustType>,
+    U: Encodable<T>,
 {
     #[inline]
     fn to_tokens(&self) -> DynSeqToken<T::TokenType<'_>> {
@@ -351,9 +351,9 @@ impl<T: SolType> SolType for Array<T> {
     }
 
     #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         for item in rust {
-            T::encode_packed_to(item, out);
+            T::abi_encode_packed_to(item, out);
         }
     }
 }
@@ -400,11 +400,11 @@ impl SolType for String {
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        keccak256(Self::encode_packed(rust))
+        keccak256(Self::abi_encode_packed(rust))
     }
 
     #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         out.extend_from_slice(rust.as_bytes());
     }
 }
@@ -454,7 +454,7 @@ where
     }
 
     #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         // write only the first n bytes
         out.extend_from_slice(rust.as_slice());
     }
@@ -523,9 +523,9 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     }
 
     #[inline]
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
         for item in rust {
-            T::encode_packed_to(item, out);
+            T::abi_encode_packed_to(item, out);
         }
     }
 }
@@ -628,11 +628,11 @@ macro_rules! tuple_impls {
                 keccak256(encoding).into()
             }
 
-            fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
+            fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>) {
                 let ($($ty,)+) = rust;
                 // TODO: Reserve
                 $(
-                    <$ty as SolType>::encode_packed_to($ty, out);
+                    <$ty as SolType>::abi_encode_packed_to($ty, out);
                 )+
             }
         }
@@ -671,7 +671,7 @@ impl SolType for () {
     }
 
     #[inline]
-    fn encode_packed_to((): &(), _out: &mut Vec<u8>) {}
+    fn abi_encode_packed_to((): &(), _out: &mut Vec<u8>) {}
 }
 
 all_the_tuples!(tuple_impls);

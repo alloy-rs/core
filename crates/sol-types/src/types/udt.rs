@@ -46,14 +46,14 @@ macro_rules! define_udt {
             /// underlying type.
             #[inline]
             pub fn abi_encode(&self) -> $crate::private::Vec<u8> {
-                <Self as $crate::SolType>::encode(&self.0)
+                <Self as $crate::SolType>::abi_encode(&self.0)
             }
 
             /// Return the packed encoding of this value, delegating to the
             /// underlying type.
             #[inline]
-            pub fn encode_packed(&self) -> $crate::private::Vec<u8> {
-                <Self as $crate::SolType>::encode_packed(&self.0)
+            pub fn abi_encode_packed(&self) -> $crate::private::Vec<u8> {
+                <Self as $crate::SolType>::abi_encode_packed(&self.0)
             }
         }
 
@@ -85,15 +85,13 @@ macro_rules! define_udt {
             }
 
             #[inline]
-            fn eip712_data_word(rust: &Self::RustType) -> $crate::Word
-            {
+            fn eip712_data_word(rust: &Self::RustType) -> $crate::Word {
                 <Self as $crate::SolType>::tokenize(rust).0
             }
 
             #[inline]
-            fn encode_packed_to(rust: &Self::RustType, out: &mut $crate::private::Vec<u8>)
-            {
-                <$underlying as $crate::SolType>::encode_packed_to(rust, out)
+            fn abi_encode_packed_to(rust: &Self::RustType, out: &mut $crate::private::Vec<u8>) {
+                <$underlying as $crate::SolType>::abi_encode_packed_to(rust, out)
             }
         }
 

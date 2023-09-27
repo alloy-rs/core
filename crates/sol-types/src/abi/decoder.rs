@@ -303,7 +303,7 @@ mod tests {
         );
 
         assert_eq!(
-            MyTy::encode_params(&vec![
+            MyTy::abi_encode_params(&vec![
                 vec![Address::repeat_byte(0x11)],
                 vec![Address::repeat_byte(0x22)],
             ]),

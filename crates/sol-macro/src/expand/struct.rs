@@ -119,10 +119,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 }
 
                 #[inline]
-                fn encode_packed_to(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                fn abi_encode_packed_to(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
                     // TODO: Avoid cloning
                     let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(rust.clone());
-                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::encode_packed_to(&tuple, out)
+                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
                 }
             }
 
