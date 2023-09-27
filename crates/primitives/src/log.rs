@@ -29,7 +29,7 @@ impl Log {
     #[inline]
     pub fn new(topics: Vec<B256>, data: Bytes) -> Option<Self> {
         let this = Self::new_unchecked(topics, data);
-        this.is_valid().then(|| this)
+        this.is_valid().then_some(this)
     }
 
     /// Creates a new empty log.
