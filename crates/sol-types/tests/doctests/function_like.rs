@@ -24,7 +24,7 @@ fn function() {
         a: U256::from(1),
         b: U256::from(2),
     };
-    let _call_data = call.encode();
+    let _call_data = call.abi_encode();
 
     // the signatures are unaffected
     let _ = overloaded_0Call {};
@@ -45,7 +45,7 @@ fn error() {
         "0000000000000000000000000000000000000000000000000000000000000002"
     );
     assert_eq!(
-        MyError::decode_raw(&call_data, true),
+        MyError::abi_decode_raw(&call_data, true),
         Ok(MyError {
             a: U256::from(1),
             b: U256::from(2)

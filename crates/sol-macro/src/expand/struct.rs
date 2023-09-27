@@ -96,10 +96,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 }
 
                 #[inline]
-                fn encoded_size(rust: &Self::RustType) -> usize {
+                fn abi_encoded_size(rust: &Self::RustType) -> usize {
                     // TODO: Avoid cloning
                     let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(rust.clone());
-                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::encoded_size(&tuple)
+                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::abi_encoded_size(&tuple)
                 }
 
                 #[inline]

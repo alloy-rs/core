@@ -40,7 +40,7 @@ pub trait SolError: Sized {
     /// The size of the error params when encoded in bytes, **without** the
     /// selector.
     #[inline]
-    fn encoded_size(&self) -> usize {
+    fn abi_encoded_size(&self) -> usize {
         if let Some(size) = <Self::Parameters<'_> as SolType>::ENCODED_SIZE {
             return size
         }
@@ -51,7 +51,7 @@ pub trait SolError: Sized {
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector.
     #[inline]
-    fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode_raw(data: &[u8], validate: bool) -> Result<Self> {
         <Self::Parameters<'_> as SolType>::decode_sequence(data, validate).map(Self::new)
     }
 
@@ -62,22 +62,22 @@ pub trait SolError: Sized {
         let data = data
             .strip_prefix(&Self::SELECTOR)
             .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
-        Self::decode_raw(data, validate)
+        Self::abi_decode_raw(data, validate)
     }
 
     /// ABI encode the error to the given buffer **without** its selector.
     #[inline]
-    fn encode_raw(&self, out: &mut Vec<u8>) {
-        out.reserve(self.encoded_size());
+    fn abi_encode_raw(&self, out: &mut Vec<u8>) {
+        out.reserve(self.abi_encoded_size());
         out.extend(crate::abi::encode_sequence(&self.tokenize()));
     }
 
     /// ABI encode the error to the given buffer **with** its selector.
     #[inline]
-    fn encode(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(4 + self.encoded_size());
+    fn abi_encode(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(4 + self.abi_encoded_size());
         out.extend(&Self::SELECTOR);
-        self.encode_raw(&mut out);
+        self.abi_encode_raw(&mut out);
         out
     }
 }
@@ -161,7 +161,7 @@ impl SolError for Revert {
     }
 
     #[inline]
-    fn encoded_size(&self) -> usize {
+    fn abi_encoded_size(&self) -> usize {
         64 + crate::utils::next_multiple_of_32(self.reason.len())
     }
 }
@@ -291,7 +291,7 @@ impl SolError for Panic {
     }
 
     #[inline]
-    fn encoded_size(&self) -> usize {
+    fn abi_encoded_size(&self) -> usize {
         32
     }
 }
@@ -437,9 +437,9 @@ mod tests {
     #[test]
     fn test_revert_encoding() {
         let revert = Revert::from("test");
-        let encoded = revert.encode();
+        let encoded = revert.abi_encode();
         let decoded = Revert::decode(&encoded, true).unwrap();
-        assert_eq!(encoded.len(), revert.encoded_size() + 4);
+        assert_eq!(encoded.len(), revert.abi_encoded_size() + 4);
         assert_eq!(encoded.len(), 100);
         assert_eq!(revert, decoded);
     }
@@ -448,10 +448,10 @@ mod tests {
     fn test_panic_encoding() {
         let panic = Panic { code: U256::ZERO };
         assert_eq!(panic.kind(), Some(PanicKind::Generic));
-        let encoded = panic.encode();
+        let encoded = panic.abi_encode();
         let decoded = Panic::decode(&encoded, true).unwrap();
 
-        assert_eq!(encoded.len(), panic.encoded_size() + 4);
+        assert_eq!(encoded.len(), panic.abi_encoded_size() + 4);
         assert_eq!(encoded.len(), 36);
         assert_eq!(panic, decoded);
     }
@@ -473,7 +473,7 @@ mod tests {
     #[test]
     fn test_decode_solidity_revert_reason() {
         let revert = Revert::from("test_revert_reason");
-        let encoded = revert.encode();
+        let encoded = revert.abi_encode();
         let decoded = decode_revert_reason(&encoded).unwrap();
         assert_eq!(decoded, String::from("revert: test_revert_reason"));
     }

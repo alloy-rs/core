@@ -130,7 +130,7 @@ pub trait SolType {
     /// Calculate the ABI-encoded size of the data, counting both head and tail
     /// words. For a single-word type this will always be 32.
     #[inline]
-    fn encoded_size(rust: &Self::RustType) -> usize {
+    fn abi_encoded_size(rust: &Self::RustType) -> usize {
         let _ = rust;
         Self::ENCODED_SIZE.unwrap()
     }

@@ -2,7 +2,7 @@
 //!
 //! ### `{encode,decode}`
 //!
-//! [`crate::SolType::encode()`] and [`encode()`] operate on a
+//! [`crate::SolType::encode()`] and [`abi_encode()`] operate on a
 //! single token. They wrap this token in a tuple, and pass it to the encoder.
 //! Use this interface when abi-encoding a single token. This is suitable for
 //! encoding a type in isolation, or for encoding parameters for single-param
@@ -22,7 +22,7 @@
 //!
 //! ### `{encode,decode}_sequence`
 //!
-//! [`crate::SolType::encode()`] and [`encode()`] operate on a sequence of
+//! [`crate::SolType::encode()`] and [`abi_encode()`] operate on a sequence of
 //! tokens. This sequence is inferred not to be function parameters.
 //!
 //! This is the least useful one. Most users will not need it.

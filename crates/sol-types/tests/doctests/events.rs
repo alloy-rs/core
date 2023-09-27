@@ -41,7 +41,7 @@ fn event() {
             WordToken(keccak256("Hello World"))
         ]
     );
-    // dynamic data is `abi.encode(b, d)`
+    // dynamic data is `abi.abi_encode(b, d)`
     assert_eq!(
         event.encode_data(),
         hex!(

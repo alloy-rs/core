@@ -60,7 +60,7 @@ fn e2e() {
 
     let mvt = MyValueType::from(U256::from(1));
     assert_eq!(
-        mvt.encode(),
+        mvt.abi_encode(),
         alloy_sol_types::sol_data::Uint::<256>::encode(&U256::from(1))
     );
 }
@@ -118,14 +118,14 @@ fn function() {
             },
         ],
     };
-    let encoded = call.encode();
+    let encoded = call.abi_encode();
     assert_eq!(
         encoded.len(),
-        someFunctionCall::SELECTOR.len() + call.encoded_size()
+        someFunctionCall::SELECTOR.len() + call.abi_encoded_size()
     );
 
     assert_eq!(
-        call.encoded_size(),
+        call.abi_encoded_size(),
         32 + (64 + 32) + (64 + 32 + 32) + (64 + 3 * 32) + 2 * 32 + (32 + 32) + (64 + 4 * (32 + 32))
     );
 }
@@ -144,7 +144,7 @@ fn error() {
         a: I256::ZERO,
         b: false,
     };
-    assert_eq!(e.encoded_size(), 64);
+    assert_eq!(e.abi_encoded_size(), 64);
 }
 
 // https://github.com/alloy-rs/core/issues/158
@@ -157,14 +157,14 @@ fn empty_call() {
     }
     use WETH::depositCall;
 
-    assert_eq!(depositCall {}.encode(), depositCall::SELECTOR);
-    assert_eq!(depositCall {}.encoded_size(), 0);
+    assert_eq!(depositCall {}.abi_encode(), depositCall::SELECTOR);
+    assert_eq!(depositCall {}.abi_encoded_size(), 0);
     let mut out = vec![];
-    depositCall {}.encode_raw(&mut out);
+    depositCall {}.abi_encode_raw(&mut out);
     assert!(out.is_empty());
 
     let depositCall {} = depositCall::decode(&depositCall::SELECTOR, true).unwrap();
-    let depositCall {} = depositCall::decode_raw(&[], true).unwrap();
+    let depositCall {} = depositCall::abi_decode_raw(&[], true).unwrap();
 }
 
 #[test]

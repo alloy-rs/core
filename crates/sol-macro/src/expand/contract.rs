@@ -278,14 +278,14 @@ impl<'a> CallLikeExpander<'a> {
                 }
 
                 #[inline]
-                fn decode_raw(
+                fn abi_decode_raw(
                     selector: [u8; 4],
                     data: &[u8],
                     validate: bool
                 )-> ::alloy_sol_types::Result<Self> {
                     match selector {
                         #(<#types as ::alloy_sol_types::#trait_>::SELECTOR => {
-                            <#types as ::alloy_sol_types::#trait_>::decode_raw(data, validate)
+                            <#types as ::alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
                                 .map(Self::#variants)
                         })*
                         s => ::core::result::Result::Err(::alloy_sol_types::Error::unknown_selector(
@@ -296,18 +296,18 @@ impl<'a> CallLikeExpander<'a> {
                 }
 
                 #[inline]
-                fn encoded_size(&self) -> usize {
+                fn abi_encoded_size(&self) -> usize {
                     match self {#(
                         Self::#variants(inner) =>
-                            <#types as ::alloy_sol_types::#trait_>::encoded_size(inner),
+                            <#types as ::alloy_sol_types::#trait_>::abi_encoded_size(inner),
                     )*}
                 }
 
                 #[inline]
-                fn encode_raw(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                fn abi_encode_raw(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
                     match self {#(
                         Self::#variants(inner) =>
-                            <#types as ::alloy_sol_types::#trait_>::encode_raw(inner, out),
+                            <#types as ::alloy_sol_types::#trait_>::abi_encode_raw(inner, out),
                     )*}
                 }
             }

@@ -196,7 +196,7 @@ mod tests {
         let expected = hex!("0000000000000000000000001111111111111111111111111111111111111111");
         let encoded = sol_data::Address::encode(&address);
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), sol_data::Address::encoded_size(&address));
+        assert_eq!(encoded.len(), sol_data::Address::abi_encoded_size(&address));
     }
 
     #[test]
@@ -214,7 +214,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
         .to_vec();
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), MyTy::encoded_size(&addresses));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&addresses));
     }
 
     #[test]
@@ -253,7 +253,7 @@ mod tests {
         .to_vec();
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&addresses));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&addresses));
     }
 
     #[test]
@@ -283,7 +283,7 @@ mod tests {
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
 
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
 
     #[test]
@@ -312,7 +312,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
 
     #[test]
@@ -342,7 +342,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
 
     #[test]
@@ -373,7 +373,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
 
     #[test]
@@ -399,7 +399,7 @@ mod tests {
         // a non-dynamic FixedSeq at top level NEVER has extra indirection
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), MyTy::encoded_size(&fixed));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&fixed));
     }
 
     #[test]
@@ -441,7 +441,7 @@ mod tests {
 
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -461,7 +461,7 @@ mod tests {
         .to_vec();
 
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(MyTy0,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy0,)>::abi_encoded_size(&(data,)));
 
         type MyTy = (
             sol_data::Array<sol_data::Address>,
@@ -486,7 +486,7 @@ mod tests {
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
 
         type MyTy2 = (
             sol_data::Array<sol_data::Array<sol_data::Address>>,
@@ -511,14 +511,14 @@ mod tests {
         .to_vec();
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
-        // be (as `encode(T)` or `encode((T,))`). This test was `encode(T)`
+        // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
         let encoded = MyTy2::encode(&data);
         assert_ne!(encoded, expected);
         let encoded_params = MyTy2::encode_params(&data);
 
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy2::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy2::abi_encoded_size(&data));
     }
 
     #[test]
@@ -536,7 +536,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(bytes,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(bytes,)));
     }
 
     #[test]
@@ -546,7 +546,7 @@ mod tests {
         assert_eq!(encoded, expected);
         assert_eq!(
             encoded.len(),
-            sol_data::FixedBytes::<2>::encoded_size(&[0x12, 0x34].into())
+            sol_data::FixedBytes::<2>::abi_encoded_size(&[0x12, 0x34].into())
         );
     }
 
@@ -563,7 +563,10 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(sol_data::String,)>::encoded_size(&(s,)));
+        assert_eq!(
+            encoded.len(),
+            <(sol_data::String,)>::abi_encoded_size(&(s,))
+        );
     }
 
     #[test]
@@ -579,7 +582,10 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(sol_data::Bytes,)>::encoded_size(&(bytes,)));
+        assert_eq!(
+            encoded.len(),
+            <(sol_data::Bytes,)>::abi_encoded_size(&(bytes,))
+        );
     }
 
     #[test]
@@ -602,7 +608,10 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(sol_data::Bytes,)>::encoded_size(&(bytes,)));
+        assert_eq!(
+            encoded.len(),
+            <(sol_data::Bytes,)>::abi_encoded_size(&(bytes,))
+        );
     }
 
     #[test]
@@ -628,11 +637,11 @@ mod tests {
         .to_vec();
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
-        // be (as `encode(T)` or `encode((T,))`). This test was `encode(T)`
+        // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
         assert_ne!(encoded, expected);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&bytes));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&bytes));
     }
 
     #[test]
@@ -641,7 +650,7 @@ mod tests {
         let encoded = sol_data::Uint::<8>::encode(&uint);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000004");
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), sol_data::Uint::<8>::encoded_size(&uint));
+        assert_eq!(encoded.len(), sol_data::Uint::<8>::abi_encoded_size(&uint));
     }
 
     #[test]
@@ -650,7 +659,7 @@ mod tests {
         let encoded = sol_data::Int::<8>::encode(&int);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000004");
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), sol_data::Int::<8>::encoded_size(&int));
+        assert_eq!(encoded.len(), sol_data::Int::<8>::abi_encoded_size(&int));
     }
 
     #[test]
@@ -658,7 +667,7 @@ mod tests {
         let encoded = sol_data::Bool::encode(&true);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000001");
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), sol_data::Bool::encoded_size(&true));
+        assert_eq!(encoded.len(), sol_data::Bool::abi_encoded_size(&true));
     }
 
     #[test]
@@ -666,7 +675,7 @@ mod tests {
         let encoded = sol_data::Bool::encode(&false);
         let expected = hex!("0000000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), sol_data::Bool::encoded_size(&false));
+        assert_eq!(encoded.len(), sol_data::Bool::abi_encoded_size(&false));
     }
 
     #[test]
@@ -708,11 +717,11 @@ mod tests {
         .to_vec();
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
-        // be (as `encode(T)` or `encode((T,))`). This test was `encode(T)`
+        // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
         assert_ne!(encoded, expected);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -747,13 +756,13 @@ mod tests {
         .to_vec();
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
-        // be (as `encode(T)` or `encode((T,))`). This test was `encode(T)`
+        // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
         let encoded = MyTy::encode(&data);
         assert_ne!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -780,7 +789,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
 
     #[test]
@@ -814,7 +823,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::encoded_size(&(data,)));
+        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
     }
 
     #[test]
@@ -834,7 +843,7 @@ mod tests {
         .to_vec();
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -861,7 +870,7 @@ mod tests {
         let encoded_params = MyTy::encode_params(&data);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -897,7 +906,7 @@ mod tests {
         assert_eq!(encoded, expected);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -935,7 +944,7 @@ mod tests {
         let encoded_params = MyTy::encode_params(&data);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -997,7 +1006,7 @@ mod tests {
         assert_eq!(encoded, expected);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -1039,11 +1048,11 @@ mod tests {
         .to_vec();
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
-        // be (as `encode(T)` or `encode((T,))`). This test was `encode(T)`
+        // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
         assert_ne!(encoded_single, expected);
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len() + 32, encoded_single.len());
-        assert_eq!(encoded.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -1080,7 +1089,7 @@ mod tests {
         // a static FixedSeq should NEVER indirect
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -1112,6 +1121,6 @@ mod tests {
         assert_eq!(encoded, expected);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::encoded_size(&data));
+        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
     }
 }

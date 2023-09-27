@@ -67,7 +67,7 @@ pub trait SolEvent: Sized {
 
     /// The size of the ABI-encoded dynamic data in bytes.
     #[inline]
-    fn encoded_size(&self) -> usize {
+    fn abi_encoded_size(&self) -> usize {
         if let Some(size) = <Self::DataTuple<'_> as SolType>::ENCODED_SIZE {
             return size
         }
@@ -78,7 +78,7 @@ pub trait SolEvent: Sized {
     /// ABI-encode the dynamic data of this event into the given buffer.
     #[inline]
     fn encode_data_to(&self, out: &mut Vec<u8>) {
-        out.reserve(self.encoded_size());
+        out.reserve(self.abi_encoded_size());
         out.extend(crate::abi::encode_sequence(&self.tokenize_body()));
     }
 

@@ -29,7 +29,7 @@ macro_rules! as_fixed_seq {
 /// let my_type: DynSolType = "uint64".parse().unwrap();
 /// let my_data: DynSolValue = 183u64.into();
 ///
-/// let encoded = my_data.encode();
+/// let encoded = my_data.abi_encode();
 /// let decoded = my_type.decode(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
@@ -749,14 +749,14 @@ impl DynSolValue {
             Self::Tuple(_) => self
                 .encode_sequence()
                 .expect("tuple is definitely a sequence"),
-            _ => self.encode(),
+            _ => self.abi_encode(),
         }
     }
 
     /// Encode this value into a byte array by wrapping it into a 1-element
     /// sequence.
     #[inline]
-    pub fn encode(&self) -> Vec<u8> {
+    pub fn abi_encode(&self) -> Vec<u8> {
         Self::encode_seq(core::slice::from_ref(self))
     }
 

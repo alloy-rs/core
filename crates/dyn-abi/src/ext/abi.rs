@@ -174,11 +174,11 @@ fn encode_typeck(params: &[Param], values: &[DynSolValue]) -> Result<Vec<u8>> {
         }
     }
 
-    Ok(encode(values))
+    Ok(abi_encode(values))
 }
 
 #[inline]
-fn encode(values: &[DynSolValue]) -> Vec<u8> {
+fn abi_encode(values: &[DynSolValue]) -> Vec<u8> {
     DynSolValue::encode_seq(values)
 }
 

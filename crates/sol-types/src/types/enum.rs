@@ -28,13 +28,13 @@ pub trait SolEnum: Sized + Copy + Into<u8> + TryFrom<u8, Error = crate::Error> {
 
     /// ABI encode the enum into the given buffer.
     #[inline]
-    fn encode_raw(self, out: &mut Vec<u8>) {
+    fn abi_encode_raw(self, out: &mut Vec<u8>) {
         out.extend(self.tokenize().0);
     }
 
     /// ABI encode the enum.
     #[inline]
-    fn encode(self) -> Vec<u8> {
+    fn abi_encode(self) -> Vec<u8> {
         self.tokenize().0.to_vec()
     }
 }

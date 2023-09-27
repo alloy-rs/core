@@ -54,7 +54,7 @@ fn dyn_abi_encode(c: &mut Criterion) {
         let input = encode_single_input();
         b.iter(|| {
             let value = DynSolValue::String(input.clone());
-            black_box(value).encode()
+            black_box(value).abi_encode()
         });
     });
 

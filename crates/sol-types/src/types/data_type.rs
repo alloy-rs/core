@@ -263,7 +263,7 @@ impl SolType for Bytes {
     }
 
     #[inline]
-    fn encoded_size(_data: &Self::RustType) -> usize {
+    fn abi_encoded_size(_data: &Self::RustType) -> usize {
         32 + utils::padded_len(_data.borrow())
     }
 
@@ -325,9 +325,9 @@ impl<T: SolType> SolType for Array<T> {
     }
 
     #[inline]
-    fn encoded_size(rust: &Self::RustType) -> usize {
+    fn abi_encoded_size(rust: &Self::RustType) -> usize {
         let data = rust;
-        32 + data.iter().map(T::encoded_size).sum::<usize>()
+        32 + data.iter().map(T::abi_encoded_size).sum::<usize>()
             + (T::DYNAMIC as usize * 32 * data.len())
     }
 
@@ -380,7 +380,7 @@ impl SolType for String {
     }
 
     #[inline]
-    fn encoded_size(rust: &Self::RustType) -> usize {
+    fn abi_encoded_size(rust: &Self::RustType) -> usize {
         32 + utils::padded_len(rust.as_bytes())
     }
 
@@ -488,12 +488,12 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     };
 
     #[inline]
-    fn encoded_size(rust: &Self::RustType) -> usize {
+    fn abi_encoded_size(rust: &Self::RustType) -> usize {
         if let Some(size) = Self::ENCODED_SIZE {
             return size
         }
 
-        rust.iter().map(T::encoded_size).sum::<usize>() + (T::DYNAMIC as usize * N * 32)
+        rust.iter().map(T::abi_encoded_size).sum::<usize>() + (T::DYNAMIC as usize * N * 32)
     }
 
     #[inline]
@@ -591,14 +591,14 @@ macro_rules! tuple_impls {
                 ).into()
             }
 
-            fn encoded_size(rust: &Self::RustType) -> usize {
+            fn abi_encoded_size(rust: &Self::RustType) -> usize {
                 if let Some(size) = Self::ENCODED_SIZE {
                     return size
                 }
 
                 let ($($ty,)+) = rust;
                 0 $(
-                    + <$ty as SolType>::encoded_size($ty)
+                    + <$ty as SolType>::abi_encoded_size($ty)
                 )+
                 $(
                     + (32 * <$ty as SolType>::DYNAMIC as usize)

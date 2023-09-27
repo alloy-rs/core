@@ -44,7 +44,7 @@ fn structs() {
         }
     );
 
-    let abi_encoded_enum = Enum::B.encode();
+    let abi_encoded_enum = Enum::B.abi_encode();
     assert_eq!(
         abi_encoded_enum,
         hex! {

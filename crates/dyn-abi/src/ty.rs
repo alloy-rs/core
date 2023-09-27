@@ -64,7 +64,7 @@ struct StructProp {
 /// let my_type = DynSolType::Uint(256);
 /// let my_data: DynSolValue = U256::from(183u64).into();
 ///
-/// let encoded = my_data.encode();
+/// let encoded = my_data.abi_encode();
 /// let decoded = my_type.decode(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
@@ -72,7 +72,7 @@ struct StructProp {
 /// let my_type = DynSolType::Array(Box::new(my_type));
 /// let my_data = DynSolValue::Array(vec![my_data.clone()]);
 ///
-/// let encoded = my_data.encode();
+/// let encoded = my_data.abi_encode();
 /// let decoded = my_type.decode(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
