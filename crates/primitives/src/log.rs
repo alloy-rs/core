@@ -28,10 +28,8 @@ impl Log {
     /// Creates a new log.
     #[inline]
     pub fn new(topics: Vec<B256>, data: Bytes) -> Option<Self> {
-        if topics.len() > 4 {
-            return None
-        }
-        Some(Self::new_unchecked(topics, data))
+        let this = Self::new_unchecked(topics, data);
+        this.is_valid().then(|| this)
     }
 
     /// Creates a new empty log.
@@ -41,6 +39,11 @@ impl Log {
             topics: Vec::new(),
             data: Bytes::new(),
         }
+    }
+
+    /// True if valid, false otherwise.
+    pub fn is_valid(&self) -> bool {
+        self.topics.len() <= 4
     }
 
     /// Get the topic list.
