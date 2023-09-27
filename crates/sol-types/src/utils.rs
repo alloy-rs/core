@@ -77,11 +77,6 @@ pub(crate) fn as_u32(word: Word, type_check: bool) -> Result<u32> {
     Ok(result)
 }
 
-#[inline]
-pub(crate) fn check_bool(slice: Word) -> bool {
-    check_zeroes(&slice[..31])
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

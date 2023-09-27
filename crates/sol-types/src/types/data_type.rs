@@ -6,7 +6,7 @@
 
 #![allow(missing_copy_implementations, missing_debug_implementations)]
 
-use crate::{abi::token::*, utils, Encodable, Result, SolType, Word};
+use crate::{abi::token::*, utils, Encodable, SolType, Word};
 use alloc::{borrow::Cow, string::String as RustString, vec::Vec};
 use alloy_primitives::{
     keccak256, Address as RustAddress, FixedBytes as RustFixedBytes, Function as RustFunction,
@@ -37,12 +37,8 @@ impl SolType for Bool {
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        if utils::check_bool(token.0) {
-            Ok(())
-        } else {
-            Err(Self::type_check_fail(token.as_slice()))
-        }
+    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+        utils::check_zeroes(&token.0[..31])
     }
 
     #[inline]
@@ -88,23 +84,18 @@ where
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
+    fn valid_token(token: &Self::TokenType<'_>) -> bool {
         if BITS == 256 {
-            return Ok(())
+            return true
         }
 
         let is_negative = token.0[IntBitCount::<BITS>::WORD_MSB] & 0x80 == 0x80;
         let sign_extension = is_negative as u8 * 0xff;
 
         // check that all upper bytes are an extension of the sign bit
-        if token.0[..IntBitCount::<BITS>::WORD_MSB]
+        token.0[..IntBitCount::<BITS>::WORD_MSB]
             .iter()
             .all(|byte| *byte == sign_extension)
-        {
-            Ok(())
-        } else {
-            Err(Self::type_check_fail(token.as_slice()))
-        }
     }
 
     #[inline]
@@ -150,13 +141,8 @@ where
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        let sli = &token.0[..<IntBitCount<BITS> as SupportedInt>::WORD_MSB];
-        if utils::check_zeroes(sli) {
-            Ok(())
-        } else {
-            Err(Self::type_check_fail(token.as_slice()))
-        }
+    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+        utils::check_zeroes(&token.0[..<IntBitCount<BITS> as SupportedInt>::WORD_MSB])
     }
 
     #[inline]
@@ -200,12 +186,8 @@ impl SolType for Address {
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        if utils::check_zeroes(&token.0[..12]) {
-            Ok(())
-        } else {
-            Err(Self::type_check_fail(token.as_slice()))
-        }
+    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+        utils::check_zeroes(&token.0[..12])
     }
 
     #[inline]
@@ -244,12 +226,8 @@ impl SolType for Function {
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        if utils::check_zeroes(&token.0[24..]) {
-            Ok(())
-        } else {
-            Err(Self::type_check_fail(token.as_slice()))
-        }
+    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+        utils::check_zeroes(&token.0[24..])
     }
 
     #[inline]
@@ -290,8 +268,8 @@ impl SolType for Bytes {
     }
 
     #[inline]
-    fn type_check(_token: &Self::TokenType<'_>) -> Result<()> {
-        Ok(())
+    fn valid_token(_token: &Self::TokenType<'_>) -> bool {
+        true
     }
 
     #[inline]
@@ -354,8 +332,8 @@ impl<T: SolType> SolType for Array<T> {
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        token.0.iter().try_for_each(T::type_check)
+    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+        token.0.iter().all(T::valid_token)
     }
 
     #[inline]
@@ -407,12 +385,8 @@ impl SolType for String {
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        if core::str::from_utf8(token.as_slice()).is_ok() {
-            Ok(())
-        } else {
-            Err(Self::type_check_fail(token.as_slice()))
-        }
+    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+        core::str::from_utf8(token.as_slice()).is_ok()
     }
 
     #[inline]
@@ -465,12 +439,8 @@ where
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        if utils::check_zeroes(&token.0[N..]) {
-            Ok(())
-        } else {
-            Err(Self::type_check_fail(token.as_slice()))
-        }
+    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+        utils::check_zeroes(&token.0[N..])
     }
 
     #[inline]
@@ -532,8 +502,8 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     }
 
     #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
-        token.as_array().iter().try_for_each(T::type_check)
+    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+        token.as_array().iter().all(T::valid_token)
     }
 
     #[inline]
@@ -635,12 +605,9 @@ macro_rules! tuple_impls {
                 )+
             }
 
-            fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
+            fn valid_token(token: &Self::TokenType<'_>) -> bool {
                 let ($($ty,)+) = token;
-                $(
-                    <$ty as SolType>::type_check($ty)?;
-                )+
-                Ok(())
+                $(<$ty as SolType>::valid_token($ty))&&+
             }
 
             fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
@@ -691,20 +658,20 @@ impl SolType for () {
     }
 
     #[inline]
-    fn type_check(_token: &Self::TokenType<'_>) -> Result<()> {
-        Ok(())
+    fn valid_token((): &()) -> bool {
+        true
     }
 
     #[inline]
-    fn detokenize(_token: Self::TokenType<'_>) -> Self::RustType {}
+    fn detokenize((): ()) -> Self::RustType {}
 
     #[inline]
-    fn eip712_data_word(_rust: &Self::RustType) -> Word {
+    fn eip712_data_word((): &()) -> Word {
         Word::ZERO
     }
 
     #[inline]
-    fn encode_packed_to(_rust: &Self::RustType, _out: &mut Vec<u8>) {}
+    fn encode_packed_to((): &(), _out: &mut Vec<u8>) {}
 }
 
 all_the_tuples!(tuple_impls);

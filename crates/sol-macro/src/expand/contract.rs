@@ -273,14 +273,8 @@ impl<'a> CallLikeExpander<'a> {
                 }
 
                 #[inline]
-                fn type_check(selector: [u8; 4]) -> ::alloy_sol_types::Result<()> {
-                    match selector {
-                        #(<#types as ::alloy_sol_types::#trait_>::SELECTOR)|* => Ok(()),
-                        s => ::core::result::Result::Err(::alloy_sol_types::Error::unknown_selector(
-                            Self::NAME,
-                            s,
-                        )),
-                    }
+                fn valid_selector(selector: [u8; 4]) -> bool {
+                    ::core::matches!(selector, #(<#types as ::alloy_sol_types::#trait_>::SELECTOR)|*)
                 }
 
                 #[inline]

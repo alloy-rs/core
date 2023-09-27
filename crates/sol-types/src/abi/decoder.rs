@@ -239,25 +239,23 @@ impl<'de> Decoder<'de> {
     }
 }
 
-/// Decodes ABI compliant vector of bytes into vector of tokens described by
-/// types param.
-pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
-    let mut decoder = Decoder::new(data, validate);
-    let res = decoder.decode_sequence::<T>()?;
-    if validate && encode_sequence(&res) != data {
-        return Err(Error::ReserMismatch)
-    }
-    Ok(res)
-}
-
-/// Decode a single token.
+/// ABI-decodes a single token by wrapping it in a single-element tuple.
+///
+/// You should probably be using [`SolType::decode`](crate::SolType::decode) if
+/// you're not intending to use raw tokens.
 #[inline]
 pub fn decode<'de, T: TokenType<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     decode_sequence::<(T,)>(data, validate).map(|(t,)| t)
 }
 
-/// Decode top-level function args. Encodes as params if T is a tuple.
-/// Otherwise, wraps in a tuple and decodes.
+/// ABI-decodes top-level function args.
+///
+/// Decodes as function parameters if [`T` is a tuple](TokenSeq::IS_TUPLE).
+/// Otherwise, decodes it as a single-element tuple.
+///
+/// You should probably be using
+/// [`SolType::decode_params`](crate::SolType::decode_params) if you're not
+/// intending to use raw tokens.
 #[inline]
 pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     if T::IS_TUPLE {
@@ -265,6 +263,21 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> 
     } else {
         decode(data, validate)
     }
+}
+
+/// Decodes ABI compliant vector of bytes into vector of tokens described by
+/// types param.
+///
+/// You should probably be using
+/// [`SolType::decode_sequence`](crate::SolType::decode_sequence) if you're not
+/// intending to use raw tokens.
+pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
+    let mut decoder = Decoder::new(data, validate);
+    let res = decoder.decode_sequence::<T>()?;
+    if validate && encode_sequence(&res) != data {
+        return Err(Error::ReserMismatch)
+    }
+    Ok(res)
 }
 
 #[cfg(test)]

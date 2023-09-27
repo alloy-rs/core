@@ -7,6 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use crate::abi;
 use alloc::{borrow::Cow, string::String};
 use core::fmt;
 
@@ -92,23 +93,32 @@ impl fmt::Display for Error {
 
 impl Error {
     /// Instantiates a new error with a static str.
-    #[inline]
+    #[cold]
     pub fn custom(s: impl Into<Cow<'static, str>>) -> Self {
         Self::Other(s.into())
     }
 
-    /// Instantiates a [`Error::TypeCheckFail`] with the provided data.
-    #[inline]
+    /// Instantiates a new [`Error::TypeCheckFail`] with the provided data.
+    #[cold]
     pub fn type_check_fail_sig(mut data: &[u8], signature: &'static str) -> Self {
         if data.len() > 4 {
             data = &data[..4];
         }
-        let expected_type = signature.split('(').next().unwrap_or(signature);
+        let expected_type = signature.split('(').next().unwrap();
         Self::type_check_fail(data, expected_type)
     }
 
-    /// Instantiates a [`Error::TypeCheckFail`] with the provided data.
-    #[inline]
+    /// Instantiates a new [`Error::TypeCheckFail`] with the provided token.
+    #[cold]
+    pub fn type_check_fail_token<'a>(
+        token: &impl abi::TokenType<'a>,
+        expected_type: impl Into<Cow<'static, str>>,
+    ) -> Self {
+        Self::type_check_fail(&abi::encode(token), expected_type)
+    }
+
+    /// Instantiates a new [`Error::TypeCheckFail`] with the provided data.
+    #[cold]
     pub fn type_check_fail(data: &[u8], expected_type: impl Into<Cow<'static, str>>) -> Self {
         Self::TypeCheckFail {
             expected_type: expected_type.into(),
@@ -116,8 +126,8 @@ impl Error {
         }
     }
 
-    /// Instantiates a [`Error::UnknownSelector`] with the provided data.
-    #[inline]
+    /// Instantiates a new [`Error::UnknownSelector`] with the provided data.
+    #[cold]
     pub fn unknown_selector(name: &'static str, selector: [u8; 4]) -> Self {
         Self::UnknownSelector {
             name,

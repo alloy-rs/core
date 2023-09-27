@@ -69,6 +69,11 @@ macro_rules! define_udt {
             }
 
             #[inline]
+            fn valid_token(token: &Self::TokenType<'_>) -> bool {
+                Self::type_check(token).is_ok()
+            }
+
+            #[inline]
             fn type_check(token: &Self::TokenType<'_>) -> $crate::Result<()> {
                 <$underlying as $crate::SolType>::type_check(token)?;
                 $path(token)

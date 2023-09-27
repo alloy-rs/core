@@ -103,8 +103,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 }
 
                 #[inline]
-                fn type_check(token: &Self::TokenType<'_>) -> ::alloy_sol_types::Result<()> {
-                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::type_check(token)
+                fn valid_token(token: &Self::TokenType<'_>) -> bool {
+                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::valid_token(token)
                 }
 
                 #[inline]

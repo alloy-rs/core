@@ -85,7 +85,7 @@ pub trait SolEvent: Sized {
     /// ABI-encode the dynamic data of this event.
     #[inline]
     fn encode_data(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(self.encoded_size());
+        let mut out = Vec::new();
         self.encode_data_to(&mut out);
         out
     }

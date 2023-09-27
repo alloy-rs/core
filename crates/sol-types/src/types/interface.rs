@@ -44,8 +44,20 @@ pub trait SolInterface: Sized {
     /// different selector otherwise.
     fn selector_at(i: usize) -> Option<[u8; 4]>;
 
-    /// Checks if the given selector is known to this type.
-    fn type_check(selector: [u8; 4]) -> Result<()>;
+    /// Returns `true` if the given selector is known to this type.
+    fn valid_selector(selector: [u8; 4]) -> bool;
+
+    /// Returns an error if the given selector is not known to this type.
+    fn type_check(selector: [u8; 4]) -> Result<()> {
+        if Self::valid_selector(selector) {
+            Ok(())
+        } else {
+            Err(Error::UnknownSelector {
+                name: Self::NAME,
+                selector: selector.into(),
+            })
+        }
+    }
 
     /// ABI-decodes the given data into one of the variants of `self`.
     fn decode_raw(selector: [u8; 4], data: &[u8], validate: bool) -> Result<Self>;
@@ -103,11 +115,8 @@ impl SolInterface for Infallible {
     }
 
     #[inline]
-    fn type_check(selector: [u8; 4]) -> Result<()> {
-        Err(Error::UnknownSelector {
-            name: Self::NAME,
-            selector: selector.into(),
-        })
+    fn valid_selector(_selector: [u8; 4]) -> bool {
+        false
     }
 
     #[inline]
@@ -249,10 +258,10 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
     }
 
     #[inline]
-    fn type_check(selector: [u8; 4]) -> Result<()> {
+    fn valid_selector(selector: [u8; 4]) -> bool {
         match selector {
-            Revert::SELECTOR | Panic::SELECTOR => Ok(()),
-            s => T::type_check(s),
+            Revert::SELECTOR | Panic::SELECTOR => true,
+            s => T::valid_selector(s),
         }
     }
 
