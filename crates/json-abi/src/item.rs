@@ -1,4 +1,9 @@
-use crate::{param::Param, utils::*, EventParam, InternalType, StateMutability};
+use crate::{
+    alloc::{borrow::ToOwned, string::ToString},
+    param::Param,
+    utils::*,
+    EventParam, InternalType, StateMutability,
+};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Selector, B256};
 use alloy_sol_type_parser::{TypeSpecifier, TypeStem};
