@@ -1,6 +1,7 @@
-use crate::{param::Param, utils::*, EventParam, StateMutability};
+use crate::{param::Param, utils::*, EventParam, InternalType, StateMutability};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Selector, B256};
+use alloy_sol_type_parser::{TypeSpecifier, TypeStem};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 // Serde order:
@@ -371,6 +372,106 @@ impl Error {
     pub fn selector(&self) -> Selector {
         selector(&self.signature())
     }
+
+    /// Parse a `String` into `Self`
+    pub fn parse(str: &str) -> Result<Self, String> {
+        let open_paren_idx = str
+            .find('(')
+            .ok_or("No opening parenthesis found".to_string())?;
+        let name = str[0..open_paren_idx].to_string();
+        let params_str = &str[(open_paren_idx + 1)..str.len() - 1]; // Exclude the last closing parenthesis
+
+        let params = parse_params(params_str)?;
+
+        Ok(Error {
+            name,
+            inputs: params,
+        })
+    }
+}
+
+fn parse_params(params: &str) -> Result<Vec<Param>, String> {
+    let mut result = vec![];
+    let mut iter = params.chars().peekable();
+    let mut buffer = String::new();
+    let mut nesting_level = 0;
+    while let Some(ch) = iter.next() {
+        match ch {
+            '(' => {
+                nesting_level += 1;
+                buffer.push(ch);
+            }
+            ')' => {
+                nesting_level -= 1;
+                buffer.push(ch);
+            }
+            ',' => {
+                if nesting_level == 0 {
+                    // This comma is not inside a tuple, so it separates parameters
+                    let param = parse_param(&buffer.trim())?;
+                    result.push(param);
+                    buffer.clear();
+                } else {
+                    // This comma is inside a tuple, so we don't want to treat it as a parameter
+                    // separator
+                    buffer.push(ch);
+                }
+            }
+            _ => {
+                buffer.push(ch);
+            }
+        }
+    }
+
+    if !buffer.is_empty() {
+        let param = parse_param(&buffer.trim())?;
+        result.push(param);
+    }
+    Ok(result)
+}
+
+fn parse_param(param_str: &str) -> Result<Param, String> {
+    // Assumption: whitespaces only to separate type and name.
+    // For example:
+    // `uint256 arg1`
+    // Never put whitespaces between args like this:
+    // `uint256 arg1, uint256 arg2`
+    //              ^
+    //              |----> this whitespace is not allowed!
+    let mut iter = param_str.split(" ");
+    let ty_str = iter.next().ok_or("Incorrect format used")?;
+    let name = iter.next().ok_or("Incorrect format used")?;
+
+    let stem = TypeSpecifier::parse(ty_str)
+        .map_err(|_| "Incorrect format used")?
+        .stem;
+    let mut components = vec![];
+    let ty;
+    match stem {
+        TypeStem::Root(_) => {
+            ty = ty_str.to_string();
+        }
+        TypeStem::Tuple(tuple_type) => {
+            ty = "tuple".to_string();
+            if !tuple_type.types.is_empty() {
+                for type_specifier in tuple_type.types.iter() {
+                    // adding a whitespace in order to handle gracefully the empty name
+                    match parse_param((type_specifier.span.to_owned() + " ").as_str()) {
+                        Ok(param) => components.push(param),
+                        Err(e) => return Err(e),
+                    }
+                }
+            }
+        }
+    }
+
+    let param = Param {
+        name: name.to_string(),
+        ty,
+        components,
+        internal_type: InternalType::parse(ty_str),
+    };
+    Ok(param)
 }
 
 impl Function {
@@ -414,5 +515,38 @@ impl Event {
     #[inline]
     pub fn selector(&self) -> B256 {
         keccak256(self.signature().as_bytes())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::Error;
+    #[test]
+    fn test1() {
+        let error_str = "Myerror(uint256 a,(address,uint256) arg2)";
+        let err = Error::parse(error_str).unwrap();
+        println!("{:#?}", err);
+    }
+
+    #[test]
+    fn test2() {
+        let error_str = "Myerror((address,uint256) arg2)";
+        let err = Error::parse(error_str).unwrap();
+        println!("{:#?}", err);
+    }
+
+    #[test]
+    fn test3() {
+        let error_str =
+            "Myerror(uint256 a,(address,uint256) arg2,(address,uint256,(uint256,uint256[2])) arg3)";
+        let err = Error::parse(error_str).unwrap();
+        println!("{:#?}", err);
+    }
+
+    #[test]
+    fn test4() {
+        let error_str = "Myerror((address,(uint256,uint256[2])) arg3)";
+        let err = Error::parse(error_str).unwrap();
+        println!("{:#?}", err);
     }
 }
