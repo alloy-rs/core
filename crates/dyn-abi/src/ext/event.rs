@@ -163,16 +163,6 @@ mod tests {
                     indexed: true,
                     ..Default::default()
                 },
-                EventParam {
-                    ty: "int256[]".into(),
-                    indexed: true,
-                    ..Default::default()
-                },
-                EventParam {
-                    ty: "address[5]".into(),
-                    indexed: true,
-                    ..Default::default()
-                },
             ],
             anonymous: false,
         };
@@ -221,14 +211,6 @@ mod tests {
                 DynSolValue::Address(address!("1111111111111111111111111111111111111111")),
                 DynSolValue::FixedBytes(
                     b256!("00000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-                    32
-                ),
-                DynSolValue::FixedBytes(
-                    b256!("00000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
-                    32
-                ),
-                DynSolValue::FixedBytes(
-                    b256!("00000000000000000ccccccccccccccccccccccccccccccccccccccccccccccc"),
                     32
                 ),
             ]
