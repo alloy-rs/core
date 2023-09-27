@@ -397,10 +397,10 @@ impl Error {
 
 fn parse_params(params: &str) -> Result<Vec<Param>, String> {
     let mut result = vec![];
-    let mut iter = params.chars().peekable();
+    let iter = params.chars().peekable();
     let mut buffer = String::new();
     let mut nesting_level = 0;
-    while let Some(ch) = iter.next() {
+    for ch in iter {
         match ch {
             '(' => {
                 nesting_level += 1;
@@ -413,7 +413,7 @@ fn parse_params(params: &str) -> Result<Vec<Param>, String> {
             ',' => {
                 if nesting_level == 0 {
                     // This comma is not inside a tuple, so it separates parameters
-                    let param = parse_param(&buffer.trim())?;
+                    let param = parse_param(buffer.trim())?;
                     result.push(param);
                     buffer.clear();
                 } else {
@@ -429,7 +429,7 @@ fn parse_params(params: &str) -> Result<Vec<Param>, String> {
     }
 
     if !buffer.is_empty() {
-        let param = parse_param(&buffer.trim())?;
+        let param = parse_param(buffer.trim())?;
         result.push(param);
     }
     Ok(result)
@@ -443,7 +443,7 @@ fn parse_param(param_str: &str) -> Result<Param, String> {
     // `uint256 arg1, uint256 arg2`
     //              ^
     //              |----> this whitespace is not allowed!
-    let mut iter = param_str.split(" ");
+    let mut iter = param_str.split(' ');
     let ty_str = iter.next().ok_or("Incorrect format used")?;
     let name = iter.next().ok_or("Incorrect format used")?;
 
