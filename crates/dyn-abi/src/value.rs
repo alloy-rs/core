@@ -485,6 +485,15 @@ impl DynSolValue {
         }
     }
 
+    /// Fallible conversion to a sequence.
+    #[inline]
+    pub(crate) fn into_fixed_seq(self) -> Option<Vec<Self>> {
+        match self {
+            as_fixed_seq!(tuple) => Some(tuple),
+            _ => None,
+        }
+    }
+
     /// Fallible cast to a packed sequence. Any of a String, or a Bytes.
     #[inline]
     pub fn as_packed_seq(&self) -> Option<&[u8]> {
