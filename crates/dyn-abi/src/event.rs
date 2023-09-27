@@ -128,7 +128,7 @@ impl DynSolEvent {
     }
 
     /// Get the selector for this event, if any.
-    pub fn topic_0(&self) -> Option<B256> {
+    pub const fn topic_0(&self) -> Option<B256> {
         self.topic_0
     }
 

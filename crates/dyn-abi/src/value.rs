@@ -487,6 +487,7 @@ impl DynSolValue {
 
     /// Fallible conversion to a sequence.
     #[inline]
+    #[allow(clippy::missing_const_for_fn)] // erroneous lint
     pub(crate) fn into_fixed_seq(self) -> Option<Vec<Self>> {
         match self {
             as_fixed_seq!(tuple) => Some(tuple),
