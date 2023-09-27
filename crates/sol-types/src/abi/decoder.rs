@@ -241,8 +241,9 @@ impl<'de> Decoder<'de> {
 
 /// ABI-decodes a single token by wrapping it in a single-element tuple.
 ///
-/// You should probably be using [`SolType::decode`](crate::SolType::decode) if
-/// you're not intending to use raw tokens.
+/// You should probably be using
+/// [`SolType::abi_decode`](crate::SolType::abi_decode) if you're not intending
+/// to use raw tokens.
 #[inline]
 pub fn decode<'de, T: TokenType<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     decode_sequence::<(T,)>(data, validate).map(|(t,)| t)
@@ -254,8 +255,8 @@ pub fn decode<'de, T: TokenType<'de>>(data: &'de [u8], validate: bool) -> Result
 /// Otherwise, decodes it as a single-element tuple.
 ///
 /// You should probably be using
-/// [`SolType::decode_params`](crate::SolType::decode_params) if you're not
-/// intending to use raw tokens.
+/// [`SolType::abi_decode_params`](crate::SolType::abi_decode_params) if you're
+/// not intending to use raw tokens.
 #[inline]
 pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     if T::IS_TUPLE {
@@ -269,8 +270,8 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> 
 /// types param.
 ///
 /// You should probably be using
-/// [`SolType::decode_sequence`](crate::SolType::decode_sequence) if you're not
-/// intending to use raw tokens.
+/// [`SolType::abi_decode_sequence`](crate::SolType::abi_decode_sequence) if
+/// you're not intending to use raw tokens.
 pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     let mut decoder = Decoder::new(data, validate);
     let res = decoder.decode_sequence::<T>()?;

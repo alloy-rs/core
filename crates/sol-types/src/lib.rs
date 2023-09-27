@@ -138,6 +138,8 @@
 //! The [`SolType`] encoding and decoding methods operate on Rust types. We
 //! recommend users use them wherever possible. We do not recommend that users
 //! interact with Tokens, except when implementing their own [`SolType`].
+//!
+//! [`TokenType`]: abi::TokenType
 
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",

@@ -66,8 +66,9 @@ pub trait JsonAbiExt: Sealed {
 pub trait FunctionExt: JsonAbiExt + Sealed {
     /// ABI-encodes the given values.
     ///
-    /// Note that, contrary to [`encode_input`](JsonAbiExt::encode_input), this
-    /// method does not prefix the return data with the function selector.
+    /// Note that, contrary to
+    /// [`abi_encode_input`](JsonAbiExt::abi_encode_input), this method does
+    /// not prefix the return data with the function selector.
     ///
     /// # Errors
     ///
