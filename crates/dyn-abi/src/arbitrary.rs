@@ -649,8 +649,8 @@ mod tests {
             prop_assert_eq!(parsed.as_ref(), Ok(&ty), "types don't match {:?}", s);
         }
 
-        let data = value.encode_params();
-        match ty.decode_params(&data) {
+        let data = value.abi_encode_params();
+        match ty.abi_decode_params(&data) {
             // skip the check if the type contains a CustomStruct, since
             // decoding will not populate names
             Ok(decoded) if !decoded.has_custom_struct() => prop_assert_eq!(

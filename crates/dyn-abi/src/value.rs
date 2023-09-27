@@ -30,7 +30,7 @@ macro_rules! as_fixed_seq {
 /// let my_data: DynSolValue = 183u64.into();
 ///
 /// let encoded = my_data.abi_encode();
-/// let decoded = my_type.decode(&encoded)?;
+/// let decoded = my_type.abi_decode(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
 /// # Ok::<(), alloy_dyn_abi::Error>(())
@@ -727,6 +727,13 @@ impl DynSolValue {
         enc.pop_offset();
     }
 
+    /// Encode this value into a byte array by wrapping it into a 1-element
+    /// sequence.
+    #[inline]
+    pub fn abi_encode(&self) -> Vec<u8> {
+        Self::encode_seq(core::slice::from_ref(self))
+    }
+
     /// Encode this value into a byte array suitable for passing to a function.
     /// If this value is a tuple, it is encoded as is. Otherwise, it is wrapped
     /// into a 1-element sequence.
@@ -735,35 +742,28 @@ impl DynSolValue {
     ///
     /// ```ignore (pseudo-code)
     /// // Encoding for function foo(address)
-    /// DynSolValue::Address(_).encode_params();
+    /// DynSolValue::Address(_).abi_encode_params();
     ///
     /// // Encoding for function foo(address, uint256)
     /// DynSolValue::Tuple(vec![
     ///     DynSolValue::Address(_),
     ///     DynSolValue::Uint(_, 256),
-    /// ]).encode_params();
+    /// ]).abi_encode_params();
     /// ```
     #[inline]
-    pub fn encode_params(&self) -> Vec<u8> {
+    pub fn abi_encode_params(&self) -> Vec<u8> {
         match self {
             Self::Tuple(_) => self
-                .encode_sequence()
+                .abi_encode_sequence()
                 .expect("tuple is definitely a sequence"),
             _ => self.abi_encode(),
         }
     }
 
-    /// Encode this value into a byte array by wrapping it into a 1-element
-    /// sequence.
-    #[inline]
-    pub fn abi_encode(&self) -> Vec<u8> {
-        Self::encode_seq(core::slice::from_ref(self))
-    }
-
     /// If this value is a fixed sequence, encode it into a byte array. If this
     /// value is not a fixed sequence, return `None`.
     #[inline]
-    pub fn encode_sequence(&self) -> Option<Vec<u8>> {
+    pub fn abi_encode_sequence(&self) -> Option<Vec<u8>> {
         self.as_fixed_seq().map(Self::encode_seq)
     }
 }

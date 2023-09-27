@@ -132,13 +132,13 @@ pub trait SolEvent: Sized {
         <Self::TopicList as TopicList>::detokenize(topics)
     }
 
-    /// Decode the dynamic data of this event from the given buffer.
+    /// ABI-decodes the dynamic data of this event from the given buffer.
     #[inline]
-    fn decode_data<'a>(
+    fn abi_decode_data<'a>(
         data: &'a [u8],
         validate: bool,
     ) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
-        <Self::DataTuple<'a> as SolType>::decode_sequence(data, validate)
+        <Self::DataTuple<'a> as SolType>::abi_decode_sequence(data, validate)
     }
 
     /// Decode the event from the given log info.
@@ -148,7 +148,7 @@ pub trait SolEvent: Sized {
         D: Into<WordToken>,
     {
         let topics = Self::decode_topics(topics)?;
-        let body = Self::decode_data(data, validate)?;
+        let body = Self::abi_decode_data(data, validate)?;
         Ok(Self::new(topics, body))
     }
 }

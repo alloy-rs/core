@@ -52,13 +52,13 @@ pub trait SolError: Sized {
     /// selector.
     #[inline]
     fn abi_decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Parameters<'_> as SolType>::decode_sequence(data, validate).map(Self::new)
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence(data, validate).map(Self::new)
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the
     /// selector.
     #[inline]
-    fn decode(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode(data: &[u8], validate: bool) -> Result<Self> {
         let data = data
             .strip_prefix(&Self::SELECTOR)
             .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
@@ -412,11 +412,11 @@ impl PanicKind {
 }
 
 /// Returns the revert reason from the given output data. Returns `None` if the
-/// content is not a valid abi encoded String or a regular utf8 string (for
-/// Vyper reverts).
+/// content is not a valid ABI-encoded [`GenericContractError`] or a [UTF-8
+/// string](String) (for Vyper reverts).
 pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
     // Try to decode as a generic contract error.
-    if let Ok(error) = GenericContractError::decode(out, true) {
+    if let Ok(error) = GenericContractError::abi_decode(out, true) {
         return Some(error.to_string())
     }
 
@@ -438,7 +438,7 @@ mod tests {
     fn test_revert_encoding() {
         let revert = Revert::from("test");
         let encoded = revert.abi_encode();
-        let decoded = Revert::decode(&encoded, true).unwrap();
+        let decoded = Revert::abi_decode(&encoded, true).unwrap();
         assert_eq!(encoded.len(), revert.abi_encoded_size() + 4);
         assert_eq!(encoded.len(), 100);
         assert_eq!(revert, decoded);
@@ -449,7 +449,7 @@ mod tests {
         let panic = Panic { code: U256::ZERO };
         assert_eq!(panic.kind(), Some(PanicKind::Generic));
         let encoded = panic.abi_encode();
-        let decoded = Panic::decode(&encoded, true).unwrap();
+        let decoded = Panic::abi_decode(&encoded, true).unwrap();
 
         assert_eq!(encoded.len(), panic.abi_encoded_size() + 4);
         assert_eq!(encoded.len(), 36);

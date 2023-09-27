@@ -310,7 +310,7 @@ mod tests {
             encoded
         );
 
-        MyTy::decode_params(&encoded, false).unwrap();
+        MyTy::abi_decode_params(&encoded, false).unwrap();
     }
 
     #[test]
@@ -328,7 +328,7 @@ mod tests {
         let address2 = Address::from([0x22u8; 20]);
         let uint = U256::from_be_bytes::<32>([0x11u8; 32]);
         let expected = (address1, address2, uint);
-        let decoded = MyTy::decode_sequence(&encoded, true).unwrap();
+        let decoded = MyTy::abi_decode_sequence(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -351,7 +351,7 @@ mod tests {
         let expected = (string1, string2);
 
         // this test vector contains a top-level indirect
-        let decoded = MyTy::decode(&encoded, true).unwrap();
+        let decoded = MyTy::abi_decode(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -405,7 +405,7 @@ mod tests {
         let inner_tuple = (string3, string4, deep_tuple);
         let expected = (string1, bool, string2, inner_tuple);
 
-        let decoded = MyTy::decode(&encoded, true).unwrap();
+        let decoded = MyTy::abi_decode(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -435,7 +435,7 @@ mod tests {
         let address2 = Address::from([0x22u8; 20]);
         let expected = (uint, string, address1, address2);
 
-        let decoded = MyTy::decode(&encoded, true).unwrap();
+        let decoded = MyTy::abi_decode(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -475,7 +475,7 @@ mod tests {
         let bool2 = false;
         let expected = (address1, tuple, address2, address3, bool2);
 
-        let decoded = MyTy::decode_params(&encoded, true).unwrap();
+        let decoded = MyTy::abi_decode_params(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -508,7 +508,7 @@ mod tests {
 
         let expected = (address1, tuple, address3, address4);
 
-        let decoded = MyTy::decode_params(&encoded, false).unwrap();
+        let decoded = MyTy::abi_decode_params(&encoded, false).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -548,7 +548,7 @@ mod tests {
         "
         );
 
-        assert_eq!(MyTy::decode_sequence(&encoded, false).unwrap(), data,);
+        assert_eq!(MyTy::abi_decode_sequence(&encoded, false).unwrap(), data,);
     }
 
     #[test]
@@ -572,7 +572,7 @@ mod tests {
         );
 
         assert_eq!(
-            MyTy::decode_params(&encoded, false).unwrap(),
+            MyTy::abi_decode_params(&encoded, false).unwrap(),
             (
                 address!("8497afefdc5ac170a664a231f6efb25526ef813f"),
                 B256::repeat_byte(0x01),
@@ -593,7 +593,7 @@ mod tests {
         );
 
         assert_eq!(
-            sol_data::String::decode(&encoded, false).unwrap(),
+            sol_data::String::abi_decode(&encoded, false).unwrap(),
             "不�".to_string()
         );
     }
@@ -613,7 +613,7 @@ mod tests {
     	0000000000000000000000000000000000000000000000000000000000000002
         "
         );
-        assert!(MyTy::decode_sequence(&encoded, true).is_err());
+        assert!(MyTy::abi_decode_sequence(&encoded, true).is_err());
     }
 
     #[test]
@@ -624,9 +624,9 @@ mod tests {
     	0000000000000000000000000000000000000000000000000000000000054321
     	"
         );
-        assert!(sol_data::Address::decode(&input, false).is_ok());
-        assert!(sol_data::Address::decode(&input, true).is_err());
-        assert!(<(sol_data::Address, sol_data::Address)>::decode(&input, true).is_ok());
+        assert!(sol_data::Address::abi_decode(&input, false).is_ok());
+        assert!(sol_data::Address::abi_decode(&input, true).is_err());
+        assert!(<(sol_data::Address, sol_data::Address)>::abi_decode(&input, true).is_ok());
     }
 
     #[test]
@@ -640,8 +640,8 @@ mod tests {
     	0000000000000000000000005432100000000000000000000000000000054321
     	"
         );
-        MyTy::decode_params(&input, true).unwrap_err();
-        assert!(MyTy2::decode_params(&input, true).is_ok());
+        MyTy::abi_decode_params(&input, true).unwrap_err();
+        assert!(MyTy2::abi_decode_params(&input, true).is_ok());
     }
 
     #[test]
@@ -651,11 +651,11 @@ mod tests {
         let dirty_negative =
             hex!("f0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
-        assert_eq!(MyTy::decode(&dirty_negative, false).unwrap(), -1);
+        assert_eq!(MyTy::abi_decode(&dirty_negative, false).unwrap(), -1);
 
         assert!(
             matches!(
-                MyTy::decode(&dirty_negative, true),
+                MyTy::abi_decode(&dirty_negative, true),
                 Err(crate::Error::TypeCheckFail { .. }),
             ),
             "did not match error"
@@ -664,11 +664,11 @@ mod tests {
         let dirty_positive =
             hex!("700000000000000000000000000000000000000000000000000000000000007f");
 
-        assert_eq!(MyTy::decode(&dirty_positive, false).unwrap(), 127);
+        assert_eq!(MyTy::abi_decode(&dirty_positive, false).unwrap(), 127);
 
         assert!(
             matches!(
-                MyTy::decode(&dirty_positive, true),
+                MyTy::abi_decode(&dirty_positive, true),
                 Err(crate::Error::TypeCheckFail { .. }),
             ),
             "did not match error"

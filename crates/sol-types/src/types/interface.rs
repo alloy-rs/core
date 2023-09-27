@@ -85,7 +85,7 @@ pub trait SolInterface: Sized {
 
     /// ABI-decodes the given data into one of the variants of `self`.
     #[inline]
-    fn decode(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode(data: &[u8], validate: bool) -> Result<Self> {
         if data.len() < Self::MIN_DATA_LENGTH + 4 {
             Err(crate::Error::type_check_fail(data, Self::NAME))
         } else {
@@ -270,7 +270,7 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
         match selector {
             Revert::SELECTOR => Revert::abi_decode_raw(data, validate).map(Self::Revert),
             Panic::SELECTOR => Panic::abi_decode_raw(data, validate).map(Self::Panic),
-            _ => T::decode(data, validate).map(Self::CustomError),
+            _ => T::abi_decode(data, validate).map(Self::CustomError),
         }
     }
 

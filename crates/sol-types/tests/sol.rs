@@ -163,7 +163,7 @@ fn empty_call() {
     depositCall {}.abi_encode_raw(&mut out);
     assert!(out.is_empty());
 
-    let depositCall {} = depositCall::decode(&depositCall::SELECTOR, true).unwrap();
+    let depositCall {} = depositCall::abi_decode(&depositCall::SELECTOR, true).unwrap();
     let depositCall {} = depositCall::abi_decode_raw(&[], true).unwrap();
 }
 

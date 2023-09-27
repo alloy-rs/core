@@ -217,14 +217,14 @@ pub trait SolType {
 
     /// Decode a Rust type from an ABI blob.
     #[inline]
-    fn decode(data: &[u8], validate: bool) -> Result<Self::RustType> {
+    fn abi_decode(data: &[u8], validate: bool) -> Result<Self::RustType> {
         abi::decode::<Self::TokenType<'_>>(data, validate)
             .and_then(|t| check_decode::<Self>(t, validate))
     }
 
     /// ABI-decode the given data
     #[inline]
-    fn decode_params<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
+    fn abi_decode_params<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
     where
         Self::TokenType<'de>: TokenSeq<'de>,
     {
@@ -234,7 +234,7 @@ pub trait SolType {
 
     /// ABI-decode a Rust type from an ABI blob.
     #[inline]
-    fn decode_sequence<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
+    fn abi_decode_sequence<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
     where
         Self::TokenType<'de>: TokenSeq<'de>,
     {

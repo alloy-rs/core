@@ -107,8 +107,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                     #tokenize_impl
                 }
 
-                fn decode_returns(data: &[u8], validate: bool) -> ::alloy_sol_types::Result<Self::Return> {
-                    <Self::ReturnTuple<'_> as ::alloy_sol_types::SolType>::decode(data, validate).map(Into::into)
+                fn abi_decode_returns(data: &[u8], validate: bool) -> ::alloy_sol_types::Result<Self::Return> {
+                    <Self::ReturnTuple<'_> as ::alloy_sol_types::SolType>::abi_decode(data, validate).map(Into::into)
                 }
             }
         };
