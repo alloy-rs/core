@@ -3,6 +3,9 @@ use alloc::vec::Vec;
 use alloy_primitives::{Log, B256};
 
 /// A dynamic ABI event.
+///
+/// This is a representation of a Solidity event, which can be used to decode
+/// logs.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DynSolEvent {
     pub(crate) topic_0: Option<B256>,
@@ -124,6 +127,21 @@ impl DynSolEvent {
     /// Decode the event from the given log info.
     pub fn decode_log(&self, log: &Log, validate: bool) -> Result<DecodedEvent> {
         self.decode_log_parts(log.topics().iter().copied(), &log.data, validate)
+    }
+
+    /// Get the selector for this event, if any.
+    pub fn topic_0(&self) -> Option<B256> {
+        self.topic_0
+    }
+
+    /// Get the indexed types.
+    pub fn indexed(&self) -> &[DynSolType] {
+        &self.indexed
+    }
+
+    /// Get the un-indexed types.
+    pub fn body(&self) -> &[DynSolType] {
+        self.body.as_tuple().expect("body is a tuple")
     }
 }
 

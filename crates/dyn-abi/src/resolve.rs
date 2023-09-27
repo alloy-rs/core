@@ -18,7 +18,7 @@ use alloy_json_abi::InternalType;
 /// into Solidity-style event descriptors (i.e. a list of indexed parameters and
 /// a tuple of non-indexed parameters).
 ///
-/// This trait is implemented for [`alloy_json_abi::Event`], and may be used
+/// This trait is implemented for [`alloy_json_abi::Event`].
 pub trait ResolveSolEvent {
     /// Resolve the type into a [`DynSolEvent`].
     fn resolve(&self) -> Result<DynSolEvent>;
