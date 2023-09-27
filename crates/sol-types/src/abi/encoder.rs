@@ -7,7 +7,10 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use crate::{token::TokenSeq, utils, TokenType, Word};
+use crate::{
+    abi::{TokenSeq, TokenType},
+    utils, Word,
+};
 use alloc::vec::Vec;
 use core::{mem, ptr};
 

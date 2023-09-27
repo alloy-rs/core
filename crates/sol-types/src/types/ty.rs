@@ -1,4 +1,7 @@
-use crate::{token::TokenSeq, Result, TokenType, Word};
+use crate::{
+    abi::{token::TokenSeq, TokenType},
+    Result, Word,
+};
 use alloc::{borrow::Cow, vec::Vec};
 
 /// An encodable is any type that may be encoded via a given [`SolType`].
@@ -196,7 +199,7 @@ pub trait SolType {
     /// Encode a single ABI token by wrapping it in a 1-length sequence.
     #[inline]
     fn encode<E: Encodable<Self>>(rust: &E) -> Vec<u8> {
-        crate::encode(&rust.to_tokens())
+        crate::abi::encode(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence.
@@ -205,7 +208,7 @@ pub trait SolType {
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
-        crate::encode_sequence(&rust.to_tokens())
+        crate::abi::encode_sequence(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence suitable for function parameters.
@@ -214,13 +217,13 @@ pub trait SolType {
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
-        crate::encode_params(&rust.to_tokens())
+        crate::abi::encode_params(&rust.to_tokens())
     }
 
     /// Decode a Rust type from an ABI blob.
     #[inline]
     fn decode(data: &[u8], validate: bool) -> Result<Self::RustType> {
-        let decoded = crate::decode::<Self::TokenType<'_>>(data, validate)?;
+        let decoded = crate::abi::decode::<Self::TokenType<'_>>(data, validate)?;
         if validate {
             Self::type_check(&decoded)?;
         }
@@ -233,7 +236,7 @@ pub trait SolType {
     where
         Self::TokenType<'de>: TokenSeq<'de>,
     {
-        let decoded = crate::decode_sequence::<Self::TokenType<'_>>(data, validate)?;
+        let decoded = crate::abi::decode_sequence::<Self::TokenType<'_>>(data, validate)?;
         if validate {
             Self::type_check(&decoded)?;
         }
@@ -246,7 +249,7 @@ pub trait SolType {
     where
         Self::TokenType<'de>: TokenSeq<'de>,
     {
-        let decoded = crate::decode_params::<Self::TokenType<'_>>(data, validate)?;
+        let decoded = crate::abi::decode_params::<Self::TokenType<'_>>(data, validate)?;
         if validate {
             Self::type_check(&decoded)?;
         }

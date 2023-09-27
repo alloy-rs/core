@@ -158,10 +158,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 #[inline]
                 fn encode_topic(
                     rust: &Self::RustType
-                ) -> ::alloy_sol_types::token::WordToken {
+                ) -> ::alloy_sol_types::abi::token::WordToken {
                     let mut out = Vec::new();
                     <Self as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust, &mut out);
-                    ::alloy_sol_types::token::WordToken(
+                    ::alloy_sol_types::abi::token::WordToken(
                         ::alloy_sol_types::private::keccak256(out)
                     )
                 }

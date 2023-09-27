@@ -1,4 +1,4 @@
-use crate::{sol_data, token::WordToken, Encodable, SolType};
+use crate::{abi::token::WordToken, sol_data, Encodable, SolType};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Address, FixedBytes, B256, U256};
 

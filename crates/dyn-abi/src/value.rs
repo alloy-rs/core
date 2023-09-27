@@ -1,7 +1,7 @@
 use crate::{DynSolType, DynToken, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::{Address, Function, I256, U256};
-use alloy_sol_types::{utils::words_for_len, Encoder};
+use alloy_sol_types::{abi::Encoder, utils::words_for_len};
 
 #[cfg(feature = "eip712")]
 macro_rules! as_fixed_seq {

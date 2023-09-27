@@ -1,4 +1,4 @@
-use crate::{token::WordToken, Error, Result, SolType};
+use crate::{abi::token::WordToken, Error, Result, SolType};
 use alloc::borrow::Cow;
 
 mod sealed {

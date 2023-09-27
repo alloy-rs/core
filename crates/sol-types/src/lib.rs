@@ -167,12 +167,7 @@ extern crate alloc;
 #[macro_use]
 mod macros;
 
-mod coder;
-pub use coder::{
-    decode, decode_params, decode_sequence, encode, encode_params, encode_sequence,
-    token::{self, TokenType},
-    Decoder, Encoder,
-};
+pub mod abi;
 
 mod errors;
 pub use errors::{Error, Result};

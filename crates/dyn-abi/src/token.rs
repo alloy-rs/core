@@ -1,6 +1,6 @@
 use crate::{Decoder, DynSolValue, Error, Result, Word};
 use alloc::{borrow::Cow, boxed::Box, vec::Vec};
-use alloy_sol_types::token::{PackedSeqToken, TokenType, WordToken};
+use alloy_sol_types::abi::token::{PackedSeqToken, TokenType, WordToken};
 
 /// A dynamic token. Equivalent to an enum over all types implementing
 /// [`alloy_sol_types::TokenType`]

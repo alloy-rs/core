@@ -1,6 +1,6 @@
 use crate::{
-    token::{PackedSeqToken, TokenSeq, WordToken},
-    GenericContractError, Result, SolInterface, SolType, TokenType, Word,
+    abi::token::{PackedSeqToken, TokenSeq, TokenType, WordToken},
+    GenericContractError, Result, SolInterface, SolType, Word,
 };
 use alloc::{
     string::{String, ToString},
@@ -69,7 +69,7 @@ pub trait SolError: Sized {
     #[inline]
     fn encode_raw(&self, out: &mut Vec<u8>) {
         out.reserve(self.encoded_size());
-        out.extend(crate::encode_sequence(&self.tokenize()));
+        out.extend(crate::abi::encode_sequence(&self.tokenize()));
     }
 
     /// ABI encode the error to the given buffer **with** its selector.

@@ -68,8 +68,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         quote! {(Self::SIGNATURE_HASH.into(), #(self.#topic_tuple_names.clone(),)*)}
     };
 
-    let encode_first_topic =
-        (!anonymous).then(|| quote!(::alloy_sol_types::token::WordToken(Self::SIGNATURE_HASH)));
+    let encode_first_topic = (!anonymous).then(|| {
+        quote!(::alloy_sol_types::abi::token::WordToken(
+            Self::SIGNATURE_HASH
+        ))
+    });
 
     let encode_topics_impl = event.indexed_params().enumerate().map(|(i, p)| {
         let name = anon_name((i, p.name.as_ref()));
@@ -146,7 +149,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                 #[inline]
                 fn encode_topics_raw(
                     &self,
-                    out: &mut [::alloy_sol_types::token::WordToken],
+                    out: &mut [::alloy_sol_types::abi::token::WordToken],
                 ) -> ::alloy_sol_types::Result<()> {
                     if out.len() < <Self::TopicList as ::alloy_sol_types::TopicList>::COUNT {
                         return Err(::alloy_sol_types::Error::Overrun);

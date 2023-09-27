@@ -1,6 +1,6 @@
 use crate::{
-    token::{TokenSeq, WordToken},
-    Result, SolType, TokenType, Word,
+    abi::token::{TokenSeq, TokenType, WordToken},
+    Result, SolType, Word,
 };
 use alloc::vec::Vec;
 use alloy_primitives::{FixedBytes, B256};
@@ -79,7 +79,7 @@ pub trait SolEvent: Sized {
     #[inline]
     fn encode_data_to(&self, out: &mut Vec<u8>) {
         out.reserve(self.encoded_size());
-        out.extend(crate::encode_sequence(&self.tokenize_body()));
+        out.extend(crate::abi::encode_sequence(&self.tokenize_body()));
     }
 
     /// ABI-encode the dynamic data of this event.

@@ -104,7 +104,7 @@ macro_rules! define_udt {
             }
 
             #[inline]
-            fn encode_topic(rust: &Self::RustType) -> $crate::token::WordToken {
+            fn encode_topic(rust: &Self::RustType) -> $crate::abi::token::WordToken {
                 <$underlying as $crate::EventTopic>::encode_topic(rust)
             }
         }

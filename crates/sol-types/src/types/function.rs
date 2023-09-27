@@ -1,4 +1,7 @@
-use crate::{token::TokenSeq, Encodable, Result, SolType, TokenType, Word};
+use crate::{
+    abi::{TokenSeq, TokenType},
+    Encodable, Result, SolType, Word,
+};
 use alloc::vec::Vec;
 
 /// Solidity call (a tuple with a selector).
@@ -71,7 +74,7 @@ pub trait SolCall: Sized {
     #[inline]
     fn encode_raw(&self, out: &mut Vec<u8>) {
         out.reserve(self.encoded_size());
-        out.extend(crate::encode_sequence(&self.tokenize()));
+        out.extend(crate::abi::encode_sequence(&self.tokenize()));
     }
 
     /// ABI encode the call to the given buffer **with** its selector.
@@ -92,6 +95,6 @@ pub trait SolCall: Sized {
     where
         E: Encodable<Self::ReturnTuple<'a>>,
     {
-        crate::encode_sequence(&e.to_tokens())
+        crate::abi::encode_sequence(&e.to_tokens())
     }
 }

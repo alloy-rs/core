@@ -1,4 +1,4 @@
-//! ABI encoder.
+//! Ethereum ABI encoding.
 //!
 //! ### `{encode,decode}`
 //!
@@ -34,3 +34,4 @@ mod decoder;
 pub use decoder::{decode, decode_params, decode_sequence, Decoder};
 
 pub mod token;
+pub use token::{TokenSeq, TokenType};
