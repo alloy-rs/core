@@ -8,6 +8,266 @@ macro_rules! make_visitor {
             @impl
             $(#[$attr])*
             pub trait $trait_name<'ast> {
+                fn visit_block(&mut v, block: &'ast $($mut)? Block) {
+                    for stmt in &$($mut)? block.stmts {
+                        v.visit_stmt(stmt);
+                    }
+                }
+
+                fn visit_stmt(&mut v, stmt: &'ast $($mut)? Stmt) {
+                    match stmt {
+                        Stmt::Assembly(asm) => {v.visit_stmt_asm(asm)}
+                        Stmt::Block(block) => {v.visit_block(block)}
+                        Stmt::Break(brk) => {v.visit_stmt_break(brk)}
+                        Stmt::Continue(cont) => {v.visit_stmt_continue(cont)}
+                        Stmt::DoWhile(dowhile) => {v.visit_stmt_dowhile(dowhile)}
+                        Stmt::Emit(emit) => {v.visit_stmt_emit(emit)}
+                        Stmt::Expr(expr) => {v.visit_expr(& $($mut)? expr.expr);}
+                        Stmt::For(f) => {v.visit_stmt_for(f)}
+                        Stmt::If(ifstmt) => {v.visit_stmt_if(ifstmt)}
+                        Stmt::Return(ret) => {v.visit_stmt_return(ret)}
+                        Stmt::Revert(revert) => {v.visit_stmt_revert(revert)}
+                        Stmt::Try(try_stmt) => {v.visit_stmt_try(try_stmt)}
+                        Stmt::UncheckedBlock(ublock) => {v.visit_unchecked_block(ublock)}
+                        Stmt::VarDecl(vard) => {v.visit_stmt_var_decl(vard)}
+                        Stmt::While(w) => {v.visit_stmt_while(w)}
+                    }
+                }
+
+                fn visit_stmt_asm(&mut v, _i: &'ast $($mut)? StmtAssembly) {
+                    // nothing to do
+                }
+
+                fn visit_stmt_break(&mut v, _i: &'ast $($mut)? StmtBreak) {
+                    // nothing to do
+                }
+
+                fn visit_stmt_continue(&mut v, _i: &'ast $($mut)? StmtContinue) {
+                    // nothing to do
+                }
+
+                fn visit_stmt_dowhile(&mut v, stmt_dowhile: &'ast $($mut)? StmtDoWhile) {
+                    v.visit_expr(&$($mut)? stmt_dowhile.cond);
+                    v.visit_stmt(&$($mut)? stmt_dowhile.body);
+                }
+
+                fn visit_stmt_emit(&mut v, emit: &'ast $($mut)? StmtEmit) {
+                    v.visit_expr(&$($mut)? emit.expr);
+                }
+
+                fn visit_stmt_for(&mut v, stmt_for: &'ast $($mut)? StmtFor) {
+                   match &$($mut)? stmt_for.init {
+                       ForInitStmt::Expr(expr) => {
+                            v.visit_expr(&$($mut)? expr.expr);
+                       },
+                       ForInitStmt::VarDecl(vard) => {
+                           v.visit_stmt_var_decl(vard);
+                       }
+                       _ => {}
+                   }
+
+                   v.visit_stmt(&$($mut)? stmt_for.body);
+                   if let Some(cond) = &$($mut)? stmt_for.cond {
+                       v.visit_expr(cond);
+                   }
+                   if let Some(post) = &$($mut)? stmt_for.post {
+                       v.visit_expr(post);
+                   }
+                }
+
+                fn visit_stmt_if(&mut v, stmt_if: &'ast $($mut)? StmtIf) {
+                      v.visit_expr(&$($mut)? stmt_if.cond);
+                      v.visit_stmt(&$($mut)? stmt_if.then_branch);
+                      if let Some((_, stmt)) = &$($mut)? stmt_if.else_branch {
+                           v.visit_stmt(stmt);
+                      }
+                }
+
+                fn visit_stmt_return(&mut v, rturn: &'ast $($mut)? StmtReturn) {
+                    if let Some(rturn_expr) = &$($mut)? rturn.expr {
+                        v.visit_expr(rturn_expr);
+                    }
+                }
+
+                fn visit_stmt_revert(&mut v, rvert: &'ast $($mut)? StmtRevert) {
+                    v.visit_expr(&$($mut)? rvert.expr);
+                }
+
+                fn visit_stmt_try(&mut v, stmt_try: &'ast $($mut)? StmtTry) {
+                   v.visit_block(&$($mut)? stmt_try.block);
+                   v.visit_expr(&$($mut)? stmt_try.expr);
+
+                   for catch in &$($mut)? stmt_try.catch {
+                       v.visit_block(&$($mut)? catch.block);
+                       for iden in &$($mut)? catch.list {
+                           v.visit_variable_declaration(iden);
+                       }
+                   };
+                   if let Some(rturn) = &$($mut)? stmt_try.returns {
+                       v.visit_parameter_list(&$($mut)? rturn.returns);
+                   }
+                }
+
+                fn visit_unchecked_block(&mut v, ublock: &'ast $($mut)? UncheckedBlock) {
+                    v.visit_block(&$($mut)? ublock.block);
+                }
+
+                fn visit_stmt_var_decl(&mut v, stmt_var_decl: &'ast $($mut)? StmtVarDecl) {
+                   if let Some((_, expr)) = &$($mut)? stmt_var_decl.assignment {
+                      v.visit_expr(expr);
+                   }
+                   match &$($mut)? stmt_var_decl.declaration {
+                       VarDeclDecl::VarDecl(vard) => {
+                           v.visit_variable_declaration(vard);
+                       },
+                       VarDeclDecl::Tuple(tuple) => {
+                           for var_opt in & $($mut)? tuple.vars {
+                               if let Some(var_decl) = var_opt {
+                                   v.visit_variable_declaration(var_decl);
+                               }
+                           }
+                       }
+                   }
+                }
+                fn visit_stmt_while(&mut v, stmt_while: &'ast $($mut)? StmtWhile) {
+                    v.visit_expr(&$($mut)? stmt_while.cond);
+                    v.visit_stmt(&$($mut)? stmt_while.body);
+                }
+
+                // TODO
+                // Check if some functions are already implemented by alloy before implementing
+                fn visit_expr(&mut v, expr: &'ast $($mut)? Expr) {
+                    //FIND WHICH EXPRESSION ENUM TO USE IF NOT BOTH
+                    // IF BOTH MAYBE MAKE 2 SEPARATE VISIT FUNCTIONS
+                    match expr {
+                        Expr::Array(array) => {v.visit_expr_array(array)}
+                        Expr::Binary(binary) => {v.visit_expr_binary(binary)}
+                        Expr::Call(call) => {v.visit_expr_call(call)}
+                        Expr::CallOptions(call_options) => {v.visit_expr_call_options(call_options)}
+                        Expr::Delete(delete) => {v.visit_expr_delete(delete)}
+                        Expr::Ident(ident) => {v.visit_ident(ident)}
+                        Expr::Index(index) => {v.visit_expr_index(index)}
+                        Expr::Lit(lit) => {v.visit_lit(lit)}
+                        Expr::LitDenominated(lit_denominated) => {v.visit_lit_denominated(lit_denominated)}
+                        Expr::Member(member) => {v.visit_expr_member(member)}
+                        Expr::New(new) => {v.visit_expr_new(new)}
+                        Expr::Payable(payable) => {v.visit_expr_payable(payable)}
+                        Expr::Postfix(postfix) => {v.visit_expr_postfix(postfix)}
+                        Expr::Ternary(ternary) => {v.visit_expr_ternary(ternary)}
+                        Expr::Tuple(tuple) => {v.visit_expr_tuple(tuple)}
+                        Expr::Type(typ) => {v.visit_type(typ)}
+                        Expr::TypeCall(type_call) => {v.visit_expr_type_call(type_call)}
+                        Expr::Unary(unary) => {v.visit_expr_unary(unary)}
+                    }
+                }
+                fn visit_expr_array(&mut v, i: &'ast $($mut)? ExprArray) {
+                    for expr in &$($mut)? i.elems {
+                        v.visit_expr(expr);
+                    }
+                }
+
+                fn visit_expr_binary(&mut v, i: &'ast $($mut)? ExprBinary) {
+                    v.visit_expr(&$($mut)? i.left);
+                    v.visit_expr(&$($mut)? i.right);
+                }
+
+                fn visit_expr_call(&mut v, i: &'ast $($mut)? ExprCall) {
+                    v.visit_expr(&$($mut)? i.expr);
+                    match &$($mut)? i.args.list {
+                        ArgListImpl::Unnamed(args) => {
+                            for arg in args {
+                                v.visit_expr(arg);
+                            }
+                        },
+                        ArgListImpl::Named(args) => {
+                            for arg in &$($mut)? args.list {
+                                v.visit_ident(& $($mut)? arg.name);
+                                v.visit_expr(& $($mut)? arg.arg);
+                            }
+                        },
+                    }
+                }
+
+                fn visit_expr_call_options(&mut v, i: &'ast $($mut)? ExprCallOptions) {
+                    v.visit_expr(&$($mut)? i.expr);
+                    for arg in &$($mut)? i.args.list {
+                        v.visit_ident(&$($mut)? arg.name);
+                        v.visit_expr(&$($mut)? arg.arg);
+                    }
+                }
+
+                fn visit_expr_delete(&mut v, i: &'ast $($mut)? ExprDelete) {
+                    v.visit_expr(&$($mut)? i.expr);
+                }
+
+                fn visit_expr_index(&mut v, i: &'ast $($mut)? ExprIndex) {
+                    v.visit_expr(&$($mut)? i.expr);
+
+                    if let Some(index) = &$($mut)? i.start {
+                        v.visit_expr(index);
+                    }
+                    if let Some(index) = &$($mut)? i.end {
+                        v.visit_expr(index);
+                    }
+                }
+
+                fn visit_lit(&mut v, i: &'ast $($mut)? Lit) {
+                    // nothing to do
+                }
+
+                fn visit_lit_denominated(&mut v, i: &'ast $($mut)? LitDenominated) {
+                    // nothing to do
+                }
+
+                fn visit_expr_member(&mut v, i: &'ast $($mut)? ExprMember) {
+                    v.visit_expr(&$($mut)? i.expr);
+                    v.visit_expr(&$($mut)? i.member);
+                }
+
+                fn visit_expr_new(&mut v, i: &'ast $($mut)? ExprNew) {
+                    v.visit_type(&$($mut)? i.ty);
+                }
+
+                fn visit_expr_payable(&mut v, i: &'ast $($mut)? ExprPayable) {
+                    match &$($mut)? i.args.list {
+                        ArgListImpl::Unnamed(exprs) => {
+                            for expr in exprs {
+                                v.visit_expr(expr);
+                            }
+                        }
+                        ArgListImpl::Named(named) => {
+                            for a in &$($mut)? named.list {
+                                v.visit_ident(& $($mut)? a.name);
+                                v.visit_expr(& $($mut)? a.arg);
+                            }
+                        }
+                    }
+                }
+
+                fn visit_expr_postfix(&mut v, i: &'ast $($mut)? ExprPostfix) {
+                    v.visit_expr(&$($mut)? i.expr);
+                }
+
+                fn visit_expr_ternary(&mut v, i: &'ast $($mut)? ExprTernary) {
+                    v.visit_expr(&$($mut)? i.cond);
+                    v.visit_expr(&$($mut)? i.if_true);
+                    v.visit_expr(&$($mut)? i.if_false);
+                }
+
+                fn visit_expr_tuple(&mut v, i: &'ast $($mut)? ExprTuple) {
+                    for expr in &$($mut)? i.elems {
+                        v.visit_expr(expr);
+                    }
+                }
+
+                fn visit_expr_type_call(&mut v, i: &'ast $($mut)? ExprTypeCall) {
+                    v.visit_type(&$($mut)? i.ty);
+                }
+
+                fn visit_expr_unary(&mut v, i: &'ast $($mut)? ExprUnary) {
+                    v.visit_expr(&$($mut)? i.expr);
+                }
+
                 fn visit_lit_str(&mut v, lit: &'ast $($mut)? LitStr) {
                     // nothing to do
                 }
@@ -137,6 +397,9 @@ macro_rules! make_visitor {
                     v.visit_parameter_list(& $($mut)? function.arguments);
                     if let Some(returns) = & $($mut)? function.returns {
                         v.visit_parameter_list(& $($mut)? returns.returns);
+                    }
+                    if let FunctionBody::Block(block) = & $($mut)? function.body {
+                        v.visit_block(block);
                     }
                 }
 
