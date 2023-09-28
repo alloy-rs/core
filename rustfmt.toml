@@ -7,3 +7,5 @@ comment_width = 80
 imports_granularity = "Crate"
 trailing_semicolon = false
 wrap_comments = true
+format_code_in_doc_comments = true
+doc_comment_code_block_width = 100

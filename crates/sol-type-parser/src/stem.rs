@@ -10,7 +10,10 @@ use winnow::{trace::trace, PResult, Parser};
 /// let stem = TypeStem::try_from("uint256")?;
 /// assert_eq!(stem.span(), "uint256");
 /// assert!(matches!(stem, TypeStem::Root(_)));
-/// assert_eq!(stem.as_root(), Some(&RootType::try_from("uint256").unwrap()));
+/// assert_eq!(
+///     stem.as_root(),
+///     Some(&RootType::try_from("uint256").unwrap())
+/// );
 ///
 /// let stem = TypeStem::try_from("(uint256,bool)")?;
 /// assert_eq!(stem.span(), "(uint256,bool)");

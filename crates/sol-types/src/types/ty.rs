@@ -85,7 +85,7 @@ pub trait Encodable<T: ?Sized + SolType> {
 /// complex Solidity types.
 ///
 /// ```
-/// use alloy_sol_types::{SolType, sol_data::*};
+/// use alloy_sol_types::{sol_data::*, SolType};
 ///
 /// type DynUint256Array = Array<Uint<256>>;
 /// assert_eq!(&DynUint256Array::sol_type_name(), "uint256[]");
@@ -94,7 +94,10 @@ pub trait Encodable<T: ?Sized + SolType> {
 /// assert_eq!(&Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
 ///
 /// type LargeComplexType = (FixedArray<Array<Bool>, 2>, (FixedBytes<13>, String));
-/// assert_eq!(&LargeComplexType::sol_type_name(), "(bool[][2],(bytes13,string))");
+/// assert_eq!(
+///     &LargeComplexType::sol_type_name(),
+///     "(bool[][2],(bytes13,string))"
+/// );
 /// ```
 ///
 /// These types are zero cost representations of Solidity types. They do not
@@ -117,7 +120,10 @@ pub trait Encodable<T: ?Sized + SolType> {
 ///
 /// // This is the native rust representation of a Solidity type!
 /// // How cool is that!
-/// const MY_STRUCT: MyStruct = MyStruct { a: true, b: alloy_primitives::FixedBytes([0x01, 0x02]) };
+/// const MY_STRUCT: MyStruct = MyStruct {
+///     a: true,
+///     b: alloy_primitives::FixedBytes([0x01, 0x02]),
+/// };
 /// ```
 pub trait SolType {
     /// The corresponding Rust type.

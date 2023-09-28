@@ -13,20 +13,13 @@ use winnow::{trace::trace, PResult, Parser};
 /// assert_eq!(root_type.span(), "uint256");
 ///
 /// // Allows unknown types
-/// assert_eq!(
-///     RootType::try_from("MyStruct")?.span(),
-///     "MyStruct",
-/// );
+/// assert_eq!(RootType::try_from("MyStruct")?.span(), "MyStruct");
 ///
 /// // No sequences
-/// assert!(
-///     RootType::try_from("uint256[2]").is_err()
-/// );
+/// assert!(RootType::try_from("uint256[2]").is_err());
 ///
 /// // No tuples
-/// assert!(
-///    RootType::try_from("(uint256,uint256)").is_err()
-/// );
+/// assert!(RootType::try_from("(uint256,uint256)").is_err());
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]

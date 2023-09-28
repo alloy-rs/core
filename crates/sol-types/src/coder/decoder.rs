@@ -532,7 +532,7 @@ mod tests {
         "
         );
 
-        assert_eq!(MyTy::decode_sequence(&encoded, false).unwrap(), data,);
+        assert_eq!(MyTy::decode_sequence(&encoded, false).unwrap(), data);
     }
 
     #[test]
