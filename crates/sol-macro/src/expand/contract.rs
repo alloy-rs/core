@@ -170,7 +170,7 @@ impl<'a> CallLikeExpander<'a> {
     ) -> Self {
         let variants: Vec<_> = functions
             .iter()
-            .map(|f| cx.function_name_ident(f).0)
+            .map(|&f| cx.overloaded_name(f.into()).0)
             .collect();
 
         let types: Vec<_> = variants.iter().map(|name| cx.raw_call_name(name)).collect();
@@ -211,13 +211,18 @@ impl<'a> CallLikeExpander<'a> {
     }
 
     fn from_events(cx: &'a ExpCtxt<'a>, contract_name: &SolIdent, events: Vec<&ItemEvent>) -> Self {
+        let variants: Vec<_> = events
+            .iter()
+            .map(|&event| cx.overloaded_name(event.into()).0)
+            .collect();
+
         let mut selectors: Vec<_> = events.iter().map(|e| cx.event_selector(e)).collect();
         selectors.sort_unstable_by_key(|a| a.array);
 
         Self {
             cx,
             name: format_ident!("{contract_name}Events"),
-            variants: events.iter().map(|event| event.name.0.clone()).collect(),
+            variants,
             min_data_len: events
                 .iter()
                 .map(|event| ty::params_base_data_size(cx, &event.params()))
@@ -228,8 +233,8 @@ impl<'a> CallLikeExpander<'a> {
         }
     }
 
-    /// Type name overrides. Currently only functions support this through
-    /// overloading.
+    /// Type name overrides. Currently only functions support because of the
+    /// `Call` suffix.
     fn types(&self) -> &[Ident] {
         match &self.data {
             CallLikeExpanderData::Function { types, .. } => types,
