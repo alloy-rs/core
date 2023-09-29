@@ -409,6 +409,27 @@ fn nested_items() {
     assert_eq!(f2Call::SIGNATURE, "f2((bytes,bool))");
 }
 
+// https://github.com/alloy-rs/core/issues/319
+#[test]
+fn enum_field_of_struct() {
+    sol! {
+        enum MyEnum {
+            FIRST,
+            SECOND
+        }
+
+        struct MyStruct {
+            MyEnum myOption;
+            uint value;
+        }
+    }
+
+    let _ = MyStruct {
+        myOption: MyEnum::FIRST,
+        value: U256::ZERO,
+    };
+}
+
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_large_array() {
