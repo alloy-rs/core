@@ -34,7 +34,7 @@ fn contracts() {
     };
 
     assert_eq!(data[..4], IERC20::transferCall::SELECTOR);
-    let decoded = IERC20::IERC20Calls::decode(&data, true).unwrap();
+    let decoded = IERC20::IERC20Calls::abi_decode(&data, true).unwrap();
     assert_eq!(decoded, IERC20::IERC20Calls::transfer(expected));
-    assert_eq!(decoded.encode(), data);
+    assert_eq!(decoded.abi_encode(), data);
 }

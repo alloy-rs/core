@@ -1,4 +1,7 @@
-use crate::{token::TokenSeq, Encodable, Result, SolType, TokenType, Word};
+use crate::{
+    abi::{TokenSeq, TokenType},
+    Encodable, Result, SolType, Word,
+};
 use alloc::vec::Vec;
 
 /// Solidity call (a tuple with a selector).
@@ -42,7 +45,7 @@ pub trait SolCall: Sized {
 
     /// The size of the encoded data in bytes, **without** its selector.
     #[inline]
-    fn encoded_size(&self) -> usize {
+    fn abi_encoded_size(&self) -> usize {
         if let Some(size) = <Self::Arguments<'_> as SolType>::ENCODED_SIZE {
             return size
         }
@@ -53,45 +56,45 @@ pub trait SolCall: Sized {
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector.
     #[inline]
-    fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Arguments<'_> as SolType>::decode_sequence(data, validate).map(Self::new)
+    fn abi_decode_raw(data: &[u8], validate: bool) -> Result<Self> {
+        <Self::Arguments<'_> as SolType>::abi_decode_sequence(data, validate).map(Self::new)
     }
 
     /// ABI decode this call's arguments from the given slice, **with** the
     /// selector.
     #[inline]
-    fn decode(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode(data: &[u8], validate: bool) -> Result<Self> {
         let data = data
             .strip_prefix(&Self::SELECTOR)
             .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
-        Self::decode_raw(data, validate)
+        Self::abi_decode_raw(data, validate)
     }
 
     /// ABI encode the call to the given buffer **without** its selector.
     #[inline]
-    fn encode_raw(&self, out: &mut Vec<u8>) {
-        out.reserve(self.encoded_size());
-        out.extend(crate::encode_sequence(&self.tokenize()));
+    fn abi_encode_raw(&self, out: &mut Vec<u8>) {
+        out.reserve(self.abi_encoded_size());
+        out.extend(crate::abi::encode_sequence(&self.tokenize()));
     }
 
     /// ABI encode the call to the given buffer **with** its selector.
     #[inline]
-    fn encode(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(4 + self.encoded_size());
+    fn abi_encode(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(4 + self.abi_encoded_size());
         out.extend(&Self::SELECTOR);
-        self.encode_raw(&mut out);
+        self.abi_encode_raw(&mut out);
         out
     }
 
     /// ABI decode this call's return values from the given slice.
-    fn decode_returns(data: &[u8], validate: bool) -> Result<Self::Return>;
+    fn abi_decode_returns(data: &[u8], validate: bool) -> Result<Self::Return>;
 
     /// ABI encode the call's return values.
     #[inline]
-    fn encode_returns<'a, E>(e: &'a E) -> Vec<u8>
+    fn abi_encode_returns<'a, E>(e: &'a E) -> Vec<u8>
     where
         E: Encodable<Self::ReturnTuple<'a>>,
     {
-        crate::encode_sequence(&e.to_tokens())
+        crate::abi::encode_sequence(&e.to_tokens())
     }
 }

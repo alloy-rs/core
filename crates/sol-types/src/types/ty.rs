@@ -1,4 +1,7 @@
-use crate::{token::TokenSeq, Result, TokenType, Word};
+use crate::{
+    abi::{self, TokenSeq, TokenType},
+    Result, Word,
+};
 use alloc::{borrow::Cow, vec::Vec};
 
 /// An encodable is any type that may be encoded via a given [`SolType`].
@@ -56,23 +59,10 @@ use alloc::{borrow::Cow, vec::Vec};
 /// ```
 pub trait Encodable<T: ?Sized + SolType> {
     /// Convert the value to tokens.
-    ///
-    /// ### Usage Note
-    ///
-    /// Rust data may not have a 1:1 mapping to Solidity types. Using this
-    /// trait without qualifying `T` will often result in type ambiguities.
-    ///
-    /// See the [`Encodable`] trait docs for more details.
     fn to_tokens(&self) -> T::TokenType<'_>;
 
     /// Return the Solidity type name of this value.
-    ///
-    /// ### Usage Note
-    ///
-    /// Rust data may not have a 1:1 mapping to Solidity types. Using this
-    /// trait without qualifying `T` will often result in type ambiguities.
-    ///
-    /// See the [`Encodable`] trait docs for more details.
+    #[inline]
     fn sol_type_name(&self) -> Cow<'static, str> {
         T::sol_type_name()
     }
@@ -143,25 +133,35 @@ pub trait SolType {
     /// The name of the type in Solidity.
     fn sol_type_name() -> Cow<'static, str>;
 
-    /// Calculate the encoded size of the data, counting both head and tail
+    /// Calculate the ABI-encoded size of the data, counting both head and tail
     /// words. For a single-word type this will always be 32.
     #[inline]
-    fn encoded_size(_rust: &Self::RustType) -> usize {
+    fn abi_encoded_size(rust: &Self::RustType) -> usize {
+        let _ = rust;
         Self::ENCODED_SIZE.unwrap()
     }
 
-    /// Check a token to see if it can be detokenized with this type.
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()>;
+    /// Returns `true` if the given token can be detokenized with this type.
+    fn valid_token(token: &Self::TokenType<'_>) -> bool;
 
-    #[doc(hidden)]
-    fn type_check_fail(data: &[u8]) -> crate::Error {
-        crate::Error::type_check_fail(data, Self::sol_type_name())
+    /// Returns an error if the given token cannot be detokenized with this
+    /// type.
+    #[inline]
+    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
+        if Self::valid_token(token) {
+            Ok(())
+        } else {
+            Err(crate::Error::type_check_fail_token(
+                token,
+                Self::sol_type_name(),
+            ))
+        }
     }
 
-    /// Detokenize.
+    /// Detokenize a value from the given token.
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType;
 
-    /// Tokenize.
+    /// Tokenizes the given value into this type's token.
     fn tokenize<E: Encodable<Self>>(rust: &E) -> Self::TokenType<'_> {
         rust.to_tokens()
     }
@@ -178,8 +178,8 @@ pub trait SolType {
 
     /// Non-standard Packed Mode ABI encoding.
     ///
-    /// See [`encode_packed`][SolType::encode_packed] for more details.
-    fn encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>);
+    /// See [`abi_encode_packed`][SolType::abi_encode_packed] for more details.
+    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>);
 
     /// Non-standard Packed Mode ABI encoding.
     ///
@@ -191,71 +191,70 @@ pub trait SolType {
     ///
     /// More information can be found in the [Solidity docs](https://docs.soliditylang.org/en/latest/abi-spec.html#non-standard-packed-mode).
     #[inline]
-    fn encode_packed(rust: &Self::RustType) -> Vec<u8> {
+    fn abi_encode_packed(rust: &Self::RustType) -> Vec<u8> {
         let mut out = Vec::new();
-        Self::encode_packed_to(rust, &mut out);
+        Self::abi_encode_packed_to(rust, &mut out);
         out
     }
 
-    /* BOILERPLATE BELOW */
-
     /// Encode a single ABI token by wrapping it in a 1-length sequence.
     #[inline]
-    fn encode<E: Encodable<Self>>(rust: &E) -> Vec<u8> {
-        crate::encode(&rust.to_tokens())
+    fn abi_encode<E: Encodable<Self>>(rust: &E) -> Vec<u8> {
+        abi::encode(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence.
     #[inline]
-    fn encode_sequence<E: Encodable<Self>>(rust: &E) -> Vec<u8>
+    fn abi_encode_sequence<E: Encodable<Self>>(rust: &E) -> Vec<u8>
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
-        crate::encode_sequence(&rust.to_tokens())
+        abi::encode_sequence(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence suitable for function parameters.
     #[inline]
-    fn encode_params<E: Encodable<Self>>(rust: &E) -> Vec<u8>
+    fn abi_encode_params<E: Encodable<Self>>(rust: &E) -> Vec<u8>
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
-        crate::encode_params(&rust.to_tokens())
+        abi::encode_params(&rust.to_tokens())
     }
 
     /// Decode a Rust type from an ABI blob.
     #[inline]
-    fn decode(data: &[u8], validate: bool) -> Result<Self::RustType> {
-        let decoded = crate::decode::<Self::TokenType<'_>>(data, validate)?;
-        if validate {
-            Self::type_check(&decoded)?;
-        }
-        Ok(Self::detokenize(decoded))
+    fn abi_decode(data: &[u8], validate: bool) -> Result<Self::RustType> {
+        abi::decode::<Self::TokenType<'_>>(data, validate)
+            .and_then(|t| check_decode::<Self>(t, validate))
     }
 
-    /// Decode a Rust type from an ABI blob.
+    /// ABI-decode the given data
     #[inline]
-    fn decode_sequence<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
+    fn abi_decode_params<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
     where
         Self::TokenType<'de>: TokenSeq<'de>,
     {
-        let decoded = crate::decode_sequence::<Self::TokenType<'_>>(data, validate)?;
-        if validate {
-            Self::type_check(&decoded)?;
-        }
-        Ok(Self::detokenize(decoded))
+        abi::decode_params::<Self::TokenType<'_>>(data, validate)
+            .and_then(|t| check_decode::<Self>(t, validate))
     }
 
-    /// Decode a Rust type from an ABI blob.
+    /// ABI-decode a Rust type from an ABI blob.
     #[inline]
-    fn decode_params<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
+    fn abi_decode_sequence<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
     where
         Self::TokenType<'de>: TokenSeq<'de>,
     {
-        let decoded = crate::decode_params::<Self::TokenType<'_>>(data, validate)?;
-        if validate {
-            Self::type_check(&decoded)?;
-        }
-        Ok(Self::detokenize(decoded))
+        abi::decode_sequence::<Self::TokenType<'_>>(data, validate)
+            .and_then(|t| check_decode::<Self>(t, validate))
     }
+}
+
+fn check_decode<T: ?Sized + SolType>(
+    token: T::TokenType<'_>,
+    validate: bool,
+) -> Result<T::RustType> {
+    if validate {
+        T::type_check(&token)?;
+    }
+    Ok(T::detokenize(token))
 }

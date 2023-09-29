@@ -132,6 +132,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
                 }
 
                 #[inline]
+                fn valid_token(token: &Self::TokenType<'_>) -> bool {
+                    Self::type_check(token).is_ok()
+                }
+
+                #[inline]
                 fn type_check(token: &Self::TokenType<'_>) -> ::alloy_sol_types::Result<()> {
                     #uint8_st::type_check(token)?;
                     <Self as ::core::convert::TryFrom<u8>>::try_from(
@@ -152,7 +157,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
                 }
 
                 #[inline]
-                fn encode_packed_to(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                fn abi_encode_packed_to(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
                     out.push(*rust as u8);
                 }
             }

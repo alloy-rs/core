@@ -32,7 +32,7 @@ fn structs() {
         b: Address::ZERO,
     };
 
-    let abi_encoded = Foo::encode_sequence(&my_foo);
+    let abi_encoded = Foo::abi_encode_sequence(&my_foo);
     assert_eq!(
         abi_encoded,
         hex! {
@@ -44,7 +44,7 @@ fn structs() {
         }
     );
 
-    let abi_encoded_enum = Enum::B.encode();
+    let abi_encoded_enum = Enum::B.abi_encode();
     assert_eq!(
         abi_encoded_enum,
         hex! {

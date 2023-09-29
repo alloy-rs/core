@@ -34,7 +34,7 @@ pub trait SolInterface: Sized {
     /// The number of variants.
     const COUNT: usize;
 
-    /// The selector of this type.
+    /// The selector of this instance.
     fn selector(&self) -> [u8; 4];
 
     /// The selector of this type at the given index, used in
@@ -44,17 +44,29 @@ pub trait SolInterface: Sized {
     /// different selector otherwise.
     fn selector_at(i: usize) -> Option<[u8; 4]>;
 
-    /// Checks if the given selector is known to this type.
-    fn type_check(selector: [u8; 4]) -> Result<()>;
+    /// Returns `true` if the given selector is known to this type.
+    fn valid_selector(selector: [u8; 4]) -> bool;
+
+    /// Returns an error if the given selector is not known to this type.
+    fn type_check(selector: [u8; 4]) -> Result<()> {
+        if Self::valid_selector(selector) {
+            Ok(())
+        } else {
+            Err(Error::UnknownSelector {
+                name: Self::NAME,
+                selector: selector.into(),
+            })
+        }
+    }
 
     /// ABI-decodes the given data into one of the variants of `self`.
-    fn decode_raw(selector: [u8; 4], data: &[u8], validate: bool) -> Result<Self>;
+    fn abi_decode_raw(selector: [u8; 4], data: &[u8], validate: bool) -> Result<Self>;
 
     /// The size of the encoded data, *without* any selectors.
-    fn encoded_size(&self) -> usize;
+    fn abi_encoded_size(&self) -> usize;
 
     /// ABI-encodes `self` into the given buffer, *without* any selectors.
-    fn encode_raw(&self, out: &mut Vec<u8>);
+    fn abi_encode_raw(&self, out: &mut Vec<u8>);
 
     /// Returns an iterator over the selectors of this type.
     #[inline]
@@ -64,21 +76,21 @@ pub trait SolInterface: Sized {
 
     /// ABI-encodes `self` into the given buffer.
     #[inline]
-    fn encode(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(4 + self.encoded_size());
+    fn abi_encode(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(4 + self.abi_encoded_size());
         out.extend(self.selector());
-        self.encode_raw(&mut out);
+        self.abi_encode_raw(&mut out);
         out
     }
 
     /// ABI-decodes the given data into one of the variants of `self`.
     #[inline]
-    fn decode(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode(data: &[u8], validate: bool) -> Result<Self> {
         if data.len() < Self::MIN_DATA_LENGTH + 4 {
             Err(crate::Error::type_check_fail(data, Self::NAME))
         } else {
             let (selector, data) = crate::impl_core::split_array_ref(data);
-            Self::decode_raw(*selector, data, validate)
+            Self::abi_decode_raw(*selector, data, validate)
         }
     }
 }
@@ -103,25 +115,22 @@ impl SolInterface for Infallible {
     }
 
     #[inline]
-    fn type_check(selector: [u8; 4]) -> Result<()> {
-        Err(Error::UnknownSelector {
-            name: Self::NAME,
-            selector: selector.into(),
-        })
+    fn valid_selector(_selector: [u8; 4]) -> bool {
+        false
     }
 
     #[inline]
-    fn decode_raw(selector: [u8; 4], _data: &[u8], _validate: bool) -> Result<Self> {
+    fn abi_decode_raw(selector: [u8; 4], _data: &[u8], _validate: bool) -> Result<Self> {
         Self::type_check(selector).map(|()| unreachable!())
     }
 
     #[inline]
-    fn encoded_size(&self) -> usize {
+    fn abi_encoded_size(&self) -> usize {
         match *self {}
     }
 
     #[inline]
-    fn encode_raw(&self, _out: &mut Vec<u8>) {
+    fn abi_encode_raw(&self, _out: &mut Vec<u8>) {
         match *self {}
     }
 }
@@ -249,37 +258,37 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
     }
 
     #[inline]
-    fn type_check(selector: [u8; 4]) -> Result<()> {
+    fn valid_selector(selector: [u8; 4]) -> bool {
         match selector {
-            Revert::SELECTOR | Panic::SELECTOR => Ok(()),
-            s => T::type_check(s),
+            Revert::SELECTOR | Panic::SELECTOR => true,
+            s => T::valid_selector(s),
         }
     }
 
     #[inline]
-    fn decode_raw(selector: [u8; 4], data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode_raw(selector: [u8; 4], data: &[u8], validate: bool) -> Result<Self> {
         match selector {
-            Revert::SELECTOR => Revert::decode_raw(data, validate).map(Self::Revert),
-            Panic::SELECTOR => Panic::decode_raw(data, validate).map(Self::Panic),
-            _ => T::decode(data, validate).map(Self::CustomError),
+            Revert::SELECTOR => Revert::abi_decode_raw(data, validate).map(Self::Revert),
+            Panic::SELECTOR => Panic::abi_decode_raw(data, validate).map(Self::Panic),
+            _ => T::abi_decode(data, validate).map(Self::CustomError),
         }
     }
 
     #[inline]
-    fn encoded_size(&self) -> usize {
+    fn abi_encoded_size(&self) -> usize {
         match self {
-            Self::CustomError(error) => error.encoded_size(),
-            Self::Panic(panic) => panic.encoded_size(),
-            Self::Revert(revert) => revert.encoded_size(),
+            Self::CustomError(error) => error.abi_encoded_size(),
+            Self::Panic(panic) => panic.abi_encoded_size(),
+            Self::Revert(revert) => revert.abi_encoded_size(),
         }
     }
 
     #[inline]
-    fn encode_raw(&self, out: &mut Vec<u8>) {
+    fn abi_encode_raw(&self, out: &mut Vec<u8>) {
         match self {
-            Self::CustomError(error) => error.encode_raw(out),
-            Self::Panic(panic) => panic.encode_raw(out),
-            Self::Revert(revert) => revert.encode_raw(out),
+            Self::CustomError(error) => error.abi_encode_raw(out),
+            Self::Panic(panic) => panic.abi_encode_raw(out),
+            Self::Revert(revert) => revert.abi_encode_raw(out),
         }
     }
 }

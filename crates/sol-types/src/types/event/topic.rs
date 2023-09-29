@@ -1,4 +1,4 @@
-use crate::{sol_data::*, token::WordToken, SolType};
+use crate::{abi::token::WordToken, sol_data::*, SolType};
 use alloc::vec::Vec;
 use alloy_primitives::keccak256;
 
@@ -31,7 +31,8 @@ pub trait EventTopic: SolType {
     /// Indexed event parameter encoding.
     ///
     /// Note that this is different from [`encode_topic_preimage`] and
-    /// [`SolType::encode`]. See the [Solidity ABI spec][ref] for more details.
+    /// [`SolType::abi_encode`]. See the [Solidity ABI spec][ref] for more
+    /// details.
     ///
     /// [`encode_topic_preimage`]: EventTopic::encode_topic_preimage
     /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#encoding-of-indexed-event-parameters

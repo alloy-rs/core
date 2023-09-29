@@ -1,7 +1,7 @@
 use crate::{DynSolType, DynToken, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::{Address, Function, I256, U256};
-use alloy_sol_types::{utils::words_for_len, Encoder};
+use alloy_sol_types::{abi::Encoder, utils::words_for_len};
 
 #[cfg(feature = "eip712")]
 macro_rules! as_fixed_seq {
@@ -29,8 +29,8 @@ macro_rules! as_fixed_seq {
 /// let my_type: DynSolType = "uint64".parse().unwrap();
 /// let my_data: DynSolValue = 183u64.into();
 ///
-/// let encoded = my_data.encode();
-/// let decoded = my_type.decode(&encoded)?;
+/// let encoded = my_data.abi_encode();
+/// let decoded = my_type.abi_decode(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
 /// # Ok::<(), alloy_dyn_abi::Error>(())
@@ -648,7 +648,7 @@ impl DynSolValue {
     }
 
     /// Encodes the packed value and appends it to the end of a byte array.
-    pub fn encode_packed_to(&self, buf: &mut Vec<u8>) {
+    pub fn abi_encode_packed_to(&self, buf: &mut Vec<u8>) {
         match self {
             Self::Address(addr) => buf.extend_from_slice(addr.as_slice()),
             Self::Function(func) => buf.extend_from_slice(func.as_slice()),
@@ -671,7 +671,7 @@ impl DynSolValue {
             }
             as_fixed_seq!(inner) | Self::Array(inner) => {
                 for val in inner {
-                    val.encode_packed_to(buf);
+                    val.abi_encode_packed_to(buf);
                 }
             }
         }
@@ -679,10 +679,10 @@ impl DynSolValue {
 
     /// Encodes the value into a packed byte array.
     #[inline]
-    pub fn encode_packed(&self) -> Vec<u8> {
+    pub fn abi_encode_packed(&self) -> Vec<u8> {
         // TODO: capacity
         let mut buf = Vec::new();
-        self.encode_packed_to(&mut buf);
+        self.abi_encode_packed_to(&mut buf);
         buf
     }
 
@@ -727,6 +727,13 @@ impl DynSolValue {
         enc.pop_offset();
     }
 
+    /// Encode this value into a byte array by wrapping it into a 1-element
+    /// sequence.
+    #[inline]
+    pub fn abi_encode(&self) -> Vec<u8> {
+        Self::encode_seq(core::slice::from_ref(self))
+    }
+
     /// Encode this value into a byte array suitable for passing to a function.
     /// If this value is a tuple, it is encoded as is. Otherwise, it is wrapped
     /// into a 1-element sequence.
@@ -735,35 +742,28 @@ impl DynSolValue {
     ///
     /// ```ignore (pseudo-code)
     /// // Encoding for function foo(address)
-    /// DynSolValue::Address(_).encode_params();
+    /// DynSolValue::Address(_).abi_encode_params();
     ///
     /// // Encoding for function foo(address, uint256)
     /// DynSolValue::Tuple(vec![
     ///     DynSolValue::Address(_),
     ///     DynSolValue::Uint(_, 256),
-    /// ]).encode_params();
+    /// ]).abi_encode_params();
     /// ```
     #[inline]
-    pub fn encode_params(&self) -> Vec<u8> {
+    pub fn abi_encode_params(&self) -> Vec<u8> {
         match self {
             Self::Tuple(_) => self
-                .encode_sequence()
+                .abi_encode_sequence()
                 .expect("tuple is definitely a sequence"),
-            _ => self.encode(),
+            _ => self.abi_encode(),
         }
-    }
-
-    /// Encode this value into a byte array by wrapping it into a 1-element
-    /// sequence.
-    #[inline]
-    pub fn encode(&self) -> Vec<u8> {
-        Self::encode_seq(core::slice::from_ref(self))
     }
 
     /// If this value is a fixed sequence, encode it into a byte array. If this
     /// value is not a fixed sequence, return `None`.
     #[inline]
-    pub fn encode_sequence(&self) -> Option<Vec<u8>> {
+    pub fn abi_encode_sequence(&self) -> Option<Vec<u8>> {
         self.as_fixed_seq().map(Self::encode_seq)
     }
 }

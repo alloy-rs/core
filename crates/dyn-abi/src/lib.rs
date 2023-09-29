@@ -57,4 +57,7 @@ pub use eip712::{parser as eip712_parser, Eip712Types, PropertyDef, Resolver, Ty
 #[doc(no_inline)]
 pub use alloy_sol_type_parser as parser;
 #[doc(no_inline)]
-pub use alloy_sol_types::{Decoder, Eip712Domain, Encoder, SolType, Word};
+pub use alloy_sol_types::{
+    abi::{self, Decoder, Encoder},
+    Eip712Domain, SolType, Word,
+};

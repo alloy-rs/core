@@ -1,7 +1,7 @@
 #![allow(clippy::assertions_on_constants)]
 
 use alloy_primitives::{hex, keccak256, B256, U256};
-use alloy_sol_types::{sol, token::WordToken, SolEvent};
+use alloy_sol_types::{abi::token::WordToken, sol, SolEvent};
 
 sol! {
     #[derive(Default)]
@@ -41,7 +41,7 @@ fn event() {
             WordToken(keccak256("Hello World"))
         ]
     );
-    // dynamic data is `abi.encode(b, d)`
+    // dynamic data is `abi.abi_encode(b, d)`
     assert_eq!(
         event.encode_data(),
         hex!(

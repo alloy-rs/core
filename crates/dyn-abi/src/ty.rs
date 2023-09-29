@@ -1,7 +1,7 @@
 use crate::{resolve::ResolveSolType, DynSolValue, DynToken, Error, Result, SolType, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_sol_type_parser::TypeSpecifier;
-use alloy_sol_types::{sol_data, Decoder};
+use alloy_sol_types::{abi::Decoder, sol_data};
 use core::{fmt, num::NonZeroUsize, str::FromStr};
 
 #[cfg(feature = "eip712")]
@@ -64,16 +64,16 @@ struct StructProp {
 /// let my_type = DynSolType::Uint(256);
 /// let my_data: DynSolValue = U256::from(183u64).into();
 ///
-/// let encoded = my_data.encode();
-/// let decoded = my_type.decode(&encoded)?;
+/// let encoded = my_data.abi_encode();
+/// let decoded = my_type.abi_decode(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
 ///
 /// let my_type = DynSolType::Array(Box::new(my_type));
 /// let my_data = DynSolValue::Array(vec![my_data.clone()]);
 ///
-/// let encoded = my_data.encode();
-/// let decoded = my_type.decode(&encoded)?;
+/// let encoded = my_data.abi_encode();
+/// let decoded = my_type.abi_decode(&encoded)?;
 ///
 /// assert_eq!(decoded, my_data);
 /// # Ok::<_, alloy_dyn_abi::Error>(())
@@ -495,6 +495,20 @@ impl DynSolType {
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
     /// match this type.
     ///
+    /// This method is used for decoding single values. It assumes the `data`
+    /// argument is an encoded single-element sequence wrapping the `self` type.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub fn abi_decode(&self, data: &[u8]) -> Result<DynSolValue> {
+        self.abi_decode_inner(
+            &mut Decoder::new(data, false),
+            DynToken::decode_single_populate,
+        )
+    }
+
+    /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
+    /// match this type.
+    ///
     /// This method is used for decoding function arguments. It tries to
     /// determine whether the user intended to decode a sequence or an
     /// individual value. If the `self` type is a tuple, the `data` will be
@@ -515,33 +529,19 @@ impl DynSolType {
     /// ```
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub fn decode_params(&self, data: &[u8]) -> Result<DynSolValue> {
+    pub fn abi_decode_params(&self, data: &[u8]) -> Result<DynSolValue> {
         match self {
-            Self::Tuple(_) => self.decode_sequence(data),
-            _ => self.decode(data),
+            Self::Tuple(_) => self.abi_decode_sequence(data),
+            _ => self.abi_decode(data),
         }
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
     /// match this type.
-    ///
-    /// This method is used for decoding single values. It assumes the `data`
-    /// argument is an encoded single-element sequence wrapping the `self` type.
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub fn decode(&self, data: &[u8]) -> Result<DynSolValue> {
-        self._decode(
-            &mut Decoder::new(data, false),
-            DynToken::decode_single_populate,
-        )
-    }
-
-    /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
-    /// match this type.
-    #[inline]
-    #[cfg_attr(debug_assertions, track_caller)]
-    pub fn decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self._decode(
+    pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
+        self.abi_decode_inner(
             &mut Decoder::new(data, false),
             DynToken::decode_sequence_populate,
         )
@@ -549,7 +549,11 @@ impl DynSolType {
 
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub(crate) fn _decode<'d, F>(&self, decoder: &mut Decoder<'d>, f: F) -> Result<DynSolValue>
+    pub(crate) fn abi_decode_inner<'d, F>(
+        &self,
+        decoder: &mut Decoder<'d>,
+        f: F,
+    ) -> Result<DynSolValue>
     where
         F: FnOnce(&mut DynToken<'d>, &mut Decoder<'d>) -> Result<()>,
     {
@@ -558,7 +562,7 @@ impl DynSolType {
         let value = self.detokenize(token).expect("invalid empty_dyn_token");
         debug_assert!(
             self.matches(&value),
-            "decoded value does not match type:\n   type: {self:?}\n  value: {value:?}"
+            "decoded value does not match type:\n  type: {self:?}\n value: {value:?}"
         );
         Ok(value)
     }
@@ -611,7 +615,7 @@ mod tests {
         let t: DynSolType = s.parse().expect("parsing failed");
         assert_eq!(t.sol_type_name(), s, "type names are not the same");
 
-        let dec = t.decode_params(encoded).expect("decoding failed");
+        let dec = t.abi_decode_params(encoded).expect("decoding failed");
         if let Some(value_name) = dec.sol_type_name() {
             assert_eq!(value_name, s, "value names are not the same");
         }
@@ -632,7 +636,7 @@ mod tests {
             len != encoded.len()
         );
 
-        let re_encoded = dec.encode_params();
+        let re_encoded = dec.abi_encode_params();
         assert_eq!(re_encoded, encoded);
     }
 
