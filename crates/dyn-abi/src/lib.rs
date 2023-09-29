@@ -28,6 +28,9 @@
 #[macro_use]
 extern crate alloc;
 
+#[macro_use]
+mod macros;
+
 #[cfg(feature = "arbitrary")]
 mod arbitrary;
 
@@ -41,7 +44,7 @@ mod ty;
 pub use ty::DynSolType;
 
 mod value;
-pub use value::DynSolValue;
+pub use value::{DetokenizeError, DynSolValue, Tokenizable};
 
 mod token;
 pub use token::DynToken;

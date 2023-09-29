@@ -2,6 +2,7 @@ use crate::{DynSolType, DynToken, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::{Address, Function, I256, U256};
 use alloy_sol_types::{abi::Encoder, utils::words_for_len};
+use core::fmt;
 
 #[cfg(feature = "eip712")]
 macro_rules! as_fixed_seq {
@@ -14,6 +15,27 @@ macro_rules! as_fixed_seq {
     ($tuple:tt) => {
         Self::FixedArray($tuple) | Self::Tuple($tuple)
     };
+}
+
+/// Convenience trait alias for converting to and from [`DynSolValue`]s.
+pub trait Tokenizable: Sized {
+    /// Converts this value into a [`DynSolValue`].
+    fn into_sol_value(self) -> DynSolValue;
+
+    /// Tries to convert a [`DynSolValue`] into this type.
+    fn from_sol_value(value: DynSolValue) -> Result<Self, DetokenizeError>;
+}
+
+impl<T: Into<DynSolValue> + TryFrom<DynSolValue, Error = DetokenizeError>> Tokenizable for T {
+    #[inline]
+    fn from_sol_value(value: DynSolValue) -> Result<Self, DetokenizeError> {
+        value.try_into()
+    }
+
+    #[inline]
+    fn into_sol_value(self) -> DynSolValue {
+        self.into()
+    }
 }
 
 /// A dynamic Solidity value.
@@ -35,7 +57,7 @@ macro_rules! as_fixed_seq {
 /// assert_eq!(decoded, my_data);
 /// # Ok::<(), alloy_dyn_abi::Error>(())
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DynSolValue {
     /// An address.
     Address(Address),
@@ -78,6 +100,20 @@ impl From<Address> for DynSolValue {
     #[inline]
     fn from(value: Address) -> Self {
         Self::Address(value)
+    }
+}
+
+impl From<Function> for DynSolValue {
+    #[inline]
+    fn from(value: Function) -> Self {
+        Self::Function(value)
+    }
+}
+
+impl From<Word> for DynSolValue {
+    #[inline]
+    fn from(value: Word) -> Self {
+        Self::FixedBytes(value, 32)
     }
 }
 
@@ -166,6 +202,152 @@ impl From<U256> for DynSolValue {
         Self::Uint(value, 256)
     }
 }
+
+macro_rules! impl_from_tuples {
+    ($count:literal $($ty:ident),+) => {
+        #[allow(non_snake_case)]
+        impl<$($ty: Into<DynSolValue>,)+> From<($($ty,)+)> for DynSolValue {
+            #[inline]
+            fn from(($($ty,)+): ($($ty,)+)) -> Self {
+                Self::Tuple(vec![$($ty.into()),+])
+            }
+        }
+    };
+}
+
+impl From<()> for DynSolValue {
+    #[inline]
+    fn from((): ()) -> Self {
+        Self::Tuple(vec![])
+    }
+}
+
+all_the_tuples!(impl_from_tuples);
+
+/// An error that can occur when converting a [DynSolValue] into another type.
+#[derive(Clone, PartialEq, Eq)]
+pub struct DetokenizeError(Box<Repr>);
+
+#[derive(Clone, PartialEq, Eq)]
+struct Repr {
+    from: DynSolValue,
+    to: &'static str,
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for DetokenizeError {}
+
+impl fmt::Debug for DetokenizeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DetokenizeError")
+            .field("from", &self.0.from)
+            .field("to", &self.0.to)
+            .finish()
+    }
+}
+
+impl fmt::Display for DetokenizeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("failed to convert ")?;
+        if let Some(ty) = self.0.from.sol_type_name() {
+            f.write_str(&ty)
+        } else {
+            fmt::Debug::fmt(&self.0.from, f)
+        }?;
+        f.write_str(" into ")?;
+        f.write_str(self.0.to)
+    }
+}
+
+impl DetokenizeError {
+    /// Returns a reference to the value that could not be converted.
+    #[inline]
+    pub fn value(&self) -> &DynSolValue {
+        &self.0.from
+    }
+
+    /// Returns the value that could not be converted.
+    #[inline]
+    pub fn into_value(self) -> DynSolValue {
+        self.0.from
+    }
+}
+
+macro_rules! impl_try_into {
+    ($($t:ty: $p:pat => $e:expr,)* $(,)?) => {$(
+        impl TryFrom<DynSolValue> for $t {
+            type Error = DetokenizeError;
+
+            fn try_from(value: DynSolValue) -> Result<Self, Self::Error> {
+                if let $p = value {
+                    $e
+                }
+                Err(DetokenizeError(Box::new(Repr {
+                    from: value,
+                    to: stringify!($t),
+                })))
+            }
+        }
+    )*};
+}
+
+impl_try_into! {
+    Address: DynSolValue::Address(value) => return Ok(value),
+    Function: DynSolValue::Function(value) => return Ok(value),
+    bool: DynSolValue::Bool(value) => return Ok(value),
+    I256: DynSolValue::Int(value, 256) => return Ok(value),
+    U256: DynSolValue::Uint(value, 256) => return Ok(value),
+    Word: DynSolValue::FixedBytes(value, 32) => return Ok(value),
+    Vec<u8>: DynSolValue::Bytes(value) => return Ok(value),
+    String: DynSolValue::String(value) => return Ok(value),
+    Vec<DynSolValue>: DynSolValue::Array(value) => return Ok(value),
+
+    u8: DynSolValue::Uint(value, 0..=8) => if let Ok(x) = value.try_into() { return Ok(x) },
+    u16: DynSolValue::Uint(value, 9..=16) => if let Ok(x) = value.try_into() { return Ok(x) },
+    u32: DynSolValue::Uint(value, 17..=32) => if let Ok(x) = value.try_into() { return Ok(x) },
+    u64: DynSolValue::Uint(value, 33..=64) => if let Ok(x) = value.try_into() { return Ok(x) },
+    u128: DynSolValue::Uint(value, 65..=128) => if let Ok(x) = value.try_into() { return Ok(x) },
+
+    i8: DynSolValue::Int(value, 0..=8) => if let Ok(x) = value.try_into() { return Ok(x) },
+    i16: DynSolValue::Int(value, 9..=16) => if let Ok(x) = value.try_into() { return Ok(x) },
+    i32: DynSolValue::Int(value, 17..=32) => if let Ok(x) = value.try_into() { return Ok(x) },
+    i64: DynSolValue::Int(value, 33..=64) => if let Ok(x) = value.try_into() { return Ok(x) },
+    i128: DynSolValue::Int(value, 65..=128) => if let Ok(x) = value.try_into() { return Ok(x) },
+}
+
+macro_rules! impl_try_into_tuples {
+    ($count:literal $($ty:ident),+) => {
+        impl<$($ty: TryFrom<DynSolValue, Error = DetokenizeError>,)+> TryFrom<DynSolValue> for ($($ty,)+) {
+            type Error = DetokenizeError;
+
+            #[inline]
+            fn try_from(value: DynSolValue) -> Result<Self, Self::Error> {
+                match value {
+                    DynSolValue::Tuple(values) if values.len() == $count => {
+                        let mut values = values.into_iter();
+                        Ok(($(<$ty>::try_from(values.next().unwrap())?,)+))
+                    }
+                    _ => Err(DetokenizeError(Box::new(Repr {
+                        from: value,
+                        to: core::any::type_name::<Self>(),
+                    })))
+                }
+            }
+        }
+    };
+}
+
+// Special case
+impl TryFrom<DynSolValue> for () {
+    type Error = DetokenizeError;
+
+    #[inline]
+    fn try_from(_value: DynSolValue) -> Result<Self, Self::Error> {
+        Ok(())
+    }
+}
+
+all_the_tuples!(impl_try_into_tuples);
 
 impl DynSolValue {
     /// The Solidity type. This returns the solidity type corresponding to this
@@ -765,5 +947,35 @@ impl DynSolValue {
     #[inline]
     pub fn abi_encode_sequence(&self) -> Option<Vec<u8>> {
         self.as_fixed_seq().map(Self::encode_seq)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_tokenizable<T: Tokenizable>() {}
+
+    #[test]
+    fn conversions() {
+        assert_tokenizable::<Address>();
+        assert_tokenizable::<Function>();
+        assert_tokenizable::<bool>();
+        assert_tokenizable::<I256>();
+        assert_tokenizable::<U256>();
+        assert_tokenizable::<Word>();
+        assert_tokenizable::<Vec<u8>>();
+        assert_tokenizable::<String>();
+        assert_tokenizable::<Vec<DynSolValue>>();
+        assert_tokenizable::<u8>();
+        assert_tokenizable::<u16>();
+        assert_tokenizable::<u32>();
+        assert_tokenizable::<u64>();
+        assert_tokenizable::<u128>();
+        assert_tokenizable::<i8>();
+        assert_tokenizable::<i16>();
+        assert_tokenizable::<i32>();
+        assert_tokenizable::<i64>();
+        assert_tokenizable::<i128>();
     }
 }
