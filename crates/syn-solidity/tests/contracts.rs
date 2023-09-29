@@ -3,7 +3,10 @@ use std::{
     path::Path,
     process::Command,
 };
-use syn_solidity::{File, Item};
+use syn_solidity::{
+    visit::{self, Visit},
+    File,
+};
 
 #[test]
 fn contracts() {
@@ -23,8 +26,14 @@ fn contracts() {
     patcher.patch();
     for file in patcher.files() {
         let path = file.path();
-        eprintln!("parsing {}", path.display());
-        parse_file(&path).unwrap();
+        let file = match parse_file(&path) {
+            Ok(file) => file,
+            Err(e) => {
+                panic!("failed to parse {}: {e}", path.display())
+            }
+        };
+        eprintln!("visiting {}", path.display());
+        TestVisitor.visit_file(&file);
     }
     patcher.unpatch();
 }
@@ -105,18 +114,26 @@ impl Drop for GitPatcher<'_> {
     }
 }
 
-fn parse_file(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn parse_file(path: &Path) -> Result<File, Box<dyn std::error::Error>> {
     let solidity = fs::read_to_string(path)?;
-    let file: File = syn::parse_str(&solidity)?;
-    assert!(!file.items.is_empty());
-    file.items.iter().try_for_each(assert_item)
+    syn::parse_str(&solidity).map_err(Into::into)
 }
 
-fn assert_item(item: &Item) -> Result<(), Box<dyn std::error::Error>> {
-    match item {
-        Item::Contract(contract) => contract.body.iter().try_for_each(assert_item),
-        Item::Enum(e) if e.variants.is_empty() => Err("empty enum".into()),
-        Item::Struct(s) if s.fields.is_empty() => Err("empty struct".into()),
-        _ => Ok(()),
+struct TestVisitor;
+
+impl<'ast> Visit<'ast> for TestVisitor {
+    fn visit_file(&mut self, file: &'ast File) {
+        assert!(!file.items.is_empty());
+        visit::visit_file(self, file);
+    }
+
+    fn visit_item_enum(&mut self, e: &'ast syn_solidity::ItemEnum) {
+        assert!(!e.variants.is_empty());
+        visit::visit_item_enum(self, e);
+    }
+
+    fn visit_item_struct(&mut self, s: &'ast syn_solidity::ItemStruct) {
+        assert!(!s.fields.is_empty());
+        visit::visit_item_struct(self, s);
     }
 }
