@@ -148,7 +148,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 }
 
                 #[inline]
-                fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
+                fn encode_topic_preimage(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
                     out.reserve(<Self as ::alloy_sol_types::EventTopic>::topic_preimage_length(rust));
                     #(
                         <#field_types as ::alloy_sol_types::EventTopic>::encode_topic_preimage(&rust.#field_names, out);
@@ -159,7 +159,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 fn encode_topic(
                     rust: &Self::RustType
                 ) -> ::alloy_sol_types::abi::token::WordToken {
-                    let mut out = Vec::new();
+                    let mut out = ::alloy_sol_types::private::Vec::new();
                     <Self as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust, &mut out);
                     ::alloy_sol_types::abi::token::WordToken(
                         ::alloy_sol_types::private::keccak256(out)

@@ -163,6 +163,26 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             }
 
             #[automatically_derived]
+            impl ::alloy_sol_types::EventTopic for #name {
+                #[inline]
+                fn topic_preimage_length(rust: &Self::RustType) -> usize {
+                    <#uint8 as ::alloy_sol_types::EventTopic>::topic_preimage_length(rust.as_u8())
+                }
+
+                #[inline]
+                fn encode_topic_preimage(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                    <#uint8 as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust.as_u8(), out);
+                }
+
+                #[inline]
+                fn encode_topic(
+                    rust: &Self::RustType
+                ) -> ::alloy_sol_types::abi::token::WordToken {
+                    <#uint8 as ::alloy_sol_types::EventTopic>::encode_topic(rust.as_u8())
+                }
+            }
+
+            #[automatically_derived]
             impl ::alloy_sol_types::SolEnum for #name {
                 const COUNT: usize = #count;
             }
@@ -172,7 +192,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
                 #[allow(unsafe_code, clippy::inline_always)]
                 #[inline(always)]
                 fn as_u8(&self) -> &u8 {
-                    unsafe { ::core::mem::transmute::<&Self, &u8>(self) }
+                    unsafe { &*::core::ptr::addr_of!(self).cast::<u8>() }
                 }
             }
         };
