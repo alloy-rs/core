@@ -18,7 +18,7 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream> {
-    let ItemEvent { name, attrs, .. } = event;
+    let ItemEvent { attrs, .. } = event;
     let params = event.params();
 
     let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
@@ -27,6 +27,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
     cx.assert_resolved(&params)?;
     event.assert_valid()?;
 
+    let name = cx.overloaded_name(event.into());
     let signature = cx.signature(name.as_string(), &params);
     let selector = crate::utils::event_selector(&signature);
     let anonymous = event.is_anonymous();

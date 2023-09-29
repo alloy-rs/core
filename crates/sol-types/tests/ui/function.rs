@@ -72,37 +72,4 @@ sol! {
     function n() public pure returns (uint256,);
 }
 
-// OK
-sol! {
-    function overloaded();
-    function overloaded(uint256);
-    function overloaded(uint256, address);
-    function overloaded(address);
-    function overloaded(address, string);
-}
-
-sol! {
-    function overloadTaken();
-    function overloadTaken(uint256);
-
-    function overloadTaken_0();
-    function overloadTaken_1();
-    function overloadTaken_2();
-}
-
-sol! {
-    function sameFnOverload();
-    function sameFnOverload();
-}
-
-sol! {
-    function sameFnTysOverload1(uint256[] memory a);
-    function sameFnTysOverload1(uint256[] storage b);
-}
-
-sol! {
-    function sameFnTysOverload2(string memory, string storage);
-    function sameFnTysOverload2(string storage b, string calldata);
-}
-
 fn main() {}

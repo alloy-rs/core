@@ -107,6 +107,30 @@ impl ItemEvent {
             .collect()
     }
 
+    pub fn param_types(
+        &self,
+    ) -> impl ExactSizeIterator<Item = &Type> + DoubleEndedIterator + Clone {
+        self.parameters.iter().map(|var| &var.ty)
+    }
+
+    pub fn param_types_mut(
+        &mut self,
+    ) -> impl ExactSizeIterator<Item = &mut Type> + DoubleEndedIterator {
+        self.parameters.iter_mut().map(|var| &mut var.ty)
+    }
+
+    pub fn param_types_and_names(
+        &self,
+    ) -> impl ExactSizeIterator<Item = (&Type, Option<&SolIdent>)> + DoubleEndedIterator {
+        self.parameters.iter().map(|p| (&p.ty, p.name.as_ref()))
+    }
+
+    pub fn param_type_strings(
+        &self,
+    ) -> impl ExactSizeIterator<Item = String> + DoubleEndedIterator + Clone + '_ {
+        self.parameters.iter().map(|var| var.ty.to_string())
+    }
+
     pub fn non_indexed_params(&self) -> impl Iterator<Item = &EventParameter> {
         self.parameters.iter().filter(|p| !p.is_indexed())
     }
