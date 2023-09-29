@@ -5,10 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/alloy-rs/core/compare/v0.3.2...HEAD)
+## [0.4.0](https://github.com/alloy-rs/core/releases/tag/0.4.0) - 2023-09-29
 
 ### Bug Fixes
 
+- Test
 - Implement EventTopic for generated enums ([#320](https://github.com/alloy-rs/core/issues/320))
 - Add super import on generated modules ([#307](https://github.com/alloy-rs/core/issues/307))
 - Respect `all_derives = false`, fix custom type printing ([#272](https://github.com/alloy-rs/core/issues/272))
@@ -26,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
-- Add automated CHANGELOG.md
+- Add automated CHANGELOG.md ([#322](https://github.com/alloy-rs/core/issues/322))
 - Improve `ResolveSolType` documentation ([#296](https://github.com/alloy-rs/core/issues/296))
 - Document dollar sign in idents ([#288](https://github.com/alloy-rs/core/issues/288))
 - Add note regarding ruint::uint macro ([#265](https://github.com/alloy-rs/core/issues/265))
