@@ -1,11 +1,21 @@
 use heck::{ToKebabCase, ToLowerCamelCase, ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
+use proc_macro2::TokenStream;
+use quote::quote;
 use syn::{punctuated::Punctuated, Attribute, Error, LitBool, LitStr, Path, Result, Token};
 
 const DUPLICATE_ERROR: &str = "duplicate attribute";
 const UNKNOWN_ERROR: &str = "unknown `sol` attribute";
 
+pub fn mk_doc(s: impl quote::ToTokens) -> TokenStream {
+    quote!(#[doc = #s])
+}
+
 pub fn docs(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|attr| attr.path().is_ident("doc"))
+}
+
+pub fn has_docs(attrs: &[Attribute]) -> bool {
+    docs(attrs).next().is_some()
 }
 
 pub fn derives(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
