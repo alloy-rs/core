@@ -201,12 +201,12 @@ impl Eip712Domain {
 /// # use alloy_sol_types::{Eip712Domain, eip712_domain};
 /// # use alloy_primitives::keccak256;
 ///
-/// const MY_DOMAIN: Eip712Domain = eip712_domain!{
+/// const MY_DOMAIN: Eip712Domain = eip712_domain! {
 ///     name: "MyCoolProtocol",
 /// };
 ///
 /// # fn main() {
-/// let my_other_domain: Eip712Domain = eip712_domain!{
+/// let my_other_domain: Eip712Domain = eip712_domain! {
 ///     name: String::from("MyCoolProtocol"),
 ///     version: "1.0.0",
 ///     salt: keccak256("my domain salt"),

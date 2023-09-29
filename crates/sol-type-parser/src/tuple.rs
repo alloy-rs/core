@@ -22,9 +22,7 @@ use winnow::{
 /// assert_eq!(spec.types[0].span(), "uint256");
 ///
 /// // No array suffixes. Use `TypeSpecifier` instead.
-/// assert!(
-///    TupleSpecifier::try_from("(uint256,uint256)[]").is_err()
-/// );
+/// assert!(TupleSpecifier::try_from("(uint256,uint256)[]").is_err());
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -549,7 +549,7 @@ mod tests {
         "
         );
 
-        assert_eq!(MyTy::abi_decode_sequence(&encoded, false).unwrap(), data,);
+        assert_eq!(MyTy::abi_decode_sequence(&encoded, false).unwrap(), data);
     }
 
     #[test]

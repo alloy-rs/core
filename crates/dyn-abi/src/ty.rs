@@ -43,8 +43,8 @@ struct StructProp {
 /// assert_eq!(
 ///     ty,
 ///     DynSolType::Array(Box::new(DynSolType::Tuple(vec![
-///          DynSolType::Bool,
-///          DynSolType::Address,
+///         DynSolType::Bool,
+///         DynSolType::Address,
 ///     ])))
 /// );
 /// assert_eq!(ty.sol_type_name(), type_name);

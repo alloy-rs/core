@@ -24,7 +24,7 @@
 //! `encode` and `decode` methods operate on objects implementing [`TokenType`].
 //!
 //! ```
-//! use alloy_sol_types::{SolType, sol_data::*};
+//! use alloy_sol_types::{sol_data::*, SolType};
 //! # pub fn main() -> alloy_sol_types::Result<()> {
 //! // Represent a Solidity type in rust
 //! type MySolType = FixedArray<Bool, 2>;
@@ -114,8 +114,9 @@
 //! let mvt = MyValueType::from(U256::from(1));
 //! assert_eq!(
 //!     mvt.abi_encode(),
-//!     sol_data::Uint::<256>::abi_encode(&U256::from(1))
+//!     sol_data::Uint::<256>::encode(&U256::from(1))
 //! );
+//! # }
 //! ```
 //!
 //! ## Tokenization/Detokenization
