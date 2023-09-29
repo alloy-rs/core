@@ -38,7 +38,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     let converts = expand_from_into_tuples(&name.0, params);
     let fields = expand_fields(params);
     let doc = (!attr::has_docs(&attrs)).then(|| {
-        let selector = hex::encode_prefixed(&selector.array);
+        let selector = hex::encode_prefixed(selector.array);
         attr::mk_doc(format!(
             "Custom error with signature `{signature}` and selector `{selector}`."
         ))

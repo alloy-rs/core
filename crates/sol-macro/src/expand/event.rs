@@ -106,7 +106,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .map(|(i, assign)| quote!(out[#i] = #assign;));
 
     let doc = (!attr::has_docs(&attrs)).then(|| {
-        let selector = hex::encode_prefixed(&selector.array);
+        let selector = hex::encode_prefixed(selector.array);
         attr::mk_doc(format!(
             "Event with signature `{signature}` and selector `{selector}`."
         ))

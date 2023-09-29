@@ -67,8 +67,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let selector = crate::utils::selector(&signature);
     let tokenize_impl = expand_tokenize_func(arguments.iter());
 
-    let call_doc = (!attr::has_docs(&attrs)).then(|| {
-        let selector = hex::encode_prefixed(&selector.array);
+    let call_doc = (!attr::has_docs(attrs)).then(|| {
+        let selector = hex::encode_prefixed(selector.array);
         attr::mk_doc(format!(
             "Function with signature `{signature}` and selector `0x{selector}`."
         ))
