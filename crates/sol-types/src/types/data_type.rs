@@ -551,8 +551,6 @@ macro_rules! tuple_encodable_impls {
 }
 
 macro_rules! tuple_impls {
-    (@one $ty:ident) => { 1usize };
-
     // compile time `join(",")` format string
     (@fmt $other:ident) => { ",{}" };
     (@fmt $first:ident, $($other:ident,)*) => {
@@ -562,7 +560,7 @@ macro_rules! tuple_impls {
         )
     };
 
-    ($($ty:ident),+) => {
+    ($count:literal $($ty:ident),+) => {
         #[allow(non_snake_case)]
         impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
             type RustType = ($( $ty::RustType, )+);
@@ -617,13 +615,12 @@ macro_rules! tuple_impls {
             }
 
             fn eip712_data_word(rust: &Self::RustType) -> Word {
-                const COUNT: usize = 0usize $(+ tuple_impls!(@one $ty))+;
                 let ($($ty,)+) = rust;
-                let encoding: [[u8; 32]; COUNT] = [$(
+                let encoding: [[u8; 32]; $count] = [$(
                     <$ty as SolType>::eip712_data_word($ty).0,
                 )+];
-                // SAFETY: Flattening [[u8; 32]; COUNT] to [u8; COUNT * 32] is valid
-                let encoding: &[u8] = unsafe { core::slice::from_raw_parts(encoding.as_ptr().cast(), COUNT * 32) };
+                // SAFETY: Flattening [[u8; 32]; $count] to [u8; $count * 32] is valid
+                let encoding: &[u8] = unsafe { core::slice::from_raw_parts(encoding.as_ptr().cast(), $count * 32) };
                 keccak256(encoding).into()
             }
 
