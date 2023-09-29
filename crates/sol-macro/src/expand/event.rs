@@ -1,6 +1,7 @@
 //! [`ItemEvent`] expansion.
 
 use super::{anon_name, expand_tuple_types, expand_type, ty, ExpCtxt};
+use crate::attr;
 use ast::{EventParameter, ItemEvent, SolIdent, Spanned};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
@@ -104,7 +105,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .enumerate()
         .map(|(i, assign)| quote!(out[#i] = #assign;));
 
+    let doc = (!attr::has_docs(&attrs)).then(|| {
+        let selector = hex::encode_prefixed(selector.array);
+        attr::mk_doc(format!(
+            "Event with signature `{signature}` and selector `{selector}`."
+        ))
+    });
     let tokens = quote! {
+        #doc
         #(#attrs)*
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         pub struct #name {

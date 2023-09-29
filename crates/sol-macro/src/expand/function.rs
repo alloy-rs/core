@@ -3,6 +3,7 @@
 use super::{
     expand_fields, expand_from_into_tuples, expand_tuple_types, ty::expand_tokenize_func, ExpCtxt,
 };
+use crate::attr;
 use ast::ItemFunction;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -66,7 +67,20 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let selector = crate::utils::selector(&signature);
     let tokenize_impl = expand_tokenize_func(arguments.iter());
 
+    let call_doc = (!attr::has_docs(attrs)).then(|| {
+        let selector = hex::encode_prefixed(selector.array);
+        attr::mk_doc(format!(
+            "Function with signature `{signature}` and selector `0x{selector}`."
+        ))
+    });
+    let return_doc = (!attr::has_docs(&return_attrs)).then(|| {
+        attr::mk_doc(format!(
+            "Container type for the return parameters of the [`{signature}`]({call_name}) function."
+        ))
+    });
+
     let tokens = quote! {
+        #call_doc
         #(#call_attrs)*
         #[allow(non_camel_case_types, non_snake_case)]
         #[derive(Clone)]
@@ -74,6 +88,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
             #(#call_fields),*
         }
 
+        #return_doc
         #(#return_attrs)*
         #[allow(non_camel_case_types, non_snake_case)]
         #[derive(Clone)]

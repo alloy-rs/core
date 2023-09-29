@@ -1,6 +1,7 @@
 //! [`ItemError`] expansion.
 
 use super::{expand_fields, expand_from_into_tuples, ty::expand_tokenize_func, ExpCtxt};
+use crate::attr;
 use ast::ItemError;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -36,7 +37,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
 
     let converts = expand_from_into_tuples(&name.0, params);
     let fields = expand_fields(params);
+    let doc = (!attr::has_docs(&attrs)).then(|| {
+        let selector = hex::encode_prefixed(selector.array);
+        attr::mk_doc(format!(
+            "Custom error with signature `{signature}` and selector `{selector}`."
+        ))
+    });
     let tokens = quote! {
+        #doc
         #(#attrs)*
         #[allow(non_camel_case_types, non_snake_case)]
         #[derive(Clone)]

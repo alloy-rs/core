@@ -23,12 +23,14 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dependencies]
 syn-solidity = { workspace = true, features = ["visit", "visit-mut"] }
 
-dunce = "1"
-heck = "0.4"
 proc-macro2.workspace = true
 quote.workspace = true
 syn = { workspace = true, features = ["extra-traits"] }
+
+dunce = "1"
+heck = "0.4"
 tiny-keccak = { workspace = true, features = ["keccak"] }
+hex.workspace = true
 
 # json
 alloy-json-abi = { workspace = true, optional = true }
