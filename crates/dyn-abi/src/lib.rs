@@ -46,7 +46,7 @@ pub use value::DynSolValue;
 mod token;
 pub use token::DynToken;
 
-pub mod resolve;
+mod resolve;
 pub use resolve::ResolveSolType;
 
 #[cfg(feature = "eip712")]
