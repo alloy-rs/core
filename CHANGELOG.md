@@ -15,14 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug Fixes
 
-- Test
-- Implement EventTopic for generated enums ([#320](https://github.com/alloy-rs/core/issues/320))
+- [syn-solidity] Test
+- [sol-macro] Implement EventTopic for generated enums ([#320](https://github.com/alloy-rs/core/issues/320))
 - Add super import on generated modules ([#307](https://github.com/alloy-rs/core/issues/307))
 - Respect `all_derives = false`, fix custom type printing ([#272](https://github.com/alloy-rs/core/issues/272))
 - Rand default-features typo ([#286](https://github.com/alloy-rs/core/issues/286))
-- Parse modifiers without parens ([#284](https://github.com/alloy-rs/core/issues/284))
+- [syn-solidity] Parse modifiers without parens ([#284](https://github.com/alloy-rs/core/issues/284))
 - Struct `eip712_data_word` ([#258](https://github.com/alloy-rs/core/issues/258))
-- Imports ([#252](https://github.com/alloy-rs/core/issues/252))
+- [syn-solidity] Imports ([#252](https://github.com/alloy-rs/core/issues/252))
 - MSRV tests ([#246](https://github.com/alloy-rs/core/issues/246))
 - Hex compatibility ([#244](https://github.com/alloy-rs/core/issues/244))
 
@@ -42,28 +42,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
-- Add docs to generated items ([#321](https://github.com/alloy-rs/core/issues/321))
-- Add support for overloaded events ([#318](https://github.com/alloy-rs/core/issues/318))
-- Added visitor hooks for all statements and expressions ([#314](https://github.com/alloy-rs/core/issues/314))
-- Improve type expansion ([#302](https://github.com/alloy-rs/core/issues/302))
-- Add more `Spanned` impls ([#301](https://github.com/alloy-rs/core/issues/301))
+- [sol-macro] Add docs to generated items ([#321](https://github.com/alloy-rs/core/issues/321))
+- [sol-macro] Add support for overloaded events ([#318](https://github.com/alloy-rs/core/issues/318))
+- [syn-solidity] Added visitor hooks for all statements and expressions ([#314](https://github.com/alloy-rs/core/issues/314))
+- [sol-macro] Improve type expansion ([#302](https://github.com/alloy-rs/core/issues/302))
+- [syn-solidity] Add more `Spanned` impls ([#301](https://github.com/alloy-rs/core/issues/301))
 - Unsupported message for $idents ([#293](https://github.com/alloy-rs/core/issues/293))
-- Add `Function::signature_full` ([#289](https://github.com/alloy-rs/core/issues/289))
-- Add more methods to `Function` ([#290](https://github.com/alloy-rs/core/issues/290))
+- [json-abi] Add `Function::signature_full` ([#289](https://github.com/alloy-rs/core/issues/289))
+- [primitives] Add more methods to `Function` ([#290](https://github.com/alloy-rs/core/issues/290))
 - Improve `SolError`, `SolInterface` structs and implementations ([#285](https://github.com/alloy-rs/core/issues/285))
 - Add more `FixedBytes` to int conversion impls ([#281](https://github.com/alloy-rs/core/issues/281))
 - Add support for `rand` ([#282](https://github.com/alloy-rs/core/issues/282))
 - Use `FixedBytes` for `sol_data::FixedBytes` ([#276](https://github.com/alloy-rs/core/issues/276))
 - Impl `bytes::Buf` for our own `Bytes` ([#279](https://github.com/alloy-rs/core/issues/279))
 - Add more `Bytes` conversion impls ([#280](https://github.com/alloy-rs/core/issues/280))
-- Improve Bytes ([#269](https://github.com/alloy-rs/core/issues/269))
-- Expand getter functions' return types ([#262](https://github.com/alloy-rs/core/issues/262))
+- [primitives] Improve Bytes ([#269](https://github.com/alloy-rs/core/issues/269))
+- [sol-macro] Expand getter functions' return types ([#262](https://github.com/alloy-rs/core/issues/262))
 - Add attributes to enum variants ([#264](https://github.com/alloy-rs/core/issues/264))
-- Expand fields with attrs ([#263](https://github.com/alloy-rs/core/issues/263))
-- Improve variable getters generation ([#260](https://github.com/alloy-rs/core/issues/260))
-- Implement more ext traits for json-abi ([#243](https://github.com/alloy-rs/core/issues/243))
-- Add opt-in attributes for extra methods and derives ([#250](https://github.com/alloy-rs/core/issues/250))
-- Allow empty input in hex macros ([#245](https://github.com/alloy-rs/core/issues/245))
+- [sol-macro] Expand fields with attrs ([#263](https://github.com/alloy-rs/core/issues/263))
+- [syn-solidity] Improve variable getters generation ([#260](https://github.com/alloy-rs/core/issues/260))
+- [dyn-abi] Implement more ext traits for json-abi ([#243](https://github.com/alloy-rs/core/issues/243))
+- [sol-macro] Add opt-in attributes for extra methods and derives ([#250](https://github.com/alloy-rs/core/issues/250))
+- [primitives] Allow empty input in hex macros ([#245](https://github.com/alloy-rs/core/issues/245))
 
 ### Miscellaneous Tasks
 
@@ -108,34 +108,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Testing
 
-- Improve contract tests ([#316](https://github.com/alloy-rs/core/issues/316))
+- [syn-solidity] Improve contract tests ([#316](https://github.com/alloy-rs/core/issues/316))
 
 ## [0.3.2](https://github.com/alloy-rs/core/releases/tag/v0.3.2) - 2023-08-23
 
 ### Bug Fixes
 
-- Properly handle Param `type` field ([#233](https://github.com/alloy-rs/core/issues/233))
-- Snake_case'd function names ([#226](https://github.com/alloy-rs/core/issues/226))
+- [json-abi] Properly handle Param `type` field ([#233](https://github.com/alloy-rs/core/issues/233))
+- [sol-macro] Snake_case'd function names ([#226](https://github.com/alloy-rs/core/issues/226))
 - Fix bincode serialization ([#223](https://github.com/alloy-rs/core/issues/223))
-- Encode UDVTs as their underlying type in EIP-712 ([#220](https://github.com/alloy-rs/core/issues/220))
-- Don't panic when encountering functions without names ([#217](https://github.com/alloy-rs/core/issues/217))
+- [sol-macro] Encode UDVTs as their underlying type in EIP-712 ([#220](https://github.com/alloy-rs/core/issues/220))
+- [sol-macro] Don't panic when encountering functions without names ([#217](https://github.com/alloy-rs/core/issues/217))
 
 ### Features
 
 - Implement abi2sol ([#228](https://github.com/alloy-rs/core/issues/228))
-- More `FixedBytes<N>` <-> `[u8; N]` conversions ([#239](https://github.com/alloy-rs/core/issues/239))
+- [primitives] More `FixedBytes<N>` <-> `[u8; N]` conversions ([#239](https://github.com/alloy-rs/core/issues/239))
 - Add support for function input/output encoding/decoding ([#227](https://github.com/alloy-rs/core/issues/227))
-- Add statements and expressions ([#199](https://github.com/alloy-rs/core/issues/199))
-- Add match functions to value and doc aliases ([#234](https://github.com/alloy-rs/core/issues/234))
+- [syn-solidity] Add statements and expressions ([#199](https://github.com/alloy-rs/core/issues/199))
+- [dyn-abi] Add match functions to value and doc aliases ([#234](https://github.com/alloy-rs/core/issues/234))
 - Function type ([#224](https://github.com/alloy-rs/core/issues/224))
-- Allow `T: Into<Cow<str>>` in `eip712_domain!` ([#222](https://github.com/alloy-rs/core/issues/222))
-- Expand getter functions for public state variables ([#218](https://github.com/alloy-rs/core/issues/218))
+- [dyn-abi] Allow `T: Into<Cow<str>>` in `eip712_domain!` ([#222](https://github.com/alloy-rs/core/issues/222))
+- [sol-macro] Expand getter functions for public state variables ([#218](https://github.com/alloy-rs/core/issues/218))
 
 ### Miscellaneous Tasks
 
 - Release 0.3.2 ([#242](https://github.com/alloy-rs/core/issues/242))
-- Discourage use of `B160` ([#235](https://github.com/alloy-rs/core/issues/235))
-- Avoid unsafe, remove unused generics ([#229](https://github.com/alloy-rs/core/issues/229))
+- [primitives] Discourage use of `B160` ([#235](https://github.com/alloy-rs/core/issues/235))
+- [json-abi] Avoid unsafe, remove unused generics ([#229](https://github.com/alloy-rs/core/issues/229))
 - Clippy ([#225](https://github.com/alloy-rs/core/issues/225))
 
 ### Performance
@@ -157,7 +157,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update no-std not in readme ([#215](https://github.com/alloy-rs/core/issues/215))
 - Add ambiguity details to Encodable rustdoc ([#211](https://github.com/alloy-rs/core/issues/211))
-- Add README.md ([#209](https://github.com/alloy-rs/core/issues/209))
+- [json-abi] Add README.md ([#209](https://github.com/alloy-rs/core/issues/209))
 - Update README.md ([#208](https://github.com/alloy-rs/core/issues/208))
 
 ### Features
@@ -175,33 +175,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Correct encodeType expansion for nested structs ([#203](https://github.com/alloy-rs/core/issues/203))
 - Remove unused method body on solstruct ([#200](https://github.com/alloy-rs/core/issues/200))
 - Remove unwrap in decode_populate ([#172](https://github.com/alloy-rs/core/issues/172))
-- Empty data decode ([#159](https://github.com/alloy-rs/core/issues/159))
+- [sol-types] Empty data decode ([#159](https://github.com/alloy-rs/core/issues/159))
 - Doc in dyn-abi ([#155](https://github.com/alloy-rs/core/issues/155))
-- Fix broken documentation link ([#152](https://github.com/alloy-rs/core/issues/152))
+- [alloy-primitives] Fix broken documentation link ([#152](https://github.com/alloy-rs/core/issues/152))
 
 ### Documentation
 
 - Add licensing note to README.md ([#186](https://github.com/alloy-rs/core/issues/186))
 - Add parser to readme ([#183](https://github.com/alloy-rs/core/issues/183))
-- Move example to README.md ([#177](https://github.com/alloy-rs/core/issues/177))
+- [rlp] Move example to README.md ([#177](https://github.com/alloy-rs/core/issues/177))
 - Request that PR contributors allow maintainer edits ([#148](https://github.com/alloy-rs/core/issues/148))
 
 ### Features
 
 - Bytes handles numeric arrays and bytearrays in deser ([#202](https://github.com/alloy-rs/core/issues/202))
-- Impl ResolveSolType for Rc ([#189](https://github.com/alloy-rs/core/issues/189))
+- [dyb-abi] Impl ResolveSolType for Rc ([#189](https://github.com/alloy-rs/core/issues/189))
 - Native keccak feature flag ([#185](https://github.com/alloy-rs/core/issues/185))
-- `#[sol]` attributes and JSON ABI support ([#173](https://github.com/alloy-rs/core/issues/173))
+- [sol-macro] `#[sol]` attributes and JSON ABI support ([#173](https://github.com/alloy-rs/core/issues/173))
 - Solidity type parser ([#181](https://github.com/alloy-rs/core/issues/181))
-- Improve implementations ([#182](https://github.com/alloy-rs/core/issues/182))
-- Add arbitrary impls and proptests ([#175](https://github.com/alloy-rs/core/issues/175))
-- Cfg CustomStruct for eip712, rm CustomValue ([#178](https://github.com/alloy-rs/core/issues/178))
-- Clean up and improve performance ([#174](https://github.com/alloy-rs/core/issues/174))
+- [rlp] Improve implementations ([#182](https://github.com/alloy-rs/core/issues/182))
+- [dyn-abi] Add arbitrary impls and proptests ([#175](https://github.com/alloy-rs/core/issues/175))
+- [dyn-abi] Cfg CustomStruct for eip712, rm CustomValue ([#178](https://github.com/alloy-rs/core/issues/178))
+- [dyn-abi] Clean up and improve performance ([#174](https://github.com/alloy-rs/core/issues/174))
 - DynSolType::decode_params ([#166](https://github.com/alloy-rs/core/issues/166))
-- Add more impls ([#164](https://github.com/alloy-rs/core/issues/164))
-- Add some impls ([#162](https://github.com/alloy-rs/core/issues/162))
+- [json-abi] Add more impls ([#164](https://github.com/alloy-rs/core/issues/164))
+- [primitives] Add some impls ([#162](https://github.com/alloy-rs/core/issues/162))
 - `SolEnum` and `SolInterface` ([#153](https://github.com/alloy-rs/core/issues/153))
-- Fixed bytes macros ([#156](https://github.com/alloy-rs/core/issues/156))
+- [primitives] Fixed bytes macros ([#156](https://github.com/alloy-rs/core/issues/156))
 
 ### Miscellaneous Tasks
 
@@ -212,7 +212,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clippy ([#196](https://github.com/alloy-rs/core/issues/196))
 - Remove remaining refs to rlp ([#190](https://github.com/alloy-rs/core/issues/190))
 - Move rlp crates to a separate repo ([#187](https://github.com/alloy-rs/core/issues/187))
-- Gate eip712 behind a feature ([#176](https://github.com/alloy-rs/core/issues/176))
+- [dyn-abi] Gate eip712 behind a feature ([#176](https://github.com/alloy-rs/core/issues/176))
 - Warn on all rustdoc lints ([#154](https://github.com/alloy-rs/core/issues/154))
 - Clean ups ([#150](https://github.com/alloy-rs/core/issues/150))
 - Add smaller image for favicon ([#142](https://github.com/alloy-rs/core/issues/142))
@@ -308,7 +308,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support function overloading in `sol!` ([#53](https://github.com/alloy-rs/core/issues/53))
 - Primitive utils and improvements ([#52](https://github.com/alloy-rs/core/issues/52))
 - Add PanicKind enum ([#54](https://github.com/alloy-rs/core/issues/54))
-- Parse and expand custom errors and functions ([#24](https://github.com/alloy-rs/core/issues/24))
+- [sol-type-parser] Parse and expand custom errors and functions ([#24](https://github.com/alloy-rs/core/issues/24))
 - Standard solidity revert & panic ([#28](https://github.com/alloy-rs/core/issues/28))
 - Use `const-hex` instead of `hex` ([#25](https://github.com/alloy-rs/core/issues/25))
 - Improve macros ([#7](https://github.com/alloy-rs/core/issues/7))
