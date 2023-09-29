@@ -1,3 +1,5 @@
+#![cfg(feature = "visit")]
+
 use std::{
     fs::{self, DirEntry},
     path::Path,

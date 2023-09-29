@@ -29,7 +29,3 @@ pretty_assertions = "1"
 [features]
 visit = []
 visit-mut = []
-
-[[test]]
-name = "contracts"
-required-features = ["visit"]
