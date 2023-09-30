@@ -66,7 +66,7 @@ pub enum YulStmt {
     /// A continue statement: `continue`.
     Continue(Token![continue]),
 
-    /// A function defenition statement: `function f() { ... }`.
+    /// A function definition statement: `function f() { ... }`.
     FunctionDef(YulFunctionDef),
 }
 

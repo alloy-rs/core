@@ -79,9 +79,9 @@ macro_rules! make_visitor {
                     }
                 }
 
-                fn visit_stmt_return(&mut v, rturn: &'ast $($mut)? StmtReturn) {
-                    if let Some(rturn_expr) = & $($mut)? rturn.expr {
-                        v.visit_expr(rturn_expr);
+                fn visit_stmt_return(&mut v, ret: &'ast $($mut)? StmtReturn) {
+                    if let Some(ret_expr) = & $($mut)? ret.expr {
+                        v.visit_expr(ret_expr);
                     }
                 }
 
@@ -99,8 +99,8 @@ macro_rules! make_visitor {
                             v.visit_variable_declaration(iden);
                         }
                     }
-                    if let Some(rturn) = & $($mut)? stmt_try.returns {
-                        v.visit_parameter_list(& $($mut)? rturn.returns);
+                    if let Some(ret) = & $($mut)? stmt_try.returns {
+                        v.visit_parameter_list(& $($mut)? ret.returns);
                     }
                 }
 

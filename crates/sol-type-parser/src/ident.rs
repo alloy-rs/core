@@ -3,19 +3,19 @@ use winnow::{
     PResult,
 };
 
-/// The regular expression for a Solidity identfier.
+/// The regular expression for a Solidity identifier.
 ///
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier>
 pub const IDENT_REGEX: &str = "[a-zA-Z$_][a-zA-Z0-9$_]*";
 
 /// Returns `true` if the given character is valid at the start of a Solidity
-/// identfier.
+/// identifier.
 #[inline]
 pub const fn is_id_start(c: char) -> bool {
     matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '$')
 }
 
-/// Returns `true` if the given character is valid in a Solidity identfier.
+/// Returns `true` if the given character is valid in a Solidity identifier.
 #[inline]
 pub const fn is_id_continue(c: char) -> bool {
     matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$')
