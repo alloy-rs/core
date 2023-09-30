@@ -8,7 +8,7 @@ use syn::{
 
 macro_rules! yul_evm_builtin_enum_builder {
     ($( $variant:ident($($token:tt)* ) ),* $(,)?) => {
-        /// Respresentation of an EVM builtin opcode.
+        /// Representation of an EVM builtin opcode.
         ///
         /// Solidity Reference:
         /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.YulEVMBuiltin>
