@@ -753,9 +753,7 @@ impl DynSolValue {
     #[inline]
     pub fn abi_encode_params(&self) -> Vec<u8> {
         match self {
-            Self::Tuple(_) => self
-                .abi_encode_sequence()
-                .expect("tuple is definitely a sequence"),
+            Self::Tuple(seq) => Self::encode_seq(seq),
             _ => self.abi_encode(),
         }
     }
