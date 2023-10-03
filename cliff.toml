@@ -20,7 +20,7 @@ body = """
 {% for group, commits in commits | group_by(attribute="group") %}
     ### {{ group | title }}
     {% for commit in commits %}
-        - {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message | upper_first | split(pat="\\n") | first }}\
+        - {% if commit.scope %}[{{ commit.scope }}] {% endif %}{{ commit.message | upper_first | split(pat="\\n") | first }}\
     {% endfor %}
 {% endfor %}\n
 """
