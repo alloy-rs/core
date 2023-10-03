@@ -56,7 +56,7 @@ pub trait JsonAbiExt: Sealed {
     ///
     /// This function will return an error if the decoded data does not match
     /// the expected input types.
-    fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>>;
+    fn abi_decode_input(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>>;
 }
 
 /// Provide ABI encoding and decoding for the [`Function`] type.
@@ -79,7 +79,7 @@ pub trait FunctionExt: JsonAbiExt + Sealed {
     /// ABI-decodes the given data according to this functions's output types.
     ///
     /// This method does not check for any prefixes or selectors.
-    fn abi_decode_output(&self, data: &[u8]) -> Result<Vec<DynSolValue>>;
+    fn abi_decode_output(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>>;
 }
 
 impl JsonAbiExt for Constructor {
@@ -94,8 +94,8 @@ impl JsonAbiExt for Constructor {
     }
 
     #[inline]
-    fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.inputs)
+    fn abi_decode_input(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>> {
+        abi_decode(data, &self.inputs, validate)
     }
 }
 
@@ -111,8 +111,8 @@ impl JsonAbiExt for Error {
     }
 
     #[inline]
-    fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.inputs)
+    fn abi_decode_input(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>> {
+        abi_decode(data, &self.inputs, validate)
     }
 }
 
@@ -128,8 +128,8 @@ impl JsonAbiExt for Function {
     }
 
     #[inline]
-    fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.inputs)
+    fn abi_decode_input(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>> {
+        abi_decode(data, &self.inputs, validate)
     }
 }
 
@@ -140,8 +140,8 @@ impl FunctionExt for Function {
     }
 
     #[inline]
-    fn abi_decode_output(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.outputs)
+    fn abi_decode_output(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>> {
+        abi_decode(data, &self.outputs, validate)
     }
 }
 
@@ -183,9 +183,9 @@ fn abi_encode(values: &[DynSolValue]) -> Vec<u8> {
     DynSolValue::encode_seq(values)
 }
 
-fn abi_decode(data: &[u8], params: &[Param]) -> Result<Vec<DynSolValue>> {
+fn abi_decode(data: &[u8], params: &[Param], validate: bool) -> Result<Vec<DynSolValue>> {
     let mut values = Vec::with_capacity(params.len());
-    let mut decoder = Decoder::new(data, false);
+    let mut decoder = Decoder::new(data, validate);
     for param in params {
         let ty = param.resolve()?;
         let value = ty.abi_decode_inner(&mut decoder, crate::DynToken::decode_single_populate)?;
@@ -253,11 +253,12 @@ mod tests {
 
         // decode
         let response = U256::from(1u8).to_be_bytes_vec();
-        let decoded = func.abi_decode_output(&response).unwrap();
+        let decoded = func.abi_decode_output(&response, true).unwrap();
         assert_eq!(decoded, [DynSolValue::Uint(U256::from(1u8), 256)]);
 
         // Fail on wrong response type
         let bad_response = Address::repeat_byte(3u8).to_vec();
-        assert!(func.abi_decode_output(&bad_response).is_err());
+        assert!(func.abi_decode_output(&bad_response, true).is_err());
+        assert!(func.abi_decode_output(&bad_response, false).is_err());
     }
 }

@@ -3,7 +3,7 @@ use crate::{
     Result, SolType, Word,
 };
 use alloc::vec::Vec;
-use alloy_primitives::{FixedBytes, B256};
+use alloy_primitives::{FixedBytes, Log, B256};
 
 mod topic;
 pub use topic::EventTopic;
@@ -150,5 +150,10 @@ pub trait SolEvent: Sized {
         let topics = Self::decode_topics(topics)?;
         let body = Self::abi_decode_data(data, validate)?;
         Ok(Self::new(topics, body))
+    }
+
+    /// Decode the event from the given log object.
+    fn decode_log_object(log: &Log, validate: bool) -> Result<Self> {
+        Self::decode_log(log.topics().iter().copied(), &log.data, validate)
     }
 }

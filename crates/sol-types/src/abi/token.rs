@@ -25,16 +25,13 @@ use alloy_primitives::{FixedBytes, I256, U256};
 use core::fmt;
 
 mod sealed {
-    use super::*;
-
     pub trait Sealed {}
-    impl Sealed for WordToken {}
+    impl Sealed for super::WordToken {}
     impl Sealed for () {}
-    impl<T, const N: usize> Sealed for FixedSeqToken<T, N> {}
-    impl<T> Sealed for DynSeqToken<T> {}
-    impl<'a> Sealed for PackedSeqToken<'a> {}
+    impl<T, const N: usize> Sealed for super::FixedSeqToken<T, N> {}
+    impl<T> Sealed for super::DynSeqToken<T> {}
+    impl Sealed for super::PackedSeqToken<'_> {}
 }
-
 use sealed::Sealed;
 
 /// Abi-Encoding Tokens. This is a sealed trait. It contains the type

@@ -35,7 +35,10 @@ mod error;
 pub use error::{Error, Result};
 
 mod ext;
-pub use ext::{FunctionExt, JsonAbiExt};
+pub use ext::{EventExt, FunctionExt, JsonAbiExt};
+
+mod event;
+pub use event::{DecodedEvent, DynSolEvent};
 
 mod ty;
 pub use ty::DynSolType;
@@ -47,7 +50,7 @@ mod token;
 pub use token::DynToken;
 
 mod resolve;
-pub use resolve::ResolveSolType;
+pub use resolve::{ResolveSolEvent, ResolveSolType};
 
 #[cfg(feature = "eip712")]
 pub mod eip712;

@@ -492,6 +492,19 @@ impl DynSolType {
         }
     }
 
+    /// Decode an event topic into a [`DynSolValue`].
+    pub(crate) fn decode_event_topic(&self, topic: Word) -> DynSolValue {
+        match self {
+            Self::Address
+            | Self::Function
+            | Self::Bool
+            | Self::FixedBytes(_)
+            | Self::Int(_)
+            | Self::Uint(_) => self.detokenize(DynToken::Word(topic)).unwrap(),
+            _ => DynSolValue::FixedBytes(topic, 32),
+        }
+    }
+
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
     /// match this type.
     ///

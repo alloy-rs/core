@@ -2,7 +2,7 @@
 //!
 //! This is a simple representation of Solidity type grammar.
 
-use crate::{DynSolType, Result};
+use crate::{DynSolEvent, DynSolType, Result};
 use alloc::vec::Vec;
 use alloy_json_abi::{EventParam, Param};
 use alloy_sol_type_parser::{
@@ -12,7 +12,24 @@ use alloy_sol_type_parser::{
 #[cfg(feature = "eip712")]
 use alloy_json_abi::InternalType;
 
-/// Types that can be resolved into a [`DynSolType`].
+/// Resolve a type into a [`DynSolEvent`].
+///
+/// The `ResolveSolEvent` trait is implemented by types that can be resolved
+/// into Solidity-style event descriptors (i.e. a list of indexed parameters and
+/// a tuple of non-indexed parameters).
+///
+/// This trait is implemented for [`alloy_json_abi::Event`].
+pub trait ResolveSolEvent {
+    /// Resolve the type into a [`DynSolEvent`].
+    fn resolve(&self) -> Result<DynSolEvent>;
+}
+
+/// Resolve a type into a [`DynSolType`].
+///
+/// The `ResolveSolType` trait is implemented by types that can be resolved into
+/// a [`DynSolType`]. ABI and related systems have many different ways of
+/// encoding solidity types. This trait provides a single pattern for resolving
+/// those encodings into solidity types.
 ///
 /// ABI and related systems have many different ways of encoding solidity types.
 /// This trait provides a single pattern for resolving those encodings into

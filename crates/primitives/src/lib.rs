@@ -44,6 +44,9 @@ pub use self::bytes_::Bytes;
 #[cfg(feature = "getrandom")]
 mod impl_core;
 
+mod log;
+pub use log::Log;
+
 mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 

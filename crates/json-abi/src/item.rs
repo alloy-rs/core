@@ -142,7 +142,7 @@ abi_items! {
         /// A list of the event's inputs, in order.
         pub inputs: Vec<EventParam>,
         /// Whether the event is anonymous. Anonymous events do not have their
-        /// Signature included in the topic 0. Instead, the indexed arguments
+        /// signature included in the topic 0. Instead, the indexed arguments
         /// are 0-indexed.
         pub anonymous: bool,
     }
@@ -414,5 +414,11 @@ impl Event {
     #[inline]
     pub fn selector(&self) -> B256 {
         keccak256(self.signature().as_bytes())
+    }
+
+    /// Computes the number of this event's indexed topics.
+    #[inline]
+    pub fn num_topics(&self) -> usize {
+        !self.anonymous as usize + self.inputs.iter().filter(|input| input.indexed).count()
     }
 }

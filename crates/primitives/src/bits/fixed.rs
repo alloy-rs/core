@@ -474,20 +474,19 @@ impl<const N: usize> FixedBytes<N> {
         &mut self.0
     }
 
-    /// Returns `true` if all bits set in `b` are also set in `self`.
+    /// Returns `true` if all bits set in `self` are also set in `b`.
     #[inline]
-    pub fn covers(&self, b: &Self) -> bool {
-        (*b & *self) == *b
+    pub fn covers(&self, other: &Self) -> bool {
+        (*self & *other) == *other
     }
 
-    /// Returns `true` if no bits are set.
-    #[inline]
-    pub fn is_zero(&self) -> bool {
-        *self == Self::ZERO
+    /// Returns `true` if all bits set in `self` are also set in `b`.
+    pub const fn const_covers(self, other: Self) -> bool {
+        // (self & other) == other
+        other.const_eq(&self.bit_and(other))
     }
 
     /// Compile-time equality. NOT constant-time equality.
-    #[inline]
     pub const fn const_eq(&self, other: &Self) -> bool {
         let mut i = 0;
         while i < N {
@@ -497,6 +496,12 @@ impl<const N: usize> FixedBytes<N> {
             i += 1;
         }
         true
+    }
+
+    /// Returns `true` if no bits are set.
+    #[inline]
+    pub fn is_zero(&self) -> bool {
+        *self == Self::ZERO
     }
 
     /// Returns `true` if no bits are set.

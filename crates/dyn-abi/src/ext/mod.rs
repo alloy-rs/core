@@ -1,5 +1,5 @@
 mod abi;
 pub use abi::{FunctionExt, JsonAbiExt};
 
-// TODO
-// mod event;
+mod event;
+pub use event::EventExt;
