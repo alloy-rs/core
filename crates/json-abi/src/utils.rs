@@ -1,6 +1,7 @@
 use crate::{EventParam, Param};
 use alloc::{string::String, vec::Vec};
 use alloy_primitives::Selector;
+use alloy_sol_type_parser::{ParameterSpecifier, TypeSpecifier, TypeStem};
 use core::{fmt::Write, num::NonZeroUsize};
 
 /// Capacity to allocate per [Param].
@@ -16,7 +17,6 @@ macro_rules! validate_identifier {
         }
     };
 }
-use alloy_sol_type_parser::{ParameterSpecifier, TypeSpecifier, TypeStem};
 pub(crate) use validate_identifier;
 
 /// `($($params),*)`
@@ -72,17 +72,15 @@ pub(crate) fn selector(preimage: &str) -> Selector {
     }
 }
 
+type Ret<T> = alloy_sol_type_parser::Result<(String, Vec<T>, Vec<T>, bool)>;
+
 #[inline]
-pub(crate) fn parse_sig<const O: bool>(
-    s: &str,
-) -> alloy_sol_type_parser::Result<(String, Vec<Param>, Vec<Param>, bool)> {
+pub(crate) fn parse_sig<const O: bool>(s: &str) -> Ret<Param> {
     alloy_sol_type_parser::__internal_parse_signature::<O, _, _>(s, |p| mk_param(p.name, p.ty))
 }
 
 #[inline]
-pub(crate) fn parse_event_sig(
-    s: &str,
-) -> alloy_sol_type_parser::Result<(String, Vec<EventParam>, Vec<EventParam>, bool)> {
+pub(crate) fn parse_event_sig(s: &str) -> Ret<EventParam> {
     alloy_sol_type_parser::__internal_parse_signature::<false, _, _>(s, mk_eparam)
 }
 

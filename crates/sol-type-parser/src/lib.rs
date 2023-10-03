@@ -138,7 +138,12 @@ pub fn __internal_parse_signature<'a, const OUT: bool, F: Fn(ParameterSpecifier<
             |i: &mut _| {
                 if OUT {
                     preceded(
-                        (space0, opt(str_parser(":")), space0),
+                        (
+                            space0,
+                            opt(str_parser(":")),
+                            opt(str_parser("returns")),
+                            space0,
+                        ),
                         opt(tuple_parser(ParameterSpecifier::parser.map(&f))),
                     )
                     .parse_next(i)

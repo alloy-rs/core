@@ -1,10 +1,10 @@
 use alloc::boxed::Box;
 use core::fmt;
 
-/// Type string parsing result
+/// Parser result
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
-/// A type string parsing error.
+/// Parser error.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Error(Repr);
 
