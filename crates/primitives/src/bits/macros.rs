@@ -4,7 +4,7 @@
 /// This functionally creates a new named `FixedBytes` that cannot be
 /// type-confused for another named `FixedBytes`.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```
 /// use alloy_primitives::wrap_fixed_bytes;
@@ -619,7 +619,7 @@ macro_rules! fixed_bytes_macros {
         ///
         /// Note that the strings cannot be prefixed with `0x`.
         ///
-        /// See [`hex_literal::hex!`] for more information.
+        /// See [`hex!`](crate::hex!) for more information.
         ///
         /// # Examples
         ///
@@ -670,7 +670,7 @@ fixed_bytes_macros! { $
 ///
 /// Note that the strings cannot be prefixed with `0x`.
 ///
-/// See [`hex_literal::hex!`] for more information.
+/// See [`hex!`](crate::hex!) for more information.
 #[macro_export]
 macro_rules! bytes {
     () => {
@@ -686,8 +686,7 @@ macro_rules! bytes {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Address, Bytes, FixedBytes};
-    use hex_literal::hex;
+    use crate::{hex, Address, Bytes, FixedBytes};
 
     #[test]
     fn fixed_byte_macros() {

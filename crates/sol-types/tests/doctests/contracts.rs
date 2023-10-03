@@ -1,6 +1,5 @@
-use alloy_primitives::{address, U256};
+use alloy_primitives::{address, hex, U256};
 use alloy_sol_types::{sol, SolCall, SolInterface};
-use hex_literal::hex;
 
 sol! {
     /// Interface of the ERC20 standard as defined in [the EIP].
@@ -35,7 +34,7 @@ fn contracts() {
     };
 
     assert_eq!(data[..4], IERC20::transferCall::SELECTOR);
-    let decoded = IERC20::IERC20Calls::decode(&data, true).unwrap();
+    let decoded = IERC20::IERC20Calls::abi_decode(&data, true).unwrap();
     assert_eq!(decoded, IERC20::IERC20Calls::transfer(expected));
-    assert_eq!(decoded.encode(), data);
+    assert_eq!(decoded.abi_encode(), data);
 }

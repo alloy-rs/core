@@ -68,30 +68,35 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
     let functions_enum = (!functions.is_empty()).then(|| {
         let mut attrs = d_attrs.clone();
-        let doc_str = format!("Container for all the `{name}` function calls.");
+        let doc_str = format!("Container for all the [`{name}`](self) function calls.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         CallLikeExpander::from_functions(cx, name, functions).expand(attrs, extra_methods)
     });
 
     let errors_enum = (!errors.is_empty()).then(|| {
         let mut attrs = d_attrs.clone();
-        let doc_str = format!("Container for all the `{name}` custom errors.");
+        let doc_str = format!("Container for all the [`{name}`](self) custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         CallLikeExpander::from_errors(cx, name, errors).expand(attrs, extra_methods)
     });
 
     let events_enum = (!events.is_empty()).then(|| {
         let mut attrs = d_attrs;
-        let doc_str = format!("Container for all the `{name}` events.");
+        let doc_str = format!("Container for all the [`{name}`](self) events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         CallLikeExpander::from_events(cx, name, events).expand_event(attrs, extra_methods)
     });
 
     let mod_attrs = attr::docs(&attrs);
+    let mod_docs = (!attr::has_docs(&attrs))
+        .then(|| attr::mk_doc("Module containing a contract's types and functions."));
     let tokens = quote! {
+        #mod_docs
         #(#mod_attrs)*
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         pub mod #name {
+            use super::*;
+
             #bytecode
             #deployed_bytecode
 
@@ -168,7 +173,7 @@ impl<'a> CallLikeExpander<'a> {
     ) -> Self {
         let variants: Vec<_> = functions
             .iter()
-            .map(|f| cx.function_name_ident(f).0)
+            .map(|&f| cx.overloaded_name(f.into()).0)
             .collect();
 
         let types: Vec<_> = variants.iter().map(|name| cx.raw_call_name(name)).collect();
@@ -209,13 +214,18 @@ impl<'a> CallLikeExpander<'a> {
     }
 
     fn from_events(cx: &'a ExpCtxt<'a>, contract_name: &SolIdent, events: Vec<&ItemEvent>) -> Self {
+        let variants: Vec<_> = events
+            .iter()
+            .map(|&event| cx.overloaded_name(event.into()).0)
+            .collect();
+
         let mut selectors: Vec<_> = events.iter().map(|e| cx.event_selector(e)).collect();
         selectors.sort_unstable_by_key(|a| a.array);
 
         Self {
             cx,
             name: format_ident!("{contract_name}Events"),
-            variants: events.iter().map(|event| event.name.0.clone()).collect(),
+            variants,
             min_data_len: events
                 .iter()
                 .map(|event| ty::params_base_data_size(cx, &event.params()))
@@ -226,8 +236,8 @@ impl<'a> CallLikeExpander<'a> {
         }
     }
 
-    /// Type name overrides. Currently only functions support this through
-    /// overloading.
+    /// Type name overrides. Currently only functions support because of the
+    /// `Call` suffix.
     fn types(&self) -> &[Ident] {
         match &self.data {
             CallLikeExpanderData::Function { types, .. } => types,
@@ -271,25 +281,19 @@ impl<'a> CallLikeExpander<'a> {
                 }
 
                 #[inline]
-                fn type_check(selector: [u8; 4]) -> ::alloy_sol_types::Result<()> {
-                    match selector {
-                        #(<#types as ::alloy_sol_types::#trait_>::SELECTOR)|* => Ok(()),
-                        s => ::core::result::Result::Err(::alloy_sol_types::Error::unknown_selector(
-                            Self::NAME,
-                            s,
-                        )),
-                    }
+                fn valid_selector(selector: [u8; 4]) -> bool {
+                    ::core::matches!(selector, #(<#types as ::alloy_sol_types::#trait_>::SELECTOR)|*)
                 }
 
                 #[inline]
-                fn decode_raw(
+                fn abi_decode_raw(
                     selector: [u8; 4],
                     data: &[u8],
                     validate: bool
                 )-> ::alloy_sol_types::Result<Self> {
                     match selector {
                         #(<#types as ::alloy_sol_types::#trait_>::SELECTOR => {
-                            <#types as ::alloy_sol_types::#trait_>::decode_raw(data, validate)
+                            <#types as ::alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
                                 .map(Self::#variants)
                         })*
                         s => ::core::result::Result::Err(::alloy_sol_types::Error::unknown_selector(
@@ -300,18 +304,18 @@ impl<'a> CallLikeExpander<'a> {
                 }
 
                 #[inline]
-                fn encoded_size(&self) -> usize {
+                fn abi_encoded_size(&self) -> usize {
                     match self {#(
                         Self::#variants(inner) =>
-                            <#types as ::alloy_sol_types::#trait_>::encoded_size(inner),
+                            <#types as ::alloy_sol_types::#trait_>::abi_encoded_size(inner),
                     )*}
                 }
 
                 #[inline]
-                fn encode_raw(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                fn abi_encode_raw(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
                     match self {#(
                         Self::#variants(inner) =>
-                            <#types as ::alloy_sol_types::#trait_>::encode_raw(inner, out),
+                            <#types as ::alloy_sol_types::#trait_>::abi_encode_raw(inner, out),
                     )*}
                 }
             }

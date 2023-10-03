@@ -16,7 +16,10 @@
 //! - Tuples (T, U, V, ...)
 //! - Dynamic-length byte arrays `u8[]`
 
-use crate::{Decoder, Encoder, Result, Word};
+use crate::{
+    abi::{Decoder, Encoder},
+    Result, Word,
+};
 use alloc::vec::Vec;
 use alloy_primitives::{FixedBytes, I256, U256};
 use core::fmt;

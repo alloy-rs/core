@@ -1,8 +1,11 @@
 use crate::{
-    token::{PackedSeqToken, TokenSeq, WordToken},
-    Result, SolType, TokenType, Word,
+    abi::token::{PackedSeqToken, TokenSeq, TokenType, WordToken},
+    GenericContractError, Result, SolInterface, SolType, Word,
 };
-use alloc::{string::String, vec::Vec};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 use alloy_primitives::U256;
 use core::{borrow::Borrow, fmt};
 
@@ -37,7 +40,7 @@ pub trait SolError: Sized {
     /// The size of the error params when encoded in bytes, **without** the
     /// selector.
     #[inline]
-    fn encoded_size(&self) -> usize {
+    fn abi_encoded_size(&self) -> usize {
         if let Some(size) = <Self::Parameters<'_> as SolType>::ENCODED_SIZE {
             return size
         }
@@ -48,33 +51,33 @@ pub trait SolError: Sized {
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector.
     #[inline]
-    fn decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Parameters<'_> as SolType>::decode_sequence(data, validate).map(Self::new)
+    fn abi_decode_raw(data: &[u8], validate: bool) -> Result<Self> {
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence(data, validate).map(Self::new)
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the
     /// selector.
     #[inline]
-    fn decode(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode(data: &[u8], validate: bool) -> Result<Self> {
         let data = data
             .strip_prefix(&Self::SELECTOR)
             .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
-        Self::decode_raw(data, validate)
+        Self::abi_decode_raw(data, validate)
     }
 
     /// ABI encode the error to the given buffer **without** its selector.
     #[inline]
-    fn encode_raw(&self, out: &mut Vec<u8>) {
-        out.reserve(self.encoded_size());
-        out.extend(crate::encode_sequence(&self.tokenize()));
+    fn abi_encode_raw(&self, out: &mut Vec<u8>) {
+        out.reserve(self.abi_encoded_size());
+        out.extend(crate::abi::encode_sequence(&self.tokenize()));
     }
 
     /// ABI encode the error to the given buffer **with** its selector.
     #[inline]
-    fn encode(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(4 + self.encoded_size());
+    fn abi_encode(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(4 + self.abi_encoded_size());
         out.extend(&Self::SELECTOR);
-        self.encode_raw(&mut out);
+        self.abi_encode_raw(&mut out);
         out
     }
 }
@@ -158,7 +161,7 @@ impl SolError for Revert {
     }
 
     #[inline]
-    fn encoded_size(&self) -> usize {
+    fn abi_encoded_size(&self) -> usize {
         64 + crate::utils::next_multiple_of_32(self.reason.len())
     }
 }
@@ -288,7 +291,7 @@ impl SolError for Panic {
     }
 
     #[inline]
-    fn encoded_size(&self) -> usize {
+    fn abi_encoded_size(&self) -> usize {
         32
     }
 }
@@ -408,6 +411,24 @@ impl PanicKind {
     }
 }
 
+/// Returns the revert reason from the given output data. Returns `None` if the
+/// content is not a valid ABI-encoded [`GenericContractError`] or a [UTF-8
+/// string](String) (for Vyper reverts).
+pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
+    // Try to decode as a generic contract error.
+    if let Ok(error) = GenericContractError::abi_decode(out, true) {
+        return Some(error.to_string())
+    }
+
+    // If that fails, try to decode as a regular string.
+    if let Ok(decoded_string) = core::str::from_utf8(out) {
+        return Some(decoded_string.to_string())
+    }
+
+    // If both attempts fail, return None.
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -416,9 +437,9 @@ mod tests {
     #[test]
     fn test_revert_encoding() {
         let revert = Revert::from("test");
-        let encoded = revert.encode();
-        let decoded = Revert::decode(&encoded, true).unwrap();
-        assert_eq!(encoded.len(), revert.encoded_size() + 4);
+        let encoded = revert.abi_encode();
+        let decoded = Revert::abi_decode(&encoded, true).unwrap();
+        assert_eq!(encoded.len(), revert.abi_encoded_size() + 4);
         assert_eq!(encoded.len(), 100);
         assert_eq!(revert, decoded);
     }
@@ -427,10 +448,10 @@ mod tests {
     fn test_panic_encoding() {
         let panic = Panic { code: U256::ZERO };
         assert_eq!(panic.kind(), Some(PanicKind::Generic));
-        let encoded = panic.encode();
-        let decoded = Panic::decode(&encoded, true).unwrap();
+        let encoded = panic.abi_encode();
+        let decoded = Panic::abi_decode(&encoded, true).unwrap();
 
-        assert_eq!(encoded.len(), panic.encoded_size() + 4);
+        assert_eq!(encoded.len(), panic.abi_encoded_size() + 4);
         assert_eq!(encoded.len(), 36);
         assert_eq!(panic, decoded);
     }
@@ -447,5 +468,27 @@ mod tests {
             &keccak256(b"Panic(uint256)")[..4],
             "Panic selector is incorrect"
         );
+    }
+
+    #[test]
+    fn test_decode_solidity_revert_reason() {
+        let revert = Revert::from("test_revert_reason");
+        let encoded = revert.abi_encode();
+        let decoded = decode_revert_reason(&encoded).unwrap();
+        assert_eq!(decoded, String::from("revert: test_revert_reason"));
+    }
+
+    #[test]
+    fn test_decode_random_revert_reason() {
+        let revert_reason = String::from("test_revert_reason");
+        let decoded = decode_revert_reason(revert_reason.as_bytes()).unwrap();
+        assert_eq!(decoded, String::from("test_revert_reason"));
+    }
+
+    #[test]
+    fn test_decode_non_utf8_revert_reason() {
+        let revert_reason = [0xFF];
+        let decoded = decode_revert_reason(&revert_reason);
+        assert_eq!(decoded, None);
     }
 }

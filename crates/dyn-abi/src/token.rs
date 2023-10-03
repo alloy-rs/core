@@ -1,9 +1,10 @@
 use crate::{Decoder, DynSolValue, Error, Result, Word};
 use alloc::{borrow::Cow, boxed::Box, vec::Vec};
-use alloy_sol_types::token::{PackedSeqToken, TokenType, WordToken};
+use alloy_sol_types::abi::token::{PackedSeqToken, TokenType, WordToken};
 
-/// A dynamic token. Equivalent to an enum over all types implementing
-/// [`alloy_sol_types::TokenType`]
+/// A dynamic token.
+///
+/// Equivalent to an enum over all types implementing [`TokenType`].
 // NOTE: do not derive `Hash` for this type. The derived version is not
 // compatible with the current `PartialEq` implementation. If manually
 // implementing `Hash`, ignore the `template` prop in the `DynSeq` variant

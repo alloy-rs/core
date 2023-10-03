@@ -1,4 +1,4 @@
-use crate::{sol_data, token::WordToken, Encodable, SolType};
+use crate::{abi::token::WordToken, sol_data, Encodable, SolType};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Address, FixedBytes, B256, U256};
 
@@ -131,7 +131,7 @@ impl Eip712Domain {
 
     /// Returns the number of bytes that will be used to encode the domain.
     #[inline]
-    pub const fn encoded_size(&self) -> usize {
+    pub const fn abi_encoded_size(&self) -> usize {
         self.num_words() * 32
     }
 
@@ -156,7 +156,7 @@ impl Eip712Domain {
             keccak256(s.as_bytes())
         }
 
-        out.reserve(self.encoded_size());
+        out.reserve(self.abi_encoded_size());
         let name = self.name.as_ref().map(cow_keccak256);
         encode_opt::<sol_data::FixedBytes<32>, _>(name.as_ref(), out);
         let version = self.version.as_ref().map(cow_keccak256);
@@ -201,12 +201,12 @@ impl Eip712Domain {
 /// # use alloy_sol_types::{Eip712Domain, eip712_domain};
 /// # use alloy_primitives::keccak256;
 ///
-/// const MY_DOMAIN: Eip712Domain = eip712_domain!{
+/// const MY_DOMAIN: Eip712Domain = eip712_domain! {
 ///     name: "MyCoolProtocol",
 /// };
 ///
 /// # fn main() {
-/// let my_other_domain: Eip712Domain = eip712_domain!{
+/// let my_other_domain: Eip712Domain = eip712_domain! {
 ///     name: String::from("MyCoolProtocol"),
 ///     version: "1.0.0",
 ///     salt: keccak256("my domain salt"),

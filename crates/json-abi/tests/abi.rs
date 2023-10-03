@@ -2,8 +2,9 @@ use alloy_json_abi::{AbiItem, EventParam, JsonAbi, Param};
 use std::collections::HashMap;
 
 macro_rules! abi_parse_tests {
-    ($($name:ident($path:literal, $len:literal))*) => {$(
+    ($( $(#[$attr:meta])* $name:ident($path:literal, $len:literal))*) => {$(
         #[test]
+        $(#[$attr])*
         fn $name() {
             parse_test(include_str!($path), $len, $path);
         }
@@ -12,19 +13,22 @@ macro_rules! abi_parse_tests {
 
 abi_parse_tests! {
     abiencoderv2("abi/Abiencoderv2Test.json", 1)
+    #[cfg_attr(miri, ignore = "takes too long")]
     console("abi/console.json", 379)
     event_with_struct("abi/EventWithStruct.json", 1)
     large_array("abi/LargeArray.json", 1)
     large_struct("abi/LargeStruct.json", 1)
+    #[cfg_attr(miri, ignore = "takes too long")]
     large_structs("abi/LargeStructs.json", 4)
     large_tuple("abi/LargeTuple.json", 1)
+    #[cfg_attr(miri, ignore = "takes too long")]
     seaport("abi/Seaport.json", 69)
     udvts("abi/Udvts.json", 1)
 }
 
 #[allow(unused_variables)]
 fn load_test(path: &str, abi: &JsonAbi) {
-    #[cfg(all(feature = "std", feature = "serde_json"))]
+    #[cfg(all(feature = "std", feature = "serde_json", not(miri)))]
     {
         use std::{fs::File, io::BufReader};
         let file_path: String = format!("tests/{path}");

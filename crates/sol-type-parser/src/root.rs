@@ -1,5 +1,6 @@
-use crate::{is_valid_identifier, Error, Result};
+use crate::{ident::parse_identifier, is_valid_identifier, Error, Result};
 use core::fmt;
+use winnow::{trace::trace, PResult, Parser};
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type. This is the most basic type specifier.
@@ -12,20 +13,13 @@ use core::fmt;
 /// assert_eq!(root_type.span(), "uint256");
 ///
 /// // Allows unknown types
-/// assert_eq!(
-///     RootType::try_from("MyStruct")?.span(),
-///     "MyStruct",
-/// );
+/// assert_eq!(RootType::try_from("MyStruct")?.span(), "MyStruct");
 ///
 /// // No sequences
-/// assert!(
-///     RootType::try_from("uint256[2]").is_err()
-/// );
+/// assert!(RootType::try_from("uint256[2]").is_err());
 ///
 /// // No tuples
-/// assert!(
-///    RootType::try_from("(uint256,uint256)").is_err()
-/// );
+/// assert!(RootType::try_from("(uint256,uint256)").is_err());
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -56,14 +50,31 @@ impl fmt::Display for RootType<'_> {
 }
 
 impl<'a> RootType<'a> {
+    /// Create a new root type from a string without checking if it's valid.
+    ///
+    /// # Safety
+    ///
+    /// The string passed in must be a valid Solidity identifier. See
+    /// [`is_valid_identifier`].
+    pub const unsafe fn new_unchecked(s: &'a str) -> Self {
+        debug_assert!(is_valid_identifier(s));
+        Self(s)
+    }
+
     /// Parse a root type from a string.
     #[inline]
-    pub fn parse(value: &'a str) -> Result<Self> {
-        if is_valid_identifier(value) {
-            Ok(Self(value))
+    pub fn parse(input: &'a str) -> Result<Self> {
+        if is_valid_identifier(input) {
+            Ok(Self(input))
         } else {
-            Err(Error::invalid_type_string(value))
+            Err(Error::invalid_type_string(input))
         }
+    }
+
+    pub(crate) fn parser(input: &mut &'a str) -> PResult<Self> {
+        trace("RootType", parse_identifier)
+            .parse_next(input)
+            .map(Self)
     }
 
     /// The string underlying this type. The type name.

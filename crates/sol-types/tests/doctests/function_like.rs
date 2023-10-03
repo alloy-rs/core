@@ -1,6 +1,5 @@
-use alloy_primitives::{keccak256, U256};
+use alloy_primitives::{hex, keccak256, U256};
 use alloy_sol_types::{sol, SolCall, SolError};
-use hex_literal::hex;
 
 sol! {
     function foo(uint256 a, uint256 b) external view returns (uint256);
@@ -25,7 +24,7 @@ fn function() {
         a: U256::from(1),
         b: U256::from(2),
     };
-    let _call_data = call.encode();
+    let _call_data = call.abi_encode();
 
     // the signatures are unaffected
     let _ = overloaded_0Call {};
@@ -46,7 +45,7 @@ fn error() {
         "0000000000000000000000000000000000000000000000000000000000000002"
     );
     assert_eq!(
-        MyError::decode_raw(&call_data, true),
+        MyError::abi_decode_raw(&call_data, true),
         Ok(MyError {
             a: U256::from(1),
             b: U256::from(2)

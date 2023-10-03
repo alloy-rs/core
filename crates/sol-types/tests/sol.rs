@@ -1,5 +1,5 @@
-use alloy_primitives::{keccak256, Address, B256, U256};
-use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolType};
+use alloy_primitives::{keccak256, Address, B256, I256, U256};
+use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolStruct, SolType};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -37,7 +37,7 @@ fn e2e() {
         type MyValueType is uint256;
     }
 
-    <sol!(bool)>::encode(&true);
+    <sol!(bool)>::abi_encode(&true);
 
     let a = MyStruct {
         a: U256::from(1),
@@ -45,23 +45,23 @@ fn e2e() {
         c: Vec::new(),
     };
 
-    MyTuple::encode(&(a.clone(), [0; 32]));
-    MyStruct::encode(&a);
+    MyTuple::abi_encode(&(a.clone(), [0; 32]));
+    MyStruct::abi_encode(&a);
 
-    LateBinding::<MyStruct>::encode(&(vec![a.clone(), a.clone()], Address::default()));
+    LateBinding::<MyStruct>::abi_encode(&(vec![a.clone(), a.clone()], Address::default()));
 
-    MyStruct2::encode(&MyStruct2 {
+    MyStruct2::abi_encode(&MyStruct2 {
         a,
         b: [0; 32].into(),
         c: vec![],
     });
 
-    NestedArray::encode(&vec![[true, false], [true, false], [true, false]]);
+    NestedArray::abi_encode(&vec![[true, false], [true, false], [true, false]]);
 
     let mvt = MyValueType::from(U256::from(1));
     assert_eq!(
-        mvt.encode(),
-        alloy_sol_types::sol_data::Uint::<256>::encode(&U256::from(1))
+        mvt.abi_encode(),
+        alloy_sol_types::sol_data::Uint::<256>::abi_encode(&U256::from(1))
     );
 }
 
@@ -118,14 +118,14 @@ fn function() {
             },
         ],
     };
-    let encoded = call.encode();
+    let encoded = call.abi_encode();
     assert_eq!(
         encoded.len(),
-        someFunctionCall::SELECTOR.len() + call.encoded_size()
+        someFunctionCall::SELECTOR.len() + call.abi_encoded_size()
     );
 
     assert_eq!(
-        call.encoded_size(),
+        call.abi_encoded_size(),
         32 + (64 + 32) + (64 + 32 + 32) + (64 + 3 * 32) + 2 * 32 + (32 + 32) + (64 + 4 * (32 + 32))
     );
 }
@@ -133,15 +133,18 @@ fn function() {
 #[test]
 fn error() {
     sol! {
-        error SomeError(uint256 a);
+        error SomeError(int a, bool b);
     }
 
-    let sig = "SomeError(uint256)";
+    let sig = "SomeError(int256,bool)";
     assert_eq!(SomeError::SIGNATURE, sig);
     assert_eq!(SomeError::SELECTOR, keccak256(sig)[..4]);
 
-    let e = SomeError { a: U256::from(1) };
-    assert_eq!(e.encoded_size(), 32);
+    let e = SomeError {
+        a: I256::ZERO,
+        b: false,
+    };
+    assert_eq!(e.abi_encoded_size(), 64);
 }
 
 // https://github.com/alloy-rs/core/issues/158
@@ -154,14 +157,14 @@ fn empty_call() {
     }
     use WETH::depositCall;
 
-    assert_eq!(depositCall {}.encode(), depositCall::SELECTOR);
-    assert_eq!(depositCall {}.encoded_size(), 0);
+    assert_eq!(depositCall {}.abi_encode(), depositCall::SELECTOR);
+    assert_eq!(depositCall {}.abi_encoded_size(), 0);
     let mut out = vec![];
-    depositCall {}.encode_raw(&mut out);
+    depositCall {}.abi_encode_raw(&mut out);
     assert!(out.is_empty());
 
-    let depositCall {} = depositCall::decode(&depositCall::SELECTOR, true).unwrap();
-    let depositCall {} = depositCall::decode_raw(&[], true).unwrap();
+    let depositCall {} = depositCall::abi_decode(&depositCall::SELECTOR, true).unwrap();
+    let depositCall {} = depositCall::abi_decode_raw(&[], true).unwrap();
 }
 
 #[test]
@@ -372,6 +375,62 @@ fn enum_variant_attrs() {
 }
 
 #[test]
+fn nested_items() {
+    // This has to be in a module (not a function) because of Rust import rules
+    mod nested {
+        alloy_sol_types::sol! {
+            #[derive(Debug, PartialEq)]
+            struct FilAddress {
+                bytes data;
+            }
+
+            #[derive(Debug, PartialEq)]
+            struct BigInt {
+                bytes val;
+                bool neg;
+            }
+
+            #[derive(Debug, PartialEq)]
+            interface InterfaceTest {
+                function f1(FilAddress memory fAddress, uint256 value) public payable;
+
+                function f2(BigInt memory b) public returns (BigInt memory);
+            }
+        }
+    }
+    use nested::{InterfaceTest::*, *};
+
+    let _ = FilAddress { data: vec![] };
+    let _ = BigInt {
+        val: vec![],
+        neg: false,
+    };
+    assert_eq!(f1Call::SIGNATURE, "f1((bytes),uint256)");
+    assert_eq!(f2Call::SIGNATURE, "f2((bytes,bool))");
+}
+
+// https://github.com/alloy-rs/core/issues/319
+#[test]
+fn enum_field_of_struct() {
+    sol! {
+        enum MyEnum {
+            FIRST,
+            SECOND
+        }
+
+        struct MyStruct {
+            MyEnum myOption;
+            uint value;
+        }
+    }
+
+    let _ = MyStruct {
+        myOption: MyEnum::FIRST,
+        value: U256::ZERO,
+    };
+}
+
+#[test]
 #[cfg(feature = "json")]
 fn abigen_json_large_array() {
     sol!(LargeArray, "../json-abi/tests/abi/LargeArray.json");
@@ -432,14 +491,14 @@ fn eip712_encode_type_nesting() {
         }
     }
 
-    assert_eq!(A::eip712_encode_type().unwrap(), "A(uint256 a)");
-    assert_eq!(B::eip712_encode_type().unwrap(), "B(bytes32 b)");
+    assert_eq!(A::eip712_encode_type(), "A(uint256 a)");
+    assert_eq!(B::eip712_encode_type(), "B(bytes32 b)");
     assert_eq!(
-        C::eip712_encode_type().unwrap(),
+        C::eip712_encode_type(),
         "C(A a,B b)A(uint256 a)B(bytes32 b)"
     );
     assert_eq!(
-        D::eip712_encode_type().unwrap(),
+        D::eip712_encode_type(),
         "D(C c,A a,B b)A(uint256 a)B(bytes32 b)C(A a,B b)"
     );
 }

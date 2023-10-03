@@ -121,7 +121,7 @@ impl SolInput {
             }
             #[cfg(not(feature = "json"))]
             {
-                let msg = "JSON support must be enabled with the `json` feature";
+                let msg = "JSON support must be enabled with the \"json\" feature";
                 Err(Error::new(span, msg))
             }
         } else {
@@ -142,7 +142,7 @@ impl SolInput {
 
         let include = path.map(|p| {
             let p = p.to_str().unwrap();
-            quote! { const _: () = { ::core::include_bytes!(#p); }; }
+            quote! { const _: &'static [u8] = ::core::include_bytes!(#p); }
         });
 
         let tokens = match kind {

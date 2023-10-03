@@ -13,10 +13,10 @@
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
 #![warn(
-    missing_docs,
-    unreachable_pub,
     missing_copy_implementations,
     missing_debug_implementations,
+    missing_docs,
+    unreachable_pub,
     clippy::missing_const_for_fn,
     rustdoc::all
 )]
@@ -46,7 +46,7 @@ pub use value::DynSolValue;
 mod token;
 pub use token::DynToken;
 
-pub mod resolve;
+mod resolve;
 pub use resolve::ResolveSolType;
 
 #[cfg(feature = "eip712")]
@@ -57,4 +57,7 @@ pub use eip712::{parser as eip712_parser, Eip712Types, PropertyDef, Resolver, Ty
 #[doc(no_inline)]
 pub use alloy_sol_type_parser as parser;
 #[doc(no_inline)]
-pub use alloy_sol_types::{Decoder, Eip712Domain, Encoder, SolType, Word};
+pub use alloy_sol_types::{
+    abi::{self, Decoder, Encoder},
+    Eip712Domain, SolType, Word,
+};

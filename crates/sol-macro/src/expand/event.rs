@@ -1,7 +1,7 @@
 //! [`ItemEvent`] expansion.
 
-use super::{anon_name, expand_tuple_types, expand_type, ExpCtxt};
-use crate::expand::ty::expand_event_tokenize_func;
+use super::{anon_name, expand_tuple_types, expand_type, ty, ExpCtxt};
+use crate::attr;
 use ast::{EventParameter, ItemEvent, SolIdent, Spanned};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
@@ -19,7 +19,7 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream> {
-    let ItemEvent { name, attrs, .. } = event;
+    let ItemEvent { attrs, .. } = event;
     let params = event.params();
 
     let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
@@ -28,6 +28,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
     cx.assert_resolved(&params)?;
     event.assert_valid()?;
 
+    let name = cx.overloaded_name(event.into());
     let signature = cx.signature(name.as_string(), &params);
     let selector = crate::utils::event_selector(&signature);
     let anonymous = event.is_anonymous();
@@ -69,8 +70,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         quote! {(Self::SIGNATURE_HASH.into(), #(self.#topic_tuple_names.clone(),)*)}
     };
 
-    let encode_first_topic =
-        (!anonymous).then(|| quote!(::alloy_sol_types::token::WordToken(Self::SIGNATURE_HASH)));
+    let encode_first_topic = (!anonymous).then(|| {
+        quote!(::alloy_sol_types::abi::token::WordToken(
+            Self::SIGNATURE_HASH
+        ))
+    });
 
     let encode_topics_impl = event.indexed_params().enumerate().map(|(i, p)| {
         let name = anon_name((i, p.name.as_ref()));
@@ -93,7 +97,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .enumerate()
         .map(|(i, p)| expand_event_topic_field(i, p, p.name.as_ref()));
 
-    let tokenize_body_impl = expand_event_tokenize_func(event.parameters.iter());
+    let tokenize_body_impl = ty::expand_event_tokenize_func(event.parameters.iter());
 
     let encode_topics_impl = encode_first_topic
         .into_iter()
@@ -101,7 +105,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .enumerate()
         .map(|(i, assign)| quote!(out[#i] = #assign;));
 
+    let doc = (!attr::has_docs(&attrs)).then(|| {
+        let selector = hex::encode_prefixed(selector.array);
+        attr::mk_doc(format!(
+            "Event with signature `{signature}` and selector `{selector}`."
+        ))
+    });
     let tokens = quote! {
+        #doc
         #(#attrs)*
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         pub struct #name {
@@ -110,6 +121,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         const _: () = {
+            #[automatically_derived]
             impl ::alloy_sol_types::SolEvent for #name {
                 type DataTuple<'a> = #data_tuple;
                 type DataToken<'a> = <Self::DataTuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
@@ -146,7 +158,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                 #[inline]
                 fn encode_topics_raw(
                     &self,
-                    out: &mut [::alloy_sol_types::token::WordToken],
+                    out: &mut [::alloy_sol_types::abi::token::WordToken],
                 ) -> ::alloy_sol_types::Result<()> {
                     if out.len() < <Self::TopicList as ::alloy_sol_types::TopicList>::COUNT {
                         return Err(::alloy_sol_types::Error::Overrun);
@@ -161,7 +173,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 }
 
 fn expand_event_topic_type(param: &EventParameter) -> TokenStream {
-    debug_assert!(param.is_indexed());
+    assert!(param.is_indexed());
     if param.is_abi_dynamic() {
         quote_spanned! {param.ty.span()=> ::alloy_sol_types::sol_data::FixedBytes<32> }
     } else {
@@ -175,15 +187,13 @@ fn expand_event_topic_field(
     name: Option<&SolIdent>,
 ) -> TokenStream {
     let name = anon_name((i, name));
-
-    if param.indexed_as_hash() {
-        quote! {
-            #name: <::alloy_sol_types::sol_data::FixedBytes<32> as ::alloy_sol_types::SolType>::RustType
-        }
+    let ty = if param.indexed_as_hash() {
+        ty::expand_rust_type(&ast::Type::FixedBytes(
+            name.span(),
+            core::num::NonZeroU16::new(32).unwrap(),
+        ))
     } else {
-        let ty = expand_type(&param.ty);
-        quote! {
-            #name: <#ty as ::alloy_sol_types::SolType>::RustType
-        }
-    }
+        ty::expand_rust_type(&param.ty)
+    };
+    quote!(#name: #ty)
 }

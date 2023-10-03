@@ -34,13 +34,13 @@ let my_data = hex!(
     "0000000000000000000000000000000000000000000000000000000000000002" // .[0][0]
     "0000000000000000000000000000000000000000000000000000000000000003" // .[0][1]
 );
-let decoded = my_type.decode(&my_data)?;
+let decoded = my_type.abi_decode(&my_data)?;
 
 let expected = DynSolValue::Array(vec![DynSolValue::FixedArray(vec![2u16.into(), 3u16.into()])]);
 assert_eq!(decoded, expected);
 
 // roundtrip
-let encoded = decoded.encode();
+let encoded = decoded.abi_encode();
 assert_eq!(encoded, my_data);
 # Ok::<(), alloy_dyn_abi::Error>(())
 ```
@@ -62,7 +62,7 @@ The [`DynSolValue`] enum represents a solidity value, and describes the
 rust shapes of possible solidity values. It is similar to, but not
 equivalent to an enum over types used as [`crate::SolType::RustType`]. The
 [`DynToken`] enum represents an ABI token, and is equivalent to an enum over
-the types implementing the [`alloy_sol_types::TokenType`] trait.
+the types implementing the [`alloy_sol_types::abi::TokenType`] trait.
 
 Where the static encoding system encodes the expected type information into
 the Rust type system, the dynamic encoder/decoder encodes it as a concrete

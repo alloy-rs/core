@@ -521,7 +521,7 @@ fn int_strategy<T: Arbitrary>() -> impl Strategy<Value = (ValueOfStrategy<T::Str
     (any::<T>(), any::<usize>().prop_map(int_size))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(miri)))] // doesn't run in isolation and would take too long
 mod tests {
     use super::*;
     #[cfg(feature = "eip712")]
@@ -637,7 +637,7 @@ mod tests {
                 tuple,
             } => {
                 prop_assert!(is_valid_identifier(name));
-                prop_assert!(prop_names.iter().all(is_valid_identifier));
+                prop_assert!(prop_names.iter().all(|s| is_valid_identifier(s)));
                 prop_assert_eq!(prop_names.len(), tuple.len());
             }
             _ => {}
@@ -649,8 +649,8 @@ mod tests {
             prop_assert_eq!(parsed.as_ref(), Ok(&ty), "types don't match {:?}", s);
         }
 
-        let data = value.encode_params();
-        match ty.decode_params(&data) {
+        let data = value.abi_encode_params();
+        match ty.abi_decode_params(&data) {
             // skip the check if the type contains a CustomStruct, since
             // decoding will not populate names
             Ok(decoded) if !decoded.has_custom_struct() => prop_assert_eq!(

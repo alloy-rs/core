@@ -24,7 +24,7 @@
 //! `encode` and `decode` methods operate on objects implementing [`TokenType`].
 //!
 //! ```
-//! use alloy_sol_types::{SolType, sol_data::*};
+//! use alloy_sol_types::{sol_data::*, SolType};
 //! # pub fn main() -> alloy_sol_types::Result<()> {
 //! // Represent a Solidity type in rust
 //! type MySolType = FixedArray<Bool, 2>;
@@ -36,8 +36,8 @@
 //! assert_eq!(&MySolType::sol_type_name(), "bool[2]");
 //!
 //! // SolTypes are used to transform Rust into ABI blobs, and back.
-//! let encoded: Vec<u8> = MySolType::encode(&data);
-//! let decoded: [bool; 2] = MySolType::decode(&encoded, validate)?;
+//! let encoded: Vec<u8> = MySolType::abi_encode(&data);
+//! let decoded: [bool; 2] = MySolType::abi_decode(&encoded, validate)?;
 //! assert_eq!(data, decoded);
 //! # Ok(())
 //! # }
@@ -110,14 +110,12 @@
 //!     type MyValueType is uint256;
 //! }
 //!
-//! # pub fn main() {
 //! // UDTs are encoded as their underlying type
 //! let mvt = MyValueType::from(U256::from(1));
 //! assert_eq!(
-//!     mvt.encode(),
-//!     sol_data::Uint::<256>::encode(&U256::from(1))
+//!     mvt.abi_encode(),
+//!     sol_data::Uint::<256>::abi_encode(&U256::from(1))
 //! );
-//! # }
 //! ```
 //!
 //! ## Tokenization/Detokenization
@@ -140,16 +138,18 @@
 //! The [`SolType`] encoding and decoding methods operate on Rust types. We
 //! recommend users use them wherever possible. We do not recommend that users
 //! interact with Tokens, except when implementing their own [`SolType`].
+//!
+//! [`TokenType`]: abi::TokenType
 
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
 #![warn(
-    missing_docs,
-    unreachable_pub,
     missing_copy_implementations,
     missing_debug_implementations,
+    missing_docs,
+    unreachable_pub,
     clippy::missing_const_for_fn,
     rustdoc::all
 )]
@@ -167,12 +167,7 @@ extern crate alloc;
 #[macro_use]
 mod macros;
 
-mod coder;
-pub use coder::{
-    decode, decode_params, decode_sequence, encode, encode_params, encode_sequence,
-    token::{self, TokenType},
-    Decoder, Encoder,
-};
+pub mod abi;
 
 mod errors;
 pub use errors::{Error, Result};
@@ -181,9 +176,9 @@ mod impl_core;
 
 mod types;
 pub use types::{
-    data_type as sol_data, ContractError, Encodable, EventTopic, GenericContractError, Panic,
-    PanicKind, Revert, Selectors, SolCall, SolEnum, SolError, SolEvent, SolInterface, SolStruct,
-    SolType, TopicList,
+    data_type as sol_data, decode_revert_reason, ContractError, Encodable, EventTopic,
+    GenericContractError, Panic, PanicKind, Revert, Selectors, SolCall, SolEnum, SolError,
+    SolEvent, SolInterface, SolStruct, SolType, TopicList,
 };
 
 pub mod utils;
@@ -206,7 +201,9 @@ pub mod private {
         string::{String, ToString},
         vec::Vec,
     };
-    pub use alloy_primitives::{bytes, keccak256, Bytes, FixedBytes, B256, U256};
+    pub use alloy_primitives::{
+        bytes, keccak256, Address, Bytes, FixedBytes, Function, Signed, Uint, B256, I256, U256,
+    };
     pub use core::{convert::From, default::Default, option::Option, result::Result};
 
     pub use Option::{None, Some};

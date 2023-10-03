@@ -16,8 +16,8 @@ type SolTuple = sol! { tuple(address, bytes, string) };
 
 #[test]
 fn types() {
-    let _ = <sol!(bool)>::encode(&true);
-    let _ = B32::encode(&[0; 32]);
-    let _ = SolArrayOf::<sol!(bool)>::encode(&vec![true, false]);
-    let _ = SolTuple::encode(&(Address::ZERO, vec![0; 32], "hello".to_string()));
+    let _ = <sol!(bool)>::abi_encode(&true);
+    let _ = B32::abi_encode(&[0; 32]);
+    let _ = SolArrayOf::<sol!(bool)>::abi_encode(&vec![true, false]);
+    let _ = SolTuple::abi_encode(&(Address::ZERO, vec![0; 32], "hello".to_string()));
 }

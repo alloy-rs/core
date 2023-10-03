@@ -54,7 +54,15 @@ serde = { workspace = true, features = ["derive"] }
 
 [features]
 default = ["std"]
-std = ["bytes/std", "hex/std", "alloy-rlp?/std", "proptest?/std", "rand?/std", "serde?/std"]
+std = [
+    "bytes/std",
+    "hex/std",
+    "ruint/std",
+    "alloy-rlp?/std",
+    "proptest?/std",
+    "rand?/std",
+    "serde?/std",
+]
 tiny-keccak = []
 native-keccak = []
 getrandom = ["dep:getrandom"]

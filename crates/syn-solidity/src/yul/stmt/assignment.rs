@@ -40,12 +40,12 @@ impl Parse for YulVarAssign {
 
 impl Spanned for YulVarAssign {
     fn span(&self) -> Span {
-        let span = crate::utils::join_spans(&self.vars);
+        let span = self.vars.span();
         span.join(self.assigned_value.span()).unwrap_or(span)
     }
 
     fn set_span(&mut self, span: Span) {
-        crate::utils::set_spans(&mut self.vars, span);
+        self.vars.set_span(span);
         self.walrus_token.set_span(span);
         self.assigned_value.set_span(span);
     }

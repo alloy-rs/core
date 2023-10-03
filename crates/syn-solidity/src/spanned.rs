@@ -1,14 +1,41 @@
-use proc_macro2::{Span, TokenStream, TokenTree};
-use syn::{punctuated::Punctuated, Token};
+//! Helper [trait](Spanned) and methods to manipulate syntax tree nodes' spans.
+#![deny(unconditional_recursion)]
 
-/// A trait for getting and setting the span of a syntax tree node.
+use proc_macro2::{Span, TokenStream};
+use syn::{
+    punctuated::{Pair, Punctuated},
+    Token,
+};
+
+/// A trait that can provide the `Span` of the complete contents of a syntax
+/// tree node.
+///
+/// The main difference between this trait and [`syn::spanned::Spanned`] is that
+/// this trait does not depend on a [`quote::ToTokens`] implementation to
+/// retrieve a span, as it is usually stored inside of the syntax tree node
+/// itself.
 pub trait Spanned {
-    /// Returns the span of this syntax tree node.
+    /// Returns a `Span` covering the complete contents of this syntax tree
+    /// node, or [`Span::call_site()`] if this node is empty.
+    ///
+    /// [`Span::call_site()`]: proc_macro2::Span::call_site
     fn span(&self) -> Span;
 
-    /// Sets the span of this syntax tree node.
+    /// Sets the span of this syntax tree node if it is not empty.
     fn set_span(&mut self, span: Span);
+
+    /// Sets the span of this owned syntax tree node if it is not empty.
+    #[inline]
+    fn with_span(mut self, span: Span) -> Self
+    where
+        Self: Sized,
+    {
+        self.set_span(span);
+        self
+    }
 }
+
+fn _object_safe(_: &dyn Spanned) {}
 
 impl Spanned for Span {
     #[inline]
@@ -30,29 +57,16 @@ impl Spanned for TokenStream {
 
     #[inline]
     fn set_span(&mut self, span: Span) {
-        crate::utils::set_spans_clone(self, span);
-    }
-}
-
-impl Spanned for TokenTree {
-    #[inline]
-    fn span(&self) -> Span {
-        self.span()
+        *self = self.clone().with_span(span);
     }
 
-    #[inline]
-    fn set_span(&mut self, span: Span) {
-        self.set_span(span);
-    }
-}
-
-impl Spanned for syn::LitStr {
-    fn span(&self) -> Span {
-        self.span()
-    }
-
-    fn set_span(&mut self, span: Span) {
-        self.set_span(span);
+    fn with_span(self, span: Span) -> Self {
+        self.into_iter()
+            .map(|mut tt| {
+                tt.set_span(span);
+                tt
+            })
+            .collect()
     }
 }
 
@@ -73,7 +87,7 @@ impl<T: Spanned> Spanned for Option<T> {
     }
 }
 
-impl<T: ?Sized + Spanned + Clone> Spanned for &T {
+impl<T: ?Sized + Spanned> Spanned for &T {
     #[inline]
     fn span(&self) -> Span {
         (**self).span()
@@ -84,18 +98,44 @@ impl<T: ?Sized + Spanned + Clone> Spanned for &T {
     fn set_span(&mut self, _span: Span) {
         unimplemented!(
             "cannot set span of borrowed Spanned: {:?}",
-            std::any::type_name::<T>()
+            std::any::type_name::<&T>()
         )
     }
 }
 
-impl<T: Spanned + Clone, P> Spanned for Punctuated<T, P> {
+impl<T: Spanned> Spanned for [T] {
+    #[inline]
     fn span(&self) -> Span {
-        crate::utils::join_spans(self)
+        join_spans(self)
+    }
+
+    #[inline]
+    fn set_span(&mut self, span: Span) {
+        set_spans(self, span);
+    }
+}
+
+impl<T: Spanned, P: Spanned> Spanned for Punctuated<T, P> {
+    fn span(&self) -> Span {
+        join_spans(self.pairs())
     }
 
     fn set_span(&mut self, span: Span) {
-        crate::utils::set_spans(self, span);
+        set_spans(self.pairs_mut(), span);
+    }
+}
+
+impl<T: Spanned, P: Spanned> Spanned for Pair<T, P> {
+    fn span(&self) -> Span {
+        let span = self.value().span();
+        self.punct()
+            .and_then(|punct| span.join(punct.span()))
+            .unwrap_or(span)
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.value_mut().set_span(span);
+        self.punct_mut().set_span(span);
     }
 }
 
@@ -122,21 +162,42 @@ deref_impl! {
     [T: Spanned] Vec<T>,
 }
 
-impl<T: Spanned> Spanned for [T] {
-    #[inline]
-    fn span(&self) -> Span {
-        join_spans(self.iter().map(Spanned::span))
-    }
+macro_rules! inherent_impl {
+    ($($t:ty),* $(,)?) => {$(
+        impl Spanned for $t {
+            #[inline]
+            fn span(&self) -> Span {
+                self.span()
+            }
 
-    #[inline]
-    fn set_span(&mut self, span: Span) {
-        for item in self {
-            item.set_span(span);
+            #[inline]
+            fn set_span(&mut self, span: Span) {
+                self.set_span(span);
+            }
         }
-    }
+    )*};
 }
 
-// For `syn::Token!`s
+inherent_impl!(
+    proc_macro2::TokenTree,
+    proc_macro2::Group,
+    proc_macro2::Punct,
+    proc_macro2::Ident,
+    proc_macro2::Literal,
+    syn::Lifetime,
+    syn::Lit,
+    syn::LitStr,
+    syn::LitByteStr,
+    syn::LitByte,
+    syn::LitChar,
+    syn::LitInt,
+    syn::LitFloat,
+    syn::LitBool,
+);
+
+/// Implements `Spanned` for `syn::Token!`s.
+///
+/// Prefix with `__more` when the underlying token has more than one span.
 macro_rules! kw_impl {
     ($([$($t:tt)+])+) => { $(kw_impl!($($t)+);)+ };
 
@@ -144,12 +205,12 @@ macro_rules! kw_impl {
         impl Spanned for Token![$t] {
             #[inline]
             fn span(&self) -> Span {
-                join_spans(self.spans)
+                self.spans.span()
             }
 
             #[inline]
             fn set_span(&mut self, span: Span) {
-                set_spans(&mut self.spans, span);
+                self.spans.set_span(span);
             }
         }
     };
@@ -271,18 +332,41 @@ kw_impl! {
     [_]
 }
 
-fn join_spans<I: IntoIterator<Item = Span>>(spans: I) -> Span {
-    let mut iter = spans.into_iter();
-    let Some(first) = iter.next() else {
-        return Span::call_site()
-    };
-    iter.last()
-        .and_then(|last| first.join(last))
-        .unwrap_or(first)
+macro_rules! delim_impl {
+    ($($t:path),* $(,)?) => {$(
+        impl Spanned for $t {
+            #[inline]
+            fn span(&self) -> Span {
+                self.span.join()
+            }
+
+            #[inline]
+            fn set_span(&mut self, span: Span) {
+                *self = $t(span);
+            }
+
+            #[inline]
+            fn with_span(self, span: Span) -> Self {
+                $t(span)
+            }
+        }
+    )*};
 }
 
-fn set_spans<'a, I: IntoIterator<Item = &'a mut Span>>(spans: I, set_to: Span) {
-    for span in spans {
-        *span = set_to;
+delim_impl!(syn::token::Brace, syn::token::Bracket, syn::token::Paren);
+
+/// Joins the spans of each item in the given iterator.
+pub fn join_spans<T: Spanned, I: IntoIterator<Item = T>>(items: I) -> Span {
+    items
+        .into_iter()
+        .map(|t| t.span())
+        .reduce(|span, other| span.join(other).unwrap_or(span))
+        .unwrap_or_else(Span::call_site)
+}
+
+/// Sets the span of each item in the given iterator.
+pub fn set_spans<T: Spanned, I: IntoIterator<Item = T>>(items: I, span: Span) {
+    for mut item in items {
+        item.set_span(span);
     }
 }
