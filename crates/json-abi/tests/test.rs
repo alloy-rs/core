@@ -47,6 +47,7 @@ fn big_function() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "takes too long")]
 fn test_constructor() {
     // Parse the ABI JSON file
     let abi_items_wo_constructor = include_str!("abi/Abiencoderv2Test.json");
@@ -65,6 +66,7 @@ fn test_constructor() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "no fs")]
 fn no_from_reader() {
     let path = "abi/Abiencoderv2Test.json";
     let file_path: String = format!("tests/{path}");

@@ -521,7 +521,7 @@ fn int_strategy<T: Arbitrary>() -> impl Strategy<Value = (ValueOfStrategy<T::Str
     (any::<T>(), any::<usize>().prop_map(int_size))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(miri)))] // doesn't run in isolation and would take too long
 mod tests {
     use super::*;
     #[cfg(feature = "eip712")]

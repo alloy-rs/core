@@ -386,6 +386,7 @@ mod tests {
     };
 
     #[test]
+    #[cfg_attr(miri, ignore = "takes too long")]
     fn getters() {
         macro_rules! test_getters {
             ($($var:literal => $f:literal),* $(,)?) => {

@@ -970,6 +970,7 @@ mod tests {
         ($($name:ident($st:ty : $t:ty);)+) => {
             proptest::proptest! {$(
                 #[test]
+                #[cfg_attr(miri, ignore = "doesn't run in isolation and would take too long")]
                 fn $name(i: $t) {
                     proptest::prop_assert_eq!(<$st>::detokenize(<$st>::tokenize(&i)), i);
                 }
