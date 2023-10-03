@@ -368,7 +368,7 @@ impl FromStr for Constructor {
 }
 
 impl Constructor {
-    /// Parses a Solidity event signature string:
+    /// Parses a Solidity constructor string:
     /// `constructor($($inputs),*) $(anonymous)?`
     ///
     /// Note:
