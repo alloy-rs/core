@@ -11,6 +11,7 @@ use syn_solidity::{
 };
 
 #[test]
+#[cfg_attr(miri, ignore = "no fs")]
 fn contracts() {
     static PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/contracts");
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))

@@ -553,6 +553,7 @@ mod tests {
 
     #[test]
     #[cfg(all(feature = "rlp", feature = "arbitrary"))]
+    #[cfg_attr(miri, ignore = "doesn't run in isolation and would take too long")]
     fn create_correctness() {
         fn create_slow(address: &Address, nonce: u64) -> Address {
             use alloy_rlp::Encodable;
