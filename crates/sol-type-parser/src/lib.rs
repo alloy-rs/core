@@ -24,7 +24,7 @@ use core::{slice, str};
 use ident::parse_identifier;
 use winnow::{
     ascii::space0,
-    combinator::{cut_err, delimited, opt, preceded, separated0},
+    combinator::{cut_err, delimited, opt, preceded, separated0, terminated},
     error::{AddContext, ParserError, StrContext, StrContextValue},
     stream::Accumulate,
     trace::trace,
@@ -117,6 +117,14 @@ pub(crate) fn opt_ws_ident<'a>(input: &mut &'a str) -> PResult<Option<&'a str>> 
 }
 
 // Not public API.
+#[doc(hidden)]
+#[inline]
+pub fn __internal_parse_item<'a>(s: &mut &'a str) -> Result<&'a str> {
+    trace("item", terminated(parse_identifier, space0))
+        .parse_next(s)
+        .map_err(Error::parser)
+}
+
 #[doc(hidden)]
 pub fn __internal_parse_signature<'a, const OUT: bool, F: Fn(ParameterSpecifier<'a>) -> T, T>(
     s: &'a str,

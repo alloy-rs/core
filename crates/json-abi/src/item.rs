@@ -158,20 +158,6 @@ abi_items! {
     }
 }
 
-impl Serialize for AbiItem<'_> {
-    #[inline]
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        <&private::AbiItem<'_>>::from(self).serialize(serializer)
-    }
-}
-
-impl<'de: 'a, 'a> Deserialize<'de> for AbiItem<'a> {
-    #[inline]
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        private::AbiItem::deserialize(deserializer).map(Into::into)
-    }
-}
-
 // SAFETY: `AbiItem` and `private::AbiItem` have the exact same variants, and
 // all the items use a non-Rust repr.
 // This is enforced in the macro.
@@ -207,7 +193,58 @@ impl<'a, 'r> From<&'r AbiItem<'a>> for &'r private::AbiItem<'a> {
     }
 }
 
+impl Serialize for AbiItem<'_> {
+    #[inline]
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        <&private::AbiItem<'_>>::from(self).serialize(serializer)
+    }
+}
+
+impl<'de: 'a, 'a> Deserialize<'de> for AbiItem<'a> {
+    #[inline]
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        private::AbiItem::deserialize(deserializer).map(Into::into)
+    }
+}
+
+impl FromStr for AbiItem<'_> {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 impl AbiItem<'_> {
+    /// Parses a single [Human-Readable ABI] string into an ABI item.
+    ///
+    /// [Human-Readable ABI]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_json_abi::{AbiItem, Function, Param};
+    /// assert_eq!(
+    ///     AbiItem::parse("function foo(bool bar)"),
+    ///     Ok(AbiItem::from(Function::parse("foo(bool bar)").unwrap()).into()),
+    /// );
+    /// ```
+    pub fn parse(mut input: &str) -> ParserResult<Self> {
+        // need this for Constructor, since the keyword is also the name of the function
+        let copy = input;
+        match alloy_sol_type_parser::__internal_parse_item(&mut input)? {
+            "constructor" => Constructor::parse(copy).map(Into::into),
+            "function" => Function::parse(input).map(Into::into),
+            "error" => Error::parse(input).map(Into::into),
+            "event" => Event::parse(input).map(Into::into),
+            keyword => Err(ParserError::invalid_type_string(format_args!(
+                "invalid AbiItem keyword: {keyword:?}, \
+                 expected one of \"constructor\", \"function\", \"error\", or \"event\""
+            ))),
+        }
+    }
+
     /// Returns the debug name of the item.
     #[inline]
     pub const fn debug_name(&self) -> &'static str {
@@ -374,7 +411,7 @@ impl Constructor {
     /// Note:
     /// - the name must always be `constructor`.
     /// - that [`state_mutability`](Self::state_mutability) is not parsed from
-    ///   the input and is always set to [`StateMutability::Payable`].
+    ///   the input and is always set to [`StateMutability::NonPayable`].
     ///
     /// # Examples
     ///
@@ -387,7 +424,7 @@ impl Constructor {
     ///             Param::parse("uint foo").unwrap(),
     ///             Param::parse("address bar").unwrap()
     ///         ],
-    ///         state_mutability: StateMutability::Payable,
+    ///         state_mutability: StateMutability::NonPayable,
     ///     }),
     /// );
     /// ```
@@ -395,23 +432,8 @@ impl Constructor {
     pub fn parse(s: &str) -> ParserResult<Self> {
         parse_sig::<false>(s).map(|(_, inputs, _, _)| Self {
             inputs,
-            state_mutability: StateMutability::Payable,
+            state_mutability: StateMutability::NonPayable,
         })
-    }
-
-    /// Computes this constructor's signature: `constructor($($inputs),*)`.
-    ///
-    /// This is the preimage input used to [compute the
-    /// selector](Self::selector).
-    #[inline]
-    pub fn signature(&self) -> String {
-        signature("constructor", &self.inputs, None)
-    }
-
-    /// Computes this constructor's selector: `keccak256(self.signature())[..4]`
-    #[inline]
-    pub fn selector(&self) -> Selector {
-        selector(&self.signature())
     }
 }
 
@@ -427,6 +449,11 @@ impl FromStr for Error {
 impl Error {
     /// Parses a Solidity error signature string:
     /// `$name($($inputs),*)`
+    ///
+    /// Note that the "error" keyword is not parsed as part of this function. If
+    /// you want to parse a [Human-Readable ABI] string, use [`AbiItem::parse`].
+    ///
+    /// [Human-Readable ABI]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
     ///
     /// # Examples
     ///
@@ -476,8 +503,13 @@ impl Function {
     /// Parses a Solidity function signature string:
     /// `$name($($inputs),*)$(($($outputs),*))?`
     ///
-    /// Note that [`state_mutability`](Self::state_mutability) is not parsed
-    /// from the input and is always set to [`StateMutability::Payable`].
+    /// Note:
+    /// - the "function" keyword is not parsed as part of this function. If you
+    ///   want to parse a [Human-Readable ABI] string, use [`AbiItem::parse`].
+    /// - [`state_mutability`](Self::state_mutability) is not parsed from the
+    ///   input and is always set to [`StateMutability::NonPayable`].
+    ///
+    /// [Human-Readable ABI]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
     ///
     /// # Examples
     ///
@@ -491,12 +523,12 @@ impl Function {
     ///         name: "foo".to_string(),
     ///         inputs: vec![Param::parse("bool bar").unwrap()],
     ///         outputs: vec![],
-    ///         state_mutability: StateMutability::Payable,
+    ///         state_mutability: StateMutability::NonPayable,
     ///     }),
     /// )
     /// ```
     ///
-    /// [Function]s also support parsing output tuples:
+    /// [Function]s also support parsing output parameters:
     ///
     /// ```
     /// # use alloy_json_abi::{Function, Param, StateMutability};
@@ -506,7 +538,7 @@ impl Function {
     ///         name: "toString".to_string(),
     ///         inputs: vec![Param::parse("uint number").unwrap()],
     ///         outputs: vec![Param::parse("string s").unwrap()],
-    ///         state_mutability: StateMutability::Payable,
+    ///         state_mutability: StateMutability::NonPayable,
     ///     }),
     /// );
     /// ```
@@ -516,7 +548,7 @@ impl Function {
             name,
             inputs,
             outputs,
-            state_mutability: StateMutability::Payable,
+            state_mutability: StateMutability::NonPayable,
         })
     }
 
@@ -558,6 +590,11 @@ impl FromStr for Event {
 impl Event {
     /// Parses a Solidity event signature string:
     /// `$name($($inputs),*) $(anonymous)?`
+    ///
+    /// Note that the "event" keyword is not parsed as part of this function. If
+    /// you want to parse a [Human-Readable ABI] string, use [`AbiItem::parse`].
+    ///
+    /// [Human-Readable ABI]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
     ///
     /// # Examples
     ///
