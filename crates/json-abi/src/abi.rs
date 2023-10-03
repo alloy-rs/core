@@ -111,7 +111,7 @@ impl JsonAbi {
         serde_json::from_str(json)
     }
 
-    /// Loads contract from a JSON [Reader](std::io::Reader).
+    /// Loads contract from a JSON [Reader](std::io::Read).
     ///
     /// This is a convenience wrapper around [`serde_json::from_str`].
     #[cfg(all(feature = "std", feature = "serde_json"))]
