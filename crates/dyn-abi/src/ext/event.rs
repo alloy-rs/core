@@ -2,7 +2,7 @@ use crate::{DynSolValue, DynToken, Error, ResolveSolType, Result};
 use alloc::vec::Vec;
 use alloy_json_abi::Event;
 use alloy_primitives::{Log, B256};
-use alloy_sol_types::Decoder;
+use alloy_sol_types::abi::Decoder;
 
 mod sealed {
     pub trait Sealed {}
@@ -99,7 +99,7 @@ impl EventExt for Event {
                     }),
                 }
             } else {
-                ty._decode(&mut decoder, DynToken::decode_single_populate)
+                ty.abi_decode_inner(&mut decoder, DynToken::decode_single_populate)
             }?;
             values.push(value);
         }

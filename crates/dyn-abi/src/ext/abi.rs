@@ -111,7 +111,7 @@ impl JsonAbiExt for Error {
     }
 
     #[inline]
-    fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
+    fn abi_decode_input(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>> {
         abi_decode(data, &self.inputs, validate)
     }
 }
@@ -258,8 +258,7 @@ mod tests {
 
         // Fail on wrong response type
         let bad_response = Address::repeat_byte(3u8).to_vec();
-        assert!(func.decode_output(&bad_response, true).is_err());
-        assert!(func.decode_output(&bad_response, false).is_err());
         assert!(func.abi_decode_output(&bad_response, true).is_err());
+        assert!(func.abi_decode_output(&bad_response, false).is_err());
     }
 }
