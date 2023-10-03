@@ -1,11 +1,17 @@
-use crate::{internal_type::BorrowedInternalType, utils::validate_identifier, InternalType};
+use crate::{
+    internal_type::BorrowedInternalType,
+    utils::{mk_eparam, mk_param, validate_identifier},
+    InternalType,
+};
 use alloc::{
     borrow::{Cow, ToOwned},
     string::String,
     vec::Vec,
 };
-use alloy_sol_type_parser::TypeSpecifier;
-use core::fmt;
+use alloy_sol_type_parser::{
+    Error as ParserError, ParameterSpecifier, Result as ParserResult, TypeSpecifier,
+};
+use core::{fmt, str::FromStr};
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
 
 /// JSON specification of a parameter.
@@ -17,19 +23,19 @@ use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
 /// [Error]: crate::Error
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Param {
-    /// The name of the parameter. This field always contains either the empty
-    /// string, or a valid Solidity identifier.
-    pub name: String,
     /// The canonical Solidity type of the parameter, using the word "tuple" to
     /// represent complex types. E.g. `uint256` or `bytes[2]` or `tuple` or
     /// `tuple[2]`. This field always contains a valid
     /// [`alloy_sol_type_parser::TypeSpecifier`].
     pub ty: String,
+    /// The name of the parameter. This field always contains either the empty
+    /// string, or a valid Solidity identifier.
+    pub name: String,
     /// If the paramaeter is a compound type (a struct or tuple), a list of the
     /// parameter's components, in order. Empty otherwise
     pub components: Vec<Param>,
     /// The internal type of the parameter. This type represents the type that
-    /// the author of the solidity contract specified. E.g. for a contract, this
+    /// the author of the Solidity contract specified. E.g. for a contract, this
     /// will be `contract MyContract` while the `type` field will be `address`.
     pub internal_type: Option<InternalType>,
 }
@@ -73,7 +79,36 @@ impl Serialize for Param {
     }
 }
 
+impl FromStr for Param {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 impl Param {
+    /// Parse a parameter from a Solidity parameter string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_json_abi::Param;
+    /// assert_eq!(
+    ///     Param::parse("uint256[] foo"),
+    ///     Ok(Param {
+    ///         name: "foo".into(),
+    ///         ty: "uint256[]".into(),
+    ///         components: vec![],
+    ///         internal_type: None,
+    ///     })
+    /// );
+    /// ```
+    pub fn parse(input: &str) -> ParserResult<Self> {
+        ParameterSpecifier::parse(input).map(|p| mk_param(p.name, p.ty))
+    }
+
     /// The internal type of the parameter.
     #[inline]
     pub const fn internal_type(&self) -> Option<&InternalType> {
@@ -224,14 +259,14 @@ impl Param {
 /// `indexed` field.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct EventParam {
-    /// The name of the parameter. This field always contains either the empty
-    /// string, or a valid Solidity identifier.
-    pub name: String,
     /// The canonical Solidity type of the parameter, using the word "tuple" to
     /// represent complex types. E.g. `uint256` or `bytes[2]` or `tuple` or
     /// `tuple[2]`. This field always contains a valid
     /// [`alloy_sol_type_parser::TypeSpecifier`].
     pub ty: String,
+    /// The name of the parameter. This field always contains either the empty
+    /// string, or a valid Solidity identifier.
+    pub name: String,
     /// Whether the parameter is indexed. Indexed parameters have their
     /// value, or the hash of their value, stored in the log topics.
     pub indexed: bool,
@@ -241,7 +276,7 @@ pub struct EventParam {
     /// `indexed` field.
     pub components: Vec<Param>,
     /// The internal type of the parameter. This type represents the type that
-    /// the author of the solidity contract specified. E.g. for a contract, this
+    /// the author of the Solidity contract specified. E.g. for a contract, this
     /// will be `contract MyContract` while the `type` field will be `address`.
     pub internal_type: Option<InternalType>,
 }
@@ -286,7 +321,38 @@ impl Serialize for EventParam {
     }
 }
 
+impl FromStr for EventParam {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 impl EventParam {
+    /// Parse an event parameter from a Solidity parameter string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_json_abi::EventParam;
+    /// assert_eq!(
+    ///     EventParam::parse("uint256[] indexed foo"),
+    ///     Ok(EventParam {
+    ///         name: "foo".into(),
+    ///         ty: "uint256[]".into(),
+    ///         indexed: true,
+    ///         components: vec![],
+    ///         internal_type: None,
+    ///     })
+    /// );
+    /// ```
+    #[inline]
+    pub fn parse(input: &str) -> ParserResult<Self> {
+        ParameterSpecifier::parse(input).map(mk_eparam)
+    }
+
     /// The internal type of the parameter.
     #[inline]
     pub const fn internal_type(&self) -> Option<&InternalType> {

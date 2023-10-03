@@ -249,4 +249,54 @@ mod test {
         TypeSpecifier::parse(&format!("a[{}]", usize::MAX)).unwrap();
         TypeSpecifier::parse(&format!("a[{}0]", usize::MAX)).unwrap_err();
     }
+
+    #[test]
+    fn try_basic_solidity() {
+        assert_eq!(
+            TypeSpecifier::parse("uint256")
+                .unwrap()
+                .try_basic_solidity(),
+            Ok(())
+        );
+        assert_eq!(
+            TypeSpecifier::parse("uint256[]")
+                .unwrap()
+                .try_basic_solidity(),
+            Ok(())
+        );
+        assert_eq!(
+            TypeSpecifier::parse("(uint256,uint256)")
+                .unwrap()
+                .try_basic_solidity(),
+            Ok(())
+        );
+        assert_eq!(
+            TypeSpecifier::parse("(uint256,uint256)[2]")
+                .unwrap()
+                .try_basic_solidity(),
+            Ok(())
+        );
+        assert_eq!(
+            TypeSpecifier::parse("tuple(uint256,uint256)")
+                .unwrap()
+                .try_basic_solidity(),
+            Ok(())
+        );
+        assert_eq!(
+            TypeSpecifier::parse("tuple(address,bytes,(bool,(string,uint256)[][3]))[2]")
+                .unwrap()
+                .try_basic_solidity(),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn not_basic_solidity() {
+        assert_eq!(
+            TypeSpecifier::parse("MyStruct")
+                .unwrap()
+                .try_basic_solidity(),
+            Err(Error::invalid_type_string("MyStruct"))
+        );
+    }
 }

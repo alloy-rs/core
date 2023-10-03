@@ -1,4 +1,4 @@
-use alloc::string::String;
+use alloc::boxed::Box;
 use core::fmt;
 
 /// Type string parsing result
@@ -57,12 +57,12 @@ impl Error {
     #[inline(never)]
     #[cold]
     fn new_(s: &str, e: &dyn fmt::Display) -> Self {
-        Self(Repr(format!("{s}{e}")))
+        Self(Repr(format!("{s}{e}").into_boxed_str()))
     }
 }
 
 #[derive(Clone, PartialEq, Eq)]
-struct Repr(String);
+struct Repr(Box<str>);
 
 impl fmt::Display for Repr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

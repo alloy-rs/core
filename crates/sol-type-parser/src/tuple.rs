@@ -1,10 +1,6 @@
-use crate::{spanned, str_parser, Error, Result, TypeSpecifier};
+use crate::{spanned, tuple_parser, Error, Result, TypeSpecifier};
 use alloc::vec::Vec;
-use winnow::{
-    combinator::{cut_err, delimited, opt, separated0},
-    trace::trace,
-    PResult, Parser,
-};
+use winnow::{trace::trace, PResult, Parser};
 
 /// A tuple specifier, with no array suffixes. Corresponds to a sequence of
 /// types.
@@ -16,13 +12,13 @@ use winnow::{
 ///
 /// ```
 /// # use alloy_sol_type_parser::TupleSpecifier;
-/// let spec = TupleSpecifier::try_from("(uint256,uint256)")?;
+/// let spec = TupleSpecifier::parse("(uint256,uint256)")?;
 /// assert_eq!(spec.span(), "(uint256,uint256)");
 /// assert_eq!(spec.types.len(), 2);
 /// assert_eq!(spec.types[0].span(), "uint256");
 ///
 /// // No array suffixes. Use `TypeSpecifier` instead.
-/// assert!(TupleSpecifier::try_from("(uint256,uint256)[]").is_err());
+/// assert!(TupleSpecifier::parse("(uint256,uint256)[]").is_err());
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,15 +63,7 @@ impl<'a> TupleSpecifier<'a> {
         if let Some(stripped) = input.strip_prefix("tuple") {
             *input = stripped;
         }
-        trace(
-            "tuple",
-            delimited(
-                str_parser("("),
-                cut_err(separated0(TypeSpecifier::parser, str_parser(","))),
-                (opt(","), cut_err(str_parser(")"))),
-            ),
-        )
-        .parse_next(input)
+        tuple_parser(TypeSpecifier::parser).parse_next(input)
     }
 
     /// Returns the tuple specifier as a string.
@@ -99,37 +87,37 @@ mod test {
 
     #[test]
     fn extra_close_parens() {
-        TupleSpecifier::try_from("bool,uint256))").unwrap_err();
+        TupleSpecifier::parse("bool,uint256))").unwrap_err();
     }
 
     #[test]
     fn extra_open_parents() {
-        TupleSpecifier::try_from("(bool,uint256").unwrap_err();
+        TupleSpecifier::parse("(bool,uint256").unwrap_err();
     }
 
     #[test]
     fn nested_tuples() {
         assert_eq!(
-            TupleSpecifier::try_from("(bool,(uint256,uint256))").unwrap(),
+            TupleSpecifier::parse("(bool,(uint256,uint256))").unwrap(),
             TupleSpecifier {
                 span: "(bool,(uint256,uint256))",
                 types: vec![
-                    TypeSpecifier::try_from("bool").unwrap(),
-                    TypeSpecifier::try_from("(uint256,uint256)").unwrap(),
+                    TypeSpecifier::parse("bool").unwrap(),
+                    TypeSpecifier::parse("(uint256,uint256)").unwrap(),
                 ]
             }
         );
         assert_eq!(
-            TupleSpecifier::try_from("(((bool),),)").unwrap(),
+            TupleSpecifier::parse("(((bool),),)").unwrap(),
             TupleSpecifier {
                 span: "(((bool),),)",
-                types: vec![TypeSpecifier::try_from("((bool),)").unwrap()]
+                types: vec![TypeSpecifier::parse("((bool),)").unwrap()]
             }
         );
     }
 
     #[test]
     fn does_not_parse_missing_parens() {
-        TupleSpecifier::try_from("bool,uint256").unwrap_err();
+        TupleSpecifier::parse("bool,uint256").unwrap_err();
     }
 }

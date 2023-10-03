@@ -1,6 +1,8 @@
 use crate::{param::Param, utils::*, EventParam, StateMutability};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Selector, B256};
+use alloy_sol_type_parser::{Error as ParserError, Result as ParserResult};
+use core::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 // Serde order:
@@ -356,7 +358,95 @@ impl AbiItem<'_> {
     }
 }
 
+impl FromStr for Constructor {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
+impl Constructor {
+    /// Parses a Solidity event signature string:
+    /// `constructor($($inputs),*) $(anonymous)?`
+    ///
+    /// Note:
+    /// - the name must always be `constructor`.
+    /// - that [`state_mutability`](Self::state_mutability) is not parsed from
+    ///   the input and is always set to [`StateMutability::Payable`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_json_abi::{Constructor, Param, StateMutability};
+    /// assert_eq!(
+    ///     Constructor::parse("constructor(uint foo, address bar)"),
+    ///     Ok(Constructor {
+    ///         inputs: vec![
+    ///             Param::parse("uint foo").unwrap(),
+    ///             Param::parse("address bar").unwrap()
+    ///         ],
+    ///         state_mutability: StateMutability::Payable,
+    ///     }),
+    /// );
+    /// ```
+    #[inline]
+    pub fn parse(s: &str) -> ParserResult<Self> {
+        parse_sig::<false>(s).map(|(_, inputs, _, _)| Self {
+            inputs,
+            state_mutability: StateMutability::Payable,
+        })
+    }
+
+    /// Computes this constructor's signature: `constructor($($inputs),*)`.
+    ///
+    /// This is the preimage input used to [compute the
+    /// selector](Self::selector).
+    #[inline]
+    pub fn signature(&self) -> String {
+        signature("constructor", &self.inputs, None)
+    }
+
+    /// Computes this constructor's selector: `keccak256(self.signature())[..4]`
+    #[inline]
+    pub fn selector(&self) -> Selector {
+        selector(&self.signature())
+    }
+}
+
+impl FromStr for Error {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 impl Error {
+    /// Parses a Solidity error signature string:
+    /// `$name($($inputs),*)`
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # use alloy_json_abi::{Error, Param, StateMutability};
+    /// assert_eq!(
+    ///     Error::parse("foo(bool bar)"),
+    ///     Ok(Error {
+    ///         name: "foo".to_string(),
+    ///         inputs: vec![Param::parse("bool bar").unwrap()],
+    ///     }),
+    /// )
+    /// ```
+    #[inline]
+    pub fn parse(s: &str) -> ParserResult<Self> {
+        parse_sig::<false>(s).map(|(name, inputs, _, _)| Self { name, inputs })
+    }
+
     /// Computes this error's signature: `$name($($inputs),*)`.
     ///
     /// This is the preimage input used to [compute the
@@ -373,7 +463,63 @@ impl Error {
     }
 }
 
+impl FromStr for Function {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 impl Function {
+    /// Parses a Solidity function signature string:
+    /// `$name($($inputs),*)$(($($outputs),*))?`
+    ///
+    /// Note that [`state_mutability`](Self::state_mutability) is not parsed
+    /// from the input and is always set to [`StateMutability::Payable`].
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # use alloy_json_abi::{Function, Param, StateMutability};
+    /// assert_eq!(
+    ///     Function::parse("foo(bool bar)"),
+    ///     Ok(Function {
+    ///         name: "foo".to_string(),
+    ///         inputs: vec![Param::parse("bool bar").unwrap()],
+    ///         outputs: vec![],
+    ///         state_mutability: StateMutability::Payable,
+    ///     }),
+    /// )
+    /// ```
+    ///
+    /// [Function]s also support parsing output tuples:
+    ///
+    /// ```
+    /// # use alloy_json_abi::{Function, Param, StateMutability};
+    /// assert_eq!(
+    ///     Function::parse("toString(uint number)(string s)"),
+    ///     Ok(Function {
+    ///         name: "toString".to_string(),
+    ///         inputs: vec![Param::parse("uint number").unwrap()],
+    ///         outputs: vec![Param::parse("string s").unwrap()],
+    ///         state_mutability: StateMutability::Payable,
+    ///     }),
+    /// );
+    /// ```
+    #[inline]
+    pub fn parse(s: &str) -> ParserResult<Self> {
+        parse_sig::<true>(s).map(|(name, inputs, outputs, _)| Self {
+            name,
+            inputs,
+            outputs,
+            state_mutability: StateMutability::Payable,
+        })
+    }
+
     /// Returns this function's signature: `$name($($inputs),*)`.
     ///
     /// This is the preimage input used to [compute the
@@ -400,7 +546,44 @@ impl Function {
     }
 }
 
+impl FromStr for Event {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 impl Event {
+    /// Parses a Solidity event signature string:
+    /// `$name($($inputs),*) $(anonymous)?`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_json_abi::{Event, EventParam};
+    /// assert_eq!(
+    ///     Event::parse("foo(bool bar, uint indexed baz)"),
+    ///     Ok(Event {
+    ///         name: "foo".to_string(),
+    ///         inputs: vec![
+    ///             EventParam::parse("bool bar").unwrap(),
+    ///             EventParam::parse("uint indexed baz").unwrap()
+    ///         ],
+    ///         anonymous: false,
+    ///     }),
+    /// );
+    /// ```
+    #[inline]
+    pub fn parse(s: &str) -> ParserResult<Self> {
+        parse_event_sig(s).map(|(name, inputs, _, anonymous)| Self {
+            name,
+            inputs,
+            anonymous,
+        })
+    }
+
     /// Returns this event's signature: `$name($($inputs),*)`.
     ///
     /// This is the preimage input used to [compute the

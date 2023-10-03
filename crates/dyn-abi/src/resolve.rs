@@ -6,7 +6,8 @@ use crate::{DynSolEvent, DynSolType, Result};
 use alloc::vec::Vec;
 use alloy_json_abi::{EventParam, Param};
 use alloy_sol_type_parser::{
-    Error as TypeStrError, RootType, TupleSpecifier, TypeSpecifier, TypeStem,
+    Error as ParserError, ParameterSpecifier, Parameters, RootType, TupleSpecifier, TypeSpecifier,
+    TypeStem,
 };
 
 #[cfg(feature = "eip712")]
@@ -31,9 +32,9 @@ pub trait ResolveSolEvent {
 /// encoding solidity types. This trait provides a single pattern for resolving
 /// those encodings into solidity types.
 ///
-/// ABI and related systems have many different ways of encoding solidity types.
+/// ABI and related systems have many different ways of encoding Solidity types.
 /// This trait provides a single pattern for resolving those encodings into
-/// solidity types.
+/// Solidity types.
 ///
 /// This trait is implemented for all the [`alloy_sol_type_parser`] types, the
 /// [`Param`] and [`EventParam`] structs, and [`str`].
@@ -45,10 +46,10 @@ pub trait ResolveSolEvent {
 /// ```
 /// # use alloy_dyn_abi::{DynSolType, ResolveSolType};
 /// # use alloy_sol_type_parser::{RootType, TypeSpecifier};
-/// let my_ty = TypeSpecifier::try_from("bool")?.resolve()?;
+/// let my_ty = TypeSpecifier::parse("bool")?.resolve()?;
 /// assert_eq!(my_ty, DynSolType::Bool);
 ///
-/// let my_ty = RootType::try_from("uint256")?.resolve()?;
+/// let my_ty = RootType::parse("uint256")?.resolve()?;
 /// assert_eq!(my_ty, DynSolType::Uint(256));
 ///
 /// assert_eq!("bytes32".resolve()?, DynSolType::FixedBytes(32));
@@ -85,7 +86,7 @@ impl ResolveSolType for RootType<'_> {
                             return Ok(DynSolType::FixedBytes(sz))
                         }
                     }
-                    return Err(TypeStrError::invalid_size(name).into())
+                    return Err(ParserError::invalid_size(name).into())
                 }
 
                 // fast path both integer types
@@ -105,9 +106,9 @@ impl ResolveSolType for RootType<'_> {
                             }
                         }
                     }
-                    Err(TypeStrError::invalid_size(name).into())
+                    Err(ParserError::invalid_size(name).into())
                 } else {
-                    Err(TypeStrError::invalid_type_string(name).into())
+                    Err(ParserError::invalid_type_string(name).into())
                 }
             }
         }
@@ -117,11 +118,7 @@ impl ResolveSolType for RootType<'_> {
 impl ResolveSolType for TupleSpecifier<'_> {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
-        self.types
-            .iter()
-            .map(TypeSpecifier::resolve)
-            .collect::<Result<Vec<_>, _>>()
-            .map(DynSolType::Tuple)
+        tuple(&self.types).map(DynSolType::Tuple)
     }
 }
 
@@ -140,6 +137,20 @@ impl ResolveSolType for TypeSpecifier<'_> {
         self.stem
             .resolve()
             .map(|ty| ty.array_wrap_from_iter(self.sizes.iter().copied()))
+    }
+}
+
+impl ResolveSolType for ParameterSpecifier<'_> {
+    #[inline]
+    fn resolve(&self) -> Result<DynSolType> {
+        self.ty.resolve()
+    }
+}
+
+impl ResolveSolType for Parameters<'_> {
+    #[inline]
+    fn resolve(&self) -> Result<DynSolType> {
+        tuple(&self.params).map(DynSolType::Tuple)
     }
 }
 
@@ -180,10 +191,7 @@ fn resolve_param(
     }
 
     // type is complex
-    let tuple = components
-        .iter()
-        .map(Param::resolve)
-        .collect::<Result<Vec<_>, _>>()?;
+    let tuple = tuple(components)?;
 
     #[cfg(feature = "eip712")]
     let resolved = if let Some((_, name)) = it.and_then(|i| i.as_struct()) {
@@ -201,6 +209,14 @@ fn resolve_param(
     let resolved = DynSolType::Tuple(tuple);
 
     Ok(resolved.array_wrap_from_iter(ty.sizes))
+}
+
+fn tuple<T: ResolveSolType>(slice: &[T]) -> Result<Vec<DynSolType>> {
+    let mut types = Vec::with_capacity(slice.len());
+    for ty in slice {
+        types.push(ty.resolve()?);
+    }
+    Ok(types)
 }
 
 macro_rules! deref_impl {
@@ -363,56 +379,6 @@ mod tests {
                 ])),
                 2
             ))
-        );
-    }
-
-    #[test]
-    fn try_basic_solidity() {
-        assert_eq!(
-            TypeSpecifier::try_from("uint256")
-                .unwrap()
-                .try_basic_solidity(),
-            Ok(())
-        );
-        assert_eq!(
-            TypeSpecifier::try_from("uint256[]")
-                .unwrap()
-                .try_basic_solidity(),
-            Ok(())
-        );
-        assert_eq!(
-            TypeSpecifier::try_from("(uint256,uint256)")
-                .unwrap()
-                .try_basic_solidity(),
-            Ok(())
-        );
-        assert_eq!(
-            TypeSpecifier::try_from("(uint256,uint256)[2]")
-                .unwrap()
-                .try_basic_solidity(),
-            Ok(())
-        );
-        assert_eq!(
-            TypeSpecifier::try_from("tuple(uint256,uint256)")
-                .unwrap()
-                .try_basic_solidity(),
-            Ok(())
-        );
-        assert_eq!(
-            TypeSpecifier::try_from("tuple(address,bytes,(bool,(string,uint256)[][3]))[2]")
-                .unwrap()
-                .try_basic_solidity(),
-            Ok(())
-        );
-    }
-
-    #[test]
-    fn not_basic_solidity() {
-        assert_eq!(
-            TypeSpecifier::try_from("MyStruct")
-                .unwrap()
-                .try_basic_solidity(),
-            Err(TypeStrError::invalid_type_string("MyStruct"))
         );
     }
 }

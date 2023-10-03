@@ -1,5 +1,7 @@
 //! EIP-712 specific parsing structures.
 
+// TODO: move to `sol-type-parser`
+
 use crate::{
     eip712::resolver::{PropertyDef, TypeDef},
     Error,
@@ -27,7 +29,15 @@ impl PropDef<'_> {
 impl<'a> TryFrom<&'a str> for PropDef<'a> {
     type Error = Error;
 
+    #[inline]
     fn try_from(input: &'a str) -> Result<Self, Self::Error> {
+        Self::parse(input)
+    }
+}
+
+impl<'a> PropDef<'a> {
+    /// Parse a string into property definition.
+    pub fn parse(input: &'a str) -> Result<Self, Error> {
         let (ty, name) = input
             .rsplit_once(' ')
             .ok_or_else(|| Error::invalid_property_def(input))?;
@@ -51,22 +61,18 @@ pub struct ComponentType<'a> {
     pub props: Vec<PropDef<'a>>,
 }
 
-impl ComponentType<'_> {
-    /// Convert to an owned TypeDef.
-    pub fn to_owned(&self) -> TypeDef {
-        TypeDef::new(
-            self.type_name,
-            self.props.iter().map(|p| p.to_owned()).collect(),
-        )
-        .unwrap()
-    }
-}
-
-// This impl handles
 impl<'a> TryFrom<&'a str> for ComponentType<'a> {
     type Error = Error;
 
+    #[inline]
     fn try_from(input: &'a str) -> Result<Self, Self::Error> {
+        Self::parse(input)
+    }
+}
+
+impl<'a> ComponentType<'a> {
+    /// Parse a string into a component type.
+    pub fn parse(input: &'a str) -> Result<Self, Error> {
         let (name, props_str) = input
             .split_once('(')
             .ok_or_else(|| Error::TypeParser(TypeParserError::invalid_type_string(input)))?;
@@ -102,6 +108,15 @@ impl<'a> TryFrom<&'a str> for ComponentType<'a> {
             props,
         })
     }
+
+    /// Convert to an owned TypeDef.
+    pub fn to_owned(&self) -> TypeDef {
+        TypeDef::new(
+            self.type_name,
+            self.props.iter().map(|p| p.to_owned()).collect(),
+        )
+        .unwrap()
+    }
 }
 
 /// Represents a list of component types in an EIP-712 `encodeType` type string.
@@ -114,11 +129,19 @@ pub struct EncodeType<'a> {
 impl<'a> TryFrom<&'a str> for EncodeType<'a> {
     type Error = Error;
 
+    #[inline]
     fn try_from(input: &'a str) -> Result<Self, Self::Error> {
+        Self::parse(input)
+    }
+}
+
+impl<'a> EncodeType<'a> {
+    /// Parse a string into a list of component types.
+    pub fn parse(input: &'a str) -> Result<Self, Error> {
         let mut types = vec![];
         let mut remaining = input;
 
-        while let Ok(t) = ComponentType::try_from(remaining) {
+        while let Ok(t) = ComponentType::parse(remaining) {
             remaining = &remaining[t.span.len()..];
             types.push(t);
         }
@@ -136,7 +159,7 @@ mod tests {
     #[test]
     fn test_component_type() {
         assert_eq!(
-            ComponentType::try_from("Transaction(Person from,Person to,Asset tx)"),
+            ComponentType::parse("Transaction(Person from,Person to,Asset tx)"),
             Ok(ComponentType {
                 span: "Transaction(Person from,Person to,Asset tx)",
                 type_name: "Transaction",
@@ -152,7 +175,7 @@ mod tests {
     #[test]
     fn test_encode_type() {
         assert_eq!(
-            EncodeType::try_from(EXAMPLE),
+            EncodeType::parse(EXAMPLE),
             Ok(EncodeType {
                 types: vec![
                     "Transaction(Person from,Person to,Asset tx)"

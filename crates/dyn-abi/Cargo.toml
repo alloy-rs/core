@@ -1,7 +1,7 @@
 [package]
 name = "alloy-dyn-abi"
 description = "Run-time ABI and EIP-712 implementations"
-keywords = ["ethereum", "abi", "encoding", "EVM", "solidity"]
+keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
 categories = ["no-std", "encoding", "cryptography::cryptocurrencies"]
 homepage = "https://github.com/alloy-rs/core/tree/main/crates/dyn-abi"
 
