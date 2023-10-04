@@ -3,7 +3,7 @@ use alloy_sol_type_parser::TypeSpecifier;
 use core::fmt;
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
-/// The contract internal type. This could be a regular solidity type, a
+/// The contract internal type. This could be a regular Solidity type, a
 /// user-defined type, an enum, a struct, a contract, or an address payable.
 ///
 /// The internal type represents the Solidity definition of the type, stripped
@@ -163,14 +163,13 @@ impl InternalType {
     #[inline]
     pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_struct()
-            .and_then(|s| TypeSpecifier::try_from(s.1).ok())
+            .and_then(|s| TypeSpecifier::parse(s.1).ok())
     }
 
     /// Return a [`TypeSpecifier`] describing the enum if this type is an enum.
     #[inline]
     pub fn enum_specifier(&self) -> Option<TypeSpecifier<'_>> {
-        self.as_enum()
-            .and_then(|s| TypeSpecifier::try_from(s.1).ok())
+        self.as_enum().and_then(|s| TypeSpecifier::parse(s.1).ok())
     }
 
     /// Return a [`TypeSpecifier`] describing the contract if this type is a
@@ -178,17 +177,16 @@ impl InternalType {
     #[inline]
     pub fn contract_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_contract()
-            .and_then(|s| TypeSpecifier::try_from(s).ok())
+            .and_then(|s| TypeSpecifier::parse(s).ok())
     }
 
     /// Return a [`TypeSpecifier`] describing the other if this type is an
-    /// other. An "other" specifier indicates EITHER a regular solidity type OR
+    /// other. An "other" specifier indicates EITHER a regular Solidity type OR
     /// a user-defined type. It is not possible to distinguish between the two
     /// without additional context.
     #[inline]
     pub fn other_specifier(&self) -> Option<TypeSpecifier<'_>> {
-        self.as_other()
-            .and_then(|s| TypeSpecifier::try_from(s.1).ok())
+        self.as_other().and_then(|s| TypeSpecifier::parse(s.1).ok())
     }
 
     #[inline]

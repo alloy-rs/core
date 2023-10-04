@@ -1,29 +1,23 @@
 use crate::{param::Param, utils::*, EventParam, StateMutability};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Selector, B256};
+use alloy_sol_type_parser::{Error as ParserError, Result as ParserResult};
+use core::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-// Serde order:
-// Public items -> public enum -> private enum -> private items
-//
-// Items are duplicated to be able to make use of the derived `serde` impl,
-// while enforcing that the public items emit their tag, as per the spec.
-//
-// They are all declared with `repr(C)` because the default repr (`Rust`) does
-// not have any layout guarantees, which we need to be able to transmute between
-// the private and public types.
+/// Declares all JSON ABI items.
 macro_rules! abi_items {
     ($(
         $(#[$attr:meta])*
-        $vis:vis struct $name:ident {$(
+        $vis:vis struct $name:ident : $name_lower:literal {$(
             $(#[$fattr:meta])*
             $fvis:vis $field:ident : $type:ty,
         )*}
     )*) => {
         $(
             $(#[$attr])*
-            #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-            #[repr(C)]
+            #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+            #[serde(rename = $name_lower, rename_all = "camelCase", tag = "type")]
             $vis struct $name {$(
                 $(#[$fattr])*
                 $fvis $field: $type,
@@ -42,67 +36,34 @@ macro_rules! abi_items {
                     AbiItem::$name(Cow::Borrowed(item))
                 }
             }
-
-            impl<'de> Deserialize<'de> for $name {
-                #[inline]
-                fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-                    AbiItem::deserialize(deserializer).and_then(|item| {
-                        if let Some(name) = item.name() {
-                            validate_identifier!(name);
-                        };
-                        match item {
-                            AbiItem::$name(item) => Ok(item.into_owned()),
-                            item => Err(serde::de::Error::invalid_type(
-                                serde::de::Unexpected::Other(item.debug_name()),
-                                &stringify!($name),
-                            )),
-                        }
-                    })
-                }
-            }
-
-            impl Serialize for $name {
-                #[inline]
-                fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                    AbiItem::$name(Cow::Borrowed(self)).serialize(serializer)
-                }
-            }
         )*
 
+        // Note: `AbiItem` **must not** derive `Serialize`, since we use `tag`
+        // only for deserialization, while we treat it as `untagged` for serialization.
+        // This is because the individual item structs are already tagged, and
+        // deriving `Serialize` would emit the tag field twice.
+
         /// A JSON ABI item.
-        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-        #[repr(C)]
+        #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
+        #[serde(tag = "type", rename_all = "camelCase")]
         pub enum AbiItem<'a> {$(
             #[doc = concat!("A JSON ABI [`", stringify!($name), "`].")]
             $name(Cow<'a, $name>),
         )*}
 
-        #[doc(hidden)]
-        mod private {
-            use super::*;
-
-            $(
-                #[derive(Clone, Serialize, Deserialize)]
-                #[serde(rename_all = "camelCase")]
-                #[repr(C)]
-                pub(super) struct $name {$(
-                    $field: $type,
+        impl Serialize for AbiItem<'_> {
+            fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                match self {$(
+                    Self::$name(item) => item.serialize(serializer),
                 )*}
-            )*
-
-            #[derive(Serialize, Deserialize)]
-            #[serde(rename_all = "lowercase", tag = "type")]
-            #[repr(C)]
-            pub(super) enum AbiItem<'a> {$(
-                $name(Cow<'a, self::$name>),
-            )*}
+            }
         }
     };
 }
 
 abi_items! {
     /// A JSON ABI constructor function.
-    pub struct Constructor {
+    pub struct Constructor: "constructor" {
         /// The input types of the constructor. May be empty.
         pub inputs: Vec<Param>,
         /// The state mutability of the constructor.
@@ -111,21 +72,22 @@ abi_items! {
 
     /// A JSON ABI fallback function.
     #[derive(Copy)]
-    pub struct Fallback {
+    pub struct Fallback: "fallback" {
         /// The state mutability of the fallback function.
         pub state_mutability: StateMutability,
     }
 
     /// A JSON ABI receive function.
     #[derive(Copy)]
-    pub struct Receive {
+    pub struct Receive: "receive" {
         /// The state mutability of the receive function.
         pub state_mutability: StateMutability,
     }
 
     /// A JSON ABI function.
-    pub struct Function {
+    pub struct Function: "function" {
         /// The name of the function.
+        #[serde(deserialize_with = "validate_identifier")]
         pub name: String,
         /// The input types of the function. May be empty.
         pub inputs: Vec<Param>,
@@ -136,8 +98,9 @@ abi_items! {
     }
 
     /// A JSON ABI event.
-    pub struct Event {
+    pub struct Event: "event" {
         /// The name of the event.
+        #[serde(deserialize_with = "validate_identifier")]
         pub name: String,
         /// A list of the event's inputs, in order.
         pub inputs: Vec<EventParam>,
@@ -148,64 +111,60 @@ abi_items! {
     }
 
     /// A JSON ABI error.
-    pub struct Error {
+    pub struct Error: "error" {
         /// The name of the error.
+        #[serde(deserialize_with = "validate_identifier")]
         pub name: String,
         /// A list of the error's components, in order.
         pub inputs: Vec<Param>,
     }
 }
 
-impl Serialize for AbiItem<'_> {
+#[inline(always)]
+fn validate_identifier<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
+    let s = String::deserialize(deserializer)?;
+    validate_identifier!(&s);
+    Ok(s)
+}
+
+impl FromStr for AbiItem<'_> {
+    type Err = ParserError;
+
     #[inline]
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        <&private::AbiItem<'_>>::from(self).serialize(serializer)
-    }
-}
-
-impl<'de: 'a, 'a> Deserialize<'de> for AbiItem<'a> {
-    #[inline]
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        private::AbiItem::deserialize(deserializer).map(Into::into)
-    }
-}
-
-// SAFETY: `AbiItem` and `private::AbiItem` have the exact same variants, and
-// all the items use a non-Rust repr.
-// This is enforced in the macro.
-#[doc(hidden)]
-impl<'a> From<private::AbiItem<'a>> for AbiItem<'a> {
-    #[inline(always)]
-    fn from(item: private::AbiItem<'a>) -> AbiItem<'a> {
-        unsafe { core::mem::transmute(item) }
-    }
-}
-
-#[doc(hidden)]
-impl<'a> From<AbiItem<'a>> for private::AbiItem<'a> {
-    #[inline(always)]
-    fn from(item: AbiItem<'a>) -> private::AbiItem<'a> {
-        unsafe { core::mem::transmute(item) }
-    }
-}
-
-#[doc(hidden)]
-impl<'a, 'r> From<&'r private::AbiItem<'a>> for &'r AbiItem<'a> {
-    #[inline(always)]
-    fn from(item: &'r private::AbiItem<'a>) -> &'r AbiItem<'a> {
-        unsafe { core::mem::transmute(item) }
-    }
-}
-
-#[doc(hidden)]
-impl<'a, 'r> From<&'r AbiItem<'a>> for &'r private::AbiItem<'a> {
-    #[inline(always)]
-    fn from(item: &'r AbiItem<'a>) -> &'r private::AbiItem<'a> {
-        unsafe { core::mem::transmute(item) }
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
     }
 }
 
 impl AbiItem<'_> {
+    /// Parses a single [Human-Readable ABI] string into an ABI item.
+    ///
+    /// [Human-Readable ABI]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_json_abi::{AbiItem, Function, Param};
+    /// assert_eq!(
+    ///     AbiItem::parse("function foo(bool bar)"),
+    ///     Ok(AbiItem::from(Function::parse("foo(bool bar)").unwrap()).into()),
+    /// );
+    /// ```
+    pub fn parse(mut input: &str) -> ParserResult<Self> {
+        // need this for Constructor, since the keyword is also the name of the function
+        let copy = input;
+        match alloy_sol_type_parser::__internal_parse_item(&mut input)? {
+            "constructor" => Constructor::parse(copy).map(Into::into),
+            "function" => Function::parse(input).map(Into::into),
+            "error" => Error::parse(input).map(Into::into),
+            "event" => Event::parse(input).map(Into::into),
+            keyword => Err(ParserError::invalid_type_string(format_args!(
+                "invalid AbiItem keyword: {keyword:?}, \
+                 expected one of \"constructor\", \"function\", \"error\", or \"event\""
+            ))),
+        }
+    }
+
     /// Returns the debug name of the item.
     #[inline]
     pub const fn debug_name(&self) -> &'static str {
@@ -356,7 +315,85 @@ impl AbiItem<'_> {
     }
 }
 
+impl FromStr for Constructor {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
+impl Constructor {
+    /// Parses a Solidity constructor string:
+    /// `constructor($($inputs),*) $(anonymous)?`
+    ///
+    /// Note:
+    /// - the name must always be `constructor`.
+    /// - that [`state_mutability`](Self::state_mutability) is not parsed from
+    ///   the input and is always set to [`StateMutability::NonPayable`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_json_abi::{Constructor, Param, StateMutability};
+    /// assert_eq!(
+    ///     Constructor::parse("constructor(uint foo, address bar)"),
+    ///     Ok(Constructor {
+    ///         inputs: vec![
+    ///             Param::parse("uint foo").unwrap(),
+    ///             Param::parse("address bar").unwrap()
+    ///         ],
+    ///         state_mutability: StateMutability::NonPayable,
+    ///     }),
+    /// );
+    /// ```
+    #[inline]
+    pub fn parse(s: &str) -> ParserResult<Self> {
+        parse_sig::<false>(s).map(|(_, inputs, _, _)| Self {
+            inputs,
+            state_mutability: StateMutability::NonPayable,
+        })
+    }
+}
+
+impl FromStr for Error {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 impl Error {
+    /// Parses a Solidity error signature string:
+    /// `$name($($inputs),*)`
+    ///
+    /// Note that the "error" keyword is not parsed as part of this function. If
+    /// you want to parse a [Human-Readable ABI] string, use [`AbiItem::parse`].
+    ///
+    /// [Human-Readable ABI]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # use alloy_json_abi::{Error, Param, StateMutability};
+    /// assert_eq!(
+    ///     Error::parse("foo(bool bar)"),
+    ///     Ok(Error {
+    ///         name: "foo".to_string(),
+    ///         inputs: vec![Param::parse("bool bar").unwrap()],
+    ///     }),
+    /// )
+    /// ```
+    #[inline]
+    pub fn parse(s: &str) -> ParserResult<Self> {
+        parse_sig::<false>(s).map(|(name, inputs, _, _)| Self { name, inputs })
+    }
+
     /// Computes this error's signature: `$name($($inputs),*)`.
     ///
     /// This is the preimage input used to [compute the
@@ -373,7 +410,68 @@ impl Error {
     }
 }
 
+impl FromStr for Function {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 impl Function {
+    /// Parses a Solidity function signature string:
+    /// `$name($($inputs),*)$(($($outputs),*))?`
+    ///
+    /// Note:
+    /// - the "function" keyword is not parsed as part of this function. If you
+    ///   want to parse a [Human-Readable ABI] string, use [`AbiItem::parse`].
+    /// - [`state_mutability`](Self::state_mutability) is not parsed from the
+    ///   input and is always set to [`StateMutability::NonPayable`].
+    ///
+    /// [Human-Readable ABI]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # use alloy_json_abi::{Function, Param, StateMutability};
+    /// assert_eq!(
+    ///     Function::parse("foo(bool bar)"),
+    ///     Ok(Function {
+    ///         name: "foo".to_string(),
+    ///         inputs: vec![Param::parse("bool bar").unwrap()],
+    ///         outputs: vec![],
+    ///         state_mutability: StateMutability::NonPayable,
+    ///     }),
+    /// )
+    /// ```
+    ///
+    /// [Function]s also support parsing output parameters:
+    ///
+    /// ```
+    /// # use alloy_json_abi::{Function, Param, StateMutability};
+    /// assert_eq!(
+    ///     Function::parse("toString(uint number)(string s)"),
+    ///     Ok(Function {
+    ///         name: "toString".to_string(),
+    ///         inputs: vec![Param::parse("uint number").unwrap()],
+    ///         outputs: vec![Param::parse("string s").unwrap()],
+    ///         state_mutability: StateMutability::NonPayable,
+    ///     }),
+    /// );
+    /// ```
+    #[inline]
+    pub fn parse(s: &str) -> ParserResult<Self> {
+        parse_sig::<true>(s).map(|(name, inputs, outputs, _)| Self {
+            name,
+            inputs,
+            outputs,
+            state_mutability: StateMutability::NonPayable,
+        })
+    }
+
     /// Returns this function's signature: `$name($($inputs),*)`.
     ///
     /// This is the preimage input used to [compute the
@@ -400,7 +498,49 @@ impl Function {
     }
 }
 
+impl FromStr for Event {
+    type Err = ParserError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
 impl Event {
+    /// Parses a Solidity event signature string:
+    /// `$name($($inputs),*) $(anonymous)?`
+    ///
+    /// Note that the "event" keyword is not parsed as part of this function. If
+    /// you want to parse a [Human-Readable ABI] string, use [`AbiItem::parse`].
+    ///
+    /// [Human-Readable ABI]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_json_abi::{Event, EventParam};
+    /// assert_eq!(
+    ///     Event::parse("foo(bool bar, uint indexed baz)"),
+    ///     Ok(Event {
+    ///         name: "foo".to_string(),
+    ///         inputs: vec![
+    ///             EventParam::parse("bool bar").unwrap(),
+    ///             EventParam::parse("uint indexed baz").unwrap()
+    ///         ],
+    ///         anonymous: false,
+    ///     }),
+    /// );
+    /// ```
+    #[inline]
+    pub fn parse(s: &str) -> ParserResult<Self> {
+        parse_event_sig(s).map(|(name, inputs, _, anonymous)| Self {
+            name,
+            inputs,
+            anonymous,
+        })
+    }
+
     /// Returns this event's signature: `$name($($inputs),*)`.
     ///
     /// This is the preimage input used to [compute the

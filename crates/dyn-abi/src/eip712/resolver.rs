@@ -46,7 +46,7 @@ impl PropertyDef {
         N: Into<String>,
     {
         let type_name = type_name.into();
-        TypeSpecifier::try_from(type_name.as_str())?;
+        TypeSpecifier::parse(type_name.as_str())?;
         Ok(Self::new_unchecked(type_name, name))
     }
 
@@ -121,7 +121,7 @@ impl TypeDef {
     #[inline]
     pub fn new<S: Into<String>>(type_name: S, props: Vec<PropertyDef>) -> Result<Self> {
         let type_name = type_name.into();
-        RootType::try_from(type_name.as_str())?;
+        RootType::parse(type_name.as_str())?;
         Ok(Self { type_name, props })
     }
 

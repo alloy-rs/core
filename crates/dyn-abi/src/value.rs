@@ -168,7 +168,7 @@ impl From<U256> for DynSolValue {
 }
 
 impl DynSolValue {
-    /// The Solidity type. This returns the solidity type corresponding to this
+    /// The Solidity type. This returns the Solidity type corresponding to this
     /// value, if it is known. A type will not be known if the value contains
     /// an empty sequence, e.g. `T[0]`.
     pub fn as_type(&self) -> Option<DynSolType> {
@@ -297,7 +297,7 @@ impl DynSolValue {
         true
     }
 
-    /// The Solidity type name. This returns the solidity type corresponding to
+    /// The Solidity type name. This returns the Solidity type corresponding to
     /// this value, if it is known. A type will not be known if the value
     /// contains an empty sequence, e.g. `T[0]`.
     pub fn sol_type_name(&self) -> Option<Cow<'_, str>> {

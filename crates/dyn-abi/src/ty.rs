@@ -148,7 +148,7 @@ impl DynSolType {
     /// ```
     #[inline]
     pub fn parse(s: &str) -> Result<Self> {
-        TypeSpecifier::try_from(s)
+        TypeSpecifier::parse(s)
             .map_err(Error::TypeParser)
             .and_then(|t| t.resolve())
     }
@@ -439,7 +439,7 @@ impl DynSolType {
         }
     }
 
-    /// The Solidity type name. This returns the solidity type corresponding to
+    /// The Solidity type name. This returns the Solidity type corresponding to
     /// this value, if it is known. A type will not be known if the value
     /// contains an empty sequence, e.g. `T[0]`.
     pub fn sol_type_name(&self) -> Cow<'_, str> {

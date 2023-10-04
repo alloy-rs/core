@@ -161,7 +161,7 @@ impl<'a> DynToken<'a> {
                     return Ok(())
                 }
 
-                // This appears to be an unclarity in the solidity spec. The
+                // This appears to be an unclarity in the Solidity spec. The
                 // spec specifies that offsets are relative to the beginning of
                 // `enc(X)`. But known-good test vectors have it relative to the
                 // word AFTER the array size

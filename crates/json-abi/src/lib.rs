@@ -59,7 +59,7 @@ pub enum StateMutability {
     View,
     /// Nonpayable functions promise not to receive Ether.
     NonPayable,
-    /// Payable functions make no promises
+    /// Payable functions make no promises.
     Payable,
 }
 

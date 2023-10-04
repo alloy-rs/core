@@ -1,7 +1,7 @@
 [package]
 name = "alloy-primitives"
 description = "Ethereum primitive types"
-keywords = ["ethereum", "ethers", "revm", "reth"]
+keywords = ["ethers", "primitives", "ethereum", "revm", "reth"]
 categories = ["no-std", "data-structures", "cryptography::cryptocurrencies"]
 homepage = "https://github.com/alloy-rs/core/tree/main/crates/primitives"
 

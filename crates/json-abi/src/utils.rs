@@ -1,6 +1,8 @@
 use crate::{EventParam, Param};
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 use alloy_primitives::Selector;
+use alloy_sol_type_parser::{ParameterSpecifier, TypeSpecifier, TypeStem};
+use core::{fmt::Write, num::NonZeroUsize};
 
 /// Capacity to allocate per [Param].
 const PARAM: usize = 32;
@@ -70,14 +72,73 @@ pub(crate) fn selector(preimage: &str) -> Selector {
     }
 }
 
+type Ret<T> = alloy_sol_type_parser::Result<(String, Vec<T>, Vec<T>, bool)>;
+
+#[inline]
+pub(crate) fn parse_sig<const O: bool>(s: &str) -> Ret<Param> {
+    alloy_sol_type_parser::__internal_parse_signature::<O, _, _>(s, |p| mk_param(p.name, p.ty))
+}
+
+#[inline]
+pub(crate) fn parse_event_sig(s: &str) -> Ret<EventParam> {
+    alloy_sol_type_parser::__internal_parse_signature::<false, _, _>(s, mk_eparam)
+}
+
+pub(crate) fn mk_param(name: Option<&str>, ty: TypeSpecifier<'_>) -> Param {
+    let name = name.unwrap_or_default().into();
+    let internal_type = None;
+    match ty.stem {
+        TypeStem::Root(s) => Param {
+            name,
+            ty: ty_string(s.span(), &ty.sizes),
+            components: vec![],
+            internal_type,
+        },
+        TypeStem::Tuple(t) => Param {
+            name,
+            ty: ty_string("tuple", &ty.sizes),
+            components: t.types.into_iter().map(|ty| mk_param(None, ty)).collect(),
+            internal_type,
+        },
+    }
+}
+
+pub(crate) fn mk_eparam(spec: ParameterSpecifier<'_>) -> EventParam {
+    let p = mk_param(spec.name, spec.ty);
+    EventParam {
+        name: p.name,
+        ty: p.ty,
+        indexed: spec.indexed,
+        components: p.components,
+        internal_type: p.internal_type,
+    }
+}
+
+fn ty_string(s: &str, sizes: &[Option<NonZeroUsize>]) -> String {
+    let mut ty = String::with_capacity(s.len() + sizes.len() * 4);
+    ty.push_str(s);
+    for size in sizes {
+        ty.push('[');
+        if let Some(size) = size {
+            write!(ty, "{size}").unwrap();
+        }
+        ty.push(']');
+    }
+    ty
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn param(kind: &str) -> Param {
-        crate::Param {
-            name: "param".into(),
+        param2(kind, "param")
+    }
+
+    fn param2(kind: &str, name: &str) -> Param {
+        Param {
             ty: kind.into(),
+            name: name.into(),
             internal_type: None,
             components: vec![],
         }
@@ -143,5 +204,102 @@ mod tests {
             event_signature("foo", &[eparam("bool"), eparam("string")]),
             "foo(bool,string)"
         );
+    }
+
+    #[test]
+    fn test_item_parse() {
+        assert_eq!(
+            parse_sig::<true>("foo()"),
+            Ok(("foo".into(), vec![], vec![], false))
+        );
+        assert_eq!(
+            parse_sig::<true>("foo()()"),
+            Ok(("foo".into(), vec![], vec![], false))
+        );
+        assert_eq!(
+            parse_sig::<true>("foo(,) \t ()"),
+            Ok(("foo".into(), vec![], vec![], false))
+        );
+        assert_eq!(
+            parse_sig::<true>("foo(,)  (,)"),
+            Ok(("foo".into(), vec![], vec![], false))
+        );
+
+        assert_eq!(
+            parse_sig::<false>("foo()"),
+            Ok(("foo".into(), vec![], vec![], false))
+        );
+        parse_sig::<false>("foo()()").unwrap_err();
+        parse_sig::<false>("foo(,)()").unwrap_err();
+        parse_sig::<false>("foo(,)(,)").unwrap_err();
+
+        assert_eq!(
+            parse_sig::<false>("foo()anonymous"),
+            Ok(("foo".into(), vec![], vec![], true))
+        );
+        assert_eq!(
+            parse_sig::<false>("foo()\t anonymous"),
+            Ok(("foo".into(), vec![], vec![], true))
+        );
+
+        assert_eq!(
+            parse_sig::<true>("foo()anonymous"),
+            Ok(("foo".into(), vec![], vec![], true))
+        );
+        assert_eq!(
+            parse_sig::<true>("foo()\t anonymous"),
+            Ok(("foo".into(), vec![], vec![], true))
+        );
+
+        assert_eq!(
+            parse_sig::<true>("foo() \t ()anonymous"),
+            Ok(("foo".into(), vec![], vec![], true))
+        );
+        assert_eq!(
+            parse_sig::<true>("foo()()anonymous"),
+            Ok(("foo".into(), vec![], vec![], true))
+        );
+        assert_eq!(
+            parse_sig::<true>("foo()()\t anonymous"),
+            Ok(("foo".into(), vec![], vec![], true))
+        );
+
+        assert_eq!(
+            parse_sig::<false>("foo(uint256 param)"),
+            Ok(("foo".into(), vec![param("uint256")], vec![], false))
+        );
+        assert_eq!(
+            parse_sig::<false>("bar(uint256 param)"),
+            Ok(("bar".into(), vec![param("uint256")], vec![], false))
+        );
+        assert_eq!(
+            parse_sig::<false>("baz(uint256 param, bool param)"),
+            Ok((
+                "baz".into(),
+                vec![param("uint256"), param("bool")],
+                vec![],
+                false
+            ))
+        );
+
+        assert_eq!(
+            parse_sig::<true>("f(a b)(c d)"),
+            Ok((
+                "f".into(),
+                vec![param2("a", "b")],
+                vec![param2("c", "d")],
+                false
+            ))
+        );
+
+        assert_eq!(
+            parse_sig::<true>("toString(uint number)(string s)"),
+            Ok((
+                "toString".into(),
+                vec![param2("uint", "number")],
+                vec![param2("string", "s")],
+                false
+            ))
+        )
     }
 }

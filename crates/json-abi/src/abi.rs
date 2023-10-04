@@ -1,10 +1,7 @@
 use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
-use alloc::{
-    collections::{btree_map, btree_map::Values},
-    string::String,
-    vec::Vec,
-};
+use alloc::{collections::btree_map, string::String, vec::Vec};
 use alloy_primitives::Bytes;
+use alloy_sol_type_parser::{Error as ParserError, Result as ParserResult};
 use btree_map::BTreeMap;
 use core::{fmt, iter, iter::Flatten};
 use serde::{
@@ -12,6 +9,28 @@ use serde::{
     ser::SerializeSeq,
     Deserialize, Deserializer, Serialize,
 };
+
+macro_rules! set_if_none {
+    ($opt:expr, $val:expr) => { set_if_none!(stringify!($opt) => $opt, $val) };
+    (@serde $opt:expr, $val:expr) => { set_if_none!(serde::de::Error::duplicate_field(stringify!($opt)) => $opt, $val) };
+    ($name:expr => $opt:expr, $val:expr) => {{
+        if $opt.is_some() {
+            return Err($name)
+        }
+        $opt = Some($val);
+    }};
+}
+
+macro_rules! entry_and_push {
+    ($map:expr, $v:expr) => {
+        $map.entry($v.name.clone())
+            .or_default()
+            .push($v.into_owned())
+    };
+}
+
+type FlattenValues<'a, V> = Flatten<btree_map::Values<'a, String, Vec<V>>>;
+type FlattenIntoValues<V> = Flatten<btree_map::IntoValues<String, Vec<V>>>;
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
 ///
@@ -32,6 +51,16 @@ pub struct JsonAbi {
     pub errors: BTreeMap<String, Vec<Error>>,
 }
 
+impl<'a> FromIterator<AbiItem<'a>> for JsonAbi {
+    fn from_iter<T: IntoIterator<Item = AbiItem<'a>>>(iter: T) -> Self {
+        let mut abi = Self::new();
+        for item in iter {
+            let _ = abi.insert_item(item);
+        }
+        abi
+    }
+}
+
 impl JsonAbi {
     /// Creates an empty ABI object.
     #[inline]
@@ -39,15 +68,52 @@ impl JsonAbi {
         Self::default()
     }
 
-    /// Parse the ABI json from a `str`. This is a convenience wrapper around
-    /// [`serde_json::from_str`].
+    /// Parse a [Human-Readable ABI] string into a JSON object.
+    ///
+    /// [Human-Readable ABI]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_json_abi::JsonAbi;
+    /// assert_eq!(JsonAbi::parse([])?, JsonAbi::new());
+    ///
+    /// let abi = JsonAbi::parse([
+    ///     "constructor(string symbol, string name)",
+    ///     "function transferFrom(address from, address to, uint value)",
+    ///     "function balanceOf(address owner)(uint balance)",
+    ///     "event Transfer(address indexed from, address indexed to, address value)",
+    ///     "error InsufficientBalance(account owner, uint balance)",
+    ///     "function addPerson(tuple(string, uint16) person)",
+    ///     "function addPeople(tuple(string, uint16)[] person)",
+    ///     "function getPerson(uint id)(tuple(string, uint16))",
+    ///     "event PersonAdded(uint indexed id, tuple(string, uint16) person)",
+    /// ])?;
+    /// assert_eq!(abi.len(), 9);
+    /// # Ok::<(), alloy_sol_type_parser::Error>(())
+    /// ```
+    pub fn parse<'a, I: IntoIterator<Item = &'a str>>(strings: I) -> ParserResult<Self> {
+        let mut abi = Self::new();
+        for string in strings {
+            let item = AbiItem::parse(string)?;
+            abi.insert_item(item)
+                .map_err(|s| ParserError::_new("duplicate JSON ABI field: ", &s))?;
+        }
+        Ok(abi)
+    }
+
+    /// Parse a JSON string into an ABI object.
+    ///
+    /// This is a convenience wrapper around [`serde_json::from_str`].
     #[cfg(feature = "serde_json")]
     #[inline]
     pub fn from_json_str(json: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json)
     }
 
-    /// Loads contract from json
+    /// Loads contract from a JSON [Reader](std::io::Read).
+    ///
+    /// This is a convenience wrapper around [`serde_json::from_str`].
     #[cfg(all(feature = "std", feature = "serde_json"))]
     pub fn load<T: std::io::Read>(mut reader: T) -> Result<Self, serde_json::Error> {
         // https://docs.rs/serde_json/latest/serde_json/fn.from_reader.html
@@ -155,7 +221,7 @@ impl JsonAbi {
         out.push('}');
     }
 
-    /// Creates constructor call builder.
+    /// Returns this contract's constructor.
     #[inline]
     pub const fn constructor(&self) -> Option<&Constructor> {
         self.constructor.as_ref()
@@ -181,20 +247,33 @@ impl JsonAbi {
 
     /// Iterates over all the functions of the contract in arbitrary order.
     #[inline]
-    pub fn functions(&self) -> Flatten<Values<'_, String, Vec<Function>>> {
+    pub fn functions(&self) -> FlattenValues<'_, Function> {
         self.functions.values().flatten()
     }
 
     /// Iterates over all the events of the contract in arbitrary order.
     #[inline]
-    pub fn events(&self) -> Flatten<Values<'_, String, Vec<Event>>> {
+    pub fn events(&self) -> FlattenValues<'_, Event> {
         self.events.values().flatten()
     }
 
     /// Iterates over all the errors of the contract in arbitrary order.
     #[inline]
-    pub fn errors(&self) -> Flatten<Values<'_, String, Vec<Error>>> {
+    pub fn errors(&self) -> FlattenValues<'_, Error> {
         self.errors.values().flatten()
+    }
+
+    /// Inserts an item into the ABI.
+    fn insert_item(&mut self, item: AbiItem<'_>) -> Result<(), &'static str> {
+        match item {
+            AbiItem::Constructor(c) => set_if_none!(self.constructor, c.into_owned()),
+            AbiItem::Fallback(f) => set_if_none!(self.fallback, f.into_owned()),
+            AbiItem::Receive(r) => set_if_none!(self.receive, r.into_owned()),
+            AbiItem::Function(f) => entry_and_push!(self.functions, f),
+            AbiItem::Event(e) => entry_and_push!(self.events, e),
+            AbiItem::Error(e) => entry_and_push!(self.errors, e),
+        };
+        Ok(())
     }
 }
 
@@ -267,8 +346,6 @@ macro_rules! iter_impl {
     };
 }
 
-type FlattenValues<'a, V> = Flatten<btree_map::Values<'a, String, Vec<V>>>;
-
 /// An iterator over all of the items in the ABI.
 ///
 /// This `struct` is created by [`JsonAbi::items`]. See its documentation for
@@ -291,8 +368,6 @@ impl<'a> Iterator for Items<'a> {
 }
 
 iter_impl!(traits Items<'_>);
-
-type FlattenIntoValues<V> = Flatten<btree_map::IntoValues<String, Vec<V>>>;
 
 /// An iterator over all of the items in the ABI.
 ///
@@ -334,24 +409,6 @@ impl Serialize for JsonAbi {
     }
 }
 
-macro_rules! set_if_none {
-    ($opt:expr, $val:expr) => { set_if_none!(stringify!($opt) => $opt, $val) };
-    ($name:expr => $opt:expr, $val:expr) => {{
-        if $opt.is_some() {
-            return Err(serde::de::Error::duplicate_field($name))
-        }
-        $opt = Some($val);
-    }};
-}
-
-macro_rules! entry_and_push {
-    ($map:expr, $v:expr) => {
-        $map.entry($v.name.clone())
-            .or_default()
-            .push($v.into_owned())
-    };
-}
-
 struct JsonAbiVisitor;
 
 impl<'de> Visitor<'de> for JsonAbiVisitor {
@@ -363,16 +420,10 @@ impl<'de> Visitor<'de> for JsonAbiVisitor {
     }
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        let mut abi = JsonAbi::default();
+        let mut abi = JsonAbi::new();
         while let Some(item) = seq.next_element()? {
-            match item {
-                AbiItem::Constructor(c) => set_if_none!(abi.constructor, c.into_owned()),
-                AbiItem::Fallback(f) => set_if_none!(abi.fallback, f.into_owned()),
-                AbiItem::Receive(r) => set_if_none!(abi.receive, r.into_owned()),
-                AbiItem::Function(f) => entry_and_push!(abi.functions, f),
-                AbiItem::Event(e) => entry_and_push!(abi.events, e),
-                AbiItem::Error(e) => entry_and_push!(abi.errors, e),
-            }
+            abi.insert_item(item)
+                .map_err(serde::de::Error::duplicate_field)?;
         }
         Ok(abi)
     }
@@ -444,21 +495,21 @@ impl<'de> Visitor<'de> for ContractAbiObjectVisitor {
 
         while let Some(key) = map.next_key::<&str>()? {
             match key {
-                "abi" => set_if_none!(abi, map.next_value()?),
+                "abi" => set_if_none!(@serde abi, map.next_value()?),
                 "evm" => {
                     let evm = map.next_value::<EvmObj>()?;
                     if let Some(bytes) = evm.bytecode {
-                        set_if_none!(bytecode, bytes.bytes());
+                        set_if_none!(@serde bytecode, bytes.bytes());
                     }
                     if let Some(bytes) = evm.deployed_bytecode {
-                        set_if_none!(deployed_bytecode, bytes.bytes());
+                        set_if_none!(@serde deployed_bytecode, bytes.bytes());
                     }
                 }
                 "byteCode" | "bytecode" | "bin" => {
-                    set_if_none!(bytecode, map.next_value::<Bytecode>()?.bytes());
+                    set_if_none!(@serde bytecode, map.next_value::<Bytecode>()?.bytes());
                 }
                 "deployedBytecode" | "deployedbytecode" | "runtimeBin" | "runtimebin" => {
-                    set_if_none!(deployed_bytecode, map.next_value::<Bytecode>()?.bytes());
+                    set_if_none!(@serde deployed_bytecode, map.next_value::<Bytecode>()?.bytes());
                 }
                 _ => {
                     map.next_value::<serde::de::IgnoredAny>()?;
