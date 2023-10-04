@@ -265,4 +265,59 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn parse_storage() {
+        assert_eq!(
+            ParameterSpecifier::parse("foo storag"),
+            Ok(ParameterSpecifier {
+                span: "foo storag",
+                ty: TypeSpecifier::parse("foo").unwrap(),
+                storage: None,
+                indexed: false,
+                name: Some("storag")
+            })
+        );
+        assert_eq!(
+            ParameterSpecifier::parse("foo storage"),
+            Ok(ParameterSpecifier {
+                span: "foo storage",
+                ty: TypeSpecifier::parse("foo").unwrap(),
+                storage: Some(Storage::Storage),
+                indexed: false,
+                name: None
+            })
+        );
+        assert_eq!(
+            ParameterSpecifier::parse("foo storage bar"),
+            Ok(ParameterSpecifier {
+                span: "foo storage bar",
+                ty: TypeSpecifier::parse("foo").unwrap(),
+                storage: Some(Storage::Storage),
+                indexed: false,
+                name: "bar".into()
+            })
+        );
+        assert_eq!(
+            ParameterSpecifier::parse("foo memory bar"),
+            Ok(ParameterSpecifier {
+                span: "foo memory bar",
+                ty: TypeSpecifier::parse("foo").unwrap(),
+                storage: Some(Storage::Memory),
+                indexed: false,
+                name: "bar".into()
+            })
+        );
+        assert_eq!(
+            ParameterSpecifier::parse("foo calldata bar"),
+            Ok(ParameterSpecifier {
+                span: "foo calldata bar",
+                ty: TypeSpecifier::parse("foo").unwrap(),
+                storage: Some(Storage::Calldata),
+                indexed: false,
+                name: "bar".into()
+            })
+        );
+        ParameterSpecifier::parse("foo storag bar").unwrap_err();
+    }
 }
