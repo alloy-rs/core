@@ -138,12 +138,7 @@ pub fn __internal_parse_signature<'a, const OUT: bool, F: Fn(ParameterSpecifier<
             |i: &mut _| {
                 if OUT {
                     preceded(
-                        (
-                            space0,
-                            opt(str_parser(":")),
-                            opt(str_parser("returns")),
-                            space0,
-                        ),
+                        (space0, opt(":"), opt("returns"), space0),
                         opt(tuple_parser(ParameterSpecifier::parser.map(&f))),
                     )
                     .parse_next(i)
@@ -152,7 +147,7 @@ pub fn __internal_parse_signature<'a, const OUT: bool, F: Fn(ParameterSpecifier<
                     Ok(vec![])
                 }
             },
-            preceded(space0, opt(str_parser("anonymous")).map(|x| x.is_some())),
+            preceded(space0, opt("anonymous").map(|x| x.is_some())),
         ),
     )
     .parse(s)

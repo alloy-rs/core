@@ -3,6 +3,8 @@ use alloc::vec::Vec;
 use core::fmt;
 use winnow::{trace::trace, PResult, Parser};
 
+// TODO: Parse visibility and state mutability
+
 /// Represents a function parameter.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParameterSpecifier<'a> {
@@ -127,6 +129,7 @@ impl core::str::FromStr for Storage {
 }
 
 impl fmt::Display for Storage {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
