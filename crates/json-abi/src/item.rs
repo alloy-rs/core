@@ -5,27 +5,19 @@ use alloy_sol_type_parser::{Error as ParserError, Result as ParserResult};
 use core::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-// Serde order:
-// Public items -> public enum -> private enum -> private items
-//
-// Items are duplicated to be able to make use of the derived `serde` impl,
-// while enforcing that the public items emit their tag, as per the spec.
-//
-// They are all declared with `repr(C)` because the default repr (`Rust`) does
-// not have any layout guarantees, which we need to be able to transmute between
-// the private and public types.
+/// Declares all JSON ABI items.
 macro_rules! abi_items {
     ($(
         $(#[$attr:meta])*
-        $vis:vis struct $name:ident {$(
+        $vis:vis struct $name:ident : $name_lower:literal {$(
             $(#[$fattr:meta])*
             $fvis:vis $field:ident : $type:ty,
         )*}
     )*) => {
         $(
             $(#[$attr])*
-            #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-            #[repr(C)]
+            #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+            #[serde(rename = $name_lower, rename_all = "camelCase", tag = "type")]
             $vis struct $name {$(
                 $(#[$fattr])*
                 $fvis $field: $type,
@@ -44,67 +36,34 @@ macro_rules! abi_items {
                     AbiItem::$name(Cow::Borrowed(item))
                 }
             }
-
-            impl<'de> Deserialize<'de> for $name {
-                #[inline]
-                fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-                    AbiItem::deserialize(deserializer).and_then(|item| {
-                        if let Some(name) = item.name() {
-                            validate_identifier!(name);
-                        };
-                        match item {
-                            AbiItem::$name(item) => Ok(item.into_owned()),
-                            item => Err(serde::de::Error::invalid_type(
-                                serde::de::Unexpected::Other(item.debug_name()),
-                                &stringify!($name),
-                            )),
-                        }
-                    })
-                }
-            }
-
-            impl Serialize for $name {
-                #[inline]
-                fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                    AbiItem::$name(Cow::Borrowed(self)).serialize(serializer)
-                }
-            }
         )*
 
+        // Note: `AbiItem` **must not** derive `Serialize`, since we use `tag`
+        // only for deserialization, while we treat it as `untagged` for serialization.
+        // This is because the individual item structs are already tagged, and
+        // deriving `Serialize` would emit the tag field twice.
+
         /// A JSON ABI item.
-        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-        #[repr(C)]
+        #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
+        #[serde(tag = "type", rename_all = "camelCase")]
         pub enum AbiItem<'a> {$(
             #[doc = concat!("A JSON ABI [`", stringify!($name), "`].")]
             $name(Cow<'a, $name>),
         )*}
 
-        #[doc(hidden)]
-        mod private {
-            use super::*;
-
-            $(
-                #[derive(Clone, Serialize, Deserialize)]
-                #[serde(rename_all = "camelCase")]
-                #[repr(C)]
-                pub(super) struct $name {$(
-                    $field: $type,
+        impl Serialize for AbiItem<'_> {
+            fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                match self {$(
+                    Self::$name(item) => item.serialize(serializer),
                 )*}
-            )*
-
-            #[derive(Serialize, Deserialize)]
-            #[serde(rename_all = "lowercase", tag = "type")]
-            #[repr(C)]
-            pub(super) enum AbiItem<'a> {$(
-                $name(Cow<'a, self::$name>),
-            )*}
+            }
         }
     };
 }
 
 abi_items! {
     /// A JSON ABI constructor function.
-    pub struct Constructor {
+    pub struct Constructor: "constructor" {
         /// The input types of the constructor. May be empty.
         pub inputs: Vec<Param>,
         /// The state mutability of the constructor.
@@ -113,21 +72,22 @@ abi_items! {
 
     /// A JSON ABI fallback function.
     #[derive(Copy)]
-    pub struct Fallback {
+    pub struct Fallback: "fallback" {
         /// The state mutability of the fallback function.
         pub state_mutability: StateMutability,
     }
 
     /// A JSON ABI receive function.
     #[derive(Copy)]
-    pub struct Receive {
+    pub struct Receive: "receive" {
         /// The state mutability of the receive function.
         pub state_mutability: StateMutability,
     }
 
     /// A JSON ABI function.
-    pub struct Function {
+    pub struct Function: "function" {
         /// The name of the function.
+        #[serde(deserialize_with = "validate_identifier")]
         pub name: String,
         /// The input types of the function. May be empty.
         pub inputs: Vec<Param>,
@@ -138,8 +98,9 @@ abi_items! {
     }
 
     /// A JSON ABI event.
-    pub struct Event {
+    pub struct Event: "event" {
         /// The name of the event.
+        #[serde(deserialize_with = "validate_identifier")]
         pub name: String,
         /// A list of the event's inputs, in order.
         pub inputs: Vec<EventParam>,
@@ -150,61 +111,20 @@ abi_items! {
     }
 
     /// A JSON ABI error.
-    pub struct Error {
+    pub struct Error: "error" {
         /// The name of the error.
+        #[serde(deserialize_with = "validate_identifier")]
         pub name: String,
         /// A list of the error's components, in order.
         pub inputs: Vec<Param>,
     }
 }
 
-// SAFETY: `AbiItem` and `private::AbiItem` have the exact same variants, and
-// all the items use a non-Rust repr.
-// This is enforced in the macro.
-#[doc(hidden)]
-impl<'a> From<private::AbiItem<'a>> for AbiItem<'a> {
-    #[inline(always)]
-    fn from(item: private::AbiItem<'a>) -> AbiItem<'a> {
-        unsafe { core::mem::transmute(item) }
-    }
-}
-
-#[doc(hidden)]
-impl<'a> From<AbiItem<'a>> for private::AbiItem<'a> {
-    #[inline(always)]
-    fn from(item: AbiItem<'a>) -> private::AbiItem<'a> {
-        unsafe { core::mem::transmute(item) }
-    }
-}
-
-#[doc(hidden)]
-impl<'a, 'r> From<&'r private::AbiItem<'a>> for &'r AbiItem<'a> {
-    #[inline(always)]
-    fn from(item: &'r private::AbiItem<'a>) -> &'r AbiItem<'a> {
-        unsafe { core::mem::transmute(item) }
-    }
-}
-
-#[doc(hidden)]
-impl<'a, 'r> From<&'r AbiItem<'a>> for &'r private::AbiItem<'a> {
-    #[inline(always)]
-    fn from(item: &'r AbiItem<'a>) -> &'r private::AbiItem<'a> {
-        unsafe { core::mem::transmute(item) }
-    }
-}
-
-impl Serialize for AbiItem<'_> {
-    #[inline]
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        <&private::AbiItem<'_>>::from(self).serialize(serializer)
-    }
-}
-
-impl<'de: 'a, 'a> Deserialize<'de> for AbiItem<'a> {
-    #[inline]
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        private::AbiItem::deserialize(deserializer).map(Into::into)
-    }
+#[inline(always)]
+fn validate_identifier<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
+    let s = String::deserialize(deserializer)?;
+    validate_identifier!(&s);
+    Ok(s)
 }
 
 impl FromStr for AbiItem<'_> {
