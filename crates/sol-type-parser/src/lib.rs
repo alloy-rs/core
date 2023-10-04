@@ -57,7 +57,7 @@ pub use type_spec::TypeSpecifier;
 
 /// Parameter specifier.
 mod parameter;
-pub use parameter::{ParameterSpecifier, Parameters};
+pub use parameter::{ParameterSpecifier, Parameters, Storage};
 
 #[inline]
 pub(crate) fn spanned<'a, O, E>(
