@@ -475,7 +475,7 @@ impl PackedSeqToken<'_> {
 }
 
 macro_rules! tuple_impls {
-    ($($ty:ident),+) => {
+    ($count:literal $($ty:ident),+) => {
         impl<'de, $($ty: TokenType<'de>,)+> Sealed for ($($ty,)+) {}
 
         #[allow(non_snake_case)]

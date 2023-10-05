@@ -154,7 +154,7 @@ impl<T: EventTopic, const N: usize> EventTopic for FixedArray<T, N> {
 }
 
 macro_rules! tuple_impls {
-    ($($t:ident),+) => {
+    ($count:literal $($t:ident),+) => {
         #[allow(non_snake_case)]
         impl<$($t: EventTopic,)+> EventTopic for ($($t,)+) {
             #[inline]
