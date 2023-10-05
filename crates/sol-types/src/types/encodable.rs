@@ -204,25 +204,7 @@ impl_encodable! {
     [T: Encodable] Vec<T> => sol_data::Array<T::SolType> [];
     [T: Encodable] [T] => sol_data::Array<T::SolType> [];
     [T: Encodable, const N: usize] [T; N] => sol_data::FixedArray<T::SolType, N> [];
-}
 
-// Have to override the `Self: SolTypeEncodable<Self::SolType>` bound for these
-// because `SolTypeEncodable` is not implemented for references
-macro_rules! deref_impls {
-    ($($(#[$attr:meta])* [$($gen:tt)*] $rust:ty => $sol:ty [$($where:tt)*];)+) => {$(
-        $(#[$attr])*
-        impl<$($gen)*> Encodable for $rust $($where)* {
-            type SolType = $sol;
-
-            #[inline]
-            fn abi_encode(&self) -> Vec<u8> {
-                (**self).abi_encode()
-            }
-        }
-    )*};
-}
-
-deref_impls! {
     [T: ?Sized + Encodable + SolTypeEncodable<T::SolType>] &T => T::SolType [];
     [T: ?Sized + Encodable + SolTypeEncodable<T::SolType>] &mut T => T::SolType [];
     [T: ?Sized + Encodable + SolTypeEncodable<T::SolType>] alloc::boxed::Box<T> => T::SolType [];
