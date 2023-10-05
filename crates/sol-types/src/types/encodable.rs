@@ -324,7 +324,7 @@ mod tests {
         assert_eq!(String::new().abi_encode(), encode_bytes(b""));
         assert_eq!(String::from("a").abi_encode(), encode_bytes(b"a"));
         assert_eq!(Vec::<u8>::new().abi_encode(), encode_bytes(b""));
-        assert_eq!(Vec::<u8>::from(b"a").abi_encode(), encode_bytes(b"a"));
+        assert_eq!(Vec::<u8>::from(&b"a"[..]).abi_encode(), encode_bytes(b"a"));
     }
 
     #[test]
@@ -364,7 +364,7 @@ mod tests {
             (
                 String::from("aaaa"),
                 Address::with_last_byte(69),
-                Vec::from(b"bbbb"),
+                b"bbbb".to_vec(),
                 b"cccc",
                 &b"dddd"[..],
             ),
