@@ -291,25 +291,25 @@ impl SolType for Bytes {
 /// Array - `T[]`
 pub struct Array<T: SolType>(PhantomData<T>);
 
-impl<T, U> Encodable<Array<T>> for [U]
+impl<T, U> Encodable<Array<U>> for [T]
 where
-    T: SolType,
-    U: Encodable<T>,
+    T: Encodable<U>,
+    U: SolType,
 {
     #[inline]
-    fn to_tokens(&self) -> DynSeqToken<T::TokenType<'_>> {
+    fn to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
         DynSeqToken(self.iter().map(|r| r.to_tokens()).collect())
     }
 }
 
-impl<T, U> Encodable<Array<T>> for Vec<U>
+impl<T, U> Encodable<Array<U>> for Vec<T>
 where
-    T: SolType,
-    U: Encodable<T>,
+    T: Encodable<U>,
+    U: SolType,
 {
     #[inline]
-    fn to_tokens(&self) -> DynSeqToken<T::TokenType<'_>> {
-        <[U] as Encodable<Array<T>>>::to_tokens(self)
+    fn to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+        <[T] as Encodable<Array<U>>>::to_tokens(self)
     }
 }
 
@@ -463,15 +463,15 @@ where
 /// FixedArray - `T[M]`
 pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 
-impl<T, U, const N: usize> Encodable<FixedArray<T, N>> for [U; N]
+impl<T, U, const N: usize> Encodable<FixedArray<U, N>> for [T; N]
 where
-    T: SolType,
-    U: Borrow<T::RustType>,
+    T: Encodable<U>,
+    U: SolType,
 {
     #[inline]
-    fn to_tokens(&self) -> <FixedArray<T, N> as SolType>::TokenType<'_> {
+    fn to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
         FixedSeqToken::<_, N>(core::array::from_fn(|i| {
-            Encodable::<T>::to_tokens(self[i].borrow())
+            Encodable::<U>::to_tokens(&self[i])
         }))
     }
 }
