@@ -1,4 +1,4 @@
-use crate::{abi::token::WordToken, sol_data, Encodable, SolType};
+use crate::{abi::token::WordToken, sol_data, SolType, SolTypeEncodable};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Address, FixedBytes, B256, U256};
 
@@ -143,7 +143,7 @@ impl Eip712Domain {
         fn encode_opt<S, T>(opt: Option<&T>, out: &mut Vec<u8>)
         where
             S: for<'a> SolType<TokenType<'a> = WordToken>,
-            T: Encodable<S>,
+            T: SolTypeEncodable<S>,
         {
             if let Some(t) = opt {
                 out.extend_from_slice(t.to_tokens().as_slice());

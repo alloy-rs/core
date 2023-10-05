@@ -57,15 +57,29 @@ use alloc::{borrow::Cow, vec::Vec};
 /// # Ok(())
 /// # }
 /// ```
-pub trait Encodable<T: ?Sized + SolType> {
+pub trait SolTypeEncodable<T: ?Sized + SolType> {
     /// Convert the value to tokens.
     fn to_tokens(&self) -> T::TokenType<'_>;
+}
 
-    /// Return the Solidity type name of this value.
-    #[inline]
-    fn sol_type_name(&self) -> Cow<'static, str> {
-        T::sol_type_name()
-    }
+macro_rules! deref_impls {
+    ($($(#[$attr:meta])* [$($gen:tt)*] $t:ty),* $(,)?) => {$(
+        $(#[$attr])*
+        impl<$($gen)*, U: SolType> SolTypeEncodable<U> for $t {
+            #[inline]
+            fn to_tokens(&self) -> <$t as SolType>::TokenType<'_> {
+                (**self).to_tokens()
+            }
+        }
+    )*};
+}
+
+deref_impls! {
+    // [T: ?Sized + SolTypeEncodable<U>] &T,
+    // [T: ?Sized + SolTypeEncodable<U>] &mut T,
+    // [T: ?Sized + alloc::borrow::ToOwned + SolTypeEncodable<U>] alloc::borrow::Cow<'_, T>,
+    // [T: ?Sized + SolTypeEncodable<U>] alloc::rc::Rc<T>,
+    // [T: ?Sized + SolTypeEncodable<U>] alloc::sync::Arc<T>,
 }
 
 /// A Solidity Type, for ABI encoding and decoding
@@ -117,7 +131,7 @@ pub trait Encodable<T: ?Sized + SolType> {
 /// ```
 pub trait SolType {
     /// The corresponding Rust type.
-    type RustType: Encodable<Self> + 'static;
+    type RustType: SolTypeEncodable<Self> + 'static;
 
     /// The corresponding ABI token type.
     ///
@@ -162,7 +176,7 @@ pub trait SolType {
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType;
 
     /// Tokenizes the given value into this type's token.
-    fn tokenize<E: Encodable<Self>>(rust: &E) -> Self::TokenType<'_> {
+    fn tokenize<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Self::TokenType<'_> {
         rust.to_tokens()
     }
 
@@ -199,13 +213,13 @@ pub trait SolType {
 
     /// Encode a single ABI token by wrapping it in a 1-length sequence.
     #[inline]
-    fn abi_encode<E: Encodable<Self>>(rust: &E) -> Vec<u8> {
+    fn abi_encode<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Vec<u8> {
         abi::encode(&rust.to_tokens())
     }
 
     /// Encode an ABI sequence.
     #[inline]
-    fn abi_encode_sequence<E: Encodable<Self>>(rust: &E) -> Vec<u8>
+    fn abi_encode_sequence<E: SolTypeEncodable<Self>>(rust: &E) -> Vec<u8>
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
@@ -214,7 +228,7 @@ pub trait SolType {
 
     /// Encode an ABI sequence suitable for function parameters.
     #[inline]
-    fn abi_encode_params<E: Encodable<Self>>(rust: &E) -> Vec<u8>
+    fn abi_encode_params<E: SolTypeEncodable<Self>>(rust: &E) -> Vec<u8>
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {

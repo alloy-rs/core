@@ -49,12 +49,12 @@ macro_rules! word_impl {
 
         #[inline]
         fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
-            out.extend($crate::Encodable::<Self>::to_tokens(rust).0 .0);
+            out.extend($crate::SolTypeEncodable::<Self>::to_tokens(rust).0 .0);
         }
 
         #[inline]
         fn encode_topic(rust: &Self::RustType) -> WordToken {
-            $crate::Encodable::<Self>::to_tokens(rust)
+            $crate::SolTypeEncodable::<Self>::to_tokens(rust)
         }
     };
 }

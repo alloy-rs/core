@@ -569,10 +569,10 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
 
         #[automatically_derived]
         #[doc(hidden)]
-        impl ::alloy_sol_types::Encodable<UnderlyingSolTuple<'_>> for #name {
+        impl ::alloy_sol_types::SolTypeEncodable<UnderlyingSolTuple<'_>> for #name {
             fn to_tokens(&self) -> <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::TokenType<'_> {
                 (#(
-                    ::alloy_sol_types::Encodable::<#field_tys>::to_tokens(&self.#names3),
+                    ::alloy_sol_types::SolTypeEncodable::<#field_tys>::to_tokens(&self.#names3),
                 )*)
             }
         }

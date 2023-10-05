@@ -6,7 +6,7 @@
 
 #![allow(missing_copy_implementations, missing_debug_implementations)]
 
-use crate::{abi::token::*, utils, Encodable, SolType, Word};
+use crate::{abi::token::*, utils, SolType, SolTypeEncodable, Word};
 use alloc::{borrow::Cow, string::String as RustString, vec::Vec};
 use alloy_primitives::{
     keccak256, Address as RustAddress, FixedBytes as RustFixedBytes, Function as RustFunction,
@@ -20,7 +20,7 @@ use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 /// Bool - `bool`
 pub struct Bool;
 
-impl Encodable<Bool> for bool {
+impl SolTypeEncodable<Bool> for bool {
     #[inline]
     fn to_tokens(&self) -> WordToken {
         WordToken(Word::with_last_byte(*self as u8))
@@ -48,7 +48,7 @@ impl SolType for Bool {
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::to_tokens(rust).0
+        SolTypeEncodable::<Self>::to_tokens(rust).0
     }
 
     #[inline]
@@ -60,7 +60,7 @@ impl SolType for Bool {
 /// Int - `intX`
 pub struct Int<const BITS: usize>;
 
-impl<T, const BITS: usize> Encodable<Int<BITS>> for T
+impl<T, const BITS: usize> SolTypeEncodable<Int<BITS>> for T
 where
     T: Borrow<<IntBitCount<BITS> as SupportedInt>::Int>,
     IntBitCount<BITS>: SupportedInt,
@@ -105,7 +105,7 @@ where
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::to_tokens(rust).0
+        SolTypeEncodable::<Self>::to_tokens(rust).0
     }
 
     #[inline]
@@ -117,7 +117,7 @@ where
 /// Uint - `uintX`
 pub struct Uint<const BITS: usize>;
 
-impl<const BITS: usize, T> Encodable<Uint<BITS>> for T
+impl<const BITS: usize, T> SolTypeEncodable<Uint<BITS>> for T
 where
     T: Borrow<<IntBitCount<BITS> as SupportedInt>::Uint>,
     IntBitCount<BITS>: SupportedInt,
@@ -152,7 +152,7 @@ where
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::to_tokens(rust).0
+        SolTypeEncodable::<Self>::to_tokens(rust).0
     }
 
     #[inline]
@@ -164,7 +164,7 @@ where
 /// Address - `address`
 pub struct Address;
 
-impl<T: Borrow<[u8; 20]>> Encodable<Address> for T {
+impl<T: Borrow<[u8; 20]>> SolTypeEncodable<Address> for T {
     #[inline]
     fn to_tokens(&self) -> WordToken {
         WordToken(RustAddress::new(*self.borrow()).into_word())
@@ -204,7 +204,7 @@ impl SolType for Address {
 /// Function - `function`
 pub struct Function;
 
-impl<T: Borrow<[u8; 24]>> Encodable<Function> for T {
+impl<T: Borrow<[u8; 24]>> SolTypeEncodable<Function> for T {
     #[inline]
     fn to_tokens(&self) -> WordToken {
         WordToken(RustFunction::new(*self.borrow()).into_word())
@@ -244,7 +244,7 @@ impl SolType for Function {
 /// Bytes - `bytes`
 pub struct Bytes;
 
-impl<T: ?Sized + AsRef<[u8]>> Encodable<Bytes> for T {
+impl<T: ?Sized + AsRef<[u8]>> SolTypeEncodable<Bytes> for T {
     #[inline]
     fn to_tokens(&self) -> PackedSeqToken<'_> {
         PackedSeqToken(self.as_ref())
@@ -291,9 +291,9 @@ impl SolType for Bytes {
 /// Array - `T[]`
 pub struct Array<T: SolType>(PhantomData<T>);
 
-impl<T, U> Encodable<Array<U>> for [T]
+impl<T, U> SolTypeEncodable<Array<U>> for [T]
 where
-    T: Encodable<U>,
+    T: SolTypeEncodable<U>,
     U: SolType,
 {
     #[inline]
@@ -302,14 +302,36 @@ where
     }
 }
 
-impl<T, U> Encodable<Array<U>> for Vec<T>
+impl<T, U> SolTypeEncodable<Array<U>> for &[T]
 where
-    T: Encodable<U>,
+    T: SolTypeEncodable<U>,
     U: SolType,
 {
     #[inline]
     fn to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
-        <[T] as Encodable<Array<U>>>::to_tokens(self)
+        (**self).to_tokens()
+    }
+}
+
+impl<T, U> SolTypeEncodable<Array<U>> for &mut [T]
+where
+    T: SolTypeEncodable<U>,
+    U: SolType,
+{
+    #[inline]
+    fn to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+        (**self).to_tokens()
+    }
+}
+
+impl<T, U> SolTypeEncodable<Array<U>> for Vec<T>
+where
+    T: SolTypeEncodable<U>,
+    U: SolType,
+{
+    #[inline]
+    fn to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+        <[T] as SolTypeEncodable<Array<U>>>::to_tokens(self)
     }
 }
 
@@ -361,7 +383,7 @@ impl<T: SolType> SolType for Array<T> {
 /// String - `string`
 pub struct String;
 
-impl<T: ?Sized + AsRef<str>> Encodable<String> for T {
+impl<T: ?Sized + AsRef<str>> SolTypeEncodable<String> for T {
     #[inline]
     fn to_tokens(&self) -> PackedSeqToken<'_> {
         PackedSeqToken(self.as_ref().as_bytes())
@@ -413,10 +435,9 @@ impl SolType for String {
 #[derive(Clone, Copy, Debug)]
 pub struct FixedBytes<const N: usize>;
 
-impl<const N: usize, T> Encodable<FixedBytes<N>> for T
+impl<T: Borrow<[u8; N]>, const N: usize> SolTypeEncodable<FixedBytes<N>> for T
 where
     ByteCount<N>: SupportedFixedBytes,
-    T: Borrow<[u8; N]>,
 {
     #[inline]
     fn to_tokens(&self) -> <FixedBytes<N> as SolType>::TokenType<'_> {
@@ -450,7 +471,7 @@ where
 
     #[inline]
     fn eip712_data_word(rust: &Self::RustType) -> Word {
-        Encodable::<Self>::to_tokens(rust).0
+        SolTypeEncodable::<Self>::to_tokens(rust).0
     }
 
     #[inline]
@@ -463,16 +484,36 @@ where
 /// FixedArray - `T[M]`
 pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 
-impl<T, U, const N: usize> Encodable<FixedArray<U, N>> for [T; N]
+impl<T, U, const N: usize> SolTypeEncodable<FixedArray<U, N>> for [T; N]
 where
-    T: Encodable<U>,
+    T: SolTypeEncodable<U>,
     U: SolType,
 {
     #[inline]
     fn to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
-        FixedSeqToken::<_, N>(core::array::from_fn(|i| {
-            Encodable::<U>::to_tokens(&self[i])
-        }))
+        FixedSeqToken(core::array::from_fn(|i| self[i].to_tokens()))
+    }
+}
+
+impl<T, U, const N: usize> SolTypeEncodable<FixedArray<U, N>> for &[T; N]
+where
+    T: SolTypeEncodable<U>,
+    U: SolType,
+{
+    #[inline]
+    fn to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
+        <[T; N] as SolTypeEncodable<FixedArray<U, N>>>::to_tokens(&**self)
+    }
+}
+
+impl<T, U, const N: usize> SolTypeEncodable<FixedArray<U, N>> for &mut [T; N]
+where
+    T: SolTypeEncodable<U>,
+    U: SolType,
+{
+    #[inline]
+    fn to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
+        <[T; N] as SolTypeEncodable<FixedArray<U, N>>>::to_tokens(&**self)
     }
 }
 
@@ -533,18 +574,11 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
 macro_rules! tuple_encodable_impls {
     ($(($ty:ident $uty:ident)),+) => {
         #[allow(non_snake_case)]
-        impl<$($ty: SolType, $uty,)+> Encodable<($($ty,)+)> for ($( $uty, )+)
-        where
-            $($uty: $crate::Encodable<$ty>,)+
-         {
+        impl<$($ty: SolTypeEncodable<$uty>, $uty: SolType),+> SolTypeEncodable<($($uty,)+)> for ($($ty,)+) {
             #[inline]
-            fn to_tokens(&self) -> <($($ty,)+) as SolType>::TokenType<'_> {
+            fn to_tokens(&self) -> <($($uty,)+) as SolType>::TokenType<'_> {
                 let ($($ty,)+) = self;
-                (
-                    $(
-                        Encodable::<$ty>::to_tokens($ty),
-                    )+
-                )
+                ($(SolTypeEncodable::<$uty>::to_tokens($ty),)+)
             }
         }
     };
@@ -635,7 +669,7 @@ macro_rules! tuple_impls {
     };
 }
 
-impl Encodable<()> for () {
+impl SolTypeEncodable<()> for () {
     #[inline]
     fn to_tokens(&self) {}
 }

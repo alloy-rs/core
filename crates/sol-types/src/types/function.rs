@@ -1,6 +1,6 @@
 use crate::{
     abi::{TokenSeq, TokenType},
-    Encodable, Result, SolType, Word,
+    Result, SolType, SolTypeEncodable, Word,
 };
 use alloc::vec::Vec;
 
@@ -93,7 +93,7 @@ pub trait SolCall: Sized {
     #[inline]
     fn abi_encode_returns<'a, E>(e: &'a E) -> Vec<u8>
     where
-        E: Encodable<Self::ReturnTuple<'a>>,
+        E: SolTypeEncodable<Self::ReturnTuple<'a>>,
     {
         crate::abi::encode_sequence(&e.to_tokens())
     }

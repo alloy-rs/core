@@ -139,7 +139,7 @@ impl<T: Spanned, P: Spanned> Spanned for Pair<T, P> {
     }
 }
 
-macro_rules! deref_impl {
+macro_rules! deref_impls {
     ($($(#[$attr:meta])* [$($gen:tt)*] $t:ty),+ $(,)?) => {$(
         $(#[$attr])*
         impl<$($gen)*> Spanned for $t {
@@ -156,7 +156,7 @@ macro_rules! deref_impl {
     )+};
 }
 
-deref_impl! {
+deref_impls! {
     [T: ?Sized + Spanned] &mut T,
     [T: ?Sized + Spanned] Box<T>,
     [T: Spanned] Vec<T>,
