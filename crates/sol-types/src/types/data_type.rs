@@ -690,14 +690,16 @@ macro_rules! tuple_encodable_impls {
 }
 
 macro_rules! tuple_impls {
-    // compile time `join(",")` format string
-    (@fmt $other:ident) => { ",{}" };
-    (@fmt $first:ident, $($other:ident,)*) => {
-        concat!(
-            "{}",
-            $(tuple_impls! { @fmt $other }),*
-        )
+    // Push 1 element, push a comma if we're not done yet, recurse
+    (@fmt $s:ident; ) => {};
+    (@fmt $s:ident; $first:ident $(, $rest:ident)*) => {
+        $s.extend_from_slice(<$first as SolType>::sol_type_name().as_bytes());
+        tuple_impls!(@fmt_comma $s; $($rest),*);
+        tuple_impls!(@fmt $s; $($rest),*);
     };
+
+    (@fmt_comma $s:ident; ) => {};
+    (@fmt_comma $s:ident; $($t:tt)+) => { $s.push(b',') };
 
     ($count:literal $($ty:ident),+) => {
         #[allow(non_snake_case)]
@@ -717,14 +719,12 @@ macro_rules! tuple_impls {
             };
 
             fn sol_type_name() -> Cow<'static, str> {
-                format!(
-                    concat!(
-                        "(",
-                        tuple_impls! { @fmt $($ty,)+ },
-                        ")",
-                    ),
-                    $(<$ty as SolType>::sol_type_name(),)+
-                ).into()
+                let mut s = Vec::<u8>::with_capacity(2 + $count * 8);
+                s.push(b'(');
+                tuple_impls!(@fmt s; $($ty),+);
+                s.push(b')');
+                // SAFETY: we're pushing only other `str`s and ASCII characters
+                Cow::Owned(unsafe { RustString::from_utf8_unchecked(s) })
             }
 
             fn valid_token(token: &Self::TokenType<'_>) -> bool {
