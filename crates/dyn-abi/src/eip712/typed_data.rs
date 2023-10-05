@@ -237,7 +237,7 @@ mod tests {
             "message": {}
         });
         let typed_data: TypedData = serde_json::from_value(json.clone()).unwrap();
-        let val = serde_json::to_value(&typed_data).unwrap();
+        let val = serde_json::to_value(typed_data).unwrap();
         assert_eq!(val, json);
     }
 
