@@ -1,22 +1,152 @@
 use super::{SolType, SolTypeEncodable};
-use crate::sol_data::{self, ByteCount, SupportedFixedBytes};
+use crate::{
+    abi::TokenSeq,
+    sol_data::{self, ByteCount, SupportedFixedBytes},
+    Result, Word,
+};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256};
 
-trait Encodable {
+/// ABI-encodable types.
+///
+/// This is a convenience trait that combines the logic in [`SolTypeEncodable`]
+/// and [`SolType`] to provide a single trait for encoding and decoding Solidity
+/// types.
+///
+/// # Examples
+///
+/// ```
+/// ```
+pub trait Encodable {
+    /// The Solidity type that this type corresponds to.
     type SolType: SolType;
 
+    /// The name of the associated Solidity type.
+    ///
+    /// See [`SolType::sol_type_name`] for more information.
+    #[inline]
+    fn sol_type_name(&self) -> Cow<'static, str> {
+        Self::SolType::sol_type_name()
+    }
+
+    /// Calculate the ABI-encoded size of the data.
+    ///
+    /// See [`SolType::abi_encoded_size`] for more information.
+    #[inline]
+    fn abi_encoded_size(&self) -> usize
+    where
+        Self: SolTypeEncodable<Self::SolType>,
+    {
+        <Self as SolTypeEncodable<Self::SolType>>::abi_encoded_size(self)
+    }
+
+    /// Encode this data according to EIP-712 `encodeData` rules, and hash it
+    /// if necessary.
+    ///
+    /// See [`SolType::eip712_data_word`] for more information.
+    #[inline]
+    fn eip712_data_word(&self) -> Word
+    where
+        Self: SolTypeEncodable<Self::SolType>,
+    {
+        <Self as SolTypeEncodable<Self::SolType>>::eip712_data_word(self)
+    }
+
+    /// Non-standard Packed Mode ABI encoding.
+    ///
+    /// See [`SolType::abi_encode_packed_to`] for more information.
+    #[inline]
+    fn abi_encode_packed_to(&self, out: &mut Vec<u8>)
+    where
+        Self: SolTypeEncodable<Self::SolType>,
+    {
+        <Self as SolTypeEncodable<Self::SolType>>::abi_encode_packed_to(self, out)
+    }
+
+    /// Non-standard Packed Mode ABI encoding.
+    ///
+    /// See [`SolType::abi_encode_packed`] for more information.
+    #[inline]
+    fn abi_encode_packed(&self) -> Vec<u8>
+    where
+        Self: SolTypeEncodable<Self::SolType>,
+    {
+        let mut out = Vec::new();
+        <Self as SolTypeEncodable<Self::SolType>>::abi_encode_packed_to(self, &mut out);
+        out
+    }
+
+    /// ABI-encodes the value.
+    ///
+    /// See [`SolType::abi_encode`] for more information.
     #[inline]
     fn abi_encode(&self) -> Vec<u8>
     where
         Self: SolTypeEncodable<Self::SolType>,
     {
-        SolType::abi_encode(self)
+        Self::SolType::abi_encode(self)
     }
 
+    /// Encodes an ABI sequence.
+    ///
+    /// See [`SolType::abi_encode_sequence`] for more information.
     #[inline]
-    fn sol_type_name(&self) -> Cow<'static, str> {
-        Self::SolType::sol_type_name()
+    fn abi_encode_sequence(&self) -> Vec<u8>
+    where
+        Self: SolTypeEncodable<Self::SolType>,
+        for<'a> <Self::SolType as SolType>::TokenType<'a>: TokenSeq<'a>,
+    {
+        Self::SolType::abi_encode_sequence(self)
+    }
+
+    /// Encodes an ABI sequence suitable for function parameters.
+    ///
+    /// See [`SolType::abi_encode_params`] for more information.
+    #[inline]
+    fn abi_encode_params(&self) -> Vec<u8>
+    where
+        Self: SolTypeEncodable<Self::SolType>,
+        for<'a> <Self::SolType as SolType>::TokenType<'a>: TokenSeq<'a>,
+    {
+        Self::SolType::abi_encode_params(self)
+    }
+
+    /// ABI-decode this type from the given data.
+    ///
+    /// See [`SolType::abi_decode`] for more information.
+    fn abi_decode<'de>(
+        data: &'de [u8],
+        validate: bool,
+    ) -> Result<<Self::SolType as SolType>::RustType> {
+        Self::SolType::abi_decode(data, validate)
+    }
+
+    /// ABI-decode this type from the given data.
+    ///
+    /// See [`SolType::abi_decode_params`] for more information.
+    #[inline]
+    fn abi_decode_params<'de>(
+        data: &'de [u8],
+        validate: bool,
+    ) -> Result<<Self::SolType as SolType>::RustType>
+    where
+        <Self::SolType as SolType>::TokenType<'de>: TokenSeq<'de>,
+    {
+        Self::SolType::abi_decode_params(data, validate)
+    }
+
+    /// ABI-decode this type from the given data.
+    ///
+    /// See [`SolType::abi_decode_sequence`] for more information.
+    #[inline]
+    fn abi_decode_sequence<'de>(
+        data: &'de [u8],
+        validate: bool,
+    ) -> Result<<Self::SolType as SolType>::RustType>
+    where
+        <Self::SolType as SolType>::TokenType<'de>: TokenSeq<'de>,
+    {
+        Self::SolType::abi_decode_sequence(data, validate)
     }
 }
 
@@ -44,7 +174,7 @@ impl_encodable! {
     #[cfg(pointer_width = "64")]
     [] isize => sol_data::Int::<64> [];
 
-    // TODO: Array<u8> is specialized to encode as `bytes`
+    // TODO: Array<u8> is specialized to encode as `bytes[N]`
     // [] u8 => sol_data::Uint::<8> [];
     [] u16 => sol_data::Uint::<16> [];
     [] u32 => sol_data::Uint::<32> [];
@@ -59,14 +189,13 @@ impl_encodable! {
     [] Address => sol_data::Address [];
     [] Function => sol_data::Function [];
     [const N: usize] FixedBytes<N> => sol_data::FixedBytes<N> [where ByteCount<N>: SupportedFixedBytes];
+    [const N: usize] [u8; N] => sol_data::FixedBytes<N> [where ByteCount<N>: SupportedFixedBytes];
     [] String => sol_data::String [];
     [] str => sol_data::String [];
     [] Bytes => sol_data::Bytes [];
 
-    // Specialize u8 to bytes
     [] Vec<u8> => sol_data::Bytes [];
     [] [u8] => sol_data::Bytes [];
-    [const N: usize] [u8; N] => sol_data::Bytes [];
 
     // Generic
     [T: Encodable] Vec<T> => sol_data::Array<T::SolType> [];
@@ -116,11 +245,31 @@ all_the_tuples!(tuple_impls);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Word;
 
     // Make sure these are in scope
     #[allow(unused_imports)]
     use crate::{SolType as _, SolTypeEncodable as _};
+
+    #[test]
+    fn inference() {
+        false.sol_type_name();
+        // false.abi_encoded_size();
+        // false.eip712_data_word();
+        // false.abi_encode_packed_to(&mut vec![]);
+        false.abi_encode_packed();
+        false.abi_encode();
+        (false,).abi_encode_sequence();
+        (false,).abi_encode_params();
+
+        "".sol_type_name();
+        // "".abi_encoded_size();
+        // "".eip712_data_word();
+        // "".abi_encode_packed_to(&mut vec![]);
+        "".abi_encode_packed();
+        "".abi_encode();
+        ("",).abi_encode_sequence();
+        ("",).abi_encode_params();
+    }
 
     #[test]
     fn basic() {
@@ -156,14 +305,20 @@ mod tests {
             ]
             .concat()
         };
+
+        // empty `bytes`
+        assert_eq!(b"".abi_encode(), encode_bytes(b""));
+        assert_eq!((b"" as &[_]).abi_encode(), encode_bytes(b""));
+        // `bytes1`
+        assert_eq!(b"a".abi_encode()[0], b'a');
+        assert_eq!(b"a".abi_encode()[1..], Word::ZERO[1..]);
+        // `bytes`
+        assert_eq!((b"a" as &[_]).abi_encode(), encode_bytes(b"a"));
+
         assert_eq!("".abi_encode(), encode_bytes(b""));
         assert_eq!("a".abi_encode(), encode_bytes(b"a"));
         assert_eq!(String::new().abi_encode(), encode_bytes(b""));
         assert_eq!(String::from("a").abi_encode(), encode_bytes(b"a"));
-        assert_eq!(b"".abi_encode(), encode_bytes(b""));
-        assert_eq!(b"a".abi_encode(), encode_bytes(b"a"));
-        assert_eq!((b"" as &[_]).abi_encode(), encode_bytes(b""));
-        assert_eq!((b"a" as &[_]).abi_encode(), encode_bytes(b"a"));
         assert_eq!(Vec::<u8>::new().abi_encode(), encode_bytes(b""));
         assert_eq!(Vec::<u8>::from(b"a").abi_encode(), encode_bytes(b"a"));
     }
@@ -212,7 +367,7 @@ mod tests {
         );
         assert_eq!(
             tuple.sol_type_name(),
-            "(uint64,string,bool,(string,address,bytes,bytes,bytes))"
+            "(uint64,string,bool,(string,address,bytes,bytes4,bytes))"
         );
     }
 
@@ -234,13 +389,31 @@ mod tests {
         x.abi_encode();
         assert_eq!(x.sol_type_name(), "address[]");
 
-        let mut x = *b"";
-        let x = (&mut x, *b"aaaa", &mut &mut b"");
+        let mut x = *b"0";
+        let x = (&mut x, *b"aaaa", b"00");
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "(bytes,bytes,bytes)");
+        assert_eq!(x.sol_type_name(), "(bytes1,bytes4,bytes2)");
 
-        let tuple = &(&0u16, &"", &mut b"", &mut [Address::ZERO][..]);
+        let tuple = &(&0u16, &"", b"0", &mut [Address::ZERO][..]);
         tuple.abi_encode();
-        assert_eq!(tuple.sol_type_name(), "(uint16,string,bytes,address[])");
+        assert_eq!(tuple.sol_type_name(), "(uint16,string,bytes1,address[])");
+    }
+
+    #[test]
+    fn decode() {
+        let _: Result<String> = String::abi_decode(b"", false);
+        let _: Result<String> = <&str>::abi_decode(b"", false);
+
+        let _: Result<Vec<String>> = Vec::<String>::abi_decode(b"", false);
+        let _: Result<Vec<String>> = Vec::<&str>::abi_decode(b"", false);
+        let _: Result<Vec<String>> = <&[String]>::abi_decode(b"", false);
+        let _: Result<[String; 4]> = <&[String; 4]>::abi_decode(b"", false);
+
+        let _: Result<(u64, String, U256)> = <(u64, String, U256)>::abi_decode(b"", false);
+        let _: Result<(
+            i64,
+            Vec<(u32, String, Vec<alloy_primitives::FixedBytes<4>>)>,
+            U256,
+        )> = <(i64, &[(u32, &str, Vec<[u8; 4]>)], U256)>::abi_decode(b"", false);
     }
 }

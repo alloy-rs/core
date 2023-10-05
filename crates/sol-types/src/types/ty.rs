@@ -4,18 +4,16 @@ use crate::{
 };
 use alloc::{borrow::Cow, vec::Vec};
 
-/// An encodable is any type that may be encoded via a given [`SolType`].
+/// An ABI-encodable is any type that may be encoded via a given [`SolType`].
+///
+/// **Note:** this trait should not be implemented directly unless implementing
+/// a custom [`SolType`], which is also discouraged. Consider using
+/// [`Encodable`](crate::Encodable).
 ///
 /// The [`SolType`] trait contains encoding logic for a single associated
 /// `RustType`. This trait allows us to plug in encoding logic for other
 /// `RustTypes`. Consumers of this library may impl `Encodable<T>` for their
 /// types.
-///
-/// ### Why no `Decodable<T>`?
-///
-/// We believe in permissive encoders and restrictive decoders. To avoid type
-/// ambiguity during the decoding process, we do not allow decoding into
-/// arbitrary types. Users desiring this behavior should convert after decoding.
 ///
 /// ### Usage Note
 ///
@@ -25,7 +23,7 @@ use alloc::{borrow::Cow, vec::Vec};
 /// trait is always ambiguous for certain types.
 ///
 /// ```compile_fail,E0284
-/// # use alloy_sol_types::{SolType, Encodable, sol_data::*};
+/// # use alloy_sol_types::{SolType, SolTypeEncodable, sol_data::*};
 /// // Compilation fails due to ambiguity
 /// //  error[E0284]: type annotations needed
 /// // |
@@ -44,45 +42,43 @@ use alloc::{borrow::Cow, vec::Vec};
 ///
 /// To resolve this, specify the related [`SolType`]. When specifying T it is
 /// recommended that you invoke the [`SolType`] methods on `T`, rather than the
-/// [`Encodable`] methods.
+/// [`SolTypeEncodable`] methods.
 ///
 /// ```
-/// # use alloy_sol_types::{SolType, Encodable, sol_data::*};
+/// # use alloy_sol_types::{SolType, SolTypeEncodable, sol_data::*};
 /// # fn main() -> Result<(), alloy_sol_types::Error> {
 /// // Not recommended:
-/// Encodable::<Uint<64>>::to_tokens(&100u64);
+/// SolTypeEncodable::<Uint<64>>::to_tokens(&100u64);
 ///
 /// // Recommended:
 /// Uint::<64>::tokenize(&100u64);
 /// # Ok(())
 /// # }
 /// ```
-pub trait SolTypeEncodable<T: ?Sized + SolType> {
+pub trait SolTypeEncodable<T: SolType> {
     /// Convert the value to tokens.
     fn to_tokens(&self) -> T::TokenType<'_>;
+
+    /// Calculate the ABI-encoded size of the data.
+    ///
+    /// See [`SolType::abi_encoded_size`] for more information.
+    fn abi_encoded_size(&self) -> usize {
+        T::ENCODED_SIZE.unwrap()
+    }
+
+    /// Non-standard Packed Mode ABI encoding.
+    ///
+    /// See [`SolType::abi_encode_packed_to`] for more information.
+    fn abi_encode_packed_to(&self, out: &mut Vec<u8>);
+
+    /// Encode this data according to EIP-712 `encodeData` rules, and hash it
+    /// if necessary.
+    ///
+    /// See [`SolType::eip712_data_word`] for more information.
+    fn eip712_data_word(&self) -> Word;
 }
 
-macro_rules! deref_impls {
-    ($($(#[$attr:meta])* [$($gen:tt)*] $t:ty),* $(,)?) => {$(
-        $(#[$attr])*
-        impl<$($gen)*, U: SolType> SolTypeEncodable<U> for $t {
-            #[inline]
-            fn to_tokens(&self) -> <$t as SolType>::TokenType<'_> {
-                (**self).to_tokens()
-            }
-        }
-    )*};
-}
-
-deref_impls! {
-    // [T: ?Sized + SolTypeEncodable<U>] &T,
-    // [T: ?Sized + SolTypeEncodable<U>] &mut T,
-    // [T: ?Sized + alloc::borrow::ToOwned + SolTypeEncodable<U>] alloc::borrow::Cow<'_, T>,
-    // [T: ?Sized + SolTypeEncodable<U>] alloc::rc::Rc<T>,
-    // [T: ?Sized + SolTypeEncodable<U>] alloc::sync::Arc<T>,
-}
-
-/// A Solidity Type, for ABI encoding and decoding
+/// A Solidity Type, for ABI encoding and decoding.
 ///
 /// This trait is implemented by types that contain ABI encoding and decoding
 /// info for Solidity types. Types may be combined to express arbitrarily
@@ -129,7 +125,7 @@ deref_impls! {
 ///     b: alloy_primitives::FixedBytes([0x01, 0x02]),
 /// };
 /// ```
-pub trait SolType {
+pub trait SolType: Sized {
     /// The corresponding Rust type.
     type RustType: SolTypeEncodable<Self> + 'static;
 
@@ -150,9 +146,8 @@ pub trait SolType {
     /// Calculate the ABI-encoded size of the data, counting both head and tail
     /// words. For a single-word type this will always be 32.
     #[inline]
-    fn abi_encoded_size(rust: &Self::RustType) -> usize {
-        let _ = rust;
-        Self::ENCODED_SIZE.unwrap()
+    fn abi_encoded_size<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> usize {
+        rust.abi_encoded_size()
     }
 
     /// Returns `true` if the given token can be detokenized with this type.
@@ -188,12 +183,18 @@ pub trait SolType {
     /// words for each element
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
-    fn eip712_data_word(rust: &Self::RustType) -> Word;
+    #[inline]
+    fn eip712_data_word<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Word {
+        rust.eip712_data_word()
+    }
 
     /// Non-standard Packed Mode ABI encoding.
     ///
     /// See [`abi_encode_packed`][SolType::abi_encode_packed] for more details.
-    fn abi_encode_packed_to(rust: &Self::RustType, out: &mut Vec<u8>);
+    #[inline]
+    fn abi_encode_packed_to<E: ?Sized + SolTypeEncodable<Self>>(rust: &E, out: &mut Vec<u8>) {
+        rust.abi_encode_packed_to(out)
+    }
 
     /// Non-standard Packed Mode ABI encoding.
     ///
@@ -205,30 +206,30 @@ pub trait SolType {
     ///
     /// More information can be found in the [Solidity docs](https://docs.soliditylang.org/en/latest/abi-spec.html#non-standard-packed-mode).
     #[inline]
-    fn abi_encode_packed(rust: &Self::RustType) -> Vec<u8> {
+    fn abi_encode_packed<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Vec<u8> {
         let mut out = Vec::new();
         Self::abi_encode_packed_to(rust, &mut out);
         out
     }
 
-    /// Encode a single ABI token by wrapping it in a 1-length sequence.
+    /// Encodes a single ABI value by wrapping it in a 1-length sequence.
     #[inline]
     fn abi_encode<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Vec<u8> {
         abi::encode(&rust.to_tokens())
     }
 
-    /// Encode an ABI sequence.
+    /// Encodes an ABI sequence.
     #[inline]
-    fn abi_encode_sequence<E: SolTypeEncodable<Self>>(rust: &E) -> Vec<u8>
+    fn abi_encode_sequence<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Vec<u8>
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
         abi::encode_sequence(&rust.to_tokens())
     }
 
-    /// Encode an ABI sequence suitable for function parameters.
+    /// Encodes an ABI sequence suitable for function parameters.
     #[inline]
-    fn abi_encode_params<E: SolTypeEncodable<Self>>(rust: &E) -> Vec<u8>
+    fn abi_encode_params<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Vec<u8>
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {

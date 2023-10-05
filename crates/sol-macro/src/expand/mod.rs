@@ -538,9 +538,6 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
     let names2 = names.clone();
     let idxs = (0..fields.len()).map(syn::Index::from);
 
-    let names3 = names.clone();
-    let field_tys = fields.types().map(expand_type);
-
     let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types());
 
     quote! {
@@ -564,16 +561,6 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
                 Self {
                     #(#names2: tuple.#idxs),*
                 }
-            }
-        }
-
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::alloy_sol_types::SolTypeEncodable<UnderlyingSolTuple<'_>> for #name {
-            fn to_tokens(&self) -> <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::TokenType<'_> {
-                (#(
-                    ::alloy_sol_types::SolTypeEncodable::<#field_tys>::to_tokens(&self.#names3),
-                )*)
             }
         }
     }

@@ -448,7 +448,7 @@ mod tests {
     fn encode_empty_array() {
         type MyTy0 = sol_data::Array<sol_data::Address>;
 
-        let data = vec![];
+        let data: Vec<Address> = vec![];
 
         // Empty arrays
         let encoded = MyTy0::abi_encode_params(&data);
@@ -467,7 +467,7 @@ mod tests {
             sol_data::Array<sol_data::Address>,
             sol_data::Array<sol_data::Address>,
         );
-        let data = (vec![], vec![]);
+        let data: (Vec<Address>, Vec<Address>) = (vec![], vec![]);
 
         let expected = hex!(
             "
@@ -493,7 +493,7 @@ mod tests {
             sol_data::Array<sol_data::Array<sol_data::Address>>,
         );
 
-        let data = (vec![vec![]], vec![vec![]]);
+        let data: (Vec<Vec<Address>>, Vec<Vec<Address>>) = (vec![vec![]], vec![vec![]]);
 
         // Nested empty arrays
         let expected = hex!(
@@ -546,7 +546,7 @@ mod tests {
         assert_eq!(encoded, expected);
         assert_eq!(
             encoded.len(),
-            sol_data::FixedBytes::<2>::abi_encoded_size(&[0x12, 0x34].into())
+            sol_data::FixedBytes::<2>::abi_encoded_size(&[0x12, 0x34])
         );
     }
 

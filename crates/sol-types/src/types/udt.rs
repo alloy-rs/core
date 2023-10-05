@@ -24,6 +24,16 @@ macro_rules! define_udt {
             fn to_tokens(&self) -> <$underlying as $crate::SolType>::TokenType<'_> {
                 $crate::SolTypeEncodable::<$underlying>::to_tokens(self)
             }
+
+            #[inline]
+            fn eip712_data_word(&self) -> $crate::Word {
+                <$underlying as $crate::SolType>::tokenize(self).0
+            }
+
+            #[inline]
+            fn abi_encode_packed_to(&self, out: &mut $crate::private::Vec<u8>) {
+                <$underlying as $crate::SolType>::abi_encode_packed_to(self, out)
+            }
         }
 
         impl $name {
@@ -82,16 +92,6 @@ macro_rules! define_udt {
             #[inline]
             fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
                 <$underlying as $crate::SolType>::detokenize(token)
-            }
-
-            #[inline]
-            fn eip712_data_word(rust: &Self::RustType) -> $crate::Word {
-                <Self as $crate::SolType>::tokenize(rust).0
-            }
-
-            #[inline]
-            fn abi_encode_packed_to(rust: &Self::RustType, out: &mut $crate::private::Vec<u8>) {
-                <$underlying as $crate::SolType>::abi_encode_packed_to(rust, out)
             }
         }
 
