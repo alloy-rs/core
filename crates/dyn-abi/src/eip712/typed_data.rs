@@ -70,6 +70,7 @@ pub struct TypedData {
     pub domain: Eip712Domain,
 
     /// The custom types used by this message.
+    #[serde(rename = "types")]
     pub resolver: Resolver,
 
     /// The type of the message.
@@ -223,6 +224,21 @@ mod tests {
     use alloc::string::ToString;
     use alloy_sol_types::sol;
     use serde_json::json;
+
+    #[test]
+    fn test_round_trip_ser() {
+        let json = json!({
+            "types": {
+                "EIP712Domain": []
+            },
+            "primaryType": "EIP712Domain",
+            "domain": {},
+            "message": {}
+        });
+        let typed_data: TypedData = serde_json::from_value(json.clone()).unwrap();
+        let val = serde_json::to_value(&typed_data).unwrap();
+        assert_eq!(val, json);
+    }
 
     #[test]
     fn test_full_domain() {
