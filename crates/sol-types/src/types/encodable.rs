@@ -16,6 +16,12 @@ use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256};
 /// # Examples
 ///
 /// ```
+/// use alloy_sol_types::Encodable;
+///
+/// let my_values = ("hello", 0xdeadbeef_u32, true, [0x42_u8; 24]);
+/// let _ = my_values.abi_encode();
+/// let _ = my_values.abi_encode_packed();
+/// assert_eq!(my_values.sol_type_name(), "(string,uint32,bool,bytes24)");
 /// ```
 pub trait Encodable {
     /// The Solidity type that this type corresponds to.
@@ -114,10 +120,7 @@ pub trait Encodable {
     /// ABI-decode this type from the given data.
     ///
     /// See [`SolType::abi_decode`] for more information.
-    fn abi_decode<'de>(
-        data: &'de [u8],
-        validate: bool,
-    ) -> Result<<Self::SolType as SolType>::RustType> {
+    fn abi_decode(data: &[u8], validate: bool) -> Result<<Self::SolType as SolType>::RustType> {
         Self::SolType::abi_decode(data, validate)
     }
 
@@ -243,6 +246,7 @@ impl Encodable for () {
 all_the_tuples!(tuple_impls);
 
 #[cfg(test)]
+#[allow(clippy::type_complexity)]
 mod tests {
     use super::*;
 
