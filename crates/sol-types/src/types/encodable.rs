@@ -120,36 +120,35 @@ pub trait Encodable {
     /// ABI-decode this type from the given data.
     ///
     /// See [`SolType::abi_decode`] for more information.
-    fn abi_decode(data: &[u8], validate: bool) -> Result<<Self::SolType as SolType>::RustType> {
-        Self::SolType::abi_decode(data, validate)
+    fn abi_decode(data: &[u8], validate: bool) -> Result<Self>
+    where
+        Self: From<<Self::SolType as SolType>::RustType>,
+    {
+        Self::SolType::abi_decode(data, validate).map(Self::from)
     }
 
     /// ABI-decode this type from the given data.
     ///
     /// See [`SolType::abi_decode_params`] for more information.
     #[inline]
-    fn abi_decode_params<'de>(
-        data: &'de [u8],
-        validate: bool,
-    ) -> Result<<Self::SolType as SolType>::RustType>
+    fn abi_decode_params<'de>(data: &'de [u8], validate: bool) -> Result<Self>
     where
+        Self: From<<Self::SolType as SolType>::RustType>,
         <Self::SolType as SolType>::TokenType<'de>: TokenSeq<'de>,
     {
-        Self::SolType::abi_decode_params(data, validate)
+        Self::SolType::abi_decode_params(data, validate).map(Self::from)
     }
 
     /// ABI-decode this type from the given data.
     ///
     /// See [`SolType::abi_decode_sequence`] for more information.
     #[inline]
-    fn abi_decode_sequence<'de>(
-        data: &'de [u8],
-        validate: bool,
-    ) -> Result<<Self::SolType as SolType>::RustType>
+    fn abi_decode_sequence<'de>(data: &'de [u8], validate: bool) -> Result<Self>
     where
+        Self: From<<Self::SolType as SolType>::RustType>,
         <Self::SolType as SolType>::TokenType<'de>: TokenSeq<'de>,
     {
-        Self::SolType::abi_decode_sequence(data, validate)
+        Self::SolType::abi_decode_sequence(data, validate).map(Self::from)
     }
 }
 
@@ -388,18 +387,11 @@ mod tests {
     #[test]
     fn decode() {
         let _: Result<String> = String::abi_decode(b"", false);
-        let _: Result<String> = <&str>::abi_decode(b"", false);
 
         let _: Result<Vec<String>> = Vec::<String>::abi_decode(b"", false);
-        let _: Result<Vec<String>> = Vec::<&str>::abi_decode(b"", false);
-        let _: Result<Vec<String>> = <&[String]>::abi_decode(b"", false);
-        let _: Result<[String; 4]> = <&[String; 4]>::abi_decode(b"", false);
 
         let _: Result<(u64, String, U256)> = <(u64, String, U256)>::abi_decode(b"", false);
-        let _: Result<(
-            i64,
-            Vec<(u32, String, Vec<alloy_primitives::FixedBytes<4>>)>,
-            U256,
-        )> = <(i64, &[(u32, &str, Vec<[u8; 4]>)], U256)>::abi_decode(b"", false);
+        let _: Result<(i64, Vec<(u32, String, Vec<FixedBytes<4>>)>, U256)> =
+            <(i64, Vec<(u32, String, Vec<FixedBytes<4>>)>, U256)>::abi_decode(b"", false);
     }
 }
