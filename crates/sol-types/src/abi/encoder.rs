@@ -187,7 +187,7 @@ pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use crate::{sol_data, SolType};
-    use alloc::{borrow::ToOwned, string::ToString};
+    use alloc::{borrow::ToOwned, string::ToString, vec::Vec};
     use alloy_primitives::{hex, Address, U256};
 
     #[test]
