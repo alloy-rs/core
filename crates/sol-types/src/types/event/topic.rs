@@ -122,17 +122,17 @@ impl EventTopic for Bytes {
 
 // Complex types - preimage encoding and hash: iter each element
 macro_rules! array_impl {
-    ($T:ident) => {
+    ($ty:ident) => {
         #[inline]
         fn topic_preimage_length(rust: &Self::RustType) -> usize {
-            rust.iter().map($T::topic_preimage_length).sum()
+            rust.iter().map($ty::topic_preimage_length).sum()
         }
 
         #[inline]
         fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
             out.reserve(Self::topic_preimage_length(rust));
             for t in rust {
-                $T::encode_topic_preimage(t, out);
+                $ty::encode_topic_preimage(t, out);
             }
         }
 
@@ -154,21 +154,21 @@ impl<T: EventTopic, const N: usize> EventTopic for FixedArray<T, N> {
 }
 
 macro_rules! tuple_impls {
-    ($count:literal $($t:ident),+) => {
+    ($count:literal $($ty:ident),+) => {
         #[allow(non_snake_case)]
-        impl<$($t: EventTopic,)+> EventTopic for ($($t,)+) {
+        impl<$($ty: EventTopic,)+> EventTopic for ($($ty,)+) {
             #[inline]
             fn topic_preimage_length(rust: &Self::RustType) -> usize {
-                let ($($t,)+) = rust;
-                0usize $( + <$t>::topic_preimage_length($t) )+
+                let ($($ty,)+) = rust;
+                0usize $( + <$ty>::topic_preimage_length($ty) )+
             }
 
             #[inline]
             fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
-                let b @ ($($t,)+) = rust;
+                let b @ ($($ty,)+) = rust;
                 out.reserve(Self::topic_preimage_length(b));
                 $(
-                    <$t>::encode_topic_preimage($t, out);
+                    <$ty>::encode_topic_preimage($ty, out);
                 )+
             }
 
