@@ -1,7 +1,6 @@
-use core::fmt;
-
 use crate::{Item, Spanned};
 use proc_macro2::Span;
+use std::fmt;
 use syn::{
     parse::{Parse, ParseStream},
     Attribute, Result,

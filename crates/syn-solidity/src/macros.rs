@@ -482,32 +482,32 @@ macro_rules! kw_enum {
             $variant($crate::kw::$kw),
         )+}
 
-        impl ::core::cmp::PartialEq for $name {
+        impl std::cmp::PartialEq for $name {
             #[inline]
             fn eq(&self, other: &Self) -> bool {
-                ::core::mem::discriminant(self) == ::core::mem::discriminant(other)
+                std::mem::discriminant(self) == std::mem::discriminant(other)
             }
         }
 
-        impl ::core::cmp::Eq for $name {}
+        impl std::cmp::Eq for $name {}
 
-        impl ::core::hash::Hash for $name {
+        impl std::hash::Hash for $name {
             #[inline]
-            fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
-                ::core::hash::Hash::hash(&::core::mem::discriminant(self), state)
+            fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                std::hash::Hash::hash(&std::mem::discriminant(self), state)
             }
         }
 
-        impl ::core::fmt::Display for $name {
+        impl std::fmt::Display for $name {
             #[inline]
-            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.write_str(self.as_str())
             }
         }
 
-        impl ::core::fmt::Debug for $name {
+        impl std::fmt::Debug for $name {
             #[inline]
-            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.write_str(self.as_debug_str())
             }
         }
@@ -621,32 +621,32 @@ macro_rules! op_enum {
             $variant($(::syn::Token![$op]),+),
         )+}
 
-        impl ::core::cmp::PartialEq for $name {
+        impl std::cmp::PartialEq for $name {
             #[inline]
             fn eq(&self, other: &Self) -> bool {
-                ::core::mem::discriminant(self) == ::core::mem::discriminant(other)
+                std::mem::discriminant(self) == std::mem::discriminant(other)
             }
         }
 
-        impl ::core::cmp::Eq for $name {}
+        impl std::cmp::Eq for $name {}
 
-        impl ::core::hash::Hash for $name {
+        impl std::hash::Hash for $name {
             #[inline]
-            fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
-                ::core::hash::Hash::hash(&::core::mem::discriminant(self), state)
+            fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                std::hash::Hash::hash(&std::mem::discriminant(self), state)
             }
         }
 
-        impl ::core::fmt::Display for $name {
+        impl std::fmt::Display for $name {
             #[inline]
-            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.write_str(self.as_str())
             }
         }
 
-        impl ::core::fmt::Debug for $name {
+        impl std::fmt::Debug for $name {
             #[inline]
-            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.write_str(self.as_debug_str())
             }
         }

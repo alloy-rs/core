@@ -1,5 +1,4 @@
 use crate::{kw, utils::DebugPunctuated, Spanned, YulBlock, YulIdent};
-
 use proc_macro2::Span;
 use std::fmt;
 use syn::{

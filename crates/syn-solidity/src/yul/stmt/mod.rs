@@ -1,8 +1,6 @@
 use crate::{kw, Spanned, YulFnCall, YulFunctionDef};
-
-use std::fmt;
-
 use proc_macro2::Span;
+use std::fmt;
 use syn::{
     parse::{Parse, ParseStream, Result},
     token::{Brace, Paren},

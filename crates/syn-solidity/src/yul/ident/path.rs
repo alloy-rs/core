@@ -1,5 +1,4 @@
 use crate::{Spanned, YulIdent};
-
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
