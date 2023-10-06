@@ -1,5 +1,4 @@
 use crate::Spanned;
-
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use std::fmt;

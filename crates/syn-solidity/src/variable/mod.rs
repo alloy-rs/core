@@ -117,6 +117,17 @@ pub struct VariableDefinition {
     pub semi_token: Token![;],
 }
 
+impl fmt::Display for VariableDefinition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {} {}", self.ty, self.attributes, self.name)?;
+        if let Some((_, _expr)) = &self.initializer {
+            // TODO: fmt::Display for Expr
+            write!(f, " = <expr>")?;
+        }
+        f.write_str(";")
+    }
+}
+
 impl fmt::Debug for VariableDefinition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("VariableDefinition")

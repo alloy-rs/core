@@ -44,17 +44,14 @@ impl fmt::Display for ItemFunction {
             f.write_str(" ")?;
             name.fmt(f)?;
         }
-        f.write_str("(")?;
-        self.arguments.fmt(f)?;
-        f.write_str(")")?;
+        write!(f, "({})", self.arguments)?;
 
         if !self.attributes.is_empty() {
-            f.write_str(" ")?;
-            self.attributes.fmt(f)?;
+            write!(f, " {}", self.attributes)?;
         }
 
         if let Some(returns) = &self.returns {
-            returns.fmt(f)?;
+            write!(f, " {returns}")?;
         }
 
         if !self.body.is_empty() {
@@ -415,7 +412,8 @@ impl FunctionBody {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Empty(_) => ";",
-            Self::Block(_) => "{ ... }",
+            // TODO: fmt::Display for Stmt
+            Self::Block(_) => "{ <stmts> }",
         }
     }
 }

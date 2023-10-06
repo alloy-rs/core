@@ -1,8 +1,6 @@
 use crate::{Lit, Spanned, YulPath};
-
-use std::fmt;
-
 use proc_macro2::Span;
+use std::fmt;
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream, Result},
     token::Paren,

@@ -80,6 +80,24 @@ pub enum Item {
     Variable(VariableDefinition),
 }
 
+impl fmt::Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Contract(item) => item.fmt(f),
+            Self::Enum(item) => item.fmt(f),
+            Self::Error(item) => item.fmt(f),
+            Self::Event(item) => item.fmt(f),
+            Self::Function(item) => item.fmt(f),
+            Self::Import(item) => item.fmt(f),
+            Self::Pragma(item) => item.fmt(f),
+            Self::Struct(item) => item.fmt(f),
+            Self::Udt(item) => item.fmt(f),
+            Self::Using(item) => item.fmt(f),
+            Self::Variable(item) => item.fmt(f),
+        }
+    }
+}
+
 impl fmt::Debug for Item {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("Item::")?;

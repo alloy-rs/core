@@ -30,7 +30,14 @@ impl fmt::Display for ItemContract {
         if let Some(inheritance) = &self.inheritance {
             write!(f, " {}", inheritance)?;
         }
-        f.write_str(" { ... }")
+        let s = self
+            .body
+            .iter()
+            .map(|item| item.to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+            .replace('\n', "\n    ");
+        write!(f, " {{\n    {s}\n}}")
     }
 }
 

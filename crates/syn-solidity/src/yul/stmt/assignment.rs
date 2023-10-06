@@ -1,5 +1,4 @@
 use crate::{utils::DebugPunctuated, Spanned, WalrusToken, YulExpr, YulPath};
-
 use proc_macro2::Span;
 use std::fmt;
 use syn::{

@@ -31,6 +31,7 @@ impl fmt::Display for ItemEvent {
             }
             param.fmt(f)?;
         }
+        f.write_str(")")?;
         if self.is_anonymous() {
             f.write_str(" anonymous")?;
         }

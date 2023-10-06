@@ -1,5 +1,6 @@
 use crate::{Item, Spanned};
 use proc_macro2::Span;
+use std::fmt;
 use syn::{
     parse::{Parse, ParseStream},
     Attribute, Result,
@@ -12,6 +13,18 @@ pub struct File {
     pub attrs: Vec<Attribute>,
     /// The items in the file.
     pub items: Vec<Item>,
+}
+
+impl fmt::Display for File {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, item) in self.items.iter().enumerate() {
+            if i > 0 {
+                f.write_str("\n\n")?;
+            }
+            item.fmt(f)?;
+        }
+        Ok(())
+    }
 }
 
 impl Parse for File {

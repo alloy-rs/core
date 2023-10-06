@@ -1,4 +1,5 @@
 //! Helper [trait](Spanned) and methods to manipulate syntax tree nodes' spans.
+
 #![deny(unconditional_recursion)]
 
 use proc_macro2::{Span, TokenStream};
