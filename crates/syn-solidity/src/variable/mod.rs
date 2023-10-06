@@ -108,13 +108,24 @@ impl VariableDeclaration {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct VariableDefinition {
     pub ty: Type,
     pub attributes: VariableAttributes,
     pub name: SolIdent,
     pub initializer: Option<(Token![=], Expr)>,
     pub semi_token: Token![;],
+}
+
+impl fmt::Debug for VariableDefinition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("VariableDefinition")
+            .field("ty", &self.ty)
+            .field("attributes", &self.attributes)
+            .field("name", &self.name)
+            .field("initializer", &self.initializer)
+            .finish()
+    }
 }
 
 impl Parse for VariableDefinition {

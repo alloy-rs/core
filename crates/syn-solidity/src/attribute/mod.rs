@@ -55,14 +55,6 @@ pub struct Override {
     pub paths: Punctuated<SolPath, Token![,]>,
 }
 
-impl fmt::Debug for Override {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Override")
-            .field(DebugPunctuated::new(&self.paths))
-            .finish()
-    }
-}
-
 impl fmt::Display for Override {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("override")?;
@@ -77,6 +69,14 @@ impl fmt::Display for Override {
             f.write_str(")")?;
         }
         Ok(())
+    }
+}
+
+impl fmt::Debug for Override {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Override")
+            .field(DebugPunctuated::new(&self.paths))
+            .finish()
     }
 }
 
@@ -139,15 +139,6 @@ impl Hash for Modifier {
     }
 }
 
-impl fmt::Debug for Modifier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Modifier")
-            .field("name", &self.name)
-            .field("arguments", DebugPunctuated::new(&self.arguments))
-            .finish()
-    }
-}
-
 impl fmt::Display for Modifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.name.fmt(f)?;
@@ -158,11 +149,21 @@ impl fmt::Display for Modifier {
                     f.write_str(", ")?;
                 }
                 // TODO: impl fmt::Display for Expr
+                // arg.fmt(f)?;
                 write!(f, "{arg:?}")?;
             }
             f.write_str(")")?;
         }
         Ok(())
+    }
+}
+
+impl fmt::Debug for Modifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Modifier")
+            .field("name", &self.name)
+            .field("arguments", DebugPunctuated::new(&self.arguments))
+            .finish()
     }
 }
 

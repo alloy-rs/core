@@ -43,12 +43,6 @@ impl DerefMut for SolPath {
     }
 }
 
-impl fmt::Debug for SolPath {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_list().entries(&self.0).finish()
-    }
-}
-
 impl fmt::Display for SolPath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, ident) in self.0.iter().enumerate() {
@@ -58,6 +52,12 @@ impl fmt::Display for SolPath {
             ident.fmt(f)?;
         }
         Ok(())
+    }
+}
+
+impl fmt::Debug for SolPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(&self.0).finish()
     }
 }
 

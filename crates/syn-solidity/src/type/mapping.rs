@@ -38,17 +38,6 @@ impl Hash for TypeMapping {
     }
 }
 
-impl fmt::Debug for TypeMapping {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TypeMapping")
-            .field("key", &self.key)
-            .field("key_name", &self.key_name)
-            .field("value", &self.value)
-            .field("value_name", &self.value_name)
-            .finish()
-    }
-}
-
 impl fmt::Display for TypeMapping {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "mapping({} ", self.key)?;
@@ -60,6 +49,17 @@ impl fmt::Display for TypeMapping {
             write!(f, "{value_name}")?;
         }
         f.write_str(")")
+    }
+}
+
+impl fmt::Debug for TypeMapping {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TypeMapping")
+            .field("key", &self.key)
+            .field("key_name", &self.key_name)
+            .field("value", &self.value)
+            .field("value_name", &self.value_name)
+            .finish()
     }
 }
 

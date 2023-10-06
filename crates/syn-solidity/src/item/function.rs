@@ -37,6 +37,33 @@ pub struct ItemFunction {
     pub body: FunctionBody,
 }
 
+impl fmt::Display for ItemFunction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.kind.as_str())?;
+        if let Some(name) = &self.name {
+            f.write_str(" ")?;
+            name.fmt(f)?;
+        }
+        f.write_str("(")?;
+        self.arguments.fmt(f)?;
+        f.write_str(")")?;
+
+        if !self.attributes.is_empty() {
+            f.write_str(" ")?;
+            self.attributes.fmt(f)?;
+        }
+
+        if let Some(returns) = &self.returns {
+            returns.fmt(f)?;
+        }
+
+        if !self.body.is_empty() {
+            f.write_str(" ")?;
+        }
+        f.write_str(self.body.as_str())
+    }
+}
+
 impl fmt::Debug for ItemFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ItemFunction")
@@ -275,22 +302,17 @@ impl Hash for Returns {
     }
 }
 
-impl fmt::Debug for Returns {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Returns").field(&self.returns).finish()
-    }
-}
-
 impl fmt::Display for Returns {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("returns (")?;
-        for (i, r) in self.returns.iter().enumerate() {
-            if i > 0 {
-                f.write_str(", ")?;
-            }
-            write!(f, "{r}")?;
-        }
+        self.returns.fmt(f)?;
         f.write_str(")")
+    }
+}
+
+impl fmt::Debug for Returns {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Returns").field(&self.returns).finish()
     }
 }
 
@@ -346,18 +368,24 @@ impl Returns {
 /// The body of a function.
 #[derive(Clone)]
 pub enum FunctionBody {
-    /// A function body delimited by curly braces.
-    Block(Block),
     /// A function without implementation.
     Empty(Token![;]),
+    /// A function body delimited by curly braces.
+    Block(Block),
+}
+
+impl fmt::Display for FunctionBody {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
 impl fmt::Debug for FunctionBody {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("FunctionBody::")?;
         match self {
-            Self::Block(block) => block.fmt(f),
             Self::Empty(_) => f.write_str("Empty"),
+            Self::Block(block) => block.fmt(f),
         }
     }
 }
@@ -371,6 +399,23 @@ impl Parse for FunctionBody {
             input.parse().map(Self::Empty)
         } else {
             Err(lookahead.error())
+        }
+    }
+}
+
+impl FunctionBody {
+    /// Returns `true` if the function body is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        matches!(self, Self::Empty(_))
+    }
+
+    /// Returns a string representation of the function body.
+    #[inline]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Empty(_) => ";",
+            Self::Block(_) => "{ ... }",
         }
     }
 }

@@ -35,15 +35,6 @@ impl Hash for TypeArray {
     }
 }
 
-impl fmt::Debug for TypeArray {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("TypeArray")
-            .field(&self.ty)
-            .field(&self.size())
-            .finish()
-    }
-}
-
 impl fmt::Display for TypeArray {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.ty.fmt(f)?;
@@ -52,6 +43,15 @@ impl fmt::Display for TypeArray {
             f.write_str(s.base10_digits())?;
         }
         f.write_str("]")
+    }
+}
+
+impl fmt::Debug for TypeArray {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("TypeArray")
+            .field(&self.ty)
+            .field(&self.size())
+            .finish()
     }
 }
 

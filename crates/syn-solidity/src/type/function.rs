@@ -44,19 +44,17 @@ impl Hash for TypeFunction {
 impl fmt::Display for TypeFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("function (")?;
-        for (i, arg) in self.arguments.iter().enumerate() {
-            if i > 0 {
-                f.write_str(", ")?;
-            }
-            write!(f, "{arg}")?;
-        }
+        self.arguments.fmt(f)?;
         f.write_str(")")?;
+
         for attr in &self.attributes.0 {
             write!(f, " {attr}")?;
         }
+
         if let Some(returns) = &self.returns {
             write!(f, " {returns}")?;
         }
+
         Ok(())
     }
 }

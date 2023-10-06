@@ -24,6 +24,18 @@ impl fmt::Debug for FunctionAttributes {
     }
 }
 
+impl fmt::Display for FunctionAttributes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, attr) in self.0.iter().enumerate() {
+            if i > 0 {
+                f.write_str(" ")?;
+            }
+            write!(f, "{attr}")?;
+        }
+        Ok(())
+    }
+}
+
 impl Deref for FunctionAttributes {
     type Target = Vec<FunctionAttribute>;
 

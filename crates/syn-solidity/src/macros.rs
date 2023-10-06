@@ -498,17 +498,17 @@ macro_rules! kw_enum {
             }
         }
 
-        impl ::core::fmt::Debug for $name {
-            #[inline]
-            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                f.write_str(self.as_debug_str())
-            }
-        }
-
         impl ::core::fmt::Display for $name {
             #[inline]
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 f.write_str(self.as_str())
+            }
+        }
+
+        impl ::core::fmt::Debug for $name {
+            #[inline]
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                f.write_str(self.as_debug_str())
             }
         }
 
@@ -637,17 +637,17 @@ macro_rules! op_enum {
             }
         }
 
-        impl ::core::fmt::Debug for $name {
-            #[inline]
-            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                f.write_str(self.as_debug_str())
-            }
-        }
-
         impl ::core::fmt::Display for $name {
             #[inline]
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 f.write_str(self.as_str())
+            }
+        }
+
+        impl ::core::fmt::Debug for $name {
+            #[inline]
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                f.write_str(self.as_debug_str())
             }
         }
 

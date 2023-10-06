@@ -57,6 +57,30 @@ impl<P> DerefMut for Parameters<P> {
     }
 }
 
+impl fmt::Display for ParameterList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, param) in self.iter().enumerate() {
+            if i > 0 {
+                f.write_str(", ")?;
+            }
+            param.fmt(f)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for FieldList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, field) in self.iter().enumerate() {
+            if i > 0 {
+                f.write_str("; ")?;
+            }
+            field.fmt(f)?;
+        }
+        Ok(())
+    }
+}
+
 impl<P> fmt::Debug for Parameters<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()

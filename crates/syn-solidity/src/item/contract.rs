@@ -108,21 +108,25 @@ impl ItemContract {
 /// The kind of contract.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ContractKind {
+    /// `abstract contract`
     AbstractContract(Token![abstract], kw::contract),
+    /// `contract`
     Contract(kw::contract),
+    /// `interface`
     Interface(kw::interface),
+    /// `library`
     Library(kw::library),
-}
-
-impl fmt::Debug for ContractKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_debug_str())
-    }
 }
 
 impl fmt::Display for ContractKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
+    }
+}
+
+impl fmt::Debug for ContractKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_debug_str())
     }
 }
 
