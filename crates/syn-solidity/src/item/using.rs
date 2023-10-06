@@ -23,6 +23,22 @@ pub struct UsingDirective {
     pub semi_token: Token![;],
 }
 
+impl fmt::Display for UsingDirective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "using {} for {}{};",
+            self.list,
+            self.ty,
+            if self.global_token.is_some() {
+                " global"
+            } else {
+                ""
+            }
+        )
+    }
+}
+
 impl fmt::Debug for UsingDirective {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("UsingDirective")
@@ -62,6 +78,24 @@ impl Spanned for UsingDirective {
 pub enum UsingList {
     Single(SolPath),
     Multiple(Brace, Punctuated<UsingListItem, Token![,]>),
+}
+
+impl fmt::Display for UsingList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Single(path) => path.fmt(f),
+            Self::Multiple(_, list) => {
+                f.write_str("{")?;
+                for (i, item) in list.iter().enumerate() {
+                    if i > 0 {
+                        f.write_str(", ")?;
+                    }
+                    item.fmt(f)?;
+                }
+                f.write_str("}")
+            }
+        }
+    }
 }
 
 impl Parse for UsingList {
@@ -106,6 +140,16 @@ pub struct UsingListItem {
     pub op: Option<(Token![as], UserDefinableOperator)>,
 }
 
+impl fmt::Display for UsingListItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.path.fmt(f)?;
+        if let Some((_, op)) = &self.op {
+            write!(f, " as {op}")?;
+        }
+        Ok(())
+    }
+}
+
 impl Parse for UsingListItem {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
@@ -133,6 +177,15 @@ impl Spanned for UsingListItem {
 pub enum UsingType {
     Star(Token![*]),
     Type(Type),
+}
+
+impl fmt::Display for UsingType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Star(_) => f.write_str("*"),
+            Self::Type(ty) => ty.fmt(f),
+        }
+    }
 }
 
 impl Parse for UsingType {

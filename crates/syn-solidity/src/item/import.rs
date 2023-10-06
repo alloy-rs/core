@@ -20,6 +20,12 @@ pub struct ImportDirective {
     pub semi_token: Token![;],
 }
 
+impl fmt::Display for ImportDirective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "import {};", self.path)
+    }
+}
+
 impl fmt::Debug for ImportDirective {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ImportDirective")
@@ -60,6 +66,16 @@ pub enum ImportPath {
     Aliases(ImportAliases),
     /// A glob import directive: `import * as Foo from "foo.sol";`.
     Glob(ImportGlob),
+}
+
+impl fmt::Display for ImportPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Plain(p) => p.fmt(f),
+            Self::Aliases(p) => p.fmt(f),
+            Self::Glob(p) => p.fmt(f),
+        }
+    }
 }
 
 impl Parse for ImportPath {
@@ -118,6 +134,12 @@ pub struct ImportAlias {
     pub alias: SolIdent,
 }
 
+impl fmt::Display for ImportAlias {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "as {}", self.alias)
+    }
+}
+
 impl fmt::Debug for ImportAlias {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Alias").field(&self.alias).finish()
@@ -162,6 +184,16 @@ pub struct ImportPlain {
     pub alias: Option<ImportAlias>,
 }
 
+impl fmt::Display for ImportPlain {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.path)?;
+        if let Some(alias) = &self.alias {
+            write!(f, " {}", alias)?;
+        }
+        Ok(())
+    }
+}
+
 impl fmt::Debug for ImportPlain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Plain")
@@ -198,13 +230,29 @@ impl Spanned for ImportPlain {
     }
 }
 
-/// A list of import aliases: `import { Foo as Bar, Baz } from "foo.sol";`.
+/// A list of import aliases: `{ Foo as Bar, Baz } from "foo.sol"`.
 #[derive(Clone)]
 pub struct ImportAliases {
     pub brace_token: Brace,
     pub imports: Punctuated<(SolIdent, Option<ImportAlias>), Token![,]>,
     pub from_token: kw::from,
     pub path: LitStr,
+}
+
+impl fmt::Display for ImportAliases {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{{")?;
+        for (i, (ident, alias)) in self.imports.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", ident)?;
+            if let Some(alias) = alias {
+                write!(f, " {}", alias)?;
+            }
+        }
+        write!(f, "}} from {}", self.path)
+    }
 }
 
 impl fmt::Debug for ImportAliases {
@@ -244,13 +292,23 @@ impl Spanned for ImportAliases {
     }
 }
 
-/// A glob import directive: `import * as Foo from "foo.sol";`.
+/// A glob import directive: `* as Foo from "foo.sol"`.
 #[derive(Clone)]
 pub struct ImportGlob {
     pub star_token: Token![*],
     pub alias: Option<ImportAlias>,
     pub from_token: kw::from,
     pub path: LitStr,
+}
+
+impl fmt::Display for ImportGlob {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "*")?;
+        if let Some(alias) = &self.alias {
+            write!(f, " {}", alias)?;
+        }
+        write!(f, " from {}", self.path)
+    }
 }
 
 impl fmt::Debug for ImportGlob {

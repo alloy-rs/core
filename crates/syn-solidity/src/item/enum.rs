@@ -23,6 +23,19 @@ pub struct ItemEnum {
     pub variants: Punctuated<Variant, Token![,]>,
 }
 
+impl fmt::Display for ItemEnum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "enum {} {{ ", self.name)?;
+        for (i, variant) in self.variants.iter().enumerate() {
+            if i > 0 {
+                f.write_str(", ")?;
+            }
+            variant.fmt(f)?;
+        }
+        f.write_str(" }")
+    }
+}
+
 impl fmt::Debug for ItemEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ItemEnum")
@@ -69,6 +82,12 @@ pub struct Variant {
 
     /// Name of the variant.
     pub ident: SolIdent,
+}
+
+impl fmt::Display for Variant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.ident.fmt(f)
+    }
 }
 
 impl Parse for Variant {

@@ -2,7 +2,7 @@ use crate::{
     kw, utils::DebugPunctuated, ParameterList, SolIdent, Spanned, Type, VariableDeclaration,
 };
 use proc_macro2::Span;
-use std::fmt;
+use std::fmt::{self, Debug};
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
@@ -20,6 +20,22 @@ pub struct ItemEvent {
     pub parameters: Punctuated<EventParameter, Token![,]>,
     pub anonymous: Option<kw::anonymous>,
     pub semi_token: Token![;],
+}
+
+impl fmt::Display for ItemEvent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "event {}(", self.name)?;
+        for (i, param) in self.parameters.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            param.fmt(f)?;
+        }
+        if self.is_anonymous() {
+            f.write_str(" anonymous")?;
+        }
+        f.write_str(";")
+    }
 }
 
 impl fmt::Debug for ItemEvent {

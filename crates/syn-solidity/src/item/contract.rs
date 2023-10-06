@@ -24,6 +24,16 @@ pub struct ItemContract {
     pub body: Vec<Item>,
 }
 
+impl fmt::Display for ItemContract {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.kind, self.name)?;
+        if let Some(inheritance) = &self.inheritance {
+            write!(f, " {}", inheritance)?;
+        }
+        f.write_str(" { ... }")
+    }
+}
+
 impl fmt::Debug for ItemContract {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ItemContract")
@@ -250,6 +260,19 @@ impl ContractKind {
 pub struct Inheritance {
     pub is_token: kw::is,
     pub inheritance: Punctuated<Modifier, Token![,]>,
+}
+
+impl fmt::Display for Inheritance {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("is ")?;
+        for (i, modifier) in self.inheritance.iter().enumerate() {
+            if i > 0 {
+                f.write_str(", ")?;
+            }
+            modifier.fmt(f)?;
+        }
+        Ok(())
+    }
 }
 
 impl fmt::Debug for Inheritance {
