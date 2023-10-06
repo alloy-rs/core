@@ -36,7 +36,7 @@ impl fmt::Display for ItemContract {
             .map(|item| item.to_string())
             .collect::<Vec<_>>()
             .join("\n")
-            .replace("\n", "\n    ");
+            .replace('\n', "\n    ");
         write!(f, " {{\n    {s}\n}}")
     }
 }
