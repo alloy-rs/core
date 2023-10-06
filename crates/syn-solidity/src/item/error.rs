@@ -22,6 +22,12 @@ pub struct ItemError {
     pub semi_token: Token![;],
 }
 
+impl fmt::Display for ItemError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "error {}({});", self.name, self.parameters)
+    }
+}
+
 impl fmt::Debug for ItemError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ItemError")

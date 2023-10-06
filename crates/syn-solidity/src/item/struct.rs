@@ -39,6 +39,12 @@ impl Hash for ItemStruct {
     }
 }
 
+impl fmt::Display for ItemStruct {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "struct {} {{ {} }}", self.name, self.fields)
+    }
+}
+
 impl fmt::Debug for ItemStruct {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ItemStruct")

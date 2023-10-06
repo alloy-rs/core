@@ -14,6 +14,12 @@ pub struct PragmaDirective {
     pub semi_token: Token![;],
 }
 
+impl fmt::Display for PragmaDirective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "pragma {};", self.tokens)
+    }
+}
+
 impl fmt::Debug for PragmaDirective {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("PragmaDirective")
@@ -51,6 +57,17 @@ pub enum PragmaTokens {
     Abicoder(kw::abicoder, SolIdent),
     Experimental(kw::experimental, SolIdent),
     Verbatim(TokenStream),
+}
+
+impl fmt::Display for PragmaTokens {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Version(_, version) => write!(f, "solidity {version}"),
+            Self::Abicoder(_, ident) => write!(f, "abicoder {ident}"),
+            Self::Experimental(_, ident) => write!(f, "experimental {ident}"),
+            Self::Verbatim(tokens) => tokens.fmt(f),
+        }
+    }
 }
 
 impl Parse for PragmaTokens {

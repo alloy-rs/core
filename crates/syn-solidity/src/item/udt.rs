@@ -23,6 +23,12 @@ pub struct ItemUdt {
     pub semi_token: Token![;],
 }
 
+impl fmt::Display for ItemUdt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "type {} is {};", self.name, self.ty)
+    }
+}
+
 impl fmt::Debug for ItemUdt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ItemUdt")

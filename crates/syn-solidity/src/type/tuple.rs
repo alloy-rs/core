@@ -34,14 +34,6 @@ impl Hash for TypeTuple {
     }
 }
 
-impl fmt::Debug for TypeTuple {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("TypeTuple")
-            .field(DebugPunctuated::new(&self.types))
-            .finish()
-    }
-}
-
 impl fmt::Display for TypeTuple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("(")?;
@@ -52,6 +44,14 @@ impl fmt::Display for TypeTuple {
             ty.fmt(f)?;
         }
         f.write_str(")")
+    }
+}
+
+impl fmt::Debug for TypeTuple {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("TypeTuple")
+            .field(DebugPunctuated::new(&self.types))
+            .finish()
     }
 }
 
