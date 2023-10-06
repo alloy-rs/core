@@ -14,10 +14,6 @@ pub fn docs(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|attr| attr.path().is_ident("doc"))
 }
 
-pub fn has_docs(attrs: &[Attribute]) -> bool {
-    docs(attrs).next().is_some()
-}
-
 pub fn derives(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|attr| attr.path().is_ident("derive"))
 }
@@ -42,6 +38,7 @@ pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {
 pub struct SolAttrs {
     pub all_derives: Option<bool>,
     pub extra_methods: Option<bool>,
+    pub docs: Option<bool>,
 
     // TODO: Implement
     pub rename: Option<LitStr>,
@@ -113,6 +110,7 @@ impl SolAttrs {
                 match_! {
                     all_derives => bool()?,
                     extra_methods => bool()?,
+                    docs => bool()?,
 
                     rename => lit()?,
                     rename_all => CasingStyle::from_lit(&lit()?)?,
@@ -270,6 +268,10 @@ mod tests {
             #[sol(extra_methods)] => Ok(sol_attrs! { extra_methods: true }),
             #[sol(extra_methods = true)] => Ok(sol_attrs! { extra_methods: true }),
             #[sol(extra_methods = false)] => Ok(sol_attrs! { extra_methods: false }),
+
+            #[sol(docs)] => Ok(sol_attrs! { docs: true }),
+            #[sol(docs = true)] => Ok(sol_attrs! { docs: true }),
+            #[sol(docs = false)] => Ok(sol_attrs! { docs: false }),
         }
 
         rename {
