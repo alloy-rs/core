@@ -14,6 +14,18 @@ use syn::{
 #[derive(Clone, Debug)]
 pub struct VariableAttributes(pub Vec<VariableAttribute>);
 
+impl fmt::Display for VariableAttributes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, attr) in self.0.iter().enumerate() {
+            if i > 0 {
+                f.write_str(" ")?;
+            }
+            write!(f, "{attr}")?;
+        }
+        Ok(())
+    }
+}
+
 impl Parse for VariableAttributes {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let mut attributes = Vec::new();
@@ -109,6 +121,17 @@ pub enum VariableAttribute {
     Immutable(kw::immutable),
     /// An [Override] attribute.
     Override(Override),
+}
+
+impl fmt::Display for VariableAttribute {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Visibility(v) => v.fmt(f),
+            Self::Constant(_) => f.write_str("constant"),
+            Self::Immutable(_) => f.write_str("immutable"),
+            Self::Override(o) => o.fmt(f),
+        }
+    }
 }
 
 impl fmt::Debug for VariableAttribute {

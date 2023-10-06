@@ -18,12 +18,6 @@ use syn::{
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct FunctionAttributes(pub Vec<FunctionAttribute>);
 
-impl fmt::Debug for FunctionAttributes {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
 impl fmt::Display for FunctionAttributes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, attr) in self.0.iter().enumerate() {
@@ -33,6 +27,12 @@ impl fmt::Display for FunctionAttributes {
             write!(f, "{attr}")?;
         }
         Ok(())
+    }
+}
+
+impl fmt::Debug for FunctionAttributes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 

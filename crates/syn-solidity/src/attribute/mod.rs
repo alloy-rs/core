@@ -144,13 +144,12 @@ impl fmt::Display for Modifier {
         self.name.fmt(f)?;
         if self.paren_token.is_some() {
             f.write_str("(")?;
-            for (i, arg) in self.arguments.iter().enumerate() {
+            for (i, _arg) in self.arguments.iter().enumerate() {
                 if i > 0 {
                     f.write_str(", ")?;
                 }
                 // TODO: impl fmt::Display for Expr
-                // arg.fmt(f)?;
-                write!(f, "{arg:?}")?;
+                f.write_str("<expr>")?;
             }
             f.write_str(")")?;
         }
