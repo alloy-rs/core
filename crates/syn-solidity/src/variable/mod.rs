@@ -110,6 +110,7 @@ impl VariableDeclaration {
 
 #[derive(Clone)]
 pub struct VariableDefinition {
+    pub attrs: Vec<Attribute>,
     pub ty: Type,
     pub attributes: VariableAttributes,
     pub name: SolIdent,
@@ -142,6 +143,7 @@ impl fmt::Debug for VariableDefinition {
 impl Parse for VariableDefinition {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
+            attrs: Attribute::parse_outer(input)?,
             ty: input.parse()?,
             attributes: input.parse()?,
             name: input.parse()?,

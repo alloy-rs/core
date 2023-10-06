@@ -205,7 +205,7 @@ impl Item {
         }
     }
 
-    fn replace_attrs(&mut self, src: Vec<Attribute>) -> Vec<Attribute> {
+    pub fn attrs(&self) -> Option<&Vec<Attribute>> {
         match self {
             Self::Contract(ItemContract { attrs, .. })
             | Self::Function(ItemFunction { attrs, .. })
@@ -213,8 +213,31 @@ impl Item {
             | Self::Error(ItemError { attrs, .. })
             | Self::Event(ItemEvent { attrs, .. })
             | Self::Struct(ItemStruct { attrs, .. })
-            | Self::Udt(ItemUdt { attrs, .. }) => std::mem::replace(attrs, src),
-            _ => vec![],
+            | Self::Udt(ItemUdt { attrs, .. })
+            | Self::Variable(VariableDefinition { attrs, .. }) => Some(attrs),
+            Self::Import(_) | Self::Pragma(_) | Self::Using(_) => None,
+        }
+    }
+
+    pub fn attrs_mut(&mut self) -> Option<&mut Vec<Attribute>> {
+        match self {
+            Self::Contract(ItemContract { attrs, .. })
+            | Self::Function(ItemFunction { attrs, .. })
+            | Self::Enum(ItemEnum { attrs, .. })
+            | Self::Error(ItemError { attrs, .. })
+            | Self::Event(ItemEvent { attrs, .. })
+            | Self::Struct(ItemStruct { attrs, .. })
+            | Self::Udt(ItemUdt { attrs, .. })
+            | Self::Variable(VariableDefinition { attrs, .. }) => Some(attrs),
+            Self::Import(_) | Self::Pragma(_) | Self::Using(_) => None,
+        }
+    }
+
+    fn replace_attrs(&mut self, src: Vec<Attribute>) -> Vec<Attribute> {
+        if let Some(attrs) = self.attrs_mut() {
+            std::mem::replace(attrs, src)
+        } else {
+            Vec::new()
         }
     }
 }

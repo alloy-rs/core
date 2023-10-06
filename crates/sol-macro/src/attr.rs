@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use heck::{ToKebabCase, ToLowerCamelCase, ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -10,12 +12,20 @@ pub fn mk_doc(s: impl quote::ToTokens) -> TokenStream {
     quote!(#[doc = #s])
 }
 
+pub fn is_doc(attr: &Attribute) -> bool {
+    attr.path().is_ident("doc")
+}
+
+pub fn is_derive(attr: &Attribute) -> bool {
+    attr.path().is_ident("derive")
+}
+
 pub fn docs(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
-    attrs.iter().filter(|attr| attr.path().is_ident("doc"))
+    attrs.iter().filter(|a| is_doc(a))
 }
 
 pub fn derives(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
-    attrs.iter().filter(|attr| attr.path().is_ident("derive"))
+    attrs.iter().filter(|a| is_derive(a))
 }
 
 pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {

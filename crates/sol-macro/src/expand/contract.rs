@@ -53,7 +53,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     let mut events = Vec::with_capacity(contract.body.len());
 
     let mut item_tokens = TokenStream::new();
-    let d_attrs: Vec<Attribute> = attr::derives(&attrs).cloned().collect();
+    let (mod_attrs, item_attrs): (Vec<_>, _) =
+        attrs.into_iter().partition(|a| a.path().is_ident("doc"));
+
     for item in body {
         match item {
             Item::Function(function) if function.name.is_some() => functions.push(function),
@@ -61,34 +63,39 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             Item::Event(event) => events.push(event),
             _ => {}
         }
-        if !d_attrs.is_empty() {
-            item_tokens.extend(quote!(#(#d_attrs)*));
+
+        if item.attrs().is_none() || item_attrs.is_empty() {
+            // avoid cloning item if we don't have to
+            item_tokens.extend(cx.expand_item(item)?);
+        } else {
+            // prepend `item_attrs` to `item.attrs`
+            let mut item = item.clone();
+            item.attrs_mut().unwrap().splice(0..0, item_attrs.clone());
+            item_tokens.extend(cx.expand_item(&item)?);
         }
-        item_tokens.extend(cx.expand_item(item)?);
     }
 
     let functions_enum = (!functions.is_empty()).then(|| {
-        let mut attrs = d_attrs.clone();
+        let mut attrs = item_attrs.clone();
         let doc_str = format!("Container for all the [`{name}`](self) function calls.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         CallLikeExpander::from_functions(cx, name, functions).expand(attrs, extra_methods)
     });
 
     let errors_enum = (!errors.is_empty()).then(|| {
-        let mut attrs = d_attrs.clone();
+        let mut attrs = item_attrs.clone();
         let doc_str = format!("Container for all the [`{name}`](self) custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         CallLikeExpander::from_errors(cx, name, errors).expand(attrs, extra_methods)
     });
 
     let events_enum = (!events.is_empty()).then(|| {
-        let mut attrs = d_attrs;
+        let mut attrs = item_attrs;
         let doc_str = format!("Container for all the [`{name}`](self) events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         CallLikeExpander::from_events(cx, name, events).expand_event(attrs, extra_methods)
     });
 
-    let mod_attrs = attr::docs(&attrs);
     let mod_docs =
         docs.then(|| attr::mk_doc("Module containing a contract's types and functions."));
     let tokens = quote! {
