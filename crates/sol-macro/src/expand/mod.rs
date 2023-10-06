@@ -333,8 +333,8 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     /// Returns the name of the function, adjusted for overloads.
-    fn function_name(&self, function: &ItemFunction) -> String {
-        self.overloaded_name(function.into()).as_string()
+    fn function_name(&self, function: &ItemFunction) -> SolIdent {
+        self.overloaded_name(function.into())
     }
 
     /// Returns the name of the given item, adjusted for overloads.
@@ -357,7 +357,11 @@ impl<'ast> ExpCtxt<'ast> {
 
     /// Formats the given name as a function's call Rust struct name.
     fn raw_call_name(&self, function_name: impl quote::IdentFragment + std::fmt::Display) -> Ident {
-        format_ident!("{function_name}Call")
+        let mut new_ident = format_ident!("{function_name}Call");
+        if let Some(span) = function_name.span() {
+            new_ident.set_span(span);
+        }
+        new_ident
     }
 
     /// Returns the name of the function's return Rust struct.
@@ -371,7 +375,11 @@ impl<'ast> ExpCtxt<'ast> {
         &self,
         function_name: impl quote::IdentFragment + std::fmt::Display,
     ) -> Ident {
-        format_ident!("{function_name}Return")
+        let mut new_ident = format_ident!("{function_name}Return");
+        if let Some(span) = function_name.span() {
+            new_ident.set_span(span);
+        }
+        new_ident
     }
 
     fn function_signature(&self, function: &ItemFunction) -> String {
