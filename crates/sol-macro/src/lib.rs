@@ -96,12 +96,17 @@ mod utils;
 /// but this may change in the future.
 ///
 /// List of all `#[sol(...)]` supported attributes:
-/// - `all_derives`: adds all possible `#[derive(...)]` attributes to all
-///   generated types. May significantly increase compile times due to all the
-///   extra generated code. This is the default behaviour of [`abigen`][abigen]
-/// - `extra_methods`: adds extra implementations and methods to all applicable
-///   generated types, such as `From` impls and `as_<variant>` methods. May
-///   significantly increase compile times due to all the extra generated code
+/// - `all_derives [ = <bool = false>]`: adds all possible `#[derive(...)]`
+///   attributes to all generated types. May significantly increase compile
+///   times due to all the extra generated code. This is the default behaviour
+///   of [`abigen`][abigen]
+/// - `extra_methods [ = <bool = false>]`: adds extra implementations and
+///   methods to all applicable generated types, such as `From` impls and
+///   `as_<variant>` methods. May significantly increase compile times due to
+///   all the extra generated code. This is the default behaviour of
+///   [`abigen`][abigen]
+/// - `docs [ = <bool = true>]`: adds doc comments to all generated types. This
+///   is the default behaviour of [`abigen`][abigen]
 /// - `bytecode = <hex string literal>`: specifies the creation/init bytecode of
 ///   a contract. This will emit a `static` item with the specified bytes.
 /// - `deployed_bytecode = <hex string literal>`: specifies the deployed

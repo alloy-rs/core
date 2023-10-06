@@ -31,6 +31,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         .extra_methods
         .or(cx.attrs.extra_methods)
         .unwrap_or(false);
+    let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     let bytecode = sol_attrs.bytecode.map(|lit| {
         let name = Ident::new("BYTECODE", lit.span());
@@ -88,8 +89,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     });
 
     let mod_attrs = attr::docs(&attrs);
-    let mod_docs = (!attr::has_docs(&attrs))
-        .then(|| attr::mk_doc("Module containing a contract's types and functions."));
+    let mod_docs =
+        docs.then(|| attr::mk_doc("Module containing a contract's types and functions."));
     let tokens = quote! {
         #mod_docs
         #(#mod_attrs)*

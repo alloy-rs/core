@@ -44,12 +44,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         cx.assert_resolved(returns)?;
     }
 
-    let (_sol_attrs, mut call_attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut call_attrs) = crate::attr::SolAttrs::parse(attrs)?;
     let mut return_attrs = call_attrs.clone();
     cx.derives(&mut call_attrs, arguments, true);
     if !returns.is_empty() {
         cx.derives(&mut return_attrs, returns, true);
     }
+    let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     let call_name = cx.call_name(function);
     let return_name = cx.return_name(function);
@@ -67,13 +68,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let selector = crate::utils::selector(&signature);
     let tokenize_impl = expand_tokenize_func(arguments.iter());
 
-    let call_doc = (!attr::has_docs(attrs)).then(|| {
+    let call_doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array);
         attr::mk_doc(format!(
-            "Function with signature `{signature}` and selector `0x{selector}`."
+            "Function with signature `{signature}` and selector `0x{selector}`.\n\
+            ```solidity\n{function}\n```"
         ))
     });
-    let return_doc = (!attr::has_docs(&return_attrs)).then(|| {
+    let return_doc = docs.then(|| {
         attr::mk_doc(format!(
             "Container type for the return parameters of the [`{signature}`]({call_name}) function."
         ))

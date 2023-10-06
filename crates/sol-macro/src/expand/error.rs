@@ -27,8 +27,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     } = error;
     cx.assert_resolved(params)?;
 
-    let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
     cx.derives(&mut attrs, params, true);
+    let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     let tokenize_impl = expand_tokenize_func(params.iter());
 
@@ -37,10 +38,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
 
     let converts = expand_from_into_tuples(&name.0, params);
     let fields = expand_fields(params);
-    let doc = (!attr::has_docs(&attrs)).then(|| {
+    let doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array);
         attr::mk_doc(format!(
-            "Custom error with signature `{signature}` and selector `{selector}`."
+            "Custom error with signature `{signature}` and selector `{selector}`.\n\
+             ```solidity\n{error}\n```"
         ))
     });
     let tokens = quote! {

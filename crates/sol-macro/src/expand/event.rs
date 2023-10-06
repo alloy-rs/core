@@ -22,8 +22,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
     let ItemEvent { attrs, .. } = event;
     let params = event.params();
 
-    let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
     cx.derives(&mut attrs, &params, true);
+    let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     cx.assert_resolved(&params)?;
     event.assert_valid()?;
@@ -105,10 +106,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .enumerate()
         .map(|(i, assign)| quote!(out[#i] = #assign;));
 
-    let doc = (!attr::has_docs(&attrs)).then(|| {
+    let doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array);
         attr::mk_doc(format!(
-            "Event with signature `{signature}` and selector `{selector}`."
+            "Event with signature `{signature}` and selector `{selector}`.\n\
+            ```solidity\n{event}\n```"
         ))
     });
     let tokens = quote! {
