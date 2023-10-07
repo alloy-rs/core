@@ -77,6 +77,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
             #convert
 
             #[automatically_derived]
+            impl ::alloy_sol_types::Encodable for #name {
+                type SolType = Self;
+            }
+
+            #[automatically_derived]
             impl ::alloy_sol_types::private::SolTypeEncodable<Self> for #name {
                 fn to_tokens(&self) -> <Self as ::alloy_sol_types::SolType>::TokenType<'_> {
                     #tokenize_impl

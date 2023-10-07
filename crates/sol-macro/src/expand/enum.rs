@@ -112,6 +112,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             }
 
             #[automatically_derived]
+            impl ::alloy_sol_types::Encodable for #name {
+                type SolType = Self;
+            }
+
+            #[automatically_derived]
             impl ::alloy_sol_types::private::SolTypeEncodable<#name> for #name {
                 #[inline]
                 fn to_tokens(&self) -> #uint8_st::TokenType<'_> {
