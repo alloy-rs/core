@@ -71,7 +71,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let call_doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array);
         attr::mk_doc(format!(
-            "Function with signature `{signature}` and selector `0x{selector}`.\n\
+            "Function with signature `{signature}` and selector `{selector}`.\n\
             ```solidity\n{function}\n```"
         ))
     });
