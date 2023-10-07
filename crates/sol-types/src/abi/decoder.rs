@@ -239,11 +239,13 @@ impl<'de> Decoder<'de> {
     }
 }
 
-/// ABI-decodes a single token by wrapping it in a single-element tuple.
+/// ABI-decodes a token by wrapping it in a single-element tuple.
 ///
-/// You should probably be using
-/// [`SolType::abi_decode`](crate::SolType::abi_decode) if you're not intending
-/// to use raw tokens.
+/// You are probably looking for
+/// [`SolValue::abi_decode`](crate::SolValue::abi_decode) if you are not
+/// intending to use raw tokens.
+///
+/// See the [`abi`](super) module for more information.
 #[inline]
 pub fn decode<'de, T: TokenType<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     decode_sequence::<(T,)>(data, validate).map(|(t,)| t)
@@ -254,9 +256,11 @@ pub fn decode<'de, T: TokenType<'de>>(data: &'de [u8], validate: bool) -> Result
 /// Decodes as function parameters if [`T` is a tuple](TokenSeq::IS_TUPLE).
 /// Otherwise, decodes it as a single-element tuple.
 ///
-/// You should probably be using
-/// [`SolType::abi_decode_params`](crate::SolType::abi_decode_params) if you're
-/// not intending to use raw tokens.
+/// You are probably looking for
+/// [`SolValue::abi_decode_params`](crate::SolValue::abi_decode_params) if
+/// you are not intending to use raw tokens.
+///
+/// See the [`abi`](super) module for more information.
 #[inline]
 pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     if T::IS_TUPLE {
@@ -269,9 +273,11 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> 
 /// Decodes ABI compliant vector of bytes into vector of tokens described by
 /// types param.
 ///
-/// You should probably be using
-/// [`SolType::abi_decode_sequence`](crate::SolType::abi_decode_sequence) if
-/// you're not intending to use raw tokens.
+/// You are probably looking for
+/// [`SolValue::abi_decode_sequence`](crate::SolValue::abi_decode_sequence) if
+/// you are not intending to use raw tokens.
+///
+/// See the [`abi`](super) module for more information.
 pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     let mut decoder = Decoder::new(data, validate);
     let res = decoder.decode_sequence::<T>()?;

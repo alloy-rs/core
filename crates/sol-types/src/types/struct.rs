@@ -12,9 +12,9 @@ use alloy_primitives::{keccak256, B256};
 ///
 /// # Implementer's Guide
 ///
-/// We do not recommend implementing this trait directly. Instead, we recommend
-/// using the [`sol`][crate::sol] proc macro to parse a Solidity struct
-/// definition.
+/// It should not be necessary to implement this trait manually. Instead, use
+/// the [`sol!`](crate::sol!) procedural macro to parse Solidity syntax into
+/// types that implement this trait.
 ///
 /// # Note
 ///

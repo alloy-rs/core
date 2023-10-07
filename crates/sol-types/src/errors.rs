@@ -110,11 +110,8 @@ impl Error {
 
     /// Instantiates a new [`Error::TypeCheckFail`] with the provided token.
     #[cold]
-    pub fn type_check_fail_token<'a>(
-        token: &impl abi::TokenType<'a>,
-        expected_type: impl Into<Cow<'static, str>>,
-    ) -> Self {
-        Self::type_check_fail(&abi::encode(token), expected_type)
+    pub fn type_check_fail_token<T: crate::SolType>(token: &T::TokenType<'_>) -> Self {
+        Self::type_check_fail(&abi::encode(token), T::sol_type_name())
     }
 
     /// Instantiates a new [`Error::TypeCheckFail`] with the provided data.

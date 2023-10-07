@@ -1,4 +1,4 @@
-use crate::{abi::token::WordToken, sol_data, Encodable, SolType};
+use crate::SolValue;
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Address, FixedBytes, B256, U256};
 
@@ -139,15 +139,12 @@ impl Eip712Domain {
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
     pub fn encode_data_to(&self, out: &mut Vec<u8>) {
         // This only works because all of the fields are encoded as words.
-        #[inline]
-        fn encode_opt<S, T>(opt: Option<&T>, out: &mut Vec<u8>)
-        where
-            S: for<'a> SolType<TokenType<'a> = WordToken>,
-            T: Encodable<S>,
-        {
-            if let Some(t) = opt {
-                out.extend_from_slice(t.to_tokens().as_slice());
-            }
+        macro_rules! encode_opt {
+            ($opt:expr) => {
+                if let Some(t) = $opt {
+                    out.extend_from_slice(t.tokenize().as_slice());
+                }
+            };
         }
 
         #[inline]
@@ -157,13 +154,11 @@ impl Eip712Domain {
         }
 
         out.reserve(self.abi_encoded_size());
-        let name = self.name.as_ref().map(cow_keccak256);
-        encode_opt::<sol_data::FixedBytes<32>, _>(name.as_ref(), out);
-        let version = self.version.as_ref().map(cow_keccak256);
-        encode_opt::<sol_data::FixedBytes<32>, _>(version.as_ref(), out);
-        encode_opt::<sol_data::Uint<256>, _>(self.chain_id.as_ref(), out);
-        encode_opt::<sol_data::Address, _>(self.verifying_contract.as_ref(), out);
-        encode_opt::<sol_data::FixedBytes<32>, _>(self.salt.as_ref(), out);
+        encode_opt!(self.name.as_ref().map(cow_keccak256));
+        encode_opt!(self.version.as_ref().map(cow_keccak256));
+        encode_opt!(&self.chain_id);
+        encode_opt!(&self.verifying_contract);
+        encode_opt!(&self.salt);
     }
 
     /// EIP-712 `encodeData`:

@@ -7,14 +7,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! Ethereum ABI Tokens.
+//! Ethereum ABI tokens.
 //!
-//! ABI encoding uses 5 types:
-//! - Single EVM words (a 32-byte string)
-//! - Sequences with a fixed length `T[M]`
-//! - Sequences with a dynamic length `T[]`
-//! - Tuples (T, U, V, ...)
-//! - Dynamic-length byte arrays `u8[]`
+//! See [`TokenType`] for more details.
 
 use crate::{
     abi::{Decoder, Encoder},
@@ -34,18 +29,27 @@ mod sealed {
 }
 use sealed::Sealed;
 
-/// Abi-Encoding Tokens. This is a sealed trait. It contains the type
-/// information necessary to encode & decode data. Tokens are an intermediate
-/// state between abi-encoded blobs, and rust types.
+/// Ethereum ABI tokens.
+///
+/// Tokens are an intermediate state between ABI-encoded blobs, and Rust types.
+///
+/// ABI encoding uses 5 types:
+/// - [`WordToken`]: Single EVM words (a 32-byte string)
+/// - [`FixedSeqToken`]: Sequences with a fixed length `T[M]`
+/// - [`DynSeqToken`]: Sequences with a dynamic length `T[]`
+/// - [`PackedSeqToken`]: Dynamic-length byte arrays `bytes` or `string`
+/// - Tuples `(T, U, V, ...)` (implemented for arity `0..=24`)
 ///
 /// A token with a lifetime borrows its data from elsewhere. During decoding,
 /// it borrows its data from the decoder. During encoding, it borrows its data
-/// from the rust value being encoded.
+/// from the Rust value being encoded.
 ///
-/// This trait allows us to encode and decode data with minimal copying. It
-/// may also be used to enable zero-copy decoding of data, or fast
-/// transformation of encoded blobs without full decoding (for, e.g., MEV
-/// Searching).
+/// This trait allows us to encode and decode data with minimal copying. It may
+/// also be used to enable zero-copy decoding of data, or fast transformation of
+/// encoded blobs without full decoding.
+///
+/// This trait is sealed and cannot be implemented for types outside of this
+/// crate. It is implemented only for the types listed above.
 pub trait TokenType<'de>: Sealed + Sized {
     /// True if the token represents a dynamically-sized type.
     const DYNAMIC: bool;
@@ -72,10 +76,11 @@ pub trait TokenType<'de>: Sealed + Sized {
     fn tail_append(&self, enc: &mut Encoder);
 }
 
-/// A token composed of a sequence of other tokens
+/// A token composed of a sequence of other tokens.
 ///
-/// This functions as an extension trait for [`TokenType`], and may only be
-/// implemented by [`FixedSeqToken`], [`DynSeqToken`], and [`PackedSeqToken`].
+/// This functions is an extension trait for [`TokenType`], and is only
+/// implemented by [`FixedSeqToken`], [`DynSeqToken`], [`PackedSeqToken`], and
+/// tuples of [`TokenType`]s (including [`WordToken`]).
 pub trait TokenSeq<'a>: TokenType<'a> {
     /// True for tuples only.
     const IS_TUPLE: bool = false;

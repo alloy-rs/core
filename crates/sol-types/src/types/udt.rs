@@ -19,10 +19,20 @@ macro_rules! define_udt {
             <$underlying as $crate::SolType>::RustType,
         );
 
-        impl $crate::Encodable<$name> for <$underlying as $crate::SolType>::RustType {
+        impl $crate::private::SolTypeValue<$name> for <$underlying as $crate::SolType>::RustType {
             #[inline]
-            fn to_tokens(&self) -> <$underlying as $crate::SolType>::TokenType<'_> {
-                $crate::Encodable::<$underlying>::to_tokens(self)
+            fn stv_to_tokens(&self) -> <$underlying as $crate::SolType>::TokenType<'_> {
+                $crate::private::SolTypeValue::<$underlying>::stv_to_tokens(self)
+            }
+
+            #[inline]
+            fn stv_eip712_data_word(&self) -> $crate::Word {
+                <$underlying as $crate::SolType>::tokenize(self).0
+            }
+
+            #[inline]
+            fn stv_abi_encode_packed_to(&self, out: &mut $crate::private::Vec<u8>) {
+                <$underlying as $crate::SolType>::abi_encode_packed_to(self, out)
             }
         }
 
@@ -82,16 +92,6 @@ macro_rules! define_udt {
             #[inline]
             fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
                 <$underlying as $crate::SolType>::detokenize(token)
-            }
-
-            #[inline]
-            fn eip712_data_word(rust: &Self::RustType) -> $crate::Word {
-                <Self as $crate::SolType>::tokenize(rust).0
-            }
-
-            #[inline]
-            fn abi_encode_packed_to(rust: &Self::RustType, out: &mut $crate::private::Vec<u8>) {
-                <$underlying as $crate::SolType>::abi_encode_packed_to(rust, out)
             }
         }
 

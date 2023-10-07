@@ -1,16 +1,17 @@
 use crate::{
     abi::{TokenSeq, TokenType},
-    Encodable, Result, SolType, Word,
+    private::SolTypeValue,
+    Result, SolType, Word,
 };
 use alloc::vec::Vec;
 
 /// Solidity call (a tuple with a selector).
 ///
-/// ### Implementer's Guide
+/// # Implementer's Guide
 ///
-/// We do not recommend implementing this trait directly. Instead, we recommend
-/// using the [`sol`][crate::sol] proc macro to parse a Solidity function
-/// definition.
+/// It should not be necessary to implement this trait manually. Instead, use
+/// the [`sol!`](crate::sol!) procedural macro to parse Solidity syntax into
+/// types that implement this trait.
 pub trait SolCall: Sized {
     /// The underlying tuple type which represents this type's arguments.
     ///
@@ -93,8 +94,8 @@ pub trait SolCall: Sized {
     #[inline]
     fn abi_encode_returns<'a, E>(e: &'a E) -> Vec<u8>
     where
-        E: Encodable<Self::ReturnTuple<'a>>,
+        E: SolTypeValue<Self::ReturnTuple<'a>>,
     {
-        crate::abi::encode_sequence(&e.to_tokens())
+        crate::abi::encode_sequence(&e.stv_to_tokens())
     }
 }

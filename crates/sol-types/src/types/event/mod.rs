@@ -13,11 +13,11 @@ pub use topic_list::TopicList;
 
 /// Solidity event.
 ///
-/// ### Implementer's Guide
+/// # Implementer's Guide
 ///
-/// We do not recommend implementing this trait directly. Instead, we recommend
-/// using the [`sol`][crate::sol] proc macro to parse a Solidity event
-/// definition.
+/// It should not be necessary to implement this trait manually. Instead, use
+/// the [`sol!`](crate::sol!) procedural macro to parse Solidity syntax into
+/// types that implement this trait.
 pub trait SolEvent: Sized {
     /// The underlying tuple type which represents this event's non-indexed
     /// parameters. These parameters are ABI encoded and included in the log

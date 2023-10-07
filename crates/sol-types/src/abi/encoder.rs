@@ -158,23 +158,26 @@ impl Encoder {
     }
 }
 
-/// ABI-encode a token sequence.
-pub fn encode_sequence<'a, T: TokenSeq<'a>>(tokens: &T) -> Vec<u8> {
-    let mut enc = Encoder::with_capacity(tokens.total_words());
-    enc.append_head_tail(tokens);
-    enc.into_bytes()
-}
-
-/// ABI-encode a single token.
+/// ABI-encodes a single token.
+///
+/// You are probably looking for
+/// [`SolValue::abi_encode`](crate::SolValue::abi_encode) if
+/// you are not intending to use raw tokens.
+///
+/// See the [`abi`](super) module for more information.
 #[inline]
 pub fn encode<'a, T: TokenType<'a>>(token: &T) -> Vec<u8> {
-    // Same as [`core::array::from_ref`].
-    // SAFETY: Converting `&T` to `&(T,)` is sound.
-    encode_sequence::<(T,)>(unsafe { &*(token as *const T).cast::<(T,)>() })
+    encode_sequence::<(T,)>(tuple_from_ref(token))
 }
 
-/// ABI-encode a tuple as ABI function params, suitable for passing to a
+/// ABI-encodes a tuple as ABI function params, suitable for passing to a
 /// function.
+///
+/// You are probably looking for
+/// [`SolValue::abi_encode_params`](crate::SolValue::abi_encode_params) if
+/// you are not intending to use raw tokens.
+///
+/// See the [`abi`](super) module for more information.
 #[inline]
 pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
     if T::IS_TUPLE {
@@ -184,10 +187,33 @@ pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
     }
 }
 
+/// ABI-encodes a token sequence.
+///
+/// You are probably looking for
+/// [`SolValue::abi_encode_sequence`](crate::SolValue::abi_encode_sequence) if
+/// you are not intending to use raw tokens.
+///
+/// See the [`abi`](super) module for more information.
+pub fn encode_sequence<'a, T: TokenSeq<'a>>(tokens: &T) -> Vec<u8> {
+    let mut enc = Encoder::with_capacity(tokens.total_words());
+    enc.append_head_tail(tokens);
+    enc.into_bytes()
+}
+
+/// Converts a reference to `T` into a reference to a tuple of length 1 (without
+/// copying).
+///
+/// Same as [`core::array::from_ref`].
+#[inline(always)]
+fn tuple_from_ref<T>(s: &T) -> &(T,) {
+    // SAFETY: Converting `&T` to `&(T,)` is sound.
+    unsafe { &*(s as *const T).cast::<(T,)>() }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{sol_data, SolType};
-    use alloc::{borrow::ToOwned, string::ToString};
+    use alloc::{borrow::ToOwned, string::ToString, vec::Vec};
     use alloy_primitives::{hex, Address, U256};
 
     #[test]
@@ -448,7 +474,7 @@ mod tests {
     fn encode_empty_array() {
         type MyTy0 = sol_data::Array<sol_data::Address>;
 
-        let data = vec![];
+        let data: Vec<Address> = vec![];
 
         // Empty arrays
         let encoded = MyTy0::abi_encode_params(&data);
@@ -467,7 +493,7 @@ mod tests {
             sol_data::Array<sol_data::Address>,
             sol_data::Array<sol_data::Address>,
         );
-        let data = (vec![], vec![]);
+        let data: (Vec<Address>, Vec<Address>) = (vec![], vec![]);
 
         let expected = hex!(
             "
@@ -493,7 +519,7 @@ mod tests {
             sol_data::Array<sol_data::Array<sol_data::Address>>,
         );
 
-        let data = (vec![vec![]], vec![vec![]]);
+        let data: (Vec<Vec<Address>>, Vec<Vec<Address>>) = (vec![vec![]], vec![vec![]]);
 
         // Nested empty arrays
         let expected = hex!(
@@ -546,7 +572,7 @@ mod tests {
         assert_eq!(encoded, expected);
         assert_eq!(
             encoded.len(),
-            sol_data::FixedBytes::<2>::abi_encoded_size(&[0x12, 0x34].into())
+            sol_data::FixedBytes::<2>::abi_encoded_size(&[0x12, 0x34])
         );
     }
 

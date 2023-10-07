@@ -112,10 +112,25 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::Encodable<#name> for #name {
+            impl ::alloy_sol_types::SolValue for #name {
+                type SolType = Self;
+            }
+
+            #[automatically_derived]
+            impl ::alloy_sol_types::private::SolTypeValue<#name> for #name {
                 #[inline]
-                fn to_tokens(&self) -> #uint8_st::TokenType<'_> {
+                fn stv_to_tokens(&self) -> #uint8_st::TokenType<'_> {
                     ::alloy_sol_types::Word::with_last_byte(*self as u8).into()
+                }
+
+                #[inline]
+                fn stv_eip712_data_word(&self) -> ::alloy_sol_types::Word {
+                    #uint8_st::eip712_data_word(self.as_u8())
+                }
+
+                #[inline]
+                fn stv_abi_encode_packed_to(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                    out.push(*self as u8);
                 }
             }
 
@@ -150,16 +165,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
                         #uint8_st::detokenize(token)
                     ).#detokenize_unwrap
                 }
-
-                #[inline]
-                fn eip712_data_word(rust: &Self::RustType) -> ::alloy_sol_types::Word {
-                    #uint8_st::eip712_data_word(rust.as_u8())
-                }
-
-                #[inline]
-                fn abi_encode_packed_to(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
-                    out.push(*rust as u8);
-                }
             }
 
             #[automatically_derived]
@@ -175,9 +180,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
                 }
 
                 #[inline]
-                fn encode_topic(
-                    rust: &Self::RustType
-                ) -> ::alloy_sol_types::abi::token::WordToken {
+                fn encode_topic(rust: &Self::RustType) -> ::alloy_sol_types::abi::token::WordToken {
                     <#uint8 as ::alloy_sol_types::EventTopic>::encode_topic(rust.as_u8())
                 }
             }

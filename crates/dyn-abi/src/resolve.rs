@@ -219,7 +219,7 @@ fn tuple<T: ResolveSolType>(slice: &[T]) -> Result<Vec<DynSolType>> {
     Ok(types)
 }
 
-macro_rules! deref_impl {
+macro_rules! deref_impls {
     ($($(#[$attr:meta])* [$($gen:tt)*] $t:ty),+ $(,)?) => {$(
         $(#[$attr])*
         impl<$($gen)*> ResolveSolType for $t {
@@ -231,7 +231,7 @@ macro_rules! deref_impl {
     )+};
 }
 
-deref_impl! {
+deref_impls! {
     [] alloc::string::String,
     [T: ?Sized + ResolveSolType] &T,
     [T: ?Sized + ResolveSolType] &mut T,

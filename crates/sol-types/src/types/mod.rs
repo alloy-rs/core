@@ -18,8 +18,11 @@ pub use interface::{ContractError, GenericContractError, Selectors, SolInterface
 mod r#struct;
 pub use r#struct::SolStruct;
 
+mod value;
+pub use value::SolValue;
+
 mod ty;
-pub use ty::{Encodable, SolType};
+pub use ty::SolType;
 
 // Solidity user-defined value types.
 // No exports are needed as the only item is a macro.

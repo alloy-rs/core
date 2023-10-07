@@ -10,6 +10,12 @@ use alloy_primitives::keccak256;
 /// For more details, see the [Solidity reference][ref].
 ///
 /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#encoding-of-indexed-event-parameters
+///
+/// # Implementer's Guide
+///
+/// It should not be necessary to implement this trait manually. Instead, use
+/// the [`sol!`](crate::sol!) procedural macro to parse Solidity syntax into
+/// types that implement this trait.
 pub trait EventTopic: SolType {
     /// The number of bytes this type occupies in another topic's preimage,
     /// usually a multiple of 32.
@@ -49,12 +55,12 @@ macro_rules! word_impl {
 
         #[inline]
         fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
-            out.extend($crate::Encodable::<Self>::to_tokens(rust).0 .0);
+            out.extend($crate::private::SolTypeValue::<Self>::stv_to_tokens(rust).0);
         }
 
         #[inline]
         fn encode_topic(rust: &Self::RustType) -> WordToken {
-            $crate::Encodable::<Self>::to_tokens(rust)
+            $crate::private::SolTypeValue::<Self>::stv_to_tokens(rust)
         }
     };
 }

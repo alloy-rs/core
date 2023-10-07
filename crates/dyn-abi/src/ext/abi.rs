@@ -16,7 +16,6 @@ use sealed::Sealed;
 ///
 /// This trait is sealed and cannot be implemented for types outside of this
 /// crate. It is implemented only for the following types:
-///
 /// - [`Constructor`]
 /// - [`Error`]
 /// - [`Function`]

@@ -15,12 +15,13 @@ body:
           description: What component is the bug in?
           multiple: true
           options:
-              - primitives
-              - syn-solidity
-              - sol-type
-              - sol! macro
               - dyn-abi
               - json-abi
+              - primitives
+              - sol-type-parser
+              - sol-types
+              - sol! macro
+              - syn-solidity
               - Other (please provide more details)
       validations:
           required: true

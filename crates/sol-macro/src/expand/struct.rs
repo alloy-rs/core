@@ -77,9 +77,33 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
             #convert
 
             #[automatically_derived]
-            impl ::alloy_sol_types::Encodable<Self> for #name {
-                fn to_tokens(&self) -> <Self as ::alloy_sol_types::SolType>::TokenType<'_> {
+            impl ::alloy_sol_types::SolValue for #name {
+                type SolType = Self;
+            }
+
+            #[automatically_derived]
+            impl ::alloy_sol_types::private::SolTypeValue<Self> for #name {
+                fn stv_to_tokens(&self) -> <Self as ::alloy_sol_types::SolType>::TokenType<'_> {
                     #tokenize_impl
+                }
+
+                #[inline]
+                fn stv_abi_encoded_size(&self) -> usize {
+                    // TODO: Avoid cloning
+                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
+                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::abi_encoded_size(&tuple)
+                }
+
+                #[inline]
+                fn stv_eip712_data_word(&self) -> ::alloy_sol_types::Word {
+                    <Self as ::alloy_sol_types::SolStruct>::eip712_hash_struct(self)
+                }
+
+                #[inline]
+                fn stv_abi_encode_packed_to(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                    // TODO: Avoid cloning
+                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
+                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
                 }
             }
 
@@ -96,13 +120,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 }
 
                 #[inline]
-                fn abi_encoded_size(rust: &Self::RustType) -> usize {
-                    // TODO: Avoid cloning
-                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(rust.clone());
-                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::abi_encoded_size(&tuple)
-                }
-
-                #[inline]
                 fn valid_token(token: &Self::TokenType<'_>) -> bool {
                     <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::valid_token(token)
                 }
@@ -111,18 +128,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
                     let tuple = <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::detokenize(token);
                     <Self as ::core::convert::From<UnderlyingRustTuple<'_>>>::from(tuple)
-                }
-
-                #[inline]
-                fn eip712_data_word(rust: &Self::RustType) -> ::alloy_sol_types::Word {
-                    <Self as ::alloy_sol_types::SolStruct>::eip712_hash_struct(rust)
-                }
-
-                #[inline]
-                fn abi_encode_packed_to(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
-                    // TODO: Avoid cloning
-                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(rust.clone());
-                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
                 }
             }
 
@@ -156,9 +161,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 }
 
                 #[inline]
-                fn encode_topic(
-                    rust: &Self::RustType
-                ) -> ::alloy_sol_types::abi::token::WordToken {
+                fn encode_topic(rust: &Self::RustType) -> ::alloy_sol_types::abi::token::WordToken {
                     let mut out = ::alloy_sol_types::private::Vec::new();
                     <Self as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust, &mut out);
                     ::alloy_sol_types::abi::token::WordToken(
