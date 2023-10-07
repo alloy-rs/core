@@ -239,7 +239,7 @@ impl<'de> Decoder<'de> {
     }
 }
 
-/// ABI-decodes a single token by wrapping it in a single-element tuple.
+/// ABI-decodes a token by wrapping it in a single-element tuple.
 ///
 /// You are probably looking for
 /// [`SolValue::abi_decode`](crate::SolValue::abi_decode) if you are not
