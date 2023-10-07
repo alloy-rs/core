@@ -16,6 +16,12 @@ use sealed::Sealed;
 /// events' topics are encoded.
 ///
 /// [solevent]: https://docs.soliditylang.org/en/latest/abi-spec.html#events
+///
+/// # Implementer's Guide
+///
+/// It should not be necessary to implement this trait manually. Instead, use
+/// the [`sol!`](crate::sol!) procedural macro to parse Solidity syntax into
+/// types that implement this trait.
 pub trait TopicList: SolType + Sealed {
     /// The number of topics.
     const COUNT: usize;

@@ -13,7 +13,7 @@ pub use topic_list::TopicList;
 
 /// Solidity event.
 ///
-/// ### Implementer's Guide
+/// # Implementer's Guide
 ///
 /// We do not recommend implementing this trait directly. Instead, we recommend
 /// using the [`sol`][crate::sol] proc macro to parse a Solidity event

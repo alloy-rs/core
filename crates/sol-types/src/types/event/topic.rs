@@ -10,6 +10,12 @@ use alloy_primitives::keccak256;
 /// For more details, see the [Solidity reference][ref].
 ///
 /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#encoding-of-indexed-event-parameters
+///
+/// # Implementer's Guide
+///
+/// It should not be necessary to implement this trait manually. Instead, use
+/// the [`sol!`](crate::sol!) procedural macro to parse Solidity syntax into
+/// types that implement this trait.
 pub trait EventTopic: SolType {
     /// The number of bytes this type occupies in another topic's preimage,
     /// usually a multiple of 32.

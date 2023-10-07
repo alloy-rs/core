@@ -2,6 +2,8 @@
 //!
 //! These are the types that are [built into Solidity][ref].
 //!
+//! See [`SolType`] for more details.
+//!
 //! [ref]: https://docs.soliditylang.org/en/latest/types.html
 
 #![allow(missing_copy_implementations, missing_debug_implementations)]

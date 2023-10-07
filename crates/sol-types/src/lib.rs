@@ -7,7 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! Solidity type modeling and ABI coding implementation.
+//! Solidity type modeling and [ABI] and [EIP-712] codec implementation.
 //!
 //! This crate provides tools for expressing Solidity types in Rust, and for
 //! encoding these representations into ABI blobs suitable for smart contract
@@ -19,13 +19,15 @@
 //! This trait maps Solidity types to Rust types via the associated
 //! [`SolType::RustType`].
 //!
-//! Each [`SolType`] also has an associated [`SolType::TokenType`]. This is the
-//! intermediate representation of the data suitable for ABI encoding. The ABI
-//! `encode` and `decode` methods operate on objects implementing [`TokenType`].
+//! The ABI encoding and decoding is implemented in the [`abi`] module, see [its
+//! documentation](abi) to learn how it works.
+//!
+//! [ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html
+//! [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
 //!
 //! ```
-//! use alloy_sol_types::{sol_data::*, SolType};
-//! # pub fn main() -> alloy_sol_types::Result<()> {
+//! use alloy_sol_types::{sol_data::*, SolType, SolValue};
+//!
 //! // Represent a Solidity type in rust
 //! type MySolType = FixedArray<Bool, 2>;
 //!
@@ -39,8 +41,12 @@
 //! let encoded: Vec<u8> = MySolType::abi_encode(&data);
 //! let decoded: [bool; 2] = MySolType::abi_decode(&encoded, validate)?;
 //! assert_eq!(data, decoded);
-//! # Ok(())
-//! # }
+//!
+//! // This is more easily done with the `SolValue` trait:
+//! let encoded: Vec<u8> = data.abi_encode();
+//! let decoded: [bool; 2] = <[bool; 2]>::abi_decode(&encoded, validate)?;
+//! assert_eq!(data, decoded);
+//! # Ok::<_, alloy_sol_types::Error>(())
 //! ```
 //!
 //! ## [`sol!`]
@@ -74,7 +80,6 @@
 //!     }
 //! }
 //!
-//! # pub fn main() {
 //! // All structs generated with `sol!` implement `crate::SolType` &
 //! // `crate::SolStruct`. This means you get eip-712 signing for freeeeee
 //! let my_struct = MyStruct {
@@ -93,7 +98,6 @@
 //! // Because all the hard work is done by the `sol!` macro, EIP-712 is as easy
 //! // as calling `eip712_signing_hash` with your domain
 //! let signing_hash = my_struct.eip712_signing_hash(&my_domain);
-//! # }
 //! ```
 //!
 //! ### [`sol!`] User-defined Value Types

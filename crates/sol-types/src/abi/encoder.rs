@@ -158,23 +158,26 @@ impl Encoder {
     }
 }
 
-/// ABI-encode a token sequence.
-pub fn encode_sequence<'a, T: TokenSeq<'a>>(tokens: &T) -> Vec<u8> {
-    let mut enc = Encoder::with_capacity(tokens.total_words());
-    enc.append_head_tail(tokens);
-    enc.into_bytes()
-}
-
-/// ABI-encode a single token.
+/// ABI-encodes a single token.
+///
+/// You are probably looking for
+/// [`SolValue::abi_encode`](crate::SolValue::abi_encode) if
+/// you are not intending to use raw tokens.
+///
+/// See the [`abi`](super) module for more information.
 #[inline]
 pub fn encode<'a, T: TokenType<'a>>(token: &T) -> Vec<u8> {
-    // Same as [`core::array::from_ref`].
-    // SAFETY: Converting `&T` to `&(T,)` is sound.
-    encode_sequence::<(T,)>(unsafe { &*(token as *const T).cast::<(T,)>() })
+    encode_sequence::<(T,)>(tuple_from_ref(token))
 }
 
-/// ABI-encode a tuple as ABI function params, suitable for passing to a
+/// ABI-encodes a tuple as ABI function params, suitable for passing to a
 /// function.
+///
+/// You are probably looking for
+/// [`SolValue::abi_encode_params`](crate::SolValue::abi_encode_params) if
+/// you are not intending to use raw tokens.
+///
+/// See the [`abi`](super) module for more information.
 #[inline]
 pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
     if T::IS_TUPLE {
@@ -182,6 +185,29 @@ pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
     } else {
         encode(token)
     }
+}
+
+/// ABI-encodes a token sequence.
+///
+/// You are probably looking for
+/// [`SolValue::abi_encode_sequence`](crate::SolValue::abi_encode_sequence) if
+/// you are not intending to use raw tokens.
+///
+/// See the [`abi`](super) module for more information.
+pub fn encode_sequence<'a, T: TokenSeq<'a>>(tokens: &T) -> Vec<u8> {
+    let mut enc = Encoder::with_capacity(tokens.total_words());
+    enc.append_head_tail(tokens);
+    enc.into_bytes()
+}
+
+/// Converts a reference to `T` into a reference to a tuple of length 1 (without
+/// copying).
+///
+/// Same as [`core::array::from_ref`].
+#[inline(always)]
+fn tuple_from_ref<T>(s: &T) -> &(T,) {
+    // SAFETY: Converting `&T` to `&(T,)` is sound.
+    unsafe { &*(s as *const T).cast::<(T,)>() }
 }
 
 #[cfg(test)]

@@ -16,6 +16,12 @@ use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256};
 ///
 /// See [`SolType`] for more information.
 ///
+/// # Implementer's Guide
+///
+/// It should not be necessary to implement this trait manually. Instead, use
+/// the [`sol!`](crate::sol!) procedural macro to parse Solidity syntax into
+/// types that implement this trait.
+///
 /// # Examples
 ///
 /// ```

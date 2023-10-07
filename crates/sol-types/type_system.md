@@ -1,6 +1,7 @@
 # Solidity Type Representation
 
-This crate is built around a representation of the Solidity type system. This doc is a primer for how we chose to represent Solidity types in Rust.
+This crate is built around a representation of the Solidity type system.
+This doc is a primer for how we chose to represent Solidity types in Rust.
 
 ## Why?
 
@@ -9,7 +10,7 @@ Its internals are complex and may not be well-understood by Solidity devs.
 However, Solidity devs generally do understand Solidity types. As a result, we
 decided the best way to represent ABI coding was as a method on Solidity types.
 
-Rather than `Coder::encode(data, type)` we felt that `Type::encode(data)` would
+Rather than `Encoder::encode(data, type)` we felt that `Type::encode(data)` would
 be more intuitive and idiomatic in Rust. To achieve this, we give each Solidity
 type a concrete Rust type that contains its data. E.g. `bytes32` is `[u8; 32]`.
 `uint256` is `U256`, `string` is `String`. This allows programmers to work with
@@ -22,7 +23,7 @@ this to be one of the fastest implementations for regular encoding/decoding. :)
 ## Downside
 
 This crate works only with types known at compile-time. For types known only at
-runtime (including the eip712 `eth_signTypedData` json-rpc request), see the
+runtime (including the eip712 `eth_signTypedData` JSON-RPC request), see the
 `alloy-dyn-abi` crate.
 
 ### To what extent?
@@ -40,32 +41,22 @@ defs into `SolCall` types, but may in the future.
 **Support overview:**
 
 - First-class Solidity types
-
   - All elementary, fixed-size, and non-fixed size
     [ABI types](https://docs.soliditylang.org/en/latest/abi-spec.html#types).
   - EXCEPT
-    - [`function` types](https://docs.soliditylang.org/en/latest/types.html#function-types).
     - [`fixed`](https://docs.soliditylang.org/en/latest/types.html#fixed-point-numbers).
-
 - Compound Solidity types
-
   - Arrays `T[N]`
   - Dynamic arrays `T[]`
   - Tuples `(T, U, ..)`
-
 - User-defined Types
-
-    - [Structs](https://solidity-by-example.org/structs/) represented as a tuple
-        of the field types.
-    - [User-defined Value Types](https://blog.soliditylang.org/2021/09/27/user-defined-value-types/), encoded transparently.
-    - [Enums](https://docs.soliditylang.org/en/latest/types.html#enums) (TODO)
-        represented as `u8`.
-
+    - [Structs](https://solidity-by-example.org/structs/) represented as a tuple of the field types.
+    - [User-defined value types](https://blog.soliditylang.org/2021/09/27/user-defined-value-types/), encoded transparently.
+    - [Enums](https://docs.soliditylang.org/en/latest/types.html#enums) represented as `u8`.
 - Externalized Types
     - Function arguments and returns, represented as selector-prefixed tuples.
-    - [Errors](https://blog.soliditylang.org/2021/04/21/custom-errors/),
-        represented as selector-prefixed tuples
-    - Events (TODO)
+    - [Errors](https://blog.soliditylang.org/2021/04/21/custom-errors/), represented as selector-prefixed tuples
+    - Events, represented as a tuples of topic and data types.
 
 ## How?
 
@@ -85,7 +76,7 @@ errors. These are each represented by a trait (`SolCall`, `SolEvent`, and
 `SolError`). These types enter or exit the EVM, or pass between callstack
 frames, and are not part of normal Solidity computation. However, they are
 composed of first-class types, and their ABI coding uses the first-class type's
-ABI coding;
+ABI coding.
 
 ### ⚠️ Rough Edge ⚠️
 
@@ -98,34 +89,34 @@ system to disallow it.
 ```
 - SolError
 - SolCall
-- SolEvent (TODO)
-
+- SolEvent
 - SolType
   ├── SolStruct
-  ├── SolEnum (TODO)
-  ├── UDTs
-  ├── address
-  ├── bytes
+  ├── SolEnum
+  ├── UDVTs
+  ├── bool
+  ├── bytesX (1 - 32)
   ├── intX (8 - 256)
   ├── uintX (8 - 256)
-  ├── bool
+  ├── address
+  ├── function (same as bytes24)
+  ├── bytes
+  ├── string
   ├── T[N] (Array)
   ├── T[] (Dynamic Array)
-  ├── string
-  ├── bytesX (1 - 32)
   └── Tuples `(T, U, ..)`
 ```
 
 ### Trait Quick Reference
 
-- `SolType` - Provides type name and properties, ABI coding, packed encoding,
-  and EIP-712 encoding.
-- `SolError` - describes custom Error types with selector, and provides
-  specialized coding methods.
-- `SolCall` - describes function **arguments** with selector, and provides
-  specialized coding methods.
-- `SolEvent` - describes Event types with topic 0 and internal tuple, and
-  provides specialized coding methods.
+- `SolType` - provides type name and properties, ABI coding, packed encoding, and EIP-712 encoding.
+- `SolValue` - conveniency wrapper for `SolType` that provides the same interface but as methods on the value type itself.
+- `SolStruct` - describes struct types, and provides specialized coding methods.
+- `SolEnum` - describes enum types as `u8` wrappers, and provides specialized coding methods.
+- `SolError` - describes custom Error types with selector, and provides specialized coding methods.
+- `SolCall` - describes function **arguments** with selector, and provides specialized coding methods.
+  An associated `Return` type describes function returns.
+- `SolEvent` - describes Event types with topics and data, and provides specialized coding methods.
 
 ## Implementing these traits
 
@@ -138,6 +129,6 @@ Solidity snippets at compile time.
 
 ## Using these traits
 
-Users will typically want to interact with `SolType`. When using errors,
+Users will typically want to interact with `SolValue`. When using errors,
 events, or calls, users will want to import the relevant trait, and use the
 specialized coding methods.

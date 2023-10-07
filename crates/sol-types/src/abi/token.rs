@@ -38,7 +38,7 @@ use sealed::Sealed;
 /// - [`FixedSeqToken`]: Sequences with a fixed length `T[M]`
 /// - [`DynSeqToken`]: Sequences with a dynamic length `T[]`
 /// - [`PackedSeqToken`]: Dynamic-length byte arrays `bytes` or `string`
-/// - Tuples of arity `0..=24` `(T, U, V, ...)`
+/// - Tuples `(T, U, V, ...)` (implemented for arity `0..=24`)
 ///
 /// A token with a lifetime borrows its data from elsewhere. During decoding,
 /// it borrows its data from the decoder. During encoding, it borrows its data

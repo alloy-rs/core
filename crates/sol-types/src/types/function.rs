@@ -7,11 +7,11 @@ use alloc::vec::Vec;
 
 /// Solidity call (a tuple with a selector).
 ///
-/// ### Implementer's Guide
+/// # Implementer's Guide
 ///
-/// We do not recommend implementing this trait directly. Instead, we recommend
-/// using the [`sol`][crate::sol] proc macro to parse a Solidity function
-/// definition.
+/// It should not be necessary to implement this trait manually. Instead, use
+/// the [`sol!`](crate::sol!) procedural macro to parse Solidity syntax into
+/// types that implement this trait.
 pub trait SolCall: Sized {
     /// The underlying tuple type which represents this type's arguments.
     ///

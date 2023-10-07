@@ -15,27 +15,11 @@ use alloc::{borrow::Cow, vec::Vec};
 /// exist at runtime. They **only** contain information about the type, they do
 /// not carry any data.
 ///
-/// ### Implementer's Guide
+/// # Implementer's Guide
 ///
-/// Implementing this trait directly is **heavily** discouraged. Instead, use
+/// It should not be necessary to implement this trait manually. Instead, use
 /// the [`sol!`] procedural macro to parse Solidity syntax into types that
 /// implement this trait.
-///
-/// ```
-/// alloy_sol_types::sol! {
-///     struct MyStruct {
-///         bool a;
-///         bytes2 b;
-///     }
-/// }
-///
-/// // This is the native rust representation of a Solidity type!
-/// // How cool is that!
-/// const MY_STRUCT: MyStruct = MyStruct {
-///     a: true,
-///     b: alloy_primitives::FixedBytes([0x01, 0x02]),
-/// };
-/// ```
 ///
 /// # Examples
 ///
