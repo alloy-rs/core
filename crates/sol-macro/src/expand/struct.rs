@@ -83,24 +83,24 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
             #[automatically_derived]
             impl ::alloy_sol_types::private::SolTypeValue<Self> for #name {
-                fn to_tokens(&self) -> <Self as ::alloy_sol_types::SolType>::TokenType<'_> {
+                fn stv_to_tokens(&self) -> <Self as ::alloy_sol_types::SolType>::TokenType<'_> {
                     #tokenize_impl
                 }
 
                 #[inline]
-                fn abi_encoded_size(&self) -> usize {
+                fn stv_abi_encoded_size(&self) -> usize {
                     // TODO: Avoid cloning
                     let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
                     <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::abi_encoded_size(&tuple)
                 }
 
                 #[inline]
-                fn eip712_data_word(&self) -> ::alloy_sol_types::Word {
+                fn stv_eip712_data_word(&self) -> ::alloy_sol_types::Word {
                     <Self as ::alloy_sol_types::SolStruct>::eip712_hash_struct(self)
                 }
 
                 #[inline]
-                fn abi_encode_packed_to(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                fn stv_abi_encode_packed_to(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
                     // TODO: Avoid cloning
                     let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
                     <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)

@@ -96,6 +96,6 @@ pub trait SolCall: Sized {
     where
         E: SolTypeValue<Self::ReturnTuple<'a>>,
     {
-        crate::abi::encode_sequence(&e.to_tokens())
+        crate::abi::encode_sequence(&e.stv_to_tokens())
     }
 }

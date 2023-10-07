@@ -119,17 +119,17 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             #[automatically_derived]
             impl ::alloy_sol_types::private::SolTypeValue<#name> for #name {
                 #[inline]
-                fn to_tokens(&self) -> #uint8_st::TokenType<'_> {
+                fn stv_to_tokens(&self) -> #uint8_st::TokenType<'_> {
                     ::alloy_sol_types::Word::with_last_byte(*self as u8).into()
                 }
 
                 #[inline]
-                fn eip712_data_word(&self) -> ::alloy_sol_types::Word {
+                fn stv_eip712_data_word(&self) -> ::alloy_sol_types::Word {
                     #uint8_st::eip712_data_word(self.as_u8())
                 }
 
                 #[inline]
-                fn abi_encode_packed_to(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                fn stv_abi_encode_packed_to(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
                     out.push(*self as u8);
                 }
             }

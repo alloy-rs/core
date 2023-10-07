@@ -24,18 +24,18 @@ pub struct Bool;
 
 impl SolTypeValue<Bool> for bool {
     #[inline]
-    fn to_tokens(&self) -> WordToken {
+    fn stv_to_tokens(&self) -> WordToken {
         WordToken(Word::with_last_byte(*self as u8))
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         out.push(*self as u8);
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        SolTypeValue::<Bool>::to_tokens(self).0
+    fn stv_eip712_data_word(&self) -> Word {
+        SolTypeValue::<Bool>::stv_to_tokens(self).0
     }
 }
 
@@ -68,18 +68,18 @@ where
     IntBitCount<BITS>: SupportedInt,
 {
     #[inline]
-    fn to_tokens(&self) -> WordToken {
+    fn stv_to_tokens(&self) -> WordToken {
         IntBitCount::<BITS>::tokenize_int(*self.borrow())
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         IntBitCount::<BITS>::encode_packed_to_int(*self.borrow(), out);
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        SolTypeValue::<Int<BITS>>::to_tokens(self).0
+    fn stv_eip712_data_word(&self) -> Word {
+        SolTypeValue::<Int<BITS>>::stv_to_tokens(self).0
     }
 }
 
@@ -125,18 +125,18 @@ where
     IntBitCount<BITS>: SupportedInt,
 {
     #[inline]
-    fn to_tokens(&self) -> WordToken {
+    fn stv_to_tokens(&self) -> WordToken {
         IntBitCount::<BITS>::tokenize_uint(*self.borrow())
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         IntBitCount::<BITS>::encode_packed_to_uint(*self.borrow(), out);
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        SolTypeValue::<Uint<BITS>>::to_tokens(self).0
+    fn stv_eip712_data_word(&self) -> Word {
+        SolTypeValue::<Uint<BITS>>::stv_to_tokens(self).0
     }
 }
 
@@ -168,18 +168,18 @@ pub struct Address;
 
 impl<T: Borrow<[u8; 20]>> SolTypeValue<Address> for T {
     #[inline]
-    fn to_tokens(&self) -> WordToken {
+    fn stv_to_tokens(&self) -> WordToken {
         WordToken(RustAddress::new(*self.borrow()).into_word())
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         out.extend_from_slice(self.borrow());
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        SolTypeValue::<Address>::to_tokens(self).0
+    fn stv_eip712_data_word(&self) -> Word {
+        SolTypeValue::<Address>::stv_to_tokens(self).0
     }
 }
 
@@ -208,18 +208,18 @@ pub struct Function;
 
 impl<T: Borrow<[u8; 24]>> SolTypeValue<Function> for T {
     #[inline]
-    fn to_tokens(&self) -> WordToken {
+    fn stv_to_tokens(&self) -> WordToken {
         WordToken(RustFunction::new(*self.borrow()).into_word())
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         out.extend_from_slice(self.borrow());
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        SolTypeValue::<Function>::to_tokens(self).0
+    fn stv_eip712_data_word(&self) -> Word {
+        SolTypeValue::<Function>::stv_to_tokens(self).0
     }
 }
 
@@ -248,22 +248,22 @@ pub struct Bytes;
 
 impl<T: ?Sized + AsRef<[u8]>> SolTypeValue<Bytes> for T {
     #[inline]
-    fn to_tokens(&self) -> PackedSeqToken<'_> {
+    fn stv_to_tokens(&self) -> PackedSeqToken<'_> {
         PackedSeqToken(self.as_ref())
     }
 
     #[inline]
-    fn abi_encoded_size(&self) -> usize {
+    fn stv_abi_encoded_size(&self) -> usize {
         32 + utils::padded_len(self.as_ref())
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
+    fn stv_eip712_data_word(&self) -> Word {
         keccak256(Bytes::abi_encode_packed(self))
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         out.extend_from_slice(self.as_ref());
     }
 }
@@ -299,29 +299,29 @@ where
     U: SolType,
 {
     #[inline]
-    fn to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
-        DynSeqToken(self.iter().map(T::to_tokens).collect())
+    fn stv_to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+        DynSeqToken(self.iter().map(T::stv_to_tokens).collect())
     }
 
     #[inline]
-    fn abi_encoded_size(&self) -> usize {
-        32 + self.iter().map(T::abi_encoded_size).sum::<usize>()
+    fn stv_abi_encoded_size(&self) -> usize {
+        32 + self.iter().map(T::stv_abi_encoded_size).sum::<usize>()
             + (U::DYNAMIC as usize * 32 * self.len())
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
+    fn stv_eip712_data_word(&self) -> Word {
         let mut encoded = Vec::new();
         for item in self {
-            encoded.extend_from_slice(T::eip712_data_word(item).as_slice());
+            encoded.extend_from_slice(T::stv_eip712_data_word(item).as_slice());
         }
         keccak256(encoded)
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         for item in self {
-            T::abi_encode_packed_to(item, out);
+            T::stv_abi_encode_packed_to(item, out);
         }
     }
 }
@@ -332,23 +332,23 @@ where
     U: SolType,
 {
     #[inline]
-    fn to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
-        (**self).to_tokens()
+    fn stv_to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+        (**self).stv_to_tokens()
     }
 
     #[inline]
-    fn abi_encoded_size(&self) -> usize {
-        (**self).abi_encoded_size()
+    fn stv_abi_encoded_size(&self) -> usize {
+        (**self).stv_abi_encoded_size()
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        (**self).eip712_data_word()
+    fn stv_eip712_data_word(&self) -> Word {
+        (**self).stv_eip712_data_word()
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
-        (**self).abi_encode_packed_to(out)
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+        (**self).stv_abi_encode_packed_to(out)
     }
 }
 
@@ -358,23 +358,23 @@ where
     U: SolType,
 {
     #[inline]
-    fn to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
-        (**self).to_tokens()
+    fn stv_to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+        (**self).stv_to_tokens()
     }
 
     #[inline]
-    fn abi_encoded_size(&self) -> usize {
-        (**self).abi_encoded_size()
+    fn stv_abi_encoded_size(&self) -> usize {
+        (**self).stv_abi_encoded_size()
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        (**self).eip712_data_word()
+    fn stv_eip712_data_word(&self) -> Word {
+        (**self).stv_eip712_data_word()
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
-        (**self).abi_encode_packed_to(out)
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+        (**self).stv_abi_encode_packed_to(out)
     }
 }
 
@@ -384,23 +384,23 @@ where
     U: SolType,
 {
     #[inline]
-    fn to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
-        <[T] as SolTypeValue<Array<U>>>::to_tokens(self)
+    fn stv_to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+        <[T] as SolTypeValue<Array<U>>>::stv_to_tokens(self)
     }
 
     #[inline]
-    fn abi_encoded_size(&self) -> usize {
-        (**self).abi_encoded_size()
+    fn stv_abi_encoded_size(&self) -> usize {
+        (**self).stv_abi_encoded_size()
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        (**self).eip712_data_word()
+    fn stv_eip712_data_word(&self) -> Word {
+        (**self).stv_eip712_data_word()
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
-        (**self).abi_encode_packed_to(out)
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+        (**self).stv_abi_encode_packed_to(out)
     }
 }
 
@@ -431,22 +431,22 @@ pub struct String;
 
 impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
     #[inline]
-    fn to_tokens(&self) -> PackedSeqToken<'_> {
+    fn stv_to_tokens(&self) -> PackedSeqToken<'_> {
         PackedSeqToken(self.as_ref().as_bytes())
     }
 
     #[inline]
-    fn abi_encoded_size(&self) -> usize {
+    fn stv_abi_encoded_size(&self) -> usize {
         32 + utils::padded_len(self.as_ref().as_ref())
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
+    fn stv_eip712_data_word(&self) -> Word {
         keccak256(String::abi_encode_packed(self))
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         out.extend_from_slice(self.as_ref().as_ref());
     }
 }
@@ -486,19 +486,19 @@ where
     ByteCount<N>: SupportedFixedBytes,
 {
     #[inline]
-    fn to_tokens(&self) -> <FixedBytes<N> as SolType>::TokenType<'_> {
+    fn stv_to_tokens(&self) -> <FixedBytes<N> as SolType>::TokenType<'_> {
         let mut word = Word::ZERO;
         word[..N].copy_from_slice(self.borrow());
         word.into()
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        SolTypeValue::<FixedBytes<N>>::to_tokens(self).0
+    fn stv_eip712_data_word(&self) -> Word {
+        SolTypeValue::<FixedBytes<N>>::stv_to_tokens(self).0
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         out.extend_from_slice(self.borrow().as_slice());
     }
 }
@@ -535,34 +535,34 @@ where
     U: SolType,
 {
     #[inline]
-    fn to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
-        FixedSeqToken(core::array::from_fn(|i| self[i].to_tokens()))
+    fn stv_to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
+        FixedSeqToken(core::array::from_fn(|i| self[i].stv_to_tokens()))
     }
 
     #[inline]
-    fn abi_encoded_size(&self) -> usize {
+    fn stv_abi_encoded_size(&self) -> usize {
         if let Some(size) = FixedArray::<U, N>::ENCODED_SIZE {
             return size
         }
 
-        self.iter().map(T::abi_encoded_size).sum::<usize>() + (U::DYNAMIC as usize * N * 32)
+        self.iter().map(T::stv_abi_encoded_size).sum::<usize>() + (U::DYNAMIC as usize * N * 32)
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
+    fn stv_eip712_data_word(&self) -> Word {
         // TODO: collect into an array of [u8; 32] and flatten it to a slice like in
         // tuple impl
         let encoded = self
             .iter()
-            .map(|element| T::eip712_data_word(element).0)
+            .map(|element| T::stv_eip712_data_word(element).0)
             .collect::<Vec<[u8; 32]>>();
         keccak256(crate::impl_core::into_flattened(encoded))
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         for item in self {
-            T::abi_encode_packed_to(item, out);
+            T::stv_abi_encode_packed_to(item, out);
         }
     }
 }
@@ -573,23 +573,23 @@ where
     U: SolType,
 {
     #[inline]
-    fn to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
-        <[T; N] as SolTypeValue<FixedArray<U, N>>>::to_tokens(&**self)
+    fn stv_to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
+        <[T; N] as SolTypeValue<FixedArray<U, N>>>::stv_to_tokens(&**self)
     }
 
     #[inline]
-    fn abi_encoded_size(&self) -> usize {
-        SolTypeValue::<FixedArray<U, N>>::abi_encoded_size(&**self)
+    fn stv_abi_encoded_size(&self) -> usize {
+        SolTypeValue::<FixedArray<U, N>>::stv_abi_encoded_size(&**self)
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        SolTypeValue::<FixedArray<U, N>>::eip712_data_word(&**self)
+    fn stv_eip712_data_word(&self) -> Word {
+        SolTypeValue::<FixedArray<U, N>>::stv_eip712_data_word(&**self)
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
-        SolTypeValue::<FixedArray<U, N>>::abi_encode_packed_to(&**self, out)
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+        SolTypeValue::<FixedArray<U, N>>::stv_abi_encode_packed_to(&**self, out)
     }
 }
 
@@ -599,23 +599,23 @@ where
     U: SolType,
 {
     #[inline]
-    fn to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
-        <[T; N] as SolTypeValue<FixedArray<U, N>>>::to_tokens(&**self)
+    fn stv_to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
+        <[T; N] as SolTypeValue<FixedArray<U, N>>>::stv_to_tokens(&**self)
     }
 
     #[inline]
-    fn abi_encoded_size(&self) -> usize {
-        SolTypeValue::<FixedArray<U, N>>::abi_encoded_size(&**self)
+    fn stv_abi_encoded_size(&self) -> usize {
+        SolTypeValue::<FixedArray<U, N>>::stv_abi_encoded_size(&**self)
     }
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
-        SolTypeValue::<FixedArray<U, N>>::eip712_data_word(&**self)
+    fn stv_eip712_data_word(&self) -> Word {
+        SolTypeValue::<FixedArray<U, N>>::stv_eip712_data_word(&**self)
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
-        SolTypeValue::<FixedArray<U, N>>::abi_encode_packed_to(&**self, out)
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+        SolTypeValue::<FixedArray<U, N>>::stv_abi_encode_packed_to(&**self, out)
     }
 }
 
@@ -651,12 +651,12 @@ macro_rules! tuple_encodable_impls {
         #[allow(non_snake_case)]
         impl<$($ty: SolTypeValue<$uty>, $uty: SolType),+> SolTypeValue<($($uty,)+)> for ($($ty,)+) {
             #[inline]
-            fn to_tokens(&self) -> <($($uty,)+) as SolType>::TokenType<'_> {
+            fn stv_to_tokens(&self) -> <($($uty,)+) as SolType>::TokenType<'_> {
                 let ($($ty,)+) = self;
-                ($(SolTypeValue::<$uty>::to_tokens($ty),)+)
+                ($(SolTypeValue::<$uty>::stv_to_tokens($ty),)+)
             }
 
-            fn abi_encoded_size(&self) -> usize {
+            fn stv_abi_encoded_size(&self) -> usize {
                 if let Some(size) = <($($uty,)+) as SolType>::ENCODED_SIZE {
                     return size
                 }
@@ -670,7 +670,7 @@ macro_rules! tuple_encodable_impls {
                 )+
             }
 
-            fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+            fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
                 let ($($ty,)+) = self;
                 // TODO: Reserve
                 $(
@@ -678,7 +678,7 @@ macro_rules! tuple_encodable_impls {
                 )+
             }
 
-            fn eip712_data_word(&self) -> Word {
+            fn stv_eip712_data_word(&self) -> Word {
                 let ($($ty,)+) = self;
                 let encoding: [[u8; 32]; $count] = [$(
                     <$uty as SolType>::eip712_data_word($ty).0,
@@ -746,15 +746,15 @@ macro_rules! tuple_impls {
 
 impl SolTypeValue<()> for () {
     #[inline]
-    fn to_tokens(&self) {}
+    fn stv_to_tokens(&self) {}
 
     #[inline]
-    fn eip712_data_word(&self) -> Word {
+    fn stv_eip712_data_word(&self) -> Word {
         Word::ZERO
     }
 
     #[inline]
-    fn abi_encode_packed_to(&self, _out: &mut Vec<u8>) {}
+    fn stv_abi_encode_packed_to(&self, _out: &mut Vec<u8>) {}
 }
 
 all_the_tuples!(@double tuple_encodable_impls);

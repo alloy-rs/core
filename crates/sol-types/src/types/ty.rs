@@ -126,7 +126,7 @@ pub trait SolType: Sized {
     /// words. For a single-word type this will always be 32.
     #[inline]
     fn abi_encoded_size<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> usize {
-        rust.abi_encoded_size()
+        rust.stv_abi_encoded_size()
     }
 
     /// Returns `true` if the given token can be detokenized with this type.
@@ -152,7 +152,7 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi::token`] module for more information.
     fn tokenize<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Self::TokenType<'_> {
-        rust.to_tokens()
+        rust.stv_to_tokens()
     }
 
     /// Encode this data according to EIP-712 `encodeData` rules, and hash it
@@ -165,7 +165,7 @@ pub trait SolType: Sized {
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
     #[inline]
     fn eip712_data_word<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Word {
-        rust.eip712_data_word()
+        rust.stv_eip712_data_word()
     }
 
     /// Non-standard Packed Mode ABI encoding.
@@ -173,7 +173,7 @@ pub trait SolType: Sized {
     /// See [`abi_encode_packed`][SolType::abi_encode_packed] for more details.
     #[inline]
     fn abi_encode_packed_to<E: ?Sized + SolTypeValue<Self>>(rust: &E, out: &mut Vec<u8>) {
-        rust.abi_encode_packed_to(out)
+        rust.stv_abi_encode_packed_to(out)
     }
 
     /// Non-standard Packed Mode ABI encoding.
@@ -198,7 +198,7 @@ pub trait SolType: Sized {
     /// See the [`abi`] module for more information.
     #[inline]
     fn abi_encode<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Vec<u8> {
-        abi::encode(&rust.to_tokens())
+        abi::encode(&rust.stv_to_tokens())
     }
 
     /// Tokenizes and ABI-encodes the given value as function parameters.
@@ -209,7 +209,7 @@ pub trait SolType: Sized {
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
-        abi::encode_params(&rust.to_tokens())
+        abi::encode_params(&rust.stv_to_tokens())
     }
 
     /// Tokenizes and ABI-encodes the given value as a sequence.
@@ -220,7 +220,7 @@ pub trait SolType: Sized {
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
-        abi::encode_sequence(&rust.to_tokens())
+        abi::encode_sequence(&rust.stv_to_tokens())
     }
 
     /// Decode a Rust type from an ABI blob.

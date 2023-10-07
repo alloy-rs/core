@@ -49,7 +49,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     /// See [`SolType::tokenize`] for more information.
     #[inline]
     fn tokenize(&self) -> <Self::SolType as SolType>::TokenType<'_> {
-        <Self as SolTypeValue<Self::SolType>>::to_tokens(self)
+        <Self as SolTypeValue<Self::SolType>>::stv_to_tokens(self)
     }
 
     /// Tokenizes the given value into this type's token.
@@ -68,7 +68,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     /// See [`SolType::abi_encoded_size`] for more information.
     #[inline]
     fn abi_encoded_size(&self) -> usize {
-        <Self as SolTypeValue<Self::SolType>>::abi_encoded_size(self)
+        <Self as SolTypeValue<Self::SolType>>::stv_abi_encoded_size(self)
     }
 
     /// Encode this data according to EIP-712 `encodeData` rules, and hash it
@@ -77,7 +77,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     /// See [`SolType::eip712_data_word`] for more information.
     #[inline]
     fn eip712_data_word(&self) -> Word {
-        <Self as SolTypeValue<Self::SolType>>::eip712_data_word(self)
+        <Self as SolTypeValue<Self::SolType>>::stv_eip712_data_word(self)
     }
 
     /// Non-standard Packed Mode ABI encoding.
@@ -85,7 +85,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     /// See [`SolType::abi_encode_packed_to`] for more information.
     #[inline]
     fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
-        <Self as SolTypeValue<Self::SolType>>::abi_encode_packed_to(self, out)
+        <Self as SolTypeValue<Self::SolType>>::stv_abi_encode_packed_to(self, out)
     }
 
     /// Non-standard Packed Mode ABI encoding.
@@ -94,7 +94,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     #[inline]
     fn abi_encode_packed(&self) -> Vec<u8> {
         let mut out = Vec::new();
-        <Self as SolTypeValue<Self::SolType>>::abi_encode_packed_to(self, &mut out);
+        <Self as SolTypeValue<Self::SolType>>::stv_abi_encode_packed_to(self, &mut out);
         out
     }
 
