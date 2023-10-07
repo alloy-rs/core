@@ -117,7 +117,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::private::SolTypeEncodable<#name> for #name {
+            impl ::alloy_sol_types::private::SolTypeValue<#name> for #name {
                 #[inline]
                 fn to_tokens(&self) -> #uint8_st::TokenType<'_> {
                     ::alloy_sol_types::Word::with_last_byte(*self as u8).into()

@@ -1,6 +1,6 @@
 use crate::{
     abi::{self, TokenSeq, TokenType},
-    private::SolTypeEncodable,
+    private::SolTypeValue,
     Result, Word,
 };
 use alloc::{borrow::Cow, vec::Vec};
@@ -80,7 +80,7 @@ use alloc::{borrow::Cow, vec::Vec};
 ///         C,
 ///     }
 ///
-///     function myFunction(MyStruct my_struct, MyEnum my_enum) {}
+///     function myFunction(MyStruct my_struct, MyEnum my_enum);
 /// }
 ///
 /// // `SolValue`
@@ -105,7 +105,7 @@ use alloc::{borrow::Cow, vec::Vec};
 /// [`sol!`]: crate::sol
 pub trait SolType: Sized {
     /// The corresponding Rust type.
-    type RustType: SolTypeEncodable<Self> + 'static;
+    type RustType: SolTypeValue<Self> + 'static;
 
     /// The corresponding ABI [token type](TokenType).
     ///
@@ -119,13 +119,13 @@ pub trait SolType: Sized {
     /// Whether the encoded size is dynamic.
     const DYNAMIC: bool = Self::ENCODED_SIZE.is_none();
 
-    /// The name of the type in Solidity.
+    /// The name of this type in Solidity.
     fn sol_type_name() -> Cow<'static, str>;
 
     /// Calculate the ABI-encoded size of the data, counting both head and tail
     /// words. For a single-word type this will always be 32.
     #[inline]
-    fn abi_encoded_size<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> usize {
+    fn abi_encoded_size<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> usize {
         rust.abi_encoded_size()
     }
 
@@ -139,18 +139,19 @@ pub trait SolType: Sized {
         if Self::valid_token(token) {
             Ok(())
         } else {
-            Err(crate::Error::type_check_fail_token(
-                token,
-                Self::sol_type_name(),
-            ))
+            Err(crate::Error::type_check_fail_token::<Self>(token))
         }
     }
 
     /// Detokenize a value from the given token.
+    ///
+    /// See the [`abi::token`] module for more information.
     fn detokenize(token: Self::TokenType<'_>) -> Self::RustType;
 
     /// Tokenizes the given value into this type's token.
-    fn tokenize<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Self::TokenType<'_> {
+    ///
+    /// See the [`abi::token`] module for more information.
+    fn tokenize<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Self::TokenType<'_> {
         rust.to_tokens()
     }
 
@@ -163,7 +164,7 @@ pub trait SolType: Sized {
     ///
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
     #[inline]
-    fn eip712_data_word<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Word {
+    fn eip712_data_word<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Word {
         rust.eip712_data_word()
     }
 
@@ -171,7 +172,7 @@ pub trait SolType: Sized {
     ///
     /// See [`abi_encode_packed`][SolType::abi_encode_packed] for more details.
     #[inline]
-    fn abi_encode_packed_to<E: ?Sized + SolTypeEncodable<Self>>(rust: &E, out: &mut Vec<u8>) {
+    fn abi_encode_packed_to<E: ?Sized + SolTypeValue<Self>>(rust: &E, out: &mut Vec<u8>) {
         rust.abi_encode_packed_to(out)
     }
 
@@ -185,37 +186,46 @@ pub trait SolType: Sized {
     ///
     /// More information can be found in the [Solidity docs](https://docs.soliditylang.org/en/latest/abi-spec.html#non-standard-packed-mode).
     #[inline]
-    fn abi_encode_packed<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Vec<u8> {
+    fn abi_encode_packed<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Vec<u8> {
         let mut out = Vec::new();
         Self::abi_encode_packed_to(rust, &mut out);
         out
     }
 
-    /// Encodes a single ABI value by wrapping it in a 1-length sequence.
+    /// Tokenizes and ABI-encodes the given value by wrapping it in a
+    /// single-element sequence.
+    ///
+    /// See the [`abi`] module for more information.
     #[inline]
-    fn abi_encode<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Vec<u8> {
+    fn abi_encode<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Vec<u8> {
         abi::encode(&rust.to_tokens())
     }
 
-    /// Encodes an ABI sequence.
+    /// Tokenizes and ABI-encodes the given value as function parameters.
+    ///
+    /// See the [`abi`] module for more information.
     #[inline]
-    fn abi_encode_sequence<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Vec<u8>
-    where
-        for<'a> Self::TokenType<'a>: TokenSeq<'a>,
-    {
-        abi::encode_sequence(&rust.to_tokens())
-    }
-
-    /// Encodes an ABI sequence suitable for function parameters.
-    #[inline]
-    fn abi_encode_params<E: ?Sized + SolTypeEncodable<Self>>(rust: &E) -> Vec<u8>
+    fn abi_encode_params<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Vec<u8>
     where
         for<'a> Self::TokenType<'a>: TokenSeq<'a>,
     {
         abi::encode_params(&rust.to_tokens())
     }
 
+    /// Tokenizes and ABI-encodes the given value as a sequence.
+    ///
+    /// See the [`abi`] module for more information.
+    #[inline]
+    fn abi_encode_sequence<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Vec<u8>
+    where
+        for<'a> Self::TokenType<'a>: TokenSeq<'a>,
+    {
+        abi::encode_sequence(&rust.to_tokens())
+    }
+
     /// Decode a Rust type from an ABI blob.
+    ///
+    /// See the [`abi`] module for more information.
     #[inline]
     fn abi_decode(data: &[u8], validate: bool) -> Result<Self::RustType> {
         abi::decode::<Self::TokenType<'_>>(data, validate)
@@ -223,6 +233,8 @@ pub trait SolType: Sized {
     }
 
     /// ABI-decode the given data
+    ///
+    /// See the [`abi`] module for more information.
     #[inline]
     fn abi_decode_params<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
     where
@@ -233,6 +245,8 @@ pub trait SolType: Sized {
     }
 
     /// ABI-decode a Rust type from an ABI blob.
+    ///
+    /// See the [`abi`] module for more information.
     #[inline]
     fn abi_decode_sequence<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
     where

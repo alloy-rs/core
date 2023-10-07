@@ -223,7 +223,7 @@ pub mod private {
     /// be implemented directly unless implementing a custom
     /// [`SolType`](crate::SolType), which is also discouraged. Consider
     /// using [`SolValue`](crate::SolValue) instead.
-    pub trait SolTypeEncodable<T: super::SolType> {
+    pub trait SolTypeValue<T: super::SolType> {
         fn to_tokens(&self) -> T::TokenType<'_>;
         fn abi_encoded_size(&self) -> usize {
             T::ENCODED_SIZE.unwrap()
