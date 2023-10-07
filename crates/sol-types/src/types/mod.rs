@@ -18,8 +18,8 @@ pub use interface::{ContractError, GenericContractError, Selectors, SolInterface
 mod r#struct;
 pub use r#struct::SolStruct;
 
-mod encodable;
-pub use encodable::SolValue;
+mod value;
+pub use value::SolValue;
 
 mod ty;
 pub use ty::SolType;
