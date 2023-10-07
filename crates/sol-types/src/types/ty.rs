@@ -45,14 +45,14 @@ use alloc::{borrow::Cow, vec::Vec};
 /// use alloy_sol_types::{sol_data::*, SolType};
 ///
 /// type Uint256DynamicArray = Array<Uint<256>>;
-/// assert_eq!(&Uint256DynamicArray::sol_type_name(), "uint256[]");
+/// assert_eq!(Uint256DynamicArray::sol_type_name(), "uint256[]");
 ///
 /// type Erc20FunctionArgs = (Address, Uint<256>);
-/// assert_eq!(&Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
+/// assert_eq!(Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
 ///
 /// type LargeComplexType = (FixedArray<Array<Bool>, 2>, (FixedBytes<13>, String));
 /// assert_eq!(
-///     &LargeComplexType::sol_type_name(),
+///     LargeComplexType::sol_type_name(),
 ///     "(bool[][2],(bytes13,string))"
 /// );
 /// ```
@@ -63,24 +63,59 @@ use alloc::{borrow::Cow, vec::Vec};
 /// use alloy_sol_types::{sol, SolType};
 ///
 /// type Uint256DynamicArray = sol!(uint256[]);
-/// assert_eq!(&Uint256DynamicArray::sol_type_name(), "uint256[]");
+/// assert_eq!(Uint256DynamicArray::sol_type_name(), "uint256[]");
 ///
 /// type Erc20FunctionArgs = sol!((address, uint256));
-/// assert_eq!(&Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
+/// assert_eq!(Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
 ///
 /// type LargeComplexType = sol!((bool[][2],(bytes13,string)));
 /// assert_eq!(
-///     &LargeComplexType::sol_type_name(),
+///     LargeComplexType::sol_type_name(),
 ///     "(bool[][2],(bytes13,string))"
 /// );
 /// ```
 ///
 /// For more complex usage, it's recommended to use the
-/// [`Encodable`](crate::Encodable) trait for primitive types, and the other
-/// `Sol*` traits for other types created with [`sol!`]:
+/// [`Encodable`](crate::Encodable) trait for primitive types, and the `Sol*`
+/// traits for other types created with [`sol!`]:
 ///
 /// ```
-/// use alloy_sol_types::{sol_data::*, SolType};
+/// use alloy_primitives::Address;
+/// use alloy_sol_types::{sol, Encodable, SolCall, SolStruct};
+///
+/// sol! {
+///     struct MyStruct {
+///         bool a;
+///         uint64 b;
+///         address c;
+///     }
+///
+///     enum MyEnum {
+///         A,
+///         B,
+///         C,
+///     }
+///
+///     function myFunction(MyStruct my_struct, MyEnum my_enum) {}
+/// }
+///
+/// // `Encodable`
+/// let my_bool = true;
+/// let _ = my_bool.abi_encode();
+///
+/// let my_struct = MyStruct {
+///     a: true,
+///     b: 1,
+///     c: Address::ZERO,
+/// };
+/// let _ = my_struct.abi_encode();
+///
+/// let my_enum = MyEnum::A;
+/// let _ = my_enum.abi_encode();
+///
+/// // `SolCall`
+/// let my_function_call = myFunctionCall { my_struct, my_enum };
+/// let _ = my_function_call.abi_encode();
 /// ```
 ///
 /// [`sol!`]: crate::sol
