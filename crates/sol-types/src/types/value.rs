@@ -245,22 +245,25 @@ mod tests {
     #[test]
     fn inference() {
         false.sol_type_name();
-        // false.abi_encoded_size();
-        // false.eip712_data_word();
-        // false.abi_encode_packed_to(&mut vec![]);
+        false.abi_encoded_size();
+        false.eip712_data_word();
+        false.abi_encode_packed_to(&mut vec![]);
         false.abi_encode_packed();
         false.abi_encode();
         (false,).abi_encode_sequence();
         (false,).abi_encode_params();
 
         "".sol_type_name();
-        // "".abi_encoded_size();
-        // "".eip712_data_word();
-        // "".abi_encode_packed_to(&mut vec![]);
+        "".abi_encoded_size();
+        "".eip712_data_word();
+        "".abi_encode_packed_to(&mut vec![]);
         "".abi_encode_packed();
         "".abi_encode();
         ("",).abi_encode_sequence();
         ("",).abi_encode_params();
+
+        let _ = String::abi_decode(b"", false);
+        let _ = bool::abi_decode(b"", false);
     }
 
     #[test]
