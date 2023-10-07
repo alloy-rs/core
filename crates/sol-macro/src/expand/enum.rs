@@ -112,7 +112,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::Encodable for #name {
+            impl ::alloy_sol_types::SolValue for #name {
                 type SolType = Self;
             }
 

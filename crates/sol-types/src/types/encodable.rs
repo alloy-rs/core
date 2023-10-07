@@ -8,23 +8,25 @@ use crate::{
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256};
 
-/// ABI-encodable types.
+/// Solidity values.
 ///
 /// This is a convenience trait that re-exports the logic in [`SolType`] with
 /// less generic implementations so that they can be used as methods with `self`
 /// receivers.
 ///
+/// See [`SolType`] for more information.
+///
 /// # Examples
 ///
 /// ```
-/// use alloy_sol_types::Encodable;
+/// use alloy_sol_types::SolValue;
 ///
 /// let my_values = ("hello", 0xdeadbeef_u32, true, [0x42_u8; 24]);
 /// let _ = my_values.abi_encode();
 /// let _ = my_values.abi_encode_packed();
 /// assert_eq!(my_values.sol_type_name(), "(string,uint32,bool,bytes24)");
 /// ```
-pub trait Encodable: SolTypeEncodable<Self::SolType> {
+pub trait SolValue: SolTypeEncodable<Self::SolType> {
     /// The Solidity type that this type corresponds to.
     type SolType: SolType;
 
@@ -45,6 +47,8 @@ pub trait Encodable: SolTypeEncodable<Self::SolType> {
     }
 
     /// Detokenize the given token into this type.
+    ///
+    /// See [`SolType::detokenize`] for more information.
     #[inline]
     fn detokenize(token: <Self::SolType as SolType>::TokenType<'_>) -> Self
     where
@@ -156,7 +160,7 @@ pub trait Encodable: SolTypeEncodable<Self::SolType> {
 macro_rules! impl_encodable {
     ($($(#[$attr:meta])* [$($gen:tt)*] $rust:ty => $sol:ty [$($where:tt)*];)+) => {$(
         $(#[$attr])*
-        impl<$($gen)*> Encodable for $rust $($where)* {
+        impl<$($gen)*> SolValue for $rust $($where)* {
             type SolType = $sol;
         }
     )*};
@@ -201,23 +205,23 @@ impl_encodable! {
     [] [u8] => sol_data::Bytes [];
 
     // Generic
-    [T: Encodable] Vec<T> => sol_data::Array<T::SolType> [];
-    [T: Encodable] [T] => sol_data::Array<T::SolType> [];
-    [T: Encodable, const N: usize] [T; N] => sol_data::FixedArray<T::SolType, N> [];
+    [T: SolValue] Vec<T> => sol_data::Array<T::SolType> [];
+    [T: SolValue] [T] => sol_data::Array<T::SolType> [];
+    [T: SolValue, const N: usize] [T; N] => sol_data::FixedArray<T::SolType, N> [];
 
-    ['a, T: ?Sized + Encodable] &'a T => T::SolType [where &'a T: SolTypeEncodable<T::SolType>];
-    ['a, T: ?Sized + Encodable] &'a mut T => T::SolType [where &'a mut T: SolTypeEncodable<T::SolType>];
+    ['a, T: ?Sized + SolValue] &'a T => T::SolType [where &'a T: SolTypeEncodable<T::SolType>];
+    ['a, T: ?Sized + SolValue] &'a mut T => T::SolType [where &'a mut T: SolTypeEncodable<T::SolType>];
 }
 
 macro_rules! tuple_impls {
     ($count:literal $($ty:ident),+) => {
-        impl<$($ty: Encodable,)+> Encodable for ($($ty,)+) {
+        impl<$($ty: SolValue,)+> SolValue for ($($ty,)+) {
             type SolType = ($($ty::SolType,)+);
         }
     };
 }
 
-impl Encodable for () {
+impl SolValue for () {
     type SolType = ();
 }
 

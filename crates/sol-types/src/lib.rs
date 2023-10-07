@@ -176,9 +176,9 @@ mod impl_core;
 
 mod types;
 pub use types::{
-    data_type as sol_data, decode_revert_reason, ContractError, Encodable, EventTopic,
-    GenericContractError, Panic, PanicKind, Revert, Selectors, SolCall, SolEnum, SolError,
-    SolEvent, SolInterface, SolStruct, SolType, TopicList,
+    data_type as sol_data, decode_revert_reason, ContractError, EventTopic, GenericContractError,
+    Panic, PanicKind, Revert, Selectors, SolCall, SolEnum, SolError, SolEvent, SolInterface,
+    SolStruct, SolType, SolValue, TopicList,
 };
 
 pub mod utils;
@@ -218,7 +218,7 @@ pub mod private {
     /// **Note:** this trait is an implementation detail. As such, it should not
     /// be implemented directly unless implementing a custom
     /// [`SolType`](crate::SolType), which is also discouraged. Consider
-    /// using [`Encodable`](crate::Encodable) instead.
+    /// using [`SolValue`](crate::SolValue) instead.
     pub trait SolTypeEncodable<T: super::SolType> {
         fn to_tokens(&self) -> T::TokenType<'_>;
         fn abi_encoded_size(&self) -> usize {

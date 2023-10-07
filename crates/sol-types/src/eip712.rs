@@ -1,4 +1,4 @@
-use crate::Encodable;
+use crate::SolValue;
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Address, FixedBytes, B256, U256};
 

@@ -19,7 +19,7 @@ mod r#struct;
 pub use r#struct::SolStruct;
 
 mod encodable;
-pub use encodable::Encodable;
+pub use encodable::SolValue;
 
 mod ty;
 pub use ty::SolType;

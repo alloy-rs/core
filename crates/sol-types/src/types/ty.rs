@@ -76,12 +76,12 @@ use alloc::{borrow::Cow, vec::Vec};
 /// ```
 ///
 /// For more complex usage, it's recommended to use the
-/// [`Encodable`](crate::Encodable) trait for primitive types, and the `Sol*`
+/// [`SolValue`](crate::SolValue) trait for primitive types, and the `Sol*`
 /// traits for other types created with [`sol!`]:
 ///
 /// ```
 /// use alloy_primitives::Address;
-/// use alloy_sol_types::{sol, Encodable, SolCall, SolStruct};
+/// use alloy_sol_types::{sol, SolCall, SolStruct, SolValue};
 ///
 /// sol! {
 ///     struct MyStruct {
@@ -99,7 +99,7 @@ use alloc::{borrow::Cow, vec::Vec};
 ///     function myFunction(MyStruct my_struct, MyEnum my_enum) {}
 /// }
 ///
-/// // `Encodable`
+/// // `SolValue`
 /// let my_bool = true;
 /// let _ = my_bool.abi_encode();
 ///
