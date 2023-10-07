@@ -1,6 +1,7 @@
-use super::{SolType, SolTypeEncodable};
+use super::SolType;
 use crate::{
     abi::TokenSeq,
+    private::SolTypeEncodable,
     sol_data::{self, ByteCount, SupportedFixedBytes},
     Result, Word,
 };
@@ -9,9 +10,9 @@ use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256};
 
 /// ABI-encodable types.
 ///
-/// This is a convenience trait that combines the logic in [`SolTypeEncodable`]
-/// and [`SolType`] to provide a single trait for encoding and decoding Solidity
-/// types.
+/// This is a convenience trait that re-exports the logic in [`SolType`] with
+/// less generic implementations so that they can be used as methods with `self`
+/// receivers.
 ///
 /// # Examples
 ///
@@ -23,7 +24,7 @@ use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256};
 /// let _ = my_values.abi_encode_packed();
 /// assert_eq!(my_values.sol_type_name(), "(string,uint32,bool,bytes24)");
 /// ```
-pub trait Encodable {
+pub trait Encodable: SolTypeEncodable<Self::SolType> {
     /// The Solidity type that this type corresponds to.
     type SolType: SolType;
 
@@ -35,14 +36,28 @@ pub trait Encodable {
         Self::SolType::sol_type_name()
     }
 
+    /// Tokenizes this value into this type's token.
+    ///
+    /// See [`SolType::tokenize`] for more information.
+    #[inline]
+    fn tokenize(&self) -> <Self::SolType as SolType>::TokenType<'_> {
+        <Self as SolTypeEncodable<Self::SolType>>::to_tokens(self)
+    }
+
+    /// Detokenize the given token into this type.
+    #[inline]
+    fn detokenize(token: <Self::SolType as SolType>::TokenType<'_>) -> Self
+    where
+        Self: From<<Self::SolType as SolType>::RustType>,
+    {
+        Self::from(<Self::SolType as SolType>::detokenize(token))
+    }
+
     /// Calculate the ABI-encoded size of the data.
     ///
     /// See [`SolType::abi_encoded_size`] for more information.
     #[inline]
-    fn abi_encoded_size(&self) -> usize
-    where
-        Self: SolTypeEncodable<Self::SolType>,
-    {
+    fn abi_encoded_size(&self) -> usize {
         <Self as SolTypeEncodable<Self::SolType>>::abi_encoded_size(self)
     }
 
@@ -51,10 +66,7 @@ pub trait Encodable {
     ///
     /// See [`SolType::eip712_data_word`] for more information.
     #[inline]
-    fn eip712_data_word(&self) -> Word
-    where
-        Self: SolTypeEncodable<Self::SolType>,
-    {
+    fn eip712_data_word(&self) -> Word {
         <Self as SolTypeEncodable<Self::SolType>>::eip712_data_word(self)
     }
 
@@ -62,10 +74,7 @@ pub trait Encodable {
     ///
     /// See [`SolType::abi_encode_packed_to`] for more information.
     #[inline]
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>)
-    where
-        Self: SolTypeEncodable<Self::SolType>,
-    {
+    fn abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         <Self as SolTypeEncodable<Self::SolType>>::abi_encode_packed_to(self, out)
     }
 
@@ -73,10 +82,7 @@ pub trait Encodable {
     ///
     /// See [`SolType::abi_encode_packed`] for more information.
     #[inline]
-    fn abi_encode_packed(&self) -> Vec<u8>
-    where
-        Self: SolTypeEncodable<Self::SolType>,
-    {
+    fn abi_encode_packed(&self) -> Vec<u8> {
         let mut out = Vec::new();
         <Self as SolTypeEncodable<Self::SolType>>::abi_encode_packed_to(self, &mut out);
         out
@@ -86,10 +92,7 @@ pub trait Encodable {
     ///
     /// See [`SolType::abi_encode`] for more information.
     #[inline]
-    fn abi_encode(&self) -> Vec<u8>
-    where
-        Self: SolTypeEncodable<Self::SolType>,
-    {
+    fn abi_encode(&self) -> Vec<u8> {
         Self::SolType::abi_encode(self)
     }
 
@@ -99,7 +102,6 @@ pub trait Encodable {
     #[inline]
     fn abi_encode_sequence(&self) -> Vec<u8>
     where
-        Self: SolTypeEncodable<Self::SolType>,
         for<'a> <Self::SolType as SolType>::TokenType<'a>: TokenSeq<'a>,
     {
         Self::SolType::abi_encode_sequence(self)
@@ -111,7 +113,6 @@ pub trait Encodable {
     #[inline]
     fn abi_encode_params(&self) -> Vec<u8>
     where
-        Self: SolTypeEncodable<Self::SolType>,
         for<'a> <Self::SolType as SolType>::TokenType<'a>: TokenSeq<'a>,
     {
         Self::SolType::abi_encode_params(self)
@@ -204,12 +205,8 @@ impl_encodable! {
     [T: Encodable] [T] => sol_data::Array<T::SolType> [];
     [T: Encodable, const N: usize] [T; N] => sol_data::FixedArray<T::SolType, N> [];
 
-    [T: ?Sized + Encodable + SolTypeEncodable<T::SolType>] &T => T::SolType [];
-    [T: ?Sized + Encodable + SolTypeEncodable<T::SolType>] &mut T => T::SolType [];
-    [T: ?Sized + Encodable + SolTypeEncodable<T::SolType>] alloc::boxed::Box<T> => T::SolType [];
-    [T: ?Sized + alloc::borrow::ToOwned + Encodable + SolTypeEncodable<T::SolType>] alloc::borrow::Cow<'_, T> => T::SolType [];
-    [T: ?Sized + Encodable + SolTypeEncodable<T::SolType>] alloc::rc::Rc<T> => T::SolType [];
-    [T: ?Sized + Encodable + SolTypeEncodable<T::SolType>] alloc::sync::Arc<T> => T::SolType [];
+    ['a, T: ?Sized + Encodable] &'a T => T::SolType [where &'a T: SolTypeEncodable<T::SolType>];
+    ['a, T: ?Sized + Encodable] &'a mut T => T::SolType [where &'a mut T: SolTypeEncodable<T::SolType>];
 }
 
 macro_rules! tuple_impls {
@@ -233,7 +230,7 @@ mod tests {
 
     // Make sure these are in scope
     #[allow(unused_imports)]
-    use crate::{SolType as _, SolTypeEncodable as _};
+    use crate::{private::SolTypeEncodable as _, SolType as _};
 
     #[test]
     fn inference() {

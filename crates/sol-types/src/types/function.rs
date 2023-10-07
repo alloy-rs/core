@@ -1,6 +1,7 @@
 use crate::{
     abi::{TokenSeq, TokenType},
-    Result, SolType, SolTypeEncodable, Word,
+    private::SolTypeEncodable,
+    Result, SolType, Word,
 };
 use alloc::vec::Vec;
 

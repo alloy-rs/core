@@ -1,114 +1,25 @@
 use crate::{
     abi::{self, TokenSeq, TokenType},
+    private::SolTypeEncodable,
     Result, Word,
 };
 use alloc::{borrow::Cow, vec::Vec};
 
-/// An ABI-encodable is any type that may be encoded via a given [`SolType`].
-///
-/// **Note:** this trait should not be implemented directly unless implementing
-/// a custom [`SolType`], which is also discouraged. Consider using
-/// [`Encodable`](crate::Encodable).
-///
-/// The [`SolType`] trait contains encoding logic for a single associated
-/// `RustType`. This trait allows us to plug in encoding logic for other
-/// `RustTypes`. Consumers of this library may impl `Encodable<T>` for their
-/// types.
-///
-/// ### Usage Note
-///
-/// Rust data may not have a 1:1 mapping to Solidity types. The easiest example
-/// of this is [`u64`], which may correspond to any of `uint{40,48,56,64}`.
-/// Similarly, [`u128`] covers `uint72-128`. Because of this, usage of this
-/// trait is always ambiguous for certain types.
-///
-/// ```compile_fail,E0284
-/// # use alloy_sol_types::{SolType, SolTypeEncodable, sol_data::*};
-/// // Compilation fails due to ambiguity
-/// //  error[E0284]: type annotations needed
-/// // |
-/// // 6 | 100u64.to_tokens();
-/// // |        ^^^^^^^^^
-/// // |
-/// // = note: cannot satisfy `<_ as SolType>::TokenType<'_> == _`
-/// // help: try using a fully qualified path to specify the expected types
-/// // |
-/// // 6 | <u64 as Encodable<T>>::to_tokens(&100u64);
-/// // | ++++++++++++++++++++++++++++++++++      ~
-/// //
-/// 100u64.to_tokens();
-/// # Ok::<_, alloy_sol_types::Error>(())
-/// ```
-///
-/// To resolve this, specify the related [`SolType`]. When specifying T it is
-/// recommended that you invoke the [`SolType`] methods on `T`, rather than the
-/// [`SolTypeEncodable`] methods.
-///
-/// ```
-/// # use alloy_sol_types::{SolType, SolTypeEncodable, sol_data::*};
-/// # fn main() -> Result<(), alloy_sol_types::Error> {
-/// // Not recommended:
-/// SolTypeEncodable::<Uint<64>>::to_tokens(&100u64);
-///
-/// // Recommended:
-/// Uint::<64>::tokenize(&100u64);
-/// # Ok(())
-/// # }
-/// ```
-pub trait SolTypeEncodable<T: SolType> {
-    /// Convert the value to tokens.
-    fn to_tokens(&self) -> T::TokenType<'_>;
-
-    /// Calculate the ABI-encoded size of the data.
-    ///
-    /// See [`SolType::abi_encoded_size`] for more information.
-    fn abi_encoded_size(&self) -> usize {
-        T::ENCODED_SIZE.unwrap()
-    }
-
-    /// Non-standard Packed Mode ABI encoding.
-    ///
-    /// See [`SolType::abi_encode_packed_to`] for more information.
-    fn abi_encode_packed_to(&self, out: &mut Vec<u8>);
-
-    /// Encode this data according to EIP-712 `encodeData` rules, and hash it
-    /// if necessary.
-    ///
-    /// See [`SolType::eip712_data_word`] for more information.
-    fn eip712_data_word(&self) -> Word;
-}
-
-/// A Solidity Type, for ABI encoding and decoding.
+/// A Solidity type.
 ///
 /// This trait is implemented by types that contain ABI encoding and decoding
 /// info for Solidity types. Types may be combined to express arbitrarily
 /// complex Solidity types.
 ///
-/// ```
-/// use alloy_sol_types::{sol_data::*, SolType};
-///
-/// type DynUint256Array = Array<Uint<256>>;
-/// assert_eq!(&DynUint256Array::sol_type_name(), "uint256[]");
-///
-/// type Erc20FunctionArgs = (Address, Uint<256>);
-/// assert_eq!(&Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
-///
-/// type LargeComplexType = (FixedArray<Array<Bool>, 2>, (FixedBytes<13>, String));
-/// assert_eq!(
-///     &LargeComplexType::sol_type_name(),
-///     "(bool[][2],(bytes13,string))"
-/// );
-/// ```
-///
 /// These types are zero cost representations of Solidity types. They do not
-/// exist at runtime. They ONLY contain information about the type, they do not
-/// carry any data.
+/// exist at runtime. They **only** contain information about the type, they do
+/// not carry any data.
 ///
 /// ### Implementer's Guide
 ///
-/// We do not recommend implementing this trait directly. Instead, we recommend
-/// using the [`crate::sol`] proc macro to parse a Solidity structdef into a
-/// native Rust struct.
+/// Implementing this trait directly is **heavily** discouraged. Instead, use
+/// the [`sol!`] procedural macro to parse Solidity syntax into types that
+/// implement this trait.
 ///
 /// ```
 /// alloy_sol_types::sol! {
@@ -125,13 +36,62 @@ pub trait SolTypeEncodable<T: SolType> {
 ///     b: alloy_primitives::FixedBytes([0x01, 0x02]),
 /// };
 /// ```
+///
+/// # Examples
+///
+/// Basic usage:
+///
+/// ```
+/// use alloy_sol_types::{sol_data::*, SolType};
+///
+/// type Uint256DynamicArray = Array<Uint<256>>;
+/// assert_eq!(&Uint256DynamicArray::sol_type_name(), "uint256[]");
+///
+/// type Erc20FunctionArgs = (Address, Uint<256>);
+/// assert_eq!(&Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
+///
+/// type LargeComplexType = (FixedArray<Array<Bool>, 2>, (FixedBytes<13>, String));
+/// assert_eq!(
+///     &LargeComplexType::sol_type_name(),
+///     "(bool[][2],(bytes13,string))"
+/// );
+/// ```
+///
+/// The previous example can be entirely replicated with the [`sol!`] macro:
+///
+/// ```
+/// use alloy_sol_types::{sol, SolType};
+///
+/// type Uint256DynamicArray = sol!(uint256[]);
+/// assert_eq!(&Uint256DynamicArray::sol_type_name(), "uint256[]");
+///
+/// type Erc20FunctionArgs = sol!((address, uint256));
+/// assert_eq!(&Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
+///
+/// type LargeComplexType = sol!((bool[][2],(bytes13,string)));
+/// assert_eq!(
+///     &LargeComplexType::sol_type_name(),
+///     "(bool[][2],(bytes13,string))"
+/// );
+/// ```
+///
+/// For more complex usage, it's recommended to use the
+/// [`Encodable`](crate::Encodable) trait for primitive types, and the other
+/// `Sol*` traits for other types created with [`sol!`]:
+///
+/// ```
+/// use alloy_sol_types::{sol_data::*, SolType};
+/// ```
+///
+/// [`sol!`]: crate::sol
 pub trait SolType: Sized {
     /// The corresponding Rust type.
     type RustType: SolTypeEncodable<Self> + 'static;
 
-    /// The corresponding ABI token type.
+    /// The corresponding ABI [token type](TokenType).
     ///
-    /// See implementers of [`TokenType`].
+    /// This is the intermediate representation of the type that is used for
+    /// ABI encoding and decoding.
     type TokenType<'a>: TokenType<'a>;
 
     /// The encoded size of the type, if known at compile time

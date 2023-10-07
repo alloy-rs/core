@@ -178,7 +178,7 @@ mod types;
 pub use types::{
     data_type as sol_data, decode_revert_reason, ContractError, Encodable, EventTopic,
     GenericContractError, Panic, PanicKind, Revert, Selectors, SolCall, SolEnum, SolError,
-    SolEvent, SolInterface, SolStruct, SolType, SolTypeEncodable, TopicList,
+    SolEvent, SolInterface, SolStruct, SolType, TopicList,
 };
 
 pub mod utils;
@@ -208,6 +208,25 @@ pub mod private {
 
     pub use Option::{None, Some};
     pub use Result::{Err, Ok};
+
+    /// An ABI-encodable is any type that may be encoded via a given `SolType`.
+    ///
+    /// The `SolType` trait contains encoding logic for a single associated
+    /// `RustType`. This trait allows us to plug in encoding logic for other
+    /// `RustTypes`.
+    ///
+    /// **Note:** this trait is an implementation detail. As such, it should not
+    /// be implemented directly unless implementing a custom [`SolType`],
+    /// which is also discouraged. Consider using
+    /// [`Encodable`](crate::Encodable) instead.
+    pub trait SolTypeEncodable<T: super::SolType> {
+        fn to_tokens(&self) -> T::TokenType<'_>;
+        fn abi_encoded_size(&self) -> usize {
+            T::ENCODED_SIZE.unwrap()
+        }
+        fn abi_encode_packed_to(&self, out: &mut Vec<u8>);
+        fn eip712_data_word(&self) -> super::Word;
+    }
 
     #[inline(always)]
     pub const fn u256(n: u64) -> U256 {

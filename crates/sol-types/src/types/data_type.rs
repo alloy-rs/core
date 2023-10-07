@@ -6,7 +6,7 @@
 
 #![allow(missing_copy_implementations, missing_debug_implementations)]
 
-use crate::{abi::token::*, utils, SolType, SolTypeEncodable, Word};
+use crate::{abi::token::*, private::SolTypeEncodable, utils, SolType, Word};
 use alloc::{borrow::Cow, string::String as RustString, vec::Vec};
 use alloy_primitives::{
     keccak256, Address as RustAddress, FixedBytes as RustFixedBytes, Function as RustFunction,
