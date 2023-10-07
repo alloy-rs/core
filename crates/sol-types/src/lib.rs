@@ -216,9 +216,9 @@ pub mod private {
     /// `RustTypes`.
     ///
     /// **Note:** this trait is an implementation detail. As such, it should not
-    /// be implemented directly unless implementing a custom [`SolType`],
-    /// which is also discouraged. Consider using
-    /// [`Encodable`](crate::Encodable) instead.
+    /// be implemented directly unless implementing a custom
+    /// [`SolType`](crate::SolType), which is also discouraged. Consider
+    /// using [`Encodable`](crate::Encodable) instead.
     pub trait SolTypeEncodable<T: super::SolType> {
         fn to_tokens(&self) -> T::TokenType<'_>;
         fn abi_encoded_size(&self) -> usize {
