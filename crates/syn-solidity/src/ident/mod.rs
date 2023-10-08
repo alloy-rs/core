@@ -118,15 +118,16 @@ impl SolIdent {
     ///
     /// See [`IdentExt::unraw`].
     pub fn unwrawed(mut self) -> Self {
-        self = self.unraw();
-        self
+        // self = self.unraw();
+        self.clone()
     }
 
     /// Strips the raw marker `r#`, if any, from the beginning of an ident.
     ///
     /// See [`IdentExt::unraw`].
     pub fn unraw(&self) -> Self {
-        Self(self.0.unraw())
+        self.clone()
+        // Self(self.0.unraw())
     }
 
     /// Returns the identifier as a string, without the `r#` prefix if present.
