@@ -12,11 +12,17 @@ use syn::{ext::IdentExt, parse_quote, Attribute, Result};
 ///
 /// ```ignore (pseudo-code)
 /// pub mod #name {
+///     #(#items)*
+///
 ///     pub enum #{name}Calls {
 ///         ...
 ///    }
 ///
 ///     pub enum #{name}Errors {
+///         ...
+///    }
+///
+///     pub enum #{name}Events {
 ///         ...
 ///    }
 /// }

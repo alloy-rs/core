@@ -248,8 +248,8 @@ pub(super) fn type_base_data_size(cx: &ExpCtxt<'_>, ty: &Type) -> usize {
             .map(|ty| type_base_data_size(cx, ty))
             .sum(),
 
-        Type::Custom(name) => match cx.try_get_item(name) {
-            Some(Item::Enum(_)) => 32,
+        Type::Custom(name) => match cx.try_item(name) {
+            Some(Item::Contract(_)) | Some(Item::Enum(_)) => 32,
             Some(Item::Error(error)) => error
                 .parameters
                 .types()
@@ -266,7 +266,7 @@ pub(super) fn type_base_data_size(cx: &ExpCtxt<'_>, ty: &Type) -> usize {
                 .map(|ty| type_base_data_size(cx, ty))
                 .sum(),
             Some(Item::Udt(udt)) => type_base_data_size(cx, &udt.ty),
-            Some(item) => panic!("Invalid item in param list: {item:?}"),
+            Some(item) => abort!(item.span(), "Invalid type in struct field: {:?}", item),
             None => 0,
         },
 
@@ -293,8 +293,8 @@ pub(super) fn can_derive_default(cx: &ExpCtxt<'_>, ty: &Type) -> bool {
             }
         }
 
-        Type::Custom(name) => match cx.try_get_item(name) {
-            Some(Item::Enum(_)) => false,
+        Type::Custom(name) => match cx.try_item(name) {
+            Some(Item::Contract(_)) | Some(Item::Enum(_)) => false,
             Some(Item::Error(error)) => error
                 .parameters
                 .types()
@@ -307,7 +307,7 @@ pub(super) fn can_derive_default(cx: &ExpCtxt<'_>, ty: &Type) -> bool {
                 strukt.fields.types().all(|ty| can_derive_default(cx, ty))
             }
             Some(Item::Udt(udt)) => can_derive_default(cx, &udt.ty),
-            Some(item) => panic!("Invalid item in param list: {item:?}"),
+            Some(item) => abort!(item.span(), "Invalid type in struct field: {:?}", item),
             _ => false,
         },
 
@@ -331,8 +331,8 @@ pub(super) fn can_derive_builtin_traits(cx: &ExpCtxt<'_>, ty: &Type) -> bool {
             }
         }
 
-        Type::Custom(name) => match cx.try_get_item(name) {
-            Some(Item::Enum(_)) => true,
+        Type::Custom(name) => match cx.try_item(name) {
+            Some(Item::Contract(_)) | Some(Item::Enum(_)) => true,
             Some(Item::Error(error)) => error
                 .parameters
                 .types()
@@ -346,7 +346,7 @@ pub(super) fn can_derive_builtin_traits(cx: &ExpCtxt<'_>, ty: &Type) -> bool {
                 .types()
                 .all(|ty| can_derive_builtin_traits(cx, ty)),
             Some(Item::Udt(udt)) => can_derive_builtin_traits(cx, &udt.ty),
-            Some(item) => panic!("Invalid item in param list: {item:?}"),
+            Some(item) => abort!(item.span(), "Invalid type in struct field: {:?}", item),
             _ => false,
         },
 

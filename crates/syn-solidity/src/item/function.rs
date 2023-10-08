@@ -209,6 +209,7 @@ impl ItemFunction {
     ///
     /// Panics if the function has no name. This is the case when `kind` is not
     /// `Function`.
+    #[track_caller]
     pub fn name(&self) -> &SolIdent {
         match &self.name {
             Some(name) => name,

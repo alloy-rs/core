@@ -1,4 +1,4 @@
-use crate::{kw, utils::DebugPunctuated, Item, Modifier, SolIdent, Spanned};
+use crate::{kw, utils::DebugPunctuated, Item, Modifier, SolIdent, Spanned, Type};
 use proc_macro2::Span;
 use std::{cmp::Ordering, fmt};
 use syn::{
@@ -101,6 +101,10 @@ impl Spanned for ItemContract {
 }
 
 impl ItemContract {
+    pub fn as_type(&self) -> Type {
+        Type::Address(self.span(), None)
+    }
+
     /// Returns true if `self` is an abstract contract.
     pub fn is_abstract_contract(&self) -> bool {
         self.kind.is_abstract_contract()

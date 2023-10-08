@@ -430,6 +430,55 @@ fn enum_field_of_struct() {
     };
 }
 
+// TODO
+// https://github.com/alloy-rs/core/issues/343
+#[test]
+#[cfg(TODO)]
+fn rust_keywords() {
+    sol! {
+        function mod(address impl) returns (bool is, bool fn);
+    }
+}
+
+// TODO
+#[test]
+#[cfg(TODO)]
+fn contract_type() {
+    sol! {
+        interface IERC20 {}
+        function func(IERC20 addr);
+        struct Struct {
+            IERC20 addr;
+        }
+    }
+}
+
+// TODO: make commented out code work
+#[test]
+fn paths_resolution_basic() {
+    sol! {
+        // library OrderRFQLib {
+            struct OrderRFQ {
+                uint256 info;
+                address makerAsset;
+                address takerAsset;
+                address maker;
+                address allowedSender;
+                uint256 makingAmount;
+                uint256 takingAmount;
+            }
+        // }
+
+        function fillOrderRFQ(
+            /*OrderRFQLib.*/OrderRFQ memory order,
+            bytes calldata signature,
+            uint256 flagsAndAmount
+        ) external payable returns(uint256, uint256, bytes32) {
+            return fillOrderRFQTo(order, signature, flagsAndAmount, msg.sender);
+        }
+    }
+}
+
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_large_array() {
