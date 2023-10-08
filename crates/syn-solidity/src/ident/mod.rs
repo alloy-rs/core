@@ -11,6 +11,17 @@ use syn::{
 mod path;
 pub use path::SolPath;
 
+// taken from https://gist.github.com/ritz078/1be714dea593838587c8a5df463a583a
+// couldn't find anything in syn
+static RUST_KEYWORDS: [&'static str; 56] = [
+    "as", "use", "break", "const", "continue", "crate", "else", "if", "enum", "extern", "false",
+    "fn", "for", "if", "impl", "in", "for", "let", "loop", "match", "mod", "move", "mut", "pub",
+    "impl", "ref", "return", "Self", "self", "static", "struct", "super", "trait", "true", "type",
+    "unsafe", "use", "where", "while", "abstract", "alignof", "become", "box", "do", "final",
+    "macro", "offsetof", "override", "priv", "proc", "pure", "sizeof", "typeof", "unsized",
+    "virtual", "yield",
+];
+
 /// A Solidity identifier.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
@@ -46,7 +57,7 @@ impl<T: ?Sized + AsRef<str>> PartialEq<T> for SolIdent {
 
 impl From<Ident> for SolIdent {
     fn from(value: Ident) -> Self {
-        Self(value)
+        Self::new_spanned(&value.to_string(), value.span())
     }
 }
 
@@ -87,11 +98,19 @@ impl Spanned for SolIdent {
 
 impl SolIdent {
     pub fn new(s: &str) -> Self {
-        Self(Ident::new(s, Span::call_site()))
+        if RUST_KEYWORDS.contains(&s) {
+            Self(Ident::new(&format!("r#{}", s), Span::call_site()))
+        } else {
+            Self(Ident::new(s, Span::call_site()))
+        }
     }
 
     pub fn new_spanned(s: &str, span: Span) -> Self {
-        Self(Ident::new(s, span))
+        if RUST_KEYWORDS.contains(&s) {
+            Self(Ident::new(&format!("r#{}", s), span))
+        } else {
+            Self(Ident::new(s, span))
+        }
     }
 
     /// Strips the raw marker `r#`, if any, from the beginning of an ident.
@@ -111,11 +130,7 @@ impl SolIdent {
 
     /// Returns the identifier as a string, without the `r#` prefix if present.
     pub fn as_string(&self) -> String {
-        let mut s = self.0.to_string();
-        if s.starts_with("r#") {
-            s = s[2..].to_string();
-        }
-        s
+        self.0.to_string()
     }
 
     /// Parses any identifier including keywords.
