@@ -12,14 +12,11 @@ mod path;
 pub use path::SolPath;
 
 // taken from https://gist.github.com/ritz078/1be714dea593838587c8a5df463a583a
-// couldn't find anything in syn
-static RUST_KEYWORDS: [&'static str; 56] = [
-    "as", "use", "break", "const", "continue", "crate", "else", "if", "enum", "extern", "false",
-    "fn", "for", "if", "impl", "in", "for", "let", "loop", "match", "mod", "move", "mut", "pub",
-    "impl", "ref", "return", "Self", "self", "static", "struct", "super", "trait", "true", "type",
-    "unsafe", "use", "where", "while", "abstract", "alignof", "become", "box", "do", "final",
-    "macro", "offsetof", "override", "priv", "proc", "pure", "sizeof", "typeof", "unsized",
-    "virtual", "yield",
+// this is the set difference of Rust - Solidity keywords
+static RUST_KEYWORD_SET_DIFFERENCE: [&'static str; 28] = [
+    "as", "use", "const", "extern", "false", "fn", "impl", "in", "move", "mut", "pub", "impl",
+    "ref", "trait", "true", "type", "unsafe", "use", "where", "alignof", "become", "box",
+    "offsetof", "priv", "proc", "unsized", "yield", "return",
 ];
 
 /// A Solidity identifier.
@@ -63,7 +60,13 @@ impl From<Ident> for SolIdent {
 
 impl From<SolIdent> for Ident {
     fn from(value: SolIdent) -> Self {
-        value.0
+        // value.0
+        let str = value.0.to_string();
+        if RUST_KEYWORD_SET_DIFFERENCE.contains(&str.as_str()) {
+            Ident::new_raw(&str, value.span())
+        } else {
+            Ident::new(&str, value.span())
+        }
     }
 }
 
@@ -82,7 +85,13 @@ impl Parse for SolIdent {
 
 impl ToTokens for SolIdent {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        self.0.to_tokens(tokens);
+        let str = self.0.to_string();
+        if RUST_KEYWORD_SET_DIFFERENCE.contains(&str.as_str()) {
+            Ident::new_raw(&str, self.span())
+        } else {
+            Ident::new(&str, self.span())
+        }
+        .to_tokens(tokens)
     }
 }
 
@@ -98,19 +107,11 @@ impl Spanned for SolIdent {
 
 impl SolIdent {
     pub fn new(s: &str) -> Self {
-        if RUST_KEYWORDS.contains(&s) {
-            Self(Ident::new(&format!("r#{}", s), Span::call_site()))
-        } else {
-            Self(Ident::new(s, Span::call_site()))
-        }
+        Self(Ident::new(&s, Span::call_site()))
     }
 
     pub fn new_spanned(s: &str, span: Span) -> Self {
-        if RUST_KEYWORDS.contains(&s) {
-            Self(Ident::new(&format!("r#{}", s), span))
-        } else {
-            Self(Ident::new(s, span))
-        }
+        Self(Ident::new(&s, span))
     }
 
     /// Strips the raw marker `r#`, if any, from the beginning of an ident.
@@ -130,7 +131,11 @@ impl SolIdent {
 
     /// Returns the identifier as a string, without the `r#` prefix if present.
     pub fn as_string(&self) -> String {
-        self.0.to_string()
+        let mut s = self.0.to_string();
+        if s.starts_with("r#") {
+            s = s[2..].to_string();
+        }
+        s
     }
 
     /// Parses any identifier including keywords.
