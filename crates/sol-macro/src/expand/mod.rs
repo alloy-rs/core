@@ -34,6 +34,7 @@ pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
 }
 
+/// The expansion context.
 struct ExpCtxt<'ast> {
     all_items: Vec<&'ast Item>,
     custom_types: HashMap<SolIdent, Type>,
@@ -61,6 +62,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn expand(mut self) -> Result<TokenStream> {
+        let mut abort = false;
         let mut tokens = TokenStream::new();
 
         if let Err(e) = self.parse_file_attributes() {
@@ -68,18 +70,23 @@ impl<'ast> ExpCtxt<'ast> {
         }
 
         self.visit_file(self.ast);
+
         if self.all_items.len() > 1 {
-            self.resolve_custom_types()?;
-            self.mk_overloads_map()?;
+            self.resolve_custom_types();
+            if self.mk_overloads_map().is_err() {
+                abort = true;
+            }
+        }
+
+        if abort {
+            return Ok(tokens)
         }
 
         for item in &self.ast.items {
+            // TODO: Dummy items
             let t = match self.expand_item(item) {
                 Ok(t) => t,
-                Err(e) => {
-                    // TODO: Dummy items
-                    e.into_compile_error()
-                }
+                Err(e) => e.into_compile_error(),
             };
             tokens.extend(t);
         }
@@ -118,6 +125,7 @@ impl<'ast> ExpCtxt<'ast> {
         map.reserve(self.all_items.len());
         for &item in &self.all_items {
             let (name, ty) = match item {
+                Item::Contract(c) => (&c.name, c.as_type()),
                 Item::Enum(e) => (&e.name, e.as_type()),
                 Item::Struct(s) => (&s.name, s.as_type()),
                 Item::Udt(u) => (&u.name, u.ty.clone()),
@@ -128,14 +136,13 @@ impl<'ast> ExpCtxt<'ast> {
         self.custom_types = map;
     }
 
-    fn resolve_custom_types(&mut self) -> Result<()> {
+    fn resolve_custom_types(&mut self) {
         self.mk_types_map();
         // you won't get me this time, borrow checker
         // SAFETY: no data races, we don't modify the map while we're iterating
         // I think this is safe anyway
         let map_ref: &mut HashMap<SolIdent, Type> =
             unsafe { &mut *(&mut self.custom_types as *mut _) };
-        let map = &self.custom_types;
         for ty in map_ref.values_mut() {
             let mut i = 0;
             ty.visit_mut(|ty| {
@@ -146,25 +153,25 @@ impl<'ast> ExpCtxt<'ast> {
                 let Type::Custom(name) = &*ty else {
                     unreachable!()
                 };
-                let Some(resolved) = map.get(name.last_tmp()) else {
+                let Some(resolved) = self.try_custom_type(name) else {
                     return
                 };
                 ty.clone_from(resolved);
                 i += 1;
             });
             if i >= RESOLVE_LIMIT {
-                let msg = "\
-                    failed to resolve types.\n\
-                    This is likely due to an infinitely recursive type definition.\n\
-                    If you believe this is a bug, please file an issue at \
-                    https://github.com/alloy-rs/core/issues/new/choose";
-                return Err(Error::new(ty.span(), msg))
+                abort!(
+                    ty.span(),
+                    "failed to resolve types.\n\
+                     This is likely due to an infinitely recursive type definition.\n\
+                     If you believe this is a bug, please file an issue at \
+                     https://github.com/alloy-rs/core/issues/new/choose"
+                );
             }
         }
-        Ok(())
     }
 
-    fn mk_overloads_map(&mut self) -> Result<()> {
+    fn mk_overloads_map(&mut self) -> std::result::Result<(), ()> {
         let all_orig_names: Vec<_> = self
             .overloaded_items
             .values()
@@ -173,25 +180,21 @@ impl<'ast> ExpCtxt<'ast> {
             .collect();
         let mut overloads_map = std::mem::take(&mut self.overloads);
 
-        // report all errors at the end
-        let mut errors = Vec::new();
+        let mut failed = false;
 
         for functions in self.overloaded_items.values().filter(|fs| fs.len() >= 2) {
             // check for same parameters
             for (i, &a) in functions.iter().enumerate() {
                 for &b in functions.iter().skip(i + 1) {
                     if a.eq_by_types(b) {
-                        let msg = format!(
+                        failed = true;
+                        emit_error!(
+                            a.span(),
                             "{} with same name and parameter types defined twice",
-                            a.desc()
+                            a.desc();
+
+                            note = b.span() => "other declaration is here";
                         );
-                        let mut err = syn::Error::new(a.span(), msg);
-
-                        let msg = "other declaration is here";
-                        let note = syn::Error::new(b.span(), msg);
-
-                        err.combine(note);
-                        errors.push(err);
                     }
                 }
             }
@@ -202,27 +205,27 @@ impl<'ast> ExpCtxt<'ast> {
                 };
                 let new_name = format!("{old_name}_{i}");
                 if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
-                    let msg = format!(
+                    failed = true;
+                    emit_error!(
+                        old_name.span(),
                         "{} `{old_name}` is overloaded, \
                          but the generated name `{new_name}` is already in use",
-                        item.desc()
-                    );
-                    let mut err = syn::Error::new(old_name.span(), msg);
+                        item.desc();
 
-                    let msg = "other declaration is here";
-                    let note = syn::Error::new(other.span(), msg);
-
-                    err.combine(note);
-                    errors.push(err);
+                        note = other.span() => "other declaration is here";
+                    )
                 }
 
                 overloads_map.insert(item.signature(self), new_name);
             }
         }
 
-        utils::combine_errors(errors).map(|()| {
-            self.overloads = overloads_map;
-        })
+        if failed {
+            return Err(())
+        }
+
+        self.overloads = overloads_map;
+        Ok(())
     }
 }
 
@@ -310,26 +313,30 @@ impl<'a> OverloadedItem<'a> {
 // utils
 impl<'ast> ExpCtxt<'ast> {
     #[allow(dead_code)]
-    fn get_item(&self, name: &SolPath) -> &Item {
-        match self.try_get_item(name) {
+    fn item(&self, name: &SolPath) -> &Item {
+        match self.try_item(name) {
             Some(item) => item,
-            None => panic!("unresolved item: {name}"),
+            None => abort!(name.span(), "unresolved item: {}", name),
         }
     }
 
-    fn try_get_item(&self, name: &SolPath) -> Option<&Item> {
-        let name = name.last_tmp();
+    fn try_item(&self, name: &SolPath) -> Option<&Item> {
+        let name = name.last();
         self.all_items
             .iter()
-            .find(|item| item.name() == Some(name))
             .copied()
+            .find(|item| item.name() == Some(name))
     }
 
     fn custom_type(&self, name: &SolPath) -> &Type {
-        match self.custom_types.get(name.last_tmp()) {
+        match self.try_custom_type(name) {
             Some(item) => item,
-            None => panic!("unresolved item: {name}"),
+            None => abort!(name.span(), "unresolved custom type: {}", name),
         }
+    }
+
+    fn try_custom_type(&self, name: &SolPath) -> Option<&Type> {
+        self.custom_types.get(name.last())
     }
 
     /// Returns the name of the function, adjusted for overloads.
@@ -489,24 +496,22 @@ impl<'ast> ExpCtxt<'ast> {
     where
         I: IntoIterator<Item = &'a VariableDeclaration>,
     {
-        let mut errors = Vec::new();
+        let mut errored = false;
         for param in params {
             param.ty.visit(|ty| {
                 if let Type::Custom(name) = ty {
-                    if !self.custom_types.contains_key(name.last_tmp()) {
-                        let e = syn::Error::new(name.span(), "unresolved type");
-                        errors.push(e);
+                    if !self.custom_types.contains_key(name.last()) {
+                        let note = (!errored).then(|| {
+                            errored = true;
+                            "Custom types must be declared inside of the same scope they are referenced in,\n\
+                             or \"imported\" as a UDT with `type ... is (...);`"
+                        });
+                        emit_error!(name.span(), "unresolved type"; help =? note);
                     }
                 }
             });
         }
-        utils::combine_errors(errors).map_err(|mut e| {
-            let note =
-                "Custom types must be declared inside of the same scope they are referenced in,\n\
-                 or \"imported\" as a UDT with `type ... is (...);`";
-            e.combine(Error::new(Span::call_site(), note));
-            e
-        })
+        Ok(())
     }
 }
 
