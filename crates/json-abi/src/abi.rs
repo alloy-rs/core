@@ -437,7 +437,8 @@ impl<'de> Visitor<'de> for JsonAbiVisitor {
 #[serde(rename_all = "camelCase")]
 pub struct ContractObject {
     /// The contract ABI.
-    pub abi: JsonAbi,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub abi: Option<JsonAbi>,
     /// The contract bytecode.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bytecode: Option<Bytes>,
@@ -449,20 +450,20 @@ pub struct ContractObject {
 impl<'de> Deserialize<'de> for ContractObject {
     #[inline]
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_any(ContractAbiObjectVisitor)
+        deserializer.deserialize_any(ContractObjectVisitor)
     }
 }
 
 // Modified from `ethers_core::abi::raw`:
 // https://github.com/gakonst/ethers-rs/blob/311086466871204c3965065b8c81e47418261412/ethers-core/src/abi/raw.rs#L154
-struct ContractAbiObjectVisitor;
+struct ContractObjectVisitor;
 
-impl<'de> Visitor<'de> for ContractAbiObjectVisitor {
+impl<'de> Visitor<'de> for ContractObjectVisitor {
     type Value = ContractObject;
 
     #[inline]
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("a sequence or map with `abi` key")
+        f.write_str("an ABI sequence or contract object")
     }
 
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
@@ -475,6 +476,7 @@ impl<'de> Visitor<'de> for ContractAbiObjectVisitor {
 
         impl Bytecode {
             #[allow(clippy::missing_const_for_fn)]
+            #[inline(always)]
             fn bytes(self) -> Bytes {
                 let (Self::Object { object: bytes } | Self::Bytes(bytes)) = self;
                 bytes
@@ -505,10 +507,11 @@ impl<'de> Visitor<'de> for ContractAbiObjectVisitor {
                         set_if_none!(@serde deployed_bytecode, bytes.bytes());
                     }
                 }
-                "byteCode" | "bytecode" | "bin" => {
+                "bytecode" | "bin" => {
                     set_if_none!(@serde bytecode, map.next_value::<Bytecode>()?.bytes());
                 }
-                "deployedBytecode" | "deployedbytecode" | "runtimeBin" | "runtimebin" => {
+                "deployedBytecode" | "deployedbytecode" | "deployed_bytecode" | "runtimeBin"
+                | "runtimebin" | "runtime " => {
                     set_if_none!(@serde deployed_bytecode, map.next_value::<Bytecode>()?.bytes());
                 }
                 _ => {
@@ -517,7 +520,6 @@ impl<'de> Visitor<'de> for ContractAbiObjectVisitor {
             }
         }
 
-        let abi = abi.ok_or_else(|| serde::de::Error::missing_field("abi"))?;
         Ok(ContractObject {
             abi,
             bytecode,
@@ -528,7 +530,7 @@ impl<'de> Visitor<'de> for ContractAbiObjectVisitor {
     #[inline]
     fn visit_seq<A: SeqAccess<'de>>(self, seq: A) -> Result<Self::Value, A::Error> {
         JsonAbiVisitor.visit_seq(seq).map(|abi| ContractObject {
-            abi,
+            abi: Some(abi),
             bytecode: None,
             deployed_bytecode: None,
         })
