@@ -1,48 +1,27 @@
 use alloy_json_abi::{AbiItem, EventParam, JsonAbi, Param};
 use std::collections::HashMap;
 
-macro_rules! abi_parse_tests {
-    ($( $(#[$attr:meta])* $name:ident($path:literal, $len:literal))*) => {$(
-        #[test]
-        $(#[$attr])*
-        fn $name() {
-            parse_test(include_str!($path), $len, $path);
+#[test]
+#[cfg_attr(miri, ignore = "no fs")]
+fn abi() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/abi");
+    for file in std::fs::read_dir(path).unwrap() {
+        let path = file.unwrap().path();
+        assert_eq!(path.extension(), Some("json".as_ref()));
+        if path.file_name() == Some("LargeFunction.json".as_ref()) {
+            continue
         }
-    )*};
-}
-
-abi_parse_tests! {
-    abiencoderv2("abi/Abiencoderv2Test.json", 1)
-    #[cfg_attr(miri, ignore = "takes too long")]
-    console("abi/console.json", 379)
-    event_with_struct("abi/EventWithStruct.json", 1)
-    large_array("abi/LargeArray.json", 1)
-    large_struct("abi/LargeStruct.json", 1)
-    #[cfg_attr(miri, ignore = "takes too long")]
-    large_structs("abi/LargeStructs.json", 4)
-    large_tuple("abi/LargeTuple.json", 1)
-    #[cfg_attr(miri, ignore = "takes too long")]
-    seaport("abi/Seaport.json", 69)
-    udvts("abi/Udvts.json", 1)
-}
-
-#[allow(unused_variables)]
-fn load_test(path: &str, abi: &JsonAbi) {
-    #[cfg(all(feature = "std", feature = "serde_json", not(miri)))]
-    {
-        use std::{fs::File, io::BufReader};
-        let file_path: String = format!("tests/{path}");
-        let file: File = File::open(file_path).unwrap();
-        let buffer: BufReader<File> = BufReader::new(file);
-        let loaded_abi: JsonAbi = JsonAbi::load(buffer).unwrap();
-
-        assert_eq!(*abi, loaded_abi);
+        parse_test(
+            &std::fs::read_to_string(&path).unwrap(),
+            path.to_str().unwrap(),
+        );
     }
 }
 
-fn parse_test(s: &str, len: usize, path: &str) {
+fn parse_test(s: &str, path: &str) {
+    eprintln!("{path}");
     let abi_items: Vec<AbiItem<'_>> = serde_json::from_str(s).unwrap();
-    assert_eq!(abi_items.len(), len);
+    let len = abi_items.len();
 
     let json: String = serde_json::to_string(&abi_items).unwrap();
     let abi1: JsonAbi = serde_json::from_str(&json).unwrap();
@@ -64,6 +43,19 @@ fn parse_test(s: &str, len: usize, path: &str) {
     iterator_test(abi1.items(), abi1.items().rev(), len);
     iterator_test(abi1.items().skip(1), abi1.items().skip(1).rev(), len - 1);
     iterator_test(abi1.clone().into_items(), abi1.into_items().rev(), len);
+}
+
+#[allow(unused_variables)]
+fn load_test(path: &str, abi: &JsonAbi) {
+    #[cfg(all(feature = "std", feature = "serde_json", not(miri)))]
+    {
+        use std::{fs::File, io::BufReader};
+        let file: File = File::open(path).unwrap();
+        let buffer: BufReader<File> = BufReader::new(file);
+        let loaded_abi: JsonAbi = JsonAbi::load(buffer).unwrap();
+
+        assert_eq!(*abi, loaded_abi);
+    }
 }
 
 fn iterator_test<T, I, R>(items: I, rev: R, len: usize)

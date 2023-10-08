@@ -431,6 +431,71 @@ fn enum_field_of_struct() {
 }
 
 #[test]
+fn same_names_different_namespaces() {
+    sol! {
+        library RouterErrors {
+            error ReturnAmountIsNotEnough();
+            error InvalidMsgValue();
+            error ERC20TransferFailed();
+        }
+
+        library Errors {
+            error InvalidMsgValue();
+            error ETHTransferFailed();
+        }
+    }
+}
+
+// TODO
+// https://github.com/alloy-rs/core/issues/343
+#[test]
+#[cfg(TODO)]
+fn rust_keywords() {
+    sol! {
+        function mod(address impl) returns (bool is, bool fn);
+    }
+}
+
+// TODO
+#[test]
+#[cfg(TODO)]
+fn contract_type() {
+    sol! {
+        interface IERC20 {}
+        function func(IERC20 addr);
+        struct Struct {
+            IERC20 addr;
+        }
+    }
+}
+
+// TODO: make commented out code work
+#[test]
+fn paths_resolution_1() {
+    sol! {
+        // library OrderRFQLib {
+            struct OrderRFQ {
+                uint256 info;
+                address makerAsset;
+                address takerAsset;
+                address maker;
+                address allowedSender;
+                uint256 makingAmount;
+                uint256 takingAmount;
+            }
+        // }
+
+        function fillOrderRFQ(
+            /*OrderRFQLib.*/OrderRFQ memory order,
+            bytes calldata signature,
+            uint256 flagsAndAmount
+        ) external payable returns(uint256, uint256, bytes32) {
+            return fillOrderRFQTo(order, signature, flagsAndAmount, msg.sender);
+        }
+    }
+}
+
+#[test]
 #[cfg(feature = "json")]
 fn abigen_json_large_array() {
     sol!(LargeArray, "../json-abi/tests/abi/LargeArray.json");
@@ -465,6 +530,26 @@ fn abigen_json_seaport() {
     assert_eq!(
         <BasicOrderParameters as SolStruct>::eip712_encode_type(),
         root_type.to_string() + component
+    );
+}
+
+// https://github.com/alloy-rs/core/issues/344
+#[test]
+#[cfg(feature = "json")]
+fn abigen_json_aggregation_router_v5() {
+    // There's multiple identical error objects in the JSON ABI
+    sol!(
+        AggregationRouterV5,
+        "../json-abi/tests/abi/AggregationRouterV5.json"
+    );
+
+    assert_eq!(
+        <AggregationRouterV5::ETHTransferFailed as SolError>::SIGNATURE,
+        "ETHTransferFailed()"
+    );
+    assert_eq!(
+        <AggregationRouterV5::InvalidMsgValue as SolError>::SIGNATURE,
+        "InvalidMsgValue()"
     );
 }
 

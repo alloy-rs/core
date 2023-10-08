@@ -119,15 +119,6 @@ impl SolPath {
         self.0.last().unwrap()
     }
 
-    // TODO: paths resolution
-    #[track_caller]
-    pub fn last_tmp(&self) -> &SolIdent {
-        if self.len() > 1 {
-            todo!("path resolution")
-        }
-        self.last()
-    }
-
     pub fn last_mut(&mut self) -> &mut SolIdent {
         self.0.last_mut().unwrap()
     }

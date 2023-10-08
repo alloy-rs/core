@@ -22,6 +22,8 @@
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
+#[macro_use]
+extern crate proc_macro_error;
 extern crate syn_solidity as ast;
 
 use proc_macro::TokenStream;
@@ -192,6 +194,7 @@ mod utils;
 #[doc = include_str!("../doctests/json.rs")]
 /// ```
 #[proc_macro]
+#[proc_macro_error]
 pub fn sol(input: TokenStream) -> TokenStream {
     parse_macro_input!(input as input::SolInput)
         .expand()

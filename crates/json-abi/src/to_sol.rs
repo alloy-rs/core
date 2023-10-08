@@ -209,6 +209,7 @@ impl ToSol for Event {
             inputs: &self.inputs,
             visibility: None,
             state_mutability: None,
+            anonymous: self.anonymous,
             outputs: &[],
         }
         .to_sol(out);
@@ -223,6 +224,7 @@ impl ToSol for Error {
             inputs: &self.inputs,
             visibility: None,
             state_mutability: None,
+            anonymous: false,
             outputs: &[],
         }
         .to_sol(out);
@@ -237,6 +239,7 @@ impl ToSol for Fallback {
             inputs: &[],
             visibility: Some("external"),
             state_mutability: Some(self.state_mutability),
+            anonymous: false,
             outputs: &[],
         }
         .to_sol(out);
@@ -251,6 +254,7 @@ impl ToSol for Receive {
             inputs: &[],
             visibility: Some("external"),
             state_mutability: Some(self.state_mutability),
+            anonymous: false,
             outputs: &[],
         }
         .to_sol(out);
@@ -265,6 +269,7 @@ impl ToSol for Function {
             inputs: &self.inputs,
             visibility: Some("external"),
             state_mutability: Some(self.state_mutability),
+            anonymous: false,
             outputs: &self.outputs,
         }
         .to_sol(out);
@@ -277,6 +282,7 @@ struct AbiFunction<'a, IN> {
     inputs: &'a [IN],
     visibility: Option<&'static str>,
     state_mutability: Option<StateMutability>,
+    anonymous: bool,
     outputs: &'a [Param],
 }
 
@@ -318,6 +324,10 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
                 output.to_sol(out);
             }
             out.push(')');
+        }
+
+        if self.anonymous {
+            out.push_str(" anonymous");
         }
 
         out.push(';');
