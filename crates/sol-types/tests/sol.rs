@@ -430,6 +430,22 @@ fn enum_field_of_struct() {
     };
 }
 
+#[test]
+fn same_names_different_namespaces() {
+    sol! {
+        library RouterErrors {
+            error ReturnAmountIsNotEnough();
+            error InvalidMsgValue();
+            error ERC20TransferFailed();
+        }
+
+        library Errors {
+            error InvalidMsgValue();
+            error ETHTransferFailed();
+        }
+    }
+}
+
 // TODO
 // https://github.com/alloy-rs/core/issues/343
 #[test]
@@ -455,7 +471,7 @@ fn contract_type() {
 
 // TODO: make commented out code work
 #[test]
-fn paths_resolution_basic() {
+fn paths_resolution_1() {
     sol! {
         // library OrderRFQLib {
             struct OrderRFQ {
@@ -514,6 +530,26 @@ fn abigen_json_seaport() {
     assert_eq!(
         <BasicOrderParameters as SolStruct>::eip712_encode_type(),
         root_type.to_string() + component
+    );
+}
+
+// https://github.com/alloy-rs/core/issues/344
+#[test]
+#[cfg(feature = "json")]
+fn abigen_json_aggregation_router_v5() {
+    // There's multiple identical error objects in the JSON ABI
+    sol!(
+        AggregationRouterV5,
+        "../json-abi/tests/abi/AggregationRouterV5.json"
+    );
+
+    assert_eq!(
+        <AggregationRouterV5::ETHTransferFailed as SolError>::SIGNATURE,
+        "ETHTransferFailed()"
+    );
+    assert_eq!(
+        <AggregationRouterV5::InvalidMsgValue as SolError>::SIGNATURE,
+        "InvalidMsgValue()"
     );
 }
 
