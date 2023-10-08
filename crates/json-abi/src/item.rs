@@ -3,7 +3,7 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Selector, B256};
 use alloy_sol_type_parser::{Error as ParserError, Result as ParserResult};
 use core::str::FromStr;
-use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Declares all JSON ABI items.
 macro_rules! abi_items {
@@ -14,6 +14,10 @@ macro_rules! abi_items {
             $fvis:vis $field:ident : $type:ty,
         )*}
     )*) => {
+        trait FlattenStateMutability {
+            fn flatten(self) -> Self;
+        }
+
         $(
             abi_items!(@flatten, $(#[$attr])*, $vis, $name, $($name_lower),* { $($(#[$fattr])*, $fvis, $field, $type,)*});
 
@@ -64,6 +68,7 @@ macro_rules! abi_items {
             #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
             #[serde(rename = $name_lower, rename_all = "camelCase", tag = "type")]
             $vis struct $name {$(
+                $(#[$fattr])*
                 $fvis $field: $type,
             )*}
 
@@ -88,7 +93,7 @@ macro_rules! abi_items {
 
                         let dummy: Dummy = Deserialize::deserialize(deserializer)?;
 
-                        let mut res = $name {
+                        let res = $name {
                             $($field: dummy.$field),*
                         };
                         Ok(res.flatten())
@@ -105,6 +110,7 @@ macro_rules! abi_items {
             #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
             #[serde(rename = $name_lower, rename_all = "camelCase", tag = "type")]
             $vis struct $name {$(
+                $(#[$fattr])*
                 $fvis $field: $type,
             )*}
 
@@ -141,17 +147,13 @@ macro_rules! abi_items {
 
                         let dummy: Dummy = Deserialize::deserialize(deserializer)?;
 
-                        let mut res = $name {
+                        let res = $name {
                             $($field: dummy.$field),*
                         };
                         Ok(res.flatten())
                     }
             }
     };
-}
-
-pub trait FlattenStateMutability {
-    fn flatten(self) -> Self;
 }
 
 abi_items! {

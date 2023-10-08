@@ -6,7 +6,7 @@ use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent};
 use heck::ToSnakeCase;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
-use syn::{parse_quote, Attribute, Result};
+use syn::{ext::IdentExt, parse_quote, Attribute, Result};
 
 /// Expands an [`ItemContract`]:
 ///

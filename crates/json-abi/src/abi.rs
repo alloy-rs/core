@@ -1,5 +1,5 @@
 use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
-use alloc::{borrow::Cow, collections::btree_map, string::String, vec::Vec};
+use alloc::{collections::btree_map, string::String, vec::Vec};
 use alloy_primitives::Bytes;
 use alloy_sol_type_parser::{Error as ParserError, Result as ParserResult};
 use btree_map::BTreeMap;
