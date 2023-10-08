@@ -10,6 +10,7 @@ pub fn expand(name: Ident, json: ContractObject, attrs: Vec<Attribute>) -> Resul
         deployed_bytecode,
     } = json;
 
+    let abi = abi.ok_or_else(|| syn::Error::new(name.span(), "ABI not found in JSON"))?;
     let abi = expand_abi(&name, abi)?;
     let bytecode = bytecode.map(|bytes| {
         let s = bytes.to_string();
