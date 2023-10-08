@@ -26,7 +26,13 @@ pub struct SolIdent(pub Ident);
 
 impl quote::IdentFragment for SolIdent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
+        let str = self.0.to_string();
+        if RUST_KEYWORD_SET_DIFFERENCE.contains(&str.as_str()) {
+            Ident::new_raw(&str, self.0.span())
+        } else {
+            Ident::new(&str, self.0.span())
+        }
+        .fmt(f)
     }
 
     fn span(&self) -> Option<Span> {
@@ -36,7 +42,13 @@ impl quote::IdentFragment for SolIdent {
 
 impl fmt::Display for SolIdent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
+        let str = self.0.to_string();
+        if RUST_KEYWORD_SET_DIFFERENCE.contains(&str.as_str()) {
+            Ident::new_raw(&str, self.span())
+        } else {
+            Ident::new(&str, self.span())
+        }
+        .fmt(f)
     }
 }
 
@@ -118,16 +130,15 @@ impl SolIdent {
     ///
     /// See [`IdentExt::unraw`].
     pub fn unwrawed(mut self) -> Self {
-        // self = self.unraw();
-        self.clone()
+        self = self.unraw();
+        self
     }
 
     /// Strips the raw marker `r#`, if any, from the beginning of an ident.
     ///
     /// See [`IdentExt::unraw`].
     pub fn unraw(&self) -> Self {
-        self.clone()
-        // Self(self.0.unraw())
+        Self(self.0.unraw())
     }
 
     /// Returns the identifier as a string, without the `r#` prefix if present.

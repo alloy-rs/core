@@ -18,7 +18,7 @@ pub const fn is_id_start(c: char) -> bool {
 /// Returns `true` if the given character is valid in a Solidity identifier.
 #[inline]
 pub const fn is_id_continue(c: char) -> bool {
-    matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$' | '#')
+    matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$')
 }
 
 /// Returns `true` if the given string is a valid Solidity identifier.

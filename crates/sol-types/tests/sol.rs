@@ -563,6 +563,12 @@ fn abigen_json_0x_proxy() {
 }
 
 #[test]
+#[cfg(feature = "json")]
+fn abigen_dai() {
+    // sol!(Dai, "../json-abi/tests/abi/Dai.json");
+}
+
+#[test]
 fn eip712_encode_type_nesting() {
     sol! {
         struct A {
