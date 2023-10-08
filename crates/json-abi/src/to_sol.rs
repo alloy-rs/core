@@ -327,7 +327,7 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
         }
 
         if self.anonymous {
-            out.push_str("anonymous");
+            out.push_str(" anonymous");
         }
 
         out.push(';');
