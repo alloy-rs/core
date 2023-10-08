@@ -38,7 +38,7 @@ pub fn expand(name: Ident, json: ContractObject, attrs: Vec<Attribute>) -> Resul
 }
 
 /// Returns `sol!` tokens.
-fn expand_abi(name: &Ident, abi: JsonAbi) -> Result<TokenStream> {
+fn expand_abi(name: &Ident, mut abi: JsonAbi) -> Result<TokenStream> {
     let mk_err = |s: &str| {
         let msg = format!(
             "`JsonAbi::to_sol` generated invalid Rust tokens: {s}\n\
@@ -47,6 +47,7 @@ fn expand_abi(name: &Ident, abi: JsonAbi) -> Result<TokenStream> {
         );
         syn::Error::new(name.span(), msg)
     };
+    dedup_abi(&mut abi);
     let s = abi.to_sol(&name.to_string());
     let brace_idx = s.find('{').ok_or_else(|| mk_err("missing `{`"))?;
     let tts = syn::parse_str::<TokenStream>(&s[brace_idx..]).map_err(|e| mk_err(&e.to_string()))?;
@@ -57,6 +58,26 @@ fn expand_abi(name: &Ident, abi: JsonAbi) -> Result<TokenStream> {
     tokens.append(name.clone());
     tokens.extend(tts);
     Ok(tokens)
+}
+
+fn dedup_abi(abi: &mut JsonAbi) {
+    macro_rules! deduper {
+        () => {
+            |a, b| {
+                assert_eq!(a.name, b.name);
+                a.inputs == b.inputs
+            }
+        };
+    }
+    for functions in abi.functions.values_mut() {
+        functions.dedup_by(deduper!());
+    }
+    for errors in abi.errors.values_mut() {
+        errors.dedup_by(deduper!());
+    }
+    for events in abi.events.values_mut() {
+        events.dedup_by(deduper!());
+    }
 }
 
 #[track_caller]
@@ -72,29 +93,25 @@ mod tests {
     use ast::Item;
     use std::path::Path;
 
-    macro_rules! abi_tests {
-        ($($name:ident($path:literal))*) => {$(
-            #[test]
-            fn $name() {
-                parse_test(include_str!(concat!("../../json-abi/tests/", $path)), $path);
+    #[test]
+    #[cfg_attr(miri, ignore = "no fs")]
+    fn abi() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../json-abi/tests/abi");
+        for file in std::fs::read_dir(path).unwrap() {
+            let path = file.unwrap().path();
+            assert_eq!(path.extension(), Some("json".as_ref()));
+            if path.file_name() == Some("LargeFunction.json".as_ref()) {
+                continue
             }
-        )*};
-    }
-
-    abi_tests! {
-        abiencoderv2("abi/Abiencoderv2Test.json")
-        console("abi/console.json")
-        event_with_struct("abi/EventWithStruct.json")
-        large_array("abi/LargeArray.json")
-        large_struct("abi/LargeStruct.json")
-        large_structs("abi/LargeStructs.json")
-        large_tuple("abi/LargeTuple.json")
-        seaport("abi/Seaport.json")
-        udvts("abi/Udvts.json")
+            parse_test(
+                &std::fs::read_to_string(&path).unwrap(),
+                path.to_str().unwrap(),
+            );
+        }
     }
 
     #[allow(clippy::single_match)]
-    fn parse_test(s: &str, path: &'static str) {
+    fn parse_test(s: &str, path: &str) {
         let (c, name) = expand_test(s, path);
         match name {
             "Udvts" => {
@@ -163,7 +180,7 @@ mod tests {
         }
     }
 
-    fn expand_test(s: &str, path: &'static str) -> (ast::ItemContract, &'static str) {
+    fn expand_test<'a>(s: &str, path: &'a str) -> (ast::ItemContract, &'a str) {
         let abi: JsonAbi = serde_json::from_str(s).unwrap();
         let name = Path::new(path).file_stem().unwrap().to_str().unwrap();
         let tokens = expand_abi(&id(name), abi).expect("couldn't expand JSON ABI");
