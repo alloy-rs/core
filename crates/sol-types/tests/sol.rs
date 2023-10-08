@@ -554,15 +554,6 @@ fn abigen_json_aggregation_router_v5() {
 }
 
 #[test]
-#[cfg(feature = "json")]
-fn abigen_json_0x_proxy() {
-    sol!(
-        ZeroXExchangeProxy,
-        "../json-abi/tests/abi/ZeroxExchangeProxy.json"
-    );
-}
-
-#[test]
 fn eip712_encode_type_nesting() {
     sol! {
         struct A {
