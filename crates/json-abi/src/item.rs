@@ -68,6 +68,7 @@ macro_rules! abi_items {
             )*}
 
             impl FlattenStateMutability for $name {
+                #[inline(always)]
                 fn flatten(self) -> Self { self }
             }
 
@@ -108,14 +109,17 @@ macro_rules! abi_items {
             )*}
 
             impl FlattenStateMutability for $name {
+                #[inline(always)]
                 fn flatten(mut self) -> Self {
                     if self.state_mutability.is_some() {
                         return self
                     }
-                    if *self.payable.as_ref().unwrap() {
+                    if let Some(payable) = *self.payable.as_ref() {
+                        if *payable {
                         self.state_mutability = Some(StateMutability::Payable);
-                    } else {
-                        self.state_mutability = Some(StateMutability::NonPayable);
+                        } else {
+                            self.state_mutability = Some(StateMutability::NonPayable);
+                        }
                     }
 
                     self
