@@ -114,7 +114,7 @@ macro_rules! abi_items {
                     if self.state_mutability.is_some() {
                         return self
                     }
-                    if let Some(payable) = *self.payable.as_ref() {
+                    if let Some(payable) = self.payable.as_ref() {
                         if *payable {
                         self.state_mutability = Some(StateMutability::Payable);
                         } else {
