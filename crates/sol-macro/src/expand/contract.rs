@@ -428,20 +428,20 @@ fn generate_variant_conversions(name: &Ident, variant: &Ident, ty: &Ident) -> To
 }
 
 fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
-    let name_snake = snakify(&variant.to_string());
+    let name = variant.unraw();
+    let name_snake = snakify(&name.to_string());
 
     let is_variant = format_ident!("is_{name_snake}");
-    let is_variant_doc =
-        format!("Returns `true` if `self` matches [`{variant}`](Self::{variant}).");
+    let is_variant_doc = format!("Returns `true` if `self` matches [`{name}`](Self::{name}).");
 
     let as_variant = format_ident!("as_{name_snake}");
     let as_variant_doc = format!(
-        "Returns an immutable reference to the inner [`{ty}`] if `self` matches [`{variant}`](Self::{variant})."
+        "Returns an immutable reference to the inner [`{ty}`] if `self` matches [`{name}`](Self::{name})."
     );
 
     let as_variant_mut = format_ident!("as_{name_snake}_mut");
     let as_variant_mut_doc = format!(
-        "Returns a mutable reference to the inner [`{ty}`] if `self` matches [`{variant}`](Self::{variant})."
+        "Returns a mutable reference to the inner [`{ty}`] if `self` matches [`{name}`](Self::{name})."
     );
 
     quote! {

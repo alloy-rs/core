@@ -46,7 +46,7 @@ impl<T: ?Sized + AsRef<str>> PartialEq<T> for SolIdent {
 
 impl From<Ident> for SolIdent {
     fn from(value: Ident) -> Self {
-        Self::new_spanned(&value.to_string(), value.span())
+        Self(value)
     }
 }
 
@@ -111,7 +111,11 @@ impl SolIdent {
 
     /// Returns the identifier as a string, without the `r#` prefix if present.
     pub fn as_string(&self) -> String {
-        self.0.to_string()
+        let mut s = self.0.to_string();
+        if s.starts_with("r#") {
+            s = s[2..].to_string();
+        }
+        s
     }
 
     /// Parses any identifier including keywords.

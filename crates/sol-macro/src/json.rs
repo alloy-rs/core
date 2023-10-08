@@ -35,7 +35,6 @@ pub fn expand(name: Ident, json: ContractObject, attrs: Vec<Attribute>) -> Resul
         );
         syn::Error::new(name.span(), msg)
     })?;
-
     crate::expand::expand(ast)
 }
 
