@@ -5,11 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/alloy-rs/core/compare/v0.4.0...HEAD)
+## [0.4.1](https://github.com/alloy-rs/core/releases/tag/v0.4.1) - 2023-10-09
+
+### Bug Fixes
+
+- [sol-macro] Flatten doc strings correctly ([#357](https://github.com/alloy-rs/core/issues/357))
+- [json-abi] Fallback to tuple types for nested params in `to_sol` ([#354](https://github.com/alloy-rs/core/issues/354))
+- [sol-macro] Correct `TypeArray::is_abi_dynamic` ([#353](https://github.com/alloy-rs/core/issues/353))
+- [sol-macro] Dedup json abi items ([#346](https://github.com/alloy-rs/core/issues/346))
+- Json-abi not using anonymous when converting to interface ([#342](https://github.com/alloy-rs/core/issues/342))
+- [sol-macro] Remove extra 0x in function docs ([#341](https://github.com/alloy-rs/core/issues/341))
+- [sol-macro] Pass attributes to all generated items ([#340](https://github.com/alloy-rs/core/issues/340))
+- [syn-solidity] Set spans on generated struct names ([#336](https://github.com/alloy-rs/core/issues/336))
+- Serde rename resolver to types ([#335](https://github.com/alloy-rs/core/issues/335))
 
 ### Documentation
 
-- Fix changelog link
+- Add scope to changelog commits ([#328](https://github.com/alloy-rs/core/issues/328))
+- Fix changelog link ([#323](https://github.com/alloy-rs/core/issues/323))
+
+### Features
+
+- [sol-macro] Add docs to generated contract modules ([#356](https://github.com/alloy-rs/core/issues/356))
+- [json-abi] Deserialize more ContractObjects ([#348](https://github.com/alloy-rs/core/issues/348))
+- [sol-macro] Improve error messages ([#345](https://github.com/alloy-rs/core/issues/345))
+- [sol-types] Introduce `SolValue`, make `Encodable` an impl detail ([#333](https://github.com/alloy-rs/core/issues/333))
+- [syn-solidity] Add even more Display impls ([#339](https://github.com/alloy-rs/core/issues/339))
+- [sol-macro] Improve generated docs ([#338](https://github.com/alloy-rs/core/issues/338))
+- [syn-solidity] Add some more Display impls ([#337](https://github.com/alloy-rs/core/issues/337))
+- Add parsing support for JSON items ([#329](https://github.com/alloy-rs/core/issues/329))
+- Add logs, add log dynamic decoding ([#271](https://github.com/alloy-rs/core/issues/271))
+
+### Miscellaneous Tasks
+
+- [sol-types] Rewrite encodable impl generics ([#332](https://github.com/alloy-rs/core/issues/332))
+- Add count to all_the_tuples! macro ([#331](https://github.com/alloy-rs/core/issues/331))
+- Enable ruint std feature ([#326](https://github.com/alloy-rs/core/issues/326))
+- Fix typos ([#325](https://github.com/alloy-rs/core/issues/325))
+- [dyn-abi] Make `resolve` module private ([#324](https://github.com/alloy-rs/core/issues/324))
+
+### Other
+
+- Run miri in ci ([#327](https://github.com/alloy-rs/core/issues/327))
+
+### Testing
+
+- Add regression test for [#351](https://github.com/alloy-rs/core/issues/351) ([#355](https://github.com/alloy-rs/core/issues/355))
 
 ## [0.4.0](https://github.com/alloy-rs/core/releases/tag/v0.4.0) - 2023-09-29
 
