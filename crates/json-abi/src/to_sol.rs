@@ -341,6 +341,7 @@ impl ToSol for Param {
             self.internal_type.as_ref(),
             false,
             &self.name,
+            &self.components,
             out,
         );
     }
@@ -353,6 +354,7 @@ impl ToSol for EventParam {
             self.internal_type.as_ref(),
             self.indexed,
             &self.name,
+            &self.components,
             out,
         );
     }
@@ -363,17 +365,48 @@ fn param<'a>(
     internal_type: Option<&'a InternalType>,
     indexed: bool,
     name: &str,
+    components: &[Param],
     out: &mut String,
 ) {
     if let Some(it) = internal_type {
-        match it {
+        type_name = match it {
+            InternalType::AddressPayable(_) => "address payable",
+            InternalType::Contract(_) => "address",
             InternalType::Struct { ty, .. }
             | InternalType::Enum { ty, .. }
-            | InternalType::Other { ty, .. } => type_name = ty,
-            _ => {}
-        }
+            | InternalType::Other { ty, .. } => ty,
+        };
     };
-    out.push_str(type_name);
+
+    match type_name.strip_prefix("tuple") {
+        // This condition is met only for JSON ABIs emitted by Solc 0.4.X which don't contain
+        // `internalType` fields and instead all structs are emitted as unnamed tuples.
+        // See https://github.com/alloy-rs/core/issues/349
+        Some(rest) if rest.is_empty() || rest.starts_with('[') => {
+            // note: this does not actually emit valid Solidity because there are no inline
+            // tuple types `(T, U, V, ...)`, but it's valid for `sol!`.
+            out.push('(');
+            for (i, component) in components.iter().enumerate() {
+                if i > 0 {
+                    out.push_str(", ");
+                }
+                param(
+                    &component.ty,
+                    component.internal_type.as_ref(), // this is probably always None
+                    false,
+                    "", // don't emit names in types
+                    &component.components,
+                    out,
+                );
+            }
+            out.push(')');
+            // could be array sizes
+            out.push_str(rest);
+        }
+        // primitive type
+        _ => out.push_str(type_name),
+    }
+
     if indexed {
         out.push_str(" indexed");
     }

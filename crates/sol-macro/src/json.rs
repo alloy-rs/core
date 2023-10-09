@@ -92,7 +92,7 @@ fn id(s: impl AsRef<str>) -> Ident {
 mod tests {
     use super::*;
     use ast::Item;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     #[test]
     #[cfg_attr(miri, ignore = "no fs")]
@@ -184,15 +184,54 @@ mod tests {
     fn expand_test<'a>(s: &str, path: &'a str) -> (ast::ItemContract, &'a str) {
         let abi: JsonAbi = serde_json::from_str(s).unwrap();
         let name = Path::new(path).file_stem().unwrap().to_str().unwrap();
-        let tokens = expand_abi(&id(name), abi).expect("couldn't expand JSON ABI");
-        let ast: ast::File = syn::parse2(tokens).expect("couldn't ABI parse back to AST");
+
+        let tokens = match expand_abi(&id(name), abi.clone()) {
+            Ok(tokens) => tokens,
+            Err(e) => {
+                let path = write_tmp_sol(name, &abi.to_sol(name));
+                panic!(
+                    "couldn't expand JSON ABI for {name:?}: {e}\n\
+                     emitted interface: {}",
+                    path.display()
+                );
+            }
+        };
+
+        let ast = match syn::parse2::<ast::File>(tokens.clone()) {
+            Ok(ast) => ast,
+            Err(e) => {
+                let spath = write_tmp_sol(name, &abi.to_sol(name));
+                let tpath = write_tmp_sol(&format!("{name}.tokens"), &abi.to_sol(name));
+                panic!(
+                    "couldn't parse expanded JSON ABI back to AST for {name:?}: {e}\n\
+                     emitted interface: {}\n\
+                     emitted tokens:    {}",
+                    spath.display(),
+                    tpath.display(),
+                )
+            }
+        };
+
         let mut items = ast.items.into_iter();
         let Some(Item::Contract(c)) = items.next() else {
-            panic!()
+            panic!("first item is not a contract");
         };
         let next = items.next();
-        assert!(next.is_none(), "{next:#?}, {items:#?}");
-        assert!(!c.body.is_empty());
+        assert!(
+            next.is_none(),
+            "AST does not contain exactly one item: {next:#?}, {items:#?}"
+        );
+        assert!(!c.body.is_empty(), "generated contract is empty");
         (c, name)
+    }
+
+    fn write_tmp_sol(name: &str, contents: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!("sol-macro-{name}.sol"));
+        std::fs::write(&path, contents).unwrap();
+        let _ = std::process::Command::new("forge")
+            .arg("fmt")
+            .arg(&path)
+            .output();
+        path
     }
 }
