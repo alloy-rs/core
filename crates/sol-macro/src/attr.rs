@@ -24,6 +24,14 @@ pub fn docs(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|a| is_doc(a))
 }
 
+pub fn docs_str(attrs: &[Attribute]) -> String {
+    docs(attrs)
+        .filter_map(|attr| attr.parse_args::<LitStr>().ok())
+        .map(|doc| doc.value())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 pub fn derives(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|a| is_derive(a))
 }
