@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2](https://github.com/alloy-rs/core/releases/tag/v0.4.2) - 2023-10-09
+
+### Bug Fixes
+
+- [primitives] Set serde derive feature ([#359](https://github.com/alloy-rs/core/issues/359))
+
 ## [0.4.1](https://github.com/alloy-rs/core/releases/tag/v0.4.1) - 2023-10-09
 
 ### Bug Fixes
@@ -38,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.4.1
 - [sol-types] Rewrite encodable impl generics ([#332](https://github.com/alloy-rs/core/issues/332))
 - Add count to all_the_tuples! macro ([#331](https://github.com/alloy-rs/core/issues/331))
 - Enable ruint std feature ([#326](https://github.com/alloy-rs/core/issues/326))
