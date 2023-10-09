@@ -33,7 +33,7 @@ cfg-if.workspace = true
 alloy-rlp = { workspace = true, optional = true }
 
 # serde
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["derive"] }
 
 # getrandom
 getrandom = { workspace = true, optional = true }
@@ -50,7 +50,6 @@ proptest-derive = { workspace = true, optional = true }
 [dev-dependencies]
 bincode.workspace = true
 serde_json.workspace = true
-serde = { workspace = true, features = ["derive"] }
 
 [features]
 default = ["std"]
