@@ -24,12 +24,31 @@ pub fn docs(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|a| is_doc(a))
 }
 
+/// Flattens all the `#[doc = "..."]` attributes into a single string.
 pub fn docs_str(attrs: &[Attribute]) -> String {
-    docs(attrs)
-        .filter_map(|attr| attr.parse_args::<LitStr>().ok())
-        .map(|doc| doc.value())
-        .collect::<Vec<_>>()
-        .join("\n")
+    let mut doc = String::new();
+    for attr in docs(attrs) {
+        let syn::Meta::NameValue(syn::MetaNameValue {
+            value:
+                syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(s),
+                    ..
+                }),
+            ..
+        }) = &attr.meta
+        else {
+            continue
+        };
+
+        let value = s.value();
+        if !value.is_empty() {
+            if !doc.is_empty() {
+                doc.push('\n');
+            }
+            doc.push_str(&value);
+        }
+    }
+    doc
 }
 
 pub fn derives(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
