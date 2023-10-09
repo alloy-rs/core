@@ -213,9 +213,13 @@ impl JsonAbi {
         out.reserve((len + 1) * 128);
 
         out.push_str("interface ");
-        out.push_str(name);
+        if !name.is_empty() {
+            out.push_str(name);
+            out.push(' ');
+        }
         out.push('{');
-        if len != 0 {
+        if len > 0 {
+            out.push('\n');
             crate::to_sol::ToSol::to_sol(self, out);
         }
         out.push('}');

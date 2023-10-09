@@ -195,7 +195,7 @@ impl ToSol for It<'_> {
                     out.push_str(";\n");
                 }
                 out.push_str(INDENT);
-                out.push_str("}\n");
+                out.push('}');
             }
         }
     }

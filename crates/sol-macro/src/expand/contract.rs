@@ -102,11 +102,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         CallLikeExpander::from_events(cx, name, events).expand_event(attrs, extra_methods)
     });
 
-    let mod_docs =
-        docs.then(|| attr::mk_doc("Module containing a contract's types and functions."));
+    let mod_descr_doc = (docs && attr::docs_str(&mod_attrs).trim().is_empty())
+        .then(|| attr::mk_doc("Module containing a contract's types and functions."));
+    let mod_iface_doc = (docs && !attr::docs_str(&mod_attrs).contains("```solidity\n"))
+        .then(|| attr::mk_doc(format!("\n\n```solidity\n{contract}\n```")));
     let tokens = quote! {
-        #mod_docs
+        #mod_descr_doc
         #(#mod_attrs)*
+        #mod_iface_doc
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         pub mod #name {
             use super::*;
