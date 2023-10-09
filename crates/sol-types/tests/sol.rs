@@ -147,6 +147,7 @@ fn error() {
     assert_eq!(e.abi_encoded_size(), 64);
 }
 
+// Handle empty call encoding/decoding correctly
 // https://github.com/alloy-rs/core/issues/158
 #[test]
 fn empty_call() {
@@ -409,6 +410,7 @@ fn nested_items() {
     assert_eq!(f2Call::SIGNATURE, "f2((bytes,bool))");
 }
 
+// Allow enums as fields of structs
 // https://github.com/alloy-rs/core/issues/319
 #[test]
 fn enum_field_of_struct() {
@@ -456,9 +458,8 @@ fn rust_keywords() {
     }
 }
 
-// TODO
+// Translate contract types to `address`
 // https://github.com/alloy-rs/core/issues/347
-// https://github.com/alloy-rs/core/issues/351
 #[test]
 #[cfg(TODO)]
 fn contract_type() {
@@ -471,6 +472,7 @@ fn contract_type() {
     }
 }
 
+// Correctly identify whether a type is dynamic
 // https://github.com/alloy-rs/core/issues/352
 #[test]
 fn word_dynarray_event() {
@@ -548,11 +550,11 @@ fn abigen_json_seaport() {
     );
 }
 
+// Handle multiple identical error objects in the JSON ABI
 // https://github.com/alloy-rs/core/issues/344
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_aggregation_router_v5() {
-    // There's multiple identical error objects in the JSON ABI
     sol!(
         AggregationRouterV5,
         "../json-abi/tests/abi/AggregationRouterV5.json"
@@ -565,6 +567,38 @@ fn abigen_json_aggregation_router_v5() {
     assert_eq!(
         <AggregationRouterV5::InvalidMsgValue as SolError>::SIGNATURE,
         "InvalidMsgValue()"
+    );
+}
+
+// Handle contract types in JSON ABI
+// https://github.com/alloy-rs/core/issues/351
+#[test]
+#[cfg(feature = "json")]
+fn abigen_json_uniswap_v3_position() {
+    sol!(
+        UniswapV3Position,
+        "../json-abi/tests/abi/UniswapV3Position.json"
+    );
+
+    let _ = UniswapV3Position::getLiquidityByRangeCall {
+        pool_: Address::ZERO,
+        self_: Address::ZERO,
+        lowerTick_: 0,
+        upperTick_: 0,
+    };
+    assert_eq!(
+        UniswapV3Position::getLiquidityByRangeCall::SIGNATURE,
+        "getLiquidityByRange(address,address,int24,int24)"
+    );
+
+    let _ = UniswapV3Position::getPositionIdCall {
+        self_: Address::ZERO,
+        lowerTick_: 0,
+        upperTick_: 0,
+    };
+    assert_eq!(
+        UniswapV3Position::getPositionIdCall::SIGNATURE,
+        "getPositionId(address,int24,int24)"
     );
 }
 
