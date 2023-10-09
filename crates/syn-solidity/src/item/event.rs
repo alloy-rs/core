@@ -2,7 +2,7 @@ use crate::{
     kw, utils::DebugPunctuated, ParameterList, SolIdent, Spanned, Type, VariableDeclaration,
 };
 use proc_macro2::Span;
-use std::fmt::{self, Debug};
+use std::fmt;
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream},
@@ -176,6 +176,19 @@ pub struct EventParameter {
     pub ty: Type,
     pub indexed: Option<kw::indexed>,
     pub name: Option<SolIdent>,
+}
+
+impl fmt::Display for EventParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.ty.fmt(f)?;
+        if self.indexed.is_some() {
+            f.write_str(" indexed")?;
+        }
+        if let Some(name) = &self.name {
+            write!(f, " {name}")?;
+        }
+        Ok(())
+    }
 }
 
 impl fmt::Debug for EventParameter {
