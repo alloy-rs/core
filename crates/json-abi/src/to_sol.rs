@@ -384,8 +384,8 @@ fn param<'a>(
         // See https://github.com/alloy-rs/core/issues/349
         Some(rest) if rest.is_empty() || rest.starts_with('[') => {
             // note: this does not actually emit valid Solidity because there are no inline
-            // tuple types (`(T, U, V, ...)`), but it's valid for `sol!`.
-            out.push_str("(");
+            // tuple types `(T, U, V, ...)`, but it's valid for `sol!`.
+            out.push('(');
             for (i, component) in components.iter().enumerate() {
                 if i > 0 {
                     out.push_str(", ");
