@@ -457,6 +457,8 @@ fn rust_keywords() {
 }
 
 // TODO
+// https://github.com/alloy-rs/core/issues/347
+// https://github.com/alloy-rs/core/issues/351
 #[test]
 #[cfg(TODO)]
 fn contract_type() {
@@ -466,6 +468,19 @@ fn contract_type() {
         struct Struct {
             IERC20 addr;
         }
+    }
+}
+
+// https://github.com/alloy-rs/core/issues/352
+#[test]
+fn word_dynarray_event() {
+    sol! {
+        event Dynamic1(string[] indexed);
+        event Dynamic2(string[] indexed, bytes[] indexed);
+
+        event Word1(address[] indexed);
+        event Word2(address[] indexed, bytes32[] indexed);
+        event Word3(address[] indexed, bytes32[] indexed, uint256[] indexed);
     }
 }
 

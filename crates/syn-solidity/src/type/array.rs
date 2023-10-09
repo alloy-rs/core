@@ -94,8 +94,8 @@ impl TypeArray {
     /// See [`Type::is_abi_dynamic`].
     pub fn is_abi_dynamic(&self) -> bool {
         match self.size {
-            Some(_) => false,
-            None => self.ty.is_abi_dynamic(),
+            Some(_) => self.ty.is_abi_dynamic(),
+            None => true,
         }
     }
 
