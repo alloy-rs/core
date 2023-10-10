@@ -46,8 +46,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
         ))
     });
     let tokens = quote! {
-        #doc
         #(#attrs)*
+        #doc
         #[allow(non_camel_case_types, non_snake_case)]
         #[derive(Clone)]
         pub struct #name {
