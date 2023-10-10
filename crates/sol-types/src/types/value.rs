@@ -182,10 +182,6 @@ impl_sol_value! {
     [] i64 => sol_data::Int::<64> [];
     [] i128 => sol_data::Int::<128> [];
     [] I256 => sol_data::Int::<256> [];
-    #[cfg(pointer_width = "32")]
-    [] isize => sol_data::Int::<32> [];
-    #[cfg(pointer_width = "64")]
-    [] isize => sol_data::Int::<64> [];
 
     // TODO: `u8` is specialized to encode as `bytes` or `bytesN`
     // [] u8 => sol_data::Uint::<8> [];
@@ -194,10 +190,6 @@ impl_sol_value! {
     [] u64 => sol_data::Uint::<64> [];
     [] u128 => sol_data::Uint::<128> [];
     [] U256 => sol_data::Uint::<256> [];
-    #[cfg(pointer_width = "32")]
-    [] usize => sol_data::Uint::<32> [];
-    #[cfg(pointer_width = "64")]
-    [] usize => sol_data::Uint::<64> [];
 
     [] Address => sol_data::Address [];
     [] Function => sol_data::Function [];
