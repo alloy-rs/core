@@ -114,8 +114,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         ))
     });
     let tokens = quote! {
-        #doc
         #(#attrs)*
+        #doc
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         pub struct #name {
             #(pub #fields,)*
