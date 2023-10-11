@@ -73,9 +73,10 @@ impl fmt::Display for FieldList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, field) in self.iter().enumerate() {
             if i > 0 {
-                f.write_str("; ")?;
+                f.write_str(" ")?;
             }
             field.fmt(f)?;
+            f.write_str(";")?;
         }
         Ok(())
     }
