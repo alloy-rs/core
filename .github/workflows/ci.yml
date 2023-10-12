@@ -31,9 +31,9 @@ jobs:
               with:
                   cache-on-failure: true
             # Only run tests on latest stable and above
-            - name: check
+            - name: build
               if: ${{ matrix.rust == '1.65' }} # MSRV
-              run: cargo check --workspace ${{ matrix.flags }}
+              run: cargo build --workspace ${{ matrix.flags }}
             - name: test
               if: ${{ matrix.rust != '1.65' }} # MSRV
               run: cargo test --workspace ${{ matrix.flags }}
