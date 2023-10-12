@@ -1,4 +1,4 @@
-use alloy_primitives::{keccak256, Address, B256, I256, U256};
+use alloy_primitives::{hex, keccak256, Address, B256, I256, U256};
 use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolStruct, SolType};
 use serde::Serialize;
 use serde_json::Value;
@@ -127,6 +127,51 @@ fn function() {
     assert_eq!(
         call.abi_encoded_size(),
         32 + (64 + 32) + (64 + 32 + 32) + (64 + 3 * 32) + 2 * 32 + (32 + 32) + (64 + 4 * (32 + 32))
+    );
+}
+
+#[test]
+fn function_returns() {
+    sol! {
+        #[derive(Debug, PartialEq)]
+        function test() returns (uint256[]);
+    }
+    assert_eq!(
+        testCall::abi_decode_returns(
+            &hex!(
+                "0000000000000000000000000000000000000000000000000000000000000020
+                 0000000000000000000000000000000000000000000000000000000000000000"
+            ),
+            true,
+        ),
+        Ok(testReturn { _0: vec![] })
+    );
+    assert_eq!(
+        testCall::abi_decode_returns(
+            &hex!(
+                "0000000000000000000000000000000000000000000000000000000000000020
+                 0000000000000000000000000000000000000000000000000000000000000001
+                 0000000000000000000000000000000000000000000000000000000000000002"
+            ),
+            true,
+        ),
+        Ok(testReturn {
+            _0: vec![U256::from(2)]
+        })
+    );
+    assert_eq!(
+        testCall::abi_decode_returns(
+            &hex!(
+                "0000000000000000000000000000000000000000000000000000000000000020
+                 0000000000000000000000000000000000000000000000000000000000000002
+                 0000000000000000000000000000000000000000000000000000000000000042
+                 0000000000000000000000000000000000000000000000000000000000000069"
+            ),
+            true,
+        ),
+        Ok(testReturn {
+            _0: vec![U256::from(0x42), U256::from(0x69)]
+        })
     );
 }
 
