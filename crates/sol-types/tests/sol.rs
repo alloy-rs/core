@@ -557,6 +557,21 @@ fn paths_resolution_1() {
     }
 }
 
+// Correctly expand the `tokenize` function statements for events
+// https://github.com/alloy-rs/core/issues/361
+#[test]
+fn event_tokenize_fields() {
+    sol! {
+        event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
+    }
+    let _ = PairCreated {
+        token0: Address::ZERO,
+        token1: Address::ZERO,
+        pair: Address::ZERO,
+        _3: U256::ZERO,
+    };
+}
+
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_large_array() {
@@ -645,6 +660,59 @@ fn abigen_json_uniswap_v3_position() {
         UniswapV3Position::getPositionIdCall::SIGNATURE,
         "getPositionId(address,int24,int24)"
     );
+}
+
+// Ensure a trailing comma for single-element tuples in old JSON ABI
+// https://github.com/alloy-rs/core/issues/360
+#[test]
+#[cfg(feature = "json")]
+fn abigen_json_double_exponent_interest_setter() {
+    sol!(
+        DoubleExponentInterestSetter,
+        "../json-abi/tests/abi/DoubleExponentInterestSetter.json"
+    );
+    let _ = DoubleExponentInterestSetter::getInterestRateCall {
+        _0: Address::ZERO,
+        borrowWei: U256::ZERO,
+        supplyWei: U256::ZERO,
+    };
+}
+
+// Same as `event_tokenize_fields`
+// https://github.com/alloy-rs/core/issues/361
+#[test]
+#[cfg(feature = "json")]
+fn abigen_json_uniswap_v2_factory() {
+    sol!(
+        UniswapV2Factory,
+        "../json-abi/tests/abi/UniswapV2Factory.json"
+    );
+    let _ = UniswapV2Factory::PairCreated {
+        token0: Address::ZERO,
+        token1: Address::ZERO,
+        pair: Address::ZERO,
+        _3: U256::ZERO,
+    };
+}
+
+// Fully qualify `SolInterface::NAME` which conflicted with the `NAME` call
+// https://github.com/alloy-rs/core/issues/361
+#[test]
+#[cfg(feature = "json")]
+fn abigen_json_gnosis_safe() {
+    sol!(GnosisSafe, "../json-abi/tests/abi/GnosisSafe.json");
+    let GnosisSafe::NAMECall {} = GnosisSafe::NAMECall {};
+    let GnosisSafe::NAMEReturn { _0: _ } = GnosisSafe::NAMEReturn { _0: String::new() };
+}
+
+// Have enough recursion depth to handle `BlurExchange` types
+// https://github.com/alloy-rs/core/issues/371
+#[test]
+#[cfg(feature = "json")]
+fn abigen_json_blur_exchange() {
+    sol!(BlurExchange, "../json-abi/tests/abi/BlurExchange.json");
+    let BlurExchange::NAMECall {} = BlurExchange::NAMECall {};
+    let BlurExchange::NAMEReturn { _0: _ } = BlurExchange::NAMEReturn { _0: String::new() };
 }
 
 #[test]

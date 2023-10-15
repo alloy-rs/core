@@ -1,6 +1,6 @@
 //! [`ItemError`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, ty::expand_tokenize_func, ExpCtxt};
+use super::{expand_fields, expand_from_into_tuples, expand_tokenize, ExpCtxt};
 use crate::attr;
 use ast::ItemError;
 use proc_macro2::TokenStream;
@@ -31,7 +31,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     cx.derives(&mut attrs, params, true);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
-    let tokenize_impl = expand_tokenize_func(params.iter());
+    let tokenize_impl = expand_tokenize(params);
 
     let signature = cx.error_signature(error);
     let selector = crate::utils::selector(&signature);

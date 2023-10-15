@@ -1,6 +1,6 @@
 //! [`ItemEvent`] expansion.
 
-use super::{anon_name, expand_tuple_types, expand_type, ty, ExpCtxt};
+use super::{anon_name, expand_event_tokenize, expand_tuple_types, expand_type, ty, ExpCtxt};
 use crate::attr;
 use ast::{EventParameter, ItemEvent, SolIdent, Spanned};
 use proc_macro2::TokenStream;
@@ -98,7 +98,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .enumerate()
         .map(|(i, p)| expand_event_topic_field(i, p, p.name.as_ref()));
 
-    let tokenize_body_impl = ty::expand_event_tokenize_func(event.parameters.iter());
+    let tokenize_body_impl = expand_event_tokenize(&event.parameters);
 
     let encode_topics_impl = encode_first_topic
         .into_iter()

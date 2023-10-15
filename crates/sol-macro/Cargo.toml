@@ -27,15 +27,16 @@ proc-macro2.workspace = true
 quote.workspace = true
 syn = { workspace = true, features = ["extra-traits"] }
 
-dunce = "1"
+dunce = "1.0"
 heck = "0.4"
-tiny-keccak = { workspace = true, features = ["keccak"] }
 hex.workspace = true
+indexmap = "2.0"
+proc-macro-error = "1.0"
+tiny-keccak = { workspace = true, features = ["keccak"] }
 
 # json
 alloy-json-abi = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
-proc-macro-error = "1.0.4"
 
 [features]
 json = ["dep:alloy-json-abi", "dep:serde_json"]

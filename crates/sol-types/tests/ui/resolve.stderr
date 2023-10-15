@@ -1,0 +1,23 @@
+error: failed to resolve types.
+       This is likely due to an infinitely recursive type definition.
+       If you believe this is a bug, please file an issue at https://github.com/alloy-rs/core/issues/new/choose
+ --> tests/ui/resolve.rs:4:12
+  |
+4 |     struct A {
+  |            ^
+
+error: failed to resolve types.
+       This is likely due to an infinitely recursive type definition.
+       If you believe this is a bug, please file an issue at https://github.com/alloy-rs/core/issues/new/choose
+  --> tests/ui/resolve.rs:14:12
+   |
+14 |     struct A {
+   |            ^
+
+error: failed to resolve types.
+       This is likely due to an infinitely recursive type definition.
+       If you believe this is a bug, please file an issue at https://github.com/alloy-rs/core/issues/new/choose
+  --> tests/ui/resolve.rs:28:12
+   |
+28 |     struct A {
+   |            ^

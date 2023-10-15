@@ -6,12 +6,13 @@ use crate::{
     utils::{self, ExprArray},
 };
 use ast::{
-    File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath, Spanned, Type,
-    VariableDeclaration, Visit,
+    EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath,
+    Spanned, Type, VariableDeclaration, Visit,
 };
+use indexmap::IndexMap;
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, TokenStreamExt};
-use std::{borrow::Borrow, collections::HashMap, fmt::Write};
+use std::{borrow::Borrow, fmt::Write};
 use syn::{parse_quote, Attribute, Error, Result};
 
 mod ty;
@@ -27,9 +28,9 @@ mod udt;
 mod var_def;
 
 /// The limit for the number of times to resolve a type.
-const RESOLVE_LIMIT: usize = 8;
+const RESOLVE_LIMIT: usize = 32;
 
-/// The [`sol!`][crate::sol!] expansion implementation.
+/// The [`sol!`](crate::sol!) expansion implementation.
 pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
 }
@@ -37,12 +38,12 @@ pub fn expand(ast: File) -> Result<TokenStream> {
 /// The expansion context.
 struct ExpCtxt<'ast> {
     all_items: Vec<&'ast Item>,
-    custom_types: HashMap<SolIdent, Type>,
+    custom_types: IndexMap<SolIdent, Type>,
 
     /// `name => item`
-    overloaded_items: HashMap<String, Vec<OverloadedItem<'ast>>>,
+    overloaded_items: IndexMap<String, Vec<OverloadedItem<'ast>>>,
     /// `signature => new_name`
-    overloads: HashMap<String, String>,
+    overloads: IndexMap<String, String>,
 
     attrs: SolAttrs,
     ast: &'ast File,
@@ -53,9 +54,9 @@ impl<'ast> ExpCtxt<'ast> {
     fn new(ast: &'ast File) -> Self {
         Self {
             all_items: Vec::new(),
-            custom_types: HashMap::new(),
-            overloaded_items: HashMap::new(),
-            overloads: HashMap::new(),
+            custom_types: IndexMap::new(),
+            overloaded_items: IndexMap::new(),
+            overloads: IndexMap::new(),
             attrs: SolAttrs::default(),
             ast,
         }
@@ -138,12 +139,8 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn resolve_custom_types(&mut self) {
         self.mk_types_map();
-        // you won't get me this time, borrow checker
-        // SAFETY: no data races, we don't modify the map while we're iterating
-        // I think this is safe anyway
-        let map_ref: &mut HashMap<SolIdent, Type> =
-            unsafe { &mut *(&mut self.custom_types as *mut _) };
-        for ty in map_ref.values_mut() {
+        let map = self.custom_types.clone();
+        for ty in self.custom_types.values_mut() {
             let mut i = 0;
             ty.visit_mut(|ty| {
                 if i >= RESOLVE_LIMIT {
@@ -153,7 +150,7 @@ impl<'ast> ExpCtxt<'ast> {
                 let Type::Custom(name) = &*ty else {
                     unreachable!()
                 };
-                let Some(resolved) = self.try_custom_type(name) else {
+                let Some(resolved) = map.get(name.last()) else {
                     return
                 };
                 ty.clone_from(resolved);
@@ -596,4 +593,40 @@ fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
     let wrap_in_parens =
         |stream| TokenStream::from(TokenTree::Group(Group::new(Delimiter::Parenthesis, stream)));
     (wrap_in_parens(sol), wrap_in_parens(rust))
+}
+
+/// Expand the body of a `tokenize` function.
+fn expand_tokenize<P>(params: &Parameters<P>) -> TokenStream {
+    tokenize_(
+        params
+            .iter()
+            .enumerate()
+            .map(|(i, p)| (i, &p.ty, p.name.as_ref())),
+    )
+}
+
+/// Expand the body of a `tokenize` function.
+fn expand_event_tokenize<'a>(params: impl IntoIterator<Item = &'a EventParameter>) -> TokenStream {
+    tokenize_(
+        params
+            .into_iter()
+            .enumerate()
+            .filter(|(_, p)| !p.is_indexed())
+            .map(|(i, p)| (i, &p.ty, p.name.as_ref())),
+    )
+}
+
+fn tokenize_<'a>(
+    iter: impl Iterator<Item = (usize, &'a Type, Option<&'a SolIdent>)>,
+) -> TokenStream {
+    let statements = iter.into_iter().map(|(i, ty, name)| {
+        let ty = expand_type(ty);
+        let name = name.cloned().unwrap_or_else(|| generate_name(i).into());
+        quote! {
+            <#ty as ::alloy_sol_types::SolType>::tokenize(&self.#name)
+        }
+    });
+    quote! {
+        (#(#statements,)*)
+    }
 }

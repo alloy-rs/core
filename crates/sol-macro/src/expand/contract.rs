@@ -293,7 +293,7 @@ impl<'a> CallLikeExpander<'a> {
                 }
 
                 #[inline]
-                fn selector_at(i: usize) -> Option<[u8; 4]> {
+                fn selector_at(i: usize) -> ::core::option::Option<[u8; 4]> {
                     Self::SELECTORS.get(i).copied()
                 }
 
@@ -314,7 +314,7 @@ impl<'a> CallLikeExpander<'a> {
                                 .map(Self::#variants)
                         })*
                         s => ::core::result::Result::Err(::alloy_sol_types::Error::unknown_selector(
-                            Self::NAME,
+                            <Self as ::alloy_sol_types::SolInterface>::NAME,
                             s,
                         )),
                     }
