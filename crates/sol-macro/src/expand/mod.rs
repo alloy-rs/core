@@ -596,7 +596,7 @@ fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
 }
 
 /// Expand the body of a `tokenize` function.
-fn expand_tokenize<'a, P>(params: &'a Parameters<P>) -> TokenStream {
+fn expand_tokenize<P>(params: &Parameters<P>) -> TokenStream {
     tokenize_(
         params
             .iter()
