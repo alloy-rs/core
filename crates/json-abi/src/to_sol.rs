@@ -399,6 +399,10 @@ fn param<'a>(
                     out,
                 );
             }
+            // trailing comma for single-element tuples
+            if components.len() == 1 {
+                out.push(',');
+            }
             out.push(')');
             // could be array sizes
             out.push_str(rest);

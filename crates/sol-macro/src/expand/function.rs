@@ -1,8 +1,6 @@
 //! [`ItemFunction`] expansion.
 
-use super::{
-    expand_fields, expand_from_into_tuples, expand_tuple_types, ty::expand_tokenize_func, ExpCtxt,
-};
+use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt};
 use crate::attr;
 use ast::ItemFunction;
 use proc_macro2::TokenStream;
@@ -66,7 +64,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);
-    let tokenize_impl = expand_tokenize_func(arguments.iter());
+    let tokenize_impl = expand_tokenize(arguments);
 
     let call_doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array);

@@ -43,6 +43,9 @@ impl fmt::Display for TypeTuple {
             }
             ty.fmt(f)?;
         }
+        if self.types.len() == 1 {
+            f.write_str(",")?;
+        }
         f.write_str(")")
     }
 }

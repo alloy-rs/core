@@ -1,8 +1,6 @@
 //! [`ItemStruct`] expansion.
 
-use super::{
-    expand_fields, expand_from_into_tuples, expand_type, ty::expand_tokenize_func, ExpCtxt,
-};
+use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_type, ExpCtxt};
 use ast::{Item, ItemStruct, Spanned, Type};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -43,7 +41,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
     let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, name);
 
-    let tokenize_impl = expand_tokenize_func(fields.iter());
+    let tokenize_impl = expand_tokenize(fields);
 
     let encode_data_impl = match fields.len() {
         0 => unreachable!("struct with zero fields"),
