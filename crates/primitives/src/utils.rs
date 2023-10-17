@@ -77,16 +77,17 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> FixedBytes<32> {
     keccak256(bytes.as_ref())
 }
 
-// test vector taken from:
-// https://web3js.readthedocs.io/en/v1.2.2/web3-eth-accounts.html#hashmessage
-#[test]
-fn test_hash_message() {
-    let hash = eip191_hash_message("Hello World");
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    assert_eq!(
-        hash,
-        "a1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2"
-            .parse::<B256>()
-            .unwrap()
-    );
+    // test vector taken from:
+    // https://web3js.readthedocs.io/en/v1.2.2/web3-eth-accounts.html#hashmessage
+    #[test]
+    fn test_hash_message() {
+        assert_eq!(
+            eip191_hash_message("Hello World"),
+            b256!("a1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2")
+        );
+    }
 }

@@ -9,7 +9,7 @@ use alloc::{
 use alloy_primitives::U256;
 use core::{borrow::Borrow, fmt};
 
-/// Solidity Error (a tuple with a selector)
+/// A Solidity custom error.
 ///
 /// # Implementer's Guide
 ///

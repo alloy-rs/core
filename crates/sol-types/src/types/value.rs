@@ -8,7 +8,7 @@ use crate::{
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256};
 
-/// Solidity values.
+/// A Solidity value.
 ///
 /// This is a convenience trait that re-exports the logic in [`SolType`] with
 /// less generic implementations so that they can be used as methods with `self`

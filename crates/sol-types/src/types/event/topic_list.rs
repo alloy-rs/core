@@ -6,7 +6,7 @@ mod sealed {
 }
 use sealed::Sealed;
 
-/// A `TopicList` represents the topics of a Solidity event.
+/// A list of Solidity event topics.
 ///
 /// This trait is implemented only on tuples of arity up to 4. The tuples must
 /// contain only [`SolType`]s where the token is a [`WordToken`], and as such
