@@ -3,7 +3,7 @@
 
 use super::SolType;
 use crate::Eip712Domain;
-use alloc::{borrow::Cow, vec::Vec};
+use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, B256};
 
 /// A Solidity struct.
