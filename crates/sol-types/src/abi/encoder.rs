@@ -22,7 +22,7 @@ use core::{mem, ptr};
 #[derive(Default, Clone, Debug)]
 pub struct Encoder {
     buf: Vec<Word>,
-    suffix_offset: Vec<u32>,
+    suffix_offset: Vec<usize>,
 }
 
 impl Encoder {
@@ -40,7 +40,9 @@ impl Encoder {
     pub fn with_capacity(size: usize) -> Self {
         Self {
             buf: Vec::with_capacity(size),
-            suffix_offset: Vec::with_capacity(8),
+            // Note: this has to be non-zero even if it won't get used. The compiler will optimize
+            // it out, but it won't for `Vec::new` (??).
+            suffix_offset: Vec::with_capacity(4),
         }
     }
 
@@ -58,39 +60,39 @@ impl Encoder {
     #[inline]
     pub fn into_bytes(self) -> Vec<u8> {
         // TODO: remove once `Vec::into_flattened` is stabilized.
-        // unsafe { mem::transmute::<Vec<_>, Vec<[u8; 32]>>(self.buf).into_flattened() }
+        // unsafe { mem::transmute::<Vec<_>, Vec<[u8; 32]>>(self.buf) }.into_flattened()
 
         // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`
-        unsafe { crate::impl_core::into_flattened::<u8, 32>(mem::transmute(self.buf)) }
+        crate::impl_core::into_flattened::<u8, 32>(unsafe { mem::transmute(self.buf) })
     }
 
     /// Determine the current suffix offset.
     ///
     /// # Panics
     ///
-    /// This method panics if there is no current suffix offset.
+    /// Panics if there is no current suffix offset.
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub fn suffix_offset(&self) -> u32 {
+    pub fn suffix_offset(&self) -> usize {
         debug_assert!(!self.suffix_offset.is_empty());
         unsafe { *self.suffix_offset.last().unwrap_unchecked() }
     }
 
     /// Appends a suffix offset.
     #[inline]
-    pub fn push_offset(&mut self, words: u32) {
+    pub fn push_offset(&mut self, words: usize) {
         self.suffix_offset.push(words * 32);
     }
 
     /// Removes the last offset and returns it.
     #[inline]
-    pub fn pop_offset(&mut self) -> Option<u32> {
+    pub fn pop_offset(&mut self) -> Option<usize> {
         self.suffix_offset.pop()
     }
 
     /// Bump the suffix offset by a given number of words.
     #[inline]
-    pub fn bump_offset(&mut self, words: u32) {
+    pub fn bump_offset(&mut self, words: usize) {
         if let Some(last) = self.suffix_offset.last_mut() {
             *last += words * 32;
         }
@@ -106,17 +108,17 @@ impl Encoder {
     ///
     /// # Panics
     ///
-    /// This method panics if there is no current suffix offset.
+    /// Panics if there is no current suffix offset.
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn append_indirection(&mut self) {
-        self.append_word(utils::pad_u32(self.suffix_offset()));
+        self.append_word(utils::pad_usize(self.suffix_offset()));
     }
 
     /// Append a sequence length.
     #[inline]
     pub fn append_seq_len(&mut self, len: usize) {
-        self.append_word(utils::pad_u32(len as u32));
+        self.append_word(utils::pad_usize(len));
     }
 
     /// Append a sequence of bytes as a packed sequence with a length prefix.
@@ -165,7 +167,7 @@ impl Encoder {
 /// you are not intending to use raw tokens.
 ///
 /// See the [`abi`](super) module for more information.
-#[inline]
+#[inline(always)]
 pub fn encode<'a, T: TokenType<'a>>(token: &T) -> Vec<u8> {
     encode_sequence::<(T,)>(tuple_from_ref(token))
 }
@@ -178,7 +180,7 @@ pub fn encode<'a, T: TokenType<'a>>(token: &T) -> Vec<u8> {
 /// you are not intending to use raw tokens.
 ///
 /// See the [`abi`](super) module for more information.
-#[inline]
+#[inline(always)]
 pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
     if T::IS_TUPLE {
         encode_sequence(token)
@@ -194,9 +196,10 @@ pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
 /// you are not intending to use raw tokens.
 ///
 /// See the [`abi`](super) module for more information.
-pub fn encode_sequence<'a, T: TokenSeq<'a>>(tokens: &T) -> Vec<u8> {
-    let mut enc = Encoder::with_capacity(tokens.total_words());
-    enc.append_head_tail(tokens);
+#[inline]
+pub fn encode_sequence<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
+    let mut enc = Encoder::with_capacity(token.total_words());
+    enc.append_head_tail(token);
     enc.into_bytes()
 }
 

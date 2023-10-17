@@ -473,7 +473,7 @@ impl SolType for String {
         // prevent invalid strings written into contracts by either users or
         // Solidity bugs from causing graph-node to fail decoding event
         // data.
-        RustString::from_utf8_lossy(&Bytes::detokenize(token)).into_owned()
+        RustString::from_utf8_lossy(token.as_slice()).into_owned()
     }
 }
 

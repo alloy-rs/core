@@ -396,7 +396,7 @@ macro_rules! impl_getrandom {
         ///
         /// # Panics
         ///
-        /// This function panics if the underlying call to `getrandom_uninit`
+        /// Panics if the underlying call to `getrandom_uninit`
         /// fails.
         #[inline]
         #[track_caller]
@@ -420,7 +420,7 @@ macro_rules! impl_getrandom {
         ///
         /// # Panics
         ///
-        /// This function panics if the underlying call to `getrandom_uninit` fails.
+        /// Panics if the underlying call to `getrandom_uninit` fails.
         #[inline]
         #[track_caller]
         pub fn randomize(&mut self) {

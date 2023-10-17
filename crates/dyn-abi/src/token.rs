@@ -149,12 +149,12 @@ impl<'a> DynToken<'a> {
                 self.decode_sequence_populate(&mut child)?;
 
                 if !dynamic {
-                    dec.take_offset(child);
+                    dec.take_offset_from(&child);
                 }
             }
             Self::DynSeq { contents, template } => {
                 let mut child = dec.take_indirection()?;
-                let size = child.take_u32()? as usize;
+                let size = child.take_offset()?;
                 if size == 0 {
                     // should already be empty from `empty_dyn_token`
                     debug_assert!(contents.is_empty());

@@ -210,7 +210,7 @@ impl Address {
     ///
     /// # Panics
     ///
-    /// This method panics if `buf` is not exactly 42 bytes long.
+    /// Panics if `buf` is not exactly 42 bytes long.
     ///
     /// # Examples
     ///

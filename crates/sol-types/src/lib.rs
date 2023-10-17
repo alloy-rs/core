@@ -227,6 +227,7 @@ pub mod private {
         // Note: methods are prefixed with `stv_` to avoid name collisions with
         // the `SolValue` trait.
         fn stv_to_tokens(&self) -> T::TokenType<'_>;
+        #[inline(always)]
         fn stv_abi_encoded_size(&self) -> usize {
             T::ENCODED_SIZE.unwrap()
         }

@@ -58,7 +58,8 @@ impl Eip712Domain {
 
     /// Instantiate a new EIP-712 domain.
     ///
-    /// Use the [`eip712_domain!`] macro for easier instantiation.
+    /// Use the [`eip712_domain!`](crate::eip712_domain!) macro for easier
+    /// instantiation.
     #[inline]
     pub const fn new(
         name: Option<Cow<'static, str>>,

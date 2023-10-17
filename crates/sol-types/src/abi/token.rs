@@ -118,6 +118,7 @@ impl From<U256> for WordToken {
 }
 
 impl From<I256> for WordToken {
+    #[inline]
     fn from(value: I256) -> Self {
         Self(value.into())
     }
@@ -156,7 +157,7 @@ impl<'a> TokenType<'a> for WordToken {
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'a>) -> Result<Self> {
-        dec.take_word().map(Self)
+        dec.take_word().copied().map(Self)
     }
 
     #[inline]
@@ -271,13 +272,14 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenType<'de> for FixedSeqToken<T,
 }
 
 impl<'de, T: TokenType<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
+    #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
         let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
-        enc.push_offset(head_words as u32);
+        enc.push_offset(head_words);
 
         for inner in &self.0 {
             inner.head_append(enc);
-            enc.bump_offset(inner.tail_words() as u32);
+            enc.bump_offset(inner.tail_words());
         }
         for inner in &self.0 {
             inner.tail_append(enc);
@@ -286,6 +288,7 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, 
         enc.pop_offset();
     }
 
+    #[inline]
     fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
         crate::impl_core::try_from_fn(|_| T::decode_from(dec)).map(Self)
     }
@@ -334,9 +337,10 @@ impl<T> AsRef<[T]> for DynSeqToken<T> {
 impl<'de, T: TokenType<'de>> TokenType<'de> for DynSeqToken<T> {
     const DYNAMIC: bool = true;
 
+    #[inline]
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
         let mut child = dec.take_indirection()?;
-        let len = child.take_u32()? as usize;
+        let len = child.take_offset()?;
         // This appears to be an unclarity in the Solidity spec. The spec
         // specifies that offsets are relative to the first word of
         // `enc(X)`. But known-good test vectors ha vrelative to the
@@ -371,13 +375,14 @@ impl<'de, T: TokenType<'de>> TokenType<'de> for DynSeqToken<T> {
 }
 
 impl<'de, T: TokenType<'de>> TokenSeq<'de> for DynSeqToken<T> {
+    #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
         let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
-        enc.push_offset(head_words as u32);
+        enc.push_offset(head_words);
 
         for inner in &self.0 {
             inner.head_append(enc);
-            enc.bump_offset(inner.tail_words() as u32);
+            enc.bump_offset(inner.tail_words());
         }
         for inner in &self.0 {
             inner.tail_append(enc);
@@ -436,7 +441,7 @@ impl<'de: 'a, 'a> TokenType<'de> for PackedSeqToken<'a> {
     #[inline]
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
         let mut child = dec.take_indirection()?;
-        let len = child.take_u32()? as usize;
+        let len = child.take_offset()?;
         let bytes = child.peek_len(len)?;
         Ok(PackedSeqToken(bytes))
     }
@@ -449,7 +454,7 @@ impl<'de: 'a, 'a> TokenType<'de> for PackedSeqToken<'a> {
     #[inline]
     fn tail_words(&self) -> usize {
         // "1 +" because len is also appended
-        1 + ((self.0.len() + 31) / 32)
+        1 + (self.0.len() + 31) / 32
     }
 
     #[inline]
@@ -489,8 +494,8 @@ macro_rules! tuple_impls {
 
             #[inline]
             fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
-                // The first element in a dynamic Tuple is an offset to the Tuple's data
-                // For a static Tuple the data begins right away
+                // The first element in a dynamic tuple is an offset to the tuple's data;
+                // for a static tuples, the data begins right away
                 let mut child = if Self::DYNAMIC {
                     dec.take_indirection()?
                 } else {
@@ -500,7 +505,7 @@ macro_rules! tuple_impls {
                 let res = Self::decode_sequence(&mut child)?;
 
                 if !Self::DYNAMIC {
-                    dec.take_offset(child);
+                    dec.take_offset_from(&child);
                 }
 
                 Ok(res)
@@ -531,6 +536,7 @@ macro_rules! tuple_impls {
                 0 $( + $ty.total_words() )+
             }
 
+            #[inline]
             fn head_append(&self, enc: &mut Encoder) {
                 if Self::DYNAMIC {
                     enc.append_indirection();
@@ -542,15 +548,16 @@ macro_rules! tuple_impls {
                 }
             }
 
+            #[inline]
             fn tail_append(&self, enc: &mut Encoder) {
                 if Self::DYNAMIC {
                     let ($($ty,)+) = self;
                     let head_words = 0 $( + $ty.head_words() )+;
 
-                    enc.push_offset(head_words as u32);
+                    enc.push_offset(head_words);
                     $(
                         $ty.head_append(enc);
-                        enc.bump_offset($ty.tail_words() as u32);
+                        enc.bump_offset($ty.tail_words());
                     )+
                     $(
                         $ty.tail_append(enc);
@@ -564,13 +571,14 @@ macro_rules! tuple_impls {
         impl<'de, $($ty: TokenType<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
             const IS_TUPLE: bool = true;
 
+            #[inline]
             fn encode_sequence(&self, enc: &mut Encoder) {
                 let ($($ty,)+) = self;
                 let head_words = 0 $( + $ty.head_words() )+;
-                enc.push_offset(head_words as u32);
+                enc.push_offset(head_words);
                 $(
                     $ty.head_append(enc);
-                    enc.bump_offset($ty.tail_words() as u32);
+                    enc.bump_offset($ty.tail_words());
                 )+
                 $(
                     $ty.tail_append(enc);
@@ -578,6 +586,7 @@ macro_rules! tuple_impls {
                 enc.pop_offset();
             }
 
+            #[inline]
             fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
                 Ok(($(
                     <$ty as TokenType>::decode_from(dec)?,
