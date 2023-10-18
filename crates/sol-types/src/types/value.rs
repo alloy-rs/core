@@ -44,7 +44,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
         Self::SolType::sol_type_name()
     }
 
-    /// Detokenize a value from the given token.
+    /// Tokenizes the given value into this type's token.
     ///
     /// See [`SolType::tokenize`] for more information.
     #[inline]
@@ -52,7 +52,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
         <Self as SolTypeValue<Self::SolType>>::stv_to_tokens(self)
     }
 
-    /// Tokenizes the given value into this type's token.
+    /// Detokenize a value from the given token.
     ///
     /// See [`SolType::detokenize`] for more information.
     #[inline]
