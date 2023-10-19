@@ -2,16 +2,17 @@ use crate::SolValue;
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Address, FixedBytes, B256, U256};
 
-/// Eip712 Domain attributes used in determining the domain separator;
+/// EIP-712 domain attributes used in determining the domain separator.
+///
 /// Unused fields are left out of the struct type.
 ///
 /// Protocol designers only need to include the fields that make sense for
-/// their signing domain. Unused fields are left out of the struct type.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+/// their signing domain.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "eip712-serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "eip712-serde", serde(rename_all = "camelCase"))]
 pub struct Eip712Domain {
-    ///  The user readable name of signing domain, i.e. the name of the DApp or
+    /// The user readable name of signing domain, i.e. the name of the DApp or
     /// the protocol.
     #[cfg_attr(
         feature = "eip712-serde",
@@ -27,7 +28,7 @@ pub struct Eip712Domain {
     )]
     pub version: Option<Cow<'static, str>>,
 
-    /// The EIP-155 chain id. The user-agent should refuse signing if it does
+    /// The EIP-155 chain ID. The user-agent should refuse signing if it does
     /// not match the currently active chain.
     #[cfg_attr(
         feature = "eip712-serde",
@@ -55,7 +56,10 @@ impl Eip712Domain {
     /// The name of the struct.
     pub const NAME: &'static str = "EIP712Domain";
 
-    /// Instantiate a new domain.
+    /// Instantiate a new EIP-712 domain.
+    ///
+    /// Use the [`eip712_domain!`](crate::eip712_domain!) macro for easier
+    /// instantiation.
     #[inline]
     pub const fn new(
         name: Option<Cow<'static, str>>,
@@ -79,8 +83,9 @@ impl Eip712Domain {
         self.hash_struct()
     }
 
-    /// EIP-712 `encodeType`:
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
+    /// The EIP-712-encoded type string.
+    ///
+    /// See [EIP-712 `encodeType`](https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype).
     pub fn encode_type(&self) -> String {
         // commas not included
         macro_rules! encode_type {
@@ -112,14 +117,18 @@ impl Eip712Domain {
         }
     }
 
-    /// EIP-712 `typeHash`:
-    /// <https://eips.ethereum.org/EIPS/eip-712#rationale-for-typehash>
+    /// Calculates the [EIP-712 `typeHash`](https://eips.ethereum.org/EIPS/eip-712#rationale-for-typehash)
+    /// for this domain.
+    ///
+    /// This is defined as the Keccak-256 hash of the
+    /// [`encodeType`](Self::encode_type) string.
     #[inline]
     pub fn type_hash(&self) -> B256 {
         keccak256(self.encode_type().as_bytes())
     }
 
-    /// Returns the number of words that will be used to encode the domain.
+    /// Returns the number of ABI words (32 bytes) that will be used to encode
+    /// the domain.
     #[inline]
     pub const fn num_words(&self) -> usize {
         self.name.is_some() as usize
@@ -135,8 +144,8 @@ impl Eip712Domain {
         self.num_words() * 32
     }
 
-    /// EIP-712 `encodeData` into the given buffer:
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
+    /// Encodes this domain using [EIP-712 `encodeData`](https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata)
+    /// into the given buffer.
     pub fn encode_data_to(&self, out: &mut Vec<u8>) {
         // This only works because all of the fields are encoded as words.
         macro_rules! encode_opt {
@@ -161,52 +170,55 @@ impl Eip712Domain {
         encode_opt!(&self.salt);
     }
 
-    /// EIP-712 `encodeData`:
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata>
+    /// Encodes this domain using [EIP-712 `encodeData`](https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata).
     pub fn encode_data(&self) -> Vec<u8> {
         let mut out = Vec::new();
         self.encode_data_to(&mut out);
         out
     }
 
-    /// EIP-712 `hashStruct`:
-    /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct>
+    /// Hashes this domain according to [EIP-712 `hashStruct`](https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct).
     #[inline]
     pub fn hash_struct(&self) -> B256 {
-        let mut type_hash = self.type_hash().to_vec();
-        type_hash.extend(self.encode_data());
-        keccak256(type_hash)
+        use alloy_primitives::Hasher;
+        let mut hasher = alloy_primitives::Keccak::v256();
+        hasher.update(self.type_hash().as_ref());
+        hasher.update(&self.encode_data());
+        let mut out = B256::ZERO;
+        hasher.finalize(out.as_mut());
+        out
     }
 }
 
-/// Convenience macro to instantiate an EIP-712 domain.
+/// Convenience macro to instantiate an [EIP-712 domain](Eip712Domain).
 ///
-/// This macro allows you to instantiate an Eip712Domain struct without
-/// manually writing `None` for unused fields. It may be used to declare
-/// a domain with any combination of fields. Each field must be labeled
-/// with the name of the field, and the fields must be in order. The
-/// fields for the domain are:
+/// This macro allows you to instantiate an [EIP-712 domain](Eip712Domain)
+/// struct without manually writing `None` for unused fields.
+///
+/// It may be used to declare a domain with any combination of fields. Each
+/// field must be labeled with the name of the field, and the fields must be in
+/// order. The fields for the domain are:
 /// - `name`
 /// - `version`
 /// - `chain_id`
 /// - `verifying_contract`
 /// - `salt`
 ///
+/// # Examples
+///
 /// ```
 /// # use alloy_sol_types::{Eip712Domain, eip712_domain};
 /// # use alloy_primitives::keccak256;
-///
 /// const MY_DOMAIN: Eip712Domain = eip712_domain! {
 ///     name: "MyCoolProtocol",
 /// };
 ///
-/// # fn main() {
+/// let dynamic_name = String::from("MyCoolProtocol");
 /// let my_other_domain: Eip712Domain = eip712_domain! {
-///     name: String::from("MyCoolProtocol"),
+///     name: dynamic_name,
 ///     version: "1.0.0",
 ///     salt: keccak256("my domain salt"),
 /// };
-/// # }
 /// ```
 #[macro_export]
 macro_rules! eip712_domain {

@@ -5,7 +5,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 
-/// Solidity call (a tuple with a selector).
+/// A Solidity function call.
 ///
 /// # Implementer's Guide
 ///

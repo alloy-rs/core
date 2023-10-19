@@ -217,7 +217,7 @@ impl DynSolType {
 
     /// Check that the given [`DynSolValue`]s match these types.
     ///
-    /// See [`Self::matches`] for more information.
+    /// See [`matches`](Self::matches) for more information.
     #[inline]
     pub fn matches_many(types: &[Self], values: &[DynSolValue]) -> bool {
         types.len() == values.len() && types.iter().zip(values).all(|(t, v)| t.matches(v))
@@ -282,22 +282,28 @@ impl DynSolType {
             (Self::Address, DynToken::Word(word)) => Ok(DynSolValue::Address(
                 sol_data::Address::detokenize(word.into()),
             )),
+
             (Self::Function, DynToken::Word(word)) => Ok(DynSolValue::Function(
                 sol_data::Function::detokenize(word.into()),
             )),
+
             (Self::Bool, DynToken::Word(word)) => {
                 Ok(DynSolValue::Bool(sol_data::Bool::detokenize(word.into())))
             }
+
             (Self::Bytes, DynToken::PackedSeq(buf)) => Ok(DynSolValue::Bytes(buf.to_vec())),
+
             (Self::FixedBytes(size), DynToken::Word(word)) => Ok(DynSolValue::FixedBytes(
                 sol_data::FixedBytes::<32>::detokenize(word.into()),
                 *size,
             )),
+
             // cheating here, but it's ok
             (Self::Int(size), DynToken::Word(word)) => Ok(DynSolValue::Int(
                 sol_data::Int::<256>::detokenize(word.into()),
                 *size,
             )),
+
             (Self::Uint(size), DynToken::Word(word)) => Ok(DynSolValue::Uint(
                 sol_data::Uint::<256>::detokenize(word.into()),
                 *size,
@@ -306,38 +312,30 @@ impl DynSolType {
             (Self::String, DynToken::PackedSeq(buf)) => Ok(DynSolValue::String(
                 sol_data::String::detokenize(buf.into()),
             )),
+
             (Self::Tuple(types), DynToken::FixedSeq(tokens, _)) => {
                 if types.len() != tokens.len() {
                     return Err(crate::Error::custom(
                         "tuple length mismatch on dynamic detokenization",
                     ))
                 }
-                types
-                    .iter()
-                    .zip(tokens.into_owned())
-                    .map(|(t, w)| t.detokenize(w))
-                    .collect::<Result<_>>()
-                    .map(DynSolValue::Tuple)
+                Self::detokenize_many(types, tokens.into_owned()).map(DynSolValue::Tuple)
             }
-            (Self::Array(t), DynToken::DynSeq { contents, .. }) => contents
-                .into_owned()
-                .into_iter()
-                .map(|tok| t.detokenize(tok))
-                .collect::<Result<_>>()
+
+            (Self::Array(t), DynToken::DynSeq { contents, .. }) => t
+                .detokenize_array(contents.into_owned())
                 .map(DynSolValue::Array),
+
             (Self::FixedArray(t, size), DynToken::FixedSeq(tokens, _)) => {
                 if *size != tokens.len() {
                     return Err(crate::Error::custom(
                         "array length mismatch on dynamic detokenization",
                     ))
                 }
-                tokens
-                    .into_owned()
-                    .into_iter()
-                    .map(|tok| t.detokenize(tok))
-                    .collect::<Result<_>>()
+                t.detokenize_array(tokens.into_owned())
                     .map(DynSolValue::FixedArray)
             }
+
             #[cfg(feature = "eip712")]
             (
                 Self::CustomStruct {
@@ -352,22 +350,36 @@ impl DynSolType {
                         "custom length mismatch on dynamic detokenization",
                     ))
                 }
-                let tuple = tuple
-                    .iter()
-                    .zip(tokens.into_owned())
-                    .map(|(t, w)| t.detokenize(w))
-                    .collect::<Result<_>>()?;
-
-                Ok(DynSolValue::CustomStruct {
-                    name: name.clone(),
-                    prop_names: prop_names.clone(),
-                    tuple,
+                Self::detokenize_many(tuple, tokens.into_owned()).map(|tuple| {
+                    DynSolValue::CustomStruct {
+                        name: name.clone(),
+                        prop_names: prop_names.clone(),
+                        tuple,
+                    }
                 })
             }
+
             _ => Err(crate::Error::custom(
                 "mismatched types on dynamic detokenization",
             )),
         }
+    }
+
+    fn detokenize_array(&self, tokens: Vec<DynToken<'_>>) -> Result<Vec<DynSolValue>> {
+        let mut values = Vec::with_capacity(tokens.len());
+        for token in tokens {
+            values.push(self.detokenize(token)?);
+        }
+        Ok(values)
+    }
+
+    fn detokenize_many(types: &[Self], tokens: Vec<DynToken<'_>>) -> Result<Vec<DynSolValue>> {
+        assert_eq!(types.len(), tokens.len());
+        let mut values = Vec::with_capacity(tokens.len());
+        for (ty, token) in core::iter::zip(types, tokens) {
+            values.push(ty.detokenize(token)?);
+        }
+        Ok(values)
     }
 
     #[inline]
@@ -446,11 +458,11 @@ impl DynSolType {
         if let Some(s) = self.sol_type_name_simple() {
             Cow::Borrowed(s)
         } else {
-            let capacity = match self {
-                Self::Tuple(_) => 256,
-                _ => 16,
+            let elems = match self {
+                as_tuple!(Self t) => t.len(),
+                _ => 1,
             };
-            let mut s = String::with_capacity(capacity);
+            let mut s = String::with_capacity(elems * 16);
             self.sol_type_name_raw(&mut s);
             Cow::Owned(s)
         }
@@ -486,7 +498,7 @@ impl DynSolType {
                 DynToken::FixedSeq(vec![t.empty_dyn_token(); size].into(), size)
             }
             as_tuple!(Self tuple) => DynToken::FixedSeq(
-                tuple.iter().map(|t| t.empty_dyn_token()).collect(),
+                tuple.iter().map(DynSolType::empty_dyn_token).collect(),
                 tuple.len(),
             ),
         }
@@ -529,15 +541,14 @@ impl DynSolType {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// // This function takes a single simple param. The user should use
-    /// // DynSolType::Uint(256).decode_params(data) to decode the param.
+    /// ```solidity
+    /// // This function takes a single simple param:
+    /// // DynSolType::Uint(256).decode_params(data)
     /// function myFunc(uint256 a) public;
     ///
-    /// // This function takes 2 params. The user should use
-    /// // DynSolType::Tuple(
-    /// //    vec![DynSolType::Uint(256), DynSolType::Bool])
-    /// // .decode_params(data)
+    /// // This function takes 2 params:
+    /// // DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Bool])
+    /// //     .decode_params(data)
     /// function myFunc(uint256 b, bool c) public;
     /// ```
     #[inline]

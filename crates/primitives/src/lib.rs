@@ -31,6 +31,7 @@ pub use aliases::{
     U64, U8,
 };
 
+#[macro_use]
 mod bits;
 pub use bits::{
     Address, AddressError, Bloom, BloomInput, FixedBytes, Function, BLOOM_BITS_PER_ITEM,

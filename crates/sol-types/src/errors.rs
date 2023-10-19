@@ -28,6 +28,9 @@ pub enum Error {
     /// Overran deserialization buffer.
     Overrun,
 
+    /// Trailing bytes in deserialization buffer.
+    BufferNotEmpty,
+
     /// Validation reserialization did not match input.
     ReserMismatch,
 
@@ -74,16 +77,17 @@ impl fmt::Display for Error {
                 data,
             } => write!(
                 f,
-                "Type check failed for \"{expected_type}\" with data: {data}",
+                "type check failed for \"{expected_type}\" with data: {data}",
             ),
-            Self::Overrun => f.write_str("Buffer overrun while deserializing"),
-            Self::ReserMismatch => f.write_str("Reserialization did not match original"),
+            Self::Overrun => f.write_str("buffer overrun while deserializing"),
+            Self::BufferNotEmpty => f.write_str("buffer not empty after deserialization"),
+            Self::ReserMismatch => f.write_str("reserialization did not match original"),
             Self::InvalidEnumValue { name, value, max } => write!(
                 f,
                 "`{value}` is not a valid {name} enum value (max: `{max}`)"
             ),
             Self::UnknownSelector { name, selector } => {
-                write!(f, "Unknown selector `{selector}` for {name}")
+                write!(f, "unknown selector `{selector}` for {name}")
             }
             Self::FromHexError(e) => e.fmt(f),
             Self::Other(e) => f.write_str(e),

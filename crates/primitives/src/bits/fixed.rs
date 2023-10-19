@@ -42,6 +42,13 @@ impl<const N: usize> Default for FixedBytes<N> {
     }
 }
 
+impl<'a, const N: usize> Default for &'a FixedBytes<N> {
+    #[inline]
+    fn default() -> Self {
+        &FixedBytes::ZERO
+    }
+}
+
 impl<const N: usize> From<&[u8; N]> for FixedBytes<N> {
     #[inline]
     fn from(bytes: &[u8; N]) -> Self {
@@ -354,7 +361,7 @@ impl<const N: usize> FixedBytes<N> {
     ///
     /// # Panics
     ///
-    /// This function panics if the underlying call to
+    /// Panics if the underlying call to
     /// [`getrandom_uninit`](getrandom::getrandom_uninit) fails.
     #[cfg(feature = "getrandom")]
     #[inline]
@@ -392,7 +399,7 @@ impl<const N: usize> FixedBytes<N> {
     ///
     /// # Panics
     ///
-    /// This function panics if the underlying call to
+    /// Panics if the underlying call to
     /// [`getrandom_uninit`](getrandom::getrandom_uninit) fails.
     #[inline]
     #[cfg(feature = "getrandom")]
@@ -427,7 +434,7 @@ impl<const N: usize> FixedBytes<N> {
     ///
     /// # Panics
     ///
-    /// This function panics if `Z` is not equal to `N + M`.
+    /// Panics if `Z` is not equal to `N + M`.
     pub const fn concat_const<const M: usize, const Z: usize>(
         self,
         other: FixedBytes<M>,

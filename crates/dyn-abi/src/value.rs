@@ -723,11 +723,11 @@ impl DynSolValue {
     /// Encode this data as a sequence into the given encoder.
     pub(crate) fn encode_seq_to(contents: &[Self], enc: &mut Encoder) {
         let head_words = contents.iter().map(Self::head_words).sum::<usize>();
-        enc.push_offset(head_words as u32);
+        enc.push_offset(head_words);
 
         for t in contents {
             t.head_append(enc);
-            enc.bump_offset(t.tail_words() as u32);
+            enc.bump_offset(t.tail_words());
         }
 
         for t in contents {
