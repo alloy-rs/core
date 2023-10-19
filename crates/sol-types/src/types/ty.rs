@@ -119,7 +119,7 @@ pub trait SolType: Sized {
     /// Whether the encoded size is dynamic.
     const DYNAMIC: bool = Self::ENCODED_SIZE.is_none();
 
-    /// The name of this type in Solidity.
+    /// Returns the name of this type in Solidity.
     fn sol_type_name() -> Cow<'static, str>;
 
     /// Calculate the ABI-encoded size of the data, counting both head and tail

@@ -1,3 +1,4 @@
+use super::ty::as_tuple;
 use crate::{DynSolType, DynToken, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::{Address, Function, I256, U256};
@@ -211,37 +212,25 @@ impl DynSolValue {
 
     #[inline]
     #[allow(clippy::missing_const_for_fn)]
-    fn sol_type_name_simple(&self) -> Option<&str> {
+    fn sol_type_name_simple(&self) -> Option<&'static str> {
         match self {
             Self::Address(_) => Some("address"),
             Self::Function(_) => Some("function"),
             Self::Bool(_) => Some("bool"),
             Self::Bytes(_) => Some("bytes"),
             Self::String(_) => Some("string"),
-            #[cfg(feature = "eip712")]
-            Self::CustomStruct { name, .. } => Some(name.as_str()),
             _ => None,
         }
     }
 
-    #[inline]
-    fn sol_type_name_raw(&self, out: &mut String) -> bool {
+    fn sol_type_name_raw(&self, out: &mut String) {
         match self {
-            #[cfg(not(feature = "eip712"))]
             Self::Address(_)
             | Self::Function(_)
             | Self::Bool(_)
             | Self::Bytes(_)
             | Self::String(_) => {
-                out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
-            }
-            #[cfg(feature = "eip712")]
-            Self::Address(_)
-            | Self::Function(_)
-            | Self::Bool(_)
-            | Self::Bytes(_)
-            | Self::String(_)
-            | Self::CustomStruct { .. } => {
+                // SAFETY: `sol_type_name_simple` returns `Some` for these types
                 out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
             }
 
@@ -256,64 +245,78 @@ impl DynSolValue {
                 out.push_str(itoa::Buffer::new().format(*size));
             }
 
-            Self::Tuple(inner) => {
+            Self::Array(values) | Self::FixedArray(values) => {
+                // SAFETY: checked in `sol_type_name_capacity`
+                debug_assert!(!values.is_empty());
+                unsafe { values.first().unwrap_unchecked() }.sol_type_name_raw(out);
+
+                out.push('[');
+                let format_len = match self {
+                    Self::Array(_) => false,
+                    Self::FixedArray(_) => true,
+                    _ => unreachable!(),
+                };
+                if format_len {
+                    out.push_str(itoa::Buffer::new().format(values.len()));
+                }
+                out.push(']');
+            }
+            as_tuple!(Self tuple) => {
                 out.push('(');
-                for (i, val) in inner.iter().enumerate() {
+                for (i, val) in tuple.iter().enumerate() {
                     if i > 0 {
                         out.push(',');
                     }
-                    if !val.sol_type_name_raw(out) {
-                        return false
-                    }
+                    val.sol_type_name_raw(out);
                 }
-                if inner.len() == 1 {
+                if tuple.len() == 1 {
                     out.push(',');
                 }
                 out.push(')');
             }
-            Self::Array(t) => {
-                if let Some(first) = t.first() {
-                    if !first.sol_type_name_raw(out) {
-                        return false
-                    }
-                    out.push_str("[]");
-                } else {
-                    return false
-                }
-            }
-            Self::FixedArray(t) => {
-                if let Some(first) = t.first() {
-                    if !first.sol_type_name_raw(out) {
-                        return false
-                    }
-                    out.push('[');
-                    out.push_str(itoa::Buffer::new().format(t.len()));
-                    out.push(']');
-                } else {
-                    return false
-                }
-            }
         }
-        true
+    }
+
+    /// Returns an estimate of the number of bytes needed to format this type.
+    /// Returns `None` if it cannot be formatted.
+    ///
+    /// See `DynSolType::sol_type_name_capacity` for more info.
+    fn sol_type_name_capacity(&self) -> Option<usize> {
+        match self {
+            Self::Address(_)
+            | Self::Function(_)
+            | Self::Bool(_)
+            | Self::Bytes(_)
+            | Self::String(_)
+            | Self::FixedBytes(..)
+            | Self::Int(..)
+            | Self::Uint(..) => Some(8),
+
+            Self::Array(t) | Self::FixedArray(t) => t
+                .first()
+                .and_then(Self::sol_type_name_capacity)
+                .map(|x| x + 8),
+
+            as_tuple!(Self tuple) => tuple
+                .iter()
+                .map(Self::sol_type_name_capacity)
+                .sum::<Option<usize>>()
+                .map(|x| x + 8),
+        }
     }
 
     /// The Solidity type name. This returns the Solidity type corresponding to
     /// this value, if it is known. A type will not be known if the value
     /// contains an empty sequence, e.g. `T[0]`.
-    pub fn sol_type_name(&self) -> Option<Cow<'_, str>> {
+    pub fn sol_type_name(&self) -> Option<Cow<'static, str>> {
         if let Some(s) = self.sol_type_name_simple() {
             Some(Cow::Borrowed(s))
-        } else {
-            let capacity = match self {
-                Self::Tuple(_) => 256,
-                _ => 16,
-            };
+        } else if let Some(capacity) = self.sol_type_name_capacity() {
             let mut s = String::with_capacity(capacity);
-            if self.sol_type_name_raw(&mut s) {
-                Some(Cow::Owned(s))
-            } else {
-                None
-            }
+            self.sol_type_name_raw(&mut s);
+            Some(Cow::Owned(s))
+        } else {
+            None
         }
     }
 

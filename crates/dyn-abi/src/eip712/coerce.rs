@@ -35,9 +35,9 @@ fn address(value: &serde_json::Value) -> Result<DynSolValue> {
         .as_str()
         .map(|s| {
             s.parse::<Address>()
-                .map_err(|_| Error::type_mismatch(&DynSolType::Address, value))
+                .map_err(|_| Error::eip712_coerce(&DynSolType::Address, value))
         })
-        .ok_or_else(|| Error::type_mismatch(&DynSolType::Address, value))??;
+        .ok_or_else(|| Error::eip712_coerce(&DynSolType::Address, value))??;
 
     Ok(DynSolValue::Address(address))
 }
@@ -47,9 +47,9 @@ fn function(value: &serde_json::Value) -> Result<DynSolValue> {
         .as_str()
         .map(|s| {
             s.parse::<Function>()
-                .map_err(|_| Error::type_mismatch(&DynSolType::Function, value))
+                .map_err(|_| Error::eip712_coerce(&DynSolType::Function, value))
         })
-        .ok_or_else(|| Error::type_mismatch(&DynSolType::Function, value))??;
+        .ok_or_else(|| Error::eip712_coerce(&DynSolType::Function, value))??;
 
     Ok(DynSolValue::Function(function))
 }
@@ -63,9 +63,9 @@ fn bool(value: &serde_json::Value) -> Result<DynSolValue> {
         .as_str()
         .map(|s| {
             s.parse::<bool>()
-                .map_err(|_| Error::type_mismatch(&DynSolType::Address, value))
+                .map_err(|_| Error::eip712_coerce(&DynSolType::Address, value))
         })
-        .ok_or_else(|| Error::type_mismatch(&DynSolType::Address, value))??;
+        .ok_or_else(|| Error::eip712_coerce(&DynSolType::Address, value))??;
     Ok(DynSolValue::Bool(bool))
 }
 
@@ -78,7 +78,7 @@ fn int(n: usize, value: &serde_json::Value) -> Result<DynSolValue> {
         return Ok(DynSolValue::Int(i, n))
     }
 
-    Err(Error::type_mismatch(&DynSolType::Int(n), value))
+    Err(Error::eip712_coerce(&DynSolType::Int(n), value))
 }
 
 fn uint(n: usize, value: &serde_json::Value) -> Result<DynSolValue> {
@@ -96,7 +96,7 @@ fn uint(n: usize, value: &serde_json::Value) -> Result<DynSolValue> {
         }
     }
 
-    Err(Error::type_mismatch(&DynSolType::Uint(n), value))
+    Err(Error::eip712_coerce(&DynSolType::Uint(n), value))
 }
 
 fn fixed_bytes(n: usize, value: &serde_json::Value) -> Result<DynSolValue> {
@@ -107,29 +107,29 @@ fn fixed_bytes(n: usize, value: &serde_json::Value) -> Result<DynSolValue> {
         return Ok(DynSolValue::FixedBytes(word, n))
     }
 
-    Err(Error::type_mismatch(&DynSolType::FixedBytes(n), value))
+    Err(Error::eip712_coerce(&DynSolType::FixedBytes(n), value))
 }
 
 fn string(value: &serde_json::Value) -> Result<DynSolValue> {
     let string = value
         .as_str()
         .map(|s| s.to_string())
-        .ok_or_else(|| Error::type_mismatch(&DynSolType::String, value))?;
+        .ok_or_else(|| Error::eip712_coerce(&DynSolType::String, value))?;
     Ok(DynSolValue::String(string))
 }
 
 fn bytes(value: &serde_json::Value) -> Result<DynSolValue> {
     let bytes = value
         .as_str()
-        .map(|s| hex::decode(s).map_err(|_| Error::type_mismatch(&DynSolType::Bytes, value)))
-        .ok_or_else(|| Error::type_mismatch(&DynSolType::Bytes, value))??;
+        .map(|s| hex::decode(s).map_err(|_| Error::eip712_coerce(&DynSolType::Bytes, value)))
+        .ok_or_else(|| Error::eip712_coerce(&DynSolType::Bytes, value))??;
     Ok(DynSolValue::Bytes(bytes))
 }
 
 fn tuple(inner: &[DynSolType], value: &serde_json::Value) -> Result<DynSolValue> {
     if let Some(arr) = value.as_array() {
         if inner.len() != arr.len() {
-            return Err(Error::type_mismatch(
+            return Err(Error::eip712_coerce(
                 &DynSolType::Tuple(inner.to_vec()),
                 value,
             ))
@@ -144,7 +144,7 @@ fn tuple(inner: &[DynSolType], value: &serde_json::Value) -> Result<DynSolValue>
         return Ok(DynSolValue::Tuple(tuple))
     }
 
-    Err(Error::type_mismatch(
+    Err(Error::eip712_coerce(
         &DynSolType::Tuple(inner.to_vec()),
         value,
     ))
@@ -160,7 +160,7 @@ fn array(inner: &DynSolType, value: &serde_json::Value) -> Result<DynSolValue> {
         return Ok(DynSolValue::Array(array))
     }
 
-    Err(Error::type_mismatch(
+    Err(Error::eip712_coerce(
         &DynSolType::Array(Box::new(inner.clone())),
         value,
     ))
@@ -169,7 +169,7 @@ fn array(inner: &DynSolType, value: &serde_json::Value) -> Result<DynSolValue> {
 fn fixed_array(inner: &DynSolType, n: usize, value: &serde_json::Value) -> Result<DynSolValue> {
     if let Some(arr) = value.as_array() {
         if arr.len() != n {
-            return Err(Error::type_mismatch(
+            return Err(Error::eip712_coerce(
                 &DynSolType::FixedArray(Box::new(inner.clone()), n),
                 value,
             ))
@@ -183,7 +183,7 @@ fn fixed_array(inner: &DynSolType, n: usize, value: &serde_json::Value) -> Resul
         return Ok(DynSolValue::FixedArray(array))
     }
 
-    Err(Error::type_mismatch(
+    Err(Error::eip712_coerce(
         &DynSolType::FixedArray(Box::new(inner.clone()), n),
         value,
     ))
@@ -201,7 +201,7 @@ pub(crate) fn coerce_custom_struct(
             if let Some(v) = map.get(name) {
                 tuple.push(ty.coerce(v)?);
             } else {
-                return Err(Error::type_mismatch(
+                return Err(Error::eip712_coerce(
                     &DynSolType::CustomStruct {
                         name: name.to_string(),
                         prop_names: prop_names.to_vec(),
@@ -218,7 +218,7 @@ pub(crate) fn coerce_custom_struct(
         })
     }
 
-    Err(Error::type_mismatch(
+    Err(Error::eip712_coerce(
         &DynSolType::CustomStruct {
             name: name.to_string(),
             prop_names: prop_names.to_vec(),

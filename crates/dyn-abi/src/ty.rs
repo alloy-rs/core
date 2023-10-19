@@ -16,6 +16,7 @@ macro_rules! as_tuple {
         $ty::Tuple($t)
     };
 }
+pub(crate) use as_tuple;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct StructProp {
@@ -144,6 +145,7 @@ impl DynSolType {
     /// let ty = DynSolType::parse(type_name)?;
     /// assert_eq!(ty, DynSolType::Uint(256));
     /// assert_eq!(ty.sol_type_name(), type_name);
+    /// assert_eq!(ty.to_string(), type_name);
     /// # Ok::<_, alloy_dyn_abi::Error>(())
     /// ```
     #[inline]
@@ -220,7 +222,7 @@ impl DynSolType {
     /// See [`matches`](Self::matches) for more information.
     #[inline]
     pub fn matches_many(types: &[Self], values: &[DynSolValue]) -> bool {
-        types.len() == values.len() && types.iter().zip(values).all(|(t, v)| t.matches(v))
+        types.len() == values.len() && core::iter::zip(types, values).all(|(t, v)| t.matches(v))
     }
 
     /// Check that the given [`DynSolValue`] matches this type.
@@ -384,15 +386,13 @@ impl DynSolType {
 
     #[inline]
     #[allow(clippy::missing_const_for_fn)]
-    fn sol_type_name_simple(&self) -> Option<&str> {
+    fn sol_type_name_simple(&self) -> Option<&'static str> {
         match self {
             Self::Address => Some("address"),
             Self::Function => Some("function"),
             Self::Bool => Some("bool"),
             Self::Bytes => Some("bytes"),
             Self::String => Some("string"),
-            #[cfg(feature = "eip712")]
-            Self::CustomStruct { name, .. } => Some(name),
             _ => None,
         }
     }
@@ -400,16 +400,6 @@ impl DynSolType {
     #[inline]
     fn sol_type_name_raw(&self, out: &mut String) {
         match self {
-            #[cfg(feature = "eip712")]
-            Self::Address
-            | Self::Function
-            | Self::Bool
-            | Self::Bytes
-            | Self::String
-            | Self::CustomStruct { .. } => {
-                out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
-            }
-            #[cfg(not(feature = "eip712"))]
             Self::Address | Self::Function | Self::Bool | Self::Bytes | Self::String => {
                 out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
             }
@@ -425,15 +415,15 @@ impl DynSolType {
                 out.push_str(itoa::Buffer::new().format(*size));
             }
 
-            Self::Tuple(inner) => {
+            as_tuple!(Self tuple) => {
                 out.push('(');
-                for (i, val) in inner.iter().enumerate() {
+                for (i, val) in tuple.iter().enumerate() {
                     if i > 0 {
                         out.push(',');
                     }
                     val.sol_type_name_raw(out);
                 }
-                if inner.len() == 1 {
+                if tuple.len() == 1 {
                     out.push(',');
                 }
                 out.push(')');
@@ -451,18 +441,40 @@ impl DynSolType {
         }
     }
 
+    /// Returns an estimate of the number of bytes needed to format this type.
+    ///
+    /// This calculation is meant to be an upper bound for valid types to avoid
+    /// a second allocation in `sol_type_name_raw` and thus is almost never
+    /// going to be exact.
+    fn sol_type_name_capacity(&self) -> usize {
+        match self {
+            | Self::Address // 7
+            | Self::Function // 8
+            | Self::Bool // 4
+            | Self::Bytes // 5
+            | Self::String // 6
+            | Self::FixedBytes(_) // 5 + 2
+            | Self::Int(_) // 3 + 3
+            | Self::Uint(_) // 4 + 3
+            => 8,
+
+            | Self::Array(t) // t + 2
+            | Self::FixedArray(t, _) // t + 2 + log10(len)
+            => t.sol_type_name_capacity() + 8,
+
+            as_tuple!(Self tuple) // sum(tuple) + len(tuple) + 2
+            => tuple.iter().map(Self::sol_type_name_capacity).sum::<usize>() + 8,
+        }
+    }
+
     /// The Solidity type name. This returns the Solidity type corresponding to
     /// this value, if it is known. A type will not be known if the value
     /// contains an empty sequence, e.g. `T[0]`.
-    pub fn sol_type_name(&self) -> Cow<'_, str> {
+    pub fn sol_type_name(&self) -> Cow<'static, str> {
         if let Some(s) = self.sol_type_name_simple() {
             Cow::Borrowed(s)
         } else {
-            let elems = match self {
-                as_tuple!(Self t) => t.len(),
-                _ => 1,
-            };
-            let mut s = String::with_capacity(elems * 16);
+            let mut s = String::with_capacity(self.sol_type_name_capacity());
             self.sol_type_name_raw(&mut s);
             Cow::Owned(s)
         }
