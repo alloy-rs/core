@@ -64,7 +64,7 @@ arbitrary = [
 ]
 
 # Debug winnow parsers; intentionally doesn't enable `winnow/debug`
-debug = ["alloy-sol-type-parser/debug"]
+debug = ["std", "alloy-sol-type-parser/debug"]
 
 [[bench]]
 name = "abi"
