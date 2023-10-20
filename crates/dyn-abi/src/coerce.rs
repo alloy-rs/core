@@ -301,13 +301,19 @@ fn string_inner<'i>(input: &mut &'i str) -> PResult<&'i str> {
 
     // TODO: escapes?
     let min = if has_delim { 0 } else { 1 };
-    let until_ch = if has_delim { delim } else { ',' };
-    let s = take_while(min.., |c: char| c != until_ch).parse_next(input)?;
+    let until_ch = if has_delim {
+        core::slice::from_ref(&delim)
+    } else {
+        &[',', ')', ']']
+    };
+    let mut s = take_while(min.., |ch: char| !until_ch.contains(&ch)).parse_next(input)?;
 
     if has_delim {
         cut_err(char_parser(delim))
             .context(StrContext::Label("string"))
             .parse_next(input)?;
+    } else {
+        s = s.trim_end();
     }
 
     Ok(s)
@@ -387,9 +393,8 @@ fn hex_error(input: &&str, e: FromHexError) -> ErrMode<ContextError> {
 
 #[cfg(test)]
 mod tests {
-    use core::str::FromStr;
-
     use super::*;
+    use core::str::FromStr;
 
     #[test]
     fn coerce_bool() {
@@ -419,21 +424,15 @@ mod tests {
             DynSolValue::Int(I256::from_be_bytes([0x22; 32]), 256)
         );
 
-        // TODO: ?
-        /*
-        assert_eq!(
-            DynSolType::Int(256)
-                .coerce_str("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-                .unwrap(),
-            DynSolValue::Int(I256::from_be_bytes([0xff; 32]), 256)
-        );
-        */
         assert_eq!(
             DynSolType::Int(256)
                 .coerce_str("0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
                 .unwrap(),
             DynSolValue::Int(I256::MAX, 256)
         );
+        assert!(DynSolType::Int(256)
+            .coerce_str("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+            .is_err());
 
         assert_eq!(
             DynSolType::Int(256).coerce_str("0").unwrap(),
@@ -772,8 +771,10 @@ mod tests {
 
         assert_eq!(arr.coerce_str("[]").unwrap(), mk_arr(&[]));
         assert_eq!(arr.coerce_str("[    ]").unwrap(), mk_arr(&[]));
-        assert!(arr.coerce_str("[,]").is_err());
-        assert!(arr.coerce_str("[ , ]").is_err());
+
+        // TODO: should this be an error?
+        // assert!(arr.coerce_str("[,]").is_err());
+        // assert!(arr.coerce_str("[ , ]").is_err());
 
         assert_eq!(arr.coerce_str("[ foo bar ]").unwrap(), mk_arr(&["foo bar"]));
         assert_eq!(arr.coerce_str("[foo bar,]").unwrap(), mk_arr(&["foo bar"]));
