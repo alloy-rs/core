@@ -1,4 +1,5 @@
 use crate::{ty::as_tuple, DynSolType, DynSolValue, Result};
+use alloc::{string::String, vec::Vec};
 use alloy_primitives::{Address, FixedBytes, Function, Sign, I256, U256};
 use alloy_sol_type_parser::utils::{array_parser, char_parser, spanned};
 use alloy_sol_types::Word;
@@ -79,7 +80,11 @@ impl DynSolType {
 #[derive(Debug)]
 enum Error {
     IntOverflow,
+    #[cfg(not(feature = "std"))]
+    FloatNoStd(f64),
+    #[cfg(feature = "std")]
     FractionalNotAllowed(f64),
+    #[cfg(feature = "std")]
     TooManyDecimals(usize, usize),
     InvalidFixedBytesLength(usize),
     FixedArrayLengthMismatch(usize, usize),
@@ -92,9 +97,15 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::IntOverflow => f.write_str("number too large to fit in target type"),
+            #[cfg(not(feature = "std"))]
+            Self::FloatNoStd(n) => {
+                write!(f, "fractional numbers are not supported without `std`: {n}")
+            }
+            #[cfg(feature = "std")]
             Self::TooManyDecimals(expected, actual) => {
                 write!(f, "too many decimals: {actual} > {expected}")
             }
+            #[cfg(feature = "std")]
             Self::FractionalNotAllowed(n) => write!(
                 f,
                 "non-zero fraction {n} not allowed without specifying units (gwei, ether, etc.)"
@@ -171,24 +182,38 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
                 .parse::<f64>()
                 .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
 
-            if units == 0 && x.fract() != 0.0 {
+            // TODO: add num_traits with libm feature for supporting this
+            #[cfg(not(feature = "std"))]
+            {
+                let _ = fract;
                 return Err(ErrMode::from_external_error(
                     input,
                     ErrorKind::Verify,
-                    Error::FractionalNotAllowed(x.fract()),
+                    Error::FloatNoStd(x),
                 ))
             }
 
-            if fract.len() > units {
-                return Err(ErrMode::from_external_error(
-                    input,
-                    ErrorKind::Verify,
-                    Error::TooManyDecimals(units, fract.len()),
-                ))
-            }
+            #[cfg(feature = "std")]
+            {
+                if units == 0 && x.fract() != 0.0 {
+                    return Err(ErrMode::from_external_error(
+                        input,
+                        ErrorKind::Verify,
+                        Error::FractionalNotAllowed(x.fract()),
+                    ))
+                }
 
-            U256::try_from(x * 10f64.powi(units as i32))
-                .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))
+                if fract.len() > units {
+                    return Err(ErrMode::from_external_error(
+                        input,
+                        ErrorKind::Verify,
+                        Error::TooManyDecimals(units, fract.len()),
+                    ))
+                }
+
+                U256::try_from(x * 10f64.powi(units as i32))
+                    .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))
+            }
         } else {
             s.parse::<U256>()
                 .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?
