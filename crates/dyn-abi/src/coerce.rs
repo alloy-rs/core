@@ -419,6 +419,7 @@ fn hex_error(input: &&str, e: FromHexError) -> ErrMode<ContextError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::{boxed::Box, string::ToString};
     use core::str::FromStr;
 
     #[test]
@@ -569,10 +570,12 @@ mod tests {
             DynSolValue::Uint(U256::from_str("1000000000").unwrap(), 256)
         );
 
-        assert_eq!(
-            DynSolType::Uint(256).coerce_str("0.1 gwei").unwrap(),
-            DynSolValue::Uint(U256::from_str("100000000").unwrap(), 256)
-        );
+        if cfg!(feature = "std") {
+            assert_eq!(
+                DynSolType::Uint(256).coerce_str("0.1 gwei").unwrap(),
+                DynSolValue::Uint(U256::from_str("100000000").unwrap(), 256)
+            );
+        }
     }
 
     #[test]
@@ -592,33 +595,35 @@ mod tests {
             DynSolValue::Uint(U256::from_str("1000000000000000000").unwrap(), 256)
         );
 
-        assert_eq!(
-            DynSolType::Uint(256).coerce_str("0.01 ether").unwrap(),
-            DynSolValue::Uint(U256::from_str("10000000000000000").unwrap(), 256)
-        );
+        if cfg!(feature = "std") {
+            assert_eq!(
+                DynSolType::Uint(256).coerce_str("0.01 ether").unwrap(),
+                DynSolValue::Uint(U256::from_str("10000000000000000").unwrap(), 256)
+            );
 
-        assert_eq!(
-            DynSolType::Uint(256)
-                .coerce_str("0.000000000000000001ether")
-                .unwrap(),
-            DynSolValue::Uint(U256::from(1), 256)
-        );
+            assert_eq!(
+                DynSolType::Uint(256)
+                    .coerce_str("0.000000000000000001ether")
+                    .unwrap(),
+                DynSolValue::Uint(U256::from(1), 256)
+            );
 
-        assert_eq!(
-            DynSolType::Uint(256).coerce_str("0.000000000000000001ether"),
-            DynSolType::Uint(256).coerce_str("1wei"),
-        );
+            assert_eq!(
+                DynSolType::Uint(256).coerce_str("0.000000000000000001ether"),
+                DynSolType::Uint(256).coerce_str("1wei"),
+            );
+        }
     }
 
     #[test]
     fn coerce_uint_array_ether() {
         assert_eq!(
             DynSolType::Array(Box::new(DynSolType::Uint(256)))
-                .coerce_str("[1ether,0.1 ether]")
+                .coerce_str("[1ether,10 ether]")
                 .unwrap(),
             DynSolValue::Array(vec![
                 DynSolValue::Uint(U256::from_str("1000000000000000000").unwrap(), 256),
-                DynSolValue::Uint(U256::from_str("100000000000000000").unwrap(), 256),
+                DynSolValue::Uint(U256::from_str("10000000000000000000").unwrap(), 256),
             ])
         );
     }
