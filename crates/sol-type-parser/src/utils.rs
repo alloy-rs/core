@@ -81,15 +81,15 @@ where
 }
 
 #[inline]
-fn list_parser<'a, O1, O2, E>(
+fn list_parser<'i, O1, O2, E>(
     open: char,
     delim: char,
     close: char,
-    f: impl Parser<&'a str, O1, E>,
-) -> impl Parser<&'a str, O2, E>
+    f: impl Parser<&'i str, O1, E>,
+) -> impl Parser<&'i str, O2, E>
 where
     O2: Accumulate<O1>,
-    E: ParserError<&'a str> + AddContext<&'a str, StrContext>,
+    E: ParserError<&'i str> + AddContext<&'i str, StrContext>,
 {
     #[cfg(feature = "debug")]
     let name = format!("list({open:?}, {delim:?}, {close:?})");
