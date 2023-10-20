@@ -51,8 +51,9 @@ pub const fn is_valid_identifier(s: &str) -> bool {
     true
 }
 
+/// Parses a Solidity identifier.
 #[inline]
-pub(crate) fn parse_identifier<'a>(input: &mut &'a str) -> PResult<&'a str> {
+pub fn identifier<'a>(input: &mut &'a str) -> PResult<&'a str> {
     // See note in `is_valid_identifier` above.
     // Use the faster `slice::Iter` instead of `str::Chars`.
     let mut chars = input.as_bytes().iter().map(|b| *b as char);
@@ -99,7 +100,7 @@ mod tests {
     #[track_caller]
     fn ident_test(mut input: &str, expected: Result<&str, ()>, output: &str) {
         assert_eq!(
-            parse_identifier(&mut input).map_err(drop),
+            identifier(&mut input).map_err(drop),
             expected,
             "result mismatch"
         );

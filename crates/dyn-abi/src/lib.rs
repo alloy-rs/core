@@ -31,6 +31,8 @@ extern crate alloc;
 #[cfg(feature = "arbitrary")]
 mod arbitrary;
 
+mod coerce;
+
 mod error;
 pub use error::{Error, Result};
 

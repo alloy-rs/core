@@ -1,4 +1,7 @@
-use crate::{opt_ws_ident, spanned, tuple_parser, Error, Result, TypeSpecifier};
+use crate::{
+    utils::{opt_ws_ident, spanned, tuple_parser},
+    Error, Result, TypeSpecifier,
+};
 use alloc::vec::Vec;
 use core::fmt;
 use winnow::{trace::trace, PResult, Parser};
@@ -36,7 +39,8 @@ impl<'a> ParameterSpecifier<'a> {
         Self::parser.parse(input).map_err(Error::parser)
     }
 
-    pub(crate) fn parser(input: &mut &'a str) -> PResult<Self> {
+    /// [`winnow`] parser for this type.
+    pub fn parser(input: &mut &'a str) -> PResult<Self> {
         trace(
             "ParameterSpecifier",
             spanned(|input: &mut &'a str| {
@@ -98,7 +102,8 @@ impl<'a> Parameters<'a> {
         Self::parser.parse(input).map_err(Error::parser)
     }
 
-    pub(crate) fn parser(input: &mut &'a str) -> PResult<Self> {
+    /// [`winnow`] parser for this type.
+    pub fn parser(input: &mut &'a str) -> PResult<Self> {
         trace(
             "Parameters",
             spanned(tuple_parser(ParameterSpecifier::parser)),

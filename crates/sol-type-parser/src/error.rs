@@ -30,7 +30,7 @@ impl Error {
     }
 
     /// Instantiate a new parser error.
-    pub(crate) fn parser(e: impl fmt::Display) -> Self {
+    pub fn parser(e: impl fmt::Display) -> Self {
         Self::_new(
             if cfg!(feature = "std") {
                 "parser error:\n"

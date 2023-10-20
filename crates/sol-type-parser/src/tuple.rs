@@ -1,4 +1,7 @@
-use crate::{spanned, tuple_parser, Error, Result, TypeSpecifier};
+use crate::{
+    utils::{spanned, tuple_parser},
+    Error, Result, TypeSpecifier,
+};
 use alloc::vec::Vec;
 use winnow::{trace::trace, PResult, Parser};
 
@@ -52,7 +55,8 @@ impl<'a> TupleSpecifier<'a> {
         Self::parser.parse(input).map_err(Error::parser)
     }
 
-    pub(crate) fn parser(input: &mut &'a str) -> PResult<Self> {
+    /// [`winnow`] parser for this type.
+    pub fn parser(input: &mut &'a str) -> PResult<Self> {
         trace("TupleSpecifier", spanned(Self::parse_types))
             .parse_next(input)
             .map(|(span, types)| Self { span, types })

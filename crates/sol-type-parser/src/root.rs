@@ -1,4 +1,4 @@
-use crate::{ident::parse_identifier, is_valid_identifier, Error, Result};
+use crate::{ident::identifier, is_valid_identifier, Error, Result};
 use core::fmt;
 use winnow::{trace::trace, PResult, Parser};
 
@@ -71,10 +71,9 @@ impl<'a> RootType<'a> {
         }
     }
 
-    pub(crate) fn parser(input: &mut &'a str) -> PResult<Self> {
-        trace("RootType", parse_identifier)
-            .parse_next(input)
-            .map(Self)
+    /// [`winnow`] parser for this type.
+    pub fn parser(input: &mut &'a str) -> PResult<Self> {
+        trace("RootType", identifier).parse_next(input).map(Self)
     }
 
     /// The string underlying this type. The type name.

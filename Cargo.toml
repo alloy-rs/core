@@ -62,3 +62,4 @@ rand = { version = "0.8", default-features = false }
 ruint = { version = "1.10.1", default-features = false, features = ["alloc"] }
 ruint-macro = { version = "1", default-features = false }
 tiny-keccak = "2.0"
+winnow = { version = "0.5", default-features = false, features = ["alloc"] }
