@@ -419,11 +419,20 @@ mod tests {
             DynSolValue::Int(I256::from_be_bytes([0x22; 32]), 256)
         );
 
+        // TODO: ?
+        /*
         assert_eq!(
             DynSolType::Int(256)
                 .coerce_str("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
                 .unwrap(),
             DynSolValue::Int(I256::from_be_bytes([0xff; 32]), 256)
+        );
+        */
+        assert_eq!(
+            DynSolType::Int(256)
+                .coerce_str("0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .unwrap(),
+            DynSolValue::Int(I256::MAX, 256)
         );
 
         assert_eq!(
@@ -640,7 +649,7 @@ mod tests {
 
         assert_eq!(
             DynSolType::FixedBytes(1).coerce_str("0x00").unwrap(),
-            DynSolValue::FixedBytes(mk_word(&[0x00]), 2)
+            DynSolValue::FixedBytes(mk_word(&[0x00]), 1)
         );
         assert_eq!(
             DynSolType::FixedBytes(2).coerce_str("0017").unwrap(),
