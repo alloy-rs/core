@@ -1,6 +1,6 @@
 use alloy_dyn_abi::{DynSolType, DynSolValue};
 use alloy_primitives::{hex, U256};
-use alloy_sol_types::{sol, sol_data, SolType};
+use alloy_sol_types::{sol, sol_data, SolType, SolValue};
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
@@ -90,12 +90,12 @@ fn sol_types_encode(c: &mut Criterion) {
 
     g.bench_function("single", |b| {
         let input = encode_single_input();
-        b.iter(|| alloy_sol_types::sol_data::String::abi_encode(black_box(&input)));
+        b.iter(|| black_box(&input).abi_encode());
     });
 
     g.bench_function("struct", |b| {
         let input = encode_struct_input();
-        b.iter(|| Input::abi_encode(black_box(&input)));
+        b.iter(|| black_box(&input).abi_encode());
     });
 
     g.finish();

@@ -38,10 +38,6 @@ macro_rules! as_fixed_seq {
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub enum DynSolValue {
-    /// An address.
-    Address(Address),
-    /// A function pointer.
-    Function(Function),
     /// A boolean.
     Bool(bool),
     /// A signed integer.
@@ -50,6 +46,10 @@ pub enum DynSolValue {
     Uint(U256, usize),
     /// A fixed-length byte string.
     FixedBytes(Word, usize),
+    /// An address.
+    Address(Address),
+    /// A function pointer.
+    Function(Function),
 
     /// A dynamic-length byte array.
     Bytes(Vec<u8>),
@@ -283,14 +283,14 @@ impl DynSolValue {
     /// See `DynSolType::sol_type_name_capacity` for more info.
     fn sol_type_name_capacity(&self) -> Option<usize> {
         match self {
-            Self::Address(_)
-            | Self::Function(_)
-            | Self::Bool(_)
-            | Self::Bytes(_)
-            | Self::String(_)
-            | Self::FixedBytes(..)
+            Self::Bool(_)
             | Self::Int(..)
-            | Self::Uint(..) => Some(8),
+            | Self::Uint(..)
+            | Self::FixedBytes(..)
+            | Self::Address(_)
+            | Self::Function(_)
+            | Self::Bytes(_)
+            | Self::String(_) => Some(8),
 
             Self::Array(t) | Self::FixedArray(t) => t
                 .first()
@@ -325,11 +325,11 @@ impl DynSolValue {
     pub const fn is_word(&self) -> bool {
         matches!(
             self,
-            Self::Address(_)
-                | Self::Bool(_)
-                | Self::FixedBytes(..)
+            Self::Bool(_)
                 | Self::Int(..)
                 | Self::Uint(..)
+                | Self::FixedBytes(..)
+                | Self::Address(_)
         )
     }
 
@@ -337,12 +337,12 @@ impl DynSolValue {
     #[inline]
     pub fn as_word(&self) -> Option<Word> {
         match *self {
-            Self::Address(a) => Some(a.into_word()),
-            Self::Function(f) => Some(f.into_word()),
             Self::Bool(b) => Some(Word::with_last_byte(b as u8)),
-            Self::FixedBytes(w, _) => Some(w),
             Self::Int(i, _) => Some(i.into()),
             Self::Uint(u, _) => Some(u.into()),
+            Self::FixedBytes(w, _) => Some(w),
+            Self::Address(a) => Some(a.into_word()),
+            Self::Function(f) => Some(f.into_word()),
             _ => None,
         }
     }
