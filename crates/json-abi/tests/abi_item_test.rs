@@ -34,6 +34,7 @@ fn operation() {
         outputs: vec![],
         state_mutability: Some(StateMutability::NonPayable),
         payable: None,
+        constant: None,
     };
 
     assert_eq!(deserialized, AbiItem::Function(Cow::Owned(function)));

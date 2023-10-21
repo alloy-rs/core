@@ -14,10 +14,6 @@ macro_rules! abi_items {
             $fvis:vis $field:ident : $type:ty,
         )*}
     )*) => {
-        trait FlattenStateMutability {
-            fn flatten(self) -> Self;
-        }
-
         $(
             abi_items!(@flatten, $(#[$attr])*, $vis, $name, $($name_lower),* { $($(#[$fattr])*, $fvis, $field, $type,)*});
 
@@ -65,44 +61,16 @@ macro_rules! abi_items {
             $fvis:vis, $field:ident, $type:ty,)*}) => {
 
             $(#[$attr])*
-            #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+            #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
             #[serde(rename = $name_lower, rename_all = "camelCase", tag = "type")]
             $vis struct $name {$(
                 $(#[$fattr])*
                 $fvis $field: $type,
             )*}
-
-            impl FlattenStateMutability for $name {
-                #[inline(always)]
-                fn flatten(self) -> Self { self }
-            }
-
-
-
-            impl<'de> Deserialize<'de> for $name {
-                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-                where
-                    D: Deserializer<'de> {
-                        $(#[$attr])*
-                        #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-                        #[serde(rename = $name_lower, rename_all = "camelCase", tag = "type")]
-                        struct Dummy {$(
-                            $(#[$fattr])*
-                            $field: $type,
-                        )*}
-
-                        let dummy: Dummy = Deserialize::deserialize(deserializer)?;
-
-                        let res = $name {
-                            $($field: dummy.$field),*
-                        };
-                        Ok(res.flatten())
-                    }
-            }
     };
     (@flatten,
         $(#[$attr:meta])*,
-        $vis:vis, $name:ident, $name_lower:literal, flatten {$(
+        $vis:vis, $name:ident, $name_lower:literal, payable, constant {$(
             $(#[$fattr:meta])*,
             $fvis:vis, $field:ident,$type:ty,)*}) => {
 
@@ -114,23 +82,52 @@ macro_rules! abi_items {
                 $fvis $field: $type,
             )*}
 
-            impl FlattenStateMutability for $name {
-                #[inline(always)]
-                fn flatten(mut self) -> Self {
-                    if self.state_mutability.is_some() {
-                        return self
-                    }
-                    if let Some(payable) = self.payable.as_ref() {
-                        if *payable {
-                        self.state_mutability = Some(StateMutability::Payable);
-                        } else {
-                            self.state_mutability = Some(StateMutability::NonPayable);
-                        }
-                    }
+            impl<'de> Deserialize<'de> for $name {
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                where
+                    D: Deserializer<'de> {
 
-                    self
-                }
+                        $(#[$attr])*
+                        #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+                        #[serde(rename = $name_lower, rename_all = "camelCase", tag = "type")]
+                        struct Dummy {$(
+                            $(#[$fattr])*
+                            $field: $type,
+                        )*}
+
+                        let mut dummy: Dummy = Deserialize::deserialize(deserializer)?;
+
+                        if !dummy.state_mutability.is_some() {
+                            dummy.state_mutability = Some(StateMutability::try_from_legacy(
+                                    dummy.payable.take().expect("abi has payable field"),
+                                    dummy.constant.take().expect("abi has payable field"),
+                            ).map_err(serde::de::Error::custom)?);
+                        }
+
+                        if !dummy.state_mutability.is_some() {
+
+                        }
+
+                        let res = $name {
+                            $($field: dummy.$field),*
+                        };
+                        Ok(res)
+                    }
             }
+    };
+    (@flatten,
+        $(#[$attr:meta])*,
+        $vis:vis, $name:ident, $name_lower:literal, payable {$(
+            $(#[$fattr:meta])*,
+            $fvis:vis, $field:ident,$type:ty,)*}) => {
+
+            $(#[$attr])*
+            #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+            #[serde(rename = $name_lower, rename_all = "camelCase", tag = "type")]
+            $vis struct $name {$(
+                $(#[$fattr])*
+                $fvis $field: $type,
+            )*}
 
             impl<'de> Deserialize<'de> for $name {
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -145,12 +142,19 @@ macro_rules! abi_items {
                             $field: $type,
                         )*}
 
-                        let dummy: Dummy = Deserialize::deserialize(deserializer)?;
+                        let mut dummy: Dummy = Deserialize::deserialize(deserializer)?;
+
+                        if !dummy.state_mutability.is_some() {
+                            dummy.state_mutability = Some(StateMutability::try_from_legacy(
+                                    dummy.payable.take().expect("abi has payable field"),
+                                    false,
+                            ).map_err(serde::de::Error::custom)?);
+                        }
 
                         let res = $name {
                             $($field: dummy.$field),*
                         };
-                        Ok(res.flatten())
+                        Ok(res)
                     }
             }
     };
@@ -158,7 +162,7 @@ macro_rules! abi_items {
 
 abi_items! {
     /// A JSON ABI constructor function.
-    pub struct Constructor: "constructor", flatten {
+    pub struct Constructor: "constructor", payable {
         /// The input types of the constructor. May be empty.
         pub inputs: Vec<Param>,
         /// The state mutability of the constructor.
@@ -169,7 +173,7 @@ abi_items! {
 
     /// A JSON ABI fallback function.
     #[derive(Copy)]
-    pub struct Fallback: "fallback", flatten {
+    pub struct Fallback: "fallback", payable {
         /// The state mutability of the fallback function.
         pub state_mutability: Option<StateMutability>,
         /// is payable is legacy
@@ -178,7 +182,7 @@ abi_items! {
 
     /// A JSON ABI receive function.
     #[derive(Copy)]
-    pub struct Receive: "receive", flatten {
+    pub struct Receive: "receive", payable {
         /// The state mutability of the receive function.
         pub state_mutability: Option<StateMutability>,
         /// is payable is legacy
@@ -186,7 +190,7 @@ abi_items! {
     }
 
     /// A JSON ABI function.
-    pub struct Function: "function", flatten {
+    pub struct Function: "function", payable, constant {
         /// The name of the function.
         #[serde(deserialize_with = "validate_identifier")]
         pub name: String,
@@ -196,8 +200,10 @@ abi_items! {
         pub outputs: Vec<Param>,
         /// The state mutability of the function. Is optional in legacy ABIS
         pub state_mutability: Option<StateMutability>,
-        /// is payable is legacy
+        /// is payable function (legacy abi)
         pub payable: Option<bool>,
+        /// is constant function (legacy abi)
+        pub constant: Option<bool>,
 
     }
 
@@ -551,6 +557,7 @@ impl Function {
     ///         outputs: vec![],
     ///         state_mutability: Some(StateMutability::NonPayable),
     ///         payable: None,
+    ///         constant: None,
     ///     }),
     /// )
     /// ```
@@ -567,6 +574,7 @@ impl Function {
     ///         outputs: vec![Param::parse("string s").unwrap()],
     ///         state_mutability: Some(StateMutability::NonPayable),
     ///         payable: None,
+    ///         constant: None,
     ///     }),
     /// );
     /// ```
@@ -578,6 +586,7 @@ impl Function {
             outputs,
             state_mutability: Some(StateMutability::NonPayable),
             payable: None,
+            constant: None,
         })
     }
 

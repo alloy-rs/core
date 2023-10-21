@@ -74,4 +74,16 @@ impl StateMutability {
             Self::NonPayable => None,
         }
     }
+
+    /// Tries to parse legacy abi fields into the replacement field
+    fn try_from_legacy(payable: bool, constant: bool) -> parser::Result<Self, parser::Error> {
+        match (payable, constant) {
+            (true, false) => Ok(Self::Payable),
+            (false, false) => Ok(Self::NonPayable),
+            (false, true) => Ok(Self::View),
+            _ => Err(parser::Error::invalid_type_string(
+                "A function cannot be both payable and constant",
+            )),
+        }
+    }
 }

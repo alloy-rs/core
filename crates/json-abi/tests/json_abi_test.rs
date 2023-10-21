@@ -125,7 +125,8 @@ fn functions() {
                             components: vec![]
                         }],
                         state_mutability: Some(StateMutability::NonPayable),
-                        payable: None
+                        payable: None,
+                        constant: None,
                     }]
                 ),
                 (
@@ -135,7 +136,8 @@ fn functions() {
                         inputs: vec![],
                         outputs: vec![],
                         state_mutability: Some(StateMutability::NonPayable),
-                        payable: None
+                        payable: None,
+                        constant: None
                     }]
                 ),
             ]),
@@ -205,6 +207,7 @@ fn functions_overloads() {
                         }],
                         state_mutability: Some(StateMutability::NonPayable),
                         payable: None,
+                        constant: None,
                     },
                     Function {
                         name: "foo".into(),
@@ -212,6 +215,7 @@ fn functions_overloads() {
                         outputs: vec![],
                         state_mutability: Some(StateMutability::NonPayable),
                         payable: None,
+                        constant: None,
                     },
                 ]
             )]),
