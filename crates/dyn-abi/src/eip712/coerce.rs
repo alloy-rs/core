@@ -149,7 +149,7 @@ pub(crate) fn custom_struct(
 ) -> Result<DynSolValue> {
     if let Some(map) = value.as_object() {
         let mut tuple = vec![];
-        for (name, ty) in prop_names.iter().zip(inner.iter()) {
+        for (name, ty) in core::iter::zip(prop_names, inner) {
             if let Some(v) = map.get(name) {
                 tuple.push(ty.coerce_json(v)?);
             } else {

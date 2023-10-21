@@ -2,7 +2,7 @@ use crate::{resolve::ResolveSolType, DynSolValue, DynToken, Error, Result, SolTy
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_sol_type_parser::TypeSpecifier;
 use alloy_sol_types::{abi::Decoder, sol_data};
-use core::{fmt, num::NonZeroUsize, str::FromStr};
+use core::{fmt, iter::zip, num::NonZeroUsize, str::FromStr};
 
 #[cfg(feature = "eip712")]
 macro_rules! as_tuple {
@@ -208,7 +208,7 @@ impl DynSolType {
     /// See [`matches`](Self::matches) for more information.
     #[inline]
     pub fn matches_many(types: &[Self], values: &[DynSolValue]) -> bool {
-        types.len() == values.len() && core::iter::zip(types, values).all(|(t, v)| t.matches(v))
+        types.len() == values.len() && zip(types, values).all(|(t, v)| t.matches(v))
     }
 
     /// Check that the given [`DynSolValue`] matches this type.
@@ -234,7 +234,7 @@ impl DynSolType {
                 DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v))
             ),
             Self::Tuple(types) => {
-                matches!(value, as_tuple!(DynSolValue tuple) if types.iter().zip(tuple).all(|(t, v)| t.matches(v)))
+                matches!(value, as_tuple!(DynSolValue tuple) if zip(types, tuple).all(|(t, v)| t.matches(v)))
             }
             #[cfg(feature = "eip712")]
             Self::CustomStruct {
@@ -252,9 +252,9 @@ impl DynSolType {
                     prop_names.len() == tuple.len()
                         && prop_names.len() == p.len()
                         && tuple.len() == t.len()
-                        && tuple.iter().zip(t).all(|(a, b)| a.matches(b))
+                        && zip(tuple, t).all(|(a, b)| a.matches(b))
                 } else if let DynSolValue::Tuple(v) = value {
-                    v.iter().zip(tuple).all(|(v, t)| t.matches(v))
+                    zip(v, tuple).all(|(v, t)| t.matches(v))
                 } else {
                     false
                 }
@@ -364,7 +364,7 @@ impl DynSolType {
     fn detokenize_many(types: &[Self], tokens: Vec<DynToken<'_>>) -> Result<Vec<DynSolValue>> {
         assert_eq!(types.len(), tokens.len());
         let mut values = Vec::with_capacity(tokens.len());
-        for (ty, token) in core::iter::zip(types, tokens) {
+        for (ty, token) in zip(types, tokens) {
             values.push(ty.detokenize(token)?);
         }
         Ok(values)
