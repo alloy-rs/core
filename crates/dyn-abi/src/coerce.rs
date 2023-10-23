@@ -17,12 +17,39 @@ use winnow::{
 impl DynSolType {
     /// Coerces a string into a [`DynSolValue`] via this type.
     ///
+    /// # Syntax
+    ///
+    /// - [`Bool`](DynSolType::Bool): `true|false`
+    /// - [`Int`](DynSolType::Int): `[+-]?{Uint}`
+    /// - [`Uint`](DynSolType::Uint): `{literal}(\.[0-9]+)?(\s*{unit})?`
+    ///   - literal: base 2, 8, 10, or 16 integer literal. If not in base 10,
+    ///     must be prefixed with `0b`, `0o`, or `0x` respectively.
+    ///   - unit: same as [Solidity ether units](https://docs.soliditylang.org/en/latest/units-and-global-variables.html#ether-units)
+    ///   - decimals with more digits than the unit's exponent value are not
+    ///     allowed
+    /// - [`FixedBytes`](DynSolType::FixedBytes): `(0x)?[0-9A-Fa-f]{$0*2}`
+    /// - [`Address`](DynSolType::Address): `(0x)?[0-9A-Fa-f]{40}`
+    /// - [`Function`](DynSolType::Function): `(0x)?[0-9A-Fa-f]{48}`
+    /// - [`Bytes`](DynSolType::Bytes): `(0x)?[0-9A-Fa-f]+`
+    /// - [`String`](DynSolType::String): `.*`
+    ///   - can be surrounded by a pair of `"` or `'`
+    ///   - trims whitespace if not surrounded
+    /// - [`Array`](DynSolType::Array): any number of the inner type delimited
+    ///   by commas (`,`) and surrounded by brackets (`[]`)
+    /// - [`FixedArray`](DynSolType::FixedArray): exactly the given number of
+    ///   the inner type delimited by commas (`,`) and surrounded by brackets
+    ///   (`[]`)
+    /// - [`Tuple`](DynSolType::Tuple): the inner types delimited by commas
+    ///   (`,`) and surrounded by parentheses (`()`)
+    /// - [`CustomStruct`](DynSolType::CustomStruct): the same as `Tuple`
+    ///
     /// # Examples
     ///
     /// ```
-    /// # use alloy_dyn_abi::{DynSolType, DynSolValue};
-    /// # use alloy_primitives::U256;
-    /// let ty = "(uint256,string)[]".parse::<DynSolType>()?;
+    /// use alloy_dyn_abi::{DynSolType, DynSolValue};
+    /// use alloy_primitives::U256;
+    ///
+    /// let ty: DynSolType = "(uint256,string)[]".parse()?;
     /// let value = ty.coerce_str("[(0, \"hello\"), (42, \"world\")]")?;
     /// assert_eq!(
     ///     value,
@@ -987,6 +1014,7 @@ mod tests {
         );
     }
 
+    // keep `n` low to avoid stack overflows (debug mode)
     #[test]
     fn lotsa_array_nesting() {
         let n = 10;
@@ -1007,6 +1035,30 @@ mod tests {
             };
             assert_eq!(arr.len(), 1);
             value = arr.into_iter().next().unwrap();
+        }
+        assert_eq!(value, DynSolValue::Bool(true));
+    }
+
+    #[test]
+    fn lotsa_tuple_nesting() {
+        let n = 10;
+
+        let mut ty = DynSolType::Bool;
+        for _ in 0..n {
+            ty = DynSolType::Tuple(vec![ty]);
+        }
+        let mut value_str = String::new();
+        value_str.push_str(&"(".repeat(n));
+        value_str.push_str("true");
+        value_str.push_str(&")".repeat(n));
+
+        let mut value = ty.coerce_str(&value_str).unwrap();
+        for _ in 0..n {
+            let DynSolValue::Tuple(tuple) = value else {
+                panic!("{value:?}")
+            };
+            assert_eq!(tuple.len(), 1);
+            value = tuple.into_iter().next().unwrap();
         }
         assert_eq!(value, DynSolValue::Bool(true));
     }

@@ -24,16 +24,36 @@ macro_rules! as_fixed_seq {
 ///
 /// # Examples
 ///
+/// Basic usage:
+///
 /// ```
 /// use alloy_dyn_abi::{DynSolType, DynSolValue};
 ///
-/// let my_type: DynSolType = "uint64".parse().unwrap();
-/// let my_data: DynSolValue = 183u64.into();
+/// let ty: DynSolType = "uint64".parse()?;
+/// let value: DynSolValue = 183u64.into();
 ///
-/// let encoded = my_data.abi_encode();
-/// let decoded = my_type.abi_decode(&encoded)?;
+/// let encoded: Vec<u8> = value.abi_encode();
+/// let decoded: DynSolValue = ty.abi_decode(&encoded)?;
 ///
-/// assert_eq!(decoded, my_data);
+/// assert_eq!(decoded, value);
+/// # Ok::<(), alloy_dyn_abi::Error>(())
+/// ```
+///
+/// Coerce a string using [`DynSolType`]:
+///
+/// ```
+/// use alloy_dyn_abi::{DynSolType, DynSolValue};
+/// use alloy_primitives::U256;
+///
+/// let ty: DynSolType = "(string, uint256)".parse()?;
+/// let value = ty.coerce_str("(foo bar, 25.5 gwei)")?;
+/// assert_eq!(
+///     value,
+///     DynSolValue::Tuple(vec![
+///         DynSolValue::String(String::from("foo bar")),
+///         DynSolValue::Uint(U256::from(25_500_000_000u64), 256)
+///     ]),
+/// );
 /// # Ok::<(), alloy_dyn_abi::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq)]
