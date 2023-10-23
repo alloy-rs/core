@@ -27,6 +27,8 @@ impl DynSolType {
     ///   - unit: same as [Solidity ether units](https://docs.soliditylang.org/en/latest/units-and-global-variables.html#ether-units)
     ///   - decimals with more digits than the unit's exponent value are not
     ///     allowed
+    ///   - decimals are only allowed when the `std` feature is enabled due to
+    ///     floating point operations; this may be relaxed in the future
     /// - [`FixedBytes`](DynSolType::FixedBytes): `(0x)?[0-9A-Fa-f]{$0*2}`
     /// - [`Address`](DynSolType::Address): `(0x)?[0-9A-Fa-f]{40}`
     /// - [`Function`](DynSolType::Function): `(0x)?[0-9A-Fa-f]{48}`

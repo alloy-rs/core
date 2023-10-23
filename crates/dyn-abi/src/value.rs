@@ -46,12 +46,19 @@ macro_rules! as_fixed_seq {
 /// use alloy_primitives::U256;
 ///
 /// let ty: DynSolType = "(string, uint256)".parse()?;
-/// let value = ty.coerce_str("(foo bar, 25.5 gwei)")?;
+#[cfg_attr(
+    feature = "std",
+    doc = "let value = ty.coerce_str(\"(foo bar, 2.5 gwei)\")?;"
+)]
+#[cfg_attr(
+    not(feature = "std"),
+    doc = "let value = ty.coerce_str(\"(foo bar, 2500000000)\")?;"
+)]
 /// assert_eq!(
 ///     value,
 ///     DynSolValue::Tuple(vec![
 ///         DynSolValue::String(String::from("foo bar")),
-///         DynSolValue::Uint(U256::from(25_500_000_000u64), 256)
+///         DynSolValue::Uint(U256::from(2_500_000_000u64), 256)
 ///     ]),
 /// );
 /// # Ok::<(), alloy_dyn_abi::Error>(())
