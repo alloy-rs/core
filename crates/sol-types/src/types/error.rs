@@ -432,10 +432,11 @@ pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::keccak256;
+    use crate::sol;
+    use alloy_primitives::{address, hex, keccak256};
 
     #[test]
-    fn test_revert_encoding() {
+    fn revert_encoding() {
         let revert = Revert::from("test");
         let encoded = revert.abi_encode();
         let decoded = Revert::abi_decode(&encoded, true).unwrap();
@@ -445,7 +446,7 @@ mod tests {
     }
 
     #[test]
-    fn test_panic_encoding() {
+    fn panic_encoding() {
         let panic = Panic { code: U256::ZERO };
         assert_eq!(panic.kind(), Some(PanicKind::Generic));
         let encoded = panic.abi_encode();
@@ -457,7 +458,7 @@ mod tests {
     }
 
     #[test]
-    fn test_selectors() {
+    fn selectors() {
         assert_eq!(
             Revert::SELECTOR,
             &keccak256(b"Error(string)")[..4],
@@ -471,7 +472,7 @@ mod tests {
     }
 
     #[test]
-    fn test_decode_solidity_revert_reason() {
+    fn decode_solidity_revert_reason() {
         let revert = Revert::from("test_revert_reason");
         let encoded = revert.abi_encode();
         let decoded = decode_revert_reason(&encoded).unwrap();
@@ -479,16 +480,38 @@ mod tests {
     }
 
     #[test]
-    fn test_decode_random_revert_reason() {
+    fn decode_random_revert_reason() {
         let revert_reason = String::from("test_revert_reason");
         let decoded = decode_revert_reason(revert_reason.as_bytes()).unwrap();
         assert_eq!(decoded, String::from("test_revert_reason"));
     }
 
     #[test]
-    fn test_decode_non_utf8_revert_reason() {
+    fn decode_non_utf8_revert_reason() {
         let revert_reason = [0xFF];
         let decoded = decode_revert_reason(&revert_reason);
         assert_eq!(decoded, None);
+    }
+
+    // https://github.com/alloy-rs/core/issues/382
+    #[test]
+    fn decode_solidity_no_interface() {
+        sol! {
+            interface C {
+                #[derive(Debug, PartialEq)]
+                error SenderAddressError(address);
+            }
+        }
+
+        let data = hex!("8758782b000000000000000000000000a48388222c7ee7daefde5d0b9c99319995c4a990");
+        assert_eq!(decode_revert_reason(&data), None);
+
+        let C::CErrors::SenderAddressError(decoded) = C::CErrors::abi_decode(&data, true).unwrap();
+        assert_eq!(
+            decoded,
+            C::SenderAddressError {
+                _0: address!("a48388222c7ee7daefde5d0b9c99319995c4a990")
+            }
+        );
     }
 }

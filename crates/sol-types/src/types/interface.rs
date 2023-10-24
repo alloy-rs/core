@@ -86,7 +86,7 @@ pub trait SolInterface: Sized {
     /// ABI-decodes the given data into one of the variants of `self`.
     #[inline]
     fn abi_decode(data: &[u8], validate: bool) -> Result<Self> {
-        if data.len() < Self::MIN_DATA_LENGTH + 4 {
+        if data.len() < Self::MIN_DATA_LENGTH.saturating_add(4) {
             Err(crate::Error::type_check_fail(data, Self::NAME))
         } else {
             let (selector, data) = crate::impl_core::split_array_ref(data);
