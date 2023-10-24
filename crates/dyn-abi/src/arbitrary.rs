@@ -311,6 +311,13 @@ impl proptest::arbitrary::Arbitrary for DynSolType {
 }
 
 impl DynSolType {
+    /// Create a [proptest strategy][Strategy] to generate [`DynSolValue`]s from
+    /// this type.
+    #[inline]
+    pub fn value_strategy(&self) -> SBoxedStrategy<DynSolValue> {
+        DynSolValue::type_strategy(self)
+    }
+
     #[inline]
     fn leaf() -> impl Strategy<Value = Self> {
         prop_oneof![

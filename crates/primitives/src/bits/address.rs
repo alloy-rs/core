@@ -245,7 +245,7 @@ impl Address {
                 debug_assert!(prefix_len <= 20);
                 let len = 2 + 40 + prefix_len;
 
-                // SAFETY: prefix_len <= 20; len <= 62; storage.len() == 64
+                // SAFETY: prefix_len <= 20; len <= 62; storage.len() == 62
                 unsafe {
                     storage
                         .get_unchecked_mut(..prefix_len)

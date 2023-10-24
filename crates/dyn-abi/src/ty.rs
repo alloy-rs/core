@@ -2,7 +2,7 @@ use crate::{resolve::ResolveSolType, DynSolValue, DynToken, Error, Result, SolTy
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_sol_type_parser::TypeSpecifier;
 use alloy_sol_types::{abi::Decoder, sol_data};
-use core::{fmt, num::NonZeroUsize, str::FromStr};
+use core::{fmt, iter::zip, num::NonZeroUsize, str::FromStr};
 
 #[cfg(feature = "eip712")]
 macro_rules! as_tuple {
@@ -16,6 +16,7 @@ macro_rules! as_tuple {
         $ty::Tuple($t)
     };
 }
+pub(crate) use as_tuple;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct StructProp {
@@ -80,10 +81,6 @@ struct StructProp {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DynSolType {
-    /// Address.
-    Address,
-    /// Function.
-    Function,
     /// Boolean.
     Bool,
     /// Signed Integer.
@@ -92,6 +89,10 @@ pub enum DynSolType {
     Uint(usize),
     /// Fixed-size bytes, up to 32.
     FixedBytes(usize),
+    /// Address.
+    Address,
+    /// Function.
+    Function,
 
     /// Dynamic bytes.
     Bytes,
@@ -144,6 +145,11 @@ impl DynSolType {
     /// let ty = DynSolType::parse(type_name)?;
     /// assert_eq!(ty, DynSolType::Uint(256));
     /// assert_eq!(ty.sol_type_name(), type_name);
+    /// assert_eq!(ty.to_string(), type_name);
+    ///
+    /// // alternatively, you can use the FromStr impl
+    /// let ty2 = type_name.parse::<DynSolType>()?;
+    /// assert_eq!(ty2, ty);
     /// # Ok::<_, alloy_dyn_abi::Error>(())
     /// ```
     #[inline]
@@ -151,24 +157,6 @@ impl DynSolType {
         TypeSpecifier::parse(s)
             .map_err(Error::TypeParser)
             .and_then(|t| t.resolve())
-    }
-
-    /// Wrap in an array of the specified size
-    #[inline]
-    pub(crate) fn array_wrap(self, size: Option<NonZeroUsize>) -> Self {
-        match size {
-            Some(size) => Self::FixedArray(Box::new(self), size.get()),
-            None => Self::Array(Box::new(self)),
-        }
-    }
-
-    /// Iteratively wrap in arrays.
-    #[inline]
-    pub(crate) fn array_wrap_from_iter(
-        self,
-        iter: impl IntoIterator<Item = Option<NonZeroUsize>>,
-    ) -> Self {
-        iter.into_iter().fold(self, Self::array_wrap)
     }
 
     /// Fallible cast to the contents of a variant.
@@ -220,7 +208,7 @@ impl DynSolType {
     /// See [`matches`](Self::matches) for more information.
     #[inline]
     pub fn matches_many(types: &[Self], values: &[DynSolValue]) -> bool {
-        types.len() == values.len() && types.iter().zip(values).all(|(t, v)| t.matches(v))
+        types.len() == values.len() && zip(types, values).all(|(t, v)| t.matches(v))
     }
 
     /// Check that the given [`DynSolValue`] matches this type.
@@ -230,23 +218,23 @@ impl DynSolType {
     /// check equality between the lengths and types of the tuple.
     pub fn matches(&self, value: &DynSolValue) -> bool {
         match self {
+            Self::Bool => matches!(value, DynSolValue::Bool(_)),
+            Self::Int(size) => matches!(value, DynSolValue::Int(_, s) if s == size),
+            Self::Uint(size) => matches!(value, DynSolValue::Uint(_, s) if s == size),
+            Self::FixedBytes(size) => matches!(value, DynSolValue::FixedBytes(_, s) if s == size),
             Self::Address => matches!(value, DynSolValue::Address(_)),
             Self::Function => matches!(value, DynSolValue::Function(_)),
             Self::Bytes => matches!(value, DynSolValue::Bytes(_)),
-            Self::Int(size) => matches!(value, DynSolValue::Int(_, s) if s == size),
-            Self::Uint(size) => matches!(value, DynSolValue::Uint(_, s) if s == size),
-            Self::Bool => matches!(value, DynSolValue::Bool(_)),
+            Self::String => matches!(value, DynSolValue::String(_)),
             Self::Array(t) => {
                 matches!(value, DynSolValue::Array(v) if v.iter().all(|v| t.matches(v)))
             }
-            Self::String => matches!(value, DynSolValue::String(_)),
-            Self::FixedBytes(size) => matches!(value, DynSolValue::FixedBytes(_, s) if s == size),
             Self::FixedArray(t, size) => matches!(
                 value,
                 DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v))
             ),
             Self::Tuple(types) => {
-                matches!(value, as_tuple!(DynSolValue tuple) if types.iter().zip(tuple).all(|(t, v)| t.matches(v)))
+                matches!(value, as_tuple!(DynSolValue tuple) if zip(types, tuple).all(|(t, v)| t.matches(v)))
             }
             #[cfg(feature = "eip712")]
             Self::CustomStruct {
@@ -264,9 +252,9 @@ impl DynSolType {
                     prop_names.len() == tuple.len()
                         && prop_names.len() == p.len()
                         && tuple.len() == t.len()
-                        && tuple.iter().zip(t).all(|(a, b)| a.matches(b))
+                        && zip(tuple, t).all(|(a, b)| a.matches(b))
                 } else if let DynSolValue::Tuple(v) = value {
-                    v.iter().zip(tuple).all(|(v, t)| t.matches(v))
+                    zip(v, tuple).all(|(v, t)| t.matches(v))
                 } else {
                     false
                 }
@@ -279,24 +267,9 @@ impl DynSolType {
     #[allow(clippy::unnecessary_to_owned)] // https://github.com/rust-lang/rust-clippy/issues/8148
     pub fn detokenize(&self, token: DynToken<'_>) -> Result<DynSolValue> {
         match (self, token) {
-            (Self::Address, DynToken::Word(word)) => Ok(DynSolValue::Address(
-                sol_data::Address::detokenize(word.into()),
-            )),
-
-            (Self::Function, DynToken::Word(word)) => Ok(DynSolValue::Function(
-                sol_data::Function::detokenize(word.into()),
-            )),
-
             (Self::Bool, DynToken::Word(word)) => {
                 Ok(DynSolValue::Bool(sol_data::Bool::detokenize(word.into())))
             }
-
-            (Self::Bytes, DynToken::PackedSeq(buf)) => Ok(DynSolValue::Bytes(buf.to_vec())),
-
-            (Self::FixedBytes(size), DynToken::Word(word)) => Ok(DynSolValue::FixedBytes(
-                sol_data::FixedBytes::<32>::detokenize(word.into()),
-                *size,
-            )),
 
             // cheating here, but it's ok
             (Self::Int(size), DynToken::Word(word)) => Ok(DynSolValue::Int(
@@ -309,18 +282,24 @@ impl DynSolType {
                 *size,
             )),
 
+            (Self::FixedBytes(size), DynToken::Word(word)) => Ok(DynSolValue::FixedBytes(
+                sol_data::FixedBytes::<32>::detokenize(word.into()),
+                *size,
+            )),
+
+            (Self::Address, DynToken::Word(word)) => Ok(DynSolValue::Address(
+                sol_data::Address::detokenize(word.into()),
+            )),
+
+            (Self::Function, DynToken::Word(word)) => Ok(DynSolValue::Function(
+                sol_data::Function::detokenize(word.into()),
+            )),
+
+            (Self::Bytes, DynToken::PackedSeq(buf)) => Ok(DynSolValue::Bytes(buf.to_vec())),
+
             (Self::String, DynToken::PackedSeq(buf)) => Ok(DynSolValue::String(
                 sol_data::String::detokenize(buf.into()),
             )),
-
-            (Self::Tuple(types), DynToken::FixedSeq(tokens, _)) => {
-                if types.len() != tokens.len() {
-                    return Err(crate::Error::custom(
-                        "tuple length mismatch on dynamic detokenization",
-                    ))
-                }
-                Self::detokenize_many(types, tokens.into_owned()).map(DynSolValue::Tuple)
-            }
 
             (Self::Array(t), DynToken::DynSeq { contents, .. }) => t
                 .detokenize_array(contents.into_owned())
@@ -334,6 +313,15 @@ impl DynSolType {
                 }
                 t.detokenize_array(tokens.into_owned())
                     .map(DynSolValue::FixedArray)
+            }
+
+            (Self::Tuple(types), DynToken::FixedSeq(tokens, _)) => {
+                if types.len() != tokens.len() {
+                    return Err(crate::Error::custom(
+                        "tuple length mismatch on dynamic detokenization",
+                    ))
+                }
+                Self::detokenize_many(types, tokens.into_owned()).map(DynSolValue::Tuple)
             }
 
             #[cfg(feature = "eip712")]
@@ -376,7 +364,7 @@ impl DynSolType {
     fn detokenize_many(types: &[Self], tokens: Vec<DynToken<'_>>) -> Result<Vec<DynSolValue>> {
         assert_eq!(types.len(), tokens.len());
         let mut values = Vec::with_capacity(tokens.len());
-        for (ty, token) in core::iter::zip(types, tokens) {
+        for (ty, token) in zip(types, tokens) {
             values.push(ty.detokenize(token)?);
         }
         Ok(values)
@@ -384,15 +372,13 @@ impl DynSolType {
 
     #[inline]
     #[allow(clippy::missing_const_for_fn)]
-    fn sol_type_name_simple(&self) -> Option<&str> {
+    fn sol_type_name_simple(&self) -> Option<&'static str> {
         match self {
             Self::Address => Some("address"),
             Self::Function => Some("function"),
             Self::Bool => Some("bool"),
             Self::Bytes => Some("bytes"),
             Self::String => Some("string"),
-            #[cfg(feature = "eip712")]
-            Self::CustomStruct { name, .. } => Some(name),
             _ => None,
         }
     }
@@ -400,16 +386,6 @@ impl DynSolType {
     #[inline]
     fn sol_type_name_raw(&self, out: &mut String) {
         match self {
-            #[cfg(feature = "eip712")]
-            Self::Address
-            | Self::Function
-            | Self::Bool
-            | Self::Bytes
-            | Self::String
-            | Self::CustomStruct { .. } => {
-                out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
-            }
-            #[cfg(not(feature = "eip712"))]
             Self::Address | Self::Function | Self::Bool | Self::Bytes | Self::String => {
                 out.push_str(unsafe { self.sol_type_name_simple().unwrap_unchecked() });
             }
@@ -425,15 +401,15 @@ impl DynSolType {
                 out.push_str(itoa::Buffer::new().format(*size));
             }
 
-            Self::Tuple(inner) => {
+            as_tuple!(Self tuple) => {
                 out.push('(');
-                for (i, val) in inner.iter().enumerate() {
+                for (i, val) in tuple.iter().enumerate() {
                     if i > 0 {
                         out.push(',');
                     }
                     val.sol_type_name_raw(out);
                 }
-                if inner.len() == 1 {
+                if tuple.len() == 1 {
                     out.push(',');
                 }
                 out.push(')');
@@ -451,18 +427,40 @@ impl DynSolType {
         }
     }
 
+    /// Returns an estimate of the number of bytes needed to format this type.
+    ///
+    /// This calculation is meant to be an upper bound for valid types to avoid
+    /// a second allocation in `sol_type_name_raw` and thus is almost never
+    /// going to be exact.
+    fn sol_type_name_capacity(&self) -> usize {
+        match self {
+            | Self::Address // 7
+            | Self::Function // 8
+            | Self::Bool // 4
+            | Self::Bytes // 5
+            | Self::String // 6
+            | Self::FixedBytes(_) // 5 + 2
+            | Self::Int(_) // 3 + 3
+            | Self::Uint(_) // 4 + 3
+            => 8,
+
+            | Self::Array(t) // t + 2
+            | Self::FixedArray(t, _) // t + 2 + log10(len)
+            => t.sol_type_name_capacity() + 8,
+
+            as_tuple!(Self tuple) // sum(tuple) + len(tuple) + 2
+            => tuple.iter().map(Self::sol_type_name_capacity).sum::<usize>() + 8,
+        }
+    }
+
     /// The Solidity type name. This returns the Solidity type corresponding to
     /// this value, if it is known. A type will not be known if the value
     /// contains an empty sequence, e.g. `T[0]`.
-    pub fn sol_type_name(&self) -> Cow<'_, str> {
+    pub fn sol_type_name(&self) -> Cow<'static, str> {
         if let Some(s) = self.sol_type_name_simple() {
             Cow::Borrowed(s)
         } else {
-            let elems = match self {
-                as_tuple!(Self t) => t.len(),
-                _ => 1,
-            };
-            let mut s = String::with_capacity(elems * 16);
+            let mut s = String::with_capacity(self.sol_type_name_capacity());
             self.sol_type_name_raw(&mut s);
             Cow::Owned(s)
         }
@@ -589,6 +587,24 @@ impl DynSolType {
             "decoded value does not match type:\n  type: {self:?}\n value: {value:?}"
         );
         Ok(value)
+    }
+
+    /// Wrap in an array of the specified size
+    #[inline]
+    pub(crate) fn array_wrap(self, size: Option<NonZeroUsize>) -> Self {
+        match size {
+            Some(size) => Self::FixedArray(Box::new(self), size.get()),
+            None => Self::Array(Box::new(self)),
+        }
+    }
+
+    /// Iteratively wrap in arrays.
+    #[inline]
+    pub(crate) fn array_wrap_from_iter(
+        self,
+        iter: impl IntoIterator<Item = Option<NonZeroUsize>>,
+    ) -> Self {
+        iter.into_iter().fold(self, Self::array_wrap)
     }
 }
 

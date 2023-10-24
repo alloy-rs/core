@@ -347,7 +347,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
             Sign::Negative => twos_complement(abs),
         });
 
-        (value, value.sign() != sign)
+        (value, value.sign() != sign && value != Self::ZERO)
     }
 
     /// Creates a `Signed` from an absolute value and a negative flag. Returns

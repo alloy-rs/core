@@ -76,12 +76,12 @@ type Ret<T> = alloy_sol_type_parser::Result<(String, Vec<T>, Vec<T>, bool)>;
 
 #[inline]
 pub(crate) fn parse_sig<const O: bool>(s: &str) -> Ret<Param> {
-    alloy_sol_type_parser::__internal_parse_signature::<O, _, _>(s, |p| mk_param(p.name, p.ty))
+    alloy_sol_type_parser::utils::parse_signature::<O, _, _>(s, |p| mk_param(p.name, p.ty))
 }
 
 #[inline]
 pub(crate) fn parse_event_sig(s: &str) -> Ret<EventParam> {
-    alloy_sol_type_parser::__internal_parse_signature::<false, _, _>(s, mk_eparam)
+    alloy_sol_type_parser::utils::parse_signature::<false, _, _>(s, mk_eparam)
 }
 
 pub(crate) fn mk_param(name: Option<&str>, ty: TypeSpecifier<'_>) -> Param {

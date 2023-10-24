@@ -1,4 +1,7 @@
-use crate::{spanned, str_parser, Error, Result, TypeStem};
+use crate::{
+    utils::{spanned, str_parser},
+    Error, Result, TypeStem,
+};
 use alloc::vec::Vec;
 use core::num::NonZeroUsize;
 use winnow::{
@@ -84,11 +87,12 @@ impl AsRef<str> for TypeSpecifier<'_> {
 impl<'a> TypeSpecifier<'a> {
     /// Parse a type specifier from a string.
     #[inline]
-    pub fn parse(input: &'a str) -> Result<Self> {
-        Self::parser.parse(input).map_err(Error::parser)
+    pub fn parse(s: &'a str) -> Result<Self> {
+        Self::parser.parse(s).map_err(Error::parser)
     }
 
-    pub(crate) fn parser(input: &mut &'a str) -> PResult<Self> {
+    /// [`winnow`] parser for this type.
+    pub fn parser(input: &mut &'a str) -> PResult<Self> {
         trace(
             "TypeSpecifier",
             spanned(|input: &mut &'a str| {

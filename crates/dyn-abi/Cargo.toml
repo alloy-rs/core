@@ -25,6 +25,7 @@ alloy-primitives.workspace = true
 
 hex.workspace = true
 itoa.workspace = true
+winnow.workspace = true
 
 # eip712
 derive_more = { workspace = true, optional = true }
@@ -61,6 +62,9 @@ arbitrary = [
     "dep:derive_arbitrary",
     "dep:proptest",
 ]
+
+# Debug winnow parsers; intentionally doesn't enable `winnow/debug`
+debug = ["std", "alloy-sol-type-parser/debug"]
 
 [[bench]]
 name = "abi"

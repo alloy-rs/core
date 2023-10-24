@@ -153,7 +153,7 @@ impl TypedData {
     /// types map as a resolver.
     pub fn coerce(&self) -> Result<DynSolValue> {
         let ty = self.resolve()?;
-        ty.coerce(&self.message)
+        ty.coerce_json(&self.message)
     }
 
     /// Calculate the Keccak-256 hash of [`encodeType`] for this value.

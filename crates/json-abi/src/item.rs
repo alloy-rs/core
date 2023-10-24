@@ -153,7 +153,7 @@ impl AbiItem<'_> {
     pub fn parse(mut input: &str) -> ParserResult<Self> {
         // need this for Constructor, since the keyword is also the name of the function
         let copy = input;
-        match alloy_sol_type_parser::__internal_parse_item(&mut input)? {
+        match alloy_sol_type_parser::utils::parse_item(&mut input)? {
             "constructor" => Constructor::parse(copy).map(Into::into),
             "function" => Function::parse(input).map(Into::into),
             "error" => Error::parse(input).map(Into::into),

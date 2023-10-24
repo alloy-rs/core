@@ -130,35 +130,31 @@ impl fmt::Display for Error {
 #[allow(dead_code)]
 impl Error {
     /// Instantiates a new error with a static str.
-    #[inline]
     pub fn custom(s: impl Into<Cow<'static, str>>) -> Self {
         Self::SolTypes(SolTypesError::custom(s))
     }
 
     #[cfg(feature = "eip712")]
-    pub(crate) fn type_mismatch(expected: &crate::DynSolType, actual: &serde_json::Value) -> Self {
+    pub(crate) fn eip712_coerce(expected: &crate::DynSolType, actual: &serde_json::Value) -> Self {
         #[allow(unused_imports)]
         use alloc::string::ToString;
         Self::TypeMismatch {
-            expected: expected.sol_type_name().into_owned(),
+            expected: expected.to_string(),
             actual: actual.to_string(),
         }
     }
 
     #[cfg(feature = "eip712")]
-    #[inline]
     pub(crate) fn invalid_property_def(def: &str) -> Self {
         Self::InvalidPropertyDefinition(def.into())
     }
 
     #[cfg(feature = "eip712")]
-    #[inline]
     pub(crate) fn missing_type(name: &str) -> Self {
         Self::MissingType(name.into())
     }
 
     #[cfg(feature = "eip712")]
-    #[inline]
     pub(crate) fn circular_dependency(dep: &str) -> Self {
         Self::CircularDependency(dep.into())
     }

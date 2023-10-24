@@ -56,7 +56,8 @@ impl<'a> TypeStem<'a> {
         }
     }
 
-    pub(crate) fn parser(input: &mut &'a str) -> PResult<Self> {
+    /// [`winnow`] parser for this type.
+    pub fn parser(input: &mut &'a str) -> PResult<Self> {
         let name = "TypeStem";
         if input.starts_with('(') || input.starts_with("tuple(") {
             trace(name, TupleSpecifier::parser)
