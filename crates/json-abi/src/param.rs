@@ -25,8 +25,12 @@ use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
 pub struct Param {
     /// The canonical Solidity type of the parameter, using the word "tuple" to
     /// represent complex types. E.g. `uint256` or `bytes[2]` or `tuple` or
-    /// `tuple[2]`. This field always contains a valid
-    /// [`alloy_sol_type_parser::TypeSpecifier`].
+    /// `tuple[2]`.
+    ///
+    /// Generally, this is a valid [`TypeSpecifier`], but in very rare
+    /// circumstances, such as when a function in a library contains an enum
+    /// in its parameters or return types, this will be `Contract.EnumName`
+    /// instead of the actual type (`uint8`).
     pub ty: String,
     /// The name of the parameter. This field always contains either the empty
     /// string, or a valid Solidity identifier.
@@ -261,8 +265,12 @@ impl Param {
 pub struct EventParam {
     /// The canonical Solidity type of the parameter, using the word "tuple" to
     /// represent complex types. E.g. `uint256` or `bytes[2]` or `tuple` or
-    /// `tuple[2]`. This field always contains a valid
-    /// [`alloy_sol_type_parser::TypeSpecifier`].
+    /// `tuple[2]`.
+    ///
+    /// Generally, this is a valid [`TypeSpecifier`], but in very rare
+    /// circumstances, such as when a function in a library contains an enum
+    /// in its parameters or return types, this will be `Contract.EnumName`
+    /// instead of the actual type (`uint8`).
     pub ty: String,
     /// The name of the parameter. This field always contains either the empty
     /// string, or a valid Solidity identifier.

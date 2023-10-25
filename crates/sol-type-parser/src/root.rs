@@ -73,7 +73,20 @@ impl<'a> RootType<'a> {
 
     /// [`winnow`] parser for this type.
     pub fn parser(input: &mut &'a str) -> PResult<Self> {
-        trace("RootType", identifier).parse_next(input).map(Self)
+        trace("RootType", |input: &mut &'a str| {
+            identifier(input).map(|mut ident| {
+                // Workaround for enums in library function params or returns.
+                // See: https://github.com/alloy-rs/core/pull/386
+                // See ethabi workaround: https://github.com/rust-ethereum/ethabi/blob/b1710adc18f5b771d2d2519c87248b1ba9430778/ethabi/src/param_type/reader.rs#L162-L167
+                if input.starts_with('.') {
+                    *input = &input[1..];
+                    let _ = identifier(input);
+                    ident = "uint8";
+                }
+                Self(ident)
+            })
+        })
+        .parse_next(input)
     }
 
     /// The string underlying this type. The type name.

@@ -195,6 +195,31 @@ mod tests {
                 assert_eq!(returns[1].ty.to_string(), "Execution[]");
                 assert_eq!(returns[1].name.as_ref().unwrap(), "f");
             }
+            "EnumsInLibraryFunctions" => {
+                assert_eq!(c.name, "EnumsInLibraryFunctions");
+                assert_eq!(c.body.len(), 5);
+                let [Item::Udt(the_enum), Item::Function(f_array), Item::Function(f_arrays), Item::Function(f_dyn_array), Item::Function(f_just_enum)] =
+                    &c.body[..]
+                else {
+                    panic!("{c:#?}");
+                };
+
+                assert_eq!(the_enum.name, "TheEnum");
+                assert_eq!(the_enum.ty.to_string(), "uint8");
+
+                let function_tests = [
+                    (f_array, "enumArray", "TheEnum[2]"),
+                    (f_arrays, "enumArrays", "TheEnum[][69][]"),
+                    (f_dyn_array, "enumDynArray", "TheEnum[]"),
+                    (f_just_enum, "enum_", "TheEnum"),
+                ];
+                for (f, name, ty) in function_tests {
+                    assert_eq!(f.name.as_ref().unwrap(), name);
+                    assert_eq!(f.arguments.type_strings().collect::<Vec<_>>(), [ty]);
+                    let ret = &f.returns.as_ref().expect("no returns").returns;
+                    assert_eq!(ret.type_strings().collect::<Vec<_>>(), [ty]);
+                }
+            }
             _ => {}
         }
     }
