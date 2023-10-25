@@ -83,11 +83,10 @@ impl<'a> RootType<'a> {
                     let _ = identifier(input);
                     ident = "uint8";
                 }
-                ident
+                Self(ident)
             })
         })
         .parse_next(input)
-        .map(Self)
     }
 
     /// The string underlying this type. The type name.
