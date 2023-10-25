@@ -530,9 +530,7 @@ impl BorrowedParam<'_> {
         // any components means type is "tuple" + maybe brackets, so we can skip
         // parsing with TypeSpecifier
         if self.components.is_empty() {
-            if alloy_sol_type_parser::TypeSpecifier::parse(self.ty).is_err()
-                && !self.ty.contains('.')
-            {
+            if alloy_sol_type_parser::TypeSpecifier::parse(self.ty).is_err() {
                 return Err(E::invalid_value(
                     Unexpected::Str(self.ty),
                     &"a valid Solidity type specifier",
