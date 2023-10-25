@@ -1,0 +1,1 @@
+[{"inputs":[],"name":"sayYes","outputs":[{"internalType":"enum LibCounter.TestEnum","name":"","type":"LibCounter.TestEnum"}],"stateMutability":"pure","type":"function"}]
