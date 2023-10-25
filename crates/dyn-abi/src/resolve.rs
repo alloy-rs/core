@@ -381,4 +381,13 @@ mod tests {
             ))
         );
     }
+
+    #[test]
+    fn library_enum_workaround() {
+        assert_eq!(parse("MyLibrary.MyEnum"), Ok(DynSolType::Uint(8)));
+        assert_eq!(
+            parse("MyLibrary.MyEnum[]"),
+            Ok(DynSolType::Array(Box::new(DynSolType::Uint(8))))
+        );
+    }
 }
