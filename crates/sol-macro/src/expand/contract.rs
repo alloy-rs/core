@@ -59,8 +59,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     let mut events = Vec::with_capacity(contract.body.len());
 
     let mut item_tokens = TokenStream::new();
-    let (mod_attrs, item_attrs): (Vec<_>, _) =
+    let (mut mod_attrs, item_attrs): (Vec<_>, _) =
         attrs.into_iter().partition(|a| a.path().is_ident("doc"));
+    mod_attrs.extend(
+        item_attrs
+            .iter()
+            .filter(|a| !a.path().is_ident("derive"))
+            .cloned(),
+    );
 
     for item in body {
         match item {
