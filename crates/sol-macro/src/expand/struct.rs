@@ -1,6 +1,6 @@
 //! [`ItemStruct`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_type, ExpCtxt};
+use super::{attr, expand_fields, expand_from_into_tuples, expand_tokenize, expand_type, ExpCtxt};
 use ast::{Item, ItemStruct, Spanned, Type};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -31,8 +31,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
         ..
     } = s;
 
-    let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
     cx.derives(&mut attrs, fields, true);
+    let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     let (field_types, field_names): (Vec<_>, Vec<_>) = fields
         .iter()
@@ -62,8 +63,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let name_s = name.to_string();
     let fields = expand_fields(fields);
 
+    let doc = docs.then(|| attr::mk_doc(format!("```solidity\n{s}\n```")));
     let tokens = quote! {
         #(#attrs)*
+        #doc
         #[allow(non_camel_case_types, non_snake_case)]
         #[derive(Clone)]
         pub struct #name {

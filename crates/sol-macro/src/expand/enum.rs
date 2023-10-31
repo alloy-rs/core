@@ -27,8 +27,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
         ..
     } = enumm;
 
-    let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
     cx.derives(&mut attrs, [], false);
+    let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     let name_s = name.to_string();
 
@@ -72,8 +73,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
     let uint8 = quote!(::alloy_sol_types::sol_data::Uint<8>);
     let uint8_st = quote!(<#uint8 as ::alloy_sol_types::SolType>);
 
+    let doc = docs.then(|| attr::mk_doc(format!("```solidity\n{enumm}\n```")));
     let tokens = quote! {
         #(#attrs)*
+        #doc
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         #[derive(Clone, Copy)]
         #[repr(u8)]
