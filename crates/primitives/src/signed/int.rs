@@ -1,4 +1,4 @@
-use super::{errors, utils::*, Sign};
+use super::{utils::*, ParseSignedError, Sign};
 use alloc::string::String;
 use core::fmt;
 use ruint::Uint;
@@ -39,18 +39,10 @@ use ruint::Uint;
 /// // But invalid chars are not
 /// assert!("^31".parse::<I256>().is_err());
 ///
-/// // Omitting the hex prefix is allowed, but not recommended
-/// // Be careful, it can be confused for a decimal string!
-/// let g = "deadbeef".parse::<I256>().unwrap();
-/// // Is this hex? or decimal?
-/// let h = "1113".parse::<I256>().unwrap();
-/// // It's decimal!
-/// assert_eq!(h, I256::unchecked_from(1113));
-///
 /// // Math works great :)
 /// let g = a * b + c - d;
 ///
-/// // And so does comparison!
+/// // And so do comparisons!
 /// assert!(e > a);
 ///
 /// // We have some useful constants too
@@ -58,19 +50,6 @@ use ruint::Uint;
 /// assert_eq!(I256::ONE, I256::unchecked_from(1));
 /// assert_eq!(I256::MINUS_ONE, I256::unchecked_from(-1));
 /// ```
-///
-/// # Note on [`std::str::FromStr`]
-///
-/// The parse function first tries the string as a decimal string, then as a
-/// hex string. We do it this way because decimal has a more-restrictive
-/// alphabet. E.g. the string "11f" is valid hex but not valid decimal. This
-/// means that errors are reported more correctly (there are no false invalid
-/// char errors on valid-but-overflowing hex strings). However, this means that
-/// when using un-prefixed hex strings, they will be confused for decimal
-/// strings if they use no hex digits.
-///
-/// To prevent this, we strongly recommend always prefixing hex strings with
-/// `0x` AFTER the sign (if any).
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "arbitrary",
@@ -156,16 +135,18 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Coerces an unsigned integer into a signed one. If the unsigned integer
     /// is greater than the greater than or equal to `1 << 255`, then the result
     /// will overflow into a negative value.
-    #[inline(always)]
+    #[inline]
     pub const fn from_raw(val: Uint<BITS, LIMBS>) -> Self {
         Self(val)
     }
 
-    /// Attempt to perform the conversion via a `TryInto` implementation, and
-    /// panic on failure
+    /// Shortcut for `val.try_into().unwrap()`.
     ///
-    /// This is a shortcut for `val.try_into().unwrap()`
-    #[inline(always)]
+    /// # Panics
+    ///
+    /// Panics if the conversion fails.
+    #[inline]
+    #[track_caller]
     pub fn unchecked_from<T>(val: T) -> Self
     where
         T: TryInto<Self>,
@@ -174,11 +155,13 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         val.try_into().unwrap()
     }
 
-    /// Attempt to perform the conversion via a `TryInto` implementation, and
-    /// panic on failure
+    /// Shortcut for `self.try_into().unwrap()`.
     ///
-    /// This is a shortcut for `self.try_into().unwrap()`
-    #[inline(always)]
+    /// # Panics
+    ///
+    /// Panics if the conversion fails.
+    #[inline]
+    #[track_caller]
     pub fn unchecked_into<T>(self) -> T
     where
         Self: TryInto<T>,
@@ -190,14 +173,14 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Returns the signed integer as a unsigned integer. If the value of `self`
     /// negative, then the two's complement of its absolute value will be
     /// returned.
-    #[inline(always)]
+    #[inline]
     pub const fn into_raw(self) -> Uint<BITS, LIMBS> {
         self.0
     }
 
     /// Returns the sign of self.
-    #[inline(always)]
-    pub const fn sign(self) -> Sign {
+    #[inline]
+    pub const fn sign(&self) -> Sign {
         // if the last limb contains the sign bit, then we're negative
         // because we can't set any higher bits to 1, we use >= as a proxy
         // check to avoid bit comparison
@@ -210,6 +193,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 
     /// Determines if the integer is odd.
+    #[inline]
     pub const fn is_odd(&self) -> bool {
         if BITS == 0 {
             false
@@ -233,83 +217,74 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Returns `true` if `self` is positive and `false` if the number is zero
     /// or negative.
-    #[inline(always)]
-    pub const fn is_positive(self) -> bool {
+    #[inline]
+    pub const fn is_positive(&self) -> bool {
         !self.is_zero() && matches!(self.sign(), Sign::Positive)
     }
 
     /// Returns `true` if `self` is negative and `false` if the number is zero
     /// or positive.
-    #[inline(always)]
-    pub const fn is_negative(self) -> bool {
+    #[inline]
+    pub const fn is_negative(&self) -> bool {
         matches!(self.sign(), Sign::Negative)
     }
 
     /// Returns the number of ones in the binary representation of `self`.
-    #[inline(always)]
+    #[inline]
     pub fn count_ones(&self) -> usize {
         self.0.count_ones()
     }
 
     /// Returns the number of zeros in the binary representation of `self`.
-    #[inline(always)]
+    #[inline]
     pub fn count_zeros(&self) -> usize {
         self.0.count_zeros()
     }
 
     /// Returns the number of leading zeros in the binary representation of
     /// `self`.
-    #[inline(always)]
+    #[inline]
     pub fn leading_zeros(&self) -> usize {
         self.0.leading_zeros()
     }
 
     /// Returns the number of leading zeros in the binary representation of
     /// `self`.
-    #[inline(always)]
+    #[inline]
     pub fn trailing_zeros(&self) -> usize {
         self.0.trailing_zeros()
     }
 
     /// Returns the number of leading ones in the binary representation of
     /// `self`.
-    #[inline(always)]
+    #[inline]
     pub fn trailing_ones(&self) -> usize {
         self.0.trailing_ones()
     }
 
-    /// Return if specific bit is set.
+    /// Returns whether a specific bit is set.
     ///
-    /// # Panics
-    ///
-    /// If index exceeds the bit width of the number.
-    #[inline(always)]
-    #[track_caller]
+    /// Returns `false` if `index` exceeds the bit width of the number.
+    #[inline]
     pub const fn bit(&self, index: usize) -> bool {
         self.0.bit(index)
     }
 
-    /// Return specific byte.
+    /// Returns a specific byte. The byte at index `0` is the least significant
+    /// byte (little endian).
     ///
     /// # Panics
     ///
-    /// If index exceeds the byte width of the number.
-    #[inline(always)]
+    /// Panics if `index` exceeds the byte width of the number.
+    #[inline]
     #[track_caller]
     pub const fn byte(&self, index: usize) -> u8 {
-        let limbs = self.0.as_limbs();
-        match index {
-            0..=7 => limbs[3].to_be_bytes()[index],
-            8..=15 => limbs[2].to_be_bytes()[index - 8],
-            16..=23 => limbs[1].to_be_bytes()[index - 16],
-            24..=31 => limbs[0].to_be_bytes()[index - 24],
-            _ => panic!(),
-        }
+        self.0.byte(index)
     }
 
     /// Return the least number of bits needed to represent the number.
-    #[inline(always)]
-    pub fn bits(self) -> u32 {
+    #[inline]
+    pub fn bits(&self) -> u32 {
         let unsigned = self.unsigned_abs();
         let unsigned_bits = unsigned.bit_len();
 
@@ -340,7 +315,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Creates a `Signed` from a sign and an absolute value. Returns the value
     /// and a bool that is true if the conversion caused an overflow.
-    #[inline(always)]
+    #[inline]
     pub fn overflowing_from_sign_and_abs(sign: Sign, abs: Uint<BITS, LIMBS>) -> (Self, bool) {
         let value = Self(match sign {
             Sign::Positive => abs,
@@ -352,7 +327,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Creates a `Signed` from an absolute value and a negative flag. Returns
     /// `None` if it would overflow as `Signed`.
-    #[inline(always)]
+    #[inline]
     pub fn checked_from_sign_and_abs(sign: Sign, abs: Uint<BITS, LIMBS>) -> Option<Self> {
         let (result, overflow) = Self::overflowing_from_sign_and_abs(sign, abs);
         if overflow {
@@ -363,18 +338,18 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 
     /// Convert from a decimal string.
-    pub fn from_dec_str(value: &str) -> Result<Self, errors::ParseSignedError> {
+    pub fn from_dec_str(value: &str) -> Result<Self, ParseSignedError> {
         let (sign, value) = match value.as_bytes().first() {
             Some(b'+') => (Sign::Positive, &value[1..]),
             Some(b'-') => (Sign::Negative, &value[1..]),
             _ => (Sign::Positive, value),
         };
         let abs = Uint::<BITS, LIMBS>::from_str_radix(value, 10)?;
-        Self::checked_from_sign_and_abs(sign, abs).ok_or(errors::ParseSignedError::IntegerOverflow)
+        Self::checked_from_sign_and_abs(sign, abs).ok_or(ParseSignedError::IntegerOverflow)
     }
 
     /// Convert to a decimal string.
-    pub fn to_dec_string(self) -> String {
+    pub fn to_dec_string(&self) -> String {
         let sign = self.sign();
         let abs = self.unsigned_abs();
 
@@ -382,7 +357,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 
     /// Convert from a hex string.
-    pub fn from_hex_str(value: &str) -> Result<Self, errors::ParseSignedError> {
+    pub fn from_hex_str(value: &str) -> Result<Self, ParseSignedError> {
         let (sign, value) = match value.as_bytes().first() {
             Some(b'+') => (Sign::Positive, &value[1..]),
             Some(b'-') => (Sign::Negative, &value[1..]),
@@ -392,15 +367,15 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         let value = value.strip_prefix("0x").unwrap_or(value);
 
         if value.len() > 64 {
-            return Err(errors::ParseSignedError::IntegerOverflow)
+            return Err(ParseSignedError::IntegerOverflow)
         }
 
         let abs = Uint::<BITS, LIMBS>::from_str_radix(value, 16)?;
-        Self::checked_from_sign_and_abs(sign, abs).ok_or(errors::ParseSignedError::IntegerOverflow)
+        Self::checked_from_sign_and_abs(sign, abs).ok_or(ParseSignedError::IntegerOverflow)
     }
 
     /// Convert to a hex string.
-    pub fn to_hex_string(self) -> String {
+    pub fn to_hex_string(&self) -> String {
         let sign = self.sign();
         let abs = self.unsigned_abs();
 
@@ -408,8 +383,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 
     /// Splits a Signed into its absolute value and negative flag.
-    #[inline(always)]
-    pub fn into_sign_and_abs(self) -> (Sign, Uint<BITS, LIMBS>) {
+    #[inline]
+    pub fn into_sign_and_abs(&self) -> (Sign, Uint<BITS, LIMBS>) {
         let sign = self.sign();
         let abs = match sign {
             Sign::Positive => self.0,
@@ -428,9 +403,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Rust issue [#60551].
     ///
     /// [#60551]: https://github.com/rust-lang/rust/issues/60551
-    #[inline(always)]
-    #[track_caller]
-    pub fn to_be_bytes<const BYTES: usize>(self) -> [u8; BYTES] {
+    #[inline]
+    pub const fn to_be_bytes<const BYTES: usize>(&self) -> [u8; BYTES] {
         self.0.to_be_bytes()
     }
 
@@ -444,20 +418,24 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Rust issue [#60551].
     ///
     /// [#60551]: https://github.com/rust-lang/rust/issues/60551
-    #[inline(always)]
-    #[track_caller]
-    pub fn to_le_bytes<const BYTES: usize>(self) -> [u8; BYTES] {
+    #[inline]
+    pub const fn to_le_bytes<const BYTES: usize>(&self) -> [u8; BYTES] {
         self.0.to_le_bytes()
     }
 
-    /// Convert from an array in BE format
+    /// Converts a big-endian byte array of size exactly [`Self::BYTES`].
     ///
     /// # Panics
     ///
-    /// If the given array is not the correct length.
-    #[inline(always)]
-    #[track_caller]
-    pub fn from_be_bytes<const BYTES: usize>(bytes: [u8; BYTES]) -> Self {
+    /// Panics if the generic parameter `BYTES` is not exactly [`Self::BYTES`].
+    /// Ideally this would be a compile time error, but this is blocked by
+    /// Rust issue [#60551].
+    ///
+    /// [#60551]: https://github.com/rust-lang/rust/issues/60551
+    ///
+    /// Panics if the value is too large for the bit-size of the Uint.
+    #[inline]
+    pub const fn from_be_bytes<const BYTES: usize>(bytes: [u8; BYTES]) -> Self {
         Self(Uint::from_be_bytes::<BYTES>(bytes))
     }
 
@@ -465,34 +443,58 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     ///
     /// # Panics
     ///
-    /// If the given array is not the correct length.
-    #[inline(always)]
+    /// Panics if the given array is not the correct length.
+    #[inline]
     #[track_caller]
-    pub fn from_le_bytes<const BYTES: usize>(bytes: [u8; BYTES]) -> Self {
+    pub const fn from_le_bytes<const BYTES: usize>(bytes: [u8; BYTES]) -> Self {
         Self(Uint::from_le_bytes::<BYTES>(bytes))
     }
 
-    /// Convert from a slice in BE format.
+    /// Creates a new integer from a big endian slice of bytes.
+    ///
+    /// The slice is interpreted as a big endian number. Leading zeros
+    /// are ignored. The slice can be any length.
+    ///
+    /// Returns [`None`] if the value is larger than fits the [`Uint`].
     pub fn try_from_be_slice(slice: &[u8]) -> Option<Self> {
-        Some(Self(Uint::try_from_be_slice(slice)?))
+        Uint::try_from_be_slice(slice).map(Self)
     }
 
-    /// Convert from a slice in LE format.
+    /// Creates a new integer from a little endian slice of bytes.
+    ///
+    /// The slice is interpreted as a big endian number. Leading zeros
+    /// are ignored. The slice can be any length.
+    ///
+    /// Returns [`None`] if the value is larger than fits the [`Uint`].
     pub fn try_from_le_slice(slice: &[u8]) -> Option<Self> {
-        Some(Self(Uint::try_from_le_slice(slice)?))
+        Uint::try_from_le_slice(slice).map(Self)
     }
 
-    /// Get a reference to the underlying limbs.
+    /// View the array of limbs.
+    #[inline(always)]
+    #[must_use]
     pub const fn as_limbs(&self) -> &[u64; LIMBS] {
         self.0.as_limbs()
     }
 
-    /// Get the underlying limbs.
+    /// Convert to a array of limbs.
+    ///
+    /// Limbs are least significant first.
+    #[inline(always)]
     pub const fn into_limbs(self) -> [u64; LIMBS] {
         self.0.into_limbs()
     }
 
-    /// Instantiate from limbs.
+    /// Construct a new integer from little-endian a array of limbs.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `LIMBS` is not equal to `nlimbs(BITS)`.
+    ///
+    /// Panics if the value is to large for the bit-size of the Uint.
+    #[inline(always)]
+    #[must_use]
+    #[track_caller]
     pub const fn from_limbs(limbs: [u64; LIMBS]) -> Self {
         Self(Uint::from_limbs(limbs))
     }

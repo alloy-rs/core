@@ -2,7 +2,7 @@ use crate::signed::Signed;
 use ruint::Uint;
 
 /// Panic if overflow on debug mode.
-#[inline(always)]
+#[inline]
 #[track_caller]
 pub(super) fn handle_overflow<const BITS: usize, const LIMBS: usize>(
     (result, overflow): (Signed<BITS, LIMBS>, bool),
@@ -12,7 +12,7 @@ pub(super) fn handle_overflow<const BITS: usize, const LIMBS: usize>(
 }
 
 /// Compute the two's complement of a U256.
-#[inline(always)]
+#[inline]
 pub(super) fn twos_complement<const BITS: usize, const LIMBS: usize>(
     u: Uint<BITS, LIMBS>,
 ) -> Uint<BITS, LIMBS> {
@@ -23,7 +23,7 @@ pub(super) fn twos_complement<const BITS: usize, const LIMBS: usize>(
 }
 
 /// Compile-time equality of signed integers.
-#[inline(always)]
+#[inline]
 pub(super) const fn const_eq<const BITS: usize, const LIMBS: usize>(
     left: &Signed<BITS, LIMBS>,
     right: &Signed<BITS, LIMBS>,
