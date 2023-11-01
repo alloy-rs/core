@@ -24,33 +24,25 @@ use ruint::Uint;
 /// // Instantiate from a number
 /// let a = I256::unchecked_from(1);
 /// // Use `try_from` if you're not sure it'll fit
-/// let b = I256::try_from(200000382).unwrap();
+/// let b = I256::try_from(200000382).expect("a");
 ///
 /// // Or parse from a string :)
-/// let c = "100".parse::<I256>().unwrap();
-/// let d = "-0x138f".parse::<I256>().unwrap();
+/// let c = "100".parse::<I256>().expect("b");
+/// let d = "-0x138f".parse::<I256>().expect("c");
 ///
 /// // Preceding plus is allowed but not recommended
-/// let e = "+0xdeadbeef".parse::<I256>().unwrap();
+/// let e = "+0xdeadbeef".parse::<I256>().expect("d");
 ///
 /// // Underscores are ignored
-/// let f = "1_000_000".parse::<I256>().unwrap();
+/// let f = "1_000_000".parse::<I256>().expect("e");
 ///
 /// // But invalid chars are not
 /// assert!("^31".parse::<I256>().is_err());
 ///
-/// // Omitting the hex prefix is allowed, but not recommended
-/// // Be careful, it can be confused for a decimal string!
-/// let g = "deadbeef".parse::<I256>().unwrap();
-/// // Is this hex? or decimal?
-/// let h = "1113".parse::<I256>().unwrap();
-/// // It's decimal!
-/// assert_eq!(h, I256::unchecked_from(1113));
-///
 /// // Math works great :)
 /// let g = a * b + c - d;
 ///
-/// // And so does comparison!
+/// // And so do comparisons!
 /// assert!(e > a);
 ///
 /// // We have some useful constants too
@@ -58,19 +50,6 @@ use ruint::Uint;
 /// assert_eq!(I256::ONE, I256::unchecked_from(1));
 /// assert_eq!(I256::MINUS_ONE, I256::unchecked_from(-1));
 /// ```
-///
-/// # Note on [`std::str::FromStr`]
-///
-/// The parse function first tries the string as a decimal string, then as a
-/// hex string. We do it this way because decimal has a more-restrictive
-/// alphabet. E.g. the string "11f" is valid hex but not valid decimal. This
-/// means that errors are reported more correctly (there are no false invalid
-/// char errors on valid-but-overflowing hex strings). However, this means that
-/// when using un-prefixed hex strings, they will be confused for decimal
-/// strings if they use no hex digits.
-///
-/// To prevent this, we strongly recommend always prefixing hex strings with
-/// `0x` AFTER the sign (if any).
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "arbitrary",
