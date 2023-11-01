@@ -24,17 +24,17 @@ use ruint::Uint;
 /// // Instantiate from a number
 /// let a = I256::unchecked_from(1);
 /// // Use `try_from` if you're not sure it'll fit
-/// let b = I256::try_from(200000382).expect("a");
+/// let b = I256::try_from(200000382).unwrap();
 ///
 /// // Or parse from a string :)
-/// let c = "100".parse::<I256>().expect("b");
-/// let d = "-0x138f".parse::<I256>().expect("c");
+/// let c = "100".parse::<I256>().unwrap();
+/// let d = "-0x138f".parse::<I256>().unwrap();
 ///
 /// // Preceding plus is allowed but not recommended
-/// let e = "+0xdeadbeef".parse::<I256>().expect("d");
+/// let e = "+0xdeadbeef".parse::<I256>().unwrap();
 ///
 /// // Underscores are ignored
-/// let f = "1_000_000".parse::<I256>().expect("e");
+/// let f = "1_000_000".parse::<I256>().unwrap();
 ///
 /// // But invalid chars are not
 /// assert!("^31".parse::<I256>().is_err());
