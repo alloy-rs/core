@@ -42,9 +42,6 @@ pub use bits::{
 mod bytes_;
 pub use self::bytes_::Bytes;
 
-#[cfg(feature = "getrandom")]
-mod impl_core;
-
 mod log;
 pub use log::Log;
 
