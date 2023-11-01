@@ -120,7 +120,7 @@ mod utils;
 /// additionally annotated with `#[repr(u8)]`, and as such can have a maximum of
 /// 256 variants.
 /// ```ignore
-#[doc = include_str!("../doctests/structs.rs")]
+#[cfg_attr(doc, doc = include_str!("../doctests/structs.rs"))]
 /// ```
 /// 
 /// ### UDVT and type aliases
@@ -129,7 +129,7 @@ mod utils;
 /// its only field, and type aliases simply expand to the corresponding Rust
 /// type.
 /// ```ignore
-#[doc = include_str!("../doctests/types.rs")]
+#[cfg_attr(doc, doc = include_str!("../doctests/types.rs"))]
 /// ```
 /// 
 /// ### Functions and errors
@@ -145,7 +145,7 @@ mod utils;
 /// `foo_0Call` and `foo_1Call`, each of which will implement `SolCall`
 /// with their respective signatures.
 /// ```ignore
-#[doc = include_str!("../doctests/function_like.rs")]
+#[cfg_attr(doc, doc = include_str!("../doctests/function_like.rs"))]
 /// ```
 /// 
 /// ### Events
@@ -157,7 +157,7 @@ mod utils;
 /// hash, and as such the generated field for this argument will be `bytes32`,
 /// and not `string`.
 /// ```ignore
-#[doc = include_str!("../doctests/events.rs")]
+#[cfg_attr(doc, doc = include_str!("../doctests/events.rs"))]
 /// ```
 /// 
 /// ### Contracts/interfaces
@@ -169,7 +169,7 @@ mod utils;
 /// - errors: `<contract_name>Errors`
 /// - events: `<contract_name>Events`
 /// ```ignore
-#[doc = include_str!("../doctests/contracts.rs")]
+#[cfg_attr(doc, doc = include_str!("../doctests/contracts.rs"))]
 /// ```
 /// 
 /// ## JSON ABI
@@ -190,7 +190,7 @@ mod utils;
 ///
 /// [abigen]: https://docs.rs/ethers/latest/ethers/contract/macro.abigen.html
 /// ```ignore
-#[doc = include_str!("../doctests/json.rs")]
+#[cfg_attr(doc, doc = include_str!("../doctests/json.rs"))]
 /// ```
 #[proc_macro]
 #[proc_macro_error]
