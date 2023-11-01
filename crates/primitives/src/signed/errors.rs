@@ -26,12 +26,19 @@ impl From<ruint::ParseError> for ParseSignedError {
 }
 
 #[cfg(feature = "std")]
-impl std::error::Error for ParseSignedError {}
+impl std::error::Error for ParseSignedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Ruint(err) => Some(err),
+            Self::IntegerOverflow => None,
+        }
+    }
+}
 
 impl fmt::Display for ParseSignedError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Ruint(err) => write!(f, "Parsing Error: {err}"),
+            Self::Ruint(e) => e.fmt(f),
             Self::IntegerOverflow => f.write_str("number does not fit in the integer size"),
         }
     }
