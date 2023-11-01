@@ -4,6 +4,7 @@ description = "Solidity to Rust procedural macro"
 keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
 homepage = "https://github.com/alloy-rs/core/tree/main/crates/sol-macro"
+exclude = ["doctests/README.md"]
 
 version.workspace = true
 edition.workspace = true
@@ -11,7 +12,6 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-exclude.workspace = true
 
 [lib]
 proc_macro = true

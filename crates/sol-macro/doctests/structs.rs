@@ -1,0 +1,1 @@
+../../sol-types/tests/doctests/structs.rs
