@@ -5,6 +5,9 @@ use winnow::{trace::trace, PResult, Parser};
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type. This is the most basic type specifier.
 ///
+/// Note that this type might modify the input string, so [`span()`](Self::span)
+/// must not be assumed to be the same as the input string.
+///
 /// # Examples
 ///
 /// ```
@@ -20,10 +23,12 @@ use winnow::{trace::trace, PResult, Parser};
 ///
 /// // No tuples
 /// assert!(RootType::parse("(uint256,uint256)").is_err());
+///
+/// // Input string might get modified
+/// assert_eq!(RootType::parse("uint")?.span(), "uint256");
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(transparent)]
 pub struct RootType<'a>(&'a str);
 
 impl<'a> TryFrom<&'a str> for RootType<'a> {
@@ -64,26 +69,28 @@ impl<'a> RootType<'a> {
     /// Parse a root type from a string.
     #[inline]
     pub fn parse(input: &'a str) -> Result<Self> {
-        if is_valid_identifier(input) {
-            Ok(Self(input))
-        } else {
-            Err(Error::invalid_type_string(input))
-        }
+        Self::parser.parse(input).map_err(Error::parser)
     }
 
     /// [`winnow`] parser for this type.
     pub fn parser(input: &mut &'a str) -> PResult<Self> {
         trace("RootType", |input: &mut &'a str| {
-            identifier(input).map(|mut ident| {
+            identifier(input).map(|ident| {
                 // Workaround for enums in library function params or returns.
                 // See: https://github.com/alloy-rs/core/pull/386
                 // See ethabi workaround: https://github.com/rust-ethereum/ethabi/blob/b1710adc18f5b771d2d2519c87248b1ba9430778/ethabi/src/param_type/reader.rs#L162-L167
                 if input.starts_with('.') {
                     *input = &input[1..];
                     let _ = identifier(input);
-                    ident = "uint8";
+                    return Self("uint8");
                 }
-                Self(ident)
+
+                // Normalize the `u?int` aliases to the canonical `u?int256`
+                match ident {
+                    "uint" => Self("uint256"),
+                    "int" => Self("int256"),
+                    _ => Self(ident),
+                }
             })
         })
         .parse_next(input)
@@ -125,5 +132,18 @@ impl<'a> RootType<'a> {
                 Err(Error::invalid_type_string(name))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn modified_input() {
+        assert_eq!(RootType::parse("Contract.Enum"), Ok(RootType("uint8")));
+
+        assert_eq!(RootType::parse("int"), Ok(RootType("int256")));
+        assert_eq!(RootType::parse("uint"), Ok(RootType("uint256")));
     }
 }

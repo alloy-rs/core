@@ -296,7 +296,7 @@ mod tests {
             parse_sig::<true>("toString(uint number)(string s)"),
             Ok((
                 "toString".into(),
-                vec![param2("uint", "number")],
+                vec![param2("uint256", "number")],
                 vec![param2("string", "s")],
                 false
             ))
