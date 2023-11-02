@@ -150,6 +150,15 @@ mod test {
     #[test]
     fn parse_test() {
         assert_eq!(
+            TypeSpecifier::parse("uint"),
+            Ok(TypeSpecifier {
+                span: "uint",
+                stem: TypeStem::parse("uint256").unwrap(),
+                sizes: vec![],
+            })
+        );
+
+        assert_eq!(
             TypeSpecifier::parse("uint256"),
             Ok(TypeSpecifier {
                 span: "uint256",
@@ -256,6 +265,14 @@ mod test {
 
     #[test]
     fn try_basic_solidity() {
+        assert_eq!(
+            TypeSpecifier::parse("uint").unwrap().try_basic_solidity(),
+            Ok(())
+        );
+        assert_eq!(
+            TypeSpecifier::parse("int").unwrap().try_basic_solidity(),
+            Ok(())
+        );
         assert_eq!(
             TypeSpecifier::parse("uint256")
                 .unwrap()
