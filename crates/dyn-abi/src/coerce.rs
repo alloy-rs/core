@@ -8,7 +8,10 @@ use hex::FromHexError;
 use winnow::{
     ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
     combinator::{cut_err, dispatch, fail, opt, preceded, success},
-    error::{ContextError, ErrMode, ErrorKind, FromExternalError, StrContext},
+    error::{
+        AddContext, ContextError, ErrMode, ErrorKind, FromExternalError, StrContext,
+        StrContextValue,
+    },
     token::take_while,
     trace::trace,
     PResult, Parser,
@@ -154,7 +157,7 @@ impl fmt::Display for Error {
 fn bool(input: &mut &str) -> PResult<bool> {
     trace(
         "bool",
-        dispatch! {alpha1;
+        dispatch! {alpha1.context(StrContext::Label("boolean"));
             "true" => success(true),
             "false" => success(false),
             _ => fail
@@ -203,8 +206,18 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
     #[cfg(not(feature = "debug"))]
     let name = "uint";
     trace(name, move |input: &mut &str| {
-        let (s, (_, fract)) =
-            spanned((prefixed_int, opt(preceded('.', cut_err(digit1))))).parse_next(input)?;
+        let (s, (_, fract)) = spanned((
+            prefixed_int,
+            opt(preceded(
+                '.',
+                cut_err(
+                    digit1.context(StrContext::Expected(StrContextValue::Description(
+                        "at least one digit",
+                    ))),
+                ),
+            )),
+        ))
+        .parse_next(input)?;
 
         let _ = space0(input)?;
         let units = int_units(input)?;
@@ -276,10 +289,17 @@ fn prefixed_int<'i>(input: &mut &'i str) -> PResult<&'i str> {
         );
         if has_prefix {
             *input = &input[2..];
+            // parse hex since it's the most general
             hex_digit1(input)
         } else {
             digit1(input)
         }
+        .map_err(|e| {
+            e.add_context(
+                input,
+                StrContext::Expected(StrContextValue::Description("at least one digit")),
+            )
+        })
     })
     .parse_next(input)
 }
@@ -441,12 +461,12 @@ fn tuple<'i: 't, 't>(
 
 #[inline]
 fn fixed_bytes_inner<const N: usize>(input: &mut &str) -> PResult<FixedBytes<N>> {
-    let s = hex_str(input)?;
-    let mut out = FixedBytes::ZERO;
-    match hex::decode_to_slice(s, out.as_mut_slice()) {
-        Ok(()) => Ok(out),
-        Err(e) => Err(hex_error(input, e)),
-    }
+    hex_str
+        .try_map(|s| {
+            let mut out = FixedBytes::ZERO;
+            hex::decode_to_slice(s, out.as_mut_slice()).map(|()| out)
+        })
+        .parse_next(input)
 }
 
 #[inline]
