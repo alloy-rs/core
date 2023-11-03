@@ -6,9 +6,12 @@ use alloy_sol_types::Word;
 use core::fmt;
 use hex::FromHexError;
 use winnow::{
-    ascii::{alpha0, alpha1, digit1, hex_digit1, space0},
+    ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
     combinator::{cut_err, dispatch, fail, opt, preceded, success},
-    error::{ContextError, ErrMode, ErrorKind, FromExternalError, StrContext},
+    error::{
+        AddContext, ContextError, ErrMode, ErrorKind, FromExternalError, StrContext,
+        StrContextValue,
+    },
     token::take_while,
     trace::trace,
     PResult, Parser,
@@ -154,7 +157,7 @@ impl fmt::Display for Error {
 fn bool(input: &mut &str) -> PResult<bool> {
     trace(
         "bool",
-        dispatch! {alpha1;
+        dispatch! {alpha1.context(StrContext::Label("boolean"));
             "true" => success(true),
             "false" => success(false),
             _ => fail
@@ -203,8 +206,18 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
     #[cfg(not(feature = "debug"))]
     let name = "uint";
     trace(name, move |input: &mut &str| {
-        let (s, (_, fract)) =
-            spanned((prefixed_int, opt(preceded('.', cut_err(digit1))))).parse_next(input)?;
+        let (s, (_, fract)) = spanned((
+            prefixed_int,
+            opt(preceded(
+                '.',
+                cut_err(
+                    digit1.context(StrContext::Expected(StrContextValue::Description(
+                        "at least one digit",
+                    ))),
+                ),
+            )),
+        ))
+        .parse_next(input)?;
 
         let _ = space0(input)?;
         let units = int_units(input)?;
@@ -276,10 +289,17 @@ fn prefixed_int<'i>(input: &mut &'i str) -> PResult<&'i str> {
         );
         if has_prefix {
             *input = &input[2..];
+            // parse hex since it's the most general
             hex_digit1(input)
         } else {
             digit1(input)
         }
+        .map_err(|e| {
+            e.add_context(
+                input,
+                StrContext::Expected(StrContextValue::Description("at least one digit")),
+            )
+        })
     })
     .parse_next(input)
 }
@@ -338,9 +358,7 @@ fn function(input: &mut &str) -> PResult<Function> {
 
 #[inline]
 fn bytes(input: &mut &str) -> PResult<Vec<u8>> {
-    trace("bytes", hex_str)
-        .parse_next(input)
-        .map(|s| hex::decode(s).unwrap())
+    trace("bytes", hex_str.try_map(hex::decode)).parse_next(input)
 }
 
 #[inline]
@@ -443,17 +461,17 @@ fn tuple<'i: 't, 't>(
 
 #[inline]
 fn fixed_bytes_inner<const N: usize>(input: &mut &str) -> PResult<FixedBytes<N>> {
-    let s = hex_str(input)?;
-    let mut out = FixedBytes::ZERO;
-    match hex::decode_to_slice(s, out.as_mut_slice()) {
-        Ok(()) => Ok(out),
-        Err(e) => Err(hex_error(input, e)),
-    }
+    hex_str
+        .try_map(|s| {
+            let mut out = FixedBytes::ZERO;
+            hex::decode_to_slice(s, out.as_mut_slice()).map(|()| out)
+        })
+        .parse_next(input)
 }
 
 #[inline]
 fn hex_str<'i>(input: &mut &'i str) -> PResult<&'i str> {
-    trace("hex_str", preceded(opt("0x"), hex_digit1)).parse_next(input)
+    trace("hex_str", preceded(opt("0x"), hex_digit0)).parse_next(input)
 }
 
 fn hex_error(input: &&str, e: FromHexError) -> ErrMode<ContextError> {
@@ -739,6 +757,16 @@ mod tests {
             out
         };
 
+        // not actually valid, but we don't care here
+        assert_eq!(
+            DynSolType::FixedBytes(0).coerce_str("0x").unwrap(),
+            DynSolValue::FixedBytes(mk_word(&[]), 0)
+        );
+
+        assert_eq!(
+            DynSolType::FixedBytes(1).coerce_str("0x00").unwrap(),
+            DynSolValue::FixedBytes(mk_word(&[0x00]), 1)
+        );
         assert_eq!(
             DynSolType::FixedBytes(1).coerce_str("0x00").unwrap(),
             DynSolValue::FixedBytes(mk_word(&[0x00]), 1)
@@ -813,6 +841,25 @@ mod tests {
 
     #[test]
     fn coerce_bytes() {
+        assert_eq!(
+            DynSolType::Bytes.coerce_str("").unwrap(),
+            DynSolValue::Bytes(vec![])
+        );
+        assert_eq!(
+            DynSolType::Bytes.coerce_str("0x").unwrap(),
+            DynSolValue::Bytes(vec![])
+        );
+        assert!(DynSolType::Bytes.coerce_str("0x0").is_err());
+        assert!(DynSolType::Bytes.coerce_str("0").is_err());
+        assert_eq!(
+            DynSolType::Bytes.coerce_str("00").unwrap(),
+            DynSolValue::Bytes(vec![0])
+        );
+        assert_eq!(
+            DynSolType::Bytes.coerce_str("0x00").unwrap(),
+            DynSolValue::Bytes(vec![0])
+        );
+
         assert_eq!(
             DynSolType::Bytes.coerce_str("123456").unwrap(),
             DynSolValue::Bytes(vec![0x12, 0x34, 0x56])
