@@ -572,6 +572,43 @@ fn event_tokenize_fields() {
     };
 }
 
+// Allow multiple overrides of the same function
+// https://github.com/alloy-rs/core/issues/398
+#[test]
+fn duplicate_attributes() {
+    sol! {
+        contract TaxableTeamToken is IERC20, Context, Ownable {
+            constructor(
+                string memory name,
+                string memory symbol,
+                uint8 decimals,
+                uint256 supply,
+                uint256 fees,
+                address owner,
+                address feeWallet
+            ) public checkIsFeesValid(fees) checkIsFeesValid(fees2) checkIsAddressValid(owner) checkIsAddressValid(feeWallet) {
+                require(decimals >=8 && decimals <= 18, "[Validation] Not valid decimals");
+                require(supply > 0, "[Validation] inital supply should be greater than 0");
+                require(owner != feeWallet, "[Validation] fee wallet and owner wallet cannot be same.");
+
+                _name = name;
+                _symbol = symbol;
+                _decimals = decimals;
+                _feesPercentage = fees;
+
+                _tTotal = supply;
+                _rTotal = (MAX - (MAX % _tTotal));
+
+                _rOwned[owner] = _rTotal;
+
+                emit Transfer(address(0), owner, _tTotal);
+
+                emit TeamFinanceTokenMint(owner);
+            }
+        }
+    }
+}
+
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_large_array() {

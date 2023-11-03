@@ -2,8 +2,6 @@ use crate::{kw, Modifier, Mutability, Override, SolPath, Spanned, VariableAttrib
 use proc_macro2::Span;
 use std::{
     fmt,
-    hash::{Hash, Hasher},
-    mem,
     ops::{Deref, DerefMut},
 };
 use syn::{
@@ -55,10 +53,17 @@ impl Parse for FunctionAttributes {
         let mut attributes = Vec::<FunctionAttribute>::new();
         while !input.is_empty() && !input.peek(kw::returns) && input.peek(Ident::peek_any) {
             let attr: FunctionAttribute = input.parse()?;
-            if let Some(prev) = attributes.iter().find(|a| **a == attr) {
-                let mut e = Error::new(attr.span(), "duplicate attribute");
-                e.combine(Error::new(prev.span(), "previous declaration is here"));
-                return Err(e)
+            if matches!(
+                attr,
+                FunctionAttribute::Visibility(_)
+                    | FunctionAttribute::Mutability(_)
+                    | FunctionAttribute::Virtual(_)
+            ) {
+                if let Some(prev) = attributes.iter().find(|a| **a == attr) {
+                    let mut e = Error::new(attr.span(), "duplicate attribute");
+                    e.combine(Error::new(prev.span(), "previous declaration is here"));
+                    return Err(e)
+                }
             }
             attributes.push(attr);
         }
@@ -128,7 +133,7 @@ impl FunctionAttributes {
 }
 
 /// A function attribute.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum FunctionAttribute {
     /// A [Visibility] attribute.
     Visibility(Visibility),
@@ -162,26 +167,6 @@ impl fmt::Debug for FunctionAttribute {
             Self::Virtual(_) => f.write_str("Virtual"),
             Self::Override(o) => o.fmt(f),
             Self::Modifier(modifier) => modifier.fmt(f),
-        }
-    }
-}
-
-impl PartialEq for FunctionAttribute {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Modifier(a), Self::Modifier(b)) => a == b,
-            _ => mem::discriminant(self) == mem::discriminant(other),
-        }
-    }
-}
-
-impl Eq for FunctionAttribute {}
-
-impl Hash for FunctionAttribute {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        mem::discriminant(self).hash(state);
-        if let Self::Modifier(m) = self {
-            m.hash(state);
         }
     }
 }
