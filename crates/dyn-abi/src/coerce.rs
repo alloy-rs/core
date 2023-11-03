@@ -6,7 +6,7 @@ use alloy_sol_types::Word;
 use core::fmt;
 use hex::FromHexError;
 use winnow::{
-    ascii::{alpha0, alpha1, digit1, hex_digit1, space0},
+    ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
     combinator::{cut_err, dispatch, fail, opt, preceded, success},
     error::{ContextError, ErrMode, ErrorKind, FromExternalError, StrContext},
     token::take_while,
@@ -453,7 +453,7 @@ fn fixed_bytes_inner<const N: usize>(input: &mut &str) -> PResult<FixedBytes<N>>
 
 #[inline]
 fn hex_str<'i>(input: &mut &'i str) -> PResult<&'i str> {
-    trace("hex_str", preceded(opt("0x"), hex_digit1)).parse_next(input)
+    trace("hex_str", preceded(opt("0x"), hex_digit0)).parse_next(input)
 }
 
 fn hex_error(input: &&str, e: FromHexError) -> ErrMode<ContextError> {
@@ -820,6 +820,10 @@ mod tests {
         assert_eq!(
             DynSolType::Bytes.coerce_str("0x0017").unwrap(),
             DynSolValue::Bytes(vec![0x00, 0x17])
+        );
+        assert_eq!(
+            DynSolType::Bytes.coerce_str("0x").unwrap(),
+            DynSolValue::Bytes(vec![])
         );
     }
 
