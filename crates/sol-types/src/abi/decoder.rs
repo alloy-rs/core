@@ -197,7 +197,7 @@ impl<'de> Decoder<'de> {
         self.take_offset().and_then(|offset| self.child(offset))
     }
 
-    /// Take a u32 from the buffer by consuming a word.
+    /// Takes a `usize` offset from the buffer by consuming a word.
     #[inline]
     pub fn take_offset(&mut self) -> Result<usize> {
         self.take_word()

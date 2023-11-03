@@ -6,7 +6,7 @@ use alloy_sol_types::Word;
 use core::fmt;
 use hex::FromHexError;
 use winnow::{
-    ascii::{alpha0, alpha1, digit1, hex_digit1, space0},
+    ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
     combinator::{cut_err, dispatch, fail, opt, preceded, success},
     error::{ContextError, ErrMode, ErrorKind, FromExternalError, StrContext},
     token::take_while,
@@ -338,9 +338,7 @@ fn function(input: &mut &str) -> PResult<Function> {
 
 #[inline]
 fn bytes(input: &mut &str) -> PResult<Vec<u8>> {
-    trace("bytes", hex_str)
-        .parse_next(input)
-        .map(|s| hex::decode(s).unwrap())
+    trace("bytes", hex_str.try_map(hex::decode)).parse_next(input)
 }
 
 #[inline]
@@ -453,7 +451,7 @@ fn fixed_bytes_inner<const N: usize>(input: &mut &str) -> PResult<FixedBytes<N>>
 
 #[inline]
 fn hex_str<'i>(input: &mut &'i str) -> PResult<&'i str> {
-    trace("hex_str", preceded(opt("0x"), hex_digit1)).parse_next(input)
+    trace("hex_str", preceded(opt("0x"), hex_digit0)).parse_next(input)
 }
 
 fn hex_error(input: &&str, e: FromHexError) -> ErrMode<ContextError> {
@@ -739,6 +737,16 @@ mod tests {
             out
         };
 
+        // not actually valid, but we don't care here
+        assert_eq!(
+            DynSolType::FixedBytes(0).coerce_str("0x").unwrap(),
+            DynSolValue::FixedBytes(mk_word(&[]), 0)
+        );
+
+        assert_eq!(
+            DynSolType::FixedBytes(1).coerce_str("0x00").unwrap(),
+            DynSolValue::FixedBytes(mk_word(&[0x00]), 1)
+        );
         assert_eq!(
             DynSolType::FixedBytes(1).coerce_str("0x00").unwrap(),
             DynSolValue::FixedBytes(mk_word(&[0x00]), 1)
@@ -813,6 +821,25 @@ mod tests {
 
     #[test]
     fn coerce_bytes() {
+        assert_eq!(
+            DynSolType::Bytes.coerce_str("").unwrap(),
+            DynSolValue::Bytes(vec![])
+        );
+        assert_eq!(
+            DynSolType::Bytes.coerce_str("0x").unwrap(),
+            DynSolValue::Bytes(vec![])
+        );
+        assert!(DynSolType::Bytes.coerce_str("0x0").is_err());
+        assert!(DynSolType::Bytes.coerce_str("0").is_err());
+        assert_eq!(
+            DynSolType::Bytes.coerce_str("00").unwrap(),
+            DynSolValue::Bytes(vec![0])
+        );
+        assert_eq!(
+            DynSolType::Bytes.coerce_str("0x00").unwrap(),
+            DynSolValue::Bytes(vec![0])
+        );
+
         assert_eq!(
             DynSolType::Bytes.coerce_str("123456").unwrap(),
             DynSolValue::Bytes(vec![0x12, 0x34, 0x56])
