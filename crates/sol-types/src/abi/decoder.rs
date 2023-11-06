@@ -91,6 +91,27 @@ impl<'de> Decoder<'de> {
         self.offset
     }
 
+    /// Returns the number of bytes in the remaining buffer.
+    #[inline]
+    pub const fn remaining(&self) -> Option<usize> {
+        self.buf.len().checked_sub(self.offset)
+    }
+
+    /// Returns a reference to the remaining bytes in the buffer.
+    #[inline]
+    pub fn remaining_buf(&self) -> Option<&'de [u8]> {
+        self.buf.get(self.offset..)
+    }
+
+    /// Returns whether the remaining buffer is empty.
+    #[inline]
+    pub const fn is_empty(&self) -> bool {
+        match self.remaining() {
+            Some(0) | None => true,
+            Some(_) => false,
+        }
+    }
+
     /// Returns `true` if this decoder is validating type correctness.
     #[inline]
     pub const fn validate(&self) -> bool {
