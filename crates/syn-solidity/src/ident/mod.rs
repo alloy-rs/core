@@ -13,7 +13,7 @@ pub use path::SolPath;
 
 // taken from https://gist.github.com/ritz078/1be714dea593838587c8a5df463a583a
 // this is the set difference of Rust - Solidity keywords
-static RUST_KEYWORD_SET_DIFFERENCE: [&'static str; 28] = [
+static RUST_KEYWORD_SET_DIFFERENCE: [&str; 28] = [
     "as", "use", "const", "extern", "false", "fn", "impl", "in", "move", "mut", "pub", "impl",
     "ref", "trait", "true", "type", "unsafe", "use", "where", "alignof", "become", "box",
     "offsetof", "priv", "proc", "unsized", "yield", "return",
@@ -60,7 +60,6 @@ impl From<Ident> for SolIdent {
 
 impl From<SolIdent> for Ident {
     fn from(value: SolIdent) -> Self {
-        // value.0
         let str = value.0.to_string();
         if RUST_KEYWORD_SET_DIFFERENCE.contains(&str.as_str()) {
             Ident::new_raw(&str, value.span())
@@ -107,18 +106,17 @@ impl Spanned for SolIdent {
 
 impl SolIdent {
     pub fn new(s: &str) -> Self {
-        Self(Ident::new(&s, Span::call_site()))
+        Self(Ident::new(s, Span::call_site()))
     }
 
     pub fn new_spanned(s: &str, span: Span) -> Self {
-        Self(Ident::new(&s, span))
+        Self(Ident::new(s, span))
     }
 
     /// Strips the raw marker `r#`, if any, from the beginning of an ident.
     ///
     /// See [`IdentExt::unraw`].
-    pub fn unwrawed(mut self) -> Self {
-        // self = self.unraw();
+    pub fn unwrawed(self) -> Self {
         self.clone()
     }
 
@@ -127,7 +125,6 @@ impl SolIdent {
     /// See [`IdentExt::unraw`].
     pub fn unraw(&self) -> Self {
         self.clone()
-        // Self(self.0.unraw())
     }
 
     /// Returns the identifier as a string, without the `r#` prefix if present.
