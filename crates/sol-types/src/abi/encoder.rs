@@ -208,7 +208,7 @@ pub fn encode_sequence<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
 ///
 /// Same as [`core::array::from_ref`].
 #[inline(always)]
-fn tuple_from_ref<T>(s: &T) -> &(T,) {
+const fn tuple_from_ref<T>(s: &T) -> &(T,) {
     // SAFETY: Converting `&T` to `&(T,)` is sound.
     unsafe { &*(s as *const T).cast::<(T,)>() }
 }
