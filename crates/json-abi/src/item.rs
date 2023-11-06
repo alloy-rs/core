@@ -104,10 +104,6 @@ macro_rules! abi_items {
                             ).map_err(serde::de::Error::custom)?);
                         }
 
-                        if !dummy.state_mutability.is_some() {
-
-                        }
-
                         let res = $name {
                             $($field: dummy.$field),*
                         };
