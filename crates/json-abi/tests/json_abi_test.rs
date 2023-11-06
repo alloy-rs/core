@@ -56,7 +56,8 @@ fn constructor() {
                     ty: "address".into(),
                     components: vec![],
                 }],
-                state_mutability: StateMutability::NonPayable
+                state_mutability: Some(StateMutability::NonPayable),
+                payable: None,
             }),
             functions: BTreeMap::new(),
             events: BTreeMap::new(),
@@ -123,7 +124,9 @@ fn functions() {
                             ty: "address".into(),
                             components: vec![]
                         }],
-                        state_mutability: StateMutability::NonPayable,
+                        state_mutability: Some(StateMutability::NonPayable),
+                        payable: None,
+                        constant: None,
                     }]
                 ),
                 (
@@ -132,7 +135,9 @@ fn functions() {
                         name: "bar".into(),
                         inputs: vec![],
                         outputs: vec![],
-                        state_mutability: StateMutability::NonPayable,
+                        state_mutability: Some(StateMutability::NonPayable),
+                        payable: None,
+                        constant: None
                     }]
                 ),
             ]),
@@ -200,13 +205,17 @@ fn functions_overloads() {
                             ty: "address".into(),
                             components: vec![]
                         }],
-                        state_mutability: StateMutability::NonPayable,
+                        state_mutability: Some(StateMutability::NonPayable),
+                        payable: None,
+                        constant: None,
                     },
                     Function {
                         name: "foo".into(),
                         inputs: vec![],
                         outputs: vec![],
-                        state_mutability: StateMutability::NonPayable,
+                        state_mutability: Some(StateMutability::NonPayable),
+                        payable: None,
+                        constant: None,
                     },
                 ]
             )]),
@@ -563,7 +572,8 @@ fn receive() {
             events: BTreeMap::new(),
             errors: BTreeMap::new(),
             receive: Some(Receive {
-                state_mutability: StateMutability::NonPayable,
+                state_mutability: Some(StateMutability::NonPayable),
+                payable: None,
             }),
             fallback: None,
         }
@@ -594,7 +604,8 @@ fn fallback() {
             errors: BTreeMap::new(),
             receive: None,
             fallback: Some(Fallback {
-                state_mutability: StateMutability::NonPayable,
+                state_mutability: Some(StateMutability::NonPayable),
+                payable: None,
             }),
         }
     );
