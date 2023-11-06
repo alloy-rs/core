@@ -493,10 +493,7 @@ fn same_names_different_namespaces() {
     }
 }
 
-// TODO
-// https://github.com/alloy-rs/core/issues/343
 #[test]
-#[cfg(TODO)]
 fn rust_keywords() {
     sol! {
         function mod(address impl) returns (bool is, bool fn);
