@@ -5,7 +5,7 @@ use alloc::{string::String, vec::Vec};
 use core::{slice, str};
 use winnow::{
     ascii::space0,
-    combinator::{cut_err, delimited, opt, preceded, separated0, terminated},
+    combinator::{cut_err, delimited, opt, preceded, separated, terminated},
     error::{AddContext, ParserError, StrContext, StrContextValue},
     stream::Accumulate,
     trace::trace,
@@ -99,7 +99,7 @@ where
         name,
         delimited(
             (char_parser(open), space0),
-            cut_err(separated0(f, (char_parser(delim), space0))),
+            cut_err(separated(0.., f, (char_parser(delim), space0))),
             (opt(delim), space0, cut_err(char_parser(close))),
         ),
     )
