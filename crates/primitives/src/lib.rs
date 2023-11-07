@@ -22,7 +22,6 @@ extern crate alloc;
 // Used in Serde tests.
 #[cfg(test)]
 use {bincode as _, serde as _, serde_json as _};
-
 pub mod aliases;
 #[doc(no_inline)]
 pub use aliases::{
@@ -105,6 +104,9 @@ pub mod private {
 
     #[cfg(feature = "rlp")]
     pub use alloy_rlp;
+
+    #[cfg(feature = "ssz")]
+    pub use ssz;
 
     #[cfg(feature = "serde")]
     pub use serde;

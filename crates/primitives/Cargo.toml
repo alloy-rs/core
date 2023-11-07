@@ -35,6 +35,10 @@ alloy-rlp = { workspace = true, optional = true }
 # serde
 serde = { workspace = true, optional = true, features = ["derive"] }
 
+# ssz
+ethereum_ssz = { workspace = true, optional = true}
+
+
 # getrandom
 getrandom = { workspace = true, optional = true }
 
@@ -60,7 +64,7 @@ std = [
     "alloy-rlp?/std",
     "proptest?/std",
     "rand?/std",
-    "serde?/std",
+    "serde?/std"
 ]
 tiny-keccak = []
 native-keccak = []
@@ -68,6 +72,7 @@ getrandom = ["dep:getrandom"]
 rand = ["dep:rand", "getrandom", "ruint/rand"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
+ssz = ["dep:serde", "dep:ethereum_ssz"]
 arbitrary = [
     "std",
     "ruint/arbitrary",
