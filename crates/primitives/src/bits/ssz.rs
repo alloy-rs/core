@@ -1,4 +1,5 @@
 use crate::FixedBytes;
+use alloc::vec::Vec;
 use ssz::{Decode, DecodeError, Encode};
 
 impl<const N: usize> Encode for FixedBytes<N> {
