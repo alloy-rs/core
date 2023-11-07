@@ -42,21 +42,14 @@ impl Parse for StmtVarDecl {
 
         let semi_token = input.parse()?;
 
-        Ok(Self {
-            declaration,
-            assignment,
-            semi_token,
-        })
+        Ok(Self { declaration, assignment, semi_token })
     }
 }
 
 impl Spanned for StmtVarDecl {
     fn span(&self) -> Span {
         let span = self.declaration.span();
-        self.assignment
-            .as_ref()
-            .and_then(|(_, expr)| expr.span().join(span))
-            .unwrap_or(span)
+        self.assignment.as_ref().and_then(|(_, expr)| expr.span().join(span)).unwrap_or(span)
     }
 
     fn set_span(&mut self, span: Span) {
@@ -142,9 +135,7 @@ pub struct VarDeclTuple {
 
 impl fmt::Debug for VarDeclTuple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("VarDeclTuple")
-            .field("vars", DebugPunctuated::new(&self.vars))
-            .finish()
+        f.debug_struct("VarDeclTuple").field("vars", DebugPunctuated::new(&self.vars)).finish()
     }
 }
 

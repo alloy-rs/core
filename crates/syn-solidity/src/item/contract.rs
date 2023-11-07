@@ -288,9 +288,7 @@ impl fmt::Display for Inheritance {
 
 impl fmt::Debug for Inheritance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Inheritance")
-            .field(DebugPunctuated::new(&self.inheritance))
-            .finish()
+        f.debug_tuple("Inheritance").field(DebugPunctuated::new(&self.inheritance)).finish()
     }
 }
 
@@ -311,10 +309,7 @@ impl Parse for Inheritance {
         if inheritance.is_empty() {
             Err(input.parse::<SolIdent>().unwrap_err())
         } else {
-            Ok(Self {
-                is_token,
-                inheritance,
-            })
+            Ok(Self { is_token, inheritance })
         }
     }
 }
@@ -322,10 +317,7 @@ impl Parse for Inheritance {
 impl Spanned for Inheritance {
     fn span(&self) -> Span {
         let span = self.is_token.span;
-        self.inheritance
-            .last()
-            .and_then(|last| span.join(last.span()))
-            .unwrap_or(span)
+        self.inheritance.last().and_then(|last| span.join(last.span())).unwrap_or(span)
     }
 
     fn set_span(&mut self, span: Span) {

@@ -90,11 +90,8 @@ impl ResolveSolType for RootType<'_> {
                 }
 
                 // fast path both integer types
-                let (s, is_uint) = if let Some(s) = name.strip_prefix('u') {
-                    (s, true)
-                } else {
-                    (name, false)
-                };
+                let (s, is_uint) =
+                    if let Some(s) = name.strip_prefix('u') { (s, true) } else { (name, false) };
 
                 if let Some(sz) = s.strip_prefix("int") {
                     if let Ok(sz) = sz.parse() {
@@ -134,9 +131,7 @@ impl ResolveSolType for TypeStem<'_> {
 
 impl ResolveSolType for TypeSpecifier<'_> {
     fn resolve(&self) -> Result<DynSolType> {
-        self.stem
-            .resolve()
-            .map(|ty| ty.array_wrap_from_iter(self.sizes.iter().copied()))
+        self.stem.resolve().map(|ty| ty.array_wrap_from_iter(self.sizes.iter().copied()))
     }
 }
 
@@ -266,24 +261,15 @@ mod tests {
 
     #[test]
     fn it_parses_tuples() {
-        assert_eq!(
-            parse("(bool,)"),
-            Ok(DynSolType::Tuple(vec![DynSolType::Bool]))
-        );
+        assert_eq!(parse("(bool,)"), Ok(DynSolType::Tuple(vec![DynSolType::Bool])));
         assert_eq!(
             parse("(uint256,uint256)"),
-            Ok(DynSolType::Tuple(vec![
-                DynSolType::Uint(256),
-                DynSolType::Uint(256)
-            ]))
+            Ok(DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)]))
         );
         assert_eq!(
             parse("(uint256,uint256)[2]"),
             Ok(DynSolType::FixedArray(
-                Box::new(DynSolType::Tuple(vec![
-                    DynSolType::Uint(256),
-                    DynSolType::Uint(256)
-                ])),
+                Box::new(DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)])),
                 2
             ))
         );
@@ -300,9 +286,9 @@ mod tests {
         );
         assert_eq!(
             parse("(((bool),),)"),
-            Ok(DynSolType::Tuple(vec![DynSolType::Tuple(vec![
-                DynSolType::Tuple(vec![DynSolType::Bool])
-            ])]))
+            Ok(DynSolType::Tuple(vec![DynSolType::Tuple(vec![DynSolType::Tuple(vec![
+                DynSolType::Bool
+            ])])]))
         );
     }
 
@@ -311,16 +297,11 @@ mod tests {
         assert_eq!(parse("()"), Ok(DynSolType::Tuple(vec![])));
         assert_eq!(
             parse("((),())"),
-            Ok(DynSolType::Tuple(vec![
-                DynSolType::Tuple(vec![]),
-                DynSolType::Tuple(vec![])
-            ]))
+            Ok(DynSolType::Tuple(vec![DynSolType::Tuple(vec![]), DynSolType::Tuple(vec![])]))
         );
         assert_eq!(
             parse("((()))"),
-            Ok(DynSolType::Tuple(vec![DynSolType::Tuple(vec![
-                DynSolType::Tuple(vec![])
-            ])]))
+            Ok(DynSolType::Tuple(vec![DynSolType::Tuple(vec![DynSolType::Tuple(vec![])])]))
         );
     }
 
@@ -338,10 +319,7 @@ mod tests {
 
     #[test]
     fn it_parses_complex_solidity_types() {
-        assert_eq!(
-            parse("uint256[]"),
-            Ok(DynSolType::Array(Box::new(DynSolType::Uint(256))))
-        );
+        assert_eq!(parse("uint256[]"), Ok(DynSolType::Array(Box::new(DynSolType::Uint(256)))));
         assert_eq!(
             parse("uint256[2]"),
             Ok(DynSolType::FixedArray(Box::new(DynSolType::Uint(256)), 2))
@@ -355,9 +333,9 @@ mod tests {
         );
         assert_eq!(
             parse("uint256[][][]"),
-            Ok(DynSolType::Array(Box::new(DynSolType::Array(Box::new(
-                DynSolType::Array(Box::new(DynSolType::Uint(256)))
-            )))))
+            Ok(DynSolType::Array(Box::new(DynSolType::Array(Box::new(DynSolType::Array(
+                Box::new(DynSolType::Uint(256))
+            ))))))
         );
 
         assert_eq!(

@@ -14,41 +14,26 @@ use alloy_primitives::{keccak256, Address, FixedBytes, B256, U256};
 pub struct Eip712Domain {
     /// The user readable name of signing domain, i.e. the name of the DApp or
     /// the protocol.
-    #[cfg_attr(
-        feature = "eip712-serde",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[cfg_attr(feature = "eip712-serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub name: Option<Cow<'static, str>>,
 
     /// The current major version of the signing domain. Signatures from
     /// different versions are not compatible.
-    #[cfg_attr(
-        feature = "eip712-serde",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[cfg_attr(feature = "eip712-serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub version: Option<Cow<'static, str>>,
 
     /// The EIP-155 chain ID. The user-agent should refuse signing if it does
     /// not match the currently active chain.
-    #[cfg_attr(
-        feature = "eip712-serde",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[cfg_attr(feature = "eip712-serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub chain_id: Option<U256>,
 
     /// The address of the contract that will verify the signature.
-    #[cfg_attr(
-        feature = "eip712-serde",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[cfg_attr(feature = "eip712-serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub verifying_contract: Option<Address>,
 
     /// A disambiguating salt for the protocol. This can be used as a domain
     /// separator of last resort.
-    #[cfg_attr(
-        feature = "eip712-serde",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[cfg_attr(feature = "eip712-serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub salt: Option<B256>,
 }
 
@@ -68,13 +53,7 @@ impl Eip712Domain {
         verifying_contract: Option<Address>,
         salt: Option<B256>,
     ) -> Self {
-        Self {
-            name,
-            version,
-            chain_id,
-            verifying_contract,
-            salt,
-        }
+        Self { name, version, chain_id, verifying_contract, salt }
     }
 
     /// Calculate the domain separator for the domain object.

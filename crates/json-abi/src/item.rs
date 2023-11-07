@@ -340,20 +340,15 @@ impl Constructor {
     /// assert_eq!(
     ///     Constructor::parse("constructor(uint foo, address bar)"),
     ///     Ok(Constructor {
-    ///         inputs: vec![
-    ///             Param::parse("uint foo").unwrap(),
-    ///             Param::parse("address bar").unwrap()
-    ///         ],
+    ///         inputs: vec![Param::parse("uint foo").unwrap(), Param::parse("address bar").unwrap()],
     ///         state_mutability: StateMutability::NonPayable,
     ///     }),
     /// );
     /// ```
     #[inline]
     pub fn parse(s: &str) -> ParserResult<Self> {
-        parse_sig::<false>(s).map(|(_, inputs, _, _)| Self {
-            inputs,
-            state_mutability: StateMutability::NonPayable,
-        })
+        parse_sig::<false>(s)
+            .map(|(_, inputs, _, _)| Self { inputs, state_mutability: StateMutability::NonPayable })
     }
 }
 
@@ -383,10 +378,7 @@ impl Error {
     /// # use alloy_json_abi::{Error, Param, StateMutability};
     /// assert_eq!(
     ///     Error::parse("foo(bool bar)"),
-    ///     Ok(Error {
-    ///         name: "foo".to_string(),
-    ///         inputs: vec![Param::parse("bool bar").unwrap()],
-    ///     }),
+    ///     Ok(Error { name: "foo".to_string(), inputs: vec![Param::parse("bool bar").unwrap()] }),
     /// )
     /// ```
     #[inline]
@@ -534,11 +526,7 @@ impl Event {
     /// ```
     #[inline]
     pub fn parse(s: &str) -> ParserResult<Self> {
-        parse_event_sig(s).map(|(name, inputs, _, anonymous)| Self {
-            name,
-            inputs,
-            anonymous,
-        })
+        parse_event_sig(s).map(|(name, inputs, _, anonymous)| Self { name, inputs, anonymous })
     }
 
     /// Returns this event's signature: `$name($($inputs),*)`.

@@ -23,10 +23,7 @@ pub struct StmtDoWhile {
 
 impl fmt::Debug for StmtDoWhile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DoWhile")
-            .field("body", &self.body)
-            .field("condition", &self.cond)
-            .finish()
+        f.debug_struct("DoWhile").field("body", &self.body).field("condition", &self.cond).finish()
     }
 }
 

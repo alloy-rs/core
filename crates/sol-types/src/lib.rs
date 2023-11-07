@@ -116,10 +116,7 @@
 //!
 //! // UDTs are encoded as their underlying type
 //! let mvt = MyValueType::from(U256::from(1));
-//! assert_eq!(
-//!     mvt.abi_encode(),
-//!     sol_data::Uint::<256>::abi_encode(&U256::from(1))
-//! );
+//! assert_eq!(mvt.abi_encode(), sol_data::Uint::<256>::abi_encode(&U256::from(1)));
 //! ```
 //!
 //! ## Tokenization/Detokenization

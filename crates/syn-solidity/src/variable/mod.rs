@@ -73,12 +73,7 @@ impl VariableDeclaration {
     }
 
     pub const fn new_with(ty: Type, storage: Option<Storage>, name: Option<SolIdent>) -> Self {
-        Self {
-            attrs: Vec::new(),
-            ty,
-            storage,
-            name,
-        }
+        Self { attrs: Vec::new(), ty, storage, name }
     }
 
     /// Formats `self` as an EIP-712 field: `<ty> <name>`

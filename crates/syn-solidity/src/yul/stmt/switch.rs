@@ -48,12 +48,7 @@ impl Parse for YulSwitch {
             return Err(input.error("Must have at least one case or a default case."));
         }
 
-        Ok(Self {
-            switch_token,
-            selector,
-            branches,
-            default_case,
-        })
+        Ok(Self { switch_token, selector, branches, default_case })
     }
 }
 
@@ -94,11 +89,7 @@ pub struct YulCaseBranch {
 
 impl Parse for YulCaseBranch {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            case_token: input.parse()?,
-            constant: input.parse()?,
-            body: input.parse()?,
-        })
+        Ok(Self { case_token: input.parse()?, constant: input.parse()?, body: input.parse()? })
     }
 }
 
@@ -133,10 +124,7 @@ pub struct YulSwitchDefault {
 
 impl Parse for YulSwitchDefault {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            default_token: input.parse()?,
-            body: input.parse()?,
-        })
+        Ok(Self { default_token: input.parse()?, body: input.parse()? })
     }
 }
 
@@ -154,8 +142,6 @@ impl Spanned for YulSwitchDefault {
 
 impl fmt::Debug for YulSwitchDefault {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SwitchDefault")
-            .field("body", &self.body)
-            .finish()
+        f.debug_struct("SwitchDefault").field("body", &self.body).finish()
     }
 }

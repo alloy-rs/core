@@ -24,14 +24,7 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream> {
-    let ItemFunction {
-        attrs,
-        arguments,
-        returns,
-        name: Some(_),
-        ..
-    } = function
-    else {
+    let ItemFunction { attrs, arguments, returns, name: Some(_), .. } = function else {
         // ignore functions without names (constructors, modifiers...)
         return Ok(quote!());
     };

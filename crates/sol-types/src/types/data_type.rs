@@ -105,9 +105,7 @@ where
         let sign_extension = is_negative as u8 * 0xff;
 
         // check that all upper bytes are an extension of the sign bit
-        token.0[..IntBitCount::<BITS>::WORD_MSB]
-            .iter()
-            .all(|byte| *byte == sign_extension)
+        token.0[..IntBitCount::<BITS>::WORD_MSB].iter().all(|byte| *byte == sign_extension)
     }
 
     #[inline]

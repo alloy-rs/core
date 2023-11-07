@@ -113,10 +113,7 @@ pub struct LitDenominated {
 
 impl Parse for LitDenominated {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            number: input.parse()?,
-            denom: input.parse()?,
-        })
+        Ok(Self { number: input.parse()?, denom: input.parse()? })
     }
 }
 

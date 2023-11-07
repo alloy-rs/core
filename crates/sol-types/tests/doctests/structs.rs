@@ -27,10 +27,7 @@ fn structs() {
         baz: vec![Address::repeat_byte(0x11), Address::repeat_byte(0x22)],
     };
 
-    let _nested = Nested {
-        a: [my_foo.clone(), my_foo.clone()],
-        b: Address::ZERO,
-    };
+    let _nested = Nested { a: [my_foo.clone(), my_foo.clone()], b: Address::ZERO };
 
     let abi_encoded = Foo::abi_encode_sequence(&my_foo);
     assert_eq!(

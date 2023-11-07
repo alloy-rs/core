@@ -10,11 +10,7 @@ use syn::{Error, Result};
 /// See [`ItemFunction::from_variable_definition`].
 pub(super) fn expand(cx: &ExpCtxt<'_>, var_def: &VariableDefinition) -> Result<TokenStream> {
     // only expand public or external state variables
-    if !var_def
-        .attributes
-        .visibility()
-        .map_or(false, |v| v.is_public() || v.is_external())
-    {
+    if !var_def.attributes.visibility().map_or(false, |v| v.is_public() || v.is_external()) {
         return Ok(TokenStream::new());
     }
 
@@ -25,10 +21,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, var_def: &VariableDefinition) -> Result<T
 
 /// Expands return-position custom types.
 fn expand_returns(cx: &ExpCtxt<'_>, f: &mut ItemFunction) -> Result<()> {
-    let returns = f
-        .returns
-        .as_mut()
-        .expect("generated getter function with no returns");
+    let returns = f.returns.as_mut().expect("generated getter function with no returns");
     let ret = returns.returns.first_mut().unwrap();
     if !ret.ty.has_custom_simple() {
         return Ok(());

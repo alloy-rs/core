@@ -39,17 +39,15 @@ impl Parse for VariableAttributes {
             // Only one of: `constant`, `immutable`
             match attribute {
                 VariableAttribute::Constant(_) => {
-                    if let Some(prev) = attributes
-                        .iter()
-                        .find(|a| matches!(a, VariableAttribute::Immutable(_)))
+                    if let Some(prev) =
+                        attributes.iter().find(|a| matches!(a, VariableAttribute::Immutable(_)))
                     {
                         return Err(error(prev));
                     }
                 }
                 VariableAttribute::Immutable(_) => {
-                    if let Some(prev) = attributes
-                        .iter()
-                        .find(|a| matches!(a, VariableAttribute::Constant(_)))
+                    if let Some(prev) =
+                        attributes.iter().find(|a| matches!(a, VariableAttribute::Constant(_)))
                     {
                         return Err(error(prev));
                     }

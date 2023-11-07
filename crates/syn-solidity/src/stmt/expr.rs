@@ -15,18 +15,13 @@ pub struct StmtExpr {
 
 impl fmt::Debug for StmtExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("StmtExpr")
-            .field("expr", &self.expr)
-            .finish()
+        f.debug_struct("StmtExpr").field("expr", &self.expr).finish()
     }
 }
 
 impl Parse for StmtExpr {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            expr: input.parse()?,
-            semi_token: input.parse()?,
-        })
+        Ok(Self { expr: input.parse()?, semi_token: input.parse()? })
     }
 }
 

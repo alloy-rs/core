@@ -1,5 +1,6 @@
 reorder_imports = true
 use_field_init_shorthand = true
+use_small_heuristics = "Max"
 
 # Nightly
 max_width = 100

@@ -24,21 +24,14 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
-    let ItemStruct {
-        name,
-        fields,
-        attrs,
-        ..
-    } = s;
+    let ItemStruct { name, fields, attrs, .. } = s;
 
     let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
     cx.derives(&mut attrs, fields, true);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
-    let (field_types, field_names): (Vec<_>, Vec<_>) = fields
-        .iter()
-        .map(|f| (expand_type(&f.ty), f.name.as_ref().unwrap()))
-        .unzip();
+    let (field_types, field_names): (Vec<_>, Vec<_>) =
+        fields.iter().map(|f| (expand_type(&f.ty), f.name.as_ref().unwrap())).unzip();
 
     let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, name);
 

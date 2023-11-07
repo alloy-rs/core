@@ -602,10 +602,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[track_caller]
     #[must_use]
     pub fn exp10(n: usize) -> Self {
-        Uint::<BITS, LIMBS>::from(10)
-            .pow(Uint::from(n))
-            .try_into()
-            .expect("overflow")
+        Uint::<BITS, LIMBS>::from(10).pow(Uint::from(n)).try_into().expect("overflow")
     }
 
     /// Raises self to the power of `exp`, using exponentiation by squaring.

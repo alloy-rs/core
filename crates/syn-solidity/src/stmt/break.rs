@@ -24,10 +24,7 @@ impl fmt::Debug for StmtBreak {
 
 impl Parse for StmtBreak {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            break_token: input.parse()?,
-            semi_token: input.parse()?,
-        })
+        Ok(Self { break_token: input.parse()?, semi_token: input.parse()? })
     }
 }
 

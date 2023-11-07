@@ -38,10 +38,7 @@ pub struct ExprArray<T, const N: usize> {
 
 impl<T, const N: usize> ExprArray<T, N> {
     fn new(array: [T; N]) -> Self {
-        Self {
-            array,
-            span: Span::call_site(),
-        }
+        Self { array, span: Span::call_site() }
     }
 }
 

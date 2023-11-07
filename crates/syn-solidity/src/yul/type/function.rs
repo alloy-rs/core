@@ -107,8 +107,6 @@ impl Spanned for YulReturns {
 
 impl fmt::Debug for YulReturns {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("YulReturns")
-            .field("returns", DebugPunctuated::new(&self.returns))
-            .finish()
+        f.debug_struct("YulReturns").field("returns", DebugPunctuated::new(&self.returns)).finish()
     }
 }

@@ -99,16 +99,9 @@ mod tests {
 
     #[track_caller]
     fn ident_test(mut input: &str, expected: Result<&str, ()>, output: &str) {
-        assert_eq!(
-            identifier(&mut input).map_err(drop),
-            expected,
-            "result mismatch"
-        );
+        assert_eq!(identifier(&mut input).map_err(drop), expected, "result mismatch");
         if let Ok(expected) = expected {
-            assert!(
-                is_valid_identifier(expected),
-                "expected is not a valid ident"
-            );
+            assert!(is_valid_identifier(expected), "expected is not a valid ident");
         }
         assert_eq!(input, output, "output mismatch");
     }

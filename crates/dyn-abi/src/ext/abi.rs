@@ -166,10 +166,7 @@ fn encode_typeck(params: &[Param], values: &[DynSolValue]) -> Result<Vec<u8>> {
         if !ty.matches(value) {
             return Err(CrateError::TypeMismatch {
                 expected: ty.sol_type_name().into_owned(),
-                actual: value
-                    .sol_type_name()
-                    .unwrap_or_else(|| "<none>".into())
-                    .into_owned(),
+                actual: value.sol_type_name().unwrap_or_else(|| "<none>".into()).into_owned(),
             });
         }
     }

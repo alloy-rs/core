@@ -18,9 +18,7 @@ pub struct ExprTuple {
 
 impl fmt::Debug for ExprTuple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ExprTuple")
-            .field("elems", DebugPunctuated::new(&self.elems))
-            .finish()
+        f.debug_struct("ExprTuple").field("elems", DebugPunctuated::new(&self.elems)).finish()
     }
 }
 

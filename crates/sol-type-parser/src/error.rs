@@ -31,14 +31,7 @@ impl Error {
 
     /// Instantiate a new parser error.
     pub fn parser(e: impl fmt::Display) -> Self {
-        Self::_new(
-            if cfg!(feature = "std") {
-                "parser error:\n"
-            } else {
-                "parser error: "
-            },
-            &e,
-        )
+        Self::_new(if cfg!(feature = "std") { "parser error:\n" } else { "parser error: " }, &e)
     }
 
     /// Instantiate an invalid type string error. Invalid type string errors are

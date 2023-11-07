@@ -196,9 +196,7 @@ impl Item {
             | Self::Enum(ItemEnum { name, .. })
             | Self::Error(ItemError { name, .. })
             | Self::Event(ItemEvent { name, .. })
-            | Self::Function(ItemFunction {
-                name: Some(name), ..
-            })
+            | Self::Function(ItemFunction { name: Some(name), .. })
             | Self::Struct(ItemStruct { name, .. })
             | Self::Udt(ItemUdt { name, .. }) => Some(name),
             _ => None,

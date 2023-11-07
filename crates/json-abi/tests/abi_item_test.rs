@@ -102,34 +102,22 @@ fn event_operation_with_tuple_array_input() {
                         name: "to".into(),
                         ty: "address".into(),
                         components: vec![],
-                        internal_type: Some(Other {
-                            contract: None,
-                            ty: "address".into(),
-                        }),
+                        internal_type: Some(Other { contract: None, ty: "address".into() }),
                     },
                     Param {
                         name: "value".into(),
                         ty: "uint256".into(),
                         components: vec![],
-                        internal_type: Some(Other {
-                            contract: None,
-                            ty: "uint256".into(),
-                        }),
+                        internal_type: Some(Other { contract: None, ty: "uint256".into() }),
                     },
                     Param {
                         name: "data".into(),
                         ty: "bytes".into(),
                         components: vec![],
-                        internal_type: Some(Other {
-                            contract: None,
-                            ty: "bytes".into(),
-                        }),
+                        internal_type: Some(Other { contract: None, ty: "bytes".into() }),
                     },
                 ],
-                internal_type: Some(Struct {
-                    contract: None,
-                    ty: "Action[]".into(),
-                }),
+                internal_type: Some(Struct { contract: None, ty: "Action[]".into() }),
             },
         ],
         anonymous: false,

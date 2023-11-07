@@ -20,12 +20,7 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> {
-    let ItemEnum {
-        name,
-        variants,
-        attrs,
-        ..
-    } = enumm;
+    let ItemEnum { name, variants, attrs, .. } = enumm;
 
     let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
     cx.derives(&mut attrs, [], false);

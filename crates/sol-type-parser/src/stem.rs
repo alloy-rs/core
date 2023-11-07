@@ -15,10 +15,7 @@ use winnow::{trace::trace, PResult, Parser};
 /// let stem = TypeStem::parse("(uint256,bool)")?;
 /// assert_eq!(stem.span(), "(uint256,bool)");
 /// assert!(matches!(stem, TypeStem::Tuple(_)));
-/// assert_eq!(
-///     stem.as_tuple(),
-///     Some(&TupleSpecifier::parse("(uint256,bool)").unwrap())
-/// );
+/// assert_eq!(stem.as_tuple(), Some(&TupleSpecifier::parse("(uint256,bool)").unwrap()));
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -60,13 +57,9 @@ impl<'a> TypeStem<'a> {
     pub fn parser(input: &mut &'a str) -> PResult<Self> {
         let name = "TypeStem";
         if input.starts_with('(') || input.starts_with("tuple(") {
-            trace(name, TupleSpecifier::parser)
-                .parse_next(input)
-                .map(Self::Tuple)
+            trace(name, TupleSpecifier::parser).parse_next(input).map(Self::Tuple)
         } else {
-            trace(name, RootType::parser)
-                .parse_next(input)
-                .map(Self::Root)
+            trace(name, RootType::parser).parse_next(input).map(Self::Root)
         }
     }
 
@@ -116,24 +109,15 @@ mod tests {
         // empty tuple
         assert_eq!(
             TypeStem::parse("()"),
-            Ok(TypeStem::Tuple(TupleSpecifier {
-                span: "()",
-                types: vec![]
-            }))
+            Ok(TypeStem::Tuple(TupleSpecifier { span: "()", types: vec![] }))
         );
         TypeStem::parse("tuple(").unwrap_err();
         assert_eq!(
             TypeStem::parse("tuple()"),
-            Ok(TypeStem::Tuple(TupleSpecifier {
-                span: "tuple()",
-                types: vec![]
-            }))
+            Ok(TypeStem::Tuple(TupleSpecifier { span: "tuple()", types: vec![] }))
         );
 
         // type named tuple
-        assert_eq!(
-            TypeStem::parse("tuple"),
-            Ok(TypeStem::Root(RootType::parse("tuple").unwrap()))
-        )
+        assert_eq!(TypeStem::parse("tuple"), Ok(TypeStem::Root(RootType::parse("tuple").unwrap())))
     }
 }

@@ -69,9 +69,7 @@ pub(crate) fn as_offset(word: &Word, validate: bool) -> Result<usize> {
     if validate && !check_zeroes(before) {
         return Err(Error::type_check_fail(&word[..], "offset (usize)"));
     }
-    Ok(usize::from_be_bytes(
-        <[u8; USIZE_BYTES]>::try_from(data).unwrap(),
-    ))
+    Ok(usize::from_be_bytes(<[u8; USIZE_BYTES]>::try_from(data).unwrap()))
 }
 
 #[cfg(test)]

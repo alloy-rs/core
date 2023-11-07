@@ -29,10 +29,7 @@ impl Encoder {
     /// Instantiate a new empty encoder.
     #[inline]
     pub const fn new() -> Self {
-        Self {
-            buf: Vec::new(),
-            suffix_offset: Vec::new(),
-        }
+        Self { buf: Vec::new(), suffix_offset: Vec::new() }
     }
 
     /// Instantiate a new encoder with a given capacity in words.
@@ -348,10 +345,7 @@ mod tests {
     fn encode_dynamic_array_of_dynamic_arrays() {
         type MyTy = sol_data::Array<sol_data::Array<sol_data::Address>>;
 
-        let data = vec![
-            vec![Address::from([0x11u8; 20])],
-            vec![Address::from([0x22u8; 20])],
-        ];
+        let data = vec![vec![Address::from([0x11u8; 20])], vec![Address::from([0x22u8; 20])]];
 
         let expected = hex!(
             "
@@ -439,16 +433,8 @@ mod tests {
 
         let data = (
             [
-                (
-                    U256::from(93523141),
-                    U256::from(352332135),
-                    Address::from([0x44u8; 20]),
-                ),
-                (
-                    U256::from(12411),
-                    U256::from(451),
-                    Address::from([0x22u8; 20]),
-                ),
+                (U256::from(93523141), U256::from(352332135), Address::from([0x44u8; 20])),
+                (U256::from(12411), U256::from(451), Address::from([0x22u8; 20])),
             ],
             "gavofyork".to_string(),
         );
@@ -492,10 +478,7 @@ mod tests {
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), <(MyTy0,)>::abi_encoded_size(&(data,)));
 
-        type MyTy = (
-            sol_data::Array<sol_data::Address>,
-            sol_data::Array<sol_data::Address>,
-        );
+        type MyTy = (sol_data::Array<sol_data::Address>, sol_data::Array<sol_data::Address>);
         let data: (Vec<Address>, Vec<Address>) = (vec![], vec![]);
 
         let expected = hex!(
@@ -573,10 +556,7 @@ mod tests {
         let encoded = sol_data::FixedBytes::<2>::abi_encode(&[0x12, 0x34]);
         let expected = hex!("1234000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
-        assert_eq!(
-            encoded.len(),
-            sol_data::FixedBytes::<2>::abi_encoded_size(&[0x12, 0x34])
-        );
+        assert_eq!(encoded.len(), sol_data::FixedBytes::<2>::abi_encoded_size(&[0x12, 0x34]));
     }
 
     #[test]
@@ -592,10 +572,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(
-            encoded.len(),
-            <(sol_data::String,)>::abi_encoded_size(&(s,))
-        );
+        assert_eq!(encoded.len(), <(sol_data::String,)>::abi_encoded_size(&(s,)));
     }
 
     #[test]
@@ -611,10 +588,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(
-            encoded.len(),
-            <(sol_data::Bytes,)>::abi_encoded_size(&(bytes,))
-        );
+        assert_eq!(encoded.len(), <(sol_data::Bytes,)>::abi_encoded_size(&(bytes,)));
     }
 
     #[test]
@@ -637,10 +611,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(
-            encoded.len(),
-            <(sol_data::Bytes,)>::abi_encoded_size(&(bytes,))
-        );
+        assert_eq!(encoded.len(), <(sol_data::Bytes,)>::abi_encoded_size(&(bytes,)));
     }
 
     #[test]
@@ -709,12 +680,7 @@ mod tests {
 
     #[test]
     fn comprehensive_test() {
-        type MyTy = (
-            sol_data::Uint<8>,
-            sol_data::Bytes,
-            sol_data::Uint<8>,
-            sol_data::Bytes,
-        );
+        type MyTy = (sol_data::Uint<8>, sol_data::Bytes, sol_data::Uint<8>, sol_data::Bytes);
 
         let bytes = hex!(
             "
@@ -940,12 +906,7 @@ mod tests {
 
     #[test]
     fn encode_complex_tuple() {
-        type MyTy = (
-            sol_data::Uint<256>,
-            sol_data::String,
-            sol_data::Address,
-            sol_data::Address,
-        );
+        type MyTy = (sol_data::Uint<256>, sol_data::String, sol_data::Address, sol_data::Address);
 
         let data = (
             U256::from_be_bytes::<32>([0x11u8; 32]),
@@ -982,22 +943,14 @@ mod tests {
             sol_data::String,
             sol_data::Bool,
             sol_data::String,
-            (
-                sol_data::String,
-                sol_data::String,
-                (sol_data::String, sol_data::String),
-            ),
+            (sol_data::String, sol_data::String, (sol_data::String, sol_data::String)),
         );
 
         let data = (
             "test".to_string(),
             true,
             "cyborg".to_string(),
-            (
-                "night".to_string(),
-                "day".to_string(),
-                ("weee".to_string(), "funtests".to_string()),
-            ),
+            ("night".to_string(), "day".to_string(), ("weee".to_string(), "funtests".to_string())),
         );
 
         let encoded = MyTy::abi_encode(&data);
@@ -1123,10 +1076,7 @@ mod tests {
 
     #[test]
     fn encode_dynamic_tuple_with_nested_static_tuples() {
-        type MyTy = (
-            ((sol_data::Bool, sol_data::Uint<16>),),
-            sol_data::Array<sol_data::Uint<16>>,
-        );
+        type MyTy = (((sol_data::Bool, sol_data::Uint<16>),), sol_data::Array<sol_data::Uint<16>>);
 
         let data = (((false, 0x777),), vec![0x42, 0x1337]);
 

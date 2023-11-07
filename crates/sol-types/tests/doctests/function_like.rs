@@ -20,10 +20,7 @@ sol! {
 fn function() {
     assert_call_signature::<fooCall>("foo(uint256,uint256)");
 
-    let call = fooCall {
-        a: U256::from(1),
-        b: U256::from(2),
-    };
+    let call = fooCall { a: U256::from(1), b: U256::from(2) };
     let _call_data = call.abi_encode();
 
     // the signatures are unaffected
@@ -46,10 +43,7 @@ fn error() {
     );
     assert_eq!(
         MyError::abi_decode_raw(&call_data, true),
-        Ok(MyError {
-            a: U256::from(1),
-            b: U256::from(2)
-        })
+        Ok(MyError { a: U256::from(1), b: U256::from(2) })
     );
 }
 

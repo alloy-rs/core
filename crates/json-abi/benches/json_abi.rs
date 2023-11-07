@@ -34,11 +34,7 @@ fn serde_(g: &mut BenchmarkGroup<'_, WallTime>, name: &str, s: &str) {
 fn signature(c: &mut Criterion) {
     let mut g = c.benchmark_group("signature");
     g.warm_up_time(Duration::from_secs(1));
-    signature_(
-        &mut g,
-        "large-function",
-        include_str!("../tests/abi/LargeFunction.json"),
-    );
+    signature_(&mut g, "large-function", include_str!("../tests/abi/LargeFunction.json"));
 }
 
 fn signature_(g: &mut BenchmarkGroup<'_, WallTime>, name: &str, s: &str) {

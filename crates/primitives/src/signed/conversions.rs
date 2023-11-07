@@ -123,10 +123,7 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<Signed<BITS, LIMBS>> for u12
             return Err(BigIntConversionError);
         }
 
-        value
-            .into_raw()
-            .try_into()
-            .map_err(|_| BigIntConversionError)
+        value.into_raw().try_into().map_err(|_| BigIntConversionError)
     }
 }
 

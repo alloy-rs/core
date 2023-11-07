@@ -29,11 +29,7 @@ impl Parse for YulVarAssign {
             return Err(input.error("Multiple variables require a function call for assignment"));
         }
 
-        Ok(Self {
-            vars,
-            walrus_token,
-            assigned_value,
-        })
+        Ok(Self { vars, walrus_token, assigned_value })
     }
 }
 
