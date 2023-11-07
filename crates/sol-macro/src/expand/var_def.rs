@@ -15,7 +15,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, var_def: &VariableDefinition) -> Result<T
         .visibility()
         .map_or(false, |v| v.is_public() || v.is_external())
     {
-        return Ok(TokenStream::new())
+        return Ok(TokenStream::new());
     }
 
     let mut function = ItemFunction::from_variable_definition(var_def.clone());
@@ -31,7 +31,7 @@ fn expand_returns(cx: &ExpCtxt<'_>, f: &mut ItemFunction) -> Result<()> {
         .expect("generated getter function with no returns");
     let ret = returns.returns.first_mut().unwrap();
     if !ret.ty.has_custom_simple() {
-        return Ok(())
+        return Ok(());
     }
 
     let mut ty = &ret.ty;
@@ -44,7 +44,7 @@ fn expand_returns(cx: &ExpCtxt<'_>, f: &mut ItemFunction) -> Result<()> {
     // skip if not tuple with complex types
     let Type::Tuple(tup) = ty else { return Ok(()) };
     if !tup.types.iter().any(type_is_complex) {
-        return Ok(())
+        return Ok(());
     }
 
     // retain only non-complex types
@@ -62,7 +62,7 @@ fn expand_returns(cx: &ExpCtxt<'_>, f: &mut ItemFunction) -> Result<()> {
 
     // all types were complex, Solidity doesn't accept this
     if new_returns.is_empty() {
-        return Err(Error::new(f.name().span(), "invalid state variable type"))
+        return Err(Error::new(f.name().span(), "invalid state variable type"));
     }
 
     returns.returns = new_returns;

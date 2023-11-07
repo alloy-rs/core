@@ -13,7 +13,7 @@ macro_rules! validate_identifier {
             return Err(serde::de::Error::invalid_value(
                 serde::de::Unexpected::Str($name),
                 &"a valid Solidity identifier",
-            ))
+            ));
         }
     };
 }

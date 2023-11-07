@@ -98,7 +98,7 @@ where
     #[inline]
     fn valid_token(token: &Self::TokenType<'_>) -> bool {
         if BITS == 256 {
-            return true
+            return true;
         }
 
         let is_negative = token.0[IntBitCount::<BITS>::WORD_MSB] & 0x80 == 0x80;
@@ -542,7 +542,7 @@ where
     #[inline]
     fn stv_abi_encoded_size(&self) -> usize {
         if let Some(size) = FixedArray::<U, N>::ENCODED_SIZE {
-            return size
+            return size;
         }
 
         self.iter().map(T::stv_abi_encoded_size).sum::<usize>() + (U::DYNAMIC as usize * N * 32)

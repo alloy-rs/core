@@ -485,7 +485,7 @@ mod tests {
 
     fn run_solc() -> bool {
         let Ok(status) = Command::new("solc").arg("--version").status() else {
-            return false
+            return false;
         };
         status.success()
     }

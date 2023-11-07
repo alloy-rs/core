@@ -42,7 +42,7 @@ pub trait SolError: Sized {
     #[inline]
     fn abi_encoded_size(&self) -> usize {
         if let Some(size) = <Self::Parameters<'_> as SolType>::ENCODED_SIZE {
-            return size
+            return size;
         }
 
         self.tokenize().total_words() * Word::len_bytes()
@@ -417,12 +417,12 @@ impl PanicKind {
 pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
     // Try to decode as a generic contract error.
     if let Ok(error) = GenericContractError::abi_decode(out, true) {
-        return Some(error.to_string())
+        return Some(error.to_string());
     }
 
     // If that fails, try to decode as a regular string.
     if let Ok(decoded_string) = core::str::from_utf8(out) {
-        return Some(decoded_string.to_string())
+        return Some(decoded_string.to_string());
     }
 
     // If both attempts fail, return None.

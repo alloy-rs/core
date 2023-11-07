@@ -273,7 +273,7 @@ impl<'a> BorrowedInternalType<'a> {
     /// Instantiate a borrowed internal type by parsing a string.
     fn parse(v: &'a str) -> Option<Self> {
         if v.starts_with("address payable") {
-            return Some(Self::AddressPayable(v))
+            return Some(Self::AddressPayable(v));
         }
         if let Some(body) = v.strip_prefix("enum ") {
             if let Some((contract, ty)) = body.split_once('.') {

@@ -26,7 +26,7 @@ impl Parse for YulVarAssign {
         let assigned_value = input.parse()?;
 
         if vars.len() > 1 && !matches!(assigned_value, YulExpr::Call(_)) {
-            return Err(input.error("Multiple variables require a function call for assignment"))
+            return Err(input.error("Multiple variables require a function call for assignment"));
         }
 
         Ok(Self {

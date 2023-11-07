@@ -48,7 +48,7 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
                 }
 
                 if let Ok(Some(_)) = seq.next_element::<u8>() {
-                    return Err(len_error(N + 1))
+                    return Err(len_error(N + 1));
                 }
 
                 Ok(FixedBytes(bytes))

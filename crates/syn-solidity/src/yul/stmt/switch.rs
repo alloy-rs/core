@@ -45,7 +45,7 @@ impl Parse for YulSwitch {
         };
 
         if branches.is_empty() && default_case.is_none() {
-            return Err(input.error("Must have at least one case or a default case."))
+            return Err(input.error("Must have at least one case or a default case."));
         }
 
         Ok(Self {
@@ -61,7 +61,7 @@ impl Spanned for YulSwitch {
     fn span(&self) -> Span {
         let span = self.switch_token.span();
         if let Some(default_case) = &self.default_case {
-            return span.join(default_case.span()).unwrap_or(span)
+            return span.join(default_case.span()).unwrap_or(span);
         }
         span.join(self.branches.span()).unwrap_or(span)
     }

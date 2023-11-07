@@ -231,12 +231,12 @@ impl<'de> Decoder<'de> {
         if self.validate {
             let padded_len = utils::next_multiple_of_32(len);
             if self.offset + padded_len > self.buf.len() {
-                return Err(Error::Overrun)
+                return Err(Error::Overrun);
             }
             if !utils::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
                 return Err(Error::Other(Cow::Borrowed(
                     "non-empty bytes after packed array",
-                )))
+                )));
             }
         }
         self.take_slice_unchecked(len)
@@ -321,7 +321,7 @@ pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -
     let mut decoder = Decoder::new(data, validate);
     let result = decoder.decode_sequence::<T>()?;
     if validate && encode_sequence(&result) != data {
-        return Err(Error::ReserMismatch)
+        return Err(Error::ReserMismatch);
     }
     Ok(result)
 }

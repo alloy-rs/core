@@ -90,7 +90,7 @@ impl<'a> GitPatcher<'a> {
 
     fn unpatch(&mut self) {
         if !self.patched {
-            return
+            return;
         }
         self.patched = false;
         for patch in self.patches() {

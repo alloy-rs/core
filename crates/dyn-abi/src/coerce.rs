@@ -235,7 +235,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
                     input,
                     ErrorKind::Verify,
                     Error::FloatNoStd(x),
-                ))
+                ));
             }
 
             #[cfg(feature = "std")]
@@ -245,7 +245,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
                         input,
                         ErrorKind::Verify,
                         Error::FractionalNotAllowed(x.fract()),
-                    ))
+                    ));
                 }
 
                 if fract.len() > units {
@@ -253,7 +253,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
                         input,
                         ErrorKind::Verify,
                         Error::TooManyDecimals(units, fract.len()),
-                    ))
+                    ));
                 }
 
                 U256::try_from(x * 10f64.powi(units as i32))
@@ -273,7 +273,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
                 input,
                 ErrorKind::Verify,
                 Error::IntOverflow,
-            ))
+            ));
         }
 
         Ok(uint)
@@ -330,7 +330,7 @@ fn fixed_bytes<'i>(len: usize) -> impl Parser<&'i str, Word, ContextError> {
                 input,
                 ErrorKind::Fail,
                 Error::InvalidFixedBytesLength(len),
-            ))
+            ));
         }
 
         let hex = hex_str(input)?;
@@ -371,7 +371,7 @@ fn string(input: &mut &str) -> PResult<String> {
 #[inline]
 fn string_inner<'i>(input: &mut &'i str) -> PResult<&'i str> {
     let Some(delim) = input.chars().next() else {
-        return Ok("")
+        return Ok("");
     };
     let has_delim = matches!(delim, '"' | '\'');
     if has_delim {

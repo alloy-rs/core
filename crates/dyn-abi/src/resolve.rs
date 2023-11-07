@@ -83,10 +83,10 @@ impl ResolveSolType for RootType<'_> {
                 if let Some(sz) = name.strip_prefix("bytes") {
                     if let Ok(sz) = sz.parse() {
                         if sz != 0 && sz <= 32 {
-                            return Ok(DynSolType::FixedBytes(sz))
+                            return Ok(DynSolType::FixedBytes(sz));
                         }
                     }
-                    return Err(ParserError::invalid_size(name).into())
+                    return Err(ParserError::invalid_size(name).into());
                 }
 
                 // fast path both integer types
@@ -103,7 +103,7 @@ impl ResolveSolType for RootType<'_> {
                                 Ok(DynSolType::Uint(sz))
                             } else {
                                 Ok(DynSolType::Int(sz))
-                            }
+                            };
                         }
                     }
                     Err(ParserError::invalid_size(name).into())
@@ -187,7 +187,7 @@ fn resolve_param(
 
     // type is simple, and we can resolve it via the specifier
     if components.is_empty() {
-        return ty.resolve()
+        return ty.resolve();
     }
 
     // type is complex

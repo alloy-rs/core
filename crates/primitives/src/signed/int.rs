@@ -186,7 +186,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         // check to avoid bit comparison
         if let Some(limb) = self.0.as_limbs().last() {
             if *limb >= Self::SIGN_BIT {
-                return Sign::Negative
+                return Sign::Negative;
             }
         }
         Sign::Positive
@@ -367,7 +367,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         let value = value.strip_prefix("0x").unwrap_or(value);
 
         if value.len() > 64 {
-            return Err(ParseSignedError::IntegerOverflow)
+            return Err(ParseSignedError::IntegerOverflow);
         }
 
         let abs = Uint::<BITS, LIMBS>::from_str_radix(value, 16)?;

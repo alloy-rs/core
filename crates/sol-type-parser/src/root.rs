@@ -111,10 +111,10 @@ impl<'a> RootType<'a> {
                 if let Some(sz) = name.strip_prefix("bytes") {
                     if let Ok(sz) = sz.parse::<usize>() {
                         if sz != 0 && sz <= 32 {
-                            return Ok(())
+                            return Ok(());
                         }
                     }
-                    return Err(Error::invalid_size(name))
+                    return Err(Error::invalid_size(name));
                 }
 
                 // fast path both integer types
@@ -123,10 +123,10 @@ impl<'a> RootType<'a> {
                 if let Some(sz) = s.strip_prefix("int") {
                     if let Ok(sz) = sz.parse::<usize>() {
                         if sz != 0 && sz <= 256 && sz % 8 == 0 {
-                            return Ok(())
+                            return Ok(());
                         }
                     }
-                    return Err(Error::invalid_size(name))
+                    return Err(Error::invalid_size(name));
                 }
 
                 Err(Error::invalid_type_string(name))

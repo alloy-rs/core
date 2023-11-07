@@ -158,7 +158,7 @@ impl<'a> DynToken<'a> {
                 if size == 0 {
                     // should already be empty from `empty_dyn_token`
                     debug_assert!(contents.is_empty());
-                    return Ok(())
+                    return Ok(());
                 }
 
                 // This appears to be an unclarity in the Solidity spec. The

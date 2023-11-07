@@ -67,7 +67,7 @@ impl Parse for ItemContract {
             inheritance: {
                 if input.peek(kw::is) {
                     if kind.is_library() {
-                        return Err(input.error("libraries are not allowed to inherit"))
+                        return Err(input.error("libraries are not allowed to inherit"));
                     }
                     Some(input.parse()?)
                 } else {
@@ -80,7 +80,7 @@ impl Parse for ItemContract {
                 while !content.is_empty() {
                     let item: Item = content.parse()?;
                     if matches!(item, Item::Contract(_)) {
-                        return Err(Error::new(item.span(), "cannot declare nested contracts"))
+                        return Err(Error::new(item.span(), "cannot declare nested contracts"));
                     }
                     body.push(item);
                 }
@@ -300,11 +300,11 @@ impl Parse for Inheritance {
         let mut inheritance = Punctuated::new();
         loop {
             if input.is_empty() || input.peek(Brace) {
-                break
+                break;
             }
             inheritance.push_value(input.parse()?);
             if input.is_empty() || input.peek(Brace) {
-                break
+                break;
             }
             inheritance.push_punct(input.parse()?);
         }

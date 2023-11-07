@@ -281,10 +281,10 @@ impl Resolver {
         };
 
         if context.stack.contains(type_name) {
-            return true
+            return true;
         }
         if context.visited.contains(ty) {
-            return false
+            return false;
         }
 
         // update visited and stack
@@ -298,7 +298,7 @@ impl Resolver {
             .iter()
             .any(|edge| self.detect_cycle(edge, context))
         {
-            return true
+            return true;
         }
 
         context.stack.remove(type_name);
@@ -350,7 +350,7 @@ impl Resolver {
         root_type: RootType<'_>,
     ) -> Result<()> {
         if root_type.try_basic_solidity().is_ok() {
-            return Ok(())
+            return Ok(());
         }
 
         let this_type = self
@@ -376,7 +376,7 @@ impl Resolver {
     pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>> {
         let mut context = DfsContext::default();
         if self.detect_cycle(type_name, &mut context) {
-            return Err(Error::circular_dependency(type_name))
+            return Err(Error::circular_dependency(type_name));
         }
         let root_type = type_name.try_into()?;
         let mut resolution = vec![];
@@ -388,7 +388,7 @@ impl Resolver {
     /// the type is missing, or contains a circular dependency.
     pub fn resolve(&self, type_name: &str) -> Result<DynSolType> {
         if self.detect_cycle(type_name, &mut Default::default()) {
-            return Err(Error::circular_dependency(type_name))
+            return Err(Error::circular_dependency(type_name));
         }
         self.unchecked_resolve(&type_name.try_into()?)
     }
@@ -411,7 +411,7 @@ impl Resolver {
     /// struct.
     fn resolve_root_type(&self, root_type: RootType<'_>) -> Result<DynSolType> {
         if let Ok(ty) = root_type.resolve() {
-            return Ok(ty)
+            return Ok(ty);
         }
 
         let ty = self
@@ -480,7 +480,7 @@ impl Resolver {
     /// encoded as their `encodeData` hash.
     pub fn eip712_data_word(&self, value: &DynSolValue) -> Result<B256> {
         if let Some(word) = value.as_word() {
-            return Ok(word)
+            return Ok(word);
         }
 
         let mut bytes;

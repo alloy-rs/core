@@ -37,7 +37,7 @@ pub fn docs_str(attrs: &[Attribute]) -> String {
             ..
         }) = &attr.meta
         else {
-            continue
+            continue;
         };
 
         let value = s.value();
@@ -93,7 +93,7 @@ impl SolAttrs {
         for attr in attrs {
             if !attr.path().is_ident("sol") {
                 others.push(attr.clone());
-                continue
+                continue;
             }
 
             attr.meta.require_list()?.parse_nested_meta(|meta| {
@@ -136,10 +136,10 @@ impl SolAttrs {
                     let v = lit.value();
                     let v = v.strip_prefix("0x").unwrap_or(&v);
                     if v.contains(|c: char| !c.is_ascii_hexdigit()) {
-                        return Err(Error::new(lit.span(), "expected hex literal"))
+                        return Err(Error::new(lit.span(), "expected hex literal"));
                     }
                     if v.len() % 2 != 0 {
-                        return Err(Error::new(lit.span(), "expected even number of hex digits"))
+                        return Err(Error::new(lit.span(), "expected even number of hex digits"));
                     }
                     Ok(LitStr::new(v, lit.span()))
                 };

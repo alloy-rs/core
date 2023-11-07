@@ -219,7 +219,7 @@ impl<const N: usize> fmt::Display for FixedBytes<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // If the alternate flag is NOT set, we write the full hex.
         if N <= 4 || !f.alternate() {
-            return self.fmt_hex::<false>(f, true)
+            return self.fmt_hex::<false>(f, true);
         }
 
         // If the alternate flag is set, we use middle-out compression.
@@ -498,7 +498,7 @@ impl<const N: usize> FixedBytes<N> {
         let mut i = 0;
         while i < N {
             if self.0[i] != other.0[i] {
-                return false
+                return false;
             }
             i += 1;
         }

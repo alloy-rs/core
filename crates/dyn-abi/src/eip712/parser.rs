@@ -89,7 +89,7 @@ impl<'a> ComponentType<'a> {
                     if depth == 0 {
                         props.push(props_str[last..i].try_into()?);
                         last = i + 1;
-                        break
+                        break;
                     }
                 }
                 ',' => {

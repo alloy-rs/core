@@ -127,7 +127,7 @@ impl SolInput {
         } else {
             if let Some(name) = name {
                 let msg = "names are not allowed outside of JSON ABI";
-                return Err(Error::new(name.span(), msg))
+                return Err(Error::new(name.span(), msg));
             }
             let kind = syn::parse_str(s).map_err(|e| {
                 let msg = format!("expected a valid JSON ABI string or Solidity string: {e}");

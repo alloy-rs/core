@@ -114,7 +114,7 @@ pub fn rec_expand_rust_type(ty: &Type, tokens: &mut TokenStream) {
                     Type::Uint(..) => "u",
                     _ => unreachable!(),
                 };
-                return Ident::new(&format!("{name}{size}"), span).to_tokens(tokens)
+                return Ident::new(&format!("{name}{size}"), span).to_tokens(tokens);
             }
             assert_eq!(size, 256);
             match ty {

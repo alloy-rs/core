@@ -169,7 +169,7 @@ impl Param {
     pub fn udt_specifier(&self) -> Option<TypeSpecifier<'_>> {
         // UDTs are more annoying to check for, so we reuse logic here.
         if !self.is_udt() {
-            return None
+            return None;
         }
         self.internal_type().and_then(|ty| ty.other_specifier())
     }
@@ -417,7 +417,7 @@ impl EventParam {
     pub fn udt_specifier(&self) -> Option<TypeSpecifier<'_>> {
         // UDTs are more annoying to check for, so we reuse logic here.
         if !self.is_udt() {
-            return None
+            return None;
         }
         self.internal_type().and_then(|ty| ty.other_specifier())
     }
@@ -534,7 +534,7 @@ impl BorrowedParam<'_> {
                 return Err(E::invalid_value(
                     Unexpected::Str(self.ty),
                     &"a valid Solidity type specifier",
-                ))
+                ));
             }
         } else {
             // https://docs.soliditylang.org/en/latest/abi-spec.html#handling-tuple-types
@@ -543,7 +543,7 @@ impl BorrowedParam<'_> {
                 return Err(E::invalid_value(
                     Unexpected::Str(self.ty),
                     &"a string prefixed with `tuple`, optionally followed by a sequence of `[]` or `[k]` with integers `k`",
-                ))
+                ));
             }
         }
 

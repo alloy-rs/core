@@ -32,7 +32,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn overflowing_abs(self) -> (Self, bool) {
         if BITS == 0 {
-            return (self, false)
+            return (self, false);
         }
         if self == Self::MIN {
             (self, true)
@@ -88,7 +88,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn overflowing_neg(self) -> (Self, bool) {
         if BITS == 0 {
-            return (self, false)
+            return (self, false);
         }
         if self == Self::MIN {
             (self, true)
@@ -258,7 +258,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn overflowing_mul(self, rhs: Self) -> (Self, bool) {
         if self.is_zero() || rhs.is_zero() {
-            return (Self::ZERO, false)
+            return (Self::ZERO, false);
         }
         let sign = self.sign() * rhs.sign();
         let (unsigned, overflow_mul) = self.unsigned_abs().overflowing_mul(rhs.unsigned_abs());
@@ -628,7 +628,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn overflowing_pow(self, exp: Uint<BITS, LIMBS>) -> (Self, bool) {
         if BITS == 0 {
-            return (Self::ZERO, false)
+            return (Self::ZERO, false);
         }
 
         let sign = self.pow_sign(exp);
@@ -752,7 +752,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     pub fn asr(self, rhs: usize) -> Self {
         // Avoid shifting if we are going to know the result regardless of the value.
         if rhs == 0 || BITS == 0 {
-            return self
+            return self;
         }
 
         if rhs >= BITS - 1 {

@@ -39,7 +39,7 @@ impl Parse for YulVarDecl {
                 .as_ref()
                 .map_or(false, |(_, expr)| !matches!(expr, YulExpr::Call(_)))
         {
-            return Err(input.error("Multiple variables can only be initialized by a function call"))
+            return Err(input.error("Multiple variables can only be initialized by a function call"));
         }
 
         Ok(Self {

@@ -185,7 +185,7 @@ impl Address {
         fn parse_checksummed(s: &str, chain_id: Option<u64>) -> Result<Address, AddressError> {
             // checksummed addresses always start with the "0x" prefix
             if !s.starts_with("0x") {
-                return Err(AddressError::Hex(hex::FromHexError::InvalidStringLength))
+                return Err(AddressError::Hex(hex::FromHexError::InvalidStringLength));
             }
 
             let address: Address = s.parse()?;

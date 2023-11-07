@@ -9,7 +9,7 @@ fn abi() {
         let path = file.unwrap().path();
         assert_eq!(path.extension(), Some("json".as_ref()));
         if path.file_name() == Some("LargeFunction.json".as_ref()) {
-            continue
+            continue;
         }
         parse_test(
             &std::fs::read_to_string(&path).unwrap(),
@@ -144,7 +144,7 @@ fn test_events(abi: &JsonAbi) {
 fn test_event_param(param: &EventParam) {
     if param.components.is_empty() {
         assert!(!param.ty.contains("tuple"));
-        return
+        return;
     }
 
     if param.is_struct() {
@@ -157,7 +157,7 @@ fn test_event_param(param: &EventParam) {
 fn test_param(param: &Param) {
     if param.components.is_empty() {
         assert!(!param.ty.contains("tuple"));
-        return
+        return;
     }
 
     if param.is_struct() {

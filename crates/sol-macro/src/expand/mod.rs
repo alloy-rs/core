@@ -80,7 +80,7 @@ impl<'ast> ExpCtxt<'ast> {
         }
 
         if abort {
-            return Ok(tokens)
+            return Ok(tokens);
         }
 
         for item in &self.ast.items {
@@ -144,14 +144,14 @@ impl<'ast> ExpCtxt<'ast> {
             let mut i = 0;
             ty.visit_mut(|ty| {
                 if i >= RESOLVE_LIMIT {
-                    return
+                    return;
                 }
                 let ty @ Type::Custom(_) = ty else { return };
                 let Type::Custom(name) = &*ty else {
                     unreachable!()
                 };
                 let Some(resolved) = map.get(name.last()) else {
-                    return
+                    return;
                 };
                 ty.clone_from(resolved);
                 i += 1;
@@ -198,7 +198,7 @@ impl<'ast> ExpCtxt<'ast> {
 
             for (i, &item) in functions.iter().enumerate() {
                 let Some(old_name) = item.name() else {
-                    continue
+                    continue;
                 };
                 let new_name = format!("{old_name}_{i}");
                 if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
@@ -218,7 +218,7 @@ impl<'ast> ExpCtxt<'ast> {
         }
 
         if failed {
-            return Err(())
+            return Err(());
         }
 
         self.overloads = overloads_map;
@@ -465,7 +465,7 @@ impl<'ast> ExpCtxt<'ast> {
         T: Borrow<Type>,
     {
         let Some(true) = self.attrs.all_derives else {
-            return
+            return;
         };
 
         let mut derives = Vec::with_capacity(5);

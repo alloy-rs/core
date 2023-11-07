@@ -579,7 +579,7 @@ impl DynSolValue {
                 let mut sum = 0;
                 for val in vals {
                     if val.is_dynamic() {
-                        return 1
+                        return 1;
                     }
                     sum += val.head_words();
                 }

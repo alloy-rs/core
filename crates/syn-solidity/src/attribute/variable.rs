@@ -43,7 +43,7 @@ impl Parse for VariableAttributes {
                         .iter()
                         .find(|a| matches!(a, VariableAttribute::Immutable(_)))
                     {
-                        return Err(error(prev))
+                        return Err(error(prev));
                     }
                 }
                 VariableAttribute::Immutable(_) => {
@@ -51,14 +51,14 @@ impl Parse for VariableAttributes {
                         .iter()
                         .find(|a| matches!(a, VariableAttribute::Constant(_)))
                     {
-                        return Err(error(prev))
+                        return Err(error(prev));
                     }
                 }
                 _ => {}
             }
 
             if let Some(prev) = attributes.iter().find(|a| **a == attribute) {
-                return Err(error(prev))
+                return Err(error(prev));
             }
             attributes.push(attribute);
         }

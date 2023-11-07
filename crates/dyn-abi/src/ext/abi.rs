@@ -159,7 +159,7 @@ fn encode_typeck(params: &[Param], values: &[DynSolValue]) -> Result<Vec<u8>> {
         return Err(CrateError::EncodeLengthMismatch {
             expected: params.len(),
             actual: values.len(),
-        })
+        });
     }
     for (value, param) in core::iter::zip(values, params) {
         let ty = param.resolve()?;
@@ -170,7 +170,7 @@ fn encode_typeck(params: &[Param], values: &[DynSolValue]) -> Result<Vec<u8>> {
                     .sol_type_name()
                     .unwrap_or_else(|| "<none>".into())
                     .into_owned(),
-            })
+            });
         }
     }
 

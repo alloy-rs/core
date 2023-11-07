@@ -34,7 +34,7 @@ impl ResolveSolEvent for Event {
             return Err(Error::TopicLengthMismatch {
                 expected: 4,
                 actual: num_topics,
-            })
+            });
         }
 
         Ok(DynSolEvent::new_unchecked(

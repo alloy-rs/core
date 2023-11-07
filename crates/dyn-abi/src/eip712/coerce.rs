@@ -63,7 +63,7 @@ fn bool(value: &serde_json::Value) -> Option<bool> {
 fn int(n: usize, value: &serde_json::Value) -> Option<I256> {
     (|| {
         if let Some(num) = value.as_i64() {
-            return Some(I256::try_from(num).unwrap())
+            return Some(I256::try_from(num).unwrap());
         }
         value.as_str().and_then(|s| s.parse().ok())
     })()
@@ -73,7 +73,7 @@ fn int(n: usize, value: &serde_json::Value) -> Option<I256> {
 fn uint(n: usize, value: &serde_json::Value) -> Option<U256> {
     (|| {
         if let Some(num) = value.as_u64() {
-            return Some(U256::from(num))
+            return Some(U256::from(num));
         }
         value.as_str().and_then(|s| s.parse().ok())
     })()
@@ -86,7 +86,7 @@ fn fixed_bytes(n: usize, value: &serde_json::Value) -> Option<Word> {
         let min = n.min(buf.len());
         if min <= 32 {
             word[..min].copy_from_slice(&buf[..min]);
-            return Some(word)
+            return Some(word);
         }
     }
     None
@@ -115,7 +115,7 @@ fn tuple(inner: &[DynSolType], value: &serde_json::Value) -> Option<Result<Vec<D
                 core::iter::zip(arr, inner)
                     .map(|(v, t)| t.coerce_json(v))
                     .collect(),
-            )
+            );
         }
     }
     None
@@ -123,7 +123,7 @@ fn tuple(inner: &[DynSolType], value: &serde_json::Value) -> Option<Result<Vec<D
 
 fn array(inner: &DynSolType, value: &serde_json::Value) -> Option<Result<Vec<DynSolValue>>> {
     if let Some(arr) = value.as_array() {
-        return Some(arr.iter().map(|v| inner.coerce_json(v)).collect())
+        return Some(arr.iter().map(|v| inner.coerce_json(v)).collect());
     }
     None
 }
@@ -135,7 +135,7 @@ fn fixed_array(
 ) -> Option<Result<Vec<DynSolValue>>> {
     if let Some(arr) = value.as_array() {
         if arr.len() == n {
-            return Some(arr.iter().map(|v| inner.coerce_json(v)).collect())
+            return Some(arr.iter().map(|v| inner.coerce_json(v)).collect());
         }
     }
     None
@@ -160,14 +160,14 @@ pub(crate) fn custom_struct(
                         tuple: inner.to_vec(),
                     },
                     value,
-                ))
+                ));
             }
         }
         return Ok(DynSolValue::CustomStruct {
             name: name.to_string(),
             prop_names: prop_names.to_vec(),
             tuple,
-        })
+        });
     }
 
     Err(Error::eip712_coerce(

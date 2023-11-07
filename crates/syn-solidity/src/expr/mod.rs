@@ -139,7 +139,7 @@ impl Parse for Expr {
                 debug!(" << Expr: {new:?}");
                 expr = new;
             } else {
-                return Ok(new)
+                return Ok(new);
             }
         }
     }

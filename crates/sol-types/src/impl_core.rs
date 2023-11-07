@@ -19,7 +19,7 @@ where
 {
     if N == 0 {
         // SAFETY: An empty array is always inhabited and has no validity invariants.
-        return unsafe { Ok(mem::zeroed()) }
+        return unsafe { Ok(mem::zeroed()) };
     }
 
     struct Guard<'a, T, const N: usize> {

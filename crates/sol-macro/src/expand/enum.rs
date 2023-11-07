@@ -35,10 +35,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
 
     let count = variants.len();
     if count == 0 {
-        return Err(syn::Error::new(enumm.span(), "enum has no variants"))
+        return Err(syn::Error::new(enumm.span(), "enum has no variants"));
     }
     if count > 256 {
-        return Err(syn::Error::new(enumm.span(), "enum has too many variants"))
+        return Err(syn::Error::new(enumm.span(), "enum has too many variants"));
     }
     let max = (count - 1) as u8;
 
@@ -48,7 +48,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
 
         let has_serde = attr::derives_mapped(&attrs).any(|path| {
             let Some(last) = path.segments.last() else {
-                return false
+                return false;
             };
             last.ident == "Serialize" || last.ident == "Deserialize"
         });

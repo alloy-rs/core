@@ -309,7 +309,7 @@ impl DynSolType {
                 if *size != tokens.len() {
                     return Err(crate::Error::custom(
                         "array length mismatch on dynamic detokenization",
-                    ))
+                    ));
                 }
                 t.detokenize_array(tokens.into_owned())
                     .map(DynSolValue::FixedArray)
@@ -319,7 +319,7 @@ impl DynSolType {
                 if types.len() != tokens.len() {
                     return Err(crate::Error::custom(
                         "tuple length mismatch on dynamic detokenization",
-                    ))
+                    ));
                 }
                 Self::detokenize_many(types, tokens.into_owned()).map(DynSolValue::Tuple)
             }
@@ -336,7 +336,7 @@ impl DynSolType {
                 if len != tokens.len() || len != tuple.len() {
                     return Err(crate::Error::custom(
                         "custom length mismatch on dynamic detokenization",
-                    ))
+                    ));
                 }
                 Self::detokenize_many(tuple, tokens.into_owned()).map(|tuple| {
                     DynSolValue::CustomStruct {
