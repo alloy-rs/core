@@ -25,13 +25,12 @@ impl DynSolType {
     /// - [`Bool`](DynSolType::Bool): `true|false`
     /// - [`Int`](DynSolType::Int): `[+-]?{Uint}`
     /// - [`Uint`](DynSolType::Uint): `{literal}(\.[0-9]+)?(\s*{unit})?`
-    ///   - literal: base 2, 8, 10, or 16 integer literal. If not in base 10,
-    ///     must be prefixed with `0b`, `0o`, or `0x` respectively.
+    ///   - literal: base 2, 8, 10, or 16 integer literal. If not in base 10, must be prefixed with
+    ///     `0b`, `0o`, or `0x` respectively.
     ///   - unit: same as [Solidity ether units](https://docs.soliditylang.org/en/latest/units-and-global-variables.html#ether-units)
-    ///   - decimals with more digits than the unit's exponent value are not
-    ///     allowed
-    ///   - decimals are only allowed when the `std` feature is enabled due to
-    ///     floating point operations; this may be relaxed in the future
+    ///   - decimals with more digits than the unit's exponent value are not allowed
+    ///   - decimals are only allowed when the `std` feature is enabled due to floating point
+    ///     operations; this may be relaxed in the future
     /// - [`FixedBytes`](DynSolType::FixedBytes): `(0x)?[0-9A-Fa-f]{$0*2}`
     /// - [`Address`](DynSolType::Address): `(0x)?[0-9A-Fa-f]{40}`
     /// - [`Function`](DynSolType::Function): `(0x)?[0-9A-Fa-f]{48}`
@@ -39,13 +38,12 @@ impl DynSolType {
     /// - [`String`](DynSolType::String): `.*`
     ///   - can be surrounded by a pair of `"` or `'`
     ///   - trims whitespace if not surrounded
-    /// - [`Array`](DynSolType::Array): any number of the inner type delimited
-    ///   by commas (`,`) and surrounded by brackets (`[]`)
-    /// - [`FixedArray`](DynSolType::FixedArray): exactly the given number of
-    ///   the inner type delimited by commas (`,`) and surrounded by brackets
-    ///   (`[]`)
-    /// - [`Tuple`](DynSolType::Tuple): the inner types delimited by commas
-    ///   (`,`) and surrounded by parentheses (`()`)
+    /// - [`Array`](DynSolType::Array): any number of the inner type delimited by commas (`,`) and
+    ///   surrounded by brackets (`[]`)
+    /// - [`FixedArray`](DynSolType::FixedArray): exactly the given number of the inner type
+    ///   delimited by commas (`,`) and surrounded by brackets (`[]`)
+    /// - [`Tuple`](DynSolType::Tuple): the inner types delimited by commas (`,`) and surrounded by
+    ///   parentheses (`()`)
     /// - [`CustomStruct`](DynSolType::CustomStruct): the same as `Tuple`
     ///
     /// # Examples

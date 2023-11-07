@@ -330,8 +330,8 @@ impl Constructor {
     ///
     /// Note:
     /// - the name must always be `constructor`.
-    /// - that [`state_mutability`](Self::state_mutability) is not parsed from
-    ///   the input and is always set to [`StateMutability::NonPayable`].
+    /// - that [`state_mutability`](Self::state_mutability) is not parsed from the input and is
+    ///   always set to [`StateMutability::NonPayable`].
     ///
     /// # Examples
     ///
@@ -416,10 +416,10 @@ impl Function {
     /// `$name($($inputs),*)$(($($outputs),*))?`
     ///
     /// Note:
-    /// - the "function" keyword is not parsed as part of this function. If you
-    ///   want to parse a [Human-Readable ABI] string, use [`AbiItem::parse`].
-    /// - [`state_mutability`](Self::state_mutability) is not parsed from the
-    ///   input and is always set to [`StateMutability::NonPayable`].
+    /// - the "function" keyword is not parsed as part of this function. If you want to parse a
+    ///   [Human-Readable ABI] string, use [`AbiItem::parse`].
+    /// - [`state_mutability`](Self::state_mutability) is not parsed from the input and is always
+    ///   set to [`StateMutability::NonPayable`].
     ///
     /// [Human-Readable ABI]: https://docs.ethers.org/v5/api/utils/abi/formats/#abi-formats--human-readable-abi
     ///

@@ -287,8 +287,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
         // NOTE: We need to deal with two special cases:
         //   - the number is 0
-        //   - the number is a negative power of `2`. These numbers are written as
-        //     `0b11..1100..00`.
+        //   - the number is a negative power of `2`. These numbers are written as `0b11..1100..00`.
         //   In the case of a negative power of two, the number of bits required
         //   to represent the negative signed value is equal to the number of
         //   bits required to represent its absolute value as an unsigned

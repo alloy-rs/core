@@ -4,7 +4,7 @@ use_small_heuristics = "Max"
 
 # Nightly
 max_width = 100
-comment_width = 80
+comment_width = 100
 imports_granularity = "Crate"
 wrap_comments = true
 format_code_in_doc_comments = true
