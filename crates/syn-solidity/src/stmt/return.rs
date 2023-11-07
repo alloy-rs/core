@@ -19,9 +19,7 @@ pub struct StmtReturn {
 
 impl fmt::Debug for StmtReturn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("StmtReturn")
-            .field("expr", &self.expr)
-            .finish()
+        f.debug_struct("StmtReturn").field("expr", &self.expr).finish()
     }
 }
 
@@ -29,11 +27,7 @@ impl Parse for StmtReturn {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             return_token: input.parse()?,
-            expr: if input.peek(Token![;]) {
-                None
-            } else {
-                Some(input.parse()?)
-            },
+            expr: if input.peek(Token![;]) { None } else { Some(input.parse()?) },
             semi_token: input.parse()?,
         })
     }

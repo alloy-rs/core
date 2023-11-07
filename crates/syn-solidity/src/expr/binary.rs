@@ -15,11 +15,7 @@ pub struct ExprBinary {
 
 impl ParseNested for ExprBinary {
     fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            left: expr,
-            op: input.parse()?,
-            right: input.parse()?,
-        })
+        Ok(Self { left: expr, op: input.parse()?, right: input.parse()? })
     }
 }
 

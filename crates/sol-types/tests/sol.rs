@@ -39,22 +39,14 @@ fn e2e() {
 
     <sol!(bool)>::abi_encode(&true);
 
-    let a = MyStruct {
-        a: U256::from(1),
-        b: [0; 32].into(),
-        c: Vec::new(),
-    };
+    let a = MyStruct { a: U256::from(1), b: [0; 32].into(), c: Vec::new() };
 
     MyTuple::abi_encode(&(a.clone(), [0; 32]));
     MyStruct::abi_encode(&a);
 
     LateBinding::<MyStruct>::abi_encode(&(vec![a.clone(), a.clone()], Address::default()));
 
-    MyStruct2::abi_encode(&MyStruct2 {
-        a,
-        b: [0; 32].into(),
-        c: vec![],
-    });
+    MyStruct2::abi_encode(&MyStruct2 { a, b: [0; 32].into(), c: vec![] });
 
     NestedArray::abi_encode(&vec![[true, false], [true, false], [true, false]]);
 
@@ -95,34 +87,16 @@ fn function() {
         longBytes: vec![0; 36],
         array: vec![Address::ZERO, Address::ZERO, Address::ZERO],
         fixedArray: [true, false],
-        struct_: CustomStruct {
-            a: Address::ZERO,
-            b: 2,
-        },
+        struct_: CustomStruct { a: Address::ZERO, b: 2 },
         structArray: vec![
-            CustomStruct {
-                a: Address::ZERO,
-                b: 3,
-            },
-            CustomStruct {
-                a: Address::ZERO,
-                b: 4,
-            },
-            CustomStruct {
-                a: Address::ZERO,
-                b: 5,
-            },
-            CustomStruct {
-                a: Address::ZERO,
-                b: 6,
-            },
+            CustomStruct { a: Address::ZERO, b: 3 },
+            CustomStruct { a: Address::ZERO, b: 4 },
+            CustomStruct { a: Address::ZERO, b: 5 },
+            CustomStruct { a: Address::ZERO, b: 6 },
         ],
     };
     let encoded = call.abi_encode();
-    assert_eq!(
-        encoded.len(),
-        someFunctionCall::SELECTOR.len() + call.abi_encoded_size()
-    );
+    assert_eq!(encoded.len(), someFunctionCall::SELECTOR.len() + call.abi_encoded_size());
 
     assert_eq!(
         call.abi_encoded_size(),
@@ -155,9 +129,7 @@ fn function_returns() {
             ),
             true,
         ),
-        Ok(testReturn {
-            _0: vec![U256::from(2)]
-        })
+        Ok(testReturn { _0: vec![U256::from(2)] })
     );
     assert_eq!(
         testCall::abi_decode_returns(
@@ -169,9 +141,7 @@ fn function_returns() {
             ),
             true,
         ),
-        Ok(testReturn {
-            _0: vec![U256::from(0x42), U256::from(0x69)]
-        })
+        Ok(testReturn { _0: vec![U256::from(0x42), U256::from(0x69)] })
     );
 }
 
@@ -185,10 +155,7 @@ fn error() {
     assert_eq!(SomeError::SIGNATURE, sig);
     assert_eq!(SomeError::SELECTOR, keccak256(sig)[..4]);
 
-    let e = SomeError {
-        a: I256::ZERO,
-        b: false,
-    };
+    let e = SomeError { a: I256::ZERO, b: false };
     assert_eq!(e.abi_encoded_size(), 64);
 }
 
@@ -249,18 +216,10 @@ fn getters() {
     }
 
     assert_eq!(data1Call::SIGNATURE, "data1(uint256,bool,uint256)");
-    let _ = data1Return {
-        _0: U256::ZERO,
-        _1: [0, 0, 0].into(),
-        _2: vec![],
-    };
+    let _ = data1Return { _0: U256::ZERO, _1: [0, 0, 0].into(), _2: vec![] };
 
     assert_eq!(data2Call::SIGNATURE, "data2(uint256,bool)");
-    let _ = data2Return {
-        _0: U256::ZERO,
-        _1: [0, 0, 0].into(),
-        _2: vec![],
-    };
+    let _ = data2Return { _0: U256::ZERO, _1: [0, 0, 0].into(), _2: vec![] };
 
     assert_eq!(
         nestedMapArrayCall::SIGNATURE,
@@ -394,9 +353,7 @@ fn struct_field_attrs() {
 
     assert_eq!(
         serde_json::from_str::<Value>(
-            serde_json::to_string(&MyStruct::default())
-                .unwrap()
-                .as_str()
+            serde_json::to_string(&MyStruct::default()).unwrap().as_str()
         )
         .unwrap()["a"],
         Value::Null
@@ -447,10 +404,7 @@ fn nested_items() {
     use nested::{InterfaceTest::*, *};
 
     let _ = FilAddress { data: vec![] };
-    let _ = BigInt {
-        val: vec![],
-        neg: false,
-    };
+    let _ = BigInt { val: vec![], neg: false };
     assert_eq!(f1Call::SIGNATURE, "f1((bytes),uint256)");
     assert_eq!(f2Call::SIGNATURE, "f2((bytes,bool))");
 }
@@ -471,10 +425,7 @@ fn enum_field_of_struct() {
         }
     }
 
-    let _ = MyStruct {
-        myOption: MyEnum::FIRST,
-        value: U256::ZERO,
-    };
+    let _ = MyStruct { myOption: MyEnum::FIRST, value: U256::ZERO };
 }
 
 #[test]
@@ -613,10 +564,7 @@ fn duplicate_attributes() {
 #[cfg(feature = "json")]
 fn abigen_json_large_array() {
     sol!(LargeArray, "../json-abi/tests/abi/LargeArray.json");
-    assert_eq!(
-        LargeArray::callWithLongArrayCall::SIGNATURE,
-        "callWithLongArray(uint64[128])"
-    );
+    assert_eq!(LargeArray::callWithLongArrayCall::SIGNATURE, "callWithLongArray(uint64[128])");
 }
 
 #[test]
@@ -637,10 +585,7 @@ fn abigen_json_seaport() {
     let component = "AdditionalRecipient(uint256 amount,address recipient)";
 
     assert_eq!(BasicOrderParameters::eip712_root_type(), root_type);
-    assert_eq!(
-        BasicOrderParameters::eip712_components(),
-        [Cow::Borrowed(component)]
-    );
+    assert_eq!(BasicOrderParameters::eip712_components(), [Cow::Borrowed(component)]);
     assert_eq!(
         <BasicOrderParameters as SolStruct>::eip712_encode_type(),
         root_type.to_string() + component
@@ -652,19 +597,13 @@ fn abigen_json_seaport() {
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_aggregation_router_v5() {
-    sol!(
-        AggregationRouterV5,
-        "../json-abi/tests/abi/AggregationRouterV5.json"
-    );
+    sol!(AggregationRouterV5, "../json-abi/tests/abi/AggregationRouterV5.json");
 
     assert_eq!(
         <AggregationRouterV5::ETHTransferFailed as SolError>::SIGNATURE,
         "ETHTransferFailed()"
     );
-    assert_eq!(
-        <AggregationRouterV5::InvalidMsgValue as SolError>::SIGNATURE,
-        "InvalidMsgValue()"
-    );
+    assert_eq!(<AggregationRouterV5::InvalidMsgValue as SolError>::SIGNATURE, "InvalidMsgValue()");
 }
 
 // Handle contract types in JSON ABI
@@ -672,10 +611,7 @@ fn abigen_json_aggregation_router_v5() {
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_uniswap_v3_position() {
-    sol!(
-        UniswapV3Position,
-        "../json-abi/tests/abi/UniswapV3Position.json"
-    );
+    sol!(UniswapV3Position, "../json-abi/tests/abi/UniswapV3Position.json");
 
     let _ = UniswapV3Position::getLiquidityByRangeCall {
         pool_: Address::ZERO,
@@ -688,11 +624,8 @@ fn abigen_json_uniswap_v3_position() {
         "getLiquidityByRange(address,address,int24,int24)"
     );
 
-    let _ = UniswapV3Position::getPositionIdCall {
-        self_: Address::ZERO,
-        lowerTick_: 0,
-        upperTick_: 0,
-    };
+    let _ =
+        UniswapV3Position::getPositionIdCall { self_: Address::ZERO, lowerTick_: 0, upperTick_: 0 };
     assert_eq!(
         UniswapV3Position::getPositionIdCall::SIGNATURE,
         "getPositionId(address,int24,int24)"
@@ -704,10 +637,7 @@ fn abigen_json_uniswap_v3_position() {
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_double_exponent_interest_setter() {
-    sol!(
-        DoubleExponentInterestSetter,
-        "../json-abi/tests/abi/DoubleExponentInterestSetter.json"
-    );
+    sol!(DoubleExponentInterestSetter, "../json-abi/tests/abi/DoubleExponentInterestSetter.json");
     let _ = DoubleExponentInterestSetter::getInterestRateCall {
         _0: Address::ZERO,
         borrowWei: U256::ZERO,
@@ -720,10 +650,7 @@ fn abigen_json_double_exponent_interest_setter() {
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_uniswap_v2_factory() {
-    sol!(
-        UniswapV2Factory,
-        "../json-abi/tests/abi/UniswapV2Factory.json"
-    );
+    sol!(UniswapV2Factory, "../json-abi/tests/abi/UniswapV2Factory.json");
     let _ = UniswapV2Factory::PairCreated {
         token0: Address::ZERO,
         token1: Address::ZERO,
@@ -777,14 +704,8 @@ fn eip712_encode_type_nesting() {
 
     assert_eq!(A::eip712_encode_type(), "A(uint256 a)");
     assert_eq!(B::eip712_encode_type(), "B(bytes32 b)");
-    assert_eq!(
-        C::eip712_encode_type(),
-        "C(A a,B b)A(uint256 a)B(bytes32 b)"
-    );
-    assert_eq!(
-        D::eip712_encode_type(),
-        "D(C c,A a,B b)A(uint256 a)B(bytes32 b)C(A a,B b)"
-    );
+    assert_eq!(C::eip712_encode_type(), "C(A a,B b)A(uint256 a)B(bytes32 b)");
+    assert_eq!(D::eip712_encode_type(), "D(C c,A a,B b)A(uint256 a)B(bytes32 b)C(A a,B b)");
 }
 
 #[test]
@@ -806,23 +727,17 @@ fn eip712_encode_data_nesting() {
     let mail = Mail {
         from: Person {
             name: "Cow".to_owned(),
-            wallet: "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"
-                .parse()
-                .unwrap(),
+            wallet: "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826".parse().unwrap(),
         },
         to: Person {
             name: "Bob".to_owned(),
-            wallet: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
-                .parse()
-                .unwrap(),
+            wallet: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB".parse().unwrap(),
         },
         contents: "Hello, Bob!".to_owned(),
     };
 
     assert_eq!(
         alloy_sol_types::SolStruct::eip712_signing_hash(&mail, &domain),
-        "25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775"
-            .parse::<B256>()
-            .unwrap()
+        "25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775".parse::<B256>().unwrap()
     )
 }

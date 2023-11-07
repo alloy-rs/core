@@ -33,9 +33,7 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
             }
 
             fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
-                <[u8; N]>::try_from(v)
-                    .map(FixedBytes)
-                    .map_err(de::Error::custom)
+                <[u8; N]>::try_from(v).map(FixedBytes).map_err(de::Error::custom)
             }
 
             fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
@@ -48,7 +46,7 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
                 }
 
                 if let Ok(Some(_)) = seq.next_element::<u8>() {
-                    return Err(len_error(N + 1))
+                    return Err(len_error(N + 1));
                 }
 
                 Ok(FixedBytes(bytes))
@@ -87,10 +85,7 @@ mod tests {
 
         let val = serde_json::to_value(bytes).unwrap();
         assert_eq!(val, serde_json::json! {"0x000000000123456789abcdef"});
-        assert_eq!(
-            serde_json::from_value::<FixedBytes<12>>(val).unwrap(),
-            bytes
-        );
+        assert_eq!(serde_json::from_value::<FixedBytes<12>>(val).unwrap(), bytes);
     }
 
     #[test]
@@ -98,18 +93,13 @@ mod tests {
         let json = serde_json::json! {{"fixed": [0,1,2,3,4]}};
 
         assert_eq!(
-            serde_json::from_value::<TestCase<5>>(json.clone())
-                .unwrap()
-                .fixed,
+            serde_json::from_value::<TestCase<5>>(json.clone()).unwrap().fixed,
             FixedBytes([0, 1, 2, 3, 4])
         );
 
         let e = serde_json::from_value::<TestCase<4>>(json).unwrap_err();
         let es = e.to_string();
-        assert!(
-            es.contains("invalid length 5, expected exactly 4 bytes"),
-            "{es}"
-        );
+        assert!(es.contains("invalid length 5, expected exactly 4 bytes"), "{es}");
     }
 
     #[test]

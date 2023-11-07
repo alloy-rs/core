@@ -52,9 +52,7 @@ impl fmt::Display for TypeTuple {
 
 impl fmt::Debug for TypeTuple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("TypeTuple")
-            .field(DebugPunctuated::new(&self.types))
-            .finish()
+        f.debug_tuple("TypeTuple").field(DebugPunctuated::new(&self.types)).finish()
     }
 }
 
@@ -67,10 +65,7 @@ impl Parse for TypeTuple {
             types: content.parse_terminated(Type::parse, Token![,])?,
         };
         match this.types.len() {
-            0 => Err(Error::new(
-                this.paren_token.span.join(),
-                "empty tuples are not allowed",
-            )),
+            0 => Err(Error::new(this.paren_token.span.join(), "empty tuples are not allowed")),
             1 if !this.types.trailing_punct() => Err(Error::new(
                 this.paren_token.span.close(),
                 "single element tuples must have a trailing comma",
@@ -100,9 +95,7 @@ impl FromIterator<Type> for TypeTuple {
 impl Spanned for TypeTuple {
     fn span(&self) -> Span {
         let span = self.paren_token.span.join();
-        self.tuple_token
-            .and_then(|tuple_token| tuple_token.span.join(span))
-            .unwrap_or(span)
+        self.tuple_token.and_then(|tuple_token| tuple_token.span.join(span)).unwrap_or(span)
     }
 
     fn set_span(&mut self, span: Span) {

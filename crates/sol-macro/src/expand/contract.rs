@@ -28,15 +28,10 @@ use syn::{ext::IdentExt, parse_quote, Attribute, Result};
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenStream> {
-    let ItemContract {
-        attrs, name, body, ..
-    } = contract;
+    let ItemContract { attrs, name, body, .. } = contract;
 
     let (sol_attrs, attrs) = attr::SolAttrs::parse(attrs)?;
-    let extra_methods = sol_attrs
-        .extra_methods
-        .or(cx.attrs.extra_methods)
-        .unwrap_or(false);
+    let extra_methods = sol_attrs.extra_methods.or(cx.attrs.extra_methods).unwrap_or(false);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     let bytecode = sol_attrs.bytecode.map(|lit| {
@@ -61,12 +56,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     let mut item_tokens = TokenStream::new();
     let (mut mod_attrs, item_attrs): (Vec<_>, _) =
         attrs.into_iter().partition(|a| a.path().is_ident("doc"));
-    mod_attrs.extend(
-        item_attrs
-            .iter()
-            .filter(|a| !a.path().is_ident("derive"))
-            .cloned(),
-    );
+    mod_attrs.extend(item_attrs.iter().filter(|a| !a.path().is_ident("derive")).cloned());
 
     for item in body {
         match item {
@@ -176,16 +166,9 @@ struct CallLikeExpander<'a> {
 }
 
 enum CallLikeExpanderData {
-    Function {
-        selectors: Vec<ExprArray<u8, 4>>,
-        types: Vec<Ident>,
-    },
-    Error {
-        selectors: Vec<ExprArray<u8, 4>>,
-    },
-    Event {
-        selectors: Vec<ExprArray<u8, 32>>,
-    },
+    Function { selectors: Vec<ExprArray<u8, 4>>, types: Vec<Ident> },
+    Error { selectors: Vec<ExprArray<u8, 4>> },
+    Event { selectors: Vec<ExprArray<u8, 32>> },
 }
 
 impl<'a> CallLikeExpander<'a> {
@@ -194,10 +177,7 @@ impl<'a> CallLikeExpander<'a> {
         contract_name: &SolIdent,
         functions: Vec<&ItemFunction>,
     ) -> Self {
-        let variants: Vec<_> = functions
-            .iter()
-            .map(|&f| cx.overloaded_name(f.into()).0)
-            .collect();
+        let variants: Vec<_> = functions.iter().map(|&f| cx.overloaded_name(f.into()).0).collect();
 
         let types: Vec<_> = variants.iter().map(|name| cx.raw_call_name(name)).collect();
 
@@ -237,10 +217,8 @@ impl<'a> CallLikeExpander<'a> {
     }
 
     fn from_events(cx: &'a ExpCtxt<'a>, contract_name: &SolIdent, events: Vec<&ItemEvent>) -> Self {
-        let variants: Vec<_> = events
-            .iter()
-            .map(|&event| cx.overloaded_name(event.into()).0)
-            .collect();
+        let variants: Vec<_> =
+            events.iter().map(|&event| cx.overloaded_name(event.into()).0).collect();
 
         let mut selectors: Vec<_> = events.iter().map(|e| cx.event_selector(e)).collect();
         selectors.sort_unstable_by_key(|a| a.array);
@@ -269,13 +247,7 @@ impl<'a> CallLikeExpander<'a> {
     }
 
     fn expand(self, attrs: Vec<Attribute>, extra_methods: bool) -> TokenStream {
-        let Self {
-            name,
-            variants,
-            min_data_len,
-            trait_,
-            ..
-        } = &self;
+        let Self { name, variants, min_data_len, trait_, .. } = &self;
         let types = self.types();
 
         assert_eq!(variants.len(), types.len());
@@ -351,12 +323,7 @@ impl<'a> CallLikeExpander<'a> {
     }
 
     fn generate_enum(&self, mut attrs: Vec<Attribute>, extra_methods: bool) -> TokenStream {
-        let Self {
-            name,
-            variants,
-            data,
-            ..
-        } = self;
+        let Self { name, variants, data, .. } = self;
         let (selectors, selector_type) = match data {
             CallLikeExpanderData::Function { selectors, .. }
             | CallLikeExpanderData::Error { selectors } => {
@@ -368,11 +335,7 @@ impl<'a> CallLikeExpander<'a> {
         };
 
         let types = self.types();
-        self.cx.type_derives(
-            &mut attrs,
-            types.iter().cloned().map(ast::Type::custom),
-            false,
-        );
+        self.cx.type_derives(&mut attrs, types.iter().cloned().map(ast::Type::custom), false);
         let tokens = quote! {
             #(#attrs)*
             pub enum #name {
@@ -390,10 +353,8 @@ impl<'a> CallLikeExpander<'a> {
         };
 
         if extra_methods {
-            let conversions = variants
-                .iter()
-                .zip(types)
-                .map(|(v, t)| generate_variant_conversions(name, v, t));
+            let conversions =
+                variants.iter().zip(types).map(|(v, t)| generate_variant_conversions(name, v, t));
             let methods = variants.iter().zip(types).map(generate_variant_methods);
             quote! {
                 #tokens

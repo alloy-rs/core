@@ -46,14 +46,8 @@ macro_rules! as_fixed_seq {
 /// use alloy_primitives::U256;
 ///
 /// let ty: DynSolType = "(string, uint256)".parse()?;
-#[cfg_attr(
-    feature = "std",
-    doc = "let value = ty.coerce_str(\"(foo bar, 2.5 gwei)\")?;"
-)]
-#[cfg_attr(
-    not(feature = "std"),
-    doc = "let value = ty.coerce_str(\"(foo bar, 2500000000)\")?;"
-)]
+#[cfg_attr(feature = "std", doc = "let value = ty.coerce_str(\"(foo bar, 2.5 gwei)\")?;")]
+#[cfg_attr(not(feature = "std"), doc = "let value = ty.coerce_str(\"(foo bar, 2500000000)\")?;")]
 /// assert_eq!(
 ///     value,
 ///     DynSolValue::Tuple(vec![
@@ -221,17 +215,10 @@ impl DynSolValue {
                 DynSolType::FixedArray(Box::new(Self::as_type(inner.first()?)?), inner.len())
             }
             #[cfg(feature = "eip712")]
-            Self::CustomStruct {
-                name,
-                prop_names,
-                tuple,
-            } => DynSolType::CustomStruct {
+            Self::CustomStruct { name, prop_names, tuple } => DynSolType::CustomStruct {
                 name: name.clone(),
                 prop_names: prop_names.clone(),
-                tuple: tuple
-                    .iter()
-                    .map(Self::as_type)
-                    .collect::<Option<Vec<_>>>()?,
+                tuple: tuple.iter().map(Self::as_type).collect::<Option<Vec<_>>>()?,
             },
         };
         Some(ty)
@@ -319,16 +306,13 @@ impl DynSolValue {
             | Self::Bytes(_)
             | Self::String(_) => Some(8),
 
-            Self::Array(t) | Self::FixedArray(t) => t
-                .first()
-                .and_then(Self::sol_type_name_capacity)
-                .map(|x| x + 8),
+            Self::Array(t) | Self::FixedArray(t) => {
+                t.first().and_then(Self::sol_type_name_capacity).map(|x| x + 8)
+            }
 
-            as_tuple!(Self tuple) => tuple
-                .iter()
-                .map(Self::sol_type_name_capacity)
-                .sum::<Option<usize>>()
-                .map(|x| x + 8),
+            as_tuple!(Self tuple) => {
+                tuple.iter().map(Self::sol_type_name_capacity).sum::<Option<usize>>().map(|x| x + 8)
+            }
         }
     }
 
@@ -470,11 +454,7 @@ impl DynSolValue {
     pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[Self])> {
         match self {
             #[cfg(feature = "eip712")]
-            Self::CustomStruct {
-                name,
-                prop_names,
-                tuple,
-            } => Some((name, prop_names, tuple)),
+            Self::CustomStruct { name, prop_names, tuple } => Some((name, prop_names, tuple)),
             _ => None,
         }
     }
@@ -579,7 +559,7 @@ impl DynSolValue {
                 let mut sum = 0;
                 for val in vals {
                     if val.is_dynamic() {
-                        return 1
+                        return 1;
                     }
                     sum += val.head_words();
                 }

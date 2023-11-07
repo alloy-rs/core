@@ -47,8 +47,6 @@ impl Spanned for YulBlock {
 
 impl fmt::Debug for YulBlock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("YulBlock")
-            .field("stmt", &self.stmts)
-            .finish()
+        f.debug_struct("YulBlock").field("stmt", &self.stmts).finish()
     }
 }

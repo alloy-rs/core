@@ -118,10 +118,7 @@ impl ItemEvent {
     }
 
     pub fn params(&self) -> ParameterList {
-        self.parameters
-            .iter()
-            .map(EventParameter::as_param)
-            .collect()
+        self.parameters.iter().map(EventParameter::as_param).collect()
     }
 
     pub fn param_types(
@@ -208,11 +205,7 @@ impl Parse for EventParameter {
             attrs: input.call(Attribute::parse_outer)?,
             ty: input.parse()?,
             indexed: input.parse()?,
-            name: if SolIdent::peek_any(input) {
-                Some(input.parse()?)
-            } else {
-                None
-            },
+            name: if SolIdent::peek_any(input) { Some(input.parse()?) } else { None },
         })
     }
 }
@@ -221,10 +214,7 @@ impl Spanned for EventParameter {
     /// Get the span of the event parameter
     fn span(&self) -> Span {
         let span = self.ty.span();
-        self.name
-            .as_ref()
-            .and_then(|name| span.join(name.span()))
-            .unwrap_or(span)
+        self.name.as_ref().and_then(|name| span.join(name.span())).unwrap_or(span)
     }
 
     /// Sets the span of the event parameter.

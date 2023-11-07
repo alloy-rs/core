@@ -23,10 +23,7 @@ impl Parse for WalrusToken {
 
 impl Spanned for WalrusToken {
     fn span(&self) -> Span {
-        self.colon
-            .span()
-            .join(self.equals.span())
-            .unwrap_or(self.colon.span())
+        self.colon.span().join(self.equals.span()).unwrap_or(self.colon.span())
     }
 
     fn set_span(&mut self, span: Span) {

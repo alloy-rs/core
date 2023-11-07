@@ -323,9 +323,7 @@ impl Bytes {
 impl<'a> arbitrary::Arbitrary<'a> for Bytes {
     #[inline]
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        u.arbitrary_iter()?
-            .collect::<arbitrary::Result<Vec<u8>>>()
-            .map(Into::into)
+        u.arbitrary_iter()?.collect::<arbitrary::Result<Vec<u8>>>().map(Into::into)
     }
 
     #[inline]
@@ -363,14 +361,8 @@ mod tests {
 
     #[test]
     fn parse() {
-        assert_eq!(
-            "1213".parse::<Bytes>().unwrap(),
-            hex::decode("1213").unwrap()
-        );
-        assert_eq!(
-            "0x1213".parse::<Bytes>().unwrap(),
-            hex::decode("0x1213").unwrap()
-        );
+        assert_eq!("1213".parse::<Bytes>().unwrap(), hex::decode("1213").unwrap());
+        assert_eq!("0x1213".parse::<Bytes>().unwrap(), hex::decode("0x1213").unwrap());
     }
 
     #[test]

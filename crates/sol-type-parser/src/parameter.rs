@@ -104,12 +104,9 @@ impl<'a> Parameters<'a> {
 
     /// [`winnow`] parser for this type.
     pub fn parser(input: &mut &'a str) -> PResult<Self> {
-        trace(
-            "Parameters",
-            spanned(tuple_parser(ParameterSpecifier::parser)),
-        )
-        .parse_next(input)
-        .map(|(span, params)| Self { span, params })
+        trace("Parameters", spanned(tuple_parser(ParameterSpecifier::parser)))
+            .parse_next(input)
+            .map(|(span, params)| Self { span, params })
     }
 }
 
@@ -208,34 +205,10 @@ mod tests {
 
     #[test]
     fn parse_params() {
-        assert_eq!(
-            Parameters::parse("()"),
-            Ok(Parameters {
-                span: "()",
-                params: vec![]
-            })
-        );
-        assert_eq!(
-            Parameters::parse("(,)"),
-            Ok(Parameters {
-                span: "(,)",
-                params: vec![]
-            })
-        );
-        assert_eq!(
-            Parameters::parse("(, )"),
-            Ok(Parameters {
-                span: "(, )",
-                params: vec![]
-            })
-        );
-        assert_eq!(
-            Parameters::parse("( , )"),
-            Ok(Parameters {
-                span: "( , )",
-                params: vec![]
-            })
-        );
+        assert_eq!(Parameters::parse("()"), Ok(Parameters { span: "()", params: vec![] }));
+        assert_eq!(Parameters::parse("(,)"), Ok(Parameters { span: "(,)", params: vec![] }));
+        assert_eq!(Parameters::parse("(, )"), Ok(Parameters { span: "(, )", params: vec![] }));
+        assert_eq!(Parameters::parse("( , )"), Ok(Parameters { span: "( , )", params: vec![] }));
 
         assert_eq!(
             Parameters::parse("(\tuint256   , \t)"),

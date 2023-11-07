@@ -106,19 +106,16 @@ impl fmt::Display for Error {
                 f,
                 "type mismatch: expected type {expected:?}, got value with type {actual:?}",
             ),
-            &Self::EncodeLengthMismatch { expected, actual } => write!(
-                f,
-                "encode length mismatch: expected {expected} types, got {actual}",
-            ),
+            &Self::EncodeLengthMismatch { expected, actual } => {
+                write!(f, "encode length mismatch: expected {expected} types, got {actual}",)
+            }
 
-            &Self::TopicLengthMismatch { expected, actual } => write!(
-                f,
-                "invalid log topic list length: expected {expected} topics, got {actual}",
-            ),
-            Self::EventSignatureMismatch { expected, actual } => write!(
-                f,
-                "invalid event signature: expected {expected}, got {actual}",
-            ),
+            &Self::TopicLengthMismatch { expected, actual } => {
+                write!(f, "invalid log topic list length: expected {expected} topics, got {actual}",)
+            }
+            Self::EventSignatureMismatch { expected, actual } => {
+                write!(f, "invalid event signature: expected {expected}, got {actual}",)
+            }
 
             Self::Hex(e) => e.fmt(f),
             Self::TypeParser(e) => e.fmt(f),
@@ -138,10 +135,7 @@ impl Error {
     pub(crate) fn eip712_coerce(expected: &crate::DynSolType, actual: &serde_json::Value) -> Self {
         #[allow(unused_imports)]
         use alloc::string::ToString;
-        Self::TypeMismatch {
-            expected: expected.to_string(),
-            actual: actual.to_string(),
-        }
+        Self::TypeMismatch { expected: expected.to_string(), actual: actual.to_string() }
     }
 
     #[cfg(feature = "eip712")]

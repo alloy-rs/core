@@ -336,14 +336,7 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
 
 impl ToSol for Param {
     fn to_sol(&self, out: &mut String) {
-        param(
-            &self.ty,
-            self.internal_type.as_ref(),
-            false,
-            &self.name,
-            &self.components,
-            out,
-        );
+        param(&self.ty, self.internal_type.as_ref(), false, &self.name, &self.components, out);
     }
 }
 

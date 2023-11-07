@@ -30,11 +30,7 @@ impl fmt::Display for UsingDirective {
             "using {} for {}{};",
             self.list,
             self.ty,
-            if self.global_token.is_some() {
-                " global"
-            } else {
-                ""
-            }
+            if self.global_token.is_some() { " global" } else { "" }
         )
     }
 }
@@ -154,11 +150,7 @@ impl Parse for UsingListItem {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(Self {
             path: input.parse()?,
-            op: if input.peek(Token![as]) {
-                Some((input.parse()?, input.parse()?))
-            } else {
-                None
-            },
+            op: if input.peek(Token![as]) { Some((input.parse()?, input.parse()?)) } else { None },
         })
     }
 }

@@ -46,11 +46,7 @@ pub struct Param {
 
 impl fmt::Display for Param {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(it) = &self.internal_type {
-            it.fmt(f)
-        } else {
-            f.write_str(&self.ty)
-        }?;
+        if let Some(it) = &self.internal_type { it.fmt(f) } else { f.write_str(&self.ty) }?;
         f.write_str(" ")?;
         f.write_str(&self.name)
     }
@@ -68,9 +64,7 @@ impl<'de> Deserialize<'de> for Param {
                     components: inner.components.into_owned(),
                 })
             } else {
-                Err(serde::de::Error::custom(
-                    "indexed is not supported in params",
-                ))
+                Err(serde::de::Error::custom("indexed is not supported in params"))
             }
         })
     }
@@ -169,7 +163,7 @@ impl Param {
     pub fn udt_specifier(&self) -> Option<TypeSpecifier<'_>> {
         // UDTs are more annoying to check for, so we reuse logic here.
         if !self.is_udt() {
-            return None
+            return None;
         }
         self.internal_type().and_then(|ty| ty.other_specifier())
     }
@@ -291,11 +285,7 @@ pub struct EventParam {
 
 impl fmt::Display for EventParam {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(it) = &self.internal_type {
-            it.fmt(f)
-        } else {
-            f.write_str(&self.ty)
-        }?;
+        if let Some(it) = &self.internal_type { it.fmt(f) } else { f.write_str(&self.ty) }?;
         f.write_str(" ")?;
         f.write_str(&self.name)
     }
@@ -314,9 +304,7 @@ impl<'de> Deserialize<'de> for EventParam {
                     components: inner.components.into_owned(),
                 })
             } else {
-                Err(serde::de::Error::custom(
-                    "indexed is required in event params",
-                ))
+                Err(serde::de::Error::custom("indexed is required in event params"))
             }
         })
     }
@@ -417,7 +405,7 @@ impl EventParam {
     pub fn udt_specifier(&self) -> Option<TypeSpecifier<'_>> {
         // UDTs are more annoying to check for, so we reuse logic here.
         if !self.is_udt() {
-            return None
+            return None;
         }
         self.internal_type().and_then(|ty| ty.other_specifier())
     }
@@ -512,11 +500,7 @@ struct BorrowedParam<'a> {
     ty: &'a str,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     indexed: Option<bool>,
-    #[serde(
-        rename = "internalType",
-        default,
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "internalType", default, skip_serializing_if = "Option::is_none")]
     internal_type: Option<BorrowedInternalType<'a>>,
     #[serde(default, skip_serializing_if = "<[_]>::is_empty")]
     components: Cow<'a, [Param]>,
@@ -534,7 +518,7 @@ impl BorrowedParam<'_> {
                 return Err(E::invalid_value(
                     Unexpected::Str(self.ty),
                     &"a valid Solidity type specifier",
-                ))
+                ));
             }
         } else {
             // https://docs.soliditylang.org/en/latest/abi-spec.html#handling-tuple-types
@@ -543,7 +527,7 @@ impl BorrowedParam<'_> {
                 return Err(E::invalid_value(
                     Unexpected::Str(self.ty),
                     &"a string prefixed with `tuple`, optionally followed by a sequence of `[]` or `[k]` with integers `k`",
-                ))
+                ));
             }
         }
 
@@ -568,10 +552,7 @@ mod tests {
             Param {
                 name: "reason".into(),
                 ty: "string".into(),
-                internal_type: Some(InternalType::Other {
-                    contract: None,
-                    ty: "string".into()
-                }),
+                internal_type: Some(InternalType::Other { contract: None, ty: "string".into() }),
                 components: vec![],
             }
         );

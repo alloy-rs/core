@@ -17,7 +17,7 @@ pub(super) fn twos_complement<const BITS: usize, const LIMBS: usize>(
     u: Uint<BITS, LIMBS>,
 ) -> Uint<BITS, LIMBS> {
     if BITS == 0 {
-        return u
+        return u;
     }
     (!u).overflowing_add(Uint::<BITS, LIMBS>::from(1)).0
 }
@@ -29,7 +29,7 @@ pub(super) const fn const_eq<const BITS: usize, const LIMBS: usize>(
     right: &Signed<BITS, LIMBS>,
 ) -> bool {
     if BITS == 0 {
-        return true
+        return true;
     }
 
     let mut i = 0;
@@ -37,7 +37,7 @@ pub(super) const fn const_eq<const BITS: usize, const LIMBS: usize>(
     let rlimbs = right.0.as_limbs();
     while i < LIMBS {
         if llimbs[i] != rlimbs[i] {
-            return false
+            return false;
         }
         i += 1;
     }
@@ -47,7 +47,7 @@ pub(super) const fn const_eq<const BITS: usize, const LIMBS: usize>(
 /// Compute the max value at compile time.
 pub(super) const fn max<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
     if LIMBS == 0 {
-        return zero()
+        return zero();
     }
 
     let mut limbs = [u64::MAX; LIMBS];
@@ -58,7 +58,7 @@ pub(super) const fn max<const BITS: usize, const LIMBS: usize>() -> Signed<BITS,
 
 pub(super) const fn min<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
     if LIMBS == 0 {
-        return zero()
+        return zero();
     }
 
     let mut limbs = [0; LIMBS];
@@ -73,7 +73,7 @@ pub(super) const fn zero<const BITS: usize, const LIMBS: usize>() -> Signed<BITS
 
 pub(super) const fn one<const BITS: usize, const LIMBS: usize>() -> Signed<BITS, LIMBS> {
     if LIMBS == 0 {
-        return zero()
+        return zero();
     }
 
     let mut limbs = [0; LIMBS];
@@ -84,7 +84,7 @@ pub(super) const fn one<const BITS: usize, const LIMBS: usize>() -> Signed<BITS,
 /// Location of the sign bit within the highest limb.
 pub(super) const fn sign_bit(bits: usize) -> u64 {
     if bits == 0 {
-        return 0
+        return 0;
     }
     let bits = bits % 64;
     if bits == 0 {
@@ -98,7 +98,7 @@ pub(super) const fn sign_bit(bits: usize) -> u64 {
 #[must_use]
 pub(super) const fn mask(bits: usize) -> u64 {
     if bits == 0 {
-        return 0
+        return 0;
     }
     let bits = bits % 64;
     if bits == 0 {

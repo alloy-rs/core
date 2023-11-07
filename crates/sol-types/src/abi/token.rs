@@ -225,11 +225,7 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenType<'de> for FixedSeqToken<T,
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
-        let mut child = if Self::DYNAMIC {
-            dec.take_indirection()?
-        } else {
-            dec.raw_child()
-        };
+        let mut child = if Self::DYNAMIC { dec.take_indirection()? } else { dec.raw_child() };
 
         Self::decode_sequence(&mut child)
     }
@@ -346,10 +342,7 @@ impl<'de, T: TokenType<'de>> TokenType<'de> for DynSeqToken<T> {
         // `enc(X)`. But known-good test vectors ha vrelative to the
         // word AFTER the array size
         let mut child = child.raw_child();
-        (0..len)
-            .map(|_| T::decode_from(&mut child))
-            .collect::<Result<Vec<T>>>()
-            .map(DynSeqToken)
+        (0..len).map(|_| T::decode_from(&mut child)).collect::<Result<Vec<T>>>().map(DynSeqToken)
     }
 
     #[inline]
@@ -411,9 +404,7 @@ pub struct PackedSeqToken<'a>(pub &'a [u8]);
 
 impl<'a> fmt::Debug for PackedSeqToken<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("PackedSeq")
-            .field(&hex::encode_prefixed(self.0))
-            .finish()
+        f.debug_tuple("PackedSeq").field(&hex::encode_prefixed(self.0)).finish()
     }
 }
 

@@ -23,25 +23,14 @@ impl ResolveSolEvent for Event {
                 body.push(ty);
             }
         }
-        let topic_0 = if self.anonymous {
-            None
-        } else {
-            Some(self.selector())
-        };
+        let topic_0 = if self.anonymous { None } else { Some(self.selector()) };
 
         let num_topics = indexed.len() + topic_0.is_some() as usize;
         if num_topics > 4 {
-            return Err(Error::TopicLengthMismatch {
-                expected: 4,
-                actual: num_topics,
-            })
+            return Err(Error::TopicLengthMismatch { expected: 4, actual: num_topics });
         }
 
-        Ok(DynSolEvent::new_unchecked(
-            topic_0,
-            indexed,
-            DynSolType::Tuple(body),
-        ))
+        Ok(DynSolEvent::new_unchecked(topic_0, indexed, DynSolType::Tuple(body)))
     }
 }
 
@@ -97,11 +86,7 @@ mod tests {
 
     #[test]
     fn empty() {
-        let mut event = Event {
-            name: "MyEvent".into(),
-            inputs: vec![],
-            anonymous: false,
-        };
+        let mut event = Event { name: "MyEvent".into(), inputs: vec![], anonymous: false };
 
         // skips over hash
         let values = event.decode_log_parts(None, &[], false).unwrap();
@@ -110,17 +95,9 @@ mod tests {
 
         // but if we validate, we get an error
         let err = event.decode_log_parts(None, &[], true).unwrap_err();
-        assert_eq!(
-            err,
-            Error::TopicLengthMismatch {
-                expected: 1,
-                actual: 0
-            }
-        );
+        assert_eq!(err, Error::TopicLengthMismatch { expected: 1, actual: 0 });
 
-        let values = event
-            .decode_log_parts(Some(keccak256("MyEvent()")), &[], true)
-            .unwrap();
+        let values = event.decode_log_parts(Some(keccak256("MyEvent()")), &[], true).unwrap();
         assert!(values.indexed.is_empty());
         assert!(values.body.is_empty());
         event.anonymous = true;
@@ -138,31 +115,11 @@ mod tests {
         let event = Event {
             name: "foo".into(),
             inputs: vec![
-                EventParam {
-                    ty: "int256".into(),
-                    indexed: false,
-                    ..Default::default()
-                },
-                EventParam {
-                    ty: "int256".into(),
-                    indexed: true,
-                    ..Default::default()
-                },
-                EventParam {
-                    ty: "address".into(),
-                    indexed: false,
-                    ..Default::default()
-                },
-                EventParam {
-                    ty: "address".into(),
-                    indexed: true,
-                    ..Default::default()
-                },
-                EventParam {
-                    ty: "string".into(),
-                    indexed: true,
-                    ..Default::default()
-                },
+                EventParam { ty: "int256".into(), indexed: false, ..Default::default() },
+                EventParam { ty: "int256".into(), indexed: true, ..Default::default() },
+                EventParam { ty: "address".into(), indexed: false, ..Default::default() },
+                EventParam { ty: "address".into(), indexed: true, ..Default::default() },
+                EventParam { ty: "string".into(), indexed: true, ..Default::default() },
             ],
             anonymous: false,
         };
@@ -222,16 +179,8 @@ mod tests {
         let correct_event = Event {
             name: "Test".into(),
             inputs: vec![
-                EventParam {
-                    ty: "(address,address)".into(),
-                    indexed: false,
-                    ..Default::default()
-                },
-                EventParam {
-                    ty: "address".into(),
-                    indexed: true,
-                    ..Default::default()
-                },
+                EventParam { ty: "(address,address)".into(), indexed: false, ..Default::default() },
+                EventParam { ty: "address".into(), indexed: true, ..Default::default() },
             ],
             anonymous: false,
         };

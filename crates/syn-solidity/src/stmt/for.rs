@@ -41,17 +41,9 @@ impl Parse for StmtFor {
             for_token: input.parse()?,
             paren_token: parenthesized!(content in input),
             init: content.parse()?,
-            cond: if content.peek(Token![;]) {
-                None
-            } else {
-                Some(content.parse()?)
-            },
+            cond: if content.peek(Token![;]) { None } else { Some(content.parse()?) },
             semi_token: content.parse()?,
-            post: if content.is_empty() {
-                None
-            } else {
-                Some(content.parse()?)
-            },
+            post: if content.is_empty() { None } else { Some(content.parse()?) },
             body: input.parse()?,
         })
     }

@@ -23,14 +23,14 @@ pub enum YulExpr {
 impl Parse for YulExpr {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         if input.peek2(Paren) {
-            return input.parse().map(Self::Call)
+            return input.parse().map(Self::Call);
         }
 
         let speculative_parse = input.fork();
 
         if let Ok(lit) = speculative_parse.parse::<Lit>() {
             input.advance_to(&speculative_parse);
-            return Ok(Self::Literal(lit))
+            return Ok(Self::Literal(lit));
         }
 
         input.parse().map(Self::Path)

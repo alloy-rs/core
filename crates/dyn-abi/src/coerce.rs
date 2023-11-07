@@ -25,13 +25,12 @@ impl DynSolType {
     /// - [`Bool`](DynSolType::Bool): `true|false`
     /// - [`Int`](DynSolType::Int): `[+-]?{Uint}`
     /// - [`Uint`](DynSolType::Uint): `{literal}(\.[0-9]+)?(\s*{unit})?`
-    ///   - literal: base 2, 8, 10, or 16 integer literal. If not in base 10,
-    ///     must be prefixed with `0b`, `0o`, or `0x` respectively.
+    ///   - literal: base 2, 8, 10, or 16 integer literal. If not in base 10, must be prefixed with
+    ///     `0b`, `0o`, or `0x` respectively.
     ///   - unit: same as [Solidity ether units](https://docs.soliditylang.org/en/latest/units-and-global-variables.html#ether-units)
-    ///   - decimals with more digits than the unit's exponent value are not
-    ///     allowed
-    ///   - decimals are only allowed when the `std` feature is enabled due to
-    ///     floating point operations; this may be relaxed in the future
+    ///   - decimals with more digits than the unit's exponent value are not allowed
+    ///   - decimals are only allowed when the `std` feature is enabled due to floating point
+    ///     operations; this may be relaxed in the future
     /// - [`FixedBytes`](DynSolType::FixedBytes): `(0x)?[0-9A-Fa-f]{$0*2}`
     /// - [`Address`](DynSolType::Address): `(0x)?[0-9A-Fa-f]{40}`
     /// - [`Function`](DynSolType::Function): `(0x)?[0-9A-Fa-f]{48}`
@@ -39,13 +38,12 @@ impl DynSolType {
     /// - [`String`](DynSolType::String): `.*`
     ///   - can be surrounded by a pair of `"` or `'`
     ///   - trims whitespace if not surrounded
-    /// - [`Array`](DynSolType::Array): any number of the inner type delimited
-    ///   by commas (`,`) and surrounded by brackets (`[]`)
-    /// - [`FixedArray`](DynSolType::FixedArray): exactly the given number of
-    ///   the inner type delimited by commas (`,`) and surrounded by brackets
-    ///   (`[]`)
-    /// - [`Tuple`](DynSolType::Tuple): the inner types delimited by commas
-    ///   (`,`) and surrounded by parentheses (`()`)
+    /// - [`Array`](DynSolType::Array): any number of the inner type delimited by commas (`,`) and
+    ///   surrounded by brackets (`[]`)
+    /// - [`FixedArray`](DynSolType::FixedArray): exactly the given number of the inner type
+    ///   delimited by commas (`,`) and surrounded by brackets (`[]`)
+    /// - [`Tuple`](DynSolType::Tuple): the inner types delimited by commas (`,`) and surrounded by
+    ///   parentheses (`()`)
     /// - [`CustomStruct`](DynSolType::CustomStruct): the same as `Tuple`
     ///
     /// # Examples
@@ -87,23 +85,21 @@ impl DynSolType {
         let name = "value_parser";
         trace(name, move |input: &mut &str| match self {
             Self::Bool => bool(input).map(DynSolValue::Bool),
-            &Self::Int(size) => int(size)
-                .parse_next(input)
-                .map(|int| DynSolValue::Int(int, size)),
-            &Self::Uint(size) => uint(size)
-                .parse_next(input)
-                .map(|uint| DynSolValue::Uint(uint, size)),
-            &Self::FixedBytes(size) => fixed_bytes(size)
-                .parse_next(input)
-                .map(|word| DynSolValue::FixedBytes(word, size)),
+            &Self::Int(size) => int(size).parse_next(input).map(|int| DynSolValue::Int(int, size)),
+            &Self::Uint(size) => {
+                uint(size).parse_next(input).map(|uint| DynSolValue::Uint(uint, size))
+            }
+            &Self::FixedBytes(size) => {
+                fixed_bytes(size).parse_next(input).map(|word| DynSolValue::FixedBytes(word, size))
+            }
             Self::Address => address(input).map(DynSolValue::Address),
             Self::Function => function(input).map(DynSolValue::Function),
             Self::Bytes => bytes(input).map(DynSolValue::Bytes),
             Self::String => string(input).map(DynSolValue::String),
             Self::Array(ty) => array(ty).parse_next(input).map(DynSolValue::Array),
-            Self::FixedArray(ty, len) => fixed_array(ty, *len)
-                .parse_next(input)
-                .map(DynSolValue::Array),
+            Self::FixedArray(ty, len) => {
+                fixed_array(ty, *len).parse_next(input).map(DynSolValue::Array)
+            }
             as_tuple!(Self tys) => tuple(tys).parse_next(input).map(DynSolValue::Tuple),
         })
     }
@@ -183,18 +179,16 @@ fn int<'i>(size: usize) -> impl Parser<&'i str, I256, ContextError> {
 
 #[inline]
 fn int_sign(input: &mut &str) -> PResult<Sign> {
-    trace("int_sign", |input: &mut &str| {
-        match input.as_bytes().first() {
-            Some(b'+') => {
-                *input = &input[1..];
-                Ok(Sign::Positive)
-            }
-            Some(b'-') => {
-                *input = &input[1..];
-                Ok(Sign::Negative)
-            }
-            Some(_) | None => Ok(Sign::Positive),
+    trace("int_sign", |input: &mut &str| match input.as_bytes().first() {
+        Some(b'+') => {
+            *input = &input[1..];
+            Ok(Sign::Positive)
         }
+        Some(b'-') => {
+            *input = &input[1..];
+            Ok(Sign::Negative)
+        }
+        Some(_) | None => Ok(Sign::Positive),
     })
     .parse_next(input)
 }
@@ -210,11 +204,9 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
             prefixed_int,
             opt(preceded(
                 '.',
-                cut_err(
-                    digit1.context(StrContext::Expected(StrContextValue::Description(
-                        "at least one digit",
-                    ))),
-                ),
+                cut_err(digit1.context(StrContext::Expected(StrContextValue::Description(
+                    "at least one digit",
+                )))),
             )),
         ))
         .parse_next(input)?;
@@ -235,7 +227,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
                     input,
                     ErrorKind::Verify,
                     Error::FloatNoStd(x),
-                ))
+                ));
             }
 
             #[cfg(feature = "std")]
@@ -245,7 +237,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
                         input,
                         ErrorKind::Verify,
                         Error::FractionalNotAllowed(x.fract()),
-                    ))
+                    ));
                 }
 
                 if fract.len() > units {
@@ -253,7 +245,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
                         input,
                         ErrorKind::Verify,
                         Error::TooManyDecimals(units, fract.len()),
-                    ))
+                    ));
                 }
 
                 U256::try_from(x * 10f64.powi(units as i32))
@@ -269,11 +261,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
         }?;
 
         if uint.bit_len() > len {
-            return Err(ErrMode::from_external_error(
-                input,
-                ErrorKind::Verify,
-                Error::IntOverflow,
-            ))
+            return Err(ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow));
         }
 
         Ok(uint)
@@ -283,10 +271,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
 #[inline]
 fn prefixed_int<'i>(input: &mut &'i str) -> PResult<&'i str> {
     trace("prefixed_int", |input: &mut &'i str| {
-        let has_prefix = matches!(
-            input.get(..2),
-            Some("0b" | "0B" | "0o" | "0O" | "0x" | "0X")
-        );
+        let has_prefix = matches!(input.get(..2), Some("0b" | "0B" | "0o" | "0O" | "0x" | "0X"));
         if has_prefix {
             *input = &input[2..];
             // parse hex since it's the most general
@@ -330,7 +315,7 @@ fn fixed_bytes<'i>(len: usize) -> impl Parser<&'i str, Word, ContextError> {
                 input,
                 ErrorKind::Fail,
                 Error::InvalidFixedBytesLength(len),
-            ))
+            ));
         }
 
         let hex = hex_str(input)?;
@@ -344,16 +329,12 @@ fn fixed_bytes<'i>(len: usize) -> impl Parser<&'i str, Word, ContextError> {
 
 #[inline]
 fn address(input: &mut &str) -> PResult<Address> {
-    trace("address", fixed_bytes_inner)
-        .parse_next(input)
-        .map(Address::from)
+    trace("address", fixed_bytes_inner).parse_next(input).map(Address::from)
 }
 
 #[inline]
 fn function(input: &mut &str) -> PResult<Function> {
-    trace("function", fixed_bytes_inner)
-        .parse_next(input)
-        .map(Function::from)
+    trace("function", fixed_bytes_inner).parse_next(input).map(Function::from)
 }
 
 #[inline]
@@ -363,15 +344,13 @@ fn bytes(input: &mut &str) -> PResult<Vec<u8>> {
 
 #[inline]
 fn string(input: &mut &str) -> PResult<String> {
-    trace("string", string_inner)
-        .parse_next(input)
-        .map(String::from)
+    trace("string", string_inner).parse_next(input).map(String::from)
 }
 
 #[inline]
 fn string_inner<'i>(input: &mut &'i str) -> PResult<&'i str> {
     let Some(delim) = input.chars().next() else {
-        return Ok("")
+        return Ok("");
     };
     let has_delim = matches!(delim, '"' | '\'');
     if has_delim {
@@ -380,17 +359,11 @@ fn string_inner<'i>(input: &mut &'i str) -> PResult<&'i str> {
 
     // TODO: escapes?
     let min = if has_delim { 0 } else { 1 };
-    let until_ch = if has_delim {
-        core::slice::from_ref(&delim)
-    } else {
-        &[',', ')', ']']
-    };
+    let until_ch = if has_delim { core::slice::from_ref(&delim) } else { &[',', ')', ']'] };
     let mut s = take_while(min.., |ch: char| !until_ch.contains(&ch)).parse_next(input)?;
 
     if has_delim {
-        cut_err(char_parser(delim))
-            .context(StrContext::Label("string"))
-            .parse_next(input)?;
+        cut_err(char_parser(delim)).context(StrContext::Label("string")).parse_next(input)?;
     } else {
         s = s.trim_end();
     }
@@ -491,14 +464,8 @@ mod tests {
 
     #[test]
     fn coerce_bool() {
-        assert_eq!(
-            DynSolType::Bool.coerce_str("true").unwrap(),
-            DynSolValue::Bool(true)
-        );
-        assert_eq!(
-            DynSolType::Bool.coerce_str("false").unwrap(),
-            DynSolValue::Bool(false)
-        );
+        assert_eq!(DynSolType::Bool.coerce_str("true").unwrap(), DynSolValue::Bool(true));
+        assert_eq!(DynSolType::Bool.coerce_str("false").unwrap(), DynSolValue::Bool(false));
 
         assert!(DynSolType::Bool.coerce_str("").is_err());
         assert!(DynSolType::Bool.coerce_str("0").is_err());
@@ -663,13 +630,8 @@ mod tests {
     #[test]
     fn coerce_uint_ether() {
         assert_eq!(
-            DynSolType::Uint(256)
-                .coerce_str("10000000000ether")
-                .unwrap(),
-            DynSolValue::Uint(
-                U256::from_str("10000000000000000000000000000").unwrap(),
-                256
-            )
+            DynSolType::Uint(256).coerce_str("10000000000ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("10000000000000000000000000000").unwrap(), 256)
         );
 
         assert_eq!(
@@ -684,9 +646,7 @@ mod tests {
             );
 
             assert_eq!(
-                DynSolType::Uint(256)
-                    .coerce_str("0.000000000000000001ether")
-                    .unwrap(),
+                DynSolType::Uint(256).coerce_str("0.000000000000000001ether").unwrap(),
                 DynSolValue::Uint(U256::from(1), 256)
             );
 
@@ -714,19 +674,13 @@ mod tests {
     fn coerce_uint_invalid_units() {
         // 0.1 wei
         assert!(DynSolType::Uint(256).coerce_str("0.1 wei").is_err());
-        assert!(DynSolType::Uint(256)
-            .coerce_str("0.0000000000000000001ether")
-            .is_err());
+        assert!(DynSolType::Uint(256).coerce_str("0.0000000000000000001ether").is_err());
 
         // 1 ether + 0.1 wei
-        assert!(DynSolType::Uint(256)
-            .coerce_str("1.0000000000000000001ether")
-            .is_err());
+        assert!(DynSolType::Uint(256).coerce_str("1.0000000000000000001ether").is_err());
 
         // 1_000_000_000 ether + 0.1 wei
-        assert!(DynSolType::Uint(256)
-            .coerce_str("1000000000.0000000000000000001ether")
-            .is_err());
+        assert!(DynSolType::Uint(256).coerce_str("1000000000.0000000000000000001ether").is_err());
 
         assert!(DynSolType::Uint(256).coerce_str("0..1 gwei").is_err());
 
@@ -789,30 +743,20 @@ mod tests {
     #[test]
     fn coerce_address() {
         // 38
-        assert!(DynSolType::Address
-            .coerce_str("00000000000000000000000000000000000000")
-            .is_err());
+        assert!(DynSolType::Address.coerce_str("00000000000000000000000000000000000000").is_err());
         // 39
-        assert!(DynSolType::Address
-            .coerce_str("000000000000000000000000000000000000000")
-            .is_err());
+        assert!(DynSolType::Address.coerce_str("000000000000000000000000000000000000000").is_err());
         // 40
         assert_eq!(
-            DynSolType::Address
-                .coerce_str("0000000000000000000000000000000000000000")
-                .unwrap(),
+            DynSolType::Address.coerce_str("0000000000000000000000000000000000000000").unwrap(),
             DynSolValue::Address(Address::ZERO)
         );
         assert_eq!(
-            DynSolType::Address
-                .coerce_str("0x1111111111111111111111111111111111111111")
-                .unwrap(),
+            DynSolType::Address.coerce_str("0x1111111111111111111111111111111111111111").unwrap(),
             DynSolValue::Address(Address::new([0x11; 20]))
         );
         assert_eq!(
-            DynSolType::Address
-                .coerce_str("2222222222222222222222222222222222222222")
-                .unwrap(),
+            DynSolType::Address.coerce_str("2222222222222222222222222222222222222222").unwrap(),
             DynSolValue::Address(Address::new([0x22; 20]))
         );
     }
@@ -841,24 +785,12 @@ mod tests {
 
     #[test]
     fn coerce_bytes() {
-        assert_eq!(
-            DynSolType::Bytes.coerce_str("").unwrap(),
-            DynSolValue::Bytes(vec![])
-        );
-        assert_eq!(
-            DynSolType::Bytes.coerce_str("0x").unwrap(),
-            DynSolValue::Bytes(vec![])
-        );
+        assert_eq!(DynSolType::Bytes.coerce_str("").unwrap(), DynSolValue::Bytes(vec![]));
+        assert_eq!(DynSolType::Bytes.coerce_str("0x").unwrap(), DynSolValue::Bytes(vec![]));
         assert!(DynSolType::Bytes.coerce_str("0x0").is_err());
         assert!(DynSolType::Bytes.coerce_str("0").is_err());
-        assert_eq!(
-            DynSolType::Bytes.coerce_str("00").unwrap(),
-            DynSolValue::Bytes(vec![0])
-        );
-        assert_eq!(
-            DynSolType::Bytes.coerce_str("0x00").unwrap(),
-            DynSolValue::Bytes(vec![0])
-        );
+        assert_eq!(DynSolType::Bytes.coerce_str("00").unwrap(), DynSolValue::Bytes(vec![0]));
+        assert_eq!(DynSolType::Bytes.coerce_str("0x00").unwrap(), DynSolValue::Bytes(vec![0]));
 
         assert_eq!(
             DynSolType::Bytes.coerce_str("123456").unwrap(),
@@ -911,11 +843,7 @@ mod tests {
     fn coerce_strings() {
         let arr = DynSolType::Array(Box::new(DynSolType::String));
         let mk_arr = |s: &[&str]| {
-            DynSolValue::Array(
-                s.iter()
-                    .map(|s| DynSolValue::String(s.to_string()))
-                    .collect(),
-            )
+            DynSolValue::Array(s.iter().map(|s| DynSolValue::String(s.to_string())).collect())
         };
 
         assert_eq!(arr.coerce_str("[]").unwrap(), mk_arr(&[]));
@@ -927,14 +855,8 @@ mod tests {
 
         assert_eq!(arr.coerce_str("[ foo bar ]").unwrap(), mk_arr(&["foo bar"]));
         assert_eq!(arr.coerce_str("[foo bar,]").unwrap(), mk_arr(&["foo bar"]));
-        assert_eq!(
-            arr.coerce_str("[  foo bar,  ]").unwrap(),
-            mk_arr(&["foo bar"])
-        );
-        assert_eq!(
-            arr.coerce_str("[ foo , bar ]").unwrap(),
-            mk_arr(&["foo", "bar"])
-        );
+        assert_eq!(arr.coerce_str("[  foo bar,  ]").unwrap(), mk_arr(&["foo bar"]));
+        assert_eq!(arr.coerce_str("[ foo , bar ]").unwrap(), mk_arr(&["foo", "bar"]));
 
         assert_eq!(arr.coerce_str("['']").unwrap(), mk_arr(&[""]));
         assert_eq!(arr.coerce_str("[\"\"]").unwrap(), mk_arr(&[""]));
@@ -947,9 +869,7 @@ mod tests {
     #[test]
     fn coerce_empty_array() {
         assert_eq!(
-            DynSolType::Array(Box::new(DynSolType::Bool))
-                .coerce_str("[]")
-                .unwrap(),
+            DynSolType::Array(Box::new(DynSolType::Bool)).coerce_str("[]").unwrap(),
             DynSolValue::Array(vec![])
         );
     }
@@ -957,11 +877,8 @@ mod tests {
     #[test]
     fn coerce_bool_array() {
         assert_eq!(
-            DynSolType::coerce_str(
-                &DynSolType::Array(Box::new(DynSolType::Bool)),
-                "[true, false]"
-            )
-            .unwrap(),
+            DynSolType::coerce_str(&DynSolType::Array(Box::new(DynSolType::Bool)), "[true, false]")
+                .unwrap(),
             DynSolValue::Array(vec![DynSolValue::Bool(true), DynSolValue::Bool(false)])
         );
     }
@@ -990,18 +907,14 @@ mod tests {
         assert!(DynSolType::Array(Box::new(DynSolType::Bool))
             .coerce_str("[true,\"false,false]")
             .is_err());
-        assert!(DynSolType::Array(Box::new(DynSolType::Bool))
-            .coerce_str("[false\"]")
-            .is_err());
+        assert!(DynSolType::Array(Box::new(DynSolType::Bool)).coerce_str("[false\"]").is_err());
         assert!(DynSolType::Array(Box::new(DynSolType::Bool))
             .coerce_str("[true,false\"]")
             .is_err());
         assert!(DynSolType::Array(Box::new(DynSolType::Bool))
             .coerce_str("[true,\"false\",false]")
             .is_err());
-        assert!(DynSolType::Array(Box::new(DynSolType::Bool))
-            .coerce_str("[true,false]")
-            .is_ok());
+        assert!(DynSolType::Array(Box::new(DynSolType::Bool)).coerce_str("[true,false]").is_ok());
     }
 
     #[test]
@@ -1055,9 +968,9 @@ mod tests {
             .coerce_str("([(5c9d55b78febcc2061715ba4f57ecf8ea2711f2c)],2)")
             .unwrap(),
             DynSolValue::Tuple(vec![
-                DynSolValue::Array(vec![DynSolValue::Tuple(vec![DynSolValue::Address(
-                    address!("5c9d55b78febcc2061715ba4f57ecf8ea2711f2c")
-                )])]),
+                DynSolValue::Array(vec![DynSolValue::Tuple(vec![DynSolValue::Address(address!(
+                    "5c9d55b78febcc2061715ba4f57ecf8ea2711f2c"
+                ))])]),
                 DynSolValue::Uint(U256::from(2), 256),
             ])
         );
@@ -1079,9 +992,7 @@ mod tests {
 
         let mut value = ty.coerce_str(&value_str).unwrap();
         for _ in 0..n {
-            let DynSolValue::Array(arr) = value else {
-                panic!("{value:?}")
-            };
+            let DynSolValue::Array(arr) = value else { panic!("{value:?}") };
             assert_eq!(arr.len(), 1);
             value = arr.into_iter().next().unwrap();
         }
@@ -1103,9 +1014,7 @@ mod tests {
 
         let mut value = ty.coerce_str(&value_str).unwrap();
         for _ in 0..n {
-            let DynSolValue::Tuple(tuple) = value else {
-                panic!("{value:?}")
-            };
+            let DynSolValue::Tuple(tuple) = value else { panic!("{value:?}") };
             assert_eq!(tuple.len(), 1);
             value = tuple.into_iter().next().unwrap();
         }

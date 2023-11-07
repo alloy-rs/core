@@ -67,7 +67,7 @@ impl Parse for ItemContract {
             inheritance: {
                 if input.peek(kw::is) {
                     if kind.is_library() {
-                        return Err(input.error("libraries are not allowed to inherit"))
+                        return Err(input.error("libraries are not allowed to inherit"));
                     }
                     Some(input.parse()?)
                 } else {
@@ -80,7 +80,7 @@ impl Parse for ItemContract {
                 while !content.is_empty() {
                     let item: Item = content.parse()?;
                     if matches!(item, Item::Contract(_)) {
-                        return Err(Error::new(item.span(), "cannot declare nested contracts"))
+                        return Err(Error::new(item.span(), "cannot declare nested contracts"));
                     }
                     body.push(item);
                 }
@@ -288,9 +288,7 @@ impl fmt::Display for Inheritance {
 
 impl fmt::Debug for Inheritance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Inheritance")
-            .field(DebugPunctuated::new(&self.inheritance))
-            .finish()
+        f.debug_tuple("Inheritance").field(DebugPunctuated::new(&self.inheritance)).finish()
     }
 }
 
@@ -300,21 +298,18 @@ impl Parse for Inheritance {
         let mut inheritance = Punctuated::new();
         loop {
             if input.is_empty() || input.peek(Brace) {
-                break
+                break;
             }
             inheritance.push_value(input.parse()?);
             if input.is_empty() || input.peek(Brace) {
-                break
+                break;
             }
             inheritance.push_punct(input.parse()?);
         }
         if inheritance.is_empty() {
             Err(input.parse::<SolIdent>().unwrap_err())
         } else {
-            Ok(Self {
-                is_token,
-                inheritance,
-            })
+            Ok(Self { is_token, inheritance })
         }
     }
 }
@@ -322,10 +317,7 @@ impl Parse for Inheritance {
 impl Spanned for Inheritance {
     fn span(&self) -> Span {
         let span = self.is_token.span;
-        self.inheritance
-            .last()
-            .and_then(|last| span.join(last.span()))
-            .unwrap_or(span)
+        self.inheritance.last().and_then(|last| span.join(last.span())).unwrap_or(span)
     }
 
     fn set_span(&mut self, span: Span) {

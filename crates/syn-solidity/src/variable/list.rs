@@ -91,9 +91,7 @@ impl<P> fmt::Debug for Parameters<P> {
 /// Parameter list
 impl Parse for ParameterList {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        input
-            .parse_terminated(VariableDeclaration::parse, Token![,])
-            .map(Self)
+        input.parse_terminated(VariableDeclaration::parse, Token![,]).map(Self)
     }
 }
 

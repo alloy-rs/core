@@ -1,11 +1,11 @@
 reorder_imports = true
 use_field_init_shorthand = true
+use_small_heuristics = "Max"
 
 # Nightly
 max_width = 100
-comment_width = 80
+comment_width = 100
 imports_granularity = "Crate"
-trailing_semicolon = false
 wrap_comments = true
 format_code_in_doc_comments = true
 doc_comment_code_block_width = 100

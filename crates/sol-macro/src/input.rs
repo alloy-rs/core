@@ -52,11 +52,7 @@ impl Parse for SolInput {
         {
             Self::parse_abigen(attrs, input)
         } else {
-            input.parse().map(|kind| Self {
-                attrs,
-                path: None,
-                kind,
-            })
+            input.parse().map(|kind| Self { attrs, path: None, kind })
         }
     }
 }
@@ -99,11 +95,7 @@ impl SolInput {
 
         let s = value.trim();
         if s.is_empty() {
-            let msg = if is_path {
-                "file path is empty"
-            } else {
-                "empty input is not allowed"
-            };
+            let msg = if is_path { "file path is empty" } else { "empty input is not allowed" };
             Err(Error::new(span, msg))
         } else if (s.starts_with('{') && s.ends_with('}'))
             || (s.starts_with('[') && s.ends_with(']'))
@@ -113,11 +105,7 @@ impl SolInput {
                 let json = serde_json::from_str(s)
                     .map_err(|e| Error::new(span, format!("invalid JSON: {e}")))?;
                 let name = name.ok_or_else(|| Error::new(span, "need a name for JSON ABI"))?;
-                Ok(Self {
-                    attrs,
-                    path,
-                    kind: SolInputKind::Json(name, json),
-                })
+                Ok(Self { attrs, path, kind: SolInputKind::Json(name, json) })
             }
             #[cfg(not(feature = "json"))]
             {
@@ -127,7 +115,7 @@ impl SolInput {
         } else {
             if let Some(name) = name {
                 let msg = "names are not allowed outside of JSON ABI";
-                return Err(Error::new(name.span(), msg))
+                return Err(Error::new(name.span(), msg));
             }
             let kind = syn::parse_str(s).map_err(|e| {
                 let msg = format!("expected a valid JSON ABI string or Solidity string: {e}");

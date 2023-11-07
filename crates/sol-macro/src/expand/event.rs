@@ -59,11 +59,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         quote!(#name: #param)
     });
 
-    let topic_tuple_names = event
-        .indexed_params()
-        .map(|p| p.name.as_ref())
-        .enumerate()
-        .map(anon_name);
+    let topic_tuple_names =
+        event.indexed_params().map(|p| p.name.as_ref()).enumerate().map(anon_name);
 
     let topics_impl = if anonymous {
         quote! {(#(self.#topic_tuple_names.clone(),)*)}
@@ -71,11 +68,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         quote! {(Self::SIGNATURE_HASH.into(), #(self.#topic_tuple_names.clone(),)*)}
     };
 
-    let encode_first_topic = (!anonymous).then(|| {
-        quote!(::alloy_sol_types::abi::token::WordToken(
-            Self::SIGNATURE_HASH
-        ))
-    });
+    let encode_first_topic = (!anonymous)
+        .then(|| quote!(::alloy_sol_types::abi::token::WordToken(Self::SIGNATURE_HASH)));
 
     let encode_topics_impl = event.indexed_params().enumerate().map(|(i, p)| {
         let name = anon_name((i, p.name.as_ref()));

@@ -80,7 +80,7 @@ impl<'ast> ExpCtxt<'ast> {
         }
 
         if abort {
-            return Ok(tokens)
+            return Ok(tokens);
         }
 
         for item in &self.ast.items {
@@ -115,9 +115,7 @@ impl<'ast> ExpCtxt<'ast> {
         let (attrs, others) = attr::SolAttrs::parse(&self.ast.attrs)?;
         self.attrs = attrs;
 
-        let errs = others
-            .iter()
-            .map(|attr| Error::new_spanned(attr, "unexpected attribute"));
+        let errs = others.iter().map(|attr| Error::new_spanned(attr, "unexpected attribute"));
         utils::combine_errors(errs)
     }
 
@@ -144,14 +142,12 @@ impl<'ast> ExpCtxt<'ast> {
             let mut i = 0;
             ty.visit_mut(|ty| {
                 if i >= RESOLVE_LIMIT {
-                    return
+                    return;
                 }
                 let ty @ Type::Custom(_) = ty else { return };
-                let Type::Custom(name) = &*ty else {
-                    unreachable!()
-                };
+                let Type::Custom(name) = &*ty else { unreachable!() };
                 let Some(resolved) = map.get(name.last()) else {
-                    return
+                    return;
                 };
                 ty.clone_from(resolved);
                 i += 1;
@@ -169,12 +165,8 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn mk_overloads_map(&mut self) -> std::result::Result<(), ()> {
-        let all_orig_names: Vec<_> = self
-            .overloaded_items
-            .values()
-            .flatten()
-            .filter_map(|f| f.name())
-            .collect();
+        let all_orig_names: Vec<_> =
+            self.overloaded_items.values().flatten().filter_map(|f| f.name()).collect();
         let mut overloads_map = std::mem::take(&mut self.overloads);
 
         let mut failed = false;
@@ -198,7 +190,7 @@ impl<'ast> ExpCtxt<'ast> {
 
             for (i, &item) in functions.iter().enumerate() {
                 let Some(old_name) = item.name() else {
-                    continue
+                    continue;
                 };
                 let new_name = format!("{old_name}_{i}");
                 if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
@@ -218,7 +210,7 @@ impl<'ast> ExpCtxt<'ast> {
         }
 
         if failed {
-            return Err(())
+            return Err(());
         }
 
         self.overloads = overloads_map;
@@ -319,10 +311,7 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn try_item(&self, name: &SolPath) -> Option<&Item> {
         let name = name.last();
-        self.all_items
-            .iter()
-            .copied()
-            .find(|item| item.name() == Some(name))
+        self.all_items.iter().copied().find(|item| item.name() == Some(name))
     }
 
     fn custom_type(&self, name: &SolPath) -> &Type {
@@ -465,7 +454,7 @@ impl<'ast> ExpCtxt<'ast> {
         T: Borrow<Type>,
     {
         let Some(true) = self.attrs.all_derives else {
-            return
+            return;
         };
 
         let mut derives = Vec::with_capacity(5);
@@ -597,12 +586,7 @@ fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
 
 /// Expand the body of a `tokenize` function.
 fn expand_tokenize<P>(params: &Parameters<P>) -> TokenStream {
-    tokenize_(
-        params
-            .iter()
-            .enumerate()
-            .map(|(i, p)| (i, &p.ty, p.name.as_ref())),
-    )
+    tokenize_(params.iter().enumerate().map(|(i, p)| (i, &p.ty, p.name.as_ref())))
 }
 
 /// Expand the body of a `tokenize` function.

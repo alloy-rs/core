@@ -28,19 +28,13 @@ impl fmt::Display for ImportDirective {
 
 impl fmt::Debug for ImportDirective {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ImportDirective")
-            .field("path", &self.path)
-            .finish()
+        f.debug_struct("ImportDirective").field("path", &self.path).finish()
     }
 }
 
 impl Parse for ImportDirective {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            import_token: input.parse()?,
-            path: input.parse()?,
-            semi_token: input.parse()?,
-        })
+        Ok(Self { import_token: input.parse()?, path: input.parse()?, semi_token: input.parse()? })
     }
 }
 
@@ -148,10 +142,7 @@ impl fmt::Debug for ImportAlias {
 
 impl Parse for ImportAlias {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            as_token: input.parse()?,
-            alias: input.parse()?,
-        })
+        Ok(Self { as_token: input.parse()?, alias: input.parse()? })
     }
 }
 
@@ -196,19 +187,13 @@ impl fmt::Display for ImportPlain {
 
 impl fmt::Debug for ImportPlain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Plain")
-            .field("path", &self.path)
-            .field("alias", &self.alias)
-            .finish()
+        f.debug_struct("Plain").field("path", &self.path).field("alias", &self.alias).finish()
     }
 }
 
 impl Parse for ImportPlain {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            path: input.parse()?,
-            alias: input.call(ImportAlias::parse_opt)?,
-        })
+        Ok(Self { path: input.parse()?, alias: input.call(ImportAlias::parse_opt)? })
     }
 }
 
@@ -257,10 +242,7 @@ impl fmt::Display for ImportAliases {
 
 impl fmt::Debug for ImportAliases {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Aliases")
-            .field("imports", &self.imports)
-            .field("path", &self.path)
-            .finish()
+        f.debug_struct("Aliases").field("imports", &self.imports).field("path", &self.path).finish()
     }
 }
 
@@ -313,10 +295,7 @@ impl fmt::Display for ImportGlob {
 
 impl fmt::Debug for ImportGlob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Glob")
-            .field("alias", &self.alias)
-            .field("path", &self.path)
-            .finish()
+        f.debug_struct("Glob").field("alias", &self.alias).field("path", &self.path).finish()
     }
 }
 

@@ -92,16 +92,7 @@ impl Parse for ItemFunction {
         let returns = input.call(Returns::parse_opt)?;
         let body = input.parse()?;
 
-        Ok(Self {
-            attrs,
-            kind,
-            name,
-            paren_token,
-            arguments,
-            attributes,
-            returns,
-            body,
-        })
+        Ok(Self { attrs, kind, name, paren_token, arguments, attributes, returns, body })
     }
 }
 
@@ -125,9 +116,7 @@ impl Spanned for ItemFunction {
 impl ItemFunction {
     /// Create a new function of the given kind.
     pub fn new(kind: FunctionKind, name: Option<SolIdent>) -> Self {
-        let span = name
-            .as_ref()
-            .map_or_else(|| kind.span(), |name| name.span());
+        let span = name.as_ref().map_or_else(|| kind.span(), |name| name.span());
         Self {
             attrs: Vec::new(),
             kind,
@@ -237,9 +226,7 @@ impl ItemFunction {
 
     /// Returns the function's return tuple type.
     pub fn return_type(&self) -> Option<Type> {
-        self.returns
-            .as_ref()
-            .map(|returns| Type::Tuple(returns.returns.types().cloned().collect()))
+        self.returns.as_ref().map(|returns| Type::Tuple(returns.returns.types().cloned().collect()))
     }
 
     /// Returns a reference to the function's body, if any.
@@ -323,10 +310,7 @@ impl Parse for Returns {
             returns: content.parse()?,
         };
         if this.returns.is_empty() {
-            Err(Error::new(
-                this.paren_token.span.join(),
-                "expected at least one return type",
-            ))
+            Err(Error::new(this.paren_token.span.join(), "expected at least one return type"))
         } else {
             Ok(this)
         }
@@ -347,11 +331,7 @@ impl Spanned for Returns {
 
 impl Returns {
     pub fn new(span: Span, returns: ParameterList) -> Self {
-        Self {
-            returns_token: kw::returns(span),
-            paren_token: Paren(span),
-            returns,
-        }
+        Self { returns_token: kw::returns(span), paren_token: Paren(span), returns }
     }
 
     pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
@@ -485,7 +465,7 @@ mod tests {
 
     fn run_solc() -> bool {
         let Ok(status) = Command::new("solc").arg("--version").status() else {
-            return false
+            return false;
         };
         status.success()
     }
@@ -494,10 +474,7 @@ mod tests {
         let contract = if var {
             format!("contract C {{ {s} }}")
         } else {
-            format!(
-                "abstract contract C {{ {} }}",
-                s.replace("returns", "virtual returns")
-            )
+            format!("abstract contract C {{ {} }}", s.replace("returns", "virtual returns"))
         };
         let mut cmd = Command::new("solc")
             .args(["--abi", "--pretty-json", "-"])

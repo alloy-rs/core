@@ -25,11 +25,7 @@ impl fmt::Debug for ExprMember {
 
 impl ParseNested for ExprMember {
     fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            expr,
-            dot_token: input.parse()?,
-            member: input.parse()?,
-        })
+        Ok(Self { expr, dot_token: input.parse()?, member: input.parse()? })
     }
 }
 
@@ -37,15 +33,9 @@ derive_parse!(ExprMember);
 
 impl Spanned for ExprMember {
     fn span(&self) -> Span {
-        self.expr
-            .span()
-            .join(self.member.span())
-            .unwrap_or_else(|| {
-                self.dot_token
-                    .span
-                    .join(self.member.span())
-                    .unwrap_or_else(|| self.expr.span())
-            })
+        self.expr.span().join(self.member.span()).unwrap_or_else(|| {
+            self.dot_token.span.join(self.member.span()).unwrap_or_else(|| self.expr.span())
+        })
     }
 
     fn set_span(&mut self, span: Span) {

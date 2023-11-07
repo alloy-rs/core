@@ -21,11 +21,7 @@ impl DynSolEvent {
         indexed: Vec<DynSolType>,
         body: DynSolType,
     ) -> Self {
-        Self {
-            topic_0,
-            indexed,
-            body,
-        }
+        Self { topic_0, indexed, body }
     }
 
     /// Creates a new event.
@@ -34,7 +30,7 @@ impl DynSolEvent {
     /// body is a tuple.
     pub fn new(topic_0: Option<B256>, indexed: Vec<DynSolType>, body: DynSolType) -> Option<Self> {
         if indexed.len() > 4 || body.as_tuple().is_none() {
-            return None
+            return None;
         }
         Some(Self::new_unchecked(topic_0, indexed, body))
     }
@@ -59,10 +55,7 @@ impl DynSolEvent {
         if validate {
             match topics.size_hint() {
                 (n, Some(m)) if n == m && n != num_topics => {
-                    return Err(Error::TopicLengthMismatch {
-                        expected: num_topics,
-                        actual: n,
-                    })
+                    return Err(Error::TopicLengthMismatch { expected: num_topics, actual: n })
                 }
                 _ => {}
             }
@@ -77,17 +70,11 @@ impl DynSolEvent {
                     Some(sig) => {
                         let expected = self.topic_0.expect("not anonymous");
                         if sig != expected {
-                            return Err(Error::EventSignatureMismatch {
-                                expected,
-                                actual: sig,
-                            })
+                            return Err(Error::EventSignatureMismatch { expected, actual: sig });
                         }
                     }
                     None => {
-                        return Err(Error::TopicLengthMismatch {
-                            expected: num_topics,
-                            actual: 0,
-                        })
+                        return Err(Error::TopicLengthMismatch { expected: num_topics, actual: 0 })
                     }
                 }
             }
@@ -103,11 +90,7 @@ impl DynSolEvent {
             })
             .collect::<Result<_>>()?;
 
-        let body = self
-            .body
-            .abi_decode_sequence(data)?
-            .into_fixed_seq()
-            .expect("body is a tuple");
+        let body = self.body.abi_decode_sequence(data)?.into_fixed_seq().expect("body is a tuple");
 
         if validate {
             let remaining = topics.count();
@@ -115,7 +98,7 @@ impl DynSolEvent {
                 return Err(Error::TopicLengthMismatch {
                     expected: num_topics,
                     actual: num_topics + remaining,
-                })
+                });
             }
         }
 
@@ -173,10 +156,7 @@ mod test {
     fn it_decodes_logs_with_indexed_params() {
         let t0 = b256!("cf74b4e62f836eeedcd6f92120ffb5afea90e6fa490d36f8b81075e2a7de0cf7");
         let log = Log::new_unchecked(
-            vec![
-                t0,
-                b256!("0000000000000000000000000000000000000000000000000000000000012321"),
-            ],
+            vec![t0, b256!("0000000000000000000000000000000000000000000000000000000000012321")],
             bytes!(
                 "
 			    0000000000000000000000000000000000000000000000000000000000012345
@@ -196,9 +176,7 @@ mod test {
         let decoded = event.decode_log(&log, true).unwrap();
         assert_eq!(
             decoded.indexed,
-            vec![DynSolValue::Address(address!(
-                "0000000000000000000000000000000000012321"
-            ))]
+            vec![DynSolValue::Address(address!("0000000000000000000000000000000000012321"))]
         );
     }
 }

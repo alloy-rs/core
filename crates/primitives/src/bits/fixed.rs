@@ -26,10 +26,7 @@ use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
     IndexMut,
     IntoIterator,
 )]
-#[cfg_attr(
-    feature = "arbitrary",
-    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
-)]
+#[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 #[repr(transparent)]
 pub struct FixedBytes<const N: usize>(#[into_iterator(owned, ref, ref_mut)] pub [u8; N]);
 
@@ -219,7 +216,7 @@ impl<const N: usize> fmt::Display for FixedBytes<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // If the alternate flag is NOT set, we write the full hex.
         if N <= 4 || !f.alternate() {
-            return self.fmt_hex::<false>(f, true)
+            return self.fmt_hex::<false>(f, true);
         }
 
         // If the alternate flag is set, we use middle-out compression.
@@ -439,10 +436,7 @@ impl<const N: usize> FixedBytes<N> {
         self,
         other: FixedBytes<M>,
     ) -> FixedBytes<Z> {
-        assert!(
-            N + M == Z,
-            "Output size `Z` must equal the sum of the input sizes `N` and `M`"
-        );
+        assert!(N + M == Z, "Output size `Z` must equal the sum of the input sizes `N` and `M`");
 
         let mut result = [0u8; Z];
         let mut i = 0;
@@ -498,7 +492,7 @@ impl<const N: usize> FixedBytes<N> {
         let mut i = 0;
         while i < N {
             if self.0[i] != other.0[i] {
-                return false
+                return false;
             }
             i += 1;
         }
@@ -552,11 +546,7 @@ impl<const N: usize> FixedBytes<N> {
 
     fn fmt_hex<const UPPER: bool>(&self, f: &mut fmt::Formatter<'_>, prefix: bool) -> fmt::Result {
         let mut buf = hex::Buffer::<N, true>::new();
-        let s = if UPPER {
-            buf.format_upper(self)
-        } else {
-            buf.format(self)
-        };
+        let s = if UPPER { buf.format_upper(self) } else { buf.format(self) };
         // SAFETY: The buffer is guaranteed to be at least 2 bytes in length.
         f.write_str(unsafe { s.get_unchecked((!prefix as usize) * 2..) })
     }

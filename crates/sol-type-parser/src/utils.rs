@@ -43,10 +43,7 @@ where
     let name = format!("char={c:?}");
     #[cfg(not(feature = "debug"))]
     let name = "char";
-    trace(
-        name,
-        c.context(StrContext::Expected(StrContextValue::CharLiteral(c))),
-    )
+    trace(name, c.context(StrContext::Expected(StrContextValue::CharLiteral(c))))
 }
 
 #[inline]
@@ -58,10 +55,7 @@ where
     let name = format!("str={s:?}");
     #[cfg(not(feature = "debug"))]
     let name = "str";
-    trace(
-        name,
-        s.context(StrContext::Expected(StrContextValue::StringLiteral(s))),
-    )
+    trace(name, s.context(StrContext::Expected(StrContextValue::StringLiteral(s))))
 }
 
 pub fn tuple_parser<'a, O1, O2, E>(f: impl Parser<&'a str, O1, E>) -> impl Parser<&'a str, O2, E>
@@ -112,9 +106,7 @@ pub fn opt_ws_ident<'a>(input: &mut &'a str) -> PResult<Option<&'a str>> {
 #[doc(hidden)]
 #[inline]
 pub fn parse_item<'a>(s: &mut &'a str) -> Result<&'a str> {
-    trace("item", terminated(identifier, space0))
-        .parse_next(s)
-        .map_err(Error::parser)
+    trace("item", terminated(identifier, space0)).parse_next(s).map_err(Error::parser)
 }
 
 #[doc(hidden)]

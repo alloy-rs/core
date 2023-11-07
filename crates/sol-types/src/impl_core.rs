@@ -19,7 +19,7 @@ where
 {
     if N == 0 {
         // SAFETY: An empty array is always inhabited and has no validity invariants.
-        return unsafe { Ok(mem::zeroed()) }
+        return unsafe { Ok(mem::zeroed()) };
     }
 
     struct Guard<'a, T, const N: usize> {
@@ -41,19 +41,13 @@ where
     }
 
     let mut array = uninit_array::<T, N>();
-    let mut guard = Guard {
-        array_mut: &mut array,
-        initialized: 0,
-    };
+    let mut guard = Guard { array_mut: &mut array, initialized: 0 };
 
     for _ in 0..N {
         // SAFETY: `guard.initialized` starts at 0, is increased by one in the
         // loop and the loop is aborted once it reaches N (which is `array.len()`).
         unsafe {
-            guard
-                .array_mut
-                .get_unchecked_mut(guard.initialized)
-                .write(cb(guard.initialized)?);
+            guard.array_mut.get_unchecked_mut(guard.initialized).write(cb(guard.initialized)?);
         }
         guard.initialized += 1;
     }
@@ -116,12 +110,7 @@ pub(crate) fn into_flattened<T, const N: usize>(vec: Vec<[T; N]>) -> Vec<T> {
         // the address space.
         // - Each `[T; N]` has `N` valid elements, so there are `len * N`
         // valid elements in the allocation.
-        unsafe {
-            (
-                len.checked_mul(N).unwrap_unchecked(),
-                cap.checked_mul(N).unwrap_unchecked(),
-            )
-        }
+        unsafe { (len.checked_mul(N).unwrap_unchecked(), cap.checked_mul(N).unwrap_unchecked()) }
     };
     // SAFETY:
     // - `ptr` was allocated by `self`

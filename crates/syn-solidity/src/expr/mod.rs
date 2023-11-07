@@ -139,7 +139,7 @@ impl Parse for Expr {
                 debug!(" << Expr: {new:?}");
                 expr = new;
             } else {
-                return Ok(new)
+                return Ok(new);
             }
         }
     }
@@ -208,10 +208,9 @@ impl Expr {
                     Ok(Self::LitDenominated(LitDenominated { number, denom }))
                 }
                 (lit, None) => Ok(Self::Lit(lit)),
-                (_, Some(denom)) => Err(syn::Error::new(
-                    denom.span(),
-                    "unexpected subdenomination for literal",
-                )),
+                (_, Some(denom)) => {
+                    Err(syn::Error::new(denom.span(), "unexpected subdenomination for literal"))
+                }
             }
         } else if lookahead.peek(kw::payable) {
             input.parse().map(Self::Payable)

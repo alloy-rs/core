@@ -43,10 +43,9 @@ struct StructProp {
 /// let ty = DynSolType::parse(type_name)?;
 /// assert_eq!(
 ///     ty,
-///     DynSolType::Array(Box::new(DynSolType::Tuple(vec![
-///         DynSolType::Bool,
-///         DynSolType::Address,
-///     ])))
+///     DynSolType::Array(Box::new(DynSolType::Tuple(
+///         vec![DynSolType::Bool, DynSolType::Address,]
+///     )))
 /// );
 /// assert_eq!(ty.sol_type_name(), type_name);
 ///
@@ -154,9 +153,7 @@ impl DynSolType {
     /// ```
     #[inline]
     pub fn parse(s: &str) -> Result<Self> {
-        TypeSpecifier::parse(s)
-            .map_err(Error::TypeParser)
-            .and_then(|t| t.resolve())
+        TypeSpecifier::parse(s).map_err(Error::TypeParser).and_then(|t| t.resolve())
     }
 
     /// Fallible cast to the contents of a variant.
@@ -174,11 +171,7 @@ impl DynSolType {
     pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[Self])> {
         match self {
             #[cfg(feature = "eip712")]
-            Self::CustomStruct {
-                name,
-                prop_names,
-                tuple,
-            } => Some((name, prop_names, tuple)),
+            Self::CustomStruct { name, prop_names, tuple } => Some((name, prop_names, tuple)),
             _ => None,
         }
     }
@@ -237,17 +230,8 @@ impl DynSolType {
                 matches!(value, as_tuple!(DynSolValue tuple) if zip(types, tuple).all(|(t, v)| t.matches(v)))
             }
             #[cfg(feature = "eip712")]
-            Self::CustomStruct {
-                name: _,
-                prop_names,
-                tuple,
-            } => {
-                if let DynSolValue::CustomStruct {
-                    name: _,
-                    prop_names: p,
-                    tuple: t,
-                } = value
-                {
+            Self::CustomStruct { name: _, prop_names, tuple } => {
+                if let DynSolValue::CustomStruct { name: _, prop_names: p, tuple: t } = value {
                     // check just types
                     prop_names.len() == tuple.len()
                         && prop_names.len() == p.len()
@@ -272,71 +256,61 @@ impl DynSolType {
             }
 
             // cheating here, but it's ok
-            (Self::Int(size), DynToken::Word(word)) => Ok(DynSolValue::Int(
-                sol_data::Int::<256>::detokenize(word.into()),
-                *size,
-            )),
+            (Self::Int(size), DynToken::Word(word)) => {
+                Ok(DynSolValue::Int(sol_data::Int::<256>::detokenize(word.into()), *size))
+            }
 
-            (Self::Uint(size), DynToken::Word(word)) => Ok(DynSolValue::Uint(
-                sol_data::Uint::<256>::detokenize(word.into()),
-                *size,
-            )),
+            (Self::Uint(size), DynToken::Word(word)) => {
+                Ok(DynSolValue::Uint(sol_data::Uint::<256>::detokenize(word.into()), *size))
+            }
 
             (Self::FixedBytes(size), DynToken::Word(word)) => Ok(DynSolValue::FixedBytes(
                 sol_data::FixedBytes::<32>::detokenize(word.into()),
                 *size,
             )),
 
-            (Self::Address, DynToken::Word(word)) => Ok(DynSolValue::Address(
-                sol_data::Address::detokenize(word.into()),
-            )),
+            (Self::Address, DynToken::Word(word)) => {
+                Ok(DynSolValue::Address(sol_data::Address::detokenize(word.into())))
+            }
 
-            (Self::Function, DynToken::Word(word)) => Ok(DynSolValue::Function(
-                sol_data::Function::detokenize(word.into()),
-            )),
+            (Self::Function, DynToken::Word(word)) => {
+                Ok(DynSolValue::Function(sol_data::Function::detokenize(word.into())))
+            }
 
             (Self::Bytes, DynToken::PackedSeq(buf)) => Ok(DynSolValue::Bytes(buf.to_vec())),
 
-            (Self::String, DynToken::PackedSeq(buf)) => Ok(DynSolValue::String(
-                sol_data::String::detokenize(buf.into()),
-            )),
+            (Self::String, DynToken::PackedSeq(buf)) => {
+                Ok(DynSolValue::String(sol_data::String::detokenize(buf.into())))
+            }
 
-            (Self::Array(t), DynToken::DynSeq { contents, .. }) => t
-                .detokenize_array(contents.into_owned())
-                .map(DynSolValue::Array),
+            (Self::Array(t), DynToken::DynSeq { contents, .. }) => {
+                t.detokenize_array(contents.into_owned()).map(DynSolValue::Array)
+            }
 
             (Self::FixedArray(t, size), DynToken::FixedSeq(tokens, _)) => {
                 if *size != tokens.len() {
                     return Err(crate::Error::custom(
                         "array length mismatch on dynamic detokenization",
-                    ))
+                    ));
                 }
-                t.detokenize_array(tokens.into_owned())
-                    .map(DynSolValue::FixedArray)
+                t.detokenize_array(tokens.into_owned()).map(DynSolValue::FixedArray)
             }
 
             (Self::Tuple(types), DynToken::FixedSeq(tokens, _)) => {
                 if types.len() != tokens.len() {
                     return Err(crate::Error::custom(
                         "tuple length mismatch on dynamic detokenization",
-                    ))
+                    ));
                 }
                 Self::detokenize_many(types, tokens.into_owned()).map(DynSolValue::Tuple)
             }
 
             #[cfg(feature = "eip712")]
-            (
-                Self::CustomStruct {
-                    name,
-                    tuple,
-                    prop_names,
-                },
-                DynToken::FixedSeq(tokens, len),
-            ) => {
+            (Self::CustomStruct { name, tuple, prop_names }, DynToken::FixedSeq(tokens, len)) => {
                 if len != tokens.len() || len != tuple.len() {
                     return Err(crate::Error::custom(
                         "custom length mismatch on dynamic detokenization",
-                    ))
+                    ));
                 }
                 Self::detokenize_many(tuple, tokens.into_owned()).map(|tuple| {
                     DynSolValue::CustomStruct {
@@ -347,9 +321,7 @@ impl DynSolType {
                 })
             }
 
-            _ => Err(crate::Error::custom(
-                "mismatched types on dynamic detokenization",
-            )),
+            _ => Err(crate::Error::custom("mismatched types on dynamic detokenization")),
         }
     }
 
@@ -523,10 +495,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(
-            &mut Decoder::new(data, false),
-            DynToken::decode_single_populate,
-        )
+        self.abi_decode_inner(&mut Decoder::new(data, false), DynToken::decode_single_populate)
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
@@ -563,10 +532,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(
-            &mut Decoder::new(data, false),
-            DynToken::decode_sequence_populate,
-        )
+        self.abi_decode_inner(&mut Decoder::new(data, false), DynToken::decode_sequence_populate)
     }
 
     #[inline]
@@ -615,12 +581,10 @@ mod tests {
 
     #[test]
     fn dynamically_encodes() {
-        let word1 = "0000000000000000000000000101010101010101010101010101010101010101"
-            .parse()
-            .unwrap();
-        let word2 = "0000000000000000000000000202020202020202020202020202020202020202"
-            .parse()
-            .unwrap();
+        let word1 =
+            "0000000000000000000000000101010101010101010101010101010101010101".parse().unwrap();
+        let word2 =
+            "0000000000000000000000000202020202020202020202020202020202020202".parse().unwrap();
 
         let val = DynSolValue::Address(Address::repeat_byte(0x01));
         let token = val.tokenize();
@@ -669,12 +633,7 @@ mod tests {
         if dec.as_tuple().is_some() && dec.is_dynamic() {
             len += 32;
         }
-        assert_eq!(
-            dec.total_words() * 32,
-            len,
-            "dyn_tuple={}",
-            len != encoded.len()
-        );
+        assert_eq!(dec.total_words() * 32, len, "dyn_tuple={}", len != encoded.len());
 
         let re_encoded = dec.abi_encode_params();
         assert_eq!(re_encoded, encoded);

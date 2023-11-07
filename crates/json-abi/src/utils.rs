@@ -13,7 +13,7 @@ macro_rules! validate_identifier {
             return Err(serde::de::Error::invalid_value(
                 serde::de::Unexpected::Str($name),
                 &"a valid Solidity identifier",
-            ))
+            ));
         }
     };
 }
@@ -88,12 +88,9 @@ pub(crate) fn mk_param(name: Option<&str>, ty: TypeSpecifier<'_>) -> Param {
     let name = name.unwrap_or_default().into();
     let internal_type = None;
     match ty.stem {
-        TypeStem::Root(s) => Param {
-            name,
-            ty: ty_string(s.span(), &ty.sizes),
-            components: vec![],
-            internal_type,
-        },
+        TypeStem::Root(s) => {
+            Param { name, ty: ty_string(s.span(), &ty.sizes), components: vec![], internal_type }
+        }
         TypeStem::Tuple(t) => Param {
             name,
             ty: ty_string("tuple", &ty.sizes),
@@ -136,12 +133,7 @@ mod tests {
     }
 
     fn param2(kind: &str, name: &str) -> Param {
-        Param {
-            ty: kind.into(),
-            name: name.into(),
-            internal_type: None,
-            components: vec![],
-        }
+        Param { ty: kind.into(), name: name.into(), internal_type: None, components: vec![] }
     }
 
     fn eparam(kind: &str) -> EventParam {
@@ -156,12 +148,7 @@ mod tests {
 
     fn params(components: impl IntoIterator<Item = &'static str>) -> Param {
         let components = components.into_iter().map(param).collect();
-        crate::Param {
-            name: "param".into(),
-            ty: "tuple".into(),
-            internal_type: None,
-            components,
-        }
+        crate::Param { name: "param".into(), ty: "tuple".into(), internal_type: None, components }
     }
 
     #[test]
@@ -173,25 +160,14 @@ mod tests {
             "foo(bytes,bytes32)"
         );
         assert_eq!(
-            signature(
-                "foo",
-                &[param("int"), params(["uint[]"]), param("string")],
-                None
-            ),
+            signature("foo", &[param("int"), params(["uint[]"]), param("string")], None),
             "foo(int,(uint[]),string)"
         );
 
         assert_eq!(signature("foo", &[], Some(&[])), "foo()()");
+        assert_eq!(signature("foo", &[param("a")], Some(&[param("b")])), "foo(a)(b)");
         assert_eq!(
-            signature("foo", &[param("a")], Some(&[param("b")])),
-            "foo(a)(b)"
-        );
-        assert_eq!(
-            signature(
-                "foo",
-                &[param("a"), param("c")],
-                Some(&[param("b"), param("d")])
-            ),
+            signature("foo", &[param("a"), param("c")], Some(&[param("b"), param("d")])),
             "foo(a,c)(b,d)"
         );
     }
@@ -200,52 +176,28 @@ mod tests {
     fn test_event_signature() {
         assert_eq!(event_signature("foo", &[]), "foo()");
         assert_eq!(event_signature("foo", &[eparam("bool")]), "foo(bool)");
-        assert_eq!(
-            event_signature("foo", &[eparam("bool"), eparam("string")]),
-            "foo(bool,string)"
-        );
+        assert_eq!(event_signature("foo", &[eparam("bool"), eparam("string")]), "foo(bool,string)");
     }
 
     #[test]
     fn test_item_parse() {
-        assert_eq!(
-            parse_sig::<true>("foo()"),
-            Ok(("foo".into(), vec![], vec![], false))
-        );
-        assert_eq!(
-            parse_sig::<true>("foo()()"),
-            Ok(("foo".into(), vec![], vec![], false))
-        );
-        assert_eq!(
-            parse_sig::<true>("foo(,) \t ()"),
-            Ok(("foo".into(), vec![], vec![], false))
-        );
-        assert_eq!(
-            parse_sig::<true>("foo(,)  (,)"),
-            Ok(("foo".into(), vec![], vec![], false))
-        );
+        assert_eq!(parse_sig::<true>("foo()"), Ok(("foo".into(), vec![], vec![], false)));
+        assert_eq!(parse_sig::<true>("foo()()"), Ok(("foo".into(), vec![], vec![], false)));
+        assert_eq!(parse_sig::<true>("foo(,) \t ()"), Ok(("foo".into(), vec![], vec![], false)));
+        assert_eq!(parse_sig::<true>("foo(,)  (,)"), Ok(("foo".into(), vec![], vec![], false)));
 
-        assert_eq!(
-            parse_sig::<false>("foo()"),
-            Ok(("foo".into(), vec![], vec![], false))
-        );
+        assert_eq!(parse_sig::<false>("foo()"), Ok(("foo".into(), vec![], vec![], false)));
         parse_sig::<false>("foo()()").unwrap_err();
         parse_sig::<false>("foo(,)()").unwrap_err();
         parse_sig::<false>("foo(,)(,)").unwrap_err();
 
-        assert_eq!(
-            parse_sig::<false>("foo()anonymous"),
-            Ok(("foo".into(), vec![], vec![], true))
-        );
+        assert_eq!(parse_sig::<false>("foo()anonymous"), Ok(("foo".into(), vec![], vec![], true)));
         assert_eq!(
             parse_sig::<false>("foo()\t anonymous"),
             Ok(("foo".into(), vec![], vec![], true))
         );
 
-        assert_eq!(
-            parse_sig::<true>("foo()anonymous"),
-            Ok(("foo".into(), vec![], vec![], true))
-        );
+        assert_eq!(parse_sig::<true>("foo()anonymous"), Ok(("foo".into(), vec![], vec![], true)));
         assert_eq!(
             parse_sig::<true>("foo()\t anonymous"),
             Ok(("foo".into(), vec![], vec![], true))
@@ -255,10 +207,7 @@ mod tests {
             parse_sig::<true>("foo() \t ()anonymous"),
             Ok(("foo".into(), vec![], vec![], true))
         );
-        assert_eq!(
-            parse_sig::<true>("foo()()anonymous"),
-            Ok(("foo".into(), vec![], vec![], true))
-        );
+        assert_eq!(parse_sig::<true>("foo()()anonymous"), Ok(("foo".into(), vec![], vec![], true)));
         assert_eq!(
             parse_sig::<true>("foo()()\t anonymous"),
             Ok(("foo".into(), vec![], vec![], true))
@@ -274,22 +223,12 @@ mod tests {
         );
         assert_eq!(
             parse_sig::<false>("baz(uint256 param, bool param)"),
-            Ok((
-                "baz".into(),
-                vec![param("uint256"), param("bool")],
-                vec![],
-                false
-            ))
+            Ok(("baz".into(), vec![param("uint256"), param("bool")], vec![], false))
         );
 
         assert_eq!(
             parse_sig::<true>("f(a b)(c d)"),
-            Ok((
-                "f".into(),
-                vec![param2("a", "b")],
-                vec![param2("c", "d")],
-                false
-            ))
+            Ok(("f".into(), vec![param2("a", "b")], vec![param2("c", "d")], false))
         );
 
         assert_eq!(

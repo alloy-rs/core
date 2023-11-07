@@ -19,11 +19,7 @@ pub struct YulIf {
 
 impl Parse for YulIf {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            if_token: input.parse()?,
-            cond: input.parse()?,
-            then_branch: input.parse()?,
-        })
+        Ok(Self { if_token: input.parse()?, cond: input.parse()?, then_branch: input.parse()? })
     }
 }
 

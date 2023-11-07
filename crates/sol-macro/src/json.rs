@@ -4,11 +4,7 @@ use quote::{quote, TokenStreamExt};
 use syn::{Attribute, Result};
 
 pub fn expand(name: Ident, json: ContractObject, attrs: Vec<Attribute>) -> Result<TokenStream> {
-    let ContractObject {
-        abi,
-        bytecode,
-        deployed_bytecode,
-    } = json;
+    let ContractObject { abi, bytecode, deployed_bytecode } = json;
 
     let mut abi = abi.ok_or_else(|| syn::Error::new(name.span(), "ABI not found in JSON"))?;
     let sol = abi_to_sol(&name, &mut abi);
@@ -120,12 +116,9 @@ mod tests {
             let path = file.unwrap().path();
             assert_eq!(path.extension(), Some("json".as_ref()));
             if path.file_name() == Some("LargeFunction.json".as_ref()) {
-                continue
+                continue;
             }
-            parse_test(
-                &std::fs::read_to_string(&path).unwrap(),
-                path.to_str().unwrap(),
-            );
+            parse_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap());
         }
     }
 
@@ -152,15 +145,11 @@ mod tests {
                 assert_eq!(c.name, "Side");
                 assert_eq!(c.ty.to_string(), "bool");
 
-                rest[..8]
-                    .iter()
-                    .for_each(|item| assert!(matches!(item, Item::Struct(_))));
+                rest[..8].iter().for_each(|item| assert!(matches!(item, Item::Struct(_))));
 
                 let last = &rest[8];
                 assert!(rest[9..].is_empty());
-                let Item::Function(f) = last else {
-                    panic!("{last:#?}")
-                };
+                let Item::Function(f) = last else { panic!("{last:#?}") };
                 assert_eq!(f.name.as_ref().unwrap(), "fulfillAvailableAdvancedOrders");
                 assert!(f.attributes.contains(&ast::FunctionAttribute::Mutability(
                     ast::Mutability::Payable(Default::default())
@@ -262,10 +251,7 @@ mod tests {
             panic!("first item is not a contract");
         };
         let next = items.next();
-        assert!(
-            next.is_none(),
-            "AST does not contain exactly one item: {next:#?}, {items:#?}"
-        );
+        assert!(next.is_none(), "AST does not contain exactly one item: {next:#?}, {items:#?}");
         assert!(!c.body.is_empty(), "generated contract is empty");
         (c, name)
     }
@@ -273,10 +259,7 @@ mod tests {
     fn write_tmp_sol(name: &str, contents: &str) -> PathBuf {
         let path = std::env::temp_dir().join(format!("sol-macro-{name}.sol"));
         std::fs::write(&path, contents).unwrap();
-        let _ = std::process::Command::new("forge")
-            .arg("fmt")
-            .arg(&path)
-            .output();
+        let _ = std::process::Command::new("forge").arg("fmt").arg(&path).output();
         path
     }
 }

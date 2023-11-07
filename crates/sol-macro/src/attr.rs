@@ -29,15 +29,11 @@ pub fn docs_str(attrs: &[Attribute]) -> String {
     let mut doc = String::new();
     for attr in docs(attrs) {
         let syn::Meta::NameValue(syn::MetaNameValue {
-            value:
-                syn::Expr::Lit(syn::ExprLit {
-                    lit: syn::Lit::Str(s),
-                    ..
-                }),
+            value: syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(s), .. }),
             ..
         }) = &attr.meta
         else {
-            continue
+            continue;
         };
 
         let value = s.value();
@@ -57,8 +53,7 @@ pub fn derives(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
 
 pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {
     derives(attrs).flat_map(|attr| {
-        attr.parse_args_with(Punctuated::<Path, Token![,]>::parse_terminated)
-            .unwrap_or_default()
+        attr.parse_args_with(Punctuated::<Path, Token![,]>::parse_terminated).unwrap_or_default()
     })
 }
 
@@ -93,14 +88,11 @@ impl SolAttrs {
         for attr in attrs {
             if !attr.path().is_ident("sol") {
                 others.push(attr.clone());
-                continue
+                continue;
             }
 
             attr.meta.require_list()?.parse_nested_meta(|meta| {
-                let path = meta
-                    .path
-                    .get_ident()
-                    .ok_or_else(|| meta.error("expected ident"))?;
+                let path = meta.path.get_ident().ok_or_else(|| meta.error("expected ident"))?;
                 let s = path.to_string();
 
                 macro_rules! match_ {
@@ -136,10 +128,10 @@ impl SolAttrs {
                     let v = lit.value();
                     let v = v.strip_prefix("0x").unwrap_or(&v);
                     if v.contains(|c: char| !c.is_ascii_hexdigit()) {
-                        return Err(Error::new(lit.span(), "expected hex literal"))
+                        return Err(Error::new(lit.span(), "expected hex literal"));
                     }
                     if v.len() % 2 != 0 {
-                        return Err(Error::new(lit.span(), "expected even number of hex digits"))
+                        return Err(Error::new(lit.span(), "expected even number of hex digits"));
                     }
                     Ok(LitStr::new(v, lit.span()))
                 };
@@ -262,10 +254,8 @@ mod tests {
         attrs_s: &'static [&'static str],
         expected: std::result::Result<SolAttrs, &'static str>,
     ) {
-        let attrs: Vec<Attribute> = attrs_s
-            .iter()
-            .flat_map(|s| syn::parse_str::<OuterAttribute>(s).unwrap().0)
-            .collect();
+        let attrs: Vec<Attribute> =
+            attrs_s.iter().flat_map(|s| syn::parse_str::<OuterAttribute>(s).unwrap().0).collect();
         match (SolAttrs::parse(&attrs), expected) {
             (Ok((actual, _)), Ok(expected)) => assert_eq!(actual, expected, "{attrs_s:?}"),
             (Err(actual), Err(expected)) => {

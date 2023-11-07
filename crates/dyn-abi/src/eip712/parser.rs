@@ -38,13 +38,9 @@ impl<'a> TryFrom<&'a str> for PropDef<'a> {
 impl<'a> PropDef<'a> {
     /// Parse a string into property definition.
     pub fn parse(input: &'a str) -> Result<Self, Error> {
-        let (ty, name) = input
-            .rsplit_once(' ')
-            .ok_or_else(|| Error::invalid_property_def(input))?;
-        Ok(PropDef {
-            ty: ty.trim().try_into()?,
-            name: name.trim(),
-        })
+        let (ty, name) =
+            input.rsplit_once(' ').ok_or_else(|| Error::invalid_property_def(input))?;
+        Ok(PropDef { ty: ty.trim().try_into()?, name: name.trim() })
     }
 }
 
@@ -89,7 +85,7 @@ impl<'a> ComponentType<'a> {
                     if depth == 0 {
                         props.push(props_str[last..i].try_into()?);
                         last = i + 1;
-                        break
+                        break;
                     }
                 }
                 ',' => {
@@ -102,20 +98,12 @@ impl<'a> ComponentType<'a> {
             }
         }
 
-        Ok(Self {
-            span: &input[..last + name.len() + 1],
-            type_name: name,
-            props,
-        })
+        Ok(Self { span: &input[..last + name.len() + 1], type_name: name, props })
     }
 
     /// Convert to an owned TypeDef.
     pub fn to_owned(&self) -> TypeDef {
-        TypeDef::new(
-            self.type_name,
-            self.props.iter().map(|p| p.to_owned()).collect(),
-        )
-        .unwrap()
+        TypeDef::new(self.type_name, self.props.iter().map(|p| p.to_owned()).collect()).unwrap()
     }
 }
 
@@ -178,9 +166,7 @@ mod tests {
             EncodeType::parse(EXAMPLE),
             Ok(EncodeType {
                 types: vec![
-                    "Transaction(Person from,Person to,Asset tx)"
-                        .try_into()
-                        .unwrap(),
+                    "Transaction(Person from,Person to,Asset tx)".try_into().unwrap(),
                     "Asset(address token,uint256 amount)".try_into().unwrap(),
                     "Person(address wallet,string name)".try_into().unwrap(),
                 ]

@@ -21,9 +21,7 @@ pub struct ExprArray {
 
 impl fmt::Debug for ExprArray {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ExprArray")
-            .field("elems", DebugPunctuated::new(&self.elems))
-            .finish()
+        f.debug_struct("ExprArray").field("elems", DebugPunctuated::new(&self.elems)).finish()
     }
 }
 
@@ -76,23 +74,10 @@ impl ParseNested for ExprIndex {
         } else {
             Some(content.parse()?)
         };
-        let colon_token = if content.is_empty() {
-            None
-        } else {
-            Some(content.parse()?)
-        };
-        let end = if content.is_empty() || colon_token.is_none() {
-            None
-        } else {
-            Some(content.parse()?)
-        };
-        Ok(Self {
-            expr,
-            bracket_token,
-            start,
-            colon_token,
-            end,
-        })
+        let colon_token = if content.is_empty() { None } else { Some(content.parse()?) };
+        let end =
+            if content.is_empty() || colon_token.is_none() { None } else { Some(content.parse()?) };
+        Ok(Self { expr, bracket_token, start, colon_token, end })
     }
 }
 

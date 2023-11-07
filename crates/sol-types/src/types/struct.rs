@@ -52,7 +52,7 @@ pub trait SolStruct: SolType<RustType = Self> {
             mut components: Vec<Cow<'static, str>>,
         ) -> Cow<'static, str> {
             if components.is_empty() {
-                return root_type
+                return root_type;
             }
 
             components.sort_unstable();

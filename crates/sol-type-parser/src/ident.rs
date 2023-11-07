@@ -33,17 +33,17 @@ pub const fn is_valid_identifier(s: &str) -> bool {
     // Note: valid idents can only contain ASCII characters, so we can
     // use the byte representation here.
     let [first, rest @ ..] = s.as_bytes() else {
-        return false
+        return false;
     };
 
     if !is_id_start(*first as char) {
-        return false
+        return false;
     }
 
     let mut i = 0;
     while i < rest.len() {
         if !is_id_continue(rest[i] as char) {
-            return false
+            return false;
         }
         i += 1;
     }
@@ -59,7 +59,7 @@ pub fn identifier<'a>(input: &mut &'a str) -> PResult<&'a str> {
     let mut chars = input.as_bytes().iter().map(|b| *b as char);
 
     let Some(true) = chars.next().map(is_id_start) else {
-        return Err(ErrMode::from_error_kind(input, ErrorKind::Fail))
+        return Err(ErrMode::from_error_kind(input, ErrorKind::Fail));
     };
 
     // 1 for the first character, we know it's ASCII
@@ -99,16 +99,9 @@ mod tests {
 
     #[track_caller]
     fn ident_test(mut input: &str, expected: Result<&str, ()>, output: &str) {
-        assert_eq!(
-            identifier(&mut input).map_err(drop),
-            expected,
-            "result mismatch"
-        );
+        assert_eq!(identifier(&mut input).map_err(drop), expected, "result mismatch");
         if let Ok(expected) = expected {
-            assert!(
-                is_valid_identifier(expected),
-                "expected is not a valid ident"
-            );
+            assert!(is_valid_identifier(expected), "expected is not a valid ident");
         }
         assert_eq!(input, output, "output mismatch");
     }
