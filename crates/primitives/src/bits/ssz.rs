@@ -28,12 +28,10 @@ impl<const N: usize> Decode for FixedBytes<N> {
             return Err(DecodeError::InvalidByteLength { len: bytes.len(), expected: N });
         }
 
-        // Try to convert the slice into an array of size N
         let fixed_array: [u8; N] = bytes
             .try_into()
             .map_err(|_| DecodeError::InvalidByteLength { len: bytes.len(), expected: N })?;
 
-        // Assuming FixedBytes<N> implements From<[u8; N]>
         Ok(FixedBytes::<N>::from(fixed_array))
     }
 }
