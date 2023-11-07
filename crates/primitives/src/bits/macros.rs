@@ -684,6 +684,94 @@ macro_rules! bytes {
     }};
 }
 
+/// Implements the `ssz::Decode` and `ssz::Encode` traits for a given type
+/// with a specified fixed length.
+///
+/// This macro is designed to be used with types that have a known, fixed size
+/// when encoded or decoded using the Simple Serialize (SSZ) encoding scheme.
+/// It generates implementations of the `ssz::Decode` and `ssz::Encode` traits
+/// which enforce that the SSZ-encoded byte representation of the type has a
+/// length exactly equal to the specified `fixed_len`.
+///
+/// The `ssz::Decode::from_ssz_bytes` function provided by this implementation
+/// will produce an error if the length of the byte slice provided does not
+/// match `fixed_len`. Conversely, the `ssz::Encode::ssz_append` function will
+/// append exactly `fixed_len` bytes to the provided buffer.
+///
+/// # Examples
+///
+/// ```
+/// // Assuming a type `MyType` exists and has a fixed SSZ length of 32 bytes:
+/// impl_ssz_fixed_len!(MyType, 32);
+///
+/// // Now `MyType` can be encoded and decoded using SSZ with a fixed length:
+/// let my_value = MyType::new();
+/// let encoded = ssz::Encode::as_ssz_bytes(&my_value);
+/// let decoded = ssz::Decode::from_ssz_bytes(&encoded).unwrap();
+/// assert_eq!(my_value, decoded);
+/// ```
+#[macro_export]
+#[cfg(feature = "ssz")]
+macro_rules! impl_ssz_fixed_len {
+    ($type:ty, $fixed_len:expr) => {
+        impl ssz::Decode for $type {
+            fn is_ssz_fixed_len() -> bool {
+                true
+            }
+
+            fn ssz_fixed_len() -> usize {
+                $fixed_len
+            }
+
+            fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, ssz::DecodeError> {
+                let len = bytes.len();
+                let expected: usize = <$type as Decode>::ssz_fixed_len();
+
+                if len != expected {
+                    Err(ssz::DecodeError::InvalidByteLength { len, expected })
+                } else {
+                    Ok(<$type>::from_slice(bytes))
+                }
+            }
+        }
+
+        impl ssz::Encode for $type {
+            fn is_ssz_fixed_len() -> bool {
+                true
+            }
+
+            fn ssz_fixed_len() -> usize {
+                $fixed_len
+            }
+
+            fn ssz_bytes_len(&self) -> usize {
+                <$type as Encode>::ssz_fixed_len()
+            }
+
+            fn ssz_append(&self, buf: &mut alloc::vec::Vec<u8>) {
+                buf.extend_from_slice(self.as_slice());
+            }
+        }
+    };
+}
+
+#[cfg(test)]
+#[macro_export]
+#[cfg(feature = "ssz")]
+macro_rules! test_encode_decode_ssz {
+    ($test_name:ident, $type:ty, [$( $value:expr ),*]) => {
+        #[test]
+        fn $test_name() {
+            $(
+                let expected: $type = $value;
+                let encoded = ssz::Encode::as_ssz_bytes(&expected);
+                let actual: $type = ssz::Decode::from_ssz_bytes(&encoded).unwrap();
+                assert_eq!(expected, actual, "Failed for value: {:?}", $value);
+            )*
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{hex, Address, Bytes, FixedBytes};

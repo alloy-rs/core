@@ -1,14 +1,14 @@
-use crate::FixedBytes;
+use crate::{Address, Bloom, FixedBytes};
 use alloc::vec::Vec;
 use ssz::{Decode, DecodeError, Encode};
 
 impl<const N: usize> Encode for FixedBytes<N> {
     fn is_ssz_fixed_len() -> bool {
-        false
+        true
     }
 
     fn ssz_bytes_len(&self) -> usize {
-        self.0.len()
+        N
     }
 
     fn ssz_append(&self, buf: &mut Vec<u8>) {
@@ -21,7 +21,11 @@ impl<const N: usize> Encode for FixedBytes<N> {
 
 impl<const N: usize> Decode for FixedBytes<N> {
     fn is_ssz_fixed_len() -> bool {
-        false
+        true
+    }
+
+    fn ssz_fixed_len() -> usize {
+        N
     }
 
     fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, DecodeError> {
@@ -29,22 +33,61 @@ impl<const N: usize> Decode for FixedBytes<N> {
             return Err(DecodeError::InvalidByteLength { len: bytes.len(), expected: N });
         }
 
-        let fixed_array: [u8; N] = bytes
-            .try_into()
-            .map_err(|_| DecodeError::InvalidByteLength { len: bytes.len(), expected: N })?;
+        let mut fixed_array = [0u8; N];
+        fixed_array.copy_from_slice(bytes);
 
-        Ok(FixedBytes::<N>::from(fixed_array))
+        Ok(FixedBytes::<N>(fixed_array))
     }
 }
+
+impl_ssz_fixed_len!(Address, 20);
+impl_ssz_fixed_len!(Bloom, 256);
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{Address, Bloom, FixedBytes};
 
-    #[test]
-    fn test_encode_decode() {
-        const EXPECTED: FixedBytes<4> = fixed_bytes!("01234567");
-        let encoded = EXPECTED.as_ssz_bytes();
-        let actual = FixedBytes::<4>::from_ssz_bytes(&encoded).unwrap();
-        assert_eq!(EXPECTED, actual);
-    }
+    test_encode_decode_ssz!(
+        test_encode_decode_fixed_bytes32,
+        FixedBytes<32>,
+        [fixed_bytes!("a1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2")]
+    );
+
+    test_encode_decode_ssz!(
+        test_encode_decode_fixed_bytes4,
+        FixedBytes<4>,
+        [fixed_bytes!("01234567")]
+    );
+
+    test_encode_decode_ssz!(
+        test_encode_decode_bloom,
+        Bloom,
+        [bloom!(
+            "00000000000000000000000000000000
+             00000000100000000000000000000000
+             00000000000000000000000000000000
+             00000000000000000000000000000000
+             00000000000000000000000000000000
+             00000000000000000000000000000000
+             00000002020000000000000000000000
+             00000000000000000000000800000000
+             10000000000000000000000000000000
+             00000000000000000000001000000000
+             00000000000000000000000000000000
+             00000000000000000000000000000000
+             00000000000000000000000000000000
+             00000000000000000000000000000000
+             00000000000000000000000000000000
+             00000000000000000000000000000000"
+        )]
+    );
+    test_encode_decode_ssz!(
+        test_encode_decode_address,
+        Address,
+        [
+            address!("2222222222222222222222222222222222222222"),
+            address!("0000000000000000000000000000000000012321"),
+            address!("0000000000000000000000000000000000000000")
+        ]
+    );
 }
