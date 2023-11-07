@@ -730,7 +730,7 @@ macro_rules! impl_ssz_fixed_len {
                 <$type as ssz::Encode>::ssz_fixed_len()
             }
 
-            fn ssz_append(&self, buf: &mut alloc::vec::Vec<u8>) {
+            fn ssz_append(&self, buf: &mut $crate::private::std::vec::Vec<u8>) {
                 buf.extend_from_slice(self.as_slice());
             }
         }

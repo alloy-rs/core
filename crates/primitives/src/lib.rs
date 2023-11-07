@@ -107,7 +107,7 @@ pub mod private {
     pub use alloy_rlp;
 
     #[cfg(feature = "ssz")]
-    pub use ssz;
+    pub use {ssz, std};
 
     #[cfg(feature = "serde")]
     pub use serde;
