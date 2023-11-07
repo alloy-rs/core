@@ -1,4 +1,4 @@
-use crate::{Address, Bloom, FixedBytes};
+use crate::FixedBytes;
 use alloc::vec::Vec;
 use ssz::{Decode, DecodeError, Encode};
 
@@ -40,12 +40,23 @@ impl<const N: usize> Decode for FixedBytes<N> {
     }
 }
 
-impl_ssz_fixed_len!(Address, 20);
-impl_ssz_fixed_len!(Bloom, 256);
-
 #[cfg(test)]
 mod tests {
     use crate::{Address, Bloom, FixedBytes};
+
+    macro_rules! test_encode_decode_ssz {
+    ($test_name:ident, $type:ty, [$( $value:expr ),*]) => {
+        #[test]
+        fn $test_name() {
+            $(
+                let expected: $type = $value;
+                let encoded = ssz::Encode::as_ssz_bytes(&expected);
+                let actual: $type = ssz::Decode::from_ssz_bytes(&encoded).unwrap();
+                assert_eq!(expected, actual, "Failed for value: {:?}", $value);
+            )*
+        }
+    };
+}
 
     test_encode_decode_ssz!(
         test_encode_decode_fixed_bytes32,

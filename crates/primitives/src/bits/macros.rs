@@ -177,6 +177,7 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
         $crate::impl_arbitrary!($name, $n);
+        $crate::impl_ssz_fixed_len!($name, $n);
         $crate::impl_rand!($name);
 
         impl $name {
@@ -608,6 +609,12 @@ macro_rules! impl_arbitrary {
     ($t:ty, $n:literal) => {};
 }
 
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "ssz"))]
+macro_rules! impl_ssz_fixed_len {
+    ($t:ty, $n:literal) => {};
+}
 macro_rules! fixed_bytes_macros {
     ($d:tt $($(#[$attr:meta])* macro $name:ident($ty:ident $($rest:tt)*);)*) => {$(
         /// Converts a sequence of string literals containing hex-encoded data
@@ -684,19 +691,7 @@ macro_rules! bytes {
     }};
 }
 
-/// Implements the `ssz::Decode` and `ssz::Encode` traits for a given type
-/// with a specified fixed length.
-///
-/// This macro is designed to be used with types that have a known, fixed size
-/// when encoded or decoded using the Simple Serialize (SSZ) encoding scheme.
-/// It generates implementations of the `ssz::Decode` and `ssz::Encode` traits
-/// which enforce that the SSZ-encoded byte representation of the type has a
-/// length exactly equal to the specified `fixed_len`.
-///
-/// The `ssz::Decode::from_ssz_bytes` function provided by this implementation
-/// will produce an error if the length of the byte slice provided does not
-/// match `fixed_len`. Conversely, the `ssz::Encode::ssz_append` function will
-/// append exactly `fixed_len` bytes to the provided buffer.
+#[doc(hidden)]
 #[macro_export]
 #[cfg(feature = "ssz")]
 macro_rules! impl_ssz_fixed_len {
@@ -712,7 +707,7 @@ macro_rules! impl_ssz_fixed_len {
 
             fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, ssz::DecodeError> {
                 let len = bytes.len();
-                let expected: usize = <$type as Decode>::ssz_fixed_len();
+                let expected: usize = <$type as ssz::Decode>::ssz_fixed_len();
 
                 if len != expected {
                     Err(ssz::DecodeError::InvalidByteLength { len, expected })
@@ -732,7 +727,7 @@ macro_rules! impl_ssz_fixed_len {
             }
 
             fn ssz_bytes_len(&self) -> usize {
-                <$type as Encode>::ssz_fixed_len()
+                <$type as ssz::Encode>::ssz_fixed_len()
             }
 
             fn ssz_append(&self, buf: &mut alloc::vec::Vec<u8>) {

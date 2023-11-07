@@ -31,9 +31,22 @@ impl Decode for Bytes {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_encode_decode_ssz;
 
     use super::*;
+
+    macro_rules! test_encode_decode_ssz {
+    ($test_name:ident, $type:ty, [$( $value:expr ),*]) => {
+        #[test]
+        fn $test_name() {
+            $(
+                let expected: $type = $value;
+                let encoded = ssz::Encode::as_ssz_bytes(&expected);
+                let actual: $type = ssz::Decode::from_ssz_bytes(&encoded).unwrap();
+                assert_eq!(expected, actual, "Failed for value: {:?}", $value);
+            )*
+        }
+    };
+}
 
     test_encode_decode_ssz!(
         test_encode_decode_bytes,
