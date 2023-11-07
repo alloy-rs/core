@@ -697,19 +697,6 @@ macro_rules! bytes {
 /// will produce an error if the length of the byte slice provided does not
 /// match `fixed_len`. Conversely, the `ssz::Encode::ssz_append` function will
 /// append exactly `fixed_len` bytes to the provided buffer.
-///
-/// # Examples
-///
-/// ```
-/// // Assuming a type `MyType` exists and has a fixed SSZ length of 32 bytes:
-/// impl_ssz_fixed_len!(MyType, 32);
-///
-/// // Now `MyType` can be encoded and decoded using SSZ with a fixed length:
-/// let my_value = MyType::new();
-/// let encoded = ssz::Encode::as_ssz_bytes(&my_value);
-/// let decoded = ssz::Decode::from_ssz_bytes(&encoded).unwrap();
-/// assert_eq!(my_value, decoded);
-/// ```
 #[macro_export]
 #[cfg(feature = "ssz")]
 macro_rules! impl_ssz_fixed_len {
