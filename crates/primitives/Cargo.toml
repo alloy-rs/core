@@ -35,6 +35,9 @@ alloy-rlp = { workspace = true, optional = true }
 # serde
 serde = { workspace = true, optional = true, features = ["derive"] }
 
+# ssz
+ethereum_ssz = { workspace = true, optional = true }
+
 # getrandom
 getrandom = { workspace = true, optional = true }
 
@@ -68,14 +71,16 @@ getrandom = ["dep:getrandom"]
 rand = ["dep:rand", "getrandom", "ruint/rand"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
+ssz = ["dep:ethereum_ssz", "std"]
 arbitrary = [
     "std",
-    "ruint/arbitrary",
-    "ruint/proptest",
     "dep:arbitrary",
     "dep:derive_arbitrary",
     "dep:proptest",
     "dep:proptest-derive",
+    "ruint/arbitrary",
+    "ruint/proptest",
+    "ethereum_ssz?/arbitrary",
 ]
 
 # `const-hex` compatibility feature for `hex`.

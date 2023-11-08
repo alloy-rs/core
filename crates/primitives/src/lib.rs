@@ -89,6 +89,7 @@ pub type B160 = FixedBytes<20>;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
+    pub use alloc::vec::Vec;
     pub use core::{
         self,
         borrow::{Borrow, BorrowMut},
@@ -105,6 +106,9 @@ pub mod private {
 
     #[cfg(feature = "rlp")]
     pub use alloy_rlp;
+
+    #[cfg(feature = "ssz")]
+    pub use ssz;
 
     #[cfg(feature = "serde")]
     pub use serde;
