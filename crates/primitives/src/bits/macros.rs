@@ -611,10 +611,63 @@ macro_rules! impl_arbitrary {
 
 #[doc(hidden)]
 #[macro_export]
+#[cfg(feature = "ssz")]
+macro_rules! impl_ssz_fixed_len {
+    ($type:ty, $fixed_len:expr) => {
+        impl $crate::private::ssz::Encode for $type {
+            #[inline]
+            fn is_ssz_fixed_len() -> bool {
+                true
+            }
+
+            #[inline]
+            fn ssz_fixed_len() -> usize {
+                $fixed_len
+            }
+
+            #[inline]
+            fn ssz_bytes_len(&self) -> usize {
+                <$type as $crate::private::ssz::Encode>::ssz_fixed_len()
+            }
+
+            #[inline]
+            fn ssz_append(&self, buf: &mut $crate::private::Vec<u8>) {
+                buf.extend_from_slice(self.as_slice());
+            }
+        }
+
+        impl $crate::private::ssz::Decode for $type {
+            #[inline]
+            fn is_ssz_fixed_len() -> bool {
+                true
+            }
+
+            #[inline]
+            fn ssz_fixed_len() -> usize {
+                $fixed_len
+            }
+
+            fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, $crate::private::ssz::DecodeError> {
+                let len = bytes.len();
+                let expected: usize = <$type as $crate::private::ssz::Decode>::ssz_fixed_len();
+
+                if len != expected {
+                    Err($crate::private::ssz::DecodeError::InvalidByteLength { len, expected })
+                } else {
+                    Ok(<$type>::from_slice(bytes))
+                }
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
 #[cfg(not(feature = "ssz"))]
 macro_rules! impl_ssz_fixed_len {
     ($t:ty, $n:literal) => {};
 }
+
 macro_rules! fixed_bytes_macros {
     ($d:tt $($(#[$attr:meta])* macro $name:ident($ty:ident $($rest:tt)*);)*) => {$(
         /// Converts a sequence of string literals containing hex-encoded data
@@ -689,52 +742,6 @@ macro_rules! bytes {
         const STATIC_BYTES: &'static [u8] = &$crate::hex!($($s)+);
         $crate::Bytes::from_static(STATIC_BYTES)
     }};
-}
-
-#[doc(hidden)]
-#[macro_export]
-#[cfg(feature = "ssz")]
-macro_rules! impl_ssz_fixed_len {
-    ($type:ty, $fixed_len:expr) => {
-        impl $crate::private::ssz::Decode for $type {
-            fn is_ssz_fixed_len() -> bool {
-                true
-            }
-
-            fn ssz_fixed_len() -> usize {
-                $fixed_len
-            }
-
-            fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, $crate::private::ssz::DecodeError> {
-                let len = bytes.len();
-                let expected: usize = <$type as $crate::private::ssz::Decode>::ssz_fixed_len();
-
-                if len != expected {
-                    Err($crate::private::ssz::DecodeError::InvalidByteLength { len, expected })
-                } else {
-                    Ok(<$type>::from_slice(bytes))
-                }
-            }
-        }
-
-        impl $crate::private::ssz::Encode for $type {
-            fn is_ssz_fixed_len() -> bool {
-                true
-            }
-
-            fn ssz_fixed_len() -> usize {
-                $fixed_len
-            }
-
-            fn ssz_bytes_len(&self) -> usize {
-                <$type as $crate::private::ssz::Encode>::ssz_fixed_len()
-            }
-
-            fn ssz_append(&self, buf: &mut $crate::private::Vec<u8>) {
-                buf.extend_from_slice(self.as_slice());
-            }
-        }
-    };
 }
 
 #[cfg(test)]

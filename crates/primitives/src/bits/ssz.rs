@@ -3,17 +3,22 @@ use alloc::vec::Vec;
 use ssz::{Decode, DecodeError, Encode};
 
 impl<const N: usize> Encode for FixedBytes<N> {
+    #[inline]
     fn is_ssz_fixed_len() -> bool {
         true
     }
 
+    #[inline]
     fn ssz_bytes_len(&self) -> usize {
         N
     }
 
+    #[inline]
     fn ssz_append(&self, buf: &mut Vec<u8>) {
         buf.extend_from_slice(&self.0);
     }
+
+    #[inline]
     fn as_ssz_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
     }
@@ -42,21 +47,22 @@ impl<const N: usize> Decode for FixedBytes<N> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Address, Bloom, FixedBytes};
+    use super::*;
+    use crate::{Address, Bloom};
 
     macro_rules! test_encode_decode_ssz {
-    ($test_name:ident, $type:ty, [$( $value:expr ),*]) => {
-        #[test]
-        fn $test_name() {
-            $(
-                let expected: $type = $value;
-                let encoded = ssz::Encode::as_ssz_bytes(&expected);
-                let actual: $type = ssz::Decode::from_ssz_bytes(&encoded).unwrap();
-                assert_eq!(expected, actual, "Failed for value: {:?}", $value);
-            )*
-        }
-    };
-}
+        ($test_name:ident, $type:ty, [$( $value:expr ),*]) => {
+            #[test]
+            fn $test_name() {
+                $(
+                    let expected: $type = $value;
+                    let encoded = ssz::Encode::as_ssz_bytes(&expected);
+                    let actual: $type = ssz::Decode::from_ssz_bytes(&encoded).unwrap();
+                    assert_eq!(expected, actual, "Failed for value: {:?}", $value);
+                )*
+            }
+        };
+    }
 
     test_encode_decode_ssz!(
         test_encode_decode_fixed_bytes32,

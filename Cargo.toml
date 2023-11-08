@@ -31,7 +31,7 @@ serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 # ssz
-ethereum_ssz = { version = "0.5.3" }
+ethereum_ssz = { version = "0.5.3", default-features = false }
 
 # macros
 proc-macro2 = "1.0"

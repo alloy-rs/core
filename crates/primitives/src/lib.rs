@@ -17,7 +17,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 #[macro_use]
-pub extern crate alloc;
+extern crate alloc;
 
 // Used in Serde tests.
 #[cfg(test)]
@@ -89,6 +89,7 @@ pub type B160 = FixedBytes<20>;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
+    pub use alloc::vec::Vec;
     pub use core::{
         self,
         borrow::{Borrow, BorrowMut},
@@ -107,7 +108,7 @@ pub mod private {
     pub use alloy_rlp;
 
     #[cfg(feature = "ssz")]
-    pub use {alloc::vec::Vec, ssz};
+    pub use ssz;
 
     #[cfg(feature = "serde")]
     pub use serde;
