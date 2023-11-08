@@ -17,7 +17,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 #[macro_use]
-extern crate alloc;
+pub extern crate alloc;
 
 // Used in Serde tests.
 #[cfg(test)]
@@ -107,7 +107,7 @@ pub mod private {
     pub use alloy_rlp;
 
     #[cfg(feature = "ssz")]
-    pub use {ssz, std};
+    pub use {alloc::vec::Vec, ssz};
 
     #[cfg(feature = "serde")]
     pub use serde;

@@ -696,7 +696,7 @@ macro_rules! bytes {
 #[cfg(feature = "ssz")]
 macro_rules! impl_ssz_fixed_len {
     ($type:ty, $fixed_len:expr) => {
-        impl ssz::Decode for $type {
+        impl $crate::private::ssz::Decode for $type {
             fn is_ssz_fixed_len() -> bool {
                 true
             }
@@ -705,19 +705,19 @@ macro_rules! impl_ssz_fixed_len {
                 $fixed_len
             }
 
-            fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, ssz::DecodeError> {
+            fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, $crate::private::ssz::DecodeError> {
                 let len = bytes.len();
-                let expected: usize = <$type as ssz::Decode>::ssz_fixed_len();
+                let expected: usize = <$type as $crate::private::ssz::Decode>::ssz_fixed_len();
 
                 if len != expected {
-                    Err(ssz::DecodeError::InvalidByteLength { len, expected })
+                    Err($crate::private::ssz::DecodeError::InvalidByteLength { len, expected })
                 } else {
                     Ok(<$type>::from_slice(bytes))
                 }
             }
         }
 
-        impl ssz::Encode for $type {
+        impl $crate::private::ssz::Encode for $type {
             fn is_ssz_fixed_len() -> bool {
                 true
             }
@@ -727,29 +727,12 @@ macro_rules! impl_ssz_fixed_len {
             }
 
             fn ssz_bytes_len(&self) -> usize {
-                <$type as ssz::Encode>::ssz_fixed_len()
+                <$type as $crate::private::ssz::Encode>::ssz_fixed_len()
             }
 
-            fn ssz_append(&self, buf: &mut $crate::private::std::vec::Vec<u8>) {
+            fn ssz_append(&self, buf: &mut $crate::private::Vec<u8>) {
                 buf.extend_from_slice(self.as_slice());
             }
-        }
-    };
-}
-
-#[cfg(test)]
-#[macro_export]
-#[cfg(feature = "ssz")]
-macro_rules! test_encode_decode_ssz {
-    ($test_name:ident, $type:ty, [$( $value:expr ),*]) => {
-        #[test]
-        fn $test_name() {
-            $(
-                let expected: $type = $value;
-                let encoded = ssz::Encode::as_ssz_bytes(&expected);
-                let actual: $type = ssz::Decode::from_ssz_bytes(&encoded).unwrap();
-                assert_eq!(expected, actual, "Failed for value: {:?}", $value);
-            )*
         }
     };
 }

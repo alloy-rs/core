@@ -72,7 +72,7 @@ getrandom = ["dep:getrandom"]
 rand = ["dep:rand", "getrandom", "ruint/rand"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
-ssz = ["dep:ethereum_ssz"]
+ssz = ["std", "dep:ethereum_ssz"]
 arbitrary = [
     "std",
     "ruint/arbitrary",
