@@ -328,7 +328,7 @@ enum AbiFunctionKw {
 
 impl AbiFunctionKw {
     #[inline]
-    fn as_str(&self) -> &'static str {
+    const fn as_str(&self) -> &'static str {
         match self {
             Self::Function => "function",
             Self::Fallback => "fallback",
@@ -345,7 +345,7 @@ enum Visibility {
 
 impl Visibility {
     #[inline]
-    fn as_str(&self) -> &'static str {
+    const fn as_str(&self) -> &'static str {
         match self {
             Self::External => "external",
         }
