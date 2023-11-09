@@ -13,5 +13,4 @@ interface Errors {
     error LiqEng_SaviourNotAuthorized();
     error LiqEng_SaviourNotOk();
     error MyError();
-
 }

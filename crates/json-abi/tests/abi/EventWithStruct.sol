@@ -5,5 +5,4 @@ interface EventWithStruct {
     }
 
     event MyEvent(MyStruct, uint256 c);
-
 }

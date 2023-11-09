@@ -50,10 +50,7 @@ impl ToSol for JsonAbi {
     #[inline]
     fn to_sol(&self, out: &mut SolPrinter<'_>) {
         macro_rules! fmt {
-            ($e:expr) => {
-                fmt!($e, true)
-            };
-            ($iter:expr, $sep:expr) => {
+            ($iter:expr) => {
                 let mut any = false;
                 for x in $iter {
                     any = true;
@@ -61,7 +58,7 @@ impl ToSol for JsonAbi {
                     x.to_sol(out);
                     out.push('\n');
                 }
-                if $sep && any {
+                if any {
                     out.push('\n');
                 }
             };
@@ -74,11 +71,12 @@ impl ToSol for JsonAbi {
         fmt!(self.events());
         fmt!(self.fallback);
         fmt!(self.receive);
-        fmt!(self.functions(), false);
+        fmt!(self.functions());
+        out.pop(); // trailing newline
     }
 }
 
-/// Recursively collects internal structs, enums, and udvts from an ABI's items.
+/// Recursively collects internal structs, enums, and UDVTs from an ABI's items.
 struct InternalTypes<'a>(BTreeSet<It<'a>>);
 
 impl<'a> InternalTypes<'a> {
