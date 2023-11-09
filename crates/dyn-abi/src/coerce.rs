@@ -103,6 +103,24 @@ impl DynSolType {
             as_tuple!(Self tys) => tuple(tys).parse_next(input).map(DynSolValue::Tuple),
         })
     }
+
+    fn array_value_parser<'i: 't, 't>(
+        &'t self,
+    ) -> impl Parser<&'i str, DynSolValue, ContextError> + 't {
+        move |input: &mut &str| match self {
+            Self::String => string_in_array(input).map(DynSolValue::String),
+            _ => self.value_parser().parse_next(input),
+        }
+    }
+
+    fn tuple_value_parser<'i: 't, 't>(
+        &'t self,
+    ) -> impl Parser<&'i str, DynSolValue, ContextError> + 't {
+        move |input: &mut &str| match self {
+            Self::String => string_in_tuple(input).map(DynSolValue::String),
+            _ => self.value_parser().parse_next(input),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -344,31 +362,43 @@ fn bytes(input: &mut &str) -> PResult<Vec<u8>> {
 
 #[inline]
 fn string(input: &mut &str) -> PResult<String> {
-    trace("string", string_inner).parse_next(input).map(String::from)
+    trace("string", string_inner(&[])).parse_next(input).map(String::from)
 }
 
 #[inline]
-fn string_inner<'i>(input: &mut &'i str) -> PResult<&'i str> {
-    let Some(delim) = input.chars().next() else {
-        return Ok("");
-    };
-    let has_delim = matches!(delim, '"' | '\'');
-    if has_delim {
-        *input = &input[1..];
-    }
+fn string_in_array(input: &mut &str) -> PResult<String> {
+    trace("string", string_inner(&[',', ']'])).parse_next(input).map(String::from)
+}
 
-    // TODO: escapes?
-    let min = if has_delim { 0 } else { 1 };
-    let until_ch = if has_delim { core::slice::from_ref(&delim) } else { &[',', ')', ']'] };
-    let mut s = take_while(min.., |ch: char| !until_ch.contains(&ch)).parse_next(input)?;
+#[inline]
+fn string_in_tuple(input: &mut &str) -> PResult<String> {
+    trace("string", string_inner(&[',', ')'])).parse_next(input).map(String::from)
+}
 
-    if has_delim {
-        cut_err(char_parser(delim)).context(StrContext::Label("string")).parse_next(input)?;
-    } else {
-        s = s.trim_end();
-    }
+#[inline]
+fn string_inner<'i>(until_ch: &'i [char]) -> impl Parser<&'i str, &'i str, ContextError> {
+    trace("string_inner", move |input: &mut &'i str| {
+        let Some(delim) = input.chars().next() else {
+            return Ok("");
+        };
+        let has_delim = matches!(delim, '"' | '\'');
+        if has_delim {
+            *input = &input[1..];
+        }
 
-    Ok(s)
+        // TODO: escapes?
+        let min = if has_delim { 0 } else { 1 };
+        let until_ch = if has_delim { core::slice::from_ref(&delim) } else { until_ch };
+        let mut s = take_while(min.., |ch: char| !until_ch.contains(&ch)).parse_next(input)?;
+
+        if has_delim {
+            cut_err(char_parser(delim)).context(StrContext::Label("string")).parse_next(input)?;
+        } else {
+            s = s.trim_end();
+        }
+
+        Ok(s)
+    })
 }
 
 #[inline]
@@ -379,7 +409,7 @@ fn array<'i: 't, 't>(
     let name = format!("{ty}[]");
     #[cfg(not(feature = "debug"))]
     let name = "array";
-    trace(name, array_parser(ty.value_parser()))
+    trace(name, array_parser(ty.array_value_parser()))
 }
 
 #[inline]
@@ -422,7 +452,7 @@ fn tuple<'i: 't, 't>(
                 char_parser(',').parse_next(input)?;
             }
             space0(input)?;
-            values.push(ty.value_parser().parse_next(input)?);
+            values.push(ty.tuple_value_parser().parse_next(input)?);
         }
 
         space0(input)?;
@@ -832,6 +862,14 @@ mod tests {
             DynSolType::String.coerce_str("'\"hello world'").unwrap(),
             DynSolValue::String("\"hello world".into())
         );
+        assert_eq!(
+            DynSolType::String.coerce_str("a, b").unwrap(),
+            DynSolValue::String("a, b".into())
+        );
+        assert_eq!(
+            DynSolType::String.coerce_str("hello (world)").unwrap(),
+            DynSolValue::String("hello (world)".into())
+        );
 
         assert!(DynSolType::String.coerce_str("\"hello world").is_err());
         assert!(DynSolType::String.coerce_str("\"hello world'").is_err());
@@ -857,6 +895,8 @@ mod tests {
         assert_eq!(arr.coerce_str("[foo bar,]").unwrap(), mk_arr(&["foo bar"]));
         assert_eq!(arr.coerce_str("[  foo bar,  ]").unwrap(), mk_arr(&["foo bar"]));
         assert_eq!(arr.coerce_str("[ foo , bar ]").unwrap(), mk_arr(&["foo", "bar"]));
+
+        assert_eq!(arr.coerce_str("[\"foo\",\"bar\"]").unwrap(), mk_arr(&["foo", "bar"]));
 
         assert_eq!(arr.coerce_str("['']").unwrap(), mk_arr(&[""]));
         assert_eq!(arr.coerce_str("[\"\"]").unwrap(), mk_arr(&[""]));
