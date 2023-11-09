@@ -294,18 +294,14 @@ impl fmt::Display for EventParam {
 impl<'de> Deserialize<'de> for EventParam {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         BorrowedParam::deserialize(deserializer).and_then(|inner| {
-            if let Some(indexed) = inner.indexed {
-                inner.validate_fields()?;
-                Ok(Self {
-                    name: inner.name.to_owned(),
-                    ty: inner.ty.to_owned(),
-                    indexed,
-                    internal_type: inner.internal_type.map(Into::into),
-                    components: inner.components.into_owned(),
-                })
-            } else {
-                Err(serde::de::Error::custom("indexed is required in event params"))
-            }
+            inner.validate_fields()?;
+            Ok(Self {
+                name: inner.name.to_owned(),
+                ty: inner.ty.to_owned(),
+                indexed: inner.indexed.unwrap_or(false),
+                internal_type: inner.internal_type.map(Into::into),
+                components: inner.components.into_owned(),
+            })
         })
     }
 }

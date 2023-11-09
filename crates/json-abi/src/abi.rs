@@ -28,6 +28,7 @@ macro_rules! entry_and_push {
 }
 
 type FlattenValues<'a, V> = Flatten<btree_map::Values<'a, String, Vec<V>>>;
+type FlattenValuesMut<'a, V> = Flatten<btree_map::ValuesMut<'a, String, Vec<V>>>;
 type FlattenIntoValues<V> = Flatten<btree_map::IntoValues<String, Vec<V>>>;
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
@@ -216,51 +217,115 @@ impl JsonAbi {
         out.push('{');
         if len > 0 {
             out.push('\n');
-            crate::to_sol::ToSol::to_sol(self, out);
+            crate::to_sol::ToSol::to_sol(self, &mut crate::to_sol::SolPrinter::new(out));
         }
         out.push('}');
     }
 
-    /// Returns this contract's constructor.
+    /// Deduplicates all functions, errors, and events which have the same name and inputs.
+    pub fn dedup(&mut self) {
+        macro_rules! same_bucket {
+            () => {
+                |a, b| {
+                    // Already grouped by name
+                    debug_assert_eq!(a.name, b.name);
+                    a.inputs == b.inputs
+                }
+            };
+        }
+        for functions in self.functions.values_mut() {
+            functions.dedup_by(same_bucket!());
+        }
+        for errors in self.errors.values_mut() {
+            errors.dedup_by(same_bucket!());
+        }
+        for events in self.events.values_mut() {
+            events.dedup_by(same_bucket!());
+        }
+    }
+
+    /// Returns an immutable reference to the constructor.
     #[inline]
     pub const fn constructor(&self) -> Option<&Constructor> {
         self.constructor.as_ref()
     }
 
-    /// Gets all the functions with the given name.
+    /// Returns a mutable reference to the constructor.
     #[inline]
-    pub fn function(&self, name: &str) -> Option<&[Function]> {
-        self.functions.get(name).map(Vec::as_slice)
+    pub fn constructor_mut(&mut self) -> Option<&mut Constructor> {
+        self.constructor.as_mut()
     }
 
-    /// Gets all the events with the given name.
+    /// Returns an immutable reference to the list of all the functions with the given name.
     #[inline]
-    pub fn event(&self, name: &str) -> Option<&[Event]> {
-        self.events.get(name).map(Vec::as_slice)
+    pub fn function(&self, name: &str) -> Option<&Vec<Function>> {
+        self.functions.get(name)
     }
 
-    /// Gets all the errors with the given name.
+    /// Returns a mutable reference to the list of all the functions with the given name.
     #[inline]
-    pub fn error(&self, name: &str) -> Option<&[Error]> {
-        self.errors.get(name).map(Vec::as_slice)
+    pub fn function_mut(&mut self, name: &str) -> Option<&mut Vec<Function>> {
+        self.functions.get_mut(name)
     }
 
-    /// Iterates over all the functions of the contract in arbitrary order.
+    /// Returns an immutable reference to the list of all the events with the given name.
+    #[inline]
+    pub fn event(&self, name: &str) -> Option<&Vec<Event>> {
+        self.events.get(name)
+    }
+
+    /// Returns a mutable reference to the list of all the events with the given name.
+    #[inline]
+    pub fn event_mut(&mut self, name: &str) -> Option<&mut Vec<Event>> {
+        self.events.get_mut(name)
+    }
+
+    /// Returns an immutable reference to the list of all the errors with the given name.
+    #[inline]
+    pub fn error(&self, name: &str) -> Option<&Vec<Error>> {
+        self.errors.get(name)
+    }
+
+    /// Returns a mutable reference to the list of all the errors with the given name.
+    #[inline]
+    pub fn error_mut(&mut self, name: &str) -> Option<&mut Vec<Error>> {
+        self.errors.get_mut(name)
+    }
+
+    /// Returns an iterator over immutable references to the functions.
     #[inline]
     pub fn functions(&self) -> FlattenValues<'_, Function> {
         self.functions.values().flatten()
     }
 
-    /// Iterates over all the events of the contract in arbitrary order.
+    /// Returns an iterator over mutable references to the functions.
+    #[inline]
+    pub fn functions_mut(&mut self) -> FlattenValuesMut<'_, Function> {
+        self.functions.values_mut().flatten()
+    }
+
+    /// Returns an iterator over immutable references to the events.
     #[inline]
     pub fn events(&self) -> FlattenValues<'_, Event> {
         self.events.values().flatten()
     }
 
-    /// Iterates over all the errors of the contract in arbitrary order.
+    /// Returns an iterator over mutable references to the events.
+    #[inline]
+    pub fn events_mut(&mut self) -> FlattenValuesMut<'_, Event> {
+        self.events.values_mut().flatten()
+    }
+
+    /// Returns an iterator over immutable references to the errors.
     #[inline]
     pub fn errors(&self) -> FlattenValues<'_, Error> {
         self.errors.values().flatten()
+    }
+
+    /// Returns an iterator over mutable references to the errors.
+    #[inline]
+    pub fn errors_mut(&mut self) -> FlattenValuesMut<'_, Error> {
+        self.errors.values_mut().flatten()
     }
 
     /// Inserts an item into the ABI.
@@ -346,7 +411,7 @@ macro_rules! iter_impl {
     };
 }
 
-/// An iterator over all of the items in the ABI.
+/// An iterator over immutable references of items in an ABI.
 ///
 /// This `struct` is created by [`JsonAbi::items`]. See its documentation for
 /// more.
@@ -369,7 +434,7 @@ impl<'a> Iterator for Items<'a> {
 
 iter_impl!(traits Items<'_>);
 
-/// An iterator over all of the items in the ABI.
+/// An iterator over items in an ABI.
 ///
 /// This `struct` is created by [`JsonAbi::into_items`]. See its documentation
 /// for more.

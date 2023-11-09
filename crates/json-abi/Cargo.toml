@@ -20,9 +20,10 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
-serde_json.workspace = true
 criterion.workspace = true
 ethabi = "18"
+pretty_assertions.workspace = true
+serde_json.workspace = true
 
 [features]
 default = ["std"]

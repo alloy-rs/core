@@ -1,21 +1,41 @@
 use alloy_json_abi::{AbiItem, EventParam, JsonAbi, Param};
-use std::collections::HashMap;
+use pretty_assertions::assert_eq;
+use std::{
+    collections::HashMap,
+    fs,
+    path::Path,
+    process::Command,
+    sync::atomic::{AtomicBool, Ordering},
+};
+
+const JSON_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/abi");
+
+static UPDATED: AtomicBool = AtomicBool::new(false);
 
 #[test]
 #[cfg_attr(miri, ignore = "no fs")]
 fn abi() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/abi");
-    for file in std::fs::read_dir(path).unwrap() {
+    let run_solc = run_solc();
+    for file in std::fs::read_dir(JSON_PATH).unwrap() {
         let path = file.unwrap().path();
-        assert_eq!(path.extension(), Some("json".as_ref()));
-        if path.file_name() == Some("LargeFunction.json".as_ref()) {
+        if path.extension() != Some("json".as_ref()) {
             continue;
         }
-        parse_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap());
+
+        let fname = path.file_name().unwrap().to_str().unwrap();
+        // Not an ABI sequence, just one function object.
+        if fname == "LargeFunction.json" {
+            continue;
+        }
+
+        abi_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap(), run_solc);
+    }
+    if UPDATED.load(Ordering::Relaxed) {
+        panic!("some file was not up to date and has been updated, simply re-run the tests");
     }
 }
 
-fn parse_test(s: &str, path: &str) {
+fn abi_test(s: &str, path: &str, run_solc: bool) {
     eprintln!("{path}");
     let abi_items: Vec<AbiItem<'_>> = serde_json::from_str(s).unwrap();
     let len = abi_items.len();
@@ -28,7 +48,9 @@ fn parse_test(s: &str, path: &str) {
     assert_eq!(len, abi2.len());
     assert_eq!(abi1, abi2);
 
+    #[cfg(all(feature = "std", feature = "serde_json"))]
     load_test(path, &abi1);
+    to_sol_test(path, &abi1, run_solc);
 
     let json: String = serde_json::to_string(&abi2).unwrap();
     let abi3: JsonAbi = serde_json::from_str(&json).unwrap();
@@ -42,16 +64,60 @@ fn parse_test(s: &str, path: &str) {
     iterator_test(abi1.clone().into_items(), abi1.into_items().rev(), len);
 }
 
-#[allow(unused_variables)]
+#[cfg(all(feature = "std", feature = "serde_json"))]
 fn load_test(path: &str, abi: &JsonAbi) {
-    #[cfg(all(feature = "std", feature = "serde_json", not(miri)))]
-    {
-        use std::{fs::File, io::BufReader};
-        let file: File = File::open(path).unwrap();
-        let buffer: BufReader<File> = BufReader::new(file);
-        let loaded_abi: JsonAbi = JsonAbi::load(buffer).unwrap();
+    use std::{fs::File, io::BufReader};
+    let file: File = File::open(path).unwrap();
+    let buffer: BufReader<File> = BufReader::new(file);
+    let loaded_abi: JsonAbi = JsonAbi::load(buffer).unwrap();
 
-        assert_eq!(*abi, loaded_abi);
+    assert_eq!(*abi, loaded_abi);
+}
+
+fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
+    let path = Path::new(path);
+    let sol_path = path.with_extension("sol");
+    let name = path.file_stem().unwrap().to_str().unwrap();
+
+    let mut abi = abi.clone();
+    abi.dedup();
+    let actual = abi.to_sol(name);
+
+    ensure_file_contents(&sol_path, &actual);
+
+    if matches!(
+        name,
+        // https://github.com/alloy-rs/core/issues/349
+        "ZeroXExchange" | "GaugeController" | "DoubleExponentInterestSetter"
+    ) {
+        return;
+    }
+
+    if run_solc {
+        let out = Command::new("solc").arg("--abi").arg(&sol_path).output().unwrap();
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        let panik = |s| -> ! { panic!("{s}\n\nstdout:\n{stdout}\n\nstderr:\n{stderr}") };
+        if !out.status.success() {
+            panik("solc failed");
+        }
+        let Some(json_str_start) = stdout.find("[{") else {
+            panik("no JSON");
+        };
+        let json_str = &stdout[json_str_start..];
+        let solc_abi = match serde_json::from_str::<JsonAbi>(json_str) {
+            Ok(solc_abi) => solc_abi,
+            Err(e) => panik(&format!("invalid JSON: {e}")),
+        };
+
+        // Constructor is ignored.
+        abi.constructor = None;
+
+        // Note that we don't compare the ABIs directly since the conversion is lossy, e.g.
+        // `internalType` fields change.
+        if solc_abi.len() != abi.len() {
+            assert_eq!(solc_abi, abi, "ABI length mismatch");
+        }
     }
 }
 
@@ -164,4 +230,36 @@ fn test_param(param: &Param) {
     }
 
     param.components.iter().for_each(test_param);
+}
+
+/// Checks that the `file` has the specified `contents`. If that is not the
+/// case, updates the file and then fails the test.
+fn ensure_file_contents(file: &Path, contents: &str) {
+    if let Ok(old_contents) = fs::read_to_string(file) {
+        if normalize_newlines(&old_contents) == normalize_newlines(contents) {
+            // File is already up to date.
+            return;
+        }
+    }
+
+    eprintln!("\n\x1b[31;1merror\x1b[0m: {} was not up-to-date, updating\n", file.display());
+    if std::env::var("CI").is_ok() {
+        eprintln!("    NOTE: run `cargo test` locally and commit the updated files\n");
+    }
+    if let Some(parent) = file.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    fs::write(file, contents).unwrap();
+    UPDATED.store(true, Ordering::Relaxed);
+}
+
+fn normalize_newlines(s: &str) -> String {
+    s.replace("\r\n", "\n")
+}
+
+fn run_solc() -> bool {
+    let Ok(status) = Command::new("solc").arg("--version").status() else {
+        return false;
+    };
+    status.success()
 }
