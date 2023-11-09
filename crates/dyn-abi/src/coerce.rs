@@ -1,5 +1,5 @@
 use crate::{ty::as_tuple, DynSolType, DynSolValue, Result};
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 use alloy_primitives::{Address, FixedBytes, Function, Sign, I256, U256};
 use alloy_sol_type_parser::utils::{array_parser, char_parser, spanned};
 use alloy_sol_types::Word;
@@ -12,6 +12,7 @@ use winnow::{
         AddContext, ContextError, ErrMode, ErrorKind, FromExternalError, StrContext,
         StrContextValue,
     },
+    stream::Stream,
     token::take_while,
     trace::trace,
     PResult, Parser,
@@ -73,34 +74,169 @@ impl DynSolType {
     /// ```
     #[doc(alias = "tokenize")] // from ethabi
     pub fn coerce_str(&self, s: &str) -> Result<DynSolValue> {
-        self.value_parser()
+        ValueParser::new(self)
             .parse(s)
             .map_err(|e| crate::Error::TypeParser(alloy_sol_type_parser::Error::parser(e)))
     }
+}
 
-    fn value_parser<'i: 't, 't>(&'t self) -> impl Parser<&'i str, DynSolValue, ContextError> + 't {
+struct ValueParser<'a> {
+    ty: &'a DynSolType,
+    list_end: Option<char>,
+}
+
+impl<'i> Parser<&'i str, DynSolValue, ContextError> for ValueParser<'_> {
+    fn parse_next(&mut self, input: &mut &'i str) -> PResult<DynSolValue, ContextError> {
         #[cfg(feature = "debug")]
-        let name = self.sol_type_name();
+        let name = self.ty.sol_type_name();
         #[cfg(not(feature = "debug"))]
         let name = "value_parser";
-        trace(name, move |input: &mut &str| match self {
-            Self::Bool => bool(input).map(DynSolValue::Bool),
-            &Self::Int(size) => int(size).parse_next(input).map(|int| DynSolValue::Int(int, size)),
-            &Self::Uint(size) => {
+        trace(name, move |input: &mut &str| match self.ty {
+            DynSolType::Bool => bool(input).map(DynSolValue::Bool),
+            &DynSolType::Int(size) => {
+                int(size).parse_next(input).map(|int| DynSolValue::Int(int, size))
+            }
+            &DynSolType::Uint(size) => {
                 uint(size).parse_next(input).map(|uint| DynSolValue::Uint(uint, size))
             }
-            &Self::FixedBytes(size) => {
+            &DynSolType::FixedBytes(size) => {
                 fixed_bytes(size).parse_next(input).map(|word| DynSolValue::FixedBytes(word, size))
             }
-            Self::Address => address(input).map(DynSolValue::Address),
-            Self::Function => function(input).map(DynSolValue::Function),
-            Self::Bytes => bytes(input).map(DynSolValue::Bytes),
-            Self::String => string(input).map(DynSolValue::String),
-            Self::Array(ty) => array(ty).parse_next(input).map(DynSolValue::Array),
-            Self::FixedArray(ty, len) => {
-                fixed_array(ty, *len).parse_next(input).map(DynSolValue::Array)
+            DynSolType::Address => address(input).map(DynSolValue::Address),
+            DynSolType::Function => function(input).map(DynSolValue::Function),
+            DynSolType::Bytes => bytes(input).map(DynSolValue::Bytes),
+            DynSolType::String => {
+                self.string().parse_next(input).map(|s| DynSolValue::String(s.into()))
             }
-            as_tuple!(Self tys) => tuple(tys).parse_next(input).map(DynSolValue::Tuple),
+            DynSolType::Array(ty) => self.in_list(']', |this| {
+                this.with(ty).array().parse_next(input).map(DynSolValue::Array)
+            }),
+            DynSolType::FixedArray(ty, len) => self.in_list(']', |this| {
+                this.with(ty).fixed_array(*len).parse_next(input).map(DynSolValue::Array)
+            }),
+            as_tuple!(DynSolType tys) => {
+                self.in_list(')', |this| this.tuple(tys).parse_next(input).map(DynSolValue::Tuple))
+            }
+        })
+        .parse_next(input)
+    }
+}
+
+impl<'a> ValueParser<'a> {
+    #[inline]
+    const fn new(ty: &'a DynSolType) -> Self {
+        Self { list_end: None, ty }
+    }
+
+    #[inline]
+    fn in_list<F: FnOnce(&mut Self) -> R, R>(&mut self, list_end: char, f: F) -> R {
+        let prev = core::mem::replace(&mut self.list_end, Some(list_end));
+        let r = f(self);
+        self.list_end = prev;
+        r
+    }
+
+    #[inline]
+    const fn with(&self, ty: &'a DynSolType) -> Self {
+        Self { list_end: self.list_end, ty }
+    }
+
+    #[inline]
+    fn string<'s, 'i: 's>(&'s self) -> impl Parser<&'i str, &'i str, ContextError> + 's {
+        trace("string", |input: &mut &'i str| {
+            let Some(delim) = input.chars().next() else {
+                return Ok("");
+            };
+            let has_delim = matches!(delim, '"' | '\'');
+            if has_delim {
+                *input = &input[1..];
+            }
+
+            // TODO: escapes?
+            let mut s = if has_delim || self.list_end.is_some() {
+                let (chs, l) = if has_delim {
+                    ([delim, '\0'], 1)
+                } else if let Some(c) = self.list_end {
+                    ([',', c], 2)
+                } else {
+                    unreachable!()
+                };
+                let min = if has_delim { 0 } else { 1 };
+                take_while(min.., move |c: char| !unsafe { chs.get_unchecked(..l) }.contains(&c))
+                    .parse_next(input)?
+            } else {
+                input.next_slice(input.len())
+            };
+
+            if has_delim {
+                cut_err(char_parser(delim))
+                    .context(StrContext::Label("string"))
+                    .parse_next(input)?;
+            } else {
+                s = s.trim_end();
+            }
+
+            Ok(s)
+        })
+    }
+
+    #[inline]
+    fn array<'i: 'a>(self) -> impl Parser<&'i str, Vec<DynSolValue>, ContextError> + 'a {
+        #[cfg(feature = "debug")]
+        let name = format!("{}[]", self.ty);
+        #[cfg(not(feature = "debug"))]
+        let name = "array";
+        trace(name, array_parser(self))
+    }
+
+    #[inline]
+    fn fixed_array<'i: 'a>(
+        self,
+        len: usize,
+    ) -> impl Parser<&'i str, Vec<DynSolValue>, ContextError> + 'a {
+        #[cfg(feature = "debug")]
+        let name = format!("{}[{len}]", self.ty);
+        #[cfg(not(feature = "debug"))]
+        let name = "fixed_array";
+        trace(
+            name,
+            array_parser(self).try_map(move |values: Vec<DynSolValue>| {
+                if values.len() == len {
+                    Ok(values)
+                } else {
+                    Err(Error::FixedArrayLengthMismatch(len, values.len()))
+                }
+            }),
+        )
+    }
+
+    #[inline]
+    fn tuple<'i: 's, 't: 's, 's>(
+        &'s self,
+        tuple: &'t Vec<DynSolType>,
+    ) -> impl Parser<&'i str, Vec<DynSolValue>, ContextError> + 's {
+        #[cfg(feature = "debug")]
+        let name = DynSolType::Tuple(tuple.clone()).to_string();
+        #[cfg(not(feature = "debug"))]
+        let name = "tuple";
+        trace(name, move |input: &mut &'i str| {
+            space0(input)?;
+            char_parser('(').parse_next(input)?;
+
+            let mut values = Vec::with_capacity(tuple.len());
+            for (i, ty) in tuple.iter().enumerate() {
+                if i > 0 {
+                    space0(input)?;
+                    char_parser(',').parse_next(input)?;
+                }
+                space0(input)?;
+                values.push(self.with(ty).parse_next(input)?);
+            }
+
+            space0(input)?;
+            char_parser(')').parse_next(input)?;
+
+            Ok(values)
         })
     }
 }
@@ -343,96 +479,6 @@ fn bytes(input: &mut &str) -> PResult<Vec<u8>> {
 }
 
 #[inline]
-fn string(input: &mut &str) -> PResult<String> {
-    trace("string", string_inner).parse_next(input).map(String::from)
-}
-
-#[inline]
-fn string_inner<'i>(input: &mut &'i str) -> PResult<&'i str> {
-    let Some(delim) = input.chars().next() else {
-        return Ok("");
-    };
-    let has_delim = matches!(delim, '"' | '\'');
-    if has_delim {
-        *input = &input[1..];
-    }
-
-    // TODO: escapes?
-    let min = if has_delim { 0 } else { 1 };
-    let until_ch = if has_delim { core::slice::from_ref(&delim) } else { &[',', ')', ']'] };
-    let mut s = take_while(min.., |ch: char| !until_ch.contains(&ch)).parse_next(input)?;
-
-    if has_delim {
-        cut_err(char_parser(delim)).context(StrContext::Label("string")).parse_next(input)?;
-    } else {
-        s = s.trim_end();
-    }
-
-    Ok(s)
-}
-
-#[inline]
-fn array<'i: 't, 't>(
-    ty: &'t DynSolType,
-) -> impl Parser<&'i str, Vec<DynSolValue>, ContextError> + 't {
-    #[cfg(feature = "debug")]
-    let name = format!("{ty}[]");
-    #[cfg(not(feature = "debug"))]
-    let name = "array";
-    trace(name, array_parser(ty.value_parser()))
-}
-
-#[inline]
-fn fixed_array<'i: 't, 't>(
-    ty: &'t DynSolType,
-    len: usize,
-) -> impl Parser<&'i str, Vec<DynSolValue>, ContextError> + 't {
-    #[cfg(feature = "debug")]
-    let name = format!("{ty}[{len}]");
-    #[cfg(not(feature = "debug"))]
-    let name = "fixed_array";
-    trace(
-        name,
-        array(ty).try_map(move |values| {
-            if values.len() == len {
-                Ok(values)
-            } else {
-                Err(Error::FixedArrayLengthMismatch(len, values.len()))
-            }
-        }),
-    )
-}
-
-#[inline]
-fn tuple<'i: 't, 't>(
-    tuple: &'t Vec<DynSolType>,
-) -> impl Parser<&'i str, Vec<DynSolValue>, ContextError> + 't {
-    #[cfg(feature = "debug")]
-    let name = DynSolType::Tuple(tuple.clone()).to_string();
-    #[cfg(not(feature = "debug"))]
-    let name = "tuple";
-    trace(name, move |input: &mut &'i str| {
-        space0(input)?;
-        char_parser('(').parse_next(input)?;
-
-        let mut values = Vec::with_capacity(tuple.len());
-        for (i, ty) in tuple.iter().enumerate() {
-            if i > 0 {
-                space0(input)?;
-                char_parser(',').parse_next(input)?;
-            }
-            space0(input)?;
-            values.push(ty.value_parser().parse_next(input)?);
-        }
-
-        space0(input)?;
-        char_parser(')').parse_next(input)?;
-
-        Ok(values)
-    })
-}
-
-#[inline]
 fn fixed_bytes_inner<const N: usize>(input: &mut &str) -> PResult<FixedBytes<N>> {
     hex_str
         .try_map(|s| {
@@ -458,7 +504,10 @@ fn hex_error(input: &&str, e: FromHexError) -> ErrMode<ContextError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::{boxed::Box, string::ToString};
+    use alloc::{
+        boxed::Box,
+        string::{String, ToString},
+    };
     use alloy_primitives::address;
     use core::str::FromStr;
 
@@ -832,11 +881,26 @@ mod tests {
             DynSolType::String.coerce_str("'\"hello world'").unwrap(),
             DynSolValue::String("\"hello world".into())
         );
+        assert_eq!(
+            DynSolType::String.coerce_str("a, b").unwrap(),
+            DynSolValue::String("a, b".into())
+        );
+        assert_eq!(
+            DynSolType::String.coerce_str("hello (world)").unwrap(),
+            DynSolValue::String("hello (world)".into())
+        );
 
         assert!(DynSolType::String.coerce_str("\"hello world").is_err());
         assert!(DynSolType::String.coerce_str("\"hello world'").is_err());
         assert!(DynSolType::String.coerce_str("'hello world").is_err());
         assert!(DynSolType::String.coerce_str("'hello world\"").is_err());
+
+        assert_eq!(
+            DynSolType::String.coerce_str("Hello, world!").unwrap(),
+            DynSolValue::String("Hello, world!".into())
+        );
+        let s = "$$g]a\"v/of;[()];2,yo\r)k_";
+        assert_eq!(DynSolType::String.coerce_str(s).unwrap(), DynSolValue::String(s.into()));
     }
 
     #[test]
@@ -857,6 +921,8 @@ mod tests {
         assert_eq!(arr.coerce_str("[foo bar,]").unwrap(), mk_arr(&["foo bar"]));
         assert_eq!(arr.coerce_str("[  foo bar,  ]").unwrap(), mk_arr(&["foo bar"]));
         assert_eq!(arr.coerce_str("[ foo , bar ]").unwrap(), mk_arr(&["foo", "bar"]));
+
+        assert_eq!(arr.coerce_str("[\"foo\",\"bar\"]").unwrap(), mk_arr(&["foo", "bar"]));
 
         assert_eq!(arr.coerce_str("['']").unwrap(), mk_arr(&[""]));
         assert_eq!(arr.coerce_str("[\"\"]").unwrap(), mk_arr(&[""]));
@@ -915,6 +981,21 @@ mod tests {
             .coerce_str("[true,\"false\",false]")
             .is_err());
         assert!(DynSolType::Array(Box::new(DynSolType::Bool)).coerce_str("[true,false]").is_ok());
+    }
+
+    #[test]
+    fn tuples() {
+        let ty = DynSolType::Tuple(vec![DynSolType::String, DynSolType::Bool, DynSolType::String]);
+        assert_eq!(
+            ty.coerce_str("(\"a,]) b\", true, true? ]and] false!)").unwrap(),
+            DynSolValue::Tuple(vec![
+                DynSolValue::String("a,]) b".into()),
+                DynSolValue::Bool(true),
+                DynSolValue::String("true? ]and] false!".into()),
+            ])
+        );
+        assert!(ty.coerce_str("(\"\", true, a, b)").is_err());
+        assert!(ty.coerce_str("(a, b, true, a)").is_err());
     }
 
     #[test]
