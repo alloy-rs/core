@@ -1,21 +1,37 @@
 use alloy_json_abi::{AbiItem, EventParam, JsonAbi, Param};
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fs,
+    path::Path,
+    sync::atomic::{AtomicBool, Ordering},
+};
+
+const JSON_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/abi");
+const SOL_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/sol");
+
+static UPDATED: AtomicBool = AtomicBool::new(false);
 
 #[test]
 #[cfg_attr(miri, ignore = "no fs")]
 fn abi() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/abi");
-    for file in std::fs::read_dir(path).unwrap() {
+    for file in std::fs::read_dir(JSON_PATH).unwrap() {
         let path = file.unwrap().path();
         assert_eq!(path.extension(), Some("json".as_ref()));
-        if path.file_name() == Some("LargeFunction.json".as_ref()) {
+
+        let fname = path.file_name().unwrap().to_str().unwrap();
+        // Not an ABI sequence, just one function object.
+        if fname == "LargeFunction.json" {
             continue;
         }
-        parse_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap());
+
+        abi_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap());
+    }
+    if UPDATED.load(Ordering::Relaxed) {
+        panic!("some file was not up to date and has been updated, simply re-run the tests");
     }
 }
 
-fn parse_test(s: &str, path: &str) {
+fn abi_test(s: &str, path: &str) {
     eprintln!("{path}");
     let abi_items: Vec<AbiItem<'_>> = serde_json::from_str(s).unwrap();
     let len = abi_items.len();
@@ -28,7 +44,9 @@ fn parse_test(s: &str, path: &str) {
     assert_eq!(len, abi2.len());
     assert_eq!(abi1, abi2);
 
+    #[cfg(all(feature = "std", feature = "serde_json"))]
     load_test(path, &abi1);
+    to_sol_test(path, &abi1);
 
     let json: String = serde_json::to_string(&abi2).unwrap();
     let abi3: JsonAbi = serde_json::from_str(&json).unwrap();
@@ -42,17 +60,23 @@ fn parse_test(s: &str, path: &str) {
     iterator_test(abi1.clone().into_items(), abi1.into_items().rev(), len);
 }
 
-#[allow(unused_variables)]
+#[cfg(all(feature = "std", feature = "serde_json"))]
 fn load_test(path: &str, abi: &JsonAbi) {
-    #[cfg(all(feature = "std", feature = "serde_json", not(miri)))]
-    {
-        use std::{fs::File, io::BufReader};
-        let file: File = File::open(path).unwrap();
-        let buffer: BufReader<File> = BufReader::new(file);
-        let loaded_abi: JsonAbi = JsonAbi::load(buffer).unwrap();
+    use std::{fs::File, io::BufReader};
+    let file: File = File::open(path).unwrap();
+    let buffer: BufReader<File> = BufReader::new(file);
+    let loaded_abi: JsonAbi = JsonAbi::load(buffer).unwrap();
 
-        assert_eq!(*abi, loaded_abi);
-    }
+    assert_eq!(*abi, loaded_abi);
+}
+
+fn to_sol_test(path: &str, abi: &JsonAbi) {
+    let path = Path::new(path);
+    let name = path.file_stem().unwrap().to_str().unwrap();
+    let actual = abi.to_sol(name);
+
+    let sol_file = Path::new(SOL_PATH).join(format!("{name}.sol"));
+    ensure_file_contents(&sol_file, &actual);
 }
 
 fn iterator_test<T, I, R>(items: I, rev: R, len: usize)
@@ -164,4 +188,29 @@ fn test_param(param: &Param) {
     }
 
     param.components.iter().for_each(test_param);
+}
+
+/// Checks that the `file` has the specified `contents`. If that is not the
+/// case, updates the file and then fails the test.
+fn ensure_file_contents(file: &Path, contents: &str) {
+    if let Ok(old_contents) = fs::read_to_string(file) {
+        if normalize_newlines(&old_contents) == normalize_newlines(contents) {
+            // File is already up to date.
+            return;
+        }
+    }
+
+    eprintln!("\n\x1b[31;1merror\x1b[0m: {} was not up-to-date, updating\n", file.display());
+    if std::env::var("CI").is_ok() {
+        eprintln!("    NOTE: run `cargo test` locally and commit the updated files\n");
+    }
+    if let Some(parent) = file.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    fs::write(file, contents).unwrap();
+    UPDATED.store(true, Ordering::Relaxed);
+}
+
+fn normalize_newlines(s: &str) -> String {
+    s.replace("\r\n", "\n")
 }

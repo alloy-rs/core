@@ -1,0 +1,43 @@
+interface ZeroXExchange {
+    event AssetProxyRegistered(bytes4 id, address assetProxy);
+    event Cancel(address indexed makerAddress, address indexed feeRecipientAddress, address senderAddress, bytes32 indexed orderHash, bytes makerAssetData, bytes takerAssetData);
+    event CancelUpTo(address indexed makerAddress, address indexed senderAddress, uint256 orderEpoch);
+    event Fill(address indexed makerAddress, address indexed feeRecipientAddress, address takerAddress, address senderAddress, uint256 makerAssetFilledAmount, uint256 takerAssetFilledAmount, uint256 makerFeePaid, uint256 takerFeePaid, bytes32 indexed orderHash, bytes makerAssetData, bytes takerAssetData);
+    event SignatureValidatorApproval(address indexed signerAddress, address indexed validatorAddress, bool approved);
+
+    function EIP712_DOMAIN_HASH() external view returns (bytes32);
+    function VERSION() external view returns (string);
+    function ZRX_ASSET_DATA() external view returns (bytes);
+    function allowedValidators(address, address) external view returns (bool);
+    function assetProxies(bytes4) external view returns (address);
+    function batchCancelOrders((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes)[] orders) external;
+    function batchFillOrKillOrders((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes)[] orders, uint256[] takerAssetFillAmounts, bytes[] signatures) external returns ((uint256, uint256, uint256, uint256) totalFillResults);
+    function batchFillOrders((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes)[] orders, uint256[] takerAssetFillAmounts, bytes[] signatures) external returns ((uint256, uint256, uint256, uint256) totalFillResults);
+    function batchFillOrdersNoThrow((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes)[] orders, uint256[] takerAssetFillAmounts, bytes[] signatures) external returns ((uint256, uint256, uint256, uint256) totalFillResults);
+    function cancelOrder((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes) order) external;
+    function cancelOrdersUpTo(uint256 targetOrderEpoch) external;
+    function cancelled(bytes32) external view returns (bool);
+    function currentContextAddress() external view returns (address);
+    function executeTransaction(uint256 salt, address signerAddress, bytes data, bytes signature) external;
+    function fillOrKillOrder((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes) order, uint256 takerAssetFillAmount, bytes signature) external returns ((uint256, uint256, uint256, uint256) fillResults);
+    function fillOrder((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes) order, uint256 takerAssetFillAmount, bytes signature) external returns ((uint256, uint256, uint256, uint256) fillResults);
+    function fillOrderNoThrow((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes) order, uint256 takerAssetFillAmount, bytes signature) external returns ((uint256, uint256, uint256, uint256) fillResults);
+    function filled(bytes32) external view returns (uint256);
+    function getAssetProxy(bytes4 assetProxyId) external view returns (address);
+    function getOrderInfo((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes) order) external view returns ((uint8, bytes32, uint256) orderInfo);
+    function getOrdersInfo((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes)[] orders) external view returns ((uint8, bytes32, uint256)[]);
+    function isValidSignature(bytes32 hash, address signerAddress, bytes signature) external view returns (bool isValid);
+    function marketBuyOrders((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes)[] orders, uint256 makerAssetFillAmount, bytes[] signatures) external returns ((uint256, uint256, uint256, uint256) totalFillResults);
+    function marketBuyOrdersNoThrow((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes)[] orders, uint256 makerAssetFillAmount, bytes[] signatures) external returns ((uint256, uint256, uint256, uint256) totalFillResults);
+    function marketSellOrders((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes)[] orders, uint256 takerAssetFillAmount, bytes[] signatures) external returns ((uint256, uint256, uint256, uint256) totalFillResults);
+    function marketSellOrdersNoThrow((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes)[] orders, uint256 takerAssetFillAmount, bytes[] signatures) external returns ((uint256, uint256, uint256, uint256) totalFillResults);
+    function matchOrders((address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes) leftOrder, (address, address, address, address, uint256, uint256, uint256, uint256, uint256, uint256, bytes, bytes) rightOrder, bytes leftSignature, bytes rightSignature) external returns (((uint256, uint256, uint256, uint256), (uint256, uint256, uint256, uint256), uint256) matchedFillResults);
+    function orderEpoch(address, address) external view returns (uint256);
+    function owner() external view returns (address);
+    function preSign(bytes32 hash, address signerAddress, bytes signature) external;
+    function preSigned(bytes32, address) external view returns (bool);
+    function registerAssetProxy(address assetProxy) external;
+    function setSignatureValidatorApproval(address validatorAddress, bool approval) external;
+    function transactions(bytes32) external view returns (bool);
+    function transferOwnership(address newOwner) external;
+}
