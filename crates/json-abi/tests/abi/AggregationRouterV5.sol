@@ -37,13 +37,11 @@ interface AggregationRouterV5 {
     error BadPool();
     error BadSignature();
     error ETHTransferFailed();
-    error ETHTransferFailed();
     error EmptyPools();
     error EthDepositRejected();
     error GetAmountCallFailed();
     error IncorrectDataLength();
     error InsufficientBalance();
-    error InvalidMsgValue();
     error InvalidMsgValue();
     error InvalidatedOrder();
     error MakingAmountExceeded();

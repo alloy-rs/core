@@ -24,7 +24,7 @@ quote.workspace = true
 syn = { workspace = true, features = ["extra-traits"] }
 
 [dev-dependencies]
-pretty_assertions = "1"
+pretty_assertions.workspace = true
 
 [features]
 visit = []
