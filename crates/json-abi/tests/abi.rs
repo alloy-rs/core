@@ -7,7 +7,6 @@ use std::{
 };
 
 const JSON_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/abi");
-const SOL_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/sol");
 
 static UPDATED: AtomicBool = AtomicBool::new(false);
 
@@ -16,7 +15,9 @@ static UPDATED: AtomicBool = AtomicBool::new(false);
 fn abi() {
     for file in std::fs::read_dir(JSON_PATH).unwrap() {
         let path = file.unwrap().path();
-        assert_eq!(path.extension(), Some("json".as_ref()));
+        if path.extension() != Some("json".as_ref()) {
+            continue;
+        }
 
         let fname = path.file_name().unwrap().to_str().unwrap();
         // Not an ABI sequence, just one function object.
@@ -74,9 +75,7 @@ fn to_sol_test(path: &str, abi: &JsonAbi) {
     let path = Path::new(path);
     let name = path.file_stem().unwrap().to_str().unwrap();
     let actual = abi.to_sol(name);
-
-    let sol_file = Path::new(SOL_PATH).join(format!("{name}.sol"));
-    ensure_file_contents(&sol_file, &actual);
+    ensure_file_contents(&path.with_extension("sol"), &actual);
 }
 
 fn iterator_test<T, I, R>(items: I, rev: R, len: usize)

@@ -14,7 +14,7 @@ pub(crate) trait ToSol {
 
 pub(crate) struct SolPrinter<'a> {
     s: &'a mut String,
-    emit_param_storage: bool,
+    emit_param_location: bool,
 }
 
 impl Deref for SolPrinter<'_> {
@@ -36,7 +36,7 @@ impl DerefMut for SolPrinter<'_> {
 impl<'a> SolPrinter<'a> {
     #[inline]
     pub(crate) fn new(s: &'a mut String) -> Self {
-        Self { s, emit_param_storage: false }
+        Self { s, emit_param_location: false }
     }
 
     #[inline]
@@ -360,7 +360,7 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
             self.kw,
             AbiFunctionKw::Function | AbiFunctionKw::Fallback | AbiFunctionKw::Receive
         ) {
-            out.emit_param_storage = true;
+            out.emit_param_location = true;
         }
 
         out.push_str(self.kw.as_str());
@@ -407,7 +407,7 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
 
         out.push(';');
 
-        out.emit_param_storage = false;
+        out.emit_param_location = false;
     }
 }
 
@@ -481,13 +481,13 @@ fn param<'a>(
         _ => out.push_str(type_name),
     }
 
-    // add `memory` if required (only functions)
+    // add `memory` if required (functions)
     let is_memory = match type_name {
-        // `bytes`, `string`, `T[]`, `T[N]`, <tuple>
+        // `bytes`, `string`, `T[]`, `T[N]`, tuple/custom type
         "bytes" | "string" => true,
         s => s.ends_with(']') || !components.is_empty(),
     };
-    if out.emit_param_storage && is_memory {
+    if out.emit_param_location && is_memory {
         out.push_str(" memory");
     }
 
