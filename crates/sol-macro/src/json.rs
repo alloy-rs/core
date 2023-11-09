@@ -94,7 +94,10 @@ mod tests {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../json-abi/tests/abi");
         for file in std::fs::read_dir(path).unwrap() {
             let path = file.unwrap().path();
-            assert_eq!(path.extension(), Some("json".as_ref()));
+            if path.extension() != Some("json".as_ref()) {
+                continue;
+            }
+
             if path.file_name() == Some("LargeFunction.json".as_ref()) {
                 continue;
             }

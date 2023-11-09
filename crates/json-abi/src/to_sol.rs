@@ -454,6 +454,8 @@ fn param<'a>(
             // note: this does not actually emit valid Solidity because there are no inline
             // tuple types `(T, U, V, ...)`, but it's valid for `sol!`.
             out.push('(');
+            // Don't emit `memory` for tuple components because `sol!` can't parse them.
+            let prev = core::mem::replace(&mut out.emit_param_location, false);
             for (i, component) in components.iter().enumerate() {
                 if i > 0 {
                     out.push_str(", ");
@@ -467,6 +469,7 @@ fn param<'a>(
                     out,
                 );
             }
+            out.emit_param_location = prev;
             // trailing comma for single-element tuples
             if components.len() == 1 {
                 out.push(',');
