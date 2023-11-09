@@ -74,8 +74,8 @@ interface LargeStructs {
         uint128 entryFunding;
     }
 
-    function getChainStorage() external returns (ChainStorage chain);
-    function getOrders(uint64[] orderIds) external pure returns (bytes32[3][] orders, bool[] isExist);
-    function getSubAccounts(bytes32[] subAccountIds) external pure returns (SubAccountState[] subAccounts);
-    function getSubAccountsAndOrders(bytes32[] subAccountIds, uint64[] orderIds) external pure returns (SubAccountState[] subAccounts, bytes32[3][] orders, bool[] isOrderExist);
+    function getChainStorage() external returns (ChainStorage memory chain);
+    function getOrders(uint64[] memory orderIds) external pure returns (bytes32[3][] memory orders, bool[] memory isExist);
+    function getSubAccounts(bytes32[] memory subAccountIds) external pure returns (SubAccountState[] memory subAccounts);
+    function getSubAccountsAndOrders(bytes32[] memory subAccountIds, uint64[] memory orderIds) external pure returns (SubAccountState[] memory subAccounts, bytes32[3][] memory orders, bool[] memory isOrderExist);
 }

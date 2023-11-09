@@ -216,7 +216,7 @@ impl JsonAbi {
         out.push('{');
         if len > 0 {
             out.push('\n');
-            crate::to_sol::ToSol::to_sol(self, out);
+            crate::to_sol::ToSol::to_sol(self, &mut crate::to_sol::SolPrinter::new(out));
         }
         out.push('}');
     }

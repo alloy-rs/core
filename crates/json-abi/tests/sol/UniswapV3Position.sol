@@ -7,5 +7,5 @@ interface UniswapV3Position {
 
     function getLiquidityByRange(address pool_, address self_, int24 lowerTick_, int24 upperTick_) external view returns (uint128 liquidity);
     function getPositionId(address self_, int24 lowerTick_, int24 upperTick_) external pure returns (bytes32 positionId);
-    function rangeExists(Range[] currentRanges_, Range range_) external pure returns (bool ok, uint256 index);
+    function rangeExists(Range[] memory currentRanges_, Range memory range_) external pure returns (bool ok, uint256 index);
 }

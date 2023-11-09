@@ -54,21 +54,21 @@ interface BlurExchange {
 
     function FEE_TYPEHASH() external view returns (bytes32);
     function INVERSE_BASIS_POINT() external view returns (uint256);
-    function NAME() external view returns (string);
+    function NAME() external view returns (string memory);
     function ORACLE_ORDER_TYPEHASH() external view returns (bytes32);
     function ORDER_TYPEHASH() external view returns (bytes32);
     function POOL() external view returns (address);
     function ROOT_TYPEHASH() external view returns (bytes32);
-    function VERSION() external view returns (string);
+    function VERSION() external view returns (string memory);
     function WETH() external view returns (address);
-    function _execute(Input sell, Input buy) external payable;
+    function _execute(Input memory sell, Input memory buy) external payable;
     function blockRange() external view returns (uint256);
-    function bulkExecute(Execution[] executions) external payable;
-    function cancelOrder(Order order) external;
-    function cancelOrders(Order[] orders) external;
+    function bulkExecute(Execution[] memory executions) external payable;
+    function cancelOrder(Order memory order) external;
+    function cancelOrders(Order[] memory orders) external;
     function cancelledOrFilled(bytes32) external view returns (bool);
     function close() external;
-    function execute(Input sell, Input buy) external payable;
+    function execute(Input memory sell, Input memory buy) external payable;
     function executionDelegate() external view returns (address);
     function feeRate() external view returns (uint256);
     function feeRecipient() external view returns (address);
@@ -94,5 +94,5 @@ interface BlurExchange {
     function setPolicyManager(address _policyManager) external;
     function transferOwnership(address newOwner) external;
     function upgradeTo(address newImplementation) external;
-    function upgradeToAndCall(address newImplementation, bytes data) external payable;
+    function upgradeToAndCall(address newImplementation, bytes memory data) external payable;
 }

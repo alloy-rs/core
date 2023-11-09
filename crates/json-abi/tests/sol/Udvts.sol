@@ -61,5 +61,5 @@ interface Udvts {
         address recipient;
     }
 
-    function fulfillAvailableAdvancedOrders(AdvancedOrder[] a, CriteriaResolver[] b, FulfillmentComponent[][] c, FulfillmentComponent[][] d, bytes32 fulfillerConduitKey, address recipient, uint256 maximumFulfilled) external payable returns (bool[] e, Execution[] f);
+    function fulfillAvailableAdvancedOrders(AdvancedOrder[] memory a, CriteriaResolver[] memory b, FulfillmentComponent[][] memory c, FulfillmentComponent[][] memory d, bytes32 fulfillerConduitKey, address recipient, uint256 maximumFulfilled) external payable returns (bool[] memory e, Execution[] memory f);
 }

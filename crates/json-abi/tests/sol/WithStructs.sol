@@ -57,7 +57,7 @@ interface WithStructs {
     function autopay_batch_size() external view returns (uint16);
     function bid_increment() external view returns (uint256);
     function bid_token() external view returns (address);
-    function checker() external view returns (bool canExec, bytes execPayload);
+    function checker() external view returns (bool canExec, bytes memory execPayload);
     function disableOpportunityAddress(address opportunityAddress) external;
     function disableValidatorAddress(address _validatorAddress) external;
     function enableOpportunityAddress(address opportunityAddress) external;
@@ -69,18 +69,18 @@ interface WithStructs {
     function findLastFinalizedAuctionWinner(address validatorAddress, address opportunityAddress) external view returns (bool, address, uint128);
     function findLiveAuctionTopBid(address validatorAddress, address opportunityAddress) external view returns (uint256, uint128);
     function getActivePrivilegesAuctionNumber() external view returns (uint128);
-    function getAutopayJobs(uint16 batch_size, uint128 auction_index) external view returns (bool hasJobs, address[] autopayRecipients);
-    function getCheckpoint(address who) external view returns (ValidatorBalanceCheckpoint);
-    function getPreferences(address who) external view returns (ValidatorPreferences);
-    function getStatus(address who) external view returns (Status);
-    function getValidatorsActiveAtAuction(uint128 auction_index) external view returns (address[]);
+    function getAutopayJobs(uint16 batch_size, uint128 auction_index) external view returns (bool hasJobs, address[] memory autopayRecipients);
+    function getCheckpoint(address who) external view returns (ValidatorBalanceCheckpoint memory);
+    function getPreferences(address who) external view returns (ValidatorPreferences memory);
+    function getStatus(address who) external view returns (Status memory);
+    function getValidatorsActiveAtAuction(uint128 auction_index) external view returns (address[] memory);
     function init(address _initial_bid_token, address _ops, address _starter) external;
     function max_gas_price() external view returns (uint128);
     function minAutoShipThreshold() external view returns (uint128);
     function ops() external view returns (address);
     function outstandingFLBalance() external view returns (uint256);
     function owner() external view returns (address);
-    function processAutopayJobs(address[] autopayRecipients) external;
+    function processAutopayJobs(address[] memory autopayRecipients) external;
     function redeemOutstandingBalance(address outstandingValidatorWithBalance) external;
     function renounceOwnership() external;
     function setAutopayBatchSize(uint16 size) external;
@@ -95,10 +95,10 @@ interface WithStructs {
     function setStarter(address _starter) external;
     function setValidatorPreferences(uint128 _minAutoshipAmount, address _validatorPayableAddress) external;
     function startAuction() external;
-    function storeNFToken(NFToken nft) external;
-    function submitBid(Bid bid) external;
+    function storeNFToken(NFToken memory nft) external;
+    function submitBid(Bid memory bid) external;
     function transferOwnership(address newOwner) external;
-    function viewNFToken() external returns (NFToken nft);
+    function viewNFToken() external returns (NFToken memory nft);
     function withdrawStuckERC20(address _tokenAddress) external;
     function withdrawStuckNativeToken(uint256 amount) external;
 }

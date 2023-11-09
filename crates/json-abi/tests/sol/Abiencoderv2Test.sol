@@ -4,5 +4,5 @@ interface Abiencoderv2Test {
         uint256 age;
     }
 
-    function defaultPerson() external pure returns (Person);
+    function defaultPerson() external pure returns (Person memory);
 }

@@ -36,7 +36,7 @@ interface LiquidityGaugeV4 {
     function initialized() external view returns (bool);
     function integrate_checkpoint_of(address arg0) external view returns (uint256);
     function kick(address addr) external;
-    function name() external view returns (string);
+    function name() external view returns (string memory);
     function reward_count() external view returns (uint256);
     function reward_data(address arg0) external view returns (address token, address distributor, uint256 period_finish, uint256 rate, uint256 last_update, uint256 integral);
     function reward_integral_for(address arg0, address arg1) external view returns (uint256);
@@ -46,7 +46,7 @@ interface LiquidityGaugeV4 {
     function set_reward_distributor(address _reward_token, address _distributor) external;
     function set_rewards_receiver(address _receiver) external;
     function staking_token() external view returns (address);
-    function symbol() external view returns (string);
+    function symbol() external view returns (string memory);
     function totalSupply() external view returns (uint256);
     function transfer(address _to, uint256 _value) external returns (bool);
     function transferFrom(address _from, address _to, uint256 _value) external returns (bool);

@@ -11,5 +11,5 @@ interface LargeStruct {
         uint256 f;
     }
 
-    function getById(bytes32 id) external view returns (Info);
+    function getById(bytes32 id) external view returns (Info memory);
 }

@@ -167,21 +167,21 @@ interface Seaport {
 
     receive() external payable;
 
-    function cancel(OrderComponents[] orders) external returns (bool cancelled);
-    function fulfillAdvancedOrder(AdvancedOrder, CriteriaResolver[], bytes32 fulfillerConduitKey, address recipient) external payable returns (bool fulfilled);
-    function fulfillAvailableAdvancedOrders(AdvancedOrder[], CriteriaResolver[], FulfillmentComponent[][], FulfillmentComponent[][], bytes32 fulfillerConduitKey, address recipient, uint256 maximumFulfilled) external payable returns (bool[], Execution[]);
-    function fulfillAvailableOrders(Order[], FulfillmentComponent[][], FulfillmentComponent[][], bytes32 fulfillerConduitKey, uint256 maximumFulfilled) external payable returns (bool[], Execution[]);
-    function fulfillBasicOrder(BasicOrderParameters parameters) external payable returns (bool fulfilled);
-    function fulfillBasicOrder_efficient_6GL6yc(BasicOrderParameters parameters) external payable returns (bool fulfilled);
-    function fulfillOrder(Order, bytes32 fulfillerConduitKey) external payable returns (bool fulfilled);
+    function cancel(OrderComponents[] memory orders) external returns (bool cancelled);
+    function fulfillAdvancedOrder(AdvancedOrder memory, CriteriaResolver[] memory, bytes32 fulfillerConduitKey, address recipient) external payable returns (bool fulfilled);
+    function fulfillAvailableAdvancedOrders(AdvancedOrder[] memory, CriteriaResolver[] memory, FulfillmentComponent[][] memory, FulfillmentComponent[][] memory, bytes32 fulfillerConduitKey, address recipient, uint256 maximumFulfilled) external payable returns (bool[] memory, Execution[] memory);
+    function fulfillAvailableOrders(Order[] memory, FulfillmentComponent[][] memory, FulfillmentComponent[][] memory, bytes32 fulfillerConduitKey, uint256 maximumFulfilled) external payable returns (bool[] memory, Execution[] memory);
+    function fulfillBasicOrder(BasicOrderParameters memory parameters) external payable returns (bool fulfilled);
+    function fulfillBasicOrder_efficient_6GL6yc(BasicOrderParameters memory parameters) external payable returns (bool fulfilled);
+    function fulfillOrder(Order memory, bytes32 fulfillerConduitKey) external payable returns (bool fulfilled);
     function getContractOffererNonce(address contractOfferer) external view returns (uint256 nonce);
     function getCounter(address offerer) external view returns (uint256 counter);
-    function getOrderHash(OrderComponents) external view returns (bytes32 orderHash);
+    function getOrderHash(OrderComponents memory) external view returns (bytes32 orderHash);
     function getOrderStatus(bytes32 orderHash) external view returns (bool isValidated, bool isCancelled, uint256 totalFilled, uint256 totalSize);
     function incrementCounter() external returns (uint256 newCounter);
-    function information() external view returns (string version, bytes32 domainSeparator, address conduitController);
-    function matchAdvancedOrders(AdvancedOrder[], CriteriaResolver[], Fulfillment[], address recipient) external payable returns (Execution[]);
-    function matchOrders(Order[], Fulfillment[]) external payable returns (Execution[]);
-    function name() external pure returns (string);
-    function validate(Order[]) external returns (bool);
+    function information() external view returns (string memory version, bytes32 domainSeparator, address conduitController);
+    function matchAdvancedOrders(AdvancedOrder[] memory, CriteriaResolver[] memory, Fulfillment[] memory, address recipient) external payable returns (Execution[] memory);
+    function matchOrders(Order[] memory, Fulfillment[] memory) external payable returns (Execution[] memory);
+    function name() external pure returns (string memory);
+    function validate(Order[] memory) external returns (bool);
 }

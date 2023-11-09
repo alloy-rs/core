@@ -15,5 +15,5 @@ interface LargeTuple {
         bytes output13;
     }
 
-    function doSomething(uint160 input) external view returns (Response);
+    function doSomething(uint160 input) external view returns (Response memory);
 }

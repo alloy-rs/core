@@ -16,8 +16,8 @@ interface GnosisSafe {
 
     fallback() external payable;
 
-    function NAME() external view returns (string);
-    function VERSION() external view returns (string);
+    function NAME() external view returns (string memory);
+    function VERSION() external view returns (string memory);
     function addOwnerWithThreshold(address owner, uint256 _threshold) external;
     function approveHash(bytes32 hashToApprove) external;
     function approvedHashes(address, bytes32) external view returns (uint256);
@@ -26,24 +26,24 @@ interface GnosisSafe {
     function disableModule(address prevModule, address module) external;
     function domainSeparator() external view returns (bytes32);
     function enableModule(address module) external;
-    function encodeTransactionData(address to, uint256 value, bytes data, Operation operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, uint256 _nonce) external view returns (bytes);
-    function execTransaction(address to, uint256 value, bytes data, Operation operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address payable refundReceiver, bytes signatures) external returns (bool success);
-    function execTransactionFromModule(address to, uint256 value, bytes data, Operation operation) external returns (bool success);
-    function execTransactionFromModuleReturnData(address to, uint256 value, bytes data, Operation operation) external returns (bool success, bytes returnData);
-    function getMessageHash(bytes message) external view returns (bytes32);
-    function getModules() external view returns (address[]);
-    function getModulesPaginated(address start, uint256 pageSize) external view returns (address[] array, address next);
-    function getOwners() external view returns (address[]);
+    function encodeTransactionData(address to, uint256 value, bytes memory data, Operation operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, uint256 _nonce) external view returns (bytes memory);
+    function execTransaction(address to, uint256 value, bytes memory data, Operation operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address payable refundReceiver, bytes memory signatures) external returns (bool success);
+    function execTransactionFromModule(address to, uint256 value, bytes memory data, Operation operation) external returns (bool success);
+    function execTransactionFromModuleReturnData(address to, uint256 value, bytes memory data, Operation operation) external returns (bool success, bytes memory returnData);
+    function getMessageHash(bytes memory message) external view returns (bytes32);
+    function getModules() external view returns (address[] memory);
+    function getModulesPaginated(address start, uint256 pageSize) external view returns (address[] memory array, address next);
+    function getOwners() external view returns (address[] memory);
     function getThreshold() external view returns (uint256);
-    function getTransactionHash(address to, uint256 value, bytes data, Operation operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, uint256 _nonce) external view returns (bytes32);
+    function getTransactionHash(address to, uint256 value, bytes memory data, Operation operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, uint256 _nonce) external view returns (bytes32);
     function isOwner(address owner) external view returns (bool);
-    function isValidSignature(bytes _data, bytes _signature) external returns (bytes4);
+    function isValidSignature(bytes memory _data, bytes memory _signature) external returns (bytes4);
     function nonce() external view returns (uint256);
     function removeOwner(address prevOwner, address owner, uint256 _threshold) external;
-    function requiredTxGas(address to, uint256 value, bytes data, Operation operation) external returns (uint256);
+    function requiredTxGas(address to, uint256 value, bytes memory data, Operation operation) external returns (uint256);
     function setFallbackHandler(address handler) external;
-    function setup(address[] _owners, uint256 _threshold, address to, bytes data, address fallbackHandler, address paymentToken, uint256 payment, address payable paymentReceiver) external;
-    function signMessage(bytes _data) external;
+    function setup(address[] memory _owners, uint256 _threshold, address to, bytes memory data, address fallbackHandler, address paymentToken, uint256 payment, address payable paymentReceiver) external;
+    function signMessage(bytes memory _data) external;
     function signedMessages(bytes32) external view returns (uint256);
     function swapOwner(address prevOwner, address oldOwner, address newOwner) external;
 }

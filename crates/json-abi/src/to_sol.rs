@@ -3,18 +3,52 @@ use crate::{
     EventParam, InternalType, JsonAbi, Param, StateMutability,
 };
 use alloc::{collections::BTreeSet, string::String, vec::Vec};
-use core::cmp::Ordering;
-
-const INDENT: &str = "    ";
+use core::{
+    cmp::Ordering,
+    ops::{Deref, DerefMut},
+};
 
 pub(crate) trait ToSol {
-    fn to_sol(&self, out: &mut String);
+    fn to_sol(&self, out: &mut SolPrinter<'_>);
+}
+
+pub(crate) struct SolPrinter<'a> {
+    s: &'a mut String,
+    emit_param_storage: bool,
+}
+
+impl Deref for SolPrinter<'_> {
+    type Target = String;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.s
+    }
+}
+
+impl DerefMut for SolPrinter<'_> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.s
+    }
+}
+
+impl<'a> SolPrinter<'a> {
+    #[inline]
+    pub(crate) fn new(s: &'a mut String) -> Self {
+        Self { s, emit_param_storage: false }
+    }
+
+    #[inline]
+    fn indent(&mut self) {
+        self.push_str("    ");
+    }
 }
 
 impl ToSol for JsonAbi {
     #[allow(unknown_lints, for_loops_over_fallibles)]
     #[inline]
-    fn to_sol(&self, out: &mut String) {
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
         macro_rules! fmt {
             ($e:expr) => {
                 fmt!($e, true)
@@ -23,7 +57,7 @@ impl ToSol for JsonAbi {
                 let mut any = false;
                 for x in $iter {
                     any = true;
-                    out.push_str(INDENT);
+                    out.indent();
                     x.to_sol(out);
                     out.push('\n');
                 }
@@ -170,7 +204,7 @@ impl<'a> It<'a> {
 }
 
 impl ToSol for It<'_> {
-    fn to_sol(&self, out: &mut String) {
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
         match self.kind {
             ItKind::Enum => {
                 out.push_str("type ");
@@ -189,12 +223,12 @@ impl ToSol for It<'_> {
                 out.push_str(self.name);
                 out.push_str(" {\n");
                 for component in components {
-                    out.push_str(INDENT);
-                    out.push_str(INDENT);
+                    out.indent();
+                    out.indent();
                     component.to_sol(out);
                     out.push_str(";\n");
                 }
-                out.push_str(INDENT);
+                out.indent();
                 out.push('}');
             }
         }
@@ -202,9 +236,9 @@ impl ToSol for It<'_> {
 }
 
 impl ToSol for Event {
-    fn to_sol(&self, out: &mut String) {
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
         AbiFunction::<'_, EventParam> {
-            kw: "event",
+            kw: AbiFunctionKw::Event,
             name: Some(&self.name),
             inputs: &self.inputs,
             visibility: None,
@@ -217,9 +251,9 @@ impl ToSol for Event {
 }
 
 impl ToSol for Error {
-    fn to_sol(&self, out: &mut String) {
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
         AbiFunction::<'_, Param> {
-            kw: "error",
+            kw: AbiFunctionKw::Error,
             name: Some(&self.name),
             inputs: &self.inputs,
             visibility: None,
@@ -232,12 +266,12 @@ impl ToSol for Error {
 }
 
 impl ToSol for Fallback {
-    fn to_sol(&self, out: &mut String) {
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
         AbiFunction::<'_, Param> {
-            kw: "fallback",
+            kw: AbiFunctionKw::Fallback,
             name: None,
             inputs: &[],
-            visibility: Some("external"),
+            visibility: Some(Visibility::External),
             state_mutability: Some(self.state_mutability),
             anonymous: false,
             outputs: &[],
@@ -247,12 +281,12 @@ impl ToSol for Fallback {
 }
 
 impl ToSol for Receive {
-    fn to_sol(&self, out: &mut String) {
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
         AbiFunction::<'_, Param> {
-            kw: "receive",
+            kw: AbiFunctionKw::Receive,
             name: None,
             inputs: &[],
-            visibility: Some("external"),
+            visibility: Some(Visibility::External),
             state_mutability: Some(self.state_mutability),
             anonymous: false,
             outputs: &[],
@@ -262,12 +296,12 @@ impl ToSol for Receive {
 }
 
 impl ToSol for Function {
-    fn to_sol(&self, out: &mut String) {
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
         AbiFunction::<'_, Param> {
-            kw: "function",
+            kw: AbiFunctionKw::Function,
             name: Some(&self.name),
             inputs: &self.inputs,
-            visibility: Some("external"),
+            visibility: Some(Visibility::External),
             state_mutability: Some(self.state_mutability),
             anonymous: false,
             outputs: &self.outputs,
@@ -277,18 +311,59 @@ impl ToSol for Function {
 }
 
 struct AbiFunction<'a, IN> {
-    kw: &'static str,
+    kw: AbiFunctionKw,
     name: Option<&'a str>,
     inputs: &'a [IN],
-    visibility: Option<&'static str>,
+    visibility: Option<Visibility>,
     state_mutability: Option<StateMutability>,
     anonymous: bool,
     outputs: &'a [Param],
 }
 
+enum AbiFunctionKw {
+    Function,
+    Fallback,
+    Receive,
+    Error,
+    Event,
+}
+
+impl AbiFunctionKw {
+    #[inline]
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Function => "function",
+            Self::Fallback => "fallback",
+            Self::Receive => "receive",
+            Self::Error => "error",
+            Self::Event => "event",
+        }
+    }
+}
+
+enum Visibility {
+    External,
+}
+
+impl Visibility {
+    #[inline]
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::External => "external",
+        }
+    }
+}
+
 impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
-    fn to_sol(&self, out: &mut String) {
-        out.push_str(self.kw);
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
+        if matches!(
+            self.kw,
+            AbiFunctionKw::Function | AbiFunctionKw::Fallback | AbiFunctionKw::Receive
+        ) {
+            out.emit_param_storage = true;
+        }
+
+        out.push_str(self.kw.as_str());
         if let Some(name) = self.name {
             out.push(' ');
             out.push_str(name);
@@ -303,9 +378,9 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
         }
         out.push(')');
 
-        if let Some(visibility) = self.visibility {
+        if let Some(visibility) = &self.visibility {
             out.push(' ');
-            out.push_str(visibility);
+            out.push_str(visibility.as_str());
         }
 
         if let Some(state_mutability) = self.state_mutability {
@@ -331,17 +406,19 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
         }
 
         out.push(';');
+
+        out.emit_param_storage = false;
     }
 }
 
 impl ToSol for Param {
-    fn to_sol(&self, out: &mut String) {
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
         param(&self.ty, self.internal_type.as_ref(), false, &self.name, &self.components, out);
     }
 }
 
 impl ToSol for EventParam {
-    fn to_sol(&self, out: &mut String) {
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
         param(
             &self.ty,
             self.internal_type.as_ref(),
@@ -359,7 +436,7 @@ fn param<'a>(
     indexed: bool,
     name: &str,
     components: &[Param],
-    out: &mut String,
+    out: &mut SolPrinter<'_>,
 ) {
     if let Some(it) = internal_type {
         type_name = match it {
@@ -402,6 +479,16 @@ fn param<'a>(
         }
         // primitive type
         _ => out.push_str(type_name),
+    }
+
+    // add `memory` if required (only functions)
+    let is_memory = match type_name {
+        // `bytes`, `string`, `T[]`, `T[N]`, <tuple>
+        "bytes" | "string" => true,
+        s => s.ends_with(']') || !components.is_empty(),
+    };
+    if out.emit_param_storage && is_memory {
+        out.push_str(" memory");
     }
 
     if indexed {
