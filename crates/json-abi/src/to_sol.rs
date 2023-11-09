@@ -14,7 +14,11 @@ pub(crate) trait ToSol {
 
 pub(crate) struct SolPrinter<'a> {
     s: &'a mut String,
-    emit_param_location: bool,
+    /// Whether to print `memory` when printing parameters.
+    print_param_location: bool,
+    /// Whether we're currently printing a single return value.
+    /// This allows us to flatten a custom return type into the returns tuple for old Solc ABIs.
+    in_single_return: bool,
 }
 
 impl Deref for SolPrinter<'_> {
@@ -36,7 +40,7 @@ impl DerefMut for SolPrinter<'_> {
 impl<'a> SolPrinter<'a> {
     #[inline]
     pub(crate) fn new(s: &'a mut String) -> Self {
-        Self { s, emit_param_location: false }
+        Self { s, print_param_location: false, in_single_return: false }
     }
 
     #[inline]
@@ -358,7 +362,7 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
             self.kw,
             AbiFunctionKw::Function | AbiFunctionKw::Fallback | AbiFunctionKw::Receive
         ) {
-            out.emit_param_location = true;
+            out.print_param_location = true;
         }
 
         out.push_str(self.kw.as_str());
@@ -390,12 +394,14 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
 
         if !self.outputs.is_empty() {
             out.push_str(" returns (");
+            out.in_single_return = true;
             for (i, output) in self.outputs.iter().enumerate() {
                 if i > 0 {
                     out.push_str(", ");
                 }
                 output.to_sol(out);
             }
+            out.in_single_return = false;
             out.push(')');
         }
 
@@ -405,7 +411,7 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
 
         out.push(';');
 
-        out.emit_param_location = false;
+        out.print_param_location = false;
     }
 }
 
@@ -446,40 +452,57 @@ fn param<'a>(
         };
     };
 
+    let mut flattened_return = false;
     match type_name.strip_prefix("tuple") {
         // This condition is met only for JSON ABIs emitted by Solc 0.4.X which don't contain
         // `internalType` fields and instead all structs are emitted as unnamed tuples.
         // See https://github.com/alloy-rs/core/issues/349
         Some(rest) if rest.is_empty() || rest.starts_with('[') => {
-            // note: this does not actually emit valid Solidity because there are no inline
-            // tuple types `(T, U, V, ...)`, but it's valid for `sol!`.
-            out.push('(');
-            // Don't emit `memory` for tuple components because `sol!` can't parse them.
-            let prev = core::mem::replace(&mut out.emit_param_location, false);
-            for (i, component) in components.iter().enumerate() {
-                if i > 0 {
-                    out.push_str(", ");
+            if out.in_single_return && rest.is_empty() {
+                // Flatten a single return values into the returns tuple.
+                for (i, component) in components.iter().enumerate() {
+                    if i > 0 {
+                        out.push_str(", ");
+                    }
+                    component.to_sol(out);
                 }
-                param(
-                    &component.ty,
-                    component.internal_type.as_ref(), // this is probably always None
-                    false,
-                    "", // don't emit names in types
-                    &component.components,
-                    out,
-                );
+                flattened_return = true;
+            } else {
+                // note: this does not actually emit valid Solidity because there are no inline
+                // tuple types `(T, U, V, ...)`, but it's valid for `sol!`.
+                out.push('(');
+                // Don't emit `memory` for tuple components because `sol!` can't parse them.
+                let prev = core::mem::replace(&mut out.print_param_location, false);
+                for (i, component) in components.iter().enumerate() {
+                    if i > 0 {
+                        out.push_str(", ");
+                    }
+                    param(
+                        &component.ty,
+                        component.internal_type.as_ref(), // this is probably always None
+                        false,
+                        "", // don't emit names in types
+                        &component.components,
+                        out,
+                    );
+                }
+                out.print_param_location = prev;
+                // trailing comma for single-element tuples
+                if components.len() == 1 {
+                    out.push(',');
+                }
+                out.push(')');
+                // could be array sizes
+                out.push_str(rest);
             }
-            out.emit_param_location = prev;
-            // trailing comma for single-element tuples
-            if components.len() == 1 {
-                out.push(',');
-            }
-            out.push(')');
-            // could be array sizes
-            out.push_str(rest);
         }
         // primitive type
         _ => out.push_str(type_name),
+    }
+
+    // skip printing location and name
+    if flattened_return {
+        return;
     }
 
     // add `memory` if required (functions)
@@ -488,7 +511,7 @@ fn param<'a>(
         "bytes" | "string" => true,
         s => s.ends_with(']') || !components.is_empty(),
     };
-    if out.emit_param_location && is_memory {
+    if out.print_param_location && is_memory {
         out.push_str(" memory");
     }
 
