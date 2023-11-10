@@ -1,6 +1,6 @@
 use crate::Spanned;
 use proc_macro2::{Ident, Span};
-use quote::ToTokens;
+use quote::{ToTokens};
 use std::fmt;
 use syn::{
     ext::IdentExt,
@@ -60,12 +60,7 @@ impl From<Ident> for SolIdent {
 
 impl From<SolIdent> for Ident {
     fn from(value: SolIdent) -> Self {
-        let str = value.0.to_string();
-        if RUST_KEYWORD_SET_DIFFERENCE.contains(&str.as_str()) {
-            Ident::new_raw(&str, value.span())
-        } else {
-            Ident::new(&str, value.span())
-        }
+        value.0
     }
 }
 
@@ -84,13 +79,7 @@ impl Parse for SolIdent {
 
 impl ToTokens for SolIdent {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let str = self.0.to_string();
-        if RUST_KEYWORD_SET_DIFFERENCE.contains(&str.as_str()) {
-            Ident::new_raw(&str, self.span())
-        } else {
-            Ident::new(&str, self.span())
-        }
-        .to_tokens(tokens)
+        self.0.to_tokens(tokens);
     }
 }
 
@@ -106,11 +95,15 @@ impl Spanned for SolIdent {
 
 impl SolIdent {
     pub fn new(s: &str) -> Self {
-        Self(Ident::new(s, Span::call_site()))
+        Self::new_spanned(s, Span::call_site())
     }
 
     pub fn new_spanned(s: &str, span: Span) -> Self {
-        Self(Ident::new(s, span))
+        if RUST_KEYWORD_SET_DIFFERENCE.contains(&s) {
+            Self(Ident::new_raw(s, span))
+        } else {
+            Self(Ident::new(s, span))
+        }
     }
 
     /// Strips the raw marker `r#`, if any, from the beginning of an ident.
@@ -139,7 +132,8 @@ impl SolIdent {
     /// Parses any identifier including keywords.
     pub fn parse_any(input: ParseStream<'_>) -> Result<Self> {
         check_dollar(input)?;
-        input.call(Ident::parse_any).map(Self)
+
+        input.call(Ident::parse_any).map(Into::into)
     }
 
     /// Peeks any identifier including keywords.
