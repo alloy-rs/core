@@ -752,10 +752,7 @@ fn abigen_json_blur_exchange() {
 #[test]
 #[cfg(feature = "json")]
 fn abigen_json_0x_proxy() {
-    sol!(
-        ZeroXExchangeProxy,
-        "../json-abi/tests/abi/ZeroxExchangeProxy.json"
-    );
+    sol!(ZeroXExchangeProxy, "../json-abi/tests/abi/ZeroxExchangeProxy.json");
 }
 
 #[test]
