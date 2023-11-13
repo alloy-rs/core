@@ -48,10 +48,7 @@ impl fmt::Display for TypeArray {
 
 impl fmt::Debug for TypeArray {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("TypeArray")
-            .field(&self.ty)
-            .field(&self.size())
-            .finish()
+        f.debug_tuple("TypeArray").field(&self.ty).field(&self.size()).finish()
     }
 }
 

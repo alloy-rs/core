@@ -18,9 +18,7 @@ pub struct ExprTypeCall {
 
 impl fmt::Debug for ExprTypeCall {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ExprTypeCall")
-            .field("ty", &self.ty)
-            .finish()
+        f.debug_struct("ExprTypeCall").field("ty", &self.ty).finish()
     }
 }
 
@@ -64,10 +62,7 @@ impl fmt::Debug for ExprNew {
 
 impl Parse for ExprNew {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            new_token: input.parse()?,
-            ty: input.parse()?,
-        })
+        Ok(Self { new_token: input.parse()?, ty: input.parse()? })
     }
 }
 

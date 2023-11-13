@@ -98,16 +98,14 @@ where
     #[inline]
     fn valid_token(token: &Self::TokenType<'_>) -> bool {
         if BITS == 256 {
-            return true
+            return true;
         }
 
         let is_negative = token.0[IntBitCount::<BITS>::WORD_MSB] & 0x80 == 0x80;
         let sign_extension = is_negative as u8 * 0xff;
 
         // check that all upper bytes are an extension of the sign bit
-        token.0[..IntBitCount::<BITS>::WORD_MSB]
-            .iter()
-            .all(|byte| *byte == sign_extension)
+        token.0[..IntBitCount::<BITS>::WORD_MSB].iter().all(|byte| *byte == sign_extension)
     }
 
     #[inline]
@@ -542,7 +540,7 @@ where
     #[inline]
     fn stv_abi_encoded_size(&self) -> usize {
         if let Some(size) = FixedArray::<U, N>::ENCODED_SIZE {
-            return size
+            return size;
         }
 
         self.iter().map(T::stv_abi_encoded_size).sum::<usize>() + (U::DYNAMIC as usize * N * 32)

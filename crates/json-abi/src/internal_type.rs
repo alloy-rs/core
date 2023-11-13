@@ -45,18 +45,15 @@ impl From<BorrowedInternalType<'_>> for InternalType {
         match borrowed {
             BorrowedInternalType::AddressPayable(s) => Self::AddressPayable(s.to_string()),
             BorrowedInternalType::Contract(s) => Self::Contract(s.to_string()),
-            BorrowedInternalType::Enum { contract, ty } => Self::Enum {
-                contract: contract.map(String::from),
-                ty: ty.to_string(),
-            },
-            BorrowedInternalType::Struct { contract, ty } => Self::Struct {
-                contract: contract.map(String::from),
-                ty: ty.to_string(),
-            },
-            BorrowedInternalType::Other { contract, ty } => Self::Other {
-                contract: contract.map(String::from),
-                ty: ty.to_string(),
-            },
+            BorrowedInternalType::Enum { contract, ty } => {
+                Self::Enum { contract: contract.map(String::from), ty: ty.to_string() }
+            }
+            BorrowedInternalType::Struct { contract, ty } => {
+                Self::Struct { contract: contract.map(String::from), ty: ty.to_string() }
+            }
+            BorrowedInternalType::Other { contract, ty } => {
+                Self::Other { contract: contract.map(String::from), ty: ty.to_string() }
+            }
         }
     }
 }
@@ -162,8 +159,7 @@ impl InternalType {
     /// struct.
     #[inline]
     pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
-        self.as_struct()
-            .and_then(|s| TypeSpecifier::parse(s.1).ok())
+        self.as_struct().and_then(|s| TypeSpecifier::parse(s.1).ok())
     }
 
     /// Return a [`TypeSpecifier`] describing the enum if this type is an enum.
@@ -176,8 +172,7 @@ impl InternalType {
     /// contract.
     #[inline]
     pub fn contract_specifier(&self) -> Option<TypeSpecifier<'_>> {
-        self.as_contract()
-            .and_then(|s| TypeSpecifier::parse(s).ok())
+        self.as_contract().and_then(|s| TypeSpecifier::parse(s).ok())
     }
 
     /// Return a [`TypeSpecifier`] describing the other if this type is an
@@ -194,18 +189,15 @@ impl InternalType {
         match self {
             Self::AddressPayable(s) => BorrowedInternalType::AddressPayable(s),
             Self::Contract(s) => BorrowedInternalType::Contract(s),
-            Self::Enum { contract, ty } => BorrowedInternalType::Enum {
-                contract: contract.as_deref(),
-                ty,
-            },
-            Self::Struct { contract, ty } => BorrowedInternalType::Struct {
-                contract: contract.as_deref(),
-                ty,
-            },
-            Self::Other { contract, ty } => BorrowedInternalType::Other {
-                contract: contract.as_deref(),
-                ty,
-            },
+            Self::Enum { contract, ty } => {
+                BorrowedInternalType::Enum { contract: contract.as_deref(), ty }
+            }
+            Self::Struct { contract, ty } => {
+                BorrowedInternalType::Struct { contract: contract.as_deref(), ty }
+            }
+            Self::Other { contract, ty } => {
+                BorrowedInternalType::Other { contract: contract.as_deref(), ty }
+            }
         }
     }
 }
@@ -214,18 +206,9 @@ impl InternalType {
 pub enum BorrowedInternalType<'a> {
     AddressPayable(&'a str),
     Contract(&'a str),
-    Enum {
-        contract: Option<&'a str>,
-        ty: &'a str,
-    },
-    Struct {
-        contract: Option<&'a str>,
-        ty: &'a str,
-    },
-    Other {
-        contract: Option<&'a str>,
-        ty: &'a str,
-    },
+    Enum { contract: Option<&'a str>, ty: &'a str },
+    Struct { contract: Option<&'a str>, ty: &'a str },
+    Other { contract: Option<&'a str>, ty: &'a str },
 }
 
 impl fmt::Display for BorrowedInternalType<'_> {
@@ -273,44 +256,26 @@ impl<'a> BorrowedInternalType<'a> {
     /// Instantiate a borrowed internal type by parsing a string.
     fn parse(v: &'a str) -> Option<Self> {
         if v.starts_with("address payable") {
-            return Some(Self::AddressPayable(v))
+            return Some(Self::AddressPayable(v));
         }
         if let Some(body) = v.strip_prefix("enum ") {
             if let Some((contract, ty)) = body.split_once('.') {
-                Some(Self::Enum {
-                    contract: Some(contract),
-                    ty,
-                })
+                Some(Self::Enum { contract: Some(contract), ty })
             } else {
-                Some(Self::Enum {
-                    contract: None,
-                    ty: body,
-                })
+                Some(Self::Enum { contract: None, ty: body })
             }
         } else if let Some(body) = v.strip_prefix("struct ") {
             if let Some((contract, ty)) = body.split_once('.') {
-                Some(Self::Struct {
-                    contract: Some(contract),
-                    ty,
-                })
+                Some(Self::Struct { contract: Some(contract), ty })
             } else {
-                Some(Self::Struct {
-                    contract: None,
-                    ty: body,
-                })
+                Some(Self::Struct { contract: None, ty: body })
             }
         } else if let Some(body) = v.strip_prefix("contract ") {
             Some(Self::Contract(body))
         } else if let Some((contract, ty)) = v.split_once('.') {
-            Some(Self::Other {
-                contract: Some(contract),
-                ty,
-            })
+            Some(Self::Other { contract: Some(contract), ty })
         } else {
-            Some(Self::Other {
-                contract: None,
-                ty: v,
-            })
+            Some(Self::Other { contract: None, ty: v })
         }
     }
 }
@@ -357,31 +322,19 @@ mod test {
     fn parse_simple_internal_types() {
         parser_test!(
             "struct SpentItem[]",
-            InternalType::Struct {
-                contract: None,
-                ty: "SpentItem[]".into()
-            }
+            InternalType::Struct { contract: None, ty: "SpentItem[]".into() }
         );
         parser_test!(
             "struct Contract.Item",
-            InternalType::Struct {
-                contract: Some("Contract".into()),
-                ty: "Item".into()
-            }
+            InternalType::Struct { contract: Some("Contract".into()), ty: "Item".into() }
         );
         parser_test!(
             "enum ItemType[32]",
-            InternalType::Enum {
-                contract: None,
-                ty: "ItemType[32]".into()
-            }
+            InternalType::Enum { contract: None, ty: "ItemType[32]".into() }
         );
         parser_test!(
             "enum Contract.Item",
-            InternalType::Enum {
-                contract: Some("Contract".into()),
-                ty: "Item".into()
-            }
+            InternalType::Enum { contract: Some("Contract".into()), ty: "Item".into() }
         );
 
         parser_test!("contract Item", InternalType::Contract("Item".into()));
@@ -393,19 +346,10 @@ mod test {
             "address payable[][][][][]",
             InternalType::AddressPayable("address payable[][][][][]".into())
         );
-        parser_test!(
-            "Item",
-            InternalType::Other {
-                contract: None,
-                ty: "Item".into()
-            }
-        );
+        parser_test!("Item", InternalType::Other { contract: None, ty: "Item".into() });
         parser_test!(
             "Contract.Item[][33]",
-            InternalType::Other {
-                contract: Some("Contract".into()),
-                ty: "Item[][33]".into()
-            }
+            InternalType::Other { contract: Some("Contract".into()), ty: "Item[][33]".into() }
         );
     }
 }

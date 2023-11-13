@@ -35,10 +35,7 @@ use alloc::{borrow::Cow, vec::Vec};
 /// assert_eq!(Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
 ///
 /// type LargeComplexType = (FixedArray<Array<Bool>, 2>, (FixedBytes<13>, String));
-/// assert_eq!(
-///     LargeComplexType::sol_type_name(),
-///     "(bool[][2],(bytes13,string))"
-/// );
+/// assert_eq!(LargeComplexType::sol_type_name(), "(bool[][2],(bytes13,string))");
 /// ```
 ///
 /// The previous example can be entirely replicated with the [`sol!`] macro:
@@ -53,10 +50,7 @@ use alloc::{borrow::Cow, vec::Vec};
 /// assert_eq!(Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
 ///
 /// type LargeComplexType = sol!((bool[][2],(bytes13,string)));
-/// assert_eq!(
-///     LargeComplexType::sol_type_name(),
-///     "(bool[][2],(bytes13,string))"
-/// );
+/// assert_eq!(LargeComplexType::sol_type_name(), "(bool[][2],(bytes13,string))");
 /// ```
 ///
 /// For more complex usage, it's recommended to use the
@@ -87,11 +81,7 @@ use alloc::{borrow::Cow, vec::Vec};
 /// let my_bool = true;
 /// let _ = my_bool.abi_encode();
 ///
-/// let my_struct = MyStruct {
-///     a: true,
-///     b: 1,
-///     c: Address::ZERO,
-/// };
+/// let my_struct = MyStruct { a: true, b: 1, c: Address::ZERO };
 /// let _ = my_struct.abi_encode();
 ///
 /// let my_enum = MyEnum::A;
@@ -179,8 +169,7 @@ pub trait SolType: Sized {
     /// Non-standard Packed Mode ABI encoding.
     ///
     /// This is different from normal ABI encoding:
-    /// - types shorter than 32 bytes are concatenated directly, without padding
-    ///   or sign extension;
+    /// - types shorter than 32 bytes are concatenated directly, without padding or sign extension;
     /// - dynamic types are encoded in-place and without the length;
     /// - array elements are padded, but still encoded in-place.
     ///

@@ -7,9 +7,7 @@ use quote::quote;
 use syn::Result;
 
 pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
-    let ItemUdt {
-        name, ty, attrs, ..
-    } = udt;
+    let ItemUdt { name, ty, attrs, .. } = udt;
 
     // TODO: Uncomment after migrating `define_udt!`
     let _ = cx;

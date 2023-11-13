@@ -15,10 +15,7 @@ pub struct ExprUnary {
 
 impl Parse for ExprUnary {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            op: input.parse()?,
-            expr: input.parse()?,
-        })
+        Ok(Self { op: input.parse()?, expr: input.parse()? })
     }
 }
 
@@ -43,18 +40,13 @@ pub struct ExprDelete {
 
 impl fmt::Debug for ExprDelete {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ExprDelete")
-            .field("expr", &self.expr)
-            .finish()
+        f.debug_struct("ExprDelete").field("expr", &self.expr).finish()
     }
 }
 
 impl Parse for ExprDelete {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            delete_token: input.parse()?,
-            expr: input.parse()?,
-        })
+        Ok(Self { delete_token: input.parse()?, expr: input.parse()? })
     }
 }
 
@@ -79,10 +71,7 @@ pub struct ExprPostfix {
 
 impl ParseNested for ExprPostfix {
     fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            expr,
-            op: input.parse()?,
-        })
+        Ok(Self { expr, op: input.parse()? })
     }
 }
 

@@ -52,10 +52,7 @@ pub trait SolInterface: Sized {
         if Self::valid_selector(selector) {
             Ok(())
         } else {
-            Err(Error::UnknownSelector {
-                name: Self::NAME,
-                selector: selector.into(),
-            })
+            Err(Error::UnknownSelector { name: Self::NAME, selector: selector.into() })
         }
     }
 
@@ -227,11 +224,7 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
     const NAME: &'static str = "ContractError";
 
     // revert is 64, panic is 32
-    const MIN_DATA_LENGTH: usize = if T::MIN_DATA_LENGTH < 32 {
-        T::MIN_DATA_LENGTH
-    } else {
-        32
-    };
+    const MIN_DATA_LENGTH: usize = if T::MIN_DATA_LENGTH < 32 { T::MIN_DATA_LENGTH } else { 32 };
 
     const COUNT: usize = T::COUNT + 2;
 
@@ -386,28 +379,20 @@ pub struct Selectors<T> {
 
 impl<T> Clone for Selectors<T> {
     fn clone(&self) -> Self {
-        Self {
-            index: self.index,
-            _marker: PhantomData,
-        }
+        Self { index: self.index, _marker: PhantomData }
     }
 }
 
 impl<T> fmt::Debug for Selectors<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Selectors")
-            .field("index", &self.index)
-            .finish()
+        f.debug_struct("Selectors").field("index", &self.index).finish()
     }
 }
 
 impl<T> Selectors<T> {
     #[inline]
     const fn new() -> Self {
-        Self {
-            index: 0,
-            _marker: PhantomData,
-        }
+        Self { index: 0, _marker: PhantomData }
     }
 }
 
@@ -497,12 +482,7 @@ mod tests {
         assert_eq!(C::CErrors::SELECTORS, [sel("Err2(uint256)"), sel("Err1()")]);
         assert_eq!(
             ContractError::<C::CErrors>::selectors().collect::<Vec<_>>(),
-            vec![
-                sel("Err2(uint256)"),
-                sel("Err1()"),
-                sel("Error(string)"),
-                sel("Panic(uint256)"),
-            ],
+            vec![sel("Err2(uint256)"), sel("Err1()"), sel("Error(string)"), sel("Panic(uint256)"),],
         );
     }
 }

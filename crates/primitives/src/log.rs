@@ -4,10 +4,7 @@ use alloc::vec::Vec;
 /// An Ethereum event log object.
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(
-    feature = "arbitrary",
-    derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary)
-)]
+#[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub struct Log {
     /// The indexed topic list.
     topics: Vec<B256>,
@@ -35,10 +32,7 @@ impl Log {
     /// Creates a new empty log.
     #[inline]
     pub const fn empty() -> Self {
-        Self {
-            topics: Vec::new(),
-            data: Bytes::new(),
-        }
+        Self { topics: Vec::new(), data: Bytes::new() }
     }
 
     /// True if valid, false otherwise.

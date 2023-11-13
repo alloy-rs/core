@@ -42,7 +42,7 @@ pub trait SolError: Sized {
     #[inline]
     fn abi_encoded_size(&self) -> usize {
         if let Some(size) = <Self::Parameters<'_> as SolType>::ENCODED_SIZE {
-            return size
+            return size;
         }
 
         self.tokenize().total_words() * Word::len_bytes()
@@ -137,9 +137,7 @@ impl From<String> for Revert {
 impl From<&str> for Revert {
     #[inline]
     fn from(value: &str) -> Self {
-        Self {
-            reason: value.into(),
-        }
+        Self { reason: value.into() }
     }
 }
 
@@ -211,18 +209,14 @@ impl Borrow<U256> for Panic {
 impl From<PanicKind> for Panic {
     #[inline]
     fn from(value: PanicKind) -> Self {
-        Self {
-            code: U256::from(value as u64),
-        }
+        Self { code: U256::from(value as u64) }
     }
 }
 
 impl From<u64> for Panic {
     #[inline]
     fn from(value: u64) -> Self {
-        Self {
-            code: U256::from(value),
-        }
+        Self { code: U256::from(value) }
     }
 }
 
@@ -303,9 +297,7 @@ impl Panic {
     /// [ref]: https://docs.soliditylang.org/en/latest/control-structures.html#panic-via-assert-and-error-via-require
     pub fn kind(&self) -> Option<PanicKind> {
         // use try_from to avoid copying by using the `&` impl
-        u32::try_from(&self.code)
-            .ok()
-            .and_then(PanicKind::from_number)
+        u32::try_from(&self.code).ok().and_then(PanicKind::from_number)
     }
 }
 
@@ -417,12 +409,12 @@ impl PanicKind {
 pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
     // Try to decode as a generic contract error.
     if let Ok(error) = GenericContractError::abi_decode(out, true) {
-        return Some(error.to_string())
+        return Some(error.to_string());
     }
 
     // If that fails, try to decode as a regular string.
     if let Ok(decoded_string) = core::str::from_utf8(out) {
-        return Some(decoded_string.to_string())
+        return Some(decoded_string.to_string());
     }
 
     // If both attempts fail, return None.
@@ -509,9 +501,7 @@ mod tests {
         let C::CErrors::SenderAddressError(decoded) = C::CErrors::abi_decode(&data, true).unwrap();
         assert_eq!(
             decoded,
-            C::SenderAddressError {
-                _0: address!("a48388222c7ee7daefde5d0b9c99319995c4a990")
-            }
+            C::SenderAddressError { _0: address!("a48388222c7ee7daefde5d0b9c99319995c4a990") }
         );
     }
 }

@@ -11,12 +11,7 @@
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
-#![warn(
-    missing_copy_implementations,
-    missing_debug_implementations,
-    missing_docs,
-    rustdoc::all
-)]
+#![warn(missing_copy_implementations, missing_debug_implementations, missing_docs, rustdoc::all)]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
@@ -52,21 +47,17 @@ mod utils;
 /// [`alloy-sol-types`]: https://docs.rs/alloy-sol-types
 ///
 /// There are two main ways to use this macro:
-/// - you can [write Solidity code](#solidity), or provide a path to a Solidity
-///   file,
-/// - if you enable the `json` feature, you can provide [an ABI, or a path to
-///   one, in JSON format](#json-abi).
+/// - you can [write Solidity code](#solidity), or provide a path to a Solidity file,
+/// - if you enable the `json` feature, you can provide [an ABI, or a path to one, in JSON
+///   format](#json-abi).
 ///
 /// Note:
-/// - relative file system paths are rooted at the `CARGO_MANIFEST_DIR`
-///   environment variable
+/// - relative file system paths are rooted at the `CARGO_MANIFEST_DIR` environment variable
 /// - no casing convention is enforced for any identifier,
-/// - unnamed arguments will be given a name based on their index in the list,
-///   e.g. `_0`, `_1`...
-/// - a current limitation for certain items is that custom types, like structs,
-///   must be defined in the same macro scope, otherwise a signature cannot be
-///   generated at compile time. You can bring them in scope with a [Solidity
-///   type alias](#udvt-and-type-aliases).
+/// - unnamed arguments will be given a name based on their index in the list, e.g. `_0`, `_1`...
+/// - a current limitation for certain items is that custom types, like structs, must be defined in
+///   the same macro scope, otherwise a signature cannot be generated at compile time. You can bring
+///   them in scope with a [Solidity type alias](#udvt-and-type-aliases).
 ///
 /// ## Solidity
 ///
@@ -74,10 +65,9 @@ mod utils;
 /// [its documentation][ast] for more.
 ///
 /// Solidity input can be either one of the following:
-/// - a Solidity item, which is a [Solidity source unit][sol-item] which
-///   generates one or more Rust items,
-/// - a [Solidity type name][sol-types], which simply expands to the
-///   corresponding Rust type.
+/// - a Solidity item, which is a [Solidity source unit][sol-item] which generates one or more Rust
+///   items,
+/// - a [Solidity type name][sol-types], which simply expands to the corresponding Rust type.
 ///
 /// [sol-item]: https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.sourceUnit
 /// [sol-types]: https://docs.soliditylang.org/en/latest/types.html
@@ -97,22 +87,19 @@ mod utils;
 /// but this may change in the future.
 ///
 /// List of all `#[sol(...)]` supported attributes:
-/// - `all_derives [ = <bool = false>]`: adds all possible `#[derive(...)]`
-///   attributes to all generated types. May significantly increase compile
-///   times due to all the extra generated code. This is the default behaviour
-///   of [`abigen`][abigen]
-/// - `extra_methods [ = <bool = false>]`: adds extra implementations and
-///   methods to all applicable generated types, such as `From` impls and
-///   `as_<variant>` methods. May significantly increase compile times due to
-///   all the extra generated code. This is the default behaviour of
+/// - `all_derives [ = <bool = false>]`: adds all possible `#[derive(...)]` attributes to all
+///   generated types. May significantly increase compile times due to all the extra generated code.
+///   This is the default behaviour of [`abigen`][abigen]
+/// - `extra_methods [ = <bool = false>]`: adds extra implementations and methods to all applicable
+///   generated types, such as `From` impls and `as_<variant>` methods. May significantly increase
+///   compile times due to all the extra generated code. This is the default behaviour of
 ///   [`abigen`][abigen]
-/// - `docs [ = <bool = true>]`: adds doc comments to all generated types. This
-///   is the default behaviour of [`abigen`][abigen]
-/// - `bytecode = <hex string literal>`: specifies the creation/init bytecode of
-///   a contract. This will emit a `static` item with the specified bytes.
-/// - `deployed_bytecode = <hex string literal>`: specifies the deployed
-///   bytecode of a contract. This will emit a `static` item with the specified
-///   bytes.
+/// - `docs [ = <bool = true>]`: adds doc comments to all generated types. This is the default
+///   behaviour of [`abigen`][abigen]
+/// - `bytecode = <hex string literal>`: specifies the creation/init bytecode of a contract. This
+///   will emit a `static` item with the specified bytes.
+/// - `deployed_bytecode = <hex string literal>`: specifies the deployed bytecode of a contract.
+///   This will emit a `static` item with the specified bytes.
 ///
 /// ### Structs and enums
 ///

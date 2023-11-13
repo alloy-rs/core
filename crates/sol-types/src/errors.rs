@@ -72,20 +72,15 @@ impl std::error::Error for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::TypeCheckFail {
-                expected_type,
-                data,
-            } => write!(
-                f,
-                "type check failed for \"{expected_type}\" with data: {data}",
-            ),
+            Self::TypeCheckFail { expected_type, data } => {
+                write!(f, "type check failed for \"{expected_type}\" with data: {data}",)
+            }
             Self::Overrun => f.write_str("buffer overrun while deserializing"),
             Self::BufferNotEmpty => f.write_str("buffer not empty after deserialization"),
             Self::ReserMismatch => f.write_str("reserialization did not match original"),
-            Self::InvalidEnumValue { name, value, max } => write!(
-                f,
-                "`{value}` is not a valid {name} enum value (max: `{max}`)"
-            ),
+            Self::InvalidEnumValue { name, value, max } => {
+                write!(f, "`{value}` is not a valid {name} enum value (max: `{max}`)")
+            }
             Self::UnknownSelector { name, selector } => {
                 write!(f, "unknown selector `{selector}` for {name}")
             }
@@ -121,19 +116,13 @@ impl Error {
     /// Instantiates a new [`Error::TypeCheckFail`] with the provided data.
     #[cold]
     pub fn type_check_fail(data: &[u8], expected_type: impl Into<Cow<'static, str>>) -> Self {
-        Self::TypeCheckFail {
-            expected_type: expected_type.into(),
-            data: hex::encode(data),
-        }
+        Self::TypeCheckFail { expected_type: expected_type.into(), data: hex::encode(data) }
     }
 
     /// Instantiates a new [`Error::UnknownSelector`] with the provided data.
     #[cold]
     pub fn unknown_selector(name: &'static str, selector: [u8; 4]) -> Self {
-        Self::UnknownSelector {
-            name,
-            selector: selector.into(),
-        }
+        Self::UnknownSelector { name, selector: selector.into() }
     }
 }
 

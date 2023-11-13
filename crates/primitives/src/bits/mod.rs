@@ -18,3 +18,6 @@ mod rlp;
 
 #[cfg(feature = "serde")]
 mod serde;
+
+#[cfg(feature = "ssz")]
+mod ssz;

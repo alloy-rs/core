@@ -69,7 +69,7 @@ pub trait SolEvent: Sized {
     #[inline]
     fn abi_encoded_size(&self) -> usize {
         if let Some(size) = <Self::DataTuple<'_> as SolType>::ENCODED_SIZE {
-            return size
+            return size;
         }
 
         self.tokenize_body().total_words() * Word::len_bytes()

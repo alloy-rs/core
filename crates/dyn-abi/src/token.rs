@@ -43,14 +43,8 @@ impl<'a> PartialEq<DynToken<'a>> for DynToken<'_> {
             (Self::Word(l0), DynToken::Word(r0)) => l0 == r0,
             (Self::FixedSeq(l0, l1), DynToken::FixedSeq(r0, r1)) => l0 == r0 && l1 == r1,
             (
-                Self::DynSeq {
-                    contents: l_contents,
-                    ..
-                },
-                DynToken::DynSeq {
-                    contents: r_contents,
-                    ..
-                },
+                Self::DynSeq { contents: l_contents, .. },
+                DynToken::DynSeq { contents: r_contents, .. },
             ) => l_contents == r_contents,
             (Self::PackedSeq(l0), DynToken::PackedSeq(r0)) => l0 == r0,
             _ => false,
@@ -72,10 +66,7 @@ impl<'a> DynToken<'a> {
     #[inline]
     pub fn from_dyn_seq(seq: &'a [DynSolValue]) -> Self {
         let tokens = seq.iter().map(DynSolValue::tokenize).collect();
-        Self::DynSeq {
-            contents: Cow::Owned(tokens),
-            template: None,
-        }
+        Self::DynSeq { contents: Cow::Owned(tokens), template: None }
     }
 
     /// Attempt to cast to a word.
@@ -140,11 +131,7 @@ impl<'a> DynToken<'a> {
             Self::Word(w) => *w = WordToken::decode_from(dec)?.0,
             Self::FixedSeq(..) => {
                 let dynamic = self.is_dynamic();
-                let mut child = if dynamic {
-                    dec.take_indirection()?
-                } else {
-                    dec.raw_child()
-                };
+                let mut child = if dynamic { dec.take_indirection()? } else { dec.raw_child() };
 
                 self.decode_sequence_populate(&mut child)?;
 
@@ -158,7 +145,7 @@ impl<'a> DynToken<'a> {
                 if size == 0 {
                     // should already be empty from `empty_dyn_token`
                     debug_assert!(contents.is_empty());
-                    return Ok(())
+                    return Ok(());
                 }
 
                 // This appears to be an unclarity in the Solidity spec. The
@@ -193,15 +180,11 @@ impl<'a> DynToken<'a> {
     #[inline]
     pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
         match self {
-            Self::FixedSeq(buf, size) => buf
-                .to_mut()
-                .iter_mut()
-                .take(*size)
-                .try_for_each(|item| item.decode_populate(dec)),
+            Self::FixedSeq(buf, size) => {
+                buf.to_mut().iter_mut().take(*size).try_for_each(|item| item.decode_populate(dec))
+            }
             Self::DynSeq { .. } => self.decode_populate(dec),
-            _ => Err(Error::custom(
-                "Called decode_sequence_populate on non-sequence token",
-            )),
+            _ => Err(Error::custom("Called decode_sequence_populate on non-sequence token")),
         }
     }
 

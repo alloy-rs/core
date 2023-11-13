@@ -22,10 +22,7 @@ pub struct ExprCall {
 
 impl ParseNested for ExprCall {
     fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            expr,
-            args: input.parse()?,
-        })
+        Ok(Self { expr, args: input.parse()? })
     }
 }
 
@@ -52,19 +49,14 @@ pub struct ExprPayable {
 
 impl fmt::Debug for ExprPayable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ExprPayable")
-            .field("args", &self.args)
-            .finish()
+        f.debug_struct("ExprPayable").field("args", &self.args).finish()
     }
 }
 
 impl From<ExprPayable> for ExprCall {
     fn from(value: ExprPayable) -> Self {
         Self {
-            expr: Box::new(Expr::Ident(SolIdent::new_spanned(
-                "payable",
-                value.payable_token.span,
-            ))),
+            expr: Box::new(Expr::Ident(SolIdent::new_spanned("payable", value.payable_token.span))),
             args: value.args,
         }
     }
@@ -72,10 +64,7 @@ impl From<ExprPayable> for ExprCall {
 
 impl Parse for ExprPayable {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            payable_token: input.parse()?,
-            args: input.parse()?,
-        })
+        Ok(Self { payable_token: input.parse()?, args: input.parse()? })
     }
 }
 
@@ -113,10 +102,7 @@ impl fmt::Debug for ArgList {
 impl Parse for ArgList {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
-        Ok(Self {
-            paren_token: parenthesized!(content in input),
-            list: content.parse()?,
-        })
+        Ok(Self { paren_token: parenthesized!(content in input), list: content.parse()? })
     }
 }
 
@@ -140,10 +126,9 @@ pub enum ArgListImpl {
 impl fmt::Debug for ArgListImpl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Unnamed(list) => f
-                .debug_tuple("Unnamed")
-                .field(DebugPunctuated::new(list))
-                .finish(),
+            Self::Unnamed(list) => {
+                f.debug_tuple("Unnamed").field(DebugPunctuated::new(list)).finish()
+            }
             Self::Named(list) => f.debug_tuple("Named").field(list).finish(),
         }
     }
@@ -154,9 +139,7 @@ impl Parse for ArgListImpl {
         if input.peek(Brace) {
             input.parse().map(Self::Named)
         } else {
-            input
-                .parse_terminated(Expr::parse, Token![,])
-                .map(Self::Unnamed)
+            input.parse_terminated(Expr::parse, Token![,]).map(Self::Unnamed)
         }
     }
 }
@@ -170,10 +153,7 @@ pub struct ExprCallOptions {
 
 impl ParseNested for ExprCallOptions {
     fn parse_nested(expr: Box<Expr>, input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            expr,
-            args: input.parse()?,
-        })
+        Ok(Self { expr, args: input.parse()? })
     }
 }
 
@@ -200,9 +180,7 @@ pub struct NamedArgList {
 
 impl fmt::Debug for NamedArgList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("NamedArgList")
-            .field("list", DebugPunctuated::new(&self.list))
-            .finish()
+        f.debug_struct("NamedArgList").field("list", DebugPunctuated::new(&self.list)).finish()
     }
 }
 
@@ -236,20 +214,13 @@ pub struct NamedArg {
 
 impl fmt::Debug for NamedArg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("NamedArg")
-            .field("name", &self.name)
-            .field("arg", &self.arg)
-            .finish()
+        f.debug_struct("NamedArg").field("name", &self.name).field("arg", &self.arg).finish()
     }
 }
 
 impl Parse for NamedArg {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            name: input.parse()?,
-            colon_token: input.parse()?,
-            arg: input.parse()?,
-        })
+        Ok(Self { name: input.parse()?, colon_token: input.parse()?, arg: input.parse()? })
     }
 }
 

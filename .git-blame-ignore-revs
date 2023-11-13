@@ -10,3 +10,6 @@
 
 # fmt: add rustfmt.toml (#42)
 ea7489fa2cd49e8f89b69d8e0450d9a123d682e2
+
+# fmt: update rustfmt config (#406)
+bceaef594891614fd16ac8420b21f1fb83376403

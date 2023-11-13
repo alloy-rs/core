@@ -19,12 +19,7 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream> {
-    let ItemError {
-        parameters: params,
-        name,
-        attrs,
-        ..
-    } = error;
+    let ItemError { parameters: params, name, attrs, .. } = error;
     cx.assert_resolved(params)?;
 
     let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;

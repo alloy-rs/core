@@ -34,11 +34,7 @@ pub struct Decoder<'de> {
 
 impl fmt::Debug for Decoder<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut body = self
-            .buf
-            .chunks(32)
-            .map(hex::encode_prefixed)
-            .collect::<Vec<_>>();
+        let mut body = self.buf.chunks(32).map(hex::encode_prefixed).collect::<Vec<_>>();
         body[self.offset / 32].push_str(" <-- Next Word");
 
         f.debug_struct("Decoder")
@@ -59,11 +55,7 @@ impl fmt::Display for Decoder<'_> {
                 f,
                 "0x{idx:04x}: {}{}",
                 hex::encode_prefixed(chunk),
-                if idx == self.offset {
-                    " <-- Next Word"
-                } else {
-                    ""
-                }
+                if idx == self.offset { " <-- Next Word" } else { "" }
             )?;
         }
         Ok(())
@@ -78,11 +70,7 @@ impl<'de> Decoder<'de> {
     /// to an identical bytestring.
     #[inline]
     pub const fn new(buf: &'de [u8], validate: bool) -> Self {
-        Self {
-            buf,
-            offset: 0,
-            validate,
-        }
+        Self { buf, offset: 0, validate }
     }
 
     /// Returns the current offset in the buffer.
@@ -140,11 +128,7 @@ impl<'de> Decoder<'de> {
     #[inline]
     pub fn child(&self, offset: usize) -> Result<Decoder<'de>, Error> {
         match self.buf.get(offset..) {
-            Some(buf) => Ok(Decoder {
-                buf,
-                offset: 0,
-                validate: self.validate,
-            }),
+            Some(buf) => Ok(Decoder { buf, offset: 0, validate: self.validate }),
             None => Err(Error::Overrun),
         }
     }
@@ -178,8 +162,7 @@ impl<'de> Decoder<'de> {
     /// offset.
     #[inline]
     pub fn peek_word_at(&self, offset: usize) -> Result<&'de Word, Error> {
-        self.peek_len_at(offset, Word::len_bytes())
-            .map(|w| <&Word>::try_from(w).unwrap())
+        self.peek_len_at(offset, Word::len_bytes()).map(|w| <&Word>::try_from(w).unwrap())
     }
 
     /// Peek the next word from the buffer without advancing the offset.
@@ -192,15 +175,13 @@ impl<'de> Decoder<'de> {
     /// the offset.
     #[inline]
     pub fn peek_offset_at(&self, offset: usize) -> Result<usize> {
-        self.peek_word_at(offset)
-            .and_then(|word| utils::as_offset(word, self.validate))
+        self.peek_word_at(offset).and_then(|word| utils::as_offset(word, self.validate))
     }
 
     /// Peek a `usize` from the buffer, without advancing the offset.
     #[inline]
     pub fn peek_offset(&self) -> Result<usize> {
-        self.peek_word()
-            .and_then(|word| utils::as_offset(word, self.validate))
+        self.peek_word().and_then(|word| utils::as_offset(word, self.validate))
     }
 
     /// Take a word from the buffer, advancing the offset.
@@ -221,8 +202,7 @@ impl<'de> Decoder<'de> {
     /// Takes a `usize` offset from the buffer by consuming a word.
     #[inline]
     pub fn take_offset(&mut self) -> Result<usize> {
-        self.take_word()
-            .and_then(|word| utils::as_offset(word, self.validate))
+        self.take_word().and_then(|word| utils::as_offset(word, self.validate))
     }
 
     /// Takes a slice of bytes of the given length by consuming up to the next
@@ -231,12 +211,10 @@ impl<'de> Decoder<'de> {
         if self.validate {
             let padded_len = utils::next_multiple_of_32(len);
             if self.offset + padded_len > self.buf.len() {
-                return Err(Error::Overrun)
+                return Err(Error::Overrun);
             }
             if !utils::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
-                return Err(Error::Other(Cow::Borrowed(
-                    "non-empty bytes after packed array",
-                )))
+                return Err(Error::Other(Cow::Borrowed("non-empty bytes after packed array")));
             }
         }
         self.take_slice_unchecked(len)
@@ -321,7 +299,7 @@ pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -
     let mut decoder = Decoder::new(data, validate);
     let result = decoder.decode_sequence::<T>()?;
     if validate && encode_sequence(&result) != data {
-        return Err(Error::ReserMismatch)
+        return Err(Error::ReserMismatch);
     }
     Ok(result)
 }
@@ -407,11 +385,7 @@ mod tests {
             sol_data::String,
             sol_data::Bool,
             sol_data::String,
-            (
-                sol_data::String,
-                sol_data::String,
-                (sol_data::String, sol_data::String),
-            ),
+            (sol_data::String, sol_data::String, (sol_data::String, sol_data::String)),
         );
 
         let encoded = hex!(
@@ -457,12 +431,7 @@ mod tests {
 
     #[test]
     fn decode_complex_tuple_of_dynamic_and_static_types() {
-        type MyTy = (
-            sol_data::Uint<256>,
-            sol_data::String,
-            sol_data::Address,
-            sol_data::Address,
-        );
+        type MyTy = (sol_data::Uint<256>, sol_data::String, sol_data::Address, sol_data::Address);
 
         let encoded = hex!(
             "
@@ -638,10 +607,7 @@ mod tests {
             "
         );
 
-        assert_eq!(
-            sol_data::String::abi_decode(&encoded, false).unwrap(),
-            "不�".to_string()
-        );
+        assert_eq!(sol_data::String::abi_decode(&encoded, false).unwrap(), "不�".to_string());
     }
 
     #[test]

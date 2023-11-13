@@ -89,10 +89,7 @@ pub fn rec_expand_rust_type(ty: &Type, tokens: &mut TokenStream) {
     // Display sizes that match with the Rust type, otherwise we lose information
     // (e.g. `uint24` displays the same as `uint32` because both use `u32`)
     fn allowed_int_size(size: Option<NonZeroU16>) -> bool {
-        matches!(
-            size.map_or(256, NonZeroU16::get),
-            8 | 16 | 32 | 64 | 128 | 256
-        )
+        matches!(size.map_or(256, NonZeroU16::get), 8 | 16 | 32 | 64 | 128 | 256)
     }
 
     let tts = match *ty {
@@ -114,7 +111,7 @@ pub fn rec_expand_rust_type(ty: &Type, tokens: &mut TokenStream) {
                     Type::Uint(..) => "u",
                     _ => unreachable!(),
                 };
-                return Ident::new(&format!("{name}{size}"), span).to_tokens(tokens)
+                return Ident::new(&format!("{name}{size}"), span).to_tokens(tokens);
             }
             assert_eq!(size, 256);
             match ty {
@@ -163,10 +160,7 @@ pub fn rec_expand_rust_type(ty: &Type, tokens: &mut TokenStream) {
 ///
 /// See [`type_base_data_size`] for more information.
 pub(super) fn params_base_data_size<P>(cx: &ExpCtxt<'_>, params: &Parameters<P>) -> usize {
-    params
-        .iter()
-        .map(|param| type_base_data_size(cx, &param.ty))
-        .sum()
+    params.iter().map(|param| type_base_data_size(cx, &param.ty)).sum()
 }
 
 /// Recursively calculates the base ABI-encoded size of the given parameter
@@ -188,38 +182,24 @@ pub(super) fn type_base_data_size(cx: &ExpCtxt<'_>, ty: &Type) -> usize {
         Type::String(_) | Type::Bytes(_) | Type::Array(TypeArray { size: None, .. }) => 64,
 
         // fixed array: size * encoded size
-        Type::Array(
-            a @ TypeArray {
-                ty: inner,
-                size: Some(_),
-                ..
-            },
-        ) => type_base_data_size(cx, inner) * a.size().unwrap(),
+        Type::Array(a @ TypeArray { ty: inner, size: Some(_), .. }) => {
+            type_base_data_size(cx, inner) * a.size().unwrap()
+        }
 
         // tuple: sum of encoded sizes
-        Type::Tuple(tuple) => tuple
-            .types
-            .iter()
-            .map(|ty| type_base_data_size(cx, ty))
-            .sum(),
+        Type::Tuple(tuple) => tuple.types.iter().map(|ty| type_base_data_size(cx, ty)).sum(),
 
         Type::Custom(name) => match cx.try_item(name) {
             Some(Item::Contract(_)) | Some(Item::Enum(_)) => 32,
-            Some(Item::Error(error)) => error
-                .parameters
-                .types()
-                .map(|ty| type_base_data_size(cx, ty))
-                .sum(),
-            Some(Item::Event(event)) => event
-                .parameters
-                .iter()
-                .map(|p| type_base_data_size(cx, &p.ty))
-                .sum(),
-            Some(Item::Struct(strukt)) => strukt
-                .fields
-                .types()
-                .map(|ty| type_base_data_size(cx, ty))
-                .sum(),
+            Some(Item::Error(error)) => {
+                error.parameters.types().map(|ty| type_base_data_size(cx, ty)).sum()
+            }
+            Some(Item::Event(event)) => {
+                event.parameters.iter().map(|p| type_base_data_size(cx, &p.ty)).sum()
+            }
+            Some(Item::Struct(strukt)) => {
+                strukt.fields.types().map(|ty| type_base_data_size(cx, ty)).sum()
+            }
             Some(Item::Udt(udt)) => type_base_data_size(cx, &udt.ty),
             Some(item) => abort!(item.span(), "Invalid type in struct field: {:?}", item),
             None => 0,
@@ -250,14 +230,12 @@ pub(super) fn can_derive_default(cx: &ExpCtxt<'_>, ty: &Type) -> bool {
 
         Type::Custom(name) => match cx.try_item(name) {
             Some(Item::Contract(_)) | Some(Item::Enum(_)) => false,
-            Some(Item::Error(error)) => error
-                .parameters
-                .types()
-                .all(|ty| can_derive_default(cx, ty)),
-            Some(Item::Event(event)) => event
-                .parameters
-                .iter()
-                .all(|p| can_derive_default(cx, &p.ty)),
+            Some(Item::Error(error)) => {
+                error.parameters.types().all(|ty| can_derive_default(cx, ty))
+            }
+            Some(Item::Event(event)) => {
+                event.parameters.iter().all(|p| can_derive_default(cx, &p.ty))
+            }
             Some(Item::Struct(strukt)) => {
                 strukt.fields.types().all(|ty| can_derive_default(cx, ty))
             }
@@ -279,27 +257,21 @@ pub(super) fn can_derive_builtin_traits(cx: &ExpCtxt<'_>, ty: &Type) -> bool {
             if tuple.types.len() > MAX_SUPPORTED_TUPLE_LEN {
                 false
             } else {
-                tuple
-                    .types
-                    .iter()
-                    .all(|ty| can_derive_builtin_traits(cx, ty))
+                tuple.types.iter().all(|ty| can_derive_builtin_traits(cx, ty))
             }
         }
 
         Type::Custom(name) => match cx.try_item(name) {
             Some(Item::Contract(_)) | Some(Item::Enum(_)) => true,
-            Some(Item::Error(error)) => error
-                .parameters
-                .types()
-                .all(|ty| can_derive_builtin_traits(cx, ty)),
-            Some(Item::Event(event)) => event
-                .parameters
-                .iter()
-                .all(|p| can_derive_builtin_traits(cx, &p.ty)),
-            Some(Item::Struct(strukt)) => strukt
-                .fields
-                .types()
-                .all(|ty| can_derive_builtin_traits(cx, ty)),
+            Some(Item::Error(error)) => {
+                error.parameters.types().all(|ty| can_derive_builtin_traits(cx, ty))
+            }
+            Some(Item::Event(event)) => {
+                event.parameters.iter().all(|p| can_derive_builtin_traits(cx, &p.ty))
+            }
+            Some(Item::Struct(strukt)) => {
+                strukt.fields.types().all(|ty| can_derive_builtin_traits(cx, ty))
+            }
             Some(Item::Udt(udt)) => can_derive_builtin_traits(cx, &udt.ty),
             Some(item) => abort!(item.span(), "Invalid type in struct field: {:?}", item),
             _ => false,

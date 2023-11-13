@@ -149,7 +149,7 @@ impl Bloom {
 
 const fn log2(x: usize) -> usize {
     if x <= 1 {
-        return 0
+        return 0;
     }
 
     (usize::BITS - x.leading_zeros()) as usize

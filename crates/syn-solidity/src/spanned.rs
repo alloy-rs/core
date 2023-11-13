@@ -97,10 +97,7 @@ impl<T: ?Sized + Spanned> Spanned for &T {
     #[inline]
     #[track_caller]
     fn set_span(&mut self, _span: Span) {
-        unimplemented!(
-            "cannot set span of borrowed Spanned: {:?}",
-            std::any::type_name::<&T>()
-        )
+        unimplemented!("cannot set span of borrowed Spanned: {:?}", std::any::type_name::<&T>())
     }
 }
 
@@ -129,9 +126,7 @@ impl<T: Spanned, P: Spanned> Spanned for Punctuated<T, P> {
 impl<T: Spanned, P: Spanned> Spanned for Pair<T, P> {
     fn span(&self) -> Span {
         let span = self.value().span();
-        self.punct()
-            .and_then(|punct| span.join(punct.span()))
-            .unwrap_or(span)
+        self.punct().and_then(|punct| span.join(punct.span())).unwrap_or(span)
     }
 
     fn set_span(&mut self, span: Span) {

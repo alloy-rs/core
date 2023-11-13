@@ -162,16 +162,9 @@ impl<'a> arbitrary::Arbitrary<'a> for DynSolType {
             #[cfg(feature = "eip712")]
             Choice::CustomStruct => {
                 let name = u.arbitrary::<AString>()?.0;
-                let (prop_names, tuple) = u
-                    .arbitrary_iter::<(AString, Self)>()?
-                    .flatten()
-                    .map(|(a, b)| (a.0, b))
-                    .unzip();
-                Ok(Self::CustomStruct {
-                    name,
-                    prop_names,
-                    tuple,
-                })
+                let (prop_names, tuple) =
+                    u.arbitrary_iter::<(AString, Self)>()?.flatten().map(|(a, b)| (a.0, b)).unzip();
+                Ok(Self::CustomStruct { name, prop_names, tuple })
             }
         }
     }
@@ -193,11 +186,7 @@ impl<'a> arbitrary::Arbitrary<'a> for DynSolValue {
         match u.arbitrary::<DynSolType>()? {
             // re-use name and prop_names
             #[cfg(feature = "eip712")]
-            DynSolType::CustomStruct {
-                name,
-                prop_names,
-                tuple,
-            } => Ok(Self::CustomStruct {
+            DynSolType::CustomStruct { name, prop_names, tuple } => Ok(Self::CustomStruct {
                 name,
                 prop_names,
                 tuple: tuple
@@ -255,11 +244,7 @@ macro_rules! custom_struct_strategy {
                     vec_strategy(elem.clone(), sz..=sz),
                 )
             })
-            .prop_map(|(name, prop_names, tuple)| Self::CustomStruct {
-                name,
-                prop_names,
-                tuple,
-            })
+            .prop_map(|(name, prop_names, tuple)| Self::CustomStruct { name, prop_names, tuple })
             .boxed();
         strat
     }};
@@ -377,9 +362,9 @@ impl DynSolValue {
             DynSolType::Function => u.arbitrary().map(Self::Function),
             &DynSolType::Int(sz) => u.arbitrary().map(|x| Self::Int(adjust_int(x, sz), sz)),
             &DynSolType::Uint(sz) => u.arbitrary().map(|x| Self::Uint(adjust_uint(x, sz), sz)),
-            &DynSolType::FixedBytes(sz) => u
-                .arbitrary()
-                .map(|x| Self::FixedBytes(adjust_fb(x, sz), sz)),
+            &DynSolType::FixedBytes(sz) => {
+                u.arbitrary().map(|x| Self::FixedBytes(adjust_fb(x, sz), sz))
+            }
             DynSolType::Bytes => u.arbitrary().map(Self::Bytes),
             DynSolType::String => u.arbitrary().map(Self::String),
             DynSolType::Array(ty) => {
@@ -413,11 +398,7 @@ impl DynSolValue {
                 let prop_names = (0..sz)
                     .map(|_| u.arbitrary::<AString>().map(|s| s.0))
                     .collect::<Result<Vec<_>, _>>()?;
-                Ok(Self::CustomStruct {
-                    name,
-                    prop_names,
-                    tuple,
-                })
+                Ok(Self::CustomStruct { name, prop_names, tuple })
             }
         }
     }
@@ -429,15 +410,15 @@ impl DynSolValue {
             DynSolType::Bool => any::<bool>().prop_map(Self::Bool).sboxed(),
             DynSolType::Address => any::<Address>().prop_map(Self::Address).sboxed(),
             DynSolType::Function => any::<Function>().prop_map(Self::Function).sboxed(),
-            &DynSolType::Int(sz) => any::<I256>()
-                .prop_map(move |x| Self::Int(adjust_int(x, sz), sz))
-                .sboxed(),
-            &DynSolType::Uint(sz) => any::<U256>()
-                .prop_map(move |x| Self::Uint(adjust_uint(x, sz), sz))
-                .sboxed(),
-            &DynSolType::FixedBytes(sz) => any::<B256>()
-                .prop_map(move |x| Self::FixedBytes(adjust_fb(x, sz), sz))
-                .sboxed(),
+            &DynSolType::Int(sz) => {
+                any::<I256>().prop_map(move |x| Self::Int(adjust_int(x, sz), sz)).sboxed()
+            }
+            &DynSolType::Uint(sz) => {
+                any::<U256>().prop_map(move |x| Self::Uint(adjust_uint(x, sz), sz)).sboxed()
+            }
+            &DynSolType::FixedBytes(sz) => {
+                any::<B256>().prop_map(move |x| Self::FixedBytes(adjust_fb(x, sz), sz)).sboxed()
+            }
             DynSolType::Bytes => any::<Vec<u8>>().prop_map(Self::Bytes).sboxed(),
             DynSolType::String => any::<String>().prop_map(Self::String).sboxed(),
             DynSolType::Array(ty) => {
@@ -446,9 +427,7 @@ impl DynSolValue {
             }
             DynSolType::FixedArray(ty, sz) => {
                 let element = Self::type_strategy(ty);
-                vec_strategy(element, *sz)
-                    .prop_map(Self::FixedArray)
-                    .sboxed()
+                vec_strategy(element, *sz).prop_map(Self::FixedArray).sboxed()
             }
             DynSolType::Tuple(tys) => tys
                 .iter()
@@ -707,11 +686,7 @@ mod tests {
                 );
             }
             #[cfg(feature = "eip712")]
-            DynSolValue::CustomStruct {
-                name,
-                prop_names,
-                tuple,
-            } => {
+            DynSolValue::CustomStruct { name, prop_names, tuple } => {
                 prop_assert!(is_valid_identifier(name));
                 prop_assert!(prop_names.iter().all(|s| is_valid_identifier(s)));
                 prop_assert_eq!(prop_names.len(), tuple.len());

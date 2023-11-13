@@ -74,9 +74,7 @@ impl fmt::Display for Override {
 
 impl fmt::Debug for Override {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Override")
-            .field(DebugPunctuated::new(&self.paths))
-            .finish()
+        f.debug_tuple("Override").field(DebugPunctuated::new(&self.paths)).finish()
     }
 }
 
@@ -91,11 +89,7 @@ impl Parse for Override {
                 paths: content.parse_terminated(SolPath::parse, Token![,])?,
             }
         } else {
-            Self {
-                override_token,
-                paren_token: None,
-                paths: Default::default(),
-            }
+            Self { override_token, paren_token: None, paths: Default::default() }
         };
         Ok(this)
     }
@@ -104,9 +98,7 @@ impl Parse for Override {
 impl Spanned for Override {
     fn span(&self) -> Span {
         let span = self.override_token.span;
-        self.paren_token
-            .and_then(|paren_token| span.join(paren_token.span.join()))
-            .unwrap_or(span)
+        self.paren_token.and_then(|paren_token| span.join(paren_token.span.join())).unwrap_or(span)
     }
 
     fn set_span(&mut self, span: Span) {
@@ -173,17 +165,9 @@ impl Parse for Modifier {
             let content;
             let paren_token = parenthesized!(content in input);
             let arguments = content.parse_terminated(Expr::parse, Token![,])?;
-            Self {
-                name,
-                paren_token: Some(paren_token),
-                arguments,
-            }
+            Self { name, paren_token: Some(paren_token), arguments }
         } else {
-            Self {
-                name,
-                paren_token: None,
-                arguments: Punctuated::new(),
-            }
+            Self { name, paren_token: None, arguments: Punctuated::new() }
         };
         Ok(this)
     }
@@ -192,9 +176,7 @@ impl Parse for Modifier {
 impl Spanned for Modifier {
     fn span(&self) -> Span {
         let span = self.name.span();
-        self.paren_token
-            .and_then(|paren_token| span.join(paren_token.span.join()))
-            .unwrap_or(span)
+        self.paren_token.and_then(|paren_token| span.join(paren_token.span.join())).unwrap_or(span)
     }
 
     fn set_span(&mut self, span: Span) {

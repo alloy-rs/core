@@ -20,10 +20,7 @@ pub struct StmtWhile {
 
 impl fmt::Debug for StmtWhile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("StmtWhile")
-            .field("cond", &self.cond)
-            .field("body", &self.body)
-            .finish()
+        f.debug_struct("StmtWhile").field("cond", &self.cond).field("body", &self.body).finish()
     }
 }
 

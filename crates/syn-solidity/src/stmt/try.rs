@@ -100,13 +100,7 @@ impl Parse for CatchClause {
             (None, ParameterList::new())
         };
         let block = input.parse()?;
-        Ok(Self {
-            catch_token,
-            name,
-            paren_token,
-            list,
-            block,
-        })
+        Ok(Self { catch_token, name, paren_token, list, block })
     }
 }
 

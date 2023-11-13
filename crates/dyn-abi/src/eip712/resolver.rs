@@ -58,10 +58,7 @@ impl PropertyDef {
         T: Into<String>,
         N: Into<String>,
     {
-        Self {
-            type_name: type_name.into(),
-            name: name.into(),
-        }
+        Self { type_name: type_name.into(), name: name.into() }
     }
 
     /// Returns the name of the property.
@@ -79,10 +76,7 @@ impl PropertyDef {
     /// Returns the root type of the name/type pair, stripping any array.
     #[inline]
     pub fn root_type_name(&self) -> &str {
-        self.type_name
-            .split_once('[')
-            .map(|t| t.0)
-            .unwrap_or(&self.type_name)
+        self.type_name.split_once('[').map(|t| t.0).unwrap_or(&self.type_name)
     }
 }
 
@@ -191,19 +185,13 @@ impl TypeDef {
     /// will take up when formatted in the EIP-712 `encodeType` typestring.
     #[inline]
     pub fn props_bytes_len(&self) -> usize {
-        self.props
-            .iter()
-            .map(|p| p.type_name.len() + p.name.len() + 2)
-            .sum()
+        self.props.iter().map(|p| p.type_name.len() + p.name.len() + 2).sum()
     }
 
     /// Return the root type.
     #[inline]
     pub fn root_type(&self) -> RootType<'_> {
-        self.type_name
-            .as_str()
-            .try_into()
-            .expect("checked in instantiation")
+        self.type_name.as_str().try_into().expect("checked in instantiation")
     }
 }
 
@@ -281,10 +269,10 @@ impl Resolver {
         };
 
         if context.stack.contains(type_name) {
-            return true
+            return true;
         }
         if context.visited.contains(ty) {
-            return false
+            return false;
         }
 
         // update visited and stack
@@ -298,7 +286,7 @@ impl Resolver {
             .iter()
             .any(|edge| self.detect_cycle(edge, context))
         {
-            return true
+            return true;
         }
 
         context.stack.remove(type_name);
@@ -350,7 +338,7 @@ impl Resolver {
         root_type: RootType<'_>,
     ) -> Result<()> {
         if root_type.try_basic_solidity().is_ok() {
-            return Ok(())
+            return Ok(());
         }
 
         let this_type = self
@@ -376,7 +364,7 @@ impl Resolver {
     pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>> {
         let mut context = DfsContext::default();
         if self.detect_cycle(type_name, &mut context) {
-            return Err(Error::circular_dependency(type_name))
+            return Err(Error::circular_dependency(type_name));
         }
         let root_type = type_name.try_into()?;
         let mut resolution = vec![];
@@ -388,7 +376,7 @@ impl Resolver {
     /// the type is missing, or contains a circular dependency.
     pub fn resolve(&self, type_name: &str) -> Result<DynSolType> {
         if self.detect_cycle(type_name, &mut Default::default()) {
-            return Err(Error::circular_dependency(type_name))
+            return Err(Error::circular_dependency(type_name));
         }
         self.unchecked_resolve(&type_name.try_into()?)
     }
@@ -411,7 +399,7 @@ impl Resolver {
     /// struct.
     fn resolve_root_type(&self, root_type: RootType<'_>) -> Result<DynSolType> {
         if let Ok(ty) = root_type.resolve() {
-            return Ok(ty)
+            return Ok(ty);
         }
 
         let ty = self
@@ -425,11 +413,7 @@ impl Resolver {
             .map(|ty| self.unchecked_resolve(&ty.try_into()?))
             .collect::<Result<_, _>>()?;
 
-        Ok(DynSolType::CustomStruct {
-            name: ty.type_name.clone(),
-            prop_names,
-            tuple,
-        })
+        Ok(DynSolType::CustomStruct { name: ty.type_name.clone(), prop_names, tuple })
     }
 
     /// Encode the type into an EIP-712 `encodeType` string
@@ -440,10 +424,8 @@ impl Resolver {
         let first = linear.first().unwrap().eip712_encode_type();
 
         // Sort references by name (eip-712 encodeType spec)
-        let mut sorted_refs = linear[1..]
-            .iter()
-            .map(|t| t.eip712_encode_type())
-            .collect::<Vec<String>>();
+        let mut sorted_refs =
+            linear[1..].iter().map(|t| t.eip712_encode_type()).collect::<Vec<String>>();
         sorted_refs.sort();
 
         Ok(sorted_refs.iter().fold(first, |mut acc, s| {
@@ -480,7 +462,7 @@ impl Resolver {
     /// encoded as their `encodeData` hash.
     pub fn eip712_data_word(&self, value: &DynSolValue) -> Result<B256> {
         if let Some(word) = value.as_word() {
-            return Ok(word)
+            return Ok(word);
         }
 
         let mut bytes;
@@ -537,10 +519,7 @@ mod tests {
         let mut graph = Resolver::default();
         graph.ingest(TypeDef::new_unchecked(
             "A".to_string(),
-            vec![
-                PropertyDef::new_unchecked("C", "myC"),
-                PropertyDef::new_unchecked("B", "myB"),
-            ],
+            vec![PropertyDef::new_unchecked("C", "myC"), PropertyDef::new_unchecked("B", "myB")],
         ));
         graph.ingest(TypeDef::new_unchecked(
             "B".to_string(),
@@ -658,9 +637,6 @@ mod tests {
 
         let mut graph = Resolver::default();
         graph.ingest_sol_struct::<MyStruct>();
-        assert_eq!(
-            graph.encode_type("MyStruct").unwrap(),
-            MyStruct::eip712_encode_type()
-        );
+        assert_eq!(graph.encode_type("MyStruct").unwrap(), MyStruct::eip712_encode_type());
     }
 }

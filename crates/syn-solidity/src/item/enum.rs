@@ -92,10 +92,7 @@ impl fmt::Display for Variant {
 
 impl Parse for Variant {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            attrs: input.call(Attribute::parse_outer)?,
-            ident: input.parse()?,
-        })
+        Ok(Self { attrs: input.call(Attribute::parse_outer)?, ident: input.parse()? })
     }
 }
 

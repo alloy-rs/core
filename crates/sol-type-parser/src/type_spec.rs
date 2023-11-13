@@ -265,42 +265,17 @@ mod test {
 
     #[test]
     fn try_basic_solidity() {
+        assert_eq!(TypeSpecifier::parse("uint").unwrap().try_basic_solidity(), Ok(()));
+        assert_eq!(TypeSpecifier::parse("int").unwrap().try_basic_solidity(), Ok(()));
+        assert_eq!(TypeSpecifier::parse("uint256").unwrap().try_basic_solidity(), Ok(()));
+        assert_eq!(TypeSpecifier::parse("uint256[]").unwrap().try_basic_solidity(), Ok(()));
+        assert_eq!(TypeSpecifier::parse("(uint256,uint256)").unwrap().try_basic_solidity(), Ok(()));
         assert_eq!(
-            TypeSpecifier::parse("uint").unwrap().try_basic_solidity(),
+            TypeSpecifier::parse("(uint256,uint256)[2]").unwrap().try_basic_solidity(),
             Ok(())
         );
         assert_eq!(
-            TypeSpecifier::parse("int").unwrap().try_basic_solidity(),
-            Ok(())
-        );
-        assert_eq!(
-            TypeSpecifier::parse("uint256")
-                .unwrap()
-                .try_basic_solidity(),
-            Ok(())
-        );
-        assert_eq!(
-            TypeSpecifier::parse("uint256[]")
-                .unwrap()
-                .try_basic_solidity(),
-            Ok(())
-        );
-        assert_eq!(
-            TypeSpecifier::parse("(uint256,uint256)")
-                .unwrap()
-                .try_basic_solidity(),
-            Ok(())
-        );
-        assert_eq!(
-            TypeSpecifier::parse("(uint256,uint256)[2]")
-                .unwrap()
-                .try_basic_solidity(),
-            Ok(())
-        );
-        assert_eq!(
-            TypeSpecifier::parse("tuple(uint256,uint256)")
-                .unwrap()
-                .try_basic_solidity(),
+            TypeSpecifier::parse("tuple(uint256,uint256)").unwrap().try_basic_solidity(),
             Ok(())
         );
         assert_eq!(
@@ -314,9 +289,7 @@ mod test {
     #[test]
     fn not_basic_solidity() {
         assert_eq!(
-            TypeSpecifier::parse("MyStruct")
-                .unwrap()
-                .try_basic_solidity(),
+            TypeSpecifier::parse("MyStruct").unwrap().try_basic_solidity(),
             Err(Error::invalid_type_string("MyStruct"))
         );
     }

@@ -562,9 +562,7 @@ fn receive() {
             functions: BTreeMap::new(),
             events: BTreeMap::new(),
             errors: BTreeMap::new(),
-            receive: Some(Receive {
-                state_mutability: StateMutability::NonPayable,
-            }),
+            receive: Some(Receive { state_mutability: StateMutability::NonPayable }),
             fallback: None,
         }
     );
@@ -593,9 +591,7 @@ fn fallback() {
             events: BTreeMap::new(),
             errors: BTreeMap::new(),
             receive: None,
-            fallback: Some(Fallback {
-                state_mutability: StateMutability::NonPayable,
-            }),
+            fallback: Some(Fallback { state_mutability: StateMutability::NonPayable }),
         }
     );
 

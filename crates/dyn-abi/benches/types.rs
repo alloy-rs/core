@@ -6,9 +6,8 @@ use criterion::{
 use rand::seq::SliceRandom;
 use std::{hint::black_box, time::Duration};
 
-const KEYWORDS: &[&str] = &[
-    "address", "bool", "string", "bytes", "bytes32", "uint", "uint256", "int", "int256",
-];
+const KEYWORDS: &[&str] =
+    &["address", "bool", "string", "bytes", "bytes32", "uint", "uint256", "int", "int256"];
 const COMPLEX: &[&str] = &[
     "((uint104,bytes,bytes8,bytes7,address,bool,address,int256,int32,bytes1,uint56,int136),uint80,uint104,address,bool,bytes14,int16,address,string,uint176,uint72,(uint120,uint192,uint256,int232,bool,bool,bool,bytes5,int56,address,uint224,int248,bytes10,int48,int8),string,string,bool,bool)",
     "(address,string,(bytes,int48,bytes30,bool,address,bytes30,int48,address,bytes17,bool,uint32),bool,address,bytes28,bytes25,uint136)",
@@ -40,10 +39,8 @@ fn resolve(c: &mut Criterion) {
     let rng = &mut rand::thread_rng();
 
     g.bench_function("keywords", |b| {
-        let parsed_keywords = KEYWORDS
-            .iter()
-            .map(|s| TypeSpecifier::parse(s).unwrap())
-            .collect::<Vec<_>>();
+        let parsed_keywords =
+            KEYWORDS.iter().map(|s| TypeSpecifier::parse(s).unwrap()).collect::<Vec<_>>();
         let parsed_keywords = parsed_keywords.as_slice();
         b.iter(|| {
             let kw = parsed_keywords.choose(rng).unwrap();
@@ -51,10 +48,7 @@ fn resolve(c: &mut Criterion) {
         });
     });
     g.bench_function("complex", |b| {
-        let complex = COMPLEX
-            .iter()
-            .map(|s| TypeSpecifier::parse(s).unwrap())
-            .collect::<Vec<_>>();
+        let complex = COMPLEX.iter().map(|s| TypeSpecifier::parse(s).unwrap()).collect::<Vec<_>>();
         let complex = complex.as_slice();
         b.iter(|| {
             let complex = complex.choose(rng).unwrap();
@@ -70,10 +64,8 @@ fn format(c: &mut Criterion) {
     let rng = &mut rand::thread_rng();
 
     g.bench_function("keywords", |b| {
-        let keyword_types = KEYWORDS
-            .iter()
-            .map(|s| DynSolType::parse(s).unwrap())
-            .collect::<Vec<_>>();
+        let keyword_types =
+            KEYWORDS.iter().map(|s| DynSolType::parse(s).unwrap()).collect::<Vec<_>>();
         let keyword_types = keyword_types.as_slice();
         b.iter(|| {
             let kw = unsafe { keyword_types.choose(rng).unwrap_unchecked() };
@@ -81,10 +73,8 @@ fn format(c: &mut Criterion) {
         });
     });
     g.bench_function("complex", |b| {
-        let complex_types = COMPLEX
-            .iter()
-            .map(|s| DynSolType::parse(s).unwrap())
-            .collect::<Vec<_>>();
+        let complex_types =
+            COMPLEX.iter().map(|s| DynSolType::parse(s).unwrap()).collect::<Vec<_>>();
         let complex_types = complex_types.as_slice();
         b.iter(|| {
             let complex = unsafe { complex_types.choose(rng).unwrap_unchecked() };

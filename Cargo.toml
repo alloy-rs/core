@@ -30,6 +30,9 @@ syn-solidity = { version = "0.4.2", path = "crates/syn-solidity", default-featur
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
+# ssz
+ethereum_ssz = { version = "0.5.3", default-features = false }
+
 # macros
 proc-macro2 = "1.0"
 quote = "1.0"
@@ -56,6 +59,7 @@ getrandom = "0.2"
 hex = { package = "const-hex", version = "1.5", default-features = false, features = ["alloc"] }
 itoa = "1"
 once_cell = "1"
+pretty_assertions = "1.4"
 proptest = "1"
 proptest-derive = "0.4"
 rand = { version = "0.8", default-features = false }

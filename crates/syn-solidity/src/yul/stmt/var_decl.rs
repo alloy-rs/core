@@ -35,18 +35,14 @@ impl Parse for YulVarDecl {
         };
 
         if vars.len() > 1
-            && init_value
-                .as_ref()
-                .map_or(false, |(_, expr)| !matches!(expr, YulExpr::Call(_)))
+            && init_value.as_ref().map_or(false, |(_, expr)| !matches!(expr, YulExpr::Call(_)))
         {
-            return Err(input.error("Multiple variables can only be initialized by a function call"))
+            return Err(
+                input.error("Multiple variables can only be initialized by a function call")
+            );
         }
 
-        Ok(Self {
-            let_token,
-            vars,
-            init_value,
-        })
+        Ok(Self { let_token, vars, init_value })
     }
 }
 
@@ -74,10 +70,7 @@ impl fmt::Debug for YulVarDecl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("YulVarDecl")
             .field("vars", DebugPunctuated::new(&self.vars))
-            .field(
-                "init_value",
-                &self.init_value.as_ref().map(|(_, expr)| expr),
-            )
+            .field("init_value", &self.init_value.as_ref().map(|(_, expr)| expr))
             .finish()
     }
 }

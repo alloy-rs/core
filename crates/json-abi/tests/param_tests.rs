@@ -38,10 +38,7 @@ fn param_simple_internal_type() {
         deserialized,
         Param {
             name: "foo".to_owned(),
-            internal_type: Some(Struct {
-                contract: Some("Verifier".into()),
-                ty: "Proof".into(),
-            }),
+            internal_type: Some(Struct { contract: Some("Verifier".into()), ty: "Proof".into() }),
             ty: "address".into(),
             components: vec![]
         }

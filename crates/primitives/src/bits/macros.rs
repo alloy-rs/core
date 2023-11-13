@@ -177,6 +177,7 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
         $crate::impl_arbitrary!($name, $n);
+        $crate::impl_ssz_fixed_len!($name, $n);
         $crate::impl_rand!($name);
 
         impl $name {
@@ -605,6 +606,65 @@ macro_rules! impl_arbitrary {
 #[macro_export]
 #[cfg(not(feature = "arbitrary"))]
 macro_rules! impl_arbitrary {
+    ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "ssz")]
+macro_rules! impl_ssz_fixed_len {
+    ($type:ty, $fixed_len:expr) => {
+        impl $crate::private::ssz::Encode for $type {
+            #[inline]
+            fn is_ssz_fixed_len() -> bool {
+                true
+            }
+
+            #[inline]
+            fn ssz_fixed_len() -> usize {
+                $fixed_len
+            }
+
+            #[inline]
+            fn ssz_bytes_len(&self) -> usize {
+                <$type as $crate::private::ssz::Encode>::ssz_fixed_len()
+            }
+
+            #[inline]
+            fn ssz_append(&self, buf: &mut $crate::private::Vec<u8>) {
+                buf.extend_from_slice(self.as_slice());
+            }
+        }
+
+        impl $crate::private::ssz::Decode for $type {
+            #[inline]
+            fn is_ssz_fixed_len() -> bool {
+                true
+            }
+
+            #[inline]
+            fn ssz_fixed_len() -> usize {
+                $fixed_len
+            }
+
+            fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, $crate::private::ssz::DecodeError> {
+                let len = bytes.len();
+                let expected: usize = <$type as $crate::private::ssz::Decode>::ssz_fixed_len();
+
+                if len != expected {
+                    Err($crate::private::ssz::DecodeError::InvalidByteLength { len, expected })
+                } else {
+                    Ok(<$type>::from_slice(bytes))
+                }
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "ssz"))]
+macro_rules! impl_ssz_fixed_len {
     ($t:ty, $n:literal) => {};
 }
 

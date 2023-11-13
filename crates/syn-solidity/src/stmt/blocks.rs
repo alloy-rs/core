@@ -57,18 +57,13 @@ pub struct UncheckedBlock {
 
 impl fmt::Debug for UncheckedBlock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UncheckedBlock")
-            .field("stmts", &self.block.stmts)
-            .finish()
+        f.debug_struct("UncheckedBlock").field("stmts", &self.block.stmts).finish()
     }
 }
 
 impl Parse for UncheckedBlock {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            unchecked_token: input.parse()?,
-            block: input.parse()?,
-        })
+        Ok(Self { unchecked_token: input.parse()?, block: input.parse()? })
     }
 }
 

@@ -22,9 +22,7 @@ impl fmt::Display for PragmaDirective {
 
 impl fmt::Debug for PragmaDirective {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("PragmaDirective")
-            .field(&self.tokens)
-            .finish()
+        f.debug_tuple("PragmaDirective").field(&self.tokens).finish()
     }
 }
 

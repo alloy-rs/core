@@ -125,10 +125,7 @@ impl Address {
     /// ```
     /// # use alloy_primitives::{address, b256, Address};
     /// let word = b256!("000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045");
-    /// assert_eq!(
-    ///     Address::from_word(word),
-    ///     address!("d8da6bf26964af9d7eed9e03e53415d37aa96045")
-    /// );
+    /// assert_eq!(Address::from_word(word), address!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
     /// ```
     #[inline]
     #[must_use]
@@ -185,7 +182,7 @@ impl Address {
         fn parse_checksummed(s: &str, chain_id: Option<u64>) -> Result<Address, AddressError> {
             // checksummed addresses always start with the "0x" prefix
             if !s.starts_with("0x") {
-                return Err(AddressError::Hex(hex::FromHexError::InvalidStringLength))
+                return Err(AddressError::Hex(hex::FromHexError::InvalidStringLength));
             }
 
             let address: Address = s.parse()?;
@@ -247,12 +244,8 @@ impl Address {
 
                 // SAFETY: prefix_len <= 20; len <= 62; storage.len() == 62
                 unsafe {
-                    storage
-                        .get_unchecked_mut(..prefix_len)
-                        .copy_from_slice(prefix_str.as_bytes());
-                    storage
-                        .get_unchecked_mut(prefix_len..len)
-                        .copy_from_slice(buf);
+                    storage.get_unchecked_mut(..prefix_len).copy_from_slice(prefix_str.as_bytes());
+                    storage.get_unchecked_mut(prefix_len..len).copy_from_slice(buf);
                     storage.get_unchecked(..len)
                 }
             }
@@ -432,16 +425,11 @@ mod tests {
     fn parse() {
         let expected = hex!("0102030405060708090a0b0c0d0e0f1011121314");
         assert_eq!(
-            "0102030405060708090a0b0c0d0e0f1011121314"
-                .parse::<Address>()
-                .unwrap()
-                .into_array(),
+            "0102030405060708090a0b0c0d0e0f1011121314".parse::<Address>().unwrap().into_array(),
             expected
         );
         assert_eq!(
-            "0x0102030405060708090a0b0c0d0e0f1011121314"
-                .parse::<Address>()
-                .unwrap(),
+            "0x0102030405060708090a0b0c0d0e0f1011121314".parse::<Address>().unwrap(),
             expected
         );
     }
@@ -534,9 +522,7 @@ mod tests {
     #[test]
     #[cfg(feature = "rlp")]
     fn create() {
-        let from = "0x6ac7ea33f8831ea9dcc53393aaa88b25a785dbf0"
-            .parse::<Address>()
-            .unwrap();
+        let from = "0x6ac7ea33f8831ea9dcc53393aaa88b25a785dbf0".parse::<Address>().unwrap();
         for (nonce, expected) in [
             "0xcd234a471b72ba2f1ccf0a70fcaba648a5eecd8d",
             "0x343c43a37d37dff08ae8c4a11544c718abb4fcf8",
@@ -560,11 +546,8 @@ mod tests {
 
             let mut out = vec![];
 
-            alloy_rlp::Header {
-                list: true,
-                payload_length: address.length() + nonce.length(),
-            }
-            .encode(&mut out);
+            alloy_rlp::Header { list: true, payload_length: address.length() + nonce.length() }
+                .encode(&mut out);
             address.encode(&mut out);
             nonce.encode(&mut out);
 

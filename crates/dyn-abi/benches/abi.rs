@@ -156,12 +156,8 @@ fn encode_struct_input_tokens() -> [ethabi::Token; 8] {
         ethabi::Token::Address(input.tokenOut.0 .0.into()),
         ethabi::Token::Uint(input.fee.into()),
         ethabi::Token::Address(input.recipient.0 .0.into()),
-        ethabi::Token::Uint(ethabi::Uint::from_big_endian(
-            &input.deadline.to_be_bytes_vec(),
-        )),
-        ethabi::Token::Uint(ethabi::Uint::from_big_endian(
-            &input.amountIn.to_be_bytes_vec(),
-        )),
+        ethabi::Token::Uint(ethabi::Uint::from_big_endian(&input.deadline.to_be_bytes_vec())),
+        ethabi::Token::Uint(ethabi::Uint::from_big_endian(&input.amountIn.to_be_bytes_vec())),
         ethabi::Token::Uint(ethabi::Uint::from_big_endian(
             &input.amountOutMinimum.to_be_bytes_vec(),
         )),

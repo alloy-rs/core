@@ -24,10 +24,7 @@ impl fmt::Debug for StmtContinue {
 
 impl Parse for StmtContinue {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        Ok(Self {
-            continue_token: input.parse()?,
-            semi_token: input.parse()?,
-        })
+        Ok(Self { continue_token: input.parse()?, semi_token: input.parse()? })
     }
 }
 
