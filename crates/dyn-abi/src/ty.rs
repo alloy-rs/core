@@ -18,7 +18,7 @@ macro_rules! as_tuple {
 }
 pub(crate) use as_tuple;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct StructProp {
     name: String,
     ty: DynSolType,
@@ -78,7 +78,7 @@ struct StructProp {
 /// assert_eq!(decoded, my_data);
 /// # Ok::<_, alloy_dyn_abi::Error>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DynSolType {
     /// Boolean.
     Bool,
