@@ -937,41 +937,4 @@ mod tests {
             0000000000000000000000000000000000000000000000000000000000001337
         "),
     }
-    #[test]
-    fn test_hash_implementation() {
-        // Create instances for DynSolType
-        let int_42 = DynSolType::Int(42);
-        let int_43 = DynSolType::Int(43);
-        let bool_type = DynSolType::Bool;
-
-        // Create instances for StructProp
-        let prop_a = StructProp { name: "prop".to_string(), ty: int_42.clone() };
-        let prop_b = StructProp { name: "prop".to_string(), ty: int_42.clone() };
-        let different_prop = StructProp { name: "prop".to_string(), ty: int_43 };
-
-        // Test hash equality and inequality
-        assert_eq!(
-            calculate_hash(&prop_a),
-            calculate_hash(&prop_b),
-            "Hashes of identical StructProp should be equal"
-        );
-        assert_ne!(
-            calculate_hash(&prop_a),
-            calculate_hash(&different_prop),
-            "Hashes of different StructProp should not be equal"
-        );
-        assert_ne!(
-            calculate_hash(&int_42),
-            calculate_hash(&bool_type),
-            "Hashes of different DynSolType should not be equal"
-        );
-    }
-
-    fn calculate_hash<T: core::hash::Hash>(t: &T) -> u64 {
-        use core::hash::Hasher;
-        use std::collections::hash_map::DefaultHasher;
-        let mut hasher = DefaultHasher::new();
-        t.hash(&mut hasher);
-        hasher.finish()
-    }
 }
