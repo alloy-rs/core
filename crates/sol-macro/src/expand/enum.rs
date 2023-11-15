@@ -193,7 +193,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
                 #[allow(unsafe_code, clippy::inline_always)]
                 #[inline(always)]
                 fn as_u8(&self) -> &u8 {
-                    unsafe { &*::core::ptr::addr_of!(self).cast::<u8>() }
+                    unsafe { &*(self as *const Self as *const u8) }
                 }
             }
         };
