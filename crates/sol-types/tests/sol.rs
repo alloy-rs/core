@@ -471,8 +471,9 @@ fn all_rust_keywords() {
     use alloy_sol_types::sol;
     use paste::paste;
 
+    // $(kw r#kw)*
     macro_rules! make {
-        ($($kw:tt)*) => {$(
+        ($($kw:tt $raw:tt)*) => {paste!($(
             sol! {
                 struct $kw {
                     uint $kw;
@@ -480,34 +481,35 @@ fn all_rust_keywords() {
 
                 function $kw(uint $kw);
             }
-            // assert_eq!(<r#$kw>::NAME, stringify!($kw));
-            assert_eq!(<paste!([<$kw Call>])>::SIGNATURE, concat!(stringify!($kw), "(uint256)"));
-        )*};
+            assert_eq!($raw::NAME, stringify!($kw));
+            assert_ne!($raw::NAME, stringify!($raw));
+            assert_eq!(<[<$kw Call>]>::SIGNATURE, concat!(stringify!($kw), "(uint256)"));
+        )*)};
     }
 
     make! {
-        const
-        extern
-        fn
-        impl
-        loop
-        mod
-        move
-        mut
-        pub
-        ref
-        trait
-        unsafe
-        use
-        where
-        async
-        await
-        dyn
-        become
-        box
-        priv
-        unsized
-        yield
+        const r#const
+        extern r#extern
+        fn r#fn
+        impl r#impl
+        loop r#loop
+        mod r#mod
+        move r#move
+        mut r#mut
+        pub r#pub
+        ref r#ref
+        trait r#trait
+        unsafe r#unsafe
+        use r#use
+        where r#where
+        async r#async
+        await r#await
+        dyn r#dyn
+        become r#become
+        box r#box
+        priv r#priv
+        unsized r#unsized
+        yield r#yield
     }
 }
 
