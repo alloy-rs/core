@@ -1,5 +1,5 @@
 use alloy_primitives::{hex, keccak256, Address, B256, I256, U256};
-use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolStruct, SolType};
+use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolEvent, SolStruct, SolType};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -468,23 +468,44 @@ fn rust_keywords() {
 
 #[test]
 fn most_rust_keywords() {
-    use alloy_sol_types::sol;
-    use paste::paste;
-
     // $(kw r#kw)*
     macro_rules! kws {
-        ($($kw:tt $raw:tt)*) => {paste!($(
-            sol! {
-                struct $kw {
-                    uint $kw;
+        ($($kw:tt $raw:tt)*) => { paste::paste! {
+            $({
+                sol! {
+                    struct $kw {
+                        uint $kw;
+                    }
+
+                    function $kw(bytes1 $kw) returns (uint $kw);
                 }
 
-                function $kw(uint $kw);
-            }
-            assert_eq!($raw::NAME, stringify!($kw));
-            assert_ne!($raw::NAME, stringify!($raw));
-            assert_eq!(<[<$kw Call>]>::SIGNATURE, concat!(stringify!($kw), "(uint256)"));
-        )*)};
+                mod error {
+                    use super::*;
+
+                    sol! {
+                        error $kw(bytes2 $kw);
+                    }
+                }
+
+                mod event {
+                    use super::*;
+
+                    sol! {
+                        event $kw(bytes3 $kw);
+                    }
+                }
+
+                assert_eq!($raw::NAME, stringify!($kw));
+                assert_ne!($raw::NAME, stringify!($raw));
+                assert_eq!(<[<$kw Call>]>::SIGNATURE, concat!(stringify!($kw), "(bytes1)"));
+                let _ = [<$kw Call>] { $raw: [0u8; 1].into() };
+                assert_eq!(error::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes2)"));
+                let _ = error::$raw { $raw: [0u8; 2].into() };
+                assert_eq!(event::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes3)"));
+                let _ = event::$raw { $raw: [0u8; 3].into() };
+            })*
+        } };
     }
 
     kws! {
