@@ -1,6 +1,6 @@
 use alloy_sol_types::sol;
 
-macro_rules! make {
+macro_rules! kws {
     ($($kw:tt)*) => {$(
         sol! {
             struct $kw {
@@ -13,7 +13,7 @@ macro_rules! make {
 }
 
 // Allowed
-make! {
+kws! {
     const
     extern
     fn
@@ -39,7 +39,7 @@ make! {
 }
 
 // Not allowed, but should be (panics on instantiation)
-make! {
+kws! {
     crate
     self
     Self
@@ -47,7 +47,7 @@ make! {
 }
 
 // Not allowed
-make! {
+kws! {
     as
     break
     continue

@@ -467,12 +467,12 @@ fn rust_keywords() {
 }
 
 #[test]
-fn all_rust_keywords() {
+fn most_rust_keywords() {
     use alloy_sol_types::sol;
     use paste::paste;
 
     // $(kw r#kw)*
-    macro_rules! make {
+    macro_rules! kws {
         ($($kw:tt $raw:tt)*) => {paste!($(
             sol! {
                 struct $kw {
@@ -487,7 +487,7 @@ fn all_rust_keywords() {
         )*)};
     }
 
-    make! {
+    kws! {
         const r#const
         extern r#extern
         fn r#fn
