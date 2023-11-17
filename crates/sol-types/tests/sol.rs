@@ -1,5 +1,5 @@
 use alloy_primitives::{hex, keccak256, Address, B256, I256, U256};
-use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolStruct, SolType};
+use alloy_sol_types::{eip712_domain, sol, SolCall, SolError, SolEvent, SolStruct, SolType};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -447,8 +447,105 @@ fn same_names_different_namespaces() {
 #[test]
 fn rust_keywords() {
     sol! {
-        function mod(address impl) returns (bool is, bool fn);
+        contract dyn {
+            struct const {
+                bool unsafe;
+                bytes32 box;
+            }
+
+            function mod(address impl) returns (bool is, bool fn);
+        }
     }
+    use r#dyn::*;
+
+    let _ = r#const { r#unsafe: true, r#box: Default::default() };
+    let m = modCall { r#impl: Address::ZERO };
+    let _ = dynCalls::r#mod(m);
+    let _ = modReturn { is: true, r#fn: false };
+    assert_eq!(r#const::NAME, "const");
+    assert_eq!(modCall::SIGNATURE, "mod(address)");
+}
+
+#[test]
+fn most_rust_keywords() {
+    // $(kw r#kw)*
+    macro_rules! kws {
+        ($($kw:tt $raw:tt)*) => { paste::paste! {
+            $({
+                sol! {
+                    struct $kw {
+                        uint $kw;
+                    }
+
+                    function $kw(bytes1 $kw) returns (uint $kw);
+                }
+
+                mod error {
+                    use super::*;
+
+                    sol! {
+                        error $kw(bytes2 $kw);
+                    }
+                }
+
+                mod event {
+                    use super::*;
+
+                    sol! {
+                        event $kw(bytes3 $kw);
+                    }
+                }
+
+                assert_eq!($raw::NAME, stringify!($kw));
+                assert_ne!($raw::NAME, stringify!($raw));
+                assert_eq!(<[<$kw Call>]>::SIGNATURE, concat!(stringify!($kw), "(bytes1)"));
+                let _ = [<$kw Call>] { $raw: [0u8; 1].into() };
+                assert_eq!(error::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes2)"));
+                let _ = error::$raw { $raw: [0u8; 2].into() };
+                assert_eq!(event::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes3)"));
+                let _ = event::$raw { $raw: [0u8; 3].into() };
+            })*
+        } };
+    }
+
+    kws! {
+        const r#const
+        extern r#extern
+        fn r#fn
+        impl r#impl
+        loop r#loop
+        mod r#mod
+        move r#move
+        mut r#mut
+        pub r#pub
+        ref r#ref
+        trait r#trait
+        unsafe r#unsafe
+        use r#use
+        where r#where
+        async r#async
+        await r#await
+        dyn r#dyn
+        become r#become
+        box r#box
+        priv r#priv
+        unsized r#unsized
+        yield r#yield
+    }
+}
+
+#[test]
+fn raw_identifiers() {
+    sol! {
+        struct r#mod {
+            int r#type;
+        }
+        function r#try();
+    }
+    let _ = r#mod { r#type: Default::default() };
+    let _ = tryCall {};
+    assert_eq!(r#mod::NAME, "mod");
+    assert_eq!(tryCall::SIGNATURE, "try()");
 }
 
 // Translate contract types to `address`
