@@ -127,7 +127,6 @@ impl SolInput {
 
     pub fn expand(self) -> Result<TokenStream> {
         let Self { attrs, path, kind } = self;
-
         let include = path.map(|p| {
             let p = p.to_str().unwrap();
             quote! { const _: &'static [u8] = ::core::include_bytes!(#p); }

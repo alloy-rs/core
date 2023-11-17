@@ -11,6 +11,14 @@ use syn::{
 mod path;
 pub use path::SolPath;
 
+// taken from https://gist.github.com/ritz078/1be714dea593838587c8a5df463a583a
+// this is the set difference of Rust - Solidity keywords
+static RUST_KEYWORD_SET_DIFFERENCE: [&str; 28] = [
+    "as", "use", "const", "extern", "false", "fn", "impl", "in", "move", "mut", "pub", "impl",
+    "ref", "trait", "true", "type", "unsafe", "use", "where", "alignof", "become", "box",
+    "offsetof", "priv", "proc", "unsized", "yield", "return",
+];
+
 /// A Solidity identifier.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
@@ -46,7 +54,7 @@ impl<T: ?Sized + AsRef<str>> PartialEq<T> for SolIdent {
 
 impl From<Ident> for SolIdent {
     fn from(value: Ident) -> Self {
-        Self(value)
+        Self::new_spanned(&value.to_string(), value.span())
     }
 }
 
@@ -87,26 +95,29 @@ impl Spanned for SolIdent {
 
 impl SolIdent {
     pub fn new(s: &str) -> Self {
-        Self(Ident::new(s, Span::call_site()))
+        Self::new_spanned(s, Span::call_site())
     }
 
     pub fn new_spanned(s: &str, span: Span) -> Self {
-        Self(Ident::new(s, span))
+        if RUST_KEYWORD_SET_DIFFERENCE.contains(&s) {
+            Self(Ident::new_raw(s, span))
+        } else {
+            Self(Ident::new(s, span))
+        }
     }
 
     /// Strips the raw marker `r#`, if any, from the beginning of an ident.
     ///
     /// See [`IdentExt::unraw`].
-    pub fn unwrawed(mut self) -> Self {
-        self = self.unraw();
-        self
+    pub fn unwrawed(self) -> Self {
+        self.clone()
     }
 
     /// Strips the raw marker `r#`, if any, from the beginning of an ident.
     ///
     /// See [`IdentExt::unraw`].
     pub fn unraw(&self) -> Self {
-        Self(self.0.unraw())
+        self.clone()
     }
 
     /// Returns the identifier as a string, without the `r#` prefix if present.
@@ -121,7 +132,8 @@ impl SolIdent {
     /// Parses any identifier including keywords.
     pub fn parse_any(input: ParseStream<'_>) -> Result<Self> {
         check_dollar(input)?;
-        input.call(Ident::parse_any).map(Self)
+
+        input.call(Ident::parse_any).map(Into::into)
     }
 
     /// Peeks any identifier including keywords.

@@ -444,10 +444,7 @@ fn same_names_different_namespaces() {
     }
 }
 
-// TODO
-// https://github.com/alloy-rs/core/issues/343
 #[test]
-#[cfg(TODO)]
 fn rust_keywords() {
     sol! {
         function mod(address impl) returns (bool is, bool fn);
@@ -677,6 +674,12 @@ fn abigen_json_blur_exchange() {
     sol!(BlurExchange, "../json-abi/tests/abi/BlurExchange.json");
     let BlurExchange::NAMECall {} = BlurExchange::NAMECall {};
     let BlurExchange::NAMEReturn { _0: _ } = BlurExchange::NAMEReturn { _0: String::new() };
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn abigen_json_0x_proxy() {
+    sol!(ZeroXExchangeProxy, "../json-abi/tests/abi/ZeroxExchangeProxy.json");
 }
 
 #[test]
