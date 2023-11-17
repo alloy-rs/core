@@ -447,8 +447,82 @@ fn same_names_different_namespaces() {
 #[test]
 fn rust_keywords() {
     sol! {
-        function mod(address impl) returns (bool is, bool fn);
+        contract dyn {
+            struct const {
+                bool unsafe;
+                bytes32 box;
+            }
+
+            function mod(address impl) returns (bool is, bool fn);
+        }
     }
+    use r#dyn::*;
+
+    let _ = r#const { r#unsafe: true, r#box: Default::default() };
+    let m = modCall { r#impl: Address::ZERO };
+    let _ = dynCalls::r#mod(m);
+    let _ = modReturn { is: true, r#fn: false };
+    assert_eq!(r#const::NAME, "const");
+    assert_eq!(modCall::SIGNATURE, "mod(address)");
+}
+
+#[test]
+fn all_rust_keywords() {
+    use alloy_sol_types::sol;
+    use paste::paste;
+
+    macro_rules! make {
+        ($($kw:tt)*) => {$(
+            sol! {
+                struct $kw {
+                    uint $kw;
+                }
+
+                function $kw(uint $kw);
+            }
+            // assert_eq!(<r#$kw>::NAME, stringify!($kw));
+            assert_eq!(<paste!([<$kw Call>])>::SIGNATURE, concat!(stringify!($kw), "(uint256)"));
+        )*};
+    }
+
+    make! {
+        const
+        extern
+        fn
+        impl
+        loop
+        mod
+        move
+        mut
+        pub
+        ref
+        trait
+        unsafe
+        use
+        where
+        async
+        await
+        dyn
+        become
+        box
+        priv
+        unsized
+        yield
+    }
+}
+
+#[test]
+fn raw_identifiers() {
+    sol! {
+        struct r#mod {
+            int r#type;
+        }
+        function r#try();
+    }
+    let _ = r#mod { r#type: Default::default() };
+    let _ = tryCall {};
+    assert_eq!(r#mod::NAME, "mod");
+    assert_eq!(tryCall::SIGNATURE, "try()");
 }
 
 // Translate contract types to `address`

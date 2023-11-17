@@ -11,13 +11,11 @@ use syn::{
 mod path;
 pub use path::SolPath;
 
-// taken from https://gist.github.com/ritz078/1be714dea593838587c8a5df463a583a
-// this is the set difference of Rust - Solidity keywords
-static RUST_KEYWORD_SET_DIFFERENCE: [&str; 28] = [
-    "as", "use", "const", "extern", "false", "fn", "impl", "in", "move", "mut", "pub", "impl",
-    "ref", "trait", "true", "type", "unsafe", "use", "where", "alignof", "become", "box",
-    "offsetof", "priv", "proc", "unsized", "yield", "return",
-];
+// See `./kw.c`.
+
+/// The set difference of the Rust and Solidity keyword sets. We need this so that we can emit raw
+/// identifiers for Solidity keywords.
+static KW_DIFFERENCE: &[&str] = &include!("./difference.expr");
 
 /// A Solidity identifier.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -72,8 +70,9 @@ impl From<&str> for SolIdent {
 
 impl Parse for SolIdent {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
-        // TODO: Deny Solidity keywords
-        Self::parse_any(input)
+        check_dollar(input)?;
+        let id = Ident::parse_any(input)?;
+        Ok(Self::from(id))
     }
 }
 
@@ -98,26 +97,23 @@ impl SolIdent {
         Self::new_spanned(s, Span::call_site())
     }
 
-    pub fn new_spanned(s: &str, span: Span) -> Self {
-        if RUST_KEYWORD_SET_DIFFERENCE.contains(&s) {
+    pub fn new_spanned(mut s: &str, span: Span) -> Self {
+        let mut new_raw = KW_DIFFERENCE.contains(&s);
+
+        if s.starts_with("r#") {
+            new_raw = true;
+            s = &s[2..];
+        }
+
+        if matches!(s, "_" | "self" | "Self" | "super" | "crate") {
+            new_raw = false;
+        }
+
+        if new_raw {
             Self(Ident::new_raw(s, span))
         } else {
             Self(Ident::new(s, span))
         }
-    }
-
-    /// Strips the raw marker `r#`, if any, from the beginning of an ident.
-    ///
-    /// See [`IdentExt::unraw`].
-    pub fn unwrawed(self) -> Self {
-        self.clone()
-    }
-
-    /// Strips the raw marker `r#`, if any, from the beginning of an ident.
-    ///
-    /// See [`IdentExt::unraw`].
-    pub fn unraw(&self) -> Self {
-        self.clone()
     }
 
     /// Returns the identifier as a string, without the `r#` prefix if present.

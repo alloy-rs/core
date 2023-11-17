@@ -53,7 +53,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
     let attrs = attrs.iter();
     let convert = expand_from_into_tuples(&name.0, fields);
-    let name_s = name.to_string();
+    let name_s = name.as_string();
     let fields = expand_fields(fields);
 
     let doc = docs.then(|| attr::mk_doc(format!("```solidity\n{s}\n```")));

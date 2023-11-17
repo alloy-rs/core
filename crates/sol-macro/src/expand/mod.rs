@@ -13,7 +13,7 @@ use indexmap::IndexMap;
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, TokenStreamExt};
 use std::{borrow::Borrow, fmt::Write};
-use syn::{parse_quote, Attribute, Error, Result};
+use syn::{ext::IdentExt, parse_quote, Attribute, Error, Result};
 
 mod ty;
 pub use ty::expand_type;
@@ -344,35 +344,28 @@ impl<'ast> ExpCtxt<'ast> {
 
     /// Returns the name of the function's call Rust struct.
     fn call_name(&self, function: &ItemFunction) -> Ident {
-        let function_name = self.function_name(function);
-        self.raw_call_name(function_name)
+        self.raw_call_name(&self.function_name(function).0)
     }
 
     /// Formats the given name as a function's call Rust struct name.
-    fn raw_call_name(&self, function_name: impl quote::IdentFragment + std::fmt::Display) -> Ident {
-        let mut new_ident = format_ident!("{function_name}Call");
-        if let Some(span) = function_name.span() {
-            new_ident.set_span(span);
-        }
-        new_ident
+    fn raw_call_name(&self, function_name: &Ident) -> Ident {
+        // Note: we want to strip the `r#` prefix when present since we are creating a new ident
+        // that will never be a keyword.
+        let new_ident = format!("{}Call", function_name.unraw());
+        Ident::new(&new_ident, function_name.span())
     }
 
     /// Returns the name of the function's return Rust struct.
     fn return_name(&self, function: &ItemFunction) -> Ident {
-        let function_name = self.function_name(function);
-        self.raw_return_name(function_name)
+        self.raw_return_name(&self.function_name(function).0)
     }
 
     /// Formats the given name as a function's return Rust struct name.
-    fn raw_return_name(
-        &self,
-        function_name: impl quote::IdentFragment + std::fmt::Display,
-    ) -> Ident {
-        let mut new_ident = format_ident!("{function_name}Return");
-        if let Some(span) = function_name.span() {
-            new_ident.set_span(span);
-        }
-        new_ident
+    fn raw_return_name(&self, function_name: &Ident) -> Ident {
+        // Note: we want to strip the `r#` prefix when present since we are creating a new ident
+        // that will never be a keyword.
+        let new_ident = format!("{}Return", function_name.unraw());
+        Ident::new(&new_ident, function_name.span())
     }
 
     fn function_signature(&self, function: &ItemFunction) -> String {
