@@ -8,10 +8,8 @@ use alloc::{
     string::String,
     vec::Vec,
 };
-use alloy_sol_type_parser::{
-    Error as ParserError, ParameterSpecifier, Result as ParserResult, TypeSpecifier,
-};
 use core::{fmt, str::FromStr};
+use parser::{ParameterSpecifier, TypeSpecifier};
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
 
 /// JSON specification of a parameter.
@@ -78,7 +76,7 @@ impl Serialize for Param {
 }
 
 impl FromStr for Param {
-    type Err = ParserError;
+    type Err = parser::Error;
 
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -103,7 +101,7 @@ impl Param {
     ///     })
     /// );
     /// ```
-    pub fn parse(input: &str) -> ParserResult<Self> {
+    pub fn parse(input: &str) -> parser::Result<Self> {
         ParameterSpecifier::parse(input).map(|p| mk_param(p.name, p.ty))
     }
 
@@ -314,7 +312,7 @@ impl Serialize for EventParam {
 }
 
 impl FromStr for EventParam {
-    type Err = ParserError;
+    type Err = parser::Error;
 
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -341,7 +339,7 @@ impl EventParam {
     /// );
     /// ```
     #[inline]
-    pub fn parse(input: &str) -> ParserResult<Self> {
+    pub fn parse(input: &str) -> parser::Result<Self> {
         ParameterSpecifier::parse(input).map(mk_eparam)
     }
 
@@ -510,7 +508,7 @@ impl BorrowedParam<'_> {
         // any components means type is "tuple" + maybe brackets, so we can skip
         // parsing with TypeSpecifier
         if self.components.is_empty() {
-            if alloy_sol_type_parser::TypeSpecifier::parse(self.ty).is_err() {
+            if parser::TypeSpecifier::parse(self.ty).is_err() {
                 return Err(E::invalid_value(
                     Unexpected::Str(self.ty),
                     &"a valid Solidity type specifier",

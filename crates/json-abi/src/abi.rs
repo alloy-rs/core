@@ -1,7 +1,6 @@
 use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
 use alloc::{collections::btree_map, string::String, vec::Vec};
 use alloy_primitives::Bytes;
-use alloy_sol_type_parser::{Error as ParserError, Result as ParserResult};
 use btree_map::BTreeMap;
 use core::{fmt, iter, iter::Flatten};
 use serde::{
@@ -91,12 +90,12 @@ impl JsonAbi {
     /// assert_eq!(abi.len(), 9);
     /// # Ok::<(), alloy_sol_type_parser::Error>(())
     /// ```
-    pub fn parse<'a, I: IntoIterator<Item = &'a str>>(strings: I) -> ParserResult<Self> {
+    pub fn parse<'a, I: IntoIterator<Item = &'a str>>(strings: I) -> parser::Result<Self> {
         let mut abi = Self::new();
         for string in strings {
             let item = AbiItem::parse(string)?;
             abi.insert_item(item)
-                .map_err(|s| ParserError::_new("duplicate JSON ABI field: ", &s))?;
+                .map_err(|s| parser::Error::_new("duplicate JSON ABI field: ", &s))?;
         }
         Ok(abi)
     }

@@ -9,9 +9,9 @@ use alloc::{
     vec::Vec,
 };
 use alloy_primitives::{keccak256, B256};
-use alloy_sol_type_parser::{RootType, TypeSpecifier, TypeStem};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
+use parser::{RootType, TypeSpecifier, TypeStem};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// An EIP-712 property definition.

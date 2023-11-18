@@ -1,8 +1,8 @@
 use crate::{resolve::ResolveSolType, DynSolValue, DynToken, Error, Result, SolType, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
-use alloy_sol_type_parser::TypeSpecifier;
 use alloy_sol_types::{abi::Decoder, sol_data};
 use core::{fmt, iter::zip, num::NonZeroUsize, str::FromStr};
+use parser::TypeSpecifier;
 
 #[cfg(feature = "eip712")]
 macro_rules! as_tuple {

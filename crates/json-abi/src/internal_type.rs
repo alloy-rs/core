@@ -1,6 +1,6 @@
 use alloc::string::{String, ToString};
-use alloy_sol_type_parser::TypeSpecifier;
 use core::fmt;
+use parser::TypeSpecifier;
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
 /// The contract internal type. This could be a regular Solidity type, a

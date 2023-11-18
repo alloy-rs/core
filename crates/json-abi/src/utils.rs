@@ -1,15 +1,15 @@
 use crate::{EventParam, Param};
 use alloc::{string::String, vec::Vec};
 use alloy_primitives::Selector;
-use alloy_sol_type_parser::{ParameterSpecifier, TypeSpecifier, TypeStem};
 use core::{fmt::Write, num::NonZeroUsize};
+use parser::{ParameterSpecifier, TypeSpecifier, TypeStem};
 
 /// Capacity to allocate per [Param].
 const PARAM: usize = 32;
 
 macro_rules! validate_identifier {
     ($name:expr) => {
-        if !$name.is_empty() && !alloy_sol_type_parser::is_valid_identifier($name) {
+        if !$name.is_empty() && !parser::is_valid_identifier($name) {
             return Err(serde::de::Error::invalid_value(
                 serde::de::Unexpected::Str($name),
                 &"a valid Solidity identifier",
@@ -72,16 +72,31 @@ pub(crate) fn selector(preimage: &str) -> Selector {
     }
 }
 
-type Ret<T> = alloy_sol_type_parser::Result<(String, Vec<T>, Vec<T>, bool)>;
+pub(crate) type ParseSigTuple<T> = (String, Vec<T>, Vec<T>, bool);
+pub(crate) type ParseSigResult<T> = parser::Result<ParseSigTuple<T>>;
 
-#[inline]
-pub(crate) fn parse_sig<const O: bool>(s: &str) -> Ret<Param> {
-    alloy_sol_type_parser::utils::parse_signature::<O, _, _>(s, |p| mk_param(p.name, p.ty))
+/// Strips `prefix` from `s` before parsing with `parser`. `prefix` must be followed by whitespace.
+pub(crate) fn parse_maybe_prefixed<F: FnOnce(&str) -> R, R>(
+    mut s: &str,
+    prefix: &str,
+    parser: F,
+) -> R {
+    if let Some(stripped) = s.strip_prefix(prefix) {
+        if stripped.starts_with(char::is_whitespace) {
+            s = stripped.trim_start();
+        }
+    }
+    parser(s)
 }
 
 #[inline]
-pub(crate) fn parse_event_sig(s: &str) -> Ret<EventParam> {
-    alloy_sol_type_parser::utils::parse_signature::<false, _, _>(s, mk_eparam)
+pub(crate) fn parse_sig<const O: bool>(s: &str) -> ParseSigResult<Param> {
+    parser::utils::parse_signature::<O, _, _>(s, |p| mk_param(p.name, p.ty))
+}
+
+#[inline]
+pub(crate) fn parse_event_sig(s: &str) -> ParseSigResult<EventParam> {
+    parser::utils::parse_signature::<false, _, _>(s, mk_eparam)
 }
 
 pub(crate) fn mk_param(name: Option<&str>, ty: TypeSpecifier<'_>) -> Param {

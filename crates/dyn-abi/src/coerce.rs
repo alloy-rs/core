@@ -1,10 +1,10 @@
 use crate::{ty::as_tuple, DynSolType, DynSolValue, Result};
 use alloc::vec::Vec;
 use alloy_primitives::{Address, FixedBytes, Function, Sign, I256, U256};
-use alloy_sol_type_parser::utils::{array_parser, char_parser, spanned};
 use alloy_sol_types::Word;
 use core::fmt;
 use hex::FromHexError;
+use parser::utils::{array_parser, char_parser, spanned};
 use winnow::{
     ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
     combinator::{cut_err, dispatch, fail, opt, preceded, success},
@@ -76,7 +76,7 @@ impl DynSolType {
     pub fn coerce_str(&self, s: &str) -> Result<DynSolValue> {
         ValueParser::new(self)
             .parse(s)
-            .map_err(|e| crate::Error::TypeParser(alloy_sol_type_parser::Error::parser(e)))
+            .map_err(|e| crate::Error::TypeParser(parser::Error::parser(e)))
     }
 }
 
