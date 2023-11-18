@@ -97,16 +97,21 @@ pub trait SolType: Sized {
     /// The corresponding Rust type.
     type RustType: SolTypeValue<Self> + 'static;
 
-    /// The corresponding ABI [token type](Token).
+    /// The corresponding [ABI token type](Token).
     ///
     /// This is the intermediate representation of the type that is used for
     /// ABI encoding and decoding.
     type Token<'a>: Token<'a>;
 
-    /// The encoded size of the type, if known at compile time
-    const ENCODED_SIZE: Option<usize> = Some(32);
+    /// The statically-known ABI-encoded size of the type.
+    ///
+    /// If this is not known at compile time, this should be `None`, which indicates that the
+    /// encoded size is dynamic.
+    const ENCODED_SIZE: Option<usize>;
 
-    /// Whether the encoded size is dynamic.
+    /// Whether the ABI-encoded size is dynamic.
+    ///
+    /// There should be no need to override the default implementation.
     const DYNAMIC: bool = Self::ENCODED_SIZE.is_none();
 
     /// Returns the name of this type in Solidity.

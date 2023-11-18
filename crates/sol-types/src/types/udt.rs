@@ -14,7 +14,7 @@ macro_rules! define_udt {
         $(#[$outer])*
         /// This struct is a Solidity user-defined value type. It wraps
         /// an underlying type.
-        #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+        #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
         pub struct $name (
             <$underlying as $crate::SolType>::RustType,
         );
@@ -71,7 +71,7 @@ macro_rules! define_udt {
             type RustType = <$underlying as $crate::SolType>::RustType;
             type Token<'a> = <$underlying as $crate::SolType>::Token<'a>;
 
-            const DYNAMIC: bool = false;
+            const ENCODED_SIZE: Option<usize> = <$underlying as $crate::SolType>::ENCODED_SIZE;
 
             #[inline]
             fn sol_type_name() -> $crate::private::Cow<'static, str> {

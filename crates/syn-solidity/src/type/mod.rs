@@ -282,11 +282,11 @@ impl Type {
     pub const fn is_one_word(&self) -> bool {
         matches!(
             self,
-            Self::Address(..)
-                | Self::Bool(_)
+            Self::Bool(_)
                 | Self::Int(..)
                 | Self::Uint(..)
                 | Self::FixedBytes(..)
+                | Self::Address(..)
                 | Self::Function(_)
         )
     }
@@ -294,21 +294,30 @@ impl Type {
     /// Returns whether this type is dynamic according to ABI rules.
     pub fn is_abi_dynamic(&self) -> bool {
         match self {
-            Self::Address(..)
-            | Self::Bool(_)
+            Self::Bool(_)
             | Self::Int(..)
             | Self::Uint(..)
             | Self::FixedBytes(..)
+            | Self::Address(..)
             | Self::Function(_) => false,
 
             Self::String(_) | Self::Bytes(_) | Self::Custom(_) => true,
 
-            Self::Tuple(tuple) => tuple.is_abi_dynamic(),
             Self::Array(array) => array.is_abi_dynamic(),
+            Self::Tuple(tuple) => tuple.is_abi_dynamic(),
 
             // not applicable
             Self::Mapping(_) => false,
         }
+    }
+
+    /// Returns whether this type is a value type.
+    ///
+    /// These types' variables are always passed by value.
+    ///
+    /// See the [Solidity docs](https://docs.soliditylang.org/en/latest/types.html#value-types) for more information.
+    pub const fn is_value_type(&self) -> bool {
+        self.is_one_word()
     }
 
     pub const fn is_array(&self) -> bool {
@@ -336,17 +345,17 @@ impl Type {
                         .map_or(false, |ret| ret.returns.iter().any(|arg| arg.ty.has_custom()))
             }
             Self::Mapping(m) => m.key.has_custom() || m.value.has_custom(),
-            Self::Address(..)
-            | Self::Bool(_)
-            | Self::Uint(..)
+            Self::Bool(_)
             | Self::Int(..)
+            | Self::Uint(..)
+            | Self::FixedBytes(..)
+            | Self::Address(..)
             | Self::String(_)
-            | Self::Bytes(_)
-            | Self::FixedBytes(..) => false,
+            | Self::Bytes(_) => false,
         }
     }
 
-    /// Same as [`has_custom`](Self::has_custom), but `Function` returns false
+    /// Same as [`has_custom`](Self::has_custom), but `Function` returns `false`
     /// rather than recursing into its arguments and return types.
     pub fn has_custom_simple(&self) -> bool {
         match self {
@@ -354,14 +363,14 @@ impl Type {
             Self::Array(a) => a.ty.has_custom_simple(),
             Self::Tuple(t) => t.types.iter().any(Self::has_custom_simple),
             Self::Mapping(m) => m.key.has_custom_simple() || m.value.has_custom_simple(),
-            Self::Address(..)
-            | Self::Bool(_)
-            | Self::Uint(..)
+            Self::Bool(_)
             | Self::Int(..)
-            | Self::String(_)
-            | Self::Bytes(_)
+            | Self::Uint(..)
             | Self::FixedBytes(..)
-            | Self::Function(_) => false,
+            | Self::Address(..)
+            | Self::Function(_)
+            | Self::String(_)
+            | Self::Bytes(_) => false,
         }
     }
 
