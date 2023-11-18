@@ -17,7 +17,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
     if !ty.is_value_type() {
         return Err(Error::new(
             ty.span(),
-            "The underlying types of the user defined values must be elementary value types",
+            "the underlying types of the user defined values must be elementary value types",
         ));
     }
 

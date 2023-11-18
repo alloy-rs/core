@@ -1163,7 +1163,7 @@ mod tests {
     }
 
     #[test]
-    fn custom_encoded_size() {
+    fn custom_encoded_sizes() {
         macro_rules! custom_and_assert {
             ($block:tt, $e:expr) => {{
                 sol! {
