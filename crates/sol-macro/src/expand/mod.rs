@@ -384,12 +384,10 @@ impl<'ast> ExpCtxt<'ast> {
         utils::selector(self.error_signature(error))
     }
 
-    #[allow(dead_code)]
     fn event_signature(&self, event: &ItemEvent) -> String {
         self.signature(event.name.as_string(), &event.params())
     }
 
-    #[allow(dead_code)]
     fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8, 32> {
         utils::event_selector(self.event_signature(event))
     }
