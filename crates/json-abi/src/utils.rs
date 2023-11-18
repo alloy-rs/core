@@ -82,7 +82,7 @@ pub(crate) fn parse_maybe_prefixed<F: FnOnce(&str) -> R, R>(
     parser: F,
 ) -> R {
     if let Some(stripped) = s.strip_prefix(prefix) {
-        if stripped.starts_with(|c: char| c.is_ascii_whitespace()) {
+        if stripped.starts_with(char::is_whitespace) {
             s = stripped.trim_start();
         }
     }
