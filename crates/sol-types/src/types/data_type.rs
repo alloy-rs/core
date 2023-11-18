@@ -43,6 +43,8 @@ impl SolType for Bool {
     type RustType = bool;
     type Token<'a> = WordToken;
 
+    const ENCODED_SIZE: Option<usize> = Some(32);
+
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
         "bool".into()
@@ -89,6 +91,8 @@ where
 {
     type RustType = <IntBitCount<BITS> as SupportedInt>::Int;
     type Token<'a> = WordToken;
+
+    const ENCODED_SIZE: Option<usize> = Some(32);
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -145,6 +149,8 @@ where
     type RustType = <IntBitCount<BITS> as SupportedInt>::Uint;
     type Token<'a> = WordToken;
 
+    const ENCODED_SIZE: Option<usize> = Some(32);
+
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
         IntBitCount::<BITS>::UINT_NAME.into()
@@ -158,6 +164,57 @@ where
     #[inline]
     fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         IntBitCount::<BITS>::detokenize_uint(token)
+    }
+}
+
+/// FixedBytes - `bytesX`
+#[derive(Clone, Copy, Debug)]
+pub struct FixedBytes<const N: usize>;
+
+impl<T: Borrow<[u8; N]>, const N: usize> SolTypeValue<FixedBytes<N>> for T
+where
+    ByteCount<N>: SupportedFixedBytes,
+{
+    #[inline]
+    fn stv_to_tokens(&self) -> <FixedBytes<N> as SolType>::Token<'_> {
+        let mut word = Word::ZERO;
+        word[..N].copy_from_slice(self.borrow());
+        word.into()
+    }
+
+    #[inline]
+    fn stv_eip712_data_word(&self) -> Word {
+        SolTypeValue::<FixedBytes<N>>::stv_to_tokens(self).0
+    }
+
+    #[inline]
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+        out.extend_from_slice(self.borrow().as_slice());
+    }
+}
+
+impl<const N: usize> SolType for FixedBytes<N>
+where
+    ByteCount<N>: SupportedFixedBytes,
+{
+    type RustType = RustFixedBytes<N>;
+    type Token<'a> = WordToken;
+
+    const ENCODED_SIZE: Option<usize> = Some(32);
+
+    #[inline]
+    fn sol_type_name() -> Cow<'static, str> {
+        <ByteCount<N>>::NAME.into()
+    }
+
+    #[inline]
+    fn valid_token(token: &Self::Token<'_>) -> bool {
+        utils::check_zeroes(&token.0[N..])
+    }
+
+    #[inline]
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
+        token.0[..N].try_into().unwrap()
     }
 }
 
@@ -184,6 +241,8 @@ impl<T: Borrow<[u8; 20]>> SolTypeValue<Address> for T {
 impl SolType for Address {
     type RustType = RustAddress;
     type Token<'a> = WordToken;
+
+    const ENCODED_SIZE: Option<usize> = Some(32);
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -224,6 +283,8 @@ impl<T: Borrow<[u8; 24]>> SolTypeValue<Function> for T {
 impl SolType for Function {
     type RustType = RustFunction;
     type Token<'a> = WordToken;
+
+    const ENCODED_SIZE: Option<usize> = Some(32);
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -285,6 +346,57 @@ impl SolType for Bytes {
     #[inline]
     fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         token.into_vec()
+    }
+}
+
+/// String - `string`
+pub struct String;
+
+impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
+    #[inline]
+    fn stv_to_tokens(&self) -> PackedSeqToken<'_> {
+        PackedSeqToken(self.as_ref().as_bytes())
+    }
+
+    #[inline]
+    fn stv_abi_encoded_size(&self) -> usize {
+        32 + utils::padded_len(self.as_ref().as_ref())
+    }
+
+    #[inline]
+    fn stv_eip712_data_word(&self) -> Word {
+        keccak256(String::abi_encode_packed(self))
+    }
+
+    #[inline]
+    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+        out.extend_from_slice(self.as_ref().as_ref());
+    }
+}
+
+impl SolType for String {
+    type RustType = RustString;
+    type Token<'a> = PackedSeqToken<'a>;
+
+    const ENCODED_SIZE: Option<usize> = None;
+
+    #[inline]
+    fn sol_type_name() -> Cow<'static, str> {
+        "string".into()
+    }
+
+    #[inline]
+    fn valid_token(token: &Self::Token<'_>) -> bool {
+        core::str::from_utf8(token.as_slice()).is_ok()
+    }
+
+    #[inline]
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
+        // NOTE: We're decoding strings using lossy UTF-8 decoding to
+        // prevent invalid strings written into contracts by either users or
+        // Solidity bugs from causing graph-node to fail decoding event
+        // data.
+        RustString::from_utf8_lossy(token.as_slice()).into_owned()
     }
 }
 
@@ -421,106 +533,6 @@ impl<T: SolType> SolType for Array<T> {
     #[inline]
     fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         token.0.into_iter().map(T::detokenize).collect()
-    }
-}
-
-/// String - `string`
-pub struct String;
-
-impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
-    #[inline]
-    fn stv_to_tokens(&self) -> PackedSeqToken<'_> {
-        PackedSeqToken(self.as_ref().as_bytes())
-    }
-
-    #[inline]
-    fn stv_abi_encoded_size(&self) -> usize {
-        32 + utils::padded_len(self.as_ref().as_ref())
-    }
-
-    #[inline]
-    fn stv_eip712_data_word(&self) -> Word {
-        keccak256(String::abi_encode_packed(self))
-    }
-
-    #[inline]
-    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
-        out.extend_from_slice(self.as_ref().as_ref());
-    }
-}
-
-impl SolType for String {
-    type RustType = RustString;
-    type Token<'a> = PackedSeqToken<'a>;
-
-    const ENCODED_SIZE: Option<usize> = None;
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        "string".into()
-    }
-
-    #[inline]
-    fn valid_token(token: &Self::Token<'_>) -> bool {
-        core::str::from_utf8(token.as_slice()).is_ok()
-    }
-
-    #[inline]
-    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
-        // NOTE: We're decoding strings using lossy UTF-8 decoding to
-        // prevent invalid strings written into contracts by either users or
-        // Solidity bugs from causing graph-node to fail decoding event
-        // data.
-        RustString::from_utf8_lossy(token.as_slice()).into_owned()
-    }
-}
-
-/// FixedBytes - `bytesX`
-#[derive(Clone, Copy, Debug)]
-pub struct FixedBytes<const N: usize>;
-
-impl<T: Borrow<[u8; N]>, const N: usize> SolTypeValue<FixedBytes<N>> for T
-where
-    ByteCount<N>: SupportedFixedBytes,
-{
-    #[inline]
-    fn stv_to_tokens(&self) -> <FixedBytes<N> as SolType>::Token<'_> {
-        let mut word = Word::ZERO;
-        word[..N].copy_from_slice(self.borrow());
-        word.into()
-    }
-
-    #[inline]
-    fn stv_eip712_data_word(&self) -> Word {
-        SolTypeValue::<FixedBytes<N>>::stv_to_tokens(self).0
-    }
-
-    #[inline]
-    fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
-        out.extend_from_slice(self.borrow().as_slice());
-    }
-}
-
-impl<const N: usize> SolType for FixedBytes<N>
-where
-    ByteCount<N>: SupportedFixedBytes,
-{
-    type RustType = RustFixedBytes<N>;
-    type Token<'a> = WordToken;
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        <ByteCount<N>>::NAME.into()
-    }
-
-    #[inline]
-    fn valid_token(token: &Self::Token<'_>) -> bool {
-        utils::check_zeroes(&token.0[N..])
-    }
-
-    #[inline]
-    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
-        token.0[..N].try_into().unwrap()
     }
 }
 
@@ -1058,6 +1070,115 @@ supported_int!(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sol;
+
+    macro_rules! assert_encoded_size {
+        ($t:ty, $sz:expr) => {
+            let sz = $sz;
+            assert_eq!(<$t as SolType>::ENCODED_SIZE, sz);
+            assert_eq!(<$t as SolType>::DYNAMIC, sz.is_none());
+        };
+    }
+
+    #[test]
+    fn primitive_encoded_sizes() {
+        assert_encoded_size!(Bool, Some(32));
+
+        assert_encoded_size!(Uint<8>, Some(32));
+        assert_encoded_size!(Int<8>, Some(32));
+        assert_encoded_size!(Uint<16>, Some(32));
+        assert_encoded_size!(Int<16>, Some(32));
+        assert_encoded_size!(Uint<32>, Some(32));
+        assert_encoded_size!(Int<32>, Some(32));
+        assert_encoded_size!(Uint<64>, Some(32));
+        assert_encoded_size!(Int<64>, Some(32));
+        assert_encoded_size!(Uint<128>, Some(32));
+        assert_encoded_size!(Int<128>, Some(32));
+        assert_encoded_size!(Uint<256>, Some(32));
+        assert_encoded_size!(Int<256>, Some(32));
+
+        assert_encoded_size!(Address, Some(32));
+        assert_encoded_size!(Function, Some(32));
+        assert_encoded_size!(FixedBytes<1>, Some(32));
+        assert_encoded_size!(FixedBytes<16>, Some(32));
+        assert_encoded_size!(FixedBytes<32>, Some(32));
+
+        assert_encoded_size!(Bytes, None);
+        assert_encoded_size!(String, None);
+
+        assert_encoded_size!(Array<()>, None);
+        assert_encoded_size!(Array<Uint<8>>, None);
+        assert_encoded_size!(Array<Bytes>, None);
+
+        assert_encoded_size!(FixedArray<(), 0>, Some(0));
+        assert_encoded_size!(FixedArray<(), 1>, Some(0));
+        assert_encoded_size!(FixedArray<(), 2>, Some(0));
+        assert_encoded_size!(FixedArray<Uint<8>, 0>, Some(0));
+        assert_encoded_size!(FixedArray<Uint<8>, 1>, Some(32));
+        assert_encoded_size!(FixedArray<Uint<8>, 2>, Some(64));
+        assert_encoded_size!(FixedArray<Bytes, 0>, None);
+        assert_encoded_size!(FixedArray<Bytes, 1>, None);
+        assert_encoded_size!(FixedArray<Bytes, 2>, None);
+
+        assert_encoded_size!((), Some(0));
+        assert_encoded_size!(((),), Some(0));
+        assert_encoded_size!(((), ()), Some(0));
+        assert_encoded_size!((Uint<8>,), Some(32));
+        assert_encoded_size!((Uint<8>, Bool), Some(64));
+        assert_encoded_size!((Uint<8>, Bool, FixedArray<Address, 4>), Some(6 * 32));
+        assert_encoded_size!((Bytes,), None);
+        assert_encoded_size!((Uint<8>, Bytes), None);
+    }
+
+    #[test]
+    fn udvt_encoded_sizes() {
+        macro_rules! udvt_and_assert {
+            ([$($t:tt)*], $e:expr) => {{
+                type Alias = sol!($($t)*);
+                sol!(type Udvt is $($t)*;);
+                assert_encoded_size!(Alias, $e);
+                assert_encoded_size!(Udvt, $e);
+            }};
+        }
+        udvt_and_assert!([bool], Some(32));
+
+        udvt_and_assert!([uint8], Some(32));
+        udvt_and_assert!([int8], Some(32));
+        udvt_and_assert!([uint16], Some(32));
+        udvt_and_assert!([int16], Some(32));
+        udvt_and_assert!([uint32], Some(32));
+        udvt_and_assert!([int32], Some(32));
+        udvt_and_assert!([uint64], Some(32));
+        udvt_and_assert!([int64], Some(32));
+        udvt_and_assert!([uint128], Some(32));
+        udvt_and_assert!([int128], Some(32));
+        udvt_and_assert!([uint256], Some(32));
+        udvt_and_assert!([int256], Some(32));
+
+        udvt_and_assert!([address], Some(32));
+        udvt_and_assert!([function()], Some(32));
+        udvt_and_assert!([bytes1], Some(32));
+        udvt_and_assert!([bytes16], Some(32));
+        udvt_and_assert!([bytes32], Some(32));
+    }
+
+    #[test]
+    fn custom_encoded_sizes() {
+        macro_rules! custom_and_assert {
+            ($block:tt, $e:expr) => {{
+                sol! {
+                    struct Struct $block
+                }
+                assert_encoded_size!(Struct, $e);
+            }};
+        }
+        custom_and_assert!({ bool a; }, Some(32));
+        custom_and_assert!({ bool a; address b; }, Some(64));
+        custom_and_assert!({ bool a; bytes1[69] b; uint8 c; }, Some(71 * 32));
+        custom_and_assert!({ bytes a; }, None);
+        custom_and_assert!({ bytes a; bytes24 b; }, None);
+        custom_and_assert!({ bool a; bytes2[42] b; uint8 c; bytes d; }, None);
+    }
 
     #[test]
     fn tuple_of_refs() {

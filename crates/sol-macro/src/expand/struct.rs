@@ -106,6 +106,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 type RustType = Self;
                 type Token<'a> = <UnderlyingSolTuple<'a> as ::alloy_sol_types::SolType>::Token<'a>;
 
+                const ENCODED_SIZE: Option<usize> =
+                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::ENCODED_SIZE;
+
                 #[inline]
                 fn sol_type_name() -> ::alloy_sol_types::private::Cow<'static, str> {
                     ::alloy_sol_types::private::Cow::Borrowed(
