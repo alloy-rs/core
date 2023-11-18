@@ -1,5 +1,5 @@
 use crate::{
-    abi::token::{PackedSeqToken, TokenSeq, TokenType, WordToken},
+    abi::token::{PackedSeqToken, Token, TokenSeq, WordToken},
     GenericContractError, Result, SolInterface, SolType, Word,
 };
 use alloc::{
@@ -20,7 +20,7 @@ pub trait SolError: Sized {
     /// The underlying tuple type which represents the error's members.
     ///
     /// If the error has no arguments, this will be the unit type `()`
-    type Parameters<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
+    type Parameters<'a>: SolType<Token<'a> = Self::Token<'a>>;
 
     /// The corresponding [`TokenSeq`] type.
     type Token<'a>: TokenSeq<'a>;

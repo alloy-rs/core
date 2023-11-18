@@ -1,5 +1,5 @@
 use crate::{
-    abi::{self, TokenSeq, TokenType},
+    abi::{self, Token, TokenSeq},
     private::SolTypeValue,
     Result, Word,
 };
@@ -97,11 +97,11 @@ pub trait SolType: Sized {
     /// The corresponding Rust type.
     type RustType: SolTypeValue<Self> + 'static;
 
-    /// The corresponding ABI [token type](TokenType).
+    /// The corresponding ABI [token type](Token).
     ///
     /// This is the intermediate representation of the type that is used for
     /// ABI encoding and decoding.
-    type TokenType<'a>: TokenType<'a>;
+    type Token<'a>: Token<'a>;
 
     /// The encoded size of the type, if known at compile time
     const ENCODED_SIZE: Option<usize> = Some(32);
@@ -120,12 +120,12 @@ pub trait SolType: Sized {
     }
 
     /// Returns `true` if the given token can be detokenized with this type.
-    fn valid_token(token: &Self::TokenType<'_>) -> bool;
+    fn valid_token(token: &Self::Token<'_>) -> bool;
 
     /// Returns an error if the given token cannot be detokenized with this
     /// type.
     #[inline]
-    fn type_check(token: &Self::TokenType<'_>) -> Result<()> {
+    fn type_check(token: &Self::Token<'_>) -> Result<()> {
         if Self::valid_token(token) {
             Ok(())
         } else {
@@ -136,12 +136,12 @@ pub trait SolType: Sized {
     /// Detokenize this type's value from the given token.
     ///
     /// See the [`abi::token`] module for more information.
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType;
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType;
 
     /// Tokenizes the given value into this type's token.
     ///
     /// See the [`abi::token`] module for more information.
-    fn tokenize<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Self::TokenType<'_> {
+    fn tokenize<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Self::Token<'_> {
         rust.stv_to_tokens()
     }
 
@@ -196,7 +196,7 @@ pub trait SolType: Sized {
     #[inline]
     fn abi_encode_params<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Vec<u8>
     where
-        for<'a> Self::TokenType<'a>: TokenSeq<'a>,
+        for<'a> Self::Token<'a>: TokenSeq<'a>,
     {
         abi::encode_params(&rust.stv_to_tokens())
     }
@@ -207,7 +207,7 @@ pub trait SolType: Sized {
     #[inline]
     fn abi_encode_sequence<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Vec<u8>
     where
-        for<'a> Self::TokenType<'a>: TokenSeq<'a>,
+        for<'a> Self::Token<'a>: TokenSeq<'a>,
     {
         abi::encode_sequence(&rust.stv_to_tokens())
     }
@@ -218,7 +218,7 @@ pub trait SolType: Sized {
     /// See the [`abi`] module for more information.
     #[inline]
     fn abi_decode(data: &[u8], validate: bool) -> Result<Self::RustType> {
-        abi::decode::<Self::TokenType<'_>>(data, validate).and_then(check_decode::<Self>(validate))
+        abi::decode::<Self::Token<'_>>(data, validate).and_then(check_decode::<Self>(validate))
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as
@@ -228,9 +228,9 @@ pub trait SolType: Sized {
     #[inline]
     fn abi_decode_params<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
     where
-        Self::TokenType<'de>: TokenSeq<'de>,
+        Self::Token<'de>: TokenSeq<'de>,
     {
-        abi::decode_params::<Self::TokenType<'_>>(data, validate)
+        abi::decode_params::<Self::Token<'_>>(data, validate)
             .and_then(check_decode::<Self>(validate))
     }
 
@@ -241,17 +241,15 @@ pub trait SolType: Sized {
     #[inline]
     fn abi_decode_sequence<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
     where
-        Self::TokenType<'de>: TokenSeq<'de>,
+        Self::Token<'de>: TokenSeq<'de>,
     {
-        abi::decode_sequence::<Self::TokenType<'_>>(data, validate)
+        abi::decode_sequence::<Self::Token<'_>>(data, validate)
             .and_then(check_decode::<Self>(validate))
     }
 }
 
 #[inline]
-fn check_decode<T: SolType>(
-    validate: bool,
-) -> impl FnOnce(T::TokenType<'_>) -> Result<T::RustType> {
+fn check_decode<T: SolType>(validate: bool) -> impl FnOnce(T::Token<'_>) -> Result<T::RustType> {
     move |token| {
         if validate {
             T::type_check(&token)?;

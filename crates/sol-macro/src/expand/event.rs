@@ -120,7 +120,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
             #[automatically_derived]
             impl ::alloy_sol_types::SolEvent for #name {
                 type DataTuple<'a> = #data_tuple;
-                type DataToken<'a> = <Self::DataTuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
+                type DataToken<'a> = <Self::DataTuple<'a> as ::alloy_sol_types::SolType>::Token<'a>;
 
                 type TopicList = (#(#topic_list,)*);
 

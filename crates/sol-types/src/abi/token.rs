@@ -9,7 +9,7 @@
 
 //! Ethereum ABI tokens.
 //!
-//! See [`TokenType`] for more details.
+//! See [`Token`] for more details.
 
 use crate::{
     abi::{Decoder, Encoder},
@@ -50,7 +50,7 @@ use sealed::Sealed;
 ///
 /// This trait is sealed and cannot be implemented for types outside of this
 /// crate. It is implemented only for the types listed above.
-pub trait TokenType<'de>: Sealed + Sized {
+pub trait Token<'de>: Sealed + Sized {
     /// True if the token represents a dynamically-sized type.
     const DYNAMIC: bool;
 
@@ -78,10 +78,10 @@ pub trait TokenType<'de>: Sealed + Sized {
 
 /// A token composed of a sequence of other tokens.
 ///
-/// This functions is an extension trait for [`TokenType`], and is only
+/// This functions is an extension trait for [`Token`], and is only
 /// implemented by [`FixedSeqToken`], [`DynSeqToken`], [`PackedSeqToken`], and
-/// tuples of [`TokenType`]s (including [`WordToken`]).
-pub trait TokenSeq<'a>: TokenType<'a> {
+/// tuples of [`Token`]s (including [`WordToken`]).
+pub trait TokenSeq<'a>: Token<'a> {
     /// True for tuples only.
     const IS_TUPLE: bool = false;
 
@@ -152,7 +152,7 @@ impl AsRef<[u8]> for WordToken {
     }
 }
 
-impl<'a> TokenType<'a> for WordToken {
+impl<'a> Token<'a> for WordToken {
     const DYNAMIC: bool = false;
 
     #[inline]
@@ -220,7 +220,7 @@ impl<T, const N: usize> AsRef<[T; N]> for FixedSeqToken<T, N> {
     }
 }
 
-impl<'de, T: TokenType<'de>, const N: usize> TokenType<'de> for FixedSeqToken<T, N> {
+impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
     const DYNAMIC: bool = T::DYNAMIC;
 
     #[inline]
@@ -235,7 +235,7 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenType<'de> for FixedSeqToken<T,
         if Self::DYNAMIC {
             1
         } else {
-            self.0.iter().map(TokenType::head_words).sum()
+            self.0.iter().map(Token::head_words).sum()
         }
     }
 
@@ -267,10 +267,10 @@ impl<'de, T: TokenType<'de>, const N: usize> TokenType<'de> for FixedSeqToken<T,
     }
 }
 
-impl<'de, T: TokenType<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
+impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
     #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
-        let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
+        let head_words = self.0.iter().map(Token::head_words).sum::<usize>();
         enc.push_offset(head_words);
 
         for inner in &self.0 {
@@ -330,7 +330,7 @@ impl<T> AsRef<[T]> for DynSeqToken<T> {
     }
 }
 
-impl<'de, T: TokenType<'de>> TokenType<'de> for DynSeqToken<T> {
+impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
     const DYNAMIC: bool = true;
 
     #[inline]
@@ -352,7 +352,7 @@ impl<'de, T: TokenType<'de>> TokenType<'de> for DynSeqToken<T> {
 
     #[inline]
     fn tail_words(&self) -> usize {
-        1 + self.0.iter().map(TokenType::total_words).sum::<usize>()
+        1 + self.0.iter().map(Token::total_words).sum::<usize>()
     }
 
     #[inline]
@@ -367,10 +367,10 @@ impl<'de, T: TokenType<'de>> TokenType<'de> for DynSeqToken<T> {
     }
 }
 
-impl<'de, T: TokenType<'de>> TokenSeq<'de> for DynSeqToken<T> {
+impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
     #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
-        let head_words = self.0.iter().map(TokenType::head_words).sum::<usize>();
+        let head_words = self.0.iter().map(Token::head_words).sum::<usize>();
         enc.push_offset(head_words);
 
         for inner in &self.0 {
@@ -426,7 +426,7 @@ impl<'a> AsRef<[u8]> for PackedSeqToken<'a> {
     }
 }
 
-impl<'de: 'a, 'a> TokenType<'de> for PackedSeqToken<'a> {
+impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
     const DYNAMIC: bool = true;
 
     #[inline]
@@ -477,11 +477,11 @@ impl PackedSeqToken<'_> {
 
 macro_rules! tuple_impls {
     ($count:literal $($ty:ident),+) => {
-        impl<'de, $($ty: TokenType<'de>,)+> Sealed for ($($ty,)+) {}
+        impl<'de, $($ty: Token<'de>,)+> Sealed for ($($ty,)+) {}
 
         #[allow(non_snake_case)]
-        impl<'de, $($ty: TokenType<'de>,)+> TokenType<'de> for ($($ty,)+) {
-            const DYNAMIC: bool = $( <$ty as TokenType>::DYNAMIC )||+;
+        impl<'de, $($ty: Token<'de>,)+> Token<'de> for ($($ty,)+) {
+            const DYNAMIC: bool = $( <$ty as Token>::DYNAMIC )||+;
 
             #[inline]
             fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
@@ -559,7 +559,7 @@ macro_rules! tuple_impls {
         }
 
         #[allow(non_snake_case)]
-        impl<'de, $($ty: TokenType<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
+        impl<'de, $($ty: Token<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
             const IS_TUPLE: bool = true;
 
             #[inline]
@@ -580,14 +580,14 @@ macro_rules! tuple_impls {
             #[inline]
             fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
                 Ok(($(
-                    <$ty as TokenType>::decode_from(dec)?,
+                    <$ty as Token>::decode_from(dec)?,
                 )+))
             }
         }
     };
 }
 
-impl<'de> TokenType<'de> for () {
+impl<'de> Token<'de> for () {
     const DYNAMIC: bool = false;
 
     #[inline]

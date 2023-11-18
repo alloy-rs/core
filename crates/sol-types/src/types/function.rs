@@ -1,5 +1,5 @@
 use crate::{
-    abi::{TokenSeq, TokenType},
+    abi::{Token, TokenSeq},
     private::SolTypeValue,
     Result, SolType, Word,
 };
@@ -16,7 +16,7 @@ pub trait SolCall: Sized {
     /// The underlying tuple type which represents this type's arguments.
     ///
     /// If this type has no arguments, this will be the unit type `()`.
-    type Arguments<'a>: SolType<TokenType<'a> = Self::Token<'a>>;
+    type Arguments<'a>: SolType<Token<'a> = Self::Token<'a>>;
 
     /// The arguments' corresponding [TokenSeq] type.
     type Token<'a>: TokenSeq<'a>;
@@ -27,7 +27,7 @@ pub trait SolCall: Sized {
     /// The underlying tuple type which represents this type's return values.
     ///
     /// If this type has no return values, this will be the unit type `()`.
-    type ReturnTuple<'a>: SolType<TokenType<'a> = Self::ReturnToken<'a>>;
+    type ReturnTuple<'a>: SolType<Token<'a> = Self::ReturnToken<'a>>;
 
     /// The returns' corresponding [TokenSeq] type.
     type ReturnToken<'a>: TokenSeq<'a>;

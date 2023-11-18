@@ -21,7 +21,7 @@ macro_rules! define_udt {
 
         impl $crate::private::SolTypeValue<$name> for <$underlying as $crate::SolType>::RustType {
             #[inline]
-            fn stv_to_tokens(&self) -> <$underlying as $crate::SolType>::TokenType<'_> {
+            fn stv_to_tokens(&self) -> <$underlying as $crate::SolType>::Token<'_> {
                 $crate::private::SolTypeValue::<$underlying>::stv_to_tokens(self)
             }
 
@@ -69,7 +69,7 @@ macro_rules! define_udt {
 
         impl $crate::SolType for $name {
             type RustType = <$underlying as $crate::SolType>::RustType;
-            type TokenType<'a> = <$underlying as $crate::SolType>::TokenType<'a>;
+            type Token<'a> = <$underlying as $crate::SolType>::Token<'a>;
 
             const DYNAMIC: bool = false;
 
@@ -79,18 +79,18 @@ macro_rules! define_udt {
             }
 
             #[inline]
-            fn valid_token(token: &Self::TokenType<'_>) -> bool {
+            fn valid_token(token: &Self::Token<'_>) -> bool {
                 Self::type_check(token).is_ok()
             }
 
             #[inline]
-            fn type_check(token: &Self::TokenType<'_>) -> $crate::Result<()> {
+            fn type_check(token: &Self::Token<'_>) -> $crate::Result<()> {
                 <$underlying as $crate::SolType>::type_check(token)?;
                 $path(token)
             }
 
             #[inline]
-            fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+            fn detokenize(token: Self::Token<'_>) -> Self::RustType {
                 <$underlying as $crate::SolType>::detokenize(token)
             }
         }

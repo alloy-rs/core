@@ -62,7 +62,7 @@ The [`DynSolValue`] enum represents a solidity value, and describes the
 rust shapes of possible solidity values. It is similar to, but not
 equivalent to an enum over types used as [`crate::SolType::RustType`]. The
 [`DynToken`] enum represents an ABI token, and is equivalent to an enum over
-the types implementing the [`alloy_sol_types::abi::TokenType`] trait.
+the types implementing the [`alloy_sol_types::abi::Token`] trait.
 
 Where the static encoding system encodes the expected type information into
 the Rust type system, the dynamic encoder/decoder encodes it as a concrete

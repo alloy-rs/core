@@ -97,12 +97,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
             #[automatically_derived]
             impl ::alloy_sol_types::SolCall for #call_name {
                 type Arguments<'a> = #call_tuple;
-                type Token<'a> = <Self::Arguments<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
+                type Token<'a> = <Self::Arguments<'a> as ::alloy_sol_types::SolType>::Token<'a>;
 
                 type Return = #return_name;
 
                 type ReturnTuple<'a> = #return_tuple;
-                type ReturnToken<'a> = <Self::ReturnTuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
+                type ReturnToken<'a> = <Self::ReturnTuple<'a> as ::alloy_sol_types::SolType>::Token<'a>;
 
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
