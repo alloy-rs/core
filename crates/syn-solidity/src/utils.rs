@@ -1,5 +1,5 @@
 use crate::Expr;
-use proc_macro2::{Delimiter, TokenStream, TokenTree};
+use proc_macro2::{TokenStream, TokenTree};
 use std::fmt;
 use syn::{parse::ParseStream, punctuated::Punctuated, Result, Token};
 
@@ -23,17 +23,6 @@ impl<T: fmt::Debug, P> fmt::Debug for DebugPunctuated<T, P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.0.iter()).finish()
     }
-}
-
-#[allow(dead_code)]
-pub(crate) fn peek_tt(input: ParseStream<'_>) -> Option<TokenTree> {
-    let tt = input.cursor().token_tree();
-    tt.and_then(|(tt, _)| match tt {
-        TokenTree::Group(g) if matches!(g.delimiter(), Delimiter::None) => {
-            g.stream().into_iter().next()
-        }
-        _ => Some(tt),
-    })
 }
 
 pub(crate) fn tts_until_semi(input: ParseStream<'_>) -> TokenStream {

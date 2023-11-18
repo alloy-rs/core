@@ -124,7 +124,6 @@ impl fmt::Display for Error {
     }
 }
 
-#[allow(dead_code)]
 impl Error {
     /// Instantiates a new error with a static str.
     pub fn custom(s: impl Into<Cow<'static, str>>) -> Self {
