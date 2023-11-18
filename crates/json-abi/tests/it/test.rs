@@ -34,7 +34,7 @@ fn complex_error() {
 
 #[test]
 fn big_function() {
-    let s = include_str!("abi/LargeFunction.json");
+    let s = include_str!("../abi/LargeFunction.json");
     let expected = "fulfillAvailableAdvancedOrders(((address,address,(uint8,address,uint256,uint256,uint256)[],(uint8,address,uint256,uint256,uint256,address)[],uint8,uint256,uint256,bytes32,uint256,bytes32,uint256),uint120,uint120,bytes,bytes)[],(uint256,uint8,uint256,uint256,bytes32[])[],(uint256,uint256)[][],(uint256,uint256)[][],bytes32,address,uint256)";
     let f = serde_json::from_str::<alloy_json_abi::Function>(s).unwrap();
     assert_eq!(f.signature(), expected);
@@ -50,8 +50,8 @@ fn big_function() {
 #[cfg_attr(miri, ignore = "takes too long")]
 fn test_constructor() {
     // Parse the ABI JSON file
-    let abi_items_wo_constructor = include_str!("abi/Abiencoderv2Test.json");
-    let abi_items_w_constructor = include_str!("abi/Seaport.json");
+    let abi_items_wo_constructor = include_str!("../abi/Abiencoderv2Test.json");
+    let abi_items_w_constructor = include_str!("../abi/Seaport.json");
 
     let abi_wo_constructor: JsonAbi =
         serde_json::from_str(abi_items_wo_constructor).expect("Failed to parse ABI JSON string");

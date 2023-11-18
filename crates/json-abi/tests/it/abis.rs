@@ -1,5 +1,3 @@
-mod test_helpers;
-
 use alloy_json_abi::{
     Constructor, Error, Event, EventParam, Fallback, Function, JsonAbi, Param, Receive,
     StateMutability,
