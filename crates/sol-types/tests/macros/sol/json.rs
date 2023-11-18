@@ -1,19 +1,17 @@
 use alloy_primitives::{Address, U256};
-use alloy_sol_types::{sol, SolCall, SolError};
+use alloy_sol_types::{sol, SolCall, SolError, SolStruct};
+use std::borrow::Cow;
 
 #[test]
-fn abigen_json_large_array() {
+fn large_array() {
     sol!(LargeArray, "../json-abi/tests/abi/LargeArray.json");
     assert_eq!(LargeArray::callWithLongArrayCall::SIGNATURE, "callWithLongArray(uint64[128])");
 }
 
 #[test]
-fn abigen_json_seaport() {
-    use alloy_sol_types::SolStruct;
-    use std::borrow::Cow;
-    use Seaport::*;
-
+fn seaport() {
     sol!(Seaport, "../json-abi/tests/abi/Seaport.json");
+    use Seaport::*;
 
     // BasicOrderType is a uint8 UDVT
     let _ = BasicOrderType::from(0u8);
@@ -34,7 +32,7 @@ fn abigen_json_seaport() {
 // Handle multiple identical error objects in the JSON ABI
 // https://github.com/alloy-rs/core/issues/344
 #[test]
-fn abigen_json_aggregation_router_v5() {
+fn aggregation_router_v5() {
     sol!(AggregationRouterV5, "../json-abi/tests/abi/AggregationRouterV5.json");
 
     assert_eq!(
@@ -47,7 +45,7 @@ fn abigen_json_aggregation_router_v5() {
 // Handle contract types in JSON ABI
 // https://github.com/alloy-rs/core/issues/351
 #[test]
-fn abigen_json_uniswap_v3_position() {
+fn uniswap_v3_position() {
     sol!(UniswapV3Position, "../json-abi/tests/abi/UniswapV3Position.json");
 
     let _ = UniswapV3Position::getLiquidityByRangeCall {
@@ -72,7 +70,7 @@ fn abigen_json_uniswap_v3_position() {
 // Ensure a trailing comma for single-element tuples in old JSON ABI
 // https://github.com/alloy-rs/core/issues/360
 #[test]
-fn abigen_json_double_exponent_interest_setter() {
+fn double_exponent_interest_setter() {
     sol!(DoubleExponentInterestSetter, "../json-abi/tests/abi/DoubleExponentInterestSetter.json");
     let _ = DoubleExponentInterestSetter::getInterestRateCall {
         _0: Address::ZERO,
@@ -84,7 +82,7 @@ fn abigen_json_double_exponent_interest_setter() {
 // Same as `event_tokenize_fields`
 // https://github.com/alloy-rs/core/issues/361
 #[test]
-fn abigen_json_uniswap_v2_factory() {
+fn uniswap_v2_factory() {
     sol!(UniswapV2Factory, "../json-abi/tests/abi/UniswapV2Factory.json");
     let _ = UniswapV2Factory::PairCreated {
         token0: Address::ZERO,
@@ -97,7 +95,7 @@ fn abigen_json_uniswap_v2_factory() {
 // Fully qualify `SolInterface::NAME` which conflicted with the `NAME` call
 // https://github.com/alloy-rs/core/issues/361
 #[test]
-fn abigen_json_gnosis_safe() {
+fn gnosis_safe() {
     sol!(GnosisSafe, "../json-abi/tests/abi/GnosisSafe.json");
     let GnosisSafe::NAMECall {} = GnosisSafe::NAMECall {};
     let GnosisSafe::NAMEReturn { _0: _ } = GnosisSafe::NAMEReturn { _0: String::new() };
@@ -106,13 +104,13 @@ fn abigen_json_gnosis_safe() {
 // Have enough recursion depth to handle `BlurExchange` types
 // https://github.com/alloy-rs/core/issues/371
 #[test]
-fn abigen_json_blur_exchange() {
+fn blur_exchange() {
     sol!(BlurExchange, "../json-abi/tests/abi/BlurExchange.json");
     let BlurExchange::NAMECall {} = BlurExchange::NAMECall {};
     let BlurExchange::NAMEReturn { _0: _ } = BlurExchange::NAMEReturn { _0: String::new() };
 }
 
 #[test]
-fn abigen_json_0x_proxy() {
+fn zerox_proxy() {
     sol!(ZeroXExchangeProxy, "../json-abi/tests/abi/ZeroxExchangeProxy.json");
 }
