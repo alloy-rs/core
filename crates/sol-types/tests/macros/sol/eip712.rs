@@ -2,7 +2,7 @@ use alloy_primitives::B256;
 use alloy_sol_types::{eip712_domain, sol, SolStruct};
 
 #[test]
-fn eip712_encode_type_nesting() {
+fn encode_type_nesting() {
     sol! {
         struct A {
             uint256 a;
@@ -31,7 +31,7 @@ fn eip712_encode_type_nesting() {
 }
 
 #[test]
-fn eip712_encode_data_nesting() {
+fn encode_data_nesting() {
     sol! {
         struct Person {
             string name;
