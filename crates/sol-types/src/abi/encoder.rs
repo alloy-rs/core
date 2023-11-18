@@ -8,7 +8,7 @@
 // except according to those terms.
 
 use crate::{
-    abi::{TokenSeq, TokenType},
+    abi::{Token, TokenSeq},
     utils, Word,
 };
 use alloc::vec::Vec;
@@ -165,7 +165,7 @@ impl Encoder {
 ///
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
-pub fn encode<'a, T: TokenType<'a>>(token: &T) -> Vec<u8> {
+pub fn encode<'a, T: Token<'a>>(token: &T) -> Vec<u8> {
     encode_sequence::<(T,)>(tuple_from_ref(token))
 }
 

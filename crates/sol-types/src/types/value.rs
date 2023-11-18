@@ -48,7 +48,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     ///
     /// See [`SolType::tokenize`] for more information.
     #[inline]
-    fn tokenize(&self) -> <Self::SolType as SolType>::TokenType<'_> {
+    fn tokenize(&self) -> <Self::SolType as SolType>::Token<'_> {
         <Self as SolTypeValue<Self::SolType>>::stv_to_tokens(self)
     }
 
@@ -56,7 +56,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     ///
     /// See [`SolType::detokenize`] for more information.
     #[inline]
-    fn detokenize(token: <Self::SolType as SolType>::TokenType<'_>) -> Self
+    fn detokenize(token: <Self::SolType as SolType>::Token<'_>) -> Self
     where
         Self: From<<Self::SolType as SolType>::RustType>,
     {
@@ -112,7 +112,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     #[inline]
     fn abi_encode_sequence(&self) -> Vec<u8>
     where
-        for<'a> <Self::SolType as SolType>::TokenType<'a>: TokenSeq<'a>,
+        for<'a> <Self::SolType as SolType>::Token<'a>: TokenSeq<'a>,
     {
         Self::SolType::abi_encode_sequence(self)
     }
@@ -123,7 +123,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     #[inline]
     fn abi_encode_params(&self) -> Vec<u8>
     where
-        for<'a> <Self::SolType as SolType>::TokenType<'a>: TokenSeq<'a>,
+        for<'a> <Self::SolType as SolType>::Token<'a>: TokenSeq<'a>,
     {
         Self::SolType::abi_encode_params(self)
     }
@@ -145,7 +145,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     fn abi_decode_params<'de>(data: &'de [u8], validate: bool) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
-        <Self::SolType as SolType>::TokenType<'de>: TokenSeq<'de>,
+        <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
         Self::SolType::abi_decode_params(data, validate).map(Self::from)
     }
@@ -157,7 +157,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     fn abi_decode_sequence<'de>(data: &'de [u8], validate: bool) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
-        <Self::SolType as SolType>::TokenType<'de>: TokenSeq<'de>,
+        <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
         Self::SolType::abi_decode_sequence(data, validate).map(Self::from)
     }

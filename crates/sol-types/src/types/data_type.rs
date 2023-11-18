@@ -41,7 +41,7 @@ impl SolTypeValue<Bool> for bool {
 
 impl SolType for Bool {
     type RustType = bool;
-    type TokenType<'a> = WordToken;
+    type Token<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -49,12 +49,12 @@ impl SolType for Bool {
     }
 
     #[inline]
-    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+    fn valid_token(token: &Self::Token<'_>) -> bool {
         utils::check_zeroes(&token.0[..31])
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         token.0 != Word::ZERO
     }
 }
@@ -88,7 +88,7 @@ where
     IntBitCount<BITS>: SupportedInt,
 {
     type RustType = <IntBitCount<BITS> as SupportedInt>::Int;
-    type TokenType<'a> = WordToken;
+    type Token<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -96,7 +96,7 @@ where
     }
 
     #[inline]
-    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+    fn valid_token(token: &Self::Token<'_>) -> bool {
         if BITS == 256 {
             return true;
         }
@@ -109,7 +109,7 @@ where
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         IntBitCount::<BITS>::detokenize_int(token)
     }
 }
@@ -143,7 +143,7 @@ where
     IntBitCount<BITS>: SupportedInt,
 {
     type RustType = <IntBitCount<BITS> as SupportedInt>::Uint;
-    type TokenType<'a> = WordToken;
+    type Token<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -151,12 +151,12 @@ where
     }
 
     #[inline]
-    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+    fn valid_token(token: &Self::Token<'_>) -> bool {
         utils::check_zeroes(&token.0[..<IntBitCount<BITS> as SupportedInt>::WORD_MSB])
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         IntBitCount::<BITS>::detokenize_uint(token)
     }
 }
@@ -183,7 +183,7 @@ impl<T: Borrow<[u8; 20]>> SolTypeValue<Address> for T {
 
 impl SolType for Address {
     type RustType = RustAddress;
-    type TokenType<'a> = WordToken;
+    type Token<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -191,12 +191,12 @@ impl SolType for Address {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         RustAddress::from_word(token.0)
     }
 
     #[inline]
-    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+    fn valid_token(token: &Self::Token<'_>) -> bool {
         utils::check_zeroes(&token.0[..12])
     }
 }
@@ -223,7 +223,7 @@ impl<T: Borrow<[u8; 24]>> SolTypeValue<Function> for T {
 
 impl SolType for Function {
     type RustType = RustFunction;
-    type TokenType<'a> = WordToken;
+    type Token<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -231,12 +231,12 @@ impl SolType for Function {
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         RustFunction::from_word(token.0)
     }
 
     #[inline]
-    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+    fn valid_token(token: &Self::Token<'_>) -> bool {
         utils::check_zeroes(&token.0[24..])
     }
 }
@@ -268,7 +268,7 @@ impl<T: ?Sized + AsRef<[u8]>> SolTypeValue<Bytes> for T {
 
 impl SolType for Bytes {
     type RustType = Vec<u8>;
-    type TokenType<'a> = PackedSeqToken<'a>;
+    type Token<'a> = PackedSeqToken<'a>;
 
     const ENCODED_SIZE: Option<usize> = None;
 
@@ -278,12 +278,12 @@ impl SolType for Bytes {
     }
 
     #[inline]
-    fn valid_token(_token: &Self::TokenType<'_>) -> bool {
+    fn valid_token(_token: &Self::Token<'_>) -> bool {
         true
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         token.into_vec()
     }
 }
@@ -297,7 +297,7 @@ where
     U: SolType,
 {
     #[inline]
-    fn stv_to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+    fn stv_to_tokens(&self) -> DynSeqToken<U::Token<'_>> {
         DynSeqToken(self.iter().map(T::stv_to_tokens).collect())
     }
 
@@ -330,7 +330,7 @@ where
     U: SolType,
 {
     #[inline]
-    fn stv_to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+    fn stv_to_tokens(&self) -> DynSeqToken<U::Token<'_>> {
         (**self).stv_to_tokens()
     }
 
@@ -356,7 +356,7 @@ where
     U: SolType,
 {
     #[inline]
-    fn stv_to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+    fn stv_to_tokens(&self) -> DynSeqToken<U::Token<'_>> {
         (**self).stv_to_tokens()
     }
 
@@ -382,7 +382,7 @@ where
     U: SolType,
 {
     #[inline]
-    fn stv_to_tokens(&self) -> DynSeqToken<U::TokenType<'_>> {
+    fn stv_to_tokens(&self) -> DynSeqToken<U::Token<'_>> {
         <[T] as SolTypeValue<Array<U>>>::stv_to_tokens(self)
     }
 
@@ -404,7 +404,7 @@ where
 
 impl<T: SolType> SolType for Array<T> {
     type RustType = Vec<T::RustType>;
-    type TokenType<'a> = DynSeqToken<T::TokenType<'a>>;
+    type Token<'a> = DynSeqToken<T::Token<'a>>;
 
     const ENCODED_SIZE: Option<usize> = None;
 
@@ -414,12 +414,12 @@ impl<T: SolType> SolType for Array<T> {
     }
 
     #[inline]
-    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+    fn valid_token(token: &Self::Token<'_>) -> bool {
         token.0.iter().all(T::valid_token)
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         token.0.into_iter().map(T::detokenize).collect()
     }
 }
@@ -451,7 +451,7 @@ impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
 
 impl SolType for String {
     type RustType = RustString;
-    type TokenType<'a> = PackedSeqToken<'a>;
+    type Token<'a> = PackedSeqToken<'a>;
 
     const ENCODED_SIZE: Option<usize> = None;
 
@@ -461,12 +461,12 @@ impl SolType for String {
     }
 
     #[inline]
-    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+    fn valid_token(token: &Self::Token<'_>) -> bool {
         core::str::from_utf8(token.as_slice()).is_ok()
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         // NOTE: We're decoding strings using lossy UTF-8 decoding to
         // prevent invalid strings written into contracts by either users or
         // Solidity bugs from causing graph-node to fail decoding event
@@ -484,7 +484,7 @@ where
     ByteCount<N>: SupportedFixedBytes,
 {
     #[inline]
-    fn stv_to_tokens(&self) -> <FixedBytes<N> as SolType>::TokenType<'_> {
+    fn stv_to_tokens(&self) -> <FixedBytes<N> as SolType>::Token<'_> {
         let mut word = Word::ZERO;
         word[..N].copy_from_slice(self.borrow());
         word.into()
@@ -506,7 +506,7 @@ where
     ByteCount<N>: SupportedFixedBytes,
 {
     type RustType = RustFixedBytes<N>;
-    type TokenType<'a> = WordToken;
+    type Token<'a> = WordToken;
 
     #[inline]
     fn sol_type_name() -> Cow<'static, str> {
@@ -514,12 +514,12 @@ where
     }
 
     #[inline]
-    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+    fn valid_token(token: &Self::Token<'_>) -> bool {
         utils::check_zeroes(&token.0[N..])
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         token.0[..N].try_into().unwrap()
     }
 }
@@ -533,7 +533,7 @@ where
     U: SolType,
 {
     #[inline]
-    fn stv_to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
+    fn stv_to_tokens(&self) -> <FixedArray<U, N> as SolType>::Token<'_> {
         FixedSeqToken(core::array::from_fn(|i| self[i].stv_to_tokens()))
     }
 
@@ -571,7 +571,7 @@ where
     U: SolType,
 {
     #[inline]
-    fn stv_to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
+    fn stv_to_tokens(&self) -> <FixedArray<U, N> as SolType>::Token<'_> {
         <[T; N] as SolTypeValue<FixedArray<U, N>>>::stv_to_tokens(&**self)
     }
 
@@ -597,7 +597,7 @@ where
     U: SolType,
 {
     #[inline]
-    fn stv_to_tokens(&self) -> <FixedArray<U, N> as SolType>::TokenType<'_> {
+    fn stv_to_tokens(&self) -> <FixedArray<U, N> as SolType>::Token<'_> {
         <[T; N] as SolTypeValue<FixedArray<U, N>>>::stv_to_tokens(&**self)
     }
 
@@ -619,7 +619,7 @@ where
 
 impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     type RustType = [T::RustType; N];
-    type TokenType<'a> = FixedSeqToken<T::TokenType<'a>, N>;
+    type Token<'a> = FixedSeqToken<T::Token<'a>, N>;
 
     const ENCODED_SIZE: Option<usize> = {
         match T::ENCODED_SIZE {
@@ -634,12 +634,12 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     }
 
     #[inline]
-    fn valid_token(token: &Self::TokenType<'_>) -> bool {
+    fn valid_token(token: &Self::Token<'_>) -> bool {
         token.as_array().iter().all(T::valid_token)
     }
 
     #[inline]
-    fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+    fn detokenize(token: Self::Token<'_>) -> Self::RustType {
         token.0.map(T::detokenize)
     }
 }
@@ -649,7 +649,7 @@ macro_rules! tuple_encodable_impls {
         #[allow(non_snake_case)]
         impl<$($ty: SolTypeValue<$uty>, $uty: SolType),+> SolTypeValue<($($uty,)+)> for ($($ty,)+) {
             #[inline]
-            fn stv_to_tokens(&self) -> <($($uty,)+) as SolType>::TokenType<'_> {
+            fn stv_to_tokens(&self) -> <($($uty,)+) as SolType>::Token<'_> {
                 let ($($ty,)+) = self;
                 ($(SolTypeValue::<$uty>::stv_to_tokens($ty),)+)
             }
@@ -705,7 +705,7 @@ macro_rules! tuple_impls {
         #[allow(non_snake_case)]
         impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
             type RustType = ($( $ty::RustType, )+);
-            type TokenType<'a> = ($( $ty::TokenType<'a>, )+);
+            type Token<'a> = ($( $ty::Token<'a>, )+);
 
             const ENCODED_SIZE: Option<usize> = 'l: {
                 let mut acc = 0;
@@ -727,12 +727,12 @@ macro_rules! tuple_impls {
                 Cow::Owned(unsafe { RustString::from_utf8_unchecked(s) })
             }
 
-            fn valid_token(token: &Self::TokenType<'_>) -> bool {
+            fn valid_token(token: &Self::Token<'_>) -> bool {
                 let ($($ty,)+) = token;
                 $(<$ty as SolType>::valid_token($ty))&&+
             }
 
-            fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+            fn detokenize(token: Self::Token<'_>) -> Self::RustType {
                 let ($($ty,)+) = token;
                 ($(
                     <$ty as SolType>::detokenize($ty),
@@ -759,7 +759,7 @@ all_the_tuples!(@double tuple_encodable_impls);
 
 impl SolType for () {
     type RustType = ();
-    type TokenType<'a> = ();
+    type Token<'a> = ();
 
     const ENCODED_SIZE: Option<usize> = Some(0);
 

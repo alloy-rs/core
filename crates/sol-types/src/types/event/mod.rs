@@ -1,5 +1,5 @@
 use crate::{
-    abi::token::{TokenSeq, TokenType, WordToken},
+    abi::token::{Token, TokenSeq, WordToken},
     Result, SolType, Word,
 };
 use alloc::vec::Vec;
@@ -25,7 +25,7 @@ pub trait SolEvent: Sized {
     ///
     /// If this event has no non-indexed parameters, this will be the unit type
     /// `()`.
-    type DataTuple<'a>: SolType<TokenType<'a> = Self::DataToken<'a>>;
+    type DataTuple<'a>: SolType<Token<'a> = Self::DataToken<'a>>;
 
     /// The [`TokenSeq`] type corresponding to the tuple.
     type DataToken<'a>: TokenSeq<'a>;

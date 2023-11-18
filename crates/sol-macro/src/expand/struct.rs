@@ -77,7 +77,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
             #[automatically_derived]
             impl ::alloy_sol_types::private::SolTypeValue<Self> for #name {
-                fn stv_to_tokens(&self) -> <Self as ::alloy_sol_types::SolType>::TokenType<'_> {
+                fn stv_to_tokens(&self) -> <Self as ::alloy_sol_types::SolType>::Token<'_> {
                     #tokenize_impl
                 }
 
@@ -104,7 +104,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
             #[automatically_derived]
             impl ::alloy_sol_types::SolType for #name {
                 type RustType = Self;
-                type TokenType<'a> = <UnderlyingSolTuple<'a> as ::alloy_sol_types::SolType>::TokenType<'a>;
+                type Token<'a> = <UnderlyingSolTuple<'a> as ::alloy_sol_types::SolType>::Token<'a>;
 
                 #[inline]
                 fn sol_type_name() -> ::alloy_sol_types::private::Cow<'static, str> {
@@ -114,12 +114,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 }
 
                 #[inline]
-                fn valid_token(token: &Self::TokenType<'_>) -> bool {
+                fn valid_token(token: &Self::Token<'_>) -> bool {
                     <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::valid_token(token)
                 }
 
                 #[inline]
-                fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+                fn detokenize(token: Self::Token<'_>) -> Self::RustType {
                     let tuple = <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::detokenize(token);
                     <Self as ::core::convert::From<UnderlyingRustTuple<'_>>>::from(tuple)
                 }

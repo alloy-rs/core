@@ -9,7 +9,7 @@
 //
 
 use crate::{
-    abi::{encode_sequence, token::TokenSeq, TokenType},
+    abi::{encode_sequence, token::TokenSeq, Token},
     utils, Error, Result, Word,
 };
 use alloc::{borrow::Cow, vec::Vec};
@@ -244,13 +244,13 @@ impl<'de> Decoder<'de> {
 
     /// Decodes a single token from the underlying buffer.
     #[inline]
-    pub fn decode<T: TokenType<'de>>(&mut self) -> Result<T> {
+    pub fn decode<T: Token<'de>>(&mut self) -> Result<T> {
         T::decode_from(self)
     }
 
     /// Decodes a sequence of tokens from the underlying buffer.
     #[inline]
-    pub fn decode_sequence<T: TokenType<'de> + TokenSeq<'de>>(&mut self) -> Result<T> {
+    pub fn decode_sequence<T: Token<'de> + TokenSeq<'de>>(&mut self) -> Result<T> {
         T::decode_sequence(self)
     }
 }
@@ -263,7 +263,7 @@ impl<'de> Decoder<'de> {
 ///
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
-pub fn decode<'de, T: TokenType<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
+pub fn decode<'de, T: Token<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
     decode_sequence::<(T,)>(data, validate).map(|(t,)| t)
 }
 

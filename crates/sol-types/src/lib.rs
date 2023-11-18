@@ -131,7 +131,7 @@
 //!
 //! ## Encoding/Decoding
 //!
-//! The process of converting from a [`TokenType`] to a serialized ABI blob is
+//! The process of converting from a [`Token`] to a serialized ABI blob is
 //! called "Encoding". It is the reciprocal of decoding.
 //!
 //! ABI encoding and decoding operates on sequences of tokens.
@@ -140,7 +140,7 @@
 //! recommend users use them wherever possible. We do not recommend that users
 //! interact with Tokens, except when implementing their own [`SolType`].
 //!
-//! [`TokenType`]: abi::TokenType
+//! [`Token`]: abi::Token
 
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
@@ -223,7 +223,7 @@ pub mod private {
     pub trait SolTypeValue<T: super::SolType> {
         // Note: methods are prefixed with `stv_` to avoid name collisions with
         // the `SolValue` trait.
-        fn stv_to_tokens(&self) -> T::TokenType<'_>;
+        fn stv_to_tokens(&self) -> T::Token<'_>;
         #[inline(always)]
         fn stv_abi_encoded_size(&self) -> usize {
             T::ENCODED_SIZE.unwrap()

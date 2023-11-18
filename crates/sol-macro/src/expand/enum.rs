@@ -117,7 +117,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             #[automatically_derived]
             impl ::alloy_sol_types::private::SolTypeValue<#name> for #name {
                 #[inline]
-                fn stv_to_tokens(&self) -> #uint8_st::TokenType<'_> {
+                fn stv_to_tokens(&self) -> #uint8_st::Token<'_> {
                     ::alloy_sol_types::Word::with_last_byte(*self as u8).into()
                 }
 
@@ -135,7 +135,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             #[automatically_derived]
             impl ::alloy_sol_types::SolType for #name {
                 type RustType = #name;
-                type TokenType<'a> = #uint8_st::TokenType<'a>;
+                type Token<'a> = #uint8_st::Token<'a>;
 
                 const ENCODED_SIZE: ::core::option::Option<usize> = #uint8_st::ENCODED_SIZE;
 
@@ -145,12 +145,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
                 }
 
                 #[inline]
-                fn valid_token(token: &Self::TokenType<'_>) -> bool {
+                fn valid_token(token: &Self::Token<'_>) -> bool {
                     Self::type_check(token).is_ok()
                 }
 
                 #[inline]
-                fn type_check(token: &Self::TokenType<'_>) -> ::alloy_sol_types::Result<()> {
+                fn type_check(token: &Self::Token<'_>) -> ::alloy_sol_types::Result<()> {
                     #uint8_st::type_check(token)?;
                     <Self as ::core::convert::TryFrom<u8>>::try_from(
                         #uint8_st::detokenize(*token)
@@ -158,7 +158,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
                 }
 
                 #[inline]
-                fn detokenize(token: Self::TokenType<'_>) -> Self::RustType {
+                fn detokenize(token: Self::Token<'_>) -> Self::RustType {
                     <Self as ::core::convert::TryFrom<u8>>::try_from(
                         #uint8_st::detokenize(token)
                     ).#detokenize_unwrap
