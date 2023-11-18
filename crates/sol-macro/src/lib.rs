@@ -96,6 +96,8 @@ mod utils;
 ///   [`abigen`][abigen]
 /// - `docs [ = <bool = true>]`: adds doc comments to all generated types. This is the default
 ///   behaviour of [`abigen`][abigen]
+/// - `dyn_abi [ = <bool = true>]`: generates [`alloy-dyn-abi`](https://docs.rs/alloy-dyn-abi) trait
+///   implementations for all generated types
 /// - `bytecode = <hex string literal>`: specifies the creation/init bytecode of a contract. This
 ///   will emit a `static` item with the specified bytes.
 /// - `deployed_bytecode = <hex string literal>`: specifies the deployed bytecode of a contract.

@@ -69,6 +69,7 @@ pub struct SolAttrs {
     pub all_derives: Option<bool>,
     pub extra_methods: Option<bool>,
     pub docs: Option<bool>,
+    pub dyn_abi: Option<bool>,
 
     // TODO: Implement
     pub rename: Option<LitStr>,
@@ -138,6 +139,7 @@ impl SolAttrs {
                     all_derives => bool()?,
                     extra_methods => bool()?,
                     docs => bool()?,
+                    dyn_abi => bool()?,
 
                     rename => lit()?,
                     rename_all => CasingStyle::from_lit(&lit()?)?,
@@ -297,6 +299,10 @@ mod tests {
             #[sol(docs)] => Ok(sol_attrs! { docs: true }),
             #[sol(docs = true)] => Ok(sol_attrs! { docs: true }),
             #[sol(docs = false)] => Ok(sol_attrs! { docs: false }),
+
+            #[sol(dyn_abi)] => Ok(sol_attrs! { dyn_abi: true }),
+            #[sol(dyn_abi = true)] => Ok(sol_attrs! { dyn_abi: true }),
+            #[sol(dyn_abi = false)] => Ok(sol_attrs! { dyn_abi: false }),
         }
 
         rename {
