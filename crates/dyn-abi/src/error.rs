@@ -1,9 +1,9 @@
 use alloc::{borrow::Cow, string::String};
 use alloy_primitives::B256;
-use alloy_sol_type_parser::Error as TypeParserError;
 use alloy_sol_types::Error as SolTypesError;
 use core::fmt;
 use hex::FromHexError;
+use parser::Error as TypeParserError;
 
 /// Dynamic ABI result type.
 pub type Result<T, E = Error> = core::result::Result<T, E>;

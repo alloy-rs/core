@@ -5,10 +5,7 @@
 use crate::{DynSolEvent, DynSolType, Result};
 use alloc::vec::Vec;
 use alloy_json_abi::{EventParam, Param};
-use alloy_sol_type_parser::{
-    Error as ParserError, ParameterSpecifier, Parameters, RootType, TupleSpecifier, TypeSpecifier,
-    TypeStem,
-};
+use parser::{ParameterSpecifier, Parameters, RootType, TupleSpecifier, TypeSpecifier, TypeStem};
 
 #[cfg(feature = "eip712")]
 use alloy_json_abi::InternalType;
@@ -36,7 +33,7 @@ pub trait ResolveSolEvent {
 /// This trait provides a single pattern for resolving those encodings into
 /// Solidity types.
 ///
-/// This trait is implemented for all the [`alloy_sol_type_parser`] types, the
+/// This trait is implemented for all the [`parser`] types, the
 /// [`Param`] and [`EventParam`] structs, and [`str`].
 ///
 /// The [`str`] implementation calls [`DynSolType::parse`].
@@ -86,7 +83,7 @@ impl ResolveSolType for RootType<'_> {
                             return Ok(DynSolType::FixedBytes(sz));
                         }
                     }
-                    return Err(ParserError::invalid_size(name).into());
+                    return Err(parser::Error::invalid_size(name).into());
                 }
 
                 // fast path both integer types
@@ -103,9 +100,9 @@ impl ResolveSolType for RootType<'_> {
                             };
                         }
                     }
-                    Err(ParserError::invalid_size(name).into())
+                    Err(parser::Error::invalid_size(name).into())
                 } else {
-                    Err(ParserError::invalid_type_string(name).into())
+                    Err(parser::Error::invalid_type_string(name).into())
                 }
             }
         }

@@ -28,6 +28,8 @@
 #[macro_use]
 extern crate alloc;
 
+pub extern crate alloy_sol_type_parser as parser;
+
 #[cfg(feature = "arbitrary")]
 mod arbitrary;
 
@@ -59,8 +61,6 @@ pub mod eip712;
 #[cfg(feature = "eip712")]
 pub use eip712::{parser as eip712_parser, Eip712Types, PropertyDef, Resolver, TypeDef, TypedData};
 
-#[doc(no_inline)]
-pub use alloy_sol_type_parser as parser;
 #[doc(no_inline)]
 pub use alloy_sol_types::{
     abi::{self, Decoder, Encoder},

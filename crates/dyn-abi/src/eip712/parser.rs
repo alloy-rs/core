@@ -7,7 +7,7 @@ use crate::{
     Error,
 };
 use alloc::vec::Vec;
-use alloy_sol_type_parser::{Error as TypeParserError, TypeSpecifier};
+use parser::{Error as TypeParserError, TypeSpecifier};
 
 /// A property is a type and a name. Of the form `type name`. E.g.
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.

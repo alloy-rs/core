@@ -29,6 +29,8 @@
 #[allow(unused_imports)]
 extern crate alloc;
 
+pub extern crate alloy_sol_type_parser as parser;
+
 use serde::{Deserialize, Serialize};
 
 mod abi;
@@ -46,8 +48,6 @@ pub use internal_type::InternalType;
 mod to_sol;
 
 pub(crate) mod utils;
-
-pub use alloy_sol_type_parser as parser;
 
 /// A JSON ABI function's state mutability.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

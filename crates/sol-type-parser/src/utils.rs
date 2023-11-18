@@ -103,12 +103,14 @@ pub fn opt_ws_ident<'a>(input: &mut &'a str) -> PResult<Option<&'a str>> {
     preceded(space0, opt(identifier)).parse_next(input)
 }
 
+// Not public API.
 #[doc(hidden)]
 #[inline]
 pub fn parse_item<'a>(s: &mut &'a str) -> Result<&'a str> {
     trace("item", terminated(identifier, space0)).parse_next(s).map_err(Error::parser)
 }
 
+/// Returns `(name, inputs, outputs, anonymous)`.
 #[doc(hidden)]
 pub fn parse_signature<'a, const OUT: bool, F: Fn(ParameterSpecifier<'a>) -> T, T>(
     s: &'a str,
