@@ -101,7 +101,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .map(|(i, assign)| quote!(out[#i] = #assign;));
 
     let doc = docs.then(|| {
-        let selector = hex::encode_prefixed(selector.array);
+        let selector = hex::encode_prefixed(selector.array.as_slice());
         attr::mk_doc(format!(
             "Event with signature `{signature}` and selector `{selector}`.\n\
             ```solidity\n{event}\n```"

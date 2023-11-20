@@ -77,25 +77,27 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         }
     }
 
+    let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
+
     let functions_enum = (!functions.is_empty()).then(|| {
         let mut attrs = item_attrs.clone();
         let doc_str = format!("Container for all the [`{name}`](self) function calls.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
-        CallLikeExpander::from_functions(cx, name, functions).expand(attrs, extra_methods)
+        enum_expander.expand(ToExpand::Functions(functions), attrs)
     });
 
     let errors_enum = (!errors.is_empty()).then(|| {
         let mut attrs = item_attrs.clone();
         let doc_str = format!("Container for all the [`{name}`](self) custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
-        CallLikeExpander::from_errors(cx, name, errors).expand(attrs, extra_methods)
+        enum_expander.expand(ToExpand::Errors(errors), attrs)
     });
 
     let events_enum = (!events.is_empty()).then(|| {
         let mut attrs = item_attrs;
         let doc_str = format!("Container for all the [`{name}`](self) events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
-        CallLikeExpander::from_events(cx, name, events).expand_event(attrs, extra_methods)
+        enum_expander.expand(ToExpand::Events(events), attrs)
     });
 
     let mod_descr_doc = (docs && attr::docs_str(&mod_attrs).trim().is_empty())
@@ -158,102 +160,117 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 /// ```
 struct CallLikeExpander<'a> {
     cx: &'a ExpCtxt<'a>,
-    name: Ident,
-    variants: Vec<Ident>,
-    min_data_len: usize,
-    trait_: Ident,
-    data: CallLikeExpanderData,
+    contract_name: SolIdent,
+    extra_methods: bool,
 }
 
-enum CallLikeExpanderData {
-    Function { selectors: Vec<ExprArray<u8, 4>>, types: Vec<Ident> },
-    Error { selectors: Vec<ExprArray<u8, 4>> },
-    Event { selectors: Vec<ExprArray<u8, 32>> },
+struct ExpandData {
+    name: Ident,
+    variants: Vec<Ident>,
+    types: Option<Vec<Ident>>,
+    min_data_len: usize,
+    trait_: Ident,
+    selectors: Vec<ExprArray<u8>>,
+}
+
+impl ExpandData {
+    fn types(&self) -> &Vec<Ident> {
+        let types = self.types.as_ref().unwrap_or(&self.variants);
+        assert_eq!(types.len(), self.variants.len());
+        types
+    }
+}
+
+enum ToExpand<'a> {
+    Functions(Vec<&'a ItemFunction>),
+    Errors(Vec<&'a ItemError>),
+    Events(Vec<&'a ItemEvent>),
+}
+
+impl<'a> ToExpand<'a> {
+    fn to_data(&self, expander: &CallLikeExpander<'_>) -> ExpandData {
+        let &CallLikeExpander { cx, ref contract_name, .. } = expander;
+        match self {
+            Self::Functions(functions) => {
+                let variants: Vec<_> =
+                    functions.iter().map(|&f| cx.overloaded_name(f.into()).0).collect();
+
+                let types: Vec<_> = variants.iter().map(|name| cx.raw_call_name(name)).collect();
+
+                let mut selectors: Vec<_> =
+                    functions.iter().map(|f| cx.function_selector(f)).collect();
+                selectors.sort_unstable();
+
+                ExpandData {
+                    name: format_ident!("{contract_name}Calls"),
+                    variants,
+                    types: Some(types),
+                    min_data_len: functions
+                        .iter()
+                        .map(|function| ty::params_base_data_size(cx, &function.arguments))
+                        .min()
+                        .unwrap(),
+                    trait_: Ident::new("SolCall", Span::call_site()),
+                    selectors,
+                }
+            }
+
+            Self::Errors(errors) => {
+                let mut selectors: Vec<_> = errors.iter().map(|e| cx.error_selector(e)).collect();
+                selectors.sort_unstable();
+
+                ExpandData {
+                    name: format_ident!("{contract_name}Errors"),
+                    variants: errors.iter().map(|error| error.name.0.clone()).collect(),
+                    types: None,
+                    min_data_len: errors
+                        .iter()
+                        .map(|error| ty::params_base_data_size(cx, &error.parameters))
+                        .min()
+                        .unwrap(),
+                    trait_: Ident::new("SolError", Span::call_site()),
+                    selectors,
+                }
+            }
+
+            Self::Events(events) => {
+                let variants: Vec<_> =
+                    events.iter().map(|&event| cx.overloaded_name(event.into()).0).collect();
+
+                let mut selectors: Vec<_> = events.iter().map(|e| cx.event_selector(e)).collect();
+                selectors.sort_unstable();
+
+                ExpandData {
+                    name: format_ident!("{contract_name}Events"),
+                    variants,
+                    types: None,
+                    min_data_len: events
+                        .iter()
+                        .map(|event| ty::params_base_data_size(cx, &event.params()))
+                        .min()
+                        .unwrap(),
+                    trait_: Ident::new("SolEvent", Span::call_site()),
+                    selectors,
+                }
+            }
+        }
+    }
 }
 
 impl<'a> CallLikeExpander<'a> {
-    fn from_functions(
-        cx: &'a ExpCtxt<'a>,
-        contract_name: &SolIdent,
-        functions: Vec<&ItemFunction>,
-    ) -> Self {
-        let variants: Vec<_> = functions.iter().map(|&f| cx.overloaded_name(f.into()).0).collect();
-
-        let types: Vec<_> = variants.iter().map(|name| cx.raw_call_name(name)).collect();
-
-        let mut selectors: Vec<_> = functions.iter().map(|f| cx.function_selector(f)).collect();
-        selectors.sort_unstable_by_key(|a| a.array);
-
-        Self {
-            cx,
-            name: format_ident!("{contract_name}Calls"),
-            variants,
-            min_data_len: functions
-                .iter()
-                .map(|function| ty::params_base_data_size(cx, &function.arguments))
-                .min()
-                .unwrap(),
-            trait_: Ident::new("SolCall", Span::call_site()),
-            data: CallLikeExpanderData::Function { selectors, types },
-        }
-    }
-
-    fn from_errors(cx: &'a ExpCtxt<'a>, contract_name: &SolIdent, errors: Vec<&ItemError>) -> Self {
-        let mut selectors: Vec<_> = errors.iter().map(|e| cx.error_selector(e)).collect();
-        selectors.sort_unstable_by_key(|a| a.array);
-
-        Self {
-            cx,
-            name: format_ident!("{contract_name}Errors"),
-            variants: errors.iter().map(|error| error.name.0.clone()).collect(),
-            min_data_len: errors
-                .iter()
-                .map(|error| ty::params_base_data_size(cx, &error.parameters))
-                .min()
-                .unwrap(),
-            trait_: Ident::new("SolError", Span::call_site()),
-            data: CallLikeExpanderData::Error { selectors },
-        }
-    }
-
-    fn from_events(cx: &'a ExpCtxt<'a>, contract_name: &SolIdent, events: Vec<&ItemEvent>) -> Self {
-        let variants: Vec<_> =
-            events.iter().map(|&event| cx.overloaded_name(event.into()).0).collect();
-
-        let mut selectors: Vec<_> = events.iter().map(|e| cx.event_selector(e)).collect();
-        selectors.sort_unstable_by_key(|a| a.array);
-
-        Self {
-            cx,
-            name: format_ident!("{contract_name}Events"),
-            variants,
-            min_data_len: events
-                .iter()
-                .map(|event| ty::params_base_data_size(cx, &event.params()))
-                .min()
-                .unwrap(),
-            trait_: Ident::new("SolEvent", Span::call_site()),
-            data: CallLikeExpanderData::Event { selectors },
-        }
-    }
-
-    /// Type name overrides. Currently only functions support because of the
-    /// `Call` suffix.
-    fn types(&self) -> &[Ident] {
-        match &self.data {
-            CallLikeExpanderData::Function { types, .. } => types,
-            _ => &self.variants,
-        }
-    }
-
-    fn expand(self, attrs: Vec<Attribute>, extra_methods: bool) -> TokenStream {
-        let Self { name, variants, min_data_len, trait_, .. } = &self;
-        let types = self.types();
-
-        assert_eq!(variants.len(), types.len());
+    fn expand(&self, to_expand: ToExpand<'_>, attrs: Vec<Attribute>) -> TokenStream {
+        let data @ ExpandData { name, variants, min_data_len, trait_, .. } =
+            &to_expand.to_data(self);
+        let types = data.types();
         let name_s = name.to_string();
         let count = variants.len();
-        let def = self.generate_enum(attrs, extra_methods);
+        let def = self.generate_enum(data, attrs);
+
+        // TODO: SolInterface for events
+        if matches!(to_expand, ToExpand::Events(_)) {
+            return def;
+        }
+
         quote! {
             #def
 
@@ -317,26 +334,14 @@ impl<'a> CallLikeExpander<'a> {
         }
     }
 
-    fn expand_event(self, attrs: Vec<Attribute>, extra_methods: bool) -> TokenStream {
-        // TODO: SolInterface for events
-        self.generate_enum(attrs, extra_methods)
-    }
-
-    fn generate_enum(&self, mut attrs: Vec<Attribute>, extra_methods: bool) -> TokenStream {
-        let Self { name, variants, data, .. } = self;
-        let (selectors, selector_type) = match data {
-            CallLikeExpanderData::Function { selectors, .. }
-            | CallLikeExpanderData::Error { selectors } => {
-                (quote!(#(#selectors,)*), quote!([u8; 4]))
-            }
-            CallLikeExpanderData::Event { selectors } => {
-                (quote!(#(#selectors,)*), quote!([u8; 32]))
-            }
-        };
-
-        let types = self.types();
+    fn generate_enum(&self, data: &ExpandData, mut attrs: Vec<Attribute>) -> TokenStream {
+        let ExpandData { name, variants, selectors, .. } = data;
+        let types = data.types();
+        let selector_len = selectors.first().unwrap().array.len();
+        assert!(selectors.iter().all(|s| s.array.len() == selector_len));
+        let selector_type = quote!([u8; #selector_len]);
         self.cx.type_derives(&mut attrs, types.iter().cloned().map(ast::Type::custom), false);
-        let tokens = quote! {
+        let mut tokens = quote! {
             #(#attrs)*
             pub enum #name {
                 #(#variants(#types),)*
@@ -348,27 +353,24 @@ impl<'a> CallLikeExpander<'a> {
                 ///
                 /// Note that the selectors might not be in the same order as the
                 /// variants, as they are sorted instead of ordered by definition.
-                pub const SELECTORS: &'static [#selector_type] = &[#selectors];
+                pub const SELECTORS: &'static [#selector_type] = &[#(#selectors),*];
             }
         };
 
-        if extra_methods {
+        if self.extra_methods {
             let conversions =
                 variants.iter().zip(types).map(|(v, t)| generate_variant_conversions(name, v, t));
             let methods = variants.iter().zip(types).map(generate_variant_methods);
-            quote! {
-                #tokens
-
-                #(#conversions)*
-
+            tokens.extend(conversions);
+            tokens.extend(quote! {
                 #[automatically_derived]
                 impl #name {
                     #(#methods)*
                 }
-            }
-        } else {
-            tokens
+            });
         }
+
+        tokens
     }
 }
 

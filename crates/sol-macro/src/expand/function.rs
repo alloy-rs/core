@@ -60,7 +60,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let tokenize_impl = expand_tokenize(arguments);
 
     let call_doc = docs.then(|| {
-        let selector = hex::encode_prefixed(selector.array);
+        let selector = hex::encode_prefixed(selector.array.as_slice());
         attr::mk_doc(format!(
             "Function with signature `{signature}` and selector `{selector}`.\n\
             ```solidity\n{function}\n```"

@@ -372,7 +372,7 @@ impl<'ast> ExpCtxt<'ast> {
         self.signature(function.name().as_string(), &function.arguments)
     }
 
-    fn function_selector(&self, function: &ItemFunction) -> ExprArray<u8, 4> {
+    fn function_selector(&self, function: &ItemFunction) -> ExprArray<u8> {
         utils::selector(self.function_signature(function))
     }
 
@@ -380,7 +380,7 @@ impl<'ast> ExpCtxt<'ast> {
         self.signature(error.name.as_string(), &error.parameters)
     }
 
-    fn error_selector(&self, error: &ItemError) -> ExprArray<u8, 4> {
+    fn error_selector(&self, error: &ItemError) -> ExprArray<u8> {
         utils::selector(self.error_signature(error))
     }
 
@@ -388,7 +388,7 @@ impl<'ast> ExpCtxt<'ast> {
         self.signature(event.name.as_string(), &event.params())
     }
 
-    fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8, 32> {
+    fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8> {
         utils::event_selector(self.event_signature(event))
     }
 
