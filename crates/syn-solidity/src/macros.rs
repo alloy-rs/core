@@ -386,7 +386,7 @@ macro_rules! make_visitor {
                     if let Some(name) = & $($mut)? function.name {
                         v.visit_ident(name);
                     }
-                    v.visit_parameter_list(& $($mut)? function.arguments);
+                    v.visit_parameter_list(& $($mut)? function.parameters);
                     if let Some(returns) = & $($mut)? function.returns {
                         v.visit_parameter_list(& $($mut)? returns.returns);
                     }
@@ -476,8 +476,7 @@ macro_rules! kw_enum {
         $(#[$attr])*
         #[derive(Clone, Copy)]
         $vis enum $name {$(
-            #[doc = concat!("`", stringify!($kw), "`")]
-            ///
+            #[doc = concat!("`", stringify!($kw), "`\n\n")]
             $(#[$variant_attr])*
             $variant($crate::kw::$kw),
         )+}
@@ -615,8 +614,7 @@ macro_rules! op_enum {
         $(#[$attr])*
         #[derive(Clone, Copy)]
         $vis enum $name {$(
-            #[doc = concat!("`", $(stringify!($op),)+ "`")]
-            ///
+            #[doc = concat!("`", $(stringify!($op),)+ "`\n\n")]
             $(#[$variant_attr])*
             $variant($(::syn::Token![$op]),+),
         )+}

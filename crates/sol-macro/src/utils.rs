@@ -1,3 +1,4 @@
+use ast::Spanned;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
 use tiny_keccak::{Hasher, Keccak};
@@ -55,6 +56,16 @@ impl<T: PartialEq> PartialEq for ExprArray<T> {
 }
 
 impl<T: Eq> Eq for ExprArray<T> {}
+
+impl<T> Spanned for ExprArray<T> {
+    fn span(&self) -> Span {
+        self.span
+    }
+
+    fn set_span(&mut self, span: Span) {
+        self.span = span;
+    }
+}
 
 impl<T> ExprArray<T> {
     fn new(array: Vec<T>) -> Self {

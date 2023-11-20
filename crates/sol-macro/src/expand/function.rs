@@ -24,20 +24,20 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream> {
-    let ItemFunction { attrs, arguments, returns, name: Some(_), .. } = function else {
+    let ItemFunction { attrs, parameters, returns, name: Some(_), .. } = function else {
         // ignore functions without names (constructors, modifiers...)
         return Ok(quote!());
     };
     let returns = returns.as_ref().map(|r| &r.returns).unwrap_or_default();
 
-    cx.assert_resolved(arguments)?;
+    cx.assert_resolved(parameters)?;
     if !returns.is_empty() {
         cx.assert_resolved(returns)?;
     }
 
     let (sol_attrs, mut call_attrs) = crate::attr::SolAttrs::parse(attrs)?;
     let mut return_attrs = call_attrs.clone();
-    cx.derives(&mut call_attrs, arguments, true);
+    cx.derives(&mut call_attrs, parameters, true);
     if !returns.is_empty() {
         cx.derives(&mut return_attrs, returns, true);
     }
@@ -46,18 +46,18 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let call_name = cx.call_name(function);
     let return_name = cx.return_name(function);
 
-    let call_fields = expand_fields(arguments);
+    let call_fields = expand_fields(parameters);
     let return_fields = expand_fields(returns);
 
-    let call_tuple = expand_tuple_types(arguments.types()).0;
+    let call_tuple = expand_tuple_types(parameters.types()).0;
     let return_tuple = expand_tuple_types(returns.types()).0;
 
-    let converts = expand_from_into_tuples(&call_name, arguments);
+    let converts = expand_from_into_tuples(&call_name, parameters);
     let return_converts = expand_from_into_tuples(&return_name, returns);
 
     let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);
-    let tokenize_impl = expand_tokenize(arguments);
+    let tokenize_impl = expand_tokenize(parameters);
 
     let call_doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array.as_slice());
