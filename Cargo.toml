@@ -63,7 +63,7 @@ pretty_assertions = "1.4"
 proptest = "1"
 proptest-derive = "0.4"
 rand = { version = "0.8", default-features = false }
-ruint = { version = "1.11.0", default-features = false, features = ["alloc"] }
+ruint = { version = "1.11.1", default-features = false, features = ["alloc"] }
 ruint-macro = { version = "1", default-features = false }
 tiny-keccak = "2.0"
 winnow = { version = "0.5.19", default-features = false, features = ["alloc"] }
