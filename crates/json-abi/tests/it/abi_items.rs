@@ -1,5 +1,3 @@
-mod test_helpers;
-
 use alloy_json_abi::{
     AbiItem, Event, EventParam, Function,
     InternalType::{Other, Struct},

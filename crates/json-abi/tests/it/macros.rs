@@ -1,4 +1,3 @@
-#[macro_export]
 macro_rules! assert_ser_de {
     ($type:ty, $value:expr) => {{
         let ser = serde_json::to_string(&$value).unwrap();
@@ -7,7 +6,6 @@ macro_rules! assert_ser_de {
     }};
 }
 
-#[macro_export]
 macro_rules! assert_json_eq {
     ($left:expr, $right:expr) => {{
         let left_val: serde_json::Value = serde_json::from_str($left).unwrap();
