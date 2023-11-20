@@ -173,6 +173,11 @@ pub mod abi;
 mod errors;
 pub use errors::{Error, Result};
 
+#[cfg(feature = "json")]
+mod ext;
+#[cfg(feature = "json")]
+pub use ext::JsonAbiExt;
+
 mod impl_core;
 
 mod types;
@@ -198,17 +203,28 @@ pub use alloy_sol_macro::sol;
 pub mod private {
     pub use super::utils::{just_ok, next_multiple_of_32, words_for, words_for_len};
     pub use alloc::{
-        borrow::{Borrow, Cow, ToOwned},
+        borrow::{Cow, ToOwned},
+        collections::BTreeMap,
         string::{String, ToString},
+        vec,
         vec::Vec,
     };
     pub use alloy_primitives::{
         bytes, keccak256, Address, Bytes, FixedBytes, Function, Signed, Uint, B256, I256, U256,
     };
-    pub use core::{convert::From, default::Default, option::Option, result::Result};
+    pub use core::{
+        borrow::{Borrow, BorrowMut},
+        convert::From,
+        default::Default,
+        option::Option,
+        result::Result,
+    };
 
     pub use Option::{None, Some};
     pub use Result::{Err, Ok};
+
+    #[cfg(feature = "json")]
+    pub use alloy_json_abi;
 
     /// An ABI-encodable is any type that may be encoded via a given `SolType`.
     ///

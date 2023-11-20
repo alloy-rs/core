@@ -42,6 +42,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         cx.derives(&mut return_attrs, returns, true);
     }
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
+    let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
 
     let call_name = cx.call_name(function);
     let return_name = cx.return_name(function);
@@ -70,6 +71,23 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         attr::mk_doc(format!(
             "Container type for the return parameters of the [`{signature}`]({call_name}) function."
         ))
+    });
+
+    let abi: Option<TokenStream> = abi.then(|| {
+        if_json! {
+            let function = super::to_dyn::generate(function, cx);
+            quote! {
+                #[automatically_derived]
+                impl ::alloy_sol_types::JsonAbiExt for #call_name {
+                    type Abi = ::alloy_sol_types::private::alloy_json_abi::Function;
+
+                    #[inline]
+                    fn abi() -> Self::Abi {
+                        #function
+                    }
+                }
+            }
+        }
     });
 
     let tokens = quote! {
@@ -119,6 +137,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                     <Self::ReturnTuple<'_> as ::alloy_sol_types::SolType>::abi_decode_sequence(data, validate).map(Into::into)
                 }
             }
+
+            #abi
         };
     };
     Ok(tokens)

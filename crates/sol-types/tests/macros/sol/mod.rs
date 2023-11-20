@@ -4,6 +4,8 @@ use serde::Serialize;
 use serde_json::Value;
 
 #[cfg(feature = "json")]
+mod abi;
+#[cfg(feature = "json")]
 mod json;
 
 mod eip712;

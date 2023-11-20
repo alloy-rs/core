@@ -2,6 +2,7 @@ use crate::{kw, sol_path, SolPath, Spanned};
 use proc_macro2::Span;
 use std::{
     fmt,
+    fmt::Write,
     hash::{Hash, Hasher},
     num::{IntErrorKind, NonZeroU16},
 };
@@ -374,6 +375,40 @@ impl Type {
         }
     }
 
+    /// Returns the inner type.
+    pub fn peel_arrays(&self) -> &Self {
+        let mut this = self;
+        while let Self::Array(array) = this {
+            this = &array.ty;
+        }
+        this
+    }
+
+    /// Returns the Solidity ABI name for this type. This is `tuple` for custom types, otherwise the
+    /// same as [`Display`](fmt::Display).
+    pub fn abi_name(&self) -> String {
+        let mut s = String::new();
+        self.abi_name_raw(&mut s);
+        s
+    }
+
+    /// Returns the Solidity ABI name for this type. This is `tuple` for custom types, otherwise the
+    /// same as [`Display`](fmt::Display).
+    pub fn abi_name_raw(&self, s: &mut String) {
+        match self {
+            Self::Custom(_) => s.push_str("tuple"),
+            Self::Array(array) => {
+                array.ty.abi_name_raw(s);
+                if let Some(size) = array.size() {
+                    write!(s, "[{size}]").unwrap();
+                } else {
+                    s.push_str("[]");
+                }
+            }
+            _ => write!(s, "{self}").unwrap(),
+        }
+    }
+
     /// Traverses this type while calling `f`.
     #[cfg(feature = "visit")]
     pub fn visit(&self, f: impl FnMut(&Self)) {
@@ -384,6 +419,12 @@ impl Type {
                 (self.0)(ty);
                 crate::visit::visit_type(self, ty);
             }
+            // Reduce generated code size by explicitly implementing these methods as noops.
+            fn visit_block(&mut self, _block: &crate::Block) {}
+            fn visit_expr(&mut self, _expr: &crate::Expr) {}
+            fn visit_stmt(&mut self, _stmt: &crate::Stmt) {}
+            fn visit_file(&mut self, _file: &crate::File) {}
+            fn visit_item(&mut self, _item: &crate::Item) {}
         }
         VisitType(f).visit_type(self);
     }
@@ -398,6 +439,12 @@ impl Type {
                 (self.0)(ty);
                 crate::visit_mut::visit_type(self, ty);
             }
+            // Reduce generated code size by explicitly implementing these methods as noops.
+            fn visit_block(&mut self, _block: &mut crate::Block) {}
+            fn visit_expr(&mut self, _expr: &mut crate::Expr) {}
+            fn visit_stmt(&mut self, _stmt: &mut crate::Stmt) {}
+            fn visit_file(&mut self, _file: &mut crate::File) {}
+            fn visit_item(&mut self, _item: &mut crate::Item) {}
         }
         VisitTypeMut(f).visit_type(self);
     }
