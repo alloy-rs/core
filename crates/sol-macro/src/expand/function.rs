@@ -75,7 +75,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     let abi: Option<TokenStream> = abi.then(|| {
         if_json! {
-            let function = super::to_dyn::generate(function, cx);
+            let function = super::to_abi::generate(function, cx);
             quote! {
                 #[automatically_derived]
                 impl ::alloy_sol_types::JsonAbiExt for #call_name {

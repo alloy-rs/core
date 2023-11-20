@@ -43,7 +43,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     });
     let abi: Option<TokenStream> = abi.then(|| {
         if_json! {
-            let error = super::to_dyn::generate(error, cx);
+            let error = super::to_abi::generate(error, cx);
             quote! {
                 #[automatically_derived]
                 impl ::alloy_sol_types::JsonAbiExt for #name {

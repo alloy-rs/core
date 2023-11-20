@@ -141,14 +141,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     let abi = abi.then(|| {
         if_json! {
             use crate::verbatim::verbatim;
-            use super::to_dyn;
+            use super::to_abi;
 
-            let constructor = verbatim(&constructor.map(|x| to_dyn::constructor(x, cx)));
-            let fallback = verbatim(&fallback.map(|x| to_dyn::fallback(x, cx)));
-            let receive = verbatim(&receive.map(|x| to_dyn::receive(x, cx)));
-            let functions_map = to_dyn::functions_map(&functions, cx);
-            let events_map = to_dyn::events_map(&events, cx);
-            let errors_map = to_dyn::errors_map(&errors, cx);
+            let constructor = verbatim(&constructor.map(|x| to_abi::constructor(x, cx)));
+            let fallback = verbatim(&fallback.map(|x| to_abi::fallback(x, cx)));
+            let receive = verbatim(&receive.map(|x| to_abi::receive(x, cx)));
+            let functions_map = to_abi::functions_map(&functions, cx);
+            let events_map = to_abi::events_map(&events, cx);
+            let errors_map = to_abi::errors_map(&errors, cx);
             quote! {
                 /// Contains [dynamic ABI definitions](::alloy_sol_types::private::alloy_json_abi) for [this contract](self).
                 pub mod abi {

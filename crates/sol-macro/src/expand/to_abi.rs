@@ -8,19 +8,19 @@ use proc_macro2::TokenStream;
 
 pub fn generate<T>(t: &T, cx: &ExpCtxt<'_>) -> TokenStream
 where
-    T: ToDynAbi,
+    T: ToAbi,
     T::DynAbi: Verbatim,
 {
     crate::verbatim::verbatim(&t.to_dyn_abi(cx))
 }
 
-pub trait ToDynAbi {
+pub trait ToAbi {
     type DynAbi;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi;
 }
 
-impl ToDynAbi for ast::ItemFunction {
+impl ToAbi for ast::ItemFunction {
     type DynAbi = Function;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
@@ -33,7 +33,7 @@ impl ToDynAbi for ast::ItemFunction {
     }
 }
 
-impl ToDynAbi for ast::ItemError {
+impl ToAbi for ast::ItemError {
     type DynAbi = Error;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
@@ -41,7 +41,7 @@ impl ToDynAbi for ast::ItemError {
     }
 }
 
-impl ToDynAbi for ast::ItemEvent {
+impl ToAbi for ast::ItemEvent {
     type DynAbi = Event;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
@@ -53,7 +53,7 @@ impl ToDynAbi for ast::ItemEvent {
     }
 }
 
-impl<P> ToDynAbi for ast::Parameters<P> {
+impl<P> ToAbi for ast::Parameters<P> {
     type DynAbi = Vec<Param>;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
@@ -61,7 +61,7 @@ impl<P> ToDynAbi for ast::Parameters<P> {
     }
 }
 
-impl ToDynAbi for ast::VariableDeclaration {
+impl ToAbi for ast::VariableDeclaration {
     type DynAbi = Param;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
@@ -69,7 +69,7 @@ impl ToDynAbi for ast::VariableDeclaration {
     }
 }
 
-impl ToDynAbi for ast::EventParameter {
+impl ToAbi for ast::EventParameter {
     type DynAbi = EventParam;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
@@ -79,7 +79,7 @@ impl ToDynAbi for ast::EventParameter {
     }
 }
 
-impl ToDynAbi for ast::FunctionAttributes {
+impl ToAbi for ast::FunctionAttributes {
     type DynAbi = StateMutability;
 
     fn to_dyn_abi(&self, _cx: &ExpCtxt<'_>) -> Self::DynAbi {

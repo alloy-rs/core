@@ -35,7 +35,7 @@ mod udt;
 mod var_def;
 
 #[cfg(feature = "json")]
-mod to_dyn;
+mod to_abi;
 
 /// The limit for the number of times to resolve a type.
 const RESOLVE_LIMIT: usize = 32;
