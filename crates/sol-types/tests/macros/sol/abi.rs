@@ -255,6 +255,104 @@ fn equal_abis() {
     );
 }
 
+#[test]
+fn recursive() {
+    sol! {
+        #![sol(abi)]
+
+        enum AccountAccessKind {
+            Call,
+            DelegateCall,
+            CallCode,
+            StaticCall,
+            Create,
+            SelfDestruct,
+            Resume,
+        }
+
+        struct ChainInfo {
+            uint256 forkId;
+            uint256 chainId;
+        }
+
+        struct AccountAccess {
+            ChainInfo chainInfo;
+            AccountAccessKind kind;
+            address account;
+            address accessor;
+            bool initialized;
+            uint256 oldBalance;
+            uint256 newBalance;
+            bytes deployedCode;
+            uint256 value;
+            bytes data;
+            bool reverted;
+            StorageAccess[] storageAccesses;
+        }
+
+        struct StorageAccess {
+            address account;
+            bytes32 slot;
+            bool isWrite;
+            bytes32 previousValue;
+            bytes32 newValue;
+            bool reverted;
+        }
+
+        function stopAndReturnStateDiff() external returns (AccountAccess[] memory accesses);
+    }
+
+    let chain_info = Param {
+        ty: "tuple".into(),
+        name: "chainInfo".into(),
+        components: vec![
+            param("uint256 "), // forkId
+            param("uint256 "), // chainId
+        ],
+        internal_type: None,
+    };
+    let storage_accesses = Param {
+        ty: "tuple[]".into(),
+        name: "storageAccesses".into(),
+        components: vec![
+            param("address "), // account
+            param("bytes32 "), // slot
+            param("bool "),    // isWrite
+            param("bytes32 "), // previousValue
+            param("bytes32 "), // newValue
+            param("bool "),    // reverted
+        ],
+        internal_type: None,
+    };
+    assert_eq!(
+        stopAndReturnStateDiffCall::abi(),
+        Function {
+            name: "stopAndReturnStateDiff".into(),
+            inputs: vec![],
+            outputs: vec![Param {
+                ty: "tuple[]".into(),
+                name: "accesses".into(),
+                components: vec![
+                    chain_info,
+                    param("uint8 kind"), // TODO: enum
+                    param("address account"),
+                    param("address accessor"),
+                    param("bool initialized"),
+                    param("uint256 oldBalance"),
+                    param("uint256 newBalance"),
+                    param("bytes deployedCode"),
+                    param("uint256 value"),
+                    param("bytes data"),
+                    param("bool reverted"),
+                    storage_accesses,
+                ],
+                internal_type: None,
+            }],
+            state_mutability: StateMutability::NonPayable,
+        }
+    );
+}
+
 sol! {
     #![sol(abi)]
 

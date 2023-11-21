@@ -129,7 +129,10 @@ fn ty_to_param(name: Option<String>, ty: &ast::Type, cx: &ExpCtxt<'_>) -> Param 
         vec![]
     };
 
-    Param { ty: ty_name, name: name.unwrap_or_default(), internal_type: None, components }
+    // TODO: internal_type
+    let internal_type = None;
+
+    Param { ty: ty_name, name: name.unwrap_or_default(), internal_type, components }
 }
 
 pub(super) fn constructor(function: &ItemFunction, cx: &ExpCtxt<'_>) -> Constructor {
