@@ -152,16 +152,13 @@ fn ty_abi_string(ty: &ast::Type, cx: &ExpCtxt<'_>) -> String {
 }
 
 fn rec_ty_abi_string_suffix(ty: &ast::Type, s: &mut String) {
-    match ty {
-        ast::Type::Array(array) => {
-            rec_ty_abi_string_suffix(&array.ty, s);
-            if let Some(size) = array.size() {
-                write!(s, "[{size}]").unwrap();
-            } else {
-                s.push_str("[]");
-            }
+    if let ast::Type::Array(array) = ty {
+        rec_ty_abi_string_suffix(&array.ty, s);
+        if let Some(size) = array.size() {
+            write!(s, "[{size}]").unwrap();
+        } else {
+            s.push_str("[]");
         }
-        _ => {}
     }
 }
 
