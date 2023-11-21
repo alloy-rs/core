@@ -357,18 +357,17 @@ impl<'a> ToExpand<'a> {
 
 impl<'a> CallLikeExpander<'a> {
     fn expand(&self, to_expand: ToExpand<'_>, attrs: Vec<Attribute>) -> TokenStream {
-        let data @ ExpandData { name, variants, min_data_len, trait_, .. } =
-            &to_expand.to_data(self);
-        let types = data.types();
-        let name_s = name.to_string();
-        let count = variants.len();
-        let def = self.generate_enum(data, attrs);
+        let data = &to_expand.to_data(self);
 
-        // TODO: SolInterface for events
         if matches!(to_expand, ToExpand::Events(_)) {
-            return def;
+            return self.expand_events(data, attrs);
         }
 
+        let def = self.generate_enum(data, attrs);
+        let ExpandData { name, variants, min_data_len, trait_, .. } = data;
+        let types = data.types();
+        let name_s = name.to_string();
+        let count = data.variants.len();
         quote! {
             #def
 
@@ -430,6 +429,12 @@ impl<'a> CallLikeExpander<'a> {
                 }
             }
         }
+    }
+
+    fn expand_events(&self, data: &ExpandData, attrs: Vec<Attribute>) -> TokenStream {
+        let def = self.generate_enum(data, attrs);
+        // TODO: SolInterface for events
+        def
     }
 
     fn generate_enum(&self, data: &ExpandData, mut attrs: Vec<Attribute>) -> TokenStream {
