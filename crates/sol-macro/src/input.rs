@@ -47,9 +47,12 @@ pub struct SolInput {
 impl Parse for SolInput {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let attrs = Attribute::parse_inner(input)?;
-        if input.peek(LitStr)
-            || (input.peek(Ident) && input.peek2(Token![,]) && input.peek3(LitStr))
-        {
+
+        // ignore attributes when peeking
+        let fork = input.fork();
+        let _inner = Attribute::parse_outer(&fork)?;
+
+        if fork.peek(LitStr) || (fork.peek(Ident) && fork.peek2(Token![,]) && fork.peek3(LitStr)) {
             Self::parse_abigen(attrs, input)
         } else {
             input.parse().map(|kind| Self { attrs, path: None, kind })
