@@ -1,11 +1,43 @@
+use alloy_json_abi::{Function, JsonAbi, Param, StateMutability};
 use alloy_primitives::{Address, U256};
 use alloy_sol_types::{sol, SolCall, SolError, SolStruct};
+use pretty_assertions::assert_eq;
 use std::borrow::Cow;
 
 #[test]
 fn large_array() {
-    sol!(LargeArray, "../json-abi/tests/abi/LargeArray.json");
+    sol!(
+        #[sol(abi)]
+        LargeArray,
+        "../json-abi/tests/abi/LargeArray.json"
+    );
     assert_eq!(LargeArray::callWithLongArrayCall::SIGNATURE, "callWithLongArray(uint64[128])");
+    let contract = LargeArray::abi::contract();
+    assert_eq!(
+        contract,
+        JsonAbi {
+            constructor: None,
+            fallback: None,
+            receive: None,
+            errors: Default::default(),
+            events: Default::default(),
+            functions: [(
+                "callWithLongArray".into(),
+                vec![Function {
+                    name: "callWithLongArray".into(),
+                    inputs: vec![Param {
+                        ty: "uint64[128]".into(),
+                        name: "longArray".into(),
+                        internal_type: None,
+                        components: vec![],
+                    }],
+                    outputs: vec![],
+                    state_mutability: StateMutability::View,
+                }],
+            )]
+            .into(),
+        }
+    );
 }
 
 #[test]
@@ -33,7 +65,11 @@ fn seaport() {
 // https://github.com/alloy-rs/core/issues/344
 #[test]
 fn aggregation_router_v5() {
-    sol!(AggregationRouterV5, "../json-abi/tests/abi/AggregationRouterV5.json");
+    sol!(
+        #[sol(docs = false)]
+        AggregationRouterV5,
+        "../json-abi/tests/abi/AggregationRouterV5.json"
+    );
 
     assert_eq!(
         <AggregationRouterV5::ETHTransferFailed as SolError>::SIGNATURE,
