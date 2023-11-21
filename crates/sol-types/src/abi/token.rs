@@ -96,6 +96,28 @@ pub trait TokenSeq<'a>: Token<'a> {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct WordToken(pub Word);
 
+impl<T> From<&T> for WordToken
+where
+    T: Clone,
+    Self: From<T>,
+{
+    #[inline]
+    fn from(value: &T) -> Self {
+        Self::from(value.clone())
+    }
+}
+
+impl<T> From<&mut T> for WordToken
+where
+    T: Clone,
+    Self: From<T>,
+{
+    #[inline]
+    fn from(value: &mut T) -> Self {
+        Self::from(value.clone())
+    }
+}
+
 impl From<Word> for WordToken {
     #[inline]
     fn from(value: Word) -> Self {
@@ -368,7 +390,6 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
 }
 
 impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
-    #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
         let head_words = self.0.iter().map(Token::head_words).sum::<usize>();
         enc.push_offset(head_words);

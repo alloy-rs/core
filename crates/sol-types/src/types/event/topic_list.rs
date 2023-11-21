@@ -36,9 +36,9 @@ pub trait TopicList: SolType + Sealed {
 }
 
 macro_rules! impl_topic_list_tuples {
-    ($($c:literal => $($t:ident),*;)+) => {$(
+    ($($c:literal => $($lt:lifetime $t:ident),*;)+) => {$(
         impl<$($t,)*> Sealed for ($($t,)*) {}
-        impl<'a, $($t: SolType<Token<'a> = WordToken>,)*> TopicList for ($($t,)*) {
+        impl<$($lt,)* $($t: SolType<Token<$lt> = WordToken>,)*> TopicList for ($($t,)*) {
             const COUNT: usize = $c;
 
             fn detokenize<I, D>(topics: I) -> Result<Self::RustType>
@@ -71,8 +71,8 @@ impl TopicList for () {
 }
 
 impl_topic_list_tuples! {
-    1 => T;
-    2 => T, U;
-    3 => T, U, V;
-    4 => T, U, V, W;
+    1 => 'a T;
+    2 => 'a T, 'b U;
+    3 => 'a T, 'b U, 'c V;
+    4 => 'a T, 'b U, 'c V, 'd W;
 }

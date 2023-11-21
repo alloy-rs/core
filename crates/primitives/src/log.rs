@@ -12,7 +12,6 @@ pub struct Log {
     pub data: Bytes,
 }
 
-#[allow(clippy::missing_const_for_fn)]
 impl Log {
     /// Creates a new log, without length-checking. This allows creation of
     /// invalid logs. May be safely used when the length of the topic list is
@@ -36,34 +35,40 @@ impl Log {
     }
 
     /// True if valid, false otherwise.
+    #[inline]
     pub fn is_valid(&self) -> bool {
         self.topics.len() <= 4
     }
 
     /// Get the topic list.
+    #[inline]
     pub fn topics(&self) -> &[B256] {
         &self.topics
     }
 
     /// Get the topic list, mutably. This gives access to the internal
     /// array, without allowing extension of that array.
+    #[inline]
     pub fn topics_mut(&mut self) -> &mut [B256] {
         &mut self.topics
     }
 
     /// Get a mutable reference to the topic list. This allows creation of
     /// invalid logs.
+    #[inline]
     pub fn topics_mut_unchecked(&mut self) -> &mut Vec<B256> {
         &mut self.topics
     }
 
     /// Set the topic list, without length-checking. This allows creation of
     /// invalid logs.
+    #[inline]
     pub fn set_topics_unchecked(&mut self, topics: Vec<B256>) {
         self.topics = topics;
     }
 
     /// Set the topic list, truncating to 4 topics.
+    #[inline]
     pub fn set_topics_truncating(&mut self, mut topics: Vec<B256>) {
         topics.truncate(4);
         self.set_topics_unchecked(topics);

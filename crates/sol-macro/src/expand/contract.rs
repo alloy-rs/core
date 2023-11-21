@@ -401,10 +401,10 @@ impl<'a> CallLikeExpander<'a> {
                     validate: bool
                 )-> ::alloy_sol_types::Result<Self> {
                     match selector {
-                        #(<#types as ::alloy_sol_types::#trait_>::SELECTOR => {
+                        #(<#types as ::alloy_sol_types::#trait_>::SELECTOR =>
                             <#types as ::alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
-                                .map(Self::#variants)
-                        })*
+                                .map(Self::#variants),
+                        )*
                         s => ::core::result::Result::Err(::alloy_sol_types::Error::unknown_selector(
                             <Self as ::alloy_sol_types::SolInterface>::NAME,
                             s,
@@ -433,8 +433,17 @@ impl<'a> CallLikeExpander<'a> {
 
     fn expand_events(&self, data: &ExpandData, attrs: Vec<Attribute>) -> TokenStream {
         let def = self.generate_enum(data, attrs);
-        // TODO: SolInterface for events
-        def
+        let ExpandData { name, variants, min_data_len, trait_, .. } = data;
+        let types = data.types();
+        let name_s = name.to_string();
+        let count = data.variants.len();
+        quote! {
+            #def
+
+            impl #name {
+
+            }
+        }
     }
 
     fn generate_enum(&self, data: &ExpandData, mut attrs: Vec<Attribute>) -> TokenStream {

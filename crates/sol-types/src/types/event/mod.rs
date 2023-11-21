@@ -154,6 +154,6 @@ pub trait SolEvent: Sized {
 
     /// Decode the event from the given log object.
     fn decode_log_object(log: &Log, validate: bool) -> Result<Self> {
-        Self::decode_log(log.topics().iter().copied(), &log.data, validate)
+        Self::decode_log(log.topics(), &log.data, validate)
     }
 }

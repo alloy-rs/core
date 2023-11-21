@@ -5,7 +5,10 @@ use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
 #[cfg(feature = "std")]
 use std::error::Error as StdError;
 
-/// A collection of ABI-encoded call-like types. This currently includes
+mod event;
+pub use event::SolEventInterface;
+
+/// A collection of ABI-encodable call-like types. This currently includes
 /// [`SolCall`] and [`SolError`].
 ///
 /// This trait assumes that the implementing type always has a selector, and
