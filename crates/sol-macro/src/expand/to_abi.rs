@@ -93,14 +93,42 @@ impl ToAbi for ast::FunctionAttributes {
 }
 
 fn ty_to_param(name: Option<String>, ty: &ast::Type, cx: &ExpCtxt<'_>) -> Param {
-    // TODO: custom type parameter names (struct field names are lost is lost in call below)
-    let ty_name = ty.abi_name();
-    let ty = cx.make_resolved_type(ty);
-    let components = if let ast::Type::Tuple(tuple) = ty.peel_arrays() {
-        tuple.types.iter().map(|ty| ty_to_param(None, ty, cx)).collect()
+    let mut ty_name = ty.abi_name();
+
+    // HACK: `cx.custom_type` resolves the custom type recursively, so in recursive structs the
+    // peeled `ty` will be `Tuple` rather than `Custom`.
+    if ty_name.starts_with('(') {
+        let paren_i = ty_name.rfind(')').expect("malformed tuple type");
+        let suffix = &ty_name[paren_i + 1..];
+        ty_name = format!("tuple{suffix}");
+    }
+
+    let mut component_names = vec![];
+    let resolved = match ty.peel_arrays() {
+        ast::Type::Custom(name) => {
+            if let ast::Item::Struct(s) = cx.item(name) {
+                component_names = s
+                    .fields
+                    .names()
+                    .map(|n| n.map(|i| i.as_string()).unwrap_or_default())
+                    .collect();
+            }
+            cx.custom_type(name)
+        }
+        ty => ty,
+    };
+
+    let components = if let ast::Type::Tuple(tuple) = resolved {
+        tuple
+            .types
+            .iter()
+            .enumerate()
+            .map(|(i, ty)| ty_to_param(component_names.get(i).cloned(), ty, cx))
+            .collect()
     } else {
         vec![]
     };
+
     Param { ty: ty_name, name: name.unwrap_or_default(), internal_type: None, components }
 }
 

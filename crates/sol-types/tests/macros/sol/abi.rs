@@ -86,7 +86,7 @@ fn equal_abis() {
         *contract.function("F20").unwrap().first().unwrap(),
         Function {
             name: "F20".into(),
-            inputs: vec![param("uint[] ")],
+            inputs: vec![param("uint "), param("uint[] "), param("uint[][1] ")],
             outputs: vec![],
             state_mutability: StateMutability::NonPayable,
         }
@@ -95,31 +95,58 @@ fn equal_abis() {
         *contract.function("F21").unwrap().first().unwrap(),
         Function {
             name: "F21".into(),
-            inputs: vec![Param {
-                ty: "tuple".into(),
-                name: String::new(),
-                components: vec![param("uint ")],
-                internal_type: None,
-            }],
+            inputs: vec![
+                Param {
+                    ty: "tuple".into(),
+                    name: String::new(),
+                    components: vec![param("uint custom")],
+                    internal_type: None,
+                },
+                Param {
+                    ty: "tuple[]".into(),
+                    name: String::new(),
+                    components: vec![param("uint custom")],
+                    internal_type: None,
+                },
+                Param {
+                    ty: "tuple[][2]".into(),
+                    name: String::new(),
+                    components: vec![param("uint custom")],
+                    internal_type: None,
+                },
+            ],
             outputs: vec![],
             state_mutability: StateMutability::NonPayable,
         }
     );
+    let custom = Param {
+        ty: "tuple".into(),
+        name: "cs".into(),
+        // TODO: should be `uint custom`, but name is lost in recursive resolution
+        components: vec![param("uint ")],
+        internal_type: None,
+    };
     assert_eq!(
         *contract.function("F22").unwrap().first().unwrap(),
         Function {
             name: "F22".into(),
             inputs: vec![
                 Param {
-                    ty: "tuple[]".into(),
+                    ty: "tuple".into(),
                     name: String::new(),
-                    components: vec![param("uint ")],
+                    components: vec![custom.clone(), param("bool cb")],
                     internal_type: None,
                 },
                 Param {
-                    ty: "tuple[][2]".into(),
+                    ty: "tuple[]".into(),
                     name: String::new(),
-                    components: vec![param("uint ")],
+                    components: vec![custom.clone(), param("bool cb")],
+                    internal_type: None,
+                },
+                Param {
+                    ty: "tuple[][3]".into(),
+                    name: String::new(),
+                    components: vec![custom, param("bool cb")],
                     internal_type: None,
                 },
             ],
@@ -233,7 +260,12 @@ sol! {
 
     contract Contract {
         struct CustomStruct {
-            uint a;
+            uint custom;
+        }
+
+        struct CustomStruct2 {
+            CustomStruct cs;
+            bool cb;
         }
 
         event EV00();
@@ -260,9 +292,9 @@ sol! {
         function F11(uint a) returns (uint a);
         function F12(uint, bool b) returns (uint, bool b);
 
-        function F20(uint[]);
-        function F21(CustomStruct);
-        function F22(CustomStruct[], CustomStruct[][2]);
+        function F20(uint, uint[], uint[][1]);
+        function F21(CustomStruct, CustomStruct[], CustomStruct[][2]);
+        function F22(CustomStruct2, CustomStruct2[], CustomStruct2[][3]);
     }
 }
 
@@ -273,7 +305,12 @@ mod not_contract {
         #![sol(abi)]
 
         struct CustomStruct {
-            uint a;
+            uint custom;
+        }
+
+        struct CustomStruct2 {
+            CustomStruct cs;
+            bool cb;
         }
 
         event EV00();
@@ -296,9 +333,9 @@ mod not_contract {
         function F11(uint a) returns (uint a);
         function F12(uint, bool b) returns (uint, bool b);
 
-        function F20(uint[]);
-        function F21(CustomStruct);
-        function F22(CustomStruct[], CustomStruct[][2]);
+        function F20(uint, uint[], uint[][1]);
+        function F21(CustomStruct, CustomStruct[], CustomStruct[][2]);
+        function F22(CustomStruct2, CustomStruct2[], CustomStruct2[][3]);
     }
 }
 
