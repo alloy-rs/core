@@ -41,7 +41,7 @@ fn equal_abis() {
         *contract.function("F01").unwrap().first().unwrap(),
         Function {
             name: "F01".into(),
-            inputs: vec![param("uint a")],
+            inputs: vec![param("uint256 a")],
             outputs: vec![],
             state_mutability: StateMutability::Payable,
         }
@@ -50,7 +50,7 @@ fn equal_abis() {
         *contract.function("F02").unwrap().first().unwrap(),
         Function {
             name: "F02".into(),
-            inputs: vec![param("uint "), param("bool b")],
+            inputs: vec![param("uint256 "), param("bool b")],
             outputs: vec![],
             state_mutability: StateMutability::View,
         }
@@ -68,8 +68,8 @@ fn equal_abis() {
         *contract.function("F11").unwrap().first().unwrap(),
         Function {
             name: "F11".into(),
-            inputs: vec![param("uint a")],
-            outputs: vec![param("uint a")],
+            inputs: vec![param("uint256 a")],
+            outputs: vec![param("uint256 a")],
             state_mutability: StateMutability::NonPayable,
         }
     );
@@ -77,8 +77,8 @@ fn equal_abis() {
         *contract.function("F12").unwrap().first().unwrap(),
         Function {
             name: "F12".into(),
-            inputs: vec![param("uint "), param("bool b")],
-            outputs: vec![param("uint "), param("bool b")],
+            inputs: vec![param("uint256 "), param("bool b")],
+            outputs: vec![param("uint256 "), param("bool b")],
             state_mutability: StateMutability::NonPayable,
         }
     );
@@ -86,7 +86,7 @@ fn equal_abis() {
         *contract.function("F20").unwrap().first().unwrap(),
         Function {
             name: "F20".into(),
-            inputs: vec![param("uint "), param("uint[] "), param("uint[][1] ")],
+            inputs: vec![param("uint256 "), param("uint256[] "), param("uint256[][1] ")],
             outputs: vec![],
             state_mutability: StateMutability::NonPayable,
         }
@@ -99,19 +99,19 @@ fn equal_abis() {
                 Param {
                     ty: "tuple".into(),
                     name: String::new(),
-                    components: vec![param("uint custom")],
+                    components: vec![param("uint256 custom")],
                     internal_type: None,
                 },
                 Param {
                     ty: "tuple[]".into(),
                     name: String::new(),
-                    components: vec![param("uint custom")],
+                    components: vec![param("uint256 custom")],
                     internal_type: None,
                 },
                 Param {
                     ty: "tuple[][2]".into(),
                     name: String::new(),
-                    components: vec![param("uint custom")],
+                    components: vec![param("uint256 custom")],
                     internal_type: None,
                 },
             ],
@@ -122,8 +122,8 @@ fn equal_abis() {
     let custom = Param {
         ty: "tuple".into(),
         name: "cs".into(),
-        // TODO: should be `uint custom`, but name is lost in recursive resolution
-        components: vec![param("uint ")],
+        // TODO: should be `uint256 custom`, but name is lost in recursive resolution
+        components: vec![param("uint256 ")],
         internal_type: None,
     };
     assert_eq!(
@@ -178,7 +178,7 @@ fn equal_abis() {
         *contract.event("EV01").unwrap().first().unwrap(),
         alloy_json_abi::Event {
             name: "EV01".into(),
-            inputs: vec![eparam("uint a", false)],
+            inputs: vec![eparam("uint256 a", false)],
             anonymous: false,
         }
     );
@@ -186,7 +186,7 @@ fn equal_abis() {
         *contract.event("EV02").unwrap().first().unwrap(),
         alloy_json_abi::Event {
             name: "EV02".into(),
-            inputs: vec![eparam("uint ", false), eparam("bool b", false)],
+            inputs: vec![eparam("uint256 ", false), eparam("bool b", false)],
             anonymous: false,
         }
     );
@@ -198,7 +198,7 @@ fn equal_abis() {
         *contract.event("EV11").unwrap().first().unwrap(),
         alloy_json_abi::Event {
             name: "EV11".into(),
-            inputs: vec![eparam("uint a", true)],
+            inputs: vec![eparam("uint256 a", true)],
             anonymous: true,
         }
     );
@@ -206,7 +206,7 @@ fn equal_abis() {
         *contract.event("EV12").unwrap().first().unwrap(),
         alloy_json_abi::Event {
             name: "EV12".into(),
-            inputs: vec![eparam("uint ", false), eparam("bool b", true)],
+            inputs: vec![eparam("uint256 ", false), eparam("bool b", true)],
             anonymous: true,
         }
     );
@@ -229,11 +229,11 @@ fn equal_abis() {
     );
     assert_eq!(
         *contract.error("ER1").unwrap().first().unwrap(),
-        Error { name: "ER1".into(), inputs: vec![param("uint a")] }
+        Error { name: "ER1".into(), inputs: vec![param("uint256 a")] }
     );
     assert_eq!(
         *contract.error("ER2").unwrap().first().unwrap(),
-        Error { name: "ER2".into(), inputs: vec![param("uint "), param("bool b")] }
+        Error { name: "ER2".into(), inputs: vec![param("uint256 "), param("bool b")] }
     );
     assert_eq!(
         contract.errors,
@@ -353,12 +353,120 @@ fn recursive() {
     );
 }
 
+#[test]
+fn custom() {
+    sol! {
+        #![sol(abi)]
+
+        type UDVT is uint32;
+
+        enum Enum {
+            A,
+            B
+        }
+
+        struct CustomStruct {
+            uint256 custom;
+            uint256[] customArr;
+            UDVT udvt;
+            UDVT[] udvtArr;
+            Enum e;
+            Enum[] eArr;
+        }
+
+        struct CustomStruct2 {
+            CustomStruct cs;
+            CustomStruct[] csArr;
+        }
+
+        function myFunc(
+            UDVT udvt,
+            UDVT[] udvtArr,
+            Enum e,
+            Enum[] eArr,
+            CustomStruct cs,
+            CustomStruct[] csArr,
+            CustomStruct2 cs2,
+            CustomStruct2[] cs2Arr
+        );
+    }
+
+    let custom_struct = vec![
+        param("uint256 custom"),
+        param("uint256[] customArr"),
+        param("uint32 udvt"),
+        param("uint32[] udvtArr"),
+        param("uint8 e"),
+        param("uint8[] eArr"),
+    ];
+    let custom_struct_erased = vec![
+        param("uint256 "),   // custom
+        param("uint256[] "), // customArr
+        param("uint32 "),    // udvt
+        param("uint32[] "),  // udvtArr
+        param("uint8 "),     // e
+        param("uint8[] "),   // eArr
+    ];
+    let custom_struct2 = vec![
+        Param {
+            ty: "tuple".into(),
+            name: "cs".into(),
+            components: custom_struct_erased.clone(),
+            internal_type: None,
+        },
+        Param {
+            ty: "tuple[]".into(),
+            name: "csArr".into(),
+            components: custom_struct_erased,
+            internal_type: None,
+        },
+    ];
+    assert_eq!(
+        myFuncCall::abi(),
+        Function {
+            name: "myFunc".into(),
+            inputs: vec![
+                param("uint32 udvt"),
+                param("uint32[] udvtArr"),
+                param("uint8 e"),
+                param("uint8[] eArr"),
+                Param {
+                    ty: "tuple".into(),
+                    name: "cs".into(),
+                    components: custom_struct.clone(),
+                    internal_type: None,
+                },
+                Param {
+                    ty: "tuple[]".into(),
+                    name: "csArr".into(),
+                    components: custom_struct,
+                    internal_type: None,
+                },
+                Param {
+                    ty: "tuple".into(),
+                    name: "cs2".into(),
+                    components: custom_struct2.clone(),
+                    internal_type: None,
+                },
+                Param {
+                    ty: "tuple[]".into(),
+                    name: "cs2Arr".into(),
+                    components: custom_struct2,
+                    internal_type: None,
+                },
+            ],
+            outputs: vec![],
+            state_mutability: StateMutability::NonPayable,
+        }
+    );
+}
+
 sol! {
     #![sol(abi)]
 
     contract Contract {
         struct CustomStruct {
-            uint custom;
+            uint256 custom;
         }
 
         struct CustomStruct2 {
@@ -367,30 +475,30 @@ sol! {
         }
 
         event EV00();
-        event EV01(uint a);
-        event EV02(uint, bool b);
+        event EV01(uint256 a);
+        event EV02(uint256, bool b);
 
         event EV10() anonymous;
-        event EV11(uint indexed a) anonymous;
-        event EV12(uint, bool indexed b) anonymous;
+        event EV11(uint256 indexed a) anonymous;
+        event EV12(uint256, bool indexed b) anonymous;
 
         error ER0();
-        error ER1(uint a);
-        error ER2(uint, bool b);
+        error ER1(uint256 a);
+        error ER2(uint256, bool b);
 
         constructor ctor();
         fallback();
         receive();
 
         function F00();
-        function F01(uint a) payable;
-        function F02(uint, bool b) view;
+        function F01(uint256 a) payable;
+        function F02(uint256, bool b) view;
 
         function F10() pure;
-        function F11(uint a) returns (uint a);
-        function F12(uint, bool b) returns (uint, bool b);
+        function F11(uint256 a) returns (uint256 a);
+        function F12(uint256, bool b) returns (uint256, bool b);
 
-        function F20(uint, uint[], uint[][1]);
+        function F20(uint256, uint256[], uint256[][1]);
         function F21(CustomStruct, CustomStruct[], CustomStruct[][2]);
         function F22(CustomStruct2, CustomStruct2[], CustomStruct2[][3]);
     }
@@ -403,7 +511,7 @@ mod not_contract {
         #![sol(abi)]
 
         struct CustomStruct {
-            uint custom;
+            uint256 custom;
         }
 
         struct CustomStruct2 {
@@ -412,26 +520,26 @@ mod not_contract {
         }
 
         event EV00();
-        event EV01(uint a);
-        event EV02(uint, bool b);
+        event EV01(uint256 a);
+        event EV02(uint256, bool b);
 
         event EV10() anonymous;
-        event EV11(uint indexed a) anonymous;
-        event EV12(uint, bool indexed b) anonymous;
+        event EV11(uint256 indexed a) anonymous;
+        event EV12(uint256, bool indexed b) anonymous;
 
         error ER0();
-        error ER1(uint a);
-        error ER2(uint, bool b);
+        error ER1(uint256 a);
+        error ER2(uint256, bool b);
 
         function F00();
-        function F01(uint a) payable;
-        function F02(uint, bool b) view;
+        function F01(uint256 a) payable;
+        function F02(uint256, bool b) view;
 
         function F10() pure;
-        function F11(uint a) returns (uint a);
-        function F12(uint, bool b) returns (uint, bool b);
+        function F11(uint256 a) returns (uint256 a);
+        function F12(uint256, bool b) returns (uint256, bool b);
 
-        function F20(uint, uint[], uint[][1]);
+        function F20(uint256, uint256[], uint256[][1]);
         function F21(CustomStruct, CustomStruct[], CustomStruct[][2]);
         function F22(CustomStruct2, CustomStruct2[], CustomStruct2[][3]);
     }

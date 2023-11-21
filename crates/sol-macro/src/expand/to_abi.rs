@@ -5,6 +5,7 @@ use alloy_json_abi::{
 };
 use ast::{ItemError, ItemEvent, ItemFunction};
 use proc_macro2::TokenStream;
+use std::fmt::Write;
 
 pub fn generate<T>(t: &T, cx: &ExpCtxt<'_>) -> TokenStream
 where
@@ -93,7 +94,7 @@ impl ToAbi for ast::FunctionAttributes {
 }
 
 fn ty_to_param(name: Option<String>, ty: &ast::Type, cx: &ExpCtxt<'_>) -> Param {
-    let mut ty_name = ty.abi_name();
+    let mut ty_name = ty_abi_string(ty, cx);
 
     // HACK: `cx.custom_type` resolves the custom type recursively, so in recursive structs the
     // peeled `ty` will be `Tuple` rather than `Custom`.
@@ -133,6 +134,32 @@ fn ty_to_param(name: Option<String>, ty: &ast::Type, cx: &ExpCtxt<'_>) -> Param 
     let internal_type = None;
 
     Param { ty: ty_name, name: name.unwrap_or_default(), internal_type, components }
+}
+
+fn ty_abi_string(ty: &ast::Type, cx: &ExpCtxt<'_>) -> String {
+    let mut suffix = String::new();
+    rec_ty_abi_string_suffix(ty, &mut suffix);
+
+    let mut ty = ty.peel_arrays();
+    if let ast::Type::Custom(name) = ty {
+        match cx.try_custom_type(name) {
+            Some(ast::Type::Tuple(_)) => return format!("tuple{suffix}"),
+            Some(custom) => ty = custom,
+            None => {}
+        }
+    }
+    format!("{}{suffix}", super::ty::TypePrinter::new(cx, ty))
+}
+
+fn rec_ty_abi_string_suffix(ty: &ast::Type, s: &mut String) {
+    if let ast::Type::Array(array) = ty {
+        rec_ty_abi_string_suffix(&array.ty, s);
+        if let Some(size) = array.size() {
+            write!(s, "[{size}]").unwrap();
+        } else {
+            s.push_str("[]");
+        }
+    }
 }
 
 pub(super) fn constructor(function: &ItemFunction, cx: &ExpCtxt<'_>) -> Constructor {
