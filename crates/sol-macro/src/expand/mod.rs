@@ -12,8 +12,15 @@ use ast::{
 use indexmap::IndexMap;
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, TokenStreamExt};
-use std::{borrow::Borrow, fmt::Write};
+use std::{
+    borrow::Borrow,
+    fmt::Write,
+    sync::atomic::{AtomicBool, Ordering},
+};
 use syn::{ext::IdentExt, parse_quote, Attribute, Error, Result};
+
+#[macro_use]
+mod macros;
 
 mod ty;
 pub use ty::expand_type;
@@ -26,6 +33,9 @@ mod function;
 mod r#struct;
 mod udt;
 mod var_def;
+
+#[cfg(feature = "json")]
+mod to_abi;
 
 /// The limit for the number of times to resolve a type.
 const RESOLVE_LIMIT: usize = 32;
@@ -278,7 +288,7 @@ impl<'a> OverloadedItem<'a> {
 
     fn eq_by_types(self, other: Self) -> bool {
         match (self, other) {
-            (Self::Function(a), Self::Function(b)) => a.arguments.types().eq(b.arguments.types()),
+            (Self::Function(a), Self::Function(b)) => a.parameters.types().eq(b.parameters.types()),
             (Self::Event(a), Self::Event(b)) => a.param_types().eq(b.param_types()),
             _ => false,
         }
@@ -312,6 +322,18 @@ impl<'ast> ExpCtxt<'ast> {
     fn try_item(&self, name: &SolPath) -> Option<&Item> {
         let name = name.last();
         self.all_items.iter().copied().find(|item| item.name() == Some(name))
+    }
+
+    /// Recursively resolves the given type by constructing a new one.
+    #[allow(dead_code)]
+    fn make_resolved_type(&self, ty: &Type) -> Type {
+        let mut ty = ty.clone();
+        ty.visit_mut(|ty| {
+            if let Type::Custom(name) = ty {
+                *ty = self.custom_type(name).clone();
+            }
+        });
+        ty
     }
 
     fn custom_type(&self, name: &SolPath) -> &Type {
@@ -369,27 +391,27 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn function_signature(&self, function: &ItemFunction) -> String {
-        self.signature(function.name().as_string(), &function.arguments)
+        self.signature(function.name().as_string(), &function.parameters)
     }
 
-    fn function_selector(&self, function: &ItemFunction) -> ExprArray<u8, 4> {
-        utils::selector(self.function_signature(function))
+    fn function_selector(&self, function: &ItemFunction) -> ExprArray<u8> {
+        utils::selector(self.function_signature(function)).with_span(function.span())
     }
 
     fn error_signature(&self, error: &ItemError) -> String {
         self.signature(error.name.as_string(), &error.parameters)
     }
 
-    fn error_selector(&self, error: &ItemError) -> ExprArray<u8, 4> {
-        utils::selector(self.error_signature(error))
+    fn error_selector(&self, error: &ItemError) -> ExprArray<u8> {
+        utils::selector(self.error_signature(error)).with_span(error.span())
     }
 
     fn event_signature(&self, event: &ItemEvent) -> String {
         self.signature(event.name.as_string(), &event.params())
     }
 
-    fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8, 32> {
-        utils::event_selector(self.event_signature(event))
+    fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8> {
+        utils::event_selector(self.event_signature(event)).with_span(event.span())
     }
 
     /// Formats the name and parameters of the function as a Solidity signature.
@@ -603,5 +625,16 @@ fn tokenize_<'a>(
     });
     quote! {
         (#(#statements,)*)
+    }
+}
+
+#[allow(dead_code)]
+fn emit_json_error() {
+    static EMITTED: AtomicBool = AtomicBool::new(false);
+    if !EMITTED.swap(true, Ordering::Relaxed) {
+        emit_error!(
+            Span::call_site(),
+            "the `#[sol(dyn_abi)]` attribute requires the `\"json\"` feature"
+        );
     }
 }

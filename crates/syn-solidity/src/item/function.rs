@@ -29,7 +29,7 @@ pub struct ItemFunction {
     /// Parens are optional for modifiers:
     /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.modifierDefinition>
     pub paren_token: Option<Paren>,
-    pub arguments: ParameterList,
+    pub parameters: ParameterList,
     /// The Solidity attributes of the function.
     pub attributes: FunctionAttributes,
     /// The optional return types of the function.
@@ -44,7 +44,7 @@ impl fmt::Display for ItemFunction {
             f.write_str(" ")?;
             name.fmt(f)?;
         }
-        write!(f, "({})", self.arguments)?;
+        write!(f, "({})", self.parameters)?;
 
         if !self.attributes.is_empty() {
             write!(f, " {}", self.attributes)?;
@@ -67,7 +67,7 @@ impl fmt::Debug for ItemFunction {
             .field("attrs", &self.attrs)
             .field("kind", &self.kind)
             .field("name", &self.name)
-            .field("arguments", &self.arguments)
+            .field("arguments", &self.parameters)
             .field("attributes", &self.attributes)
             .field("returns", &self.returns)
             .field("body", &self.body)
@@ -81,7 +81,7 @@ impl Parse for ItemFunction {
         let kind: FunctionKind = input.parse()?;
         let name = input.call(SolIdent::parse_opt)?;
 
-        let (paren_token, arguments) = if kind.is_modifier() && !input.peek(Paren) {
+        let (paren_token, parameters) = if kind.is_modifier() && !input.peek(Paren) {
             (None, ParameterList::new())
         } else {
             let content;
@@ -92,7 +92,7 @@ impl Parse for ItemFunction {
         let returns = input.call(Returns::parse_opt)?;
         let body = input.parse()?;
 
-        Ok(Self { attrs, kind, name, paren_token, arguments, attributes, returns, body })
+        Ok(Self { attrs, kind, name, paren_token, parameters, attributes, returns, body })
     }
 }
 
@@ -122,7 +122,7 @@ impl ItemFunction {
             kind,
             name,
             paren_token: Some(Paren(span)),
-            arguments: Parameters::new(),
+            parameters: Parameters::new(),
             attributes: FunctionAttributes::new(),
             returns: None,
             body: FunctionBody::Empty(Token![;](span)),
@@ -161,14 +161,14 @@ impl ItemFunction {
                 // mapping(k => v) -> arguments += k, ty = v
                 Type::Mapping(map) => {
                     let key = VariableDeclaration::new_with(*map.key, None, map.key_name);
-                    function.arguments.push(key);
+                    function.parameters.push(key);
                     return_name = map.value_name;
                     ty = *map.value;
                 }
                 // inner[] -> arguments += uint256, ty = inner
                 Type::Array(array) => {
                     let uint256 = Type::Uint(span, NonZeroU16::new(256));
-                    function.arguments.push(VariableDeclaration::new(uint256));
+                    function.parameters.push(VariableDeclaration::new(uint256));
                     ty = *array.ty;
                 }
                 _ => break,
@@ -221,7 +221,7 @@ impl ItemFunction {
 
     /// Returns the function's arguments tuple type.
     pub fn call_type(&self) -> Type {
-        Type::Tuple(self.arguments.types().cloned().collect())
+        Type::Tuple(self.parameters.types().cloned().collect())
     }
 
     /// Returns the function's return tuple type.

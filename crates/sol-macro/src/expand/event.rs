@@ -25,6 +25,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
     let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
     cx.derives(&mut attrs, &params, true);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
+    let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
 
     cx.assert_resolved(&params)?;
     event.assert_valid()?;
@@ -101,12 +102,30 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .map(|(i, assign)| quote!(out[#i] = #assign;));
 
     let doc = docs.then(|| {
-        let selector = hex::encode_prefixed(selector.array);
+        let selector = hex::encode_prefixed(selector.array.as_slice());
         attr::mk_doc(format!(
             "Event with signature `{signature}` and selector `{selector}`.\n\
             ```solidity\n{event}\n```"
         ))
     });
+
+    let abi: Option<TokenStream> = abi.then(|| {
+        if_json! {
+            let event = super::to_abi::generate(event, cx);
+            quote! {
+                #[automatically_derived]
+                impl ::alloy_sol_types::JsonAbiExt for #name {
+                    type Abi = ::alloy_sol_types::private::alloy_json_abi::Event;
+
+                    #[inline]
+                    fn abi() -> Self::Abi {
+                        #event
+                    }
+                }
+            }
+        }
+    });
+
     let tokens = quote! {
         #(#attrs)*
         #doc
@@ -163,6 +182,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                     Ok(())
                 }
             }
+
+            #abi
         };
     };
     Ok(tokens)

@@ -26,9 +26,13 @@ use syn::parse_macro_input;
 mod attr;
 mod expand;
 mod input;
+mod utils;
+
+#[cfg(feature = "json")]
+mod verbatim;
+
 #[cfg(feature = "json")]
 mod json;
-mod utils;
 
 /// Generate types that implement [`alloy-sol-types`] traits, which can be used
 /// for type-safe [ABI] and [EIP-712] serialization to interface with Ethereum
@@ -96,6 +100,19 @@ mod utils;
 ///   [`abigen`][abigen]
 /// - `docs [ = <bool = true>]`: adds doc comments to all generated types. This is the default
 ///   behaviour of [`abigen`][abigen]
+/// - `abi [ = <bool = false>]`: generates functions which return the dynamic ABI representation
+///   (provided by [`alloy_json_abi`](https://docs.rs/alloy-json-abi)) of all the generated items.
+///   Requires the `"json"` feature. For:
+///   - contracts: generates an `abi` module nested inside of the contract module, which contains:
+///     - `pub fn contract() -> JsonAbi`,
+///     - `pub fn constructor() -> Option<Constructor>`
+///     - `pub fn fallback() -> Option<Fallback>`
+///     - `pub fn receive() -> Option<Receive>`
+///     - `pub fn functions() -> BTreeMap<String, Vec<Function>>`
+///     - `pub fn events() -> BTreeMap<String, Vec<Event>>`
+///     - `pub fn errors() -> BTreeMap<String, Vec<Error>>`
+///   - items: generates implementations of the `SolAbiExt` trait, alongside the existing
+///     [`alloy-sol-types`] traits
 /// - `bytecode = <hex string literal>`: specifies the creation/init bytecode of a contract. This
 ///   will emit a `static` item with the specified bytes.
 /// - `deployed_bytecode = <hex string literal>`: specifies the deployed bytecode of a contract.

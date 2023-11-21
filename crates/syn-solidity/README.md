@@ -93,7 +93,7 @@ let Some(Item::Function(function)) = body.first() else {
 };
 assert_eq!(function.attrs.len(), 1); // doc comment
 assert_eq!(function.name.as_ref().unwrap(), "helloWorld");
-assert!(function.arguments.is_empty()); // ()
+assert!(function.parameters.is_empty()); // ()
 assert_eq!(function.attributes.len(), 2); // external pure
 assert!(function.returns.is_some());
 

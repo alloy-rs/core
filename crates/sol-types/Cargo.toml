@@ -23,13 +23,18 @@ alloy-sol-macro.workspace = true
 
 hex.workspace = true
 
+# json
+alloy-json-abi = { workspace = true, optional = true }
+
+# eip712-serde
 serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
 alloy-primitives = { workspace = true, features = ["arbitrary", "serde"] }
 paste.workspace = true
+pretty_assertions.workspace = true
 serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
+serde_json.workspace = true
 
 proptest.workspace = true
 rustversion = "1.0"
@@ -38,6 +43,6 @@ trybuild = "1.0"
 [features]
 default = ["std"]
 std = ["alloy-primitives/std", "hex/std", "serde?/std"]
-json = ["alloy-sol-macro/json"]
+json = ["dep:alloy-json-abi", "alloy-sol-macro/json"]
 eip712-serde = ["dep:serde", "alloy-primitives/serde"]
 arbitrary = ["alloy-primitives/arbitrary"]

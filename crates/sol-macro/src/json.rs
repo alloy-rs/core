@@ -141,7 +141,7 @@ mod tests {
                     ast::Visibility::External(Default::default())
                 )));
 
-                let args = &f.arguments;
+                let args = &f.parameters;
                 assert_eq!(args.len(), 7);
 
                 assert_eq!(args[0].ty.to_string(), "AdvancedOrder[]");
@@ -187,7 +187,7 @@ mod tests {
                 ];
                 for (f, name, ty) in function_tests {
                     assert_eq!(f.name.as_ref().unwrap(), name);
-                    assert_eq!(f.arguments.type_strings().collect::<Vec<_>>(), [ty]);
+                    assert_eq!(f.parameters.type_strings().collect::<Vec<_>>(), [ty]);
                     let ret = &f.returns.as_ref().expect("no returns").returns;
                     assert_eq!(ret.type_strings().collect::<Vec<_>>(), [ty]);
                 }

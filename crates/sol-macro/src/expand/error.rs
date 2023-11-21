@@ -25,6 +25,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
     cx.derives(&mut attrs, params, true);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
+    let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
 
     let tokenize_impl = expand_tokenize(params);
 
@@ -34,11 +35,27 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     let converts = expand_from_into_tuples(&name.0, params);
     let fields = expand_fields(params);
     let doc = docs.then(|| {
-        let selector = hex::encode_prefixed(selector.array);
+        let selector = hex::encode_prefixed(selector.array.as_slice());
         attr::mk_doc(format!(
             "Custom error with signature `{signature}` and selector `{selector}`.\n\
              ```solidity\n{error}\n```"
         ))
+    });
+    let abi: Option<TokenStream> = abi.then(|| {
+        if_json! {
+            let error = super::to_abi::generate(error, cx);
+            quote! {
+                #[automatically_derived]
+                impl ::alloy_sol_types::JsonAbiExt for #name {
+                    type Abi = ::alloy_sol_types::private::alloy_json_abi::Error;
+
+                    #[inline]
+                    fn abi() -> Self::Abi {
+                        #error
+                    }
+                }
+            }
+        }
     });
     let tokens = quote! {
         #(#attrs)*
@@ -71,6 +88,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
                     #tokenize_impl
                 }
             }
+
+            #abi
         };
     };
     Ok(tokens)
