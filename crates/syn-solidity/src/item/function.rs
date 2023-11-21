@@ -432,11 +432,12 @@ mod tests {
     #[test]
     #[cfg_attr(miri, ignore = "takes too long")]
     fn getters() {
+        let run_solc = run_solc();
+
         macro_rules! test_getters {
             ($($var:literal => $f:literal),* $(,)?) => {
                 let vars: &[&str] = &[$($var),*];
                 let fns: &[&str] = &[$($f),*];
-                let run_solc = run_solc();
                 for (var, f) in std::iter::zip(vars, fns) {
                     test_getter(var, f, run_solc);
                 }
@@ -484,10 +485,28 @@ mod tests {
     }
 
     fn run_solc() -> bool {
-        let Ok(status) = Command::new("solc").arg("--version").status() else {
-            return false;
-        };
-        status.success()
+        let Some(v) = get_solc_version() else { return false };
+        // Named keys in mappings: https://soliditylang.org/blog/2023/02/01/solidity-0.8.18-release-announcement/
+        v >= (0, 8, 18)
+    }
+
+    fn get_solc_version() -> Option<(u16, u16, u16)> {
+        let output = Command::new("solc").arg("--version").output().ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let stdout = String::from_utf8(output.stdout).ok()?;
+
+        let start = stdout.find(": 0.")?;
+        let version = &stdout[start + 2..];
+        let end = version.find('+')?;
+        let version = &version[..end];
+
+        let mut iter = version.split('.').map(|s| s.parse::<u16>().expect("bad solc version"));
+        let major = iter.next().unwrap();
+        let minor = iter.next().unwrap();
+        let patch = iter.next().unwrap();
+        Some((major, minor, patch))
     }
 
     fn wrap_and_compile(s: &str, var: bool) -> std::result::Result<String, Box<dyn Error>> {

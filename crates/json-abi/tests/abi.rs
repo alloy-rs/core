@@ -258,8 +258,28 @@ fn normalize_newlines(s: &str) -> String {
 }
 
 fn run_solc() -> bool {
-    let Ok(status) = Command::new("solc").arg("--version").status() else {
+    let Some(v) = get_solc_version() else {
         return false;
     };
-    status.success()
+    // UDVTs: https://soliditylang.org/blog/2021/09/27/user-defined-value-types/
+    v >= (0, 8, 8)
+}
+
+fn get_solc_version() -> Option<(u16, u16, u16)> {
+    let output = Command::new("solc").arg("--version").output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8(output.stdout).ok()?;
+
+    let start = stdout.find(": 0.")?;
+    let version = &stdout[start + 2..];
+    let end = version.find('+')?;
+    let version = &version[..end];
+
+    let mut iter = version.split('.').map(|s| s.parse::<u16>().expect("bad solc version"));
+    let major = iter.next().unwrap();
+    let minor = iter.next().unwrap();
+    let patch = iter.next().unwrap();
+    Some((major, minor, patch))
 }
