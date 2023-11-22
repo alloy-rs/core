@@ -8,7 +8,7 @@
 // except according to those terms.
 
 use crate::abi;
-use alloc::{borrow::Cow, string::String};
+use alloc::{borrow::Cow, boxed::Box, string::String};
 use alloy_primitives::Log;
 use core::fmt;
 
