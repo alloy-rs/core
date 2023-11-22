@@ -1,7 +1,8 @@
 use crate::{bits::FixedBytes, B256};
-use alloc::{string::ToString, vec::Vec};
+use alloc::vec::Vec;
+
 /// The prefix used for hashing messages according to EIP-191.
-const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
+pub const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
 
 /// Hash a message according to [EIP-191] (version `0x01`).
 ///
@@ -12,16 +13,29 @@ const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
 ///
 /// [EIP-191]: https://eips.ethereum.org/EIPS/eip-191
 pub fn eip191_hash_message<T: AsRef<[u8]>>(message: T) -> B256 {
-    let message = message.as_ref();
-    let len = message.len();
-    let len_string = len.to_string();
+    keccak256(eip191_message(message))
+}
 
-    let mut eth_message = Vec::with_capacity(EIP191_PREFIX.len() + len_string.len() + len);
-    eth_message.extend_from_slice(EIP191_PREFIX.as_bytes());
-    eth_message.extend_from_slice(len_string.as_bytes());
-    eth_message.extend_from_slice(message);
+/// Constructs a message according to [EIP-191] (version `0x01`).
+///
+/// The final message is a UTF-8 string, encoded as follows:
+/// `"\x19Ethereum Signed Message:\n" + message.length + message`
+///
+/// [EIP-191]: https://eips.ethereum.org/EIPS/eip-191
+pub fn eip191_message<T: AsRef<[u8]>>(message: T) -> Vec<u8> {
+    fn eip191_message(message: &[u8]) -> Vec<u8> {
+        let len = message.len();
+        let mut len_string_buffer = itoa::Buffer::new();
+        let len_string = len_string_buffer.format(len);
 
-    keccak256(&eth_message)
+        let mut eth_message = Vec::with_capacity(EIP191_PREFIX.len() + len_string.len() + len);
+        eth_message.extend_from_slice(EIP191_PREFIX.as_bytes());
+        eth_message.extend_from_slice(len_string.as_bytes());
+        eth_message.extend_from_slice(message);
+        eth_message
+    }
+
+    eip191_message(message.as_ref())
 }
 
 /// Simple interface to the [`Keccak-256`] hash function.
@@ -82,12 +96,17 @@ mod tests {
     use super::*;
 
     // test vector taken from:
-    // https://web3js.readthedocs.io/en/v1.2.2/web3-eth-accounts.html#hashmessage
+    // https://web3js.readthedocs.io/en/v1.10.0/web3-eth-accounts.html#hashmessage
     #[test]
     fn test_hash_message() {
+        let msg = "Hello World";
+        let eip191_msg = eip191_message(msg);
+        let hash = keccak256(&eip191_msg);
         assert_eq!(
-            eip191_hash_message("Hello World"),
-            b256!("a1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2")
+            eip191_msg,
+            [EIP191_PREFIX.as_bytes(), msg.len().to_string().as_bytes(), msg.as_bytes()].concat()
         );
+        assert_eq!(hash, b256!("a1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2"));
+        assert_eq!(eip191_hash_message(msg), hash);
     }
 }
