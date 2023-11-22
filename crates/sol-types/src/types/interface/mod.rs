@@ -266,7 +266,7 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
         match selector {
             Revert::SELECTOR => Revert::abi_decode_raw(data, validate).map(Self::Revert),
             Panic::SELECTOR => Panic::abi_decode_raw(data, validate).map(Self::Panic),
-            _ => T::abi_decode(data, validate).map(Self::CustomError),
+            s => T::abi_decode_raw(s, data, validate).map(Self::CustomError),
         }
     }
 
@@ -433,7 +433,7 @@ impl<T: SolInterface> FusedIterator for Selectors<T> {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::keccak256;
+    use alloy_primitives::{keccak256, U256};
 
     fn sel(s: &str) -> [u8; 4] {
         keccak256(s)[..4].try_into().unwrap()
@@ -470,22 +470,69 @@ mod tests {
     #[test]
     fn contract_error_enum_2() {
         crate::sol! {
+            #[derive(Debug, PartialEq, Eq)]
             contract C {
                 error Err1();
                 error Err2(uint256);
+                error Err3(string);
             }
         }
 
-        assert_eq!(C::CErrors::COUNT, 2);
+        assert_eq!(C::CErrors::COUNT, 3);
         assert_eq!(C::CErrors::MIN_DATA_LENGTH, 0);
-        assert_eq!(ContractError::<C::CErrors>::COUNT, 2 + 2);
+        assert_eq!(ContractError::<C::CErrors>::COUNT, 2 + 3);
         assert_eq!(ContractError::<C::CErrors>::MIN_DATA_LENGTH, 0);
 
         // sorted by selector
-        assert_eq!(C::CErrors::SELECTORS, [sel("Err2(uint256)"), sel("Err1()")]);
+        assert_eq!(
+            C::CErrors::SELECTORS,
+            [sel("Err3(string)"), sel("Err2(uint256)"), sel("Err1()")]
+        );
         assert_eq!(
             ContractError::<C::CErrors>::selectors().collect::<Vec<_>>(),
-            vec![sel("Err2(uint256)"), sel("Err1()"), sel("Error(string)"), sel("Panic(uint256)"),],
+            [
+                sel("Err3(string)"),
+                sel("Err2(uint256)"),
+                sel("Err1()"),
+                sel("Error(string)"),
+                sel("Panic(uint256)"),
+            ],
         );
+
+        let err1 = || C::Err1 {};
+        let errors_err1 = || C::CErrors::Err1(err1());
+        let contract_error_err1 = || ContractError::<C::CErrors>::CustomError(errors_err1());
+        let data = err1().abi_encode();
+        assert_eq!(data[..4], C::Err1::SELECTOR);
+        assert_eq!(errors_err1().abi_encode(), data);
+        assert_eq!(contract_error_err1().abi_encode(), data);
+
+        assert_eq!(C::Err1::abi_decode(&data, true), Ok(err1()));
+        assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err1()));
+        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err1()));
+
+        let err2 = || C::Err2 { _0: U256::from(42) };
+        let errors_err2 = || C::CErrors::Err2(err2());
+        let contract_error_err2 = || ContractError::<C::CErrors>::CustomError(errors_err2());
+        let data = err2().abi_encode();
+        assert_eq!(data[..4], C::Err2::SELECTOR);
+        assert_eq!(errors_err2().abi_encode(), data);
+        assert_eq!(contract_error_err2().abi_encode(), data);
+
+        assert_eq!(C::Err2::abi_decode(&data, true), Ok(err2()));
+        assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err2()));
+        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err2()));
+
+        let err3 = || C::Err3 { _0: "hello".into() };
+        let errors_err3 = || C::CErrors::Err3(err3());
+        let contract_error_err3 = || ContractError::<C::CErrors>::CustomError(errors_err3());
+        let data = err3().abi_encode();
+        assert_eq!(data[..4], C::Err3::SELECTOR);
+        assert_eq!(errors_err3().abi_encode(), data);
+        assert_eq!(contract_error_err3().abi_encode(), data);
+
+        assert_eq!(C::Err3::abi_decode(&data, true), Ok(err3()));
+        assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err3()));
+        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err3()));
     }
 }
