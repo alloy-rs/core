@@ -19,13 +19,13 @@ pub trait Verbatim {
         s
     }
 
-    /// Uses [`Verbatim::to_tokens`] to provide a [`quote::ToTokens`] implementation.
+    /// Uses [`Verbatim::to_verbatim_tokens`] to provide a [`quote::ToTokens`] implementation.
     #[inline]
     fn quote_verbatim(&self) -> ToTokensCompat<'_, Self> {
         ToTokensCompat(self)
     }
 
-    /// Uses [`Verbatim::to_tokens`] to provide a [`quote::ToTokens`] implementation.
+    /// Uses [`Verbatim::to_verbatim_tokens`] to provide a [`quote::ToTokens`] implementation.
     #[inline]
     fn into_quote_verbatim(self) -> IntoTokensCompat<Self>
     where
