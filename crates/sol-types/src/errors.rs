@@ -8,7 +8,8 @@
 // except according to those terms.
 
 use crate::abi;
-use alloc::{borrow::Cow, string::String};
+use alloc::{borrow::Cow, boxed::Box, string::String};
+use alloy_primitives::Log;
 use core::fmt;
 
 /// ABI result type.
@@ -44,6 +45,14 @@ pub enum Error {
         max: u8,
     },
 
+    /// Could not decode an event from log topics.
+    InvalidLog {
+        /// The name of the enum or event.
+        name: &'static str,
+        /// The invalid log.
+        log: Box<Log>,
+    },
+
     /// Unknown selector.
     UnknownSelector {
         /// The type name.
@@ -73,13 +82,16 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::TypeCheckFail { expected_type, data } => {
-                write!(f, "type check failed for \"{expected_type}\" with data: {data}",)
+                write!(f, "type check failed for {expected_type:?} with data: {data}",)
             }
             Self::Overrun => f.write_str("buffer overrun while deserializing"),
             Self::BufferNotEmpty => f.write_str("buffer not empty after deserialization"),
             Self::ReserMismatch => f.write_str("reserialization did not match original"),
             Self::InvalidEnumValue { name, value, max } => {
                 write!(f, "`{value}` is not a valid {name} enum value (max: `{max}`)")
+            }
+            Self::InvalidLog { name, log } => {
+                write!(f, "could not decode {name} from log: {log:?}")
             }
             Self::UnknownSelector { name, selector } => {
                 write!(f, "unknown selector `{selector}` for {name}")

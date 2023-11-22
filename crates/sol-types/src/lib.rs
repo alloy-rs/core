@@ -183,8 +183,8 @@ mod impl_core;
 mod types;
 pub use types::{
     data_type as sol_data, decode_revert_reason, ContractError, EventTopic, GenericContractError,
-    Panic, PanicKind, Revert, Selectors, SolCall, SolEnum, SolError, SolEvent, SolInterface,
-    SolStruct, SolType, SolValue, TopicList,
+    Panic, PanicKind, Revert, Selectors, SolCall, SolEnum, SolError, SolEvent, SolEventInterface,
+    SolInterface, SolStruct, SolType, SolValue, TopicList,
 };
 
 pub mod utils;
@@ -204,13 +204,14 @@ pub mod private {
     pub use super::utils::{just_ok, next_multiple_of_32, words_for, words_for_len};
     pub use alloc::{
         borrow::{Cow, ToOwned},
+        boxed::Box,
         collections::BTreeMap,
         string::{String, ToString},
         vec,
         vec::Vec,
     };
     pub use alloy_primitives::{
-        bytes, keccak256, Address, Bytes, FixedBytes, Function, Signed, Uint, B256, I256, U256,
+        bytes, keccak256, Address, Bytes, FixedBytes, Function, Log, Signed, Uint, B256, I256, U256,
     };
     pub use core::{
         borrow::{Borrow, BorrowMut},

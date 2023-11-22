@@ -357,18 +357,17 @@ impl<'a> ToExpand<'a> {
 
 impl<'a> CallLikeExpander<'a> {
     fn expand(&self, to_expand: ToExpand<'_>, attrs: Vec<Attribute>) -> TokenStream {
-        let data @ ExpandData { name, variants, min_data_len, trait_, .. } =
-            &to_expand.to_data(self);
-        let types = data.types();
-        let name_s = name.to_string();
-        let count = variants.len();
-        let def = self.generate_enum(data, attrs);
+        let data = &to_expand.to_data(self);
 
-        // TODO: SolInterface for events
-        if matches!(to_expand, ToExpand::Events(_)) {
-            return def;
+        if let ToExpand::Events(events) = to_expand {
+            return self.expand_events(events, data, attrs);
         }
 
+        let def = self.generate_enum(data, attrs);
+        let ExpandData { name, variants, min_data_len, trait_, .. } = data;
+        let types = data.types();
+        let name_s = name.to_string();
+        let count = data.variants.len();
         quote! {
             #def
 
@@ -402,10 +401,10 @@ impl<'a> CallLikeExpander<'a> {
                     validate: bool
                 )-> ::alloy_sol_types::Result<Self> {
                     match selector {
-                        #(<#types as ::alloy_sol_types::#trait_>::SELECTOR => {
+                        #(<#types as ::alloy_sol_types::#trait_>::SELECTOR =>
                             <#types as ::alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
-                                .map(Self::#variants)
-                        })*
+                                .map(Self::#variants),
+                        )*
                         s => ::core::result::Result::Err(::alloy_sol_types::Error::unknown_selector(
                             <Self as ::alloy_sol_types::SolInterface>::NAME,
                             s,
@@ -427,6 +426,73 @@ impl<'a> CallLikeExpander<'a> {
                         Self::#variants(inner) =>
                             <#types as ::alloy_sol_types::#trait_>::abi_encode_raw(inner, out),
                     )*}
+                }
+            }
+        }
+    }
+
+    fn expand_events(
+        &self,
+        events: &[&ItemEvent],
+        data: &ExpandData,
+        attrs: Vec<Attribute>,
+    ) -> TokenStream {
+        let def = self.generate_enum(data, attrs);
+        let ExpandData { name, trait_, .. } = data;
+        let name_s = name.to_string();
+        let count = data.variants.len();
+
+        let has_anon = events.iter().any(|e| e.is_anonymous());
+        let has_non_anon = events.iter().any(|e| !e.is_anonymous());
+        assert!(has_anon || has_non_anon, "events shouldn't be empty");
+
+        let e_name = |&e: &&ItemEvent| self.cx.overloaded_name(e.into());
+        let err = quote! {
+            ::alloy_sol_types::private::Err(::alloy_sol_types::Error::InvalidLog {
+                name: <Self as ::alloy_sol_types::SolEventInterface>::NAME,
+                log: ::alloy_sol_types::private::Box::new(::alloy_sol_types::private::Log::new_unchecked(
+                    topics.to_vec(),
+                    data.to_vec().into(),
+                )),
+            })
+        };
+        let non_anon_impl = has_non_anon.then(|| {
+            let variants = events.iter().filter(|e| !e.is_anonymous()).map(e_name);
+            let ret = has_anon.then(|| quote!(return));
+            let ret_err = (!has_anon).then_some(&err);
+            quote! {
+                match topics.first().copied() {
+                    #(
+                        Some(<#variants as ::alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
+                            #ret <#variants as ::alloy_sol_types::#trait_>::decode_log(topics, data, validate)
+                                .map(Self::#variants),
+                    )*
+                    _ => { #ret_err }
+                }
+            }
+        });
+        let anon_impl = has_anon.then(|| {
+            let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
+            quote! {
+                #(
+                    if let Ok(res) = <#variants as ::alloy_sol_types::#trait_>::decode_log(topics, data, validate) {
+                        return Ok(Self::#variants(res));
+                    }
+                )*
+                #err
+            }
+        });
+
+        quote! {
+            #def
+
+            impl ::alloy_sol_types::SolEventInterface for #name {
+                const NAME: &'static str = #name_s;
+                const COUNT: usize = #count;
+
+                fn decode_log(topics: &[::alloy_sol_types::Word], data: &[u8], validate: bool) -> ::alloy_sol_types::Result<Self> {
+                    #non_anon_impl
+                    #anon_impl
                 }
             }
         }
