@@ -446,6 +446,7 @@ impl<'a> CallLikeExpander<'a> {
         let has_non_anon = events.iter().any(|e| !e.is_anonymous());
         assert!(has_anon || has_non_anon, "events shouldn't be empty");
 
+        let e_name = |&e: &&ItemEvent| self.cx.overloaded_name(e.into());
         let err = quote! {
             ::alloy_sol_types::private::Err(::alloy_sol_types::Error::InvalidLog {
                 name: <Self as ::alloy_sol_types::SolEventInterface>::NAME,
@@ -456,7 +457,7 @@ impl<'a> CallLikeExpander<'a> {
             })
         };
         let non_anon_impl = has_non_anon.then(|| {
-            let variants = events.iter().filter(|e| !e.is_anonymous()).map(|e| &e.name.0);
+            let variants = events.iter().filter(|e| !e.is_anonymous()).map(e_name);
             let ret = has_anon.then(|| quote!(return));
             let ret_err = (!has_anon).then_some(&err);
             quote! {
@@ -471,7 +472,7 @@ impl<'a> CallLikeExpander<'a> {
             }
         });
         let anon_impl = has_anon.then(|| {
-            let variants = events.iter().filter(|e| e.is_anonymous()).map(|e| &e.name.0);
+            let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
                 #(
                     if let Ok(res) = <#variants as ::alloy_sol_types::#trait_>::decode_log(topics, data, validate) {
