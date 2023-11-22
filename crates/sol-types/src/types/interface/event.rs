@@ -1,7 +1,5 @@
-use crate::{abi::token::WordToken, Error, Panic, Result, Revert, SolError};
-use alloc::vec::Vec;
-use alloy_primitives::B256;
-use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
+use crate::{Result, Word};
+use alloy_primitives::Log;
 
 /// A collection of [`SolEvent`]s.
 ///
@@ -16,11 +14,14 @@ pub trait SolEventInterface: Sized {
     /// The name of this type.
     const NAME: &'static str;
 
-    /// The minimum length of the data for this type.
-    ///
-    /// This does *not* include the selector's length (4).
-    const MIN_DATA_LENGTH: usize;
-
     /// The number of variants.
     const COUNT: usize;
+
+    /// Decode the events from the given log info.
+    fn decode_log(topics: &[Word], data: &[u8], validate: bool) -> Result<Self>;
+
+    /// Decode the events from the given log object.
+    fn decode_log_object(log: &Log, validate: bool) -> Result<Self> {
+        Self::decode_log(log.topics(), &log.data, validate)
+    }
 }

@@ -204,13 +204,14 @@ pub mod private {
     pub use super::utils::{just_ok, next_multiple_of_32, words_for, words_for_len};
     pub use alloc::{
         borrow::{Cow, ToOwned},
+        boxed::Box,
         collections::BTreeMap,
         string::{String, ToString},
         vec,
         vec::Vec,
     };
     pub use alloy_primitives::{
-        bytes, keccak256, Address, Bytes, FixedBytes, Function, Signed, Uint, B256, I256, U256,
+        bytes, keccak256, Address, Bytes, FixedBytes, Function, Log, Signed, Uint, B256, I256, U256,
     };
     pub use core::{
         borrow::{Borrow, BorrowMut},
