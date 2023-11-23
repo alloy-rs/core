@@ -211,7 +211,7 @@ macro_rules! wrap_fixed_bytes {
             $crate::impl_getrandom!();
             $crate::impl_rand!();
 
-            /// Create a new fixed-hash from the given slice `src`.
+            /// Create a new byte array from the given slice `src`.
             ///
             /// # Note
             ///
@@ -225,7 +225,7 @@ macro_rules! wrap_fixed_bytes {
                 Self($crate::FixedBytes::from_slice(src))
             }
 
-            /// Create a new [`FixedBytes`] from the given slice `src`, left-padding it
+            /// Create a new byte array from the given slice `src`, left-padding it
             /// with zeroes if necessary.
             ///
             /// # Note
@@ -241,7 +241,7 @@ macro_rules! wrap_fixed_bytes {
                 Self($crate::FixedBytes::left_padding_from(value))
             }
 
-            /// Create a new [`FixedBytes`] from the given slice `src`, right-padding it
+            /// Create a new byte array from the given slice `src`, right-padding it
             /// with zeroes if necessary.
             ///
             /// # Note
