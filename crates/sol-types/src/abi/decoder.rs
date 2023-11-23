@@ -306,7 +306,7 @@ pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -
 
 #[cfg(test)]
 mod tests {
-    use crate::{sol_data, utils::pad_usize, SolType};
+    use crate::{sol, sol_data, utils::pad_usize, SolType, SolValue};
     use alloc::string::ToString;
     use alloy_primitives::{address, hex, Address, B256, U256};
 
@@ -685,5 +685,73 @@ mod tests {
             ),
             "did not match error"
         );
+    }
+
+    // https://github.com/alloy-rs/core/issues/433
+    #[test]
+    fn fixed_before_dynamic() {
+        sol! {
+            #[derive(Debug, PartialEq, Eq)]
+            struct Ty {
+                bytes32[3] arr;
+                bytes dyn;
+            }
+        }
+
+        let ty = Ty {
+            arr: [[0x11u8; 32].into(), [0x22u8; 32].into(), [0x33u8; 32].into()],
+            r#dyn: vec![0x44u8; 4],
+        };
+        let encoded = hex!(
+            "1111111111111111111111111111111111111111111111111111111111111111"
+            "2222222222222222222222222222222222222222222222222222222222222222"
+            "3333333333333333333333333333333333333333333333333333333333333333"
+            "0000000000000000000000000000000000000000000000000000000000000080"
+            "0000000000000000000000000000000000000000000000000000000000000004"
+            "4444444400000000000000000000000000000000000000000000000000000000"
+        );
+        assert_eq!(hex::encode(ty.abi_encode_params()), hex::encode(encoded));
+        assert_eq!(ty.abi_encoded_size(), encoded.len());
+
+        assert_eq!(<Ty as SolType>::abi_decode_params(&encoded, true).unwrap(), ty);
+    }
+
+    #[test]
+    fn dynarray_before_dynamic() {
+        sol! {
+            #[derive(Debug, PartialEq, Eq)]
+            struct Ty {
+                bytes[3] arr;
+                bytes dyn;
+            }
+        }
+
+        let ty = Ty {
+            arr: [vec![0x11u8; 32], vec![0x22u8; 32], vec![0x33u8; 32]],
+            r#dyn: vec![0x44u8; 4],
+        };
+        let encoded = hex!(
+            "0000000000000000000000000000000000000000000000000000000000000040" // arr offset
+            "0000000000000000000000000000000000000000000000000000000000000160" // dyn offset
+            "0000000000000000000000000000000000000000000000000000000000000060" // arr[0] offset
+            "00000000000000000000000000000000000000000000000000000000000000a0" // arr[1] offset
+            "00000000000000000000000000000000000000000000000000000000000000e0" // arr[2] offset
+            "0000000000000000000000000000000000000000000000000000000000000020" // arr[0]
+            "1111111111111111111111111111111111111111111111111111111111111111"
+            "0000000000000000000000000000000000000000000000000000000000000020" // arr[1]
+            "2222222222222222222222222222222222222222222222222222222222222222"
+            "0000000000000000000000000000000000000000000000000000000000000020" // arr[2]
+            "3333333333333333333333333333333333333333333333333333333333333333"
+            "0000000000000000000000000000000000000000000000000000000000000004" // dyn
+            "4444444400000000000000000000000000000000000000000000000000000000"
+        );
+
+        // TODO: dyn offset is encoded as 0x100 instead of 0x160
+        if cfg!(TODO) {
+            assert_eq!(hex::encode(ty.abi_encode_params()), hex::encode(encoded));
+        }
+        assert_eq!(ty.abi_encoded_size(), encoded.len());
+
+        assert_eq!(<Ty as SolType>::abi_decode_params(&encoded, false).unwrap(), ty);
     }
 }
