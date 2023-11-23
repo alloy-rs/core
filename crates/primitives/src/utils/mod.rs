@@ -1,7 +1,8 @@
 //! Common Ethereum utilities.
 
-use crate::{bits::FixedBytes, B256};
+use crate::B256;
 use alloc::vec::Vec;
+use core::mem::MaybeUninit;
 
 mod units;
 pub use units::{
@@ -56,51 +57,45 @@ pub fn eip191_message<T: AsRef<[u8]>>(message: T) -> Vec<u8> {
 /// Simple interface to the [`Keccak-256`] hash function.
 ///
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
-pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> FixedBytes<32> {
-    cfg_if::cfg_if! {
-        if #[cfg(all(feature = "native-keccak", not(feature = "tiny-keccak")))] {
-            #[link(wasm_import_module = "vm_hooks")]
-            extern "C" {
-                /// When targeting VMs with native keccak hooks, the `native-keccak` feature
-                /// can be enabled to import and use the host environment's implementation
-                /// of [`keccak256`] in place of [`tiny_keccak`]. This is overridden when
-                /// the `tiny-keccak` feature is enabled.
-                ///
-                /// # Safety
-                ///
-                /// The VM accepts the preimage by pointer and length, and writes the
-                /// 32-byte hash.
-                /// - `bytes` must point to an input buffer at least `len` long.
-                /// - `output` must point to a buffer that is at least 32-bytes long.
-                ///
-                /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
-                /// [`tiny_keccak`]: https://docs.rs/tiny-keccak/latest/tiny_keccak/
-                fn native_keccak256(bytes: *const u8, len: usize, output: *mut u8);
-            }
+pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
+    fn keccak256(bytes: &[u8]) -> B256 {
+        let mut output = MaybeUninit::<B256>::uninit();
 
-            /// Calls an external native keccak hook when `native-keccak` is enabled.
-            /// This is overridden when `tiny-keccak` is enabled.
-            fn keccak256(bytes: &[u8]) -> FixedBytes<32> {
-                let mut output = [0; 32];
+        cfg_if::cfg_if! {
+            if #[cfg(all(feature = "native-keccak", not(feature = "tiny-keccak")))] {
+                #[link(wasm_import_module = "vm_hooks")]
+                extern "C" {
+                    /// When targeting VMs with native keccak hooks, the `native-keccak` feature
+                    /// can be enabled to import and use the host environment's implementation
+                    /// of [`keccak256`] in place of [`tiny_keccak`]. This is overridden when
+                    /// the `tiny-keccak` feature is enabled.
+                    ///
+                    /// # Safety
+                    ///
+                    /// The VM accepts the preimage by pointer and length, and writes the
+                    /// 32-byte hash.
+                    /// - `bytes` must point to an input buffer at least `len` long.
+                    /// - `output` must point to a buffer that is at least 32-bytes long.
+                    ///
+                    /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
+                    /// [`tiny_keccak`]: https://docs.rs/tiny-keccak/latest/tiny_keccak/
+                    fn native_keccak256(bytes: *const u8, len: usize, output: *mut u8);
+                }
+
                 // SAFETY: The output is 32-bytes, and the input comes from a slice.
-                unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr()) };
-                output.into()
-            }
-        } else {
-            use tiny_keccak::{Hasher, Keccak};
+                unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr().cast()) };
+            } else {
+                use tiny_keccak::{Hasher, Keccak};
 
-            /// Calls [`tiny-keccak`] when the `tiny-keccak` feature is enabled or
-            /// when no particular keccak feature flag is specified.
-            ///
-            /// [`tiny_keccak`]: https://docs.rs/tiny-keccak/latest/tiny_keccak/
-            fn keccak256(bytes: &[u8]) -> FixedBytes<32> {
                 let mut hasher = Keccak::v256();
                 hasher.update(bytes);
-                let mut output = [0; 32];
-                hasher.finalize(&mut output);
-                output.into()
+                // SAFETY: Never reads from `output`.
+                hasher.finalize(unsafe { (*output.as_mut_ptr()).as_mut_slice() });
             }
         }
+
+        // SAFETY: Initialized above.
+        unsafe { output.assume_init() }
     }
 
     keccak256(bytes.as_ref())
