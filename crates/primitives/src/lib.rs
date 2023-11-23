@@ -19,10 +19,6 @@
 #[macro_use]
 extern crate alloc;
 
-// Used in Serde tests.
-#[cfg(test)]
-use {bincode as _, serde as _, serde_json as _};
-
 pub mod aliases;
 #[doc(no_inline)]
 pub use aliases::{
@@ -48,23 +44,21 @@ pub use log::Log;
 mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
-mod utils;
+pub mod utils;
 pub use utils::{eip191_hash_message, keccak256};
 
 #[doc(no_inline)]
-pub use ::bytes;
-#[doc(no_inline)]
-pub use ::hex;
-#[doc(no_inline)]
-pub use hex_literal::{self, hex};
-/// Re-export of [`ruint::uint`] for convenience. Note that users of this macro
+pub use {
+    ::hex,
+    hex_literal::{self, hex},
+    ruint::{self, Uint},
+    tiny_keccak::{self, Hasher, Keccak},
+};
+
+/// Re-export of [`ruint::uint!`] for convenience. Note that users of this macro
 /// must also add [`ruint`] to their `Cargo.toml` as a dependency.
 #[doc(inline)]
 pub use ruint::uint;
-#[doc(no_inline)]
-pub use ruint::{self, Uint};
-#[doc(no_inline)]
-pub use tiny_keccak::{self, Hasher, Keccak};
 
 #[cfg(feature = "serde")]
 #[doc(no_inline)]
