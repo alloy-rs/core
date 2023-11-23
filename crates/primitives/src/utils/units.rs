@@ -521,6 +521,24 @@ mod tests {
     }
 
     #[test]
+    fn unit_wei() {
+        let assert = |unit: Unit| {
+            let wei = unit.wei();
+            assert_eq!(wei.to::<u128>(), 10u128.pow(unit.get() as u32));
+            assert_eq!(wei, U256::from(10u8).pow(U256::from(unit.get())));
+        };
+        assert(Unit::WEI);
+        assert(Unit::KWEI);
+        assert(Unit::MWEI);
+        assert(Unit::GWEI);
+        assert(Unit::TWEI);
+        assert(Unit::PWEI);
+        assert(Unit::ETHER);
+        assert(Unit::new(10).unwrap());
+        assert(Unit::new(20).unwrap());
+    }
+
+    #[test]
     fn parse() {
         assert_eq!(Unit::try_from("wei").unwrap(), Unit::WEI);
         assert_eq!(Unit::try_from("kwei").unwrap(), Unit::KWEI);
