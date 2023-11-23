@@ -45,7 +45,9 @@ pub trait SolError: Sized {
             return size;
         }
 
-        self.tokenize().total_words() * Word::len_bytes()
+        // `total_words` includes the first dynamic offset which we ignore.
+        let offset = <<Self::Parameters<'_> as SolType>::Token<'_> as Token>::DYNAMIC as usize * 32;
+        (self.tokenize().total_words() * Word::len_bytes()).saturating_sub(offset)
     }
 
     /// ABI decode this call's arguments from the given slice, **without** its

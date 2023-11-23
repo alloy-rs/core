@@ -114,8 +114,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
             #[automatically_derived]
             impl ::alloy_sol_types::SolCall for #call_name {
-                type Arguments<'a> = #call_tuple;
-                type Token<'a> = <Self::Arguments<'a> as ::alloy_sol_types::SolType>::Token<'a>;
+                type Parameters<'a> = #call_tuple;
+                type Token<'a> = <Self::Parameters<'a> as ::alloy_sol_types::SolType>::Token<'a>;
 
                 type Return = #return_name;
 
@@ -125,7 +125,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
-                fn new<'a>(tuple: <Self::Arguments<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
+                fn new<'a>(tuple: <Self::Parameters<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 

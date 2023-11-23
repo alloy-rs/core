@@ -257,16 +257,19 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
     #[inline]
     fn head_words(&self) -> usize {
         if Self::DYNAMIC {
+            // offset
             1
         } else {
-            self.0.iter().map(T::head_words).sum()
+            // elements
+            self.0.iter().map(T::total_words).sum()
         }
     }
 
     #[inline]
     fn tail_words(&self) -> usize {
         if Self::DYNAMIC {
-            self.0.iter().map(T::tail_words).sum()
+            // elements
+            self.0.iter().map(T::total_words).sum()
         } else {
             0
         }
@@ -371,11 +374,13 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
 
     #[inline]
     fn head_words(&self) -> usize {
+        // offset
         1
     }
 
     #[inline]
     fn tail_words(&self) -> usize {
+        // length + elements
         1 + self.0.iter().map(Token::total_words).sum::<usize>()
     }
 
@@ -524,8 +529,9 @@ macro_rules! tuple_impls {
                     // offset
                     1
                 } else {
+                    // elements
                     let ($($ty,)+) = self;
-                    0 $( + $ty.head_words() )+
+                    0 $( + $ty.total_words() )+
                 }
             }
 
@@ -534,7 +540,7 @@ macro_rules! tuple_impls {
                 if Self::DYNAMIC {
                     // elements
                     let ($($ty,)+) = self;
-                    0 $( + $ty.tail_words() )+
+                    0 $( + $ty.total_words() )+
                 } else {
                     0
                 }

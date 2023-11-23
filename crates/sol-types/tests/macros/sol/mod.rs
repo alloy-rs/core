@@ -67,11 +67,13 @@ fn e2e() {
 #[test]
 fn function() {
     sol! {
+        #[derive(Debug, PartialEq)]
         struct CustomStruct {
             address a;
             uint64 b;
         }
 
+        #[derive(Debug, PartialEq)]
         function someFunction(
             uint256 basic,
             string memory string_,
@@ -103,12 +105,13 @@ fn function() {
         ],
     };
     let encoded = call.abi_encode();
-    assert_eq!(encoded.len(), someFunctionCall::SELECTOR.len() + call.abi_encoded_size());
+    assert_eq!(someFunctionCall::abi_decode(&encoded, true).unwrap(), call);
 
     assert_eq!(
         call.abi_encoded_size(),
         32 + (64 + 32) + (64 + 32 + 32) + (64 + 3 * 32) + 2 * 32 + (32 + 32) + (64 + 4 * (32 + 32))
     );
+    assert_eq!(encoded.len(), 4 + call.abi_encoded_size());
 }
 
 #[test]

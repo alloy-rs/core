@@ -326,15 +326,13 @@ mod tests {
     	"
         );
 
-        assert_eq!(
-            MyTy::abi_encode_params(&vec![
-                vec![Address::repeat_byte(0x11)],
-                vec![Address::repeat_byte(0x22)],
-            ]),
-            encoded
-        );
+        let ty = vec![vec![Address::repeat_byte(0x11)], vec![Address::repeat_byte(0x22)]];
+        assert_eq!(MyTy::abi_encode_params(&ty), encoded);
 
-        MyTy::abi_decode_params(&encoded, false).unwrap();
+        let decoded = MyTy::abi_decode_params(&encoded, false).unwrap();
+        assert_eq!(decoded, ty);
+        assert_eq!(decoded.abi_encode_params(), encoded);
+        assert_eq!(decoded.abi_encoded_size(), encoded.len());
     }
 
     #[test]
@@ -354,6 +352,8 @@ mod tests {
         let expected = (address1, address2, uint);
         let decoded = MyTy::abi_decode_sequence(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
+        assert_eq!(decoded.abi_encode_params(), encoded);
+        assert_eq!(decoded.abi_encoded_size(), encoded.len());
     }
 
     #[test]
@@ -377,6 +377,8 @@ mod tests {
         // this test vector contains a top-level indirect
         let decoded = MyTy::abi_decode(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
+        assert_eq!(decoded.abi_encode(), encoded);
+        assert_eq!(decoded.abi_encoded_size(), encoded.len());
     }
 
     #[test]
@@ -427,6 +429,8 @@ mod tests {
 
         let decoded = MyTy::abi_decode(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
+        assert_eq!(decoded.abi_encode(), encoded);
+        assert_eq!(decoded.abi_encoded_size(), encoded.len());
     }
 
     #[test]
@@ -452,6 +456,8 @@ mod tests {
 
         let decoded = MyTy::abi_decode(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
+        assert_eq!(decoded.abi_encode(), encoded);
+        assert_eq!(decoded.abi_encoded_size(), encoded.len());
     }
 
     #[test]
@@ -492,6 +498,8 @@ mod tests {
 
         let decoded = MyTy::abi_decode_params(&encoded, true).unwrap();
         assert_eq!(decoded, expected);
+        assert_eq!(decoded.abi_encode_params(), encoded);
+        assert_eq!(decoded.abi_encoded_size(), encoded.len() + 32);
     }
 
     #[test]
@@ -703,6 +711,7 @@ mod tests {
             r#dyn: vec![0x44u8; 4],
         };
         let encoded = hex!(
+            "0000000000000000000000000000000000000000000000000000000000000020"
             "1111111111111111111111111111111111111111111111111111111111111111"
             "2222222222222222222222222222222222222222222222222222222222222222"
             "3333333333333333333333333333333333333333333333333333333333333333"
@@ -710,10 +719,10 @@ mod tests {
             "0000000000000000000000000000000000000000000000000000000000000004"
             "4444444400000000000000000000000000000000000000000000000000000000"
         );
-        assert_eq!(hex::encode(ty.abi_encode_params()), hex::encode(encoded));
+        assert_eq!(hex::encode(ty.abi_encode()), hex::encode(encoded));
         assert_eq!(ty.abi_encoded_size(), encoded.len());
 
-        assert_eq!(<Ty as SolType>::abi_decode_params(&encoded, true).unwrap(), ty);
+        assert_eq!(<Ty as SolType>::abi_decode(&encoded, true).unwrap(), ty);
     }
 
     #[test]
@@ -731,6 +740,7 @@ mod tests {
             r#dyn: vec![0x44u8; 4],
         };
         let encoded = hex!(
+            "0000000000000000000000000000000000000000000000000000000000000020" // struct offset
             "0000000000000000000000000000000000000000000000000000000000000040" // arr offset
             "0000000000000000000000000000000000000000000000000000000000000160" // dyn offset
             "0000000000000000000000000000000000000000000000000000000000000060" // arr[0] offset
@@ -745,13 +755,9 @@ mod tests {
             "0000000000000000000000000000000000000000000000000000000000000004" // dyn
             "4444444400000000000000000000000000000000000000000000000000000000"
         );
-
-        // TODO: dyn offset is encoded as 0x100 instead of 0x160
-        if cfg!(TODO) {
-            assert_eq!(hex::encode(ty.abi_encode_params()), hex::encode(encoded));
-        }
+        assert_eq!(hex::encode(ty.abi_encode()), hex::encode(encoded));
         assert_eq!(ty.abi_encoded_size(), encoded.len());
 
-        assert_eq!(<Ty as SolType>::abi_decode_params(&encoded, false).unwrap(), ty);
+        assert_eq!(<Ty as SolType>::abi_decode(&encoded, false).unwrap(), ty);
     }
 }

@@ -134,6 +134,10 @@ impl Encoder {
     /// Append a sequence of bytes, padding to the next word.
     #[inline(always)]
     fn append_bytes(&mut self, bytes: &[u8]) {
+        if bytes.is_empty() {
+            return;
+        }
+
         let n_words = utils::words_for(bytes);
         self.buf.reserve(n_words);
         unsafe {
@@ -240,7 +244,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -279,7 +283,7 @@ mod tests {
         .to_vec();
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&addresses));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&addresses));
     }
 
     #[test]
@@ -309,7 +313,7 @@ mod tests {
         let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
 
-        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -338,7 +342,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -365,7 +369,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -396,7 +400,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -454,9 +458,11 @@ mod tests {
         )
         .to_vec();
 
+        let encoded = MyTy::abi_encode(&data);
         let encoded_params = MyTy::abi_encode_params(&data);
+        assert_ne!(encoded, expected);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -476,7 +482,7 @@ mod tests {
         .to_vec();
 
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(MyTy0,)>::abi_encoded_size(&(data,)));
+        assert_eq!(encoded.len(), MyTy0::abi_encoded_size(&data));
 
         type MyTy = (sol_data::Array<sol_data::Address>, sol_data::Array<sol_data::Address>);
         let data: (Vec<Address>, Vec<Address>) = (vec![], vec![]);
@@ -498,7 +504,7 @@ mod tests {
         let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
 
         type MyTy2 = (
             sol_data::Array<sol_data::Array<sol_data::Address>>,
@@ -530,25 +536,38 @@ mod tests {
 
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy2::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy2::abi_encoded_size(&data));
+    }
+
+    #[test]
+    fn encode_empty_bytes() {
+        let bytes = Vec::<u8>::new();
+
+        let encoded = sol_data::Bytes::abi_encode(&bytes);
+        let expected = hex!(
+            "
+    		0000000000000000000000000000000000000000000000000000000000000020
+    		0000000000000000000000000000000000000000000000000000000000000000
+    	"
+        );
+        assert_eq!(encoded, expected);
+        assert_eq!(encoded.len(), sol_data::Bytes::abi_encoded_size(&bytes));
     }
 
     #[test]
     fn encode_bytes() {
-        type MyTy = sol_data::Bytes;
         let bytes = vec![0x12, 0x34];
 
-        let encoded = MyTy::abi_encode(&bytes);
+        let encoded = sol_data::Bytes::abi_encode(&bytes);
         let expected = hex!(
             "
     		0000000000000000000000000000000000000000000000000000000000000020
     		0000000000000000000000000000000000000000000000000000000000000002
     		1234000000000000000000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(bytes,)));
+        assert_eq!(encoded.len(), sol_data::Bytes::abi_encoded_size(&bytes));
     }
 
     #[test]
@@ -557,6 +576,20 @@ mod tests {
         let expected = hex!("1234000000000000000000000000000000000000000000000000000000000000");
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), sol_data::FixedBytes::<2>::abi_encoded_size(&[0x12, 0x34]));
+    }
+
+    #[test]
+    fn encode_empty_string() {
+        let s = "";
+        let encoded = sol_data::String::abi_encode(s);
+        let expected = hex!(
+            "
+    		0000000000000000000000000000000000000000000000000000000000000020
+    		0000000000000000000000000000000000000000000000000000000000000000
+    	"
+        );
+        assert_eq!(encoded, expected);
+        assert_eq!(encoded.len(), sol_data::String::abi_encoded_size(&s));
     }
 
     #[test]
@@ -569,10 +602,9 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000009
     		6761766f66796f726b0000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(sol_data::String,)>::abi_encoded_size(&(s,)));
+        assert_eq!(encoded.len(), sol_data::String::abi_encoded_size(&s));
     }
 
     #[test]
@@ -588,7 +620,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(sol_data::Bytes,)>::abi_encoded_size(&(bytes,)));
+        assert_eq!(encoded.len(), sol_data::Bytes::abi_encoded_size(&bytes));
     }
 
     #[test]
@@ -611,7 +643,7 @@ mod tests {
         )
         .to_vec();
         assert_eq!(encoded, expected);
-        assert_eq!(encoded.len(), <(sol_data::Bytes,)>::abi_encoded_size(&(bytes,)));
+        assert_eq!(encoded.len(), sol_data::Bytes::abi_encoded_size(&bytes));
     }
 
     #[test]
@@ -641,7 +673,7 @@ mod tests {
         assert_ne!(encoded, expected);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&bytes));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&bytes));
     }
 
     #[test]
@@ -716,7 +748,7 @@ mod tests {
         assert_ne!(encoded, expected);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -757,7 +789,7 @@ mod tests {
         let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -784,7 +816,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -818,7 +850,7 @@ mod tests {
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::abi_encode_params(&data);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded.len(), <(MyTy,)>::abi_encoded_size(&(data,)));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -838,7 +870,7 @@ mod tests {
         .to_vec();
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -865,7 +897,7 @@ mod tests {
         let encoded_params = MyTy::abi_encode_params(&data);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -901,7 +933,7 @@ mod tests {
         assert_eq!(encoded, expected);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -934,7 +966,7 @@ mod tests {
         let encoded_params = MyTy::abi_encode_params(&data);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -988,7 +1020,7 @@ mod tests {
         assert_eq!(encoded, expected);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -1034,7 +1066,7 @@ mod tests {
         assert_ne!(encoded_single, expected);
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len() + 32, encoded_single.len());
-        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded_single.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -1071,7 +1103,7 @@ mod tests {
         // a static FixedSeq should NEVER indirect
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 
     #[test]
@@ -1100,6 +1132,6 @@ mod tests {
         assert_eq!(encoded, expected);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
-        assert_eq!(encoded_params.len(), MyTy::abi_encoded_size(&data));
+        assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
 }
