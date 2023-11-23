@@ -313,7 +313,12 @@ impl<T: ?Sized + AsRef<[u8]>> SolTypeValue<Bytes> for T {
 
     #[inline]
     fn stv_abi_encoded_size(&self) -> usize {
-        32 + utils::padded_len(self.as_ref())
+        let s = self.as_ref();
+        if s.is_empty() {
+            64
+        } else {
+            64 + utils::padded_len(s)
+        }
     }
 
     #[inline]
@@ -360,7 +365,12 @@ impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
 
     #[inline]
     fn stv_abi_encoded_size(&self) -> usize {
-        32 + utils::padded_len(self.as_ref().as_ref())
+        let s = self.as_ref();
+        if s.is_empty() {
+            64
+        } else {
+            64 + utils::padded_len(s.as_bytes())
+        }
     }
 
     #[inline]
@@ -415,8 +425,11 @@ where
 
     #[inline]
     fn stv_abi_encoded_size(&self) -> usize {
-        32 + self.iter().map(T::stv_abi_encoded_size).sum::<usize>()
-            + (U::DYNAMIC as usize * 32 * self.len())
+        if let Some(size) = Array::<U>::ENCODED_SIZE {
+            return size;
+        }
+
+        64 + self.iter().map(T::stv_abi_encoded_size).sum::<usize>()
     }
 
     #[inline]
@@ -555,18 +568,24 @@ where
             return size;
         }
 
-        self.iter().map(T::stv_abi_encoded_size).sum::<usize>() + (U::DYNAMIC as usize * N * 32)
+        let sum = self.iter().map(T::stv_abi_encoded_size).sum::<usize>();
+        if FixedArray::<U, N>::DYNAMIC {
+            32 + sum
+        } else {
+            sum
+        }
     }
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        // TODO: collect into an array of [u8; 32] and flatten it to a slice like in
-        // tuple impl
-        let encoded = self
-            .iter()
-            .map(|element| T::stv_eip712_data_word(element).0)
-            .collect::<Vec<[u8; 32]>>();
-        keccak256(crate::impl_core::into_flattened(encoded))
+        let mut encoded = crate::impl_core::uninit_array::<[u8; 32], N>();
+        for (i, item) in self.iter().enumerate() {
+            encoded[i].write(T::stv_eip712_data_word(item).0);
+        }
+        // SAFETY: Flattening [[u8; 32]; N] to [u8; N * 32] is valid
+        let encoded: &[u8] =
+            unsafe { core::slice::from_raw_parts(encoded.as_ptr().cast(), N * 32) };
+        keccak256(encoded)
     }
 
     #[inline]
@@ -672,19 +691,19 @@ macro_rules! tuple_encodable_impls {
                 }
 
                 let ($($ty,)+) = self;
-                0 $(
-                    + <$uty as SolType>::abi_encoded_size($ty)
-                )+
-                $(
-                    + (32 * <$uty as SolType>::DYNAMIC as usize)
-                )+
+                let sum = 0 $( + $ty.stv_abi_encoded_size() )+;
+                if <($($uty,)+) as SolType>::DYNAMIC {
+                    32 + sum
+                } else {
+                    sum
+                }
             }
 
             fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
                 let ($($ty,)+) = self;
                 // TODO: Reserve
                 $(
-                    <$uty as SolType>::abi_encode_packed_to($ty, out);
+                    $ty.stv_abi_encode_packed_to(out);
                 )+
             }
 
@@ -1197,7 +1216,9 @@ mod tests {
                 #[test]
                 #[cfg_attr(miri, ignore = "doesn't run in isolation and would take too long")]
                 fn $name(i: $t) {
-                    proptest::prop_assert_eq!(<$st>::detokenize(<$st>::tokenize(&i)), i);
+                    let token = <$st>::tokenize(&i);
+                    proptest::prop_assert_eq!(token.total_words() * 32, <$st>::abi_encoded_size(&i));
+                    proptest::prop_assert_eq!(<$st>::detokenize(token), i);
                 }
             )+}
         };

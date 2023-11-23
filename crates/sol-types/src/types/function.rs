@@ -16,7 +16,7 @@ pub trait SolCall: Sized {
     /// The underlying tuple type which represents this type's arguments.
     ///
     /// If this type has no arguments, this will be the unit type `()`.
-    type Arguments<'a>: SolType<Token<'a> = Self::Token<'a>>;
+    type Parameters<'a>: SolType<Token<'a> = Self::Token<'a>>;
 
     /// The arguments' corresponding [TokenSeq] type.
     type Token<'a>: TokenSeq<'a>;
@@ -39,7 +39,7 @@ pub trait SolCall: Sized {
     const SELECTOR: [u8; 4];
 
     /// Convert from the tuple type used for ABI encoding and decoding.
-    fn new(tuple: <Self::Arguments<'_> as SolType>::RustType) -> Self;
+    fn new(tuple: <Self::Parameters<'_> as SolType>::RustType) -> Self;
 
     /// Tokenize the call's arguments.
     fn tokenize(&self) -> Self::Token<'_>;
@@ -47,18 +47,20 @@ pub trait SolCall: Sized {
     /// The size of the encoded data in bytes, **without** its selector.
     #[inline]
     fn abi_encoded_size(&self) -> usize {
-        if let Some(size) = <Self::Arguments<'_> as SolType>::ENCODED_SIZE {
+        if let Some(size) = <Self::Parameters<'_> as SolType>::ENCODED_SIZE {
             return size;
         }
 
-        self.tokenize().total_words() * Word::len_bytes()
+        // `total_words` includes the first dynamic offset which we ignore.
+        let offset = <<Self::Parameters<'_> as SolType>::Token<'_> as Token>::DYNAMIC as usize * 32;
+        (self.tokenize().total_words() * Word::len_bytes()).saturating_sub(offset)
     }
 
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector.
     #[inline]
     fn abi_decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Arguments<'_> as SolType>::abi_decode_sequence(data, validate).map(Self::new)
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence(data, validate).map(Self::new)
     }
 
     /// ABI decode this call's arguments from the given slice, **with** the

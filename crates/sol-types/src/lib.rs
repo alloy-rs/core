@@ -200,6 +200,7 @@ pub use alloy_sol_macro::sol;
 
 // Not public API.
 #[doc(hidden)]
+#[allow(missing_debug_implementations)]
 pub mod private {
     pub use super::utils::{just_ok, next_multiple_of_32, words_for, words_for_len};
     pub use alloc::{
@@ -253,4 +254,6 @@ pub mod private {
     pub const fn u256(n: u64) -> U256 {
         U256::from_limbs([n, 0, 0, 0])
     }
+
+    pub struct AssertTypeEq<T>(pub T);
 }

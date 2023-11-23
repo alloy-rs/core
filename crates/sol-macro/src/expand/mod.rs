@@ -558,6 +558,14 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = #rust_tuple;
 
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(_t: ::alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+            match _t {
+                ::alloy_sol_types::private::AssertTypeEq::<<UnderlyingSolTuple as ::alloy_sol_types::SolType>::RustType>(_) => {}
+            }
+        }
+
         #[automatically_derived]
         #[doc(hidden)]
         impl ::core::convert::From<#name> for UnderlyingRustTuple<'_> {

@@ -247,24 +247,29 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
-        let mut child = if Self::DYNAMIC { dec.take_indirection()? } else { dec.raw_child() };
-
-        Self::decode_sequence(&mut child)
+        if Self::DYNAMIC {
+            dec.take_indirection().and_then(|mut child| Self::decode_sequence(&mut child))
+        } else {
+            Self::decode_sequence(dec)
+        }
     }
 
     #[inline]
     fn head_words(&self) -> usize {
         if Self::DYNAMIC {
+            // offset
             1
         } else {
-            self.0.iter().map(Token::head_words).sum()
+            // elements
+            self.0.iter().map(T::total_words).sum()
         }
     }
 
     #[inline]
     fn tail_words(&self) -> usize {
         if Self::DYNAMIC {
-            N
+            // elements
+            self.0.iter().map(T::total_words).sum()
         } else {
             0
         }
@@ -290,10 +295,8 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
 }
 
 impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
-    #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
-        let head_words = self.0.iter().map(Token::head_words).sum::<usize>();
-        enc.push_offset(head_words);
+        enc.push_offset(self.0.iter().map(T::head_words).sum());
 
         for inner in &self.0 {
             inner.head_append(enc);
@@ -361,7 +364,7 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         let len = child.take_offset()?;
         // This appears to be an unclarity in the Solidity spec. The spec
         // specifies that offsets are relative to the first word of
-        // `enc(X)`. But known-good test vectors ha vrelative to the
+        // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
         let mut child = child.raw_child();
         (0..len).map(|_| T::decode_from(&mut child)).collect::<Result<Vec<T>>>().map(DynSeqToken)
@@ -369,12 +372,14 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
 
     #[inline]
     fn head_words(&self) -> usize {
+        // offset
         1
     }
 
     #[inline]
     fn tail_words(&self) -> usize {
-        1 + self.0.iter().map(Token::total_words).sum::<usize>()
+        // length + elements
+        1 + self.0.iter().map(T::total_words).sum::<usize>()
     }
 
     #[inline]
@@ -391,8 +396,7 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
 
 impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
     fn encode_sequence(&self, enc: &mut Encoder) {
-        let head_words = self.0.iter().map(Token::head_words).sum::<usize>();
-        enc.push_offset(head_words);
+        enc.push_offset(self.0.iter().map(T::head_words).sum());
 
         for inner in &self.0 {
             inner.head_append(enc);
@@ -460,13 +464,14 @@ impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
 
     #[inline]
     fn head_words(&self) -> usize {
+        // offset
         1
     }
 
     #[inline]
     fn tail_words(&self) -> usize {
-        // "1 +" because len is also appended
-        1 + (self.0.len() + 31) / 32
+        // length + words(data)
+        1 + crate::utils::words_for(self.0)
     }
 
     #[inline]
@@ -508,44 +513,34 @@ macro_rules! tuple_impls {
             fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
                 // The first element in a dynamic tuple is an offset to the tuple's data;
                 // for a static tuples, the data begins right away
-                let mut child = if Self::DYNAMIC {
-                    dec.take_indirection()?
+                if Self::DYNAMIC {
+                    dec.take_indirection().and_then(|mut child| Self::decode_sequence(&mut child))
                 } else {
-                    dec.raw_child()
-                };
-
-                let res = Self::decode_sequence(&mut child)?;
-
-                if !Self::DYNAMIC {
-                    dec.take_offset_from(&child);
+                    Self::decode_sequence(dec)
                 }
-
-                Ok(res)
             }
 
             #[inline]
             fn head_words(&self) -> usize {
                 if Self::DYNAMIC {
+                    // offset
                     1
                 } else {
+                    // elements
                     let ($($ty,)+) = self;
-                    0 $( + $ty.head_words() )+
+                    0 $( + $ty.total_words() )+
                 }
             }
 
             #[inline]
             fn tail_words(&self) -> usize {
                 if Self::DYNAMIC {
-                    self.total_words()
+                    // elements
+                    let ($($ty,)+) = self;
+                    0 $( + $ty.total_words() )+
                 } else {
                     0
                 }
-            }
-
-            #[inline]
-            fn total_words(&self) -> usize {
-                let ($($ty,)+) = self;
-                0 $( + $ty.total_words() )+
             }
 
             #[inline]
@@ -563,18 +558,7 @@ macro_rules! tuple_impls {
             #[inline]
             fn tail_append(&self, enc: &mut Encoder) {
                 if Self::DYNAMIC {
-                    let ($($ty,)+) = self;
-                    let head_words = 0 $( + $ty.head_words() )+;
-
-                    enc.push_offset(head_words);
-                    $(
-                        $ty.head_append(enc);
-                        enc.bump_offset($ty.tail_words());
-                    )+
-                    $(
-                        $ty.tail_append(enc);
-                    )+
-                    enc.pop_offset();
+                    self.encode_sequence(enc);
                 }
             }
         }
@@ -583,25 +567,29 @@ macro_rules! tuple_impls {
         impl<'de, $($ty: Token<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
             const IS_TUPLE: bool = true;
 
-            #[inline]
             fn encode_sequence(&self, enc: &mut Encoder) {
                 let ($($ty,)+) = self;
-                let head_words = 0 $( + $ty.head_words() )+;
-                enc.push_offset(head_words);
+                enc.push_offset(0 $( + $ty.head_words() )+);
+
                 $(
                     $ty.head_append(enc);
                     enc.bump_offset($ty.tail_words());
                 )+
+
                 $(
                     $ty.tail_append(enc);
                 )+
+
                 enc.pop_offset();
             }
 
             #[inline]
             fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
                 Ok(($(
-                    <$ty as Token>::decode_from(dec)?,
+                    match <$ty as Token>::decode_from(dec) {
+                        Ok(t) => t,
+                        Err(e) => return Err(e),
+                    },
                 )+))
             }
         }

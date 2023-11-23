@@ -134,7 +134,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
                 #eip712_encode_type_fns
 
-                fn eip712_encode_data(&self) -> Vec<u8> {
+                fn eip712_encode_data(&self) -> ::alloy_sol_types::private::Vec<u8> {
                     #encode_data_impl
                 }
             }
