@@ -462,6 +462,46 @@ impl<const N: usize> FixedBytes<N> {
         Self::try_from(value).unwrap()
     }
 
+    /// Create a new [`FixedBytes`] from the given slice `src`, left-padding it
+    /// with zeroes if necessary.
+    ///
+    /// # Note
+    ///
+    /// The given bytes are interpreted in big endian order.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() > N`.
+    #[track_caller]
+    #[inline]
+    pub fn left_padding_from(value: &[u8]) -> Self {
+        let len = value.len();
+        assert!(len <= N, "slice is too large. Expected <={N} bytes, got {len}");
+        let mut bytes = Self::ZERO;
+        bytes[N - len..].copy_from_slice(value);
+        bytes
+    }
+
+    /// Create a new [`FixedBytes`] from the given slice `src`, right-padding it
+    /// with zeroes if necessary.
+    ///
+    /// # Note
+    ///
+    /// The given bytes are interpreted in big endian order.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() > N`.
+    #[track_caller]
+    #[inline]
+    pub fn right_padding_from(value: &[u8]) -> Self {
+        let len = value.len();
+        assert!(len <= N, "slice is too large. Expected <={N} bytes, got {len}");
+        let mut bytes = Self::ZERO;
+        bytes[..len].copy_from_slice(value);
+        bytes
+    }
+
     /// Returns a slice containing the entire array. Equivalent to `&s[..]`.
     #[inline]
     pub const fn as_slice(&self) -> &[u8] {
@@ -607,5 +647,37 @@ mod tests {
             "{:X}", "0123456789abcdef" => "0123456789ABCDEF";
             "{:#X}", "0123456789abcdef" => "0x0123456789ABCDEF";
         }
+    }
+
+    #[test]
+    fn left_padding_from() {
+        assert_eq!(FixedBytes::<4>::left_padding_from(&[0x01, 0x23]), fixed_bytes!("00000123"));
+
+        assert_eq!(
+            FixedBytes::<4>::left_padding_from(&[0x01, 0x23, 0x45, 0x67]),
+            fixed_bytes!("01234567")
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "slice is too large. Expected <=4 bytes, got 5")]
+    fn left_padding_from_too_large() {
+        FixedBytes::<4>::left_padding_from(&[0x01, 0x23, 0x45, 0x67, 0x89]);
+    }
+
+    #[test]
+    fn right_padding_from() {
+        assert_eq!(FixedBytes::<4>::right_padding_from(&[0x01, 0x23]), fixed_bytes!("01230000"));
+
+        assert_eq!(
+            FixedBytes::<4>::right_padding_from(&[0x01, 0x23, 0x45, 0x67]),
+            fixed_bytes!("01234567")
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "slice is too large. Expected <=4 bytes, got 5")]
+    fn right_padding_from_too_large() {
+        FixedBytes::<4>::right_padding_from(&[0x01, 0x23, 0x45, 0x67, 0x89]);
     }
 }
