@@ -195,12 +195,8 @@ impl_sol_value! {
     [] Function => sol_data::Function [];
     [const N: usize] FixedBytes<N> => sol_data::FixedBytes<N> [where ByteCount<N>: SupportedFixedBytes];
     [const N: usize] [u8; N] => sol_data::FixedBytes<N> [where ByteCount<N>: SupportedFixedBytes];
-    [] String => sol_data::String [];
-    [] str => sol_data::String [];
-    [] Bytes => sol_data::Bytes [];
 
-    [] Vec<u8> => sol_data::Bytes [];
-    [] [u8] => sol_data::Bytes [];
+    // `bytes` and `string` are specialized below.
 
     // Generic
     [T: SolValue] Vec<T> => sol_data::Array<T::SolType> [];
@@ -224,6 +220,60 @@ impl SolValue for () {
 }
 
 all_the_tuples!(tuple_impls);
+
+// Empty `bytes` and `string` specialization
+impl SolValue for str {
+    type SolType = sol_data::String;
+
+    #[inline]
+    fn abi_encode(&self) -> Vec<u8> {
+        if self.is_empty() {
+            crate::abi::EMPTY_BYTES.to_vec()
+        } else {
+            <Self::SolType as SolType>::abi_encode(self)
+        }
+    }
+}
+
+impl SolValue for [u8] {
+    type SolType = sol_data::Bytes;
+
+    #[inline]
+    fn abi_encode(&self) -> Vec<u8> {
+        if self.is_empty() {
+            crate::abi::EMPTY_BYTES.to_vec()
+        } else {
+            <Self::SolType as SolType>::abi_encode(self)
+        }
+    }
+}
+
+impl SolValue for String {
+    type SolType = sol_data::String;
+
+    #[inline]
+    fn abi_encode(&self) -> Vec<u8> {
+        self[..].abi_encode()
+    }
+}
+
+impl SolValue for Bytes {
+    type SolType = sol_data::Bytes;
+
+    #[inline]
+    fn abi_encode(&self) -> Vec<u8> {
+        self[..].abi_encode()
+    }
+}
+
+impl SolValue for Vec<u8> {
+    type SolType = sol_data::Bytes;
+
+    #[inline]
+    fn abi_encode(&self) -> Vec<u8> {
+        self[..].abi_encode()
+    }
+}
 
 #[cfg(test)]
 #[allow(clippy::type_complexity)]
@@ -395,5 +445,27 @@ mod tests {
         let _: Result<(u64, String, U256)> = <(u64, String, U256)>::abi_decode(b"", false);
         let _: Result<(i64, Vec<(u32, String, Vec<FixedBytes<4>>)>, U256)> =
             <(i64, Vec<(u32, String, Vec<FixedBytes<4>>)>, U256)>::abi_decode(b"", false);
+    }
+
+    #[test]
+    fn empty_spec() {
+        assert_eq!("".abi_encode(), crate::abi::EMPTY_BYTES);
+        assert_eq!(b"".abi_encode(), crate::abi::EMPTY_BYTES);
+        assert_eq!(
+            ("", "a").abi_encode(),
+            <(sol_data::String, sol_data::String)>::abi_encode(&("", "a"))
+        );
+        assert_eq!(
+            ("a", "").abi_encode(),
+            <(sol_data::String, sol_data::String)>::abi_encode(&("a", ""))
+        );
+        assert_eq!(
+            (&b""[..], &b"a"[..]).abi_encode(),
+            <(sol_data::Bytes, sol_data::Bytes)>::abi_encode(&(b"", b"a"))
+        );
+        assert_eq!(
+            (&b"a"[..], &b""[..]).abi_encode(),
+            <(sol_data::Bytes, sol_data::Bytes)>::abi_encode(&(b"a", b""))
+        );
     }
 }
