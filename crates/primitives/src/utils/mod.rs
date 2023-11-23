@@ -1,5 +1,12 @@
+//! Common Ethereum utilities.
+
 use crate::{bits::FixedBytes, B256};
 use alloc::vec::Vec;
+
+mod units;
+pub use units::{
+    format_ether, format_units, parse_ether, parse_units, ParseUnits, Units, UnitsError,
+};
 
 /// The prefix used for hashing messages according to EIP-191.
 pub const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";

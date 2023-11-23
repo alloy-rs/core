@@ -44,8 +44,8 @@ pub use log::Log;
 mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
-mod utils;
-pub use utils::{eip191_hash_message, eip191_message, keccak256, EIP191_PREFIX};
+pub mod utils;
+pub use utils::{eip191_hash_message, keccak256};
 
 #[doc(no_inline)]
 pub use {

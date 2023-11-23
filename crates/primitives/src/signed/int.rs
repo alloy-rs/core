@@ -65,10 +65,8 @@ impl<const BITS: usize, const LIMBS: usize> fmt::Debug for Signed<BITS, LIMBS> {
 impl<const BITS: usize, const LIMBS: usize> fmt::Display for Signed<BITS, LIMBS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (sign, abs) = self.into_sign_and_abs();
-        // sign must be formatted directly, instead of with `write!` due to the
-        // `sign_positive` flag
         sign.fmt(f)?;
-        write!(f, "{abs}")
+        abs.fmt(f)
     }
 }
 
