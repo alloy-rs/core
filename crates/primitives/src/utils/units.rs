@@ -89,7 +89,7 @@ where
     units.try_into().map(|units| amount.into().format_units(units)).map_err(UnitsError::from)
 }
 
-/// Error type for [`Units`]-related operations.
+/// Error type for [`Unit`]-related operations.
 #[derive(Debug)]
 pub enum UnitsError {
     /// The provided units are not recognized.
@@ -179,11 +179,12 @@ impl ParseUnits {
     /// Parses a decimal number and multiplies it with 10^units.
     ///
     /// See [`parse_units`] for more information.
+    #[allow(clippy::self_named_constructors)]
     pub fn parse_units(amount: &str, unit: Unit) -> Result<Self, UnitsError> {
         let exponent = unit.get() as usize;
 
         let mut amount = amount.to_string();
-        let negative = amount.chars().next() == Some('-');
+        let negative = amount.starts_with('-');
         let dec_len = if let Some(di) = amount.find('.') {
             amount.remove(di);
             amount[di..].len()
@@ -194,7 +195,7 @@ impl ParseUnits {
 
         if dec_len > exponent {
             // Truncate the decimal part if it is longer than the exponent
-            let amount = &amount[..(amount.len() - (dec_len - exponent) as usize)];
+            let amount = &amount[..(amount.len() - (dec_len - exponent))];
             if negative {
                 // Edge case: We have removed the entire number and only the negative sign is left.
                 //            Return 0 as a I256 given the input was signed.
@@ -212,7 +213,7 @@ impl ParseUnits {
             if amount == "-" {
                 Ok(Self::I256(I256::ZERO))
             } else {
-                let mut n = I256::from_dec_str(&amount)?;
+                let mut n = I256::from_dec_str(amount)?;
                 n *= I256::try_from(10u8)
                     .unwrap()
                     .checked_pow(U256::from(exponent - dec_len))
@@ -220,7 +221,7 @@ impl ParseUnits {
                 Ok(Self::I256(n))
             }
         } else {
-            let mut a_uint = U256::from_str_radix(&amount, 10)?;
+            let mut a_uint = U256::from_str_radix(amount, 10)?;
             a_uint *= U256::from(10)
                 .checked_pow(U256::from(exponent - dec_len))
                 .ok_or(UnitsError::ParseSigned(ParseSignedError::IntegerOverflow))?;
@@ -266,13 +267,13 @@ impl ParseUnits {
 
     /// Returns `true` if the number is unsigned.
     #[inline]
-    pub fn is_unsigned(&self) -> bool {
+    pub const fn is_unsigned(&self) -> bool {
         matches!(self, Self::U256(_))
     }
 
     /// Returns `true` if the number is negative.
     #[inline]
-    pub fn is_negative(&self) -> bool {
+    pub const fn is_negative(&self) -> bool {
         match self {
             Self::U256(_) => false,
             Self::I256(n) => n.is_negative(),
@@ -281,7 +282,7 @@ impl ParseUnits {
 
     /// Returns `true` if the number is positive.
     #[inline]
-    pub fn is_positive(&self) -> bool {
+    pub const fn is_positive(&self) -> bool {
         match self {
             Self::U256(_) => true,
             Self::I256(n) => n.is_positive(),
@@ -299,7 +300,7 @@ impl ParseUnits {
 
     /// Returns the absolute value of the number.
     #[inline]
-    pub fn get_absolute(self) -> U256 {
+    pub const fn get_absolute(self) -> U256 {
         match self {
             Self::U256(n) => n,
             Self::I256(n) => n.into_raw(),
@@ -308,7 +309,7 @@ impl ParseUnits {
 
     /// Returns the signed value of the number.
     #[inline]
-    pub fn get_signed(self) -> I256 {
+    pub const fn get_signed(self) -> I256 {
         match self {
             Self::U256(n) => I256::from_raw(n),
             Self::I256(n) => n,
@@ -316,7 +317,7 @@ impl ParseUnits {
     }
 }
 
-/// Ethereum unit. Always less than [`77`](Units::MAX).
+/// Ethereum unit. Always less than [`77`](Unit::MAX).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Unit(u8);
 
@@ -445,7 +446,7 @@ impl Unit {
     ///
     /// # Safety
     ///
-    /// `x` must be less than [`Units::MAX`].
+    /// `x` must be less than [`Unit::MAX`].
     #[inline]
     pub const unsafe fn new_unchecked(x: u8) -> Self {
         Self(x)
