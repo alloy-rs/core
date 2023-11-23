@@ -259,14 +259,14 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
         if Self::DYNAMIC {
             1
         } else {
-            self.0.iter().map(Token::head_words).sum()
+            self.0.iter().map(T::head_words).sum()
         }
     }
 
     #[inline]
     fn tail_words(&self) -> usize {
         if Self::DYNAMIC {
-            N
+            self.0.iter().map(T::tail_words).sum()
         } else {
             0
         }
@@ -294,7 +294,7 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
 impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
     #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
-        let head_words = self.0.iter().map(Token::head_words).sum::<usize>();
+        let head_words = self.0.iter().map(T::head_words).sum::<usize>();
         enc.push_offset(head_words);
 
         for inner in &self.0 {
@@ -521,6 +521,7 @@ macro_rules! tuple_impls {
             #[inline]
             fn head_words(&self) -> usize {
                 if Self::DYNAMIC {
+                    // offset
                     1
                 } else {
                     let ($($ty,)+) = self;
@@ -531,16 +532,12 @@ macro_rules! tuple_impls {
             #[inline]
             fn tail_words(&self) -> usize {
                 if Self::DYNAMIC {
-                    self.total_words()
+                    // elements
+                    let ($($ty,)+) = self;
+                    0 $( + $ty.tail_words() )+
                 } else {
                     0
                 }
-            }
-
-            #[inline]
-            fn total_words(&self) -> usize {
-                let ($($ty,)+) = self;
-                0 $( + $ty.total_words() )+
             }
 
             #[inline]
