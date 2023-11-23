@@ -44,3 +44,24 @@ pub use decoder::{decode, decode_params, decode_sequence, Decoder};
 
 pub mod token;
 pub use token::{Token, TokenSeq};
+
+/// The ABI encoding of an empty byte array (`bytes` or `string`).
+pub const EMPTY_BYTES: &[u8; 64] = &alloy_primitives::hex!(
+    "0000000000000000000000000000000000000000000000000000000000000020" // offset, points to the next word
+    "0000000000000000000000000000000000000000000000000000000000000000" // length, 0
+);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{SolType, SolValue};
+
+    #[test]
+    fn empty_bytes() {
+        assert_eq!(EMPTY_BYTES.len(), 64);
+        assert_eq!(EMPTY_BYTES[..], crate::sol_data::String::abi_encode("")[..]);
+        assert_eq!(EMPTY_BYTES[..], crate::sol_data::Bytes::abi_encode(b"")[..]);
+        assert_eq!(EMPTY_BYTES[..], "".abi_encode());
+        assert_eq!(EMPTY_BYTES[..], b"".abi_encode());
+    }
+}
