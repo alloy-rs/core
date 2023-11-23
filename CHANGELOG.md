@@ -5,11 +5,85 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0](https://github.com/alloy-rs/core/releases/tag/v0.5.0) - 2023-11-23
+
+### Bug Fixes
+
+- [sol-types] Many ABI coder fixes ([#434](https://github.com/alloy-rs/core/issues/434))
+- [sol-types] ContractError decoding ([#430](https://github.com/alloy-rs/core/issues/430))
+- [sol-macro] Handle outer attrs in abigen input ([#429](https://github.com/alloy-rs/core/issues/429))
+- [sol-macro] Correctly print Custom types in parameters ([#425](https://github.com/alloy-rs/core/issues/425))
+- [sol-types] Remove `SolType::ENCODED_SIZE` default ([#418](https://github.com/alloy-rs/core/issues/418))
+- [syn-solidity] Raw keyword identifiers ([#415](https://github.com/alloy-rs/core/issues/415))
+- Rust keyword conflict ([#405](https://github.com/alloy-rs/core/issues/405))
+- Wrong as_u8 generated for enum ([#413](https://github.com/alloy-rs/core/issues/413))
+- [dyn-abi] Correctly parse strings in `coerce_str` ([#410](https://github.com/alloy-rs/core/issues/410))
+- [dyn-abi] Handle empty hex strings ([#400](https://github.com/alloy-rs/core/issues/400))
+- [syn-solidity] Allow some duplicate attributes ([#399](https://github.com/alloy-rs/core/issues/399))
+- [sol-type-parser] Normalize `u?int` to `u?int256` ([#397](https://github.com/alloy-rs/core/issues/397))
+- Avoid symlinks ([#396](https://github.com/alloy-rs/core/issues/396))
+- [primitives] Signed cleanup ([#395](https://github.com/alloy-rs/core/issues/395))
+- Don't use directory symlinks ([#394](https://github.com/alloy-rs/core/issues/394))
+- [sol-macro] Keep more attributes on contract module ([#391](https://github.com/alloy-rs/core/issues/391))
+- [json-abi] `Param.ty` is not always a valid `TypeSpecifier` ([#386](https://github.com/alloy-rs/core/issues/386))
+- [dyn-abi] Generate Int, Uint, FixedBytes adjusted to their size ([#384](https://github.com/alloy-rs/core/issues/384))
+- [sol-types] `SolInterface::MIN_DATA_LENGTH` overflow ([#383](https://github.com/alloy-rs/core/issues/383))
+- [docs] Switch incorrect function docs ([#374](https://github.com/alloy-rs/core/issues/374))
+- [sol-macro] Bug fixes ([#372](https://github.com/alloy-rs/core/issues/372))
+- [sol-macro] Correct `SolCall::abi_decode_returns` ([#367](https://github.com/alloy-rs/core/issues/367))
+- [syn-solidity] Struct fields formatting ([#364](https://github.com/alloy-rs/core/issues/364))
+
+### Features
+
+- [primitives] Left and right padding conversions ([#424](https://github.com/alloy-rs/core/issues/424))
+- [primitives] Improve utils ([#432](https://github.com/alloy-rs/core/issues/432))
+- [sol-types] Add empty `bytes` and `string` specialization ([#435](https://github.com/alloy-rs/core/issues/435))
+- [sol-macro] `SolEventInterface`: `SolInterface` for contract events enum ([#426](https://github.com/alloy-rs/core/issues/426))
+- [sol-macro] Add `json-abi` item generation ([#422](https://github.com/alloy-rs/core/issues/422))
+- Enable ruint ssz when primitives ssz ([#419](https://github.com/alloy-rs/core/issues/419))
+- [json-abi] Permit keyword prefixes in HR parser ([#420](https://github.com/alloy-rs/core/issues/420))
+- Added Hash to DynSolType and StructProp ([#411](https://github.com/alloy-rs/core/issues/411))
+- [json-abi] Improve `JsonAbi::to_sol` ([#408](https://github.com/alloy-rs/core/issues/408))
+- [sol-types] Add some more methods to `abi::Decoder` ([#404](https://github.com/alloy-rs/core/issues/404))
+- [sol-macro] Add definition doc to structs and enums ([#393](https://github.com/alloy-rs/core/issues/393))
+- [dyn-abi] `DynSolType::coerce_str` ([#380](https://github.com/alloy-rs/core/issues/380))
+
+### Miscellaneous Tasks
+
+- Update git-cliff config
+- Restructure tests ([#421](https://github.com/alloy-rs/core/issues/421))
+- Rename `TokenType` GAT and trait to `Token` ([#417](https://github.com/alloy-rs/core/issues/417))
+- Remove dead code ([#416](https://github.com/alloy-rs/core/issues/416))
+- Update .git-blame-ignore-revs
+- Use winnow `separated` instead of `separated0` ([#403](https://github.com/alloy-rs/core/issues/403))
+- Clean up ABI, EIP-712, docs ([#373](https://github.com/alloy-rs/core/issues/373))
+- [sol-macro] Move generated docs below input attrs ([#363](https://github.com/alloy-rs/core/issues/363))
+- [sol-types] Remove impls for isize/usize ([#362](https://github.com/alloy-rs/core/issues/362))
+
+### Other
+
+- SSZ implementation for alloy primitives ([#407](https://github.com/alloy-rs/core/issues/407))
+- Enable rand feature for re-exported ruint crate ([#385](https://github.com/alloy-rs/core/issues/385))
+- Cargo build instead of check ([#368](https://github.com/alloy-rs/core/issues/368))
+
+### Styling
+
+- Update rustfmt config ([#406](https://github.com/alloy-rs/core/issues/406))
+
+### Testing
+
+- Check version before running Solc ([#428](https://github.com/alloy-rs/core/issues/428))
+- Add errors abi test ([#390](https://github.com/alloy-rs/core/issues/390))
+
 ## [0.4.2](https://github.com/alloy-rs/core/releases/tag/v0.4.2) - 2023-10-09
 
 ### Bug Fixes
 
 - [primitives] Set serde derive feature ([#359](https://github.com/alloy-rs/core/issues/359))
+
+### Miscellaneous Tasks
+
+- Release 0.4.2
 
 ## [0.4.1](https://github.com/alloy-rs/core/releases/tag/v0.4.1) - 2023-10-09
 
@@ -463,5 +537,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Test U1 sub
 - Add custom sol structs to tests and docs
 - Clean up some type check and add a couple new ones
+
+[`dyn-abi`]: https://crates.io/crates/alloy-dyn-abi
+[dyn-abi]: https://crates.io/crates/alloy-dyn-abi
+[`json-abi`]: https://crates.io/crates/alloy-json-abi
+[json-abi]: https://crates.io/crates/alloy-json-abi
+[`primitives`]: https://crates.io/crates/alloy-primitives
+[primitives]: https://crates.io/crates/alloy-primitives
+[`sol-macro`]: https://crates.io/crates/alloy-sol-macro
+[sol-macro]: https://crates.io/crates/alloy-sol-macro
+[`sol-type-parser`]: https://crates.io/crates/alloy-sol-type-parser
+[sol-type-parser]: https://crates.io/crates/alloy-sol-type-parser
+[`sol-types`]: https://crates.io/crates/alloy-sol-types
+[sol-types]: https://crates.io/crates/alloy-sol-types
+[`syn-solidity`]: https://crates.io/crates/syn-solidity
+[syn-solidity]: https://crates.io/crates/syn-solidity
 
 <!-- generated by git-cliff -->
