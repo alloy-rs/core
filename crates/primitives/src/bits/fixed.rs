@@ -471,12 +471,12 @@ impl<const N: usize> FixedBytes<N> {
     ///
     /// # Panics
     ///
-    /// If `src.len() > N`
+    /// Panics if `src.len() > N`.
     #[track_caller]
     #[inline]
     pub fn left_padding_from(value: &[u8]) -> Self {
         let len = value.len();
-        assert!(len <= N, "slice is too large. Expected <={} bytes, got {}", N, len);
+        assert!(len <= N, "slice is too large. Expected <={N} bytes, got {len}");
         let mut bytes = Self::ZERO;
         bytes[N - len..].copy_from_slice(value);
         bytes
@@ -491,10 +491,12 @@ impl<const N: usize> FixedBytes<N> {
     ///
     /// # Panics
     ///
-    /// If `src.len() > N`
+    /// Panics if `src.len() > N`.
+    #[track_caller]
+    #[inline]
     pub fn right_padding_from(value: &[u8]) -> Self {
         let len = value.len();
-        assert!(len <= N, "slice is too large. Expected <={} bytes, got {}", N, len);
+        assert!(len <= N, "slice is too large. Expected <={N} bytes, got {len}");
         let mut bytes = Self::ZERO;
         bytes[..len].copy_from_slice(value);
         bytes

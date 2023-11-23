@@ -225,6 +225,38 @@ macro_rules! wrap_fixed_bytes {
                 Self($crate::FixedBytes::from_slice(src))
             }
 
+            /// Create a new [`FixedBytes`] from the given slice `src`, left-padding it
+            /// with zeroes if necessary.
+            ///
+            /// # Note
+            ///
+            /// The given bytes are interpreted in big endian order.
+            ///
+            /// # Panics
+            ///
+            /// Panics if `src.len() > N`.
+            #[track_caller]
+            #[inline]
+            pub fn left_padding_from(value: &[u8]) -> Self {
+                Self($crate::FixedBytes::left_padding_from(value))
+            }
+
+            /// Create a new [`FixedBytes`] from the given slice `src`, right-padding it
+            /// with zeroes if necessary.
+            ///
+            /// # Note
+            ///
+            /// The given bytes are interpreted in big endian order.
+            ///
+            /// # Panics
+            ///
+            /// Panics if `src.len() > N`.
+            #[track_caller]
+            #[inline]
+            pub fn right_padding_from(value: &[u8]) -> Self {
+                Self($crate::FixedBytes::right_padding_from(value))
+            }
+
             /// Returns the inner bytes array.
             #[inline]
             pub const fn into_array(self) -> [u8; $n] {
