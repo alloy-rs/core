@@ -196,6 +196,8 @@ impl_sol_value! {
     [const N: usize] FixedBytes<N> => sol_data::FixedBytes<N> [where ByteCount<N>: SupportedFixedBytes];
     [const N: usize] [u8; N] => sol_data::FixedBytes<N> [where ByteCount<N>: SupportedFixedBytes];
 
+    // `bytes` and `string` are specialized below.
+
     // Generic
     [T: SolValue] Vec<T> => sol_data::Array<T::SolType> [];
     [T: SolValue] [T] => sol_data::Array<T::SolType> [];
