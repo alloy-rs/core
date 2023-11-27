@@ -65,7 +65,7 @@ struct StructProp {
 /// let my_data: DynSolValue = U256::from(183u64).into();
 ///
 /// let encoded = my_data.abi_encode();
-/// let decoded = my_type.abi_decode(&encoded)?;
+/// let decoded = my_type.abi_decode(&encoded, false)?;
 ///
 /// assert_eq!(decoded, my_data);
 ///
@@ -73,7 +73,7 @@ struct StructProp {
 /// let my_data = DynSolValue::Array(vec![my_data.clone()]);
 ///
 /// let encoded = my_data.abi_encode();
-/// let decoded = my_type.abi_decode(&encoded)?;
+/// let decoded = my_type.abi_decode(&encoded, false)?;
 ///
 /// assert_eq!(decoded, my_data);
 /// # Ok::<_, alloy_dyn_abi::Error>(())
@@ -494,8 +494,8 @@ impl DynSolType {
     /// argument is an encoded single-element sequence wrapping the `self` type.
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub fn abi_decode(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data, false), DynToken::decode_single_populate)
+    pub fn abi_decode(&self, data: &[u8], validate: bool) -> Result<DynSolValue> {
+        self.abi_decode_inner(&mut Decoder::new(data, validate), DynToken::decode_single_populate)
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
@@ -520,10 +520,10 @@ impl DynSolType {
     /// ```
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub fn abi_decode_params(&self, data: &[u8]) -> Result<DynSolValue> {
+    pub fn abi_decode_params(&self, data: &[u8], validate: bool) -> Result<DynSolValue> {
         match self {
-            Self::Tuple(_) => self.abi_decode_sequence(data),
-            _ => self.abi_decode(data),
+            Self::Tuple(_) => self.abi_decode_sequence(data, validate),
+            _ => self.abi_decode(data, validate),
         }
     }
 
@@ -531,8 +531,8 @@ impl DynSolType {
     /// match this type.
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data, false), DynToken::decode_sequence_populate)
+    pub fn abi_decode_sequence(&self, data: &[u8], validate: bool) -> Result<DynSolValue> {
+        self.abi_decode_inner(&mut Decoder::new(data, validate), DynToken::decode_sequence_populate)
     }
 
     #[inline]
@@ -619,7 +619,7 @@ mod tests {
         let t: DynSolType = s.parse().expect("parsing failed");
         assert_eq!(t.sol_type_name(), s, "type names are not the same");
 
-        let dec = t.abi_decode_params(encoded).expect("decoding failed");
+        let dec = t.abi_decode_params(encoded, true).expect("decoding failed");
         if let Some(value_name) = dec.sol_type_name() {
             assert_eq!(value_name, s, "value names are not the same");
         }
@@ -642,7 +642,13 @@ mod tests {
     encoder_tests! {
         address("address", "0000000000000000000000001111111111111111111111111111111111111111"),
 
-        dynamic_array_of_addresses("address[]", "
+        dynamic_array_of_addresses1("address[]", "
+            0000000000000000000000000000000000000000000000000000000000000020
+            0000000000000000000000000000000000000000000000000000000000000001
+            0000000000000000000000001111111111111111111111111111111111111111
+        "),
+
+        dynamic_array_of_addresses2("address[]", "
             0000000000000000000000000000000000000000000000000000000000000020
             0000000000000000000000000000000000000000000000000000000000000002
             0000000000000000000000001111111111111111111111111111111111111111

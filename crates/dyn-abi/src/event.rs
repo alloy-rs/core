@@ -90,7 +90,8 @@ impl DynSolEvent {
             })
             .collect::<Result<_>>()?;
 
-        let body = self.body.abi_decode_sequence(data)?.into_fixed_seq().expect("body is a tuple");
+        let body =
+            self.body.abi_decode_sequence(data, false)?.into_fixed_seq().expect("body is a tuple");
 
         if validate {
             let remaining = topics.count();

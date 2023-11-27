@@ -652,7 +652,7 @@ mod tests {
         }
 
         let data = value.abi_encode_params();
-        match ty.abi_decode_params(&data) {
+        match ty.abi_decode_params(&data, true) {
             // skip the check if the type contains a CustomStruct, since
             // decoding will not populate names
             Ok(decoded) if !decoded.has_custom_struct() => prop_assert_eq!(

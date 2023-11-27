@@ -73,13 +73,13 @@ fn dyn_abi_decode(c: &mut Criterion) {
     g.bench_function("word", |b| {
         let ty = DynSolType::Uint(256);
         let input = decode_word_input();
-        b.iter(|| ty.abi_decode(black_box(&input)).unwrap());
+        b.iter(|| ty.abi_decode(black_box(&input), false).unwrap());
     });
 
     g.bench_function("dynamic", |b| {
         let ty = DynSolType::String;
         let input = decode_dynamic_input();
-        b.iter(|| ty.abi_decode(black_box(&input)).unwrap());
+        b.iter(|| ty.abi_decode(black_box(&input), false).unwrap());
     });
 
     g.finish();

@@ -34,7 +34,7 @@ let my_data = hex!(
     "0000000000000000000000000000000000000000000000000000000000000002" // .[0][0]
     "0000000000000000000000000000000000000000000000000000000000000003" // .[0][1]
 );
-let decoded = my_type.abi_decode(&my_data)?;
+let decoded = my_type.abi_decode(&my_data, false)?;
 
 let expected = DynSolValue::Array(vec![DynSolValue::FixedArray(vec![2u16.into(), 3u16.into()])]);
 assert_eq!(decoded, expected);

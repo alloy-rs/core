@@ -33,7 +33,7 @@ macro_rules! as_fixed_seq {
 /// let value: DynSolValue = 183u64.into();
 ///
 /// let encoded: Vec<u8> = value.abi_encode();
-/// let decoded: DynSolValue = ty.abi_decode(&encoded)?;
+/// let decoded: DynSolValue = ty.abi_decode(&encoded, false)?;
 ///
 /// assert_eq!(decoded, value);
 /// # Ok::<(), alloy_dyn_abi::Error>(())
