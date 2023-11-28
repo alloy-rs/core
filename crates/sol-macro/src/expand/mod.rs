@@ -46,7 +46,7 @@ pub fn expand(ast: File) -> Result<TokenStream> {
 }
 
 /// The expansion context.
-struct ExpCtxt<'ast> {
+pub struct ExpCtxt<'ast> {
     all_items: Vec<&'ast Item>,
     custom_types: IndexMap<SolIdent, Type>,
 
