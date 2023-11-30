@@ -15,11 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v1
-        with:
-          mdbook-version: "latest"
-
       - name: Setup rust toolchain
         uses: dtolnay/rust-toolchain@nightly
 
