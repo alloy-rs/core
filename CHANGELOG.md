@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1](https://github.com/alloy-rs/core/releases/tag/v0.5.1) - 2023-11-30
+
+### Bug Fixes
+
+- Fix public leak ([#437](https://github.com/alloy-rs/core/issues/437))
+
+### Other
+
+- Re-enable MSRV all features check ([#439](https://github.com/alloy-rs/core/issues/439))
+
 ## [0.5.0](https://github.com/alloy-rs/core/releases/tag/v0.5.0) - 2023-11-23
 
 ### Bug Fixes
@@ -50,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.5.0
 - Update git-cliff config
 - Restructure tests ([#421](https://github.com/alloy-rs/core/issues/421))
 - Rename `TokenType` GAT and trait to `Token` ([#417](https://github.com/alloy-rs/core/issues/417))
