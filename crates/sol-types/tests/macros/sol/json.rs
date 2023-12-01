@@ -65,6 +65,7 @@ fn seaport() {
 // https://github.com/alloy-rs/core/issues/344
 #[test]
 fn aggregation_router_v5() {
+    // https://etherscan.io/address/0x1111111254eeb25477b68fb85ed929f73a960582#code
     sol!(
         #[sol(docs = false)]
         AggregationRouterV5,
@@ -82,6 +83,7 @@ fn aggregation_router_v5() {
 // https://github.com/alloy-rs/core/issues/351
 #[test]
 fn uniswap_v3_position() {
+    // https://etherscan.io/address/0x8638fbd429b19249bb3bcf3ec72d07a657e49642#code
     sol!(UniswapV3Position, "../json-abi/tests/abi/UniswapV3Position.json");
 
     let _ = UniswapV3Position::getLiquidityByRangeCall {
@@ -107,6 +109,7 @@ fn uniswap_v3_position() {
 // https://github.com/alloy-rs/core/issues/360
 #[test]
 fn double_exponent_interest_setter() {
+    // https://etherscan.io/address/0xef2ed07cc7a0825ced8ac1a67f88a0e17414fa6c#code
     sol!(DoubleExponentInterestSetter, "../json-abi/tests/abi/DoubleExponentInterestSetter.json");
     let _ = DoubleExponentInterestSetter::getInterestRateCall {
         _0: Address::ZERO,
@@ -147,6 +150,32 @@ fn blur_exchange() {
 }
 
 #[test]
-fn zerox_proxy() {
+fn zerox_exchange_proxy() {
     sol!(ZeroXExchangeProxy, "../json-abi/tests/abi/ZeroxExchangeProxy.json");
+}
+
+// TODO: Error and event with the same name
+// https://github.com/alloy-rs/core/issues/376
+#[test]
+#[cfg(TODO)]
+fn auction() {
+    // https://etherscan.io/address/0xbb37a88508d464a1bb54cf627d05e39883ae0ef9
+    sol!(Auction, "../json-abi/tests/abi/Auction.json");
+}
+
+// https://github.com/alloy-rs/core/issues/378
+#[test]
+fn uniswap_v2_factory_with_migrator() {
+    // This contract has the same ABI as `UniswapV2Factory`
+    // https://etherscan.io/address/0x1ffbe925f22fca796adf2a63313b8b70b5b1a7f4
+
+    // https://etherscan.io/address/0xc1a2706ceb8c21967d5c930c00c8ed16480f7255
+    sol!(UniswapV2FactoryWithMigrator, "../json-abi/tests/abi/UniswapV2FactoryWithMigrator.json");
+}
+
+// https://github.com/alloy-rs/core/issues/379
+#[test]
+fn junkyard() {
+    // https://etherscan.io/address/0x2e4b0f20bdb1caa0886c531256efdaab925dbe72
+    sol!(Junkyard, "../json-abi/tests/abi/Junkyard.json");
 }

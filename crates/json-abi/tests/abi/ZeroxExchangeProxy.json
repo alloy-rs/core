@@ -1,15 +1,1 @@
-[
-  {
-    "name": "getFunctionImplementation",
-    "inputs": [],
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "impl",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-]
+[{"name":"getFunctionImplementation","inputs":[],"outputs":[{"internalType":"address","name":"impl","type":"address"}],"stateMutability":"view","type":"function"}]
