@@ -112,7 +112,7 @@ impl<'i> Parser<&'i str, DynSolValue, ContextError> for ValueParser<'_> {
                 this.with(ty).array().parse_next(input).map(DynSolValue::Array)
             }),
             DynSolType::FixedArray(ty, len) => self.in_list(']', |this| {
-                this.with(ty).fixed_array(*len).parse_next(input).map(DynSolValue::Array)
+                this.with(ty).fixed_array(*len).parse_next(input).map(DynSolValue::FixedArray)
             }),
             as_tuple!(DynSolType tys) => {
                 self.in_list(')', |this| this.tuple(tys).parse_next(input).map(DynSolValue::Tuple))
@@ -307,7 +307,10 @@ fn int<'i>(size: usize) -> impl Parser<&'i str, I256, ContextError> {
     let name = "int";
     trace(
         name,
-        (int_sign, uint(size)).try_map(|(sign, abs)| {
+        (int_sign, uint(size)).try_map(move |(sign, abs)| {
+            if !sign.is_negative() && abs.bit_len() > size - 1 {
+                return Err(Error::IntOverflow);
+            }
             I256::checked_from_sign_and_abs(sign, abs).ok_or(Error::IntOverflow)
         }),
     )
@@ -583,6 +586,37 @@ mod tests {
     }
 
     #[test]
+    fn coerce_int_overflow() {
+        assert_eq!(
+            DynSolType::Int(8).coerce_str("126").unwrap(),
+            DynSolValue::Int(I256::try_from(126).unwrap(), 8),
+        );
+        assert_eq!(
+            DynSolType::Int(8).coerce_str("127").unwrap(),
+            DynSolValue::Int(I256::try_from(127).unwrap(), 8),
+        );
+        assert!(DynSolType::Int(8).coerce_str("128").is_err());
+        assert!(DynSolType::Int(8).coerce_str("129").is_err());
+        assert_eq!(
+            DynSolType::Int(16).coerce_str("128").unwrap(),
+            DynSolValue::Int(I256::try_from(128).unwrap(), 16),
+        );
+        assert_eq!(
+            DynSolType::Int(16).coerce_str("129").unwrap(),
+            DynSolValue::Int(I256::try_from(129).unwrap(), 16),
+        );
+
+        assert_eq!(
+            DynSolType::Int(8).coerce_str("-1").unwrap(),
+            DynSolValue::Int(I256::MINUS_ONE, 8),
+        );
+        assert_eq!(
+            DynSolType::Int(16).coerce_str("-1").unwrap(),
+            DynSolValue::Int(I256::MINUS_ONE, 16),
+        );
+    }
+
+    #[test]
     fn coerce_uint() {
         assert_eq!(
             DynSolType::Uint(256)
@@ -625,6 +659,28 @@ mod tests {
         assert_eq!(
             DynSolType::Uint(256).coerce_str("1").unwrap(),
             DynSolValue::Uint(U256::from(1), 256)
+        );
+    }
+
+    #[test]
+    fn coerce_uint_overflow() {
+        assert_eq!(
+            DynSolType::Uint(8).coerce_str("254").unwrap(),
+            DynSolValue::Uint(U256::from(254), 8),
+        );
+        assert_eq!(
+            DynSolType::Uint(8).coerce_str("255").unwrap(),
+            DynSolValue::Uint(U256::from(255), 8),
+        );
+        assert!(DynSolType::Uint(8).coerce_str("256").is_err());
+        assert!(DynSolType::Uint(8).coerce_str("257").is_err());
+        assert_eq!(
+            DynSolType::Uint(16).coerce_str("256").unwrap(),
+            DynSolValue::Uint(U256::from(256), 16),
+        );
+        assert_eq!(
+            DynSolType::Uint(16).coerce_str("257").unwrap(),
+            DynSolValue::Uint(U256::from(257), 16),
         );
     }
 
@@ -938,6 +994,11 @@ mod tests {
             DynSolType::Array(Box::new(DynSolType::Bool)).coerce_str("[]").unwrap(),
             DynSolValue::Array(vec![])
         );
+        assert_eq!(
+            DynSolType::FixedArray(Box::new(DynSolType::Bool), 0).coerce_str("[]").unwrap(),
+            DynSolValue::FixedArray(vec![]),
+        );
+        assert!(DynSolType::FixedArray(Box::new(DynSolType::Bool), 1).coerce_str("[]").is_err());
     }
 
     #[test]
@@ -966,6 +1027,23 @@ mod tests {
                 DynSolValue::Array(vec![DynSolValue::Bool(false)])
             ])
         );
+    }
+
+    #[test]
+    fn coerce_bool_fixed_array() {
+        let ty = DynSolType::FixedArray(Box::new(DynSolType::Bool), 3);
+        assert!(ty.coerce_str("[]").is_err());
+        assert!(ty.coerce_str("[true]").is_err());
+        assert!(ty.coerce_str("[true, false]").is_err());
+        assert_eq!(
+            ty.coerce_str("[true, false, true]").unwrap(),
+            DynSolValue::FixedArray(vec![
+                DynSolValue::Bool(true),
+                DynSolValue::Bool(false),
+                DynSolValue::Bool(true),
+            ])
+        );
+        assert!(ty.coerce_str("[true, false, false, true]").is_err());
     }
 
     #[test]
