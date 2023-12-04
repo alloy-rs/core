@@ -79,6 +79,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
                     ///
                     /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
                     /// [`tiny_keccak`]: https://docs.rs/tiny-keccak/latest/tiny_keccak/
+                    /// [`xkcp`]: https://github.com/DaniPopes/xkcp-rs
                     fn native_keccak256(bytes: *const u8, len: usize, output: *mut u8);
                 }
 
@@ -93,6 +94,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
                 hasher.finalize(unsafe { (*output.as_mut_ptr()).as_mut_slice() });
             }
             else {
+                // default keccak implementation
                 let bytes_out: &mut [u8; 32] = unsafe {(*output.as_mut_ptr()).as_mut_slice()}.try_into().
                 expect("Slice does not have a length of 32 bytes");
 
