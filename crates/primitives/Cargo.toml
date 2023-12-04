@@ -24,6 +24,7 @@ hex.workspace = true
 itoa.workspace = true
 ruint.workspace = true
 tiny-keccak = { workspace = true, features = ["keccak"] }
+xkcp-rs = { workspace = true }
 
 # macros
 derive_more.workspace = true
