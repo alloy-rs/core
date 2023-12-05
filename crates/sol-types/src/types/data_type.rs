@@ -1090,6 +1090,7 @@ supported_int!(
 mod tests {
     use super::*;
     use crate::sol;
+    use alloy_primitives::hex;
 
     macro_rules! assert_encoded_size {
         ($t:ty, $sz:expr) => {
@@ -1426,5 +1427,23 @@ mod tests {
         assert_eq!(<Int<240>>::detokenize(token), "0x0000038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
         assert_eq!(<Int<248>>::detokenize(token), "0xff82038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
         assert_eq!(<Int<256>>::detokenize(token), "0x0182038405860788098a0b8c0d8e0f901192139415961798199a1b9c1d9e1fa0".as_u256_as_i256());
+    }
+
+    #[test]
+    fn encode_packed() {
+        let value = (RustAddress::with_last_byte(1), U256::from(2), 3, -3, 3, -3);
+        let res =
+            <sol! { (address, uint160, uint24, int24, uint32, int32) }>::abi_encode_packed(&value);
+        assert_eq!(
+            res,
+            hex!(
+                "0000000000000000000000000000000000000001"
+                "0000000000000000000000000000000000000002"
+                "000003"
+                "fffffd"
+                "00000003"
+                "fffffffd"
+            )
+        );
     }
 }

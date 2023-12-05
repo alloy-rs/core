@@ -21,21 +21,25 @@ pub struct Bytes(pub bytes::Bytes);
 
 impl fmt::Debug for Bytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Bytes(")?;
-        f.write_str(&self.hex_encode())?;
-        f.write_str(")")
+        fmt::LowerHex::fmt(self, f)
     }
 }
 
 impl fmt::Display for Bytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.hex_encode())
+        fmt::LowerHex::fmt(self, f)
     }
 }
 
 impl fmt::LowerHex for Bytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.hex_encode())
+        f.pad(&hex::encode_prefixed(self.as_ref()))
+    }
+}
+
+impl fmt::UpperHex for Bytes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.pad(&hex::encode_upper_prefixed(self.as_ref()))
     }
 }
 
@@ -315,11 +319,6 @@ impl Bytes {
     pub fn split_to(&mut self, at: usize) -> Self {
         Self(self.0.split_to(at))
     }
-
-    #[inline]
-    fn hex_encode(&self) -> String {
-        hex::encode_prefixed(self.0.as_ref())
-    }
 }
 
 #[cfg(feature = "arbitrary")]
@@ -364,22 +363,22 @@ mod tests {
 
     #[test]
     fn parse() {
-        assert_eq!("1213".parse::<Bytes>().unwrap(), hex::decode("1213").unwrap());
-        assert_eq!("0x1213".parse::<Bytes>().unwrap(), hex::decode("0x1213").unwrap());
+        let expected = Bytes::from_static(&[0x12, 0x13, 0xab, 0xcd]);
+        assert_eq!("1213abcd".parse::<Bytes>().unwrap(), expected);
+        assert_eq!("0x1213abcd".parse::<Bytes>().unwrap(), expected);
+        assert_eq!("1213ABCD".parse::<Bytes>().unwrap(), expected);
+        assert_eq!("0x1213ABCD".parse::<Bytes>().unwrap(), expected);
     }
 
     #[test]
-    fn hex() {
+    fn format() {
         let b = Bytes::from_static(&[1, 35, 69, 103, 137, 171, 205, 239]);
-        let expected = "0x0123456789abcdef";
-        assert_eq!(format!("{b:x}"), expected);
-        assert_eq!(format!("{b}"), expected);
-    }
-
-    #[test]
-    fn debug() {
-        let b = Bytes::from_static(&[1, 35, 69, 103, 137, 171, 205, 239]);
-        assert_eq!(format!("{b:?}"), "Bytes(0x0123456789abcdef)");
-        assert_eq!(format!("{b:#?}"), "Bytes(0x0123456789abcdef)");
+        assert_eq!(format!("{b}"), "0x0123456789abcdef");
+        assert_eq!(format!("{b:x}"), "0x0123456789abcdef");
+        assert_eq!(format!("{b:?}"), "0x0123456789abcdef");
+        assert_eq!(format!("{b:#?}"), "0x0123456789abcdef");
+        assert_eq!(format!("{b:#x}"), "0x0123456789abcdef");
+        assert_eq!(format!("{b:X}"), "0x0123456789ABCDEF");
+        assert_eq!(format!("{b:#X}"), "0x0123456789ABCDEF");
     }
 }
