@@ -89,7 +89,7 @@ mod tests {
 
         assert_eq!(
             serde_json::from_value::<TestCase>(json).unwrap().variable,
-            Bytes::from(Vec::from([0, 1, 2, 3, 4]))
+            Bytes::from_static(&[0, 1, 2, 3, 4])
         );
     }
 
