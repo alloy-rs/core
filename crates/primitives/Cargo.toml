@@ -50,6 +50,9 @@ derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
+#postgres types
+postgres-types = { workspace = true }
+
 [dev-dependencies]
 bincode.workspace = true
 serde_json.workspace = true

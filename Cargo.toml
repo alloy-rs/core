@@ -67,3 +67,4 @@ ruint = { version = "1.11.1", default-features = false, features = ["alloc"] }
 ruint-macro = { version = "1", default-features = false }
 tiny-keccak = "2.0"
 winnow = { version = "0.5.19", default-features = false, features = ["alloc"] }
+postgres-types = "0.2.6"
