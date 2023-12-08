@@ -52,6 +52,7 @@ proptest-derive = { workspace = true, optional = true }
 
 #postgres types
 postgres-types = { workspace = true }
+thiserror.workspace = true
 
 [dev-dependencies]
 bincode.workspace = true

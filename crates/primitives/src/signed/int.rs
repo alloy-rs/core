@@ -1,7 +1,7 @@
 use super::{utils::*, ParseSignedError, Sign};
 use alloc::string::String;
 use core::fmt;
-use ruint::Uint;
+use ruint::{BaseConvertError, Uint};
 
 /// Signed integer wrapping a `ruint::Uint`.
 ///
@@ -491,6 +491,13 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[track_caller]
     pub const fn from_limbs(limbs: [u64; LIMBS]) -> Self {
         Self(Uint::from_limbs(limbs))
+    }
+
+    pub fn from_base_be<I: IntoIterator<Item = u64>>(
+        base: u64,
+        digits: I,
+    ) -> Result<Self, BaseConvertError> {
+        Ok(Self(Uint::from_base_be(base, digits)?))
     }
 }
 
