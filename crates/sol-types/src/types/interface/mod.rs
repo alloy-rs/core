@@ -370,7 +370,7 @@ impl<T> ContractError<T> {
 }
 
 /// Represents the reason for a revert in a generic contract error.
-pub(crate) type GenericRevertReason = RevertReason<Infallible>;
+pub type GenericRevertReason = RevertReason<Infallible>;
 
 /// Represents the reason for a revert in a smart contract.
 ///
