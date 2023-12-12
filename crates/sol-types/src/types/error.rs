@@ -1,5 +1,6 @@
 use crate::{
     abi::token::{PackedSeqToken, Token, TokenSeq, WordToken},
+    types::interface::GenericRevertReason,
     GenericContractError, Result, SolInterface, SolType, Word,
 };
 use alloc::{
@@ -405,18 +406,19 @@ impl PanicKind {
     }
 }
 
-/// Returns the revert reason from the given output data. Returns `None` if the
-/// content is not a valid ABI-encoded [`GenericContractError`] or a [UTF-8
-/// string](String) (for Vyper reverts).
-pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
+/// Decodes and retrieves the reason for a revert from the provided output data.
+///
+/// Returns `None` if the content is not a valid ABI-encoded [`GenericContractError`] or
+/// a [UTF-8 string](String) (for Vyper reverts).
+pub fn decode_revert_reason(out: &[u8]) -> Option<GenericRevertReason> {
     // Try to decode as a generic contract error.
     if let Ok(error) = GenericContractError::abi_decode(out, true) {
-        return Some(error.to_string());
+        return Some(error.into());
     }
 
     // If that fails, try to decode as a regular string.
     if let Ok(decoded_string) = core::str::from_utf8(out) {
-        return Some(decoded_string.to_string());
+        return Some(decoded_string.to_string().into());
     }
 
     // If both attempts fail, return None.
@@ -470,14 +472,14 @@ mod tests {
         let revert = Revert::from("test_revert_reason");
         let encoded = revert.abi_encode();
         let decoded = decode_revert_reason(&encoded).unwrap();
-        assert_eq!(decoded, String::from("revert: test_revert_reason"));
+        assert_eq!(decoded, revert.into());
     }
 
     #[test]
     fn decode_random_revert_reason() {
         let revert_reason = String::from("test_revert_reason");
         let decoded = decode_revert_reason(revert_reason.as_bytes()).unwrap();
-        assert_eq!(decoded, String::from("test_revert_reason"));
+        assert_eq!(decoded, String::from("test_revert_reason").into());
     }
 
     #[test]

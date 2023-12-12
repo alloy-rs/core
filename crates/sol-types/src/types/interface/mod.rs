@@ -369,6 +369,47 @@ impl<T> ContractError<T> {
     }
 }
 
+/// Represents the reason for a revert in a generic contract error.
+pub(crate) type GenericRevertReason = RevertReason<Infallible>;
+
+/// Represents the reason for a revert in a smart contract.
+///
+/// This enum captures two possible scenarios for a revert:
+///
+/// - [`ContractError`](RevertReason::ContractError): Contains detailed error information, such as a
+///   specific [`Revert`] or [`Panic`] error.
+///
+/// - [`RawString`](RevertReason::RawString): Represents a raw string message as the reason for the
+///   revert.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RevertReason<T> {
+    /// A detailed contract error, including a specific revert or panic error.
+    ContractError(ContractError<T>),
+    /// Represents a raw string message as the reason for the revert.
+    RawString(String),
+}
+
+/// Converts a `ContractError<T>` into a `RevertReason<T>`.
+impl<T> From<ContractError<T>> for RevertReason<T> {
+    fn from(error: ContractError<T>) -> Self {
+        RevertReason::ContractError(error)
+    }
+}
+
+/// Converts a `Revert` into a `RevertReason<T>`.
+impl<T> From<Revert> for RevertReason<T> {
+    fn from(revert: Revert) -> Self {
+        RevertReason::ContractError(ContractError::Revert(revert))
+    }
+}
+
+/// Converts a `String` into a `RevertReason<T>`.
+impl<T> From<String> for RevertReason<T> {
+    fn from(raw_string: String) -> Self {
+        RevertReason::RawString(raw_string)
+    }
+}
+
 /// Iterator over the function or error selectors of a [`SolInterface`] type.
 ///
 /// This `struct` is created by the [`selectors`] method on [`SolInterface`].
