@@ -389,6 +389,15 @@ pub enum RevertReason<T> {
     RawString(String),
 }
 
+impl<T: fmt::Display> fmt::Display for RevertReason<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RevertReason::ContractError(error) => error.fmt(f),
+            RevertReason::RawString(raw_string) => write!(f, "{}", raw_string),
+        }
+    }
+}
+
 /// Converts a `ContractError<T>` into a `RevertReason<T>`.
 impl<T> From<ContractError<T>> for RevertReason<T> {
     fn from(error: ContractError<T>) -> Self {
