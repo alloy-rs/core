@@ -1,5 +1,5 @@
 use crate::{Error, Panic, Result, Revert, SolError};
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
 
 #[cfg(feature = "std")]
