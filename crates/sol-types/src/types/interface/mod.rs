@@ -419,6 +419,34 @@ impl<T> From<String> for RevertReason<T> {
     }
 }
 
+impl<T: SolInterface> RevertReason<T>
+where
+    RevertReason<T>: From<ContractError<Infallible>>,
+{
+    /// Decodes and retrieves the reason for a revert from the provided output data.
+    ///
+    /// This method attempts to decode the provided output data as a generic contract error
+    /// or a UTF-8 string (for Vyper reverts).
+    ///
+    /// If successful, it returns the decoded revert reason wrapped in an `Option`.
+    ///
+    /// If both attempts fail, it returns `None`.
+    pub fn decode(out: &[u8]) -> Option<Self> {
+        // Try to decode as a generic contract error.
+        if let Ok(error) = GenericContractError::abi_decode(out, true) {
+            return Some(error.into());
+        }
+
+        // If that fails, try to decode as a regular string.
+        if let Ok(decoded_string) = core::str::from_utf8(out) {
+            return Some(decoded_string.to_string().into());
+        }
+
+        // If both attempts fail, return None.
+        None
+    }
+}
+
 /// Iterator over the function or error selectors of a [`SolInterface`] type.
 ///
 /// This `struct` is created by the [`selectors`] method on [`SolInterface`].
