@@ -1,4 +1,4 @@
-use crate::{Error, Panic, Result, Revert, SolError};
+use crate::{alloc::string::ToString, Error, Panic, Result, Revert, SolError};
 use alloc::{string::String, vec::Vec};
 use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
 
@@ -433,7 +433,7 @@ where
     /// If both attempts fail, it returns `None`.
     pub fn decode(out: &[u8]) -> Option<Self> {
         // Try to decode as a generic contract error.
-        if let Ok(error) = GenericContractError::abi_decode(out, true) {
+        if let Ok(error) = ContractError::<T>::abi_decode(out, true) {
             return Some(error.into());
         }
 
