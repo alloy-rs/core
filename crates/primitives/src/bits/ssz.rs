@@ -14,6 +14,11 @@ impl<const N: usize> Encode for FixedBytes<N> {
     }
 
     #[inline]
+    fn ssz_fixed_len() -> usize {
+        N
+    }
+
+    #[inline]
     fn ssz_append(&self, buf: &mut Vec<u8>) {
         buf.extend_from_slice(&self.0);
     }
@@ -107,4 +112,25 @@ mod tests {
             address!("0000000000000000000000000000000000000000")
         ]
     );
+
+    #[test]
+    fn test_ssz_fixed_lengths() {
+        assert_eq!(<u64 as Encode>::ssz_fixed_len(), 8);
+        assert_eq!(<u64 as Decode>::ssz_fixed_len(), 8);
+
+        assert_eq!(<[u8; 32] as Encode>::ssz_fixed_len(), 32);
+        assert_eq!(<[u8; 32] as Decode>::ssz_fixed_len(), 32);
+
+        assert_eq!(<Bloom as Encode>::ssz_fixed_len(), 256);
+        assert_eq!(<Bloom as Decode>::ssz_fixed_len(), 256);
+
+        assert_eq!(<Address as Encode>::ssz_fixed_len(), 20);
+        assert_eq!(<Address as Decode>::ssz_fixed_len(), 20);
+
+        assert_eq!(<FixedBytes<32> as Encode>::ssz_fixed_len(), 32);
+        assert_eq!(<FixedBytes<32> as Decode>::ssz_fixed_len(), 32);
+
+        assert_eq!(<FixedBytes<4> as Encode>::ssz_fixed_len(), 4);
+        assert_eq!(<FixedBytes<4> as Decode>::ssz_fixed_len(), 4);
+    }
 }
