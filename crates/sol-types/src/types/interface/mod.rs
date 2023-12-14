@@ -1,5 +1,5 @@
-use crate::{Error, Panic, Result, Revert, SolError};
-use alloc::vec::Vec;
+use crate::{alloc::string::ToString, Error, Panic, Result, Revert, SolError};
+use alloc::{string::String, vec::Vec};
 use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
 
 #[cfg(feature = "std")]
@@ -366,6 +366,84 @@ impl<T> ContractError<T> {
             Self::Panic(inner) => Some(inner),
             _ => None,
         }
+    }
+}
+
+/// Represents the reason for a revert in a generic contract error.
+pub type GenericRevertReason = RevertReason<Infallible>;
+
+/// Represents the reason for a revert in a smart contract.
+///
+/// This enum captures two possible scenarios for a revert:
+///
+/// - [`ContractError`](RevertReason::ContractError): Contains detailed error information, such as a
+///   specific [`Revert`] or [`Panic`] error.
+///
+/// - [`RawString`](RevertReason::RawString): Represents a raw string message as the reason for the
+///   revert.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RevertReason<T> {
+    /// A detailed contract error, including a specific revert or panic error.
+    ContractError(ContractError<T>),
+    /// Represents a raw string message as the reason for the revert.
+    RawString(String),
+}
+
+impl<T: fmt::Display> fmt::Display for RevertReason<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RevertReason::ContractError(error) => error.fmt(f),
+            RevertReason::RawString(raw_string) => write!(f, "{}", raw_string),
+        }
+    }
+}
+
+/// Converts a `ContractError<T>` into a `RevertReason<T>`.
+impl<T> From<ContractError<T>> for RevertReason<T> {
+    fn from(error: ContractError<T>) -> Self {
+        RevertReason::ContractError(error)
+    }
+}
+
+/// Converts a `Revert` into a `RevertReason<T>`.
+impl<T> From<Revert> for RevertReason<T> {
+    fn from(revert: Revert) -> Self {
+        RevertReason::ContractError(ContractError::Revert(revert))
+    }
+}
+
+/// Converts a `String` into a `RevertReason<T>`.
+impl<T> From<String> for RevertReason<T> {
+    fn from(raw_string: String) -> Self {
+        RevertReason::RawString(raw_string)
+    }
+}
+
+impl<T: SolInterface> RevertReason<T>
+where
+    RevertReason<T>: From<ContractError<Infallible>>,
+{
+    /// Decodes and retrieves the reason for a revert from the provided output data.
+    ///
+    /// This method attempts to decode the provided output data as a generic contract error
+    /// or a UTF-8 string (for Vyper reverts).
+    ///
+    /// If successful, it returns the decoded revert reason wrapped in an `Option`.
+    ///
+    /// If both attempts fail, it returns `None`.
+    pub fn decode(out: &[u8]) -> Option<Self> {
+        // Try to decode as a generic contract error.
+        if let Ok(error) = ContractError::<T>::abi_decode(out, true) {
+            return Some(error.into());
+        }
+
+        // If that fails, try to decode as a regular string.
+        if let Ok(decoded_string) = core::str::from_utf8(out) {
+            return Some(decoded_string.to_string().into());
+        }
+
+        // If both attempts fail, return None.
+        None
     }
 }
 

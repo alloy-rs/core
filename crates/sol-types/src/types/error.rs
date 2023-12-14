@@ -1,11 +1,9 @@
 use crate::{
     abi::token::{PackedSeqToken, Token, TokenSeq, WordToken},
-    GenericContractError, Result, SolInterface, SolType, Word,
+    types::interface::{GenericRevertReason, RevertReason},
+    Result, SolType, Word,
 };
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{string::String, vec::Vec};
 use alloy_primitives::U256;
 use core::{borrow::Borrow, fmt};
 
@@ -405,28 +403,22 @@ impl PanicKind {
     }
 }
 
-/// Returns the revert reason from the given output data. Returns `None` if the
-/// content is not a valid ABI-encoded [`GenericContractError`] or a [UTF-8
-/// string](String) (for Vyper reverts).
-pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
-    // Try to decode as a generic contract error.
-    if let Ok(error) = GenericContractError::abi_decode(out, true) {
-        return Some(error.to_string());
-    }
-
-    // If that fails, try to decode as a regular string.
-    if let Ok(decoded_string) = core::str::from_utf8(out) {
-        return Some(decoded_string.to_string());
-    }
-
-    // If both attempts fail, return None.
-    None
+/// Decodes and retrieves the reason for a revert from the provided output data.
+///
+/// This function attempts to decode the provided output data as a generic contract error
+/// or a UTF-8 string (for Vyper reverts) using the `RevertReason::decode` method.
+///
+/// If successful, it returns the decoded revert reason wrapped in an `Option`.
+///
+/// If both attempts fail, it returns `None`.
+pub fn decode_revert_reason(out: &[u8]) -> Option<GenericRevertReason> {
+    RevertReason::decode(out)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sol;
+    use crate::{sol, types::interface::SolInterface};
     use alloy_primitives::{address, hex, keccak256};
 
     #[test]
@@ -470,14 +462,14 @@ mod tests {
         let revert = Revert::from("test_revert_reason");
         let encoded = revert.abi_encode();
         let decoded = decode_revert_reason(&encoded).unwrap();
-        assert_eq!(decoded, String::from("revert: test_revert_reason"));
+        assert_eq!(decoded, revert.into());
     }
 
     #[test]
     fn decode_random_revert_reason() {
         let revert_reason = String::from("test_revert_reason");
         let decoded = decode_revert_reason(revert_reason.as_bytes()).unwrap();
-        assert_eq!(decoded, String::from("test_revert_reason"));
+        assert_eq!(decoded, String::from("test_revert_reason").into());
     }
 
     #[test]
