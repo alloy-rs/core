@@ -589,11 +589,11 @@ impl DynSolType {
     }
 
     #[inline]
-    fn zero_sized_value(&self) -> Option<DynSolValue> {
+    const fn zero_sized_value(&self) -> Option<DynSolValue> {
         match self {
-            DynSolType::Array(inner) => Some(DynSolValue::Array(vec![])),
-            DynSolType::FixedArray(inner, size) => Some(DynSolValue::FixedArray(vec![])),
-            DynSolType::Tuple(inner) => Some(DynSolValue::Tuple(vec![])),
+            DynSolType::Array(_) => Some(DynSolValue::Array(vec![])),
+            DynSolType::FixedArray(_, _) => Some(DynSolValue::FixedArray(vec![])),
+            DynSolType::Tuple(_) => Some(DynSolValue::Tuple(vec![])),
             _ => None,
         }
     }

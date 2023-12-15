@@ -74,5 +74,7 @@ mod test {
     fn zst_dos() {
         let my_type: DynSolType = "()[]".parse().unwrap();
         let decoded = my_type.abi_decode(&hex::decode("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000FFFFFFFF").unwrap()).unwrap();
+
+        dbg!(decoded);
     }
 }
