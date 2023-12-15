@@ -487,6 +487,15 @@ impl Resolver {
         };
         Ok(keccak256(to_hash))
     }
+
+    /// Check if the resolver graph contains a type by its name.
+    ///
+    /// ## Warning
+    ///
+    /// This checks by NAME only. It does NOT check for type
+    pub fn contains_type_name(&self, name: &str) -> bool {
+        self.nodes.contains_key(name)
+    }
 }
 
 #[cfg(test)]
