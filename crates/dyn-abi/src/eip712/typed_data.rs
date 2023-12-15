@@ -132,9 +132,12 @@ impl TypedData {
     /// Instantiate [`TypedData`] from a [`SolStruct`] that implements
     /// [`serde::Serialize`].
     pub fn from_struct<S: SolStruct + Serialize>(s: &S, domain: Option<Eip712Domain>) -> Self {
+        let mut resolver = Resolver::from_struct::<S>();
+        let domain = domain.unwrap_or_default();
+        resolver.ingest_string(domain.encode_type());
         Self {
             domain: domain.unwrap_or_default(),
-            resolver: Resolver::from_struct::<S>(),
+            resolver,
             primary_type: S::NAME.into(),
             message: serde_json::to_value(s).unwrap(),
         }
