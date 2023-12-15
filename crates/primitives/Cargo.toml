@@ -51,7 +51,7 @@ proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
 #postgres types
-postgres-types = { workspace = true }
+postgres-types = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [dev-dependencies]
@@ -69,6 +69,7 @@ std = [
     "rand?/std",
     "serde?/std",
 ]
+postgres = ["dep:postgres-types"]
 tiny-keccak = []
 native-keccak = []
 getrandom = ["dep:getrandom"]

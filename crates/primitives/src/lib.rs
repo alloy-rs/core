@@ -19,6 +19,7 @@
 #[macro_use]
 extern crate alloc;
 
+#[cfg(feature = "postgres")]
 pub mod postgres;
 
 pub mod aliases;

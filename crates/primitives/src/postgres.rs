@@ -1,8 +1,5 @@
 //! support for the postgres crate.
 
-//#![cfg(feature = "postgres")]
-//#![cfg_attr(docsrs, doc(cfg(feature = "postgres")))]
-
 use std::{
     error::Error,
     iter,
