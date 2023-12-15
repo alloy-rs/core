@@ -69,12 +69,10 @@ pub use alloy_sol_types::{
 
 #[cfg(test)]
 mod test {
-    use crate::{DynSolType, DynSolValue};
+    use crate::DynSolType;
     #[test]
     fn zst_dos() {
         let my_type: DynSolType = "()[]".parse().unwrap();
-        let decoded = my_type.abi_decode(&hex::decode("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000FFFFFFFF").unwrap()).unwrap();
-
-        dbg!(decoded);
+        let _ = my_type.abi_decode(&hex::decode("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000FFFFFFFF").unwrap()).unwrap();
     }
 }
