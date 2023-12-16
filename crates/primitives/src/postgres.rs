@@ -11,8 +11,9 @@ use thiserror::Error;
 use bytes::{BufMut, BytesMut};
 use postgres_types::{accepts, to_sql_checked, FromSql, IsNull, ToSql, Type, WrongType};
 
-use crate::{FixedBytes, Signed};
+use super::{FixedBytes, Sign, Signed, Uint};
 
+/// Converts `FixedBytes` to Postgres Bytea Type.
 impl<const BITS: usize> ToSql for FixedBytes<BITS> {
     fn to_sql(&self, _: &Type, out: &mut BytesMut) -> Result<IsNull, BoxedError> {
         out.put_slice(&self[..]);
@@ -25,6 +26,7 @@ impl<const BITS: usize> ToSql for FixedBytes<BITS> {
     to_sql_checked!();
 }
 
+/// Converts `FixedBytes` From Postgres Bytea Type.
 impl<'a, const BITS: usize> FromSql<'a> for FixedBytes<BITS> {
     accepts!(BYTEA);
 
@@ -60,6 +62,35 @@ pub enum ToSqlError {
     Overflow(usize, Type),
 }
 
+/// Convert to Postgres types.
+///
+/// Compatible [Postgres data types][dt] are:
+///
+/// * `BOOL`, `SMALLINT`, `INTEGER`, `BIGINT` which are 1, 16, 32 and 64 bit
+///   signed integers respectively.
+/// * `OID` which is a 32 bit unsigned integer.
+/// * `DECIMAL` and `NUMERIC`, which are variable length.
+/// * `MONEY` which is a 64 bit integer with two decimals.
+/// * `BYTEA`, `BIT`, `VARBIT` interpreted as a big-endian binary number.
+/// * `CHAR`, `VARCHAR`, `TEXT` as `0x`-prefixed big-endian hex strings.
+/// * `JSON`, `JSONB` as a hex string compatible with the Serde serialization.
+///
+/// # Errors
+///
+/// Returns an error when trying to convert to a value that is too small to fit
+/// the number. Note that this depends on the value, not the type, so a
+/// [`Uint<256>`] can be stored in a `SMALLINT` column, as long as the values
+/// are less than $2^{16}$.
+///
+/// # Implementation details
+///
+/// The Postgres binary formats are used in the wire-protocol and the
+/// the `COPY BINARY` command, but they have very little documentation. You are
+/// pointed to the source code, for example this is the implementation of the
+/// the `NUMERIC` type serializer: [`numeric.c`][numeric].
+///
+/// [dt]:https://www.postgresql.org/docs/9.5/datatype.html
+/// [numeric]: https://github.com/postgres/postgres/blob/05a5a1775c89f6beb326725282e7eea1373cbec8/src/backend/utils/adt/numeric.c#L1082
 impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
     fn to_sql(&self, ty: &Type, out: &mut BytesMut) -> Result<IsNull, BoxedError> {
         match *ty {
@@ -70,8 +101,7 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
             Type::INT4 => out.put_i32(self.0.try_into()?),
             Type::OID => out.put_u32(self.0.try_into()?),
             Type::INT8 => out.put_i64(self.0.try_into()?),
-            Type::FLOAT4 => out.put_f32(self.0.into()),
-            Type::FLOAT8 => out.put_f64(self.0.into()),
+
             Type::MONEY => {
                 // Like i64, but with two decimals.
                 out.put_i64(
@@ -134,7 +164,13 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
 
                 out.put_i16(digits.len().try_into()?); // Number of digits.
                 out.put_i16(exponent); // Exponent of first digit.
-                out.put_i16(0); // sign: 0x0000 = positive, 0x4000 = negative.
+
+                let sign = match self.sign() {
+                    Sign::Positive => 0x0000,
+                    _ => 0x4000,
+                };
+
+                out.put_i16(sign);
                 out.put_i16(0); // dscale: Number of digits to the right of the decimal point.
                 for digit in digits {
                     debug_assert!(digit < BASE);
@@ -198,7 +234,6 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
             Type::INT4 => i32::from_be_bytes(raw.try_into()?).try_into()?,
             Type::OID => u32::from_be_bytes(raw.try_into()?).try_into()?,
             Type::INT8 => i64::from_be_bytes(raw.try_into()?).try_into()?,
-
             Type::MONEY => (i64::from_be_bytes(raw.try_into()?) / 100).try_into()?,
 
             // Binary strings
@@ -257,13 +292,12 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                 }
                 let digits = i16::from_be_bytes(raw[0..2].try_into()?);
                 let exponent = i16::from_be_bytes(raw[2..4].try_into()?);
-                let sign = i16::from_be_bytes(raw[4..6].try_into()?);
+                let _sign = i16::from_be_bytes(raw[4..6].try_into()?);
                 let dscale = i16::from_be_bytes(raw[6..8].try_into()?);
                 let raw = &raw[8..];
                 #[allow(clippy::cast_sign_loss)] // Signs are checked
                 if digits < 0
                     || exponent < 0
-                    || sign != 0x0000
                     || dscale != 0
                     || digits > exponent + 1
                     || raw.len() != digits as usize * 2

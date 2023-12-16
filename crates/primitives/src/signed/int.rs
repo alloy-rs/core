@@ -503,7 +503,6 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// * [`BaseConvertError::Overflow`] if the number is too large to
     /// fit.
     pub fn from_base_be<I: IntoIterator<Item = u64>>(
-        &self,
         base: u64,
         digits: I,
     ) -> Result<Self, BaseConvertError> {
