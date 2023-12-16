@@ -308,6 +308,7 @@ impl Panic {
 /// [Solidity definition]: https://github.com/ethereum/solidity/blob/9eaa5cebdb1458457135097efdca1a3573af17c8/libsolutil/ErrorCodes.h#L25-L37
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u32)]
+#[non_exhaustive]
 pub enum PanicKind {
     // Docs extracted from the Solidity definition and documentation, linked above.
     /// Generic / unspecified error.
