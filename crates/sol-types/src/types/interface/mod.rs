@@ -393,7 +393,7 @@ impl<T: fmt::Display> fmt::Display for RevertReason<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RevertReason::ContractError(error) => error.fmt(f),
-            RevertReason::RawString(raw_string) => write!(f, "{}", raw_string),
+            RevertReason::RawString(raw_string) => f.write_str(raw_string),
         }
     }
 }
@@ -444,6 +444,17 @@ where
 
         // If both attempts fail, return None.
         None
+    }
+}
+
+impl<T: SolInterface + fmt::Display> RevertReason<T> {
+    /// Returns the reason for a revert as a string.
+    #[allow(clippy::inherent_to_string_shadow_display)]
+    pub fn to_string(&self) -> String {
+        match self {
+            RevertReason::ContractError(error) => error.to_string(),
+            RevertReason::RawString(raw_string) => raw_string.clone(),
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::{
     abi::token::{PackedSeqToken, Token, TokenSeq, WordToken},
-    types::interface::{GenericRevertReason, RevertReason},
+    types::interface::RevertReason,
     Result, SolType, Word,
 };
 use alloc::{string::String, vec::Vec};
@@ -411,14 +411,15 @@ impl PanicKind {
 /// If successful, it returns the decoded revert reason wrapped in an `Option`.
 ///
 /// If both attempts fail, it returns `None`.
-pub fn decode_revert_reason(out: &[u8]) -> Option<GenericRevertReason> {
-    RevertReason::decode(out)
+pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
+    RevertReason::decode(out).map(|x| x.to_string())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{sol, types::interface::SolInterface};
+    use alloc::string::ToString;
     use alloy_primitives::{address, hex, keccak256};
 
     #[test]
@@ -462,14 +463,14 @@ mod tests {
         let revert = Revert::from("test_revert_reason");
         let encoded = revert.abi_encode();
         let decoded = decode_revert_reason(&encoded).unwrap();
-        assert_eq!(decoded, revert.into());
+        assert_eq!(decoded, revert.to_string());
     }
 
     #[test]
     fn decode_random_revert_reason() {
         let revert_reason = String::from("test_revert_reason");
         let decoded = decode_revert_reason(revert_reason.as_bytes()).unwrap();
-        assert_eq!(decoded, String::from("test_revert_reason").into());
+        assert_eq!(decoded, "test_revert_reason");
     }
 
     #[test]
