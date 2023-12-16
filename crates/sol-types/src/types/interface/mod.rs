@@ -449,6 +449,7 @@ where
 
 impl<T: SolInterface + fmt::Display> RevertReason<T> {
     /// Returns the reason for a revert as a string.
+    #[allow(clippy::inherent_to_string_shadow_display)]
     pub fn to_string(&self) -> String {
         match self {
             RevertReason::ContractError(error) => error.to_string(),
