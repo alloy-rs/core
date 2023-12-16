@@ -11,7 +11,7 @@ use parser::{Error as TypeParserError, TypeSpecifier};
 
 /// A property is a type and a name. Of the form `type name`. E.g.
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PropDef<'a> {
     /// The prop type specifier.
     pub ty: TypeSpecifier<'a>,
@@ -47,7 +47,7 @@ impl<'a> PropDef<'a> {
 /// Represents a single component type in an EIP-712 `encodeType` type string.
 ///
 /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ComponentType<'a> {
     /// The span.
     pub span: &'a str,
@@ -83,7 +83,10 @@ impl<'a> ComponentType<'a> {
                 ')' => {
                     depth -= 1;
                     if depth == 0 {
-                        props.push(props_str[last..i].try_into()?);
+                        let candidate = &props_str[last..i];
+                        if !candidate.is_empty() {
+                            props.push(candidate.try_into()?);
+                        }
                         last = i + 1;
                         break;
                     }
@@ -143,6 +146,18 @@ mod tests {
     use super::*;
 
     const EXAMPLE: &str = "Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)";
+
+    #[test]
+    fn empty_type() {
+        let empty_domain_type =
+            ComponentType { span: "EIP712Domain()", type_name: "EIP712Domain", props: vec![] };
+        assert_eq!(ComponentType::parse("EIP712Domain()"), Ok(empty_domain_type.clone()));
+
+        assert_eq!(
+            EncodeType::try_from("EIP712Domain()"),
+            Ok(EncodeType { types: vec![empty_domain_type] })
+        );
+    }
 
     #[test]
     fn test_component_type() {

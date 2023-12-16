@@ -132,9 +132,12 @@ impl TypedData {
     /// Instantiate [`TypedData`] from a [`SolStruct`] that implements
     /// [`serde::Serialize`].
     pub fn from_struct<S: SolStruct + Serialize>(s: &S, domain: Option<Eip712Domain>) -> Self {
+        let mut resolver = Resolver::from_struct::<S>();
+        let domain = domain.unwrap_or_default();
+        resolver.ingest_string(domain.encode_type()).expect("domain string always valid");
         Self {
-            domain: domain.unwrap_or_default(),
-            resolver: Resolver::from_struct::<S>(),
+            domain,
+            resolver,
             primary_type: S::NAME.into(),
             message: serde_json::to_value(s).unwrap(),
         }
@@ -674,6 +677,8 @@ mod tests {
 
         let typed_data = TypedData::from_struct(&s, None);
         assert_eq!(typed_data.encode_type().unwrap(), "MyStruct(string name,string otherThing)",);
+
+        assert!(typed_data.resolver.contains_type_name("EIP712Domain"));
     }
 
     #[test]
