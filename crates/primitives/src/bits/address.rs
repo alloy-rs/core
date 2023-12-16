@@ -414,6 +414,17 @@ impl Address {
         let hash = keccak256(bytes);
         Self::from_word(hash)
     }
+
+    /// Instantiate by hashing public key bytes.
+    ///
+    /// # Panics
+    ///
+    /// If the input is not exactly 64 bytes
+    pub fn from_raw_public_key(pubkey: &[u8]) -> Self {
+        assert_eq!(pubkey.len(), 64, "raw public key must be 64 bytes");
+        let digest = keccak256(pubkey);
+        Address::from_slice(&digest[12..])
+    }
 }
 
 #[cfg(test)]
@@ -620,5 +631,14 @@ mod tests {
             assert_eq!(expected, from.create2(salt, init_code_hash));
             assert_eq!(expected, from.create2_from_code(salt, init_code));
         }
+    }
+
+    #[test]
+    fn test_raw_public_key_to_address() {
+        let addr = "0Ac1dF02185025F65202660F8167210A80dD5086".parse::<Address>().unwrap();
+
+        let pubkey_bytes = hex::decode("76698beebe8ee5c74d8cc50ab84ac301ee8f10af6f28d0ffd6adf4d6d3b9b762d46ca56d3dad2ce13213a6f42278dabbb53259f2d92681ea6a0b98197a719be3").unwrap();
+
+        assert_eq!(Address::from_raw_public_key(&pubkey_bytes), addr);
     }
 }
