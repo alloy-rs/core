@@ -5,11 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3](https://github.com/alloy-rs/core/releases/tag/v0.5.3) - 2023-12-16
+
+### Bug Fixes
+
+- [sol-types] Un-break decode revert ([#457](https://github.com/alloy-rs/core/issues/457))
+- Ingest domain when instantiating TypedData ([#453](https://github.com/alloy-rs/core/issues/453))
+- Don't decode ZSTs ([#454](https://github.com/alloy-rs/core/issues/454))
+- [primitives] Return correct fixed length in ssz::Encode ([#451](https://github.com/alloy-rs/core/issues/451))
+
+### Features
+
+- Address from pubkey ([#455](https://github.com/alloy-rs/core/issues/455))
+- Add `RevertReason` enum ([#450](https://github.com/alloy-rs/core/issues/450))
+- [primitives] Update Bytes formatting, add UpperHex ([#446](https://github.com/alloy-rs/core/issues/446))
+
+### Miscellaneous Tasks
+
+- Bless tests ([#456](https://github.com/alloy-rs/core/issues/456))
+
 ## [0.5.2](https://github.com/alloy-rs/core/releases/tag/v0.5.2) - 2023-12-01
 
 ### Bug Fixes
 
 - [dyn-abi] Fixed arrays coerce_str ([#442](https://github.com/alloy-rs/core/issues/442))
+
+### Miscellaneous Tasks
+
+- Release 0.5.2
 
 ### Testing
 
