@@ -414,6 +414,17 @@ impl Address {
         let hash = keccak256(bytes);
         Self::from_word(hash)
     }
+
+    /// Instantiate by hashing public key bytes.
+    ///
+    /// # Panics
+    ///
+    /// If the input is not exactly 64 bytes
+    pub fn from_raw_public_key(pubkey: &[u8]) -> Self {
+        assert_eq!(pubkey.len(), 64, "raw public key must be 64 bytes");
+        let digest = keccak256(pubkey);
+        Address::from_slice(&digest[12..])
+    }
 }
 
 #[cfg(test)]
