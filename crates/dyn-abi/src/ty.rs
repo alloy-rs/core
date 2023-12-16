@@ -545,6 +545,10 @@ impl DynSolType {
     where
         F: FnOnce(&mut DynToken<'d>, &mut Decoder<'d>) -> Result<()>,
     {
+        if self.is_zst() {
+            return Ok(self.zero_sized_value().expect("checked"));
+        }
+
         let mut token = self.empty_dyn_token();
         f(&mut token, decoder)?;
         let value = self.detokenize(token).expect("invalid empty_dyn_token");
@@ -571,6 +575,27 @@ impl DynSolType {
         iter: impl IntoIterator<Item = Option<NonZeroUsize>>,
     ) -> Self {
         iter.into_iter().fold(self, Self::array_wrap)
+    }
+
+    /// Return true if the type is zero-sized, e.g. `()` or `T[0]`
+    #[inline]
+    pub fn is_zst(&self) -> bool {
+        match self {
+            DynSolType::Array(inner) => inner.is_zst(),
+            DynSolType::FixedArray(inner, size) => *size == 0 || inner.is_zst(),
+            DynSolType::Tuple(inner) => inner.is_empty() || inner.iter().all(|t| t.is_zst()),
+            _ => false,
+        }
+    }
+
+    #[inline]
+    const fn zero_sized_value(&self) -> Option<DynSolValue> {
+        match self {
+            DynSolType::Array(_) => Some(DynSolValue::Array(vec![])),
+            DynSolType::FixedArray(_, _) => Some(DynSolValue::FixedArray(vec![])),
+            DynSolType::Tuple(_) => Some(DynSolValue::Tuple(vec![])),
+            _ => None,
+        }
     }
 }
 
