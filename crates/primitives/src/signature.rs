@@ -337,7 +337,9 @@ impl Signature<k256::ecdsa::Signature> {
     }
 
     /// Recovers an [`Address`] from this signature and the given message by first prefixing and
-    /// hashing the message according to [EIP-191](eip191_hash_message).
+    /// hashing the message according to [EIP-191](crate::eip191_hash_message).
+    ///
+    /// [`Address`]: crate::Address
     #[inline]
     pub fn recover_address_from_msg<T: AsRef<[u8]>>(
         &self,
@@ -347,6 +349,8 @@ impl Signature<k256::ecdsa::Signature> {
     }
 
     /// Recovers an [`Address`] from this signature and the given prehashed message.
+    ///
+    /// [`Address`]: crate::Address
     #[inline]
     pub fn recover_address_from_prehash(
         &self,
@@ -356,7 +360,9 @@ impl Signature<k256::ecdsa::Signature> {
     }
 
     /// Recovers a [`VerifyingKey`] from this signature and the given message by first prefixing and
-    /// hashing the message according to [EIP-191](eip191_hash_message).
+    /// hashing the message according to [EIP-191](crate::eip191_hash_message).
+    ///
+    /// [`VerifyingKey`]: k256::ecdsa::VerifyingKey
     #[inline]
     pub fn recover_from_msg<T: AsRef<[u8]>>(
         &self,
@@ -366,6 +372,8 @@ impl Signature<k256::ecdsa::Signature> {
     }
 
     /// Recovers a [`VerifyingKey`] from this signature and the given prehashed message.
+    ///
+    /// [`VerifyingKey`]: k256::ecdsa::VerifyingKey
     #[inline]
     pub fn recover_from_prehash(
         &self,
