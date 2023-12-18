@@ -733,7 +733,7 @@ mod tests {
         let signature: crate::Signature =
             serde_json::from_str(raw_signature_without_y_parity).unwrap();
 
-        let expected = Signature::from_rs_and_parity(
+        let expected = crate::Signature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -761,7 +761,7 @@ mod tests {
         let signature: crate::Signature =
             serde_json::from_value(raw_signature_with_y_parity).unwrap();
 
-        let expected = Signature::from_rs_and_parity(
+        let expected = crate::Signature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -777,7 +777,7 @@ mod tests {
     #[test]
     fn serialize_both_parity() {
         // this test should be removed if the struct moves to an enum based on tx type
-        let signature = Signature::from_rs_and_parity(
+        let signature = crate::Signature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -797,7 +797,7 @@ mod tests {
     #[test]
     fn serialize_v_only() {
         // this test should be removed if the struct moves to an enum based on tx type
-        let signature = Signature::from_rs_and_parity(
+        let signature = crate::Signature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
