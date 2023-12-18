@@ -50,9 +50,8 @@ derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
-#postgres types
+# postgres
 postgres-types = { workspace = true, optional = true }
-thiserror.workspace = true
 
 [dev-dependencies]
 bincode.workspace = true
@@ -69,7 +68,7 @@ std = [
     "rand?/std",
     "serde?/std",
 ]
-postgres = ["dep:postgres-types"]
+postgres = ["dep:postgres-types", "std"]
 tiny-keccak = []
 native-keccak = []
 getrandom = ["dep:getrandom"]

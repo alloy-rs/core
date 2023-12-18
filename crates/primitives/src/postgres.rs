@@ -1,23 +1,22 @@
-//! support for the postgres crate.
+//! Support for the [`postgres_types`] crate.
+//!
+//! **WARNING**: this module depends entirely on [`postgres_types`, which is not yet stable,
+//! therefore this module is exempt from the semver guarantees of this crate.
 
+use super::{FixedBytes, Sign, Signed};
+use bytes::{BufMut, BytesMut};
+use derive_more::{Display, Error};
+use postgres_types::{accepts, to_sql_checked, FromSql, IsNull, ToSql, Type, WrongType};
 use std::{
     error::Error,
     iter,
     str::{from_utf8, FromStr},
 };
 
-use thiserror::Error;
-
-use bytes::{BufMut, BytesMut};
-use postgres_types::{accepts, to_sql_checked, FromSql, IsNull, ToSql, Type, WrongType};
-
-use super::{FixedBytes, Sign, Signed, Uint};
-
 /// Converts `FixedBytes` to Postgres Bytea Type.
 impl<const BITS: usize> ToSql for FixedBytes<BITS> {
     fn to_sql(&self, _: &Type, out: &mut BytesMut) -> Result<IsNull, BoxedError> {
         out.put_slice(&self[..]);
-
         Ok(IsNull::No)
     }
 
@@ -35,7 +34,7 @@ impl<'a, const BITS: usize> FromSql<'a> for FixedBytes<BITS> {
     }
 }
 
-//https://github.com/recmo/uint/blob/6c755ad7cd54a0706d20f11f3f63b0d977af0226/src/support/postgres.rs#L22
+// https://github.com/recmo/uint/blob/6c755ad7cd54a0706d20f11f3f63b0d977af0226/src/support/postgres.rs#L22
 
 type BoxedError = Box<dyn Error + Sync + Send + 'static>;
 
@@ -56,9 +55,11 @@ fn trim_end_vec<T: PartialEq>(vec: &mut Vec<T>, value: &T) {
     vec.truncate(last_idx(vec, value));
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Error)]
+/// Error when converting to Postgres types.
+#[derive(Clone, Debug, PartialEq, Eq, Display, Error)]
 pub enum ToSqlError {
-    #[error("Uint<{0}> value too large to fit target type {1}")]
+    /// The value is too large for the type.
+    #[display(fmt = "Signed<{_0}> value too large to fit target type {_1}")]
     Overflow(usize, Type),
 }
 
@@ -66,8 +67,8 @@ pub enum ToSqlError {
 ///
 /// Compatible [Postgres data types][dt] are:
 ///
-/// * `BOOL`, `SMALLINT`, `INTEGER`, `BIGINT` which are 1, 16, 32 and 64 bit
-///   signed integers respectively.
+/// * `BOOL`, `SMALLINT`, `INTEGER`, `BIGINT` which are 1, 16, 32 and 64 bit signed integers
+///   respectively.
 /// * `OID` which is a 32 bit unsigned integer.
 /// * `DECIMAL` and `NUMERIC`, which are variable length.
 /// * `MONEY` which is a 64 bit integer with two decimals.
@@ -79,7 +80,7 @@ pub enum ToSqlError {
 ///
 /// Returns an error when trying to convert to a value that is too small to fit
 /// the number. Note that this depends on the value, not the type, so a
-/// [`Uint<256>`] can be stored in a `SMALLINT` column, as long as the values
+/// [`Signed<256>`] can be stored in a `SMALLINT` column, as long as the values
 /// are less than $2^{16}$.
 ///
 /// # Implementation details
@@ -209,14 +210,19 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
     to_sql_checked!();
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Error)]
+/// Error when converting from Postgres types.
+#[derive(Clone, PartialEq, Eq, Debug, Display)]
 pub enum FromSqlError {
-    #[error("The value is too large for the Uint type")]
+    /// The value is too large for the type.
+    #[display(fmt = "The value is too large for the Signed type")]
     Overflow,
 
-    #[error("Unexpected data for type {0}")]
+    /// The value is not valid for the type.
+    #[display(fmt = "unexpected data for type {_0}")]
     ParseError(Type),
 }
+
+impl std::error::Error for FromSqlError {}
 
 impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIMBS> {
     fn accepts(ty: &Type) -> bool {
