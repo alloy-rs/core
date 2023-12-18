@@ -131,7 +131,7 @@ impl Parity {
 
     /// Get the RLP value for the byte.
     #[cfg(feature = "rlp")]
-    pub fn rlp_parity_value(&self) -> u64 {
+    pub const fn rlp_parity_value(&self) -> u64 {
         match self {
             Parity::V(v) => *v,
             Parity::Parity(b) => *b as u64 + 27,
