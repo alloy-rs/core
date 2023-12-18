@@ -301,6 +301,16 @@ impl crate::Signature {
 
 #[cfg(feature = "k256")]
 impl Signature<k256::ecdsa::Signature> {
+    #[doc(hidden)]
+    pub fn test_signature() -> Self {
+        Signature::from_scalars_and_parity(
+            b256!("840cfc572845f5786e702984c2a582528cad4b49b2a10b9db1be7fca90058565"),
+            b256!("25e7109ceb98168d95b09b18bbf6b685130e0562f233877d492b94eee0c5b6d1"),
+            false,
+        )
+        .unwrap()
+    }
+
     /// Instantiate from a signature and recovery id
     pub fn from_signature_and_parity<T: Into<Parity>>(
         signature: k256::ecdsa::Signature,
@@ -704,6 +714,7 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use std::str::FromStr;
 
