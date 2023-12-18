@@ -363,6 +363,10 @@ impl core::str::FromStr for Unit {
     type Err = UnitsError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(unit) = crate::U8::from_str(s) {
+            return Self::new(unit.to()).ok_or_else(|| UnitsError::InvalidUnit(s.to_string()));
+        }
+
         Ok(match s.to_ascii_lowercase().as_str() {
             "eth" | "ether" => Self::ETHER,
             "pwei" | "milli" | "milliether" | "finney" => Self::PWEI,
