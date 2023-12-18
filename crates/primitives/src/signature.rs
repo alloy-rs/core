@@ -116,10 +116,10 @@ impl Parity {
     }
 
     /// Return the y-parity
-    pub fn y_parity(&self) -> bool {
+    pub const fn y_parity(&self) -> bool {
         match self {
-            Parity::V(v @ 0..=34) => v % 2 == 1,
-            Parity::V(v) => (v ^ 1) % 2 == 0,
+            Parity::V(v @ 0..=34) => *v % 2 == 1,
+            Parity::V(v) => (*v ^ 1) % 2 == 0,
             Parity::Parity(y) => *y,
         }
     }
@@ -139,10 +139,10 @@ impl Parity {
     }
 
     /// Apply EIP 155 to the V value. This is a nop for parity values.
-    pub const fn with_chain_id(&self, chain_id: ChainId) -> Self {
+    pub const fn with_chain_id(self, chain_id: ChainId) -> Self {
         let parity = match self {
-            Parity::V(v) => normalize_v_to_byte(*v) == 1,
-            Parity::Parity(y) => *y,
+            Parity::V(v) => normalize_v_to_byte(v) == 1,
+            Parity::Parity(_) => return self,
         };
 
         Self::V(to_eip155_v(parity as u8, chain_id))
@@ -162,6 +162,11 @@ impl Parity {
             None => unreachable!(),
         }
     }
+
+    /// Convert to a parity bool, dropping any V information.
+    pub const fn to_parity_bool(self) -> Parity {
+        Parity::Parity(self.y_parity())
+    }
 }
 
 #[cfg(feature = "rlp")]
@@ -169,8 +174,7 @@ impl alloy_rlp::Encodable for Parity {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         match self {
             Parity::V(v) => v.encode(out),
-            Parity::Parity(false) => 27u8.encode(out),
-            Parity::Parity(true) => 28u8.encode(out),
+            Parity::Parity(b) => b.encode(out),
         }
     }
 
@@ -473,6 +477,12 @@ impl<S: Copy> Signature<S> {
     #[inline]
     pub fn with_chain_id(self, chain_id: u64) -> Self {
         self.with_parity(self.v.with_chain_id(chain_id))
+    }
+
+    /// Modifies the recovery ID by dropping any [EIP-155] v value, converting
+    /// to a simple parity bool.
+    pub fn with_parity_bool(self) -> Self {
+        self.with_parity(self.v.to_parity_bool())
     }
 }
 
