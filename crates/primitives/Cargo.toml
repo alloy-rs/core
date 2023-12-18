@@ -68,7 +68,7 @@ std = [
     "rand?/std",
     "serde?/std",
 ]
-postgres = ["dep:postgres-types", "std"]
+postgres = ["dep:postgres-types", "std", "ruint/postgres"]
 tiny-keccak = []
 native-keccak = []
 getrandom = ["dep:getrandom"]
