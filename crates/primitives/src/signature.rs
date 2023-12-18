@@ -285,6 +285,20 @@ impl From<(k256::ecdsa::Signature, k256::ecdsa::RecoveryId)> for Signature<k256:
     }
 }
 
+#[cfg(feature = "rlp")]
+impl crate::Signature {
+    pub fn decode_rlp_vrs(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        use alloy_rlp::Decodable;
+
+        let parity: u64 = Decodable::decode(buf)?;
+        let r = Decodable::decode(buf)?;
+        let s = Decodable::decode(buf)?;
+
+        Self::from_rs_and_parity(r, s, parity)
+            .map_err(|_| alloy_rlp::Error::Custom("attempted to decode invalid field element"))
+    }
+}
+
 #[cfg(feature = "k256")]
 impl Signature<k256::ecdsa::Signature> {
     /// Instantiate from a signature and recovery id
@@ -407,18 +421,6 @@ impl Signature<k256::ecdsa::Signature> {
             this.recid(),
         )
         .map_err(Into::into)
-    }
-
-    #[cfg(feature = "rlp")]
-    pub fn decode_rlp_vrs(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
-        use alloy_rlp::Decodable;
-
-        let parity: u64 = Decodable::decode(buf)?;
-        let r = Decodable::decode(buf)?;
-        let s = Decodable::decode(buf)?;
-
-        Self::from_rs_and_parity(r, s, parity)
-            .map_err(|_| alloy_rlp::Error::Custom("attempted to decode invalid field element"))
     }
 }
 
