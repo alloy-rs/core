@@ -10,7 +10,7 @@ const MAX_U64_EXPONENT: u8 = 19;
 ///
 /// ```
 /// use alloy_primitives::{
-///     utils::{parse_ether, Units},
+///     utils::{parse_ether, Unit},
 ///     U256,
 /// };
 ///
@@ -435,7 +435,7 @@ impl Unit {
     /// The largest unit.
     pub const MAX: Self = unsafe { Self::new_unchecked(77) };
 
-    /// Creates a new `Units` instance, checking for overflow.
+    /// Creates a new `Unit` instance, checking for overflow.
     #[inline]
     pub const fn new(units: u8) -> Option<Self> {
         if units <= Self::MAX.get() {
@@ -446,7 +446,7 @@ impl Unit {
         }
     }
 
-    /// Creates a new `Units` instance.
+    /// Creates a new `Unit` instance.
     ///
     /// # Safety
     ///
