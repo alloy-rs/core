@@ -177,7 +177,7 @@ impl alloy_rlp::Encodable for Parity {
     fn length(&self) -> usize {
         match self {
             Parity::V(v) => v.length(),
-            Parity::Parity(_) => 1,
+            Parity::Parity(v) => v.length(),
         }
     }
 }
@@ -196,7 +196,7 @@ impl alloy_rlp::Decodable for Parity {
 
 /// An Ethereum ECDSA signature.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Signature<T: Copy + Eq> {
+pub struct Signature<T> {
     /// Memoized ecdsa signature (if any)
     inner: T,
 
@@ -460,17 +460,27 @@ impl Signature<()> {
     }
 }
 
-impl<S: Copy + Eq> Signature<S> {
-    /// Returns the inner ECDSA signature.
-    #[inline]
-    pub const fn inner(&self) -> &S {
-        &self.inner
-    }
-
+impl<S: Copy> Signature<S> {
     /// Returns the inner ECDSA signature.
     #[inline]
     pub const fn into_inner(self) -> S {
         self.inner
+    }
+
+    /// Modifies the recovery ID by applying [EIP-155] to a `v` value.
+    ///
+    /// [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
+    #[inline]
+    pub fn with_chain_id(self, chain_id: u64) -> Self {
+        self.with_parity(self.v.with_chain_id(chain_id))
+    }
+}
+
+impl<S> Signature<S> {
+    /// Returns the inner ECDSA signature.
+    #[inline]
+    pub const fn inner(&self) -> &S {
+        &self.inner
     }
 
     /// Returns the `r` component of this signature.
@@ -508,14 +518,6 @@ impl<S: Copy + Eq> Signature<S> {
     #[inline]
     pub fn with_parity<T: Into<Parity>>(self, parity: T) -> Self {
         Self { inner: self.inner, v: parity.into(), r: self.r, s: self.s }
-    }
-
-    /// Modifies the recovery ID by applying [EIP-155] to a `v` value.
-    ///
-    /// [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
-    #[inline]
-    pub fn with_chain_id(self, chain_id: u64) -> Self {
-        self.with_parity(self.v.with_chain_id(chain_id))
     }
 
     #[cfg(feature = "rlp")]
