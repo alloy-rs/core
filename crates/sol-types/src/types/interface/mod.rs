@@ -106,7 +106,7 @@ impl SolInterface for Infallible {
 
     #[inline]
     fn selector(&self) -> [u8; 4] {
-        match *self {}
+        unreachable!()
     }
 
     #[inline]
@@ -126,12 +126,12 @@ impl SolInterface for Infallible {
 
     #[inline]
     fn abi_encoded_size(&self) -> usize {
-        match *self {}
+        unreachable!()
     }
 
     #[inline]
     fn abi_encode_raw(&self, _out: &mut Vec<u8>) {
-        match *self {}
+        unreachable!()
     }
 }
 
