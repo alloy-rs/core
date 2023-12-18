@@ -129,15 +129,6 @@ impl Parity {
         self.y_parity() as u8
     }
 
-    /// Get the RLP value for the byte.
-    #[cfg(feature = "rlp")]
-    pub const fn rlp_parity_value(&self) -> u64 {
-        match self {
-            Parity::V(v) => *v,
-            Parity::Parity(b) => *b as u64 + 27,
-        }
-    }
-
     /// Invert the parity
     pub fn inverted(&self) -> Self {
         match self {
@@ -170,6 +161,36 @@ impl Parity {
             Some(recid) => recid,
             None => unreachable!(),
         }
+    }
+}
+
+#[cfg(feature = "rlp")]
+impl alloy_rlp::Encodable for Parity {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        match self {
+            Parity::V(v) => v.encode(out),
+            Parity::Parity(false) => 27u8.encode(out),
+            Parity::Parity(true) => 28u8.encode(out),
+        }
+    }
+
+    fn length(&self) -> usize {
+        match self {
+            Parity::V(v) => v.length(),
+            Parity::Parity(_) => 1,
+        }
+    }
+}
+
+#[cfg(feature = "rlp")]
+impl alloy_rlp::Decodable for Parity {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        let v = u64::decode(buf)?;
+        Ok(match v {
+            27 => Self::Parity(false),
+            28 => Self::Parity(true),
+            v => Self::from(v),
+        })
     }
 }
 
@@ -494,7 +515,7 @@ impl<S: Copy + Eq> Signature<S> {
     #[cfg(feature = "rlp")]
     /// Length of RLP V field encoding
     pub fn rlp_vrs_len(&self) -> usize {
-        self.rlp_rs_len() + alloy_rlp::Encodable::length(&self.v.rlp_parity_value())
+        self.rlp_rs_len() + alloy_rlp::Encodable::length(&self.v)
     }
 
     #[cfg(feature = "rlp")]
@@ -507,7 +528,7 @@ impl<S: Copy + Eq> Signature<S> {
     #[cfg(feature = "rlp")]
     /// Write the V to an RLP buffer without using EIP-155.
     pub fn write_rlp_v(&self, out: &mut dyn alloy_rlp::BufMut) {
-        alloy_rlp::Encodable::encode(&self.v.rlp_parity_value(), out)
+        alloy_rlp::Encodable::encode(&self.v, out);
     }
 
     #[cfg(feature = "rlp")]
