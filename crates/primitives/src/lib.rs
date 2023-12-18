@@ -52,6 +52,7 @@ pub use utils::{eip191_hash_message, keccak256};
 
 #[doc(no_inline)]
 pub use {
+    ::bytes,
     ::hex,
     hex_literal::{self, hex},
     ruint::{self, Uint},
