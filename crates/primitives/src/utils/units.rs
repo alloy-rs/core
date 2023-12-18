@@ -10,11 +10,11 @@ const MAX_U64_EXPONENT: u8 = 19;
 ///
 /// ```
 /// use alloy_primitives::{
-///     utils::{parse_ether, Units},
+///     utils::{parse_ether, Unit},
 ///     U256,
 /// };
 ///
-/// let eth = Units::ETHER.wei();
+/// let eth = Unit::ETHER.wei();
 /// assert_eq!(parse_ether("1").unwrap(), eth);
 /// ```
 pub fn parse_ether(eth: &str) -> Result<U256, UnitsError> {
@@ -363,6 +363,10 @@ impl core::str::FromStr for Unit {
     type Err = UnitsError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(unit) = crate::U8::from_str(s) {
+            return Self::new(unit.to()).ok_or_else(|| UnitsError::InvalidUnit(s.to_string()));
+        }
+
         Ok(match s.to_ascii_lowercase().as_str() {
             "eth" | "ether" => Self::ETHER,
             "pwei" | "milli" | "milliether" | "finney" => Self::PWEI,
@@ -381,49 +385,49 @@ impl Unit {
     pub const WEI: Self = unsafe { Self::new_unchecked(0) };
     #[allow(non_upper_case_globals)]
     #[doc(hidden)]
-    #[deprecated(since = "0.5.0", note = "use `Units::WEI` instead")]
+    #[deprecated(since = "0.5.0", note = "use `Unit::WEI` instead")]
     pub const Wei: Self = Self::WEI;
 
     /// Kwei is equivalent to 1e3 wei.
     pub const KWEI: Self = unsafe { Self::new_unchecked(3) };
     #[allow(non_upper_case_globals)]
     #[doc(hidden)]
-    #[deprecated(since = "0.5.0", note = "use `Units::KWEI` instead")]
+    #[deprecated(since = "0.5.0", note = "use `Unit::KWEI` instead")]
     pub const Kwei: Self = Self::KWEI;
 
     /// Mwei is equivalent to 1e6 wei.
     pub const MWEI: Self = unsafe { Self::new_unchecked(6) };
     #[allow(non_upper_case_globals)]
     #[doc(hidden)]
-    #[deprecated(since = "0.5.0", note = "use `Units::MWEI` instead")]
+    #[deprecated(since = "0.5.0", note = "use `Unit::MWEI` instead")]
     pub const Mwei: Self = Self::MWEI;
 
     /// Gwei is equivalent to 1e9 wei.
     pub const GWEI: Self = unsafe { Self::new_unchecked(9) };
     #[allow(non_upper_case_globals)]
     #[doc(hidden)]
-    #[deprecated(since = "0.5.0", note = "use `Units::GWEI` instead")]
+    #[deprecated(since = "0.5.0", note = "use `Unit::GWEI` instead")]
     pub const Gwei: Self = Self::GWEI;
 
     /// Twei is equivalent to 1e12 wei.
     pub const TWEI: Self = unsafe { Self::new_unchecked(12) };
     #[allow(non_upper_case_globals)]
     #[doc(hidden)]
-    #[deprecated(since = "0.5.0", note = "use `Units::TWEI` instead")]
+    #[deprecated(since = "0.5.0", note = "use `Unit::TWEI` instead")]
     pub const Twei: Self = Self::TWEI;
 
     /// Pwei is equivalent to 1e15 wei.
     pub const PWEI: Self = unsafe { Self::new_unchecked(15) };
     #[allow(non_upper_case_globals)]
     #[doc(hidden)]
-    #[deprecated(since = "0.5.0", note = "use `Units::PWEI` instead")]
+    #[deprecated(since = "0.5.0", note = "use `Unit::PWEI` instead")]
     pub const Pwei: Self = Self::PWEI;
 
     /// Ether is equivalent to 1e18 wei.
     pub const ETHER: Self = unsafe { Self::new_unchecked(18) };
     #[allow(non_upper_case_globals)]
     #[doc(hidden)]
-    #[deprecated(since = "0.5.0", note = "use `Units::ETHER` instead")]
+    #[deprecated(since = "0.5.0", note = "use `Unit::ETHER` instead")]
     pub const Ether: Self = Self::ETHER;
 
     /// The smallest unit.
@@ -431,7 +435,7 @@ impl Unit {
     /// The largest unit.
     pub const MAX: Self = unsafe { Self::new_unchecked(77) };
 
-    /// Creates a new `Units` instance, checking for overflow.
+    /// Creates a new `Unit` instance, checking for overflow.
     #[inline]
     pub const fn new(units: u8) -> Option<Self> {
         if units <= Self::MAX.get() {
@@ -442,7 +446,7 @@ impl Unit {
         }
     }
 
-    /// Creates a new `Units` instance.
+    /// Creates a new `Unit` instance.
     ///
     /// # Safety
     ///
@@ -457,15 +461,15 @@ impl Unit {
     /// # Examples
     ///
     /// ```
-    /// use alloy_primitives::{utils::Units, U256};
+    /// use alloy_primitives::{utils::Unit, U256};
     ///
-    /// assert_eq!(U256::from(1u128), Units::WEI.wei());
-    /// assert_eq!(U256::from(1_000u128), Units::KWEI.wei());
-    /// assert_eq!(U256::from(1_000_000u128), Units::MWEI.wei());
-    /// assert_eq!(U256::from(1_000_000_000u128), Units::GWEI.wei());
-    /// assert_eq!(U256::from(1_000_000_000_000u128), Units::TWEI.wei());
-    /// assert_eq!(U256::from(1_000_000_000_000_000u128), Units::PWEI.wei());
-    /// assert_eq!(U256::from(1_000_000_000_000_000_000u128), Units::ETHER.wei());
+    /// assert_eq!(U256::from(1u128), Unit::WEI.wei());
+    /// assert_eq!(U256::from(1_000u128), Unit::KWEI.wei());
+    /// assert_eq!(U256::from(1_000_000u128), Unit::MWEI.wei());
+    /// assert_eq!(U256::from(1_000_000_000u128), Unit::GWEI.wei());
+    /// assert_eq!(U256::from(1_000_000_000_000u128), Unit::TWEI.wei());
+    /// assert_eq!(U256::from(1_000_000_000_000_000u128), Unit::PWEI.wei());
+    /// assert_eq!(U256::from(1_000_000_000_000_000_000u128), Unit::ETHER.wei());
     /// ```
     #[inline]
     pub fn wei(self) -> U256 {
