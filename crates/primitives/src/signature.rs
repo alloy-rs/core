@@ -118,7 +118,7 @@ impl Parity {
     /// Return the y-parity
     pub fn y_parity(&self) -> bool {
         match self {
-            Parity::V(v @ ..=34) => v % 2 == 1,
+            Parity::V(v @ 0..=34) => v % 2 == 1,
             Parity::V(v) => (v ^ 1) % 2 == 0,
             Parity::Parity(y) => *y,
         }
