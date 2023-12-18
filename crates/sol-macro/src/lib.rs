@@ -126,7 +126,7 @@ mod json;
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/structs.rs"))]
 /// ```
-///
+/// 
 /// ### UDVT and type aliases
 ///
 /// User defined value types (UDVT) generate a tuple struct with the type as
@@ -135,7 +135,7 @@ mod json;
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/types.rs"))]
 /// ```
-///
+/// 
 /// ### Functions and errors
 ///
 /// Functions generate two structs that implement `SolCall`: `<name>Call` for
@@ -151,7 +151,7 @@ mod json;
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/function_like.rs"))]
 /// ```
-///
+/// 
 /// ### Events
 ///
 /// Events generate a struct that implements `SolEvent`.
@@ -163,7 +163,7 @@ mod json;
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/events.rs"))]
 /// ```
-///
+/// 
 /// ### Contracts/interfaces
 ///
 /// Contracts generate a module with the same name, which contains all the items.
@@ -175,7 +175,7 @@ mod json;
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/contracts.rs"))]
 /// ```
-///
+/// 
 /// ## JSON ABI
 ///
 /// Contracts can also be generated from ABI JSON strings and files, similar to
