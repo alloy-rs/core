@@ -243,11 +243,11 @@ impl Address {
         let mut hash_hex = [0u8; 64];
         hex::encode_to_slice(hash, &mut hash_hex).unwrap();
 
-        // Generates significantly less code than zipping the two arrays or `array::into_iter`.
+        // `0..40` generates significantly less code than zipping or `array::into_iter`.
         for i in 0..40 {
-            if hash_hex[i] >= b'8' {
-                buf[2 + i].make_ascii_uppercase();
-            }
+            // This is made branchless for easier vectorization.
+            buf[2 + i] ^=
+                0b0010_0000 * (buf[2 + i].is_ascii_lowercase() & (hash_hex[i] >= b'8')) as u8;
         }
 
         // SAFETY: All bytes in the buffer are valid UTF-8.
