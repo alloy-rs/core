@@ -1,4 +1,4 @@
-use crate::{aliases::U160, utils::keccak256, wrap_fixed_bytes, FixedBytes};
+use crate::{aliases::U160, utils::keccak256, wrap_fixed_bytes, FixedBytes, Hasher};
 use alloc::{
     borrow::Borrow,
     string::{String, ToString},
@@ -224,47 +224,33 @@ impl Address {
     /// ```
     #[must_use]
     pub fn to_checksum_raw<'a>(&self, buf: &'a mut [u8], chain_id: Option<u64>) -> &'a str {
-        assert_eq!(buf.len(), 42, "addr_buf must be 42 bytes long");
+        let buf: &mut [u8; 42] = buf.try_into().expect("buffer must be exactly 42 bytes long");
         buf[0] = b'0';
         buf[1] = b'x';
         hex::encode_to_slice(self, &mut buf[2..]).unwrap();
 
-        let mut storage;
-        let to_hash = match chain_id {
+        let mut hasher = crate::Keccak::v256();
+        match chain_id {
             Some(chain_id) => {
-                // A decimal `u64` string is at most 20 bytes long
-                storage = [0u8; 2 + 40 + 20];
-
-                // Format the `chain_id` into a stack-allocated buffer using `itoa`
-                let mut temp = itoa::Buffer::new();
-                let prefix_str = temp.format(chain_id);
-                let prefix_len = prefix_str.len();
-                debug_assert!(prefix_len <= 20);
-                let len = 2 + 40 + prefix_len;
-
-                // SAFETY: prefix_len <= 20; len <= 62; storage.len() == 62
-                unsafe {
-                    storage.get_unchecked_mut(..prefix_len).copy_from_slice(prefix_str.as_bytes());
-                    storage.get_unchecked_mut(prefix_len..len).copy_from_slice(buf);
-                    storage.get_unchecked(..len)
-                }
+                hasher.update(itoa::Buffer::new().format(chain_id).as_bytes());
+                hasher.update(buf);
             }
-            None => &buf[2..],
-        };
-        let hash = keccak256(to_hash);
+            None => hasher.update(&buf[2..]),
+        }
+        let mut hash = [0u8; 32];
+        hasher.finalize(&mut hash);
+
         let mut hash_hex = [0u8; 64];
         hex::encode_to_slice(hash, &mut hash_hex).unwrap();
 
-        // generates significantly less code than zipping the two arrays, or
-        // `.into_iter()`
-        for (i, x) in hash_hex.iter().enumerate().take(40) {
-            if *x >= b'8' {
-                // SAFETY: `addr_buf` is 42 bytes long, `2..42` is always in range
-                unsafe { buf.get_unchecked_mut(i + 2).make_ascii_uppercase() };
-            }
+        // `0..40` generates significantly less code than zipping or `array::into_iter`.
+        for i in 0..40 {
+            // This is made branchless for easier vectorization.
+            buf[2 + i] ^=
+                0b0010_0000 * (buf[2 + i].is_ascii_lowercase() & (hash_hex[i] >= b'8')) as u8;
         }
 
-        // SAFETY: All bytes in the buffer are valid UTF-8
+        // SAFETY: All bytes in the buffer are valid UTF-8.
         unsafe { str::from_utf8_unchecked(buf) }
     }
 
