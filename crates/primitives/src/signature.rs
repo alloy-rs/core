@@ -1,5 +1,6 @@
 use crate::{hex, ChainId, Uint, U256, U64};
 use alloc::vec::Vec;
+use alloy_rlp::length_of_length;
 use core::str::FromStr;
 
 /// Applies [EIP-155](https://eips.ethereum.org/EIPS/eip-155).
@@ -99,6 +100,7 @@ impl From<bool> for Parity {
 impl From<u64> for Parity {
     fn from(value: u64) -> Self {
         match value {
+            0 | 1 => Parity::Parity(value != 0),
             27 | 28 => Parity::NonEip155((value - 27) != 0),
             _ => Parity::Eip155(value),
         }
@@ -202,9 +204,12 @@ impl alloy_rlp::Decodable for Parity {
     fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         let v = u64::decode(buf)?;
         Ok(match v {
-            0 | 27 => Self::Parity(false),
-            1 | 28 => Self::Parity(true),
-            v => Self::from(v),
+            0 => Self::Parity(false),
+            1 => Self::Parity(true),
+            27 => Self::NonEip155(false),
+            28 => Self::NonEip155(true),
+            v @ 35..=u64::MAX => Self::from(v),
+            _ => return Err(alloy_rlp::Error::Custom("Invalid parity value")),
         })
     }
 }
@@ -544,13 +549,13 @@ impl<S> Signature<S> {
     #[cfg(feature = "rlp")]
     /// Length of RLP RS field encoding
     pub fn rlp_rs_len(&self) -> usize {
-        alloy_rlp::Encodable::length(&self.r) + alloy_rlp::Encodable::length(&self.s)
+        dbg!(alloy_rlp::Encodable::length(&self.r)) + dbg!(alloy_rlp::Encodable::length(&self.s))
     }
 
     #[cfg(feature = "rlp")]
     /// Length of RLP V field encoding
     pub fn rlp_vrs_len(&self) -> usize {
-        self.rlp_rs_len() + alloy_rlp::Encodable::length(&self.v)
+        self.rlp_rs_len() + dbg!(alloy_rlp::Encodable::length(&self.v))
     }
 
     #[cfg(feature = "rlp")]
@@ -608,6 +613,38 @@ const fn normalize_v_to_byte(v: u64) -> u8 {
         27..=34 => ((v - 27) % 4) as u8,
         // Case 3: EIP-155 V value
         35.. => ((v - 1) % 2) as u8,
+    }
+}
+
+#[cfg(feature = "rlp")]
+impl alloy_rlp::Encodable for crate::Signature {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        alloy_rlp::Header { list: true, payload_length: self.rlp_vrs_len() }.encode(out);
+        self.write_rlp_vrs(out);
+    }
+
+    fn length(&self) -> usize {
+        let payload_length = self.rlp_vrs_len();
+        payload_length + length_of_length(payload_length)
+    }
+}
+
+#[cfg(feature = "rlp")]
+impl alloy_rlp::Decodable for crate::Signature {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        use alloy_rlp::Encodable;
+
+        let pre_len = dbg!(buf.len());
+        let header = alloy_rlp::Header::decode(buf)?;
+        let decoded = Self::decode_rlp_vrs(buf)?;
+        let consumed = dbg!(pre_len - buf.len());
+        dbg!(header);
+        dbg!(decoded.rlp_vrs_len());
+        if decoded.length() != consumed {
+            return Err(alloy_rlp::Error::Custom("consumed incorrect number of bytes"));
+        }
+
+        Ok(decoded)
     }
 }
 
@@ -741,6 +778,9 @@ mod tests {
 
     use super::*;
     use std::str::FromStr;
+
+    #[cfg(feature = "rlp")]
+    use alloy_rlp::{Decodable, Encodable};
 
     #[test]
     #[cfg(TODO)] // TODO: Transaction
@@ -888,5 +928,50 @@ mod tests {
 
         let serialized = serde_json::to_string(&signature).unwrap();
         assert_eq!(serialized, expected);
+    }
+
+    #[cfg(feature = "rlp")]
+    #[test]
+    fn signature_rlp_decode() {
+        // Given a hex-encoded byte sequence
+        let bytes = crate::hex!("f84301a048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a010002cef538bc0c8e21c46080634a93e082408b0ad93f4a7207e63ec5463793d");
+
+        // Decode the byte sequence into a Signature instance
+        let result = Signature::decode(&mut &bytes[..]).unwrap();
+
+        // Assert that the decoded Signature matches the expected Signature
+        assert_eq!(
+            result,
+            Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a3664935310002cef538bc0c8e21c46080634a93e082408b0ad93f4a7207e63ec5463793d01").unwrap()
+        );
+    }
+
+    #[cfg(feature = "rlp")]
+    #[test]
+    fn signature_rlp_encode() {
+        // Given a Signature instance
+        let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
+
+        // Initialize an empty buffer
+        let mut buf = vec![];
+
+        // Encode the Signature into the buffer
+        sig.encode(&mut buf);
+
+        // Define the expected hex-encoded string
+        let expected = "f8431ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804";
+
+        // Assert that the encoded buffer matches the expected hex-encoded string
+        assert_eq!(hex::encode(&buf), expected);
+    }
+
+    #[cfg(feature = "rlp")]
+    #[test]
+    fn signature_rlp_length() {
+        // Given a Signature instance
+        let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
+
+        // Assert that the length of the Signature matches the expected length
+        assert_eq!(sig.length(), 69);
     }
 }
