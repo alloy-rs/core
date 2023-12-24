@@ -548,13 +548,13 @@ impl<S> Signature<S> {
     #[cfg(feature = "rlp")]
     /// Length of RLP RS field encoding
     pub fn rlp_rs_len(&self) -> usize {
-        dbg!(alloy_rlp::Encodable::length(&self.r)) + dbg!(alloy_rlp::Encodable::length(&self.s))
+        alloy_rlp::Encodable::length(&self.r) + alloy_rlp::Encodable::length(&self.s)
     }
 
     #[cfg(feature = "rlp")]
     /// Length of RLP V field encoding
     pub fn rlp_vrs_len(&self) -> usize {
-        self.rlp_rs_len() + dbg!(alloy_rlp::Encodable::length(&self.v))
+        self.rlp_rs_len() + alloy_rlp::Encodable::length(&self.v)
     }
 
     #[cfg(feature = "rlp")]
@@ -631,15 +631,11 @@ impl alloy_rlp::Encodable for crate::Signature {
 #[cfg(feature = "rlp")]
 impl alloy_rlp::Decodable for crate::Signature {
     fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
-        use alloy_rlp::Encodable;
-
-        let pre_len = dbg!(buf.len());
         let header = alloy_rlp::Header::decode(buf)?;
+        let pre_len = buf.len();
         let decoded = Self::decode_rlp_vrs(buf)?;
-        let consumed = dbg!(pre_len - buf.len());
-        dbg!(header);
-        dbg!(decoded.rlp_vrs_len());
-        if decoded.length() != consumed {
+        let consumed = pre_len - buf.len();
+        if consumed != header.payload_length {
             return Err(alloy_rlp::Error::Custom("consumed incorrect number of bytes"));
         }
 
