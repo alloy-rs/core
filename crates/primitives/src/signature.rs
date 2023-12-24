@@ -1,6 +1,5 @@
 use crate::{hex, ChainId, Uint, U256, U64};
 use alloc::vec::Vec;
-use alloy_rlp::length_of_length;
 use core::str::FromStr;
 
 /// Applies [EIP-155](https://eips.ethereum.org/EIPS/eip-155).
@@ -625,7 +624,7 @@ impl alloy_rlp::Encodable for crate::Signature {
 
     fn length(&self) -> usize {
         let payload_length = self.rlp_vrs_len();
-        payload_length + length_of_length(payload_length)
+        payload_length + alloy_rlp::length_of_length(payload_length)
     }
 }
 
