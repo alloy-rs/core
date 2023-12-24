@@ -169,3 +169,30 @@ impl alloy_rlp::Decodable for Parity {
         })
     }
 }
+
+#[cfg(test)]
+mod test {
+    #[cfg(feature = "rlp")]
+    #[test]
+    fn basic_rlp() {
+        use crate::{hex, Parity};
+
+        use alloy_rlp::{Decodable, Encodable};
+
+        let vector = vec![
+            (hex!("01").as_slice(), Parity::Parity(true)),
+            (hex!("1b").as_slice(), Parity::NonEip155(false)),
+            (hex!("25").as_slice(), Parity::Eip155(37)),
+            (hex!("26").as_slice(), Parity::Eip155(38)),
+            (hex!("81ff").as_slice(), Parity::Eip155(255)),
+        ];
+
+        for test in vector.into_iter() {
+            let mut buf = vec![];
+            test.1.encode(&mut buf);
+            assert_eq!(test.0, buf.as_slice());
+
+            assert_eq!(test.1, Parity::decode(&mut buf.as_slice()).unwrap());
+        }
+    }
+}
