@@ -1,217 +1,10 @@
-use crate::{hex, ChainId, Uint, U256, U64};
+use crate::{
+    hex,
+    signature::{Parity, SignatureError},
+    U256,
+};
 use alloc::vec::Vec;
 use core::str::FromStr;
-
-/// Applies [EIP-155](https://eips.ethereum.org/EIPS/eip-155).
-#[inline]
-pub const fn to_eip155_v(v: u8, chain_id: u64) -> u64 {
-    (v as u64) + 35 + chain_id * 2
-}
-
-/// Errors in signature parsing or verification.
-#[derive(Debug)]
-#[cfg_attr(not(feature = "k256"), derive(Copy, Clone))]
-pub enum SignatureError {
-    /// Error converting from bytes.
-    FromBytes(&'static str),
-
-    /// Error converting hex to bytes.
-    FromHex(hex::FromHexError),
-
-    /// k256 error
-    #[cfg(feature = "k256")]
-    K256(k256::ecdsa::Error),
-}
-
-#[cfg(feature = "k256")]
-impl From<k256::ecdsa::Error> for SignatureError {
-    fn from(err: k256::ecdsa::Error) -> Self {
-        Self::K256(err)
-    }
-}
-
-impl From<hex::FromHexError> for SignatureError {
-    fn from(err: hex::FromHexError) -> Self {
-        Self::FromHex(err)
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for SignatureError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            #[cfg(feature = "k256")]
-            SignatureError::K256(e) => Some(e),
-            SignatureError::FromHex(e) => Some(e),
-            _ => None,
-        }
-    }
-}
-
-impl core::fmt::Display for SignatureError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            #[cfg(feature = "k256")]
-            SignatureError::K256(e) => e.fmt(f),
-            SignatureError::FromBytes(e) => f.write_str(e),
-            SignatureError::FromHex(e) => e.fmt(f),
-        }
-    }
-}
-
-/// The parity of the signature, stored as either a V value (which may include
-/// a chain id), or the y-parity.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Parity {
-    /// Explicit V value. May be EIP-155 modified.
-    Eip155(u64),
-    /// Non-EIP155. 27 or 28.
-    NonEip155(bool),
-    /// Parity flag. True for odd.
-    Parity(bool),
-}
-
-#[cfg(feature = "k256")]
-impl From<k256::ecdsa::RecoveryId> for Parity {
-    fn from(value: k256::ecdsa::RecoveryId) -> Self {
-        Self::Parity(value.is_y_odd())
-    }
-}
-
-impl From<U64> for Parity {
-    fn from(value: U64) -> Self {
-        value.as_limbs()[0].into()
-    }
-}
-
-impl From<Uint<1, 1>> for Parity {
-    fn from(value: Uint<1, 1>) -> Self {
-        Parity::Parity(!value.is_zero())
-    }
-}
-
-impl From<bool> for Parity {
-    fn from(value: bool) -> Self {
-        Parity::Parity(value)
-    }
-}
-
-impl From<u64> for Parity {
-    fn from(value: u64) -> Self {
-        match value {
-            0 | 1 => Parity::Parity(value != 0),
-            27 | 28 => Parity::NonEip155((value - 27) != 0),
-            _ => Parity::Eip155(value),
-        }
-    }
-}
-
-impl Parity {
-    /// Get the chain_id of the V value, if any
-    pub const fn chain_id(&self) -> Option<ChainId> {
-        match *self {
-            Parity::Eip155(mut v @ 35..) => {
-                if v % 2 == 0 {
-                    v -= 1;
-                }
-                v -= 35;
-                Some(v / 2)
-            }
-            _ => None,
-        }
-    }
-
-    /// Return the y-parity
-    pub const fn y_parity(&self) -> bool {
-        match self {
-            Parity::Eip155(v @ 0..=34) => *v % 2 == 1,
-            Parity::Eip155(v) => (*v ^ 1) % 2 == 0,
-            Parity::NonEip155(b) | Parity::Parity(b) => *b,
-        }
-    }
-
-    /// Return the y-parity as 0 or 1
-    pub const fn y_parity_byte(&self) -> u8 {
-        self.y_parity() as u8
-    }
-
-    /// Invert the parity
-    pub fn inverted(&self) -> Self {
-        match self {
-            Parity::Parity(b) => Parity::Parity(!b),
-            Parity::NonEip155(b) => Parity::NonEip155(!b),
-            Parity::Eip155(v @ 0..=34) => Parity::Eip155(if v % 2 == 0 { v - 1 } else { v + 1 }),
-            Parity::Eip155(v @ 35..) => Parity::Eip155(*v ^ 1),
-        }
-    }
-
-    /// Apply EIP 155 to the V value. This is a nop for parity values.
-    pub const fn with_chain_id(self, chain_id: ChainId) -> Self {
-        let parity = match self {
-            Parity::Eip155(v) => normalize_v_to_byte(v) == 1,
-            Parity::NonEip155(b) => b,
-            Parity::Parity(_) => return self,
-        };
-
-        Self::Eip155(to_eip155_v(parity as u8, chain_id))
-    }
-
-    #[cfg(feature = "k256")]
-    /// Determine the recovery id.
-    pub const fn recid(&self) -> k256::ecdsa::RecoveryId {
-        let recid_opt = match self {
-            Parity::Eip155(v) => Some(normalize_v(*v)),
-            Parity::NonEip155(b) | Parity::Parity(b) => {
-                k256::ecdsa::RecoveryId::from_byte(*b as u8)
-            }
-        };
-
-        // manual unwrap for const fn
-        match recid_opt {
-            Some(recid) => recid,
-            None => unreachable!(),
-        }
-    }
-
-    /// Convert to a parity bool, dropping any V information.
-    pub const fn to_parity_bool(self) -> Parity {
-        Parity::Parity(self.y_parity())
-    }
-}
-
-#[cfg(feature = "rlp")]
-impl alloy_rlp::Encodable for Parity {
-    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        match self {
-            Parity::Eip155(v) => v.encode(out),
-            Parity::NonEip155(v) => (*v as u8 + 27).encode(out),
-            Parity::Parity(b) => b.encode(out),
-        }
-    }
-
-    fn length(&self) -> usize {
-        match self {
-            Parity::Eip155(v) => v.length(),
-            Parity::NonEip155(_) => 0u8.length(),
-            Parity::Parity(v) => v.length(),
-        }
-    }
-}
-
-#[cfg(feature = "rlp")]
-impl alloy_rlp::Decodable for Parity {
-    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
-        let v = u64::decode(buf)?;
-        Ok(match v {
-            0 => Self::Parity(false),
-            1 => Self::Parity(true),
-            27 => Self::NonEip155(false),
-            28 => Self::NonEip155(true),
-            v @ 35..=u64::MAX => Self::from(v),
-            _ => return Err(alloy_rlp::Error::Custom("Invalid parity value")),
-        })
-    }
-}
 
 /// An Ethereum ECDSA signature.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -300,7 +93,7 @@ impl From<crate::Signature> for Vec<u8> {
 #[cfg(feature = "k256")]
 impl From<(k256::ecdsa::Signature, k256::ecdsa::RecoveryId)> for Signature<k256::ecdsa::Signature> {
     fn from(value: (k256::ecdsa::Signature, k256::ecdsa::RecoveryId)) -> Self {
-        Self::from_signature_and_parity(value.0, value.1)
+        Self::from_signature_and_parity(value.0, value.1).unwrap()
     }
 }
 
@@ -331,17 +124,17 @@ impl Signature<k256::ecdsa::Signature> {
     }
 
     /// Instantiate from a signature and recovery id
-    pub fn from_signature_and_parity<T: Into<Parity>>(
-        signature: k256::ecdsa::Signature,
+    pub fn from_signature_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
+        sig: k256::ecdsa::Signature,
         parity: T,
-    ) -> Self {
-        let r = U256::from_be_slice(signature.r().to_bytes().as_ref());
-        let s = U256::from_be_slice(signature.s().to_bytes().as_ref());
-        Self { inner: signature, v: parity.into(), r, s }
+    ) -> Result<Self, SignatureError> {
+        let r = U256::from_be_slice(sig.r().to_bytes().as_ref());
+        let s = U256::from_be_slice(sig.s().to_bytes().as_ref());
+        Ok(Self { inner: sig, v: parity.try_into().map_err(Into::into)?, r, s })
     }
 
     /// Instantiate from v, r, s.
-    pub fn from_rs_and_parity<T: Into<Parity>>(
+    pub fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         r: U256,
         s: U256,
         parity: T,
@@ -351,12 +144,12 @@ impl Signature<k256::ecdsa::Signature> {
 
     /// Parses a signature from a byte slice, with a v value
     #[inline]
-    pub fn from_bytes_and_parity<T: Into<Parity>>(
+    pub fn from_bytes_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         bytes: &[u8],
         parity: T,
     ) -> Result<Self, SignatureError> {
-        let signature = k256::ecdsa::Signature::from_slice(bytes)?;
-        Ok(Self::from_signature_and_parity(signature, parity))
+        let sig = k256::ecdsa::Signature::from_slice(bytes)?;
+        Self::from_signature_and_parity(sig, parity)
     }
 
     /// Creates a [`Signature`] from the serialized `r` and `s` scalar values, which comprise the
@@ -364,13 +157,13 @@ impl Signature<k256::ecdsa::Signature> {
     ///
     /// See [`k256::ecdsa::Signature::from_scalars`] for more details.
     #[inline]
-    pub fn from_scalars_and_parity<T: Into<Parity>>(
+    pub fn from_scalars_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         r: crate::B256,
         s: crate::B256,
         parity: T,
     ) -> Result<Self, SignatureError> {
         let inner = k256::ecdsa::Signature::from_scalars(r.0, s.0)?;
-        Ok(Self::from_signature_and_parity(inner, parity))
+        Self::from_signature_and_parity(inner, parity)
     }
 
     /// Normalizes the signature into "low S" form as described in
@@ -460,7 +253,7 @@ impl Signature<()> {
     ///
     /// If the slice is not at least 64 bytes long.
     #[inline]
-    pub fn from_bytes_and_parity<T: Into<Parity>>(
+    pub fn from_bytes_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         bytes: &[u8],
         parity: T,
     ) -> Result<Self, SignatureError> {
@@ -470,12 +263,12 @@ impl Signature<()> {
     }
 
     /// Instantiate from v, r, s.
-    pub fn from_rs_and_parity<T: Into<Parity>>(
+    pub fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         r: U256,
         s: U256,
         parity: T,
     ) -> Result<Self, SignatureError> {
-        Ok(Self { inner: (), v: parity.into(), r, s })
+        Ok(Self { inner: (), v: parity.try_into().map_err(Into::into)?, r, s })
     }
 }
 
@@ -578,43 +371,6 @@ impl<S> Signature<S> {
     }
 }
 
-/// Normalizes a `v` value, respecting raw, legacy, and EIP-155 values.
-///
-/// This function covers the entire u64 range, producing v-values as follows:
-/// - 0-26 - raw/bare. 0-3 are legal. In order to ensure that all values are covered, we also handle
-///   4-26 here by returning v % 4.
-/// - 27-34 - legacy. 27-30 are legal. By legacy bitcoin convention range 27-30 signals uncompressed
-///   pubkeys, while 31-34 signals compressed pubkeys. We do not respect the compression convention.
-///   All Ethereum keys are uncompressed.
-/// - 35+ - EIP-155. By EIP-155 convention, `v = 35 + CHAIN_ID * 2 + 0/1` We return (v-1 % 2) here.
-///
-/// NB: raw and legacy support values 2, and 3, while EIP-155 does not.
-/// Recovery values of 2 and 3 are unlikely to occur in practice. In the vanishingly unlikely event
-/// that you encounter an EIP-155 signature with a recovery value of 2 or 3, you should normalize
-/// out of band.
-#[cfg(feature = "k256")]
-#[inline]
-const fn normalize_v(v: u64) -> k256::ecdsa::RecoveryId {
-    let byte = normalize_v_to_byte(v);
-    debug_assert!(byte <= k256::ecdsa::RecoveryId::MAX);
-    match k256::ecdsa::RecoveryId::from_byte(byte) {
-        Some(recid) => recid,
-        None => unsafe { core::hint::unreachable_unchecked() },
-    }
-}
-
-/// Normalize the v value to a single byte.
-const fn normalize_v_to_byte(v: u64) -> u8 {
-    match v {
-        // Case 1: raw/bare
-        0..=26 => (v % 4) as u8,
-        // Case 2: non-EIP-155 v value
-        27..=34 => ((v - 27) % 4) as u8,
-        // Case 3: EIP-155 V value
-        35.. => ((v - 1) % 2) as u8,
-    }
-}
-
 #[cfg(feature = "rlp")]
 impl alloy_rlp::Encodable for crate::Signature {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
@@ -657,7 +413,7 @@ impl serde::Serialize for crate::Signature {
         map.serialize_entry("s", &self.s)?;
 
         match self.v {
-            Parity::Eip155(v) => map.serialize_entry("v", &U64::from(v))?,
+            Parity::Eip155(v) => map.serialize_entry("v", &crate::U64::from(v))?,
             Parity::NonEip155(b) => map.serialize_entry("v", &(b as u8 + 27))?,
             Parity::Parity(true) => map.serialize_entry("yParity", "0x1")?,
             Parity::Parity(false) => map.serialize_entry("yParity", "0x0")?,
@@ -735,11 +491,17 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
                 while let Some(key) = map.next_key()? {
                     match key {
                         Field::V => {
-                            let value: U64 = map.next_value()?;
-                            v = Some(value.into())
+                            let value: crate::U64 = map.next_value()?;
+                            let parity = value.try_into().map_err(|_| {
+                                serde::de::Error::invalid_value(
+                                    serde::de::Unexpected::Unsigned(value.as_limbs()[0]),
+                                    &"a valid v value matching the range 0 | 1 | 27 | 28 | 35..",
+                                )
+                            })?;
+                            v = Some(parity);
                         }
                         Field::YParity => {
-                            let value: Uint<1, 1> = map.next_value()?;
+                            let value: crate::Uint<1, 1> = map.next_value()?;
                             if v.is_none() {
                                 v = Some(value.into());
                             }
@@ -804,21 +566,14 @@ mod tests {
 
     #[test]
     #[cfg(feature = "k256")]
-    fn normalizes_v() {
-        assert_eq!(normalize_v(27), k256::ecdsa::RecoveryId::from_byte(0).unwrap());
-        assert_eq!(normalize_v(28), k256::ecdsa::RecoveryId::from_byte(1).unwrap());
-    }
-
-    #[test]
-    #[cfg(feature = "k256")]
     fn recover_web3_signature() {
         // test vector taken from:
         // https://web3js.readthedocs.io/en/v1.2.2/web3-eth-accounts.html#sign
-        let signature = Signature::from_str(
+        let sig = Signature::from_str(
             "b91467e570a6466aa9e9876cbcd013baba02900b8979d43fe208a4a4f339f5fd6007e74cd82e037b800186422fc2da167c747ef045e5d18a5f5d4300f8e1a0291c"
         ).expect("could not parse signature");
         let expected = address!("2c7536E3605D9C16a7a3D7b1898e529396a65c23");
-        assert_eq!(signature.recover_address_from_msg("Some data").unwrap(), expected);
+        assert_eq!(sig.recover_address_from_msg("Some data").unwrap(), expected);
     }
 
     #[test]
