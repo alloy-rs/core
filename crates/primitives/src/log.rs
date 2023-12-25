@@ -115,3 +115,40 @@ impl Log {
         Self { address: Address::ZERO, data: LogData::empty() }
     }
 }
+
+#[cfg(feature = "rlp")]
+impl alloy_rlp::Encodable for Log {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        let payload_length =
+            self.address.length() + self.data.data.length() + self.data.topics.length();
+
+        alloy_rlp::Header { list: true, payload_length }.encode(out);
+        self.address.encode(out);
+        self.data.topics.encode(out);
+        self.data.data.encode(out);
+    }
+
+    fn length(&self) -> usize {
+        let payload_length =
+            self.address.length() + self.data.data.length() + self.data.topics.length();
+        payload_length + alloy_rlp::length_of_length(payload_length)
+    }
+}
+
+#[cfg(feature = "rlp")]
+impl alloy_rlp::Decodable for Log {
+    fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        let h = alloy_rlp::Header::decode(buf)?;
+        let pre = buf.len();
+
+        let address = alloy_rlp::Decodable::decode(buf)?;
+        let topics = alloy_rlp::Decodable::decode(buf)?;
+        let data = alloy_rlp::Decodable::decode(buf)?;
+
+        if h.payload_length != pre - buf.len() {
+            return Err(alloy_rlp::Error::Custom("did not consume exact payload"));
+        }
+
+        Ok(Self { address, data: LogData { topics, data } })
+    }
+}
