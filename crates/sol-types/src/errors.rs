@@ -9,7 +9,7 @@
 
 use crate::abi;
 use alloc::{borrow::Cow, boxed::Box, string::String};
-use alloy_primitives::Log;
+use alloy_primitives::LogData;
 use core::fmt;
 
 /// ABI result type.
@@ -50,7 +50,7 @@ pub enum Error {
         /// The name of the enum or event.
         name: &'static str,
         /// The invalid log.
-        log: Box<Log>,
+        log: Box<LogData>,
     },
 
     /// Unknown selector.

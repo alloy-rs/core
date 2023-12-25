@@ -18,10 +18,11 @@ pub trait SolEventInterface: Sized {
     const COUNT: usize;
 
     /// Decode the events from the given log info.
-    fn decode_log(topics: &[Word], data: &[u8], validate: bool) -> Result<Self>;
+    fn decode_raw_log(topics: &[Word], data: &[u8], validate: bool) -> Result<Self>;
 
     /// Decode the events from the given log object.
-    fn decode_log_object(log: &Log, validate: bool) -> Result<Self> {
-        Self::decode_log(log.topics(), &log.data, validate)
+    fn decode_log(log: &Log, validate: bool) -> Result<Log<Self>> {
+        Self::decode_raw_log(log.topics(), &log.data.data, validate)
+            .map(|data| Log { address: log.address, data })
     }
 }

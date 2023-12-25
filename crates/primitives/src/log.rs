@@ -1,18 +1,18 @@
-use crate::{Bytes, B256};
+use crate::{Address, Bytes, B256};
 use alloc::vec::Vec;
 
 /// An Ethereum event log object.
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
-pub struct Log {
+pub struct LogData {
     /// The indexed topic list.
     topics: Vec<B256>,
     /// The plain data.
     pub data: Bytes,
 }
 
-impl Log {
+impl LogData {
     /// Creates a new log, without length-checking. This allows creation of
     /// invalid logs. May be safely used when the length of the topic list is
     /// known to be 4 or less.
@@ -72,5 +72,46 @@ impl Log {
     pub fn set_topics_truncating(&mut self, mut topics: Vec<B256>) {
         topics.truncate(4);
         self.set_topics_unchecked(topics);
+    }
+}
+
+/// A log consists of an address, and some log data.
+#[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
+pub struct Log<T = LogData> {
+    /// The address which emitted this log.
+    pub address: Address,
+    /// The log data.
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub data: T,
+}
+
+impl<T> core::ops::Deref for Log<T> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl Log {
+    /// Creates a new log.
+    #[inline]
+    pub fn new(address: Address, topics: Vec<B256>, data: Bytes) -> Option<Self> {
+        LogData::new(topics, data).map(|data| Self { address, data })
+    }
+
+    /// Creates a new log.
+    #[inline]
+    pub fn new_unchecked(address: Address, topics: Vec<B256>, data: Bytes) -> Self {
+        Self { address, data: LogData::new_unchecked(topics, data) }
+    }
+
+    /// Creates a new empty log.
+    #[inline]
+    pub const fn empty() -> Self {
+        Self { address: Address::ZERO, data: LogData::empty() }
     }
 }

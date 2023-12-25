@@ -450,7 +450,7 @@ impl<'a> CallLikeExpander<'a> {
         let err = quote! {
             ::alloy_sol_types::private::Err(::alloy_sol_types::Error::InvalidLog {
                 name: <Self as ::alloy_sol_types::SolEventInterface>::NAME,
-                log: ::alloy_sol_types::private::Box::new(::alloy_sol_types::private::Log::new_unchecked(
+                log: ::alloy_sol_types::private::Box::new(::alloy_sol_types::private::LogData::new_unchecked(
                     topics.to_vec(),
                     data.to_vec().into(),
                 )),
@@ -464,7 +464,7 @@ impl<'a> CallLikeExpander<'a> {
                 match topics.first().copied() {
                     #(
                         Some(<#variants as ::alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
-                            #ret <#variants as ::alloy_sol_types::#trait_>::decode_log(topics, data, validate)
+                            #ret <#variants as ::alloy_sol_types::#trait_>::decode_raw_log(topics, data, validate)
                                 .map(Self::#variants),
                     )*
                     _ => { #ret_err }
@@ -475,7 +475,7 @@ impl<'a> CallLikeExpander<'a> {
             let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
                 #(
-                    if let Ok(res) = <#variants as ::alloy_sol_types::#trait_>::decode_log(topics, data, validate) {
+                    if let Ok(res) = <#variants as ::alloy_sol_types::#trait_>::decode_raw_log(topics, data, validate) {
                         return Ok(Self::#variants(res));
                     }
                 )*
@@ -490,7 +490,7 @@ impl<'a> CallLikeExpander<'a> {
                 const NAME: &'static str = #name_s;
                 const COUNT: usize = #count;
 
-                fn decode_log(topics: &[::alloy_sol_types::Word], data: &[u8], validate: bool) -> ::alloy_sol_types::Result<Self> {
+                fn decode_raw_log(topics: &[::alloy_sol_types::Word], data: &[u8], validate: bool) -> ::alloy_sol_types::Result<Self> {
                     #non_anon_impl
                     #anon_impl
                 }
