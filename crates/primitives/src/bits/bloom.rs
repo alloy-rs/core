@@ -2,7 +2,7 @@
 //!
 //! Adapted from <https://github.com/paritytech/parity-common/blob/2fb72eea96b6de4a085144ce239feb49da0cd39e/ethbloom/src/lib.rs>
 
-use crate::{keccak256, wrap_fixed_bytes, B256};
+use crate::{keccak256, wrap_fixed_bytes, Address, Log, LogData, B256};
 
 /// Number of bits to set per input in Ethereum bloom filter.
 pub const BLOOM_BITS_PER_ITEM: usize = 3;
@@ -55,23 +55,36 @@ wrap_fixed_bytes!(
     pub struct Bloom<256>;
 );
 
-impl<'a> FromIterator<&'a crate::Log> for Bloom {
+impl<'a> FromIterator<&'a (Address, LogData)> for Bloom {
+    fn from_iter<T: IntoIterator<Item = &'a (Address, LogData)>>(iter: T) -> Self {
+        let mut bloom = Bloom::ZERO;
+        bloom.extend(iter);
+        bloom
+    }
+}
+
+impl<'a> Extend<&'a (Address, LogData)> for Bloom {
+    fn extend<T: IntoIterator<Item = &'a (Address, LogData)>>(&mut self, iter: T) {
+        for (address, log_data) in iter {
+            self.accrue_raw_log(*address, log_data.topics())
+        }
+    }
+}
+
+impl<'a> FromIterator<&'a Log> for Bloom {
     #[inline]
-    fn from_iter<T: IntoIterator<Item = &'a crate::Log>>(logs: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = &'a Log>>(logs: T) -> Self {
         let mut bloom = Bloom::ZERO;
         bloom.extend(logs);
         bloom
     }
 }
 
-impl<'a> Extend<&'a crate::Log> for Bloom {
+impl<'a> Extend<&'a Log> for Bloom {
     #[inline]
-    fn extend<T: IntoIterator<Item = &'a crate::Log>>(&mut self, logs: T) {
+    fn extend<T: IntoIterator<Item = &'a Log>>(&mut self, logs: T) {
         for log in logs {
-            self.m3_2048(log.address.as_slice());
-            for topic in log.topics().iter() {
-                self.m3_2048(topic.as_slice());
-            }
+            self.accrue_log(log)
         }
     }
 }
@@ -163,6 +176,19 @@ impl Bloom {
         for i in [0, 2, 4] {
             let bit = (hash[i + 1] as usize + ((hash[i] as usize) << 8)) & 0x7FF;
             self[BLOOM_SIZE_BYTES - 1 - bit / 8] |= 1 << (bit % 8);
+        }
+    }
+
+    /// Ingests a log into the bloom filter.
+    pub fn accrue_log(&mut self, log: &Log) {
+        self.accrue_raw_log(log.address, log.topics())
+    }
+
+    /// Ingests a raw log into the bloom filter.
+    pub fn accrue_raw_log(&mut self, address: Address, topics: &[B256]) {
+        self.m3_2048(address.as_slice());
+        for topic in topics.iter() {
+            self.m3_2048(topic.as_slice());
         }
     }
 }
