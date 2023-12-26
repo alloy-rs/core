@@ -6,14 +6,14 @@ use std::hint::black_box;
 
 fn primitives(c: &mut Criterion) {
     let mut g = c.benchmark_group("primitives");
-    // g.bench_function("address/checksum", |b| {
-    //     let address = Address::random();
-    //     let out = &mut [0u8; 42];
-    //     b.iter(|| {
-    //         let x = address.to_checksum_raw(black_box(out), None);
-    //         black_box(x);
-    //     })
-    // });
+    g.bench_function("address/checksum", |b| {
+        let address = Address::random();
+        let out = &mut [0u8; 42];
+        b.iter(|| {
+            let x = address.to_checksum_raw(black_box(out), None);
+            black_box(x);
+        })
+    });
     g.bench_function("keccak256/32", |b| {
         let mut out = alloy_primitives::B256::random();
         b.iter(|| {
