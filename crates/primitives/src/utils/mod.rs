@@ -84,6 +84,13 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
 
                 // SAFETY: The output is 32-bytes, and the input comes from a slice.
                 unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr().cast()) };
+            } else if #[cfg(feature = "asm-keccak")] {
+                use keccak_asm::{Keccak256,digest::Digest};
+
+                let mut hasher = Keccak256::new();
+                hasher.update(bytes);
+                // SAFETY: Never reads from `output`.
+                hasher.finalize_into(unsafe { (*output.as_mut_ptr()).as_mut_slice().into() });
             } else {
                 use tiny_keccak::{Hasher, Keccak};
 
