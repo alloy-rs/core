@@ -17,6 +17,7 @@ fn primitives(c: &mut Criterion) {
     g.bench_function("keccak256/32", |b| {
         let mut out = alloy_primitives::B256::random();
         b.iter(|| {
+            #[allow(clippy::needless_borrows_for_generic_args)]
             for _ in 0..10 {
                 out = alloy_primitives::keccak256(&out);
             }
