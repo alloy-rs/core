@@ -122,18 +122,27 @@ impl Bloom {
 
     /// Returns true if this bloom filter is a possible superset of the other
     /// bloom filter, admitting false positives.
+    ///
+    /// Note: This method may return false positives. This is inherent to the
+    /// bloom filter data structure.
     #[inline]
     pub fn contains_input(&self, input: BloomInput<'_>) -> bool {
         self.contains(&input.into())
     }
 
     /// Compile-time version of [`contains`](Self::contains).
+    ///
+    /// Note: This method may return false positives. This is inherent to the
+    /// bloom filter data structure.
     pub const fn const_contains(self, other: Self) -> bool {
         self.0.const_covers(other.0)
     }
 
     /// Returns true if this bloom filter is a possible superset of the other
     /// bloom filter, admitting false positives.
+    ///
+    /// Note: This method may return false positives. This is inherent to the
+    /// bloom filter data structure.
     pub fn contains(&self, other: &Self) -> bool {
         self.0.covers(&other.0)
     }
@@ -179,17 +188,35 @@ impl Bloom {
         }
     }
 
-    /// Ingests a log into the bloom filter.
-    pub fn accrue_log(&mut self, log: &Log) {
-        self.accrue_raw_log(log.address, log.topics())
-    }
-
     /// Ingests a raw log into the bloom filter.
     pub fn accrue_raw_log(&mut self, address: Address, topics: &[B256]) {
         self.m3_2048(address.as_slice());
         for topic in topics.iter() {
             self.m3_2048(topic.as_slice());
         }
+    }
+
+    /// Ingests a log into the bloom filter.
+    pub fn accrue_log(&mut self, log: &Log) {
+        self.accrue_raw_log(log.address, log.topics())
+    }
+
+    /// True if the bloom filter contains a log with given address and topics.
+    ///
+    /// Note: This method may return false positives. This is inherent to the
+    /// bloom filter data structure.
+    pub fn contains_raw_log(&self, address: Address, topics: &[B256]) -> bool {
+        let mut bloom = Bloom::default();
+        bloom.accrue_raw_log(address, topics);
+        self.contains(&bloom)
+    }
+
+    /// True if the bloom filter contains a log with given address and topics.
+    ///
+    /// Note: This method may return false positives. This is inherent to the
+    /// bloom filter data structure.
+    pub fn contains_log(&self, log: &Log) -> bool {
+        self.contains_raw_log(log.address, log.topics())
     }
 }
 
