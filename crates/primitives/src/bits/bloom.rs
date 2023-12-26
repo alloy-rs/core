@@ -3,7 +3,6 @@
 //! Adapted from <https://github.com/paritytech/parity-common/blob/2fb72eea96b6de4a085144ce239feb49da0cd39e/ethbloom/src/lib.rs>
 
 use crate::{keccak256, wrap_fixed_bytes, B256};
-use core::borrow::Borrow;
 
 /// Number of bits to set per input in Ethereum bloom filter.
 pub const BLOOM_BITS_PER_ITEM: usize = 3;
@@ -55,6 +54,45 @@ wrap_fixed_bytes!(
     /// Ethereum 256 byte bloom filter.
     pub struct Bloom<256>;
 );
+
+impl<'a> FromIterator<&'a crate::Log> for Bloom {
+    #[inline]
+    fn from_iter<T: IntoIterator<Item = &'a crate::Log>>(logs: T) -> Self {
+        let mut bloom = Bloom::ZERO;
+        bloom.extend(logs);
+        bloom
+    }
+}
+
+impl<'a> Extend<&'a crate::Log> for Bloom {
+    #[inline]
+    fn extend<T: IntoIterator<Item = &'a crate::Log>>(&mut self, logs: T) {
+        for log in logs {
+            self.m3_2048(log.address.as_slice());
+            for topic in log.topics().iter() {
+                self.m3_2048(topic.as_slice());
+            }
+        }
+    }
+}
+
+impl<'a, 'b> FromIterator<&'a BloomInput<'b>> for Bloom {
+    #[inline]
+    fn from_iter<T: IntoIterator<Item = &'a BloomInput<'b>>>(inputs: T) -> Self {
+        let mut bloom = Bloom::ZERO;
+        bloom.extend(inputs);
+        bloom
+    }
+}
+
+impl<'a, 'b> Extend<&'a BloomInput<'b>> for Bloom {
+    #[inline]
+    fn extend<T: IntoIterator<Item = &'a BloomInput<'b>>>(&mut self, inputs: T) {
+        for input in inputs {
+            self.accrue(*input);
+        }
+    }
+}
 
 impl Bloom {
     /// Returns a reference to the underlying data.
@@ -126,24 +164,6 @@ impl Bloom {
             let bit = (hash[i + 1] as usize + ((hash[i] as usize) << 8)) & 0x7FF;
             self[BLOOM_SIZE_BYTES - 1 - bit / 8] |= 1 << (bit % 8);
         }
-    }
-
-    /// Calculate a transaction receipt's logs bloom.
-    pub fn logs_bloom<A, TS, T, I>(logs: I) -> Self
-    where
-        A: Borrow<[u8; 20]>,
-        TS: IntoIterator<Item = T>,
-        T: Borrow<[u8; 32]>,
-        I: IntoIterator<Item = (A, TS)>,
-    {
-        let mut bloom = Self::ZERO;
-        for (address, topics) in logs {
-            bloom.m3_2048(address.borrow());
-            for topic in topics {
-                bloom.m3_2048(topic.borrow());
-            }
-        }
-        bloom
     }
 }
 
