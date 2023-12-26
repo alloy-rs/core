@@ -100,3 +100,9 @@ name = "address"
 path = "benches/address.rs"
 harness = false
 required-features = ["rand"]
+
+[[bench]]
+name = "primitives"
+path = "benches/primitives.rs"
+harness = false
+required-features = ["rand"]
