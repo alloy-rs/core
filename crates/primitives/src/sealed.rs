@@ -53,11 +53,11 @@ impl<T> Sealed<T> {
 /// Sealeable objects.
 pub trait Sealable: Sized {
     /// Calculate the seal hash, this may be slow.
-    fn hash(&self) -> B256;
+    fn hash_slow(&self) -> B256;
 
     /// Seal the object by calculating the hash. This may be slow.
     fn seal_slow(self) -> Sealed<Self> {
-        let seal = self.hash();
+        let seal = self.hash_slow();
         Sealed::new_unchecked(self, seal)
     }
 
