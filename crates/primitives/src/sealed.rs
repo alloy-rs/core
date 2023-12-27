@@ -42,12 +42,6 @@ impl<T> Sealed<T> {
     pub const fn seal(&self) -> B256 {
         self.seal
     }
-
-    /// Geth the hash (alias for [`Self::seal`]).
-    #[inline(always)]
-    pub const fn hash(&self) -> B256 {
-        self.seal()
-    }
 }
 
 /// Sealeable objects.
