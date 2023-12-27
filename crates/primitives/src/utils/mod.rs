@@ -62,7 +62,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
         let mut output = MaybeUninit::<B256>::uninit();
 
         cfg_if::cfg_if! {
-            if #[cfg(all(feature = "native-keccak", not(feature = "tiny-keccak")))] {
+            if #[cfg(all(feature = "native-keccak", not(feature = "tiny-keccak"), not(miri)))] {
                 #[link(wasm_import_module = "vm_hooks")]
                 extern "C" {
                     /// When targeting VMs with native keccak hooks, the `native-keccak` feature
@@ -83,14 +83,21 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
                 }
 
                 // SAFETY: The output is 32-bytes, and the input comes from a slice.
-                unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr().cast()) };
+                unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr().cast::<u8>()) };
+            } else if #[cfg(all(feature = "asm-keccak", not(miri)))] {
+                use keccak_asm::{digest::Digest, Keccak256};
+
+                let mut hasher = Keccak256::new();
+                hasher.update(bytes);
+                // SAFETY: Never reads from `output`.
+                hasher.finalize_into(unsafe { (&mut (*output.as_mut_ptr()).0).into() });
             } else {
                 use tiny_keccak::{Hasher, Keccak};
 
                 let mut hasher = Keccak::v256();
                 hasher.update(bytes);
                 // SAFETY: Never reads from `output`.
-                hasher.finalize(unsafe { (*output.as_mut_ptr()).as_mut_slice() });
+                hasher.finalize(unsafe { &mut (*output.as_mut_ptr()).0 });
             }
         }
 

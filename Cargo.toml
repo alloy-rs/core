@@ -10,7 +10,7 @@ authors = ["Alloy Contributors"]
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/alloy-rs/core"
 repository = "https://github.com/alloy-rs/core"
-exclude = ["benches/", "tests/"]
+exclude = ["tests"]
 
 [workspace.metadata.docs.rs]
 all-features = true
@@ -46,6 +46,9 @@ strum = { version = "0.25", features = ["derive"] }
 num_enum = "0.7"
 thiserror = "1.0"
 
+keccak-asm = { version = "0.1.0", default-features = false }
+tiny-keccak = "2.0"
+
 # misc
 alloy-rlp = { version = "0.3", default-features = false }
 alloy-rlp-derive = { version = "0.3", default-features = false }
@@ -65,6 +68,5 @@ proptest-derive = "0.4"
 rand = { version = "0.8", default-features = false }
 ruint = { version = "1.11.1", default-features = false, features = ["alloc"] }
 ruint-macro = { version = "1", default-features = false }
-tiny-keccak = "2.0"
 winnow = { version = "0.5.19", default-features = false, features = ["alloc"] }
 postgres-types = "0.2.6"

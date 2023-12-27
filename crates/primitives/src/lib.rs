@@ -62,6 +62,10 @@ pub use {
     tiny_keccak::{self, Hasher, Keccak},
 };
 
+#[cfg(feature = "asm-keccak")]
+#[doc(no_inline)]
+pub use keccak_asm::{self, digest, Keccak256};
+
 /// Re-export of [`ruint::uint!`] for convenience. Note that users of this macro
 /// must also add [`ruint`] to their `Cargo.toml` as a dependency.
 #[doc(inline)]
