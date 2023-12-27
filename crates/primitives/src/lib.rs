@@ -44,6 +44,9 @@ pub use self::bytes_::Bytes;
 mod log;
 pub use log::Log;
 
+mod sealed;
+pub use sealed::{Sealable, Sealed};
+
 mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
