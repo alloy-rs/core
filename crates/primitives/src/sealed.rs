@@ -24,11 +24,16 @@ impl<T> Sealed<T> {
     pub const fn new_unchecked(inner: T, seal: B256) -> Self {
         Self { inner, seal }
     }
-
     /// Decompose into parts.
     #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn into_parts(self) -> (T, B256) {
         (self.inner, self.seal)
+    }
+
+    /// Decompose into parts. Alias for [`Self::into_parts`].
+    #[allow(clippy::missing_const_for_fn)] // false positive
+    pub fn split(self) -> (T, B256) {
+        self.into_parts()
     }
 
     /// Get the inner item.
@@ -41,6 +46,21 @@ impl<T> Sealed<T> {
     #[inline(always)]
     pub const fn seal(&self) -> B256 {
         self.seal
+    }
+
+    /// Unseal the inner item, discarding the hash.
+    #[inline(always)]
+    #[allow(clippy::missing_const_for_fn)] // false positive
+    pub fn into_inner(self) -> T {
+        self.inner
+    }
+
+    /// Unseal the inner item, discarding the hash. Alias for
+    /// [`Self::into_inner`].
+    #[inline(always)]
+    #[allow(clippy::missing_const_for_fn)] // false positive
+    pub fn unseal(self) -> T {
+        self.into_inner()
     }
 }
 
