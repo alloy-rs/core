@@ -1,9 +1,10 @@
 use crate::B256;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// A consensus hashable item, with its memoized hash.
 ///
-/// We do not implement
+/// We do not implement any specific hashing algorithm here. Instead types
+/// implement the [`Sealable`] trait to provide define their own hash.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Sealed<T> {
     /// The inner item
     inner: T,
