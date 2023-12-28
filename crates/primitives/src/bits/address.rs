@@ -1,4 +1,4 @@
-use crate::{aliases::U160, utils::keccak256, wrap_fixed_bytes, FixedBytes, Hasher};
+use crate::{aliases::U160, utils::keccak256, wrap_fixed_bytes, FixedBytes};
 use alloc::{
     borrow::Borrow,
     string::{String, ToString},
@@ -229,16 +229,17 @@ impl Address {
         buf[1] = b'x';
         hex::encode_to_slice(self, &mut buf[2..]).unwrap();
 
-        let mut hasher = crate::Keccak::v256();
+        let mut hasher = crate::Keccak256::new();
         match chain_id {
             Some(chain_id) => {
                 hasher.update(itoa::Buffer::new().format(chain_id).as_bytes());
-                hasher.update(buf);
+                // Clippy suggests an unnecessary copy.
+                #[allow(clippy::needless_borrows_for_generic_args)]
+                hasher.update(&*buf);
             }
             None => hasher.update(&buf[2..]),
         }
-        let mut hash = [0u8; 32];
-        hasher.finalize(&mut hash);
+        let hash = hasher.finalize();
 
         let mut hash_hex = [0u8; 64];
         hex::encode_to_slice(hash, &mut hash_hex).unwrap();

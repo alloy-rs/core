@@ -159,13 +159,10 @@ impl Eip712Domain {
     /// Hashes this domain according to [EIP-712 `hashStruct`](https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct).
     #[inline]
     pub fn hash_struct(&self) -> B256 {
-        use alloy_primitives::Hasher;
-        let mut hasher = alloy_primitives::Keccak::v256();
-        hasher.update(self.type_hash().as_ref());
-        hasher.update(&self.encode_data());
-        let mut out = B256::ZERO;
-        hasher.finalize(out.as_mut());
-        out
+        let mut hasher = alloy_primitives::Keccak256::new();
+        hasher.update(self.type_hash());
+        hasher.update(self.encode_data());
+        hasher.finalize()
     }
 }
 

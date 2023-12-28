@@ -2,12 +2,21 @@
 
 use crate::B256;
 use alloc::vec::Vec;
-use core::mem::MaybeUninit;
+use cfg_if::cfg_if;
+use core::{fmt, mem::MaybeUninit};
 
 mod units;
 pub use units::{
     format_ether, format_units, parse_ether, parse_units, ParseUnits, Unit, UnitsError,
 };
+
+cfg_if! {
+    if #[cfg(all(feature = "asm-keccak", not(miri)))] {
+        use keccak_asm::Digest as _;
+    } else {
+        use tiny_keccak::Hasher as _;
+    }
+}
 
 #[doc(hidden)]
 #[deprecated(since = "0.5.0", note = "use `Unit::ETHER.wei()` instead")]
@@ -61,7 +70,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
     fn keccak256(bytes: &[u8]) -> B256 {
         let mut output = MaybeUninit::<B256>::uninit();
 
-        cfg_if::cfg_if! {
+        cfg_if! {
             if #[cfg(all(feature = "native-keccak", not(feature = "tiny-keccak"), not(miri)))] {
                 #[link(wasm_import_module = "vm_hooks")]
                 extern "C" {
@@ -84,20 +93,11 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
 
                 // SAFETY: The output is 32-bytes, and the input comes from a slice.
                 unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr().cast::<u8>()) };
-            } else if #[cfg(all(feature = "asm-keccak", not(miri)))] {
-                use keccak_asm::{digest::Digest, Keccak256};
-
+            } else {
                 let mut hasher = Keccak256::new();
                 hasher.update(bytes);
                 // SAFETY: Never reads from `output`.
-                hasher.finalize_into(unsafe { (&mut (*output.as_mut_ptr()).0).into() });
-            } else {
-                use tiny_keccak::{Hasher, Keccak};
-
-                let mut hasher = Keccak::v256();
-                hasher.update(bytes);
-                // SAFETY: Never reads from `output`.
-                hasher.finalize(unsafe { &mut (*output.as_mut_ptr()).0 });
+                unsafe { hasher.finalize_into_raw(output.as_mut_ptr().cast()) };
             }
         }
 
@@ -106,6 +106,98 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
     }
 
     keccak256(bytes.as_ref())
+}
+
+/// Simple [`Keccak-256`] hasher.
+///
+/// Note that the "native-keccak" feature is not supported for this struct, and will default to the
+/// [`tiny_keccak`] implementation.
+///
+/// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
+#[derive(Clone)]
+pub struct Keccak256 {
+    #[cfg(all(feature = "asm-keccak", not(miri)))]
+    hasher: keccak_asm::Keccak256,
+    #[cfg(not(all(feature = "asm-keccak", not(miri))))]
+    hasher: tiny_keccak::Keccak,
+}
+
+impl Default for Keccak256 {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl fmt::Debug for Keccak256 {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Keccak256").finish_non_exhaustive()
+    }
+}
+
+impl Keccak256 {
+    /// Creates a new [`Keccak256`] hasher.
+    #[inline]
+    pub fn new() -> Self {
+        cfg_if! {
+            if #[cfg(all(feature = "asm-keccak", not(miri)))] {
+                let hasher = keccak_asm::Keccak256::new();
+            } else {
+                let hasher = tiny_keccak::Keccak::v256();
+            }
+        }
+        Self { hasher }
+    }
+
+    /// Absorbs additional input. Can be called multiple times.
+    #[inline]
+    pub fn update(&mut self, bytes: impl AsRef<[u8]>) {
+        self.hasher.update(bytes.as_ref());
+    }
+
+    /// Pad and squeeze the state.
+    #[inline]
+    pub fn finalize(self) -> B256 {
+        let mut output = MaybeUninit::<B256>::uninit();
+        // SAFETY: The output is 32-bytes.
+        unsafe { self.finalize_into_raw(output.as_mut_ptr().cast()) };
+        // SAFETY: Initialized above.
+        unsafe { output.assume_init() }
+    }
+
+    /// Pad and squeeze the state into `output`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `output` is not 32 bytes long.
+    #[inline]
+    #[track_caller]
+    pub fn finalize_into(self, output: &mut [u8]) {
+        self.finalize_into_array(output.try_into().unwrap())
+    }
+
+    /// Pad and squeeze the state into `output`.
+    #[inline]
+    pub fn finalize_into_array(self, output: &mut [u8; 32]) {
+        cfg_if! {
+            if #[cfg(all(feature = "asm-keccak", not(miri)))] {
+                self.hasher.finalize_into(output.into());
+            } else {
+                self.hasher.finalize(output);
+            }
+        }
+    }
+
+    /// Pad and squeeze the state into `output`.
+    ///
+    /// # Safety
+    ///
+    /// `output` must point to a buffer that is at least 32-bytes long.
+    #[inline]
+    pub unsafe fn finalize_into_raw(self, output: *mut u8) {
+        self.finalize_into_array(&mut *output.cast::<[u8; 32]>())
+    }
 }
 
 #[cfg(test)]
@@ -125,5 +217,29 @@ mod tests {
         );
         assert_eq!(hash, b256!("a1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2"));
         assert_eq!(eip191_hash_message(msg), hash);
+    }
+
+    #[test]
+    fn keccak256_hasher() {
+        let expected = b256!("47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad");
+        assert_eq!(keccak256("hello world"), expected);
+
+        let mut hasher = Keccak256::new();
+        hasher.update(b"hello");
+        hasher.update(b" world");
+
+        assert_eq!(hasher.clone().finalize(), expected);
+
+        let mut hash = [0u8; 32];
+        hasher.clone().finalize_into(&mut hash);
+        assert_eq!(hash, expected);
+
+        let mut hash = [0u8; 32];
+        hasher.clone().finalize_into_array(&mut hash);
+        assert_eq!(hash, expected);
+
+        let mut hash = [0u8; 32];
+        unsafe { hasher.finalize_into_raw(hash.as_mut_ptr()) };
+        assert_eq!(hash, expected);
     }
 }
