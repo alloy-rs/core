@@ -225,12 +225,25 @@ mod tests {
 
     #[test]
     fn keccak256_hasher() {
+        let expected = b256!("47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad");
+        assert_eq!(keccak256("hello world"), expected);
+
         let mut hasher = Keccak256::new();
         hasher.update(b"hello");
         hasher.update(b" world");
+
+        assert_eq!(hasher.clone().finalize(), expected);
+
         let mut hash = [0u8; 32];
-        hasher.finalize_into(&mut hash);
-        assert_eq!(hash, b256!("47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad"));
-        assert_eq!(hash, keccak256("hello world"));
+        hasher.clone().finalize_into(&mut hash);
+        assert_eq!(hash, expected);
+
+        let mut hash = [0u8; 32];
+        hasher.clone().finalize_into_array(&mut hash);
+        assert_eq!(hash, expected);
+
+        let mut hash = [0u8; 32];
+        unsafe { hasher.finalize_into_raw(hash.as_mut_ptr()) };
+        assert_eq!(hash, expected);
     }
 }
