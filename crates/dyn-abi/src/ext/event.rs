@@ -3,7 +3,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use alloy_json_abi::Event;
-use alloy_primitives::{Log, B256};
+use alloy_primitives::{LogData, B256};
 
 mod sealed {
     pub trait Sealed {}
@@ -62,7 +62,7 @@ pub trait EventExt: Sealed {
     ///
     /// See [`decode_log`](EventExt::decode_log).
     #[inline]
-    fn decode_log(&self, log: &Log, validate: bool) -> Result<DecodedEvent> {
+    fn decode_log(&self, log: &LogData, validate: bool) -> Result<DecodedEvent> {
         self.decode_log_parts(log.topics().iter().copied(), &log.data, validate)
     }
 }
@@ -189,7 +189,7 @@ mod tests {
         wrong_event.inputs[0].indexed = true;
         wrong_event.inputs[1].indexed = false;
 
-        let log = Log::new_unchecked(
+        let log = LogData::new_unchecked(
             vec![
                 b256!("cf74b4e62f836eeedcd6f92120ffb5afea90e6fa490d36f8b81075e2a7de0cf7"),
                 b256!("0000000000000000000000000000000000000000000000000000000000012321"),

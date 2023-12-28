@@ -1,6 +1,6 @@
 use crate::{DynSolType, DynSolValue, Error, Result};
 use alloc::vec::Vec;
-use alloy_primitives::{Log, B256};
+use alloy_primitives::{LogData, B256};
 
 /// A dynamic ABI event.
 ///
@@ -106,7 +106,7 @@ impl DynSolEvent {
     }
 
     /// Decode the event from the given log info.
-    pub fn decode_log(&self, log: &Log, validate: bool) -> Result<DecodedEvent> {
+    pub fn decode_log(&self, log: &LogData, validate: bool) -> Result<DecodedEvent> {
         self.decode_log_parts(log.topics().iter().copied(), &log.data, validate)
     }
 
@@ -143,7 +143,7 @@ mod test {
 
     #[test]
     fn it_decodes_a_simple_log() {
-        let log = Log::new_unchecked(vec![], U256::ZERO.to_be_bytes_vec().into());
+        let log = LogData::new_unchecked(vec![], U256::ZERO.to_be_bytes_vec().into());
         let event = DynSolEvent {
             topic_0: None,
             indexed: vec![],
@@ -155,7 +155,7 @@ mod test {
     #[test]
     fn it_decodes_logs_with_indexed_params() {
         let t0 = b256!("cf74b4e62f836eeedcd6f92120ffb5afea90e6fa490d36f8b81075e2a7de0cf7");
-        let log = Log::new_unchecked(
+        let log = LogData::new_unchecked(
             vec![t0, b256!("0000000000000000000000000000000000000000000000000000000000012321")],
             bytes!(
                 "

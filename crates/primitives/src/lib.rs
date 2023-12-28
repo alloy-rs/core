@@ -42,7 +42,7 @@ mod bytes_;
 pub use self::bytes_::Bytes;
 
 mod log;
-pub use log::Log;
+pub use log::{Log, LogData};
 
 mod sealed;
 pub use sealed::{Sealable, Sealed};

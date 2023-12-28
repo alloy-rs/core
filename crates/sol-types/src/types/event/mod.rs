@@ -3,7 +3,7 @@ use crate::{
     Result, SolType, Word,
 };
 use alloc::vec::Vec;
-use alloy_primitives::{FixedBytes, Log, B256};
+use alloy_primitives::{FixedBytes, Log, LogData, B256};
 
 mod topic;
 pub use topic::EventTopic;
@@ -142,7 +142,7 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the event from the given log info.
-    fn decode_log<I, D>(topics: I, data: &[u8], validate: bool) -> Result<Self>
+    fn decode_raw_log<I, D>(topics: I, data: &[u8], validate: bool) -> Result<Self>
     where
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,
@@ -153,7 +153,12 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the event from the given log object.
-    fn decode_log_object(log: &Log, validate: bool) -> Result<Self> {
-        Self::decode_log(log.topics(), &log.data, validate)
+    fn decode_log_data(log: &LogData, validate: bool) -> Result<Self> {
+        Self::decode_raw_log(log.topics(), &log.data, validate)
+    }
+
+    /// Decode the event from the given log object.
+    fn decode_log(log: &Log, validate: bool) -> Result<Log<Self>> {
+        Self::decode_log_data(&log.data, validate).map(|data| Log { address: log.address, data })
     }
 }
