@@ -19,6 +19,8 @@
 #[macro_use]
 extern crate alloc;
 
+use tiny_keccak as _;
+
 #[cfg(feature = "postgres")]
 pub mod postgres;
 
@@ -51,7 +53,7 @@ mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 pub mod utils;
-pub use utils::{eip191_hash_message, keccak256};
+pub use utils::{eip191_hash_message, keccak256, Keccak256};
 
 #[doc(no_inline)]
 pub use {
@@ -59,12 +61,7 @@ pub use {
     ::hex,
     hex_literal::{self, hex},
     ruint::{self, Uint},
-    tiny_keccak::{self, Hasher, Keccak},
 };
-
-#[cfg(feature = "asm-keccak")]
-#[doc(no_inline)]
-pub use keccak_asm::{self, digest, Keccak256};
 
 /// Re-export of [`ruint::uint!`] for convenience. Note that users of this macro
 /// must also add [`ruint`] to their `Cargo.toml` as a dependency.
