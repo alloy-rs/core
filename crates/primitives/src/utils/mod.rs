@@ -178,10 +178,6 @@ impl Keccak256 {
     }
 
     /// Pad and squeeze the state into `output`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `output` is not 32 bytes long.
     #[inline]
     pub fn finalize_into_array(self, output: &mut [u8; 32]) {
         cfg_if! {
