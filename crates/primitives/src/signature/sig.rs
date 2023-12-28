@@ -338,8 +338,8 @@ impl<S> Signature<S> {
         Self { inner: self.inner, v: parity.into(), r: self.r, s: self.s }
     }
 
-    #[cfg(feature = "rlp")]
     /// Length of RLP RS field encoding
+    #[cfg(feature = "rlp")]
     pub fn rlp_rs_len(&self) -> usize {
         alloy_rlp::Encodable::length(&self.r) + alloy_rlp::Encodable::length(&self.s)
     }
@@ -350,21 +350,21 @@ impl<S> Signature<S> {
         self.rlp_rs_len() + alloy_rlp::Encodable::length(&self.v)
     }
 
-    #[cfg(feature = "rlp")]
     /// Write R and S to an RLP buffer in progress.
+    #[cfg(feature = "rlp")]
     pub fn write_rlp_rs(&self, out: &mut dyn alloy_rlp::BufMut) {
         alloy_rlp::Encodable::encode(&self.r, out);
         alloy_rlp::Encodable::encode(&self.s, out);
     }
 
-    #[cfg(feature = "rlp")]
     /// Write the V to an RLP buffer without using EIP-155.
+    #[cfg(feature = "rlp")]
     pub fn write_rlp_v(&self, out: &mut dyn alloy_rlp::BufMut) {
         alloy_rlp::Encodable::encode(&self.v, out);
     }
 
-    #[cfg(feature = "rlp")]
     /// Write the VRS to the output. The V will always be 27 or 28.
+    #[cfg(feature = "rlp")]
     pub fn write_rlp_vrs(&self, out: &mut dyn alloy_rlp::BufMut) {
         self.write_rlp_v(out);
         self.write_rlp_rs(out);
