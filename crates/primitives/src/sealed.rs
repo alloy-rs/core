@@ -25,6 +25,7 @@ impl<T> Sealed<T> {
     pub const fn new_unchecked(inner: T, seal: B256) -> Self {
         Self { inner, seal }
     }
+
     /// Decompose into parts.
     #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn into_parts(self) -> (T, B256) {
