@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4](https://github.com/alloy-rs/core/releases/tag/v0.5.4) - 2023-12-28
+
+### Features
+
+- Sealed ([#467](https://github.com/alloy-rs/core/issues/467))
+- [primitives] Re-export ::bytes ([#462](https://github.com/alloy-rs/core/issues/462))
+- [primitives] Support parsing numbers in Unit::from_str ([#461](https://github.com/alloy-rs/core/issues/461))
+- Enable postgres ruint feature ([#460](https://github.com/alloy-rs/core/issues/460))
+
+### Miscellaneous Tasks
+
+- Clean up address checksum implementation ([#464](https://github.com/alloy-rs/core/issues/464))
+- Clippy ([#463](https://github.com/alloy-rs/core/issues/463))
+- [sol-types] Make PanicKind non_exhaustive ([#458](https://github.com/alloy-rs/core/issues/458))
+
+### Performance
+
+- Add optional support for keccak-asm ([#466](https://github.com/alloy-rs/core/issues/466))
+
+### Styling
+
+- Add ToSql and FromSql to Signed and FixedBytes ([#447](https://github.com/alloy-rs/core/issues/447))
+
 ## [0.5.3](https://github.com/alloy-rs/core/releases/tag/v0.5.3) - 2023-12-16
 
 ### Bug Fixes
@@ -22,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.5.3
 - Bless tests ([#456](https://github.com/alloy-rs/core/issues/456))
 
 ## [0.5.2](https://github.com/alloy-rs/core/releases/tag/v0.5.2) - 2023-12-01
