@@ -454,8 +454,9 @@ impl Address {
 /// Stack-allocated buffer for efficiently computing address checksums.
 ///
 /// See [`Address::to_checksum_buffer`] for more information.
-#[derive(Clone, Copy)]
 #[must_use]
+#[allow(missing_copy_implementations)]
+#[derive(Clone)]
 pub struct AddressChecksumBuffer(MaybeUninit<[u8; 42]>);
 
 impl fmt::Debug for AddressChecksumBuffer {
