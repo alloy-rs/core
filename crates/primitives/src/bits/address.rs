@@ -225,6 +225,9 @@ impl Address {
 
     /// Encodes an Ethereum address to its [EIP-55] checksum into the given buffer.
     ///
+    /// For convenience, the buffer is returned as a `&mut str`, as the bytes
+    /// are guaranteed to be valid UTF-8.
+    ///
     /// You can optionally specify an [EIP-155 chain ID] to encode the address
     /// using [EIP-1191].
     ///
@@ -243,17 +246,19 @@ impl Address {
     /// let address = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// let mut buf = [0; 42];
     ///
-    /// let checksummed: &str = address.to_checksum_raw(&mut buf, None);
+    /// let checksummed: &mut str = address.to_checksum_raw(&mut buf, None);
     /// assert_eq!(checksummed, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
     ///
-    /// let checksummed: &str = address.to_checksum_raw(&mut buf, Some(1));
+    /// let checksummed: &mut str = address.to_checksum_raw(&mut buf, Some(1));
     /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
     /// ```
     #[inline]
     #[must_use]
     pub fn to_checksum_raw<'a>(&self, buf: &'a mut [u8], chain_id: Option<u64>) -> &'a mut str {
-        let buf = buf.try_into().expect("buffer must be exactly 42 bytes long");
-        self.to_checksum_inner(buf, chain_id)
+        let buf: &mut [u8; 42] = buf.try_into().expect("buffer must be exactly 42 bytes long");
+        self.to_checksum_inner(buf, chain_id);
+        // SAFETY: All bytes in the buffer are valid UTF-8.
+        unsafe { str::from_utf8_unchecked_mut(buf) }
     }
 
     /// Encodes an Ethereum address to its [EIP-55] checksum into a stack-allocated buffer.
@@ -285,8 +290,8 @@ impl Address {
         buf
     }
 
-    #[must_use]
-    fn to_checksum_inner<'a>(&self, buf: &'a mut [u8; 42], chain_id: Option<u64>) -> &'a mut str {
+    #[allow(clippy::wrong_self_convention)]
+    fn to_checksum_inner(&self, buf: &mut [u8; 42], chain_id: Option<u64>) {
         buf[0] = b'0';
         buf[1] = b'x';
         hex::encode_to_slice(self, &mut buf[2..]).unwrap();
@@ -312,9 +317,6 @@ impl Address {
             buf[2 + i] ^=
                 0b0010_0000 * (buf[2 + i].is_ascii_lowercase() & (hash_hex[i] >= b'8')) as u8;
         }
-
-        // SAFETY: All bytes in the buffer are valid UTF-8.
-        unsafe { str::from_utf8_unchecked_mut(buf) }
     }
 
     /// Computes the `create` address for this address and nonce:
@@ -483,14 +485,17 @@ impl AddressChecksumBuffer {
     }
 
     /// Calculates the checksum of an address into the buffer.
+    ///
+    /// See [`Address::to_checksum_buffer`] for more information.
     #[inline]
     pub fn format(&mut self, address: &Address, chain_id: Option<u64>) -> &mut str {
-        address.to_checksum_inner(unsafe { self.0.assume_init_mut() }, chain_id)
+        address.to_checksum_inner(unsafe { self.0.assume_init_mut() }, chain_id);
+        self.as_mut_str()
     }
 
     /// Returns the checksum of a formatted address.
     #[inline]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         unsafe { str::from_utf8_unchecked(self.0.assume_init_ref()) }
     }
 
@@ -509,7 +514,7 @@ impl AddressChecksumBuffer {
 
     /// Returns the backing buffer.
     #[inline]
-    pub fn into_inner(self) -> [u8; 42] {
+    pub const fn into_inner(self) -> [u8; 42] {
         unsafe { self.0.assume_init() }
     }
 }
