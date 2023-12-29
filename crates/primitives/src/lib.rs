@@ -35,8 +35,8 @@ pub use aliases::{
 #[macro_use]
 mod bits;
 pub use bits::{
-    Address, AddressError, Bloom, BloomInput, FixedBytes, Function, BLOOM_BITS_PER_ITEM,
-    BLOOM_SIZE_BITS, BLOOM_SIZE_BYTES,
+    Address, AddressChecksumBuffer, AddressError, Bloom, BloomInput, FixedBytes, Function,
+    BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS, BLOOM_SIZE_BYTES,
 };
 
 #[path = "bytes/mod.rs"]
