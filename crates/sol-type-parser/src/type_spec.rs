@@ -151,6 +151,7 @@ fn array_size_parser(input: &mut &str) -> PResult<Option<NonZeroUsize>> {
 mod test {
     use super::*;
     use crate::TupleSpecifier;
+    use alloc::string::ToString;
 
     #[track_caller]
     fn assert_error_contains(e: &Error, s: &str) {
