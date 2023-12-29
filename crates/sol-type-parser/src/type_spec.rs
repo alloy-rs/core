@@ -6,7 +6,8 @@ use alloc::vec::Vec;
 use core::num::NonZeroUsize;
 use winnow::{
     ascii::digit0,
-    combinator::{cut_err, delimited, opt, repeat},
+    combinator::{cut_err, delimited, repeat},
+    error::{ErrMode, ErrorKind, FromExternalError},
     trace::trace,
     PResult, Parser,
 };
@@ -100,11 +101,7 @@ impl<'a> TypeSpecifier<'a> {
                 let sizes = if input.starts_with('[') {
                     repeat(
                         1..,
-                        delimited(
-                            str_parser("["),
-                            opt(cut_err(digit0).parse_to()),
-                            cut_err(str_parser("]")),
-                        ),
+                        delimited(str_parser("["), array_size_parser, cut_err(str_parser("]"))),
                     )
                     .parse_next(input)?
                 } else {
@@ -142,10 +139,27 @@ impl<'a> TypeSpecifier<'a> {
     }
 }
 
+fn array_size_parser(input: &mut &str) -> PResult<Option<NonZeroUsize>> {
+    let digits = digit0(input)?;
+    if digits.is_empty() {
+        return Ok(None);
+    }
+    digits.parse().map(Some).map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::TupleSpecifier;
+    use alloc::string::ToString;
+
+    #[track_caller]
+    fn assert_error_contains(e: &Error, s: &str) {
+        if cfg!(feature = "std") {
+            let es = e.to_string();
+            assert!(es.contains(s), "{s:?} not in {es:?}");
+        }
+    }
 
     #[test]
     fn parse_test() {
@@ -245,7 +259,9 @@ mod test {
             }),
         );
 
-        TypeSpecifier::parse("a[0]").unwrap_err();
+        let e = TypeSpecifier::parse("a[0]").unwrap_err();
+        assert_error_contains(&e, "number would be zero for non-zero type");
+        TypeSpecifier::parse("a[x]").unwrap_err();
 
         TypeSpecifier::parse("a[ ]").unwrap_err();
         TypeSpecifier::parse("a[  ]").unwrap_err();
@@ -260,7 +276,8 @@ mod test {
         TypeSpecifier::parse("a[1 ]").unwrap_err();
 
         TypeSpecifier::parse(&format!("a[{}]", usize::MAX)).unwrap();
-        TypeSpecifier::parse(&format!("a[{}0]", usize::MAX)).unwrap_err();
+        let e = TypeSpecifier::parse(&format!("a[{}0]", usize::MAX)).unwrap_err();
+        assert_error_contains(&e, "number too large to fit in target type");
     }
 
     #[test]
