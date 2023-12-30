@@ -1,6 +1,6 @@
 //! [`ItemUdt`] expansion.
 
-use super::ExpCtxt;
+use super::{ty::expand_rust_type, ExpCtxt};
 use crate::expand::expand_type;
 use ast::ItemUdt;
 use proc_macro2::TokenStream;
@@ -11,37 +11,44 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
     let ItemUdt { name, ty, attrs, .. } = udt;
 
     let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
-    cx.type_derives(&mut attrs, Some(ty), true);
+    cx.type_derives(&mut attrs, std::iter::once(ty), true);
 
-    let type_check = if let Some(lit_str) = sol_attrs.type_check {
-        let func_path: syn::Path = syn::parse_str(&lit_str.value()).unwrap();
-        quote! { #func_path }
+    let underlying_sol = expand_type(ty);
+    let underlying_rust = expand_rust_type(ty);
+
+    let type_check_body = if let Some(lit_str) = sol_attrs.type_check {
+        let func_path: syn::Path = lit_str.parse()?;
+        quote! {
+            <#underlying_sol as ::alloy_sol_types::SolType>::type_check(token)?;
+            #func_path(token)
+        }
     } else {
-        quote! { ::alloy_sol_types::private::just_ok }
+        quote! {
+            <#underlying_sol as ::alloy_sol_types::SolType>::type_check(token)
+        }
     };
 
-    let underlying = expand_type(ty);
     let tokens = quote! {
-        #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-        pub struct #name (
-            <#underlying as ::alloy_sol_types::SolType>::RustType,
-        );
+        #(#attrs)*
+        #[allow(non_camel_case_types, non_snake_case)]
+        #[derive(Clone)]
+        pub struct #name(#underlying_rust);
 
         #[automatically_derived]
-        impl ::alloy_sol_types::private::SolTypeValue<#name> for <#underlying as ::alloy_sol_types::SolType>::RustType {
+        impl ::alloy_sol_types::private::SolTypeValue<#name> for #underlying_rust {
             #[inline]
-            fn stv_to_tokens(&self) -> <#underlying as ::alloy_sol_types::SolType>::Token<'_> {
-                ::alloy_sol_types::private::SolTypeValue::<#underlying>::stv_to_tokens(self)
+            fn stv_to_tokens(&self) -> <#underlying_sol as ::alloy_sol_types::SolType>::Token<'_> {
+                ::alloy_sol_types::private::SolTypeValue::<#underlying_sol>::stv_to_tokens(self)
             }
 
             #[inline]
             fn stv_eip712_data_word(&self) -> ::alloy_sol_types::Word {
-                <#underlying as ::alloy_sol_types::SolType>::tokenize(self).0
+                <#underlying_sol as ::alloy_sol_types::SolType>::tokenize(self).0
             }
 
             #[inline]
             fn stv_abi_encode_packed_to(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
-                <#underlying as ::alloy_sol_types::SolType>::abi_encode_packed_to(self, out)
+                <#underlying_sol as ::alloy_sol_types::SolType>::abi_encode_packed_to(self, out)
             }
         }
 
@@ -52,13 +59,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
 
             /// Convert from the underlying value type.
             #[inline]
-            pub const fn from(value: <#underlying as ::alloy_sol_types::SolType>::RustType) -> Self {
+            pub const fn from(value: #underlying_rust) -> Self {
                 Self(value)
             }
 
             /// Return the underlying value.
             #[inline]
-            pub const fn into(self) -> <#underlying as ::alloy_sol_types::SolType>::RustType {
+            pub const fn into(self) -> #underlying_rust {
                 self.0
             }
 
@@ -79,10 +86,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
 
         #[automatically_derived]
         impl ::alloy_sol_types::SolType for #name {
-            type RustType = <#underlying as ::alloy_sol_types::SolType>::RustType;
-            type Token<'a> = <#underlying as ::alloy_sol_types::SolType>::Token<'a>;
+            type RustType = #underlying_rust;
+            type Token<'a> = <#underlying_sol as ::alloy_sol_types::SolType>::Token<'a>;
 
-            const ENCODED_SIZE: Option<usize> = <#underlying as ::alloy_sol_types::SolType>::ENCODED_SIZE;
+            const ENCODED_SIZE: Option<usize> = <#underlying_sol as ::alloy_sol_types::SolType>::ENCODED_SIZE;
 
             #[inline]
             fn sol_type_name() -> ::alloy_sol_types::private::Cow<'static, str> {
@@ -96,13 +103,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
 
             #[inline]
             fn type_check(token: &Self::Token<'_>) -> ::alloy_sol_types::Result<()> {
-                <#underlying as ::alloy_sol_types::SolType>::type_check(token)?;
-                #type_check(token)
+                #type_check_body
             }
 
             #[inline]
             fn detokenize(token: Self::Token<'_>) -> Self::RustType {
-                <#underlying as ::alloy_sol_types::SolType>::detokenize(token)
+                <#underlying_sol as ::alloy_sol_types::SolType>::detokenize(token)
             }
         }
 
@@ -110,17 +116,17 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
         impl ::alloy_sol_types::EventTopic for #name {
             #[inline]
             fn topic_preimage_length(rust: &Self::RustType) -> usize {
-                <#underlying as ::alloy_sol_types::EventTopic>::topic_preimage_length(rust)
+                <#underlying_sol as ::alloy_sol_types::EventTopic>::topic_preimage_length(rust)
             }
 
             #[inline]
             fn encode_topic_preimage(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
-                <#underlying as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust, out)
+                <#underlying_sol as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust, out)
             }
 
             #[inline]
             fn encode_topic(rust: &Self::RustType) -> ::alloy_sol_types::abi::token::WordToken {
-                <#underlying as ::alloy_sol_types::EventTopic>::encode_topic(rust)
+                <#underlying_sol as ::alloy_sol_types::EventTopic>::encode_topic(rust)
             }
         }
     };
