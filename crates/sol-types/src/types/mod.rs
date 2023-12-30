@@ -26,7 +26,3 @@ pub use value::SolValue;
 
 mod ty;
 pub use ty::SolType;
-
-// Solidity user-defined value types.
-// No exports are needed as the only item is a macro.
-mod udt;
