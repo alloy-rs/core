@@ -117,6 +117,8 @@ mod json;
 ///   will emit a `static` item with the specified bytes.
 /// - `deployed_bytecode = <hex string literal>`: specifies the deployed bytecode of a contract.
 ///   This will emit a `static` item with the specified bytes.
+/// - `type_check = <string literal>`: specifies a function to be used to check an User Defined
+///   Type.
 ///
 /// ### Structs and enums
 ///

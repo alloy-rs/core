@@ -10,8 +10,15 @@ use syn::Result;
 pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
     let ItemUdt { name, ty, attrs, .. } = udt;
 
-    let (_sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
     cx.type_derives(&mut attrs, Some(ty), true);
+
+    let type_check = if let Some(lit_str) = sol_attrs.type_check {
+        let func_path: syn::Path = syn::parse_str(&lit_str.value()).unwrap();
+        quote! { #func_path }
+    } else {
+        quote! { ::alloy_sol_types::private::just_ok }
+    };
 
     let underlying = expand_type(ty);
     let tokens = quote! {
@@ -90,7 +97,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
             #[inline]
             fn type_check(token: &Self::Token<'_>) -> ::alloy_sol_types::Result<()> {
                 <#underlying as ::alloy_sol_types::SolType>::type_check(token)?;
-                ::alloy_sol_types::private::just_ok(token)
+                #type_check(token)
             }
 
             #[inline]

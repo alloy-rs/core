@@ -78,6 +78,8 @@ pub struct SolAttrs {
 
     pub bytecode: Option<LitStr>,
     pub deployed_bytecode: Option<LitStr>,
+
+    pub type_check: Option<LitStr>,
 }
 
 impl SolAttrs {
@@ -146,6 +148,8 @@ impl SolAttrs {
 
                     bytecode => bytes()?,
                     deployed_bytecode => bytes()?,
+
+                    type_check => lit()?,
                 };
                 Ok(())
             })?;
@@ -321,6 +325,11 @@ mod tests {
             #[sol(bytecode = "12 34")] => Err("expected hex literal"),
             #[sol(bytecode = "xyz")] => Err("expected hex literal"),
             #[sol(bytecode = "123")] => Err("expected even number of hex digits"),
+        }
+
+        type_check {
+            #[sol(type_check = "my_function")] => Ok(sol_attrs! {type_check: parse_quote!("my_function")} ),
+            #[sol(type_check = "my_function1")] #[sol(type_check = "my_function2")] => Err(DUPLICATE_ERROR),
         }
     }
 }
