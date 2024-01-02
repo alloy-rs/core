@@ -455,14 +455,15 @@ fn fixed_bytes<'i>(len: usize) -> impl Parser<&'i str, Word, ContextError> {
                 input,
                 ErrorKind::Fail,
                 Error::InvalidFixedBytesLength(len),
-            ));
+            )
+            .cut());
         }
 
         let hex = hex_str(input)?;
         let mut out = Word::ZERO;
         match hex::decode_to_slice(hex, &mut out[..len]) {
             Ok(()) => Ok(out),
-            Err(e) => Err(hex_error(input, e)),
+            Err(e) => Err(hex_error(input, e).cut()),
         }
     })
 }
@@ -484,12 +485,7 @@ fn bytes(input: &mut &str) -> PResult<Vec<u8>> {
 
 #[inline]
 fn fixed_bytes_inner<const N: usize>(input: &mut &str) -> PResult<FixedBytes<N>> {
-    hex_str
-        .try_map(|s| {
-            let mut out = FixedBytes::ZERO;
-            hex::decode_to_slice(s, out.as_mut_slice()).map(|()| out)
-        })
-        .parse_next(input)
+    hex_str.try_map(|s| hex::decode_to_array(s).map(Into::into)).parse_next(input)
 }
 
 #[inline]
@@ -514,6 +510,14 @@ mod tests {
     };
     use alloy_primitives::address;
     use core::str::FromStr;
+
+    #[track_caller]
+    fn assert_error_contains(e: &impl core::fmt::Display, s: &str) {
+        if cfg!(feature = "std") {
+            let es = e.to_string();
+            assert!(es.contains(s), "{s:?} not in {es:?}");
+        }
+    }
 
     #[test]
     fn coerce_bool() {
@@ -840,10 +844,22 @@ mod tests {
             DynSolValue::FixedBytes(mk_word(&[0x12, 0x34, 0x56]), 3)
         );
 
-        assert!(DynSolType::FixedBytes(1).coerce_str("").is_err());
-        assert!(DynSolType::FixedBytes(1).coerce_str("0").is_err());
-        assert!(DynSolType::FixedBytes(1).coerce_str("0x").is_err());
-        assert!(DynSolType::FixedBytes(1).coerce_str("0x0").is_err());
+        let e = DynSolType::FixedBytes(1).coerce_str("").unwrap_err();
+        assert_error_contains(&e, "Invalid string length");
+        let e = DynSolType::FixedBytes(1).coerce_str("0").unwrap_err();
+        assert_error_contains(&e, "Odd number of digits");
+        let e = DynSolType::FixedBytes(1).coerce_str("0x").unwrap_err();
+        assert_error_contains(&e, "Invalid string length");
+        let e = DynSolType::FixedBytes(1).coerce_str("0x0").unwrap_err();
+        assert_error_contains(&e, "Odd number of digits");
+
+        let t = DynSolType::Array(Box::new(DynSolType::FixedBytes(1)));
+        let e = t.coerce_str("[0]").unwrap_err();
+        assert_error_contains(&e, "Odd number of digits");
+        let e = t.coerce_str("[0x]").unwrap_err();
+        assert_error_contains(&e, "Invalid string length");
+        let e = t.coerce_str("[0x0]").unwrap_err();
+        assert_error_contains(&e, "Odd number of digits");
     }
 
     #[test]
