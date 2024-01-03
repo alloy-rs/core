@@ -3,7 +3,7 @@ use alloc::{
     borrow::Borrow,
     string::{String, ToString},
 };
-use core::{fmt, str};
+use core::{fmt, mem::MaybeUninit, str};
 
 /// Error type for address checksum validation.
 #[derive(Debug, Copy, Clone)]
@@ -102,8 +102,8 @@ impl From<Address> for U160 {
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut buf = [0; 42];
-        let checksum = self.to_checksum_raw(&mut buf, None);
+        let checksum = self.to_checksum_buffer(None);
+        let checksum = checksum.as_str();
         if f.alternate() {
             // If the alternate flag is set, use middle-out compression
             // "0x" + first 4 bytes + "…" + last 4 bytes
@@ -186,7 +186,7 @@ impl Address {
             }
 
             let address: Address = s.parse()?;
-            if s == address.to_checksum_raw(&mut [0; 42], chain_id) {
+            if s == address.to_checksum_buffer(chain_id).as_str() {
                 Ok(address)
             } else {
                 Err(AddressError::InvalidChecksum)
@@ -196,7 +196,37 @@ impl Address {
         parse_checksummed(s.as_ref(), chain_id)
     }
 
-    /// Encodes an Ethereum address to its [EIP-55] checksum.
+    /// Encodes an Ethereum address to its [EIP-55] checksum into a heap-allocated string.
+    ///
+    /// You can optionally specify an [EIP-155 chain ID] to encode the address
+    /// using [EIP-1191].
+    ///
+    /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
+    /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
+    /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_primitives::{address, Address};
+    /// let address = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
+    ///
+    /// let checksummed: String = address.to_checksum(None);
+    /// assert_eq!(checksummed, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
+    ///
+    /// let checksummed: String = address.to_checksum(Some(1));
+    /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
+        self.to_checksum_buffer(chain_id).as_str().into()
+    }
+
+    /// Encodes an Ethereum address to its [EIP-55] checksum into the given buffer.
+    ///
+    /// For convenience, the buffer is returned as a `&mut str`, as the bytes
+    /// are guaranteed to be valid UTF-8.
     ///
     /// You can optionally specify an [EIP-155 chain ID] to encode the address
     /// using [EIP-1191].
@@ -216,15 +246,52 @@ impl Address {
     /// let address = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// let mut buf = [0; 42];
     ///
-    /// let checksummed: &str = address.to_checksum_raw(&mut buf, None);
+    /// let checksummed: &mut str = address.to_checksum_raw(&mut buf, None);
     /// assert_eq!(checksummed, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
     ///
-    /// let checksummed: &str = address.to_checksum_raw(&mut buf, Some(1));
+    /// let checksummed: &mut str = address.to_checksum_raw(&mut buf, Some(1));
     /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
     /// ```
+    #[inline]
     #[must_use]
-    pub fn to_checksum_raw<'a>(&self, buf: &'a mut [u8], chain_id: Option<u64>) -> &'a str {
+    pub fn to_checksum_raw<'a>(&self, buf: &'a mut [u8], chain_id: Option<u64>) -> &'a mut str {
         let buf: &mut [u8; 42] = buf.try_into().expect("buffer must be exactly 42 bytes long");
+        self.to_checksum_inner(buf, chain_id);
+        // SAFETY: All bytes in the buffer are valid UTF-8.
+        unsafe { str::from_utf8_unchecked_mut(buf) }
+    }
+
+    /// Encodes an Ethereum address to its [EIP-55] checksum into a stack-allocated buffer.
+    ///
+    /// You can optionally specify an [EIP-155 chain ID] to encode the address
+    /// using [EIP-1191].
+    ///
+    /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
+    /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
+    /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_primitives::{address, Address, AddressChecksumBuffer};
+    /// let address = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
+    ///
+    /// let mut buffer: AddressChecksumBuffer = address.to_checksum_buffer(None);
+    /// assert_eq!(buffer.as_str(), "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
+    ///
+    /// let checksummed: &str = buffer.format(&address, Some(1));
+    /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
+    /// ```
+    #[inline]
+    pub fn to_checksum_buffer(&self, chain_id: Option<u64>) -> AddressChecksumBuffer {
+        // SAFETY: The buffer is initialized by `format`.
+        let mut buf = unsafe { AddressChecksumBuffer::new() };
+        buf.format(self, chain_id);
+        buf
+    }
+
+    #[allow(clippy::wrong_self_convention)]
+    fn to_checksum_inner(&self, buf: &mut [u8; 42], chain_id: Option<u64>) {
         buf[0] = b'0';
         buf[1] = b'x';
         hex::encode_to_slice(self, &mut buf[2..]).unwrap();
@@ -250,36 +317,6 @@ impl Address {
             buf[2 + i] ^=
                 0b0010_0000 * (buf[2 + i].is_ascii_lowercase() & (hash_hex[i] >= b'8')) as u8;
         }
-
-        // SAFETY: All bytes in the buffer are valid UTF-8.
-        unsafe { str::from_utf8_unchecked(buf) }
-    }
-
-    /// Encodes an Ethereum address to its [EIP-55] checksum.
-    ///
-    /// You can optionally specify an [EIP-155 chain ID] to encode the address
-    /// using [EIP-1191].
-    ///
-    /// [EIP-55]: https://eips.ethereum.org/EIPS/eip-55
-    /// [EIP-155 chain ID]: https://eips.ethereum.org/EIPS/eip-155
-    /// [EIP-1191]: https://eips.ethereum.org/EIPS/eip-1191
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use alloy_primitives::{address, Address};
-    /// let address = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
-    ///
-    /// let checksummed: String = address.to_checksum(None);
-    /// assert_eq!(checksummed, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
-    ///
-    /// let checksummed: String = address.to_checksum(Some(1));
-    /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
-    /// ```
-    #[inline]
-    #[must_use]
-    pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
-        self.to_checksum_raw(&mut [0u8; 42], chain_id).to_string()
     }
 
     /// Computes the `create` address for this address and nonce:
@@ -411,6 +448,75 @@ impl Address {
         assert_eq!(pubkey.len(), 64, "raw public key must be 64 bytes");
         let digest = keccak256(pubkey);
         Address::from_slice(&digest[12..])
+    }
+}
+
+/// Stack-allocated buffer for efficiently computing address checksums.
+///
+/// See [`Address::to_checksum_buffer`] for more information.
+#[must_use]
+#[allow(missing_copy_implementations)]
+#[derive(Clone)]
+pub struct AddressChecksumBuffer(MaybeUninit<[u8; 42]>);
+
+impl fmt::Debug for AddressChecksumBuffer {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
+impl fmt::Display for AddressChecksumBuffer {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
+impl AddressChecksumBuffer {
+    /// Creates a new buffer.
+    ///
+    /// # Safety
+    ///
+    /// The buffer must be initialized with [`format`](Self::format) before use.
+    /// Prefer [`Address::to_checksum_buffer`] instead.
+    #[inline]
+    pub const unsafe fn new() -> Self {
+        Self(MaybeUninit::uninit())
+    }
+
+    /// Calculates the checksum of an address into the buffer.
+    ///
+    /// See [`Address::to_checksum_buffer`] for more information.
+    #[inline]
+    pub fn format(&mut self, address: &Address, chain_id: Option<u64>) -> &mut str {
+        address.to_checksum_inner(unsafe { self.0.assume_init_mut() }, chain_id);
+        self.as_mut_str()
+    }
+
+    /// Returns the checksum of a formatted address.
+    #[inline]
+    pub const fn as_str(&self) -> &str {
+        unsafe { str::from_utf8_unchecked(self.0.assume_init_ref()) }
+    }
+
+    /// Returns the checksum of a formatted address.
+    #[inline]
+    pub fn as_mut_str(&mut self) -> &mut str {
+        unsafe { str::from_utf8_unchecked_mut(self.0.assume_init_mut()) }
+    }
+
+    /// Returns the checksum of a formatted address.
+    #[inline]
+    #[allow(clippy::inherent_to_string_shadow_display)]
+    pub fn to_string(&self) -> String {
+        self.as_str().to_string()
+    }
+
+    /// Returns the backing buffer.
+    #[inline]
+    pub const fn into_inner(self) -> [u8; 42] {
+        unsafe { self.0.assume_init() }
     }
 }
 
