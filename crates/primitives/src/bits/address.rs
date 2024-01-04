@@ -426,9 +426,9 @@ impl Address {
         Address::from_slice(&digest[12..])
     }
 
-    #[cfg(feature = "k256")]
     /// Converts an ECDSA public key to its corresponding Ethereum address.
     #[inline]
+    #[cfg(feature = "k256")]
     pub fn from_public_key(pubkey: &k256::ecdsa::VerifyingKey) -> Self {
         use k256::elliptic_curve::sec1::ToEncodedPoint;
         let affine: &k256::AffinePoint = pubkey.as_ref();
