@@ -50,6 +50,7 @@ arbitrary = { workspace = true, optional = true }
 derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
+k256 = { version = "0.13.2", optional = true }
 
 # postgres
 postgres-types = { workspace = true, optional = true }
@@ -70,6 +71,7 @@ std = [
     "proptest?/std",
     "rand?/std",
     "serde?/std",
+    "k256?/std"
 ]
 postgres = ["dep:postgres-types", "std", "ruint/postgres"]
 tiny-keccak = []
@@ -80,17 +82,8 @@ rand = ["dep:rand", "getrandom", "ruint/rand"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
 ssz = ["dep:ethereum_ssz", "std", "ruint/ssz"]
-arbitrary = [
-    "std",
-    "dep:arbitrary",
-    "dep:derive_arbitrary",
-    "dep:proptest",
-    "dep:proptest-derive",
-    "ruint/arbitrary",
-    "ruint/proptest",
-    "ethereum_ssz?/arbitrary",
-]
-
+arbitrary = ["std", "dep:arbitrary", "dep:derive_arbitrary", "dep:proptest", "dep:proptest-derive", "ruint/arbitrary", "ruint/proptest", "ethereum_ssz?/arbitrary"]
+k256 = ["dep:k256"]
 # `const-hex` compatibility feature for `hex`.
 # Should not be needed most of the time.
 hex-compat = ["hex/hex"]

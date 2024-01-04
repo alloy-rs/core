@@ -52,6 +52,17 @@ pub use sealed::{Sealable, Sealed};
 mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
+mod signature;
+pub use signature::{to_eip155_v, Parity, SignatureError};
+
+/// An ECDSA Signature, consisting of V, R, and S.
+#[cfg(feature = "k256")]
+pub type Signature = signature::Signature<k256::ecdsa::Signature>;
+
+/// An ECDSA Signature, consisting of V, R, and S.
+#[cfg(not(feature = "k256"))]
+pub type Signature = signature::Signature<()>;
+
 pub mod utils;
 pub use utils::{eip191_hash_message, keccak256, Keccak256};
 
