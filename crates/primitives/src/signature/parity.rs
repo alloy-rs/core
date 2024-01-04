@@ -31,13 +31,13 @@ impl TryFrom<U64> for Parity {
 
 impl From<Uint<1, 1>> for Parity {
     fn from(value: Uint<1, 1>) -> Self {
-        Parity::Parity(!value.is_zero())
+        Self::Parity(!value.is_zero())
     }
 }
 
 impl From<bool> for Parity {
     fn from(value: bool) -> Self {
-        Parity::Parity(value)
+        Self::Parity(value)
     }
 }
 
@@ -58,7 +58,7 @@ impl Parity {
     /// Get the chain_id of the V value, if any.
     pub const fn chain_id(&self) -> Option<ChainId> {
         match *self {
-            Parity::Eip155(mut v @ 35..) => {
+            Self::Eip155(mut v @ 35..) => {
                 if v % 2 == 0 {
                     v -= 1;
                 }
@@ -72,9 +72,9 @@ impl Parity {
     /// Return the y-parity as a boolean.
     pub const fn y_parity(&self) -> bool {
         match self {
-            Parity::Eip155(v @ 0..=34) => *v % 2 == 1,
-            Parity::Eip155(v) => (*v ^ 1) % 2 == 0,
-            Parity::NonEip155(b) | Parity::Parity(b) => *b,
+            Self::Eip155(v @ 0..=34) => *v % 2 == 1,
+            Self::Eip155(v) => (*v ^ 1) % 2 == 0,
+            Self::NonEip155(b) | Self::Parity(b) => *b,
         }
     }
 
@@ -86,10 +86,10 @@ impl Parity {
     /// Invert the parity.
     pub fn inverted(&self) -> Self {
         match self {
-            Parity::Parity(b) => Parity::Parity(!b),
-            Parity::NonEip155(b) => Parity::NonEip155(!b),
-            Parity::Eip155(v @ 0..=34) => Parity::Eip155(if v % 2 == 0 { v - 1 } else { v + 1 }),
-            Parity::Eip155(v @ 35..) => Parity::Eip155(*v ^ 1),
+            Self::Parity(b) => Self::Parity(!b),
+            Self::NonEip155(b) => Self::NonEip155(!b),
+            Self::Eip155(v @ 0..=34) => Self::Eip155(if v % 2 == 0 { v - 1 } else { v + 1 }),
+            Self::Eip155(v @ 35..) => Self::Eip155(*v ^ 1),
         }
     }
 
@@ -97,7 +97,7 @@ impl Parity {
     /// non-EIP-155 values.
     pub fn strip_chain_id(&self) -> Self {
         match self {
-            Parity::Eip155(v) => Parity::NonEip155(v % 2 == 1),
+            Self::Eip155(v) => Self::NonEip155(v % 2 == 1),
             _ => *self,
         }
     }
@@ -105,9 +105,9 @@ impl Parity {
     /// Apply EIP 155 to the V value. This is a nop for parity values.
     pub const fn with_chain_id(self, chain_id: ChainId) -> Self {
         let parity = match self {
-            Parity::Eip155(v) => normalize_v_to_byte(v) == 1,
-            Parity::NonEip155(b) => b,
-            Parity::Parity(_) => return self,
+            Self::Eip155(v) => normalize_v_to_byte(v) == 1,
+            Self::NonEip155(b) => b,
+            Self::Parity(_) => return self,
         };
 
         Self::Eip155(to_eip155_v(parity as u8, chain_id))
@@ -117,10 +117,8 @@ impl Parity {
     /// Determine the recovery id.
     pub const fn recid(&self) -> k256::ecdsa::RecoveryId {
         let recid_opt = match self {
-            Parity::Eip155(v) => Some(crate::signature::utils::normalize_v(*v)),
-            Parity::NonEip155(b) | Parity::Parity(b) => {
-                k256::ecdsa::RecoveryId::from_byte(*b as u8)
-            }
+            Self::Eip155(v) => Some(crate::signature::utils::normalize_v(*v)),
+            Self::NonEip155(b) | Self::Parity(b) => k256::ecdsa::RecoveryId::from_byte(*b as u8),
         };
 
         // manual unwrap for const fn
@@ -131,8 +129,8 @@ impl Parity {
     }
 
     /// Convert to a parity bool, dropping any V information.
-    pub const fn to_parity_bool(self) -> Parity {
-        Parity::Parity(self.y_parity())
+    pub const fn to_parity_bool(self) -> Self {
+        Self::Parity(self.y_parity())
     }
 }
 
@@ -140,17 +138,17 @@ impl Parity {
 impl alloy_rlp::Encodable for Parity {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         match self {
-            Parity::Eip155(v) => v.encode(out),
-            Parity::NonEip155(v) => (*v as u8 + 27).encode(out),
-            Parity::Parity(b) => b.encode(out),
+            Self::Eip155(v) => v.encode(out),
+            Self::NonEip155(v) => (*v as u8 + 27).encode(out),
+            Self::Parity(b) => b.encode(out),
         }
     }
 
     fn length(&self) -> usize {
         match self {
-            Parity::Eip155(v) => v.length(),
-            Parity::NonEip155(_) => 0u8.length(),
-            Parity::Parity(v) => v.length(),
+            Self::Eip155(v) => v.length(),
+            Self::NonEip155(_) => 0u8.length(),
+            Self::Parity(v) => v.length(),
         }
     }
 }

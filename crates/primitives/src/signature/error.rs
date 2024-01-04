@@ -36,8 +36,8 @@ impl std::error::Error for SignatureError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             #[cfg(feature = "k256")]
-            SignatureError::K256(e) => Some(e),
-            SignatureError::FromHex(e) => Some(e),
+            Self::K256(e) => Some(e),
+            Self::FromHex(e) => Some(e),
             _ => None,
         }
     }
@@ -47,10 +47,10 @@ impl core::fmt::Display for SignatureError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             #[cfg(feature = "k256")]
-            SignatureError::K256(e) => e.fmt(f),
-            SignatureError::FromBytes(e) => f.write_str(e),
-            SignatureError::FromHex(e) => e.fmt(f),
-            SignatureError::InvalidParity(v) => write!(f, "invalid parity: {}", v),
+            Self::K256(e) => e.fmt(f),
+            Self::FromBytes(e) => f.write_str(e),
+            Self::FromHex(e) => e.fmt(f),
+            Self::InvalidParity(v) => write!(f, "invalid parity: {v}"),
         }
     }
 }

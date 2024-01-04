@@ -78,14 +78,14 @@ impl From<crate::Signature> for [u8; 65] {
 
 impl From<&crate::Signature> for Vec<u8> {
     #[inline]
-    fn from(value: &crate::Signature) -> Vec<u8> {
+    fn from(value: &crate::Signature) -> Self {
         value.as_bytes().to_vec()
     }
 }
 
 impl From<crate::Signature> for Vec<u8> {
     #[inline]
-    fn from(value: crate::Signature) -> Vec<u8> {
+    fn from(value: crate::Signature) -> Self {
         value.as_bytes().to_vec()
     }
 }
@@ -115,7 +115,7 @@ impl crate::Signature {
 impl Signature<k256::ecdsa::Signature> {
     #[doc(hidden)]
     pub fn test_signature() -> Self {
-        Signature::from_scalars_and_parity(
+        Self::from_scalars_and_parity(
             b256!("840cfc572845f5786e702984c2a582528cad4b49b2a10b9db1be7fca90058565"),
             b256!("25e7109ceb98168d95b09b18bbf6b685130e0562f233877d492b94eee0c5b6d1"),
             false,
@@ -439,7 +439,7 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
         }
 
         impl<'de> serde::Deserialize<'de> for Field {
-            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: serde::Deserializer<'de>,
             {
@@ -625,7 +625,7 @@ mod tests {
         }
         );
 
-        println!("{}", raw_signature_with_y_parity);
+        println!("{raw_signature_with_y_parity}");
         let signature: crate::Signature =
             serde_json::from_value(raw_signature_with_y_parity).unwrap();
 

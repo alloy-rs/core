@@ -46,7 +46,7 @@ impl<const N: usize> Decode for FixedBytes<N> {
         let mut fixed_array = [0u8; N];
         fixed_array.copy_from_slice(bytes);
 
-        Ok(FixedBytes::<N>(fixed_array))
+        Ok(Self(fixed_array))
     }
 }
 

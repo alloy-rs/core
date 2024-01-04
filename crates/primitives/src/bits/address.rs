@@ -447,7 +447,7 @@ impl Address {
     pub fn from_raw_public_key(pubkey: &[u8]) -> Self {
         assert_eq!(pubkey.len(), 64, "raw public key must be 64 bytes");
         let digest = keccak256(pubkey);
-        Address::from_slice(&digest[12..])
+        Self::from_slice(&digest[12..])
     }
 
     /// Converts an ECDSA public key to its corresponding Ethereum address.

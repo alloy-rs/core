@@ -392,8 +392,8 @@ pub enum RevertReason<T> {
 impl<T: fmt::Display> fmt::Display for RevertReason<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RevertReason::ContractError(error) => error.fmt(f),
-            RevertReason::RawString(raw_string) => f.write_str(raw_string),
+            Self::ContractError(error) => error.fmt(f),
+            Self::RawString(raw_string) => f.write_str(raw_string),
         }
     }
 }
@@ -401,27 +401,27 @@ impl<T: fmt::Display> fmt::Display for RevertReason<T> {
 /// Converts a `ContractError<T>` into a `RevertReason<T>`.
 impl<T> From<ContractError<T>> for RevertReason<T> {
     fn from(error: ContractError<T>) -> Self {
-        RevertReason::ContractError(error)
+        Self::ContractError(error)
     }
 }
 
 /// Converts a `Revert` into a `RevertReason<T>`.
 impl<T> From<Revert> for RevertReason<T> {
     fn from(revert: Revert) -> Self {
-        RevertReason::ContractError(ContractError::Revert(revert))
+        Self::ContractError(ContractError::Revert(revert))
     }
 }
 
 /// Converts a `String` into a `RevertReason<T>`.
 impl<T> From<String> for RevertReason<T> {
     fn from(raw_string: String) -> Self {
-        RevertReason::RawString(raw_string)
+        Self::RawString(raw_string)
     }
 }
 
 impl<T: SolInterface> RevertReason<T>
 where
-    RevertReason<T>: From<ContractError<Infallible>>,
+    Self: From<ContractError<Infallible>>,
 {
     /// Decodes and retrieves the reason for a revert from the provided output data.
     ///
@@ -452,8 +452,8 @@ impl<T: SolInterface + fmt::Display> RevertReason<T> {
     #[allow(clippy::inherent_to_string_shadow_display)]
     pub fn to_string(&self) -> String {
         match self {
-            RevertReason::ContractError(error) => error.to_string(),
-            RevertReason::RawString(raw_string) => raw_string.clone(),
+            Self::ContractError(error) => error.to_string(),
+            Self::RawString(raw_string) => raw_string.clone(),
         }
     }
 }

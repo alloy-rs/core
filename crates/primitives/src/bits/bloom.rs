@@ -57,7 +57,7 @@ wrap_fixed_bytes!(
 
 impl<'a> FromIterator<&'a (Address, LogData)> for Bloom {
     fn from_iter<T: IntoIterator<Item = &'a (Address, LogData)>>(iter: T) -> Self {
-        let mut bloom = Bloom::ZERO;
+        let mut bloom = Self::ZERO;
         bloom.extend(iter);
         bloom
     }
@@ -74,7 +74,7 @@ impl<'a> Extend<&'a (Address, LogData)> for Bloom {
 impl<'a> FromIterator<&'a Log> for Bloom {
     #[inline]
     fn from_iter<T: IntoIterator<Item = &'a Log>>(logs: T) -> Self {
-        let mut bloom = Bloom::ZERO;
+        let mut bloom = Self::ZERO;
         bloom.extend(logs);
         bloom
     }
@@ -92,7 +92,7 @@ impl<'a> Extend<&'a Log> for Bloom {
 impl<'a, 'b> FromIterator<&'a BloomInput<'b>> for Bloom {
     #[inline]
     fn from_iter<T: IntoIterator<Item = &'a BloomInput<'b>>>(inputs: T) -> Self {
-        let mut bloom = Bloom::ZERO;
+        let mut bloom = Self::ZERO;
         bloom.extend(inputs);
         bloom
     }
@@ -206,7 +206,7 @@ impl Bloom {
     /// Note: This method may return false positives. This is inherent to the
     /// bloom filter data structure.
     pub fn contains_raw_log(&self, address: Address, topics: &[B256]) -> bool {
-        let mut bloom = Bloom::default();
+        let mut bloom = Self::default();
         bloom.accrue_raw_log(address, topics);
         self.contains(&bloom)
     }

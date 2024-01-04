@@ -28,7 +28,7 @@ impl fmt::Display for ItemContract {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.kind, self.name)?;
         if let Some(inheritance) = &self.inheritance {
-            write!(f, " {}", inheritance)?;
+            write!(f, " {inheritance}")?;
         }
         let s = self
             .body

@@ -179,7 +179,7 @@ impl fmt::Display for ImportPlain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.path)?;
         if let Some(alias) = &self.alias {
-            write!(f, " {}", alias)?;
+            write!(f, " {alias}")?;
         }
         Ok(())
     }
@@ -231,9 +231,9 @@ impl fmt::Display for ImportAliases {
             if i > 0 {
                 write!(f, ", ")?;
             }
-            write!(f, "{}", ident)?;
+            write!(f, "{ident}")?;
             if let Some(alias) = alias {
-                write!(f, " {}", alias)?;
+                write!(f, " {alias}")?;
             }
         }
         write!(f, "}} from {}", self.path)
@@ -287,7 +287,7 @@ impl fmt::Display for ImportGlob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "*")?;
         if let Some(alias) = &self.alias {
-            write!(f, " {}", alias)?;
+            write!(f, " {alias}")?;
         }
         write!(f, " from {}", self.path)
     }
