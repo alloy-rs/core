@@ -83,38 +83,37 @@ impl Parity {
         self.y_parity() as u8
     }
 
-    /// Invert the parity.
-    pub fn inverted(&self) -> Self {
-        match self {
+    /// Inverts the parity.
+    pub const fn inverted(&self) -> Self {
+        match *self {
             Self::Parity(b) => Self::Parity(!b),
             Self::NonEip155(b) => Self::NonEip155(!b),
             Self::Eip155(v @ 0..=34) => Self::Eip155(if v % 2 == 0 { v - 1 } else { v + 1 }),
-            Self::Eip155(v @ 35..) => Self::Eip155(*v ^ 1),
+            Self::Eip155(v @ 35..) => Self::Eip155(v ^ 1),
         }
     }
 
     /// Converts an EIP-155 V value to a non-EIP-155 V value. This is a nop for
     /// non-EIP-155 values.
-    pub fn strip_chain_id(&self) -> Self {
-        match self {
+    pub const fn strip_chain_id(&self) -> Self {
+        match *self {
             Self::Eip155(v) => Self::NonEip155(v % 2 == 1),
-            _ => *self,
+            this => this,
         }
     }
 
-    /// Apply EIP 155 to the V value. This is a nop for parity values.
+    /// Applies EIP 155 to the V value.
     pub const fn with_chain_id(self, chain_id: ChainId) -> Self {
         let parity = match self {
             Self::Eip155(v) => normalize_v_to_byte(v) == 1,
-            Self::NonEip155(b) => b,
-            Self::Parity(_) => return self,
+            Self::NonEip155(b) | Self::Parity(b) => b,
         };
 
         Self::Eip155(to_eip155_v(parity as u8, chain_id))
     }
 
+    /// Determines the recovery ID.
     #[cfg(feature = "k256")]
-    /// Determine the recovery id.
     pub const fn recid(&self) -> k256::ecdsa::RecoveryId {
         let recid_opt = match self {
             Self::Eip155(v) => Some(crate::signature::utils::normalize_v(*v)),
