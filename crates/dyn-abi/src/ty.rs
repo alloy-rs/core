@@ -467,10 +467,9 @@ impl DynSolType {
             &Self::FixedArray(ref t, size) => {
                 DynToken::FixedSeq(vec![t.empty_dyn_token(); size].into(), size)
             }
-            as_tuple!(Self tuple) => DynToken::FixedSeq(
-                tuple.iter().map(DynSolType::empty_dyn_token).collect(),
-                tuple.len(),
-            ),
+            as_tuple!(Self tuple) => {
+                DynToken::FixedSeq(tuple.iter().map(Self::empty_dyn_token).collect(), tuple.len())
+            }
         }
     }
 
@@ -581,9 +580,9 @@ impl DynSolType {
     #[inline]
     pub fn is_zst(&self) -> bool {
         match self {
-            DynSolType::Array(inner) => inner.is_zst(),
-            DynSolType::FixedArray(inner, size) => *size == 0 || inner.is_zst(),
-            DynSolType::Tuple(inner) => inner.is_empty() || inner.iter().all(|t| t.is_zst()),
+            Self::Array(inner) => inner.is_zst(),
+            Self::FixedArray(inner, size) => *size == 0 || inner.is_zst(),
+            Self::Tuple(inner) => inner.is_empty() || inner.iter().all(|t| t.is_zst()),
             _ => false,
         }
     }
@@ -591,9 +590,9 @@ impl DynSolType {
     #[inline]
     const fn zero_sized_value(&self) -> Option<DynSolValue> {
         match self {
-            DynSolType::Array(_) => Some(DynSolValue::Array(vec![])),
-            DynSolType::FixedArray(_, _) => Some(DynSolValue::FixedArray(vec![])),
-            DynSolType::Tuple(_) => Some(DynSolValue::Tuple(vec![])),
+            Self::Array(_) => Some(DynSolValue::Array(vec![])),
+            Self::FixedArray(_, _) => Some(DynSolValue::FixedArray(vec![])),
+            Self::Tuple(_) => Some(DynSolValue::Tuple(vec![])),
             _ => None,
         }
     }

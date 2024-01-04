@@ -30,7 +30,7 @@ impl<'a, const BITS: usize> FromSql<'a> for FixedBytes<BITS> {
     accepts!(BYTEA);
 
     fn from_sql(_: &Type, raw: &'a [u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
-        Ok(FixedBytes::try_from(raw)?)
+        Ok(Self::try_from(raw)?)
     }
 }
 

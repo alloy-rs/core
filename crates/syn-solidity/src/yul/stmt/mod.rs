@@ -101,33 +101,33 @@ impl Parse for YulStmt {
 impl Spanned for YulStmt {
     fn span(&self) -> Span {
         match self {
-            YulStmt::Block(block) => block.span(),
-            YulStmt::Decl(decl) => decl.span(),
-            YulStmt::Assign(assign) => assign.span(),
-            YulStmt::Call(call) => call.span(),
-            YulStmt::If(r#if) => r#if.span(),
-            YulStmt::For(r#for) => r#for.span(),
-            YulStmt::Switch(switch) => switch.span(),
-            YulStmt::Leave(leave) => leave.span(),
-            YulStmt::Break(r#break) => r#break.span(),
-            YulStmt::Continue(r#continue) => r#continue.span(),
-            YulStmt::FunctionDef(fn_def) => fn_def.span(),
+            Self::Block(block) => block.span(),
+            Self::Decl(decl) => decl.span(),
+            Self::Assign(assign) => assign.span(),
+            Self::Call(call) => call.span(),
+            Self::If(r#if) => r#if.span(),
+            Self::For(r#for) => r#for.span(),
+            Self::Switch(switch) => switch.span(),
+            Self::Leave(leave) => leave.span(),
+            Self::Break(r#break) => r#break.span(),
+            Self::Continue(r#continue) => r#continue.span(),
+            Self::FunctionDef(fn_def) => fn_def.span(),
         }
     }
 
     fn set_span(&mut self, span: Span) {
         match self {
-            YulStmt::Block(block) => block.set_span(span),
-            YulStmt::Decl(decl) => decl.set_span(span),
-            YulStmt::Assign(assign) => assign.set_span(span),
-            YulStmt::Call(call) => call.set_span(span),
-            YulStmt::If(r#if) => r#if.set_span(span),
-            YulStmt::For(r#for) => r#for.set_span(span),
-            YulStmt::Switch(switch) => switch.set_span(span),
-            YulStmt::Leave(leave) => leave.set_span(span),
-            YulStmt::Break(r#break) => r#break.set_span(span),
-            YulStmt::Continue(r#continue) => r#continue.set_span(span),
-            YulStmt::FunctionDef(fn_def) => fn_def.set_span(span),
+            Self::Block(block) => block.set_span(span),
+            Self::Decl(decl) => decl.set_span(span),
+            Self::Assign(assign) => assign.set_span(span),
+            Self::Call(call) => call.set_span(span),
+            Self::If(r#if) => r#if.set_span(span),
+            Self::For(r#for) => r#for.set_span(span),
+            Self::Switch(switch) => switch.set_span(span),
+            Self::Leave(leave) => leave.set_span(span),
+            Self::Break(r#break) => r#break.set_span(span),
+            Self::Continue(r#continue) => r#continue.set_span(span),
+            Self::FunctionDef(fn_def) => fn_def.set_span(span),
         }
     }
 }
@@ -136,17 +136,17 @@ impl fmt::Debug for YulStmt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("YulStmt::")?;
         match self {
-            YulStmt::Block(block) => block.fmt(f),
-            YulStmt::Decl(decl) => decl.fmt(f),
-            YulStmt::Assign(assign) => assign.fmt(f),
-            YulStmt::Call(call) => call.fmt(f),
-            YulStmt::If(r#if) => r#if.fmt(f),
-            YulStmt::For(r#for) => r#for.fmt(f),
-            YulStmt::Switch(switch) => switch.fmt(f),
-            YulStmt::Leave(leave) => leave.fmt(f),
-            YulStmt::Break(r#break) => r#break.fmt(f),
-            YulStmt::Continue(r#continue) => r#continue.fmt(f),
-            YulStmt::FunctionDef(fn_def) => fn_def.fmt(f),
+            Self::Block(block) => block.fmt(f),
+            Self::Decl(decl) => decl.fmt(f),
+            Self::Assign(assign) => assign.fmt(f),
+            Self::Call(call) => call.fmt(f),
+            Self::If(r#if) => r#if.fmt(f),
+            Self::For(r#for) => r#for.fmt(f),
+            Self::Switch(switch) => switch.fmt(f),
+            Self::Leave(leave) => leave.fmt(f),
+            Self::Break(r#break) => r#break.fmt(f),
+            Self::Continue(r#continue) => r#continue.fmt(f),
+            Self::FunctionDef(fn_def) => fn_def.fmt(f),
         }
     }
 }

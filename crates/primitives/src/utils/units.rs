@@ -156,8 +156,8 @@ impl From<ParseUnits> for I256 {
 impl fmt::Display for ParseUnits {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseUnits::U256(val) => val.fmt(f),
-            ParseUnits::I256(val) => val.fmt(f),
+            Self::U256(val) => val.fmt(f),
+            Self::I256(val) => val.fmt(f),
         }
     }
 }
