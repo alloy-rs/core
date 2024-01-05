@@ -93,8 +93,9 @@ impl Parity {
         }
     }
 
-    /// Converts an EIP-155 V value to a non-EIP-155 V value. This is a nop for
-    /// non-EIP-155 values.
+    /// Converts an EIP-155 V value to a non-EIP-155 V value.
+    ///
+    /// This is a nop for non-EIP-155 values.
     pub const fn strip_chain_id(&self) -> Self {
         match *self {
             Self::Eip155(v) => Self::NonEip155(v % 2 == 1),
@@ -102,7 +103,7 @@ impl Parity {
         }
     }
 
-    /// Applies EIP 155 to the V value.
+    /// Applies EIP-155 with the given chain ID.
     pub const fn with_chain_id(self, chain_id: ChainId) -> Self {
         let parity = match self {
             Self::Eip155(v) => normalize_v_to_byte(v) == 1,
