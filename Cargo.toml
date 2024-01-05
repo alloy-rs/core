@@ -59,7 +59,7 @@ bytes = { version = "1", default-features = false }
 criterion = "0.5"
 derive_arbitrary = "1.3"
 getrandom = "0.2"
-hex = { package = "const-hex", version = "1.5", default-features = false, features = ["alloc"] }
+hex = { package = "const-hex", version = "1.10", default-features = false, features = ["alloc"] }
 itoa = "1"
 once_cell = "1"
 pretty_assertions = "1.4"
