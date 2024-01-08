@@ -502,6 +502,17 @@ impl Function {
         signature(&self.name, &self.inputs, Some(&self.outputs))
     }
 
+    /// Returns this function's full signature including names of params:
+    /// `event $name($($inputs names),*) state_mutability returns ($(outputs names),*)`.
+    ///
+    /// This is a full human-readable string, including all parameter names, any optional modifiers
+    /// (e.g. indexed, public, etc) and white-space to aid in human readability. This is useful for
+    /// storing a string which can still fully reconstruct the original Fragment
+    #[inline]
+    pub fn full_signature(&self) -> String {
+        full_signature(&self.name, &self.inputs, Some(&self.outputs), self.state_mutability)
+    }
+
     /// Computes this error's selector: `keccak256(self.signature())[..4]`
     #[inline]
     pub fn selector(&self) -> Selector {
@@ -561,6 +572,12 @@ impl Event {
     #[inline]
     pub fn signature(&self) -> String {
         event_signature(&self.name, &self.inputs)
+    }
+
+    /// Returns this event's full signature: `event $name($($inputs indexed names),*)`.
+    #[inline]
+    pub fn full_signature(&self) -> String {
+        event_full_signature(&self.name, &self.inputs)
     }
 
     /// Computes this event's selector: `keccak256(self.signature())`
