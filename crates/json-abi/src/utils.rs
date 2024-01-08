@@ -331,11 +331,12 @@ mod tests {
             "function foo(address asset) returns (uint256 amount)"
         );
 
-        let mut components = vec![];
-        components.push(param2("address", "pool"));
-        components.push(param2("uint256", "tokenInParam"));
-        components.push(param2("uint256", "tokenOutParam"));
-        components.push(param2("uint256", "maxPrice"));
+        let components = vec![
+            param2("address", "pool"),
+            param2("uint256", "tokenInParam"),
+            param2("uint256", "tokenOutParam"),
+            param2("uint256", "maxPrice"),
+        ];
         let swaps =
             Param { name: "swaps".into(), ty: "tuple[]".into(), internal_type: None, components };
 
@@ -398,10 +399,11 @@ mod tests {
             "event foo(bool indexed confirmed, string message)"
         );
 
-        let mut components = vec![];
-        components.push(param2("uint256", "amount"));
-        components.push(param2("uint256", "startTime"));
-        components.push(param2("uint256", "interval"));
+        let components = vec![
+            param2("uint256", "amount"),
+            param2("uint256", "startTime"),
+            param2("uint256", "interval"),
+        ];
         let info = EventParam {
             name: "info".into(),
             ty: "tuple".into(),
