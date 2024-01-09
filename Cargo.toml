@@ -46,6 +46,7 @@ strum = { version = "0.25", features = ["derive"] }
 num_enum = "0.7"
 thiserror = "1.0"
 
+k256 = "0.13"
 keccak-asm = { version = "0.1.0", default-features = false }
 tiny-keccak = "2.0"
 
