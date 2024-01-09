@@ -498,7 +498,7 @@ impl Function {
     /// This is the same as [`signature`](Self::signature), but also includes
     /// the output types.
     #[inline]
-    pub fn signature_full(&self) -> String {
+    pub fn signature_with_outputs(&self) -> String {
         signature(&self.name, &self.inputs, Some(&self.outputs))
     }
 
@@ -506,7 +506,7 @@ impl Function {
     /// `function $name($($inputs $names),*) state_mutability returns ($($outputs $names),*)`.
     ///
     /// This is a full human-readable string, including all parameter names, any optional modifiers
-    /// (e.g. indexed, public, etc) and white-space to aid in human readability. This is useful for
+    /// (e.g. view, payable, pure) and white-space to aid in human readability. This is useful for
     /// storing a string which can still fully reconstruct the original Fragment
     #[inline]
     pub fn full_signature(&self) -> String {
@@ -574,7 +574,12 @@ impl Event {
         event_signature(&self.name, &self.inputs)
     }
 
-    /// Returns this event's full signature: `event $name($($inputs indexed names),*)`.
+    /// Returns this event's full signature
+    /// `event $name($($inputs indexed $names),*)`.
+    ///
+    /// This is a full human-readable string, including all parameter names, any optional modifiers
+    /// (e.g. indexed) and white-space to aid in human readability. This is useful for
+    /// storing a string which can still fully reconstruct the original Fragment
     #[inline]
     pub fn full_signature(&self) -> String {
         event_full_signature(&self.name, &self.inputs)
