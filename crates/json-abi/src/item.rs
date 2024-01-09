@@ -498,8 +498,19 @@ impl Function {
     /// This is the same as [`signature`](Self::signature), but also includes
     /// the output types.
     #[inline]
-    pub fn signature_full(&self) -> String {
+    pub fn signature_with_outputs(&self) -> String {
         signature(&self.name, &self.inputs, Some(&self.outputs))
+    }
+
+    /// Returns this function's full signature including names of params:
+    /// `function $name($($inputs $names),*) state_mutability returns ($($outputs $names),*)`.
+    ///
+    /// This is a full human-readable string, including all parameter names, any optional modifiers
+    /// (e.g. view, payable, pure) and white-space to aid in human readability. This is useful for
+    /// storing a string which can still fully reconstruct the original Fragment
+    #[inline]
+    pub fn full_signature(&self) -> String {
+        full_signature(&self.name, &self.inputs, Some(&self.outputs), self.state_mutability)
     }
 
     /// Computes this error's selector: `keccak256(self.signature())[..4]`
@@ -561,6 +572,17 @@ impl Event {
     #[inline]
     pub fn signature(&self) -> String {
         event_signature(&self.name, &self.inputs)
+    }
+
+    /// Returns this event's full signature
+    /// `event $name($($inputs indexed $names),*)`.
+    ///
+    /// This is a full human-readable string, including all parameter names, any optional modifiers
+    /// (e.g. indexed) and white-space to aid in human readability. This is useful for
+    /// storing a string which can still fully reconstruct the original Fragment
+    #[inline]
+    pub fn full_signature(&self) -> String {
+        event_full_signature(&self.name, &self.inputs)
     }
 
     /// Computes this event's selector: `keccak256(self.signature())`

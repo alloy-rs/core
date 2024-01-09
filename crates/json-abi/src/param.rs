@@ -218,6 +218,22 @@ impl Param {
         }
     }
 
+    /// Formats the canonical type of this parameter into the given string including then names of
+    /// the params.
+    #[inline]
+    pub fn full_selector_type_raw(&self, s: &mut String) {
+        if self.components.is_empty() {
+            s.push_str(&self.ty);
+        } else {
+            s.push_str("tuple");
+            crate::utils::full_signature_raw(&self.components, s);
+            // checked during deserialization, but might be invalid from a user
+            if let Some(suffix) = self.ty.strip_prefix("tuple") {
+                s.push_str(suffix);
+            }
+        }
+    }
+
     /// Returns the canonical type of this parameter.
     ///
     /// This is used to encode the preimage of a function or error selector.
@@ -449,6 +465,22 @@ impl EventParam {
             s.push_str(&self.ty);
         } else {
             crate::utils::signature_raw(&self.components, s);
+            // checked during deserialization, but might be invalid from a user
+            if let Some(suffix) = self.ty.strip_prefix("tuple") {
+                s.push_str(suffix);
+            }
+        }
+    }
+
+    /// Formats the canonical type of this parameter into the given string including then names of
+    /// the params.
+    #[inline]
+    pub fn full_selector_type_raw(&self, s: &mut String) {
+        if self.components.is_empty() {
+            s.push_str(&self.ty);
+        } else {
+            s.push_str("tuple");
+            crate::utils::full_signature_raw(&self.components, s);
             // checked during deserialization, but might be invalid from a user
             if let Some(suffix) = self.ty.strip_prefix("tuple") {
                 s.push_str(suffix);
