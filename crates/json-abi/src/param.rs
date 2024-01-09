@@ -220,8 +220,6 @@ impl Param {
 
     /// Formats the canonical type of this parameter into the given string including then names of
     /// the params.
-    ///
-    /// This is used to encode the preimage of a function selector.
     #[inline]
     pub fn full_selector_type_raw(&self, s: &mut String) {
         if self.components.is_empty() {
@@ -476,8 +474,6 @@ impl EventParam {
 
     /// Formats the canonical type of this parameter into the given string including then names of
     /// the params.
-    ///
-    /// This is used to encode the preimage of the event selector.
     #[inline]
     pub fn full_selector_type_raw(&self, s: &mut String) {
         if self.components.is_empty() {

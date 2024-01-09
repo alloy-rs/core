@@ -503,7 +503,7 @@ impl Function {
     }
 
     /// Returns this function's full signature including names of params:
-    /// `event $name($($inputs names),*) state_mutability returns ($(outputs names),*)`.
+    /// `function $name($($inputs $names),*) state_mutability returns ($($outputs $names),*)`.
     ///
     /// This is a full human-readable string, including all parameter names, any optional modifiers
     /// (e.g. indexed, public, etc) and white-space to aid in human readability. This is useful for
