@@ -45,12 +45,14 @@ getrandom = { workspace = true, optional = true }
 # rand
 rand = { workspace = true, optional = true, features = ["getrandom"] }
 
+# k256
+k256 = { workspace = true, optional = true }
+
 # arbitrary
 arbitrary = { workspace = true, optional = true }
 derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
-k256 = { version = "0.13.2", optional = true }
 
 # postgres
 postgres-types = { workspace = true, optional = true }
