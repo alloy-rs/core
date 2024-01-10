@@ -5,7 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.4](https://github.com/alloy-rs/core/releases/tag/v0.5.4) - 2023-12-28
+## [0.6.0](https://github.com/alloy-rs/core/releases/tag/v0.6.0) - 2024-01-10
+
+### Bug Fixes
+
+- [primitives] Also apply EIP-155 to Parity::Parity ([#476](https://github.com/alloy-rs/core/issues/476))
+- Clean the sealed ([#468](https://github.com/alloy-rs/core/issues/468))
+
+### Dependencies
+
+- [deps] Relax k256 requirement ([#481](https://github.com/alloy-rs/core/issues/481))
+- [deps] Bump const-hex requirement ([#479](https://github.com/alloy-rs/core/issues/479))
+
+### Documentation
+
+- Update docs on parity ([#477](https://github.com/alloy-rs/core/issues/477))
+
+### Features
+
+- [json-abi] Add full_signature ([#480](https://github.com/alloy-rs/core/issues/480))
+- [primitives] Add Signature type and utils ([#459](https://github.com/alloy-rs/core/issues/459))
+- [primitives] Add a buffer type for address checksums ([#472](https://github.com/alloy-rs/core/issues/472))
+- [dyn-abi] Improve hex error messages ([#474](https://github.com/alloy-rs/core/issues/474))
+- [sol-type-parser] Improve error message for bad array size ([#470](https://github.com/alloy-rs/core/issues/470))
+- [primitives] Add Keccak256 hasher struct ([#469](https://github.com/alloy-rs/core/issues/469))
+
+### Miscellaneous Tasks
+
+- Bless tests ([#478](https://github.com/alloy-rs/core/issues/478))
+- Clippy uninlined_format_args, use_self ([#475](https://github.com/alloy-rs/core/issues/475))
+- Touch up UDVT expansion ([#473](https://github.com/alloy-rs/core/issues/473))
+- Move define_udt! decl macro to sol! proc macro ([#471](https://github.com/alloy-rs/core/issues/471))
+- Release 0.5.4
+
+### Refactor
+
+- Log implementation ([#465](https://github.com/alloy-rs/core/issues/465))
+
+## [0.5.4](https://github.com/alloy-rs/core/releases/tag/v0.5.4) - 2023-12-27
 
 ### Features
 
