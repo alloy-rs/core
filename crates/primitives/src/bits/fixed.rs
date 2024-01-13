@@ -67,7 +67,7 @@ impl<const N: usize> TryFrom<&[u8]> for FixedBytes<N> {
 
     #[inline]
     fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-        <&Self>::try_from(slice).map(|this| *this)
+        <&Self>::try_from(slice).copied()
     }
 }
 
