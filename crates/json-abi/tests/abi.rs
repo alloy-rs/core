@@ -1,4 +1,4 @@
-use alloy_json_abi::{AbiItem, EventParam, JsonAbi, Param};
+use alloy_json_abi::{AbiItem, ContractObject, EventParam, JsonAbi, Param};
 use pretty_assertions::assert_eq;
 use std::{
     collections::HashMap,
@@ -9,6 +9,8 @@ use std::{
 };
 
 const JSON_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/abi");
+
+const TESTDATA_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/testdata");
 
 static UPDATED: AtomicBool = AtomicBool::new(false);
 
@@ -282,4 +284,16 @@ fn get_solc_version() -> Option<(u16, u16, u16)> {
     let minor = iter.next().unwrap();
     let patch = iter.next().unwrap();
     Some((major, minor, patch))
+}
+
+// <https://github.com/foundry-rs/foundry/issues/6815>
+#[test]
+#[cfg_attr(miri, ignore = "no fs")]
+#[cfg(all(feature = "std", feature = "serde_json"))]
+fn parse_unlinked_contract() {
+    // unlinked placeholder __$7233c33f2e1e35848c685b0eb24649959e$__
+    let content = fs::read_to_string(Path::new(TESTDATA_PATH).join("UnlinkedNouns.json")).unwrap();
+    let res = serde_json::from_str::<ContractObject>(&content);
+    let err = res.unwrap_err();
+    assert!(err.to_string().contains("expected bytecode, found unlinked bytecode with placeholder: 7233c33f2e1e35848c685b0eb24649959e"));
 }

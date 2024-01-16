@@ -529,20 +529,39 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
         f.write_str("an ABI sequence or contract object")
     }
 
+    #[inline]
+    fn visit_seq<A: SeqAccess<'de>>(self, seq: A) -> Result<Self::Value, A::Error> {
+        JsonAbiVisitor.visit_seq(seq).map(|abi| ContractObject {
+            abi: Some(abi),
+            bytecode: None,
+            deployed_bytecode: None,
+        })
+    }
+
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
         #[derive(Deserialize)]
         #[serde(untagged)]
         enum Bytecode {
             Bytes(Bytes),
             Object { object: Bytes },
+            Unlinked(String),
+            UnlinkedObject { object: String },
         }
 
         impl Bytecode {
-            #[allow(clippy::missing_const_for_fn)]
-            #[inline(always)]
-            fn bytes(self) -> Bytes {
-                let (Self::Object { object: bytes } | Self::Bytes(bytes)) = self;
-                bytes
+            fn ensure_bytes<E: serde::de::Error>(self) -> Result<Bytes, E> {
+                match self {
+                    Bytecode::Bytes(bytes) | Bytecode::Object { object: bytes } => Ok(bytes),
+                    Bytecode::Unlinked(unlinked)
+                    | Bytecode::UnlinkedObject { object: unlinked } => {
+                        if let Some((_, unlinked)) = unlinked.split_once("__$") {
+                            if let Some((addr, _)) = unlinked.split_once("$__") {
+                                return Err(E::custom(format!("expected bytecode, found unlinked bytecode with placeholder: {addr}")));
+                            }
+                        }
+                        Err(E::custom("invalid contract bytecode"))
+                    }
+                }
             }
         }
 
@@ -564,18 +583,18 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
                 "evm" => {
                     let evm = map.next_value::<EvmObj>()?;
                     if let Some(bytes) = evm.bytecode {
-                        set_if_none!(@serde bytecode, bytes.bytes());
+                        set_if_none!(@serde bytecode, bytes.ensure_bytes()?);
                     }
                     if let Some(bytes) = evm.deployed_bytecode {
-                        set_if_none!(@serde deployed_bytecode, bytes.bytes());
+                        set_if_none!(@serde deployed_bytecode, bytes.ensure_bytes()?);
                     }
                 }
                 "bytecode" | "bin" => {
-                    set_if_none!(@serde bytecode, map.next_value::<Bytecode>()?.bytes());
+                    set_if_none!(@serde bytecode, map.next_value::<Bytecode>()?.ensure_bytes()?);
                 }
                 "deployedBytecode" | "deployedbytecode" | "deployed_bytecode" | "runtimeBin"
                 | "runtimebin" | "runtime " => {
-                    set_if_none!(@serde deployed_bytecode, map.next_value::<Bytecode>()?.bytes());
+                    set_if_none!(@serde deployed_bytecode, map.next_value::<Bytecode>()?.ensure_bytes()?);
                 }
                 _ => {
                     map.next_value::<serde::de::IgnoredAny>()?;
@@ -584,14 +603,5 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
         }
 
         Ok(ContractObject { abi, bytecode, deployed_bytecode })
-    }
-
-    #[inline]
-    fn visit_seq<A: SeqAccess<'de>>(self, seq: A) -> Result<Self::Value, A::Error> {
-        JsonAbiVisitor.visit_seq(seq).map(|abi| ContractObject {
-            abi: Some(abi),
-            bytecode: None,
-            deployed_bytecode: None,
-        })
     }
 }
