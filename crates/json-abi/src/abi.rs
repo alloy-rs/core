@@ -549,7 +549,6 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
         }
 
         impl Bytecode {
-            #[inline(always)]
             fn ensure_bytes<E: serde::de::Error>(self) -> Result<Bytes, E> {
                 match self {
                     Bytecode::Bytes(bytes) | Bytecode::Object { object: bytes } => Ok(bytes),
