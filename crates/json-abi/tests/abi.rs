@@ -288,6 +288,8 @@ fn get_solc_version() -> Option<(u16, u16, u16)> {
 
 // <https://github.com/foundry-rs/foundry/issues/6815>
 #[test]
+#[cfg_attr(miri, ignore = "no fs")]
+#[cfg(all(feature = "std", feature = "serde_json"))]
 fn parse_unlinked_contract() {
     // unlinked placeholder __$7233c33f2e1e35848c685b0eb24649959e$__
     let content = fs::read_to_string(Path::new(TESTDATA_PATH).join("UnlinkedNouns.json")).unwrap();
