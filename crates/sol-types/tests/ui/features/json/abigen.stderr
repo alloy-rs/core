@@ -4,19 +4,19 @@ error: empty input is not allowed
 3 | sol!(EmptyStr, "");
   |                ^^
 
-error: failed to canonicalize path: No such file or directory (os error 2)
+error: failed to canonicalize path "$WORKSPACE/target/tests/trybuild/alloy-sol-types/???": No such file or directory (os error 2)
  --> tests/ui/features/json/abigen.rs:5:24
   |
 5 | sol!(PathDoesNotExist, "???");
   |                        ^^^^^
 
-error: failed to canonicalize path: No such file or directory (os error 2)
+error: failed to canonicalize path "$WORKSPACE/target/tests/trybuild/alloy-sol-types/pragma solidity ^0.8.0": No such file or directory (os error 2)
  --> tests/ui/features/json/abigen.rs:6:6
   |
 6 | sol!("pragma solidity ^0.8.0");
   |      ^^^^^^^^^^^^^^^^^^^^^^^^
 
-error: failed to canonicalize path: No such file or directory (os error 2)
+error: failed to canonicalize path "$WORKSPACE/target/tests/trybuild/alloy-sol-types/pragma solidity ^0.8.0;": No such file or directory (os error 2)
  --> tests/ui/features/json/abigen.rs:7:6
   |
 7 | sol!("pragma solidity ^0.8.0;");
