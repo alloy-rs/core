@@ -211,7 +211,7 @@ impl Signature<k256::ecdsa::Signature> {
     #[inline]
     pub fn recover_address_from_prehash(
         &self,
-        prehash: crate::B256,
+        prehash: &crate::B256,
     ) -> Result<crate::Address, SignatureError> {
         self.recover_from_prehash(prehash).map(|vk| crate::Address::from_public_key(&vk))
     }
@@ -225,7 +225,7 @@ impl Signature<k256::ecdsa::Signature> {
         &self,
         msg: T,
     ) -> Result<k256::ecdsa::VerifyingKey, SignatureError> {
-        self.recover_from_prehash(crate::eip191_hash_message(msg))
+        self.recover_from_prehash(&crate::eip191_hash_message(msg))
     }
 
     /// Recovers a [`VerifyingKey`] from this signature and the given prehashed message.
@@ -234,7 +234,7 @@ impl Signature<k256::ecdsa::Signature> {
     #[inline]
     pub fn recover_from_prehash(
         &self,
-        prehash: crate::B256,
+        prehash: &crate::B256,
     ) -> Result<k256::ecdsa::VerifyingKey, SignatureError> {
         let this = self.normalize_s().unwrap_or(*self);
         k256::ecdsa::VerifyingKey::recover_from_prehash(
@@ -561,7 +561,7 @@ mod tests {
         let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
         let hash = b256!("5eb4f5a33c621f32a8622d5f943b6b102994dfe4e5aebbefe69bb1b2aa0fc93e");
         let expected = address!("0f65fe9276bc9a24ae7083ae28e2660ef72df99e");
-        assert_eq!(sig.recover_address_from_prehash(hash).unwrap(), expected);
+        assert_eq!(sig.recover_address_from_prehash(&hash).unwrap(), expected);
     }
 
     #[test]
