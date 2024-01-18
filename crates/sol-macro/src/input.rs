@@ -90,9 +90,9 @@ impl SolInput {
                 p = dir.join(p);
             }
             p = dunce::canonicalize(&p)
-                .map_err(|e| Error::new(span, format!("failed to canonicalize path: {e}")))?;
+                .map_err(|e| Error::new(span, format!("failed to canonicalize path {p:?}: {e}")))?;
             value = std::fs::read_to_string(&p)
-                .map_err(|e| Error::new(span, format!("failed to read file: {e}")))?;
+                .map_err(|e| Error::new(span, format!("failed to read file {p:?}: {e}")))?;
             path = Some(p);
         }
 
