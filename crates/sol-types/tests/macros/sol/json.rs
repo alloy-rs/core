@@ -179,3 +179,14 @@ fn junkyard() {
     // https://etherscan.io/address/0x2e4b0f20bdb1caa0886c531256efdaab925dbe72
     sol!(Junkyard, "../json-abi/tests/abi/Junkyard.json");
 }
+
+// Handle missing state mutability in JSON ABI
+// https://github.com/alloy-rs/core/issues/485
+#[test]
+fn zrx_token() {
+    // https://etherscan.io/address/0xe41d2489571d322189246dafa5ebde1f4699f498#code
+    sol!(ZRXToken, "../json-abi/tests/abi/ZRXToken.json");
+
+    let _ = ZRXToken::approveCall { _spender: Address::ZERO, _value: U256::ZERO };
+    assert_eq!(ZRXToken::approveCall::SIGNATURE, "approve(address,uint256)");
+}
