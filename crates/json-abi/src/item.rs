@@ -66,6 +66,7 @@ abi_items! {
         /// The input types of the constructor. May be empty.
         pub inputs: Vec<Param>,
         /// The state mutability of the constructor.
+        #[serde(default)]
         pub state_mutability: StateMutability,
     }
 
@@ -73,6 +74,7 @@ abi_items! {
     #[derive(Copy)]
     pub struct Fallback: "fallback" {
         /// The state mutability of the fallback function.
+        #[serde(default)]
         pub state_mutability: StateMutability,
     }
 
@@ -80,6 +82,7 @@ abi_items! {
     #[derive(Copy)]
     pub struct Receive: "receive" {
         /// The state mutability of the receive function.
+        #[serde(default)]
         pub state_mutability: StateMutability,
     }
 
@@ -93,6 +96,9 @@ abi_items! {
         /// The output types of the function. May be empty.
         pub outputs: Vec<Param>,
         /// The state mutability of the function.
+        ///
+        /// By default this is [StateMutability::NonPayable] which is reflected in Solidity by not specifying a state mutability modifier at all. This field was introduced in 0.4.16: <https://github.com/ethereum/solidity/releases/tag/v0.4.16>
+        #[serde(default)]
         pub state_mutability: StateMutability,
     }
 

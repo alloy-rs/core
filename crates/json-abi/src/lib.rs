@@ -50,7 +50,9 @@ mod to_sol;
 pub(crate) mod utils;
 
 /// A JSON ABI function's state mutability.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum StateMutability {
     /// Pure functions promise not to read from or modify the state.
@@ -58,6 +60,12 @@ pub enum StateMutability {
     /// View functions promise not to modify the state.
     View,
     /// Nonpayable functions promise not to receive Ether.
+    ///
+    /// This is the solidity default: <https://docs.soliditylang.org/en/latest/abi-spec.html#json>
+    ///
+    /// The state mutability nonpayable is reflected in Solidity by not specifying a state
+    /// mutability modifier at all.
+    #[default]
     NonPayable,
     /// Payable functions make no promises.
     Payable,
