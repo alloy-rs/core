@@ -961,4 +961,22 @@ mod tests {
             0000000000000000000000000000000000000000000000000000000000001337
         "),
     }
+
+    // <https://github.com/alloy-rs/core/issues/490>
+    #[test]
+    fn parse_dyn_2d_array() {
+        let payload = "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000FFFFFFFF";
+
+        // ok
+        //let my_type: DynSolType = "()[]".parse().unwrap();
+        // error
+        //let my_type: DynSolType = "uint32[1][]".parse().unwrap();
+
+        // eats 60 gb of memory
+        let my_type: DynSolType = "uint32[1][]".parse().unwrap();
+        let encoded = hex::decode(payload).unwrap();
+        let decoded = my_type.abi_decode(&encoded).unwrap();
+
+        println!("T {:?}", decoded);
+    }
 }

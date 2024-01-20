@@ -161,6 +161,7 @@ impl<'a> DynToken<'a> {
                     // re-use the box allocation
                     unsafe { Vec::from_raw_parts(Box::into_raw(t), 1, 1) }
                 } else {
+                    dbg!(size); // 4294967295
                     vec![*t; size]
                 };
 
