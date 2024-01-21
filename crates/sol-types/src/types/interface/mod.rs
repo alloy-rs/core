@@ -8,6 +8,9 @@ use std::error::Error as StdError;
 mod event;
 pub use event::SolEventInterface;
 
+pub mod multicall;
+pub use multicall::MulticallBuilder;
+
 /// A collection of ABI-encodable call-like types. This currently includes
 /// [`SolCall`] and [`SolError`].
 ///

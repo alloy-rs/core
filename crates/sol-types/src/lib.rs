@@ -182,9 +182,10 @@ mod impl_core;
 
 mod types;
 pub use types::{
-    data_type as sol_data, decode_revert_reason, ContractError, EventTopic, GenericContractError,
-    GenericRevertReason, Panic, PanicKind, Revert, Selectors, SolCall, SolEnum, SolError, SolEvent,
-    SolEventInterface, SolInterface, SolStruct, SolType, SolValue, TopicList,
+    data_type as sol_data, decode_revert_reason, multicall, ContractError, EventTopic,
+    GenericContractError, GenericRevertReason, MulticallBuilder, Panic, PanicKind, Revert,
+    RevertReason, Selectors, SolCall, SolEnum, SolError, SolEvent, SolEventInterface, SolInterface,
+    SolStruct, SolType, SolValue, TopicList,
 };
 
 pub mod utils;
