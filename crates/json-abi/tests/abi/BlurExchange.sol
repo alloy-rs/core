@@ -34,6 +34,8 @@ interface BlurExchange {
         bytes extraParams;
     }
 
+    constructor();
+
     event AdminChanged(address previousAdmin, address newAdmin);
     event BeaconUpgraded(address indexed beacon);
     event Closed();

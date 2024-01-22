@@ -30,6 +30,8 @@ interface AggregationRouterV5 {
         uint256 flags;
     }
 
+    constructor(address weth);
+
     error AccessDenied();
     error AdvanceNonceFailed();
     error AlreadyFilled();

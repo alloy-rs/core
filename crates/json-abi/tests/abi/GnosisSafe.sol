@@ -1,6 +1,8 @@
 interface GnosisSafe {
     type Operation is uint8;
 
+    constructor();
+
     event AddedOwner(address owner);
     event ApproveHash(bytes32 indexed approvedHash, address indexed owner);
     event ChangedMasterCopy(address masterCopy);

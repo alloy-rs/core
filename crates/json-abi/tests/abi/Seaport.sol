@@ -113,6 +113,8 @@ interface Seaport {
         uint256 amount;
     }
 
+    constructor(address conduitController);
+
     error BadContractSignature();
     error BadFraction();
     error BadReturnValueFromERC20OnTransfer(address token, address from, address to, uint256 amount);

@@ -1,4 +1,6 @@
 interface UniswapV2Factory {
+    constructor(address _feeToSetter);
+
     event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
 
     function allPairs(uint256) external view returns (address);

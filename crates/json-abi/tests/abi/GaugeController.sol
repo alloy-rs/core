@@ -1,4 +1,6 @@
 interface GaugeController {
+    constructor(address _token, address _voting_escrow);
+
     event AddType(string name, int128 type_id);
     event ApplyOwnership(address admin);
     event CommitOwnership(address admin);

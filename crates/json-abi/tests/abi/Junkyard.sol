@@ -1,4 +1,6 @@
 interface Junkyard {
+    constructor(address[] jkdPayees, uint256[] jkdShares, address _gateway, address _gasReceiver);
+
     error InvalidAddress();
     error InvalidAddressString();
     error NotApprovedByGateway();

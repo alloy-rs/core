@@ -45,6 +45,9 @@ fn seaport() {
     sol!(Seaport, "../json-abi/tests/abi/Seaport.json");
     use Seaport::*;
 
+    // Constructor with a single argument
+    let _ = constructorCall { conduitController: Address::ZERO };
+
     // BasicOrderType is a uint8 UDVT
     let _ = BasicOrderType::from(0u8);
 

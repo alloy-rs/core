@@ -1,5 +1,5 @@
 use crate::{
-    item::{Error, Event, Fallback, Function, Receive},
+    item::{Constructor, Error, Event, Fallback, Function, Receive},
     EventParam, InternalType, JsonAbi, Param, StateMutability,
 };
 use alloc::{collections::BTreeSet, string::String, vec::Vec};
@@ -67,6 +67,7 @@ impl ToSol for JsonAbi {
         let mut its = InternalTypes::new();
         its.visit_abi(self);
         fmt!(its.0);
+        fmt!(self.constructor());
         fmt!(self.errors());
         fmt!(self.events());
         fmt!(self.fallback);
@@ -233,6 +234,21 @@ impl ToSol for It<'_> {
     }
 }
 
+impl ToSol for Constructor {
+    fn to_sol(&self, out: &mut SolPrinter<'_>) {
+        AbiFunction::<'_, Param> {
+            kw: AbiFunctionKw::Constructor,
+            name: None,
+            inputs: &self.inputs,
+            visibility: None,
+            state_mutability: Some(self.state_mutability),
+            anonymous: false,
+            outputs: &[],
+        }
+        .to_sol(out);
+    }
+}
+
 impl ToSol for Event {
     fn to_sol(&self, out: &mut SolPrinter<'_>) {
         AbiFunction::<'_, EventParam> {
@@ -319,6 +335,7 @@ struct AbiFunction<'a, IN> {
 }
 
 enum AbiFunctionKw {
+    Constructor,
     Function,
     Fallback,
     Receive,
@@ -330,6 +347,7 @@ impl AbiFunctionKw {
     #[inline]
     const fn as_str(&self) -> &'static str {
         match self {
+            Self::Constructor => "constructor",
             Self::Function => "function",
             Self::Fallback => "fallback",
             Self::Receive => "receive",

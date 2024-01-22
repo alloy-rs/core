@@ -1,4 +1,6 @@
 interface ZeroXExchange {
+    constructor(bytes _zrxAssetData);
+
     event AssetProxyRegistered(bytes4 id, address assetProxy);
     event Cancel(address indexed makerAddress, address indexed feeRecipientAddress, address senderAddress, bytes32 indexed orderHash, bytes makerAssetData, bytes takerAssetData);
     event CancelUpTo(address indexed makerAddress, address indexed senderAddress, uint256 orderEpoch);

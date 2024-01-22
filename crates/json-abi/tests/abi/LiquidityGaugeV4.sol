@@ -1,4 +1,6 @@
 interface LiquidityGaugeV4 {
+    constructor();
+
     event ApplyOwnership(address admin);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
     event CommitOwnership(address admin);
