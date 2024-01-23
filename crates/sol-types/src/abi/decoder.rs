@@ -45,6 +45,7 @@ impl fmt::Debug for Decoder<'_> {
             .field("buf", &body)
             .field("offset", &self.offset)
             .field("validate", &self.validate)
+            .field("depth", &self.depth)
             .finish()
     }
 }
