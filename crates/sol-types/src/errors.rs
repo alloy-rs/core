@@ -35,6 +35,9 @@ pub enum Error {
     /// Validation reserialization did not match input.
     ReserMismatch,
 
+    /// ABI Decoding recursion limit exceeded.
+    RecursionLimitExceeded(u8),
+
     /// Invalid enum value.
     InvalidEnumValue {
         /// The name of the enum.
@@ -87,6 +90,9 @@ impl fmt::Display for Error {
             Self::Overrun => f.write_str("buffer overrun while deserializing"),
             Self::BufferNotEmpty => f.write_str("buffer not empty after deserialization"),
             Self::ReserMismatch => f.write_str("reserialization did not match original"),
+            Self::RecursionLimitExceeded(limit) => {
+                write!(f, "recursion limit of {} exceeded during decoding", limit)
+            }
             Self::InvalidEnumValue { name, value, max } => {
                 write!(f, "`{value}` is not a valid {name} enum value (max: `{max}`)")
             }
