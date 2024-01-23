@@ -43,9 +43,12 @@ impl DynSolType {
     ///   surrounded by brackets (`[]`)
     /// - [`FixedArray`](DynSolType::FixedArray): exactly the given number of the inner type
     ///   delimited by commas (`,`) and surrounded by brackets (`[]`)
+    /// - [`Tuple`](DynSolType::Tuple): the inner types delimited by commas (`,`) and surrounded by
+    ///   parentheses (`()`)
+    /// -
     #[cfg_attr(
         feature = "eip712",
-        doc = "- [`Tuple`](DynSolType::Tuple): the inner types delimited by commas (`,`) and surrounded by parentheses (`()`)"
+        doc = "- [`CustomStruct`](DynSolType::CustomStruct): the same as `Tuple`"
     )]
     ///
     /// # Examples
