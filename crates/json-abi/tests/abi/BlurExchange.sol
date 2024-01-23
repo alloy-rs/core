@@ -52,6 +52,8 @@ interface BlurExchange {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event Upgraded(address indexed implementation);
 
+    constructor();
+
     function FEE_TYPEHASH() external view returns (bytes32);
     function INVERSE_BASIS_POINT() external view returns (uint256);
     function NAME() external view returns (string memory);

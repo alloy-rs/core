@@ -165,6 +165,8 @@ interface Seaport {
     event OrderValidated(bytes32 orderHash, OrderParameters orderParameters);
     event OrdersMatched(bytes32[] orderHashes);
 
+    constructor(address conduitController);
+
     receive() external payable;
 
     function cancel(OrderComponents[] memory orders) external returns (bool cancelled);

@@ -10,7 +10,7 @@ mod event;
 pub use event::{EventTopic, SolEvent, TopicList};
 
 mod function;
-pub use function::SolCall;
+pub use function::{SolCall, SolConstructor};
 
 mod interface;
 pub use interface::{

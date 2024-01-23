@@ -2,9 +2,9 @@
 
 use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt};
 use crate::attr;
-use ast::ItemFunction;
+use ast::{FunctionKind, ItemFunction};
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::Result;
 
 /// Expands an [`ItemFunction`]:
@@ -24,10 +24,17 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream> {
-    let ItemFunction { attrs, parameters, returns, name: Some(_), .. } = function else {
-        // ignore functions without names (constructors, modifiers...)
+    let ItemFunction { attrs, parameters, returns, name, kind, .. } = function;
+
+    if matches!(kind, FunctionKind::Constructor(_)) {
+        return expand_constructor(cx, function);
+    }
+
+    if name.is_none() {
+        // ignore functions without names (modifiers...)
         return Ok(quote!());
     };
+
     let returns = returns.as_ref().map(|r| &r.returns).unwrap_or_default();
 
     cx.assert_resolved(parameters)?;
@@ -139,6 +146,54 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
             }
 
             #abi
+        };
+    };
+    Ok(tokens)
+}
+
+fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<TokenStream> {
+    let ItemFunction { attrs, parameters, .. } = constructor;
+
+    let (sol_attrs, call_attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
+    let call_name = format_ident!("constructorCall");
+    let call_fields = expand_fields(parameters);
+    let call_tuple = expand_tuple_types(parameters.types()).0;
+    let converts = expand_from_into_tuples(&call_name, parameters);
+    let tokenize_impl = expand_tokenize(parameters);
+
+    let call_doc = docs.then(|| {
+        attr::mk_doc(format!(
+            "Constructor`.\n\
+            ```solidity\n{constructor}\n```"
+        ))
+    });
+
+    let tokens = quote! {
+        #(#call_attrs)*
+        #call_doc
+        #[allow(non_camel_case_types, non_snake_case)]
+        #[derive(Clone)]
+        pub struct #call_name {
+            #(#call_fields),*
+        }
+
+        const _: () = {
+            { #converts }
+
+            #[automatically_derived]
+            impl ::alloy_sol_types::SolConstructor for #call_name {
+                type Parameters<'a> = #call_tuple;
+                type Token<'a> = <Self::Parameters<'a> as ::alloy_sol_types::SolType>::Token<'a>;
+
+                fn new<'a>(tuple: <Self::Parameters<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
+                    tuple.into()
+                }
+
+                fn tokenize(&self) -> Self::Token<'_> {
+                    #tokenize_impl
+                }
+            }
         };
     };
     Ok(tokens)
