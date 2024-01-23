@@ -73,7 +73,7 @@ impl Parity {
     pub const fn y_parity(&self) -> bool {
         match self {
             Self::Eip155(v @ 0..=34) => *v % 2 == 1,
-            Self::Eip155(v) => (*v ^ 1) % 2 == 0,
+            Self::Eip155(v) => (*v ^ 1) % 2 == 1,
             Self::NonEip155(b) | Self::Parity(b) => *b,
         }
     }
@@ -170,10 +170,12 @@ impl alloy_rlp::Decodable for Parity {
 
 #[cfg(test)]
 mod test {
+    use crate::Parity;
+
     #[cfg(feature = "rlp")]
     #[test]
     fn basic_rlp() {
-        use crate::{hex, Parity};
+        use crate::hex;
 
         use alloy_rlp::{Decodable, Encodable};
 
@@ -192,5 +194,15 @@ mod test {
 
             assert_eq!(test.1, Parity::decode(&mut buf.as_slice()).unwrap());
         }
+    }
+
+    #[test]
+    fn round_trip() {
+        // with chain ID 1
+        let p = Parity::Eip155(37);
+
+        assert_eq!(p.to_parity_bool(), Parity::Parity(false));
+
+        assert_eq!(p.with_chain_id(1), Parity::Eip155(37));
     }
 }
