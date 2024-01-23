@@ -45,7 +45,6 @@ impl DynSolType {
     ///   delimited by commas (`,`) and surrounded by brackets (`[]`)
     /// - [`Tuple`](DynSolType::Tuple): the inner types delimited by commas (`,`) and surrounded by
     ///   parentheses (`()`)
-    /// - [`CustomStruct`](DynSolType::CustomStruct): the same as `Tuple`
     ///
     /// # Examples
     ///
