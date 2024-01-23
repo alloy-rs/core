@@ -1,6 +1,4 @@
 interface GaugeController {
-    constructor(address _token, address _voting_escrow);
-
     event AddType(string name, int128 type_id);
     event ApplyOwnership(address admin);
     event CommitOwnership(address admin);
@@ -8,6 +6,8 @@ interface GaugeController {
     event NewGaugeWeight(address gauge_address, uint256 time, uint256 weight, uint256 total_weight);
     event NewTypeWeight(int128 type_id, uint256 time, uint256 weight, uint256 total_weight);
     event VoteForGauge(uint256 time, address user, address gauge_addr, uint256 weight);
+
+    constructor(address _token, address _voting_escrow);
 
     function add_gauge(address addr, int128 gauge_type, uint256 weight) external;
     function add_type(string memory _name, uint256 weight) external;

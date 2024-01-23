@@ -133,9 +133,6 @@ pub trait SolConstructor: Sized {
     /// ABI encode the call to the given buffer.
     #[inline]
     fn abi_encode(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(self.abi_encoded_size());
-        out.reserve(self.abi_encoded_size());
-        out.extend(crate::abi::encode_sequence(&self.tokenize()));
-        out
+        crate::abi::encode_sequence(&self.tokenize())
     }
 }

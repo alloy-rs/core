@@ -34,8 +34,6 @@ interface BlurExchange {
         bytes extraParams;
     }
 
-    constructor();
-
     event AdminChanged(address previousAdmin, address newAdmin);
     event BeaconUpgraded(address indexed beacon);
     event Closed();
@@ -53,6 +51,8 @@ interface BlurExchange {
     event OrdersMatched(address indexed maker, address indexed taker, Order sell, bytes32 sellHash, Order buy, bytes32 buyHash);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event Upgraded(address indexed implementation);
+
+    constructor();
 
     function FEE_TYPEHASH() external view returns (bytes32);
     function INVERSE_BASIS_POINT() external view returns (uint256);

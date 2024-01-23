@@ -1,7 +1,7 @@
 interface UniswapV2FactoryWithMigrator {
-    constructor(address _feeToSetter);
-
     event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
+
+    constructor(address _feeToSetter);
 
     function allPairs(uint256) external view returns (address);
     function allPairsLength() external view returns (uint256);

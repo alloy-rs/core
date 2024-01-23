@@ -67,9 +67,9 @@ impl ToSol for JsonAbi {
         let mut its = InternalTypes::new();
         its.visit_abi(self);
         fmt!(its.0);
-        fmt!(self.constructor());
         fmt!(self.errors());
         fmt!(self.events());
+        fmt!(self.constructor());
         fmt!(self.fallback);
         fmt!(self.receive);
         fmt!(self.functions());

@@ -30,8 +30,6 @@ interface AggregationRouterV5 {
         uint256 flags;
     }
 
-    constructor(address weth);
-
     error AccessDenied();
     error AdvanceNonceFailed();
     error AlreadyFilled();
@@ -85,6 +83,8 @@ interface AggregationRouterV5 {
     event OrderFilled(address indexed maker, bytes32 orderHash, uint256 remaining);
     event OrderFilledRFQ(bytes32 orderHash, uint256 makingAmount);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    constructor(address weth);
 
     receive() external payable;
 

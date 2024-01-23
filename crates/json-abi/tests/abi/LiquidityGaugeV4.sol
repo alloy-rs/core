@@ -1,6 +1,4 @@
 interface LiquidityGaugeV4 {
-    constructor();
-
     event ApplyOwnership(address admin);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
     event CommitOwnership(address admin);
@@ -9,6 +7,8 @@ interface LiquidityGaugeV4 {
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
     event UpdateLiquidityLimit(address user, uint256 original_balance, uint256 original_supply, uint256 working_balance, uint256 working_supply);
     event Withdraw(address indexed provider, uint256 value);
+
+    constructor();
 
     function SDT() external view returns (address);
     function accept_transfer_ownership() external;

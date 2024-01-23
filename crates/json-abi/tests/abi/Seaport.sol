@@ -113,8 +113,6 @@ interface Seaport {
         uint256 amount;
     }
 
-    constructor(address conduitController);
-
     error BadContractSignature();
     error BadFraction();
     error BadReturnValueFromERC20OnTransfer(address token, address from, address to, uint256 amount);
@@ -166,6 +164,8 @@ interface Seaport {
     event OrderFulfilled(bytes32 orderHash, address indexed offerer, address indexed zone, address recipient, SpentItem[] offer, ReceivedItem[] consideration);
     event OrderValidated(bytes32 orderHash, OrderParameters orderParameters);
     event OrdersMatched(bytes32[] orderHashes);
+
+    constructor(address conduitController);
 
     receive() external payable;
 

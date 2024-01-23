@@ -30,7 +30,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         return expand_constructor(cx, function);
     }
 
-    let Option::Some(_) = name else {
+    if name.is_none() {
         // ignore functions without names (modifiers...)
         return Ok(quote!());
     };

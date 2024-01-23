@@ -1,8 +1,6 @@
 interface GnosisSafe {
     type Operation is uint8;
 
-    constructor();
-
     event AddedOwner(address owner);
     event ApproveHash(bytes32 indexed approvedHash, address indexed owner);
     event ChangedMasterCopy(address masterCopy);
@@ -15,6 +13,8 @@ interface GnosisSafe {
     event ExecutionSuccess(bytes32 txHash, uint256 payment);
     event RemovedOwner(address owner);
     event SignMsg(bytes32 indexed msgHash);
+
+    constructor();
 
     fallback() external payable;
 
