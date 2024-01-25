@@ -328,7 +328,7 @@ impl<S> Signature<S> {
         let mut sig = [0u8; 65];
         sig[..32].copy_from_slice(&self.r.to_be_bytes::<32>());
         sig[32..64].copy_from_slice(&self.s.to_be_bytes::<32>());
-        sig[64] = self.v.y_parity_byte();
+        sig[64] = self.v.y_parity_byte_non_eip155().unwrap_or(self.v.y_parity_byte());
         sig
     }
 
