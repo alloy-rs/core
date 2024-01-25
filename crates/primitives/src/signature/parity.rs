@@ -83,6 +83,15 @@ impl Parity {
         self.y_parity() as u8
     }
 
+    /// Return the y-parity byte as 27 or 28,
+    /// in the case of a non-EIP155 signature.
+    pub const fn y_parity_byte_non_eip155(&self) -> Option<u8> {
+        match self {
+            Self::NonEip155(v) | Self::Parity(v) => Some(*v as u8 + 27),
+            _ => None,
+        }
+    }
+
     /// Inverts the parity.
     pub const fn inverted(&self) -> Self {
         match *self {
