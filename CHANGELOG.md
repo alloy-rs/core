@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1](https://github.com/alloy-rs/core/releases/tag/v0.6.1) - 2024-01-25
+
+### Bug Fixes
+
+- Deserialize missing state mutability as non payable ([#488](https://github.com/alloy-rs/core/issues/488))
+
+### Documentation
+
+- Remove stray list element ([#500](https://github.com/alloy-rs/core/issues/500))
+- Fixes ([#498](https://github.com/alloy-rs/core/issues/498))
+
+### Features
+
+- [`primitives`] Add `y_parity_byte_non_eip155` to `Parity` ([#499](https://github.com/alloy-rs/core/issues/499))
+- Add constructorCall to `sol!` ([#493](https://github.com/alloy-rs/core/issues/493))
+- [primitives] Add `Address::from_private_key` ([#483](https://github.com/alloy-rs/core/issues/483))
+
+### Miscellaneous Tasks
+
+- Add SECURITY.md ([#494](https://github.com/alloy-rs/core/issues/494))
+- [primitives] Pass B256 by reference in Signature methods ([#487](https://github.com/alloy-rs/core/issues/487))
+- Include path in error ([#486](https://github.com/alloy-rs/core/issues/486))
+- Improve unlinked bytecode deserde error ([#484](https://github.com/alloy-rs/core/issues/484))
+
+### Testing
+
+- Don't print constructors for Solc tests ([#501](https://github.com/alloy-rs/core/issues/501))
+- Parity roundtripping ([#497](https://github.com/alloy-rs/core/issues/497))
+
 ## [0.6.0](https://github.com/alloy-rs/core/releases/tag/v0.6.0) - 2024-01-10
 
 ### Bug Fixes
@@ -32,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.6.0
 - Bless tests ([#478](https://github.com/alloy-rs/core/issues/478))
 - Clippy uninlined_format_args, use_self ([#475](https://github.com/alloy-rs/core/issues/475))
 - Touch up UDVT expansion ([#473](https://github.com/alloy-rs/core/issues/473))
