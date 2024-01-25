@@ -84,8 +84,6 @@ interface AggregationRouterV5 {
     event OrderFilledRFQ(bytes32 orderHash, uint256 makingAmount);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    constructor(address weth);
-
     receive() external payable;
 
     function advanceNonce(uint8 amount) external;

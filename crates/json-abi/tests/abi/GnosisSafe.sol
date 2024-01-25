@@ -14,8 +14,6 @@ interface GnosisSafe {
     event RemovedOwner(address owner);
     event SignMsg(bytes32 indexed msgHash);
 
-    constructor();
-
     fallback() external payable;
 
     function NAME() external view returns (string memory);

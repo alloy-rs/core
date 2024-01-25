@@ -8,8 +8,6 @@ interface LiquidityGaugeV4 {
     event UpdateLiquidityLimit(address user, uint256 original_balance, uint256 original_supply, uint256 working_balance, uint256 working_supply);
     event Withdraw(address indexed provider, uint256 value);
 
-    constructor();
-
     function SDT() external view returns (address);
     function accept_transfer_ownership() external;
     function add_reward(address _reward_token, address _distributor) external;
