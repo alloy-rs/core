@@ -87,7 +87,7 @@ impl Parity {
     /// in the case of a non-EIP155 signature.
     pub const fn y_parity_byte_non_eip155(&self) -> Option<u8> {
         match self {
-            Self::NonEip155(v) => Some(*v as u8 + 27),
+            Self::NonEip155(v) | Self::Parity(v) => Some(*v as u8 + 27),
             _ => None,
         }
     }
