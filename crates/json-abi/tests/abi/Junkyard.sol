@@ -15,8 +15,6 @@ interface Junkyard {
     event PricesChange(uint256, uint256);
     event Unpaused(address account);
 
-    constructor(address[] jkdPayees, uint256[] jkdShares, address _gateway, address _gasReceiver);
-
     receive() external payable;
 
     function GAS_RECEIVER() external view returns (address);

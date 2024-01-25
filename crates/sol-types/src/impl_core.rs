@@ -57,7 +57,7 @@ where
     Ok(unsafe { array_assume_init(array) })
 }
 
-/// [slice::split_array_ref](https://doc.rust-lang.org/std/primitive.slice.html#method.split_array_ref)
+/// [`array::split_array_ref`]
 #[inline]
 #[track_caller]
 pub(crate) fn split_array_ref<T, const N: usize>(slice: &[T]) -> (&[T; N], &[T]) {

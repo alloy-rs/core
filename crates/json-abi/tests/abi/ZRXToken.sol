@@ -2,8 +2,6 @@ interface ZRXToken {
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
     event Transfer(address indexed _from, address indexed _to, uint256 _value);
 
-    constructor();
-
     function allowance(address _owner, address _spender) external returns (uint256);
     function approve(address _spender, uint256 _value) external returns (bool);
     function balanceOf(address _owner) external returns (uint256);
