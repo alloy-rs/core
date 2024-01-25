@@ -5,8 +5,6 @@ interface ZeroXExchange {
     event Fill(address indexed makerAddress, address indexed feeRecipientAddress, address takerAddress, address senderAddress, uint256 makerAssetFilledAmount, uint256 takerAssetFilledAmount, uint256 makerFeePaid, uint256 takerFeePaid, bytes32 indexed orderHash, bytes makerAssetData, bytes takerAssetData);
     event SignatureValidatorApproval(address indexed signerAddress, address indexed validatorAddress, bool approved);
 
-    constructor(bytes _zrxAssetData);
-
     function EIP712_DOMAIN_HASH() external view returns (bytes32);
     function VERSION() external view returns (string memory);
     function ZRX_ASSET_DATA() external view returns (bytes memory);

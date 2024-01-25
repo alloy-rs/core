@@ -80,6 +80,8 @@ fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
     let name = path.file_stem().unwrap().to_str().unwrap();
 
     let mut abi = abi.clone();
+    // Ignore constructors for Solc tests.
+    abi.constructor = None;
     abi.dedup();
     let actual = abi.to_sol(name);
 
@@ -109,9 +111,6 @@ fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
             Ok(solc_abi) => solc_abi,
             Err(e) => panik(&format!("invalid JSON: {e}")),
         };
-
-        // Constructor is ignored.
-        abi.constructor = None;
 
         // Note that we don't compare the ABIs directly since the conversion is lossy, e.g.
         // `internalType` fields change.
