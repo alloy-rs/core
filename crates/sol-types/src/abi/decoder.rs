@@ -134,9 +134,8 @@ impl<'de> Decoder<'de> {
     ///
     /// See [`child`](Self::child).
     #[inline]
-    #[track_caller]
-    pub fn raw_child(&self) -> Self {
-        self.child(self.offset).unwrap()
+    pub fn raw_child(&self) -> Result<Self> {
+        self.child(self.offset)
     }
 
     /// Create a child decoder, starting at `offset` bytes from the current

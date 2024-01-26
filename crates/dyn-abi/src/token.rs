@@ -143,7 +143,7 @@ impl<'a> DynToken<'a> {
             Self::Word(w) => *w = WordToken::decode_from(dec)?.0,
             Self::FixedSeq(..) => {
                 let dynamic = self.is_dynamic();
-                let mut child = if dynamic { dec.take_indirection()? } else { dec.raw_child() };
+                let mut child = if dynamic { dec.take_indirection() } else { dec.raw_child() }?;
 
                 self.decode_sequence_populate(&mut child)?;
 
@@ -168,7 +168,7 @@ impl<'a> DynToken<'a> {
                 // spec specifies that offsets are relative to the beginning of
                 // `enc(X)`. But known-good test vectors have it relative to the
                 // word AFTER the array size
-                let mut child = child.raw_child();
+                let mut child = child.raw_child()?;
 
                 // Check that the decoder contains enough words to decode the
                 // sequence. Each item in the sequence is at least one word, so

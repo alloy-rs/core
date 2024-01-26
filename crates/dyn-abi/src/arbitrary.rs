@@ -573,6 +573,13 @@ mod tests {
             let cont = super::ident_char(x, false);
             prop_assert!(is_id_continue(cont as char));
         }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig {
+            cases: 256,
+            ..Default::default()
+        })]
 
         #[test]
         #[cfg(feature = "eip712")]
@@ -664,6 +671,9 @@ mod tests {
                 hex::encode_prefixed(&data),
             ),
             Ok(_) => {}
+            Err(e @ crate::Error::SolTypes(alloy_sol_types::Error::RecursionLimitExceeded(_))) => {
+                return Err(TestCaseError::Reject(e.to_string().into()));
+            }
             Err(e) => prop_assert!(
                 false,
                 "failed to decode {s:?}: {e}\nvalue: {value:?}\ndata: {:?}",

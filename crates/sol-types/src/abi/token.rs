@@ -366,7 +366,7 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         // specifies that offsets are relative to the first word of
         // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
-        let mut child = child.raw_child();
+        let mut child = child.raw_child()?;
         (0..len).map(|_| T::decode_from(&mut child)).collect::<Result<Vec<T>>>().map(DynSeqToken)
     }
 
