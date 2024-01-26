@@ -15,9 +15,7 @@ fn primitives(c: &mut Criterion) {
     g.bench_function("keccak256/32", |b| {
         let mut out = B256::random();
         b.iter(|| {
-            for _ in 0..10 {
-                out = keccak256(out);
-            }
+            out = keccak256(out.as_slice());
             black_box(&out);
         });
     });
