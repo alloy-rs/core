@@ -92,11 +92,11 @@ impl<'de> Decoder<'de> {
 
     /// Returns the number of words in the remaining buffer.
     #[inline]
-    pub const fn remaining_words(&self) -> Option<usize> {
+    pub const fn remaining_words(&self) -> usize {
         if let Some(remaining) = self.remaining() {
-            Some(remaining / Word::len_bytes())
+            remaining / Word::len_bytes()
         } else {
-            None
+            0
         }
     }
 

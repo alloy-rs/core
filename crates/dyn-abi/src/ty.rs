@@ -449,7 +449,12 @@ impl DynSolType {
     }
 
     /// Instantiate an empty dyn token, to be decoded into.
-    pub(crate) fn empty_dyn_token<'a>(&self) -> DynToken<'a> {
+    ///
+    /// ## Warning
+    ///
+    /// This function may allocate an unbounded amount of memory based on user
+    /// input types. It must be used with care to avoid DOS issues.
+    fn empty_dyn_token<'a>(&self) -> DynToken<'a> {
         match self {
             Self::Address
             | Self::Function
@@ -534,6 +539,27 @@ impl DynSolType {
         self.abi_decode_inner(&mut Decoder::new(data, false), DynToken::decode_sequence_populate)
     }
 
+    /// Calculate the minimum number of ABI words necessary to encode this
+    /// type.
+    pub fn minimum_words(&self) -> usize {
+        match self {
+            // word types are always 1
+            DynSolType::Bool |
+            DynSolType::Int(_) |
+            DynSolType::Uint(_) |
+            DynSolType::FixedBytes(_) |
+            DynSolType::Address |
+            DynSolType::Function |
+            // packed/dynamic seq types may be empty
+            DynSolType::Bytes |
+            DynSolType::String |
+            DynSolType::Array(_) => 1,
+            // fixed-seq types are the sum of their components
+            DynSolType::FixedArray(v, size) => size * v.minimum_words(),
+            DynSolType::Tuple(v) => v.iter().map(|ty| ty.minimum_words()).sum(),
+        }
+    }
+
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub(crate) fn abi_decode_inner<'d, F>(
@@ -546,6 +572,10 @@ impl DynSolType {
     {
         if self.is_zst() {
             return Ok(self.zero_sized_value().expect("checked"));
+        }
+
+        if decoder.remaining_words() < self.minimum_words() {
+            return Err(Error::SolTypes(alloy_sol_types::Error::Overrun));
         }
 
         let mut token = self.empty_dyn_token();
