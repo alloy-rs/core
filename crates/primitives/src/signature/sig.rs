@@ -531,29 +531,13 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
 }
 
 #[cfg(test)]
+#[allow(unused_imports)]
 mod tests {
-
     use super::*;
     use std::str::FromStr;
 
     #[cfg(feature = "rlp")]
     use alloy_rlp::{Decodable, Encodable};
-
-    #[test]
-    #[cfg(TODO)] // TODO: Transaction
-    fn can_recover_tx_sender() {
-        // random mainnet tx: https://etherscan.io/tx/0x86718885c4b4218c6af87d3d0b0d83e3cc465df2a05c048aa4db9f1a6f9de91f
-        let tx_rlp = hex::decode("02f872018307910d808507204d2cb1827d0094388c818ca8b9251b393131c08a736a67ccb19297880320d04823e2701c80c001a0cf024f4815304df2867a1a74e9d2707b6abda0337d2d54a4438d453f4160f190a07ac0e6b3bc9395b5b9c8b9e6d77204a236577a5b18467b9175c01de4faa208d9").unwrap();
-        let tx: Transaction = rlp::decode(&tx_rlp).unwrap();
-        assert_eq!(tx.rlp(), tx_rlp);
-        assert_eq!(
-            tx.hash,
-            "0x86718885c4b4218c6af87d3d0b0d83e3cc465df2a05c048aa4db9f1a6f9de91f".parse().unwrap()
-        );
-        assert_eq!(tx.transaction_type, Some(2.into()));
-        let expected = Address::from_str("0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5").unwrap();
-        assert_eq!(tx.recover_from().unwrap(), expected);
-    }
 
     #[test]
     #[cfg(feature = "k256")]
