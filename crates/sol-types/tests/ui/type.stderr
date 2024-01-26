@@ -129,27 +129,3 @@ error[E0412]: cannot find type `a` in this scope
     |
 739 |         mapping(mapping(a b => c d) e => mapping(f g => h i) j) map;
     |                         ^ not found in this scope
-
-error[E0277]: the trait bound `(alloy_sol_types::sol_data::Address, alloy_sol_types::sol_data::Address, alloy_sol_types::sol_data::String, Bool, alloy_sol_types::sol_data::Bytes, alloy_sol_types::sol_data::FixedBytes<1>, alloy_sol_types::sol_data::FixedBytes<2>, alloy_sol_types::sol_data::FixedBytes<3>, alloy_sol_types::sol_data::FixedBytes<4>, alloy_sol_types::sol_data::FixedBytes<5>, alloy_sol_types::sol_data::FixedBytes<6>, alloy_sol_types::sol_data::FixedBytes<7>, alloy_sol_types::sol_data::FixedBytes<8>, alloy_sol_types::sol_data::FixedBytes<9>, alloy_sol_types::sol_data::FixedBytes<10>, alloy_sol_types::sol_data::FixedBytes<11>, alloy_sol_types::sol_data::FixedBytes<12>, alloy_sol_types::sol_data::FixedBytes<13>, alloy_sol_types::sol_data::FixedBytes<14>, alloy_sol_types::sol_data::FixedBytes<15>, alloy_sol_types::sol_data::FixedBytes<16>, alloy_sol_types::sol_data::FixedBytes<17>, alloy_sol_types::sol_data::FixedBytes<18>, alloy_sol_types::sol_data::FixedBytes<19>, alloy_sol_types::sol_data::FixedBytes<20>, alloy_sol_types::sol_data::FixedBytes<21>, alloy_sol_types::sol_data::FixedBytes<22>, alloy_sol_types::sol_data::FixedBytes<23>, alloy_sol_types::sol_data::FixedBytes<24>, alloy_sol_types::sol_data::FixedBytes<25>, alloy_sol_types::sol_data::FixedBytes<26>, alloy_sol_types::sol_data::FixedBytes<27>, alloy_sol_types::sol_data::FixedBytes<28>, alloy_sol_types::sol_data::FixedBytes<29>, alloy_sol_types::sol_data::FixedBytes<30>, alloy_sol_types::sol_data::FixedBytes<31>, alloy_sol_types::sol_data::FixedBytes<32>, Int<256>, Int<8>, Int<16>, Int<24>, Int<32>, Int<40>, Int<48>, Int<56>, Int<64>, Int<72>, Int<80>, Int<88>, Int<96>, Int<104>, Int<112>, Int<120>, Int<128>, Int<136>, Int<144>, Int<152>, Int<160>, Int<168>, Int<176>, Int<184>, Int<192>, Int<200>, Int<208>, Int<216>, Int<224>, Int<232>, Int<240>, Int<248>, Int<256>, alloy_sol_types::sol_data::Uint<256>, alloy_sol_types::sol_data::Uint<8>, alloy_sol_types::sol_data::Uint<16>, alloy_sol_types::sol_data::Uint<24>, alloy_sol_types::sol_data::Uint<32>, alloy_sol_types::sol_data::Uint<40>, alloy_sol_types::sol_data::Uint<48>, alloy_sol_types::sol_data::Uint<56>, alloy_sol_types::sol_data::Uint<64>, alloy_sol_types::sol_data::Uint<72>, alloy_sol_types::sol_data::Uint<80>, alloy_sol_types::sol_data::Uint<88>, alloy_sol_types::sol_data::Uint<96>, alloy_sol_types::sol_data::Uint<104>, alloy_sol_types::sol_data::Uint<112>, alloy_sol_types::sol_data::Uint<120>, alloy_sol_types::sol_data::Uint<128>, alloy_sol_types::sol_data::Uint<136>, alloy_sol_types::sol_data::Uint<144>, alloy_sol_types::sol_data::Uint<152>, alloy_sol_types::sol_data::Uint<160>, alloy_sol_types::sol_data::Uint<168>, alloy_sol_types::sol_data::Uint<176>, alloy_sol_types::sol_data::Uint<184>, alloy_sol_types::sol_data::Uint<192>, alloy_sol_types::sol_data::Uint<200>, alloy_sol_types::sol_data::Uint<208>, alloy_sol_types::sol_data::Uint<216>, alloy_sol_types::sol_data::Uint<224>, alloy_sol_types::sol_data::Uint<232>, alloy_sol_types::sol_data::Uint<240>, alloy_sol_types::sol_data::Uint<248>, alloy_sol_types::sol_data::Uint<256>): SolType` is not satisfied
-   --> tests/ui/type.rs:3:1
-    |
-3   | / sol! {
-4   | |     struct BuiltinTypes {
-5   | |         address a;
-6   | |         address payable ap;
-...   |
-111 | |     }
-112 | | }
-    | |_^ the trait `SolType` is not implemented for `(Address, ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ..., ...)`
-    |
-    = help: the following other types implement trait `SolType`:
-              ()
-              (T1,)
-              (T1, T2)
-              (T1, T2, T3)
-              (T1, T2, T3, T4)
-              (T1, T2, T3, T4, T5)
-              (T1, T2, T3, T4, T5, T6)
-              (T1, T2, T3, T4, T5, T6, T7)
-            and $N others
-    = note: this error originates in the macro `sol` (in Nightly builds, run with -Z macro-backtrace for more info)
