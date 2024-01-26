@@ -153,8 +153,14 @@ impl<'a> DynToken<'a> {
                 // `enc(X)`. But known-good test vectors have it relative to the
                 // word AFTER the array size
                 let mut child = child.raw_child();
-                let rem = child.remaining_words();
-                if rem.is_none() || rem.expect("checked") < size {
+
+                // Check that the decoder contains enough words to decode the
+                // sequence. Each item in the sequence is at least one word, so
+                // the remaining words must be at least the size of the sequence
+                let rem = child
+                    .remaining_words()
+                    .ok_or(Error::SolTypes(alloy_sol_types::Error::Overrun))?;
+                if rem < size {
                     return Err(alloy_sol_types::Error::Overrun.into());
                 }
 
