@@ -156,6 +156,25 @@ impl DynSolType {
         TypeSpecifier::parse(s).map_err(Error::TypeParser).and_then(|t| t.resolve())
     }
 
+    /// Calculate the nesting depth of this type. Simple types have a nesting
+    /// depth of 0, while all other types have a nesting depth of at least 1.
+    pub fn nesting_depth(&self) -> usize {
+        match self {
+            DynSolType::Bool
+            | DynSolType::Int(_)
+            | DynSolType::Uint(_)
+            | DynSolType::FixedBytes(_)
+            | DynSolType::Address
+            | DynSolType::Function
+            | DynSolType::Bytes
+            | DynSolType::String => 0,
+            DynSolType::Array(contents) | DynSolType::FixedArray(contents, _) => {
+                1 + contents.nesting_depth()
+            }
+            as_tuple!(Self tuple) => 1 + tuple.iter().map(Self::nesting_depth).max().unwrap_or(0),
+        }
+    }
+
     /// Fallible cast to the contents of a variant.
     #[inline]
     pub fn as_tuple(&self) -> Option<&[Self]> {
@@ -556,7 +575,9 @@ impl DynSolType {
             DynSolType::Array(_) => 1,
             // fixed-seq types are the sum of their components
             DynSolType::FixedArray(v, size) => size * v.minimum_words(),
-            DynSolType::Tuple(v) => v.iter().map(|ty| ty.minimum_words()).sum(),
+            DynSolType::Tuple(tuple) => tuple.iter().map(|ty| ty.minimum_words()).sum(),
+            #[cfg(feature = "eip712")]
+            DynSolType::CustomStruct { tuple, ..} => tuple.iter().map(|ty| ty.minimum_words()).sum(),
         }
     }
 

@@ -15,7 +15,9 @@ use crate::{
 use alloc::{borrow::Cow, vec::Vec};
 use core::{fmt, slice::SliceIndex};
 
-const RECURSION_LIMIT: u8 = 8;
+/// The decoder recursion limit. This is currently hardcoded, but may be
+/// parameterizable in the future.
+pub const RECURSION_LIMIT: u8 = 8;
 
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
 /// deserialize the bytes into a sequence of tokens.
