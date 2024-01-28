@@ -132,14 +132,17 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
+                #[inline]
                 fn new<'a>(tuple: <Self::Parameters<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 
+                #[inline]
                 fn tokenize(&self) -> Self::Token<'_> {
                     #tokenize_impl
                 }
 
+                #[inline]
                 fn abi_decode_returns(data: &[u8], validate: bool) -> ::alloy_sol_types::Result<Self::Return> {
                     <Self::ReturnTuple<'_> as ::alloy_sol_types::SolType>::abi_decode_sequence(data, validate).map(Into::into)
                 }
@@ -186,10 +189,12 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
                 type Parameters<'a> = #call_tuple;
                 type Token<'a> = <Self::Parameters<'a> as ::alloy_sol_types::SolType>::Token<'a>;
 
+                #[inline]
                 fn new<'a>(tuple: <Self::Parameters<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 
+                #[inline]
                 fn tokenize(&self) -> Self::Token<'_> {
                     #tokenize_impl
                 }
