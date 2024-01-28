@@ -6,9 +6,8 @@ use alloc::vec::Vec;
 use core::num::NonZeroUsize;
 use winnow::{
     ascii::digit0,
-    combinator::{cut_err, delimited, repeat},
+    combinator::{cut_err, delimited, repeat, trace},
     error::{ErrMode, ErrorKind, FromExternalError},
-    trace::trace,
     PResult, Parser,
 };
 

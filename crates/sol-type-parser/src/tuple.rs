@@ -3,7 +3,7 @@ use crate::{
     Error, Result, TypeSpecifier,
 };
 use alloc::vec::Vec;
-use winnow::{trace::trace, PResult, Parser};
+use winnow::{combinator::trace, PResult, Parser};
 
 /// A tuple specifier, with no array suffixes. Corresponds to a sequence of
 /// types.

@@ -5,10 +5,9 @@ use alloc::{string::String, vec::Vec};
 use core::{slice, str};
 use winnow::{
     ascii::space0,
-    combinator::{cut_err, delimited, opt, preceded, separated, terminated},
+    combinator::{cut_err, delimited, opt, preceded, separated, terminated, trace},
     error::{AddContext, ParserError, StrContext, StrContextValue},
     stream::Accumulate,
-    trace::trace,
     PResult, Parser,
 };
 

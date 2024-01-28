@@ -1,6 +1,6 @@
 use crate::{ident::identifier, is_valid_identifier, Error, Result};
 use core::fmt;
-use winnow::{trace::trace, PResult, Parser};
+use winnow::{combinator::trace, PResult, Parser};
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type. This is the most basic type specifier.
