@@ -391,7 +391,7 @@ impl<'a> CallLikeExpander<'a> {
 
                 #[inline]
                 fn valid_selector(selector: [u8; 4]) -> bool {
-                    ::core::matches!(selector, #(<#types as ::alloy_sol_types::#trait_>::SELECTOR)|*)
+                    Self::SELECTORS.binary_search(&selector).is_ok()
                 }
 
                 #[inline]
@@ -515,8 +515,12 @@ impl<'a> CallLikeExpander<'a> {
             impl #name {
                 /// All the selectors of this enum.
                 ///
-                /// Note that the selectors might not be in the same order as the
-                /// variants, as they are sorted instead of ordered by definition.
+                /// Note that the selectors might not be in the same order as the variants.
+                /// No guarantees are made about the order of the selectors.
+                ///
+                /// Prefer using `SolInterface` methods instead.
+                // NOTE: This is currently sorted to allow for binary search in
+                // `SolInterface::valid_selector`.
                 pub const SELECTORS: &'static [#selector_type] = &[#(#selectors),*];
             }
         };

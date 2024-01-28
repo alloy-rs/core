@@ -554,6 +554,14 @@ mod tests {
             ContractError::<C::CErrors>::selectors().collect::<Vec<_>>(),
             vec![sel("Err1()"), sel("Error(string)"), sel("Panic(uint256)")],
         );
+
+        for selector in C::CErrors::selectors() {
+            assert!(C::CErrors::valid_selector(selector));
+        }
+
+        for selector in ContractError::<C::CErrors>::selectors() {
+            assert!(ContractError::<C::CErrors>::valid_selector(selector));
+        }
     }
 
     #[test]
@@ -623,5 +631,13 @@ mod tests {
         assert_eq!(C::Err3::abi_decode(&data, true), Ok(err3()));
         assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err3()));
         assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err3()));
+
+        for selector in C::CErrors::selectors() {
+            assert!(C::CErrors::valid_selector(selector));
+        }
+
+        for selector in ContractError::<C::CErrors>::selectors() {
+            assert!(ContractError::<C::CErrors>::valid_selector(selector));
+        }
     }
 }
