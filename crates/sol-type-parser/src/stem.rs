@@ -1,5 +1,5 @@
 use crate::{Error, Result, RootType, TupleSpecifier};
-use winnow::{trace::trace, PResult, Parser};
+use winnow::{combinator::trace, PResult, Parser};
 
 /// A stem of a Solidity array type. It is either a root type, or a tuple type.
 ///

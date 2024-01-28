@@ -4,7 +4,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use core::fmt;
-use winnow::{trace::trace, PResult, Parser};
+use winnow::{combinator::trace, PResult, Parser};
 
 // TODO: Parse visibility and state mutability
 

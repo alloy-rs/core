@@ -7,14 +7,13 @@ use hex::FromHexError;
 use parser::utils::{array_parser, char_parser, spanned};
 use winnow::{
     ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
-    combinator::{cut_err, dispatch, fail, opt, preceded, success},
+    combinator::{cut_err, dispatch, empty, fail, opt, preceded, trace},
     error::{
         AddContext, ContextError, ErrMode, ErrorKind, FromExternalError, StrContext,
         StrContextValue,
     },
     stream::Stream,
     token::take_while,
-    trace::trace,
     PResult, Parser,
 };
 
@@ -294,8 +293,8 @@ fn bool(input: &mut &str) -> PResult<bool> {
     trace(
         "bool",
         dispatch! {alpha1.context(StrContext::Label("boolean"));
-            "true" => success(true),
-            "false" => success(false),
+            "true" => empty.value(true),
+            "false" => empty.value(false),
             _ => fail
         }
         .context(StrContext::Label("boolean")),
@@ -437,9 +436,9 @@ fn int_units(input: &mut &str) -> PResult<usize> {
     trace(
         "int_units",
         dispatch! {alpha0;
-            "ether" => success(18),
-            "gwei" | "nano" | "nanoether" => success(9),
-            "" | "wei" => success(0),
+            "ether" => empty.value(18),
+            "gwei" | "nano" | "nanoether" => empty.value(9),
+            "" | "wei" => empty.value(0),
             _ => fail,
         },
     )
