@@ -262,6 +262,7 @@ struct CallLikeExpander<'a> {
     extra_methods: bool,
 }
 
+#[derive(Clone, Debug)]
 struct ExpandData {
     name: Ident,
     variants: Vec<Ident>,
@@ -276,6 +277,35 @@ impl ExpandData {
         let types = self.types.as_ref().unwrap_or(&self.variants);
         assert_eq!(types.len(), self.variants.len());
         types
+    }
+
+    fn sort_by_selector(&mut self) {
+        let len = self.selectors.len();
+        if len <= 1 {
+            return;
+        }
+
+        let prev = self.selectors.clone();
+        self.selectors.sort_unstable();
+        // Arbitrary max length.
+        if len <= 20 && prev == self.selectors {
+            return;
+        }
+
+        let old_variants = self.variants.clone();
+        let old_types = self.types.clone();
+        let new_idxs =
+            prev.iter().map(|selector| self.selectors.iter().position(|s| s == selector).unwrap());
+        for (old, new) in new_idxs.enumerate() {
+            if old == new {
+                continue;
+            }
+
+            self.variants[new] = old_variants[old].clone();
+            if let Some(types) = self.types.as_mut() {
+                types[new] = old_types.as_ref().unwrap()[old].clone();
+            }
+        }
     }
 }
 
@@ -295,10 +325,6 @@ impl<'a> ToExpand<'a> {
 
                 let types: Vec<_> = variants.iter().map(|name| cx.raw_call_name(name)).collect();
 
-                let mut selectors: Vec<_> =
-                    functions.iter().map(|f| cx.function_selector(f)).collect();
-                selectors.sort_unstable();
-
                 ExpandData {
                     name: format_ident!("{contract_name}Calls"),
                     variants,
@@ -309,34 +335,26 @@ impl<'a> ToExpand<'a> {
                         .min()
                         .unwrap(),
                     trait_: format_ident!("SolCall"),
-                    selectors,
+                    selectors: functions.iter().map(|f| cx.function_selector(f)).collect(),
                 }
             }
 
-            Self::Errors(errors) => {
-                let mut selectors: Vec<_> = errors.iter().map(|e| cx.error_selector(e)).collect();
-                selectors.sort_unstable();
-
-                ExpandData {
-                    name: format_ident!("{contract_name}Errors"),
-                    variants: errors.iter().map(|error| error.name.0.clone()).collect(),
-                    types: None,
-                    min_data_len: errors
-                        .iter()
-                        .map(|error| ty::params_base_data_size(cx, &error.parameters))
-                        .min()
-                        .unwrap(),
-                    trait_: format_ident!("SolError"),
-                    selectors,
-                }
-            }
+            Self::Errors(errors) => ExpandData {
+                name: format_ident!("{contract_name}Errors"),
+                variants: errors.iter().map(|error| error.name.0.clone()).collect(),
+                types: None,
+                min_data_len: errors
+                    .iter()
+                    .map(|error| ty::params_base_data_size(cx, &error.parameters))
+                    .min()
+                    .unwrap(),
+                trait_: format_ident!("SolError"),
+                selectors: errors.iter().map(|e| cx.error_selector(e)).collect(),
+            },
 
             Self::Events(events) => {
                 let variants: Vec<_> =
                     events.iter().map(|&event| cx.overloaded_name(event.into()).0).collect();
-
-                let mut selectors: Vec<_> = events.iter().map(|e| cx.event_selector(e)).collect();
-                selectors.sort_unstable();
 
                 ExpandData {
                     name: format_ident!("{contract_name}Events"),
@@ -348,7 +366,7 @@ impl<'a> ToExpand<'a> {
                         .min()
                         .unwrap(),
                     trait_: format_ident!("SolEvent"),
-                    selectors,
+                    selectors: events.iter().map(|e| cx.event_selector(e)).collect(),
                 }
             }
         }
@@ -359,15 +377,30 @@ impl<'a> CallLikeExpander<'a> {
     fn expand(&self, to_expand: ToExpand<'_>, attrs: Vec<Attribute>) -> TokenStream {
         let data = &to_expand.to_data(self);
 
-        if let ToExpand::Events(events) = to_expand {
-            return self.expand_events(events, data, attrs);
+        let mut sorted_data = data.clone();
+        sorted_data.sort_by_selector();
+        #[cfg(debug_assertions)]
+        for (i, sv) in sorted_data.variants.iter().enumerate() {
+            let s = &sorted_data.selectors[i];
+
+            let normal_pos = data.variants.iter().position(|v| v == sv).unwrap();
+            let ns = &data.selectors[normal_pos];
+            assert_eq!(s, ns);
         }
 
-        let def = self.generate_enum(data, attrs);
+        if let ToExpand::Events(events) = to_expand {
+            return self.expand_events(events, data, &sorted_data, attrs);
+        }
+
+        let def = self.generate_enum(data, &sorted_data, attrs);
         let ExpandData { name, variants, min_data_len, trait_, .. } = data;
         let types = data.types();
         let name_s = name.to_string();
         let count = data.variants.len();
+
+        let sorted_variants = &sorted_data.variants;
+        let sorted_types = sorted_data.types();
+
         quote! {
             #def
 
@@ -395,21 +428,30 @@ impl<'a> CallLikeExpander<'a> {
                 }
 
                 #[inline]
+                #[allow(unsafe_code, non_snake_case)]
                 fn abi_decode_raw(
                     selector: [u8; 4],
                     data: &[u8],
                     validate: bool
                 )-> ::alloy_sol_types::Result<Self> {
-                    match selector {
-                        #(<#types as ::alloy_sol_types::#trait_>::SELECTOR =>
-                            <#types as ::alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
-                                .map(Self::#variants),
-                        )*
-                        s => ::core::result::Result::Err(::alloy_sol_types::Error::unknown_selector(
+                    static DECODE_SHIMS: &[fn(&[u8], bool) -> ::alloy_sol_types::Result<#name>] = &[
+                        #({
+                            fn #sorted_variants(data: &[u8], validate: bool) -> ::alloy_sol_types::Result<#name> {
+                                <#sorted_types as ::alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
+                                    .map(#name::#sorted_variants)
+                            }
+                            #sorted_variants
+                        }),*
+                    ];
+
+                    let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                        return Err(::alloy_sol_types::Error::unknown_selector(
                             <Self as ::alloy_sol_types::SolInterface>::NAME,
-                            s,
-                        )),
-                    }
+                            selector,
+                        ));
+                    };
+                    // SAFETY: `idx` is a valid index into `DECODE_SHIMS`.
+                    (unsafe { DECODE_SHIMS.get_unchecked(idx) })(data, validate)
                 }
 
                 #[inline]
@@ -435,9 +477,10 @@ impl<'a> CallLikeExpander<'a> {
         &self,
         events: &[&ItemEvent],
         data: &ExpandData,
+        sorted_data: &ExpandData,
         attrs: Vec<Attribute>,
     ) -> TokenStream {
-        let def = self.generate_enum(data, attrs);
+        let def = self.generate_enum(data, sorted_data, attrs);
         let ExpandData { name, trait_, .. } = data;
         let name_s = name.to_string();
         let count = data.variants.len();
@@ -498,13 +541,23 @@ impl<'a> CallLikeExpander<'a> {
         }
     }
 
-    fn generate_enum(&self, data: &ExpandData, mut attrs: Vec<Attribute>) -> TokenStream {
-        let ExpandData { name, variants, selectors, .. } = data;
+    fn generate_enum(
+        &self,
+        data: &ExpandData,
+        sorted_data: &ExpandData,
+        mut attrs: Vec<Attribute>,
+    ) -> TokenStream {
+        let ExpandData { name, variants, .. } = data;
         let types = data.types();
+
+        let selectors = &sorted_data.selectors;
+
         let selector_len = selectors.first().unwrap().array.len();
         assert!(selectors.iter().all(|s| s.array.len() == selector_len));
         let selector_type = quote!([u8; #selector_len]);
+
         self.cx.type_derives(&mut attrs, types.iter().cloned().map(ast::Type::custom), false);
+
         let mut tokens = quote! {
             #(#attrs)*
             pub enum #name {
@@ -519,8 +572,7 @@ impl<'a> CallLikeExpander<'a> {
                 /// No guarantees are made about the order of the selectors.
                 ///
                 /// Prefer using `SolInterface` methods instead.
-                // NOTE: This is currently sorted to allow for binary search in
-                // `SolInterface::valid_selector`.
+                // NOTE: This is currently sorted to allow for binary search in `SolInterface`.
                 pub const SELECTORS: &'static [#selector_type] = &[#(#selectors),*];
             }
         };

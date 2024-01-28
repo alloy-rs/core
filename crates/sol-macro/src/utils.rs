@@ -32,6 +32,7 @@ pub fn combine_errors(v: impl IntoIterator<Item = syn::Error>) -> syn::Result<()
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct ExprArray<T> {
     pub array: Vec<T>,
     pub span: Span,
