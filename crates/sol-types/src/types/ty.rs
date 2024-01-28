@@ -146,6 +146,7 @@ pub trait SolType: Sized {
     /// Tokenizes the given value into this type's token.
     ///
     /// See the [`abi::token`] module for more information.
+    #[inline]
     fn tokenize<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Self::Token<'_> {
         rust.stv_to_tokens()
     }

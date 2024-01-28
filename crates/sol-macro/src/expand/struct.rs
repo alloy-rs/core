@@ -77,6 +77,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
             #[automatically_derived]
             impl ::alloy_sol_types::private::SolTypeValue<Self> for #name {
+                #[inline]
                 fn stv_to_tokens(&self) -> <Self as ::alloy_sol_types::SolType>::Token<'_> {
                     #tokenize_impl
                 }
@@ -134,6 +135,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
                 #eip712_encode_type_fns
 
+                #[inline]
                 fn eip712_encode_data(&self) -> ::alloy_sol_types::private::Vec<u8> {
                     #encode_data_impl
                 }
@@ -238,6 +240,7 @@ fn expand_encode_type_fns(
             ::alloy_sol_types::private::Cow::Borrowed(#root)
         }
 
+        #[inline]
         fn eip712_components() -> ::alloy_sol_types::private::Vec<::alloy_sol_types::private::Cow<'static, str>> {
             #components_impl
         }
