@@ -1,6 +1,6 @@
 //! [`ItemContract`] expansion.
 
-use super::{ty, ExpCtxt};
+use super::{anon_name, ty, ExpCtxt};
 use crate::{attr, utils::ExprArray};
 use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent, Spanned};
 use heck::ToSnakeCase;
@@ -32,13 +32,15 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
     let (sol_attrs, attrs) = attr::SolAttrs::parse(attrs)?;
     let extra_methods = sol_attrs.extra_methods.or(cx.attrs.extra_methods).unwrap_or(false);
-    let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
+    let rpc = sol_attrs.rpc.or(cx.attrs.rpc).unwrap_or(false);
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
+    let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     let bytecode = sol_attrs.bytecode.map(|lit| {
         let name = Ident::new("BYTECODE", lit.span());
         quote! {
             /// The creation / init code of the contract.
+            #[rustfmt::skip]
             pub static #name: ::alloy_sol_types::private::Bytes = ::alloy_sol_types::private::bytes!(#lit);
         }
     });
@@ -46,6 +48,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         let name = Ident::new("DEPLOYED_BYTECODE", lit.span());
         quote! {
             /// The runtime bytecode of the contract.
+            #[rustfmt::skip]
             pub static #name: ::alloy_sol_types::private::Bytes = ::alloy_sol_types::private::bytes!(#lit);
         }
     });
@@ -57,8 +60,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     let mut errors = Vec::with_capacity(contract.body.len());
     let mut events = Vec::with_capacity(contract.body.len());
 
-    let (mut mod_attrs, item_attrs): (Vec<_>, _) =
-        attrs.into_iter().partition(|a| a.path().is_ident("doc"));
+    let (mut mod_attrs, item_attrs) =
+        attrs.into_iter().partition::<Vec<_>, _>(|a| a.path().is_ident("doc"));
     mod_attrs.extend(item_attrs.iter().filter(|a| !a.path().is_ident("derive")).cloned());
 
     let mut item_tokens = TokenStream::new();
@@ -68,6 +71,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 ast::FunctionKind::Function(_) if function.name.is_some() => {
                     functions.push(function);
                 }
+                ast::FunctionKind::Function(_) => {}
+                ast::FunctionKind::Modifier(_) => {}
                 ast::FunctionKind::Constructor(_) => {
                     if constructor.is_none() {
                         constructor = Some(function);
@@ -92,7 +97,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                         return Err(syn::Error::new(function.span(), msg));
                     }
                 }
-                _ => {}
             },
             Item::Error(error) => errors.push(error),
             Item::Event(event) => events.push(event),
@@ -200,6 +204,102 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         }
     });
 
+    let rpc = rpc.then(|| {
+        let contract_name = name;
+        let name = format_ident!("{contract_name}Instance");
+        let name_s = name.to_string();
+        let methods = functions.iter().map(|f| call_builder_method(f, cx));
+        let new_fn_doc = format!(
+            "Creates a new wrapper around an on-chain [`{contract_name}`](self) contract instance.\n\
+             \n\
+             See the [wrapper's documentation](`{name}`) for more details."
+        );
+        let struct_doc = format!(
+            "A [`{contract_name}`](self) instance.\n\
+             \n\
+             Contains type-safe methods for interacting with an on-chain instance of the\n\
+             [`{contract_name}`](self) contract located at a given `address`, using a given\n\
+             provider `P`.\n\
+             \n\
+             See the [module-level documentation](self) for all the available methods."
+        );
+        quote! {
+            #[doc = #new_fn_doc]
+            #[inline]
+            pub const fn new<P: ::alloy_contract::private::Provider>(
+                address: ::alloy_sol_types::private::Address,
+                provider: P,
+            ) -> #name<P> {
+                #name::<P>::new(address, provider)
+            }
+
+            #[doc = #struct_doc]
+            #[derive(Clone)]
+            pub struct #name<P> {
+                address: ::alloy_sol_types::private::Address,
+                provider: P,
+            }
+
+            #[automatically_derived]
+            impl<P> ::core::fmt::Debug for #name<P> {
+                #[inline]
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    f.debug_tuple(#name_s).field(&self.address).finish()
+                }
+            }
+
+            /// Instantiation and getters/setters.
+            #[automatically_derived]
+            impl<P: ::alloy_contract::private::Provider> #name<P> {
+                #[doc = #new_fn_doc]
+                #[inline]
+                pub const fn new(address: ::alloy_sol_types::private::Address, provider: P) -> Self {
+                    Self { address, provider }
+                }
+
+                /// Returns a reference to the address.
+                #[inline]
+                pub const fn address(&self) -> &::alloy_sol_types::private::Address {
+                    &self.address
+                }
+
+                /// Sets the address.
+                #[inline]
+                pub fn set_address(&mut self, address: ::alloy_sol_types::private::Address) {
+                    self.address = address;
+                }
+
+                /// Sets the address and returns `self`.
+                pub fn at(mut self, address: ::alloy_sol_types::private::Address) -> Self {
+                    self.set_address(address);
+                    self
+                }
+
+                /// Returns a reference to the provider.
+                #[inline]
+                pub const fn provider(&self) -> &P {
+                    &self.provider
+                }
+            }
+
+            /// Function calls.
+            #[automatically_derived]
+            impl<P: ::alloy_contract::private::Provider> #name<P> {
+                /// Creates a new call builder using this contract instance's provider and address.
+                /// 
+                /// Note that the call can be any function call, not just those defined in this
+                /// contract. Prefer using the other methods for building type-safe contract calls.
+                pub fn call_builder<C: ::alloy_sol_types::SolCall>(&self, call: &C)
+                    -> ::alloy_contract::SolCallBuilder<&P, C>
+                {
+                    ::alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
+                }
+
+                #(#methods)*
+            }
+        }
+    });
+
     let tokens = quote! {
         #mod_descr_doc
         #(#mod_attrs)*
@@ -218,6 +318,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             #events_enum
 
             #abi
+
+            #rpc
         }
     };
     Ok(tokens)
@@ -659,6 +761,21 @@ fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
                 Self::#variant(inner) => ::core::option::Option::Some(inner),
                 _ => ::core::option::Option::None,
             }
+        }
+    }
+}
+
+fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
+    let name = cx.function_name(f);
+    let call_name = cx.call_name(f);
+    let param_names1 = f.parameters.names().enumerate().map(anon_name);
+    let param_names2 = param_names1.clone();
+    let param_tys = f.parameters.types().map(super::ty::expand_rust_type);
+    let doc = format!("Creates a new call builder for the [`{name}`] function.");
+    quote! {
+        #[doc = #doc]
+        pub fn #name(&self, #(#param_names1: #param_tys),*) -> ::alloy_contract::SolCallBuilder<&P, #call_name> {
+            self.call_builder(&#call_name { #(#param_names2),* })
         }
     }
 }
