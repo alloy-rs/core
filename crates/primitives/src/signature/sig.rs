@@ -708,15 +708,14 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn test_bincode_roundtrip() {
-        let raw_signature_without_y_parity = serde_json::json!(
-            {
-            "r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0",
-            "s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05",
-            "v":"0x37"
-        });
-
-        let signature: crate::Signature =
-            serde_json::from_value(raw_signature_without_y_parity).unwrap();
+        let signature = crate::Signature::from_rs_and_parity(
+            U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
+                .unwrap(),
+            U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
+                .unwrap(),
+            1,
+        )
+        .unwrap();
 
         let bin = bincode::serialize(&signature).unwrap();
         assert_eq!(bincode::deserialize::<crate::Signature>(&bin).unwrap(), signature);
