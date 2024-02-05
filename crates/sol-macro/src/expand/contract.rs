@@ -223,6 +223,37 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
              \n\
              See the [module-level documentation](self) for all the available methods."
         );
+        let (deploy_fn, deploy_method) = bytecode.is_some().then(|| {
+            let doc_str = "todo";
+            let doc = attr::mk_doc(doc_str);
+            let (params, args) = constructor.map(|c| {
+                let names1 = c.parameters.names().enumerate().map(anon_name);
+                let names2 = names1.clone();
+                let tys = c.parameters.types().map(super::ty::expand_rust_type);
+                (quote!(#(#names1: #tys),*), quote!(#(#names2,)*))
+            }).unzip();
+            (
+                quote! {
+                    #doc
+                    #[inline]
+                    pub fn deploy<P: ::alloy_contract::private::Provider>(provider: P, #params)
+                        -> ::alloy_contract::DeploymentCallBuilder<P>
+                    {
+                        #name::<P>::deploy(provider, #args)
+                    }
+                },
+                quote! {
+                    #doc
+                    #[inline]
+                    pub fn deploy(provider: P, #params)
+                        -> ::alloy_contract::DeploymentCallBuilder<P>
+                    {
+                        let data = ::alloy_sol_types::SolConstructor::abi_encode(&constructorCall { #args });
+                        ::alloy_contract::DeploymentCallBuilder::new_deployment(provider, data)
+                    }
+                },
+            )
+        }).unzip();
         quote! {
             #[doc = #new_fn_doc]
             #[inline]
@@ -232,6 +263,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             ) -> #name<P> {
                 #name::<P>::new(address, provider)
             }
+
+            #deploy_fn
 
             #[doc = #struct_doc]
             #[derive(Clone)]
@@ -256,6 +289,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 pub const fn new(address: ::alloy_sol_types::private::Address, provider: P) -> Self {
                     Self { address, provider }
                 }
+
+                #deploy_method
 
                 /// Returns a reference to the address.
                 #[inline]
