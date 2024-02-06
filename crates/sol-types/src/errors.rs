@@ -8,7 +8,7 @@
 // except according to those terms.
 
 use crate::abi;
-use alloc::{borrow::Cow, boxed::Box, string::String};
+use alloc::{borrow::Cow, boxed::Box, collections::TryReserveError, string::String};
 use alloy_primitives::LogData;
 use core::fmt;
 
@@ -28,6 +28,9 @@ pub enum Error {
 
     /// Overran deserialization buffer.
     Overrun,
+
+    /// Allocation failed.
+    Reserve(TryReserveError),
 
     /// Trailing bytes in deserialization buffer.
     BufferNotEmpty,
@@ -75,6 +78,7 @@ pub enum Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
+            Self::Reserve(e) => Some(e),
             Self::FromHexError(e) => Some(e),
             _ => None,
         }
@@ -88,6 +92,7 @@ impl fmt::Display for Error {
                 write!(f, "type check failed for {expected_type:?} with data: {data}",)
             }
             Self::Overrun => f.write_str("buffer overrun while deserializing"),
+            Self::Reserve(e) => e.fmt(f),
             Self::BufferNotEmpty => f.write_str("buffer not empty after deserialization"),
             Self::ReserMismatch => f.write_str("reserialization did not match original"),
             Self::RecursionLimitExceeded(limit) => {
@@ -145,7 +150,15 @@ impl Error {
 }
 
 impl From<hex::FromHexError> for Error {
+    #[inline]
     fn from(value: hex::FromHexError) -> Self {
         Self::FromHexError(value)
+    }
+}
+
+impl From<TryReserveError> for Error {
+    #[inline]
+    fn from(value: TryReserveError) -> Self {
+        Self::Reserve(value)
     }
 }

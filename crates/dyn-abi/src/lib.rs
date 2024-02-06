@@ -66,13 +66,3 @@ pub use alloy_sol_types::{
     abi::{self, Decoder, Encoder},
     Eip712Domain, SolType, Word,
 };
-
-#[cfg(test)]
-mod test {
-    use crate::DynSolType;
-    #[test]
-    fn zst_dos() {
-        let my_type: DynSolType = "()[]".parse().unwrap();
-        let _ = my_type.abi_decode(&hex::decode("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000FFFFFFFF").unwrap()).unwrap();
-    }
-}

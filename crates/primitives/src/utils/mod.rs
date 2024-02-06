@@ -1,7 +1,7 @@
 //! Common Ethereum utilities.
 
 use crate::B256;
-use alloc::vec::Vec;
+use alloc::{boxed::Box, collections::TryReserveError, vec::Vec};
 use cfg_if::cfg_if;
 use core::{fmt, mem::MaybeUninit};
 
@@ -28,6 +28,85 @@ pub type Units = Unit;
 
 /// The prefix used for hashing messages according to EIP-191.
 pub const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
+
+/// Tries to create a `Vec` of `n` elements, each initialized to `elem`.
+#[macro_export]
+macro_rules! try_vec {
+    () => {
+        $crate::private::Vec::new()
+    };
+    ($elem:expr; $n:expr) => {
+        $crate::utils::vec_try_from_elem($elem, $n)
+    };
+    ($($x:expr),+ $(,)?) => {
+        match $crate::utils::box_try_new([$($x),+]) {
+            ::core::result::Result::Ok(x) => ::core::result::Result::Ok(<[_]>::into_vec(x)),
+            ::core::result::Result::Err(e) => ::core::result::Result::Err(e),
+        }
+    };
+}
+
+/// Allocates memory on the heap then places `x` into it, returning an error if the allocation
+/// fails.
+///
+/// Stable version of `Box::try_new`.
+#[inline]
+pub fn box_try_new<T>(value: T) -> Result<Box<T>, TryReserveError> {
+    let mut boxed = box_try_new_uninit::<T>()?;
+    unsafe {
+        boxed.as_mut_ptr().write(value);
+        let ptr = Box::into_raw(boxed);
+        Ok(Box::from_raw(ptr.cast()))
+    }
+}
+
+/// Constructs a new box with uninitialized contents on the heap, returning an error if the
+/// allocation fails.
+///
+/// Stable version of `Box::try_new_uninit`.
+#[inline]
+pub fn box_try_new_uninit<T>() -> Result<Box<MaybeUninit<T>>, TryReserveError> {
+    let mut vec = Vec::<MaybeUninit<T>>::new();
+
+    // Reserve enough space for one `MaybeUninit<T>`.
+    vec.try_reserve_exact(1)?;
+
+    // `try_reserve_exact`'s docs note that the allocator might allocate more than requested anyway.
+    // Make sure we got exactly 1 element.
+    vec.shrink_to(1);
+
+    let ptr = vec.as_mut_ptr();
+    core::mem::forget(vec);
+    // SAFETY: `vec` is exactly one element long and has not been deallocated.
+    Ok(unsafe { Box::from_raw(ptr) })
+}
+
+/// Tries to collect the elements of an iterator into a `Vec`.
+pub fn try_collect_vec<I: Iterator<Item = T>, T>(iter: I) -> Result<Vec<T>, TryReserveError> {
+    let mut vec = Vec::new();
+    if let Some(size_hint) = iter.size_hint().1 {
+        vec.try_reserve(size_hint.max(4))?;
+    }
+    vec.extend(iter);
+    Ok(vec)
+}
+
+/// Tries to create a `Vec` with the given capacity.
+#[inline]
+pub fn vec_try_with_capacity<T>(capacity: usize) -> Result<Vec<T>, TryReserveError> {
+    let mut vec = Vec::new();
+    vec.try_reserve(capacity).map(|()| vec)
+}
+
+/// Tries to create a `Vec` of `n` elements, each initialized to `elem`.
+// Not public API. Use `try_vec!` instead.
+#[doc(hidden)]
+pub fn vec_try_from_elem<T: Clone>(elem: T, n: usize) -> Result<Vec<T>, TryReserveError> {
+    let mut vec = Vec::new();
+    vec.try_reserve(n)?;
+    vec.resize(n, elem);
+    Ok(vec)
+}
 
 /// Hash a message according to [EIP-191] (version `0x01`).
 ///
@@ -241,5 +320,20 @@ mod tests {
         let mut hash = [0u8; 32];
         unsafe { hasher.finalize_into_raw(hash.as_mut_ptr()) };
         assert_eq!(hash, expected);
+    }
+
+    #[test]
+    fn test_try_boxing() {
+        let x = Box::new(42);
+        let y = box_try_new(42).unwrap();
+        assert_eq!(x, y);
+
+        let x = vec![1; 3];
+        let y = try_vec![1; 3].unwrap();
+        assert_eq!(x, y);
+
+        let x = vec![1, 2, 3];
+        let y = try_vec![1, 2, 3].unwrap();
+        assert_eq!(x, y);
     }
 }

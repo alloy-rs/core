@@ -16,7 +16,7 @@ use crate::{
     Result, Word,
 };
 use alloc::vec::Vec;
-use alloy_primitives::{FixedBytes, I256, U256};
+use alloy_primitives::{utils::vec_try_with_capacity, FixedBytes, I256, U256};
 use core::fmt;
 
 mod sealed {
@@ -367,7 +367,11 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
         let mut child = child.raw_child()?;
-        (0..len).map(|_| T::decode_from(&mut child)).collect::<Result<Vec<T>>>().map(DynSeqToken)
+        let mut tokens = vec_try_with_capacity(len)?;
+        for _ in 0..len {
+            tokens.push(T::decode_from(&mut child)?);
+        }
+        Ok(Self(tokens))
     }
 
     #[inline]
@@ -429,7 +433,7 @@ pub struct PackedSeqToken<'a>(pub &'a [u8]);
 
 impl<'a> fmt::Debug for PackedSeqToken<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("PackedSeq").field(&hex::encode_prefixed(self.0)).finish()
+        f.debug_tuple("PackedSeqToken").field(&hex::encode_prefixed(self.0)).finish()
     }
 }
 
