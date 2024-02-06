@@ -231,7 +231,7 @@ mod test {
         let my_type: DynSolType = "uint256[][][][][][][][][][]".parse().unwrap();
         let decoded = my_type.abi_decode(&hex::decode(payload).unwrap());
 
-        assert_eq!(decoded, Err(alloy_sol_types::Error::RecursionLimitExceeded(8).into()))
+        assert_eq!(decoded, Err(alloy_sol_types::Error::RecursionLimitExceeded(16).into()))
     }
 
     // https://github.com/alloy-rs/core/issues/490
