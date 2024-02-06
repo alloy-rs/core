@@ -15,6 +15,10 @@ use crate::{
 use alloc::{borrow::Cow, vec::Vec};
 use core::{fmt, slice::SliceIndex};
 
+/// The decoder recursion limit.
+/// This is currently hardcoded, but may be parameterizable in the future.
+pub const RECURSION_LIMIT: u8 = 16;
+
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
 /// deserialize the bytes into a sequence of tokens.
 ///
@@ -30,6 +34,8 @@ pub struct Decoder<'de> {
     offset: usize,
     // Whether to validate type correctness and blob re-encoding.
     validate: bool,
+    /// The current recursion depth.
+    depth: u8,
 }
 
 impl fmt::Debug for Decoder<'_> {
@@ -41,6 +47,7 @@ impl fmt::Debug for Decoder<'_> {
             .field("buf", &body)
             .field("offset", &self.offset)
             .field("validate", &self.validate)
+            .field("depth", &self.depth)
             .finish()
     }
 }
@@ -70,7 +77,7 @@ impl<'de> Decoder<'de> {
     /// to an identical bytestring.
     #[inline]
     pub const fn new(buf: &'de [u8], validate: bool) -> Self {
-        Self { buf, offset: 0, validate }
+        Self { buf, offset: 0, validate, depth: 0 }
     }
 
     /// Returns the current offset in the buffer.
@@ -83,6 +90,16 @@ impl<'de> Decoder<'de> {
     #[inline]
     pub const fn remaining(&self) -> Option<usize> {
         self.buf.len().checked_sub(self.offset)
+    }
+
+    /// Returns the number of words in the remaining buffer.
+    #[inline]
+    pub const fn remaining_words(&self) -> usize {
+        if let Some(remaining) = self.remaining() {
+            remaining / Word::len_bytes()
+        } else {
+            0
+        }
     }
 
     /// Returns a reference to the remaining bytes in the buffer.
@@ -117,9 +134,8 @@ impl<'de> Decoder<'de> {
     ///
     /// See [`child`](Self::child).
     #[inline]
-    #[track_caller]
-    pub fn raw_child(&self) -> Self {
-        self.child(self.offset).unwrap()
+    pub fn raw_child(&self) -> Result<Self> {
+        self.child(self.offset)
     }
 
     /// Create a child decoder, starting at `offset` bytes from the current
@@ -127,8 +143,13 @@ impl<'de> Decoder<'de> {
     /// The child decoder shares the buffer and validation flag.
     #[inline]
     pub fn child(&self, offset: usize) -> Result<Decoder<'de>, Error> {
+        if self.depth >= RECURSION_LIMIT {
+            return Err(Error::RecursionLimitExceeded(RECURSION_LIMIT));
+        }
         match self.buf.get(offset..) {
-            Some(buf) => Ok(Decoder { buf, offset: 0, validate: self.validate }),
+            Some(buf) => {
+                Ok(Decoder { buf, offset: 0, validate: self.validate, depth: self.depth + 1 })
+            }
             None => Err(Error::Overrun),
         }
     }

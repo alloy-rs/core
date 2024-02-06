@@ -202,7 +202,10 @@ pub use alloy_sol_macro::sol;
 #[doc(hidden)]
 #[allow(missing_debug_implementations)]
 pub mod private {
-    pub use super::utils::{just_ok, next_multiple_of_32, words_for, words_for_len};
+    pub use super::{
+        abi::RECURSION_LIMIT,
+        utils::{just_ok, next_multiple_of_32, words_for, words_for_len},
+    };
     pub use alloc::{
         borrow::{Cow, ToOwned},
         boxed::Box,

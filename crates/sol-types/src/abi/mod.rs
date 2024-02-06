@@ -40,7 +40,7 @@ mod encoder;
 pub use encoder::{encode, encode_params, encode_sequence, Encoder};
 
 mod decoder;
-pub use decoder::{decode, decode_params, decode_sequence, Decoder};
+pub use decoder::{decode, decode_params, decode_sequence, Decoder, RECURSION_LIMIT};
 
 pub mod token;
 pub use token::{Token, TokenSeq};
