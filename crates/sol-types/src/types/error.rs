@@ -468,6 +468,22 @@ mod tests {
     }
 
     #[test]
+    fn decode_uniswap_revert() {
+        // Solc 0.5.X/0.5.16 adds a random 0x80 byte which makes reserialization check fail.
+        // https://github.com/Uniswap/v2-core/blob/ee547b17853e71ed4e0101ccfd52e70d5acded58/contracts/UniswapV2Pair.sol#L178
+        // https://github.com/paradigmxyz/evm-inspectors/pull/12
+        let bytes = hex!("08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000024556e697377617056323a20494e53554646494349454e545f494e5055545f414d4f554e5400000000000000000000000000000000000000000000000000000080");
+
+        Revert::abi_decode(&bytes, true).unwrap_err();
+
+        let decoded = Revert::abi_decode(&bytes, false).unwrap();
+        assert_eq!(decoded.reason, "UniswapV2: INSUFFICIENT_INPUT_AMOUNT");
+
+        let decoded = decode_revert_reason(&bytes).unwrap();
+        assert_eq!(decoded, "revert: UniswapV2: INSUFFICIENT_INPUT_AMOUNT");
+    }
+
+    #[test]
     fn decode_random_revert_reason() {
         let revert_reason = String::from("test_revert_reason");
         let decoded = decode_revert_reason(revert_reason.as_bytes()).unwrap();
