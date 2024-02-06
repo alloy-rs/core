@@ -92,6 +92,15 @@ impl Parity {
         }
     }
 
+    /// Return the corresponding u64 V value.
+    pub const fn to_u64(&self) -> u64 {
+        match self {
+            Self::Eip155(v) => *v,
+            Self::NonEip155(b) => *b as u64 + 27,
+            Self::Parity(b) => *b as u64,
+        }
+    }
+
     /// Inverts the parity.
     pub const fn inverted(&self) -> Self {
         match *self {
@@ -203,6 +212,22 @@ mod test {
 
             assert_eq!(test.1, Parity::decode(&mut buf.as_slice()).unwrap());
         }
+    }
+
+    #[test]
+    fn u64_round_trip() {
+        let parity = Parity::Eip155(37);
+        assert_eq!(parity, Parity::try_from(parity.to_u64()).unwrap());
+        let parity = Parity::Eip155(38);
+        assert_eq!(parity, Parity::try_from(parity.to_u64()).unwrap());
+        let parity = Parity::NonEip155(false);
+        assert_eq!(parity, Parity::try_from(parity.to_u64()).unwrap());
+        let parity = Parity::NonEip155(true);
+        assert_eq!(parity, Parity::try_from(parity.to_u64()).unwrap());
+        let parity = Parity::Parity(false);
+        assert_eq!(parity, Parity::try_from(parity.to_u64()).unwrap());
+        let parity = Parity::Parity(true);
+        assert_eq!(parity, Parity::try_from(parity.to_u64()).unwrap());
     }
 
     #[test]

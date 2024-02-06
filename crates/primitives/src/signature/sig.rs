@@ -405,20 +405,31 @@ impl serde::Serialize for crate::Signature {
     where
         S: serde::Serializer,
     {
-        use serde::ser::SerializeMap;
+        // if the serializer is human readable, serialize as a map, otherwise as a tuple
+        if serializer.is_human_readable() {
+            use serde::ser::SerializeMap;
 
-        let mut map = serializer.serialize_map(Some(3))?;
+            let mut map = serializer.serialize_map(Some(3))?;
 
-        map.serialize_entry("r", &self.r)?;
-        map.serialize_entry("s", &self.s)?;
+            map.serialize_entry("r", &self.r)?;
+            map.serialize_entry("s", &self.s)?;
 
-        match self.v {
-            Parity::Eip155(v) => map.serialize_entry("v", &crate::U64::from(v))?,
-            Parity::NonEip155(b) => map.serialize_entry("v", &(b as u8 + 27))?,
-            Parity::Parity(true) => map.serialize_entry("yParity", "0x1")?,
-            Parity::Parity(false) => map.serialize_entry("yParity", "0x0")?,
+            match self.v {
+                Parity::Eip155(v) => map.serialize_entry("v", &crate::U64::from(v))?,
+                Parity::NonEip155(b) => map.serialize_entry("v", &(b as u8 + 27))?,
+                Parity::Parity(true) => map.serialize_entry("yParity", "0x1")?,
+                Parity::Parity(false) => map.serialize_entry("yParity", "0x0")?,
+            }
+            map.end()
+        } else {
+            use serde::ser::SerializeTuple;
+
+            let mut tuple = serializer.serialize_tuple(3)?;
+            tuple.serialize_element(&self.r)?;
+            tuple.serialize_element(&self.s)?;
+            tuple.serialize_element(&self.v.to_u64())?;
+            tuple.end()
         }
-        map.end()
     }
 }
 
@@ -472,8 +483,8 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
             }
         }
 
-        struct SignatureVisitor;
-        impl<'de> serde::de::Visitor<'de> for SignatureVisitor {
+        struct MapVisitor;
+        impl<'de> serde::de::Visitor<'de> for MapVisitor {
             type Value = crate::Signature;
 
             fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -526,7 +537,37 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
             }
         }
 
-        deserializer.deserialize_map(SignatureVisitor)
+        struct TupleVisitor;
+        impl<'de> serde::de::Visitor<'de> for TupleVisitor {
+            type Value = crate::Signature;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                formatter.write_str("a tuple containing r, s, and v")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let r = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+                let s = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+                let v: u64 = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
+
+                crate::Signature::from_rs_and_parity(r, s, v).map_err(serde::de::Error::custom)
+            }
+        }
+
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_map(MapVisitor)
+        } else {
+            deserializer.deserialize_tuple(3, TupleVisitor)
+        }
     }
 }
 
@@ -662,6 +703,22 @@ mod tests {
 
         let serialized = serde_json::to_string(&signature).unwrap();
         assert_eq!(serialized, expected);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_bincode_roundtrip() {
+        let signature = crate::Signature::from_rs_and_parity(
+            U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
+                .unwrap(),
+            U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
+                .unwrap(),
+            1,
+        )
+        .unwrap();
+
+        let bin = bincode::serialize(&signature).unwrap();
+        assert_eq!(bincode::deserialize::<crate::Signature>(&bin).unwrap(), signature);
     }
 
     #[cfg(feature = "rlp")]
