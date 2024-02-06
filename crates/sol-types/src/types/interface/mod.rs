@@ -433,7 +433,7 @@ where
     /// If both attempts fail, it returns `None`.
     pub fn decode(out: &[u8]) -> Option<Self> {
         // Try to decode as a generic contract error.
-        if let Ok(error) = ContractError::<T>::abi_decode(out, true) {
+        if let Ok(error) = ContractError::<T>::abi_decode(out, false) {
             return Some(error.into());
         }
 
