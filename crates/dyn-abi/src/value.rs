@@ -688,8 +688,33 @@ impl DynSolValue {
                 let start = 32usize.saturating_sub(byte_size);
                 buf.extend_from_slice(&num.to_be_bytes::<32>()[start..]);
             }
-            as_fixed_seq!(inner) | Self::Array(inner) => {
+            Self::FixedArray(inner) | Self::Array(inner) => {
                 for val in inner {
+                    let mut buf_inner = Vec::new();
+                    val.abi_encode_packed_to(&mut buf_inner);
+
+                    // Array elements are always padded
+                    if buf_inner.len() < 32usize {
+                        // Calculate the number of padding elements needed
+                        let padding_needed = 32usize.saturating_sub(buf_inner.len());
+
+                        // Extend the vector with the padding elements
+                        buf_inner.resize(32usize, 0);
+
+                        // Rotate the vector left by the number of padding elements added
+                        buf_inner.rotate_right(padding_needed);
+                    }
+                    buf.extend_from_slice(&buf_inner);
+                }
+            }
+            Self::Tuple(inner) => {
+                for val in inner {
+                    val.abi_encode_packed_to(buf);
+                }
+            }
+            #[cfg(feature = "eip712")]
+            Self::CustomStruct { tuple, .. } => {
+                for val in tuple {
                     val.abi_encode_packed_to(buf);
                 }
             }
