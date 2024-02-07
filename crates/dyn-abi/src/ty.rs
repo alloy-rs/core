@@ -699,11 +699,11 @@ mod tests {
     }
 
     fn encoder_test(s: &str, encoded: &[u8]) {
-        let t: DynSolType = s.parse().expect("parsing failed");
-        assert_eq!(t.sol_type_name(), s, "type names are not the same");
+        let ty: DynSolType = s.parse().expect("parsing failed");
+        assert_eq!(ty.sol_type_name(), s, "type names are not the same");
 
-        let dec = t.abi_decode_params(encoded).expect("decoding failed");
-        if let Some(value_name) = dec.sol_type_name() {
+        let value = ty.abi_decode_params(encoded).expect("decoding failed");
+        if let Some(value_name) = value.sol_type_name() {
             assert_eq!(value_name, s, "value names are not the same");
         }
 
@@ -713,13 +713,22 @@ mod tests {
         // account for this, we add 32 bytes to the expected length when
         // the type is a dynamic tuple.
         let mut len = encoded.len();
-        if dec.as_tuple().is_some() && dec.is_dynamic() {
+        if value.as_tuple().is_some() && value.is_dynamic() {
             len += 32;
         }
-        assert_eq!(dec.total_words() * 32, len, "dyn_tuple={}", len != encoded.len());
+        assert_eq!(value.total_words() * 32, len, "dyn_tuple={}", len != encoded.len());
 
-        let re_encoded = dec.abi_encode_params();
-        assert_eq!(re_encoded, encoded);
+        let re_encoded = value.abi_encode_params();
+        assert!(
+            re_encoded == encoded,
+            "
+  type: {ty}
+ value: {value:?}
+re-enc: {re_enc}
+   enc: {encoded}",
+            re_enc = hex::encode(re_encoded),
+            encoded = hex::encode(encoded),
+        );
     }
 
     encoder_tests! {
@@ -795,16 +804,16 @@ mod tests {
         "),
 
         fixed_array_of_static_tuples_followed_by_dynamic_type("((uint256,uint256,address)[2],string)", "
-                0000000000000000000000000000000000000000000000000000000005930cc5
-                0000000000000000000000000000000000000000000000000000000015002967
-                0000000000000000000000004444444444444444444444444444444444444444
-                000000000000000000000000000000000000000000000000000000000000307b
-                00000000000000000000000000000000000000000000000000000000000001c3
-                0000000000000000000000002222222222222222222222222222222222222222
-                00000000000000000000000000000000000000000000000000000000000000e0
-                0000000000000000000000000000000000000000000000000000000000000009
-                6761766f66796f726b0000000000000000000000000000000000000000000000
-            "),
+            0000000000000000000000000000000000000000000000000000000005930cc5
+            0000000000000000000000000000000000000000000000000000000015002967
+            0000000000000000000000004444444444444444444444444444444444444444
+            000000000000000000000000000000000000000000000000000000000000307b
+            00000000000000000000000000000000000000000000000000000000000001c3
+            0000000000000000000000002222222222222222222222222222222222222222
+            00000000000000000000000000000000000000000000000000000000000000e0
+            0000000000000000000000000000000000000000000000000000000000000009
+            6761766f66796f726b0000000000000000000000000000000000000000000000
+        "),
 
         empty_array("address[]", "
             0000000000000000000000000000000000000000000000000000000000000020
@@ -1069,5 +1078,178 @@ mod tests {
         let t = "uint32[9999999999]".parse::<DynSolType>().unwrap();
         let decoded = t.abi_decode(&[]);
         assert_eq!(decoded, Err(alloy_sol_types::Error::Overrun.into()))
+    }
+
+    macro_rules! packed_tests {
+        ($($name:ident($ty:literal, $v:literal, $encoded:literal)),* $(,)?) => {
+            mod packed {
+                use super::*;
+
+                $(
+                    #[test]
+                    fn $name() {
+                        packed_test($ty, $v, &hex!($encoded));
+                    }
+                )*
+            }
+        };
+    }
+
+    fn packed_test(t_s: &str, v_s: &str, expected: &[u8]) {
+        let ty: DynSolType = t_s.parse().expect("parsing failed");
+        assert_eq!(ty.sol_type_name(), t_s, "type names are not the same");
+
+        let value = match ty.coerce_str(v_s) {
+            Ok(v) => v,
+            Err(e) => {
+                panic!("failed to coerce to a value: {e}");
+            }
+        };
+        if let Some(value_name) = value.sol_type_name() {
+            assert_eq!(value_name, t_s, "value names are not the same");
+        }
+
+        let packed = value.abi_encode_packed();
+        assert!(
+            packed == expected,
+            "
+  type: {ty}
+ value: {value:?}
+packed: {packed}
+expect: {expected}",
+            packed = hex::encode(packed),
+            expected = hex::encode(expected),
+        );
+    }
+
+    packed_tests! {
+        address("address", "1111111111111111111111111111111111111111", "1111111111111111111111111111111111111111"),
+
+        bool_false("bool", "false", "00"),
+        bool_true("bool", "true", "01"),
+
+        int8_1("int8", "0", "00"),
+        int8_2("int8", "1", "01"),
+        int8_3("int8", "16", "10"),
+        int8_4("int8", "127", "7f"),
+        neg_int8_1("int8", "-1", "ff"),
+        neg_int8_2("int8", "-16", "f0"),
+        neg_int8_3("int8", "-127", "81"),
+        neg_int8_4("int8", "-128", "80"),
+
+        int16_1("int16", "0", "0000"),
+        int16_2("int16", "1", "0001"),
+        int16_3("int16", "16", "0010"),
+        int16_4("int16", "127", "007f"),
+        int16_5("int16", "128", "0080"),
+        int16_6("int16", "8192", "2000"),
+        int16_7("int16", "32767", "7fff"),
+        neg_int16_1("int16", "-1", "ffff"),
+        neg_int16_2("int16", "-16", "fff0"),
+        neg_int16_3("int16", "-127", "ff81"),
+        neg_int16_4("int16", "-128", "ff80"),
+        neg_int16_5("int16", "-129", "ff7f"),
+        neg_int16_6("int16", "-32767", "8001"),
+        neg_int16_7("int16", "-32768", "8000"),
+
+        int32_1("int32", "0", "00000000"),
+        int32_2("int32", "-1", "ffffffff"),
+        int64_1("int64", "0", "0000000000000000"),
+        int64_2("int64", "-1", "ffffffffffffffff"),
+        int128_1("int128", "0", "00000000000000000000000000000000"),
+        int128_2("int128", "-1", "ffffffffffffffffffffffffffffffff"),
+        int256_1("int256", "0", "0000000000000000000000000000000000000000000000000000000000000000"),
+        int256_2("int256", "-1", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+
+        uint8_1("uint8", "0", "00"),
+        uint8_2("uint8", "1", "01"),
+        uint8_3("uint8", "16", "10"),
+        uint16("uint16", "0", "0000"),
+        uint32("uint32", "0", "00000000"),
+        uint64("uint64", "0", "0000000000000000"),
+        uint128("uint128", "0", "00000000000000000000000000000000"),
+        uint256_1("uint256", "0", "0000000000000000000000000000000000000000000000000000000000000000"),
+        uint256_2("uint256", "42", "000000000000000000000000000000000000000000000000000000000000002a"),
+        uint256_3("uint256", "115792089237316195423570985008687907853269984665640564039457584007913129639935", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+
+        string_1("string", "a", "61"),
+        string_2("string", "ab", "6162"),
+        string_3("string", "abc", "616263"),
+
+        bytes_1("bytes", "00", "00"),
+        bytes_2("bytes", "0001", "0001"),
+        bytes_3("bytes", "000102", "000102"),
+
+        dynamic_array_of_addresses("address[]", "[\
+            1111111111111111111111111111111111111111,\
+            2222222222222222222222222222222222222222\
+        ]", "
+            1111111111111111111111111111111111111111
+            2222222222222222222222222222222222222222
+        "),
+
+        fixed_array_of_addresses("address[2]", "[\
+            1111111111111111111111111111111111111111,\
+            2222222222222222222222222222222222222222\
+        ]", "
+            1111111111111111111111111111111111111111
+            2222222222222222222222222222222222222222
+        "),
+
+        two_addresses("(address,address)", "(\
+            1111111111111111111111111111111111111111,\
+            2222222222222222222222222222222222222222\
+        )", "
+            1111111111111111111111111111111111111111
+            2222222222222222222222222222222222222222
+        "),
+
+        fixed_array_of_dynamic_arrays_of_addresses("address[][2]", "[\
+            [1111111111111111111111111111111111111111, 2222222222222222222222222222222222222222],\
+            [3333333333333333333333333333333333333333, 4444444444444444444444444444444444444444]\
+        ]", "
+            1111111111111111111111111111111111111111
+            2222222222222222222222222222222222222222
+            3333333333333333333333333333333333333333
+            4444444444444444444444444444444444444444
+        "),
+
+        dynamic_array_of_fixed_arrays_of_addresses("address[2][]", "[\
+            [1111111111111111111111111111111111111111, 2222222222222222222222222222222222222222],\
+            [3333333333333333333333333333333333333333, 4444444444444444444444444444444444444444]\
+        ]", "
+            1111111111111111111111111111111111111111
+            2222222222222222222222222222222222222222
+            3333333333333333333333333333333333333333
+            4444444444444444444444444444444444444444
+        "),
+
+        dynamic_array_of_dynamic_arrays("address[][]", "[\
+            [1111111111111111111111111111111111111111],\
+            [2222222222222222222222222222222222222222]\
+        ]", "
+            1111111111111111111111111111111111111111
+            2222222222222222222222222222222222222222
+        "),
+
+        dynamic_array_of_dynamic_arrays2("address[][]", "[\
+            [1111111111111111111111111111111111111111, 2222222222222222222222222222222222222222],\
+            [3333333333333333333333333333333333333333, 4444444444444444444444444444444444444444]\
+        ]", "
+            1111111111111111111111111111111111111111
+            2222222222222222222222222222222222222222
+            3333333333333333333333333333333333333333
+            4444444444444444444444444444444444444444
+        "),
+
+        dynamic_array_of_dynamic_arrays3("uint32[][]", "[\
+            [1, 2],\
+            [3, 4]\
+        ]", "
+            00000001
+            00000002
+            00000003
+            00000004
+        "),
     }
 }

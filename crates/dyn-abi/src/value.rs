@@ -61,11 +61,11 @@ macro_rules! as_fixed_seq {
 pub enum DynSolValue {
     /// A boolean.
     Bool(bool),
-    /// A signed integer.
+    /// A signed integer. The second parameter is the number of bits, not bytes.
     Int(I256, usize),
-    /// An unsigned integer.
+    /// An unsigned integer. The second parameter is the number of bits, not bytes.
     Uint(U256, usize),
-    /// A fixed-length byte string.
+    /// A fixed-length byte array. The second parameter is the number of bytes.
     FixedBytes(Word, usize),
     /// An address.
     Address(Address),
@@ -668,6 +668,8 @@ impl DynSolValue {
     }
 
     /// Encodes the packed value and appends it to the end of a byte array.
+    ///
+    /// See [`abi_encode_packed`](Self::abi_encode_packed) for more details.
     pub fn abi_encode_packed_to(&self, buf: &mut Vec<u8>) {
         match self {
             Self::Address(addr) => buf.extend_from_slice(addr.as_slice()),
@@ -675,19 +677,16 @@ impl DynSolValue {
             Self::Bool(b) => buf.push(*b as u8),
             Self::String(s) => buf.extend_from_slice(s.as_bytes()),
             Self::Bytes(bytes) => buf.extend_from_slice(bytes),
-            Self::FixedBytes(word, size) => buf.extend_from_slice(&word[..*size]),
+            Self::FixedBytes(word, size) => buf.extend_from_slice(&word[..(*size).max(32)]),
             Self::Int(num, size) => {
-                let mut bytes = num.to_be_bytes::<32>();
-                let start = 32 - *size;
-                if num.is_negative() {
-                    bytes[start] |= 0x80;
-                } else {
-                    bytes[start] &= 0x7f;
-                }
-                buf.extend_from_slice(&bytes[start..]);
+                let byte_size = *size / 8;
+                let start = 32usize.saturating_sub(byte_size);
+                buf.extend_from_slice(&num.to_be_bytes::<32>()[start..]);
             }
             Self::Uint(num, size) => {
-                buf.extend_from_slice(&num.to_be_bytes::<32>()[(32 - *size)..]);
+                let byte_size = *size / 8;
+                let start = 32usize.saturating_sub(byte_size);
+                buf.extend_from_slice(&num.to_be_bytes::<32>()[start..]);
             }
             as_fixed_seq!(inner) | Self::Array(inner) => {
                 for val in inner {
@@ -697,10 +696,15 @@ impl DynSolValue {
         }
     }
 
-    /// Encodes the value into a packed byte array.
+    /// Non-standard Packed Mode ABI encoding.
+    ///
+    /// Note that invalid value sizes will saturate to the maximum size, e.g. `Uint(x, 300)` will
+    /// behave the same as `Uint(x, 256)`.
+    ///
+    /// See [`SolType::abi_encode_packed`](alloy_sol_types::SolType::abi_encode_packed) for more
+    /// details.
     #[inline]
     pub fn abi_encode_packed(&self) -> Vec<u8> {
-        // TODO: capacity
         let mut buf = Vec::new();
         self.abi_encode_packed_to(&mut buf);
         buf
