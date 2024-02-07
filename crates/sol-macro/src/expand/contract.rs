@@ -66,7 +66,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         match item {
             Item::Function(function) => match function.kind {
                 ast::FunctionKind::Function(_) if function.name.is_some() => {
-                    functions.push(function);
+                    functions.push(function.clone());
                 }
                 ast::FunctionKind::Constructor(_) => {
                     if constructor.is_none() {
@@ -96,6 +96,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             },
             Item::Error(error) => errors.push(error),
             Item::Event(event) => events.push(event),
+            Item::Variable(var_def) => {
+                if let Some(function) = super::var_def::var_as_function(cx, var_def)? {
+                    functions.push(function);
+                }
+            }
             _ => {}
         }
 
@@ -105,7 +110,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         } else {
             // prepend `item_attrs` to `item.attrs`
             let mut item = item.clone();
-            item.attrs_mut().unwrap().splice(0..0, item_attrs.clone());
+            item.attrs_mut().expect("is_none checked above").splice(0..0, item_attrs.clone());
             item_tokens.extend(cx.expand_item(&item)?);
         }
     }
@@ -310,7 +315,7 @@ impl ExpandData {
 }
 
 enum ToExpand<'a> {
-    Functions(&'a [&'a ItemFunction]),
+    Functions(&'a [ItemFunction]),
     Errors(&'a [&'a ItemError]),
     Events(&'a [&'a ItemEvent]),
 }
@@ -321,7 +326,7 @@ impl<'a> ToExpand<'a> {
         match self {
             Self::Functions(functions) => {
                 let variants: Vec<_> =
-                    functions.iter().map(|&f| cx.overloaded_name(f.into()).0).collect();
+                    functions.iter().map(|f| cx.overloaded_name(f.into()).0).collect();
 
                 let types: Vec<_> = variants.iter().map(|name| cx.raw_call_name(name)).collect();
 

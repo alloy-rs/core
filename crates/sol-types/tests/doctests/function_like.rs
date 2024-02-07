@@ -11,6 +11,9 @@ sol! {
     function overloaded(uint256) returns (uint256);
     function overloaded(string);
 
+    // State variables will generate getter functions just like in Solidity.
+    mapping(uint k => bool v) public variableGetter;
+
     /// Implements [`SolError`].
     #[derive(Debug, PartialEq, Eq)]
     error MyError(uint256 a, uint256 b);
@@ -23,7 +26,6 @@ fn function() {
     let call = fooCall { a: U256::from(1), b: U256::from(2) };
     let _call_data = call.abi_encode();
 
-    // the signatures are unaffected
     let _ = overloaded_0Call {};
     assert_call_signature::<overloaded_0Call>("overloaded()");
 
@@ -32,6 +34,11 @@ fn function() {
 
     let _ = overloaded_2Call { _0: "hello".into() };
     assert_call_signature::<overloaded_2Call>("overloaded(string)");
+
+    // Exactly the same as `function variableGetter(uint256) returns (bool)`.
+    let _ = variableGetterCall { k: U256::from(2) };
+    assert_call_signature::<variableGetterCall>("variableGetter(uint256)");
+    let _ = variableGetterReturn { v: false };
 }
 
 #[test]
