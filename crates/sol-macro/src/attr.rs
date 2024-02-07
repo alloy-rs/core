@@ -62,14 +62,15 @@ pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {
 // 4. implement the attribute in the `expand` module,
 // 5. document the attribute in the [`crate::sol!`] macro docs.
 
-/// `#[sol(...)]` attributes. See [`crate::sol!`] for a list of all possible
-/// attributes.
+/// `#[sol(...)]` attributes.
+/// See [`crate::sol!`] for a list of all possible attributes.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct SolAttrs {
+    pub rpc: Option<bool>,
+    pub abi: Option<bool>,
     pub all_derives: Option<bool>,
     pub extra_methods: Option<bool>,
     pub docs: Option<bool>,
-    pub abi: Option<bool>,
 
     // TODO: Implement
     pub rename: Option<LitStr>,
@@ -138,10 +139,11 @@ impl SolAttrs {
                 };
 
                 match_! {
+                    rpc => bool()?,
+                    abi => bool()?,
                     all_derives => bool()?,
                     extra_methods => bool()?,
                     docs => bool()?,
-                    abi => bool()?,
 
                     rename => lit()?,
                     rename_all => CasingStyle::from_lit(&lit()?)?,
@@ -307,6 +309,10 @@ mod tests {
             #[sol(abi)] => Ok(sol_attrs! { abi: true }),
             #[sol(abi = true)] => Ok(sol_attrs! { abi: true }),
             #[sol(abi = false)] => Ok(sol_attrs! { abi: false }),
+
+            #[sol(rpc)] => Ok(sol_attrs! { rpc: true }),
+            #[sol(rpc = true)] => Ok(sol_attrs! { rpc: true }),
+            #[sol(rpc = false)] => Ok(sol_attrs! { rpc: false }),
         }
 
         rename {
@@ -328,7 +334,7 @@ mod tests {
         }
 
         type_check {
-            #[sol(type_check = "my_function")] => Ok(sol_attrs! {type_check: parse_quote!("my_function")} ),
+            #[sol(type_check = "my_function")] => Ok(sol_attrs! { type_check: parse_quote!("my_function") }),
             #[sol(type_check = "my_function1")] #[sol(type_check = "my_function2")] => Err(DUPLICATE_ERROR),
         }
     }

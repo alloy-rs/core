@@ -2,7 +2,7 @@
 
 use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt};
 use crate::attr;
-use ast::{FunctionKind, ItemFunction};
+use ast::{FunctionKind, ItemFunction, Spanned};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Result;
@@ -159,7 +159,7 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
 
     let (sol_attrs, call_attrs) = crate::attr::SolAttrs::parse(attrs)?;
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
-    let call_name = format_ident!("constructorCall");
+    let call_name = format_ident!("constructorCall").with_span(constructor.kind.span());
     let call_fields = expand_fields(parameters);
     let call_tuple = expand_tuple_types(parameters.types()).0;
     let converts = expand_from_into_tuples(&call_name, parameters);
