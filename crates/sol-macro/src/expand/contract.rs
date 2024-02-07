@@ -244,13 +244,17 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                  the bytecode concatenated with the constructor's ABI-encoded arguments.";
             let deploy_builder_doc = attr::mk_doc(deploy_builder_doc_str);
 
-            let (params, args) = option_unzip(constructor.map(|c| {
+            let (params, args) = option_unzip(constructor.and_then(|c| {
+                if c.parameters.is_empty() {
+                    return None;
+                }
+
                 let names1 = c.parameters.names().enumerate().map(anon_name);
                 let names2 = names1.clone();
                 let tys = c.parameters.types().map(super::ty::expand_rust_type);
-                (quote!(#(#names1: #tys),*), quote!(#(#names2,)*))
+                Some((quote!(#(#names1: #tys),*), quote!(#(#names2,)*)))
             }));
-            let deploy_builder_data = if constructor.is_some() {
+            let deploy_builder_data = if matches!(constructor, Some(c) if !c.parameters.is_empty()) {
                 quote! {
                     [
                         &BYTECODE[..],
@@ -259,9 +263,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 }
             } else {
                 quote! {
-                    ::core::clone::Clone::clone(&*BYTECODE)
+                    ::core::clone::Clone::clone(&BYTECODE)
                 }
             };
+
             (
                 quote! {
                     #deploy_doc
