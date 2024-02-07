@@ -62,20 +62,30 @@ pub enum Error {
 }
 
 impl From<FromHexError> for Error {
+    #[inline]
     fn from(e: FromHexError) -> Self {
         Self::Hex(e)
     }
 }
 
 impl From<SolTypesError> for Error {
+    #[inline]
     fn from(e: SolTypesError) -> Self {
         Self::SolTypes(e)
     }
 }
 
 impl From<TypeParserError> for Error {
+    #[inline]
     fn from(e: TypeParserError) -> Self {
         Self::TypeParser(e)
+    }
+}
+
+impl From<alloc::collections::TryReserveError> for Error {
+    #[inline]
+    fn from(value: alloc::collections::TryReserveError) -> Self {
+        Self::SolTypes(value.into())
     }
 }
 
