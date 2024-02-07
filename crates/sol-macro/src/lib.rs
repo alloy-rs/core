@@ -138,6 +138,13 @@ mod json;
 #[cfg_attr(doc, doc = include_str!("../doctests/types.rs"))]
 /// ```
 /// 
+/// ### State variables
+///
+/// Public and external state variables will generate a getter function just like in Solidity.
+///
+/// See the [functions](#functions-and-errors) and [contracts](#contractsinterfaces)
+/// sections for more information.
+///
 /// ### Functions and errors
 ///
 /// Functions generate two structs that implement `SolCall`: `<name>Call` for

@@ -189,7 +189,9 @@ impl ItemFunction {
     ///
     /// See [`new_getter`](Self::new_getter) for more details.
     pub fn from_variable_definition(var: VariableDefinition) -> Self {
-        Self::new_getter(var.name, var.ty)
+        let mut function = Self::new_getter(var.name, var.ty);
+        function.attrs = var.attrs;
+        function
     }
 
     /// Returns the name of the function.

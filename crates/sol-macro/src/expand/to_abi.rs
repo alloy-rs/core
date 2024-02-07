@@ -191,7 +191,7 @@ macro_rules! make_map {
     }};
 }
 
-pub(super) fn functions_map(functions: &[&ItemFunction], cx: &ExpCtxt<'_>) -> TokenStream {
+pub(super) fn functions_map(functions: &[ItemFunction], cx: &ExpCtxt<'_>) -> TokenStream {
     make_map!(functions, cx)
 }
 

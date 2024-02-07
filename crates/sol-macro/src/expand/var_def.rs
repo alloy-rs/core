@@ -9,14 +9,24 @@ use syn::{Error, Result};
 ///
 /// See [`ItemFunction::from_variable_definition`].
 pub(super) fn expand(cx: &ExpCtxt<'_>, var_def: &VariableDefinition) -> Result<TokenStream> {
+    let Some(function) = var_as_function(cx, var_def)? else {
+        return Ok(TokenStream::new());
+    };
+    super::function::expand(cx, &function)
+}
+
+pub(super) fn var_as_function(
+    cx: &ExpCtxt<'_>,
+    var_def: &VariableDefinition,
+) -> Result<Option<ItemFunction>> {
     // only expand public or external state variables
     if !var_def.attributes.visibility().map_or(false, |v| v.is_public() || v.is_external()) {
-        return Ok(TokenStream::new());
+        return Ok(None);
     }
 
     let mut function = ItemFunction::from_variable_definition(var_def.clone());
     expand_returns(cx, &mut function)?;
-    super::function::expand(cx, &function)
+    Ok(Some(function))
 }
 
 /// Expands return-position custom types.
