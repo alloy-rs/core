@@ -221,39 +221,86 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
              [`{contract_name}`](self) contract located at a given `address`, using a given\n\
              provider `P`.\n\
              \n\
+             If the contract bytecode is available (see the [`sol!`](::alloy_sol_types::sol!)\n\
+             documentation on how to provide it), the `deploy` and `deploy_builder` methods can\n\
+             be used to deploy a new instance of the contract.\n\
+             \n\
              See the [module-level documentation](self) for all the available methods."
         );
-        let (deploy_fn, deploy_method) = bytecode.is_some().then(|| {
-            let doc_str = "todo";
-            let doc = attr::mk_doc(doc_str);
-            let (params, args) = constructor.map(|c| {
+        let (deploy_fn, deploy_method) = option_unzip(bytecode.is_some().then(|| {
+            let deploy_doc_str = 
+                "Deploys this contract using the given `provider` and constructor arguments, if any.\n\
+                 \n\
+                 Returns a new instance of the contract, if the deployment was successful.\n\
+                 \n\
+                 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.";
+            let deploy_doc = attr::mk_doc(deploy_doc_str);
+                 
+            let deploy_builder_doc_str = 
+                "Creates a `RawCallBuilder` for deploying this contract using the given `provider`\n\
+                 and constructor arguments, if any.\n\
+                 \n\
+                 This is a simple wrapper around creating a `RawCallBuilder` with the data set to\n\
+                 the bytecode concatenated with the constructor's ABI-encoded arguments.";
+            let deploy_builder_doc = attr::mk_doc(deploy_builder_doc_str);
+
+            let (params, args) = option_unzip(constructor.map(|c| {
                 let names1 = c.parameters.names().enumerate().map(anon_name);
                 let names2 = names1.clone();
                 let tys = c.parameters.types().map(super::ty::expand_rust_type);
                 (quote!(#(#names1: #tys),*), quote!(#(#names2,)*))
-            }).unzip();
+            }));
+            let deploy_builder_data = if constructor.is_some() {
+                quote! {
+                    [
+                        &BYTECODE[..],
+                        &::alloy_sol_types::SolConstructor::abi_encode(&constructorCall { #args })[..]
+                    ].concat().into()
+                }
+            } else {
+                quote! {
+                    ::core::clone::Clone::clone(&*BYTECODE)
+                }
+            };
             (
                 quote! {
-                    #doc
+                    #deploy_doc
                     #[inline]
                     pub fn deploy<P: ::alloy_contract::private::Provider>(provider: P, #params)
-                        -> ::alloy_contract::DeploymentCallBuilder<P>
+                        -> impl ::core::future::Future<Output = ::alloy_contract::Result<#name<P>>>
                     {
                         #name::<P>::deploy(provider, #args)
                     }
+
+                    #deploy_builder_doc
+                    #[inline]
+                    pub fn deploy_builder<P: ::alloy_contract::private::Provider>(provider: P, #params)
+                        -> ::alloy_contract::RawCallBuilder<P>
+                    {
+                        #name::<P>::deploy_builder(provider, #args)
+                    }
                 },
                 quote! {
-                    #doc
+                    #deploy_doc
                     #[inline]
-                    pub fn deploy(provider: P, #params)
-                        -> ::alloy_contract::DeploymentCallBuilder<P>
+                    pub async fn deploy(provider: P, #params)
+                        -> ::alloy_contract::Result<#name<P>>
                     {
-                        let data = ::alloy_sol_types::SolConstructor::abi_encode(&constructorCall { #args });
-                        ::alloy_contract::DeploymentCallBuilder::new_deployment(provider, data)
+                        let call_builder = Self::deploy_builder(provider, #args);
+                        let contract_address = call_builder.deploy().await?;
+                        Ok(Self::new(contract_address, call_builder.provider))
+                    }
+
+                    #deploy_builder_doc
+                    #[inline]
+                    pub fn deploy_builder(provider: P, #params)
+                        -> ::alloy_contract::RawCallBuilder<P>
+                    {
+                        ::alloy_contract::RawCallBuilder::new_raw(provider, #deploy_builder_data)
                     }
                 },
             )
-        }).unzip();
+        }));
         quote! {
             #[doc = #new_fn_doc]
             #[inline]
@@ -314,6 +361,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 #[inline]
                 pub const fn provider(&self) -> &P {
                     &self.provider
+                }
+            }
+
+            impl<P: ::core::clone::Clone> #name<&P> {
+                /// Clones the provider and returns a new instance with the cloned provider.
+                #[inline]
+                pub fn with_cloned_provider(self) -> #name<P> {
+                    #name { address: self.address, provider: ::core::clone::Clone::clone(&self.provider) }
                 }
             }
 
@@ -837,4 +892,12 @@ fn snakify(s: &str) -> String {
         output.insert(i, '_');
     }
     output.into_iter().collect()
+}
+
+// TODO(MSRV-1.66): Option::unzip
+fn option_unzip<T, U>(opt: Option<(T, U)>) -> (Option<T>, Option<U>) {
+    match opt {
+        Some((a, b)) => (Some(a), Some(b)),
+        None => (None, None),
+    }
 }
