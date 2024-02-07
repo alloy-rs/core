@@ -787,3 +787,83 @@ impl DynSolValue {
         self.as_fixed_seq().map(Self::encode_seq)
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use alloy_primitives::U256;
+    use crate::DynSolValue;
+
+    #[test]
+    fn abi_encode_packed_uint32() {
+        // abi.encodePacked(uint32(42))
+        let byte_size = 4;
+        let value = DynSolValue::Uint(U256::from(42), byte_size * 8); // Assuming byte_size * 8 represents bit size for Uint
+        let encoded = value.abi_encode_packed();
+        assert_eq!(encoded.len(), byte_size);
+        assert_eq!(encoded, [0, 0, 0, 42]);
+    }
+
+    #[test]
+    fn abi_encode_packed_uint8() {
+        // abi.encodePacked(uint8(255))
+        let byte_size = 1;
+        let value = DynSolValue::Uint(U256::from(255), byte_size * 8);
+        let encoded = value.abi_encode_packed();
+        assert_eq!(encoded.len(), byte_size);
+        assert_eq!(encoded, [255]);
+    }
+
+    #[test]
+    fn abi_encode_packed_string() {
+        // abi.encodePacked("hello")
+        let value = DynSolValue::String("hello".to_owned());
+        let encoded = value.abi_encode_packed();
+        assert_eq!(encoded, b"hello");
+    }
+
+    #[test]
+    fn abi_encode_packed_bytes_fixed() {
+        // abi.encodePacked(bytes4(hex"deadbeef"))
+        let value = DynSolValue::Bytes(vec![0xde, 0xad, 0xbe, 0xef]);
+        let encoded = value.abi_encode_packed();
+        assert_eq!(encoded, [0xde, 0xad, 0xbe, 0xef]);
+    }
+
+    #[test]
+    fn abi_encode_packed_multiple_values() {
+        // abi.encodePacked(uint64(255), string("test"), bytes(hex"dead"))
+        let values = vec![
+            DynSolValue::Uint(U256::from(255), 8),
+            DynSolValue::String("test".to_owned()),
+            DynSolValue::Bytes(vec![0xde, 0xad]),
+        ];
+        let encoded = values.iter().map(|v| v.abi_encode_packed()).flatten().collect::<Vec<_>>();
+        assert_eq!(encoded, [255, b't', b'e', b's', b't', 0xde, 0xad]);
+    }
+
+    #[test]
+    fn abi_encode_packed_array() {
+        // abi.encodePacked([[uint32(1),uint32(2)], [uint32(3), uint32(4)]])
+        // Array elements are always padded to 32 bytes.
+        let values = vec![
+             DynSolValue::Array(vec![
+                DynSolValue::Uint(U256::from(1), 32),
+                DynSolValue::Uint(U256::from(2), 32),
+            ]),
+            DynSolValue::Array(vec![
+                DynSolValue::Uint(U256::from(3), 32),
+                DynSolValue::Uint(U256::from(4), 32),
+            ])
+        ];
+        let value = DynSolValue::Array(values);
+        let encoded = value.abi_encode_packed();
+        assert_eq!(encoded, vec![
+            U256::from(1).to_be_bytes::<32>().to_vec(),
+            U256::from(2).to_be_bytes::<32>().to_vec(),
+            U256::from(3).to_be_bytes::<32>().to_vec(),
+            U256::from(4).to_be_bytes::<32>().to_vec(),
+        ].concat());
+    }
+}
+
