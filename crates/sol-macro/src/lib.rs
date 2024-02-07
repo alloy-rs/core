@@ -94,7 +94,12 @@ mod json;
 /// - `rpc [ = <bool = false>]` (contracts and alike only): generates a structs with methods to
 ///   construct `eth_call`s to an on-chain contract through Ethereum JSON RPC, similar to the
 ///   default behavior of [`abigen`]. This makes use of the [`alloy-contract`](https://github.com/alloy-rs/alloy)
-///   crate. At the time of writing, this crate is not yet released on `crates.io`.
+///   crate.
+///   
+///   N.B: at the time of writing, the `alloy-contract` crate is not yet released on `crates.io`,
+///   and its API is completely unstable and subject to change, so this feature is not yet
+///   recommended for use.
+///   
 ///   Generates:
 ///   - `struct {name}Instance<P: Provider> { ... }`
 ///     - `pub fn new(...) -> {name}Instance<P>` + getters and setters
