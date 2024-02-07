@@ -706,7 +706,7 @@ impl DynSolValue {
                     }
                     buf.extend_from_slice(&buf_inner);
                 }
-            },
+            }
             Self::Tuple(inner) => {
                 for val in inner {
                     val.abi_encode_packed_to(buf);
