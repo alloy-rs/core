@@ -228,15 +228,15 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
              See the [module-level documentation](self) for all the available methods."
         );
         let (deploy_fn, deploy_method) = option_unzip(bytecode.is_some().then(|| {
-            let deploy_doc_str = 
+            let deploy_doc_str =
                 "Deploys this contract using the given `provider` and constructor arguments, if any.\n\
                  \n\
                  Returns a new instance of the contract, if the deployment was successful.\n\
                  \n\
                  For more fine-grained control over the deployment process, use [`deploy_builder`] instead.";
             let deploy_doc = attr::mk_doc(deploy_doc_str);
-                 
-            let deploy_builder_doc_str = 
+
+            let deploy_builder_doc_str =
                 "Creates a `RawCallBuilder` for deploying this contract using the given `provider`\n\
                  and constructor arguments, if any.\n\
                  \n\
