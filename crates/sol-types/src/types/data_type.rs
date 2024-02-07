@@ -1089,7 +1089,7 @@ supported_int!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sol;
+    use crate::{sol, SolValue};
     use alloy_primitives::hex;
 
     macro_rules! assert_encoded_size {
@@ -1431,19 +1431,29 @@ mod tests {
 
     #[test]
     fn encode_packed() {
-        let value = (RustAddress::with_last_byte(1), U256::from(2), 3, -3, 3, -3);
+        let value = (RustAddress::with_last_byte(1), U256::from(2), 3u32, -3i32, 3u32, -3i32);
+
         let res =
             <sol! { (address, uint160, uint24, int24, uint32, int32) }>::abi_encode_packed(&value);
-        assert_eq!(
-            res,
-            hex!(
-                "0000000000000000000000000000000000000001"
-                "0000000000000000000000000000000000000002"
-                "000003"
-                "fffffd"
-                "00000003"
-                "fffffffd"
-            )
+        let expected = hex!(
+            "0000000000000000000000000000000000000001"
+            "0000000000000000000000000000000000000002"
+            "000003"
+            "fffffd"
+            "00000003"
+            "fffffffd"
         );
+        assert_eq!(hex::encode(res), hex::encode(expected));
+
+        // Type is `(address, uint256, uint32, int32, uint32, int32)`
+        let expected = hex!(
+            "0000000000000000000000000000000000000001"
+            "0000000000000000000000000000000000000000000000000000000000000002"
+            "00000003"
+            "fffffffd"
+            "00000003"
+            "fffffffd"
+        );
+        assert_eq!(hex::encode(value.abi_encode_packed()), hex::encode(expected));
     }
 }
