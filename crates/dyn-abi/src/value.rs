@@ -677,8 +677,9 @@ impl DynSolValue {
             Self::Bytes(bytes) => buf.extend_from_slice(bytes),
             Self::FixedBytes(word, size) => buf.extend_from_slice(&word[..*size]),
             Self::Int(num, size) => {
+                let byte_size: usize = *size / 8;
                 let mut bytes = num.to_be_bytes::<32>();
-                let start = 32 - *size;
+                let start = 32 - byte_size;
                 if num.is_negative() {
                     bytes[start] |= 0x80;
                 } else {
@@ -687,7 +688,8 @@ impl DynSolValue {
                 buf.extend_from_slice(&bytes[start..]);
             }
             Self::Uint(num, size) => {
-                buf.extend_from_slice(&num.to_be_bytes::<32>()[(32 - *size)..]);
+                let byte_size: usize = *size / 8;
+                buf.extend_from_slice(&num.to_be_bytes::<32>()[(32 - byte_size)..]);
             }
             as_fixed_seq!(inner) | Self::Array(inner) => {
                 for val in inner {
