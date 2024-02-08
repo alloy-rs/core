@@ -1039,6 +1039,8 @@ supported_int!(
 
 const NAME_CAP: usize = 256;
 
+/// Simple buffer for constructing strings at compile time.
+#[must_use]
 struct NameBuffer {
     buffer: [u8; NAME_CAP],
     len: usize,
