@@ -9,7 +9,7 @@
 #![allow(missing_copy_implementations, missing_debug_implementations)]
 
 use crate::{abi::token::*, private::SolTypeValue, utils, SolType, Word};
-use alloc::{borrow::Cow, string::String as RustString, vec::Vec};
+use alloc::{string::String as RustString, vec::Vec};
 use alloy_primitives::{
     keccak256, Address as RustAddress, FixedBytes as RustFixedBytes, Function as RustFunction,
     I256, U256,
@@ -43,12 +43,8 @@ impl SolType for Bool {
     type RustType = bool;
     type Token<'a> = WordToken;
 
+    const SOL_NAME: &'static str = "bool";
     const ENCODED_SIZE: Option<usize> = Some(32);
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        "bool".into()
-    }
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -92,12 +88,8 @@ where
     type RustType = <IntBitCount<BITS> as SupportedInt>::Int;
     type Token<'a> = WordToken;
 
+    const SOL_NAME: &'static str = IntBitCount::<BITS>::INT_NAME;
     const ENCODED_SIZE: Option<usize> = Some(32);
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        IntBitCount::<BITS>::INT_NAME.into()
-    }
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -149,12 +141,8 @@ where
     type RustType = <IntBitCount<BITS> as SupportedInt>::Uint;
     type Token<'a> = WordToken;
 
+    const SOL_NAME: &'static str = IntBitCount::<BITS>::UINT_NAME;
     const ENCODED_SIZE: Option<usize> = Some(32);
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        IntBitCount::<BITS>::UINT_NAME.into()
-    }
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -200,12 +188,8 @@ where
     type RustType = RustFixedBytes<N>;
     type Token<'a> = WordToken;
 
+    const SOL_NAME: &'static str = <ByteCount<N>>::NAME;
     const ENCODED_SIZE: Option<usize> = Some(32);
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        <ByteCount<N>>::NAME.into()
-    }
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -242,12 +226,8 @@ impl SolType for Address {
     type RustType = RustAddress;
     type Token<'a> = WordToken;
 
+    const SOL_NAME: &'static str = "address";
     const ENCODED_SIZE: Option<usize> = Some(32);
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        "address".into()
-    }
 
     #[inline]
     fn detokenize(token: Self::Token<'_>) -> Self::RustType {
@@ -284,12 +264,8 @@ impl SolType for Function {
     type RustType = RustFunction;
     type Token<'a> = WordToken;
 
+    const SOL_NAME: &'static str = "function";
     const ENCODED_SIZE: Option<usize> = Some(32);
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        "function".into()
-    }
 
     #[inline]
     fn detokenize(token: Self::Token<'_>) -> Self::RustType {
@@ -336,12 +312,8 @@ impl SolType for Bytes {
     type RustType = Vec<u8>;
     type Token<'a> = PackedSeqToken<'a>;
 
+    const SOL_NAME: &'static str = "bytes";
     const ENCODED_SIZE: Option<usize> = None;
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        "bytes".into()
-    }
 
     #[inline]
     fn valid_token(_token: &Self::Token<'_>) -> bool {
@@ -388,12 +360,8 @@ impl SolType for String {
     type RustType = RustString;
     type Token<'a> = PackedSeqToken<'a>;
 
+    const SOL_NAME: &'static str = "string";
     const ENCODED_SIZE: Option<usize> = None;
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        "string".into()
-    }
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -531,12 +499,9 @@ impl<T: SolType> SolType for Array<T> {
     type RustType = Vec<T::RustType>;
     type Token<'a> = DynSeqToken<T::Token<'a>>;
 
+    const SOL_NAME: &'static str =
+        NameBuffer::new().write_str(T::SOL_NAME).write_str("[]").as_str();
     const ENCODED_SIZE: Option<usize> = None;
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        format!("{}[]", T::sol_type_name()).into()
-    }
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -652,17 +617,18 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
     type RustType = [T::RustType; N];
     type Token<'a> = FixedSeqToken<T::Token<'a>, N>;
 
+    const SOL_NAME: &'static str = NameBuffer::new()
+        .write_str(T::SOL_NAME)
+        .write_byte(b'[')
+        .write_usize(N)
+        .write_byte(b']')
+        .as_str();
     const ENCODED_SIZE: Option<usize> = {
         match T::ENCODED_SIZE {
             Some(size) => Some(size * N),
             None => None,
         }
     };
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        format!("{}[{}]", T::sol_type_name(), N).into()
-    }
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -721,23 +687,21 @@ macro_rules! tuple_encodable_impls {
 }
 
 macro_rules! tuple_impls {
-    // Push 1 element, push a comma if we're not done yet, recurse
-    (@fmt $s:ident; ) => {};
-    (@fmt $s:ident; $first:ident $(, $rest:ident)*) => {
-        $s.extend_from_slice(<$first as SolType>::sol_type_name().as_bytes());
-        tuple_impls!(@fmt_comma $s; $($rest),*);
-        tuple_impls!(@fmt $s; $($rest),*);
-    };
-
-    (@fmt_comma $s:ident; ) => {};
-    (@fmt_comma $s:ident; $($t:tt)+) => { $s.push(b',') };
-
     ($count:literal $($ty:ident),+) => {
         #[allow(non_snake_case)]
         impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
             type RustType = ($( $ty::RustType, )+);
             type Token<'a> = ($( $ty::Token<'a>, )+);
 
+            const SOL_NAME: &'static str = NameBuffer::new()
+                .write_byte(b'(')
+                $(
+                .write_str($ty::SOL_NAME)
+                .write_byte(b',')
+                )+
+                .pop() // Remove the last comma
+                .write_byte(b')')
+                .as_str();
             const ENCODED_SIZE: Option<usize> = 'l: {
                 let mut acc = 0;
                 $(
@@ -748,15 +712,6 @@ macro_rules! tuple_impls {
                 )+
                 Some(acc)
             };
-
-            fn sol_type_name() -> Cow<'static, str> {
-                let mut s = Vec::<u8>::with_capacity(2 + $count * 8);
-                s.push(b'(');
-                tuple_impls!(@fmt s; $($ty),+);
-                s.push(b')');
-                // SAFETY: we're pushing only other `str`s and ASCII characters
-                Cow::Owned(unsafe { RustString::from_utf8_unchecked(s) })
-            }
 
             fn valid_token(token: &Self::Token<'_>) -> bool {
                 let ($($ty,)+) = token;
@@ -792,12 +747,8 @@ impl SolType for () {
     type RustType = ();
     type Token<'a> = ();
 
+    const SOL_NAME: &'static str = "()";
     const ENCODED_SIZE: Option<usize> = Some(0);
-
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        "()".into()
-    }
 
     #[inline]
     fn valid_token((): &()) -> bool {
@@ -1086,11 +1037,121 @@ supported_int!(
     256 => I256, U256;
 );
 
+const NAME_CAP: usize = 256;
+
+/// Simple buffer for constructing strings at compile time.
+#[must_use]
+struct NameBuffer {
+    buffer: [u8; NAME_CAP],
+    len: usize,
+}
+
+impl NameBuffer {
+    const fn new() -> Self {
+        Self { buffer: [0; NAME_CAP], len: 0 }
+    }
+
+    const fn write_str(self, s: &str) -> Self {
+        self.write_bytes(s.as_bytes())
+    }
+
+    const fn write_bytes(mut self, s: &[u8]) -> Self {
+        let mut i = 0;
+        while i < s.len() {
+            self.buffer[self.len + i] = s[i];
+            i += 1;
+        }
+        self.len += s.len();
+        self
+    }
+
+    const fn write_byte(mut self, b: u8) -> Self {
+        self.buffer[self.len] = b;
+        self.len += 1;
+        self
+    }
+
+    const fn write_usize(mut self, number: usize) -> Self {
+        if number == 0 {
+            return self.write_byte(b'0');
+        }
+
+        let mut n = number;
+        let mut digits = 0;
+        while n > 0 {
+            n /= 10;
+            digits += 1;
+        }
+
+        let mut n = number;
+        let mut i = self.len + digits;
+        while n > 0 {
+            i -= 1;
+            self.buffer[i] = b'0' + (n % 10) as u8;
+            n /= 10;
+        }
+        self.len += digits;
+
+        self
+    }
+
+    const fn pop(mut self) -> Self {
+        self.len -= 1;
+        self
+    }
+
+    const fn as_bytes(&self) -> &[u8] {
+        assert!(self.len <= self.buffer.len());
+        unsafe { core::slice::from_raw_parts(self.buffer.as_ptr(), self.len) }
+    }
+
+    const fn as_str(&self) -> &str {
+        match core::str::from_utf8(self.as_bytes()) {
+            Ok(s) => s,
+            Err(_) => panic!("wrote invalid UTF-8"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{sol, SolValue};
     use alloy_primitives::hex;
+
+    #[test]
+    fn sol_names() {
+        macro_rules! assert_name {
+            ($t:ty, $s:literal) => {
+                assert_eq!(<$t as SolType>::SOL_NAME, $s);
+            };
+        }
+
+        assert_name!(Bool, "bool");
+        assert_name!(Uint<8>, "uint8");
+        assert_name!(Uint<16>, "uint16");
+        assert_name!(Uint<32>, "uint32");
+        assert_name!(Int<8>, "int8");
+        assert_name!(Int<16>, "int16");
+        assert_name!(Int<32>, "int32");
+        assert_name!(FixedBytes<1>, "bytes1");
+        assert_name!(FixedBytes<16>, "bytes16");
+        assert_name!(FixedBytes<32>, "bytes32");
+        assert_name!(Address, "address");
+        assert_name!(Function, "function");
+        assert_name!(Bytes, "bytes");
+        assert_name!(String, "string");
+
+        assert_name!(Array<Uint<8>>, "uint8[]");
+        assert_name!(Array<Bytes>, "bytes[]");
+        assert_name!(FixedArray<Uint<8>, 0>, "uint8[0]");
+        assert_name!(FixedArray<Uint<8>, 1>, "uint8[1]");
+        assert_name!(FixedArray<Uint<8>, 2>, "uint8[2]");
+        assert_name!((), "()");
+        assert_name!((Uint<8>,), "(uint8)");
+        assert_name!((Uint<8>, Bool), "(uint8,bool)");
+        assert_name!((Uint<8>, Bool, FixedArray<Address, 4>), "(uint8,bool,address[4])");
+    }
 
     macro_rules! assert_encoded_size {
         ($t:ty, $sz:expr) => {

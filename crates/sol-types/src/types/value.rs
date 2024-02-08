@@ -38,10 +38,19 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
 
     /// The name of the associated Solidity type.
     ///
+    /// See [`SolType::SOL_NAME`] for more information.
+    #[inline]
+    fn sol_name(&self) -> &'static str {
+        Self::SolType::SOL_NAME
+    }
+
+    /// The name of the associated Solidity type.
+    ///
     /// See [`SolType::sol_type_name`] for more information.
+    #[deprecated(since = "0.6.3", note = "use `sol_name` instead")]
     #[inline]
     fn sol_type_name(&self) -> Cow<'static, str> {
-        Self::SolType::sol_type_name()
+        self.sol_name().into()
     }
 
     /// Tokenizes the given value into this type's token.
@@ -286,7 +295,7 @@ mod tests {
 
     #[test]
     fn inference() {
-        false.sol_type_name();
+        false.sol_name();
         false.abi_encoded_size();
         false.eip712_data_word();
         false.abi_encode_packed_to(&mut vec![]);
@@ -295,7 +304,7 @@ mod tests {
         (false,).abi_encode_sequence();
         (false,).abi_encode_params();
 
-        "".sol_type_name();
+        "".sol_name();
         "".abi_encoded_size();
         "".eip712_data_word();
         "".abi_encode_packed_to(&mut vec![]);
@@ -388,7 +397,7 @@ mod tests {
     fn complex() {
         let tuple = ((((((false,),),),),),);
         assert_eq!(tuple.abi_encode(), Word::ZERO[..]);
-        assert_eq!(tuple.sol_type_name(), "((((((bool))))))");
+        assert_eq!(tuple.sol_name(), "((((((bool))))))");
 
         let tuple = (
             42u64,
@@ -402,38 +411,35 @@ mod tests {
                 &b"dddd"[..],
             ),
         );
-        assert_eq!(
-            tuple.sol_type_name(),
-            "(uint64,string,bool,(string,address,bytes,bytes4,bytes))"
-        );
+        assert_eq!(tuple.sol_name(), "(uint64,string,bool,(string,address,bytes,bytes4,bytes))");
     }
 
     #[test]
     fn derefs() {
         let x: &[Address; 0] = &[];
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "address[0]");
+        assert_eq!(x.sol_name(), "address[0]");
 
         let x = &[Address::ZERO];
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "address[1]");
+        assert_eq!(x.sol_name(), "address[1]");
 
         let x = &[Address::ZERO, Address::ZERO];
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "address[2]");
+        assert_eq!(x.sol_name(), "address[2]");
 
         let x = &[Address::ZERO][..];
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "address[]");
+        assert_eq!(x.sol_name(), "address[]");
 
         let mut x = *b"0";
         let x = (&mut x, *b"aaaa", b"00");
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "(bytes1,bytes4,bytes2)");
+        assert_eq!(x.sol_name(), "(bytes1,bytes4,bytes2)");
 
         let tuple = &(&0u16, &"", b"0", &mut [Address::ZERO][..]);
         tuple.abi_encode();
-        assert_eq!(tuple.sol_type_name(), "(uint16,string,bytes1,address[])");
+        assert_eq!(tuple.sol_name(), "(uint16,string,bytes1,address[])");
     }
 
     #[test]
