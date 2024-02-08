@@ -1,0 +1,54 @@
+[package]
+name = "alloy-core"
+description = "Rust Ethereum core libraries"
+keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
+categories = ["no-std", "encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/dyn-abi"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+alloy-primitives = { workspace = true, default-features = false }
+
+alloy-dyn-abi = { workspace = true, default-features = false, optional = true }
+alloy-json-abi = { workspace = true, default-features = false, optional = true }
+alloy-sol-types = { workspace = true, default-features = false, optional = true }
+
+alloy-rlp = { workspace = true, default-features = false, optional = true }
+
+[features]
+std = ["alloy-primitives/std", "alloy-json-abi?/std", "alloy-dyn-abi?/std", "alloy-sol-types?/std"]
+
+dyn-abi = ["sol-types", "dep:alloy-dyn-abi"]
+json-abi = ["json", "serde", "dep:alloy-json-abi"]
+json = ["alloy-sol-types?/json"]
+sol-types = ["dep:alloy-sol-types"]
+
+tiny-keccak = ["alloy-primitives/tiny-keccak"]
+native-keccak = ["alloy-primitives/native-keccak"]
+asm-keccak = ["alloy-primitives/asm-keccak"]
+
+postgres = ["std", "alloy-primitives/postgres"]
+getrandom = ["alloy-primitives/getrandom"]
+rand = ["alloy-primitives/rand"]
+rlp = ["alloy-primitives/rlp", "dep:alloy-rlp"]
+serde = ["alloy-primitives/serde"]
+ssz = ["std", "alloy-primitives/ssz"]
+arbitrary = [
+    "std",
+    "alloy-primitives/arbitrary",
+    "alloy-sol-types?/arbitrary",
+    "alloy-dyn-abi?/arbitrary",
+]
+k256 = ["alloy-primitives/k256"]
+eip712 = ["alloy-sol-types?/eip712-serde", "alloy-dyn-abi?/eip712"]
