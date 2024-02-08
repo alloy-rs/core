@@ -35,3 +35,7 @@ pub use alloy_sol_types as sol_types;
 #[cfg(feature = "sol-types")]
 #[doc(no_inline)]
 pub use alloy_sol_types::sol;
+
+#[cfg(feature = "rlp")]
+#[doc(inline)]
+pub use alloy_rlp as rlp;

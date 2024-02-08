@@ -24,6 +24,8 @@ alloy-dyn-abi = { workspace = true, default-features = false, optional = true }
 alloy-json-abi = { workspace = true, default-features = false, optional = true }
 alloy-sol-types = { workspace = true, default-features = false, optional = true }
 
+alloy-rlp = { workspace = true, default-features = false, optional = true }
+
 [features]
 std = ["alloy-primitives/std", "alloy-json-abi?/std", "alloy-dyn-abi?/std", "alloy-sol-types?/std"]
 
@@ -39,7 +41,7 @@ asm-keccak = ["alloy-primitives/asm-keccak"]
 postgres = ["std", "alloy-primitives/postgres"]
 getrandom = ["alloy-primitives/getrandom"]
 rand = ["alloy-primitives/rand"]
-rlp = ["alloy-primitives/rlp"]
+rlp = ["alloy-primitives/rlp", "dep:alloy-rlp"]
 serde = ["alloy-primitives/serde"]
 ssz = ["std", "alloy-primitives/ssz"]
 arbitrary = [
