@@ -21,12 +21,14 @@ pub trait Verbatim {
 
     /// Uses [`Verbatim::to_verbatim_tokens`] to provide a [`quote::ToTokens`] implementation.
     #[inline]
+    #[allow(dead_code)]
     fn quote_verbatim(&self) -> ToTokensCompat<'_, Self> {
         ToTokensCompat(self)
     }
 
     /// Uses [`Verbatim::to_verbatim_tokens`] to provide a [`quote::ToTokens`] implementation.
     #[inline]
+    #[allow(dead_code)]
     fn into_quote_verbatim(self) -> IntoTokensCompat<Self>
     where
         Self: Sized,
