@@ -41,7 +41,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     /// See [`SolType::SOL_NAME`] for more information.
     #[inline]
     fn sol_name(&self) -> &'static str {
-        Self::SolType::SOL_NAME.into()
+        Self::SolType::SOL_NAME
     }
 
     /// The name of the associated Solidity type.
