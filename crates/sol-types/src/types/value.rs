@@ -47,7 +47,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     /// The name of the associated Solidity type.
     ///
     /// See [`SolType::sol_type_name`] for more information.
-    #[deprecated(since = "0.6.4", note = "use `sol_name` instead")]
+    #[deprecated(since = "0.6.3", note = "use `sol_name` instead")]
     #[inline]
     fn sol_type_name(&self) -> Cow<'static, str> {
         self.sol_name().into()
