@@ -89,12 +89,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
             type RustType = #underlying_rust;
             type Token<'a> = <#underlying_sol as ::alloy_sol_types::SolType>::Token<'a>;
 
+            const SOL_NAME: &'static str = Self::NAME;
             const ENCODED_SIZE: Option<usize> = <#underlying_sol as ::alloy_sol_types::SolType>::ENCODED_SIZE;
-
-            #[inline]
-            fn sol_type_name() -> ::alloy_sol_types::private::Cow<'static, str> {
-                Self::NAME.into()
-            }
 
             #[inline]
             fn valid_token(token: &Self::Token<'_>) -> bool {
