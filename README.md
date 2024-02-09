@@ -22,6 +22,7 @@ feature-parity in Alloy. No action is currently needed from devs.
 
 This repository contains the following crates:
 
+- [`alloy-core`]: Meta-crate for the entire project
 - [`alloy-primitives`] - Primitive integer and byte types
 - [`alloy-sol-types`] - Compile-time [ABI] and [EIP-712] implementations
 - [`alloy-sol-macro`] - The [`sol!`] procedural macro
@@ -30,6 +31,7 @@ This repository contains the following crates:
 - [`alloy-sol-type-parser`] - A simple parser for Solidity type strings
 - [`syn-solidity`] - [`syn`]-powered Solidity parser
 
+[`alloy-core`]: ./crates/core
 [`alloy-primitives`]: ./crates/primitives
 [`alloy-sol-types`]: ./crates/sol-types
 [`alloy-sol-macro`]: ./crates/sol-macro
