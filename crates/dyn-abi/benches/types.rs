@@ -1,3 +1,5 @@
+#![allow(clippy::incompatible_msrv)]
+
 use alloy_dyn_abi::{DynSolType, ResolveSolType};
 use alloy_sol_type_parser::TypeSpecifier;
 use criterion::{
