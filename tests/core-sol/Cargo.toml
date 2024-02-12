@@ -1,0 +1,14 @@
+[package]
+name = "alloy-core-sol-test"
+publish = false
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[dependencies]
+alloy-core = { workspace = true, features = ["sol-types", "json"] }

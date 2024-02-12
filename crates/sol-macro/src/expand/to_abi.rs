@@ -7,15 +7,15 @@ use ast::{ItemError, ItemEvent, ItemFunction};
 use proc_macro2::TokenStream;
 use std::fmt::Write;
 
-pub fn generate<T>(t: &T, cx: &ExpCtxt<'_>) -> TokenStream
+pub(crate) fn generate<T>(t: &T, cx: &ExpCtxt<'_>) -> TokenStream
 where
     T: ToAbi,
     T::DynAbi: Verbatim,
 {
-    crate::verbatim::verbatim(&t.to_dyn_abi(cx))
+    crate::verbatim::verbatim(&t.to_dyn_abi(cx), &cx.crates)
 }
 
-pub trait ToAbi {
+pub(crate) trait ToAbi {
     type DynAbi;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi;
@@ -187,7 +187,7 @@ macro_rules! make_map {
             let item = item.to_dyn_abi($cx);
             map.entry(item.name.clone()).or_default().push(item);
         }
-        crate::verbatim::verbatim(&map)
+        crate::verbatim::verbatim(&map, &$cx.crates)
     }};
 }
 

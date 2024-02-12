@@ -141,14 +141,17 @@ impl SolInput {
                 crate::expand::expand(file)
             }
             SolInputKind::Type(ty) => {
-                if attrs.is_empty() {
-                    Ok(crate::expand::expand_type(&ty))
-                } else {
-                    Err(Error::new_spanned(
-                        attrs.first().unwrap(),
-                        "attributes are not allowed here",
-                    ))
+                let (sol_attrs, rest) = crate::attr::SolAttrs::parse(&attrs)?;
+                if !rest.is_empty() {
+                    return Err(Error::new_spanned(
+                        rest.first().unwrap(),
+                        "only `#[sol]` attributes are allowed here",
+                    ));
                 }
+
+                let mut crates = crate::expand::ExternCrates::default();
+                crates.fill(&sol_attrs);
+                Ok(crate::expand::expand_type(&ty, &crates))
             }
             #[cfg(feature = "json")]
             SolInputKind::Json(name, json) => crate::json::expand(name, json, attrs),

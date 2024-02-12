@@ -31,30 +31,32 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     let (field_types, field_names): (Vec<_>, Vec<_>) =
-        fields.iter().map(|f| (expand_type(&f.ty), f.name.as_ref().unwrap())).unzip();
+        fields.iter().map(|f| (expand_type(&f.ty, &cx.crates), f.name.as_ref().unwrap())).unzip();
 
     let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, name);
 
-    let tokenize_impl = expand_tokenize(fields);
+    let tokenize_impl = expand_tokenize(fields, cx);
 
     let encode_data_impl = match fields.len() {
         0 => unreachable!("struct with zero fields"),
         1 => {
             let name = *field_names.first().unwrap();
             let ty = field_types.first().unwrap();
-            quote!(<#ty as ::alloy_sol_types::SolType>::eip712_data_word(&self.#name).0.to_vec())
+            quote!(<#ty as alloy_sol_types::SolType>::eip712_data_word(&self.#name).0.to_vec())
         }
         _ => quote! {
             [#(
-                <#field_types as ::alloy_sol_types::SolType>::eip712_data_word(&self.#field_names).0,
+                <#field_types as alloy_sol_types::SolType>::eip712_data_word(&self.#field_names).0,
             )*].concat()
         },
     };
 
+    let alloy_sol_types = &cx.crates.sol_types;
+
     let attrs = attrs.iter();
-    let convert = expand_from_into_tuples(&name.0, fields);
+    let convert = expand_from_into_tuples(&name.0, fields, cx);
     let name_s = name.as_string();
-    let fields = expand_fields(fields);
+    let fields = expand_fields(fields, cx);
 
     let doc = docs.then(|| attr::mk_doc(format!("```solidity\n{s}\n```")));
     let tokens = quote! {
@@ -68,17 +70,19 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         const _: () = {
+            use #alloy_sol_types as alloy_sol_types;
+
             #convert
 
             #[automatically_derived]
-            impl ::alloy_sol_types::SolValue for #name {
+            impl alloy_sol_types::SolValue for #name {
                 type SolType = Self;
             }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::private::SolTypeValue<Self> for #name {
+            impl alloy_sol_types::private::SolTypeValue<Self> for #name {
                 #[inline]
-                fn stv_to_tokens(&self) -> <Self as ::alloy_sol_types::SolType>::Token<'_> {
+                fn stv_to_tokens(&self) -> <Self as alloy_sol_types::SolType>::Token<'_> {
                     #tokenize_impl
                 }
 
@@ -86,79 +90,79 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 fn stv_abi_encoded_size(&self) -> usize {
                     // TODO: Avoid cloning
                     let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
-                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::abi_encoded_size(&tuple)
+                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_encoded_size(&tuple)
                 }
 
                 #[inline]
-                fn stv_eip712_data_word(&self) -> ::alloy_sol_types::Word {
-                    <Self as ::alloy_sol_types::SolStruct>::eip712_hash_struct(self)
+                fn stv_eip712_data_word(&self) -> alloy_sol_types::Word {
+                    <Self as alloy_sol_types::SolStruct>::eip712_hash_struct(self)
                 }
 
                 #[inline]
-                fn stv_abi_encode_packed_to(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                fn stv_abi_encode_packed_to(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
                     // TODO: Avoid cloning
                     let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
-                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
+                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
                 }
             }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::SolType for #name {
+            impl alloy_sol_types::SolType for #name {
                 type RustType = Self;
-                type Token<'a> = <UnderlyingSolTuple<'a> as ::alloy_sol_types::SolType>::Token<'a>;
+                type Token<'a> = <UnderlyingSolTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
 
-                const SOL_NAME: &'static str = <Self as ::alloy_sol_types::SolStruct>::NAME;
+                const SOL_NAME: &'static str = <Self as alloy_sol_types::SolStruct>::NAME;
                 const ENCODED_SIZE: Option<usize> =
-                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::ENCODED_SIZE;
+                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::ENCODED_SIZE;
 
                 #[inline]
                 fn valid_token(token: &Self::Token<'_>) -> bool {
-                    <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::valid_token(token)
+                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::valid_token(token)
                 }
 
                 #[inline]
                 fn detokenize(token: Self::Token<'_>) -> Self::RustType {
-                    let tuple = <UnderlyingSolTuple<'_> as ::alloy_sol_types::SolType>::detokenize(token);
+                    let tuple = <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::detokenize(token);
                     <Self as ::core::convert::From<UnderlyingRustTuple<'_>>>::from(tuple)
                 }
             }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::SolStruct for #name {
+            impl alloy_sol_types::SolStruct for #name {
                 const NAME: &'static str = #name_s;
 
                 #eip712_encode_type_fns
 
                 #[inline]
-                fn eip712_encode_data(&self) -> ::alloy_sol_types::private::Vec<u8> {
+                fn eip712_encode_data(&self) -> alloy_sol_types::private::Vec<u8> {
                     #encode_data_impl
                 }
             }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::EventTopic for #name {
+            impl alloy_sol_types::EventTopic for #name {
                 #[inline]
                 fn topic_preimage_length(rust: &Self::RustType) -> usize {
                     0usize
                     #(
-                        + <#field_types as ::alloy_sol_types::EventTopic>::topic_preimage_length(&rust.#field_names)
+                        + <#field_types as alloy_sol_types::EventTopic>::topic_preimage_length(&rust.#field_names)
                     )*
                 }
 
                 #[inline]
-                fn encode_topic_preimage(rust: &Self::RustType, out: &mut ::alloy_sol_types::private::Vec<u8>) {
-                    out.reserve(<Self as ::alloy_sol_types::EventTopic>::topic_preimage_length(rust));
+                fn encode_topic_preimage(rust: &Self::RustType, out: &mut alloy_sol_types::private::Vec<u8>) {
+                    out.reserve(<Self as alloy_sol_types::EventTopic>::topic_preimage_length(rust));
                     #(
-                        <#field_types as ::alloy_sol_types::EventTopic>::encode_topic_preimage(&rust.#field_names, out);
+                        <#field_types as alloy_sol_types::EventTopic>::encode_topic_preimage(&rust.#field_names, out);
                     )*
                 }
 
                 #[inline]
-                fn encode_topic(rust: &Self::RustType) -> ::alloy_sol_types::abi::token::WordToken {
-                    let mut out = ::alloy_sol_types::private::Vec::new();
-                    <Self as ::alloy_sol_types::EventTopic>::encode_topic_preimage(rust, &mut out);
-                    ::alloy_sol_types::abi::token::WordToken(
-                        ::alloy_sol_types::private::keccak256(out)
+                fn encode_topic(rust: &Self::RustType) -> alloy_sol_types::abi::token::WordToken {
+                    let mut out = alloy_sol_types::private::Vec::new();
+                    <Self as alloy_sol_types::EventTopic>::encode_topic_preimage(rust, &mut out);
+                    alloy_sol_types::abi::token::WordToken(
+                        alloy_sol_types::private::keccak256(out)
                     )
                 }
             }
@@ -202,40 +206,40 @@ fn expand_encode_type_fns(
                 }
             });
             // cannot panic as this field is guaranteed to contain a custom type
-            let ty = expand_type(&ty.unwrap());
+            let ty = expand_type(&ty.unwrap(), &cx.crates);
 
             quote! {
-                components.push(<#ty as ::alloy_sol_types::SolStruct>::eip712_root_type());
-                components.extend(<#ty as ::alloy_sol_types::SolStruct>::eip712_components());
+                components.push(<#ty as alloy_sol_types::SolStruct>::eip712_root_type());
+                components.extend(<#ty as alloy_sol_types::SolStruct>::eip712_components());
             }
         });
         let capacity = proc_macro2::Literal::usize_unsuffixed(n_custom);
         quote! {
-            let mut components = ::alloy_sol_types::private::Vec::with_capacity(#capacity);
+            let mut components = alloy_sol_types::private::Vec::with_capacity(#capacity);
             #(#bits)*
             components
         }
     } else {
-        quote! { ::alloy_sol_types::private::Vec::new() }
+        quote! { alloy_sol_types::private::Vec::new() }
     };
 
     let encode_type_impl_opt = (n_custom == 0).then(|| {
         quote! {
             #[inline]
-            fn eip712_encode_type() -> ::alloy_sol_types::private::Cow<'static, str> {
-                <Self as ::alloy_sol_types::SolStruct>::eip712_root_type()
+            fn eip712_encode_type() -> alloy_sol_types::private::Cow<'static, str> {
+                <Self as alloy_sol_types::SolStruct>::eip712_root_type()
             }
         }
     });
 
     quote! {
         #[inline]
-        fn eip712_root_type() -> ::alloy_sol_types::private::Cow<'static, str> {
-            ::alloy_sol_types::private::Cow::Borrowed(#root)
+        fn eip712_root_type() -> alloy_sol_types::private::Cow<'static, str> {
+            alloy_sol_types::private::Cow::Borrowed(#root)
         }
 
         #[inline]
-        fn eip712_components() -> ::alloy_sol_types::private::Vec<::alloy_sol_types::private::Cow<'static, str>> {
+        fn eip712_components() -> alloy_sol_types::private::Vec<alloy_sol_types::private::Cow<'static, str>> {
             #components_impl
         }
 

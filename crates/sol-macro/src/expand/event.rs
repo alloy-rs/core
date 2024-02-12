@@ -36,11 +36,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
     let anonymous = event.is_anonymous();
 
     // prepend the first topic if not anonymous
-    let first_topic = (!anonymous).then(|| quote!(::alloy_sol_types::sol_data::FixedBytes<32>));
-    let topic_list = event.indexed_params().map(expand_event_topic_type);
+    let first_topic = (!anonymous).then(|| quote!(alloy_sol_types::sol_data::FixedBytes<32>));
+    let topic_list = event.indexed_params().map(|p| expand_event_topic_type(p, cx));
     let topic_list = first_topic.into_iter().chain(topic_list);
 
-    let (data_tuple, _) = expand_tuple_types(event.non_indexed_params().map(|p| &p.ty));
+    let (data_tuple, _) = expand_tuple_types(event.non_indexed_params().map(|p| &p.ty), cx);
 
     // skip first topic if not anonymous, which is the hash of the signature
     let mut topic_i = !anonymous as usize;
@@ -69,20 +69,20 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         quote! {(Self::SIGNATURE_HASH.into(), #(self.#topic_tuple_names.clone(),)*)}
     };
 
-    let encode_first_topic = (!anonymous)
-        .then(|| quote!(::alloy_sol_types::abi::token::WordToken(Self::SIGNATURE_HASH)));
+    let encode_first_topic =
+        (!anonymous).then(|| quote!(alloy_sol_types::abi::token::WordToken(Self::SIGNATURE_HASH)));
 
     let encode_topics_impl = event.indexed_params().enumerate().map(|(i, p)| {
         let name = anon_name((i, p.name.as_ref()));
-        let ty = expand_type(&p.ty);
+        let ty = expand_type(&p.ty, &cx.crates);
 
         if p.indexed_as_hash() {
             quote! {
-                <::alloy_sol_types::sol_data::FixedBytes<32> as ::alloy_sol_types::EventTopic>::encode_topic(&self.#name)
+                <alloy_sol_types::sol_data::FixedBytes<32> as alloy_sol_types::EventTopic>::encode_topic(&self.#name)
             }
         } else {
             quote! {
-                <#ty as ::alloy_sol_types::EventTopic>::encode_topic(&self.#name)
+                <#ty as alloy_sol_types::EventTopic>::encode_topic(&self.#name)
             }
         }
     });
@@ -91,9 +91,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .parameters
         .iter()
         .enumerate()
-        .map(|(i, p)| expand_event_topic_field(i, p, p.name.as_ref()));
+        .map(|(i, p)| expand_event_topic_field(i, p, p.name.as_ref(), cx));
 
-    let tokenize_body_impl = expand_event_tokenize(&event.parameters);
+    let tokenize_body_impl = expand_event_tokenize(&event.parameters, cx);
 
     let encode_topics_impl = encode_first_topic
         .into_iter()
@@ -114,8 +114,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
             let event = super::to_abi::generate(event, cx);
             quote! {
                 #[automatically_derived]
-                impl ::alloy_sol_types::JsonAbiExt for #name {
-                    type Abi = ::alloy_sol_types::private::alloy_json_abi::Event;
+                impl alloy_sol_types::JsonAbiExt for #name {
+                    type Abi = alloy_sol_types::private::alloy_json_abi::Event;
 
                     #[inline]
                     fn abi() -> Self::Abi {
@@ -125,6 +125,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
             }
         }
     });
+
+    let alloy_sol_types = &cx.crates.sol_types;
 
     let tokens = quote! {
         #(#attrs)*
@@ -136,24 +138,26 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         const _: () = {
+            use #alloy_sol_types as alloy_sol_types;
+
             #[automatically_derived]
-            impl ::alloy_sol_types::SolEvent for #name {
+            impl alloy_sol_types::SolEvent for #name {
                 type DataTuple<'a> = #data_tuple;
-                type DataToken<'a> = <Self::DataTuple<'a> as ::alloy_sol_types::SolType>::Token<'a>;
+                type DataToken<'a> = <Self::DataTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
 
                 type TopicList = (#(#topic_list,)*);
 
                 const SIGNATURE: &'static str = #signature;
-                const SIGNATURE_HASH: ::alloy_sol_types::private::B256 =
-                    ::alloy_sol_types::private::B256::new(#selector);
+                const SIGNATURE_HASH: alloy_sol_types::private::B256 =
+                    alloy_sol_types::private::B256::new(#selector);
 
                 const ANONYMOUS: bool = #anonymous;
 
                 #[allow(unused_variables)]
                 #[inline]
                 fn new(
-                    topics: <Self::TopicList as ::alloy_sol_types::SolType>::RustType,
-                    data: <Self::DataTuple<'_> as ::alloy_sol_types::SolType>::RustType,
+                    topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
+                    data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
                 ) -> Self {
                     Self {
                         #(#new_impl,)*
@@ -166,17 +170,17 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                 }
 
                 #[inline]
-                fn topics(&self) -> <Self::TopicList as ::alloy_sol_types::SolType>::RustType {
+                fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
                     #topics_impl
                 }
 
                 #[inline]
                 fn encode_topics_raw(
                     &self,
-                    out: &mut [::alloy_sol_types::abi::token::WordToken],
-                ) -> ::alloy_sol_types::Result<()> {
-                    if out.len() < <Self::TopicList as ::alloy_sol_types::TopicList>::COUNT {
-                        return Err(::alloy_sol_types::Error::Overrun);
+                    out: &mut [alloy_sol_types::abi::token::WordToken],
+                ) -> alloy_sol_types::Result<()> {
+                    if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
+                        return Err(alloy_sol_types::Error::Overrun);
                     }
                     #(#encode_topics_impl)*
                     Ok(())
@@ -189,12 +193,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
     Ok(tokens)
 }
 
-fn expand_event_topic_type(param: &EventParameter) -> TokenStream {
+fn expand_event_topic_type(param: &EventParameter, cx: &ExpCtxt<'_>) -> TokenStream {
+    let alloy_sol_types = &cx.crates.sol_types;
     assert!(param.is_indexed());
     if param.is_abi_dynamic() {
-        quote_spanned! {param.ty.span()=> ::alloy_sol_types::sol_data::FixedBytes<32> }
+        quote_spanned! {param.ty.span()=> #alloy_sol_types::sol_data::FixedBytes<32> }
     } else {
-        expand_type(&param.ty)
+        expand_type(&param.ty, &cx.crates)
     }
 }
 
@@ -202,15 +207,14 @@ fn expand_event_topic_field(
     i: usize,
     param: &EventParameter,
     name: Option<&SolIdent>,
+    cx: &ExpCtxt<'_>,
 ) -> TokenStream {
     let name = anon_name((i, name));
     let ty = if param.indexed_as_hash() {
-        ty::expand_rust_type(&ast::Type::FixedBytes(
-            name.span(),
-            core::num::NonZeroU16::new(32).unwrap(),
-        ))
+        let bytes32 = ast::Type::FixedBytes(name.span(), core::num::NonZeroU16::new(32).unwrap());
+        ty::expand_rust_type(&bytes32, &cx.crates)
     } else {
-        ty::expand_rust_type(&param.ty)
+        ty::expand_rust_type(&param.ty, &cx.crates)
     };
     quote!(#name: #ty)
 }
