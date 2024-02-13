@@ -54,18 +54,18 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let call_name = cx.call_name(function);
     let return_name = cx.return_name(function);
 
-    let call_fields = expand_fields(parameters);
-    let return_fields = expand_fields(returns);
+    let call_fields = expand_fields(parameters, cx);
+    let return_fields = expand_fields(returns, cx);
 
-    let call_tuple = expand_tuple_types(parameters.types()).0;
-    let return_tuple = expand_tuple_types(returns.types()).0;
+    let call_tuple = expand_tuple_types(parameters.types(), cx).0;
+    let return_tuple = expand_tuple_types(returns.types(), cx).0;
 
-    let converts = expand_from_into_tuples(&call_name, parameters);
-    let return_converts = expand_from_into_tuples(&return_name, returns);
+    let converts = expand_from_into_tuples(&call_name, parameters, cx);
+    let return_converts = expand_from_into_tuples(&return_name, returns, cx);
 
     let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);
-    let tokenize_impl = expand_tokenize(parameters);
+    let tokenize_impl = expand_tokenize(parameters, cx);
 
     let call_doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array.as_slice());
@@ -85,8 +85,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
             let function = super::to_abi::generate(function, cx);
             quote! {
                 #[automatically_derived]
-                impl ::alloy_sol_types::JsonAbiExt for #call_name {
-                    type Abi = ::alloy_sol_types::private::alloy_json_abi::Function;
+                impl alloy_sol_types::JsonAbiExt for #call_name {
+                    type Abi = alloy_sol_types::private::alloy_json_abi::Function;
 
                     #[inline]
                     fn abi() -> Self::Abi {
@@ -96,6 +96,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
             }
         }
     });
+
+    let alloy_sol_types = &cx.crates.sol_types;
 
     let tokens = quote! {
         #(#call_attrs)*
@@ -116,24 +118,26 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         const _: () = {
+            use #alloy_sol_types as alloy_sol_types;
+
             { #converts }
             { #return_converts }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::SolCall for #call_name {
+            impl alloy_sol_types::SolCall for #call_name {
                 type Parameters<'a> = #call_tuple;
-                type Token<'a> = <Self::Parameters<'a> as ::alloy_sol_types::SolType>::Token<'a>;
+                type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
 
                 type Return = #return_name;
 
                 type ReturnTuple<'a> = #return_tuple;
-                type ReturnToken<'a> = <Self::ReturnTuple<'a> as ::alloy_sol_types::SolType>::Token<'a>;
+                type ReturnToken<'a> = <Self::ReturnTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
 
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
                 #[inline]
-                fn new<'a>(tuple: <Self::Parameters<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
+                fn new<'a>(tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 
@@ -143,8 +147,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 }
 
                 #[inline]
-                fn abi_decode_returns(data: &[u8], validate: bool) -> ::alloy_sol_types::Result<Self::Return> {
-                    <Self::ReturnTuple<'_> as ::alloy_sol_types::SolType>::abi_decode_sequence(data, validate).map(Into::into)
+                fn abi_decode_returns(data: &[u8], validate: bool) -> alloy_sol_types::Result<Self::Return> {
+                    <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate).map(Into::into)
                 }
             }
 
@@ -159,11 +163,14 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
 
     let (sol_attrs, call_attrs) = crate::attr::SolAttrs::parse(attrs)?;
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
+
+    let alloy_sol_types = &cx.crates.sol_types;
+
     let call_name = format_ident!("constructorCall").with_span(constructor.kind.span());
-    let call_fields = expand_fields(parameters);
-    let call_tuple = expand_tuple_types(parameters.types()).0;
-    let converts = expand_from_into_tuples(&call_name, parameters);
-    let tokenize_impl = expand_tokenize(parameters);
+    let call_fields = expand_fields(parameters, cx);
+    let call_tuple = expand_tuple_types(parameters.types(), cx).0;
+    let converts = expand_from_into_tuples(&call_name, parameters, cx);
+    let tokenize_impl = expand_tokenize(parameters, cx);
 
     let call_doc = docs.then(|| {
         attr::mk_doc(format!(
@@ -182,15 +189,17 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
         }
 
         const _: () = {
+            use #alloy_sol_types as alloy_sol_types;
+
             { #converts }
 
             #[automatically_derived]
-            impl ::alloy_sol_types::SolConstructor for #call_name {
+            impl alloy_sol_types::SolConstructor for #call_name {
                 type Parameters<'a> = #call_tuple;
-                type Token<'a> = <Self::Parameters<'a> as ::alloy_sol_types::SolType>::Token<'a>;
+                type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
 
                 #[inline]
-                fn new<'a>(tuple: <Self::Parameters<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
+                fn new<'a>(tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 

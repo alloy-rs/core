@@ -1,116 +1,88 @@
+use crate::expand::ExternCrates;
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::collections::BTreeMap;
 
 /// Converts the given value into tokens that represent itself.
-pub fn verbatim<T: Verbatim>(t: &T) -> TokenStream {
-    t.to_verbatim_token_stream()
+pub(crate) fn verbatim<T: Verbatim>(t: &T, crates: &ExternCrates) -> TokenStream {
+    let mut s = TokenStream::new();
+    t.to_verbatim_tokens(&mut s, crates);
+    s
 }
 
 /// Conversion to tokens that represent the value itself.
-pub trait Verbatim {
+pub(crate) trait Verbatim {
     /// Converts `self` into tokens that represent itself.
-    fn to_verbatim_tokens(&self, s: &mut TokenStream);
-
-    /// Converts `self` into a [`TokenStream`] that represents itself.
-    fn to_verbatim_token_stream(&self) -> TokenStream {
-        let mut s = TokenStream::new();
-        self.to_verbatim_tokens(&mut s);
-        s
-    }
-
-    /// Uses [`Verbatim::to_verbatim_tokens`] to provide a [`quote::ToTokens`] implementation.
-    #[inline]
-    #[allow(dead_code)]
-    fn quote_verbatim(&self) -> ToTokensCompat<'_, Self> {
-        ToTokensCompat(self)
-    }
-
-    /// Uses [`Verbatim::to_verbatim_tokens`] to provide a [`quote::ToTokens`] implementation.
-    #[inline]
-    #[allow(dead_code)]
-    fn into_quote_verbatim(self) -> IntoTokensCompat<Self>
-    where
-        Self: Sized,
-    {
-        IntoTokensCompat(self)
-    }
+    fn to_verbatim_tokens(&self, s: &mut TokenStream, crates: &ExternCrates);
 }
 
 /// Provides a [`quote::ToTokens`] implementations for references of values that implement
 /// [`Verbatim`].
-pub struct ToTokensCompat<'a, T: ?Sized + Verbatim>(pub &'a T);
+pub(crate) struct ToTokensCompat<'a, T: ?Sized + Verbatim>(pub &'a T, &'a ExternCrates);
 
 impl<T: Verbatim> quote::ToTokens for ToTokensCompat<'_, T> {
     #[inline]
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.0.to_verbatim_tokens(tokens)
-    }
-}
-
-/// Provides a [`quote::ToTokens`] implementations for owned values that implement [`Verbatim`].
-pub struct IntoTokensCompat<T: ?Sized + Verbatim>(pub T);
-
-impl<T: Verbatim> quote::ToTokens for IntoTokensCompat<T> {
-    #[inline]
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.0.to_verbatim_tokens(tokens)
+        self.0.to_verbatim_tokens(tokens, self.1)
     }
 }
 
 impl Verbatim for String {
-    fn to_verbatim_tokens(&self, tokens: &mut TokenStream) {
+    fn to_verbatim_tokens(&self, tokens: &mut TokenStream, crates: &ExternCrates) {
+        let alloy_sol_types = &crates.sol_types;
         tokens.extend(if self.is_empty() {
-            quote!(::alloy_sol_types::private::String::new())
+            quote!(#alloy_sol_types::private::String::new())
         } else {
-            quote!(::alloy_sol_types::private::ToOwned::to_owned(#self))
+            quote!(#alloy_sol_types::private::ToOwned::to_owned(#self))
         })
     }
 }
 
 impl Verbatim for bool {
     #[inline]
-    fn to_verbatim_tokens(&self, s: &mut TokenStream) {
+    fn to_verbatim_tokens(&self, s: &mut TokenStream, _crates: &ExternCrates) {
         quote::ToTokens::to_tokens(self, s)
     }
 }
 
 impl Verbatim for usize {
     #[inline]
-    fn to_verbatim_tokens(&self, s: &mut TokenStream) {
+    fn to_verbatim_tokens(&self, s: &mut TokenStream, _crates: &ExternCrates) {
         quote::ToTokens::to_tokens(self, s)
     }
 }
 
 impl<T: Verbatim> Verbatim for Vec<T> {
-    fn to_verbatim_tokens(&self, s: &mut TokenStream) {
+    fn to_verbatim_tokens(&self, s: &mut TokenStream, crates: &ExternCrates) {
+        let alloy_sol_types = &crates.sol_types;
         s.extend(if self.is_empty() {
-            quote!(::alloy_sol_types::private::Vec::new())
+            quote!(#alloy_sol_types::private::Vec::new())
         } else {
-            let iter = self.iter().map(ToTokensCompat);
-            quote!(::alloy_sol_types::private::vec![#(#iter),*])
+            let iter = self.iter().map(|t| ToTokensCompat(t, crates));
+            quote!(#alloy_sol_types::private::vec![#(#iter),*])
         });
     }
 }
 
 impl<K: Verbatim, V: Verbatim> Verbatim for BTreeMap<K, V> {
-    fn to_verbatim_tokens(&self, s: &mut TokenStream) {
+    fn to_verbatim_tokens(&self, s: &mut TokenStream, crates: &ExternCrates) {
+        let alloy_sol_types = &crates.sol_types;
         s.extend(if self.is_empty() {
-            quote!(::alloy_sol_types::private::BTreeMap::new())
+            quote!(#alloy_sol_types::private::BTreeMap::new())
         } else {
-            let k = self.keys().map(ToTokensCompat);
-            let v = self.values().map(ToTokensCompat);
-            quote!(::alloy_sol_types::private::BTreeMap::from([#( (#k, #v) ),*]))
+            let k = self.keys().map(|t| ToTokensCompat(t, crates));
+            let v = self.values().map(|t| ToTokensCompat(t, crates));
+            quote!(#alloy_sol_types::private::BTreeMap::from([#( (#k, #v) ),*]))
         });
     }
 }
 
 impl<T: Verbatim> Verbatim for Option<T> {
-    fn to_verbatim_tokens(&self, s: &mut TokenStream) {
+    fn to_verbatim_tokens(&self, s: &mut TokenStream, crates: &ExternCrates) {
         let tts = match self {
             Some(t) => {
                 let mut s = TokenStream::new();
-                t.to_verbatim_tokens(&mut s);
+                t.to_verbatim_tokens(&mut s, crates);
                 quote!(::core::option::Option::Some(#s))
             }
             None => quote!(::core::option::Option::None),
@@ -124,13 +96,14 @@ macro_rules! derive_verbatim {
 
     (struct $name:ident { $($field:ident),* $(,)? } $($rest:tt)*) => {
         impl Verbatim for alloy_json_abi::$name {
-            fn to_verbatim_tokens(&self, s: &mut TokenStream) {
+            fn to_verbatim_tokens(&self, s: &mut TokenStream, crates: &ExternCrates) {
                 let Self { $($field),* } = self;
                 $(
-                    let $field = ToTokensCompat($field);
+                    let $field = ToTokensCompat($field, crates);
                 )*
+                let alloy_sol_types = &crates.sol_types;
                 s.extend(quote! {
-                    ::alloy_sol_types::private::alloy_json_abi::$name {
+                    #alloy_sol_types::private::alloy_json_abi::$name {
                         $($field: #$field,)*
                     }
                 });
@@ -141,14 +114,15 @@ macro_rules! derive_verbatim {
 
     (enum $name:ident { $($variant:ident $( { $($field_idx:tt : $field:ident),* $(,)? } )?),* $(,)? } $($rest:tt)*) => {
         impl Verbatim for alloy_json_abi::$name {
-            fn to_verbatim_tokens(&self, s: &mut TokenStream) {
+            fn to_verbatim_tokens(&self, s: &mut TokenStream, crates: &ExternCrates) {
                 match self {$(
                     Self::$variant $( { $($field_idx: $field),* } )? => {
                         $($(
-                            let $field = ToTokensCompat($field);
+                            let $field = ToTokensCompat($field, crates);
                         )*)?
+                        let alloy_sol_types = &crates.sol_types;
                         s.extend(quote! {
-                            ::alloy_sol_types::private::alloy_json_abi::$name::$variant $( { $($field_idx: #$field),* } )?
+                            #alloy_sol_types::private::alloy_json_abi::$name::$variant $( { $($field_idx: #$field),* } )?
                         });
                     }
                 )*}

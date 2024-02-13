@@ -72,6 +72,9 @@ pub struct SolAttrs {
     pub extra_methods: Option<bool>,
     pub docs: Option<bool>,
 
+    pub alloy_sol_types: Option<Path>,
+    pub alloy_contract: Option<Path>,
+
     // TODO: Implement
     pub rename: Option<LitStr>,
     // TODO: Implement
@@ -121,6 +124,9 @@ impl SolAttrs {
                     }
                 };
 
+                // `path = <path>`
+                let path = || meta.value()?.parse::<Path>();
+
                 // `path = "<str>"`
                 let lit = || meta.value()?.parse::<LitStr>();
 
@@ -144,6 +150,9 @@ impl SolAttrs {
                     all_derives => bool()?,
                     extra_methods => bool()?,
                     docs => bool()?,
+
+                    alloy_sol_types => path()?,
+                    alloy_contract => path()?,
 
                     rename => lit()?,
                     rename_all => CasingStyle::from_lit(&lit()?)?,
@@ -313,6 +322,16 @@ mod tests {
             #[sol(rpc)] => Ok(sol_attrs! { rpc: true }),
             #[sol(rpc = true)] => Ok(sol_attrs! { rpc: true }),
             #[sol(rpc = false)] => Ok(sol_attrs! { rpc: false }),
+
+            #[sol(alloy_sol_types)] => Err("expected `=`"),
+            #[sol(alloy_sol_types = alloy_core::sol_types)] => Ok(sol_attrs! { alloy_sol_types: parse_quote!(alloy_core::sol_types) }),
+            #[sol(alloy_sol_types = ::alloy_core::sol_types)] => Ok(sol_attrs! { alloy_sol_types: parse_quote!(::alloy_core::sol_types) }),
+            #[sol(alloy_sol_types = alloy::sol_types)] => Ok(sol_attrs! { alloy_sol_types: parse_quote!(alloy::sol_types) }),
+            #[sol(alloy_sol_types = ::alloy::sol_types)] => Ok(sol_attrs! { alloy_sol_types: parse_quote!(::alloy::sol_types) }),
+
+            #[sol(alloy_contract)] => Err("expected `=`"),
+            #[sol(alloy_contract = alloy::contract)] => Ok(sol_attrs! { alloy_contract: parse_quote!(alloy::contract) }),
+            #[sol(alloy_contract = ::alloy::contract)] => Ok(sol_attrs! { alloy_contract: parse_quote!(::alloy::contract) }),
         }
 
         rename {

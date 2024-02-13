@@ -27,13 +27,15 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
 
-    let tokenize_impl = expand_tokenize(params);
+    let tokenize_impl = expand_tokenize(params, cx);
 
     let signature = cx.error_signature(error);
     let selector = crate::utils::selector(&signature);
 
-    let converts = expand_from_into_tuples(&name.0, params);
-    let fields = expand_fields(params);
+    let alloy_sol_types = &cx.crates.sol_types;
+
+    let converts = expand_from_into_tuples(&name.0, params, cx);
+    let fields = expand_fields(params, cx);
     let doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array.as_slice());
         attr::mk_doc(format!(
@@ -46,8 +48,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
             let error = super::to_abi::generate(error, cx);
             quote! {
                 #[automatically_derived]
-                impl ::alloy_sol_types::JsonAbiExt for #name {
-                    type Abi = ::alloy_sol_types::private::alloy_json_abi::Error;
+                impl alloy_sol_types::JsonAbiExt for #name {
+                    type Abi = alloy_sol_types::private::alloy_json_abi::Error;
 
                     #[inline]
                     fn abi() -> Self::Abi {
@@ -68,18 +70,20 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
 
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         const _: () = {
+            use #alloy_sol_types as alloy_sol_types;
+
             #converts
 
             #[automatically_derived]
-            impl ::alloy_sol_types::SolError for #name {
+            impl alloy_sol_types::SolError for #name {
                 type Parameters<'a> = UnderlyingSolTuple<'a>;
-                type Token<'a> = <Self::Parameters<'a> as ::alloy_sol_types::SolType>::Token<'a>;
+                type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
 
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector;
 
                 #[inline]
-                fn new<'a>(tuple: <Self::Parameters<'a> as ::alloy_sol_types::SolType>::RustType) -> Self {
+                fn new<'a>(tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 

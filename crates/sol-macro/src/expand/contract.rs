@@ -41,7 +41,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         quote! {
             /// The creation / init code of the contract.
             #[rustfmt::skip]
-            pub static #name: ::alloy_sol_types::private::Bytes = ::alloy_sol_types::private::bytes!(#lit);
+            pub static #name: alloy_sol_types::private::Bytes = alloy_sol_types::private::bytes!(#lit);
         }
     });
     let deployed_bytecode = sol_attrs.deployed_bytecode.map(|lit| {
@@ -49,7 +49,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         quote! {
             /// The runtime bytecode of the contract.
             #[rustfmt::skip]
-            pub static #name: ::alloy_sol_types::private::Bytes = ::alloy_sol_types::private::bytes!(#lit);
+            pub static #name: alloy_sol_types::private::Bytes = alloy_sol_types::private::bytes!(#lit);
         }
     });
 
@@ -152,16 +152,18 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             use crate::verbatim::verbatim;
             use super::to_abi;
 
-            let constructor = verbatim(&constructor.map(|x| to_abi::constructor(x, cx)));
-            let fallback = verbatim(&fallback.map(|x| to_abi::fallback(x, cx)));
-            let receive = verbatim(&receive.map(|x| to_abi::receive(x, cx)));
+            let crates = &cx.crates;
+            let constructor = verbatim(&constructor.map(|x| to_abi::constructor(x, cx)), crates);
+            let fallback = verbatim(&fallback.map(|x| to_abi::fallback(x, cx)), crates);
+            let receive = verbatim(&receive.map(|x| to_abi::receive(x, cx)), crates);
             let functions_map = to_abi::functions_map(&functions, cx);
             let events_map = to_abi::events_map(&events, cx);
             let errors_map = to_abi::errors_map(&errors, cx);
             quote! {
-                /// Contains [dynamic ABI definitions](::alloy_sol_types::private::alloy_json_abi) for [this contract](self).
+                /// Contains [dynamic ABI definitions](alloy_sol_types::private::alloy_json_abi) for [this contract](self).
                 pub mod abi {
-                    use ::alloy_sol_types::private::{alloy_json_abi as json, BTreeMap, Vec};
+                    use super::*;
+                    use alloy_sol_types::private::{alloy_json_abi as json, BTreeMap, Vec};
 
                     /// Returns the ABI for [this contract](super).
                     pub fn contract() -> json::JsonAbi {
@@ -226,7 +228,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
              [`{contract_name}`](self) contract located at a given `address`, using a given\n\
              provider `P`.\n\
              \n\
-             If the contract bytecode is available (see the [`sol!`](::alloy_sol_types::sol!)\n\
+             If the contract bytecode is available (see the [`sol!`](alloy_sol_types::sol!)\n\
              documentation on how to provide it), the `deploy` and `deploy_builder` methods can\n\
              be used to deploy a new instance of the contract.\n\
              \n\
@@ -256,14 +258,16 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
                 let names1 = c.parameters.names().enumerate().map(anon_name);
                 let names2 = names1.clone();
-                let tys = c.parameters.types().map(super::ty::expand_rust_type);
+                let tys = c.parameters.types().map(|ty| {
+                    super::ty::expand_rust_type(ty, &cx.crates)
+                });
                 Some((quote!(#(#names1: #tys),*), quote!(#(#names2,)*)))
             }));
             let deploy_builder_data = if matches!(constructor, Some(c) if !c.parameters.is_empty()) {
                 quote! {
                     [
                         &BYTECODE[..],
-                        &::alloy_sol_types::SolConstructor::abi_encode(&constructorCall { #args })[..]
+                        &alloy_sol_types::SolConstructor::abi_encode(&constructorCall { #args })[..]
                     ].concat().into()
                 }
             } else {
@@ -276,16 +280,16 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 quote! {
                     #deploy_doc
                     #[inline]
-                    pub fn deploy<P: ::alloy_contract::private::Provider>(provider: P, #params)
-                        -> impl ::core::future::Future<Output = ::alloy_contract::Result<#name<P>>>
+                    pub fn deploy<P: alloy_contract::private::Provider>(provider: P, #params)
+                        -> impl ::core::future::Future<Output = alloy_contract::Result<#name<P>>>
                     {
                         #name::<P>::deploy(provider, #args)
                     }
 
                     #deploy_builder_doc
                     #[inline]
-                    pub fn deploy_builder<P: ::alloy_contract::private::Provider>(provider: P, #params)
-                        -> ::alloy_contract::RawCallBuilder<P>
+                    pub fn deploy_builder<P: alloy_contract::private::Provider>(provider: P, #params)
+                        -> alloy_contract::RawCallBuilder<P>
                     {
                         #name::<P>::deploy_builder(provider, #args)
                     }
@@ -294,7 +298,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                     #deploy_doc
                     #[inline]
                     pub async fn deploy(provider: P, #params)
-                        -> ::alloy_contract::Result<#name<P>>
+                        -> alloy_contract::Result<#name<P>>
                     {
                         let call_builder = Self::deploy_builder(provider, #args);
                         let contract_address = call_builder.deploy().await?;
@@ -304,18 +308,23 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                     #deploy_builder_doc
                     #[inline]
                     pub fn deploy_builder(provider: P, #params)
-                        -> ::alloy_contract::RawCallBuilder<P>
+                        -> alloy_contract::RawCallBuilder<P>
                     {
-                        ::alloy_contract::RawCallBuilder::new_raw(provider, #deploy_builder_data)
+                        alloy_contract::RawCallBuilder::new_raw(provider, #deploy_builder_data)
                     }
                 },
             )
         }));
+
+        let alloy_contract = &cx.crates.contract;
+
         quote! {
+            use #alloy_contract as alloy_contract;
+
             #[doc = #new_fn_doc]
             #[inline]
-            pub const fn new<P: ::alloy_contract::private::Provider>(
-                address: ::alloy_sol_types::private::Address,
+            pub const fn new<P: alloy_contract::private::Provider>(
+                address: alloy_sol_types::private::Address,
                 provider: P,
             ) -> #name<P> {
                 #name::<P>::new(address, provider)
@@ -326,7 +335,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             #[doc = #struct_doc]
             #[derive(Clone)]
             pub struct #name<P> {
-                address: ::alloy_sol_types::private::Address,
+                address: alloy_sol_types::private::Address,
                 provider: P,
             }
 
@@ -340,10 +349,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
             /// Instantiation and getters/setters.
             #[automatically_derived]
-            impl<P: ::alloy_contract::private::Provider> #name<P> {
+            impl<P: alloy_contract::private::Provider> #name<P> {
                 #[doc = #new_fn_doc]
                 #[inline]
-                pub const fn new(address: ::alloy_sol_types::private::Address, provider: P) -> Self {
+                pub const fn new(address: alloy_sol_types::private::Address, provider: P) -> Self {
                     Self { address, provider }
                 }
 
@@ -351,18 +360,18 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
                 /// Returns a reference to the address.
                 #[inline]
-                pub const fn address(&self) -> &::alloy_sol_types::private::Address {
+                pub const fn address(&self) -> &alloy_sol_types::private::Address {
                     &self.address
                 }
 
                 /// Sets the address.
                 #[inline]
-                pub fn set_address(&mut self, address: ::alloy_sol_types::private::Address) {
+                pub fn set_address(&mut self, address: alloy_sol_types::private::Address) {
                     self.address = address;
                 }
 
                 /// Sets the address and returns `self`.
-                pub fn at(mut self, address: ::alloy_sol_types::private::Address) -> Self {
+                pub fn at(mut self, address: alloy_sol_types::private::Address) -> Self {
                     self.set_address(address);
                     self
                 }
@@ -384,21 +393,23 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
             /// Function calls.
             #[automatically_derived]
-            impl<P: ::alloy_contract::private::Provider> #name<P> {
+            impl<P: alloy_contract::private::Provider> #name<P> {
                 /// Creates a new call builder using this contract instance's provider and address.
                 /// 
                 /// Note that the call can be any function call, not just those defined in this
                 /// contract. Prefer using the other methods for building type-safe contract calls.
-                pub fn call_builder<C: ::alloy_sol_types::SolCall>(&self, call: &C)
-                    -> ::alloy_contract::SolCallBuilder<&P, C>
+                pub fn call_builder<C: alloy_sol_types::SolCall>(&self, call: &C)
+                    -> alloy_contract::SolCallBuilder<&P, C>
                 {
-                    ::alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
+                    alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
                 }
 
                 #(#methods)*
             }
         }
     });
+
+    let alloy_sol_types = &cx.crates.sol_types;
 
     let tokens = quote! {
         #mod_descr_doc
@@ -407,6 +418,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
         pub mod #name {
             use super::*;
+            use #alloy_sol_types as alloy_sol_types;
 
             #bytecode
             #deployed_bytecode
@@ -607,7 +619,7 @@ impl<'a> CallLikeExpander<'a> {
             #def
 
             #[automatically_derived]
-            impl ::alloy_sol_types::SolInterface for #name {
+            impl alloy_sol_types::SolInterface for #name {
                 const NAME: &'static str = #name_s;
                 const MIN_DATA_LENGTH: usize = #min_data_len;
                 const COUNT: usize = #count;
@@ -615,7 +627,7 @@ impl<'a> CallLikeExpander<'a> {
                 #[inline]
                 fn selector(&self) -> [u8; 4] {
                     match self {#(
-                        Self::#variants(_) => <#types as ::alloy_sol_types::#trait_>::SELECTOR,
+                        Self::#variants(_) => <#types as alloy_sol_types::#trait_>::SELECTOR,
                     )*}
                 }
 
@@ -635,11 +647,11 @@ impl<'a> CallLikeExpander<'a> {
                     selector: [u8; 4],
                     data: &[u8],
                     validate: bool
-                )-> ::alloy_sol_types::Result<Self> {
-                    static DECODE_SHIMS: &[fn(&[u8], bool) -> ::alloy_sol_types::Result<#name>] = &[
+                )-> alloy_sol_types::Result<Self> {
+                    static DECODE_SHIMS: &[fn(&[u8], bool) -> alloy_sol_types::Result<#name>] = &[
                         #({
-                            fn #sorted_variants(data: &[u8], validate: bool) -> ::alloy_sol_types::Result<#name> {
-                                <#sorted_types as ::alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
+                            fn #sorted_variants(data: &[u8], validate: bool) -> alloy_sol_types::Result<#name> {
+                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
                                     .map(#name::#sorted_variants)
                             }
                             #sorted_variants
@@ -647,8 +659,8 @@ impl<'a> CallLikeExpander<'a> {
                     ];
 
                     let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                        return Err(::alloy_sol_types::Error::unknown_selector(
-                            <Self as ::alloy_sol_types::SolInterface>::NAME,
+                        return Err(alloy_sol_types::Error::unknown_selector(
+                            <Self as alloy_sol_types::SolInterface>::NAME,
                             selector,
                         ));
                     };
@@ -660,15 +672,15 @@ impl<'a> CallLikeExpander<'a> {
                 fn abi_encoded_size(&self) -> usize {
                     match self {#(
                         Self::#variants(inner) =>
-                            <#types as ::alloy_sol_types::#trait_>::abi_encoded_size(inner),
+                            <#types as alloy_sol_types::#trait_>::abi_encoded_size(inner),
                     )*}
                 }
 
                 #[inline]
-                fn abi_encode_raw(&self, out: &mut ::alloy_sol_types::private::Vec<u8>) {
+                fn abi_encode_raw(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
                     match self {#(
                         Self::#variants(inner) =>
-                            <#types as ::alloy_sol_types::#trait_>::abi_encode_raw(inner, out),
+                            <#types as alloy_sol_types::#trait_>::abi_encode_raw(inner, out),
                     )*}
                 }
             }
@@ -693,9 +705,9 @@ impl<'a> CallLikeExpander<'a> {
 
         let e_name = |&e: &&ItemEvent| self.cx.overloaded_name(e.into());
         let err = quote! {
-            ::alloy_sol_types::private::Err(::alloy_sol_types::Error::InvalidLog {
-                name: <Self as ::alloy_sol_types::SolEventInterface>::NAME,
-                log: ::alloy_sol_types::private::Box::new(::alloy_sol_types::private::LogData::new_unchecked(
+            alloy_sol_types::private::Err(alloy_sol_types::Error::InvalidLog {
+                name: <Self as alloy_sol_types::SolEventInterface>::NAME,
+                log: alloy_sol_types::private::Box::new(alloy_sol_types::private::LogData::new_unchecked(
                     topics.to_vec(),
                     data.to_vec().into(),
                 )),
@@ -708,8 +720,8 @@ impl<'a> CallLikeExpander<'a> {
             quote! {
                 match topics.first().copied() {
                     #(
-                        Some(<#variants as ::alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
-                            #ret <#variants as ::alloy_sol_types::#trait_>::decode_raw_log(topics, data, validate)
+                        Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
+                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data, validate)
                                 .map(Self::#variants),
                     )*
                     _ => { #ret_err }
@@ -720,7 +732,7 @@ impl<'a> CallLikeExpander<'a> {
             let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
                 #(
-                    if let Ok(res) = <#variants as ::alloy_sol_types::#trait_>::decode_raw_log(topics, data, validate) {
+                    if let Ok(res) = <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data, validate) {
                         return Ok(Self::#variants(res));
                     }
                 )*
@@ -731,11 +743,11 @@ impl<'a> CallLikeExpander<'a> {
         quote! {
             #def
 
-            impl ::alloy_sol_types::SolEventInterface for #name {
+            impl alloy_sol_types::SolEventInterface for #name {
                 const NAME: &'static str = #name_s;
                 const COUNT: usize = #count;
 
-                fn decode_raw_log(topics: &[::alloy_sol_types::Word], data: &[u8], validate: bool) -> ::alloy_sol_types::Result<Self> {
+                fn decode_raw_log(topics: &[alloy_sol_types::Word], data: &[u8], validate: bool) -> alloy_sol_types::Result<Self> {
                     #non_anon_impl
                     #anon_impl
                 }
@@ -870,11 +882,11 @@ fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
     let call_name = cx.call_name(f);
     let param_names1 = f.parameters.names().enumerate().map(anon_name);
     let param_names2 = param_names1.clone();
-    let param_tys = f.parameters.types().map(super::ty::expand_rust_type);
+    let param_tys = f.parameters.types().map(|ty| super::ty::expand_rust_type(ty, &cx.crates));
     let doc = format!("Creates a new call builder for the [`{name}`] function.");
     quote! {
         #[doc = #doc]
-        pub fn #name(&self, #(#param_names1: #param_tys),*) -> ::alloy_contract::SolCallBuilder<&P, #call_name> {
+        pub fn #name(&self, #(#param_names1: #param_tys),*) -> alloy_contract::SolCallBuilder<&P, #call_name> {
             self.call_builder(&#call_name { #(#param_names2),* })
         }
     }

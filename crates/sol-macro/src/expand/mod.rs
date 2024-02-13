@@ -23,7 +23,7 @@ use syn::{ext::IdentExt, parse_quote, Attribute, Error, Result};
 mod macros;
 
 mod ty;
-pub use ty::expand_type;
+pub(crate) use ty::expand_type;
 
 mod contract;
 mod r#enum;
@@ -56,6 +56,7 @@ pub struct ExpCtxt<'ast> {
     overloads: IndexMap<String, String>,
 
     attrs: SolAttrs,
+    crates: ExternCrates,
     ast: &'ast File,
 }
 
@@ -68,6 +69,7 @@ impl<'ast> ExpCtxt<'ast> {
             overloaded_items: IndexMap::new(),
             overloads: IndexMap::new(),
             attrs: SolAttrs::default(),
+            crates: ExternCrates::default(),
             ast,
         }
     }
@@ -124,6 +126,7 @@ impl<'ast> ExpCtxt<'ast> {
     fn parse_file_attributes(&mut self) -> Result<()> {
         let (attrs, others) = attr::SolAttrs::parse(&self.ast.attrs)?;
         self.attrs = attrs;
+        self.crates.fill(&self.attrs);
 
         let errs = others.iter().map(|attr| Error::new_spanned(attr, "unexpected attribute"));
         utils::combine_errors(errs)
@@ -514,13 +517,45 @@ impl<'ast> ExpCtxt<'ast> {
     }
 }
 
+/// Configurable extern crate dependencies.
+///
+/// These should be added to import lists at the top of anonymous `const _: () = { ... }` blocks,
+/// and in case of top-level structs they should be inlined into all `path`s.
+pub(crate) struct ExternCrates {
+    pub(crate) sol_types: syn::Path,
+    pub(crate) contract: syn::Path,
+}
+
+impl Default for ExternCrates {
+    fn default() -> Self {
+        Self {
+            sol_types: parse_quote!(::alloy_sol_types),
+            contract: parse_quote!(::alloy_contract),
+        }
+    }
+}
+
+impl ExternCrates {
+    pub(crate) fn fill(&mut self, attrs: &SolAttrs) {
+        if let Some(sol_types) = &attrs.alloy_sol_types {
+            self.sol_types = sol_types.clone();
+        }
+        if let Some(alloy_contract) = &attrs.alloy_contract {
+            self.contract = alloy_contract.clone();
+        }
+    }
+}
+
 // helper functions
 
 /// Expands a list of parameters into a list of struct fields.
-fn expand_fields<P>(params: &Parameters<P>) -> impl Iterator<Item = TokenStream> + '_ {
+fn expand_fields<'a, P>(
+    params: &'a Parameters<P>,
+    cx: &'a ExpCtxt<'_>,
+) -> impl Iterator<Item = TokenStream> + 'a {
     params.iter().enumerate().map(|(i, var)| {
         let name = anon_name((i, var.name.as_ref()));
-        let ty = expand_rust_type(&var.ty);
+        let ty = expand_rust_type(&var.ty, &cx.crates);
         let attrs = &var.attrs;
         quote! {
             #(#attrs)*
@@ -544,13 +579,17 @@ fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Ident {
 }
 
 /// Expands `From` impls for a list of types and the corresponding tuple.
-fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStream {
+fn expand_from_into_tuples<P>(
+    name: &Ident,
+    fields: &Parameters<P>,
+    cx: &ExpCtxt<'_>,
+) -> TokenStream {
     let names = fields.names().enumerate().map(anon_name);
 
     let names2 = names.clone();
     let idxs = (0..fields.len()).map(syn::Index::from);
 
-    let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types());
+    let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types(), cx);
 
     quote! {
         #[doc(hidden)]
@@ -560,9 +599,9 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
 
         #[cfg(test)]
         #[allow(dead_code, unreachable_patterns)]
-        fn _type_assertion(_t: ::alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+        fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
             match _t {
-                ::alloy_sol_types::private::AssertTypeEq::<<UnderlyingSolTuple as ::alloy_sol_types::SolType>::RustType>(_) => {}
+                alloy_sol_types::private::AssertTypeEq::<<UnderlyingSolTuple as alloy_sol_types::SolType>::RustType>(_) => {}
             }
         }
 
@@ -589,15 +628,16 @@ fn expand_from_into_tuples<P>(name: &Ident, fields: &Parameters<P>) -> TokenStre
 /// Returns `(sol_tuple, rust_tuple)`
 fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
     types: I,
+    cx: &ExpCtxt<'_>,
 ) -> (TokenStream, TokenStream) {
     let mut sol = TokenStream::new();
     let mut rust = TokenStream::new();
     let comma = Punct::new(',', Spacing::Alone);
     for ty in types {
-        ty::rec_expand_type(ty, &mut sol);
+        ty::rec_expand_type(ty, &cx.crates, &mut sol);
         sol.append(comma.clone());
 
-        ty::rec_expand_rust_type(ty, &mut rust);
+        ty::rec_expand_rust_type(ty, &cx.crates, &mut rust);
         rust.append(comma.clone());
     }
     let wrap_in_parens =
@@ -606,29 +646,34 @@ fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
 }
 
 /// Expand the body of a `tokenize` function.
-fn expand_tokenize<P>(params: &Parameters<P>) -> TokenStream {
-    tokenize_(params.iter().enumerate().map(|(i, p)| (i, &p.ty, p.name.as_ref())))
+fn expand_tokenize<P>(params: &Parameters<P>, cx: &ExpCtxt<'_>) -> TokenStream {
+    tokenize_(params.iter().enumerate().map(|(i, p)| (i, &p.ty, p.name.as_ref())), cx)
 }
 
 /// Expand the body of a `tokenize` function.
-fn expand_event_tokenize<'a>(params: impl IntoIterator<Item = &'a EventParameter>) -> TokenStream {
+fn expand_event_tokenize<'a>(
+    params: impl IntoIterator<Item = &'a EventParameter>,
+    cx: &ExpCtxt<'_>,
+) -> TokenStream {
     tokenize_(
         params
             .into_iter()
             .enumerate()
             .filter(|(_, p)| !p.is_indexed())
             .map(|(i, p)| (i, &p.ty, p.name.as_ref())),
+        cx,
     )
 }
 
 fn tokenize_<'a>(
     iter: impl Iterator<Item = (usize, &'a Type, Option<&'a SolIdent>)>,
+    cx: &'a ExpCtxt<'_>,
 ) -> TokenStream {
     let statements = iter.into_iter().map(|(i, ty, name)| {
-        let ty = expand_type(ty);
+        let ty = expand_type(ty, &cx.crates);
         let name = name.cloned().unwrap_or_else(|| generate_name(i).into());
         quote! {
-            <#ty as ::alloy_sol_types::SolType>::tokenize(&self.#name)
+            <#ty as alloy_sol_types::SolType>::tokenize(&self.#name)
         }
     });
     quote! {
@@ -642,7 +687,7 @@ fn emit_json_error() {
     if !EMITTED.swap(true, Ordering::Relaxed) {
         emit_error!(
             Span::call_site(),
-            "the `#[sol(dyn_abi)]` attribute requires the `\"json\"` feature"
+            "the `#[sol(abi)]` attribute requires the `\"json\"` feature"
         );
     }
 }

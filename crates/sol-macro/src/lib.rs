@@ -122,6 +122,11 @@ mod json;
 ///     - `pub fn errors() -> BTreeMap<String, Vec<Error>>`
 ///   - items: generates implementations of the `SolAbiExt` trait, alongside the existing
 ///     [`alloy-sol-types`] traits
+/// - `alloy_sol_types = <path = ::alloy_sol_types>` (inner attribute only): specifies the path to
+///   the required dependency [`alloy-sol-types`].
+/// - `alloy_contract = <path = ::alloy_contract>` (inner attribute only): specifies the path to the
+///   optional dependency [`alloy-contract`]. This is only used in combination with the `rpc`
+///   attribute.
 /// - `all_derives [ = <bool = false>]`: adds all possible `#[derive(...)]` attributes to all
 ///   generated types. May significantly increase compile times due to all the extra generated code.
 ///   This is the default behavior of [`abigen`]
@@ -130,12 +135,12 @@ mod json;
 ///   compile times due to all the extra generated code. This is the default behavior of [`abigen`]
 /// - `docs [ = <bool = true>]`: adds doc comments to all generated types. This is the default
 ///   behavior of [`abigen`]
-/// - `bytecode = <hex string literal>`: specifies the creation/init bytecode of a contract. This
-///   will emit a `static` item with the specified bytes.
-/// - `deployed_bytecode = <hex string literal>`: specifies the deployed bytecode of a contract.
-///   This will emit a `static` item with the specified bytes.
-/// - `type_check = <string literal>`: specifies a function to be used to check an User Defined
-///   Type.
+/// - `bytecode = <hex string literal>` (contract-like only): specifies the creation/init bytecode
+///   of a contract. This will emit a `static` item with the specified bytes.
+/// - `deployed_bytecode = <hex string literal>` (contract-like only): specifies the deployed
+///   bytecode of a contract. This will emit a `static` item with the specified bytes.
+/// - `type_check = <string literal>` (UDVT only): specifies a function to be used to check an User
+///   Defined Type.
 ///
 /// ### Structs and enums
 ///
