@@ -40,9 +40,9 @@ pub use sol_types::sol;
 #[doc(inline)]
 pub use alloy_rlp as rlp;
 
-/// [`sol!`](alloy_sol_types::sol!) macro wrapper to route imports to the correct crate.
+/// [`sol!`](sol_types::sol!) macro wrapper to route imports to the correct crate.
 ///
-/// See [`sol!`](alloy_sol_types::sol!) for the actual macro documentation.
+/// See [`sol!`](sol_types::sol!) for the actual macro documentation.
 #[cfg(all(not(doc), feature = "sol-types"))]
 #[doc(hidden)]
 #[macro_export]
