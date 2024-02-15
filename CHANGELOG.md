@@ -5,11 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3](https://github.com/alloy-rs/core/releases/tag/v0.6.3) - 2024-02-15
+
+### Bug Fixes
+
+- [json-abi] Accept nameless `Param`s ([#526](https://github.com/alloy-rs/core/issues/526))
+- [dyn-abi] Abi-encode-packed always pads arrays ([#519](https://github.com/alloy-rs/core/issues/519))
+- Properly test ABI packed encoding ([#517](https://github.com/alloy-rs/core/issues/517))
+- Signature bincode serialization ([#509](https://github.com/alloy-rs/core/issues/509))
+- Don't validate when decoding revert reason ([#511](https://github.com/alloy-rs/core/issues/511))
+
+### Dependencies
+
+- [deps] Update some dependencies ([#522](https://github.com/alloy-rs/core/issues/522))
+- [deps] Bump winnow ([#518](https://github.com/alloy-rs/core/issues/518))
+- Recursion mitigations ([#495](https://github.com/alloy-rs/core/issues/495))
+
+### Documentation
+
+- Update alloy_core::sol reference to real sol ([#529](https://github.com/alloy-rs/core/issues/529))
+- Mention `alloy-core` meta crate in README.md overview ([#523](https://github.com/alloy-rs/core/issues/523))
+
+### Features
+
+- [primitives] Add some more implementations to Bytes ([#528](https://github.com/alloy-rs/core/issues/528))
+- [sol-macro] Provide a way to override import paths for dependencies ([#527](https://github.com/alloy-rs/core/issues/527))
+- Add `alloy-core` prelude crate ([#521](https://github.com/alloy-rs/core/issues/521))
+- [sol-types] Constify type name formatting ([#520](https://github.com/alloy-rs/core/issues/520))
+- [sol-macro] Add `#[sol(rpc)]` to generate type-safe provider contract calls ([#510](https://github.com/alloy-rs/core/issues/510))
+- [sol-macro] Expand state variable getters in contracts ([#514](https://github.com/alloy-rs/core/issues/514))
+- Make some allocations fallible in ABI decoding ([#513](https://github.com/alloy-rs/core/issues/513))
+
+### Miscellaneous Tasks
+
+- Fix winnow deprecation warnings ([#507](https://github.com/alloy-rs/core/issues/507))
+- [sol-macro] Tweak inline attributes in generated code ([#505](https://github.com/alloy-rs/core/issues/505))
+
+### Other
+
+- Update actions/checkout to v4 ([#512](https://github.com/alloy-rs/core/issues/512))
+
+### Performance
+
+- [sol-macro] Use a lookup table when generating `SolInterface::abi_decode_raw` ([#508](https://github.com/alloy-rs/core/issues/508))
+- [sol-macro] Use `binary_search` in `SolInterface::valid_selector` ([#506](https://github.com/alloy-rs/core/issues/506))
+
+### Testing
+
+- Bless tests ([#524](https://github.com/alloy-rs/core/issues/524))
+- Remove unused test ([#504](https://github.com/alloy-rs/core/issues/504))
+
 ## [0.6.2](https://github.com/alloy-rs/core/releases/tag/v0.6.2) - 2024-01-25
 
 ### Bug Fixes
 
 - [`signature`] Construct Signature bytes using v+27 when we do not have an EIP155 `v` ([#503](https://github.com/alloy-rs/core/issues/503))
+
+### Miscellaneous Tasks
+
+- Release 0.6.2
 
 ## [0.6.1](https://github.com/alloy-rs/core/releases/tag/v0.6.1) - 2024-01-25
 
