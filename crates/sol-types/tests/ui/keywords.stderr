@@ -1665,11 +1665,6 @@ error[E0573]: expected type, found module `crate`
   |                    |
   |                    you might have meant to refer to this struct
   |                    not a type
-  |
-help: consider importing this struct instead
-  |
-1 + use crate::crate;
-  |
 
 error[E0573]: expected type, found module `self`
   --> tests/ui/keywords.rs:5:9
@@ -1820,3 +1815,357 @@ error[E0117]: only traits defined in the current crate can be implemented for ar
    |
    = note: define and implement a trait or new type instead
    = note: this error originates in the macro `sol` which comes from the expansion of the macro `kws` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0609]: no field `crate` on type `crateCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `crate` on type `&crateCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `self` on type `selfCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `self` on type `&selfCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `Self` on type `(alloy_sol_types::private::Uint<256, 4>,)`
+ --> tests/ui/keywords.rs:7:22
+  |
+7 |                 uint $kw;
+  |                      ^^^ unknown field
+
+error[E0609]: no field `Self` on type `SelfCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `Self` on type `&SelfCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `super` on type `superCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `super` on type `&superCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#as` on type `asCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#as` on type `&asCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#break` on type `breakCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#break` on type `&breakCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#continue` on type `continueCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#continue` on type `&continueCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#else` on type `elseCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#else` on type `&elseCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#enum` on type `enumCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#enum` on type `&enumCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#false` on type `falseCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#false` on type `&falseCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#for` on type `forCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#for` on type `&forCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#if` on type `ifCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#if` on type `&ifCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#in` on type `inCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#in` on type `&inCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#let` on type `letCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#let` on type `&letCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#match` on type `matchCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#match` on type `&matchCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#return` on type `returnCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#return` on type `&returnCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#static` on type `staticCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#static` on type `&staticCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#struct` on type `structCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#struct` on type `&structCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#true` on type `trueCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#true` on type `&trueCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#type` on type `typeCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#type` on type `&typeCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#while` on type `whileCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#while` on type `&whileCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#abstract` on type `abstractCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#abstract` on type `&abstractCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#do` on type `doCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#do` on type `&doCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#final` on type `finalCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#final` on type `&finalCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#macro` on type `macroCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#macro` on type `&macroCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#override` on type `overrideCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#override` on type `&overrideCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#typeof` on type `typeofCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#typeof` on type `&typeofCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#virtual` on type `virtualCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#virtual` on type `&virtualCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#try` on type `tryCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
+
+error[E0609]: no field `r#try` on type `&tryCall`
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^ unknown field
