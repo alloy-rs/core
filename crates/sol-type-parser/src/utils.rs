@@ -92,7 +92,7 @@ where
         name,
         delimited(
             (char_parser(open), space0),
-            cut_err(separated(0.., f, (char_parser(delim), space0))),
+            separated(0.., f, (char_parser(delim), space0)),
             (opt(delim), space0, cut_err(char_parser(close))),
         ),
     )

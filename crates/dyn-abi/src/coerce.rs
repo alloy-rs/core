@@ -864,6 +864,14 @@ mod tests {
         assert_error_contains(&e, "Invalid string length");
         let e = t.coerce_str("[0x0]").unwrap_err();
         assert_error_contains(&e, "Odd number of digits");
+
+        let t = DynSolType::Array(Box::new(DynSolType::Tuple(vec![DynSolType::FixedBytes(1)])));
+        let e = t.coerce_str("[(0)]").unwrap_err();
+        assert_error_contains(&e, "Odd number of digits");
+        let e = t.coerce_str("[(0x)]").unwrap_err();
+        assert_error_contains(&e, "Invalid string length");
+        let e = t.coerce_str("[(0x0)]").unwrap_err();
+        assert_error_contains(&e, "Odd number of digits");
     }
 
     #[test]
@@ -926,6 +934,27 @@ mod tests {
             DynSolType::Bytes.coerce_str("0x0017").unwrap(),
             DynSolValue::Bytes(vec![0x00, 0x17])
         );
+
+        let t = DynSolType::Tuple(vec![DynSolType::Bytes, DynSolType::Bytes]);
+        let e = t.coerce_str("(0, 0x0)").unwrap_err();
+        assert_error_contains(&e, "Odd number of digits");
+
+        // TODO: cut_err in `array_parser` somehow
+        /*
+        let t = DynSolType::Array(Box::new(DynSolType::Tuple(vec![
+            DynSolType::Bytes,
+            DynSolType::Bytes,
+        ])));
+        let e = t.coerce_str("[(0, 0x0)]").unwrap_err();
+        assert_error_contains(&e, "Odd number of digits");
+
+        let t = DynSolType::Array(Box::new(DynSolType::Tuple(vec![
+            DynSolType::Bytes,
+            DynSolType::Bytes,
+        ])));
+        let e = t.coerce_str("[(0x00, 0x0)]").unwrap_err();
+        assert_error_contains(&e, "Odd number of digits");
+        */
     }
 
     #[test]
