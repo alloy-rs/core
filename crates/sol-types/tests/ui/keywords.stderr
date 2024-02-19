@@ -1,16 +1,17 @@
 error: expected identifier, found keyword `crate`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
+  --> tests/ui/keywords.rs:43:5
+   |
+43 |     crate
+   |     ^^^^^ expected identifier, found keyword
 
 error: expected identifier, found keyword `crate`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+43 |     crate
+   |     ----- while parsing this struct
 
 error: expected identifier, found keyword `crate`
  --> tests/ui/keywords.rs:7:22
@@ -33,18 +34,19 @@ error: expected identifier, found keyword `crate`
    |                               ^^^ expected identifier, found keyword
 
 error: expected identifier, found keyword `self`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
+  --> tests/ui/keywords.rs:44:5
+   |
+44 |     self
+   |     ^^^^ expected identifier, found keyword
 
 error: expected identifier, found keyword `self`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+44 |     self
+   |     ---- while parsing this struct
 
 error: expected identifier, found keyword `self`
  --> tests/ui/keywords.rs:7:22
@@ -67,18 +69,19 @@ error: expected identifier, found keyword `self`
    |                               ^^^ expected identifier, found keyword
 
 error: expected identifier, found keyword `Self`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
+  --> tests/ui/keywords.rs:45:5
+   |
+45 |     Self
+   |     ^^^^ expected identifier, found keyword
 
 error: expected identifier, found keyword `Self`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+45 |     Self
+   |     ---- while parsing this struct
 
 error: expected identifier, found keyword `Self`
  --> tests/ui/keywords.rs:7:22
@@ -101,18 +104,19 @@ error: expected identifier, found keyword `Self`
    |                               ^^^ expected identifier, found keyword
 
 error: expected identifier, found keyword `super`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
+  --> tests/ui/keywords.rs:46:5
+   |
+46 |     super
+   |     ^^^^^ expected identifier, found keyword
 
 error: expected identifier, found keyword `super`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+46 |     super
+   |     ----- while parsing this struct
 
 error: expected identifier, found keyword `super`
  --> tests/ui/keywords.rs:7:22
@@ -135,34 +139,35 @@ error: expected identifier, found keyword `super`
    |                               ^^^ expected identifier, found keyword
 
 error: expected identifier, found keyword `as`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:51:5
+   |
+51 |     as
+   |     ^^ expected identifier, found keyword
+   |
 help: escape `as` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+51 |     r#as
+   |     ++
 
 error: expected identifier, found keyword `as`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+51 |     as
+   |     -- while parsing this struct
+   |
 help: escape `as` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `as`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:51:5
+   |
+51 |     as
+   |     ^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `as`
   --> tests/ui/keywords.rs:10:31
@@ -189,45 +194,46 @@ help: escape `as` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `break`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:52:5
+   |
+52 |     break
+   |     ^^^^^ expected identifier, found keyword
+   |
 help: escape `break` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+52 |     r#break
+   |     ++
 
 error: expected identifier, found keyword `break`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+52 |     break
+   |     ----- while parsing this struct
+   |
 help: escape `break` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: invalid const generic expression
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^
-  |
+  --> tests/ui/keywords.rs:52:5
+   |
+52 |     break
+   |     ^^^^^
+   |
 help: expressions must be enclosed in braces to be used as const generic arguments
-  |
-6 |             struct { $kw } {
-  |                    +     +
+   |
+52 |     { break }
+   |     +       +
 
 error: expected type, found keyword `break`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected type
+  --> tests/ui/keywords.rs:52:5
+   |
+52 |     break
+   |     ^^^^^ expected type
 
 error: expected identifier, found keyword `break`
  --> tests/ui/keywords.rs:7:22
@@ -265,34 +271,46 @@ help: escape `break` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `continue`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:53:5
+   |
+53 |     continue
+   |     ^^^^^^^^ expected identifier, found keyword
+   |
 help: escape `continue` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+53 |     r#continue
+   |     ++
 
 error: expected identifier, found keyword `continue`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+53 |     continue
+   |     -------- while parsing this struct
+   |
 help: escape `continue` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
+
+error: invalid const generic expression
+  --> tests/ui/keywords.rs:53:5
+   |
+53 |     continue
+   |     ^^^^^^^^
+   |
+help: expressions must be enclosed in braces to be used as const generic arguments
+   |
+53 |     { continue }
+   |     +          +
 
 error: expected type, found keyword `continue`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected type
+  --> tests/ui/keywords.rs:53:5
+   |
+53 |     continue
+   |     ^^^^^^^^ expected type
 
 error: expected identifier, found keyword `continue`
  --> tests/ui/keywords.rs:7:22
@@ -330,34 +348,35 @@ help: escape `continue` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `else`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:54:5
+   |
+54 |     else
+   |     ^^^^ expected identifier, found keyword
+   |
 help: escape `else` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+54 |     r#else
+   |     ++
 
 error: expected identifier, found keyword `else`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+54 |     else
+   |     ---- while parsing this struct
+   |
 help: escape `else` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `else`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:54:5
+   |
+54 |     else
+   |     ^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `else`
   --> tests/ui/keywords.rs:10:31
@@ -384,34 +403,35 @@ help: escape `else` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `enum`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:55:5
+   |
+55 |     enum
+   |     ^^^^ expected identifier, found keyword
+   |
 help: escape `enum` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+55 |     r#enum
+   |     ++
 
 error: expected identifier, found keyword `enum`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+55 |     enum
+   |     ---- while parsing this struct
+   |
 help: escape `enum` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `enum`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:55:5
+   |
+55 |     enum
+   |     ^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `enum`
   --> tests/ui/keywords.rs:10:31
@@ -438,34 +458,35 @@ help: escape `enum` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `false`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:56:5
+   |
+56 |     false
+   |     ^^^^^ expected identifier, found keyword
+   |
 help: escape `false` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+56 |     r#false
+   |     ++
 
 error: expected identifier, found keyword `false`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+56 |     false
+   |     ----- while parsing this struct
+   |
 help: escape `false` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected type, found keyword `false`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected type
+  --> tests/ui/keywords.rs:56:5
+   |
+56 |     false
+   |     ^^^^^ expected type
 
 error: expected identifier, found keyword `false`
  --> tests/ui/keywords.rs:7:22
@@ -503,28 +524,29 @@ help: escape `false` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `for`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:57:5
+   |
+57 |     for
+   |     ^^^ expected identifier, found keyword
+   |
 help: escape `for` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+57 |     r#for
+   |     ++
 
 error: expected identifier, found keyword `for`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+57 |     for
+   |     --- while parsing this struct
+   |
 help: escape `for` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected `<`, found `>`
   --> tests/ui/keywords.rs:5:9
@@ -574,34 +596,35 @@ help: escape `for` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `if`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:58:5
+   |
+58 |     if
+   |     ^^ expected identifier, found keyword
+   |
 help: escape `if` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+58 |     r#if
+   |     ++
 
 error: expected identifier, found keyword `if`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+58 |     if
+   |     -- while parsing this struct
+   |
 help: escape `if` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `if`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:58:5
+   |
+58 |     if
+   |     ^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `if`
   --> tests/ui/keywords.rs:10:31
@@ -628,34 +651,35 @@ help: escape `if` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `in`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:59:5
+   |
+59 |     in
+   |     ^^ expected identifier, found keyword
+   |
 help: escape `in` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+59 |     r#in
+   |     ++
 
 error: expected identifier, found keyword `in`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+59 |     in
+   |     -- while parsing this struct
+   |
 help: escape `in` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `in`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:59:5
+   |
+59 |     in
+   |     ^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `in`
   --> tests/ui/keywords.rs:10:31
@@ -682,42 +706,43 @@ help: escape `in` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `let`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:60:5
+   |
+60 |     let
+   |     ^^^ expected identifier, found keyword
+   |
 help: escape `let` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+60 |     r#let
+   |     ++
 
 error: expected identifier, found keyword `let`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+60 |     let
+   |     --- while parsing this struct
+   |
 help: escape `let` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected expression, found `let` statement
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^
-  |
-  = note: only supported directly in conditions of `if` and `while` expressions
+  --> tests/ui/keywords.rs:60:5
+   |
+60 |     let
+   |     ^^^
+   |
+   = note: only supported directly in conditions of `if` and `while` expressions
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `let`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:60:5
+   |
+60 |     let
+   |     ^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `let`
   --> tests/ui/keywords.rs:10:31
@@ -744,34 +769,35 @@ help: escape `let` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `match`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:61:5
+   |
+61 |     match
+   |     ^^^^^ expected identifier, found keyword
+   |
 help: escape `match` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+61 |     r#match
+   |     ++
 
 error: expected identifier, found keyword `match`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+61 |     match
+   |     ----- while parsing this struct
+   |
 help: escape `match` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `match`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:61:5
+   |
+61 |     match
+   |     ^^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `match`
   --> tests/ui/keywords.rs:10:31
@@ -798,34 +824,46 @@ help: escape `match` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `return`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:62:5
+   |
+62 |     return
+   |     ^^^^^^ expected identifier, found keyword
+   |
 help: escape `return` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+62 |     r#return
+   |     ++
 
 error: expected identifier, found keyword `return`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+62 |     return
+   |     ------ while parsing this struct
+   |
 help: escape `return` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
+
+error: invalid const generic expression
+  --> tests/ui/keywords.rs:62:5
+   |
+62 |     return
+   |     ^^^^^^
+   |
+help: expressions must be enclosed in braces to be used as const generic arguments
+   |
+62 |     { return }
+   |     +        +
 
 error: expected type, found keyword `return`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected type
+  --> tests/ui/keywords.rs:62:5
+   |
+62 |     return
+   |     ^^^^^^ expected type
 
 error: expected identifier, found keyword `return`
  --> tests/ui/keywords.rs:7:22
@@ -863,34 +901,35 @@ help: escape `return` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `static`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:63:5
+   |
+63 |     static
+   |     ^^^^^^ expected identifier, found keyword
+   |
 help: escape `static` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+63 |     r#static
+   |     ++
 
 error: expected identifier, found keyword `static`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+63 |     static
+   |     ------ while parsing this struct
+   |
 help: escape `static` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `static`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:63:5
+   |
+63 |     static
+   |     ^^^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `static`
   --> tests/ui/keywords.rs:10:31
@@ -917,34 +956,35 @@ help: escape `static` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `struct`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:64:5
+   |
+64 |     struct
+   |     ^^^^^^ expected identifier, found keyword
+   |
 help: escape `struct` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+64 |     r#struct
+   |     ++
 
 error: expected identifier, found keyword `struct`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+64 |     struct
+   |     ------ while parsing this struct
+   |
 help: escape `struct` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `struct`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:64:5
+   |
+64 |     struct
+   |     ^^^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `struct`
   --> tests/ui/keywords.rs:10:31
@@ -971,34 +1011,35 @@ help: escape `struct` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `true`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:65:5
+   |
+65 |     true
+   |     ^^^^ expected identifier, found keyword
+   |
 help: escape `true` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+65 |     r#true
+   |     ++
 
 error: expected identifier, found keyword `true`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+65 |     true
+   |     ---- while parsing this struct
+   |
 help: escape `true` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected type, found keyword `true`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected type
+  --> tests/ui/keywords.rs:65:5
+   |
+65 |     true
+   |     ^^^^ expected type
 
 error: expected identifier, found keyword `true`
  --> tests/ui/keywords.rs:7:22
@@ -1036,34 +1077,35 @@ help: escape `true` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `type`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:66:5
+   |
+66 |     type
+   |     ^^^^ expected identifier, found keyword
+   |
 help: escape `type` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+66 |     r#type
+   |     ++
 
 error: expected identifier, found keyword `type`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+66 |     type
+   |     ---- while parsing this struct
+   |
 help: escape `type` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `type`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:66:5
+   |
+66 |     type
+   |     ^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `type`
   --> tests/ui/keywords.rs:10:31
@@ -1090,34 +1132,35 @@ help: escape `type` to use it as an identifier
    |                               ++
 
 error: expected identifier, found keyword `while`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:67:5
+   |
+67 |     while
+   |     ^^^^^ expected identifier, found keyword
+   |
 help: escape `while` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+67 |     r#while
+   |     ++
 
 error: expected identifier, found keyword `while`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found keyword
+...
+67 |     while
+   |     ----- while parsing this struct
+   |
 help: escape `while` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found keyword `while`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:67:5
+   |
+67 |     while
+   |     ^^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found keyword `while`
   --> tests/ui/keywords.rs:10:31
@@ -1144,34 +1187,35 @@ help: escape `while` to use it as an identifier
    |                               ++
 
 error: expected identifier, found reserved keyword `abstract`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:68:5
+   |
+68 |     abstract
+   |     ^^^^^^^^ expected identifier, found reserved keyword
+   |
 help: escape `abstract` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+68 |     r#abstract
+   |     ++
 
 error: expected identifier, found reserved keyword `abstract`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found reserved keyword
+...
+68 |     abstract
+   |     -------- while parsing this struct
+   |
 help: escape `abstract` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found reserved keyword `abstract`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:68:5
+   |
+68 |     abstract
+   |     ^^^^^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found reserved keyword `abstract`
   --> tests/ui/keywords.rs:10:31
@@ -1198,34 +1242,35 @@ help: escape `abstract` to use it as an identifier
    |                               ++
 
 error: expected identifier, found reserved keyword `do`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:69:5
+   |
+69 |     do
+   |     ^^ expected identifier, found reserved keyword
+   |
 help: escape `do` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+69 |     r#do
+   |     ++
 
 error: expected identifier, found reserved keyword `do`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found reserved keyword
+...
+69 |     do
+   |     -- while parsing this struct
+   |
 help: escape `do` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found reserved keyword `do`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:69:5
+   |
+69 |     do
+   |     ^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found reserved keyword `do`
   --> tests/ui/keywords.rs:10:31
@@ -1252,34 +1297,35 @@ help: escape `do` to use it as an identifier
    |                               ++
 
 error: expected identifier, found reserved keyword `final`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:70:5
+   |
+70 |     final
+   |     ^^^^^ expected identifier, found reserved keyword
+   |
 help: escape `final` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+70 |     r#final
+   |     ++
 
 error: expected identifier, found reserved keyword `final`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found reserved keyword
+...
+70 |     final
+   |     ----- while parsing this struct
+   |
 help: escape `final` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found reserved keyword `final`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:70:5
+   |
+70 |     final
+   |     ^^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found reserved keyword `final`
   --> tests/ui/keywords.rs:10:31
@@ -1306,34 +1352,35 @@ help: escape `final` to use it as an identifier
    |                               ++
 
 error: expected identifier, found reserved keyword `macro`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:71:5
+   |
+71 |     macro
+   |     ^^^^^ expected identifier, found reserved keyword
+   |
 help: escape `macro` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+71 |     r#macro
+   |     ++
 
 error: expected identifier, found reserved keyword `macro`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found reserved keyword
+...
+71 |     macro
+   |     ----- while parsing this struct
+   |
 help: escape `macro` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found reserved keyword `macro`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:71:5
+   |
+71 |     macro
+   |     ^^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found reserved keyword `macro`
   --> tests/ui/keywords.rs:10:31
@@ -1360,34 +1407,35 @@ help: escape `macro` to use it as an identifier
    |                               ++
 
 error: expected identifier, found reserved keyword `override`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:72:5
+   |
+72 |     override
+   |     ^^^^^^^^ expected identifier, found reserved keyword
+   |
 help: escape `override` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+72 |     r#override
+   |     ++
 
 error: expected identifier, found reserved keyword `override`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found reserved keyword
+...
+72 |     override
+   |     -------- while parsing this struct
+   |
 help: escape `override` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found reserved keyword `override`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:72:5
+   |
+72 |     override
+   |     ^^^^^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found reserved keyword `override`
   --> tests/ui/keywords.rs:10:31
@@ -1414,35 +1462,35 @@ help: escape `override` to use it as an identifier
    |                               ++
 
 error: expected identifier, found reserved keyword `typeof`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:73:5
+   |
+73 |     typeof
+   |     ^^^^^^ expected identifier, found reserved keyword
+   |
 help: escape `typeof` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+73 |     r#typeof
+   |     ++
 
 error: expected identifier, found reserved keyword `typeof`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found reserved keyword
+...
+73 |     typeof
+   |     ------ while parsing this struct
+   |
 help: escape `typeof` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected `(`, found `>`
   --> tests/ui/keywords.rs:5:9
    |
 5  | /         sol! {
 6  | |             struct $kw {
-   | |                       - expected `(`
 7  | |                 uint $kw;
 8  | |             }
 9  | |
@@ -1455,6 +1503,9 @@ error: expected `(`, found `>`
 52 | |     break
 53 | |     continue
 ...  |
+73 | |     typeof
+   | |           - expected `(`
+74 | |     virtual
 75 | |     try
 76 | | }
    | |_- in this macro invocation
@@ -1486,34 +1537,35 @@ help: escape `typeof` to use it as an identifier
    |                               ++
 
 error: expected identifier, found reserved keyword `virtual`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:74:5
+   |
+74 |     virtual
+   |     ^^^^^^^ expected identifier, found reserved keyword
+   |
 help: escape `virtual` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+74 |     r#virtual
+   |     ++
 
 error: expected identifier, found reserved keyword `virtual`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found reserved keyword
+...
+74 |     virtual
+   |     ------- while parsing this struct
+   |
 help: escape `virtual` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found reserved keyword `virtual`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:74:5
+   |
+74 |     virtual
+   |     ^^^^^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found reserved keyword `virtual`
   --> tests/ui/keywords.rs:10:31
@@ -1540,34 +1592,35 @@ help: escape `virtual` to use it as an identifier
    |                               ++
 
 error: expected identifier, found reserved keyword `try`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:75:5
+   |
+75 |     try
+   |     ^^^ expected identifier, found reserved keyword
+   |
 help: escape `try` to use it as an identifier
-  |
-6 |             struct r#$kw {
-  |                    ++
+   |
+75 |     r#try
+   |     ++
 
 error: expected identifier, found reserved keyword `try`
- --> tests/ui/keywords.rs:7:22
-  |
-6 |             struct $kw {
-  |                    --- while parsing this struct
-7 |                 uint $kw;
-  |                      ^^^ expected identifier, found reserved keyword
-  |
+  --> tests/ui/keywords.rs:7:22
+   |
+7  |                 uint $kw;
+   |                      ^^^ expected identifier, found reserved keyword
+...
+75 |     try
+   |     --- while parsing this struct
+   |
 help: escape `try` to use it as an identifier
-  |
-7 |                 uint r#$kw;
-  |                      ++
+   |
+7  |                 uint r#$kw;
+   |                      ++
 
 error: expected one of `>`, a const expression, lifetime, or type, found reserved keyword `try`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ expected one of `>`, a const expression, lifetime, or type
+  --> tests/ui/keywords.rs:75:5
+   |
+75 |     try
+   |     ^^^ expected one of `>`, a const expression, lifetime, or type
 
 error: expected identifier, found reserved keyword `try`
   --> tests/ui/keywords.rs:10:31
@@ -1606,17 +1659,16 @@ error[E0433]: failed to resolve: there are too many leading `super` keywords
    | |_________^ there are too many leading `super` keywords
 
 error[E0433]: failed to resolve: there are too many leading `super` keywords
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^ there are too many leading `super` keywords
+  --> tests/ui/keywords.rs:46:5
+   |
+46 |     super
+   |     ^^^^^ there are too many leading `super` keywords
 
 error[E0573]: expected type, found module `crate`
   --> tests/ui/keywords.rs:5:9
    |
 5  | /         sol! {
 6  | |             struct $kw {
-   | |                    --- you might have meant to refer to this struct
 7  | |                 uint $kw;
 8  | |             }
 9  | |
@@ -1626,6 +1678,7 @@ error[E0573]: expected type, found module `crate`
 ...
 42 | / kws! {
 43 | |     crate
+   | |     ----- you might have meant to refer to this struct
 44 | |     self
 45 | |     Self
 46 | |     super
@@ -1639,7 +1692,6 @@ error[E0574]: expected struct, variant or union type, found module `crate`
    |
 5  | /         sol! {
 6  | |             struct $kw {
-   | |                    --- you might have meant to refer to this struct
 7  | |                 uint $kw;
 8  | |             }
 9  | |
@@ -1649,6 +1701,7 @@ error[E0574]: expected struct, variant or union type, found module `crate`
 ...
 42 | / kws! {
 43 | |     crate
+   | |     ----- you might have meant to refer to this struct
 44 | |     self
 45 | |     Self
 46 | |     super
@@ -1658,13 +1711,13 @@ error[E0574]: expected struct, variant or union type, found module `crate`
    = note: this error originates in the derive macro `Clone` which comes from the expansion of the macro `kws` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0573]: expected type, found module `crate`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^
-  |                    |
-  |                    you might have meant to refer to this struct
-  |                    not a type
+  --> tests/ui/keywords.rs:43:5
+   |
+43 |     crate
+   |     ^^^^^
+   |     |
+   |     you might have meant to refer to this struct
+   |     not a type
 
 error[E0573]: expected type, found module `self`
   --> tests/ui/keywords.rs:5:9
@@ -1715,19 +1768,19 @@ error[E0574]: expected struct, variant or union type, found module `self`
    = note: this error originates in the derive macro `Clone` which comes from the expansion of the macro `kws` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0573]: expected type, found module `self`
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^
-  |
-help: a self type with a similar name exists
-  |
-6 |             struct Self {
-  |                    ~~~~
+  --> tests/ui/keywords.rs:44:5
+   |
+44 |     self
+   |     ^^^^
+   |
+help: a self type with a similar name exists (notice the capitalization difference)
+   |
+44 |     Self
+   |
 help: consider importing this struct instead
-  |
-1 + use crate::self;
-  |
+   |
+1  + use crate::self;
+   |
 
 error[E0425]: cannot find value `value` in this scope
   --> tests/ui/keywords.rs:5:9
@@ -1776,18 +1829,42 @@ error: `Self` is not valid in the self type of an impl block
    = note: this error originates in the derive macro `Clone` which comes from the expansion of the macro `kws` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: `Self` is not valid in the self type of an impl block
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^
-  |
-  = note: replace `Self` with a different type
+  --> tests/ui/keywords.rs:45:5
+   |
+45 |     Self
+   |     ^^^^
+   |
+   = note: replace `Self` with a different type
 
 error[E0747]: constant provided when a type was expected
- --> tests/ui/keywords.rs:6:20
-  |
-6 |             struct $kw {
-  |                    ^^^
+  --> tests/ui/keywords.rs:52:5
+   |
+52 |     break
+   |     ^^^^^
+
+error[E0747]: constant provided when a type was expected
+  --> tests/ui/keywords.rs:53:5
+   |
+53 |     continue
+   |     ^^^^^^^^
+
+error[E0747]: constant provided when a type was expected
+  --> tests/ui/keywords.rs:56:5
+   |
+56 |     false
+   |     ^^^^^
+
+error[E0747]: constant provided when a type was expected
+  --> tests/ui/keywords.rs:62:5
+   |
+62 |     return
+   |     ^^^^^^
+
+error[E0747]: constant provided when a type was expected
+  --> tests/ui/keywords.rs:65:5
+   |
+65 |     true
+   |     ^^^^
 
 error[E0117]: only traits defined in the current crate can be implemented for arbitrary types
   --> tests/ui/keywords.rs:5:9
