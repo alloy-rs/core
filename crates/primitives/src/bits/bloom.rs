@@ -2,7 +2,7 @@
 //!
 //! Adapted from <https://github.com/paritytech/parity-common/blob/2fb72eea96b6de4a085144ce239feb49da0cd39e/ethbloom/src/lib.rs>
 
-use crate::{keccak256, wrap_fixed_bytes, Address, Log, LogData, B256};
+use crate::{keccak256, Address, Log, LogData, B256};
 
 /// Number of bits to set per input in Ethereum bloom filter.
 pub const BLOOM_BITS_PER_ITEM: usize = 3;
