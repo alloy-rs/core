@@ -405,7 +405,6 @@ impl FunctionBody {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
-    use proc_macro2::Span;
     use std::{
         error::Error,
         io::Write,

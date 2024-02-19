@@ -31,14 +31,14 @@ This repository contains the following crates:
 - [`alloy-sol-type-parser`] - A simple parser for Solidity type strings
 - [`syn-solidity`] - [`syn`]-powered Solidity parser
 
-[`alloy-core`]: ./crates/core
-[`alloy-primitives`]: ./crates/primitives
-[`alloy-sol-types`]: ./crates/sol-types
-[`alloy-sol-macro`]: ./crates/sol-macro
-[`alloy-dyn-abi`]: ./crates/dyn-abi
-[`alloy-json-abi`]: ./crates/json-abi
-[`alloy-sol-type-parser`]: ./crates/sol-type-parser
-[`syn-solidity`]: ./crates/syn-solidity
+[`alloy-core`]: /crates/core
+[`alloy-primitives`]: /crates/primitives
+[`alloy-sol-types`]: /crates/sol-types
+[`alloy-sol-macro`]: /crates/sol-macro
+[`alloy-dyn-abi`]: /crates/dyn-abi
+[`alloy-json-abi`]: /crates/json-abi
+[`alloy-sol-type-parser`]: /crates/sol-type-parser
+[`syn-solidity`]: /crates/syn-solidity
 [JSON-ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html#json
 [ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html
 [EIP-712]: https://eips.ethereum.org/EIPS/eip-712

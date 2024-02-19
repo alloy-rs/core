@@ -1,4 +1,4 @@
-use crate::{aliases::U160, utils::keccak256, wrap_fixed_bytes, FixedBytes};
+use crate::{aliases::U160, utils::keccak256, FixedBytes};
 use alloc::{
     borrow::Borrow,
     string::{String, ToString},

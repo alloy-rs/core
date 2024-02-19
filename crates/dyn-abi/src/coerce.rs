@@ -414,6 +414,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
 fn prefixed_int<'i>(input: &mut &'i str) -> PResult<&'i str> {
     trace("prefixed_int", |input: &mut &'i str| {
         let has_prefix = matches!(input.get(..2), Some("0b" | "0B" | "0o" | "0O" | "0x" | "0X"));
+        let checkpoint = input.checkpoint();
         if has_prefix {
             *input = &input[2..];
             // parse hex since it's the most general
@@ -424,6 +425,7 @@ fn prefixed_int<'i>(input: &mut &'i str) -> PResult<&'i str> {
         .map_err(|e| {
             e.add_context(
                 input,
+                &checkpoint,
                 StrContext::Expected(StrContextValue::Description("at least one digit")),
             )
         })
