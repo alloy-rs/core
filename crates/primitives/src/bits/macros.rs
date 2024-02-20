@@ -176,6 +176,7 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_fb_traits!($name, $n);
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
+        $crate::impl_allocative!($name);
         $crate::impl_arbitrary!($name, $n);
         $crate::impl_ssz_fixed_len!($name, $n);
         $crate::impl_rand!($name);
@@ -556,6 +557,27 @@ macro_rules! impl_rlp {
 #[cfg(not(feature = "rlp"))]
 macro_rules! impl_rlp {
     ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "allocative")]
+macro_rules! impl_allocative {
+    ($t:ty) => {
+        impl $crate::private::allocative::Allocative for $t {
+            #[inline]
+            fn visit<'a, 'b: 'a>(&self, visitor: &'a mut $crate::private::allocative::Visitor<'b>) {
+                $crate::private::allocative::Allocative::visit(&self.0, visitor)
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "allocative"))]
+macro_rules! impl_allocative {
+    ($t:ty) => {};
 }
 
 #[doc(hidden)]
