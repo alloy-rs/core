@@ -33,7 +33,7 @@ pub use alloy_json_abi as json_abi;
 #[cfg(feature = "sol-types")]
 #[doc(inline)]
 pub use alloy_sol_types as sol_types;
-#[cfg(all(doc, feature = "sol-types"))]
+#[cfg(all(doc, feature = "sol-types"))] // Show this re-export in docs instead of the wrapper below.
 #[doc(no_inline)]
 pub use sol_types::sol;
 
@@ -44,7 +44,7 @@ pub use alloy_rlp as rlp;
 /// [`sol!`](sol_types::sol!) macro wrapper to route imports to the correct crate.
 ///
 /// See [`sol!`](sol_types::sol!) for the actual macro documentation.
-#[cfg(all(not(doc), feature = "sol-types"))]
+#[cfg(all(not(doc), feature = "sol-types"))] // Show the actual macro in docs.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! sol {
