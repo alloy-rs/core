@@ -72,13 +72,8 @@ pub use {
     ::bytes,
     ::hex,
     hex_literal::{self, hex},
-    ruint::{self, Uint},
+    ruint::{self, uint, Uint},
 };
-
-/// Re-export of [`ruint::uint!`] for convenience. Note that users of this macro
-/// must also add [`ruint`] to their `Cargo.toml` as a dependency.
-#[doc(inline)]
-pub use ruint::uint;
 
 #[cfg(feature = "serde")]
 #[doc(no_inline)]
