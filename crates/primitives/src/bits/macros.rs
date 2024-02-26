@@ -722,7 +722,7 @@ macro_rules! fixed_bytes_macros {
         #[doc = concat!("assert_eq!(ZERO, ", stringify!($ty), "::ZERO);")]
         ///
         /// # stringify!(
-        #[doc = concat!("let byte_array: ", stringify!($ty), " = ", stringify!($name), "!(\"…\");")]
+        #[doc = concat!("let byte_array: ", stringify!($ty), " = ", stringify!($name), "!(\"0123abcd…\");")]
         /// # );
         /// ```
         $(#[$attr])*
@@ -763,6 +763,15 @@ fixed_bytes_macros! { $
 /// Note that the strings cannot be prefixed with `0x`.
 ///
 /// See [`hex!`](crate::hex!) for more information.
+///
+/// # Examples
+///
+/// ```
+/// use alloy_primitives::{bytes, Bytes};
+///
+/// static MY_BYTES: Bytes = bytes!("0123abcd");
+/// assert_eq!(MY_BYTES, Bytes::from(&[0x01, 0x23, 0xab, 0xcd]));
+/// ```
 #[macro_export]
 macro_rules! bytes {
     () => {
