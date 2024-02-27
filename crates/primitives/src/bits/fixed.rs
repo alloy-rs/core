@@ -27,6 +27,7 @@ use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
     IntoIterator,
 )]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
+#[cfg_attr(feature = "allocative", derive(allocative::Allocative))]
 #[repr(transparent)]
 pub struct FixedBytes<const N: usize>(#[into_iterator(owned, ref, ref_mut)] pub [u8; N]);
 

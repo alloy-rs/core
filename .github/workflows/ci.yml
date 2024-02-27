@@ -20,8 +20,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: ["stable", "beta", "nightly", "1.65"] # MSRV
+        rust: ["stable", "beta", "nightly"]
         flags: ["--no-default-features", "", "--all-features"]
+        include:
+          - rust: "1.65" # MSRV
+            flags: "--no-default-features"
+          - rust: "1.65" # MSRV
+            flags: ""
+          - rust: "1.65" # MSRV
+            flags: "--features json"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master

@@ -54,6 +54,9 @@ derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
+# allocative
+allocative = { workspace = true, optional = true }
+
 # postgres
 postgres-types = { workspace = true, optional = true }
 
@@ -97,6 +100,7 @@ arbitrary = [
     "ethereum_ssz?/arbitrary",
 ]
 k256 = ["dep:k256"]
+allocative = ["dep:allocative"]
 
 # `const-hex` compatibility feature for `hex`.
 # Should not be needed most of the time.
