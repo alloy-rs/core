@@ -16,6 +16,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "std", allow(unused_imports))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+// TODO: remove when https://github.com/proptest-rs/proptest/pull/427 is merged
+#![allow(unknown_lints, non_local_definitions)]
 
 #[macro_use]
 extern crate alloc;
