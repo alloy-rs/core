@@ -57,7 +57,7 @@ impl TxKind {
     /// Calculates a heuristic for the in-memory size of this object.
     #[inline]
     pub const fn size(self) -> usize {
-        std::mem::size_of::<Self>()
+        core::mem::size_of::<Self>()
     }
 }
 
@@ -69,6 +69,7 @@ impl Encodable for TxKind {
             TxKind::Create => out.put_u8(EMPTY_STRING_CODE),
         }
     }
+
     fn length(&self) -> usize {
         match self {
             TxKind::Call(to) => to.length(),
