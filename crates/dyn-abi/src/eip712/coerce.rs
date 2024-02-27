@@ -101,7 +101,16 @@ fn string(value: &serde_json::Value) -> Option<String> {
 }
 
 fn bytes(value: &serde_json::Value) -> Option<Vec<u8>> {
-    value.as_str().and_then(|s| hex::decode(s).ok())
+    if let Some(s) = value.as_str() {
+        return hex::decode(s).ok();
+    }
+
+    let arr = value.as_array()?;
+    let mut vec = Vec::with_capacity(arr.len());
+    for elem in arr.into_iter() {
+        vec.push(elem.as_u64()?.try_into().ok()?);
+    }
+    Some(vec)
 }
 
 fn tuple(inner: &[DynSolType], value: &serde_json::Value) -> Option<Result<Vec<DynSolValue>>> {
@@ -177,6 +186,13 @@ mod tests {
     use super::*;
     use alloc::{borrow::ToOwned, string::ToString};
     use serde_json::json;
+
+    #[test]
+    fn test_bytes_num_array() {
+        let ty = DynSolType::Bytes;
+        let j = json!([1, 2, 3, 4]);
+        assert_eq!(ty.coerce_json(&j), Ok(DynSolValue::Bytes(vec![1, 2, 3, 4])));
+    }
 
     #[test]
     fn it_coerces() {
