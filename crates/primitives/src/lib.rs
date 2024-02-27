@@ -44,6 +44,9 @@ pub use bits::{
 mod bytes_;
 pub use self::bytes_::Bytes;
 
+mod common;
+pub use common::TxKind;
+
 mod log;
 pub use log::{Log, LogData};
 
