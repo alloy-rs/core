@@ -101,6 +101,7 @@ impl<'de> Deserialize<'de> for TypedData {
             message: serde_json::Value,
         }
 
+        #[allow(non_local_definitions)]
         impl From<TypedDataHelper> for TypedData {
             fn from(value: TypedDataHelper) -> Self {
                 Self {

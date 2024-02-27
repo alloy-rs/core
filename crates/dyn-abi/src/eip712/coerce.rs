@@ -107,7 +107,7 @@ fn bytes(value: &serde_json::Value) -> Option<Vec<u8>> {
 
     let arr = value.as_array()?;
     let mut vec = Vec::with_capacity(arr.len());
-    for elem in arr.into_iter() {
+    for elem in arr.iter() {
         vec.push(elem.as_u64()?.try_into().ok()?);
     }
     Some(vec)
