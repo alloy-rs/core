@@ -20,7 +20,7 @@
 #[doc(inline)]
 pub use alloy_primitives as primitives;
 #[doc(no_inline)]
-pub use primitives::hex;
+pub use primitives::{hex, uint};
 
 #[cfg(feature = "dyn-abi")]
 #[doc(inline)]
