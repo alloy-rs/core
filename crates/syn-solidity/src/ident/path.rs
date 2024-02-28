@@ -102,6 +102,12 @@ impl Spanned for SolPath {
     }
 }
 
+impl Default for SolPath {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SolPath {
     pub const fn new() -> Self {
         Self(Punctuated::new())
