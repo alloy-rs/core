@@ -214,6 +214,8 @@ macro_rules! wrap_fixed_bytes {
 
             /// Create a new byte array from the given slice `src`.
             ///
+            /// For a fallible version, use the `TryFrom<&[u8]>` implementation.
+            ///
             /// # Note
             ///
             /// The given bytes are interpreted in big endian order.

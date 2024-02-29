@@ -450,6 +450,8 @@ impl<const N: usize> FixedBytes<N> {
 
     /// Create a new [`FixedBytes`] from the given slice `src`.
     ///
+    /// For a fallible version, use the `TryFrom<&[u8]>` implementation.
+    ///
     /// # Note
     ///
     /// The given bytes are interpreted in big endian order.
