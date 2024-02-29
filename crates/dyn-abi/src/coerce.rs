@@ -255,6 +255,7 @@ enum Error {
     TooManyDecimals(usize, usize),
     InvalidFixedBytesLength(usize),
     FixedArrayLengthMismatch(usize, usize),
+    EmptyHexStringWithoutPrefix,
 }
 
 #[cfg(feature = "std")]
@@ -284,6 +285,7 @@ impl fmt::Display for Error {
                 f,
                 "fixed array length mismatch: expected {expected} elements, got {actual}"
             ),
+            Self::EmptyHexStringWithoutPrefix => f.write_str("expected hex digits or the `0x` prefix for an empty hex string"),
         }
     }
 }
@@ -474,12 +476,12 @@ fn fixed_bytes<'i>(len: usize) -> impl Parser<&'i str, Word, ContextError> {
 
 #[inline]
 fn address(input: &mut &str) -> PResult<Address> {
-    trace("address", fixed_bytes_inner).parse_next(input).map(Address::from)
+    trace("address", hex_str.try_map(hex::FromHex::from_hex)).parse_next(input)
 }
 
 #[inline]
 fn function(input: &mut &str) -> PResult<Function> {
-    trace("function", fixed_bytes_inner).parse_next(input).map(Function::from)
+    trace("function", hex_str.try_map(hex::FromHex::from_hex)).parse_next(input)
 }
 
 #[inline]
@@ -488,13 +490,21 @@ fn bytes(input: &mut &str) -> PResult<Vec<u8>> {
 }
 
 #[inline]
-fn fixed_bytes_inner<const N: usize>(input: &mut &str) -> PResult<FixedBytes<N>> {
-    hex_str.try_map(|s| hex::decode_to_array(s).map(Into::into)).parse_next(input)
-}
-
-#[inline]
 fn hex_str<'i>(input: &mut &'i str) -> PResult<&'i str> {
-    trace("hex_str", preceded(opt("0x"), hex_digit0)).parse_next(input)
+    trace("hex_str", |input: &mut &'i str| {
+        // Allow empty `bytes` only with a prefix.
+        let has_prefix = opt("0x").parse_next(input)?.is_some();
+        let s = hex_digit0(input)?;
+        if !has_prefix && s.is_empty() {
+            return Err(ErrMode::from_external_error(
+                input,
+                ErrorKind::Verify,
+                Error::EmptyHexStringWithoutPrefix,
+            ));
+        }
+        Ok(s)
+    })
+    .parse_next(input)
 }
 
 fn hex_error(input: &&str, e: FromHexError) -> ErrMode<ContextError> {
@@ -849,7 +859,7 @@ mod tests {
         );
 
         let e = DynSolType::FixedBytes(1).coerce_str("").unwrap_err();
-        assert_error_contains(&e, "Invalid string length");
+        assert_error_contains(&e, &Error::EmptyHexStringWithoutPrefix.to_string());
         let e = DynSolType::FixedBytes(1).coerce_str("0").unwrap_err();
         assert_error_contains(&e, "Odd number of digits");
         let e = DynSolType::FixedBytes(1).coerce_str("0x").unwrap_err();
@@ -919,7 +929,9 @@ mod tests {
 
     #[test]
     fn coerce_bytes() {
-        assert_eq!(DynSolType::Bytes.coerce_str("").unwrap(), DynSolValue::Bytes(vec![]));
+        let e = DynSolType::Bytes.coerce_str("").unwrap_err();
+        assert_error_contains(&e, &Error::EmptyHexStringWithoutPrefix.to_string());
+
         assert_eq!(DynSolType::Bytes.coerce_str("0x").unwrap(), DynSolValue::Bytes(vec![]));
         assert!(DynSolType::Bytes.coerce_str("0x0").is_err());
         assert!(DynSolType::Bytes.coerce_str("0").is_err());
@@ -1036,6 +1048,24 @@ mod tests {
         assert_eq!(arr.coerce_str("['', \"\"]").unwrap(), mk_arr(&["", ""]));
         assert_eq!(arr.coerce_str("[\"\", '']").unwrap(), mk_arr(&["", ""]));
         assert_eq!(arr.coerce_str("[\"\", \"\"]").unwrap(), mk_arr(&["", ""]));
+    }
+
+    #[test]
+    fn coerce_array_of_bytes_and_strings() {
+        let ty = DynSolType::Array(Box::new(DynSolType::Bytes));
+        assert_eq!(ty.coerce_str("[]"), Ok(DynSolValue::Array(vec![])));
+        assert_eq!(ty.coerce_str("[0x]"), Ok(DynSolValue::Array(vec![DynSolValue::Bytes(vec![])])));
+
+        let ty = DynSolType::Array(Box::new(DynSolType::String));
+        assert_eq!(ty.coerce_str("[]"), Ok(DynSolValue::Array(vec![])));
+        assert_eq!(
+            ty.coerce_str("[\"\"]"),
+            Ok(DynSolValue::Array(vec![DynSolValue::String(String::new())]))
+        );
+        assert_eq!(
+            ty.coerce_str("[0x]"),
+            Ok(DynSolValue::Array(vec![DynSolValue::String("0x".into())]))
+        );
     }
 
     #[test]

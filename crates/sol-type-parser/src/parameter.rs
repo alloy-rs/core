@@ -206,9 +206,9 @@ mod tests {
     #[test]
     fn parse_params() {
         assert_eq!(Parameters::parse("()"), Ok(Parameters { span: "()", params: vec![] }));
-        assert_eq!(Parameters::parse("(,)"), Ok(Parameters { span: "(,)", params: vec![] }));
-        assert_eq!(Parameters::parse("(, )"), Ok(Parameters { span: "(, )", params: vec![] }));
-        assert_eq!(Parameters::parse("( , )"), Ok(Parameters { span: "( , )", params: vec![] }));
+        assert_eq!(Parameters::parse("( )"), Ok(Parameters { span: "( )", params: vec![] }));
+        assert_eq!(Parameters::parse("(  )"), Ok(Parameters { span: "(  )", params: vec![] }));
+        assert_eq!(Parameters::parse("(   )"), Ok(Parameters { span: "(   )", params: vec![] }));
 
         assert_eq!(
             Parameters::parse("(\tuint256   , \t)"),

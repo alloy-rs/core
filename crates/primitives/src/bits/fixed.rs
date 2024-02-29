@@ -1,6 +1,7 @@
 use crate::aliases;
 use core::{fmt, iter, ops, str};
 use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
+use hex::FromHex;
 
 /// A byte array of fixed length (`[u8; N]`).
 ///
@@ -307,9 +308,7 @@ impl<const N: usize> str::FromStr for FixedBytes<N> {
 
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut buf = [0u8; N];
-        hex::decode_to_slice(s, &mut buf)?;
-        Ok(Self(buf))
+        Self::from_hex(s)
     }
 }
 

@@ -427,8 +427,8 @@ mod tests {
     fn test_item_parse() {
         assert_eq!(parse_sig::<true>("foo()"), Ok(("foo".into(), vec![], vec![], false)));
         assert_eq!(parse_sig::<true>("foo()()"), Ok(("foo".into(), vec![], vec![], false)));
-        assert_eq!(parse_sig::<true>("foo(,) \t ()"), Ok(("foo".into(), vec![], vec![], false)));
-        assert_eq!(parse_sig::<true>("foo(,)  (,)"), Ok(("foo".into(), vec![], vec![], false)));
+        assert_eq!(parse_sig::<true>("foo() \t ()"), Ok(("foo".into(), vec![], vec![], false)));
+        assert_eq!(parse_sig::<true>("foo()  ()"), Ok(("foo".into(), vec![], vec![], false)));
 
         assert_eq!(parse_sig::<false>("foo()"), Ok(("foo".into(), vec![], vec![], false)));
         parse_sig::<false>("foo()()").unwrap_err();
