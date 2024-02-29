@@ -218,7 +218,8 @@ const fn tuple_from_ref<T>(s: &T) -> &(T,) {
 mod tests {
     use crate::{sol_data, SolType};
     use alloc::{borrow::ToOwned, string::ToString, vec::Vec};
-    use alloy_primitives::{hex, Address, U256};
+    use alloy_primitives::{address, bytes, hex, Address, U256};
+    use alloy_sol_macro::sol;
 
     #[test]
     fn encode_address() {
@@ -241,8 +242,7 @@ mod tests {
 			0000000000000000000000001111111111111111111111111111111111111111
 			0000000000000000000000002222222222222222222222222222222222222222
 		"
-        )
-        .to_vec();
+        );
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
     }
@@ -260,8 +260,7 @@ mod tests {
     		0000000000000000000000001111111111111111111111111111111111111111
     		0000000000000000000000002222222222222222222222222222222222222222
     	"
-        )
-        .to_vec();
+        );
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), MyTy::abi_encoded_size(&addresses));
@@ -279,8 +278,7 @@ mod tests {
     		0000000000000000000000001111111111111111111111111111111111111111
     		0000000000000000000000002222222222222222222222222222222222222222
     	"
-        )
-        .to_vec();
+        );
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded.len(), MyTy::abi_encoded_size(&addresses));
@@ -306,8 +304,7 @@ mod tests {
     		0000000000000000000000003333333333333333333333333333333333333333
     		0000000000000000000000004444444444444444444444444444444444444444
     	"
-        )
-        .to_vec();
+        );
         let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
         let encoded_params = MyTy::abi_encode_params(&data);
@@ -335,8 +332,7 @@ mod tests {
     		0000000000000000000000003333333333333333333333333333333333333333
     		0000000000000000000000004444444444444444444444444444444444444444
     	"
-        )
-        .to_vec();
+        );
         // a DynSeq at top level ALWAYS has extra indirection
         let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
@@ -362,8 +358,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000001
     		0000000000000000000000002222222222222222222222222222222222222222
     	"
-        )
-        .to_vec();
+        );
         // a DynSeq at top level ALWAYS has extra indirection
         let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
@@ -393,8 +388,7 @@ mod tests {
     		0000000000000000000000003333333333333333333333333333333333333333
     		0000000000000000000000004444444444444444444444444444444444444444
     	"
-        )
-        .to_vec();
+        );
         // a DynSeq at top level ALWAYS has extra indirection
         let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
@@ -421,8 +415,7 @@ mod tests {
     		0000000000000000000000003333333333333333333333333333333333333333
     		0000000000000000000000004444444444444444444444444444444444444444
     	"
-        )
-        .to_vec();
+        );
         // a non-dynamic FixedSeq at top level NEVER has extra indirection
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
@@ -455,8 +448,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000009
     		6761766f66796f726b0000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
 
         let encoded = MyTy::abi_encode(&data);
         let encoded_params = MyTy::abi_encode_params(&data);
@@ -478,8 +470,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000020
     		0000000000000000000000000000000000000000000000000000000000000000
     	    "
-        )
-        .to_vec();
+        );
 
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), MyTy0::abi_encoded_size(&data));
@@ -494,8 +485,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000000
     		0000000000000000000000000000000000000000000000000000000000000000
     	    "
-        )
-        .to_vec();
+        );
 
         // Empty arrays
         let encoded = MyTy::abi_encode(&data);
@@ -525,8 +515,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000020
     		0000000000000000000000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
         // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
@@ -617,8 +606,7 @@ mod tests {
     		000000000000000000000000000000000000000000000000000000000000001f
     		1000000000000000000000000000000000000000000000000000000000000200
     	"
-        )
-        .to_vec();
+        );
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), sol_data::Bytes::abi_encoded_size(&bytes));
     }
@@ -630,8 +618,7 @@ mod tests {
     		1000000000000000000000000000000000000000000000000000000000000000
     		1000000000000000000000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         let encoded = sol_data::Bytes::abi_encode(&bytes);
         let expected = hex!(
             "
@@ -640,8 +627,7 @@ mod tests {
     		1000000000000000000000000000000000000000000000000000000000000000
     		1000000000000000000000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         assert_eq!(encoded, expected);
         assert_eq!(encoded.len(), sol_data::Bytes::abi_encoded_size(&bytes));
     }
@@ -665,8 +651,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000020
     		0010000000000000000000000000000000000000000000000000000000000002
     	"
-        )
-        .to_vec();
+        );
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
         // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
@@ -719,8 +704,7 @@ mod tests {
     		131a3afc00d1b1e3461b955e53fc866dcf303b3eb9f4c16f89e388930f48134b
     		131a3afc00d1b1e3461b955e53fc866dcf303b3eb9f4c16f89e388930f48134b
     	"
-        )
-        .to_vec();
+        );
 
         let data = (5, bytes.clone(), 3, bytes);
 
@@ -740,8 +724,7 @@ mod tests {
     		131a3afc00d1b1e3461b955e53fc866dcf303b3eb9f4c16f89e388930f48134b
     		131a3afc00d1b1e3461b955e53fc866dcf303b3eb9f4c16f89e388930f48134b
     	"
-        )
-        .to_vec();
+        );
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
         // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
@@ -779,8 +762,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000006
     		0000000000000000000000000000000000000000000000000000000000000007
     	"
-        )
-        .to_vec();
+        );
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
         // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
@@ -809,8 +791,7 @@ mod tests {
     		019c80031b20d5e69c8093a571162299032018d913930d93ab320ae5ea44a421
     		8a274f00d6070000000000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         // a DynSeq at top level ALWAYS has extra indirection
         let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
@@ -843,8 +824,7 @@ mod tests {
     		6666666666666666666666666666666666666666666666666666666666666666
     		6666666666660000000000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         // a DynSeq at top level ALWAYS has extra indirection
         let encoded = MyTy::abi_encode(&data);
         assert_eq!(encoded, expected);
@@ -866,8 +846,7 @@ mod tests {
     		0000000000000000000000001111111111111111111111111111111111111111
     		0000000000000000000000002222222222222222222222222222222222222222
     	"
-        )
-        .to_vec();
+        );
         assert_eq!(encoded, expected);
         assert_eq!(encoded_params, expected);
         assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
@@ -888,8 +867,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000009
     		6761766f66796f726b0000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded.
         let encoded = MyTy::abi_encode(&data);
@@ -926,8 +904,7 @@ mod tests {
     		6666666666666666666666666666666666666666666666666666666666666666
     		6666666666660000000000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded.
         assert_eq!(encoded, expected);
@@ -957,8 +934,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000009
     		6761766f66796f726b0000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded.
         let encoded = MyTy::abi_encode(&data);
@@ -1013,8 +989,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000008
     		66756e7465737473000000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded
         assert_eq!(encoded, expected);
@@ -1058,8 +1033,7 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000006
     		6379626f72670000000000000000000000000000000000000000000000000000
     	"
-        )
-        .to_vec();
+        );
         // A Dynamic FixedSeq may be a top-level sequence to `encode` or may
         // itself be an item in a top-level sequence. Which is to say, it could
         // be (as `abi_encode(T)` or `abi_encode((T,))`). This test was `abi_encode(T)`
@@ -1097,8 +1071,7 @@ mod tests {
     		0000000000000000000000003333333333333333333333333333333333333333
     		0000000000000000000000004444444444444444444444444444444444444444
     	"
-        )
-        .to_vec();
+        );
 
         // a static FixedSeq should NEVER indirect
         assert_eq!(encoded, expected);
@@ -1125,13 +1098,38 @@ mod tests {
     		0000000000000000000000000000000000000000000000000000000000000042
     		0000000000000000000000000000000000000000000000000000000000001337
     	"
-        )
-        .to_vec();
+        );
         // a dynamic FixedSeq at top level should start with indirection
         // when not param encoded
         assert_eq!(encoded, expected);
         assert_ne!(encoded_params, expected);
         assert_eq!(encoded_params.len() + 32, encoded.len());
         assert_eq!(encoded.len(), MyTy::abi_encoded_size(&data));
+    }
+
+    // https://github.com/foundry-rs/foundry/issues/7280
+    #[test]
+    fn encode_empty_bytes_array_in_tuple() {
+        type MyTy = sol! { (bytes, address, bytes[]) };
+
+        let data = (
+            Vec::from(bytes!("09736b79736b79736b79026f7300")),
+            address!("B7b54cd129e6D8B24e6AE652a473449B273eE3E4"),
+            Vec::<Vec<u8>>::new(),
+        );
+
+        let encoded_params = MyTy::abi_encode_params(&data);
+
+        let expected = hex!(
+            "
+            0000000000000000000000000000000000000000000000000000000000000060
+            000000000000000000000000B7b54cd129e6D8B24e6AE652a473449B273eE3E4
+            00000000000000000000000000000000000000000000000000000000000000a0
+            000000000000000000000000000000000000000000000000000000000000000e
+            09736b79736b79736b79026f7300000000000000000000000000000000000000
+            0000000000000000000000000000000000000000000000000000000000000000
+    	"
+        );
+        assert_eq!(encoded_params, expected);
     }
 }
