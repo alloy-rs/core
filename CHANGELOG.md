@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4](https://github.com/alloy-rs/core/releases/tag/v0.6.4) - 2024-02-29
+
+### Bug Fixes
+
+- [dyn-abi] Correctly parse empty lists of bytes ([#548](https://github.com/alloy-rs/core/issues/548))
+- [dyn-abi] Enable `DynSolType.coerce_json` to convert array of numbers to bytes ([#541](https://github.com/alloy-rs/core/issues/541))
+
+### Dependencies
+
+- [deps] Update winnow to 0.6 ([#533](https://github.com/alloy-rs/core/issues/533))
+
+### Documentation
+
+- [primitives] Add a bytes! macro example ([#539](https://github.com/alloy-rs/core/issues/539))
+- Fix relative paths in README files ([#532](https://github.com/alloy-rs/core/issues/532))
+
+### Features
+
+- Add `TxKind` ([#542](https://github.com/alloy-rs/core/issues/542))
+- [core] Re-export `uint!` ([#537](https://github.com/alloy-rs/core/issues/537))
+- Derive Allocative on FixedBytes ([#531](https://github.com/alloy-rs/core/issues/531))
+
+### Miscellaneous Tasks
+
+- [primitives] Improve `from_slice` functions ([#546](https://github.com/alloy-rs/core/issues/546))
+- Allow unknown lints ([#543](https://github.com/alloy-rs/core/issues/543))
+- [core] Add comments to `cfg(doc)` ([#538](https://github.com/alloy-rs/core/issues/538))
+- Remove unused imports ([#534](https://github.com/alloy-rs/core/issues/534))
+
+### Other
+
+- Add concurrency ([#540](https://github.com/alloy-rs/core/issues/540))
+
+### Testing
+
+- Add another ABI encode test ([#547](https://github.com/alloy-rs/core/issues/547))
+- Add some more coerce error message tests ([#535](https://github.com/alloy-rs/core/issues/535))
+- Bless tests ([#530](https://github.com/alloy-rs/core/issues/530))
+
 ## [0.6.3](https://github.com/alloy-rs/core/releases/tag/v0.6.3) - 2024-02-15
 
 ### Bug Fixes
@@ -38,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.6.3
 - Fix winnow deprecation warnings ([#507](https://github.com/alloy-rs/core/issues/507))
 - [sol-macro] Tweak inline attributes in generated code ([#505](https://github.com/alloy-rs/core/issues/505))
 

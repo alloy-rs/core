@@ -3,7 +3,7 @@ members = ["crates/*", "tests/*"]
 resolver = "2"
 
 [workspace.package]
-version = "0.6.3"
+version = "0.6.4"
 edition = "2021"
 rust-version = "1.65"
 authors = ["Alloy Contributors"]
@@ -18,14 +18,14 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [workspace.dependencies]
 # workspace crates
-alloy-core = { version = "0.6.3", path = "crates/core", default-features = false }
-alloy-dyn-abi = { version = "0.6.3", path = "crates/dyn-abi", default-features = false }
-alloy-json-abi = { version = "0.6.3", path = "crates/json-abi", default-features = false }
-alloy-primitives = { version = "0.6.3", path = "crates/primitives", default-features = false }
-alloy-sol-macro = { version = "0.6.3", path = "crates/sol-macro", default-features = false }
-alloy-sol-type-parser = { version = "0.6.3", path = "crates/sol-type-parser", default-features = false }
-alloy-sol-types = { version = "0.6.3", path = "crates/sol-types", default-features = false }
-syn-solidity = { version = "0.6.3", path = "crates/syn-solidity", default-features = false }
+alloy-core = { version = "0.6.4", path = "crates/core", default-features = false }
+alloy-dyn-abi = { version = "0.6.4", path = "crates/dyn-abi", default-features = false }
+alloy-json-abi = { version = "0.6.4", path = "crates/json-abi", default-features = false }
+alloy-primitives = { version = "0.6.4", path = "crates/primitives", default-features = false }
+alloy-sol-macro = { version = "0.6.4", path = "crates/sol-macro", default-features = false }
+alloy-sol-type-parser = { version = "0.6.4", path = "crates/sol-type-parser", default-features = false }
+alloy-sol-types = { version = "0.6.4", path = "crates/sol-types", default-features = false }
+syn-solidity = { version = "0.6.4", path = "crates/syn-solidity", default-features = false }
 
 # serde
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
