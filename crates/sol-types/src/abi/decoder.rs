@@ -729,7 +729,7 @@ mod tests {
 
         let ty = Ty {
             arr: [[0x11u8; 32].into(), [0x22u8; 32].into(), [0x33u8; 32].into()],
-            r#dyn: vec![0x44u8; 4],
+            r#dyn: vec![0x44u8; 4].into(),
         };
         let encoded = hex!(
             "0000000000000000000000000000000000000000000000000000000000000020"
@@ -757,8 +757,8 @@ mod tests {
         }
 
         let ty = Ty {
-            arr: [vec![0x11u8; 32], vec![0x22u8; 32], vec![0x33u8; 32]],
-            r#dyn: vec![0x44u8; 4],
+            arr: [vec![0x11u8; 32].into(), vec![0x22u8; 32].into(), vec![0x33u8; 32].into()],
+            r#dyn: vec![0x44u8; 4].into(),
         };
         let encoded = hex!(
             "0000000000000000000000000000000000000000000000000000000000000020" // struct offset

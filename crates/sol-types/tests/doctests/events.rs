@@ -1,6 +1,6 @@
 #![allow(clippy::assertions_on_constants)]
 
-use alloy_primitives::{hex, keccak256, Log, B256, U256};
+use alloy_primitives::{hex, keccak256, Bytes, Log, B256, U256};
 use alloy_rlp::{Decodable, Encodable};
 use alloy_sol_types::{abi::token::WordToken, sol, SolEvent};
 
@@ -31,7 +31,7 @@ fn event() {
         a: [0x11; 32].into(),
         b: U256::from(1u64),
         c: keccak256("Hello World"),
-        d: Vec::new(),
+        d: Bytes::default(),
     };
     // topics are `(SELECTOR, a, keccak256(c))`
     assert_eq!(
@@ -68,7 +68,7 @@ fn event_rlp_roundtrip() {
         a: [0x11; 32].into(),
         b: U256::from(1u64),
         c: keccak256("Hello World"),
-        d: Vec::new(),
+        d: Vec::new().into(),
     };
 
     let rlpable_log = Log::<MyEvent>::new_from_event_unchecked(Default::default(), event);

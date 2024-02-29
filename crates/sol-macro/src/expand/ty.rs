@@ -98,7 +98,7 @@ pub(crate) fn rec_expand_rust_type(ty: &Type, crates: &ExternCrates, tokens: &mu
         Type::Address(span, _) => quote_spanned! {span=> #alloy_sol_types::private::Address },
         Type::Bool(span) => return Ident::new("bool", span).to_tokens(tokens),
         Type::String(span) => quote_spanned! {span=> #alloy_sol_types::private::String },
-        Type::Bytes(span) => quote_spanned! {span=> #alloy_sol_types::private::Vec<u8> },
+        Type::Bytes(span) => quote_spanned! {span=> #alloy_sol_types::private::Bytes },
 
         Type::FixedBytes(span, size) => {
             assert!(size.get() <= 32);
