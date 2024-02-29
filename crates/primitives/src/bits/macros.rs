@@ -222,8 +222,12 @@ macro_rules! wrap_fixed_bytes {
             ///
             /// If the length of `src` and the number of bytes in `Self` do not match.
             #[inline]
+            #[track_caller]
             pub fn from_slice(src: &[u8]) -> Self {
-                Self($crate::FixedBytes::from_slice(src))
+                match Self::try_from(src) {
+                    Ok(x) => x,
+                    Err(_) => panic!("cannot convert a slice of length {} to {}", src.len(), stringify!($name)),
+                }
             }
 
             /// Create a new byte array from the given slice `src`, left-padding it
@@ -236,8 +240,8 @@ macro_rules! wrap_fixed_bytes {
             /// # Panics
             ///
             /// Panics if `src.len() > N`.
-            #[track_caller]
             #[inline]
+            #[track_caller]
             pub fn left_padding_from(value: &[u8]) -> Self {
                 Self($crate::FixedBytes::left_padding_from(value))
             }
@@ -252,8 +256,8 @@ macro_rules! wrap_fixed_bytes {
             /// # Panics
             ///
             /// Panics if `src.len() > N`.
-            #[track_caller]
             #[inline]
+            #[track_caller]
             pub fn right_padding_from(value: &[u8]) -> Self {
                 Self($crate::FixedBytes::right_padding_from(value))
             }

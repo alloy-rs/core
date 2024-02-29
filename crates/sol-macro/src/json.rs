@@ -76,8 +76,8 @@ fn tokens_for_sol(name: &Ident, sol: &str) -> Result<TokenStream> {
     Ok(tokens)
 }
 
-#[track_caller]
 #[inline]
+#[track_caller]
 fn id(s: impl AsRef<str>) -> Ident {
     // Ident::new panics on Rust keywords and `r#` prefixes
     syn::parse_str(s.as_ref()).unwrap()
