@@ -706,7 +706,7 @@ mod tests {
     	"
         );
 
-        let data = (5, bytes.clone(), 3, bytes);
+        let data = (5, bytes, 3, bytes);
 
         let encoded = MyTy::abi_encode(&data);
         let encoded_params = MyTy::abi_encode_params(&data);
