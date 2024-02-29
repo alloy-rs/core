@@ -5,7 +5,7 @@ use alloc::{string::String, vec::Vec};
 use core::{slice, str};
 use winnow::{
     ascii::space0,
-    combinator::{cut_err, delimited, opt, preceded, separated, terminated, trace},
+    combinator::{cut_err, opt, preceded, separated, terminated, trace},
     error::{AddContext, ParserError, StrContext, StrContextValue},
     stream::Accumulate,
     PResult, Parser,
@@ -88,14 +88,19 @@ where
     let name = format!("list({open:?}, {delim:?}, {close:?})");
     #[cfg(not(feature = "debug"))]
     let name = "list";
-    trace(
-        name,
-        delimited(
-            (char_parser(open), space0),
-            separated(0.., f, (char_parser(delim), space0)),
-            (opt(delim), space0, cut_err(char_parser(close))),
-        ),
-    )
+
+    // These have to be outside of the closure for some reason.
+    let elems_1 = separated(1.., f, (char_parser(delim), space0));
+    let mut elems_and_end = terminated(elems_1, (opt(delim), space0, cut_err(char_parser(close))));
+    trace(name, move |input: &mut &'i str| {
+        let _ = char_parser(open).parse_next(input)?;
+        let _ = space0(input)?;
+        if let Some(stripped) = input.strip_prefix(close) {
+            *input = stripped;
+            return Ok(O2::initial(Some(0)));
+        }
+        elems_and_end.parse_next(input)
+    })
 }
 
 pub fn opt_ws_ident<'a>(input: &mut &'a str) -> PResult<Option<&'a str>> {
