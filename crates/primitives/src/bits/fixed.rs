@@ -399,8 +399,8 @@ impl<const N: usize> FixedBytes<N> {
     ///
     /// Panics if the underlying call to
     /// [`getrandom_uninit`](getrandom::getrandom_uninit) fails.
-    #[inline]
     #[cfg(feature = "getrandom")]
+    #[inline]
     #[track_caller]
     pub fn randomize(&mut self) {
         self.try_randomize().unwrap()
@@ -450,6 +450,8 @@ impl<const N: usize> FixedBytes<N> {
 
     /// Create a new [`FixedBytes`] from the given slice `src`.
     ///
+    /// For a fallible version, use the `TryFrom<&[u8]>` implementation.
+    ///
     /// # Note
     ///
     /// The given bytes are interpreted in big endian order.
@@ -457,10 +459,13 @@ impl<const N: usize> FixedBytes<N> {
     /// # Panics
     ///
     /// If the length of `src` and the number of bytes in `Self` do not match.
-    #[track_caller]
     #[inline]
-    pub fn from_slice(value: &[u8]) -> Self {
-        Self::try_from(value).unwrap()
+    #[track_caller]
+    pub fn from_slice(src: &[u8]) -> Self {
+        match Self::try_from(src) {
+            Ok(x) => x,
+            Err(_) => panic!("cannot convert a slice of length {} to FixedBytes<{N}>", src.len()),
+        }
     }
 
     /// Create a new [`FixedBytes`] from the given slice `src`, left-padding it
@@ -473,8 +478,8 @@ impl<const N: usize> FixedBytes<N> {
     /// # Panics
     ///
     /// Panics if `src.len() > N`.
-    #[track_caller]
     #[inline]
+    #[track_caller]
     pub fn left_padding_from(value: &[u8]) -> Self {
         let len = value.len();
         assert!(len <= N, "slice is too large. Expected <={N} bytes, got {len}");
@@ -493,8 +498,8 @@ impl<const N: usize> FixedBytes<N> {
     /// # Panics
     ///
     /// Panics if `src.len() > N`.
-    #[track_caller]
     #[inline]
+    #[track_caller]
     pub fn right_padding_from(value: &[u8]) -> Self {
         let len = value.len();
         assert!(len <= N, "slice is too large. Expected <={N} bytes, got {len}");

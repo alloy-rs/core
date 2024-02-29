@@ -487,8 +487,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     ///
     /// Panics if the value is to large for the bit-size of the Uint.
     #[inline(always)]
-    #[must_use]
     #[track_caller]
+    #[must_use]
     pub const fn from_limbs(limbs: [u64; LIMBS]) -> Self {
         Self(Uint::from_limbs(limbs))
     }
