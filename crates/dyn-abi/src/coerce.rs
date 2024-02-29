@@ -476,22 +476,17 @@ fn fixed_bytes<'i>(len: usize) -> impl Parser<&'i str, Word, ContextError> {
 
 #[inline]
 fn address(input: &mut &str) -> PResult<Address> {
-    trace("address", fixed_bytes_inner).parse_next(input).map(Address::from)
+    trace("address", hex_str.try_map(hex::FromHex::from_hex)).parse_next(input)
 }
 
 #[inline]
 fn function(input: &mut &str) -> PResult<Function> {
-    trace("function", fixed_bytes_inner).parse_next(input).map(Function::from)
+    trace("function", hex_str.try_map(hex::FromHex::from_hex)).parse_next(input)
 }
 
 #[inline]
 fn bytes(input: &mut &str) -> PResult<Vec<u8>> {
     trace("bytes", hex_str.try_map(hex::decode)).parse_next(input)
-}
-
-#[inline]
-fn fixed_bytes_inner<const N: usize>(input: &mut &str) -> PResult<FixedBytes<N>> {
-    hex_str.try_map(|s| hex::decode_to_array(s).map(Into::into)).parse_next(input)
 }
 
 #[inline]

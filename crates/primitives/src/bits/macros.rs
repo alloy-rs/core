@@ -414,13 +414,8 @@ macro_rules! impl_fb_traits {
             type Error = $crate::hex::FromHexError;
 
             #[inline]
-            fn from_hex<T>(hex: T) -> Result<Self, Self::Error>
-            where
-                T: $crate::private::AsRef<[u8]>
-            {
-                let mut buf = [0u8; $n];
-                $crate::hex::decode_to_slice(hex.as_ref(), &mut buf)?;
-                Ok(Self::new(buf))
+            fn from_hex<T: $crate::private::AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
+                $crate::hex::decode_to_array(hex).map(Self::new)
             }
         }
     };
