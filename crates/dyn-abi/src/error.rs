@@ -1,5 +1,5 @@
 use alloc::{borrow::Cow, string::String};
-use alloy_primitives::B256;
+use alloy_primitives::{Selector, B256};
 use alloy_sol_types::Error as SolTypesError;
 use core::fmt;
 use hex::FromHexError;
@@ -45,6 +45,15 @@ pub enum Error {
         /// The actual length.
         actual: usize,
     },
+
+    /// Selector mismatch during function or error decoding.
+    SelectorMismatch {
+        /// The expected selector.
+        expected: Selector,
+        /// The actual selector.
+        actual: Selector,
+    },
+
     /// Invalid event signature.
     EventSignatureMismatch {
         /// The expected signature.
@@ -126,7 +135,9 @@ impl fmt::Display for Error {
             Self::EventSignatureMismatch { expected, actual } => {
                 write!(f, "invalid event signature: expected {expected}, got {actual}",)
             }
-
+            Self::SelectorMismatch { expected, actual } => {
+                write!(f, "selector mismatch: expected {expected}, got {actual}",)
+            }
             Self::Hex(e) => e.fmt(f),
             Self::TypeParser(e) => e.fmt(f),
             Self::SolTypes(e) => e.fmt(f),

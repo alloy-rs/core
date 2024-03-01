@@ -36,26 +36,19 @@ mod arbitrary;
 
 mod coerce;
 
+mod dynamic;
+pub use dynamic::{
+    DecodedError, DecodedEvent, DynSolError, DynSolEvent, DynSolType, DynSolValue, DynToken,
+};
+
 mod error;
 pub use error::{Error, Result};
 
 mod ext;
-pub use ext::{EventExt, FunctionExt, JsonAbiExt};
+pub use ext::{ErrorExt, EventExt, FunctionExt, JsonAbiExt};
 
-mod event;
-pub use event::{DecodedEvent, DynSolEvent};
-
-mod ty;
-pub use ty::DynSolType;
-
-mod value;
-pub use value::DynSolValue;
-
-mod token;
-pub use token::DynToken;
-
-mod resolve;
-pub use resolve::Specifier;
+mod specifier;
+pub use specifier::Specifier;
 
 #[cfg(feature = "eip712")]
 pub mod eip712;
