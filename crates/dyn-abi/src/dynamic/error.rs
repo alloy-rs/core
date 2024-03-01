@@ -41,7 +41,7 @@ impl DynSolError {
     pub fn panic() -> Self {
         Self {
             selector: Selector::new([0x4e, 0x48, 0x7b, 0x71]),
-            body: DynSolType::Tuple(vec![DynSolType::String]),
+            body: DynSolType::Tuple(vec![DynSolType::Uint(256)]),
         }
     }
 
@@ -87,4 +87,28 @@ pub struct DecodedError {
 }
 
 #[cfg(test)]
-mod test {}
+mod test {
+
+    use crate::DynSolValue;
+
+    use super::DynSolError;
+    use alloy_primitives::hex;
+
+    #[test]
+    fn decode_revert_message() {
+        let error = DynSolError::revert();
+        let data = hex!("08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000042020202000000000000000000000000000000000000000000000000000000000");
+
+        let decoded = error.decode_error(&data).unwrap();
+        assert_eq!(decoded.body, vec!(DynSolValue::String("    ".into())));
+    }
+
+    #[test]
+    fn decode_panic() {
+        let error = DynSolError::panic();
+        let data = hex!("4e487b710000000000000000000000000000000000000000000000000000000000000001");
+
+        let decoded = error.decode_error(&data).unwrap();
+        assert_eq!(decoded.body, vec![DynSolValue::Uint(alloy_primitives::Uint::from(1), 256)]);
+    }
+}
