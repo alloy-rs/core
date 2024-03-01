@@ -1,4 +1,4 @@
-use crate::{resolve::ResolveSolType, DynSolValue, DynToken, Error, Result, SolType, Word};
+use crate::{DynSolValue, DynToken, Error, Result, SolType, Specifier, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::{
     try_vec,

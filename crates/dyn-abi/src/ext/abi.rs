@@ -1,4 +1,4 @@
-use crate::{DynSolValue, Error as CrateError, ResolveSolType, Result};
+use crate::{DynSolValue, Error as CrateError, Result, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::{Constructor, Error, Function, Param};
 use alloy_primitives::Selector;

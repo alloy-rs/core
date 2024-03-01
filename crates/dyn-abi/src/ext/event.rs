@@ -1,6 +1,4 @@
-use crate::{
-    resolve::ResolveSolEvent, DecodedEvent, DynSolEvent, DynSolType, Error, ResolveSolType, Result,
-};
+use crate::{DecodedEvent, DynSolEvent, DynSolType, Error, Result, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::Event;
 use alloy_primitives::{LogData, B256};
@@ -11,7 +9,7 @@ mod sealed {
 }
 use sealed::Sealed;
 
-impl ResolveSolEvent for Event {
+impl Specifier<DynSolEvent> for Event {
     fn resolve(&self) -> Result<DynSolEvent> {
         let mut indexed = Vec::with_capacity(self.inputs.len());
         let mut body = Vec::with_capacity(self.inputs.len());
@@ -72,7 +70,7 @@ impl EventExt for Event {
     where
         I: IntoIterator<Item = B256>,
     {
-        ResolveSolEvent::resolve(self)?.decode_log_parts(topics, data, validate)
+        Specifier::resolve(self)?.decode_log_parts(topics, data, validate)
     }
 }
 

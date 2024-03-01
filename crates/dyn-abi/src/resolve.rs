@@ -10,38 +10,23 @@ use parser::{ParameterSpecifier, Parameters, RootType, TupleSpecifier, TypeSpeci
 #[cfg(feature = "eip712")]
 use alloy_json_abi::InternalType;
 
-/// Resolve a type into a [`DynSolEvent`].
+/// Trait for items that can be resolved to `DynSol_____`, i.e. they speicify
+/// some Solidity interface item.
 ///
-/// The `ResolveSolEvent` trait is implemented by types that can be resolved
-/// into Solidity-style event descriptors (i.e. a list of indexed parameters and
-/// a tuple of non-indexed parameters).
-///
-/// This trait is implemented for [`alloy_json_abi::Event`].
-pub trait ResolveSolEvent {
-    /// Resolve the type into a [`DynSolEvent`].
-    fn resolve(&self) -> Result<DynSolEvent>;
-}
-
-/// Resolve a type into a [`DynSolType`].
-///
-/// The `ResolveSolType` trait is implemented by types that can be resolved into
-/// a [`DynSolType`]. ABI and related systems have many different ways of
-/// encoding solidity types. This trait provides a single pattern for resolving
-/// those encodings into solidity types.
-///
-/// ABI and related systems have many different ways of encoding Solidity types.
+/// The `Specifier` trait is implemented by types that can be resolved into
+/// Solidity interace items, e.g. [`DynSolType`] or [`DynSolEvent`]. ABI and
+/// related systems have many different ways of specifying Solidity interfaces.
 /// This trait provides a single pattern for resolving those encodings into
-/// Solidity types.
+/// Solidity interface items.
 ///
-/// This trait is implemented for all the [`parser`] types, the
-/// [`Param`] and [`EventParam`] structs, and [`str`].
-///
-/// The [`str`] implementation calls [`DynSolType::parse`].
+/// `Specifier<DynSolType>` is implemented for all the [`parser`] types, the
+/// [`Param`] and [`EventParam`] structs, and [`str`]. The [`str`]
+/// implementation calls [`DynSolType::parse`].
 ///
 /// # Examples
 ///
 /// ```
-/// # use alloy_dyn_abi::{DynSolType, ResolveSolType};
+/// # use alloy_dyn_abi::{DynSolType, Specifier};
 /// # use alloy_sol_type_parser::{RootType, TypeSpecifier};
 /// let my_ty = TypeSpecifier::parse("bool")?.resolve()?;
 /// assert_eq!(my_ty, DynSolType::Bool);
@@ -52,21 +37,20 @@ pub trait ResolveSolEvent {
 /// assert_eq!("bytes32".resolve()?, DynSolType::FixedBytes(32));
 /// # Ok::<_, alloy_dyn_abi::Error>(())
 /// ```
-pub trait ResolveSolType {
-    /// Resolve this object into a [`DynSolType`].
-    ///
-    /// See the [trait documentation](ResolveSolType) for more details.
-    fn resolve(&self) -> Result<DynSolType>;
+
+pub trait Specifier<T> {
+    /// Resolve the type into a value.
+    fn resolve(&self) -> Result<T>;
 }
 
-impl ResolveSolType for str {
+impl Specifier<DynSolType> for str {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
         DynSolType::parse(self)
     }
 }
 
-impl ResolveSolType for RootType<'_> {
+impl Specifier<DynSolType> for RootType<'_> {
     fn resolve(&self) -> Result<DynSolType> {
         match self.span() {
             "address" => Ok(DynSolType::Address),
@@ -109,14 +93,14 @@ impl ResolveSolType for RootType<'_> {
     }
 }
 
-impl ResolveSolType for TupleSpecifier<'_> {
+impl Specifier<DynSolType> for TupleSpecifier<'_> {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
         tuple(&self.types).map(DynSolType::Tuple)
     }
 }
 
-impl ResolveSolType for TypeStem<'_> {
+impl Specifier<DynSolType> for TypeStem<'_> {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
         match self {
@@ -126,27 +110,27 @@ impl ResolveSolType for TypeStem<'_> {
     }
 }
 
-impl ResolveSolType for TypeSpecifier<'_> {
+impl Specifier<DynSolType> for TypeSpecifier<'_> {
     fn resolve(&self) -> Result<DynSolType> {
         self.stem.resolve().map(|ty| ty.array_wrap_from_iter(self.sizes.iter().copied()))
     }
 }
 
-impl ResolveSolType for ParameterSpecifier<'_> {
+impl Specifier<DynSolType> for ParameterSpecifier<'_> {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
         self.ty.resolve()
     }
 }
 
-impl ResolveSolType for Parameters<'_> {
+impl Specifier<DynSolType> for Parameters<'_> {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
         tuple(&self.params).map(DynSolType::Tuple)
     }
 }
 
-impl ResolveSolType for Param {
+impl Specifier<DynSolType> for Param {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
         resolve_param(
@@ -158,7 +142,7 @@ impl ResolveSolType for Param {
     }
 }
 
-impl ResolveSolType for EventParam {
+impl Specifier<DynSolType> for EventParam {
     #[inline]
     fn resolve(&self) -> Result<DynSolType> {
         resolve_param(
@@ -203,7 +187,7 @@ fn resolve_param(
     Ok(resolved.array_wrap_from_iter(ty.sizes))
 }
 
-fn tuple<T: ResolveSolType>(slice: &[T]) -> Result<Vec<DynSolType>> {
+fn tuple<T: Specifier<DynSolType>>(slice: &[T]) -> Result<Vec<DynSolType>> {
     let mut types = Vec::with_capacity(slice.len());
     for ty in slice {
         types.push(ty.resolve()?);
@@ -214,7 +198,7 @@ fn tuple<T: ResolveSolType>(slice: &[T]) -> Result<Vec<DynSolType>> {
 macro_rules! deref_impls {
     ($($(#[$attr:meta])* [$($gen:tt)*] $t:ty),+ $(,)?) => {$(
         $(#[$attr])*
-        impl<$($gen)*> ResolveSolType for $t {
+        impl<$($gen)*> Specifier<DynSolType> for $t {
             #[inline]
             fn resolve(&self) -> Result<DynSolType> {
                 (**self).resolve()
@@ -225,12 +209,12 @@ macro_rules! deref_impls {
 
 deref_impls! {
     [] alloc::string::String,
-    [T: ?Sized + ResolveSolType] &T,
-    [T: ?Sized + ResolveSolType] &mut T,
-    [T: ?Sized + ResolveSolType] alloc::boxed::Box<T>,
-    [T: ?Sized + alloc::borrow::ToOwned + ResolveSolType] alloc::borrow::Cow<'_, T>,
-    [T: ?Sized + ResolveSolType] alloc::rc::Rc<T>,
-    [T: ?Sized + ResolveSolType] alloc::sync::Arc<T>,
+    [T: ?Sized + Specifier<DynSolType>] &T,
+    [T: ?Sized + Specifier<DynSolType>] &mut T,
+    [T: ?Sized + Specifier<DynSolType>] alloc::boxed::Box<T>,
+    [T: ?Sized + alloc::borrow::ToOwned + Specifier<DynSolType>] alloc::borrow::Cow<'_, T>,
+    [T: ?Sized + Specifier<DynSolType>] alloc::rc::Rc<T>,
+    [T: ?Sized + Specifier<DynSolType>] alloc::sync::Arc<T>,
 }
 
 #[cfg(test)]

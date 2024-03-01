@@ -55,7 +55,7 @@ mod token;
 pub use token::DynToken;
 
 mod resolve;
-pub use resolve::{ResolveSolEvent, ResolveSolType};
+pub use resolve::Specifier;
 
 #[cfg(feature = "eip712")]
 pub mod eip712;
