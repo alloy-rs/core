@@ -38,6 +38,7 @@ impl DynSolError {
     /// The list of all known panic codes can be found in the [PanicKind] enum.
     ///
     /// [Solidity panic]: https://docs.soliditylang.org/en/latest/control-structures.html#panic-via-assert-and-error-via-require
+    /// [PanicKind]: alloy_sol_types::PanicKind
     pub fn panic() -> Self {
         Self { selector: PANIC_SELECTOR, body: DynSolType::Tuple(vec![DynSolType::Uint(256)]) }
     }
