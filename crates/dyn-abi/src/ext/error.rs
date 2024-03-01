@@ -1,7 +1,7 @@
+use crate::{DynSolError, Specifier};
+use alloc::vec::Vec;
 use alloy_json_abi::Error;
 use alloy_primitives::{keccak256, Selector};
-
-use crate::{DynSolError, Specifier};
 
 mod sealed {
     pub trait Sealed {}
