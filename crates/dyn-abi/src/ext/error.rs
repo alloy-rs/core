@@ -12,7 +12,7 @@ use sealed::Sealed;
 impl Specifier<DynSolError> for Error {
     fn resolve(&self) -> crate::Result<DynSolError> {
         let signature = self.signature();
-        let selector = Selector::from_slice(&keccak256(&signature)[0..4]);
+        let selector = Selector::from_slice(&keccak256(signature)[0..4]);
 
         let mut body = Vec::with_capacity(self.inputs.len());
         for param in &self.inputs {
