@@ -2,6 +2,9 @@ use alloy_primitives::{keccak256, Selector};
 
 use crate::{DynSolType, DynSolValue, Error, Result};
 
+const PANIC_SELECTOR: Selector = Selector::new([0x4e, 0x48, 0x7b, 0x71]);
+const REVERT_SELECTOR: Selector = Selector::new([0x08, 0xc3, 0x79, 0xa0]);
+
 /// A dynamic ABI error.
 ///
 /// This is a representation of a Solidity error, which can be used to decode
@@ -21,10 +24,7 @@ impl DynSolError {
     /// **Note**: Usage of this instantiator is not recommended. It is better to
     /// use [alloy_sol_types::Revert] in almost all cases.
     pub fn revert() -> Self {
-        Self {
-            selector: Selector::new([0x08, 0xc3, 0x79, 0xa0]),
-            body: DynSolType::Tuple(vec![DynSolType::String]),
-        }
+        Self { selector: REVERT_SELECTOR, body: DynSolType::Tuple(vec![DynSolType::String]) }
     }
 
     /// A [Solidity panic].
@@ -39,10 +39,7 @@ impl DynSolError {
     ///
     /// [Solidity panic]: https://docs.soliditylang.org/en/latest/control-structures.html#panic-via-assert-and-error-via-require
     pub fn panic() -> Self {
-        Self {
-            selector: Selector::new([0x4e, 0x48, 0x7b, 0x71]),
-            body: DynSolType::Tuple(vec![DynSolType::Uint(256)]),
-        }
+        Self { selector: PANIC_SELECTOR, body: DynSolType::Tuple(vec![DynSolType::Uint(256)]) }
     }
 
     /// Creates a new error from a selector.
