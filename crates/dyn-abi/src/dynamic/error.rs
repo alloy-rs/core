@@ -94,10 +94,8 @@ pub struct DecodedError {
 
 #[cfg(test)]
 mod test {
-
-    use crate::DynSolValue;
-
     use super::DynSolError;
+    use crate::DynSolValue;
     use alloy_primitives::hex;
 
     #[test]
