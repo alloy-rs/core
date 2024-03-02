@@ -16,7 +16,7 @@ const REVERT_SELECTOR: Selector = Selector::new(alloy_sol_types::Revert::SELECTO
 pub struct DynSolError {
     /// Error selector.
     pub(crate) selector: Selector,
-    /// Error body types.
+    /// Error body types. MUST be a tuple.
     pub(crate) body: DynSolType,
 }
 
@@ -46,9 +46,16 @@ impl DynSolError {
         Self { selector: PANIC_SELECTOR, body: DynSolType::Tuple(vec![DynSolType::Uint(256)]) }
     }
 
-    /// Creates a new error from a selector.
-    pub const fn new(selector: Selector, body: DynSolType) -> Self {
+    /// Creates a new error, without length-checking the body. This allows
+    /// creation of invalid errors.
+    pub const fn new_unchecked(selector: Selector, body: DynSolType) -> Self {
         Self { selector, body }
+    }
+
+    /// Creates a new error from a selector.
+    pub fn new(selector: Selector, body: DynSolType) -> Option<Self> {
+        let _ = body.as_tuple()?;
+        Some(Self::new_unchecked(selector, body))
     }
 
     /// Error selector is the first 4 bytes of the keccak256 hash of the error

@@ -29,7 +29,8 @@ impl DynSolEvent {
     /// Checks that the indexed length is less than or equal to 4, and that the
     /// body is a tuple.
     pub fn new(topic_0: Option<B256>, indexed: Vec<DynSolType>, body: DynSolType) -> Option<Self> {
-        if indexed.len() > 4 || body.as_tuple().is_none() {
+        let topics = indexed.len() + topic_0.is_some() as usize;
+        if topics > 4 || body.as_tuple().is_none() {
             return None;
         }
         Some(Self::new_unchecked(topic_0, indexed, body))

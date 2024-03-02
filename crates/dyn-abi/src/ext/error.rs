@@ -19,7 +19,7 @@ impl Specifier<DynSolError> for Error {
             body.push(param.resolve()?);
         }
 
-        Ok(DynSolError::new(selector, crate::DynSolType::Tuple(body)))
+        Ok(DynSolError::new_unchecked(selector, crate::DynSolType::Tuple(body)))
     }
 }
 
