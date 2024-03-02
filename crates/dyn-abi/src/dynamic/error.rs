@@ -57,6 +57,11 @@ impl DynSolError {
         self.selector
     }
 
+    /// Error body types.
+    pub fn body(&self) -> &[DynSolType] {
+        self.body.as_tuple().expect("body is a tuple")
+    }
+
     /// Decode the error from the given data, which must already be stripped of
     /// its selector.
     fn decode_error_body(&self, data: &[u8]) -> Result<DecodedError> {
