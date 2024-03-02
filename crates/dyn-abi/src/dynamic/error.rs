@@ -1,9 +1,12 @@
 use crate::{DynSolType, DynSolValue, Error, Result};
 use alloc::vec::Vec;
 use alloy_primitives::{keccak256, Selector};
+use alloy_sol_types::SolError;
 
-const PANIC_SELECTOR: Selector = Selector::new([0x4e, 0x48, 0x7b, 0x71]);
-const REVERT_SELECTOR: Selector = Selector::new([0x08, 0xc3, 0x79, 0xa0]);
+/// See [alloy_sol_types::Panic] for signature details.
+const PANIC_SELECTOR: Selector = Selector::new(alloy_sol_types::Panic::SELECTOR);
+/// See [alloy_sol_types::Revert] for signature details.
+const REVERT_SELECTOR: Selector = Selector::new(alloy_sol_types::Revert::SELECTOR);
 
 /// A dynamic ABI error.
 ///
