@@ -723,7 +723,9 @@ mod tests {
         match value {
             DynSolValue::Array(t)
             | DynSolValue::FixedArray(t)
-            | crate::ty::as_tuple!(DynSolValue t) => t.iter().try_for_each(assert_valid_value)?,
+            | crate::dynamic::ty::as_tuple!(DynSolValue t) => {
+                t.iter().try_for_each(assert_valid_value)?
+            }
             _ => {}
         }
 

@@ -70,7 +70,7 @@ impl EventExt for Event {
     where
         I: IntoIterator<Item = B256>,
     {
-        Specifier::resolve(self)?.decode_log_parts(topics, data, validate)
+        self.resolve()?.decode_log_parts(topics, data, validate)
     }
 }
 
