@@ -811,7 +811,13 @@ macro_rules! bytes {
         // force const eval
         const STATIC_BYTES: &'static [u8] = &[$($inner),+];
         $crate::Bytes::from_static(STATIC_BYTES)
-    }}
+    }};
+
+    [$inner:literal; $size:literal] => {{
+        // force const eval
+        const STATIC_BYTES: &'static [u8; $size] = &[$inner; $size];
+        $crate::Bytes::from_static(STATIC_BYTES)
+    }};
 }
 
 #[cfg(test)]
@@ -820,12 +826,18 @@ mod tests {
 
     #[test]
     fn bytes_macros() {
-        const B1: Bytes = bytes!("010203040506070809");
-        const B2: Bytes = bytes![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        const B3: Bytes = bytes![1, 2, 3, 4, 5, 6, 7, 8, 9,];
+        static B1: Bytes = bytes!("010203040506070809");
+        static B2: Bytes = bytes![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        static B3: Bytes = bytes![1, 2, 3, 4, 5, 6, 7, 8, 9,];
 
         assert_eq!(B1, B2);
         assert_eq!(B1, B3);
+
+        static B4: Bytes = bytes!("0000");
+        static B5: Bytes = bytes![0; 2];
+        static B6: Bytes = bytes![0, 0];
+        assert_eq!(B4, B5);
+        assert_eq!(B4, B6);
     }
 
     #[test]

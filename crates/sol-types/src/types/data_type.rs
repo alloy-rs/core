@@ -322,7 +322,7 @@ impl SolType for Bytes {
 
     #[inline]
     fn detokenize(token: Self::Token<'_>) -> Self::RustType {
-        token.into_vec().into()
+        token.into_bytes()
     }
 }
 
