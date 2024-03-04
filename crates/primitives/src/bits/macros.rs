@@ -806,11 +806,27 @@ macro_rules! bytes {
         const STATIC_BYTES: &'static [u8] = &$crate::hex!($($s)+);
         $crate::Bytes::from_static(STATIC_BYTES)
     }};
+
+    [$($inner:literal),+ $(,)?] => {{
+        // force const eval
+        const STATIC_BYTES: &'static [u8] = &[$($inner),+];
+        $crate::Bytes::from_static(STATIC_BYTES)
+    }}
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{hex, Address, Bytes, FixedBytes};
+
+    #[test]
+    fn bytes_macros() {
+        const B1: Bytes = bytes!("010203040506070809");
+        const B2: Bytes = bytes![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        const B3: Bytes = bytes![1, 2, 3, 4, 5, 6, 7, 8, 9,];
+
+        assert_eq!(B1, B2);
+        assert_eq!(B1, B3);
+    }
 
     #[test]
     fn fixed_byte_macros() {
