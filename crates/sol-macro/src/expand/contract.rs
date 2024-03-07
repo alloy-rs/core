@@ -337,8 +337,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             pub struct #name<N, T, P> {
                 address: alloy_sol_types::private::Address,
                 provider: P,
-                network: ::core::marker::PhantomData<N>,
-                transport: ::core::marker::PhantomData<T>,
+                _network_transport: ::core::marker::PhantomData<(N, T)>,
             }
 
             #[automatically_derived]
@@ -355,7 +354,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 #[doc = #new_fn_doc]
                 #[inline]
                 pub const fn new(address: alloy_sol_types::private::Address, provider: P) -> Self {
-                    Self { address, provider, network: ::core::marker::PhantomData, transport: ::core::marker::PhantomData }
+                    Self { address, provider, _network_transport: ::core::marker::PhantomData }
                 }
 
                 #deploy_method
@@ -389,7 +388,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 /// Clones the provider and returns a new instance with the cloned provider.
                 #[inline]
                 pub fn with_cloned_provider(self) -> #name<N, T, P> {
-                    #name { address: self.address, provider: ::core::clone::Clone::clone(&self.provider), network: ::core::marker::PhantomData, transport: ::core::marker::PhantomData }
+                    #name { address: self.address, provider: ::core::clone::Clone::clone(&self.provider), _network_transport: ::core::marker::PhantomData }
                 }
             }
 
