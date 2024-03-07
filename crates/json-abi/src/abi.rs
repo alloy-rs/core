@@ -1,4 +1,7 @@
-use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
+use crate::{
+    to_sol::{SolPrinter, ToSolConfig},
+    AbiItem, Constructor, Error, Event, Fallback, Function, Receive,
+};
 use alloc::{collections::btree_map, string::String, vec::Vec};
 use alloy_primitives::Bytes;
 use btree_map::BTreeMap;
@@ -195,18 +198,18 @@ impl JsonAbi {
     /// Note that enums are going to be identical to `uint8` UDVTs, since no
     /// other information about enums is present in the ABI.
     #[inline]
-    pub fn to_sol(&self, name: &str) -> String {
+    pub fn to_sol(&self, name: &str, config: Option<ToSolConfig>) -> String {
         let mut out = String::new();
-        self.to_sol_raw(name, &mut out);
+        self.to_sol_raw(name, &mut out, config);
         out
     }
 
     /// Formats this JSON ABI as a Solidity interface into the given string.
     ///
     /// See [`to_sol`](JsonAbi::to_sol) for more information.
-    pub fn to_sol_raw(&self, name: &str, out: &mut String) {
+    pub fn to_sol_raw(&self, name: &str, out: &mut String, config: Option<ToSolConfig>) {
         let len = self.len();
-        out.reserve((len + 1) * 128);
+        out.reserve(len * 128);
 
         out.push_str("interface ");
         if !name.is_empty() {
@@ -216,7 +219,7 @@ impl JsonAbi {
         out.push('{');
         if len > 0 {
             out.push('\n');
-            crate::to_sol::ToSol::to_sol(self, &mut crate::to_sol::SolPrinter::new(out));
+            SolPrinter::new(out, config.unwrap_or_default()).print(self);
         }
         out.push('}');
     }

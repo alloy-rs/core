@@ -83,7 +83,7 @@ fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
     // Ignore constructors for Solc tests.
     abi.constructor = None;
     abi.dedup();
-    let actual = abi.to_sol(name);
+    let actual = abi.to_sol(name, None);
 
     ensure_file_contents(&sol_path, &actual);
 

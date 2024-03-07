@@ -8,13 +8,49 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
+/// Configuration for [`JsonAbi::to_sol`].
+#[derive(Clone, Debug)]
+#[allow(missing_copy_implementations)] // Future-proofing
+pub struct ToSolConfig {
+    print_constructors: bool,
+}
+
+impl Default for ToSolConfig {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ToSolConfig {
+    /// Creates a new configuration with default settings.
+    #[inline]
+    pub const fn new() -> Self {
+        Self { print_constructors: false }
+    }
+
+    /// Sets whether to print constructors. Default: `false`.
+    #[inline]
+    pub const fn print_constructors(mut self, yes: bool) -> Self {
+        self.print_constructors = yes;
+        self
+    }
+}
+
 pub(crate) trait ToSol {
     fn to_sol(&self, out: &mut SolPrinter<'_>);
 }
 
 pub(crate) struct SolPrinter<'a> {
+    /// The buffer to write to.
     s: &'a mut String,
+
+    /// Whether to emit `memory` when printing parameters.
+    /// This is set to `true` when printing functions so that we emit valid Solidity.
     emit_param_location: bool,
+
+    /// Configuration.
+    config: ToSolConfig,
 }
 
 impl Deref for SolPrinter<'_> {
@@ -35,8 +71,13 @@ impl DerefMut for SolPrinter<'_> {
 
 impl<'a> SolPrinter<'a> {
     #[inline]
-    pub(crate) fn new(s: &'a mut String) -> Self {
-        Self { s, emit_param_location: false }
+    pub(crate) fn new(s: &'a mut String, config: ToSolConfig) -> Self {
+        Self { s, emit_param_location: false, config }
+    }
+
+    #[inline]
+    pub(crate) fn print<T: ToSol>(&mut self, value: &T) {
+        value.to_sol(self);
     }
 
     #[inline]
@@ -69,7 +110,9 @@ impl ToSol for JsonAbi {
         fmt!(its.0);
         fmt!(self.errors());
         fmt!(self.events());
-        fmt!(self.constructor());
+        if out.config.print_constructors {
+            fmt!(self.constructor());
+        }
         fmt!(self.fallback);
         fmt!(self.receive);
         fmt!(self.functions());
