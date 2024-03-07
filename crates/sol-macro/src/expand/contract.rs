@@ -280,25 +280,25 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 quote! {
                     #deploy_doc
                     #[inline]
-                    pub fn deploy<P: alloy_contract::private::Provider>(provider: P, #params)
-                        -> impl ::core::future::Future<Output = alloy_contract::Result<#name<P>>>
+                    pub fn deploy<N: alloy_contract::private::Network, T: alloy_contract::private::Transport + ::core::clone::Clone, P: alloy_contract::private::Provider<N, T>>(provider: P, #params)
+                        -> impl ::core::future::Future<Output = alloy_contract::Result<#name<N, T, P>>>
                     {
-                        #name::<P>::deploy(provider, #args)
+                        #name::<N, T, P>::deploy(provider, #args)
                     }
 
                     #deploy_builder_doc
                     #[inline]
-                    pub fn deploy_builder<P: alloy_contract::private::Provider>(provider: P, #params)
-                        -> alloy_contract::RawCallBuilder<P>
+                    pub fn deploy_builder<N: alloy_contract::private::Network, T: alloy_contract::private::Transport + ::core::clone::Clone, P: alloy_contract::private::Provider<N, T>>(provider: P, #params)
+                        -> alloy_contract::RawCallBuilder<N, T, P>
                     {
-                        #name::<P>::deploy_builder(provider, #args)
+                        #name::<N, T, P>::deploy_builder(provider, #args)
                     }
                 },
                 quote! {
                     #deploy_doc
                     #[inline]
                     pub async fn deploy(provider: P, #params)
-                        -> alloy_contract::Result<#name<P>>
+                        -> alloy_contract::Result<#name<N, T, P>>
                     {
                         let call_builder = Self::deploy_builder(provider, #args);
                         let contract_address = call_builder.deploy().await?;
@@ -308,7 +308,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                     #deploy_builder_doc
                     #[inline]
                     pub fn deploy_builder(provider: P, #params)
-                        -> alloy_contract::RawCallBuilder<P>
+                        -> alloy_contract::RawCallBuilder<N, T, P>
                     {
                         alloy_contract::RawCallBuilder::new_raw(provider, #deploy_builder_data)
                     }
@@ -323,24 +323,25 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
             #[doc = #new_fn_doc]
             #[inline]
-            pub const fn new<P: alloy_contract::private::Provider>(
+            pub const fn new<N: alloy_contract::private::Network, T: alloy_contract::private::Transport + ::core::clone::Clone, P: alloy_contract::private::Provider<N, T>>(
                 address: alloy_sol_types::private::Address,
                 provider: P,
-            ) -> #name<P> {
-                #name::<P>::new(address, provider)
+            ) -> #name<N, T, P> {
+                #name::<N, T, P>::new(address, provider)
             }
 
             #deploy_fn
 
             #[doc = #struct_doc]
             #[derive(Clone)]
-            pub struct #name<P> {
+            pub struct #name<N, T, P> {
                 address: alloy_sol_types::private::Address,
                 provider: P,
+                _network_transport: ::core::marker::PhantomData<(N, T)>,
             }
 
             #[automatically_derived]
-            impl<P> ::core::fmt::Debug for #name<P> {
+            impl<N, T, P> ::core::fmt::Debug for #name<N, T, P> {
                 #[inline]
                 fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                     f.debug_tuple(#name_s).field(&self.address).finish()
@@ -349,11 +350,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
             /// Instantiation and getters/setters.
             #[automatically_derived]
-            impl<P: alloy_contract::private::Provider> #name<P> {
+            impl<N: alloy_contract::private::Network, T: alloy_contract::private::Transport + ::core::clone::Clone, P: alloy_contract::private::Provider<N, T>> #name<N, T, P> {
                 #[doc = #new_fn_doc]
                 #[inline]
                 pub const fn new(address: alloy_sol_types::private::Address, provider: P) -> Self {
-                    Self { address, provider }
+                    Self { address, provider, _network_transport: ::core::marker::PhantomData }
                 }
 
                 #deploy_method
@@ -383,23 +384,23 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 }
             }
 
-            impl<P: ::core::clone::Clone> #name<&P> {
+            impl<N, T, P: ::core::clone::Clone> #name<N, T, &P> {
                 /// Clones the provider and returns a new instance with the cloned provider.
                 #[inline]
-                pub fn with_cloned_provider(self) -> #name<P> {
-                    #name { address: self.address, provider: ::core::clone::Clone::clone(&self.provider) }
+                pub fn with_cloned_provider(self) -> #name<N, T, P> {
+                    #name { address: self.address, provider: ::core::clone::Clone::clone(&self.provider), _network_transport: ::core::marker::PhantomData }
                 }
             }
 
             /// Function calls.
             #[automatically_derived]
-            impl<P: alloy_contract::private::Provider> #name<P> {
+            impl<N: alloy_contract::private::Network, T: alloy_contract::private::Transport + ::core::clone::Clone, P: alloy_contract::private::Provider<N, T>> #name<N, T, P> {
                 /// Creates a new call builder using this contract instance's provider and address.
-                /// 
+                ///
                 /// Note that the call can be any function call, not just those defined in this
                 /// contract. Prefer using the other methods for building type-safe contract calls.
                 pub fn call_builder<C: alloy_sol_types::SolCall>(&self, call: &C)
-                    -> alloy_contract::SolCallBuilder<&P, C>
+                    -> alloy_contract::SolCallBuilder<N, T, &P, C>
                 {
                     alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
                 }
@@ -886,7 +887,7 @@ fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
     let doc = format!("Creates a new call builder for the [`{name}`] function.");
     quote! {
         #[doc = #doc]
-        pub fn #name(&self, #(#param_names1: #param_tys),*) -> alloy_contract::SolCallBuilder<&P, #call_name> {
+        pub fn #name(&self, #(#param_names1: #param_tys),*) -> alloy_contract::SolCallBuilder<N, T, &P, #call_name> {
             self.call_builder(&#call_name { #(#param_names2),* })
         }
     }
