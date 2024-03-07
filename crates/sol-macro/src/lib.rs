@@ -198,11 +198,12 @@ mod json;
 /// ### Contracts/interfaces
 ///
 /// Contracts generate a module with the same name, which contains all the items.
-/// This module will also contain 3 container enums which implement
-/// `SolInterface`, one for each:
+/// This module will also contain 3 container enums which implement `SolInterface`, one for each:
 /// - functions: `<contract_name>Calls`
 /// - errors: `<contract_name>Errors`
 /// - events: `<contract_name>Events`
+/// Note that by default only ABI encoding are generated. In order to generate bindings for RPC
+/// calls, you must enable the `#[sol(rpc)]` attribute.
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/contracts.rs"))]
 /// ```
