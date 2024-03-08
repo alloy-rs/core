@@ -47,6 +47,7 @@ mod internal_type;
 pub use internal_type::InternalType;
 
 mod to_sol;
+pub use to_sol::ToSolConfig;
 
 pub(crate) mod utils;
 
