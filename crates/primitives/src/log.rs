@@ -73,6 +73,12 @@ impl LogData {
         topics.truncate(4);
         self.set_topics_unchecked(topics);
     }
+
+    /// Consumes the log data, returning the topic list and the data.
+    #[inline]
+    pub fn split(self) -> (Vec<B256>, Bytes) {
+        (self.topics, self.data)
+    }
 }
 
 /// A log consists of an address, and some log data.
