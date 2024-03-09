@@ -134,7 +134,7 @@ where
 
     /// Reserialize the data.
     #[inline]
-    pub fn reserialze(&self) -> Log<LogData> {
+    pub fn reserialize(&self) -> Log<LogData> {
         Log { address: self.address, data: (&self.data).into() }
     }
 }
@@ -145,7 +145,7 @@ where
     for<'a> &'a T: Into<LogData>,
 {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        let this = self.reserialze();
+        let this = self.reserialize();
         let payload_length =
             this.address.length() + this.data.data.length() + this.data.topics.length();
 
@@ -156,7 +156,7 @@ where
     }
 
     fn length(&self) -> usize {
-        let this = self.reserialze();
+        let this = self.reserialize();
         let payload_length =
             this.address.length() + this.data.data.length() + this.data.topics.length();
         payload_length + alloy_rlp::length_of_length(payload_length)

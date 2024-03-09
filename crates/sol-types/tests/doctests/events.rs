@@ -78,7 +78,7 @@ fn event_rlp_roundtrip() {
     assert_eq!(rlpable_log.length(), rlp_encoded.len());
 
     let rlp_decoded = Log::decode(&mut rlp_encoded.as_slice()).unwrap();
-    assert_eq!(rlp_decoded, rlpable_log.reserialze());
+    assert_eq!(rlp_decoded, rlpable_log.reserialize());
 
     let decoded_log = MyEvent::decode_log(&rlp_decoded, true).unwrap();
 
