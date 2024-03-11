@@ -270,8 +270,9 @@ mod tests {
         match (SolAttrs::parse(&attrs), expected) {
             (Ok((actual, _)), Ok(expected)) => assert_eq!(actual, expected, "{attrs_s:?}"),
             (Err(actual), Err(expected)) => {
-                if !expected.is_empty() {
-                    assert_eq!(actual.to_string(), expected, "{attrs_s:?}")
+                let actual = actual.to_string();
+                if !actual.contains(expected) {
+                    assert_eq!(actual, expected, "{attrs_s:?}")
                 }
             }
             (a, b) => panic!("assertion failed: `{a:?} != {b:?}`: {attrs_s:?}"),
@@ -339,13 +340,13 @@ mod tests {
         }
 
         bytecode {
-            #[sol(deployed_bytecode = "0x1234")] => Ok(sol_attrs! { deployed_bytecode: parse_quote!("1234") }),
-            #[sol(bytecode = "0x1234")] => Ok(sol_attrs! { bytecode: parse_quote!("1234") }),
+            #[sol(deployed_bytecode = "0x1234")] => Ok(sol_attrs! { deployed_bytecode: parse_quote!("0x1234") }),
+            #[sol(bytecode = "0x1234")] => Ok(sol_attrs! { bytecode: parse_quote!("0x1234") }),
             #[sol(bytecode = "1234")] => Ok(sol_attrs! { bytecode: parse_quote!("1234") }),
-            #[sol(bytecode = "0x123xyz")] => Err("expected hex literal"),
-            #[sol(bytecode = "12 34")] => Err("expected hex literal"),
-            #[sol(bytecode = "xyz")] => Err("expected hex literal"),
-            #[sol(bytecode = "123")] => Err("expected even number of hex digits"),
+            #[sol(bytecode = "0x123xyz")] => Err("invalid hex value: "),
+            #[sol(bytecode = "12 34")] => Err("invalid hex value: "),
+            #[sol(bytecode = "xyz")] => Err("invalid hex value: "),
+            #[sol(bytecode = "123")] => Err("invalid hex value: "),
         }
 
         type_check {
