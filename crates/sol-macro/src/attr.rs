@@ -133,15 +133,11 @@ impl SolAttrs {
                 // `path = "0x<hex>"`
                 let bytes = || {
                     let lit = lit()?;
-                    let v = lit.value();
-                    let v = v.strip_prefix("0x").unwrap_or(&v);
-                    if v.contains(|c: char| !c.is_ascii_hexdigit()) {
-                        return Err(Error::new(lit.span(), "expected hex literal"));
+                    if let Err(e) = hex::check(lit.value()) {
+                        let msg = format!("invalid hex value: {e}");
+                        return Err(Error::new(lit.span(), msg));
                     }
-                    if v.len() % 2 != 0 {
-                        return Err(Error::new(lit.span(), "expected even number of hex digits"));
-                    }
-                    Ok(LitStr::new(v, lit.span()))
+                    Ok(lit)
                 };
 
                 match_! {

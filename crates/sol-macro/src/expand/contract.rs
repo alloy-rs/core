@@ -40,17 +40,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         let name = Ident::new("BYTECODE", lit.span());
         let hex = lit.value();
         let bytes = hex::decode(&hex).unwrap();
-        let doc = format!(
-            "The creation / init bytecode of the contract.\n\
-             \n\
-             Source:\n\
-             ```text\n\
-             {hex}\n\
-             ```"
-        );
         let lit_bytes = proc_macro2::Literal::byte_string(&bytes).with_span(lit.span());
         quote! {
-            #[doc = #doc]
+            /// The creation / init bytecode of the contract.
+            ///
+            /// ```text
+            #[doc = #hex]
+            /// ```
             #[rustfmt::skip]
             pub static #name: alloy_sol_types::private::Bytes =
                 alloy_sol_types::private::Bytes::from_static(#lit_bytes);
@@ -60,17 +56,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         let name = Ident::new("DEPLOYED_BYTECODE", lit.span());
         let hex = lit.value();
         let bytes = hex::decode(&hex).unwrap();
-        let doc = format!(
-            "The runtime bytecode of the contract, as deployed on the network.\n\
-             \n\
-             Source:\n\
-             ```text\n\
-             {hex}\n\
-             ```"
-        );
         let lit_bytes = proc_macro2::Literal::byte_string(&bytes).with_span(lit.span());
         quote! {
-            #[doc = #doc]
+            /// The runtime bytecode of the contract, as deployed on the network.
+            ///
+            /// ```text
+            #[doc = #hex]
+            /// ```
             #[rustfmt::skip]
             pub static #name: alloy_sol_types::private::Bytes =
                 alloy_sol_types::private::Bytes::from_static(#lit_bytes);
