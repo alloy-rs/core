@@ -341,8 +341,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             quote! {
                 #[doc = #doc]
                 pub fn #name(&self) -> alloy_contract::Event<N, T, &P, #event_name> {
-                    alloy_contract::private::Event::new(&self.provider)
-                    alloy_contract::SolEventBuilder::new_sol(&self.provider, &self.address)
+                    self.event_filter::<#event_name>()
                 }
             }
         });
