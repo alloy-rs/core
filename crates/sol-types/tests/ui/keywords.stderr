@@ -1836,6 +1836,33 @@ error: `Self` is not valid in the self type of an impl block
    |
    = note: replace `Self` with a different type
 
+error[E0117]: only traits defined in the current crate can be implemented for arbitrary types
+  --> tests/ui/keywords.rs:5:9
+   |
+5  | /         sol! {
+6  | |             struct $kw {
+7  | |                 uint $kw;
+8  | |             }
+9  | |
+10 | |             function $kw(uint $kw);
+11 | |         }
+   | |         ^
+   | |         |
+   | |         impl doesn't use only types from inside the current crate
+   | |_________this is not defined in the current crate because this is a foreign trait
+   |           this is not defined in the current crate because tuples are always foreign
+...
+42 | / kws! {
+43 | |     crate
+44 | |     self
+45 | |     Self
+46 | |     super
+47 | | }
+   | |_- in this macro invocation
+   |
+   = note: define and implement a trait or new type instead
+   = note: this error originates in the macro `sol` which comes from the expansion of the macro `kws` (in Nightly builds, run with -Z macro-backtrace for more info)
+
 error[E0747]: constant provided when a type was expected
   --> tests/ui/keywords.rs:52:5
    |
@@ -1865,33 +1892,6 @@ error[E0747]: constant provided when a type was expected
    |
 65 |     true
    |     ^^^^
-
-error[E0117]: only traits defined in the current crate can be implemented for arbitrary types
-  --> tests/ui/keywords.rs:5:9
-   |
-5  | /         sol! {
-6  | |             struct $kw {
-7  | |                 uint $kw;
-8  | |             }
-9  | |
-10 | |             function $kw(uint $kw);
-11 | |         }
-   | |         ^
-   | |         |
-   | |         impl doesn't use only types from inside the current crate
-   | |_________this is not defined in the current crate because this is a foreign trait
-   |           this is not defined in the current crate because tuples are always foreign
-...
-42 | / kws! {
-43 | |     crate
-44 | |     self
-45 | |     Self
-46 | |     super
-47 | | }
-   | |_- in this macro invocation
-   |
-   = note: define and implement a trait or new type instead
-   = note: this error originates in the macro `sol` which comes from the expansion of the macro `kws` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0609]: no field `crate` on type `crateCall`
   --> tests/ui/keywords.rs:10:31
