@@ -60,8 +60,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         quote!(#name: #param)
     });
 
-    let topic_tuple_names =
-        event.indexed_params().map(|p| p.name.as_ref()).enumerate().map(anon_name);
+    // NOTE: We need to enumerate before filtering.
+    let topic_tuple_names = event
+        .parameters
+        .iter()
+        .enumerate()
+        .filter(|(_, p)| p.is_indexed())
+        .map(|(i, p)| (i, p.name.as_ref()))
+        .map(anon_name);
 
     let topics_impl = if anonymous {
         quote! {(#(self.#topic_tuple_names.clone(),)*)}
@@ -72,7 +78,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
     let encode_first_topic =
         (!anonymous).then(|| quote!(alloy_sol_types::abi::token::WordToken(Self::SIGNATURE_HASH)));
 
-    let encode_topics_impl = event.indexed_params().enumerate().map(|(i, p)| {
+    let encode_topics_impl = event.parameters.iter().enumerate().filter(|(_, p)| p.is_indexed()).map(|(i, p)| {
         let name = anon_name((i, p.name.as_ref()));
         let ty = expand_type(&p.ty, &cx.crates);
 
