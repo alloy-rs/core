@@ -797,3 +797,14 @@ fn decoder_fixed_array_before_dynamic() {
     let decoded = FullReport::abi_decode(&encoded, true).unwrap();
     assert_eq!(decoded, full_report);
 }
+
+#[test]
+fn bytecode_attributes() {
+    sol! {
+        #[sol(bytecode = "1234", deployed_bytecode = "0x5678")]
+        contract Dummy {}
+    }
+
+    assert_eq!(Dummy::BYTECODE[..], hex::decode("1234").unwrap());
+    assert_eq!(Dummy::DEPLOYED_BYTECODE[..], hex::decode("5678").unwrap());
+}
