@@ -861,27 +861,27 @@ mod tests {
         let e = DynSolType::FixedBytes(1).coerce_str("").unwrap_err();
         assert_error_contains(&e, &Error::EmptyHexStringWithoutPrefix.to_string());
         let e = DynSolType::FixedBytes(1).coerce_str("0").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
         let e = DynSolType::FixedBytes(1).coerce_str("0x").unwrap_err();
-        assert_error_contains(&e, "Invalid string length");
+        assert_error_contains(&e, &hex::FromHexError::InvalidStringLength.to_string());
         let e = DynSolType::FixedBytes(1).coerce_str("0x0").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
 
         let t = DynSolType::Array(Box::new(DynSolType::FixedBytes(1)));
         let e = t.coerce_str("[0]").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
         let e = t.coerce_str("[0x]").unwrap_err();
-        assert_error_contains(&e, "Invalid string length");
+        assert_error_contains(&e, &hex::FromHexError::InvalidStringLength.to_string());
         let e = t.coerce_str("[0x0]").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
 
         let t = DynSolType::Array(Box::new(DynSolType::Tuple(vec![DynSolType::FixedBytes(1)])));
         let e = t.coerce_str("[(0)]").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
         let e = t.coerce_str("[(0x)]").unwrap_err();
-        assert_error_contains(&e, "Invalid string length");
+        assert_error_contains(&e, &hex::FromHexError::InvalidStringLength.to_string());
         let e = t.coerce_str("[(0x0)]").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
     }
 
     #[test]
@@ -949,7 +949,7 @@ mod tests {
 
         let t = DynSolType::Tuple(vec![DynSolType::Bytes, DynSolType::Bytes]);
         let e = t.coerce_str("(0, 0x0)").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
 
         // TODO: cut_err in `array_parser` somehow
         /*
@@ -958,14 +958,14 @@ mod tests {
             DynSolType::Bytes,
         ])));
         let e = t.coerce_str("[(0, 0x0)]").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
 
         let t = DynSolType::Array(Box::new(DynSolType::Tuple(vec![
             DynSolType::Bytes,
             DynSolType::Bytes,
         ])));
         let e = t.coerce_str("[(0x00, 0x0)]").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
         */
     }
 
