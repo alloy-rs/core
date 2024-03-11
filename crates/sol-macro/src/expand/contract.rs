@@ -442,11 +442,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             /// Event filters.
             #[automatically_derived]
             impl #generics_n_t_p #name<N, T, P> {
-                /// Creates a new call builder using this contract instance's provider and address.
+                /// Creates a new event filter using this contract instance's provider and address.
                 ///
-                /// Note that the call can be any function call, not just those defined in this
-                /// contract. Prefer using the other methods for building type-safe contract calls.
-                pub fn event_filter<E: alloy_sol_types::SolEvent>(&self, call: &E)
+                /// Note that the type can be any event, not just those defined in this contract.
+                /// Prefer using the other methods for building type-safe event filters.
+                pub fn event_filter<E: alloy_sol_types::SolEvent>(&self)
                     -> alloy_contract::Event<N, T, &P, E>
                 {
                     alloy_contract::Event::new_sol(&self.provider, &self.address)
