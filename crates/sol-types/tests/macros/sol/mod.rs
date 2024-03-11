@@ -586,6 +586,27 @@ fn word_dynarray_event() {
     }
 }
 
+#[test]
+fn string_indexed_event() {
+    sol! {
+        event S1(string);
+        event S2(uint, string);
+        event S3(string, uint);
+        event S4(uint[], string);
+        event S5(uint[], string, uint[]);
+        event S6(uint[] indexed, string, uint[]);
+        event S7(uint[] indexed, string, uint[] indexed);
+
+        event SI1(string indexed);
+        event SI2(uint, string indexed);
+        event SI3(string indexed, uint);
+        event SI4(uint[], string indexed);
+        event SI5(uint[], string indexed, uint[]);
+        event SI6(uint[] indexed, string indexed, uint[]);
+        event SI7(uint[] indexed, string indexed, uint[] indexed);
+    }
+}
+
 // TODO: make commented out code work
 #[test]
 fn paths_resolution_1() {
