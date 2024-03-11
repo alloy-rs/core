@@ -450,7 +450,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 pub fn event_filter<E: alloy_sol_types::SolEvent>(&self, call: &C)
                     -> alloy_contract::Event<N, T, &P, E>
                 {
-                    alloy_contract::Event::new_sol(&self.provider, self.address)
+                    alloy_contract::Event::new_sol(&self.provider, &self.address)
                 }
 
                 #(#filter_methods)*
