@@ -1,10 +1,11 @@
 #![allow(clippy::assertions_on_constants)]
 
-use alloy_primitives::{hex, keccak256, B256, U256};
+use alloy_primitives::{hex, keccak256, Log, B256, U256};
+use alloy_rlp::{Decodable, Encodable};
 use alloy_sol_types::{abi::token::WordToken, sol, SolEvent};
 
 sol! {
-    #[derive(Default)]
+    #[derive(Default, PartialEq, Debug)]
     event MyEvent(bytes32 indexed a, uint256 b, string indexed c, bytes d);
 
     event LogNote(
@@ -59,6 +60,29 @@ fn event() {
 
     assert_event_signature::<MyEvent2>("MyEvent2((bytes))");
     assert!(!MyEvent2::ANONYMOUS);
+}
+
+#[test]
+fn event_rlp_roundtrip() {
+    let event = MyEvent {
+        a: [0x11; 32].into(),
+        b: U256::from(1u64),
+        c: keccak256("Hello World"),
+        d: Vec::new(),
+    };
+
+    let rlpable_log = Log::<MyEvent>::new_from_event_unchecked(Default::default(), event);
+
+    let mut rlp_encoded = vec![];
+    rlpable_log.encode(&mut rlp_encoded);
+    assert_eq!(rlpable_log.length(), rlp_encoded.len());
+
+    let rlp_decoded = Log::decode(&mut rlp_encoded.as_slice()).unwrap();
+    assert_eq!(rlp_decoded, rlpable_log.reserialize());
+
+    let decoded_log = MyEvent::decode_log(&rlp_decoded, true).unwrap();
+
+    assert_eq!(decoded_log, rlpable_log)
 }
 
 fn assert_event_signature<T: SolEvent>(expected: &str) {

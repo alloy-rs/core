@@ -193,6 +193,15 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                 }
             }
 
+            impl From<&#name> for alloy_sol_types::private::LogData {
+                #[inline]
+                fn from(this: &#name) -> alloy_sol_types::private::LogData {
+                    let topics = alloy_sol_types::SolEvent::encode_topics(this).into_iter().map(|t| t.into()).collect();
+                    let data = alloy_sol_types::SolEvent::encode_data(this).into();
+                    alloy_sol_types::private::LogData::new_unchecked(topics, data)
+                }
+            }
+
             #abi
         };
     };

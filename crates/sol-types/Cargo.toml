@@ -30,7 +30,8 @@ alloy-json-abi = { workspace = true, optional = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
-alloy-primitives = { workspace = true, features = ["arbitrary", "serde"] }
+alloy-primitives = { workspace = true, features = ["arbitrary", "serde", "rlp"] }
+alloy-rlp.workspace = true
 derive_more.workspace = true
 paste.workspace = true
 pretty_assertions.workspace = true

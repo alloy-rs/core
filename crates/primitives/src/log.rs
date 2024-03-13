@@ -122,21 +122,49 @@ impl Log {
     }
 }
 
+impl<T> Log<T>
+where
+    for<'a> &'a T: Into<LogData>,
+{
+    /// Creates a new log.
+    #[inline]
+    pub const fn new_from_event_unchecked(address: Address, data: T) -> Self {
+        Self { address, data }
+    }
+
+    /// Creates a new log from an deserialized event.
+    pub fn new_from_event(address: Address, data: T) -> Option<Self> {
+        let this = Self::new_from_event_unchecked(address, data);
+        (&this.data).into().is_valid().then_some(this)
+    }
+
+    /// Reserialize the data.
+    #[inline]
+    pub fn reserialize(&self) -> Log<LogData> {
+        Log { address: self.address, data: (&self.data).into() }
+    }
+}
+
 #[cfg(feature = "rlp")]
-impl alloy_rlp::Encodable for Log {
+impl<T> alloy_rlp::Encodable for Log<T>
+where
+    for<'a> &'a T: Into<LogData>,
+{
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        let this = self.reserialize();
         let payload_length =
-            self.address.length() + self.data.data.length() + self.data.topics.length();
+            this.address.length() + this.data.data.length() + this.data.topics.length();
 
         alloy_rlp::Header { list: true, payload_length }.encode(out);
-        self.address.encode(out);
-        self.data.topics.encode(out);
-        self.data.data.encode(out);
+        this.address.encode(out);
+        this.data.topics.encode(out);
+        this.data.data.encode(out);
     }
 
     fn length(&self) -> usize {
+        let this = self.reserialize();
         let payload_length =
-            self.address.length() + self.data.data.length() + self.data.topics.length();
+            this.address.length() + this.data.data.length() + this.data.topics.length();
         payload_length + alloy_rlp::length_of_length(payload_length)
     }
 }

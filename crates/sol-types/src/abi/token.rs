@@ -125,6 +125,13 @@ impl From<Word> for WordToken {
     }
 }
 
+impl From<WordToken> for Word {
+    #[inline]
+    fn from(value: WordToken) -> Word {
+        value.0
+    }
+}
+
 impl From<bool> for WordToken {
     #[inline]
     fn from(value: bool) -> Self {
