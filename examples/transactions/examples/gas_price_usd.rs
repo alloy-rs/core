@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use alloy_core::primitives::{address, utils::format_units, Address, Bytes, U256};
 use alloy_network::Ethereum;
 use alloy_node_bindings::{Anvil, AnvilInstance};
@@ -10,6 +8,7 @@ use alloy_sol_types::{sol, SolCall};
 use alloy_transport_http::Http;
 use eyre::Result;
 use reqwest::Client;
+use std::str::FromStr;
 
 sol!(
     #[derive(Debug)]

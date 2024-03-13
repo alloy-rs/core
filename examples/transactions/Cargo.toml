@@ -19,6 +19,7 @@ alloy-sol-types = { version = "0.6.4", features = ["json"] }
 alloy-provider = { git = "https://github.com/alloy-rs/alloy", default-features = false }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", default-features = false }
 alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", default-features = false }
+alloy-rpc-trace-types = { git = "https://github.com/alloy-rs/alloy", default-features = false }
 alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy", default-features = false }
 alloy-transport = { git = "https://github.com/alloy-rs/alloy", default-features = false }
 alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", default-features = false }
