@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
         Ok(decoded) => {
             let path = decoded.path.iter().map(|address| address).collect::<Vec<&Address>>();
             println!(
-                "Swap {} of {} to {} of {}",
+                "Swap {} of token {} to {} of token {}",
                 decoded.amountIn,
                 path.first().unwrap(),
                 decoded.amountOutMin,

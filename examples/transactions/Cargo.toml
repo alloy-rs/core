@@ -16,9 +16,15 @@ exclude.workspace = true
 [dependencies]
 alloy-core = "0.6.4"
 alloy-sol-types = "0.6.4"
-alloy-providers = { git = "https://github.com/alloy-rs/alloy", rev = "9ac2c90", default-features = false }
-alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "9ac2c90", default-features = false }
-alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy", rev = "9ac2c90", default-features = false }
-
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", default-features = false }
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", default-features = false }
+alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", default-features = false }
+alloy-node-bindings = { git = "https://github.com/alloy-rs/alloy", default-features = false }
+alloy-transport = { git = "https://github.com/alloy-rs/alloy", default-features = false }
+alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", default-features = false }
+alloy-transport-ipc = { git = "https://github.com/alloy-rs/alloy", default-features = false }
+alloy-transport-ws = { git = "https://github.com/alloy-rs/alloy", default-features = false }
+alloy-network = { git = "https://github.com/alloy-rs/alloy", default-features = false }
 tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros"] }
 eyre = "0.6.12"
+reqwest = "0.11.26"
