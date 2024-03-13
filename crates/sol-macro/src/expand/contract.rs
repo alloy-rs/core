@@ -334,7 +334,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
         let filter_methods = events.iter().map(|&e| {
             let event_name = cx.overloaded_name(e.into());
-            let name = format_ident!("{name}_filter");
+            let name = format_ident!("{event_name}_filter");
             let doc = format!(
                 "Creates a new event filter for the [`{event_name}`] event.",
             );
