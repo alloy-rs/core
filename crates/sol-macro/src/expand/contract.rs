@@ -332,14 +332,29 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             )
         }));
 
+        let filter_methods = events.iter().map(|&e| {
+            let event_name = cx.overloaded_name(e.into());
+            let name = format_ident!("{name}_filter");
+            let doc = format!(
+                "Creates a new event filter for the [`{event_name}`] event.",
+            );
+            quote! {
+                #[doc = #doc]
+                pub fn #name(&self) -> alloy_contract::Event<N, T, &P, #event_name> {
+                    self.event_filter::<#event_name>()
+                }
+            }
+        });
+
         let alloy_contract = &cx.crates.contract;
+        let generics_n_t_p = quote!(<N: alloy_contract::private::Network, T: alloy_contract::private::Transport + ::core::clone::Clone, P: alloy_contract::private::Provider<N, T>>);
 
         quote! {
             use #alloy_contract as alloy_contract;
 
             #[doc = #new_fn_doc]
             #[inline]
-            pub const fn new<N: alloy_contract::private::Network, T: alloy_contract::private::Transport + ::core::clone::Clone, P: alloy_contract::private::Provider<N, T>>(
+            pub const fn new #generics_n_t_p(
                 address: alloy_sol_types::private::Address,
                 provider: P,
             ) -> #name<N, T, P> {
@@ -366,7 +381,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
             /// Instantiation and getters/setters.
             #[automatically_derived]
-            impl<N: alloy_contract::private::Network, T: alloy_contract::private::Transport + ::core::clone::Clone, P: alloy_contract::private::Provider<N, T>> #name<N, T, P> {
+            impl #generics_n_t_p #name<N, T, P> {
                 #[doc = #new_fn_doc]
                 #[inline]
                 pub const fn new(address: alloy_sol_types::private::Address, provider: P) -> Self {
@@ -410,7 +425,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
 
             /// Function calls.
             #[automatically_derived]
-            impl<N: alloy_contract::private::Network, T: alloy_contract::private::Transport + ::core::clone::Clone, P: alloy_contract::private::Provider<N, T>> #name<N, T, P> {
+            impl #generics_n_t_p #name<N, T, P> {
                 /// Creates a new call builder using this contract instance's provider and address.
                 ///
                 /// Note that the call can be any function call, not just those defined in this
@@ -422,6 +437,22 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                 }
 
                 #(#methods)*
+            }
+
+            /// Event filters.
+            #[automatically_derived]
+            impl #generics_n_t_p #name<N, T, P> {
+                /// Creates a new event filter using this contract instance's provider and address.
+                ///
+                /// Note that the type can be any event, not just those defined in this contract.
+                /// Prefer using the other methods for building type-safe event filters.
+                pub fn event_filter<E: alloy_sol_types::SolEvent>(&self)
+                    -> alloy_contract::Event<N, T, &P, E>
+                {
+                    alloy_contract::Event::new_sol(&self.provider, &self.address)
+                }
+
+                #(#filter_methods)*
             }
         }
     });

@@ -108,6 +108,7 @@ mod json;
 ///       other methods when possible
 ///     - `pub fn <functionName>(&self, <parameters>...) -> CallBuilder<P, functionReturn>` for each
 ///       function in the contract
+///     - `pub fn <eventName>_filter(&self) -> Event<P, eventName>` for each event in the contract
 ///   - `pub fn new ...`, same as above just as a free function in the contract module
 /// - `abi [ = <bool = false>]`: generates functions which return the dynamic ABI representation
 ///   (provided by [`alloy_json_abi`](https://docs.rs/alloy-json-abi)) of all the generated items.
