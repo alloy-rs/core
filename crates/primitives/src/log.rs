@@ -146,26 +146,35 @@ where
 }
 
 #[cfg(feature = "rlp")]
+impl alloy_rlp::Encodable for Log {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        let payload_length =
+            self.address.length() + self.data.data.length() + self.data.topics.length();
+
+        alloy_rlp::Header { list: true, payload_length }.encode(out);
+        self.address.encode(out);
+        self.data.topics.encode(out);
+        self.data.data.encode(out);
+    }
+
+    fn length(&self) -> usize {
+        let payload_length =
+            self.address.length() + self.data.data.length() + self.data.topics.length();
+        payload_length + alloy_rlp::length_of_length(payload_length)
+    }
+}
+
+#[cfg(feature = "rlp")]
 impl<T> alloy_rlp::Encodable for Log<T>
 where
     for<'a> &'a T: Into<LogData>,
 {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        let this = self.reserialize();
-        let payload_length =
-            this.address.length() + this.data.data.length() + this.data.topics.length();
-
-        alloy_rlp::Header { list: true, payload_length }.encode(out);
-        this.address.encode(out);
-        this.data.topics.encode(out);
-        this.data.data.encode(out);
+        self.reserialize().encode(out)
     }
 
     fn length(&self) -> usize {
-        let this = self.reserialize();
-        let payload_length =
-            this.address.length() + this.data.data.length() + this.data.topics.length();
-        payload_length + alloy_rlp::length_of_length(payload_length)
+        self.reserialize().length()
     }
 }
 
@@ -184,5 +193,20 @@ impl alloy_rlp::Decodable for Log {
         }
 
         Ok(Self { address, data: LogData { topics, data } })
+    }
+}
+
+#[cfg(feature = "rlp")]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_rlp::{Decodable, Encodable};
+
+    #[test]
+    fn test_roundtrip_rlp_log_data() {
+        let log = Log::<LogData>::default();
+        let mut buf = Vec::<u8>::new();
+        log.encode(&mut buf);
+        assert_eq!(Log::decode(&mut &buf[..]).unwrap(), log);
     }
 }
