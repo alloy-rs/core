@@ -22,12 +22,6 @@ macro_rules! as_tuple {
 }
 pub(crate) use as_tuple;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct StructProp {
-    name: String,
-    ty: DynSolType,
-}
-
 /// A dynamic Solidity type.
 ///
 /// Equivalent to an enum wrapper around all implementers of [`SolType`].
