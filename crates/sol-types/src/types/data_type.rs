@@ -11,8 +11,8 @@
 use crate::{abi::token::*, private::SolTypeValue, utils, SolType, Word};
 use alloc::{string::String as RustString, vec::Vec};
 use alloy_primitives::{
-    keccak256, Address as RustAddress, FixedBytes as RustFixedBytes, Function as RustFunction,
-    I256, U256,
+    keccak256, Address as RustAddress, Bytes as RustBytes, FixedBytes as RustFixedBytes,
+    Function as RustFunction, I256, U256,
 };
 use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
@@ -309,7 +309,7 @@ impl<T: ?Sized + AsRef<[u8]>> SolTypeValue<Bytes> for T {
 }
 
 impl SolType for Bytes {
-    type RustType = Vec<u8>;
+    type RustType = RustBytes;
     type Token<'a> = PackedSeqToken<'a>;
 
     const SOL_NAME: &'static str = "bytes";
@@ -322,7 +322,7 @@ impl SolType for Bytes {
 
     #[inline]
     fn detokenize(token: Self::Token<'_>) -> Self::RustType {
-        token.into_vec()
+        token.into_bytes()
     }
 }
 

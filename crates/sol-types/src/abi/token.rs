@@ -16,7 +16,7 @@ use crate::{
     Result, Word,
 };
 use alloc::vec::Vec;
-use alloy_primitives::{utils::vec_try_with_capacity, FixedBytes, I256, U256};
+use alloy_primitives::{utils::vec_try_with_capacity, Bytes, FixedBytes, I256, U256};
 use core::fmt;
 
 mod sealed {
@@ -497,12 +497,17 @@ impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
 }
 
 impl PackedSeqToken<'_> {
-    /// Consumes `self` to return the underlying vector.
+    /// Instantiate a new [`Vec`] by copying the underlying slice.
     // https://github.com/rust-lang/rust-clippy/issues/4979
     #[allow(clippy::missing_const_for_fn)]
     #[inline]
     pub fn into_vec(self) -> Vec<u8> {
         self.0.to_vec()
+    }
+
+    /// Instantiate a new [`Bytes`] by copying the underlying slice.
+    pub fn into_bytes(self) -> Bytes {
+        Bytes::copy_from_slice(self.0)
     }
 
     /// Returns a reference to the slice.

@@ -329,7 +329,7 @@ pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -
 mod tests {
     use crate::{sol, sol_data, utils::pad_usize, SolType, SolValue};
     use alloc::string::ToString;
-    use alloy_primitives::{address, hex, Address, B256, U256};
+    use alloy_primitives::{address, bytes, hex, Address, B256, U256};
 
     #[test]
     fn dynamic_array_of_dynamic_arrays() {
@@ -729,7 +729,7 @@ mod tests {
 
         let ty = Ty {
             arr: [[0x11u8; 32].into(), [0x22u8; 32].into(), [0x33u8; 32].into()],
-            r#dyn: vec![0x44u8; 4],
+            r#dyn: bytes![0x44u8; 4],
         };
         let encoded = hex!(
             "0000000000000000000000000000000000000000000000000000000000000020"
@@ -757,8 +757,8 @@ mod tests {
         }
 
         let ty = Ty {
-            arr: [vec![0x11u8; 32], vec![0x22u8; 32], vec![0x33u8; 32]],
-            r#dyn: vec![0x44u8; 4],
+            arr: [bytes![0x11u8; 32], bytes![0x22u8; 32], bytes![0x33u8; 32]],
+            r#dyn: bytes![0x44u8; 4],
         };
         let encoded = hex!(
             "0000000000000000000000000000000000000000000000000000000000000020" // struct offset

@@ -1,4 +1,4 @@
-use alloy_primitives::{b256, hex, keccak256, Address, I256, U256};
+use alloy_primitives::{b256, bytes, hex, keccak256, Address, I256, U256};
 use alloy_sol_types::{sol, SolCall, SolError, SolEvent, SolStruct, SolType};
 use serde::Serialize;
 use serde_json::Value;
@@ -93,7 +93,7 @@ fn function() {
     let call = someFunctionCall {
         basic: U256::from(1),
         string_: "Hello World".to_owned(),
-        longBytes: vec![0; 36],
+        longBytes: bytes![0; 36],
         array: vec![Address::ZERO, Address::ZERO, Address::ZERO],
         fixedArray: [true, false],
         struct_: CustomStruct { a: Address::ZERO, b: 2 },
@@ -226,10 +226,10 @@ fn getters() {
     }
 
     assert_eq!(data1Call::SIGNATURE, "data1(uint256,bool,uint256)");
-    let _ = data1Return { _0: U256::ZERO, _1: [0, 0, 0].into(), _2: vec![] };
+    let _ = data1Return { _0: U256::ZERO, _1: [0, 0, 0].into(), _2: bytes![] };
 
     assert_eq!(data2Call::SIGNATURE, "data2(uint256,bool)");
-    let _ = data2Return { _0: U256::ZERO, _1: [0, 0, 0].into(), _2: vec![] };
+    let _ = data2Return { _0: U256::ZERO, _1: [0, 0, 0].into(), _2: bytes![] };
 
     assert_eq!(
         nestedMapArrayCall::SIGNATURE,
@@ -413,8 +413,8 @@ fn nested_items() {
     }
     use nested::{InterfaceTest::*, *};
 
-    let _ = FilAddress { data: vec![] };
-    let _ = BigInt { val: vec![], neg: false };
+    let _ = FilAddress { data: bytes![] };
+    let _ = BigInt { val: bytes![], neg: false };
     assert_eq!(f1Call::SIGNATURE, "f1((bytes),uint256)");
     assert_eq!(f2Call::SIGNATURE, "f2((bytes,bool))");
 }
