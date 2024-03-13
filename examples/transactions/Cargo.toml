@@ -15,7 +15,7 @@ exclude.workspace = true
 
 [dependencies]
 alloy-core = "0.6.4"
-alloy-sol-types = "0.6.4"
+alloy-sol-types = { version = "0.6.4", features = ["json"] }
 alloy-provider = { git = "https://github.com/alloy-rs/alloy", default-features = false }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", default-features = false }
 alloy-rpc-client = { git = "https://github.com/alloy-rs/alloy", default-features = false }
