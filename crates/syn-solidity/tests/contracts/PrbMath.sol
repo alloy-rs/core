@@ -35,7 +35,7 @@ uint256 constant UNIT = 1e18;
 /// @dev The unit number inverted mod 2^256.
 uint256 constant UNIT_INVERSE = 78156646155174841979727994598816262306175212592076161876661_508869554232690281;
 
-/// @dev The the largest power of two that divides the decimal value of `UNIT`. The logarithm of this value is the least significant
+/// @dev The largest power of two that divides the decimal value of `UNIT`. The logarithm of this value is the least significant
 /// bit in the binary representation of `UNIT`.
 uint256 constant UNIT_LPOTD = 262144;
 
