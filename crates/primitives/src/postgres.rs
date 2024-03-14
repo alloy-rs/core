@@ -115,7 +115,7 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
             // Binary strings
             Type::BYTEA => out.put_slice(&self.0.to_be_bytes_vec()),
             Type::BIT | Type::VARBIT => {
-                // Bit in little-endian so the the first bit is the least significant.
+                // Bit in little-endian so the first bit is the least significant.
                 // Length must be at least one bit.
                 if BITS == 0 {
                     if *ty == Type::BIT {
