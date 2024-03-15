@@ -46,7 +46,7 @@ getrandom = { workspace = true, optional = true }
 rand = { workspace = true, optional = true, features = ["getrandom"] }
 
 # k256
-k256 = { workspace = true, optional = true }
+k256 = { workspace = true, optional = true, features = ["ecdsa"] }
 
 # arbitrary
 arbitrary = { workspace = true, optional = true }
