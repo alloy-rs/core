@@ -1,15 +1,18 @@
 [package]
 name = "alloy-sol-macro-input"
+description = "Input types for sol!-like macros"
+keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
+categories = ["encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/sol-macro-input"
+
+
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
 exclude.workspace = true
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 dunce = "1.0.4"
