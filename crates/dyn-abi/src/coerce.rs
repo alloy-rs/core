@@ -29,8 +29,6 @@ impl DynSolType {
     ///     `0b`, `0o`, or `0x` respectively.
     ///   - unit: same as [Solidity ether units](https://docs.soliditylang.org/en/latest/units-and-global-variables.html#ether-units)
     ///   - decimals with more digits than the unit's exponent value are not allowed
-    ///   - decimals are only allowed when the `std` feature is enabled due to floating point
-    ///     operations; this may be relaxed in the future
     /// - [`FixedBytes`](DynSolType::FixedBytes): `(0x)?[0-9A-Fa-f]{$0*2}`
     /// - [`Address`](DynSolType::Address): `(0x)?[0-9A-Fa-f]{40}`
     /// - [`Function`](DynSolType::Function): `(0x)?[0-9A-Fa-f]{48}`
@@ -247,11 +245,7 @@ impl<'a> ValueParser<'a> {
 #[derive(Debug)]
 enum Error {
     IntOverflow,
-    #[cfg(not(feature = "std"))]
-    FloatNoStd(f64),
-    #[cfg(feature = "std")]
-    FractionalNotAllowed(f64),
-    #[cfg(feature = "std")]
+    FractionalNotAllowed(U256),
     TooManyDecimals(usize, usize),
     InvalidFixedBytesLength(usize),
     FixedArrayLengthMismatch(usize, usize),
@@ -265,18 +259,12 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::IntOverflow => f.write_str("number too large to fit in target type"),
-            #[cfg(not(feature = "std"))]
-            Self::FloatNoStd(n) => {
-                write!(f, "fractional numbers are not supported without `std`: {n}")
-            }
-            #[cfg(feature = "std")]
             Self::TooManyDecimals(expected, actual) => {
                 write!(f, "expected at most {expected} decimals, got {actual}")
             }
-            #[cfg(feature = "std")]
             Self::FractionalNotAllowed(n) => write!(
                 f,
-                "non-zero fraction {n} not allowed without specifying non-wei units (gwei, ether, etc.)"
+                "non-zero fraction 0.{n} not allowed without specifying non-wei units (gwei, ether, etc.)"
             ),
             Self::InvalidFixedBytesLength(len) => {
                 write!(f, "fixed bytes length {len} greater than 32")
@@ -344,7 +332,7 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
     #[cfg(not(feature = "debug"))]
     let name = "uint";
     trace(name, move |input: &mut &str| {
-        let (s, (_, fract)) = spanned((
+        let (s, (intpart, fract)) = spanned((
             prefixed_int,
             opt(preceded(
                 '.',
@@ -359,42 +347,34 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
         let units = int_units(input)?;
 
         let uint = if let Some(fract) = fract {
-            let x = s
-                .parse::<f64>()
+            let fract_uint = U256::from_str_radix(fract, 10)
                 .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
 
-            // TODO: add num_traits with libm feature to support this
-            #[cfg(not(feature = "std"))]
-            {
-                let _ = fract;
+            if units == 0 && !fract_uint.is_zero() {
                 return Err(ErrMode::from_external_error(
                     input,
                     ErrorKind::Verify,
-                    Error::FloatNoStd(x),
+                    Error::FractionalNotAllowed(fract_uint),
                 ));
             }
 
-            #[cfg(feature = "std")]
-            {
-                if units == 0 && x.fract() != 0.0 {
-                    return Err(ErrMode::from_external_error(
-                        input,
-                        ErrorKind::Verify,
-                        Error::FractionalNotAllowed(x.fract()),
-                    ));
-                }
-
-                if fract.len() > units {
-                    return Err(ErrMode::from_external_error(
-                        input,
-                        ErrorKind::Verify,
-                        Error::TooManyDecimals(units, fract.len()),
-                    ));
-                }
-
-                U256::try_from(x * 10f64.powi(units as i32))
-                    .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))
+            if fract.len() > units {
+                return Err(ErrMode::from_external_error(
+                    input,
+                    ErrorKind::Verify,
+                    Error::TooManyDecimals(units, fract.len()),
+                ));
             }
+
+            // (intpart * 10^fract.len() + fract) * 10^(units-fract.len())
+            U256::from_str_radix(intpart, 10)
+                .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?
+                .checked_mul(U256::from(10usize.pow(fract.len() as u32)))
+                .and_then(|u| u.checked_add(fract_uint))
+                .and_then(|u| u.checked_mul(U256::from(10usize.pow((units - fract.len()) as u32))))
+                .ok_or_else(|| {
+                    ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
+                })
         } else {
             s.parse::<U256>()
                 .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?
@@ -743,12 +723,25 @@ mod tests {
             DynSolValue::Uint(U256::from_str("1000000000").unwrap(), 256)
         );
 
-        if cfg!(feature = "std") {
-            assert_eq!(
-                DynSolType::Uint(256).coerce_str("0.1 gwei").unwrap(),
-                DynSolValue::Uint(U256::from_str("100000000").unwrap(), 256)
-            );
-        }
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.1 gwei").unwrap(),
+            DynSolValue::Uint(U256::from_str("100000000").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.000000001gwei").unwrap(),
+            DynSolValue::Uint(U256::from(1), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.123456789gwei").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456789").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("123456789123.123456789gwei").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456789123123456789").unwrap(), 256)
+        );
     }
 
     #[test]
@@ -763,22 +756,50 @@ mod tests {
             DynSolValue::Uint(U256::from_str("1000000000000000000").unwrap(), 256)
         );
 
-        if cfg!(feature = "std") {
-            assert_eq!(
-                DynSolType::Uint(256).coerce_str("0.01 ether").unwrap(),
-                DynSolValue::Uint(U256::from_str("10000000000000000").unwrap(), 256)
-            );
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.01 ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("10000000000000000").unwrap(), 256)
+        );
 
-            assert_eq!(
-                DynSolType::Uint(256).coerce_str("0.000000000000000001ether").unwrap(),
-                DynSolValue::Uint(U256::from(1), 256)
-            );
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.000000000000000001ether").unwrap(),
+            DynSolValue::Uint(U256::from(1), 256)
+        );
 
-            assert_eq!(
-                DynSolType::Uint(256).coerce_str("0.000000000000000001ether"),
-                DynSolType::Uint(256).coerce_str("1wei"),
-            );
-        }
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.000000000000000001ether"),
+            DynSolType::Uint(256).coerce_str("1wei"),
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.123456789123456789ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456789123456789").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.123456789123456000ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456789123456000").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.1234567891234560ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456789123456000").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("123456.123456789123456789ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456123456789123456789").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("123456.123456789123456000ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456123456789123456000").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("123456.1234567891234560ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456123456789123456000").unwrap(), 256)
+        );
     }
 
     #[test]
