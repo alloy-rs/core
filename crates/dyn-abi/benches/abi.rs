@@ -1,4 +1,4 @@
-#![allow(clippy::incompatible_msrv)]
+#![allow(unknown_lints, clippy::incompatible_msrv)]
 
 use alloy_dyn_abi::{DynSolType, DynSolValue};
 use alloy_primitives::{hex, U256};
