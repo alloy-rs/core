@@ -22,6 +22,7 @@ extern crate syn_solidity as ast;
 
 use alloy_sol_macro_input::{SolInput, SolInputExpander, SolInputKind};
 use proc_macro::TokenStream;
+use quote::quote;
 use syn::parse_macro_input;
 
 mod attr;
