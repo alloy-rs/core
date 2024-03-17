@@ -23,6 +23,7 @@ alloy-dyn-abi = { version = "0.6.4", path = "crates/dyn-abi", default-features =
 alloy-json-abi = { version = "0.6.4", path = "crates/json-abi", default-features = false }
 alloy-primitives = { version = "0.6.4", path = "crates/primitives", default-features = false }
 alloy-sol-macro = { version = "0.6.4", path = "crates/sol-macro", default-features = false }
+alloy-sol-macro-input = { version = "0.6.4", path = "crates/sol-macro-input", default-features = false }
 alloy-sol-type-parser = { version = "0.6.4", path = "crates/sol-type-parser", default-features = false }
 alloy-sol-types = { version = "0.6.4", path = "crates/sol-types", default-features = false }
 syn-solidity = { version = "0.6.4", path = "crates/syn-solidity", default-features = false }
