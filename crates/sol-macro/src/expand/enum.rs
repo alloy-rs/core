@@ -1,7 +1,7 @@
 //! [`ItemEnum`] expansion.
 
 use super::ExpCtxt;
-use crate::attr;
+use alloy_sol_macro_input::{derives_mapped, mk_doc, SolAttrs};
 use ast::{ItemEnum, Spanned};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -22,7 +22,7 @@ use syn::Result;
 pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> {
     let ItemEnum { name, variants, attrs, .. } = enumm;
 
-    let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = SolAttrs::parse(attrs)?;
     cx.derives(&mut attrs, [], false);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
@@ -41,7 +41,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
     let invalid_variant = has_invalid_variant.then(|| {
         let comma = (!variants.trailing_punct()).then(syn::token::Comma::default);
 
-        let has_serde = attr::derives_mapped(&attrs).any(|path| {
+        let has_serde = derives_mapped(&attrs).any(|path| {
             let Some(last) = path.segments.last() else {
                 return false;
             };
@@ -70,7 +70,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
     let uint8 = quote!(alloy_sol_types::sol_data::Uint<8>);
     let uint8_st = quote!(<#uint8 as alloy_sol_types::SolType>);
 
-    let doc = docs.then(|| attr::mk_doc(format!("```solidity\n{enumm}\n```")));
+    let doc = docs.then(|| mk_doc(format!("```solidity\n{enumm}\n```")));
     let tokens = quote! {
         #(#attrs)*
         #doc

@@ -6,18 +6,22 @@ use syn::{punctuated::Punctuated, Attribute, Error, LitBool, LitStr, Path, Resul
 const DUPLICATE_ERROR: &str = "duplicate attribute";
 const UNKNOWN_ERROR: &str = "unknown `sol` attribute";
 
+/// Wraps the argument in a doc attribute.
 pub fn mk_doc(s: impl quote::ToTokens) -> TokenStream {
     quote!(#[doc = #s])
 }
 
+/// Returns `true` if the attribute is `#[doc = "..."]`.
 pub fn is_doc(attr: &Attribute) -> bool {
     attr.path().is_ident("doc")
 }
 
+/// Returns `true` if the attribute is `#[derive(...)]`.
 pub fn is_derive(attr: &Attribute) -> bool {
     attr.path().is_ident("derive")
 }
 
+/// Returns an iterator over all the `#[doc = "..."]` attributes.
 pub fn docs(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|a| is_doc(a))
 }
@@ -45,10 +49,13 @@ pub fn docs_str(attrs: &[Attribute]) -> String {
     doc
 }
 
+/// Returns an iterator over all the `#[derive(...)]` attributes.
 pub fn derives(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
     attrs.iter().filter(|a| is_derive(a))
 }
 
+/// Returns an iterator over all the rust `::` paths in the `#[derive(...)]`
+/// attributes.
 pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {
     derives(attrs).flat_map(|attr| {
         attr.parse_args_with(Punctuated::<Path, Token![,]>::parse_terminated).unwrap_or_default()
@@ -66,27 +73,40 @@ pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {
 /// See [`crate::sol!`] for a list of all possible attributes.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct SolAttrs {
+    /// `#[sol(rpc)]`
     pub rpc: Option<bool>,
+    /// `#[sol(abi)]`
     pub abi: Option<bool>,
+    /// `#[sol(all_derives)]`
     pub all_derives: Option<bool>,
+    /// `#[sol(extra_methods)]`
     pub extra_methods: Option<bool>,
+    /// `#[sol(docs)]`
     pub docs: Option<bool>,
 
+    /// `#[sol(alloy_sol_types = alloy_core::sol_types)]`
     pub alloy_sol_types: Option<Path>,
+    /// `#[sol(alloy_contract = alloy_contract)]`
     pub alloy_contract: Option<Path>,
 
     // TODO: Implement
+    /// UNIMPLEMENTED: `#[sol(rename = "new_name")]`
     pub rename: Option<LitStr>,
     // TODO: Implement
+    /// UNIMPLMENTED: `#[sol(rename_all = "camelCase")]`
     pub rename_all: Option<CasingStyle>,
 
+    /// `#[sol(bytecode = "0x1234")]`
     pub bytecode: Option<LitStr>,
+    /// `#[sol(deployed_bytecode = "0x1234")]`
     pub deployed_bytecode: Option<LitStr>,
 
+    /// UDVT only `#[sol(type_check = "my_function")]`
     pub type_check: Option<LitStr>,
 }
 
 impl SolAttrs {
+    /// Parse the `#[sol(...)]` attributes from a list of attributes.
     pub fn parse(attrs: &[Attribute]) -> Result<(Self, Vec<Attribute>)> {
         let mut this = Self::default();
         let mut others = Vec::with_capacity(attrs.len());

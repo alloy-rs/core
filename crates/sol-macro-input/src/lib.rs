@@ -14,6 +14,10 @@
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
+/// Tools for working with `#[...]` attributes.
+mod attr;
+pub use attr::{derives_mapped, docs_str, mk_doc, SolAttrs};
+
 mod input;
 pub use input::{SolInput, SolInputKind};
 

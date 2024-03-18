@@ -20,12 +20,11 @@
 extern crate proc_macro_error;
 extern crate syn_solidity as ast;
 
-use alloy_sol_macro_input::{SolInput, SolInputExpander, SolInputKind};
+use alloy_sol_macro_input::{SolAttrs, SolInput, SolInputExpander, SolInputKind};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse_macro_input;
 
-mod attr;
 mod expand;
 mod utils;
 
@@ -233,14 +232,16 @@ mod verbatim;
 pub fn sol(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as alloy_sol_macro_input::SolInput);
 
-    SolMacroExpander.expand(input).unwrap_or_else(syn::Error::into_compile_error).into()
+    SolMacroExpander.expand(&input).unwrap_or_else(syn::Error::into_compile_error).into()
 }
 
 struct SolMacroExpander;
 
 impl SolInputExpander for SolMacroExpander {
-    fn expand(&mut self, input: SolInput) -> syn::Result<proc_macro2::TokenStream> {
+    fn expand(&mut self, input: &SolInput) -> syn::Result<proc_macro2::TokenStream> {
+        let input = input.clone();
         // Convert JSON input to Solidity input
+
         #[cfg(feature = "json")]
         let input = input.normalize_json()?;
 
@@ -256,7 +257,7 @@ impl SolInputExpander for SolMacroExpander {
                 crate::expand::expand(file)
             }
             SolInputKind::Type(ty) => {
-                let (sol_attrs, rest) = crate::attr::SolAttrs::parse(&attrs)?;
+                let (sol_attrs, rest) = SolAttrs::parse(&attrs)?;
                 if !rest.is_empty() {
                     return Err(syn::Error::new_spanned(
                         rest.first().unwrap(),
