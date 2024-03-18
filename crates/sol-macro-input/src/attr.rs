@@ -70,7 +70,6 @@ pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {
 // 5. document the attribute in the [`crate::sol!`] macro docs.
 
 /// `#[sol(...)]` attributes.
-/// See [`crate::sol!`] for a list of all possible attributes.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct SolAttrs {
     /// `#[sol(rpc)]`
