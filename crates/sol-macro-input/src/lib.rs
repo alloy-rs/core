@@ -16,7 +16,7 @@
 
 /// Tools for working with `#[...]` attributes.
 mod attr;
-pub use attr::{derives_mapped, docs_str, mk_doc, SolAttrs};
+pub use attr::{derives_mapped, docs_str, mk_doc, ContainsSolAttrs, SolAttrs};
 
 mod input;
 pub use input::{SolInput, SolInputKind};

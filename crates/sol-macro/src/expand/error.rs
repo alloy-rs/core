@@ -1,7 +1,7 @@
 //! [`ItemError`] expansion.
 
 use super::{expand_fields, expand_from_into_tuples, expand_tokenize, ExpCtxt};
-use alloy_sol_macro_input::{mk_doc, SolAttrs};
+use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::ItemError;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -19,10 +19,10 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream> {
-    let ItemError { parameters: params, name, attrs, .. } = error;
+    let ItemError { parameters: params, name, .. } = error;
     cx.assert_resolved(params)?;
 
-    let (sol_attrs, mut attrs) = SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = error.split_attrs()?;
     cx.derives(&mut attrs, params, true);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);

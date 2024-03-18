@@ -2,7 +2,7 @@
 
 use super::{anon_name, ty, ExpCtxt};
 use crate::utils::ExprArray;
-use alloy_sol_macro_input::{docs_str, mk_doc, SolAttrs};
+use alloy_sol_macro_input::{docs_str, mk_doc, ContainsSolAttrs};
 use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent, Spanned};
 use heck::ToSnakeCase;
 use proc_macro2::{Ident, TokenStream};
@@ -29,9 +29,10 @@ use syn::{parse_quote, Attribute, Result};
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenStream> {
-    let ItemContract { attrs, name, body, .. } = contract;
+    let ItemContract { name, body, .. } = contract;
 
-    let (sol_attrs, attrs) = SolAttrs::parse(attrs)?;
+    let (sol_attrs, attrs) = contract.split_attrs()?;
+
     let extra_methods = sol_attrs.extra_methods.or(cx.attrs.extra_methods).unwrap_or(false);
     let rpc = sol_attrs.rpc.or(cx.attrs.rpc).unwrap_or(false);
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);

@@ -1,7 +1,7 @@
 //! [`ItemFunction`] expansion.
 
 use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt};
-use alloy_sol_macro_input::{mk_doc, SolAttrs};
+use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{FunctionKind, ItemFunction, Spanned};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
@@ -24,7 +24,7 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenStream> {
-    let ItemFunction { attrs, parameters, returns, name, kind, .. } = function;
+    let ItemFunction { parameters, returns, name, kind, .. } = function;
 
     if matches!(kind, FunctionKind::Constructor(_)) {
         return expand_constructor(cx, function);
@@ -42,7 +42,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         cx.assert_resolved(returns)?;
     }
 
-    let (sol_attrs, mut call_attrs) = SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut call_attrs) = function.split_attrs()?;
     let mut return_attrs = call_attrs.clone();
     cx.derives(&mut call_attrs, parameters, true);
     if !returns.is_empty() {
@@ -159,9 +159,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 }
 
 fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<TokenStream> {
-    let ItemFunction { attrs, parameters, .. } = constructor;
+    let ItemFunction { parameters, .. } = constructor;
 
-    let (sol_attrs, call_attrs) = SolAttrs::parse(attrs)?;
+    let (sol_attrs, call_attrs) = constructor.split_attrs()?;
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     let alloy_sol_types = &cx.crates.sol_types;

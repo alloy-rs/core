@@ -185,6 +185,66 @@ impl SolAttrs {
     }
 }
 
+/// Trait for items that contain `#[sol(...)]` attributes among other
+/// attributes. This is usually a shortcut  for [`SolAttrs::parse`].
+pub trait ContainsSolAttrs {
+    /// Get the list of attributes.
+    fn attrs(&self) -> &[Attribute];
+
+    /// Parse the `#[sol(...)]` attributes from the list of attributes.
+    fn split_attrs(&self) -> syn::Result<(SolAttrs, Vec<Attribute>)> {
+        SolAttrs::parse(self.attrs())
+    }
+}
+
+impl ContainsSolAttrs for syn_solidity::File {
+    fn attrs(&self) -> &[Attribute] {
+        &self.attrs
+    }
+}
+
+impl ContainsSolAttrs for syn_solidity::ItemContract {
+    fn attrs(&self) -> &[Attribute] {
+        &self.attrs
+    }
+}
+
+impl ContainsSolAttrs for syn_solidity::ItemEnum {
+    fn attrs(&self) -> &[Attribute] {
+        &self.attrs
+    }
+}
+
+impl ContainsSolAttrs for syn_solidity::ItemError {
+    fn attrs(&self) -> &[Attribute] {
+        &self.attrs
+    }
+}
+
+impl ContainsSolAttrs for syn_solidity::ItemEvent {
+    fn attrs(&self) -> &[Attribute] {
+        &self.attrs
+    }
+}
+
+impl ContainsSolAttrs for syn_solidity::ItemFunction {
+    fn attrs(&self) -> &[Attribute] {
+        &self.attrs
+    }
+}
+
+impl ContainsSolAttrs for syn_solidity::ItemStruct {
+    fn attrs(&self) -> &[Attribute] {
+        &self.attrs
+    }
+}
+
+impl ContainsSolAttrs for syn_solidity::ItemUdt {
+    fn attrs(&self) -> &[Attribute] {
+        &self.attrs
+    }
+}
+
 /// Defines the casing for the attributes long representation.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum CasingStyle {

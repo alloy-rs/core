@@ -1,7 +1,7 @@
 //! [`ItemEvent`] expansion.
 
 use super::{anon_name, expand_event_tokenize, expand_tuple_types, expand_type, ty, ExpCtxt};
-use alloy_sol_macro_input::{mk_doc, SolAttrs};
+use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{EventParameter, ItemEvent, SolIdent, Spanned};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
@@ -19,10 +19,9 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream> {
-    let ItemEvent { attrs, .. } = event;
     let params = event.params();
 
-    let (sol_attrs, mut attrs) = SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = event.split_attrs()?;
     cx.derives(&mut attrs, &params, true);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);

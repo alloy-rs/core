@@ -1,7 +1,7 @@
 //! [`ItemEnum`] expansion.
 
 use super::ExpCtxt;
-use alloy_sol_macro_input::{derives_mapped, mk_doc, SolAttrs};
+use alloy_sol_macro_input::{derives_mapped, mk_doc, ContainsSolAttrs};
 use ast::{ItemEnum, Spanned};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -20,9 +20,9 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> {
-    let ItemEnum { name, variants, attrs, .. } = enumm;
+    let ItemEnum { name, variants, .. } = enumm;
 
-    let (sol_attrs, mut attrs) = SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = enumm.split_attrs()?;
     cx.derives(&mut attrs, [], false);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
