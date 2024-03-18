@@ -5,7 +5,6 @@ keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
 categories = ["encoding", "cryptography::cryptocurrencies"]
 homepage = "https://github.com/alloy-rs/core/tree/main/crates/sol-macro-input"
 
-
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
