@@ -66,8 +66,8 @@ pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {
 // 1. add a field to this struct,
 // 2. add a match arm in the `parse` function below,
 // 3. add test cases in the `tests` module at the bottom of this file,
-// 4. implement the attribute in the `expand` module,
-// 5. document the attribute in the [`crate::sol!`] macro docs.
+// 4. implement the attribute in your `SolInputExpander` implementation,
+// 5. document the attribute in the [`sol!`] macro docs.
 
 /// `#[sol(...)]` attributes.
 #[derive(Debug, Default, PartialEq, Eq)]
