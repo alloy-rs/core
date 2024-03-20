@@ -1,21 +1,23 @@
 use ast::Spanned;
-use proc_macro2::TokenStream;
-use quote::quote;
 use std::path::PathBuf;
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
     Attribute, Error, Ident, LitStr, Result, Token,
 };
 
+/// Parsed input for `sol!`-like macro expanders. This enum represents a `Sol` file, a JSON ABI, or
+/// a Solidity type.
 #[derive(Clone, Debug)]
 pub enum SolInputKind {
-    Sol(ast::File),
+    /// Solidity type.
     Type(ast::Type),
+    /// Solidity file or snippet.
+    Sol(ast::File),
+    /// JSON ABI file
     #[cfg(feature = "json")]
     Json(Ident, alloy_json_abi::ContractObject),
 }
 
-// doesn't parse Json
 impl Parse for SolInputKind {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let fork = input.fork();
@@ -37,10 +39,16 @@ impl Parse for SolInputKind {
     }
 }
 
+/// Parsed input for `sol!`-like macro expanders. This struct represents a list
+/// of expandable items parsed from either solidity code snippets, or from a
+/// JSON abi.
 #[derive(Clone, Debug)]
 pub struct SolInput {
+    /// Attributes attached to the input, of the form `#[...]`.
     pub attrs: Vec<Attribute>,
+    /// Path to the input, if any.
     pub path: Option<PathBuf>,
+    /// The input kind.
     pub kind: SolInputKind,
 }
 
@@ -126,40 +134,5 @@ impl SolInput {
             })?;
             Ok(Self { attrs, path, kind })
         }
-    }
-
-    pub fn expand(self) -> Result<TokenStream> {
-        let Self { attrs, path, kind } = self;
-        let include = path.map(|p| {
-            let p = p.to_str().unwrap();
-            quote! { const _: &'static [u8] = ::core::include_bytes!(#p); }
-        });
-
-        let tokens = match kind {
-            SolInputKind::Sol(mut file) => {
-                file.attrs.extend(attrs);
-                crate::expand::expand(file)
-            }
-            SolInputKind::Type(ty) => {
-                let (sol_attrs, rest) = crate::attr::SolAttrs::parse(&attrs)?;
-                if !rest.is_empty() {
-                    return Err(Error::new_spanned(
-                        rest.first().unwrap(),
-                        "only `#[sol]` attributes are allowed here",
-                    ));
-                }
-
-                let mut crates = crate::expand::ExternCrates::default();
-                crates.fill(&sol_attrs);
-                Ok(crate::expand::expand_type(&ty, &crates))
-            }
-            #[cfg(feature = "json")]
-            SolInputKind::Json(name, json) => crate::json::expand(name, json, attrs),
-        }?;
-
-        Ok(quote! {
-            #include
-            #tokens
-        })
     }
 }

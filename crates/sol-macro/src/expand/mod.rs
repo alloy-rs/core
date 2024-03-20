@@ -1,10 +1,10 @@
 //! Functions which generate Rust code from the Solidity AST.
 
 use crate::{
-    attr::{self, SolAttrs},
     expand::ty::expand_rust_type,
     utils::{self, ExprArray},
 };
+use alloy_sol_macro_input::{ContainsSolAttrs, SolAttrs};
 use ast::{
     EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath,
     Spanned, Type, VariableDeclaration, Visit,
@@ -124,7 +124,7 @@ impl<'ast> ExpCtxt<'ast> {
 // resolve
 impl<'ast> ExpCtxt<'ast> {
     fn parse_file_attributes(&mut self) -> Result<()> {
-        let (attrs, others) = attr::SolAttrs::parse(&self.ast.attrs)?;
+        let (attrs, others) = self.ast.split_attrs()?;
         self.attrs = attrs;
         self.crates.fill(&self.attrs);
 

@@ -1,0 +1,30 @@
+[package]
+name = "alloy-sol-macro-input"
+description = "Input types for sol!-like macros"
+keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
+categories = ["encoding", "cryptography::cryptocurrencies"]
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/sol-macro-input"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[dependencies]
+dunce = "1.0.4"
+heck = "0.5.0"
+hex.workspace = true
+proc-macro2.workspace = true
+syn.workspace = true
+syn-solidity.workspace = true
+quote.workspace = true
+
+# json
+alloy-json-abi = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+
+[features]
+json = ["dep:alloy-json-abi", "dep:serde_json"]

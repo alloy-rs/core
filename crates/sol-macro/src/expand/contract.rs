@@ -1,7 +1,8 @@
 //! [`ItemContract`] expansion.
 
 use super::{anon_name, ty, ExpCtxt};
-use crate::{attr, utils::ExprArray};
+use crate::utils::ExprArray;
+use alloy_sol_macro_input::{docs_str, mk_doc, ContainsSolAttrs};
 use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent, Spanned};
 use heck::ToSnakeCase;
 use proc_macro2::{Ident, TokenStream};
@@ -28,9 +29,10 @@ use syn::{parse_quote, Attribute, Result};
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenStream> {
-    let ItemContract { attrs, name, body, .. } = contract;
+    let ItemContract { name, body, .. } = contract;
 
-    let (sol_attrs, attrs) = attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, attrs) = contract.split_attrs()?;
+
     let extra_methods = sol_attrs.extra_methods.or(cx.attrs.extra_methods).unwrap_or(false);
     let rpc = sol_attrs.rpc.or(cx.attrs.rpc).unwrap_or(false);
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
@@ -158,10 +160,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
         enum_expander.expand(ToExpand::Events(&events), attrs)
     });
 
-    let mod_descr_doc = (docs && attr::docs_str(&mod_attrs).trim().is_empty())
-        .then(|| attr::mk_doc("Module containing a contract's types and functions."));
-    let mod_iface_doc = (docs && !attr::docs_str(&mod_attrs).contains("```solidity\n"))
-        .then(|| attr::mk_doc(format!("\n\n```solidity\n{contract}\n```")));
+    let mod_descr_doc = (docs && docs_str(&mod_attrs).trim().is_empty())
+        .then(|| mk_doc("Module containing a contract's types and functions."));
+    let mod_iface_doc = (docs && !docs_str(&mod_attrs).contains("```solidity\n"))
+        .then(|| mk_doc(format!("\n\n```solidity\n{contract}\n```")));
 
     let abi = abi.then(|| {
         if_json! {
@@ -257,7 +259,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                  Returns a new instance of the contract, if the deployment was successful.\n\
                  \n\
                  For more fine-grained control over the deployment process, use [`deploy_builder`] instead.";
-            let deploy_doc = attr::mk_doc(deploy_doc_str);
+            let deploy_doc = mk_doc(deploy_doc_str);
 
             let deploy_builder_doc_str =
                 "Creates a `RawCallBuilder` for deploying this contract using the given `provider`\n\
@@ -265,7 +267,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                  \n\
                  This is a simple wrapper around creating a `RawCallBuilder` with the data set to\n\
                  the bytecode concatenated with the constructor's ABI-encoded arguments.";
-            let deploy_builder_doc = attr::mk_doc(deploy_builder_doc_str);
+            let deploy_builder_doc = mk_doc(deploy_builder_doc_str);
 
             let (params, args) = option_unzip(constructor.and_then(|c| {
                 if c.parameters.is_empty() {

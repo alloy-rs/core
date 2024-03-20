@@ -20,19 +20,16 @@
 extern crate proc_macro_error;
 extern crate syn_solidity as ast;
 
+use alloy_sol_macro_input::{SolAttrs, SolInput, SolInputExpander, SolInputKind};
 use proc_macro::TokenStream;
+use quote::quote;
 use syn::parse_macro_input;
 
-mod attr;
 mod expand;
-mod input;
 mod utils;
 
 #[cfg(feature = "json")]
 mod verbatim;
-
-#[cfg(feature = "json")]
-mod json;
 
 /// Generate types that implement [`alloy-sol-types`] traits, which can be used
 /// for type-safe [ABI] and [EIP-712] serialization to interface with Ethereum
@@ -95,11 +92,11 @@ mod json;
 ///   construct `eth_call`s to an on-chain contract through Ethereum JSON RPC, similar to the
 ///   default behavior of [`abigen`]. This makes use of the [`alloy-contract`](https://github.com/alloy-rs/alloy)
 ///   crate.
-///   
+///
 ///   N.B: at the time of writing, the `alloy-contract` crate is not yet released on `crates.io`,
 ///   and its API is completely unstable and subject to change, so this feature is not yet
 ///   recommended for use.
-///   
+///
 ///   Generates:
 ///   - `struct {name}Instance<P: Provider> { ... }`
 ///     - `pub fn new(...) -> {name}Instance<P>` + getters and setters
@@ -233,8 +230,52 @@ mod json;
 #[proc_macro]
 #[proc_macro_error]
 pub fn sol(input: TokenStream) -> TokenStream {
-    parse_macro_input!(input as input::SolInput)
-        .expand()
-        .unwrap_or_else(syn::Error::into_compile_error)
-        .into()
+    let input = parse_macro_input!(input as alloy_sol_macro_input::SolInput);
+
+    SolMacroExpander.expand(&input).unwrap_or_else(syn::Error::into_compile_error).into()
+}
+
+struct SolMacroExpander;
+
+impl SolInputExpander for SolMacroExpander {
+    fn expand(&mut self, input: &SolInput) -> syn::Result<proc_macro2::TokenStream> {
+        let input = input.clone();
+        // Convert JSON input to Solidity input
+
+        #[cfg(feature = "json")]
+        let input = input.normalize_json()?;
+
+        let SolInput { attrs, path, kind } = input;
+        let include = path.map(|p| {
+            let p = p.to_str().unwrap();
+            quote! { const _: &'static [u8] = ::core::include_bytes!(#p); }
+        });
+
+        let tokens = match kind {
+            SolInputKind::Sol(mut file) => {
+                file.attrs.extend(attrs);
+                crate::expand::expand(file)
+            }
+            SolInputKind::Type(ty) => {
+                let (sol_attrs, rest) = SolAttrs::parse(&attrs)?;
+                if !rest.is_empty() {
+                    return Err(syn::Error::new_spanned(
+                        rest.first().unwrap(),
+                        "only `#[sol]` attributes are allowed here",
+                    ));
+                }
+
+                let mut crates = crate::expand::ExternCrates::default();
+                crates.fill(&sol_attrs);
+                Ok(crate::expand::expand_type(&ty, &crates))
+            }
+            #[cfg(feature = "json")]
+            SolInputKind::Json(_, _) => unreachable!("input already normalized"),
+        }?;
+
+        Ok(quote! {
+            #include
+            #tokens
+        })
+    }
 }

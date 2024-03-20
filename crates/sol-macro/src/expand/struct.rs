@@ -1,6 +1,7 @@
 //! [`ItemStruct`] expansion.
 
-use super::{attr, expand_fields, expand_from_into_tuples, expand_tokenize, expand_type, ExpCtxt};
+use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_type, ExpCtxt};
+use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{Item, ItemStruct, Spanned, Type};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -24,9 +25,10 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
-    let ItemStruct { name, fields, attrs, .. } = s;
+    let ItemStruct { name, fields, .. } = s;
 
-    let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = s.split_attrs()?;
+
     cx.derives(&mut attrs, fields, true);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
@@ -58,7 +60,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let name_s = name.as_string();
     let fields = expand_fields(fields, cx);
 
-    let doc = docs.then(|| attr::mk_doc(format!("```solidity\n{s}\n```")));
+    let doc = docs.then(|| mk_doc(format!("```solidity\n{s}\n```")));
     let tokens = quote! {
         #(#attrs)*
         #doc

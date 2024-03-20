@@ -2,15 +2,16 @@
 
 use super::{ty::expand_rust_type, ExpCtxt};
 use crate::expand::expand_type;
+use alloy_sol_macro_input::ContainsSolAttrs;
 use ast::ItemUdt;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Result;
 
 pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
-    let ItemUdt { name, ty, attrs, .. } = udt;
+    let ItemUdt { name, ty, .. } = udt;
 
-    let (sol_attrs, mut attrs) = crate::attr::SolAttrs::parse(attrs)?;
+    let (sol_attrs, mut attrs) = udt.split_attrs()?;
     cx.type_derives(&mut attrs, std::iter::once(ty), true);
 
     let underlying_sol = expand_type(ty, &cx.crates);
