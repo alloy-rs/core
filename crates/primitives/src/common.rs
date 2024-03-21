@@ -35,7 +35,7 @@ impl From<Address> for TxKind {
 
 impl TxKind {
     /// Returns the address of the contract that will be called or will receive the transfer.
-    pub const fn to(self) -> Option<Address> {
+    pub const fn to(&self) -> Option<&Address> {
         match self {
             TxKind::Create => None,
             TxKind::Call(to) => Some(to),
@@ -44,19 +44,19 @@ impl TxKind {
 
     /// Returns true if the transaction is a contract creation.
     #[inline]
-    pub const fn is_create(self) -> bool {
+    pub const fn is_create(&self) -> bool {
         matches!(self, TxKind::Create)
     }
 
     /// Returns true if the transaction is a contract call.
     #[inline]
-    pub const fn is_call(self) -> bool {
+    pub const fn is_call(&self) -> bool {
         matches!(self, TxKind::Call(_))
     }
 
     /// Calculates a heuristic for the in-memory size of this object.
     #[inline]
-    pub const fn size(self) -> usize {
+    pub const fn size(&self) -> usize {
         core::mem::size_of::<Self>()
     }
 }
@@ -92,5 +92,19 @@ impl Decodable for TxKind {
         } else {
             Err(alloy_rlp::Error::InputTooShort)
         }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for TxKind {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.to().serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for TxKind {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Ok(Option::<Address>::deserialize(deserializer)?.into())
     }
 }
