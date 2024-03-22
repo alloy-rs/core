@@ -14,6 +14,8 @@
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
+extern crate syn_solidity as ast;
+
 /// Tools for working with `#[...]` attributes.
 mod attr;
 pub use attr::{derives_mapped, docs_str, mk_doc, ContainsSolAttrs, SolAttrs};
@@ -26,5 +28,3 @@ pub use expander::SolInputExpander;
 
 #[cfg(feature = "json")]
 mod json;
-
-extern crate syn_solidity as ast;
