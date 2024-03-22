@@ -22,7 +22,6 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 alloy-sol-macro-input.workspace = true
-
 syn-solidity = { workspace = true, features = ["visit", "visit-mut"] }
 
 proc-macro2.workspace = true

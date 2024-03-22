@@ -240,8 +240,11 @@ struct SolMacroExpander;
 impl SolInputExpander for SolMacroExpander {
     fn expand(&mut self, input: &SolInput) -> syn::Result<proc_macro2::TokenStream> {
         let input = input.clone();
-        // Convert JSON input to Solidity input
 
+        #[cfg(feature = "json")]
+        let is_json = matches!(input.kind, SolInputKind::Json { .. });
+
+        // Convert JSON input to Solidity input
         #[cfg(feature = "json")]
         let input = input.normalize_json()?;
 
@@ -253,7 +256,12 @@ impl SolInputExpander for SolMacroExpander {
 
         let tokens = match kind {
             SolInputKind::Sol(mut file) => {
-                file.attrs.extend(attrs);
+                // Attributes have already been added to the inner contract generated in
+                // `normalize_json`.
+                #[cfg(feature = "json")]
+                if !is_json {
+                    file.attrs.extend(attrs);
+                }
                 crate::expand::expand(file)
             }
             SolInputKind::Type(ty) => {
