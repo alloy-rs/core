@@ -256,7 +256,8 @@ impl SolInputExpander for SolMacroExpander {
 
         let tokens = match kind {
             SolInputKind::Sol(mut file) => {
-                // Attributes have been added to the inner contract generated in JSON.
+                // Attributes have already been added to the inner contract generated in
+                // `normalize_json`.
                 #[cfg(feature = "json")]
                 if !is_json {
                     file.attrs.extend(attrs);
