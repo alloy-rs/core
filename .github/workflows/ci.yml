@@ -61,7 +61,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - run: cargo miri setup ${{ matrix.flags }}
       - run: cargo miri test ${{ matrix.flags }}
 
   wasm:
