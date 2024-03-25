@@ -1,6 +1,6 @@
 use alloy_json_abi::{Function, JsonAbi, Param, StateMutability};
-use alloy_primitives::{Address, U256};
-use alloy_sol_types::{sol, SolCall, SolError, SolStruct};
+use alloy_primitives::{Address, B256, I256, U256};
+use alloy_sol_types::{sol, SolCall, SolError, SolEvent, SolStruct};
 use pretty_assertions::assert_eq;
 use std::borrow::Cow;
 
@@ -197,4 +197,24 @@ fn zrx_token() {
 
     let _ = ZRXToken::approveCall { _spender: Address::ZERO, _value: U256::ZERO };
     assert_eq!(ZRXToken::approveCall::SIGNATURE, "approve(address,uint256)");
+}
+
+// Handle contract **array** types in JSON ABI
+// https://github.com/alloy-rs/core/issues/585
+#[test]
+fn balancer_v2_vault() {
+    // https://etherscan.io/address/0xBA12222222228d8Ba445958a75a0704d566BF2C8#code
+    sol!(BalancerV2Vault, "../json-abi/tests/abi/BalancerV2Vault.json");
+
+    let _ = BalancerV2Vault::PoolBalanceChanged {
+        poolId: B256::ZERO,
+        liquidityProvider: Address::ZERO,
+        tokens: vec![Address::ZERO],
+        deltas: vec![I256::ZERO],
+        protocolFeeAmounts: vec![U256::ZERO],
+    };
+    assert_eq!(
+        BalancerV2Vault::PoolBalanceChanged::SIGNATURE,
+        "PoolBalanceChanged(bytes32,address,address[],int256[],uint256[])"
+    );
 }

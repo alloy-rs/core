@@ -489,19 +489,28 @@ impl ToSol for EventParam {
     }
 }
 
-fn param<'a>(
-    mut type_name: &'a str,
-    internal_type: Option<&'a InternalType>,
+fn param(
+    type_name: &str,
+    internal_type: Option<&InternalType>,
     indexed: bool,
     name: &str,
     components: &[Param],
     out: &mut SolPrinter<'_>,
 ) {
+    let mut type_name = type_name;
+    let storage;
     if let Some(it) = internal_type {
         type_name = match it {
-            InternalType::AddressPayable(_) => "address payable",
-            InternalType::Contract(_) => "address",
-            InternalType::Struct { ty, .. }
+            InternalType::Contract(s) => {
+                if let Some(start) = s.find('[') {
+                    storage = format!("address{}", &s[start..]);
+                    &storage
+                } else {
+                    "address"
+                }
+            }
+            InternalType::AddressPayable(ty)
+            | InternalType::Struct { ty, .. }
             | InternalType::Enum { ty, .. }
             | InternalType::Other { ty, .. } => ty,
         };
