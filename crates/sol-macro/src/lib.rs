@@ -243,6 +243,8 @@ impl SolInputExpander for SolMacroExpander {
 
         #[cfg(feature = "json")]
         let is_json = matches!(input.kind, SolInputKind::Json { .. });
+        #[cfg(not(feature = "json"))]
+        let is_json = false;
 
         // Convert JSON input to Solidity input
         #[cfg(feature = "json")]
@@ -258,10 +260,10 @@ impl SolInputExpander for SolMacroExpander {
             SolInputKind::Sol(mut file) => {
                 // Attributes have already been added to the inner contract generated in
                 // `normalize_json`.
-                #[cfg(feature = "json")]
                 if !is_json {
                     file.attrs.extend(attrs);
                 }
+
                 crate::expand::expand(file)
             }
             SolInputKind::Type(ty) => {

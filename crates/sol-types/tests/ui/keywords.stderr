@@ -812,6 +812,30 @@ help: escape `match` to use it as an identifier
 10 |             function $kw(uint r#$kw);
    |                               ++
 
+error: expected `{`, found `,`
+  --> tests/ui/keywords.rs:5:9
+   |
+5  | /         sol! {
+6  | |             struct $kw {
+7  | |                 uint $kw;
+8  | |             }
+9  | |
+10 | |             function $kw(uint $kw);
+   | |                                  - expected `{`
+11 | |         }
+   | |_________^ unexpected token
+...
+50 | / kws! {
+51 | |     as
+52 | |     break
+53 | |     continue
+...  |
+75 | |     try
+76 | | }
+   | |_- in this macro invocation
+   |
+   = note: this error originates in the macro `sol` which comes from the expansion of the macro `kws` (in Nightly builds, run with -Z macro-backtrace for more info)
+
 error: expected identifier, found keyword `match`
   --> tests/ui/keywords.rs:10:31
    |
@@ -822,6 +846,30 @@ help: escape `match` to use it as an identifier
    |
 10 |             function $kw(uint r#$kw);
    |                               ++
+
+error: expected `{`, found `)`
+  --> tests/ui/keywords.rs:5:9
+   |
+5  | /         sol! {
+6  | |             struct $kw {
+7  | |                 uint $kw;
+8  | |             }
+9  | |
+10 | |             function $kw(uint $kw);
+   | |                                  - expected `{`
+11 | |         }
+   | |_________^ unexpected token
+...
+50 | / kws! {
+51 | |     as
+52 | |     break
+53 | |     continue
+...  |
+75 | |     try
+76 | | }
+   | |_- in this macro invocation
+   |
+   = note: this error originates in the macro `sol` which comes from the expansion of the macro `kws` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected identifier, found keyword `return`
   --> tests/ui/keywords.rs:62:5
@@ -1805,6 +1853,15 @@ error[E0425]: cannot find value `value` in this scope
    |
    = note: this error originates in the macro `sol` which comes from the expansion of the macro `kws` (in Nightly builds, run with -Z macro-backtrace for more info)
 
+error[E0658]: postfix match is experimental
+  --> tests/ui/keywords.rs:10:31
+   |
+10 |             function $kw(uint $kw);
+   |                               ^^^
+   |
+   = note: see issue #121618 <https://github.com/rust-lang/rust/issues/121618> for more information
+   = help: add `#![feature(postfix_match)]` to the crate attributes to enable
+
 error: `Self` is not valid in the self type of an impl block
   --> tests/ui/keywords.rs:5:9
    |
@@ -2062,18 +2119,6 @@ error[E0609]: no field `r#let` on type `letCall`
    |                               ^^^ unknown field
 
 error[E0609]: no field `r#let` on type `&letCall`
-  --> tests/ui/keywords.rs:10:31
-   |
-10 |             function $kw(uint $kw);
-   |                               ^^^ unknown field
-
-error[E0609]: no field `r#match` on type `matchCall`
-  --> tests/ui/keywords.rs:10:31
-   |
-10 |             function $kw(uint $kw);
-   |                               ^^^ unknown field
-
-error[E0609]: no field `r#match` on type `&matchCall`
   --> tests/ui/keywords.rs:10:31
    |
 10 |             function $kw(uint $kw);

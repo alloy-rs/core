@@ -24,7 +24,7 @@ impl Specifier<DynSolError> for Error {
 }
 
 /// Provides error encoding and decoding for the [`Error`] type.
-pub trait ErrorExt: sealed::Sealed {
+pub trait ErrorExt: Sealed {
     /// Decode the error from the given data.
     fn decode_error(&self, data: &[u8]) -> crate::Result<crate::DecodedError>;
 }

@@ -338,6 +338,10 @@ mod test {
         );
 
         parser_test!("contract Item", InternalType::Contract("Item".into()));
+        parser_test!("contract Item[]", InternalType::Contract("Item[]".into()));
+        parser_test!("contract Item[][2]", InternalType::Contract("Item[][2]".into()));
+        parser_test!("contract Item[][2][]", InternalType::Contract("Item[][2][]".into()));
+
         parser_test!(
             "address payable",
             InternalType::AddressPayable("address payable".to_string())
