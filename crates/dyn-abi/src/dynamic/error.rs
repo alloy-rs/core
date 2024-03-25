@@ -1,6 +1,6 @@
 use crate::{DynSolType, DynSolValue, Error, Result};
 use alloc::vec::Vec;
-use alloy_primitives::{keccak256, Selector};
+use alloy_primitives::Selector;
 use alloy_sol_types::SolError;
 
 /// See [alloy_sol_types::Panic] for signature details.

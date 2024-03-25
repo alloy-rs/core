@@ -2,7 +2,7 @@
 //!
 //! This is a simple representation of Solidity type grammar.
 
-use crate::{DynSolEvent, DynSolType, Result};
+use crate::{DynSolType, Result};
 use alloc::vec::Vec;
 use alloy_json_abi::{EventParam, Param};
 use parser::{ParameterSpecifier, Parameters, RootType, TupleSpecifier, TypeSpecifier, TypeStem};
@@ -14,8 +14,9 @@ use alloy_json_abi::InternalType;
 /// some Solidity interface item.
 ///
 /// The `Specifier` trait is implemented by types that can be resolved into
-/// Solidity interace items, e.g. [`DynSolType`] or [`DynSolEvent`]. ABI and
-/// related systems have many different ways of specifying Solidity interfaces.
+/// Solidity interace items, e.g. [`DynSolType`] or [`DynSolEvent`](crate::DynSolEvent).
+///
+/// ABI and related systems have many different ways of specifying Solidity interfaces.
 /// This trait provides a single pattern for resolving those encodings into
 /// Solidity interface items.
 ///

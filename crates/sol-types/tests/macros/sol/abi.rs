@@ -464,6 +464,7 @@ fn custom() {
 sol! {
     #![sol(abi)]
 
+    #[allow(dead_code)]
     contract Contract {
         struct CustomStruct {
             uint256 custom;
@@ -504,6 +505,7 @@ sol! {
     }
 }
 
+#[allow(dead_code)]
 mod not_contract {
     use super::*;
 
