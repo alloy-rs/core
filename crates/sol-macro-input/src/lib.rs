@@ -21,7 +21,7 @@ pub use attr::{derives_mapped, docs_str, mk_doc, ContainsSolAttrs, SolAttrs};
 mod input;
 pub use input::{SolInput, SolInputKind};
 
-mod expander;
+pub mod expander;
 pub use expander::SolInputExpander;
 
 #[cfg(feature = "json")]

@@ -1,9 +1,11 @@
 use ast::Spanned;
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
     Attribute, Error, Ident, LitStr, Result, Token,
 };
+
+use crate::{expander::Context, SolAttrs};
 
 /// Parsed input for `sol!`-like macro expanders. This enum represents a `Sol` file, a JSON ABI, or
 /// a Solidity type.
@@ -69,6 +71,26 @@ impl Parse for SolInput {
 }
 
 impl SolInput {
+    /// Normalize JSON ABI inputs into Sol inputs.
+    #[cfg(not(feature = "json"))]
+    pub fn normalize_json(self) -> syn::Result<Self> {
+        Ok(self)
+    }
+
+    /// Convert the input into an input kind and an context.
+    pub fn to_kind_and_context(self) -> syn::Result<(SolInputKind, Context)> {
+        let this = self.normalize_json()?;
+
+        let (sol_attrs, root_attrs) = SolAttrs::parse(&this.attrs)?;
+
+        let context =
+            Context { path: this.path, crates: BTreeMap::default(), root_attrs, sol_attrs };
+
+        // TODO: apply renames and other transformations based on the context.
+
+        Ok((this.kind, context))
+    }
+
     /// `abigen`-like syntax: `sol!(name, "path/to/file")`
     fn parse_abigen(mut attrs: Vec<Attribute>, input: ParseStream<'_>) -> Result<Self> {
         attrs.extend(Attribute::parse_outer(input)?);

@@ -20,7 +20,7 @@
 extern crate proc_macro_error;
 extern crate syn_solidity as ast;
 
-use alloy_sol_macro_input::{SolAttrs, SolInput, SolInputExpander, SolInputKind};
+use alloy_sol_macro_input::{expander, SolAttrs, SolInput, SolInputExpander, SolInputKind};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse_macro_input;
@@ -237,7 +237,7 @@ pub fn sol(input: TokenStream) -> TokenStream {
 
 struct SolMacroExpander;
 
-impl SolInputExpander for SolMacroExpander {
+impl SolMacroExpander {
     fn expand(&mut self, input: &SolInput) -> syn::Result<proc_macro2::TokenStream> {
         let input = input.clone();
         // Convert JSON input to Solidity input
@@ -277,5 +277,68 @@ impl SolInputExpander for SolMacroExpander {
             #include
             #tokens
         })
+    }
+}
+
+impl SolInputExpander for SolMacroExpander {
+    fn from_context(_context: expander::Context) -> Self {
+        todo!()
+    }
+
+    fn ctx(&self) -> &expander::Context {
+        todo!()
+    }
+
+    fn expand_enum<'a>(&mut self, item: &'a ast::ItemEnum) -> expander::EnumExpansion<'a> {
+        todo!()
+    }
+
+    fn expand_error<'a>(&mut self, item: &'a ast::ItemError) -> expander::ErrorExpansion<'a> {
+        todo!()
+    }
+
+    fn expand_event<'a>(&mut self, item: &'a ast::ItemEvent) -> expander::EventExpansion<'a> {
+        todo!()
+    }
+
+    fn expand_function<'a>(
+        &mut self,
+        item: &'a ast::ItemFunction,
+    ) -> expander::FunctionExpansion<'a> {
+        todo!()
+    }
+
+    fn expand_struct<'a>(&mut self, item: &'a ast::ItemStruct) -> expander::StructExpansion<'a> {
+        todo!()
+    }
+
+    fn expand_udt<'a>(&mut self, item: &'a ast::ItemUdt) -> expander::UdtExpansion<'a> {
+        todo!()
+    }
+
+    fn expand_variable<'a>(
+        &mut self,
+        item: &'a ast::VariableDefinition,
+    ) -> expander::VariableExpansion<'a> {
+        todo!()
+    }
+
+    fn expand_contract<'a>(
+        &mut self,
+        item: &'a ast::ItemContract,
+    ) -> expander::ContractExpansion<'a> {
+        todo!()
+    }
+
+    fn expand_file<'a>(&mut self, file: &'a ast::File) -> expander::SolOutput<'a> {
+        todo!()
+    }
+
+    fn expand_type<'a>(&mut self, ty: &'a ast::Type) -> expander::SolOutput<'a> {
+        todo!()
+    }
+
+    fn expand<'a>(&mut self, input: &'a SolInputKind) -> syn::Result<expander::SolOutput<'a>> {
+        todo!()
     }
 }

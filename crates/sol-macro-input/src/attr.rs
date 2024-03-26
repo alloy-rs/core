@@ -70,7 +70,7 @@ pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {
 // 5. document the attribute in the [`sol!`] macro docs.
 
 /// `#[sol(...)]` attributes.
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct SolAttrs {
     /// `#[sol(rpc)]`
     pub rpc: Option<bool>,
