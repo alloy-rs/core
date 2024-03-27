@@ -148,7 +148,7 @@ mod verbatim;
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/structs.rs"))]
 /// ```
-/// 
+///
 /// ### UDVT and type aliases
 ///
 /// User defined value types (UDVT) generate a tuple struct with the type as
@@ -157,7 +157,7 @@ mod verbatim;
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/types.rs"))]
 /// ```
-/// 
+///
 /// ### State variables
 ///
 /// Public and external state variables will generate a getter function just like in Solidity.
@@ -180,7 +180,7 @@ mod verbatim;
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/function_like.rs"))]
 /// ```
-/// 
+///
 /// ### Events
 ///
 /// Events generate a struct that implements `SolEvent`.
@@ -192,7 +192,7 @@ mod verbatim;
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/events.rs"))]
 /// ```
-/// 
+///
 /// ### Contracts/interfaces
 ///
 /// Contracts generate a module with the same name, which contains all the items.
@@ -205,7 +205,7 @@ mod verbatim;
 /// ```ignore
 #[cfg_attr(doc, doc = include_str!("../doctests/contracts.rs"))]
 /// ```
-/// 
+///
 /// ## JSON ABI
 ///
 /// Contracts can also be generated from ABI JSON strings and files, similar to
