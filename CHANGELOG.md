@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0](https://github.com/alloy-rs/core/releases/tag/v0.7.0) - 2024-03-30
+
+### Bug Fixes
+
+- [json-abi] Correct to_sol for arrays of contracts ([#586](https://github.com/alloy-rs/core/issues/586))
+- [sol-macro] Don't double attributes in JSON input ([#583](https://github.com/alloy-rs/core/issues/583))
+- [dyn-abi] Correctly parse uints in `coerce_str` ([#577](https://github.com/alloy-rs/core/issues/577))
+- Force clippy to stable ([#569](https://github.com/alloy-rs/core/issues/569))
+- [primitives] Re-implement RLP for `Log<LogData>` ([#573](https://github.com/alloy-rs/core/issues/573))
+- [sol-macro] Rpc event filter function name ([#572](https://github.com/alloy-rs/core/issues/572))
+- [sol-macro] Enumerate before filtering when expanding events ([#561](https://github.com/alloy-rs/core/issues/561))
+
+### Documentation
+
+- Do not accept grammar prs ([#575](https://github.com/alloy-rs/core/issues/575))
+- [sol-macro] Add a note about sol(rpc) in Contracts paragraph ([#556](https://github.com/alloy-rs/core/issues/556))
+
+### Features
+
+- Rlp encoding for logs with generic event data ([#553](https://github.com/alloy-rs/core/issues/553))
+- [sol-macro] Add event filters to contracts ([#563](https://github.com/alloy-rs/core/issues/563))
+- [json-abi] Add configuration for `JsonAbi::to_sol` ([#558](https://github.com/alloy-rs/core/issues/558))
+- Add LogData::split ([#559](https://github.com/alloy-rs/core/issues/559))
+- Add network generic to sol-macro ([#557](https://github.com/alloy-rs/core/issues/557))
+
+### Miscellaneous Tasks
+
+- No-default-features k256 ([#576](https://github.com/alloy-rs/core/issues/576))
+- Remove dead code ([#571](https://github.com/alloy-rs/core/issues/571))
+
+### Other
+
+- Small helpers for alloy serde PR ([#582](https://github.com/alloy-rs/core/issues/582))
+- Use latest stable
+- Prestwich/dyn sol error ([#551](https://github.com/alloy-rs/core/issues/551))
+
+### Performance
+
+- [sol-macro] Decode bytecode hex strings ourselves ([#562](https://github.com/alloy-rs/core/issues/562))
+
+### Refactor
+
+- Break SolInput to its own crate ([#578](https://github.com/alloy-rs/core/issues/578))
+- Change identical resolve traits to Specifier<T> ([#550](https://github.com/alloy-rs/core/issues/550))
+
+### Styling
+
+- Rearranged type param order so that the Network param is the last ([#587](https://github.com/alloy-rs/core/issues/587))
+- Make `Bytes` map to `Bytes` in `SolType` ([#545](https://github.com/alloy-rs/core/issues/545))
+
 ## [0.6.4](https://github.com/alloy-rs/core/releases/tag/v0.6.4) - 2024-02-29
 
 ### Bug Fixes
@@ -29,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.6.4
 - [primitives] Improve `from_slice` functions ([#546](https://github.com/alloy-rs/core/issues/546))
 - Allow unknown lints ([#543](https://github.com/alloy-rs/core/issues/543))
 - [core] Add comments to `cfg(doc)` ([#538](https://github.com/alloy-rs/core/issues/538))
