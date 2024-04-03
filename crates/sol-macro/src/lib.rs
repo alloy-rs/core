@@ -238,7 +238,7 @@ pub fn sol(input: TokenStream) -> TokenStream {
 struct SolMacroExpander;
 
 impl SolInputExpander for SolMacroExpander {
-    fn expand(&mut self, input: &SolInput) -> syn::Result<proc_macro2::TokenStream> {
+    fn expand(&self, input: &SolInput) -> syn::Result<proc_macro2::TokenStream> {
         let input = input.clone();
 
         #[cfg(feature = "json")]
