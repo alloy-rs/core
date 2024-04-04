@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub struct LogData {
     /// The indexed topic list.
-    topics: Vec<B256>,
+    pub topics: Vec<B256>,
     /// The plain data.
     pub data: Bytes,
 }
