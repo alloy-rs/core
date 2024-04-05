@@ -70,6 +70,13 @@ mod verbatim;
 ///   items,
 /// - a [Solidity type name][sol-types], which simply expands to the corresponding Rust type.
 ///
+/// **IMPORTANT!** This is **NOT** a Solidity compiler, or a substitute for one! It only parses a
+/// Solidity-like syntax to generate Rust types, designed for simple interfaces defined inline with
+/// your other Rust code.
+///
+/// Further, this macro does not resolve imports or dependencies, and it does not handle
+/// inheritance. All required types must be provided in the same macro scope.
+///
 /// [sol-item]: https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.sourceUnit
 /// [sol-types]: https://docs.soliditylang.org/en/latest/types.html
 ///
@@ -87,7 +94,11 @@ mod verbatim;
 /// generated code. Note that unused attributes are currently silently ignored,
 /// but this may change in the future.
 ///
-/// List of all `#[sol(...)]` supported attributes:
+/// Note that the `sol` attribute does not compose like other Rust attributes, for example
+/// `#[cfg_attr]` will **NOT** work, as it is parsed and extracted from the input separately.
+/// This is a limitation of the proc-macro API.
+///
+/// List of all `#[sol(...)]` supported values:
 /// - `rpc [ = <bool = false>]` (contracts and alike only): generates a structs with methods to
 ///   construct `eth_call`s to an on-chain contract through Ethereum JSON RPC, similar to the
 ///   default behavior of [`abigen`]. This makes use of the [`alloy-contract`](https://github.com/alloy-rs/alloy)
@@ -97,7 +108,7 @@ mod verbatim;
 ///   and its API is completely unstable and subject to change, so this feature is not yet
 ///   recommended for use.
 ///
-///   Generates:
+///   Generates the following items inside of the `{name}` module:
 ///   - `struct {name}Instance<P: Provider> { ... }`
 ///     - `pub fn new(...) -> {name}Instance<P>` + getters and setters
 ///     - `pub fn call_builder<C: SolCall>(&self, call: &C) -> SolCallBuilder<P, C>`, as a generic
