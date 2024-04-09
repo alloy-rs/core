@@ -793,6 +793,7 @@ impl<'a> CallLikeExpander<'a> {
         quote! {
             #def
 
+            #[automatically_derived]
             impl alloy_sol_types::SolEventInterface for #name {
                 const NAME: &'static str = #name_s;
                 const COUNT: usize = #count;
