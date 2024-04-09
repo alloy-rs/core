@@ -32,8 +32,6 @@ extern crate alloc;
 
 pub extern crate alloy_sol_type_parser as parser;
 
-use serde::{Deserialize, Serialize};
-
 mod abi;
 pub use abi::{ContractObject, IntoItems, Items, JsonAbi};
 
@@ -43,6 +41,9 @@ pub use item::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
 mod param;
 pub use param::{EventParam, Param};
 
+mod state_mutability;
+pub use state_mutability::{serde_state_mutability_compat, StateMutability};
+
 mod internal_type;
 pub use internal_type::InternalType;
 
@@ -50,38 +51,3 @@ mod to_sol;
 pub use to_sol::ToSolConfig;
 
 pub(crate) mod utils;
-
-/// A JSON ABI function's state mutability.
-#[derive(
-    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
-#[serde(rename_all = "lowercase")]
-pub enum StateMutability {
-    /// Pure functions promise not to read from or modify the state.
-    Pure,
-    /// View functions promise not to modify the state.
-    View,
-    /// Nonpayable functions promise not to receive Ether.
-    ///
-    /// This is the solidity default: <https://docs.soliditylang.org/en/latest/abi-spec.html#json>
-    ///
-    /// The state mutability nonpayable is reflected in Solidity by not specifying a state
-    /// mutability modifier at all.
-    #[default]
-    NonPayable,
-    /// Payable functions make no promises.
-    Payable,
-}
-
-impl StateMutability {
-    /// Returns the string representation of the state mutability.
-    #[inline]
-    pub const fn as_str(self) -> Option<&'static str> {
-        match self {
-            Self::Pure => Some("pure"),
-            Self::View => Some("view"),
-            Self::Payable => Some("payable"),
-            Self::NonPayable => None,
-        }
-    }
-}
