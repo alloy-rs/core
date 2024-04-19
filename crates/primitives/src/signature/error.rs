@@ -13,6 +13,12 @@ pub enum SignatureError {
     /// Invalid parity.
     InvalidParity(u64),
 
+    /// Missing parity.
+    MissingParity,
+
+    /// Invalid signature.
+    InvalidSignature,
+
     /// k256 error
     #[cfg(feature = "k256")]
     K256(k256::ecdsa::Error),
@@ -51,6 +57,8 @@ impl core::fmt::Display for SignatureError {
             Self::FromBytes(e) => f.write_str(e),
             Self::FromHex(e) => e.fmt(f),
             Self::InvalidParity(v) => write!(f, "invalid parity: {v}"),
+            Self::MissingParity => f.write_str("missing parity"),
+            Self::InvalidSignature => f.write_str("invalid signature"),
         }
     }
 }
