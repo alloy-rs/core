@@ -328,7 +328,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
                     pub fn deploy_builder(provider: P, #params)
                         -> alloy_contract::RawCallBuilder<T, P, N>
                     {
-                        alloy_contract::RawCallBuilder::new_raw(provider, #deploy_builder_data)
+                        alloy_contract::RawCallBuilder::new_raw_deploy(provider, #deploy_builder_data)
                     }
                 },
             )
