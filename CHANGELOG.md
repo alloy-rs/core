@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1](https://github.com/alloy-rs/core/releases/tag/v0.7.1) - 2024-04-23
+
+### Bug Fixes
+
+- Use deploy in sol expansion ([#606](https://github.com/alloy-rs/core/issues/606))
+
+### Documentation
+
+- Update README crate links to use URLs ([#603](https://github.com/alloy-rs/core/issues/603))
+- [sol-macro] Add some more disclaimers ([#595](https://github.com/alloy-rs/core/issues/595))
+
+### Features
+
+- Add arbitrary for TxKind ([#604](https://github.com/alloy-rs/core/issues/604))
+- [json-abi] Support legacy JSON ABIs ([#596](https://github.com/alloy-rs/core/issues/596))
+
+### Miscellaneous Tasks
+
+- FixedBytes instead of array
+- Add a automatically_derived ([#597](https://github.com/alloy-rs/core/issues/597))
+- Update tests and clippy
+
 ## [0.7.0](https://github.com/alloy-rs/core/releases/tag/v0.7.0) - 2024-03-30
 
 ### Bug Fixes
@@ -32,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.7.0
 - No-default-features k256 ([#576](https://github.com/alloy-rs/core/issues/576))
 - Remove dead code ([#571](https://github.com/alloy-rs/core/issues/571))
 
