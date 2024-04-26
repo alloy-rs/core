@@ -14,21 +14,43 @@ concurrency:
 
 jobs:
   test:
-    name: test ${{ matrix.rust }} ${{ matrix.flags }}
-    runs-on: ubuntu-latest
+    name: test ${{ matrix.os }} ${{ matrix.rust }} ${{ matrix.flags }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        rust: ["stable", "beta", "nightly"]
-        flags: ["--no-default-features", "", "--all-features"]
+        os: ["ubuntu-latest", "windows-latest"]
+        rust: [
+          "stable", 
+          "beta", 
+          "nightly",
+          "1.65" # MSRV
+        ] 
+        flags: [
+          # No features
+          "--no-default-features",
+          # Default features
+          ""
+        ]
         include:
-          - rust: "1.65" # MSRV
-            flags: "--no-default-features"
-          - rust: "1.65" # MSRV
-            flags: ""
-          - rust: "1.65" # MSRV
+          # MSRV features
+          - os: "ubuntu-latest"
+            rust: "1.65" # MSRV
             flags: "--features json"
+          - os: "windows-latest"
+            rust: "1.65" # MSRV
+            flags: "--features json"
+          # All features
+          - os: "ubuntu-latest"
+            rust: "stable"
+            flags: "--all-features"
+          - os: "ubuntu-latest"
+            rust: "beta"
+            flags: "--all-features"
+          - os: "ubuntu-latest"
+            rust: "nightly"
+            flags: "--all-features"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
