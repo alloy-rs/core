@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   test:
-    name: test ${{ matrix.os}} ${{ matrix.rust }} ${{ matrix.flags }}
+    name: test ${{ matrix.os }} ${{ matrix.rust }} ${{ matrix.flags }}
     timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     strategy:
