@@ -14,12 +14,13 @@ concurrency:
 
 jobs:
   test:
-    name: test ${{ matrix.rust }} ${{ matrix.flags }}
-    runs-on: ubuntu-latest
+    name: test ${{ matrix.os}} ${{ matrix.rust }} ${{ matrix.flags }}
     timeout-minutes: 30
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: ["ubuntu-latest", "windows-latest"]
         rust: ["stable", "beta", "nightly"]
         flags: ["--no-default-features", "", "--all-features"]
         include:
