@@ -3,6 +3,8 @@ use crate::{DynSolType, DynToken, Word};
 use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::{Address, Function, I256, U256};
 use alloy_sol_types::{abi::Encoder, utils::words_for_len};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "eip712")]
 macro_rules! as_fixed_seq {
@@ -58,6 +60,7 @@ macro_rules! as_fixed_seq {
 /// # Ok::<(), alloy_dyn_abi::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DynSolValue {
     /// A boolean.
     Bool(bool),

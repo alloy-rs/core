@@ -7,6 +7,8 @@ use alloy_primitives::{
 use alloy_sol_types::{abi::Decoder, sol_data};
 use core::{fmt, iter::zip, num::NonZeroUsize, str::FromStr};
 use parser::TypeSpecifier;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "eip712")]
 macro_rules! as_tuple {
@@ -77,6 +79,7 @@ pub(crate) use as_tuple;
 /// # Ok::<_, alloy_dyn_abi::Error>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DynSolType {
     /// Boolean.
     Bool,

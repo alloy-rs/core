@@ -1,12 +1,15 @@
 use crate::{DynSolType, DynSolValue, Error, Result};
 use alloc::vec::Vec;
 use alloy_primitives::{LogData, B256};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// A dynamic ABI event.
 ///
 /// This is a representation of a Solidity event, which can be used to decode
 /// logs.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DynSolEvent {
     pub(crate) topic_0: Option<B256>,
     pub(crate) indexed: Vec<DynSolType>,
