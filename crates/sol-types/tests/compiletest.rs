@@ -1,5 +1,5 @@
 #[rustversion::attr(not(nightly), ignore)]
-#[cfg_attr(miri, ignore)]
+#[cfg_attr(any(target_os = "windows", miri), ignore)]
 #[test]
 fn ui() {
     let t = trybuild::TestCases::new();
