@@ -21,8 +21,16 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
-        rust: ["stable", "nightly", "1.76"] # MSRV
+        rust: ["stable", "beta", "nightly"]
         flags: ["--no-default-features", "", "--all-features"]
+        include:
+          - rust: "1.65" # MSRV
+            flags: "--no-default-features"
+          - rust: "1.65" # MSRV
+            flags: ""
+          - rust: "1.65" # MSRV
+            flags: "--features json"
+
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -32,15 +40,12 @@ jobs:
         with:
           cache-on-failure: true
       # Only run tests on latest stable and above
-      - name: Install cargo-nextest
-        if: ${{ matrix.rust != '1.76' }} # MSRV
-        uses: taiki-e/install-action@nextest
       - name: build
-        if: ${{ matrix.rust == '1.76' }} # MSRV
+        if: ${{ matrix.rust == '1.65' }} # MSRV
         run: cargo build --workspace ${{ matrix.flags }}
       - name: test
-        if: ${{ matrix.rust != '1.76' }} # MSRV
-        run: cargo nextest run --workspace ${{ matrix.flags }}
+        if: ${{ matrix.rust != '1.65' }} # MSRV
+        run: cargo test --workspace ${{ matrix.flags }}
 
   miri:
     name: miri ${{ matrix.flags }}
