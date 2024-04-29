@@ -11,9 +11,20 @@ pub use units::{
 };
 
 cfg_if! {
-    if #[cfg(all(feature = "asm-keccak", not(miri)))] {
+    if #[cfg(all(
+        not(miri), // Exclude `miri`
+        feature = "asm-keccak",
+        not(target_env = "msvc"), // Exclude `msvc`
+        any(
+            all(target_arch = "x86_64", any(target_os = "linux", target_os = "macos", target_os = "windows")),
+            all(target_arch = "aarch64", target_os = "macos"),
+            all(any(target_arch = "powerpc", target_arch = "powerpc64", target_arch = "riscv64"), target_os = "linux")
+        )
+    ))] {
+        // See support table: https://github.com/DaniPopes/keccak-asm/blob/master/README.md#support
         use keccak_asm::Digest as _;
     } else {
+        // Fallback to `tiny_keccak` for miri or other unsupported configurations.
         use tiny_keccak::Hasher as _;
     }
 }
