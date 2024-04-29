@@ -206,9 +206,42 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 #[derive(Clone)]
 pub struct Keccak256 {
-    #[cfg(all(feature = "asm-keccak", not(miri)))]
+    #[cfg(all(
+        not(miri), // Exclude `miri`
+        feature = "asm-keccak",
+        not(target_env = "msvc"), // Exclude `msvc`
+        any( // Include supported configurations of `keccak_asm`.
+            all(
+                target_arch = "x86_64",
+                any(target_os = "linux", target_os = "macos", target_os = "windows")
+            ),
+            all(target_arch = "aarch64", target_os = "macos"),
+            all(
+                any(target_arch = "powerpc", target_arch = "powerpc64", target_arch = "riscv64"),
+                target_os = "linux"
+            )
+        )
+    ))]
+    // Use `keccak_asm` for supported configurations.
+    // See support table: https://github.com/DaniPopes/keccak-asm/blob/master/README.md#support
     hasher: keccak_asm::Keccak256,
-    #[cfg(not(all(feature = "asm-keccak", not(miri))))]
+    #[cfg(not(all(
+        not(miri), // Include `miri`
+        feature = "asm-keccak",
+        not(target_env = "msvc"), // Include `msvc`
+        any( // Exclude supported configurations of `keccak_asm`.
+            all(
+                target_arch = "x86_64",
+                any(target_os = "linux", target_os = "macos", target_os = "windows")
+            ),
+            all(target_arch = "aarch64", target_os = "macos"),
+            all(
+                any(target_arch = "powerpc", target_arch = "powerpc64", target_arch = "riscv64"),
+                target_os = "linux"
+            )
+        )
+    )))]
+    // Fallback to `tiny_keccak` for `miri` or other unsupported configurations.
     hasher: tiny_keccak::Keccak,
 }
 
@@ -231,12 +264,35 @@ impl Keccak256 {
     #[inline]
     pub fn new() -> Self {
         cfg_if! {
-            if #[cfg(all(feature = "asm-keccak", not(miri)))] {
+            if #[cfg(all(
+                feature = "asm-keccak",
+                not(miri),
+                not(target_env = "msvc"),
+                any(
+                    all(
+                        target_arch = "x86_64",
+                        any(target_os = "linux", target_os = "macos", target_os = "windows")
+                    ),
+                    all(target_arch = "aarch64", target_os = "macos"),
+                    all(
+                        any(
+                            target_arch = "powerpc",
+                            target_arch = "powerpc64",
+                            target_arch = "riscv64"
+                        ),
+                        target_os = "linux"
+                    )
+                )
+            ))] {
+                // Use `keccak_asm` for supported configurations.
+                // See support table: https://github.com/DaniPopes/keccak-asm/blob/master/README.md#support
                 let hasher = keccak_asm::Keccak256::new();
             } else {
+                // Fallback to `tiny_keccak` for `miri` or other unsupported configurations.
                 let hasher = tiny_keccak::Keccak::v256();
             }
         }
+
         Self { hasher }
     }
 
@@ -271,9 +327,31 @@ impl Keccak256 {
     #[inline]
     pub fn finalize_into_array(self, output: &mut [u8; 32]) {
         cfg_if! {
-            if #[cfg(all(feature = "asm-keccak", not(miri)))] {
+            if #[cfg(all(
+                feature = "asm-keccak",
+                not(miri),
+                not(target_env = "msvc"),
+                any(
+                    all(
+                        target_arch = "x86_64",
+                        any(target_os = "linux", target_os = "macos", target_os = "windows")
+                    ),
+                    all(target_arch = "aarch64", target_os = "macos"),
+                    all(
+                        any(
+                            target_arch = "powerpc",
+                            target_arch = "powerpc64",
+                            target_arch = "riscv64"
+                        ),
+                        target_os = "linux"
+                    )
+                )
+            ))] {
+                // Use `keccak_asm` for supported configurations.
+                // See support table: https://github.com/DaniPopes/keccak-asm/blob/master/README.md#support
                 self.hasher.finalize_into(output.into());
             } else {
+                // Fallback to `tiny_keccak` for `miri` or other unsupported configurations.
                 self.hasher.finalize(output);
             }
         }
