@@ -20,7 +20,7 @@ use proptest::{
 };
 
 const DEPTH: u32 = 16;
-const DESIZED_SIZE: u32 = 64;
+const DESIRED_SIZE: u32 = 64;
 const EXPECTED_BRANCH_SIZE: u32 = 32;
 
 macro_rules! prop_oneof_cfg {
@@ -286,7 +286,7 @@ impl proptest::arbitrary::Arbitrary for DynSolType {
 
     #[inline]
     fn arbitrary() -> Self::Strategy {
-        Self::arbitrary_with((DEPTH, DESIZED_SIZE, EXPECTED_BRANCH_SIZE))
+        Self::arbitrary_with((DEPTH, DESIRED_SIZE, EXPECTED_BRANCH_SIZE))
     }
 
     fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
@@ -341,7 +341,7 @@ impl proptest::arbitrary::Arbitrary for DynSolValue {
 
     #[inline]
     fn arbitrary() -> Self::Strategy {
-        Self::arbitrary_with((DEPTH, DESIZED_SIZE, EXPECTED_BRANCH_SIZE))
+        Self::arbitrary_with((DEPTH, DESIRED_SIZE, EXPECTED_BRANCH_SIZE))
     }
 
     fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {

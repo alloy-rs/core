@@ -10,11 +10,11 @@ use parser::{ParameterSpecifier, Parameters, RootType, TupleSpecifier, TypeSpeci
 #[cfg(feature = "eip712")]
 use alloy_json_abi::InternalType;
 
-/// Trait for items that can be resolved to `DynSol_____`, i.e. they speicify
-/// some Solidity interface item.
+/// Trait for items that can be resolved to `DynSol_____`, i.e. they specify some Solidity interface
+/// item.
 ///
-/// The `Specifier` trait is implemented by types that can be resolved into
-/// Solidity interace items, e.g. [`DynSolType`] or [`DynSolEvent`](crate::DynSolEvent).
+/// The `Specifier` trait is implemented by types that can be resolved into Solidity interface
+/// items, e.g. [`DynSolType`] or [`DynSolEvent`](crate::DynSolEvent).
 ///
 /// ABI and related systems have many different ways of specifying Solidity interfaces.
 /// This trait provides a single pattern for resolving those encodings into

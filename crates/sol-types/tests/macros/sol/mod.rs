@@ -664,7 +664,7 @@ fn duplicate_attributes() {
                 address feeWallet
             ) public checkIsFeesValid(fees) checkIsFeesValid(fees2) checkIsAddressValid(owner) checkIsAddressValid(feeWallet) {
                 require(decimals >=8 && decimals <= 18, "[Validation] Not valid decimals");
-                require(supply > 0, "[Validation] inital supply should be greater than 0");
+                require(supply > 0, "[Validation] initial supply should be greater than 0");
                 require(owner != feeWallet, "[Validation] fee wallet and owner wallet cannot be same.");
 
                 _name = name;

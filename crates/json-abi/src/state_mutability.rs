@@ -87,7 +87,7 @@ pub mod serde_state_mutability_compat {
     use super::*;
     use serde::ser::SerializeStruct;
 
-    /// Deserializes a [`StateMutability`], compatibile with older JSON ABI versions.
+    /// Deserializes a [`StateMutability`], compatible with older JSON ABI versions.
     ///
     /// See [the module-level documentation](self) for more information.
     pub fn deserialize<'de, D: serde::Deserializer<'de>>(
