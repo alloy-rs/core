@@ -137,6 +137,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         #(#attrs)*
         #doc
         #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+        #[derive(Clone)]
         pub struct #name {
             #(pub #fields,)*
         }
