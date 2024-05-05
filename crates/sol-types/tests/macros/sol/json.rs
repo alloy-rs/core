@@ -165,7 +165,7 @@ fn zerox_exchange_proxy() {
 // TODO: Error and event with the same name
 // https://github.com/alloy-rs/core/issues/376
 #[test]
-#[cfg(TODO)]
+#[cfg(any())]
 fn auction() {
     // https://etherscan.io/address/0xbb37a88508d464a1bb54cf627d05e39883ae0ef9
     sol!(Auction, "../json-abi/tests/abi/Auction.json");
