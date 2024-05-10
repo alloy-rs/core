@@ -1,3 +1,4 @@
+#[rustversion::attr(nightly, ignore = "type.rs depends way too much on compiler internals")]
 #[rustversion::attr(not(nightly), ignore)]
 #[cfg_attr(any(target_os = "windows", miri), ignore)]
 #[test]
