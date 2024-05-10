@@ -38,10 +38,11 @@ derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 
 [dev-dependencies]
+alloy-dyn-abi = { workspace = true, features = ["std"] }
 criterion.workspace = true
 ethabi = "18"
 rand = "0.8"
-serde_json = { workspace = true }
+serde_json.workspace = true
 
 [features]
 default = ["std"]
