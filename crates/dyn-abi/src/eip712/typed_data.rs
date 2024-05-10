@@ -63,7 +63,7 @@ impl<'de> Deserialize<'de> for Eip712Types {
 ///     "required": ["types", "primaryType", "domain", "message"]
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct TypedData {
     /// Signing domain metadata. The signing domain is the intended context for
     /// the signature (e.g. the dapp, protocol, etc. that it's intended for).

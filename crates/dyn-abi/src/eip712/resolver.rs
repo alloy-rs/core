@@ -204,7 +204,7 @@ struct DfsContext<'a> {
 /// A dependency graph built from the `Eip712Types` object. This is used to
 /// safely resolve JSON into a [`crate::DynSolType`] by detecting cycles in the
 /// type graph and traversing the dep graph.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Resolver {
     /// Nodes in the graph
     // NOTE: Non-duplication of names must be enforced. See note on impl of Ord
