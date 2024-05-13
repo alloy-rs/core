@@ -41,7 +41,7 @@ mod to_abi;
 const RESOLVE_LIMIT: usize = 32;
 
 /// The [`sol!`] expansion implementation.
-/// 
+///
 /// [`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/index.html
 pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
