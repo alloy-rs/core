@@ -24,8 +24,8 @@ use alloy_sol_macro_input::{SolAttrs, SolInput, SolInputExpander, SolInputKind};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse_macro_input;
-
-mod expand;
+use alloy_sol_macro_expander::expand;
+// mod expand;
 mod utils;
 
 #[cfg(feature = "json")]

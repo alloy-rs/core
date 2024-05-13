@@ -24,6 +24,7 @@ alloy-json-abi = { version = "0.7.2", path = "crates/json-abi", default-features
 alloy-primitives = { version = "0.7.2", path = "crates/primitives", default-features = false }
 alloy-sol-macro = { version = "0.7.2", path = "crates/sol-macro", default-features = false }
 alloy-sol-macro-input = { version = "0.7.2", path = "crates/sol-macro-input", default-features = false }
+alloy-sol-macro-expander = {version = "0.7.2", path = "crates/sol-macro-expander", default-features = false }
 alloy-sol-type-parser = { version = "0.7.2", path = "crates/sol-type-parser", default-features = false }
 alloy-sol-types = { version = "0.7.2", path = "crates/sol-types", default-features = false }
 syn-solidity = { version = "0.7.2", path = "crates/syn-solidity", default-features = false }
