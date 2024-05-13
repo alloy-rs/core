@@ -1,5 +1,6 @@
 //! Functions which generate Rust code from the Solidity AST.
 
+#![allow(rustdoc::private_intra_doc_links)]
 use crate::{
     expand::ty::expand_rust_type,
     utils::{self, ExprArray},
