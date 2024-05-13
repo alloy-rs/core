@@ -25,6 +25,7 @@ pub use input::{SolInput, SolInputKind};
 
 mod expander;
 pub use expander::SolInputExpander;
-
 #[cfg(feature = "json")]
 mod json;
+#[cfg(feature = "json")]
+pub use json::tokens_for_sol;
