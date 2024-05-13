@@ -71,7 +71,7 @@ fn abi_to_sol(name: &Ident, abi: &mut JsonAbi) -> String {
 }
 
 /// Returns `sol!` tokens.
-fn tokens_for_sol(name: &Ident, sol: &str) -> Result<TokenStream> {
+pub fn tokens_for_sol(name: &Ident, sol: &str) -> Result<TokenStream> {
     let mk_err = |s: &str| {
         let msg = format!(
             "`JsonAbi::to_sol` generated invalid Rust tokens: {s}\n\

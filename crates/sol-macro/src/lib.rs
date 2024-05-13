@@ -18,18 +18,12 @@
 
 #[macro_use]
 extern crate proc_macro_error;
-extern crate syn_solidity as ast;
 
+use alloy_sol_macro_expander::expand;
 use alloy_sol_macro_input::{SolAttrs, SolInput, SolInputExpander, SolInputKind};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse_macro_input;
-
-mod expand;
-mod utils;
-
-#[cfg(feature = "json")]
-mod verbatim;
 
 /// Generate types that implement [`alloy-sol-types`] traits, which can be used
 /// for type-safe [ABI] and [EIP-712] serialization to interface with Ethereum
@@ -83,6 +77,7 @@ mod verbatim;
 ///
 /// [sol-item]: https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.sourceUnit
 /// [sol-types]: https://docs.soliditylang.org/en/latest/types.html
+/// [ast]: https://docs.rs/syn-solidity/latest/syn_solidity
 ///
 /// ### Attributes
 ///

@@ -189,7 +189,9 @@ fn expand_encode_type_fns(
             Some(Item::Contract(_)) => *ty = Type::Address(ty.span(), None),
             Some(Item::Enum(_)) => *ty = Type::Uint(ty.span(), NonZeroU16::new(8)),
             Some(Item::Udt(udt)) => *ty = udt.ty.clone(),
-            Some(item) => abort!(item.span(), "Invalid type in struct field: {:?}", item),
+            Some(item) => {
+                proc_macro_error::abort!(item.span(), "Invalid type in struct field: {:?}", item)
+            }
         }
     });
 

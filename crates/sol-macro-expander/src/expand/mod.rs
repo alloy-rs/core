@@ -1,5 +1,6 @@
 //! Functions which generate Rust code from the Solidity AST.
 
+#![allow(rustdoc::private_intra_doc_links)]
 use crate::{
     expand::ty::expand_rust_type,
     utils::{self, ExprArray},
@@ -11,6 +12,7 @@ use ast::{
 };
 use indexmap::IndexMap;
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
+use proc_macro_error::{abort, emit_error};
 use quote::{format_ident, quote, TokenStreamExt};
 use std::{
     borrow::Borrow,
@@ -18,12 +20,11 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 use syn::{ext::IdentExt, parse_quote, Attribute, Error, Result};
-
 #[macro_use]
 mod macros;
 
-mod ty;
-pub(crate) use ty::expand_type;
+pub mod ty;
+pub use ty::expand_type;
 
 mod contract;
 mod r#enum;
@@ -40,7 +41,9 @@ mod to_abi;
 /// The limit for the number of times to resolve a type.
 const RESOLVE_LIMIT: usize = 32;
 
-/// The [`sol!`](crate::sol!) expansion implementation.
+/// The [`sol!`] expansion implementation.
+///
+/// [`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/index.html
 pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
 }
@@ -521,9 +524,9 @@ impl<'ast> ExpCtxt<'ast> {
 ///
 /// These should be added to import lists at the top of anonymous `const _: () = { ... }` blocks,
 /// and in case of top-level structs they should be inlined into all `path`s.
-pub(crate) struct ExternCrates {
-    pub(crate) sol_types: syn::Path,
-    pub(crate) contract: syn::Path,
+pub struct ExternCrates {
+    pub sol_types: syn::Path,
+    pub contract: syn::Path,
 }
 
 impl Default for ExternCrates {
@@ -536,7 +539,7 @@ impl Default for ExternCrates {
 }
 
 impl ExternCrates {
-    pub(crate) fn fill(&mut self, attrs: &SolAttrs) {
+    pub fn fill(&mut self, attrs: &SolAttrs) {
         if let Some(sol_types) = &attrs.alloy_sol_types {
             self.sol_types = sol_types.clone();
         }

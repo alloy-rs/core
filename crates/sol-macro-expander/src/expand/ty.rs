@@ -3,12 +3,13 @@
 use super::{ExpCtxt, ExternCrates};
 use ast::{Item, Parameters, Spanned, Type, TypeArray};
 use proc_macro2::{Ident, Literal, TokenStream};
+use proc_macro_error::abort;
 use quote::{quote_spanned, ToTokens};
 use std::{fmt, num::NonZeroU16};
 
 /// Expands a single [`Type`] recursively to its `alloy_sol_types::sol_data`
 /// equivalent.
-pub(crate) fn expand_type(ty: &Type, crates: &ExternCrates) -> TokenStream {
+pub fn expand_type(ty: &Type, crates: &ExternCrates) -> TokenStream {
     let mut tokens = TokenStream::new();
     rec_expand_type(ty, crates, &mut tokens);
     tokens
@@ -19,14 +20,14 @@ pub(crate) fn expand_type(ty: &Type, crates: &ExternCrates) -> TokenStream {
 /// This is the same as `<#expand_type(ty) as SolType>::RustType`, but generates
 /// nicer code for documentation and IDE/LSP support when the type is not
 /// ambiguous.
-pub(crate) fn expand_rust_type(ty: &Type, crates: &ExternCrates) -> TokenStream {
+pub fn expand_rust_type(ty: &Type, crates: &ExternCrates) -> TokenStream {
     let mut tokens = TokenStream::new();
     rec_expand_rust_type(ty, crates, &mut tokens);
     tokens
 }
 
 /// The [`expand_type`] recursive implementation.
-pub(crate) fn rec_expand_type(ty: &Type, crates: &ExternCrates, tokens: &mut TokenStream) {
+pub fn rec_expand_type(ty: &Type, crates: &ExternCrates, tokens: &mut TokenStream) {
     let alloy_sol_types = &crates.sol_types;
     let tts = match *ty {
         Type::Address(span, _) => quote_spanned! {span=> #alloy_sol_types::sol_data::Address },
@@ -86,7 +87,7 @@ pub(crate) fn rec_expand_type(ty: &Type, crates: &ExternCrates, tokens: &mut Tok
 
 // IMPORTANT: Keep in sync with `sol-types/src/types/data_type.rs`
 /// The [`expand_rust_type`] recursive implementation.
-pub(crate) fn rec_expand_rust_type(ty: &Type, crates: &ExternCrates, tokens: &mut TokenStream) {
+pub fn rec_expand_rust_type(ty: &Type, crates: &ExternCrates, tokens: &mut TokenStream) {
     // Display sizes that match with the Rust type, otherwise we lose information
     // (e.g. `uint24` displays the same as `uint32` because both use `u32`)
     fn allowed_int_size(size: Option<NonZeroU16>) -> bool {
