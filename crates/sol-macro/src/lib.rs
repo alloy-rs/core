@@ -77,6 +77,7 @@ use syn::parse_macro_input;
 ///
 /// [sol-item]: https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.sourceUnit
 /// [sol-types]: https://docs.soliditylang.org/en/latest/types.html
+/// [ast]: https://docs.rs/syn-solidity/latest/syn_solidity
 ///
 /// ### Attributes
 ///

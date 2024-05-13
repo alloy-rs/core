@@ -40,7 +40,9 @@ mod to_abi;
 /// The limit for the number of times to resolve a type.
 const RESOLVE_LIMIT: usize = 32;
 
-/// The [`sol!`](crate::sol!) expansion implementation.
+/// The [`sol!`] expansion implementation.
+/// 
+/// [`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/index.html
 pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
 }
