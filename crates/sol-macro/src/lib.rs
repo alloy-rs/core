@@ -19,11 +19,11 @@
 #[macro_use]
 extern crate proc_macro_error;
 
+use alloy_sol_macro_expander::expand;
 use alloy_sol_macro_input::{SolAttrs, SolInput, SolInputExpander, SolInputKind};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse_macro_input;
-use alloy_sol_macro_expander::expand;
 
 /// Generate types that implement [`alloy-sol-types`] traits, which can be used
 /// for type-safe [ABI] and [EIP-712] serialization to interface with Ethereum
