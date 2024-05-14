@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.3](https://github.com/alloy-rs/core/releases/tag/v0.7.3) - 2024-05-14
 
+### Miscellaneous Tasks
+
+- Fix dyn abi
+- Release 0.7.3
+
+## [0.7.3](https://github.com/alloy-rs/core/releases/tag/v0.7.3) - 2024-05-14
+
 ### Documentation
 
 - Update alloy-core homepage link
