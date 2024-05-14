@@ -3,7 +3,7 @@ name = "alloy-core"
 description = "Rust Ethereum core libraries"
 keywords = ["ethereum", "abi", "encoding", "evm", "solidity"]
 categories = ["no-std", "encoding", "cryptography::cryptocurrencies"]
-homepage = "https://github.com/alloy-rs/core/tree/main/crates/dyn-abi"
+homepage = "https://github.com/alloy-rs/core/tree/main/crates/core"
 
 version.workspace = true
 edition.workspace = true
