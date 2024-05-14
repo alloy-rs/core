@@ -44,7 +44,7 @@ pub use alloy_rlp as rlp;
 /// [`sol!`](sol_types::sol!) `macro_rules!` wrapper to set import attributes.
 ///
 /// See [`sol!`](sol_types::sol!) for the actual macro documentation.
-#[cfg(all(not(doc), feature = "sol-types", feature = "json"))] // Show the actual macro in docs.
+#[cfg(all(not(doc), feature = "sol-types"))] // Show the actual macro in docs.
 #[macro_export]
 macro_rules! sol {
     ($($t:tt)*) => {

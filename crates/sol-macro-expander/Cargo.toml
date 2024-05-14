@@ -28,7 +28,7 @@ syn = { workspace = true, features = ["extra-traits"] }
 heck = "0.4"
 hex.workspace = true
 indexmap = "2"
-proc-macro-error = "1.0"
+proc-macro-error.workspace = true
 tiny-keccak = { workspace = true, features = ["keccak"] }
 
 # json

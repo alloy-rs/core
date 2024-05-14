@@ -27,7 +27,7 @@ alloy-sol-types = { workspace = true, default-features = false, optional = true 
 alloy-rlp = { workspace = true, default-features = false, optional = true }
 
 [features]
-std = ["alloy-primitives/std", "alloy-json-abi?/std", "alloy-dyn-abi?/std", "alloy-sol-types?/std", "json"]
+std = ["alloy-primitives/std", "alloy-json-abi?/std", "alloy-dyn-abi?/std", "alloy-sol-types?/std"]
 
 dyn-abi = ["sol-types", "dep:alloy-dyn-abi"]
 json-abi = ["json", "serde", "dep:alloy-json-abi"]
