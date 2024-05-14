@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3](https://github.com/alloy-rs/core/releases/tag/v0.7.3) - 2024-05-14
+
+### Refactor
+
+- Move `expand` from `sol-macro` to its own crate ([#626](https://github.com/alloy-rs/core/pull/626))
+
+### Features
+
+-  Allow missing docs for event fields in `sol!` macro ([#619](https://github.com/alloy-rs/core/pull/619))
+
+- derive[Eq] for `TypedData` in `dyn-abi` ([#623](https://github.com/alloy-rs/core/pull/623))
+
+### Miscellaneous Tasks
+
+- Fix tests ([#624](https://github.com/alloy-rs/core/pull/624))
+
+
 ## [0.7.2](https://github.com/alloy-rs/core/releases/tag/v0.7.2) - 2024-05-02
 
 ### Documentation
