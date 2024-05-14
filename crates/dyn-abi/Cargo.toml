@@ -38,7 +38,7 @@ derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 
 [dev-dependencies]
-alloy-dyn-abi = { workspace = true, features = ["std"] }
+alloy-dyn-abi = { path = ".", features = ["std"] }
 criterion.workspace = true
 ethabi = "18"
 rand = "0.8"
