@@ -37,7 +37,7 @@ mod test {
 
         let msg = Order {
             sender: B256::repeat_byte(3),
-            priceX18: -1 * 1000000000000000,
+            priceX18: -1000000000000000,
             amount: 2,
             expiration: 3,
             nonce: 4,
