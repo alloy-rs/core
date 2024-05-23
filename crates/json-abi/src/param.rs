@@ -99,7 +99,12 @@ impl Param {
     /// # use alloy_json_abi::Param;
     /// assert_eq!(
     ///     Param::parse("uint256[] foo"),
-    ///     Ok(Param {name: "foo".into(), ty: "uint256[]".into(), components:vec![], internal_type:None})
+    ///     Ok(Param {
+    ///         name: "foo".into(),
+    ///         ty: "uint256[]".into(),
+    ///         components: vec![],
+    ///         internal_type: None,
+    ///     })
     /// );
     /// ```
     pub fn parse(input: &str) -> parser::Result<Self> {
@@ -108,13 +113,13 @@ impl Param {
 
     /// Validate and create new instance of Param.
     pub fn new(
-        name: String,
-        ty: String,
+        name: &str,
+        ty: &str,
         components: Vec<Self>,
         internal_type: Option<InternalType>,
     ) -> parser::Result<Self> {
-        Self::validate_fields(&name, &ty, !components.is_empty())?;
-        Ok(Self { ty, name, components, internal_type })
+        Self::validate_fields(name, ty, !components.is_empty())?;
+        Ok(Self { ty: ty.into(), name: name.into(), components, internal_type })
     }
 
     /// The internal type of the parameter.
@@ -384,7 +389,13 @@ impl EventParam {
     /// use alloy_json_abi::EventParam;
     /// assert_eq!(
     ///     EventParam::parse("uint256[] indexed foo"),
-    ///     Ok(EventParam {name:"foo".into(), ty:"uint256[]".into(), indexed:true, components: vec![], internal_type: None})
+    ///     Ok(EventParam {
+    ///         name: "foo".into(),
+    ///         ty: "uint256[]".into(),
+    ///         indexed: true,
+    ///         components: vec![],
+    ///         internal_type: None,
+    ///     })
     /// );
     /// ```
     #[inline]
@@ -394,14 +405,14 @@ impl EventParam {
 
     /// Validate and create new instance of EventParam
     pub fn new(
-        name: String,
-        ty: String,
+        name: &str,
+        ty: &str,
         indexed: bool,
         components: Vec<Param>,
         internal_type: Option<InternalType>,
     ) -> parser::Result<Self> {
-        Param::validate_fields(&name, &ty, !components.is_empty())?;
-        Ok(Self { name, ty, indexed, components, internal_type })
+        Param::validate_fields(name, ty, !components.is_empty())?;
+        Ok(Self { name: name.into(), ty: ty.into(), indexed, components, internal_type })
     }
 
     /// The internal type of the parameter.
@@ -612,7 +623,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn param() {
+    fn param_from_str() {
         let param = r#"{
             "internalType": "string",
             "name": "reason",
@@ -628,5 +639,25 @@ mod tests {
                 components: vec![],
             }
         );
+    }
+
+    #[test]
+    fn param_from_new() {
+        let param = Param::new("something", "string", vec![], None);
+        assert_eq!(
+            param,
+            Ok(Param {
+                name: "something".into(),
+                ty: "string".into(),
+                components: vec![],
+                internal_type: None,
+            })
+        );
+
+        let err_not_a_type = Param::new("something", "not a type", vec![], None);
+        assert!(err_not_a_type.is_err());
+
+        let err_not_tuple = Param::new("something", "string", vec![param.unwrap()], None);
+        assert!(err_not_tuple.is_err())
     }
 }
