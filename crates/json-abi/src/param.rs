@@ -9,7 +9,7 @@ use alloc::{
     vec::Vec,
 };
 use core::{fmt, str::FromStr};
-use parser::{ParameterSpecifier, TypeSpecifier};
+use parser::{Error, ParameterSpecifier, TypeSpecifier};
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
 
 /// JSON specification of a parameter.
@@ -29,9 +29,15 @@ pub struct Param {
     /// circumstances, such as when a function in a library contains an enum
     /// in its parameters or return types, this will be `Contract.EnumName`
     /// instead of the actual type (`uint8`).
+    /// Visible for macros, functions inside the crate, and doc tests. It is not recommended to
+    /// instantiate directly. Use Param::new instead.
+    #[doc(hidden)]
     pub ty: String,
     /// The name of the parameter. This field always contains either the empty
     /// string, or a valid Solidity identifier.
+    /// Visible for macros, functions inside the crate, and doc tests. It is not recommended to
+    /// instantiate directly. Use Param::new instead.
+    #[doc(hidden)]
     pub name: String,
     /// If the paramaeter is a compound type (a struct or tuple), a list of the
     /// parameter's components, in order. Empty otherwise
@@ -93,16 +99,22 @@ impl Param {
     /// # use alloy_json_abi::Param;
     /// assert_eq!(
     ///     Param::parse("uint256[] foo"),
-    ///     Ok(Param {
-    ///         name: "foo".into(),
-    ///         ty: "uint256[]".into(),
-    ///         components: vec![],
-    ///         internal_type: None,
-    ///     })
+    ///     Ok(Param {name: "foo".into(), ty: "uint256[]".into(), components:vec![], internal_type:None})
     /// );
     /// ```
     pub fn parse(input: &str) -> parser::Result<Self> {
         ParameterSpecifier::parse(input).map(|p| mk_param(p.name, p.ty))
+    }
+
+    /// Validate and create new instance of Param.
+    pub fn new(
+        name: String,
+        ty: String,
+        components: Vec<Self>,
+        internal_type: Option<InternalType>,
+    ) -> parser::Result<Self> {
+        Self::validate_fields(&name, &ty, !components.is_empty())?;
+        Ok(Self { ty, name, components, internal_type })
     }
 
     /// The internal type of the parameter.
@@ -263,6 +275,26 @@ impl Param {
             components: Cow::Borrowed(&self.components),
         }
     }
+
+    #[inline]
+    fn validate_fields(name: &str, ty: &str, has_components: bool) -> parser::Result<()> {
+        if !name.is_empty() && !parser::is_valid_identifier(name) {
+            return Err(Error::invalid_identifier_string(name));
+        }
+
+        // any components means type is "tuple" + maybe brackets, so we can skip
+        // parsing with TypeSpecifier
+        if !has_components {
+            parser::TypeSpecifier::parse(ty)?;
+        } else {
+            // https://docs.soliditylang.org/en/latest/abi-spec.html#handling-tuple-types
+            // checking for "tuple" prefix should be enough
+            if !ty.starts_with("tuple") {
+                return Err(Error::invalid_type_string(ty));
+            }
+        }
+        Ok(())
+    }
 }
 
 /// A Solidity Event parameter.
@@ -279,9 +311,15 @@ pub struct EventParam {
     /// circumstances, such as when a function in a library contains an enum
     /// in its parameters or return types, this will be `Contract.EnumName`
     /// instead of the actual type (`uint8`).
+    /// Visible for macros, functions inside the crate, and doc tests. It is not recommended to
+    /// instantiate directly. Use Param::new instead.
+    #[doc(hidden)]
     pub ty: String,
     /// The name of the parameter. This field always contains either the empty
     /// string, or a valid Solidity identifier.
+    /// Visible for macros, functions inside the crate, and doc tests. It is not recommended to
+    /// instantiate directly. Use Param::new instead.
+    #[doc(hidden)]
     pub name: String,
     /// Whether the parameter is indexed. Indexed parameters have their
     /// value, or the hash of their value, stored in the log topics.
@@ -342,21 +380,28 @@ impl EventParam {
     /// # Examples
     ///
     /// ```
-    /// # use alloy_json_abi::EventParam;
+    /// # use std::panic::catch_unwind;
+    /// use alloy_json_abi::EventParam;
     /// assert_eq!(
     ///     EventParam::parse("uint256[] indexed foo"),
-    ///     Ok(EventParam {
-    ///         name: "foo".into(),
-    ///         ty: "uint256[]".into(),
-    ///         indexed: true,
-    ///         components: vec![],
-    ///         internal_type: None,
-    ///     })
+    ///     Ok(EventParam {name:"foo".into(), ty:"uint256[]".into(), indexed:true, components: vec![], internal_type: None})
     /// );
     /// ```
     #[inline]
     pub fn parse(input: &str) -> parser::Result<Self> {
         ParameterSpecifier::parse(input).map(mk_eparam)
+    }
+
+    /// Validate and create new instance of EventParam
+    pub fn new(
+        name: String,
+        ty: String,
+        indexed: bool,
+        components: Vec<Param>,
+        internal_type: Option<InternalType>,
+    ) -> parser::Result<Self> {
+        Param::validate_fields(&name, &ty, !components.is_empty())?;
+        Ok(Self { name, ty, indexed, components, internal_type })
     }
 
     /// The internal type of the parameter.

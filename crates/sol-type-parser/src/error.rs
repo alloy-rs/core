@@ -40,6 +40,13 @@ impl Error {
         Self::_new("invalid type string: ", &ty)
     }
 
+    /// Instantiate an invalid identifier string error. Invalid identifier string errors are for
+    /// identifier strings that do not follow the format described in
+    /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier>.
+    pub fn invalid_identifier_string(identifier: impl fmt::Display) -> Self {
+        Self::_new("invalid identifier string: ", &identifier)
+    }
+
     /// Instantiate an invalid size error. Invalid size errors are for valid
     /// primitive types with invalid sizes. E.g. `"uint7"` or `"bytes1337"` or
     /// `"string[aaaaaa]"`.
