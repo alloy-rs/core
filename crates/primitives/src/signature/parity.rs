@@ -106,7 +106,8 @@ impl Parity {
         match *self {
             Self::Parity(b) => Self::Parity(!b),
             Self::NonEip155(b) => Self::NonEip155(!b),
-            Self::Eip155(v @ 0..=34) => Self::Eip155(if v % 2 == 0 { v - 1 } else { v + 1 }),
+            Self::Eip155(0) => Self::Eip155(1),
+            Self::Eip155(v @ 1..=34) => Self::Eip155(if v % 2 == 0 { v - 1 } else { v + 1 }),
             Self::Eip155(v @ 35..) => Self::Eip155(v ^ 1),
         }
     }
@@ -238,5 +239,23 @@ mod test {
         assert_eq!(p.to_parity_bool(), Parity::Parity(false));
 
         assert_eq!(p.with_chain_id(1), Parity::Eip155(37));
+    }
+
+    #[test]
+    fn invert_parity() {
+        let p = Parity::Eip155(0);
+        assert_eq!(p.inverted(), Parity::Eip155(1));
+
+        let p = Parity::Eip155(22);
+        assert_eq!(p.inverted(), Parity::Eip155(21));
+
+        let p = Parity::Eip155(58);
+        assert_eq!(p.inverted(), Parity::Eip155(59));
+
+        let p = Parity::NonEip155(false);
+        assert_eq!(p.inverted(), Parity::NonEip155(true));
+
+        let p = Parity::Parity(true);
+        assert_eq!(p.inverted(), Parity::Parity(false));
     }
 }
