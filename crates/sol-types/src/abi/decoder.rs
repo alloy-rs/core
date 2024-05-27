@@ -640,6 +640,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "OOM https://github.com/rust-lang/miri/issues/3637")]
     fn decode_corrupted_dynamic_array() {
         type MyTy = sol_data::Array<sol_data::Uint<32>>;
         // line 1 at 0x00 =   0: tail offset of array
