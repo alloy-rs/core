@@ -1,7 +1,7 @@
 //! This is an implementation of serde for Log for
 //! both human-readable and binary forms.
 //!
-//! Etherium JSON RPC requires logs in a flattened form.
+//! Ethereum JSON RPC requires logs in a flattened form.
 //! However `serde(flatten)` breaks binary implementations.
 //!
 //! This module uses a trick to select a proxy for serde:
@@ -77,8 +77,10 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Log<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::log::{Log, LogData};
-    use crate::Bytes;
+    use crate::{
+        log::{Log, LogData},
+        Bytes,
+    };
 
     #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     struct TestStruct {
@@ -120,7 +122,7 @@ mod tests {
     fn test_log_json_roundtrip() {
         let expected = "{\"logs\":[{\"address\":\"0x3100000000000000000000000000000000000001\",\"topics\":[\"0x32eff959e2e8d1609edc4b39ccf75900aa6c1da5719f8432752963fdf008234f\"],\"data\":\"0x303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030323165396462633161313166386530343661373264313239366363326438626230643135343464353666643062396262383839306130663839623838303336353431653964626331613131663865303436613732643132393663633264386262306431353434643536666430623962623838393061306638396238383033363534\"}]}";
 
-        let parsed: TestStruct = serde_json::from_str(&expected).unwrap();
+        let parsed: TestStruct = serde_json::from_str(expected).unwrap();
         let dumped = serde_json::to_string(&parsed).unwrap();
 
         assert_eq!(expected, dumped);
