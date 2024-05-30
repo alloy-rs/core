@@ -51,6 +51,8 @@ pub use common::TxKind;
 
 mod log;
 pub use log::{Log, LogData};
+#[cfg(feature = "serde")]
+mod log_serde;
 
 mod sealed;
 pub use sealed::{Sealable, Sealed};

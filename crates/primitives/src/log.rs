@@ -83,7 +83,6 @@ impl LogData {
 
 /// A log consists of an address, and some log data.
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub struct Log<T = LogData> {
     /// The address which emitted this log.
@@ -195,53 +194,17 @@ impl alloy_rlp::Decodable for Log {
     }
 }
 
+#[cfg(feature = "rlp")]
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_rlp::{Decodable, Encodable};
 
-    #[cfg(feature = "rlp")]
     #[test]
     fn test_roundtrip_rlp_log_data() {
-        use alloy_rlp::{Decodable, Encodable};
         let log = Log::<LogData>::default();
         let mut buf = Vec::<u8>::new();
         log.encode(&mut buf);
         assert_eq!(Log::decode(&mut &buf[..]).unwrap(), log);
-    }
-
-    #[test]
-    fn test_bincode_encode_decode() {
-        #[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-        struct MyStruct {
-            logs: Vec<Log>,
-        }
-
-        let my_struct = MyStruct {
-            logs: vec![Log {
-                address: address!("f39fd6e51aad88f6f4ce6ab8827279cfffb92266"),
-                data: LogData::new(vec![], Default::default()).unwrap(),
-            }],
-        };
-
-        let bytes = bincode::serialize(&my_struct).unwrap();
-        let _: MyStruct = bincode::deserialize(&bytes).unwrap();
-    }
-
-    #[test]
-    fn test_bcs_encode_decode() {
-        #[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-        struct MyStruct {
-            logs: Vec<Log>,
-        }
-
-        let my_struct = MyStruct {
-            logs: vec![Log {
-                address: address!("f39fd6e51aad88f6f4ce6ab8827279cfffb92266"),
-                data: LogData::new(vec![], Default::default()).unwrap(),
-            }],
-        };
-
-        let bytes = bcs::to_bytes(&my_struct).unwrap();
-        let _: MyStruct = bcs::from_bytes(&bytes).unwrap();
     }
 }
