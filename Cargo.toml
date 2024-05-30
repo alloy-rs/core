@@ -59,6 +59,7 @@ alloy-rlp = { version = "0.3", default-features = false }
 alloy-rlp-derive = { version = "0.3", default-features = false }
 arbitrary = "1.3"
 arrayvec = { version = "0.7", default-features = false }
+bcs = "0.1.6"
 bincode = "1.3"
 bytes = { version = "1", default-features = false }
 criterion = "0.5"
