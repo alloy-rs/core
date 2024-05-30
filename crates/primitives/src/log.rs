@@ -210,6 +210,24 @@ mod tests {
     }
 
     #[test]
+    fn test_bincode_encode_decode() {
+        #[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+        struct MyStruct {
+            logs: Vec<Log>,
+        }
+
+        let my_struct = MyStruct {
+            logs: vec![Log {
+                address: address!("f39fd6e51aad88f6f4ce6ab8827279cfffb92266"),
+                data: LogData::new(vec![], Default::default()).unwrap(),
+            }],
+        };
+
+        let bytes = bincode::serialize(&my_struct).unwrap();
+        let _: MyStruct = bincode::deserialize(&bytes).unwrap();
+    }
+
+    #[test]
     fn test_bcs_encode_decode() {
         #[derive(Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
         struct MyStruct {
