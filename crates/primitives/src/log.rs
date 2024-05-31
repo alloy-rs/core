@@ -83,13 +83,11 @@ impl LogData {
 
 /// A log consists of an address, and some log data.
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub struct Log<T = LogData> {
     /// The address which emitted this log.
     pub address: Address,
     /// The log data.
-    #[cfg_attr(feature = "serde", serde(flatten))]
     pub data: T,
 }
 
