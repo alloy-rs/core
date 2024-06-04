@@ -5,8 +5,6 @@
 The parsed root element is the [`File`], which contains a list of [`Item`]s.
 [`Item`]s also support outer attributes, as shown below.
 
-**⚠️ Work in progress ⚠️**
-
 [`syn`]: https://github.com/dtolnay/syn
 [`TokenStream`]: https://doc.rust-lang.org/proc_macro/struct.TokenStream.html
 
