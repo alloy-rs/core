@@ -876,3 +876,23 @@ fn event_overrides() {
     assert_eq!(two::TestEvent_1::SIGNATURE, "TestEvent(bytes32,bytes32)");
     assert_eq!(two::TestEvent_1::SIGNATURE_HASH, keccak256("TestEvent(bytes32,bytes32)"));
 }
+
+#[test]
+fn contract_derive_default() {
+    sol! {
+        #[derive(Debug, Default)]
+        contract MyContract {
+            function f1();
+            function f2();
+            event e1();
+            event e2();
+            error c();
+        }
+    }
+
+    let MyContract::f1Call {} = MyContract::f1Call::default();
+    let MyContract::f2Call {} = MyContract::f2Call::default();
+    let MyContract::e1 {} = MyContract::e1::default();
+    let MyContract::e2 {} = MyContract::e2::default();
+    let MyContract::c {} = MyContract::c::default();
+}
