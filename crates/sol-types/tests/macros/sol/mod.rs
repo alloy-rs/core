@@ -1,4 +1,4 @@
-use alloy_primitives::{b256, bytes, hex, keccak256, Address, I256, U256};
+use alloy_primitives::{b256, bytes, hex, keccak256, Address, B256, I256, U256};
 use alloy_sol_types::{sol, SolCall, SolError, SolEvent, SolStruct, SolType};
 use serde::Serialize;
 use serde_json::Value;
@@ -236,6 +236,35 @@ fn getters() {
         "nestedMapArray(uint256,uint256,bool,uint256,address,uint256)"
     );
     let _ = nestedMapArrayReturn { _0: U256::ZERO };
+}
+
+#[test]
+fn getter_names() {
+    sol! {
+        contract Getters {
+            string public value;
+            string[] public array;
+            mapping(bytes32 => string) public map;
+            mapping(bytes32 k => string v) public mapWithNames;
+
+            mapping(bytes32 k1 => mapping(uint256 k2 => string v2) v1) public nestedMapWithNames;
+        }
+    }
+
+    let _ = Getters::valueCall {};
+    let _ = Getters::valueReturn { value: String::new() };
+
+    let _ = Getters::arrayCall { _0: U256::ZERO };
+    let _ = Getters::arrayReturn { _0: String::new() };
+
+    let _ = Getters::mapCall { _0: B256::ZERO };
+    let _ = Getters::mapReturn { _0: String::new() };
+
+    let _ = Getters::mapWithNamesCall { k: B256::ZERO };
+    let _ = Getters::mapWithNamesReturn { v: String::new() };
+
+    let _ = Getters::nestedMapWithNamesCall { k1: B256::ZERO, k2: U256::ZERO };
+    let _ = Getters::nestedMapWithNamesReturn { v2: String::new() };
 }
 
 #[test]
