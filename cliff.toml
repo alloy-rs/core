@@ -51,15 +51,15 @@ commit_preprocessors = [
     { pattern = '#(\d+)', replace = "[#$1](https://github.com/alloy-rs/core/issues/$1)" },
 ]
 commit_parsers = [
-    { message = "^feat", group = "Features" },
-    { message = "^fix", group = "Bug Fixes" },
-    { message = "^doc", group = "Documentation" },
+    { message = "^[Ff]eat", group = "Features" },
+    { message = "^[Ff]ix", group = "Bug Fixes" },
+    { message = "^[Dd]oc", group = "Documentation" },
     { message = ".*\\b([Dd]eps|[Dd]ependencies|[Bb]ump)\\b", group = "Dependencies" },
-    { message = "^perf", group = "Performance" },
-    { message = "^refactor", group = "Refactor" },
-    { message = ".*\\b(style|fmt|format)\\b", group = "Styling" },
-    { message = "^test", group = "Testing" },
-    { message = "^chore", group = "Miscellaneous Tasks" },
+    { message = "^[Pp]erf", group = "Performance" },
+    { message = "^[Rr]efactor", group = "Refactor" },
+    { message = ".*\\b([Ss]tyle|[Ff]mt|[Ff]ormat)\\b", group = "Styling" },
+    { message = "^[Tt]est", group = "Testing" },
+    { message = "^[Cc]hore", group = "Miscellaneous Tasks" },
 
     { message = ".*", group = "Other" },
 ]

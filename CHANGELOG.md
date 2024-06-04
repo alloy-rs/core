@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [sol-macro] Allow deriving `Default` on contracts ([#645](https://github.com/alloy-rs/core/issues/645))
 - [sol-macro] Overridden event signatures ([#642](https://github.com/alloy-rs/core/issues/642))
 - [primitives] Signed formatting ([#643](https://github.com/alloy-rs/core/issues/643))
+- Fix Log serde for non self describing protocols ([#639](https://github.com/alloy-rs/core/issues/639))
 - Handle 0 for inverting eip155 parity. ([#633](https://github.com/alloy-rs/core/issues/633))
 
 ### Documentation
@@ -26,12 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.7.5
 - [sol-macro] Add suggestion to remove name ([#647](https://github.com/alloy-rs/core/issues/647))
 - Temporarily disable tests that OOM Miri ([#637](https://github.com/alloy-rs/core/issues/637))
-
-### Styling
-
-- Fix Log serde for non self describing protocols ([#639](https://github.com/alloy-rs/core/issues/639))
 
 ## [0.7.4](https://github.com/alloy-rs/core/releases/tag/v0.7.4) - 2024-05-14
 
@@ -736,12 +734,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Cache wasm job ([#197](https://github.com/alloy-rs/core/issues/197))
 - Significant dyn-abi fixes :) ([#168](https://github.com/alloy-rs/core/issues/168))
-- Refactoring `dyn-abi` to performance parity with ethabi ([#144](https://github.com/alloy-rs/core/issues/144))
 - Kuly14/cleanup ([#151](https://github.com/alloy-rs/core/issues/151))
 - Explain alloy vs ethers-rs intention ([#146](https://github.com/alloy-rs/core/issues/146))
 
 ### Refactor
 
+- Refactoring `dyn-abi` to performance parity with ethabi ([#144](https://github.com/alloy-rs/core/issues/144))
 - Rename domain macro and add docs ([#147](https://github.com/alloy-rs/core/issues/147))
 - Rename Sol*::Tuple to Parameters/Arguments  ([#145](https://github.com/alloy-rs/core/issues/145))
 - Do not generate SolCall for return values ([#134](https://github.com/alloy-rs/core/issues/134))
