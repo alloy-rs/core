@@ -123,7 +123,7 @@ abi_items! {
     }
 }
 
-#[inline(always)]
+#[inline]
 fn validate_identifier<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
     let s = String::deserialize(deserializer)?;
     validate_identifier!(&s);

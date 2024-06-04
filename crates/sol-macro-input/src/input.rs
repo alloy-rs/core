@@ -125,7 +125,7 @@ impl SolInput {
             }
         } else {
             if let Some(name) = name {
-                let msg = "names are not allowed outside of JSON ABI";
+                let msg = "names are not allowed outside of JSON ABI, remove this name";
                 return Err(Error::new(name.span(), msg));
             }
             let kind = syn::parse_str(s).map_err(|e| {
