@@ -66,7 +66,11 @@ impl<const BITS: usize, const LIMBS: usize> fmt::Display for Signed<BITS, LIMBS>
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (sign, abs) = self.into_sign_and_abs();
         sign.fmt(f)?;
-        abs.fmt(f)
+        if f.sign_plus() {
+            write!(f, "{abs}")
+        } else {
+            abs.fmt(f)
+        }
     }
 }
 
@@ -750,19 +754,13 @@ mod tests {
 
                 assert_eq!(format!("{positive:x}"), format!("{unsigned:x}"));
                 assert_eq!(format!("{negative:x}"), format!("{unsigned_negative:x}"));
-                assert_eq!(format!("{positive:+x}"), format!("{unsigned:x}"));
-                assert_eq!(format!("{negative:+x}"), format!("{unsigned_negative:x}"));
+                assert_eq!(format!("{positive:+x}"), format!("+{unsigned:x}"));
+                assert_eq!(format!("{negative:+x}"), format!("+{unsigned_negative:x}"));
 
-                assert_eq!(format!("{positive:X}"), format!("{unsigned:x}").to_uppercase());
-                assert_eq!(
-                    format!("{negative:X}"),
-                    format!("{unsigned_negative:x}").to_uppercase()
-                );
-                assert_eq!(format!("{positive:+X}"), format!("{unsigned:x}").to_uppercase());
-                assert_eq!(
-                    format!("{negative:+X}"),
-                    format!("{unsigned_negative:x}").to_uppercase()
-                );
+                assert_eq!(format!("{positive:X}"), format!("{unsigned:X}"));
+                assert_eq!(format!("{negative:X}"), format!("{unsigned_negative:X}"));
+                assert_eq!(format!("{positive:+X}"), format!("+{unsigned:X}"));
+                assert_eq!(format!("{negative:+X}"), format!("+{unsigned_negative:X}"));
             };
         }
 
