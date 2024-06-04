@@ -22,6 +22,7 @@ mod test {
     use super::*;
     use alloy_primitives::B256;
     use alloy_sol_types::SolStruct;
+
     #[test]
     fn repro_i128() {
         alloy_sol_types::sol! {
