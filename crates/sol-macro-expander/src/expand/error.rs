@@ -19,7 +19,7 @@ use syn::Result;
 /// }
 /// ```
 pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream> {
-    let ItemError { parameters: params, name, .. } = error;
+    let ItemError { parameters: params, .. } = error;
     cx.assert_resolved(params)?;
 
     let (sol_attrs, mut attrs) = error.split_attrs()?;
@@ -29,6 +29,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
 
     let tokenize_impl = expand_tokenize(params, cx);
 
+    let name = cx.overloaded_name(error.into());
     let signature = cx.error_signature(error);
     let selector = crate::utils::selector(&signature);
 

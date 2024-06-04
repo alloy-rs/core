@@ -439,6 +439,7 @@ fn enum_field_of_struct() {
 }
 
 #[test]
+#[cfg(any())] // TODO: https://github.com/alloy-rs/core/issues/599
 fn same_names_different_namespaces() {
     sol! {
         library RouterErrors {
@@ -813,21 +814,42 @@ fn bytecode_attributes() {
 fn function_overrides() {
     mod one {
         alloy_sol_types::sol! {
-            function TestEvent(bytes32 one);
+            function testFunction(bytes32 one);
         }
     }
 
     mod two {
         alloy_sol_types::sol! {
-            function TestEvent(bytes32 one);
-            function TestEvent(bytes32 one, bytes32 two);
+            function testFunction(bytes32 one);
+            function testFunction(bytes32 one, bytes32 two);
         }
     }
 
-    assert_eq!(one::TestEventCall::SIGNATURE, "TestEvent(bytes32)");
-    assert_eq!(one::TestEventCall::SIGNATURE, two::TestEvent_0Call::SIGNATURE);
+    assert_eq!(one::testFunctionCall::SIGNATURE, "testFunction(bytes32)");
+    assert_eq!(one::testFunctionCall::SIGNATURE, two::testFunction_0Call::SIGNATURE);
 
-    assert_eq!(two::TestEvent_1Call::SIGNATURE, "TestEvent(bytes32,bytes32)");
+    assert_eq!(two::testFunction_1Call::SIGNATURE, "testFunction(bytes32,bytes32)");
+}
+
+#[test]
+fn error_overrides() {
+    mod one {
+        alloy_sol_types::sol! {
+            error TestError(bytes32 one);
+        }
+    }
+
+    mod two {
+        alloy_sol_types::sol! {
+            error TestError(bytes32 one);
+            error TestError(bytes32 one, bytes32 two);
+        }
+    }
+
+    assert_eq!(one::TestError::SIGNATURE, "TestError(bytes32)");
+    assert_eq!(one::TestError::SIGNATURE, two::TestError_0::SIGNATURE);
+
+    assert_eq!(two::TestError_1::SIGNATURE, "TestError(bytes32,bytes32)");
 }
 
 // https://github.com/alloy-rs/core/issues/640

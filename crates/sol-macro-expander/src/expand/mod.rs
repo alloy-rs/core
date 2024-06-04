@@ -257,12 +257,21 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
             .push(OverloadedItem::Event(event));
         ast::visit::visit_item_event(self, event);
     }
+
+    fn visit_item_error(&mut self, error: &'ast ItemError) {
+        self.overloaded_items
+            .entry(error.name.as_string())
+            .or_default()
+            .push(OverloadedItem::Error(error));
+        ast::visit::visit_item_error(self, error);
+    }
 }
 
 #[derive(Clone, Copy)]
 enum OverloadedItem<'a> {
     Function(&'a ItemFunction),
     Event(&'a ItemEvent),
+    Error(&'a ItemError),
 }
 
 impl<'ast> From<&'ast ItemFunction> for OverloadedItem<'ast> {
@@ -277,11 +286,18 @@ impl<'ast> From<&'ast ItemEvent> for OverloadedItem<'ast> {
     }
 }
 
+impl<'ast> From<&'ast ItemError> for OverloadedItem<'ast> {
+    fn from(e: &'ast ItemError) -> Self {
+        Self::Error(e)
+    }
+}
+
 impl<'a> OverloadedItem<'a> {
     fn name(self) -> Option<&'a SolIdent> {
         match self {
             Self::Function(f) => f.name.as_ref(),
             Self::Event(e) => Some(&e.name),
+            Self::Error(e) => Some(&e.name),
         }
     }
 
@@ -289,6 +305,7 @@ impl<'a> OverloadedItem<'a> {
         match self {
             Self::Function(_) => "function",
             Self::Event(_) => "event",
+            Self::Error(_) => "error",
         }
     }
 
@@ -296,6 +313,7 @@ impl<'a> OverloadedItem<'a> {
         match (self, other) {
             (Self::Function(a), Self::Function(b)) => a.parameters.types().eq(b.parameters.types()),
             (Self::Event(a), Self::Event(b)) => a.param_types().eq(b.param_types()),
+            (Self::Error(a), Self::Error(b)) => a.parameters.types().eq(b.parameters.types()),
             _ => false,
         }
     }
@@ -304,6 +322,7 @@ impl<'a> OverloadedItem<'a> {
         match self {
             Self::Function(f) => f.span(),
             Self::Event(e) => e.span(),
+            Self::Error(e) => e.span(),
         }
     }
 
@@ -311,6 +330,7 @@ impl<'a> OverloadedItem<'a> {
         match self {
             Self::Function(f) => cx.function_signature(f),
             Self::Event(e) => cx.event_signature(e),
+            Self::Error(e) => cx.error_signature(e),
         }
     }
 }
