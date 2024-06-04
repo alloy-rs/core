@@ -57,9 +57,12 @@ pub fn derives(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
 /// Returns an iterator over all the rust `::` paths in the `#[derive(...)]`
 /// attributes.
 pub fn derives_mapped(attrs: &[Attribute]) -> impl Iterator<Item = Path> + '_ {
-    derives(attrs).flat_map(|attr| {
-        attr.parse_args_with(Punctuated::<Path, Token![,]>::parse_terminated).unwrap_or_default()
-    })
+    derives(attrs).flat_map(parse_derives)
+}
+
+/// Parses the `#[derive(...)]` attributes into a list of paths.
+pub fn parse_derives(attr: &Attribute) -> Punctuated<Path, Token![,]> {
+    attr.parse_args_with(Punctuated::<Path, Token![,]>::parse_terminated).unwrap_or_default()
 }
 
 // When adding a new attribute:

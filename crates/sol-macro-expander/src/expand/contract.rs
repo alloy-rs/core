@@ -138,23 +138,44 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
     }
 
     let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
+    // Remove any `Default` derives.
+    let mut enum_attrs = item_attrs;
+    for attr in &mut enum_attrs {
+        if !attr.path().is_ident("derive") {
+            continue;
+        }
+
+        let derives = alloy_sol_macro_input::parse_derives(attr);
+        let mut derives = derives.into_iter().collect::<Vec<_>>();
+        if derives.is_empty() {
+            continue;
+        }
+
+        let len = derives.len();
+        derives.retain(|derive| !derive.is_ident("Default"));
+        if derives.len() == len {
+            continue;
+        }
+
+        attr.meta = parse_quote! { derive(#(#derives),*) };
+    }
 
     let functions_enum = (!functions.is_empty()).then(|| {
-        let mut attrs = item_attrs.clone();
+        let mut attrs = enum_attrs.clone();
         let doc_str = format!("Container for all the [`{name}`](self) function calls.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         enum_expander.expand(ToExpand::Functions(&functions), attrs)
     });
 
     let errors_enum = (!errors.is_empty()).then(|| {
-        let mut attrs = item_attrs.clone();
+        let mut attrs = enum_attrs.clone();
         let doc_str = format!("Container for all the [`{name}`](self) custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         enum_expander.expand(ToExpand::Errors(&errors), attrs)
     });
 
     let events_enum = (!events.is_empty()).then(|| {
-        let mut attrs = item_attrs;
+        let mut attrs = enum_attrs;
         let doc_str = format!("Container for all the [`{name}`](self) events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         enum_expander.expand(ToExpand::Events(&events), attrs)
