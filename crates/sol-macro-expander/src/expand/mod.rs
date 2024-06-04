@@ -1,6 +1,5 @@
 //! Functions which generate Rust code from the Solidity AST.
 
-#![allow(rustdoc::private_intra_doc_links)]
 use crate::{
     expand::ty::expand_rust_type,
     utils::{self, ExprArray},
@@ -20,6 +19,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 use syn::{ext::IdentExt, parse_quote, Attribute, Error, Result};
+
 #[macro_use]
 mod macros;
 
@@ -574,7 +574,7 @@ pub fn generate_name(i: usize) -> Ident {
 }
 
 /// Returns the name of a parameter, or a generated name if it is `None`.
-fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Ident {
+pub fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Ident {
     match name {
         Some(name) => name.clone().into(),
         None => generate_name(i),

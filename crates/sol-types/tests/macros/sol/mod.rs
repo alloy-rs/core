@@ -808,3 +808,49 @@ fn bytecode_attributes() {
     assert_eq!(Dummy::BYTECODE[..], hex::decode("1234").unwrap());
     assert_eq!(Dummy::DEPLOYED_BYTECODE[..], hex::decode("5678").unwrap());
 }
+
+#[test]
+fn function_overrides() {
+    mod one {
+        alloy_sol_types::sol! {
+            function TestEvent(bytes32 one);
+        }
+    }
+
+    mod two {
+        alloy_sol_types::sol! {
+            function TestEvent(bytes32 one);
+            function TestEvent(bytes32 one, bytes32 two);
+        }
+    }
+
+    assert_eq!(one::TestEventCall::SIGNATURE, "TestEvent(bytes32)");
+    assert_eq!(one::TestEventCall::SIGNATURE, two::TestEvent_0Call::SIGNATURE);
+
+    assert_eq!(two::TestEvent_1Call::SIGNATURE, "TestEvent(bytes32,bytes32)");
+}
+
+// https://github.com/alloy-rs/core/issues/640
+#[test]
+fn event_overrides() {
+    mod one {
+        alloy_sol_types::sol! {
+            event TestEvent(bytes32 indexed one);
+        }
+    }
+
+    mod two {
+        alloy_sol_types::sol! {
+            event TestEvent(bytes32 indexed one);
+            event TestEvent(bytes32 indexed one, bytes32 indexed two);
+        }
+    }
+
+    assert_eq!(one::TestEvent::SIGNATURE, "TestEvent(bytes32)");
+    assert_eq!(one::TestEvent::SIGNATURE, two::TestEvent_0::SIGNATURE);
+    assert_eq!(one::TestEvent::SIGNATURE_HASH, keccak256("TestEvent(bytes32)"));
+    assert_eq!(one::TestEvent::SIGNATURE_HASH, two::TestEvent_0::SIGNATURE_HASH);
+
+    assert_eq!(two::TestEvent_1::SIGNATURE, "TestEvent(bytes32,bytes32)");
+    assert_eq!(two::TestEvent_1::SIGNATURE_HASH, keccak256("TestEvent(bytes32,bytes32)"));
+}
