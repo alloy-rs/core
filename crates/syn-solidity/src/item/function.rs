@@ -145,7 +145,7 @@ impl ItemFunction {
     pub fn new_getter(name: SolIdent, ty: Type) -> Self {
         let span = name.span();
         let kind = FunctionKind::new_function(span);
-        let mut function = Self::new(kind, Some(name));
+        let mut function = Self::new(kind, Some(name.clone()));
 
         // `public view`
         function.attributes.0 = vec![
@@ -153,9 +153,11 @@ impl ItemFunction {
             FunctionAttribute::Mutability(Mutability::new_view(span)),
         ];
 
-        // Recurse into mappings and arrays to generate arguments and the return type
+        // Recurse into mappings and arrays to generate arguments and the return type.
+        // If the return type is simple, the return value name is set to the variable name.
         let mut ty = ty;
         let mut return_name = None;
+        let mut first = true;
         loop {
             match ty {
                 // mapping(k => v) -> arguments += k, ty = v
@@ -171,8 +173,14 @@ impl ItemFunction {
                     function.parameters.push(VariableDeclaration::new(uint256));
                     ty = *array.ty;
                 }
-                _ => break,
+                _ => {
+                    if first {
+                        return_name = Some(name);
+                    }
+                    break;
+                }
             }
+            first = false;
         }
         let mut returns = ParameterList::new();
         returns.push(VariableDeclaration::new_with(ty, None, return_name));
@@ -446,10 +454,10 @@ mod tests {
         }
 
         test_getters! {
-            "bool public getter;"
-                => "function getter() public view returns (bool);",
-            "bool public constant publicConstantAttr = false;"
-                => "function publicConstantAttr() public view returns (bool);",
+            "bool public simple;"
+                => "function simple() public view returns (bool simple);",
+            "bool public constant simpleConstant = false;"
+                => "function simpleConstant() public view returns (bool simpleConstant);",
 
             "mapping(address => bool) public map;"
                 => "function map(address) public view returns (bool);",
@@ -473,9 +481,12 @@ mod tests {
         let var = syn::parse_str::<VariableDefinition>(var_s).unwrap();
         let getter = ItemFunction::from_variable_definition(var);
         let f = syn::parse_str::<ItemFunction>(fn_s).unwrap();
-        assert_eq!(format!("{getter:#?}"), format!("{f:#?}"));
-        // test that the ABIs are the same
-        if run_solc {
+        assert_eq!(format!("{getter:#?}"), format!("{f:#?}"), "{var_s}");
+
+        // Test that the ABIs are the same.
+        // Skip `simple` getters since the return type will have a different ABI because Solc
+        // doesn't populate the field.
+        if run_solc && !var_s.contains("simple") {
             match (wrap_and_compile(var_s, true), wrap_and_compile(fn_s, false)) {
                 (Ok(a), Ok(b)) => {
                     assert_eq!(a.trim(), b.trim(), "\nleft:  {var_s:?}\nright: {fn_s:?}")
