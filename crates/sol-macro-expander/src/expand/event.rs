@@ -30,7 +30,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
     event.assert_valid()?;
 
     let name = cx.overloaded_name(event.into());
-    let signature = cx.signature(name.as_string(), &params);
+    let signature = cx.event_signature(event);
     let selector = crate::utils::event_selector(&signature);
     let anonymous = event.is_anonymous();
 
