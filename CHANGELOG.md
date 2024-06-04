@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.5](https://github.com/alloy-rs/core/releases/tag/v0.7.5) - 2024-06-04
+
+### Bug Fixes
+
+- [sol-macro] Allow deriving `Default` on contracts ([#645](https://github.com/alloy-rs/core/issues/645))
+- [sol-macro] Overridden event signatures ([#642](https://github.com/alloy-rs/core/issues/642))
+- [primitives] Signed formatting ([#643](https://github.com/alloy-rs/core/issues/643))
+- Handle 0 for inverting eip155 parity. ([#633](https://github.com/alloy-rs/core/issues/633))
+
+### Documentation
+
+- Update some READMEs ([#641](https://github.com/alloy-rs/core/issues/641))
+
+### Features
+
+- [primitives] Implement TryInto for ParseUnits ([#646](https://github.com/alloy-rs/core/issues/646))
+- [sol-macro] Allow overridden custom errors ([#644](https://github.com/alloy-rs/core/issues/644))
+- Create new method on Param and EventParam ([#634](https://github.com/alloy-rs/core/issues/634))
+
+### Miscellaneous Tasks
+
+- [sol-macro] Add suggestion to remove name ([#647](https://github.com/alloy-rs/core/issues/647))
+- Temporarily disable tests that OOM Miri ([#637](https://github.com/alloy-rs/core/issues/637))
+
+### Styling
+
+- Fix Log serde for non self describing protocols ([#639](https://github.com/alloy-rs/core/issues/639))
+
 ## [0.7.4](https://github.com/alloy-rs/core/releases/tag/v0.7.4) - 2024-05-14
 
 ### Bug Fixes
@@ -13,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.7.4
 - Release 0.7.3
 - Fix dyn abi
 - Release 0.7.3
