@@ -175,6 +175,20 @@ macro_rules! impl_from_integers {
 impl_from_integers!(U256(u8, u16, u32, u64, u128, usize, U256));
 impl_from_integers!(I256(i8, i16, i32, i64, i128, isize, I256));
 
+macro_rules! impl_try_into_absolute {
+    ($($t:ty),* $(,)?) => { $(
+        impl TryFrom<ParseUnits> for $t {
+            type Error = <$t as TryFrom<U256>>::Error;
+
+            fn try_from(value: ParseUnits) -> Result<Self, Self::Error> {
+                <$t>::try_from(value.get_absolute())
+            }
+        }
+    )* };
+}
+
+impl_try_into_absolute!(u64, u128);
+
 impl ParseUnits {
     /// Parses a decimal number and multiplies it with 10^units.
     ///
