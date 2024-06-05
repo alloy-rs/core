@@ -37,7 +37,6 @@ sol! {
 }
 
 sol! {
-
     contract MyContract {
         enum MyOtherEnum {
             A, B

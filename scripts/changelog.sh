@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
-set -e -o pipefail
+set -eo pipefail
 
-root=$(dirname "$(dirname "$0")")
-cmd=(git cliff --workdir "$root" --output "$root/CHANGELOG.md" "$@")
+run_unless_dry_run() {
+    if [ "$DRY_RUN" = "true" ]; then
+        echo "skipping due to dry run: $*" >&2
+    else
+        "$@"
+    fi
+}
 
-if [ "$DRY_RUN" = "true" ]; then
-    echo "skipping due to dry run: ${cmd[*]}" >&2
+root=$WORKSPACE_ROOT
+crate=$CRATE_ROOT
+# crate_glob="${crate#"$root/"}/**/*"
+
+if [[ "$crate" = */tests/* || "$crate" = *test-utils* ]]; then
     exit 0
-else
-    "${cmd[@]}"
 fi
+
+command=(git cliff --workdir "$root" --config "$root/cliff.toml" "${@}")
+run_unless_dry_run "${command[@]}" --output "$root/CHANGELOG.md"
+# TODO: https://github.com/orhun/git-cliff/issues/208
+# if [ -n "$crate" ] && [ "$root" != "$crate" ]; then
+#     run_unless_dry_run "${command[@]}" --include-path "$crate_glob" --output "$crate/CHANGELOG.md"
+# fi
