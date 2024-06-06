@@ -50,6 +50,7 @@ macro_rules! wrap_fixed_bytes {
             $crate::private::derive_more::BitOrAssign,
             $crate::private::derive_more::BitXor,
             $crate::private::derive_more::BitXorAssign,
+            $crate::private::derive_more::Not,
             $crate::private::derive_more::Deref,
             $crate::private::derive_more::DerefMut,
             $crate::private::derive_more::From,
