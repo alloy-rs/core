@@ -303,6 +303,16 @@ impl<const N: usize> ops::BitXorAssign for FixedBytes<N> {
     }
 }
 
+impl<const N: usize> ops::Not for FixedBytes<N> {
+    type Output = Self;
+
+    #[inline]
+    fn not(mut self) -> Self::Output {
+        self.iter_mut().for_each(|byte| *byte = !*byte);
+        self
+    }
+}
+
 impl<const N: usize> str::FromStr for FixedBytes<N> {
     type Err = hex::FromHexError;
 
