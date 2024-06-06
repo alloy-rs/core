@@ -7,6 +7,7 @@ use alloy_rlp::{Buf, BufMut, Decodable, Encodable, EMPTY_STRING_CODE};
 /// contract creation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
+#[doc(alias = "TransactionKind")]
 pub enum TxKind {
     /// A transaction that creates a contract.
     #[default]
