@@ -6,6 +6,7 @@ use crate::{
 /// The parity of the signature, stored as either a V value (which may include
 /// a chain id), or the y-parity.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(any(test, feature = "arbitrary"), derive(derive_arbitrary::Arbitrary))]
 pub enum Parity {
     /// Explicit V value. May be EIP-155 modified.
     Eip155(u64),

@@ -7,6 +7,7 @@ use alloc::vec::Vec;
 use core::str::FromStr;
 
 /// An Ethereum ECDSA signature.
+#[cfg_attr(any(test, feature = "arbitrary"), derive(derive_arbitrary::Arbitrary))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Signature<T> {
     /// Memoized ecdsa signature (if any)
