@@ -155,7 +155,7 @@ use syn::parse_macro_input;
 /// additionally annotated with `#[repr(u8)]`, and as such can have a maximum of
 /// 256 variants.
 /// ```ignore
-#[cfg_attr(doc, doc = include_str!("../doctests/structs.rs"))]
+#[doc = include_str!("../doctests/structs.rs")]
 /// ```
 /// 
 /// ### UDVT and type aliases
@@ -164,7 +164,7 @@ use syn::parse_macro_input;
 /// its only field, and type aliases simply expand to the corresponding Rust
 /// type.
 /// ```ignore
-#[cfg_attr(doc, doc = include_str!("../doctests/types.rs"))]
+#[doc = include_str!("../doctests/types.rs")]
 /// ```
 /// 
 /// ### State variables
@@ -187,7 +187,7 @@ use syn::parse_macro_input;
 /// `foo_0Call` and `foo_1Call`, each of which will implement `SolCall`
 /// with their respective signatures.
 /// ```ignore
-#[cfg_attr(doc, doc = include_str!("../doctests/function_like.rs"))]
+#[doc = include_str!("../doctests/function_like.rs")]
 /// ```
 /// 
 /// ### Events
@@ -199,7 +199,7 @@ use syn::parse_macro_input;
 /// hash, and as such the generated field for this argument will be `bytes32`,
 /// and not `string`.
 /// ```ignore
-#[cfg_attr(doc, doc = include_str!("../doctests/events.rs"))]
+#[doc = include_str!("../doctests/events.rs")]
 /// ```
 /// 
 /// ### Contracts/interfaces
@@ -212,7 +212,7 @@ use syn::parse_macro_input;
 /// Note that by default only ABI encoding are generated. In order to generate bindings for RPC
 /// calls, you must enable the `#[sol(rpc)]` attribute.
 /// ```ignore
-#[cfg_attr(doc, doc = include_str!("../doctests/contracts.rs"))]
+#[doc = include_str!("../doctests/contracts.rs")]
 /// ```
 /// 
 /// ## JSON ABI
@@ -234,7 +234,7 @@ use syn::parse_macro_input;
 /// [abigen]: https://docs.rs/ethers/latest/ethers/contract/macro.abigen.html
 /// [`abigen`]: https://docs.rs/ethers/latest/ethers/contract/macro.abigen.html
 /// ```ignore
-#[cfg_attr(doc, doc = include_str!("../doctests/json.rs"))]
+#[doc = include_str!("../doctests/json.rs")]
 /// ```
 #[proc_macro]
 #[proc_macro_error]
