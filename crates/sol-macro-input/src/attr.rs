@@ -248,7 +248,7 @@ impl ContainsSolAttrs for syn_solidity::ItemUdt {
 }
 
 /// Defines the casing for the attributes long representation.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CasingStyle {
     /// Indicate word boundaries with uppercase letter, excluding the first
     /// word.

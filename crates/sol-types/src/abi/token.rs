@@ -435,7 +435,7 @@ impl<T> DynSeqToken<T> {
 }
 
 /// A Packed Sequence - `bytes` or `string`
-#[derive(Clone, PartialEq, Eq, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct PackedSeqToken<'a>(pub &'a [u8]);
 
 impl<'a> fmt::Debug for PackedSeqToken<'a> {

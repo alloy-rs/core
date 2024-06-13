@@ -5,7 +5,7 @@ use alloy_rlp::{Decodable, Encodable};
 use alloy_sol_types::{abi::token::WordToken, sol, SolEvent};
 
 sol! {
-    #[derive(Default, PartialEq, Debug)]
+    #[derive(Debug, Default, PartialEq)]
     event MyEvent(bytes32 indexed a, uint256 b, string indexed c, bytes d);
 
     event LogNote(

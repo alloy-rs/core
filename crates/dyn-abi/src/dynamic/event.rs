@@ -6,7 +6,7 @@ use alloy_primitives::{LogData, B256};
 ///
 /// This is a representation of a Solidity event, which can be used to decode
 /// logs.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DynSolEvent {
     pub(crate) topic_0: Option<B256>,
     pub(crate) indexed: Vec<DynSolType>,
@@ -128,7 +128,7 @@ impl DynSolEvent {
 }
 
 /// A decoded dynamic ABI event.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DecodedEvent {
     /// The indexed values, in order.
     pub indexed: Vec<DynSolValue>,

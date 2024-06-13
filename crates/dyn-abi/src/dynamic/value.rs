@@ -57,7 +57,7 @@ macro_rules! as_fixed_seq {
 /// );
 /// # Ok::<(), alloy_dyn_abi::Error>(())
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DynSolValue {
     /// A boolean.
     Bool(bool),

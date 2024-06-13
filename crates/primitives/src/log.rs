@@ -2,7 +2,7 @@ use crate::{Address, Bytes, B256};
 use alloc::vec::Vec;
 
 /// An Ethereum event log object.
-#[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub struct LogData {
@@ -82,7 +82,7 @@ impl LogData {
 }
 
 /// A log consists of an address, and some log data.
-#[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub struct Log<T = LogData> {
     /// The address which emitted this log.

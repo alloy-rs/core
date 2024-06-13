@@ -11,7 +11,7 @@ use parser::{Error as TypeParserError, TypeSpecifier};
 
 /// A property is a type and a name. Of the form `type name`. E.g.
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PropDef<'a> {
     /// The prop type specifier.
     pub ty: TypeSpecifier<'a>,
@@ -47,7 +47,7 @@ impl<'a> PropDef<'a> {
 /// Represents a single component type in an EIP-712 `encodeType` type string.
 ///
 /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ComponentType<'a> {
     /// The span.
     pub span: &'a str,

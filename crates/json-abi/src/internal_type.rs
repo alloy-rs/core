@@ -202,7 +202,7 @@ impl InternalType {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum BorrowedInternalType<'a> {
     AddressPayable(&'a str),
     Contract(&'a str),

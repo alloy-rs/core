@@ -76,7 +76,7 @@ pub(crate) use as_tuple;
 /// assert_eq!(decoded, my_data);
 /// # Ok::<_, alloy_dyn_abi::Error>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum DynSolType {
     /// Boolean.
     Bool,

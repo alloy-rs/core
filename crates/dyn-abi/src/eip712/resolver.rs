@@ -81,7 +81,7 @@ impl PropertyDef {
 }
 
 /// An EIP-712 type definition.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeDef {
     /// Must always be a ROOT type name with any array stripped.
     type_name: String,

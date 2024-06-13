@@ -12,7 +12,7 @@ const REVERT_SELECTOR: Selector = Selector::new(alloy_sol_types::Revert::SELECTO
 ///
 /// This is a representation of a Solidity error, which can be used to decode
 /// error events.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DynSolError {
     /// Error selector.
     pub(crate) selector: Selector,
@@ -93,7 +93,7 @@ impl DynSolError {
 }
 
 /// A decoded dynamic ABI error.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DecodedError {
     /// The decoded error body.
     pub body: Vec<DynSolValue>,
