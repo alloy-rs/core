@@ -782,9 +782,9 @@ mod tests {
             "v":"0x1"
         }"#;
 
-        let deserialized: crate::Signature = serde_json::from_str(&v_y_should_appear).unwrap();
+        let deserialized: crate::Signature = serde_json::from_str(v_y_should_appear).unwrap();
 
-        let serialized = serde_json::to_value(&deserialized).unwrap();
+        let serialized = serde_json::to_value(deserialized).unwrap();
 
         // Check if v and yParity key exists together
         assert_eq!(serialized.get("v").unwrap(), "0x1");
@@ -796,9 +796,9 @@ mod tests {
             "v":"0x23"
         }"#;
 
-        let deserialized: crate::Signature = serde_json::from_str(&only_v_should_appear).unwrap();
+        let deserialized: crate::Signature = serde_json::from_str(only_v_should_appear).unwrap();
 
-        let serialized = serde_json::to_value(&deserialized).unwrap();
+        let serialized = serde_json::to_value(deserialized).unwrap();
 
         assert_eq!(serialized.get("v").unwrap(), "0x23");
         assert!(serialized.get("yParity").is_none());
