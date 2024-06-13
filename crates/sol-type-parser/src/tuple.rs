@@ -24,7 +24,7 @@ use winnow::{combinator::trace, PResult, Parser};
 /// assert!(TupleSpecifier::parse("(uint256,uint256)[]").is_err());
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TupleSpecifier<'a> {
     /// The full span of the tuple specifier.
     pub span: &'a str,

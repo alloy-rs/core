@@ -510,7 +510,7 @@ impl<'ast> ExpCtxt<'ast> {
             derives.extend(["Debug", "PartialEq", "Eq", "Hash"]);
         }
         let derives = derives.iter().map(|s| Ident::new(s, Span::call_site()));
-        attrs.push(parse_quote! { #[derive(#(#derives),*)] });
+        attrs.push(parse_quote! { #[derive(#(#derives), *)] });
     }
 
     /// Returns an error if any of the types in the parameters are unresolved.

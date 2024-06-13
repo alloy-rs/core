@@ -381,7 +381,7 @@ fn abigen_sol_multicall() {
 #[test]
 fn struct_field_attrs() {
     sol! {
-        #[derive(Serialize, Default)]
+        #[derive(Default, Serialize)]
         struct MyStruct {
             #[serde(skip)]
             uint256 a;
@@ -402,7 +402,7 @@ fn struct_field_attrs() {
 #[test]
 fn enum_variant_attrs() {
     sol! {
-        #[derive(Default, Debug, PartialEq, Eq, Serialize)]
+        #[derive(Debug, Default, PartialEq, Eq, Serialize)]
         enum MyEnum {
             A,
             #[default]

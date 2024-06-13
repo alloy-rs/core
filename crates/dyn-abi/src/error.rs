@@ -11,7 +11,7 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 /// Error when parsing EIP-712 `encodeType` strings
 ///
 /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     /// Unknown type referenced from another type.
     #[cfg(feature = "eip712")]

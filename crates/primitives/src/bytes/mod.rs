@@ -16,7 +16,7 @@ mod serde;
 mod ssz;
 
 /// Wrapper type around [`bytes::Bytes`] to support "0x" prefixed hex strings.
-#[derive(Clone, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct Bytes(pub bytes::Bytes);
 

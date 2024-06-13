@@ -18,7 +18,7 @@ use winnow::{combinator::trace, PResult, Parser};
 /// assert_eq!(stem.as_tuple(), Some(&TupleSpecifier::parse("(uint256,bool)").unwrap()));
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TypeStem<'a> {
     /// Root type.
     Root(RootType<'a>),

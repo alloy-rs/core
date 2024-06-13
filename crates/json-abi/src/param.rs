@@ -575,7 +575,7 @@ impl EventParam {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Serialize, Deserialize)]
 struct BorrowedParam<'a> {
     #[serde(default)]
     name: &'a str,

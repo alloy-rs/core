@@ -211,7 +211,7 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
 }
 
 /// Error when converting from Postgres types.
-#[derive(Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Clone, Debug, PartialEq, Eq, Display)]
 pub enum FromSqlError {
     /// The value is too large for the type.
     #[display(fmt = "The value is too large for the Signed type")]

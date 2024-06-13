@@ -56,7 +56,7 @@ use winnow::{
 /// assert_eq!(spec.sizes.as_slice(), &[NonZeroUsize::new(2), None]);
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeSpecifier<'a> {
     /// The full span of the specifier.
     pub span: &'a str,
