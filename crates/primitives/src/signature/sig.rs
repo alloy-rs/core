@@ -7,7 +7,6 @@ use alloc::vec::Vec;
 use core::str::FromStr;
 
 /// An Ethereum ECDSA signature.
-#[cfg_attr(any(test, feature = "arbitrary"), derive(derive_arbitrary::Arbitrary))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Signature<T> {
     /// Memoized ecdsa signature (if any)
@@ -569,6 +568,31 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
         } else {
             deserializer.deserialize_tuple(3, TupleVisitor)
         }
+    }
+}
+
+#[cfg(feature = "arbitrary")]
+impl<'a> arbitrary::Arbitrary<'a> for crate::Signature {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        Self::from_rs_and_parity(u.arbitrary()?, u.arbitrary()?, u.arbitrary::<Parity>()?)
+            .map_err(|_| arbitrary::Error::IncorrectFormat)
+    }
+}
+
+#[cfg(feature = "arbitrary")]
+impl proptest::arbitrary::Arbitrary for crate::Signature {
+    type Parameters = ();
+    type Strategy = proptest::strategy::FilterMap<
+        <(U256, U256, Parity) as proptest::arbitrary::Arbitrary>::Strategy,
+        fn((U256, U256, Parity)) -> Option<Self>,
+    >;
+
+    fn arbitrary_with((): Self::Parameters) -> Self::Strategy {
+        use proptest::strategy::Strategy;
+        proptest::arbitrary::any::<(U256, U256, Parity)>()
+            .prop_filter_map("invalid signature", |(r, s, parity)| {
+                Self::from_rs_and_parity(r, s, parity).ok()
+            })
     }
 }
 

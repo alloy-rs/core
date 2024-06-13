@@ -504,8 +504,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     ///
     /// * [`BaseConvertError::InvalidBase`] if the base is less than 2.
     /// * [`BaseConvertError::InvalidDigit`] if a digit is out of range.
-    /// * [`BaseConvertError::Overflow`] if the number is too large to
-    /// fit.
+    /// * [`BaseConvertError::Overflow`] if the number is too large to fit.
     pub fn from_base_be<I: IntoIterator<Item = u64>>(
         base: u64,
         digits: I,
