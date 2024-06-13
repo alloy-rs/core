@@ -438,7 +438,7 @@ impl Function {
     ///
     /// Note:
     /// - [`state_mutability`](Self::state_mutability) is currently not parsed from the input and is
-    /// always set to [`StateMutability::NonPayable`]
+    ///   always set to [`StateMutability::NonPayable`]
     /// - visibility is rejected
     ///
     /// If you want to parse a generic [Human-Readable ABI] string, use [`AbiItem::parse`].
