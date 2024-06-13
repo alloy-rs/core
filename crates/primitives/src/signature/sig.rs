@@ -418,13 +418,10 @@ impl serde::Serialize for crate::Signature {
             match self.v {
                 Parity::Eip155(v) => map.serialize_entry("v", &crate::U64::from(v))?,
                 Parity::NonEip155(b) => map.serialize_entry("v", &(b as u8 + 27))?,
-                Parity::Parity(true) => {
-                    map.serialize_entry("v", "0x1")?;
-                    map.serialize_entry("yParity", "0x1")?;
-                }
-                Parity::Parity(false) => {
-                    map.serialize_entry("v", "0x0")?;
-                    map.serialize_entry("yParity", "0x0")?;
+                Parity::Parity(parity) => {
+                    let (v, y_parity) = if parity { ("0x1", "0x1") } else { ("0x0", "0x0") };
+                    map.serialize_entry("v", v)?;
+                    map.serialize_entry("yParity", y_parity)?;
                 }
             }
             map.end()
