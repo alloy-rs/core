@@ -50,7 +50,7 @@ mod common;
 pub use common::TxKind;
 
 mod log;
-pub use log::{Log, LogData};
+pub use log::{IntoLogData, Log, LogData};
 #[cfg(feature = "serde")]
 mod log_serde;
 
