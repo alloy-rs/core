@@ -8,7 +8,7 @@ use alloc::{
     string::String,
     vec::Vec,
 };
-use core::{fmt, str::FromStr};
+use core::{borrow::Borrow, fmt, str::FromStr};
 use parser::{Error, ParameterSpecifier, TypeSpecifier};
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -62,8 +62,8 @@ impl<'de> Deserialize<'de> for Param {
             if inner.indexed.is_none() {
                 inner.validate_fields()?;
                 Ok(Self {
-                    name: inner.name.to_owned(),
-                    ty: inner.ty.to_owned(),
+                    name: inner.name.into_owned(),
+                    ty: inner.ty.into_owned(),
                     internal_type: inner.internal_type.map(Into::into),
                     components: inner.components.into_owned(),
                 })
@@ -273,8 +273,8 @@ impl Param {
     #[inline]
     fn as_inner(&self) -> BorrowedParam<'_> {
         BorrowedParam {
-            name: &self.name,
-            ty: &self.ty,
+            name: Cow::from(&self.name),
+            ty: Cow::from(&self.ty),
             indexed: None,
             internal_type: self.borrowed_internal_type(),
             components: Cow::Borrowed(&self.components),
@@ -353,8 +353,8 @@ impl<'de> Deserialize<'de> for EventParam {
         BorrowedParam::deserialize(deserializer).and_then(|inner| {
             inner.validate_fields()?;
             Ok(Self {
-                name: inner.name.to_owned(),
-                ty: inner.ty.to_owned(),
+                name: inner.name.into_owned(),
+                ty: inner.ty.into_owned(),
                 indexed: inner.indexed.unwrap_or(false),
                 internal_type: inner.internal_type.map(Into::into),
                 components: inner.components.into_owned(),
@@ -566,8 +566,8 @@ impl EventParam {
     #[inline]
     fn as_inner(&self) -> BorrowedParam<'_> {
         BorrowedParam {
-            name: &self.name,
-            ty: &self.ty,
+            name: Cow::from(&self.name),
+            ty: Cow::from(&self.ty),
             indexed: Some(self.indexed),
             internal_type: self.borrowed_internal_type(),
             components: Cow::Borrowed(&self.components),
@@ -578,12 +578,12 @@ impl EventParam {
 #[derive(Serialize, Deserialize)]
 struct BorrowedParam<'a> {
     #[serde(default)]
-    name: &'a str,
+    name: Cow<'a, str>,
     #[serde(rename = "type")]
-    ty: &'a str,
+    ty: Cow<'a, str>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     indexed: Option<bool>,
-    #[serde(rename = "internalType", default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "internalType", default, skip_serializing_if = "Option::is_none", borrow)]
     internal_type: Option<BorrowedInternalType<'a>>,
     #[serde(default, skip_serializing_if = "<[_]>::is_empty")]
     components: Cow<'a, [Param]>,
@@ -592,14 +592,14 @@ struct BorrowedParam<'a> {
 impl BorrowedParam<'_> {
     #[inline(always)]
     fn validate_fields<E: serde::de::Error>(&self) -> Result<(), E> {
-        validate_identifier!(self.name);
+        validate_identifier!(&self.name);
 
         // any components means type is "tuple" + maybe brackets, so we can skip
         // parsing with TypeSpecifier
         if self.components.is_empty() {
-            if parser::TypeSpecifier::parse(self.ty).is_err() {
+            if parser::TypeSpecifier::parse(&self.ty).is_err() {
                 return Err(E::invalid_value(
-                    Unexpected::Str(self.ty),
+                    Unexpected::Str(&self.ty),
                     &"a valid Solidity type specifier",
                 ));
             }
@@ -608,7 +608,7 @@ impl BorrowedParam<'_> {
             // checking for "tuple" prefix should be enough
             if !self.ty.starts_with("tuple") {
                 return Err(E::invalid_value(
-                    Unexpected::Str(self.ty),
+                    Unexpected::Str(&self.ty),
                     &"a string prefixed with `tuple`, optionally followed by a sequence of `[]` or `[k]` with integers `k`",
                 ));
             }
