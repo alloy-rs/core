@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased](https://github.com/alloy-rs/core/compare/v0.7.6...HEAD)
+
+### Bug Fixes
+
+- [primitives] Include in aliases export to prevent having to import from `aliases::{..}` ([#655](https://github.com/alloy-rs/core/issues/655))
+
+### Documentation
+
+- Update MSRV policy ([#665](https://github.com/alloy-rs/core/issues/665))
+
+### Features
+
+- [primitives] Manually implement arbitrary for signature ([#663](https://github.com/alloy-rs/core/issues/663))
+
+### Miscellaneous Tasks
+
+- Add book/examples to readme
+- [sol-types] Exit early if Abigen input is invalid
+- Swap sol macro doctests symlink ([#657](https://github.com/alloy-rs/core/issues/657))
+
+### Styling
+
+- Format GHA workflow
+- Sort derives ([#662](https://github.com/alloy-rs/core/issues/662))
+
 ## [0.7.6](https://github.com/alloy-rs/core/releases/tag/v0.7.6) - 2024-06-10
 
 ### Features
@@ -16,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.7.6
 - [docs] Add doc aliases for `Tx` prefixed names ([#649](https://github.com/alloy-rs/core/issues/649))
 - Update changelog.sh
 - Fix CHANGELOG parsers for uppercase
