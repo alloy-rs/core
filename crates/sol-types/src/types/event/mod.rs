@@ -3,7 +3,7 @@ use crate::{
     Result, SolType, Word,
 };
 use alloc::vec::Vec;
-use alloy_primitives::{FixedBytes, IntoLogData, Log, LogData, B256};
+use alloy_primitives::{FixedBytes, Log, LogData, B256};
 
 mod topic;
 pub use topic::EventTopic;
@@ -120,6 +120,20 @@ pub trait SolEvent: Sized {
         let mut out = [WordToken(B256::ZERO); LEN];
         self.encode_topics_raw(&mut out).unwrap();
         out
+    }
+
+    /// Encode this event to a [`LogData`].
+    fn encode_log_data(&self) -> LogData {
+        LogData::new_unchecked(
+            self.encode_topics().into_iter().map(Into::into).collect(),
+            self.encode_data().into(),
+        )
+    }
+
+    /// Transform ca [`Log`] containing this event into a [`Log`] containing
+    /// [`LogData`].
+    fn encode_log(log: &Log<Self>) -> Log<LogData> {
+        Log { address: log.address, data: log.data.encode_log_data() }
     }
 
     /// Decode the topics of this event from the given data.

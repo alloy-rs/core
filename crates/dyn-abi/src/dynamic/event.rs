@@ -8,8 +8,11 @@ use alloy_primitives::{LogData, B256};
 /// logs.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DynSolEvent {
+    /// The event signature hash, if any.
     pub(crate) topic_0: Option<B256>,
+    /// The indexed types.
     pub(crate) indexed: Vec<DynSolType>,
+    /// The un-indexed types.
     pub(crate) body: DynSolType,
 }
 
@@ -103,11 +106,11 @@ impl DynSolEvent {
             }
         }
 
-        Ok(DecodedEvent { indexed, body })
+        Ok(DecodedEvent { signature_hash: self.topic_0, indexed, body })
     }
 
     /// Decode the event from the given log info.
-    pub fn decode_log(&self, log: &LogData, validate: bool) -> Result<DecodedEvent> {
+    pub fn decode_log_data(&self, log: &LogData, validate: bool) -> Result<DecodedEvent> {
         self.decode_log_parts(log.topics().iter().copied(), &log.data, validate)
     }
 
@@ -130,10 +133,37 @@ impl DynSolEvent {
 /// A decoded dynamic ABI event.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecodedEvent {
+    /// The hashes event_signature (if any)
+    #[doc(alias = "topic_0")]
+    pub signature_hash: Option<B256>,
     /// The indexed values, in order.
     pub indexed: Vec<DynSolValue>,
     /// The un-indexed values, in order.
     pub body: Vec<DynSolValue>,
+}
+
+impl DecodedEvent {
+    /// True if anonymous. False if not.
+    pub const fn is_anonymous(&self) -> bool {
+        self.signature_hash.is_none()
+    }
+
+    /// Re-encode the event as a log.
+    pub fn encode_log_data(&self) -> LogData {
+        debug_assert!(
+            self.indexed.len() + self.signature_hash.is_some() as usize <= 4,
+            "too many indexed values"
+        );
+
+        LogData::new_unchecked(
+            self.signature_hash
+                .iter()
+                .copied()
+                .chain(self.indexed.iter().flat_map(DynSolValue::as_word).map(B256::from))
+                .collect(),
+            DynSolValue::encode_seq(&self.body).into(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -150,7 +180,7 @@ mod test {
             indexed: vec![],
             body: DynSolType::Tuple(vec![DynSolType::Uint(256)]),
         };
-        event.decode_log(&log, true).unwrap();
+        event.decode_log_data(&log, true).unwrap();
     }
 
     #[test]
@@ -174,7 +204,7 @@ mod test {
             ])]),
         };
 
-        let decoded = event.decode_log(&log, true).unwrap();
+        let decoded = event.decode_log_data(&log, true).unwrap();
         assert_eq!(
             decoded.indexed,
             vec![DynSolValue::Address(address!("0000000000000000000000000000000000012321"))]
