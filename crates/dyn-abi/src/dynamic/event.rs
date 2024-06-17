@@ -1,6 +1,6 @@
 use crate::{DynSolType, DynSolValue, Error, Result};
 use alloc::vec::Vec;
-use alloy_primitives::{LogData, B256};
+use alloy_primitives::{IntoLogData, Log, LogData, B256};
 
 /// A dynamic ABI event.
 ///
@@ -106,7 +106,7 @@ impl DynSolEvent {
             }
         }
 
-        Ok(DecodedEvent { signature_hash: self.topic_0, indexed, body })
+        Ok(DecodedEvent { selector: self.topic_0, indexed, body })
     }
 
     /// Decode the event from the given log info.
@@ -135,7 +135,7 @@ impl DynSolEvent {
 pub struct DecodedEvent {
     /// The hashes event_signature (if any)
     #[doc(alias = "topic_0")]
-    pub signature_hash: Option<B256>,
+    pub selector: Option<B256>,
     /// The indexed values, in order.
     pub indexed: Vec<DynSolValue>,
     /// The un-indexed values, in order.
@@ -145,24 +145,40 @@ pub struct DecodedEvent {
 impl DecodedEvent {
     /// True if anonymous. False if not.
     pub const fn is_anonymous(&self) -> bool {
-        self.signature_hash.is_none()
+        self.selector.is_none()
     }
 
-    /// Re-encode the event as a log.
+    /// Re-encode the event into a [`LogData`]
     pub fn encode_log_data(&self) -> LogData {
         debug_assert!(
-            self.indexed.len() + self.signature_hash.is_some() as usize <= 4,
+            self.indexed.len() + !self.is_anonymous() as usize <= 4,
             "too many indexed values"
         );
 
         LogData::new_unchecked(
-            self.signature_hash
+            self.selector
                 .iter()
                 .copied()
                 .chain(self.indexed.iter().flat_map(DynSolValue::as_word).map(B256::from))
                 .collect(),
             DynSolValue::encode_seq(&self.body).into(),
         )
+    }
+
+    /// Transform a [`Log`] containing this event into a [`Log`] containing
+    /// [`LogData`].
+    pub fn encode_log(log: Log<Self>) -> Log<LogData> {
+        Log { address: log.address, data: log.data.encode_log_data() }
+    }
+}
+
+impl IntoLogData for DecodedEvent {
+    fn to_log_data(&self) -> LogData {
+        self.encode_log_data()
+    }
+
+    fn into_log_data(self) -> LogData {
+        self.encode_log_data()
     }
 }
 
@@ -186,7 +202,7 @@ mod test {
     #[test]
     fn it_decodes_logs_with_indexed_params() {
         let t0 = b256!("cf74b4e62f836eeedcd6f92120ffb5afea90e6fa490d36f8b81075e2a7de0cf7");
-        let log = LogData::new_unchecked(
+        let log: LogData = LogData::new_unchecked(
             vec![t0, b256!("0000000000000000000000000000000000000000000000000000000000012321")],
             bytes!(
                 "
@@ -209,5 +225,8 @@ mod test {
             decoded.indexed,
             vec![DynSolValue::Address(address!("0000000000000000000000000000000000012321"))]
         );
+
+        let encoded = decoded.encode_log_data();
+        assert_eq!(encoded, log);
     }
 }
