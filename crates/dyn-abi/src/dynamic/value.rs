@@ -677,7 +677,7 @@ impl DynSolValue {
             Self::Bool(b) => buf.push(*b as u8),
             Self::String(s) => buf.extend_from_slice(s.as_bytes()),
             Self::Bytes(bytes) => buf.extend_from_slice(bytes),
-            Self::FixedBytes(word, size) => buf.extend_from_slice(&word[..(*size).max(32)]),
+            Self::FixedBytes(word, size) => buf.extend_from_slice(&word[..*size]),
             Self::Int(num, size) => {
                 let byte_size = *size / 8;
                 let start = 32usize.saturating_sub(byte_size);
