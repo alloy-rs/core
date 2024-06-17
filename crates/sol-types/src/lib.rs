@@ -248,12 +248,19 @@ pub mod private {
     pub trait SolTypeValue<T: super::SolType> {
         // Note: methods are prefixed with `stv_` to avoid name collisions with
         // the `SolValue` trait.
-        fn stv_to_tokens(&self) -> T::Token<'_>;
+
         #[inline(always)]
         fn stv_abi_encoded_size(&self) -> usize {
             T::ENCODED_SIZE.unwrap()
         }
+        fn stv_to_tokens(&self) -> T::Token<'_>;
+
+        #[inline(always)]
+        fn stv_abi_packed_encoded_size(&self) -> usize {
+            T::PACKED_ENCODED_SIZE.unwrap()
+        }
         fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>);
+
         fn stv_eip712_data_word(&self) -> super::Word;
     }
 

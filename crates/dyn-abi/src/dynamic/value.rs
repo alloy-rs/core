@@ -667,7 +667,21 @@ impl DynSolValue {
         }
     }
 
-    /// Encodes the packed value and appends it to the end of a byte array.
+    /// Non-standard Packed Mode ABI encoding.
+    ///
+    /// Note that invalid value sizes will saturate to the maximum size, e.g. `Uint(x, 300)` will
+    /// behave the same as `Uint(x, 256)`.
+    ///
+    /// See [`SolType::abi_encode_packed`](alloy_sol_types::SolType::abi_encode_packed) for more
+    /// details.
+    #[inline]
+    pub fn abi_encode_packed(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(self.abi_packed_encoded_size());
+        self.abi_encode_packed_to(&mut buf);
+        buf
+    }
+
+    /// Non-standard Packed Mode ABI encoding.
     ///
     /// See [`abi_encode_packed`](Self::abi_encode_packed) for more details.
     pub fn abi_encode_packed_to(&self, buf: &mut Vec<u8>) {
@@ -690,49 +704,38 @@ impl DynSolValue {
             }
             Self::FixedArray(inner) | Self::Array(inner) => {
                 for val in inner {
-                    let mut buf_inner = Vec::new();
-                    val.abi_encode_packed_to(&mut buf_inner);
-
-                    // Array elements are always padded
-                    if buf_inner.len() < 32usize {
-                        // Calculate the number of padding elements needed
-                        let padding_needed = 32usize.saturating_sub(buf_inner.len());
-
-                        // Extend the vector with the padding elements
-                        buf_inner.resize(32usize, 0);
-
-                        // Rotate the vector left by the number of padding elements added
-                        buf_inner.rotate_right(padding_needed);
+                    // Array elements are left-padded to 32 bytes.
+                    if let Some(padding_needed) = 32usize.checked_sub(val.abi_packed_encoded_size())
+                    {
+                        buf.extend(core::iter::repeat(0).take(padding_needed));
                     }
-                    buf.extend_from_slice(&buf_inner);
-                }
-            }
-            Self::Tuple(inner) => {
-                for val in inner {
                     val.abi_encode_packed_to(buf);
                 }
             }
-            #[cfg(feature = "eip712")]
-            Self::CustomStruct { tuple, .. } => {
-                for val in tuple {
+            as_tuple!(Self inner) => {
+                for val in inner {
                     val.abi_encode_packed_to(buf);
                 }
             }
         }
     }
 
-    /// Non-standard Packed Mode ABI encoding.
+    /// Returns the length of this value when ABI-encoded in Non-standard Packed Mode.
     ///
-    /// Note that invalid value sizes will saturate to the maximum size, e.g. `Uint(x, 300)` will
-    /// behave the same as `Uint(x, 256)`.
-    ///
-    /// See [`SolType::abi_encode_packed`](alloy_sol_types::SolType::abi_encode_packed) for more
-    /// details.
-    #[inline]
-    pub fn abi_encode_packed(&self) -> Vec<u8> {
-        let mut buf = Vec::new();
-        self.abi_encode_packed_to(&mut buf);
-        buf
+    /// See [`abi_encode_packed`](Self::abi_encode_packed) for more details.
+    pub fn abi_packed_encoded_size(&self) -> usize {
+        match self {
+            Self::Address(_) | Self::Function(_) => 20,
+            Self::Bool(_) => 1,
+            Self::String(s) => s.len(),
+            Self::Bytes(b) => b.len(),
+            Self::FixedBytes(_, size) => (*size).min(32),
+            Self::Int(_, size) | Self::Uint(_, size) => (size / 8).min(32),
+            Self::FixedArray(inner) | Self::Array(inner) => {
+                inner.iter().map(|v| v.abi_packed_encoded_size().max(32)).sum()
+            }
+            as_tuple!(Self inner) => inner.iter().map(Self::abi_packed_encoded_size).sum(),
+        }
     }
 
     /// Tokenize this value into a [`DynToken`].

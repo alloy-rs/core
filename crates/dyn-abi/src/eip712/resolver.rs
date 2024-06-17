@@ -122,7 +122,7 @@ impl TypeDef {
     /// Instantiate a new type definition, without checking that the type name
     /// is a valid root type. This may result in bad behavior in a resolver.
     #[inline]
-    pub fn new_unchecked(type_name: String, props: Vec<PropertyDef>) -> Self {
+    pub const fn new_unchecked(type_name: String, props: Vec<PropertyDef>) -> Self {
         Self { type_name, props }
     }
 

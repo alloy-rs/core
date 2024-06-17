@@ -16,7 +16,7 @@ pub struct DynSolEvent {
 impl DynSolEvent {
     /// Creates a new event, without length-checking the indexed, or ensuring
     /// the body is a tuple. This allows creation of invalid events.
-    pub fn new_unchecked(
+    pub const fn new_unchecked(
         topic_0: Option<B256>,
         indexed: Vec<DynSolType>,
         body: DynSolType,

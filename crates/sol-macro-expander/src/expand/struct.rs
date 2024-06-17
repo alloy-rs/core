@@ -90,6 +90,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
                 #[inline]
                 fn stv_abi_encoded_size(&self) -> usize {
+                    if let Some(size) = <Self as alloy_sol_types::SolType>::ENCODED_SIZE {
+                        return size;
+                    }
+
                     // TODO: Avoid cloning
                     let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
                     <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_encoded_size(&tuple)
@@ -106,6 +110,17 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                     let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
                     <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
                 }
+
+                #[inline]
+                fn stv_abi_packed_encoded_size(&self) -> usize {
+                    if let Some(size) = <Self as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE {
+                        return size;
+                    }
+
+                    // TODO: Avoid cloning
+                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
+                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_packed_encoded_size(&tuple)
+                }
             }
 
             #[automatically_derived]
@@ -116,6 +131,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                 const SOL_NAME: &'static str = <Self as alloy_sol_types::SolStruct>::NAME;
                 const ENCODED_SIZE: Option<usize> =
                     <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::ENCODED_SIZE;
+                const PACKED_ENCODED_SIZE: Option<usize> =
+                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE;
 
                 #[inline]
                 fn valid_token(token: &Self::Token<'_>) -> bool {
