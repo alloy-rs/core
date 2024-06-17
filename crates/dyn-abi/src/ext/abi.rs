@@ -118,29 +118,29 @@ impl JsonAbiExt for Error {
 impl JsonAbiExt for Function {
     #[inline]
     fn abi_encode_input(&self, values: &[DynSolValue]) -> Result<Vec<u8>> {
-        self.resolve()?.abi_encode_input(values)
+        encode_typeck(&self.inputs, values).map(prefix_selector(self.selector()))
     }
 
     #[inline]
     fn abi_encode_input_raw(&self, values: &[DynSolValue]) -> Result<Vec<u8>> {
-        self.resolve()?.abi_encode_input_raw(values)
+        encode_typeck(&self.inputs, values)
     }
 
     #[inline]
     fn abi_decode_input(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>> {
-        self.resolve()?.abi_decode_input(data, validate)
+        abi_decode(data, &self.inputs, validate)
     }
 }
 
 impl FunctionExt for Function {
     #[inline]
     fn abi_encode_output(&self, values: &[DynSolValue]) -> Result<Vec<u8>> {
-        self.resolve()?.abi_encode_output(values)
+        encode_typeck(&self.outputs, values)
     }
 
     #[inline]
     fn abi_decode_output(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>> {
-        self.resolve()?.abi_decode_output(data, validate)
+        abi_decode(data, &self.outputs, validate)
     }
 }
 
