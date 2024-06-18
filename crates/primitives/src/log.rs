@@ -17,7 +17,7 @@ impl LogData {
     /// invalid logs. May be safely used when the length of the topic list is
     /// known to be 4 or less.
     #[inline]
-    pub fn new_unchecked(topics: Vec<B256>, data: Bytes) -> Self {
+    pub const fn new_unchecked(topics: Vec<B256>, data: Bytes) -> Self {
         Self { topics, data }
     }
 
@@ -109,7 +109,7 @@ impl Log {
 
     /// Creates a new log.
     #[inline]
-    pub fn new_unchecked(address: Address, topics: Vec<B256>, data: Bytes) -> Self {
+    pub const fn new_unchecked(address: Address, topics: Vec<B256>, data: Bytes) -> Self {
         Self { address, data: LogData::new_unchecked(topics, data) }
     }
 

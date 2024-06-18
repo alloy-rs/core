@@ -143,6 +143,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
 
                 const SOL_NAME: &'static str = #uint8_st::SOL_NAME;
                 const ENCODED_SIZE: ::core::option::Option<usize> = #uint8_st::ENCODED_SIZE;
+                const PACKED_ENCODED_SIZE: ::core::option::Option<usize> = #uint8_st::PACKED_ENCODED_SIZE;
 
                 #[inline]
                 fn valid_token(token: &Self::Token<'_>) -> bool {
