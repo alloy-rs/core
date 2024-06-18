@@ -91,22 +91,27 @@ fn aggregation_router_v5() {
 // https://github.com/alloy-rs/core/issues/351
 #[test]
 fn uniswap_v3_position() {
+    use alloy_primitives::Signed;
+
     // https://etherscan.io/address/0x8638fbd429b19249bb3bcf3ec72d07a657e49642#code
     sol!(UniswapV3Position, "../json-abi/tests/abi/UniswapV3Position.json");
 
     let _ = UniswapV3Position::getLiquidityByRangeCall {
         pool_: Address::ZERO,
         self_: Address::ZERO,
-        lowerTick_: 0,
-        upperTick_: 0,
+        lowerTick_: Signed::ZERO,
+        upperTick_: Signed::ZERO,
     };
     assert_eq!(
         UniswapV3Position::getLiquidityByRangeCall::SIGNATURE,
         "getLiquidityByRange(address,address,int24,int24)"
     );
 
-    let _ =
-        UniswapV3Position::getPositionIdCall { self_: Address::ZERO, lowerTick_: 0, upperTick_: 0 };
+    let _ = UniswapV3Position::getPositionIdCall {
+        self_: Address::ZERO,
+        lowerTick_: Signed::ZERO,
+        upperTick_: Signed::ZERO,
+    };
     assert_eq!(
         UniswapV3Position::getPositionIdCall::SIGNATURE,
         "getPositionId(address,int24,int24)"
