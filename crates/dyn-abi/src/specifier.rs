@@ -2,9 +2,9 @@
 //!
 //! This is a simple representation of Solidity type grammar.
 
-use crate::{DynSolType, Result};
+use crate::{DynSolCall, DynSolType, Result};
 use alloc::vec::Vec;
-use alloy_json_abi::{EventParam, Param};
+use alloy_json_abi::{EventParam, Function, Param};
 use parser::{ParameterSpecifier, Parameters, RootType, TupleSpecifier, TypeSpecifier, TypeStem};
 
 #[cfg(feature = "eip712")]
@@ -152,6 +152,24 @@ impl Specifier<DynSolType> for EventParam {
             #[cfg(feature = "eip712")]
             self.internal_type(),
         )
+    }
+}
+
+impl Specifier<DynSolCall> for Function {
+    #[inline]
+    fn resolve(&self) -> Result<DynSolCall> {
+        let selector = self.selector();
+        let parameters =
+            self.inputs.iter().map(Specifier::<DynSolType>::resolve).collect::<Result<Vec<_>>>()?;
+        let returns = self
+            .outputs
+            .iter()
+            .map(Specifier::<DynSolType>::resolve)
+            .collect::<Result<Vec<_>>>()?
+            .into();
+        let method = self.name.clone();
+
+        Ok(DynSolCall::new(selector, parameters, Some(method), returns))
     }
 }
 

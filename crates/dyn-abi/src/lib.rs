@@ -38,7 +38,8 @@ mod coerce;
 
 mod dynamic;
 pub use dynamic::{
-    DecodedError, DecodedEvent, DynSolError, DynSolEvent, DynSolType, DynSolValue, DynToken,
+    DecodedError, DecodedEvent, DynSolCall, DynSolError, DynSolEvent, DynSolReturns, DynSolType,
+    DynSolValue, DynToken,
 };
 
 mod error;
