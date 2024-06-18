@@ -86,7 +86,7 @@ abstract contract Ownable {
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
     /// @dev The owner slot is given by: `not(_OWNER_SLOT_NOT)`.
-    /// It is intentionally choosen to be a high value
+    /// It is intentionally chosen to be a high value
     /// to avoid collision with lower slots.
     /// The choice of manual storage layout is to enable compatibility
     /// with both regular and upgradeable contracts.
@@ -2310,7 +2310,7 @@ library SafeTransferLib {
 
     /// @dev Force sends `amount` (in wei) ETH to `to`, with a gas stipend
     /// equal to `_GAS_STIPEND_NO_GRIEF`. This gas stipend is a reasonable default
-    /// for 99% of cases and can be overriden with the three-argument version of this
+    /// for 99% of cases and can be overridden with the three-argument version of this
     /// function if necessary.
     ///
     /// If sending via the normal procedure fails, force sends the ETH by
@@ -6331,7 +6331,7 @@ library DateTimeLib {
     /// between `fromTimestamp` and `toTimestamp`.
     /// Note: Even if the true time difference is less than a year,
     /// the difference can be non-zero is the timestamps are
-    /// from diffrent Gregorian calendar years
+    /// from different Gregorian calendar years
     function diffYears(uint256 fromTimestamp, uint256 toTimestamp)
         internal
         pure
@@ -6347,7 +6347,7 @@ library DateTimeLib {
     /// between `fromTimestamp` and `toTimestamp`.
     /// Note: Even if the true time difference is less than a month,
     /// the difference can be non-zero is the timestamps are
-    /// from diffrent Gregorian calendar months.
+    /// from different Gregorian calendar months.
     function diffMonths(uint256 fromTimestamp, uint256 toTimestamp)
         internal
         pure
