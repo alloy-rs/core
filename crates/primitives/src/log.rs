@@ -81,6 +81,26 @@ impl LogData {
     }
 }
 
+/// Trait for an object that can be converted into a log data object.
+pub trait IntoLogData {
+    /// Convert into a [`LogData`] object.
+    fn to_log_data(&self) -> LogData;
+    /// Consume and convert into a [`LogData`] object.
+    fn into_log_data(self) -> LogData;
+}
+
+impl IntoLogData for LogData {
+    #[inline]
+    fn to_log_data(&self) -> LogData {
+        self.clone()
+    }
+
+    #[inline]
+    fn into_log_data(self) -> LogData {
+        self
+    }
+}
+
 /// A log consists of an address, and some log data.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
