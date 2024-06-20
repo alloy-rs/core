@@ -203,7 +203,7 @@ impl InternalType {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum BorrowedInternalType<'a> {
+pub(crate) enum BorrowedInternalType<'a> {
     AddressPayable(&'a str),
     Contract(&'a str),
     Enum { contract: Option<&'a str>, ty: &'a str },

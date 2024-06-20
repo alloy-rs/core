@@ -18,7 +18,9 @@ extern crate syn_solidity as ast;
 
 /// Tools for working with `#[...]` attributes.
 mod attr;
-pub use attr::{derives_mapped, docs_str, mk_doc, parse_derives, ContainsSolAttrs, SolAttrs};
+pub use attr::{
+    derives_mapped, docs_str, mk_doc, parse_derives, CasingStyle, ContainsSolAttrs, SolAttrs,
+};
 
 mod input;
 pub use input::{SolInput, SolInputKind};
