@@ -19,6 +19,7 @@ use alloc::vec::Vec;
 use alloy_primitives::{utils::vec_try_with_capacity, Bytes, FixedBytes, I256, U256};
 use core::fmt;
 
+#[allow(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
     impl Sealed for super::WordToken {}
@@ -127,7 +128,7 @@ impl From<Word> for WordToken {
 
 impl From<WordToken> for Word {
     #[inline]
-    fn from(value: WordToken) -> Word {
+    fn from(value: WordToken) -> Self {
         value.0
     }
 }

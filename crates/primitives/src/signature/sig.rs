@@ -1,3 +1,5 @@
+#![allow(unknown_lints, unnameable_types)]
+
 use crate::{
     hex,
     signature::{Parity, SignatureError},

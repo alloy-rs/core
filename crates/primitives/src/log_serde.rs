@@ -49,7 +49,7 @@ impl<T: Serialize> Serialize for Log<T> {
     where
         S: Serializer,
     {
-        let Log { address, data } = self;
+        let Self { address, data } = self;
         if serializer.is_human_readable() {
             let replace = LogFlattenSerializer { address, data };
             replace.serialize(serializer)

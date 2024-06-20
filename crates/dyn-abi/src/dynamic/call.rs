@@ -82,7 +82,7 @@ impl From<Vec<DynSolType>> for DynSolReturns {
 }
 
 impl From<DynSolReturns> for Vec<DynSolType> {
-    fn from(returns: DynSolReturns) -> Vec<DynSolType> {
+    fn from(returns: DynSolReturns) -> Self {
         returns.0
     }
 }

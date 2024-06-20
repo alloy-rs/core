@@ -158,17 +158,15 @@ impl DynSolType {
     /// depth of 0, while all other types have a nesting depth of at least 1.
     pub fn nesting_depth(&self) -> usize {
         match self {
-            DynSolType::Bool
-            | DynSolType::Int(_)
-            | DynSolType::Uint(_)
-            | DynSolType::FixedBytes(_)
-            | DynSolType::Address
-            | DynSolType::Function
-            | DynSolType::Bytes
-            | DynSolType::String => 0,
-            DynSolType::Array(contents) | DynSolType::FixedArray(contents, _) => {
-                1 + contents.nesting_depth()
-            }
+            Self::Bool
+            | Self::Int(_)
+            | Self::Uint(_)
+            | Self::FixedBytes(_)
+            | Self::Address
+            | Self::Function
+            | Self::Bytes
+            | Self::String => 0,
+            Self::Array(contents) | Self::FixedArray(contents, _) => 1 + contents.nesting_depth(),
             as_tuple!(Self tuple) => 1 + tuple.iter().map(Self::nesting_depth).max().unwrap_or(0),
         }
     }
@@ -565,21 +563,21 @@ impl DynSolType {
     pub fn minimum_words(&self) -> usize {
         match self {
             // word types are always 1
-            DynSolType::Bool |
-            DynSolType::Int(_) |
-            DynSolType::Uint(_) |
-            DynSolType::FixedBytes(_) |
-            DynSolType::Address |
-            DynSolType::Function |
+            Self::Bool |
+            Self::Int(_) |
+            Self::Uint(_) |
+            Self::FixedBytes(_) |
+            Self::Address |
+            Self::Function |
             // packed/dynamic seq types may be empty
-            DynSolType::Bytes |
-            DynSolType::String |
-            DynSolType::Array(_) => 1,
+            Self::Bytes |
+            Self::String |
+            Self::Array(_) => 1,
             // fixed-seq types are the sum of their components
-            DynSolType::FixedArray(v, size) => size * v.minimum_words(),
-            DynSolType::Tuple(tuple) => tuple.iter().map(|ty| ty.minimum_words()).sum(),
+            Self::FixedArray(v, size) => size * v.minimum_words(),
+            Self::Tuple(tuple) => tuple.iter().map(|ty| ty.minimum_words()).sum(),
             #[cfg(feature = "eip712")]
-            DynSolType::CustomStruct { tuple, ..} => tuple.iter().map(|ty| ty.minimum_words()).sum(),
+            Self::CustomStruct { tuple, ..} => tuple.iter().map(|ty| ty.minimum_words()).sum(),
         }
     }
 

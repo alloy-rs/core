@@ -1,4 +1,5 @@
 #![cfg(feature = "visit")]
+#![allow(clippy::missing_const_for_fn)]
 
 use std::{
     fs::{self, DirEntry},
