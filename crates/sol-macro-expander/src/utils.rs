@@ -34,8 +34,8 @@ pub(crate) fn combine_errors(v: impl IntoIterator<Item = syn::Error>) -> syn::Re
 
 #[derive(Clone, Debug)]
 pub(crate) struct ExprArray<T> {
-    pub array: Vec<T>,
-    pub span: Span,
+    pub(crate) array: Vec<T>,
+    pub(crate) span: Span,
 }
 
 impl<T: PartialOrd> PartialOrd for ExprArray<T> {
