@@ -50,6 +50,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             #[doc = #hex]
             /// ```
             #[rustfmt::skip]
+            #[allow(clippy::all)]
             pub static #name: alloy_sol_types::private::Bytes =
                 alloy_sol_types::private::Bytes::from_static(#lit_bytes);
         }
@@ -66,6 +67,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             #[doc = #hex]
             /// ```
             #[rustfmt::skip]
+            #[allow(clippy::all)]
             pub static #name: alloy_sol_types::private::Bytes =
                 alloy_sol_types::private::Bytes::from_static(#lit_bytes);
         }
