@@ -81,7 +81,7 @@ pub use visit_mut::VisitMut;
 
 mod yul;
 pub use yul::{
-    WalrusToken, YulBlock, YulCaseBranch, YulEVMBuiltIn, YulExpr, YulFnCall, YulFor,
+    WalrusToken, YulBlock, YulCaseBranch, YulEVMBuiltIn, YulExpr, YulFnCall, YulFnType, YulFor,
     YulFunctionDef, YulIdent, YulIf, YulPath, YulReturns, YulStmt, YulSwitch, YulSwitchDefault,
     YulVarAssign, YulVarDecl,
 };

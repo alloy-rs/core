@@ -20,7 +20,7 @@ pub struct DynSolCall {
 
 impl DynSolCall {
     /// Create a new `DynSolCall` with the given selector and types.
-    pub fn new(
+    pub const fn new(
         selector: Selector,
         parameters: Vec<DynSolType>,
         method: Option<String>,
@@ -89,7 +89,7 @@ impl From<DynSolReturns> for Vec<DynSolType> {
 
 impl DynSolReturns {
     /// Create a new `DynSolReturns` with the given types.
-    pub fn new(types: Vec<DynSolType>) -> Self {
+    pub const fn new(types: Vec<DynSolType>) -> Self {
         Self(types)
     }
 

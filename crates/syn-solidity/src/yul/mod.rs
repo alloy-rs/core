@@ -1,5 +1,5 @@
 mod expr;
-pub use expr::{YulExpr, YulFnCall};
+pub use expr::{YulExpr, YulFnCall, YulFnType};
 
 mod stmt;
 pub use stmt::{
