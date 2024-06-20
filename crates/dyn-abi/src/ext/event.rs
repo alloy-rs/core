@@ -3,6 +3,7 @@ use alloc::vec::Vec;
 use alloy_json_abi::Event;
 use alloy_primitives::{LogData, B256};
 
+#[allow(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
     impl Sealed for alloy_json_abi::Event {}

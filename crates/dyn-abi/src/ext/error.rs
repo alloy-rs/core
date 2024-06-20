@@ -3,6 +3,7 @@ use alloc::vec::Vec;
 use alloy_json_abi::Error;
 use alloy_primitives::{keccak256, Selector};
 
+#[allow(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
     impl Sealed for alloy_json_abi::Error {}

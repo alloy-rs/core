@@ -16,6 +16,27 @@ exclude = ["tests"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[workspace.lints.clippy]
+dbg-macro = "warn"
+manual-string-new = "warn"
+uninlined-format-args = "warn"
+use-self = "warn"
+redundant-clone = "warn"
+missing-const-for-fn = "warn"
+
+[workspace.lints.rust]
+missing-copy-implementations = "warn"
+missing-debug-implementations = "warn"
+missing-docs = "warn"
+rust-2018-idioms = "warn"
+unreachable-pub = "warn"
+unused-must-use = "warn"
+redundant-lifetimes = "warn"
+unnameable-types = "warn"
+
+[workspace.lints.rustdoc]
+all = "warn"
+
 [workspace.dependencies]
 # workspace crates
 alloy-core = { version = "0.7.6", path = "crates/core", default-features = false }

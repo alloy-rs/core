@@ -17,6 +17,9 @@ exclude.workspace = true
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[lints]
+workspace = true
+
 [dependencies]
 alloy-json-abi.workspace = true
 alloy-sol-type-parser.workspace = true
@@ -55,7 +58,12 @@ std = [
     "serde?/std",
     "serde_json?/std",
 ]
-eip712 = ["alloy-sol-types/eip712-serde", "dep:derive_more", "dep:serde", "dep:serde_json"]
+eip712 = [
+    "alloy-sol-types/eip712-serde",
+    "dep:derive_more",
+    "dep:serde",
+    "dep:serde_json",
+]
 arbitrary = [
     "std",
     "alloy-sol-types/arbitrary",

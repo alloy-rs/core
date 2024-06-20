@@ -49,6 +49,7 @@ pub fn expand(ast: File) -> Result<TokenStream> {
 }
 
 /// The expansion context.
+#[derive(Debug)]
 pub struct ExpCtxt<'ast> {
     all_items: Vec<&'ast Item>,
     custom_types: IndexMap<SolIdent, Type>,
@@ -267,7 +268,7 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum OverloadedItem<'a> {
     Function(&'a ItemFunction),
     Event(&'a ItemEvent),
@@ -544,8 +545,11 @@ impl<'ast> ExpCtxt<'ast> {
 ///
 /// These should be added to import lists at the top of anonymous `const _: () = { ... }` blocks,
 /// and in case of top-level structs they should be inlined into all `path`s.
+#[derive(Debug)]
 pub struct ExternCrates {
+    /// The path to the `alloy_sol_types` crate.
     pub sol_types: syn::Path,
+    /// The path to the `alloy_contract` crate.
     pub contract: syn::Path,
 }
 
@@ -559,6 +563,7 @@ impl Default for ExternCrates {
 }
 
 impl ExternCrates {
+    /// Fills the extern crate dependencies with the given attributes.
     pub fn fill(&mut self, attrs: &SolAttrs) {
         if let Some(sol_types) = &attrs.alloy_sol_types {
             self.sol_types = sol_types.clone();

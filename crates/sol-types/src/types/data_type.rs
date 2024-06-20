@@ -837,6 +837,7 @@ impl SolType for () {
 
 all_the_tuples!(tuple_impls);
 
+#[allow(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
 }
