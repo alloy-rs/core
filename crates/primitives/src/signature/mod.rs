@@ -5,6 +5,9 @@ mod parity;
 pub use parity::Parity;
 
 mod sig;
+#[cfg(feature = "unstable-doc")]
+pub use sig::Signature;
+#[cfg(not(feature = "unstable-doc"))]
 pub(crate) use sig::Signature;
 
 mod utils;
