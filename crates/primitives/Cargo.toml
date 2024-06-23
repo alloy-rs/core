@@ -110,6 +110,8 @@ allocative = ["dep:allocative"]
 # Should not be needed most of the time.
 hex-compat = ["hex/hex"]
 
+unstable-doc = []
+
 [[bench]]
 name = "primitives"
 path = "benches/primitives.rs"
