@@ -114,12 +114,12 @@ pub fn parse_item<'a>(s: &mut &'a str) -> Result<&'a str> {
     trace("item", terminated(identifier, space0)).parse_next(s).map_err(Error::parser)
 }
 
-/// Returns `(name, inputs, outputs, anonymous)`.
+/// Returns `(name, inputs, outputs, anonymous, state mutability)`.
 #[doc(hidden)]
 pub fn parse_signature<'a, const OUT: bool, F: Fn(ParameterSpecifier<'a>) -> T, T>(
     s: &'a str,
     f: F,
-) -> Result<(String, Vec<T>, Vec<T>, bool)> {
+) -> Result<(String, Vec<T>, Vec<T>, bool, Option<&str>)> {
     trace(
         "signature",
         (

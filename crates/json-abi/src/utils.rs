@@ -160,7 +160,8 @@ pub(crate) fn selector(preimage: &str) -> Selector {
     }
 }
 
-pub(crate) type ParseSigTuple<T> = (String, Vec<T>, Vec<T>, bool);
+// (name, inputs, outputs, anonymous, mutability)
+pub(crate) type ParseSigTuple<T> = (String, Vec<T>, Vec<T>, bool, Option<StateMutability>);
 pub(crate) type ParseSigResult<T> = parser::Result<ParseSigTuple<T>>;
 
 /// Strips `prefix` from `s` before parsing with `parser`. `prefix` must be followed by whitespace.
