@@ -184,9 +184,8 @@ impl IntoLogData for DecodedEvent {
 
 #[cfg(test)]
 mod test {
-    use alloy_primitives::{address, b256, bytes, U256};
-
     use super::*;
+    use alloy_primitives::{address, b256, bytes, U256};
 
     #[test]
     fn it_decodes_a_simple_log() {

@@ -196,7 +196,6 @@ mod test {
     #[test]
     fn basic_rlp() {
         use crate::hex;
-
         use alloy_rlp::{Decodable, Encodable};
 
         let vector = vec![

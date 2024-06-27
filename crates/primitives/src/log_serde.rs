@@ -11,7 +11,6 @@
 //! 4. LogUnflattenDeserializer for a binary deserializer.
 
 use crate::{Address, Log};
-
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Serialize)]

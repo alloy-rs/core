@@ -77,9 +77,8 @@ impl EventExt for Event {
 
 #[cfg(test)]
 mod tests {
-    use crate::DynSolValue;
-
     use super::*;
+    use crate::DynSolValue;
     use alloy_json_abi::EventParam;
     use alloy_primitives::{address, b256, bytes, hex, keccak256, Signed};
 
