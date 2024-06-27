@@ -22,7 +22,7 @@ workspace = true
 
 [dependencies]
 winnow.workspace = true
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
 serde_json.workspace = true
