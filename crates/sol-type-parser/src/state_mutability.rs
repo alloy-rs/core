@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 const COMPAT_ERROR: &str = "state mutability cannot be both `payable` and `constant`";
@@ -7,10 +8,9 @@ const COMPAT_ERROR: &str = "state mutability cannot be both `payable` and `const
 /// This will serialize/deserialize as the `stateMutability` JSON ABI field's value, see
 /// [`as_json_str`](Self::as_json_str).
 /// For backwards compatible deserialization, see [`serde_state_mutability_compat`].
-#[derive(
-    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
-#[serde(rename_all = "lowercase")]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
 pub enum StateMutability {
     /// Pure functions promise not to read from or modify the state.
     Pure,
@@ -28,7 +28,25 @@ pub enum StateMutability {
     Payable,
 }
 
+impl core::str::FromStr for StateMutability {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s).ok_or(())
+    }
+}
+
 impl StateMutability {
+    /// Parses a state mutability from a string.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "pure" => Some(Self::Pure),
+            "view" => Some(Self::View),
+            "payable" => Some(Self::Payable),
+            _ => None,
+        }
+    }
+
     /// Returns the string representation of the state mutability.
     #[inline]
     pub const fn as_str(self) -> Option<&'static str> {
@@ -66,7 +84,7 @@ impl StateMutability {
 /// [`StateMutability`] struct field.
 ///
 /// ```rust
-/// use alloy_json_abi::{serde_state_mutability_compat, StateMutability};
+/// use alloy_sol_type_parser::{serde_state_mutability_compat, StateMutability};
 /// use serde::{Deserialize, Serialize};
 ///
 /// #[derive(Serialize, Deserialize)]
@@ -83,6 +101,7 @@ impl StateMutability {
 /// let reserialized = serde_json::to_string(&ms).expect("failed reserializing");
 /// assert_eq!(reserialized, r#"{"stateMutability":"view"}"#);
 /// ```
+#[cfg(feature = "serde")]
 pub mod serde_state_mutability_compat {
     use super::*;
     use serde::ser::SerializeStruct;
@@ -140,6 +159,8 @@ pub mod serde_state_mutability_compat {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(feature = "std"))]
     use alloc::string::ToString;
 
     #[derive(Debug, Serialize, Deserialize)]

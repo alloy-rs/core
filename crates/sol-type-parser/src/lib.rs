@@ -40,3 +40,8 @@ pub use parameter::{ParameterSpecifier, Parameters, Storage};
 
 /// Generic [`winnow`] parsing utilities.
 pub mod utils;
+
+mod state_mutability;
+#[cfg(feature = "serde")]
+pub use state_mutability::serde_state_mutability_compat;
+pub use state_mutability::StateMutability;

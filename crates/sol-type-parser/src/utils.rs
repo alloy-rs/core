@@ -1,11 +1,11 @@
 #![allow(missing_docs)]
 
-use crate::{Error, ParameterSpecifier, Result, RootType};
+use crate::{Error, ParameterSpecifier, Result, RootType, StateMutability};
 use alloc::{string::String, vec::Vec};
 use core::{slice, str};
 use winnow::{
     ascii::space0,
-    combinator::{cut_err, opt, preceded, separated, terminated, trace},
+    combinator::{alt, cut_err, opt, preceded, separated, terminated, trace},
     error::{AddContext, ParserError, StrContext, StrContextValue},
     stream::Accumulate,
     PResult, Parser,
@@ -114,32 +114,54 @@ pub fn parse_item<'a>(s: &mut &'a str) -> Result<&'a str> {
     trace("item", terminated(identifier, space0)).parse_next(s).map_err(Error::parser)
 }
 
-/// Returns `(name, inputs, outputs, anonymous)`.
+#[doc(hidden)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ParsedSignature<Param> {
+    pub name: String,
+    pub inputs: Vec<Param>,
+    pub outputs: Vec<Param>,
+    pub anonymous: bool,
+    pub state_mutability: Option<StateMutability>,
+}
+
 #[doc(hidden)]
 pub fn parse_signature<'a, const OUT: bool, F: Fn(ParameterSpecifier<'a>) -> T, T>(
     s: &'a str,
     f: F,
-) -> Result<(String, Vec<T>, Vec<T>, bool)> {
+) -> Result<ParsedSignature<T>> {
+    let params = || tuple_parser(ParameterSpecifier::parser.map(&f));
     trace(
         "signature",
         (
-            RootType::parser.map(|x| x.span().into()),
-            preceded(space0, tuple_parser(ParameterSpecifier::parser.map(&f))),
-            |i: &mut _| {
+            // name
+            RootType::parser,
+            // inputs
+            preceded(space0, params()),
+            // visibility
+            opt(preceded(space0, alt(("internal", "external", "private", "public")))),
+            // state mutability
+            opt(preceded(space0, alt(("pure", "view", "payable")))),
+            // outputs
+            move |i: &mut _| {
                 if OUT {
-                    preceded(
-                        (space0, opt(":"), opt("returns"), space0),
-                        opt(tuple_parser(ParameterSpecifier::parser.map(&f))),
-                    )
-                    .parse_next(i)
-                    .map(Option::unwrap_or_default)
+                    preceded((space0, opt(":"), opt("returns"), space0), opt(params()))
+                        .parse_next(i)
+                        .map(Option::unwrap_or_default)
                 } else {
                     Ok(vec![])
                 }
             },
+            // anonymous
             preceded(space0, opt("anonymous").map(|x| x.is_some())),
         ),
     )
+    .map(|(name, inputs, _visibility, mutability, outputs, anonymous)| ParsedSignature {
+        name: name.span().into(),
+        inputs,
+        outputs,
+        anonymous,
+        state_mutability: mutability.map(|s| s.parse().unwrap()),
+    })
     .parse(s)
     .map_err(Error::parser)
 }
