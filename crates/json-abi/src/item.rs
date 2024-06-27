@@ -613,6 +613,14 @@ impl Event {
 mod tests {
     use super::*;
 
+    // fn param(kind: &str) -> Param {
+    //     param2(kind, "param")
+    // }
+
+    fn param2(kind: &str, name: &str) -> Param {
+        Param { ty: kind.into(), name: name.into(), internal_type: None, components: vec![] }
+    }
+
     #[test]
     fn parse_prefixes() {
         for prefix in ["function", "error", "event"] {
@@ -654,5 +662,30 @@ mod tests {
         assert_eq!(Error::parse("error foo()"), Ok(new("foo")));
         assert_eq!(Error::parse("errorfoo()"), Ok(new("errorfoo")));
         assert_eq!(Error::parse("error errorfoo()"), Ok(new("errorfoo")));
+    }
+
+    #[test]
+    fn parse_full() {
+        // https://github.com/alloy-rs/core/issues/389
+        assert_eq!(
+            Function::parse("function foo(uint256 a, uint256 b) external returns (uint256)"),
+            Ok(Function {
+                name: "foo".into(),
+                inputs: vec![param2("uint256", "a"), param2("uint256", "b")],
+                outputs: vec![param2("uint256", "")],
+                state_mutability: StateMutability::NonPayable,
+            })
+        );
+
+        // https://github.com/alloy-rs/core/issues/681
+        assert_eq!(
+            Function::parse("function balanceOf(address owner) view returns (uint256 balance)"),
+            Ok(Function {
+                name: "balanceOf".into(),
+                inputs: vec![param2("address", "owner")],
+                outputs: vec![param2("uint256", "balance")],
+                state_mutability: StateMutability::View,
+            })
+        );
     }
 }
