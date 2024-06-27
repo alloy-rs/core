@@ -333,6 +333,7 @@ impl Constructor {
     ///
     /// Note:
     /// - the name must always be `constructor`
+    /// - visibility is ignored
     ///
     /// # Examples
     ///
@@ -377,6 +378,9 @@ impl FromStr for Error {
 
 impl Error {
     /// Parses a Solidity error signature string: `$(error)? $name($($inputs),*)`
+    ///
+    /// Note:
+    /// - visibility is ignored
     ///
     /// If you want to parse a generic [Human-Readable ABI] string, use [`AbiItem::parse`].
     ///
@@ -538,6 +542,9 @@ impl FromStr for Event {
 
 impl Event {
     /// Parses a Solidity event signature string: `$(event)? $name($($inputs),*) $(anonymous)?`
+    ///
+    /// Note:
+    /// - visibility is ignored
     ///
     /// If you want to parse a generic [Human-Readable ABI] string, use [`AbiItem::parse`].
     ///
