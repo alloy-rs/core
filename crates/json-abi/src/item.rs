@@ -329,7 +329,8 @@ impl FromStr for Constructor {
 }
 
 impl Constructor {
-    /// Parses a Solidity constructor string: `constructor($($inputs),*)`
+    /// Parses a Solidity constructor string:
+    /// `constructor($($inputs),*) [visibility] [s_mutability]`
     ///
     /// Note:
     /// - the name must always be `constructor`
@@ -378,9 +379,6 @@ impl FromStr for Error {
 
 impl Error {
     /// Parses a Solidity error signature string: `$(error)? $name($($inputs),*)`
-    ///
-    /// Note:
-    /// - visibility is ignored
     ///
     /// If you want to parse a generic [Human-Readable ABI] string, use [`AbiItem::parse`].
     ///
@@ -442,7 +440,7 @@ impl FromStr for Function {
 
 impl Function {
     /// Parses a Solidity function signature string:
-    /// `$(function)? $name($($inputs),*) $(returns ($($outputs),+))?`
+    /// `$(function)? $name($($inputs),*) [visibility] [s_mutability] $(returns ($($outputs),+))?`
     ///
     /// Note:
     /// - visibility is ignored
@@ -542,9 +540,6 @@ impl FromStr for Event {
 
 impl Event {
     /// Parses a Solidity event signature string: `$(event)? $name($($inputs),*) $(anonymous)?`
-    ///
-    /// Note:
-    /// - visibility is ignored
     ///
     /// If you want to parse a generic [Human-Readable ABI] string, use [`AbiItem::parse`].
     ///
