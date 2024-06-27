@@ -2,6 +2,7 @@ use crate::{param::Param, serde_state_mutability_compat, utils::*, EventParam, S
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Selector, B256};
 use core::str::FromStr;
+use parser::utils::ParsedSignature;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Declares all JSON ABI items.
@@ -332,8 +333,6 @@ impl Constructor {
     ///
     /// Note:
     /// - the name must always be `constructor`
-    /// - [`state_mutability`](Self::state_mutability) is currently not parsed from the input and is
-    ///   always set to [`StateMutability::NonPayable`]
     ///
     /// # Examples
     ///
@@ -352,7 +351,8 @@ impl Constructor {
         parse_sig::<false>(s).and_then(Self::parsed)
     }
 
-    fn parsed((name, inputs, outputs, anonymous, mutability): ParseSigTuple<Param>) -> parser::Result<Self> {
+    fn parsed(sig: ParsedSignature<Param>) -> parser::Result<Self> {
+        let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if name != "constructor" {
             return Err(parser::Error::new("constructors' name must be exactly \"constructor\""));
         }
@@ -362,10 +362,7 @@ impl Constructor {
         if anonymous {
             return Err(parser::Error::new("constructors cannot be anonymous"));
         }
-        if mutability.is_some() {
-            return Err(parser::Error::new("constructors cannot have state mutability"));
-        }
-        Ok(Self { inputs, state_mutability: StateMutability::NonPayable })
+        Ok(Self { inputs, state_mutability: state_mutability.unwrap_or_default() })
     }
 }
 
@@ -401,14 +398,15 @@ impl Error {
         parse_maybe_prefixed(s, "error", parse_sig::<false>).and_then(Self::parsed)
     }
 
-    fn parsed((name, inputs, outputs, anonymous, mutability): ParseSigTuple<Param>) -> parser::Result<Self> {
+    fn parsed(sig: ParsedSignature<Param>) -> parser::Result<Self> {
+        let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if !outputs.is_empty() {
             return Err(parser::Error::new("errors cannot have outputs"));
         }
         if anonymous {
             return Err(parser::Error::new("errors cannot be anonymous"));
         }
-        if mutability.is_some() {
+        if state_mutability.is_some() {
             return Err(parser::Error::new("errors cannot have mutability"));
         }
         Ok(Self { name, inputs })
@@ -443,9 +441,7 @@ impl Function {
     /// `$(function)? $name($($inputs),*) $(returns ($($outputs),+))?`
     ///
     /// Note:
-    /// - [`state_mutability`](Self::state_mutability) is currently not parsed from the input and is
-    ///   always set to [`StateMutability::NonPayable`]
-    /// - visibility is rejected
+    /// - visibility is ignored
     ///
     /// If you want to parse a generic [Human-Readable ABI] string, use [`AbiItem::parse`].
     ///
@@ -473,22 +469,7 @@ impl Function {
     /// ```
     /// # use alloy_json_abi::{Function, Param, StateMutability};
     /// assert_eq!(
-    ///     Function::parse("function toString(uint number) returns (string s)"),
-    ///     Ok(Function {
-    ///         name: "toString".to_string(),
-    ///         inputs: vec![Param::parse("uint number").unwrap()],
-    ///         outputs: vec![Param::parse("string s").unwrap()],
-    ///         state_mutability: StateMutability::NonPayable,
-    ///     }),
-    /// );
-    /// ```
-    ///
-    /// [Function]s also support parsing output parameters:
-    ///
-    /// ```
-    /// # use alloy_json_abi::{Function, Param, StateMutability};
-    /// assert_eq!(
-    ///     Function::parse("function toString(uint number) view returns (string s)"),
+    ///     Function::parse("function toString(uint number) external view returns (string s)"),
     ///     Ok(Function {
     ///         name: "toString".to_string(),
     ///         inputs: vec![Param::parse("uint number").unwrap()],
@@ -502,9 +483,10 @@ impl Function {
         parse_maybe_prefixed(s, "function", parse_sig::<true>).and_then(Self::parsed)
     }
 
-    fn parsed((name, inputs, outputs, anonymous, state_mutability): ParseSigTuple<Param>) -> parser::Result<Self> {
+    fn parsed(sig: ParsedSignature<Param>) -> parser::Result<Self> {
+        let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if anonymous {
-            return Err(parser::Error::new("function cannot be anonymous"));
+            return Err(parser::Error::new("functions cannot be anonymous"));
         }
         Ok(Self { name, inputs, outputs, state_mutability: state_mutability.unwrap_or_default() })
     }
@@ -582,13 +564,12 @@ impl Event {
         parse_maybe_prefixed(s, "event", parse_event_sig).and_then(Self::parsed)
     }
 
-    fn parsed(
-        (name, inputs, outputs, anonymous, mutability): ParseSigTuple<EventParam>,
-    ) -> parser::Result<Self> {
+    fn parsed(sig: ParsedSignature<EventParam>) -> parser::Result<Self> {
+        let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if !outputs.is_empty() {
             return Err(parser::Error::new("events cannot have outputs"));
         }
-        if mutability.is_some() {
+        if state_mutability.is_some() {
             return Err(parser::Error::new("events cannot have state mutability"));
         }
         Ok(Self { name, inputs, anonymous })
