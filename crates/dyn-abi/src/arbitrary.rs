@@ -533,7 +533,6 @@ fn adjust_int(mut int: I256, size: usize) -> I256 {
             int &= (I256::ONE << size).wrapping_sub(I256::ONE);
         }
     }
-
     int
 }
 
