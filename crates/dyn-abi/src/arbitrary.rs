@@ -523,8 +523,13 @@ fn int_strategy<T: Arbitrary>() -> impl Strategy<Value = (ValueOfStrategy<T::Str
 #[inline]
 fn adjust_int(mut int: I256, size: usize) -> I256 {
     if size < 256 {
-        int &= (I256::ONE << size).wrapping_sub(I256::ONE);
+        if int.bit(size) {
+            int |= I256::MINUS_ONE - (I256::ONE << size).wrapping_sub(I256::ONE);
+        } else {
+            int &= (I256::ONE << size).wrapping_sub(I256::ONE);
+        }
     }
+
     int
 }
 
