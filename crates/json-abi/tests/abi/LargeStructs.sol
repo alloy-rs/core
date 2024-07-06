@@ -1,4 +1,4 @@
-interface LargeStructs {
+library IReader {
     struct AssetStorage {
         bytes32 symbol;
         address tokenAddress;
@@ -33,9 +33,9 @@ interface LargeStructs {
         uint256 deduct;
     }
     struct ChainStorage {
-        PoolStorage pool;
-        AssetStorage[] assets;
-        DexStorage[] dexes;
+        IReader.PoolStorage pool;
+        IReader.AssetStorage[] assets;
+        IReader.DexStorage[] dexes;
         uint32 liquidityLockPeriod;
         uint32 marketOrderTimeout;
         uint32 maxLimitOrderTimeout;
@@ -73,9 +73,11 @@ interface LargeStructs {
         uint96 entryPrice;
         uint128 entryFunding;
     }
+}
 
-    function getChainStorage() external returns (ChainStorage memory chain);
+interface LargeStructs {
+    function getChainStorage() external returns (IReader.ChainStorage memory chain);
     function getOrders(uint64[] memory orderIds) external pure returns (bytes32[3][] memory orders, bool[] memory isExist);
-    function getSubAccounts(bytes32[] memory subAccountIds) external pure returns (SubAccountState[] memory subAccounts);
-    function getSubAccountsAndOrders(bytes32[] memory subAccountIds, uint64[] memory orderIds) external pure returns (SubAccountState[] memory subAccounts, bytes32[3][] memory orders, bool[] memory isOrderExist);
+    function getSubAccounts(bytes32[] memory subAccountIds) external pure returns (IReader.SubAccountState[] memory subAccounts);
+    function getSubAccountsAndOrders(bytes32[] memory subAccountIds, uint64[] memory orderIds) external pure returns (IReader.SubAccountState[] memory subAccounts, bytes32[3][] memory orders, bool[] memory isOrderExist);
 }

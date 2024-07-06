@@ -1,4 +1,16 @@
-interface AggregationRouterV5 {
+library GenericRouter {
+    struct SwapDescription {
+        address srcToken;
+        address dstToken;
+        address payable srcReceiver;
+        address payable dstReceiver;
+        uint256 amount;
+        uint256 minReturnAmount;
+        uint256 flags;
+    }
+}
+
+library OrderLib {
     struct Order {
         uint256 salt;
         address makerAsset;
@@ -11,6 +23,9 @@ interface AggregationRouterV5 {
         uint256 offsets;
         bytes interactions;
     }
+}
+
+library OrderRFQLib {
     struct OrderRFQ {
         uint256 info;
         address makerAsset;
@@ -20,16 +35,9 @@ interface AggregationRouterV5 {
         uint256 makingAmount;
         uint256 takingAmount;
     }
-    struct SwapDescription {
-        address srcToken;
-        address dstToken;
-        address payable srcReceiver;
-        address payable dstReceiver;
-        uint256 amount;
-        uint256 minReturnAmount;
-        uint256 flags;
-    }
+}
 
+interface AggregationRouterV5 {
     error AccessDenied();
     error AdvanceNonceFailed();
     error AlreadyFilled();
@@ -89,24 +97,24 @@ interface AggregationRouterV5 {
     function advanceNonce(uint8 amount) external;
     function and(uint256 offsets, bytes memory data) external view returns (bool);
     function arbitraryStaticCall(address target, bytes memory data) external view returns (uint256);
-    function cancelOrder(Order memory order) external returns (uint256 orderRemaining, bytes32 orderHash);
+    function cancelOrder(OrderLib.Order memory order) external returns (uint256 orderRemaining, bytes32 orderHash);
     function cancelOrderRFQ(uint256 orderInfo) external;
     function cancelOrderRFQ(uint256 orderInfo, uint256 additionalMask) external;
-    function checkPredicate(Order memory order) external view returns (bool);
+    function checkPredicate(OrderLib.Order memory order) external view returns (bool);
     function clipperSwap(address clipperExchange, address srcToken, address dstToken, uint256 inputAmount, uint256 outputAmount, uint256 goodUntil, bytes32 r, bytes32 vs) external payable returns (uint256 returnAmount);
     function clipperSwapTo(address clipperExchange, address payable recipient, address srcToken, address dstToken, uint256 inputAmount, uint256 outputAmount, uint256 goodUntil, bytes32 r, bytes32 vs) external payable returns (uint256 returnAmount);
     function clipperSwapToWithPermit(address clipperExchange, address payable recipient, address srcToken, address dstToken, uint256 inputAmount, uint256 outputAmount, uint256 goodUntil, bytes32 r, bytes32 vs, bytes memory permit) external returns (uint256 returnAmount);
     function destroy() external;
     function eq(uint256 value, bytes memory data) external view returns (bool);
-    function fillOrder(Order memory order, bytes memory signature, bytes memory interaction, uint256 makingAmount, uint256 takingAmount, uint256 skipPermitAndThresholdAmount) external payable returns (uint256, uint256, bytes32);
-    function fillOrderRFQ(OrderRFQ memory order, bytes memory signature, uint256 flagsAndAmount) external payable returns (uint256, uint256, bytes32);
-    function fillOrderRFQCompact(OrderRFQ memory order, bytes32 r, bytes32 vs, uint256 flagsAndAmount) external payable returns (uint256 filledMakingAmount, uint256 filledTakingAmount, bytes32 orderHash);
-    function fillOrderRFQTo(OrderRFQ memory order, bytes memory signature, uint256 flagsAndAmount, address target) external payable returns (uint256 filledMakingAmount, uint256 filledTakingAmount, bytes32 orderHash);
-    function fillOrderRFQToWithPermit(OrderRFQ memory order, bytes memory signature, uint256 flagsAndAmount, address target, bytes memory permit) external returns (uint256, uint256, bytes32);
-    function fillOrderTo(Order memory order_, bytes memory signature, bytes memory interaction, uint256 makingAmount, uint256 takingAmount, uint256 skipPermitAndThresholdAmount, address target) external payable returns (uint256 actualMakingAmount, uint256 actualTakingAmount, bytes32 orderHash);
-    function fillOrderToWithPermit(Order memory order, bytes memory signature, bytes memory interaction, uint256 makingAmount, uint256 takingAmount, uint256 skipPermitAndThresholdAmount, address target, bytes memory permit) external returns (uint256, uint256, bytes32);
+    function fillOrder(OrderLib.Order memory order, bytes memory signature, bytes memory interaction, uint256 makingAmount, uint256 takingAmount, uint256 skipPermitAndThresholdAmount) external payable returns (uint256, uint256, bytes32);
+    function fillOrderRFQ(OrderRFQLib.OrderRFQ memory order, bytes memory signature, uint256 flagsAndAmount) external payable returns (uint256, uint256, bytes32);
+    function fillOrderRFQCompact(OrderRFQLib.OrderRFQ memory order, bytes32 r, bytes32 vs, uint256 flagsAndAmount) external payable returns (uint256 filledMakingAmount, uint256 filledTakingAmount, bytes32 orderHash);
+    function fillOrderRFQTo(OrderRFQLib.OrderRFQ memory order, bytes memory signature, uint256 flagsAndAmount, address target) external payable returns (uint256 filledMakingAmount, uint256 filledTakingAmount, bytes32 orderHash);
+    function fillOrderRFQToWithPermit(OrderRFQLib.OrderRFQ memory order, bytes memory signature, uint256 flagsAndAmount, address target, bytes memory permit) external returns (uint256, uint256, bytes32);
+    function fillOrderTo(OrderLib.Order memory order_, bytes memory signature, bytes memory interaction, uint256 makingAmount, uint256 takingAmount, uint256 skipPermitAndThresholdAmount, address target) external payable returns (uint256 actualMakingAmount, uint256 actualTakingAmount, bytes32 orderHash);
+    function fillOrderToWithPermit(OrderLib.Order memory order, bytes memory signature, bytes memory interaction, uint256 makingAmount, uint256 takingAmount, uint256 skipPermitAndThresholdAmount, address target, bytes memory permit) external returns (uint256, uint256, bytes32);
     function gt(uint256 value, bytes memory data) external view returns (bool);
-    function hashOrder(Order memory order) external view returns (bytes32);
+    function hashOrder(OrderLib.Order memory order) external view returns (bytes32);
     function increaseNonce() external;
     function invalidatorForOrderRFQ(address maker, uint256 slot) external view returns (uint256);
     function lt(uint256 value, bytes memory data) external view returns (bool);
@@ -120,7 +128,7 @@ interface AggregationRouterV5 {
     function renounceOwnership() external;
     function rescueFunds(address token, uint256 amount) external;
     function simulate(address target, bytes memory data) external;
-    function swap(address executor, SwapDescription memory desc, bytes memory permit, bytes memory data) external payable returns (uint256 returnAmount, uint256 spentAmount);
+    function swap(address executor, GenericRouter.SwapDescription memory desc, bytes memory permit, bytes memory data) external payable returns (uint256 returnAmount, uint256 spentAmount);
     function timestampBelow(uint256 time) external view returns (bool);
     function timestampBelowAndNonceEquals(uint256 timeNonceAccount) external view returns (bool);
     function transferOwnership(address newOwner) external;

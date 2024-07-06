@@ -925,3 +925,52 @@ fn contract_derive_default() {
     let MyContract::e2 {} = MyContract::e2::default();
     let MyContract::c {} = MyContract::c::default();
 }
+
+#[test]
+#[cfg(any())] // TODO: https://github.com/alloy-rs/core/issues/660
+fn contract_namespaces() {
+    mod inner {
+        alloy_sol_types::sol! {
+            library LibA {
+                struct Struct {
+                    uint64 field64;
+                }
+            }
+
+            library LibB {
+                struct Struct {
+                    uint128 field128;
+                }
+            }
+
+            contract Contract {
+                LibA.Struct internal aValue;
+                LibB.Struct internal bValue;
+
+                constructor(
+                    LibA.Struct memory aValue_,
+                    LibB.Struct memory bValue_
+                )
+                {
+                    aValue = aValue_;
+                    bValue = bValue_;
+                }
+
+                function fn(
+                    LibA.Struct memory aValue_,
+                    LibB.Struct memory bValue_
+                ) public
+                {
+                    aValue = aValue_;
+                    bValue = bValue_;
+                }
+            }
+        }
+    }
+
+    let _ = inner::Contract::fnCall {
+        aValue_: inner::LibA::Struct { field64: 0 },
+        bValue_: inner::LibB::Struct { field128: 0 },
+    };
+    assert_eq!(inner::Contract::fnCall::SIGNATURE, "fn((uint64),(uint128))");
+}

@@ -7,7 +7,7 @@ sol!(
             "inputs": [
                 { "name": "bar", "type": "uint256" },
                 { 
-                    "internalType": "struct MyJsonContract.MyStruct",
+                    "internalType": "struct MyStruct",
                     "name": "baz",
                     "type": "tuple",
                     "components": [
