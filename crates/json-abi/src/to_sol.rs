@@ -17,6 +17,7 @@ use core::{
 #[allow(missing_copy_implementations)] // Future-proofing
 pub struct ToSolConfig {
     print_constructors: bool,
+    enums_as_udvt: bool,
 }
 
 impl Default for ToSolConfig {
@@ -30,13 +31,21 @@ impl ToSolConfig {
     /// Creates a new configuration with default settings.
     #[inline]
     pub const fn new() -> Self {
-        Self { print_constructors: false }
+        Self { print_constructors: false, enums_as_udvt: true }
     }
 
     /// Sets whether to print constructors. Default: `false`.
     #[inline]
     pub const fn print_constructors(mut self, yes: bool) -> Self {
         self.print_constructors = yes;
+        self
+    }
+
+    /// Sets whether to print `enum`s as user-defined value types (UDVTs) instead of `uint8`.
+    /// Default: `true`.
+    #[inline]
+    pub const fn enums_as_udvt(mut self, yes: bool) -> Self {
+        self.enums_as_udvt = yes;
         self
     }
 }
@@ -49,7 +58,7 @@ pub(crate) struct SolPrinter<'a> {
     /// The buffer to write to.
     s: &'a mut String,
 
-    /// The name of the interface being printed.
+    /// The name of the current library/interface being printed.
     name: &'a str,
 
     /// Whether to emit `memory` when printing parameters.
@@ -81,7 +90,7 @@ impl<'a> SolPrinter<'a> {
         Self { s, name, print_param_location: false, config }
     }
 
-    pub(crate) fn print(&mut self, abi: &JsonAbi) {
+    pub(crate) fn print(&mut self, abi: &'a JsonAbi) {
         abi.to_sol_root(self);
     }
 
@@ -92,7 +101,7 @@ impl<'a> SolPrinter<'a> {
 
 impl JsonAbi {
     #[allow(unknown_lints, for_loops_over_fallibles)]
-    fn to_sol_root(&self, out: &mut SolPrinter<'_>) {
+    fn to_sol_root<'a>(&'a self, out: &mut SolPrinter<'a>) {
         macro_rules! fmt {
             ($iter:expr) => {
                 let mut any = false;
@@ -108,18 +117,23 @@ impl JsonAbi {
             };
         }
 
-        let mut its = InternalTypes::new(out.name);
+        let mut its = InternalTypes::new(out.name, out.config.enums_as_udvt);
         its.visit_abi(self);
 
         for (name, its) in &its.other {
+            if its.is_empty() {
+                continue;
+            }
             out.push_str("library ");
             out.push_str(name);
             out.push_str(" {\n");
+            let prev = core::mem::replace(&mut out.name, name);
             for it in its {
                 out.indent();
                 it.to_sol(out);
                 out.push('\n');
             }
+            out.name = prev;
             out.push_str("}\n\n");
         }
 
@@ -151,12 +165,13 @@ struct InternalTypes<'a> {
     name: &'a str,
     this_its: BTreeSet<It<'a>>,
     other: BTreeMap<&'a String, BTreeSet<It<'a>>>,
+    enums_as_udvt: bool,
 }
 
 impl<'a> InternalTypes<'a> {
     #[allow(clippy::missing_const_for_fn)]
-    fn new(name: &'a str) -> Self {
-        Self { name, this_its: BTreeSet::new(), other: BTreeMap::new() }
+    fn new(name: &'a str, enums_as_udvt: bool) -> Self {
+        Self { name, this_its: BTreeSet::new(), other: BTreeMap::new(), enums_as_udvt }
     }
 
     fn visit_abi(&mut self, abi: &'a JsonAbi) {
@@ -209,7 +224,9 @@ impl<'a> InternalTypes<'a> {
                 self.extend_one(contract, It::new(ty, ItKind::Struct(components)));
             }
             Some(InternalType::Enum { contract, ty }) => {
-                self.extend_one(contract, It::new(ty, ItKind::Enum));
+                if self.enums_as_udvt {
+                    self.extend_one(contract, It::new(ty, ItKind::Enum));
+                }
             }
             Some(it @ InternalType::Other { contract, ty }) => {
                 // `Other` is a UDVT if it's not a basic Solidity type and not an array
@@ -549,6 +566,7 @@ fn param(
                 };
                 (None, ty)
             }
+            InternalType::Enum { .. } if !out.config.enums_as_udvt => (None, "uint8"),
             InternalType::AddressPayable(ty) => (None, &ty[..]),
             InternalType::Struct { contract, ty }
             | InternalType::Enum { contract, ty }
@@ -591,8 +609,10 @@ fn param(
         // primitive type
         _ => {
             if let Some(contract_name) = contract_name {
-                out.push_str(contract_name);
-                out.push('.');
+                if contract_name != out.name {
+                    out.push_str(contract_name);
+                    out.push('.');
+                }
             }
             out.push_str(type_name);
         }

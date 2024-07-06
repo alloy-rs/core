@@ -33,9 +33,9 @@ library IReader {
         uint256 deduct;
     }
     struct ChainStorage {
-        IReader.PoolStorage pool;
-        IReader.AssetStorage[] assets;
-        IReader.DexStorage[] dexes;
+        PoolStorage pool;
+        AssetStorage[] assets;
+        DexStorage[] dexes;
         uint32 liquidityLockPeriod;
         uint32 marketOrderTimeout;
         uint32 maxLimitOrderTimeout;

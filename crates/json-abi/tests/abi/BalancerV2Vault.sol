@@ -29,21 +29,21 @@ library IVault {
         bool fromInternalBalance;
     }
     struct PoolBalanceOp {
-        IVault.PoolBalanceOpKind kind;
+        PoolBalanceOpKind kind;
         bytes32 poolId;
         address token;
         uint256 amount;
     }
     struct SingleSwap {
         bytes32 poolId;
-        IVault.SwapKind kind;
+        SwapKind kind;
         address assetIn;
         address assetOut;
         uint256 amount;
         bytes userData;
     }
     struct UserBalanceOp {
-        IVault.UserBalanceOpKind kind;
+        UserBalanceOpKind kind;
         address asset;
         uint256 amount;
         address sender;
