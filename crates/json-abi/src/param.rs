@@ -60,7 +60,7 @@ impl<'de> Deserialize<'de> for Param {
                 Ok(Self {
                     name: inner.name,
                     ty: inner.ty,
-                    internal_type: inner.internal_type.map(Into::into),
+                    internal_type: inner.internal_type,
                     components: inner.components,
                 })
             } else {
