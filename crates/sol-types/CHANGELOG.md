@@ -5,10 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/alloy-rs/core/compare/v0.7.6...HEAD)
+## [0.7.7](https://github.com/alloy-rs/core/releases/tag/v0.7.7) - 2024-07-08
+
+### Documentation
+
+- [sol-types] Update README.md using crate docs ([#679](https://github.com/alloy-rs/core/issues/679))
+- Add per-crate changelogs ([#669](https://github.com/alloy-rs/core/issues/669))
+
+### Features
+
+- IntoLogData ([#666](https://github.com/alloy-rs/core/issues/666))
+- Add `abi_packed_encoded_size` ([#672](https://github.com/alloy-rs/core/issues/672))
 
 ### Miscellaneous Tasks
 
+- Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
+- Fix unnameable-types ([#675](https://github.com/alloy-rs/core/issues/675))
 - Swap sol macro doctests symlink ([#657](https://github.com/alloy-rs/core/issues/657))
 
 ### Styling

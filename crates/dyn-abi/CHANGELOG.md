@@ -5,10 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/alloy-rs/core/compare/v0.7.4...HEAD)
+## [0.7.7](https://github.com/alloy-rs/core/releases/tag/v0.7.7) - 2024-07-08
+
+### Bug Fixes
+
+- Small fixes for `DynSolValue` strategies ([#683](https://github.com/alloy-rs/core/issues/683))
+- Fixed bytes dyn abi packed encoding ([#671](https://github.com/alloy-rs/core/issues/671))
+
+### Documentation
+
+- Add per-crate changelogs ([#669](https://github.com/alloy-rs/core/issues/669))
+
+### Features
+
+- DynSolCall ([#632](https://github.com/alloy-rs/core/issues/632))
+- IntoLogData ([#666](https://github.com/alloy-rs/core/issues/666))
+- Add `abi_packed_encoded_size` ([#672](https://github.com/alloy-rs/core/issues/672))
+
+### Miscellaneous Tasks
+
+- Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
+- Fix unnameable-types ([#675](https://github.com/alloy-rs/core/issues/675))
 
 ### Styling
 
+- Format some imports
 - Sort derives ([#662](https://github.com/alloy-rs/core/issues/662))
 
 ## [0.7.4](https://github.com/alloy-rs/core/releases/tag/v0.7.4) - 2024-05-14

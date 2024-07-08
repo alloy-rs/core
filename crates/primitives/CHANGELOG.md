@@ -5,18 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/alloy-rs/core/compare/v0.7.6...HEAD)
+## [0.7.7](https://github.com/alloy-rs/core/releases/tag/v0.7.7) - 2024-07-08
 
 ### Bug Fixes
 
 - [primitives] Include in aliases export to prevent having to import from `aliases::{..}` ([#655](https://github.com/alloy-rs/core/issues/655))
 
+### Documentation
+
+- [primitives] Fix rustdoc for Signature ([#680](https://github.com/alloy-rs/core/issues/680))
+- Add per-crate changelogs ([#669](https://github.com/alloy-rs/core/issues/669))
+
 ### Features
 
+- IntoLogData ([#666](https://github.com/alloy-rs/core/issues/666))
+- Add `abi_packed_encoded_size` ([#672](https://github.com/alloy-rs/core/issues/672))
 - [primitives] Manually implement arbitrary for signature ([#663](https://github.com/alloy-rs/core/issues/663))
+
+### Miscellaneous Tasks
+
+- Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
 
 ### Styling
 
+- Format some imports
 - Sort derives ([#662](https://github.com/alloy-rs/core/issues/662))
 
 ## [0.7.6](https://github.com/alloy-rs/core/releases/tag/v0.7.6) - 2024-06-10

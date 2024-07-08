@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/alloy-rs/core/compare/v0.7.5...HEAD)
+## [0.7.7](https://github.com/alloy-rs/core/releases/tag/v0.7.7) - 2024-07-08
+
+### Documentation
+
+- Add per-crate changelogs ([#669](https://github.com/alloy-rs/core/issues/669))
+
+### Features
+
+- Add support for parsing visibility and state mutability ([#682](https://github.com/alloy-rs/core/issues/682))
+
+### Miscellaneous Tasks
+
+- Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
 
 ### Styling
 
