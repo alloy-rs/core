@@ -3,11 +3,7 @@ use crate::{
     utils::{mk_eparam, mk_param, validate_identifier},
     InternalType,
 };
-use alloc::{
-    borrow::{Cow, ToOwned},
-    string::String,
-    vec::Vec,
-};
+use alloc::{borrow::Cow, string::String, vec::Vec};
 use core::{fmt, str::FromStr};
 use parser::{Error, ParameterSpecifier, TypeSpecifier};
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
@@ -58,14 +54,14 @@ impl fmt::Display for Param {
 
 impl<'de> Deserialize<'de> for Param {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        BorrowedParam::deserialize(deserializer).and_then(|inner| {
+        ParamInner::deserialize(deserializer).and_then(|inner| {
             if inner.indexed.is_none() {
                 inner.validate_fields()?;
                 Ok(Self {
-                    name: inner.name.to_owned(),
-                    ty: inner.ty.to_owned(),
-                    internal_type: inner.internal_type.map(Into::into),
-                    components: inner.components.into_owned(),
+                    name: inner.name,
+                    ty: inner.ty,
+                    internal_type: inner.internal_type,
+                    components: inner.components,
                 })
             } else {
                 Err(serde::de::Error::custom("indexed is not supported in params"))
@@ -271,8 +267,8 @@ impl Param {
     }
 
     #[inline]
-    fn as_inner(&self) -> BorrowedParam<'_> {
-        BorrowedParam {
+    fn as_inner(&self) -> BorrowedParamInner<'_> {
+        BorrowedParamInner {
             name: &self.name,
             ty: &self.ty,
             indexed: None,
@@ -350,14 +346,14 @@ impl fmt::Display for EventParam {
 
 impl<'de> Deserialize<'de> for EventParam {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        BorrowedParam::deserialize(deserializer).and_then(|inner| {
+        ParamInner::deserialize(deserializer).and_then(|inner| {
             inner.validate_fields()?;
             Ok(Self {
-                name: inner.name.to_owned(),
-                ty: inner.ty.to_owned(),
+                name: inner.name,
+                ty: inner.ty,
                 indexed: inner.indexed.unwrap_or(false),
                 internal_type: inner.internal_type.map(Into::into),
-                components: inner.components.into_owned(),
+                components: inner.components,
             })
         })
     }
@@ -564,8 +560,8 @@ impl EventParam {
     }
 
     #[inline]
-    fn as_inner(&self) -> BorrowedParam<'_> {
-        BorrowedParam {
+    fn as_inner(&self) -> BorrowedParamInner<'_> {
+        BorrowedParamInner {
             name: &self.name,
             ty: &self.ty,
             indexed: Some(self.indexed),
@@ -575,8 +571,47 @@ impl EventParam {
     }
 }
 
+#[derive(Deserialize)]
+struct ParamInner {
+    #[serde(default)]
+    name: String,
+    #[serde(rename = "type")]
+    ty: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    indexed: Option<bool>,
+    #[serde(rename = "internalType", default, skip_serializing_if = "Option::is_none")]
+    internal_type: Option<InternalType>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    components: Vec<Param>,
+}
+
+impl Serialize for ParamInner {
+    #[inline]
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.as_borrowed().serialize(serializer)
+    }
+}
+
+impl ParamInner {
+    #[inline]
+    fn validate_fields<E: serde::de::Error>(&self) -> Result<(), E> {
+        self.as_borrowed().validate_fields()
+    }
+
+    #[inline]
+    fn as_borrowed(&self) -> BorrowedParamInner<'_> {
+        BorrowedParamInner {
+            name: &self.name,
+            ty: &self.ty,
+            indexed: self.indexed,
+            internal_type: self.internal_type.as_ref().map(InternalType::as_borrowed),
+            components: Cow::Borrowed(&self.components),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
-struct BorrowedParam<'a> {
+struct BorrowedParamInner<'a> {
     #[serde(default)]
     name: &'a str,
     #[serde(rename = "type")]
@@ -589,8 +624,7 @@ struct BorrowedParam<'a> {
     components: Cow<'a, [Param]>,
 }
 
-impl BorrowedParam<'_> {
-    #[inline(always)]
+impl BorrowedParamInner<'_> {
     fn validate_fields<E: serde::de::Error>(&self) -> Result<(), E> {
         validate_identifier!(self.name);
 
@@ -623,22 +657,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn param_from_str() {
+    fn param_from_json() {
         let param = r#"{
             "internalType": "string",
             "name": "reason",
             "type": "string"
         }"#;
-        let param = serde_json::from_str::<Param>(param).unwrap();
-        assert_eq!(
-            param,
-            Param {
-                name: "reason".into(),
-                ty: "string".into(),
-                internal_type: Some(InternalType::Other { contract: None, ty: "string".into() }),
-                components: vec![],
-            }
-        );
+        let expected = Param {
+            name: "reason".into(),
+            ty: "string".into(),
+            internal_type: Some(InternalType::Other { contract: None, ty: "string".into() }),
+            components: vec![],
+        };
+
+        assert_eq!(serde_json::from_str::<Param>(param).unwrap(), expected);
+
+        let param_value = serde_json::from_str::<serde_json::Value>(param).unwrap();
+        assert_eq!(serde_json::from_value::<Param>(param_value).unwrap(), expected);
+
+        let reader = std::io::Cursor::new(param);
+        assert_eq!(serde_json::from_reader::<_, Param>(reader).unwrap(), expected);
     }
 
     #[test]
