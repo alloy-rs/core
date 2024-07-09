@@ -185,6 +185,7 @@ pub fn encode<'a, T: Token<'a>>(token: &T) -> Vec<u8> {
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
 pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
+    // TODO(MSRV-1.79): Use `const {}` to select the function at compile time.
     if T::IS_TUPLE {
         encode_sequence(token)
     } else {

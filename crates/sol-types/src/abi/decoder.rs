@@ -300,6 +300,7 @@ pub fn decode<'de, T: Token<'de>>(data: &'de [u8], validate: bool) -> Result<T> 
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
 pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
+    // TODO(MSRV-1.79): Use `const {}` to select the function at compile time.
     if T::IS_TUPLE {
         decode_sequence(data, validate)
     } else {
