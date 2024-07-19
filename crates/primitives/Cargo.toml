@@ -70,7 +70,7 @@ criterion.workspace = true
 serde_json.workspace = true
 
 [features]
-default = ["std"]
+default = ["std", "k256"]
 std = [
     "bytes/std",
     "hex/std",

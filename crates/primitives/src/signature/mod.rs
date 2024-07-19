@@ -1,3 +1,6 @@
+mod builder;
+pub use builder::SignatureBuilder;
+
 mod error;
 pub use error::SignatureError;
 
@@ -5,10 +8,7 @@ mod parity;
 pub use parity::Parity;
 
 mod sig;
-#[cfg(feature = "unstable-doc")]
-pub use sig::Signature;
-#[cfg(not(feature = "unstable-doc"))]
-pub(crate) use sig::Signature;
+pub use sig::{RawSignature, Signature};
 
 mod utils;
 pub use utils::to_eip155_v;

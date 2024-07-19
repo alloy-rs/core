@@ -6,7 +6,9 @@ use crate::{
     U256,
 };
 use alloc::vec::Vec;
-use core::str::FromStr;
+use core::{fmt::Debug, marker::PhantomData, str::FromStr};
+
+use super::builder::SignatureBuilder;
 
 /// An Ethereum ECDSA signature.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -18,6 +20,9 @@ pub struct Signature<T> {
     r: U256,
     s: U256,
 }
+
+/// An raw Ethereum ECDSA signature.
+pub type RawSignature = Signature<()>;
 
 #[cfg(feature = "k256")]
 impl<'a> TryFrom<&'a [u8]> for Signature<k256::ecdsa::Signature> {
@@ -34,7 +39,7 @@ impl<'a> TryFrom<&'a [u8]> for Signature<k256::ecdsa::Signature> {
     }
 }
 
-impl<'a> TryFrom<&'a [u8]> for Signature<()> {
+impl<'a> TryFrom<&'a [u8]> for RawSignature {
     type Error = SignatureError;
 
     fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
@@ -55,7 +60,7 @@ impl FromStr for Signature<k256::ecdsa::Signature> {
     }
 }
 
-impl FromStr for Signature<()> {
+impl FromStr for RawSignature {
     type Err = SignatureError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -64,30 +69,30 @@ impl FromStr for Signature<()> {
     }
 }
 
-impl From<&crate::Signature> for [u8; 65] {
+impl<T> From<&Signature<T>> for [u8; 65] {
     #[inline]
-    fn from(value: &crate::Signature) -> [u8; 65] {
+    fn from(value: &Signature<T>) -> [u8; 65] {
         value.as_bytes()
     }
 }
 
-impl From<crate::Signature> for [u8; 65] {
+impl<T> From<Signature<T>> for [u8; 65] {
     #[inline]
-    fn from(value: crate::Signature) -> [u8; 65] {
+    fn from(value: Signature<T>) -> [u8; 65] {
         value.as_bytes()
     }
 }
 
-impl From<&crate::Signature> for Vec<u8> {
+impl<T> From<&Signature<T>> for Vec<u8> {
     #[inline]
-    fn from(value: &crate::Signature) -> Self {
+    fn from(value: &Signature<T>) -> Self {
         value.as_bytes().to_vec()
     }
 }
 
-impl From<crate::Signature> for Vec<u8> {
+impl<T> From<Signature<T>> for Vec<u8> {
     #[inline]
-    fn from(value: crate::Signature) -> Self {
+    fn from(value: Signature<T>) -> Self {
         value.as_bytes().to_vec()
     }
 }
@@ -100,7 +105,10 @@ impl From<(k256::ecdsa::Signature, k256::ecdsa::RecoveryId)> for Signature<k256:
 }
 
 #[cfg(feature = "rlp")]
-impl crate::Signature {
+impl<T> Signature<T>
+where
+    Self: SignatureBuilder<T>,
+{
     /// Decode an RLP-encoded VRS signature.
     pub fn decode_rlp_vrs(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         use alloy_rlp::Decodable;
@@ -111,6 +119,26 @@ impl crate::Signature {
 
         Self::from_rs_and_parity(r, s, parity)
             .map_err(|_| alloy_rlp::Error::Custom("attempted to decode invalid field element"))
+    }
+}
+
+#[cfg(feature = "k256")]
+impl SignatureBuilder<k256::ecdsa::Signature> for Signature<k256::ecdsa::Signature> {
+    fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
+        r: U256,
+        s: U256,
+        parity: T,
+    ) -> Result<Self, SignatureError> {
+        Self::from_scalars_and_parity(r.into(), s.into(), parity)
+    }
+
+    #[inline]
+    fn from_bytes_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
+        bytes: &[u8],
+        parity: T,
+    ) -> Result<Self, SignatureError> {
+        let sig = k256::ecdsa::Signature::from_slice(bytes)?;
+        Self::from_signature_and_parity(sig, parity)
     }
 }
 
@@ -134,25 +162,6 @@ impl Signature<k256::ecdsa::Signature> {
         let r = U256::from_be_slice(sig.r().to_bytes().as_ref());
         let s = U256::from_be_slice(sig.s().to_bytes().as_ref());
         Ok(Self { inner: sig, v: parity.try_into().map_err(Into::into)?, r, s })
-    }
-
-    /// Instantiate from v, r, s.
-    pub fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
-        r: U256,
-        s: U256,
-        parity: T,
-    ) -> Result<Self, SignatureError> {
-        Self::from_scalars_and_parity(r.into(), s.into(), parity)
-    }
-
-    /// Parses a signature from a byte slice, with a v value
-    #[inline]
-    pub fn from_bytes_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
-        bytes: &[u8],
-        parity: T,
-    ) -> Result<Self, SignatureError> {
-        let sig = k256::ecdsa::Signature::from_slice(bytes)?;
-        Self::from_signature_and_parity(sig, parity)
     }
 
     /// Creates a [`Signature`] from the serialized `r` and `s` scalar values, which comprise the
@@ -249,29 +258,22 @@ impl Signature<k256::ecdsa::Signature> {
     }
 }
 
-impl Signature<()> {
-    /// Parses a signature from a byte slice, with a v value
-    ///
-    /// # Panics
-    ///
-    /// If the slice is not at least 64 bytes long.
-    #[inline]
-    pub fn from_bytes_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
+impl SignatureBuilder<()> for RawSignature {
+    fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
+        r: U256,
+        s: U256,
+        parity: T,
+    ) -> Result<Self, SignatureError> {
+        Ok(Self { inner: (), v: parity.try_into().map_err(Into::into)?, r, s })
+    }
+
+    fn from_bytes_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         bytes: &[u8],
         parity: T,
     ) -> Result<Self, SignatureError> {
         let r = U256::from_be_slice(&bytes[..32]);
         let s = U256::from_be_slice(&bytes[32..64]);
         Self::from_rs_and_parity(r, s, parity)
-    }
-
-    /// Instantiate from v, r, s.
-    pub fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
-        r: U256,
-        s: U256,
-        parity: T,
-    ) -> Result<Self, SignatureError> {
-        Ok(Self { inner: (), v: parity.try_into().map_err(Into::into)?, r, s })
     }
 }
 
@@ -375,7 +377,7 @@ impl<S> Signature<S> {
 }
 
 #[cfg(feature = "rlp")]
-impl alloy_rlp::Encodable for crate::Signature {
+impl<T> alloy_rlp::Encodable for Signature<T> {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         alloy_rlp::Header { list: true, payload_length: self.rlp_vrs_len() }.encode(out);
         self.write_rlp_vrs(out);
@@ -388,7 +390,10 @@ impl alloy_rlp::Encodable for crate::Signature {
 }
 
 #[cfg(feature = "rlp")]
-impl alloy_rlp::Decodable for crate::Signature {
+impl<T> alloy_rlp::Decodable for Signature<T>
+where
+    Self: SignatureBuilder<T>,
+{
     fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         let header = alloy_rlp::Header::decode(buf)?;
         let pre_len = buf.len();
@@ -403,7 +408,7 @@ impl alloy_rlp::Decodable for crate::Signature {
 }
 
 #[cfg(feature = "serde")]
-impl serde::Serialize for crate::Signature {
+impl<T> serde::Serialize for Signature<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -437,7 +442,10 @@ impl serde::Serialize for crate::Signature {
 }
 
 #[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for crate::Signature {
+impl<'de, T> serde::Deserialize<'de> for Signature<T>
+where
+    Self: SignatureBuilder<T>,
+{
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -486,9 +494,12 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
             }
         }
 
-        struct MapVisitor;
-        impl<'de> serde::de::Visitor<'de> for MapVisitor {
-            type Value = crate::Signature;
+        struct MapVisitor<T>(PhantomData<T>);
+        impl<'de, T> serde::de::Visitor<'de> for MapVisitor<T>
+        where
+            Signature<T>: SignatureBuilder<T>,
+        {
+            type Value = Signature<T>;
 
             fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 formatter.write_str("a JSON signature object containing r, s, and v or yParity")
@@ -536,13 +547,16 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
                 let r = r.ok_or_else(|| serde::de::Error::missing_field("r"))?;
                 let s = s.ok_or_else(|| serde::de::Error::missing_field("s"))?;
 
-                crate::Signature::from_rs_and_parity(r, s, v).map_err(serde::de::Error::custom)
+                Signature::<T>::from_rs_and_parity(r, s, v).map_err(serde::de::Error::custom)
             }
         }
 
-        struct TupleVisitor;
-        impl<'de> serde::de::Visitor<'de> for TupleVisitor {
-            type Value = crate::Signature;
+        struct TupleVisitor<T>(PhantomData<T>);
+        impl<'de, T> serde::de::Visitor<'de> for TupleVisitor<T>
+        where
+            Signature<T>: SignatureBuilder<T>,
+        {
+            type Value = Signature<T>;
 
             fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 formatter.write_str("a tuple containing r, s, and v")
@@ -562,20 +576,23 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
                     .next_element()?
                     .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
 
-                crate::Signature::from_rs_and_parity(r, s, v).map_err(serde::de::Error::custom)
+                Signature::<T>::from_rs_and_parity(r, s, v).map_err(serde::de::Error::custom)
             }
         }
 
         if deserializer.is_human_readable() {
-            deserializer.deserialize_map(MapVisitor)
+            deserializer.deserialize_map(MapVisitor(Default::default()))
         } else {
-            deserializer.deserialize_tuple(3, TupleVisitor)
+            deserializer.deserialize_tuple(3, TupleVisitor(Default::default()))
         }
     }
 }
 
 #[cfg(feature = "arbitrary")]
-impl<'a> arbitrary::Arbitrary<'a> for crate::Signature {
+impl<'a, T> arbitrary::Arbitrary<'a> for Signature<T>
+where
+    Self: SignatureBuilder<T>,
+{
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         Self::from_rs_and_parity(u.arbitrary()?, u.arbitrary()?, u.arbitrary::<Parity>()?)
             .map_err(|_| arbitrary::Error::IncorrectFormat)
@@ -583,7 +600,11 @@ impl<'a> arbitrary::Arbitrary<'a> for crate::Signature {
 }
 
 #[cfg(feature = "arbitrary")]
-impl proptest::arbitrary::Arbitrary for crate::Signature {
+impl<T> proptest::arbitrary::Arbitrary for Signature<T>
+where
+    T: Debug,
+    Self: SignatureBuilder<T>,
+{
     type Parameters = ();
     type Strategy = proptest::strategy::FilterMap<
         <(U256, U256, Parity) as proptest::arbitrary::Arbitrary>::Strategy,
@@ -631,11 +652,11 @@ mod tests {
 
     #[test]
     fn signature_from_str() {
-        let s1 = crate::Signature::from_str(
+        let s1 = RawSignature::from_str(
             "0xaa231fbe0ed2b5418e6ba7c19bee2522852955ec50996c02a2fe3e71d30ddaf1645baf4823fea7cb4fcc7150842493847cfb6a6d63ab93e8ee928ee3f61f503500"
         ).expect("could not parse 0x-prefixed signature");
 
-        let s2 = crate::Signature::from_str(
+        let s2 = RawSignature::from_str(
             "aa231fbe0ed2b5418e6ba7c19bee2522852955ec50996c02a2fe3e71d30ddaf1645baf4823fea7cb4fcc7150842493847cfb6a6d63ab93e8ee928ee3f61f503500"
         ).expect("could not parse non-prefixed signature");
 
@@ -651,10 +672,9 @@ mod tests {
             "v":"0x1"
         }"#;
 
-        let signature: crate::Signature =
-            serde_json::from_str(raw_signature_without_y_parity).unwrap();
+        let signature: RawSignature = serde_json::from_str(raw_signature_without_y_parity).unwrap();
 
-        let expected = crate::Signature::from_rs_and_parity(
+        let expected = RawSignature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -679,10 +699,9 @@ mod tests {
         );
 
         println!("{raw_signature_with_y_parity}");
-        let signature: crate::Signature =
-            serde_json::from_value(raw_signature_with_y_parity).unwrap();
+        let signature: RawSignature = serde_json::from_value(raw_signature_with_y_parity).unwrap();
 
-        let expected = crate::Signature::from_rs_and_parity(
+        let expected = RawSignature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -698,7 +717,7 @@ mod tests {
     #[test]
     fn serialize_both_parity() {
         // this test should be removed if the struct moves to an enum based on tx type
-        let signature = crate::Signature::from_rs_and_parity(
+        let signature = RawSignature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -718,7 +737,7 @@ mod tests {
     #[test]
     fn serialize_v_only() {
         // this test should be removed if the struct moves to an enum based on tx type
-        let signature = crate::Signature::from_rs_and_parity(
+        let signature = RawSignature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -736,7 +755,7 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn test_bincode_roundtrip() {
-        let signature = crate::Signature::from_rs_and_parity(
+        let signature = RawSignature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -746,7 +765,7 @@ mod tests {
         .unwrap();
 
         let bin = bincode::serialize(&signature).unwrap();
-        assert_eq!(bincode::deserialize::<crate::Signature>(&bin).unwrap(), signature);
+        assert_eq!(bincode::deserialize::<RawSignature>(&bin).unwrap(), signature);
     }
 
     #[cfg(feature = "rlp")]
@@ -756,12 +775,12 @@ mod tests {
         let bytes = crate::hex!("f84301a048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a010002cef538bc0c8e21c46080634a93e082408b0ad93f4a7207e63ec5463793d");
 
         // Decode the byte sequence into a Signature instance
-        let result = Signature::decode(&mut &bytes[..]).unwrap();
+        let result = RawSignature::decode(&mut &bytes[..]).unwrap();
 
         // Assert that the decoded Signature matches the expected Signature
         assert_eq!(
             result,
-            Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a3664935310002cef538bc0c8e21c46080634a93e082408b0ad93f4a7207e63ec5463793d01").unwrap()
+            RawSignature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a3664935310002cef538bc0c8e21c46080634a93e082408b0ad93f4a7207e63ec5463793d01").unwrap()
         );
     }
 
@@ -769,7 +788,7 @@ mod tests {
     #[test]
     fn signature_rlp_encode() {
         // Given a Signature instance
-        let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
+        let sig = RawSignature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
 
         // Initialize an empty buffer
         let mut buf = vec![];
@@ -788,7 +807,7 @@ mod tests {
     #[test]
     fn signature_rlp_length() {
         // Given a Signature instance
-        let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
+        let sig = RawSignature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
 
         // Assert that the length of the Signature matches the expected length
         assert_eq!(sig.length(), 69);
