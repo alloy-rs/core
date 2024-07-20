@@ -24,6 +24,13 @@ pub struct Signature<T> {
 /// An raw Ethereum ECDSA signature.
 pub type RawSignature = Signature<()>;
 
+impl RawSignature {
+    /// Creates a new [`RawSignature`].
+    pub const fn new(v: Parity, r: U256, s: U256) -> Self {
+        Self { inner: (), v, r, s }
+    }
+}
+
 #[cfg(feature = "k256")]
 impl<'a> TryFrom<&'a [u8]> for Signature<k256::ecdsa::Signature> {
     type Error = SignatureError;
@@ -341,6 +348,11 @@ impl<S> Signature<S> {
     #[inline]
     pub fn with_parity<T: Into<Parity>>(self, parity: T) -> Self {
         Self { inner: self.inner, v: parity.into(), r: self.r, s: self.s }
+    }
+
+    /// Converts the signature into a [`RawSignature`].
+    pub fn into_raw(self) -> RawSignature {
+        RawSignature::new(self.v, self.r, self.s)
     }
 
     /// Length of RLP RS field encoding
