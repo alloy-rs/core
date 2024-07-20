@@ -52,7 +52,7 @@ pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 mod signature;
 pub use signature::{
-    to_eip155_v, Parity, RawSignature, Signature, SignatureBuilder, SignatureError,
+    to_eip155_v, BuildableSignature, Parity, RawSignature, Signature, SignatureError,
 };
 
 /// A memoized ECDSA Signature, consisting of V, R, and S.

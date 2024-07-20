@@ -8,7 +8,7 @@ use crate::{
 use alloc::vec::Vec;
 use core::{fmt::Debug, marker::PhantomData, str::FromStr};
 
-use super::builder::SignatureBuilder;
+use super::buildable::BuildableSignature;
 
 /// An Ethereum ECDSA signature.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -114,7 +114,7 @@ impl From<(k256::ecdsa::Signature, k256::ecdsa::RecoveryId)> for Signature<k256:
 #[cfg(feature = "rlp")]
 impl<T> Signature<T>
 where
-    Self: SignatureBuilder<T>,
+    Self: BuildableSignature,
 {
     /// Decode an RLP-encoded VRS signature.
     pub fn decode_rlp_vrs(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
@@ -130,7 +130,7 @@ where
 }
 
 #[cfg(feature = "k256")]
-impl SignatureBuilder<k256::ecdsa::Signature> for Signature<k256::ecdsa::Signature> {
+impl BuildableSignature for Signature<k256::ecdsa::Signature> {
     fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         r: U256,
         s: U256,
@@ -265,7 +265,7 @@ impl Signature<k256::ecdsa::Signature> {
     }
 }
 
-impl SignatureBuilder<()> for RawSignature {
+impl BuildableSignature for RawSignature {
     fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         r: U256,
         s: U256,
@@ -404,7 +404,7 @@ impl<T> alloy_rlp::Encodable for Signature<T> {
 #[cfg(feature = "rlp")]
 impl<T> alloy_rlp::Decodable for Signature<T>
 where
-    Self: SignatureBuilder<T>,
+    Self: BuildableSignature,
 {
     fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         let header = alloy_rlp::Header::decode(buf)?;
@@ -456,7 +456,7 @@ impl<T> serde::Serialize for Signature<T> {
 #[cfg(feature = "serde")]
 impl<'de, T> serde::Deserialize<'de> for Signature<T>
 where
-    Self: SignatureBuilder<T>,
+    Self: BuildableSignature,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -509,7 +509,7 @@ where
         struct MapVisitor<T>(PhantomData<T>);
         impl<'de, T> serde::de::Visitor<'de> for MapVisitor<T>
         where
-            Signature<T>: SignatureBuilder<T>,
+            Signature<T>: BuildableSignature,
         {
             type Value = Signature<T>;
 
@@ -566,7 +566,7 @@ where
         struct TupleVisitor<T>(PhantomData<T>);
         impl<'de, T> serde::de::Visitor<'de> for TupleVisitor<T>
         where
-            Signature<T>: SignatureBuilder<T>,
+            Signature<T>: BuildableSignature,
         {
             type Value = Signature<T>;
 
@@ -603,7 +603,7 @@ where
 #[cfg(feature = "arbitrary")]
 impl<'a, T> arbitrary::Arbitrary<'a> for Signature<T>
 where
-    Self: SignatureBuilder<T>,
+    Self: BuildableSignature,
 {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         Self::from_rs_and_parity(u.arbitrary()?, u.arbitrary()?, u.arbitrary::<Parity>()?)
@@ -615,7 +615,7 @@ where
 impl<T> proptest::arbitrary::Arbitrary for Signature<T>
 where
     T: Debug,
-    Self: SignatureBuilder<T>,
+    Self: BuildableSignature,
 {
     type Parameters = ();
     type Strategy = proptest::strategy::FilterMap<

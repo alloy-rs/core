@@ -1,7 +1,7 @@
 use crate::{Parity, SignatureError, U256};
 
 /// Trait used to uniformize signature creation.
-pub trait SignatureBuilder<S>: Sized {
+pub trait BuildableSignature: Sized {
     /// Instantiate from v, r, s.
     fn from_rs_and_parity<P: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         r: U256,

@@ -1,5 +1,5 @@
-mod builder;
-pub use builder::SignatureBuilder;
+mod buildable;
+pub use buildable::BuildableSignature;
 
 mod error;
 pub use error::SignatureError;
