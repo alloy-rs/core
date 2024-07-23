@@ -156,6 +156,10 @@ impl BuildableSignature for Signature<k256::ecdsa::Signature> {
         let sig = k256::ecdsa::Signature::from_slice(bytes)?;
         Self::from_signature_and_parity(sig, parity)
     }
+
+    fn into_raw(self) -> RawSignature {
+        RawSignature::new(self.v, self.r, self.s)
+    }
 }
 
 #[cfg(feature = "k256")]
@@ -290,6 +294,10 @@ impl BuildableSignature for RawSignature {
         let r = U256::from_be_slice(&bytes[..32]);
         let s = U256::from_be_slice(&bytes[32..64]);
         Self::from_rs_and_parity(r, s, parity)
+    }
+
+    fn into_raw(self) -> RawSignature {
+        self
     }
 }
 
