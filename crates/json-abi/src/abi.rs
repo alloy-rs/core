@@ -710,7 +710,7 @@ impl<'a> Renamer<'a> {
 
         *contract = None;
         if let Some(new_name) = self.renames.get(ty.as_str()).and_then(|m| m.get(&components)) {
-            *ty = new_name.clone();
+            ty.clone_from(new_name);
         }
     }
 }
