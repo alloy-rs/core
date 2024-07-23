@@ -29,6 +29,15 @@ impl RawSignature {
     pub const fn new(v: Parity, r: U256, s: U256) -> Self {
         Self { inner: (), v, r, s }
     }
+
+    #[doc(hidden)]
+    pub fn test_signature() -> Self {
+        Self::new(
+            false.into(),
+            b256!("840cfc572845f5786e702984c2a582528cad4b49b2a10b9db1be7fca90058565").into(),
+            b256!("25e7109ceb98168d95b09b18bbf6b685130e0562f233877d492b94eee0c5b6d1").into(),
+        )
+    }
 }
 
 #[cfg(feature = "k256")]
