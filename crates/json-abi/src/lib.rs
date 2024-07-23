@@ -40,3 +40,6 @@ mod to_sol;
 pub use to_sol::ToSolConfig;
 
 pub(crate) mod utils;
+
+mod visitor;
+pub use visitor::{Visitor, VisitorMut, Walk, WalkMut};

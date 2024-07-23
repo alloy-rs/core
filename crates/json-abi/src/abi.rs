@@ -1,10 +1,17 @@
 use crate::{
     to_sol::{SolPrinter, ToSolConfig},
-    AbiItem, Constructor, Error, Event, Fallback, Function, Receive,
+    visitor::{Walk, WalkMut},
+    AbiItem, Constructor, Error, Event, Fallback, Function, InternalType, Param, Receive,
 };
-use alloc::{collections::btree_map, string::String, vec::Vec};
+use alloc::{
+    collections::{
+        btree_map::{self, BTreeMap},
+        btree_set::BTreeSet,
+    },
+    string::{String, ToString},
+    vec::Vec,
+};
 use alloy_primitives::Bytes;
-use btree_map::BTreeMap;
 use core::{fmt, iter, iter::Flatten};
 use serde::{
     de::{MapAccess, SeqAccess, Visitor},
@@ -244,6 +251,40 @@ impl JsonAbi {
         for events in self.events.values_mut() {
             events.dedup_by(same_bucket!());
         }
+    }
+
+    /// Goes over all structs referenced as internal types in the ABI and changes them to global
+    /// structs.
+    ///
+    /// Namespace for global struct names is managed and in cases of duplicates structs are renamed.
+    pub fn rename_internal_structs(&mut self) {
+        let mut collector = Collector::default();
+        self.walk(&mut collector);
+
+        let Collector { unique_struct_components } = collector;
+
+        // Collect needed renames.
+        let renames = unique_struct_components
+            .into_iter()
+            .filter(|(_, components)| components.len() > 1)
+            .map(|(name, components)| {
+                (
+                    name.to_string(),
+                    components
+                        .into_iter()
+                        .enumerate()
+                        .map(move |(idx, components)| {
+                            let components =
+                                components.into_iter().map(ToString::to_string).collect::<Vec<_>>();
+                            (components, format!("{name}{idx}"))
+                        })
+                        .collect::<BTreeMap<_, _>>(),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+
+        let mut renamer = Renamer::new(&renames);
+        self.walk_mut(&mut renamer);
     }
 
     /// Returns an immutable reference to the constructor.
@@ -606,5 +647,84 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
         }
 
         Ok(ContractObject { abi, bytecode, deployed_bytecode })
+    }
+}
+
+/// A [crate::Visitor] implementation that collects a mapping from struct name to set of components
+/// various structs with such name have.
+#[derive(Debug, Default, Clone)]
+struct Collector<'a> {
+    unique_struct_components: BTreeMap<&'a str, BTreeSet<Vec<&'a str>>>,
+}
+
+impl<'a> Collector<'a> {
+    fn visit_internal_type(&mut self, ty: &'a InternalType, components: &'a [Param]) {
+        // If it's not a struct, or contract is None, exit early
+        let InternalType::Struct { contract: _, ty } = ty else { return };
+        let components = components.iter().map(|c| c.ty.as_str()).collect::<Vec<_>>();
+        self.unique_struct_components.entry(ty).or_default().insert(components);
+    }
+}
+
+impl<'a> crate::Visitor<'a> for Collector<'a> {
+    fn visit_event_param(&mut self, param: &'a crate::EventParam) {
+        if let Some(internal) = &param.internal_type {
+            self.visit_internal_type(internal, &param.components)
+        }
+    }
+
+    fn visit_param(&mut self, param: &'a crate::Param) {
+        if let Some(internal) = &param.internal_type {
+            self.visit_internal_type(internal, &param.components)
+        }
+    }
+}
+
+/// A [crate::VisitorMut] implementation that keeps a reference struct name -> struct components ->
+/// new name, traverses the ABI and renames structs, if needed.
+#[derive(Debug, Default, Clone)]
+struct Renamer<'a> {
+    renames: BTreeMap<&'a str, BTreeMap<Vec<&'a str>, String>>,
+}
+
+impl<'a> Renamer<'a> {
+    fn new(renames: &'a BTreeMap<String, BTreeMap<Vec<String>, String>>) -> Self {
+        let renames = renames
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.as_str(),
+                    v.iter()
+                        .map(|(k, v)| (k.iter().map(String::as_str).collect(), v.clone()))
+                        .collect(),
+                )
+            })
+            .collect();
+
+        Self { renames }
+    }
+
+    fn visit_internal_type(&mut self, ty: &mut InternalType, components: &[Param]) {
+        let InternalType::Struct { contract, ty } = ty else { return };
+        let components = components.iter().map(|c| c.ty.as_str()).collect::<Vec<_>>();
+
+        *contract = None;
+        if let Some(new_name) = self.renames.get(ty.as_str()).and_then(|m| m.get(&components)) {
+            *ty = new_name.clone();
+        }
+    }
+}
+
+impl<'a> crate::VisitorMut for Renamer<'a> {
+    fn visit_event_param(&mut self, param: &mut crate::EventParam) {
+        if let Some(internal) = &mut param.internal_type {
+            self.visit_internal_type(internal, &param.components)
+        }
+    }
+
+    fn visit_param(&mut self, param: &mut crate::Param) {
+        if let Some(internal) = &mut param.internal_type {
+            self.visit_internal_type(internal, &param.components)
+        }
     }
 }

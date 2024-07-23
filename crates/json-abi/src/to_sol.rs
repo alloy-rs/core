@@ -1,5 +1,6 @@
 use crate::{
     item::{Constructor, Error, Event, Fallback, Function, Receive},
+    visitor::Walk,
     EventParam, InternalType, JsonAbi, Param, StateMutability,
 };
 use alloc::{collections::BTreeSet, string::String, vec::Vec};
@@ -106,7 +107,8 @@ impl ToSol for JsonAbi {
         }
 
         let mut its = InternalTypes::new();
-        its.visit_abi(self);
+        self.walk(&mut its);
+
         fmt!(its.0);
         fmt!(self.errors());
         fmt!(self.events());
@@ -128,44 +130,6 @@ impl<'a> InternalTypes<'a> {
     #[inline]
     fn new() -> Self {
         Self(BTreeSet::new())
-    }
-
-    fn visit_abi(&mut self, abi: &'a JsonAbi) {
-        if let Some(constructor) = &abi.constructor {
-            self.visit_params(&constructor.inputs);
-        }
-        for function in abi.functions() {
-            self.visit_params(&function.inputs);
-            self.visit_params(&function.outputs);
-        }
-        for error in abi.errors() {
-            self.visit_params(&error.inputs);
-        }
-        for event in abi.events() {
-            self.visit_event_params(&event.inputs);
-        }
-    }
-
-    fn visit_params(&mut self, params: &'a [Param]) {
-        for param in params {
-            self.visit_param(param);
-        }
-    }
-
-    fn visit_param(&mut self, param: &'a Param) {
-        self.extend(param.internal_type.as_ref(), &param.components, &param.ty);
-        self.visit_params(&param.components);
-    }
-
-    fn visit_event_params(&mut self, params: &'a [EventParam]) {
-        for param in params {
-            self.visit_event_param(param);
-        }
-    }
-
-    fn visit_event_param(&mut self, param: &'a EventParam) {
-        self.extend(param.internal_type.as_ref(), &param.components, &param.ty);
-        self.visit_params(&param.components);
     }
 
     fn extend(
@@ -191,6 +155,16 @@ impl<'a> InternalTypes<'a> {
                 }
             }
         }
+    }
+}
+
+impl<'a> crate::Visitor<'a> for InternalTypes<'a> {
+    fn visit_param(&mut self, param: &'a Param) {
+        self.extend(param.internal_type.as_ref(), &param.components, &param.ty);
+    }
+
+    fn visit_event_param(&mut self, param: &'a EventParam) {
+        self.extend(param.internal_type.as_ref(), &param.components, &param.ty);
     }
 }
 
