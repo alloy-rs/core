@@ -1,6 +1,9 @@
 mod error;
 pub use error::SignatureError;
 
+mod encodable;
+pub use encodable::EncodableSignature;
+
 mod parity;
 pub use parity::Parity;
 

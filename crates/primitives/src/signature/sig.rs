@@ -8,6 +8,8 @@ use crate::{
 use alloc::vec::Vec;
 use core::str::FromStr;
 
+use super::EncodableSignature;
+
 /// An Ethereum ECDSA signature.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Signature<T> {
@@ -136,15 +138,6 @@ impl Signature<k256::ecdsa::Signature> {
         Ok(Self { inner: sig, v: parity.try_into().map_err(Into::into)?, r, s })
     }
 
-    /// Instantiate from v, r, s.
-    pub fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
-        r: U256,
-        s: U256,
-        parity: T,
-    ) -> Result<Self, SignatureError> {
-        Self::from_scalars_and_parity(r.into(), s.into(), parity)
-    }
-
     /// Parses a signature from a byte slice, with a v value
     #[inline]
     pub fn from_bytes_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
@@ -249,6 +242,36 @@ impl Signature<k256::ecdsa::Signature> {
     }
 }
 
+#[cfg(feature = "k256")]
+impl EncodableSignature for Signature<k256::ecdsa::Signature> {
+    fn from_rs_and_parity<P: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
+        r: U256,
+        s: U256,
+        parity: P,
+    ) -> Result<Self, SignatureError> {
+        Self::from_scalars_and_parity(r.into(), s.into(), parity)
+    }
+
+    #[inline]
+    fn r(&self) -> U256 {
+        self.r
+    }
+
+    #[inline]
+    fn s(&self) -> U256 {
+        self.s
+    }
+
+    #[inline]
+    fn v(&self) -> Parity {
+        self.v
+    }
+
+    fn with_parity<T: Into<Parity>>(self, parity: T) -> Self {
+        Self { inner: self.inner, v: parity.into(), r: self.r, s: self.s }
+    }
+}
+
 impl Signature<()> {
     /// Parses a signature from a byte slice, with a v value
     ///
@@ -264,14 +287,35 @@ impl Signature<()> {
         let s = U256::from_be_slice(&bytes[32..64]);
         Self::from_rs_and_parity(r, s, parity)
     }
+}
 
-    /// Instantiate from v, r, s.
-    pub fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
+impl EncodableSignature for Signature<()> {
+    fn from_rs_and_parity<P: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         r: U256,
         s: U256,
-        parity: T,
+        parity: P,
     ) -> Result<Self, SignatureError> {
         Ok(Self { inner: (), v: parity.try_into().map_err(Into::into)?, r, s })
+    }
+
+    #[inline]
+    fn r(&self) -> U256 {
+        self.r
+    }
+
+    #[inline]
+    fn s(&self) -> U256 {
+        self.s
+    }
+
+    #[inline]
+    fn v(&self) -> Parity {
+        self.v
+    }
+
+    #[inline]
+    fn with_parity<T: Into<Parity>>(self, parity: T) -> Self {
+        Self { inner: self.inner, v: parity.into(), r: self.r, s: self.s }
     }
 }
 
@@ -281,20 +325,6 @@ impl<S: Copy> Signature<S> {
     pub const fn into_inner(self) -> S {
         self.inner
     }
-
-    /// Modifies the recovery ID by applying [EIP-155] to a `v` value.
-    ///
-    /// [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
-    #[inline]
-    pub fn with_chain_id(self, chain_id: u64) -> Self {
-        self.with_parity(self.v.with_chain_id(chain_id))
-    }
-
-    /// Modifies the recovery ID by dropping any [EIP-155] v value, converting
-    /// to a simple parity bool.
-    pub fn with_parity_bool(self) -> Self {
-        self.with_parity(self.v.to_parity_bool())
-    }
 }
 
 impl<S> Signature<S> {
@@ -302,24 +332,6 @@ impl<S> Signature<S> {
     #[inline]
     pub const fn inner(&self) -> &S {
         &self.inner
-    }
-
-    /// Returns the `r` component of this signature.
-    #[inline]
-    pub const fn r(&self) -> U256 {
-        self.r
-    }
-
-    /// Returns the `s` component of this signature.
-    #[inline]
-    pub const fn s(&self) -> U256 {
-        self.s
-    }
-
-    /// Returns the recovery ID as a `u8`.
-    #[inline]
-    pub const fn v(&self) -> Parity {
-        self.v
     }
 
     /// Returns the byte-array representation of this signature.
@@ -333,12 +345,6 @@ impl<S> Signature<S> {
         sig[32..64].copy_from_slice(&self.s.to_be_bytes::<32>());
         sig[64] = self.v.y_parity_byte_non_eip155().unwrap_or(self.v.y_parity_byte());
         sig
-    }
-
-    /// Sets the recovery ID by normalizing a `v` value.
-    #[inline]
-    pub fn with_parity<T: Into<Parity>>(self, parity: T) -> Self {
-        Self { inner: self.inner, v: parity.into(), r: self.r, s: self.s }
     }
 
     /// Length of RLP RS field encoding
