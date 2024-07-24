@@ -267,6 +267,7 @@ impl EncodableSignature for Signature<k256::ecdsa::Signature> {
         self.v
     }
 
+    #[inline]
     fn with_parity<T: Into<Parity>>(self, parity: T) -> Self {
         Self { inner: self.inner, v: parity.into(), r: self.r, s: self.s }
     }
