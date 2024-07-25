@@ -927,7 +927,6 @@ fn contract_derive_default() {
 }
 
 #[test]
-#[cfg(any())] // TODO: https://github.com/alloy-rs/core/issues/660
 fn contract_namespaces() {
     mod inner {
         alloy_sol_types::sol! {
