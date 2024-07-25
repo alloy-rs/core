@@ -48,7 +48,7 @@ pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
 }
 
-/// Mapping namespace -> ident -> t
+/// Mapping namespace -> ident -> T
 ///
 /// Keeps namespaced items. Namespace `None` represents global namespace (top-level items).
 /// Namespace `Some(ident)` represents items declared inside of a contract.
