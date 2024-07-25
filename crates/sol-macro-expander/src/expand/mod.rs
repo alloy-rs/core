@@ -6,8 +6,8 @@ use crate::{
 };
 use alloy_sol_macro_input::{ContainsSolAttrs, SolAttrs};
 use ast::{
-    EventParameter, File, Item, ItemContract, ItemError, ItemEvent, ItemFunction, Parameters,
-    SolIdent, SolPath, Spanned, Type, VariableDeclaration, Visit,
+    EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath,
+    Spanned, Type, VariableDeclaration, Visit,
 };
 use indexmap::IndexMap;
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
@@ -429,7 +429,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn try_item(&self, name: &SolPath) -> Option<&Item> {
-        self.all_items.resolve(name, &self.current_namespace).map(|i| *i)
+        self.all_items.resolve(name, &self.current_namespace).copied()
     }
 
     /// Recursively resolves the given type by constructing a new one.
