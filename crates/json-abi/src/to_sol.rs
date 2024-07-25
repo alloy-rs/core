@@ -241,10 +241,14 @@ impl<'a> InternalTypes<'a> {
 
     fn extend_one(&mut self, contract: &'a Option<String>, it: It<'a>) {
         let contract = contract.as_ref();
-        if contract.is_none() || contract.unwrap() == self.name {
-            self.this_its.insert(it);
+        if let Some(contract) = contract {
+            if contract == self.name {
+                self.this_its.insert(it);
+            } else {
+                self.other.entry(contract).or_default().insert(it);
+            }
         } else {
-            self.other.entry(contract.unwrap()).or_default().insert(it);
+            self.this_its.insert(it);
         }
     }
 }
