@@ -447,13 +447,7 @@ impl<'ast> ExpCtxt<'ast> {
     fn custom_type(&self, name: &SolPath) -> &Type {
         match self.try_custom_type(name) {
             Some(item) => item,
-            None => abort!(
-                name.span(),
-                "unresolved custom type: {} {:?} {:?}",
-                name,
-                self.current_namespace,
-                self.custom_types
-            ),
+            None => abort!(name.span(), "unresolved custom type: {}", name),
         }
     }
 
