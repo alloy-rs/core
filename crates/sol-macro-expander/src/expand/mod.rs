@@ -6,8 +6,8 @@ use crate::{
 };
 use alloy_sol_macro_input::{ContainsSolAttrs, SolAttrs};
 use ast::{
-    EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath,
-    Spanned, Type, VariableDeclaration, Visit,
+    EventParameter, File, Item, ItemContract, ItemError, ItemEvent, ItemFunction, Parameters,
+    SolIdent, SolPath, Spanned, Type, VariableDeclaration, Visit,
 };
 use indexmap::IndexMap;
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
@@ -48,33 +48,98 @@ pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
 }
 
+/// Mapping namespace -> ident -> t
+///
+/// Keeps namespaced items. Namespace `None` represents global namespace (top-level items).
+/// Namespace `Some(ident)` represents items declared inside of a contract.
+#[derive(Debug, Clone)]
+pub struct NamespacedMap<T>(pub IndexMap<Option<SolIdent>, IndexMap<SolIdent, T>>);
+
+impl<T> Default for NamespacedMap<T> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+
+impl<T> NamespacedMap<T> {
+    pub fn insert(&mut self, namespace: Option<SolIdent>, name: SolIdent, value: T) {
+        self.0.entry(namespace).or_default().insert(name, value);
+    }
+
+    /// Given [SolPath] and current namespace, resolves item
+    pub fn resolve(&self, path: &SolPath, current_namespace: &Option<SolIdent>) -> Option<&T> {
+        // If path contains two components, its `Contract.Something` where `Contract` is a namespace
+        if path.len() == 2 {
+            self.get_by_name_and_namespace(&Some(path.first().clone()), path.last())
+        } else {
+            // If there's only one component, this is either global item, or item declared in the
+            // current namespace.
+            //
+            // NOTE: This does not account for inheritance
+            self.get_by_name_and_namespace(&None, path.last())
+                .or_else(|| self.get_by_name_and_namespace(current_namespace, path.last()))
+        }
+    }
+
+    fn get_by_name_and_namespace(
+        &self,
+        namespace: &Option<SolIdent>,
+        name: &SolIdent,
+    ) -> Option<&T> {
+        self.0.get(namespace).and_then(|vals| vals.get(name))
+    }
+}
+
+impl<T: Default> NamespacedMap<T> {
+    pub fn get_or_insert_default(&mut self, namespace: Option<SolIdent>, name: SolIdent) -> &mut T {
+        self.0.entry(namespace).or_default().entry(name).or_default()
+    }
+}
+
 /// The expansion context.
 pub struct ExpCtxt<'ast> {
-    all_items: Vec<&'ast Item>,
-    custom_types: IndexMap<SolIdent, Type>,
+    /// Keeps items along with optional parent contract holding their definition.
+    all_items: NamespacedMap<&'ast Item>,
+    custom_types: NamespacedMap<Type>,
 
     /// `name => item`
-    overloaded_items: IndexMap<String, Vec<OverloadedItem<'ast>>>,
-    /// `signature => new_name`
-    overloads: IndexMap<String, String>,
+    overloaded_items: NamespacedMap<Vec<OverloadedItem<'ast>>>,
+    /// `namespace => signature => new_name`
+    overloads: IndexMap<Option<SolIdent>, IndexMap<String, String>>,
 
     attrs: SolAttrs,
     crates: ExternCrates,
     ast: &'ast File,
+
+    /// Current namespace. Switched during AST traversal and expansion of different contracts.
+    current_namespace: Option<SolIdent>,
 }
 
 // expand
 impl<'ast> ExpCtxt<'ast> {
     fn new(ast: &'ast File) -> Self {
         Self {
-            all_items: Vec::new(),
-            custom_types: IndexMap::new(),
-            overloaded_items: IndexMap::new(),
+            all_items: Default::default(),
+            custom_types: Default::default(),
+            overloaded_items: Default::default(),
             overloads: IndexMap::new(),
             attrs: SolAttrs::default(),
             crates: ExternCrates::default(),
             ast,
+            current_namespace: None,
         }
+    }
+
+    /// Sets the current namespace for the duration of the closure.
+    fn with_namespace<O>(
+        &mut self,
+        namespace: Option<SolIdent>,
+        mut f: impl FnMut(&mut Self) -> O,
+    ) -> O {
+        self.current_namespace = namespace;
+        let res = f(self);
+        self.current_namespace = None;
+        res
     }
 
     fn expand(mut self) -> Result<TokenStream> {
@@ -87,7 +152,7 @@ impl<'ast> ExpCtxt<'ast> {
 
         self.visit_file(self.ast);
 
-        if self.all_items.len() > 1 {
+        if !self.all_items.0.is_empty() {
             self.resolve_custom_types();
             if self.mk_overloads_map().is_err() {
                 abort = true;
@@ -109,9 +174,11 @@ impl<'ast> ExpCtxt<'ast> {
         Ok(tokens)
     }
 
-    fn expand_item(&self, item: &Item) -> Result<TokenStream> {
+    fn expand_item(&mut self, item: &Item) -> Result<TokenStream> {
         match item {
-            Item::Contract(contract) => contract::expand(self, contract),
+            Item::Contract(contract) => self.with_namespace(Some(contract.name.clone()), |this| {
+                contract::expand(this, contract)
+            }),
             Item::Enum(enumm) => r#enum::expand(self, enumm),
             Item::Error(error) => error::expand(self, error),
             Item::Event(event) => event::expand(self, event),
@@ -137,16 +204,18 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn mk_types_map(&mut self) {
         let mut map = std::mem::take(&mut self.custom_types);
-        map.reserve(self.all_items.len());
-        for &item in &self.all_items {
-            let (name, ty) = match item {
-                Item::Contract(c) => (&c.name, c.as_type()),
-                Item::Enum(e) => (&e.name, e.as_type()),
-                Item::Struct(s) => (&s.name, s.as_type()),
-                Item::Udt(u) => (&u.name, u.ty.clone()),
-                _ => continue,
-            };
-            map.insert(name.clone(), ty);
+        for (namespace, items) in &self.all_items.0 {
+            for (name, item) in items {
+                let ty = match item {
+                    Item::Contract(c) => c.as_type(),
+                    Item::Enum(e) => e.as_type(),
+                    Item::Struct(s) => s.as_type(),
+                    Item::Udt(u) => u.ty.clone(),
+                    _ => continue,
+                };
+
+                map.insert(namespace.clone(), name.clone(), ty);
+            }
         }
         self.custom_types = map;
     }
@@ -154,79 +223,87 @@ impl<'ast> ExpCtxt<'ast> {
     fn resolve_custom_types(&mut self) {
         self.mk_types_map();
         let map = self.custom_types.clone();
-        for ty in self.custom_types.values_mut() {
-            let mut i = 0;
-            ty.visit_mut(|ty| {
+        for (namespace, custom_types) in &mut self.custom_types.0 {
+            for ty in custom_types.values_mut() {
+                let mut i = 0;
+                ty.visit_mut(|ty| {
+                    if i >= RESOLVE_LIMIT {
+                        return;
+                    }
+                    let ty @ Type::Custom(_) = ty else { return };
+                    let Type::Custom(name) = &*ty else { unreachable!() };
+                    let Some(resolved) = map.resolve(name, namespace) else {
+                        return;
+                    };
+                    ty.clone_from(resolved);
+                    i += 1;
+                });
                 if i >= RESOLVE_LIMIT {
-                    return;
+                    abort!(
+                        ty.span(),
+                        "failed to resolve types.\n\
+                         This is likely due to an infinitely recursive type definition.\n\
+                         If you believe this is a bug, please file an issue at \
+                         https://github.com/alloy-rs/core/issues/new/choose"
+                    );
                 }
-                let ty @ Type::Custom(_) = ty else { return };
-                let Type::Custom(name) = &*ty else { unreachable!() };
-                let Some(resolved) = map.get(name.last()) else {
-                    return;
-                };
-                ty.clone_from(resolved);
-                i += 1;
-            });
-            if i >= RESOLVE_LIMIT {
-                abort!(
-                    ty.span(),
-                    "failed to resolve types.\n\
-                     This is likely due to an infinitely recursive type definition.\n\
-                     If you believe this is a bug, please file an issue at \
-                     https://github.com/alloy-rs/core/issues/new/choose"
-                );
             }
         }
     }
 
     fn mk_overloads_map(&mut self) -> std::result::Result<(), ()> {
-        let all_orig_names: Vec<_> =
-            self.overloaded_items.values().flatten().filter_map(|f| f.name()).collect();
         let mut overloads_map = std::mem::take(&mut self.overloads);
 
-        let mut failed = false;
+        for (namespace, overloaded_items) in &self.overloaded_items.0 {
+            let all_orig_names: Vec<_> =
+                overloaded_items.values().flatten().filter_map(|f| f.name()).collect();
 
-        for functions in self.overloaded_items.values().filter(|fs| fs.len() >= 2) {
-            // check for same parameters
-            for (i, &a) in functions.iter().enumerate() {
-                for &b in functions.iter().skip(i + 1) {
-                    if a.eq_by_types(b) {
-                        failed = true;
-                        emit_error!(
-                            a.span(),
-                            "{} with same name and parameter types defined twice",
-                            a.desc();
+            let mut failed = false;
 
-                            note = b.span() => "other declaration is here";
-                        );
+            for functions in overloaded_items.values().filter(|fs| fs.len() >= 2) {
+                // check for same parameters
+                for (i, &a) in functions.iter().enumerate() {
+                    for &b in functions.iter().skip(i + 1) {
+                        if a.eq_by_types(b) {
+                            failed = true;
+                            emit_error!(
+                                a.span(),
+                                "{} with same name and parameter types defined twice",
+                                a.desc();
+
+                                note = b.span() => "other declaration is here";
+                            );
+                        }
                     }
                 }
-            }
 
-            for (i, &item) in functions.iter().enumerate() {
-                let Some(old_name) = item.name() else {
-                    continue;
-                };
-                let new_name = format!("{old_name}_{i}");
-                if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
-                    failed = true;
-                    emit_error!(
-                        old_name.span(),
-                        "{} `{old_name}` is overloaded, \
-                         but the generated name `{new_name}` is already in use",
-                        item.desc();
+                for (i, &item) in functions.iter().enumerate() {
+                    let Some(old_name) = item.name() else {
+                        continue;
+                    };
+                    let new_name = format!("{old_name}_{i}");
+                    if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
+                        failed = true;
+                        emit_error!(
+                            old_name.span(),
+                            "{} `{old_name}` is overloaded, \
+                            but the generated name `{new_name}` is already in use",
+                            item.desc();
 
-                        note = other.span() => "other declaration is here";
-                    )
+                            note = other.span() => "other declaration is here";
+                        )
+                    }
+
+                    overloads_map
+                        .entry(namespace.clone())
+                        .or_default()
+                        .insert(item.signature(self), new_name);
                 }
-
-                overloads_map.insert(item.signature(self), new_name);
             }
-        }
 
-        if failed {
-            return Err(());
+            if failed {
+                return Err(());
+            }
         }
 
         self.overloads = overloads_map;
@@ -236,15 +313,23 @@ impl<'ast> ExpCtxt<'ast> {
 
 impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
     fn visit_item(&mut self, item: &'ast Item) {
-        self.all_items.push(item);
-        ast::visit::visit_item(self, item);
+        if let Some(name) = item.name() {
+            self.all_items.insert(self.current_namespace.clone(), name.clone(), item)
+        }
+
+        if let Item::Contract(contract) = item {
+            self.with_namespace(Some(contract.name.clone()), |this| {
+                ast::visit::visit_item(this, item);
+            });
+        } else {
+            ast::visit::visit_item(self, item);
+        }
     }
 
     fn visit_item_function(&mut self, function: &'ast ItemFunction) {
         if let Some(name) = &function.name {
             self.overloaded_items
-                .entry(name.as_string())
-                .or_default()
+                .get_or_insert_default(self.current_namespace.clone(), name.clone())
                 .push(OverloadedItem::Function(function));
         }
         ast::visit::visit_item_function(self, function);
@@ -252,16 +337,14 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
 
     fn visit_item_event(&mut self, event: &'ast ItemEvent) {
         self.overloaded_items
-            .entry(event.name.as_string())
-            .or_default()
+            .get_or_insert_default(self.current_namespace.clone(), event.name.clone())
             .push(OverloadedItem::Event(event));
         ast::visit::visit_item_event(self, event);
     }
 
     fn visit_item_error(&mut self, error: &'ast ItemError) {
         self.overloaded_items
-            .entry(error.name.as_string())
-            .or_default()
+            .get_or_insert_default(self.current_namespace.clone(), error.name.clone())
             .push(OverloadedItem::Error(error));
         ast::visit::visit_item_error(self, error);
     }
@@ -346,8 +429,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn try_item(&self, name: &SolPath) -> Option<&Item> {
-        let name = name.last();
-        self.all_items.iter().copied().find(|item| item.name() == Some(name))
+        self.all_items.resolve(name, &self.current_namespace).map(|i| *i)
     }
 
     /// Recursively resolves the given type by constructing a new one.
@@ -365,12 +447,18 @@ impl<'ast> ExpCtxt<'ast> {
     fn custom_type(&self, name: &SolPath) -> &Type {
         match self.try_custom_type(name) {
             Some(item) => item,
-            None => abort!(name.span(), "unresolved custom type: {}", name),
+            None => abort!(
+                name.span(),
+                "unresolved custom type: {} {:?} {:?}",
+                name,
+                self.current_namespace,
+                self.custom_types
+            ),
         }
     }
 
     fn try_custom_type(&self, name: &SolPath) -> Option<&Type> {
-        self.custom_types.get(name.last())
+        self.custom_types.resolve(name, &self.current_namespace)
     }
 
     /// Returns the name of the function, adjusted for overloads.
@@ -384,7 +472,7 @@ impl<'ast> ExpCtxt<'ast> {
     fn overloaded_name(&self, item: OverloadedItem<'ast>) -> SolIdent {
         let original_ident = item.name().expect("item has no name");
         let sig = item.signature(self);
-        match self.overloads.get(&sig) {
+        match self.overloads.get(&self.current_namespace).and_then(|m| m.get(&sig)) {
             Some(name) => SolIdent::new_spanned(name, original_ident.span()),
             None => original_ident.clone(),
         }
@@ -525,7 +613,7 @@ impl<'ast> ExpCtxt<'ast> {
         for param in params {
             param.ty.visit(|ty| {
                 if let Type::Custom(name) = ty {
-                    if !self.custom_types.contains_key(name.last()) {
+                    if self.try_custom_type(name).is_none() {
                         let note = (!errored).then(|| {
                             errored = true;
                             "Custom types must be declared inside of the same scope they are referenced in,\n\
