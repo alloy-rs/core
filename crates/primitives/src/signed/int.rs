@@ -1650,4 +1650,19 @@ mod tests {
         run_test!(I192, U192);
         run_test!(I256, U256);
     }
+
+    #[test]
+    fn test_overflowing_from_sign_and_abs() {
+        let a = Uint::<8, 1>::ZERO;
+        let (_, overflow) = Signed::overflowing_from_sign_and_abs(Sign::Negative, a);
+        assert!(!overflow);
+
+        let a = Uint::<8, 1>::from(128u8);
+        let (_, overflow) = Signed::overflowing_from_sign_and_abs(Sign::Negative, a);
+        assert!(!overflow);
+
+        let a = Uint::<8, 1>::from(129u8);
+        let (_, overflow) = Signed::overflowing_from_sign_and_abs(Sign::Negative, a);
+        assert!(overflow);
+    }
 }
