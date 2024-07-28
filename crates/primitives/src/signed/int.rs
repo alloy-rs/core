@@ -104,7 +104,7 @@ impl<const BITS: usize, const LIMBS: usize> fmt::UpperHex for Signed<BITS, LIMBS
 
 impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Mask for the highest limb.
-    pub(crate) const MASK: u64 = mask(BITS);
+    pub(crate) const MASK: u64 = ruint::mask(BITS);
 
     /// Location of the sign bit within the highest limb.
     pub(crate) const SIGN_BIT: u64 = sign_bit(BITS);
