@@ -6,7 +6,7 @@ use crate::{
     Result, Word,
 };
 use alloc::{borrow::Cow, string::String, vec::Vec};
-use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256};
+use alloy_primitives::{aliases::*, Address, Bytes, FixedBytes, Function, I256, U256};
 
 /// A Solidity value.
 ///
@@ -180,59 +180,6 @@ macro_rules! impl_sol_value {
         }
     )*};
 }
-
-type U24 = alloy_primitives::Uint<24, 1>;
-type I24 = alloy_primitives::Signed<24, 1>;
-type I40 = alloy_primitives::Signed<40, 1>;
-type U40 = alloy_primitives::Uint<40, 1>;
-type I48 = alloy_primitives::Signed<48, 1>;
-type U48 = alloy_primitives::Uint<48, 1>;
-type I56 = alloy_primitives::Signed<56, 1>;
-type U56 = alloy_primitives::Uint<56, 1>;
-type I72 = alloy_primitives::Signed<72, 2>;
-type U72 = alloy_primitives::Uint<72, 2>;
-type I80 = alloy_primitives::Signed<80, 2>;
-type U80 = alloy_primitives::Uint<80, 2>;
-type I88 = alloy_primitives::Signed<88, 2>;
-type U88 = alloy_primitives::Uint<88, 2>;
-type I96 = alloy_primitives::Signed<96, 2>;
-type U96 = alloy_primitives::Uint<96, 2>;
-type I104 = alloy_primitives::Signed<104, 2>;
-type U104 = alloy_primitives::Uint<104, 2>;
-type I112 = alloy_primitives::Signed<112, 2>;
-type U112 = alloy_primitives::Uint<112, 2>;
-type I120 = alloy_primitives::Signed<120, 2>;
-type U120 = alloy_primitives::Uint<120, 2>;
-type I136 = alloy_primitives::Signed<136, 3>;
-type U136 = alloy_primitives::Uint<136, 3>;
-type I144 = alloy_primitives::Signed<144, 3>;
-type U144 = alloy_primitives::Uint<144, 3>;
-type I152 = alloy_primitives::Signed<152, 3>;
-type U152 = alloy_primitives::Uint<152, 3>;
-type I160 = alloy_primitives::Signed<160, 3>;
-type U160 = alloy_primitives::Uint<160, 3>;
-type I168 = alloy_primitives::Signed<168, 3>;
-type U168 = alloy_primitives::Uint<168, 3>;
-type I176 = alloy_primitives::Signed<176, 3>;
-type U176 = alloy_primitives::Uint<176, 3>;
-type I184 = alloy_primitives::Signed<184, 3>;
-type U184 = alloy_primitives::Uint<184, 3>;
-type I192 = alloy_primitives::Signed<192, 3>;
-type U192 = alloy_primitives::Uint<192, 3>;
-type I200 = alloy_primitives::Signed<200, 4>;
-type U200 = alloy_primitives::Uint<200, 4>;
-type I208 = alloy_primitives::Signed<208, 4>;
-type U208 = alloy_primitives::Uint<208, 4>;
-type I216 = alloy_primitives::Signed<216, 4>;
-type U216 = alloy_primitives::Uint<216, 4>;
-type I224 = alloy_primitives::Signed<224, 4>;
-type U224 = alloy_primitives::Uint<224, 4>;
-type I232 = alloy_primitives::Signed<232, 4>;
-type U232 = alloy_primitives::Uint<232, 4>;
-type I240 = alloy_primitives::Signed<240, 4>;
-type U240 = alloy_primitives::Uint<240, 4>;
-type I248 = alloy_primitives::Signed<248, 4>;
-type U248 = alloy_primitives::Uint<248, 4>;
 
 impl_sol_value! {
     // Basic

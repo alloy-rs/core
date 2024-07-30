@@ -11,8 +11,8 @@
 use crate::{abi::token::*, private::SolTypeValue, utils, SolType, Word};
 use alloc::{string::String as RustString, vec::Vec};
 use alloy_primitives::{
-    keccak256, Address as RustAddress, Bytes as RustBytes, FixedBytes as RustFixedBytes,
-    Function as RustFunction, I256, U256,
+    aliases::*, keccak256, Address as RustAddress, Bytes as RustBytes,
+    FixedBytes as RustFixedBytes, Function as RustFunction, I256, U256,
 };
 use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
@@ -1009,59 +1009,6 @@ macro_rules! uint_impls2 {
     ($t:ident) => { int_impls! { @big_uint $t } };
 }
 
-type I24 = alloy_primitives::Signed<24, 1>;
-type U24 = alloy_primitives::Uint<24, 1>;
-type I40 = alloy_primitives::Signed<40, 1>;
-type U40 = alloy_primitives::Uint<40, 1>;
-type I48 = alloy_primitives::Signed<48, 1>;
-type U48 = alloy_primitives::Uint<48, 1>;
-type I56 = alloy_primitives::Signed<56, 1>;
-type U56 = alloy_primitives::Uint<56, 1>;
-type I72 = alloy_primitives::Signed<72, 2>;
-type U72 = alloy_primitives::Uint<72, 2>;
-type I80 = alloy_primitives::Signed<80, 2>;
-type U80 = alloy_primitives::Uint<80, 2>;
-type I88 = alloy_primitives::Signed<88, 2>;
-type U88 = alloy_primitives::Uint<88, 2>;
-type I96 = alloy_primitives::Signed<96, 2>;
-type U96 = alloy_primitives::Uint<96, 2>;
-type I104 = alloy_primitives::Signed<104, 2>;
-type U104 = alloy_primitives::Uint<104, 2>;
-type I112 = alloy_primitives::Signed<112, 2>;
-type U112 = alloy_primitives::Uint<112, 2>;
-type I120 = alloy_primitives::Signed<120, 2>;
-type U120 = alloy_primitives::Uint<120, 2>;
-type I136 = alloy_primitives::Signed<136, 3>;
-type U136 = alloy_primitives::Uint<136, 3>;
-type I144 = alloy_primitives::Signed<144, 3>;
-type U144 = alloy_primitives::Uint<144, 3>;
-type I152 = alloy_primitives::Signed<152, 3>;
-type U152 = alloy_primitives::Uint<152, 3>;
-type I160 = alloy_primitives::Signed<160, 3>;
-type U160 = alloy_primitives::Uint<160, 3>;
-type I168 = alloy_primitives::Signed<168, 3>;
-type U168 = alloy_primitives::Uint<168, 3>;
-type I176 = alloy_primitives::Signed<176, 3>;
-type U176 = alloy_primitives::Uint<176, 3>;
-type I184 = alloy_primitives::Signed<184, 3>;
-type U184 = alloy_primitives::Uint<184, 3>;
-type I192 = alloy_primitives::Signed<192, 3>;
-type U192 = alloy_primitives::Uint<192, 3>;
-type I200 = alloy_primitives::Signed<200, 4>;
-type U200 = alloy_primitives::Uint<200, 4>;
-type I208 = alloy_primitives::Signed<208, 4>;
-type U208 = alloy_primitives::Uint<208, 4>;
-type I216 = alloy_primitives::Signed<216, 4>;
-type U216 = alloy_primitives::Uint<216, 4>;
-type I224 = alloy_primitives::Signed<224, 4>;
-type U224 = alloy_primitives::Uint<224, 4>;
-type I232 = alloy_primitives::Signed<232, 4>;
-type U232 = alloy_primitives::Uint<232, 4>;
-type I240 = alloy_primitives::Signed<240, 4>;
-type U240 = alloy_primitives::Uint<240, 4>;
-type I248 = alloy_primitives::Signed<248, 4>;
-type U248 = alloy_primitives::Uint<248, 4>;
-
 supported_int!(
       8 => i8, u8;
      16 => i16, u16;
@@ -1531,19 +1478,19 @@ mod tests {
         }
         assert_eq!(<Int<8>>::detokenize(token),    0x00000000000000000000000000000000000000000000000000000000000000a0_u8 as i8);
         assert_eq!(<Int<16>>::detokenize(token),   0x0000000000000000000000000000000000000000000000000000000000001fa0_u16 as i16);
-        assert_eq!(<Int<24>>::detokenize(token),   "0x00000000000000000000000000000000000000000000000000000000ff9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<24>>::detokenize(token),  "0x00000000000000000000000000000000000000000000000000000000ff9e1fa0".as_uint_as_int());
         assert_eq!(<Int<32>>::detokenize(token),   0x000000000000000000000000000000000000000000000000000000001d9e1fa0_u32 as i32);
-        assert_eq!(<Int<40>>::detokenize(token),   "0x000000000000000000000000000000000000000000000000ffffff9c1d9e1fa0".as_uint_as_int());
-        assert_eq!(<Int<48>>::detokenize(token),   "0x00000000000000000000000000000000000000000000000000001b9c1d9e1fa0".as_uint_as_int());
-        assert_eq!(<Int<56>>::detokenize(token),   "0x000000000000000000000000000000000000000000000000ff9a1b9c1d9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<40>>::detokenize(token),  "0x000000000000000000000000000000000000000000000000ffffff9c1d9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<48>>::detokenize(token),  "0x00000000000000000000000000000000000000000000000000001b9c1d9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<56>>::detokenize(token),  "0x000000000000000000000000000000000000000000000000ff9a1b9c1d9e1fa0".as_uint_as_int());
         assert_eq!(<Int<64>>::detokenize(token),   0x000000000000000000000000000000000000000000000000199a1b9c1d9e1fa0_u64 as i64);
-        assert_eq!(<Int<72>>::detokenize(token),   "0x00000000000000000000000000000000ffffffffffffff98199a1b9c1d9e1fa0".as_uint_as_int());
-        assert_eq!(<Int<80>>::detokenize(token),   "0x000000000000000000000000000000000000000000001798199a1b9c1d9e1fa0".as_uint_as_int());
-        assert_eq!(<Int<88>>::detokenize(token),   "0x00000000000000000000000000000000ffffffffff961798199a1b9c1d9e1fa0".as_uint_as_int());
-        assert_eq!(<Int<96>>::detokenize(token),   "0x000000000000000000000000000000000000000015961798199a1b9c1d9e1fa0".as_uint_as_int());
-        assert_eq!(<Int<104>>::detokenize(token),  "0x00000000000000000000000000000000ffffff9415961798199a1b9c1d9e1fa0".as_uint_as_int());
-        assert_eq!(<Int<112>>::detokenize(token),  "0x000000000000000000000000000000000000139415961798199a1b9c1d9e1fa0".as_uint_as_int());
-        assert_eq!(<Int<120>>::detokenize(token),  "0x00000000000000000000000000000000ff92139415961798199a1b9c1d9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<72>>::detokenize(token),  "0x00000000000000000000000000000000ffffffffffffff98199a1b9c1d9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<80>>::detokenize(token),  "0x000000000000000000000000000000000000000000001798199a1b9c1d9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<88>>::detokenize(token),  "0x00000000000000000000000000000000ffffffffff961798199a1b9c1d9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<96>>::detokenize(token),  "0x000000000000000000000000000000000000000015961798199a1b9c1d9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<104>>::detokenize(token), "0x00000000000000000000000000000000ffffff9415961798199a1b9c1d9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<112>>::detokenize(token), "0x000000000000000000000000000000000000139415961798199a1b9c1d9e1fa0".as_uint_as_int());
+        assert_eq!(<Int<120>>::detokenize(token), "0x00000000000000000000000000000000ff92139415961798199a1b9c1d9e1fa0".as_uint_as_int());
         assert_eq!(<Int<128>>::detokenize(token),  0x000000000000000000000000000000001192139415961798199a1b9c1d9e1fa0_u128 as i128);
         assert_eq!(<Int<136>>::detokenize(token), "0xffffffffffffffffffffffffffffff901192139415961798199a1b9c1d9e1fa0".as_uint_as_int());
         assert_eq!(<Int<144>>::detokenize(token), "0x00000000000000000000000000000f901192139415961798199a1b9c1d9e1fa0".as_uint_as_int());
