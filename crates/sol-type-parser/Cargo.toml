@@ -32,10 +32,3 @@ default = ["std"]
 std = ["winnow/std"]
 serde = ["dep:serde"]
 debug = ["std"] # intentionally doesn't enable `winnow/debug`
-
-# Provide a method disable_recursion_limit to parse arbitrarily deep structures
-# without any consideration for overflowing the stack. Additionally you will
-# need to be careful around other recursive operations on the parsed result
-# which may overflow the stack after deserialization has completed, including,
-# but not limited to, Display and Debug and Drop impls.
-unbounded = []

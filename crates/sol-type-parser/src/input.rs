@@ -8,15 +8,16 @@ use winnow::{
     Parser,
 };
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum CustomError {
+enum CustomError {
     RecursionLimitExceeded,
 }
 
 impl fmt::Display for CustomError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CustomError::RecursionLimitExceeded => f.write_str("recursion limit exceeded"),
+            Self::RecursionLimitExceeded => f.write_str("recursion limit exceeded"),
         }
     }
 }
@@ -46,16 +47,14 @@ pub fn check_recursion<'a, O>(
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct RecursionCheck {
-    #[cfg(not(feature = "unbounded"))]
     current: usize,
 }
 
-#[cfg(not(feature = "unbounded"))]
 const LIMIT: usize = 80;
 
 impl RecursionCheck {
-    pub fn check_depth(_depth: usize) -> Result<(), CustomError> {
-        #[cfg(not(feature = "unbounded"))]
+    #[cfg(any())]
+    fn check_depth(_depth: usize) -> Result<(), CustomError> {
         if LIMIT <= _depth {
             return Err(CustomError::RecursionLimitExceeded);
         }
@@ -64,20 +63,14 @@ impl RecursionCheck {
     }
 
     fn enter(&mut self) -> Result<(), CustomError> {
-        #[cfg(not(feature = "unbounded"))]
-        {
-            self.current += 1;
-            if LIMIT <= self.current {
-                return Err(CustomError::RecursionLimitExceeded);
-            }
+        self.current += 1;
+        if LIMIT <= self.current {
+            return Err(CustomError::RecursionLimitExceeded);
         }
         Ok(())
     }
 
     fn exit(&mut self) {
-        #[cfg(not(feature = "unbounded"))]
-        {
-            self.current -= 1;
-        }
+        self.current -= 1;
     }
 }

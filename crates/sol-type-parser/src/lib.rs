@@ -38,13 +38,16 @@ pub use type_spec::TypeSpecifier;
 mod parameter;
 pub use parameter::{ParameterSpecifier, Parameters, Storage};
 
-/// Generic [`winnow`] parsing utilities.
-pub mod utils;
-
 mod state_mutability;
 #[cfg(feature = "serde")]
 pub use state_mutability::serde_state_mutability_compat;
 pub use state_mutability::StateMutability;
 
+// Not public API.
+#[doc(hidden)]
+pub mod utils;
+
+#[doc(hidden)]
 pub mod input;
+#[doc(hidden)]
 pub use input::{new_input, Input};
