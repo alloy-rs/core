@@ -1,6 +1,7 @@
 use crate::{abi::token::WordToken, Error, Result, SolType};
 use alloc::borrow::Cow;
 
+#[allow(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
 }

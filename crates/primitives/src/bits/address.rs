@@ -6,7 +6,7 @@ use alloc::{
 use core::{fmt, mem::MaybeUninit, str};
 
 /// Error type for address checksum validation.
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Copy, Debug)]
 pub enum AddressError {
     /// Error while decoding hex.
     Hex(hex::FromHexError),

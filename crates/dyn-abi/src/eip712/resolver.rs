@@ -81,7 +81,7 @@ impl PropertyDef {
 }
 
 /// An EIP-712 type definition.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeDef {
     /// Must always be a ROOT type name with any array stripped.
     type_name: String,
@@ -122,7 +122,7 @@ impl TypeDef {
     /// Instantiate a new type definition, without checking that the type name
     /// is a valid root type. This may result in bad behavior in a resolver.
     #[inline]
-    pub fn new_unchecked(type_name: String, props: Vec<PropertyDef>) -> Self {
+    pub const fn new_unchecked(type_name: String, props: Vec<PropertyDef>) -> Self {
         Self { type_name, props }
     }
 

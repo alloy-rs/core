@@ -79,6 +79,12 @@ impl SolInput {
         }
         let lit = input.parse::<LitStr>()?;
 
+        let _ = input.parse::<Option<Token![,]>>()?;
+        if !input.is_empty() {
+            let msg = "unexpected token, expected end of input";
+            return Err(Error::new(input.span(), msg));
+        }
+
         let mut value = lit.value();
         let mut path = None;
         let span = lit.span();

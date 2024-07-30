@@ -3,6 +3,7 @@ use alloc::vec::Vec;
 use alloy_json_abi::Event;
 use alloy_primitives::{LogData, B256};
 
+#[allow(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
     impl Sealed for alloy_json_abi::Event {}
@@ -76,9 +77,8 @@ impl EventExt for Event {
 
 #[cfg(test)]
 mod tests {
-    use crate::DynSolValue;
-
     use super::*;
+    use crate::DynSolValue;
     use alloy_json_abi::EventParam;
     use alloy_primitives::{address, b256, bytes, hex, keccak256, Signed};
 

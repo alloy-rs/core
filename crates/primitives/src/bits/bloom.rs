@@ -22,7 +22,7 @@ const ITEM_BYTES: usize = (log2(BLOOM_SIZE_BITS) + 7) / 8;
 const _: () = assert!(BLOOM_SIZE_BYTES.is_power_of_two());
 
 /// Input to the [`Bloom::accrue`] method.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum BloomInput<'a> {
     /// Raw input to be hashed.
     Raw(&'a [u8]),

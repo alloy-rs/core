@@ -14,7 +14,7 @@ use alloy_primitives::{Address, Function, B256, I256, U256};
 use arbitrary::{size_hint, Unstructured};
 use core::ops::RangeInclusive;
 use proptest::{
-    collection::{vec as vec_strategy, VecStrategy},
+    collection::{hash_set as hash_set_strategy, vec as vec_strategy, VecStrategy},
     prelude::*,
     strategy::{Flatten, Map, Recursive, TupleUnion, WA},
 };
@@ -240,7 +240,8 @@ macro_rules! custom_struct_strategy {
             .prop_flat_map(move |sz| {
                 (
                     IDENT_STRATEGY,
-                    vec_strategy(IDENT_STRATEGY, sz..=sz),
+                    hash_set_strategy(IDENT_STRATEGY, sz..=sz)
+                        .prop_map(|prop_names| prop_names.into_iter().collect()),
                     vec_strategy(elem.clone(), sz..=sz),
                 )
             })
@@ -436,13 +437,16 @@ impl DynSolValue {
                 .prop_map(Self::Tuple)
                 .sboxed(),
             #[cfg(feature = "eip712")]
-            DynSolType::CustomStruct { tuple, .. } => {
-                let types = tuple.iter().map(Self::type_strategy).collect::<Vec<_>>();
-                let sz = types.len();
-                (IDENT_STRATEGY, vec_strategy(IDENT_STRATEGY, sz..=sz), types)
-                    .prop_map(|(name, prop_names, tuple)| Self::CustomStruct {
-                        name,
-                        prop_names,
+            DynSolType::CustomStruct { tuple, prop_names, name } => {
+                let name = name.clone();
+                let prop_names = prop_names.clone();
+                tuple
+                    .iter()
+                    .map(Self::type_strategy)
+                    .collect::<Vec<_>>()
+                    .prop_map(move |tuple| Self::CustomStruct {
+                        name: name.clone(),
+                        prop_names: prop_names.clone(),
                         tuple,
                     })
                     .sboxed()
@@ -523,7 +527,11 @@ fn int_strategy<T: Arbitrary>() -> impl Strategy<Value = (ValueOfStrategy<T::Str
 #[inline]
 fn adjust_int(mut int: I256, size: usize) -> I256 {
     if size < 256 {
-        int &= (I256::ONE << size).wrapping_sub(I256::ONE);
+        if int.bit(size - 1) {
+            int |= I256::MINUS_ONE - (I256::ONE << size).wrapping_sub(I256::ONE);
+        } else {
+            int &= (I256::ONE << size).wrapping_sub(I256::ONE);
+        }
     }
     int
 }

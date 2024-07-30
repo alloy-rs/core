@@ -3,18 +3,8 @@
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
-#![warn(
-    missing_copy_implementations,
-    missing_debug_implementations,
-    missing_docs,
-    unreachable_pub,
-    clippy::missing_const_for_fn,
-    rustdoc::all
-)]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(feature = "std", allow(unused_imports))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 // TODO: remove when https://github.com/proptest-rs/proptest/pull/427 is merged
 #![allow(unknown_lints, non_local_definitions)]
@@ -50,7 +40,7 @@ mod common;
 pub use common::TxKind;
 
 mod log;
-pub use log::{Log, LogData};
+pub use log::{IntoLogData, Log, LogData};
 #[cfg(feature = "serde")]
 mod log_serde;
 
@@ -62,6 +52,12 @@ pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 mod signature;
 pub use signature::{to_eip155_v, Parity, SignatureError};
+
+/// Only available for documentation purposes.
+// Without this visible (not `#[doc(hidden)]`) re-export, `rustdoc` will not generate documentation
+// for the `Signature` type alias below.
+#[cfg(feature = "unstable-doc")]
+pub use signature::Signature as PrivateSignature;
 
 /// An ECDSA Signature, consisting of V, R, and S.
 #[cfg(feature = "k256")]

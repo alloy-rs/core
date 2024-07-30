@@ -20,6 +20,9 @@ proc-macro = true
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[lints]
+workspace = true
+
 [dependencies]
 alloy-sol-macro-input.workspace = true
 alloy-sol-macro-expander.workspace = true

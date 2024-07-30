@@ -39,25 +39,6 @@ pub enum InternalType {
     },
 }
 
-impl From<BorrowedInternalType<'_>> for InternalType {
-    #[inline]
-    fn from(borrowed: BorrowedInternalType<'_>) -> Self {
-        match borrowed {
-            BorrowedInternalType::AddressPayable(s) => Self::AddressPayable(s.to_string()),
-            BorrowedInternalType::Contract(s) => Self::Contract(s.to_string()),
-            BorrowedInternalType::Enum { contract, ty } => {
-                Self::Enum { contract: contract.map(String::from), ty: ty.to_string() }
-            }
-            BorrowedInternalType::Struct { contract, ty } => {
-                Self::Struct { contract: contract.map(String::from), ty: ty.to_string() }
-            }
-            BorrowedInternalType::Other { contract, ty } => {
-                Self::Other { contract: contract.map(String::from), ty: ty.to_string() }
-            }
-        }
-    }
-}
-
 impl fmt::Display for InternalType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_borrowed().fmt(f)
@@ -65,20 +46,16 @@ impl fmt::Display for InternalType {
 }
 
 impl Serialize for InternalType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
+    #[inline]
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.as_borrowed().serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for InternalType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(ItVisitor).map(Into::into)
+    #[inline]
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserializer.deserialize_str(ItVisitor)
     }
 }
 
@@ -86,7 +63,7 @@ impl InternalType {
     /// Parse a string into an instance, taking ownership of data
     #[inline]
     pub fn parse(s: &str) -> Option<Self> {
-        BorrowedInternalType::parse(s).map(Into::into)
+        BorrowedInternalType::parse(s).map(BorrowedInternalType::into_owned)
     }
 
     /// True if the instance is a `struct` variant.
@@ -202,8 +179,8 @@ impl InternalType {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum BorrowedInternalType<'a> {
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum BorrowedInternalType<'a> {
     AddressPayable(&'a str),
     Contract(&'a str),
     Enum { contract: Option<&'a str>, ty: &'a str },
@@ -248,7 +225,7 @@ impl Serialize for BorrowedInternalType<'_> {
 impl<'de: 'a, 'a> Deserialize<'de> for BorrowedInternalType<'a> {
     #[inline]
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_str(ItVisitor)
+        deserializer.deserialize_str(BorrowedItVisitor)
     }
 }
 
@@ -278,33 +255,61 @@ impl<'a> BorrowedInternalType<'a> {
             Some(Self::Other { contract: None, ty: v })
         }
     }
+
+    pub(crate) fn into_owned(self) -> InternalType {
+        match self {
+            Self::AddressPayable(s) => InternalType::AddressPayable(s.to_string()),
+            Self::Contract(s) => InternalType::Contract(s.to_string()),
+            Self::Enum { contract, ty } => {
+                InternalType::Enum { contract: contract.map(String::from), ty: ty.to_string() }
+            }
+            Self::Struct { contract, ty } => {
+                InternalType::Struct { contract: contract.map(String::from), ty: ty.to_string() }
+            }
+            Self::Other { contract, ty } => {
+                InternalType::Other { contract: contract.map(String::from), ty: ty.to_string() }
+            }
+        }
+    }
 }
+
+const VISITOR_EXPECTED: &str = "a valid internal type";
 
 pub(crate) struct ItVisitor;
 
 impl<'de> Visitor<'de> for ItVisitor {
+    type Value = InternalType;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(VISITOR_EXPECTED)
+    }
+
+    fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+        BorrowedInternalType::parse(v)
+            .map(BorrowedInternalType::into_owned)
+            .ok_or_else(|| E::invalid_value(serde::de::Unexpected::Str(v), &VISITOR_EXPECTED))
+    }
+}
+
+const BORROWED_VISITOR_EXPECTED: &str = "a valid borrowed internal type";
+
+pub(crate) struct BorrowedItVisitor;
+
+impl<'de> Visitor<'de> for BorrowedItVisitor {
     type Value = BorrowedInternalType<'de>;
 
-    fn expecting(&self, formatter: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result {
-        write!(formatter, "a valid internal type")
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(BORROWED_VISITOR_EXPECTED)
     }
 
     fn visit_borrowed_str<E: serde::de::Error>(self, v: &'de str) -> Result<Self::Value, E> {
         BorrowedInternalType::parse(v).ok_or_else(|| {
-            E::invalid_value(serde::de::Unexpected::Str(v), &"a valid internal type")
+            E::invalid_value(serde::de::Unexpected::Str(v), &BORROWED_VISITOR_EXPECTED)
         })
     }
 
-    fn visit_str<E>(self, _v: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        // `from_reader` copies the bytes into a Vec before calling this
-        // method. Because the lifetime is unspecified, we can't borrow from it.
-        // As a result, we don't support `from_reader`.
-        Err(serde::de::Error::custom(
-            "Using serde_json::from_reader is not supported. Instead, buffer the reader contents into a string, as in alloy_json_abi::JsonAbi::load.",
-        ))
+    fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+        Err(E::invalid_value(serde::de::Unexpected::Str(v), &BORROWED_VISITOR_EXPECTED))
     }
 }
 

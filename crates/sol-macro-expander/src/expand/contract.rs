@@ -50,6 +50,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             #[doc = #hex]
             /// ```
             #[rustfmt::skip]
+            #[allow(clippy::all)]
             pub static #name: alloy_sol_types::private::Bytes =
                 alloy_sol_types::private::Bytes::from_static(#lit_bytes);
         }
@@ -66,6 +67,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenS
             #[doc = #hex]
             /// ```
             #[rustfmt::skip]
+            #[allow(clippy::all)]
             pub static #name: alloy_sol_types::private::Bytes =
                 alloy_sol_types::private::Bytes::from_static(#lit_bytes);
         }
@@ -811,6 +813,29 @@ impl<'a> CallLikeExpander<'a> {
             }
         });
 
+        let into_impl = {
+            let variants = events.iter().map(e_name);
+            let v2 = variants.clone();
+            quote! {
+                #[automatically_derived]
+                impl alloy_sol_types::private::IntoLogData for #name {
+                    fn to_log_data(&self) -> alloy_sol_types::private::LogData {
+                        match self {#(
+                            Self::#variants(inner) =>
+                            alloy_sol_types::private::IntoLogData::to_log_data(inner),
+                        )*}
+                    }
+
+                    fn into_log_data(self) -> alloy_sol_types::private::LogData {
+                        match self {#(
+                            Self::#v2(inner) =>
+                            alloy_sol_types::private::IntoLogData::into_log_data(inner),
+                        )*}
+                    }
+                }
+            }
+        };
+
         quote! {
             #def
 
@@ -824,6 +849,8 @@ impl<'a> CallLikeExpander<'a> {
                     #anon_impl
                 }
             }
+
+            #into_impl
         }
     }
 

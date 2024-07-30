@@ -2,7 +2,7 @@ use crate::{Address, Bytes, B256};
 use alloc::vec::Vec;
 
 /// An Ethereum event log object.
-#[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub struct LogData {
@@ -17,7 +17,7 @@ impl LogData {
     /// invalid logs. May be safely used when the length of the topic list is
     /// known to be 4 or less.
     #[inline]
-    pub fn new_unchecked(topics: Vec<B256>, data: Bytes) -> Self {
+    pub const fn new_unchecked(topics: Vec<B256>, data: Bytes) -> Self {
         Self { topics, data }
     }
 
@@ -81,8 +81,28 @@ impl LogData {
     }
 }
 
+/// Trait for an object that can be converted into a log data object.
+pub trait IntoLogData {
+    /// Convert into a [`LogData`] object.
+    fn to_log_data(&self) -> LogData;
+    /// Consume and convert into a [`LogData`] object.
+    fn into_log_data(self) -> LogData;
+}
+
+impl IntoLogData for LogData {
+    #[inline]
+    fn to_log_data(&self) -> LogData {
+        self.clone()
+    }
+
+    #[inline]
+    fn into_log_data(self) -> LogData {
+        self
+    }
+}
+
 /// A log consists of an address, and some log data.
-#[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub struct Log<T = LogData> {
     /// The address which emitted this log.
@@ -109,7 +129,7 @@ impl Log {
 
     /// Creates a new log.
     #[inline]
-    pub fn new_unchecked(address: Address, topics: Vec<B256>, data: Bytes) -> Self {
+    pub const fn new_unchecked(address: Address, topics: Vec<B256>, data: Bytes) -> Self {
         Self { address, data: LogData::new_unchecked(topics, data) }
     }
 

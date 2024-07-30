@@ -93,17 +93,3 @@ pub(super) const fn sign_bit(bits: usize) -> u64 {
         1 << (bits - 1)
     }
 }
-
-/// Mask to apply to the highest limb to get the correct number of bits.
-#[must_use]
-pub(super) const fn mask(bits: usize) -> u64 {
-    if bits == 0 {
-        return 0;
-    }
-    let bits = bits % 64;
-    if bits == 0 {
-        u64::MAX
-    } else {
-        (1 << bits) - 1
-    }
-}

@@ -17,6 +17,9 @@ exclude.workspace = true
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[lints]
+workspace = true
+
 [dependencies]
 paste.workspace = true
 proc-macro2.workspace = true

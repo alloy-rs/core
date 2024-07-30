@@ -17,10 +17,18 @@ exclude.workspace = true
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[lints]
+workspace = true
+
 [dependencies]
 winnow.workspace = true
+serde = { workspace = true, optional = true, features = ["derive"] }
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [features]
 default = ["std"]
 std = ["winnow/std"]
+serde = ["dep:serde"]
 debug = ["std"] # intentionally doesn't enable `winnow/debug`

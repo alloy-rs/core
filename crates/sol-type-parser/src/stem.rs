@@ -1,4 +1,4 @@
-use crate::{Error, Result, RootType, TupleSpecifier};
+use crate::{Error, Input, Result, RootType, TupleSpecifier};
 use winnow::{combinator::trace, PResult, Parser};
 
 /// A stem of a Solidity array type. It is either a root type, or a tuple type.
@@ -18,7 +18,7 @@ use winnow::{combinator::trace, PResult, Parser};
 /// assert_eq!(stem.as_tuple(), Some(&TupleSpecifier::parse("(uint256,bool)").unwrap()));
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TypeStem<'a> {
     /// Root type.
     Root(RootType<'a>),
@@ -54,7 +54,7 @@ impl<'a> TypeStem<'a> {
     }
 
     /// [`winnow`] parser for this type.
-    pub fn parser(input: &mut &'a str) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
         let name = "TypeStem";
         if input.starts_with('(') || input.starts_with("tuple(") {
             trace(name, TupleSpecifier::parser).parse_next(input).map(Self::Tuple)

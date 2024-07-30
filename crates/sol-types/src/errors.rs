@@ -96,7 +96,7 @@ impl fmt::Display for Error {
             Self::BufferNotEmpty => f.write_str("buffer not empty after deserialization"),
             Self::ReserMismatch => f.write_str("reserialization did not match original"),
             Self::RecursionLimitExceeded(limit) => {
-                write!(f, "recursion limit of {} exceeded during decoding", limit)
+                write!(f, "recursion limit of {limit} exceeded during decoding")
             }
             Self::InvalidEnumValue { name, value, max } => {
                 write!(f, "`{value}` is not a valid {name} enum value (max: `{max}`)")

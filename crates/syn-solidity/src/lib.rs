@@ -3,9 +3,8 @@
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
-#![warn(missing_debug_implementations, unreachable_pub, rustdoc::all)]
+#![allow(missing_docs, missing_copy_implementations, clippy::missing_const_for_fn)]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 extern crate proc_macro;
@@ -81,7 +80,7 @@ pub use visit_mut::VisitMut;
 
 mod yul;
 pub use yul::{
-    WalrusToken, YulBlock, YulCaseBranch, YulEVMBuiltIn, YulExpr, YulFnCall, YulFor,
+    WalrusToken, YulBlock, YulCaseBranch, YulEVMBuiltIn, YulExpr, YulFnCall, YulFnType, YulFor,
     YulFunctionDef, YulIdent, YulIf, YulPath, YulReturns, YulStmt, YulSwitch, YulSwitchDefault,
     YulVarAssign, YulVarDecl,
 };
