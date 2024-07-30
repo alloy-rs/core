@@ -1,6 +1,7 @@
 use crate::{
+    new_input,
     utils::{spanned, str_parser},
-    Error, Result, TypeStem,
+    Error, Input, Result, TypeStem,
 };
 use alloc::vec::Vec;
 use core::num::NonZeroUsize;
@@ -88,14 +89,14 @@ impl<'a> TypeSpecifier<'a> {
     /// Parse a type specifier from a string.
     #[inline]
     pub fn parse(s: &'a str) -> Result<Self> {
-        Self::parser.parse(s).map_err(Error::parser)
+        Self::parser.parse(new_input(s)).map_err(Error::parser)
     }
 
     /// [`winnow`] parser for this type.
-    pub fn parser(input: &mut &'a str) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
         trace(
             "TypeSpecifier",
-            spanned(|input: &mut &'a str| {
+            spanned(|input: &mut Input<'a>| {
                 let stem = TypeStem::parser(input)?;
                 let sizes = if input.starts_with('[') {
                     repeat(
@@ -138,7 +139,7 @@ impl<'a> TypeSpecifier<'a> {
     }
 }
 
-fn array_size_parser(input: &mut &str) -> PResult<Option<NonZeroUsize>> {
+fn array_size_parser(input: &mut Input<'_>) -> PResult<Option<NonZeroUsize>> {
     let digits = digit0(input)?;
     if digits.is_empty() {
         return Ok(None);

@@ -1,6 +1,7 @@
 use crate::{
+    new_input,
     utils::{opt_ws_ident, spanned, tuple_parser},
-    Error, Result, TypeSpecifier,
+    Error, Input, Result, TypeSpecifier,
 };
 use alloc::vec::Vec;
 use core::fmt;
@@ -36,14 +37,14 @@ impl<'a> ParameterSpecifier<'a> {
     /// Parse a parameter from a string.
     #[inline]
     pub fn parse(input: &'a str) -> Result<Self> {
-        Self::parser.parse(input).map_err(Error::parser)
+        Self::parser.parse(new_input(input)).map_err(Error::parser)
     }
 
     /// [`winnow`] parser for this type.
-    pub fn parser(input: &mut &'a str) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
         trace(
             "ParameterSpecifier",
-            spanned(|input: &mut &'a str| {
+            spanned(|input: &mut Input<'a>| {
                 let ty = TypeSpecifier::parser(input)?;
                 let mut name = opt_ws_ident(input)?;
 
@@ -99,11 +100,11 @@ impl<'a> Parameters<'a> {
     /// Parse a parameter list from a string.
     #[inline]
     pub fn parse(input: &'a str) -> Result<Self> {
-        Self::parser.parse(input).map_err(Error::parser)
+        Self::parser.parse(new_input(input)).map_err(Error::parser)
     }
 
     /// [`winnow`] parser for this type.
-    pub fn parser(input: &mut &'a str) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
         trace("Parameters", spanned(tuple_parser(ParameterSpecifier::parser)))
             .parse_next(input)
             .map(|(span, params)| Self { span, params })
