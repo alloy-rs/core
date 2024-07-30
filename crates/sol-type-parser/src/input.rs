@@ -1,5 +1,7 @@
 #![allow(missing_docs, missing_copy_implementations, missing_debug_implementations)]
 
+// Recursion implementation modified from `toml`: https://github.com/toml-rs/toml/blob/a02cbf46cab4a8683e641efdba648a31498f7342/crates/toml_edit/src/parser/mod.rs#L99
+
 use core::fmt;
 use winnow::{
     error::{ContextError, FromExternalError},

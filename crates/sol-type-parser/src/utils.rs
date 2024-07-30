@@ -82,9 +82,10 @@ where
     let name = "list";
 
     // These have to be outside of the closure for some reason.
+    let f = check_recursion(f);
     let elems_1 = separated(1.., f, (char_parser(delim), space0));
     let mut elems_and_end = terminated(elems_1, (opt(delim), space0, cut_err(char_parser(close))));
-    check_recursion(trace(name, move |input: &mut Input<'i>| {
+    trace(name, move |input: &mut Input<'i>| {
         let _ = char_parser(open).parse_next(input)?;
         let _ = space0(input)?;
         if input.starts_with(close) {
@@ -92,7 +93,7 @@ where
             return Ok(O2::initial(Some(0)));
         }
         elems_and_end.parse_next(input)
-    }))
+    })
 }
 
 pub fn opt_ws_ident<'a>(input: &mut Input<'a>) -> PResult<Option<&'a str>> {
