@@ -45,3 +45,6 @@ mod state_mutability;
 #[cfg(feature = "serde")]
 pub use state_mutability::serde_state_mutability_compat;
 pub use state_mutability::StateMutability;
+
+pub mod input;
+pub use input::{new_input, Input};

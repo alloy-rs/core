@@ -155,9 +155,9 @@ impl AbiItem<'_> {
     /// );
     /// ```
     pub fn parse(mut input: &str) -> parser::Result<Self> {
-        // need this for Constructor, since the keyword is also the name of the function
+        // Need this copy for Constructor, since the keyword is also the name of the function.
         let copy = input;
-        match parser::utils::parse_item(&mut input)? {
+        match parser::utils::parse_item_keyword(&mut input)? {
             "constructor" => Constructor::parse(copy).map(Into::into),
             "function" => Function::parse(input).map(Into::into),
             "error" => Error::parse(input).map(Into::into),

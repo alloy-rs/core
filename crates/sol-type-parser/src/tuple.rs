@@ -1,9 +1,13 @@
 use crate::{
+    new_input,
     utils::{spanned, tuple_parser},
-    Error, Result, TypeSpecifier,
+    Error, Input, Result, TypeSpecifier,
 };
 use alloc::vec::Vec;
-use winnow::{combinator::trace, PResult, Parser};
+use winnow::{
+    combinator::{opt, preceded, trace},
+    PResult, Parser,
+};
 
 /// A tuple specifier, with no array suffixes. Corresponds to a sequence of
 /// types.
@@ -52,22 +56,19 @@ impl<'a> TupleSpecifier<'a> {
     /// Parse a tuple specifier from a string.
     #[inline]
     pub fn parse(input: &'a str) -> Result<Self> {
-        Self::parser.parse(input).map_err(Error::parser)
+        Self::parser.parse(new_input(input)).map_err(Error::parser)
     }
 
     /// [`winnow`] parser for this type.
-    pub fn parser(input: &mut &'a str) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
         trace("TupleSpecifier", spanned(Self::parse_types))
             .parse_next(input)
             .map(|(span, types)| Self { span, types })
     }
 
     #[inline]
-    fn parse_types(input: &mut &'a str) -> PResult<Vec<TypeSpecifier<'a>>> {
-        if let Some(stripped) = input.strip_prefix("tuple") {
-            *input = stripped;
-        }
-        tuple_parser(TypeSpecifier::parser).parse_next(input)
+    fn parse_types(input: &mut Input<'a>) -> PResult<Vec<TypeSpecifier<'a>>> {
+        preceded(opt("tuple"), tuple_parser(TypeSpecifier::parser)).parse_next(input)
     }
 
     /// Returns the tuple specifier as a string.
