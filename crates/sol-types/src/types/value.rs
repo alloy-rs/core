@@ -185,18 +185,18 @@ impl_sol_value! {
     // Basic
     [] bool => sol_data::Bool [];
 
-    [] i8 => sol_data::Int::<8> [];
-    [] i16 => sol_data::Int::<16> [];
-    [] I24 => sol_data::Int::<24> [];
-    [] i32 => sol_data::Int::<32> [];
-    [] I40 => sol_data::Int::<40> [];
-    [] I48 => sol_data::Int::<48> [];
-    [] I56 => sol_data::Int::<56> [];
-    [] i64 => sol_data::Int::<64> [];
-    [] I72 => sol_data::Int::<72> [];
-    [] I80 => sol_data::Int::<80> [];
-    [] I88 => sol_data::Int::<88> [];
-    [] I96 => sol_data::Int::<96> [];
+    []   i8 => sol_data::Int::<8> [];
+    []  i16 => sol_data::Int::<16> [];
+    []  I24 => sol_data::Int::<24> [];
+    []  i32 => sol_data::Int::<32> [];
+    []  I40 => sol_data::Int::<40> [];
+    []  I48 => sol_data::Int::<48> [];
+    []  I56 => sol_data::Int::<56> [];
+    []  i64 => sol_data::Int::<64> [];
+    []  I72 => sol_data::Int::<72> [];
+    []  I80 => sol_data::Int::<80> [];
+    []  I88 => sol_data::Int::<88> [];
+    []  I96 => sol_data::Int::<96> [];
     [] I104 => sol_data::Int::<104> [];
     [] I112 => sol_data::Int::<112> [];
     [] I120 => sol_data::Int::<120> [];
@@ -220,17 +220,17 @@ impl_sol_value! {
 
     // TODO: `u8` is specialized to encode as `bytes` or `bytesN`
     // [] u8 => sol_data::Uint::<8> [];
-    [] u16 => sol_data::Uint::<16> [];
-    [] U24 => sol_data::Uint::<24> [];
-    [] u32 => sol_data::Uint::<32> [];
-    [] U40 => sol_data::Uint::<40> [];
-    [] U48 => sol_data::Uint::<48> [];
-    [] U56 => sol_data::Uint::<56> [];
-    [] u64 => sol_data::Uint::<64> [];
-    [] U72 => sol_data::Uint::<72> [];
-    [] U80 => sol_data::Uint::<80> [];
-    [] U88 => sol_data::Uint::<88> [];
-    [] U96 => sol_data::Uint::<96> [];
+    []  u16 => sol_data::Uint::<16> [];
+    []  U24 => sol_data::Uint::<24> [];
+    []  u32 => sol_data::Uint::<32> [];
+    []  U40 => sol_data::Uint::<40> [];
+    []  U48 => sol_data::Uint::<48> [];
+    []  U56 => sol_data::Uint::<56> [];
+    []  u64 => sol_data::Uint::<64> [];
+    []  U72 => sol_data::Uint::<72> [];
+    []  U80 => sol_data::Uint::<80> [];
+    []  U88 => sol_data::Uint::<88> [];
+    []  U96 => sol_data::Uint::<96> [];
     [] U104 => sol_data::Uint::<104> [];
     [] U112 => sol_data::Uint::<112> [];
     [] U120 => sol_data::Uint::<120> [];

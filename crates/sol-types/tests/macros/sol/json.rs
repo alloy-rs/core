@@ -1,5 +1,5 @@
 use alloy_json_abi::{Function, JsonAbi, Param, StateMutability};
-use alloy_primitives::{Address, B256, I256, U256};
+use alloy_primitives::{Address, Signed, B256, I256, U256};
 use alloy_sol_types::{sol, SolCall, SolError, SolEvent, SolStruct};
 use pretty_assertions::assert_eq;
 use std::borrow::Cow;
@@ -91,8 +91,6 @@ fn aggregation_router_v5() {
 // https://github.com/alloy-rs/core/issues/351
 #[test]
 fn uniswap_v3_position() {
-    use alloy_primitives::Signed;
-
     // https://etherscan.io/address/0x8638fbd429b19249bb3bcf3ec72d07a657e49642#code
     sol!(UniswapV3Position, "../json-abi/tests/abi/UniswapV3Position.json");
 
