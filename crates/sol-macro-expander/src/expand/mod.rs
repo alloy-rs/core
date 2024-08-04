@@ -257,52 +257,55 @@ impl<'ast> ExpCtxt<'ast> {
     fn mk_overloads_map(&mut self) -> std::result::Result<(), ()> {
         let mut overloads_map = std::mem::take(&mut self.overloads);
 
-        for (namespace, overloaded_items) in &self.overloaded_items.0 {
-            let all_orig_names: Vec<_> =
-                overloaded_items.values().flatten().filter_map(|f| f.name()).collect();
-
+        for namespace in &self.overloaded_items.0.keys().cloned().collect::<Vec<_>>() {
             let mut failed = false;
 
-            for functions in overloaded_items.values().filter(|fs| fs.len() >= 2) {
-                // check for same parameters
-                for (i, &a) in functions.iter().enumerate() {
-                    for &b in functions.iter().skip(i + 1) {
-                        if a.eq_by_types(b) {
-                            failed = true;
-                            emit_error!(
-                                a.span(),
-                                "{} with same name and parameter types defined twice",
-                                a.desc();
+            self.with_namespace(namespace.clone(), |this| {
+                let overloaded_items = this.overloaded_items.0.get(namespace).unwrap();
+                let all_orig_names: Vec<_> =
+                    overloaded_items.values().flatten().filter_map(|f| f.name()).collect();
 
-                                note = b.span() => "other declaration is here";
-                            );
+                for functions in overloaded_items.values().filter(|fs| fs.len() >= 2) {
+                    // check for same parameters
+                    for (i, &a) in functions.iter().enumerate() {
+                        for &b in functions.iter().skip(i + 1) {
+                            if a.eq_by_types(b) {
+                                failed = true;
+                                emit_error!(
+                                    a.span(),
+                                    "{} with same name and parameter types defined twice",
+                                    a.desc();
+
+                                    note = b.span() => "other declaration is here";
+                                );
+                            }
                         }
                     }
-                }
 
-                for (i, &item) in functions.iter().enumerate() {
-                    let Some(old_name) = item.name() else {
-                        continue;
-                    };
-                    let new_name = format!("{old_name}_{i}");
-                    if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
-                        failed = true;
-                        emit_error!(
-                            old_name.span(),
-                            "{} `{old_name}` is overloaded, \
-                            but the generated name `{new_name}` is already in use",
-                            item.desc();
+                    for (i, &item) in functions.iter().enumerate() {
+                        let Some(old_name) = item.name() else {
+                            continue;
+                        };
+                        let new_name = format!("{old_name}_{i}");
+                        if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
+                            failed = true;
+                            emit_error!(
+                                old_name.span(),
+                                "{} `{old_name}` is overloaded, \
+                                but the generated name `{new_name}` is already in use",
+                                item.desc();
 
-                            note = other.span() => "other declaration is here";
-                        )
+                                note = other.span() => "other declaration is here";
+                            )
+                        }
+
+                        overloads_map
+                            .entry(namespace.clone())
+                            .or_default()
+                            .insert(item.signature(this), new_name);
                     }
-
-                    overloads_map
-                        .entry(namespace.clone())
-                        .or_default()
-                        .insert(item.signature(self), new_name);
                 }
-            }
+            });
 
             if failed {
                 return Err(());
