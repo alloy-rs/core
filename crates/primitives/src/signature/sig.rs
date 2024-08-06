@@ -420,8 +420,11 @@ impl serde::Serialize for crate::Signature {
             match self.v {
                 Parity::Eip155(v) => map.serialize_entry("v", &crate::U64::from(v))?,
                 Parity::NonEip155(b) => map.serialize_entry("v", &(b as u8 + 27))?,
-                Parity::Parity(true) => map.serialize_entry("yParity", "0x1")?,
-                Parity::Parity(false) => map.serialize_entry("yParity", "0x0")?,
+                Parity::Parity(parity) => {
+                    let (v, y_parity) = if parity { ("0x1", "0x1") } else { ("0x0", "0x0") };
+                    map.serialize_entry("v", v)?;
+                    map.serialize_entry("yParity", y_parity)?;
+                }
             }
             map.end()
         } else {
@@ -710,7 +713,7 @@ mod tests {
         let serialized = serde_json::to_string(&signature).unwrap();
         assert_eq!(
             serialized,
-            r#"{"r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0","s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05","yParity":"0x1"}"#
+            r#"{"r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0","s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05","v":"0x1","yParity":"0x1"}"#
         );
     }
 
@@ -727,7 +730,7 @@ mod tests {
         )
         .unwrap();
 
-        let expected = r#"{"r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0","s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05","yParity":"0x1"}"#;
+        let expected = r#"{"r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0","s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05","v":"0x1","yParity":"0x1"}"#;
 
         let serialized = serde_json::to_string(&signature).unwrap();
         assert_eq!(serialized, expected);
@@ -792,5 +795,36 @@ mod tests {
 
         // Assert that the length of the Signature matches the expected length
         assert_eq!(sig.length(), 69);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn signature_with_opt_y_parity() {
+        let v_y_should_appear = r#"{
+            "r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0",
+            "s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05",
+            "v":"0x1"
+        }"#;
+
+        let deserialized: crate::Signature = serde_json::from_str(v_y_should_appear).unwrap();
+
+        let serialized = serde_json::to_value(deserialized).unwrap();
+
+        // Check if v and yParity key exists together
+        assert_eq!(serialized.get("v").unwrap(), "0x1");
+        assert_eq!(serialized.get("yParity").unwrap(), "0x1");
+
+        let only_v_should_appear = r#"{
+            "r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0",
+            "s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05",
+            "v":"0x23"
+        }"#;
+
+        let deserialized: crate::Signature = serde_json::from_str(only_v_should_appear).unwrap();
+
+        let serialized = serde_json::to_value(deserialized).unwrap();
+
+        assert_eq!(serialized.get("v").unwrap(), "0x23");
+        assert!(serialized.get("yParity").is_none());
     }
 }
