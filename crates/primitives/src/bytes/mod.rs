@@ -12,9 +12,6 @@ mod rlp;
 #[cfg(feature = "serde")]
 mod serde;
 
-#[cfg(feature = "ssz")]
-mod ssz;
-
 /// Wrapper type around [`bytes::Bytes`] to support "0x" prefixed hex strings.
 #[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]

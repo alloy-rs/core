@@ -51,7 +51,6 @@ getrandom = ["alloy-primitives/getrandom"]
 rand = ["alloy-primitives/rand"]
 rlp = ["alloy-primitives/rlp", "dep:alloy-rlp"]
 serde = ["alloy-primitives/serde"]
-ssz = ["std", "alloy-primitives/ssz"]
 arbitrary = [
     "std",
     "alloy-primitives/arbitrary",
