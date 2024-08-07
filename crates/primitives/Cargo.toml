@@ -39,7 +39,6 @@ alloy-rlp = { workspace = true, optional = true }
 # serde
 serde = { workspace = true, optional = true, features = ["derive"] }
 
-
 # getrandom
 getrandom = { workspace = true, optional = true }
 
