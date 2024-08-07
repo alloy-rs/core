@@ -66,8 +66,8 @@ pub mod private {
         vec::Vec,
     };
     pub use alloy_primitives::{
-        bytes, keccak256, Address, Bytes, FixedBytes, Function, IntoLogData, LogData, Signed, Uint,
-        B256, I256, U256,
+        self as primitives, bytes, keccak256, Address, Bytes, FixedBytes, Function, IntoLogData,
+        LogData, Signed, Uint, B256, I256, U256,
     };
     pub use core::{
         borrow::{Borrow, BorrowMut},
