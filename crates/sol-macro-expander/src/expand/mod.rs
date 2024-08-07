@@ -139,9 +139,9 @@ impl<'ast> ExpCtxt<'ast> {
         namespace: Option<SolIdent>,
         mut f: impl FnMut(&mut Self) -> O,
     ) -> O {
-        self.current_namespace = namespace;
+        let prev = std::mem::replace(&mut self.current_namespace, namespace);
         let res = f(self);
-        self.current_namespace = None;
+        self.current_namespace = prev;
         res
     }
 
