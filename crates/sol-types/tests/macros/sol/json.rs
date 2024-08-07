@@ -1,5 +1,5 @@
 use alloy_json_abi::{Function, JsonAbi, Param, StateMutability};
-use alloy_primitives::{Address, B256, I256, U256};
+use alloy_primitives::{Address, Signed, B256, I256, U256};
 use alloy_sol_types::{sol, SolCall, SolError, SolEvent, SolStruct};
 use pretty_assertions::assert_eq;
 use std::borrow::Cow;
@@ -98,16 +98,19 @@ fn uniswap_v3_position() {
     let _ = UniswapV3Position::getLiquidityByRangeCall {
         pool_: Address::ZERO,
         self_: Address::ZERO,
-        lowerTick_: 0,
-        upperTick_: 0,
+        lowerTick_: Signed::ZERO,
+        upperTick_: Signed::ZERO,
     };
     assert_eq!(
         UniswapV3Position::getLiquidityByRangeCall::SIGNATURE,
         "getLiquidityByRange(address,address,int24,int24)"
     );
 
-    let _ =
-        UniswapV3Position::getPositionIdCall { self_: Address::ZERO, lowerTick_: 0, upperTick_: 0 };
+    let _ = UniswapV3Position::getPositionIdCall {
+        self_: Address::ZERO,
+        lowerTick_: Signed::ZERO,
+        upperTick_: Signed::ZERO,
+    };
     assert_eq!(
         UniswapV3Position::getPositionIdCall::SIGNATURE,
         "getPositionId(address,int24,int24)"

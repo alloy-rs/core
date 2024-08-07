@@ -131,9 +131,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Minus one (multiplicative inverse) of this type.
     pub const MINUS_ONE: Self = Self(Uint::<BITS, LIMBS>::MAX);
 
-    /// Coerces an unsigned integer into a signed one. If the unsigned integer
-    /// is greater than the greater than or equal to `1 << 255`, then the result
-    /// will overflow into a negative value.
+    /// Coerces an unsigned integer into a signed one. If the unsigned integer is greater than or
+    /// equal to `1 << 255`, then the result will overflow into a negative value.
     #[inline]
     pub const fn from_raw(val: Uint<BITS, LIMBS>) -> Self {
         Self(val)
