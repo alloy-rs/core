@@ -62,6 +62,7 @@ impl<T> Default for NamespacedMap<T> {
 }
 
 impl<T> NamespacedMap<T> {
+    /// Inserts an item into the map.
     pub fn insert(&mut self, namespace: Option<SolIdent>, name: SolIdent, value: T) {
         self.0.entry(namespace).or_default().insert(name, value);
     }
@@ -91,6 +92,7 @@ impl<T> NamespacedMap<T> {
 }
 
 impl<T: Default> NamespacedMap<T> {
+    /// Inserts an item into the map if it does not exist and returns a mutable reference to it.
     pub fn get_or_insert_default(&mut self, namespace: Option<SolIdent>, name: SolIdent) -> &mut T {
         self.0.entry(namespace).or_default().entry(name).or_default()
     }
