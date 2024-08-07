@@ -97,6 +97,7 @@ impl<T: Default> NamespacedMap<T> {
 }
 
 /// The expansion context.
+#[derive(Debug)]
 pub struct ExpCtxt<'ast> {
     /// Keeps items along with optional parent contract holding their definition.
     all_items: NamespacedMap<&'ast Item>,
@@ -350,7 +351,7 @@ impl<'ast> Visit<'ast> for ExpCtxt<'ast> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum OverloadedItem<'a> {
     Function(&'a ItemFunction),
     Event(&'a ItemEvent),
@@ -592,7 +593,7 @@ impl<'ast> ExpCtxt<'ast> {
             derives.extend(["Debug", "PartialEq", "Eq", "Hash"]);
         }
         let derives = derives.iter().map(|s| Ident::new(s, Span::call_site()));
-        attrs.push(parse_quote! { #[derive(#(#derives),*)] });
+        attrs.push(parse_quote! { #[derive(#(#derives), *)] });
     }
 
     /// Returns an error if any of the types in the parameters are unresolved.
@@ -626,8 +627,11 @@ impl<'ast> ExpCtxt<'ast> {
 ///
 /// These should be added to import lists at the top of anonymous `const _: () = { ... }` blocks,
 /// and in case of top-level structs they should be inlined into all `path`s.
+#[derive(Debug)]
 pub struct ExternCrates {
+    /// The path to the `alloy_sol_types` crate.
     pub sol_types: syn::Path,
+    /// The path to the `alloy_contract` crate.
     pub contract: syn::Path,
 }
 
@@ -641,6 +645,7 @@ impl Default for ExternCrates {
 }
 
 impl ExternCrates {
+    /// Fills the extern crate dependencies with the given attributes.
     pub fn fill(&mut self, attrs: &SolAttrs) {
         if let Some(sol_types) = &attrs.alloy_sol_types {
             self.sol_types = sol_types.clone();

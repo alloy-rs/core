@@ -122,6 +122,20 @@ pub trait SolEvent: Sized {
         out
     }
 
+    /// Encode this event to a [`LogData`].
+    fn encode_log_data(&self) -> LogData {
+        LogData::new_unchecked(
+            self.encode_topics().into_iter().map(Into::into).collect(),
+            self.encode_data().into(),
+        )
+    }
+
+    /// Transform ca [`Log`] containing this event into a [`Log`] containing
+    /// [`LogData`].
+    fn encode_log(log: &Log<Self>) -> Log<LogData> {
+        Log { address: log.address, data: log.data.encode_log_data() }
+    }
+
     /// Decode the topics of this event from the given data.
     #[inline]
     fn decode_topics<I, D>(topics: I) -> Result<<Self::TopicList as SolType>::RustType>

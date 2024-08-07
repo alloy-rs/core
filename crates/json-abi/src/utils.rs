@@ -1,11 +1,8 @@
 use crate::{EventParam, Param, StateMutability};
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::string::{String, ToString};
 use alloy_primitives::Selector;
 use core::{fmt::Write, num::NonZeroUsize};
-use parser::{ParameterSpecifier, TypeSpecifier, TypeStem};
+use parser::{utils::ParsedSignature, ParameterSpecifier, TypeSpecifier, TypeStem};
 
 /// Capacity to allocate per [Param].
 const PARAM: usize = 32;
@@ -160,9 +157,6 @@ pub(crate) fn selector(preimage: &str) -> Selector {
     }
 }
 
-pub(crate) type ParseSigTuple<T> = (String, Vec<T>, Vec<T>, bool);
-pub(crate) type ParseSigResult<T> = parser::Result<ParseSigTuple<T>>;
-
 /// Strips `prefix` from `s` before parsing with `parser`. `prefix` must be followed by whitespace.
 pub(crate) fn parse_maybe_prefixed<F: FnOnce(&str) -> R, R>(
     mut s: &str,
@@ -178,12 +172,12 @@ pub(crate) fn parse_maybe_prefixed<F: FnOnce(&str) -> R, R>(
 }
 
 #[inline]
-pub(crate) fn parse_sig<const O: bool>(s: &str) -> ParseSigResult<Param> {
+pub(crate) fn parse_sig<const O: bool>(s: &str) -> parser::Result<ParsedSignature<Param>> {
     parser::utils::parse_signature::<O, _, _>(s, |p| mk_param(p.name, p.ty))
 }
 
 #[inline]
-pub(crate) fn parse_event_sig(s: &str) -> ParseSigResult<EventParam> {
+pub(crate) fn parse_event_sig(s: &str) -> parser::Result<ParsedSignature<EventParam>> {
     parser::utils::parse_signature::<false, _, _>(s, mk_eparam)
 }
 
@@ -424,65 +418,72 @@ mod tests {
     }
 
     #[test]
-    fn test_item_parse() {
-        assert_eq!(parse_sig::<true>("foo()"), Ok(("foo".into(), vec![], vec![], false)));
-        assert_eq!(parse_sig::<true>("foo()()"), Ok(("foo".into(), vec![], vec![], false)));
-        assert_eq!(parse_sig::<true>("foo() \t ()"), Ok(("foo".into(), vec![], vec![], false)));
-        assert_eq!(parse_sig::<true>("foo()  ()"), Ok(("foo".into(), vec![], vec![], false)));
+    fn test_parse_sig() {
+        let empty_sig = |name: &str, anonymous| ParsedSignature::<Param> {
+            name: name.into(),
+            inputs: vec![],
+            outputs: vec![],
+            anonymous,
+            state_mutability: None,
+        };
+        let sig = |name: &str, inputs, outputs| ParsedSignature::<Param> {
+            name: name.into(),
+            inputs,
+            outputs,
+            anonymous: false,
+            state_mutability: None,
+        };
 
-        assert_eq!(parse_sig::<false>("foo()"), Ok(("foo".into(), vec![], vec![], false)));
+        assert_eq!(parse_sig::<true>("foo()"), Ok(empty_sig("foo", false)));
+        assert_eq!(parse_sig::<true>("foo()()"), Ok(empty_sig("foo", false)));
+        assert_eq!(parse_sig::<true>("foo()external()"), Ok(empty_sig("foo", false)));
+        assert_eq!(parse_sig::<true>("foo() \t ()"), Ok(empty_sig("foo", false)));
+        assert_eq!(parse_sig::<true>("foo()  ()"), Ok(empty_sig("foo", false)));
+
+        assert_eq!(parse_sig::<false>("foo()"), Ok(empty_sig("foo", false)));
         parse_sig::<false>("foo()()").unwrap_err();
+        parse_sig::<false>("foo()view external()").unwrap_err();
         parse_sig::<false>("foo(,)()").unwrap_err();
         parse_sig::<false>("foo(,)(,)").unwrap_err();
 
-        assert_eq!(parse_sig::<false>("foo()anonymous"), Ok(("foo".into(), vec![], vec![], true)));
-        assert_eq!(
-            parse_sig::<false>("foo()\t anonymous"),
-            Ok(("foo".into(), vec![], vec![], true))
-        );
+        assert_eq!(parse_sig::<false>("foo()anonymous"), Ok(empty_sig("foo", true)));
+        assert_eq!(parse_sig::<false>("foo()\t anonymous"), Ok(empty_sig("foo", true)));
 
-        assert_eq!(parse_sig::<true>("foo()anonymous"), Ok(("foo".into(), vec![], vec![], true)));
-        assert_eq!(
-            parse_sig::<true>("foo()\t anonymous"),
-            Ok(("foo".into(), vec![], vec![], true))
-        );
+        assert_eq!(parse_sig::<true>("foo()anonymous"), Ok(empty_sig("foo", true)));
+        assert_eq!(parse_sig::<true>("foo()\t anonymous"), Ok(empty_sig("foo", true)));
 
-        assert_eq!(
-            parse_sig::<true>("foo() \t ()anonymous"),
-            Ok(("foo".into(), vec![], vec![], true))
-        );
-        assert_eq!(parse_sig::<true>("foo()()anonymous"), Ok(("foo".into(), vec![], vec![], true)));
-        assert_eq!(
-            parse_sig::<true>("foo()()\t anonymous"),
-            Ok(("foo".into(), vec![], vec![], true))
-        );
+        assert_eq!(parse_sig::<true>("foo() \t ()anonymous"), Ok(empty_sig("foo", true)));
+        assert_eq!(parse_sig::<true>("foo()()anonymous"), Ok(empty_sig("foo", true)));
+        assert_eq!(parse_sig::<true>("foo()()\t anonymous"), Ok(empty_sig("foo", true)));
 
         assert_eq!(
             parse_sig::<false>("foo(uint256 param)"),
-            Ok(("foo".into(), vec![param("uint256")], vec![], false))
+            Ok(sig("foo", vec![param("uint256")], vec![]))
         );
         assert_eq!(
             parse_sig::<false>("bar(uint256 param)"),
-            Ok(("bar".into(), vec![param("uint256")], vec![], false))
+            Ok(sig("bar", vec![param("uint256")], vec![]))
         );
         assert_eq!(
             parse_sig::<false>("baz(uint256 param, bool param)"),
-            Ok(("baz".into(), vec![param("uint256"), param("bool")], vec![], false))
+            Ok(sig("baz", vec![param("uint256"), param("bool")], vec![]))
         );
 
         assert_eq!(
             parse_sig::<true>("f(a b)(c d)"),
-            Ok(("f".into(), vec![param2("a", "b")], vec![param2("c", "d")], false))
+            Ok(sig("f", vec![param2("a", "b")], vec![param2("c", "d")]))
         );
 
         assert_eq!(
             parse_sig::<true>("toString(uint number)(string s)"),
-            Ok((
-                "toString".into(),
-                vec![param2("uint256", "number")],
-                vec![param2("string", "s")],
-                false
-            ))
-        )
+            Ok(sig("toString", vec![param2("uint256", "number")], vec![param2("string", "s")]))
+        );
+
+        let mut sig_full = sig("toString", vec![param("uint256")], vec![param("string")]);
+        sig_full.state_mutability = Some(StateMutability::View);
+        assert_eq!(
+            parse_sig::<true>("toString(uint param) external view returns(string param)"),
+            Ok(sig_full)
+        );
     }
 }

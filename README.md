@@ -5,6 +5,8 @@ Core libraries at the root of the Rust Ethereum ecosystem.
 Alloy is a rewrite of [`ethers-rs`] from the ground up, with exciting new
 features, high performance, and excellent docs.
 
+We have a [book](https://alloy.rs) on all things Alloy and many [examples](https://github.com/alloy-rs/examples) to help you get started.
+
 [`ethers-rs`] will continue to be maintained until we have achieved
 feature-parity in Alloy. No action is currently needed from devs.
 
@@ -45,7 +47,7 @@ This repository contains the following crates:
 [`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/macro.sol.html
 [`syn`]: https://github.com/dtolnay/syn
 
-## Supported Rust Versions
+## Supported Rust Versions (MSRV)
 
 <!--
 When updating this, also update:
@@ -54,12 +56,14 @@ When updating this, also update:
 - .github/workflows/ci.yml
 -->
 
-Alloy will keep a rolling MSRV (minimum supported rust version) policy of **at
-least** 6 months. When increasing the MSRV, the new Rust version must have been
-released at least six months ago. The current MSRV is 1.65.0.
+The current MSRV (minimum supported rust version) is 1.65.
 
-Note that the MSRV is not increased automatically, and only as part of a minor
-release.
+Alloy will keep a rolling MSRV policy of **at least** two versions behind the
+latest stable release (so if the latest stable release is 1.58, we would
+support 1.56).
+
+Note that the MSRV is not increased automatically, and only as part of a patch
+(pre-1.0) or minor (post-1.0) release.
 
 ## Contributing
 

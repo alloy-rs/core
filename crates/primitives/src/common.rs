@@ -5,7 +5,7 @@ use alloy_rlp::{Buf, BufMut, Decodable, Encodable, EMPTY_STRING_CODE};
 
 /// The `to` field of a transaction. Either a target address, or empty for a
 /// contract creation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 #[doc(alias = "TransactionKind")]
 pub enum TxKind {
@@ -21,8 +21,8 @@ impl From<Option<Address>> for TxKind {
     #[inline]
     fn from(value: Option<Address>) -> Self {
         match value {
-            None => TxKind::Create,
-            Some(addr) => TxKind::Call(addr),
+            None => Self::Create,
+            Some(addr) => Self::Call(addr),
         }
     }
 }
@@ -31,7 +31,7 @@ impl From<Address> for TxKind {
     /// Creates a `TxKind::Call` with the given address.
     #[inline]
     fn from(value: Address) -> Self {
-        TxKind::Call(value)
+        Self::Call(value)
     }
 }
 
@@ -39,21 +39,21 @@ impl TxKind {
     /// Returns the address of the contract that will be called or will receive the transfer.
     pub const fn to(&self) -> Option<&Address> {
         match self {
-            TxKind::Create => None,
-            TxKind::Call(to) => Some(to),
+            Self::Create => None,
+            Self::Call(to) => Some(to),
         }
     }
 
     /// Returns true if the transaction is a contract creation.
     #[inline]
     pub const fn is_create(&self) -> bool {
-        matches!(self, TxKind::Create)
+        matches!(self, Self::Create)
     }
 
     /// Returns true if the transaction is a contract call.
     #[inline]
     pub const fn is_call(&self) -> bool {
-        matches!(self, TxKind::Call(_))
+        matches!(self, Self::Call(_))
     }
 
     /// Calculates a heuristic for the in-memory size of this object.
@@ -67,15 +67,15 @@ impl TxKind {
 impl Encodable for TxKind {
     fn encode(&self, out: &mut dyn BufMut) {
         match self {
-            TxKind::Call(to) => to.encode(out),
-            TxKind::Create => out.put_u8(EMPTY_STRING_CODE),
+            Self::Call(to) => to.encode(out),
+            Self::Create => out.put_u8(EMPTY_STRING_CODE),
         }
     }
 
     fn length(&self) -> usize {
         match self {
-            TxKind::Call(to) => to.length(),
-            TxKind::Create => 1, // EMPTY_STRING_CODE is a single byte
+            Self::Call(to) => to.length(),
+            Self::Create => 1, // EMPTY_STRING_CODE is a single byte
         }
     }
 }
@@ -86,10 +86,10 @@ impl Decodable for TxKind {
         if let Some(&first) = buf.first() {
             if first == EMPTY_STRING_CODE {
                 buf.advance(1);
-                Ok(TxKind::Create)
+                Ok(Self::Create)
             } else {
                 let addr = <Address as Decodable>::decode(buf)?;
-                Ok(TxKind::Call(addr))
+                Ok(Self::Call(addr))
             }
         } else {
             Err(alloy_rlp::Error::InputTooShort)

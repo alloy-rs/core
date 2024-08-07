@@ -11,7 +11,6 @@
 //! 4. LogUnflattenDeserializer for a binary deserializer.
 
 use crate::{Address, Log};
-
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Serialize)]
@@ -49,7 +48,7 @@ impl<T: Serialize> Serialize for Log<T> {
     where
         S: Serializer,
     {
-        let Log { address, data } = self;
+        let Self { address, data } = self;
         if serializer.is_human_readable() {
             let replace = LogFlattenSerializer { address, data };
             replace.serialize(serializer)

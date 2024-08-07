@@ -67,15 +67,12 @@ fn test_constructor() {
 
 #[test]
 #[cfg_attr(miri, ignore = "no fs")]
-fn no_from_reader() {
+fn from_reader() {
     let path = "abi/Abiencoderv2Test.json";
     let file_path: String = format!("tests/{path}");
     let file: File = File::open(file_path).unwrap();
     let buffer: BufReader<File> = BufReader::new(file);
 
-    let res = serde_json::from_reader::<_, JsonAbi>(buffer);
-    assert!(res.is_err());
-    assert!(
-        format!("{}", res.unwrap_err()).contains("Using serde_json::from_reader is not supported.")
-    );
+    let abi = serde_json::from_reader::<_, JsonAbi>(buffer).unwrap();
+    assert_eq!(abi.len(), 1);
 }

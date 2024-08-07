@@ -142,7 +142,7 @@ impl<'de> Decoder<'de> {
     /// decoder's offset.
     /// The child decoder shares the buffer and validation flag.
     #[inline]
-    pub fn child(&self, offset: usize) -> Result<Decoder<'de>, Error> {
+    pub fn child(&self, offset: usize) -> Result<Self, Error> {
         if self.depth >= RECURSION_LIMIT {
             return Err(Error::RecursionLimitExceeded(RECURSION_LIMIT));
         }
@@ -216,7 +216,7 @@ impl<'de> Decoder<'de> {
     /// Return a child decoder by consuming a word, interpreting it as a
     /// pointer, and following it.
     #[inline]
-    pub fn take_indirection(&mut self) -> Result<Decoder<'de>, Error> {
+    pub fn take_indirection(&mut self) -> Result<Self, Error> {
         self.take_offset().and_then(|offset| self.child(offset))
     }
 
@@ -253,7 +253,7 @@ impl<'de> Decoder<'de> {
     /// Takes the offset from the child decoder and sets it as the current
     /// offset.
     #[inline]
-    pub fn take_offset_from(&mut self, child: &Decoder<'de>) {
+    pub fn take_offset_from(&mut self, child: &Self) {
         self.set_offset(child.offset + (self.buf.len() - child.buf.len()));
     }
 
@@ -300,6 +300,7 @@ pub fn decode<'de, T: Token<'de>>(data: &'de [u8], validate: bool) -> Result<T> 
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
 pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
+    // TODO(MSRV-1.79): Use `const {}` to select the function at compile time.
     if T::IS_TUPLE {
         decode_sequence(data, validate)
     } else {

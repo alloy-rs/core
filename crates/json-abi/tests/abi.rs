@@ -48,6 +48,9 @@ fn abi_test(s: &str, path: &str, run_solc: bool) {
     assert_eq!(len, abi2.len());
     assert_eq!(abi1, abi2);
 
+    let abi_items2: Vec<AbiItem<'_>> = serde_json::from_reader(std::io::Cursor::new(s)).unwrap();
+    assert_eq!(abi_items2, abi_items);
+
     #[cfg(all(feature = "std", feature = "serde_json"))]
     load_test(path, &abi1);
     to_sol_test(path, &abi1, run_solc);

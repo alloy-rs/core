@@ -17,6 +17,9 @@ exclude.workspace = true
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[lints]
+workspace = true
+
 [dependencies]
 bytes.workspace = true
 hex-literal.workspace = true
@@ -106,6 +109,8 @@ allocative = ["dep:allocative"]
 # `const-hex` compatibility feature for `hex`.
 # Should not be needed most of the time.
 hex-compat = ["hex/hex"]
+
+unstable-doc = []
 
 [[bench]]
 name = "primitives"

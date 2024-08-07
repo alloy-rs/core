@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7](https://github.com/alloy-rs/core/releases/tag/v0.7.7) - 2024-07-08
+
+### Bug Fixes
+
+- Small fixes for `DynSolValue` strategies ([#683](https://github.com/alloy-rs/core/issues/683))
+- Fixed bytes dyn abi packed encoding ([#671](https://github.com/alloy-rs/core/issues/671))
+- [primitives] Include in aliases export to prevent having to import from `aliases::{..}` ([#655](https://github.com/alloy-rs/core/issues/655))
+
+### Documentation
+
+- [primitives] Fix rustdoc for Signature ([#680](https://github.com/alloy-rs/core/issues/680))
+- [sol-types] Update README.md using crate docs ([#679](https://github.com/alloy-rs/core/issues/679))
+- Add per-crate changelogs ([#669](https://github.com/alloy-rs/core/issues/669))
+- Update MSRV policy ([#665](https://github.com/alloy-rs/core/issues/665))
+
+### Features
+
+- [json-abi] Allow `serde_json::from_{value,reader}` ([#684](https://github.com/alloy-rs/core/issues/684))
+- Add support for parsing visibility and state mutability ([#682](https://github.com/alloy-rs/core/issues/682))
+- DynSolCall ([#632](https://github.com/alloy-rs/core/issues/632))
+- IntoLogData ([#666](https://github.com/alloy-rs/core/issues/666))
+- Add `abi_packed_encoded_size` ([#672](https://github.com/alloy-rs/core/issues/672))
+- [primitives] Manually implement arbitrary for signature ([#663](https://github.com/alloy-rs/core/issues/663))
+
+### Miscellaneous Tasks
+
+- Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
+- Fix unnameable-types ([#675](https://github.com/alloy-rs/core/issues/675))
+- [sol-macro] Allow clippy all when emitting contract bytecode ([#674](https://github.com/alloy-rs/core/issues/674))
+- Add book/examples to readme
+- [sol-types] Exit early if Abigen input is invalid
+- Swap sol macro doctests symlink ([#657](https://github.com/alloy-rs/core/issues/657))
+
+### Styling
+
+- Format some imports
+- Format GHA workflow
+- Sort derives ([#662](https://github.com/alloy-rs/core/issues/662))
+
 ## [0.7.6](https://github.com/alloy-rs/core/releases/tag/v0.7.6) - 2024-06-10
 
 ### Features
@@ -16,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.7.6
 - [docs] Add doc aliases for `Tx` prefixed names ([#649](https://github.com/alloy-rs/core/issues/649))
 - Update changelog.sh
 - Fix CHANGELOG parsers for uppercase

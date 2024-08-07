@@ -56,6 +56,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
                 fn stv_abi_encode_packed_to(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
                     <#underlying_sol as alloy_sol_types::SolType>::abi_encode_packed_to(self, out)
                 }
+
+                #[inline]
+                fn stv_abi_packed_encoded_size(&self) -> usize {
+                    <#underlying_sol as alloy_sol_types::SolType>::abi_encoded_size(self)
+                }
             }
 
             #[automatically_derived]
@@ -97,6 +102,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
 
                 const SOL_NAME: &'static str = Self::NAME;
                 const ENCODED_SIZE: Option<usize> = <#underlying_sol as alloy_sol_types::SolType>::ENCODED_SIZE;
+                const PACKED_ENCODED_SIZE: Option<usize> = <#underlying_sol as alloy_sol_types::SolType>::PACKED_ENCODED_SIZE;
 
                 #[inline]
                 fn valid_token(token: &Self::Token<'_>) -> bool {

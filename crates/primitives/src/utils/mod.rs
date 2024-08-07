@@ -3,7 +3,10 @@
 use crate::B256;
 use alloc::{boxed::Box, collections::TryReserveError, vec::Vec};
 use cfg_if::cfg_if;
-use core::{fmt, mem::MaybeUninit};
+use core::{
+    fmt,
+    mem::{ManuallyDrop, MaybeUninit},
+};
 
 mod units;
 pub use units::{
@@ -29,7 +32,7 @@ pub type Units = Unit;
 /// The prefix used for hashing messages according to EIP-191.
 pub const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
 
-/// Tries to create a `Vec` of `n` elements, each initialized to `elem`.
+/// Tries to create a [`Vec`] containing the arguments.
 #[macro_export]
 macro_rules! try_vec {
     () => {
@@ -75,10 +78,10 @@ pub fn box_try_new_uninit<T>() -> Result<Box<MaybeUninit<T>>, TryReserveError> {
     // Make sure we got exactly 1 element.
     vec.shrink_to(1);
 
-    let ptr = vec.as_mut_ptr();
-    core::mem::forget(vec);
+    let mut vec = ManuallyDrop::new(vec);
+
     // SAFETY: `vec` is exactly one element long and has not been deallocated.
-    Ok(unsafe { Box::from_raw(ptr) })
+    Ok(unsafe { Box::from_raw(vec.as_mut_ptr()) })
 }
 
 /// Tries to collect the elements of an iterator into a `Vec`.

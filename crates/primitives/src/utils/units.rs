@@ -131,7 +131,7 @@ impl From<ParseSignedError> for UnitsError {
 
 /// This enum holds the numeric types that a possible to be returned by `parse_units` and
 /// that are taken by `format_units`.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ParseUnits {
     /// Unsigned 256-bit integer.
     U256(U256),

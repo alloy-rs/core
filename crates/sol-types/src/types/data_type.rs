@@ -45,6 +45,7 @@ impl SolType for Bool {
 
     const SOL_NAME: &'static str = "bool";
     const ENCODED_SIZE: Option<usize> = Some(32);
+    const PACKED_ENCODED_SIZE: Option<usize> = Some(1);
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -90,6 +91,7 @@ where
 
     const SOL_NAME: &'static str = IntBitCount::<BITS>::INT_NAME;
     const ENCODED_SIZE: Option<usize> = Some(32);
+    const PACKED_ENCODED_SIZE: Option<usize> = Some(BITS / 8);
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -143,6 +145,7 @@ where
 
     const SOL_NAME: &'static str = IntBitCount::<BITS>::UINT_NAME;
     const ENCODED_SIZE: Option<usize> = Some(32);
+    const PACKED_ENCODED_SIZE: Option<usize> = Some(BITS / 8);
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -190,6 +193,7 @@ where
 
     const SOL_NAME: &'static str = <ByteCount<N>>::NAME;
     const ENCODED_SIZE: Option<usize> = Some(32);
+    const PACKED_ENCODED_SIZE: Option<usize> = Some(N);
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -228,6 +232,7 @@ impl SolType for Address {
 
     const SOL_NAME: &'static str = "address";
     const ENCODED_SIZE: Option<usize> = Some(32);
+    const PACKED_ENCODED_SIZE: Option<usize> = Some(20);
 
     #[inline]
     fn detokenize(token: Self::Token<'_>) -> Self::RustType {
@@ -266,6 +271,7 @@ impl SolType for Function {
 
     const SOL_NAME: &'static str = "function";
     const ENCODED_SIZE: Option<usize> = Some(32);
+    const PACKED_ENCODED_SIZE: Option<usize> = Some(24);
 
     #[inline]
     fn detokenize(token: Self::Token<'_>) -> Self::RustType {
@@ -306,6 +312,11 @@ impl<T: ?Sized + AsRef<[u8]>> SolTypeValue<Bytes> for T {
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         out.extend_from_slice(self.as_ref());
     }
+
+    #[inline]
+    fn stv_abi_packed_encoded_size(&self) -> usize {
+        self.as_ref().len()
+    }
 }
 
 impl SolType for Bytes {
@@ -314,6 +325,7 @@ impl SolType for Bytes {
 
     const SOL_NAME: &'static str = "bytes";
     const ENCODED_SIZE: Option<usize> = None;
+    const PACKED_ENCODED_SIZE: Option<usize> = None;
 
     #[inline]
     fn valid_token(_token: &Self::Token<'_>) -> bool {
@@ -354,6 +366,11 @@ impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         out.extend_from_slice(self.as_ref().as_ref());
     }
+
+    #[inline]
+    fn stv_abi_packed_encoded_size(&self) -> usize {
+        self.as_ref().len()
+    }
 }
 
 impl SolType for String {
@@ -362,6 +379,7 @@ impl SolType for String {
 
     const SOL_NAME: &'static str = "string";
     const ENCODED_SIZE: Option<usize> = None;
+    const PACKED_ENCODED_SIZE: Option<usize> = None;
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -412,8 +430,17 @@ where
     #[inline]
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         for item in self {
+            // Array elements are left-padded to 32 bytes.
+            if let Some(padding_needed) = 32usize.checked_sub(item.stv_abi_packed_encoded_size()) {
+                out.extend(core::iter::repeat(0).take(padding_needed));
+            }
             T::stv_abi_encode_packed_to(item, out);
         }
+    }
+
+    #[inline]
+    fn stv_abi_packed_encoded_size(&self) -> usize {
+        self.iter().map(|item| item.stv_abi_packed_encoded_size().max(32)).sum()
     }
 }
 
@@ -441,6 +468,11 @@ where
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         (**self).stv_abi_encode_packed_to(out)
     }
+
+    #[inline]
+    fn stv_abi_packed_encoded_size(&self) -> usize {
+        (**self).stv_abi_packed_encoded_size()
+    }
 }
 
 impl<T, U> SolTypeValue<Array<U>> for &mut [T]
@@ -466,6 +498,11 @@ where
     #[inline]
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         (**self).stv_abi_encode_packed_to(out)
+    }
+
+    #[inline]
+    fn stv_abi_packed_encoded_size(&self) -> usize {
+        (**self).stv_abi_packed_encoded_size()
     }
 }
 
@@ -493,6 +530,11 @@ where
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         (**self).stv_abi_encode_packed_to(out)
     }
+
+    #[inline]
+    fn stv_abi_packed_encoded_size(&self) -> usize {
+        (**self).stv_abi_packed_encoded_size()
+    }
 }
 
 impl<T: SolType> SolType for Array<T> {
@@ -502,6 +544,7 @@ impl<T: SolType> SolType for Array<T> {
     const SOL_NAME: &'static str =
         NameBuffer::new().write_str(T::SOL_NAME).write_str("[]").as_str();
     const ENCODED_SIZE: Option<usize> = None;
+    const PACKED_ENCODED_SIZE: Option<usize> = None;
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -556,8 +599,17 @@ where
     #[inline]
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         for item in self {
+            // Array elements are left-padded to 32 bytes.
+            if let Some(padding_needed) = 32usize.checked_sub(item.stv_abi_packed_encoded_size()) {
+                out.extend(core::iter::repeat(0).take(padding_needed));
+            }
             T::stv_abi_encode_packed_to(item, out);
         }
+    }
+
+    #[inline]
+    fn stv_abi_packed_encoded_size(&self) -> usize {
+        self.iter().map(|item| item.stv_abi_packed_encoded_size().max(32)).sum()
     }
 }
 
@@ -585,6 +637,11 @@ where
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         SolTypeValue::<FixedArray<U, N>>::stv_abi_encode_packed_to(&**self, out)
     }
+
+    #[inline]
+    fn stv_abi_packed_encoded_size(&self) -> usize {
+        SolTypeValue::<FixedArray<U, N>>::stv_abi_packed_encoded_size(&**self)
+    }
 }
 
 impl<T, U, const N: usize> SolTypeValue<FixedArray<U, N>> for &mut [T; N]
@@ -611,6 +668,11 @@ where
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         SolTypeValue::<FixedArray<U, N>>::stv_abi_encode_packed_to(&**self, out)
     }
+
+    #[inline]
+    fn stv_abi_packed_encoded_size(&self) -> usize {
+        SolTypeValue::<FixedArray<U, N>>::stv_abi_packed_encoded_size(&**self)
+    }
 }
 
 impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
@@ -623,12 +685,11 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
         .write_usize(N)
         .write_byte(b']')
         .as_str();
-    const ENCODED_SIZE: Option<usize> = {
-        match T::ENCODED_SIZE {
-            Some(size) => Some(size * N),
-            None => None,
-        }
+    const ENCODED_SIZE: Option<usize> = match T::ENCODED_SIZE {
+        Some(size) => Some(size * N),
+        None => None,
     };
+    const PACKED_ENCODED_SIZE: Option<usize> = None;
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
@@ -667,7 +728,6 @@ macro_rules! tuple_encodable_impls {
 
             fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
                 let ($($ty,)+) = self;
-                // TODO: Reserve
                 $(
                     $ty.stv_abi_encode_packed_to(out);
                 )+
@@ -681,6 +741,11 @@ macro_rules! tuple_encodable_impls {
                 // SAFETY: Flattening [[u8; 32]; $count] to [u8; $count * 32] is valid
                 let encoding: &[u8] = unsafe { core::slice::from_raw_parts(encoding.as_ptr().cast(), $count * 32) };
                 keccak256(encoding).into()
+            }
+
+            fn stv_abi_packed_encoded_size(&self) -> usize {
+                let ($($ty,)+) = self;
+                0 $(+ $ty.stv_abi_packed_encoded_size())+
             }
         }
     };
@@ -706,6 +771,16 @@ macro_rules! tuple_impls {
                 let mut acc = 0;
                 $(
                     match <$ty as SolType>::ENCODED_SIZE {
+                        Some(size) => acc += size,
+                        None => break 'l None,
+                    }
+                )+
+                Some(acc)
+            };
+            const PACKED_ENCODED_SIZE: Option<usize> = 'l: {
+                let mut acc = 0;
+                $(
+                    match <$ty as SolType>::PACKED_ENCODED_SIZE {
                         Some(size) => acc += size,
                         None => break 'l None,
                     }
@@ -749,6 +824,7 @@ impl SolType for () {
 
     const SOL_NAME: &'static str = "()";
     const ENCODED_SIZE: Option<usize> = Some(0);
+    const PACKED_ENCODED_SIZE: Option<usize> = Some(0);
 
     #[inline]
     fn valid_token((): &()) -> bool {
@@ -761,6 +837,7 @@ impl SolType for () {
 
 all_the_tuples!(tuple_impls);
 
+#[allow(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
 }

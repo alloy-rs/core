@@ -19,7 +19,7 @@ use core::{mem, ptr};
 /// This is not intended for public consumption. It should be used only by the
 /// token types. If you have found yourself here, you probably want to use the
 /// high-level [`crate::SolType`] interface (or its dynamic equivalent) instead.
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Encoder {
     buf: Vec<Word>,
     suffix_offset: Vec<usize>,
@@ -185,6 +185,7 @@ pub fn encode<'a, T: Token<'a>>(token: &T) -> Vec<u8> {
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
 pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
+    // TODO(MSRV-1.79): Use `const {}` to select the function at compile time.
     if T::IS_TUPLE {
         encode_sequence(token)
     } else {

@@ -6,7 +6,7 @@ use tiny_keccak::{Hasher, Keccak};
 /// Simple interface to the [`keccak256`] hash function.
 ///
 /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
-pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> [u8; 32] {
+pub(crate) fn keccak256<T: AsRef<[u8]>>(bytes: T) -> [u8; 32] {
     let mut output = [0u8; 32];
     let mut hasher = Keccak::v256();
     hasher.update(bytes.as_ref());
@@ -14,15 +14,15 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> [u8; 32] {
     output
 }
 
-pub fn selector<T: AsRef<[u8]>>(bytes: T) -> ExprArray<u8> {
+pub(crate) fn selector<T: AsRef<[u8]>>(bytes: T) -> ExprArray<u8> {
     ExprArray::new(keccak256(bytes)[..4].to_vec())
 }
 
-pub fn event_selector<T: AsRef<[u8]>>(bytes: T) -> ExprArray<u8> {
+pub(crate) fn event_selector<T: AsRef<[u8]>>(bytes: T) -> ExprArray<u8> {
     ExprArray::new(keccak256(bytes).to_vec())
 }
 
-pub fn combine_errors(v: impl IntoIterator<Item = syn::Error>) -> syn::Result<()> {
+pub(crate) fn combine_errors(v: impl IntoIterator<Item = syn::Error>) -> syn::Result<()> {
     match v.into_iter().reduce(|mut a, b| {
         a.combine(b);
         a
@@ -33,9 +33,9 @@ pub fn combine_errors(v: impl IntoIterator<Item = syn::Error>) -> syn::Result<()
 }
 
 #[derive(Clone, Debug)]
-pub struct ExprArray<T> {
-    pub array: Vec<T>,
-    pub span: Span,
+pub(crate) struct ExprArray<T> {
+    pub(crate) array: Vec<T>,
+    pub(crate) span: Span,
 }
 
 impl<T: PartialOrd> PartialOrd for ExprArray<T> {

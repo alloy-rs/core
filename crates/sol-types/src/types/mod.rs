@@ -14,8 +14,8 @@ pub use function::{SolCall, SolConstructor};
 
 mod interface;
 pub use interface::{
-    ContractError, GenericContractError, GenericRevertReason, Selectors, SolEventInterface,
-    SolInterface,
+    ContractError, GenericContractError, GenericRevertReason, RevertReason, Selectors,
+    SolEventInterface, SolInterface,
 };
 
 mod r#struct;

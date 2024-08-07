@@ -93,7 +93,7 @@ impl<'a> DynToken<'a> {
 
     /// Fallible cast into a fixed sequence.
     #[inline]
-    pub fn as_fixed_seq(&self) -> Option<(&[DynToken<'a>], usize)> {
+    pub fn as_fixed_seq(&self) -> Option<(&[Self], usize)> {
         match self {
             Self::FixedSeq(tokens, size) => Some((tokens, *size)),
             _ => None,
@@ -102,7 +102,7 @@ impl<'a> DynToken<'a> {
 
     /// Fallible cast into a dynamic sequence.
     #[inline]
-    pub fn as_dynamic_seq(&self) -> Option<&[DynToken<'a>]> {
+    pub fn as_dynamic_seq(&self) -> Option<&[Self]> {
         match self {
             Self::DynSeq { contents, .. } => Some(contents),
             _ => None,
@@ -111,7 +111,7 @@ impl<'a> DynToken<'a> {
 
     /// Fallible cast into a sequence, dynamic or fixed-size
     #[inline]
-    pub fn as_token_seq(&self) -> Option<&[DynToken<'a>]> {
+    pub fn as_token_seq(&self) -> Option<&[Self]> {
         match self {
             Self::FixedSeq(contents, _) | Self::DynSeq { contents, .. } => Some(contents),
             _ => None,

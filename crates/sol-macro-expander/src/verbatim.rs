@@ -18,7 +18,7 @@ pub(crate) trait Verbatim {
 
 /// Provides a [`quote::ToTokens`] implementations for references of values that implement
 /// [`Verbatim`].
-pub(crate) struct ToTokensCompat<'a, T: ?Sized + Verbatim>(pub &'a T, &'a ExternCrates);
+pub(crate) struct ToTokensCompat<'a, T: ?Sized + Verbatim>(pub(crate) &'a T, &'a ExternCrates);
 
 impl<T: Verbatim> quote::ToTokens for ToTokensCompat<'_, T> {
     #[inline]
