@@ -973,3 +973,28 @@ fn contract_namespaces() {
     };
     assert_eq!(inner::Contract::fnCall::SIGNATURE, "fn((uint64),(uint128))");
 }
+
+#[test]
+fn regression_overloads() {
+    sol! {
+        contract Vm {
+            struct Wallet {
+                uint stuff;
+            }
+
+            /// Gets the nonce of an account.
+            function getNonce(address account) external view returns (uint64 nonce);
+
+            /// Get the nonce of a `Wallet`.
+            function getNonce(Wallet calldata wallet) external returns (uint64 nonce);
+        }
+    }
+
+    let _ = Vm::getNonce_0Call { account: Address::ZERO };
+    let _ = Vm::getNonce_0Return { nonce: 0 };
+    assert_eq!(Vm::getNonce_0Call::SIGNATURE, "getNonce(address)");
+
+    let _ = Vm::getNonce_1Call { wallet: Vm::Wallet { stuff: U256::ZERO } };
+    let _ = Vm::getNonce_1Return { nonce: 0 };
+    assert_eq!(Vm::getNonce_1Call::SIGNATURE, "getNonce((uint256))");
+}
