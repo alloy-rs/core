@@ -7,7 +7,7 @@ sol!(
             "inputs": [
                 { "name": "bar", "type": "uint256" },
                 { 
-                    "internalType": "struct MyJsonContract.MyStruct",
+                    "internalType": "struct MyStruct",
                     "name": "baz",
                     "type": "tuple",
                     "components": [
@@ -38,5 +38,5 @@ sol! {
 
 #[test]
 fn abigen() {
-    assert_eq!(MyJsonContract1::fooCall::SIGNATURE, MyJsonContract2::fooCall::SIGNATURE,);
+    assert_eq!(MyJsonContract1::fooCall::SIGNATURE, MyJsonContract2::fooCall::SIGNATURE);
 }

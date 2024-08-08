@@ -1,6 +1,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "serde")]
 const COMPAT_ERROR: &str = "state mutability cannot be both `payable` and `constant`";
 
 /// A JSON ABI function's state mutability.

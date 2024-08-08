@@ -69,17 +69,18 @@ fn seaport() {
     );
 }
 
+// https://etherscan.io/address/0x1111111254eeb25477b68fb85ed929f73a960582#code
+sol!(
+    #[sol(docs = false)]
+    #[derive(Debug)]
+    AggregationRouterV5,
+    "../json-abi/tests/abi/AggregationRouterV5.json"
+);
+
 // Handle multiple identical error objects in the JSON ABI
 // https://github.com/alloy-rs/core/issues/344
 #[test]
 fn aggregation_router_v5() {
-    // https://etherscan.io/address/0x1111111254eeb25477b68fb85ed929f73a960582#code
-    sol!(
-        #[sol(docs = false)]
-        AggregationRouterV5,
-        "../json-abi/tests/abi/AggregationRouterV5.json"
-    );
-
     assert_eq!(
         <AggregationRouterV5::ETHTransferFailed as SolError>::SIGNATURE,
         "ETHTransferFailed()"
@@ -142,11 +143,12 @@ fn uniswap_v2_factory() {
     };
 }
 
+sol!(GnosisSafe, "../json-abi/tests/abi/GnosisSafe.json");
+
 // Fully qualify `SolInterface::NAME` which conflicted with the `NAME` call
 // https://github.com/alloy-rs/core/issues/361
 #[test]
 fn gnosis_safe() {
-    sol!(GnosisSafe, "../json-abi/tests/abi/GnosisSafe.json");
     let GnosisSafe::NAMECall {} = GnosisSafe::NAMECall {};
     let GnosisSafe::NAMEReturn { _0: _ } = GnosisSafe::NAMEReturn { _0: String::new() };
 }
@@ -202,13 +204,17 @@ fn zrx_token() {
     assert_eq!(ZRXToken::approveCall::SIGNATURE, "approve(address,uint256)");
 }
 
+// https://etherscan.io/address/0xBA12222222228d8Ba445958a75a0704d566BF2C8#code
+sol!(
+    #![sol(all_derives)]
+    BalancerV2Vault,
+    "../json-abi/tests/abi/BalancerV2Vault.json"
+);
+
 // Handle contract **array** types in JSON ABI
 // https://github.com/alloy-rs/core/issues/585
 #[test]
 fn balancer_v2_vault() {
-    // https://etherscan.io/address/0xBA12222222228d8Ba445958a75a0704d566BF2C8#code
-    sol!(BalancerV2Vault, "../json-abi/tests/abi/BalancerV2Vault.json");
-
     let _ = BalancerV2Vault::PoolBalanceChanged {
         poolId: B256::ZERO,
         liquidityProvider: Address::ZERO,

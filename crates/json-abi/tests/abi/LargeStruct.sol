@@ -1,4 +1,4 @@
-interface LargeStruct {
+library Many {
     struct Info {
         uint128 x;
         int24 y;
@@ -10,6 +10,8 @@ interface LargeStruct {
         uint256 e;
         uint256 f;
     }
+}
 
-    function getById(bytes32 id) external view returns (Info memory);
+interface LargeStruct {
+    function getById(bytes32 id) external view returns (Many.Info memory);
 }

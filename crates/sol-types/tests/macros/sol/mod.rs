@@ -925,3 +925,77 @@ fn contract_derive_default() {
     let MyContract::e2 {} = MyContract::e2::default();
     let MyContract::c {} = MyContract::c::default();
 }
+
+#[test]
+fn contract_namespaces() {
+    mod inner {
+        alloy_sol_types::sol! {
+            library LibA {
+                struct Struct {
+                    uint64 field64;
+                }
+            }
+
+            library LibB {
+                struct Struct {
+                    uint128 field128;
+                }
+            }
+
+            contract Contract {
+                LibA.Struct internal aValue;
+                LibB.Struct internal bValue;
+
+                constructor(
+                    LibA.Struct memory aValue_,
+                    LibB.Struct memory bValue_
+                )
+                {
+                    aValue = aValue_;
+                    bValue = bValue_;
+                }
+
+                function fn(
+                    LibA.Struct memory aValue_,
+                    LibB.Struct memory bValue_
+                ) public
+                {
+                    aValue = aValue_;
+                    bValue = bValue_;
+                }
+            }
+        }
+    }
+
+    let _ = inner::Contract::fnCall {
+        aValue_: inner::LibA::Struct { field64: 0 },
+        bValue_: inner::LibB::Struct { field128: 0 },
+    };
+    assert_eq!(inner::Contract::fnCall::SIGNATURE, "fn((uint64),(uint128))");
+}
+
+// https://github.com/alloy-rs/core/pull/694#issuecomment-2274263880
+#[test]
+fn regression_overloads() {
+    sol! {
+        contract Vm {
+            struct Wallet {
+                uint stuff;
+            }
+
+            /// Gets the nonce of an account.
+            function getNonce(address account) external view returns (uint64 nonce);
+
+            /// Get the nonce of a `Wallet`.
+            function getNonce(Wallet calldata wallet) external returns (uint64 nonce);
+        }
+    }
+
+    let _ = Vm::getNonce_0Call { account: Address::ZERO };
+    let _ = Vm::getNonce_0Return { nonce: 0 };
+    assert_eq!(Vm::getNonce_0Call::SIGNATURE, "getNonce(address)");
+
+    let _ = Vm::getNonce_1Call { wallet: Vm::Wallet { stuff: U256::ZERO } };
+    let _ = Vm::getNonce_1Return { nonce: 0 };
+    assert_eq!(Vm::getNonce_1Call::SIGNATURE, "getNonce((uint256))");
+}
