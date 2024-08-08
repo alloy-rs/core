@@ -974,6 +974,7 @@ fn contract_namespaces() {
     assert_eq!(inner::Contract::fnCall::SIGNATURE, "fn((uint64),(uint128))");
 }
 
+// https://github.com/alloy-rs/core/pull/694#issuecomment-2274263880
 #[test]
 fn regression_overloads() {
     sol! {
