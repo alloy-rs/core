@@ -28,7 +28,7 @@ use syn::{parse_quote, Attribute, Result};
 ///    }
 /// }
 /// ```
-pub(super) fn expand(cx: &ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenStream> {
+pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<TokenStream> {
     let ItemContract { name, body, .. } = contract;
 
     let (sol_attrs, attrs) = contract.split_attrs()?;

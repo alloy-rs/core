@@ -538,7 +538,7 @@ mod tests {
 
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
 
-        assert_eq!(typed_data.eip712_signing_hash(), Err(Error::CircularDependency("Mail".into())),);
+        assert_eq!(typed_data.eip712_signing_hash(), Err(Error::CircularDependency("Mail".into())));
     }
 
     #[test]
@@ -677,7 +677,7 @@ mod tests {
         let s = MyStruct { name: "hello".to_string(), otherThing: "world".to_string() };
 
         let typed_data = TypedData::from_struct(&s, None);
-        assert_eq!(typed_data.encode_type().unwrap(), "MyStruct(string name,string otherThing)",);
+        assert_eq!(typed_data.encode_type().unwrap(), "MyStruct(string name,string otherThing)");
 
         assert!(typed_data.resolver.contains_type_name("EIP712Domain"));
     }
