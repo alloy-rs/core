@@ -4,7 +4,7 @@ use crate::B256;
 ///
 /// We do not implement any specific hashing algorithm here. Instead types
 /// implement the [`Sealable`] trait to provide define their own hash.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
 pub struct Sealed<T> {
     /// The inner item
     inner: T,
