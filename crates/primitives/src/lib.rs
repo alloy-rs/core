@@ -120,9 +120,6 @@ pub mod private {
     #[cfg(feature = "allocative")]
     pub use allocative;
 
-    #[cfg(feature = "ssz")]
-    pub use ssz;
-
     #[cfg(feature = "serde")]
     pub use serde;
 

@@ -39,9 +39,6 @@ alloy-rlp = { workspace = true, optional = true }
 # serde
 serde = { workspace = true, optional = true, features = ["derive"] }
 
-# ssz
-ethereum_ssz = { workspace = true, optional = true }
-
 # getrandom
 getrandom = { workspace = true, optional = true }
 
@@ -92,7 +89,6 @@ getrandom = ["dep:getrandom"]
 rand = ["dep:rand", "getrandom", "ruint/rand"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
-ssz = ["std", "dep:ethereum_ssz", "ruint/ssz"]
 arbitrary = [
     "std",
     "dep:arbitrary",
@@ -101,7 +97,6 @@ arbitrary = [
     "dep:proptest-derive",
     "ruint/arbitrary",
     "ruint/proptest",
-    "ethereum_ssz?/arbitrary",
 ]
 k256 = ["dep:k256"]
 allocative = ["dep:allocative"]

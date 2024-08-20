@@ -54,9 +54,6 @@ syn-solidity = { version = "0.7.7", path = "crates/syn-solidity", default-featur
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
-# ssz
-ethereum_ssz = { version = "0.5.3", default-features = false }
-
 # macros
 proc-macro-error = "1.0"
 proc-macro2 = "1.0"
