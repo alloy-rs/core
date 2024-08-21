@@ -999,3 +999,17 @@ fn regression_overloads() {
     let _ = Vm::getNonce_1Return { nonce: 0 };
     assert_eq!(Vm::getNonce_1Call::SIGNATURE, "getNonce((uint256))");
 }
+
+#[test]
+fn normal_paths() {
+    sol! {
+        interface I {
+            struct S {
+                uint x;
+            }
+        }
+        function func(I.S memory stuff);
+    }
+
+    let _ = funcCall { stuff: I::S { x: U256::ZERO } };
+}
