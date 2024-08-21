@@ -25,7 +25,7 @@ jobs:
             "stable",
             "beta",
             "nightly",
-            "1.65", # MSRV
+            "1.79", # MSRV
           ]
         flags: [
             # No features
@@ -36,10 +36,10 @@ jobs:
         include:
           # MSRV features
           - os: "ubuntu-latest"
-            rust: "1.65" # MSRV
+            rust: "1.79" # MSRV
             flags: "--features json"
           - os: "windows-latest"
-            rust: "1.65" # MSRV
+            rust: "1.79" # MSRV
             flags: "--features json"
           # All features
           - os: "ubuntu-latest"
@@ -61,10 +61,10 @@ jobs:
           cache-on-failure: true
       # Only run tests on latest stable and above
       - name: build
-        if: ${{ matrix.rust == '1.65' }} # MSRV
+        if: ${{ matrix.rust == '1.79' }} # MSRV
         run: cargo build --workspace ${{ matrix.flags }}
       - name: test
-        if: ${{ matrix.rust != '1.65' }} # MSRV
+        if: ${{ matrix.rust != '1.79' }} # MSRV
         run: cargo test --workspace ${{ matrix.flags }}
 
   miri:

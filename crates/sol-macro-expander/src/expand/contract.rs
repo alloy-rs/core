@@ -275,7 +275,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
              \n\
              See the [module-level documentation](self) for all the available methods."
         );
-        let (deploy_fn, deploy_method) = option_unzip(bytecode.is_some().then(|| {
+        let (deploy_fn, deploy_method) = bytecode.is_some().then(|| {
             let deploy_doc_str =
                 "Deploys this contract using the given `provider` and constructor arguments, if any.\n\
                  \n\
@@ -292,7 +292,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
                  the bytecode concatenated with the constructor's ABI-encoded arguments.";
             let deploy_builder_doc = mk_doc(deploy_builder_doc_str);
 
-            let (params, args) = option_unzip(constructor.and_then(|c| {
+            let (params, args) = constructor.and_then(|c| {
                 if c.parameters.is_empty() {
                     return None;
                 }
@@ -303,7 +303,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
                     super::ty::expand_rust_type(ty, &cx.crates)
                 });
                 Some((quote!(#(#names1: #tys),*), quote!(#(#names2,)*)))
-            }));
+            }).unzip();
             let deploy_builder_data = if matches!(constructor, Some(c) if !c.parameters.is_empty()) {
                 quote! {
                     [
@@ -355,7 +355,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
                     }
                 },
             )
-        }));
+        }).unzip();
 
         let filter_methods = events.iter().map(|&e| {
             let event_name = cx.overloaded_name(e.into());
@@ -1013,12 +1013,4 @@ fn snakify(s: &str) -> String {
         output.insert(i, '_');
     }
     output.into_iter().collect()
-}
-
-// TODO(MSRV-1.66): Option::unzip
-fn option_unzip<T, U>(opt: Option<(T, U)>) -> (Option<T>, Option<U>) {
-    match opt {
-        Some((a, b)) => (Some(a), Some(b)),
-        None => (None, None),
-    }
 }

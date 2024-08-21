@@ -1156,24 +1156,10 @@ impl NameBuffer {
     }
 
     const fn write_usize(mut self, number: usize) -> Self {
-        if number == 0 {
-            return self.write_byte(b'0');
-        }
-
-        let mut n = number;
-        let mut digits = 0;
-        while n > 0 {
-            n /= 10;
-            digits += 1;
-        }
-
-        // TODO(MSRV-1.67): Uncomment and remove everything above
-        /*
         let Some(digits) = number.checked_ilog10() else {
             return self.write_byte(b'0');
         };
         let digits = digits as usize + 1;
-        */
 
         let mut n = number;
         let mut i = self.len + digits;
