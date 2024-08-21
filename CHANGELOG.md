@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0](https://github.com/alloy-rs/core/releases/tag/v0.8.0) - 2024-08-21
+
+### Bug Fixes
+
+- Parsing stack overflow ([#703](https://github.com/alloy-rs/core/issues/703))
+
+### Dependencies
+
+- [deps] Bump proptest-derive ([#708](https://github.com/alloy-rs/core/issues/708))
+
+### Documentation
+
+- Typo
+
+### Features
+
+- Derive ser deser on `Sealed` ([#710](https://github.com/alloy-rs/core/issues/710))
+- [sol-macro] Support namespaces ([#694](https://github.com/alloy-rs/core/issues/694))
+- Derive `Hash` for `Sealed` ([#707](https://github.com/alloy-rs/core/issues/707))
+- [sol-types] Implement traits for longer tuples ([#699](https://github.com/alloy-rs/core/issues/699))
+
+### Miscellaneous Tasks
+
+- [primitives] Re-use ruint mask function ([#698](https://github.com/alloy-rs/core/issues/698))
+- Derive hash for parity ([#686](https://github.com/alloy-rs/core/issues/686))
+- Add some TODO comments
+
+### Other
+
+- Implement specific bit types for integers ([#677](https://github.com/alloy-rs/core/issues/677))
+- Add testcase for overflowing_from_sign_and_abs ([#696](https://github.com/alloy-rs/core/issues/696))
+
+### Styling
+
+- Remove `ethereum_ssz` dependency ([#701](https://github.com/alloy-rs/core/issues/701))
+
 ## [0.7.7](https://github.com/alloy-rs/core/releases/tag/v0.7.7) - 2024-07-08
 
 ### Bug Fixes
@@ -31,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.7.7
 - Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
 - Fix unnameable-types ([#675](https://github.com/alloy-rs/core/issues/675))
 - [sol-macro] Allow clippy all when emitting contract bytecode ([#674](https://github.com/alloy-rs/core/issues/674))

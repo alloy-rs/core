@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.7.7
 - Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
 - Fix unnameable-types ([#675](https://github.com/alloy-rs/core/issues/675))
 
