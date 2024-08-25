@@ -290,6 +290,15 @@ impl Address {
         buf
     }
 
+    // https://eips.ethereum.org/EIPS/eip-55
+    // > In English, convert the address to hex, but if the `i`th digit is a letter (ie. it’s one of
+    // > `abcdef`) print it in uppercase if the `4*i`th bit of the hash of the lowercase hexadecimal
+    // > address is 1 otherwise print it in lowercase.
+    //
+    // https://eips.ethereum.org/EIPS/eip-1191
+    // > [...] If the chain id passed to the function belongs to a network that opted for using this
+    // > checksum variant, prefix the address with the chain id and the `0x` separator before
+    // > calculating the hash. [...]
     #[allow(clippy::wrong_self_convention)]
     fn to_checksum_inner(&self, buf: &mut [u8; 42], chain_id: Option<u64>) {
         buf[0] = b'0';
@@ -308,14 +317,14 @@ impl Address {
         }
         let hash = hasher.finalize();
 
-        let mut hash_hex = [0u8; 64];
-        hex::encode_to_slice(hash, &mut hash_hex).unwrap();
-
-        // `0..40` generates significantly less code than zipping or `array::into_iter`.
-        for i in 0..40 {
+        for (i, out) in buf[2..].iter_mut().enumerate() {
             // This is made branchless for easier vectorization.
-            buf[2 + i] ^=
-                0b0010_0000 * (buf[2 + i].is_ascii_lowercase() & (hash_hex[i] >= b'8')) as u8;
+            // Get the i-th nibble of the hash.
+            let hash_nibble = hash[i / 2] >> (4 * (1 - i % 2)) & 0xf;
+            // Make the character ASCII uppercase if it's a hex letter and the hash nibble is >= 8.
+            // We can use a simpler comparison for checking if the character is a hex letter because
+            // we know `out` is a hex-encoded character (`b'0'..=b'9' | b'a'..=b'f'`).
+            *out ^= 0b0010_0000 * ((*out >= b'a') & (hash_nibble >= 8)) as u8;
         }
     }
 
