@@ -419,7 +419,9 @@ impl serde::Serialize for crate::Signature {
 
             match self.v {
                 Parity::Eip155(v) => map.serialize_entry("v", &crate::U64::from(v))?,
-                Parity::NonEip155(b) => map.serialize_entry("v", &(b as u8 + 27))?,
+                Parity::NonEip155(b) => {
+                    map.serialize_entry("v", &crate::U64::from(b as u8 + 27))?
+                }
                 Parity::Parity(true) => map.serialize_entry("yParity", "0x1")?,
                 Parity::Parity(false) => map.serialize_entry("yParity", "0x0")?,
             }
@@ -430,7 +432,7 @@ impl serde::Serialize for crate::Signature {
             let mut tuple = serializer.serialize_tuple(3)?;
             tuple.serialize_element(&self.r)?;
             tuple.serialize_element(&self.s)?;
-            tuple.serialize_element(&self.v.to_u64())?;
+            tuple.serialize_element(&crate::U64::from(self.v.to_u64()))?;
             tuple.end()
         }
     }
@@ -558,7 +560,7 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
                 let s = seq
                     .next_element()?
                     .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
-                let v: u64 = seq
+                let v: crate::U64 = seq
                     .next_element()?
                     .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
 
@@ -731,6 +733,16 @@ mod tests {
 
         let serialized = serde_json::to_string(&signature).unwrap();
         assert_eq!(serialized, expected);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serialize_v_hex() {
+        let s = r#"{"r":"0x3d43270611ffb1a10fcab841e636e355a787151969b920cf10fef48d3a61aac3","s":"0x11336489e3050e3ec017079dfe16582ce3d167559bcaa8383b665b3fda4eb963","v":"0x1b"}"#;
+
+        let sig = serde_json::from_str::<crate::Signature>(s).unwrap();
+        let serialized = serde_json::to_string(&sig).unwrap();
+        assert_eq!(serialized, s);
     }
 
     #[cfg(feature = "serde")]
