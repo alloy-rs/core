@@ -24,6 +24,8 @@ impl fmt::Display for CustomError {
 
 #[cfg(feature = "std")]
 impl std::error::Error for CustomError {}
+#[cfg(not(feature = "std"))]
+impl core::error::Error for CustomError {}
 
 pub type Input<'a> = winnow::Stateful<&'a str, RecursionCheck>;
 
