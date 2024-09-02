@@ -84,7 +84,7 @@ impl TryFrom<Signature> for k256::ecdsa::Signature {
     type Error = k256::ecdsa::Error;
 
     fn try_from(value: Signature) -> Result<Self, Self::Error> {
-        k256::ecdsa::Signature::from_scalars(value.r.to_be_bytes(), value.s.to_be_bytes())
+        Self::from_scalars(value.r.to_be_bytes(), value.s.to_be_bytes())
     }
 }
 
@@ -115,7 +115,7 @@ impl Signature {
     }
 
     /// Instantiate a new signature from `r`, `s`, and `v` values.
-    pub fn new(r: U256, s: U256, v: Parity) -> Self {
+    pub const fn new(r: U256, s: U256, v: Parity) -> Self {
         Self { r, s, v }
     }
 
