@@ -3,15 +3,14 @@
 use crate::{
     hex,
     signature::{Parity, SignatureError},
-    U256,
+    uint, U256,
 };
 use alloc::vec::Vec;
 use core::str::FromStr;
 
 /// The order of the secp256k1 curve
-const SECP256K1N_ORDER: U256 = U256::from_be_bytes(
-    fixed_bytes!("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141").0,
-);
+const SECP256K1N_ORDER: U256 =
+    uint!(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141_U256);
 
 /// An Ethereum ECDSA signature.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -117,6 +116,14 @@ impl Signature {
     /// Instantiate a new signature from `r`, `s`, and `v` values.
     pub const fn new(r: U256, s: U256, v: Parity) -> Self {
         Self { r, s, v }
+    }
+
+    /// Returns the inner ECDSA signature.
+    #[cfg(feature = "k256")]
+    #[deprecated(note = "use TryFrom instead")]
+    #[inline]
+    pub fn into_inner(self) -> k256::ecdsa::Signature {
+        self.try_into().expect("signature conversion failed")
     }
 
     /// Instantiate from a signature and recovery id
