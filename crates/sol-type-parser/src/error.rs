@@ -1,4 +1,4 @@
-use alloc::boxed::Box;
+use alloc::{boxed::Box, string::String};
 use core::fmt;
 
 /// Parser result
@@ -59,12 +59,13 @@ impl Error {
     #[inline(never)]
     #[cold]
     pub fn _new(s: &str, e: &dyn fmt::Display) -> Self {
-        Self(Repr(format!("{s}{e}").into_boxed_str()))
+        Self(Repr(Box::new(format!("{s}{e}"))))
     }
 }
 
 #[derive(Clone, PartialEq, Eq)]
-struct Repr(Box<str>);
+#[allow(clippy::box_collection)] // `Box<String>` is smaller than `String` or `Box<str>`.
+struct Repr(Box<String>);
 
 impl fmt::Display for Repr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

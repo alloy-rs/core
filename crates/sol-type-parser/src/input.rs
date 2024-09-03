@@ -3,14 +3,10 @@
 // Recursion implementation modified from `toml`: https://github.com/toml-rs/toml/blob/a02cbf46cab4a8683e641efdba648a31498f7342/crates/toml_edit/src/parser/mod.rs#L99
 
 use core::fmt;
-use winnow::{
-    error::{ContextError, FromExternalError},
-    Parser,
-};
+use winnow::{error::ContextError, Parser};
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum CustomError {
+pub enum CustomError {
     RecursionLimitExceeded,
 }
 
@@ -35,9 +31,16 @@ pub fn check_recursion<'a, O>(
     mut parser: impl Parser<Input<'a>, O, ContextError>,
 ) -> impl Parser<Input<'a>, O, ContextError> {
     move |input: &mut Input<'a>| {
-        input.state.enter().map_err(|err| {
-            winnow::error::ErrMode::from_external_error(input, winnow::error::ErrorKind::Eof, err)
-                .cut()
+        input.state.enter().map_err(|_err| {
+            // TODO: Very weird bug with features: https://github.com/alloy-rs/core/issues/717
+            // use winnow::error::FromExternalError;
+            // let err = winnow::error::ContextError::from_external_error(
+            //     input,
+            //     winnow::error::ErrorKind::Eof,
+            //     _err,
+            // );
+            let err = winnow::error::ContextError::new();
+            winnow::error::ErrMode::Cut(err)
         })?;
         let result = parser.parse_next(input);
         input.state.exit();
