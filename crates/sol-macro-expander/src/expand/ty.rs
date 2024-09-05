@@ -3,7 +3,7 @@
 use super::{ExpCtxt, ExternCrates};
 use ast::{Item, Parameters, Spanned, Type, TypeArray};
 use proc_macro2::{Ident, Literal, TokenStream};
-use proc_macro_error::abort;
+use proc_macro_error2::abort;
 use quote::{quote_spanned, ToTokens};
 use std::{fmt, num::NonZeroU16};
 

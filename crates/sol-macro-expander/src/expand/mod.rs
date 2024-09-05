@@ -11,7 +11,7 @@ use ast::{
 };
 use indexmap::IndexMap;
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
-use proc_macro_error::{abort, emit_error};
+use proc_macro_error2::{abort, emit_error};
 use quote::{format_ident, quote, TokenStreamExt};
 use std::{
     borrow::Borrow,
