@@ -83,7 +83,7 @@ impl TryFrom<Signature> for k256::ecdsa::Signature {
     type Error = k256::ecdsa::Error;
 
     fn try_from(value: Signature) -> Result<Self, Self::Error> {
-        Self::from_scalars(value.r.to_be_bytes(), value.s.to_be_bytes())
+        value.to_k256()
     }
 }
 
@@ -114,16 +114,24 @@ impl Signature {
     }
 
     /// Instantiate a new signature from `r`, `s`, and `v` values.
-    pub const fn new(r: U256, s: U256, v: Parity) -> Self {
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn new(r: U256, s: U256, v: Parity) -> Self {
         Self { r, s, v }
     }
 
     /// Returns the inner ECDSA signature.
     #[cfg(feature = "k256")]
-    #[deprecated(note = "use TryFrom instead")]
+    #[deprecated(note = "use `Signature::to_k256` instead")]
     #[inline]
     pub fn into_inner(self) -> k256::ecdsa::Signature {
         self.try_into().expect("signature conversion failed")
+    }
+
+    /// Returns the inner ECDSA signature.
+    #[cfg(feature = "k256")]
+    #[inline]
+    pub fn to_k256(self) -> Result<k256::ecdsa::Signature, k256::ecdsa::Error> {
+        k256::ecdsa::Signature::from_scalars(self.r.to_be_bytes(), self.s.to_be_bytes())
     }
 
     /// Instantiate from a signature and recovery id
@@ -231,7 +239,7 @@ impl Signature {
         let this = self.normalize_s().unwrap_or(*self);
         k256::ecdsa::VerifyingKey::recover_from_prehash(
             prehash.as_slice(),
-            &this.try_into()?,
+            &this.to_k256()?,
             this.recid(),
         )
         .map_err(Into::into)
