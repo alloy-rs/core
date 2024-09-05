@@ -39,7 +39,7 @@ alloy-primitives = { workspace = true, features = [
     "rlp",
 ] }
 alloy-rlp.workspace = true
-derive_more.workspace = true
+derive_more = { workspace = true, features = ["display"] }
 paste.workspace = true
 pretty_assertions.workspace = true
 serde = { workspace = true, features = ["derive"] }

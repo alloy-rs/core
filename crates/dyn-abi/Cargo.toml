@@ -31,7 +31,7 @@ itoa.workspace = true
 winnow.workspace = true
 
 # eip712
-derive_more = { workspace = true, optional = true }
+derive_more = { workspace = true, features = ["full"], optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 

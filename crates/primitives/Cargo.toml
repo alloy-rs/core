@@ -30,7 +30,7 @@ tiny-keccak = { workspace = true, features = ["keccak"] }
 keccak-asm = { workspace = true, optional = true }
 
 # macros
-derive_more.workspace = true
+derive_more = { workspace = true, features = ["full"] }
 cfg-if.workspace = true
 
 # rlp
