@@ -405,7 +405,7 @@ macro_rules! iter_impl {
 ///
 /// This `struct` is created by [`JsonAbi::items`]. See its documentation for
 /// more.
-#[derive(Clone, Debug)] // TODO(MSRV-1.70): derive Default
+#[derive(Clone, Debug, Default)]
 pub struct Items<'a> {
     len: usize,
     constructor: Option<&'a Constructor>,
@@ -428,7 +428,7 @@ iter_impl!(traits Items<'_>);
 ///
 /// This `struct` is created by [`JsonAbi::into_items`]. See its documentation
 /// for more.
-#[derive(Debug)] // TODO(MSRV-1.70): derive Default
+#[derive(Debug, Default)]
 pub struct IntoItems {
     len: usize,
     constructor: Option<Constructor>,
