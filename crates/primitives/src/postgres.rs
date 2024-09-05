@@ -59,7 +59,7 @@ fn trim_end_vec<T: PartialEq>(vec: &mut Vec<T>, value: &T) {
 #[derive(Clone, Debug, PartialEq, Eq, Display, Error)]
 pub enum ToSqlError {
     /// The value is too large for the type.
-    #[display(fmt = "Signed<{_0}> value too large to fit target type {_1}")]
+    #[display("Signed<{_0}> value too large to fit target type {_1}")]
     Overflow(usize, Type),
 }
 
@@ -214,11 +214,11 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
 #[derive(Clone, Debug, PartialEq, Eq, Display)]
 pub enum FromSqlError {
     /// The value is too large for the type.
-    #[display(fmt = "The value is too large for the Signed type")]
+    #[display("The value is too large for the Signed type")]
     Overflow,
 
     /// The value is not valid for the type.
-    #[display(fmt = "unexpected data for type {_0}")]
+    #[display("unexpected data for type {_0}")]
     ParseError(Type),
 }
 
