@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1](https://github.com/alloy-rs/core/releases/tag/v0.8.1) - 2024-09-06
+
+### Dependencies
+
+- Bump MSRV to 1.79 ([#712](https://github.com/alloy-rs/core/issues/712))
+- Revert "chore(deps): bump derive_more to 1.0"
+- [deps] Bump derive_more to 1.0
+
+### Miscellaneous Tasks
+
+- Clippy
+
+### Testing
+
+- [sol] Add a test for custom paths
+
 ## [0.8.0](https://github.com/alloy-rs/core/releases/tag/v0.8.0) - 2024-08-21
 
 ### Dependencies
@@ -18,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.8.0
 - Add some TODO comments
 
 ### Other

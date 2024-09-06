@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1](https://github.com/alloy-rs/core/releases/tag/v0.8.1) - 2024-09-06
+
+### Bug Fixes
+
+- Use quantity for v value ([#715](https://github.com/alloy-rs/core/issues/715))
+
+### Dependencies
+
+- Bump MSRV to 1.79 ([#712](https://github.com/alloy-rs/core/issues/712))
+- Revert "chore(deps): bump derive_more to 1.0"
+- [deps] Bump derive_more to 1.0
+
+### Performance
+
+- [primitives] Improve checksum algorithm ([#713](https://github.com/alloy-rs/core/issues/713))
+
+### Refactor
+
+- Remove `Signature` generic ([#719](https://github.com/alloy-rs/core/issues/719))
+
 ## [0.8.0](https://github.com/alloy-rs/core/releases/tag/v0.8.0) - 2024-08-21
 
 ### Bug Fixes
@@ -26,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.8.0
 - [primitives] Re-use ruint mask function ([#698](https://github.com/alloy-rs/core/issues/698))
 - Derive hash for parity ([#686](https://github.com/alloy-rs/core/issues/686))
 

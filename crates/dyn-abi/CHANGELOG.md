@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [sol-macro] Support namespaces ([#694](https://github.com/alloy-rs/core/issues/694))
 
+### Miscellaneous Tasks
+
+- Release 0.8.0
+
 ### Other
 
 - Implement specific bit types for integers ([#677](https://github.com/alloy-rs/core/issues/677))
