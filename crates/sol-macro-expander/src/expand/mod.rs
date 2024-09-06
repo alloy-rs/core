@@ -16,6 +16,7 @@ use quote::{format_ident, quote, TokenStreamExt};
 use std::{
     borrow::Borrow,
     collections::HashMap,
+    fmt,
     fmt::Write,
     sync::atomic::{AtomicBool, Ordering},
 };
@@ -158,7 +159,8 @@ impl<'ast> ExpCtxt<'ast> {
 
         if !self.all_items.0.is_empty() {
             self.resolve_custom_types();
-            if self.mk_overloads_map().is_err() || self.parse_selectors().is_err() {
+            // Selector collisions requires resolved types.
+            if self.mk_overloads_map().is_err() || self.check_selector_collisions().is_err() {
                 abort = true;
             }
         }
@@ -255,44 +257,83 @@ impl<'ast> ExpCtxt<'ast> {
         }
     }
 
-    fn parse_selectors(&mut self) -> std::result::Result<(), ()> {
-        let mut function_selectors = HashMap::new();
-        let mut error_selectors = HashMap::new();
-        let mut failed = false;
+    /// Checks for function and error selector collisions in the resolved items.
+    fn check_selector_collisions(&mut self) -> std::result::Result<(), ()> {
+        #[derive(Clone, Copy)]
+        enum SelectorKind {
+            Function,
+            Error,
+            // We can ignore events since their selectors are 32 bytes which are unlikely to
+            // collide.
+            // Event,
+        }
 
-        for item in &self.ast.items {
-            match item {
-                Item::Function(func) => {
-                    let fun_selector = self.selector_hash(&self.function_selector(func));
-                    if function_selectors.insert(fun_selector, item).is_some() {
-                        failed = true;
-                        emit_error!(func.span(), "function signature hash collision");
-                    }
+        impl fmt::Display for SelectorKind {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self {
+                    Self::Function => "function",
+                    Self::Error => "error",
+                    // Self::Event => "event",
                 }
-                Item::Error(err) => {
-                    let err_selector = self.selector_hash(&self.error_selector(err));
-                    if matches!(err_selector.as_str(), "0x00000000" | "0xffffffff") {
-                        failed = true;
-                        emit_error!(
-                            err.span(),
-                            "illegal usage of reserved error signature hash `{}`",
-                            err_selector
-                        );
-                    }
-                    if error_selectors.insert(err_selector, item).is_some() {
-                        failed = true;
-                        emit_error!(err.span(), "error signature hash collision");
-                    };
-                }
-                _ => (),
-            }
-
-            if failed {
-                return Err(());
+                .fmt(f)
             }
         }
 
-        Ok(())
+        let mut success = true;
+
+        let mut selectors = vec![HashMap::new(); 3];
+        let all_items = std::mem::take(&mut self.all_items);
+        for (namespace, items) in &all_items.0 {
+            self.with_namespace(namespace.clone(), |this| {
+                selectors.iter_mut().for_each(|s| s.clear());
+                for (_, &item) in items {
+                    let (kind, selector) = match item {
+                        Item::Function(function) => {
+                            (SelectorKind::Function, this.function_selector(function))
+                        }
+                        Item::Error(error) => (SelectorKind::Error, this.error_selector(error)),
+                        // Item::Event(event) => (SelectorKind::Event, this.event_selector(event)),
+                        _ => continue,
+                    };
+                    // 0x00000000 or 0xffffffff are reserved for custom errors.
+                    if matches!(kind, SelectorKind::Error)
+                        && (selector.array.iter().all(|&x| x == 0x00)
+                            || selector.array.iter().all(|&x| x == 0xff))
+                    {
+                        emit_error!(
+                            selector.span(),
+                            "{kind} selector `{}` is reserved",
+                            hex::encode_prefixed(&selector.array),
+                        );
+                        success = false;
+                        continue;
+                    }
+                    match selectors[kind as usize].entry(selector.array.clone()) {
+                        std::collections::hash_map::Entry::Vacant(entry) => {
+                            entry.insert(item);
+                        }
+                        std::collections::hash_map::Entry::Occupied(entry) => {
+                            success = false;
+                            let other = *entry.get();
+                            emit_error!(
+                                item.span(),
+                                "{kind} selector `{}` collides with `{}`",
+                                hex::encode_prefixed(&selector.array),
+                                other.name().unwrap();
+
+                                note = other.span() => "other declaration is here";
+                            );
+                        }
+                    }
+                }
+            })
+        }
+        self.all_items = all_items;
+
+        match success {
+            true => Ok(()),
+            false => Err(()),
+        }
     }
 
     fn mk_overloads_map(&mut self) -> std::result::Result<(), ()> {
@@ -559,13 +600,6 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn error_selector(&self, error: &ItemError) -> ExprArray<u8> {
         utils::selector(self.error_signature(error)).with_span(error.span())
-    }
-
-    fn selector_hash(&self, item: &ExprArray<u8>) -> String {
-        item.array.iter().fold(String::from("0x"), |mut output, b| {
-            let _ = write!(output, "{b:02X}");
-            output
-        })
     }
 
     fn event_signature(&self, event: &ItemEvent) -> String {
