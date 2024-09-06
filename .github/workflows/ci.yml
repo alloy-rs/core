@@ -119,6 +119,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: riscv32imac-unknown-none-elf
+      - uses: taiki-e/install-action@cargo-hack
       - run: ./scripts/check_no_std.sh
 
   clippy:
