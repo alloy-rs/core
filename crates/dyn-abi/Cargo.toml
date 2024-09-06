@@ -31,7 +31,13 @@ itoa.workspace = true
 winnow.workspace = true
 
 # eip712
-derive_more = { workspace = true, optional = true }
+derive_more = { workspace = true, optional = true, features = [
+    "deref",
+    "deref_mut",
+    "from",
+    "into",
+    "into_iterator",
+] }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 

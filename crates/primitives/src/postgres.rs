@@ -5,9 +5,10 @@
 
 use super::{FixedBytes, Sign, Signed};
 use bytes::{BufMut, BytesMut};
-use derive_more::{Display, Error};
+use derive_more::Display;
 use postgres_types::{accepts, to_sql_checked, FromSql, IsNull, ToSql, Type, WrongType};
 use std::{
+    error::Error,
     iter,
     str::{from_utf8, FromStr},
 };
@@ -55,12 +56,14 @@ fn trim_end_vec<T: PartialEq>(vec: &mut Vec<T>, value: &T) {
 }
 
 /// Error when converting to Postgres types.
-#[derive(Clone, Debug, PartialEq, Eq, Display, Error)]
+#[derive(Clone, Debug, PartialEq, Eq, Display)]
 pub enum ToSqlError {
     /// The value is too large for the type.
     #[display("Signed<{_0}> value too large to fit target type {_1}")]
     Overflow(usize, Type),
 }
+
+impl std::error::Error for ToSqlError {}
 
 /// Convert to Postgres types.
 ///
