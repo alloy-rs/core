@@ -435,6 +435,7 @@ macro_rules! impl_getrandom {
         /// fails.
         #[inline]
         #[track_caller]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn random() -> Self {
             Self($crate::FixedBytes::random())
         }
@@ -447,6 +448,7 @@ macro_rules! impl_getrandom {
         /// This function only propagates the error from the underlying call to
         /// `getrandom_uninit`.
         #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn try_random() -> $crate::private::Result<Self, $crate::private::getrandom::Error> {
             $crate::FixedBytes::try_random().map(Self)
         }
@@ -458,6 +460,7 @@ macro_rules! impl_getrandom {
         /// Panics if the underlying call to `getrandom_uninit` fails.
         #[inline]
         #[track_caller]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn randomize(&mut self) {
             self.try_randomize().unwrap()
         }
@@ -469,6 +472,7 @@ macro_rules! impl_getrandom {
         /// This function only propagates the error from the underlying call to
         /// `getrandom_uninit`.
         #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn try_randomize(
             &mut self,
         ) -> $crate::private::Result<(), $crate::private::getrandom::Error> {
@@ -492,6 +496,7 @@ macro_rules! impl_rand {
         /// Creates a new fixed byte array with the given random number generator.
         #[inline]
         #[doc(alias = "random_using")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
         pub fn random_with<R: $crate::private::rand::Rng + ?Sized>(rng: &mut R) -> Self {
             Self($crate::FixedBytes::random_with(rng))
         }
@@ -499,12 +504,14 @@ macro_rules! impl_rand {
         /// Fills this fixed byte array with the given random number generator.
         #[inline]
         #[doc(alias = "randomize_using")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
         pub fn randomize_with<R: $crate::private::rand::Rng + ?Sized>(&mut self, rng: &mut R) {
             self.0.randomize_with(rng);
         }
     };
 
     ($t:ty) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
         impl $crate::private::rand::distributions::Distribution<$t>
             for $crate::private::rand::distributions::Standard
         {
@@ -528,6 +535,7 @@ macro_rules! impl_rand {
 #[cfg(feature = "rlp")]
 macro_rules! impl_rlp {
     ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "rlp")))]
         impl $crate::private::alloy_rlp::Decodable for $t {
             #[inline]
             fn decode(buf: &mut &[u8]) -> $crate::private::alloy_rlp::Result<Self> {
@@ -535,6 +543,7 @@ macro_rules! impl_rlp {
             }
         }
 
+        #[cfg_attr(docsrs, doc(cfg(feature = "rlp")))]
         impl $crate::private::alloy_rlp::Encodable for $t {
             #[inline]
             fn length(&self) -> usize {
@@ -565,6 +574,7 @@ macro_rules! impl_rlp {
 #[cfg(feature = "allocative")]
 macro_rules! impl_allocative {
     ($t:ty) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "allocative")))]
         impl $crate::private::allocative::Allocative for $t {
             #[inline]
             fn visit<'a, 'b: 'a>(&self, visitor: &'a mut $crate::private::allocative::Visitor<'b>) {
@@ -586,6 +596,7 @@ macro_rules! impl_allocative {
 #[cfg(feature = "serde")]
 macro_rules! impl_serde {
     ($t:ty) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl $crate::private::serde::Serialize for $t {
             #[inline]
             fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -593,6 +604,7 @@ macro_rules! impl_serde {
             }
         }
 
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de> $crate::private::serde::Deserialize<'de> for $t {
             #[inline]
             fn deserialize<D: $crate::private::serde::Deserializer<'de>>(
@@ -616,6 +628,7 @@ macro_rules! impl_serde {
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary {
     ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary")))]
         impl<'a> $crate::private::arbitrary::Arbitrary<'a> for $t {
             #[inline]
             fn arbitrary(u: &mut $crate::private::arbitrary::Unstructured<'a>) -> $crate::private::arbitrary::Result<Self> {
@@ -633,6 +646,7 @@ macro_rules! impl_arbitrary {
             }
         }
 
+        #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary")))]
         impl $crate::private::proptest::arbitrary::Arbitrary for $t {
             type Parameters = <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::Parameters;
             type Strategy = $crate::private::proptest::strategy::Map<
