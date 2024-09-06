@@ -30,7 +30,21 @@ tiny-keccak = { workspace = true, features = ["keccak"] }
 keccak-asm = { workspace = true, optional = true }
 
 # macros
-derive_more.workspace = true
+derive_more = { workspace = true, features = [
+    "as_ref",
+    "add",
+    "add_assign",
+    "not",
+    "deref",
+    "deref_mut",
+    "from",
+    "from_str",
+    "index",
+    "index_mut",
+    "into",
+    "into_iterator",
+    "display",
+] }
 cfg-if.workspace = true
 
 # rlp
