@@ -114,14 +114,12 @@ jobs:
     name: check no_std ${{ matrix.features }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      NO_STD_TARGET: riscv32imac-unknown-none-elf
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ env.NO_STD_TARGET }}
-      - run: cargo hack check --no-default-features --target ${{ env.NO_STD_TARGET }}
+          targets: riscv32imac-unknown-none-elf
+      - run: ./scripts/check_no_std.sh
 
   clippy:
     runs-on: ubuntu-latest
