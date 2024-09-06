@@ -49,21 +49,7 @@ mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 mod signature;
-pub use signature::{to_eip155_v, Parity, SignatureError};
-
-/// Only available for documentation purposes.
-// Without this visible (not `#[doc(hidden)]`) re-export, `rustdoc` will not generate documentation
-// for the `Signature` type alias below.
-#[cfg(feature = "unstable-doc")]
-pub use signature::Signature as PrivateSignature;
-
-/// An ECDSA Signature, consisting of V, R, and S.
-#[cfg(feature = "k256")]
-pub type Signature = signature::Signature<k256::ecdsa::Signature>;
-
-/// An ECDSA Signature, consisting of V, R, and S.
-#[cfg(not(feature = "k256"))]
-pub type Signature = signature::Signature<()>;
+pub use signature::{to_eip155_v, Parity, Signature, SignatureError};
 
 pub mod utils;
 pub use utils::{eip191_hash_message, keccak256, Keccak256};

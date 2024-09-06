@@ -12,11 +12,6 @@ pub use alloy_primitives as primitives;
 #[doc(no_inline)]
 pub use primitives::{hex, uint};
 
-#[cfg(feature = "unstable-doc")]
-#[doc(hidden)]
-#[allow(unused_imports)]
-pub use primitives::PrivateSignature as _;
-
 #[cfg(feature = "dyn-abi")]
 #[doc(inline)]
 pub use alloy_dyn_abi as dyn_abi;
