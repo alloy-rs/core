@@ -15,6 +15,8 @@ use proc_macro_error2::{abort, emit_error};
 use quote::{format_ident, quote, TokenStreamExt};
 use std::{
     borrow::Borrow,
+    collections::HashMap,
+    fmt,
     fmt::Write,
     sync::atomic::{AtomicBool, Ordering},
 };
@@ -157,7 +159,8 @@ impl<'ast> ExpCtxt<'ast> {
 
         if !self.all_items.0.is_empty() {
             self.resolve_custom_types();
-            if self.mk_overloads_map().is_err() {
+            // Selector collisions requires resolved types.
+            if self.mk_overloads_map().is_err() || self.check_selector_collisions().is_err() {
                 abort = true;
             }
         }
@@ -252,6 +255,82 @@ impl<'ast> ExpCtxt<'ast> {
                 }
             }
         }
+    }
+
+    /// Checks for function and error selector collisions in the resolved items.
+    fn check_selector_collisions(&mut self) -> std::result::Result<(), ()> {
+        #[derive(Clone, Copy)]
+        enum SelectorKind {
+            Function,
+            Error,
+            // We can ignore events since their selectors are 32 bytes which are unlikely to
+            // collide.
+            // Event,
+        }
+
+        impl fmt::Display for SelectorKind {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self {
+                    Self::Function => "function",
+                    Self::Error => "error",
+                    // Self::Event => "event",
+                }
+                .fmt(f)
+            }
+        }
+
+        let mut result = Ok(());
+
+        let mut selectors = vec![HashMap::new(); 3];
+        let all_items = std::mem::take(&mut self.all_items);
+        for (namespace, items) in &all_items.0 {
+            self.with_namespace(namespace.clone(), |this| {
+                selectors.iter_mut().for_each(|s| s.clear());
+                for (_, &item) in items {
+                    let (kind, selector) = match item {
+                        Item::Function(function) => {
+                            (SelectorKind::Function, this.function_selector(function))
+                        }
+                        Item::Error(error) => (SelectorKind::Error, this.error_selector(error)),
+                        // Item::Event(event) => (SelectorKind::Event, this.event_selector(event)),
+                        _ => continue,
+                    };
+                    let selector: [u8; 4] = selector.array.try_into().unwrap();
+                    // 0x00000000 or 0xffffffff are reserved for custom errors.
+                    if matches!(kind, SelectorKind::Error)
+                        && (selector == [0, 0, 0, 0] || selector == [0xff, 0xff, 0xff, 0xff])
+                    {
+                        emit_error!(
+                            item.span(),
+                            "{kind} selector `{}` is reserved",
+                            hex::encode_prefixed(selector),
+                        );
+                        result = Err(());
+                        continue;
+                    }
+                    match selectors[kind as usize].entry(selector) {
+                        std::collections::hash_map::Entry::Vacant(entry) => {
+                            entry.insert(item);
+                        }
+                        std::collections::hash_map::Entry::Occupied(entry) => {
+                            result = Err(());
+                            let other = *entry.get();
+                            emit_error!(
+                                item.span(),
+                                "{kind} selector `{}` collides with `{}`",
+                                hex::encode_prefixed(selector),
+                                other.name().unwrap();
+
+                                note = other.span() => "other declaration is here";
+                            );
+                        }
+                    }
+                }
+            })
+        }
+        self.all_items = all_items;
+
+        result
     }
 
     fn mk_overloads_map(&mut self) -> std::result::Result<(), ()> {
