@@ -14,7 +14,10 @@ use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, To
 use proc_macro_error::{abort, emit_error};
 use quote::{format_ident, quote, TokenStreamExt};
 use std::{
-    borrow::Borrow, collections::HashMap, fmt::Write, sync::atomic::{AtomicBool, Ordering}
+    borrow::Borrow,
+    collections::HashMap,
+    fmt::Write,
+    sync::atomic::{AtomicBool, Ordering},
 };
 use syn::{ext::IdentExt, parse_quote, Attribute, Error, Result};
 
@@ -263,12 +266,9 @@ impl<'ast> ExpCtxt<'ast> {
                     let fun_selector = self.selector_hash(&self.function_selector(func));
                     if function_selectors.insert(fun_selector, item).is_some() {
                         failed = true;
-                        emit_error!(
-                            func.span(),
-                            "function signature hash collision"
-                        );
+                        emit_error!(func.span(), "function signature hash collision");
                     }
-                },
+                }
                 Item::Error(err) => {
                     let err_selector = self.selector_hash(&self.error_selector(err));
                     if err_selector.eq("00000000") || err_selector.eq("ffffffff") {
@@ -281,12 +281,9 @@ impl<'ast> ExpCtxt<'ast> {
                     }
                     if error_selectors.insert(err_selector, item).is_some() {
                         failed = true;
-                        emit_error!(
-                            err.span(),
-                            "error signature hash collision"
-                        );
+                        emit_error!(err.span(), "error signature hash collision");
                     };
-                },
+                }
                 _ => (),
             }
 
