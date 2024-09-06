@@ -271,7 +271,7 @@ impl<'ast> ExpCtxt<'ast> {
                 }
                 Item::Error(err) => {
                     let err_selector = self.selector_hash(&self.error_selector(err));
-                    if err_selector.eq("0x00000000") || err_selector.eq("0xffffffff") {
+                    if matches!(err_selector.as_str(), "0x00000000" | "0xffffffff") {
                         failed = true;
                         emit_error!(
                             err.span(),
