@@ -271,11 +271,11 @@ impl<'ast> ExpCtxt<'ast> {
                 }
                 Item::Error(err) => {
                     let err_selector = self.selector_hash(&self.error_selector(err));
-                    if err_selector.eq("00000000") || err_selector.eq("ffffffff") {
+                    if err_selector.eq("0x00000000") || err_selector.eq("0xffffffff") {
                         failed = true;
                         emit_error!(
                             err.span(),
-                            "illegal usage of reserved error signature hash `0x{}`",
+                            "illegal usage of reserved error signature hash `{}`",
                             err_selector
                         );
                     }
@@ -562,7 +562,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn selector_hash(&self, item: &ExprArray<u8>) -> String {
-        item.array.iter().fold(String::new(), |mut output, b| {
+        item.array.iter().fold(String::from("0x"), |mut output, b| {
             let _ = write!(output, "{b:02X}");
             output
         })
