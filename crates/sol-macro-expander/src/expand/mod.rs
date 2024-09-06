@@ -14,9 +14,7 @@ use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, To
 use proc_macro_error::{abort, emit_error};
 use quote::{format_ident, quote, TokenStreamExt};
 use std::{
-    borrow::Borrow,
-    fmt::Write,
-    sync::atomic::{AtomicBool, Ordering},
+    borrow::Borrow, collections::HashMap, fmt::Write, sync::atomic::{AtomicBool, Ordering}
 };
 use syn::{ext::IdentExt, parse_quote, Attribute, Error, Result};
 
@@ -157,7 +155,7 @@ impl<'ast> ExpCtxt<'ast> {
 
         if !self.all_items.0.is_empty() {
             self.resolve_custom_types();
-            if self.mk_overloads_map().is_err() {
+            if self.mk_overloads_map().is_err() || self.parse_selectors().is_err() {
                 abort = true;
             }
         }
@@ -252,6 +250,52 @@ impl<'ast> ExpCtxt<'ast> {
                 }
             }
         }
+    }
+
+    fn parse_selectors(&mut self) -> std::result::Result<(), ()> {
+        let mut function_selectors = HashMap::new();
+        let mut error_selectors = HashMap::new();
+        let mut failed = false;
+
+        for item in &self.ast.items {
+            match item {
+                Item::Function(func) => {
+                    let fun_selector = self.selector_hash(&self.function_selector(func));
+                    if function_selectors.insert(fun_selector, item).is_some() {
+                        failed = true;
+                        emit_error!(
+                            func.span(),
+                            "function signature hash collision"
+                        );
+                    }
+                },
+                Item::Error(err) => {
+                    let err_selector = self.selector_hash(&self.error_selector(err));
+                    if err_selector.eq("00000000") || err_selector.eq("ffffffff") {
+                        failed = true;
+                        emit_error!(
+                            err.span(),
+                            "illegal usage of reserved error signature hash `0x{}`",
+                            err_selector
+                        );
+                    }
+                    if error_selectors.insert(err_selector, item).is_some() {
+                        failed = true;
+                        emit_error!(
+                            err.span(),
+                            "error signature hash collision"
+                        );
+                    };
+                },
+                _ => (),
+            }
+
+            if failed {
+                return Err(());
+            }
+        }
+
+        Ok(())
     }
 
     fn mk_overloads_map(&mut self) -> std::result::Result<(), ()> {
@@ -518,6 +562,10 @@ impl<'ast> ExpCtxt<'ast> {
 
     fn error_selector(&self, error: &ItemError) -> ExprArray<u8> {
         utils::selector(self.error_signature(error)).with_span(error.span())
+    }
+
+    fn selector_hash(&self, item: &ExprArray<u8>) -> String {
+        item.array.iter().map(|byte| format!("{:02x}", byte)).collect::<String>()
     }
 
     fn event_signature(&self, event: &ItemEvent) -> String {
