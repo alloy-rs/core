@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.1](https://github.com/alloy-rs/core/releases/tag/v0.8.1) - 2024-09-06
 
+### Miscellaneous Tasks
+
+- Release 0.8.1
+
 ### Refactor
 
 - Remove `Signature` generic ([#719](https://github.com/alloy-rs/core/issues/719))
