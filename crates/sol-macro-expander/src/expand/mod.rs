@@ -562,7 +562,10 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn selector_hash(&self, item: &ExprArray<u8>) -> String {
-        item.array.iter().map(|byte| format!("{:02x}", byte)).collect::<String>()
+        item.array.iter().fold(String::new(), |mut output, b| {
+            let _ = write!(output, "{b:02X}");
+            output
+        })
     }
 
     fn event_signature(&self, event: &ItemEvent) -> String {
