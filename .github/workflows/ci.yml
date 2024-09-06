@@ -120,6 +120,9 @@ jobs:
         with:
           targets: riscv32imac-unknown-none-elf
       - uses: taiki-e/install-action@cargo-hack
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - run: ./scripts/check_no_std.sh
 
   clippy:
