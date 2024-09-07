@@ -13,7 +13,7 @@ const SECP256K1N_ORDER: U256 =
     uint!(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141_U256);
 
 /// An Ethereum ECDSA signature.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, Default, PartialEq, Eq)]
 pub struct Signature {
     v: Parity,
     r: U256,
