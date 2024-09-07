@@ -356,6 +356,12 @@ impl Signature {
         self.write_rlp_v(out);
         self.write_rlp_rs(out);
     }
+
+    /// Calculates a heuristic for the in-memory size of the [Signature].
+    #[inline]
+    pub const fn size(&self) -> usize {
+        core::mem::size_of::<Self>()
+    }
 }
 
 #[cfg(feature = "rlp")]
