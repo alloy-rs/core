@@ -795,6 +795,42 @@ mod tests {
         assert_eq!(sig.length(), 69);
     }
 
+    #[cfg(feature = "rlp")]
+    #[test]
+    fn test_rlp_vrs_len() {
+        let signature = Signature::default();
+        assert_eq!(3, signature.rlp_vrs_len());
+    }
+
+    #[cfg(feature = "rlp")]
+    #[test]
+    fn test_encode_and_decode() {
+        let signature = Signature::default();
+
+        let mut encoded = Vec::new();
+        signature.encode(&mut encoded);
+        assert_eq!(encoded.len(), signature.length());
+        let decoded = Signature::decode(&mut &*encoded).unwrap();
+        assert_eq!(signature, decoded);
+    }
+
+    #[test]
+    fn ensure_size_equals_sum_of_fields() {
+        let signature = Signature::new(
+            U256::from_str(
+                "18515461264373351373200002665853028612451056578545711640558177340181847433846",
+            )
+            .unwrap(),
+            U256::from_str(
+                "46948507304638947509940763649030358759909902576025900602547168820602576006531",
+            )
+            .unwrap(),
+            Parity::Parity(false),
+        );
+
+        assert!(signature.size() >= 65);
+    }
+
     #[test]
     fn test_as_hex_bytes() {
         let signature = Signature::new(
