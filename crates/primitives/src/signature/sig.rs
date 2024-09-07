@@ -3,7 +3,7 @@
 use crate::{
     hex,
     signature::{Parity, SignatureError},
-    uint, U256,
+    uint, Bytes, U256,
 };
 use alloc::vec::Vec;
 use core::str::FromStr;
@@ -314,6 +314,11 @@ impl Signature {
         sig
     }
 
+    /// Turn this signature into its hex-encoded representation.
+    pub fn as_hex_bytes(&self) -> Bytes {
+        self.as_bytes().into()
+    }
+
     /// Sets the recovery ID by normalizing a `v` value.
     #[inline]
     pub fn with_parity<T: Into<Parity>>(self, parity: T) -> Self {
@@ -588,6 +593,7 @@ mod tests {
 
     #[cfg(feature = "rlp")]
     use alloy_rlp::{Decodable, Encodable};
+    use hex::FromHex;
 
     #[test]
     #[cfg(feature = "k256")]
@@ -781,5 +787,23 @@ mod tests {
 
         // Assert that the length of the Signature matches the expected length
         assert_eq!(sig.length(), 69);
+    }
+
+    #[test]
+    fn test_as_hex_bytes() {
+        let signature = Signature::new(
+            U256::from_str(
+                "18515461264373351373200002665853028612451056578545711640558177340181847433846",
+            )
+            .unwrap(),
+            U256::from_str(
+                "46948507304638947509940763649030358759909902576025900602547168820602576006531",
+            )
+            .unwrap(),
+            Parity::Parity(false),
+        );
+
+        let expected = Bytes::from_hex("0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d831b").unwrap();
+        assert_eq!(signature.as_hex_bytes(), expected);
     }
 }
