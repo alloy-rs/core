@@ -23,6 +23,12 @@ impl From<k256::ecdsa::RecoveryId> for Parity {
     }
 }
 
+impl Default for Parity {
+    fn default() -> Self {
+        Self::Parity(false)
+    }
+}
+
 impl TryFrom<U64> for Parity {
     type Error = <Self as TryFrom<u64>>::Error;
     fn try_from(value: U64) -> Result<Self, Self::Error> {
