@@ -13,7 +13,7 @@ const SECP256K1N_ORDER: U256 =
     uint!(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141_U256);
 
 /// An Ethereum ECDSA signature.
-#[derive(Clone, Copy, Debug, Hash, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct Signature {
     v: Parity,
     r: U256,
@@ -789,14 +789,14 @@ mod tests {
     #[cfg(feature = "rlp")]
     #[test]
     fn test_rlp_vrs_len() {
-        let signature = Signature::default();
-        assert_eq!(3, signature.rlp_vrs_len());
+        let signature = Signature::test_signature();
+        assert_eq!(67, signature.rlp_vrs_len());
     }
 
     #[cfg(feature = "rlp")]
     #[test]
     fn test_encode_and_decode() {
-        let signature = Signature::default();
+        let signature = Signature::test_signature();
 
         let mut encoded = Vec::new();
         signature.encode(&mut encoded);
