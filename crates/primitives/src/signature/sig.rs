@@ -356,12 +356,6 @@ impl Signature {
         self.write_rlp_v(out);
         self.write_rlp_rs(out);
     }
-
-    /// Calculates a heuristic for the in-memory size of the [Signature].
-    #[inline]
-    pub const fn size(&self) -> usize {
-        core::mem::size_of::<Self>()
-    }
 }
 
 #[cfg(feature = "rlp")]
@@ -812,23 +806,6 @@ mod tests {
         assert_eq!(encoded.len(), signature.length());
         let decoded = Signature::decode(&mut &*encoded).unwrap();
         assert_eq!(signature, decoded);
-    }
-
-    #[test]
-    fn ensure_size_equals_sum_of_fields() {
-        let signature = Signature::new(
-            U256::from_str(
-                "18515461264373351373200002665853028612451056578545711640558177340181847433846",
-            )
-            .unwrap(),
-            U256::from_str(
-                "46948507304638947509940763649030358759909902576025900602547168820602576006531",
-            )
-            .unwrap(),
-            Parity::Parity(false),
-        );
-
-        assert!(signature.size() >= 65);
     }
 
     #[test]
