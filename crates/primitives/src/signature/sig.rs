@@ -3,7 +3,7 @@
 use crate::{
     hex,
     signature::{Parity, SignatureError},
-    uint, Bytes, U256,
+    uint, U256,
 };
 use alloc::vec::Vec;
 use core::str::FromStr;
@@ -314,11 +314,6 @@ impl Signature {
         sig
     }
 
-    /// Turn this signature into its hex-encoded representation.
-    pub fn as_hex_bytes(&self) -> Bytes {
-        self.as_bytes().into()
-    }
-
     /// Sets the recovery ID by normalizing a `v` value.
     #[inline]
     pub fn with_parity<T: Into<Parity>>(self, parity: T) -> Self {
@@ -588,6 +583,8 @@ impl proptest::arbitrary::Arbitrary for Signature {
 #[cfg(test)]
 #[allow(unused_imports)]
 mod tests {
+    use crate::Bytes;
+
     use super::*;
     use std::str::FromStr;
 
@@ -809,7 +806,7 @@ mod tests {
     }
 
     #[test]
-    fn test_as_hex_bytes() {
+    fn test_as_bytes() {
         let signature = Signature::new(
             U256::from_str(
                 "18515461264373351373200002665853028612451056578545711640558177340181847433846",
@@ -823,6 +820,6 @@ mod tests {
         );
 
         let expected = Bytes::from_hex("0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d831b").unwrap();
-        assert_eq!(signature.as_hex_bytes(), expected);
+        assert_eq!(signature.as_bytes(), **expected);
     }
 }
