@@ -1013,3 +1013,74 @@ fn normal_paths() {
 
     let _ = funcCall { stuff: I::S { x: U256::ZERO } };
 }
+
+#[test]
+fn regression_nested_namespaced_structs() {
+    mod inner {
+        super::sol! {
+            library LibA {
+                struct Simple {
+                    uint256 x;
+                }
+
+                struct Nested {
+                    Simple simple;
+                    LibB.Simple[] simpleB;
+                }
+            }
+
+            library LibB {
+                struct Simple {
+                    uint256 x;
+                    uint256 y;
+                }
+
+                struct Nested {
+                    Simple simple;
+                    LibA.Simple simpleA;
+                    LibB.Simple simpleB;
+                }
+            }
+
+            library LibC {
+                struct Nested1 {
+                    LibA.Nested nestedA;
+                    LibB.Nested nestedB;
+                }
+
+                struct Nested2 {
+                    LibA.Simple simpleA;
+                    LibB.Simple simpleB;
+                    LibA.Nested[] nestedA;
+                    LibB.Nested nestedB;
+                    Nested1[] nestedC1;
+                    LibC.Nested1 nestedC2;
+                }
+            }
+
+            contract C {
+                function libASimple(LibA.Simple memory simple) public returns(LibA.Simple memory);
+                function libBSimple(LibB.Simple memory simple) public returns(LibB.Simple memory);
+                function libANested(LibA.Nested memory nested) public returns(LibA.Nested memory);
+                function libBNested(LibB.Nested memory nested) public returns(LibB.Nested memory);
+                function libCNested1(LibC.Nested1 memory nested) public returns(LibC.Nested1 memory);
+                function libCNested2(LibC.Nested2 memory nested) public returns(LibC.Nested2 memory);
+            }
+        }
+    }
+
+    let a_simple = "(uint256)";
+    let b_simple = "(uint256,uint256)";
+    let a_nested = format!("({a_simple},{b_simple}[])");
+    let b_nested = format!("({b_simple},{a_simple},{b_simple})");
+    let c_nested1 = format!("({a_nested},{b_nested})");
+    let c_nested2 =
+        format!("({a_simple},{b_simple},{a_nested}[],{b_nested},{c_nested1}[],{c_nested1})");
+
+    assert_eq!(inner::C::libASimpleCall::SIGNATURE, format!("libASimple({a_simple})"));
+    assert_eq!(inner::C::libBSimpleCall::SIGNATURE, format!("libBSimple({b_simple})"));
+    assert_eq!(inner::C::libANestedCall::SIGNATURE, format!("libANested({a_nested})"));
+    assert_eq!(inner::C::libBNestedCall::SIGNATURE, format!("libBNested({b_nested})"));
+    assert_eq!(inner::C::libCNested1Call::SIGNATURE, format!("libCNested1({c_nested1})"));
+    assert_eq!(inner::C::libCNested2Call::SIGNATURE, format!("libCNested2({c_nested2})"));
+}
