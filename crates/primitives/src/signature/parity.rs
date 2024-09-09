@@ -16,6 +16,12 @@ pub enum Parity {
     Parity(bool),
 }
 
+impl Default for Parity {
+    fn default() -> Self {
+        Self::Parity(false)
+    }
+}
+
 #[cfg(feature = "k256")]
 impl From<k256::ecdsa::RecoveryId> for Parity {
     fn from(value: k256::ecdsa::RecoveryId) -> Self {
