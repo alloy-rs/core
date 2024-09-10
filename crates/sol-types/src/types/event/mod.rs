@@ -47,6 +47,7 @@ pub trait SolEvent: Sized {
     ///
     /// For non-anonymous events, this will be the first topic (`topic0`).
     /// For anonymous events, this is unused, but is still present.
+    #[doc(alias = "SELECTOR")]
     const SIGNATURE_HASH: FixedBytes<32>;
 
     /// Whether the event is anonymous.
