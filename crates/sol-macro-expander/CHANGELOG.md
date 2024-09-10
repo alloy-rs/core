@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3](https://github.com/alloy-rs/core/releases/tag/v0.8.3) - 2024-09-10
+
+### Bug Fixes
+
+- [sol-macro] Correctly determine whether event parameters are hashes ([#735](https://github.com/alloy-rs/core/issues/735))
+- [sol-macro] Namespaced custom type resolution ([#731](https://github.com/alloy-rs/core/issues/731))
+- Parse selector hashes in `sol` macro ([#730](https://github.com/alloy-rs/core/issues/730))
+
+## [0.8.2](https://github.com/alloy-rs/core/releases/tag/v0.8.2) - 2024-09-06
+
+### Miscellaneous Tasks
+
+- Release 0.8.2
+
 ## [0.8.1](https://github.com/alloy-rs/core/releases/tag/v0.8.1) - 2024-09-06
 
 ### Dependencies
