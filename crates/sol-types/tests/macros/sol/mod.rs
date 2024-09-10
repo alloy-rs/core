@@ -1084,3 +1084,67 @@ fn regression_nested_namespaced_structs() {
     assert_eq!(inner::C::libCNested1Call::SIGNATURE, format!("libCNested1({c_nested1})"));
     assert_eq!(inner::C::libCNested2Call::SIGNATURE, format!("libCNested2({c_nested2})"));
 }
+
+// https://github.com/alloy-rs/core/issues/734
+#[test]
+fn event_indexed_udvt() {
+    use alloy_primitives::aliases::*;
+
+    sol! {
+        type Currency is address;
+        type PoolId is bytes32;
+
+        event Initialize(
+            PoolId indexed id,
+            Currency indexed currency0,
+            Currency indexed currency1,
+            uint24 fee,
+            int24 tickSpacing,
+            address hooks,
+            uint160 sqrtPriceX96,
+            int24 tick
+        );
+    }
+
+    assert_eq!(
+        Initialize::SIGNATURE,
+        "Initialize(bytes32,address,address,uint24,int24,address,uint160,int24)",
+    );
+    assert_eq!(
+        Initialize::SIGNATURE_HASH,
+        b256!("dd466e674ea557f56295e2d0218a125ea4b4f0f6f3307b95f85e6110838d6438"),
+    );
+
+    let _ = Initialize {
+        id: B256::ZERO,
+        currency0: Address::ZERO,
+        currency1: Address::ZERO,
+        fee: U24::ZERO,
+        tickSpacing: I24::ZERO,
+        hooks: Address::ZERO,
+        sqrtPriceX96: U160::ZERO,
+        tick: I24::ZERO,
+    };
+}
+
+#[test]
+fn event_indexed_elementary_arrays() {
+    sol! {
+        event AddrArray(address[1] indexed x);
+        event AddrDynArray(address[] indexed x);
+
+        type MyAddress is address;
+        event AddrUdvtArray(MyAddress[1] indexed y);
+        event AddrUdvtDynArray(MyAddress[] indexed y);
+    }
+
+    assert_eq!(AddrArray::SIGNATURE, "AddrArray(address[1])");
+    let _ = AddrArray { x: B256::ZERO };
+    assert_eq!(AddrDynArray::SIGNATURE, "AddrDynArray(address[])");
+    let _ = AddrDynArray { x: B256::ZERO };
+
+    assert_eq!(AddrUdvtArray::SIGNATURE, "AddrUdvtArray(address[1])");
+    let _ = AddrUdvtArray { y: B256::ZERO };
+    assert_eq!(AddrUdvtDynArray::SIGNATURE, "AddrUdvtDynArray(address[])");
+    let _ = AddrUdvtDynArray { y: B256::ZERO };
+}

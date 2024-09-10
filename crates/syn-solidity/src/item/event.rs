@@ -1,5 +1,6 @@
 use crate::{
-    kw, utils::DebugPunctuated, ParameterList, SolIdent, Spanned, Type, VariableDeclaration,
+    kw, utils::DebugPunctuated, ParameterList, SolIdent, SolPath, Spanned, Type,
+    VariableDeclaration,
 };
 use proc_macro2::Span;
 use std::fmt;
@@ -153,10 +154,6 @@ impl ItemEvent {
         self.parameters.iter().filter(|p| p.is_indexed())
     }
 
-    pub fn dynamic_params(&self) -> impl Iterator<Item = &EventParameter> {
-        self.parameters.iter().filter(|p| p.is_abi_dynamic())
-    }
-
     pub fn as_type(&self) -> Type {
         let mut ty = Type::Tuple(self.parameters.iter().map(|arg| arg.ty.clone()).collect());
         ty.set_span(self.span());
@@ -252,17 +249,14 @@ impl EventParameter {
         self.indexed.is_none()
     }
 
-    /// Returns true if the event parameter is a dynamically sized type.
-    pub fn is_abi_dynamic(&self) -> bool {
-        self.ty.is_abi_dynamic()
-    }
-
     /// Returns `true` if the event parameter is indexed and dynamically sized.
     /// These types are hashed, and then stored in the topics as specified in
     /// [the Solidity spec][ref].
     ///
+    /// `custom_is_value_type` accounts for custom value types.
+    ///
     /// [ref]: https://docs.soliditylang.org/en/latest/abi-spec.html#events
-    pub fn indexed_as_hash(&self) -> bool {
-        self.is_indexed() && self.is_abi_dynamic()
+    pub fn indexed_as_hash(&self, custom_is_value_type: impl Fn(&SolPath) -> bool) -> bool {
+        self.is_indexed() && !self.ty.is_value_type(custom_is_value_type)
     }
 }

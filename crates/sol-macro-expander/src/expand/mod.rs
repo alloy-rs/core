@@ -545,7 +545,23 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn try_custom_type(&self, name: &SolPath) -> Option<&Type> {
-        self.custom_types.resolve(name, &self.current_namespace)
+        self.custom_types.resolve(name, &self.current_namespace).inspect(|&ty| {
+            if ty.is_custom() {
+                abort!(
+                    ty.span(),
+                    "unresolved custom type in map";
+                    note = name.span() => "name span";
+                );
+            }
+        })
+    }
+
+    fn indexed_as_hash(&self, param: &EventParameter) -> bool {
+        param.indexed_as_hash(self.custom_is_value_type())
+    }
+
+    fn custom_is_value_type(&self) -> impl Fn(&SolPath) -> bool + '_ {
+        move |ty| self.custom_type(ty).is_value_type(self.custom_is_value_type())
     }
 
     /// Returns the name of the function, adjusted for overloads.
