@@ -10,6 +10,9 @@
 #[macro_use]
 extern crate alloc;
 
+#[cfg(feature = "sha3-keccak")]
+use sha3 as _;
+
 use tiny_keccak as _;
 
 #[cfg(feature = "postgres")]

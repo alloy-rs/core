@@ -70,6 +70,7 @@ thiserror = "1.0"
 k256 = { version = "0.13", default-features = false }
 keccak-asm = { version = "0.1.0", default-features = false }
 tiny-keccak = "2.0"
+sha3 = "0.10.8"
 
 # misc
 allocative = { version = "0.3.2", default-features = false }

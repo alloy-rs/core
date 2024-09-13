@@ -16,6 +16,8 @@ pub use units::{
 cfg_if! {
     if #[cfg(all(feature = "asm-keccak", not(miri)))] {
         use keccak_asm::Digest as _;
+    } else if #[cfg(all(feature = "sha3-keccak", not(miri)))] {
+        use sha3::Digest as _;
     } else {
         use tiny_keccak::Hasher as _;
     }
@@ -153,13 +155,13 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
         let mut output = MaybeUninit::<B256>::uninit();
 
         cfg_if! {
-            if #[cfg(all(feature = "native-keccak", not(feature = "tiny-keccak"), not(miri)))] {
+            if #[cfg(all(feature = "native-keccak", not(feature = "sha3-keccak"), not(feature = "tiny-keccak"), not(miri)))] {
                 #[link(wasm_import_module = "vm_hooks")]
                 extern "C" {
                     /// When targeting VMs with native keccak hooks, the `native-keccak` feature
                     /// can be enabled to import and use the host environment's implementation
-                    /// of [`keccak256`] in place of [`tiny_keccak`]. This is overridden when
-                    /// the `tiny-keccak` feature is enabled.
+                    /// of [`keccak256`] in place of [`sha3`] or [`tiny_keccak`]. This is overridden
+                    /// when the `sha3-keccak` or `tiny-keccak` feature is enabled.
                     ///
                     /// # Safety
                     ///
@@ -169,6 +171,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
                     /// - `output` must point to a buffer that is at least 32-bytes long.
                     ///
                     /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
+                    /// [`sha3`]: https://docs.rs/sha3/latest/sha3/
                     /// [`tiny_keccak`]: https://docs.rs/tiny-keccak/latest/tiny_keccak/
                     fn native_keccak256(bytes: *const u8, len: usize, output: *mut u8);
                 }
@@ -200,7 +203,12 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
 pub struct Keccak256 {
     #[cfg(all(feature = "asm-keccak", not(miri)))]
     hasher: keccak_asm::Keccak256,
-    #[cfg(not(all(feature = "asm-keccak", not(miri))))]
+    #[cfg(all(feature = "sha3-keccak", not(miri), not(all(feature = "asm-keccak", not(miri)))))]
+    hasher: sha3::Keccak256,
+    #[cfg(not(any(
+        all(feature = "asm-keccak", not(miri)),
+        all(feature = "sha3-keccak", not(miri)),
+    )))]
     hasher: tiny_keccak::Keccak,
 }
 
@@ -225,6 +233,8 @@ impl Keccak256 {
         cfg_if! {
             if #[cfg(all(feature = "asm-keccak", not(miri)))] {
                 let hasher = keccak_asm::Keccak256::new();
+            } else if #[cfg(all(feature = "sha3-keccak", not(miri)))] {
+                let hasher = sha3::Keccak256::new();
             } else {
                 let hasher = tiny_keccak::Keccak::v256();
             }
@@ -265,6 +275,9 @@ impl Keccak256 {
         cfg_if! {
             if #[cfg(all(feature = "asm-keccak", not(miri)))] {
                 self.hasher.finalize_into(output.into());
+            } else if #[cfg(all(feature = "sha3-keccak", not(miri)))] {
+                <sha3::Keccak256 as sha3::digest::DynDigest>::finalize_into(self.hasher, output)
+                    .unwrap();
             } else {
                 self.hasher.finalize(output);
             }
