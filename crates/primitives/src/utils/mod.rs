@@ -257,7 +257,7 @@ impl Keccak256 {
     /// Absorbs additional input. Can be called multiple times.
     #[inline]
     pub fn update(&mut self, bytes: impl AsRef<[u8]>) {
-        keccak256_state::State::update(&mut self.state, bytes.as_ref());
+        self.state.update(bytes.as_ref());
     }
 
     /// Pad and squeeze the state.
