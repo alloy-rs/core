@@ -45,6 +45,7 @@ sol-types = ["dep:alloy-sol-types"]
 tiny-keccak = ["alloy-primitives/tiny-keccak"]
 native-keccak = ["alloy-primitives/native-keccak"]
 asm-keccak = ["alloy-primitives/asm-keccak"]
+sha3-keccak = ["alloy-primitives/sha3-keccak"]
 
 postgres = ["std", "alloy-primitives/postgres"]
 getrandom = ["alloy-primitives/getrandom"]

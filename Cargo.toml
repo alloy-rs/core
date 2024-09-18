@@ -67,9 +67,11 @@ paste = "1.0"
 num_enum = "0.7"
 thiserror = "1.0"
 
+digest = "0.10"
 k256 = { version = "0.13", default-features = false }
 keccak-asm = { version = "0.1.0", default-features = false }
-tiny-keccak = "2.0"
+tiny-keccak = { version = "2.0", default-features = false }
+sha3 = { version = "0.10.8", default-features = false }
 
 # misc
 allocative = { version = "0.3.2", default-features = false }

@@ -13,14 +13,6 @@ pub use units::{
     format_ether, format_units, parse_ether, parse_units, ParseUnits, Unit, UnitsError,
 };
 
-cfg_if! {
-    if #[cfg(all(feature = "asm-keccak", not(miri)))] {
-        use keccak_asm::Digest as _;
-    } else {
-        use tiny_keccak::Hasher as _;
-    }
-}
-
 #[doc(hidden)]
 #[deprecated(since = "0.5.0", note = "use `Unit::ETHER.wei()` instead")]
 pub const WEI_IN_ETHER: crate::U256 = Unit::ETHER.wei_const();
@@ -153,13 +145,13 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
         let mut output = MaybeUninit::<B256>::uninit();
 
         cfg_if! {
-            if #[cfg(all(feature = "native-keccak", not(feature = "tiny-keccak"), not(miri)))] {
+            if #[cfg(all(feature = "native-keccak", not(any(feature = "sha3-keccak", feature = "tiny-keccak", miri))))] {
                 #[link(wasm_import_module = "vm_hooks")]
                 extern "C" {
                     /// When targeting VMs with native keccak hooks, the `native-keccak` feature
                     /// can be enabled to import and use the host environment's implementation
-                    /// of [`keccak256`] in place of [`tiny_keccak`]. This is overridden when
-                    /// the `tiny-keccak` feature is enabled.
+                    /// of [`keccak256`] in place of [`sha3`] or [`tiny_keccak`]. This is overridden
+                    /// when the `sha3-keccak` or `tiny-keccak` feature is enabled.
                     ///
                     /// # Safety
                     ///
@@ -169,6 +161,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
                     /// - `output` must point to a buffer that is at least 32-bytes long.
                     ///
                     /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
+                    /// [`sha3`]: https://docs.rs/sha3/latest/sha3/
                     /// [`tiny_keccak`]: https://docs.rs/tiny-keccak/latest/tiny_keccak/
                     fn native_keccak256(bytes: *const u8, len: usize, output: *mut u8);
                 }
@@ -190,6 +183,45 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
     keccak256(bytes.as_ref())
 }
 
+mod keccak256_state {
+    cfg_if::cfg_if! {
+        if #[cfg(all(feature = "asm-keccak", not(miri)))] {
+            pub(super) use keccak_asm::Digest;
+
+            pub(super) type State = keccak_asm::Keccak256;
+        } else if #[cfg(feature = "sha3-keccak")] {
+            pub(super) use sha3::Digest;
+
+            pub(super) type State = sha3::Keccak256;
+        } else {
+            pub(super) use tiny_keccak::Hasher as Digest;
+
+            /// Wraps `tiny_keccak::Keccak` to implement `Digest`-like API.
+            #[derive(Clone)]
+            pub(super) struct State(tiny_keccak::Keccak);
+
+            impl State {
+                #[inline]
+                pub(super) fn new() -> Self {
+                    Self(tiny_keccak::Keccak::v256())
+                }
+
+                #[inline]
+                pub(super) fn finalize_into(self, output: &mut [u8; 32]) {
+                    self.0.finalize(output);
+                }
+
+                #[inline]
+                pub(super) fn update(&mut self, bytes: &[u8]) {
+                    self.0.update(bytes);
+                }
+            }
+        }
+    }
+}
+#[allow(unused_imports)]
+use keccak256_state::Digest;
+
 /// Simple [`Keccak-256`] hasher.
 ///
 /// Note that the "native-keccak" feature is not supported for this struct, and will default to the
@@ -198,10 +230,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 #[derive(Clone)]
 pub struct Keccak256 {
-    #[cfg(all(feature = "asm-keccak", not(miri)))]
-    hasher: keccak_asm::Keccak256,
-    #[cfg(not(all(feature = "asm-keccak", not(miri))))]
-    hasher: tiny_keccak::Keccak,
+    state: keccak256_state::State,
 }
 
 impl Default for Keccak256 {
@@ -222,20 +251,13 @@ impl Keccak256 {
     /// Creates a new [`Keccak256`] hasher.
     #[inline]
     pub fn new() -> Self {
-        cfg_if! {
-            if #[cfg(all(feature = "asm-keccak", not(miri)))] {
-                let hasher = keccak_asm::Keccak256::new();
-            } else {
-                let hasher = tiny_keccak::Keccak::v256();
-            }
-        }
-        Self { hasher }
+        Self { state: keccak256_state::State::new() }
     }
 
     /// Absorbs additional input. Can be called multiple times.
     #[inline]
     pub fn update(&mut self, bytes: impl AsRef<[u8]>) {
-        self.hasher.update(bytes.as_ref());
+        self.state.update(bytes.as_ref());
     }
 
     /// Pad and squeeze the state.
@@ -261,14 +283,9 @@ impl Keccak256 {
 
     /// Pad and squeeze the state into `output`.
     #[inline]
+    #[allow(clippy::useless_conversion)]
     pub fn finalize_into_array(self, output: &mut [u8; 32]) {
-        cfg_if! {
-            if #[cfg(all(feature = "asm-keccak", not(miri)))] {
-                self.hasher.finalize_into(output.into());
-            } else {
-                self.hasher.finalize(output);
-            }
-        }
+        self.state.finalize_into(output.into());
     }
 
     /// Pad and squeeze the state into `output`.
