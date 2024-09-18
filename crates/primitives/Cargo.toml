@@ -26,9 +26,6 @@ hex-literal.workspace = true
 hex.workspace = true
 itoa.workspace = true
 ruint.workspace = true
-tiny-keccak = { workspace = true, features = ["keccak"] }
-keccak-asm = { workspace = true, optional = true }
-sha3 = { workspace = true, optional = true }
 
 # macros
 derive_more = { workspace = true, features = [
@@ -47,6 +44,11 @@ derive_more = { workspace = true, features = [
     "display",
 ] }
 cfg-if.workspace = true
+
+# keccak256
+keccak-asm = { workspace = true, optional = true }
+sha3 = { workspace = true, optional = true }
+tiny-keccak = { workspace = true, features = ["keccak"] }
 
 # rlp
 alloy-rlp = { workspace = true, optional = true }
@@ -93,6 +95,7 @@ std = [
     "rand?/std",
     "serde?/std",
     "k256?/std",
+    "sha3?/std",
 ]
 
 tiny-keccak = []
