@@ -59,5 +59,3 @@ arbitrary = [
 ]
 k256 = ["alloy-primitives/k256"]
 eip712 = ["alloy-sol-types?/eip712-serde", "alloy-dyn-abi?/eip712"]
-
-unstable-doc = ["alloy-primitives/unstable-doc"]
