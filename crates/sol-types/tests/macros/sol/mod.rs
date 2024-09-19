@@ -1151,6 +1151,7 @@ fn event_indexed_elementary_arrays() {
 
 // https://github.com/alloy-rs/core/issues/589
 #[test]
+#[allow(clippy::assertions_on_constants)]
 fn event_check_signature() {
     sol! {
         #[derive(Debug)]

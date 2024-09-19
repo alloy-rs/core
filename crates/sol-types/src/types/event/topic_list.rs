@@ -78,6 +78,6 @@ impl_topic_list_tuples! {
 }
 
 #[cold]
-fn length_mismatch() -> Error {
+const fn length_mismatch() -> Error {
     Error::Other(Cow::Borrowed("topic list length mismatch"))
 }
