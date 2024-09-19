@@ -9,7 +9,7 @@
 
 use crate::abi;
 use alloc::{borrow::Cow, boxed::Box, collections::TryReserveError, string::String};
-use alloy_primitives::LogData;
+use alloy_primitives::{LogData, B256};
 use core::fmt;
 
 /// ABI result type.
@@ -146,6 +146,14 @@ impl Error {
     #[cold]
     pub fn unknown_selector(name: &'static str, selector: [u8; 4]) -> Self {
         Self::UnknownSelector { name, selector: selector.into() }
+    }
+
+    #[doc(hidden)] // Not public API.
+    #[cold]
+    pub fn invalid_event_signature_hash(name: &'static str, got: B256, expected: B256) -> Self {
+        Self::custom(format!(
+            "invalid signature hash for event {name:?}: got {got}, expected {expected}"
+        ))
     }
 }
 

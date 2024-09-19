@@ -98,6 +98,18 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         .enumerate()
         .map(|(i, p)| expand_event_topic_field(i, p, p.name.as_ref(), cx));
 
+    let check_signature = (!anonymous).then(|| {
+        quote! {
+            #[inline]
+            fn check_signature(topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType) -> alloy_sol_types::Result<()> {
+                if topics.0 != Self::SIGNATURE_HASH {
+                    return Err(alloy_sol_types::Error::invalid_event_signature_hash(Self::SIGNATURE, topics.0, Self::SIGNATURE_HASH));
+                }
+                Ok(())
+            }
+        }
+    });
+
     let tokenize_body_impl = expand_event_tokenize(&event.parameters, cx);
 
     let encode_topics_impl = encode_first_topic
@@ -172,6 +184,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                         #(#new_impl,)*
                     }
                 }
+
+                #check_signature
 
                 #[inline]
                 fn tokenize_body(&self) -> Self::DataToken<'_> {

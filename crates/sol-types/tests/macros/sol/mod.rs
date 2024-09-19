@@ -1148,3 +1148,26 @@ fn event_indexed_elementary_arrays() {
     assert_eq!(AddrUdvtDynArray::SIGNATURE, "AddrUdvtDynArray(address[])");
     let _ = AddrUdvtDynArray { y: B256::ZERO };
 }
+
+// https://github.com/alloy-rs/core/issues/589
+#[test]
+#[allow(clippy::assertions_on_constants)]
+fn event_check_signature() {
+    sol! {
+        #[derive(Debug)]
+        event MyEvent();
+        event MyEventAnonymous() anonymous;
+    }
+
+    let no_topics: [B256; 0] = [];
+
+    assert!(!MyEvent::ANONYMOUS);
+    let e = MyEvent::decode_raw_log(no_topics, &[], false).unwrap_err();
+    assert_eq!(e.to_string(), "topic list length mismatch");
+    let e = MyEvent::decode_raw_log([B256::ZERO], &[], false).unwrap_err();
+    assert!(e.to_string().contains("invalid signature hash"), "{e:?}");
+    let MyEvent {} = MyEvent::decode_raw_log([MyEvent::SIGNATURE_HASH], &[], false).unwrap();
+
+    assert!(MyEventAnonymous::ANONYMOUS);
+    let MyEventAnonymous {} = MyEventAnonymous::decode_raw_log(no_topics, &[], false).unwrap();
+}
