@@ -1,6 +1,5 @@
 use super::{Address, FixedBytes};
-use alloc::string::String;
-use core::{fmt, str::FromStr};
+use core::fmt;
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
@@ -11,8 +10,12 @@ impl Serialize for Address {
     where
         S: Serializer,
     {
-        let checksum_address = self.to_checksum(None);
-        serializer.serialize_str(&checksum_address)
+        if serializer.is_human_readable() {
+            let checksum_address = self.to_checksum_buffer(None);
+            serializer.serialize_str(checksum_address.as_str())
+        } else {
+            serializer.serialize_bytes(self.as_slice())
+        }
     }
 }
 
