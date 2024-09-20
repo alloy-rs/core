@@ -21,8 +21,7 @@ impl<'de> Deserialize<'de> for Address {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        Self::from_str(&s).map_err(serde::de::Error::custom)
+        Deserialize::deserialize(deserializer).map(Self)
     }
 }
 
