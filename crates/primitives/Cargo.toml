@@ -90,7 +90,7 @@ criterion.workspace = true
 serde_json.workspace = true
 
 [features]
-default = ["std", "map-fxhash", "rand"]
+default = ["std", "map-fxhash"]
 std = [
     "bytes/std",
     "hex/std",
