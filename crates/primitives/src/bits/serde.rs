@@ -1,9 +1,30 @@
-use super::FixedBytes;
-use core::fmt;
+use super::{Address, FixedBytes};
+use alloc::string::String;
+use core::{fmt, str::FromStr};
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
 };
+
+impl Serialize for Address {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let checksum_address = self.to_checksum(None);
+        serializer.serialize_str(&checksum_address)
+    }
+}
+
+impl<'de> Deserialize<'de> for Address {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Self::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
 
 impl<const N: usize> Serialize for FixedBytes<N> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -67,6 +88,8 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
 
 #[cfg(test)]
 mod tests {
+    use core::str::FromStr;
+
     use super::*;
     use alloc::string::ToString;
     use serde::Deserialize;
@@ -86,6 +109,14 @@ mod tests {
         let val = serde_json::to_value(bytes).unwrap();
         assert_eq!(val, serde_json::json! {"0x000000000123456789abcdef"});
         assert_eq!(serde_json::from_value::<FixedBytes<12>>(val).unwrap(), bytes);
+    }
+
+    #[test]
+    fn serde_address() {
+        let address = Address::from_str("0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359").unwrap();
+        let ser = serde_json::to_string(&address).unwrap();
+        // serialize in checksum format
+        assert_eq!(ser, "\"0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359\"");
     }
 
     #[test]
