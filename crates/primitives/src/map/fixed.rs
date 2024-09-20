@@ -47,11 +47,24 @@ macro_rules! fb_alias_maps {
 
 fb_alias_maps!(Selector<4>, Address<20>, B256<32>);
 
+#[allow(unused_macros)]
 macro_rules! assert_unchecked {
-    ($e:expr) => {
+    ($e:expr) => { assert_unchecked!($e,); };
+    ($e:expr, $($t:tt)*) => {
         if cfg!(debug_assertions) {
-            assert!($e);
+            assert!($e, $($t)*);
         } else if !$e {
+            unsafe { core::hint::unreachable_unchecked() }
+        }
+    };
+}
+
+macro_rules! assert_eq_unchecked {
+    ($a:expr, $b:expr) => { assert_eq_unchecked!($a, $b,); };
+    ($a:expr, $b:expr, $($t:tt)*) => {
+        if cfg!(debug_assertions) {
+            assert_eq!($a, $b, $($t)*);
+        } else if $a != $b {
             unsafe { core::hint::unreachable_unchecked() }
         }
     };
@@ -95,57 +108,66 @@ impl<const N: usize, H: Hasher> Hasher for FbHasher<N, H> {
     }
 
     #[inline]
-    fn write(&mut self, mut bytes: &[u8]) {
-        assert_unchecked!(bytes.len() == N);
+    fn write(&mut self, bytes: &[u8]) {
+        assert_eq_unchecked!(bytes.len(), N);
+        write_bytes(&mut self.inner, bytes);
+    }
 
-        while let Some((chunk, rest)) = bytes.split_first_chunk() {
-            self.inner.write_usize(usize::from_ne_bytes(*chunk));
-            bytes = rest;
-        }
-        if usize::BITS > 64 {
-            if let Some((chunk, rest)) = bytes.split_first_chunk() {
-                self.inner.write_u64(u64::from_ne_bytes(*chunk));
-                bytes = rest;
-            }
-        }
-        if usize::BITS > 32 {
-            if let Some((chunk, rest)) = bytes.split_first_chunk() {
-                self.inner.write_u32(u32::from_ne_bytes(*chunk));
-                bytes = rest;
-            }
-        }
-        if usize::BITS > 16 {
-            if let Some((chunk, rest)) = bytes.split_first_chunk() {
-                self.inner.write_u16(u16::from_ne_bytes(*chunk));
-                bytes = rest;
-            }
-        }
-        if usize::BITS > 8 {
-            if let Some((chunk, rest)) = bytes.split_first_chunk() {
-                self.inner.write_u8(u8::from_ne_bytes(*chunk));
-                bytes = rest;
-            }
-        }
-
-        debug_assert!(bytes.is_empty());
+    // `write_length_prefix` calls `write_usize` by default.
+    #[cfg(not(feature = "nightly"))]
+    #[inline]
+    fn write_usize(&mut self, len: usize) {
+        assert_eq_unchecked!(len, N);
     }
 
     #[cfg(feature = "nightly")]
     #[inline]
     fn write_length_prefix(&mut self, len: usize) {
-        assert_unchecked!(len == N);
+        assert_eq_unchecked!(len, N);
         // We can just skip hashing the length prefix entirely since we know it's always `N`.
     }
+}
+
+#[inline(always)]
+fn write_bytes(hasher: &mut impl Hasher, mut bytes: &[u8]) {
+    while let Some((chunk, rest)) = bytes.split_first_chunk() {
+        hasher.write_usize(usize::from_ne_bytes(*chunk));
+        bytes = rest;
+    }
+    if usize::BITS > 64 {
+        if let Some((chunk, rest)) = bytes.split_first_chunk() {
+            hasher.write_u64(u64::from_ne_bytes(*chunk));
+            bytes = rest;
+        }
+    }
+    if usize::BITS > 32 {
+        if let Some((chunk, rest)) = bytes.split_first_chunk() {
+            hasher.write_u32(u32::from_ne_bytes(*chunk));
+            bytes = rest;
+        }
+    }
+    if usize::BITS > 16 {
+        if let Some((chunk, rest)) = bytes.split_first_chunk() {
+            hasher.write_u16(u16::from_ne_bytes(*chunk));
+            bytes = rest;
+        }
+    }
+    if usize::BITS > 8 {
+        if let Some((chunk, rest)) = bytes.split_first_chunk() {
+            hasher.write_u8(u8::from_ne_bytes(*chunk));
+            bytes = rest;
+        }
+    }
+
+    debug_assert!(bytes.is_empty());
 }
 
 #[cfg(all(test, any(feature = "std", feature = "map-fxhash")))]
 mod tests {
     use super::*;
 
-    macro_rules! hash_zero {
-        ($n:expr) => {
-            BuildFbHasher::<$n>::default().hash_one(&FixedBytes::<$n>::ZERO)
-        };
+    fn hash_zero<const N: usize>() -> u64 {
+        BuildFbHasher::<N>::default().hash_one(&FixedBytes::<N>::ZERO)
     }
 
     #[test]
@@ -154,7 +176,7 @@ mod tests {
         ruint::const_for!(N in [ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
                                 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
                                 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47] {
-            assert_ne!(hash_zero!(N), 0);
+            assert_ne!(hash_zero::<N>(), 0);
         });
     }
 }
