@@ -90,7 +90,7 @@ criterion.workspace = true
 serde_json.workspace = true
 
 [features]
-default = ["std"]
+default = ["std", "map-fxhash", "rand"]
 std = [
     "bytes/std",
     "hex/std",
@@ -133,6 +133,7 @@ serde = [
     "ruint/serde",
     "hashbrown?/serde",
     "indexmap?/serde",
+    "rand?/serde",
 ]
 
 allocative = ["dep:allocative"]

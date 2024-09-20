@@ -5,6 +5,8 @@ use cfg_if::cfg_if;
 mod fixed;
 pub use fixed::*;
 
+use hashbrown as _;
+
 // Use `hashbrown` if requested with "map-hashbrown" or required by `no_std`.
 cfg_if! {
     if #[cfg(any(feature = "map-hashbrown", not(feature = "std")))] {
@@ -53,13 +55,21 @@ cfg_if! {
 cfg_if! {
     if #[cfg(feature = "map-fxhash")] {
         type DefaultHashBuilderInner = FxBuildHasher;
+    } else if #[cfg(feature = "std")] {
+        type DefaultHashBuilderInner = std::collections::hash_map::RandomState;
     } else {
         type DefaultHashBuilderInner = hashbrown::hash_map::DefaultHashBuilder;
     }
 }
 /// The default [`BuildHasher`](core::hash::BuildHasher) used by [`HashMap`] and [`HashSet`].
+///
+/// This hasher prioritizes speed over security, even if it is still secure enough for most
+/// applications thanks to the use of a random seed.
 pub type DefaultHashBuilder = DefaultHashBuilderInner;
 /// The default [`Hasher`](core::hash::Hasher) used by [`HashMap`] and [`HashSet`].
+///
+/// This hasher prioritizes speed over security, even if it is still secure enough for most
+/// applications thanks to the use of a random seed.
 pub type DefaultHasher = <DefaultHashBuilder as core::hash::BuildHasher>::Hasher;
 
 // `indexmap` re-exports.

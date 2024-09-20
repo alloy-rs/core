@@ -59,6 +59,8 @@ macro_rules! assert_unchecked {
 
 /// [`BuildHasher`] optimized for hashing [fixed-size byte arrays](FixedBytes).
 ///
+/// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
+///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is UB to hash anything else.
 #[derive(Clone, Debug, Default)]
 pub struct BuildFbHasher<const N: usize, S = DefaultHashBuilder> {
@@ -76,6 +78,8 @@ impl<const N: usize, S: BuildHasher> BuildHasher for BuildFbHasher<N, S> {
 }
 
 /// [`Hasher`] optimized for hashing [fixed-size byte arrays](FixedBytes).
+///
+/// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
 ///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is UB to hash anything else.
 #[derive(Clone, Debug, Default)]
@@ -134,7 +138,7 @@ impl<const N: usize, H: Hasher> Hasher for FbHasher<N, H> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, any(feature = "std", feature = "map-fxhash")))]
 mod tests {
     use super::*;
 

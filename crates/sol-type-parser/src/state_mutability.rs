@@ -157,11 +157,9 @@ pub mod serde_state_mutability_compat {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "serde"))]
 mod tests {
     use super::*;
-
-    #[cfg(not(feature = "std"))]
     use alloc::string::ToString;
 
     #[derive(Debug, Serialize, Deserialize)]

@@ -302,6 +302,7 @@ impl Keccak256 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::string::ToString;
 
     // test vector taken from:
     // https://web3js.readthedocs.io/en/v1.10.0/web3-eth-accounts.html#hashmessage

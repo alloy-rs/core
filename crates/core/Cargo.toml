@@ -21,15 +21,16 @@ rustdoc-args = ["--cfg", "docsrs"]
 workspace = true
 
 [dependencies]
-alloy-primitives = { workspace = true, default-features = false }
+alloy-primitives.workspace = true
 
-alloy-dyn-abi = { workspace = true, default-features = false, optional = true }
-alloy-json-abi = { workspace = true, default-features = false, optional = true }
-alloy-sol-types = { workspace = true, default-features = false, optional = true }
+alloy-dyn-abi = { workspace = true, optional = true }
+alloy-json-abi = { workspace = true, optional = true }
+alloy-sol-types = { workspace = true, optional = true }
 
-alloy-rlp = { workspace = true, default-features = false, optional = true }
+alloy-rlp = { workspace = true, optional = true }
 
 [features]
+default = ["std", "map-fxhash", "rand"]
 std = [
     "alloy-primitives/std",
     "alloy-json-abi?/std",

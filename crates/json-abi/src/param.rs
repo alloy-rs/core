@@ -675,8 +675,11 @@ mod tests {
         let param_value = serde_json::from_str::<serde_json::Value>(param).unwrap();
         assert_eq!(serde_json::from_value::<Param>(param_value).unwrap(), expected);
 
-        let reader = std::io::Cursor::new(param);
-        assert_eq!(serde_json::from_reader::<_, Param>(reader).unwrap(), expected);
+        #[cfg(feature = "std")]
+        {
+            let reader = std::io::Cursor::new(param);
+            assert_eq!(serde_json::from_reader::<_, Param>(reader).unwrap(), expected);
+        }
     }
 
     #[test]
