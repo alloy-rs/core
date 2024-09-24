@@ -216,7 +216,7 @@ impl<'a> InternalTypes<'a> {
         &mut self,
         internal_type: Option<&'a InternalType>,
         components: &'a Vec<Param>,
-        real_ty: &'a String,
+        real_ty: &'a str,
     ) {
         match internal_type {
             None | Some(InternalType::AddressPayable(_) | InternalType::Contract(_)) => {}
