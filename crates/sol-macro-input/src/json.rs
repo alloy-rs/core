@@ -119,7 +119,7 @@ pub fn tokens_for_sol(name: &Ident, sol: &str) -> Result<TokenStream> {
         );
         syn::Error::new(name.span(), msg)
     };
-    let tts = syn::parse_str::<TokenStream>(&sol).map_err(|e| mk_err(&e.to_string()))?;
+    let tts = syn::parse_str::<TokenStream>(sol).map_err(|e| mk_err(&e.to_string()))?;
     Ok(tts
         .into_iter()
         .map(|mut tt| {
