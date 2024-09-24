@@ -233,3 +233,9 @@ fn balancer_v2_vault() {
 // fn eigenlayer_delegation_manager() {
 //     sol!(DelegationManager, "../json-abi/tests/abi/DelegationManager.json");
 // }
+
+// TODO: https://github.com/alloy-rs/core/issues/746
+// #[test]
+// fn smartsession_bootstrap() {
+//     sol!(Bootstrap, "../json-abi/tests/abi/Bootstrap.json");
+// }

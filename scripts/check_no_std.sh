@@ -7,7 +7,6 @@ crates=(
     alloy-core-sol-test
     alloy-dyn-abi
     alloy-json-abi
-    alloy-json-abi
     alloy-primitives
     # alloy-sol-macro
     # alloy-sol-macro-expander

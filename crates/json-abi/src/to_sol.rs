@@ -3,6 +3,7 @@ use crate::{
     EventParam, InternalType, JsonAbi, Param, StateMutability,
 };
 use alloc::{
+    borrow::Cow,
     collections::{BTreeMap, BTreeSet},
     string::String,
     vec::Vec,
@@ -18,6 +19,7 @@ use core::{
 pub struct ToSolConfig {
     print_constructors: bool,
     enums_as_udvt: bool,
+    for_sol_macro: bool,
 }
 
 impl Default for ToSolConfig {
@@ -31,7 +33,7 @@ impl ToSolConfig {
     /// Creates a new configuration with default settings.
     #[inline]
     pub const fn new() -> Self {
-        Self { print_constructors: false, enums_as_udvt: true }
+        Self { print_constructors: false, enums_as_udvt: true, for_sol_macro: false }
     }
 
     /// Sets whether to print constructors. Default: `false`.
@@ -46,6 +48,14 @@ impl ToSolConfig {
     #[inline]
     pub const fn enums_as_udvt(mut self, yes: bool) -> Self {
         self.enums_as_udvt = yes;
+        self
+    }
+
+    /// Sets whether to normalize the output for the [`sol!`] macro. Default: `false`.
+    ///
+    /// [`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/macro.sol.html
+    pub const fn for_sol_macro(mut self, yes: bool) -> Self {
+        self.for_sol_macro = yes;
         self
     }
 }
@@ -96,6 +106,27 @@ impl<'a> SolPrinter<'a> {
 
     fn indent(&mut self) {
         self.push_str("    ");
+    }
+
+    /// Normalizes `s` as a Rust identifier and pushes it to the buffer.
+    ///
+    /// See [`Self::normalize_ident`] for more details.
+    fn push_ident(&mut self, s: &str) {
+        let s = self.normalize_ident(s);
+        self.push_str(&s);
+    }
+
+    /// Normalizes `s` as a Rust identifier.
+    ///
+    /// All Solidity identifiers are also valid Rust identifiers, except for `$`.
+    /// This function replaces `$` with `_` if the configuration is set to normalize for the `sol!`
+    /// macro.
+    fn normalize_ident<'b>(&self, s: &'b str) -> Cow<'b, str> {
+        if self.config.for_sol_macro && s.contains('$') {
+            Cow::Owned(s.replace('$', "_"))
+        } else {
+            Cow::Borrowed(s)
+        }
     }
 }
 
@@ -311,19 +342,19 @@ impl ToSol for It<'_> {
         match self.kind {
             ItKind::Enum => {
                 out.push_str("type ");
-                out.push_str(self.name);
+                out.push_ident(self.name);
                 out.push_str(" is uint8;");
             }
             ItKind::Udvt(ty) => {
                 out.push_str("type ");
-                out.push_str(self.name);
+                out.push_ident(self.name);
                 out.push_str(" is ");
                 out.push_str(ty);
                 out.push(';');
             }
             ItKind::Struct(components) => {
                 out.push_str("struct ");
-                out.push_str(self.name);
+                out.push_ident(self.name);
                 out.push_str(" {\n");
                 for component in components {
                     out.indent();
@@ -483,10 +514,17 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
             out.print_param_location = true;
         }
 
+        // TODO: Enable once `#[sol(rename)]` is implemented.
+        // if let Some(name) = self.name {
+        //     if out.config.for_sol_macro && name.contains('$') {
+        //         write!(out, "#[sol(rename = \"{name}\")]").unwrap();
+        //     }
+        // }
+
         out.push_str(self.kw.as_str());
         if let Some(name) = self.name {
             out.push(' ');
-            out.push_str(name);
+            out.push_ident(name);
         }
 
         out.push('(');
@@ -616,11 +654,11 @@ fn param(
         _ => {
             if let Some(contract_name) = contract_name {
                 if contract_name != out.name {
-                    out.push_str(contract_name);
+                    out.push_ident(contract_name);
                     out.push('.');
                 }
             }
-            out.push_str(type_name);
+            out.push_ident(type_name);
         }
     }
 
@@ -639,6 +677,6 @@ fn param(
     }
     if !name.is_empty() {
         out.push(' ');
-        out.push_str(name);
+        out.push_ident(name);
     }
 }
