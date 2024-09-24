@@ -120,8 +120,8 @@ native-keccak = []
 sha3-keccak = ["dep:sha3"]
 tiny-keccak = []
 
-map = []
-map-hashbrown = ["map", "dep:hashbrown"]
+map = ["dep:hashbrown"]
+map-hashbrown = ["map"]
 map-indexmap = ["map", "dep:indexmap"]
 map-fxhash = ["map", "dep:rustc-hash"]
 

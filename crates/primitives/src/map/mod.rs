@@ -32,14 +32,14 @@ use cfg_if::cfg_if;
 mod fixed;
 pub use fixed::*;
 
-// The `HashMap` type implementation.
+// The `HashMap` implementation.
+// Use `hashbrown` if requested with "map-hashbrown" or required by `no_std`.
 cfg_if! {
-    if #[cfg(feature = "map-hashbrown")] {
+    if #[cfg(any(feature = "map-hashbrown", not(feature = "std")))] {
         use hashbrown as imp;
-    } else if #[cfg(feature = "std")] {
-        use std::collections as imp;
     } else {
-        compile_error!("The `map-hashbrown` feature is required in `no_std` environments.");
+        use hashbrown as _;
+        use std::collections as imp;
     }
 }
 
@@ -87,13 +87,10 @@ cfg_if! {
 cfg_if! {
     if #[cfg(feature = "map-fxhash")] {
         type DefaultHashBuilderInner = FxBuildHasher;
-    } else if #[cfg(feature = "map-hashbrown")] {
+    } else if #[cfg(any(feature = "map-hashbrown", not(feature = "std")))] {
         type DefaultHashBuilderInner = hashbrown::hash_map::DefaultHashBuilder;
-    } else if #[cfg(feature = "std")] {
-        type DefaultHashBuilderInner = std::collections::hash_map::RandomState;
     } else {
-        // An error has already been emitted in the `imp` block above.
-        type DefaultHashBuilderInner = ();
+        type DefaultHashBuilderInner = std::collections::hash_map::RandomState;
     }
 }
 /// The default [`BuildHasher`](core::hash::BuildHasher) used by [`HashMap`] and [`HashSet`].
