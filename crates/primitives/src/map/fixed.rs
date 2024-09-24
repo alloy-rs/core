@@ -74,7 +74,7 @@ macro_rules! assert_eq_unchecked {
 ///
 /// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
 ///
-/// **NOTE:** this hasher accepts only `N`-length byte arrays! It is UB to hash anything else.
+/// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
 #[derive(Clone, Debug, Default)]
 pub struct FbBuildHasher<const N: usize, S = DefaultHashBuilder> {
     inner: S,
@@ -94,7 +94,7 @@ impl<const N: usize, S: BuildHasher> BuildHasher for FbBuildHasher<N, S> {
 ///
 /// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
 ///
-/// **NOTE:** this hasher accepts only `N`-length byte arrays! It is UB to hash anything else.
+/// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
 #[derive(Clone, Debug, Default)]
 pub struct FbHasher<const N: usize, H> {
     inner: H,
@@ -114,7 +114,7 @@ impl<const N: usize, H: Hasher> Hasher for FbHasher<N, H> {
         if N > 32 {
             self.inner.write(bytes);
         } else {
-            write_bytes(&mut self.inner, bytes);
+            write_bytes_unrolled(&mut self.inner, bytes);
         }
     }
 
@@ -124,18 +124,18 @@ impl<const N: usize, H: Hasher> Hasher for FbHasher<N, H> {
     #[cfg(not(feature = "nightly"))]
     #[inline]
     fn write_usize(&mut self, i: usize) {
-        assert_eq_unchecked!(i, N);
+        debug_assert_eq!(i, N);
     }
 
     #[cfg(feature = "nightly")]
     #[inline]
     fn write_length_prefix(&mut self, len: usize) {
-        assert_eq_unchecked!(len, N);
+        debug_assert_eq!(len, N);
     }
 }
 
 #[inline(always)]
-fn write_bytes(hasher: &mut impl Hasher, mut bytes: &[u8]) {
+fn write_bytes_unrolled(hasher: &mut impl Hasher, mut bytes: &[u8]) {
     while let Some((chunk, rest)) = bytes.split_first_chunk() {
         hasher.write_usize(usize::from_ne_bytes(*chunk));
         bytes = rest;
@@ -184,5 +184,13 @@ mod tests {
                                 32, 47, 48, 49, 63, 64, 127, 128, 256, 512, 1024, 2048, 4096] {
             let _ = hash_zero::<N>();
         });
+    }
+
+    #[test]
+    fn map() {
+        let mut map = AddressHashMap::<bool>::default();
+        map.insert(Address::ZERO, true);
+        assert_eq!(map.get(&Address::ZERO), Some(&true));
+        assert_eq!(map.get(&Address::with_last_byte(1)), None);
     }
 }

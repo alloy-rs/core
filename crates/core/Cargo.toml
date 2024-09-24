@@ -30,12 +30,20 @@ alloy-sol-types = { workspace = true, optional = true }
 alloy-rlp = { workspace = true, optional = true }
 
 [features]
-default = ["std", "map-fxhash"]
+default = [
+    "std",
+    "alloy-primitives/default",
+    "alloy-dyn-abi?/default",
+    "alloy-json-abi?/default",
+    "alloy-sol-types?/default",
+    "alloy-rlp?/default",
+]
 std = [
     "alloy-primitives/std",
     "alloy-json-abi?/std",
     "alloy-dyn-abi?/std",
     "alloy-sol-types?/std",
+    "alloy-rlp?/std",
 ]
 nightly = ["alloy-primitives/nightly"]
 

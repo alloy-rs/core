@@ -67,7 +67,10 @@ rand = { workspace = true, optional = true, features = ["getrandom"] }
 k256 = { workspace = true, optional = true, features = ["ecdsa"] }
 
 # map
-hashbrown = { workspace = true, optional = true, features = ["inline-more"] }
+hashbrown = { workspace = true, optional = true, features = [
+    "ahash",
+    "inline-more",
+] }
 indexmap = { workspace = true, optional = true }
 rustc-hash = { workspace = true, optional = true }
 
@@ -117,8 +120,8 @@ native-keccak = []
 sha3-keccak = ["dep:sha3"]
 tiny-keccak = []
 
-map = ["dep:hashbrown"]
-map-hashbrown = ["map"]
+map = []
+map-hashbrown = ["map", "dep:hashbrown"]
 map-indexmap = ["map", "dep:indexmap"]
 map-fxhash = ["map", "dep:rustc-hash"]
 
