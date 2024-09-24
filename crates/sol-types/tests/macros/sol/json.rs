@@ -227,3 +227,9 @@ fn balancer_v2_vault() {
         "PoolBalanceChanged(bytes32,address,address[],int256[],uint256[])"
     );
 }
+
+// TODO: https://github.com/alloy-rs/core/issues/744
+// #[test]
+// fn eigenlayer_delegation_manager() {
+//     sol!(DelegationManager, "../json-abi/tests/abi/DelegationManager.json");
+// }
