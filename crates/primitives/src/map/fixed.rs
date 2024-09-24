@@ -1,23 +1,24 @@
 use super::*;
 use crate::{Address, FixedBytes, Selector, B256};
 use cfg_if::cfg_if;
-use core::hash::{BuildHasher, Hasher};
+use core::{
+    fmt,
+    hash::{BuildHasher, Hasher},
+};
 
 /// [`HashMap`] optimized for hashing [fixed-size byte arrays](FixedBytes).
-pub type FbHashMap<const N: usize, V, S = DefaultHashBuilder> =
-    HashMap<FixedBytes<N>, V, FbBuildHasher<N, S>>;
+pub type FbHashMap<const N: usize, V> = HashMap<FixedBytes<N>, V, FbBuildHasher<N>>;
 /// [`HashSet`] optimized for hashing [fixed-size byte arrays](FixedBytes).
-pub type FbHashSet<const N: usize, S = DefaultHashBuilder> =
-    HashSet<FixedBytes<N>, FbBuildHasher<N, S>>;
+pub type FbHashSet<const N: usize> = HashSet<FixedBytes<N>, FbBuildHasher<N>>;
 
 cfg_if! {
     if #[cfg(feature = "map-indexmap")] {
         /// [`IndexMap`] optimized for hashing [fixed-size byte arrays](FixedBytes).
-        pub type FbIndexMap<const N: usize, V, S = DefaultHashBuilder> =
-            indexmap::IndexMap<FixedBytes<N>, V, FbBuildHasher<N, S>>;
+        pub type FbIndexMap<const N: usize, V> =
+            indexmap::IndexMap<FixedBytes<N>, V, FbBuildHasher<N>>;
         /// [`IndexSet`] optimized for hashing [fixed-size byte arrays](FixedBytes).
-        pub type FbIndexSet<const N: usize, S = DefaultHashBuilder> =
-            indexmap::IndexSet<FixedBytes<N>, FbBuildHasher<N, S>>;
+        pub type FbIndexSet<const N: usize> =
+            indexmap::IndexSet<FixedBytes<N>, FbBuildHasher<N>>;
     }
 }
 
@@ -25,20 +26,16 @@ macro_rules! fb_alias_maps {
     ($($ty:ident < $n:literal >),* $(,)?) => { paste::paste! {
         $(
             #[doc = concat!("[`HashMap`] optimized for hashing [`", stringify!($ty), "`].")]
-            pub type [<$ty HashMap>]<V, S = DefaultHashBuilder> =
-                HashMap<$ty, V, FbBuildHasher<$n, S>>;
+            pub type [<$ty HashMap>]<V> = HashMap<$ty, V, FbBuildHasher<$n>>;
             #[doc = concat!("[`HashSet`] optimized for hashing [`", stringify!($ty), "`].")]
-            pub type [<$ty HashSet>]<S = DefaultHashBuilder> =
-                HashSet<$ty, FbBuildHasher<$n, S>>;
+            pub type [<$ty HashSet>] = HashSet<$ty, FbBuildHasher<$n>>;
 
             cfg_if! {
                 if #[cfg(feature = "map-indexmap")] {
                     #[doc = concat!("[`IndexMap`] optimized for hashing [`", stringify!($ty), "`].")]
-                    pub type [<$ty IndexMap>]<V, S = DefaultHashBuilder> =
-                        IndexMap<$ty, V, FbBuildHasher<$n, S>>;
+                    pub type [<$ty IndexMap>]<V> = IndexMap<$ty, V, FbBuildHasher<$n>>;
                     #[doc = concat!("[`IndexSet`] optimized for hashing [`", stringify!($ty), "`].")]
-                    pub type [<$ty IndexSet>]<S = DefaultHashBuilder> =
-                        IndexSet<$ty, FbBuildHasher<$n, S>>;
+                    pub type [<$ty IndexSet>] = IndexSet<$ty, FbBuildHasher<$n>>;
                 }
             }
         )*
@@ -75,14 +72,20 @@ macro_rules! assert_eq_unchecked {
 /// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
 ///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
-#[derive(Clone, Debug, Default)]
-pub struct FbBuildHasher<const N: usize, S = DefaultHashBuilder> {
-    inner: S,
+#[derive(Default)]
+pub struct FbBuildHasher<const N: usize> {
+    inner: DefaultHashBuilder,
     _marker: core::marker::PhantomData<[(); N]>,
 }
 
-impl<const N: usize, S: BuildHasher> BuildHasher for FbBuildHasher<N, S> {
-    type Hasher = FbHasher<N, S::Hasher>;
+impl<const N: usize> fmt::Debug for FbBuildHasher<N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FbBuildHasher").finish_non_exhaustive()
+    }
+}
+
+impl<const N: usize> BuildHasher for FbBuildHasher<N> {
+    type Hasher = FbHasher<N>;
 
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
@@ -95,13 +98,19 @@ impl<const N: usize, S: BuildHasher> BuildHasher for FbBuildHasher<N, S> {
 /// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
 ///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
-#[derive(Clone, Debug, Default)]
-pub struct FbHasher<const N: usize, H> {
-    inner: H,
+#[derive(Default)]
+pub struct FbHasher<const N: usize> {
+    inner: DefaultHasher,
     _marker: core::marker::PhantomData<[(); N]>,
 }
 
-impl<const N: usize, H: Hasher> Hasher for FbHasher<N, H> {
+impl<const N: usize> fmt::Debug for FbHasher<N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FbHasher").finish_non_exhaustive()
+    }
+}
+
+impl<const N: usize> Hasher for FbHasher<N> {
     #[inline]
     fn finish(&self) -> u64 {
         self.inner.finish()
