@@ -96,6 +96,8 @@ fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
         |"ZeroXExchange"| "GaugeController" | "DoubleExponentInterestSetter" | "NamelessParams"
         // UniswapV1Exchange has return values with the same name.
         | "UniswapV1Exchange"
+        // https://github.com/alloy-rs/core/issues/744
+        | "DelegationManager"
     ) {
         return;
     }

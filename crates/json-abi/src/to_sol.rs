@@ -229,9 +229,11 @@ impl<'a> InternalTypes<'a> {
                 }
             }
             Some(it @ InternalType::Other { contract, ty }) => {
-                // `Other` is a UDVT if it's not a basic Solidity type and not an array
+                // `Other` is a UDVT if it's not a basic Solidity type.
                 if let Some(it) = it.other_specifier() {
-                    if it.try_basic_solidity().is_err() && !it.is_array() {
+                    if it.try_basic_solidity().is_err() {
+                        let ty = ty.split('[').next().unwrap();
+                        let real_ty = real_ty.split('[').next().unwrap();
                         self.extend_one(contract, It::new(ty, ItKind::Udvt(real_ty)));
                     }
                 }
@@ -264,7 +266,7 @@ struct It<'a> {
 #[derive(PartialEq, Eq)]
 enum ItKind<'a> {
     Enum,
-    Udvt(&'a String),
+    Udvt(&'a str),
     Struct(&'a Vec<Param>),
 }
 
