@@ -1,4 +1,4 @@
-use alloy_json_abi::{AbiItem, EventParam, JsonAbi, Param};
+use alloy_json_abi::{AbiItem, EventParam, JsonAbi, Param, ToSolConfig};
 use pretty_assertions::assert_eq;
 use std::{
     collections::HashMap,
@@ -86,7 +86,7 @@ fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
     // Ignore constructors for Solc tests.
     abi.constructor = None;
     abi.dedup();
-    let actual = abi.to_sol(name, None);
+    let actual = abi.to_sol(name, Some(ToSolConfig::new().for_sol_macro(true)));
 
     ensure_file_contents(&sol_path, &actual);
 
@@ -98,6 +98,8 @@ fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
         | "UniswapV1Exchange"
         // https://github.com/alloy-rs/core/issues/744
         | "DelegationManager"
+        // https://github.com/alloy-rs/core/issues/746
+        | "Bootstrap"
     ) {
         return;
     }
