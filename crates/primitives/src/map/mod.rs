@@ -63,7 +63,40 @@ cfg_if! {
 
         cfg_if! {
             if #[cfg(all(feature = "std", feature = "rand"))] {
-                use rustc_hash::FxRandomState as FxBuildHasherInner;
+                // use rustc_hash::FxRandomState as FxBuildHasherInner;
+
+                // TODO: Polyfill for https://github.com/rust-lang/rustc-hash/pull/52/
+                #[allow(missing_debug_implementations, missing_copy_implementations)]
+                #[doc(hidden)]
+                #[derive(Clone)]
+                pub struct FxBuildHasherInner(usize);
+
+                impl Default for FxBuildHasherInner {
+                    // Copied from `FxRandomState::new`.
+                    fn default() -> Self {
+                        use rand::Rng;
+                        use std::{cell::Cell, thread_local};
+
+                        thread_local!(static SEED: Cell<usize> = {
+                            Cell::new(rand::thread_rng().gen())
+                        });
+
+                        SEED.with(|seed| {
+                            let s = seed.get();
+                            seed.set(s.wrapping_add(1));
+                            Self(s)
+                        })
+                    }
+                }
+
+                impl core::hash::BuildHasher for FxBuildHasherInner {
+                    type Hasher = rustc_hash::FxHasher;
+
+                    #[inline]
+                    fn build_hasher(&self) -> Self::Hasher {
+                        rustc_hash::FxHasher::with_seed(self.0)
+                    }
+                }
             } else {
                 use rustc_hash::FxBuildHasher as FxBuildHasherInner;
             }
@@ -125,5 +158,21 @@ cfg_if! {
                 pub type FxIndexSet<V> = IndexSet<V, FxBuildHasher>;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_hasher_builder_traits() {
+        let hash_builder = <DefaultHashBuilder as Default>::default();
+        let _hash_builder2 = <DefaultHashBuilder as Clone>::clone(&hash_builder);
+        let mut hasher =
+            <DefaultHashBuilder as core::hash::BuildHasher>::build_hasher(&hash_builder);
+
+        <DefaultHasher as core::hash::Hasher>::write_u8(&mut hasher, 0);
+        let _hasher2 = <DefaultHasher as Clone>::clone(&hasher);
     }
 }

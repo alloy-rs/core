@@ -72,7 +72,7 @@ macro_rules! assert_eq_unchecked {
 /// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
 ///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct FbBuildHasher<const N: usize> {
     inner: DefaultHashBuilder,
     _marker: core::marker::PhantomData<[(); N]>,
@@ -98,7 +98,7 @@ impl<const N: usize> BuildHasher for FbBuildHasher<N> {
 /// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
 ///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct FbHasher<const N: usize> {
     inner: DefaultHasher,
     _marker: core::marker::PhantomData<[(); N]>,
@@ -201,5 +201,11 @@ mod tests {
         map.insert(Address::ZERO, true);
         assert_eq!(map.get(&Address::ZERO), Some(&true));
         assert_eq!(map.get(&Address::with_last_byte(1)), None);
+
+        let map2 = map.clone();
+        assert_eq!(map.len(), map2.len());
+        assert_eq!(map.len(), 1);
+        assert_eq!(map2.get(&Address::ZERO), Some(&true));
+        assert_eq!(map2.get(&Address::with_last_byte(1)), None);
     }
 }
