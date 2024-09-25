@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4](https://github.com/alloy-rs/core/releases/tag/v0.8.4) - 2024-09-25
+
+### Bug Fixes
+
+- [json-abi] Normalize $ to _ in identifiers in to_sol ([#747](https://github.com/alloy-rs/core/issues/747))
+- [json-abi] Correct to-sol for UDVT arrays in structs ([#745](https://github.com/alloy-rs/core/issues/745))
+- [sol-types] Check signature in SolEvent if non-anonymous ([#741](https://github.com/alloy-rs/core/issues/741))
+
+### Features
+
+- [primitives] Implement `map` module ([#743](https://github.com/alloy-rs/core/issues/743))
+- Support Keccak with sha3 ([#737](https://github.com/alloy-rs/core/issues/737))
+
+### Miscellaneous Tasks
+
+- Remove unused unstable-doc feature
+
+### Other
+
+- Add custom serialization for Address ([#742](https://github.com/alloy-rs/core/issues/742))
+
+### Testing
+
+- Allow missing_docs in tests
+- Add another dyn-abi test
+
 ## [0.8.3](https://github.com/alloy-rs/core/releases/tag/v0.8.3) - 2024-09-10
 
 ### Bug Fixes
@@ -16,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 - Prepare reth Signature migration to alloy ([#732](https://github.com/alloy-rs/core/issues/732))
+
+### Miscellaneous Tasks
+
+- Release 0.8.3
 
 ## [0.8.2](https://github.com/alloy-rs/core/releases/tag/v0.8.2) - 2024-09-06
 
