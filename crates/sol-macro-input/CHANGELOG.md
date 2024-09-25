@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [json-abi] Normalize $ to _ in identifiers in to_sol ([#747](https://github.com/alloy-rs/core/issues/747))
 
+### Miscellaneous Tasks
+
+- Release 0.8.4
+
 ## [0.8.3](https://github.com/alloy-rs/core/releases/tag/v0.8.3) - 2024-09-10
 
 ### Miscellaneous Tasks

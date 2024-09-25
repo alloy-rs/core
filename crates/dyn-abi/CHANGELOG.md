@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [primitives] Implement `map` module ([#743](https://github.com/alloy-rs/core/issues/743))
 
+### Miscellaneous Tasks
+
+- Release 0.8.4
+
 ### Other
 
 - Add custom serialization for Address ([#742](https://github.com/alloy-rs/core/issues/742))

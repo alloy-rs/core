@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [json-abi] Correct to-sol for UDVT arrays in structs ([#745](https://github.com/alloy-rs/core/issues/745))
 
+### Miscellaneous Tasks
+
+- Release 0.8.4
+
 ### Testing
 
 - Allow missing_docs in tests
