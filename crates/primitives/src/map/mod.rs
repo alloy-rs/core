@@ -6,8 +6,6 @@
 //!   `no_std` environments.
 //! - [`IndexMap`] and [`IndexSet`] from the `indexmap` crate, if the "map-indexmap" feature is
 //!   enabled.
-//! - The previously-listed hash map types prefixed with `Fx` if the "map-fxhash" feature is
-//!   enabled. These are type aliases with [`FxBuildHasher`] as the hasher builder.
 //! - The previously-listed hash map types prefixed with `Fb`. These are type aliases with
 //!   [`FixedBytes<N>`][fb] as the key, and [`FbBuildHasher`] as the hasher builder. This hasher is
 //!   optimized for hashing fixed-size byte arrays, and wraps around the default hasher builder. It
@@ -106,13 +104,8 @@ cfg_if! {
         ///
         /// This is [`rustc_hash::FxBuildHasher`], unless both the "std" and "rand" features are
         /// enabled, in which case it will be [`rustc_hash::FxRandomState`] for better security at
-        /// very little cost. If this is not preferred, consider using the `Fx*` aliases directly.
+        /// very little cost.
         pub type FxBuildHasher = FxBuildHasherInner;
-
-        /// A [`HashMap`] using [`FxHasher`] as its hasher.
-        pub type FxHashMap<K, V> = HashMap<K, V, FxBuildHasher>;
-        /// A [`HashSet`] using [`FxHasher`] as its hasher.
-        pub type FxHashSet<V> = HashSet<V, FxBuildHasher>;
     }
 }
 
@@ -149,15 +142,6 @@ cfg_if! {
         ///
         /// See [`IndexSet`](indexmap::IndexSet) for more information.
         pub type IndexSet<V, S = DefaultHashBuilder> = indexmap::IndexSet<V, S>;
-
-        cfg_if! {
-            if #[cfg(feature = "map-fxhash")] {
-                /// An [`IndexMap`] using [`FxHasher`] as its hasher.
-                pub type FxIndexMap<K, V> = IndexMap<K, V, FxBuildHasher>;
-                /// An [`IndexSet`] using [`FxHasher`] as its hasher.
-                pub type FxIndexSet<V> = IndexSet<V, FxBuildHasher>;
-            }
-        }
     }
 }
 
