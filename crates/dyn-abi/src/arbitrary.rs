@@ -14,7 +14,7 @@ use alloy_primitives::{Address, Function, B256, I256, U256};
 use arbitrary::{size_hint, Unstructured};
 use core::ops::RangeInclusive;
 use proptest::{
-    collection::{hash_set as hash_set_strategy, vec as vec_strategy, VecStrategy},
+    collection::{vec as vec_strategy, VecStrategy},
     prelude::*,
     strategy::{Flatten, Map, Recursive, TupleUnion, WA},
 };
@@ -240,7 +240,7 @@ macro_rules! custom_struct_strategy {
             .prop_flat_map(move |sz| {
                 (
                     IDENT_STRATEGY,
-                    hash_set_strategy(IDENT_STRATEGY, sz..=sz)
+                    proptest::collection::hash_set(IDENT_STRATEGY, sz..=sz)
                         .prop_map(|prop_names| prop_names.into_iter().collect()),
                     vec_strategy(elem.clone(), sz..=sz),
                 )

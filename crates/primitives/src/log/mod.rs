@@ -1,9 +1,12 @@
 use crate::{Address, Bytes, B256};
 use alloc::vec::Vec;
 
+#[cfg(feature = "serde")]
+mod serde;
+
 /// An Ethereum event log object.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub struct LogData {
     /// The indexed topic list.

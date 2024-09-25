@@ -5,14 +5,15 @@
 )]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 #[macro_use]
 extern crate alloc;
 
+use paste as _;
 #[cfg(feature = "sha3-keccak")]
 use sha3 as _;
-
 use tiny_keccak as _;
 
 #[cfg(feature = "postgres")]
@@ -42,8 +43,9 @@ pub use common::TxKind;
 
 mod log;
 pub use log::{IntoLogData, Log, LogData};
-#[cfg(feature = "serde")]
-mod log_serde;
+
+#[cfg(feature = "map")]
+pub mod map;
 
 mod sealed;
 pub use sealed::{Sealable, Sealed};

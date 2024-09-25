@@ -11,4 +11,4 @@ repository.workspace = true
 exclude.workspace = true
 
 [dependencies]
-alloy-core = { workspace = true, features = ["sol-types", "json"] }
+alloy-core = { workspace = true, features = ["sol-types", "json", "map"] }

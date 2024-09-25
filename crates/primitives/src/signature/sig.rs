@@ -583,14 +583,13 @@ impl proptest::arbitrary::Arbitrary for Signature {
 #[cfg(test)]
 #[allow(unused_imports)]
 mod tests {
-    use crate::Bytes;
-
     use super::*;
-    use std::str::FromStr;
+    use crate::Bytes;
+    use core::str::FromStr;
+    use hex::FromHex;
 
     #[cfg(feature = "rlp")]
     use alloy_rlp::{Decodable, Encodable};
-    use hex::FromHex;
 
     #[test]
     #[cfg(feature = "k256")]
@@ -652,16 +651,13 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn deserialize_with_parity() {
-        let raw_signature_with_y_parity = serde_json::json!(
-            {
-            "r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0",
-            "s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05",
-            "v":"0x1",
+        let raw_signature_with_y_parity = serde_json::json!({
+            "r": "0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0",
+            "s": "0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05",
+            "v": "0x1",
             "yParity": "0x1"
-        }
-        );
+        });
 
-        println!("{raw_signature_with_y_parity}");
         let signature: Signature = serde_json::from_value(raw_signature_with_y_parity).unwrap();
 
         let expected = Signature::from_rs_and_parity(
