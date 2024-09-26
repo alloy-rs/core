@@ -57,15 +57,6 @@ where
     Ok(unsafe { array_assume_init(array) })
 }
 
-/// [`array::split_array_ref`]
-#[inline]
-#[track_caller]
-pub(crate) fn split_array_ref<T, const N: usize>(slice: &[T]) -> (&[T; N], &[T]) {
-    let (a, b) = slice.split_at(N);
-    // SAFETY: a points to [T; N]? Yes it's [T] of length N (checked by split_at)
-    unsafe { (&*a.as_ptr().cast::<[T; N]>(), b) }
-}
-
 /// [`MaybeUninit::slice_assume_init_mut`]
 #[inline(always)]
 unsafe fn slice_assume_init_mut<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
@@ -98,6 +89,7 @@ unsafe fn transpose<T, const N: usize>(array: [MaybeUninit<T>; N]) -> MaybeUnini
     mem::transmute_copy::<[MaybeUninit<T>; N], MaybeUninit<[T; N]>>(&mem::ManuallyDrop::new(&array))
 }
 
+// TODO(MSRV-1.80): remove
 /// [`Vec::into_flattened`].
 #[inline]
 pub(crate) fn into_flattened<T, const N: usize>(vec: Vec<[T; N]>) -> Vec<T> {

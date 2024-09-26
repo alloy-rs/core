@@ -10,7 +10,7 @@ use parser::{ParameterSpecifier, Parameters, RootType, TupleSpecifier, TypeSpeci
 #[cfg(feature = "eip712")]
 use alloy_json_abi::InternalType;
 
-/// Trait for items that can be resolved to `DynSol_____`, i.e. they specify some Solidity interface
+/// Trait for items that can be resolved to `DynSol*`, i.e. they specify some Solidity interface
 /// item.
 ///
 /// The `Specifier` trait is implemented by types that can be resolved into Solidity interface
@@ -38,7 +38,6 @@ use alloy_json_abi::InternalType;
 /// assert_eq!("bytes32".resolve()?, DynSolType::FixedBytes(32));
 /// # Ok::<_, alloy_dyn_abi::Error>(())
 /// ```
-
 pub trait Specifier<T> {
     /// Resolve the type into a value.
     fn resolve(&self) -> Result<T>;
