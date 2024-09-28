@@ -80,6 +80,7 @@ mod tests {
         log::{Log, LogData},
         Bytes,
     };
+    use alloc::vec::Vec;
 
     #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     struct TestStruct {

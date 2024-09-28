@@ -720,70 +720,70 @@ fn duplicate_events() {
     sol! {
     #[derive(derive_more::Display)]
     interface Console {
-        #[display(fmt = "{val}")]
+        #[display("{val}")]
         event log(string val);
 
-        #[display(fmt = "{}", "hex::encode_prefixed(val)")]
+        #[display("{}", "hex::encode_prefixed(val)")]
         event logs(bytes val);
 
-        #[display(fmt = "{val}")]
+        #[display("{val}")]
         event log_address(address val);
 
-        #[display(fmt = "{val}")]
+        #[display("{val}")]
         event log_bytes32(bytes32 val);
 
-        #[display(fmt = "{val}")]
+        #[display("{val}")]
         event log_int(int val);
 
-        #[display(fmt = "{val}")]
+        #[display("{val}")]
         event log_uint(uint val);
 
-        #[display(fmt = "{}", "hex::encode_prefixed(val)")]
+        #[display("{}", "hex::encode_prefixed(val)")]
         event log_bytes(bytes val);
 
-        #[display(fmt = "{val}")]
+        #[display("{val}")]
         event log_string(string val);
 
-        #[display(fmt = "{val:?}")]
+        #[display("{val:?}")]
         event log_array(uint256[] val);
 
-        #[display(fmt = "{val:?}")]
+        #[display("{val:?}")]
         event log_array(int256[] val);
 
-        #[display(fmt = "{val:?}")]
+        #[display("{val:?}")]
         event log_array(address[] val);
 
-        #[display(fmt = "{key}: {val}")]
+        #[display("{key}: {val}")]
         event log_named_address(string key, address val);
 
-        #[display(fmt = "{key}: {val}")]
+        #[display("{key}: {val}")]
         event log_named_bytes32(string key, bytes32 val);
 
-        #[display(fmt = "{key}: {val}")]
+        #[display("{key}: {val}")]
         event log_named_decimal_int(string key, int val, uint decimals);
 
-        #[display(fmt = "{key}: {val}")]
+        #[display("{key}: {val}")]
         event log_named_decimal_uint(string key, uint val, uint decimals);
 
-        #[display(fmt = "{key}: {val}")]
+        #[display("{key}: {val}")]
         event log_named_int(string key, int val);
 
-        #[display(fmt = "{key}: {val}")]
+        #[display("{key}: {val}")]
         event log_named_uint(string key, uint val);
 
-        #[display(fmt = "{key}: {val:?}")]
+        #[display("{key}: {val:?}")]
         event log_named_bytes(string key, bytes val);
 
-        #[display(fmt = "{key}: {val}")]
+        #[display("{key}: {val}")]
         event log_named_string(string key, string val);
 
-        #[display(fmt = "{key}: {val:?}")]
+        #[display("{key}: {val:?}")]
         event log_named_array(string key, uint256[] val);
 
-        #[display(fmt = "{key}: {val:?}")]
+        #[display("{key}: {val:?}")]
         event log_named_array(string key, int256[] val);
 
-        #[display(fmt = "{key}: {val:?}")]
+        #[display("{key}: {val:?}")]
         event log_named_array(string key, address[] val);
     }
     }
@@ -924,4 +924,250 @@ fn contract_derive_default() {
     let MyContract::e1 {} = MyContract::e1::default();
     let MyContract::e2 {} = MyContract::e2::default();
     let MyContract::c {} = MyContract::c::default();
+}
+
+#[test]
+fn contract_namespaces() {
+    mod inner {
+        alloy_sol_types::sol! {
+            library LibA {
+                struct Struct {
+                    uint64 field64;
+                }
+            }
+
+            library LibB {
+                struct Struct {
+                    uint128 field128;
+                }
+            }
+
+            contract Contract {
+                LibA.Struct internal aValue;
+                LibB.Struct internal bValue;
+
+                constructor(
+                    LibA.Struct memory aValue_,
+                    LibB.Struct memory bValue_
+                )
+                {
+                    aValue = aValue_;
+                    bValue = bValue_;
+                }
+
+                function fn(
+                    LibA.Struct memory aValue_,
+                    LibB.Struct memory bValue_
+                ) public
+                {
+                    aValue = aValue_;
+                    bValue = bValue_;
+                }
+            }
+        }
+    }
+
+    let _ = inner::Contract::fnCall {
+        aValue_: inner::LibA::Struct { field64: 0 },
+        bValue_: inner::LibB::Struct { field128: 0 },
+    };
+    assert_eq!(inner::Contract::fnCall::SIGNATURE, "fn((uint64),(uint128))");
+}
+
+// https://github.com/alloy-rs/core/pull/694#issuecomment-2274263880
+#[test]
+fn regression_overloads() {
+    sol! {
+        contract Vm {
+            struct Wallet {
+                uint stuff;
+            }
+
+            /// Gets the nonce of an account.
+            function getNonce(address account) external view returns (uint64 nonce);
+
+            /// Get the nonce of a `Wallet`.
+            function getNonce(Wallet calldata wallet) external returns (uint64 nonce);
+        }
+    }
+
+    let _ = Vm::getNonce_0Call { account: Address::ZERO };
+    let _ = Vm::getNonce_0Return { nonce: 0 };
+    assert_eq!(Vm::getNonce_0Call::SIGNATURE, "getNonce(address)");
+
+    let _ = Vm::getNonce_1Call { wallet: Vm::Wallet { stuff: U256::ZERO } };
+    let _ = Vm::getNonce_1Return { nonce: 0 };
+    assert_eq!(Vm::getNonce_1Call::SIGNATURE, "getNonce((uint256))");
+}
+
+#[test]
+fn normal_paths() {
+    sol! {
+        interface I {
+            struct S {
+                uint x;
+            }
+        }
+        function func(I.S memory stuff);
+    }
+
+    let _ = funcCall { stuff: I::S { x: U256::ZERO } };
+}
+
+#[test]
+fn regression_nested_namespaced_structs() {
+    mod inner {
+        super::sol! {
+            library LibA {
+                struct Simple {
+                    uint256 x;
+                }
+
+                struct Nested {
+                    Simple simple;
+                    LibB.Simple[] simpleB;
+                }
+            }
+
+            library LibB {
+                struct Simple {
+                    uint256 x;
+                    uint256 y;
+                }
+
+                struct Nested {
+                    Simple simple;
+                    LibA.Simple simpleA;
+                    LibB.Simple simpleB;
+                }
+            }
+
+            library LibC {
+                struct Nested1 {
+                    LibA.Nested nestedA;
+                    LibB.Nested nestedB;
+                }
+
+                struct Nested2 {
+                    LibA.Simple simpleA;
+                    LibB.Simple simpleB;
+                    LibA.Nested[] nestedA;
+                    LibB.Nested nestedB;
+                    Nested1[] nestedC1;
+                    LibC.Nested1 nestedC2;
+                }
+            }
+
+            contract C {
+                function libASimple(LibA.Simple memory simple) public returns(LibA.Simple memory);
+                function libBSimple(LibB.Simple memory simple) public returns(LibB.Simple memory);
+                function libANested(LibA.Nested memory nested) public returns(LibA.Nested memory);
+                function libBNested(LibB.Nested memory nested) public returns(LibB.Nested memory);
+                function libCNested1(LibC.Nested1 memory nested) public returns(LibC.Nested1 memory);
+                function libCNested2(LibC.Nested2 memory nested) public returns(LibC.Nested2 memory);
+            }
+        }
+    }
+
+    let a_simple = "(uint256)";
+    let b_simple = "(uint256,uint256)";
+    let a_nested = format!("({a_simple},{b_simple}[])");
+    let b_nested = format!("({b_simple},{a_simple},{b_simple})");
+    let c_nested1 = format!("({a_nested},{b_nested})");
+    let c_nested2 =
+        format!("({a_simple},{b_simple},{a_nested}[],{b_nested},{c_nested1}[],{c_nested1})");
+
+    assert_eq!(inner::C::libASimpleCall::SIGNATURE, format!("libASimple({a_simple})"));
+    assert_eq!(inner::C::libBSimpleCall::SIGNATURE, format!("libBSimple({b_simple})"));
+    assert_eq!(inner::C::libANestedCall::SIGNATURE, format!("libANested({a_nested})"));
+    assert_eq!(inner::C::libBNestedCall::SIGNATURE, format!("libBNested({b_nested})"));
+    assert_eq!(inner::C::libCNested1Call::SIGNATURE, format!("libCNested1({c_nested1})"));
+    assert_eq!(inner::C::libCNested2Call::SIGNATURE, format!("libCNested2({c_nested2})"));
+}
+
+// https://github.com/alloy-rs/core/issues/734
+#[test]
+fn event_indexed_udvt() {
+    use alloy_primitives::aliases::*;
+
+    sol! {
+        type Currency is address;
+        type PoolId is bytes32;
+
+        event Initialize(
+            PoolId indexed id,
+            Currency indexed currency0,
+            Currency indexed currency1,
+            uint24 fee,
+            int24 tickSpacing,
+            address hooks,
+            uint160 sqrtPriceX96,
+            int24 tick
+        );
+    }
+
+    assert_eq!(
+        Initialize::SIGNATURE,
+        "Initialize(bytes32,address,address,uint24,int24,address,uint160,int24)",
+    );
+    assert_eq!(
+        Initialize::SIGNATURE_HASH,
+        b256!("dd466e674ea557f56295e2d0218a125ea4b4f0f6f3307b95f85e6110838d6438"),
+    );
+
+    let _ = Initialize {
+        id: B256::ZERO,
+        currency0: Address::ZERO,
+        currency1: Address::ZERO,
+        fee: U24::ZERO,
+        tickSpacing: I24::ZERO,
+        hooks: Address::ZERO,
+        sqrtPriceX96: U160::ZERO,
+        tick: I24::ZERO,
+    };
+}
+
+#[test]
+fn event_indexed_elementary_arrays() {
+    sol! {
+        event AddrArray(address[1] indexed x);
+        event AddrDynArray(address[] indexed x);
+
+        type MyAddress is address;
+        event AddrUdvtArray(MyAddress[1] indexed y);
+        event AddrUdvtDynArray(MyAddress[] indexed y);
+    }
+
+    assert_eq!(AddrArray::SIGNATURE, "AddrArray(address[1])");
+    let _ = AddrArray { x: B256::ZERO };
+    assert_eq!(AddrDynArray::SIGNATURE, "AddrDynArray(address[])");
+    let _ = AddrDynArray { x: B256::ZERO };
+
+    assert_eq!(AddrUdvtArray::SIGNATURE, "AddrUdvtArray(address[1])");
+    let _ = AddrUdvtArray { y: B256::ZERO };
+    assert_eq!(AddrUdvtDynArray::SIGNATURE, "AddrUdvtDynArray(address[])");
+    let _ = AddrUdvtDynArray { y: B256::ZERO };
+}
+
+// https://github.com/alloy-rs/core/issues/589
+#[test]
+#[allow(clippy::assertions_on_constants)]
+fn event_check_signature() {
+    sol! {
+        #[derive(Debug)]
+        event MyEvent();
+        event MyEventAnonymous() anonymous;
+    }
+
+    let no_topics: [B256; 0] = [];
+
+    assert!(!MyEvent::ANONYMOUS);
+    let e = MyEvent::decode_raw_log(no_topics, &[], false).unwrap_err();
+    assert_eq!(e.to_string(), "topic list length mismatch");
+    let e = MyEvent::decode_raw_log([B256::ZERO], &[], false).unwrap_err();
+    assert!(e.to_string().contains("invalid signature hash"), "{e:?}");
+    let MyEvent {} = MyEvent::decode_raw_log([MyEvent::SIGNATURE_HASH], &[], false).unwrap();
+
+    assert!(MyEventAnonymous::ANONYMOUS);
+    let MyEventAnonymous {} = MyEventAnonymous::decode_raw_log(no_topics, &[], false).unwrap();
 }

@@ -47,10 +47,9 @@ macro_rules! impl_topic_list_tuples {
                 I: IntoIterator<Item = D>,
                 D: Into<WordToken>
             {
-                let err = || Error::Other(Cow::Borrowed("topic list length mismatch"));
                 let mut iter = topics.into_iter();
                 Ok(($(
-                    <$t>::detokenize(iter.next().ok_or_else(err)?.into()),
+                    <$t>::detokenize(iter.next().ok_or_else(length_mismatch)?.into()),
                 )*))
             }
         }
@@ -76,4 +75,9 @@ impl_topic_list_tuples! {
     2 => 'a T, 'b U;
     3 => 'a T, 'b U, 'c V;
     4 => 'a T, 'b U, 'c V, 'd W;
+}
+
+#[cold]
+const fn length_mismatch() -> Error {
+    Error::Other(Cow::Borrowed("topic list length mismatch"))
 }

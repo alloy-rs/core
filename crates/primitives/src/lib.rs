@@ -5,13 +5,15 @@
 )]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
-// TODO: remove when https://github.com/proptest-rs/proptest/pull/427 is merged
-#![allow(unknown_lints, non_local_definitions)]
 
 #[macro_use]
 extern crate alloc;
 
+use paste as _;
+#[cfg(feature = "sha3-keccak")]
+use sha3 as _;
 use tiny_keccak as _;
 
 #[cfg(feature = "postgres")]
@@ -41,8 +43,9 @@ pub use common::TxKind;
 
 mod log;
 pub use log::{IntoLogData, Log, LogData};
-#[cfg(feature = "serde")]
-mod log_serde;
+
+#[cfg(feature = "map")]
+pub mod map;
 
 mod sealed;
 pub use sealed::{Sealable, Sealed};
@@ -51,21 +54,7 @@ mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 mod signature;
-pub use signature::{to_eip155_v, Parity, SignatureError};
-
-/// Only available for documentation purposes.
-// Without this visible (not `#[doc(hidden)]`) re-export, `rustdoc` will not generate documentation
-// for the `Signature` type alias below.
-#[cfg(feature = "unstable-doc")]
-pub use signature::Signature as PrivateSignature;
-
-/// An ECDSA Signature, consisting of V, R, and S.
-#[cfg(feature = "k256")]
-pub type Signature = signature::Signature<k256::ecdsa::Signature>;
-
-/// An ECDSA Signature, consisting of V, R, and S.
-#[cfg(not(feature = "k256"))]
-pub type Signature = signature::Signature<()>;
+pub use signature::{to_eip155_v, Parity, Signature, SignatureError};
 
 pub mod utils;
 pub use utils::{eip191_hash_message, keccak256, Keccak256};
@@ -121,9 +110,6 @@ pub mod private {
 
     #[cfg(feature = "allocative")]
     pub use allocative;
-
-    #[cfg(feature = "ssz")]
-    pub use ssz;
 
     #[cfg(feature = "serde")]
     pub use serde;

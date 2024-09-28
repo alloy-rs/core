@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 #![cfg(feature = "sol-types")]
 
 use alloy_core::sol;

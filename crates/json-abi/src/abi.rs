@@ -208,20 +208,8 @@ impl JsonAbi {
     ///
     /// See [`to_sol`](JsonAbi::to_sol) for more information.
     pub fn to_sol_raw(&self, name: &str, out: &mut String, config: Option<ToSolConfig>) {
-        let len = self.len();
-        out.reserve(len * 128);
-
-        out.push_str("interface ");
-        if !name.is_empty() {
-            out.push_str(name);
-            out.push(' ');
-        }
-        out.push('{');
-        if len > 0 {
-            out.push('\n');
-            SolPrinter::new(out, config.unwrap_or_default()).print(self);
-        }
-        out.push('}');
+        out.reserve(self.len() * 128);
+        SolPrinter::new(out, name, config.unwrap_or_default()).print(self);
     }
 
     /// Deduplicates all functions, errors, and events which have the same name and inputs.
@@ -417,7 +405,7 @@ macro_rules! iter_impl {
 ///
 /// This `struct` is created by [`JsonAbi::items`]. See its documentation for
 /// more.
-#[derive(Clone, Debug)] // TODO(MSRV-1.70): derive Default
+#[derive(Clone, Debug, Default)]
 pub struct Items<'a> {
     len: usize,
     constructor: Option<&'a Constructor>,
@@ -440,7 +428,7 @@ iter_impl!(traits Items<'_>);
 ///
 /// This `struct` is created by [`JsonAbi::into_items`]. See its documentation
 /// for more.
-#[derive(Debug)] // TODO(MSRV-1.70): derive Default
+#[derive(Debug, Default)]
 pub struct IntoItems {
     len: usize,
     constructor: Option<Constructor>,

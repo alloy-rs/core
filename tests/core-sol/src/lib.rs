@@ -16,6 +16,7 @@ sol! {
         A, B
     }
 
+    #[derive(Default, PartialEq, Eq, Hash)]
     struct MyStruct {
         uint32 a;
         uint64 b;
@@ -61,4 +62,11 @@ sol! {
 
         type MyOtherType is uint32;
     }
+}
+
+#[test]
+fn do_stuff() {
+    let mut set = alloy_core::primitives::map::HashSet::<MyStruct>::default();
+    set.insert(Default::default());
+    assert_eq!(set.len(), 1);
 }

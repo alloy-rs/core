@@ -14,8 +14,7 @@ pub const BLOOM_SIZE_BITS: usize = BLOOM_SIZE_BYTES * 8;
 /// Mask, used in accrue
 const MASK: usize = BLOOM_SIZE_BITS - 1;
 /// Number of bytes per item, used in accrue
-// TODO(MSRV-1.67): use `usize::ilog2()`
-const ITEM_BYTES: usize = (log2(BLOOM_SIZE_BITS) + 7) / 8;
+const ITEM_BYTES: usize = (BLOOM_SIZE_BITS.ilog2() as usize + 7) / 8;
 
 // BLOOM_SIZE_BYTES must be a power of 2
 #[allow(clippy::assertions_on_constants)]
@@ -218,14 +217,6 @@ impl Bloom {
     pub fn contains_log(&self, log: &Log) -> bool {
         self.contains_raw_log(log.address, log.topics())
     }
-}
-
-const fn log2(x: usize) -> usize {
-    if x <= 1 {
-        return 0;
-    }
-
-    (usize::BITS - x.leading_zeros()) as usize
 }
 
 #[cfg(test)]

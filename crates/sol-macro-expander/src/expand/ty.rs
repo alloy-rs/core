@@ -3,7 +3,7 @@
 use super::{ExpCtxt, ExternCrates};
 use ast::{Item, Parameters, Spanned, Type, TypeArray};
 use proc_macro2::{Ident, Literal, TokenStream};
-use proc_macro_error::abort;
+use proc_macro_error2::abort;
 use quote::{quote_spanned, ToTokens};
 use std::{fmt, num::NonZeroU16};
 
@@ -27,7 +27,7 @@ pub fn expand_rust_type(ty: &Type, crates: &ExternCrates) -> TokenStream {
 }
 
 /// The [`expand_type`] recursive implementation.
-pub fn rec_expand_type(ty: &Type, crates: &ExternCrates, tokens: &mut TokenStream) {
+pub(super) fn rec_expand_type(ty: &Type, crates: &ExternCrates, tokens: &mut TokenStream) {
     let alloy_sol_types = &crates.sol_types;
     let tts = match *ty {
         Type::Address(span, _) => quote_spanned! {span=> #alloy_sol_types::sol_data::Address },
@@ -80,20 +80,17 @@ pub fn rec_expand_type(ty: &Type, crates: &ExternCrates, tokens: &mut TokenStrea
             ::core::compile_error!("Mapping types are not supported here")
         },
 
-        Type::Custom(ref custom) => return custom.to_tokens(tokens),
+        Type::Custom(ref custom) => {
+            let segments = custom.iter();
+            quote_spanned! {custom.span()=> #(#segments)::* }
+        }
     };
     tokens.extend(tts);
 }
 
 // IMPORTANT: Keep in sync with `sol-types/src/types/data_type.rs`
 /// The [`expand_rust_type`] recursive implementation.
-pub fn rec_expand_rust_type(ty: &Type, crates: &ExternCrates, tokens: &mut TokenStream) {
-    // Display sizes that match with the Rust type, otherwise we lose information
-    // (e.g. `uint24` displays the same as `uint32` because both use `u32`)
-    fn allowed_int_size(size: Option<NonZeroU16>) -> bool {
-        matches!(size.map_or(256, NonZeroU16::get), 8 | 16 | 32 | 64 | 128 | 256)
-    }
-
+pub(super) fn rec_expand_rust_type(ty: &Type, crates: &ExternCrates, tokens: &mut TokenStream) {
     let alloy_sol_types = &crates.sol_types;
     let tts = match *ty {
         Type::Address(span, _) => quote_spanned! {span=> #alloy_sol_types::private::Address },
@@ -106,22 +103,24 @@ pub fn rec_expand_rust_type(ty: &Type, crates: &ExternCrates, tokens: &mut Token
             let size = Literal::u16_unsuffixed(size.get());
             quote_spanned! {span=> #alloy_sol_types::private::FixedBytes<#size> }
         }
-        Type::Int(span, size) | Type::Uint(span, size) if allowed_int_size(size) => {
+        Type::Int(span, size) | Type::Uint(span, size) => {
             let size = size.map_or(256, NonZeroU16::get);
-            if size <= 128 {
-                let name = match ty {
+            let primitive = matches!(size, 8 | 16 | 32 | 64 | 128);
+            if primitive {
+                let prefix = match ty {
                     Type::Int(..) => "i",
                     Type::Uint(..) => "u",
                     _ => unreachable!(),
                 };
-                return Ident::new(&format!("{name}{size}"), span).to_tokens(tokens);
+                return Ident::new(&format!("{prefix}{size}"), span).to_tokens(tokens);
             }
-            assert_eq!(size, 256);
-            match ty {
-                Type::Int(..) => quote_spanned! {span=> #alloy_sol_types::private::I256 },
-                Type::Uint(..) => quote_spanned! {span=> #alloy_sol_types::private::U256 },
+            let prefix = match ty {
+                Type::Int(..) => "I",
+                Type::Uint(..) => "U",
                 _ => unreachable!(),
-            }
+            };
+            let name = Ident::new(&format!("{prefix}{size}"), span);
+            quote_spanned! {span=> #alloy_sol_types::private::primitives::aliases::#name }
         }
 
         Type::Tuple(ref tuple) => {
@@ -150,7 +149,7 @@ pub fn rec_expand_rust_type(ty: &Type, crates: &ExternCrates, tokens: &mut Token
         },
 
         // Exhaustive fallback to `SolType::RustType`
-        ref ty @ (Type::Int(..) | Type::Uint(..) | Type::Custom(_)) => {
+        Type::Custom(_) => {
             let span = ty.span();
             let ty = expand_type(ty, crates);
             quote_spanned! {span=> <#ty as #alloy_sol_types::SolType>::RustType }

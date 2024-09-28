@@ -104,7 +104,7 @@ impl<const BITS: usize, const LIMBS: usize> fmt::UpperHex for Signed<BITS, LIMBS
 
 impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Mask for the highest limb.
-    pub(crate) const MASK: u64 = mask(BITS);
+    pub(crate) const MASK: u64 = ruint::mask(BITS);
 
     /// Location of the sign bit within the highest limb.
     pub(crate) const SIGN_BIT: u64 = sign_bit(BITS);
@@ -131,9 +131,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Minus one (multiplicative inverse) of this type.
     pub const MINUS_ONE: Self = Self(Uint::<BITS, LIMBS>::MAX);
 
-    /// Coerces an unsigned integer into a signed one. If the unsigned integer
-    /// is greater than the greater than or equal to `1 << 255`, then the result
-    /// will overflow into a negative value.
+    /// Coerces an unsigned integer into a signed one. If the unsigned integer is greater than or
+    /// equal to `1 << 255`, then the result will overflow into a negative value.
     #[inline]
     pub const fn from_raw(val: Uint<BITS, LIMBS>) -> Self {
         Self(val)
@@ -1649,5 +1648,20 @@ mod tests {
         run_test!(I160, U160);
         run_test!(I192, U192);
         run_test!(I256, U256);
+    }
+
+    #[test]
+    fn test_overflowing_from_sign_and_abs() {
+        let a = Uint::<8, 1>::ZERO;
+        let (_, overflow) = Signed::overflowing_from_sign_and_abs(Sign::Negative, a);
+        assert!(!overflow);
+
+        let a = Uint::<8, 1>::from(128u8);
+        let (_, overflow) = Signed::overflowing_from_sign_and_abs(Sign::Negative, a);
+        assert!(!overflow);
+
+        let a = Uint::<8, 1>::from(129u8);
+        let (_, overflow) = Signed::overflowing_from_sign_and_abs(Sign::Negative, a);
+        assert!(overflow);
     }
 }

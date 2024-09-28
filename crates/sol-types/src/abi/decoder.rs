@@ -244,10 +244,7 @@ impl<'de> Decoder<'de> {
     /// Takes a slice of bytes of the given length.
     #[inline]
     pub fn take_slice_unchecked(&mut self, len: usize) -> Result<&'de [u8]> {
-        self.peek_len(len).map(|x| {
-            self.increase_offset(len);
-            x
-        })
+        self.peek_len(len).inspect(|_| self.increase_offset(len))
     }
 
     /// Takes the offset from the child decoder and sets it as the current
@@ -300,12 +297,14 @@ pub fn decode<'de, T: Token<'de>>(data: &'de [u8], validate: bool) -> Result<T> 
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
 pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
-    // TODO(MSRV-1.79): Use `const {}` to select the function at compile time.
-    if T::IS_TUPLE {
-        decode_sequence(data, validate)
-    } else {
-        decode(data, validate)
-    }
+    let decode = const {
+        if T::IS_TUPLE {
+            decode_sequence
+        } else {
+            decode
+        }
+    };
+    decode(data, validate)
 }
 
 /// Decodes ABI compliant vector of bytes into vector of tokens described by

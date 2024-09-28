@@ -1,6 +1,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "serde")]
 const COMPAT_ERROR: &str = "state mutability cannot be both `payable` and `constant`";
 
 /// A JSON ABI function's state mutability.
@@ -156,11 +157,9 @@ pub mod serde_state_mutability_compat {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "serde"))]
 mod tests {
     use super::*;
-
-    #[cfg(not(feature = "std"))]
     use alloc::string::ToString;
 
     #[derive(Debug, Serialize, Deserialize)]

@@ -26,21 +26,36 @@ hex-literal.workspace = true
 hex.workspace = true
 itoa.workspace = true
 ruint.workspace = true
-tiny-keccak = { workspace = true, features = ["keccak"] }
-keccak-asm = { workspace = true, optional = true }
 
 # macros
-derive_more.workspace = true
 cfg-if.workspace = true
+derive_more = { workspace = true, features = [
+    "as_ref",
+    "add",
+    "add_assign",
+    "not",
+    "deref",
+    "deref_mut",
+    "from",
+    "from_str",
+    "index",
+    "index_mut",
+    "into",
+    "into_iterator",
+    "display",
+] }
+paste.workspace = true
+
+# keccak256
+keccak-asm = { workspace = true, optional = true }
+sha3 = { workspace = true, optional = true }
+tiny-keccak = { workspace = true, features = ["keccak"] }
 
 # rlp
 alloy-rlp = { workspace = true, optional = true }
 
 # serde
 serde = { workspace = true, optional = true, features = ["derive"] }
-
-# ssz
-ethereum_ssz = { workspace = true, optional = true }
 
 # getrandom
 getrandom = { workspace = true, optional = true }
@@ -50,6 +65,14 @@ rand = { workspace = true, optional = true, features = ["getrandom"] }
 
 # k256
 k256 = { workspace = true, optional = true, features = ["ecdsa"] }
+
+# map
+hashbrown = { workspace = true, optional = true, features = [
+    "ahash",
+    "inline-more",
+] }
+indexmap = { workspace = true, optional = true }
+rustc-hash = { workspace = true, optional = true }
 
 # arbitrary
 arbitrary = { workspace = true, optional = true }
@@ -70,29 +93,53 @@ criterion.workspace = true
 serde_json.workspace = true
 
 [features]
-default = ["std"]
+default = ["std", "map-fxhash"]
 std = [
     "bytes/std",
     "hex/std",
     "ruint/std",
     "alloy-rlp?/std",
+    "indexmap?/std",
+    "k256?/std",
     "keccak-asm?/std",
     "proptest?/std",
     "rand?/std",
+    "rustc-hash?/std",
     "serde?/std",
-    "k256?/std",
+    "sha3?/std",
+]
+nightly = [
+    "hex/nightly",
+    "ruint/nightly",
+    "hashbrown?/nightly",
+    "rustc-hash?/nightly",
 ]
 
-tiny-keccak = []
-native-keccak = []
 asm-keccak = ["dep:keccak-asm"]
+native-keccak = []
+sha3-keccak = ["dep:sha3"]
+tiny-keccak = []
 
-postgres = ["std", "dep:postgres-types", "ruint/postgres"]
+map = ["dep:hashbrown"]
+map-hashbrown = ["map"]
+map-indexmap = ["map", "dep:indexmap"]
+map-fxhash = ["map", "dep:rustc-hash"]
+
 getrandom = ["dep:getrandom"]
-rand = ["dep:rand", "getrandom", "ruint/rand"]
+k256 = ["dep:k256"]
+rand = ["dep:rand", "getrandom", "ruint/rand", "rustc-hash?/rand"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
-serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
-ssz = ["std", "dep:ethereum_ssz", "ruint/ssz"]
+serde = [
+    "dep:serde",
+    "bytes/serde",
+    "hex/serde",
+    "ruint/serde",
+    "hashbrown?/serde",
+    "indexmap?/serde",
+    "rand?/serde",
+]
+
+allocative = ["dep:allocative"]
 arbitrary = [
     "std",
     "dep:arbitrary",
@@ -101,16 +148,13 @@ arbitrary = [
     "dep:proptest-derive",
     "ruint/arbitrary",
     "ruint/proptest",
-    "ethereum_ssz?/arbitrary",
+    "indexmap?/arbitrary",
 ]
-k256 = ["dep:k256"]
-allocative = ["dep:allocative"]
+postgres = ["std", "dep:postgres-types", "ruint/postgres"]
 
 # `const-hex` compatibility feature for `hex`.
 # Should not be needed most of the time.
 hex-compat = ["hex/hex"]
-
-unstable-doc = []
 
 [[bench]]
 name = "primitives"

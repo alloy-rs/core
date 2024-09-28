@@ -89,7 +89,7 @@ pub trait SolInterface: Sized {
         if data.len() < Self::MIN_DATA_LENGTH.saturating_add(4) {
             Err(crate::Error::type_check_fail(data, Self::NAME))
         } else {
-            let (selector, data) = crate::impl_core::split_array_ref(data);
+            let (selector, data) = data.split_first_chunk().unwrap();
             Self::abi_decode_raw(*selector, data, validate)
         }
     }

@@ -1,5 +1,6 @@
-#![cfg(feature = "visit")]
 #![allow(clippy::missing_const_for_fn)]
+#![allow(missing_docs)]
+#![cfg(feature = "visit")]
 
 use std::{
     fs::{self, DirEntry},

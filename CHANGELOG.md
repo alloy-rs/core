@@ -5,6 +5,141 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5](https://github.com/alloy-rs/core/releases/tag/v0.8.5) - 2024-09-25
+
+### Bug Fixes
+
+- [primitives] Make sure DefaultHashBuilder implements Clone ([#748](https://github.com/alloy-rs/core/issues/748))
+
+### Miscellaneous Tasks
+
+- [primitives] Remove Fx* aliases ([#749](https://github.com/alloy-rs/core/issues/749))
+
+## [0.8.4](https://github.com/alloy-rs/core/releases/tag/v0.8.4) - 2024-09-25
+
+### Bug Fixes
+
+- [json-abi] Normalize $ to _ in identifiers in to_sol ([#747](https://github.com/alloy-rs/core/issues/747))
+- [json-abi] Correct to-sol for UDVT arrays in structs ([#745](https://github.com/alloy-rs/core/issues/745))
+- [sol-types] Check signature in SolEvent if non-anonymous ([#741](https://github.com/alloy-rs/core/issues/741))
+
+### Features
+
+- [primitives] Implement `map` module ([#743](https://github.com/alloy-rs/core/issues/743))
+- Support Keccak with sha3 ([#737](https://github.com/alloy-rs/core/issues/737))
+
+### Miscellaneous Tasks
+
+- Release 0.8.4
+- Remove unused unstable-doc feature
+
+### Other
+
+- Add custom serialization for Address ([#742](https://github.com/alloy-rs/core/issues/742))
+
+### Testing
+
+- Allow missing_docs in tests
+- Add another dyn-abi test
+
+## [0.8.3](https://github.com/alloy-rs/core/releases/tag/v0.8.3) - 2024-09-10
+
+### Bug Fixes
+
+- [sol-macro] Correctly determine whether event parameters are hashes ([#735](https://github.com/alloy-rs/core/issues/735))
+- [sol-macro] Namespaced custom type resolution ([#731](https://github.com/alloy-rs/core/issues/731))
+- Parse selector hashes in `sol` macro ([#730](https://github.com/alloy-rs/core/issues/730))
+
+### Features
+
+- Prepare reth Signature migration to alloy ([#732](https://github.com/alloy-rs/core/issues/732))
+
+### Miscellaneous Tasks
+
+- Release 0.8.3
+
+## [0.8.2](https://github.com/alloy-rs/core/releases/tag/v0.8.2) - 2024-09-06
+
+### Bug Fixes
+
+- `no_std` and workflow ([#727](https://github.com/alloy-rs/core/issues/727))
+
+### Documentation
+
+- [primitives] Document features in `wrap_fixed_bytes`-generated types ([#726](https://github.com/alloy-rs/core/issues/726))
+
+### Miscellaneous Tasks
+
+- Release 0.8.2
+
+## [0.8.1](https://github.com/alloy-rs/core/releases/tag/v0.8.1) - 2024-09-06
+
+### Bug Fixes
+
+- [sol-type-parser] Winnow std error ([#720](https://github.com/alloy-rs/core/issues/720))
+- Use quantity for v value ([#715](https://github.com/alloy-rs/core/issues/715))
+
+### Dependencies
+
+- Bump MSRV to 1.79 ([#712](https://github.com/alloy-rs/core/issues/712))
+- Revert "chore(deps): bump derive_more to 1.0"
+- [deps] Bump derive_more to 1.0
+
+### Miscellaneous Tasks
+
+- Release 0.8.1
+- Clippy
+- Use proc-macro-error2 ([#723](https://github.com/alloy-rs/core/issues/723))
+
+### Performance
+
+- [primitives] Improve checksum algorithm ([#713](https://github.com/alloy-rs/core/issues/713))
+
+### Refactor
+
+- Remove `Signature` generic ([#719](https://github.com/alloy-rs/core/issues/719))
+
+### Testing
+
+- [sol] Add a test for custom paths
+
+## [0.8.0](https://github.com/alloy-rs/core/releases/tag/v0.8.0) - 2024-08-21
+
+### Bug Fixes
+
+- Parsing stack overflow ([#703](https://github.com/alloy-rs/core/issues/703))
+
+### Dependencies
+
+- [deps] Bump proptest-derive ([#708](https://github.com/alloy-rs/core/issues/708))
+
+### Documentation
+
+- Typo
+
+### Features
+
+- Derive ser deser on `Sealed` ([#710](https://github.com/alloy-rs/core/issues/710))
+- [sol-macro] Support namespaces ([#694](https://github.com/alloy-rs/core/issues/694))
+- Derive `Hash` for `Sealed` ([#707](https://github.com/alloy-rs/core/issues/707))
+- [sol-types] Implement traits for longer tuples ([#699](https://github.com/alloy-rs/core/issues/699))
+
+### Miscellaneous Tasks
+
+- Release 0.8.0
+- [primitives] Re-use ruint mask function ([#698](https://github.com/alloy-rs/core/issues/698))
+- Derive hash for parity ([#686](https://github.com/alloy-rs/core/issues/686))
+- Add some TODO comments
+
+### Other
+
+- Implement specific bit types for integers ([#677](https://github.com/alloy-rs/core/issues/677))
+- Add testcase for overflowing_from_sign_and_abs ([#696](https://github.com/alloy-rs/core/issues/696))
+
+### Styling
+
+- Remove `ethereum_ssz` dependency ([#701](https://github.com/alloy-rs/core/issues/701))
+
 ## [0.7.7](https://github.com/alloy-rs/core/releases/tag/v0.7.7) - 2024-07-08
 
 ### Bug Fixes
@@ -31,6 +166,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.7.7
 - Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
 - Fix unnameable-types ([#675](https://github.com/alloy-rs/core/issues/675))
 - [sol-macro] Allow clippy all when emitting contract bytecode ([#674](https://github.com/alloy-rs/core/issues/674))

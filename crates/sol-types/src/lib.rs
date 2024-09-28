@@ -6,8 +6,6 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
-// TODO: remove when https://github.com/proptest-rs/proptest/pull/427 is merged
-#![allow(unknown_lints, non_local_definitions)]
 
 #[allow(unused_extern_crates)]
 extern crate self as alloy_sol_types;
@@ -66,8 +64,8 @@ pub mod private {
         vec::Vec,
     };
     pub use alloy_primitives::{
-        bytes, keccak256, Address, Bytes, FixedBytes, Function, IntoLogData, LogData, Signed, Uint,
-        B256, I256, U256,
+        self as primitives, bytes, keccak256, Address, Bytes, FixedBytes, Function, IntoLogData,
+        LogData, Signed, Uint, B256, I256, U256,
     };
     pub use core::{
         borrow::{Borrow, BorrowMut},

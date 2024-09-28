@@ -1,5 +1,5 @@
 use alloy_json_abi::{Function, JsonAbi, Param, StateMutability};
-use alloy_primitives::{Address, B256, I256, U256};
+use alloy_primitives::{Address, Signed, B256, I256, U256};
 use alloy_sol_types::{sol, SolCall, SolError, SolEvent, SolStruct};
 use pretty_assertions::assert_eq;
 use std::borrow::Cow;
@@ -69,17 +69,18 @@ fn seaport() {
     );
 }
 
+// https://etherscan.io/address/0x1111111254eeb25477b68fb85ed929f73a960582#code
+sol!(
+    #[sol(docs = false)]
+    #[derive(Debug)]
+    AggregationRouterV5,
+    "../json-abi/tests/abi/AggregationRouterV5.json"
+);
+
 // Handle multiple identical error objects in the JSON ABI
 // https://github.com/alloy-rs/core/issues/344
 #[test]
 fn aggregation_router_v5() {
-    // https://etherscan.io/address/0x1111111254eeb25477b68fb85ed929f73a960582#code
-    sol!(
-        #[sol(docs = false)]
-        AggregationRouterV5,
-        "../json-abi/tests/abi/AggregationRouterV5.json"
-    );
-
     assert_eq!(
         <AggregationRouterV5::ETHTransferFailed as SolError>::SIGNATURE,
         "ETHTransferFailed()"
@@ -97,16 +98,19 @@ fn uniswap_v3_position() {
     let _ = UniswapV3Position::getLiquidityByRangeCall {
         pool_: Address::ZERO,
         self_: Address::ZERO,
-        lowerTick_: 0,
-        upperTick_: 0,
+        lowerTick_: Signed::ZERO,
+        upperTick_: Signed::ZERO,
     };
     assert_eq!(
         UniswapV3Position::getLiquidityByRangeCall::SIGNATURE,
         "getLiquidityByRange(address,address,int24,int24)"
     );
 
-    let _ =
-        UniswapV3Position::getPositionIdCall { self_: Address::ZERO, lowerTick_: 0, upperTick_: 0 };
+    let _ = UniswapV3Position::getPositionIdCall {
+        self_: Address::ZERO,
+        lowerTick_: Signed::ZERO,
+        upperTick_: Signed::ZERO,
+    };
     assert_eq!(
         UniswapV3Position::getPositionIdCall::SIGNATURE,
         "getPositionId(address,int24,int24)"
@@ -139,11 +143,12 @@ fn uniswap_v2_factory() {
     };
 }
 
+sol!(GnosisSafe, "../json-abi/tests/abi/GnosisSafe.json");
+
 // Fully qualify `SolInterface::NAME` which conflicted with the `NAME` call
 // https://github.com/alloy-rs/core/issues/361
 #[test]
 fn gnosis_safe() {
-    sol!(GnosisSafe, "../json-abi/tests/abi/GnosisSafe.json");
     let GnosisSafe::NAMECall {} = GnosisSafe::NAMECall {};
     let GnosisSafe::NAMEReturn { _0: _ } = GnosisSafe::NAMEReturn { _0: String::new() };
 }
@@ -199,13 +204,17 @@ fn zrx_token() {
     assert_eq!(ZRXToken::approveCall::SIGNATURE, "approve(address,uint256)");
 }
 
+// https://etherscan.io/address/0xBA12222222228d8Ba445958a75a0704d566BF2C8#code
+sol!(
+    #![sol(all_derives)]
+    BalancerV2Vault,
+    "../json-abi/tests/abi/BalancerV2Vault.json"
+);
+
 // Handle contract **array** types in JSON ABI
 // https://github.com/alloy-rs/core/issues/585
 #[test]
 fn balancer_v2_vault() {
-    // https://etherscan.io/address/0xBA12222222228d8Ba445958a75a0704d566BF2C8#code
-    sol!(BalancerV2Vault, "../json-abi/tests/abi/BalancerV2Vault.json");
-
     let _ = BalancerV2Vault::PoolBalanceChanged {
         poolId: B256::ZERO,
         liquidityProvider: Address::ZERO,
@@ -218,3 +227,15 @@ fn balancer_v2_vault() {
         "PoolBalanceChanged(bytes32,address,address[],int256[],uint256[])"
     );
 }
+
+// TODO: https://github.com/alloy-rs/core/issues/744
+// #[test]
+// fn eigenlayer_delegation_manager() {
+//     sol!(DelegationManager, "../json-abi/tests/abi/DelegationManager.json");
+// }
+
+// TODO: https://github.com/alloy-rs/core/issues/746
+// #[test]
+// fn smartsession_bootstrap() {
+//     sol!(Bootstrap, "../json-abi/tests/abi/Bootstrap.json");
+// }

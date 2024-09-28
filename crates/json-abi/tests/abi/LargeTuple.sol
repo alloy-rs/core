@@ -1,4 +1,4 @@
-interface LargeTuple {
+library Contract {
     struct Response {
         bytes output1;
         bytes output2;
@@ -14,6 +14,8 @@ interface LargeTuple {
         bytes output12;
         bytes output13;
     }
+}
 
-    function doSomething(uint160 input) external view returns (Response memory);
+interface LargeTuple {
+    function doSomething(uint160 input) external view returns (Contract.Response memory);
 }

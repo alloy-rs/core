@@ -15,7 +15,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 #[macro_use]
-extern crate proc_macro_error;
+extern crate proc_macro_error2;
 
 use alloy_sol_macro_expander::expand;
 use alloy_sol_macro_input::{SolAttrs, SolInput, SolInputExpander, SolInputKind};

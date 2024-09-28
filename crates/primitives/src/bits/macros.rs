@@ -179,7 +179,6 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_serde!($name);
         $crate::impl_allocative!($name);
         $crate::impl_arbitrary!($name, $n);
-        $crate::impl_ssz_fixed_len!($name, $n);
         $crate::impl_rand!($name);
 
         impl $name {
@@ -436,6 +435,7 @@ macro_rules! impl_getrandom {
         /// fails.
         #[inline]
         #[track_caller]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn random() -> Self {
             Self($crate::FixedBytes::random())
         }
@@ -448,6 +448,7 @@ macro_rules! impl_getrandom {
         /// This function only propagates the error from the underlying call to
         /// `getrandom_uninit`.
         #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn try_random() -> $crate::private::Result<Self, $crate::private::getrandom::Error> {
             $crate::FixedBytes::try_random().map(Self)
         }
@@ -459,6 +460,7 @@ macro_rules! impl_getrandom {
         /// Panics if the underlying call to `getrandom_uninit` fails.
         #[inline]
         #[track_caller]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn randomize(&mut self) {
             self.try_randomize().unwrap()
         }
@@ -470,6 +472,7 @@ macro_rules! impl_getrandom {
         /// This function only propagates the error from the underlying call to
         /// `getrandom_uninit`.
         #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn try_randomize(
             &mut self,
         ) -> $crate::private::Result<(), $crate::private::getrandom::Error> {
@@ -493,6 +496,7 @@ macro_rules! impl_rand {
         /// Creates a new fixed byte array with the given random number generator.
         #[inline]
         #[doc(alias = "random_using")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
         pub fn random_with<R: $crate::private::rand::Rng + ?Sized>(rng: &mut R) -> Self {
             Self($crate::FixedBytes::random_with(rng))
         }
@@ -500,12 +504,14 @@ macro_rules! impl_rand {
         /// Fills this fixed byte array with the given random number generator.
         #[inline]
         #[doc(alias = "randomize_using")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
         pub fn randomize_with<R: $crate::private::rand::Rng + ?Sized>(&mut self, rng: &mut R) {
             self.0.randomize_with(rng);
         }
     };
 
     ($t:ty) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
         impl $crate::private::rand::distributions::Distribution<$t>
             for $crate::private::rand::distributions::Standard
         {
@@ -529,6 +535,7 @@ macro_rules! impl_rand {
 #[cfg(feature = "rlp")]
 macro_rules! impl_rlp {
     ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "rlp")))]
         impl $crate::private::alloy_rlp::Decodable for $t {
             #[inline]
             fn decode(buf: &mut &[u8]) -> $crate::private::alloy_rlp::Result<Self> {
@@ -536,6 +543,7 @@ macro_rules! impl_rlp {
             }
         }
 
+        #[cfg_attr(docsrs, doc(cfg(feature = "rlp")))]
         impl $crate::private::alloy_rlp::Encodable for $t {
             #[inline]
             fn length(&self) -> usize {
@@ -566,6 +574,7 @@ macro_rules! impl_rlp {
 #[cfg(feature = "allocative")]
 macro_rules! impl_allocative {
     ($t:ty) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "allocative")))]
         impl $crate::private::allocative::Allocative for $t {
             #[inline]
             fn visit<'a, 'b: 'a>(&self, visitor: &'a mut $crate::private::allocative::Visitor<'b>) {
@@ -586,7 +595,11 @@ macro_rules! impl_allocative {
 #[macro_export]
 #[cfg(feature = "serde")]
 macro_rules! impl_serde {
+    (Address) => {
+        // Use custom implementation for Address
+    };
     ($t:ty) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl $crate::private::serde::Serialize for $t {
             #[inline]
             fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -594,6 +607,7 @@ macro_rules! impl_serde {
             }
         }
 
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de> $crate::private::serde::Deserialize<'de> for $t {
             #[inline]
             fn deserialize<D: $crate::private::serde::Deserializer<'de>>(
@@ -617,6 +631,7 @@ macro_rules! impl_serde {
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary {
     ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary")))]
         impl<'a> $crate::private::arbitrary::Arbitrary<'a> for $t {
             #[inline]
             fn arbitrary(u: &mut $crate::private::arbitrary::Unstructured<'a>) -> $crate::private::arbitrary::Result<Self> {
@@ -634,6 +649,7 @@ macro_rules! impl_arbitrary {
             }
         }
 
+        #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary")))]
         impl $crate::private::proptest::arbitrary::Arbitrary for $t {
             type Parameters = <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::Parameters;
             type Strategy = $crate::private::proptest::strategy::Map<
@@ -662,65 +678,6 @@ macro_rules! impl_arbitrary {
 #[macro_export]
 #[cfg(not(feature = "arbitrary"))]
 macro_rules! impl_arbitrary {
-    ($t:ty, $n:literal) => {};
-}
-
-#[doc(hidden)]
-#[macro_export]
-#[cfg(feature = "ssz")]
-macro_rules! impl_ssz_fixed_len {
-    ($type:ty, $fixed_len:expr) => {
-        impl $crate::private::ssz::Encode for $type {
-            #[inline]
-            fn is_ssz_fixed_len() -> bool {
-                true
-            }
-
-            #[inline]
-            fn ssz_fixed_len() -> usize {
-                $fixed_len
-            }
-
-            #[inline]
-            fn ssz_bytes_len(&self) -> usize {
-                <$type as $crate::private::ssz::Encode>::ssz_fixed_len()
-            }
-
-            #[inline]
-            fn ssz_append(&self, buf: &mut $crate::private::Vec<u8>) {
-                buf.extend_from_slice(self.as_slice());
-            }
-        }
-
-        impl $crate::private::ssz::Decode for $type {
-            #[inline]
-            fn is_ssz_fixed_len() -> bool {
-                true
-            }
-
-            #[inline]
-            fn ssz_fixed_len() -> usize {
-                $fixed_len
-            }
-
-            fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, $crate::private::ssz::DecodeError> {
-                let len = bytes.len();
-                let expected: usize = <$type as $crate::private::ssz::Decode>::ssz_fixed_len();
-
-                if len != expected {
-                    Err($crate::private::ssz::DecodeError::InvalidByteLength { len, expected })
-                } else {
-                    Ok(<$type>::from_slice(bytes))
-                }
-            }
-        }
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-#[cfg(not(feature = "ssz"))]
-macro_rules! impl_ssz_fixed_len {
     ($t:ty, $n:literal) => {};
 }
 

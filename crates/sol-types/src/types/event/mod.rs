@@ -47,16 +47,39 @@ pub trait SolEvent: Sized {
     ///
     /// For non-anonymous events, this will be the first topic (`topic0`).
     /// For anonymous events, this is unused, but is still present.
+    #[doc(alias = "SELECTOR")]
     const SIGNATURE_HASH: FixedBytes<32>;
 
     /// Whether the event is anonymous.
     const ANONYMOUS: bool;
 
     /// Convert decoded rust data to the event type.
+    ///
+    /// Does not check that `topics[0]` is the correct hash.
+    /// Use [`new_checked`](Self::new_checked) instead.
     fn new(
         topics: <Self::TopicList as SolType>::RustType,
         data: <Self::DataTuple<'_> as SolType>::RustType,
     ) -> Self;
+
+    /// Convert decoded rust data to the event type.
+    ///
+    /// Checks that `topics[0]` is the correct hash.
+    #[inline]
+    fn new_checked(
+        topics: <Self::TopicList as SolType>::RustType,
+        data: <Self::DataTuple<'_> as SolType>::RustType,
+    ) -> Result<Self> {
+        Self::check_signature(&topics).map(|()| Self::new(topics, data))
+    }
+
+    /// Check that the event's signature matches the given topics.
+    #[inline]
+    fn check_signature(topics: &<Self::TopicList as SolType>::RustType) -> Result<()> {
+        // Overridden for non-anonymous events in `sol!`.
+        let _ = topics;
+        Ok(())
+    }
 
     /// Tokenize the event's non-indexed parameters.
     fn tokenize_body(&self) -> Self::DataToken<'_>;
@@ -109,14 +132,10 @@ pub trait SolEvent: Sized {
 
     /// Encode the topics of this event into a fixed-size array.
     ///
-    /// # Panics
-    ///
-    /// This method will panic if `LEN` is not equal to
-    /// `Self::TopicList::COUNT`.
+    /// This method will not compile if `LEN` is not equal to `Self::TopicList::COUNT`.
     #[inline]
     fn encode_topics_array<const LEN: usize>(&self) -> [WordToken; LEN] {
-        // TODO: make this a compile-time error when `const` blocks are stable
-        assert_eq!(LEN, Self::TopicList::COUNT, "topic list length mismatch");
+        const { assert!(LEN == Self::TopicList::COUNT, "topic list length mismatch") };
         let mut out = [WordToken(B256::ZERO); LEN];
         self.encode_topics_raw(&mut out).unwrap();
         out
@@ -162,6 +181,8 @@ pub trait SolEvent: Sized {
         D: Into<WordToken>,
     {
         let topics = Self::decode_topics(topics)?;
+        // Check signature before decoding the data.
+        Self::check_signature(&topics)?;
         let body = Self::abi_decode_data(data, validate)?;
         Ok(Self::new(topics, body))
     }

@@ -35,7 +35,7 @@ pub struct Param {
     /// instantiate directly. Use Param::new instead.
     #[doc(hidden)]
     pub name: String,
-    /// If the paramaeter is a compound type (a struct or tuple), a list of the
+    /// If the parameter is a compound type (a struct or tuple), a list of the
     /// parameter's components, in order. Empty otherwise
     pub components: Vec<Param>,
     /// The internal type of the parameter. This type represents the type that
@@ -325,7 +325,7 @@ pub struct EventParam {
     /// Whether the parameter is indexed. Indexed parameters have their
     /// value, or the hash of their value, stored in the log topics.
     pub indexed: bool,
-    /// If the paramaeter is a compound type (a struct or tuple), a list of the
+    /// If the parameter is a compound type (a struct or tuple), a list of the
     /// parameter's components, in order. Empty otherwise. Because the
     /// components are not top-level event params, they will not have an
     /// `indexed` field.
@@ -675,8 +675,11 @@ mod tests {
         let param_value = serde_json::from_str::<serde_json::Value>(param).unwrap();
         assert_eq!(serde_json::from_value::<Param>(param_value).unwrap(), expected);
 
-        let reader = std::io::Cursor::new(param);
-        assert_eq!(serde_json::from_reader::<_, Param>(reader).unwrap(), expected);
+        #[cfg(feature = "std")]
+        {
+            let reader = std::io::Cursor::new(param);
+            assert_eq!(serde_json::from_reader::<_, Param>(reader).unwrap(), expected);
+        }
     }
 
     #[test]
