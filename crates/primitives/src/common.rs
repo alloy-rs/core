@@ -40,6 +40,7 @@ impl From<TxKind> for Option<Address> {
     #[inline]
     fn from(value: TxKind) -> Self {
         value.to().copied()
+    }
 }
 
 impl TxKind {
