@@ -39,11 +39,7 @@ impl From<TxKind> for Option<Address> {
     /// Returns the address of the contract that will be called or will receive the transfer.
     #[inline]
     fn from(value: TxKind) -> Self {
-        match value {
-            TxKind::Create => None,
-            TxKind::Call(addr) => Some(addr),
-        }
-    }
+        value.to().copied()
 }
 
 impl TxKind {
