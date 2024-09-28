@@ -35,6 +35,14 @@ impl From<Address> for TxKind {
     }
 }
 
+impl From<TxKind> for Option<Address> {
+    /// Returns the address of the contract that will be called or will receive the transfer.
+    #[inline]
+    fn from(value: TxKind) -> Self {
+        value.to().copied()
+    }
+}
+
 impl TxKind {
     /// Returns the address of the contract that will be called or will receive the transfer.
     pub const fn to(&self) -> Option<&Address> {
