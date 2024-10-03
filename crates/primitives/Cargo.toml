@@ -68,7 +68,7 @@ k256 = { workspace = true, optional = true, features = ["ecdsa"] }
 
 # map
 hashbrown = { workspace = true, optional = true, features = [
-    "ahash",
+    "default-hasher",
     "inline-more",
 ] }
 indexmap = { workspace = true, optional = true }
