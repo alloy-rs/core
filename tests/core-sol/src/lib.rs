@@ -65,6 +65,7 @@ sol! {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "foldhash queries time (orlp/foldhash#4)")]
 fn do_stuff() {
     let mut set = alloy_core::primitives::map::HashSet::<MyStruct>::default();
     set.insert(Default::default());
