@@ -8,6 +8,7 @@ use crate::B256;
 /// implement the [`Sealable`] trait to provide define their own hash.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deref)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "arbitrary", derive(proptest_derive::Arbitrary))]
 pub struct Sealed<T> {
     /// The inner item
     #[deref]
@@ -59,6 +60,16 @@ impl<T> Sealed<T> {
     #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn unseal(self) -> T {
         self.into_inner()
+    }
+}
+
+#[cfg(feature = "arbitrary")]
+impl<'a, T> arbitrary::Arbitrary<'a> for Sealed<T>
+where
+    T: for<'b> arbitrary::Arbitrary<'b> + Sealable,
+{
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        Ok(T::arbitrary(u)?.seal_slow())
     }
 }
 
