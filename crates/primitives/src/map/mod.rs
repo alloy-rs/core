@@ -20,6 +20,10 @@
 //! resistance should enable the "rand" feature so that the hasher is initialized using a random
 //! seed.
 //!
+//! Note that using the types provided in this module may require using different APIs than the
+//! standard library as they might not be generic over the hasher state, such as using
+//! `HashMap::default()` instead of `HashMap::new()`.
+//!
 //! [fb]: crate::FixedBytes
 //! [`Selector`]: crate::Selector
 //! [`Address`]: crate::Address
@@ -53,7 +57,7 @@ pub type HashMap<K, V, S = DefaultHashBuilder> = imp::HashMap<K, V, S>;
 /// See [`HashSet`](imp::HashSet) for more information.
 pub type HashSet<V, S = DefaultHashBuilder> = imp::HashSet<V, S>;
 
-// Faster hasher.
+// Faster hashers.
 cfg_if! {
     if #[cfg(feature = "map-fxhash")] {
         #[doc(no_inline)]
@@ -111,7 +115,9 @@ cfg_if! {
 
 // Default hasher.
 cfg_if! {
-    if #[cfg(feature = "map-fxhash")] {
+    if #[cfg(feature = "map-foldhash")] {
+        type DefaultHashBuilderInner = foldhash::fast::RandomState;
+    } else if #[cfg(feature = "map-fxhash")] {
         type DefaultHashBuilderInner = FxBuildHasher;
     } else if #[cfg(any(feature = "map-hashbrown", not(feature = "std")))] {
         type DefaultHashBuilderInner = hashbrown::DefaultHashBuilder;
@@ -150,6 +156,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(miri, ignore = "foldhash queries time (orlp/foldhash#4)")]
     fn default_hasher_builder_traits() {
         let hash_builder = <DefaultHashBuilder as Default>::default();
         let _hash_builder2 = <DefaultHashBuilder as Clone>::clone(&hash_builder);

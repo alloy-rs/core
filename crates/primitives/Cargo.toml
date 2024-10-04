@@ -73,6 +73,7 @@ hashbrown = { workspace = true, optional = true, features = [
     "inline-more",
 ] }
 indexmap = { workspace = true, optional = true }
+foldhash = { workspace = true, optional = true }
 rustc-hash = { workspace = true, optional = true }
 
 # arbitrary
@@ -94,12 +95,13 @@ criterion.workspace = true
 serde_json.workspace = true
 
 [features]
-default = ["std", "map-fxhash"]
+default = ["std", "map-foldhash"]
 std = [
     "bytes/std",
     "hex/std",
     "ruint/std",
     "alloy-rlp?/std",
+    "foldhash?/std",
     "indexmap?/std",
     "k256?/std",
     "keccak-asm?/std",
@@ -124,6 +126,7 @@ tiny-keccak = []
 map = ["dep:hashbrown"]
 map-hashbrown = ["map"]
 map-indexmap = ["map", "dep:indexmap"]
+map-foldhash = ["map", "dep:foldhash"]
 map-fxhash = ["map", "dep:rustc-hash"]
 
 getrandom = ["dep:getrandom"]
