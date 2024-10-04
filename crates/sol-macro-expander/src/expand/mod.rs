@@ -198,7 +198,7 @@ impl<'ast> ExpCtxt<'ast> {
 }
 
 // resolve
-impl<'ast> ExpCtxt<'ast> {
+impl ExpCtxt<'_> {
     fn parse_file_attributes(&mut self) -> Result<()> {
         let (attrs, others) = self.ast.split_attrs()?;
         self.attrs = attrs;

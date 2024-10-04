@@ -277,7 +277,7 @@ const VISITOR_EXPECTED: &str = "a valid internal type";
 
 pub(crate) struct ItVisitor;
 
-impl<'de> Visitor<'de> for ItVisitor {
+impl Visitor<'_> for ItVisitor {
     type Value = InternalType;
 
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

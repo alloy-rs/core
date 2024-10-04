@@ -41,7 +41,7 @@ impl<const N: usize> Default for FixedBytes<N> {
     }
 }
 
-impl<'a, const N: usize> Default for &'a FixedBytes<N> {
+impl<const N: usize> Default for &FixedBytes<N> {
     #[inline]
     fn default() -> Self {
         &FixedBytes::ZERO
