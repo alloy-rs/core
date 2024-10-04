@@ -98,10 +98,20 @@ impl<const N: usize> BuildHasher for FbBuildHasher<N> {
 /// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
 ///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct FbHasher<const N: usize> {
     inner: DefaultHasher,
     _marker: core::marker::PhantomData<[(); N]>,
+}
+
+impl<const N: usize> Default for FbHasher<N> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            inner: DefaultHashBuilder::default().build_hasher(),
+            _marker: core::marker::PhantomData,
+        }
+    }
 }
 
 impl<const N: usize> fmt::Debug for FbHasher<N> {

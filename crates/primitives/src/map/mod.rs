@@ -114,7 +114,7 @@ cfg_if! {
     if #[cfg(feature = "map-fxhash")] {
         type DefaultHashBuilderInner = FxBuildHasher;
     } else if #[cfg(any(feature = "map-hashbrown", not(feature = "std")))] {
-        type DefaultHashBuilderInner = hashbrown::hash_map::DefaultHashBuilder;
+        type DefaultHashBuilderInner = hashbrown::DefaultHashBuilder;
     } else {
         type DefaultHashBuilderInner = std::collections::hash_map::RandomState;
     }
