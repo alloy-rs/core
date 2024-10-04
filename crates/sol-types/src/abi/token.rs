@@ -439,7 +439,7 @@ impl<T> DynSeqToken<T> {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct PackedSeqToken<'a>(pub &'a [u8]);
 
-impl<'a> fmt::Debug for PackedSeqToken<'a> {
+impl fmt::Debug for PackedSeqToken<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("PackedSeqToken").field(&hex::encode_prefixed(self.0)).finish()
     }
@@ -457,7 +457,7 @@ impl<'a> From<&'a Vec<u8>> for PackedSeqToken<'a> {
     }
 }
 
-impl<'a> AsRef<[u8]> for PackedSeqToken<'a> {
+impl AsRef<[u8]> for PackedSeqToken<'_> {
     fn as_ref(&self) -> &[u8] {
         self.0
     }
