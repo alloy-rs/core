@@ -1,24 +1,19 @@
+use derive_more::Deref;
+
 use crate::B256;
 
 /// A consensus hashable item, with its memoized hash.
 ///
 /// We do not implement any specific hashing algorithm here. Instead types
 /// implement the [`Sealable`] trait to provide define their own hash.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deref)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sealed<T> {
     /// The inner item
+    #[deref]
     inner: T,
     /// Its hash.
     seal: B256,
-}
-
-impl<T> core::ops::Deref for Sealed<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        self.inner()
-    }
 }
 
 impl<T> Sealed<T> {
