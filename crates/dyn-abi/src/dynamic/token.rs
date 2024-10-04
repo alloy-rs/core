@@ -37,7 +37,7 @@ impl<T: Into<Word>> From<T> for DynToken<'_> {
     }
 }
 
-impl<'a> PartialEq<DynToken<'a>> for DynToken<'_> {
+impl PartialEq<DynToken<'_>> for DynToken<'_> {
     #[inline]
     fn eq(&self, other: &DynToken<'_>) -> bool {
         match (self, other) {
