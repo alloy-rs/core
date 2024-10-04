@@ -6,6 +6,7 @@ use crate::B256;
 /// implement the [`Sealable`] trait to provide define their own hash.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub struct Sealed<T> {
     /// The inner item
     inner: T,
