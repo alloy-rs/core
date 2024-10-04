@@ -4,7 +4,7 @@ use crate::B256;
 ///
 /// We do not implement any specific hashing algorithm here. Instead types
 /// implement the [`Sealable`] trait to provide define their own hash.
-#[derive(Clone, Default, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sealed<T> {
     /// The inner item
@@ -64,6 +64,15 @@ impl<T> Sealed<T> {
     #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn unseal(self) -> T {
         self.into_inner()
+    }
+}
+
+impl<T> Default for Sealed<T>
+where
+    T: Sealable + Default,
+{
+    fn default() -> Self {
+        T::default().seal_slow()
     }
 }
 
