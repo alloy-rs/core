@@ -68,7 +68,7 @@ impl<T> Sealed<T> {
     }
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(feature = "arbitrary")]
 impl<'a, T> arbitrary::Arbitrary<'a> for Sealed<T>
 where
     T: for<'b> arbitrary::Arbitrary<'b> + Sealable,
