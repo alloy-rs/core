@@ -43,6 +43,7 @@ derive_more = { workspace = true, features = [
     "into",
     "into_iterator",
     "display",
+    "deref",
 ] }
 paste.workspace = true
 

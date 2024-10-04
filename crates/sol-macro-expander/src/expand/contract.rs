@@ -602,7 +602,7 @@ enum ToExpand<'a> {
     Events(&'a [&'a ItemEvent]),
 }
 
-impl<'a> ToExpand<'a> {
+impl ToExpand<'_> {
     fn to_data(&self, expander: &CallLikeExpander<'_>) -> ExpandData {
         let &CallLikeExpander { cx, ref contract_name, .. } = expander;
         match self {
@@ -660,7 +660,7 @@ impl<'a> ToExpand<'a> {
     }
 }
 
-impl<'a> CallLikeExpander<'a> {
+impl CallLikeExpander<'_> {
     fn expand(&self, to_expand: ToExpand<'_>, attrs: Vec<Attribute>) -> TokenStream {
         let data = &to_expand.to_data(self);
 
