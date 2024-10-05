@@ -63,6 +63,15 @@ impl<T> Sealed<T> {
     }
 }
 
+impl<T> Default for Sealed<T>
+where
+    T: Sealable + Default,
+{
+    fn default() -> Self {
+        T::default().seal_slow()
+    }
+}
+
 #[cfg(feature = "arbitrary")]
 impl<'a, T> arbitrary::Arbitrary<'a> for Sealed<T>
 where
