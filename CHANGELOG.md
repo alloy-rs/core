@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.6](https://github.com/alloy-rs/core/releases/tag/v0.8.6) - 2024-10-06
+
+### Bug Fixes
+
+- Fix lint `alloy-primitives` ([#756](https://github.com/alloy-rs/core/issues/756))
+- Fix lint `alloy-json-abi` ([#757](https://github.com/alloy-rs/core/issues/757))
+- Fix lint `alloy-dyn-abi` ([#758](https://github.com/alloy-rs/core/issues/758))
+- Fix lint alloy-sol-types ([#761](https://github.com/alloy-rs/core/issues/761))
+- Fix lint `alloy-sol-macro-expander` ([#760](https://github.com/alloy-rs/core/issues/760))
+
+### Dependencies
+
+- [deps] Bump hashbrown to 0.15 ([#753](https://github.com/alloy-rs/core/issues/753))
+
+### Features
+
+- Add `Default` for `Sealed<T>` ([#755](https://github.com/alloy-rs/core/issues/755))
+- [primitives] Add and use foldhash as default hasher ([#763](https://github.com/alloy-rs/core/issues/763))
+
+### Miscellaneous Tasks
+
+- [meta] Update CODEOWNERS
+- Remove a stabilized impl_core function
+
+### Other
+
+- Derive `Arbitrary` for `Sealed<T>` ([#762](https://github.com/alloy-rs/core/issues/762))
+- Derive `Deref` for `Sealed<T>` ([#759](https://github.com/alloy-rs/core/issues/759))
+- Add conversion `TxKind` -> `Option<Address>` ([#750](https://github.com/alloy-rs/core/issues/750))
+
 ## [0.8.5](https://github.com/alloy-rs/core/releases/tag/v0.8.5) - 2024-09-25
 
 ### Bug Fixes
@@ -13,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.8.5
 - [primitives] Remove Fx* aliases ([#749](https://github.com/alloy-rs/core/issues/749))
 
 ## [0.8.4](https://github.com/alloy-rs/core/releases/tag/v0.8.4) - 2024-09-25
