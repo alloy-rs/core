@@ -595,9 +595,6 @@ macro_rules! impl_allocative {
 #[macro_export]
 #[cfg(feature = "serde")]
 macro_rules! impl_serde {
-    (Address) => {
-        // Use custom implementation for Address
-    };
     ($t:ty) => {
         #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl $crate::private::serde::Serialize for $t {

@@ -292,55 +292,6 @@ mod tests {
     }
 
     #[test]
-    fn test_full_domain_contract_format() {
-        let json = json!({
-            "types": {
-                "EIP712Domain": [
-                    {
-                        "name": "name",
-                        "type": "string"
-                    },
-                    {
-                        "name": "version",
-                        "type": "string"
-                    },
-                    {
-                        "name": "chainId",
-                        "type": "uint256"
-                    },
-                    {
-                        "name": "verifyingContract",
-                        "type": "address"
-                    },
-                    {
-                        "name": "salt",
-                        "type": "bytes32"
-                    }
-                ]
-            },
-            "primaryType": "EIP712Domain",
-            "domain": {
-                "name": "example.metamask.io",
-                "version": "1",
-                "chainId": 1,
-                "verifyingContract": "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359"
-            },
-            "message": {}
-        });
-
-        let typed_data: TypedData = serde_json::from_value(json).unwrap();
-
-        let serialized_contract = typed_data.domain.verifying_contract.unwrap();
-        assert_eq!(serialized_contract.to_string(), "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359");
-
-        let hash = typed_data.eip712_signing_hash().unwrap();
-        assert_eq!(
-            hex::encode(&hash[..]),
-            "4863a6e9735dee205f3010f78d613c425a26ae2db6e4cf207f88b5d26735d378",
-        );
-    }
-
-    #[test]
     fn test_minimal_message() {
         let json = json!({
             "types": {
