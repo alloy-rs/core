@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.8.6
 - Remove a stabilized impl_core function
 
 ## [0.8.5](https://github.com/alloy-rs/core/releases/tag/v0.8.5) - 2024-09-25
