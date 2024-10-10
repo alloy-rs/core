@@ -102,7 +102,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let tokens = quote! {
         #(#call_attrs)*
         #call_doc
-        #[allow(non_camel_case_types, non_snake_case)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
         #[derive(Clone)]
         pub struct #call_name {
             #(#call_fields),*
@@ -110,13 +110,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
         #(#return_attrs)*
         #return_doc
-        #[allow(non_camel_case_types, non_snake_case)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
         #[derive(Clone)]
         pub struct #return_name {
             #(#return_fields),*
         }
 
-        #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
         const _: () = {
             use #alloy_sol_types as alloy_sol_types;
 
@@ -182,7 +182,7 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
     let tokens = quote! {
         #(#call_attrs)*
         #call_doc
-        #[allow(non_camel_case_types, non_snake_case)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
         #[derive(Clone)]
         pub struct #call_name {
             #(#call_fields),*

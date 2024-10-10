@@ -488,7 +488,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         #mod_descr_doc
         #(#mod_attrs)*
         #mod_iface_doc
-        #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
         pub mod #name {
             use super::*;
             use #alloy_sol_types as alloy_sol_types;

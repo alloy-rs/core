@@ -74,7 +74,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
     let tokens = quote! {
         #(#attrs)*
         #doc
-        #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
         #[derive(Clone, Copy)]
         #[repr(u8)]
         pub enum #name {
@@ -82,7 +82,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             #invalid_variant
         }
 
-        #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
         const _: () = {
             use #alloy_sol_types as alloy_sol_types;
 
