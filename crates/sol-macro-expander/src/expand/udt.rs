@@ -33,7 +33,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
 
     let tokens = quote! {
         #(#attrs)*
-        #[allow(non_camel_case_types, non_snake_case)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
         #[derive(Clone)]
         pub struct #name(#underlying_rust);
 

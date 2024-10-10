@@ -64,13 +64,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let tokens = quote! {
         #(#attrs)*
         #doc
-        #[allow(non_camel_case_types, non_snake_case)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
         #[derive(Clone)]
         pub struct #name {
             #(#fields),*
         }
 
-        #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
         const _: () = {
             use #alloy_sol_types as alloy_sol_types;
 
