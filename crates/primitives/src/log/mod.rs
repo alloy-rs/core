@@ -1,8 +1,20 @@
-use crate::{Address, Bytes, B256};
+use crate::{Address, Bloom, Bytes, B256};
 use alloc::vec::Vec;
 
 #[cfg(feature = "serde")]
 mod serde;
+
+/// Compute the logs bloom filter for the given logs.
+pub fn logs_bloom<'a>(logs: impl IntoIterator<Item = &'a Log>) -> Bloom {
+    let mut bloom = Bloom::ZERO;
+    for log in logs {
+        bloom.m3_2048(log.address.as_slice());
+        for topic in log.topics() {
+            bloom.m3_2048(topic.as_slice());
+        }
+    }
+    bloom
+}
 
 /// An Ethereum event log object.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
