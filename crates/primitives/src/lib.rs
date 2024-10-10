@@ -42,7 +42,7 @@ mod common;
 pub use common::TxKind;
 
 mod log;
-pub use log::{IntoLogData, Log, LogData};
+pub use log::{logs_bloom, IntoLogData, Log, LogData};
 
 #[cfg(feature = "map")]
 pub mod map;
