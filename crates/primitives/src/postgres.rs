@@ -159,7 +159,13 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
             Type::NUMERIC => {
                 // Everything is done in big-endian base 1000 digits.
                 const BASE: u64 = 10000;
-                let mut digits: Vec<_> = self.0.to_base_be(BASE).collect();
+
+                let sign = match self.sign() {
+                    Sign::Positive => 0x0000,
+                    _ => 0x4000,
+                };
+
+                let mut digits: Vec<_> = self.abs().0.to_base_be(BASE).collect();
                 let exponent = digits.len().saturating_sub(1).try_into()?;
 
                 // Trailing zeros are removed.
@@ -167,11 +173,6 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
 
                 out.put_i16(digits.len().try_into()?); // Number of digits.
                 out.put_i16(exponent); // Exponent of first digit.
-
-                let sign = match self.sign() {
-                    Sign::Positive => 0x0000,
-                    _ => 0x4000,
-                };
 
                 out.put_i16(sign);
                 out.put_i16(0); // dscale: Number of digits to the right of the decimal point.
@@ -300,7 +301,7 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                 }
                 let digits = i16::from_be_bytes(raw[0..2].try_into()?);
                 let exponent = i16::from_be_bytes(raw[2..4].try_into()?);
-                let _sign = i16::from_be_bytes(raw[4..6].try_into()?);
+                let sign = i16::from_be_bytes(raw[4..6].try_into()?);
                 let dscale = i16::from_be_bytes(raw[6..8].try_into()?);
                 let raw = &raw[8..];
                 #[allow(clippy::cast_sign_loss)] // Signs are checked
@@ -329,7 +330,10 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                 // Expression can not be negative due to checks above
                 let iter = iter.chain(iter::repeat(0).take((exponent + 1 - digits) as usize));
 
-                let value = Self::from_base_be(10000, iter)?;
+                let mut value = Self::from_base_be(10000, iter)?;
+                if sign == 0x4000 {
+                    value = -value;
+                }
                 if error {
                     return Err(Box::new(FromSqlError::ParseError(ty.clone())));
                 }
@@ -340,5 +344,80 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
             // Unsupported types
             _ => return Err(Box::new(WrongType::new::<Self>(ty.clone()))),
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use crate::I256;
+
+    #[test]
+    fn positive_i256_from_sql() {
+        assert_eq!(
+            I256::from_sql(
+                &Type::NUMERIC,
+                &[
+                    0x00, 0x01, // ndigits: 1
+                    0x00, 0x00, // weight: 0
+                    0x00, 0x00, // sign: 0x0000 (positive)
+                    0x00, 0x00, // scale: 0
+                    0x00, 0x01, // digit: 1
+                ]
+            )
+            .unwrap(),
+            I256::ONE
+        );
+    }
+
+    #[test]
+    fn positive_i256_to_sql() {
+        let mut bytes = BytesMut::with_capacity(64);
+        I256::ONE.to_sql(&Type::NUMERIC, &mut bytes).unwrap();
+        assert_eq!(
+            *bytes.freeze(),
+            [
+                0x00, 0x01, // ndigits: 1
+                0x00, 0x00, // weight: 0
+                0x00, 0x00, // sign: 0x0000 (positive)
+                0x00, 0x00, // scale: 0
+                0x00, 0x01, // digit: 1
+            ],
+        );
+    }
+
+    #[test]
+    fn negative_i256_from_sql() {
+        assert_eq!(
+            I256::from_sql(
+                &Type::NUMERIC,
+                &[
+                    0x00, 0x01, // ndigits: 1
+                    0x00, 0x00, // weight: 0
+                    0x40, 0x00, // sign: 0x4000 (negative)
+                    0x00, 0x00, // scale: 0
+                    0x00, 0x01, // digit: 1
+                ]
+            )
+            .unwrap(),
+            I256::MINUS_ONE
+        );
+    }
+
+    #[test]
+    fn negative_i256_to_sql() {
+        let mut bytes = BytesMut::with_capacity(64);
+        I256::MINUS_ONE.to_sql(&Type::NUMERIC, &mut bytes).unwrap();
+        assert_eq!(
+            *bytes.freeze(),
+            [
+                0x00, 0x01, // ndigits: 1
+                0x00, 0x00, // weight: 0
+                0x40, 0x00, // sign: 0x4000 (negative)
+                0x00, 0x00, // scale: 0
+                0x00, 0x01, // digit: 1
+            ],
+        );
     }
 }
