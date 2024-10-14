@@ -5,7 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.8](https://github.com/alloy-rs/core/releases/tag/v0.8.8) - 2024-10-14
+
+### Bug Fixes
+
+- Properly account for sign in pg to/from sql implementation for signed ([#772](https://github.com/alloy-rs/core/issues/772))
+- Don't enable foldhash by default ([#771](https://github.com/alloy-rs/core/issues/771))
+
+### Features
+
+- Add logs_bloom ([#768](https://github.com/alloy-rs/core/issues/768))
+
 ## [0.8.7](https://github.com/alloy-rs/core/releases/tag/v0.8.7) - 2024-10-08
+
+### Miscellaneous Tasks
+
+- Release 0.8.7
 
 ### Other
 

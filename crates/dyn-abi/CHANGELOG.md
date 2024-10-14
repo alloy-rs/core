@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.7](https://github.com/alloy-rs/core/releases/tag/v0.8.7) - 2024-10-08
 
+### Miscellaneous Tasks
+
+- Release 0.8.7
+
 ### Other
 
 - Revert "Add custom serialization for Address" ([#765](https://github.com/alloy-rs/core/issues/765))
