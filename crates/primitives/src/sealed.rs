@@ -44,7 +44,7 @@ impl<T> Sealed<T> {
         F: FnOnce(&T) -> B256,
     {
         let seal = f(&inner);
-        Sealed::new_unchecked(inner, seal)
+        Self::new_unchecked(inner, seal)
     }
 
     /// Seal a reference to the inner item with some function.
