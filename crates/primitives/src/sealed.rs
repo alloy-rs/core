@@ -131,13 +131,18 @@ pub trait Sealable: Sized {
         Sealed::new(self)
     }
 
-    /// Seal the object by calculating the hash. This may be slow.
-    fn seal_ref(&self) -> Sealed<&Self> {
+    /// Seal a borrowed object by calculating the hash. This may be slow.
+    fn seal_ref_slow(&self) -> Sealed<&Self> {
         Sealed::new_ref(self)
     }
 
     /// Instantiate an unchecked seal. This should be used with caution.
     fn seal_unchecked(self, seal: B256) -> Sealed<Self> {
+        Sealed::new_unchecked(self, seal)
+    }
+
+    /// Instantiate an unchecked seal. This should be used with caution.
+    fn seal_ref_unchecked(&self, seal: B256) -> Sealed<&Self> {
         Sealed::new_unchecked(self, seal)
     }
 }
