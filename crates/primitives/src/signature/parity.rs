@@ -76,6 +76,25 @@ impl Parity {
         }
     }
 
+    /// Applies a check to the [`Parity::Eip155`] v value if this instance is a [`Parity::Eip155`].
+    ///
+    /// Returns [`Ok`] if the instance is not [`Parity::Eip155`]
+    pub fn ensure_eip155<F, E>(&self, f: F) -> Result<(), E>
+    where
+        F: FnOnce(u64) -> Result<(), E>,
+    {
+        if let Self::Eip155(v) = self {
+            f(*v)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Returns true if this instance is a [`Parity::Eip155`]
+    pub const fn is_eip155(&self) -> bool {
+        matches!(self, Self::Eip155(_))
+    }
+
     /// Return the y-parity as a boolean.
     pub const fn y_parity(&self) -> bool {
         match self {
