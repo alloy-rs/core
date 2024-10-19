@@ -1,6 +1,5 @@
-use derive_more::Deref;
-
 use crate::B256;
+use derive_more::Deref;
 
 /// A consensus hashable item, with its memoized hash.
 ///
@@ -10,14 +9,54 @@ use crate::B256;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(proptest_derive::Arbitrary))]
 pub struct Sealed<T> {
-    /// The inner item
+    /// The inner item.
     #[deref]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     inner: T,
+    #[cfg_attr(feature = "serde", serde(flatten, alias = "hash"))]
     /// Its hash.
     seal: B256,
 }
 
 impl<T> Sealed<T> {
+    /// Seal the inner item.
+    pub fn new(inner: T) -> Self
+    where
+        T: Sealable,
+    {
+        let seal = inner.hash_slow();
+        Self { inner, seal }
+    }
+
+    /// Seal the inner item, by reference.
+    pub fn new_ref(inner: &T) -> Sealed<&T>
+    where
+        T: Sealable,
+    {
+        let seal = inner.hash_slow();
+        Sealed { inner, seal }
+    }
+
+    /// Seal the inner item with some function.
+    pub fn new_with<F>(inner: T, f: F) -> Self
+    where
+        T: Sized,
+        F: FnOnce(&T) -> B256,
+    {
+        let seal = f(&inner);
+        Self::new_unchecked(inner, seal)
+    }
+
+    /// Seal a reference to the inner item with some function.
+    pub fn new_ref_with<F>(inner: &T, f: F) -> Sealed<&T>
+    where
+        T: Sized,
+        F: FnOnce(&T) -> B256,
+    {
+        let seal = f(inner);
+        Sealed::new_unchecked(inner, seal)
+    }
+
     /// Instantiate without performing the hash. This should be used carefully.
     pub const fn new_unchecked(inner: T, seal: B256) -> Self {
         Self { inner, seal }
@@ -89,12 +128,21 @@ pub trait Sealable: Sized {
 
     /// Seal the object by calculating the hash. This may be slow.
     fn seal_slow(self) -> Sealed<Self> {
-        let seal = self.hash_slow();
-        Sealed::new_unchecked(self, seal)
+        Sealed::new(self)
+    }
+
+    /// Seal a borrowed object by calculating the hash. This may be slow.
+    fn seal_ref_slow(&self) -> Sealed<&Self> {
+        Sealed::new_ref(self)
     }
 
     /// Instantiate an unchecked seal. This should be used with caution.
     fn seal_unchecked(self, seal: B256) -> Sealed<Self> {
+        Sealed::new_unchecked(self, seal)
+    }
+
+    /// Instantiate an unchecked seal. This should be used with caution.
+    fn seal_ref_unchecked(&self, seal: B256) -> Sealed<&Self> {
         Sealed::new_unchecked(self, seal)
     }
 }
