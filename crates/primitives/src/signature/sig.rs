@@ -328,7 +328,11 @@ impl proptest::arbitrary::Arbitrary for Signature {
 #[cfg(feature = "rlp")]
 impl alloy_rlp::Encodable for Signature {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        alloy_rlp::Header { list: true, payload_length: self.rlp_rs_len() + self.y_parity.length() }.encode(out);
+        alloy_rlp::Header {
+            list: true,
+            payload_length: self.rlp_rs_len() + self.y_parity.length(),
+        }
+        .encode(out);
         self.write_rlp_vrs(out, self.y_parity);
     }
 
