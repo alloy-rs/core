@@ -54,7 +54,7 @@ mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 mod signature;
-pub use signature::{to_eip155_v, Parity, Signature, SignatureError};
+pub use signature::{normalize_v, to_eip155_v, Signature, SignatureError};
 
 pub mod utils;
 pub use utils::{eip191_hash_message, keccak256, Keccak256};
