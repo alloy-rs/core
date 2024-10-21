@@ -95,7 +95,7 @@ criterion.workspace = true
 serde_json.workspace = true
 
 [features]
-default = ["std", "map"]
+default = ["std", "map", "map-foldhash"]
 std = [
     "bytes/std",
     "hex/std",
