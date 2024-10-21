@@ -115,7 +115,8 @@ cfg_if! {
 
 // Default hasher.
 cfg_if! {
-    if #[cfg(feature = "map-foldhash")] {
+    // TODO: Use `foldhash` in zkVM when it's supported.
+    if #[cfg(all(feature = "map-foldhash", not(target_os = "zkvm")))] {
         type DefaultHashBuilderInner = foldhash::fast::RandomState;
     } else if #[cfg(feature = "map-fxhash")] {
         type DefaultHashBuilderInner = FxBuildHasher;
