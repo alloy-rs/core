@@ -48,8 +48,7 @@ impl fmt::Display for ParseSignedError {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BigIntConversionError;
 
-#[cfg(feature = "std")]
-impl std::error::Error for BigIntConversionError {}
+impl core::error::Error for BigIntConversionError {}
 
 impl fmt::Display for BigIntConversionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
