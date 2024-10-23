@@ -8,8 +8,7 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 #[derive(Clone, PartialEq, Eq)]
 pub struct Error(Repr);
 
-#[cfg(feature = "std")]
-impl std::error::Error for Error {}
+impl core::error::Error for Error {}
 
 impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

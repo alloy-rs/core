@@ -103,8 +103,7 @@ impl fmt::Display for Revert {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for Revert {}
+impl core::error::Error for Revert {}
 
 impl AsRef<str> for Revert {
     #[inline]
@@ -264,8 +263,7 @@ impl fmt::Display for Panic {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for Panic {}
+impl core::error::Error for Panic {}
 
 impl SolError for Panic {
     type Parameters<'a> = (crate::sol_data::Uint<256>,);
