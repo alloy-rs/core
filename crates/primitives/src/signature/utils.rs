@@ -6,6 +6,22 @@ pub const fn to_eip155_v(v: u8, chain_id: ChainId) -> ChainId {
     (v as u64) + 35 + chain_id * 2
 }
 
+/// Attempts to normalize the v value to a boolean parity value. Returns None if the value is
+/// invalid for any of the known Ethereum parity encodings.
+pub const fn normalize_v(v: u64) -> Option<bool> {
+    match v {
+        // Case 1: raw/bare
+        0 => Some(false),
+        1 => Some(true),
+        // Case 2: non-EIP-155 v value
+        27 => Some(false),
+        28 => Some(true),
+        // Case 3: EIP-155 V value
+        35.. => Some(((v - 35) % 2) != 0),
+        _ => None,
+    }
+}
+
 /// Normalizes a `v` value, respecting raw, legacy, and EIP-155 values.
 ///
 /// This function covers the entire u64 range, producing v-values as follows:
@@ -22,7 +38,7 @@ pub const fn to_eip155_v(v: u8, chain_id: ChainId) -> ChainId {
 /// recovery value of 2 or 3, you should normalize out of band.
 #[cfg(feature = "k256")]
 #[inline]
-pub(crate) const fn normalize_v(v: u64) -> k256::ecdsa::RecoveryId {
+pub(crate) const fn normalize_v_to_recid(v: u64) -> k256::ecdsa::RecoveryId {
     let byte = normalize_v_to_byte(v);
     debug_assert!(byte <= k256::ecdsa::RecoveryId::MAX);
     match k256::ecdsa::RecoveryId::from_byte(byte) {
@@ -49,7 +65,7 @@ mod test {
     #[cfg(feature = "k256")]
     fn normalizes_v() {
         use super::*;
-        assert_eq!(normalize_v(27), k256::ecdsa::RecoveryId::from_byte(0).unwrap());
-        assert_eq!(normalize_v(28), k256::ecdsa::RecoveryId::from_byte(1).unwrap());
+        assert_eq!(normalize_v_to_recid(27), k256::ecdsa::RecoveryId::from_byte(0).unwrap());
+        assert_eq!(normalize_v_to_recid(28), k256::ecdsa::RecoveryId::from_byte(1).unwrap());
     }
 }
