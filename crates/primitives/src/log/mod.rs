@@ -132,6 +132,13 @@ impl<T> core::ops::Deref for Log<T> {
     }
 }
 
+impl<T> core::ops::DerefMut for Log<T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
+    }
+}
+
 impl Log {
     /// Creates a new log.
     #[inline]
