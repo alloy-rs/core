@@ -84,7 +84,7 @@ impl JsonAbi {
     ///     "function transferFrom(address from, address to, uint value)",
     ///     "function balanceOf(address owner)(uint balance)",
     ///     "event Transfer(address indexed from, address indexed to, address value)",
-    ///     "error InsufficientBalance(account owner, uint balance)",
+    ///     "error InsufficientBalance(address owner, uint balance)",
     ///     "function addPerson(tuple(string, uint16) person)",
     ///     "function addPeople(tuple(string, uint16)[] person)",
     ///     "function getPerson(uint id)(tuple(string, uint16))",
