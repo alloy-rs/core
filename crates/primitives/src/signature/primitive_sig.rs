@@ -143,8 +143,8 @@ impl PrimitiveSignature {
         Self { y_parity: v, r, s }
     }
 
-    /// Creates a [`PrimitiveSignature`] from the serialized `r` and `s` scalar values, which comprise the
-    /// ECDSA signature, alongside a `v` value, used to determine the recovery ID.
+    /// Creates a [`PrimitiveSignature`] from the serialized `r` and `s` scalar values, which
+    /// comprise the ECDSA signature, alongside a `v` value, used to determine the recovery ID.
     #[inline]
     pub fn from_scalars_and_parity(r: crate::B256, s: crate::B256, parity: bool) -> Self {
         Self::new(U256::from_be_slice(r.as_ref()), U256::from_be_slice(s.as_ref()), parity)
