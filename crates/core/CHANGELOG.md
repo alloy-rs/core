@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Re-enable foldhash by default, but exclude it from zkvm ([#777](https://github.com/alloy-rs/core/issues/777))
 
+### Miscellaneous Tasks
+
+- Release 0.8.9
+
 ## [0.8.8](https://github.com/alloy-rs/core/releases/tag/v0.8.8) - 2024-10-14
 
 ### Miscellaneous Tasks

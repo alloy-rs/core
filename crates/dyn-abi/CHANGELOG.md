@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.10](https://github.com/alloy-rs/core/releases/tag/v0.8.10) - 2024-10-28
+
+### Bug Fixes
+
+- Revert MSRV changes ([#789](https://github.com/alloy-rs/core/issues/789))
+
+### Dependencies
+
+- Bump MSRV to 1.81 & use `core::error::Error` in place of `std` ([#780](https://github.com/alloy-rs/core/issues/780))
+
+## [0.8.9](https://github.com/alloy-rs/core/releases/tag/v0.8.9) - 2024-10-21
+
+### Miscellaneous Tasks
+
+- Release 0.8.9
+
 ## [0.8.8](https://github.com/alloy-rs/core/releases/tag/v0.8.8) - 2024-10-14
 
 ### Miscellaneous Tasks
