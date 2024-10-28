@@ -2,6 +2,9 @@ use crate::{alloc::string::ToString, Error, Panic, Result, Revert, SolError};
 use alloc::{string::String, vec::Vec};
 use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
 
+#[cfg(feature = "std")]
+use std::error::Error as StdError;
+
 mod event;
 pub use event::SolEventInterface;
 
@@ -208,9 +211,10 @@ impl<T: fmt::Display> fmt::Display for ContractError<T> {
     }
 }
 
-impl<T: core::error::Error + 'static> core::error::Error for ContractError<T> {
+#[cfg(feature = "std")]
+impl<T: StdError + 'static> StdError for ContractError<T> {
     #[inline]
-    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Self::CustomError(error) => Some(error),
             Self::Panic(panic) => Some(panic),
