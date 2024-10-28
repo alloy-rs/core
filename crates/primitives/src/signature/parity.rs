@@ -143,7 +143,7 @@ impl Parity {
     #[cfg(feature = "k256")]
     pub const fn recid(&self) -> k256::ecdsa::RecoveryId {
         let recid_opt = match self {
-            Self::Eip155(v) => Some(crate::signature::utils::normalize_v(*v)),
+            Self::Eip155(v) => Some(crate::signature::utils::normalize_v_to_recid(*v)),
             Self::NonEip155(b) | Self::Parity(b) => k256::ecdsa::RecoveryId::from_byte(*b as u8),
         };
 
