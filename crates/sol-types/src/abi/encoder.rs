@@ -43,6 +43,12 @@ impl Encoder {
         }
     }
 
+    /// Return a reference to the encoded words.
+    #[inline]
+    pub fn words(&self) -> &[Word] {
+        &self.buf
+    }
+
     /// Finish the encoding process, returning the encoded words.
     ///
     /// Use `into_bytes` instead to flatten the words into bytes.
@@ -53,16 +59,18 @@ impl Encoder {
         self.buf
     }
 
+    /// Return a reference to the encoded bytes.
+    #[inline]
+    pub fn bytes(&self) -> &[u8] {
+        // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`
+        unsafe { &*(self.words() as *const [Word] as *const [[u8; 32]]) }.as_flattened()
+    }
+
     /// Finish the encoding process, returning the encoded bytes.
     #[inline]
     pub fn into_bytes(self) -> Vec<u8> {
-        // TODO: remove once `Vec::into_flattened` is stabilized.
-        // unsafe { mem::transmute::<Vec<_>, Vec<[u8; 32]>>(self.buf) }.into_flattened()
-
         // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`
-        crate::impl_core::into_flattened::<u8, 32>(unsafe {
-            mem::transmute::<Vec<Word>, Vec<[u8; 32]>>(self.buf)
-        })
+        unsafe { mem::transmute::<Vec<Word>, Vec<[u8; 32]>>(self.finish()) }.into_flattened()
     }
 
     /// Determine the current suffix offset.
