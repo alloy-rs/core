@@ -169,3 +169,22 @@ jobs:
         with:
           components: rustfmt
       - run: cargo fmt --all --check
+
+  ci-success:
+    name: ci success
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - test
+      - miri
+      - wasm
+      - feature-checks
+      - check-no-std
+      - clippy
+      - docs
+      - fmt
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
