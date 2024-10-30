@@ -444,8 +444,7 @@ mod tests {
             "yParity": "0x1"
         });
 
-        let signature: Signature =
-            serde_json::from_value(raw_signature_with_y_parity).unwrap();
+        let signature: Signature = serde_json::from_value(raw_signature_with_y_parity).unwrap();
 
         let expected = Signature::new(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
