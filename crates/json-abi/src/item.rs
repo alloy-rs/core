@@ -90,7 +90,7 @@ abi_items! {
     /// A JSON ABI function.
     pub struct Function: "function" {
         /// The name of the function.
-        #[serde(deserialize_with = "validate_identifier")]
+        #[serde(deserialize_with = "validated_identifier")]
         pub name: String,
         /// The input types of the function. May be empty.
         pub inputs: Vec<Param>,
@@ -104,7 +104,7 @@ abi_items! {
     /// A JSON ABI event.
     pub struct Event: "event" {
         /// The name of the event.
-        #[serde(deserialize_with = "validate_identifier")]
+        #[serde(deserialize_with = "validated_identifier")]
         pub name: String,
         /// A list of the event's inputs, in order.
         pub inputs: Vec<EventParam>,
@@ -117,7 +117,7 @@ abi_items! {
     /// A JSON ABI error.
     pub struct Error: "error" {
         /// The name of the error.
-        #[serde(deserialize_with = "validate_identifier")]
+        #[serde(deserialize_with = "validated_identifier")]
         pub name: String,
         /// A list of the error's components, in order.
         pub inputs: Vec<Param>,
@@ -125,9 +125,9 @@ abi_items! {
 }
 
 #[inline]
-fn validate_identifier<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
+fn validated_identifier<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
     let s = String::deserialize(deserializer)?;
-    validate_identifier!(&s);
+    validate_identifier(&s)?;
     Ok(s)
 }
 
