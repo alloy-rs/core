@@ -58,6 +58,25 @@ macro_rules! abi_items {
                 )*}
             }
         }
+
+        impl AbiItem<'_> {
+            /// Returns the JSON type of the item as a string.
+            ///
+            /// # Examples
+            ///
+            /// ```
+            /// # use alloy_json_abi::AbiItem;
+            /// let item = AbiItem::parse("function f()")?;
+            /// assert_eq!(item.json_type(), "function");
+            /// # Ok::<_, alloy_json_abi::parser::Error>(())
+            /// ```
+            #[inline]
+            pub const fn json_type(&self) -> &'static str {
+                match self {$(
+                    Self::$name(_) => $name_lower,
+                )*}
+            }
+        }
     };
 }
 
