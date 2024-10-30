@@ -223,7 +223,7 @@ impl Param {
         if self.components.is_empty() {
             s.push_str(&self.ty);
         } else {
-            crate::utils::signature_raw(&self.components, s);
+            crate::utils::params_abi_tuple(&self.components, s);
             // checked during deserialization, but might be invalid from a user
             if let Some(suffix) = self.ty.strip_prefix("tuple") {
                 s.push_str(suffix);
@@ -239,7 +239,7 @@ impl Param {
             s.push_str(&self.ty);
         } else {
             s.push_str("tuple");
-            crate::utils::full_signature_raw(&self.components, s);
+            crate::utils::params_tuple(&self.components, s);
             // checked during deserialization, but might be invalid from a user
             if let Some(suffix) = self.ty.strip_prefix("tuple") {
                 s.push_str(suffix);
@@ -516,7 +516,7 @@ impl EventParam {
         if self.components.is_empty() {
             s.push_str(&self.ty);
         } else {
-            crate::utils::signature_raw(&self.components, s);
+            crate::utils::params_abi_tuple(&self.components, s);
             // checked during deserialization, but might be invalid from a user
             if let Some(suffix) = self.ty.strip_prefix("tuple") {
                 s.push_str(suffix);
@@ -532,7 +532,7 @@ impl EventParam {
             s.push_str(&self.ty);
         } else {
             s.push_str("tuple");
-            crate::utils::full_signature_raw(&self.components, s);
+            crate::utils::params_tuple(&self.components, s);
             // checked during deserialization, but might be invalid from a user
             if let Some(suffix) = self.ty.strip_prefix("tuple") {
                 s.push_str(suffix);
@@ -626,7 +626,7 @@ struct BorrowedParamInner<'a> {
 
 impl BorrowedParamInner<'_> {
     fn validate_fields<E: serde::de::Error>(&self) -> Result<(), E> {
-        validate_identifier!(self.name);
+        validate_identifier(self.name)?;
 
         // any components means type is "tuple" + maybe brackets, so we can skip
         // parsing with TypeSpecifier
