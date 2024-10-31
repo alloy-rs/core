@@ -7,8 +7,7 @@ features, high performance, and excellent docs.
 
 We have a [book](https://alloy.rs) on all things Alloy and many [examples](https://github.com/alloy-rs/examples) to help you get started.
 
-[`ethers-rs`] will continue to be maintained until we have achieved
-feature-parity in Alloy. No action is currently needed from devs.
+[`ethers-rs`] has been deprecated, and users are recommended to migrate to Alloy.
 
 [`ethers-rs`]: https://github.com/gakonst/ethers-rs
 
