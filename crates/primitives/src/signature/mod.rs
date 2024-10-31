@@ -10,5 +10,5 @@ pub use sig::Signature;
 mod utils;
 pub use utils::{normalize_v, to_eip155_v};
 
-mod primitive_sig;
-pub use primitive_sig::PrimitiveSignature;
+/// Primitive signature type with boolean parity.
+pub mod primitive_sig;

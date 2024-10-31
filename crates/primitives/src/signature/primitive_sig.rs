@@ -10,13 +10,13 @@ const SECP256K1N_ORDER: U256 =
 
 /// An Ethereum ECDSA signature.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
-pub struct PrimitiveSignature {
+pub struct Signature {
     y_parity: bool,
     r: U256,
     s: U256,
 }
 
-impl<'a> TryFrom<&'a [u8]> for PrimitiveSignature {
+impl<'a> TryFrom<&'a [u8]> for Signature {
     type Error = SignatureError;
 
     /// Parses a raw signature which is expected to be 65 bytes long where
@@ -32,7 +32,7 @@ impl<'a> TryFrom<&'a [u8]> for PrimitiveSignature {
     }
 }
 
-impl FromStr for PrimitiveSignature {
+impl FromStr for Signature {
     type Err = SignatureError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -41,52 +41,52 @@ impl FromStr for PrimitiveSignature {
     }
 }
 
-impl From<&PrimitiveSignature> for [u8; 65] {
+impl From<&Signature> for [u8; 65] {
     #[inline]
-    fn from(value: &PrimitiveSignature) -> [u8; 65] {
+    fn from(value: &Signature) -> [u8; 65] {
         value.as_bytes()
     }
 }
 
-impl From<PrimitiveSignature> for [u8; 65] {
+impl From<Signature> for [u8; 65] {
     #[inline]
-    fn from(value: PrimitiveSignature) -> [u8; 65] {
+    fn from(value: Signature) -> [u8; 65] {
         value.as_bytes()
     }
 }
 
-impl From<&PrimitiveSignature> for Vec<u8> {
+impl From<&Signature> for Vec<u8> {
     #[inline]
-    fn from(value: &PrimitiveSignature) -> Self {
+    fn from(value: &Signature) -> Self {
         value.as_bytes().to_vec()
     }
 }
 
-impl From<PrimitiveSignature> for Vec<u8> {
+impl From<Signature> for Vec<u8> {
     #[inline]
-    fn from(value: PrimitiveSignature) -> Self {
+    fn from(value: Signature) -> Self {
         value.as_bytes().to_vec()
     }
 }
 
 #[cfg(feature = "k256")]
-impl From<(k256::ecdsa::Signature, k256::ecdsa::RecoveryId)> for PrimitiveSignature {
+impl From<(k256::ecdsa::Signature, k256::ecdsa::RecoveryId)> for Signature {
     fn from(value: (k256::ecdsa::Signature, k256::ecdsa::RecoveryId)) -> Self {
         Self::from_signature_and_parity(value.0, value.1.is_y_odd())
     }
 }
 
 #[cfg(feature = "k256")]
-impl TryFrom<PrimitiveSignature> for k256::ecdsa::Signature {
+impl TryFrom<Signature> for k256::ecdsa::Signature {
     type Error = k256::ecdsa::Error;
 
-    fn try_from(value: PrimitiveSignature) -> Result<Self, Self::Error> {
+    fn try_from(value: Signature) -> Result<Self, Self::Error> {
         value.to_k256()
     }
 }
 
 #[cfg(feature = "rlp")]
-impl PrimitiveSignature {
+impl Signature {
     /// Decode an RLP-encoded VRS signature. Accepts `decode_parity` closure which allows to
     /// customize parity decoding and possibly extract additional data from it (e.g chain_id for
     /// legacy signature).
@@ -104,7 +104,7 @@ impl PrimitiveSignature {
     }
 }
 
-impl PrimitiveSignature {
+impl Signature {
     #[doc(hidden)]
     pub fn test_signature() -> Self {
         Self::from_scalars_and_parity(
@@ -143,7 +143,7 @@ impl PrimitiveSignature {
         Self { y_parity: v, r, s }
     }
 
-    /// Creates a [`PrimitiveSignature`] from the serialized `r` and `s` scalar values, which
+    /// Creates a [`Signature`] from the serialized `r` and `s` scalar values, which
     /// comprise the ECDSA signature, alongside a `v` value, used to determine the recovery ID.
     #[inline]
     pub fn from_scalars_and_parity(r: crate::B256, s: crate::B256, parity: bool) -> Self {
@@ -306,14 +306,14 @@ impl PrimitiveSignature {
 }
 
 #[cfg(feature = "arbitrary")]
-impl<'a> arbitrary::Arbitrary<'a> for PrimitiveSignature {
+impl<'a> arbitrary::Arbitrary<'a> for Signature {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         Ok(Self::new(u.arbitrary()?, u.arbitrary()?, u.arbitrary()?))
     }
 }
 
 #[cfg(feature = "arbitrary")]
-impl proptest::arbitrary::Arbitrary for PrimitiveSignature {
+impl proptest::arbitrary::Arbitrary for Signature {
     type Parameters = ();
     type Strategy = proptest::strategy::Map<
         <(U256, U256, bool) as proptest::arbitrary::Arbitrary>::Strategy,
@@ -333,7 +333,7 @@ mod signature_serde {
 
     use crate::{U256, U64};
 
-    use super::PrimitiveSignature;
+    use super::Signature;
 
     #[derive(Serialize, Deserialize)]
     struct HumanReadableRepr {
@@ -347,7 +347,7 @@ mod signature_serde {
     #[serde(transparent)]
     struct NonHumanReadableRepr((U256, U256, U64));
 
-    impl Serialize for PrimitiveSignature {
+    impl Serialize for Signature {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
@@ -367,7 +367,7 @@ mod signature_serde {
         }
     }
 
-    impl<'de> Deserialize<'de> for PrimitiveSignature {
+    impl<'de> Deserialize<'de> for Signature {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,
@@ -403,7 +403,7 @@ mod tests {
     #[test]
     #[cfg(feature = "k256")]
     fn can_recover_tx_sender_not_normalized() {
-        let sig = PrimitiveSignature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
+        let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
         let hash = b256!("5eb4f5a33c621f32a8622d5f943b6b102994dfe4e5aebbefe69bb1b2aa0fc93e");
         let expected = address!("0f65fe9276bc9a24ae7083ae28e2660ef72df99e");
         assert_eq!(sig.recover_address_from_prehash(&hash).unwrap(), expected);
@@ -414,7 +414,7 @@ mod tests {
     fn recover_web3_signature() {
         // test vector taken from:
         // https://web3js.readthedocs.io/en/v1.2.2/web3-eth-accounts.html#sign
-        let sig = PrimitiveSignature::from_str(
+        let sig = Signature::from_str(
             "b91467e570a6466aa9e9876cbcd013baba02900b8979d43fe208a4a4f339f5fd6007e74cd82e037b800186422fc2da167c747ef045e5d18a5f5d4300f8e1a0291c"
         ).expect("could not parse signature");
         let expected = address!("2c7536E3605D9C16a7a3D7b1898e529396a65c23");
@@ -423,11 +423,11 @@ mod tests {
 
     #[test]
     fn signature_from_str() {
-        let s1 = PrimitiveSignature::from_str(
+        let s1 = Signature::from_str(
             "0xaa231fbe0ed2b5418e6ba7c19bee2522852955ec50996c02a2fe3e71d30ddaf1645baf4823fea7cb4fcc7150842493847cfb6a6d63ab93e8ee928ee3f61f503500"
         ).expect("could not parse 0x-prefixed signature");
 
-        let s2 = PrimitiveSignature::from_str(
+        let s2 = Signature::from_str(
             "aa231fbe0ed2b5418e6ba7c19bee2522852955ec50996c02a2fe3e71d30ddaf1645baf4823fea7cb4fcc7150842493847cfb6a6d63ab93e8ee928ee3f61f503500"
         ).expect("could not parse non-prefixed signature");
 
@@ -444,10 +444,9 @@ mod tests {
             "yParity": "0x1"
         });
 
-        let signature: PrimitiveSignature =
-            serde_json::from_value(raw_signature_with_y_parity).unwrap();
+        let signature: Signature = serde_json::from_value(raw_signature_with_y_parity).unwrap();
 
-        let expected = PrimitiveSignature::new(
+        let expected = Signature::new(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -462,7 +461,7 @@ mod tests {
     #[test]
     fn serialize_both_parity() {
         // this test should be removed if the struct moves to an enum based on tx type
-        let signature = PrimitiveSignature::new(
+        let signature = Signature::new(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -481,7 +480,7 @@ mod tests {
     #[test]
     fn serialize_v_only() {
         // this test should be removed if the struct moves to an enum based on tx type
-        let signature = PrimitiveSignature::new(
+        let signature = Signature::new(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -498,7 +497,7 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn test_bincode_roundtrip() {
-        let signature = PrimitiveSignature::new(
+        let signature = Signature::new(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -507,14 +506,14 @@ mod tests {
         );
 
         let bin = bincode::serialize(&signature).unwrap();
-        assert_eq!(bincode::deserialize::<PrimitiveSignature>(&bin).unwrap(), signature);
+        assert_eq!(bincode::deserialize::<Signature>(&bin).unwrap(), signature);
     }
 
     #[cfg(feature = "rlp")]
     #[test]
     fn signature_rlp_encode() {
         // Given a Signature instance
-        let sig = PrimitiveSignature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
+        let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
 
         // Initialize an empty buffer
         let mut buf = vec![];
@@ -533,7 +532,7 @@ mod tests {
     #[test]
     fn signature_rlp_length() {
         // Given a Signature instance
-        let sig = PrimitiveSignature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
+        let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
 
         // Assert that the length of the Signature matches the expected length
         assert_eq!(sig.rlp_rs_len() + sig.v().length(), 67);
@@ -542,25 +541,25 @@ mod tests {
     #[cfg(feature = "rlp")]
     #[test]
     fn test_rlp_vrs_len() {
-        let signature = PrimitiveSignature::test_signature();
+        let signature = Signature::test_signature();
         assert_eq!(67, signature.rlp_rs_len() + 1);
     }
 
     #[cfg(feature = "rlp")]
     #[test]
     fn test_encode_and_decode() {
-        let signature = PrimitiveSignature::test_signature();
+        let signature = Signature::test_signature();
 
         let mut encoded = Vec::new();
         signature.write_rlp_vrs(&mut encoded, signature.v());
         assert_eq!(encoded.len(), signature.rlp_rs_len() + signature.v().length());
-        let decoded = PrimitiveSignature::decode_rlp_vrs(&mut &*encoded, bool::decode).unwrap();
+        let decoded = Signature::decode_rlp_vrs(&mut &*encoded, bool::decode).unwrap();
         assert_eq!(signature, decoded);
     }
 
     #[test]
     fn test_as_bytes() {
-        let signature = PrimitiveSignature::new(
+        let signature = Signature::new(
             U256::from_str(
                 "18515461264373351373200002665853028612451056578545711640558177340181847433846",
             )
