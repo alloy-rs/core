@@ -339,7 +339,7 @@ mod signature_serde {
     struct HumanReadableRepr {
         r: U256,
         s: U256,
-        #[serde(rename = "yParity")]
+        #[serde(rename = "yParity", alias = "v")]
         y_parity: U64,
     }
 
