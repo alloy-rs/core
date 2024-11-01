@@ -340,7 +340,9 @@ mod signature_serde {
         r: U256,
         s: U256,
         #[serde(rename = "yParity")]
-        y_parity: U64,
+        y_parity: Option<U64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        v: Option<U64>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -355,7 +357,8 @@ mod signature_serde {
             // if the serializer is human readable, serialize as a map, otherwise as a tuple
             if serializer.is_human_readable() {
                 HumanReadableRepr {
-                    y_parity: U64::from(self.y_parity as u64),
+                    y_parity: Some(U64::from(self.y_parity as u64)),
+                    v: Some(U64::from(self.y_parity as u64)),
                     r: self.r,
                     s: self.s,
                 }
@@ -373,7 +376,10 @@ mod signature_serde {
             D: Deserializer<'de>,
         {
             let (y_parity, r, s) = if deserializer.is_human_readable() {
-                let HumanReadableRepr { y_parity, r, s } = <_>::deserialize(deserializer)?;
+                let HumanReadableRepr { y_parity, v, r, s } = <_>::deserialize(deserializer)?;
+                let y_parity = y_parity
+                    .or(v)
+                    .ok_or_else(|| serde::de::Error::custom("missing `yParity` or `v`"))?;
                 (y_parity, r, s)
             } else {
                 let NonHumanReadableRepr((r, s, y_parity)) = <_>::deserialize(deserializer)?;
@@ -473,7 +479,7 @@ mod tests {
         let serialized = serde_json::to_string(&signature).unwrap();
         assert_eq!(
             serialized,
-            r#"{"r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0","s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05","yParity":"0x1"}"#
+            r#"{"r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0","s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05","yParity":"0x1","v":"0x1"}"#
         );
     }
 
@@ -489,7 +495,7 @@ mod tests {
             true,
         );
 
-        let expected = r#"{"r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0","s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05","yParity":"0x1"}"#;
+        let expected = r#"{"r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0","s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05","yParity":"0x1","v":"0x1"}"#;
 
         let serialized = serde_json::to_string(&signature).unwrap();
         assert_eq!(serialized, expected);
