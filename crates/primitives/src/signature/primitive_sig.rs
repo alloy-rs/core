@@ -341,6 +341,7 @@ mod signature_serde {
         s: U256,
         #[serde(rename = "yParity")]
         y_parity: Option<U64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         v: Option<U64>,
     }
 
