@@ -339,8 +339,9 @@ mod signature_serde {
     struct HumanReadableRepr {
         r: U256,
         s: U256,
-        #[serde(rename = "yParity", alias = "v")]
-        y_parity: U64,
+        #[serde(rename = "yParity")]
+        y_parity: Option<U64>,
+        v: Option<U64>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -355,7 +356,8 @@ mod signature_serde {
             // if the serializer is human readable, serialize as a map, otherwise as a tuple
             if serializer.is_human_readable() {
                 HumanReadableRepr {
-                    y_parity: U64::from(self.y_parity as u64),
+                    y_parity: Some(U64::from(self.y_parity as u64)),
+                    v: None,
                     r: self.r,
                     s: self.s,
                 }
@@ -373,7 +375,10 @@ mod signature_serde {
             D: Deserializer<'de>,
         {
             let (y_parity, r, s) = if deserializer.is_human_readable() {
-                let HumanReadableRepr { y_parity, r, s } = <_>::deserialize(deserializer)?;
+                let HumanReadableRepr { y_parity, v, r, s } = <_>::deserialize(deserializer)?;
+                let y_parity = y_parity
+                    .or(v)
+                    .ok_or_else(|| serde::de::Error::custom("missing `yParity` or `v`"))?;
                 (y_parity, r, s)
             } else {
                 let NonHumanReadableRepr((r, s, y_parity)) = <_>::deserialize(deserializer)?;
