@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.8.11
 - [json-abi] Clean up utils ([#794](https://github.com/alloy-rs/core/issues/794))
 - [meta] Update SECURITY.md ([#793](https://github.com/alloy-rs/core/issues/793))
 
