@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.8.10
 - Address MSRV TODOs for 1.81 ([#781](https://github.com/alloy-rs/core/issues/781))
 
 ## [0.8.9](https://github.com/alloy-rs/core/releases/tag/v0.8.9) - 2024-10-21

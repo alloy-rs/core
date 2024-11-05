@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bump MSRV to 1.81 & use `core::error::Error` in place of `std` ([#780](https://github.com/alloy-rs/core/issues/780))
 
+### Miscellaneous Tasks
+
+- Release 0.8.10
+
 ## [0.8.9](https://github.com/alloy-rs/core/releases/tag/v0.8.9) - 2024-10-21
 
 ### Miscellaneous Tasks

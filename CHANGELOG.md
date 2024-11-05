@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
+
+### Bug Fixes
+
+- [serde] Add alias `v` for `yParity` ([#801](https://github.com/alloy-rs/core/issues/801))
+
+### Documentation
+
+- Update ethers-rs README note ([#798](https://github.com/alloy-rs/core/issues/798))
+
+### Features
+
+- [json-abi] Add `AbiItem::json_type` ([#797](https://github.com/alloy-rs/core/issues/797))
+- Add has_eip155_value convenience function to signature ([#791](https://github.com/alloy-rs/core/issues/791))
+
+### Miscellaneous Tasks
+
+- [json-abi] Clean up utils ([#794](https://github.com/alloy-rs/core/issues/794))
+- [meta] Update SECURITY.md ([#793](https://github.com/alloy-rs/core/issues/793))
+
+### Other
+
+- Revert "chore: replace Signature with PrimitiveSignature" ([#800](https://github.com/alloy-rs/core/issues/800))
+- Add success job ([#795](https://github.com/alloy-rs/core/issues/795))
+
+### Performance
+
+- Improve normalize_v ([#792](https://github.com/alloy-rs/core/issues/792))
+
+### Styling
+
+- Replace Signature with PrimitiveSignature ([#796](https://github.com/alloy-rs/core/issues/796))
+
 ## [0.8.10](https://github.com/alloy-rs/core/releases/tag/v0.8.10) - 2024-10-28
 
 ### Bug Fixes
@@ -21,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.8.10
 - Address MSRV TODOs for 1.81 ([#781](https://github.com/alloy-rs/core/issues/781))
 
 ### Other
