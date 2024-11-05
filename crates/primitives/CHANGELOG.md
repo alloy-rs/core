@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
+
+### Bug Fixes
+
+- [serde] Add alias `v` for `yParity` ([#801](https://github.com/alloy-rs/core/issues/801))
+
+### Features
+
+- Add has_eip155_value convenience function to signature ([#791](https://github.com/alloy-rs/core/issues/791))
+
+### Other
+
+- Revert "chore: replace Signature with PrimitiveSignature" ([#800](https://github.com/alloy-rs/core/issues/800))
+
+### Performance
+
+- Improve normalize_v ([#792](https://github.com/alloy-rs/core/issues/792))
+
+### Styling
+
+- Replace Signature with PrimitiveSignature ([#796](https://github.com/alloy-rs/core/issues/796))
+
 ## [0.8.10](https://github.com/alloy-rs/core/releases/tag/v0.8.10) - 2024-10-28
 
 ### Bug Fixes
@@ -14,6 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Dependencies
 
 - Bump MSRV to 1.81 & use `core::error::Error` in place of `std` ([#780](https://github.com/alloy-rs/core/issues/780))
+
+### Miscellaneous Tasks
+
+- Release 0.8.10
 
 ### Other
 
