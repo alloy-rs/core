@@ -14,7 +14,7 @@ pub struct Sealed<T> {
     #[deref]
     #[cfg_attr(feature = "serde", serde(flatten))]
     inner: T,
-    #[cfg_attr(feature = "serde", serde(flatten, alias = "hash"))]
+    #[cfg_attr(feature = "serde", serde(rename = "hash"))]
     /// Its hash.
     seal: B256,
 }
