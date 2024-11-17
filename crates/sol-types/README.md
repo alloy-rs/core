@@ -13,7 +13,7 @@ This trait maps Solidity types to Rust types via the associated
 [`SolType::RustType`].
 
 The ABI encoding and decoding is implemented in the [`abi`] module, see [its
-documentation](abi) to learn how it works.
+documentation](https://docs.rs/alloy-core/latest/alloy_core/sol_types/abi/) to learn how it works.
 
 [ABI]: https://docs.soliditylang.org/en/latest/abi-spec.html
 [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
