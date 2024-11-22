@@ -1,9 +1,7 @@
 [advisories]
-vulnerability = "deny"
-unmaintained = "warn"
-unsound = "warn"
+version = 2
 yanked = "warn"
-notice = "warn"
+ignore = []
 
 [bans]
 multiple-versions = "warn"
@@ -11,7 +9,6 @@ wildcards = "deny"
 highlight = "all"
 
 [licenses]
-unlicensed = "deny"
 confidence-threshold = 0.9
 # copyleft = "deny"
 
