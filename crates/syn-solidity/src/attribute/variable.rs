@@ -243,7 +243,7 @@ impl VariableAttribute {
 
     #[inline]
     pub fn is_override(&self, path: Option<&SolPath>) -> bool {
-        self.r#override().map_or(false, |o| match path {
+        self.r#override().is_some_and(|o| match path {
             Some(path) => o.paths.iter().any(|p| p == path),
             None => true,
         })
