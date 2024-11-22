@@ -359,7 +359,7 @@ impl Type {
                 f.arguments.iter().any(|arg| arg.ty.has_custom())
                     || f.returns
                         .as_ref()
-                        .map_or(false, |ret| ret.returns.iter().any(|arg| arg.ty.has_custom()))
+                        .is_some_and(|ret| ret.returns.iter().any(|arg| arg.ty.has_custom()))
             }
             Self::Mapping(m) => m.key.has_custom() || m.value.has_custom(),
             Self::Bool(_)

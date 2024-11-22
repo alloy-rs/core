@@ -35,7 +35,7 @@ impl Parse for YulVarDecl {
         };
 
         if vars.len() > 1
-            && init_value.as_ref().map_or(false, |(_, expr)| !matches!(expr, YulExpr::Call(_)))
+            && init_value.as_ref().is_some_and(|(_, expr)| !matches!(expr, YulExpr::Call(_)))
         {
             return Err(
                 input.error("Multiple variables can only be initialized by a function call")

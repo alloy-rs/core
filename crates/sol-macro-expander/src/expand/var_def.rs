@@ -19,8 +19,8 @@ pub(super) fn var_as_function(
     cx: &ExpCtxt<'_>,
     var_def: &VariableDefinition,
 ) -> Result<Option<ItemFunction>> {
-    // only expand public or external state variables
-    if !var_def.attributes.visibility().map_or(false, |v| v.is_public() || v.is_external()) {
+    // Only expand public or external state variables.
+    if !var_def.attributes.visibility().is_some_and(|v| v.is_public() || v.is_external()) {
         return Ok(None);
     }
 
