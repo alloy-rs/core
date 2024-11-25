@@ -114,8 +114,7 @@ impl Signature {
     }
 
     /// Instantiate a new signature from `r`, `s`, and `v` values.
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn new(r: U256, s: U256, v: Parity) -> Self {
+    pub const fn new(r: U256, s: U256, v: Parity) -> Self {
         Self { r, s, v }
     }
 
