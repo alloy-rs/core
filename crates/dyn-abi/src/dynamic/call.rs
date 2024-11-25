@@ -44,6 +44,11 @@ impl DynSolCall {
         self.method.as_deref()
     }
 
+    /// Get the types of the call's returns.
+    pub const fn returns(&self) -> &DynSolReturns {
+        &self.returns
+    }
+
     /// ABI encode the given values as function params.
     pub fn abi_encode_input(&self, values: &[DynSolValue]) -> Result<Vec<u8>> {
         encode_typeck(&self.parameters, values).map(prefix_selector(self.selector))
