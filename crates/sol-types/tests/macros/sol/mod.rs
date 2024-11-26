@@ -1171,3 +1171,55 @@ fn event_check_signature() {
     assert!(MyEventAnonymous::ANONYMOUS);
     let MyEventAnonymous {} = MyEventAnonymous::decode_raw_log(no_topics, &[], false).unwrap();
 }
+
+// https://github.com/alloy-rs/core/issues/811
+#[test]
+fn mapping_getters() {
+    sol! {
+        #![sol(all_derives)]
+
+        contract TestIbc {
+            /// ConnectionId -> Connection
+            mapping(uint32 => Connection) public connections;
+            /// ChannelId -> Channel
+            mapping(uint32 => Channel) public channels;
+
+            enum ConnectionState {
+                Unspecified,
+                Init,
+                TryOpen,
+                Open
+            }
+
+            struct Connection {
+                ConnectionState state;
+                uint32 client_id;
+                uint32 counterparty_client_id;
+                uint32 counterparty_connection_id;
+            }
+
+            enum ChannelState {
+                Unspecified,
+                Init,
+                TryOpen,
+                Open,
+                Closed
+            }
+
+            struct Channel {
+                ChannelState state;
+                uint32 connection_id;
+                uint32 counterparty_channel_id;
+                bytes counterparty_port_id;
+                string version;
+            }
+        }
+    }
+
+    assert_eq!(TestIbc::connectionsCall::SIGNATURE, "connections(uint32)");
+    let _ = TestIbc::connectionsReturn { _0: 0u8, _1: 0u32, _2: 0u32, _3: 0u32 };
+
+    assert_eq!(TestIbc::channelsCall::SIGNATURE, "channels(uint32)");
+    let _ =
+        TestIbc::channelsReturn { _0: 0u8, _1: 0u32, _2: 0u32, _3: bytes![], _4: String::new() };
+}
