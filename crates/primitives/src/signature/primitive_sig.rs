@@ -88,7 +88,7 @@ impl TryFrom<PrimitiveSignature> for k256::ecdsa::Signature {
 #[cfg(feature = "rlp")]
 impl PrimitiveSignature {
     /// Decode an RLP-encoded VRS signature. Accepts `decode_parity` closure which allows to
-    /// customize parity decoding and possibly extract additional data from it (e.g chain_id for
+    /// customize parity decoding and possibly extract additional data from it (e.g. chain_id for
     /// legacy signature).
     pub fn decode_rlp_vrs(
         buf: &mut &[u8],

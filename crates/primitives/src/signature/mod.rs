@@ -4,6 +4,12 @@ pub use error::SignatureError;
 mod parity;
 pub use parity::Parity;
 
+mod ecdsa_sig;
+pub use ecdsa_sig::EcdsaSignature;
+
+mod super_sig;
+pub use super_sig::{ArbitrarySuperSig, K256SuperSig, RlpSuperSig, SerdeSuperSig};
+
 mod sig;
 pub use sig::Signature;
 
