@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.12](https://github.com/alloy-rs/core/releases/tag/v0.8.12) - 2024-11-12
 
+### Miscellaneous Tasks
+
+- Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
+
+## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
+
 ### Features
 
 - [json-abi] Add `AbiItem::json_type` ([#797](https://github.com/alloy-rs/core/issues/797))

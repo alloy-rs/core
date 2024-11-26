@@ -5,11 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.13](https://github.com/alloy-rs/core/releases/tag/v0.8.13) - 2024-11-26
+
+### Bug Fixes
+
+- [sol-macro] Expand all getter return types ([#812](https://github.com/alloy-rs/core/issues/812))
+
+### Dependencies
+
+- Remove cron schedule for deps.yml ([#808](https://github.com/alloy-rs/core/issues/808))
+
+### Features
+
+- Expose `returns` field for `DynSolCall` type ([#809](https://github.com/alloy-rs/core/issues/809))
+
+### Other
+
+- Make Signature::new a const fn ([#810](https://github.com/alloy-rs/core/issues/810))
+
 ## [0.8.12](https://github.com/alloy-rs/core/releases/tag/v0.8.12) - 2024-11-12
 
 ### Bug Fixes
 
 - `Sealed::hash` serde ([#805](https://github.com/alloy-rs/core/issues/805))
+
+### Features
+
+- Add `AsRef` impl and `hash` method to `Sealed` ([#804](https://github.com/alloy-rs/core/issues/804))
+
+### Miscellaneous Tasks
+
+- Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
+
+## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
+
+### Bug Fixes
+
 - [serde] Add alias `v` for `yParity` ([#801](https://github.com/alloy-rs/core/issues/801))
 
 ### Documentation
@@ -18,7 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
-- Add `AsRef` impl and `hash` method to `Sealed` ([#804](https://github.com/alloy-rs/core/issues/804))
 - [json-abi] Add `AbiItem::json_type` ([#797](https://github.com/alloy-rs/core/issues/797))
 - Add has_eip155_value convenience function to signature ([#791](https://github.com/alloy-rs/core/issues/791))
 
