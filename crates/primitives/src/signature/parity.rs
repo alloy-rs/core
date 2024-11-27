@@ -208,8 +208,8 @@ impl alloy_rlp::Decodable for Parity {
 }
 
 #[cfg(test)]
-mod test {
-    use crate::Parity;
+mod tests {
+    use crate::{Parity, SignatureError};
 
     #[cfg(feature = "rlp")]
     #[test]
@@ -276,5 +276,111 @@ mod test {
 
         let p = Parity::Parity(true);
         assert_eq!(p.inverted(), Parity::Parity(false));
+    }
+
+    #[test]
+    fn test_chain_id_extraction() {
+        // Valid EIP-155 V values with chain IDs
+        assert_eq!(Parity::Eip155(37).chain_id(), Some(1));
+        assert_eq!(Parity::Eip155(39).chain_id(), Some(2));
+        assert_eq!(Parity::Eip155(43).chain_id(), Some(4));
+
+        // Invalid EIP-155 V values should return None
+        assert_eq!(Parity::Eip155(30).chain_id(), None);
+
+        // Non-EIP155 or parity values should return None
+        assert_eq!(Parity::NonEip155(true).chain_id(), None);
+        assert_eq!(Parity::Parity(false).chain_id(), None);
+    }
+
+    #[test]
+    fn test_has_eip155_value() {
+        // EIP-155 values
+        assert!(Parity::Eip155(37).has_eip155_value());
+        assert!(Parity::Eip155(38).has_eip155_value());
+
+        // Invalid EIP-155 values
+        assert!(!Parity::Eip155(30).has_eip155_value());
+
+        // Non-EIP-155 values
+        assert!(!Parity::NonEip155(false).has_eip155_value());
+        assert!(!Parity::Parity(true).has_eip155_value());
+    }
+
+    #[test]
+    fn test_y_parity() {
+        // Parity values
+        assert_eq!(Parity::Parity(false).y_parity(), false);
+        assert_eq!(Parity::Parity(true).y_parity(), true);
+
+        // EIP-155 values
+        assert_eq!(Parity::Eip155(2).y_parity(), false);
+        assert_eq!(Parity::Eip155(3).y_parity(), true);
+        assert_eq!(Parity::Eip155(37).y_parity(), false);
+        assert_eq!(Parity::Eip155(38).y_parity(), true);
+
+        // Non-EIP-155 values
+        assert_eq!(Parity::NonEip155(false).y_parity(), false);
+        assert_eq!(Parity::NonEip155(true).y_parity(), true);
+    }
+
+    #[test]
+    fn test_y_parity_byte() {
+        // Parity values
+        assert_eq!(Parity::Parity(false).y_parity_byte(), 0);
+        assert_eq!(Parity::Parity(true).y_parity_byte(), 1);
+
+        // EIP-155 values
+        assert_eq!(Parity::Eip155(2).y_parity_byte(), 0);
+        assert_eq!(Parity::Eip155(3).y_parity_byte(), 1);
+        assert_eq!(Parity::Eip155(37).y_parity_byte(), 0);
+        assert_eq!(Parity::Eip155(38).y_parity_byte(), 1);
+        assert_eq!(Parity::Eip155(0).y_parity_byte(), 0);
+        assert_eq!(Parity::Eip155(1).y_parity_byte(), 1);
+
+        // Non-EIP-155 values
+        assert_eq!(Parity::NonEip155(false).y_parity_byte(), 0);
+        assert_eq!(Parity::NonEip155(true).y_parity_byte(), 1);
+    }
+
+    #[test]
+    fn test_y_parity_byte_non_eip155() {
+        // Non-EIP-155 values
+        assert_eq!(Parity::NonEip155(false).y_parity_byte_non_eip155(), Some(27));
+        assert_eq!(Parity::NonEip155(true).y_parity_byte_non_eip155(), Some(28));
+
+        // Parity values
+        assert_eq!(Parity::Parity(false).y_parity_byte_non_eip155(), Some(27));
+        assert_eq!(Parity::Parity(true).y_parity_byte_non_eip155(), Some(28));
+
+        // EIP-155 values should return None
+        assert_eq!(Parity::Eip155(37).y_parity_byte_non_eip155(), None);
+    }
+
+    #[test]
+    fn test_strip_chain_id() {
+        assert_eq!(Parity::Eip155(37).strip_chain_id(), Parity::NonEip155(true));
+        assert_eq!(Parity::Eip155(38).strip_chain_id(), Parity::NonEip155(false));
+        assert_eq!(Parity::NonEip155(true).strip_chain_id(), Parity::NonEip155(true));
+        assert_eq!(Parity::Parity(false).strip_chain_id(), Parity::Parity(false));
+    }
+
+    #[test]
+    fn test_with_chain_id() {
+        assert_eq!(Parity::Parity(true).with_chain_id(1), Parity::Eip155(38));
+        assert_eq!(Parity::Parity(false).with_chain_id(1), Parity::Eip155(37));
+    }
+
+    #[test]
+    fn test_try_from_u64() {
+        // Valid conversions
+        assert_eq!(Parity::try_from(27u64).unwrap(), Parity::NonEip155(false));
+        assert_eq!(Parity::try_from(28u64).unwrap(), Parity::NonEip155(true));
+        assert_eq!(Parity::try_from(37u64).unwrap(), Parity::Eip155(37));
+        assert_eq!(Parity::try_from(0u64).unwrap(), Parity::Parity(false));
+        assert_eq!(Parity::try_from(1u64).unwrap(), Parity::Parity(true));
+
+        // Invalid conversions
+        assert!(matches!(Parity::try_from(34u64), Err(SignatureError::InvalidParity(34))));
     }
 }
