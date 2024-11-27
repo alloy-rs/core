@@ -310,18 +310,18 @@ mod tests {
     #[test]
     fn test_y_parity() {
         // Parity values
-        assert_eq!(Parity::Parity(false).y_parity(), false);
-        assert_eq!(Parity::Parity(true).y_parity(), true);
+        assert!(!Parity::Parity(false).y_parity());
+        assert!(Parity::Parity(true).y_parity());
 
         // EIP-155 values
-        assert_eq!(Parity::Eip155(2).y_parity(), false);
-        assert_eq!(Parity::Eip155(3).y_parity(), true);
-        assert_eq!(Parity::Eip155(37).y_parity(), false);
-        assert_eq!(Parity::Eip155(38).y_parity(), true);
+        assert!(!Parity::Eip155(2).y_parity());
+        assert!(Parity::Eip155(3).y_parity());
+        assert!(!Parity::Eip155(37).y_parity());
+        assert!(Parity::Eip155(38).y_parity());
 
         // Non-EIP-155 values
-        assert_eq!(Parity::NonEip155(false).y_parity(), false);
-        assert_eq!(Parity::NonEip155(true).y_parity(), true);
+        assert!(!Parity::NonEip155(false).y_parity());
+        assert!(Parity::NonEip155(true).y_parity());
     }
 
     #[test]
