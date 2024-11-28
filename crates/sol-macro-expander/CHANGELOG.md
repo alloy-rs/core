@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Remove cron schedule for deps.yml ([#808](https://github.com/alloy-rs/core/issues/808))
 
+### Miscellaneous Tasks
+
+- Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
+
 ## [0.8.12](https://github.com/alloy-rs/core/releases/tag/v0.8.12) - 2024-11-12
 
 ### Miscellaneous Tasks
