@@ -25,12 +25,12 @@ impl From<ruint::ParseError> for ParseSignedError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for ParseSignedError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for ParseSignedError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
+            #[cfg(feature = "std")]
             Self::Ruint(err) => Some(err),
-            Self::IntegerOverflow => None,
+            _ => None,
         }
     }
 }

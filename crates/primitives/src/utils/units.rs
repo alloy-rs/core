@@ -98,9 +98,8 @@ pub enum UnitsError {
     ParseSigned(ParseSignedError),
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for UnitsError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for UnitsError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::InvalidUnit(_) => None,
             Self::ParseSigned(e) => Some(e),
