@@ -98,10 +98,9 @@ impl From<alloc::collections::TryReserveError> for Error {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for Error {
+impl core::error::Error for Error {
     #[inline]
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::Hex(e) => Some(e),
             Self::TypeParser(e) => Some(e),

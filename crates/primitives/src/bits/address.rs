@@ -22,13 +22,13 @@ impl From<hex::FromHexError> for AddressError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for AddressError {
+impl core::error::Error for AddressError {
     #[inline]
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
+            #[cfg(any(feature = "std", not(feature = "hex-compat")))]
             Self::Hex(err) => Some(err),
-            Self::InvalidChecksum => None,
+            _ => None,
         }
     }
 }

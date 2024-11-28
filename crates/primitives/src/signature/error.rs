@@ -31,12 +31,12 @@ impl From<hex::FromHexError> for SignatureError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for SignatureError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for SignatureError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
-            #[cfg(feature = "k256")]
+            #[cfg(all(feature = "k256", feature = "std"))]
             Self::K256(e) => Some(e),
+            #[cfg(any(feature = "std", not(feature = "hex-compat")))]
             Self::FromHex(e) => Some(e),
             _ => None,
         }

@@ -90,8 +90,9 @@ bytes = { version = "1", default-features = false }
 criterion = "0.5"
 derive_arbitrary = "1.3"
 getrandom = "0.2"
-hex = { package = "const-hex", version = "1.10", default-features = false, features = [
+hex = { package = "const-hex", version = "1.14", default-features = false, features = [
     "alloc",
+    "core-error",
 ] }
 itoa = "1"
 once_cell = "1"
