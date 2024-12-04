@@ -70,6 +70,26 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
     let uint8 = quote!(alloy_sol_types::sol_data::Uint<8>);
     let uint8_st = quote!(<#uint8 as alloy_sol_types::SolType>);
 
+    let index_to_variant: Vec<_> = variants
+        .iter()
+        .enumerate()
+        .map(|(idx, variant)| {
+            let ident = &variant.ident;
+            let idx = idx as u8;
+            quote! { #idx => ::core::result::Result::Ok(Self::#ident), }
+        })
+        .collect();
+
+    let variant_to_index: Vec<_> = variants
+        .iter()
+        .enumerate()
+        .map(|(idx, variant)| {
+            let ident = &variant.ident;
+            let idx = idx as u8;
+            quote! { Self::#ident => &#idx, }
+        })
+        .collect();
+
     let doc = docs.then(|| mk_doc(format!("```solidity\n{enumm}\n```")));
     let tokens = quote! {
         #(#attrs)*
@@ -98,13 +118,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             impl ::core::convert::TryFrom<u8> for #name {
                 type Error = alloy_sol_types::Error;
 
-                #[allow(unsafe_code)]
                 #[inline]
                 fn try_from(v: u8) -> alloy_sol_types::Result<Self> {
-                    if v <= #max {
-                        ::core::result::Result::Ok(unsafe { ::core::mem::transmute(v) })
-                    } else {
-                        ::core::result::Result::Err(alloy_sol_types::Error::InvalidEnumValue {
+                    match v {
+                        #(#index_to_variant)*
+                        _ => ::core::result::Result::Err(alloy_sol_types::Error::InvalidEnumValue {
                             name: #name_s,
                             value: v,
                             max: #max,
@@ -191,10 +209,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
 
             #[automatically_derived]
             impl #name {
-                #[allow(unsafe_code, clippy::inline_always)]
+                #[allow(clippy::inline_always)]
                 #[inline(always)]
-                fn as_u8(&self) -> &u8 {
-                    unsafe { &*(self as *const Self as *const u8) }
+                const fn as_u8(&self) -> &u8 {
+                    match self {
+                        #(#variant_to_index)*
+                        Self::__Invalid => &u8::MAX,
+                    }
                 }
             }
         };

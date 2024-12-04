@@ -488,7 +488,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         #mod_descr_doc
         #(#mod_attrs)*
         #mod_iface_doc
-        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
+        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style, clippy::empty_structs_with_brackets)]
         pub mod #name {
             use super::*;
             use #alloy_sol_types as alloy_sol_types;
@@ -721,24 +721,16 @@ impl CallLikeExpander<'_> {
                     data: &[u8],
                     validate: bool
                 )-> alloy_sol_types::Result<Self> {
-                    static DECODE_SHIMS: &[fn(&[u8], bool) -> alloy_sol_types::Result<#name>] = &[
-                        #({
-                            fn #sorted_variants(data: &[u8], validate: bool) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
-                                    .map(#name::#sorted_variants)
-                            }
-                            #sorted_variants
-                        }),*
-                    ];
-
-                    let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                        return Err(alloy_sol_types::Error::unknown_selector(
+                    match selector {
+                        #(<#sorted_types as alloy_sol_types::#trait_>::SELECTOR =>
+                            <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
+                                .map(Self::#sorted_variants),
+                        )*
+                        s => ::core::result::Result::Err(alloy_sol_types::Error::unknown_selector(
                             <Self as alloy_sol_types::SolInterface>::NAME,
-                            selector,
-                        ));
-                    };
-                    // SAFETY: `idx` is a valid index into `DECODE_SHIMS`.
-                    (unsafe { DECODE_SHIMS.get_unchecked(idx) })(data, validate)
+                            s,
+                        )),
+                    }
                 }
 
                 #[inline]
