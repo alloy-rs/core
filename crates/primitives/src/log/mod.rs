@@ -139,6 +139,12 @@ impl<T> core::ops::DerefMut for Log<T> {
     }
 }
 
+impl<T> AsRef<Self> for Log<T> {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
 impl Log {
     /// Creates a new log.
     #[inline]
