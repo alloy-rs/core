@@ -714,8 +714,8 @@ impl CallLikeExpander<'_> {
                     Self::SELECTORS.binary_search(&selector).is_ok()
                 }
 
-                #[inline(never)]
-                #[allow(unsafe_code, non_snake_case)]
+                #[inline]
+                #[allow(non_snake_case)]
                 fn abi_decode_raw(
                     selector: [u8; 4],
                     data: &[u8],
