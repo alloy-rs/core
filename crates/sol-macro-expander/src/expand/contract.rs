@@ -714,23 +714,31 @@ impl CallLikeExpander<'_> {
                     Self::SELECTORS.binary_search(&selector).is_ok()
                 }
 
-                #[inline]
+                #[inline(never)]
                 #[allow(unsafe_code, non_snake_case)]
                 fn abi_decode_raw(
                     selector: [u8; 4],
                     data: &[u8],
                     validate: bool
                 )-> alloy_sol_types::Result<Self> {
-                    match selector {
-                        #(<#sorted_types as alloy_sol_types::#trait_>::SELECTOR =>
-                            <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
-                                .map(Self::#sorted_variants),
-                        )*
-                        s => ::core::result::Result::Err(alloy_sol_types::Error::unknown_selector(
+                    static DECODE_SHIMS: &[fn(&[u8], bool) -> alloy_sol_types::Result<#name>] = &[
+                        #({
+                            fn #sorted_variants(data: &[u8], validate: bool) -> alloy_sol_types::Result<#name> {
+                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
+                                    .map(#name::#sorted_variants)
+                            }
+                            #sorted_variants
+                        }),*
+                    ];
+
+                    let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                        return Err(alloy_sol_types::Error::unknown_selector(
                             <Self as alloy_sol_types::SolInterface>::NAME,
-                            s,
-                        )),
-                    }
+                            selector,
+                        ));
+                    };
+                    // `SELECTORS` and `DECODE_SHIMS` have the same length and are sorted in the same order.
+                    DECODE_SHIMS[idx](data, validate)
                 }
 
                 #[inline]

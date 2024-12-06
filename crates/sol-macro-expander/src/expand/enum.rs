@@ -70,25 +70,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
     let uint8 = quote!(alloy_sol_types::sol_data::Uint<8>);
     let uint8_st = quote!(<#uint8 as alloy_sol_types::SolType>);
 
-    let index_to_variant: Vec<_> = variants
-        .iter()
-        .enumerate()
-        .map(|(idx, variant)| {
-            let ident = &variant.ident;
-            let idx = idx as u8;
-            quote! { #idx => ::core::result::Result::Ok(Self::#ident), }
-        })
-        .collect();
-
-    let variant_to_index: Vec<_> = variants
-        .iter()
-        .enumerate()
-        .map(|(idx, variant)| {
-            let ident = &variant.ident;
-            let idx = idx as u8;
-            quote! { Self::#ident => &#idx, }
-        })
-        .collect();
+    let index_to_variant = variants.iter().enumerate().map(|(idx, variant)| {
+        let ident = &variant.ident;
+        let idx = idx as u8;
+        quote! { #idx => ::core::result::Result::Ok(Self::#ident), }
+    });
 
     let doc = docs.then(|| mk_doc(format!("```solidity\n{enumm}\n```")));
     let tokens = quote! {
@@ -119,12 +105,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
                 type Error = alloy_sol_types::Error;
 
                 #[inline]
-                fn try_from(v: u8) -> alloy_sol_types::Result<Self> {
-                    match v {
+                fn try_from(value: u8) -> alloy_sol_types::Result<Self> {
+                    match value {
                         #(#index_to_variant)*
-                        _ => ::core::result::Result::Err(alloy_sol_types::Error::InvalidEnumValue {
+                        value => ::core::result::Result::Err(alloy_sol_types::Error::InvalidEnumValue {
                             name: #name_s,
-                            value: v,
+                            value,
                             max: #max,
                         })
                     }
@@ -145,7 +131,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
 
                 #[inline]
                 fn stv_eip712_data_word(&self) -> alloy_sol_types::Word {
-                    #uint8_st::eip712_data_word(self.as_u8())
+                    #uint8_st::eip712_data_word(&(*self as u8))
                 }
 
                 #[inline]
@@ -188,35 +174,23 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
             impl alloy_sol_types::EventTopic for #name {
                 #[inline]
                 fn topic_preimage_length(rust: &Self::RustType) -> usize {
-                    <#uint8 as alloy_sol_types::EventTopic>::topic_preimage_length(rust.as_u8())
+                    <#uint8 as alloy_sol_types::EventTopic>::topic_preimage_length(&(*rust as u8))
                 }
 
                 #[inline]
                 fn encode_topic_preimage(rust: &Self::RustType, out: &mut alloy_sol_types::private::Vec<u8>) {
-                    <#uint8 as alloy_sol_types::EventTopic>::encode_topic_preimage(rust.as_u8(), out);
+                    <#uint8 as alloy_sol_types::EventTopic>::encode_topic_preimage(&(*rust as u8), out);
                 }
 
                 #[inline]
                 fn encode_topic(rust: &Self::RustType) -> alloy_sol_types::abi::token::WordToken {
-                    <#uint8 as alloy_sol_types::EventTopic>::encode_topic(rust.as_u8())
+                    <#uint8 as alloy_sol_types::EventTopic>::encode_topic(&(*rust as u8))
                 }
             }
 
             #[automatically_derived]
             impl alloy_sol_types::SolEnum for #name {
                 const COUNT: usize = #count;
-            }
-
-            #[automatically_derived]
-            impl #name {
-                #[allow(clippy::inline_always)]
-                #[inline(always)]
-                const fn as_u8(&self) -> &u8 {
-                    match self {
-                        #(#variant_to_index)*
-                        Self::__Invalid => &u8::MAX,
-                    }
-                }
             }
         };
     };
