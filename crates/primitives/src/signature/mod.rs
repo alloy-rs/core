@@ -1,10 +1,14 @@
 mod error;
 pub use error::SignatureError;
 
+#[allow(deprecated)]
 mod parity;
+#[allow(deprecated)]
 pub use parity::Parity;
 
+#[allow(deprecated)]
 mod sig;
+#[allow(deprecated)]
 pub use sig::Signature;
 
 mod utils;
