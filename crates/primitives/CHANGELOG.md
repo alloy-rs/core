@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.15](https://github.com/alloy-rs/core/releases/tag/v0.8.15) - 2024-12-09
+
+### Miscellaneous Tasks
+
+- Mark `Signature` as deprecated ([#819](https://github.com/alloy-rs/core/issues/819))
+- AsRef for Log ([#820](https://github.com/alloy-rs/core/issues/820))
+
 ## [0.8.14](https://github.com/alloy-rs/core/releases/tag/v0.8.14) - 2024-11-28
 
 ### Dependencies
@@ -15,46 +22,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Switch all std::error to core::error ([#815](https://github.com/alloy-rs/core/issues/815))
 
-## [0.8.13](https://github.com/alloy-rs/core/releases/tag/v0.8.13) - 2024-11-26
-
 ### Miscellaneous Tasks
 
-- Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
+- Release 0.8.14
 
-### Other
-
-- Make Signature::new a const fn ([#810](https://github.com/alloy-rs/core/issues/810))
-
-## [0.8.12](https://github.com/alloy-rs/core/releases/tag/v0.8.12) - 2024-11-12
+## [0.8.13](https://github.com/alloy-rs/core/releases/tag/v0.8.13) - 2024-11-26
 
 ### Bug Fixes
 
 - `Sealed::hash` serde ([#805](https://github.com/alloy-rs/core/issues/805))
-
-### Features
-
-- Add `AsRef` impl and `hash` method to `Sealed` ([#804](https://github.com/alloy-rs/core/issues/804))
-
-### Miscellaneous Tasks
-
-- Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
-
-## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
-
-### Bug Fixes
-
 - [serde] Add alias `v` for `yParity` ([#801](https://github.com/alloy-rs/core/issues/801))
 
 ### Features
 
+- Add `AsRef` impl and `hash` method to `Sealed` ([#804](https://github.com/alloy-rs/core/issues/804))
 - Add has_eip155_value convenience function to signature ([#791](https://github.com/alloy-rs/core/issues/791))
 
 ### Miscellaneous Tasks
 
+- Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
+- Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
 - Release 0.8.11 ([#803](https://github.com/alloy-rs/core/issues/803))
 
 ### Other
 
+- Make Signature::new a const fn ([#810](https://github.com/alloy-rs/core/issues/810))
 - Revert "chore: replace Signature with PrimitiveSignature" ([#800](https://github.com/alloy-rs/core/issues/800))
 
 ### Performance
