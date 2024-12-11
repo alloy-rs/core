@@ -7,9 +7,13 @@ use core::{
 };
 
 /// [`HashMap`] optimized for hashing [fixed-size byte arrays](FixedBytes).
-pub type FbHashMap<const N: usize, V> = HashMap<FixedBytes<N>, V, FbBuildHasher<N>>;
+pub type FbMap<const N: usize, V> = HashMap<FixedBytes<N>, V, FbBuildHasher<N>>;
+#[doc(hidden)]
+pub type FbHashMap<const N: usize, V> = FbMap<N, V>;
 /// [`HashSet`] optimized for hashing [fixed-size byte arrays](FixedBytes).
-pub type FbHashSet<const N: usize> = HashSet<FixedBytes<N>, FbBuildHasher<N>>;
+pub type FbSet<const N: usize> = HashSet<FixedBytes<N>, FbBuildHasher<N>>;
+#[doc(hidden)]
+pub type FbHashSet<const N: usize> = FbSet<N>;
 
 cfg_if! {
     if #[cfg(feature = "map-indexmap")] {
@@ -26,9 +30,13 @@ macro_rules! fb_alias_maps {
     ($($ty:ident < $n:literal >),* $(,)?) => { paste::paste! {
         $(
             #[doc = concat!("[`HashMap`] optimized for hashing [`", stringify!($ty), "`].")]
-            pub type [<$ty HashMap>]<V> = HashMap<$ty, V, FbBuildHasher<$n>>;
+            pub type [<$ty Map>]<V> = HashMap<$ty, V, FbBuildHasher<$n>>;
+            #[doc(hidden)]
+            pub type [<$ty HashMap>]<V> = [<$ty Map>]<V>;
             #[doc = concat!("[`HashSet`] optimized for hashing [`", stringify!($ty), "`].")]
-            pub type [<$ty HashSet>] = HashSet<$ty, FbBuildHasher<$n>>;
+            pub type [<$ty Set>] = HashSet<$ty, FbBuildHasher<$n>>;
+            #[doc(hidden)]
+            pub type [<$ty HashSet>] = [<$ty Set>];
 
             cfg_if! {
                 if #[cfg(feature = "map-indexmap")] {
