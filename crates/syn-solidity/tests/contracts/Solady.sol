@@ -1166,7 +1166,7 @@ abstract contract ERC20 {
             mstore(0x60, s)
             pop(staticcall(gas(), 1, 0, 0x80, 0x20, 0x20))
             // If the ecrecover fails, the returndatasize will be 0x00,
-            // `owner` will be be checked if it equals the hash at 0x00,
+            // `owner` will be checked if it equals the hash at 0x00,
             // which evaluates to false (i.e. 0), and we will revert.
             // If the ecrecover succeeds, the returndatasize will be 0x20,
             // `owner` will be compared against the returned address at 0x20.
@@ -2310,7 +2310,7 @@ library SafeTransferLib {
 
     /// @dev Force sends `amount` (in wei) ETH to `to`, with a gas stipend
     /// equal to `_GAS_STIPEND_NO_GRIEF`. This gas stipend is a reasonable default
-    /// for 99% of cases and can be overriden with the three-argument version of this
+    /// for 99% of cases and can be overridden with the three-argument version of this
     /// function if necessary.
     ///
     /// If sending via the normal procedure fails, force sends the ETH by
