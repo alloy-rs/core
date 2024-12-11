@@ -13,7 +13,7 @@ use ruint::{BaseConvertError, Uint};
 ///
 /// ## Aliases
 ///
-/// We provide aliases for every bit-width divisble by 8, from 8 to 256. These
+/// We provide aliases for every bit-width divisible by 8, from 8 to 256. These
 /// are located in [`crate::aliases`] and are named `I256`, `I248` etc. Most
 /// users will want [`crate::I256`].
 ///

@@ -300,6 +300,6 @@ mod tests {
                 name: "bar".into()
             })
         );
-        ParameterSpecifier::parse("foo storag bar").unwrap_err();
+        ParameterSpecifier::parse("foo storage bar").unwrap_err();
     }
 }
