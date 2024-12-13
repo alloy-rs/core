@@ -75,6 +75,15 @@ impl<T> Sealed<T> {
         self.into_parts()
     }
 
+    /// Clone the inner item.
+    #[inline(always)]
+    pub fn clone_inner(&self) -> T
+    where
+        T: Clone,
+    {
+        self.inner.clone()
+    }
+
     /// Get the inner item.
     #[inline(always)]
     pub const fn inner(&self) -> &T {
