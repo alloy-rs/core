@@ -222,9 +222,11 @@ impl Expr {
             input.parse().map(Self::Delete)
         } else if lookahead.peek(Ident::peek_any) {
             let ident = input.call(Ident::parse_any)?;
-            match Type::parse_ident(ident.clone()) {
-                Ok(ty) if !ty.is_custom() => ty.parse_payable(input).map(Self::Type),
-                _ => Ok(Self::Ident(ident.into())),
+            let ty = Type::parse_ident(ident.clone()).parse_payable(input);
+            if ty.is_custom() {
+                Ok(Self::Ident(ident.into()))
+            } else {
+                Ok(Self::Type(ty))
             }
         } else {
             Err(lookahead.error())

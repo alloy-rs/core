@@ -228,7 +228,11 @@ impl Type {
     /// keyword separately.
     ///
     /// [ref]: https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.elementaryTypeName
-    pub fn parse_ident(ident: Ident) -> Result<Self> {
+    pub fn parse_ident(ident: Ident) -> Self {
+        Self::try_parse_ident(ident.clone()).unwrap_or_else(|_| Self::custom(ident))
+    }
+
+    pub fn try_parse_ident(ident: Ident) -> Result<Self> {
         let span = ident.span();
         let s = ident.to_string();
         let ret = match s.as_str() {
@@ -271,11 +275,11 @@ impl Type {
 
     /// Parses the `payable` keyword from the input stream if this type is an
     /// address.
-    pub fn parse_payable(mut self, input: ParseStream<'_>) -> Result<Self> {
+    pub fn parse_payable(mut self, input: ParseStream<'_>) -> Self {
         if let Self::Address(_, opt @ None) = &mut self {
-            *opt = input.parse()?;
+            *opt = input.parse().unwrap();
         }
-        Ok(self)
+        self
     }
 
     /// Returns whether this type is ABI-encoded as a single EVM word (32 bytes).
@@ -478,7 +482,7 @@ impl Type {
             input.parse().map(Self::Custom)
         } else if input.peek(Ident::peek_any) {
             let ident = input.call(Ident::parse_any)?;
-            Self::parse_ident(ident)?.parse_payable(input)
+            Ok(Self::parse_ident(ident).parse_payable(input))
         } else {
             Err(input.error(
                 "expected a Solidity type: \
