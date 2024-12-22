@@ -1223,3 +1223,22 @@ fn mapping_getters() {
     let _ =
         TestIbc::channelsReturn { _0: 0u8, _1: 0u32, _2: 0u32, _3: bytes![], _4: String::new() };
 }
+
+// https://github.com/alloy-rs/core/issues/829
+#[test]
+fn bytes64() {
+    sol! {
+        struct bytes64 {
+            bytes32 a;
+            bytes32 b;
+        }
+
+        function f(bytes64 x) public returns(bytes64 y) {
+            bytes64 z = x;
+            y = z;
+        }
+    }
+
+    let x = bytes64 { a: B256::ZERO, b: B256::ZERO };
+    assert_eq!(bytes64::abi_encode_packed(&x), alloy_primitives::B512::ZERO.as_slice());
+}
