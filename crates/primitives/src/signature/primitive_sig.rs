@@ -331,7 +331,7 @@ impl proptest::arbitrary::Arbitrary for PrimitiveSignature {
 mod signature_serde {
     use serde::{Deserialize, Deserializer, Serialize};
 
-    use crate::{U256, U64};
+    use crate::{normalize_v, U256, U64};
 
     use super::PrimitiveSignature;
 
@@ -375,22 +375,28 @@ mod signature_serde {
         where
             D: Deserializer<'de>,
         {
-            let (y_parity, r, s) = if deserializer.is_human_readable() {
+            let (y_parity, v, r, s) = if deserializer.is_human_readable() {
                 let HumanReadableRepr { y_parity, v, r, s } = <_>::deserialize(deserializer)?;
-                let y_parity = y_parity
-                    .or(v)
-                    .ok_or_else(|| serde::de::Error::custom("missing `yParity` or `v`"))?;
-                (y_parity, r, s)
+                (y_parity, v, r, s)
             } else {
                 let NonHumanReadableRepr((r, s, y_parity)) = <_>::deserialize(deserializer)?;
-                (y_parity, r, s)
+                (Some(y_parity), None, r, s)
             };
 
-            if y_parity > U64::from(1) {
-                Err(serde::de::Error::custom("invalid y_parity"))
+            // Attempt to extract `y_parity` bit from either `yParity` key or `v` value.
+            let y_parity = if let Some(y_parity) = y_parity {
+                if y_parity > U64::from(1) {
+                    return Err(serde::de::Error::custom("invalid yParity"));
+                }
+
+                y_parity == U64::from(1)
+            } else if let Some(v) = v {
+                normalize_v(v.to()).ok_or(serde::de::Error::custom("invalid v"))?
             } else {
-                Ok(Self::new(r, s, y_parity == U64::from(1)))
-            }
+                return Err(serde::de::Error::custom("missing `yParity` or `v`"));
+            };
+
+            Ok(Self::new(r, s, y_parity))
         }
     }
 }
