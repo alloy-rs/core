@@ -380,7 +380,7 @@ mod signature_serde {
                 (y_parity, v, r, s)
             } else {
                 let NonHumanReadableRepr((r, s, y_parity)) = <_>::deserialize(deserializer)?;
-                (y_parity, None, r, s)
+                (Some(y_parity), None, r, s)
             };
 
             // Attempt to extract `y_parity` bit from either `yParity` key or `v` value.
