@@ -320,7 +320,7 @@ impl Address {
         for (i, out) in buf[2..].iter_mut().enumerate() {
             // This is made branchless for easier vectorization.
             // Get the i-th nibble of the hash.
-            let hash_nibble = hash[i / 2] >> (4 * (1 - i % 2)) & 0xf;
+            let hash_nibble = (hash[i / 2] >> (4 * (1 - i % 2))) & 0xf;
             // Make the character ASCII uppercase if it's a hex letter and the hash nibble is >= 8.
             // We can use a simpler comparison for checking if the character is a hex letter because
             // we know `out` is a hex-encoded character (`b'0'..=b'9' | b'a'..=b'f'`).

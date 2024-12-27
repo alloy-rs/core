@@ -260,7 +260,7 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                 let mut raw = raw.to_owned();
                 if padding > 0 {
                     for i in (1..raw.len()).rev() {
-                        raw[i] = raw[i] >> padding | raw[i - 1] << (8 - padding);
+                        raw[i] = (raw[i] >> padding) | (raw[i - 1] << (8 - padding));
                     }
                     raw[0] >>= padding;
                 }

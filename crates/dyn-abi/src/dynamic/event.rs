@@ -159,7 +159,7 @@ impl DecodedEvent {
             self.selector
                 .iter()
                 .copied()
-                .chain(self.indexed.iter().flat_map(DynSolValue::as_word).map(B256::from))
+                .chain(self.indexed.iter().flat_map(DynSolValue::as_word))
                 .collect(),
             DynSolValue::encode_seq(&self.body).into(),
         )
