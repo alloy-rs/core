@@ -15,6 +15,7 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+#![allow(clippy::literal_string_with_formatting_args)] // TODO: https://github.com/rust-lang/rust-clippy/issues/13885
 
 #[macro_use]
 #[allow(unused_imports)]

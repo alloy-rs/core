@@ -352,7 +352,7 @@ impl<'de> Deserialize<'de> for EventParam {
                 name: inner.name,
                 ty: inner.ty,
                 indexed: inner.indexed.unwrap_or(false),
-                internal_type: inner.internal_type.map(Into::into),
+                internal_type: inner.internal_type,
                 components: inner.components,
             })
         })
