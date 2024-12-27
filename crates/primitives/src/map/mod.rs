@@ -82,8 +82,7 @@ cfg_if! {
 
 // Default hasher.
 cfg_if! {
-    // TODO: Use `foldhash` in zkVM when it's supported. https://github.com/orlp/foldhash/issues/13
-    if #[cfg(all(feature = "map-foldhash", not(target_os = "zkvm")))] {
+    if #[cfg(feature = "map-foldhash")] {
         type DefaultHashBuilderInner = foldhash::fast::RandomState;
     } else if #[cfg(feature = "map-fxhash")] {
         type DefaultHashBuilderInner = FxBuildHasher;
