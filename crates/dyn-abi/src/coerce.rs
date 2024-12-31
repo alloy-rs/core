@@ -1316,4 +1316,26 @@ mod tests {
         }
         assert_eq!(value, DynSolValue::Bool(true));
     }
+
+    #[test]
+    fn coerce_uint_scientific() {
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("1e18").unwrap(),
+            DynSolValue::Uint(U256::from_str("1000000000000000000").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("74258.225772486694040708e18").unwrap(),
+            DynSolValue::Uint(U256::from_str("74258225772486694040708").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("1.5e18").unwrap(),
+            DynSolValue::Uint(U256::from_str("1500000000000000000").unwrap(), 256)
+        );
+
+        assert!(DynSolType::Uint(256).coerce_str("1e-18").is_err());
+        assert!(DynSolType::Uint(256).coerce_str("1ex").is_err());
+        assert!(DynSolType::Uint(256).coerce_str("1e").is_err());
+    }
 }
