@@ -11,9 +11,9 @@ use parser::{
 };
 use winnow::{
     ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
-    combinator::{cut_err, dispatch, empty, fail, opt, preceded, trace},
+    combinator::{alt, cut_err, dispatch, empty, fail, opt, preceded, trace},
     error::{
-        AddContext, ContextError, ErrMode, ErrorKind, FromExternalError, StrContext,
+        AddContext, ContextError, ErrMode, ErrorKind, FromExternalError, ParserError, StrContext,
         StrContextValue,
     },
     stream::Stream,
@@ -422,14 +422,47 @@ fn prefixed_int<'i>(input: &mut Input<'i>) -> PResult<&'i str> {
 fn int_units(input: &mut Input<'_>) -> PResult<usize> {
     trace(
         "int_units",
-        dispatch! {alpha0;
-            "ether" => empty.value(18),
-            "gwei" | "nano" | "nanoether" => empty.value(9),
-            "" | "wei" => empty.value(0),
-            _ => fail,
-        },
+        alt((
+            dispatch! {alpha0;
+                "ether" => empty.value(18),
+                "gwei" | "nano" | "nanoether" => empty.value(9),
+                "" | "wei" => empty.value(0),
+                _ => fail,
+            },
+            scientific_notation,
+        )),
     )
     .parse_next(input)
+}
+
+#[inline]
+fn scientific_notation(input: &mut Input<'_>) -> PResult<usize> {
+    // Check if we have 'e' or 'E' followed by an optional sign and digits
+    if let Some(c) = input.chars().next() {
+        if c == 'e' || c == 'E' {
+            let _ = input.next_token();
+
+            // Parse optional sign
+            let sign = int_sign(input)?;
+
+            // Parse digits
+            let exp = digit1
+                .parse_next(input)?
+                .parse::<usize>()
+                .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
+
+            return if sign.is_negative() {
+                Err(ErrMode::from_external_error(
+                    input,
+                    ErrorKind::Verify,
+                    crate::Error::NegativeExponent(exp),
+                ))
+            } else {
+                Ok(exp)
+            };
+        }
+    }
+    Err(ErrMode::from_error_kind(input, ErrorKind::Fail))
 }
 
 #[inline]

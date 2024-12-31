@@ -68,6 +68,8 @@ pub enum Error {
     TypeParser(TypeParserError),
     /// [`alloy_sol_types`] error.
     SolTypes(SolTypesError),
+    /// Negative exponent in fixed-point number.
+    NegativeExponent(usize),
 }
 
 impl From<FromHexError> for Error {
@@ -140,6 +142,7 @@ impl fmt::Display for Error {
             Self::Hex(e) => e.fmt(f),
             Self::TypeParser(e) => e.fmt(f),
             Self::SolTypes(e) => e.fmt(f),
+            Self::NegativeExponent(exp) => write!(f, "negative exponent e-{exp} not allowed"),
         }
     }
 }
