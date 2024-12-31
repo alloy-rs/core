@@ -254,6 +254,7 @@ enum Error {
     InvalidFixedBytesLength(usize),
     FixedArrayLengthMismatch(usize, usize),
     EmptyHexStringWithoutPrefix,
+    NegativeExponent(usize),
 }
 
 impl core::error::Error for Error {}
@@ -277,6 +278,7 @@ impl fmt::Display for Error {
                 "fixed array length mismatch: expected {expected} elements, got {actual}"
             ),
             Self::EmptyHexStringWithoutPrefix => f.write_str("expected hex digits or the `0x` prefix for an empty hex string"),
+            Self::NegativeExponent(exp) => write!(f, "negative exponent e-{exp} not allowed"),
         }
     }
 }
@@ -454,11 +456,7 @@ fn scientific_notation(input: &mut Input<'_>) -> PResult<usize> {
         .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
 
     if sign.is_negative() {
-        Err(ErrMode::from_external_error(
-            input,
-            ErrorKind::Verify,
-            crate::Error::NegativeExponent(exp),
-        ))
+        Err(ErrMode::from_external_error(input, ErrorKind::Verify, Error::NegativeExponent(exp)))
     } else {
         Ok(exp)
     }
