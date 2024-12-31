@@ -438,31 +438,30 @@ fn int_units(input: &mut Input<'_>) -> PResult<usize> {
 #[inline]
 fn scientific_notation(input: &mut Input<'_>) -> PResult<usize> {
     // Check if we have 'e' or 'E' followed by an optional sign and digits
-    if let Some(c) = input.chars().next() {
-        if c == 'e' || c == 'E' {
-            let _ = input.next_token();
+    if input.chars().next().filter(|&c| c == 'e' || c == 'E').is_none() {
+        return Err(ErrMode::from_error_kind(input, ErrorKind::Fail));
+    };
 
-            // Parse optional sign
-            let sign = int_sign(input)?;
+    let _ = input.next_token();
 
-            // Parse digits
-            let exp = digit1
-                .parse_next(input)?
-                .parse::<usize>()
-                .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
+    // Parse optional sign
+    let sign = int_sign(input)?;
 
-            return if sign.is_negative() {
-                Err(ErrMode::from_external_error(
-                    input,
-                    ErrorKind::Verify,
-                    crate::Error::NegativeExponent(exp),
-                ))
-            } else {
-                Ok(exp)
-            };
-        }
+    // Parse digits
+    let exp = digit1
+        .parse_next(input)?
+        .parse::<usize>()
+        .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
+
+    if sign.is_negative() {
+        Err(ErrMode::from_external_error(
+            input,
+            ErrorKind::Verify,
+            crate::Error::NegativeExponent(exp),
+        ))
+    } else {
+        Ok(exp)
     }
-    Err(ErrMode::from_error_kind(input, ErrorKind::Fail))
 }
 
 #[inline]
