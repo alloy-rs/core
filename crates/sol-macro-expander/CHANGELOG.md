@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.15](https://github.com/alloy-rs/core/releases/tag/v0.8.15) - 2024-12-09
 
+### Miscellaneous Tasks
+
+- Release 0.8.15
+
 ### Other
 
 - Remove unsafe code from macro expansions ([#818](https://github.com/alloy-rs/core/issues/818))
@@ -30,7 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Miscellaneous Tasks
 
 - Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
+
+## [0.8.12](https://github.com/alloy-rs/core/releases/tag/v0.8.12) - 2024-11-12
+
+### Miscellaneous Tasks
+
 - Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
+
+## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
+
+### Miscellaneous Tasks
+
 - Release 0.8.11 ([#803](https://github.com/alloy-rs/core/issues/803))
 
 ## [0.8.10](https://github.com/alloy-rs/core/releases/tag/v0.8.10) - 2024-10-28
