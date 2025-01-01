@@ -6,12 +6,12 @@ use core::fmt;
 use hex::FromHexError;
 use parser::{
     new_input,
-    utils::{array_parser, char_parser, spanned},
+    utils::{array_parser, char_parser},
     Input,
 };
 use winnow::{
     ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
-    combinator::{alt, cut_err, dispatch, empty, fail, opt, preceded, trace},
+    combinator::{cut_err, dispatch, empty, fail, opt, preceded, trace},
     error::{
         AddContext, ContextError, ErrMode, ErrorKind, FromExternalError, ParserError, StrContext,
         StrContextValue,
@@ -250,11 +250,11 @@ impl<'a> ValueParser<'a> {
 enum Error {
     IntOverflow,
     FractionalNotAllowed(U256),
+    NegativeUnits,
     TooManyDecimals(usize, usize),
     InvalidFixedBytesLength(usize),
     FixedArrayLengthMismatch(usize, usize),
     EmptyHexStringWithoutPrefix,
-    NegativeExponent(usize),
 }
 
 impl core::error::Error for Error {}
@@ -266,19 +266,17 @@ impl fmt::Display for Error {
             Self::TooManyDecimals(expected, actual) => {
                 write!(f, "expected at most {expected} decimals, got {actual}")
             }
-            Self::FractionalNotAllowed(n) => write!(
-                f,
-                "non-zero fraction 0.{n} not allowed without specifying non-wei units (gwei, ether, etc.)"
-            ),
+            Self::FractionalNotAllowed(n) => write!(f, "non-zero fraction .{n} not allowed"),
+            Self::NegativeUnits => f.write_str("negative units not allowed"),
             Self::InvalidFixedBytesLength(len) => {
                 write!(f, "fixed bytes length {len} greater than 32")
             }
-            Self::FixedArrayLengthMismatch(expected, actual) => write!(
-                f,
-                "fixed array length mismatch: expected {expected} elements, got {actual}"
-            ),
-            Self::EmptyHexStringWithoutPrefix => f.write_str("expected hex digits or the `0x` prefix for an empty hex string"),
-            Self::NegativeExponent(exp) => write!(f, "negative exponent e-{exp} not allowed"),
+            Self::FixedArrayLengthMismatch(expected, actual) => {
+                write!(f, "fixed array length mismatch: expected {expected} elements, got {actual}")
+            }
+            Self::EmptyHexStringWithoutPrefix => {
+                f.write_str("expected hex digits or the `0x` prefix for an empty hex string")
+            }
         }
     }
 }
@@ -337,19 +335,32 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
     #[cfg(not(feature = "debug"))]
     let name = "uint";
     trace(name, move |input: &mut Input<'_>| {
-        let (s, (intpart, fract)) = spanned((
-            prefixed_int,
+        let intpart = prefixed_int(input)?;
+        let fract =
             opt(preceded(
                 '.',
                 cut_err(digit1.context(StrContext::Expected(StrContextValue::Description(
                     "at least one digit",
                 )))),
-            )),
-        ))
-        .parse_next(input)?;
+            ))
+            .parse_next(input)?;
+
+        let intpart = U256::from_str_radix(intpart, 10)
+            .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
+        let e = opt(scientific_notation).parse_next(input)?.unwrap_or(0);
 
         let _ = space0(input)?;
         let units = int_units(input)?;
+
+        let units = units as isize + e;
+        if units < 0 {
+            return Err(ErrMode::from_external_error(
+                input,
+                ErrorKind::Verify,
+                Error::NegativeUnits,
+            ));
+        }
+        let units = units as usize;
 
         let uint = if let Some(fract) = fract {
             let fract_uint = U256::from_str_radix(fract, 10)
@@ -372,8 +383,7 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
             }
 
             // (intpart * 10^fract.len() + fract) * 10^(units-fract.len())
-            U256::from_str_radix(intpart, 10)
-                .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?
+            intpart
                 .checked_mul(U256::from(10usize.pow(fract.len() as u32)))
                 .and_then(|u| u.checked_add(fract_uint))
                 .and_then(|u| u.checked_mul(U256::from(10usize.pow((units - fract.len()) as u32))))
@@ -381,12 +391,9 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
                     ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
                 })
         } else {
-            s.parse::<U256>()
-                .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?
-                .checked_mul(U256::from(10usize.pow(units as u32)))
-                .ok_or_else(|| {
-                    ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
-                })
+            intpart.checked_mul(U256::from(10usize.pow(units as u32))).ok_or_else(|| {
+                ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
+            })
         }?;
 
         if uint.bit_len() > len {
@@ -424,44 +431,24 @@ fn prefixed_int<'i>(input: &mut Input<'i>) -> PResult<&'i str> {
 fn int_units(input: &mut Input<'_>) -> PResult<usize> {
     trace(
         "int_units",
-        alt((
-            dispatch! {alpha0;
-                "ether" => empty.value(18),
-                "gwei" | "nano" | "nanoether" => empty.value(9),
-                "" | "wei" => empty.value(0),
-                _ => fail,
-            },
-            scientific_notation,
-        )),
+        dispatch! {alpha0;
+            "ether" => empty.value(18),
+            "gwei" | "nano" | "nanoether" => empty.value(9),
+            "" | "wei" => empty.value(0),
+            _ => fail,
+        },
     )
     .parse_next(input)
 }
 
 #[inline]
-fn scientific_notation(input: &mut Input<'_>) -> PResult<usize> {
+fn scientific_notation(input: &mut Input<'_>) -> PResult<isize> {
     // Check if we have 'e' or 'E' followed by an optional sign and digits
-    if input.chars().next().filter(|&c| c == 'e' || c == 'E').is_none() {
+    if !matches!(input.chars().next(), Some('e' | 'E')) {
         return Err(ErrMode::from_error_kind(input, ErrorKind::Fail));
     };
-
     let _ = input.next_token();
-
-    // Parse optional sign
-    if int_sign(input)?.is_negative() {
-        return Err(ErrMode::from_external_error(
-            input,
-            ErrorKind::Verify,
-            Error::NegativeExponent(0),
-        ));
-    }
-
-    // Parse digits
-    let exp = digit1
-        .parse_next(input)?
-        .parse::<usize>()
-        .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
-
-    Ok(exp)
+    winnow::ascii::dec_int(input)
 }
 
 #[inline]
@@ -1333,7 +1320,21 @@ mod tests {
             DynSolValue::Uint(U256::from_str("1500000000000000000").unwrap(), 256)
         );
 
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("1e-3 ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("1000000000000000").unwrap(), 256)
+        );
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("1.0e-3 ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("1000000000000000").unwrap(), 256)
+        );
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("1.1e-3 ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("1100000000000000").unwrap(), 256)
+        );
+
         assert!(DynSolType::Uint(256).coerce_str("1e-18").is_err());
+        assert!(DynSolType::Uint(256).coerce_str("1 e18").is_err());
         assert!(DynSolType::Uint(256).coerce_str("1ex").is_err());
         assert!(DynSolType::Uint(256).coerce_str("1e").is_err());
     }
