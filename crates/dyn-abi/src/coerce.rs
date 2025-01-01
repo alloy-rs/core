@@ -447,7 +447,13 @@ fn scientific_notation(input: &mut Input<'_>) -> PResult<usize> {
     let _ = input.next_token();
 
     // Parse optional sign
-    let sign = int_sign(input)?;
+    if int_sign(input)?.is_negative() {
+        return Err(ErrMode::from_external_error(
+            input,
+            ErrorKind::Verify,
+            Error::NegativeExponent(0),
+        ));
+    }
 
     // Parse digits
     let exp = digit1
@@ -455,11 +461,7 @@ fn scientific_notation(input: &mut Input<'_>) -> PResult<usize> {
         .parse::<usize>()
         .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
 
-    if sign.is_negative() {
-        Err(ErrMode::from_external_error(input, ErrorKind::Verify, Error::NegativeExponent(exp)))
-    } else {
-        Ok(exp)
-    }
+    Ok(exp)
 }
 
 #[inline]
