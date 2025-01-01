@@ -6,7 +6,7 @@ use core::fmt;
 use hex::FromHexError;
 use parser::{
     new_input,
-    utils::{array_parser, char_parser},
+    utils::{array_parser, char_parser, spanned},
     Input,
 };
 use winnow::{
@@ -345,7 +345,8 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
             ))
             .parse_next(input)?;
 
-        let intpart = U256::from_str_radix(intpart, 10)
+        let intpart = intpart
+            .parse::<U256>()
             .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
         let e = opt(scientific_notation).parse_next(input)?.unwrap_or(0);
 
@@ -390,10 +391,12 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
                 .ok_or_else(|| {
                     ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
                 })
-        } else {
+        } else if units > 0 {
             intpart.checked_mul(U256::from(10usize.pow(units as u32))).ok_or_else(|| {
                 ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
             })
+        } else {
+            Ok(intpart)
         }?;
 
         if uint.bit_len() > len {
@@ -406,25 +409,30 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
 
 #[inline]
 fn prefixed_int<'i>(input: &mut Input<'i>) -> PResult<&'i str> {
-    trace("prefixed_int", |input: &mut Input<'i>| {
-        let has_prefix = matches!(input.get(..2), Some("0b" | "0B" | "0o" | "0O" | "0x" | "0X"));
-        let checkpoint = input.checkpoint();
-        if has_prefix {
-            let _ = input.next_slice(2);
-            // parse hex since it's the most general
-            hex_digit1(input)
-        } else {
-            digit1(input)
-        }
-        .map_err(|e| {
-            e.add_context(
-                input,
-                &checkpoint,
-                StrContext::Expected(StrContextValue::Description("at least one digit")),
-            )
-        })
-    })
+    trace(
+        "prefixed_int",
+        spanned(|input: &mut Input<'i>| {
+            let has_prefix =
+                matches!(input.get(..2), Some("0b" | "0B" | "0o" | "0O" | "0x" | "0X"));
+            let checkpoint = input.checkpoint();
+            if has_prefix {
+                let _ = input.next_slice(2);
+                // parse hex since it's the most general
+                hex_digit1(input)
+            } else {
+                digit1(input)
+            }
+            .map_err(|e| {
+                e.add_context(
+                    input,
+                    &checkpoint,
+                    StrContext::Expected(StrContextValue::Description("at least one digit")),
+                )
+            })
+        }),
+    )
     .parse_next(input)
+    .map(|(s, _)| s)
 }
 
 #[inline]
