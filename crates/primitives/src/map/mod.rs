@@ -118,8 +118,11 @@ cfg_if! {
     }
 }
 
+/// This module contains the rayon parallel iterator types for hash maps (HashMap<K, V>).
+/// You will rarely need to interact with it directly unless you have need to name one
+/// of the iterator types.
 #[cfg(feature = "rayon")]
-mod rayon {
+pub mod rayon {
     use super::*;
 
     cfg_if! {
@@ -131,6 +134,8 @@ mod rayon {
             pub use hashbrown::hash_map::rayon::ParKeys as Keys;
             pub use hashbrown::hash_map::rayon::ParValues as Values;
             pub use hashbrown::hash_map::rayon::ParValuesMut as ValuesMut;
+
+            use ::rayon as _;
         } else {
             pub use ::rayon::collections::hash_map::*;
         }
