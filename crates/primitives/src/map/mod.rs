@@ -118,6 +118,25 @@ cfg_if! {
     }
 }
 
+#[cfg(feature = "rayon")]
+mod rayon {
+    use super::*;
+
+    cfg_if! {
+        if #[cfg(any(feature = "map-hashbrown", not(feature = "std")))] {
+            pub use hashbrown::hash_map::rayon::IntoParIter as IntoIter;
+            pub use hashbrown::hash_map::rayon::ParDrain as Drain;
+            pub use hashbrown::hash_map::rayon::ParIter as Iter;
+            pub use hashbrown::hash_map::rayon::ParIterMut as IterMut;
+            pub use hashbrown::hash_map::rayon::ParKeys as Keys;
+            pub use hashbrown::hash_map::rayon::ParValues as Values;
+            pub use hashbrown::hash_map::rayon::ParValuesMut as ValuesMut;
+        } else {
+            pub use ::rayon::collections::hash_map::*;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
