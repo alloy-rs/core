@@ -22,6 +22,7 @@ impl core::error::Error for CustomError {}
 
 pub type Input<'a> = winnow::Stateful<&'a str, RecursionCheck>;
 
+#[inline]
 pub fn new_input(input: &str) -> Input<'_> {
     winnow::Stateful { input, state: Default::default() }
 }
