@@ -58,7 +58,7 @@ impl DynSolType {
     /// use alloy_primitives::U256;
     ///
     /// let ty: DynSolType = "(uint256,string)[]".parse()?;
-    /// let value = ty.coerce_str("[(0, \"hello\"), (42, \"world\")]")?;
+    /// let value = ty.coerce_str("[(0, \"hello\"), (4.2e1, \"world\")]")?;
     /// assert_eq!(
     ///     value,
     ///     DynSolValue::Array(vec![
@@ -384,20 +384,25 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
             }
 
             // (intpart * 10^fract.len() + fract) * 10^(units-fract.len())
-            intpart
-                .checked_mul(U256::from(10usize.pow(fract.len() as u32)))
-                .and_then(|u| u.checked_add(fract_uint))
-                .and_then(|u| u.checked_mul(U256::from(10usize.pow((units - fract.len()) as u32))))
-                .ok_or_else(|| {
-                    ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
-                })
+            (|| -> Option<U256> {
+                let extension = U256::from(10u64).checked_pow(U256::from(fract.len()))?;
+                let extended = intpart.checked_mul(extension)?;
+                let uint = fract_uint.checked_add(extended)?;
+                let units = U256::from(10u64).checked_pow(U256::from(units - fract.len()))?;
+                uint.checked_mul(units)
+            })()
         } else if units > 0 {
-            intpart.checked_mul(U256::from(10usize.pow(units as u32))).ok_or_else(|| {
-                ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
-            })
+            // intpart * 10^units
+            (|| -> Option<U256> {
+                let units = U256::from(10u64).checked_pow(U256::from(units))?;
+                intpart.checked_mul(units)
+            })()
         } else {
-            Ok(intpart)
-        }?;
+            Some(intpart)
+        }
+        .ok_or_else(|| {
+            ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
+        })?;
 
         if uint.bit_len() > len {
             return Err(ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow));
@@ -534,6 +539,38 @@ mod tests {
     };
     use alloy_primitives::address;
     use core::str::FromStr;
+
+    fn uint_test(s: &str, expected: Result<&str, ()>) {
+        for (ty, negate) in [
+            (DynSolType::Uint(256), false),
+            (DynSolType::Int(256), false),
+            (DynSolType::Int(256), true),
+        ] {
+            let s = if negate { &format!("-{s}") } else { s };
+            let expected = if negate {
+                expected.map(|s| format!("-{s}"))
+            } else {
+                expected.map(|s| s.to_string())
+            };
+            let d = format!("{s:?} as {ty:?}");
+
+            let actual = ty.coerce_str(s);
+            match (actual, expected) {
+                (Ok(actual), Ok(expected)) => match (actual, ty) {
+                    (DynSolValue::Uint(v, 256), DynSolType::Uint(256)) => {
+                        assert_eq!(v, expected.parse::<U256>().unwrap(), "{d}");
+                    }
+                    (DynSolValue::Int(v, 256), DynSolType::Int(256)) => {
+                        assert_eq!(v, expected.parse::<I256>().unwrap(), "{d}");
+                    }
+                    (actual, _) => panic!("{d}: unexpected value: {actual:?}"),
+                },
+                (Err(_), Err(())) => {}
+                (Ok(actual), Err(_)) => panic!("{d}: expected failure, got {actual:?}"),
+                (Err(e), Ok(_)) => panic!("{d}: {e:?}"),
+            }
+        }
+    }
 
     #[track_caller]
     fn assert_error_contains(e: &impl core::fmt::Display, s: &str) {
@@ -1313,37 +1350,25 @@ mod tests {
 
     #[test]
     fn coerce_uint_scientific() {
-        assert_eq!(
-            DynSolType::Uint(256).coerce_str("1e18").unwrap(),
-            DynSolValue::Uint(U256::from_str("1000000000000000000").unwrap(), 256)
-        );
+        uint_test("1e18", Ok("1000000000000000000"));
 
-        assert_eq!(
-            DynSolType::Uint(256).coerce_str("74258.225772486694040708e18").unwrap(),
-            DynSolValue::Uint(U256::from_str("74258225772486694040708").unwrap(), 256)
-        );
+        uint_test("0.03069536448928848133e20", Ok("3069536448928848133"));
 
-        assert_eq!(
-            DynSolType::Uint(256).coerce_str("1.5e18").unwrap(),
-            DynSolValue::Uint(U256::from_str("1500000000000000000").unwrap(), 256)
-        );
+        uint_test("1.5e18", Ok("1500000000000000000"));
 
-        assert_eq!(
-            DynSolType::Uint(256).coerce_str("1e-3 ether").unwrap(),
-            DynSolValue::Uint(U256::from_str("1000000000000000").unwrap(), 256)
-        );
-        assert_eq!(
-            DynSolType::Uint(256).coerce_str("1.0e-3 ether").unwrap(),
-            DynSolValue::Uint(U256::from_str("1000000000000000").unwrap(), 256)
-        );
-        assert_eq!(
-            DynSolType::Uint(256).coerce_str("1.1e-3 ether").unwrap(),
-            DynSolValue::Uint(U256::from_str("1100000000000000").unwrap(), 256)
-        );
+        uint_test("1e-3 ether", Ok("1000000000000000"));
+        uint_test("1.0e-3 ether", Ok("1000000000000000"));
+        uint_test("1.1e-3 ether", Ok("1100000000000000"));
 
-        assert!(DynSolType::Uint(256).coerce_str("1e-18").is_err());
-        assert!(DynSolType::Uint(256).coerce_str("1 e18").is_err());
-        assert!(DynSolType::Uint(256).coerce_str("1ex").is_err());
-        assert!(DynSolType::Uint(256).coerce_str("1e").is_err());
+        uint_test("74258.225772486694040708e18", Ok("74258225772486694040708"));
+        uint_test("0.03069536448928848133e20", Ok("3069536448928848133"));
+        uint_test("0.000000000003069536448928848133e30", Ok("3069536448928848133"));
+
+        uint_test("1e-1", Err(()));
+        uint_test("1e-2", Err(()));
+        uint_test("1e-18", Err(()));
+        uint_test("1 e18", Err(()));
+        uint_test("1ex", Err(()));
+        uint_test("1e", Err(()));
     }
 }
