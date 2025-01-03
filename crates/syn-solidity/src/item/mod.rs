@@ -198,7 +198,8 @@ impl Item {
             | Self::Event(ItemEvent { name, .. })
             | Self::Function(ItemFunction { name: Some(name), .. })
             | Self::Struct(ItemStruct { name, .. })
-            | Self::Udt(ItemUdt { name, .. }) => Some(name),
+            | Self::Udt(ItemUdt { name, .. })
+            | Self::Variable(VariableDefinition { name, .. }) => Some(name),
             _ => None,
         }
     }

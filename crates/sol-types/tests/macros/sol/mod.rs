@@ -1242,3 +1242,26 @@ fn bytes64() {
     let x = bytes64 { a: B256::ZERO, b: B256::ZERO };
     assert_eq!(bytes64::abi_encode_packed(&x), alloy_primitives::B512::ZERO.as_slice());
 }
+
+#[test]
+fn array_sizes() {
+    sol! {
+        uint constant x = 1;
+        uint constant y = x + 1;
+
+        contract C {
+            uint constant z = y * 2;
+
+            struct S {
+                uint[x] a;
+                uint[y] b;
+                uint[z] c;
+                uint[z * 2] d;
+            }
+
+            function f(S memory s);
+        }
+    }
+
+    assert_eq!(C::fCall::SIGNATURE, "f((uint256[1],uint256[2],uint256[4],uint256[8]))");
+}

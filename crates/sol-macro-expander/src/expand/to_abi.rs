@@ -138,7 +138,7 @@ fn ty_to_param(name: Option<String>, ty: &ast::Type, cx: &ExpCtxt<'_>) -> Param 
 
 fn ty_abi_string(ty: &ast::Type, cx: &ExpCtxt<'_>) -> String {
     let mut suffix = String::new();
-    rec_ty_abi_string_suffix(ty, &mut suffix);
+    rec_ty_abi_string_suffix(cx, ty, &mut suffix);
 
     let mut ty = ty.peel_arrays();
     if let ast::Type::Custom(name) = ty {
@@ -151,10 +151,10 @@ fn ty_abi_string(ty: &ast::Type, cx: &ExpCtxt<'_>) -> String {
     format!("{}{suffix}", super::ty::TypePrinter::new(cx, ty))
 }
 
-fn rec_ty_abi_string_suffix(ty: &ast::Type, s: &mut String) {
+fn rec_ty_abi_string_suffix(cx: &ExpCtxt<'_>, ty: &ast::Type, s: &mut String) {
     if let ast::Type::Array(array) = ty {
-        rec_ty_abi_string_suffix(&array.ty, s);
-        if let Some(size) = array.size() {
+        rec_ty_abi_string_suffix(cx, &array.ty, s);
+        if let Some(size) = cx.eval_array_size(array) {
             write!(s, "[{size}]").unwrap();
         } else {
             s.push_str("[]");

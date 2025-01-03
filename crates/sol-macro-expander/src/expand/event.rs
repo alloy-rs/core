@@ -1,6 +1,6 @@
 //! [`ItemEvent`] expansion.
 
-use super::{anon_name, expand_event_tokenize, expand_tuple_types, expand_type, ty, ExpCtxt};
+use super::{anon_name, expand_event_tokenize, expand_tuple_types, ExpCtxt};
 use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{EventParameter, ItemEvent, SolIdent, Spanned};
 use proc_macro2::TokenStream;
@@ -79,7 +79,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 
     let encode_topics_impl = event.parameters.iter().enumerate().filter(|(_, p)| p.is_indexed()).map(|(i, p)| {
         let name = anon_name((i, p.name.as_ref()));
-        let ty = expand_type(&p.ty, &cx.crates);
+        let ty = cx.expand_type(&p.ty);
 
         if cx.indexed_as_hash(p) {
             quote! {
@@ -242,7 +242,7 @@ fn expand_event_topic_type(param: &EventParameter, cx: &ExpCtxt<'_>) -> TokenStr
     if cx.indexed_as_hash(param) {
         quote_spanned! {param.ty.span()=> #alloy_sol_types::sol_data::FixedBytes<32> }
     } else {
-        expand_type(&param.ty, &cx.crates)
+        cx.expand_type(&param.ty)
     }
 }
 
@@ -255,9 +255,9 @@ fn expand_event_topic_field(
     let name = anon_name((i, name));
     let ty = if cx.indexed_as_hash(param) {
         let bytes32 = ast::Type::FixedBytes(name.span(), core::num::NonZeroU16::new(32).unwrap());
-        ty::expand_rust_type(&bytes32, &cx.crates)
+        cx.expand_rust_type(&bytes32)
     } else {
-        ty::expand_rust_type(&param.ty, &cx.crates)
+        cx.expand_rust_type(&param.ty)
     };
     quote!(#name: #ty)
 }
