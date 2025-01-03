@@ -107,8 +107,8 @@ impl Signature {
     #[doc(hidden)]
     pub fn test_signature() -> Self {
         Self::from_scalars_and_parity(
-            b256!("840cfc572845f5786e702984c2a582528cad4b49b2a10b9db1be7fca90058565"),
-            b256!("25e7109ceb98168d95b09b18bbf6b685130e0562f233877d492b94eee0c5b6d1"),
+            b256!("0x840cfc572845f5786e702984c2a582528cad4b49b2a10b9db1be7fca90058565"),
+            b256!("0x25e7109ceb98168d95b09b18bbf6b685130e0562f233877d492b94eee0c5b6d1"),
             false,
         )
         .unwrap()
@@ -614,8 +614,8 @@ mod tests {
     #[cfg(feature = "k256")]
     fn can_recover_tx_sender_not_normalized() {
         let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
-        let hash = b256!("5eb4f5a33c621f32a8622d5f943b6b102994dfe4e5aebbefe69bb1b2aa0fc93e");
-        let expected = address!("0f65fe9276bc9a24ae7083ae28e2660ef72df99e");
+        let hash = b256!("0x5eb4f5a33c621f32a8622d5f943b6b102994dfe4e5aebbefe69bb1b2aa0fc93e");
+        let expected = address!("0x0f65fe9276bc9a24ae7083ae28e2660ef72df99e");
         assert_eq!(sig.recover_address_from_prehash(&hash).unwrap(), expected);
     }
 
@@ -627,7 +627,7 @@ mod tests {
         let sig = Signature::from_str(
             "b91467e570a6466aa9e9876cbcd013baba02900b8979d43fe208a4a4f339f5fd6007e74cd82e037b800186422fc2da167c747ef045e5d18a5f5d4300f8e1a0291c"
         ).expect("could not parse signature");
-        let expected = address!("2c7536E3605D9C16a7a3D7b1898e529396a65c23");
+        let expected = address!("0x2c7536E3605D9C16a7a3D7b1898e529396a65c23");
         assert_eq!(sig.recover_address_from_msg("Some data").unwrap(), expected);
     }
 

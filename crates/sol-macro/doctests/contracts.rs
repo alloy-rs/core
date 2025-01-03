@@ -42,7 +42,7 @@ fn transfer() {
         "0000000000000000000000000000000000000000000000000000000253c51700"
     );
     let expected = ERC20::transferCall {
-        to: address!("8bc47be1e3abbaba182069c89d08a61fa6c2b292"),
+        to: address!("0x8bc47be1e3abbaba182069c89d08a61fa6c2b292"),
         amount: U256::from(9995360000_u64),
     };
 

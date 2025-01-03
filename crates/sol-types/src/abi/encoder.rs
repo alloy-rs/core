@@ -1127,7 +1127,7 @@ mod tests {
 
         let data = (
             Vec::from(bytes!("09736b79736b79736b79026f7300")),
-            address!("B7b54cd129e6D8B24e6AE652a473449B273eE3E4"),
+            address!("0xB7b54cd129e6D8B24e6AE652a473449B273eE3E4"),
             Vec::<Vec<u8>>::new(),
         );
 

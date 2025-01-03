@@ -511,7 +511,7 @@ mod tests {
         let C::CErrors::SenderAddressError(decoded) = C::CErrors::abi_decode(&data, true).unwrap();
         assert_eq!(
             decoded,
-            C::SenderAddressError { _0: address!("a48388222c7ee7daefde5d0b9c99319995c4a990") }
+            C::SenderAddressError { _0: address!("0xa48388222c7ee7daefde5d0b9c99319995c4a990") }
         );
     }
 }

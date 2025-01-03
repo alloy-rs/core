@@ -91,9 +91,9 @@ mod tests {
         // assume it's random:
         TestStruct {
             logs: vec![Log {
-                address: address!("3100000000000000000000000000000000000001"),
+                address: address!("0x3100000000000000000000000000000000000001"),
                 data: LogData::new(
-                    vec![b256!("32eff959e2e8d1609edc4b39ccf75900aa6c1da5719f8432752963fdf008234f")],
+                    vec![b256!("0x32eff959e2e8d1609edc4b39ccf75900aa6c1da5719f8432752963fdf008234f")],
                     Bytes::from_static(b"00000000000000000000000000000000000000000000000000000000000000021e9dbc1a11f8e046a72d1296cc2d8bb0d1544d56fd0b9bb8890a0f89b88036541e9dbc1a11f8e046a72d1296cc2d8bb0d1544d56fd0b9bb8890a0f89b8803654"),
                 ).unwrap(),
             }],

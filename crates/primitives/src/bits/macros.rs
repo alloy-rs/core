@@ -708,8 +708,8 @@ macro_rules! fixed_bytes_macros {
                 $crate::$ty::ZERO
             };
 
-            ($d ($d s:literal)+) => {
-                $crate::$ty::new($crate::hex!($d ($d s)+))
+            ($d ($d t:tt)+) => {
+                $crate::$ty::new($crate::hex!($d ($d t)+))
             };
         }
     )*};
@@ -743,7 +743,7 @@ fixed_bytes_macros! { $
 /// ```
 /// use alloy_primitives::{bytes, Bytes};
 ///
-/// static MY_BYTES: Bytes = bytes!("0x0123 0xabcd");
+/// static MY_BYTES: Bytes = bytes!("0x0123" "0xabcd");
 /// assert_eq!(MY_BYTES, Bytes::from(&[0x01, 0x23, 0xab, 0xcd]));
 /// ```
 #[macro_export]
