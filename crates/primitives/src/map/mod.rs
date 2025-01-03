@@ -80,6 +80,10 @@ cfg_if! {
     }
 }
 
+#[cfg(feature = "map-foldhash")]
+#[doc(no_inline)]
+pub use foldhash;
+
 // Default hasher.
 cfg_if! {
     if #[cfg(feature = "map-foldhash")] {
@@ -119,6 +123,7 @@ cfg_if! {
 }
 
 /// This module contains the rayon parallel iterator types for hash maps (HashMap<K, V>).
+///
 /// You will rarely need to interact with it directly unless you have need to name one
 /// of the iterator types.
 #[cfg(feature = "rayon")]
