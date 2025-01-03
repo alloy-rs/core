@@ -315,13 +315,16 @@ mod tests {
             eip191_msg,
             [EIP191_PREFIX.as_bytes(), msg.len().to_string().as_bytes(), msg.as_bytes()].concat()
         );
-        assert_eq!(hash, b256!("a1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2"));
+        assert_eq!(
+            hash,
+            b256!("0xa1de988600a42c4b4ab089b619297c17d53cffae5d5120d82d8a92d0bb3b78f2")
+        );
         assert_eq!(eip191_hash_message(msg), hash);
     }
 
     #[test]
     fn keccak256_hasher() {
-        let expected = b256!("47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad");
+        let expected = b256!("0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad");
         assert_eq!(keccak256("hello world"), expected);
 
         let mut hasher = Keccak256::new();

@@ -618,7 +618,7 @@ mod tests {
         assert_eq!(
             MyTy::abi_decode_params(&encoded, false).unwrap(),
             (
-                address!("8497afefdc5ac170a664a231f6efb25526ef813f"),
+                address!("0x8497afefdc5ac170a664a231f6efb25526ef813f"),
                 B256::repeat_byte(0x01),
                 [0x02; 4].into(),
                 "0x0000001F".into(),

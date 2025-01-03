@@ -266,7 +266,7 @@ mod tests {
         let func = Function::parse("register(bytes,address,bytes[])").unwrap();
         let input = [
             DynSolValue::Bytes(bytes!("09736b79736b79736b79026f7300").into()),
-            DynSolValue::Address(address!("B7b54cd129e6D8B24e6AE652a473449B273eE3E4")),
+            DynSolValue::Address(address!("0xB7b54cd129e6D8B24e6AE652a473449B273eE3E4")),
             DynSolValue::Array(vec![]),
         ];
         let result = func.abi_encode_input(&input).unwrap();

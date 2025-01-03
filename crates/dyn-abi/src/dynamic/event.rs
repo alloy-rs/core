@@ -200,9 +200,9 @@ mod test {
 
     #[test]
     fn it_decodes_logs_with_indexed_params() {
-        let t0 = b256!("cf74b4e62f836eeedcd6f92120ffb5afea90e6fa490d36f8b81075e2a7de0cf7");
+        let t0 = b256!("0xcf74b4e62f836eeedcd6f92120ffb5afea90e6fa490d36f8b81075e2a7de0cf7");
         let log: LogData = LogData::new_unchecked(
-            vec![t0, b256!("0000000000000000000000000000000000000000000000000000000000012321")],
+            vec![t0, b256!("0x0000000000000000000000000000000000000000000000000000000000012321")],
             bytes!(
                 "
 			    0000000000000000000000000000000000000000000000000000000000012345
@@ -222,7 +222,7 @@ mod test {
         let decoded = event.decode_log_data(&log, true).unwrap();
         assert_eq!(
             decoded.indexed,
-            vec![DynSolValue::Address(address!("0000000000000000000000000000000000012321"))]
+            vec![DynSolValue::Address(address!("0x0000000000000000000000000000000000012321"))]
         );
 
         let encoded = decoded.encode_log_data();
