@@ -77,6 +77,17 @@ use syn::parse_macro_input;
 /// [sol-types]: https://docs.soliditylang.org/en/latest/types.html
 /// [ast]: https://docs.rs/syn-solidity/latest/syn_solidity
 ///
+/// ### Visibility
+///
+/// Visibility modifiers (`private`, `internal`, `public`, `external`) are supported in all items
+/// that Solidity supports them in. However, they are only taken into consideration when deciding
+/// whether to generate a getter for a state variable or not. They are ignored in all other places.
+///
+/// ### State mutability
+///
+/// State mutability modifiers (`pure`, `view`, `payable`, `nonpayable`) are parsed, but ignored for
+/// the purposes of this macro.
+///
 /// ### Attributes
 ///
 /// Inner attributes (`#![...]`) are parsed at the top of the input, just like a
