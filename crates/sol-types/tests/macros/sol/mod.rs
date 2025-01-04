@@ -468,7 +468,6 @@ fn enum_field_of_struct() {
 }
 
 #[test]
-#[cfg(any())] // TODO: https://github.com/alloy-rs/core/issues/599
 fn same_names_different_namespaces() {
     sol! {
         library RouterErrors {
@@ -482,6 +481,11 @@ fn same_names_different_namespaces() {
             error ETHTransferFailed();
         }
     }
+
+    assert_ne!(
+        std::any::TypeId::of::<RouterErrors::InvalidMsgValue>(),
+        std::any::TypeId::of::<Errors::InvalidMsgValue>(),
+    );
 }
 
 #[test]
