@@ -130,7 +130,13 @@ pub mod no_missing_docs {
 
 #[test]
 fn do_stuff() {
-    let mut set = alloy_core::primitives::map::HashSet::<MyStruct>::default();
-    set.insert(Default::default());
+    let mut set = alloy_core::primitives::map::B256Map::<MyStruct>::default();
+    set.insert(
+        alloy_core::primitives::hex_literal::hex!(
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        )
+        .into(),
+        Default::default(),
+    );
     assert_eq!(set.len(), 1);
 }
