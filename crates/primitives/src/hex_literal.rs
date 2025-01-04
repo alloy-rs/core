@@ -94,6 +94,8 @@ macro_rules! hex {
         $crate::hex_literal::decode::<{ $crate::hex_literal::len(STRINGS) }>(STRINGS)
     }};
 }
+#[doc(hidden)] // Use `crate::hex` directly instead!
+pub use crate::hex;
 
 #[cfg(test)]
 mod tests {
