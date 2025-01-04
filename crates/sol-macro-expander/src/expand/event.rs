@@ -151,10 +151,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
         #[derive(Clone)]
         pub struct #name {
-            #(
-                #[allow(missing_docs)]
-                pub #fields,
-            )*
+            #( #fields, )*
         }
 
         #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
@@ -259,5 +256,10 @@ fn expand_event_topic_field(
     } else {
         cx.expand_rust_type(&param.ty)
     };
-    quote!(#name: #ty)
+    let attrs = &param.attrs;
+    quote! {
+        #(#attrs)*
+        #[allow(missing_docs)]
+        pub #name: #ty
+    }
 }

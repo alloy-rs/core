@@ -874,7 +874,10 @@ impl CallLikeExpander<'_> {
         let mut tokens = quote! {
             #(#attrs)*
             pub enum #name {
-                #(#variants(#types),)*
+                #(
+                    #[allow(missing_docs)]
+                    #variants(#types),
+                )*
             }
 
             #[automatically_derived]
