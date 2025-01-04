@@ -1,9 +1,6 @@
 //! Functions which generate Rust code from the Solidity AST.
 
-use crate::{
-    expand::ty::expand_rust_type,
-    utils::{self, ExprArray},
-};
+use crate::utils::{self, ExprArray};
 use alloy_sol_macro_input::{ContainsSolAttrs, SolAttrs};
 use ast::{
     visit_mut, EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters,
@@ -25,15 +22,13 @@ use syn::{ext::IdentExt, parse_quote, Attribute, Error, Result};
 #[macro_use]
 mod macros;
 
-pub mod ty;
-pub use ty::expand_type;
-
 mod contract;
 mod r#enum;
 mod error;
 mod event;
 mod function;
 mod r#struct;
+mod ty;
 mod udt;
 mod var_def;
 
@@ -48,6 +43,14 @@ const RESOLVE_LIMIT: usize = 32;
 /// [`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/index.html
 pub fn expand(ast: File) -> Result<TokenStream> {
     ExpCtxt::new(&ast).expand()
+}
+
+/// Expands a Rust type from a Solidity type.
+pub fn expand_type(ty: &Type, crates: &ExternCrates) -> TokenStream {
+    let dummy_file = File { attrs: Vec::new(), items: Vec::new() };
+    let mut cx = ExpCtxt::new(&dummy_file);
+    cx.crates = crates.clone();
+    cx.expand_type(ty)
 }
 
 /// Mapping namespace -> ident -> T
@@ -302,8 +305,7 @@ impl ExpCtxt<'_> {
         let mut result = Ok(());
 
         let mut selectors = vec![HashMap::new(); 3];
-        let all_items = std::mem::take(&mut self.all_items);
-        for (namespace, items) in &all_items.0 {
+        for (namespace, items) in &self.all_items.clone().0 {
             self.with_namespace(namespace.clone(), |this| {
                 selectors.iter_mut().for_each(|s| s.clear());
                 for (_, &item) in items {
@@ -348,7 +350,6 @@ impl ExpCtxt<'_> {
                 }
             })
         }
-        self.all_items = all_items;
 
         result
     }
@@ -691,8 +692,8 @@ impl<'ast> ExpCtxt<'ast> {
         let mut derive_others = true;
         for ty in types {
             let ty = ty.borrow();
-            derive_default = derive_default && ty::can_derive_default(self, ty);
-            derive_others = derive_others && ty::can_derive_builtin_traits(self, ty);
+            derive_default = derive_default && self.can_derive_default(ty);
+            derive_others = derive_others && self.can_derive_builtin_traits(ty);
         }
         if derive_default {
             derives.push("Default");
@@ -735,7 +736,7 @@ impl<'ast> ExpCtxt<'ast> {
 ///
 /// These should be added to import lists at the top of anonymous `const _: () = { ... }` blocks,
 /// and in case of top-level structs they should be inlined into all `path`s.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ExternCrates {
     /// The path to the `alloy_sol_types` crate.
     pub sol_types: syn::Path,
@@ -773,7 +774,7 @@ fn expand_fields<'a, P>(
 ) -> impl Iterator<Item = TokenStream> + 'a {
     params.iter().enumerate().map(|(i, var)| {
         let name = anon_name((i, var.name.as_ref()));
-        let ty = expand_rust_type(&var.ty, &cx.crates);
+        let ty = cx.expand_rust_type(&var.ty);
         let attrs = &var.attrs;
         quote! {
             #(#attrs)*
@@ -852,10 +853,10 @@ fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
     let mut rust = TokenStream::new();
     let comma = Punct::new(',', Spacing::Alone);
     for ty in types {
-        ty::rec_expand_type(ty, &cx.crates, &mut sol);
+        cx.expand_type_to(ty, &mut sol);
         sol.append(comma.clone());
 
-        ty::rec_expand_rust_type(ty, &cx.crates, &mut rust);
+        cx.expand_rust_type_to(ty, &mut rust);
         rust.append(comma.clone());
     }
     let wrap_in_parens =
@@ -888,7 +889,7 @@ fn tokenize_<'a>(
     cx: &'a ExpCtxt<'_>,
 ) -> TokenStream {
     let statements = iter.into_iter().map(|(i, ty, name)| {
-        let ty = expand_type(ty, &cx.crates);
+        let ty = cx.expand_type(ty);
         let name = name.cloned().unwrap_or_else(|| generate_name(i).into());
         quote! {
             <#ty as alloy_sol_types::SolType>::tokenize(&self.#name)

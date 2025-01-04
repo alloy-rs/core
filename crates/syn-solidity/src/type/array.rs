@@ -3,11 +3,10 @@ use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
-    num::NonZeroUsize,
 };
 use syn::{
     bracketed,
-    parse::{discouraged::Speculative, Parse, ParseStream},
+    parse::{Parse, ParseStream},
     token::Bracket,
     Result,
 };
@@ -77,14 +76,14 @@ impl Spanned for TypeArray {
 impl TypeArray {
     /// Returns the size of the array, or None if dynamic.
     pub fn size(&self) -> Option<usize> {
-        self.size_lit().map(|s| s.base10_parse().unwrap())
+        self.size_lit().and_then(|s| s.base10_parse().ok())
     }
 
     /// Returns the size of the array, or None if dynamic.
     pub fn size_lit(&self) -> Option<&LitNumber> {
-        self.size.as_ref().map(|s| match &**s {
-            Expr::Lit(Lit::Number(n)) => n,
-            _ => panic!("unevaluated literal in array size"),
+        self.size.as_ref().and_then(|s| match &**s {
+            Expr::Lit(Lit::Number(n)) => Some(n),
+            _ => None,
         })
     }
 
@@ -106,23 +105,7 @@ impl TypeArray {
                 if content.is_empty() {
                     None
                 } else {
-                    let fork = content.fork();
-                    let sz = match fork.parse::<syn::LitInt>() {
-                        Ok(lit) => lit,
-                        Err(e) => {
-                            return Err(match fork.parse::<Expr>() {
-                                Ok(_) => syn::Error::new(
-                                    e.span(),
-                                    "generic expressions are not supported in array type sizes",
-                                ),
-                                Err(e) => e,
-                            })
-                        }
-                    };
-                    content.advance_to(&fork);
-                    // Validate the size
-                    sz.base10_parse::<NonZeroUsize>()?;
-                    Some(Box::new(Expr::Lit(Lit::Number(LitNumber::Int(sz)))))
+                    Some(content.parse()?)
                 }
             },
         })

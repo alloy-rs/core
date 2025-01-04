@@ -144,3 +144,22 @@ kw_enum! {
         Years(kw::years),
     }
 }
+
+impl SubDenomination {
+    /// Returns the value of this sub-denomination.
+    pub const fn value(self) -> u64 {
+        // https://github.com/ethereum/solidity/blob/2a2a9d37ee69ca77ef530fe18524a3dc8b053104/libsolidity/ast/Types.cpp#L973
+        match self {
+            Self::Wei(..) => 1,
+            Self::Gwei(..) => 1_000_000_000,
+            Self::Ether(..) => 1_000_000_000_000_000_000,
+
+            Self::Seconds(..) => 1,
+            Self::Minutes(..) => 60,
+            Self::Hours(..) => 3_600,
+            Self::Days(..) => 86_400,
+            Self::Weeks(..) => 604_800,
+            Self::Years(..) => 31_536_000,
+        }
+    }
+}

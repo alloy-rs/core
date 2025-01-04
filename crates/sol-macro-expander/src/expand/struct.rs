@@ -1,6 +1,6 @@
 //! [`ItemStruct`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_type, ExpCtxt};
+use super::{expand_fields, expand_from_into_tuples, expand_tokenize, ExpCtxt};
 use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{Item, ItemStruct, Spanned, Type};
 use proc_macro2::TokenStream;
@@ -33,7 +33,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
     let (field_types, field_names): (Vec<_>, Vec<_>) =
-        fields.iter().map(|f| (expand_type(&f.ty, &cx.crates), f.name.as_ref().unwrap())).unzip();
+        fields.iter().map(|f| (cx.expand_type(&f.ty), f.name.as_ref().unwrap())).unzip();
 
     let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, name);
 
@@ -227,7 +227,7 @@ fn expand_encode_type_fns(
                 }
             });
             // cannot panic as this field is guaranteed to contain a custom type
-            let ty = expand_type(&ty.unwrap(), &cx.crates);
+            let ty = cx.expand_type(&ty.unwrap());
 
             quote! {
                 components.push(<#ty as alloy_sol_types::SolStruct>::eip712_root_type());

@@ -194,6 +194,23 @@ impl Spanned for Expr {
 }
 
 impl Expr {
+    pub fn peel_parens(&self) -> &Self {
+        let mut expr = self;
+        while let Some(inner) = expr.peel_paren() {
+            expr = inner;
+        }
+        expr
+    }
+
+    fn peel_paren(&self) -> Option<&Self> {
+        if let Self::Tuple(t) = self {
+            if t.elems.len() == 1 {
+                return Some(&t.elems[0]);
+            }
+        }
+        None
+    }
+
     fn parse_simple(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(Paren) {

@@ -1,6 +1,6 @@
 //! [`ItemContract`] expansion.
 
-use super::{anon_name, ty, ExpCtxt};
+use super::{anon_name, ExpCtxt};
 use crate::utils::ExprArray;
 use alloy_sol_macro_input::{docs_str, mk_doc, ContainsSolAttrs};
 use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent, Spanned};
@@ -300,7 +300,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
                 let names1 = c.parameters.names().enumerate().map(anon_name);
                 let names2 = names1.clone();
                 let tys = c.parameters.types().map(|ty| {
-                    super::ty::expand_rust_type(ty, &cx.crates)
+                    cx.expand_rust_type(ty)
                 });
                 Some((quote!(#(#names1: #tys),*), quote!(#(#names2,)*)))
             }).unzip();
@@ -618,7 +618,7 @@ impl ToExpand<'_> {
                     types: Some(types),
                     min_data_len: functions
                         .iter()
-                        .map(|function| ty::params_base_data_size(cx, &function.parameters))
+                        .map(|function| cx.params_base_data_size(&function.parameters))
                         .min()
                         .unwrap(),
                     trait_: format_ident!("SolCall"),
@@ -632,7 +632,7 @@ impl ToExpand<'_> {
                 types: None,
                 min_data_len: errors
                     .iter()
-                    .map(|error| ty::params_base_data_size(cx, &error.parameters))
+                    .map(|error| cx.params_base_data_size(&error.parameters))
                     .min()
                     .unwrap(),
                 trait_: format_ident!("SolError"),
@@ -649,7 +649,7 @@ impl ToExpand<'_> {
                     types: None,
                     min_data_len: events
                         .iter()
-                        .map(|event| ty::params_base_data_size(cx, &event.params()))
+                        .map(|event| cx.params_base_data_size(&event.params()))
                         .min()
                         .unwrap(),
                     trait_: format_ident!("SolEvent"),
@@ -981,7 +981,7 @@ fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
     let call_name = cx.call_name(f);
     let param_names1 = f.parameters.names().enumerate().map(anon_name);
     let param_names2 = param_names1.clone();
-    let param_tys = f.parameters.types().map(|ty| super::ty::expand_rust_type(ty, &cx.crates));
+    let param_tys = f.parameters.types().map(|ty| cx.expand_rust_type(ty));
     let doc = format!("Creates a new call builder for the [`{name}`] function.");
     quote! {
         #[doc = #doc]
