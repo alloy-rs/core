@@ -88,8 +88,12 @@ impl ExpCtxt<'_> {
             },
 
             Type::Custom(ref custom) => {
-                let segments = custom.iter();
-                quote_spanned! {custom.span()=> #(#segments)::* }
+                if let Some(Item::Contract(c)) = self.try_item(custom) {
+                    quote_spanned! {c.span()=> #alloy_sol_types::sol_data::Address }
+                } else {
+                    let segments = custom.iter();
+                    quote_spanned! {custom.span()=> #(#segments)::* }
+                }
             }
         };
         tokens.extend(tts);
@@ -238,7 +242,8 @@ impl ExpCtxt<'_> {
             }
 
             Type::Custom(name) => match self.try_item(name) {
-                Some(Item::Contract(_)) | Some(Item::Enum(_)) => false,
+                Some(Item::Contract(_)) => true,
+                Some(Item::Enum(_)) => false,
                 Some(Item::Error(error)) => {
                     error.parameters.types().all(|ty| self.can_derive_default(ty))
                 }

@@ -591,7 +591,6 @@ fn raw_identifiers() {
 // Translate contract types to `address`
 // https://github.com/alloy-rs/core/issues/347
 #[test]
-#[cfg(any())]
 fn contract_type() {
     sol! {
         interface IERC20 {}
