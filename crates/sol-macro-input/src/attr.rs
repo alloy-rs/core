@@ -95,7 +95,7 @@ pub struct SolAttrs {
     /// UNIMPLEMENTED: `#[sol(rename = "new_name")]`
     pub rename: Option<LitStr>,
     // TODO: Implement
-    /// UNIMPLMENTED: `#[sol(rename_all = "camelCase")]`
+    /// UNIMPLEMENTED: `#[sol(rename_all = "camelCase")]`
     pub rename_all: Option<CasingStyle>,
 
     /// `#[sol(bytecode = "0x1234")]`

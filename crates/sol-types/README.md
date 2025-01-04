@@ -115,7 +115,7 @@ assert_eq!(mvt.abi_encode(), sol_data::Uint::<256>::abi_encode(&U256::from(1)));
 ## Tokenization/Detokenization
 
 The process of converting from a Rust type to a to an abi token is called
-"Tokenization". Typical users will not access tokenizaiton directly.
+"Tokenization". Typical users will not access tokenization directly.
 Power users should use the [`SolType::tokenize()`] and
 [`SolType::detokenize()`] methods.
 
