@@ -687,8 +687,6 @@ macro_rules! fixed_bytes_macros {
         ///
         /// If the input is empty, a zero-initialized array is returned.
         ///
-        /// Note that the strings cannot be prefixed with `0x`.
-        ///
         /// See [`hex!`](crate::hex!) for more information.
         ///
         /// # Examples
@@ -700,7 +698,7 @@ macro_rules! fixed_bytes_macros {
         #[doc = concat!("assert_eq!(ZERO, ", stringify!($ty), "::ZERO);")]
         ///
         /// # stringify!(
-        #[doc = concat!("let byte_array: ", stringify!($ty), " = ", stringify!($name), "!(\"0123abcd…\");")]
+        #[doc = concat!("let byte_array: ", stringify!($ty), " = ", stringify!($name), "!(\"0x0123abcd…\");")]
         /// # );
         /// ```
         $(#[$attr])*
@@ -710,8 +708,8 @@ macro_rules! fixed_bytes_macros {
                 $crate::$ty::ZERO
             };
 
-            ($d ($d s:literal)+) => {
-                $crate::$ty::new($crate::hex!($d ($d s)+))
+            ($d ($d t:tt)+) => {
+                $crate::$ty::new($crate::hex!($d ($d t)+))
             };
         }
     )*};
@@ -738,8 +736,6 @@ fixed_bytes_macros! { $
 ///
 /// If the input is empty, an empty instance is returned.
 ///
-/// Note that the strings cannot be prefixed with `0x`.
-///
 /// See [`hex!`](crate::hex!) for more information.
 ///
 /// # Examples
@@ -747,7 +743,7 @@ fixed_bytes_macros! { $
 /// ```
 /// use alloy_primitives::{bytes, Bytes};
 ///
-/// static MY_BYTES: Bytes = bytes!("0123abcd");
+/// static MY_BYTES: Bytes = bytes!("0x0123" "0xabcd");
 /// assert_eq!(MY_BYTES, Bytes::from(&[0x01, 0x23, 0xab, 0xcd]));
 /// ```
 #[macro_export]
@@ -756,22 +752,16 @@ macro_rules! bytes {
         $crate::Bytes::new()
     };
 
-    ($($s:literal)+) => {{
-        // force const eval
-        const STATIC_BYTES: &'static [u8] = &$crate::hex!($($s)+);
-        $crate::Bytes::from_static(STATIC_BYTES)
+    ($($s:literal)+) => {const {
+        $crate::Bytes::from_static(&$crate::hex!($($s)+))
     }};
 
-    [$($inner:literal),+ $(,)?] => {{
-        // force const eval
-        const STATIC_BYTES: &'static [u8] = &[$($inner),+];
-        $crate::Bytes::from_static(STATIC_BYTES)
+    [$($inner:expr),+ $(,)?] => {const {
+        $crate::Bytes::from_static(&[$($inner),+])
     }};
 
-    [$inner:literal; $size:literal] => {{
-        // force const eval
-        const STATIC_BYTES: &'static [u8; $size] = &[$inner; $size];
-        $crate::Bytes::from_static(STATIC_BYTES)
+    [$inner:expr; $size:literal] => {const {
+        $crate::Bytes::from_static(&[$inner; $size])
     }};
 }
 
@@ -800,20 +790,20 @@ mod tests {
         const A0: Address = address!();
         assert_eq!(A0, Address::ZERO);
 
-        const A1: Address = address!("0102030405060708090a0b0c0d0e0f1011121314");
-        const A2: Address = Address(fixed_bytes!("0102030405060708090a0b0c0d0e0f1011121314"));
-        const A3: Address = Address(FixedBytes(hex!("0102030405060708090a0b0c0d0e0f1011121314")));
+        const A1: Address = address!("0x0102030405060708090a0b0c0d0e0f1011121314");
+        const A2: Address = Address(fixed_bytes!("0x0102030405060708090a0b0c0d0e0f1011121314"));
+        const A3: Address = Address(FixedBytes(hex!("0x0102030405060708090a0b0c0d0e0f1011121314")));
         assert_eq!(A1, A2);
         assert_eq!(A1, A3);
-        assert_eq!(A1, hex!("0102030405060708090a0b0c0d0e0f1011121314"));
+        assert_eq!(A1, hex!("0x0102030405060708090a0b0c0d0e0f1011121314"));
 
-        static B: Bytes = bytes!("112233");
+        static B: Bytes = bytes!("0x112233");
         assert_eq!(B[..], [0x11, 0x22, 0x33]);
 
         static EMPTY_BYTES1: Bytes = bytes!();
         static EMPTY_BYTES2: Bytes = bytes!("");
-        assert_eq!(EMPTY_BYTES1, EMPTY_BYTES2);
-        assert_eq!(EMPTY_BYTES1, Bytes::new());
         assert!(EMPTY_BYTES1.is_empty());
+        assert_eq!(EMPTY_BYTES1, Bytes::new());
+        assert_eq!(EMPTY_BYTES1, EMPTY_BYTES2);
     }
 }

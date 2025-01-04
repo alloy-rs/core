@@ -22,7 +22,6 @@ workspace = true
 
 [dependencies]
 bytes.workspace = true
-hex-literal.workspace = true
 hex.workspace = true
 itoa.workspace = true
 ruint.workspace = true
