@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.18](https://github.com/alloy-rs/core/releases/tag/v0.8.18) - 2025-01-04
+
+### Bug Fixes
+
+- [primitives] Hex macro re-export ([#848](https://github.com/alloy-rs/core/issues/848))
+
 ## [0.8.17](https://github.com/alloy-rs/core/releases/tag/v0.8.17) - 2025-01-04
 
 ### Bug Fixes
@@ -23,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [sol-macro] Evaluate array sizes ([#840](https://github.com/alloy-rs/core/issues/840))
 - [primitives] Re-export foldhash ([#839](https://github.com/alloy-rs/core/issues/839))
 - Re-export rayon traits implementations ([#836](https://github.com/alloy-rs/core/issues/836))
+
+### Miscellaneous Tasks
+
+- Release 0.8.17
 
 ### Testing
 

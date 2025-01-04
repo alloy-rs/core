@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support 0x in hex! and similar macros ([#841](https://github.com/alloy-rs/core/issues/841))
 
+### Miscellaneous Tasks
+
+- Release 0.8.17
+
 ## [0.8.16](https://github.com/alloy-rs/core/releases/tag/v0.8.16) - 2025-01-01
 
 ### Miscellaneous Tasks

@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [sol-macro] Translate contract types to address ([#842](https://github.com/alloy-rs/core/issues/842))
 - [sol-macro] Evaluate array sizes ([#840](https://github.com/alloy-rs/core/issues/840))
 
+### Miscellaneous Tasks
+
+- Release 0.8.17
+
 ### Testing
 
 - [sol-macro] Add a test for missing_docs ([#845](https://github.com/alloy-rs/core/issues/845))
