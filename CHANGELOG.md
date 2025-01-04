@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.17](https://github.com/alloy-rs/core/releases/tag/v0.8.17) - 2025-01-04
+
+### Bug Fixes
+
+- Coerce pow overflow ([#838](https://github.com/alloy-rs/core/issues/838))
+
+### Documentation
+
+- Typos ([#847](https://github.com/alloy-rs/core/issues/847))
+- [sol-macro] Document visibility and state mutability ([#846](https://github.com/alloy-rs/core/issues/846))
+
+### Features
+
+- [sol-macro] Translate contract types to address ([#842](https://github.com/alloy-rs/core/issues/842))
+- Support 0x in hex! and similar macros ([#841](https://github.com/alloy-rs/core/issues/841))
+- [sol-macro] Evaluate array sizes ([#840](https://github.com/alloy-rs/core/issues/840))
+- [primitives] Re-export foldhash ([#839](https://github.com/alloy-rs/core/issues/839))
+- Re-export rayon traits implementations ([#836](https://github.com/alloy-rs/core/issues/836))
+
+### Testing
+
+- [sol-macro] Add a test for missing_docs ([#845](https://github.com/alloy-rs/core/issues/845))
+- Re-enable miri on foldhash ([#844](https://github.com/alloy-rs/core/issues/844))
+- [sol-macro] Add a test for namespaced types ([#843](https://github.com/alloy-rs/core/issues/843))
+
 ## [0.8.16](https://github.com/alloy-rs/core/releases/tag/v0.8.16) - 2025-01-01
 
 ### Bug Fixes
@@ -20,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.8.16
 - Clippy ([#834](https://github.com/alloy-rs/core/issues/834))
 - Add clone_inner ([#825](https://github.com/alloy-rs/core/issues/825))
 - Shorten map type alias names ([#824](https://github.com/alloy-rs/core/issues/824))

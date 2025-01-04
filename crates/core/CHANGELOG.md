@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Re-export `rayon` feature ([#827](https://github.com/alloy-rs/core/issues/827))
 
+### Miscellaneous Tasks
+
+- Release 0.8.16
+
 ## [0.8.15](https://github.com/alloy-rs/core/releases/tag/v0.8.15) - 2024-12-09
 
 ### Miscellaneous Tasks
