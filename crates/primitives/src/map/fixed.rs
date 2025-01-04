@@ -204,7 +204,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore = "foldhash queries time (orlp/foldhash#4)")]
     fn fb_hasher() {
         // Just by running it once we test that it compiles and that debug assertions are correct.
         ruint::const_for!(N in [ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
@@ -215,7 +214,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore = "foldhash queries time (orlp/foldhash#4)")]
     fn map() {
         let mut map = AddressHashMap::<bool>::default();
         map.insert(Address::ZERO, true);

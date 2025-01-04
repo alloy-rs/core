@@ -153,7 +153,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg_attr(miri, ignore = "foldhash queries time (orlp/foldhash#4)")]
     fn default_hasher_builder_traits() {
         let hash_builder = <DefaultHashBuilder as Default>::default();
         let _hash_builder2 = <DefaultHashBuilder as Clone>::clone(&hash_builder);
