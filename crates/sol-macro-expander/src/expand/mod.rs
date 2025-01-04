@@ -778,6 +778,7 @@ fn expand_fields<'a, P>(
         let attrs = &var.attrs;
         quote! {
             #(#attrs)*
+            #[allow(missing_docs)]
             pub #name: #ty
         }
     })
