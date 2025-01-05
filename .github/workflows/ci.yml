@@ -156,9 +156,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - run: cargo doc --workspace --all-features --no-deps --document-private-items
+      - name: Build documentation
+        run: cargo doc --workspace --all-features --no-deps --document-private-items
         env:
-          RUSTDOCFLAGS: "--cfg docsrs -D warnings"
+          RUSTDOCFLAGS: --cfg docsrs -D warnings -Zunstable-options --show-type-layout --generate-link-to-definition
 
   fmt:
     runs-on: ubuntu-latest
