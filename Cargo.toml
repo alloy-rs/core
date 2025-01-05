@@ -12,10 +12,6 @@ homepage = "https://github.com/alloy-rs/core"
 repository = "https://github.com/alloy-rs/core"
 exclude = ["tests"]
 
-[workspace.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
-
 [workspace.lints.clippy]
 dbg-macro = "warn"
 manual-string-new = "warn"
