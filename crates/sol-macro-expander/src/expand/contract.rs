@@ -34,7 +34,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
     let (sol_attrs, attrs) = contract.split_attrs()?;
 
     let extra_methods = sol_attrs.extra_methods.or(cx.attrs.extra_methods).unwrap_or(false);
-    let rpc = sol_attrs.rpc.or(cx.attrs.rpc).unwrap_or(false);
+    let rpc = sol_attrs.rpc.or(cx.attrs.rpc).unwrap_or(true);
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
