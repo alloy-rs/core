@@ -109,7 +109,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let return_type = if is_singular_noname {
         cx.expand_rust_type(&returns.first().unwrap().ty)
     } else if is_tuple_noname {
-        let return_rust_tys = expand_types(&returns, cx);
+        let return_rust_tys = expand_types(returns, cx);
         quote!((#(#return_rust_tys),*))
     } else {
         quote!(#return_name)
