@@ -1,10 +1,8 @@
 //! [`ItemFunction`] expansion.
 
-use crate::expand::anon_name;
-
 use super::{
-    expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, expand_types,
-    ExpCtxt,
+    anon_name, expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types,
+    expand_types, ExpCtxt,
 };
 use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{FunctionKind, ItemFunction, Spanned};
