@@ -791,7 +791,7 @@ fn expand_types<'a, P>(
     params.iter().map(move |var| cx.expand_rust_type(&var.ty))
 }
 
-fn generate_return_tuple<'a>(params: &'a Parameters<Comma>) -> TokenStream {
+fn generate_return_tuple(params: &Parameters<Comma>) -> TokenStream {
     let fields = params.iter().enumerate().map(|(i, var)| anon_name((i, var.name.as_ref())));
     quote! { (#(r.#fields),*) }
 }
