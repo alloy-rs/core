@@ -156,7 +156,7 @@ fn function_returns() {
 }
 
 #[test]
-fn ret_param_test() {
+fn ret_param_single_test() {
     use alloy_sol_types::SolValue;
     sol! {
         function balanceOf(address owner) returns (uint256);
@@ -168,6 +168,8 @@ fn ret_param_test() {
             uint256 bal;
         }
         function balanceOfStructUnnamed(address owner) returns (MyBalance);
+
+        function balanceOfNamed(address owner) returns (uint256 bal);
     }
     let data = vec![42].abi_encode_sequence();
     let res = balanceOfCall::abi_decode_returns(&data, true).unwrap();
@@ -183,6 +185,11 @@ fn ret_param_test() {
     let res = balanceOfUnnamedArrayCall::abi_decode_returns(&data, true).unwrap();
 
     assert_eq!(res, [U256::from(24), U256::from(42)]);
+
+    let data = vec![42].abi_encode_sequence();
+    let res = balanceOfNamedCall::abi_decode_returns(&data, true).unwrap();
+
+    assert_eq!(res, U256::from(42));
 }
 
 #[test]

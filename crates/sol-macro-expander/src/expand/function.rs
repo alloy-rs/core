@@ -1,5 +1,7 @@
 //! [`ItemFunction`] expansion.
 
+use crate::expand::anon_name;
+
 use super::{
     expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, expand_types,
     ExpCtxt,
@@ -40,8 +42,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     let returns = returns.as_ref().map(|r| &r.returns).unwrap_or_default();
 
-    let is_singular_noname =
-        returns.len() == 1 && returns.first().is_some_and(|r| r.name.is_none());
+    let is_singular_noname = returns.len() == 1;
     let is_tuple_noname = returns.len() > 1 && returns.iter().all(|r| r.name.is_none());
 
     cx.assert_resolved(parameters)?;
@@ -118,10 +119,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let ret_params = (0..returns.len()).map(|i| format_ident!("_{i}"));
     let tuple_ret = quote! { (#(r.#ret_params),*) };
     let decode_returns = if is_singular_noname {
+        let name = anon_name((0, returns.first().unwrap().name.as_ref()));
         quote! {
             <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                 .map(Into::into)
-                .map(|r: #return_name| r._0)
+                .map(|r: #return_name| r.#name)
         }
     } else if is_tuple_noname {
         quote! {
