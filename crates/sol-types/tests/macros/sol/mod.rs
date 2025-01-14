@@ -128,7 +128,7 @@ fn function_returns() {
             ),
             true,
         ),
-        Ok(testReturn { _0: vec![] })
+        Ok(vec![])
     );
     assert_eq!(
         testCall::abi_decode_returns(
@@ -139,7 +139,7 @@ fn function_returns() {
             ),
             true,
         ),
-        Ok(testReturn { _0: vec![U256::from(2)] })
+        Ok(vec![U256::from(2)])
     );
     assert_eq!(
         testCall::abi_decode_returns(
@@ -151,8 +151,38 @@ fn function_returns() {
             ),
             true,
         ),
-        Ok(testReturn { _0: vec![U256::from(0x42), U256::from(0x69)] })
+        Ok(vec![U256::from(0x42), U256::from(0x69)])
     );
+}
+
+#[test]
+fn ret_param_test() {
+    use alloy_sol_types::SolValue;
+    sol! {
+        function balanceOf(address owner) returns (uint256);
+
+        function balanceOfUnnamedArray(address owner) returns (uint256[2]);
+
+        #[derive(Debug, PartialEq, Eq)]
+        struct MyBalance {
+            uint256 bal;
+        }
+        function balanceOfStructUnnamed(address owner) returns (MyBalance);
+    }
+    let data = vec![42].abi_encode_sequence();
+    let res = balanceOfCall::abi_decode_returns(&data, true).unwrap();
+
+    assert_eq!(res, U256::from(42));
+
+    let res = balanceOfStructUnnamedCall::abi_decode_returns(&data, true).unwrap();
+
+    assert_eq!(res, MyBalance { bal: U256::from(42) });
+
+    let data = vec![24, 42].abi_encode_sequence();
+
+    let res = balanceOfUnnamedArrayCall::abi_decode_returns(&data, true).unwrap();
+
+    assert_eq!(res, [U256::from(24), U256::from(42)]);
 }
 
 #[test]

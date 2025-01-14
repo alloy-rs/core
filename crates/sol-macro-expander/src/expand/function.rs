@@ -36,6 +36,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     };
 
     let returns = returns.as_ref().map(|r| &r.returns).unwrap_or_default();
+    let is_singular_noname =
+        returns.len() == 1 && returns.first().is_some_and(|r| r.name.is_none());
 
     cx.assert_resolved(parameters)?;
     if !returns.is_empty() {
@@ -99,6 +101,26 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     let alloy_sol_types = &cx.crates.sol_types;
 
+    let return_type = if is_singular_noname {
+        let t = cx.expand_rust_type(&returns.first().unwrap().ty);
+        quote! (#t)
+    } else {
+        quote!(#return_name)
+    };
+
+    let decode_returns = if is_singular_noname {
+        quote! {
+            <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                .map(Into::into)
+                .map(|r: #return_name| r._0)
+        }
+    } else {
+        quote! {
+            <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                .map(Into::into)
+        }
+    };
+
     let tokens = quote! {
         #(#call_attrs)*
         #call_doc
@@ -128,7 +150,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 type Parameters<'a> = #call_tuple;
                 type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
 
-                type Return = #return_name;
+                type Return = #return_type;
 
                 type ReturnTuple<'a> = #return_tuple;
                 type ReturnToken<'a> = <Self::ReturnTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
@@ -148,7 +170,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
                 #[inline]
                 fn abi_decode_returns(data: &[u8], validate: bool) -> alloy_sol_types::Result<Self::Return> {
-                    <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate).map(Into::into)
+                    #decode_returns
                 }
             }
 
