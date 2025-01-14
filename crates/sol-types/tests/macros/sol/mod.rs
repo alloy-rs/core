@@ -193,6 +193,29 @@ fn ret_param_single_test() {
 }
 
 #[test]
+fn ret_tuple_param() {
+    use alloy_sol_types::SolValue;
+    sol! {
+        function balanceOfTuple(address owner) returns (uint256, uint256);
+
+        function balanceOfTupleNamed(address owner) returns (uint256 bal, uint256);
+
+        function balanceOfDoubleTuple(address owner) returns ((uint256, uint256), uint256);
+    }
+
+    let data = vec![24, 42].abi_encode_sequence();
+    let (u1, u2) = balanceOfTupleCall::abi_decode_returns(&data, true).unwrap();
+
+    assert_eq!(u1, U256::from(24));
+    assert_eq!(u2, U256::from(42));
+
+    let (u1, u2) = balanceOfTupleNamedCall::abi_decode_returns(&data, true).unwrap();
+
+    assert_eq!(u1, U256::from(24));
+    assert_eq!(u2, U256::from(42));
+}
+
+#[test]
 fn error() {
     sol! {
         error SomeError(int a, bool b);

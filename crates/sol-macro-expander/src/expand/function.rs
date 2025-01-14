@@ -2,7 +2,7 @@
 
 use super::{
     anon_name, expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types,
-    expand_types, ExpCtxt,
+    expand_types, generate_return_tuple, ExpCtxt,
 };
 use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{FunctionKind, ItemFunction, Spanned};
@@ -41,7 +41,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let returns = returns.as_ref().map(|r| &r.returns).unwrap_or_default();
 
     let is_singular_noname = returns.len() == 1;
-    let is_tuple_noname = returns.len() > 1 && returns.iter().all(|r| r.name.is_none());
+    let is_tuple_noname = returns.len() > 1;
 
     cx.assert_resolved(parameters)?;
     if !returns.is_empty() {
@@ -114,8 +114,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         quote!(#return_name)
     };
 
-    let ret_params = (0..returns.len()).map(|i| format_ident!("_{i}"));
-    let tuple_ret = quote! { (#(r.#ret_params),*) };
+    let tuple_ret = generate_return_tuple(returns);
     let decode_returns = if is_singular_noname {
         let name = anon_name((0, returns.first().unwrap().name.as_ref()));
         quote! {
