@@ -784,6 +784,13 @@ fn expand_fields<'a, P>(
     })
 }
 
+fn expand_types<'a, P>(
+    params: &'a Parameters<P>,
+    cx: &'a ExpCtxt<'_>,
+) -> impl Iterator<Item = TokenStream> + 'a {
+    params.iter().map(move |var| cx.expand_rust_type(&var.ty))
+}
+
 /// Generates an anonymous name from an integer. Used in [`anon_name`].
 #[inline]
 pub fn generate_name(i: usize) -> Ident {

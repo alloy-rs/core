@@ -1,6 +1,9 @@
 //! [`ItemFunction`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt};
+use super::{
+    expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, expand_types,
+    ExpCtxt,
+};
 use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{FunctionKind, ItemFunction, Spanned};
 use proc_macro2::TokenStream;
@@ -36,8 +39,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     };
 
     let returns = returns.as_ref().map(|r| &r.returns).unwrap_or_default();
+
     let is_singular_noname =
         returns.len() == 1 && returns.first().is_some_and(|r| r.name.is_none());
+    let is_tuple_noname = returns.len() > 1 && returns.iter().all(|r| r.name.is_none());
 
     cx.assert_resolved(parameters)?;
     if !returns.is_empty() {
@@ -102,17 +107,29 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let alloy_sol_types = &cx.crates.sol_types;
 
     let return_type = if is_singular_noname {
-        let t = cx.expand_rust_type(&returns.first().unwrap().ty);
-        quote! (#t)
+        cx.expand_rust_type(&returns.first().unwrap().ty)
+    } else if is_tuple_noname {
+        let return_rust_tys = expand_types(&returns, cx);
+        quote!((#(#return_rust_tys),*))
     } else {
         quote!(#return_name)
     };
 
+    let ret_params = (0..returns.len()).map(|i| format_ident!("_{i}"));
+    let tuple_ret = quote! { (#(r.#ret_params),*) };
     let decode_returns = if is_singular_noname {
         quote! {
             <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
                 .map(Into::into)
                 .map(|r: #return_name| r._0)
+        }
+    } else if is_tuple_noname {
+        quote! {
+            <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                .map(Into::into)
+                .map(|r: #return_name| {
+                    #tuple_ret
+                })
         }
     } else {
         quote! {
