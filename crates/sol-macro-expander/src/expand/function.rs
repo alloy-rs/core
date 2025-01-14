@@ -118,8 +118,10 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 ty,
                 quote! {
                     <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                        .map(Into::into)
-                        .map(|r: #return_name| r.#name)
+                        .map(|r| {
+                            let r: #return_name = r.into();
+                            r.#name
+                        })
                 },
             )
         }
@@ -130,8 +132,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 quote!((#(#return_tys),*)),
                 quote! {
                     <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                        .map(Into::into)
-                        .map(|r: #return_name| {
+                        .map(|r| {
+                            let r: #return_name = r.into();
                             #tuple_ret
                         })
                 },
