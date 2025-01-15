@@ -38,6 +38,7 @@ sol! {
 }
 
 sol! {
+    #[sol(rpc = false)]
     contract MyContract {
         enum MyOtherEnum {
             A, B
@@ -68,6 +69,7 @@ sol! {
 #[deny(missing_docs)]
 pub mod no_missing_docs {
     alloy_core::sol! {
+        #![sol(rpc = false)]
         #[allow(missing_docs)]
         contract Allowed {
             uint256 public number;

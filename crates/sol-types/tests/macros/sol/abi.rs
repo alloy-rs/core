@@ -462,7 +462,7 @@ fn custom() {
 }
 
 sol! {
-    #![sol(abi)]
+    #![sol(rpc = false, abi)]
 
     #[allow(dead_code)]
     contract Contract {

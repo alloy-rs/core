@@ -1,6 +1,7 @@
 use alloy_sol_types::{sol, SolCall};
 
 sol!(
+    #[sol(rpc = false)]
     MyJsonContract1,
     r#"[
         {
@@ -26,6 +27,7 @@ sol!(
 
 // This is the same as:
 sol! {
+    #[sol(rpc = false)]
     interface MyJsonContract2 {
         struct MyStruct {
             bool[] a;
