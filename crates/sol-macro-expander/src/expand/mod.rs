@@ -784,7 +784,7 @@ fn expand_fields<'a, P>(
     })
 }
 
-fn expand_types<'a, P>(
+fn expand_rust_types<'a, P>(
     params: &'a Parameters<P>,
     cx: &'a ExpCtxt<'_>,
 ) -> impl Iterator<Item = TokenStream> + 'a {

@@ -1,8 +1,8 @@
 //! [`ItemFunction`] expansion.
 
 use super::{
-    anon_name, expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types,
-    expand_types, generate_return_tuple, ExpCtxt,
+    anon_name, expand_fields, expand_from_into_tuples, expand_rust_types, expand_tokenize,
+    expand_tuple_types, generate_return_tuple, ExpCtxt,
 };
 use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{FunctionKind, ItemFunction, Spanned};
@@ -102,23 +102,24 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     let alloy_sol_types = &cx.crates.sol_types;
 
+    let decode_sequence = quote!(
+        <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+    );
     let (return_type, decode_returns) = match returns.len() {
         0 => (
             quote!(#return_name),
             quote! {
-                <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
+                #decode_sequence.map(Into::into)
             },
         ),
         1 => {
-            let name = anon_name((0, returns.first().unwrap().name.as_ref()));
+            let name = anon_name((0, returns[0].name.as_ref()));
             let ty = cx.expand_rust_type(&returns.first().unwrap().ty);
 
             (
                 ty,
                 quote! {
-                    <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                        .map(|r| {
+                    #decode_sequence.map(|r| {
                             let r: #return_name = r.into();
                             r.#name
                         })
@@ -126,12 +127,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
             )
         }
         _ => {
-            let return_tys = expand_types(returns, cx);
+            let return_tys = expand_rust_types(returns, cx);
             let tuple_ret = generate_return_tuple(returns);
             (
                 quote!((#(#return_tys),*)),
                 quote! {
-                    <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    #decode_sequence
                         .map(|r| {
                             let r: #return_name = r.into();
                             #tuple_ret
