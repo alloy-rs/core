@@ -114,7 +114,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         ),
         1 => {
             let name = anon_name((0, returns[0].name.as_ref()));
-            let ty = cx.expand_rust_type(&returns.first().unwrap().ty);
+            let ty = cx.expand_rust_type(&returns[0].ty);
 
             (
                 ty,
