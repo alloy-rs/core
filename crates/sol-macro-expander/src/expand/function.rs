@@ -1,6 +1,9 @@
 //! [`ItemFunction`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt};
+use super::{
+    anon_name, expand_fields, expand_from_into_tuples, expand_rust_types, expand_tokenize,
+    expand_tuple_types, generate_return_tuple, ExpCtxt,
+};
 use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{FunctionKind, ItemFunction, Spanned};
 use proc_macro2::TokenStream;
@@ -99,6 +102,46 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     let alloy_sol_types = &cx.crates.sol_types;
 
+    let decode_sequence = quote!(
+        <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+    );
+    let (return_type, decode_returns) = match returns.len() {
+        0 => (
+            quote!(#return_name),
+            quote! {
+                #decode_sequence.map(Into::into)
+            },
+        ),
+        1 => {
+            let name = anon_name((0, returns[0].name.as_ref()));
+            let ty = cx.expand_rust_type(&returns[0].ty);
+
+            (
+                ty,
+                quote! {
+                    #decode_sequence.map(|r| {
+                            let r: #return_name = r.into();
+                            r.#name
+                        })
+                },
+            )
+        }
+        _ => {
+            let return_tys = expand_rust_types(returns, cx);
+            let tuple_ret = generate_return_tuple(returns);
+            (
+                quote!((#(#return_tys),*)),
+                quote! {
+                    #decode_sequence
+                        .map(|r| {
+                            let r: #return_name = r.into();
+                            #tuple_ret
+                        })
+                },
+            )
+        }
+    };
+
     let tokens = quote! {
         #(#call_attrs)*
         #call_doc
@@ -128,7 +171,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 type Parameters<'a> = #call_tuple;
                 type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
 
-                type Return = #return_name;
+                type Return = #return_type;
 
                 type ReturnTuple<'a> = #return_tuple;
                 type ReturnToken<'a> = <Self::ReturnTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
@@ -148,7 +191,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
                 #[inline]
                 fn abi_decode_returns(data: &[u8], validate: bool) -> alloy_sol_types::Result<Self::Return> {
-                    <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate).map(Into::into)
+                    #decode_returns
                 }
             }
 
