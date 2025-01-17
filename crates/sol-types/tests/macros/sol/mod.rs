@@ -213,6 +213,13 @@ fn ret_tuple_param() {
 
     assert_eq!(u1, U256::from(24));
     assert_eq!(u2, U256::from(42));
+
+    let data = vec![24, 42, 69].abi_encode_sequence();
+    let ((u1, u2), u3) = balanceOfDoubleTupleCall::abi_decode_returns(&data, true).unwrap();
+
+    assert_eq!(u1, U256::from(24));
+    assert_eq!(u2, U256::from(42));
+    assert_eq!(u3, U256::from(69));
 }
 
 #[test]
