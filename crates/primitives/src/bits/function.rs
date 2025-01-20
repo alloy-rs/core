@@ -59,6 +59,7 @@ impl Function {
 
     /// Returns references to the address and selector of the function.
     #[inline]
+    #[allow(clippy::missing_const_for_fn)]
     pub fn as_address_and_selector(&self) -> (&Address, &Selector) {
         // SAFETY: Function (24) = Address (20) + Selector (4)
         unsafe { (&*self.as_ptr().cast(), &*self.as_ptr().add(20).cast()) }
