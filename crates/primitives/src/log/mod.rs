@@ -54,7 +54,6 @@ impl LogData {
 
     /// Get the topic list.
     #[inline]
-    #[allow(clippy::missing_const_for_fn)]
     pub fn topics(&self) -> &[B256] {
         &self.topics
     }
