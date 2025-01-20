@@ -54,7 +54,7 @@ impl LogData {
 
     /// Get the topic list.
     #[inline]
-    pub fn topics(&self) -> &[B256] {
+    pub const fn topics(&self) -> &[B256] {
         &self.topics
     }
 
