@@ -204,18 +204,21 @@ fn ret_tuple_param() {
     }
 
     let data = vec![24, 42].abi_encode_sequence();
-    let (u1, u2) = balanceOfTupleCall::abi_decode_returns(&data, true).unwrap();
+    let balanceOfTupleReturn { _0, _1 } =
+        balanceOfTupleCall::abi_decode_returns(&data, true).unwrap();
 
-    assert_eq!(u1, U256::from(24));
-    assert_eq!(u2, U256::from(42));
+    assert_eq!(_0, U256::from(24));
+    assert_eq!(_1, U256::from(42));
 
-    let (u1, u2) = balanceOfTupleNamedCall::abi_decode_returns(&data, true).unwrap();
+    let balanceOfTupleNamedReturn { bal, _1 } =
+        balanceOfTupleNamedCall::abi_decode_returns(&data, true).unwrap();
 
-    assert_eq!(u1, U256::from(24));
-    assert_eq!(u2, U256::from(42));
+    assert_eq!(bal, U256::from(24));
+    assert_eq!(_1, U256::from(42));
 
     let data = vec![24, 42, 69].abi_encode_sequence();
-    let ((u1, u2), u3) = balanceOfDoubleTupleCall::abi_decode_returns(&data, true).unwrap();
+    let balanceOfDoubleTupleReturn { _0: (u1, u2), _1: u3 } =
+        balanceOfDoubleTupleCall::abi_decode_returns(&data, true).unwrap();
 
     assert_eq!(u1, U256::from(24));
     assert_eq!(u2, U256::from(42));

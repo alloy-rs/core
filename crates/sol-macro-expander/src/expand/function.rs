@@ -1,8 +1,7 @@
 //! [`ItemFunction`] expansion.
 
 use super::{
-    anon_name, expand_fields, expand_from_into_tuples, expand_rust_types, expand_tokenize,
-    expand_tuple_types, generate_return_tuple, ExpCtxt,
+    anon_name, expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt,
 };
 use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{FunctionKind, ItemFunction, Spanned};
@@ -105,42 +104,23 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let decode_sequence = quote!(
         <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
     );
-    let (return_type, decode_returns) = match returns.len() {
-        0 => (
-            quote!(#return_name),
-            quote! {
-                #decode_sequence.map(Into::into)
-            },
-        ),
-        1 => {
-            let name = anon_name((0, returns[0].name.as_ref()));
-            let ty = cx.expand_rust_type(&returns[0].ty);
 
-            (
-                ty,
-                quote! {
-                    #decode_sequence.map(|r| {
-                            let r: #return_name = r.into();
-                            r.#name
-                        })
-                },
-            )
-        }
-        _ => {
-            let return_tys = expand_rust_types(returns, cx);
-            let tuple_ret = generate_return_tuple(returns);
-            (
-                quote!((#(#return_tys),*)),
-                quote! {
-                    #decode_sequence
-                        .map(|r| {
-                            let r: #return_name = r.into();
-                            #tuple_ret
-                        })
-                },
-            )
-        }
-    };
+    // Determine whether the return type should directly yield result or the <name>Return struct.
+    let is_single_return = returns.len() == 1;
+    let return_type = is_single_return
+        .then(|| cx.expand_rust_type(&returns[0].ty))
+        .unwrap_or(quote!(#return_name));
+    let decode_returns = is_single_return
+        .then(|| {
+            let name = anon_name((0, returns[0].name.as_ref()));
+            quote! {
+                #decode_sequence.map(|r| {
+                    let r: #return_name = r.into();
+                    r.#name
+                })
+            }
+        })
+        .unwrap_or(quote!(#decode_sequence.map(Into::into)));
 
     let tokens = quote! {
         #(#call_attrs)*

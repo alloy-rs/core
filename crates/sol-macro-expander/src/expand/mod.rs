@@ -17,7 +17,7 @@ use std::{
     fmt::Write,
     sync::atomic::{AtomicBool, Ordering},
 };
-use syn::{ext::IdentExt, parse_quote, token::Comma, Attribute, Error, Result};
+use syn::{ext::IdentExt, parse_quote, Attribute, Error, Result};
 
 #[macro_use]
 mod macros;
@@ -782,18 +782,6 @@ fn expand_fields<'a, P>(
             pub #name: #ty
         }
     })
-}
-
-fn expand_rust_types<'a, P>(
-    params: &'a Parameters<P>,
-    cx: &'a ExpCtxt<'_>,
-) -> impl Iterator<Item = TokenStream> + 'a {
-    params.iter().map(move |var| cx.expand_rust_type(&var.ty))
-}
-
-fn generate_return_tuple(params: &Parameters<Comma>) -> TokenStream {
-    let fields = params.iter().enumerate().map(|(i, var)| anon_name((i, var.name.as_ref())));
-    quote! { (#(r.#fields),*) }
 }
 
 /// Generates an anonymous name from an integer. Used in [`anon_name`].
