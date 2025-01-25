@@ -174,7 +174,6 @@ fn error() {
 #[test]
 fn empty_call() {
     sol! {
-        #[sol(rpc = false)]
         interface WETH {
             function deposit() external payable;
         }
@@ -194,7 +193,7 @@ fn empty_call() {
 #[test]
 fn function_names() {
     sol! {
-        #[sol(rpc = false, extra_methods)]
+        #[sol(extra_methods)]
         contract LeadingUnderscores {
             function f();
             function _f();
@@ -242,7 +241,6 @@ fn getters() {
 #[test]
 fn getter_names() {
     sol! {
-        #[sol(rpc = false)]
         contract Getters {
             string public value;
             string[] public array;
@@ -271,15 +269,12 @@ fn getter_names() {
 
 #[test]
 fn abigen_sol_multicall() {
-    sol!(
-        #[sol(rpc = false)]
-        "../syn-solidity/tests/contracts/Multicall.sol"
-    );
+    sol!("../syn-solidity/tests/contracts/Multicall.sol");
 
     sol! {
         // SPDX-License-Identifier: MIT
         pragma solidity >=0.8.12 <0.9.0;
-        #[sol(rpc = false)]
+
         interface IMulticall3_2 {
             struct Call {
                 address target;
@@ -438,7 +433,6 @@ fn nested_items() {
             }
 
             #[derive(Debug, PartialEq)]
-            #[sol(rpc = false)]
             interface InterfaceTest {
                 function f1(FilAddress memory fAddress, uint256 value) public payable;
 
@@ -476,7 +470,6 @@ fn enum_field_of_struct() {
 #[test]
 fn same_names_different_namespaces() {
     sol! {
-        #![sol(rpc = false)]
         library RouterErrors {
             error ReturnAmountIsNotEnough();
             error InvalidMsgValue();
@@ -498,7 +491,6 @@ fn same_names_different_namespaces() {
 #[test]
 fn rust_keywords() {
     sol! {
-        #[sol(rpc = false)]
         contract dyn {
             struct const {
                 bool unsafe;
@@ -605,7 +597,6 @@ fn raw_identifiers() {
 #[test]
 fn contract_type() {
     sol! {
-        #[sol(rpc = false)]
         interface IERC20 {}
         function func(IERC20 addr);
         struct Struct {
@@ -695,7 +686,6 @@ fn event_tokenize_fields() {
 #[test]
 fn duplicate_attributes() {
     sol! {
-        #[sol(rpc = false)]
         contract TaxableTeamToken is IERC20, Context, Ownable {
             constructor(
                 string memory name,
@@ -732,7 +722,6 @@ fn duplicate_attributes() {
 fn duplicate_events() {
     sol! {
     #[derive(derive_more::Display)]
-    #[sol(rpc = false)]
     interface Console {
         #[display("{val}")]
         event log(string val);
@@ -845,7 +834,7 @@ fn decoder_fixed_array_before_dynamic() {
 #[test]
 fn bytecode_attributes() {
     sol! {
-        #[sol(rpc = false, bytecode = "1234", deployed_bytecode = "0x5678")]
+        #[sol(bytecode = "1234", deployed_bytecode = "0x5678")]
         contract Dummy {}
     }
 
@@ -924,7 +913,6 @@ fn event_overrides() {
 fn contract_derive_default() {
     sol! {
         #[derive(Debug, Default)]
-        #[sol(rpc = false)]
         contract MyContract {
             function f1();
             function f2();
@@ -945,7 +933,6 @@ fn contract_derive_default() {
 fn contract_namespaces() {
     mod inner {
         alloy_sol_types::sol! {
-            #![sol(rpc = false)]
             library LibA {
                 struct Struct {
                     uint64 field64;
@@ -994,7 +981,6 @@ fn contract_namespaces() {
 #[test]
 fn regression_overloads() {
     sol! {
-        #[sol(rpc = false)]
         contract Vm {
             struct Wallet {
                 uint stuff;
@@ -1020,7 +1006,6 @@ fn regression_overloads() {
 #[test]
 fn normal_paths() {
     sol! {
-        #[sol(rpc = false)]
         interface I {
             struct S {
                 uint x;
@@ -1036,7 +1021,6 @@ fn normal_paths() {
 fn regression_nested_namespaced_structs() {
     mod inner {
         super::sol! {
-            #![sol(rpc = false)]
             library LibA {
                 struct Simple {
                     uint256 x;
@@ -1197,7 +1181,6 @@ fn mapping_getters() {
     sol! {
         #![sol(all_derives)]
 
-        #[sol(rpc = false)]
         contract TestIbc {
             /// ConnectionId -> Connection
             mapping(uint32 => Connection) public connections;
@@ -1269,7 +1252,6 @@ fn array_sizes() {
         uint constant x = 1;
         uint constant y = x + 1;
 
-        #[sol(rpc = false)]
         contract C {
             uint constant z = y * 2;
 

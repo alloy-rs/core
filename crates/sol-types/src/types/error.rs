@@ -499,7 +499,6 @@ mod tests {
     #[test]
     fn decode_solidity_no_interface() {
         sol! {
-            #[sol(rpc = false)]
             interface C {
                 #[derive(Debug, PartialEq)]
                 error SenderAddressError(address);

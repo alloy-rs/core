@@ -7,7 +7,7 @@ use std::borrow::Cow;
 #[test]
 fn large_array() {
     sol!(
-        #[sol(rpc = false, abi)]
+        #[sol(abi)]
         #[derive(Debug)]
         LargeArray,
         "../json-abi/tests/abi/LargeArray.json"
@@ -47,11 +47,7 @@ fn large_array() {
 
 #[test]
 fn seaport() {
-    sol!(
-        #[sol(rpc = false)]
-        Seaport,
-        "../json-abi/tests/abi/Seaport.json"
-    );
+    sol!(Seaport, "../json-abi/tests/abi/Seaport.json");
     use Seaport::*;
 
     // Constructor with a single argument
@@ -75,7 +71,7 @@ fn seaport() {
 
 // https://etherscan.io/address/0x1111111254eeb25477b68fb85ed929f73a960582#code
 sol!(
-    #![sol(rpc = false, docs = false)]
+    #[sol(docs = false)]
     #[derive(Debug)]
     AggregationRouterV5,
     "../json-abi/tests/abi/AggregationRouterV5.json"
@@ -97,11 +93,7 @@ fn aggregation_router_v5() {
 #[test]
 fn uniswap_v3_position() {
     // https://etherscan.io/address/0x8638fbd429b19249bb3bcf3ec72d07a657e49642#code
-    sol!(
-        #[sol(rpc = false)]
-        UniswapV3Position,
-        "../json-abi/tests/abi/UniswapV3Position.json"
-    );
+    sol!(UniswapV3Position, "../json-abi/tests/abi/UniswapV3Position.json");
 
     let _ = UniswapV3Position::getLiquidityByRangeCall {
         pool_: Address::ZERO,
@@ -130,11 +122,7 @@ fn uniswap_v3_position() {
 #[test]
 fn double_exponent_interest_setter() {
     // https://etherscan.io/address/0xef2ed07cc7a0825ced8ac1a67f88a0e17414fa6c#code
-    sol!(
-        #[sol(rpc = false)]
-        DoubleExponentInterestSetter,
-        "../json-abi/tests/abi/DoubleExponentInterestSetter.json"
-    );
+    sol!(DoubleExponentInterestSetter, "../json-abi/tests/abi/DoubleExponentInterestSetter.json");
     let _ = DoubleExponentInterestSetter::getInterestRateCall {
         _0: Address::ZERO,
         borrowWei: U256::ZERO,
@@ -146,11 +134,7 @@ fn double_exponent_interest_setter() {
 // https://github.com/alloy-rs/core/issues/361
 #[test]
 fn uniswap_v2_factory() {
-    sol!(
-        #[sol(rpc = false)]
-        UniswapV2Factory,
-        "../json-abi/tests/abi/UniswapV2Factory.json"
-    );
+    sol!(UniswapV2Factory, "../json-abi/tests/abi/UniswapV2Factory.json");
     let _ = UniswapV2Factory::PairCreated {
         token0: Address::ZERO,
         token1: Address::ZERO,
@@ -159,11 +143,7 @@ fn uniswap_v2_factory() {
     };
 }
 
-sol!(
-    #![sol(rpc = false)]
-    GnosisSafe,
-    "../json-abi/tests/abi/GnosisSafe.json"
-);
+sol!(GnosisSafe, "../json-abi/tests/abi/GnosisSafe.json");
 
 // Fully qualify `SolInterface::NAME` which conflicted with the `NAME` call
 // https://github.com/alloy-rs/core/issues/361
@@ -177,22 +157,14 @@ fn gnosis_safe() {
 // https://github.com/alloy-rs/core/issues/371
 #[test]
 fn blur_exchange() {
-    sol!(
-        #[sol(rpc = false)]
-        BlurExchange,
-        "../json-abi/tests/abi/BlurExchange.json"
-    );
+    sol!(BlurExchange, "../json-abi/tests/abi/BlurExchange.json");
     let BlurExchange::NAMECall {} = BlurExchange::NAMECall {};
     let BlurExchange::NAMEReturn { _0: _ } = BlurExchange::NAMEReturn { _0: String::new() };
 }
 
 #[test]
 fn zerox_exchange_proxy() {
-    sol!(
-        #[sol(rpc = false)]
-        ZeroXExchangeProxy,
-        "../json-abi/tests/abi/ZeroxExchangeProxy.json"
-    );
+    sol!(ZeroXExchangeProxy, "../json-abi/tests/abi/ZeroxExchangeProxy.json");
 }
 
 // TODO: Error and event with the same name
@@ -201,11 +173,7 @@ fn zerox_exchange_proxy() {
 #[cfg(any())]
 fn auction() {
     // https://etherscan.io/address/0xbb37a88508d464a1bb54cf627d05e39883ae0ef9
-    sol!(
-        #[sol(rpc = false)]
-        Auction,
-        "../json-abi/tests/abi/Auction.json"
-    );
+    sol!(Auction, "../json-abi/tests/abi/Auction.json");
 }
 
 // https://github.com/alloy-rs/core/issues/378
@@ -215,22 +183,14 @@ fn uniswap_v2_factory_with_migrator() {
     // https://etherscan.io/address/0x1ffbe925f22fca796adf2a63313b8b70b5b1a7f4
 
     // https://etherscan.io/address/0xc1a2706ceb8c21967d5c930c00c8ed16480f7255
-    sol!(
-        #[sol(rpc = false)]
-        UniswapV2FactoryWithMigrator,
-        "../json-abi/tests/abi/UniswapV2FactoryWithMigrator.json"
-    );
+    sol!(UniswapV2FactoryWithMigrator, "../json-abi/tests/abi/UniswapV2FactoryWithMigrator.json");
 }
 
 // https://github.com/alloy-rs/core/issues/379
 #[test]
 fn junkyard() {
     // https://etherscan.io/address/0x2e4b0f20bdb1caa0886c531256efdaab925dbe72
-    sol!(
-        #[sol(rpc = false)]
-        Junkyard,
-        "../json-abi/tests/abi/Junkyard.json"
-    );
+    sol!(Junkyard, "../json-abi/tests/abi/Junkyard.json");
 }
 
 // Handle missing state mutability in JSON ABI
@@ -238,11 +198,7 @@ fn junkyard() {
 #[test]
 fn zrx_token() {
     // https://etherscan.io/address/0xe41d2489571d322189246dafa5ebde1f4699f498#code
-    sol!(
-        #[sol(rpc = false)]
-        ZRXToken,
-        "../json-abi/tests/abi/ZRXToken.json"
-    );
+    sol!(ZRXToken, "../json-abi/tests/abi/ZRXToken.json");
 
     let _ = ZRXToken::approveCall { _spender: Address::ZERO, _value: U256::ZERO };
     assert_eq!(ZRXToken::approveCall::SIGNATURE, "approve(address,uint256)");
@@ -250,7 +206,7 @@ fn zrx_token() {
 
 // https://etherscan.io/address/0xBA12222222228d8Ba445958a75a0704d566BF2C8#code
 sol!(
-    #![sol(rpc = false, all_derives)]
+    #![sol(all_derives)]
     BalancerV2Vault,
     "../json-abi/tests/abi/BalancerV2Vault.json"
 );

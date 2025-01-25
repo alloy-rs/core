@@ -6,7 +6,6 @@ sol! {
     ///
     /// [the EIP]: https://eips.ethereum.org/EIPS/eip-20
     #[derive(Debug, PartialEq, Eq)]
-    #[sol(rpc = false)]
     contract ERC20 {
         mapping(address account => uint256) public balanceOf;
 

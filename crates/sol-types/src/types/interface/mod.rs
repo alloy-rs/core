@@ -535,7 +535,6 @@ mod tests {
     #[test]
     fn contract_error_enum_1() {
         crate::sol! {
-            #[sol(rpc = false)]
             contract C {
                 error Err1();
             }
@@ -565,7 +564,6 @@ mod tests {
     fn contract_error_enum_2() {
         crate::sol! {
             #[derive(Debug, PartialEq, Eq)]
-            #[sol(rpc = false)]
             contract C {
                 error Err1();
                 error Err2(uint256);
