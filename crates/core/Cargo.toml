@@ -50,7 +50,7 @@ std = [
     "alloy-rlp?/std",
 ]
 nightly = ["alloy-primitives/nightly"]
-
+rpc = ["alloy-sol-types?/rpc"]
 dyn-abi = ["sol-types", "dep:alloy-dyn-abi"]
 json-abi = ["json", "serde", "dep:alloy-json-abi"]
 json = ["alloy-sol-types?/json"]

@@ -38,3 +38,4 @@ syn = { workspace = true, features = ["extra-traits"] }
 
 [features]
 json = ["alloy-sol-macro-expander/json"]
+rpc = ["alloy-sol-macro-expander/rpc"]
