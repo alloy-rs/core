@@ -13,6 +13,7 @@ sol! {
     event MyEvent(uint32 a, uint32 b);
     error MyError(uint32 a, uint32 b);
 
+    #[sol(rpc = false)]
     contract MyContract {
         struct MyOtherStruct {
             uint32 a;
