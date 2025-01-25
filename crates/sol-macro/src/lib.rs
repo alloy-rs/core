@@ -107,10 +107,11 @@ use syn::parse_macro_input;
 /// This is a limitation of the proc-macro API.
 ///
 /// List of all `#[sol(...)]` supported values:
-/// - `rpc [ = <bool = true>]` (contracts and alike only): generates a structs with methods to
+/// - `rpc [ = <bool = false>]` (contracts and alike only): generates a structs with methods to
 ///   construct `eth_call`s to an on-chain contract through Ethereum JSON RPC, similar to the
 ///   default behavior of [`abigen`]. This makes use of the [`alloy-contract`](https://github.com/alloy-rs/alloy)
-///   crate.
+///   crate. RPC-related code will be automatically generated if the "rpc" feature is enabled in
+///   Cargo.toml removing the need to specify this `#[sol(rpc)]` attribute.
 ///
 ///   N.B: at the time of writing, the `alloy-contract` crate is not yet released on `crates.io`,
 ///   and its API is completely unstable and subject to change, so this feature is not yet
