@@ -18,7 +18,7 @@ use winnow::{
     },
     stream::Stream,
     token::take_while,
-    PResult, Parser,
+    ModalResult, Parser,
 };
 
 impl DynSolType {
@@ -90,7 +90,7 @@ struct ValueParser<'a> {
 }
 
 impl<'i> Parser<Input<'i>, DynSolValue, ContextError> for ValueParser<'_> {
-    fn parse_next(&mut self, input: &mut Input<'i>) -> PResult<DynSolValue, ContextError> {
+    fn parse_next(&mut self, input: &mut Input<'i>) -> ModalResult<DynSolValue, ContextError> {
         #[cfg(feature = "debug")]
         let name = self.ty.sol_type_name();
         #[cfg(not(feature = "debug"))]
@@ -282,7 +282,7 @@ impl fmt::Display for Error {
 }
 
 #[inline]
-fn bool(input: &mut Input<'_>) -> PResult<bool> {
+fn bool(input: &mut Input<'_>) -> ModalResult<bool> {
     trace(
         "bool",
         dispatch! {alpha1.context(StrContext::Label("boolean"));
@@ -313,7 +313,7 @@ fn int<'i>(size: usize) -> impl Parser<Input<'i>, I256, ContextError> {
 }
 
 #[inline]
-fn int_sign(input: &mut Input<'_>) -> PResult<Sign> {
+fn int_sign(input: &mut Input<'_>) -> ModalResult<Sign> {
     trace("int_sign", |input: &mut Input<'_>| match input.as_bytes().first() {
         Some(b'+') => {
             let _ = input.next_slice(1);
@@ -413,7 +413,7 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
 }
 
 #[inline]
-fn prefixed_int<'i>(input: &mut Input<'i>) -> PResult<&'i str> {
+fn prefixed_int<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
     trace(
         "prefixed_int",
         spanned(|input: &mut Input<'i>| {
@@ -441,7 +441,7 @@ fn prefixed_int<'i>(input: &mut Input<'i>) -> PResult<&'i str> {
 }
 
 #[inline]
-fn int_units(input: &mut Input<'_>) -> PResult<usize> {
+fn int_units(input: &mut Input<'_>) -> ModalResult<usize> {
     trace(
         "int_units",
         dispatch! {alpha0;
@@ -455,7 +455,7 @@ fn int_units(input: &mut Input<'_>) -> PResult<usize> {
 }
 
 #[inline]
-fn scientific_notation(input: &mut Input<'_>) -> PResult<isize> {
+fn scientific_notation(input: &mut Input<'_>) -> ModalResult<isize> {
     // Check if we have 'e' or 'E' followed by an optional sign and digits
     if !matches!(input.chars().next(), Some('e' | 'E')) {
         return Err(ErrMode::from_error_kind(input, ErrorKind::Fail));
@@ -490,22 +490,22 @@ fn fixed_bytes<'i>(len: usize) -> impl Parser<Input<'i>, Word, ContextError> {
 }
 
 #[inline]
-fn address(input: &mut Input<'_>) -> PResult<Address> {
+fn address(input: &mut Input<'_>) -> ModalResult<Address> {
     trace("address", hex_str.try_map(hex::FromHex::from_hex)).parse_next(input)
 }
 
 #[inline]
-fn function(input: &mut Input<'_>) -> PResult<Function> {
+fn function(input: &mut Input<'_>) -> ModalResult<Function> {
     trace("function", hex_str.try_map(hex::FromHex::from_hex)).parse_next(input)
 }
 
 #[inline]
-fn bytes(input: &mut Input<'_>) -> PResult<Vec<u8>> {
+fn bytes(input: &mut Input<'_>) -> ModalResult<Vec<u8>> {
     trace("bytes", hex_str.try_map(hex::decode)).parse_next(input)
 }
 
 #[inline]
-fn hex_str<'i>(input: &mut Input<'i>) -> PResult<&'i str> {
+fn hex_str<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
     trace("hex_str", |input: &mut Input<'i>| {
         // Allow empty `bytes` only with a prefix.
         let has_prefix = opt("0x").parse_next(input)?.is_some();

@@ -18,7 +18,7 @@ manual-string-new = "warn"
 uninlined-format-args = "warn"
 use-self = "warn"
 redundant-clone = "warn"
-missing-const-for-fn = "warn"
+missing-const-for-fn = "allow" # TODO: https://github.com/rust-lang/rust-clippy/issues/14020
 
 [workspace.lints.rust]
 missing-copy-implementations = "warn"
