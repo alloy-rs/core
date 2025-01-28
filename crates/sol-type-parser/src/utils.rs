@@ -11,7 +11,7 @@ use winnow::{
     combinator::{alt, cut_err, opt, preceded, separated, terminated, trace},
     error::{ContextError, StrContext, StrContextValue},
     stream::{Accumulate, AsChar, Stream},
-    PResult, Parser,
+    ModalResult, Parser,
 };
 
 pub use crate::ident::identifier;
@@ -96,7 +96,7 @@ where
     })
 }
 
-pub fn opt_ws_ident<'a>(input: &mut Input<'a>) -> PResult<Option<&'a str>> {
+pub fn opt_ws_ident<'a>(input: &mut Input<'a>) -> ModalResult<Option<&'a str>> {
     preceded(space0, opt(identifier_parser)).parse_next(input)
 }
 

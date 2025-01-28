@@ -1,5 +1,5 @@
 use crate::{Error, Input, Result, RootType, TupleSpecifier};
-use winnow::{combinator::trace, PResult, Parser};
+use winnow::{combinator::trace, ModalResult, Parser};
 
 /// A stem of a Solidity array type. It is either a root type, or a tuple type.
 ///
@@ -54,7 +54,7 @@ impl<'a> TypeStem<'a> {
     }
 
     /// [`winnow`] parser for this type.
-    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> ModalResult<Self> {
         let name = "TypeStem";
         if input.starts_with('(') || input.starts_with("tuple(") {
             trace(name, TupleSpecifier::parser).parse_next(input).map(Self::Tuple)

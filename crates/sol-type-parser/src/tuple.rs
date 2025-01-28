@@ -6,7 +6,7 @@ use crate::{
 use alloc::vec::Vec;
 use winnow::{
     combinator::{opt, preceded, trace},
-    PResult, Parser,
+    ModalResult, Parser,
 };
 
 /// A tuple specifier, with no array suffixes. Corresponds to a sequence of
@@ -60,14 +60,14 @@ impl<'a> TupleSpecifier<'a> {
     }
 
     /// [`winnow`] parser for this type.
-    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> ModalResult<Self> {
         trace("TupleSpecifier", spanned(Self::parse_types))
             .parse_next(input)
             .map(|(span, types)| Self { span, types })
     }
 
     #[inline]
-    fn parse_types(input: &mut Input<'a>) -> PResult<Vec<TypeSpecifier<'a>>> {
+    fn parse_types(input: &mut Input<'a>) -> ModalResult<Vec<TypeSpecifier<'a>>> {
         preceded(opt("tuple"), tuple_parser(TypeSpecifier::parser)).parse_next(input)
     }
 
