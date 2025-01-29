@@ -63,6 +63,11 @@ impl<T> Sealed<T> {
         Self { inner, seal }
     }
 
+    /// Converts from `&Sealed<T>` to `Sealed<&T>`.
+    pub const fn as_sealed_ref(&self) -> Sealed<&T> {
+        Sealed { inner: &self.inner, seal: self.seal }
+    }
+
     /// Decompose into parts.
     #[allow(clippy::missing_const_for_fn)] // false positive
     pub fn into_parts(self) -> (T, B256) {
