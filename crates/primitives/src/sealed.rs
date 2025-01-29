@@ -118,6 +118,17 @@ impl<T> Sealed<T> {
     }
 }
 
+impl<T> Sealed<&T> {
+    /// Maps a `Sealed<&T>` to a `Sealed<T>` by cloning the inner value.
+    pub fn cloned(self) -> Sealed<T>
+    where
+        T: Clone,
+    {
+        let Self { inner, seal } = self;
+        Sealed::new_unchecked(inner.clone(), seal)
+    }
+}
+
 impl<T> Default for Sealed<T>
 where
     T: Sealable + Default,
