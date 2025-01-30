@@ -23,6 +23,7 @@ pub const fn words_for(data: &[u8]) -> usize {
 /// Calculates the padded length of a slice of a specific length by rounding its
 /// length to the next word.
 #[inline(always)]
+#[allow(clippy::manual_div_ceil)] // `.div_ceil` has worse codegen: https://godbolt.org/z/MenKWfPh9
 pub const fn words_for_len(len: usize) -> usize {
     (len + 31) / 32
 }
