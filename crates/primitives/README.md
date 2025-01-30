@@ -29,7 +29,7 @@ Please consult [the documentation][docs] for more information.
 use alloy_primitives::{address, fixed_bytes, Address, FixedBytes, I256, U256};
 
 // FixedBytes
-let n: FixedBytes<6> = fixed_bytes!("1234567890ab");
+let n: FixedBytes<6> = fixed_bytes!("0x1234567890ab");
 assert_eq!(n, "0x1234567890ab".parse::<FixedBytes<6>>().unwrap());
 assert_eq!(n.to_string(), "0x1234567890ab");
 
