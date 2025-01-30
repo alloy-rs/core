@@ -622,9 +622,9 @@ mod tests {
 
     #[test]
     fn concat_const() {
-        const A: FixedBytes<2> = fixed_bytes!("0123");
-        const B: FixedBytes<2> = fixed_bytes!("4567");
-        const EXPECTED: FixedBytes<4> = fixed_bytes!("01234567");
+        const A: FixedBytes<2> = fixed_bytes!("0x0123");
+        const B: FixedBytes<2> = fixed_bytes!("0x4567");
+        const EXPECTED: FixedBytes<4> = fixed_bytes!("0x01234567");
         const ACTUAL: FixedBytes<4> = A.concat_const(B);
 
         assert_eq!(ACTUAL, EXPECTED);
@@ -666,11 +666,11 @@ mod tests {
 
     #[test]
     fn left_padding_from() {
-        assert_eq!(FixedBytes::<4>::left_padding_from(&[0x01, 0x23]), fixed_bytes!("00000123"));
+        assert_eq!(FixedBytes::<4>::left_padding_from(&[0x01, 0x23]), fixed_bytes!("0x00000123"));
 
         assert_eq!(
             FixedBytes::<4>::left_padding_from(&[0x01, 0x23, 0x45, 0x67]),
-            fixed_bytes!("01234567")
+            fixed_bytes!("0x01234567")
         );
     }
 
@@ -682,11 +682,11 @@ mod tests {
 
     #[test]
     fn right_padding_from() {
-        assert_eq!(FixedBytes::<4>::right_padding_from(&[0x01, 0x23]), fixed_bytes!("01230000"));
+        assert_eq!(FixedBytes::<4>::right_padding_from(&[0x01, 0x23]), fixed_bytes!("0x01230000"));
 
         assert_eq!(
             FixedBytes::<4>::right_padding_from(&[0x01, 0x23, 0x45, 0x67]),
-            fixed_bytes!("01234567")
+            fixed_bytes!("0x01234567")
         );
     }
 

@@ -14,7 +14,7 @@ pub const BLOOM_SIZE_BITS: usize = BLOOM_SIZE_BYTES * 8;
 /// Mask, used in accrue
 const MASK: usize = BLOOM_SIZE_BITS - 1;
 /// Number of bytes per item, used in accrue
-const ITEM_BYTES: usize = (BLOOM_SIZE_BITS.ilog2() as usize + 7) / 8;
+const ITEM_BYTES: usize = BLOOM_SIZE_BITS.ilog2().div_ceil(8) as usize;
 
 // BLOOM_SIZE_BYTES must be a power of 2
 #[allow(clippy::assertions_on_constants)]
