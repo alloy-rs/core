@@ -52,7 +52,7 @@ pub trait SolError: Sized {
     /// selector.
     #[inline]
     fn abi_decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Parameters<'_> as SolType>::abi_decode_sequence(data, validate).map(Self::new)
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence(data).map(Self::new)
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the

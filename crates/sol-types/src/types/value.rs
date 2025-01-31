@@ -144,7 +144,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     where
         Self: From<<Self::SolType as SolType>::RustType>,
     {
-        Self::SolType::abi_decode(data, validate).map(Self::from)
+        Self::SolType::abi_decode(data).map(Self::from)
     }
 
     /// ABI-decode this type from the given data.
@@ -156,7 +156,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
         Self: From<<Self::SolType as SolType>::RustType>,
         <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
-        Self::SolType::abi_decode_params(data, validate).map(Self::from)
+        Self::SolType::abi_decode_params(data).map(Self::from)
     }
 
     /// ABI-decode this type from the given data.
@@ -168,7 +168,7 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
         Self: From<<Self::SolType as SolType>::RustType>,
         <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
-        Self::SolType::abi_decode_sequence(data, validate).map(Self::from)
+        Self::SolType::abi_decode_sequence(data).map(Self::from)
     }
 }
 

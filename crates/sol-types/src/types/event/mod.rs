@@ -171,7 +171,7 @@ pub trait SolEvent: Sized {
         data: &'a [u8],
         validate: bool,
     ) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
-        <Self::DataTuple<'a> as SolType>::abi_decode_sequence(data, validate)
+        <Self::DataTuple<'a> as SolType>::abi_decode_sequence(data)
     }
 
     /// Decode the event from the given log info.
