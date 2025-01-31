@@ -59,18 +59,18 @@ pub trait SolCall: Sized {
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector.
     #[inline]
-    fn abi_decode_raw(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode_raw(data: &[u8]) -> Result<Self> {
         <Self::Parameters<'_> as SolType>::abi_decode_sequence(data).map(Self::new)
     }
 
     /// ABI decode this call's arguments from the given slice, **with** the
     /// selector.
     #[inline]
-    fn abi_decode(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode(data: &[u8]) -> Result<Self> {
         let data = data
             .strip_prefix(&Self::SELECTOR)
             .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
-        Self::abi_decode_raw(data, validate)
+        Self::abi_decode_raw(data)
     }
 
     /// ABI encode the call to the given buffer **without** its selector.
@@ -90,7 +90,7 @@ pub trait SolCall: Sized {
     }
 
     /// ABI decode this call's return values from the given slice.
-    fn abi_decode_returns(data: &[u8], validate: bool) -> Result<Self::Return>;
+    fn abi_decode_returns(data: &[u8]) -> Result<Self::Return>;
 
     /// ABI encode the call's return values.
     #[inline]

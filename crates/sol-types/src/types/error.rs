@@ -417,9 +417,8 @@ pub fn decode_revert_reason(out: &[u8]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{sol, types::interface::SolInterface};
     use alloc::string::ToString;
-    use alloy_primitives::{address, hex, keccak256};
+    use alloy_primitives::{hex, keccak256};
 
     #[test]
     fn revert_encoding() {
