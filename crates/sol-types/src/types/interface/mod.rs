@@ -260,9 +260,9 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
     #[inline]
     fn abi_decode_raw(selector: [u8; 4], data: &[u8], validate: bool) -> Result<Self> {
         match selector {
-            Revert::SELECTOR => Revert::abi_decode_raw(data, validate).map(Self::Revert),
-            Panic::SELECTOR => Panic::abi_decode_raw(data, validate).map(Self::Panic),
+            Revert::SELECTOR => Revert::abi_decode_raw(data).map(Self::Revert),
             s => T::abi_decode_raw(s, data, validate).map(Self::CustomError),
+            Panic::SELECTOR => Panic::abi_decode_raw(data).map(Self::Panic),
         }
     }
 
@@ -600,7 +600,7 @@ mod tests {
         assert_eq!(errors_err1().abi_encode(), data);
         assert_eq!(contract_error_err1().abi_encode(), data);
 
-        assert_eq!(C::Err1::abi_decode(&data, true), Ok(err1()));
+        assert_eq!(C::Err1::abi_decode(&data), Ok(err1()));
         assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err1()));
         assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err1()));
 
@@ -612,7 +612,7 @@ mod tests {
         assert_eq!(errors_err2().abi_encode(), data);
         assert_eq!(contract_error_err2().abi_encode(), data);
 
-        assert_eq!(C::Err2::abi_decode(&data, true), Ok(err2()));
+        assert_eq!(C::Err2::abi_decode(&data), Ok(err2()));
         assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err2()));
         assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err2()));
 
@@ -624,7 +624,7 @@ mod tests {
         assert_eq!(errors_err3().abi_encode(), data);
         assert_eq!(contract_error_err3().abi_encode(), data);
 
-        assert_eq!(C::Err3::abi_decode(&data, true), Ok(err3()));
+        assert_eq!(C::Err3::abi_decode(&data), Ok(err3()));
         assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err3()));
         assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err3()));
 
