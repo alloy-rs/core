@@ -309,9 +309,9 @@ pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{sol, sol_data, utils::pad_usize, Error, SolType, SolValue};
+    use crate::{sol, sol_data, Error, SolType, SolValue};
     use alloc::string::ToString;
-    use alloy_primitives::{bytes, hex, Address, B256, U256};
+    use alloy_primitives::{bytes, hex, Address, U256};
 
     #[test]
     fn dynamic_array_of_dynamic_arrays() {
