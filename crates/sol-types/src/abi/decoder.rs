@@ -32,8 +32,6 @@ pub struct Decoder<'de> {
     buf: &'de [u8],
     // The current offset in the buffer.
     offset: usize,
-    // Whether to validate type correctness and blob re-encoding.
-    validate: bool,
     /// The current recursion depth.
     depth: u8,
 }
@@ -46,7 +44,6 @@ impl fmt::Debug for Decoder<'_> {
         f.debug_struct("Decoder")
             .field("buf", &body)
             .field("offset", &self.offset)
-            .field("validate", &self.validate)
             .field("depth", &self.depth)
             .finish()
     }
@@ -72,12 +69,13 @@ impl fmt::Display for Decoder<'_> {
 impl<'de> Decoder<'de> {
     /// Instantiate a new decoder from a byte slice and a validation flag.
     ///
-    /// If `validate` is true, the decoder will check that the bytes conform to
-    /// expected type limitations, and that the decoded values can be re-encoded
-    /// to an identical bytestring.
+    /// Decoder will ensure that the bytes conform to expected type limitations, and that the
+    /// decoded values can be re-encoded to an identical bytestring.
+    ///
+    /// If this fails to be the case, [`Error::TypeCheckFail`] will be thrown.
     #[inline]
-    pub const fn new(buf: &'de [u8], validate: bool) -> Self {
-        Self { buf, offset: 0, validate, depth: 0 }
+    pub const fn new(buf: &'de [u8]) -> Self {
+        Self { buf, offset: 0, depth: 0 }
     }
 
     /// Returns the current offset in the buffer.
@@ -117,18 +115,6 @@ impl<'de> Decoder<'de> {
         }
     }
 
-    /// Returns `true` if this decoder is validating type correctness.
-    #[inline]
-    pub const fn validate(&self) -> bool {
-        self.validate
-    }
-
-    /// Set whether to validate type correctness.
-    #[inline]
-    pub fn set_validate(&mut self, validate: bool) {
-        self.validate = validate;
-    }
-
     /// Create a child decoder, starting at `offset` bytes from the current
     /// decoder's offset.
     ///
@@ -140,16 +126,14 @@ impl<'de> Decoder<'de> {
 
     /// Create a child decoder, starting at `offset` bytes from the current
     /// decoder's offset.
-    /// The child decoder shares the buffer and validation flag.
+    /// The child decoder shares the buffer.
     #[inline]
     pub fn child(&self, offset: usize) -> Result<Self, Error> {
         if self.depth >= RECURSION_LIMIT {
             return Err(Error::RecursionLimitExceeded(RECURSION_LIMIT));
         }
         match self.buf.get(offset..) {
-            Some(buf) => {
-                Ok(Decoder { buf, offset: 0, validate: self.validate, depth: self.depth + 1 })
-            }
+            Some(buf) => Ok(Decoder { buf, offset: 0, depth: self.depth + 1 }),
             None => Err(Error::Overrun),
         }
     }
@@ -196,13 +180,13 @@ impl<'de> Decoder<'de> {
     /// the offset.
     #[inline]
     pub fn peek_offset_at(&self, offset: usize) -> Result<usize> {
-        self.peek_word_at(offset).and_then(|word| utils::as_offset(word, self.validate))
+        self.peek_word_at(offset).and_then(|word| utils::as_offset(word, true))
     }
 
     /// Peek a `usize` from the buffer, without advancing the offset.
     #[inline]
     pub fn peek_offset(&self) -> Result<usize> {
-        self.peek_word().and_then(|word| utils::as_offset(word, self.validate))
+        self.peek_word().and_then(|word| utils::as_offset(word, true))
     }
 
     /// Take a word from the buffer, advancing the offset.
@@ -223,20 +207,18 @@ impl<'de> Decoder<'de> {
     /// Takes a `usize` offset from the buffer by consuming a word.
     #[inline]
     pub fn take_offset(&mut self) -> Result<usize> {
-        self.take_word().and_then(|word| utils::as_offset(word, self.validate))
+        self.take_word().and_then(|word| utils::as_offset(word, true))
     }
 
     /// Takes a slice of bytes of the given length by consuming up to the next
     /// word boundary.
     pub fn take_slice(&mut self, len: usize) -> Result<&'de [u8]> {
-        if self.validate {
-            let padded_len = utils::next_multiple_of_32(len);
-            if self.offset + padded_len > self.buf.len() {
-                return Err(Error::Overrun);
-            }
-            if !utils::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
-                return Err(Error::Other(Cow::Borrowed("non-empty bytes after packed array")));
-            }
+        let padded_len = utils::next_multiple_of_32(len);
+        if self.offset + padded_len > self.buf.len() {
+            return Err(Error::Overrun);
+        }
+        if !utils::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
+            return Err(Error::Other(Cow::Borrowed("non-empty bytes after packed array")));
         }
         self.take_slice_unchecked(len)
     }
@@ -317,7 +299,7 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
 /// See the [`abi`](super) module for more information.
 #[inline]
 pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
-    let mut decoder = Decoder::new(data, true);
+    let mut decoder = Decoder::new(data);
     let result = decoder.decode_sequence::<T>()?;
     if encode_sequence(&result) != data {
         return Err(Error::ReserMismatch);
