@@ -8,7 +8,7 @@ use core::num::NonZeroUsize;
 use winnow::{
     ascii::digit0,
     combinator::{cut_err, delimited, repeat, trace},
-    error::{ErrMode, ErrorKind, FromExternalError},
+    error::{ErrMode, FromExternalError},
     ModalResult, Parser,
 };
 
@@ -144,7 +144,7 @@ fn array_size_parser(input: &mut Input<'_>) -> ModalResult<Option<NonZeroUsize>>
     if digits.is_empty() {
         return Ok(None);
     }
-    digits.parse().map(Some).map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))
+    digits.parse().map(Some).map_err(|e| ErrMode::from_external_error(input, e))
 }
 
 #[cfg(test)]

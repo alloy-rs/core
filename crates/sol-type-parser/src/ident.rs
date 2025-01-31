@@ -1,5 +1,5 @@
 use winnow::{
-    error::{ErrMode, ErrorKind, ParserError},
+    error::{ErrMode, ParserError},
     stream::{AsBStr, Stream},
     ModalResult,
 };
@@ -68,7 +68,7 @@ where
     let mut chars = input.as_bstr().iter().map(|b| *b as char);
 
     let Some(true) = chars.next().map(is_id_start) else {
-        return Err(ErrMode::from_error_kind(input, ErrorKind::Fail));
+        return Err(ErrMode::from_input(input));
     };
 
     // 1 for the first character, we know it's ASCII
