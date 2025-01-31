@@ -62,7 +62,7 @@ impl DynSolCall {
 
     /// ABI decode the given data as function returns.
     pub fn abi_decode_input(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.parameters, validate)
+        abi_decode(data, &self.parameters)
     }
 
     /// ABI encode the given values as function return values.
@@ -110,7 +110,7 @@ impl DynSolReturns {
 
     /// ABI decode the given data as function return values.
     pub fn abi_decode_output(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, self.types(), validate)
+        abi_decode(data, self.types())
     }
 }
 
@@ -146,13 +146,9 @@ pub(crate) fn abi_encode(values: &[DynSolValue]) -> Vec<u8> {
     DynSolValue::encode_seq(values)
 }
 
-pub(crate) fn abi_decode(
-    data: &[u8],
-    tys: &[DynSolType],
-    validate: bool,
-) -> Result<Vec<DynSolValue>> {
+pub(crate) fn abi_decode(data: &[u8], tys: &[DynSolType]) -> Result<Vec<DynSolValue>> {
     let mut values = Vec::with_capacity(tys.len());
-    let mut decoder = Decoder::new(data, validate);
+    let mut decoder = Decoder::new(data);
     for ty in tys {
         let value = ty.abi_decode_inner(&mut decoder, crate::DynToken::decode_single_populate)?;
         values.push(value);

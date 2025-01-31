@@ -518,7 +518,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data, false), DynToken::decode_single_populate)
+        self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_single_populate)
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
@@ -555,7 +555,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data, false), DynToken::decode_sequence_populate)
+        self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_sequence_populate)
     }
 
     /// Calculate the minimum number of ABI words necessary to encode this
