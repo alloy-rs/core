@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Enable some useful rustdoc features on docs.rs ([#850](https://github.com/alloy-rs/core/issues/850))
 
+### Miscellaneous Tasks
+
+- Release 0.8.19
+
 ## [0.8.18](https://github.com/alloy-rs/core/releases/tag/v0.8.18) - 2025-01-04
 
 ### Miscellaneous Tasks

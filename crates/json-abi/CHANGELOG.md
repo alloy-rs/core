@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [json-abi] Add Param.name() accessor ([#856](https://github.com/alloy-rs/core/issues/856))
 
+### Miscellaneous Tasks
+
+- Release 0.8.19
+
 ## [0.8.18](https://github.com/alloy-rs/core/releases/tag/v0.8.18) - 2025-01-04
 
 ### Miscellaneous Tasks
