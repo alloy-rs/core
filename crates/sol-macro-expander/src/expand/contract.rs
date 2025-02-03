@@ -372,7 +372,6 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         });
 
         let alloy_contract = &cx.crates.contract;
-        // let _generics_t_p_n = quote!(<T: alloy_contract::private::Transport + ::core::clone::Clone, P: alloy_contract::private::Provider<T, N>, N: alloy_contract::private::Network>);
 
         let generic_p_n = quote!(<P: alloy_contract::private::Provider<N>, N: alloy_contract::private::Network>);
 
