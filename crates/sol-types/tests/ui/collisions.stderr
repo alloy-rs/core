@@ -1,14 +1,11 @@
 error: function selector `0xa9059cbb` collides with `func_2093253501`
+
+         = note: other declaration is here
+
   --> tests/ui/collisions.rs:10:14
    |
 10 |     function transfer(address,uint256);
    |              ^^^^^^^^
-   |
-note: other declaration is here
-  --> tests/ui/collisions.rs:9:14
-   |
-9  |     function func_2093253501(bytes);
-   |              ^^^^^^^^^^^^^^^
 
 error: error selector `0x00000000` is reserved
   --> tests/ui/collisions.rs:12:11
@@ -17,16 +14,13 @@ error: error selector `0x00000000` is reserved
    |           ^^^^^^^^^^^^^^^^^^^
 
 error: function selector `0xa9059cbb` collides with `func_2093253501`
+
+         = note: other declaration is here
+
   --> tests/ui/collisions.rs:19:18
    |
 19 |         function transfer(address,uint256);
    |                  ^^^^^^^^
-   |
-note: other declaration is here
-  --> tests/ui/collisions.rs:18:18
-   |
-18 |         function func_2093253501(bytes);
-   |                  ^^^^^^^^^^^^^^^
 
 error: error selector `0x00000000` is reserved
   --> tests/ui/collisions.rs:21:15
