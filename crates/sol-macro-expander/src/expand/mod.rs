@@ -36,7 +36,7 @@ mod var_def;
 mod to_abi;
 
 /// The limit for the number of times to resolve a type.
-const RESOLVE_LIMIT: usize = 32;
+const RESOLVE_LIMIT: usize = 128;
 
 /// The [`sol!`] expansion implementation.
 ///
