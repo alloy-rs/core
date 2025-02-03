@@ -3,7 +3,7 @@
 // Recursion implementation modified from `toml`: https://github.com/toml-rs/toml/blob/a02cbf46cab4a8683e641efdba648a31498f7342/crates/toml_edit/src/parser/mod.rs#L99
 
 use core::fmt;
-use winnow::{error::ContextError, Parser};
+use winnow::{error::ContextError, ModalParser};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CustomError {
@@ -28,17 +28,13 @@ pub fn new_input(input: &str) -> Input<'_> {
 }
 
 pub fn check_recursion<'a, O>(
-    mut parser: impl Parser<Input<'a>, O, ContextError>,
-) -> impl Parser<Input<'a>, O, ContextError> {
+    mut parser: impl ModalParser<Input<'a>, O, ContextError>,
+) -> impl ModalParser<Input<'a>, O, ContextError> {
     move |input: &mut Input<'a>| {
         input.state.enter().map_err(|_err| {
             // TODO: Very weird bug with features: https://github.com/alloy-rs/core/issues/717
             // use winnow::error::FromExternalError;
-            // let err = winnow::error::ContextError::from_external_error(
-            //     input,
-            //     winnow::error::ErrorKind::Eof,
-            //     _err,
-            // );
+            // let err = winnow::error::ContextError::from_external_error(input, _err);
             let err = winnow::error::ContextError::new();
             winnow::error::ErrMode::Cut(err)
         })?;
