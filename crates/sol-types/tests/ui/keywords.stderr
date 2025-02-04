@@ -554,8 +554,7 @@ error: expected `<`, found `>`
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
 11 | |         }
    | |_________^ expected `<`
@@ -818,8 +817,7 @@ error: expected `{`, found `,`
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
    | |                                  - expected `{`
 11 | |         }
@@ -853,8 +851,7 @@ error: expected `{`, found `)`
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
    | |                                  - expected `{`
 11 | |         }
@@ -1540,8 +1537,7 @@ error: expected `(`, found `>`
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
 11 | |         }
    | |_________^ unexpected token
@@ -1700,8 +1696,7 @@ error[E0433]: failed to resolve: there are too many leading `super` keywords
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
 11 | |         }
    | |_________^ there are too many leading `super` keywords
@@ -1718,8 +1713,7 @@ error[E0573]: expected type, found module `crate`
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
 11 | |         }
    | |_________^ not a type
@@ -1741,8 +1735,7 @@ error[E0574]: expected struct, variant or union type, found module `crate`
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
 11 | |         }
    | |_________^ not a struct, variant or union type
@@ -1773,8 +1766,7 @@ error[E0573]: expected type, found module `self`
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
 11 | |         }
    | |         ^ help: a self type with a similar name exists: `Self`
@@ -1797,8 +1789,7 @@ error[E0574]: expected struct, variant or union type, found module `self`
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
 11 | |         }
    | |         ^ help: a self type with a similar name exists: `Self`
@@ -1836,8 +1827,7 @@ error[E0425]: cannot find value `value` in this scope
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
 11 | |         }
    | |_________^ not found in this scope
@@ -1876,8 +1866,7 @@ error: `Self` is not valid in the self type of an impl block
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
 11 | |         }
    | |_________^
@@ -1899,13 +1888,11 @@ error[E0117]: only traits defined in the current crate can be implemented for ar
 5  | /         sol! {
 6  | |             struct $kw {
 7  | |                 uint $kw;
-8  | |             }
-9  | |
+...  |
 10 | |             function $kw(uint $kw);
 11 | |         }
    | |         ^
    | |         |
-   | |         impl doesn't use only types from inside the current crate
    | |_________this is not defined in the current crate because tuples are always foreign
    |           this is not defined in the current crate because this is a foreign trait
 ...
@@ -1917,6 +1904,8 @@ error[E0117]: only traits defined in the current crate can be implemented for ar
 47 | | }
    | |_- in this macro invocation
    |
+   = note: impl doesn't have any local type before any uncovered type parameters
+   = note: for more information see https://doc.rust-lang.org/reference/items/implementations.html#orphan-rules
    = note: define and implement a trait or new type instead
    = note: this error originates in the macro `sol` which comes from the expansion of the macro `kws` (in Nightly builds, run with -Z macro-backtrace for more info)
 

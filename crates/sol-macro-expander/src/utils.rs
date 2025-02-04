@@ -84,3 +84,28 @@ impl<T: ToTokens> ToTokens for ExprArray<T> {
         });
     }
 }
+
+/// Applies [`proc_macro_error2`] programmatically.
+pub(crate) fn pme_compat(f: impl FnOnce() -> TokenStream) -> TokenStream {
+    pme_compat_result(|| Ok(f())).unwrap()
+}
+
+/// Applies [`proc_macro_error2`] programmatically.
+pub(crate) fn pme_compat_result(
+    f: impl FnOnce() -> syn::Result<TokenStream>,
+) -> syn::Result<TokenStream> {
+    let mut r = None;
+    let e = proc_macro_error2::entry_point(
+        std::panic::AssertUnwindSafe(|| {
+            r = Some(f());
+            Default::default()
+        }),
+        false,
+    );
+    if let Some(r) = r {
+        if e.is_empty() || r.is_err() {
+            return r;
+        }
+    }
+    Ok(e.into())
+}

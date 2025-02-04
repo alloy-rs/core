@@ -51,7 +51,7 @@ serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 # macros
-proc-macro-error2 = "2.0.0"
+proc-macro-error2 = ">=2.0.0, <=2.0.1" # We directly use the `entry_point` private API.
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "2.0"

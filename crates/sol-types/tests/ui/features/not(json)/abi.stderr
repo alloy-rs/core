@@ -6,7 +6,6 @@ error: the `#[sol(abi)]` attribute requires the `"json"` feature
 5  | |
 6  | |     contract C {
 ...  |
-22 | |     }
 23 | | }
    | |_^
    |
