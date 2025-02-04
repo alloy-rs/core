@@ -5,7 +5,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use core::fmt;
-use winnow::{combinator::trace, PResult, Parser};
+use winnow::{combinator::trace, ModalResult, Parser};
 
 // TODO: Parse visibility and state mutability
 
@@ -41,7 +41,7 @@ impl<'a> ParameterSpecifier<'a> {
     }
 
     /// [`winnow`] parser for this type.
-    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> ModalResult<Self> {
         trace(
             "ParameterSpecifier",
             spanned(|input: &mut Input<'a>| {
@@ -104,7 +104,7 @@ impl<'a> Parameters<'a> {
     }
 
     /// [`winnow`] parser for this type.
-    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> ModalResult<Self> {
         trace("Parameters", spanned(tuple_parser(ParameterSpecifier::parser)))
             .parse_next(input)
             .map(|(span, params)| Self { span, params })

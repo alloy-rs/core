@@ -9,17 +9,17 @@ use core::{slice, str};
 use winnow::{
     ascii::space0,
     combinator::{alt, cut_err, opt, preceded, separated, terminated, trace},
-    error::{ContextError, StrContext, StrContextValue},
+    error::{ContextError, ParserError, StrContext, StrContextValue},
     stream::{Accumulate, AsChar, Stream},
-    PResult, Parser,
+    ModalParser, ModalResult, Parser,
 };
 
 pub use crate::ident::identifier;
 
 #[inline]
-pub fn spanned<'a, O, E>(
-    mut f: impl Parser<Input<'a>, O, E>,
-) -> impl Parser<Input<'a>, (&'a str, O), E> {
+pub fn spanned<'a, O, E: ParserError<Input<'a>>>(
+    mut f: impl ModalParser<Input<'a>, O, E>,
+) -> impl ModalParser<Input<'a>, (&'a str, O), E> {
     trace("spanned", move |input: &mut Input<'a>| {
         let start = input.as_ptr();
 
@@ -37,7 +37,7 @@ pub fn spanned<'a, O, E>(
 }
 
 #[inline]
-pub fn char_parser<'a>(c: char) -> impl Parser<Input<'a>, char, ContextError> {
+pub fn char_parser<'a>(c: char) -> impl ModalParser<Input<'a>, char, ContextError> {
     #[cfg(feature = "debug")]
     let name = format!("char={c:?}");
     #[cfg(not(feature = "debug"))]
@@ -46,7 +46,7 @@ pub fn char_parser<'a>(c: char) -> impl Parser<Input<'a>, char, ContextError> {
 }
 
 #[inline]
-pub fn str_parser<'a>(s: &'static str) -> impl Parser<Input<'a>, &'a str, ContextError> {
+pub fn str_parser<'a>(s: &'static str) -> impl ModalParser<Input<'a>, &'a str, ContextError> {
     #[cfg(feature = "debug")]
     let name = format!("str={s:?}");
     #[cfg(not(feature = "debug"))]
@@ -55,14 +55,14 @@ pub fn str_parser<'a>(s: &'static str) -> impl Parser<Input<'a>, &'a str, Contex
 }
 
 pub fn tuple_parser<'a, O1, O2: Accumulate<O1>>(
-    f: impl Parser<Input<'a>, O1, ContextError>,
-) -> impl Parser<Input<'a>, O2, ContextError> {
+    f: impl ModalParser<Input<'a>, O1, ContextError>,
+) -> impl ModalParser<Input<'a>, O2, ContextError> {
     list_parser('(', ',', ')', f)
 }
 
 pub fn array_parser<'a, O1, O2: Accumulate<O1>>(
-    f: impl Parser<Input<'a>, O1, ContextError>,
-) -> impl Parser<Input<'a>, O2, ContextError> {
+    f: impl ModalParser<Input<'a>, O1, ContextError>,
+) -> impl ModalParser<Input<'a>, O2, ContextError> {
     list_parser('[', ',', ']', f)
 }
 
@@ -71,8 +71,8 @@ fn list_parser<'i, O1, O2>(
     open: char,
     delim: char,
     close: char,
-    f: impl Parser<Input<'i>, O1, ContextError>,
-) -> impl Parser<Input<'i>, O2, ContextError>
+    f: impl ModalParser<Input<'i>, O1, ContextError>,
+) -> impl ModalParser<Input<'i>, O2, ContextError>
 where
     O2: Accumulate<O1>,
 {
@@ -96,7 +96,7 @@ where
     })
 }
 
-pub fn opt_ws_ident<'a>(input: &mut Input<'a>) -> PResult<Option<&'a str>> {
+pub fn opt_ws_ident<'a>(input: &mut Input<'a>) -> ModalResult<Option<&'a str>> {
     preceded(space0, opt(identifier_parser)).parse_next(input)
 }
 

@@ -8,8 +8,8 @@ use core::num::NonZeroUsize;
 use winnow::{
     ascii::digit0,
     combinator::{cut_err, delimited, repeat, trace},
-    error::{ErrMode, ErrorKind, FromExternalError},
-    PResult, Parser,
+    error::{ErrMode, FromExternalError},
+    ModalResult, Parser,
 };
 
 /// Represents a type-name. Consists of an identifier and optional array sizes.
@@ -93,7 +93,7 @@ impl<'a> TypeSpecifier<'a> {
     }
 
     /// [`winnow`] parser for this type.
-    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> ModalResult<Self> {
         trace(
             "TypeSpecifier",
             spanned(|input: &mut Input<'a>| {
@@ -139,12 +139,12 @@ impl<'a> TypeSpecifier<'a> {
     }
 }
 
-fn array_size_parser(input: &mut Input<'_>) -> PResult<Option<NonZeroUsize>> {
+fn array_size_parser(input: &mut Input<'_>) -> ModalResult<Option<NonZeroUsize>> {
     let digits = digit0(input)?;
     if digits.is_empty() {
         return Ok(None);
     }
-    digits.parse().map(Some).map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))
+    digits.parse().map(Some).map_err(|e| ErrMode::from_external_error(input, e))
 }
 
 #[cfg(test)]

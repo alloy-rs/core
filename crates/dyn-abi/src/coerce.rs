@@ -3,7 +3,6 @@ use alloc::vec::Vec;
 use alloy_primitives::{Address, Function, Sign, I256, U256};
 use alloy_sol_types::Word;
 use core::fmt;
-use hex::FromHexError;
 use parser::{
     new_input,
     utils::{array_parser, char_parser, spanned},
@@ -13,12 +12,12 @@ use winnow::{
     ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
     combinator::{cut_err, dispatch, empty, fail, opt, preceded, trace},
     error::{
-        AddContext, ContextError, ErrMode, ErrorKind, FromExternalError, ParserError, StrContext,
+        AddContext, ContextError, ErrMode, FromExternalError, ParserError, StrContext,
         StrContextValue,
     },
     stream::Stream,
     token::take_while,
-    PResult, Parser,
+    ModalParser, ModalResult, Parser,
 };
 
 impl DynSolType {
@@ -89,8 +88,8 @@ struct ValueParser<'a> {
     list_end: Option<char>,
 }
 
-impl<'i> Parser<Input<'i>, DynSolValue, ContextError> for ValueParser<'_> {
-    fn parse_next(&mut self, input: &mut Input<'i>) -> PResult<DynSolValue, ContextError> {
+impl<'i> Parser<Input<'i>, DynSolValue, ErrMode<ContextError>> for ValueParser<'_> {
+    fn parse_next(&mut self, input: &mut Input<'i>) -> ModalResult<DynSolValue, ContextError> {
         #[cfg(feature = "debug")]
         let name = self.ty.sol_type_name();
         #[cfg(not(feature = "debug"))]
@@ -146,7 +145,7 @@ impl<'a> ValueParser<'a> {
     }
 
     #[inline]
-    fn string<'s, 'i: 's>(&'s self) -> impl Parser<Input<'i>, &'i str, ContextError> + 's {
+    fn string<'s, 'i: 's>(&'s self) -> impl ModalParser<Input<'i>, &'i str, ContextError> + 's {
         trace("string", |input: &mut Input<'i>| {
             let Some(delim) = input.chars().next() else {
                 return Ok("");
@@ -185,7 +184,7 @@ impl<'a> ValueParser<'a> {
     }
 
     #[inline]
-    fn array<'i: 'a>(self) -> impl Parser<Input<'i>, Vec<DynSolValue>, ContextError> + 'a {
+    fn array<'i: 'a>(self) -> impl ModalParser<Input<'i>, Vec<DynSolValue>, ContextError> + 'a {
         #[cfg(feature = "debug")]
         let name = format!("{}[]", self.ty);
         #[cfg(not(feature = "debug"))]
@@ -197,7 +196,7 @@ impl<'a> ValueParser<'a> {
     fn fixed_array<'i: 'a>(
         self,
         len: usize,
-    ) -> impl Parser<Input<'i>, Vec<DynSolValue>, ContextError> + 'a {
+    ) -> impl ModalParser<Input<'i>, Vec<DynSolValue>, ContextError> + 'a {
         #[cfg(feature = "debug")]
         let name = format!("{}[{len}]", self.ty);
         #[cfg(not(feature = "debug"))]
@@ -219,7 +218,7 @@ impl<'a> ValueParser<'a> {
     fn tuple<'i: 's, 't: 's, 's>(
         &'s self,
         tuple: &'t Vec<DynSolType>,
-    ) -> impl Parser<Input<'i>, Vec<DynSolValue>, ContextError> + 's {
+    ) -> impl ModalParser<Input<'i>, Vec<DynSolValue>, ContextError> + 's {
         #[cfg(feature = "debug")]
         let name = DynSolType::Tuple(tuple.clone()).to_string();
         #[cfg(not(feature = "debug"))]
@@ -282,7 +281,7 @@ impl fmt::Display for Error {
 }
 
 #[inline]
-fn bool(input: &mut Input<'_>) -> PResult<bool> {
+fn bool(input: &mut Input<'_>) -> ModalResult<bool> {
     trace(
         "bool",
         dispatch! {alpha1.context(StrContext::Label("boolean"));
@@ -296,7 +295,7 @@ fn bool(input: &mut Input<'_>) -> PResult<bool> {
 }
 
 #[inline]
-fn int<'i>(size: usize) -> impl Parser<Input<'i>, I256, ContextError> {
+fn int<'i>(size: usize) -> impl ModalParser<Input<'i>, I256, ContextError> {
     #[cfg(feature = "debug")]
     let name = format!("int{size}");
     #[cfg(not(feature = "debug"))]
@@ -313,7 +312,7 @@ fn int<'i>(size: usize) -> impl Parser<Input<'i>, I256, ContextError> {
 }
 
 #[inline]
-fn int_sign(input: &mut Input<'_>) -> PResult<Sign> {
+fn int_sign(input: &mut Input<'_>) -> ModalResult<Sign> {
     trace("int_sign", |input: &mut Input<'_>| match input.as_bytes().first() {
         Some(b'+') => {
             let _ = input.next_slice(1);
@@ -329,7 +328,7 @@ fn int_sign(input: &mut Input<'_>) -> PResult<Sign> {
 }
 
 #[inline]
-fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
+fn uint<'i>(len: usize) -> impl ModalParser<Input<'i>, U256, ContextError> {
     #[cfg(feature = "debug")]
     let name = format!("uint{len}");
     #[cfg(not(feature = "debug"))]
@@ -345,9 +344,8 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
             ))
             .parse_next(input)?;
 
-        let intpart = intpart
-            .parse::<U256>()
-            .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
+        let intpart =
+            intpart.parse::<U256>().map_err(|e| ErrMode::from_external_error(input, e))?;
         let e = opt(scientific_notation).parse_next(input)?.unwrap_or(0);
 
         let _ = space0(input)?;
@@ -355,22 +353,17 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
 
         let units = units as isize + e;
         if units < 0 {
-            return Err(ErrMode::from_external_error(
-                input,
-                ErrorKind::Verify,
-                Error::NegativeUnits,
-            ));
+            return Err(ErrMode::from_external_error(input, Error::NegativeUnits));
         }
         let units = units as usize;
 
         let uint = if let Some(fract) = fract {
             let fract_uint = U256::from_str_radix(fract, 10)
-                .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
+                .map_err(|e| ErrMode::from_external_error(input, e))?;
 
             if units == 0 && !fract_uint.is_zero() {
                 return Err(ErrMode::from_external_error(
                     input,
-                    ErrorKind::Verify,
                     Error::FractionalNotAllowed(fract_uint),
                 ));
             }
@@ -378,7 +371,6 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
             if fract.len() > units {
                 return Err(ErrMode::from_external_error(
                     input,
-                    ErrorKind::Verify,
                     Error::TooManyDecimals(units, fract.len()),
                 ));
             }
@@ -400,12 +392,10 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
         } else {
             Some(intpart)
         }
-        .ok_or_else(|| {
-            ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
-        })?;
+        .ok_or_else(|| ErrMode::from_external_error(input, Error::IntOverflow))?;
 
         if uint.bit_len() > len {
-            return Err(ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow));
+            return Err(ErrMode::from_external_error(input, Error::IntOverflow));
         }
 
         Ok(uint)
@@ -413,7 +403,7 @@ fn uint<'i>(len: usize) -> impl Parser<Input<'i>, U256, ContextError> {
 }
 
 #[inline]
-fn prefixed_int<'i>(input: &mut Input<'i>) -> PResult<&'i str> {
+fn prefixed_int<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
     trace(
         "prefixed_int",
         spanned(|input: &mut Input<'i>| {
@@ -427,7 +417,7 @@ fn prefixed_int<'i>(input: &mut Input<'i>) -> PResult<&'i str> {
             } else {
                 digit1(input)
             }
-            .map_err(|e| {
+            .map_err(|e: ErrMode<_>| {
                 e.add_context(
                     input,
                     &checkpoint,
@@ -441,7 +431,7 @@ fn prefixed_int<'i>(input: &mut Input<'i>) -> PResult<&'i str> {
 }
 
 #[inline]
-fn int_units(input: &mut Input<'_>) -> PResult<usize> {
+fn int_units(input: &mut Input<'_>) -> ModalResult<usize> {
     trace(
         "int_units",
         dispatch! {alpha0;
@@ -455,79 +445,64 @@ fn int_units(input: &mut Input<'_>) -> PResult<usize> {
 }
 
 #[inline]
-fn scientific_notation(input: &mut Input<'_>) -> PResult<isize> {
+fn scientific_notation(input: &mut Input<'_>) -> ModalResult<isize> {
     // Check if we have 'e' or 'E' followed by an optional sign and digits
     if !matches!(input.chars().next(), Some('e' | 'E')) {
-        return Err(ErrMode::from_error_kind(input, ErrorKind::Fail));
-    };
+        return Err(ErrMode::from_input(input));
+    }
     let _ = input.next_token();
     winnow::ascii::dec_int(input)
 }
 
 #[inline]
-fn fixed_bytes<'i>(len: usize) -> impl Parser<Input<'i>, Word, ContextError> {
+fn fixed_bytes<'i>(len: usize) -> impl ModalParser<Input<'i>, Word, ContextError> {
     #[cfg(feature = "debug")]
     let name = format!("bytes{len}");
     #[cfg(not(feature = "debug"))]
     let name = "bytesN";
     trace(name, move |input: &mut Input<'_>| {
         if len > Word::len_bytes() {
-            return Err(ErrMode::from_external_error(
-                input,
-                ErrorKind::Fail,
-                Error::InvalidFixedBytesLength(len),
-            )
-            .cut());
+            return Err(
+                ErrMode::from_external_error(input, Error::InvalidFixedBytesLength(len)).cut()
+            );
         }
 
         let hex = hex_str(input)?;
         let mut out = Word::ZERO;
         match hex::decode_to_slice(hex, &mut out[..len]) {
             Ok(()) => Ok(out),
-            Err(e) => Err(hex_error(input, e).cut()),
+            Err(e) => Err(ErrMode::from_external_error(input, e).cut()),
         }
     })
 }
 
 #[inline]
-fn address(input: &mut Input<'_>) -> PResult<Address> {
+fn address(input: &mut Input<'_>) -> ModalResult<Address> {
     trace("address", hex_str.try_map(hex::FromHex::from_hex)).parse_next(input)
 }
 
 #[inline]
-fn function(input: &mut Input<'_>) -> PResult<Function> {
+fn function(input: &mut Input<'_>) -> ModalResult<Function> {
     trace("function", hex_str.try_map(hex::FromHex::from_hex)).parse_next(input)
 }
 
 #[inline]
-fn bytes(input: &mut Input<'_>) -> PResult<Vec<u8>> {
+fn bytes(input: &mut Input<'_>) -> ModalResult<Vec<u8>> {
     trace("bytes", hex_str.try_map(hex::decode)).parse_next(input)
 }
 
 #[inline]
-fn hex_str<'i>(input: &mut Input<'i>) -> PResult<&'i str> {
+fn hex_str<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
     trace("hex_str", |input: &mut Input<'i>| {
         // Allow empty `bytes` only with a prefix.
         let has_prefix = opt("0x").parse_next(input)?.is_some();
         let s = hex_digit0(input)?;
         if !has_prefix && s.is_empty() {
-            return Err(ErrMode::from_external_error(
-                input,
-                ErrorKind::Verify,
-                Error::EmptyHexStringWithoutPrefix,
-            ));
+            return Err(ErrMode::from_external_error(input, Error::EmptyHexStringWithoutPrefix));
         }
         Ok(s)
     })
     .parse_next(input)
-}
-
-fn hex_error(input: &&str, e: FromHexError) -> ErrMode<ContextError> {
-    let kind = match e {
-        FromHexError::InvalidHexCharacter { .. } => unreachable!("{e:?}"),
-        FromHexError::InvalidStringLength | FromHexError::OddLength => ErrorKind::Eof,
-    };
-    ErrMode::from_external_error(input, kind, e)
 }
 
 #[cfg(test)]

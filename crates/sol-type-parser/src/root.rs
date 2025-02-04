@@ -1,6 +1,6 @@
 use crate::{ident::identifier_parser, is_valid_identifier, new_input, Error, Input, Result};
 use core::fmt;
-use winnow::{combinator::trace, stream::Stream, PResult, Parser};
+use winnow::{combinator::trace, stream::Stream, ModalResult, Parser};
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type. This is the most basic type specifier.
@@ -73,7 +73,7 @@ impl<'a> RootType<'a> {
     }
 
     /// [`winnow`] parser for this type.
-    pub(crate) fn parser(input: &mut Input<'a>) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> ModalResult<Self> {
         trace("RootType", |input: &mut Input<'a>| {
             identifier_parser(input).map(|ident| {
                 // Workaround for enums in library function params or returns.

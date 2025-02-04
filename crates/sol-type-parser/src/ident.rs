@@ -1,7 +1,7 @@
 use winnow::{
-    error::{ErrMode, ErrorKind, ParserError},
+    error::{ErrMode, ParserError},
     stream::{AsBStr, Stream},
-    PResult,
+    ModalResult,
 };
 
 /// The regular expression for a Solidity identifier.
@@ -54,12 +54,12 @@ pub const fn is_valid_identifier(s: &str) -> bool {
 
 /// Parses a Solidity identifier.
 #[inline]
-pub fn identifier<'a>(input: &mut &'a str) -> PResult<&'a str> {
+pub fn identifier<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
     identifier_parser(input)
 }
 
 #[inline]
-pub(crate) fn identifier_parser<'a, I>(input: &mut I) -> PResult<&'a str>
+pub(crate) fn identifier_parser<'a, I>(input: &mut I) -> ModalResult<&'a str>
 where
     I: Stream<Slice = &'a str> + AsBStr,
 {
@@ -68,7 +68,7 @@ where
     let mut chars = input.as_bstr().iter().map(|b| *b as char);
 
     let Some(true) = chars.next().map(is_id_start) else {
-        return Err(ErrMode::from_error_kind(input, ErrorKind::Fail));
+        return Err(ErrMode::from_input(input));
     };
 
     // 1 for the first character, we know it's ASCII
