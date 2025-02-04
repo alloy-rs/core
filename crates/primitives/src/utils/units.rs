@@ -98,9 +98,8 @@ pub enum UnitsError {
     ParseSigned(ParseSignedError),
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for UnitsError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for UnitsError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::InvalidUnit(_) => None,
             Self::ParseSigned(e) => Some(e),
@@ -131,7 +130,7 @@ impl From<ParseSignedError> for UnitsError {
 
 /// This enum holds the numeric types that a possible to be returned by `parse_units` and
 /// that are taken by `format_units`.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ParseUnits {
     /// Unsigned 256-bit integer.
     U256(U256),
@@ -174,6 +173,20 @@ macro_rules! impl_from_integers {
 
 impl_from_integers!(U256(u8, u16, u32, u64, u128, usize, U256));
 impl_from_integers!(I256(i8, i16, i32, i64, i128, isize, I256));
+
+macro_rules! impl_try_into_absolute {
+    ($($t:ty),* $(,)?) => { $(
+        impl TryFrom<ParseUnits> for $t {
+            type Error = <$t as TryFrom<U256>>::Error;
+
+            fn try_from(value: ParseUnits) -> Result<Self, Self::Error> {
+                <$t>::try_from(value.get_absolute())
+            }
+        }
+    )* };
+}
+
+impl_try_into_absolute!(u64, u128);
 
 impl ParseUnits {
     /// Parses a decimal number and multiplies it with 10^units.

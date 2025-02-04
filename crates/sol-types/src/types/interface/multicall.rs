@@ -134,7 +134,7 @@ impl MulticallMarker for Aggregate {
         data: Vec<u8>,
         rest: Self::CallStructParameters,
     ) -> Self::CallStruct {
-        IMulticall3::Call { target: rest, callData: data }
+        IMulticall3::Call { target: rest, callData: data.into() }
     }
 
     fn __multicall_abi_encode(calls: &Vec<Self::CallStruct>) -> Vec<u8> {
@@ -156,7 +156,7 @@ impl MulticallMarker for Aggregate3 {
         data: Vec<u8>,
         rest: Self::CallStructParameters,
     ) -> Self::CallStruct {
-        IMulticall3::Call3 { target: rest.0, allowFailure: rest.1, callData: data }
+        IMulticall3::Call3 { target: rest.0, allowFailure: rest.1, callData: data.into() }
     }
 
     fn __multicall_abi_encode(calls: &Vec<Self::CallStruct>) -> Vec<u8> {
@@ -182,7 +182,7 @@ impl MulticallMarker for Aggregate3Value {
             target: rest.0,
             allowFailure: rest.1,
             value: rest.2,
-            callData: data,
+            callData: data.into(),
         }
     }
 
@@ -429,7 +429,7 @@ mod tests {
             builder.push(&call1, token);
         assert_eq!(
             builder.calls(),
-            &[IMulticall3::Call { target: token, callData: call1.abi_encode() }]
+            &[IMulticall3::Call { target: token, callData: call1.abi_encode().into() }]
         );
 
         let call2 = ERC20::balanceOfCall { owner: Address::with_last_byte(2) };
@@ -438,8 +438,8 @@ mod tests {
         assert_eq!(
             builder.calls(),
             &[
-                IMulticall3::Call { target: token, callData: call1.abi_encode() },
-                IMulticall3::Call { target: token, callData: call2.abi_encode() },
+                IMulticall3::Call { target: token, callData: call1.abi_encode().into() },
+                IMulticall3::Call { target: token, callData: call2.abi_encode().into() },
             ]
         );
 
@@ -448,12 +448,13 @@ mod tests {
             calls: vec![
                 IMulticall3::Call {
                     target: token,
-                    callData: ERC20::totalSupplyCall {}.abi_encode(),
+                    callData: ERC20::totalSupplyCall {}.abi_encode().into(),
                 },
                 IMulticall3::Call {
                     target: token,
                     callData: ERC20::balanceOfCall { owner: Address::with_last_byte(2) }
-                        .abi_encode(),
+                        .abi_encode()
+                        .into(),
                 },
             ],
         };

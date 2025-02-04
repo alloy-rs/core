@@ -1,17 +1,16 @@
-use crate::{
-    resolve::ResolveSolEvent, DecodedEvent, DynSolEvent, DynSolType, Error, ResolveSolType, Result,
-};
+use crate::{DecodedEvent, DynSolEvent, DynSolType, Error, Result, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::Event;
 use alloy_primitives::{LogData, B256};
 
+#[allow(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
     impl Sealed for alloy_json_abi::Event {}
 }
 use sealed::Sealed;
 
-impl ResolveSolEvent for Event {
+impl Specifier<DynSolEvent> for Event {
     fn resolve(&self) -> Result<DynSolEvent> {
         let mut indexed = Vec::with_capacity(self.inputs.len());
         let mut body = Vec::with_capacity(self.inputs.len());
@@ -72,15 +71,14 @@ impl EventExt for Event {
     where
         I: IntoIterator<Item = B256>,
     {
-        ResolveSolEvent::resolve(self)?.decode_log_parts(topics, data, validate)
+        self.resolve()?.decode_log_parts(topics, data, validate)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::DynSolValue;
-
     use super::*;
+    use crate::DynSolValue;
     use alloy_json_abi::EventParam;
     use alloy_primitives::{address, b256, bytes, hex, keccak256, Signed};
 
@@ -127,12 +125,12 @@ mod tests {
         let result = event
             .decode_log_parts(
                 [
-                    b256!("0000000000000000000000000000000000000000000000000000000000000000"),
-                    b256!("0000000000000000000000000000000000000000000000000000000000000002"),
-                    b256!("0000000000000000000000001111111111111111111111111111111111111111"),
-                    b256!("00000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-                    b256!("00000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
-                    b256!("00000000000000000ccccccccccccccccccccccccccccccccccccccccccccccc"),
+                    b256!("0x0000000000000000000000000000000000000000000000000000000000000000"),
+                    b256!("0x0000000000000000000000000000000000000000000000000000000000000002"),
+                    b256!("0x0000000000000000000000001111111111111111111111111111111111111111"),
+                    b256!("0x00000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+                    b256!("0x00000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+                    b256!("0x00000000000000000ccccccccccccccccccccccccccccccccccccccccccccccc"),
                 ],
                 &hex!(
                     "
@@ -153,7 +151,7 @@ mod tests {
                     )),
                     256
                 ),
-                DynSolValue::Address(address!("2222222222222222222222222222222222222222")),
+                DynSolValue::Address(address!("0x2222222222222222222222222222222222222222")),
             ]
         );
         assert_eq!(
@@ -165,9 +163,9 @@ mod tests {
                     )),
                     256
                 ),
-                DynSolValue::Address(address!("1111111111111111111111111111111111111111")),
+                DynSolValue::Address(address!("0x1111111111111111111111111111111111111111")),
                 DynSolValue::FixedBytes(
-                    b256!("00000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+                    b256!("0x00000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
                     32
                 ),
             ]
@@ -191,8 +189,8 @@ mod tests {
 
         let log = LogData::new_unchecked(
             vec![
-                b256!("cf74b4e62f836eeedcd6f92120ffb5afea90e6fa490d36f8b81075e2a7de0cf7"),
-                b256!("0000000000000000000000000000000000000000000000000000000000012321"),
+                b256!("0xcf74b4e62f836eeedcd6f92120ffb5afea90e6fa490d36f8b81075e2a7de0cf7"),
+                b256!("0x0000000000000000000000000000000000000000000000000000000000012321"),
             ],
             bytes!(
                 "

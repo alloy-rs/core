@@ -1,4 +1,7 @@
-use crate::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
+use crate::{
+    to_sol::{SolPrinter, ToSolConfig},
+    AbiItem, Constructor, Error, Event, Fallback, Function, Receive,
+};
 use alloc::{collections::btree_map, string::String, vec::Vec};
 use alloy_primitives::Bytes;
 use btree_map::BTreeMap;
@@ -81,7 +84,7 @@ impl JsonAbi {
     ///     "function transferFrom(address from, address to, uint value)",
     ///     "function balanceOf(address owner)(uint balance)",
     ///     "event Transfer(address indexed from, address indexed to, address value)",
-    ///     "error InsufficientBalance(account owner, uint balance)",
+    ///     "error InsufficientBalance(address owner, uint balance)",
     ///     "function addPerson(tuple(string, uint16) person)",
     ///     "function addPeople(tuple(string, uint16)[] person)",
     ///     "function getPerson(uint id)(tuple(string, uint16))",
@@ -195,30 +198,18 @@ impl JsonAbi {
     /// Note that enums are going to be identical to `uint8` UDVTs, since no
     /// other information about enums is present in the ABI.
     #[inline]
-    pub fn to_sol(&self, name: &str) -> String {
+    pub fn to_sol(&self, name: &str, config: Option<ToSolConfig>) -> String {
         let mut out = String::new();
-        self.to_sol_raw(name, &mut out);
+        self.to_sol_raw(name, &mut out, config);
         out
     }
 
     /// Formats this JSON ABI as a Solidity interface into the given string.
     ///
     /// See [`to_sol`](JsonAbi::to_sol) for more information.
-    pub fn to_sol_raw(&self, name: &str, out: &mut String) {
-        let len = self.len();
-        out.reserve((len + 1) * 128);
-
-        out.push_str("interface ");
-        if !name.is_empty() {
-            out.push_str(name);
-            out.push(' ');
-        }
-        out.push('{');
-        if len > 0 {
-            out.push('\n');
-            crate::to_sol::ToSol::to_sol(self, &mut crate::to_sol::SolPrinter::new(out));
-        }
-        out.push('}');
+    pub fn to_sol_raw(&self, name: &str, out: &mut String, config: Option<ToSolConfig>) {
+        out.reserve(self.len() * 128);
+        SolPrinter::new(out, name, config.unwrap_or_default()).print(self);
     }
 
     /// Deduplicates all functions, errors, and events which have the same name and inputs.
@@ -414,7 +405,7 @@ macro_rules! iter_impl {
 ///
 /// This `struct` is created by [`JsonAbi::items`]. See its documentation for
 /// more.
-#[derive(Clone, Debug)] // TODO(MSRV-1.70): derive Default
+#[derive(Clone, Debug, Default)]
 pub struct Items<'a> {
     len: usize,
     constructor: Option<&'a Constructor>,
@@ -437,7 +428,7 @@ iter_impl!(traits Items<'_>);
 ///
 /// This `struct` is created by [`JsonAbi::into_items`]. See its documentation
 /// for more.
-#[derive(Debug)] // TODO(MSRV-1.70): derive Default
+#[derive(Debug, Default)]
 pub struct IntoItems {
     len: usize,
     constructor: Option<Constructor>,

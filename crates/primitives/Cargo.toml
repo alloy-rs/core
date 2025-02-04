@@ -15,20 +15,45 @@ exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
+rustdoc-args = [
+    "-Zunstable-options",
+    "--generate-link-to-definition",
+    "--show-type-layout",
+]
+
+[lints]
+workspace = true
 
 [dependencies]
 bytes.workspace = true
-hex-literal.workspace = true
 hex.workspace = true
 itoa.workspace = true
 ruint.workspace = true
-tiny-keccak = { workspace = true, features = ["keccak"] }
-keccak-asm = { workspace = true, optional = true }
 
 # macros
-derive_more.workspace = true
 cfg-if.workspace = true
+derive_more = { workspace = true, features = [
+    "as_ref",
+    "add",
+    "add_assign",
+    "not",
+    "deref",
+    "deref_mut",
+    "from",
+    "from_str",
+    "index",
+    "index_mut",
+    "into",
+    "into_iterator",
+    "display",
+    "deref",
+] }
+paste.workspace = true
+
+# keccak256
+keccak-asm = { workspace = true, optional = true }
+sha3 = { workspace = true, optional = true }
+tiny-keccak = { workspace = true, features = ["keccak"] }
 
 # rlp
 alloy-rlp = { workspace = true, optional = true }
@@ -36,17 +61,26 @@ alloy-rlp = { workspace = true, optional = true }
 # serde
 serde = { workspace = true, optional = true, features = ["derive"] }
 
-# ssz
-ethereum_ssz = { workspace = true, optional = true }
-
 # getrandom
 getrandom = { workspace = true, optional = true }
 
 # rand
 rand = { workspace = true, optional = true, features = ["getrandom"] }
 
+# rayon
+rayon = { workspace = true, optional = true }
+
 # k256
-k256 = { workspace = true, optional = true }
+k256 = { workspace = true, optional = true, features = ["ecdsa"] }
+
+# map
+hashbrown = { workspace = true, optional = true, features = [
+    "default-hasher",
+    "inline-more",
+] }
+indexmap = { workspace = true, optional = true }
+foldhash = { workspace = true, optional = true }
+rustc-hash = { workspace = true, optional = true }
 
 # arbitrary
 arbitrary = { workspace = true, optional = true }
@@ -54,38 +88,81 @@ derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
+# allocative
+allocative = { workspace = true, optional = true }
+
 # postgres
 postgres-types = { workspace = true, optional = true }
 
 [dev-dependencies]
+bcs.workspace = true
 bincode.workspace = true
 criterion.workspace = true
 serde_json.workspace = true
 
 [features]
-default = ["std"]
+default = ["std", "map", "map-foldhash"]
 std = [
     "bytes/std",
     "hex/std",
     "ruint/std",
     "alloy-rlp?/std",
+    "foldhash?/std",
+    "indexmap?/std",
+    "k256?/std",
     "keccak-asm?/std",
     "proptest?/std",
     "rand?/std",
+    "rustc-hash?/std",
     "serde?/std",
-    "k256?/std"
+    "sha3?/std",
 ]
-postgres = ["dep:postgres-types", "std", "ruint/postgres"]
-tiny-keccak = []
-native-keccak = []
+nightly = [
+    "hex/nightly",
+    "ruint/nightly",
+    "hashbrown?/nightly",
+    "rustc-hash?/nightly",
+]
+
 asm-keccak = ["dep:keccak-asm"]
+native-keccak = []
+sha3-keccak = ["dep:sha3"]
+tiny-keccak = []
+
+map = ["dep:hashbrown"]
+map-hashbrown = ["map"]
+map-indexmap = ["map", "dep:indexmap"]
+map-foldhash = ["map", "dep:foldhash"]
+map-fxhash = ["map", "dep:rustc-hash"]
+
 getrandom = ["dep:getrandom"]
-rand = ["dep:rand", "getrandom", "ruint/rand"]
-rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
-serde = ["dep:serde", "bytes/serde", "hex/serde", "ruint/serde"]
-ssz = ["dep:ethereum_ssz", "std", "ruint/ssz"]
-arbitrary = ["std", "dep:arbitrary", "dep:derive_arbitrary", "dep:proptest", "dep:proptest-derive", "ruint/arbitrary", "ruint/proptest", "ethereum_ssz?/arbitrary"]
 k256 = ["dep:k256"]
+rand = ["dep:rand", "getrandom", "ruint/rand", "rustc-hash?/rand"]
+rayon = ["dep:rayon", "hashbrown?/rayon", "indexmap?/rayon"]
+rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
+serde = [
+    "dep:serde",
+    "bytes/serde",
+    "hex/serde",
+    "ruint/serde",
+    "hashbrown?/serde",
+    "indexmap?/serde",
+    "rand?/serde",
+]
+
+allocative = ["dep:allocative"]
+arbitrary = [
+    "std",
+    "dep:arbitrary",
+    "dep:derive_arbitrary",
+    "dep:proptest",
+    "dep:proptest-derive",
+    "ruint/arbitrary",
+    "ruint/proptest",
+    "indexmap?/arbitrary",
+]
+postgres = ["std", "dep:postgres-types", "ruint/postgres"]
+
 # `const-hex` compatibility feature for `hex`.
 # Should not be needed most of the time.
 hex-compat = ["hex/hex"]

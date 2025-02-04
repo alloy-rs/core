@@ -15,7 +15,14 @@ exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
+rustdoc-args = [
+    "-Zunstable-options",
+    "--generate-link-to-definition",
+    "--show-type-layout",
+]
+
+[lints]
+workspace = true
 
 [dependencies]
 alloy-primitives.workspace = true
@@ -30,7 +37,12 @@ alloy-json-abi = { workspace = true, optional = true }
 serde = { workspace = true, optional = true, features = ["derive"] }
 
 [dev-dependencies]
-alloy-primitives = { workspace = true, features = ["arbitrary", "serde"] }
+alloy-primitives = { workspace = true, features = [
+    "arbitrary",
+    "serde",
+    "rlp",
+] }
+alloy-rlp.workspace = true
 derive_more.workspace = true
 paste.workspace = true
 pretty_assertions.workspace = true
@@ -43,7 +55,7 @@ trybuild = "1.0"
 
 [features]
 default = ["std"]
-std = ["alloy-primitives/std", "hex/std", "serde?/std"]
+std = ["alloy-primitives/std", "hex/std", "alloy-json-abi?/std", "serde?/std"]
 json = ["dep:alloy-json-abi", "alloy-sol-macro/json"]
 eip712-serde = ["dep:serde", "alloy-primitives/serde"]
 arbitrary = ["alloy-primitives/arbitrary"]

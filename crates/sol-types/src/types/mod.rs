@@ -10,12 +10,12 @@ mod event;
 pub use event::{EventTopic, SolEvent, TopicList};
 
 mod function;
-pub use function::SolCall;
+pub use function::{SolCall, SolConstructor};
 
 mod interface;
 pub use interface::{
-    multicall, ContractError, GenericContractError, GenericRevertReason, MulticallBuilder,
-    RevertReason, Selectors, SolEventInterface, SolInterface,
+    ContractError, GenericContractError, GenericRevertReason, MulticallBuilder, RevertReason,
+    Selectors, SolEventInterface, SolInterface,
 };
 
 mod r#struct;

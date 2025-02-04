@@ -1,24 +1,26 @@
 #![allow(missing_docs)]
 
-use crate::{Error, ParameterSpecifier, Result, RootType};
+use crate::{
+    ident::identifier_parser, input::check_recursion, new_input, Error, Input, ParameterSpecifier,
+    Result, RootType, StateMutability,
+};
 use alloc::{string::String, vec::Vec};
 use core::{slice, str};
 use winnow::{
     ascii::space0,
-    combinator::{cut_err, delimited, opt, preceded, separated, terminated},
-    error::{AddContext, ParserError, StrContext, StrContextValue},
-    stream::Accumulate,
-    trace::trace,
-    PResult, Parser,
+    combinator::{alt, cut_err, opt, preceded, separated, terminated, trace},
+    error::{ContextError, ParserError, StrContext, StrContextValue},
+    stream::{Accumulate, AsChar, Stream},
+    ModalParser, ModalResult, Parser,
 };
 
 pub use crate::ident::identifier;
 
 #[inline]
-pub fn spanned<'a, O, E>(
-    mut f: impl Parser<&'a str, O, E>,
-) -> impl Parser<&'a str, (&'a str, O), E> {
-    trace("spanned", move |input: &mut &'a str| {
+pub fn spanned<'a, O, E: ParserError<Input<'a>>>(
+    mut f: impl ModalParser<Input<'a>, O, E>,
+) -> impl ModalParser<Input<'a>, (&'a str, O), E> {
+    trace("spanned", move |input: &mut Input<'a>| {
         let start = input.as_ptr();
 
         let mut len = input.len();
@@ -35,10 +37,7 @@ pub fn spanned<'a, O, E>(
 }
 
 #[inline]
-pub fn char_parser<'a, E>(c: char) -> impl Parser<&'a str, char, E>
-where
-    E: ParserError<&'a str> + AddContext<&'a str, StrContext>,
-{
+pub fn char_parser<'a>(c: char) -> impl ModalParser<Input<'a>, char, ContextError> {
     #[cfg(feature = "debug")]
     let name = format!("char={c:?}");
     #[cfg(not(feature = "debug"))]
@@ -47,10 +46,7 @@ where
 }
 
 #[inline]
-pub fn str_parser<'a, E>(s: &'static str) -> impl Parser<&'a str, &'a str, E>
-where
-    E: ParserError<&'a str> + AddContext<&'a str, StrContext>,
-{
+pub fn str_parser<'a>(s: &'static str) -> impl ModalParser<Input<'a>, &'a str, ContextError> {
     #[cfg(feature = "debug")]
     let name = format!("str={s:?}");
     #[cfg(not(feature = "debug"))]
@@ -58,84 +54,107 @@ where
     trace(name, s.context(StrContext::Expected(StrContextValue::StringLiteral(s))))
 }
 
-pub fn tuple_parser<'a, O1, O2, E>(f: impl Parser<&'a str, O1, E>) -> impl Parser<&'a str, O2, E>
-where
-    O2: Accumulate<O1>,
-    E: ParserError<&'a str> + AddContext<&'a str, StrContext>,
-{
+pub fn tuple_parser<'a, O1, O2: Accumulate<O1>>(
+    f: impl ModalParser<Input<'a>, O1, ContextError>,
+) -> impl ModalParser<Input<'a>, O2, ContextError> {
     list_parser('(', ',', ')', f)
 }
 
-pub fn array_parser<'a, O1, O2, E>(f: impl Parser<&'a str, O1, E>) -> impl Parser<&'a str, O2, E>
-where
-    O2: Accumulate<O1>,
-    E: ParserError<&'a str> + AddContext<&'a str, StrContext>,
-{
+pub fn array_parser<'a, O1, O2: Accumulate<O1>>(
+    f: impl ModalParser<Input<'a>, O1, ContextError>,
+) -> impl ModalParser<Input<'a>, O2, ContextError> {
     list_parser('[', ',', ']', f)
 }
 
 #[inline]
-fn list_parser<'i, O1, O2, E>(
+fn list_parser<'i, O1, O2>(
     open: char,
     delim: char,
     close: char,
-    f: impl Parser<&'i str, O1, E>,
-) -> impl Parser<&'i str, O2, E>
+    f: impl ModalParser<Input<'i>, O1, ContextError>,
+) -> impl ModalParser<Input<'i>, O2, ContextError>
 where
     O2: Accumulate<O1>,
-    E: ParserError<&'i str> + AddContext<&'i str, StrContext>,
 {
     #[cfg(feature = "debug")]
     let name = format!("list({open:?}, {delim:?}, {close:?})");
     #[cfg(not(feature = "debug"))]
     let name = "list";
-    trace(
-        name,
-        delimited(
-            (char_parser(open), space0),
-            cut_err(separated(0.., f, (char_parser(delim), space0))),
-            (opt(delim), space0, cut_err(char_parser(close))),
-        ),
-    )
+
+    // These have to be outside of the closure for some reason.
+    let f = check_recursion(f);
+    let elems_1 = separated(1.., f, (char_parser(delim), space0));
+    let mut elems_and_end = terminated(elems_1, (opt(delim), space0, cut_err(char_parser(close))));
+    trace(name, move |input: &mut Input<'i>| {
+        let _ = char_parser(open).parse_next(input)?;
+        let _ = space0(input)?;
+        if input.starts_with(close) {
+            input.next_slice(close.len());
+            return Ok(O2::initial(Some(0)));
+        }
+        elems_and_end.parse_next(input)
+    })
 }
 
-pub fn opt_ws_ident<'a>(input: &mut &'a str) -> PResult<Option<&'a str>> {
-    preceded(space0, opt(identifier)).parse_next(input)
+pub fn opt_ws_ident<'a>(input: &mut Input<'a>) -> ModalResult<Option<&'a str>> {
+    preceded(space0, opt(identifier_parser)).parse_next(input)
 }
 
 // Not public API.
 #[doc(hidden)]
 #[inline]
-pub fn parse_item<'a>(s: &mut &'a str) -> Result<&'a str> {
+pub fn parse_item_keyword<'a>(s: &mut &'a str) -> Result<&'a str> {
     trace("item", terminated(identifier, space0)).parse_next(s).map_err(Error::parser)
 }
 
-/// Returns `(name, inputs, outputs, anonymous)`.
+#[doc(hidden)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ParsedSignature<Param> {
+    pub name: String,
+    pub inputs: Vec<Param>,
+    pub outputs: Vec<Param>,
+    pub anonymous: bool,
+    pub state_mutability: Option<StateMutability>,
+}
+
 #[doc(hidden)]
 pub fn parse_signature<'a, const OUT: bool, F: Fn(ParameterSpecifier<'a>) -> T, T>(
     s: &'a str,
     f: F,
-) -> Result<(String, Vec<T>, Vec<T>, bool)> {
+) -> Result<ParsedSignature<T>> {
+    let params = || tuple_parser(ParameterSpecifier::parser.map(&f));
     trace(
         "signature",
         (
-            RootType::parser.map(|x| x.span().into()),
-            preceded(space0, tuple_parser(ParameterSpecifier::parser.map(&f))),
-            |i: &mut _| {
+            // name
+            RootType::parser,
+            // inputs
+            preceded(space0, params()),
+            // visibility
+            opt(preceded(space0, alt(("internal", "external", "private", "public")))),
+            // state mutability
+            opt(preceded(space0, alt(("pure", "view", "payable")))),
+            // outputs
+            move |i: &mut _| {
                 if OUT {
-                    preceded(
-                        (space0, opt(":"), opt("returns"), space0),
-                        opt(tuple_parser(ParameterSpecifier::parser.map(&f))),
-                    )
-                    .parse_next(i)
-                    .map(Option::unwrap_or_default)
+                    preceded((space0, opt(":"), opt("returns"), space0), opt(params()))
+                        .parse_next(i)
+                        .map(Option::unwrap_or_default)
                 } else {
                     Ok(vec![])
                 }
             },
+            // anonymous
             preceded(space0, opt("anonymous").map(|x| x.is_some())),
         ),
     )
-    .parse(s)
+    .map(|(name, inputs, _visibility, mutability, outputs, anonymous)| ParsedSignature {
+        name: name.span().into(),
+        inputs,
+        outputs,
+        anonymous,
+        state_mutability: mutability.map(|s| s.parse().unwrap()),
+    })
+    .parse(new_input(s))
     .map_err(Error::parser)
 }

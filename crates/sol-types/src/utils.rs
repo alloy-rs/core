@@ -23,6 +23,7 @@ pub const fn words_for(data: &[u8]) -> usize {
 /// Calculates the padded length of a slice of a specific length by rounding its
 /// length to the next word.
 #[inline(always)]
+#[allow(clippy::manual_div_ceil)] // `.div_ceil` has worse codegen: https://godbolt.org/z/MenKWfPh9
 pub const fn words_for_len(len: usize) -> usize {
     (len + 31) / 32
 }
@@ -90,19 +91,19 @@ mod tests {
         // this will fail if endianness is not supported
         assert_eq!(
             pad_usize(0),
-            b256!("0000000000000000000000000000000000000000000000000000000000000000")
+            b256!("0x0000000000000000000000000000000000000000000000000000000000000000")
         );
         assert_eq!(
             pad_usize(1),
-            b256!("0000000000000000000000000000000000000000000000000000000000000001")
+            b256!("0x0000000000000000000000000000000000000000000000000000000000000001")
         );
         assert_eq!(
             pad_usize(0x100),
-            b256!("0000000000000000000000000000000000000000000000000000000000000100")
+            b256!("0x0000000000000000000000000000000000000000000000000000000000000100")
         );
         assert_eq!(
             pad_usize(0xffffffff),
-            b256!("00000000000000000000000000000000000000000000000000000000ffffffff")
+            b256!("0x00000000000000000000000000000000000000000000000000000000ffffffff")
         );
     }
 }

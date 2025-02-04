@@ -1,9 +1,7 @@
 [advisories]
-vulnerability = "deny"
-unmaintained = "warn"
-unsound = "warn"
+version = 2
 yanked = "warn"
-notice = "warn"
+ignore = []
 
 [bans]
 multiple-versions = "warn"
@@ -11,7 +9,6 @@ wildcards = "deny"
 highlight = "all"
 
 [licenses]
-unlicensed = "deny"
 confidence-threshold = 0.9
 # copyleft = "deny"
 
@@ -24,8 +21,10 @@ allow = [
     "BSD-3-Clause",
     "ISC",
     "Unicode-DFS-2016",
+    "Unicode-3.0",
     "Unlicense",
     "MPL-2.0",
+    "Zlib",
     # https://github.com/briansmith/ring/issues/902
     "LicenseRef-ring",
     # https://github.com/briansmith/webpki/issues/148

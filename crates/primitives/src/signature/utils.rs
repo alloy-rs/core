@@ -6,6 +6,43 @@ pub const fn to_eip155_v(v: u8, chain_id: ChainId) -> ChainId {
     (v as u64) + 35 + chain_id * 2
 }
 
+/// Attempts to normalize the v value to a boolean parity value.
+///
+/// Returns `None` if the value is invalid for any of the known Ethereum parity encodings.
+pub const fn normalize_v(v: u64) -> Option<bool> {
+    if !is_valid_v(v) {
+        return None;
+    }
+
+    // Simplifying:
+    //  0| 1 => v % 2 == 0
+    // 27|28 => (v - 27) % 2 == 0
+    //  35.. => (v - 35) % 2 == 0
+    // ---
+    //  0| 1 => v % 2 == 0
+    // 27|28 => v % 2 == 1
+    //  35.. => v % 2 == 1
+    // ---
+    //   ..2 => v % 2 == 0
+    //     _ => v % 2 == 1
+    let cmp = (v <= 1) as u64;
+    Some(v % 2 == cmp)
+}
+
+/// Returns `true` if the given `v` value is valid for any of the known Ethereum parity encodings.
+#[inline]
+const fn is_valid_v(v: u64) -> bool {
+    matches!(
+        v,
+        // Case 1: raw/bare
+        0 | 1
+        // Case 2: non-EIP-155 v value
+        | 27 | 28
+        // Case 3: EIP-155 V value
+        | 35..
+    )
+}
+
 /// Normalizes a `v` value, respecting raw, legacy, and EIP-155 values.
 ///
 /// This function covers the entire u64 range, producing v-values as follows:
@@ -22,7 +59,7 @@ pub const fn to_eip155_v(v: u8, chain_id: ChainId) -> ChainId {
 /// recovery value of 2 or 3, you should normalize out of band.
 #[cfg(feature = "k256")]
 #[inline]
-pub(crate) const fn normalize_v(v: u64) -> k256::ecdsa::RecoveryId {
+pub(crate) const fn normalize_v_to_recid(v: u64) -> k256::ecdsa::RecoveryId {
     let byte = normalize_v_to_byte(v);
     debug_assert!(byte <= k256::ecdsa::RecoveryId::MAX);
     match k256::ecdsa::RecoveryId::from_byte(byte) {
@@ -45,11 +82,35 @@ pub(crate) const fn normalize_v_to_byte(v: u64) -> u8 {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
+    #[test]
+    fn normalizes_v() {
+        assert_eq!(normalize_v(0), Some(false));
+        assert_eq!(normalize_v(1), Some(true));
+
+        for invalid_v in 2..27 {
+            assert_eq!(normalize_v(invalid_v), None);
+        }
+
+        assert_eq!(normalize_v(27), Some(false));
+        assert_eq!(normalize_v(28), Some(true));
+
+        for invalid_v in 29..35 {
+            assert_eq!(normalize_v(invalid_v), None);
+        }
+
+        assert_eq!(normalize_v(35), Some(false));
+        assert_eq!(normalize_v(36), Some(true));
+        for v in 35..100 {
+            assert_eq!(normalize_v(v), Some((v - 35) % 2 != 0));
+        }
+    }
+
     #[test]
     #[cfg(feature = "k256")]
-    fn normalizes_v() {
-        use super::*;
-        assert_eq!(normalize_v(27), k256::ecdsa::RecoveryId::from_byte(0).unwrap());
-        assert_eq!(normalize_v(28), k256::ecdsa::RecoveryId::from_byte(1).unwrap());
+    fn normalizes_v_to_recid() {
+        assert_eq!(normalize_v_to_recid(27), k256::ecdsa::RecoveryId::from_byte(0).unwrap());
+        assert_eq!(normalize_v_to_recid(28), k256::ecdsa::RecoveryId::from_byte(1).unwrap());
     }
 }

@@ -1,24 +1,27 @@
+#![allow(unknown_lints, unnameable_types)]
+
 use crate::{
     hex,
     signature::{Parity, SignatureError},
-    U256,
+    uint, U256,
 };
 use alloc::vec::Vec;
 use core::str::FromStr;
 
-/// An Ethereum ECDSA signature.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Signature<T> {
-    /// Memoized ecdsa signature (if any)
-    inner: T,
+/// The order of the secp256k1 curve
+const SECP256K1N_ORDER: U256 =
+    uint!(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141_U256);
 
+/// An Ethereum ECDSA signature.
+#[deprecated(since = "0.8.15", note = "use PrimitiveSignature instead")]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub struct Signature {
     v: Parity,
     r: U256,
     s: U256,
 }
 
-#[cfg(feature = "k256")]
-impl<'a> TryFrom<&'a [u8]> for Signature<k256::ecdsa::Signature> {
+impl<'a> TryFrom<&'a [u8]> for Signature {
     type Error = SignatureError;
 
     /// Parses a raw signature which is expected to be 65 bytes long where
@@ -26,25 +29,13 @@ impl<'a> TryFrom<&'a [u8]> for Signature<k256::ecdsa::Signature> {
     /// and the final byte is the `v` value in 'Electrum' notation.
     fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
         if bytes.len() != 65 {
-            return Err(k256::ecdsa::Error::new().into());
+            return Err(SignatureError::FromBytes("expected exactly 65 bytes"));
         }
         Self::from_bytes_and_parity(&bytes[..64], bytes[64] as u64)
     }
 }
 
-impl<'a> TryFrom<&'a [u8]> for Signature<()> {
-    type Error = SignatureError;
-
-    fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
-        if bytes.len() != 65 {
-            return Err(SignatureError::FromBytes("expected exactly 65 bytes"));
-        }
-        Self::from_bytes_and_parity(bytes, bytes[64] as u64)
-    }
-}
-
-#[cfg(feature = "k256")]
-impl FromStr for Signature<k256::ecdsa::Signature> {
+impl FromStr for Signature {
     type Err = SignatureError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -53,52 +44,53 @@ impl FromStr for Signature<k256::ecdsa::Signature> {
     }
 }
 
-impl FromStr for Signature<()> {
-    type Err = SignatureError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let bytes = hex::decode(s)?;
-        Self::try_from(&bytes[..])
-    }
-}
-
-impl From<&crate::Signature> for [u8; 65] {
+impl From<&Signature> for [u8; 65] {
     #[inline]
-    fn from(value: &crate::Signature) -> [u8; 65] {
+    fn from(value: &Signature) -> [u8; 65] {
         value.as_bytes()
     }
 }
 
-impl From<crate::Signature> for [u8; 65] {
+impl From<Signature> for [u8; 65] {
     #[inline]
-    fn from(value: crate::Signature) -> [u8; 65] {
+    fn from(value: Signature) -> [u8; 65] {
         value.as_bytes()
     }
 }
 
-impl From<&crate::Signature> for Vec<u8> {
+impl From<&Signature> for Vec<u8> {
     #[inline]
-    fn from(value: &crate::Signature) -> Self {
+    fn from(value: &Signature) -> Self {
         value.as_bytes().to_vec()
     }
 }
 
-impl From<crate::Signature> for Vec<u8> {
+impl From<Signature> for Vec<u8> {
     #[inline]
-    fn from(value: crate::Signature) -> Self {
+    fn from(value: Signature) -> Self {
         value.as_bytes().to_vec()
     }
 }
 
 #[cfg(feature = "k256")]
-impl From<(k256::ecdsa::Signature, k256::ecdsa::RecoveryId)> for Signature<k256::ecdsa::Signature> {
+impl From<(k256::ecdsa::Signature, k256::ecdsa::RecoveryId)> for Signature {
     fn from(value: (k256::ecdsa::Signature, k256::ecdsa::RecoveryId)) -> Self {
         Self::from_signature_and_parity(value.0, value.1).unwrap()
     }
 }
 
+#[cfg(feature = "k256")]
+impl TryFrom<Signature> for k256::ecdsa::Signature {
+    type Error = k256::ecdsa::Error;
+
+    fn try_from(value: Signature) -> Result<Self, Self::Error> {
+        value.to_k256()
+    }
+}
+
 #[cfg(feature = "rlp")]
-impl crate::Signature {
+impl Signature {
+    /// Decode an RLP-encoded VRS signature.
     pub fn decode_rlp_vrs(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         use alloy_rlp::Decodable;
 
@@ -111,59 +103,61 @@ impl crate::Signature {
     }
 }
 
-#[cfg(feature = "k256")]
-impl Signature<k256::ecdsa::Signature> {
+impl Signature {
     #[doc(hidden)]
     pub fn test_signature() -> Self {
         Self::from_scalars_and_parity(
-            b256!("840cfc572845f5786e702984c2a582528cad4b49b2a10b9db1be7fca90058565"),
-            b256!("25e7109ceb98168d95b09b18bbf6b685130e0562f233877d492b94eee0c5b6d1"),
+            b256!("0x840cfc572845f5786e702984c2a582528cad4b49b2a10b9db1be7fca90058565"),
+            b256!("0x25e7109ceb98168d95b09b18bbf6b685130e0562f233877d492b94eee0c5b6d1"),
             false,
         )
         .unwrap()
     }
 
+    /// Instantiate a new signature from `r`, `s`, and `v` values.
+    pub const fn new(r: U256, s: U256, v: Parity) -> Self {
+        Self { r, s, v }
+    }
+
+    /// Returns the inner ECDSA signature.
+    #[cfg(feature = "k256")]
+    #[deprecated(note = "use `Signature::to_k256` instead")]
+    #[inline]
+    pub fn into_inner(self) -> k256::ecdsa::Signature {
+        self.try_into().expect("signature conversion failed")
+    }
+
+    /// Returns the inner ECDSA signature.
+    #[cfg(feature = "k256")]
+    #[inline]
+    pub fn to_k256(self) -> Result<k256::ecdsa::Signature, k256::ecdsa::Error> {
+        k256::ecdsa::Signature::from_scalars(self.r.to_be_bytes(), self.s.to_be_bytes())
+    }
+
     /// Instantiate from a signature and recovery id
+    #[cfg(feature = "k256")]
     pub fn from_signature_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         sig: k256::ecdsa::Signature,
         parity: T,
     ) -> Result<Self, SignatureError> {
         let r = U256::from_be_slice(sig.r().to_bytes().as_ref());
         let s = U256::from_be_slice(sig.s().to_bytes().as_ref());
-        Ok(Self { inner: sig, v: parity.try_into().map_err(Into::into)?, r, s })
-    }
-
-    /// Instantiate from v, r, s.
-    pub fn from_rs_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
-        r: U256,
-        s: U256,
-        parity: T,
-    ) -> Result<Self, SignatureError> {
-        Self::from_scalars_and_parity(r.into(), s.into(), parity)
-    }
-
-    /// Parses a signature from a byte slice, with a v value
-    #[inline]
-    pub fn from_bytes_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
-        bytes: &[u8],
-        parity: T,
-    ) -> Result<Self, SignatureError> {
-        let sig = k256::ecdsa::Signature::from_slice(bytes)?;
-        Self::from_signature_and_parity(sig, parity)
+        Ok(Self { v: parity.try_into().map_err(Into::into)?, r, s })
     }
 
     /// Creates a [`Signature`] from the serialized `r` and `s` scalar values, which comprise the
     /// ECDSA signature, alongside a `v` value, used to determine the recovery ID.
-    ///
-    /// See [`k256::ecdsa::Signature::from_scalars`] for more details.
     #[inline]
     pub fn from_scalars_and_parity<T: TryInto<Parity, Error = E>, E: Into<SignatureError>>(
         r: crate::B256,
         s: crate::B256,
         parity: T,
     ) -> Result<Self, SignatureError> {
-        let inner = k256::ecdsa::Signature::from_scalars(r.0, s.0)?;
-        Self::from_signature_and_parity(inner, parity)
+        Self::from_rs_and_parity(
+            U256::from_be_slice(r.as_ref()),
+            U256::from_be_slice(s.as_ref()),
+            parity,
+        )
     }
 
     /// Normalizes the signature into "low S" form as described in
@@ -172,21 +166,23 @@ impl Signature<k256::ecdsa::Signature> {
     /// [1]: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
     #[inline]
     pub fn normalize_s(&self) -> Option<Self> {
-        // Normalize into "low S" form. See:
-        // - https://github.com/RustCrypto/elliptic-curves/issues/988
-        // - https://github.com/bluealloy/revm/pull/870
-        self.inner.normalize_s().map(|normalized| {
-            let s = U256::from_be_slice(normalized.s().to_bytes().as_ref());
-            Self { inner: normalized, v: self.v.inverted(), r: self.r, s }
-        })
+        let s = self.s();
+
+        if s > SECP256K1N_ORDER >> 1 {
+            Some(Self { v: self.v.inverted(), r: self.r, s: SECP256K1N_ORDER - s })
+        } else {
+            None
+        }
     }
 
     /// Returns the recovery ID.
+    #[cfg(feature = "k256")]
     #[inline]
     pub const fn recid(&self) -> k256::ecdsa::RecoveryId {
         self.v.recid()
     }
 
+    #[cfg(feature = "k256")]
     #[doc(hidden)]
     #[deprecated(note = "use `Signature::recid` instead")]
     pub const fn recovery_id(&self) -> k256::ecdsa::RecoveryId {
@@ -197,6 +193,7 @@ impl Signature<k256::ecdsa::Signature> {
     /// hashing the message according to [EIP-191](crate::eip191_hash_message).
     ///
     /// [`Address`]: crate::Address
+    #[cfg(feature = "k256")]
     #[inline]
     pub fn recover_address_from_msg<T: AsRef<[u8]>>(
         &self,
@@ -208,6 +205,7 @@ impl Signature<k256::ecdsa::Signature> {
     /// Recovers an [`Address`] from this signature and the given prehashed message.
     ///
     /// [`Address`]: crate::Address
+    #[cfg(feature = "k256")]
     #[inline]
     pub fn recover_address_from_prehash(
         &self,
@@ -220,6 +218,7 @@ impl Signature<k256::ecdsa::Signature> {
     /// hashing the message according to [EIP-191](crate::eip191_hash_message).
     ///
     /// [`VerifyingKey`]: k256::ecdsa::VerifyingKey
+    #[cfg(feature = "k256")]
     #[inline]
     pub fn recover_from_msg<T: AsRef<[u8]>>(
         &self,
@@ -231,6 +230,7 @@ impl Signature<k256::ecdsa::Signature> {
     /// Recovers a [`VerifyingKey`] from this signature and the given prehashed message.
     ///
     /// [`VerifyingKey`]: k256::ecdsa::VerifyingKey
+    #[cfg(feature = "k256")]
     #[inline]
     pub fn recover_from_prehash(
         &self,
@@ -239,14 +239,12 @@ impl Signature<k256::ecdsa::Signature> {
         let this = self.normalize_s().unwrap_or(*self);
         k256::ecdsa::VerifyingKey::recover_from_prehash(
             prehash.as_slice(),
-            &this.inner,
+            &this.to_k256()?,
             this.recid(),
         )
         .map_err(Into::into)
     }
-}
 
-impl Signature<()> {
     /// Parses a signature from a byte slice, with a v value
     ///
     /// # Panics
@@ -268,15 +266,7 @@ impl Signature<()> {
         s: U256,
         parity: T,
     ) -> Result<Self, SignatureError> {
-        Ok(Self { inner: (), v: parity.try_into().map_err(Into::into)?, r, s })
-    }
-}
-
-impl<S: Copy> Signature<S> {
-    /// Returns the inner ECDSA signature.
-    #[inline]
-    pub const fn into_inner(self) -> S {
-        self.inner
+        Ok(Self { v: parity.try_into().map_err(Into::into)?, r, s })
     }
 
     /// Modifies the recovery ID by applying [EIP-155] to a `v` value.
@@ -291,14 +281,6 @@ impl<S: Copy> Signature<S> {
     /// to a simple parity bool.
     pub fn with_parity_bool(self) -> Self {
         self.with_parity(self.v.to_parity_bool())
-    }
-}
-
-impl<S> Signature<S> {
-    /// Returns the inner ECDSA signature.
-    #[inline]
-    pub const fn inner(&self) -> &S {
-        &self.inner
     }
 
     /// Returns the `r` component of this signature.
@@ -319,6 +301,25 @@ impl<S> Signature<S> {
         self.v
     }
 
+    /// Returns the chain ID associated with the V value, if this signature is
+    /// replay-protected by [EIP-155].
+    ///
+    /// [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
+    pub const fn chain_id(&self) -> Option<u64> {
+        self.v.chain_id()
+    }
+
+    /// Returns true if the signature is replay-protected by [EIP-155].
+    ///
+    /// This is true if the V value is 35 or greater. Values less than 35 are
+    /// either not replay protected (27/28), or are invalid.
+    ///
+    /// [EIP-155]: https://eips.ethereum.org/EIPS/eip-155
+    #[inline]
+    pub const fn has_eip155_value(&self) -> bool {
+        self.v().has_eip155_value()
+    }
+
     /// Returns the byte-array representation of this signature.
     ///
     /// The first 32 bytes are the `r` value, the second 32 bytes the `s` value
@@ -328,14 +329,14 @@ impl<S> Signature<S> {
         let mut sig = [0u8; 65];
         sig[..32].copy_from_slice(&self.r.to_be_bytes::<32>());
         sig[32..64].copy_from_slice(&self.s.to_be_bytes::<32>());
-        sig[64] = self.v.y_parity_byte();
+        sig[64] = self.v.y_parity_byte_non_eip155().unwrap_or(self.v.y_parity_byte());
         sig
     }
 
     /// Sets the recovery ID by normalizing a `v` value.
     #[inline]
     pub fn with_parity<T: Into<Parity>>(self, parity: T) -> Self {
-        Self { inner: self.inner, v: parity.into(), r: self.r, s: self.s }
+        Self { v: parity.into(), r: self.r, s: self.s }
     }
 
     /// Length of RLP RS field encoding
@@ -372,7 +373,7 @@ impl<S> Signature<S> {
 }
 
 #[cfg(feature = "rlp")]
-impl alloy_rlp::Encodable for crate::Signature {
+impl alloy_rlp::Encodable for Signature {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         alloy_rlp::Header { list: true, payload_length: self.rlp_vrs_len() }.encode(out);
         self.write_rlp_vrs(out);
@@ -385,7 +386,7 @@ impl alloy_rlp::Encodable for crate::Signature {
 }
 
 #[cfg(feature = "rlp")]
-impl alloy_rlp::Decodable for crate::Signature {
+impl alloy_rlp::Decodable for Signature {
     fn decode(buf: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
         let header = alloy_rlp::Header::decode(buf)?;
         let pre_len = buf.len();
@@ -400,30 +401,43 @@ impl alloy_rlp::Decodable for crate::Signature {
 }
 
 #[cfg(feature = "serde")]
-impl serde::Serialize for crate::Signature {
+impl serde::Serialize for Signature {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        use serde::ser::SerializeMap;
+        // if the serializer is human readable, serialize as a map, otherwise as a tuple
+        if serializer.is_human_readable() {
+            use serde::ser::SerializeMap;
 
-        let mut map = serializer.serialize_map(Some(3))?;
+            let mut map = serializer.serialize_map(Some(3))?;
 
-        map.serialize_entry("r", &self.r)?;
-        map.serialize_entry("s", &self.s)?;
+            map.serialize_entry("r", &self.r)?;
+            map.serialize_entry("s", &self.s)?;
 
-        match self.v {
-            Parity::Eip155(v) => map.serialize_entry("v", &crate::U64::from(v))?,
-            Parity::NonEip155(b) => map.serialize_entry("v", &(b as u8 + 27))?,
-            Parity::Parity(true) => map.serialize_entry("yParity", "0x1")?,
-            Parity::Parity(false) => map.serialize_entry("yParity", "0x0")?,
+            match self.v {
+                Parity::Eip155(v) => map.serialize_entry("v", &crate::U64::from(v))?,
+                Parity::NonEip155(b) => {
+                    map.serialize_entry("v", &crate::U64::from(b as u8 + 27))?
+                }
+                Parity::Parity(true) => map.serialize_entry("yParity", "0x1")?,
+                Parity::Parity(false) => map.serialize_entry("yParity", "0x0")?,
+            }
+            map.end()
+        } else {
+            use serde::ser::SerializeTuple;
+
+            let mut tuple = serializer.serialize_tuple(3)?;
+            tuple.serialize_element(&self.r)?;
+            tuple.serialize_element(&self.s)?;
+            tuple.serialize_element(&crate::U64::from(self.v.to_u64()))?;
+            tuple.end()
         }
-        map.end()
     }
 }
 
 #[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for crate::Signature {
+impl<'de> serde::Deserialize<'de> for Signature {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -445,7 +459,7 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
             {
                 struct FieldVisitor;
 
-                impl<'de> serde::de::Visitor<'de> for FieldVisitor {
+                impl serde::de::Visitor<'_> for FieldVisitor {
                     type Value = Field;
 
                     fn expecting(
@@ -472,9 +486,9 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
             }
         }
 
-        struct SignatureVisitor;
-        impl<'de> serde::de::Visitor<'de> for SignatureVisitor {
-            type Value = crate::Signature;
+        struct MapVisitor;
+        impl<'de> serde::de::Visitor<'de> for MapVisitor {
+            type Value = Signature;
 
             fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 formatter.write_str("a JSON signature object containing r, s, and v or yParity")
@@ -522,45 +536,86 @@ impl<'de> serde::Deserialize<'de> for crate::Signature {
                 let r = r.ok_or_else(|| serde::de::Error::missing_field("r"))?;
                 let s = s.ok_or_else(|| serde::de::Error::missing_field("s"))?;
 
-                crate::Signature::from_rs_and_parity(r, s, v).map_err(serde::de::Error::custom)
+                Signature::from_rs_and_parity(r, s, v).map_err(serde::de::Error::custom)
             }
         }
 
-        deserializer.deserialize_map(SignatureVisitor)
+        struct TupleVisitor;
+        impl<'de> serde::de::Visitor<'de> for TupleVisitor {
+            type Value = Signature;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                formatter.write_str("a tuple containing r, s, and v")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let r = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+                let s = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+                let v: crate::U64 = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
+
+                Signature::from_rs_and_parity(r, s, v).map_err(serde::de::Error::custom)
+            }
+        }
+
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_map(MapVisitor)
+        } else {
+            deserializer.deserialize_tuple(3, TupleVisitor)
+        }
+    }
+}
+
+#[cfg(feature = "arbitrary")]
+impl<'a> arbitrary::Arbitrary<'a> for Signature {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        Self::from_rs_and_parity(u.arbitrary()?, u.arbitrary()?, u.arbitrary::<Parity>()?)
+            .map_err(|_| arbitrary::Error::IncorrectFormat)
+    }
+}
+
+#[cfg(feature = "arbitrary")]
+impl proptest::arbitrary::Arbitrary for Signature {
+    type Parameters = ();
+    type Strategy = proptest::strategy::FilterMap<
+        <(U256, U256, Parity) as proptest::arbitrary::Arbitrary>::Strategy,
+        fn((U256, U256, Parity)) -> Option<Self>,
+    >;
+
+    fn arbitrary_with((): Self::Parameters) -> Self::Strategy {
+        use proptest::strategy::Strategy;
+        proptest::arbitrary::any::<(U256, U256, Parity)>()
+            .prop_filter_map("invalid signature", |(r, s, parity)| {
+                Self::from_rs_and_parity(r, s, parity).ok()
+            })
     }
 }
 
 #[cfg(test)]
+#[allow(unused_imports)]
 mod tests {
-
     use super::*;
-    use std::str::FromStr;
+    use crate::Bytes;
+    use core::str::FromStr;
+    use hex::FromHex;
 
     #[cfg(feature = "rlp")]
     use alloy_rlp::{Decodable, Encodable};
 
     #[test]
-    #[cfg(TODO)] // TODO: Transaction
-    fn can_recover_tx_sender() {
-        // random mainnet tx: https://etherscan.io/tx/0x86718885c4b4218c6af87d3d0b0d83e3cc465df2a05c048aa4db9f1a6f9de91f
-        let tx_rlp = hex::decode("02f872018307910d808507204d2cb1827d0094388c818ca8b9251b393131c08a736a67ccb19297880320d04823e2701c80c001a0cf024f4815304df2867a1a74e9d2707b6abda0337d2d54a4438d453f4160f190a07ac0e6b3bc9395b5b9c8b9e6d77204a236577a5b18467b9175c01de4faa208d9").unwrap();
-        let tx: Transaction = rlp::decode(&tx_rlp).unwrap();
-        assert_eq!(tx.rlp(), tx_rlp);
-        assert_eq!(
-            tx.hash,
-            "0x86718885c4b4218c6af87d3d0b0d83e3cc465df2a05c048aa4db9f1a6f9de91f".parse().unwrap()
-        );
-        assert_eq!(tx.transaction_type, Some(2.into()));
-        let expected = Address::from_str("0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5").unwrap();
-        assert_eq!(tx.recover_from().unwrap(), expected);
-    }
-
-    #[test]
     #[cfg(feature = "k256")]
     fn can_recover_tx_sender_not_normalized() {
         let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
-        let hash = b256!("5eb4f5a33c621f32a8622d5f943b6b102994dfe4e5aebbefe69bb1b2aa0fc93e");
-        let expected = address!("0f65fe9276bc9a24ae7083ae28e2660ef72df99e");
+        let hash = b256!("0x5eb4f5a33c621f32a8622d5f943b6b102994dfe4e5aebbefe69bb1b2aa0fc93e");
+        let expected = address!("0x0f65fe9276bc9a24ae7083ae28e2660ef72df99e");
         assert_eq!(sig.recover_address_from_prehash(&hash).unwrap(), expected);
     }
 
@@ -572,17 +627,17 @@ mod tests {
         let sig = Signature::from_str(
             "b91467e570a6466aa9e9876cbcd013baba02900b8979d43fe208a4a4f339f5fd6007e74cd82e037b800186422fc2da167c747ef045e5d18a5f5d4300f8e1a0291c"
         ).expect("could not parse signature");
-        let expected = address!("2c7536E3605D9C16a7a3D7b1898e529396a65c23");
+        let expected = address!("0x2c7536E3605D9C16a7a3D7b1898e529396a65c23");
         assert_eq!(sig.recover_address_from_msg("Some data").unwrap(), expected);
     }
 
     #[test]
     fn signature_from_str() {
-        let s1 = crate::Signature::from_str(
+        let s1 = Signature::from_str(
             "0xaa231fbe0ed2b5418e6ba7c19bee2522852955ec50996c02a2fe3e71d30ddaf1645baf4823fea7cb4fcc7150842493847cfb6a6d63ab93e8ee928ee3f61f503500"
         ).expect("could not parse 0x-prefixed signature");
 
-        let s2 = crate::Signature::from_str(
+        let s2 = Signature::from_str(
             "aa231fbe0ed2b5418e6ba7c19bee2522852955ec50996c02a2fe3e71d30ddaf1645baf4823fea7cb4fcc7150842493847cfb6a6d63ab93e8ee928ee3f61f503500"
         ).expect("could not parse non-prefixed signature");
 
@@ -598,10 +653,9 @@ mod tests {
             "v":"0x1"
         }"#;
 
-        let signature: crate::Signature =
-            serde_json::from_str(raw_signature_without_y_parity).unwrap();
+        let signature: Signature = serde_json::from_str(raw_signature_without_y_parity).unwrap();
 
-        let expected = crate::Signature::from_rs_and_parity(
+        let expected = Signature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -616,20 +670,16 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn deserialize_with_parity() {
-        let raw_signature_with_y_parity = serde_json::json!(
-            {
-            "r":"0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0",
-            "s":"0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05",
-            "v":"0x1",
+        let raw_signature_with_y_parity = serde_json::json!({
+            "r": "0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0",
+            "s": "0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05",
+            "v": "0x1",
             "yParity": "0x1"
-        }
-        );
+        });
 
-        println!("{raw_signature_with_y_parity}");
-        let signature: crate::Signature =
-            serde_json::from_value(raw_signature_with_y_parity).unwrap();
+        let signature: Signature = serde_json::from_value(raw_signature_with_y_parity).unwrap();
 
-        let expected = crate::Signature::from_rs_and_parity(
+        let expected = Signature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -645,7 +695,7 @@ mod tests {
     #[test]
     fn serialize_both_parity() {
         // this test should be removed if the struct moves to an enum based on tx type
-        let signature = crate::Signature::from_rs_and_parity(
+        let signature = Signature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -665,7 +715,7 @@ mod tests {
     #[test]
     fn serialize_v_only() {
         // this test should be removed if the struct moves to an enum based on tx type
-        let signature = crate::Signature::from_rs_and_parity(
+        let signature = Signature::from_rs_and_parity(
             U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
                 .unwrap(),
             U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
@@ -678,6 +728,32 @@ mod tests {
 
         let serialized = serde_json::to_string(&signature).unwrap();
         assert_eq!(serialized, expected);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serialize_v_hex() {
+        let s = r#"{"r":"0x3d43270611ffb1a10fcab841e636e355a787151969b920cf10fef48d3a61aac3","s":"0x11336489e3050e3ec017079dfe16582ce3d167559bcaa8383b665b3fda4eb963","v":"0x1b"}"#;
+
+        let sig = serde_json::from_str::<Signature>(s).unwrap();
+        let serialized = serde_json::to_string(&sig).unwrap();
+        assert_eq!(serialized, s);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_bincode_roundtrip() {
+        let signature = Signature::from_rs_and_parity(
+            U256::from_str("0xc569c92f176a3be1a6352dd5005bfc751dcb32f57623dd2a23693e64bf4447b0")
+                .unwrap(),
+            U256::from_str("0x1a891b566d369e79b7a66eecab1e008831e22daa15f91a0a0cf4f9f28f47ee05")
+                .unwrap(),
+            1,
+        )
+        .unwrap();
+
+        let bin = bincode::serialize(&signature).unwrap();
+        assert_eq!(bincode::deserialize::<Signature>(&bin).unwrap(), signature);
     }
 
     #[cfg(feature = "rlp")]
@@ -723,5 +799,42 @@ mod tests {
 
         // Assert that the length of the Signature matches the expected length
         assert_eq!(sig.length(), 69);
+    }
+
+    #[cfg(feature = "rlp")]
+    #[test]
+    fn test_rlp_vrs_len() {
+        let signature = Signature::test_signature();
+        assert_eq!(67, signature.rlp_vrs_len());
+    }
+
+    #[cfg(feature = "rlp")]
+    #[test]
+    fn test_encode_and_decode() {
+        let signature = Signature::test_signature();
+
+        let mut encoded = Vec::new();
+        signature.encode(&mut encoded);
+        assert_eq!(encoded.len(), signature.length());
+        let decoded = Signature::decode(&mut &*encoded).unwrap();
+        assert_eq!(signature, decoded);
+    }
+
+    #[test]
+    fn test_as_bytes() {
+        let signature = Signature::new(
+            U256::from_str(
+                "18515461264373351373200002665853028612451056578545711640558177340181847433846",
+            )
+            .unwrap(),
+            U256::from_str(
+                "46948507304638947509940763649030358759909902576025900602547168820602576006531",
+            )
+            .unwrap(),
+            Parity::Parity(false),
+        );
+
+        let expected = Bytes::from_hex("0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d831b").unwrap();
+        assert_eq!(signature.as_bytes(), **expected);
     }
 }

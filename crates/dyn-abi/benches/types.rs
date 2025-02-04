@@ -1,4 +1,6 @@
-use alloy_dyn_abi::{DynSolType, ResolveSolType};
+#![allow(unknown_lints, clippy::incompatible_msrv, missing_docs)]
+
+use alloy_dyn_abi::{DynSolType, Specifier};
 use alloy_sol_type_parser::TypeSpecifier;
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,

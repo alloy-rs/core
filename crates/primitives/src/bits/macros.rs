@@ -50,6 +50,7 @@ macro_rules! wrap_fixed_bytes {
             $crate::private::derive_more::BitOrAssign,
             $crate::private::derive_more::BitXor,
             $crate::private::derive_more::BitXorAssign,
+            $crate::private::derive_more::Not,
             $crate::private::derive_more::Deref,
             $crate::private::derive_more::DerefMut,
             $crate::private::derive_more::From,
@@ -176,8 +177,8 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_fb_traits!($name, $n);
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
+        $crate::impl_allocative!($name);
         $crate::impl_arbitrary!($name, $n);
-        $crate::impl_ssz_fixed_len!($name, $n);
         $crate::impl_rand!($name);
 
         impl $name {
@@ -213,6 +214,8 @@ macro_rules! wrap_fixed_bytes {
 
             /// Create a new byte array from the given slice `src`.
             ///
+            /// For a fallible version, use the `TryFrom<&[u8]>` implementation.
+            ///
             /// # Note
             ///
             /// The given bytes are interpreted in big endian order.
@@ -221,8 +224,12 @@ macro_rules! wrap_fixed_bytes {
             ///
             /// If the length of `src` and the number of bytes in `Self` do not match.
             #[inline]
+            #[track_caller]
             pub fn from_slice(src: &[u8]) -> Self {
-                Self($crate::FixedBytes::from_slice(src))
+                match Self::try_from(src) {
+                    Ok(x) => x,
+                    Err(_) => panic!("cannot convert a slice of length {} to {}", src.len(), stringify!($name)),
+                }
             }
 
             /// Create a new byte array from the given slice `src`, left-padding it
@@ -235,8 +242,8 @@ macro_rules! wrap_fixed_bytes {
             /// # Panics
             ///
             /// Panics if `src.len() > N`.
-            #[track_caller]
             #[inline]
+            #[track_caller]
             pub fn left_padding_from(value: &[u8]) -> Self {
                 Self($crate::FixedBytes::left_padding_from(value))
             }
@@ -251,8 +258,8 @@ macro_rules! wrap_fixed_bytes {
             /// # Panics
             ///
             /// Panics if `src.len() > N`.
-            #[track_caller]
             #[inline]
+            #[track_caller]
             pub fn right_padding_from(value: &[u8]) -> Self {
                 Self($crate::FixedBytes::right_padding_from(value))
             }
@@ -407,13 +414,8 @@ macro_rules! impl_fb_traits {
             type Error = $crate::hex::FromHexError;
 
             #[inline]
-            fn from_hex<T>(hex: T) -> Result<Self, Self::Error>
-            where
-                T: $crate::private::AsRef<[u8]>
-            {
-                let mut buf = [0u8; $n];
-                $crate::hex::decode_to_slice(hex.as_ref(), &mut buf)?;
-                Ok(Self::new(buf))
+            fn from_hex<T: $crate::private::AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
+                $crate::hex::decode_to_array(hex).map(Self::new)
             }
         }
     };
@@ -433,6 +435,7 @@ macro_rules! impl_getrandom {
         /// fails.
         #[inline]
         #[track_caller]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn random() -> Self {
             Self($crate::FixedBytes::random())
         }
@@ -445,6 +448,7 @@ macro_rules! impl_getrandom {
         /// This function only propagates the error from the underlying call to
         /// `getrandom_uninit`.
         #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn try_random() -> $crate::private::Result<Self, $crate::private::getrandom::Error> {
             $crate::FixedBytes::try_random().map(Self)
         }
@@ -456,6 +460,7 @@ macro_rules! impl_getrandom {
         /// Panics if the underlying call to `getrandom_uninit` fails.
         #[inline]
         #[track_caller]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn randomize(&mut self) {
             self.try_randomize().unwrap()
         }
@@ -467,6 +472,7 @@ macro_rules! impl_getrandom {
         /// This function only propagates the error from the underlying call to
         /// `getrandom_uninit`.
         #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn try_randomize(
             &mut self,
         ) -> $crate::private::Result<(), $crate::private::getrandom::Error> {
@@ -490,6 +496,7 @@ macro_rules! impl_rand {
         /// Creates a new fixed byte array with the given random number generator.
         #[inline]
         #[doc(alias = "random_using")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
         pub fn random_with<R: $crate::private::rand::Rng + ?Sized>(rng: &mut R) -> Self {
             Self($crate::FixedBytes::random_with(rng))
         }
@@ -497,12 +504,14 @@ macro_rules! impl_rand {
         /// Fills this fixed byte array with the given random number generator.
         #[inline]
         #[doc(alias = "randomize_using")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
         pub fn randomize_with<R: $crate::private::rand::Rng + ?Sized>(&mut self, rng: &mut R) {
             self.0.randomize_with(rng);
         }
     };
 
     ($t:ty) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
         impl $crate::private::rand::distributions::Distribution<$t>
             for $crate::private::rand::distributions::Standard
         {
@@ -526,6 +535,7 @@ macro_rules! impl_rand {
 #[cfg(feature = "rlp")]
 macro_rules! impl_rlp {
     ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "rlp")))]
         impl $crate::private::alloy_rlp::Decodable for $t {
             #[inline]
             fn decode(buf: &mut &[u8]) -> $crate::private::alloy_rlp::Result<Self> {
@@ -533,6 +543,7 @@ macro_rules! impl_rlp {
             }
         }
 
+        #[cfg_attr(docsrs, doc(cfg(feature = "rlp")))]
         impl $crate::private::alloy_rlp::Encodable for $t {
             #[inline]
             fn length(&self) -> usize {
@@ -560,9 +571,32 @@ macro_rules! impl_rlp {
 
 #[doc(hidden)]
 #[macro_export]
+#[cfg(feature = "allocative")]
+macro_rules! impl_allocative {
+    ($t:ty) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "allocative")))]
+        impl $crate::private::allocative::Allocative for $t {
+            #[inline]
+            fn visit<'a, 'b: 'a>(&self, visitor: &'a mut $crate::private::allocative::Visitor<'b>) {
+                $crate::private::allocative::Allocative::visit(&self.0, visitor)
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "allocative"))]
+macro_rules! impl_allocative {
+    ($t:ty) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
 #[cfg(feature = "serde")]
 macro_rules! impl_serde {
     ($t:ty) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl $crate::private::serde::Serialize for $t {
             #[inline]
             fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -570,6 +604,7 @@ macro_rules! impl_serde {
             }
         }
 
+        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl<'de> $crate::private::serde::Deserialize<'de> for $t {
             #[inline]
             fn deserialize<D: $crate::private::serde::Deserializer<'de>>(
@@ -593,6 +628,7 @@ macro_rules! impl_serde {
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary {
     ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary")))]
         impl<'a> $crate::private::arbitrary::Arbitrary<'a> for $t {
             #[inline]
             fn arbitrary(u: &mut $crate::private::arbitrary::Unstructured<'a>) -> $crate::private::arbitrary::Result<Self> {
@@ -610,6 +646,7 @@ macro_rules! impl_arbitrary {
             }
         }
 
+        #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary")))]
         impl $crate::private::proptest::arbitrary::Arbitrary for $t {
             type Parameters = <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::Parameters;
             type Strategy = $crate::private::proptest::strategy::Map<
@@ -641,65 +678,6 @@ macro_rules! impl_arbitrary {
     ($t:ty, $n:literal) => {};
 }
 
-#[doc(hidden)]
-#[macro_export]
-#[cfg(feature = "ssz")]
-macro_rules! impl_ssz_fixed_len {
-    ($type:ty, $fixed_len:expr) => {
-        impl $crate::private::ssz::Encode for $type {
-            #[inline]
-            fn is_ssz_fixed_len() -> bool {
-                true
-            }
-
-            #[inline]
-            fn ssz_fixed_len() -> usize {
-                $fixed_len
-            }
-
-            #[inline]
-            fn ssz_bytes_len(&self) -> usize {
-                <$type as $crate::private::ssz::Encode>::ssz_fixed_len()
-            }
-
-            #[inline]
-            fn ssz_append(&self, buf: &mut $crate::private::Vec<u8>) {
-                buf.extend_from_slice(self.as_slice());
-            }
-        }
-
-        impl $crate::private::ssz::Decode for $type {
-            #[inline]
-            fn is_ssz_fixed_len() -> bool {
-                true
-            }
-
-            #[inline]
-            fn ssz_fixed_len() -> usize {
-                $fixed_len
-            }
-
-            fn from_ssz_bytes(bytes: &[u8]) -> Result<Self, $crate::private::ssz::DecodeError> {
-                let len = bytes.len();
-                let expected: usize = <$type as $crate::private::ssz::Decode>::ssz_fixed_len();
-
-                if len != expected {
-                    Err($crate::private::ssz::DecodeError::InvalidByteLength { len, expected })
-                } else {
-                    Ok(<$type>::from_slice(bytes))
-                }
-            }
-        }
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-#[cfg(not(feature = "ssz"))]
-macro_rules! impl_ssz_fixed_len {
-    ($t:ty, $n:literal) => {};
-}
-
 macro_rules! fixed_bytes_macros {
     ($d:tt $($(#[$attr:meta])* macro $name:ident($ty:ident $($rest:tt)*);)*) => {$(
         /// Converts a sequence of string literals containing hex-encoded data
@@ -708,8 +686,6 @@ macro_rules! fixed_bytes_macros {
         )]
         ///
         /// If the input is empty, a zero-initialized array is returned.
-        ///
-        /// Note that the strings cannot be prefixed with `0x`.
         ///
         /// See [`hex!`](crate::hex!) for more information.
         ///
@@ -722,7 +698,7 @@ macro_rules! fixed_bytes_macros {
         #[doc = concat!("assert_eq!(ZERO, ", stringify!($ty), "::ZERO);")]
         ///
         /// # stringify!(
-        #[doc = concat!("let byte_array: ", stringify!($ty), " = ", stringify!($name), "!(\"…\");")]
+        #[doc = concat!("let byte_array: ", stringify!($ty), " = ", stringify!($name), "!(\"0x0123abcd…\");")]
         /// # );
         /// ```
         $(#[$attr])*
@@ -732,8 +708,8 @@ macro_rules! fixed_bytes_macros {
                 $crate::$ty::ZERO
             };
 
-            ($d ($d s:literal)+) => {
-                $crate::$ty::new($crate::hex!($d ($d s)+))
+            ($d ($d t:tt)+) => {
+                $crate::$ty::new($crate::hex!($d ($d t)+))
             };
         }
     )*};
@@ -760,19 +736,32 @@ fixed_bytes_macros! { $
 ///
 /// If the input is empty, an empty instance is returned.
 ///
-/// Note that the strings cannot be prefixed with `0x`.
-///
 /// See [`hex!`](crate::hex!) for more information.
+///
+/// # Examples
+///
+/// ```
+/// use alloy_primitives::{bytes, Bytes};
+///
+/// static MY_BYTES: Bytes = bytes!("0x0123" "0xabcd");
+/// assert_eq!(MY_BYTES, Bytes::from(&[0x01, 0x23, 0xab, 0xcd]));
+/// ```
 #[macro_export]
 macro_rules! bytes {
     () => {
         $crate::Bytes::new()
     };
 
-    ($($s:literal)+) => {{
-        // force const eval
-        const STATIC_BYTES: &'static [u8] = &$crate::hex!($($s)+);
-        $crate::Bytes::from_static(STATIC_BYTES)
+    ($($s:literal)+) => {const {
+        $crate::Bytes::from_static(&$crate::hex!($($s)+))
+    }};
+
+    [$($inner:expr),+ $(,)?] => {const {
+        $crate::Bytes::from_static(&[$($inner),+])
+    }};
+
+    [$inner:expr; $size:literal] => {const {
+        $crate::Bytes::from_static(&[$inner; $size])
     }};
 }
 
@@ -781,24 +770,40 @@ mod tests {
     use crate::{hex, Address, Bytes, FixedBytes};
 
     #[test]
+    fn bytes_macros() {
+        static B1: Bytes = bytes!("010203040506070809");
+        static B2: Bytes = bytes![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        static B3: Bytes = bytes![1, 2, 3, 4, 5, 6, 7, 8, 9,];
+
+        assert_eq!(B1, B2);
+        assert_eq!(B1, B3);
+
+        static B4: Bytes = bytes!("0000");
+        static B5: Bytes = bytes![0; 2];
+        static B6: Bytes = bytes![0, 0];
+        assert_eq!(B4, B5);
+        assert_eq!(B4, B6);
+    }
+
+    #[test]
     fn fixed_byte_macros() {
         const A0: Address = address!();
         assert_eq!(A0, Address::ZERO);
 
-        const A1: Address = address!("0102030405060708090a0b0c0d0e0f1011121314");
-        const A2: Address = Address(fixed_bytes!("0102030405060708090a0b0c0d0e0f1011121314"));
-        const A3: Address = Address(FixedBytes(hex!("0102030405060708090a0b0c0d0e0f1011121314")));
+        const A1: Address = address!("0x0102030405060708090a0b0c0d0e0f1011121314");
+        const A2: Address = Address(fixed_bytes!("0x0102030405060708090a0b0c0d0e0f1011121314"));
+        const A3: Address = Address(FixedBytes(hex!("0x0102030405060708090a0b0c0d0e0f1011121314")));
         assert_eq!(A1, A2);
         assert_eq!(A1, A3);
-        assert_eq!(A1, hex!("0102030405060708090a0b0c0d0e0f1011121314"));
+        assert_eq!(A1, hex!("0x0102030405060708090a0b0c0d0e0f1011121314"));
 
-        static B: Bytes = bytes!("112233");
+        static B: Bytes = bytes!("0x112233");
         assert_eq!(B[..], [0x11, 0x22, 0x33]);
 
         static EMPTY_BYTES1: Bytes = bytes!();
         static EMPTY_BYTES2: Bytes = bytes!("");
-        assert_eq!(EMPTY_BYTES1, EMPTY_BYTES2);
-        assert_eq!(EMPTY_BYTES1, Bytes::new());
         assert!(EMPTY_BYTES1.is_empty());
+        assert_eq!(EMPTY_BYTES1, Bytes::new());
+        assert_eq!(EMPTY_BYTES1, EMPTY_BYTES2);
     }
 }

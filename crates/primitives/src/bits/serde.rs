@@ -33,7 +33,7 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
             }
 
             fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
-                <[u8; N]>::try_from(v).map(FixedBytes).map_err(de::Error::custom)
+                FixedBytes::try_from(v).map_err(de::Error::custom)
             }
 
             fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {

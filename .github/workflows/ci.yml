@@ -1,117 +1,195 @@
 name: CI
 
 on:
-    push:
-        branches: [main]
-    pull_request:
+  push:
+    branches: [main]
+  pull_request:
 
 env:
-    CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: always
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
-    test:
-        name: test ${{ matrix.rust }} ${{ matrix.flags }}
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        strategy:
-            fail-fast: false
-            matrix:
-                rust: ["stable", "beta", "nightly", "1.65"] # MSRV
-                flags: ["--no-default-features", "", "--all-features"]
-        steps:
-            - uses: actions/checkout@v3
-            - uses: dtolnay/rust-toolchain@master
-              with:
-                  toolchain: ${{ matrix.rust }}
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  cache-on-failure: true
-            # Only run tests on latest stable and above
-            - name: build
-              if: ${{ matrix.rust == '1.65' }} # MSRV
-              run: cargo build --workspace ${{ matrix.flags }}
-            - name: test
-              if: ${{ matrix.rust != '1.65' }} # MSRV
-              run: cargo test --workspace ${{ matrix.flags }}
+  test:
+    name: test ${{ matrix.os }} ${{ matrix.rust }} ${{ matrix.flags }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "windows-latest"]
+        rust: [
+            "stable",
+            "nightly",
+            "1.81", # MSRV
+          ]
+        flags: [
+            # No features
+            "--no-default-features",
+            # Default features
+            "",
+          ]
+        include:
+          # MSRV features
+          - os: "ubuntu-latest"
+            rust: "1.81" # MSRV
+            flags: "--features json"
+          - os: "windows-latest"
+            rust: "1.81" # MSRV
+            flags: "--features json"
+          # All features
+          - os: "ubuntu-latest"
+            rust: "nightly"
+            flags: "--all-features"
+          - os: "windows-latest"
+            rust: "nightly"
+            flags: "--all-features"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      # Only run tests on latest stable and above
+      - name: build
+        if: ${{ matrix.rust == '1.81' }} # MSRV
+        run: cargo build --workspace ${{ matrix.flags }}
+      - name: test
+        if: ${{ matrix.rust != '1.81' }} # MSRV
+        run: cargo test --workspace ${{ matrix.flags }}
 
-    miri:
-        name: miri ${{ matrix.flags }}
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        strategy:
-            fail-fast: false
-            matrix:
-                flags: ["--no-default-features", "", "--all-features"]
+  miri:
+    name: miri ${{ matrix.flags }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        flags: ["--no-default-features", "", "--all-features"]
+    env:
+      MIRIFLAGS: -Zmiri-strict-provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@miri
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo miri test ${{ matrix.flags }}
+
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: check
+        run: cargo check --workspace --target wasm32-unknown-unknown
+
+  feature-checks:
+    name: features ${{ matrix.rust }} ${{ matrix.flags }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: ["stable", "nightly"]
+        flags: ["", "--all-targets"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: cargo hack
+        run: |
+          args=(${{ matrix.flags }})
+          [ ${{ matrix.rust }} == "stable" ] && args+=(--skip nightly)
+          ./scripts/check_features.sh "${args[@]}"
+
+  check-no-std:
+    name: check no_std ${{ matrix.features }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: riscv32imac-unknown-none-elf
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - run: ./scripts/check_no_std.sh
+
+  clippy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - run: cargo clippy --workspace --all-targets --all-features
         env:
-            MIRIFLAGS: -Zmiri-strict-provenance
-        steps:
-            - uses: actions/checkout@v3
-            - uses: dtolnay/rust-toolchain@miri
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  cache-on-failure: true
-            - run: cargo miri setup ${{ matrix.flags }}
-            - run: cargo miri test ${{ matrix.flags }}
+          RUSTFLAGS: -Dwarnings
 
-    wasm:
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        steps:
-            - uses: actions/checkout@v3
-            - uses: dtolnay/rust-toolchain@stable
-              with:
-                  targets: wasm32-unknown-unknown
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  cache-on-failure: true
-            - name: check
-              run: cargo check --workspace --target wasm32-unknown-unknown
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Build documentation
+        run: cargo doc --workspace --all-features --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: --cfg docsrs -D warnings -Zunstable-options --show-type-layout --generate-link-to-definition
 
-    feature-checks:
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        steps:
-            - uses: actions/checkout@v3
-            - uses: dtolnay/rust-toolchain@stable
-            - uses: taiki-e/install-action@cargo-hack
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  cache-on-failure: true
-            - name: cargo hack
-              run: cargo hack check --feature-powerset --depth 2
+  fmt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
 
-    clippy:
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        steps:
-            - uses: actions/checkout@v3
-            - uses: dtolnay/rust-toolchain@clippy
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  cache-on-failure: true
-            - run: cargo clippy --workspace --all-targets --all-features
-              env:
-                  RUSTFLAGS: -Dwarnings
+  deny:
+    uses: ithacaxyz/ci/.github/workflows/deny.yml@main
 
-    docs:
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        steps:
-            - uses: actions/checkout@v3
-            - uses: dtolnay/rust-toolchain@nightly
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  cache-on-failure: true
-            - run: cargo doc --workspace --all-features --no-deps --document-private-items
-              env:
-                  RUSTDOCFLAGS: "--cfg docsrs -D warnings"
-
-    fmt:
-        runs-on: ubuntu-latest
-        timeout-minutes: 30
-        steps:
-            - uses: actions/checkout@v3
-            - uses: dtolnay/rust-toolchain@nightly
-              with:
-                  components: rustfmt
-            - run: cargo fmt --all --check
+  ci-success:
+    name: ci success
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - test
+      - miri
+      - wasm
+      - feature-checks
+      - check-no-std
+      - clippy
+      - docs
+      - fmt
+      - deny
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}

@@ -1,8 +1,10 @@
-interface Abiencoderv2Test {
+library Hello {
     struct Person {
         string name;
         uint256 age;
     }
+}
 
-    function defaultPerson() external pure returns (Person memory);
+interface Abiencoderv2Test {
+    function defaultPerson() external pure returns (Hello.Person memory);
 }

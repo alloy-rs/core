@@ -1,7 +1,8 @@
-use crate::{param::Param, utils::*, EventParam, StateMutability};
+use crate::{param::Param, serde_state_mutability_compat, utils::*, EventParam, StateMutability};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Selector, B256};
 use core::str::FromStr;
+use parser::utils::ParsedSignature;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Declares all JSON ABI items.
@@ -57,6 +58,25 @@ macro_rules! abi_items {
                 )*}
             }
         }
+
+        impl AbiItem<'_> {
+            /// Returns the JSON type of the item as a string.
+            ///
+            /// # Examples
+            ///
+            /// ```
+            /// # use alloy_json_abi::AbiItem;
+            /// let item = AbiItem::parse("function f()")?;
+            /// assert_eq!(item.json_type(), "function");
+            /// # Ok::<_, alloy_json_abi::parser::Error>(())
+            /// ```
+            #[inline]
+            pub const fn json_type(&self) -> &'static str {
+                match self {$(
+                    Self::$name(_) => $name_lower,
+                )*}
+            }
+        }
     };
 }
 
@@ -66,7 +86,7 @@ abi_items! {
         /// The input types of the constructor. May be empty.
         pub inputs: Vec<Param>,
         /// The state mutability of the constructor.
-        #[serde(default)]
+        #[serde(default, flatten, with = "serde_state_mutability_compat")]
         pub state_mutability: StateMutability,
     }
 
@@ -74,7 +94,7 @@ abi_items! {
     #[derive(Copy)]
     pub struct Fallback: "fallback" {
         /// The state mutability of the fallback function.
-        #[serde(default)]
+        #[serde(default, flatten, with = "serde_state_mutability_compat")]
         pub state_mutability: StateMutability,
     }
 
@@ -82,30 +102,28 @@ abi_items! {
     #[derive(Copy)]
     pub struct Receive: "receive" {
         /// The state mutability of the receive function.
-        #[serde(default)]
+        #[serde(default, flatten, with = "serde_state_mutability_compat")]
         pub state_mutability: StateMutability,
     }
 
     /// A JSON ABI function.
     pub struct Function: "function" {
         /// The name of the function.
-        #[serde(deserialize_with = "validate_identifier")]
+        #[serde(deserialize_with = "validated_identifier")]
         pub name: String,
         /// The input types of the function. May be empty.
         pub inputs: Vec<Param>,
         /// The output types of the function. May be empty.
         pub outputs: Vec<Param>,
         /// The state mutability of the function.
-        ///
-        /// By default this is [StateMutability::NonPayable] which is reflected in Solidity by not specifying a state mutability modifier at all. This field was introduced in 0.4.16: <https://github.com/ethereum/solidity/releases/tag/v0.4.16>
-        #[serde(default)]
+        #[serde(default, flatten, with = "serde_state_mutability_compat")]
         pub state_mutability: StateMutability,
     }
 
     /// A JSON ABI event.
     pub struct Event: "event" {
         /// The name of the event.
-        #[serde(deserialize_with = "validate_identifier")]
+        #[serde(deserialize_with = "validated_identifier")]
         pub name: String,
         /// A list of the event's inputs, in order.
         pub inputs: Vec<EventParam>,
@@ -118,17 +136,17 @@ abi_items! {
     /// A JSON ABI error.
     pub struct Error: "error" {
         /// The name of the error.
-        #[serde(deserialize_with = "validate_identifier")]
+        #[serde(deserialize_with = "validated_identifier")]
         pub name: String,
         /// A list of the error's components, in order.
         pub inputs: Vec<Param>,
     }
 }
 
-#[inline(always)]
-fn validate_identifier<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
+#[inline]
+fn validated_identifier<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
     let s = String::deserialize(deserializer)?;
-    validate_identifier!(&s);
+    validate_identifier(&s)?;
     Ok(s)
 }
 
@@ -156,9 +174,9 @@ impl AbiItem<'_> {
     /// );
     /// ```
     pub fn parse(mut input: &str) -> parser::Result<Self> {
-        // need this for Constructor, since the keyword is also the name of the function
+        // Need this copy for Constructor, since the keyword is also the name of the function.
         let copy = input;
-        match parser::utils::parse_item(&mut input)? {
+        match parser::utils::parse_item_keyword(&mut input)? {
             "constructor" => Constructor::parse(copy).map(Into::into),
             "function" => Function::parse(input).map(Into::into),
             "error" => Error::parse(input).map(Into::into),
@@ -330,12 +348,12 @@ impl FromStr for Constructor {
 }
 
 impl Constructor {
-    /// Parses a Solidity constructor string: `constructor($($inputs),*)`
+    /// Parses a Solidity constructor string:
+    /// `constructor($($inputs),*) [visibility] [s_mutability]`
     ///
     /// Note:
     /// - the name must always be `constructor`
-    /// - [`state_mutability`](Self::state_mutability) is currently not parsed from the input and is
-    ///   always set to [`StateMutability::NonPayable`]
+    /// - visibility is ignored
     ///
     /// # Examples
     ///
@@ -354,7 +372,8 @@ impl Constructor {
         parse_sig::<false>(s).and_then(Self::parsed)
     }
 
-    fn parsed((name, inputs, outputs, anonymous): ParseSigTuple<Param>) -> parser::Result<Self> {
+    fn parsed(sig: ParsedSignature<Param>) -> parser::Result<Self> {
+        let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if name != "constructor" {
             return Err(parser::Error::new("constructors' name must be exactly \"constructor\""));
         }
@@ -364,7 +383,7 @@ impl Constructor {
         if anonymous {
             return Err(parser::Error::new("constructors cannot be anonymous"));
         }
-        Ok(Self { inputs, state_mutability: StateMutability::NonPayable })
+        Ok(Self { inputs, state_mutability: state_mutability.unwrap_or_default() })
     }
 }
 
@@ -400,12 +419,16 @@ impl Error {
         parse_maybe_prefixed(s, "error", parse_sig::<false>).and_then(Self::parsed)
     }
 
-    fn parsed((name, inputs, outputs, anonymous): ParseSigTuple<Param>) -> parser::Result<Self> {
+    fn parsed(sig: ParsedSignature<Param>) -> parser::Result<Self> {
+        let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if !outputs.is_empty() {
             return Err(parser::Error::new("errors cannot have outputs"));
         }
         if anonymous {
             return Err(parser::Error::new("errors cannot be anonymous"));
+        }
+        if state_mutability.is_some() {
+            return Err(parser::Error::new("errors cannot have mutability"));
         }
         Ok(Self { name, inputs })
     }
@@ -436,12 +459,10 @@ impl FromStr for Function {
 
 impl Function {
     /// Parses a Solidity function signature string:
-    /// `$(function)? $name($($inputs),*) $(returns ($($outputs),+))?`
+    /// `$(function)? $name($($inputs),*) [visibility] [s_mutability] $(returns ($($outputs),+))?`
     ///
     /// Note:
-    /// - [`state_mutability`](Self::state_mutability) is currently not parsed from the input and is
-    /// always set to [`StateMutability::NonPayable`]
-    /// - visibility is rejected
+    /// - visibility is ignored
     ///
     /// If you want to parse a generic [Human-Readable ABI] string, use [`AbiItem::parse`].
     ///
@@ -469,12 +490,12 @@ impl Function {
     /// ```
     /// # use alloy_json_abi::{Function, Param, StateMutability};
     /// assert_eq!(
-    ///     Function::parse("function toString(uint number) returns (string s)"),
+    ///     Function::parse("function toString(uint number) external view returns (string s)"),
     ///     Ok(Function {
     ///         name: "toString".to_string(),
     ///         inputs: vec![Param::parse("uint number").unwrap()],
     ///         outputs: vec![Param::parse("string s").unwrap()],
-    ///         state_mutability: StateMutability::NonPayable,
+    ///         state_mutability: StateMutability::View,
     ///     }),
     /// );
     /// ```
@@ -483,11 +504,12 @@ impl Function {
         parse_maybe_prefixed(s, "function", parse_sig::<true>).and_then(Self::parsed)
     }
 
-    fn parsed((name, inputs, outputs, anonymous): ParseSigTuple<Param>) -> parser::Result<Self> {
+    fn parsed(sig: ParsedSignature<Param>) -> parser::Result<Self> {
+        let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if anonymous {
-            return Err(parser::Error::new("function cannot be anonymous"));
+            return Err(parser::Error::new("functions cannot be anonymous"));
         }
-        Ok(Self { name, inputs, outputs, state_mutability: StateMutability::NonPayable })
+        Ok(Self { name, inputs, outputs, state_mutability: state_mutability.unwrap_or_default() })
     }
 
     /// Returns this function's signature: `$name($($inputs),*)`.
@@ -563,11 +585,13 @@ impl Event {
         parse_maybe_prefixed(s, "event", parse_event_sig).and_then(Self::parsed)
     }
 
-    fn parsed(
-        (name, inputs, outputs, anonymous): ParseSigTuple<EventParam>,
-    ) -> parser::Result<Self> {
+    fn parsed(sig: ParsedSignature<EventParam>) -> parser::Result<Self> {
+        let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if !outputs.is_empty() {
             return Err(parser::Error::new("events cannot have outputs"));
+        }
+        if state_mutability.is_some() {
+            return Err(parser::Error::new("events cannot have state mutability"));
         }
         Ok(Self { name, inputs, anonymous })
     }
@@ -607,6 +631,14 @@ impl Event {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // fn param(kind: &str) -> Param {
+    //     param2(kind, "param")
+    // }
+
+    fn param2(kind: &str, name: &str) -> Param {
+        Param { ty: kind.into(), name: name.into(), internal_type: None, components: vec![] }
+    }
 
     #[test]
     fn parse_prefixes() {
@@ -649,5 +681,37 @@ mod tests {
         assert_eq!(Error::parse("error foo()"), Ok(new("foo")));
         assert_eq!(Error::parse("errorfoo()"), Ok(new("errorfoo")));
         assert_eq!(Error::parse("error errorfoo()"), Ok(new("errorfoo")));
+    }
+
+    #[test]
+    fn parse_full() {
+        // https://github.com/alloy-rs/core/issues/389
+        assert_eq!(
+            Function::parse("function foo(uint256 a, uint256 b) external returns (uint256)"),
+            Ok(Function {
+                name: "foo".into(),
+                inputs: vec![param2("uint256", "a"), param2("uint256", "b")],
+                outputs: vec![param2("uint256", "")],
+                state_mutability: StateMutability::NonPayable,
+            })
+        );
+
+        // https://github.com/alloy-rs/core/issues/681
+        assert_eq!(
+            Function::parse("function balanceOf(address owner) view returns (uint256 balance)"),
+            Ok(Function {
+                name: "balanceOf".into(),
+                inputs: vec![param2("address", "owner")],
+                outputs: vec![param2("uint256", "balance")],
+                state_mutability: StateMutability::View,
+            })
+        );
+    }
+
+    // https://github.com/alloy-rs/core/issues/702
+    #[test]
+    fn parse_stack_overflow() {
+        let s = "error  J((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((";
+        AbiItem::parse(s).unwrap_err();
     }
 }

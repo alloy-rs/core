@@ -7,7 +7,7 @@ use syn::{
 };
 
 mod fn_call;
-pub use fn_call::YulFnCall;
+pub use fn_call::{YulFnCall, YulFnType};
 
 /// A Yul expression.
 ///

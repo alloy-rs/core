@@ -1,6 +1,6 @@
-use crate::{ident::identifier, is_valid_identifier, Error, Result};
+use crate::{ident::identifier_parser, is_valid_identifier, new_input, Error, Input, Result};
 use core::fmt;
-use winnow::{trace::trace, PResult, Parser};
+use winnow::{combinator::trace, stream::Stream, ModalResult, Parser};
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type. This is the most basic type specifier.
@@ -69,19 +69,19 @@ impl<'a> RootType<'a> {
     /// Parse a root type from a string.
     #[inline]
     pub fn parse(input: &'a str) -> Result<Self> {
-        Self::parser.parse(input).map_err(Error::parser)
+        Self::parser.parse(new_input(input)).map_err(Error::parser)
     }
 
     /// [`winnow`] parser for this type.
-    pub fn parser(input: &mut &'a str) -> PResult<Self> {
-        trace("RootType", |input: &mut &'a str| {
-            identifier(input).map(|ident| {
+    pub(crate) fn parser(input: &mut Input<'a>) -> ModalResult<Self> {
+        trace("RootType", |input: &mut Input<'a>| {
+            identifier_parser(input).map(|ident| {
                 // Workaround for enums in library function params or returns.
                 // See: https://github.com/alloy-rs/core/pull/386
                 // See ethabi workaround: https://github.com/rust-ethereum/ethabi/blob/b1710adc18f5b771d2d2519c87248b1ba9430778/ethabi/src/param_type/reader.rs#L162-L167
                 if input.starts_with('.') {
-                    *input = &input[1..];
-                    let _ = identifier(input);
+                    let _ = input.next_token();
+                    let _ = identifier_parser(input);
                     return Self("uint8");
                 }
 

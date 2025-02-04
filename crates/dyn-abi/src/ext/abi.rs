@@ -1,9 +1,10 @@
-use crate::{DynSolValue, Error as CrateError, ResolveSolType, Result};
+use crate::{DynSolValue, Error as CrateError, Result, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::{Constructor, Error, Function, Param};
 use alloy_primitives::Selector;
 use alloy_sol_types::abi::Decoder;
 
+#[allow(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
     impl Sealed for super::Constructor {}
@@ -193,7 +194,7 @@ fn abi_decode(data: &[u8], params: &[Param], validate: bool) -> Result<Vec<DynSo
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::{Address, U256};
+    use alloy_primitives::{address, bytes, hex, Address, U256};
 
     #[test]
     fn can_encode_decode_functions() {
@@ -256,5 +257,31 @@ mod tests {
         let bad_response = Address::repeat_byte(3u8).to_vec();
         assert!(func.abi_decode_output(&bad_response, true).is_err());
         assert!(func.abi_decode_output(&bad_response, false).is_err());
+    }
+
+    // https://github.com/foundry-rs/foundry/issues/7280
+    // Same as `encode_empty_bytes_array_in_tuple` in sol-types.
+    #[test]
+    fn empty_bytes_array() {
+        let func = Function::parse("register(bytes,address,bytes[])").unwrap();
+        let input = [
+            DynSolValue::Bytes(bytes!("09736b79736b79736b79026f7300").into()),
+            DynSolValue::Address(address!("0xB7b54cd129e6D8B24e6AE652a473449B273eE3E4")),
+            DynSolValue::Array(vec![]),
+        ];
+        let result = func.abi_encode_input(&input).unwrap();
+
+        let expected = hex!(
+            "
+            d123f99a
+            0000000000000000000000000000000000000000000000000000000000000060
+            000000000000000000000000B7b54cd129e6D8B24e6AE652a473449B273eE3E4
+            00000000000000000000000000000000000000000000000000000000000000a0
+            000000000000000000000000000000000000000000000000000000000000000e
+            09736b79736b79736b79026f7300000000000000000000000000000000000000
+            0000000000000000000000000000000000000000000000000000000000000000
+    	"
+        );
+        assert_eq!(hex::encode(expected), hex::encode(result));
     }
 }

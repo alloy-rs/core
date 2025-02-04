@@ -1,6 +1,10 @@
 # Configuration file for [`git-cliff`](https://github.com/orhun/git-cliff)
 # See https://git-cliff.org/docs/configuration
 
+[remote.github]
+owner = "alloy-rs"
+repo = "core"
+
 [changelog]
 header = """
 # Changelog
@@ -10,12 +14,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n
 """
-# https://tera.netlify.app/docs/#introduction
-body = """
+# https://keats.github.io/tera/docs/#introduction
+body = """\
+{% set gh_link = "https://github.com/" ~ remote.github.owner ~ "/" ~ remote.github.repo %}\
 {% if version %}\
-    ## [{{ version | trim_start_matches(pat="v") }}](https://github.com/alloy-rs/core/releases/tag/v{{ version | trim_start_matches(pat="v") }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+    ## [{{ version | trim_start_matches(pat="v") }}]({{ gh_link }}/releases/tag/v{{ version | trim_start_matches(pat="v") }}) - {{ timestamp | date(format="%Y-%m-%d") }}
 {% else %}\
-    ## [Unreleased](https://github.com/alloy-rs/core/compare/{{ previous.version }}...HEAD)
+    ## [Unreleased]({{ gh_link }}/compare/{{ previous.version }}...HEAD)
 {% endif %}\
 {% for group, commits in commits | group_by(attribute="group") %}
     ### {{ group | title }}
@@ -51,15 +56,15 @@ commit_preprocessors = [
     { pattern = '#(\d+)', replace = "[#$1](https://github.com/alloy-rs/core/issues/$1)" },
 ]
 commit_parsers = [
-    { message = "^feat", group = "Features" },
-    { message = "^fix", group = "Bug Fixes" },
-    { message = "^doc", group = "Documentation" },
+    { message = "^[Ff]eat", group = "Features" },
+    { message = "^[Ff]ix", group = "Bug Fixes" },
+    { message = "^[Dd]oc", group = "Documentation" },
     { message = ".*\\b([Dd]eps|[Dd]ependencies|[Bb]ump)\\b", group = "Dependencies" },
-    { message = "^perf", group = "Performance" },
-    { message = "^refactor", group = "Refactor" },
-    { message = ".*\\b(style|fmt|format)\\b", group = "Styling" },
-    { message = "^test", group = "Testing" },
-    { message = "^chore", group = "Miscellaneous Tasks" },
+    { message = "^[Pp]erf", group = "Performance" },
+    { message = "^[Rr]efactor", group = "Refactor" },
+    { message = ".*\\b([Ss]tyle|[Ff]mt|[Ff]ormat)\\b", group = "Styling" },
+    { message = "^[Tt]est", group = "Testing" },
+    { message = "^[Cc]hore", group = "Miscellaneous Tasks" },
 
     { message = ".*", group = "Other" },
 ]

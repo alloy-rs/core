@@ -15,7 +15,14 @@ exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
+rustdoc-args = [
+    "-Zunstable-options",
+    "--generate-link-to-definition",
+    "--show-type-layout",
+]
+
+[lints]
+workspace = true
 
 [dependencies]
 alloy-json-abi.workspace = true
@@ -28,7 +35,13 @@ itoa.workspace = true
 winnow.workspace = true
 
 # eip712
-derive_more = { workspace = true, optional = true }
+derive_more = { workspace = true, optional = true, features = [
+    "deref",
+    "deref_mut",
+    "from",
+    "into",
+    "into_iterator",
+] }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 
@@ -38,10 +51,11 @@ derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 
 [dev-dependencies]
+alloy-dyn-abi = { path = ".", version = ">=0", features = ["std"] }
 criterion.workspace = true
 ethabi = "18"
 rand = "0.8"
-serde_json = { workspace = true }
+serde_json.workspace = true
 
 [features]
 default = ["std"]
@@ -54,7 +68,12 @@ std = [
     "serde?/std",
     "serde_json?/std",
 ]
-eip712 = ["alloy-sol-types/eip712-serde", "dep:derive_more", "dep:serde", "dep:serde_json"]
+eip712 = [
+    "alloy-sol-types/eip712-serde",
+    "dep:derive_more",
+    "dep:serde",
+    "dep:serde_json",
+]
 arbitrary = [
     "std",
     "alloy-sol-types/arbitrary",

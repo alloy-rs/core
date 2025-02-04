@@ -1,4 +1,4 @@
-use alloy_json_abi::{AbiItem, EventParam, JsonAbi, Param};
+use alloy_json_abi::{AbiItem, EventParam, JsonAbi, Param, ToSolConfig};
 use pretty_assertions::assert_eq;
 use std::{
     collections::HashMap,
@@ -48,6 +48,9 @@ fn abi_test(s: &str, path: &str, run_solc: bool) {
     assert_eq!(len, abi2.len());
     assert_eq!(abi1, abi2);
 
+    let abi_items2: Vec<AbiItem<'_>> = serde_json::from_reader(std::io::Cursor::new(s)).unwrap();
+    assert_eq!(abi_items2, abi_items);
+
     #[cfg(all(feature = "std", feature = "serde_json"))]
     load_test(path, &abi1);
     to_sol_test(path, &abi1, run_solc);
@@ -80,38 +83,47 @@ fn to_sol_test(path: &str, abi: &JsonAbi, run_solc: bool) {
     let name = path.file_stem().unwrap().to_str().unwrap();
 
     let mut abi = abi.clone();
+    // Ignore constructors for Solc tests.
+    abi.constructor = None;
     abi.dedup();
-    let actual = abi.to_sol(name);
+    let actual = abi.to_sol(name, Some(ToSolConfig::new().for_sol_macro(true)));
 
     ensure_file_contents(&sol_path, &actual);
 
     if matches!(
         name,
         // https://github.com/alloy-rs/core/issues/349
-        "ZeroXExchange" | "GaugeController" | "DoubleExponentInterestSetter"
+        |"ZeroXExchange"| "GaugeController" | "DoubleExponentInterestSetter" | "NamelessParams"
+        // UniswapV1Exchange has return values with the same name.
+        | "UniswapV1Exchange"
+        // https://github.com/alloy-rs/core/issues/744
+        | "DelegationManager"
+        // https://github.com/alloy-rs/core/issues/746
+        | "Bootstrap"
     ) {
         return;
     }
 
     if run_solc {
-        let out = Command::new("solc").arg("--abi").arg(&sol_path).output().unwrap();
+        let out = Command::new("solc").arg("--combined-json=abi").arg(&sol_path).output().unwrap();
         let stdout = String::from_utf8_lossy(&out.stdout);
         let stderr = String::from_utf8_lossy(&out.stderr);
         let panik = |s| -> ! { panic!("{s}\n\nstdout:\n{stdout}\n\nstderr:\n{stderr}") };
         if !out.status.success() {
             panik("solc failed");
         }
-        let Some(json_str_start) = stdout.find("[{") else {
-            panik("no JSON");
-        };
-        let json_str = &stdout[json_str_start..];
-        let solc_abi = match serde_json::from_str::<JsonAbi>(json_str) {
-            Ok(solc_abi) => solc_abi,
+        let combined_json = match serde_json::from_str::<serde_json::Value>(stdout.trim()) {
+            Ok(j) => j,
             Err(e) => panik(&format!("invalid JSON: {e}")),
         };
-
-        // Constructor is ignored.
-        abi.constructor = None;
+        let (_, contract) = combined_json["contracts"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .find(|(k, _)| k.contains(&format!(":{name}")))
+            .unwrap();
+        let solc_abi_str = serde_json::to_string(&contract["abi"]).unwrap();
+        let solc_abi: JsonAbi = serde_json::from_str(&solc_abi_str).unwrap();
 
         // Note that we don't compare the ABIs directly since the conversion is lossy, e.g.
         // `internalType` fields change.

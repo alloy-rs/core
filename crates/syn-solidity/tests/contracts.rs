@@ -1,3 +1,5 @@
+#![allow(clippy::missing_const_for_fn)]
+#![allow(missing_docs)]
 #![cfg(feature = "visit")]
 
 use std::{
@@ -98,7 +100,7 @@ impl Drop for GitPatcher<'_> {
     }
 }
 
-fn parse_file(path: &Path) -> Result<File, Box<dyn std::error::Error>> {
+fn parse_file(path: &Path) -> Result<File, Box<dyn core::error::Error>> {
     let solidity = fs::read_to_string(path)?;
     syn::parse_str(&solidity).map_err(Into::into)
 }

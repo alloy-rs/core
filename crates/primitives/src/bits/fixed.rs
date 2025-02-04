@@ -1,6 +1,7 @@
 use crate::aliases;
 use core::{fmt, iter, ops, str};
 use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
+use hex::FromHex;
 
 /// A byte array of fixed length (`[u8; N]`).
 ///
@@ -27,6 +28,7 @@ use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
     IntoIterator,
 )]
 #[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
+#[cfg_attr(feature = "allocative", derive(allocative::Allocative))]
 #[repr(transparent)]
 pub struct FixedBytes<const N: usize>(#[into_iterator(owned, ref, ref_mut)] pub [u8; N]);
 
@@ -39,7 +41,7 @@ impl<const N: usize> Default for FixedBytes<N> {
     }
 }
 
-impl<'a, const N: usize> Default for &'a FixedBytes<N> {
+impl<const N: usize> Default for &FixedBytes<N> {
     #[inline]
     fn default() -> Self {
         &FixedBytes::ZERO
@@ -301,14 +303,22 @@ impl<const N: usize> ops::BitXorAssign for FixedBytes<N> {
     }
 }
 
+impl<const N: usize> ops::Not for FixedBytes<N> {
+    type Output = Self;
+
+    #[inline]
+    fn not(mut self) -> Self::Output {
+        self.iter_mut().for_each(|byte| *byte = !*byte);
+        self
+    }
+}
+
 impl<const N: usize> str::FromStr for FixedBytes<N> {
     type Err = hex::FromHexError;
 
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut buf = [0u8; N];
-        hex::decode_to_slice(s, &mut buf)?;
-        Ok(Self(buf))
+        Self::from_hex(s)
     }
 }
 
@@ -398,8 +408,8 @@ impl<const N: usize> FixedBytes<N> {
     ///
     /// Panics if the underlying call to
     /// [`getrandom_uninit`](getrandom::getrandom_uninit) fails.
-    #[inline]
     #[cfg(feature = "getrandom")]
+    #[inline]
     #[track_caller]
     pub fn randomize(&mut self) {
         self.try_randomize().unwrap()
@@ -449,6 +459,8 @@ impl<const N: usize> FixedBytes<N> {
 
     /// Create a new [`FixedBytes`] from the given slice `src`.
     ///
+    /// For a fallible version, use the `TryFrom<&[u8]>` implementation.
+    ///
     /// # Note
     ///
     /// The given bytes are interpreted in big endian order.
@@ -456,10 +468,13 @@ impl<const N: usize> FixedBytes<N> {
     /// # Panics
     ///
     /// If the length of `src` and the number of bytes in `Self` do not match.
-    #[track_caller]
     #[inline]
-    pub fn from_slice(value: &[u8]) -> Self {
-        Self::try_from(value).unwrap()
+    #[track_caller]
+    pub fn from_slice(src: &[u8]) -> Self {
+        match Self::try_from(src) {
+            Ok(x) => x,
+            Err(_) => panic!("cannot convert a slice of length {} to FixedBytes<{N}>", src.len()),
+        }
     }
 
     /// Create a new [`FixedBytes`] from the given slice `src`, left-padding it
@@ -472,8 +487,8 @@ impl<const N: usize> FixedBytes<N> {
     /// # Panics
     ///
     /// Panics if `src.len() > N`.
-    #[track_caller]
     #[inline]
+    #[track_caller]
     pub fn left_padding_from(value: &[u8]) -> Self {
         let len = value.len();
         assert!(len <= N, "slice is too large. Expected <={N} bytes, got {len}");
@@ -492,8 +507,8 @@ impl<const N: usize> FixedBytes<N> {
     /// # Panics
     ///
     /// Panics if `src.len() > N`.
-    #[track_caller]
     #[inline]
+    #[track_caller]
     pub fn right_padding_from(value: &[u8]) -> Self {
         let len = value.len();
         assert!(len <= N, "slice is too large. Expected <={N} bytes, got {len}");
@@ -607,9 +622,9 @@ mod tests {
 
     #[test]
     fn concat_const() {
-        const A: FixedBytes<2> = fixed_bytes!("0123");
-        const B: FixedBytes<2> = fixed_bytes!("4567");
-        const EXPECTED: FixedBytes<4> = fixed_bytes!("01234567");
+        const A: FixedBytes<2> = fixed_bytes!("0x0123");
+        const B: FixedBytes<2> = fixed_bytes!("0x4567");
+        const EXPECTED: FixedBytes<4> = fixed_bytes!("0x01234567");
         const ACTUAL: FixedBytes<4> = A.concat_const(B);
 
         assert_eq!(ACTUAL, EXPECTED);
@@ -651,11 +666,11 @@ mod tests {
 
     #[test]
     fn left_padding_from() {
-        assert_eq!(FixedBytes::<4>::left_padding_from(&[0x01, 0x23]), fixed_bytes!("00000123"));
+        assert_eq!(FixedBytes::<4>::left_padding_from(&[0x01, 0x23]), fixed_bytes!("0x00000123"));
 
         assert_eq!(
             FixedBytes::<4>::left_padding_from(&[0x01, 0x23, 0x45, 0x67]),
-            fixed_bytes!("01234567")
+            fixed_bytes!("0x01234567")
         );
     }
 
@@ -667,11 +682,11 @@ mod tests {
 
     #[test]
     fn right_padding_from() {
-        assert_eq!(FixedBytes::<4>::right_padding_from(&[0x01, 0x23]), fixed_bytes!("01230000"));
+        assert_eq!(FixedBytes::<4>::right_padding_from(&[0x01, 0x23]), fixed_bytes!("0x01230000"));
 
         assert_eq!(
             FixedBytes::<4>::right_padding_from(&[0x01, 0x23, 0x45, 0x67]),
-            fixed_bytes!("01234567")
+            fixed_bytes!("0x01234567")
         );
     }
 

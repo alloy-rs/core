@@ -15,6 +15,10 @@ use crate::{
 use alloc::{borrow::Cow, vec::Vec};
 use core::{fmt, slice::SliceIndex};
 
+/// The decoder recursion limit.
+/// This is currently hardcoded, but may be parameterizable in the future.
+pub const RECURSION_LIMIT: u8 = 16;
+
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
 /// deserialize the bytes into a sequence of tokens.
 ///
@@ -30,6 +34,8 @@ pub struct Decoder<'de> {
     offset: usize,
     // Whether to validate type correctness and blob re-encoding.
     validate: bool,
+    /// The current recursion depth.
+    depth: u8,
 }
 
 impl fmt::Debug for Decoder<'_> {
@@ -41,6 +47,7 @@ impl fmt::Debug for Decoder<'_> {
             .field("buf", &body)
             .field("offset", &self.offset)
             .field("validate", &self.validate)
+            .field("depth", &self.depth)
             .finish()
     }
 }
@@ -70,7 +77,7 @@ impl<'de> Decoder<'de> {
     /// to an identical bytestring.
     #[inline]
     pub const fn new(buf: &'de [u8], validate: bool) -> Self {
-        Self { buf, offset: 0, validate }
+        Self { buf, offset: 0, validate, depth: 0 }
     }
 
     /// Returns the current offset in the buffer.
@@ -83,6 +90,16 @@ impl<'de> Decoder<'de> {
     #[inline]
     pub const fn remaining(&self) -> Option<usize> {
         self.buf.len().checked_sub(self.offset)
+    }
+
+    /// Returns the number of words in the remaining buffer.
+    #[inline]
+    pub const fn remaining_words(&self) -> usize {
+        if let Some(remaining) = self.remaining() {
+            remaining / Word::len_bytes()
+        } else {
+            0
+        }
     }
 
     /// Returns a reference to the remaining bytes in the buffer.
@@ -117,18 +134,22 @@ impl<'de> Decoder<'de> {
     ///
     /// See [`child`](Self::child).
     #[inline]
-    #[track_caller]
-    pub fn raw_child(&self) -> Self {
-        self.child(self.offset).unwrap()
+    pub fn raw_child(&self) -> Result<Self> {
+        self.child(self.offset)
     }
 
     /// Create a child decoder, starting at `offset` bytes from the current
     /// decoder's offset.
     /// The child decoder shares the buffer and validation flag.
     #[inline]
-    pub fn child(&self, offset: usize) -> Result<Decoder<'de>, Error> {
+    pub fn child(&self, offset: usize) -> Result<Self, Error> {
+        if self.depth >= RECURSION_LIMIT {
+            return Err(Error::RecursionLimitExceeded(RECURSION_LIMIT));
+        }
         match self.buf.get(offset..) {
-            Some(buf) => Ok(Decoder { buf, offset: 0, validate: self.validate }),
+            Some(buf) => {
+                Ok(Decoder { buf, offset: 0, validate: self.validate, depth: self.depth + 1 })
+            }
             None => Err(Error::Overrun),
         }
     }
@@ -195,7 +216,7 @@ impl<'de> Decoder<'de> {
     /// Return a child decoder by consuming a word, interpreting it as a
     /// pointer, and following it.
     #[inline]
-    pub fn take_indirection(&mut self) -> Result<Decoder<'de>, Error> {
+    pub fn take_indirection(&mut self) -> Result<Self, Error> {
         self.take_offset().and_then(|offset| self.child(offset))
     }
 
@@ -223,16 +244,13 @@ impl<'de> Decoder<'de> {
     /// Takes a slice of bytes of the given length.
     #[inline]
     pub fn take_slice_unchecked(&mut self, len: usize) -> Result<&'de [u8]> {
-        self.peek_len(len).map(|x| {
-            self.increase_offset(len);
-            x
-        })
+        self.peek_len(len).inspect(|_| self.increase_offset(len))
     }
 
     /// Takes the offset from the child decoder and sets it as the current
     /// offset.
     #[inline]
-    pub fn take_offset_from(&mut self, child: &Decoder<'de>) {
+    pub fn take_offset_from(&mut self, child: &Self) {
         self.set_offset(child.offset + (self.buf.len() - child.buf.len()));
     }
 
@@ -279,11 +297,14 @@ pub fn decode<'de, T: Token<'de>>(data: &'de [u8], validate: bool) -> Result<T> 
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
 pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
-    if T::IS_TUPLE {
-        decode_sequence(data, validate)
-    } else {
-        decode(data, validate)
-    }
+    let decode = const {
+        if T::IS_TUPLE {
+            decode_sequence
+        } else {
+            decode
+        }
+    };
+    decode(data, validate)
 }
 
 /// Decodes ABI compliant vector of bytes into vector of tokens described by
@@ -308,7 +329,7 @@ pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -
 mod tests {
     use crate::{sol, sol_data, utils::pad_usize, SolType, SolValue};
     use alloc::string::ToString;
-    use alloy_primitives::{address, hex, Address, B256, U256};
+    use alloy_primitives::{address, bytes, hex, Address, B256, U256};
 
     #[test]
     fn dynamic_array_of_dynamic_arrays() {
@@ -597,7 +618,7 @@ mod tests {
         assert_eq!(
             MyTy::abi_decode_params(&encoded, false).unwrap(),
             (
-                address!("8497afefdc5ac170a664a231f6efb25526ef813f"),
+                address!("0x8497afefdc5ac170a664a231f6efb25526ef813f"),
                 B256::repeat_byte(0x01),
                 [0x02; 4].into(),
                 "0x0000001F".into(),
@@ -619,6 +640,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "OOM https://github.com/rust-lang/miri/issues/3637")]
     fn decode_corrupted_dynamic_array() {
         type MyTy = sol_data::Array<sol_data::Uint<32>>;
         // line 1 at 0x00 =   0: tail offset of array
@@ -708,7 +730,7 @@ mod tests {
 
         let ty = Ty {
             arr: [[0x11u8; 32].into(), [0x22u8; 32].into(), [0x33u8; 32].into()],
-            r#dyn: vec![0x44u8; 4],
+            r#dyn: bytes![0x44u8; 4],
         };
         let encoded = hex!(
             "0000000000000000000000000000000000000000000000000000000000000020"
@@ -736,8 +758,8 @@ mod tests {
         }
 
         let ty = Ty {
-            arr: [vec![0x11u8; 32], vec![0x22u8; 32], vec![0x33u8; 32]],
-            r#dyn: vec![0x44u8; 4],
+            arr: [bytes![0x11u8; 32], bytes![0x22u8; 32], bytes![0x33u8; 32]],
+            r#dyn: bytes![0x44u8; 4],
         };
         let encoded = hex!(
             "0000000000000000000000000000000000000000000000000000000000000020" // struct offset

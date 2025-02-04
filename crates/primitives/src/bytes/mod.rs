@@ -1,3 +1,4 @@
+use crate::FixedBytes;
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::{
     borrow::Borrow,
@@ -11,13 +12,18 @@ mod rlp;
 #[cfg(feature = "serde")]
 mod serde;
 
-#[cfg(feature = "ssz")]
-mod ssz;
-
 /// Wrapper type around [`bytes::Bytes`] to support "0x" prefixed hex strings.
-#[derive(Clone, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct Bytes(pub bytes::Bytes);
+
+impl Default for &Bytes {
+    #[inline]
+    fn default() -> Self {
+        static EMPTY: Bytes = Bytes::new();
+        &EMPTY
+    }
+}
 
 impl fmt::Debug for Bytes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -125,6 +131,20 @@ impl From<Vec<u8>> for Bytes {
     #[inline]
     fn from(value: Vec<u8>) -> Self {
         Self(value.into())
+    }
+}
+
+impl<const N: usize> From<FixedBytes<N>> for Bytes {
+    #[inline]
+    fn from(value: FixedBytes<N>) -> Self {
+        value.to_vec().into()
+    }
+}
+
+impl<const N: usize> From<&'static FixedBytes<N>> for Bytes {
+    #[inline]
+    fn from(value: &'static FixedBytes<N>) -> Self {
+        Self::from_static(value.as_slice())
     }
 }
 

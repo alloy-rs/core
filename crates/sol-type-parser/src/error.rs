@@ -1,4 +1,4 @@
-use alloc::boxed::Box;
+use alloc::{boxed::Box, string::String};
 use core::fmt;
 
 /// Parser result
@@ -8,8 +8,7 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 #[derive(Clone, PartialEq, Eq)]
 pub struct Error(Repr);
 
-#[cfg(feature = "std")]
-impl std::error::Error for Error {}
+impl core::error::Error for Error {}
 
 impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -40,6 +39,13 @@ impl Error {
         Self::_new("invalid type string: ", &ty)
     }
 
+    /// Instantiate an invalid identifier string error. Invalid identifier string errors are for
+    /// identifier strings that do not follow the format described in
+    /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier>.
+    pub fn invalid_identifier_string(identifier: impl fmt::Display) -> Self {
+        Self::_new("invalid identifier string: ", &identifier)
+    }
+
     /// Instantiate an invalid size error. Invalid size errors are for valid
     /// primitive types with invalid sizes. E.g. `"uint7"` or `"bytes1337"` or
     /// `"string[aaaaaa]"`.
@@ -52,12 +58,13 @@ impl Error {
     #[inline(never)]
     #[cold]
     pub fn _new(s: &str, e: &dyn fmt::Display) -> Self {
-        Self(Repr(format!("{s}{e}").into_boxed_str()))
+        Self(Repr(Box::new(format!("{s}{e}"))))
     }
 }
 
 #[derive(Clone, PartialEq, Eq)]
-struct Repr(Box<str>);
+#[allow(clippy::box_collection)] // `Box<String>` is smaller than `String` or `Box<str>`.
+struct Repr(Box<String>);
 
 impl fmt::Display for Repr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

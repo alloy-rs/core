@@ -103,11 +103,20 @@ pub trait SolType: Sized {
     /// ABI encoding and decoding.
     type Token<'a>: Token<'a>;
 
+    /// The name of this type in Solidity.
+    const SOL_NAME: &'static str;
+
     /// The statically-known ABI-encoded size of the type.
     ///
     /// If this is not known at compile time, this should be `None`, which indicates that the
     /// encoded size is dynamic.
     const ENCODED_SIZE: Option<usize>;
+
+    /// The statically-known Non-standard Packed Mode ABI-encoded size of the type.
+    ///
+    /// If this is not known at compile time, this should be `None`, which indicates that the
+    /// encoded size is dynamic.
+    const PACKED_ENCODED_SIZE: Option<usize>;
 
     /// Whether the ABI-encoded size is dynamic.
     ///
@@ -115,7 +124,11 @@ pub trait SolType: Sized {
     const DYNAMIC: bool = Self::ENCODED_SIZE.is_none();
 
     /// Returns the name of this type in Solidity.
-    fn sol_type_name() -> Cow<'static, str>;
+    #[deprecated(since = "0.6.3", note = "use `SOL_NAME` instead")]
+    #[inline]
+    fn sol_type_name() -> Cow<'static, str> {
+        Self::SOL_NAME.into()
+    }
 
     /// Calculate the ABI-encoded size of the data, counting both head and tail
     /// words. For a single-word type this will always be 32.
@@ -146,6 +159,7 @@ pub trait SolType: Sized {
     /// Tokenizes the given value into this type's token.
     ///
     /// See the [`abi::token`] module for more information.
+    #[inline]
     fn tokenize<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Self::Token<'_> {
         rust.stv_to_tokens()
     }
@@ -161,6 +175,14 @@ pub trait SolType: Sized {
     #[inline]
     fn eip712_data_word<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Word {
         rust.stv_eip712_data_word()
+    }
+
+    /// Returns the length of this value when ABI-encoded in Non-standard Packed Mode.
+    ///
+    /// See [`abi_encode_packed`][SolType::abi_encode_packed] for more details.
+    #[inline]
+    fn abi_packed_encoded_size<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> usize {
+        rust.stv_abi_packed_encoded_size()
     }
 
     /// Non-standard Packed Mode ABI encoding.
@@ -181,7 +203,7 @@ pub trait SolType: Sized {
     /// More information can be found in the [Solidity docs](https://docs.soliditylang.org/en/latest/abi-spec.html#non-standard-packed-mode).
     #[inline]
     fn abi_encode_packed<E: ?Sized + SolTypeValue<Self>>(rust: &E) -> Vec<u8> {
-        let mut out = Vec::new();
+        let mut out = Vec::with_capacity(Self::abi_packed_encoded_size(rust));
         Self::abi_encode_packed_to(rust, &mut out);
         out
     }
@@ -223,7 +245,8 @@ pub trait SolType: Sized {
     /// See the [`abi`] module for more information.
     #[inline]
     fn abi_decode(data: &[u8], validate: bool) -> Result<Self::RustType> {
-        abi::decode::<Self::Token<'_>>(data, validate).and_then(check_decode::<Self>(validate))
+        abi::decode::<Self::Token<'_>>(data, validate)
+            .and_then(validate_and_detokenize::<Self>(validate))
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as
@@ -236,7 +259,7 @@ pub trait SolType: Sized {
         Self::Token<'de>: TokenSeq<'de>,
     {
         abi::decode_params::<Self::Token<'_>>(data, validate)
-            .and_then(check_decode::<Self>(validate))
+            .and_then(validate_and_detokenize::<Self>(validate))
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as a
@@ -249,12 +272,14 @@ pub trait SolType: Sized {
         Self::Token<'de>: TokenSeq<'de>,
     {
         abi::decode_sequence::<Self::Token<'_>>(data, validate)
-            .and_then(check_decode::<Self>(validate))
+            .and_then(validate_and_detokenize::<Self>(validate))
     }
 }
 
 #[inline]
-fn check_decode<T: SolType>(validate: bool) -> impl FnOnce(T::Token<'_>) -> Result<T::RustType> {
+fn validate_and_detokenize<T: SolType>(
+    validate: bool,
+) -> impl FnOnce(T::Token<'_>) -> Result<T::RustType> {
     move |token| {
         if validate {
             T::type_check(&token)?;

@@ -1,6 +1,6 @@
 use crate::{
-    eip712::typed_data::Eip712Types, eip712_parser::EncodeType, resolve::ResolveSolType,
-    DynSolType, DynSolValue, Error, Result,
+    eip712::typed_data::Eip712Types, eip712_parser::EncodeType, DynSolType, DynSolValue, Error,
+    Result, Specifier,
 };
 use alloc::{
     borrow::ToOwned,
@@ -81,7 +81,7 @@ impl PropertyDef {
 }
 
 /// An EIP-712 type definition.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeDef {
     /// Must always be a ROOT type name with any array stripped.
     type_name: String,
@@ -122,7 +122,7 @@ impl TypeDef {
     /// Instantiate a new type definition, without checking that the type name
     /// is a valid root type. This may result in bad behavior in a resolver.
     #[inline]
-    pub fn new_unchecked(type_name: String, props: Vec<PropertyDef>) -> Self {
+    pub const fn new_unchecked(type_name: String, props: Vec<PropertyDef>) -> Self {
         Self { type_name, props }
     }
 
@@ -204,7 +204,7 @@ struct DfsContext<'a> {
 /// A dependency graph built from the `Eip712Types` object. This is used to
 /// safely resolve JSON into a [`crate::DynSolType`] by detecting cycles in the
 /// type graph and traversing the dep graph.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Resolver {
     /// Nodes in the graph
     // NOTE: Non-duplication of names must be enforced. See note on impl of Ord

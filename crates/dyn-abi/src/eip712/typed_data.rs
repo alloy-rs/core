@@ -63,7 +63,7 @@ impl<'de> Deserialize<'de> for Eip712Types {
 ///     "required": ["types", "primaryType", "domain", "message"]
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct TypedData {
     /// Signing domain metadata. The signing domain is the intended context for
     /// the signature (e.g. the dapp, protocol, etc. that it's intended for).
@@ -101,6 +101,7 @@ impl<'de> Deserialize<'de> for TypedData {
             message: serde_json::Value,
         }
 
+        #[allow(unknown_lints, non_local_definitions)]
         impl From<TypedDataHelper> for TypedData {
             fn from(value: TypedDataHelper) -> Self {
                 Self {
@@ -537,7 +538,7 @@ mod tests {
 
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
 
-        assert_eq!(typed_data.eip712_signing_hash(), Err(Error::CircularDependency("Mail".into())),);
+        assert_eq!(typed_data.eip712_signing_hash(), Err(Error::CircularDependency("Mail".into())));
     }
 
     #[test]
@@ -676,7 +677,7 @@ mod tests {
         let s = MyStruct { name: "hello".to_string(), otherThing: "world".to_string() };
 
         let typed_data = TypedData::from_struct(&s, None);
-        assert_eq!(typed_data.encode_type().unwrap(), "MyStruct(string name,string otherThing)",);
+        assert_eq!(typed_data.encode_type().unwrap(), "MyStruct(string name,string otherThing)");
 
         assert!(typed_data.resolver.contains_type_name("EIP712Domain"));
     }

@@ -1,73 +1,102 @@
 [workspace]
-members = ["crates/*"]
+members = ["crates/*", "tests/*"]
 resolver = "2"
 
 [workspace.package]
-version = "0.6.0"
+version = "0.8.20"
 edition = "2021"
-rust-version = "1.65"
+rust-version = "1.81"
 authors = ["Alloy Contributors"]
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/alloy-rs/core"
 repository = "https://github.com/alloy-rs/core"
 exclude = ["tests"]
 
-[workspace.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
+[workspace.lints.clippy]
+dbg-macro = "warn"
+manual-string-new = "warn"
+uninlined-format-args = "warn"
+use-self = "warn"
+redundant-clone = "warn"
+missing-const-for-fn = "allow" # TODO: https://github.com/rust-lang/rust-clippy/issues/14020
+
+[workspace.lints.rust]
+missing-copy-implementations = "warn"
+missing-debug-implementations = "warn"
+missing-docs = "warn"
+rust-2018-idioms = "warn"
+unreachable-pub = "warn"
+unused-must-use = "warn"
+redundant-lifetimes = "warn"
+unnameable-types = "warn"
+
+[workspace.lints.rustdoc]
+all = "warn"
 
 [workspace.dependencies]
 # workspace crates
-alloy-dyn-abi = { version = "0.6.0", path = "crates/dyn-abi", default-features = false }
-alloy-json-abi = { version = "0.6.0", path = "crates/json-abi", default-features = false }
-alloy-primitives = { version = "0.6.0", path = "crates/primitives", default-features = false }
-alloy-sol-macro = { version = "0.6.0", path = "crates/sol-macro", default-features = false }
-alloy-sol-type-parser = { version = "0.6.0", path = "crates/sol-type-parser", default-features = false }
-alloy-sol-types = { version = "0.6.0", path = "crates/sol-types", default-features = false }
-syn-solidity = { version = "0.6.0", path = "crates/syn-solidity", default-features = false }
+alloy-core = { version = "0.8.20", path = "crates/core", default-features = false }
+alloy-dyn-abi = { version = "0.8.20", path = "crates/dyn-abi", default-features = false }
+alloy-json-abi = { version = "0.8.20", path = "crates/json-abi", default-features = false }
+alloy-primitives = { version = "0.8.20", path = "crates/primitives", default-features = false }
+alloy-sol-macro = { version = "0.8.20", path = "crates/sol-macro", default-features = false }
+alloy-sol-macro-input = { version = "0.8.20", path = "crates/sol-macro-input", default-features = false }
+alloy-sol-macro-expander = { version = "0.8.20", path = "crates/sol-macro-expander", default-features = false }
+alloy-sol-type-parser = { version = "0.8.20", path = "crates/sol-type-parser", default-features = false }
+alloy-sol-types = { version = "0.8.20", path = "crates/sol-types", default-features = false }
+syn-solidity = { version = "0.8.20", path = "crates/syn-solidity", default-features = false }
 
 # serde
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
-# ssz
-ethereum_ssz = { version = "0.5.3", default-features = false }
-
 # macros
+proc-macro-error2 = "2.0.0"
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "2.0"
 
 cfg-if = "1.0.0"
-derive_more = "0.99"
-hex-literal = "0.4"
+derive_more = { version = "1.0", default-features = false }
 paste = "1.0"
-strum = { version = "0.25", features = ["derive"] }
-num_enum = "0.7"
-thiserror = "1.0"
 
-k256 = "0.13"
+# crypto
+digest = "0.10"
+k256 = { version = "0.13", default-features = false }
 keccak-asm = { version = "0.1.0", default-features = false }
-tiny-keccak = "2.0"
+tiny-keccak = { version = "2.0", default-features = false }
+sha3 = { version = "0.10.8", default-features = false }
+
+# maps
+hashbrown = { version = "0.15", default-features = false }
+indexmap = { version = "2.5", default-features = false }
+foldhash = { version = "0.1.4", default-features = false }
+rustc-hash = { version = "2.1", default-features = false }
 
 # misc
+allocative = { version = "0.3.2", default-features = false }
 alloy-rlp = { version = "0.3", default-features = false }
 alloy-rlp-derive = { version = "0.3", default-features = false }
 arbitrary = "1.3"
 arrayvec = { version = "0.7", default-features = false }
+bcs = "0.1.6"
 bincode = "1.3"
 bytes = { version = "1", default-features = false }
 criterion = "0.5"
 derive_arbitrary = "1.3"
 getrandom = "0.2"
-hex = { package = "const-hex", version = "1.10", default-features = false, features = ["alloc"] }
+hex = { package = "const-hex", version = "1.14", default-features = false, features = [
+    "alloc",
+    "core-error",
+] }
 itoa = "1"
 once_cell = "1"
+postgres-types = "0.2.6"
 pretty_assertions = "1.4"
 proptest = "1"
-proptest-derive = "0.4"
+proptest-derive = "0.5"
 rand = { version = "0.8", default-features = false }
-ruint = { version = "1.11.1", default-features = false, features = ["alloc"] }
+rayon = { version = "1.2", default-features = false }
+ruint = { version = "1.12.3", default-features = false, features = ["alloc"] }
 ruint-macro = { version = "1", default-features = false }
-winnow = { version = "0.5.19", default-features = false, features = ["alloc"] }
-postgres-types = "0.2.6"
+winnow = { version = "0.7", default-features = false, features = ["alloc"] }

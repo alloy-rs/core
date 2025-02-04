@@ -6,7 +6,7 @@ use crate::{
     Result, Word,
 };
 use alloc::{borrow::Cow, string::String, vec::Vec};
-use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256};
+use alloy_primitives::{aliases::*, Address, Bytes, FixedBytes, Function, I256, U256};
 
 /// A Solidity value.
 ///
@@ -38,10 +38,19 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
 
     /// The name of the associated Solidity type.
     ///
+    /// See [`SolType::SOL_NAME`] for more information.
+    #[inline]
+    fn sol_name(&self) -> &'static str {
+        Self::SolType::SOL_NAME
+    }
+
+    /// The name of the associated Solidity type.
+    ///
     /// See [`SolType::sol_type_name`] for more information.
+    #[deprecated(since = "0.6.3", note = "use `sol_name` instead")]
     #[inline]
     fn sol_type_name(&self) -> Cow<'static, str> {
-        Self::SolType::sol_type_name()
+        self.sol_name().into()
     }
 
     /// Tokenizes the given value into this type's token.
@@ -176,19 +185,71 @@ impl_sol_value! {
     // Basic
     [] bool => sol_data::Bool [];
 
-    [] i8 => sol_data::Int::<8> [];
-    [] i16 => sol_data::Int::<16> [];
-    [] i32 => sol_data::Int::<32> [];
-    [] i64 => sol_data::Int::<64> [];
+    []   i8 => sol_data::Int::<8> [];
+    []  i16 => sol_data::Int::<16> [];
+    []  I24 => sol_data::Int::<24> [];
+    []  i32 => sol_data::Int::<32> [];
+    []  I40 => sol_data::Int::<40> [];
+    []  I48 => sol_data::Int::<48> [];
+    []  I56 => sol_data::Int::<56> [];
+    []  i64 => sol_data::Int::<64> [];
+    []  I72 => sol_data::Int::<72> [];
+    []  I80 => sol_data::Int::<80> [];
+    []  I88 => sol_data::Int::<88> [];
+    []  I96 => sol_data::Int::<96> [];
+    [] I104 => sol_data::Int::<104> [];
+    [] I112 => sol_data::Int::<112> [];
+    [] I120 => sol_data::Int::<120> [];
     [] i128 => sol_data::Int::<128> [];
+    [] I136 => sol_data::Int::<136> [];
+    [] I144 => sol_data::Int::<144> [];
+    [] I152 => sol_data::Int::<152> [];
+    [] I160 => sol_data::Int::<160> [];
+    [] I168 => sol_data::Int::<168> [];
+    [] I176 => sol_data::Int::<176> [];
+    [] I184 => sol_data::Int::<184> [];
+    [] I192 => sol_data::Int::<192> [];
+    [] I200 => sol_data::Int::<200> [];
+    [] I208 => sol_data::Int::<208> [];
+    [] I216 => sol_data::Int::<216> [];
+    [] I224 => sol_data::Int::<224> [];
+    [] I232 => sol_data::Int::<232> [];
+    [] I240 => sol_data::Int::<240> [];
+    [] I248 => sol_data::Int::<248> [];
     [] I256 => sol_data::Int::<256> [];
 
     // TODO: `u8` is specialized to encode as `bytes` or `bytesN`
     // [] u8 => sol_data::Uint::<8> [];
-    [] u16 => sol_data::Uint::<16> [];
-    [] u32 => sol_data::Uint::<32> [];
-    [] u64 => sol_data::Uint::<64> [];
+    []  u16 => sol_data::Uint::<16> [];
+    []  U24 => sol_data::Uint::<24> [];
+    []  u32 => sol_data::Uint::<32> [];
+    []  U40 => sol_data::Uint::<40> [];
+    []  U48 => sol_data::Uint::<48> [];
+    []  U56 => sol_data::Uint::<56> [];
+    []  u64 => sol_data::Uint::<64> [];
+    []  U72 => sol_data::Uint::<72> [];
+    []  U80 => sol_data::Uint::<80> [];
+    []  U88 => sol_data::Uint::<88> [];
+    []  U96 => sol_data::Uint::<96> [];
+    [] U104 => sol_data::Uint::<104> [];
+    [] U112 => sol_data::Uint::<112> [];
+    [] U120 => sol_data::Uint::<120> [];
     [] u128 => sol_data::Uint::<128> [];
+    [] U136 => sol_data::Uint::<136> [];
+    [] U144 => sol_data::Uint::<144> [];
+    [] U152 => sol_data::Uint::<152> [];
+    [] U160 => sol_data::Uint::<160> [];
+    [] U168 => sol_data::Uint::<168> [];
+    [] U176 => sol_data::Uint::<176> [];
+    [] U184 => sol_data::Uint::<184> [];
+    [] U192 => sol_data::Uint::<192> [];
+    [] U200 => sol_data::Uint::<200> [];
+    [] U208 => sol_data::Uint::<208> [];
+    [] U216 => sol_data::Uint::<216> [];
+    [] U224 => sol_data::Uint::<224> [];
+    [] U232 => sol_data::Uint::<232> [];
+    [] U240 => sol_data::Uint::<240> [];
+    [] U248 => sol_data::Uint::<248> [];
     [] U256 => sol_data::Uint::<256> [];
 
     [] Address => sol_data::Address [];
@@ -286,7 +347,7 @@ mod tests {
 
     #[test]
     fn inference() {
-        false.sol_type_name();
+        false.sol_name();
         false.abi_encoded_size();
         false.eip712_data_word();
         false.abi_encode_packed_to(&mut vec![]);
@@ -295,7 +356,7 @@ mod tests {
         (false,).abi_encode_sequence();
         (false,).abi_encode_params();
 
-        "".sol_type_name();
+        "".sol_name();
         "".abi_encoded_size();
         "".eip712_data_word();
         "".abi_encode_packed_to(&mut vec![]);
@@ -388,7 +449,7 @@ mod tests {
     fn complex() {
         let tuple = ((((((false,),),),),),);
         assert_eq!(tuple.abi_encode(), Word::ZERO[..]);
-        assert_eq!(tuple.sol_type_name(), "((((((bool))))))");
+        assert_eq!(tuple.sol_name(), "((((((bool))))))");
 
         let tuple = (
             42u64,
@@ -402,38 +463,35 @@ mod tests {
                 &b"dddd"[..],
             ),
         );
-        assert_eq!(
-            tuple.sol_type_name(),
-            "(uint64,string,bool,(string,address,bytes,bytes4,bytes))"
-        );
+        assert_eq!(tuple.sol_name(), "(uint64,string,bool,(string,address,bytes,bytes4,bytes))");
     }
 
     #[test]
     fn derefs() {
         let x: &[Address; 0] = &[];
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "address[0]");
+        assert_eq!(x.sol_name(), "address[0]");
 
         let x = &[Address::ZERO];
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "address[1]");
+        assert_eq!(x.sol_name(), "address[1]");
 
         let x = &[Address::ZERO, Address::ZERO];
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "address[2]");
+        assert_eq!(x.sol_name(), "address[2]");
 
         let x = &[Address::ZERO][..];
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "address[]");
+        assert_eq!(x.sol_name(), "address[]");
 
         let mut x = *b"0";
         let x = (&mut x, *b"aaaa", b"00");
         x.abi_encode();
-        assert_eq!(x.sol_type_name(), "(bytes1,bytes4,bytes2)");
+        assert_eq!(x.sol_name(), "(bytes1,bytes4,bytes2)");
 
         let tuple = &(&0u16, &"", b"0", &mut [Address::ZERO][..]);
         tuple.abi_encode();
-        assert_eq!(tuple.sol_type_name(), "(uint16,string,bytes1,address[])");
+        assert_eq!(tuple.sol_name(), "(uint16,string,bytes1,address[])");
     }
 
     #[test]

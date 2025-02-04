@@ -66,7 +66,11 @@ impl<const BITS: usize, const LIMBS: usize> fmt::Display for Signed<BITS, LIMBS>
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (sign, abs) = self.into_sign_and_abs();
         sign.fmt(f)?;
-        abs.fmt(f)
+        if f.sign_plus() {
+            write!(f, "{abs}")
+        } else {
+            abs.fmt(f)
+        }
     }
 }
 
@@ -100,7 +104,7 @@ impl<const BITS: usize, const LIMBS: usize> fmt::UpperHex for Signed<BITS, LIMBS
 
 impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Mask for the highest limb.
-    pub(crate) const MASK: u64 = mask(BITS);
+    pub(crate) const MASK: u64 = ruint::mask(BITS);
 
     /// Location of the sign bit within the highest limb.
     pub(crate) const SIGN_BIT: u64 = sign_bit(BITS);
@@ -127,9 +131,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Minus one (multiplicative inverse) of this type.
     pub const MINUS_ONE: Self = Self(Uint::<BITS, LIMBS>::MAX);
 
-    /// Coerces an unsigned integer into a signed one. If the unsigned integer
-    /// is greater than the greater than or equal to `1 << 255`, then the result
-    /// will overflow into a negative value.
+    /// Coerces an unsigned integer into a signed one. If the unsigned integer is greater than or
+    /// equal to `1 << 255`, then the result will overflow into a negative value.
     #[inline]
     pub const fn from_raw(val: Uint<BITS, LIMBS>) -> Self {
         Self(val)
@@ -487,8 +490,8 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     ///
     /// Panics if the value is to large for the bit-size of the Uint.
     #[inline(always)]
-    #[must_use]
     #[track_caller]
+    #[must_use]
     pub const fn from_limbs(limbs: [u64; LIMBS]) -> Self {
         Self(Uint::from_limbs(limbs))
     }
@@ -500,8 +503,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     ///
     /// * [`BaseConvertError::InvalidBase`] if the base is less than 2.
     /// * [`BaseConvertError::InvalidDigit`] if a digit is out of range.
-    /// * [`BaseConvertError::Overflow`] if the number is too large to
-    /// fit.
+    /// * [`BaseConvertError::Overflow`] if the number is too large to fit.
     pub fn from_base_be<I: IntoIterator<Item = u64>>(
         base: u64,
         digits: I,
@@ -750,19 +752,13 @@ mod tests {
 
                 assert_eq!(format!("{positive:x}"), format!("{unsigned:x}"));
                 assert_eq!(format!("{negative:x}"), format!("{unsigned_negative:x}"));
-                assert_eq!(format!("{positive:+x}"), format!("{unsigned:x}"));
-                assert_eq!(format!("{negative:+x}"), format!("{unsigned_negative:x}"));
+                assert_eq!(format!("{positive:+x}"), format!("+{unsigned:x}"));
+                assert_eq!(format!("{negative:+x}"), format!("+{unsigned_negative:x}"));
 
-                assert_eq!(format!("{positive:X}"), format!("{unsigned:x}").to_uppercase());
-                assert_eq!(
-                    format!("{negative:X}"),
-                    format!("{unsigned_negative:x}").to_uppercase()
-                );
-                assert_eq!(format!("{positive:+X}"), format!("{unsigned:x}").to_uppercase());
-                assert_eq!(
-                    format!("{negative:+X}"),
-                    format!("{unsigned_negative:x}").to_uppercase()
-                );
+                assert_eq!(format!("{positive:X}"), format!("{unsigned:X}"));
+                assert_eq!(format!("{negative:X}"), format!("{unsigned_negative:X}"));
+                assert_eq!(format!("{positive:+X}"), format!("+{unsigned:X}"));
+                assert_eq!(format!("{negative:+X}"), format!("+{unsigned_negative:X}"));
             };
         }
 
@@ -1652,5 +1648,20 @@ mod tests {
         run_test!(I160, U160);
         run_test!(I192, U192);
         run_test!(I256, U256);
+    }
+
+    #[test]
+    fn test_overflowing_from_sign_and_abs() {
+        let a = Uint::<8, 1>::ZERO;
+        let (_, overflow) = Signed::overflowing_from_sign_and_abs(Sign::Negative, a);
+        assert!(!overflow);
+
+        let a = Uint::<8, 1>::from(128u8);
+        let (_, overflow) = Signed::overflowing_from_sign_and_abs(Sign::Negative, a);
+        assert!(!overflow);
+
+        let a = Uint::<8, 1>::from(129u8);
+        let (_, overflow) = Signed::overflowing_from_sign_and_abs(Sign::Negative, a);
+        assert!(overflow);
     }
 }

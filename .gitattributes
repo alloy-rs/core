@@ -1,3 +1,2 @@
 *.sol linguist-language=Solidity
-**/tests/abi/* linguist-vendored
 **/tests/contracts/* linguist-vendored

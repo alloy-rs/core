@@ -1,3 +1,5 @@
+#![allow(unknown_lints, clippy::incompatible_msrv)]
+
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };

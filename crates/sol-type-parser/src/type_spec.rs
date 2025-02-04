@@ -1,15 +1,15 @@
 use crate::{
+    new_input,
     utils::{spanned, str_parser},
-    Error, Result, TypeStem,
+    Error, Input, Result, TypeStem,
 };
 use alloc::vec::Vec;
 use core::num::NonZeroUsize;
 use winnow::{
     ascii::digit0,
-    combinator::{cut_err, delimited, repeat},
-    error::{ErrMode, ErrorKind, FromExternalError},
-    trace::trace,
-    PResult, Parser,
+    combinator::{cut_err, delimited, repeat, trace},
+    error::{ErrMode, FromExternalError},
+    ModalResult, Parser,
 };
 
 /// Represents a type-name. Consists of an identifier and optional array sizes.
@@ -57,7 +57,7 @@ use winnow::{
 /// assert_eq!(spec.sizes.as_slice(), &[NonZeroUsize::new(2), None]);
 /// # Ok::<_, alloy_sol_type_parser::Error>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeSpecifier<'a> {
     /// The full span of the specifier.
     pub span: &'a str,
@@ -89,14 +89,14 @@ impl<'a> TypeSpecifier<'a> {
     /// Parse a type specifier from a string.
     #[inline]
     pub fn parse(s: &'a str) -> Result<Self> {
-        Self::parser.parse(s).map_err(Error::parser)
+        Self::parser.parse(new_input(s)).map_err(Error::parser)
     }
 
     /// [`winnow`] parser for this type.
-    pub fn parser(input: &mut &'a str) -> PResult<Self> {
+    pub(crate) fn parser(input: &mut Input<'a>) -> ModalResult<Self> {
         trace(
             "TypeSpecifier",
-            spanned(|input: &mut &'a str| {
+            spanned(|input: &mut Input<'a>| {
                 let stem = TypeStem::parser(input)?;
                 let sizes = if input.starts_with('[') {
                     repeat(
@@ -139,12 +139,12 @@ impl<'a> TypeSpecifier<'a> {
     }
 }
 
-fn array_size_parser(input: &mut &str) -> PResult<Option<NonZeroUsize>> {
+fn array_size_parser(input: &mut Input<'_>) -> ModalResult<Option<NonZeroUsize>> {
     let digits = digit0(input)?;
     if digits.is_empty() {
         return Ok(None);
     }
-    digits.parse().map(Some).map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))
+    digits.parse().map(Some).map_err(|e| ErrMode::from_external_error(input, e))
 }
 
 #[cfg(test)]

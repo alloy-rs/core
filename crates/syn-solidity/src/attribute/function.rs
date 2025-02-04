@@ -290,7 +290,7 @@ impl FunctionAttribute {
 
     #[inline]
     pub fn is_override(&self, path: Option<&SolPath>) -> bool {
-        self.r#override().map_or(false, |o| match path {
+        self.r#override().is_some_and(|o| match path {
             Some(path) => o.paths.iter().any(|p| p == path),
             None => true,
         })
@@ -298,7 +298,7 @@ impl FunctionAttribute {
 
     #[inline]
     pub fn is_modifier(&self, path: Option<&SolPath>) -> bool {
-        self.modifier().map_or(false, |m| match path {
+        self.modifier().is_some_and(|m| match path {
             Some(path) => m.name == *path,
             None => true,
         })

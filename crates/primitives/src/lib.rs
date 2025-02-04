@@ -3,22 +3,17 @@
     html_logo_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/alloy.jpg",
     html_favicon_url = "https://raw.githubusercontent.com/alloy-rs/core/main/assets/favicon.ico"
 )]
-#![warn(
-    missing_copy_implementations,
-    missing_debug_implementations,
-    missing_docs,
-    unreachable_pub,
-    clippy::missing_const_for_fn,
-    rustdoc::all
-)]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
-#![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 #[macro_use]
 extern crate alloc;
 
+use paste as _;
+#[cfg(feature = "sha3-keccak")]
+use sha3 as _;
 use tiny_keccak as _;
 
 #[cfg(feature = "postgres")]
@@ -27,9 +22,9 @@ pub mod postgres;
 pub mod aliases;
 #[doc(no_inline)]
 pub use aliases::{
-    BlockHash, BlockNumber, ChainId, Selector, StorageKey, StorageValue, TxHash, TxIndex, TxNumber,
-    B128, B256, B512, B64, I128, I16, I160, I256, I32, I64, I8, U128, U16, U160, U256, U32, U512,
-    U64, U8,
+    BlockHash, BlockNumber, BlockTimestamp, ChainId, Selector, StorageKey, StorageValue, TxHash,
+    TxIndex, TxNonce, TxNumber, B128, B256, B512, B64, I128, I16, I160, I256, I32, I64, I8, U128,
+    U16, U160, U256, U32, U512, U64, U8,
 };
 
 #[macro_use]
@@ -43,8 +38,14 @@ pub use bits::{
 mod bytes_;
 pub use self::bytes_::Bytes;
 
+mod common;
+pub use common::TxKind;
+
 mod log;
-pub use log::{Log, LogData};
+pub use log::{logs_bloom, IntoLogData, Log, LogData};
+
+#[cfg(feature = "map")]
+pub mod map;
 
 mod sealed;
 pub use sealed::{Sealable, Sealed};
@@ -53,31 +54,22 @@ mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 mod signature;
-pub use signature::{to_eip155_v, Parity, SignatureError};
-
-/// An ECDSA Signature, consisting of V, R, and S.
-#[cfg(feature = "k256")]
-pub type Signature = signature::Signature<k256::ecdsa::Signature>;
-
-/// An ECDSA Signature, consisting of V, R, and S.
-#[cfg(not(feature = "k256"))]
-pub type Signature = signature::Signature<()>;
+pub use signature::{normalize_v, to_eip155_v, PrimitiveSignature, SignatureError};
+#[allow(deprecated)]
+pub use signature::{Parity, Signature};
 
 pub mod utils;
 pub use utils::{eip191_hash_message, keccak256, Keccak256};
+
+#[doc(hidden)] // Use `hex` directly instead!
+pub mod hex_literal;
 
 #[doc(no_inline)]
 pub use {
     ::bytes,
     ::hex,
-    hex_literal::{self, hex},
-    ruint::{self, Uint},
+    ruint::{self, uint, Uint},
 };
-
-/// Re-export of [`ruint::uint!`] for convenience. Note that users of this macro
-/// must also add [`ruint`] to their `Cargo.toml` as a dependency.
-#[doc(inline)]
-pub use ruint::uint;
 
 #[cfg(feature = "serde")]
 #[doc(no_inline)]
@@ -120,8 +112,8 @@ pub mod private {
     #[cfg(feature = "rlp")]
     pub use alloy_rlp;
 
-    #[cfg(feature = "ssz")]
-    pub use ssz;
+    #[cfg(feature = "allocative")]
+    pub use allocative;
 
     #[cfg(feature = "serde")]
     pub use serde;

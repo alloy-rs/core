@@ -1,5 +1,5 @@
 use alloc::{borrow::Cow, string::String};
-use alloy_primitives::B256;
+use alloy_primitives::{Selector, B256};
 use alloy_sol_types::Error as SolTypesError;
 use core::fmt;
 use hex::FromHexError;
@@ -11,7 +11,7 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 /// Error when parsing EIP-712 `encodeType` strings
 ///
 /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     /// Unknown type referenced from another type.
     #[cfg(feature = "eip712")]
@@ -45,6 +45,15 @@ pub enum Error {
         /// The actual length.
         actual: usize,
     },
+
+    /// Selector mismatch during function or error decoding.
+    SelectorMismatch {
+        /// The expected selector.
+        expected: Selector,
+        /// The actual selector.
+        actual: Selector,
+    },
+
     /// Invalid event signature.
     EventSignatureMismatch {
         /// The expected signature.
@@ -62,27 +71,36 @@ pub enum Error {
 }
 
 impl From<FromHexError> for Error {
+    #[inline]
     fn from(e: FromHexError) -> Self {
         Self::Hex(e)
     }
 }
 
 impl From<SolTypesError> for Error {
+    #[inline]
     fn from(e: SolTypesError) -> Self {
         Self::SolTypes(e)
     }
 }
 
 impl From<TypeParserError> for Error {
+    #[inline]
     fn from(e: TypeParserError) -> Self {
         Self::TypeParser(e)
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for Error {
+impl From<alloc::collections::TryReserveError> for Error {
     #[inline]
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn from(value: alloc::collections::TryReserveError) -> Self {
+        Self::SolTypes(value.into())
+    }
+}
+
+impl core::error::Error for Error {
+    #[inline]
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::Hex(e) => Some(e),
             Self::TypeParser(e) => Some(e),
@@ -116,7 +134,9 @@ impl fmt::Display for Error {
             Self::EventSignatureMismatch { expected, actual } => {
                 write!(f, "invalid event signature: expected {expected}, got {actual}",)
             }
-
+            Self::SelectorMismatch { expected, actual } => {
+                write!(f, "selector mismatch: expected {expected}, got {actual}",)
+            }
             Self::Hex(e) => e.fmt(f),
             Self::TypeParser(e) => e.fmt(f),
             Self::SolTypes(e) => e.fmt(f),

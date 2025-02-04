@@ -1,15 +1,6 @@
 //! Modified implementations of unstable libcore functions.
 
-use alloc::vec::Vec;
 use core::mem::{self, MaybeUninit};
-
-trait Ext {
-    const IS_ZST: bool;
-}
-
-impl<T> Ext for T {
-    const IS_ZST: bool = mem::size_of::<Self>() == 0;
-}
 
 /// [`core::array::try_from_fn`]
 #[inline]
@@ -57,15 +48,6 @@ where
     Ok(unsafe { array_assume_init(array) })
 }
 
-/// [`slice::split_array_ref`]
-#[inline]
-#[track_caller]
-pub(crate) fn split_array_ref<T, const N: usize>(slice: &[T]) -> (&[T; N], &[T]) {
-    let (a, b) = slice.split_at(N);
-    // SAFETY: a points to [T; N]? Yes it's [T] of length N (checked by split_at)
-    unsafe { (&*a.as_ptr().cast::<[T; N]>(), b) }
-}
-
 /// [`MaybeUninit::slice_assume_init_mut`]
 #[inline(always)]
 unsafe fn slice_assume_init_mut<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
@@ -96,34 +78,4 @@ pub(crate) unsafe fn array_assume_init<T, const N: usize>(array: [MaybeUninit<T>
 #[inline(always)]
 unsafe fn transpose<T, const N: usize>(array: [MaybeUninit<T>; N]) -> MaybeUninit<[T; N]> {
     mem::transmute_copy::<[MaybeUninit<T>; N], MaybeUninit<[T; N]>>(&mem::ManuallyDrop::new(&array))
-}
-
-/// [`Vec::into_flattened`].
-#[inline]
-pub(crate) fn into_flattened<T, const N: usize>(vec: Vec<[T; N]>) -> Vec<T> {
-    let (ptr, len, cap) = into_raw_parts(vec);
-    let (new_len, new_cap) = if T::IS_ZST {
-        (len.checked_mul(N).expect("vec len overflow"), usize::MAX)
-    } else {
-        // SAFETY:
-        // - `cap * N` cannot overflow because the allocation is already in
-        // the address space.
-        // - Each `[T; N]` has `N` valid elements, so there are `len * N`
-        // valid elements in the allocation.
-        unsafe { (len.checked_mul(N).unwrap_unchecked(), cap.checked_mul(N).unwrap_unchecked()) }
-    };
-    // SAFETY:
-    // - `ptr` was allocated by `self`
-    // - `ptr` is well-aligned because `[T; N]` has the same alignment as `T`.
-    // - `new_cap` refers to the same sized allocation as `cap` because
-    // `new_cap * size_of::<T>()` == `cap * size_of::<[T; N]>()`
-    // - `len` <= `cap`, so `len * N` <= `cap * N`.
-    unsafe { Vec::from_raw_parts(ptr.cast(), new_len, new_cap) }
-}
-
-/// [`Vec::into_raw_parts`]
-#[inline(always)]
-fn into_raw_parts<T>(vec: Vec<T>) -> (*mut T, usize, usize) {
-    let mut me = mem::ManuallyDrop::new(vec);
-    (me.as_mut_ptr(), me.len(), me.capacity())
 }

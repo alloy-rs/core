@@ -101,3 +101,38 @@ pub trait SolCall: Sized {
         crate::abi::encode_sequence(&e.stv_to_tokens())
     }
 }
+
+/// A Solidity constructor.
+pub trait SolConstructor: Sized {
+    /// The underlying tuple type which represents this type's arguments.
+    ///
+    /// If this type has no arguments, this will be the unit type `()`.
+    type Parameters<'a>: SolType<Token<'a> = Self::Token<'a>>;
+
+    /// The arguments' corresponding [TokenSeq] type.
+    type Token<'a>: TokenSeq<'a>;
+
+    /// Convert from the tuple type used for ABI encoding and decoding.
+    fn new(tuple: <Self::Parameters<'_> as SolType>::RustType) -> Self;
+
+    /// Tokenize the call's arguments.
+    fn tokenize(&self) -> Self::Token<'_>;
+
+    /// The size of the encoded data in bytes.
+    #[inline]
+    fn abi_encoded_size(&self) -> usize {
+        if let Some(size) = <Self::Parameters<'_> as SolType>::ENCODED_SIZE {
+            return size;
+        }
+
+        // `total_words` includes the first dynamic offset which we ignore.
+        let offset = <<Self::Parameters<'_> as SolType>::Token<'_> as Token>::DYNAMIC as usize * 32;
+        (self.tokenize().total_words() * Word::len_bytes()).saturating_sub(offset)
+    }
+
+    /// ABI encode the call to the given buffer.
+    #[inline]
+    fn abi_encode(&self) -> Vec<u8> {
+        crate::abi::encode_sequence(&self.tokenize())
+    }
+}

@@ -15,7 +15,7 @@ use syn::{
 /// <https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityParser.yulFunctionCall>
 #[derive(Clone)]
 pub struct YulFnCall {
-    pub function_type: FnType,
+    pub function_type: YulFnType,
     pub paren_token: Paren,
     pub arguments: Punctuated<YulExpr, Token![,]>,
 }
@@ -55,7 +55,7 @@ impl fmt::Debug for YulFnCall {
 
 /// What type of function is called.
 #[derive(Clone)]
-pub enum FnType {
+pub enum YulFnType {
     /// When calling a self defined function
     Custom(YulIdent),
 
@@ -63,7 +63,7 @@ pub enum FnType {
     EVMOpcode(YulEVMBuiltIn),
 }
 
-impl Parse for FnType {
+impl Parse for YulFnType {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let speculative_parse = input.fork();
 
@@ -76,7 +76,7 @@ impl Parse for FnType {
     }
 }
 
-impl Spanned for FnType {
+impl Spanned for YulFnType {
     fn span(&self) -> Span {
         match self {
             Self::Custom(custom) => custom.span(),
@@ -92,7 +92,7 @@ impl Spanned for FnType {
     }
 }
 
-impl fmt::Debug for FnType {
+impl fmt::Debug for YulFnType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("FnType::")?;
         match self {

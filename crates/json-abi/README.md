@@ -29,9 +29,3 @@ for item in abi.items() {
     println!("{item:?}");
 }
 ```
-
-Resolve a `Function`'s input type with [`alloy-dyn-abi`](../dyn-abi):
-
-```rust,ignore
-todo!()
-```

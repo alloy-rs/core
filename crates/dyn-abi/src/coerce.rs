@@ -1,21 +1,23 @@
-use crate::{ty::as_tuple, DynSolType, DynSolValue, Result};
+use crate::{dynamic::ty::as_tuple, DynSolType, DynSolValue, Result};
 use alloc::vec::Vec;
-use alloy_primitives::{Address, FixedBytes, Function, Sign, I256, U256};
+use alloy_primitives::{Address, Function, Sign, I256, U256};
 use alloy_sol_types::Word;
 use core::fmt;
-use hex::FromHexError;
-use parser::utils::{array_parser, char_parser, spanned};
+use parser::{
+    new_input,
+    utils::{array_parser, char_parser, spanned},
+    Input,
+};
 use winnow::{
     ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
-    combinator::{cut_err, dispatch, fail, opt, preceded, success},
+    combinator::{cut_err, dispatch, empty, fail, opt, preceded, trace},
     error::{
-        AddContext, ContextError, ErrMode, ErrorKind, FromExternalError, StrContext,
+        AddContext, ContextError, ErrMode, FromExternalError, ParserError, StrContext,
         StrContextValue,
     },
     stream::Stream,
     token::take_while,
-    trace::trace,
-    PResult, Parser,
+    ModalParser, ModalResult, Parser,
 };
 
 impl DynSolType {
@@ -30,8 +32,6 @@ impl DynSolType {
     ///     `0b`, `0o`, or `0x` respectively.
     ///   - unit: same as [Solidity ether units](https://docs.soliditylang.org/en/latest/units-and-global-variables.html#ether-units)
     ///   - decimals with more digits than the unit's exponent value are not allowed
-    ///   - decimals are only allowed when the `std` feature is enabled due to floating point
-    ///     operations; this may be relaxed in the future
     /// - [`FixedBytes`](DynSolType::FixedBytes): `(0x)?[0-9A-Fa-f]{$0*2}`
     /// - [`Address`](DynSolType::Address): `(0x)?[0-9A-Fa-f]{40}`
     /// - [`Function`](DynSolType::Function): `(0x)?[0-9A-Fa-f]{48}`
@@ -45,7 +45,10 @@ impl DynSolType {
     ///   delimited by commas (`,`) and surrounded by brackets (`[]`)
     /// - [`Tuple`](DynSolType::Tuple): the inner types delimited by commas (`,`) and surrounded by
     ///   parentheses (`()`)
-    /// - [`CustomStruct`](DynSolType::CustomStruct): the same as `Tuple`
+    #[cfg_attr(
+        feature = "eip712",
+        doc = "- [`CustomStruct`](DynSolType::CustomStruct): the same as `Tuple`"
+    )]
     ///
     /// # Examples
     ///
@@ -54,7 +57,7 @@ impl DynSolType {
     /// use alloy_primitives::U256;
     ///
     /// let ty: DynSolType = "(uint256,string)[]".parse()?;
-    /// let value = ty.coerce_str("[(0, \"hello\"), (42, \"world\")]")?;
+    /// let value = ty.coerce_str("[(0, \"hello\"), (4.2e1, \"world\")]")?;
     /// assert_eq!(
     ///     value,
     ///     DynSolValue::Array(vec![
@@ -75,7 +78,7 @@ impl DynSolType {
     #[doc(alias = "tokenize")] // from ethabi
     pub fn coerce_str(&self, s: &str) -> Result<DynSolValue> {
         ValueParser::new(self)
-            .parse(s)
+            .parse(new_input(s))
             .map_err(|e| crate::Error::TypeParser(parser::Error::parser(e)))
     }
 }
@@ -85,13 +88,13 @@ struct ValueParser<'a> {
     list_end: Option<char>,
 }
 
-impl<'i> Parser<&'i str, DynSolValue, ContextError> for ValueParser<'_> {
-    fn parse_next(&mut self, input: &mut &'i str) -> PResult<DynSolValue, ContextError> {
+impl<'i> Parser<Input<'i>, DynSolValue, ErrMode<ContextError>> for ValueParser<'_> {
+    fn parse_next(&mut self, input: &mut Input<'i>) -> ModalResult<DynSolValue, ContextError> {
         #[cfg(feature = "debug")]
         let name = self.ty.sol_type_name();
         #[cfg(not(feature = "debug"))]
         let name = "value_parser";
-        trace(name, move |input: &mut &str| match self.ty {
+        trace(name, move |input: &mut Input<'i>| match self.ty {
             DynSolType::Bool => bool(input).map(DynSolValue::Bool),
             &DynSolType::Int(size) => {
                 int(size).parse_next(input).map(|int| DynSolValue::Int(int, size))
@@ -142,14 +145,14 @@ impl<'a> ValueParser<'a> {
     }
 
     #[inline]
-    fn string<'s, 'i: 's>(&'s self) -> impl Parser<&'i str, &'i str, ContextError> + 's {
-        trace("string", |input: &mut &'i str| {
+    fn string<'s, 'i: 's>(&'s self) -> impl ModalParser<Input<'i>, &'i str, ContextError> + 's {
+        trace("string", |input: &mut Input<'i>| {
             let Some(delim) = input.chars().next() else {
                 return Ok("");
             };
             let has_delim = matches!(delim, '"' | '\'');
             if has_delim {
-                *input = &input[1..];
+                let _ = input.next_token();
             }
 
             // TODO: escapes?
@@ -181,7 +184,7 @@ impl<'a> ValueParser<'a> {
     }
 
     #[inline]
-    fn array<'i: 'a>(self) -> impl Parser<&'i str, Vec<DynSolValue>, ContextError> + 'a {
+    fn array<'i: 'a>(self) -> impl ModalParser<Input<'i>, Vec<DynSolValue>, ContextError> + 'a {
         #[cfg(feature = "debug")]
         let name = format!("{}[]", self.ty);
         #[cfg(not(feature = "debug"))]
@@ -193,7 +196,7 @@ impl<'a> ValueParser<'a> {
     fn fixed_array<'i: 'a>(
         self,
         len: usize,
-    ) -> impl Parser<&'i str, Vec<DynSolValue>, ContextError> + 'a {
+    ) -> impl ModalParser<Input<'i>, Vec<DynSolValue>, ContextError> + 'a {
         #[cfg(feature = "debug")]
         let name = format!("{}[{len}]", self.ty);
         #[cfg(not(feature = "debug"))]
@@ -215,12 +218,12 @@ impl<'a> ValueParser<'a> {
     fn tuple<'i: 's, 't: 's, 's>(
         &'s self,
         tuple: &'t Vec<DynSolType>,
-    ) -> impl Parser<&'i str, Vec<DynSolValue>, ContextError> + 's {
+    ) -> impl ModalParser<Input<'i>, Vec<DynSolValue>, ContextError> + 's {
         #[cfg(feature = "debug")]
         let name = DynSolType::Tuple(tuple.clone()).to_string();
         #[cfg(not(feature = "debug"))]
         let name = "tuple";
-        trace(name, move |input: &mut &'i str| {
+        trace(name, move |input: &mut Input<'i>| {
             space0(input)?;
             char_parser('(').parse_next(input)?;
 
@@ -245,54 +248,45 @@ impl<'a> ValueParser<'a> {
 #[derive(Debug)]
 enum Error {
     IntOverflow,
-    #[cfg(not(feature = "std"))]
-    FloatNoStd(f64),
-    #[cfg(feature = "std")]
-    FractionalNotAllowed(f64),
-    #[cfg(feature = "std")]
+    FractionalNotAllowed(U256),
+    NegativeUnits,
     TooManyDecimals(usize, usize),
     InvalidFixedBytesLength(usize),
     FixedArrayLengthMismatch(usize, usize),
+    EmptyHexStringWithoutPrefix,
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for Error {}
+impl core::error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::IntOverflow => f.write_str("number too large to fit in target type"),
-            #[cfg(not(feature = "std"))]
-            Self::FloatNoStd(n) => {
-                write!(f, "fractional numbers are not supported without `std`: {n}")
-            }
-            #[cfg(feature = "std")]
             Self::TooManyDecimals(expected, actual) => {
                 write!(f, "expected at most {expected} decimals, got {actual}")
             }
-            #[cfg(feature = "std")]
-            Self::FractionalNotAllowed(n) => write!(
-                f,
-                "non-zero fraction {n} not allowed without specifying non-wei units (gwei, ether, etc.)"
-            ),
+            Self::FractionalNotAllowed(n) => write!(f, "non-zero fraction .{n} not allowed"),
+            Self::NegativeUnits => f.write_str("negative units not allowed"),
             Self::InvalidFixedBytesLength(len) => {
                 write!(f, "fixed bytes length {len} greater than 32")
             }
-            Self::FixedArrayLengthMismatch(expected, actual) => write!(
-                f,
-                "fixed array length mismatch: expected {expected} elements, got {actual}"
-            ),
+            Self::FixedArrayLengthMismatch(expected, actual) => {
+                write!(f, "fixed array length mismatch: expected {expected} elements, got {actual}")
+            }
+            Self::EmptyHexStringWithoutPrefix => {
+                f.write_str("expected hex digits or the `0x` prefix for an empty hex string")
+            }
         }
     }
 }
 
 #[inline]
-fn bool(input: &mut &str) -> PResult<bool> {
+fn bool(input: &mut Input<'_>) -> ModalResult<bool> {
     trace(
         "bool",
         dispatch! {alpha1.context(StrContext::Label("boolean"));
-            "true" => success(true),
-            "false" => success(false),
+            "true" => empty.value(true),
+            "false" => empty.value(false),
             _ => fail
         }
         .context(StrContext::Label("boolean")),
@@ -301,7 +295,7 @@ fn bool(input: &mut &str) -> PResult<bool> {
 }
 
 #[inline]
-fn int<'i>(size: usize) -> impl Parser<&'i str, I256, ContextError> {
+fn int<'i>(size: usize) -> impl ModalParser<Input<'i>, I256, ContextError> {
     #[cfg(feature = "debug")]
     let name = format!("int{size}");
     #[cfg(not(feature = "debug"))]
@@ -318,14 +312,14 @@ fn int<'i>(size: usize) -> impl Parser<&'i str, I256, ContextError> {
 }
 
 #[inline]
-fn int_sign(input: &mut &str) -> PResult<Sign> {
-    trace("int_sign", |input: &mut &str| match input.as_bytes().first() {
+fn int_sign(input: &mut Input<'_>) -> ModalResult<Sign> {
+    trace("int_sign", |input: &mut Input<'_>| match input.as_bytes().first() {
         Some(b'+') => {
-            *input = &input[1..];
+            let _ = input.next_slice(1);
             Ok(Sign::Positive)
         }
         Some(b'-') => {
-            *input = &input[1..];
+            let _ = input.next_slice(1);
             Ok(Sign::Negative)
         }
         Some(_) | None => Ok(Sign::Positive),
@@ -334,74 +328,74 @@ fn int_sign(input: &mut &str) -> PResult<Sign> {
 }
 
 #[inline]
-fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
+fn uint<'i>(len: usize) -> impl ModalParser<Input<'i>, U256, ContextError> {
     #[cfg(feature = "debug")]
     let name = format!("uint{len}");
     #[cfg(not(feature = "debug"))]
     let name = "uint";
-    trace(name, move |input: &mut &str| {
-        let (s, (_, fract)) = spanned((
-            prefixed_int,
+    trace(name, move |input: &mut Input<'_>| {
+        let intpart = prefixed_int(input)?;
+        let fract =
             opt(preceded(
                 '.',
                 cut_err(digit1.context(StrContext::Expected(StrContextValue::Description(
                     "at least one digit",
                 )))),
-            )),
-        ))
-        .parse_next(input)?;
+            ))
+            .parse_next(input)?;
+
+        let intpart =
+            intpart.parse::<U256>().map_err(|e| ErrMode::from_external_error(input, e))?;
+        let e = opt(scientific_notation).parse_next(input)?.unwrap_or(0);
 
         let _ = space0(input)?;
         let units = int_units(input)?;
 
-        let uint = if let Some(fract) = fract {
-            let x = s
-                .parse::<f64>()
-                .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?;
+        let units = units as isize + e;
+        if units < 0 {
+            return Err(ErrMode::from_external_error(input, Error::NegativeUnits));
+        }
+        let units = units as usize;
 
-            // TODO: add num_traits with libm feature to support this
-            #[cfg(not(feature = "std"))]
-            {
-                let _ = fract;
+        let uint = if let Some(fract) = fract {
+            let fract_uint = U256::from_str_radix(fract, 10)
+                .map_err(|e| ErrMode::from_external_error(input, e))?;
+
+            if units == 0 && !fract_uint.is_zero() {
                 return Err(ErrMode::from_external_error(
                     input,
-                    ErrorKind::Verify,
-                    Error::FloatNoStd(x),
+                    Error::FractionalNotAllowed(fract_uint),
                 ));
             }
 
-            #[cfg(feature = "std")]
-            {
-                if units == 0 && x.fract() != 0.0 {
-                    return Err(ErrMode::from_external_error(
-                        input,
-                        ErrorKind::Verify,
-                        Error::FractionalNotAllowed(x.fract()),
-                    ));
-                }
-
-                if fract.len() > units {
-                    return Err(ErrMode::from_external_error(
-                        input,
-                        ErrorKind::Verify,
-                        Error::TooManyDecimals(units, fract.len()),
-                    ));
-                }
-
-                U256::try_from(x * 10f64.powi(units as i32))
-                    .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))
+            if fract.len() > units {
+                return Err(ErrMode::from_external_error(
+                    input,
+                    Error::TooManyDecimals(units, fract.len()),
+                ));
             }
+
+            // (intpart * 10^fract.len() + fract) * 10^(units-fract.len())
+            (|| -> Option<U256> {
+                let extension = U256::from(10u64).checked_pow(U256::from(fract.len()))?;
+                let extended = intpart.checked_mul(extension)?;
+                let uint = fract_uint.checked_add(extended)?;
+                let units = U256::from(10u64).checked_pow(U256::from(units - fract.len()))?;
+                uint.checked_mul(units)
+            })()
+        } else if units > 0 {
+            // intpart * 10^units
+            (|| -> Option<U256> {
+                let units = U256::from(10u64).checked_pow(U256::from(units))?;
+                intpart.checked_mul(units)
+            })()
         } else {
-            s.parse::<U256>()
-                .map_err(|e| ErrMode::from_external_error(input, ErrorKind::Verify, e))?
-                .checked_mul(U256::from(10usize.pow(units as u32)))
-                .ok_or_else(|| {
-                    ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow)
-                })
-        }?;
+            Some(intpart)
+        }
+        .ok_or_else(|| ErrMode::from_external_error(input, Error::IntOverflow))?;
 
         if uint.bit_len() > len {
-            return Err(ErrMode::from_external_error(input, ErrorKind::Verify, Error::IntOverflow));
+            return Err(ErrMode::from_external_error(input, Error::IntOverflow));
         }
 
         Ok(uint)
@@ -409,34 +403,41 @@ fn uint<'i>(len: usize) -> impl Parser<&'i str, U256, ContextError> {
 }
 
 #[inline]
-fn prefixed_int<'i>(input: &mut &'i str) -> PResult<&'i str> {
-    trace("prefixed_int", |input: &mut &'i str| {
-        let has_prefix = matches!(input.get(..2), Some("0b" | "0B" | "0o" | "0O" | "0x" | "0X"));
-        if has_prefix {
-            *input = &input[2..];
-            // parse hex since it's the most general
-            hex_digit1(input)
-        } else {
-            digit1(input)
-        }
-        .map_err(|e| {
-            e.add_context(
-                input,
-                StrContext::Expected(StrContextValue::Description("at least one digit")),
-            )
-        })
-    })
+fn prefixed_int<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
+    trace(
+        "prefixed_int",
+        spanned(|input: &mut Input<'i>| {
+            let has_prefix =
+                matches!(input.get(..2), Some("0b" | "0B" | "0o" | "0O" | "0x" | "0X"));
+            let checkpoint = input.checkpoint();
+            if has_prefix {
+                let _ = input.next_slice(2);
+                // parse hex since it's the most general
+                hex_digit1(input)
+            } else {
+                digit1(input)
+            }
+            .map_err(|e: ErrMode<_>| {
+                e.add_context(
+                    input,
+                    &checkpoint,
+                    StrContext::Expected(StrContextValue::Description("at least one digit")),
+                )
+            })
+        }),
+    )
     .parse_next(input)
+    .map(|(s, _)| s)
 }
 
 #[inline]
-fn int_units(input: &mut &str) -> PResult<usize> {
+fn int_units(input: &mut Input<'_>) -> ModalResult<usize> {
     trace(
         "int_units",
         dispatch! {alpha0;
-            "ether" => success(18),
-            "gwei" | "nano" | "nanoether" => success(9),
-            "" | "wei" => success(0),
+            "ether" => empty.value(18),
+            "gwei" | "nano" | "nanoether" => empty.value(9),
+            "" | "wei" => empty.value(0),
             _ => fail,
         },
     )
@@ -444,61 +445,64 @@ fn int_units(input: &mut &str) -> PResult<usize> {
 }
 
 #[inline]
-fn fixed_bytes<'i>(len: usize) -> impl Parser<&'i str, Word, ContextError> {
+fn scientific_notation(input: &mut Input<'_>) -> ModalResult<isize> {
+    // Check if we have 'e' or 'E' followed by an optional sign and digits
+    if !matches!(input.chars().next(), Some('e' | 'E')) {
+        return Err(ErrMode::from_input(input));
+    }
+    let _ = input.next_token();
+    winnow::ascii::dec_int(input)
+}
+
+#[inline]
+fn fixed_bytes<'i>(len: usize) -> impl ModalParser<Input<'i>, Word, ContextError> {
     #[cfg(feature = "debug")]
     let name = format!("bytes{len}");
     #[cfg(not(feature = "debug"))]
     let name = "bytesN";
-    trace(name, move |input: &mut &str| {
+    trace(name, move |input: &mut Input<'_>| {
         if len > Word::len_bytes() {
-            return Err(ErrMode::from_external_error(
-                input,
-                ErrorKind::Fail,
-                Error::InvalidFixedBytesLength(len),
-            )
-            .cut());
+            return Err(
+                ErrMode::from_external_error(input, Error::InvalidFixedBytesLength(len)).cut()
+            );
         }
 
         let hex = hex_str(input)?;
         let mut out = Word::ZERO;
         match hex::decode_to_slice(hex, &mut out[..len]) {
             Ok(()) => Ok(out),
-            Err(e) => Err(hex_error(input, e).cut()),
+            Err(e) => Err(ErrMode::from_external_error(input, e).cut()),
         }
     })
 }
 
 #[inline]
-fn address(input: &mut &str) -> PResult<Address> {
-    trace("address", fixed_bytes_inner).parse_next(input).map(Address::from)
+fn address(input: &mut Input<'_>) -> ModalResult<Address> {
+    trace("address", hex_str.try_map(hex::FromHex::from_hex)).parse_next(input)
 }
 
 #[inline]
-fn function(input: &mut &str) -> PResult<Function> {
-    trace("function", fixed_bytes_inner).parse_next(input).map(Function::from)
+fn function(input: &mut Input<'_>) -> ModalResult<Function> {
+    trace("function", hex_str.try_map(hex::FromHex::from_hex)).parse_next(input)
 }
 
 #[inline]
-fn bytes(input: &mut &str) -> PResult<Vec<u8>> {
+fn bytes(input: &mut Input<'_>) -> ModalResult<Vec<u8>> {
     trace("bytes", hex_str.try_map(hex::decode)).parse_next(input)
 }
 
 #[inline]
-fn fixed_bytes_inner<const N: usize>(input: &mut &str) -> PResult<FixedBytes<N>> {
-    hex_str.try_map(|s| hex::decode_to_array(s).map(Into::into)).parse_next(input)
-}
-
-#[inline]
-fn hex_str<'i>(input: &mut &'i str) -> PResult<&'i str> {
-    trace("hex_str", preceded(opt("0x"), hex_digit0)).parse_next(input)
-}
-
-fn hex_error(input: &&str, e: FromHexError) -> ErrMode<ContextError> {
-    let kind = match e {
-        FromHexError::InvalidHexCharacter { .. } => unreachable!("{e:?}"),
-        FromHexError::InvalidStringLength | FromHexError::OddLength => ErrorKind::Eof,
-    };
-    ErrMode::from_external_error(input, kind, e)
+fn hex_str<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
+    trace("hex_str", |input: &mut Input<'i>| {
+        // Allow empty `bytes` only with a prefix.
+        let has_prefix = opt("0x").parse_next(input)?.is_some();
+        let s = hex_digit0(input)?;
+        if !has_prefix && s.is_empty() {
+            return Err(ErrMode::from_external_error(input, Error::EmptyHexStringWithoutPrefix));
+        }
+        Ok(s)
+    })
+    .parse_next(input)
 }
 
 #[cfg(test)]
@@ -510,6 +514,38 @@ mod tests {
     };
     use alloy_primitives::address;
     use core::str::FromStr;
+
+    fn uint_test(s: &str, expected: Result<&str, ()>) {
+        for (ty, negate) in [
+            (DynSolType::Uint(256), false),
+            (DynSolType::Int(256), false),
+            (DynSolType::Int(256), true),
+        ] {
+            let s = if negate { &format!("-{s}") } else { s };
+            let expected = if negate {
+                expected.map(|s| format!("-{s}"))
+            } else {
+                expected.map(|s| s.to_string())
+            };
+            let d = format!("{s:?} as {ty:?}");
+
+            let actual = ty.coerce_str(s);
+            match (actual, expected) {
+                (Ok(actual), Ok(expected)) => match (actual, ty) {
+                    (DynSolValue::Uint(v, 256), DynSolType::Uint(256)) => {
+                        assert_eq!(v, expected.parse::<U256>().unwrap(), "{d}");
+                    }
+                    (DynSolValue::Int(v, 256), DynSolType::Int(256)) => {
+                        assert_eq!(v, expected.parse::<I256>().unwrap(), "{d}");
+                    }
+                    (actual, _) => panic!("{d}: unexpected value: {actual:?}"),
+                },
+                (Err(_), Err(())) => {}
+                (Ok(actual), Err(_)) => panic!("{d}: expected failure, got {actual:?}"),
+                (Err(e), Ok(_)) => panic!("{d}: {e:?}"),
+            }
+        }
+    }
 
     #[track_caller]
     fn assert_error_contains(e: &impl core::fmt::Display, s: &str) {
@@ -729,12 +765,25 @@ mod tests {
             DynSolValue::Uint(U256::from_str("1000000000").unwrap(), 256)
         );
 
-        if cfg!(feature = "std") {
-            assert_eq!(
-                DynSolType::Uint(256).coerce_str("0.1 gwei").unwrap(),
-                DynSolValue::Uint(U256::from_str("100000000").unwrap(), 256)
-            );
-        }
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.1 gwei").unwrap(),
+            DynSolValue::Uint(U256::from_str("100000000").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.000000001gwei").unwrap(),
+            DynSolValue::Uint(U256::from(1), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.123456789gwei").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456789").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("123456789123.123456789gwei").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456789123123456789").unwrap(), 256)
+        );
     }
 
     #[test]
@@ -749,22 +798,50 @@ mod tests {
             DynSolValue::Uint(U256::from_str("1000000000000000000").unwrap(), 256)
         );
 
-        if cfg!(feature = "std") {
-            assert_eq!(
-                DynSolType::Uint(256).coerce_str("0.01 ether").unwrap(),
-                DynSolValue::Uint(U256::from_str("10000000000000000").unwrap(), 256)
-            );
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.01 ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("10000000000000000").unwrap(), 256)
+        );
 
-            assert_eq!(
-                DynSolType::Uint(256).coerce_str("0.000000000000000001ether").unwrap(),
-                DynSolValue::Uint(U256::from(1), 256)
-            );
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.000000000000000001ether").unwrap(),
+            DynSolValue::Uint(U256::from(1), 256)
+        );
 
-            assert_eq!(
-                DynSolType::Uint(256).coerce_str("0.000000000000000001ether"),
-                DynSolType::Uint(256).coerce_str("1wei"),
-            );
-        }
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.000000000000000001ether"),
+            DynSolType::Uint(256).coerce_str("1wei"),
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.123456789123456789ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456789123456789").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.123456789123456000ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456789123456000").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("0.1234567891234560ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456789123456000").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("123456.123456789123456789ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456123456789123456789").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("123456.123456789123456000ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456123456789123456000").unwrap(), 256)
+        );
+
+        assert_eq!(
+            DynSolType::Uint(256).coerce_str("123456.1234567891234560ether").unwrap(),
+            DynSolValue::Uint(U256::from_str("123456123456789123456000").unwrap(), 256)
+        );
     }
 
     #[test]
@@ -845,21 +922,29 @@ mod tests {
         );
 
         let e = DynSolType::FixedBytes(1).coerce_str("").unwrap_err();
-        assert_error_contains(&e, "Invalid string length");
+        assert_error_contains(&e, &Error::EmptyHexStringWithoutPrefix.to_string());
         let e = DynSolType::FixedBytes(1).coerce_str("0").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
         let e = DynSolType::FixedBytes(1).coerce_str("0x").unwrap_err();
-        assert_error_contains(&e, "Invalid string length");
+        assert_error_contains(&e, &hex::FromHexError::InvalidStringLength.to_string());
         let e = DynSolType::FixedBytes(1).coerce_str("0x0").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
 
         let t = DynSolType::Array(Box::new(DynSolType::FixedBytes(1)));
         let e = t.coerce_str("[0]").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
         let e = t.coerce_str("[0x]").unwrap_err();
-        assert_error_contains(&e, "Invalid string length");
+        assert_error_contains(&e, &hex::FromHexError::InvalidStringLength.to_string());
         let e = t.coerce_str("[0x0]").unwrap_err();
-        assert_error_contains(&e, "Odd number of digits");
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
+
+        let t = DynSolType::Array(Box::new(DynSolType::Tuple(vec![DynSolType::FixedBytes(1)])));
+        let e = t.coerce_str("[(0)]").unwrap_err();
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
+        let e = t.coerce_str("[(0x)]").unwrap_err();
+        assert_error_contains(&e, &hex::FromHexError::InvalidStringLength.to_string());
+        let e = t.coerce_str("[(0x0)]").unwrap_err();
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
     }
 
     #[test]
@@ -907,7 +992,9 @@ mod tests {
 
     #[test]
     fn coerce_bytes() {
-        assert_eq!(DynSolType::Bytes.coerce_str("").unwrap(), DynSolValue::Bytes(vec![]));
+        let e = DynSolType::Bytes.coerce_str("").unwrap_err();
+        assert_error_contains(&e, &Error::EmptyHexStringWithoutPrefix.to_string());
+
         assert_eq!(DynSolType::Bytes.coerce_str("0x").unwrap(), DynSolValue::Bytes(vec![]));
         assert!(DynSolType::Bytes.coerce_str("0x0").is_err());
         assert!(DynSolType::Bytes.coerce_str("0").is_err());
@@ -922,6 +1009,27 @@ mod tests {
             DynSolType::Bytes.coerce_str("0x0017").unwrap(),
             DynSolValue::Bytes(vec![0x00, 0x17])
         );
+
+        let t = DynSolType::Tuple(vec![DynSolType::Bytes, DynSolType::Bytes]);
+        let e = t.coerce_str("(0, 0x0)").unwrap_err();
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
+
+        // TODO: cut_err in `array_parser` somehow
+        /*
+        let t = DynSolType::Array(Box::new(DynSolType::Tuple(vec![
+            DynSolType::Bytes,
+            DynSolType::Bytes,
+        ])));
+        let e = t.coerce_str("[(0, 0x0)]").unwrap_err();
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
+
+        let t = DynSolType::Array(Box::new(DynSolType::Tuple(vec![
+            DynSolType::Bytes,
+            DynSolType::Bytes,
+        ])));
+        let e = t.coerce_str("[(0x00, 0x0)]").unwrap_err();
+        assert_error_contains(&e, &hex::FromHexError::OddLength.to_string());
+        */
     }
 
     #[test]
@@ -1003,6 +1111,24 @@ mod tests {
         assert_eq!(arr.coerce_str("['', \"\"]").unwrap(), mk_arr(&["", ""]));
         assert_eq!(arr.coerce_str("[\"\", '']").unwrap(), mk_arr(&["", ""]));
         assert_eq!(arr.coerce_str("[\"\", \"\"]").unwrap(), mk_arr(&["", ""]));
+    }
+
+    #[test]
+    fn coerce_array_of_bytes_and_strings() {
+        let ty = DynSolType::Array(Box::new(DynSolType::Bytes));
+        assert_eq!(ty.coerce_str("[]"), Ok(DynSolValue::Array(vec![])));
+        assert_eq!(ty.coerce_str("[0x]"), Ok(DynSolValue::Array(vec![DynSolValue::Bytes(vec![])])));
+
+        let ty = DynSolType::Array(Box::new(DynSolType::String));
+        assert_eq!(ty.coerce_str("[]"), Ok(DynSolValue::Array(vec![])));
+        assert_eq!(
+            ty.coerce_str("[\"\"]"),
+            Ok(DynSolValue::Array(vec![DynSolValue::String(String::new())]))
+        );
+        assert_eq!(
+            ty.coerce_str("[0x]"),
+            Ok(DynSolValue::Array(vec![DynSolValue::String("0x".into())]))
+        );
     }
 
     #[test]
@@ -1195,5 +1321,29 @@ mod tests {
             value = tuple.into_iter().next().unwrap();
         }
         assert_eq!(value, DynSolValue::Bool(true));
+    }
+
+    #[test]
+    fn coerce_uint_scientific() {
+        uint_test("1e18", Ok("1000000000000000000"));
+
+        uint_test("0.03069536448928848133e20", Ok("3069536448928848133"));
+
+        uint_test("1.5e18", Ok("1500000000000000000"));
+
+        uint_test("1e-3 ether", Ok("1000000000000000"));
+        uint_test("1.0e-3 ether", Ok("1000000000000000"));
+        uint_test("1.1e-3 ether", Ok("1100000000000000"));
+
+        uint_test("74258.225772486694040708e18", Ok("74258225772486694040708"));
+        uint_test("0.03069536448928848133e20", Ok("3069536448928848133"));
+        uint_test("0.000000000003069536448928848133e30", Ok("3069536448928848133"));
+
+        uint_test("1e-1", Err(()));
+        uint_test("1e-2", Err(()));
+        uint_test("1e-18", Err(()));
+        uint_test("1 e18", Err(()));
+        uint_test("1ex", Err(()));
+        uint_test("1e", Err(()));
     }
 }

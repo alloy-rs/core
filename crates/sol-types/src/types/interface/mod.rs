@@ -2,13 +2,10 @@ use crate::{alloc::string::ToString, Error, Panic, Result, Revert, SolError};
 use alloc::{string::String, vec::Vec};
 use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
 
-#[cfg(feature = "std")]
-use std::error::Error as StdError;
-
 mod event;
 pub use event::SolEventInterface;
 
-pub mod multicall;
+mod multicall;
 pub use multicall::MulticallBuilder;
 
 /// A collection of ABI-encodable call-like types. This currently includes
@@ -92,7 +89,7 @@ pub trait SolInterface: Sized {
         if data.len() < Self::MIN_DATA_LENGTH.saturating_add(4) {
             Err(crate::Error::type_check_fail(data, Self::NAME))
         } else {
-            let (selector, data) = crate::impl_core::split_array_ref(data);
+            let (selector, data) = data.split_first_chunk().unwrap();
             Self::abi_decode_raw(*selector, data, validate)
         }
     }
@@ -214,10 +211,9 @@ impl<T: fmt::Display> fmt::Display for ContractError<T> {
     }
 }
 
-#[cfg(feature = "std")]
-impl<T: StdError + 'static> StdError for ContractError<T> {
+impl<T: core::error::Error + 'static> core::error::Error for ContractError<T> {
     #[inline]
-    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::CustomError(error) => Some(error),
             Self::Panic(panic) => Some(panic),
@@ -436,7 +432,7 @@ where
     /// If both attempts fail, it returns `None`.
     pub fn decode(out: &[u8]) -> Option<Self> {
         // Try to decode as a generic contract error.
-        if let Ok(error) = ContractError::<T>::abi_decode(out, true) {
+        if let Ok(error) = ContractError::<T>::abi_decode(out, false) {
             return Some(error.into());
         }
 
@@ -557,6 +553,14 @@ mod tests {
             ContractError::<C::CErrors>::selectors().collect::<Vec<_>>(),
             vec![sel("Err1()"), sel("Error(string)"), sel("Panic(uint256)")],
         );
+
+        for selector in C::CErrors::selectors() {
+            assert!(C::CErrors::valid_selector(selector));
+        }
+
+        for selector in ContractError::<C::CErrors>::selectors() {
+            assert!(ContractError::<C::CErrors>::valid_selector(selector));
+        }
     }
 
     #[test]
@@ -626,5 +630,13 @@ mod tests {
         assert_eq!(C::Err3::abi_decode(&data, true), Ok(err3()));
         assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err3()));
         assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err3()));
+
+        for selector in C::CErrors::selectors() {
+            assert!(C::CErrors::valid_selector(selector));
+        }
+
+        for selector in ContractError::<C::CErrors>::selectors() {
+            assert!(ContractError::<C::CErrors>::valid_selector(selector));
+        }
     }
 }

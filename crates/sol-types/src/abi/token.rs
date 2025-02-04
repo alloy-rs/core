@@ -16,9 +16,10 @@ use crate::{
     Result, Word,
 };
 use alloc::vec::Vec;
-use alloy_primitives::{FixedBytes, I256, U256};
+use alloy_primitives::{utils::vec_try_with_capacity, Bytes, FixedBytes, I256, U256};
 use core::fmt;
 
+#[allow(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
     impl Sealed for super::WordToken {}
@@ -122,6 +123,13 @@ impl From<Word> for WordToken {
     #[inline]
     fn from(value: Word) -> Self {
         Self(value)
+    }
+}
+
+impl From<WordToken> for Word {
+    #[inline]
+    fn from(value: WordToken) -> Self {
+        value.0
     }
 }
 
@@ -366,8 +374,12 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         // specifies that offsets are relative to the first word of
         // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
-        let mut child = child.raw_child();
-        (0..len).map(|_| T::decode_from(&mut child)).collect::<Result<Vec<T>>>().map(DynSeqToken)
+        let mut child = child.raw_child()?;
+        let mut tokens = vec_try_with_capacity(len)?;
+        for _ in 0..len {
+            tokens.push(T::decode_from(&mut child)?);
+        }
+        Ok(Self(tokens))
     }
 
     #[inline]
@@ -424,12 +436,12 @@ impl<T> DynSeqToken<T> {
 }
 
 /// A Packed Sequence - `bytes` or `string`
-#[derive(Clone, PartialEq, Eq, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct PackedSeqToken<'a>(pub &'a [u8]);
 
-impl<'a> fmt::Debug for PackedSeqToken<'a> {
+impl fmt::Debug for PackedSeqToken<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("PackedSeq").field(&hex::encode_prefixed(self.0)).finish()
+        f.debug_tuple("PackedSeqToken").field(&hex::encode_prefixed(self.0)).finish()
     }
 }
 
@@ -445,7 +457,7 @@ impl<'a> From<&'a Vec<u8>> for PackedSeqToken<'a> {
     }
 }
 
-impl<'a> AsRef<[u8]> for PackedSeqToken<'a> {
+impl AsRef<[u8]> for PackedSeqToken<'_> {
     fn as_ref(&self) -> &[u8] {
         self.0
     }
@@ -486,12 +498,17 @@ impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
 }
 
 impl PackedSeqToken<'_> {
-    /// Consumes `self` to return the underlying vector.
+    /// Instantiate a new [`Vec`] by copying the underlying slice.
     // https://github.com/rust-lang/rust-clippy/issues/4979
     #[allow(clippy::missing_const_for_fn)]
     #[inline]
     pub fn into_vec(self) -> Vec<u8> {
         self.0.to_vec()
+    }
+
+    /// Instantiate a new [`Bytes`] by copying the underlying slice.
+    pub fn into_bytes(self) -> Bytes {
+        Bytes::copy_from_slice(self.0)
     }
 
     /// Returns a reference to the slice.

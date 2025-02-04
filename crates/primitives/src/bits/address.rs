@@ -1,4 +1,4 @@
-use crate::{aliases::U160, utils::keccak256, wrap_fixed_bytes, FixedBytes};
+use crate::{aliases::U160, utils::keccak256, FixedBytes};
 use alloc::{
     borrow::Borrow,
     string::{String, ToString},
@@ -6,7 +6,7 @@ use alloc::{
 use core::{fmt, mem::MaybeUninit, str};
 
 /// Error type for address checksum validation.
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Copy, Debug)]
 pub enum AddressError {
     /// Error while decoding hex.
     Hex(hex::FromHexError),
@@ -22,13 +22,13 @@ impl From<hex::FromHexError> for AddressError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for AddressError {
+impl core::error::Error for AddressError {
     #[inline]
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
+            #[cfg(any(feature = "std", not(feature = "hex-compat")))]
             Self::Hex(err) => Some(err),
-            Self::InvalidChecksum => None,
+            _ => None,
         }
     }
 }
@@ -69,7 +69,7 @@ wrap_fixed_bytes!(
     /// use alloy_primitives::{address, Address};
     ///
     /// let checksummed = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
-    /// let expected = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// let expected = address!("0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// let address = Address::parse_checksummed(checksummed, None).expect("valid checksum");
     /// assert_eq!(address, expected);
     ///
@@ -124,8 +124,8 @@ impl Address {
     ///
     /// ```
     /// # use alloy_primitives::{address, b256, Address};
-    /// let word = b256!("000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045");
-    /// assert_eq!(Address::from_word(word), address!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// let word = b256!("0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// assert_eq!(Address::from_word(word), address!("0xd8da6bf26964af9d7eed9e03e53415d37aa96045"));
     /// ```
     #[inline]
     #[must_use]
@@ -140,8 +140,8 @@ impl Address {
     /// ```
     /// # use alloy_primitives::{address, b256, Address};
     /// assert_eq!(
-    ///     address!("d8da6bf26964af9d7eed9e03e53415d37aa96045").into_word(),
-    ///     b256!("000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045"),
+    ///     address!("0xd8da6bf26964af9d7eed9e03e53415d37aa96045").into_word(),
+    ///     b256!("0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045"),
     /// );
     /// ```
     #[inline]
@@ -172,7 +172,7 @@ impl Address {
     /// # use alloy_primitives::{address, Address};
     /// let checksummed = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
     /// let address = Address::parse_checksummed(checksummed, None).unwrap();
-    /// let expected = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// let expected = address!("0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// assert_eq!(address, expected);
     /// ```
     pub fn parse_checksummed<S: AsRef<str>>(
@@ -209,7 +209,7 @@ impl Address {
     ///
     /// ```
     /// # use alloy_primitives::{address, Address};
-    /// let address = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// let address = address!("0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
     ///
     /// let checksummed: String = address.to_checksum(None);
     /// assert_eq!(checksummed, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
@@ -243,7 +243,7 @@ impl Address {
     ///
     /// ```
     /// # use alloy_primitives::{address, Address};
-    /// let address = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// let address = address!("0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// let mut buf = [0; 42];
     ///
     /// let checksummed: &mut str = address.to_checksum_raw(&mut buf, None);
@@ -274,7 +274,7 @@ impl Address {
     ///
     /// ```
     /// # use alloy_primitives::{address, Address, AddressChecksumBuffer};
-    /// let address = address!("d8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// let address = address!("0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
     ///
     /// let mut buffer: AddressChecksumBuffer = address.to_checksum_buffer(None);
     /// assert_eq!(buffer.as_str(), "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
@@ -290,6 +290,15 @@ impl Address {
         buf
     }
 
+    // https://eips.ethereum.org/EIPS/eip-55
+    // > In English, convert the address to hex, but if the `i`th digit is a letter (ie. it’s one of
+    // > `abcdef`) print it in uppercase if the `4*i`th bit of the hash of the lowercase hexadecimal
+    // > address is 1 otherwise print it in lowercase.
+    //
+    // https://eips.ethereum.org/EIPS/eip-1191
+    // > [...] If the chain id passed to the function belongs to a network that opted for using this
+    // > checksum variant, prefix the address with the chain id and the `0x` separator before
+    // > calculating the hash. [...]
     #[allow(clippy::wrong_self_convention)]
     fn to_checksum_inner(&self, buf: &mut [u8; 42], chain_id: Option<u64>) {
         buf[0] = b'0';
@@ -308,14 +317,14 @@ impl Address {
         }
         let hash = hasher.finalize();
 
-        let mut hash_hex = [0u8; 64];
-        hex::encode_to_slice(hash, &mut hash_hex).unwrap();
-
-        // `0..40` generates significantly less code than zipping or `array::into_iter`.
-        for i in 0..40 {
+        for (i, out) in buf[2..].iter_mut().enumerate() {
             // This is made branchless for easier vectorization.
-            buf[2 + i] ^=
-                0b0010_0000 * (buf[2 + i].is_ascii_lowercase() & (hash_hex[i] >= b'8')) as u8;
+            // Get the i-th nibble of the hash.
+            let hash_nibble = (hash[i / 2] >> (4 * (1 - i % 2))) & 0xf;
+            // Make the character ASCII uppercase if it's a hex letter and the hash nibble is >= 8.
+            // We can use a simpler comparison for checking if the character is a hex letter because
+            // we know `out` is a hex-encoded character (`b'0'..=b'9' | b'a'..=b'f'`).
+            *out ^= 0b0010_0000 * ((*out >= b'a') & (hash_nibble >= 8)) as u8;
         }
     }
 
@@ -327,12 +336,12 @@ impl Address {
     ///
     /// ```
     /// # use alloy_primitives::{address, Address};
-    /// let sender = address!("b20a608c624Ca5003905aA834De7156C68b2E1d0");
+    /// let sender = address!("0xb20a608c624Ca5003905aA834De7156C68b2E1d0");
     ///
-    /// let expected = address!("00000000219ab540356cBB839Cbe05303d7705Fa");
+    /// let expected = address!("0x00000000219ab540356cBB839Cbe05303d7705Fa");
     /// assert_eq!(sender.create(0), expected);
     ///
-    /// let expected = address!("e33c6e89e69d085897f98e92b06ebd541d1daa99");
+    /// let expected = address!("0xe33c6e89e69d085897f98e92b06ebd541d1daa99");
     /// assert_eq!(sender.create(1), expected);
     /// ```
     #[cfg(feature = "rlp")]
@@ -379,10 +388,10 @@ impl Address {
     ///
     /// ```
     /// # use alloy_primitives::{address, b256, bytes, Address};
-    /// let address = address!("8ba1f109551bD432803012645Ac136ddd64DBA72");
-    /// let salt = b256!("7c5ea36004851c764c44143b1dcb59679b11c9a68e5f41497f6cf3d480715331");
+    /// let address = address!("0x8ba1f109551bD432803012645Ac136ddd64DBA72");
+    /// let salt = b256!("0x7c5ea36004851c764c44143b1dcb59679b11c9a68e5f41497f6cf3d480715331");
     /// let init_code = bytes!("6394198df16000526103ff60206004601c335afa6040516060f3");
-    /// let expected = address!("533ae9d683B10C02EbDb05471642F85230071FC3");
+    /// let expected = address!("0x533ae9d683B10C02EbDb05471642F85230071FC3");
     /// assert_eq!(address.create2_from_code(salt, init_code), expected);
     /// ```
     #[must_use]
@@ -410,10 +419,11 @@ impl Address {
     ///
     /// ```
     /// # use alloy_primitives::{address, b256, Address};
-    /// let address = address!("5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f");
-    /// let salt = b256!("2b2f5776e38002e0c013d0d89828fdb06fee595ea2d5ed4b194e3883e823e350");
-    /// let init_code_hash = b256!("96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f");
-    /// let expected = address!("0d4a11d5EEaaC28EC3F61d100daF4d40471f1852");
+    /// let address = address!("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f");
+    /// let salt = b256!("0x2b2f5776e38002e0c013d0d89828fdb06fee595ea2d5ed4b194e3883e823e350");
+    /// let init_code_hash =
+    ///     b256!("0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f");
+    /// let expected = address!("0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852");
     /// assert_eq!(address.create2(salt, init_code_hash), expected);
     /// ```
     #[must_use]

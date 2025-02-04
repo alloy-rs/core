@@ -15,12 +15,24 @@ exclude.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
+rustdoc-args = [
+    "-Zunstable-options",
+    "--generate-link-to-definition",
+    "--show-type-layout",
+]
+
+[lints]
+workspace = true
 
 [dependencies]
 winnow.workspace = true
+serde = { workspace = true, optional = true, features = ["derive"] }
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [features]
 default = ["std"]
 std = ["winnow/std"]
+serde = ["dep:serde"]
 debug = ["std"] # intentionally doesn't enable `winnow/debug`

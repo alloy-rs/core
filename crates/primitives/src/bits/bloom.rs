@@ -2,7 +2,7 @@
 //!
 //! Adapted from <https://github.com/paritytech/parity-common/blob/2fb72eea96b6de4a085144ce239feb49da0cd39e/ethbloom/src/lib.rs>
 
-use crate::{keccak256, wrap_fixed_bytes, Address, Log, LogData, B256};
+use crate::{keccak256, Address, Log, LogData, B256};
 
 /// Number of bits to set per input in Ethereum bloom filter.
 pub const BLOOM_BITS_PER_ITEM: usize = 3;
@@ -14,15 +14,14 @@ pub const BLOOM_SIZE_BITS: usize = BLOOM_SIZE_BYTES * 8;
 /// Mask, used in accrue
 const MASK: usize = BLOOM_SIZE_BITS - 1;
 /// Number of bytes per item, used in accrue
-// TODO(MSRV-1.67): use `usize::ilog2()`
-const ITEM_BYTES: usize = (log2(BLOOM_SIZE_BITS) + 7) / 8;
+const ITEM_BYTES: usize = BLOOM_SIZE_BITS.ilog2().div_ceil(8) as usize;
 
 // BLOOM_SIZE_BYTES must be a power of 2
 #[allow(clippy::assertions_on_constants)]
 const _: () = assert!(BLOOM_SIZE_BYTES.is_power_of_two());
 
 /// Input to the [`Bloom::accrue`] method.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum BloomInput<'a> {
     /// Raw input to be hashed.
     Raw(&'a [u8]),
@@ -218,14 +217,6 @@ impl Bloom {
     pub fn contains_log(&self, log: &Log) -> bool {
         self.contains_raw_log(log.address, log.topics())
     }
-}
-
-const fn log2(x: usize) -> usize {
-    if x <= 1 {
-        return 0;
-    }
-
-    (usize::BITS - x.leading_zeros()) as usize
 }
 
 #[cfg(test)]
