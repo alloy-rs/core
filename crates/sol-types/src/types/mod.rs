@@ -16,7 +16,7 @@ mod interface;
 pub use interface::{
     Aggregate, Aggregate3, Aggregate3Value, ContractError, GenericContractError,
     GenericRevertReason, MulticallBuilder, MulticallMarker, RevertReason, Selectors,
-    SolEventInterface, SolInterface,
+    SolEventInterface, SolInterface, TuplePush,
 };
 
 mod r#struct;

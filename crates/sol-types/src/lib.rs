@@ -34,7 +34,7 @@ pub use types::{
     ContractError, EventTopic, GenericContractError, GenericRevertReason, MulticallBuilder,
     MulticallMarker, Panic, PanicKind, Revert, RevertReason, Selectors, SolCall, SolConstructor,
     SolEnum, SolError, SolEvent, SolEventInterface, SolInterface, SolStruct, SolType, SolValue,
-    TopicList,
+    TopicList, TuplePush,
 };
 
 pub mod utils;
