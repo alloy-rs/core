@@ -6,7 +6,7 @@ mod event;
 pub use event::SolEventInterface;
 
 mod multicall;
-pub use multicall::MulticallBuilder;
+pub use multicall::{Aggregate, Aggregate3, Aggregate3Value, MulticallBuilder, MulticallMarker};
 
 /// A collection of ABI-encodable call-like types. This currently includes
 /// [`SolCall`] and [`SolError`].
