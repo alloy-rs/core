@@ -53,7 +53,7 @@ pub trait EventExt: Sealed {
     ///
     /// This function will return an error if the decoded data does not match
     /// the expected input types.
-    fn decode_log_parts<I>(&self, topics: I, data: &[u8], validate: bool) -> Result<DecodedEvent>
+    fn decode_log_parts<I>(&self, topics: I, data: &[u8]) -> Result<DecodedEvent>
     where
         I: IntoIterator<Item = B256>;
 
@@ -61,17 +61,17 @@ pub trait EventExt: Sealed {
     ///
     /// See [`decode_log`](EventExt::decode_log).
     #[inline]
-    fn decode_log(&self, log: &LogData, validate: bool) -> Result<DecodedEvent> {
-        self.decode_log_parts(log.topics().iter().copied(), &log.data, validate)
+    fn decode_log(&self, log: &LogData) -> Result<DecodedEvent> {
+        self.decode_log_parts(log.topics().iter().copied(), &log.data)
     }
 }
 
 impl EventExt for Event {
-    fn decode_log_parts<I>(&self, topics: I, data: &[u8], validate: bool) -> Result<DecodedEvent>
+    fn decode_log_parts<I>(&self, topics: I, data: &[u8]) -> Result<DecodedEvent>
     where
         I: IntoIterator<Item = B256>,
     {
-        self.resolve()?.decode_log_parts(topics, data, validate)
+        self.resolve()?.decode_log_parts(topics, data, false)
     }
 }
 
@@ -87,22 +87,18 @@ mod tests {
         let mut event = Event { name: "MyEvent".into(), inputs: vec![], anonymous: false };
 
         // skips over hash
-        let values = event.decode_log_parts(None, &[], false).unwrap();
+        let values = event.decode_log_parts(None, &[]).unwrap();
         assert!(values.indexed.is_empty());
         assert!(values.body.is_empty());
 
-        // but if we validate, we get an error
-        let err = event.decode_log_parts(None, &[], true).unwrap_err();
-        assert_eq!(err, Error::TopicLengthMismatch { expected: 1, actual: 0 });
-
-        let values = event.decode_log_parts(Some(keccak256("MyEvent()")), &[], true).unwrap();
+        let values = event.decode_log_parts(Some(keccak256("MyEvent()")), &[]).unwrap();
         assert!(values.indexed.is_empty());
         assert!(values.body.is_empty());
         event.anonymous = true;
-        let values = event.decode_log_parts(None, &[], false).unwrap();
+        let values = event.decode_log_parts(None, &[]).unwrap();
         assert!(values.indexed.is_empty());
         assert!(values.body.is_empty());
-        let values = event.decode_log_parts(None, &[], true).unwrap();
+        let values = event.decode_log_parts(None, &[]).unwrap();
         assert!(values.indexed.is_empty());
         assert!(values.body.is_empty());
     }
@@ -138,7 +134,6 @@ mod tests {
                     0000000000000000000000002222222222222222222222222222222222222222
                 "
                 ),
-                false,
             )
             .unwrap();
 
@@ -200,10 +195,10 @@ mod tests {
             ),
         );
 
-        wrong_event.decode_log(&log, false).unwrap();
+        wrong_event.decode_log(&log).unwrap();
         // TODO: How do we verify here?
         // wrong_event.decode_log_object(&log, true).unwrap_err();
-        correct_event.decode_log(&log, false).unwrap();
-        correct_event.decode_log(&log, true).unwrap();
+        correct_event.decode_log(&log).unwrap();
+        correct_event.decode_log(&log).unwrap();
     }
 }
