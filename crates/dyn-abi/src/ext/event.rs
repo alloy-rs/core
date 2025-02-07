@@ -71,7 +71,7 @@ impl EventExt for Event {
     where
         I: IntoIterator<Item = B256>,
     {
-        self.resolve()?.decode_log_parts(topics, data, false)
+        self.resolve()?.decode_log_parts(topics, data)
     }
 }
 
