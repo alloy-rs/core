@@ -175,13 +175,13 @@ impl<'de> Decoder<'de> {
     /// the offset.
     #[inline]
     pub fn peek_offset_at(&self, offset: usize) -> Result<usize> {
-        self.peek_word_at(offset).and_then(|word| utils::as_offset(word, true))
+        self.peek_word_at(offset).and_then(|word| utils::as_offset(word, false))
     }
 
     /// Peek a `usize` from the buffer, without advancing the offset.
     #[inline]
     pub fn peek_offset(&self) -> Result<usize> {
-        self.peek_word().and_then(|word| utils::as_offset(word, true))
+        self.peek_word().and_then(|word| utils::as_offset(word, false))
     }
 
     /// Take a word from the buffer, advancing the offset.
@@ -202,7 +202,7 @@ impl<'de> Decoder<'de> {
     /// Takes a `usize` offset from the buffer by consuming a word.
     #[inline]
     pub fn take_offset(&mut self) -> Result<usize> {
-        self.take_word().and_then(|word| utils::as_offset(word, true))
+        self.take_word().and_then(|word| utils::as_offset(word, false))
     }
 
     /// Takes a slice of bytes of the given length.
