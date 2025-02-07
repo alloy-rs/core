@@ -9,10 +9,10 @@
 //
 
 use crate::{
-    abi::{encode_sequence, token::TokenSeq, Token},
+    abi::{token::TokenSeq, Token},
     utils, Error, Result, Word,
 };
-use alloc::{borrow::Cow, vec::Vec};
+use alloc::vec::Vec;
 use core::{fmt, slice::SliceIndex};
 
 /// The decoder recursion limit.
@@ -68,11 +68,6 @@ impl fmt::Display for Decoder<'_> {
 
 impl<'de> Decoder<'de> {
     /// Instantiate a new decoder from a byte slice and a validation flag.
-    ///
-    /// Decoder will ensure that the bytes conform to expected type limitations, and that the
-    /// decoded values can be re-encoded to an identical bytestring.
-    ///
-    /// If this fails to be the case, [`Error::TypeCheckFail`] will be thrown.
     #[inline]
     pub const fn new(buf: &'de [u8]) -> Self {
         Self { buf, offset: 0, depth: 0 }
@@ -210,22 +205,9 @@ impl<'de> Decoder<'de> {
         self.take_word().and_then(|word| utils::as_offset(word, true))
     }
 
-    /// Takes a slice of bytes of the given length by consuming up to the next
-    /// word boundary.
-    pub fn take_slice(&mut self, len: usize) -> Result<&'de [u8]> {
-        let padded_len = utils::next_multiple_of_32(len);
-        if self.offset + padded_len > self.buf.len() {
-            return Err(Error::Overrun);
-        }
-        if !utils::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
-            return Err(Error::Other(Cow::Borrowed("non-empty bytes after packed array")));
-        }
-        self.take_slice_unchecked(len)
-    }
-
     /// Takes a slice of bytes of the given length.
     #[inline]
-    pub fn take_slice_unchecked(&mut self, len: usize) -> Result<&'de [u8]> {
+    pub fn take_slice(&mut self, len: usize) -> Result<&'de [u8]> {
         self.peek_len(len).inspect(|_| self.increase_offset(len))
     }
 
@@ -301,9 +283,6 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
 pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
     let mut decoder = Decoder::new(data);
     let result = decoder.decode_sequence::<T>()?;
-    if encode_sequence(&result) != data {
-        return Err(Error::ReserMismatch);
-    }
     Ok(result)
 }
 
