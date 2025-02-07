@@ -454,6 +454,39 @@ impl<T: SolInterface + fmt::Display> RevertReason<T> {
     }
 }
 
+impl<T> RevertReason<T> {
+    /// Returns the raw string error message if this type is a [`RevertReason::RawString`]
+    pub fn as_raw_error(&self) -> Option<&str> {
+        match self {
+            Self::RawString(error) => Some(error.as_str()),
+            _ => None,
+        }
+    }
+
+    /// Returns the [`ContractError`] if this type is a [`RevertReason::ContractError`]
+    pub const fn as_contract_error(&self) -> Option<&ContractError<T>> {
+        match self {
+            Self::ContractError(error) => Some(error),
+            _ => None,
+        }
+    }
+
+    /// Returns `true` if `self` matches [`Revert`](ContractError::Revert).
+    pub const fn is_revert(&self) -> bool {
+        matches!(self, Self::ContractError(ContractError::Revert(_)))
+    }
+
+    /// Returns `true` if `self` matches [`Panic`](ContractError::Panic).
+    pub const fn is_panic(&self) -> bool {
+        matches!(self, Self::ContractError(ContractError::Panic(_)))
+    }
+
+    /// Returns `true` if `self` matches [`CustomError`](ContractError::CustomError).
+    pub const fn is_custom_error(&self) -> bool {
+        matches!(self, Self::ContractError(ContractError::CustomError(_)))
+    }
+}
+
 /// Iterator over the function or error selectors of a [`SolInterface`] type.
 ///
 /// This `struct` is created by the [`selectors`] method on [`SolInterface`].

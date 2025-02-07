@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 #[rustversion::attr(nightly, ignore = "type.rs depends way too much on compiler internals")]
-#[rustversion::attr(not(nightly), ignore)]
+#[rustversion::attr(not(nightly), ignore = "should run only on nightly")]
 #[cfg_attr(any(target_os = "windows", miri), ignore)]
 #[test]
 fn ui() {
