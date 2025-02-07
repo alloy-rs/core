@@ -61,7 +61,7 @@ impl DynSolCall {
     }
 
     /// ABI decode the given data as function returns.
-    pub fn abi_decode_input(&self, data: &[u8], _validate: bool) -> Result<Vec<DynSolValue>> {
+    pub fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
         abi_decode(data, &self.parameters)
     }
 
@@ -71,8 +71,8 @@ impl DynSolCall {
     }
 
     /// ABI decode the given data as function return values.
-    pub fn abi_decode_output(&self, data: &[u8], validate: bool) -> Result<Vec<DynSolValue>> {
-        self.returns.abi_decode_output(data, validate)
+    pub fn abi_decode_output(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
+        self.returns.abi_decode_output(data)
     }
 }
 
@@ -109,7 +109,7 @@ impl DynSolReturns {
     }
 
     /// ABI decode the given data as function return values.
-    pub fn abi_decode_output(&self, data: &[u8], _validate: bool) -> Result<Vec<DynSolValue>> {
+    pub fn abi_decode_output(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
         abi_decode(data, self.types())
     }
 }
