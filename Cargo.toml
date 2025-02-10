@@ -84,7 +84,7 @@ bincode = "1.3"
 bytes = { version = "1", default-features = false }
 criterion = "0.5"
 derive_arbitrary = "1.3"
-getrandom = "0.2"
+getrandom = "0.3"
 hex = { package = "const-hex", version = "1.14", default-features = false, features = [
     "alloc",
     "core-error",
@@ -95,7 +95,7 @@ postgres-types = "0.2.6"
 pretty_assertions = "1.4"
 proptest = "1"
 proptest-derive = "0.5"
-rand = { version = "0.8", default-features = false, features = ["getrandom"] }
+rand = { version = "0.9", default-features = false, features = ["os_rng"] }
 rayon = { version = "1.2", default-features = false }
 ruint = { version = "1.12.3", default-features = false, features = ["alloc"] }
 ruint-macro = { version = "1", default-features = false }
