@@ -65,7 +65,7 @@ serde = { workspace = true, optional = true, features = ["derive"] }
 getrandom = { workspace = true, optional = true }
 
 # rand
-rand = { workspace = true, optional = true, features = ["getrandom"] }
+rand = { workspace = true, optional = true }
 
 # rayon
 rayon = { workspace = true, optional = true }
@@ -113,6 +113,7 @@ std = [
     "keccak-asm?/std",
     "proptest?/std",
     "rand?/std",
+    "rand?/std_rng",
     "rustc-hash?/std",
     "serde?/std",
     "sha3?/std",

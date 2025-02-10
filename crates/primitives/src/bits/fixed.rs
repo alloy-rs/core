@@ -364,30 +364,26 @@ impl<const N: usize> FixedBytes<N> {
         N
     }
 
-    /// Creates a new [`FixedBytes`] with cryptographically random content.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the underlying call to
-    /// [`getrandom_uninit`](getrandom::getrandom_uninit) fails.
+    /// Creates a new [`FixedBytes`] with the default non-cryptographic random number generator.
     #[cfg(feature = "getrandom")]
     #[inline]
     #[track_caller]
     pub fn random() -> Self {
-        Self::try_random().unwrap()
+        // SAFETY: `bytes` is only accessible after random initialization.
+        #[allow(clippy::uninit_assumed_init)]
+        let mut bytes = unsafe { core::mem::MaybeUninit::<Self>::uninit().assume_init() };
+        bytes.randomize();
+        bytes
     }
 
-    /// Tries to create a new [`FixedBytes`] with cryptographically random
-    /// content.
-    ///
-    /// # Errors
-    ///
-    /// This function only propagates the error from the underlying call to
-    /// [`getrandom_uninit`](getrandom::getrandom_uninit).
+    /// Tries to create a new [`FixedBytes`] with the default non-cryptographic random number
+    /// generator.
     #[cfg(feature = "getrandom")]
     #[inline]
     pub fn try_random() -> Result<Self, getrandom::Error> {
-        let mut bytes = Self::ZERO;
+        // SAFETY: `bytes` is only accessible after random initialization.
+        #[allow(clippy::uninit_assumed_init)]
+        let mut bytes = unsafe { core::mem::MaybeUninit::<Self>::uninit().assume_init() };
         bytes.try_randomize()?;
         Ok(bytes)
     }
@@ -396,41 +392,43 @@ impl<const N: usize> FixedBytes<N> {
     #[cfg(feature = "rand")]
     #[inline]
     #[doc(alias = "random_using")]
-    pub fn random_with<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
-        let mut bytes = Self::ZERO;
+    pub fn random_with<R: rand::RngCore + ?Sized>(rng: &mut R) -> Self {
+        // SAFETY: `bytes` is only accessible after random initialization.
+        #[allow(clippy::uninit_assumed_init)]
+        let mut bytes = unsafe { core::mem::MaybeUninit::<Self>::uninit().assume_init() };
         bytes.randomize_with(rng);
         bytes
     }
 
-    /// Fills this [`FixedBytes`] with cryptographically random content.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the underlying call to
-    /// [`getrandom_uninit`](getrandom::getrandom_uninit) fails.
+    /// Fills this [`FixedBytes`] with the default non-cryptographic random number generator.
     #[cfg(feature = "getrandom")]
     #[inline]
     #[track_caller]
     pub fn randomize(&mut self) {
-        self.try_randomize().unwrap()
+        self.try_randomize().unwrap_or_else(|e| panic!("failed to fill with random bytes: {e}"));
     }
 
-    /// Tries to fill this [`FixedBytes`] with cryptographically random content.
-    ///
-    /// # Errors
-    ///
-    /// This function only propagates the error from the underlying call to
-    /// [`getrandom_uninit`](getrandom::getrandom_uninit).
+    /// Tries to fill this [`FixedBytes`] with the default non-cryptographic random number
+    /// generator.
     #[inline]
     #[cfg(feature = "getrandom")]
     pub fn try_randomize(&mut self) -> Result<(), getrandom::Error> {
-        getrandom::getrandom(&mut self.0)
+        #[cfg(all(feature = "rand", feature = "std"))]
+        {
+            self.randomize_with(&mut rand::thread_rng());
+            Ok(())
+        }
+        #[cfg(not(all(feature = "rand", feature = "std")))]
+        {
+            getrandom::getrandom(&mut self.0)
+        }
     }
 
     /// Fills this [`FixedBytes`] with the given random number generator.
     #[cfg(feature = "rand")]
+    #[inline]
     #[doc(alias = "randomize_using")]
-    pub fn randomize_with<R: rand::Rng + ?Sized>(&mut self, rng: &mut R) {
+    pub fn randomize_with<R: rand::RngCore + ?Sized>(&mut self, rng: &mut R) {
         rng.fill_bytes(&mut self.0);
     }
 
