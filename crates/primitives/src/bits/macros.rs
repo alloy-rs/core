@@ -426,8 +426,11 @@ macro_rules! impl_fb_traits {
 #[cfg(feature = "getrandom")]
 macro_rules! impl_getrandom {
     () => {
-        /// Creates a new fixed byte array with the default non-cryptographic random number
+        /// Creates a new fixed byte array with the default cryptographic random number
         /// generator.
+        ///
+        /// This is `rand::thread_rng` if the "rand" and "std" features are enabled, otherwise
+        /// it uses `getrandom::getrandom`. Both are cryptographically secure.
         #[inline]
         #[track_caller]
         #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
@@ -435,15 +438,19 @@ macro_rules! impl_getrandom {
             Self($crate::FixedBytes::random())
         }
 
-        /// Tries to create a new fixed byte array with the default non-cryptographic random number
+        /// Tries to create a new fixed byte array with the default cryptographic random number
         /// generator.
+        ///
+        /// See [`random`](Self::random) for more details.
         #[inline]
         #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn try_random() -> $crate::private::Result<Self, $crate::private::getrandom::Error> {
             $crate::FixedBytes::try_random().map(Self)
         }
 
-        /// Fills this fixed byte array with the default non-cryptographic random number generator.
+        /// Fills this fixed byte array with the default cryptographic random number generator.
+        ///
+        /// See [`random`](Self::random) for more details.
         #[inline]
         #[track_caller]
         #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
@@ -451,8 +458,10 @@ macro_rules! impl_getrandom {
             self.0.randomize();
         }
 
-        /// Tries to fill this fixed byte array with the default non-cryptographic random number
+        /// Tries to fill this fixed byte array with the default cryptographic random number
         /// generator.
+        ///
+        /// See [`random`](Self::random) for more details.
         #[inline]
         #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         pub fn try_randomize(

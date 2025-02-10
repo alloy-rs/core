@@ -364,7 +364,10 @@ impl<const N: usize> FixedBytes<N> {
         N
     }
 
-    /// Creates a new [`FixedBytes`] with the default non-cryptographic random number generator.
+    /// Creates a new [`FixedBytes`] with the default cryptographic random number generator.
+    ///
+    /// This is `rand::thread_rng` if the "rand" and "std" features are enabled, otherwise
+    /// it uses `getrandom::getrandom`. Both are cryptographically secure.
     #[cfg(feature = "getrandom")]
     #[inline]
     #[track_caller]
@@ -376,8 +379,10 @@ impl<const N: usize> FixedBytes<N> {
         bytes
     }
 
-    /// Tries to create a new [`FixedBytes`] with the default non-cryptographic random number
+    /// Tries to create a new [`FixedBytes`] with the default cryptographic random number
     /// generator.
+    ///
+    /// See [`random`](Self::random) for more details.
     #[cfg(feature = "getrandom")]
     #[inline]
     pub fn try_random() -> Result<Self, getrandom::Error> {
@@ -389,6 +394,8 @@ impl<const N: usize> FixedBytes<N> {
     }
 
     /// Creates a new [`FixedBytes`] with the given random number generator.
+    ///
+    /// See [`random`](Self::random) for more details.
     #[cfg(feature = "rand")]
     #[inline]
     #[doc(alias = "random_using")]
@@ -400,7 +407,9 @@ impl<const N: usize> FixedBytes<N> {
         bytes
     }
 
-    /// Fills this [`FixedBytes`] with the default non-cryptographic random number generator.
+    /// Fills this [`FixedBytes`] with the default cryptographic random number generator.
+    ///
+    /// See [`random`](Self::random) for more details.
     #[cfg(feature = "getrandom")]
     #[inline]
     #[track_caller]
@@ -408,8 +417,10 @@ impl<const N: usize> FixedBytes<N> {
         self.try_randomize().unwrap_or_else(|e| panic!("failed to fill with random bytes: {e}"));
     }
 
-    /// Tries to fill this [`FixedBytes`] with the default non-cryptographic random number
+    /// Tries to fill this [`FixedBytes`] with the default cryptographic random number
     /// generator.
+    ///
+    /// See [`random`](Self::random) for more details.
     #[inline]
     #[cfg(feature = "getrandom")]
     pub fn try_randomize(&mut self) -> Result<(), getrandom::Error> {
