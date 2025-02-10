@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Sealed::as_sealed_ref ([#859](https://github.com/alloy-rs/core/issues/859))
 - Add Sealed::cloned ([#860](https://github.com/alloy-rs/core/issues/860))
 
+### Miscellaneous Tasks
+
+- Release 0.8.20
+
 ## [0.8.19](https://github.com/alloy-rs/core/releases/tag/v0.8.19) - 2025-01-15
 
 ### Documentation
