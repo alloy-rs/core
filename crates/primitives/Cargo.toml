@@ -113,7 +113,7 @@ std = [
     "keccak-asm?/std",
     "proptest?/std",
     "rand?/std",
-    "rand?/std_rng",
+    "rand?/thread_rng",
     "rustc-hash?/std",
     "serde?/std",
     "sha3?/std",
