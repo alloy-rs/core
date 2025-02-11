@@ -639,7 +639,6 @@ mod tests {
 
     #[test]
     fn decode_verify_bytes() {
-        type MyTy = (sol_data::Address, sol_data::FixedBytes<20>);
         type MyTy2 = (sol_data::Address, sol_data::Address);
 
         let input = hex!(
@@ -648,7 +647,6 @@ mod tests {
     	0000000000000000000000005432100000000000000000000000000000054321
     	"
         );
-        MyTy::abi_decode_params(&input).unwrap();
         assert!(MyTy2::abi_decode_params(&input).is_ok());
     }
 
@@ -730,7 +728,6 @@ mod tests {
         assert_eq!(hex::encode(ty.abi_encode()), hex::encode(encoded));
         assert_eq!(ty.abi_encoded_size(), encoded.len());
 
-        // assert_eq!(<Ty as SolType>::abi_decode(&encoded, false).unwrap(), ty);
         assert_eq!(<Ty as SolType>::abi_decode(&encoded).unwrap(), ty);
     }
 }

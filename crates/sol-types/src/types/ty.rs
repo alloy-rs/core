@@ -245,7 +245,7 @@ pub trait SolType: Sized {
     /// See the [`abi`] module for more information.
     #[inline]
     fn abi_decode(data: &[u8]) -> Result<Self::RustType> {
-        abi::decode::<Self::Token<'_>>(data).and_then(detokenize::<Self>())
+        abi::decode::<Self::Token<'_>>(data).map(Self::detokenize)
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as
@@ -257,7 +257,7 @@ pub trait SolType: Sized {
     where
         Self::Token<'de>: TokenSeq<'de>,
     {
-        abi::decode_params::<Self::Token<'_>>(data).and_then(detokenize::<Self>())
+        abi::decode_params::<Self::Token<'_>>(data).map(Self::detokenize)
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as a
@@ -269,12 +269,6 @@ pub trait SolType: Sized {
     where
         Self::Token<'de>: TokenSeq<'de>,
     {
-        abi::decode_sequence::<Self::Token<'_>>(data).and_then(detokenize::<Self>())
+        abi::decode_sequence::<Self::Token<'_>>(data).map(Self::detokenize)
     }
-}
-
-/// Detokenize into the Rust type without [SolType::type_check]ing.
-#[inline]
-fn detokenize<T: SolType>() -> impl FnOnce(T::Token<'_>) -> Result<T::RustType> {
-    move |token| Ok(T::detokenize(token))
 }
