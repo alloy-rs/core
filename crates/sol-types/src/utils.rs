@@ -9,7 +9,7 @@
 
 //! Utilities used by different modules.
 
-use crate::{Error, Result, Word};
+use crate::{Result, Word};
 
 const USIZE_BYTES: usize = usize::BITS as usize / 8;
 
