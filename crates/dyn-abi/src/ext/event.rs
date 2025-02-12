@@ -191,8 +191,6 @@ mod tests {
         );
 
         wrong_event.decode_log(&log).unwrap();
-        // TODO: How do we verify here?
-        // wrong_event.decode_log_object(&log, true).unwrap_err();
         correct_event.decode_log(&log).unwrap();
         correct_event.decode_log(&log).unwrap();
     }

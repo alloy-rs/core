@@ -311,7 +311,6 @@ mod tests {
         let ty = vec![vec![Address::repeat_byte(0x11)], vec![Address::repeat_byte(0x22)]];
         assert_eq!(MyTy::abi_encode_params(&ty), encoded);
 
-        // let decoded = MyTy::abi_decode_params(&encoded, false).unwrap();
         let decoded = MyTy::abi_decode_params(&encoded).unwrap();
         assert_eq!(decoded, ty);
         assert_eq!(decoded.abi_encode_params(), encoded);
@@ -514,7 +513,6 @@ mod tests {
 
         let expected = (address1, tuple, address3, address4);
 
-        // let decoded = MyTy::abi_decode_params(&encoded, false).unwrap();
         let decoded = MyTy::abi_decode_params(&encoded).unwrap();
         assert_eq!(decoded, expected);
     }
