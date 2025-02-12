@@ -1075,7 +1075,15 @@ re-enc: {re_enc}
 
         let my_type: DynSolType = "bytes[][][][][][][][][][]".parse().unwrap();
         let decoded = my_type.abi_decode(&hex::decode(payload).unwrap());
-        assert_eq!(decoded, Err(alloy_sol_types::Error::RecursionLimitExceeded(16).into()));
+        assert_eq!(
+            decoded,
+            Err(alloy_sol_types::Error::TypeCheckFail {
+                expected_type: "offset (usize)".into(),
+                data: "0000000000000000000000000000000000000000000a00000000000000000000"
+                    .to_string()
+            }
+            .into())
+        );
     }
 
     // https://github.com/alloy-rs/core/issues/490
