@@ -9,7 +9,7 @@
 
 //! Utilities used by different modules.
 
-use crate::{Result, Word};
+use crate::{Error, Result, Word};
 
 const USIZE_BYTES: usize = usize::BITS as usize / 8;
 
@@ -66,8 +66,13 @@ pub(crate) fn check_zeroes(data: &[u8]) -> bool {
 
 #[inline]
 pub(crate) fn as_offset(word: &Word) -> Result<usize> {
-    let (_, data) = word.split_at(32 - USIZE_BYTES);
-    Ok(usize::from_be_bytes(<[u8; USIZE_BYTES]>::try_from(data).unwrap()))
+    let Some((before, data)) = word.split_last_chunk::<USIZE_BYTES>() else {
+        return Err(Error::custom("Word is too short to be an offset"));
+    };
+    if !check_zeroes(before) {
+        return Err(Error::type_check_fail(&word[..], "offset (usize)"));
+    }
+    Ok(usize::from_be_bytes(*data))
 }
 
 #[cfg(test)]
