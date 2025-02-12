@@ -116,12 +116,10 @@ mod tests {
         let result = event
             .decode_log_parts(
                 [
-                    b256!("0x0000000000000000000000000000000000000000000000000000000000000000"),
+                    event.selector(),
                     b256!("0x0000000000000000000000000000000000000000000000000000000000000002"),
                     b256!("0x0000000000000000000000001111111111111111111111111111111111111111"),
                     b256!("0x00000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-                    b256!("0x00000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
-                    b256!("0x00000000000000000ccccccccccccccccccccccccccccccccccccccccccccccc"),
                 ],
                 &hex!(
                     "
