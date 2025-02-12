@@ -1,4 +1,4 @@
-use crate::{DynSolType, DynSolValue, Result};
+use crate::{DynSolType, DynSolValue, Error, Result};
 use alloc::vec::Vec;
 use alloy_primitives::{IntoLogData, Log, LogData, B256};
 
@@ -50,10 +50,27 @@ impl DynSolEvent {
         I: IntoIterator<Item = B256>,
     {
         let mut topics = topics.into_iter();
+        let num_topics = self.indexed.len() + !self.is_anonymous() as usize;
+
+        match topics.size_hint() {
+            (n, Some(m)) if n == m && n != num_topics => {
+                return Err(Error::TopicLengthMismatch { expected: num_topics, actual: n })
+            }
+            _ => {}
+        }
 
         // skip event hash if not anonymous
         if !self.is_anonymous() {
-            topics.next();
+            let t = topics.next();
+            match t {
+                Some(sig) => {
+                    let expected = self.topic_0.expect("not anonymous");
+                    if sig != expected {
+                        return Err(Error::EventSignatureMismatch { expected, actual: sig });
+                    }
+                }
+                None => return Err(Error::TopicLengthMismatch { expected: num_topics, actual: 0 }),
+            }
         }
 
         let indexed = self
@@ -67,6 +84,14 @@ impl DynSolEvent {
             .collect::<Result<_>>()?;
 
         let body = self.body.abi_decode_sequence(data)?.into_fixed_seq().expect("body is a tuple");
+
+        let remaining = topics.count();
+        if remaining > 0 {
+            return Err(Error::TopicLengthMismatch {
+                expected: num_topics,
+                actual: num_topics + remaining,
+            });
+        }
 
         Ok(DecodedEvent { selector: self.topic_0, indexed, body })
     }

@@ -86,11 +86,6 @@ mod tests {
     fn empty() {
         let mut event = Event { name: "MyEvent".into(), inputs: vec![], anonymous: false };
 
-        // skips over hash
-        let values = event.decode_log_parts(None, &[]).unwrap();
-        assert!(values.indexed.is_empty());
-        assert!(values.body.is_empty());
-
         let values = event.decode_log_parts(Some(keccak256("MyEvent()")), &[]).unwrap();
         assert!(values.indexed.is_empty());
         assert!(values.body.is_empty());
