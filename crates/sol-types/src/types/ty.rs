@@ -244,9 +244,8 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
-    fn abi_decode(data: &[u8], validate: bool) -> Result<Self::RustType> {
-        abi::decode::<Self::Token<'_>>(data, validate)
-            .and_then(validate_and_detokenize::<Self>(validate))
+    fn abi_decode(data: &[u8]) -> Result<Self::RustType> {
+        abi::decode::<Self::Token<'_>>(data).map(Self::detokenize)
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as
@@ -254,12 +253,11 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
-    fn abi_decode_params<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
+    fn abi_decode_params<'de>(data: &'de [u8]) -> Result<Self::RustType>
     where
         Self::Token<'de>: TokenSeq<'de>,
     {
-        abi::decode_params::<Self::Token<'_>>(data, validate)
-            .and_then(validate_and_detokenize::<Self>(validate))
+        abi::decode_params::<Self::Token<'_>>(data).map(Self::detokenize)
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as a
@@ -267,23 +265,10 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
-    fn abi_decode_sequence<'de>(data: &'de [u8], validate: bool) -> Result<Self::RustType>
+    fn abi_decode_sequence<'de>(data: &'de [u8]) -> Result<Self::RustType>
     where
         Self::Token<'de>: TokenSeq<'de>,
     {
-        abi::decode_sequence::<Self::Token<'_>>(data, validate)
-            .and_then(validate_and_detokenize::<Self>(validate))
-    }
-}
-
-#[inline]
-fn validate_and_detokenize<T: SolType>(
-    validate: bool,
-) -> impl FnOnce(T::Token<'_>) -> Result<T::RustType> {
-    move |token| {
-        if validate {
-            T::type_check(&token)?;
-        }
-        Ok(T::detokenize(token))
+        abi::decode_sequence::<Self::Token<'_>>(data).map(Self::detokenize)
     }
 }

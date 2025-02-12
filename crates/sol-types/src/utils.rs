@@ -65,12 +65,12 @@ pub(crate) fn check_zeroes(data: &[u8]) -> bool {
 }
 
 #[inline]
-pub(crate) fn as_offset(word: &Word, validate: bool) -> Result<usize> {
-    let (before, data) = word.split_at(32 - USIZE_BYTES);
-    if validate && !check_zeroes(before) {
+pub(crate) fn as_offset(word: &Word) -> Result<usize> {
+    let (before, data) = word.split_last_chunk::<USIZE_BYTES>().unwrap();
+    if !check_zeroes(before) {
         return Err(Error::type_check_fail(&word[..], "offset (usize)"));
     }
-    Ok(usize::from_be_bytes(<[u8; USIZE_BYTES]>::try_from(data).unwrap()))
+    Ok(usize::from_be_bytes(*data))
 }
 
 #[cfg(test)]
