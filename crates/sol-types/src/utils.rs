@@ -66,9 +66,7 @@ pub(crate) fn check_zeroes(data: &[u8]) -> bool {
 
 #[inline]
 pub(crate) fn as_offset(word: &Word) -> Result<usize> {
-    let Some((before, data)) = word.split_last_chunk::<USIZE_BYTES>() else {
-        return Err(Error::custom("Word is too short to be an offset"));
-    };
+    let (before, data) = word.split_last_chunk::<USIZE_BYTES>().unwrap();
     if !check_zeroes(before) {
         return Err(Error::type_check_fail(&word[..], "offset (usize)"));
     }
