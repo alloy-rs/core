@@ -278,6 +278,25 @@ impl PrimitiveSignature {
         sig
     }
 
+    /// Returns the ERC-2098 compact representation of this signature.
+    ///
+    /// The first 32 bytes are the `r` value, and the next 32 bytes are the `s` value with `yParity`
+    /// in the top bit of the `s` value, as described in ERC-2098.
+    ///
+    /// See <https://eips.ethereum.org/EIPS/eip-2098>
+    #[inline]
+    pub fn as_erc2098(&self) -> [u8; 64] {
+        // The top bit of the `s` parameters is always 0, due to the use of canonical
+        // signatures which flip the solution parity to prevent negative values, which was
+        // introduced as a constraint in Homestead.
+        let y_and_s: U256 = U256::from(self.y_parity as u8) << 255 | self.s;
+
+        let mut sig = [0u8; 64];
+        sig[..32].copy_from_slice(&self.r.to_be_bytes::<32>());
+        sig[32..64].copy_from_slice(&y_and_s.to_be_bytes::<32>());
+        sig
+    }
+
     /// Sets the recovery ID by normalizing a `v` value.
     #[inline]
     pub const fn with_parity(self, v: bool) -> Self {
@@ -586,5 +605,23 @@ mod tests {
 
         let expected = Bytes::from_hex("0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d831b").unwrap();
         assert_eq!(signature.as_bytes(), **expected);
+    }
+
+    #[test]
+    fn test_as_erc2098_y_false() {
+        let signature = PrimitiveSignature::new(
+            U256::from_str(
+                "47323457007453657207889730243826965761922296599680473886588287015755652701072",
+            )
+            .unwrap(),
+            U256::from_str(
+                "57228803202727131502949358313456071280488184270258293674242124340113824882788",
+            )
+            .unwrap(),
+            false,
+        );
+
+        let expected = Bytes::from_hex("0x68a020a209d3d56c46f38cc50a33f704f4a9a10a59377f8dd762ac66910e9b907e865ad05c4035ab5792787d4a0297a43617ae897930a6fe4d822b8faea52064").unwrap();
+        assert_eq!(signature.as_erc2098(), **expected);
     }
 }
