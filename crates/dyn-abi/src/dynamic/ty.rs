@@ -518,7 +518,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data, false), DynToken::decode_single_populate)
+        self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_single_populate)
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
@@ -555,7 +555,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data, false), DynToken::decode_sequence_populate)
+        self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_sequence_populate)
     }
 
     /// Calculate the minimum number of ABI words necessary to encode this
@@ -1063,11 +1063,27 @@ re-enc: {re_enc}
             .repeat(64);
         let my_type: DynSolType = "uint256[][][][][][][][][][]".parse().unwrap();
         let decoded = my_type.abi_decode(&hex::decode(payload).unwrap());
-        assert_eq!(decoded, Err(alloy_sol_types::Error::RecursionLimitExceeded(16).into()));
+        assert_eq!(
+            decoded,
+            Err(alloy_sol_types::Error::TypeCheckFail {
+                expected_type: "offset (usize)".into(),
+                data: "0000000000000000000000000000000000000000000a00000000000000000000"
+                    .to_string()
+            }
+            .into())
+        );
 
         let my_type: DynSolType = "bytes[][][][][][][][][][]".parse().unwrap();
         let decoded = my_type.abi_decode(&hex::decode(payload).unwrap());
-        assert_eq!(decoded, Err(alloy_sol_types::Error::RecursionLimitExceeded(16).into()));
+        assert_eq!(
+            decoded,
+            Err(alloy_sol_types::Error::TypeCheckFail {
+                expected_type: "offset (usize)".into(),
+                data: "0000000000000000000000000000000000000000000a00000000000000000000"
+                    .to_string()
+            }
+            .into())
+        );
     }
 
     // https://github.com/alloy-rs/core/issues/490

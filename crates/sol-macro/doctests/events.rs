@@ -80,7 +80,7 @@ fn event_rlp_roundtrip() {
     let rlp_decoded = Log::decode(&mut rlp_encoded.as_slice()).unwrap();
     assert_eq!(rlp_decoded, rlpable_log.reserialize());
 
-    let decoded_log = MyEvent::decode_log(&rlp_decoded, true).unwrap();
+    let decoded_log = MyEvent::decode_log(&rlp_decoded).unwrap();
 
     assert_eq!(decoded_log, rlpable_log)
 }

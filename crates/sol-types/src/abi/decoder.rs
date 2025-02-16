@@ -9,10 +9,10 @@
 //
 
 use crate::{
-    abi::{encode_sequence, token::TokenSeq, Token},
+    abi::{token::TokenSeq, Token},
     utils, Error, Result, Word,
 };
-use alloc::{borrow::Cow, vec::Vec};
+use alloc::vec::Vec;
 use core::{fmt, slice::SliceIndex};
 
 /// The decoder recursion limit.
@@ -32,8 +32,6 @@ pub struct Decoder<'de> {
     buf: &'de [u8],
     // The current offset in the buffer.
     offset: usize,
-    // Whether to validate type correctness and blob re-encoding.
-    validate: bool,
     /// The current recursion depth.
     depth: u8,
 }
@@ -46,7 +44,6 @@ impl fmt::Debug for Decoder<'_> {
         f.debug_struct("Decoder")
             .field("buf", &body)
             .field("offset", &self.offset)
-            .field("validate", &self.validate)
             .field("depth", &self.depth)
             .finish()
     }
@@ -71,13 +68,9 @@ impl fmt::Display for Decoder<'_> {
 
 impl<'de> Decoder<'de> {
     /// Instantiate a new decoder from a byte slice and a validation flag.
-    ///
-    /// If `validate` is true, the decoder will check that the bytes conform to
-    /// expected type limitations, and that the decoded values can be re-encoded
-    /// to an identical bytestring.
     #[inline]
-    pub const fn new(buf: &'de [u8], validate: bool) -> Self {
-        Self { buf, offset: 0, validate, depth: 0 }
+    pub const fn new(buf: &'de [u8]) -> Self {
+        Self { buf, offset: 0, depth: 0 }
     }
 
     /// Returns the current offset in the buffer.
@@ -117,18 +110,6 @@ impl<'de> Decoder<'de> {
         }
     }
 
-    /// Returns `true` if this decoder is validating type correctness.
-    #[inline]
-    pub const fn validate(&self) -> bool {
-        self.validate
-    }
-
-    /// Set whether to validate type correctness.
-    #[inline]
-    pub fn set_validate(&mut self, validate: bool) {
-        self.validate = validate;
-    }
-
     /// Create a child decoder, starting at `offset` bytes from the current
     /// decoder's offset.
     ///
@@ -140,16 +121,14 @@ impl<'de> Decoder<'de> {
 
     /// Create a child decoder, starting at `offset` bytes from the current
     /// decoder's offset.
-    /// The child decoder shares the buffer and validation flag.
+    /// The child decoder shares the buffer.
     #[inline]
     pub fn child(&self, offset: usize) -> Result<Self, Error> {
         if self.depth >= RECURSION_LIMIT {
             return Err(Error::RecursionLimitExceeded(RECURSION_LIMIT));
         }
         match self.buf.get(offset..) {
-            Some(buf) => {
-                Ok(Decoder { buf, offset: 0, validate: self.validate, depth: self.depth + 1 })
-            }
+            Some(buf) => Ok(Decoder { buf, offset: 0, depth: self.depth + 1 }),
             None => Err(Error::Overrun),
         }
     }
@@ -196,13 +175,13 @@ impl<'de> Decoder<'de> {
     /// the offset.
     #[inline]
     pub fn peek_offset_at(&self, offset: usize) -> Result<usize> {
-        self.peek_word_at(offset).and_then(|word| utils::as_offset(word, self.validate))
+        self.peek_word_at(offset).and_then(utils::as_offset)
     }
 
     /// Peek a `usize` from the buffer, without advancing the offset.
     #[inline]
     pub fn peek_offset(&self) -> Result<usize> {
-        self.peek_word().and_then(|word| utils::as_offset(word, self.validate))
+        self.peek_word().and_then(utils::as_offset)
     }
 
     /// Take a word from the buffer, advancing the offset.
@@ -223,27 +202,12 @@ impl<'de> Decoder<'de> {
     /// Takes a `usize` offset from the buffer by consuming a word.
     #[inline]
     pub fn take_offset(&mut self) -> Result<usize> {
-        self.take_word().and_then(|word| utils::as_offset(word, self.validate))
-    }
-
-    /// Takes a slice of bytes of the given length by consuming up to the next
-    /// word boundary.
-    pub fn take_slice(&mut self, len: usize) -> Result<&'de [u8]> {
-        if self.validate {
-            let padded_len = utils::next_multiple_of_32(len);
-            if self.offset + padded_len > self.buf.len() {
-                return Err(Error::Overrun);
-            }
-            if !utils::check_zeroes(self.peek(self.offset + len..self.offset + padded_len)?) {
-                return Err(Error::Other(Cow::Borrowed("non-empty bytes after packed array")));
-            }
-        }
-        self.take_slice_unchecked(len)
+        self.take_word().and_then(utils::as_offset)
     }
 
     /// Takes a slice of bytes of the given length.
     #[inline]
-    pub fn take_slice_unchecked(&mut self, len: usize) -> Result<&'de [u8]> {
+    pub fn take_slice(&mut self, len: usize) -> Result<&'de [u8]> {
         self.peek_len(len).inspect(|_| self.increase_offset(len))
     }
 
@@ -281,8 +245,8 @@ impl<'de> Decoder<'de> {
 ///
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
-pub fn decode<'de, T: Token<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
-    decode_sequence::<(T,)>(data, validate).map(|(t,)| t)
+pub fn decode<'de, T: Token<'de>>(data: &'de [u8]) -> Result<T> {
+    decode_sequence::<(T,)>(data).map(|(t,)| t)
 }
 
 /// ABI-decodes top-level function args.
@@ -296,7 +260,7 @@ pub fn decode<'de, T: Token<'de>>(data: &'de [u8], validate: bool) -> Result<T> 
 ///
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
-pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
+pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
     let decode = const {
         if T::IS_TUPLE {
             decode_sequence
@@ -304,7 +268,7 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> 
             decode
         }
     };
-    decode(data, validate)
+    decode(data)
 }
 
 /// Decodes ABI compliant vector of bytes into vector of tokens described by
@@ -316,12 +280,9 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> 
 ///
 /// See the [`abi`](super) module for more information.
 #[inline]
-pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8], validate: bool) -> Result<T> {
-    let mut decoder = Decoder::new(data, validate);
+pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
+    let mut decoder = Decoder::new(data);
     let result = decoder.decode_sequence::<T>()?;
-    if validate && encode_sequence(&result) != data {
-        return Err(Error::ReserMismatch);
-    }
     Ok(result)
 }
 
@@ -350,7 +311,7 @@ mod tests {
         let ty = vec![vec![Address::repeat_byte(0x11)], vec![Address::repeat_byte(0x22)]];
         assert_eq!(MyTy::abi_encode_params(&ty), encoded);
 
-        let decoded = MyTy::abi_decode_params(&encoded, false).unwrap();
+        let decoded = MyTy::abi_decode_params(&encoded).unwrap();
         assert_eq!(decoded, ty);
         assert_eq!(decoded.abi_encode_params(), encoded);
         assert_eq!(decoded.abi_encoded_size(), encoded.len());
@@ -371,7 +332,7 @@ mod tests {
         let address2 = Address::from([0x22u8; 20]);
         let uint = U256::from_be_bytes::<32>([0x11u8; 32]);
         let expected = (address1, address2, uint);
-        let decoded = MyTy::abi_decode_sequence(&encoded, true).unwrap();
+        let decoded = MyTy::abi_decode_sequence(&encoded).unwrap();
         assert_eq!(decoded, expected);
         assert_eq!(decoded.abi_encode_params(), encoded);
         assert_eq!(decoded.abi_encoded_size(), encoded.len());
@@ -396,7 +357,7 @@ mod tests {
         let expected = (string1, string2);
 
         // this test vector contains a top-level indirect
-        let decoded = MyTy::abi_decode(&encoded, true).unwrap();
+        let decoded = MyTy::abi_decode(&encoded).unwrap();
         assert_eq!(decoded, expected);
         assert_eq!(decoded.abi_encode(), encoded);
         assert_eq!(decoded.abi_encoded_size(), encoded.len());
@@ -448,7 +409,7 @@ mod tests {
         let inner_tuple = (string3, string4, deep_tuple);
         let expected = (string1, bool, string2, inner_tuple);
 
-        let decoded = MyTy::abi_decode(&encoded, true).unwrap();
+        let decoded = MyTy::abi_decode(&encoded).unwrap();
         assert_eq!(decoded, expected);
         assert_eq!(decoded.abi_encode(), encoded);
         assert_eq!(decoded.abi_encoded_size(), encoded.len());
@@ -475,7 +436,7 @@ mod tests {
         let address2 = Address::from([0x22u8; 20]);
         let expected = (uint, string, address1, address2);
 
-        let decoded = MyTy::abi_decode(&encoded, true).unwrap();
+        let decoded = MyTy::abi_decode(&encoded).unwrap();
         assert_eq!(decoded, expected);
         assert_eq!(decoded.abi_encode(), encoded);
         assert_eq!(decoded.abi_encoded_size(), encoded.len());
@@ -517,7 +478,7 @@ mod tests {
         let bool2 = false;
         let expected = (address1, tuple, address2, address3, bool2);
 
-        let decoded = MyTy::abi_decode_params(&encoded, true).unwrap();
+        let decoded = MyTy::abi_decode_params(&encoded).unwrap();
         assert_eq!(decoded, expected);
         assert_eq!(decoded.abi_encode_params(), encoded);
         assert_eq!(decoded.abi_encoded_size(), encoded.len() + 32);
@@ -552,7 +513,7 @@ mod tests {
 
         let expected = (address1, tuple, address3, address4);
 
-        let decoded = MyTy::abi_decode_params(&encoded, false).unwrap();
+        let decoded = MyTy::abi_decode_params(&encoded).unwrap();
         assert_eq!(decoded, expected);
     }
 
@@ -592,7 +553,7 @@ mod tests {
         "
         );
 
-        assert_eq!(MyTy::abi_decode_sequence(&encoded, false).unwrap(), data);
+        assert_eq!(MyTy::abi_decode_sequence(&encoded).unwrap(), data);
     }
 
     #[test]
@@ -616,7 +577,7 @@ mod tests {
         );
 
         assert_eq!(
-            MyTy::abi_decode_params(&encoded, false).unwrap(),
+            MyTy::abi_decode_params(&encoded).unwrap(),
             (
                 address!("0x8497afefdc5ac170a664a231f6efb25526ef813f"),
                 B256::repeat_byte(0x01),
@@ -636,7 +597,7 @@ mod tests {
             "
         );
 
-        assert_eq!(sol_data::String::abi_decode(&encoded, false).unwrap(), "不�".to_string());
+        assert_eq!(sol_data::String::abi_decode(&encoded).unwrap(), "不�".to_string());
     }
 
     #[test]
@@ -655,7 +616,7 @@ mod tests {
     	0000000000000000000000000000000000000000000000000000000000000002
         "
         );
-        assert!(MyTy::abi_decode_sequence(&encoded, true).is_err());
+        assert!(MyTy::abi_decode_sequence(&encoded).is_err());
     }
 
     #[test]
@@ -666,14 +627,16 @@ mod tests {
     	0000000000000000000000000000000000000000000000000000000000054321
     	"
         );
-        assert!(sol_data::Address::abi_decode(&input, false).is_ok());
-        assert!(sol_data::Address::abi_decode(&input, true).is_err());
-        assert!(<(sol_data::Address, sol_data::Address)>::abi_decode(&input, true).is_ok());
+
+        assert_eq!(
+            sol_data::Address::abi_decode(&input).unwrap(),
+            address!("0000000000000000000000000000000000012345")
+        );
+        assert!(<(sol_data::Address, sol_data::Address)>::abi_decode(&input).is_ok());
     }
 
     #[test]
     fn decode_verify_bytes() {
-        type MyTy = (sol_data::Address, sol_data::FixedBytes<20>);
         type MyTy2 = (sol_data::Address, sol_data::Address);
 
         let input = hex!(
@@ -682,8 +645,7 @@ mod tests {
     	0000000000000000000000005432100000000000000000000000000000054321
     	"
         );
-        MyTy::abi_decode_params(&input, true).unwrap_err();
-        assert!(MyTy2::abi_decode_params(&input, true).is_ok());
+        assert!(MyTy2::abi_decode_params(&input).is_ok());
     }
 
     #[test]
@@ -693,28 +655,12 @@ mod tests {
         let dirty_negative =
             hex!("f0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
-        assert_eq!(MyTy::abi_decode(&dirty_negative, false).unwrap(), -1);
-
-        assert!(
-            matches!(
-                MyTy::abi_decode(&dirty_negative, true),
-                Err(crate::Error::TypeCheckFail { .. }),
-            ),
-            "did not match error"
-        );
+        assert_eq!(MyTy::abi_decode(&dirty_negative).unwrap(), -1);
 
         let dirty_positive =
             hex!("700000000000000000000000000000000000000000000000000000000000007f");
 
-        assert_eq!(MyTy::abi_decode(&dirty_positive, false).unwrap(), 127);
-
-        assert!(
-            matches!(
-                MyTy::abi_decode(&dirty_positive, true),
-                Err(crate::Error::TypeCheckFail { .. }),
-            ),
-            "did not match error"
-        );
+        assert_eq!(MyTy::abi_decode(&dirty_positive).unwrap(), 127);
     }
 
     // https://github.com/alloy-rs/core/issues/433
@@ -744,7 +690,7 @@ mod tests {
         assert_eq!(hex::encode(ty.abi_encode()), hex::encode(encoded));
         assert_eq!(ty.abi_encoded_size(), encoded.len());
 
-        assert_eq!(<Ty as SolType>::abi_decode(&encoded, true).unwrap(), ty);
+        assert_eq!(<Ty as SolType>::abi_decode(&encoded).unwrap(), ty);
     }
 
     #[test]
@@ -780,6 +726,6 @@ mod tests {
         assert_eq!(hex::encode(ty.abi_encode()), hex::encode(encoded));
         assert_eq!(ty.abi_encoded_size(), encoded.len());
 
-        assert_eq!(<Ty as SolType>::abi_decode(&encoded, false).unwrap(), ty);
+        assert_eq!(<Ty as SolType>::abi_decode(&encoded).unwrap(), ty);
     }
 }
