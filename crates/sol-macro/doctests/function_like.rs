@@ -29,14 +29,14 @@ fn function() {
     let _ = overloaded_0Call {};
     assert_call_signature::<overloaded_0Call>("overloaded()");
 
-    let _ = overloaded_1Call { _0: U256::from(1) };
+    let _ = overloaded_1Call(U256::from(1));
     assert_call_signature::<overloaded_1Call>("overloaded(uint256)");
 
-    let _ = overloaded_2Call { _0: "hello".into() };
+    let _ = overloaded_2Call("hello".into());
     assert_call_signature::<overloaded_2Call>("overloaded(string)");
 
     // Exactly the same as `function variableGetter(uint256) returns (bool)`.
-    let _ = variableGetterCall { k: U256::from(2) };
+    let _ = variableGetterCall(U256::from(2));
     assert_call_signature::<variableGetterCall>("variableGetter(uint256)");
     let _ = variableGetterReturn { v: false };
 }

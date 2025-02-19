@@ -13,7 +13,7 @@ fn large_array() {
         "../json-abi/tests/abi/LargeArray.json"
     );
 
-    let call = LargeArray::callWithLongArrayCall { longArray: [0; 128] };
+    let call = LargeArray::callWithLongArrayCall([0; 128]);
     let _ = format!("{call:#?}");
 
     assert_eq!(LargeArray::callWithLongArrayCall::SIGNATURE, "callWithLongArray(uint64[128])");

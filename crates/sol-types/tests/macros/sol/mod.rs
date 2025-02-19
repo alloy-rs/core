@@ -254,13 +254,13 @@ fn getter_names() {
     let _ = Getters::valueCall {};
     let _ = Getters::valueReturn { value: String::new() };
 
-    let _ = Getters::arrayCall { _0: U256::ZERO };
+    let _ = Getters::arrayCall(U256::ZERO);
     let _ = Getters::arrayReturn { _0: String::new() };
 
-    let _ = Getters::mapCall { _0: B256::ZERO };
+    let _ = Getters::mapCall(B256::ZERO);
     let _ = Getters::mapReturn { _0: String::new() };
 
-    let _ = Getters::mapWithNamesCall { k: B256::ZERO };
+    let _ = Getters::mapWithNamesCall(B256::ZERO);
     let _ = Getters::mapWithNamesReturn { v: String::new() };
 
     let _ = Getters::nestedMapWithNamesCall { k1: B256::ZERO, k2: U256::ZERO };
@@ -497,17 +497,17 @@ fn rust_keywords() {
                 bytes32 box;
             }
 
-            function mod(address impl) returns (bool is, bool fn);
+            function mod(address impl, address some) returns (bool is, bool fn);
         }
     }
     use r#dyn::*;
 
     let _ = r#const { r#unsafe: true, r#box: Default::default() };
-    let m = modCall { r#impl: Address::ZERO };
+    let m = modCall { r#impl: Address::ZERO, some: Address::ZERO };
     let _ = dynCalls::r#mod(m);
     let _ = modReturn { is: true, r#fn: false };
     assert_eq!(r#const::NAME, "const");
-    assert_eq!(modCall::SIGNATURE, "mod(address)");
+    assert_eq!(modCall::SIGNATURE, "mod(address,address)");
 }
 
 #[test]
@@ -543,7 +543,7 @@ fn most_rust_keywords() {
                 assert_eq!($raw::NAME, stringify!($kw));
                 assert_ne!($raw::NAME, stringify!($raw));
                 assert_eq!(<[<$kw Call>]>::SIGNATURE, concat!(stringify!($kw), "(bytes1)"));
-                let _ = [<$kw Call>] { $raw: [0u8; 1].into() };
+                let _ = [<$kw Call>]([0u8; 1].into());
                 assert_eq!(error::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes2)"));
                 let _ = error::$raw([0u8; 2].into());
                 assert_eq!(event::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes3)"));
@@ -914,16 +914,16 @@ fn contract_derive_default() {
     sol! {
         #[derive(Debug, Default)]
         contract MyContract {
-            function f1();
-            function f2();
+            function f1(address);
+            function f2(address b);
             event e1();
             event e2();
             error c();
         }
     }
 
-    let MyContract::f1Call {} = MyContract::f1Call::default();
-    let MyContract::f2Call {} = MyContract::f2Call::default();
+    let MyContract::f1Call(_) = MyContract::f1Call::default();
+    let MyContract::f2Call(_) = MyContract::f2Call::default();
     let MyContract::e1 {} = MyContract::e1::default();
     let MyContract::e2 {} = MyContract::e2::default();
     #[allow(clippy::default_constructed_unit_structs)]
@@ -995,11 +995,11 @@ fn regression_overloads() {
         }
     }
 
-    let _ = Vm::getNonce_0Call { account: Address::ZERO };
+    let _ = Vm::getNonce_0Call(Address::ZERO);
     let _ = Vm::getNonce_0Return { nonce: 0 };
     assert_eq!(Vm::getNonce_0Call::SIGNATURE, "getNonce(address)");
 
-    let _ = Vm::getNonce_1Call { wallet: Vm::Wallet { stuff: U256::ZERO } };
+    let _ = Vm::getNonce_1Call(Vm::Wallet { stuff: U256::ZERO });
     let _ = Vm::getNonce_1Return { nonce: 0 };
     assert_eq!(Vm::getNonce_1Call::SIGNATURE, "getNonce((uint256))");
 }
@@ -1015,7 +1015,7 @@ fn normal_paths() {
         function func(I.S memory stuff);
     }
 
-    let _ = funcCall { stuff: I::S { x: U256::ZERO } };
+    let _ = funcCall(I::S { x: U256::ZERO });
 }
 
 #[test]
