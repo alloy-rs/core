@@ -110,7 +110,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         }
     });
 
-    let tokenize_body_impl = expand_event_tokenize(&event.parameters, cx);
+    let tokenize_body_impl =
+        expand_event_tokenize(&event.parameters, cx, event.parameters.len(), true);
 
     let encode_topics_impl = encode_first_topic
         .into_iter()
