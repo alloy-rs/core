@@ -801,10 +801,16 @@ pub fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Iden
 }
 
 /// Expands `From` impls for a list of types and the corresponding tuple.
+///
+/// The `retain_fields` parameter specifies whether fields should retained as is and the struct
+/// should not be converted to unit/tuple struct i.e maintain the original form of the struct.
+/// Used to handle expansion of solidity structs as we want to retain the fields and keep original
+/// form.
 fn expand_from_into_tuples<P>(
     name: &Ident,
     fields: &Parameters<P>,
     cx: &ExpCtxt<'_>,
+    retain_fields: bool,
 ) -> TokenStream {
     let names = fields.names().enumerate().map(anon_name);
 
@@ -813,6 +819,14 @@ fn expand_from_into_tuples<P>(
 
     let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types(), cx);
 
+    let (from_sol_type, from_rust_tuple) = if fields.is_empty() && !retain_fields {
+        (quote!(()), quote!(Self))
+    } else if fields.len() == 1 && !retain_fields {
+        let idxs2 = (0..fields.len()).map(syn::Index::from);
+        (quote!((#(value.#idxs),*,)), quote!(Self(#(tuple.#idxs2),*)))
+    } else {
+        (quote!((#(value.#names,)*)), quote!(Self { #(#names2: tuple.#idxs),* }))
+    };
     quote! {
         #[doc(hidden)]
         type UnderlyingSolTuple<'a> = #sol_tuple;
@@ -831,7 +845,7 @@ fn expand_from_into_tuples<P>(
         #[doc(hidden)]
         impl ::core::convert::From<#name> for UnderlyingRustTuple<'_> {
             fn from(value: #name) -> Self {
-                (#(value.#names,)*)
+                #from_sol_type
             }
         }
 
@@ -839,9 +853,7 @@ fn expand_from_into_tuples<P>(
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for #name {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {
-                    #(#names2: tuple.#idxs),*
-                }
+                #from_rust_tuple
             }
         }
     }
@@ -868,14 +880,35 @@ fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
 }
 
 /// Expand the body of a `tokenize` function.
-fn expand_tokenize<P>(params: &Parameters<P>, cx: &ExpCtxt<'_>) -> TokenStream {
-    tokenize_(params.iter().enumerate().map(|(i, p)| (i, &p.ty, p.name.as_ref())), cx)
+///
+/// The `retain_fields` parameter specifies whether fields should retained as is and the struct
+/// should not be converted to unit/tuple struct i.e maintain the original form of the struct.
+/// Used to handle expansion of solidity structs as we want to retain the fields and keep original
+/// form.
+fn expand_tokenize<P>(
+    params: &Parameters<P>,
+    cx: &ExpCtxt<'_>,
+    retain_fields: bool,
+) -> TokenStream {
+    tokenize_(
+        params.iter().enumerate().map(|(i, p)| (i, &p.ty, p.name.as_ref())),
+        cx,
+        params.len(),
+        retain_fields,
+    )
 }
 
 /// Expand the body of a `tokenize` function.
+///
+/// The `retain_fields` parameter specifies whether fields should retained as is and the struct
+/// should not be converted to unit/tuple struct i.e maintain the original form of the struct.
+/// Used to handle expansion of solidity structs as we want to retain the fields and keep original
+/// form.
 fn expand_event_tokenize<'a>(
     params: impl IntoIterator<Item = &'a EventParameter>,
     cx: &ExpCtxt<'_>,
+    params_len: usize,
+    retain_fields: bool,
 ) -> TokenStream {
     tokenize_(
         params
@@ -884,18 +917,32 @@ fn expand_event_tokenize<'a>(
             .filter(|(_, p)| !p.is_indexed())
             .map(|(i, p)| (i, &p.ty, p.name.as_ref())),
         cx,
+        params_len,
+        retain_fields,
     )
 }
 
+/// The `retain_fields` parameter specifies whether fields should retained as is and the struct
+/// should not be converted to unit/tuple struct i.e maintain the original form of the struct.
+/// Used to handle expansion of solidity structs as we want to retain the fields and keep original
+/// form.
 fn tokenize_<'a>(
     iter: impl Iterator<Item = (usize, &'a Type, Option<&'a SolIdent>)>,
     cx: &'a ExpCtxt<'_>,
+    params_len: usize,
+    retain_fields: bool,
 ) -> TokenStream {
     let statements = iter.into_iter().map(|(i, ty, name)| {
         let ty = cx.expand_type(ty);
         let name = name.cloned().unwrap_or_else(|| generate_name(i).into());
-        quote! {
-            <#ty as alloy_sol_types::SolType>::tokenize(&self.#name)
+        if params_len == 1 && !retain_fields {
+            quote! {
+                <#ty as alloy_sol_types::SolType>::tokenize(&self.0)
+            }
+        } else {
+            quote! {
+                <#ty as alloy_sol_types::SolType>::tokenize(&self.#name)
+            }
         }
     });
     quote! {

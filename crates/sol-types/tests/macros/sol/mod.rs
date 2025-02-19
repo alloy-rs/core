@@ -545,7 +545,7 @@ fn most_rust_keywords() {
                 assert_eq!(<[<$kw Call>]>::SIGNATURE, concat!(stringify!($kw), "(bytes1)"));
                 let _ = [<$kw Call>] { $raw: [0u8; 1].into() };
                 assert_eq!(error::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes2)"));
-                let _ = error::$raw { $raw: [0u8; 2].into() };
+                let _ = error::$raw([0u8; 2].into());
                 assert_eq!(event::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes3)"));
                 let _ = event::$raw { $raw: [0u8; 3].into() };
             })*
@@ -926,6 +926,7 @@ fn contract_derive_default() {
     let MyContract::f2Call {} = MyContract::f2Call::default();
     let MyContract::e1 {} = MyContract::e1::default();
     let MyContract::e2 {} = MyContract::e2::default();
+    #[allow(clippy::default_constructed_unit_structs)]
     let MyContract::c {} = MyContract::c::default();
 }
 

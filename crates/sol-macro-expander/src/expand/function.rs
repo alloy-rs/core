@@ -60,12 +60,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let call_tuple = expand_tuple_types(parameters.types(), cx).0;
     let return_tuple = expand_tuple_types(returns.types(), cx).0;
 
-    let converts = expand_from_into_tuples(&call_name, parameters, cx);
-    let return_converts = expand_from_into_tuples(&return_name, returns, cx);
+    let converts = expand_from_into_tuples(&call_name, parameters, cx, true);
+    let return_converts = expand_from_into_tuples(&return_name, returns, cx, true);
 
     let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);
-    let tokenize_impl = expand_tokenize(parameters, cx);
+    let tokenize_impl = expand_tokenize(parameters, cx, true);
 
     let call_doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array.as_slice());
@@ -169,8 +169,8 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
     let call_name = format_ident!("constructorCall").with_span(constructor.kind.span());
     let call_fields = expand_fields(parameters, cx);
     let call_tuple = expand_tuple_types(parameters.types(), cx).0;
-    let converts = expand_from_into_tuples(&call_name, parameters, cx);
-    let tokenize_impl = expand_tokenize(parameters, cx);
+    let converts = expand_from_into_tuples(&call_name, parameters, cx, true);
+    let tokenize_impl = expand_tokenize(parameters, cx, true);
 
     let call_doc = docs.then(|| {
         mk_doc(format!(
