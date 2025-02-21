@@ -101,7 +101,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         quote! {
             pub struct #call_name;
         }
-    } else if parameters.len() == 1 {
+    } else if parameters.len() == 1 && parameters[0].name.is_none() {
         let ty = cx.expand_rust_type(&parameters[0].ty);
         quote! {
             pub struct #call_name(pub #ty);

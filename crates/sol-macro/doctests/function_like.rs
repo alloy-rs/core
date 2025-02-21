@@ -36,7 +36,7 @@ fn function() {
     assert_call_signature::<overloaded_2Call>("overloaded(string)");
 
     // Exactly the same as `function variableGetter(uint256) returns (bool)`.
-    let _ = variableGetterCall(U256::from(2));
+    let _ = variableGetterCall { k: U256::from(2) };
     assert_call_signature::<variableGetterCall>("variableGetter(uint256)");
     let _ = variableGetterReturn { v: false };
 }
