@@ -821,12 +821,13 @@ fn expand_from_into_tuples<P>(
 
     let (from_sol_type, from_rust_tuple) = if fields.is_empty() && !retain_fields {
         (quote!(()), quote!(Self))
-    } else if fields.len() == 1 && !retain_fields {
+    } else if fields.len() == 1 && fields[0].name.is_none() && !retain_fields {
         let idxs2 = (0..fields.len()).map(syn::Index::from);
         (quote!((#(value.#idxs),*,)), quote!(Self(#(tuple.#idxs2),*)))
     } else {
         (quote!((#(value.#names,)*)), quote!(Self { #(#names2: tuple.#idxs),* }))
     };
+
     quote! {
         #[doc(hidden)]
         type UnderlyingSolTuple<'a> = #sol_tuple;
@@ -934,12 +935,12 @@ fn tokenize_<'a>(
 ) -> TokenStream {
     let statements = iter.into_iter().map(|(i, ty, name)| {
         let ty = cx.expand_type(ty);
-        let name = name.cloned().unwrap_or_else(|| generate_name(i).into());
-        if params_len == 1 && !retain_fields {
+        if params_len == 1 && name.is_none() && !retain_fields {
             quote! {
                 <#ty as alloy_sol_types::SolType>::tokenize(&self.0)
             }
         } else {
+            let name = name.cloned().unwrap_or_else(|| generate_name(i).into());
             quote! {
                 <#ty as alloy_sol_types::SolType>::tokenize(&self.#name)
             }
