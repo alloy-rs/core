@@ -545,7 +545,7 @@ fn most_rust_keywords() {
                 assert_eq!(<[<$kw Call>]>::SIGNATURE, concat!(stringify!($kw), "(bytes1)"));
                 let _ = [<$kw Call>] { $raw: [0u8; 1].into() };
                 assert_eq!(error::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes2)"));
-                let _ = error::$raw([0u8; 2].into());
+                let _ = error::$raw { $raw: [0u8; 2].into() };
                 assert_eq!(event::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes3)"));
                 let _ = event::$raw { $raw: [0u8; 3].into() };
             })*
