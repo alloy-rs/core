@@ -153,6 +153,8 @@ impl PrimitiveSignature {
     /// Normalizes the signature into "low S" form as described in
     /// [BIP 0062: Dealing with Malleability][1].
     ///
+    /// If `s` is already normalized, returns `None`.
+    ///
     /// [1]: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
     #[inline]
     pub fn normalize_s(&self) -> Option<Self> {
@@ -275,6 +277,46 @@ impl PrimitiveSignature {
         sig[..32].copy_from_slice(&self.r.to_be_bytes::<32>());
         sig[32..64].copy_from_slice(&self.s.to_be_bytes::<32>());
         sig[64] = 27 + self.y_parity as u8;
+        sig
+    }
+
+    /// Decode the signature from the ERC-2098 compact representation.
+    ///
+    /// The first 32 bytes are the `r` value, and the next 32 bytes are the `s` value with `yParity`
+    /// in the top bit of the `s` value, as described in ERC-2098.
+    ///
+    /// See <https://eips.ethereum.org/EIPS/eip-2098>
+    ///
+    /// # Panics
+    ///
+    /// If the slice is not at least 64 bytes long.
+    pub fn from_erc2098(bytes: &[u8]) -> Self {
+        let r = U256::from_be_slice(&bytes[..32]);
+        let y_and_s = U256::from_be_slice(&bytes[32..64]);
+        let y_parity = U256::from(y_and_s >> 255u8).to::<u8>() == 1;
+        let s = y_and_s & (U256::from(U256::from(1) << 255) - U256::from(1));
+
+        Self { y_parity, r, s }
+    }
+
+    /// Returns the ERC-2098 compact representation of this signature.
+    ///
+    /// The first 32 bytes are the `r` value, and the next 32 bytes are the `s` value with `yParity`
+    /// in the top bit of the `s` value, as described in ERC-2098.
+    ///
+    /// See <https://eips.ethereum.org/EIPS/eip-2098>
+    #[inline]
+    pub fn as_erc2098(&self) -> [u8; 64] {
+        let normalized_self = self.normalize_s().unwrap_or(*self);
+
+        // The top bit of the `s` parameters is always 0, due to the use of canonical
+        // signatures which flip the solution parity to prevent negative values, which was
+        // introduced as a constraint in Homestead.
+        let y_and_s: U256 = (U256::from(normalized_self.y_parity as u8) << 255) | normalized_self.s;
+
+        let mut sig = [0u8; 64];
+        sig[..32].copy_from_slice(&normalized_self.r().to_be_bytes::<32>());
+        sig[32..64].copy_from_slice(&y_and_s.to_be_bytes::<32>());
         sig
     }
 
@@ -586,5 +628,77 @@ mod tests {
 
         let expected = Bytes::from_hex("0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d831b").unwrap();
         assert_eq!(signature.as_bytes(), **expected);
+    }
+
+    #[test]
+    fn test_as_erc2098_y_false() {
+        let signature = PrimitiveSignature::new(
+            U256::from_str(
+                "47323457007453657207889730243826965761922296599680473886588287015755652701072",
+            )
+            .unwrap(),
+            U256::from_str(
+                "57228803202727131502949358313456071280488184270258293674242124340113824882788",
+            )
+            .unwrap(),
+            false,
+        );
+
+        let expected = Bytes::from_hex("0x68a020a209d3d56c46f38cc50a33f704f4a9a10a59377f8dd762ac66910e9b907e865ad05c4035ab5792787d4a0297a43617ae897930a6fe4d822b8faea52064").unwrap();
+        assert_eq!(signature.as_erc2098(), **expected);
+    }
+
+    #[test]
+    fn test_as_erc2098_y_true() {
+        let signature = PrimitiveSignature::new(
+            U256::from_str("0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76")
+                .unwrap(),
+            U256::from_str("0x139c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f550793")
+                .unwrap(),
+            true,
+        );
+
+        let expected = Bytes::from_hex("0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76939c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f550793").unwrap();
+        assert_eq!(signature.as_erc2098(), **expected);
+    }
+
+    #[test]
+    fn from_from_erc2098_y_false() {
+        let expected = PrimitiveSignature::new(
+            U256::from_str(
+                "47323457007453657207889730243826965761922296599680473886588287015755652701072",
+            )
+            .unwrap(),
+            U256::from_str(
+                "57228803202727131502949358313456071280488184270258293674242124340113824882788",
+            )
+            .unwrap(),
+            false,
+        );
+
+        assert_eq!(
+            PrimitiveSignature::from_erc2098(
+                &bytes!("0x68a020a209d3d56c46f38cc50a33f704f4a9a10a59377f8dd762ac66910e9b907e865ad05c4035ab5792787d4a0297a43617ae897930a6fe4d822b8faea52064")
+            ),
+            expected
+        );
+    }
+
+    #[test]
+    fn test_from_erc2098_y_true() {
+        let expected = PrimitiveSignature::new(
+            U256::from_str("0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76")
+                .unwrap(),
+            U256::from_str("0x139c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f550793")
+                .unwrap(),
+            true,
+        );
+
+        assert_eq!(
+            PrimitiveSignature::from_erc2098(
+                &bytes!("0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76939c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f550793")
+            ),
+            expected
+        );
     }
 }
