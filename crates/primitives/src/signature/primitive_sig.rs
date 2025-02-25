@@ -153,6 +153,8 @@ impl PrimitiveSignature {
     /// Normalizes the signature into "low S" form as described in
     /// [BIP 0062: Dealing with Malleability][1].
     ///
+    /// If `s` is already normalized, returns `None`.
+    ///
     /// [1]: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
     #[inline]
     pub fn normalize_s(&self) -> Option<Self> {
@@ -303,13 +305,9 @@ impl PrimitiveSignature {
     /// in the top bit of the `s` value, as described in ERC-2098.
     ///
     /// See <https://eips.ethereum.org/EIPS/eip-2098>
-    ///
-    /// # Panics
-    ///
-    /// Panics if `s` is invalid for any of the known Ethereum parity encodings.
     #[inline]
     pub fn as_erc2098(&self) -> [u8; 64] {
-        let normalized_self = self.normalize_s().unwrap();
+        let normalized_self = self.normalize_s().unwrap_or(*self);
 
         // The top bit of the `s` parameters is always 0, due to the use of canonical
         // signatures which flip the solution parity to prevent negative values, which was
