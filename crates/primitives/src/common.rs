@@ -52,6 +52,15 @@ impl TxKind {
         }
     }
 
+    /// Consumes the type and returns the address of the contract that will be called or will
+    /// receive the transfer.
+    pub fn into_to(self) -> Option<Address> {
+        match self {
+            Self::Create => None,
+            Self::Call(to) => Some(to),
+        }
+    }
+
     /// Returns true if the transaction is a contract creation.
     #[inline]
     pub const fn is_create(&self) -> bool {
