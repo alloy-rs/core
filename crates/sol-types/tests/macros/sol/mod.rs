@@ -924,8 +924,10 @@ fn contract_derive_default() {
 
     let MyContract::f1Call {} = MyContract::f1Call::default();
     let MyContract::f2Call {} = MyContract::f2Call::default();
-    let MyContract::e1 {} = MyContract::e1::default();
-    let MyContract::e2 {} = MyContract::e2::default();
+    #[allow(clippy::default_constructed_unit_structs)]
+    let MyContract::e1 = MyContract::e1::default();
+    #[allow(clippy::default_constructed_unit_structs)]
+    let MyContract::e2 = MyContract::e2::default();
     #[allow(clippy::default_constructed_unit_structs)]
     let MyContract::c {} = MyContract::c::default();
 }

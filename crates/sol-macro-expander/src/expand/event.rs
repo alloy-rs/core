@@ -150,14 +150,24 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 
     let alloy_sol_types = &cx.crates.sol_types;
 
+    let event_struct = if event.parameters.is_empty() {
+        quote! {
+            pub struct #name;
+        }
+    } else {
+        quote! {
+            pub struct #name {
+                #(#fields,)*
+            }
+        }
+    };
+
     let tokens = quote! {
         #(#attrs)*
         #doc
         #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
         #[derive(Clone)]
-        pub struct #name {
-            #( #fields, )*
-        }
+        #event_struct
 
         #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
         const _: () = {
