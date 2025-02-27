@@ -27,7 +27,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
 
-    let tokenize_impl = expand_tokenize(params, cx, false);
+    let tokenize_impl = expand_tokenize(params, cx, super::FieldKind::Deconstruct);
 
     let name = cx.overloaded_name(error.into());
     let signature = cx.error_signature(error);
@@ -35,7 +35,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
 
     let alloy_sol_types = &cx.crates.sol_types;
 
-    let converts = expand_from_into_tuples(&name.0, params, cx, false);
+    let converts = expand_from_into_tuples(&name.0, params, cx, super::FieldKind::Deconstruct);
 
     let doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array.as_slice());
