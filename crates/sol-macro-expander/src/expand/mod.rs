@@ -839,11 +839,6 @@ enum FieldKind {
 }
 
 impl FieldKind {
-    /// Returns whether the field kind is `Original`.
-    fn is_original(&self) -> bool {
-        matches!(self, Self::Original)
-    }
-
     /// Returns whether the field kind is `Deconstruct`.
     fn is_deconstruct(&self) -> bool {
         matches!(self, Self::Deconstruct)
