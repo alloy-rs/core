@@ -637,7 +637,7 @@ mod tests {
         assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err1()));
         assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err1()));
 
-        let err2 = || C::Err2 { _0: U256::from(42) };
+        let err2 = || C::Err2(U256::from(42));
         let errors_err2 = || C::CErrors::Err2(err2());
         let contract_error_err2 = || ContractError::<C::CErrors>::CustomError(errors_err2());
         let data = err2().abi_encode();
@@ -649,7 +649,7 @@ mod tests {
         assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err2()));
         assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err2()));
 
-        let err3 = || C::Err3 { _0: "hello".into() };
+        let err3 = || C::Err3("hello".into());
         let errors_err3 = || C::CErrors::Err3(err3());
         let contract_error_err3 = || ContractError::<C::CErrors>::CustomError(errors_err3());
         let data = err3().abi_encode();
