@@ -108,6 +108,94 @@ impl PrimitiveSignature {
         Self { r, s, y_parity }
     }
 
+    /// Parses a 65-byte long raw signature.
+    ///
+    /// The first 32 bytes is the `r` value, the second 32 bytes the `s` value, and the final byte
+    /// is the `v` value in 'Electrum' notation.
+    #[inline]
+    pub fn from_raw(bytes: &[u8]) -> Result<Self, SignatureError> {
+        Self::from_raw_array(
+            bytes.try_into().map_err(|_| SignatureError::FromBytes("expected exactly 65 bytes"))?,
+        )
+    }
+
+    /// Parses a 65-byte long raw signature.
+    ///
+    /// See [`from_raw`](Self::from_raw).
+    #[inline]
+    pub fn from_raw_array(bytes: &[u8; 65]) -> Result<Self, SignatureError> {
+        let [bytes @ .., v] = bytes;
+        let v = *v as u64;
+        let Some(parity) = normalize_v(v) else { return Err(SignatureError::InvalidParity(v)) };
+        Ok(Self::from_bytes_and_parity(bytes, parity))
+    }
+
+    /// Parses a signature from a byte slice, with a v value
+    ///
+    /// # Panics
+    ///
+    /// If the slice is not at least 64 bytes long.
+    #[inline]
+    #[track_caller]
+    pub fn from_bytes_and_parity(bytes: &[u8], parity: bool) -> Self {
+        let (r_bytes, s_bytes) = bytes[..64].split_at(32);
+        let r = U256::from_be_slice(r_bytes);
+        let s = U256::from_be_slice(s_bytes);
+        Self::new(r, s, parity)
+    }
+
+    /// Returns the byte-array representation of this signature.
+    ///
+    /// The first 32 bytes are the `r` value, the second 32 bytes the `s` value
+    /// and the final byte is the `v` value in 'Electrum' notation.
+    #[inline]
+    pub fn as_bytes(&self) -> [u8; 65] {
+        let mut sig = [0u8; 65];
+        sig[..32].copy_from_slice(&self.r.to_be_bytes::<32>());
+        sig[32..64].copy_from_slice(&self.s.to_be_bytes::<32>());
+        sig[64] = 27 + self.y_parity as u8;
+        sig
+    }
+
+    /// Decode the signature from the ERC-2098 compact representation.
+    ///
+    /// The first 32 bytes are the `r` value, and the next 32 bytes are the `s` value with `yParity`
+    /// in the top bit of the `s` value, as described in ERC-2098.
+    ///
+    /// See <https://eips.ethereum.org/EIPS/eip-2098>
+    ///
+    /// # Panics
+    ///
+    /// If the slice is not at least 64 bytes long.
+    pub fn from_erc2098(bytes: &[u8]) -> Self {
+        let (r_bytes, y_and_s_bytes) = bytes[..64].split_at(32);
+        let r = U256::from_be_slice(r_bytes);
+        let y_and_s = U256::from_be_slice(y_and_s_bytes);
+        let y_parity = y_and_s.bit(255);
+        let mut s = y_and_s;
+        s.set_bit(255, false);
+        Self { y_parity, r, s }
+    }
+
+    /// Returns the ERC-2098 compact representation of this signature.
+    ///
+    /// The first 32 bytes are the `r` value, and the next 32 bytes are the `s` value with `yParity`
+    /// in the top bit of the `s` value, as described in ERC-2098.
+    ///
+    /// See <https://eips.ethereum.org/EIPS/eip-2098>
+    pub fn as_erc2098(&self) -> [u8; 64] {
+        let normalized = self.normalized_s();
+        // The top bit of the `s` parameters is always 0, due to the use of canonical
+        // signatures which flip the solution parity to prevent negative values, which was
+        // introduced as a constraint in Homestead.
+        let mut sig = [0u8; 64];
+        sig[..32].copy_from_slice(&normalized.r().to_be_bytes::<32>());
+        sig[32..64].copy_from_slice(&normalized.s().to_be_bytes::<32>());
+        debug_assert_eq!(sig[32] >> 7, 0, "top bit of s should be 0");
+        sig[32] |= (normalized.y_parity as u8) << 7;
+        sig
+    }
+
     /// Sets the recovery ID by normalizing a `v` value.
     #[inline]
     pub fn with_parity(mut self, v: bool) -> Self {
@@ -235,42 +323,6 @@ impl PrimitiveSignature {
         .map_err(Into::into)
     }
 
-    /// Parses a 65-byte long raw signature.
-    ///
-    /// The first 32 bytes is the `r` value, the second 32 bytes the `s` value, and the final byte
-    /// is the `v` value in 'Electrum' notation.
-    #[inline]
-    pub fn from_raw(bytes: &[u8]) -> Result<Self, SignatureError> {
-        Self::from_raw_array(
-            bytes.try_into().map_err(|_| SignatureError::FromBytes("expected exactly 65 bytes"))?,
-        )
-    }
-
-    /// Parses a 65-byte long raw signature.
-    ///
-    /// See [`from_raw`](Self::from_raw).
-    #[inline]
-    pub fn from_raw_array(bytes: &[u8; 65]) -> Result<Self, SignatureError> {
-        let [bytes @ .., v] = bytes;
-        let v = *v as u64;
-        let Some(parity) = normalize_v(v) else { return Err(SignatureError::InvalidParity(v)) };
-        Ok(Self::from_bytes_and_parity(bytes, parity))
-    }
-
-    /// Parses a signature from a byte slice, with a v value
-    ///
-    /// # Panics
-    ///
-    /// If the slice is not at least 64 bytes long.
-    #[inline]
-    #[track_caller]
-    pub fn from_bytes_and_parity(bytes: &[u8], parity: bool) -> Self {
-        let (r_bytes, s_bytes) = bytes[..64].split_at(32);
-        let r = U256::from_be_slice(r_bytes);
-        let s = U256::from_be_slice(s_bytes);
-        Self::new(r, s, parity)
-    }
-
     /// Returns the `r` component of this signature.
     #[inline]
     pub fn r(&self) -> U256 {
@@ -287,58 +339,6 @@ impl PrimitiveSignature {
     #[inline]
     pub fn v(&self) -> bool {
         self.y_parity
-    }
-
-    /// Returns the byte-array representation of this signature.
-    ///
-    /// The first 32 bytes are the `r` value, the second 32 bytes the `s` value
-    /// and the final byte is the `v` value in 'Electrum' notation.
-    #[inline]
-    pub fn as_bytes(&self) -> [u8; 65] {
-        let mut sig = [0u8; 65];
-        sig[..32].copy_from_slice(&self.r.to_be_bytes::<32>());
-        sig[32..64].copy_from_slice(&self.s.to_be_bytes::<32>());
-        sig[64] = 27 + self.y_parity as u8;
-        sig
-    }
-
-    /// Decode the signature from the ERC-2098 compact representation.
-    ///
-    /// The first 32 bytes are the `r` value, and the next 32 bytes are the `s` value with `yParity`
-    /// in the top bit of the `s` value, as described in ERC-2098.
-    ///
-    /// See <https://eips.ethereum.org/EIPS/eip-2098>
-    ///
-    /// # Panics
-    ///
-    /// If the slice is not at least 64 bytes long.
-    pub fn from_erc2098(bytes: &[u8]) -> Self {
-        let (r_bytes, y_and_s_bytes) = bytes[..64].split_at(32);
-        let r = U256::from_be_slice(r_bytes);
-        let y_and_s = U256::from_be_slice(y_and_s_bytes);
-        let y_parity = y_and_s.bit(255);
-        let mut s = y_and_s;
-        s.set_bit(255, false);
-        Self { y_parity, r, s }
-    }
-
-    /// Returns the ERC-2098 compact representation of this signature.
-    ///
-    /// The first 32 bytes are the `r` value, and the next 32 bytes are the `s` value with `yParity`
-    /// in the top bit of the `s` value, as described in ERC-2098.
-    ///
-    /// See <https://eips.ethereum.org/EIPS/eip-2098>
-    pub fn as_erc2098(&self) -> [u8; 64] {
-        let normalized = self.normalized_s();
-        // The top bit of the `s` parameters is always 0, due to the use of canonical
-        // signatures which flip the solution parity to prevent negative values, which was
-        // introduced as a constraint in Homestead.
-        let mut sig = [0u8; 64];
-        sig[..32].copy_from_slice(&normalized.r().to_be_bytes::<32>());
-        sig[32..64].copy_from_slice(&normalized.s().to_be_bytes::<32>());
-        debug_assert_eq!(sig[32] >> 7, 0, "top bit of s should be 0");
-        sig[32] |= (normalized.y_parity as u8) << 7;
-        sig
     }
 
     /// Length of RLP RS field encoding
