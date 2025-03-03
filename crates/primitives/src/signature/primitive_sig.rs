@@ -2,7 +2,7 @@
 
 use crate::{hex, normalize_v, signature::SignatureError, uint, B256, U256};
 use alloc::vec::Vec;
-use core::str::FromStr;
+use core::{fmt::Display, str::FromStr};
 
 #[cfg(feature = "k256")]
 use crate::Address;
@@ -17,6 +17,12 @@ pub struct PrimitiveSignature {
     y_parity: bool,
     r: U256,
     s: U256,
+}
+
+impl Display for PrimitiveSignature {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "0x{}", hex::encode(&self.as_bytes()))
+    }
 }
 
 impl TryFrom<&[u8]> for PrimitiveSignature {
@@ -717,6 +723,22 @@ mod tests {
                 &hex!("0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76939c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f550793")
             ),
             expected
+        );
+    }
+
+    #[test]
+    fn display_impl() {
+        let sig = PrimitiveSignature::new(
+            U256::from_str("0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76")
+                .unwrap(),
+            U256::from_str("0x139c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f550793")
+                .unwrap(),
+            true,
+        );
+
+        assert_eq!(
+            format!("{}", sig),
+            "0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76139c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f5507931c"
         );
     }
 }
