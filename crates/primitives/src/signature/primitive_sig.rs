@@ -21,7 +21,7 @@ pub struct PrimitiveSignature {
 
 impl Display for PrimitiveSignature {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "0x{}", hex::encode(&self.as_bytes()))
+        write!(f, "0x{}", hex::encode(self.as_bytes()))
     }
 }
 
@@ -737,7 +737,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", sig),
+            format!("{sig}"),
             "0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76139c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f5507931c"
         );
     }
