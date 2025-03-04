@@ -255,6 +255,7 @@ impl ItemFunction {
         }
     }
 
+    #[allow(clippy::result_large_err)]
     pub fn into_body(self) -> std::result::Result<Vec<Stmt>, Self> {
         match self.body {
             FunctionBody::Block(block) => Ok(block.stmts),
