@@ -45,42 +45,31 @@ impl DynSolEvent {
     }
 
     /// Decode the event from the given log info.
-    pub fn decode_log_parts<I>(
-        &self,
-        topics: I,
-        data: &[u8],
-        validate: bool,
-    ) -> Result<DecodedEvent>
+    pub fn decode_log_parts<I>(&self, topics: I, data: &[u8]) -> Result<DecodedEvent>
     where
         I: IntoIterator<Item = B256>,
     {
         let mut topics = topics.into_iter();
         let num_topics = self.indexed.len() + !self.is_anonymous() as usize;
-        if validate {
-            match topics.size_hint() {
-                (n, Some(m)) if n == m && n != num_topics => {
-                    return Err(Error::TopicLengthMismatch { expected: num_topics, actual: n })
-                }
-                _ => {}
+
+        match topics.size_hint() {
+            (n, Some(m)) if n == m && n != num_topics => {
+                return Err(Error::TopicLengthMismatch { expected: num_topics, actual: n })
             }
+            _ => {}
         }
 
         // skip event hash if not anonymous
         if !self.is_anonymous() {
             let t = topics.next();
-            // Validate only if requested
-            if validate {
-                match t {
-                    Some(sig) => {
-                        let expected = self.topic_0.expect("not anonymous");
-                        if sig != expected {
-                            return Err(Error::EventSignatureMismatch { expected, actual: sig });
-                        }
-                    }
-                    None => {
-                        return Err(Error::TopicLengthMismatch { expected: num_topics, actual: 0 })
+            match t {
+                Some(sig) => {
+                    let expected = self.topic_0.expect("not anonymous");
+                    if sig != expected {
+                        return Err(Error::EventSignatureMismatch { expected, actual: sig });
                     }
                 }
+                None => return Err(Error::TopicLengthMismatch { expected: num_topics, actual: 0 }),
             }
         }
 
@@ -96,22 +85,20 @@ impl DynSolEvent {
 
         let body = self.body.abi_decode_sequence(data)?.into_fixed_seq().expect("body is a tuple");
 
-        if validate {
-            let remaining = topics.count();
-            if remaining > 0 {
-                return Err(Error::TopicLengthMismatch {
-                    expected: num_topics,
-                    actual: num_topics + remaining,
-                });
-            }
+        let remaining = topics.count();
+        if remaining > 0 {
+            return Err(Error::TopicLengthMismatch {
+                expected: num_topics,
+                actual: num_topics + remaining,
+            });
         }
 
         Ok(DecodedEvent { selector: self.topic_0, indexed, body })
     }
 
     /// Decode the event from the given log info.
-    pub fn decode_log_data(&self, log: &LogData, validate: bool) -> Result<DecodedEvent> {
-        self.decode_log_parts(log.topics().iter().copied(), &log.data, validate)
+    pub fn decode_log_data(&self, log: &LogData) -> Result<DecodedEvent> {
+        self.decode_log_parts(log.topics().iter().copied(), &log.data)
     }
 
     /// Get the selector for this event, if any.
@@ -195,7 +182,7 @@ mod test {
             indexed: vec![],
             body: DynSolType::Tuple(vec![DynSolType::Uint(256)]),
         };
-        event.decode_log_data(&log, true).unwrap();
+        event.decode_log_data(&log).unwrap();
     }
 
     #[test]
@@ -219,7 +206,7 @@ mod test {
             ])]),
         };
 
-        let decoded = event.decode_log_data(&log, true).unwrap();
+        let decoded = event.decode_log_data(&log).unwrap();
         assert_eq!(
             decoded.indexed,
             vec![DynSolValue::Address(address!("0x0000000000000000000000000000000000012321"))]
