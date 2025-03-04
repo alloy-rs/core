@@ -133,7 +133,7 @@ impl<'a> ValueParser<'a> {
 
     #[inline]
     fn in_list<F: FnOnce(&mut Self) -> R, R>(&mut self, list_end: char, f: F) -> R {
-        let prev = core::mem::replace(&mut self.list_end, Some(list_end));
+        let prev = self.list_end.replace(list_end);
         let r = f(self);
         self.list_end = prev;
         r
