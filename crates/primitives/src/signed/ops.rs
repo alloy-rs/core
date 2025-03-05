@@ -768,8 +768,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
                 // where '~' represents ones complement
                 let two: Uint<BITS, LIMBS> = Uint::from(2);
                 let bitwise_or = Self::from_raw(
-                    !(two.pow(Uint::<BITS, LIMBS>::from(BITS - rhs))
-                        - Uint::<BITS, LIMBS>::from(1)),
+                    !(two.pow(Uint::<BITS, LIMBS>::from(BITS - rhs)) - Uint::<BITS, LIMBS>::ONE),
                 );
                 (self.wrapping_shr(rhs)) | bitwise_or
             }

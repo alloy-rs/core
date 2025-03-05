@@ -46,7 +46,7 @@ fn e2e() {
 
     <sol!(bool)>::abi_encode(&true);
 
-    let a = MyStruct { a: U256::from(1), b: [0; 32].into(), c: Vec::new() };
+    let a = MyStruct { a: U256::ONE, b: [0; 32].into(), c: Vec::new() };
 
     MyTuple::abi_encode(&(a.clone(), [0; 32]));
     MyStruct::abi_encode(&a);
@@ -57,11 +57,8 @@ fn e2e() {
 
     NestedArray::abi_encode(&vec![[true, false], [true, false], [true, false]]);
 
-    let mvt = MyValueType::from(U256::from(1));
-    assert_eq!(
-        mvt.abi_encode(),
-        alloy_sol_types::sol_data::Uint::<256>::abi_encode(&U256::from(1))
-    );
+    let mvt = MyValueType::from(U256::ONE);
+    assert_eq!(mvt.abi_encode(), alloy_sol_types::sol_data::Uint::<256>::abi_encode(&U256::ONE));
 }
 
 #[test]
@@ -91,7 +88,7 @@ fn function() {
     assert_eq!(someFunctionCall::SELECTOR, keccak256(sig)[..4]);
 
     let call = someFunctionCall {
-        basic: U256::from(1),
+        basic: U256::ONE,
         string_: "Hello World".to_owned(),
         longBytes: bytes![0; 36],
         array: vec![Address::ZERO, Address::ZERO, Address::ZERO],

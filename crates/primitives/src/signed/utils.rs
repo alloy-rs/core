@@ -11,13 +11,13 @@ pub(super) const fn handle_overflow<T: Copy>((result, overflow): (T, bool)) -> T
 
 /// Compute the two's complement of a U256.
 #[inline]
-pub(super) fn twos_complement<const BITS: usize, const LIMBS: usize>(
+pub(super) const fn twos_complement<const BITS: usize, const LIMBS: usize>(
     u: Uint<BITS, LIMBS>,
 ) -> Uint<BITS, LIMBS> {
     if BITS == 0 {
         return u;
     }
-    (!u).overflowing_add(Uint::<BITS, LIMBS>::from(1)).0
+    u.not().overflowing_add(Uint::<BITS, LIMBS>::ONE).0
 }
 
 /// Compile-time equality of signed integers.

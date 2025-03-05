@@ -76,7 +76,7 @@ sol! {
 // All structs generated with `sol!` implement `crate::SolType` &
 // `crate::SolStruct`. This means you get eip-712 signing for freeeeee
 let my_struct = MyStruct {
-    a: U256::from(1),
+    a: U256::ONE,
     b: [0; 32].into(),
     c: vec![Default::default()],
 };
@@ -108,8 +108,8 @@ sol! {
 }
 
 // UDTs are encoded as their underlying type
-let mvt = MyValueType::from(U256::from(1));
-assert_eq!(mvt.abi_encode(), sol_data::Uint::<256>::abi_encode(&U256::from(1)));
+let mvt = MyValueType::from(U256::ONE);
+assert_eq!(mvt.abi_encode(), sol_data::Uint::<256>::abi_encode(&U256::ONE));
 ```
 
 ## Tokenization/Detokenization

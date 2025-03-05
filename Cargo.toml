@@ -97,6 +97,8 @@ proptest = "1"
 proptest-derive = "0.5"
 rand = { version = "0.8", default-features = false, features = ["getrandom"] }
 rayon = { version = "1.2", default-features = false }
-ruint = { version = "1.12.3", default-features = false, features = ["alloc"] }
-ruint-macro = { version = "1", default-features = false }
+ruint = { path="../../danipopes/uint", default-features = false, features = ["alloc"] }
 winnow = { version = "0.7", default-features = false, features = ["alloc"] }
+
+[patch.crates-io]
+ruint = { path = "../../danipopes/uint" }

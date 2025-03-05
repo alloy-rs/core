@@ -699,7 +699,7 @@ mod tests {
 
         assert_eq!(
             DynSolType::Uint(256).coerce_str("1").unwrap(),
-            DynSolValue::Uint(U256::from(1), 256)
+            DynSolValue::Uint(U256::ONE, 256)
         );
     }
 
@@ -729,11 +729,11 @@ mod tests {
     fn coerce_uint_wei() {
         assert_eq!(
             DynSolType::Uint(256).coerce_str("1wei").unwrap(),
-            DynSolValue::Uint(U256::from(1), 256)
+            DynSolValue::Uint(U256::ONE, 256)
         );
         assert_eq!(
             DynSolType::Uint(256).coerce_str("1 wei").unwrap(),
-            DynSolValue::Uint(U256::from(1), 256)
+            DynSolValue::Uint(U256::ONE, 256)
         );
 
         assert!(DynSolType::Uint(256).coerce_str("1").is_ok());
@@ -772,7 +772,7 @@ mod tests {
 
         assert_eq!(
             DynSolType::Uint(256).coerce_str("0.000000001gwei").unwrap(),
-            DynSolValue::Uint(U256::from(1), 256)
+            DynSolValue::Uint(U256::ONE, 256)
         );
 
         assert_eq!(
@@ -805,7 +805,7 @@ mod tests {
 
         assert_eq!(
             DynSolType::Uint(256).coerce_str("0.000000000000000001ether").unwrap(),
-            DynSolValue::Uint(U256::from(1), 256)
+            DynSolValue::Uint(U256::ONE, 256)
         );
 
         assert_eq!(

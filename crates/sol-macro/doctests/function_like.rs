@@ -23,13 +23,13 @@ sol! {
 fn function() {
     assert_call_signature::<fooCall>("foo(uint256,uint256)");
 
-    let call = fooCall { a: U256::from(1), b: U256::from(2) };
+    let call = fooCall { a: U256::ONE, b: U256::from(2) };
     let _call_data = call.abi_encode();
 
     let _ = overloaded_0Call {};
     assert_call_signature::<overloaded_0Call>("overloaded()");
 
-    let _ = overloaded_1Call { _0: U256::from(1) };
+    let _ = overloaded_1Call { _0: U256::ONE };
     assert_call_signature::<overloaded_1Call>("overloaded(uint256)");
 
     let _ = overloaded_2Call { _0: "hello".into() };
@@ -50,7 +50,7 @@ fn error() {
     );
     assert_eq!(
         MyError::abi_decode_raw(&call_data, true),
-        Ok(MyError { a: U256::from(1), b: U256::from(2) })
+        Ok(MyError { a: U256::ONE, b: U256::from(2) })
     );
 }
 

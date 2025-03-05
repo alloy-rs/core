@@ -210,7 +210,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// or positive.
     #[inline]
     pub const fn is_zero(&self) -> bool {
-        self.const_eq(&Self::ZERO)
+        self.0.is_zero()
     }
 
     /// Returns `true` if `self` is positive and `false` if the number is zero
@@ -313,19 +313,18 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Creates a `Signed` from a sign and an absolute value. Returns the value
     /// and a bool that is true if the conversion caused an overflow.
     #[inline]
-    pub fn overflowing_from_sign_and_abs(sign: Sign, abs: Uint<BITS, LIMBS>) -> (Self, bool) {
+    pub const fn overflowing_from_sign_and_abs(sign: Sign, abs: Uint<BITS, LIMBS>) -> (Self, bool) {
         let value = Self(match sign {
             Sign::Positive => abs,
             Sign::Negative => twos_complement(abs),
         });
-
-        (value, value.sign() != sign && value != Self::ZERO)
+        (value, value.sign() as i8 != sign as i8 && !value.is_zero())
     }
 
     /// Creates a `Signed` from an absolute value and a negative flag. Returns
     /// `None` if it would overflow as `Signed`.
     #[inline]
-    pub fn checked_from_sign_and_abs(sign: Sign, abs: Uint<BITS, LIMBS>) -> Option<Self> {
+    pub const fn checked_from_sign_and_abs(sign: Sign, abs: Uint<BITS, LIMBS>) -> Option<Self> {
         let (result, overflow) = Self::overflowing_from_sign_and_abs(sign, abs);
         if overflow {
             None
@@ -1641,7 +1640,7 @@ mod tests {
         let m = I1::MINUS_ONE;
         assert_eq!(z.twos_complement(), U0::default());
         assert_eq!(o.twos_complement(), U1::default());
-        assert_eq!(m.twos_complement(), U1::from(1));
+        assert_eq!(m.twos_complement(), U1::ONE);
 
         run_test!(I96, U96);
         run_test!(I128, U128);

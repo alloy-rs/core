@@ -120,6 +120,6 @@ mod test {
         let data = hex!("4e487b710000000000000000000000000000000000000000000000000000000000000001");
 
         let decoded = error.decode_error(&data).unwrap();
-        assert_eq!(decoded.body, vec![DynSolValue::Uint(alloy_primitives::Uint::from(1), 256)]);
+        assert_eq!(decoded.body, vec![DynSolValue::Uint(alloy_primitives::Uint::ONE, 256)]);
     }
 }
