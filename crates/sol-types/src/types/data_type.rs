@@ -586,14 +586,8 @@ where
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        let mut encoded = crate::impl_core::uninit_array::<[u8; 32], N>();
-        for (i, item) in self.iter().enumerate() {
-            encoded[i].write(T::stv_eip712_data_word(item).0);
-        }
-        // SAFETY: Flattening [[u8; 32]; N] to [u8; N * 32] is valid
-        let encoded: &[u8] =
-            unsafe { core::slice::from_raw_parts(encoded.as_ptr().cast(), N * 32) };
-        keccak256(encoded)
+        let encoded = core::array::from_fn::<_, N, _>(|i| self[i].stv_eip712_data_word().0);
+        keccak256(encoded.as_flattened())
     }
 
     #[inline]
@@ -603,7 +597,7 @@ where
             if let Some(padding_needed) = 32usize.checked_sub(item.stv_abi_packed_encoded_size()) {
                 out.extend(core::iter::repeat(0).take(padding_needed));
             }
-            T::stv_abi_encode_packed_to(item, out);
+            item.stv_abi_encode_packed_to(out);
         }
     }
 

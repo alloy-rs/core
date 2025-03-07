@@ -54,7 +54,7 @@ proptest = { workspace = true, optional = true }
 alloy-dyn-abi = { path = ".", version = ">=0", features = ["std"] }
 criterion.workspace = true
 ethabi = "18"
-rand = "0.8"
+rand = { workspace = true, features = ["std", "std_rng"] }
 serde_json.workspace = true
 
 [features]
