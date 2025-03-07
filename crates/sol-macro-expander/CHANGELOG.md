@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [`sol-macro-expander`] Increase resolve limit to 128 ([#864](https://github.com/alloy-rs/core/issues/864))
 
+### Miscellaneous Tasks
+
+- Release 0.8.21
+
 ## [0.8.20](https://github.com/alloy-rs/core/releases/tag/v0.8.20) - 2025-02-02
 
 ### Miscellaneous Tasks
