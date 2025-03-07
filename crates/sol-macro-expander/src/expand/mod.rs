@@ -36,21 +36,23 @@ mod var_def;
 mod to_abi;
 
 /// The limit for the number of times to resolve a type.
-const RESOLVE_LIMIT: usize = 32;
+const RESOLVE_LIMIT: usize = 128;
 
 /// The [`sol!`] expansion implementation.
 ///
 /// [`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/index.html
 pub fn expand(ast: File) -> Result<TokenStream> {
-    ExpCtxt::new(&ast).expand()
+    utils::pme_compat_result(|| ExpCtxt::new(&ast).expand())
 }
 
 /// Expands a Rust type from a Solidity type.
 pub fn expand_type(ty: &Type, crates: &ExternCrates) -> TokenStream {
-    let dummy_file = File { attrs: Vec::new(), items: Vec::new() };
-    let mut cx = ExpCtxt::new(&dummy_file);
-    cx.crates = crates.clone();
-    cx.expand_type(ty)
+    utils::pme_compat(|| {
+        let dummy_file = File { attrs: Vec::new(), items: Vec::new() };
+        let mut cx = ExpCtxt::new(&dummy_file);
+        cx.crates = crates.clone();
+        cx.expand_type(ty)
+    })
 }
 
 /// Mapping namespace -> ident -> T

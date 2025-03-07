@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.22](https://github.com/alloy-rs/core/releases/tag/v0.8.22) - 2025-02-27
+
+### Documentation
+
+- [primitives] Report some Bytes methods may panic ([#877](https://github.com/alloy-rs/core/issues/877))
+- [primitives] `random` functions are cryptographically secure ([#872](https://github.com/alloy-rs/core/issues/872))
+
+### Features
+
+- [primitives] Add some more utility methods to PrimitiveSignature ([#888](https://github.com/alloy-rs/core/issues/888))
+- Erc2098 signature representation ([#874](https://github.com/alloy-rs/core/issues/874))
+- Add TxKind::into_to ([#875](https://github.com/alloy-rs/core/issues/875))
+- [primitives] Improve rand implementations, use `thread_rng` when available ([#870](https://github.com/alloy-rs/core/issues/870))
+
+## [0.8.21](https://github.com/alloy-rs/core/releases/tag/v0.8.21) - 2025-02-10
+
+### Miscellaneous Tasks
+
+- Release 0.8.21
+
 ## [0.8.20](https://github.com/alloy-rs/core/releases/tag/v0.8.20) - 2025-02-02
 
 ### Documentation
@@ -15,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add Sealed::as_sealed_ref ([#859](https://github.com/alloy-rs/core/issues/859))
 - Add Sealed::cloned ([#860](https://github.com/alloy-rs/core/issues/860))
+
+### Miscellaneous Tasks
+
+- Release 0.8.20
 
 ## [0.8.19](https://github.com/alloy-rs/core/releases/tag/v0.8.19) - 2025-01-15
 

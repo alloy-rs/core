@@ -315,18 +315,32 @@ impl Bytes {
     }
 
     /// Returns a slice of self for the provided range.
+    ///
+    /// # Panics
+    ///
+    /// Requires that `begin <= end` and `end <= self.len()`, otherwise slicing
+    /// will panic.
     #[inline]
     pub fn slice(&self, range: impl RangeBounds<usize>) -> Self {
         Self(self.0.slice(range))
     }
 
     /// Returns a slice of self that is equivalent to the given `subset`.
+    ///
+    /// # Panics
+    ///
+    /// Requires that the given `subset` slice is in fact contained within the
+    /// `Bytes` buffer; otherwise this function will panic.
     #[inline]
     pub fn slice_ref(&self, subset: &[u8]) -> Self {
         Self(self.0.slice_ref(subset))
     }
 
     /// Splits the bytes into two at the given index.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `at > len`.
     #[must_use = "consider Bytes::truncate if you don't need the other half"]
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self {
@@ -334,6 +348,10 @@ impl Bytes {
     }
 
     /// Splits the bytes into two at the given index.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `at > len`.
     #[must_use = "consider Bytes::advance if you don't need the other half"]
     #[inline]
     pub fn split_to(&mut self, at: usize) -> Self {

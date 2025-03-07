@@ -86,7 +86,7 @@ To fix this, either disable the `"getrandom"` feature on `alloy-core` or add
 `getrandom` to your dependencies with the `"js"` feature enabled:
 
 ```toml
-getrandom = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.3", features = ["js"] }
 ```
 
 There is currently no plan to provide an official JS/TS-accessible library
