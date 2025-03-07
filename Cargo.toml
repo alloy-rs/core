@@ -3,7 +3,7 @@ members = ["crates/*", "tests/*"]
 resolver = "2"
 
 [workspace.package]
-version = "0.8.20"
+version = "0.8.22"
 edition = "2021"
 rust-version = "1.81"
 authors = ["Alloy Contributors"]
@@ -35,16 +35,16 @@ all = "warn"
 
 [workspace.dependencies]
 # workspace crates
-alloy-core = { version = "0.8.20", path = "crates/core", default-features = false }
-alloy-dyn-abi = { version = "0.8.20", path = "crates/dyn-abi", default-features = false }
-alloy-json-abi = { version = "0.8.20", path = "crates/json-abi", default-features = false }
-alloy-primitives = { version = "0.8.20", path = "crates/primitives", default-features = false }
-alloy-sol-macro = { version = "0.8.20", path = "crates/sol-macro", default-features = false }
-alloy-sol-macro-input = { version = "0.8.20", path = "crates/sol-macro-input", default-features = false }
-alloy-sol-macro-expander = { version = "0.8.20", path = "crates/sol-macro-expander", default-features = false }
-alloy-sol-type-parser = { version = "0.8.20", path = "crates/sol-type-parser", default-features = false }
-alloy-sol-types = { version = "0.8.20", path = "crates/sol-types", default-features = false }
-syn-solidity = { version = "0.8.20", path = "crates/syn-solidity", default-features = false }
+alloy-core = { version = "0.8.22", path = "crates/core", default-features = false }
+alloy-dyn-abi = { version = "0.8.22", path = "crates/dyn-abi", default-features = false }
+alloy-json-abi = { version = "0.8.22", path = "crates/json-abi", default-features = false }
+alloy-primitives = { version = "0.8.22", path = "crates/primitives", default-features = false }
+alloy-sol-macro = { version = "0.8.22", path = "crates/sol-macro", default-features = false }
+alloy-sol-macro-input = { version = "0.8.22", path = "crates/sol-macro-input", default-features = false }
+alloy-sol-macro-expander = { version = "0.8.22", path = "crates/sol-macro-expander", default-features = false }
+alloy-sol-type-parser = { version = "0.8.22", path = "crates/sol-type-parser", default-features = false }
+alloy-sol-types = { version = "0.8.22", path = "crates/sol-types", default-features = false }
+syn-solidity = { version = "0.8.22", path = "crates/syn-solidity", default-features = false }
 
 # serde
 serde = { version = "1.0", default-features = false, features = ["alloc"] }
@@ -57,7 +57,7 @@ quote = "1.0"
 syn = "2.0"
 
 cfg-if = "1.0.0"
-derive_more = { version = "1.0", default-features = false }
+derive_more = { version = "2.0", default-features = false }
 paste = "1.0"
 
 # crypto
@@ -95,7 +95,7 @@ postgres-types = "0.2.6"
 pretty_assertions = "1.4"
 proptest = "1"
 proptest-derive = "0.5"
-rand = { version = "0.8", default-features = false }
+rand = { version = "0.8", default-features = false, features = ["getrandom"] }
 rayon = { version = "1.2", default-features = false }
 ruint = { version = "1.12.3", default-features = false, features = ["alloc"] }
 ruint-macro = { version = "1", default-features = false }
