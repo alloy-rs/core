@@ -720,12 +720,11 @@ impl CallLikeExpander<'_> {
                 fn abi_decode_raw(
                     selector: [u8; 4],
                     data: &[u8],
-                    validate: bool
                 )-> alloy_sol_types::Result<Self> {
-                    static DECODE_SHIMS: &[fn(&[u8], bool) -> alloy_sol_types::Result<#name>] = &[
+                    static DECODE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
                         #({
-                            fn #sorted_variants(data: &[u8], validate: bool) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data, validate)
+                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
+                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data)
                                     .map(#name::#sorted_variants)
                             }
                             #sorted_variants
@@ -739,7 +738,7 @@ impl CallLikeExpander<'_> {
                         ));
                     };
                     // `SELECTORS` and `DECODE_SHIMS` have the same length and are sorted in the same order.
-                    DECODE_SHIMS[idx](data, validate)
+                    DECODE_SHIMS[idx](data)
                 }
 
                 #[inline]
@@ -795,7 +794,7 @@ impl CallLikeExpander<'_> {
                 match topics.first().copied() {
                     #(
                         Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
-                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data, validate)
+                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data)
                                 .map(Self::#variants),
                     )*
                     _ => { #ret_err }
@@ -806,7 +805,7 @@ impl CallLikeExpander<'_> {
             let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
                 #(
-                    if let Ok(res) = <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data, validate) {
+                    if let Ok(res) = <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data) {
                         return Ok(Self::#variants(res));
                     }
                 )*
@@ -845,7 +844,7 @@ impl CallLikeExpander<'_> {
                 const NAME: &'static str = #name_s;
                 const COUNT: usize = #count;
 
-                fn decode_raw_log(topics: &[alloy_sol_types::Word], data: &[u8], validate: bool) -> alloy_sol_types::Result<Self> {
+                fn decode_raw_log(topics: &[alloy_sol_types::Word], data: &[u8]) -> alloy_sol_types::Result<Self> {
                     #non_anon_impl
                     #anon_impl
                 }

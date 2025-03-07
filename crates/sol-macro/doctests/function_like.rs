@@ -49,7 +49,7 @@ fn error() {
         "0000000000000000000000000000000000000000000000000000000000000002"
     );
     assert_eq!(
-        MyError::abi_decode_raw(&call_data, true),
+        MyError::abi_decode_raw(&call_data),
         Ok(MyError { a: U256::from(1), b: U256::from(2) })
     );
 }

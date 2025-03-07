@@ -57,7 +57,7 @@ pub trait SolInterface: Sized {
     }
 
     /// ABI-decodes the given data into one of the variants of `self`.
-    fn abi_decode_raw(selector: [u8; 4], data: &[u8], validate: bool) -> Result<Self>;
+    fn abi_decode_raw(selector: [u8; 4], data: &[u8]) -> Result<Self>;
 
     /// The size of the encoded data, *without* any selectors.
     fn abi_encoded_size(&self) -> usize;
@@ -82,12 +82,12 @@ pub trait SolInterface: Sized {
 
     /// ABI-decodes the given data into one of the variants of `self`.
     #[inline]
-    fn abi_decode(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode(data: &[u8]) -> Result<Self> {
         if data.len() < Self::MIN_DATA_LENGTH.saturating_add(4) {
             Err(crate::Error::type_check_fail(data, Self::NAME))
         } else {
             let (selector, data) = data.split_first_chunk().unwrap();
-            Self::abi_decode_raw(*selector, data, validate)
+            Self::abi_decode_raw(*selector, data)
         }
     }
 }
@@ -117,7 +117,7 @@ impl SolInterface for Infallible {
     }
 
     #[inline]
-    fn abi_decode_raw(selector: [u8; 4], _data: &[u8], _validate: bool) -> Result<Self> {
+    fn abi_decode_raw(selector: [u8; 4], _data: &[u8]) -> Result<Self> {
         Self::type_check(selector).map(|()| unreachable!())
     }
 
@@ -258,11 +258,11 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
     }
 
     #[inline]
-    fn abi_decode_raw(selector: [u8; 4], data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode_raw(selector: [u8; 4], data: &[u8]) -> Result<Self> {
         match selector {
-            Revert::SELECTOR => Revert::abi_decode_raw(data, validate).map(Self::Revert),
-            Panic::SELECTOR => Panic::abi_decode_raw(data, validate).map(Self::Panic),
-            s => T::abi_decode_raw(s, data, validate).map(Self::CustomError),
+            Revert::SELECTOR => Revert::abi_decode_raw(data).map(Self::Revert),
+            Panic::SELECTOR => Panic::abi_decode_raw(data).map(Self::Panic),
+            s => T::abi_decode_raw(s, data).map(Self::CustomError),
         }
     }
 
@@ -429,7 +429,7 @@ where
     /// If both attempts fail, it returns `None`.
     pub fn decode(out: &[u8]) -> Option<Self> {
         // Try to decode as a generic contract error.
-        if let Ok(error) = ContractError::<T>::abi_decode(out, false) {
+        if let Ok(error) = ContractError::<T>::abi_decode(out) {
             return Some(error.into());
         }
 
@@ -633,9 +633,9 @@ mod tests {
         assert_eq!(errors_err1().abi_encode(), data);
         assert_eq!(contract_error_err1().abi_encode(), data);
 
-        assert_eq!(C::Err1::abi_decode(&data, true), Ok(err1()));
-        assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err1()));
-        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err1()));
+        assert_eq!(C::Err1::abi_decode(&data), Ok(err1()));
+        assert_eq!(C::CErrors::abi_decode(&data), Ok(errors_err1()));
+        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data), Ok(contract_error_err1()));
 
         let err2 = || C::Err2 { _0: U256::from(42) };
         let errors_err2 = || C::CErrors::Err2(err2());
@@ -645,9 +645,9 @@ mod tests {
         assert_eq!(errors_err2().abi_encode(), data);
         assert_eq!(contract_error_err2().abi_encode(), data);
 
-        assert_eq!(C::Err2::abi_decode(&data, true), Ok(err2()));
-        assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err2()));
-        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err2()));
+        assert_eq!(C::Err2::abi_decode(&data), Ok(err2()));
+        assert_eq!(C::CErrors::abi_decode(&data), Ok(errors_err2()));
+        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data), Ok(contract_error_err2()));
 
         let err3 = || C::Err3 { _0: "hello".into() };
         let errors_err3 = || C::CErrors::Err3(err3());
@@ -657,9 +657,9 @@ mod tests {
         assert_eq!(errors_err3().abi_encode(), data);
         assert_eq!(contract_error_err3().abi_encode(), data);
 
-        assert_eq!(C::Err3::abi_decode(&data, true), Ok(err3()));
-        assert_eq!(C::CErrors::abi_decode(&data, true), Ok(errors_err3()));
-        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data, true), Ok(contract_error_err3()));
+        assert_eq!(C::Err3::abi_decode(&data), Ok(err3()));
+        assert_eq!(C::CErrors::abi_decode(&data), Ok(errors_err3()));
+        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data), Ok(contract_error_err3()));
 
         for selector in C::CErrors::selectors() {
             assert!(C::CErrors::valid_selector(selector));
