@@ -323,9 +323,7 @@ impl<const N: usize> str::FromStr for FixedBytes<N> {
 }
 
 #[cfg(feature = "rand")]
-impl<const N: usize> rand::distributions::Distribution<FixedBytes<N>>
-    for rand::distributions::Standard
-{
+impl<const N: usize> rand::distr::Distribution<FixedBytes<N>> for rand::distr::StandardUniform {
     #[inline]
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> FixedBytes<N> {
         FixedBytes::random_with(rng)
@@ -407,6 +405,17 @@ impl<const N: usize> FixedBytes<N> {
         bytes
     }
 
+    /// Tries to create a new [`FixedBytes`] with the given random number generator.
+    #[cfg(feature = "rand")]
+    #[inline]
+    pub fn try_random_with<R: rand::TryRngCore + ?Sized>(rng: &mut R) -> Result<Self, R::Error> {
+        // SAFETY: `bytes` is only accessible after random initialization.
+        #[allow(clippy::uninit_assumed_init)]
+        let mut bytes = unsafe { core::mem::MaybeUninit::<Self>::uninit().assume_init() };
+        bytes.try_randomize_with(rng)?;
+        Ok(bytes)
+    }
+
     /// Fills this [`FixedBytes`] with the default cryptographic random number generator.
     ///
     /// See [`random`](Self::random) for more details.
@@ -426,12 +435,12 @@ impl<const N: usize> FixedBytes<N> {
     pub fn try_randomize(&mut self) -> Result<(), getrandom::Error> {
         #[cfg(all(feature = "rand", feature = "std"))]
         {
-            self.randomize_with(&mut rand::thread_rng());
+            self.randomize_with(&mut rand::rng());
             Ok(())
         }
         #[cfg(not(all(feature = "rand", feature = "std")))]
         {
-            getrandom::getrandom(&mut self.0)
+            getrandom::fill(&mut self.0)
         }
     }
 
@@ -441,6 +450,16 @@ impl<const N: usize> FixedBytes<N> {
     #[doc(alias = "randomize_using")]
     pub fn randomize_with<R: rand::RngCore + ?Sized>(&mut self, rng: &mut R) {
         rng.fill_bytes(&mut self.0);
+    }
+
+    /// Tries to fill this [`FixedBytes`] with the given random number generator.
+    #[inline]
+    #[cfg(feature = "rand")]
+    pub fn try_randomize_with<R: rand::TryRngCore + ?Sized>(
+        &mut self,
+        rng: &mut R,
+    ) -> Result<(), R::Error> {
+        rng.try_fill_bytes(&mut self.0)
     }
 
     /// Concatenate two `FixedBytes`.

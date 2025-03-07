@@ -5,7 +5,7 @@ use alloy_sol_type_parser::TypeSpecifier;
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
-use rand::seq::SliceRandom;
+use rand::seq::IndexedRandom;
 use std::{hint::black_box, time::Duration};
 
 const KEYWORDS: &[&str] =
@@ -18,7 +18,7 @@ const COMPLEX: &[&str] = &[
 
 fn parse(c: &mut Criterion) {
     let mut g = group(c, "parse");
-    let rng = &mut rand::thread_rng();
+    let rng = &mut rand::rng();
 
     g.bench_function("keywords", |b| {
         b.iter(|| {
@@ -38,7 +38,7 @@ fn parse(c: &mut Criterion) {
 
 fn resolve(c: &mut Criterion) {
     let mut g = group(c, "resolve");
-    let rng = &mut rand::thread_rng();
+    let rng = &mut rand::rng();
 
     g.bench_function("keywords", |b| {
         let parsed_keywords =
@@ -63,7 +63,7 @@ fn resolve(c: &mut Criterion) {
 
 fn format(c: &mut Criterion) {
     let mut g = group(c, "format");
-    let rng = &mut rand::thread_rng();
+    let rng = &mut rand::rng();
 
     g.bench_function("keywords", |b| {
         let keyword_types =
