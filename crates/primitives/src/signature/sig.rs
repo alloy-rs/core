@@ -232,7 +232,7 @@ impl Signature {
         Self { y_parity: v, r, s }
     }
 
-    /// Creates a [`PrimitiveSignature`] from the serialized `r` and `s` scalar values, which
+    /// Creates a [`Signature`] from the serialized `r` and `s` scalar values, which
     /// comprise the ECDSA signature, alongside a `v` value, used to determine the recovery ID.
     #[inline]
     pub fn from_scalars_and_parity(r: B256, s: B256, parity: bool) -> Self {
