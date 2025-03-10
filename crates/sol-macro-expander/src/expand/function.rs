@@ -101,9 +101,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     let alloy_sol_types = &cx.crates.sol_types;
 
-    let decode_sequence = quote!(
-        <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-    );
+    let decode_sequence =
+        quote!(<Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data));
 
     // Determine whether the return type should directly yield result or the <name>Return struct.
     let is_single_return = returns.len() == 1;
@@ -170,7 +169,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 }
 
                 #[inline]
-                fn abi_decode_returns(data: &[u8], validate: bool) -> alloy_sol_types::Result<Self::Return> {
+                fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
                     #decode_returns
                 }
             }

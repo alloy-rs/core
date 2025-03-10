@@ -167,15 +167,12 @@ pub trait SolEvent: Sized {
 
     /// ABI-decodes the dynamic data of this event from the given buffer.
     #[inline]
-    fn abi_decode_data<'a>(
-        data: &'a [u8],
-        validate: bool,
-    ) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
-        <Self::DataTuple<'a> as SolType>::abi_decode_sequence(data, validate)
+    fn abi_decode_data<'a>(data: &'a [u8]) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
+        <Self::DataTuple<'a> as SolType>::abi_decode_sequence(data)
     }
 
     /// Decode the event from the given log info.
-    fn decode_raw_log<I, D>(topics: I, data: &[u8], validate: bool) -> Result<Self>
+    fn decode_raw_log<I, D>(topics: I, data: &[u8]) -> Result<Self>
     where
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,
@@ -183,17 +180,17 @@ pub trait SolEvent: Sized {
         let topics = Self::decode_topics(topics)?;
         // Check signature before decoding the data.
         Self::check_signature(&topics)?;
-        let body = Self::abi_decode_data(data, validate)?;
+        let body = Self::abi_decode_data(data)?;
         Ok(Self::new(topics, body))
     }
 
     /// Decode the event from the given log object.
-    fn decode_log_data(log: &LogData, validate: bool) -> Result<Self> {
-        Self::decode_raw_log(log.topics(), &log.data, validate)
+    fn decode_log_data(log: &LogData) -> Result<Self> {
+        Self::decode_raw_log(log.topics(), &log.data)
     }
 
     /// Decode the event from the given log object.
-    fn decode_log(log: &Log, validate: bool) -> Result<Log<Self>> {
-        Self::decode_log_data(&log.data, validate).map(|data| Log { address: log.address, data })
+    fn decode_log(log: &Log) -> Result<Log<Self>> {
+        Self::decode_log_data(&log.data).map(|data| Log { address: log.address, data })
     }
 }
