@@ -800,17 +800,57 @@ pub fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Iden
     }
 }
 
+/// Utility type to determining how a solidity type should be expanded.
+enum FieldKind {
+    /// The type should be expanded as is. i.e a struct with named/unnamed fields.
+    ///
+    /// e.g
+    /// ```ignore
+    /// sol! {
+    ///   error MyError(uint256, string);
+    /// }
+    /// ```
+    /// Expands to:
+    ///
+    /// ```ignore
+    /// struct MyError {
+    ///    pub _0: U256,
+    ///    pub _1: String,
+    /// }
+    Original,
+    /// The types should be deconstructed and expanded into a unit/tuple struct depending on the
+    /// number of params.
+    ///
+    /// e.g
+    /// ```ignore
+    /// sol! {
+    ///  error MyError(uint256 value);
+    ///  error UnitError();
+    /// }
+    /// ```
+    ///
+    /// Expands to:
+    ///
+    /// ```ignore
+    /// struct MyError(pub U256);
+    /// struct UnitError();
+    /// ```
+    Deconstruct,
+}
+
+impl FieldKind {
+    /// Returns whether the field kind is `Deconstruct`.
+    fn is_deconstruct(&self) -> bool {
+        matches!(self, Self::Deconstruct)
+    }
+}
+
 /// Expands `From` impls for a list of types and the corresponding tuple.
-///
-/// The `retain_fields` parameter specifies whether fields should retained as is and the struct
-/// should not be converted to unit/tuple struct i.e maintain the original form of the struct.
-/// Used to handle expansion of solidity structs as we want to retain the fields and keep original
-/// form.
 fn expand_from_into_tuples<P>(
     name: &Ident,
     fields: &Parameters<P>,
     cx: &ExpCtxt<'_>,
-    retain_fields: bool,
+    field_kind: FieldKind,
 ) -> TokenStream {
     let names = fields.names().enumerate().map(anon_name);
 
@@ -819,9 +859,9 @@ fn expand_from_into_tuples<P>(
 
     let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types(), cx);
 
-    let (from_sol_type, from_rust_tuple) = if fields.is_empty() && !retain_fields {
+    let (from_sol_type, from_rust_tuple) = if fields.is_empty() && field_kind.is_deconstruct() {
         (quote!(()), quote!(Self))
-    } else if fields.len() == 1 && fields[0].name.is_none() && !retain_fields {
+    } else if fields.len() == 1 && fields[0].name.is_none() && field_kind.is_deconstruct() {
         let idxs2 = (0..fields.len()).map(syn::Index::from);
         (quote!((#(value.#idxs),*,)), quote!(Self(#(tuple.#idxs2),*)))
     } else {
@@ -881,35 +921,25 @@ fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
 }
 
 /// Expand the body of a `tokenize` function.
-///
-/// The `retain_fields` parameter specifies whether fields should retained as is and the struct
-/// should not be converted to unit/tuple struct i.e maintain the original form of the struct.
-/// Used to handle expansion of solidity structs as we want to retain the fields and keep original
-/// form.
 fn expand_tokenize<P>(
     params: &Parameters<P>,
     cx: &ExpCtxt<'_>,
-    retain_fields: bool,
+    field_kind: FieldKind,
 ) -> TokenStream {
     tokenize_(
         params.iter().enumerate().map(|(i, p)| (i, &p.ty, p.name.as_ref())),
         cx,
         params.len(),
-        retain_fields,
+        field_kind,
     )
 }
 
 /// Expand the body of a `tokenize` function.
-///
-/// The `retain_fields` parameter specifies whether fields should retained as is and the struct
-/// should not be converted to unit/tuple struct i.e maintain the original form of the struct.
-/// Used to handle expansion of solidity structs as we want to retain the fields and keep original
-/// form.
 fn expand_event_tokenize<'a>(
     params: impl IntoIterator<Item = &'a EventParameter>,
     cx: &ExpCtxt<'_>,
     params_len: usize,
-    retain_fields: bool,
+    field_kind: FieldKind,
 ) -> TokenStream {
     tokenize_(
         params
@@ -919,23 +949,19 @@ fn expand_event_tokenize<'a>(
             .map(|(i, p)| (i, &p.ty, p.name.as_ref())),
         cx,
         params_len,
-        retain_fields,
+        field_kind,
     )
 }
 
-/// The `retain_fields` parameter specifies whether fields should retained as is and the struct
-/// should not be converted to unit/tuple struct i.e maintain the original form of the struct.
-/// Used to handle expansion of solidity structs as we want to retain the fields and keep original
-/// form.
 fn tokenize_<'a>(
     iter: impl Iterator<Item = (usize, &'a Type, Option<&'a SolIdent>)>,
     cx: &'a ExpCtxt<'_>,
     params_len: usize,
-    retain_fields: bool,
+    field_kind: FieldKind,
 ) -> TokenStream {
     let statements = iter.into_iter().map(|(i, ty, name)| {
         let ty = cx.expand_type(ty);
-        if params_len == 1 && name.is_none() && !retain_fields {
+        if params_len == 1 && name.is_none() && field_kind.is_deconstruct() {
             quote! {
                 <#ty as alloy_sol_types::SolType>::tokenize(&self.0)
             }

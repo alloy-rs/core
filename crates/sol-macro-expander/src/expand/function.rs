@@ -1,6 +1,8 @@
 //! [`ItemFunction`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt};
+use super::{
+    expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt, FieldKind,
+};
 use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{FunctionKind, ItemFunction, Spanned};
 use proc_macro2::TokenStream;
@@ -60,12 +62,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let call_tuple = expand_tuple_types(parameters.types(), cx).0;
     let return_tuple = expand_tuple_types(returns.types(), cx).0;
 
-    let converts = expand_from_into_tuples(&call_name, parameters, cx, true);
-    let return_converts = expand_from_into_tuples(&return_name, returns, cx, true);
+    let converts = expand_from_into_tuples(&call_name, parameters, cx, FieldKind::Deconstruct);
+    let return_converts = expand_from_into_tuples(&return_name, returns, cx, FieldKind::Original);
 
     let signature = cx.function_signature(function);
     let selector = crate::utils::selector(&signature);
-    let tokenize_impl = expand_tokenize(parameters, cx, true);
+    let tokenize_impl = expand_tokenize(parameters, cx, FieldKind::Deconstruct);
 
     let call_doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array.as_slice());
@@ -97,6 +99,23 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         }
     });
 
+    let call_struct = if parameters.is_empty() {
+        quote! {
+            pub struct #call_name;
+        }
+    } else if parameters.len() == 1 && parameters[0].name.is_none() {
+        let ty = cx.expand_rust_type(&parameters[0].ty);
+        quote! {
+            pub struct #call_name(pub #ty);
+        }
+    } else {
+        quote! {
+            pub struct #call_name {
+                #(#call_fields),*
+            }
+        }
+    };
+
     let alloy_sol_types = &cx.crates.sol_types;
 
     let tokens = quote! {
@@ -104,9 +123,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         #call_doc
         #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
         #[derive(Clone)]
-        pub struct #call_name {
-            #(#call_fields),*
-        }
+        #call_struct
 
         #(#return_attrs)*
         #return_doc
@@ -169,8 +186,8 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
     let call_name = format_ident!("constructorCall").with_span(constructor.kind.span());
     let call_fields = expand_fields(parameters, cx);
     let call_tuple = expand_tuple_types(parameters.types(), cx).0;
-    let converts = expand_from_into_tuples(&call_name, parameters, cx, true);
-    let tokenize_impl = expand_tokenize(parameters, cx, true);
+    let converts = expand_from_into_tuples(&call_name, parameters, cx, FieldKind::Original);
+    let tokenize_impl = expand_tokenize(parameters, cx, FieldKind::Original);
 
     let call_doc = docs.then(|| {
         mk_doc(format!(
