@@ -1,6 +1,8 @@
 //! [`ItemFunction`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt};
+use super::{
+    anon_name, expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types, ExpCtxt,
+};
 use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
 use ast::{FunctionKind, ItemFunction, Spanned};
 use proc_macro2::TokenStream;
@@ -99,6 +101,26 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     let alloy_sol_types = &cx.crates.sol_types;
 
+    let decode_sequence =
+        quote!(<Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data));
+
+    // Determine whether the return type should directly yield result or the <name>Return struct.
+    let is_single_return = returns.len() == 1;
+    let return_type = is_single_return
+        .then(|| cx.expand_rust_type(&returns[0].ty))
+        .unwrap_or(quote!(#return_name));
+    let decode_returns = is_single_return
+        .then(|| {
+            let name = anon_name((0, returns[0].name.as_ref()));
+            quote! {
+                #decode_sequence.map(|r| {
+                    let r: #return_name = r.into();
+                    r.#name
+                })
+            }
+        })
+        .unwrap_or(quote!(#decode_sequence.map(Into::into)));
+
     let tokens = quote! {
         #(#call_attrs)*
         #call_doc
@@ -128,7 +150,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 type Parameters<'a> = #call_tuple;
                 type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
 
-                type Return = #return_name;
+                type Return = #return_type;
 
                 type ReturnTuple<'a> = #return_tuple;
                 type ReturnToken<'a> = <Self::ReturnTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
@@ -148,7 +170,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
                 #[inline]
                 fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                    <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data).map(Into::into)
+                    #decode_returns
                 }
             }
 

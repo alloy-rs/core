@@ -188,6 +188,39 @@ use syn::parse_macro_input;
 /// Functions generate two structs that implement `SolCall`: `<name>Call` for
 /// the function arguments, and `<name>Return` for the return values.
 ///
+/// In the case where the solidity returns multiple values, the `<name>Return` is returned by the call which contains the return values as fields in the struct.
+///
+/// Take Uniswap v3's slot0 function as an example:
+/// ```ignore
+/// sol! {
+///     function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16
+/// observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8
+/// feeProtocol, bool unlocked);
+/// }
+///
+/// pub struct slot0Return {
+///     pub sqrtPriceX96: Uint<160, 3>,
+///     pub tick: Signed<24, 1>,
+///     pub observationIndex: u16,
+///     pub observationCardinality: u16,
+///     pub observationCardinalityNext: u16,
+///     pub feeProtocol: u8,
+///     pub unlocked: bools,
+/// }
+/// ```
+/// 
+/// Whereas, if the solidity function returns a single value, the singular return value will yielded by the call.
+/// ```ignore
+/// sol! {
+///   #[sol(rpc)]
+///   contract ERC20 {
+///       function balanceOf(address owner) external view returns (uint256);
+///   }
+/// }
+///
+/// let balance: U256 = erc20.balanceOf(owner).call().await?;
+/// ```
+/// 
 /// In the case of overloaded functions, an underscore and the index of the
 /// function will be appended to `<name>` (like `foo_0`, `foo_1`...) for
 /// disambiguation, but the signature will remain the same.
