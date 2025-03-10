@@ -3,6 +3,7 @@
 //! Modified from the [`hex-literal`](https://github.com/RustCrypto/utils/tree/master/hex-literal)
 //! crate to allow `0x` prefixes.
 
+#[must_use]
 const fn next_hex_char(string: &[u8], mut pos: usize) -> Option<(u8, usize)> {
     while pos < string.len() {
         let raw_val = string[pos];
@@ -20,6 +21,7 @@ const fn next_hex_char(string: &[u8], mut pos: usize) -> Option<(u8, usize)> {
     None
 }
 
+#[must_use]
 const fn next_byte(string: &[u8], pos: usize) -> Option<(u8, usize)> {
     let (half1, pos) = match next_hex_char(string, pos) {
         Some(v) => v,
@@ -36,6 +38,7 @@ const fn next_byte(string: &[u8], pos: usize) -> Option<(u8, usize)> {
 ///
 /// This function is an implementation detail and SHOULD NOT be called directly!
 #[doc(hidden)]
+#[must_use]
 pub const fn strip_hex_prefix(string: &[u8]) -> &[u8] {
     if let [b'0', b'x' | b'X', rest @ ..] = string {
         rest
@@ -48,6 +51,7 @@ pub const fn strip_hex_prefix(string: &[u8]) -> &[u8] {
 ///
 /// This function is an implementation detail and SHOULD NOT be called directly!
 #[doc(hidden)]
+#[must_use]
 pub const fn len(strings: &[&[u8]]) -> usize {
     let mut i = 0;
     let mut len = 0;
@@ -66,6 +70,7 @@ pub const fn len(strings: &[&[u8]]) -> usize {
 ///
 /// This function is an implementation detail and SHOULD NOT be called directly!
 #[doc(hidden)]
+#[must_use]
 pub const fn decode<const LEN: usize>(strings: &[&[u8]]) -> [u8; LEN] {
     let mut i = 0;
     let mut buf = [0u8; LEN];
