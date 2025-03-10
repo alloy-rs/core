@@ -108,12 +108,12 @@ fn sol_types_decode(c: &mut Criterion) {
 
     g.bench_function("word", |b| {
         let input = decode_word_input();
-        b.iter(|| sol_data::Uint::<256>::abi_decode(black_box(&input), false).unwrap());
+        b.iter(|| sol_data::Uint::<256>::abi_decode(black_box(&input)).unwrap());
     });
 
     g.bench_function("dynamic", |b| {
         let input = decode_dynamic_input();
-        b.iter(|| sol_data::String::abi_decode(black_box(&input), false).unwrap());
+        b.iter(|| sol_data::String::abi_decode(black_box(&input)).unwrap());
     });
 
     g.finish();
