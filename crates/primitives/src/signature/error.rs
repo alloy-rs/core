@@ -1,4 +1,4 @@
-use core::convert::Infallible;
+use core::{convert::Infallible, fmt};
 
 /// Errors in signature parsing or verification.
 #[derive(Debug)]
@@ -43,8 +43,8 @@ impl core::error::Error for SignatureError {
     }
 }
 
-impl core::fmt::Display for SignatureError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl fmt::Display for SignatureError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             #[cfg(feature = "k256")]
             Self::K256(e) => e.fmt(f),

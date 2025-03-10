@@ -9,6 +9,7 @@ pub const fn to_eip155_v(v: u8, chain_id: ChainId) -> ChainId {
 /// Attempts to normalize the v value to a boolean parity value.
 ///
 /// Returns `None` if the value is invalid for any of the known Ethereum parity encodings.
+#[inline]
 pub const fn normalize_v(v: u64) -> Option<bool> {
     if !is_valid_v(v) {
         return None;
@@ -69,6 +70,7 @@ pub(crate) const fn normalize_v_to_recid(v: u64) -> k256::ecdsa::RecoveryId {
 }
 
 /// Normalize the v value to a single byte.
+#[inline]
 pub(crate) const fn normalize_v_to_byte(v: u64) -> u8 {
     match v {
         // Case 1: raw/bare
