@@ -60,7 +60,18 @@ impl Parse for SolInput {
         let fork = input.fork();
         let _fork_outer = Attribute::parse_outer(&fork)?;
 
-        if fork.peek(LitStr) || (fork.peek(Ident) && fork.peek2(Token![,]) && fork.peek3(LitStr)) {
+        // Include macro calls like `concat!(env!())`;
+        let is_litstr_like = |fork: syn::parse::ParseStream<'_>| {
+            fork.peek(LitStr) || (fork.peek(Ident) && fork.peek2(Token![!]))
+        };
+
+        if is_litstr_like(&fork)
+            || (fork.peek(Ident) && fork.peek2(Token![,]) && {
+                let _ = fork.parse::<Ident>();
+                let _ = fork.parse::<Token![,]>();
+                is_litstr_like(&fork)
+            })
+        {
             Self::parse_abigen(attrs, input)
         } else {
             input.parse().map(|kind| Self { attrs, path: None, kind })
@@ -77,7 +88,8 @@ impl SolInput {
         if name.is_some() {
             input.parse::<Token![,]>()?;
         }
-        let lit = input.parse::<LitStr>()?;
+        let span = input.span();
+        let macro_string::MacroString(mut value) = input.parse::<macro_string::MacroString>()?;
 
         let _ = input.parse::<Option<Token![,]>>()?;
         if !input.is_empty() {
@@ -85,9 +97,7 @@ impl SolInput {
             return Err(Error::new(input.span(), msg));
         }
 
-        let mut value = lit.value();
         let mut path = None;
-        let span = lit.span();
 
         let is_path = {
             let s = value.trim();

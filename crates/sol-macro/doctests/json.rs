@@ -36,6 +36,9 @@ sol! {
     }
 }
 
+// And:
+// sol!(MyJsonContract, concat!(env!("CARGO_MANIFEST_DIR"), "/path/to/MyJsonContract.json"));
+
 #[test]
 fn abigen() {
     assert_eq!(MyJsonContract1::fooCall::SIGNATURE, MyJsonContract2::fooCall::SIGNATURE);

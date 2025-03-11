@@ -25,6 +25,7 @@ rustdoc-args = [
 dunce = "1.0.4"
 heck = "0.5.0"
 hex.workspace = true
+macro-string = "0.1"
 proc-macro2.workspace = true
 syn.workspace = true
 syn-solidity.workspace = true

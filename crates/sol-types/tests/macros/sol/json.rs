@@ -10,7 +10,7 @@ fn large_array() {
         #[sol(abi)]
         #[derive(Debug)]
         LargeArray,
-        "../json-abi/tests/abi/LargeArray.json"
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../json-abi/tests/abi/LargeArray.json")
     );
 
     let call = LargeArray::callWithLongArrayCall { longArray: [0; 128] };
@@ -239,3 +239,14 @@ fn balancer_v2_vault() {
 // fn smartsession_bootstrap() {
 //     sol!(Bootstrap, "../json-abi/tests/abi/Bootstrap.json");
 // }
+
+#[test]
+fn inner_macros() {
+    sol!(
+        #[sol(all_derives)]
+        Name,
+        concat!("[", "]"),
+    );
+    #[allow(unused_imports)]
+    use Name::*;
+}
