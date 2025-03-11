@@ -150,7 +150,13 @@ impl SolAttrs {
                 let path = || meta.value()?.parse::<Path>();
 
                 // `path = "<str>"`
-                let lit = || meta.value()?.parse::<LitStr>();
+                let lit = || {
+                    let value = meta.value()?;
+                    let span = value.span();
+                    let macro_string::MacroString(value) =
+                        value.parse::<macro_string::MacroString>()?;
+                    Ok::<_, syn::Error>(LitStr::new(&value, span))
+                };
 
                 // `path = "0x<hex>"`
                 let bytes = || {
@@ -311,8 +317,9 @@ mod tests {
     use syn::parse_quote;
 
     macro_rules! test_sol_attrs {
-        ($($group:ident { $($t:tt)* })+) => {$(
+        ($($(#[$attr:meta])* $group:ident { $($t:tt)* })+) => {$(
             #[test]
+            $(#[$attr])*
             fn $group() {
                 test_sol_attrs! { $($t)* }
             }
@@ -434,6 +441,11 @@ mod tests {
         type_check {
             #[sol(type_check = "my_function")] => Ok(sol_attrs! { type_check: parse_quote!("my_function") }),
             #[sol(type_check = "my_function1")] #[sol(type_check = "my_function2")] => Err(DUPLICATE_ERROR),
+        }
+
+        #[cfg_attr(miri, ignore = "env not available")]
+        inner_macro {
+            #[sol(rename = env!("CARGO_PKG_NAME"))] => Ok(sol_attrs! { rename: parse_quote!("alloy-sol-macro-input") }),
         }
     }
 }

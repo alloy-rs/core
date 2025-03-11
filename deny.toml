@@ -1,7 +1,9 @@
 [advisories]
 version = 2
 yanked = "warn"
-ignore = []
+ignore = [
+    "RUSTSEC-2024-0436" # paste - no longer maintained
+]
 
 [bans]
 multiple-versions = "warn"
