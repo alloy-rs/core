@@ -996,7 +996,7 @@ fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
             pub struct #call_name(pub #ty);
         }
     } else {
-        let call_fields = super::expand_fields(&f.parameters, cx);
+        let call_fields = param_names1.clone();
         quote! {
             pub struct #call_name {
                 #(#call_fields),*
