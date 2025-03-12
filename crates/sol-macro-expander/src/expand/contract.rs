@@ -983,13 +983,30 @@ fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
     let name = cx.function_name(f);
     let call_name = cx.call_name(f);
     let param_names1 = f.parameters.names().enumerate().map(anon_name);
-    let param_names2 = param_names1.clone();
     let param_tys = f.parameters.types().map(|ty| cx.expand_rust_type(ty));
     let doc = format!("Creates a new call builder for the [`{name}`] function.");
+
+    let call_struct = if f.parameters.is_empty() {
+        quote! {
+            pub struct #call_name;
+        }
+    } else if f.parameters.len() == 1 && f.parameters[0].name.is_none() {
+        let ty = cx.expand_rust_type(&f.parameters[0].ty);
+        quote! {
+            pub struct #call_name(pub #ty);
+        }
+    } else {
+        let call_fields = super::expand_fields(&f.parameters, cx);
+        quote! {
+            pub struct #call_name {
+                #(#call_fields),*
+            }
+        }
+    };
     quote! {
         #[doc = #doc]
         pub fn #name(&self, #(#param_names1: #param_tys),*) -> alloy_contract::SolCallBuilder<&P, #call_name, N> {
-            self.call_builder(&#call_name { #(#param_names2),* })
+            self.call_builder(&#call_struct)
         }
     }
 }
