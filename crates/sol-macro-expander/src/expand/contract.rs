@@ -987,20 +987,14 @@ fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
     let doc = format!("Creates a new call builder for the [`{name}`] function.");
 
     let call_struct = if f.parameters.is_empty() {
-        quote! {
-            pub struct #call_name;
-        }
+        quote! { #call_name }
     } else if f.parameters.len() == 1 && f.parameters[0].name.is_none() {
-        let ty = cx.expand_rust_type(&f.parameters[0].ty);
-        quote! {
-            pub struct #call_name(pub #ty);
-        }
+        let param_name = quote! { _0 };
+        quote! { #call_name(#param_name) }
     } else {
         let call_fields = param_names1.clone();
         quote! {
-            pub struct #call_name {
-                #(#call_fields),*
-            }
+            #call_name { #(#call_fields),* }
         }
     };
     quote! {
