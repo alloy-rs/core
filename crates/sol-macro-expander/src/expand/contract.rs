@@ -989,8 +989,7 @@ fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
     let call_struct = if f.parameters.is_empty() {
         quote! { #call_name }
     } else if f.parameters.len() == 1 && f.parameters[0].name.is_none() {
-        let param_name = quote! { _0 };
-        quote! { #call_name(#param_name) }
+        quote! { #call_name(_0) }
     } else {
         let call_fields = param_names1.clone();
         quote! {
