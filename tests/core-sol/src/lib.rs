@@ -128,10 +128,6 @@ pub mod no_missing_docs {
     }
 }
 
-// <https://github.com/alloy-rs/core/issues/902>
-sol! {
-    function f(address self) returns (uint256);
-}
 #[test]
 fn do_stuff() {
     let mut set = alloy_core::primitives::map::B256Map::<MyStruct>::default();
@@ -143,7 +139,4 @@ fn do_stuff() {
         Default::default(),
     );
     assert_eq!(set.len(), 1);
-
-    // self renamed to `this` as `r#self` is not accepted by rust. See: <https://internals.rust-lang.org/t/raw-identifiers-dont-work-for-all-identifiers/9094/4>
-    let _f_call = fCall { this: Default::default() };
 }
