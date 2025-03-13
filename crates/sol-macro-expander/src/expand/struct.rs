@@ -37,7 +37,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
     let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, name);
 
-    let tokenize_impl = expand_tokenize(fields, cx);
+    let tokenize_impl = expand_tokenize(fields, cx, super::FieldKind::Original);
 
     let encode_data_impl = match fields.len() {
         0 => unreachable!("struct with zero fields"),
@@ -56,7 +56,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let alloy_sol_types = &cx.crates.sol_types;
 
     let attrs = attrs.iter();
-    let convert = expand_from_into_tuples(&name.0, fields, cx);
+    let convert = expand_from_into_tuples(&name.0, fields, cx, super::FieldKind::Original);
     let name_s = name.as_string();
     let fields = expand_fields(fields, cx);
 
