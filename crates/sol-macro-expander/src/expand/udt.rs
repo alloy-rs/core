@@ -102,6 +102,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
             }
 
             #[automatically_derived]
+            impl From<#name> for #underlying_rust {
+                fn from(value: #name) -> Self {
+                    value.into_underlying()
+                }
+            }
+
+            #[automatically_derived]
             impl alloy_sol_types::SolType for #name {
                 type RustType = #underlying_rust;
                 type Token<'a> = <#underlying_sol as alloy_sol_types::SolType>::Token<'a>;
