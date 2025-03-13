@@ -47,18 +47,22 @@ fn large_array() {
 
 #[test]
 fn seaport() {
-    sol!(Seaport, "../json-abi/tests/abi/Seaport.json");
+    sol!(
+        #[derive(Debug, PartialEq, Eq)]
+        Seaport,
+        "../json-abi/tests/abi/Seaport.json"
+    );
     use Seaport::*;
 
     // Constructor with a single argument
     let _ = constructorCall { conduitController: Address::ZERO };
 
     // BasicOrderType is a uint8 UDVT
-    let _o1 = BasicOrderType::from(0u8);
+    let o1 = BasicOrderType::from(0u8);
 
-    let _o2: BasicOrderType = 0.into();
+    let o2: BasicOrderType = 0.into();
 
-    assert!(matches!(_o1, _o2));
+    assert_eq!(o1, o2);
 
     // BasicOrderParameters is a struct that contains UDVTs (basicOrderType) and a
     // struct array. The only component should be the struct of the struct array.
