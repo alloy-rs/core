@@ -116,10 +116,6 @@ use syn::parse_macro_input;
 ///   default behavior of [`abigen`]. This makes use of the [`alloy-contract`](https://github.com/alloy-rs/alloy)
 ///   crate.
 ///
-///   N.B: at the time of writing, the `alloy-contract` crate is not yet released on `crates.io`,
-///   and its API is completely unstable and subject to change, so this feature is not yet
-///   recommended for use.
-///
 ///   Generates the following items inside of the `{contract_name}` module:
 ///   - `struct {contract_name}Instance<P: Provider> { ... }`
 ///     - `pub fn new(...) -> {contract_name}Instance<P>` + getters and setters
