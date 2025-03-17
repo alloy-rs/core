@@ -1,5 +1,4 @@
 use crate::{
-    alloc::string::ToString,
     item::{Constructor, Error, Event, Fallback, Function, Receive},
     EventParam, InternalType, JsonAbi, Param, StateMutability,
 };
@@ -196,13 +195,11 @@ impl JsonAbi {
         out.push('{');
         out.push('\n');
 
-        let mut other_its_names = Vec::new();
         if types_in_interface {
             for (name, its) in &its.other {
                 if its.is_empty() {
                     continue;
                 }
-                other_its_names.extend(its.iter().map(|it| it.name.to_string()));
 
                 out.indent();
                 out.push_str("// Types from `");
