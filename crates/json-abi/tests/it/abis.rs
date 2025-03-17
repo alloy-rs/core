@@ -626,7 +626,25 @@ interface TestContract {
 
     let config = ToSolConfig::default().types_in_interface(true).print_constructors(true);
     let sol_interface = deserialized.to_sol("TestContract", Some(config));
-    // TODO
-
     println!("{}", sol_interface);
+    assert_eq!(
+        sol_interface.trim(),
+        r#"interface TestContract {
+    // Types from `ITestContract`
+    type TestEnum is uint8;
+    type Unsigned is uint256;
+    struct TestStruct {
+        address asset;
+    }
+
+    error TestError(Unsigned);
+
+    event TestEvent(Unsigned);
+
+    constructor(TestStruct, TestEnum, Unsigned);
+
+    function test_struct(TestStruct memory) external;
+}"#
+        .trim()
+    );
 }

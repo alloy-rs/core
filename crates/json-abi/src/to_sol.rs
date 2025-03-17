@@ -649,7 +649,13 @@ fn param(
             InternalType::AddressPayable(ty) => (None, &ty[..]),
             InternalType::Struct { contract, ty }
             | InternalType::Enum { contract, ty }
-            | InternalType::Other { contract, ty } => (contract.as_deref(), &ty[..]),
+            | InternalType::Other { contract, ty } => {
+                if !out.config.types_in_interface {
+                    (contract.as_deref(), &ty[..])
+                } else {
+                    (None, &ty[..])
+                }
+            }
         };
     };
 
