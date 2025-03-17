@@ -1,26 +1,14 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
-
-interface ITestContract {
+library ITestContract {
+    type Unsigned is uint256;
     struct TestStruct {
         address asset;
     }
-
-    type Unsigned is uint256;
-
-    enum TestEnum {
-        A,
-        B,
-        C
-    }
 }
 
-contract TestContract is ITestContract {
-    function test_struct(TestStruct memory) external {}
+interface TestContract {
+    error TestError(ITestContract.Unsigned);
 
-    error TestError(Unsigned);
+    event TestEvent(ITestContract.Unsigned);
 
-    event TestEvent(Unsigned);
-
-    constructor(TestStruct memory, TestEnum, Unsigned) {}
+    function test_struct(ITestContract.TestStruct memory) external;
 }
