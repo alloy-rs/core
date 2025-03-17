@@ -49,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 - [`primitives`] Impl Display for PrimitiveSig ([#892](https://github.com/alloy-rs/core/issues/892))
+- [`primitives`] Impl support for diesel @ 2.2 ([#876](https://github.com/alloy-rs/core/issues/876))
 
 ### Miscellaneous Tasks
 
