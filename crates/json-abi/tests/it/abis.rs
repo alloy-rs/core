@@ -1,6 +1,6 @@
 use alloy_json_abi::{
     Constructor, Error, Event, EventParam, Fallback, Function, JsonAbi, Param, Receive,
-    StateMutability,
+    StateMutability, ToSolConfig,
 };
 use std::collections::BTreeMap;
 
@@ -594,4 +594,39 @@ fn fallback() {
     );
 
     assert_ser_de!(JsonAbi, deserialized);
+}
+
+#[test]
+fn types_in_interface() {
+    let test_contract_json = include_str!("../abi/TestContract.json");
+    let deserialized: JsonAbi = serde_json::from_str(test_contract_json).unwrap();
+
+    // Default config, generates the struct in a library
+    let sol_interface = deserialized.to_sol("TestContract", Default::default());
+
+    assert_eq!(
+        sol_interface.trim(),
+        r#"library ITestContract {
+    type TestEnum is uint8;
+    type Unsigned is uint256;
+    struct TestStruct {
+        address asset;
+    }
+}
+
+interface TestContract {
+    error TestError(ITestContract.Unsigned);
+
+    event TestEvent(ITestContract.Unsigned);
+
+    function test_struct(ITestContract.TestStruct memory) external;
+}"#
+        .trim()
+    );
+
+    let config = ToSolConfig::default().types_in_interface(true).print_constructors(true);
+    let sol_interface = deserialized.to_sol("TestContract", Some(config));
+    // TODO
+
+    println!("{}", sol_interface);
 }

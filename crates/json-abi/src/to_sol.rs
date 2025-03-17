@@ -1,4 +1,5 @@
 use crate::{
+    alloc::string::ToString,
     item::{Constructor, Error, Event, Fallback, Function, Receive},
     EventParam, InternalType, JsonAbi, Param, StateMutability,
 };
@@ -166,21 +167,25 @@ impl JsonAbi {
         let mut its = InternalTypes::new(out.name, out.config.enums_as_udvt);
         its.visit_abi(self);
 
-        for (name, its) in &its.other {
-            if its.is_empty() {
-                continue;
+        let types_in_interface = out.config.types_in_interface;
+
+        if !types_in_interface {
+            for (name, its) in &its.other {
+                if its.is_empty() {
+                    continue;
+                }
+                out.push_str("library ");
+                out.push_str(name);
+                out.push_str(" {\n");
+                let prev = core::mem::replace(&mut out.name, name);
+                for it in its {
+                    out.indent();
+                    it.to_sol(out);
+                    out.push('\n');
+                }
+                out.name = prev;
+                out.push_str("}\n\n");
             }
-            out.push_str("library ");
-            out.push_str(name);
-            out.push_str(" {\n");
-            let prev = core::mem::replace(&mut out.name, name);
-            for it in its {
-                out.indent();
-                it.to_sol(out);
-                out.push('\n');
-            }
-            out.name = prev;
-            out.push_str("}\n\n");
         }
 
         out.push_str("interface ");
@@ -191,6 +196,21 @@ impl JsonAbi {
         out.push('{');
         out.push('\n');
 
+        let mut other_its_names = Vec::new();
+        if types_in_interface {
+            for (name, its) in &its.other {
+                if its.is_empty() {
+                    continue;
+                }
+                other_its_names.extend(its.iter().map(|it| it.name.to_string()));
+
+                out.indent();
+                out.push_str("// Types from `");
+                out.push_str(name);
+                out.push_str("`\n");
+                fmt!(its);
+            }
+        }
         fmt!(its.this_its);
         fmt!(self.errors());
         fmt!(self.events());
