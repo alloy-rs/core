@@ -1,7 +1,10 @@
 use heck::{ToKebabCase, ToLowerCamelCase, ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{punctuated::Punctuated, Attribute, Error, LitBool, LitStr, Path, Result, Token};
+use syn::{
+    meta::ParseNestedMeta, parse::Parse, punctuated::Punctuated, Attribute, Error, LitBool, LitStr,
+    Path, Result, Token,
+};
 
 const DUPLICATE_ERROR: &str = "duplicate attribute";
 const UNKNOWN_ERROR: &str = "unknown `sol` attribute";
@@ -81,6 +84,8 @@ pub struct SolAttrs {
     pub abi: Option<bool>,
     /// `#[sol(all_derives)]`
     pub all_derives: Option<bool>,
+    /// `#[sol(extra_derives(...))]`
+    pub extra_derives: Option<Vec<Path>>,
     /// `#[sol(extra_methods)]`
     pub extra_methods: Option<bool>,
     /// `#[sol(docs)]`
@@ -168,10 +173,21 @@ impl SolAttrs {
                     Ok(lit)
                 };
 
+                // `path(comma, separated, list)`
+                fn list<T>(
+                    meta: &ParseNestedMeta<'_>,
+                    parser: fn(syn::parse::ParseStream<'_>) -> Result<T>,
+                ) -> Result<Vec<T>> {
+                    let content;
+                    syn::parenthesized!(content in meta.input);
+                    Ok(content.parse_terminated(parser, Token![,])?.into_iter().collect())
+                }
+
                 match_! {
                     rpc => bool()?,
                     abi => bool()?,
                     all_derives => bool()?,
+                    extra_derives => list(&meta, Path::parse)?,
                     extra_methods => bool()?,
                     docs => bool()?,
 
@@ -392,6 +408,11 @@ mod tests {
             #[sol(all_derives = false)] => Ok(sol_attrs! { all_derives: false }),
             #[sol(all_derives = "false")] => Err("expected boolean literal"),
             #[sol(all_derives)] #[sol(all_derives)] => Err(DUPLICATE_ERROR),
+
+            #[sol(extra_derives(Single, module::Double))] => Ok(sol_attrs! { extra_derives: vec![
+                parse_quote!(Single),
+                parse_quote!(module::Double),
+            ] }),
 
             #[sol(extra_methods)] => Ok(sol_attrs! { extra_methods: true }),
             #[sol(extra_methods = true)] => Ok(sol_attrs! { extra_methods: true }),

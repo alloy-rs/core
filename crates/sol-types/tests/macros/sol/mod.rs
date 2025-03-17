@@ -1277,3 +1277,17 @@ fn array_sizes() {
 
     assert_eq!(C::fCall::SIGNATURE, "f((uint256[1],uint256[2],uint256[4],uint256[8]))");
 }
+
+#[test]
+fn extra_derives() {
+    sol! {
+        #![sol(extra_derives(std::fmt::Debug))]
+
+        struct MyStruct {
+            uint256 a;
+        }
+    }
+
+    let s = MyStruct { a: U256::ZERO };
+    let _ = format!("{s:#?}");
+}
