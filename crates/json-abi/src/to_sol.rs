@@ -21,8 +21,8 @@ pub struct ToSolConfig {
     print_constructors: bool,
     enums_as_udvt: bool,
     for_sol_macro: bool,
-    /// Default is false. If set to `true`, any types part of the ABI are generated in the same
-    /// interface as the contract and not in a separate library.
+    /// Default is false. If set to `true`, any types part of some other interface/library are
+    /// generated in the same interface as the contract and not in a separate library.
     types_in_interface: bool,
 }
 
