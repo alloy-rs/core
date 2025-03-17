@@ -13,6 +13,8 @@ const SECP256K1N_ORDER: U256 =
 
 /// An Ethereum ECDSA signature.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "diesel", derive(diesel::AsExpression, diesel::FromSqlRow))]
+#[cfg_attr(feature = "diesel", diesel(sql_type = diesel::sql_types::Binary))]
 pub struct Signature {
     y_parity: bool,
     r: U256,
