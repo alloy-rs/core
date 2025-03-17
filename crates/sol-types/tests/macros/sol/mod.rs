@@ -181,6 +181,8 @@ fn ret_param_single_test() {
     let res = balanceOfNamedCall::abi_decode_returns(&data).unwrap();
 
     assert_eq!(res, U256::from(42));
+
+    assert_eq!(balanceOfCall::abi_encode_returns(&res), data);
 }
 
 #[test]
@@ -248,6 +250,8 @@ fn empty_call() {
 
     let depositCall {} = depositCall::abi_decode(&depositCall::SELECTOR).unwrap();
     let depositCall {} = depositCall::abi_decode_raw(&[]).unwrap();
+
+    assert!(depositCall::abi_encode_returns(&WETH::depositReturn {}).is_empty());
 }
 
 #[test]

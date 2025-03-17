@@ -44,6 +44,9 @@ pub trait SolCall: Sized {
     /// Tokenize the call's arguments.
     fn tokenize(&self) -> Self::Token<'_>;
 
+    /// Tokenize the call's return values.
+    fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_>;
+
     /// The size of the encoded data in bytes, **without** its selector.
     #[inline]
     fn abi_encoded_size(&self) -> usize {
@@ -92,9 +95,15 @@ pub trait SolCall: Sized {
     /// ABI decode this call's return values from the given slice.
     fn abi_decode_returns(data: &[u8]) -> Result<Self::Return>;
 
+    /// ABI encode the call's return value.
+    #[inline]
+    fn abi_encode_returns(ret: &Self::Return) -> Vec<u8> {
+        crate::abi::encode_sequence(&Self::tokenize_returns(ret))
+    }
+
     /// ABI encode the call's return values.
     #[inline]
-    fn abi_encode_returns<'a, E>(e: &'a E) -> Vec<u8>
+    fn abi_encode_returns_tuple<'a, E>(e: &'a E) -> Vec<u8>
     where
         E: SolTypeValue<Self::ReturnTuple<'a>>,
     {

@@ -124,20 +124,37 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     // Determine whether the return type should directly yield result or the <name>Return struct.
     let is_single_return = returns.len() == 1;
-    let return_type = is_single_return
-        .then(|| cx.expand_rust_type(&returns[0].ty))
-        .unwrap_or(quote!(#return_name));
-    let decode_returns = is_single_return
-        .then(|| {
-            let name = anon_name((0, returns[0].name.as_ref()));
-            quote! {
-                #decode_sequence.map(|r| {
-                    let r: #return_name = r.into();
-                    r.#name
-                })
+    let return_type =
+        if is_single_return { cx.expand_rust_type(&returns[0].ty) } else { quote!(#return_name) };
+    let tokenize_returns_impl = if is_single_return {
+        quote!()
+    } else {
+        let imp = expand_tokenize(returns, cx, FieldKind::Original);
+        quote! {
+            impl #return_name {
+                fn _tokenize(&self) -> <#call_name as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                    #imp
+                }
             }
-        })
-        .unwrap_or(quote!(#decode_sequence.map(Into::into)));
+        }
+    };
+    let tokenize_returns = if is_single_return {
+        let ty = cx.expand_type(&returns[0].ty);
+        quote! { (<#ty as alloy_sol_types::SolType>::tokenize(ret),) }
+    } else {
+        quote! { #return_name::_tokenize(ret) }
+    };
+    let decode_returns = if is_single_return {
+        let name = anon_name((0, returns[0].name.as_ref()));
+        quote! {
+            #decode_sequence.map(|r| {
+                let r: #return_name = r.into();
+                r.#name
+            })
+        }
+    } else {
+        quote!(#decode_sequence.map(Into::into))
+    };
 
     let tokens = quote! {
         #(#call_attrs)*
@@ -161,6 +178,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
             { #converts }
             { #return_converts }
 
+            #tokenize_returns_impl
+
             #[automatically_derived]
             impl alloy_sol_types::SolCall for #call_name {
                 type Parameters<'a> = #call_tuple;
@@ -182,6 +201,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 #[inline]
                 fn tokenize(&self) -> Self::Token<'_> {
                     #tokenize_impl
+                }
+
+                #[inline]
+                fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                    #tokenize_returns
                 }
 
                 #[inline]
