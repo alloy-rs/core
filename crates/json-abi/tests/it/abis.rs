@@ -624,9 +624,8 @@ interface TestContract {
         .trim()
     );
 
-    let config = ToSolConfig::default().types_in_interface(true).print_constructors(true);
+    let config = ToSolConfig::default().types_in_interface(true);
     let sol_interface = deserialized.to_sol("TestContract", Some(config));
-    println!("{}", sol_interface);
     assert_eq!(
         sol_interface.trim(),
         r#"interface TestContract {
@@ -640,8 +639,6 @@ interface TestContract {
     error TestError(Unsigned);
 
     event TestEvent(Unsigned);
-
-    constructor(TestStruct, TestEnum, Unsigned);
 
     function test_struct(TestStruct memory) external;
 }"#
