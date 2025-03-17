@@ -20,6 +20,9 @@ pub struct ToSolConfig {
     print_constructors: bool,
     enums_as_udvt: bool,
     for_sol_macro: bool,
+    /// Default is false. If set to `true`, any types part of the ABI are generated in the same
+    /// interface as the contract and not in a separate library.
+    types_in_interface: bool,
 }
 
 impl Default for ToSolConfig {
@@ -33,7 +36,12 @@ impl ToSolConfig {
     /// Creates a new configuration with default settings.
     #[inline]
     pub const fn new() -> Self {
-        Self { print_constructors: false, enums_as_udvt: true, for_sol_macro: false }
+        Self {
+            print_constructors: false,
+            enums_as_udvt: true,
+            for_sol_macro: false,
+            types_in_interface: false,
+        }
     }
 
     /// Sets whether to print constructors. Default: `false`.
@@ -56,6 +64,13 @@ impl ToSolConfig {
     /// [`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/macro.sol.html
     pub const fn for_sol_macro(mut self, yes: bool) -> Self {
         self.for_sol_macro = yes;
+        self
+    }
+
+    /// Sets whether to generate structs or any other types in the same interface as the contract
+    /// and not in a separate library. Default: `false`.
+    pub const fn types_in_interface(mut self, yes: bool) -> Self {
+        self.types_in_interface = yes;
         self
     }
 }
