@@ -96,6 +96,7 @@ postgres-types = { workspace = true, optional = true }
 
 # diesel
 diesel = { workspace = true, optional = true }
+diesel-derive-newtype = { workspace = true, optional = true }
 
 [dev-dependencies]
 bcs.workspace = true
@@ -166,7 +167,7 @@ arbitrary = [
     "indexmap?/arbitrary",
 ]
 postgres = ["std", "dep:postgres-types", "ruint/postgres"]
-diesel = ["std", "dep:diesel", "ruint/diesel"]
+diesel = ["std", "dep:diesel", "dep:diesel-derive-newtype", "ruint/diesel"]
 
 # `const-hex` compatibility feature for `hex`.
 # Should not be needed most of the time.
