@@ -46,7 +46,9 @@ assert_eq!(data, decoded);
 
 The [`sol!`] procedural macro provides a convenient way to define
 custom [`SolType`]s and reference primitive ones. See
-[its documentation][sol!] for details on how to use it.
+[its documentation](sol!) for details on how to use it.
+
+[sol!]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/macro.sol.html
 
 ## [`SolStruct`]
 
