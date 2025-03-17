@@ -69,6 +69,7 @@ macro_rules! wrap_fixed_bytes {
                 $extra_derives,
             )*
         )]
+        #[cfg_attr(feature = "diesel", derive(diesel_derive_newtype::DieselNewType))]
         #[repr(transparent)]
         $vis struct $name(#[into_iterator(owned, ref, ref_mut)] pub $crate::FixedBytes<$n>);
 
