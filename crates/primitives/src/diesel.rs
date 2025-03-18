@@ -1,11 +1,10 @@
 //! Support for the [`diesel`](https://crates.io/crates/diesel) crate.
 //!
-//! Supports big-endian binary serialization via via the [`BYTEA`] Postgres type.
+//! Supports big-endian binary serialization via into sql_types::Binary.
 //! Similar to [`ruint`'s implementation](https://github.com/recmo/uint/blob/fd57517b36cda8341f7740dacab4b1ec186af948/src/support/diesel.rs)
 
-use crate::PrimitiveSignature;
+use crate::{FixedBytes, PrimitiveSignature};
 
-use super::FixedBytes;
 use diesel::{
     backend::Backend,
     deserialize::{FromSql, Result as DeserResult},
