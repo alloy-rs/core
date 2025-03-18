@@ -24,14 +24,14 @@ where
     }
 }
 
-impl<'a, const BITS: usize, Db: Backend> FromSql<Binary, Db> for FixedBytes<BITS>
+impl<const BITS: usize, Db: Backend> FromSql<Binary, Db> for FixedBytes<BITS>
 where
     *const [u8]: FromSql<Binary, Db>,
 {
     fn from_sql(bytes: Db::RawValue<'_>) -> DeserResult<Self> {
         let bytes: *const [u8] = FromSql::<Binary, Db>::from_sql(bytes)?;
         let bytes = unsafe { &*bytes };
-        Ok(Self::from_slice(&bytes))
+        Ok(Self::from_slice(bytes))
     }
 }
 
@@ -45,7 +45,7 @@ where
     }
 }
 
-impl<'a, Db: Backend> FromSql<Binary, Db> for PrimitiveSignature
+impl<Db: Backend> FromSql<Binary, Db> for PrimitiveSignature
 where
     *const [u8]: FromSql<Binary, Db>,
 {
