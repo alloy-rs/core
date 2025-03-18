@@ -110,7 +110,7 @@ impl PrimitiveSignature {
 impl PrimitiveSignature {
     /// Instantiate a new signature from `r`, `s`, and `v` values.
     #[inline]
-    pub fn new(r: U256, s: U256, y_parity: bool) -> Self {
+    pub const fn new(r: U256, s: U256, y_parity: bool) -> Self {
         Self { r, s, y_parity }
     }
 

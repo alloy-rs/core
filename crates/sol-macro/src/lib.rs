@@ -147,9 +147,10 @@ use syn::parse_macro_input;
 ///   the required dependency [`alloy-sol-types`].
 /// - `alloy_contract = <path = ::alloy_contract>` (inner attribute only): specifies the path to the
 ///   optional dependency [`alloy-contract`]. This is only used by the `rpc` attribute.
-/// - `all_derives [ = <bool = false>]`: adds all possible `#[derive(...)]` attributes to all
-///   generated types. May significantly increase compile times due to all the extra generated code.
-///   This is the default behavior of [`abigen`]
+/// - `all_derives [ = <bool = false>]`: adds all possible standard library `#[derive(...)]`
+///   attributes to all generated types. May significantly increase compile times due to all the
+///   extra generated code. This is the default behavior of [`abigen`]
+/// - `extra_derives(<paths...>)`: adds extra `#[derive(...)]` attributes to all generated types.
 /// - `extra_methods [ = <bool = false>]`: adds extra implementations and methods to all applicable
 ///   generated types, such as `From` impls and `as_<variant>` methods. May significantly increase
 ///   compile times due to all the extra generated code. This is the default behavior of [`abigen`]
