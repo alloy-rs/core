@@ -1,3 +1,5 @@
+#![allow(clippy::missing_const_for_fn)] // On purpose for forward compatibility.
+
 use crate::{hex, normalize_v, signature::SignatureError, uint, B256, U256};
 use alloc::vec::Vec;
 use core::{fmt::Display, str::FromStr};
