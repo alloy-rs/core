@@ -1,5 +1,3 @@
-#![allow(clippy::missing_const_for_fn)] // On purpose for forward compatibility.
-
 use crate::{hex, normalize_v, signature::SignatureError, uint, B256, U256};
 use alloc::vec::Vec;
 use core::{fmt::Display, str::FromStr};
@@ -110,7 +108,7 @@ impl PrimitiveSignature {
 impl PrimitiveSignature {
     /// Instantiate a new signature from `r`, `s`, and `v` values.
     #[inline]
-    pub fn new(r: U256, s: U256, y_parity: bool) -> Self {
+    pub const fn new(r: U256, s: U256, y_parity: bool) -> Self {
         Self { r, s, y_parity }
     }
 
