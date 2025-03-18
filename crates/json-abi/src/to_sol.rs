@@ -21,8 +21,10 @@ pub struct ToSolConfig {
     enums_as_udvt: bool,
     for_sol_macro: bool,
     /// Default is false. If set to `true`, any types part of some other interface/library are
-    /// generated in the same interface as the contract and not in a separate library.
-    types_in_interface: bool,
+    /// generated in one contract.
+    ///
+    /// This breaks if there are structs with the same name in different interfaces.
+    one_contract: bool,
 }
 
 impl Default for ToSolConfig {
@@ -40,7 +42,7 @@ impl ToSolConfig {
             print_constructors: false,
             enums_as_udvt: true,
             for_sol_macro: false,
-            types_in_interface: false,
+            one_contract: false,
         }
     }
 
@@ -67,10 +69,10 @@ impl ToSolConfig {
         self
     }
 
-    /// Sets whether to generate structs or any other types in the same interface as the contract
-    /// and not in a separate library. Default: `false`.
-    pub const fn types_in_interface(mut self, yes: bool) -> Self {
-        self.types_in_interface = yes;
+    /// Sets whether to generate types part of different interfaces/libs in one contract. Default:
+    /// `false`.
+    pub const fn one_contract(mut self, yes: bool) -> Self {
+        self.one_contract = yes;
         self
     }
 }
@@ -166,9 +168,9 @@ impl JsonAbi {
         let mut its = InternalTypes::new(out.name, out.config.enums_as_udvt);
         its.visit_abi(self);
 
-        let types_in_interface = out.config.types_in_interface;
+        let one_contract = out.config.one_contract;
 
-        if !types_in_interface {
+        if !one_contract {
             for (name, its) in &its.other {
                 if its.is_empty() {
                     continue;
@@ -195,7 +197,7 @@ impl JsonAbi {
         out.push('{');
         out.push('\n');
 
-        if types_in_interface {
+        if one_contract {
             for (name, its) in &its.other {
                 if its.is_empty() {
                     continue;
@@ -647,7 +649,7 @@ fn param(
             InternalType::Struct { contract, ty }
             | InternalType::Enum { contract, ty }
             | InternalType::Other { contract, ty } => {
-                if !out.config.types_in_interface {
+                if !out.config.one_contract {
                     (contract.as_deref(), &ty[..])
                 } else {
                     (None, &ty[..])

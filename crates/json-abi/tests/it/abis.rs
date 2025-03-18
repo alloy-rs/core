@@ -597,7 +597,7 @@ fn fallback() {
 }
 
 #[test]
-fn types_in_interface() {
+fn one_contract() {
     let test_contract_json = include_str!("../abi/TestContract.json");
     let deserialized: JsonAbi = serde_json::from_str(test_contract_json).unwrap();
 
@@ -624,7 +624,7 @@ interface TestContract {
         .trim()
     );
 
-    let config = ToSolConfig::default().types_in_interface(true);
+    let config = ToSolConfig::default().one_contract(true);
     let sol_interface = deserialized.to_sol("TestContract", Some(config));
     assert_eq!(
         sol_interface.trim(),
