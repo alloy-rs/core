@@ -44,7 +44,7 @@ impl fmt::Display for ParseSignedError {
     }
 }
 
-/// The error type that is returned when conversion to or from a integer fails.
+/// The error type that is returned when conversion to or from an integer fails.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BigIntConversionError;
 
