@@ -113,8 +113,8 @@ use syn::parse_macro_input;
 /// List of all `#[sol(...)]` supported values:
 /// - `rpc [ = <bool = false>]` (contracts and alike only): generates a structs with methods to
 ///   construct `eth_call`s to an on-chain contract through Ethereum JSON RPC, similar to the
-///   default behavior of [`abigen`]. This makes use of the [`alloy-contract`](https://github.com/alloy-rs/alloy)
-///   crate.
+///   default behavior of [`abigen`]. This makes use of the 
+///   [`alloy-contract`](https://github.com/alloy-rs/alloy/tree/main/crates/contract#alloy-contract) crate.
 ///
 ///   N.B: at the time of writing, the `alloy-contract` crate is not yet released on `crates.io`,
 ///   and its API is completely unstable and subject to change, so this feature is not yet
