@@ -20,6 +20,7 @@ pub struct ToSolConfig {
     print_constructors: bool,
     enums_as_udvt: bool,
     for_sol_macro: bool,
+    one_contract: bool,
 }
 
 impl Default for ToSolConfig {
@@ -33,7 +34,12 @@ impl ToSolConfig {
     /// Creates a new configuration with default settings.
     #[inline]
     pub const fn new() -> Self {
-        Self { print_constructors: false, enums_as_udvt: true, for_sol_macro: false }
+        Self {
+            print_constructors: false,
+            enums_as_udvt: true,
+            for_sol_macro: false,
+            one_contract: false,
+        }
     }
 
     /// Sets whether to print constructors. Default: `false`.
@@ -56,6 +62,15 @@ impl ToSolConfig {
     /// [`sol!`]: https://docs.rs/alloy-sol-macro/latest/alloy_sol_macro/macro.sol.html
     pub const fn for_sol_macro(mut self, yes: bool) -> Self {
         self.for_sol_macro = yes;
+        self
+    }
+
+    /// If set to `true`, any types part of some other interface/library are
+    /// generated in one contract. Default is false.
+    ///
+    /// This breaks if there are structs with the same name in different interfaces.
+    pub const fn one_contract(mut self, yes: bool) -> Self {
+        self.one_contract = yes;
         self
     }
 }
@@ -151,21 +166,25 @@ impl JsonAbi {
         let mut its = InternalTypes::new(out.name, out.config.enums_as_udvt);
         its.visit_abi(self);
 
-        for (name, its) in &its.other {
-            if its.is_empty() {
-                continue;
+        let one_contract = out.config.one_contract;
+
+        if !one_contract {
+            for (name, its) in &its.other {
+                if its.is_empty() {
+                    continue;
+                }
+                out.push_str("library ");
+                out.push_str(name);
+                out.push_str(" {\n");
+                let prev = core::mem::replace(&mut out.name, name);
+                for it in its {
+                    out.indent();
+                    it.to_sol(out);
+                    out.push('\n');
+                }
+                out.name = prev;
+                out.push_str("}\n\n");
             }
-            out.push_str("library ");
-            out.push_str(name);
-            out.push_str(" {\n");
-            let prev = core::mem::replace(&mut out.name, name);
-            for it in its {
-                out.indent();
-                it.to_sol(out);
-                out.push('\n');
-            }
-            out.name = prev;
-            out.push_str("}\n\n");
         }
 
         out.push_str("interface ");
@@ -176,6 +195,19 @@ impl JsonAbi {
         out.push('{');
         out.push('\n');
 
+        if one_contract {
+            for (name, its) in &its.other {
+                if its.is_empty() {
+                    continue;
+                }
+
+                out.indent();
+                out.push_str("// Types from `");
+                out.push_str(name);
+                out.push_str("`\n");
+                fmt!(its);
+            }
+        }
         fmt!(its.this_its);
         fmt!(self.errors());
         fmt!(self.events());
@@ -614,7 +646,13 @@ fn param(
             InternalType::AddressPayable(ty) => (None, &ty[..]),
             InternalType::Struct { contract, ty }
             | InternalType::Enum { contract, ty }
-            | InternalType::Other { contract, ty } => (contract.as_deref(), &ty[..]),
+            | InternalType::Other { contract, ty } => {
+                if !out.config.one_contract {
+                    (contract.as_deref(), &ty[..])
+                } else {
+                    (None, &ty[..])
+                }
+            }
         };
     };
 
