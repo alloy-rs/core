@@ -69,8 +69,10 @@ impl ToSolConfig {
         self
     }
 
-    /// Sets whether to generate types part of different interfaces/libs in one contract. Default:
-    /// `false`.
+    /// If set to `true`, any types part of some other interface/library are
+    /// generated in one contract. Default is false.
+    ///
+    /// This breaks if there are structs with the same name in different interfaces.
     pub const fn one_contract(mut self, yes: bool) -> Self {
         self.one_contract = yes;
         self
