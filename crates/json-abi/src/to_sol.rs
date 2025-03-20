@@ -20,10 +20,6 @@ pub struct ToSolConfig {
     print_constructors: bool,
     enums_as_udvt: bool,
     for_sol_macro: bool,
-    /// Default is false. If set to `true`, any types part of some other interface/library are
-    /// generated in one contract.
-    ///
-    /// This breaks if there are structs with the same name in different interfaces.
     one_contract: bool,
 }
 
