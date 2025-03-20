@@ -50,7 +50,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
             #[doc = #hex]
             /// ```
             #[rustfmt::skip]
-            #[allow(clippy::all)]
+            #[expect(clippy::all)]
             pub static #name: alloy_sol_types::private::Bytes =
                 alloy_sol_types::private::Bytes::from_static(#lit_bytes);
         }
@@ -67,7 +67,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
             #[doc = #hex]
             /// ```
             #[rustfmt::skip]
-            #[allow(clippy::all)]
+            #[expect(clippy::all)]
             pub static #name: alloy_sol_types::private::Bytes =
                 alloy_sol_types::private::Bytes::from_static(#lit_bytes);
         }
@@ -488,7 +488,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         #mod_descr_doc
         #(#mod_attrs)*
         #mod_iface_doc
-        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style, clippy::empty_structs_with_brackets)]
+        #[expect(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style, clippy::empty_structs_with_brackets)]
         pub mod #name {
             use super::*;
             use #alloy_sol_types as alloy_sol_types;
@@ -715,7 +715,7 @@ impl CallLikeExpander<'_> {
                 }
 
                 #[inline]
-                #[allow(non_snake_case)]
+                #[expect(non_snake_case)]
                 fn abi_decode_raw(
                     selector: [u8; 4],
                     data: &[u8],
@@ -875,7 +875,7 @@ impl CallLikeExpander<'_> {
             #(#attrs)*
             pub enum #name {
                 #(
-                    #[allow(missing_docs)]
+                    #[expect(missing_docs)]
                     #variants(#types),
                 )*
             }

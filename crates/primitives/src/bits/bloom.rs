@@ -17,7 +17,7 @@ const MASK: usize = BLOOM_SIZE_BITS - 1;
 const ITEM_BYTES: usize = BLOOM_SIZE_BITS.ilog2().div_ceil(8) as usize;
 
 // BLOOM_SIZE_BYTES must be a power of 2
-#[allow(clippy::assertions_on_constants)]
+#[expect(clippy::assertions_on_constants)]
 const _: () = assert!(BLOOM_SIZE_BYTES.is_power_of_two());
 
 /// Input to the [`Bloom::accrue`] method.

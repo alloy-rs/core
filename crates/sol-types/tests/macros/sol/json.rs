@@ -247,6 +247,6 @@ fn inner_macros() {
         Name,
         concat!("[", "]"),
     );
-    #[allow(unused_imports)]
+    #[expect(unused_imports)]
     use Name::*;
 }

@@ -214,7 +214,7 @@ impl<'a> ValueParser<'a> {
     }
 
     #[inline]
-    #[allow(clippy::ptr_arg)]
+    #[expect(clippy::ptr_arg)]
     fn tuple<'i: 's, 't: 's, 's>(
         &'s self,
         tuple: &'t Vec<DynSolType>,

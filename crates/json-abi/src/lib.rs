@@ -18,7 +18,6 @@
 #![allow(clippy::literal_string_with_formatting_args)] // TODO: https://github.com/rust-lang/rust-clippy/issues/13885
 
 #[macro_use]
-#[allow(unused_imports)]
 extern crate alloc;
 
 pub extern crate alloy_sol_type_parser as parser;

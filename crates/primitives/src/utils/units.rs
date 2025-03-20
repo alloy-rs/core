@@ -192,7 +192,7 @@ impl ParseUnits {
     /// Parses a decimal number and multiplies it with 10^units.
     ///
     /// See [`parse_units`] for more information.
-    #[allow(clippy::self_named_constructors)]
+    #[expect(clippy::self_named_constructors)]
     pub fn parse_units(amount: &str, unit: Unit) -> Result<Self, UnitsError> {
         let exponent = unit.get() as usize;
 
@@ -396,49 +396,49 @@ impl core::str::FromStr for Unit {
 impl Unit {
     /// Wei is equivalent to 1 wei.
     pub const WEI: Self = unsafe { Self::new_unchecked(0) };
-    #[allow(non_upper_case_globals)]
+    #[expect(non_upper_case_globals)]
     #[doc(hidden)]
     #[deprecated(since = "0.5.0", note = "use `Unit::WEI` instead")]
     pub const Wei: Self = Self::WEI;
 
     /// Kwei is equivalent to 1e3 wei.
     pub const KWEI: Self = unsafe { Self::new_unchecked(3) };
-    #[allow(non_upper_case_globals)]
+    #[expect(non_upper_case_globals)]
     #[doc(hidden)]
     #[deprecated(since = "0.5.0", note = "use `Unit::KWEI` instead")]
     pub const Kwei: Self = Self::KWEI;
 
     /// Mwei is equivalent to 1e6 wei.
     pub const MWEI: Self = unsafe { Self::new_unchecked(6) };
-    #[allow(non_upper_case_globals)]
+    #[expect(non_upper_case_globals)]
     #[doc(hidden)]
     #[deprecated(since = "0.5.0", note = "use `Unit::MWEI` instead")]
     pub const Mwei: Self = Self::MWEI;
 
     /// Gwei is equivalent to 1e9 wei.
     pub const GWEI: Self = unsafe { Self::new_unchecked(9) };
-    #[allow(non_upper_case_globals)]
+    #[expect(non_upper_case_globals)]
     #[doc(hidden)]
     #[deprecated(since = "0.5.0", note = "use `Unit::GWEI` instead")]
     pub const Gwei: Self = Self::GWEI;
 
     /// Twei is equivalent to 1e12 wei.
     pub const TWEI: Self = unsafe { Self::new_unchecked(12) };
-    #[allow(non_upper_case_globals)]
+    #[expect(non_upper_case_globals)]
     #[doc(hidden)]
     #[deprecated(since = "0.5.0", note = "use `Unit::TWEI` instead")]
     pub const Twei: Self = Self::TWEI;
 
     /// Pwei is equivalent to 1e15 wei.
     pub const PWEI: Self = unsafe { Self::new_unchecked(15) };
-    #[allow(non_upper_case_globals)]
+    #[expect(non_upper_case_globals)]
     #[doc(hidden)]
     #[deprecated(since = "0.5.0", note = "use `Unit::PWEI` instead")]
     pub const Pwei: Self = Self::PWEI;
 
     /// Ether is equivalent to 1e18 wei.
     pub const ETHER: Self = unsafe { Self::new_unchecked(18) };
-    #[allow(non_upper_case_globals)]
+    #[expect(non_upper_case_globals)]
     #[doc(hidden)]
     #[deprecated(since = "0.5.0", note = "use `Unit::ETHER` instead")]
     pub const Ether: Self = Self::ETHER;

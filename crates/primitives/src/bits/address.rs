@@ -299,7 +299,7 @@ impl Address {
     // > [...] If the chain id passed to the function belongs to a network that opted for using this
     // > checksum variant, prefix the address with the chain id and the `0x` separator before
     // > calculating the hash. [...]
-    #[allow(clippy::wrong_self_convention)]
+    #[expect(clippy::wrong_self_convention)]
     fn to_checksum_inner(&self, buf: &mut [u8; 42], chain_id: Option<u64>) {
         buf[0] = b'0';
         buf[1] = b'x';
@@ -310,7 +310,7 @@ impl Address {
             Some(chain_id) => {
                 hasher.update(itoa::Buffer::new().format(chain_id).as_bytes());
                 // Clippy suggests an unnecessary copy.
-                #[allow(clippy::needless_borrows_for_generic_args)]
+                #[expect(clippy::needless_borrows_for_generic_args)]
                 hasher.update(&*buf);
             }
             None => hasher.update(&buf[2..]),
@@ -484,7 +484,7 @@ impl Address {
 ///
 /// See [`Address::to_checksum_buffer`] for more information.
 #[must_use]
-#[allow(missing_copy_implementations)]
+#[expect(missing_copy_implementations)]
 #[derive(Clone)]
 pub struct AddressChecksumBuffer(MaybeUninit<[u8; 42]>);
 
@@ -537,7 +537,7 @@ impl AddressChecksumBuffer {
 
     /// Returns the checksum of a formatted address.
     #[inline]
-    #[allow(clippy::inherent_to_string_shadow_display)]
+    #[expect(clippy::inherent_to_string_shadow_display)]
     pub fn to_string(&self) -> String {
         self.as_str().to_string()
     }

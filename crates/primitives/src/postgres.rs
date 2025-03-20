@@ -178,7 +178,7 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
                 out.put_i16(0); // dscale: Number of digits to the right of the decimal point.
                 for digit in digits {
                     debug_assert!(digit < BASE);
-                    #[allow(clippy::cast_possible_truncation)] // 10000 < i16::MAX
+                    #[expect(clippy::cast_possible_truncation)] // 10000 < i16::MAX
                     out.put_i16(digit as i16);
                 }
             }
@@ -304,7 +304,7 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                 let sign = i16::from_be_bytes(raw[4..6].try_into()?);
                 let dscale = i16::from_be_bytes(raw[6..8].try_into()?);
                 let raw = &raw[8..];
-                #[allow(clippy::cast_sign_loss)] // Signs are checked
+                #[expect(clippy::cast_sign_loss)] // Signs are checked
                 if digits < 0
                     || exponent < 0
                     || dscale != 0
@@ -323,10 +323,10 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                         error = true;
                         return None;
                     }
-                    #[allow(clippy::cast_sign_loss)] // Signs are checked
+                    #[expect(clippy::cast_sign_loss)] // Signs are checked
                     Some(digit as u64)
                 });
-                #[allow(clippy::cast_sign_loss)]
+                #[expect(clippy::cast_sign_loss)]
                 // Expression can not be negative due to checks above
                 let iter = iter.chain(iter::repeat(0).take((exponent + 1 - digits) as usize));
 

@@ -219,7 +219,7 @@ mod keccak256_state {
         }
     }
 }
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 use keccak256_state::Digest;
 
 /// Simple [`Keccak-256`] hasher.
@@ -283,7 +283,7 @@ impl Keccak256 {
 
     /// Pad and squeeze the state into `output`.
     #[inline]
-    #[allow(clippy::useless_conversion)]
+    #[expect(clippy::useless_conversion)]
     pub fn finalize_into_array(self, output: &mut [u8; 32]) {
         self.state.finalize_into(output.into());
     }

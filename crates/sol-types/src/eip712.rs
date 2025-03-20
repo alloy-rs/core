@@ -136,7 +136,7 @@ impl Eip712Domain {
         }
 
         #[inline]
-        #[allow(clippy::ptr_arg)]
+        #[expect(clippy::ptr_arg)]
         fn cow_keccak256(s: &Cow<'_, str>) -> FixedBytes<32> {
             keccak256(s.as_bytes())
         }

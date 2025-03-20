@@ -118,7 +118,7 @@ macro_rules! wrap_fixed_bytes {
             type Error = $crate::private::core::array::TryFromSliceError;
 
             #[inline]
-            #[allow(unsafe_code)]
+            #[expect(unsafe_code)]
             fn try_from(slice: &'a [u8]) -> Result<&'a $name, Self::Error> {
                 // SAFETY: `$name` is `repr(transparent)` for `FixedBytes<$n>`
                 // and consequently `[u8; $n]`
@@ -131,7 +131,7 @@ macro_rules! wrap_fixed_bytes {
             type Error = $crate::private::core::array::TryFromSliceError;
 
             #[inline]
-            #[allow(unsafe_code)]
+            #[expect(unsafe_code)]
             fn try_from(slice: &'a mut [u8]) -> Result<&'a mut $name, Self::Error> {
                 // SAFETY: `$name` is `repr(transparent)` for `FixedBytes<$n>`
                 // and consequently `[u8; $n]`
@@ -324,7 +324,7 @@ macro_rules! impl_fb_traits {
     (unsafe impl<$lt:lifetime, $($const:ident)?> From<$a:ty> for $b:ty) => {
         impl<$lt, $($const N: usize)?> $crate::private::From<$a> for $b {
             #[inline]
-            #[allow(unsafe_code)]
+            #[expect(unsafe_code)]
             fn from(value: $a) -> $b {
                 // SAFETY: guaranteed by caller
                 unsafe { $crate::private::core::mem::transmute::<$a, $b>(value) }

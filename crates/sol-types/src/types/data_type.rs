@@ -698,7 +698,7 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
 
 macro_rules! tuple_encodable_impls {
     ($count:literal $(($ty:ident $uty:ident)),+) => {
-        #[allow(non_snake_case)]
+        #[expect(non_snake_case)]
         impl<$($ty: SolTypeValue<$uty>, $uty: SolType),+> SolTypeValue<($($uty,)+)> for ($($ty,)+) {
             #[inline]
             fn stv_to_tokens(&self) -> <($($uty,)+) as SolType>::Token<'_> {
@@ -747,7 +747,7 @@ macro_rules! tuple_encodable_impls {
 
 macro_rules! tuple_impls {
     ($count:literal $($ty:ident),+) => {
-        #[allow(non_snake_case)]
+        #[expect(non_snake_case)]
         impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
             type RustType = ($( $ty::RustType, )+);
             type Token<'a> = ($( $ty::Token<'a>, )+);
@@ -831,7 +831,7 @@ impl SolType for () {
 
 all_the_tuples!(tuple_impls);
 
-#[allow(unknown_lints, unnameable_types)]
+#[expect(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
 }

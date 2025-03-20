@@ -528,7 +528,7 @@ impl<'a> OverloadedItem<'a> {
 
 // utils
 impl<'ast> ExpCtxt<'ast> {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     fn item(&self, name: &SolPath) -> &Item {
         match self.try_item(name) {
             Some(item) => item,
@@ -787,7 +787,7 @@ fn expand_fields<'a, P>(
         let attrs = &var.attrs;
         quote! {
             #(#attrs)*
-            #[allow(missing_docs)]
+            #[expect(missing_docs)]
             pub #name: #ty
         }
     })
@@ -827,7 +827,7 @@ fn expand_from_into_tuples<P>(
         type UnderlyingRustTuple<'a> = #rust_tuple;
 
         #[cfg(test)]
-        #[allow(dead_code, unreachable_patterns)]
+        #[expect(dead_code, unreachable_patterns)]
         fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
             match _t {
                 alloy_sol_types::private::AssertTypeEq::<<UnderlyingSolTuple as alloy_sol_types::SolType>::RustType>(_) => {}
@@ -910,7 +910,7 @@ fn tokenize_<'a>(
     }
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 fn emit_json_error() {
     static EMITTED: AtomicBool = AtomicBool::new(false);
     if !EMITTED.swap(true, Ordering::Relaxed) {

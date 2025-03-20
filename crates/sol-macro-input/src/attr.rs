@@ -312,7 +312,7 @@ impl CasingStyle {
     }
 
     /// Apply the casing style to the given string.
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub fn apply(self, s: &str) -> String {
         match self {
             Self::Pascal => s.to_upper_camel_case(),

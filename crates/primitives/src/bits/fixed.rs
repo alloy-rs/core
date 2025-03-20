@@ -373,7 +373,7 @@ impl<const N: usize> FixedBytes<N> {
     #[track_caller]
     pub fn random() -> Self {
         // SAFETY: `bytes` is only accessible after random initialization.
-        #[allow(clippy::uninit_assumed_init)]
+        #[expect(clippy::uninit_assumed_init)]
         let mut bytes = unsafe { core::mem::MaybeUninit::<Self>::uninit().assume_init() };
         bytes.randomize();
         bytes
@@ -387,7 +387,7 @@ impl<const N: usize> FixedBytes<N> {
     #[inline]
     pub fn try_random() -> Result<Self, getrandom::Error> {
         // SAFETY: `bytes` is only accessible after random initialization.
-        #[allow(clippy::uninit_assumed_init)]
+        #[expect(clippy::uninit_assumed_init)]
         let mut bytes = unsafe { core::mem::MaybeUninit::<Self>::uninit().assume_init() };
         bytes.try_randomize()?;
         Ok(bytes)
@@ -401,7 +401,7 @@ impl<const N: usize> FixedBytes<N> {
     #[doc(alias = "random_using")]
     pub fn random_with<R: rand::RngCore + ?Sized>(rng: &mut R) -> Self {
         // SAFETY: `bytes` is only accessible after random initialization.
-        #[allow(clippy::uninit_assumed_init)]
+        #[expect(clippy::uninit_assumed_init)]
         let mut bytes = unsafe { core::mem::MaybeUninit::<Self>::uninit().assume_init() };
         bytes.randomize_with(rng);
         bytes

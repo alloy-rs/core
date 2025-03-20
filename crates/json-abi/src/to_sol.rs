@@ -15,7 +15,7 @@ use core::{
 
 /// Configuration for [`JsonAbi::to_sol`].
 #[derive(Clone, Debug)]
-#[allow(missing_copy_implementations)] // Future-proofing
+#[expect(missing_copy_implementations)] // Future-proofing
 pub struct ToSolConfig {
     print_constructors: bool,
     enums_as_udvt: bool,
@@ -146,7 +146,7 @@ impl<'a> SolPrinter<'a> {
 }
 
 impl JsonAbi {
-    #[allow(unknown_lints, for_loops_over_fallibles)]
+    #[expect(for_loops_over_fallibles)]
     fn to_sol_root<'a>(&'a self, out: &mut SolPrinter<'a>) {
         macro_rules! fmt {
             ($iter:expr) => {
@@ -232,7 +232,7 @@ struct InternalTypes<'a> {
 }
 
 impl<'a> InternalTypes<'a> {
-    #[allow(clippy::missing_const_for_fn)]
+    #[expect(clippy::missing_const_for_fn)]
     fn new(name: &'a str, enums_as_udvt: bool) -> Self {
         Self { name, this_its: BTreeSet::new(), other: BTreeMap::new(), enums_as_udvt }
     }

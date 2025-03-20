@@ -4,7 +4,7 @@ use alloy_json_abi::{Constructor, Error, Function, Param};
 use alloy_primitives::Selector;
 use alloy_sol_types::abi::Decoder;
 
-#[allow(unknown_lints, unnameable_types)]
+#[expect(unnameable_types)]
 mod sealed {
     pub trait Sealed {}
     impl Sealed for super::Constructor {}

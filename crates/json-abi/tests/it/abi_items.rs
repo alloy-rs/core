@@ -20,7 +20,6 @@ fn operation() {
 
     let deserialized: AbiItem<'static> = serde_json::from_str(s).unwrap();
 
-    #[allow(deprecated)]
     let function = Function {
         name: "foo".to_owned(),
         inputs: vec![Param {

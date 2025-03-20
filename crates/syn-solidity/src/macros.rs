@@ -690,7 +690,7 @@ macro_rules! op_enum {
                 )+
             }
 
-            #[allow(unused_parens, unused_variables)]
+            #[expect(unused_parens, unused_variables)]
             pub fn peek(input: syn::parse::ParseStream<'_>, lookahead: &::syn::parse::Lookahead1<'_>) -> bool {
                 $(
                     (op_enum!(@peek input, lookahead, $($op)+ $($peek)?))

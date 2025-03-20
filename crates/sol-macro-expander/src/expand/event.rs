@@ -148,13 +148,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
     let tokens = quote! {
         #(#attrs)*
         #doc
-        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
+        #[expect(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
         #[derive(Clone)]
         pub struct #name {
             #( #fields, )*
         }
 
-        #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
+        #[expect(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
         const _: () = {
             use #alloy_sol_types as alloy_sol_types;
 
@@ -171,7 +171,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 
                 const ANONYMOUS: bool = #anonymous;
 
-                #[allow(unused_variables)]
+                #[expect(unused_variables)]
                 #[inline]
                 fn new(
                     topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
@@ -259,7 +259,7 @@ fn expand_event_topic_field(
     let attrs = &param.attrs;
     quote! {
         #(#attrs)*
-        #[allow(missing_docs)]
+        #[expect(missing_docs)]
         pub #name: #ty
     }
 }

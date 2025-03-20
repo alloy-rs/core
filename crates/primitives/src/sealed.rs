@@ -69,13 +69,13 @@ impl<T> Sealed<T> {
     }
 
     /// Decompose into parts.
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[expect(clippy::missing_const_for_fn)] // false positive
     pub fn into_parts(self) -> (T, B256) {
         (self.inner, self.seal)
     }
 
     /// Decompose into parts. Alias for [`Self::into_parts`].
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[expect(clippy::missing_const_for_fn)] // false positive
     pub fn split(self) -> (T, B256) {
         self.into_parts()
     }
@@ -109,7 +109,7 @@ impl<T> Sealed<T> {
 
     /// Unseal the inner item, discarding the hash.
     #[inline(always)]
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[expect(clippy::missing_const_for_fn)] // false positive
     pub fn into_inner(self) -> T {
         self.inner
     }
@@ -117,7 +117,7 @@ impl<T> Sealed<T> {
     /// Unseal the inner item, discarding the hash. Alias for
     /// [`Self::into_inner`].
     #[inline(always)]
-    #[allow(clippy::missing_const_for_fn)] // false positive
+    #[expect(clippy::missing_const_for_fn)] // false positive
     pub fn unseal(self) -> T {
         self.into_inner()
     }

@@ -182,7 +182,7 @@ impl DynSolType {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
-    #[allow(clippy::missing_const_for_fn)]
+    #[expect(clippy::missing_const_for_fn)]
     pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[Self])> {
         match self {
             #[cfg(feature = "eip712")]
@@ -193,7 +193,7 @@ impl DynSolType {
 
     /// Returns whether this type is contains a custom struct.
     #[inline]
-    #[allow(clippy::missing_const_for_fn)]
+    #[expect(clippy::missing_const_for_fn)]
     pub fn has_custom_struct(&self) -> bool {
         #[cfg(feature = "eip712")]
         {
@@ -263,7 +263,7 @@ impl DynSolType {
 
     /// Dynamic detokenization.
     // This should not fail when using a token created by `Self::empty_dyn_token`.
-    #[allow(clippy::unnecessary_to_owned)] // https://github.com/rust-lang/rust-clippy/issues/8148
+    #[expect(clippy::unnecessary_to_owned)] // https://github.com/rust-lang/rust-clippy/issues/8148
     pub fn detokenize(&self, token: DynToken<'_>) -> Result<DynSolValue> {
         match (self, token) {
             (Self::Bool, DynToken::Word(word)) => {
@@ -358,7 +358,7 @@ impl DynSolType {
     }
 
     #[inline]
-    #[allow(clippy::missing_const_for_fn)]
+    #[expect(clippy::missing_const_for_fn)]
     fn sol_type_name_simple(&self) -> Option<&'static str> {
         match self {
             Self::Address => Some("address"),
@@ -458,7 +458,7 @@ impl DynSolType {
     /// Note: this shadows the inherent [`ToString`] implementation, derived
     /// from [`fmt::Display`], for performance reasons.
     #[inline]
-    #[allow(clippy::inherent_to_string_shadow_display)]
+    #[expect(clippy::inherent_to_string_shadow_display)]
     pub fn to_string(&self) -> String {
         self.sol_type_name().into_owned()
     }

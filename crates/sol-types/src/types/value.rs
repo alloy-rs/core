@@ -337,12 +337,12 @@ impl SolValue for Vec<u8> {
 }
 
 #[cfg(test)]
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 mod tests {
     use super::*;
 
     // Make sure these are in scope
-    #[allow(unused_imports)]
+    #[expect(unused_imports)]
     use crate::{private::SolTypeValue as _, SolType as _};
 
     #[test]

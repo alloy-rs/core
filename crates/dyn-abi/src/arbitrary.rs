@@ -512,7 +512,7 @@ impl DynSolValue {
     ///                found struct `Map<Flatten<Map<BoxedStrategy<DynSolValue>, [closure@arbitrary.rs:264:40]>>, ...>`
     /// ```
     #[inline]
-    #[allow(rustdoc::invalid_rust_codeblocks)]
+    #[expect(rustdoc::invalid_rust_codeblocks)]
     fn array_strategy(element: BoxedStrategy<Self>) -> ValueArrayStrategy {
         element.prop_flat_map(|x| vec_strategy(x.value_strategy(), 1..=16))
     }

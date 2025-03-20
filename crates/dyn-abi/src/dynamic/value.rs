@@ -225,7 +225,7 @@ impl DynSolValue {
     }
 
     #[inline]
-    #[allow(clippy::missing_const_for_fn)]
+    #[expect(clippy::missing_const_for_fn)]
     fn sol_type_name_simple(&self) -> Option<&'static str> {
         match self {
             Self::Address(_) => Some("address"),
@@ -450,7 +450,7 @@ impl DynSolValue {
 
     /// Fallible cast to the contents of a variant.
     #[inline]
-    #[allow(clippy::missing_const_for_fn)]
+    #[expect(clippy::missing_const_for_fn)]
     pub fn as_custom_struct(&self) -> Option<(&str, &[String], &[Self])> {
         match self {
             #[cfg(feature = "eip712")]
@@ -461,7 +461,7 @@ impl DynSolValue {
 
     /// Returns whether this type is contains a custom struct.
     #[inline]
-    #[allow(clippy::missing_const_for_fn)]
+    #[expect(clippy::missing_const_for_fn)]
     pub fn has_custom_struct(&self) -> bool {
         #[cfg(feature = "eip712")]
         {
@@ -497,7 +497,7 @@ impl DynSolValue {
 
     /// Fallible conversion to a sequence.
     #[inline]
-    #[allow(clippy::missing_const_for_fn)] // erroneous lint
+    #[expect(clippy::missing_const_for_fn)] // erroneous lint
     pub(crate) fn into_fixed_seq(self) -> Option<Vec<Self>> {
         match self {
             as_fixed_seq!(tuple) => Some(tuple),

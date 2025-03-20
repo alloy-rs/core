@@ -101,7 +101,6 @@ impl<'de> Deserialize<'de> for TypedData {
             message: serde_json::Value,
         }
 
-        #[allow(unknown_lints, non_local_definitions)]
         impl From<TypedDataHelper> for TypedData {
             fn from(value: TypedDataHelper) -> Self {
                 Self {
@@ -115,7 +114,7 @@ impl<'de> Deserialize<'de> for TypedData {
 
         #[derive(Deserialize)]
         #[serde(untagged)]
-        #[allow(clippy::large_enum_variant)]
+        #[expect(clippy::large_enum_variant)]
         enum StrOrVal {
             Str(String),
             Val(TypedDataHelper),

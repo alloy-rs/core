@@ -55,7 +55,7 @@ pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 mod signature;
 pub use signature::{normalize_v, to_eip155_v, PrimitiveSignature, SignatureError};
-#[allow(deprecated)]
+#[expect(deprecated)]
 pub use signature::{Parity, Signature};
 
 pub mod utils;

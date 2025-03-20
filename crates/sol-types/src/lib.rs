@@ -7,7 +7,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
-#[allow(unused_extern_crates)]
+#[expect(unused_extern_crates)]
 extern crate self as alloy_sol_types;
 
 #[macro_use]
@@ -49,7 +49,7 @@ pub use alloy_sol_macro::sol;
 
 // Not public API.
 #[doc(hidden)]
-#[allow(missing_debug_implementations)]
+#[expect(missing_debug_implementations)]
 pub mod private {
     pub use super::{
         abi::RECURSION_LIMIT,

@@ -53,7 +53,7 @@ impl Encoder {
     ///
     /// Use `into_bytes` instead to flatten the words into bytes.
     // https://github.com/rust-lang/rust-clippy/issues/4979
-    #[allow(clippy::missing_const_for_fn)]
+    #[expect(clippy::missing_const_for_fn)]
     #[inline]
     pub fn finish(self) -> Vec<Word> {
         self.buf

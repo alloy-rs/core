@@ -63,7 +63,7 @@ impl Error {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-#[allow(clippy::box_collection)] // `Box<String>` is smaller than `String` or `Box<str>`.
+#[expect(clippy::box_collection)] // `Box<String>` is smaller than `String` or `Box<str>`.
 struct Repr(Box<String>);
 
 impl fmt::Display for Repr {

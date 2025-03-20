@@ -68,7 +68,6 @@ sol! {
 #[deny(missing_docs)]
 pub mod no_missing_docs {
     alloy_core::sol! {
-        #[allow(missing_docs)]
         contract Allowed {
             uint256 public number;
 

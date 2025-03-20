@@ -19,7 +19,7 @@ use alloc::vec::Vec;
 use alloy_primitives::{utils::vec_try_with_capacity, Bytes, FixedBytes, I256, U256};
 use core::fmt;
 
-#[allow(unknown_lints, unnameable_types)]
+#[expect(unknown_lints, unnameable_types)]
 mod sealed {
     pub trait Sealed {}
     impl Sealed for super::WordToken {}
@@ -326,7 +326,7 @@ impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
 impl<T, const N: usize> FixedSeqToken<T, N> {
     /// Take the backing array, consuming the token.
     // https://github.com/rust-lang/rust-clippy/issues/4979
-    #[allow(clippy::missing_const_for_fn)]
+    #[expect(clippy::missing_const_for_fn)]
     #[inline]
     pub fn into_array(self) -> [T; N] {
         self.0
@@ -500,7 +500,7 @@ impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
 impl PackedSeqToken<'_> {
     /// Instantiate a new [`Vec`] by copying the underlying slice.
     // https://github.com/rust-lang/rust-clippy/issues/4979
-    #[allow(clippy::missing_const_for_fn)]
+    #[expect(clippy::missing_const_for_fn)]
     #[inline]
     pub fn into_vec(self) -> Vec<u8> {
         self.0.to_vec()
@@ -522,7 +522,7 @@ macro_rules! tuple_impls {
     ($count:literal $($ty:ident),+) => {
         impl<'de, $($ty: Token<'de>,)+> Sealed for ($($ty,)+) {}
 
-        #[allow(non_snake_case)]
+        #[expect(non_snake_case)]
         impl<'de, $($ty: Token<'de>,)+> Token<'de> for ($($ty,)+) {
             const DYNAMIC: bool = $( <$ty as Token>::DYNAMIC )||+;
 
@@ -580,7 +580,7 @@ macro_rules! tuple_impls {
             }
         }
 
-        #[allow(non_snake_case)]
+        #[expect(non_snake_case)]
         impl<'de, $($ty: Token<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
             const IS_TUPLE: bool = true;
 

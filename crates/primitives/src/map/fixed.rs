@@ -52,7 +52,7 @@ macro_rules! fb_alias_maps {
 
 fb_alias_maps!(Selector<4>, Address<20>, B256<32>);
 
-#[allow(unused_macros)]
+#[expect(unused_macros)]
 macro_rules! assert_unchecked {
     ($e:expr) => { assert_unchecked!($e,); };
     ($e:expr, $($t:tt)*) => {
