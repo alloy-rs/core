@@ -542,7 +542,7 @@ macro_rules! impl_rlp {
             }
 
             #[inline]
-            fn encode(&self, out: &mut dyn bytes::BufMut) {
+            fn encode(&self, out: &mut dyn $crate::private::alloy_rlp::BufMut) {
                 $crate::private::alloy_rlp::Encodable::encode(&self.0, out)
             }
         }
