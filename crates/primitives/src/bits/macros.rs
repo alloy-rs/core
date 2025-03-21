@@ -590,7 +590,7 @@ macro_rules! impl_serde {
         #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl $crate::private::serde::Serialize for $t {
             #[inline]
-            fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            fn serialize<S: $crate::private::serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                 $crate::private::serde::Serialize::serialize(&self.0, serializer)
             }
         }
