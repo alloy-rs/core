@@ -6,7 +6,7 @@
 
 use alloy_core::{primitives::wrap_fixed_bytes, sol};
 
-wrap_fixed_bytes!{
+wrap_fixed_bytes! {
     struct MyFixedBytes<32>;
 }
 
