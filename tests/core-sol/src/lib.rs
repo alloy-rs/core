@@ -3,6 +3,7 @@
 //! This has to be in a separate crate where `alloy_sol_types` is not provided as a dependency.
 
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 use alloy_core::{primitives::wrap_fixed_bytes, sol};
 
