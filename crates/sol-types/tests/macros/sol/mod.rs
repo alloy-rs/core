@@ -604,19 +604,28 @@ fn most_rust_keywords() {
                     }
                 }
 
-                assert_eq!($raw::NAME, stringify!($kw));
-                assert_ne!($raw::NAME, stringify!($raw));
-                assert_eq!(<[<$kw Call>]>::SIGNATURE, concat!(stringify!($kw), "(bytes1)"));
-                let _ = [<$kw Call>] { $raw: [0u8; 1].into()};
-                assert_eq!(error::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes2)"));
+                // Special cased, signatures will be different.
+                let kw = match stringify!($kw) {
+                    "self" => "this",
+                    "Self" => "This",
+                    kw => kw,
+                };
+                assert_eq!($raw::NAME, kw);
+                assert_eq!(<[<$raw Call>]>::SIGNATURE, format!("{kw}(bytes1)"));
+                let _ = [<$raw Call>] { $raw: [0u8; 1].into() };
+                assert_eq!(error::$raw::SIGNATURE, format!("{kw}(bytes2)"));
                 let _ = error::$raw { $raw: [0u8; 2].into() };
-                assert_eq!(event::$raw::SIGNATURE, concat!(stringify!($kw), "(bytes3)"));
+                assert_eq!(event::$raw::SIGNATURE, format!("{kw}(bytes3)"));
                 let _ = event::$raw { $raw: [0u8; 3].into() };
             })*
         } };
     }
 
     kws! {
+        // Special cased: https://github.com/alloy-rs/core/issues/902
+        self this
+        Self This
+
         const r#const
         extern r#extern
         fn r#fn
@@ -1334,4 +1343,18 @@ fn array_sizes() {
     }
 
     assert_eq!(C::fCall::SIGNATURE, "f((uint256[1],uint256[2],uint256[4],uint256[8]))");
+}
+
+#[test]
+fn extra_derives() {
+    sol! {
+        #![sol(extra_derives(std::fmt::Debug))]
+
+        struct MyStruct {
+            uint256 a;
+        }
+    }
+
+    let s = MyStruct { a: U256::ZERO };
+    let _ = format!("{s:#?}");
 }

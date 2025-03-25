@@ -1,6 +1,6 @@
 use alloy_json_abi::{
     Constructor, Error, Event, EventParam, Fallback, Function, JsonAbi, Param, Receive,
-    StateMutability,
+    StateMutability, ToSolConfig,
 };
 use std::collections::BTreeMap;
 
@@ -594,4 +594,54 @@ fn fallback() {
     );
 
     assert_ser_de!(JsonAbi, deserialized);
+}
+
+#[test]
+fn one_contract() {
+    let test_contract_json = include_str!("../abi/TestContract.json");
+    let deserialized: JsonAbi = serde_json::from_str(test_contract_json).unwrap();
+
+    // Default config, generates the struct in a library
+    let sol_interface = deserialized.to_sol("TestContract", Default::default());
+
+    assert_eq!(
+        sol_interface.trim(),
+        r#"library ITestContract {
+    type TestEnum is uint8;
+    type Unsigned is uint256;
+    struct TestStruct {
+        address asset;
+    }
+}
+
+interface TestContract {
+    error TestError(ITestContract.Unsigned);
+
+    event TestEvent(ITestContract.Unsigned);
+
+    function test_struct(ITestContract.TestStruct memory) external;
+}"#
+        .trim()
+    );
+
+    let config = ToSolConfig::default().one_contract(true);
+    let sol_interface = deserialized.to_sol("TestContract", Some(config));
+    assert_eq!(
+        sol_interface.trim(),
+        r#"interface TestContract {
+    // Types from `ITestContract`
+    type TestEnum is uint8;
+    type Unsigned is uint256;
+    struct TestStruct {
+        address asset;
+    }
+
+    error TestError(Unsigned);
+
+    event TestEvent(Unsigned);
+
+    function test_struct(TestStruct memory) external;
+}"#
+        .trim()
+    );
 }

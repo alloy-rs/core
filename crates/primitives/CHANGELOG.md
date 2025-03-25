@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
+
+### Miscellaneous Tasks
+
+- Restore clippy allow
+
+### Other
+
+- Make PrimitiveSignature::new a const fn ([#913](https://github.com/alloy-rs/core/issues/913))
+
+## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
+
+### Features
+
+- [`primitives`] Impl Display for PrimitiveSig ([#892](https://github.com/alloy-rs/core/issues/892))
+
+### Miscellaneous Tasks
+
+- Release 0.8.23
+- Clippy ([#894](https://github.com/alloy-rs/core/issues/894))
+- [primitives] Make TxKind::into_to const ([#890](https://github.com/alloy-rs/core/issues/890))
+
 ## [0.8.22](https://github.com/alloy-rs/core/releases/tag/v0.8.22) - 2025-02-27
 
 ### Documentation
@@ -18,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Erc2098 signature representation ([#874](https://github.com/alloy-rs/core/issues/874))
 - Add TxKind::into_to ([#875](https://github.com/alloy-rs/core/issues/875))
 - [primitives] Improve rand implementations, use `thread_rng` when available ([#870](https://github.com/alloy-rs/core/issues/870))
+
+### Miscellaneous Tasks
+
+- Release 0.8.22
 
 ## [0.8.21](https://github.com/alloy-rs/core/releases/tag/v0.8.21) - 2025-02-10
 

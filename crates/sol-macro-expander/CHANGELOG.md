@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
+
+### Features
+
+- [sol-macro] Add `#![sol(extra_derives(...)]` ([#910](https://github.com/alloy-rs/core/issues/910))
+
+## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
+
+### Miscellaneous Tasks
+
+- Release 0.8.23
+
+## [0.8.22](https://github.com/alloy-rs/core/releases/tag/v0.8.22) - 2025-02-27
+
+### Miscellaneous Tasks
+
+- Release 0.8.22
+
 ## [0.8.21](https://github.com/alloy-rs/core/releases/tag/v0.8.21) - 2025-02-10
 
 ### Bug Fixes

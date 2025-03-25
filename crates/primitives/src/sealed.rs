@@ -107,6 +107,12 @@ impl<T> Sealed<T> {
         self.seal
     }
 
+    /// Get the hash.
+    #[inline(always)]
+    pub const fn hash_ref(&self) -> &B256 {
+        &self.seal
+    }
+
     /// Unseal the inner item, discarding the hash.
     #[inline(always)]
     #[allow(clippy::missing_const_for_fn)] // false positive

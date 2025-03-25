@@ -653,8 +653,9 @@ impl<'ast> ExpCtxt<'ast> {
         name
     }
 
-    /// Extends `attrs` with all possible derive attributes for the given type
-    /// if `#[sol(all_derives)]` was passed.
+    /// Extends `attrs` with:
+    /// - all derives specified by the user in `#[sol(extra_derives(...))]`,
+    /// - all possible derive attributes for the given type if `#[sol(all_derives)]` was passed.
     ///
     /// The following traits are only implemented on tuples of arity 12 or less:
     /// - [PartialEq](https://doc.rust-lang.org/stable/std/cmp/trait.PartialEq.html)
@@ -686,6 +687,12 @@ impl<'ast> ExpCtxt<'ast> {
         I: IntoIterator<Item = T>,
         T: Borrow<Type>,
     {
+        if let Some(extra) = &self.attrs.extra_derives {
+            if !extra.is_empty() {
+                attrs.push(parse_quote! { #[derive(#(#extra),*)] });
+            }
+        }
+
         let Some(true) = self.attrs.all_derives else {
             return;
         };

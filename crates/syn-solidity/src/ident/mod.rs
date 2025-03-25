@@ -107,6 +107,15 @@ impl SolIdent {
 
         if matches!(s, "_" | "self" | "Self" | "super" | "crate") {
             new_raw = false;
+
+            // `self` renamed to `this` as `r#self` is not accepted by rust.
+            // See: <https://internals.rust-lang.org/t/raw-identifiers-dont-work-for-all-identifiers/9094/4>
+            if matches!(s, "self") {
+                s = "this";
+            }
+            if matches!(s, "Self") {
+                s = "This";
+            }
         }
 
         if new_raw {
@@ -185,6 +194,20 @@ mod tests {
             assert_eq!(id.to_string(), s);
             assert_eq!(id.as_string(), s);
         }
+    }
+
+    // <https://github.com/alloy-rs/core/issues/902>
+    #[test]
+    fn self_keywords() {
+        let id: SolIdent = syn::parse_str("self").unwrap();
+        assert_eq!(id, SolIdent::new("this"));
+        assert_eq!(id.to_string(), "this");
+        assert_eq!(id.as_string(), "this");
+
+        let id: SolIdent = syn::parse_str("Self").unwrap();
+        assert_eq!(id, SolIdent::new("This"));
+        assert_eq!(id.to_string(), "This");
+        assert_eq!(id.as_string(), "This");
     }
 
     #[test]
