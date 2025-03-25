@@ -3,7 +3,7 @@
 //! Supports big-endian binary serialization via into sql_types::Binary.
 //! Similar to [`ruint`'s implementation](https://github.com/recmo/uint/blob/fd57517b36cda8341f7740dacab4b1ec186af948/src/support/diesel.rs)
 
-use crate::{FixedBytes, PrimitiveSignature};
+use crate::{FixedBytes, PrimitiveSignature, SignatureError};
 
 use diesel::{
     backend::Backend,
@@ -14,7 +14,7 @@ use diesel::{
 };
 use std::io::Write;
 
-impl<const BITS: usize, Db> ToSql<Binary, Db> for FixedBytes<BITS>
+impl<const BYTES: usize, Db> ToSql<Binary, Db> for FixedBytes<BYTES>
 where
     for<'c> Db: Backend<BindCollector<'c> = RawBytesBindCollector<Db>>,
 {
@@ -24,14 +24,14 @@ where
     }
 }
 
-impl<const BITS: usize, Db: Backend> FromSql<Binary, Db> for FixedBytes<BITS>
+impl<const BYTES: usize, Db: Backend> FromSql<Binary, Db> for FixedBytes<BYTES>
 where
     *const [u8]: FromSql<Binary, Db>,
 {
     fn from_sql(bytes: Db::RawValue<'_>) -> DeserResult<Self> {
         let bytes: *const [u8] = FromSql::<Binary, Db>::from_sql(bytes)?;
         let bytes = unsafe { &*bytes };
-        Ok(Self::from_slice(bytes))
+        Self::try_from(bytes).map_err(|e| e.into())
     }
 }
 
@@ -52,6 +52,9 @@ where
     fn from_sql(bytes: Db::RawValue<'_>) -> DeserResult<Self> {
         let bytes: *const [u8] = FromSql::<Binary, Db>::from_sql(bytes)?;
         let bytes = unsafe { &*bytes };
+        if bytes.len() != 64 {
+            return Err(SignatureError::FromBytes("Invalid length").into());
+        }
         Ok(Self::from_erc2098(bytes))
     }
 }
