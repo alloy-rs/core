@@ -4,8 +4,9 @@
 /// This functionally creates a new named `FixedBytes` that cannot be
 /// type-confused for another named `FixedBytes`.
 ///
-/// **NOTE:** This macro currently requires `#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]`
-/// at the top level of the crate where it is used.
+/// **NOTE:** This macro currently requires:
+/// - `#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]` at the top level of the crate.
+/// - The `derive_more` crate in scope.
 ///
 /// # Examples
 ///
