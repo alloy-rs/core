@@ -138,7 +138,7 @@ map-fxhash = ["map", "dep:rustc-hash"]
 
 getrandom = ["dep:getrandom"]
 k256 = ["dep:k256"]
-rand = ["dep:rand", "getrandom", "ruint/rand", "rustc-hash?/rand"]
+rand = ["dep:rand", "getrandom", "ruint/rand-09", "rustc-hash?/rand"]
 rayon = ["dep:rayon", "hashbrown?/rayon", "indexmap?/rayon"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = [
