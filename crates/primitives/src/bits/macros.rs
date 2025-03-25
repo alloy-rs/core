@@ -4,6 +4,10 @@
 /// This functionally creates a new named `FixedBytes` that cannot be
 /// type-confused for another named `FixedBytes`.
 ///
+/// **NOTE:** This macro currently requires:
+/// - `#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]` at the top level of the crate.
+/// - The `derive_more` crate in scope.
+///
 /// # Examples
 ///
 /// ```
@@ -542,7 +546,7 @@ macro_rules! impl_rlp {
             }
 
             #[inline]
-            fn encode(&self, out: &mut dyn bytes::BufMut) {
+            fn encode(&self, out: &mut dyn $crate::private::alloy_rlp::BufMut) {
                 $crate::private::alloy_rlp::Encodable::encode(&self.0, out)
             }
         }
@@ -590,7 +594,10 @@ macro_rules! impl_serde {
         #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         impl $crate::private::serde::Serialize for $t {
             #[inline]
-            fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            fn serialize<S: $crate::private::serde::Serializer>(
+                &self,
+                serializer: S,
+            ) -> Result<S::Ok, S::Error> {
                 $crate::private::serde::Serialize::serialize(&self.0, serializer)
             }
         }
