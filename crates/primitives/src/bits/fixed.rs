@@ -372,7 +372,9 @@ impl<const N: usize> FixedBytes<N> {
     #[inline]
     #[track_caller]
     pub fn random() -> Self {
-        Self::try_random().unwrap_or_else(|e| panic!("failed to fill with random bytes: {e}"))
+        let mut bytes = Self::ZERO;
+        bytes.randomize();
+        bytes
     }
 
     /// Tries to create a new [`FixedBytes`] with the default cryptographic random number
@@ -382,18 +384,9 @@ impl<const N: usize> FixedBytes<N> {
     #[cfg(feature = "getrandom")]
     #[inline]
     pub fn try_random() -> Result<Self, getrandom::Error> {
-        #[cfg(all(feature = "rand", feature = "std"))]
-        {
-            Ok(Self::random_with(&mut rand::thread_rng()))
-        }
-        #[cfg(not(all(feature = "rand", feature = "std")))]
-        {
-            let mut bytes = [core::mem::MaybeUninit::<u8>::uninit(); N];
-            getrandom::getrandom_uninit(&mut bytes)?;
-            // SAFETY: The successful call to `getrandom_uninit` fully
-            // initializes the byte slice.
-            Ok(Self(unsafe { core::mem::MaybeUninit::array_assume_init(bytes) }))
-        }
+        let mut bytes = Self::ZERO;
+        bytes.try_randomize()?;
+        Ok(bytes)
     }
 
     /// Creates a new [`FixedBytes`] with the given random number generator.
@@ -403,24 +396,9 @@ impl<const N: usize> FixedBytes<N> {
     #[inline]
     #[doc(alias = "random_using")]
     pub fn random_with<R: rand::RngCore + ?Sized>(rng: &mut R) -> Self {
-        use rand::Rng;
-
-        // Wrapper for implementing `fill` on uninitialized byte array.
-        struct FillWrap<'a, const N: usize>(&'a mut [core::mem::MaybeUninit<u8>; N]);
-        impl<const N: usize> rand::Fill for FillWrap<'_, N> {
-            fn try_fill<R: Rng + ?Sized>(&mut self, rng: &mut R) -> Result<(), rand::Error> {
-                for elem in &mut *self.0 {
-                    elem.write(rng.next_u32() as u8);
-                }
-                Ok(())
-            }
-        }
-
-        let mut bytes = [core::mem::MaybeUninit::<u8>::uninit(); N];
-        rng.fill(&mut FillWrap(&mut bytes));
-        // SAFETY: Our implementation of [`rand::Fill`] writes a random value
-        // to every element, thereby initializing the slice.
-        Self(unsafe { core::mem::MaybeUninit::array_assume_init(bytes) })
+        let mut bytes = Self::ZERO;
+        bytes.randomize_with(rng);
+        bytes
     }
 
     /// Fills this [`FixedBytes`] with the default cryptographic random number generator.

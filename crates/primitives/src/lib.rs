@@ -7,7 +7,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
-#![cfg_attr(any(feature = "getrandom", feature = "rand"), feature(maybe_uninit_array_assume_init))]
 
 #[macro_use]
 extern crate alloc;
