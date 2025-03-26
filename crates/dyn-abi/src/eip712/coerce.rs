@@ -184,7 +184,7 @@ pub(crate) fn custom_struct(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::{borrow::ToOwned, string::ToString};
+    use alloc::{borrow::ToOwned, boxed::Box, string::ToString};
     use serde_json::json;
 
     #[test]
