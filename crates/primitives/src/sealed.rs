@@ -95,6 +95,15 @@ impl<T> Sealed<T> {
         &self.inner
     }
 
+    /// Returns mutable access to the inner type.
+    ///
+    /// Caution: Modifying the inner type can cause side-effects on the `seal` hash.
+    #[inline(always)]
+    #[doc(hidden)]
+    pub fn inner_mut(&mut self) -> &mut T {
+        &mut self.inner
+    }
+
     /// Get the hash.
     #[inline(always)]
     pub const fn seal(&self) -> B256 {
