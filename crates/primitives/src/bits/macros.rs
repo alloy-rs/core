@@ -701,102 +701,104 @@ macro_rules! impl_arbitrary {
 #[cfg(feature = "diesel")]
 macro_rules! impl_diesel {
     ($t:ty, $n:literal) => {
-        use $crate::private::diesel::{
-            backend::Backend,
-            deserialize::{FromSql, Result as DeserResult},
-            expression::AsExpression,
-            internal::derives::as_expression::Bound,
-            query_builder::bind_collector::RawBytesBindCollector,
-            serialize::{Output, Result as SerResult, ToSql},
-            sql_types::{Binary, Nullable, SingleValue},
-            Queryable,
+        const _: () = {
+            use $crate::private::diesel::{
+                backend::Backend,
+                deserialize::{FromSql, Result as DeserResult},
+                expression::AsExpression,
+                internal::derives::as_expression::Bound,
+                query_builder::bind_collector::RawBytesBindCollector,
+                serialize::{Output, Result as SerResult, ToSql},
+                sql_types::{Binary, Nullable, SingleValue},
+                Queryable,
+            };
+
+            impl<Db> ToSql<Binary, Db> for $t
+            where
+                for<'c> Db: Backend<BindCollector<'c> = RawBytesBindCollector<Db>>,
+            {
+                fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Db>) -> SerResult {
+                    <$crate::FixedBytes<$n> as ToSql<Binary, Db>>::to_sql(&self.0, out)
+                }
+            }
+
+            impl<Db> FromSql<Binary, Db> for $t
+            where
+                Db: Backend,
+                *const [u8]: FromSql<Binary, Db>,
+            {
+                fn from_sql(bytes: Db::RawValue<'_>) -> DeserResult<Self> {
+                    <$crate::FixedBytes<$n> as FromSql<Binary, Db>>::from_sql(bytes).map(Self)
+                }
+            }
+
+            // Note: the following impls are equivalent to the expanded derive macro produced by
+            // #[derive(diesel::AsExpression)]
+            impl<Db> ToSql<Nullable<Binary>, Db> for $t
+            where
+                for<'c> Db: Backend<BindCollector<'c> = RawBytesBindCollector<Db>>,
+            {
+                fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Db>) -> SerResult {
+                    <$crate::FixedBytes<$n> as ToSql<Nullable<Binary>, Db>>::to_sql(&self.0, out)
+                }
+            }
+
+            impl AsExpression<Binary> for $t {
+                type Expression = Bound<Binary, Self>;
+                fn as_expression(self) -> Self::Expression {
+                    Bound::new(self)
+                }
+            }
+
+            impl AsExpression<Nullable<Binary>> for $t {
+                type Expression = Bound<Nullable<Binary>, Self>;
+                fn as_expression(self) -> Self::Expression {
+                    Bound::new(self)
+                }
+            }
+
+            impl AsExpression<Binary> for &$t {
+                type Expression = Bound<Binary, Self>;
+                fn as_expression(self) -> Self::Expression {
+                    Bound::new(self)
+                }
+            }
+
+            impl AsExpression<Nullable<Binary>> for &$t {
+                type Expression = Bound<Nullable<Binary>, Self>;
+                fn as_expression(self) -> Self::Expression {
+                    Bound::new(self)
+                }
+            }
+
+            impl AsExpression<Binary> for &&$t {
+                type Expression = Bound<Binary, Self>;
+                fn as_expression(self) -> Self::Expression {
+                    Bound::new(self)
+                }
+            }
+
+            impl AsExpression<Nullable<Binary>> for &&$t {
+                type Expression = Bound<Nullable<Binary>, Self>;
+                fn as_expression(self) -> Self::Expression {
+                    Bound::new(self)
+                }
+            }
+
+            // Note: the following impl is equivalent to the expanded derive macro produced by
+            // #[derive(diesel::Queryable)]
+            impl<Db, St> Queryable<St, Db> for $t
+            where
+                Db: Backend,
+                St: SingleValue,
+                Self: FromSql<St, Db>,
+            {
+                type Row = Self;
+                fn build(row: Self::Row) -> DeserResult<Self> {
+                    Ok(row)
+                }
+            }
         };
-
-        impl<Db> ToSql<Binary, Db> for $t
-        where
-            for<'c> Db: Backend<BindCollector<'c> = RawBytesBindCollector<Db>>,
-        {
-            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Db>) -> SerResult {
-                <$crate::FixedBytes<$n> as ToSql<Binary, Db>>::to_sql(&self.0, out)
-            }
-        }
-
-        impl<Db> FromSql<Binary, Db> for $t
-        where
-            Db: Backend,
-            *const [u8]: FromSql<Binary, Db>,
-        {
-            fn from_sql(bytes: Db::RawValue<'_>) -> DeserResult<Self> {
-                <$crate::FixedBytes<$n> as FromSql<Binary, Db>>::from_sql(bytes).map(Self)
-            }
-        }
-
-        // Note: the following impls are equivalent to the expanded derive macro produced by
-        // #[derive(diesel::AsExpression)]
-        impl<Db> ToSql<Nullable<Binary>, Db> for $t
-        where
-            for<'c> Db: Backend<BindCollector<'c> = RawBytesBindCollector<Db>>,
-        {
-            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Db>) -> SerResult {
-                <$crate::FixedBytes<$n> as ToSql<Nullable<Binary>, Db>>::to_sql(&self.0, out)
-            }
-        }
-
-        impl AsExpression<Binary> for $t {
-            type Expression = Bound<Binary, Self>;
-            fn as_expression(self) -> Self::Expression {
-                Bound::new(self)
-            }
-        }
-
-        impl AsExpression<Nullable<Binary>> for $t {
-            type Expression = Bound<Nullable<Binary>, Self>;
-            fn as_expression(self) -> Self::Expression {
-                Bound::new(self)
-            }
-        }
-
-        impl AsExpression<Binary> for &$t {
-            type Expression = Bound<Binary, Self>;
-            fn as_expression(self) -> Self::Expression {
-                Bound::new(self)
-            }
-        }
-
-        impl AsExpression<Nullable<Binary>> for &$t {
-            type Expression = Bound<Nullable<Binary>, Self>;
-            fn as_expression(self) -> Self::Expression {
-                Bound::new(self)
-            }
-        }
-
-        impl AsExpression<Binary> for &&$t {
-            type Expression = Bound<Binary, Self>;
-            fn as_expression(self) -> Self::Expression {
-                Bound::new(self)
-            }
-        }
-
-        impl AsExpression<Nullable<Binary>> for &&$t {
-            type Expression = Bound<Nullable<Binary>, Self>;
-            fn as_expression(self) -> Self::Expression {
-                Bound::new(self)
-            }
-        }
-
-        // Note: the following impl is equivalent to the expanded derive macro produced by
-        // #[derive(diesel::Queryable)]
-        impl<Db, St> Queryable<St, Db> for $t
-        where
-            Db: Backend,
-            St: SingleValue,
-            Self: FromSql<St, Db>,
-        {
-            type Row = Self;
-            fn build(row: Self::Row) -> DeserResult<Self> {
-                Ok(row)
-            }
-        }
     };
 }
 
