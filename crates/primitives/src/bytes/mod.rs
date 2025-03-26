@@ -1,5 +1,5 @@
 use crate::FixedBytes;
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 use core::{
     borrow::Borrow,
     fmt,
@@ -179,13 +179,6 @@ impl From<&'static str> for Bytes {
 impl From<Box<[u8]>> for Bytes {
     #[inline]
     fn from(value: Box<[u8]>) -> Self {
-        Self(value.into())
-    }
-}
-
-impl From<String> for Bytes {
-    #[inline]
-    fn from(value: String) -> Self {
         Self(value.into())
     }
 }

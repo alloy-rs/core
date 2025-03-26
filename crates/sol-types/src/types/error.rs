@@ -51,18 +51,18 @@ pub trait SolError: Sized {
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector.
     #[inline]
-    fn abi_decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Parameters<'_> as SolType>::abi_decode_sequence(data, validate).map(Self::new)
+    fn abi_decode_raw(data: &[u8]) -> Result<Self> {
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence(data).map(Self::new)
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the
     /// selector.
     #[inline]
-    fn abi_decode(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode(data: &[u8]) -> Result<Self> {
         let data = data
             .strip_prefix(&Self::SELECTOR)
             .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
-        Self::abi_decode_raw(data, validate)
+        Self::abi_decode_raw(data)
     }
 
     /// ABI encode the error to the given buffer **without** its selector.
@@ -425,7 +425,7 @@ mod tests {
     fn revert_encoding() {
         let revert = Revert::from("test");
         let encoded = revert.abi_encode();
-        let decoded = Revert::abi_decode(&encoded, true).unwrap();
+        let decoded = Revert::abi_decode(&encoded).unwrap();
         assert_eq!(encoded.len(), revert.abi_encoded_size() + 4);
         assert_eq!(encoded.len(), 100);
         assert_eq!(revert, decoded);
@@ -436,7 +436,7 @@ mod tests {
         let panic = Panic { code: U256::ZERO };
         assert_eq!(panic.kind(), Some(PanicKind::Generic));
         let encoded = panic.abi_encode();
-        let decoded = Panic::abi_decode(&encoded, true).unwrap();
+        let decoded = Panic::abi_decode(&encoded).unwrap();
 
         assert_eq!(encoded.len(), panic.abi_encoded_size() + 4);
         assert_eq!(encoded.len(), 36);
@@ -472,9 +472,7 @@ mod tests {
         // https://github.com/paradigmxyz/evm-inspectors/pull/12
         let bytes = hex!("08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000024556e697377617056323a20494e53554646494349454e545f494e5055545f414d4f554e5400000000000000000000000000000000000000000000000000000080");
 
-        Revert::abi_decode(&bytes, true).unwrap_err();
-
-        let decoded = Revert::abi_decode(&bytes, false).unwrap();
+        let decoded = Revert::abi_decode(&bytes).unwrap();
         assert_eq!(decoded.reason, "UniswapV2: INSUFFICIENT_INPUT_AMOUNT");
 
         let decoded = decode_revert_reason(&bytes).unwrap();
@@ -508,10 +506,10 @@ mod tests {
         let data = hex!("8758782b000000000000000000000000a48388222c7ee7daefde5d0b9c99319995c4a990");
         assert_eq!(decode_revert_reason(&data), None);
 
-        let C::CErrors::SenderAddressError(decoded) = C::CErrors::abi_decode(&data, true).unwrap();
+        let C::CErrors::SenderAddressError(decoded) = C::CErrors::abi_decode(&data).unwrap();
         assert_eq!(
             decoded,
-            C::SenderAddressError { _0: address!("0xa48388222c7ee7daefde5d0b9c99319995c4a990") }
+            C::SenderAddressError(address!("0xa48388222c7ee7daefde5d0b9c99319995c4a990"))
         );
     }
 }

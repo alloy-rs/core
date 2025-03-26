@@ -807,11 +807,57 @@ pub fn anon_name<T: Into<Ident> + Clone>((i, name): (usize, Option<&T>)) -> Iden
     }
 }
 
+/// Utility type to determining how a solidity type should be expanded.
+enum FieldKind {
+    /// The type should be expanded as is. i.e a struct with named/unnamed fields.
+    ///
+    /// e.g
+    /// ```ignore
+    /// sol! {
+    ///   error MyError(uint256, string);
+    /// }
+    /// ```
+    /// Expands to:
+    ///
+    /// ```ignore
+    /// struct MyError {
+    ///    pub _0: U256,
+    ///    pub _1: String,
+    /// }
+    Original,
+    /// The types should be deconstructed and expanded into a unit/tuple struct depending on the
+    /// number of params.
+    ///
+    /// e.g
+    /// ```ignore
+    /// sol! {
+    ///  error MyError(uint256 value);
+    ///  error UnitError();
+    /// }
+    /// ```
+    ///
+    /// Expands to:
+    ///
+    /// ```ignore
+    /// struct MyError(pub U256);
+    /// struct UnitError();
+    /// ```
+    Deconstruct,
+}
+
+impl FieldKind {
+    /// Returns whether the field kind is `Deconstruct`.
+    fn is_deconstruct(&self) -> bool {
+        matches!(self, Self::Deconstruct)
+    }
+}
+
 /// Expands `From` impls for a list of types and the corresponding tuple.
 fn expand_from_into_tuples<P>(
     name: &Ident,
     fields: &Parameters<P>,
     cx: &ExpCtxt<'_>,
+    field_kind: FieldKind,
 ) -> TokenStream {
     let names = fields.names().enumerate().map(anon_name);
 
@@ -819,6 +865,15 @@ fn expand_from_into_tuples<P>(
     let idxs = (0..fields.len()).map(syn::Index::from);
 
     let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types(), cx);
+
+    let (from_sol_type, from_rust_tuple) = if fields.is_empty() && field_kind.is_deconstruct() {
+        (quote!(()), quote!(Self))
+    } else if fields.len() == 1 && fields[0].name.is_none() && field_kind.is_deconstruct() {
+        let idxs2 = (0..fields.len()).map(syn::Index::from);
+        (quote!((#(value.#idxs),*,)), quote!(Self(#(tuple.#idxs2),*)))
+    } else {
+        (quote!((#(value.#names,)*)), quote!(Self { #(#names2: tuple.#idxs),* }))
+    };
 
     quote! {
         #[doc(hidden)]
@@ -838,7 +893,7 @@ fn expand_from_into_tuples<P>(
         #[doc(hidden)]
         impl ::core::convert::From<#name> for UnderlyingRustTuple<'_> {
             fn from(value: #name) -> Self {
-                (#(value.#names,)*)
+                #from_sol_type
             }
         }
 
@@ -846,9 +901,7 @@ fn expand_from_into_tuples<P>(
         #[doc(hidden)]
         impl ::core::convert::From<UnderlyingRustTuple<'_>> for #name {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {
-                    #(#names2: tuple.#idxs),*
-                }
+                #from_rust_tuple
             }
         }
     }
@@ -875,14 +928,25 @@ fn expand_tuple_types<'a, I: IntoIterator<Item = &'a Type>>(
 }
 
 /// Expand the body of a `tokenize` function.
-fn expand_tokenize<P>(params: &Parameters<P>, cx: &ExpCtxt<'_>) -> TokenStream {
-    tokenize_(params.iter().enumerate().map(|(i, p)| (i, &p.ty, p.name.as_ref())), cx)
+fn expand_tokenize<P>(
+    params: &Parameters<P>,
+    cx: &ExpCtxt<'_>,
+    field_kind: FieldKind,
+) -> TokenStream {
+    tokenize_(
+        params.iter().enumerate().map(|(i, p)| (i, &p.ty, p.name.as_ref())),
+        cx,
+        params.len(),
+        field_kind,
+    )
 }
 
 /// Expand the body of a `tokenize` function.
 fn expand_event_tokenize<'a>(
     params: impl IntoIterator<Item = &'a EventParameter>,
     cx: &ExpCtxt<'_>,
+    params_len: usize,
+    field_kind: FieldKind,
 ) -> TokenStream {
     tokenize_(
         params
@@ -891,18 +955,28 @@ fn expand_event_tokenize<'a>(
             .filter(|(_, p)| !p.is_indexed())
             .map(|(i, p)| (i, &p.ty, p.name.as_ref())),
         cx,
+        params_len,
+        field_kind,
     )
 }
 
 fn tokenize_<'a>(
     iter: impl Iterator<Item = (usize, &'a Type, Option<&'a SolIdent>)>,
     cx: &'a ExpCtxt<'_>,
+    params_len: usize,
+    field_kind: FieldKind,
 ) -> TokenStream {
     let statements = iter.into_iter().map(|(i, ty, name)| {
         let ty = cx.expand_type(ty);
-        let name = name.cloned().unwrap_or_else(|| generate_name(i).into());
-        quote! {
-            <#ty as alloy_sol_types::SolType>::tokenize(&self.#name)
+        if params_len == 1 && name.is_none() && field_kind.is_deconstruct() {
+            quote! {
+                <#ty as alloy_sol_types::SolType>::tokenize(&self.0)
+            }
+        } else {
+            let name = name.cloned().unwrap_or_else(|| generate_name(i).into());
+            quote! {
+                <#ty as alloy_sol_types::SolType>::tokenize(&self.#name)
+            }
         }
     });
     quote! {

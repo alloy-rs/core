@@ -69,13 +69,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
 
                 /// Convert from the underlying value type.
                 #[inline]
-                pub const fn from(value: #underlying_rust) -> Self {
+                pub const fn from_underlying(value: #underlying_rust) -> Self {
                     Self(value)
                 }
 
                 /// Return the underlying value.
                 #[inline]
-                pub const fn into(self) -> #underlying_rust {
+                pub const fn into_underlying(self) -> #underlying_rust {
                     self.0
                 }
 
@@ -91,6 +91,20 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
                 #[inline]
                 pub fn abi_encode_packed(&self) -> alloy_sol_types::private::Vec<u8> {
                     <Self as alloy_sol_types::SolType>::abi_encode_packed(&self.0)
+                }
+            }
+
+            #[automatically_derived]
+            impl From<#underlying_rust> for #name {
+                fn from(value: #underlying_rust) -> Self {
+                    Self::from_underlying(value)
+                }
+            }
+
+            #[automatically_derived]
+            impl From<#name> for #underlying_rust {
+                fn from(value: #name) -> Self {
+                    value.into_underlying()
                 }
             }
 

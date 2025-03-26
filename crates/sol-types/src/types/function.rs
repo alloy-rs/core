@@ -44,6 +44,9 @@ pub trait SolCall: Sized {
     /// Tokenize the call's arguments.
     fn tokenize(&self) -> Self::Token<'_>;
 
+    /// Tokenize the call's return values.
+    fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_>;
+
     /// The size of the encoded data in bytes, **without** its selector.
     #[inline]
     fn abi_encoded_size(&self) -> usize {
@@ -59,18 +62,18 @@ pub trait SolCall: Sized {
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector.
     #[inline]
-    fn abi_decode_raw(data: &[u8], validate: bool) -> Result<Self> {
-        <Self::Parameters<'_> as SolType>::abi_decode_sequence(data, validate).map(Self::new)
+    fn abi_decode_raw(data: &[u8]) -> Result<Self> {
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence(data).map(Self::new)
     }
 
     /// ABI decode this call's arguments from the given slice, **with** the
     /// selector.
     #[inline]
-    fn abi_decode(data: &[u8], validate: bool) -> Result<Self> {
+    fn abi_decode(data: &[u8]) -> Result<Self> {
         let data = data
             .strip_prefix(&Self::SELECTOR)
             .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
-        Self::abi_decode_raw(data, validate)
+        Self::abi_decode_raw(data)
     }
 
     /// ABI encode the call to the given buffer **without** its selector.
@@ -90,11 +93,17 @@ pub trait SolCall: Sized {
     }
 
     /// ABI decode this call's return values from the given slice.
-    fn abi_decode_returns(data: &[u8], validate: bool) -> Result<Self::Return>;
+    fn abi_decode_returns(data: &[u8]) -> Result<Self::Return>;
+
+    /// ABI encode the call's return value.
+    #[inline]
+    fn abi_encode_returns(ret: &Self::Return) -> Vec<u8> {
+        crate::abi::encode_sequence(&Self::tokenize_returns(ret))
+    }
 
     /// ABI encode the call's return values.
     #[inline]
-    fn abi_encode_returns<'a, E>(e: &'a E) -> Vec<u8>
+    fn abi_encode_returns_tuple<'a, E>(e: &'a E) -> Vec<u8>
     where
         E: SolTypeValue<Self::ReturnTuple<'a>>,
     {

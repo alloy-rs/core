@@ -105,7 +105,7 @@ fn function() {
         ],
     };
     let encoded = call.abi_encode();
-    assert_eq!(someFunctionCall::abi_decode(&encoded, true).unwrap(), call);
+    assert_eq!(someFunctionCall::abi_decode(&encoded).unwrap(), call);
 
     assert_eq!(
         call.abi_encoded_size(),
@@ -121,38 +121,100 @@ fn function_returns() {
         function test() returns (uint256[]);
     }
     assert_eq!(
-        testCall::abi_decode_returns(
-            &hex!(
-                "0000000000000000000000000000000000000000000000000000000000000020
+        testCall::abi_decode_returns(&hex!(
+            "0000000000000000000000000000000000000000000000000000000000000020
                  0000000000000000000000000000000000000000000000000000000000000000"
-            ),
-            true,
-        ),
-        Ok(testReturn { _0: vec![] })
+        ),),
+        Ok(vec![])
     );
     assert_eq!(
-        testCall::abi_decode_returns(
-            &hex!(
-                "0000000000000000000000000000000000000000000000000000000000000020
+        testCall::abi_decode_returns(&hex!(
+            "0000000000000000000000000000000000000000000000000000000000000020
                  0000000000000000000000000000000000000000000000000000000000000001
                  0000000000000000000000000000000000000000000000000000000000000002"
-            ),
-            true,
-        ),
-        Ok(testReturn { _0: vec![U256::from(2)] })
+        )),
+        Ok(vec![U256::from(2)])
     );
     assert_eq!(
-        testCall::abi_decode_returns(
-            &hex!(
-                "0000000000000000000000000000000000000000000000000000000000000020
+        testCall::abi_decode_returns(&hex!(
+            "0000000000000000000000000000000000000000000000000000000000000020
                  0000000000000000000000000000000000000000000000000000000000000002
                  0000000000000000000000000000000000000000000000000000000000000042
                  0000000000000000000000000000000000000000000000000000000000000069"
-            ),
-            true,
-        ),
-        Ok(testReturn { _0: vec![U256::from(0x42), U256::from(0x69)] })
+        ),),
+        Ok(vec![U256::from(0x42), U256::from(0x69)])
     );
+}
+
+#[test]
+fn ret_param_single_test() {
+    use alloy_sol_types::SolValue;
+    sol! {
+        function balanceOf(address owner) returns (uint256);
+
+        function balanceOfUnnamedArray(address owner) returns (uint256[2]);
+
+        #[derive(Debug, PartialEq, Eq)]
+        struct MyBalance {
+            uint256 bal;
+        }
+        function balanceOfStructUnnamed(address owner) returns (MyBalance);
+
+        function balanceOfNamed(address owner) returns (uint256 bal);
+    }
+    let data = vec![42].abi_encode_sequence();
+    let res = balanceOfCall::abi_decode_returns(&data).unwrap();
+
+    assert_eq!(res, U256::from(42));
+
+    let res = balanceOfStructUnnamedCall::abi_decode_returns(&data).unwrap();
+
+    assert_eq!(res, MyBalance { bal: U256::from(42) });
+
+    let data = vec![24, 42].abi_encode_sequence();
+
+    let res = balanceOfUnnamedArrayCall::abi_decode_returns(&data).unwrap();
+
+    assert_eq!(res, [U256::from(24), U256::from(42)]);
+
+    let data = vec![42].abi_encode_sequence();
+    let res = balanceOfNamedCall::abi_decode_returns(&data).unwrap();
+
+    assert_eq!(res, U256::from(42));
+
+    assert_eq!(balanceOfCall::abi_encode_returns(&res), data);
+}
+
+#[test]
+fn ret_tuple_param() {
+    use alloy_sol_types::SolValue;
+    sol! {
+        function balanceOfTuple(address owner) returns (uint256, uint256);
+
+        function balanceOfTupleNamed(address owner) returns (uint256 bal, uint256);
+
+        function balanceOfDoubleTuple(address owner) returns ((uint256, uint256), uint256);
+    }
+
+    let data = vec![24, 42].abi_encode_sequence();
+    let balanceOfTupleReturn { _0, _1 } = balanceOfTupleCall::abi_decode_returns(&data).unwrap();
+
+    assert_eq!(_0, U256::from(24));
+    assert_eq!(_1, U256::from(42));
+
+    let balanceOfTupleNamedReturn { bal, _1 } =
+        balanceOfTupleNamedCall::abi_decode_returns(&data).unwrap();
+
+    assert_eq!(bal, U256::from(24));
+    assert_eq!(_1, U256::from(42));
+
+    let data = vec![24, 42, 69].abi_encode_sequence();
+    let balanceOfDoubleTupleReturn { _0: (u1, u2), _1: u3 } =
+        balanceOfDoubleTupleCall::abi_decode_returns(&data).unwrap();
+
+    assert_eq!(u1, U256::from(24));
+    assert_eq!(u2, U256::from(42));
+    assert_eq!(u3, U256::from(69));
 }
 
 #[test]
@@ -186,8 +248,10 @@ fn empty_call() {
     depositCall {}.abi_encode_raw(&mut out);
     assert!(out.is_empty());
 
-    let depositCall {} = depositCall::abi_decode(&depositCall::SELECTOR, true).unwrap();
-    let depositCall {} = depositCall::abi_decode_raw(&[], true).unwrap();
+    let depositCall {} = depositCall::abi_decode(&depositCall::SELECTOR).unwrap();
+    let depositCall {} = depositCall::abi_decode_raw(&[]).unwrap();
+
+    assert!(depositCall::abi_encode_returns(&WETH::depositReturn {}).is_empty());
 }
 
 #[test]
@@ -254,10 +318,10 @@ fn getter_names() {
     let _ = Getters::valueCall {};
     let _ = Getters::valueReturn { value: String::new() };
 
-    let _ = Getters::arrayCall { _0: U256::ZERO };
+    let _ = Getters::arrayCall(U256::ZERO);
     let _ = Getters::arrayReturn { _0: String::new() };
 
-    let _ = Getters::mapCall { _0: B256::ZERO };
+    let _ = Getters::mapCall(B256::ZERO);
     let _ = Getters::mapReturn { _0: String::new() };
 
     let _ = Getters::mapWithNamesCall { k: B256::ZERO };
@@ -497,17 +561,17 @@ fn rust_keywords() {
                 bytes32 box;
             }
 
-            function mod(address impl) returns (bool is, bool fn);
+            function mod(address impl, address some) returns (bool is, bool fn);
         }
     }
     use r#dyn::*;
 
     let _ = r#const { r#unsafe: true, r#box: Default::default() };
-    let m = modCall { r#impl: Address::ZERO };
+    let m = modCall { r#impl: Address::ZERO, some: Address::ZERO };
     let _ = dynCalls::r#mod(m);
     let _ = modReturn { is: true, r#fn: false };
     assert_eq!(r#const::NAME, "const");
-    assert_eq!(modCall::SIGNATURE, "mod(address)");
+    assert_eq!(modCall::SIGNATURE, "mod(address,address)");
 }
 
 #[test]
@@ -836,7 +900,7 @@ fn decoder_fixed_array_before_dynamic() {
     let expected = hex!("00000000000000000000000000000000000000000000000000000000000000200006015a2de20abc8c880eb052a09c069e4edf697529d12eeae88b7b6867fc8100000000000000000000000000000000000000000000000000000000080f7906000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000001e00000000000000000000000000000000000000000000000000000000000000240000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e00002191c50b7bdaf2cb8672453141946eea123f8baeaa8d2afa4194b6955e68300000000000000000000000000000000000000000000000000000000655ac7af00000000000000000000000000000000000000000000000000000000655ac7af000000000000000000000000000000000000000000000000000000000000138800000000000000000000000000000000000000000000000000000000000a1f6800000000000000000000000000000000000000000000000000000000655c192f000000000000000000000000000000000000000000000000d130d9ecefeaae300000000000000000000000000000000000000000000000000000000000000002d1e3d8b8c581a7ed9cfc41316f1bb8598d98237fc8278a01a9c6a323c4b5c33138ef50778560ec2bb08b23960e3d74f1ffe83b9240a39555c6eb817e3f68302c00000000000000000000000000000000000000000000000000000000000000027fb9c59cc499a4672f1481a526d01aa8c01380dcfa0ea855041254d3bcf455362ce612a86846a7cbb640ddcd3abdecf56618c7b24cf96242643d5c355dee5f0e");
     assert_eq!(hex::encode(&encoded), hex::encode(expected));
 
-    let decoded = FullReport::abi_decode(&encoded, true).unwrap();
+    let decoded = FullReport::abi_decode(&encoded).unwrap();
     assert_eq!(decoded, full_report);
 }
 
@@ -923,18 +987,21 @@ fn contract_derive_default() {
     sol! {
         #[derive(Debug, Default)]
         contract MyContract {
-            function f1();
-            function f2();
+            function f1(address);
+            function f2(address b);
             event e1();
             event e2();
             error c();
         }
     }
 
-    let MyContract::f1Call {} = MyContract::f1Call::default();
-    let MyContract::f2Call {} = MyContract::f2Call::default();
-    let MyContract::e1 {} = MyContract::e1::default();
-    let MyContract::e2 {} = MyContract::e2::default();
+    let MyContract::f1Call(_) = MyContract::f1Call::default();
+    let MyContract::f2Call { b: _ } = MyContract::f2Call::default();
+    #[allow(clippy::default_constructed_unit_structs)]
+    let MyContract::e1 = MyContract::e1::default();
+    #[allow(clippy::default_constructed_unit_structs)]
+    let MyContract::e2 = MyContract::e2::default();
+    #[allow(clippy::default_constructed_unit_structs)]
     let MyContract::c {} = MyContract::c::default();
 }
 
@@ -1174,14 +1241,14 @@ fn event_check_signature() {
     let no_topics: [B256; 0] = [];
 
     assert!(!MyEvent::ANONYMOUS);
-    let e = MyEvent::decode_raw_log(no_topics, &[], false).unwrap_err();
+    let e = MyEvent::decode_raw_log(no_topics, &[]).unwrap_err();
     assert_eq!(e.to_string(), "topic list length mismatch");
-    let e = MyEvent::decode_raw_log([B256::ZERO], &[], false).unwrap_err();
+    let e = MyEvent::decode_raw_log([B256::ZERO], &[]).unwrap_err();
     assert!(e.to_string().contains("invalid signature hash"), "{e:?}");
-    let MyEvent {} = MyEvent::decode_raw_log([MyEvent::SIGNATURE_HASH], &[], false).unwrap();
+    let MyEvent {} = MyEvent::decode_raw_log([MyEvent::SIGNATURE_HASH], &[]).unwrap();
 
     assert!(MyEventAnonymous::ANONYMOUS);
-    let MyEventAnonymous {} = MyEventAnonymous::decode_raw_log(no_topics, &[], false).unwrap();
+    let MyEventAnonymous {} = MyEventAnonymous::decode_raw_log(no_topics, &[]).unwrap();
 }
 
 // https://github.com/alloy-rs/core/issues/811
