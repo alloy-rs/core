@@ -19,6 +19,9 @@ use tiny_keccak as _;
 #[cfg(feature = "postgres")]
 pub mod postgres;
 
+#[cfg(feature = "diesel")]
+pub mod diesel;
+
 pub mod aliases;
 #[doc(no_inline)]
 pub use aliases::{
@@ -120,4 +123,7 @@ pub mod private {
 
     #[cfg(feature = "arbitrary")]
     pub use {arbitrary, derive_arbitrary, proptest, proptest_derive};
+
+    #[cfg(feature = "diesel")]
+    pub use diesel;
 }
