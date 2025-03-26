@@ -3,7 +3,7 @@
 //! Supports big-endian binary serialization via into sql_types::Binary.
 //! Similar to [`ruint`'s implementation](https://github.com/recmo/uint/blob/fd57517b36cda8341f7740dacab4b1ec186af948/src/support/diesel.rs)
 
-use crate::{FixedBytes, PrimitiveSignature, SignatureError};
+use crate::{FixedBytes, Signature, SignatureError};
 
 use diesel::{
     backend::Backend,
@@ -35,7 +35,7 @@ where
     }
 }
 
-impl<Db: Backend> ToSql<Binary, Db> for PrimitiveSignature
+impl<Db: Backend> ToSql<Binary, Db> for Signature
 where
     for<'c> Db: Backend<BindCollector<'c> = RawBytesBindCollector<Db>>,
 {
@@ -45,7 +45,7 @@ where
     }
 }
 
-impl<Db: Backend> FromSql<Binary, Db> for PrimitiveSignature
+impl<Db: Backend> FromSql<Binary, Db> for Signature
 where
     *const [u8]: FromSql<Binary, Db>,
 {
