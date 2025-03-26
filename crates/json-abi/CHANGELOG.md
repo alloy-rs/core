@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [`json-abi`] Config to generate types in interface ([#911](https://github.com/alloy-rs/core/issues/911))
 
+### Miscellaneous Tasks
+
+- Release 0.8.24
+
 ### Testing
 
 - Add a test for namespaced types

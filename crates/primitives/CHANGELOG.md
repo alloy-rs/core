@@ -5,10 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.25](https://github.com/alloy-rs/core/releases/tag/v0.8.25) - 2025-03-26
+
+### Bug Fixes
+
+- [primitives] Remove undefined behavior in FixedBytes ([#919](https://github.com/alloy-rs/core/issues/919))
+- Do not rely on bytes dependency in `wrap_fixed_bytes!` ([#918](https://github.com/alloy-rs/core/issues/918))
+
+### Miscellaneous Tasks
+
+- Add hash_ref function to sealed.rs ([#920](https://github.com/alloy-rs/core/issues/920))
+
 ## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
 
 ### Miscellaneous Tasks
 
+- Release 0.8.24
 - Restore clippy allow
 
 ### Other

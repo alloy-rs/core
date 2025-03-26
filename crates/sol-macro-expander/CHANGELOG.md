@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [sol-macro] Add `#![sol(extra_derives(...)]` ([#910](https://github.com/alloy-rs/core/issues/910))
 
+### Miscellaneous Tasks
+
+- Release 0.8.24
+
 ## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
 
 ### Miscellaneous Tasks
