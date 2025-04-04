@@ -1,7 +1,7 @@
 use super::{utils::*, ParseSignedError, Sign};
 use alloc::string::String;
 use core::fmt;
-use ruint::{BaseConvertError, Uint};
+use ruint::{BaseConvertError, Uint, UintTryFrom, UintTryTo};
 
 /// Signed integer wrapping a `ruint::Uint`.
 ///
@@ -151,6 +151,41 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         <T as TryInto<Self>>::Error: fmt::Debug,
     {
         val.try_into().unwrap()
+    }
+
+    /// Construct a new [`Signed`] from the value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the conversion fails, for example if the value is too large
+    /// for the bit-size of the [`Signed`]. The panic will be attributed to the
+    /// call site.
+    ///
+    #[inline]
+    #[track_caller]
+    pub fn from<T>(value: T) -> Self
+    where
+        Self: UintTryFrom<T>,
+    {
+        match Self::uint_try_from(value) {
+            Ok(n) => n,
+            Err(e) => panic!("Uint conversion error: {e}"),
+        }
+    }
+
+    /// # Panics
+    ///
+    /// Panics if the conversion fails, for example if the value is too large
+    /// for the bit-size of the target type.
+    ///
+    #[inline]
+    #[track_caller]
+    pub fn to<T>(&self) -> T
+    where
+        Self: UintTryTo<T>,
+        T: fmt::Debug,
+    {
+        self.uint_try_to().expect("Uint conversion error")
     }
 
     /// Shortcut for `self.try_into().unwrap()`.
@@ -1663,5 +1698,37 @@ mod tests {
         let a = Uint::<8, 1>::from(129u8);
         let (_, overflow) = Signed::overflowing_from_sign_and_abs(Sign::Negative, a);
         assert!(overflow);
+    }
+
+    #[test]
+    fn test_int_conversion() {
+        // can convert between signed of different sizes when value is within bounds
+        let m_i256 = I256::unchecked_from(-4);
+        let m_i24 = I24::from(m_i256);
+        assert_eq!(m_i24, I24::from_dec_str("-4").unwrap());
+        let m_i56 = I56::from(m_i24);
+        assert_eq!(m_i56, I56::from_dec_str("-4").unwrap());
+        let m_i128 = I128::from(m_i56);
+        assert_eq!(m_i128, I128::from_dec_str("-4").unwrap());
+        let m_i96 = I96::from(m_i128);
+        assert_eq!(m_i96, I96::from_dec_str("-4").unwrap());
+
+        // convert positive signed to unsigned
+        assert_eq!(U24::from(I24::from_hex_str("0x7FFFFF").unwrap()), U24::from(0x7FFFFF));
+
+        // convert unsigned to positive signed
+        assert_eq!(I24::from(U24::from(0x7FFFFF)), I24::from_hex_str("0x7FFFFF").unwrap());
+        assert_eq!(I24::from(U96::from(0x7FFFFF)), I24::from_hex_str("0x7FFFFF").unwrap());
+
+        // can't convert negative signed to unsigned
+        assert!(U24::uint_try_from(m_i24).is_err());
+
+        // can't convert unsigned to positive signed if too large
+        assert!(I24::uint_try_from(U24::from(0x800000)).is_err());
+
+        // out-of-bounds conversions
+        assert!(I24::uint_try_from(I128::MIN).is_err());
+        assert!(I24::uint_try_from(I128::MAX).is_err());
+
     }
 }
