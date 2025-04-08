@@ -1,12 +1,14 @@
-use crate::{
-    internal_type::BorrowedInternalType,
-    utils::{mk_eparam, mk_param, validate_identifier},
-    InternalType,
-};
+use crate::{internal_type::BorrowedInternalType, utils::validate_identifier, InternalType};
 use alloc::{borrow::Cow, string::String, vec::Vec};
-use core::{fmt, str::FromStr};
-use parser::{Error, ParameterSpecifier, TypeSpecifier};
+use core::fmt;
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize, Serializer};
+
+#[cfg(feature = "parser")]
+use crate::utils::{mk_eparam, mk_param};
+#[cfg(feature = "parser")]
+use core::str::FromStr;
+#[cfg(feature = "parser")]
+use parser::{Error, ParameterSpecifier, TypeSpecifier};
 
 /// JSON specification of a parameter.
 ///
@@ -77,6 +79,7 @@ impl Serialize for Param {
     }
 }
 
+#[cfg(feature = "parser")]
 impl FromStr for Param {
     type Err = parser::Error;
 
@@ -103,11 +106,13 @@ impl Param {
     ///     })
     /// );
     /// ```
+    #[cfg(feature = "parser")]
     pub fn parse(input: &str) -> parser::Result<Self> {
         ParameterSpecifier::parse(input).map(|p| mk_param(p.name, p.ty))
     }
 
     /// Validate and create new instance of Param.
+    #[cfg(feature = "parser")]
     pub fn new(
         name: &str,
         ty: &str,
@@ -178,6 +183,7 @@ impl Param {
     /// array sizes. It is computed from the `internal_type`. If this param is
     /// not a UDT, this function will return `None`.
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn udt_specifier(&self) -> Option<TypeSpecifier<'_>> {
         // UDTs are more annoying to check for, so we reuse logic here.
         if !self.is_udt() {
@@ -190,6 +196,7 @@ impl Param {
     /// and any array sizes. It is computed from the `internal_type` If this
     /// param is not a struct, this function will return `None`.
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.internal_type().and_then(|ty| ty.struct_specifier())
     }
@@ -198,6 +205,7 @@ impl Param {
     /// any array sizes. It is computed from the `internal_type`. If this param
     /// is not a enum, this function will return `None`.
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn enum_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.internal_type().and_then(|ty| ty.enum_specifier())
     }
@@ -206,6 +214,7 @@ impl Param {
     /// and any array sizes. It is computed from the `internal_type` If this
     /// param is not a struct, this function will return `None`.
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn contract_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.internal_type().and_then(|ty| ty.contract_specifier())
     }
@@ -285,6 +294,7 @@ impl Param {
     }
 
     #[inline]
+    #[cfg(feature = "parser")]
     fn validate_fields(name: &str, ty: &str, has_components: bool) -> parser::Result<()> {
         if !name.is_empty() && !parser::is_valid_identifier(name) {
             return Err(Error::invalid_identifier_string(name));
@@ -373,6 +383,7 @@ impl Serialize for EventParam {
     }
 }
 
+#[cfg(feature = "parser")]
 impl FromStr for EventParam {
     type Err = parser::Error;
 
@@ -402,11 +413,13 @@ impl EventParam {
     /// );
     /// ```
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn parse(input: &str) -> parser::Result<Self> {
         ParameterSpecifier::parse(input).map(mk_eparam)
     }
 
     /// Validate and create new instance of EventParam
+    #[cfg(feature = "parser")]
     pub fn new(
         name: &str,
         ty: &str,
@@ -471,6 +484,7 @@ impl EventParam {
     /// array sizes. It is computed from the `internal_type`. If this param is
     /// not a UDT, this function will return `None`.
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn udt_specifier(&self) -> Option<TypeSpecifier<'_>> {
         // UDTs are more annoying to check for, so we reuse logic here.
         if !self.is_udt() {
@@ -483,6 +497,7 @@ impl EventParam {
     /// and any array sizes. It is computed from the `internal_type` If this
     /// param is not a struct, this function will return `None`.
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.internal_type().and_then(|ty| ty.struct_specifier())
     }
@@ -491,6 +506,7 @@ impl EventParam {
     /// any array sizes. It is computed from the `internal_type`. If this param
     /// is not a enum, this function will return `None`.
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn enum_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.internal_type().and_then(|ty| ty.enum_specifier())
     }
@@ -499,6 +515,7 @@ impl EventParam {
     /// and any array sizes. It is computed from the `internal_type` If this
     /// param is not a struct, this function will return `None`.
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn contract_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.internal_type().and_then(|ty| ty.contract_specifier())
     }
@@ -638,6 +655,7 @@ impl BorrowedParamInner<'_> {
         // any components means type is "tuple" + maybe brackets, so we can skip
         // parsing with TypeSpecifier
         if self.components.is_empty() {
+            #[cfg(feature = "parser")]
             if parser::TypeSpecifier::parse(self.ty).is_err() {
                 return Err(E::invalid_value(
                     Unexpected::Str(self.ty),

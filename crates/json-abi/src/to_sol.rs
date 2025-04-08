@@ -293,6 +293,7 @@ impl<'a> InternalTypes<'a> {
             }
             Some(it @ InternalType::Other { contract, ty }) => {
                 // `Other` is a UDVT if it's not a basic Solidity type.
+                #[cfg(feature = "parser")]
                 if let Some(it) = it.other_specifier() {
                     if it.try_basic_solidity().is_err() {
                         let ty = ty.split('[').next().unwrap();
@@ -300,6 +301,9 @@ impl<'a> InternalTypes<'a> {
                         self.extend_one(contract, It::new(ty, ItKind::Udvt(real_ty)));
                     }
                 }
+
+                #[cfg(not(feature = "parser"))]
+                let _ = (it, contract, ty, real_ty);
             }
         }
     }
@@ -329,6 +333,7 @@ struct It<'a> {
 #[derive(PartialEq, Eq)]
 enum ItKind<'a> {
     Enum,
+    #[cfg_attr(not(feature = "parser"), allow(dead_code))] // Only constructed with "parser".
     Udvt(&'a str),
     Struct(&'a Vec<Param>),
 }

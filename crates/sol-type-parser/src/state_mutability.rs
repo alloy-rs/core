@@ -1,7 +1,9 @@
-#[cfg(feature = "serde")]
+#![allow(unexpected_cfgs)]
+
+#[cfg(any(feature = "serde", not(feature = "parser")))]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", not(feature = "parser")))]
 const COMPAT_ERROR: &str = "state mutability cannot be both `payable` and `constant`";
 
 /// A JSON ABI function's state mutability.
@@ -10,8 +12,8 @@ const COMPAT_ERROR: &str = "state mutability cannot be both `payable` and `const
 /// [`as_json_str`](Self::as_json_str).
 /// For backwards compatible deserialization, see [`serde_state_mutability_compat`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
+#[cfg_attr(any(feature = "serde", not(feature = "parser")), derive(Serialize, Deserialize))]
+#[cfg_attr(any(feature = "serde", not(feature = "parser")), serde(rename_all = "lowercase"))]
 pub enum StateMutability {
     /// Pure functions promise not to read from or modify the state.
     Pure,
@@ -102,7 +104,7 @@ impl StateMutability {
 /// let reserialized = serde_json::to_string(&ms).expect("failed reserializing");
 /// assert_eq!(reserialized, r#"{"stateMutability":"view"}"#);
 /// ```
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", not(feature = "parser")))]
 pub mod serde_state_mutability_compat {
     use super::*;
     use serde::ser::SerializeStruct;
@@ -157,7 +159,7 @@ pub mod serde_state_mutability_compat {
     }
 }
 
-#[cfg(all(test, feature = "serde"))]
+#[cfg(all(test, any(feature = "serde", not(feature = "parser"))))]
 mod tests {
     use super::*;
     use alloc::string::ToString;

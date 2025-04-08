@@ -93,6 +93,7 @@ impl JsonAbi {
     /// assert_eq!(abi.len(), 9);
     /// # Ok::<(), alloy_sol_type_parser::Error>(())
     /// ```
+    #[cfg(feature = "parser")]
     pub fn parse<'a, I: IntoIterator<Item = &'a str>>(strings: I) -> parser::Result<Self> {
         let mut abi = Self::new();
         for string in strings {

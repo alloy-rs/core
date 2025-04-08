@@ -1,8 +1,18 @@
 use crate::{EventParam, Param, StateMutability};
 use alloc::string::String;
 use alloy_primitives::Selector;
+
+#[cfg(feature = "parser")]
 use core::{fmt::Write, num::NonZeroUsize};
-use parser::{utils::ParsedSignature, ParameterSpecifier, TypeSpecifier, TypeStem};
+#[cfg(feature = "parser")]
+use parser::{
+    is_valid_identifier, utils::ParsedSignature, ParameterSpecifier, TypeSpecifier, TypeStem,
+};
+
+#[cfg(not(feature = "parser"))]
+fn is_valid_identifier(name: &str) -> bool {
+    name.is_ascii()
+}
 
 /// Capacity to allocate per [Param].
 const PARAM_CAP: usize = 32;
@@ -123,6 +133,7 @@ pub(crate) fn selector(preimage: &str) -> Selector {
 }
 
 /// Strips `prefix` from `s` before parsing with `parser`. `prefix` must be followed by whitespace.
+#[cfg(feature = "parser")]
 pub(crate) fn parse_maybe_prefixed<F: FnOnce(&str) -> R, R>(
     mut s: &str,
     prefix: &str,
@@ -136,16 +147,19 @@ pub(crate) fn parse_maybe_prefixed<F: FnOnce(&str) -> R, R>(
     parser(s)
 }
 
+#[cfg(feature = "parser")]
 #[inline]
 pub(crate) fn parse_sig<const O: bool>(s: &str) -> parser::Result<ParsedSignature<Param>> {
     parser::utils::parse_signature::<O, _, _>(s, |p| mk_param(p.name, p.ty))
 }
 
+#[cfg(feature = "parser")]
 #[inline]
 pub(crate) fn parse_event_sig(s: &str) -> parser::Result<ParsedSignature<EventParam>> {
     parser::utils::parse_signature::<false, _, _>(s, mk_eparam)
 }
 
+#[cfg(feature = "parser")]
 pub(crate) fn mk_param(name: Option<&str>, ty: TypeSpecifier<'_>) -> Param {
     let name = name.unwrap_or_default().into();
     let internal_type = None;
@@ -162,6 +176,7 @@ pub(crate) fn mk_param(name: Option<&str>, ty: TypeSpecifier<'_>) -> Param {
     }
 }
 
+#[cfg(feature = "parser")]
 pub(crate) fn mk_eparam(spec: ParameterSpecifier<'_>) -> EventParam {
     let p = mk_param(spec.name, spec.ty);
     EventParam {
@@ -173,6 +188,7 @@ pub(crate) fn mk_eparam(spec: ParameterSpecifier<'_>) -> EventParam {
     }
 }
 
+#[cfg(feature = "parser")]
 fn ty_string(s: &str, sizes: &[Option<NonZeroUsize>]) -> String {
     let mut ty = String::with_capacity(s.len() + sizes.len() * 4);
     ty.push_str(s);
@@ -187,7 +203,7 @@ fn ty_string(s: &str, sizes: &[Option<NonZeroUsize>]) -> String {
 }
 
 pub(crate) fn validate_identifier<E: serde::de::Error>(name: &str) -> Result<(), E> {
-    if !name.is_empty() && !parser::is_valid_identifier(name) {
+    if !name.is_empty() && !is_valid_identifier(name) {
         return Err(serde::de::Error::invalid_value(
             serde::de::Unexpected::Str(name),
             &"a valid Solidity identifier",

@@ -1,9 +1,12 @@
 use crate::{param::Param, serde_state_mutability_compat, utils::*, EventParam, StateMutability};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{keccak256, Selector, B256};
-use core::str::FromStr;
-use parser::utils::ParsedSignature;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+#[cfg(feature = "parser")]
+use core::str::FromStr;
+#[cfg(feature = "parser")]
+use parser::utils::ParsedSignature;
 
 /// Declares all JSON ABI items.
 macro_rules! abi_items {
@@ -150,6 +153,7 @@ fn validated_identifier<'de, D: Deserializer<'de>>(deserializer: D) -> Result<St
     Ok(s)
 }
 
+#[cfg(feature = "parser")]
 impl FromStr for AbiItem<'_> {
     type Err = parser::Error;
 
@@ -173,6 +177,7 @@ impl AbiItem<'_> {
     ///     Ok(AbiItem::from(Function::parse("foo(bool bar)").unwrap()).into()),
     /// );
     /// ```
+    #[cfg(feature = "parser")]
     pub fn parse(mut input: &str) -> parser::Result<Self> {
         // Need this copy for Constructor, since the keyword is also the name of the function.
         let copy = input;
@@ -338,6 +343,7 @@ impl AbiItem<'_> {
     }
 }
 
+#[cfg(feature = "parser")]
 impl FromStr for Constructor {
     type Err = parser::Error;
 
@@ -368,10 +374,12 @@ impl Constructor {
     /// );
     /// ```
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn parse(s: &str) -> parser::Result<Self> {
         parse_sig::<false>(s).and_then(Self::parsed)
     }
 
+    #[cfg(feature = "parser")]
     fn parsed(sig: ParsedSignature<Param>) -> parser::Result<Self> {
         let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if name != "constructor" {
@@ -387,6 +395,7 @@ impl Constructor {
     }
 }
 
+#[cfg(feature = "parser")]
 impl FromStr for Error {
     type Err = parser::Error;
 
@@ -415,10 +424,12 @@ impl Error {
     /// );
     /// ```
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn parse(s: &str) -> parser::Result<Self> {
         parse_maybe_prefixed(s, "error", parse_sig::<false>).and_then(Self::parsed)
     }
 
+    #[cfg(feature = "parser")]
     fn parsed(sig: ParsedSignature<Param>) -> parser::Result<Self> {
         let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if !outputs.is_empty() {
@@ -448,6 +459,7 @@ impl Error {
     }
 }
 
+#[cfg(feature = "parser")]
 impl FromStr for Function {
     type Err = parser::Error;
 
@@ -500,10 +512,12 @@ impl Function {
     /// );
     /// ```
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn parse(s: &str) -> parser::Result<Self> {
         parse_maybe_prefixed(s, "function", parse_sig::<true>).and_then(Self::parsed)
     }
 
+    #[cfg(feature = "parser")]
     fn parsed(sig: ParsedSignature<Param>) -> parser::Result<Self> {
         let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if anonymous {
@@ -548,6 +562,7 @@ impl Function {
     }
 }
 
+#[cfg(feature = "parser")]
 impl FromStr for Event {
     type Err = parser::Error;
 
@@ -581,10 +596,12 @@ impl Event {
     /// );
     /// ```
     #[inline]
+    #[cfg(feature = "parser")]
     pub fn parse(s: &str) -> parser::Result<Self> {
         parse_maybe_prefixed(s, "event", parse_event_sig).and_then(Self::parsed)
     }
 
+    #[cfg(feature = "parser")]
     fn parsed(sig: ParsedSignature<EventParam>) -> parser::Result<Self> {
         let ParsedSignature { name, inputs, outputs, anonymous, state_mutability } = sig;
         if !outputs.is_empty() {
