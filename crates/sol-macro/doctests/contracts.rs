@@ -22,6 +22,7 @@ sol! {
     }
 }
 
+#[cfg(test)]
 #[test]
 fn constructor() {
     let constructor_args =
@@ -32,6 +33,7 @@ fn constructor() {
     assert_eq!(constructor_args.as_slice(), constructor_args_expected);
 }
 
+#[cfg(test)]
 #[test]
 fn transfer() {
     // random mainnet ERC20 transfer

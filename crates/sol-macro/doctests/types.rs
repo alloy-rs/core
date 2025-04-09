@@ -14,6 +14,7 @@ type B32 = sol! { bytes32 };
 type SolArrayOf<T> = sol! { T[] };
 type SolTuple = sol! { tuple(address, bytes, string) };
 
+#[cfg(test)]
 #[test]
 fn types() {
     let _ = <sol!(bool)>::abi_encode(&true);

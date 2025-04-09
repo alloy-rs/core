@@ -19,6 +19,7 @@ sol! {
     error MyError(uint256 a, uint256 b);
 }
 
+#[cfg(test)]
 #[test]
 fn function() {
     assert_call_signature::<fooCall>("foo(uint256,uint256)");
@@ -41,6 +42,7 @@ fn function() {
     let _ = variableGetterReturn { v: false };
 }
 
+#[cfg(test)]
 #[test]
 fn error() {
     assert_error_signature::<MyError>("MyError(uint256,uint256)");

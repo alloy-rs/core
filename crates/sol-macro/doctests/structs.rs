@@ -20,6 +20,7 @@ sol! {
     }
 }
 
+#[cfg(test)]
 #[test]
 fn structs() {
     let my_foo = Foo {

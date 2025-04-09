@@ -23,6 +23,7 @@ sol! {
     event MyEvent2(Data indexed data);
 }
 
+#[cfg(test)]
 #[test]
 fn event() {
     assert_event_signature::<MyEvent>("MyEvent(bytes32,uint256,string,bytes)");
@@ -62,6 +63,7 @@ fn event() {
     assert!(!MyEvent2::ANONYMOUS);
 }
 
+#[cfg(test)]
 #[test]
 fn event_rlp_roundtrip() {
     let event = MyEvent {
