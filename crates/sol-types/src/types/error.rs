@@ -55,6 +55,16 @@ pub trait SolError: Sized {
         <Self::Parameters<'_> as SolType>::abi_decode_sequence(data).map(Self::new)
     }
 
+    /// ABI decode this error's arguments from the given slice, **without** its
+    /// selector, with validation.
+    ///
+    /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
+    /// validation checks on the decoded parameters tuple.
+    #[inline]
+    fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence_validate(data).map(Self::new)
+    }
+
     /// ABI decode this error's arguments from the given slice, **with** the
     /// selector.
     #[inline]
@@ -63,6 +73,19 @@ pub trait SolError: Sized {
             .strip_prefix(&Self::SELECTOR)
             .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
         Self::abi_decode_raw(data)
+    }
+
+    /// ABI decode this error's arguments from the given slice, **with** the
+    /// selector, with validation.
+    ///
+    /// This is the same as [`abi_decode`](Self::abi_decode), but performs
+    /// validation checks on the decoded parameters tuple.
+    #[inline]
+    fn abi_decode_validate(data: &[u8]) -> Result<Self> {
+        let data = data
+            .strip_prefix(&Self::SELECTOR)
+            .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
+        Self::abi_decode_raw_validate(data)
     }
 
     /// ABI encode the error to the given buffer **without** its selector.
@@ -160,6 +183,11 @@ impl SolError for Revert {
     #[inline]
     fn abi_encoded_size(&self) -> usize {
         64 + crate::utils::next_multiple_of_32(self.reason.len())
+    }
+
+    #[inline]
+    fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
+        Self::abi_decode_raw(data)
     }
 }
 
@@ -285,6 +313,11 @@ impl SolError for Panic {
     #[inline]
     fn abi_encoded_size(&self) -> usize {
         32
+    }
+
+    #[inline]
+    fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
+        Self::abi_decode_raw(data)
     }
 }
 
@@ -506,7 +539,7 @@ mod tests {
         let data = hex!("8758782b000000000000000000000000a48388222c7ee7daefde5d0b9c99319995c4a990");
         assert_eq!(decode_revert_reason(&data), None);
 
-        let C::CErrors::SenderAddressError(decoded) = C::CErrors::abi_decode(&data).unwrap();
+        let C::CErrors::SenderAddressError(decoded) = C::CErrors::abi_decode_validate(&data).unwrap();
         assert_eq!(
             decoded,
             C::SenderAddressError(address!("0xa48388222c7ee7daefde5d0b9c99319995c4a990"))
