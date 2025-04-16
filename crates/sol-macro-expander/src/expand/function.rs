@@ -156,8 +156,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         quote!(#decode_sequence.map(Into::into))
     };
 
-    let decode_sequence_validate =
-        quote!(<Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data));
+    let decode_sequence_validate = quote!(
+        <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+    );
     let decode_returns_validate = if is_single_return {
         let name = anon_name((0, returns[0].name.as_ref()));
         quote! {

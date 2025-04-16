@@ -294,7 +294,9 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
     #[inline]
     fn abi_decode_raw_validate(selector: [u8; 4], data: &[u8]) -> Result<Self> {
         match selector {
-            Revert::SELECTOR => <Revert as SolError>::abi_decode_raw_validate(data).map(Self::Revert),
+            Revert::SELECTOR => {
+                <Revert as SolError>::abi_decode_raw_validate(data).map(Self::Revert)
+            }
             Panic::SELECTOR => <Panic as SolError>::abi_decode_raw_validate(data).map(Self::Panic),
             s => T::abi_decode_raw_validate(s, data).map(Self::CustomError),
         }
@@ -639,15 +641,23 @@ mod tests {
         assert_eq!(contract_error_err1().abi_encode(), encoded_data);
 
         assert_eq!(C::Err1::abi_decode(&encoded_data), Ok(err1()));
-        assert_eq!(<C::CErrors as SolInterface>::abi_decode_validate(&encoded_data), Ok(errors_err1()));
-        assert_eq!(<ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data), Ok(contract_error_err1()));
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data),
+            Ok(errors_err1())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data),
+            Ok(contract_error_err1())
+        );
 
         assert_eq!(
             <C::CErrors as SolInterface>::abi_decode_raw_validate(selector, raw_data),
             Ok(errors_err1())
         );
         assert_eq!(
-            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(selector, raw_data),
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(
+                selector, raw_data
+            ),
             Ok(contract_error_err1())
         );
 
@@ -704,15 +714,23 @@ mod tests {
         assert_eq!(contract_error_err1().abi_encode(), encoded_data1);
 
         assert_eq!(C::Err1::abi_decode(&encoded_data1), Ok(err1()));
-        assert_eq!(<C::CErrors as SolInterface>::abi_decode_validate(&encoded_data1), Ok(errors_err1()));
-        assert_eq!(<ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data1), Ok(contract_error_err1()));
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data1),
+            Ok(errors_err1())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data1),
+            Ok(contract_error_err1())
+        );
 
         assert_eq!(
             <C::CErrors as SolInterface>::abi_decode_raw_validate(selector1, raw_data1),
             Ok(errors_err1())
         );
         assert_eq!(
-            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(selector1, raw_data1),
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(
+                selector1, raw_data1
+            ),
             Ok(contract_error_err1())
         );
 
@@ -728,15 +746,23 @@ mod tests {
         assert_eq!(contract_error_err2().abi_encode(), encoded_data2);
 
         assert_eq!(C::Err2::abi_decode(&encoded_data2), Ok(err2()));
-        assert_eq!(<C::CErrors as SolInterface>::abi_decode_validate(&encoded_data2), Ok(errors_err2()));
-        assert_eq!(<ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data2), Ok(contract_error_err2()));
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data2),
+            Ok(errors_err2())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data2),
+            Ok(contract_error_err2())
+        );
 
         assert_eq!(
             <C::CErrors as SolInterface>::abi_decode_raw_validate(selector2, raw_data2),
             Ok(errors_err2())
         );
         assert_eq!(
-            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(selector2, raw_data2),
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(
+                selector2, raw_data2
+            ),
             Ok(contract_error_err2())
         );
 
@@ -752,15 +778,23 @@ mod tests {
         assert_eq!(contract_error_err3().abi_encode(), encoded_data3);
 
         assert_eq!(C::Err3::abi_decode(&encoded_data3), Ok(err3()));
-        assert_eq!(<C::CErrors as SolInterface>::abi_decode_validate(&encoded_data3), Ok(errors_err3()));
-        assert_eq!(<ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data3), Ok(contract_error_err3()));
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data3),
+            Ok(errors_err3())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data3),
+            Ok(contract_error_err3())
+        );
 
         assert_eq!(
             <C::CErrors as SolInterface>::abi_decode_raw_validate(selector3, raw_data3),
             Ok(errors_err3())
         );
         assert_eq!(
-            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(selector3, raw_data3),
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(
+                selector3, raw_data3
+            ),
             Ok(contract_error_err3())
         );
 

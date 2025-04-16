@@ -539,7 +539,8 @@ mod tests {
         let data = hex!("8758782b000000000000000000000000a48388222c7ee7daefde5d0b9c99319995c4a990");
         assert_eq!(decode_revert_reason(&data), None);
 
-        let C::CErrors::SenderAddressError(decoded) = C::CErrors::abi_decode_validate(&data).unwrap();
+        let C::CErrors::SenderAddressError(decoded) =
+            C::CErrors::abi_decode_validate(&data).unwrap();
         assert_eq!(
             decoded,
             C::SenderAddressError(address!("0xa48388222c7ee7daefde5d0b9c99319995c4a990"))
