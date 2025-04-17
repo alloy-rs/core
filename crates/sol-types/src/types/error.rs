@@ -314,11 +314,6 @@ impl SolError for Panic {
     fn abi_encoded_size(&self) -> usize {
         32
     }
-
-    #[inline]
-    fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
-        Self::abi_decode_raw(data)
-    }
 }
 
 impl Panic {
