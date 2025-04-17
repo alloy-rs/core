@@ -424,7 +424,7 @@ impl<'a> ArraySizeEvaluator<'a> {
                 lhs.checked_mul(rhs).ok_or_else(|| EE::ArithmeticOverflow.into())
             }
             ast::BinOp::Div(..) => lhs.checked_div(rhs).ok_or_else(|| EE::DivisionByZero.into()),
-            ast::BinOp::Rem(..) => lhs.checked_div(rhs).ok_or_else(|| EE::DivisionByZero.into()),
+            ast::BinOp::Rem(..) => lhs.checked_rem(rhs).ok_or_else(|| EE::DivisionByZero.into()),
             _ => Err(EE::UnsupportedExpr.into()),
         }
     }
