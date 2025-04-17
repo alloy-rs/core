@@ -62,7 +62,7 @@ pub use signature::PrimitiveSignature;
 pub use signature::{normalize_v, to_eip155_v, Signature, SignatureError};
 
 pub mod utils;
-pub use utils::{eip191_hash_message, keccak256, Keccak256};
+pub use utils::{eip191_hash_message, keccak256, Keccak256, KECCAK256_EMPTY};
 
 #[doc(hidden)] // Use `hex` directly instead!
 pub mod hex_literal;
