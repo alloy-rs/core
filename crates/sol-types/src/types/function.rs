@@ -66,6 +66,16 @@ pub trait SolCall: Sized {
         <Self::Parameters<'_> as SolType>::abi_decode_sequence(data).map(Self::new)
     }
 
+    /// ABI decode this call's arguments from the given slice, **without** its
+    /// selector, with validation.
+    ///
+    /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
+    /// validation checks on the decoded parameters tuple.
+    #[inline]
+    fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence_validate(data).map(Self::new)
+    }
+
     /// ABI decode this call's arguments from the given slice, **with** the
     /// selector.
     #[inline]
@@ -74,6 +84,19 @@ pub trait SolCall: Sized {
             .strip_prefix(&Self::SELECTOR)
             .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
         Self::abi_decode_raw(data)
+    }
+
+    /// ABI decode this call's arguments from the given slice, **with** the
+    /// selector, with validation.
+    ///
+    /// This is the same as [`abi_decode`](Self::abi_decode), but performs
+    /// validation checks on the decoded parameters tuple.
+    #[inline]
+    fn abi_decode_validate(data: &[u8]) -> Result<Self> {
+        let data = data
+            .strip_prefix(&Self::SELECTOR)
+            .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
+        Self::abi_decode_raw_validate(data)
     }
 
     /// ABI encode the call to the given buffer **without** its selector.
@@ -94,6 +117,12 @@ pub trait SolCall: Sized {
 
     /// ABI decode this call's return values from the given slice.
     fn abi_decode_returns(data: &[u8]) -> Result<Self::Return>;
+
+    /// ABI decode this call's return values from the given slice, with validation.
+    ///
+    /// This is the same as [`abi_decode_returns`](Self::abi_decode_returns), but performs
+    /// validation checks on the decoded return tuple.
+    fn abi_decode_returns_validate(data: &[u8]) -> Result<Self::Return>;
 
     /// ABI encode the call's return value.
     #[inline]

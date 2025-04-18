@@ -171,6 +171,17 @@ pub trait SolEvent: Sized {
         <Self::DataTuple<'a> as SolType>::abi_decode_sequence(data)
     }
 
+    /// ABI-decodes the dynamic data of this event from the given buffer, with validation.
+    ///
+    /// This is the same as [`abi_decode_data`](Self::abi_decode_data), but performs
+    /// validation checks on the decoded data tuple.
+    #[inline]
+    fn abi_decode_data_validate<'a>(
+        data: &'a [u8],
+    ) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
+        <Self::DataTuple<'a> as SolType>::abi_decode_sequence_validate(data)
+    }
+
     /// Decode the event from the given log info.
     fn decode_raw_log<I, D>(topics: I, data: &[u8]) -> Result<Self>
     where
@@ -181,6 +192,22 @@ pub trait SolEvent: Sized {
         // Check signature before decoding the data.
         Self::check_signature(&topics)?;
         let body = Self::abi_decode_data(data)?;
+        Ok(Self::new(topics, body))
+    }
+
+    /// Decode the event from the given log info, with validation.
+    ///
+    /// This is the same as [`decode_raw_log`](Self::decode_raw_log), but performs
+    /// validation checks on the decoded topics and data.
+    fn decode_raw_log_validate<I, D>(topics: I, data: &[u8]) -> Result<Self>
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
+        let topics = Self::decode_topics(topics)?;
+        // Check signature before decoding the data.
+        Self::check_signature(&topics)?;
+        let body = Self::abi_decode_data_validate(data)?;
         Ok(Self::new(topics, body))
     }
 

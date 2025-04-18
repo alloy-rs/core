@@ -249,6 +249,20 @@ pub trait SolType: Sized {
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as
+    /// single-element sequence, with validation.
+    ///
+    /// This is the same as [`abi_decode`](Self::abi_decode), but performs
+    /// validation checks on the decoded token.
+    ///
+    /// See the [`abi`] module for more information.
+    #[inline]
+    fn abi_decode_validate(data: &[u8]) -> Result<Self::RustType> {
+        let token = abi::decode::<Self::Token<'_>>(data)?;
+        Self::type_check(&token)?;
+        Ok(Self::detokenize(token))
+    }
+
+    /// Decodes this type's value from an ABI blob by interpreting it as
     /// function parameters.
     ///
     /// See the [`abi`] module for more information.
@@ -258,6 +272,23 @@ pub trait SolType: Sized {
         Self::Token<'de>: TokenSeq<'de>,
     {
         abi::decode_params::<Self::Token<'_>>(data).map(Self::detokenize)
+    }
+
+    /// Decodes this type's value from an ABI blob by interpreting it as
+    /// function parameters, with validation.
+    ///
+    /// This is the same as [`abi_decode_params`](Self::abi_decode_params), but performs
+    /// validation checks on the decoded token.
+    ///
+    /// See the [`abi`] module for more information.
+    #[inline]
+    fn abi_decode_params_validate<'de>(data: &'de [u8]) -> Result<Self::RustType>
+    where
+        Self::Token<'de>: TokenSeq<'de>,
+    {
+        let token = abi::decode_params::<Self::Token<'_>>(data)?;
+        Self::type_check(&token)?;
+        Ok(Self::detokenize(token))
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as a
@@ -270,5 +301,22 @@ pub trait SolType: Sized {
         Self::Token<'de>: TokenSeq<'de>,
     {
         abi::decode_sequence::<Self::Token<'_>>(data).map(Self::detokenize)
+    }
+
+    /// Decodes this type's value from an ABI blob by interpreting it as
+    /// sequence, with validation.
+    ///
+    /// This is the same as [`abi_decode_sequence`](Self::abi_decode_sequence), but performs
+    /// validation checks on the decoded token.
+    ///
+    /// See the [`abi`] module for more information.
+    #[inline]
+    fn abi_decode_sequence_validate<'de>(data: &'de [u8]) -> Result<Self::RustType>
+    where
+        Self::Token<'de>: TokenSeq<'de>,
+    {
+        let token = abi::decode_sequence::<Self::Token<'_>>(data)?;
+        Self::type_check(&token)?;
+        Ok(Self::detokenize(token))
     }
 }
