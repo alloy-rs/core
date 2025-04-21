@@ -284,12 +284,14 @@ impl ParseUnits {
             }
         }
     }
+
     /// Formats the given number of Wei as the given unit.
     ///
     /// See [`format_units`] for more information.
     pub fn format_units(&self, unit: Unit) -> String {
         self.format_units_with(unit, DecimalSeparator::Period)
     }
+
     /// Returns `true` if the number is signed.
     #[inline]
     pub const fn is_signed(&self) -> bool {
