@@ -251,7 +251,6 @@ impl ParseUnits {
     }
 
     /// Formats the given number of Wei as the given unit.
-
     pub fn format_units_with(&self, mut unit: Unit, separator: DecimalSeparator) -> String {
         // Edge case: If the number is signed and the unit is the largest possible unit, we need to
         //            subtract 1 from the unit to avoid overflow.
