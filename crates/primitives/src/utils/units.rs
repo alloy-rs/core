@@ -188,14 +188,27 @@ macro_rules! impl_try_into_absolute {
 
 impl_try_into_absolute!(u64, u128);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// Decimal separator for number formatting
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum DecimalSeparator {
     /// Use comma as decimal separator
     Comma,
     /// Use period as decimal separator
+    #[default]
     Period,
 }
+
+impl DecimalSeparator {
+    /// Returns the character used as decimal separator
+    #[inline]
+    pub const fn separator(&self) -> char {
+        match self {
+            Self::Comma => ',',
+            Self::Period => '.',
+        }
+    }
+}
+
 impl ParseUnits {
     /// Parses a decimal number and multiplies it with 10^units.
     ///
@@ -266,20 +279,14 @@ impl ParseUnits {
             Self::U256(amount) => {
                 let integer = amount / exp10;
                 let decimals = (amount % exp10).to_string();
-                match separator {
-                    DecimalSeparator::Comma => format!("{integer},{decimals:0>units$}"),
-                    DecimalSeparator::Period => format!("{integer}.{decimals:0>units$}"),
-                }
+                format!("{integer}{}{decimals:0>units$}", separator.separator())
             }
             Self::I256(amount) => {
                 let exp10 = I256::from_raw(exp10);
                 let sign = if amount.is_negative() { "-" } else { "" };
                 let integer = (amount / exp10).twos_complement();
                 let decimals = ((amount % exp10).twos_complement()).to_string();
-                match separator {
-                    DecimalSeparator::Comma => format!("{sign}{integer},{decimals:0>units$}"),
-                    DecimalSeparator::Period => format!("{sign}{integer}.{decimals:0>units$}"),
-                }
+                format!("{sign}{integer}{}{decimals:0>units$}", separator.separator())
             }
         }
     }
