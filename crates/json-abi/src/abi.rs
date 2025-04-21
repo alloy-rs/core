@@ -504,13 +504,19 @@ pub struct ContractObject {
 impl<'de> Deserialize<'de> for ContractObject {
     #[inline]
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_any(ContractObjectVisitor)
+        deserializer.deserialize_any(ContractObjectVisitor::default())
     }
 }
 
+// TODO: add helper type to deserialize with settings
+
 // Modified from `ethers_core::abi::raw`:
 // https://github.com/gakonst/ethers-rs/blob/311086466871204c3965065b8c81e47418261412/ethers-core/src/abi/raw.rs#L154
-struct ContractObjectVisitor;
+#[derive(Default)]
+struct ContractObjectVisitor {
+    /// Whether unlinked bytecode objects should be ignored.
+    ignore_unlinked_bytecode: bool,
+}
 
 impl<'de> Visitor<'de> for ContractObjectVisitor {
     type Value = ContractObject;

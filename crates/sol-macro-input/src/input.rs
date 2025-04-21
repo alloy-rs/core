@@ -54,6 +54,13 @@ pub struct SolInput {
 
 impl Parse for SolInput {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
+        Self::parse_with(input, Default::default())
+    }
+}
+
+impl SolInput {
+    /// Parse the [`SolInput`] with the given settings.
+    pub fn parse_with(input: ParseStream<'_>, config: SolInputParseConfig) -> Result<Self> {
         let attrs = Attribute::parse_inner(input)?;
 
         // Ignore outer attributes when peeking.
@@ -72,16 +79,18 @@ impl Parse for SolInput {
                 is_litstr_like(&fork)
             })
         {
-            Self::parse_abigen(attrs, input)
+            Self::parse_abigen(attrs, input, config)
         } else {
             input.parse().map(|kind| Self { attrs, path: None, kind })
         }
     }
-}
 
-impl SolInput {
     /// `abigen`-like syntax: `sol!(name, "path/to/file")`
-    fn parse_abigen(mut attrs: Vec<Attribute>, input: ParseStream<'_>) -> Result<Self> {
+    fn parse_abigen(
+        mut attrs: Vec<Attribute>,
+        input: ParseStream<'_>,
+        config: SolInputParseConfig,
+    ) -> Result<Self> {
         attrs.extend(Attribute::parse_outer(input)?);
 
         let name = input.parse::<Option<Ident>>()?;
@@ -129,6 +138,7 @@ impl SolInput {
         {
             #[cfg(feature = "json")]
             {
+                // TODO: utilize config settings
                 let json = serde_json::from_str(s)
                     .map_err(|e| Error::new(span, format!("invalid JSON: {e}")))?;
                 let name = name.ok_or_else(|| Error::new(span, "need a name for JSON ABI"))?;
@@ -150,5 +160,24 @@ impl SolInput {
             })?;
             Ok(Self { attrs, path, kind })
         }
+    }
+}
+
+/// Settings determining how to parse [`SolInput`]
+#[derive(Debug, Clone, Default)]
+pub struct SolInputParseConfig {
+    /// Whether unlinked bytecode objects should be ignored.
+    ignore_unlinked_bytecode: bool,
+}
+
+impl SolInputParseConfig {
+    /// Ignores bytecode from json abi parsing if the bytecode is unlinked.
+    pub fn ignore_unlinked_bytecode(self) -> Self {
+        self.set_ignore_unlinked_bytecode(true)
+    }
+
+    pub fn set_ignore_unlinked_bytecode(mut self, ignore_unlinked_bytecode: bool) -> Self {
+        self.ignore_unlinked_bytecode = ignore_unlinked_bytecode;
+        self
     }
 }
