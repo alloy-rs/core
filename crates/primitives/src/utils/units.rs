@@ -188,6 +188,27 @@ macro_rules! impl_try_into_absolute {
 
 impl_try_into_absolute!(u64, u128);
 
+/// Decimal separator for number formatting
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum DecimalSeparator {
+    /// Use comma as decimal separator
+    Comma,
+    /// Use period as decimal separator
+    #[default]
+    Period,
+}
+
+impl DecimalSeparator {
+    /// Returns the character used as decimal separator
+    #[inline]
+    pub const fn separator(&self) -> char {
+        match self {
+            Self::Comma => ',',
+            Self::Period => '.',
+        }
+    }
+}
+
 impl ParseUnits {
     /// Parses a decimal number and multiplies it with 10^units.
     ///
@@ -243,9 +264,7 @@ impl ParseUnits {
     }
 
     /// Formats the given number of Wei as the given unit.
-    ///
-    /// See [`format_units`] for more information.
-    pub fn format_units(&self, mut unit: Unit) -> String {
+    pub fn format_units_with(&self, mut unit: Unit, separator: DecimalSeparator) -> String {
         // Edge case: If the number is signed and the unit is the largest possible unit, we need to
         //            subtract 1 from the unit to avoid overflow.
         if self.is_signed() && unit == Unit::MAX {
@@ -260,16 +279,23 @@ impl ParseUnits {
             Self::U256(amount) => {
                 let integer = amount / exp10;
                 let decimals = (amount % exp10).to_string();
-                format!("{integer}.{decimals:0>units$}")
+                format!("{integer}{}{decimals:0>units$}", separator.separator())
             }
             Self::I256(amount) => {
                 let exp10 = I256::from_raw(exp10);
                 let sign = if amount.is_negative() { "-" } else { "" };
                 let integer = (amount / exp10).twos_complement();
                 let decimals = ((amount % exp10).twos_complement()).to_string();
-                format!("{sign}{integer}.{decimals:0>units$}")
+                format!("{sign}{integer}{}{decimals:0>units$}", separator.separator())
             }
         }
+    }
+
+    /// Formats the given number of Wei as the given unit.
+    ///
+    /// See [`format_units`] for more information.
+    pub fn format_units(&self, unit: Unit) -> String {
+        self.format_units_with(unit, DecimalSeparator::Period)
     }
 
     /// Returns `true` if the number is signed.
