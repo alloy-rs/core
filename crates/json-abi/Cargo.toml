@@ -25,13 +25,12 @@ rustdoc-args = [
 alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-sol-type-parser = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true, optional = true }
+serde_json.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
 ethabi = "18"
 pretty_assertions.workspace = true
-serde_json.workspace = true
 
 [features]
 default = ["std"]
@@ -39,9 +38,9 @@ std = [
     "serde/std",
     "alloy-primitives/std",
     "alloy-sol-type-parser/std",
-    "serde_json?/std",
+    "serde_json/std",
 ]
-serde_json = ["dep:serde_json"]
+serde_json = []
 
 [[bench]]
 name = "json_abi"

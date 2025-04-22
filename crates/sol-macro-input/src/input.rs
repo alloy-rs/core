@@ -89,7 +89,7 @@ impl SolInput {
     fn parse_abigen(
         mut attrs: Vec<Attribute>,
         input: ParseStream<'_>,
-        config: SolInputParseConfig,
+        _config: SolInputParseConfig,
     ) -> Result<Self> {
         attrs.extend(Attribute::parse_outer(input)?);
 
@@ -138,9 +138,14 @@ impl SolInput {
         {
             #[cfg(feature = "json")]
             {
-                // TODO: utilize config settings
-                let json = serde_json::from_str(s)
-                    .map_err(|e| Error::new(span, format!("invalid JSON: {e}")))?;
+                let json = if _config.ignore_unlinked_bytecode {
+                    alloy_json_abi::ContractObject::ignore_unlinked_bytecode_and_parse(s)
+                        .map_err(|e| Error::new(span, format!("invalid JSON: {e}")))?
+                } else {
+                    serde_json::from_str(s)
+                        .map_err(|e| Error::new(span, format!("invalid JSON: {e}")))?
+                };
+
                 let name = name.ok_or_else(|| Error::new(span, "need a name for JSON ABI"))?;
                 Ok(Self { attrs, path, kind: SolInputKind::Json(name, json) })
             }
