@@ -509,8 +509,10 @@ impl<'de> Deserialize<'de> for ContractObject {
 }
 
 impl ContractObject {
-    /// Ignores unlinked bytecode when deserializing and returns the contract object.
-    pub fn ignore_unlinked_bytecode_and_parse(s: &str) -> Result<Self, serde_json::Error> {
+    /// Ignores unlinked bytecode when deserializing and returns the [`ContractObject`].
+    ///
+    /// Unlinked bytecode can be identified by the presence of the `__$` and `$__` placeholders.
+    pub fn parse_unlinked(s: &str) -> Result<Self, serde_json::Error> {
         let visitor = ContractObjectVisitor { ignore_unlinked_bytecode: true };
         serde_json::Deserializer::from_str(s).deserialize_any(visitor)
     }
