@@ -110,6 +110,10 @@ pub struct SolAttrs {
 
     /// UDVT only `#[sol(type_check = "my_function")]`
     pub type_check: Option<LitStr>,
+
+    /// Ignore unlinked bytecode
+    /// `#[sol(ignore_unlinked)]`
+    pub ignore_unlinked: Option<bool>,
 }
 
 impl SolAttrs {
@@ -201,6 +205,7 @@ impl SolAttrs {
                     deployed_bytecode => bytes()?,
 
                     type_check => lit()?,
+                    ignore_unlinked => bool()?,
                 };
                 Ok(())
             })?;
@@ -467,6 +472,12 @@ mod tests {
         #[cfg_attr(miri, ignore = "env not available")]
         inner_macro {
             #[sol(rename = env!("CARGO_PKG_NAME"))] => Ok(sol_attrs! { rename: parse_quote!("alloy-sol-macro-input") }),
+        }
+
+        ignore_unlinked {
+            #[sol(ignore_unlinked)] => Ok(sol_attrs! { ignore_unlinked: true }),
+            #[sol(ignore_unlinked = true)] => Ok(sol_attrs! { ignore_unlinked: true }),
+            #[sol(ignore_unlinked = false)] => Ok(sol_attrs! { ignore_unlinked: false }),
         }
     }
 }
