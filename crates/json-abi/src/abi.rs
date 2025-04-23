@@ -106,7 +106,6 @@ impl JsonAbi {
     /// Parse a JSON string into an ABI object.
     ///
     /// This is a convenience wrapper around [`serde_json::from_str`].
-    #[cfg(feature = "serde_json")]
     #[inline]
     pub fn from_json_str(json: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json)
@@ -115,7 +114,7 @@ impl JsonAbi {
     /// Loads contract from a JSON [Reader](std::io::Read).
     ///
     /// This is a convenience wrapper around [`serde_json::from_str`].
-    #[cfg(all(feature = "std", feature = "serde_json"))]
+    #[cfg(feature = "std")]
     pub fn load<T: std::io::Read>(mut reader: T) -> Result<Self, serde_json::Error> {
         // https://docs.rs/serde_json/latest/serde_json/fn.from_reader.html
         // serde_json docs recommend buffering the whole reader to a string

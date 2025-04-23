@@ -40,7 +40,6 @@ std = [
     "alloy-sol-type-parser/std",
     "serde_json/std",
 ]
-serde_json = []
 
 [[bench]]
 name = "json_abi"
