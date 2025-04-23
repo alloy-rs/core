@@ -145,3 +145,25 @@ fn do_stuff() {
     );
     assert_eq!(set.len(), 1);
 }
+
+#[test]
+fn ignore_unlinked_bytecode_attr() {
+    use alloy_core::primitives::U256;
+    sol! (
+        // Inner
+        #![sol(ignore_unlinked)]
+        Unlinked,
+        "./testdata/SomeLibUser.json"
+    );
+
+    let _ = Unlinked::addCall { a: U256::ZERO, b: U256::ZERO };
+
+    sol!(
+        // Outer
+        #[sol(ignore_unlinked)]
+        AnotherUnlinked,
+        "./testdata/SomeLibUser.json"
+    );
+
+    let _ = AnotherUnlinked::addCall { a: U256::ZERO, b: U256::ZERO };
+}

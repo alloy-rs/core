@@ -65,7 +65,8 @@ impl SolInput {
 
         // Ignore outer attributes when peeking.
         let fork = input.fork();
-        let _fork_outer = Attribute::parse_outer(&fork)?;
+        let fork_outer = Attribute::parse_outer(&fork)?;
+        let ignore_unlinked_outer = contains_ignore_unlinked(&fork_outer);
 
         // Include macro calls like `concat!(env!())`;
         let is_litstr_like = |fork: syn::parse::ParseStream<'_>| {
@@ -79,7 +80,12 @@ impl SolInput {
                 is_litstr_like(&fork)
             })
         {
-            Self::parse_abigen(attrs, input, config)
+            let ignore_unlinked_inner = contains_ignore_unlinked(&attrs);
+            Self::parse_abigen(
+                attrs,
+                input,
+                config.set_ignore_unlinked_bytecode(ignore_unlinked_inner || ignore_unlinked_outer),
+            )
         } else {
             input.parse().map(|kind| Self { attrs, path: None, kind })
         }
@@ -139,7 +145,7 @@ impl SolInput {
             #[cfg(feature = "json")]
             {
                 let json = if _config.ignore_unlinked_bytecode {
-                    alloy_json_abi::ContractObject::ignore_unlinked_bytecode_and_parse(s)
+                    alloy_json_abi::ContractObject::parse_unlinked(s)
                         .map_err(|e| Error::new(span, format!("invalid JSON: {e}")))?
                 } else {
                     serde_json::from_str(s)
@@ -185,4 +191,24 @@ impl SolInputParseConfig {
         self.ignore_unlinked_bytecode = ignore_unlinked_bytecode;
         self
     }
+}
+
+/// Checks if the `ignore_unlinked` sol attr is present in the given attributes.
+fn contains_ignore_unlinked(attrs: &[Attribute]) -> bool {
+    attrs.iter().any(|attr| {
+        attr.path().is_ident("sol") && {
+            if let Ok(meta) = attr.meta.require_list() {
+                let mut found = false;
+                let _ = meta.parse_nested_meta(|meta| {
+                    if meta.path.is_ident("ignore_unlinked") {
+                        found = true;
+                    }
+                    Ok(())
+                });
+                found
+            } else {
+                false
+            }
+        }
+    })
 }
