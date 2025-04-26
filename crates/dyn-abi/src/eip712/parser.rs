@@ -77,7 +77,7 @@ impl<'a> ComponentType<'a> {
         let mut depth = 1; // 1 to account for the ( in the split above
         let mut last = 0;
 
-        for (i, c) in props_str.chars().enumerate() {
+        for (i, c) in props_str.char_indices() {
             match c {
                 '(' => depth += 1,
                 ')' => {
@@ -87,14 +87,14 @@ impl<'a> ComponentType<'a> {
                         if !candidate.is_empty() {
                             props.push(candidate.try_into()?);
                         }
-                        last = i + 1;
+                        last = i + c.len_utf8();
                         break;
                     }
                 }
                 ',' => {
                     if depth == 1 {
                         props.push(props_str[last..i].try_into()?);
-                        last = i + 1;
+                        last = i + c.len_utf8();
                     }
                 }
                 _ => {}
