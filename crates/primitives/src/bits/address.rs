@@ -451,8 +451,10 @@ impl Address {
 
     /// Computes the `CREATE_EOF` address for a contract created using EOF create instruction.
     ///
-    /// The address is calculated as:
-    /// `keccak256(0xff ++ padded_zeroes (1-13) ++ address ++ salt)[12:]`
+    /// The address is calculated as: `keccak256(0xff || sender32 || salt)[12:]`, where sender32 is
+    /// the sender address left-padded to 32 bytes with zeros.
+    ///
+    /// See [EIP-7620](https://eips.ethereum.org/EIPS/eip-7620) for more details.
     ///
     /// # Examples
     ///
@@ -464,6 +466,7 @@ impl Address {
     /// let eof_address = address.create_eof(salt);
     /// ```
     #[must_use]
+    #[doc(alias = "eof_create")]
     pub fn create_eof<S>(&self, salt: S) -> Self
     where
         // not `AsRef` because `[u8; N]` does not implement `AsRef<[u8; N]>`
@@ -476,7 +479,7 @@ impl Address {
     fn _create_eof(&self, salt: &[u8; 32]) -> Self {
         let mut buffer = [0; 65];
         buffer[0] = 0xff;
-        // 1..13 are padded zeroes (already initialized to 0)
+        // 1..13 is zero pad (already initialized to 0)
         buffer[13..33].copy_from_slice(self.as_slice());
         buffer[33..].copy_from_slice(salt);
         Self::from_word(keccak256(buffer))
@@ -792,6 +795,11 @@ mod tests {
     fn create_eof() {
         // Test cases with (from_address, salt, expected_result)
         let tests = [
+            (
+                "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                "02b6826e9392ee6bf6479e413c570846ab0107ec",
+            ),
             (
                 "0000000000000000000000000000000000000000",
                 "0000000000000000000000000000000000000000000000000000000000000000",
