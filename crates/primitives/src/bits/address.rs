@@ -800,18 +800,18 @@ mod tests {
             (
                 "deadbeef00000000000000000000000000000000",
                 "0000000000000000000000000000000000000000000000000000000000000000",
-                "D146E87a5EA438103eF31cB75B432EecF0c855cc"
+                "D146E87a5EA438103eF31cB75B432EecF0c855cc",
             ),
         ];
-        
+
         for (from, salt, expected) in tests {
             let from = from.parse::<Address>().unwrap();
-            
+
             let salt = hex::decode(salt).unwrap();
             let salt: [u8; 32] = salt.try_into().unwrap();
-            
+
             let expected = expected.parse::<Address>().unwrap();
-            
+
             assert_eq!(expected, from.create_eof(salt));
         }
     }
