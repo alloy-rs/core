@@ -115,6 +115,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
                 fn tokenize(&self) -> Self::Token<'_> {
                     #tokenize_impl
                 }
+
+                #[inline]
+                fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                    <Self::Parameters<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data).map(Self::new)
+                }
             }
 
             #abi

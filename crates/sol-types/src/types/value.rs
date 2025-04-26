@@ -147,6 +147,16 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
         Self::SolType::abi_decode(data).map(Self::from)
     }
 
+    /// ABI-decode this type from the given data, with validation.
+    ///
+    /// See [`SolType::abi_decode_validate`] for more information.
+    fn abi_decode_validate(data: &[u8]) -> Result<Self>
+    where
+        Self: From<<Self::SolType as SolType>::RustType>,
+    {
+        Self::SolType::abi_decode_validate(data).map(Self::from)
+    }
+
     /// ABI-decode this type from the given data.
     ///
     /// See [`SolType::abi_decode_params`] for more information.
@@ -159,6 +169,18 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
         Self::SolType::abi_decode_params(data).map(Self::from)
     }
 
+    /// ABI-decode this type from the given data, with validation.
+    ///
+    /// See [`SolType::abi_decode_params_validate`] for more information.
+    #[inline]
+    fn abi_decode_params_validate<'de>(data: &'de [u8]) -> Result<Self>
+    where
+        Self: From<<Self::SolType as SolType>::RustType>,
+        <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
+    {
+        Self::SolType::abi_decode_params_validate(data).map(Self::from)
+    }
+
     /// ABI-decode this type from the given data.
     ///
     /// See [`SolType::abi_decode_sequence`] for more information.
@@ -169,6 +191,18 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
         <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
         Self::SolType::abi_decode_sequence(data).map(Self::from)
+    }
+
+    /// ABI-decode this type from the given data, with validation.
+    ///
+    /// See [`SolType::abi_decode_sequence_validate`] for more information.
+    #[inline]
+    fn abi_decode_sequence_validate<'de>(data: &'de [u8]) -> Result<Self>
+    where
+        Self: From<<Self::SolType as SolType>::RustType>,
+        <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
+    {
+        Self::SolType::abi_decode_sequence_validate(data).map(Self::from)
     }
 }
 
