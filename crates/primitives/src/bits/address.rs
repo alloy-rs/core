@@ -449,12 +449,17 @@ impl Address {
         Self::from_word(hash)
     }
 
-    /// Computes the `CREATE_EOF` address for a contract created using EOF create instruction.
+    /// Computes the address created by the `EOFCREATE` opcode, where `self` is the sender.
     ///
-    /// The address is calculated as: `keccak256(0xff || sender32 || salt)[12:]`, where sender32 is
+    /// The address is calculated as `keccak256(0xff || sender32 || salt)[12:]`, where sender32 is
     /// the sender address left-padded to 32 bytes with zeros.
     ///
     /// See [EIP-7620](https://eips.ethereum.org/EIPS/eip-7620) for more details.
+    ///
+    /// <div class="warning">
+    /// This function's stability is not guaranteed. It may change in the future as the EIP is
+    /// not yet accepted.
+    /// </div>
     ///
     /// # Examples
     ///
