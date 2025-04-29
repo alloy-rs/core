@@ -1,9 +1,5 @@
 use crate::aliases;
-use core::{
-    fmt, iter,
-    ops::{self, BitAndAssign, BitOrAssign, BitXorAssign},
-    str,
-};
+use core::{fmt, iter, ops, str};
 use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
 use hex::FromHex;
 
@@ -255,23 +251,19 @@ impl<const N: usize> fmt::UpperHex for FixedBytes<N> {
     }
 }
 
-impl<const N: usize> ops::BitAndAssign<&Self> for FixedBytes<N> {
+impl<const N: usize> FixedBytes<N> {
     #[inline]
     fn bitand_assign(&mut self, rhs: &Self) {
         // Note: `slice::Iter`` has better codegen than `array::IntoIter``
         iter::zip(self, rhs).for_each(|(a, b)| *a &= *b);
     }
-}
 
-impl<const N: usize> ops::BitOrAssign<&Self> for FixedBytes<N> {
     #[inline]
     fn bitor_assign(&mut self, rhs: &Self) {
         // Note: `slice::Iter` has better codegen than `array::IntoIter`
         iter::zip(self, rhs).for_each(|(a, b)| *a |= *b);
     }
-}
 
-impl<const N: usize> ops::BitXorAssign<&Self> for FixedBytes<N> {
     #[inline]
     fn bitxor_assign(&mut self, rhs: &Self) {
         // Note: `slice::Iter` has better codegen than `array::IntoIter`
