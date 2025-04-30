@@ -51,7 +51,7 @@ fn abi_test(s: &str, path: &str, run_solc: bool) {
     let abi_items2: Vec<AbiItem<'_>> = serde_json::from_reader(std::io::Cursor::new(s)).unwrap();
     assert_eq!(abi_items2, abi_items);
 
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", feature = "serde_json"))]
     load_test(path, &abi1);
     to_sol_test(path, &abi1, run_solc);
 
@@ -67,7 +67,7 @@ fn abi_test(s: &str, path: &str, run_solc: bool) {
     iterator_test(abi1.clone().into_items(), abi1.into_items().rev(), len);
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "serde_json"))]
 fn load_test(path: &str, abi: &JsonAbi) {
     use std::{fs::File, io::BufReader};
     let file: File = File::open(path).unwrap();
@@ -298,8 +298,6 @@ fn get_solc_version() -> Option<(u16, u16, u16)> {
 
 // <https://github.com/foundry-rs/foundry/issues/6815>
 #[test]
-#[cfg_attr(miri, ignore = "no fs")]
-#[cfg(feature = "std")]
 fn parse_unlinked_contract() {
     const TESTDATA_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/testdata");
     // unlinked placeholder __$7233c33f2e1e35848c685b0eb24649959e$__
