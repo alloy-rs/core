@@ -154,7 +154,7 @@ mod tests {
             }
 
             if path.file_name() == Some("LargeFunction.json".as_ref())
-                || path.file_name() == Some("SomeUserLib.json".as_ref())
+                || path.file_name() == Some("SomeLibUser.json".as_ref())
             {
                 continue;
             }

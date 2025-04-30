@@ -13,7 +13,7 @@ const JSON_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/abi");
 static UPDATED: AtomicBool = AtomicBool::new(false);
 
 #[test]
-#[cfg_attr(miri, ignore = "no fs")]
+// #[cfg_attr(miri, ignore = "no fs")]
 fn abi() {
     let run_solc = run_solc();
     for file in std::fs::read_dir(JSON_PATH).unwrap() {
@@ -24,9 +24,9 @@ fn abi() {
 
         let fname = path.file_name().unwrap().to_str().unwrap();
         // LargeFunction.json: Not an ABI sequence, just one function object.
-        // SomeUserLib.json: Not an ABI sequence, rather a contract object with bytecode and
+        // SomeLibUser.json: Not an ABI sequence, rather a contract object with bytecode and
         // deployed bytecode as well.
-        if fname == "LargeFunction.json" || fname == "SomeUserLib.json" {
+        if fname == "LargeFunction.json" || fname == "SomeLibUser.json" {
             continue;
         }
         abi_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap(), run_solc);
