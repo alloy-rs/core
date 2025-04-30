@@ -145,7 +145,7 @@ impl SolInput {
             #[cfg(feature = "json")]
             {
                 let json = if _config.ignore_unlinked_bytecode {
-                    alloy_json_abi::ContractObject::parse_unlinked(s)
+                    alloy_json_abi::ContractObject::from_json(s)
                         .map_err(|e| Error::new(span, format!("invalid JSON: {e}")))?
                 } else {
                     serde_json::from_str(s)

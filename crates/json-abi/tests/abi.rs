@@ -298,6 +298,8 @@ fn get_solc_version() -> Option<(u16, u16, u16)> {
 
 // <https://github.com/foundry-rs/foundry/issues/6815>
 #[test]
+#[cfg_attr(miri, ignore = "no fs")]
+#[cfg(all(feature = "std", feature = "serde_json"))]
 fn parse_unlinked_contract() {
     const TESTDATA_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/testdata");
     // unlinked placeholder __$7233c33f2e1e35848c685b0eb24649959e$__
@@ -307,6 +309,6 @@ fn parse_unlinked_contract() {
     assert!(err.to_string().contains("expected bytecode, found unlinked bytecode with placeholder: 7233c33f2e1e35848c685b0eb24649959e"));
 
     // Ignore unlinked and parse
-    let content = alloy_json_abi::ContractObject::parse_unlinked(&content);
+    let content = alloy_json_abi::ContractObject::from_json(&content);
     assert!(content.is_ok());
 }

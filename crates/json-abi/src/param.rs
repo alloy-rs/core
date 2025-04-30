@@ -664,6 +664,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(all(feature = "std", feature = "serde_json"))]
     fn param_from_json() {
         let param = r#"{
             "internalType": "string",
