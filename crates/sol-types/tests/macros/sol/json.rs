@@ -262,3 +262,24 @@ fn inner_macros() {
     #[allow(unused_imports)]
     use Name::*;
 }
+
+#[test]
+fn ignore_unlinked_bytecode_attr() {
+    sol! (
+        // Inner
+        #![sol(ignore_unlinked)]
+        Unlinked,
+        "../json-abi/tests/abi/SomeLibUser.json"
+    );
+
+    let _ = Unlinked::addCall { a: U256::ZERO, b: U256::ZERO };
+
+    sol!(
+        // Outer
+        #[sol(ignore_unlinked)]
+        AnotherUnlinked,
+        "../json-abi/tests/abi/SomeLibUser.json"
+    );
+
+    let _ = AnotherUnlinked::addCall { a: U256::ZERO, b: U256::ZERO };
+}

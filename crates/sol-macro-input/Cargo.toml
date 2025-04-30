@@ -36,4 +36,4 @@ alloy-json-abi = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 
 [features]
-json = ["dep:alloy-json-abi", "dep:serde_json"]
+json = ["dep:alloy-json-abi", "dep:serde_json", "alloy-json-abi/serde_json"]

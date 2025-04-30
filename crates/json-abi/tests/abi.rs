@@ -23,11 +23,12 @@ fn abi() {
         }
 
         let fname = path.file_name().unwrap().to_str().unwrap();
-        // Not an ABI sequence, just one function object.
-        if fname == "LargeFunction.json" {
+        // LargeFunction.json: Not an ABI sequence, just one function object.
+        // SomeLibUser.json: Not an ABI sequence, rather a contract object with bytecode and
+        // deployed bytecode as well.
+        if fname == "LargeFunction.json" || fname == "SomeLibUser.json" {
             continue;
         }
-
         abi_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap(), run_solc);
     }
     if UPDATED.load(Ordering::Relaxed) {
@@ -307,4 +308,8 @@ fn parse_unlinked_contract() {
     let res = serde_json::from_str::<alloy_json_abi::ContractObject>(&content);
     let err = res.unwrap_err();
     assert!(err.to_string().contains("expected bytecode, found unlinked bytecode with placeholder: 7233c33f2e1e35848c685b0eb24649959e"));
+
+    // Ignore unlinked and parse
+    let content = alloy_json_abi::ContractObject::from_json(&content);
+    assert!(content.is_ok());
 }
