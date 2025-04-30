@@ -504,13 +504,38 @@ pub struct ContractObject {
 impl<'de> Deserialize<'de> for ContractObject {
     #[inline]
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_any(ContractObjectVisitor)
+        deserializer.deserialize_any(ContractObjectVisitor::default())
     }
 }
 
+#[cfg(feature = "serde_json")]
+impl ContractObject {
+    /// Ignores unlinked bytecode when deserializing the artifact and returns the
+    /// [`ContractObject`].
+    ///
+    /// Unlinked bytecode can be identified by the presence of the `__$` and `$__` placeholders.
+    pub fn from_json(s: &str) -> Result<Self, serde_json::Error> {
+        Self::from_json_with(s, true)
+    }
+
+    /// Deserializes an artifact into a [`ContractObject`].
+    ///
+    /// Optionally ignore unlinked bytecode if `ignore_unlinked_bytecode` is set to true.
+    pub fn from_json_with(
+        s: &str,
+        ignore_unlinked_bytecode: bool,
+    ) -> Result<Self, serde_json::Error> {
+        let visitor = ContractObjectVisitor { ignore_unlinked_bytecode };
+        serde_json::Deserializer::from_str(s).deserialize_any(visitor)
+    }
+}
 // Modified from `ethers_core::abi::raw`:
 // https://github.com/gakonst/ethers-rs/blob/311086466871204c3965065b8c81e47418261412/ethers-core/src/abi/raw.rs#L154
-struct ContractObjectVisitor;
+#[derive(Default)]
+struct ContractObjectVisitor {
+    /// Whether unlinked bytecode objects should be ignored.
+    ignore_unlinked_bytecode: bool,
+}
 
 impl<'de> Visitor<'de> for ContractObjectVisitor {
     type Value = ContractObject;
@@ -540,14 +565,20 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
         }
 
         impl Bytecode {
-            fn ensure_bytes<E: serde::de::Error>(self) -> Result<Bytes, E> {
+            fn ensure_bytes<E: serde::de::Error>(
+                self,
+                ignore_unlinked_bytecode: bool,
+            ) -> Result<Option<Bytes>, E> {
                 match self {
-                    Bytecode::Bytes(bytes) | Bytecode::Object { object: bytes } => Ok(bytes),
+                    Bytecode::Bytes(bytes) | Bytecode::Object { object: bytes } => Ok(Some(bytes)),
                     Bytecode::Unlinked(unlinked)
                     | Bytecode::UnlinkedObject { object: unlinked } => {
+                        if ignore_unlinked_bytecode {
+                            return Ok(None);
+                        }
                         if let Some((_, unlinked)) = unlinked.split_once("__$") {
                             if let Some((addr, _)) = unlinked.split_once("$__") {
-                                return Err(E::custom(format!("expected bytecode, found unlinked bytecode with placeholder: {addr}")));
+                                return Err(E::custom(format!("expected bytecode, found unlinked bytecode with placeholder: {addr}. Use the `ignore_unlinked` sol attribute to bypass this error.")));
                             }
                         }
                         Err(E::custom("invalid contract bytecode"))
@@ -574,18 +605,30 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
                 "evm" => {
                     let evm = map.next_value::<EvmObj>()?;
                     if let Some(bytes) = evm.bytecode {
-                        set_if_none!(@serde bytecode, bytes.ensure_bytes()?);
+                        if let Some(b) = bytes.ensure_bytes(self.ignore_unlinked_bytecode)? {
+                            set_if_none!(@serde bytecode, b);
+                        }
                     }
                     if let Some(bytes) = evm.deployed_bytecode {
-                        set_if_none!(@serde deployed_bytecode, bytes.ensure_bytes()?);
+                        if let Some(b) = bytes.ensure_bytes(self.ignore_unlinked_bytecode)? {
+                            set_if_none!(@serde deployed_bytecode, b);
+                        }
                     }
                 }
                 "bytecode" | "bin" => {
-                    set_if_none!(@serde bytecode, map.next_value::<Bytecode>()?.ensure_bytes()?);
+                    if let Some(b) =
+                        map.next_value::<Bytecode>()?.ensure_bytes(self.ignore_unlinked_bytecode)?
+                    {
+                        set_if_none!(@serde bytecode, b);
+                    }
                 }
                 "deployedBytecode" | "deployedbytecode" | "deployed_bytecode" | "runtimeBin"
                 | "runtimebin" | "runtime " => {
-                    set_if_none!(@serde deployed_bytecode, map.next_value::<Bytecode>()?.ensure_bytes()?);
+                    if let Some(b) =
+                        map.next_value::<Bytecode>()?.ensure_bytes(self.ignore_unlinked_bytecode)?
+                    {
+                        set_if_none!(@serde deployed_bytecode, b);
+                    }
                 }
                 _ => {
                     map.next_value::<serde::de::IgnoredAny>()?;

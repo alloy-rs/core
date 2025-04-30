@@ -158,6 +158,7 @@ use syn::parse_macro_input;
 ///   bytecode of a contract. This will emit a `static` item with the specified bytes.
 /// - `type_check = <string literal>` (UDVT only): specifies a function to be used to check an User
 ///   Defined Type.
+/// - `ignore_unlinked [ = <bool = false>]`: ignores unlinked bytecode in contract artifacts.
 ///
 /// ### Structs and enums
 ///

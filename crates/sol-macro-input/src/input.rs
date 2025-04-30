@@ -54,11 +54,19 @@ pub struct SolInput {
 
 impl Parse for SolInput {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
+        Self::parse_with(input, Default::default())
+    }
+}
+
+impl SolInput {
+    /// Parse the [`SolInput`] with the given settings.
+    pub fn parse_with(input: ParseStream<'_>, config: SolInputParseConfig) -> Result<Self> {
         let attrs = Attribute::parse_inner(input)?;
 
         // Ignore outer attributes when peeking.
         let fork = input.fork();
-        let _fork_outer = Attribute::parse_outer(&fork)?;
+        let fork_outer = Attribute::parse_outer(&fork)?;
+        let ignore_unlinked_outer = contains_ignore_unlinked(&fork_outer);
 
         // Include macro calls like `concat!(env!())`;
         let is_litstr_like = |fork: syn::parse::ParseStream<'_>| {
@@ -72,16 +80,23 @@ impl Parse for SolInput {
                 is_litstr_like(&fork)
             })
         {
-            Self::parse_abigen(attrs, input)
+            let ignore_unlinked_inner = contains_ignore_unlinked(&attrs);
+            Self::parse_abigen(
+                attrs,
+                input,
+                config.set_ignore_unlinked_bytecode(ignore_unlinked_inner || ignore_unlinked_outer),
+            )
         } else {
             input.parse().map(|kind| Self { attrs, path: None, kind })
         }
     }
-}
 
-impl SolInput {
     /// `abigen`-like syntax: `sol!(name, "path/to/file")`
-    fn parse_abigen(mut attrs: Vec<Attribute>, input: ParseStream<'_>) -> Result<Self> {
+    fn parse_abigen(
+        mut attrs: Vec<Attribute>,
+        input: ParseStream<'_>,
+        _config: SolInputParseConfig,
+    ) -> Result<Self> {
         attrs.extend(Attribute::parse_outer(input)?);
 
         let name = input.parse::<Option<Ident>>()?;
@@ -129,8 +144,12 @@ impl SolInput {
         {
             #[cfg(feature = "json")]
             {
-                let json = serde_json::from_str(s)
-                    .map_err(|e| Error::new(span, format!("invalid JSON: {e}")))?;
+                let json = alloy_json_abi::ContractObject::from_json_with(
+                    s,
+                    _config.ignore_unlinked_bytecode,
+                )
+                .map_err(|e| Error::new(span, format!("invalid JSON: {e}")))?;
+
                 let name = name.ok_or_else(|| Error::new(span, "need a name for JSON ABI"))?;
                 Ok(Self { attrs, path, kind: SolInputKind::Json(name, json) })
             }
@@ -151,4 +170,43 @@ impl SolInput {
             Ok(Self { attrs, path, kind })
         }
     }
+}
+
+/// Settings determining how to parse [`SolInput`]
+#[derive(Debug, Clone, Default)]
+pub struct SolInputParseConfig {
+    /// Whether unlinked bytecode objects should be ignored.
+    ignore_unlinked_bytecode: bool,
+}
+
+impl SolInputParseConfig {
+    /// Ignores bytecode from json abi parsing if the bytecode is unlinked.
+    pub fn ignore_unlinked_bytecode(self) -> Self {
+        self.set_ignore_unlinked_bytecode(true)
+    }
+
+    pub fn set_ignore_unlinked_bytecode(mut self, ignore_unlinked_bytecode: bool) -> Self {
+        self.ignore_unlinked_bytecode = ignore_unlinked_bytecode;
+        self
+    }
+}
+
+/// Checks if the `ignore_unlinked` sol attr is present in the given attributes.
+fn contains_ignore_unlinked(attrs: &[Attribute]) -> bool {
+    attrs.iter().any(|attr| {
+        attr.path().is_ident("sol") && {
+            if let Ok(meta) = attr.meta.require_list() {
+                let mut found = false;
+                let _ = meta.parse_nested_meta(|meta| {
+                    if meta.path.is_ident("ignore_unlinked") {
+                        found = true;
+                    }
+                    Ok(())
+                });
+                found
+            } else {
+                false
+            }
+        }
+    })
 }

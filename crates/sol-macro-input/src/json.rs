@@ -153,7 +153,9 @@ mod tests {
                 continue;
             }
 
-            if path.file_name() == Some("LargeFunction.json".as_ref()) {
+            if path.file_name() == Some("LargeFunction.json".as_ref())
+                || path.file_name() == Some("SomeLibUser.json".as_ref())
+            {
                 continue;
             }
             parse_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap());
