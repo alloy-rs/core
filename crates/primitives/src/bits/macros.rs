@@ -178,6 +178,54 @@ macro_rules! wrap_fixed_bytes {
             }
         }
 
+        impl $crate::private::core::ops::BitAnd<&Self> for $name {
+            type Output = Self;
+
+            #[inline]
+            fn bitand(self, rhs: &Self) -> Self {
+                Self(self.0.bitand(&rhs.0))
+            }
+        }
+
+        impl $crate::private::core::ops::BitAndAssign<&Self> for $name {
+            #[inline]
+            fn bitand_assign(&mut self, rhs: &Self) {
+                self.0.bitand_assign(&rhs.0)
+            }
+        }
+
+        impl $crate::private::core::ops::BitOr<&Self> for $name {
+            type Output = Self;
+
+            #[inline]
+            fn bitor(self, rhs: &Self) -> Self {
+                Self(self.0.bitor(&rhs.0))
+            }
+        }
+
+        impl $crate::private::core::ops::BitOrAssign<&Self> for $name {
+            #[inline]
+            fn bitor_assign(&mut self, rhs: &Self) {
+                self.0.bitor_assign(&rhs.0)
+            }
+        }
+
+        impl $crate::private::core::ops::BitXor<&Self> for $name {
+            type Output = Self;
+
+            #[inline]
+            fn bitxor(self, rhs: &Self) -> Self {
+                Self(self.0.bitxor(&rhs.0))
+            }
+        }
+
+        impl $crate::private::core::ops::BitXorAssign<&Self> for $name {
+            #[inline]
+            fn bitxor_assign(&mut self, rhs: &Self) {
+                self.0.bitxor_assign(&rhs.0)
+            }
+        }
+
         $crate::impl_fb_traits!($name, $n);
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
