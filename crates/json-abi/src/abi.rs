@@ -578,7 +578,7 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
                         }
                         if let Some((_, unlinked)) = unlinked.split_once("__$") {
                             if let Some((addr, _)) = unlinked.split_once("$__") {
-                                return Err(E::custom(format!("expected bytecode, found unlinked bytecode with placeholder: {addr}")));
+                                return Err(E::custom(format!("expected bytecode, found unlinked bytecode with placeholder: {addr}. Use the `ignore_unlinked` sol attribute to bypass this error.")));
                             }
                         }
                         Err(E::custom("invalid contract bytecode"))
