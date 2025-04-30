@@ -1,9 +1,5 @@
 use crate::aliases;
-use core::{
-    fmt, iter,
-    ops::{self, BitAndAssign, BitOrAssign, BitXorAssign},
-    str,
-};
+use core::{fmt, iter, ops, str};
 use derive_more::{Deref, DerefMut, From, Index, IndexMut, IntoIterator};
 use hex::FromHex;
 
@@ -255,10 +251,30 @@ impl<const N: usize> fmt::UpperHex for FixedBytes<N> {
     }
 }
 
+impl<const N: usize> ops::BitAndAssign for FixedBytes<N> {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self &= &rhs;
+    }
+}
+
+impl<const N: usize> ops::BitOrAssign for FixedBytes<N> {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self |= &rhs;
+    }
+}
+
+impl<const N: usize> ops::BitXorAssign for FixedBytes<N> {
+    #[inline]
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self ^= &rhs;
+    }
+}
+
 impl<const N: usize> ops::BitAndAssign<&Self> for FixedBytes<N> {
     #[inline]
     fn bitand_assign(&mut self, rhs: &Self) {
-        // Note: `slice::Iter`` has better codegen than `array::IntoIter``
         iter::zip(self, rhs).for_each(|(a, b)| *a &= *b);
     }
 }
@@ -266,7 +282,6 @@ impl<const N: usize> ops::BitAndAssign<&Self> for FixedBytes<N> {
 impl<const N: usize> ops::BitOrAssign<&Self> for FixedBytes<N> {
     #[inline]
     fn bitor_assign(&mut self, rhs: &Self) {
-        // Note: `slice::Iter` has better codegen than `array::IntoIter`
         iter::zip(self, rhs).for_each(|(a, b)| *a |= *b);
     }
 }
@@ -274,7 +289,6 @@ impl<const N: usize> ops::BitOrAssign<&Self> for FixedBytes<N> {
 impl<const N: usize> ops::BitXorAssign<&Self> for FixedBytes<N> {
     #[inline]
     fn bitxor_assign(&mut self, rhs: &Self) {
-        // Note: `slice::Iter` has better codegen than `array::IntoIter`
         iter::zip(self, rhs).for_each(|(a, b)| *a ^= *b);
     }
 }
@@ -284,7 +298,7 @@ impl<const N: usize> ops::BitAnd for FixedBytes<N> {
 
     #[inline]
     fn bitand(mut self, rhs: Self) -> Self::Output {
-        self.bitand_assign(&rhs);
+        self &= &rhs;
         self
     }
 }
@@ -294,7 +308,7 @@ impl<const N: usize> ops::BitOr for FixedBytes<N> {
 
     #[inline]
     fn bitor(mut self, rhs: Self) -> Self::Output {
-        self.bitor_assign(&rhs);
+        self |= &rhs;
         self
     }
 }
@@ -304,29 +318,8 @@ impl<const N: usize> ops::BitXor for FixedBytes<N> {
 
     #[inline]
     fn bitxor(mut self, rhs: Self) -> Self::Output {
-        self ^= rhs;
+        self ^= &rhs;
         self
-    }
-}
-
-impl<const N: usize> ops::BitAndAssign for FixedBytes<N> {
-    #[inline]
-    fn bitand_assign(&mut self, rhs: Self) {
-        self.bitand_assign(&rhs)
-    }
-}
-
-impl<const N: usize> ops::BitOrAssign for FixedBytes<N> {
-    #[inline]
-    fn bitor_assign(&mut self, rhs: Self) {
-        self.bitor_assign(&rhs)
-    }
-}
-
-impl<const N: usize> ops::BitXorAssign for FixedBytes<N> {
-    #[inline]
-    fn bitxor_assign(&mut self, rhs: Self) {
-        self.bitxor_assign(&rhs)
     }
 }
 
@@ -335,7 +328,7 @@ impl<const N: usize> ops::BitAnd<&Self> for FixedBytes<N> {
 
     #[inline]
     fn bitand(mut self, rhs: &Self) -> Self::Output {
-        self.bitand_assign(rhs);
+        self &= rhs;
         self
     }
 }
@@ -345,7 +338,7 @@ impl<const N: usize> ops::BitOr<&Self> for FixedBytes<N> {
 
     #[inline]
     fn bitor(mut self, rhs: &Self) -> Self::Output {
-        self.bitor_assign(rhs);
+        self |= rhs;
         self
     }
 }
@@ -355,7 +348,7 @@ impl<const N: usize> ops::BitXor<&Self> for FixedBytes<N> {
 
     #[inline]
     fn bitxor(mut self, rhs: &Self) -> Self::Output {
-        self.bitxor_assign(rhs);
+        self ^= rhs;
         self
     }
 }
