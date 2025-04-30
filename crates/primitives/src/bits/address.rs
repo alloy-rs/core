@@ -449,6 +449,47 @@ impl Address {
         Self::from_word(hash)
     }
 
+    /// Computes the address created by the `EOFCREATE` opcode, where `self` is the sender.
+    ///
+    /// The address is calculated as `keccak256(0xff || sender32 || salt)[12:]`, where sender32 is
+    /// the sender address left-padded to 32 bytes with zeros.
+    ///
+    /// See [EIP-7620](https://eips.ethereum.org/EIPS/eip-7620) for more details.
+    ///
+    /// <div class="warning">
+    /// This function's stability is not guaranteed. It may change in the future as the EIP is
+    /// not yet accepted.
+    /// </div>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_primitives::{address, b256, Address};
+    /// let address = address!("0xb20a608c624Ca5003905aA834De7156C68b2E1d0");
+    /// let salt = b256!("0x7c5ea36004851c764c44143b1dcb59679b11c9a68e5f41497f6cf3d480715331");
+    /// // Create an address using CREATE_EOF
+    /// let eof_address = address.create_eof(salt);
+    /// ```
+    #[must_use]
+    #[doc(alias = "eof_create")]
+    pub fn create_eof<S>(&self, salt: S) -> Self
+    where
+        // not `AsRef` because `[u8; N]` does not implement `AsRef<[u8; N]>`
+        S: Borrow<[u8; 32]>,
+    {
+        self._create_eof(salt.borrow())
+    }
+
+    // non-generic inner function
+    fn _create_eof(&self, salt: &[u8; 32]) -> Self {
+        let mut buffer = [0; 65];
+        buffer[0] = 0xff;
+        // 1..13 is zero pad (already initialized to 0)
+        buffer[13..33].copy_from_slice(self.as_slice());
+        buffer[33..].copy_from_slice(salt);
+        Self::from_word(keccak256(buffer))
+    }
+
     /// Instantiate by hashing public key bytes.
     ///
     /// # Panics
@@ -752,6 +793,39 @@ mod tests {
 
             assert_eq!(expected, from.create2(salt, init_code_hash));
             assert_eq!(expected, from.create2_from_code(salt, init_code));
+        }
+    }
+
+    #[test]
+    fn create_eof() {
+        // Test cases with (from_address, salt, expected_result)
+        let tests = [
+            (
+                "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                "02b6826e9392ee6bf6479e413c570846ab0107ec",
+            ),
+            (
+                "0000000000000000000000000000000000000000",
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                "47f3f8F550f58348651C4c3E8cCD414b35d2E9fC",
+            ),
+            (
+                "deadbeef00000000000000000000000000000000",
+                "0000000000000000000000000000000000000000000000000000000000000000",
+                "D146E87a5EA438103eF31cB75B432EecF0c855cc",
+            ),
+        ];
+
+        for (from, salt, expected) in tests {
+            let from = from.parse::<Address>().unwrap();
+
+            let salt = hex::decode(salt).unwrap();
+            let salt: [u8; 32] = salt.try_into().unwrap();
+
+            let expected = expected.parse::<Address>().unwrap();
+
+            assert_eq!(expected, from.create_eof(salt));
         }
     }
 

@@ -742,6 +742,32 @@ impl CallLikeExpander<'_> {
                 }
 
                 #[inline]
+                #[allow(non_snake_case)]
+                fn abi_decode_raw_validate(
+                    selector: [u8; 4],
+                    data: &[u8],
+                ) -> alloy_sol_types::Result<Self> {
+                    static DECODE_VALIDATE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
+                        #({
+                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
+                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw_validate(data)
+                                    .map(#name::#sorted_variants)
+                            }
+                            #sorted_variants
+                        }),*
+                    ];
+
+                    let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
+                        return Err(alloy_sol_types::Error::unknown_selector(
+                            <Self as alloy_sol_types::SolInterface>::NAME,
+                            selector,
+                        ));
+                    };
+                    // `SELECTORS` and `DECODE_VALIDATE_SHIMS` have the same length and are sorted in the same order.
+                    DECODE_VALIDATE_SHIMS[idx](data)
+                }
+
+                #[inline]
                 fn abi_encoded_size(&self) -> usize {
                     match self {#(
                         Self::#variants(inner) =>

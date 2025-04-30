@@ -74,8 +74,8 @@ pub trait SolStruct: SolType<RustType = Self> {
     /// Calculates the [EIP-712 `typeHash`](https://eips.ethereum.org/EIPS/eip-712#rationale-for-typehash)
     /// for this struct.
     ///
-    /// This is defined as the Keccak-256 hash of the
-    /// [`encodeType`](Self::eip712_encode_type) string.
+    /// This is defined as the Keccak-256 hash of the [`encodeType`](Self::eip712_encode_type)
+    /// string.
     #[inline]
     fn eip712_type_hash(&self) -> B256 {
         keccak256(Self::eip712_encode_type().as_bytes())
@@ -84,7 +84,9 @@ pub trait SolStruct: SolType<RustType = Self> {
     /// Encodes this domain using [EIP-712 `encodeData`](https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata).
     fn eip712_encode_data(&self) -> Vec<u8>;
 
-    /// Hashes this struct according to [EIP-712 `hashStruct`](https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct).
+    /// Calculates the EIP-712 [`hashStruct`] for this value.
+    ///
+    /// [`hashStruct`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct
     #[inline]
     fn eip712_hash_struct(&self) -> B256 {
         let mut hasher = alloy_primitives::Keccak256::new();
@@ -93,10 +95,15 @@ pub trait SolStruct: SolType<RustType = Self> {
         hasher.finalize()
     }
 
-    /// Does something.
+    /// Calculate the [EIP-712 signing hash](https://eips.ethereum.org/EIPS/eip-712#specification-of-the-eth_signtypeddata-json-rpc)
+    /// for this struct.
+    /// Note that this does not **sign** the hash, only calculates it.
     ///
-    /// See [EIP-712 `signTypedData`](https://eips.ethereum.org/EIPS/eip-712#specification-of-the-eth_signtypeddata-json-rpc).
-    #[inline]
+    /// This is the hash of the magic bytes 0x1901 concatenated with the domain
+    /// separator and the `hashStruct` result:
+    /// `keccak256("\x19\x01" ‖ domainSeparator ‖ hashStruct(message))`
+    #[doc(alias = "sign_typed_data")]
+    #[doc(alias = "hash_typed_data")]
     fn eip712_signing_hash(&self, domain: &Eip712Domain) -> B256 {
         let mut digest_input = [0u8; 2 + 32 + 32];
         digest_input[0] = 0x19;

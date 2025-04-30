@@ -59,6 +59,12 @@ pub trait SolInterface: Sized {
     /// ABI-decodes the given data into one of the variants of `self`.
     fn abi_decode_raw(selector: [u8; 4], data: &[u8]) -> Result<Self>;
 
+    /// ABI-decodes the given data into one of the variants of `self`, with validation.
+    ///
+    /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
+    /// validation checks on the decoded variant's data.
+    fn abi_decode_raw_validate(selector: [u8; 4], data: &[u8]) -> Result<Self>;
+
     /// The size of the encoded data, *without* any selectors.
     fn abi_encoded_size(&self) -> usize;
 
@@ -90,6 +96,20 @@ pub trait SolInterface: Sized {
             Self::abi_decode_raw(*selector, data)
         }
     }
+
+    /// ABI-decodes the given data into one of the variants of `self`, with validation.
+    ///
+    /// This is the same as [`abi_decode`](Self::abi_decode), but performs validation
+    /// checks on the decoded variant's data.
+    #[inline]
+    fn abi_decode_validate(data: &[u8]) -> Result<Self> {
+        if data.len() < Self::MIN_DATA_LENGTH.saturating_add(4) {
+            Err(crate::Error::type_check_fail(data, Self::NAME))
+        } else {
+            let (selector, data) = data.split_first_chunk().unwrap();
+            Self::abi_decode_raw_validate(*selector, data)
+        }
+    }
 }
 
 /// An empty [`SolInterface`] implementation. Used by [`GenericContractError`].
@@ -118,6 +138,11 @@ impl SolInterface for Infallible {
 
     #[inline]
     fn abi_decode_raw(selector: [u8; 4], _data: &[u8]) -> Result<Self> {
+        Self::type_check(selector).map(|()| unreachable!())
+    }
+
+    #[inline]
+    fn abi_decode_raw_validate(selector: [u8; 4], _data: &[u8]) -> Result<Self> {
         Self::type_check(selector).map(|()| unreachable!())
     }
 
@@ -263,6 +288,17 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
             Revert::SELECTOR => Revert::abi_decode_raw(data).map(Self::Revert),
             Panic::SELECTOR => Panic::abi_decode_raw(data).map(Self::Panic),
             s => T::abi_decode_raw(s, data).map(Self::CustomError),
+        }
+    }
+
+    #[inline]
+    fn abi_decode_raw_validate(selector: [u8; 4], data: &[u8]) -> Result<Self> {
+        match selector {
+            Revert::SELECTOR => {
+                <Revert as SolError>::abi_decode_raw_validate(data).map(Self::Revert)
+            }
+            Panic::SELECTOR => <Panic as SolError>::abi_decode_raw_validate(data).map(Self::Panic),
+            s => T::abi_decode_raw_validate(s, data).map(Self::CustomError),
         }
     }
 
@@ -568,6 +604,7 @@ mod tests {
     #[test]
     fn contract_error_enum_1() {
         crate::sol! {
+            #[derive(Debug, PartialEq, Eq)]
             contract C {
                 error Err1();
             }
@@ -582,6 +619,46 @@ mod tests {
         assert_eq!(
             ContractError::<C::CErrors>::selectors().collect::<Vec<_>>(),
             vec![sel("Err1()"), sel("Error(string)"), sel("Panic(uint256)")],
+        );
+
+        for selector in C::CErrors::selectors() {
+            assert!(C::CErrors::valid_selector(selector));
+        }
+
+        for selector in ContractError::<C::CErrors>::selectors() {
+            assert!(ContractError::<C::CErrors>::valid_selector(selector));
+        }
+
+        let err1 = || C::Err1 {};
+        let errors_err1 = || C::CErrors::Err1(err1());
+        let contract_error_err1 = || ContractError::<C::CErrors>::CustomError(errors_err1());
+        let encoded_data = err1().abi_encode();
+        let selector = C::Err1::SELECTOR;
+        let raw_data = &encoded_data[4..];
+
+        assert_eq!(encoded_data[..4], selector);
+        assert_eq!(errors_err1().abi_encode(), encoded_data);
+        assert_eq!(contract_error_err1().abi_encode(), encoded_data);
+
+        assert_eq!(C::Err1::abi_decode(&encoded_data), Ok(err1()));
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data),
+            Ok(errors_err1())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data),
+            Ok(contract_error_err1())
+        );
+
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_raw_validate(selector, raw_data),
+            Ok(errors_err1())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(
+                selector, raw_data
+            ),
+            Ok(contract_error_err1())
         );
 
         for selector in C::CErrors::selectors() {
@@ -628,38 +705,98 @@ mod tests {
         let err1 = || C::Err1 {};
         let errors_err1 = || C::CErrors::Err1(err1());
         let contract_error_err1 = || ContractError::<C::CErrors>::CustomError(errors_err1());
-        let data = err1().abi_encode();
-        assert_eq!(data[..4], C::Err1::SELECTOR);
-        assert_eq!(errors_err1().abi_encode(), data);
-        assert_eq!(contract_error_err1().abi_encode(), data);
+        let encoded_data1 = err1().abi_encode();
+        let selector1 = C::Err1::SELECTOR;
+        let raw_data1 = &encoded_data1[4..];
 
-        assert_eq!(C::Err1::abi_decode(&data), Ok(err1()));
-        assert_eq!(C::CErrors::abi_decode(&data), Ok(errors_err1()));
-        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data), Ok(contract_error_err1()));
+        assert_eq!(encoded_data1[..4], selector1);
+        assert_eq!(errors_err1().abi_encode(), encoded_data1);
+        assert_eq!(contract_error_err1().abi_encode(), encoded_data1);
+
+        assert_eq!(C::Err1::abi_decode(&encoded_data1), Ok(err1()));
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data1),
+            Ok(errors_err1())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data1),
+            Ok(contract_error_err1())
+        );
+
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_raw_validate(selector1, raw_data1),
+            Ok(errors_err1())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(
+                selector1, raw_data1
+            ),
+            Ok(contract_error_err1())
+        );
 
         let err2 = || C::Err2(U256::from(42));
         let errors_err2 = || C::CErrors::Err2(err2());
         let contract_error_err2 = || ContractError::<C::CErrors>::CustomError(errors_err2());
-        let data = err2().abi_encode();
-        assert_eq!(data[..4], C::Err2::SELECTOR);
-        assert_eq!(errors_err2().abi_encode(), data);
-        assert_eq!(contract_error_err2().abi_encode(), data);
+        let encoded_data2 = err2().abi_encode();
+        let selector2 = C::Err2::SELECTOR;
+        let raw_data2 = &encoded_data2[4..];
 
-        assert_eq!(C::Err2::abi_decode(&data), Ok(err2()));
-        assert_eq!(C::CErrors::abi_decode(&data), Ok(errors_err2()));
-        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data), Ok(contract_error_err2()));
+        assert_eq!(encoded_data2[..4], selector2);
+        assert_eq!(errors_err2().abi_encode(), encoded_data2);
+        assert_eq!(contract_error_err2().abi_encode(), encoded_data2);
+
+        assert_eq!(C::Err2::abi_decode(&encoded_data2), Ok(err2()));
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data2),
+            Ok(errors_err2())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data2),
+            Ok(contract_error_err2())
+        );
+
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_raw_validate(selector2, raw_data2),
+            Ok(errors_err2())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(
+                selector2, raw_data2
+            ),
+            Ok(contract_error_err2())
+        );
 
         let err3 = || C::Err3("hello".into());
         let errors_err3 = || C::CErrors::Err3(err3());
         let contract_error_err3 = || ContractError::<C::CErrors>::CustomError(errors_err3());
-        let data = err3().abi_encode();
-        assert_eq!(data[..4], C::Err3::SELECTOR);
-        assert_eq!(errors_err3().abi_encode(), data);
-        assert_eq!(contract_error_err3().abi_encode(), data);
+        let encoded_data3 = err3().abi_encode();
+        let selector3 = C::Err3::SELECTOR;
+        let raw_data3 = &encoded_data3[4..];
 
-        assert_eq!(C::Err3::abi_decode(&data), Ok(err3()));
-        assert_eq!(C::CErrors::abi_decode(&data), Ok(errors_err3()));
-        assert_eq!(ContractError::<C::CErrors>::abi_decode(&data), Ok(contract_error_err3()));
+        assert_eq!(encoded_data3[..4], selector3);
+        assert_eq!(errors_err3().abi_encode(), encoded_data3);
+        assert_eq!(contract_error_err3().abi_encode(), encoded_data3);
+
+        assert_eq!(C::Err3::abi_decode(&encoded_data3), Ok(err3()));
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data3),
+            Ok(errors_err3())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_validate(&encoded_data3),
+            Ok(contract_error_err3())
+        );
+
+        assert_eq!(
+            <C::CErrors as SolInterface>::abi_decode_raw_validate(selector3, raw_data3),
+            Ok(errors_err3())
+        );
+        assert_eq!(
+            <ContractError<C::CErrors> as SolInterface>::abi_decode_raw_validate(
+                selector3, raw_data3
+            ),
+            Ok(contract_error_err3())
+        );
 
         for selector in C::CErrors::selectors() {
             assert!(C::CErrors::valid_selector(selector));
