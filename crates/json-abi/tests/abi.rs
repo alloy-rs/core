@@ -23,13 +23,10 @@ fn abi() {
         }
 
         let fname = path.file_name().unwrap().to_str().unwrap();
-        // Not an ABI sequence, just one function object.
-        if fname == "LargeFunction.json" {
-            continue;
-        }
-
-        // Not an ABI sequence, but a full contract object with bytecode and deployed bytecode.
-        if fname == "SomeLibUser.json" {
+        // LargeFunction.json: Not an ABI sequence, just one function object.
+        // SomeUserLib.json: Not an ABI sequence, rather a contract object with bytecode and
+        // deployed bytecode as well.
+        if fname == "LargeFunction.json" || fname == "SomeUserLib.json" {
             continue;
         }
         abi_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap(), run_solc);

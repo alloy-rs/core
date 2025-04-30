@@ -144,7 +144,7 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     #[test]
-    #[cfg_attr(miri, ignore = "no fs")]
+    // #[cfg_attr(miri, ignore = "no fs")]
     fn abi() {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../json-abi/tests/abi");
         for file in std::fs::read_dir(path).unwrap() {
@@ -153,7 +153,9 @@ mod tests {
                 continue;
             }
 
-            if path.file_name() == Some("LargeFunction.json".as_ref()) {
+            if path.file_name() == Some("LargeFunction.json".as_ref())
+                || path.file_name() == Some("SomeUserLib.json".as_ref())
+            {
                 continue;
             }
             parse_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap());
