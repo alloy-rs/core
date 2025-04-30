@@ -251,21 +251,55 @@ impl<const N: usize> fmt::UpperHex for FixedBytes<N> {
     }
 }
 
+impl<const N: usize> ops::BitAndAssign for FixedBytes<N> {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self &= &rhs;
+    }
+}
+
+impl<const N: usize> ops::BitOrAssign for FixedBytes<N> {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self |= &rhs;
+    }
+}
+
+impl<const N: usize> ops::BitXorAssign for FixedBytes<N> {
+    #[inline]
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self ^= &rhs;
+    }
+}
+
+impl<const N: usize> ops::BitAndAssign<&Self> for FixedBytes<N> {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: &Self) {
+        iter::zip(self, rhs).for_each(|(a, b)| *a &= *b);
+    }
+}
+
+impl<const N: usize> ops::BitOrAssign<&Self> for FixedBytes<N> {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: &Self) {
+        iter::zip(self, rhs).for_each(|(a, b)| *a |= *b);
+    }
+}
+
+impl<const N: usize> ops::BitXorAssign<&Self> for FixedBytes<N> {
+    #[inline]
+    fn bitxor_assign(&mut self, rhs: &Self) {
+        iter::zip(self, rhs).for_each(|(a, b)| *a ^= *b);
+    }
+}
+
 impl<const N: usize> ops::BitAnd for FixedBytes<N> {
     type Output = Self;
 
     #[inline]
     fn bitand(mut self, rhs: Self) -> Self::Output {
-        self &= rhs;
+        self &= &rhs;
         self
-    }
-}
-
-impl<const N: usize> ops::BitAndAssign for FixedBytes<N> {
-    #[inline]
-    fn bitand_assign(&mut self, rhs: Self) {
-        // Note: `slice::Iter` has better codegen than `array::IntoIter`
-        iter::zip(self, &rhs).for_each(|(a, b)| *a &= *b);
     }
 }
 
@@ -274,16 +308,8 @@ impl<const N: usize> ops::BitOr for FixedBytes<N> {
 
     #[inline]
     fn bitor(mut self, rhs: Self) -> Self::Output {
-        self |= rhs;
+        self |= &rhs;
         self
-    }
-}
-
-impl<const N: usize> ops::BitOrAssign for FixedBytes<N> {
-    #[inline]
-    fn bitor_assign(&mut self, rhs: Self) {
-        // Note: `slice::Iter` has better codegen than `array::IntoIter`
-        iter::zip(self, &rhs).for_each(|(a, b)| *a |= *b);
     }
 }
 
@@ -292,16 +318,38 @@ impl<const N: usize> ops::BitXor for FixedBytes<N> {
 
     #[inline]
     fn bitxor(mut self, rhs: Self) -> Self::Output {
-        self ^= rhs;
+        self ^= &rhs;
         self
     }
 }
 
-impl<const N: usize> ops::BitXorAssign for FixedBytes<N> {
+impl<const N: usize> ops::BitAnd<&Self> for FixedBytes<N> {
+    type Output = Self;
+
     #[inline]
-    fn bitxor_assign(&mut self, rhs: Self) {
-        // Note: `slice::Iter` has better codegen than `array::IntoIter`
-        iter::zip(self, &rhs).for_each(|(a, b)| *a ^= *b);
+    fn bitand(mut self, rhs: &Self) -> Self::Output {
+        self &= rhs;
+        self
+    }
+}
+
+impl<const N: usize> ops::BitOr<&Self> for FixedBytes<N> {
+    type Output = Self;
+
+    #[inline]
+    fn bitor(mut self, rhs: &Self) -> Self::Output {
+        self |= rhs;
+        self
+    }
+}
+
+impl<const N: usize> ops::BitXor<&Self> for FixedBytes<N> {
+    type Output = Self;
+
+    #[inline]
+    fn bitxor(mut self, rhs: &Self) -> Self::Output {
+        self ^= rhs;
+        self
     }
 }
 
