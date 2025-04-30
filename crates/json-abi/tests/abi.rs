@@ -28,6 +28,10 @@ fn abi() {
             continue;
         }
 
+        // Not an ABI sequence, but a full contract object with bytecode and deployed bytecode.
+        if fname == "SomeLibUser.json" {
+            continue;
+        }
         abi_test(&std::fs::read_to_string(&path).unwrap(), path.to_str().unwrap(), run_solc);
     }
     if UPDATED.load(Ordering::Relaxed) {
