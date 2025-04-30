@@ -144,7 +144,7 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     #[test]
-    // #[cfg_attr(miri, ignore = "no fs")]
+    #[cfg_attr(miri, ignore = "no fs")]
     fn abi() {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../json-abi/tests/abi");
         for file in std::fs::read_dir(path).unwrap() {
