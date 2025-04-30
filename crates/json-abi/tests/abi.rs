@@ -13,7 +13,7 @@ const JSON_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/abi");
 static UPDATED: AtomicBool = AtomicBool::new(false);
 
 #[test]
-// #[cfg_attr(miri, ignore = "no fs")]
+#[cfg_attr(miri, ignore = "no fs")]
 fn abi() {
     let run_solc = run_solc();
     for file in std::fs::read_dir(JSON_PATH).unwrap() {
