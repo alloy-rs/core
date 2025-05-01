@@ -89,6 +89,23 @@ where
     units.try_into().map(|units| amount.into().format_units(units)).map_err(UnitsError::from)
 }
 
+/// Formats the given number of Wei as the given unit with a custom decimal separator.
+pub fn format_units_with<T, K, E>(
+    amount: T,
+    units: K,
+    separator: DecimalSeparator,
+) -> Result<String, UnitsError>
+where
+    T: Into<ParseUnits>,
+    K: TryInto<Unit, Error = E>,
+    UnitsError: From<E>,
+{
+    units
+        .try_into()
+        .map(|units| amount.into().format_units_with(units, separator))
+        .map_err(UnitsError::from)
+}
+
 /// Error type for [`Unit`]-related operations.
 #[derive(Debug)]
 pub enum UnitsError {
