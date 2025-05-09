@@ -167,10 +167,6 @@ impl<'a> EncodeType<'a> {
     /// The primary type is the component type that is not used as a property in any component type
     /// definition within this set.
     fn get_primary(&self) -> Result<usize, Error> {
-        if self.types.len() == 1 {
-            return Ok(0);
-        }
-
         // Track all defined component types and types used in component properties.
         let mut components = HashSet::new();
         let mut types_in_props = HashSet::new();
