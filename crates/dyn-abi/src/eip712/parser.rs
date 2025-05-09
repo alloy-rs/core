@@ -144,7 +144,7 @@ impl<'a> EncodeType<'a> {
 
     /// Computes the canonical string representation of the type.
     ///
-    /// Orders the `ComponentTypes` based on the EIP712 rules, and removes unsupported whitespaces.
+    /// Orders the `ComponentTypes` based on the EIP-712 rules, and removes unsupported whitespaces.
     pub fn canonicalize(&self) -> Result<String, Error> {
         if self.types.is_empty() {
             return Err(Error::MissingType("Primary Type".into()));
@@ -152,7 +152,7 @@ impl<'a> EncodeType<'a> {
 
         let primary_idx = self.get_primary_idx()?;
 
-        // EIP712 requires alphabeting order of the secondary types
+        // EIP-712 requires alphabetical order of the secondary types
         let mut types = self.types.clone();
         let mut sorted = vec![types.remove(primary_idx)];
         types.sort_by(|a, b| a.type_name.cmp(b.type_name));
