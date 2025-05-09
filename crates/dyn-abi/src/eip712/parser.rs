@@ -150,7 +150,7 @@ impl<'a> EncodeType<'a> {
             return Err(Error::MissingType("Primary Type".into()));
         }
 
-        let primary_idx = self.get_primary()?;
+        let primary_idx = self.get_primary_idx()?;
 
         // EIP712 requires alphabeting order of the secondary types
         let mut types = self.types.clone();
@@ -166,7 +166,7 @@ impl<'a> EncodeType<'a> {
     ///
     /// The primary type is the component type that is not used as a property in any component type
     /// definition within this set.
-    fn get_primary(&self) -> Result<usize, Error> {
+    fn get_primary_idx(&self) -> Result<usize, Error> {
         // Track all defined component types and types used in component properties.
         let mut components = HashSet::new();
         let mut types_in_props = HashSet::new();
@@ -182,7 +182,7 @@ impl<'a> EncodeType<'a> {
                 // A type is considered a reference to another type if its name starts with an
                 // uppercase letter, otherwise it is assumed to be a basic type
                 if !type_str.is_empty()
-                    && type_str.chars().next().map_or(false, |c| c.is_ascii_uppercase())
+                    && type_str.chars().next().is_some_and(|c| c.is_ascii_uppercase())
                 {
                     types_in_props.insert(type_str);
                 }
