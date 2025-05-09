@@ -2,6 +2,8 @@
 
 // TODO: move to `sol-type-parser`
 
+use std::collections::HashSet;
+
 use crate::{
     eip712::resolver::{PropertyDef, TypeDef},
     Error,
@@ -101,7 +103,7 @@ impl<'a> ComponentType<'a> {
             }
         }
 
-        Ok(Self { span: &input[..last + name.len() + 1], type_name: name, props })
+        Ok(Self { span: &input[..last + name.len() + 1], type_name: name.trim(), props })
     }
 
     /// Convert to an owned TypeDef.
@@ -139,13 +141,95 @@ impl<'a> EncodeType<'a> {
 
         Ok(Self { types })
     }
+
+    /// Computes the canonical string representation of the type.
+    ///
+    /// Orders the `ComponentTypes` based on the EIP712 rules, and removes unsupported whitespaces.
+    pub fn canonicalize(&self) -> Result<String, Error> {
+        if self.types.is_empty() {
+            return Err(Error::MissingType("Primary Type".into()));
+        }
+
+        let primary_idx = self.get_primary()?;
+
+        // EIP712 requires alphabeting order of the secondary types
+        let mut types = self.types.clone();
+        let mut sorted = vec![types.remove(primary_idx)];
+        types.sort_by(|a, b| a.type_name.cmp(b.type_name));
+        sorted.extend(types);
+
+        // Ensure no unintended whitespaces
+        Ok(sorted.into_iter().map(|t| t.span.trim().replace(", ", ",")).collect())
+    }
+
+    /// Identifies the primary type from the list of component types.
+    ///
+    /// The primary type is the component type that is not used as a property in any component type
+    /// definition within this set.
+    fn get_primary(&self) -> Result<usize, Error> {
+        if self.types.len() == 1 {
+            return Ok(0);
+        }
+
+        // Track all defined component types and types used in component properties.
+        let mut components = HashSet::new();
+        let mut types_in_props = HashSet::new();
+
+        for ty in &self.types {
+            components.insert(ty.type_name);
+
+            for prop_def in &ty.props {
+                // Extract the base type name, removing array suffixes like "Person[]"
+                let type_str = prop_def.ty.span.trim();
+                let type_str = type_str.split('[').next().unwrap_or(type_str).trim();
+
+                // A type is considered a reference to another type if its name starts with an
+                // uppercase letter, otherwise it is assumed to be a basic type
+                if !type_str.is_empty()
+                    && type_str.chars().next().map_or(false, |c| c.is_ascii_uppercase())
+                {
+                    types_in_props.insert(type_str);
+                }
+            }
+        }
+
+        // Ensure all types in props have a defined `ComponentType`
+        for ty in &types_in_props {
+            if !components.contains(ty) {
+                return Err(Error::MissingType(ty.to_string()));
+            }
+        }
+
+        // The primary type won't be a property of any other component
+        let mut primary = 0;
+        let mut is_found = false;
+        for (n, ty) in self.types.iter().enumerate() {
+            if !types_in_props.contains(ty.type_name) {
+                if is_found {
+                    return Err(Error::MissingType("no primary component".into()));
+                }
+                primary = n;
+                is_found = true;
+            }
+        }
+
+        Ok(primary)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const EXAMPLE: &str = "Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)";
+    const CANONICAL: &str = "Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)";
+    const MISSING_COMPONENT: &str =
+        r#"Transaction(Person from, Person to, Asset tx) Person(address wallet, string name)"#;
+    const MISSING_PRIMARY: &str =
+        r#"Person(address wallet, string name) Asset(address token, uint256 amount)"#;
+    const MESSY: &str = r#"
+        Person(address wallet, string name) Asset(address token, uint256 amount)
+        Transaction(Person from, Person to, Asset tx)
+        "#;
 
     #[test]
     fn empty_type() {
@@ -178,7 +262,7 @@ mod tests {
     #[test]
     fn test_encode_type() {
         assert_eq!(
-            EncodeType::parse(EXAMPLE),
+            EncodeType::parse(CANONICAL),
             Ok(EncodeType {
                 types: vec![
                     "Transaction(Person from,Person to,Asset tx)".try_into().unwrap(),
@@ -186,6 +270,27 @@ mod tests {
                     "Person(address wallet,string name)".try_into().unwrap(),
                 ]
             })
+        );
+    }
+
+    #[test]
+    fn test_encode_type_messy() {
+        assert_eq!(EncodeType::parse(MESSY).unwrap().canonicalize(), Ok(CANONICAL.to_owned()));
+    }
+
+    #[test]
+    fn test_fails_encode_type_missing_type() {
+        assert_eq!(
+            EncodeType::parse(MISSING_COMPONENT).unwrap().canonicalize(),
+            Err(Error::MissingType("Asset".into()))
+        );
+    }
+
+    #[test]
+    fn test_fails_encode_type_multi_primary() {
+        assert_eq!(
+            EncodeType::parse(MISSING_PRIMARY).unwrap().canonicalize(),
+            Err(Error::MissingType("no primary component".into()))
         );
     }
 }
