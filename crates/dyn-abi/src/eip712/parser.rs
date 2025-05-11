@@ -172,7 +172,7 @@ impl<'a> EncodeType<'a> {
                 let type_str = prop_def.ty.span.trim();
                 // A type is considered a reference to another type if its name starts with an
                 // uppercase letter, otherwise it is assumed to be a basic type
-                if !type_str.is_empty() && type_str.chars().next().unwrap().is_ascii_uppercase() {
+                if type_str.starts_with(char::is_ascii_uppercase) {
                     // Extract the base type name, removing array suffixes like "Person[]"
                     let type_str = match type_str.split_once('[') {
                         Some((base, _suffix)) => base.trim(),
