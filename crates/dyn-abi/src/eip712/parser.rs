@@ -169,15 +169,10 @@ impl<'a> EncodeType<'a> {
 
         for ty in self.types.iter() {
             for prop_def in ty.props.iter() {
-                let type_str = prop_def.ty.span.trim();
-                // A type is considered a reference to another type if its name starts with an
-                // uppercase letter, otherwise it is assumed to be a basic type
-                if type_str.starts_with(char::is_ascii_uppercase) {
-                    // Extract the base type name, removing array suffixes like "Person[]"
-                    let type_str = match type_str.split_once('[') {
-                        Some((base, _suffix)) => base.trim(),
-                        None => type_str,
-                    };
+                // If `try_basic_solidity()` fails, it is a custom type.
+                if prop_def.ty.try_basic_solidity().is_err() {
+                    // The type stemp already removes array suffixes like "Person[]"
+                    let type_str = prop_def.ty.stem.span();
 
                     if !types_in_props.contains(&type_str) {
                         types_in_props.push(type_str);
@@ -263,6 +258,7 @@ mod tests {
                 ]
             })
         );
+        assert_eq!(EncodeType::parse(CANONICAL).unwrap().canonicalize(), Ok(CANONICAL.to_owned()));
     }
 
     #[test]
