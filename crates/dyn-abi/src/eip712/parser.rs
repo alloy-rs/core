@@ -2,8 +2,6 @@
 
 // TODO: move to `sol-type-parser`
 
-use std::collections::HashSet;
-
 use crate::{
     eip712::resolver::{PropertyDef, TypeDef},
     Error,
@@ -145,7 +143,7 @@ impl<'a> EncodeType<'a> {
     /// Computes the canonical string representation of the type.
     ///
     /// Orders the `ComponentTypes` based on the EIP-712 rules, and removes unsupported whitespaces.
-    pub fn canonicalize(&self) -> Result<String, Error> {
+    pub fn canonicalize(&mut self) -> Result<String, Error> {
         if self.types.is_empty() {
             return Err(Error::MissingType("Primary Type".into()));
         }
@@ -153,13 +151,12 @@ impl<'a> EncodeType<'a> {
         let primary_idx = self.get_primary_idx()?;
 
         // EIP-712 requires alphabetical order of the secondary types
-        let mut types = self.types.clone();
-        let mut sorted = vec![types.remove(primary_idx)];
-        types.sort_by(|a, b| a.type_name.cmp(b.type_name));
-        sorted.extend(types);
+        let primary = self.types.remove(primary_idx);
+        self.types.insert(0, primary);
+        self.types[1..].sort_by(|a, b| a.type_name.cmp(b.type_name));
 
         // Ensure no unintended whitespaces
-        Ok(sorted.into_iter().map(|t| t.span.trim().replace(", ", ",")).collect())
+        Ok(self.types.iter().map(|t| t.span.trim().replace(", ", ",")).collect())
     }
 
     /// Identifies the primary type from the list of component types.
@@ -167,49 +164,48 @@ impl<'a> EncodeType<'a> {
     /// The primary type is the component type that is not used as a property in any component type
     /// definition within this set.
     fn get_primary_idx(&self) -> Result<usize, Error> {
-        // Track all defined component types and types used in component properties.
-        let mut components = HashSet::new();
-        let mut types_in_props = HashSet::new();
+        // Track all types used in component properties.
+        let mut types_in_props: Vec<&str> = Vec::new();
 
-        for ty in &self.types {
-            components.insert(ty.type_name);
-
-            for prop_def in &ty.props {
-                // Extract the base type name, removing array suffixes like "Person[]"
+        for ty in self.types.iter() {
+            for prop_def in ty.props.iter() {
                 let type_str = prop_def.ty.span.trim();
-                let type_str = type_str.split('[').next().unwrap_or(type_str).trim();
-
                 // A type is considered a reference to another type if its name starts with an
                 // uppercase letter, otherwise it is assumed to be a basic type
-                if !type_str.is_empty()
-                    && type_str.chars().next().is_some_and(|c| c.is_ascii_uppercase())
-                {
-                    types_in_props.insert(type_str);
+                if !type_str.is_empty() && type_str.chars().next().unwrap().is_ascii_uppercase() {
+                    // Extract the base type name, removing array suffixes like "Person[]"
+                    let type_str = match type_str.split_once('[') {
+                        Some((base, _suffix)) => base.trim(),
+                        None => type_str,
+                    };
+
+                    if !types_in_props.contains(&type_str) {
+                        types_in_props.push(type_str);
+                    }
                 }
             }
         }
 
         // Ensure all types in props have a defined `ComponentType`
-        for ty in &types_in_props {
-            if !components.contains(ty) {
+        for ty in types_in_props.iter() {
+            if !self.types.iter().any(|component| &component.type_name == ty) {
                 return Err(Error::MissingType(ty.to_string()));
             }
         }
 
         // The primary type won't be a property of any other component
-        let mut primary = 0;
-        let mut is_found = false;
-        for (n, ty) in self.types.iter().enumerate() {
-            if !types_in_props.contains(ty.type_name) {
-                if is_found {
-                    return Err(Error::MissingType("no primary component".into()));
-                }
-                primary = n;
-                is_found = true;
-            }
-        }
+        let primary = self
+            .types
+            .iter()
+            .enumerate()
+            .filter(|(_, ty)| !types_in_props.iter().any(|prop_ty| prop_ty == &ty.type_name))
+            .map(|(n, _)| n)
+            .collect::<Vec<usize>>();
 
-        Ok(primary)
+        match primary.as_slice() {
+            [primary] => Ok(*primary),
+            _ => Err(Error::MissingType("no primary component".into())),
+        }
     }
 }
 
