@@ -9,6 +9,8 @@ use crate::{
 use alloc::vec::Vec;
 use parser::{Error as TypeParserError, TypeSpecifier};
 
+use super::Resolver;
+
 /// A property is a type and a name. Of the form `type name`. E.g.
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -143,64 +145,19 @@ impl<'a> EncodeType<'a> {
     /// Computes the canonical string representation of the type.
     ///
     /// Orders the `ComponentTypes` based on the EIP-712 rules, and removes unsupported whitespaces.
-    pub fn canonicalize(&mut self) -> Result<String, Error> {
-        if self.types.is_empty() {
-            return Err(Error::MissingType("Primary Type".into()));
-        }
-
-        let primary_idx = self.get_primary_idx()?;
-
-        // EIP-712 requires alphabetical order of the secondary types
-        let primary = self.types.remove(primary_idx);
-        self.types.insert(0, primary);
-        self.types[1..].sort_by(|a, b| a.type_name.cmp(b.type_name));
-
+    pub fn canonicalize(&self) -> Result<String, Error> {
         // Ensure no unintended whitespaces
-        Ok(self.types.iter().map(|t| t.span.trim().replace(", ", ",")).collect())
-    }
-
-    /// Identifies the primary type from the list of component types.
-    ///
-    /// The primary type is the component type that is not used as a property in any component type
-    /// definition within this set.
-    fn get_primary_idx(&self) -> Result<usize, Error> {
-        // Track all types used in component properties.
-        let mut types_in_props: Vec<&str> = Vec::new();
-
-        for ty in self.types.iter() {
-            for prop_def in ty.props.iter() {
-                // If `try_basic_solidity()` fails, it is a custom type.
-                if prop_def.ty.try_basic_solidity().is_err() {
-                    // The type stemp already removes array suffixes like "Person[]"
-                    let type_str = prop_def.ty.stem.span();
-
-                    if !types_in_props.contains(&type_str) {
-                        types_in_props.push(type_str);
-                    }
-                }
-            }
+        let mut resolver = Resolver::default();
+        for component_type in self.types.iter() {
+            resolver.ingest(component_type.to_owned());
         }
 
-        // Ensure all types in props have a defined `ComponentType`
-        for ty in types_in_props.iter() {
-            if !self.types.iter().any(|component| &component.type_name == ty) {
-                return Err(Error::MissingType(ty.to_string()));
-            }
+        let primary = resolver.non_dependent_types();
+        if primary.len() != 1 {
+            return Err(Error::MissingType("no primary component".into()));
         }
 
-        // The primary type won't be a property of any other component
-        let primary = self
-            .types
-            .iter()
-            .enumerate()
-            .filter(|(_, ty)| !types_in_props.iter().any(|prop_ty| prop_ty == &ty.type_name))
-            .map(|(n, _)| n)
-            .collect::<Vec<usize>>();
-
-        match primary.as_slice() {
-            [primary] => Ok(*primary),
-            _ => Err(Error::MissingType("no primary component".into())),
-        }
+        resolver.encode_type(primary[0])
     }
 }
 
