@@ -144,7 +144,8 @@ impl<'a> EncodeType<'a> {
 
     /// Computes the canonical string representation of the type.
     ///
-    /// Orders the `ComponentTypes` based on the EIP-712 rules, and removes unsupported whitespaces.
+    /// Orders the `ComponentTypes` based on the EIP-712 rules, removes unsupported whitespaces, and
+    /// validates them.
     pub fn canonicalize(&self) -> Result<String, Error> {
         // Ensure no unintended whitespaces
         let mut resolver = Resolver::default();
@@ -152,11 +153,19 @@ impl<'a> EncodeType<'a> {
             resolver.ingest(component_type.to_owned());
         }
 
+        // Resolve non-dependent types and validate them
         let primary = resolver.non_dependent_types();
         if primary.len() != 1 {
-            return Err(Error::MissingType("no primary component".into()));
+            let msg = if primary.is_empty() {
+                "primary component".into()
+            } else {
+                format!("primary component: {}", primary.join(", "))
+            };
+            return Err(Error::MissingType(msg));
         }
+        _ = resolver.resolve(primary[0])?;
 
+        // Encode primary type
         resolver.encode_type(primary[0])
     }
 }
@@ -170,8 +179,14 @@ mod tests {
         r#"Transaction(Person from, Person to, Asset tx) Person(address wallet, string name)"#;
     const MISSING_PRIMARY: &str =
         r#"Person(address wallet, string name) Asset(address token, uint256 amount)"#;
+    const CIRCULAR: &str = r#"
+        Transaction(Person from, Person to, Asset tx)
+        Asset(Person token, uint256 amount)
+        Person(Asset wallet, string name)
+        "#;
     const MESSY: &str = r#"
-        Person(address wallet, string name) Asset(address token, uint256 amount)
+        Person(address wallet, string name)
+        Asset(address token, uint256 amount)
         Transaction(Person from, Person to, Asset tx)
         "#;
 
@@ -235,7 +250,15 @@ mod tests {
     fn test_fails_encode_type_multi_primary() {
         assert_eq!(
             EncodeType::parse(MISSING_PRIMARY).unwrap().canonicalize(),
-            Err(Error::MissingType("no primary component".into()))
+            Err(Error::MissingType("primary component: Asset, Person".into()))
+        );
+    }
+
+    #[test]
+    fn test_fails_encode_type_circular() {
+        assert_eq!(
+            EncodeType::parse(CIRCULAR).unwrap().canonicalize(),
+            Err(Error::CircularDependency("Transaction".into()))
         );
     }
 }
