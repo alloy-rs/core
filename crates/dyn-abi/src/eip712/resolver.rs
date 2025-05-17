@@ -497,9 +497,8 @@ impl Resolver {
         self.nodes.contains_key(name)
     }
 
-    /// Returns the names of those types which do not depend on any other nodes in the resolver
-    /// graph.
-    pub fn non_dependent_types(&self) -> Vec<&str> {
+    /// Returns those types which do not depend on any other nodes in the resolver graph.
+    pub fn non_dependent_types(&self) -> Vec<&TypeDef> {
         let dependent_types: BTreeSet<&str> = self
             .edges
             .values()
@@ -509,9 +508,16 @@ impl Resolver {
             .collect();
 
         self.nodes
-            .keys()
-            .map(|node| node.as_str())
-            .filter(|node| !dependent_types.contains(node))
+            .iter()
+            .filter_map(
+                |(node, def)| {
+                    if !dependent_types.contains(node.as_str()) {
+                        Some(def)
+                    } else {
+                        None
+                    }
+                },
+            )
             .collect()
     }
 }
@@ -673,11 +679,17 @@ mod tests {
             "A(C myC,B myB)B(C myC)C(uint256 myUint,uint256 myUint2)D(bool isD)";
         let mut graph = Resolver::default();
         graph.ingest_string(ENCODE_TYPE).unwrap();
-        assert_eq!(graph.non_dependent_types(), vec!["A", "D"]);
+        assert_eq!(
+            graph.non_dependent_types().iter().map(|t| &t.type_name).collect::<Vec<_>>(),
+            vec!["A", "D"]
+        );
 
         const ENCODE_TYPE_2: &str = "Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)";
         let mut graph = Resolver::default();
         graph.ingest_string(ENCODE_TYPE_2).unwrap();
-        assert_eq!(graph.non_dependent_types(), vec!["Transaction"]);
+        assert_eq!(
+            graph.non_dependent_types().iter().map(|t| &t.type_name).collect::<Vec<_>>(),
+            vec!["Transaction"]
+        );
     }
 }

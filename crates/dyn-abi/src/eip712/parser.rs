@@ -159,14 +159,19 @@ impl<'a> EncodeType<'a> {
             let msg = if primary.is_empty() {
                 "primary component".into()
             } else {
-                format!("primary component: {}", primary.join(", "))
+                format!(
+                    "primary component: {}",
+                    primary.iter().map(|t| t.type_name()).collect::<Vec<_>>().join(", ")
+                )
             };
             return Err(Error::MissingType(msg));
         }
-        _ = resolver.resolve(primary[0])?;
+
+        let primary = primary[0].type_name();
+        _ = resolver.resolve(primary)?;
 
         // Encode primary type
-        resolver.encode_type(primary[0])
+        resolver.encode_type(primary)
     }
 }
 
