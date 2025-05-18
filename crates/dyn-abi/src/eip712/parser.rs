@@ -153,21 +153,21 @@ impl<'a> EncodeType<'a> {
             resolver.ingest(component_type.to_owned());
         }
 
-        // Resolve non-dependent types and validate them
-        let primary = resolver.non_dependent_types();
-        if primary.len() != 1 {
-            let msg = if primary.is_empty() {
-                "primary component".into()
-            } else {
-                format!(
-                    "primary component: {}",
-                    primary.iter().map(|t| t.type_name()).collect::<Vec<_>>().join(", ")
-                )
-            };
-            return Err(Error::MissingType(msg));
-        }
+        // Resolve and validate non-dependent types
+        let mut non_dependent = resolver.non_dependent_types();
 
-        let primary = primary[0].type_name();
+        let first = non_dependent.next().ok_or(Error::MissingType("primary component".into()))?;
+        if let Some(second) = non_dependent.next() {
+            let all_types = vec![first.type_name(), second.type_name()]
+                .into_iter()
+                .chain(non_dependent.map(|t| t.type_name()))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            return Err(Error::MissingType(format!("primary component: {all_types}")));
+        };
+
+        let primary = first.type_name();
         _ = resolver.resolve(primary)?;
 
         // Encode primary type

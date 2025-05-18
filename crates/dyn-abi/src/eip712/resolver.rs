@@ -498,7 +498,7 @@ impl Resolver {
     }
 
     /// Returns those types which do not depend on any other nodes in the resolver graph.
-    pub fn non_dependent_types(&self) -> Vec<&TypeDef> {
+    pub fn non_dependent_types(&self) -> impl Iterator<Item = &TypeDef> {
         let dependent_types: BTreeSet<&str> = self
             .edges
             .values()
@@ -507,18 +507,13 @@ impl Resolver {
             .filter(|dep| self.nodes.contains_key(*dep))
             .collect();
 
-        self.nodes
-            .iter()
-            .filter_map(
-                |(node, def)| {
-                    if !dependent_types.contains(node.as_str()) {
-                        Some(def)
-                    } else {
-                        None
-                    }
-                },
-            )
-            .collect()
+        self.nodes.iter().filter_map(move |(node, def)| {
+            if !dependent_types.contains(node.as_str()) {
+                Some(def)
+            } else {
+                None
+            }
+        })
     }
 }
 
@@ -680,7 +675,7 @@ mod tests {
         let mut graph = Resolver::default();
         graph.ingest_string(ENCODE_TYPE).unwrap();
         assert_eq!(
-            graph.non_dependent_types().iter().map(|t| &t.type_name).collect::<Vec<_>>(),
+            graph.non_dependent_types().map(|t| &t.type_name).collect::<Vec<_>>(),
             vec!["A", "D"]
         );
 
@@ -688,7 +683,7 @@ mod tests {
         let mut graph = Resolver::default();
         graph.ingest_string(ENCODE_TYPE_2).unwrap();
         assert_eq!(
-            graph.non_dependent_types().iter().map(|t| &t.type_name).collect::<Vec<_>>(),
+            graph.non_dependent_types().map(|t| &t.type_name).collect::<Vec<_>>(),
             vec!["Transaction"]
         );
     }
