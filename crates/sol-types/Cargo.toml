@@ -28,8 +28,6 @@ workspace = true
 alloy-primitives.workspace = true
 alloy-sol-macro.workspace = true
 
-hex.workspace = true
-
 # json
 alloy-json-abi = { workspace = true, optional = true }
 
@@ -55,7 +53,7 @@ trybuild = "1.0"
 
 [features]
 default = ["std"]
-std = ["alloy-primitives/std", "hex/std", "alloy-json-abi?/std", "serde?/std"]
+std = ["alloy-primitives/std", "alloy-json-abi?/std", "serde?/std"]
 json = ["dep:alloy-json-abi", "alloy-sol-macro/json"]
 eip712-serde = ["dep:serde", "alloy-primitives/serde"]
 arbitrary = ["alloy-primitives/arbitrary"]
