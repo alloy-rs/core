@@ -6,7 +6,10 @@ use crate::{
     eip712::resolver::{PropertyDef, TypeDef},
     Error,
 };
-use alloc::{string::String, vec::Vec};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 use parser::{Error as TypeParserError, TypeSpecifier};
 
 use super::Resolver;
