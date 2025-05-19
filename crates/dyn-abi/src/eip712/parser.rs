@@ -6,7 +6,7 @@ use crate::{
     eip712::resolver::{PropertyDef, TypeDef},
     Error,
 };
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 use parser::{Error as TypeParserError, TypeSpecifier};
 
 use super::Resolver;
@@ -158,7 +158,7 @@ impl<'a> EncodeType<'a> {
 
         let first = non_dependent
             .next()
-            .ok_or_else(|| Error::MissingType(String::from("primary component")))?;
+            .ok_or_else(|| Error::MissingType("primary component".to_string()))?;
         if let Some(second) = non_dependent.next() {
             let all_types = vec![first.type_name(), second.type_name()]
                 .into_iter()
