@@ -1,8 +1,7 @@
 use alloc::{borrow::Cow, string::String};
-use alloy_primitives::{Selector, B256};
+use alloy_primitives::{hex, hex::FromHexError, Selector, B256};
 use alloy_sol_types::Error as SolTypesError;
 use core::fmt;
-use hex::FromHexError;
 use parser::Error as TypeParserError;
 
 /// Dynamic ABI result type.
@@ -62,7 +61,7 @@ pub enum Error {
         actual: B256,
     },
 
-    /// [`hex`] error.
+    /// [`hex`](mod@hex) error.
     Hex(hex::FromHexError),
     /// [`alloy_sol_type_parser`] error.
     TypeParser(TypeParserError),

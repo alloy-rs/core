@@ -555,6 +555,7 @@ fn adjust_fb(mut word: B256, size: usize) -> B256 {
 #[cfg(all(test, not(miri)))] // doesn't run in isolation and would take too long
 mod tests {
     use super::*;
+    use alloy_primitives::hex;
     #[cfg(feature = "eip712")]
     use parser::{is_id_continue, is_id_start, is_valid_identifier};
 

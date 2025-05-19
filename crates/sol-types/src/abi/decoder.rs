@@ -13,6 +13,7 @@ use crate::{
     utils, Error, Result, Word,
 };
 use alloc::vec::Vec;
+use alloy_primitives::hex;
 use core::{fmt, slice::SliceIndex};
 
 /// The decoder recursion limit.

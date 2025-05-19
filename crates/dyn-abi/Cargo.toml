@@ -30,7 +30,6 @@ alloy-sol-type-parser.workspace = true
 alloy-sol-types.workspace = true
 alloy-primitives.workspace = true
 
-hex.workspace = true
 itoa.workspace = true
 winnow.workspace = true
 
@@ -63,7 +62,6 @@ std = [
     "alloy-sol-types/std",
     "alloy-sol-type-parser/std",
     "alloy-primitives/std",
-    "hex/std",
     "serde?/std",
     "serde_json?/std",
 ]
