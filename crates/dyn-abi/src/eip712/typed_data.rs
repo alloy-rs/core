@@ -233,6 +233,7 @@ mod tests {
     use super::*;
     use crate::Error;
     use alloc::string::ToString;
+    use alloy_primitives::hex;
     use alloy_sol_types::sol;
     use serde_json::json;
 
