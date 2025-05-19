@@ -149,7 +149,7 @@ impl<'a> EncodeType<'a> {
     pub fn canonicalize(&self) -> Result<String, Error> {
         // Ensure no unintended whitespaces
         let mut resolver = Resolver::default();
-        for component_type in self.types.iter() {
+        for component_type in &self.types {
             resolver.ingest(component_type.to_owned());
         }
 
