@@ -156,7 +156,8 @@ impl<'a> EncodeType<'a> {
         // Resolve and validate non-dependent types
         let mut non_dependent = resolver.non_dependent_types();
 
-        let first = non_dependent.next().ok_or(Error::MissingType("primary component".into()))?;
+        let first =
+            non_dependent.next().ok_or(Error::MissingType(String::from("primary component")))?;
         if let Some(second) = non_dependent.next() {
             let all_types = vec![first.type_name(), second.type_name()]
                 .into_iter()
