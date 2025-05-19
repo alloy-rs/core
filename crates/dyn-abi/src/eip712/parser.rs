@@ -158,7 +158,7 @@ impl<'a> EncodeType<'a> {
 
         let first = non_dependent
             .next()
-            .ok_or_else(|| String::from(Error::MissingType("primary component")))?;
+            .ok_or_else(|| Error::MissingType(String::from("primary component")))?;
         if let Some(second) = non_dependent.next() {
             let all_types = vec![first.type_name(), second.type_name()]
                 .into_iter()
