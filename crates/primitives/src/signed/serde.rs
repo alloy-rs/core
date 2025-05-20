@@ -62,15 +62,10 @@ fn deserialize<'de, const BITS: usize, const LIMBS: usize, D: Deserializer<'de>>
         where
             E: de::Error,
         {
-            Ok(match Uint::try_from_be_slice(v) {
-                Some(v) => Signed::from_raw(v),
-                None => String::from_utf8(v.to_vec())
-                    .map(|s| s.parse::<Self::Value>())
-                    .ok()
-                    .map(|v| v.ok())
-                    .flatten()
-                    .ok_or(de::Error::custom("Invalid bytes"))?,
-            })
+            Ok(Signed::from_raw(
+                Uint::try_from_be_slice(v)
+                    .ok_or(de::Error::custom("Expected a valid signed integer"))?,
+            ))
         }
     }
     if deserializer.is_human_readable() {
@@ -80,4 +75,36 @@ fn deserialize<'de, const BITS: usize, const LIMBS: usize, D: Deserializer<'de>>
     }
 }
 
-// TODO: Tests
+#[cfg(test)]
+mod tests {
+    use core::str::FromStr;
+
+    use crate::I256;
+
+    const TEST_VALS: [&str; 3] = [
+        "12345681238128738123",
+        "-1239373781294184527124318238",
+        "99999999999999999999999999999999999999999999999999999999999",
+    ];
+
+    #[test]
+    fn serde_json_roundtrip() {
+        for val in TEST_VALS {
+            let signed = I256::from_str(val).unwrap();
+            let ser = serde_json::to_string(&signed).unwrap();
+            assert_eq!(serde_json::from_str::<I256>(&ser).unwrap(), signed);
+            assert_eq!(serde_json::from_str::<I256>(&format!("\"{}\"", val)).unwrap(), signed);
+        }
+    }
+
+    #[test]
+    fn test_bincode_roundtrip() {
+        for val in TEST_VALS {
+            let signed = I256::from_str(val).unwrap();
+            let ser = bincode::serialize(&signed).unwrap();
+            assert!(ser.len() < 64); // Assumes that bincode will never use more than an extra 32 bytes to serialize a simple
+                                     // byte array, currently its 8 bytes
+            assert_eq!(bincode::deserialize::<I256>(&ser).unwrap(), signed);
+        }
+    }
+}
