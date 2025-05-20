@@ -240,12 +240,12 @@ mod tests {
                 ]
             })
         );
-        assert_eq!(EncodeType::parse(CANONICAL).unwrap().canonicalize(), Ok(CANONICAL.to_owned()));
+        assert_eq!(EncodeType::parse(CANONICAL).unwrap().canonicalize(), Ok(CANONICAL.to_string()));
     }
 
     #[test]
     fn test_encode_type_messy() {
-        assert_eq!(EncodeType::parse(MESSY).unwrap().canonicalize(), Ok(CANONICAL.to_owned()));
+        assert_eq!(EncodeType::parse(MESSY).unwrap().canonicalize(), Ok(CANONICAL.to_string()));
     }
 
     #[test]
