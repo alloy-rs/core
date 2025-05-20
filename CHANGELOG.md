@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1](https://github.com/alloy-rs/core/releases/tag/v1.1.1) - 2025-05-19
+
+### Features
+
+- Added standalone format_units_with ([#947](https://github.com/alloy-rs/core/issues/947))
+
+### Miscellaneous Tasks
+
+- Re-use alloy_primitives::hex ([#952](https://github.com/alloy-rs/core/issues/952))
+
+### Other
+
+- Remove unnecessary bound on `sol_data::Array` ([#951](https://github.com/alloy-rs/core/issues/951))
+
 ## [1.1.0](https://github.com/alloy-rs/core/releases/tag/v1.1.0) - 2025-04-30
 
 ### Bug Fixes
@@ -26,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added format_units_with ([#936](https://github.com/alloy-rs/core/issues/936))
 - Add `KECCAK256_EMPTY` from `revm::primitives` ([#931](https://github.com/alloy-rs/core/issues/931))
 - Convert between `Signed` of different length ([#923](https://github.com/alloy-rs/core/issues/923))
+
+### Miscellaneous Tasks
+
+- Release 1.1.0
 
 ## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
 
