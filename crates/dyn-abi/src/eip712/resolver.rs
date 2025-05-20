@@ -496,6 +496,25 @@ impl Resolver {
     pub fn contains_type_name(&self, name: &str) -> bool {
         self.nodes.contains_key(name)
     }
+
+    /// Returns those types which do not depend on any other nodes in the resolver graph.
+    pub fn non_dependent_types(&self) -> impl Iterator<Item = &TypeDef> {
+        let dependent_types: BTreeSet<&str> = self
+            .edges
+            .values()
+            .flat_map(|dep| dep.iter())
+            .map(|dep| dep.as_str())
+            .filter(|dep| self.nodes.contains_key(*dep))
+            .collect();
+
+        self.nodes.iter().filter_map(move |(node, def)| {
+            if !dependent_types.contains(node.as_str()) {
+                Some(def)
+            } else {
+                None
+            }
+        })
+    }
 }
 
 #[cfg(test)]
@@ -647,5 +666,25 @@ mod tests {
         let mut graph = Resolver::default();
         graph.ingest_sol_struct::<MyStruct>();
         assert_eq!(graph.encode_type("MyStruct").unwrap(), MyStruct::eip712_encode_type());
+    }
+
+    #[test]
+    fn it_finds_non_dependent_nodes() {
+        const ENCODE_TYPE: &str =
+            "A(C myC,B myB)B(C myC)C(uint256 myUint,uint256 myUint2)D(bool isD)";
+        let mut graph = Resolver::default();
+        graph.ingest_string(ENCODE_TYPE).unwrap();
+        assert_eq!(
+            graph.non_dependent_types().map(|t| &t.type_name).collect::<Vec<_>>(),
+            vec!["A", "D"]
+        );
+
+        const ENCODE_TYPE_2: &str = "Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)";
+        let mut graph = Resolver::default();
+        graph.ingest_string(ENCODE_TYPE_2).unwrap();
+        assert_eq!(
+            graph.non_dependent_types().map(|t| &t.type_name).collect::<Vec<_>>(),
+            vec!["Transaction"]
+        );
     }
 }

@@ -6,8 +6,13 @@ use crate::{
     eip712::resolver::{PropertyDef, TypeDef},
     Error,
 };
-use alloc::vec::Vec;
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 use parser::{Error as TypeParserError, TypeSpecifier};
+
+use super::Resolver;
 
 /// A property is a type and a name. Of the form `type name`. E.g.
 /// `uint256 foo` or `(MyStruct[23],bool) bar`.
@@ -101,7 +106,7 @@ impl<'a> ComponentType<'a> {
             }
         }
 
-        Ok(Self { span: &input[..last + name.len() + 1], type_name: name, props })
+        Ok(Self { span: &input[..last + name.len() + 1], type_name: name.trim(), props })
     }
 
     /// Convert to an owned TypeDef.
@@ -139,13 +144,61 @@ impl<'a> EncodeType<'a> {
 
         Ok(Self { types })
     }
+
+    /// Computes the canonical string representation of the type.
+    ///
+    /// Orders the `ComponentTypes` based on the EIP-712 rules, removes unsupported whitespaces, and
+    /// validates them.
+    pub fn canonicalize(&self) -> Result<String, Error> {
+        // Ensure no unintended whitespaces
+        let mut resolver = Resolver::default();
+        for component_type in &self.types {
+            resolver.ingest(component_type.to_owned());
+        }
+
+        // Resolve and validate non-dependent types
+        let mut non_dependent = resolver.non_dependent_types();
+
+        let first = non_dependent
+            .next()
+            .ok_or_else(|| Error::MissingType("primary component".to_string()))?;
+        if let Some(second) = non_dependent.next() {
+            let all_types = vec![first.type_name(), second.type_name()]
+                .into_iter()
+                .chain(non_dependent.map(|t| t.type_name()))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            return Err(Error::MissingType(format!("primary component: {all_types}")));
+        };
+
+        let primary = first.type_name();
+        _ = resolver.resolve(primary)?;
+
+        // Encode primary type
+        resolver.encode_type(primary)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const EXAMPLE: &str = "Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)";
+    const CANONICAL: &str = "Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)";
+    const MISSING_COMPONENT: &str =
+        r#"Transaction(Person from, Person to, Asset tx) Person(address wallet, string name)"#;
+    const MISSING_PRIMARY: &str =
+        r#"Person(address wallet, string name) Asset(address token, uint256 amount)"#;
+    const CIRCULAR: &str = r#"
+        Transaction(Person from, Person to, Asset tx)
+        Asset(Person token, uint256 amount)
+        Person(Asset wallet, string name)
+        "#;
+    const MESSY: &str = r#"
+        Person(address wallet, string name)
+        Asset(address token, uint256 amount)
+        Transaction(Person from, Person to, Asset tx)
+        "#;
 
     #[test]
     fn empty_type() {
@@ -178,7 +231,7 @@ mod tests {
     #[test]
     fn test_encode_type() {
         assert_eq!(
-            EncodeType::parse(EXAMPLE),
+            EncodeType::parse(CANONICAL),
             Ok(EncodeType {
                 types: vec![
                     "Transaction(Person from,Person to,Asset tx)".try_into().unwrap(),
@@ -186,6 +239,36 @@ mod tests {
                     "Person(address wallet,string name)".try_into().unwrap(),
                 ]
             })
+        );
+        assert_eq!(EncodeType::parse(CANONICAL).unwrap().canonicalize(), Ok(CANONICAL.to_string()));
+    }
+
+    #[test]
+    fn test_encode_type_messy() {
+        assert_eq!(EncodeType::parse(MESSY).unwrap().canonicalize(), Ok(CANONICAL.to_string()));
+    }
+
+    #[test]
+    fn test_fails_encode_type_missing_type() {
+        assert_eq!(
+            EncodeType::parse(MISSING_COMPONENT).unwrap().canonicalize(),
+            Err(Error::MissingType("Asset".into()))
+        );
+    }
+
+    #[test]
+    fn test_fails_encode_type_multi_primary() {
+        assert_eq!(
+            EncodeType::parse(MISSING_PRIMARY).unwrap().canonicalize(),
+            Err(Error::MissingType("primary component: Asset, Person".into()))
+        );
+    }
+
+    #[test]
+    fn test_fails_encode_type_circular() {
+        assert_eq!(
+            EncodeType::parse(CIRCULAR).unwrap().canonicalize(),
+            Err(Error::CircularDependency("Transaction".into()))
         );
     }
 }
