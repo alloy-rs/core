@@ -1,3 +1,5 @@
+use crate::Sign;
+
 use super::Signed;
 use alloc::string::String;
 use core::{fmt, str};
@@ -12,7 +14,12 @@ impl<const BITS: usize, const LIMBS: usize> Serialize for Signed<BITS, LIMBS> {
         if serializer.is_human_readable() {
             serializer.collect_str(self)
         } else {
-            serializer.serialize_bytes(&self.0.to_be_bytes_vec())
+            let (sign, abs) = self.into_sign_and_abs();
+            let le_bytes = abs.as_le_bytes_trimmed();
+            let mut buf = [0u8; 1 + 32];
+            buf[0] = sign.is_positive() as u8;
+            buf[1..1 + le_bytes.len()].copy_from_slice(&le_bytes);
+            serializer.serialize_bytes(&buf[0..le_bytes.len() + 1])
         }
     }
 }
@@ -62,10 +69,10 @@ fn deserialize<'de, const BITS: usize, const LIMBS: usize, D: Deserializer<'de>>
         where
             E: de::Error,
         {
-            Ok(Signed::from_raw(
-                Uint::try_from_be_slice(v)
-                    .ok_or(de::Error::custom("Expected a valid signed integer"))?,
-            ))
+            let sign = if v[0] == 1 { Sign::Positive } else { Sign::Negative };
+            let u256 = Uint::<BITS, LIMBS>::try_from_le_slice(&v[1..])
+                .ok_or(de::Error::custom("Expected a valid unsigned integer"))?;
+            Ok(Signed::overflowing_from_sign_and_abs(sign, u256).0)
         }
     }
     if deserializer.is_human_readable() {
@@ -81,10 +88,12 @@ mod tests {
 
     use crate::I256;
 
-    const TEST_VALS: [&str; 3] = [
+    const TEST_VALS: [&str; 5] = [
         "12345681238128738123",
         "-1239373781294184527124318238",
         "99999999999999999999999999999999999999999999999999999999999",
+        "57896044618658097711785492504343953926634992332820282019728792003956564819967",
+        "-57896044618658097711785492504343953926634992332820282019728792003956564819968",
     ];
 
     #[test]
@@ -98,12 +107,11 @@ mod tests {
     }
 
     #[test]
-    fn test_bincode_roundtrip() {
+    fn serde_bincode_roundtrip() {
         for val in TEST_VALS {
             let signed = I256::from_str(val).unwrap();
             let ser = bincode::serialize(&signed).unwrap();
-            assert!(ser.len() < 64); // Assumes that bincode will never use more than an extra 32 bytes to serialize a simple
-                                     // byte array, currently its 8 bytes
+            assert!(ser.len() <= 64);
             assert_eq!(bincode::deserialize::<I256>(&ser).unwrap(), signed);
         }
     }
