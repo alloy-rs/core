@@ -254,20 +254,20 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 
     /// Returns the number of ones in the binary representation of `self`.
     #[inline]
-    pub fn count_ones(&self) -> usize {
+    pub const fn count_ones(&self) -> usize {
         self.0.count_ones()
     }
 
     /// Returns the number of zeros in the binary representation of `self`.
     #[inline]
-    pub fn count_zeros(&self) -> usize {
+    pub const fn count_zeros(&self) -> usize {
         self.0.count_zeros()
     }
 
     /// Returns the number of leading zeros in the binary representation of
     /// `self`.
     #[inline]
-    pub fn leading_zeros(&self) -> usize {
+    pub const fn leading_zeros(&self) -> usize {
         self.0.leading_zeros()
     }
 

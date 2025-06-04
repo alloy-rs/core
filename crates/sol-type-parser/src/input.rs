@@ -61,7 +61,7 @@ impl RecursionCheck {
         Ok(())
     }
 
-    fn enter(&mut self) -> Result<(), CustomError> {
+    const fn enter(&mut self) -> Result<(), CustomError> {
         self.current += 1;
         if LIMIT <= self.current {
             return Err(CustomError::RecursionLimitExceeded);
@@ -69,7 +69,7 @@ impl RecursionCheck {
         Ok(())
     }
 
-    fn exit(&mut self) {
+    const fn exit(&mut self) {
         self.current -= 1;
     }
 }

@@ -115,7 +115,7 @@ impl Bloom {
 
     /// Returns a mutable reference to the underlying data.
     #[inline]
-    pub fn data_mut(&mut self) -> &mut [u8; BLOOM_SIZE_BYTES] {
+    pub const fn data_mut(&mut self) -> &mut [u8; BLOOM_SIZE_BYTES] {
         &mut self.0.0
     }
 
