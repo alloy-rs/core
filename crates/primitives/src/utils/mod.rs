@@ -300,7 +300,7 @@ impl Keccak256 {
     /// `output` must point to a buffer that is at least 32-bytes long.
     #[inline]
     pub unsafe fn finalize_into_raw(self, output: *mut u8) {
-        self.finalize_into_array(&mut *output.cast::<[u8; 32]>())
+        self.finalize_into_array(unsafe { &mut *output.cast::<[u8; 32]>() })
     }
 }
 
