@@ -1,4 +1,4 @@
-use crate::{kw, Lit, Spanned, YulBlock, YulExpr};
+use crate::{Lit, Spanned, YulBlock, YulExpr, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::parse::{Parse, ParseStream, Result};
@@ -36,13 +36,7 @@ impl Parse for YulSwitch {
             }
             branches
         };
-        let default_case = {
-            if input.peek(kw::default) {
-                Some(input.parse()?)
-            } else {
-                None
-            }
-        };
+        let default_case = { if input.peek(kw::default) { Some(input.parse()?) } else { None } };
 
         if branches.is_empty() && default_case.is_none() {
             return Err(input.error("Must have at least one case or a default case."));

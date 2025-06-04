@@ -1,15 +1,14 @@
-use crate::{kw, utils::DebugPunctuated, Expr, SolPath, Spanned};
+use crate::{Expr, SolPath, Spanned, kw, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
 };
 use syn::{
-    parenthesized,
+    Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
-    Result, Token,
 };
 
 mod function;

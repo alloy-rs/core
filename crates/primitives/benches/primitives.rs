@@ -1,7 +1,7 @@
 #![allow(unknown_lints, clippy::incompatible_msrv, missing_docs)]
 
-use alloy_primitives::{keccak256, Address, B256};
-use criterion::{criterion_group, criterion_main, Criterion};
+use alloy_primitives::{Address, B256, keccak256};
+use criterion::{Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
 fn primitives(c: &mut Criterion) {

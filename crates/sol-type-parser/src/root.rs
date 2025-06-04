@@ -1,6 +1,6 @@
-use crate::{ident::identifier_parser, is_valid_identifier, new_input, Error, Input, Result};
+use crate::{Error, Input, Result, ident::identifier_parser, is_valid_identifier, new_input};
 use core::fmt;
-use winnow::{combinator::trace, stream::Stream, ModalResult, Parser};
+use winnow::{ModalResult, Parser, combinator::trace, stream::Stream};
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type. This is the most basic type specifier.

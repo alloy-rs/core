@@ -1,4 +1,4 @@
-use super::{utils::*, ParseSignedError, Sign};
+use super::{ParseSignedError, Sign, utils::*};
 use alloc::string::String;
 use core::fmt;
 use ruint::{BaseConvertError, Uint, UintTryFrom, UintTryTo};
@@ -66,11 +66,7 @@ impl<const BITS: usize, const LIMBS: usize> fmt::Display for Signed<BITS, LIMBS>
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (sign, abs) = self.into_sign_and_abs();
         sign.fmt(f)?;
-        if f.sign_plus() {
-            write!(f, "{abs}")
-        } else {
-            abs.fmt(f)
-        }
+        if f.sign_plus() { write!(f, "{abs}") } else { abs.fmt(f) }
     }
 }
 
@@ -226,11 +222,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// Determines if the integer is odd.
     #[inline]
     pub const fn is_odd(&self) -> bool {
-        if BITS == 0 {
-            false
-        } else {
-            self.as_limbs()[0] % 2 == 1
-        }
+        if BITS == 0 { false } else { self.as_limbs()[0] % 2 == 1 }
     }
 
     /// Compile-time equality. NOT constant-time equality.
@@ -360,11 +352,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline]
     pub fn checked_from_sign_and_abs(sign: Sign, abs: Uint<BITS, LIMBS>) -> Option<Self> {
         let (result, overflow) = Self::overflowing_from_sign_and_abs(sign, abs);
-        if overflow {
-            None
-        } else {
-            Some(result)
-        }
+        if overflow { None } else { Some(result) }
     }
 
     /// Convert from a decimal string.
@@ -548,12 +536,12 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{aliases::*, BigIntConversionError, ParseSignedError};
+    use crate::{BigIntConversionError, ParseSignedError, aliases::*};
     use alloc::string::ToString;
     use core::ops::Neg;
     use ruint::{
-        aliases::{U0, U1, U128, U160, U256},
         BaseConvertError, ParseError,
+        aliases::{U0, U1, U128, U160, U256},
     };
 
     // type U2 = Uint<2, 1>;

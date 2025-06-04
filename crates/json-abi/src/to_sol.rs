@@ -1,6 +1,6 @@
 use crate::{
-    item::{Constructor, Error, Event, Fallback, Function, Receive},
     EventParam, InternalType, JsonAbi, Param, StateMutability,
+    item::{Constructor, Error, Event, Fallback, Function, Receive},
 };
 use alloc::{
     borrow::Cow,

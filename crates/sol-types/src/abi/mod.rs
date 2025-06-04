@@ -37,10 +37,10 @@
 //! This is the least useful one. Most users will not need it.
 
 mod encoder;
-pub use encoder::{encode, encode_params, encode_sequence, Encoder};
+pub use encoder::{Encoder, encode, encode_params, encode_sequence};
 
 mod decoder;
-pub use decoder::{decode, decode_params, decode_sequence, Decoder, RECURSION_LIMIT};
+pub use decoder::{Decoder, RECURSION_LIMIT, decode, decode_params, decode_sequence};
 
 pub mod token;
 pub use token::{Token, TokenSeq};

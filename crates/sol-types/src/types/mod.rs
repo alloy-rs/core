@@ -4,7 +4,7 @@ mod r#enum;
 pub use r#enum::SolEnum;
 
 mod error;
-pub use error::{decode_revert_reason, Panic, PanicKind, Revert, SolError};
+pub use error::{Panic, PanicKind, Revert, SolError, decode_revert_reason};
 
 mod event;
 pub use event::{EventTopic, SolEvent, TopicList};

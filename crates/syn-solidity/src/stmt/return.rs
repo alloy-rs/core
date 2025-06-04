@@ -2,8 +2,8 @@ use crate::{Expr, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parse::{Parse, ParseStream},
     Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 /// A return statement: `return 42;`.

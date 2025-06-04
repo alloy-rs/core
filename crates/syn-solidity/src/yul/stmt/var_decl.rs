@@ -1,10 +1,10 @@
-use crate::{utils::DebugPunctuated, Spanned, WalrusToken, YulExpr, YulIdent};
+use crate::{Spanned, WalrusToken, YulExpr, YulIdent, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
+    Result, Token,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Result, Token,
 };
 
 /// Declares Yul variables, which may or may not have initial values. E.x.

@@ -1,5 +1,5 @@
 use alloy_primitives::Address;
-use alloy_sol_types::{sol, SolType};
+use alloy_sol_types::{SolType, sol};
 
 // Type definition: generates a new struct that implements `SolType`
 sol! {

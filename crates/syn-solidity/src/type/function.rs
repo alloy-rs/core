@@ -1,14 +1,13 @@
-use crate::{kw, FunctionAttributes, ParameterList, Returns, Spanned};
+use crate::{FunctionAttributes, ParameterList, Returns, Spanned, kw};
 use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
 };
 use syn::{
-    parenthesized,
+    Result, parenthesized,
     parse::{Parse, ParseStream},
     token::Paren,
-    Result,
 };
 
 /// A function type: `function() returns (string memory)`.

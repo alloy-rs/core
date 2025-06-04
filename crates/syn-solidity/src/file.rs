@@ -2,8 +2,8 @@ use crate::{Item, Spanned};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parse::{Parse, ParseStream},
     Attribute, Result,
+    parse::{Parse, ParseStream},
 };
 
 /// A Solidity file. The root of the AST.

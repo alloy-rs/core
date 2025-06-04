@@ -1,4 +1,4 @@
-use crate::{aliases::U160, utils::keccak256, FixedBytes};
+use crate::{FixedBytes, aliases::U160, utils::keccak256};
 use alloc::{
     borrow::Borrow,
     string::{String, ToString},
@@ -96,7 +96,7 @@ impl From<U160> for Address {
 impl From<Address> for U160 {
     #[inline]
     fn from(value: Address) -> Self {
-        Self::from_be_bytes(value.0 .0)
+        Self::from_be_bytes(value.0.0)
     }
 }
 
@@ -348,7 +348,7 @@ impl Address {
     #[inline]
     #[must_use]
     pub fn create(&self, nonce: u64) -> Self {
-        use alloy_rlp::{Encodable, EMPTY_LIST_CODE, EMPTY_STRING_CODE};
+        use alloy_rlp::{EMPTY_LIST_CODE, EMPTY_STRING_CODE, Encodable};
 
         // max u64 encoded length is `1 + u64::BYTES`
         const MAX_LEN: usize = 1 + (1 + 20) + 9;

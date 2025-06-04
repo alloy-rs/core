@@ -1,9 +1,9 @@
-use crate::{kw, Spanned};
+use crate::{Spanned, kw};
 use proc_macro2::{Literal, Span};
 use std::{fmt, str::FromStr};
 use syn::{
-    parse::{Lookahead1, Parse, ParseStream},
     LitFloat, LitInt, Result,
+    parse::{Lookahead1, Parse, ParseStream},
 };
 
 // TODO: Fixed point numbers

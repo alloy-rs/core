@@ -25,16 +25,16 @@ pub mod diesel;
 pub mod aliases;
 #[doc(no_inline)]
 pub use aliases::{
-    BlockHash, BlockNumber, BlockTimestamp, ChainId, Selector, StorageKey, StorageValue, TxHash,
-    TxIndex, TxNonce, TxNumber, B128, B256, B512, B64, I128, I16, I160, I256, I32, I64, I8, U128,
-    U16, U160, U256, U32, U512, U64, U8,
+    B64, B128, B256, B512, BlockHash, BlockNumber, BlockTimestamp, ChainId, I8, I16, I32, I64,
+    I128, I160, I256, Selector, StorageKey, StorageValue, TxHash, TxIndex, TxNonce, TxNumber, U8,
+    U16, U32, U64, U128, U160, U256, U512,
 };
 
 #[macro_use]
 mod bits;
 pub use bits::{
-    Address, AddressChecksumBuffer, AddressError, Bloom, BloomInput, FixedBytes, Function,
-    BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS, BLOOM_SIZE_BYTES,
+    Address, AddressChecksumBuffer, AddressError, BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS,
+    BLOOM_SIZE_BYTES, Bloom, BloomInput, FixedBytes, Function,
 };
 
 #[path = "bytes/mod.rs"]
@@ -45,7 +45,7 @@ mod common;
 pub use common::TxKind;
 
 mod log;
-pub use log::{logs_bloom, IntoLogData, Log, LogData};
+pub use log::{IntoLogData, Log, LogData, logs_bloom};
 
 #[cfg(feature = "map")]
 pub mod map;
@@ -59,10 +59,10 @@ pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 mod signature;
 #[allow(deprecated)]
 pub use signature::PrimitiveSignature;
-pub use signature::{normalize_v, to_eip155_v, Signature, SignatureError};
+pub use signature::{Signature, SignatureError, normalize_v, to_eip155_v};
 
 pub mod utils;
-pub use utils::{eip191_hash_message, keccak256, Keccak256, KECCAK256_EMPTY};
+pub use utils::{KECCAK256_EMPTY, Keccak256, eip191_hash_message, keccak256};
 
 #[doc(hidden)] // Use `hex` directly instead!
 pub mod hex_literal;
@@ -71,7 +71,7 @@ pub mod hex_literal;
 pub use {
     ::bytes,
     ::hex,
-    ruint::{self, uint, Uint},
+    ruint::{self, Uint, uint},
 };
 
 #[cfg(feature = "serde")]

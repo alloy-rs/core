@@ -2,8 +2,8 @@ use crate::{Spanned, YulBlock, YulExpr};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parse::{Parse, ParseStream},
     Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 /// A Yul if statement: `if lt(a, b) { sstore(0, 1) }`.

@@ -1,9 +1,9 @@
-use crate::{kw, variable::VariableDefinition, SolIdent, Spanned};
+use crate::{SolIdent, Spanned, kw, variable::VariableDefinition};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parse::{Parse, ParseStream},
     Attribute, Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 mod contract;
@@ -233,10 +233,6 @@ impl Item {
     }
 
     fn replace_attrs(&mut self, src: Vec<Attribute>) -> Vec<Attribute> {
-        if let Some(attrs) = self.attrs_mut() {
-            std::mem::replace(attrs, src)
-        } else {
-            Vec::new()
-        }
+        if let Some(attrs) = self.attrs_mut() { std::mem::replace(attrs, src) } else { Vec::new() }
     }
 }

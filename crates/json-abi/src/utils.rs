@@ -2,7 +2,7 @@ use crate::{EventParam, Param, StateMutability};
 use alloc::string::String;
 use alloy_primitives::Selector;
 use core::{fmt::Write, num::NonZeroUsize};
-use parser::{utils::ParsedSignature, ParameterSpecifier, TypeSpecifier, TypeStem};
+use parser::{ParameterSpecifier, TypeSpecifier, TypeStem, utils::ParsedSignature};
 
 /// Capacity to allocate per [Param].
 const PARAM_CAP: usize = 32;
@@ -383,11 +383,8 @@ mod tests {
         assert_eq!(
             event_full_signature(
                 "SetupDirectDebit",
-                &[
-                    eparam2("address", "debtor", true),
-                    eparam2("address", "receiver", true),
-                    info,
-                ]            ),
+                &[eparam2("address", "debtor", true), eparam2("address", "receiver", true), info,]
+            ),
             "event SetupDirectDebit(address indexed debtor, address indexed receiver, tuple(uint256 amount, uint256 startTime, uint256 interval) info)"
         );
     }

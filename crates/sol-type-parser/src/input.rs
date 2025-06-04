@@ -3,7 +3,7 @@
 // Recursion implementation modified from `toml`: https://github.com/toml-rs/toml/blob/a02cbf46cab4a8683e641efdba648a31498f7342/crates/toml_edit/src/parser/mod.rs#L99
 
 use core::fmt;
-use winnow::{error::ContextError, ModalParser};
+use winnow::{ModalParser, error::ContextError};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CustomError {

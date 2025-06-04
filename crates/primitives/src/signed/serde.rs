@@ -2,8 +2,8 @@ use super::Signed;
 use alloc::string::String;
 use core::fmt;
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
+    de::{self, Visitor},
 };
 
 impl<const BITS: usize, const LIMBS: usize> Serialize for Signed<BITS, LIMBS> {

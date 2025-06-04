@@ -1,10 +1,10 @@
-use crate::{kw, Spanned};
+use crate::{Spanned, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
+    Result, Token,
     parse::{Parse, ParseStream},
     token::{Brace, Bracket, Paren},
-    Result, Token,
 };
 
 mod assembly;

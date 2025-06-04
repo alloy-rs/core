@@ -2,7 +2,7 @@
 //!
 //! Adapted from <https://github.com/paritytech/parity-common/blob/2fb72eea96b6de4a085144ce239feb49da0cd39e/ethbloom/src/lib.rs>
 
-use crate::{keccak256, Address, Log, LogData, B256};
+use crate::{Address, B256, Log, LogData, keccak256};
 
 /// Number of bits to set per input in Ethereum bloom filter.
 pub const BLOOM_BITS_PER_ITEM: usize = 3;
@@ -110,13 +110,13 @@ impl Bloom {
     /// Returns a reference to the underlying data.
     #[inline]
     pub const fn data(&self) -> &[u8; BLOOM_SIZE_BYTES] {
-        &self.0 .0
+        &self.0.0
     }
 
     /// Returns a mutable reference to the underlying data.
     #[inline]
     pub fn data_mut(&mut self) -> &mut [u8; BLOOM_SIZE_BYTES] {
-        &mut self.0 .0
+        &mut self.0.0
     }
 
     /// Returns true if this bloom filter is a possible superset of the other

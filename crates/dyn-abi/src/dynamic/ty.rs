@@ -653,7 +653,7 @@ impl DynSolType {
 mod tests {
     use super::*;
     use alloc::string::ToString;
-    use alloy_primitives::{hex, Address};
+    use alloy_primitives::{Address, hex};
 
     #[test]
     fn dynamically_encodes() {

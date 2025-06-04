@@ -1,13 +1,13 @@
 use crate::{
-    kw, utils::ParseNested, Lit, LitDenominated, SolIdent, Spanned, SubDenomination, Type,
+    Lit, LitDenominated, SolIdent, Spanned, SubDenomination, Type, kw, utils::ParseNested,
 };
 use proc_macro2::{Ident, Span};
 use std::fmt;
 use syn::{
+    Result, Token,
     ext::IdentExt,
     parse::{Parse, ParseStream},
     token::{Brace, Bracket, Paren},
-    Result, Token,
 };
 
 mod array;
@@ -240,11 +240,7 @@ impl Expr {
         } else if lookahead.peek(Ident::peek_any) {
             let ident = input.call(Ident::parse_any)?;
             let ty = Type::parse_ident(ident.clone()).parse_payable(input);
-            if ty.is_custom() {
-                Ok(Self::Ident(ident.into()))
-            } else {
-                Ok(Self::Type(ty))
-            }
+            if ty.is_custom() { Ok(Self::Ident(ident.into())) } else { Ok(Self::Type(ty)) }
         } else {
             Err(lookahead.error())
         }
@@ -269,11 +265,7 @@ impl Expr {
             parse!(Self::Index)
         } else if lookahead.peek(Brace) {
             // Special case: `try` stmt block
-            if input.peek2(kw::catch) {
-                parse!(break)
-            } else {
-                parse!(Self::CallOptions)
-            }
+            if input.peek2(kw::catch) { parse!(break) } else { parse!(Self::CallOptions) }
         } else if lookahead.peek(Paren) {
             parse!(Self::Call)
         } else if lookahead.peek(Token![.]) {

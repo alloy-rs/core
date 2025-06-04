@@ -1,15 +1,14 @@
-use crate::{kw, utils::DebugPunctuated, Spanned, Type};
+use crate::{Spanned, Type, kw, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
 };
 use syn::{
-    parenthesized,
+    Error, Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
-    Error, Result, Token,
 };
 
 /// A tuple type.

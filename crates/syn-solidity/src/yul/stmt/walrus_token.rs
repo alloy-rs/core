@@ -1,8 +1,8 @@
 use crate::Spanned;
 use proc_macro2::Span;
 use syn::{
-    parse::{Parse, ParseStream},
     Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 /// Represents the walrus operator `:=`.

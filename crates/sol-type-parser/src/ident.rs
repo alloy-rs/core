@@ -1,7 +1,7 @@
 use winnow::{
+    ModalResult,
     error::{ErrMode, ParserError},
     stream::{AsBStr, Stream},
-    ModalResult,
 };
 
 /// The regular expression for a Solidity identifier.

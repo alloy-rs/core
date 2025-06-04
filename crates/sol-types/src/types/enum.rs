@@ -1,4 +1,4 @@
-use crate::{abi::token::WordToken, Result, SolType, Word};
+use crate::{Result, SolType, Word, abi::token::WordToken};
 use alloc::vec::Vec;
 
 /// A Solidity enum. This is always a wrapper around a [`u8`].

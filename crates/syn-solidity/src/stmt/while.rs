@@ -2,9 +2,9 @@ use crate::{Expr, Spanned, Stmt};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
+    Result, Token,
     parse::{Parse, ParseStream},
     token::Paren,
-    Result, Token,
 };
 
 /// A while statement: `while (i < 42) { ... }`.

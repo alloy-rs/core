@@ -1,8 +1,8 @@
 use super::FixedBytes;
 use core::fmt;
 use serde::{
-    de::{self, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
+    de::{self, Visitor},
 };
 
 impl<const N: usize> Serialize for FixedBytes<N> {

@@ -2,8 +2,8 @@ use heck::{ToKebabCase, ToLowerCamelCase, ToShoutySnakeCase, ToSnakeCase, ToUppe
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
-    meta::ParseNestedMeta, parse::Parse, punctuated::Punctuated, Attribute, Error, LitBool, LitStr,
-    Path, Result, Token,
+    Attribute, Error, LitBool, LitStr, Path, Result, Token, meta::ParseNestedMeta, parse::Parse,
+    punctuated::Punctuated,
 };
 
 const DUPLICATE_ERROR: &str = "duplicate attribute";

@@ -3,8 +3,8 @@
 // TODO: move to `sol-type-parser`
 
 use crate::{
-    eip712::resolver::{PropertyDef, TypeDef},
     Error,
+    eip712::resolver::{PropertyDef, TypeDef},
 };
 use alloc::{
     string::{String, ToString},

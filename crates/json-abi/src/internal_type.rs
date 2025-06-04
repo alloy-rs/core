@@ -1,7 +1,7 @@
 use alloc::string::{String, ToString};
 use core::fmt;
 use parser::TypeSpecifier;
-use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Visitor};
 
 /// The contract internal type. This could be a regular Solidity type, a
 /// user-defined type, an enum, a struct, a contract, or an address payable.

@@ -1,15 +1,14 @@
 use crate::{
-    new_input,
+    Error, Input, Result, TypeStem, new_input,
     utils::{spanned, str_parser},
-    Error, Input, Result, TypeStem,
 };
 use alloc::vec::Vec;
 use core::num::NonZeroUsize;
 use winnow::{
+    ModalResult, Parser,
     ascii::digit0,
     combinator::{cut_err, delimited, repeat, trace},
     error::{ErrMode, FromExternalError},
-    ModalResult, Parser,
 };
 
 /// Represents a type-name. Consists of an identifier and optional array sizes.

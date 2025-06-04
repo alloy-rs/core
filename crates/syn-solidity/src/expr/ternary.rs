@@ -1,9 +1,9 @@
-use crate::{utils::ParseNested, Expr, Spanned};
+use crate::{Expr, Spanned, utils::ParseNested};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parse::{Parse, ParseStream},
     Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 /// A ternary (AKA conditional) expression: `foo ? bar : baz`.

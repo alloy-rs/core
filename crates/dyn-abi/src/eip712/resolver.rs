@@ -1,6 +1,6 @@
 use crate::{
-    eip712::typed_data::Eip712Types, eip712_parser::EncodeType, DynSolType, DynSolValue, Error,
-    Result, Specifier,
+    DynSolType, DynSolValue, Error, Result, Specifier, eip712::typed_data::Eip712Types,
+    eip712_parser::EncodeType,
 };
 use alloc::{
     borrow::ToOwned,
@@ -8,7 +8,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::{keccak256, B256};
+use alloy_primitives::{B256, keccak256};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
 use parser::{RootType, TypeSpecifier, TypeStem};
@@ -508,11 +508,7 @@ impl Resolver {
             .collect();
 
         self.nodes.iter().filter_map(move |(node, def)| {
-            if !dependent_types.contains(node.as_str()) {
-                Some(def)
-            } else {
-                None
-            }
+            if !dependent_types.contains(node.as_str()) { Some(def) } else { None }
         })
     }
 }

@@ -5,10 +5,9 @@ use std::{
     hash::{Hash, Hasher},
 };
 use syn::{
-    bracketed,
+    Result, bracketed,
     parse::{Parse, ParseStream},
     token::Bracket,
-    Result,
 };
 
 /// An array type.
@@ -101,13 +100,7 @@ impl TypeArray {
         Ok(Self {
             ty,
             bracket_token: bracketed!(content in input),
-            size: {
-                if content.is_empty() {
-                    None
-                } else {
-                    Some(content.parse()?)
-                }
-            },
+            size: { if content.is_empty() { None } else { Some(content.parse()?) } },
         })
     }
 }

@@ -10,8 +10,8 @@ use core::{
 
 mod units;
 pub use units::{
-    format_ether, format_units, format_units_with, parse_ether, parse_units, DecimalSeparator,
-    ParseUnits, Unit, UnitsError,
+    DecimalSeparator, ParseUnits, Unit, UnitsError, format_ether, format_units, format_units_with,
+    parse_ether, parse_units,
 };
 
 #[doc(hidden)]

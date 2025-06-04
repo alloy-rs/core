@@ -1,4 +1,4 @@
-use crate::{Address, Bloom, Bytes, B256};
+use crate::{Address, B256, Bloom, Bytes};
 use alloc::vec::Vec;
 
 #[cfg(feature = "serde")]

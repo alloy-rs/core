@@ -1,14 +1,14 @@
-use crate::{dynamic::ty::as_tuple, DynSolType, DynSolValue, Result};
+use crate::{DynSolType, DynSolValue, Result, dynamic::ty::as_tuple};
 use alloc::vec::Vec;
-use alloy_primitives::{hex, Address, Function, Sign, I256, U256};
+use alloy_primitives::{Address, Function, I256, Sign, U256, hex};
 use alloy_sol_types::Word;
 use core::fmt;
 use parser::{
-    new_input,
+    Input, new_input,
     utils::{array_parser, char_parser, spanned},
-    Input,
 };
 use winnow::{
+    ModalParser, ModalResult, Parser,
     ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
     combinator::{cut_err, dispatch, empty, fail, opt, preceded, trace},
     error::{
@@ -17,7 +17,6 @@ use winnow::{
     },
     stream::Stream,
     token::take_while,
-    ModalParser, ModalResult, Parser,
 };
 
 impl DynSolType {
@@ -588,9 +587,11 @@ mod tests {
                 .unwrap(),
             DynSolValue::Int(I256::MAX, 256)
         );
-        assert!(DynSolType::Int(256)
-            .coerce_str("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-            .is_err());
+        assert!(
+            DynSolType::Int(256)
+                .coerce_str("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .is_err()
+        );
 
         assert_eq!(
             DynSolType::Int(256).coerce_str("0").unwrap(),
@@ -621,7 +622,11 @@ mod tests {
             DynSolValue::Int(I256::MAX, 256)
         );
         assert_eq!(
-            DynSolType::Int(256).coerce_str("-57896044618658097711785492504343953926634992332820282019728792003956564819968").unwrap(),
+            DynSolType::Int(256)
+                .coerce_str(
+                    "-57896044618658097711785492504343953926634992332820282019728792003956564819968"
+                )
+                .unwrap(),
             DynSolValue::Int(I256::MIN, 256)
         );
     }
@@ -681,13 +686,17 @@ mod tests {
         );
 
         // 255 bits fails
-        assert!(DynSolType::Uint(255)
-            .coerce_str("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-            .is_err());
+        assert!(
+            DynSolType::Uint(255)
+                .coerce_str("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+                .is_err()
+        );
 
         assert_eq!(
             DynSolType::Uint(256)
-                .coerce_str("115792089237316195423570985008687907853269984665640564039457584007913129639935")
+                .coerce_str(
+                    "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+                )
                 .unwrap(),
             DynSolValue::Uint(U256::MAX, 256)
         );
@@ -1191,16 +1200,20 @@ mod tests {
 
     #[test]
     fn single_quoted_in_array_must_error() {
-        assert!(DynSolType::Array(Box::new(DynSolType::Bool))
-            .coerce_str("[true,\"false,false]")
-            .is_err());
+        assert!(
+            DynSolType::Array(Box::new(DynSolType::Bool))
+                .coerce_str("[true,\"false,false]")
+                .is_err()
+        );
         assert!(DynSolType::Array(Box::new(DynSolType::Bool)).coerce_str("[false\"]").is_err());
-        assert!(DynSolType::Array(Box::new(DynSolType::Bool))
-            .coerce_str("[true,false\"]")
-            .is_err());
-        assert!(DynSolType::Array(Box::new(DynSolType::Bool))
-            .coerce_str("[true,\"false\",false]")
-            .is_err());
+        assert!(
+            DynSolType::Array(Box::new(DynSolType::Bool)).coerce_str("[true,false\"]").is_err()
+        );
+        assert!(
+            DynSolType::Array(Box::new(DynSolType::Bool))
+                .coerce_str("[true,\"false\",false]")
+                .is_err()
+        );
         assert!(DynSolType::Array(Box::new(DynSolType::Bool)).coerce_str("[true,false]").is_ok());
     }
 

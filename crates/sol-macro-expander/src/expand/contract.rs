@@ -1,13 +1,13 @@
 //! [`ItemContract`] expansion.
 
-use super::{anon_name, ExpCtxt};
+use super::{ExpCtxt, anon_name};
 use crate::utils::ExprArray;
-use alloy_sol_macro_input::{docs_str, mk_doc, ContainsSolAttrs};
+use alloy_sol_macro_input::{ContainsSolAttrs, docs_str, mk_doc};
 use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent, Spanned};
 use heck::ToSnakeCase;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
-use syn::{parse_quote, Attribute, Result};
+use syn::{Attribute, Result, parse_quote};
 
 /// Expands an [`ItemContract`]:
 ///

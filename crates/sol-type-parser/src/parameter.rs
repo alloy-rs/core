@@ -1,11 +1,10 @@
 use crate::{
-    new_input,
+    Error, Input, Result, TypeSpecifier, new_input,
     utils::{opt_ws_ident, spanned, tuple_parser},
-    Error, Input, Result, TypeSpecifier,
 };
 use alloc::vec::Vec;
 use core::fmt;
-use winnow::{combinator::trace, ModalResult, Parser};
+use winnow::{ModalResult, Parser, combinator::trace};
 
 // TODO: Parse visibility and state mutability
 
