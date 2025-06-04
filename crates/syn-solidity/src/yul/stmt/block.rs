@@ -2,10 +2,9 @@ use crate::{Spanned, YulStmt};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    braced,
+    Result, braced,
     parse::{Parse, ParseStream},
     token::Brace,
-    Result,
 };
 
 /// A Yul block contains `YulStmt` between curly braces.

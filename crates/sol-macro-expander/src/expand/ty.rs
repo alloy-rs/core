@@ -2,9 +2,9 @@
 
 use super::ExpCtxt;
 use ast::{Item, Parameters, Spanned, Type, TypeArray};
-use proc_macro2::{Ident, Literal, Span, TokenStream};
 use proc_macro_error2::{abort, emit_error};
-use quote::{quote_spanned, ToTokens};
+use proc_macro2::{Ident, Literal, Span, TokenStream};
+use quote::{ToTokens, quote_spanned};
 use std::{fmt, num::NonZeroU16};
 
 const MAX_SUPPORTED_ARRAY_LEN: usize = 32;
@@ -69,7 +69,7 @@ impl ExpCtxt<'_> {
                         self.expand_type_to(ty, tokens);
                         comma.to_tokens(tokens);
                     }
-                })
+                });
             }
             Type::Array(ref array) => {
                 let ty = self.expand_type(&array.ty);
@@ -143,7 +143,7 @@ impl ExpCtxt<'_> {
                         self.expand_rust_type_to(ty, tokens);
                         comma.to_tokens(tokens);
                     }
-                })
+                });
             }
             Type::Array(ref array) => {
                 let ty = self.expand_rust_type(&array.ty);

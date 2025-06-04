@@ -2,8 +2,8 @@ use crate::{Spanned, YulBlock, YulExpr};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parse::{Parse, ParseStream},
     Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 /// Yul for loop e.g `for {let i := 0} lt(i,10) {i := add(i,1)} {mstore(i,7)}`.

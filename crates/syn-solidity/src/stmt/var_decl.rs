@@ -1,12 +1,11 @@
-use crate::{utils::DebugPunctuated, Expr, Spanned, Stmt, VariableDeclaration};
+use crate::{Expr, Spanned, Stmt, VariableDeclaration, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parenthesized,
-    parse::{discouraged::Speculative, Parse, ParseStream},
+    Result, Token, parenthesized,
+    parse::{Parse, ParseStream, discouraged::Speculative},
     punctuated::Punctuated,
     token::Paren,
-    Result, Token,
 };
 
 /// A variable declaration statement: `uint256 foo = 42;`.
@@ -77,11 +76,7 @@ impl StmtVarDecl {
         };
 
         if input.peek(Paren) {
-            if input.peek2(Token![=]) {
-                speculative_parse()
-            } else {
-                input.parse().map(Stmt::Expr)
-            }
+            if input.peek2(Token![=]) { speculative_parse() } else { input.parse().map(Stmt::Expr) }
         } else {
             speculative_parse()
         }
@@ -161,10 +156,6 @@ impl Spanned for VarDeclTuple {
 
 impl VarDeclTuple {
     fn parse_var_opt(input: ParseStream<'_>) -> Result<Option<VariableDeclaration>> {
-        if input.peek(Token![,]) {
-            Ok(None)
-        } else {
-            input.parse().map(Some)
-        }
+        if input.peek(Token![,]) { Ok(None) } else { input.parse().map(Some) }
     }
 }

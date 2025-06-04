@@ -1,6 +1,6 @@
 use super::{
-    utils::{handle_overflow, twos_complement},
     Sign, Signed,
+    utils::{handle_overflow, twos_complement},
 };
 use core::{cmp, iter, ops};
 use ruint::Uint;
@@ -34,11 +34,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         if BITS == 0 {
             return (self, false);
         }
-        if self == Self::MIN {
-            (self, true)
-        } else {
-            (Self(self.unsigned_abs()), false)
-        }
+        if self == Self::MIN { (self, true) } else { (Self(self.unsigned_abs()), false) }
     }
 
     /// Checked absolute value. Computes `self.abs()`, returning `None` if `self
@@ -90,11 +86,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         if BITS == 0 {
             return (self, false);
         }
-        if self == Self::MIN {
-            (self, true)
-        } else {
-            (Self(twos_complement(self.0)), false)
-        }
+        if self == Self::MIN { (self, true) } else { (Self(twos_complement(self.0)), false) }
     }
 
     /// Checked negation. Computes `-self`, returning `None` if `self == MIN`.
@@ -442,11 +434,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     pub fn div_euclid(self, rhs: Self) -> Self {
         let q = self / rhs;
         if (self % rhs).is_negative() {
-            if rhs.is_positive() {
-                q - Self::ONE
-            } else {
-                q + Self::ONE
-            }
+            if rhs.is_positive() { q - Self::ONE } else { q + Self::ONE }
         } else {
             q
         }
@@ -516,15 +504,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn rem_euclid(self, rhs: Self) -> Self {
         let r = self % rhs;
-        if r < Self::ZERO {
-            if rhs < Self::ZERO {
-                r - rhs
-            } else {
-                r + rhs
-            }
-        } else {
-            r
-        }
+        if r < Self::ZERO { if rhs < Self::ZERO { r - rhs } else { r + rhs } } else { r }
     }
 
     /// Overflowing Euclidean remainder. Calculates `self.rem_euclid(rhs)`.
@@ -586,11 +566,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline]
     pub(crate) const fn pow_sign(self, exp: Uint<BITS, LIMBS>) -> Sign {
         let is_exp_odd = BITS != 0 && exp.as_limbs()[0] % 2 == 1;
-        if is_exp_odd && self.is_negative() {
-            Sign::Negative
-        } else {
-            Sign::Positive
-        }
+        if is_exp_odd && self.is_negative() { Sign::Negative } else { Sign::Positive }
     }
 
     /// Create `10**n` as this type.
@@ -642,11 +618,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[must_use]
     pub fn checked_pow(self, exp: Uint<BITS, LIMBS>) -> Option<Self> {
         let (result, overflow) = self.overflowing_pow(exp);
-        if overflow {
-            None
-        } else {
-            Some(result)
-        }
+        if overflow { None } else { Some(result) }
     }
 
     /// Saturating integer exponentiation. Computes `self.pow(exp)`, saturating
@@ -681,11 +653,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline]
     #[must_use]
     pub fn overflowing_shl(self, rhs: usize) -> (Self, bool) {
-        if rhs >= 256 {
-            (Self::ZERO, true)
-        } else {
-            (Self(self.0 << rhs), false)
-        }
+        if rhs >= 256 { (Self::ZERO, true) } else { (Self(self.0 << rhs), false) }
     }
 
     /// Checked shift left. Computes `self << rhs`, returning `None` if `rhs` is
@@ -715,11 +683,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[inline]
     #[must_use]
     pub fn overflowing_shr(self, rhs: usize) -> (Self, bool) {
-        if rhs >= 256 {
-            (Self::ZERO, true)
-        } else {
-            (Self(self.0 >> rhs), false)
-        }
+        if rhs >= 256 { (Self::ZERO, true) } else { (Self(self.0 >> rhs), false) }
     }
 
     /// Checked shift right. Computes `self >> rhs`, returning `None` if `rhs`
@@ -876,8 +840,8 @@ impl<const BITS: usize, const LIMBS: usize> cmp::Ord for Signed<BITS, LIMBS> {
         // TODO(nlordell): Once subtraction is implemented:
         // self.saturating_sub(*other).signum64().partial_cmp(&0)
 
-        use cmp::Ordering::*;
         use Sign::*;
+        use cmp::Ordering::*;
 
         match (self.into_sign_and_abs(), other.into_sign_and_abs()) {
             ((Positive, _), (Negative, _)) => Greater,

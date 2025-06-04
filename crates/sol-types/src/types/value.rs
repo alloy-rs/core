@@ -1,12 +1,12 @@
 use super::SolType;
 use crate::{
+    Result, Word,
     abi::TokenSeq,
     private::SolTypeValue,
     sol_data::{self, ByteCount, SupportedFixedBytes},
-    Result, Word,
 };
 use alloc::{borrow::Cow, string::String, vec::Vec};
-use alloy_primitives::{aliases::*, Address, Bytes, FixedBytes, Function, I256, U256};
+use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256, aliases::*};
 
 /// A Solidity value.
 ///
@@ -377,7 +377,7 @@ mod tests {
 
     // Make sure these are in scope
     #[allow(unused_imports)]
-    use crate::{private::SolTypeValue as _, SolType as _};
+    use crate::{SolType as _, private::SolTypeValue as _};
 
     #[test]
     fn inference() {

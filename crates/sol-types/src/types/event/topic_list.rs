@@ -1,4 +1,4 @@
-use crate::{abi::token::WordToken, Error, Result, SolType};
+use crate::{Error, Result, SolType, abi::token::WordToken};
 use alloc::borrow::Cow;
 
 #[allow(unknown_lints, unnameable_types)]

@@ -1,7 +1,7 @@
 use crate::{DynSolError, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::Error;
-use alloy_primitives::{keccak256, Selector};
+use alloy_primitives::{Selector, keccak256};
 
 #[allow(unknown_lints, unnameable_types)]
 mod sealed {

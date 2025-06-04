@@ -1,7 +1,7 @@
 use crate::{DecodedEvent, DynSolEvent, DynSolType, Error, Result, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::Event;
-use alloy_primitives::{LogData, B256};
+use alloy_primitives::{B256, LogData};
 
 #[allow(unknown_lints, unnameable_types)]
 mod sealed {
@@ -80,7 +80,7 @@ mod tests {
     use super::*;
     use crate::DynSolValue;
     use alloy_json_abi::EventParam;
-    use alloy_primitives::{address, b256, bytes, hex, keccak256, Signed};
+    use alloy_primitives::{Signed, address, b256, bytes, hex, keccak256};
 
     #[test]
     fn empty() {

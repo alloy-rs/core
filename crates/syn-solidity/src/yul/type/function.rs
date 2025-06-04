@@ -1,12 +1,11 @@
-use crate::{kw, utils::DebugPunctuated, Spanned, YulBlock, YulIdent};
+use crate::{Spanned, YulBlock, YulIdent, kw, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parenthesized,
+    Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
-    Result, Token,
 };
 
 /// Yul function definition: `function f() -> a, b { ... }`.

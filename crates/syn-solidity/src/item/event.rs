@@ -1,15 +1,14 @@
 use crate::{
-    kw, utils::DebugPunctuated, ParameterList, SolIdent, SolPath, Spanned, Type,
-    VariableDeclaration,
+    ParameterList, SolIdent, SolPath, Spanned, Type, VariableDeclaration, kw,
+    utils::DebugPunctuated,
 };
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parenthesized,
+    Attribute, Error, Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
-    Attribute, Error, Result, Token,
 };
 
 #[derive(Clone)]
@@ -88,11 +87,7 @@ impl ItemEvent {
     /// This is `4` if the event is anonymous, otherwise `3`.
     #[inline]
     pub fn max_indexed(&self) -> usize {
-        if self.is_anonymous() {
-            4
-        } else {
-            3
-        }
+        if self.is_anonymous() { 4 } else { 3 }
     }
 
     /// Returns `true` if the event has more indexed parameters than allowed by

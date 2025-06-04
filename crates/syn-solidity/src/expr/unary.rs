@@ -1,9 +1,9 @@
-use crate::{kw, utils::ParseNested, Expr, Spanned};
+use crate::{Expr, Spanned, kw, utils::ParseNested};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parse::{Parse, ParseStream},
     Result,
+    parse::{Parse, ParseStream},
 };
 
 /// A unary operation: `!x`, `-x`.

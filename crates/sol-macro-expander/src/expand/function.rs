@@ -1,10 +1,10 @@
 //! [`ItemFunction`] expansion.
 
 use super::{
-    anon_name, expand_fields, expand_from_into_tuples, expand_tokenize, expand_tuple_types,
-    ExpCtxt, FieldKind,
+    ExpCtxt, FieldKind, anon_name, expand_fields, expand_from_into_tuples, expand_tokenize,
+    expand_tuple_types,
 };
-use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
+use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
 use ast::{FunctionKind, ItemFunction, Spanned};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};

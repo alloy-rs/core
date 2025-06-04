@@ -1,6 +1,6 @@
 #![allow(clippy::missing_const_for_fn)] // On purpose for forward compatibility.
 
-use crate::{hex, normalize_v, signature::SignatureError, uint, B256, U256};
+use crate::{B256, U256, hex, normalize_v, signature::SignatureError, uint};
 use alloc::vec::Vec;
 use core::{fmt::Display, str::FromStr};
 
@@ -405,7 +405,7 @@ impl proptest::arbitrary::Arbitrary for Signature {
 #[cfg(feature = "serde")]
 mod signature_serde {
     use super::Signature;
-    use crate::{normalize_v, U256, U64};
+    use crate::{U64, U256, normalize_v};
     use serde::{Deserialize, Deserializer, Serialize};
 
     #[derive(Serialize, Deserialize)]
@@ -651,7 +651,9 @@ mod tests {
             false,
         );
 
-        let expected = hex!("0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d831b");
+        let expected = hex!(
+            "0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d831b"
+        );
         assert_eq!(signature.as_bytes(), expected);
     }
 
@@ -669,7 +671,9 @@ mod tests {
             false,
         );
 
-        let expected = hex!("0x68a020a209d3d56c46f38cc50a33f704f4a9a10a59377f8dd762ac66910e9b907e865ad05c4035ab5792787d4a0297a43617ae897930a6fe4d822b8faea52064");
+        let expected = hex!(
+            "0x68a020a209d3d56c46f38cc50a33f704f4a9a10a59377f8dd762ac66910e9b907e865ad05c4035ab5792787d4a0297a43617ae897930a6fe4d822b8faea52064"
+        );
         assert_eq!(signature.as_erc2098(), expected);
     }
 
@@ -683,7 +687,9 @@ mod tests {
             true,
         );
 
-        let expected = hex!("0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76939c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f550793");
+        let expected = hex!(
+            "0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76939c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f550793"
+        );
         assert_eq!(signature.as_erc2098(), expected);
     }
 
@@ -702,9 +708,9 @@ mod tests {
         );
 
         assert_eq!(
-            Signature::from_erc2098(
-                &hex!("0x68a020a209d3d56c46f38cc50a33f704f4a9a10a59377f8dd762ac66910e9b907e865ad05c4035ab5792787d4a0297a43617ae897930a6fe4d822b8faea52064")
-            ),
+            Signature::from_erc2098(&hex!(
+                "0x68a020a209d3d56c46f38cc50a33f704f4a9a10a59377f8dd762ac66910e9b907e865ad05c4035ab5792787d4a0297a43617ae897930a6fe4d822b8faea52064"
+            )),
             expected
         );
     }
@@ -720,9 +726,9 @@ mod tests {
         );
 
         assert_eq!(
-            Signature::from_erc2098(
-                &hex!("0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76939c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f550793")
-            ),
+            Signature::from_erc2098(&hex!(
+                "0x9328da16089fcba9bececa81663203989f2df5fe1faa6291a45381c81bd17f76939c6d6b623b42da56557e5e734a43dc83345ddfadec52cbe24d0cc64f550793"
+            )),
             expected
         );
     }

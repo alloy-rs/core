@@ -1,17 +1,17 @@
 #![allow(missing_docs)]
 
 use crate::{
-    ident::identifier_parser, input::check_recursion, new_input, Error, Input, ParameterSpecifier,
-    Result, RootType, StateMutability,
+    Error, Input, ParameterSpecifier, Result, RootType, StateMutability, ident::identifier_parser,
+    input::check_recursion, new_input,
 };
 use alloc::{string::String, vec::Vec};
 use core::{slice, str};
 use winnow::{
+    ModalParser, ModalResult, Parser,
     ascii::space0,
     combinator::{alt, cut_err, opt, preceded, separated, terminated, trace},
     error::{ContextError, ParserError, StrContext, StrContextValue},
     stream::{Accumulate, AsChar, Stream},
-    ModalParser, ModalResult, Parser,
 };
 
 pub use crate::ident::identifier;

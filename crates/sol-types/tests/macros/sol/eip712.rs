@@ -1,5 +1,5 @@
 use alloy_primitives::B256;
-use alloy_sol_types::{eip712_domain, sol, SolStruct};
+use alloy_sol_types::{SolStruct, eip712_domain, sol};
 
 #[test]
 fn encode_type_nesting() {

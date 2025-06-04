@@ -1,8 +1,8 @@
-use crate::{utils::ParseNested, Expr, Spanned};
+use crate::{Expr, Spanned, utils::ParseNested};
 use proc_macro2::Span;
 use syn::{
-    parse::{Parse, ParseStream},
     Result,
+    parse::{Parse, ParseStream},
 };
 
 /// A binary operation: `a + b`, `a += b`.

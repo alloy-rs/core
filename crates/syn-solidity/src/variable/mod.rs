@@ -2,9 +2,9 @@ use crate::{Expr, SolIdent, Spanned, Storage, Type, VariableAttributes};
 use proc_macro2::Span;
 use std::fmt::{self, Write};
 use syn::{
+    Attribute, Ident, Result, Token,
     ext::IdentExt,
     parse::{Parse, ParseStream},
-    Attribute, Ident, Result, Token,
 };
 
 mod list;

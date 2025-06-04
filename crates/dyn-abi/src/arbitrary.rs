@@ -10,11 +10,11 @@
 #![allow(clippy::arc_with_non_send_sync)]
 
 use crate::{DynSolType, DynSolValue};
-use alloy_primitives::{Address, Function, B256, I256, U256};
-use arbitrary::{size_hint, Unstructured};
+use alloy_primitives::{Address, B256, Function, I256, U256};
+use arbitrary::{Unstructured, size_hint};
 use core::ops::RangeInclusive;
 use proptest::{
-    collection::{vec as vec_strategy, VecStrategy},
+    collection::{VecStrategy, vec as vec_strategy},
     prelude::*,
     strategy::{Flatten, Map, Recursive, TupleUnion, WA},
 };

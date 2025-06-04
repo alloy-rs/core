@@ -1,11 +1,10 @@
-use crate::{kw, Spanned, Type};
+use crate::{Spanned, Type, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parenthesized,
+    Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     token::Paren,
-    Result, Token,
 };
 
 /// A `type()` expression: `type(uint256)`

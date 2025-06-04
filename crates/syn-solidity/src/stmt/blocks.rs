@@ -1,10 +1,10 @@
-use crate::{kw, Spanned, Stmt};
+use crate::{Spanned, Stmt, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
+    Result,
     parse::{Parse, ParseStream},
     token::Brace,
-    Result,
 };
 
 /// A curly-braced block of statements: `{ ... }`.

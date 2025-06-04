@@ -12,7 +12,7 @@ impl core::error::Error for Error {}
 
 impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Error").field(&self.0 .0).finish()
+        f.debug_tuple("Error").field(&self.0.0).finish()
     }
 }
 

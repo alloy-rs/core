@@ -85,9 +85,5 @@ pub(super) const fn sign_bit(bits: usize) -> u64 {
         return 0;
     }
     let bits = bits % 64;
-    if bits == 0 {
-        1 << 63
-    } else {
-        1 << (bits - 1)
-    }
+    if bits == 0 { 1 << 63 } else { 1 << (bits - 1) }
 }

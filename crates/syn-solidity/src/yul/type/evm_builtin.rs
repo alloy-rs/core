@@ -1,8 +1,8 @@
-use crate::{kw, Spanned};
+use crate::{Spanned, kw};
 use proc_macro2::Span;
 use syn::{
-    parse::{Parse, ParseStream},
     Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 macro_rules! yul_evm_builtin_enum_builder {

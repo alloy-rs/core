@@ -1,12 +1,11 @@
 use crate::{
-    new_input,
+    Error, Input, Result, TypeSpecifier, new_input,
     utils::{spanned, tuple_parser},
-    Error, Input, Result, TypeSpecifier,
 };
 use alloc::vec::Vec;
 use winnow::{
-    combinator::{opt, preceded, trace},
     ModalResult, Parser,
+    combinator::{opt, preceded, trace},
 };
 
 /// A tuple specifier, with no array suffixes. Corresponds to a sequence of

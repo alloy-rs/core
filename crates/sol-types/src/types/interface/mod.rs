@@ -1,4 +1,4 @@
-use crate::{alloc::string::ToString, Error, Panic, Result, Revert, SolError};
+use crate::{Error, Panic, Result, Revert, SolError, alloc::string::ToString};
 use alloc::{string::String, vec::Vec};
 use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
 
@@ -587,7 +587,7 @@ impl<T: SolInterface> FusedIterator for Selectors<T> {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::{keccak256, U256};
+    use alloy_primitives::{U256, keccak256};
 
     fn sel(s: &str) -> [u8; 4] {
         keccak256(s)[..4].try_into().unwrap()

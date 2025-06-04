@@ -208,7 +208,7 @@ impl DynSolValue {
                     .iter()
                     .map(Self::as_type)
                     .collect::<Option<Vec<_>>>()
-                    .map(DynSolType::Tuple)
+                    .map(DynSolType::Tuple);
             }
             Self::Array(inner) => DynSolType::Array(Box::new(Self::as_type(inner.first()?)?)),
             Self::FixedArray(inner) => {

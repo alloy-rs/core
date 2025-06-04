@@ -51,11 +51,7 @@ impl StateMutability {
     /// Returns the string representation of the state mutability.
     #[inline]
     pub const fn as_str(self) -> Option<&'static str> {
-        if let Self::NonPayable = self {
-            None
-        } else {
-            Some(self.as_json_str())
-        }
+        if let Self::NonPayable = self { None } else { Some(self.as_json_str()) }
     }
 
     /// Returns the string representation of the state mutability when serialized to JSON.
@@ -85,7 +81,7 @@ impl StateMutability {
 /// [`StateMutability`] struct field.
 ///
 /// ```rust
-/// use alloy_sol_type_parser::{serde_state_mutability_compat, StateMutability};
+/// use alloy_sol_type_parser::{StateMutability, serde_state_mutability_compat};
 /// use serde::{Deserialize, Serialize};
 ///
 /// #[derive(Serialize, Deserialize)]

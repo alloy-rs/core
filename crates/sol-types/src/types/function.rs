@@ -1,7 +1,7 @@
 use crate::{
+    Result, SolType, Word,
     abi::{Token, TokenSeq},
     private::SolTypeValue,
-    Result, SolType, Word,
 };
 use alloc::vec::Vec;
 

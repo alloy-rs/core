@@ -4,8 +4,8 @@
 
 use proc_macro2::{Span, TokenStream};
 use syn::{
-    punctuated::{Pair, Punctuated},
     Token,
+    punctuated::{Pair, Punctuated},
 };
 
 /// A trait that can provide the `Span` of the complete contents of a syntax

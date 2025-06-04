@@ -1,10 +1,10 @@
 #![allow(unknown_lints, clippy::incompatible_msrv, missing_docs)]
 
 use alloy_dyn_abi::{DynSolType, DynSolValue};
-use alloy_primitives::{hex, Uint, U256};
-use alloy_sol_types::{sol, sol_data, SolType, SolValue};
+use alloy_primitives::{U256, Uint, hex};
+use alloy_sol_types::{SolType, SolValue, sol, sol_data};
 use criterion::{
-    criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
+    BenchmarkGroup, Criterion, criterion_group, criterion_main, measurement::WallTime,
 };
 use std::{hint::black_box, time::Duration};
 
@@ -154,10 +154,10 @@ fn encode_struct_input() -> Input {
 fn encode_struct_input_tokens() -> [ethabi::Token; 8] {
     let input = encode_struct_input();
     [
-        ethabi::Token::Address(input.tokenIn.0 .0.into()),
-        ethabi::Token::Address(input.tokenOut.0 .0.into()),
+        ethabi::Token::Address(input.tokenIn.0.0.into()),
+        ethabi::Token::Address(input.tokenOut.0.0.into()),
         ethabi::Token::Uint(input.fee.to::<u64>().into()),
-        ethabi::Token::Address(input.recipient.0 .0.into()),
+        ethabi::Token::Address(input.recipient.0.0.into()),
         ethabi::Token::Uint(ethabi::Uint::from_big_endian(&input.deadline.to_be_bytes_vec())),
         ethabi::Token::Uint(ethabi::Uint::from_big_endian(&input.amountIn.to_be_bytes_vec())),
         ethabi::Token::Uint(ethabi::Uint::from_big_endian(

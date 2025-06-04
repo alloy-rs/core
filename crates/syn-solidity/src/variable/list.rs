@@ -5,9 +5,9 @@ use std::{
     ops::{Deref, DerefMut},
 };
 use syn::{
+    Result, Token,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Result, Token,
 };
 
 /// A list of comma-separated [VariableDeclaration]s.

@@ -1,12 +1,11 @@
-use crate::{utils::DebugPunctuated, Expr, Spanned};
+use crate::{Expr, Spanned, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parenthesized,
+    Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
-    Result, Token,
 };
 
 /// A tuple expression: `(a, b, c, d)`.

@@ -1,7 +1,7 @@
 use crate::Expr;
 use proc_macro2::{TokenStream, TokenTree};
 use std::fmt;
-use syn::{parse::ParseStream, punctuated::Punctuated, Result, Token};
+use syn::{Result, Token, parse::ParseStream, punctuated::Punctuated};
 
 /// Helper trait to parsing nested expressions.
 pub(crate) trait ParseNested: Sized {

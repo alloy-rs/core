@@ -1,12 +1,11 @@
-use crate::{kw, SolPath, Spanned, Type};
+use crate::{SolPath, Spanned, Type, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    braced,
+    Result, Token, braced,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Brace,
-    Result, Token,
 };
 
 /// A `using` directive: `using { A, B.mul as * } for uint256 global;`.

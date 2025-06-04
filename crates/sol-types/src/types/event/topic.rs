@@ -1,4 +1,4 @@
-use crate::{abi::token::WordToken, sol_data::*, SolType};
+use crate::{SolType, abi::token::WordToken, sol_data::*};
 use alloc::vec::Vec;
 use alloy_primitives::keccak256;
 

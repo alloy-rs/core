@@ -2,10 +2,9 @@ use crate::{Expr, Spanned, Stmt, StmtExpr, StmtVarDecl};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parenthesized,
+    Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     token::Paren,
-    Result, Token,
 };
 
 /// A for statement: `for (uint256 i; i < 42; ++i) { ... }`.

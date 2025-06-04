@@ -1,9 +1,9 @@
-use crate::{kw, Expr, Spanned};
+use crate::{Expr, Spanned, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parse::{Parse, ParseStream},
     Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 /// An emit statement: `emit FooBar(42);`.

@@ -1,4 +1,4 @@
-use crate::{ParseSignedError, I256, U256};
+use crate::{I256, ParseSignedError, U256};
 use alloc::string::{String, ToString};
 use core::fmt;
 
@@ -10,8 +10,8 @@ const MAX_U64_EXPONENT: u8 = 19;
 ///
 /// ```
 /// use alloy_primitives::{
-///     utils::{parse_ether, Unit},
 ///     U256,
+///     utils::{Unit, parse_ether},
 /// };
 ///
 /// let eth = Unit::ETHER.wei();
@@ -26,7 +26,7 @@ pub fn parse_ether(eth: &str) -> Result<U256, UnitsError> {
 /// # Examples
 ///
 /// ```
-/// use alloy_primitives::{utils::parse_units, U256};
+/// use alloy_primitives::{U256, utils::parse_units};
 ///
 /// let amount_in_eth = U256::from_str_radix("15230001000000000000", 10).unwrap();
 /// let amount_in_gwei = U256::from_str_radix("15230001000", 10).unwrap();
@@ -40,7 +40,7 @@ pub fn parse_ether(eth: &str) -> Result<U256, UnitsError> {
 /// ETH denominator. 1 ETH = 10^18 WEI.
 ///
 /// ```should_panic
-/// use alloy_primitives::{utils::parse_units, U256};
+/// use alloy_primitives::{U256, utils::parse_units};
 /// let amount_in_wei = U256::from_str_radix("15230001000", 10).unwrap();
 /// assert_eq!(amount_in_wei, parse_units("15.230001000000000000", "wei").unwrap().into());
 /// ```
@@ -57,7 +57,7 @@ where
 /// # Examples
 ///
 /// ```
-/// use alloy_primitives::{utils::format_ether, U256};
+/// use alloy_primitives::{U256, utils::format_ether};
 ///
 /// let eth = format_ether(1395633240123456000_u128);
 /// assert_eq!(format_ether(1395633240123456000_u128), "1.395633240123456000");
@@ -71,7 +71,7 @@ pub fn format_ether<T: Into<ParseUnits>>(amount: T) -> String {
 /// # Examples
 ///
 /// ```
-/// use alloy_primitives::{utils::format_units, U256};
+/// use alloy_primitives::{U256, utils::format_units};
 ///
 /// let eth = U256::from_str_radix("1395633240123456000", 10).unwrap();
 /// assert_eq!(format_units(eth, "eth").unwrap(), "1.395633240123456000");
@@ -517,7 +517,7 @@ impl Unit {
     /// # Examples
     ///
     /// ```
-    /// use alloy_primitives::{utils::Unit, U256};
+    /// use alloy_primitives::{U256, utils::Unit};
     ///
     /// assert_eq!(U256::from(1u128), Unit::WEI.wei());
     /// assert_eq!(U256::from(1_000u128), Unit::KWEI.wei());

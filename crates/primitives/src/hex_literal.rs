@@ -37,11 +37,7 @@ const fn next_byte(string: &[u8], pos: usize) -> Option<(u8, usize)> {
 /// This function is an implementation detail and SHOULD NOT be called directly!
 #[doc(hidden)]
 pub const fn strip_hex_prefix(string: &[u8]) -> &[u8] {
-    if let [b'0', b'x' | b'X', rest @ ..] = string {
-        rest
-    } else {
-        string
-    }
+    if let [b'0', b'x' | b'X', rest @ ..] = string { rest } else { string }
 }
 
 /// Compute length of a byte array which will be decoded from the strings.

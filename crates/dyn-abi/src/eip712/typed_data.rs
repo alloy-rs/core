@@ -1,9 +1,9 @@
 use crate::{
-    eip712::{PropertyDef, Resolver},
     DynSolType, DynSolValue, Result,
+    eip712::{PropertyDef, Resolver},
 };
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
-use alloy_primitives::{keccak256, B256};
+use alloy_primitives::{B256, keccak256};
 use alloy_sol_types::{Eip712Domain, SolStruct};
 use derive_more::{Deref, DerefMut, From, Into, IntoIterator};
 use parser::TypeSpecifier;

@@ -1,7 +1,7 @@
 use crate::Address;
 
 #[cfg(feature = "rlp")]
-use alloy_rlp::{Buf, BufMut, Decodable, Encodable, EMPTY_STRING_CODE};
+use alloy_rlp::{Buf, BufMut, Decodable, EMPTY_STRING_CODE, Encodable};
 
 /// The `to` field of a transaction. Either a target address, or empty for a
 /// contract creation.

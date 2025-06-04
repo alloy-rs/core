@@ -2,7 +2,7 @@ use crate::{Lit, Spanned, YulPath};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parse::{discouraged::Speculative, Parse, ParseStream, Result},
+    parse::{Parse, ParseStream, Result, discouraged::Speculative},
     token::Paren,
 };
 

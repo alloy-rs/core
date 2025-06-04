@@ -1,9 +1,9 @@
 use crate::{
-    abi::token::{Token, TokenSeq, WordToken},
     Result, SolType, Word,
+    abi::token::{Token, TokenSeq, WordToken},
 };
 use alloc::vec::Vec;
-use alloy_primitives::{FixedBytes, Log, LogData, B256};
+use alloy_primitives::{B256, FixedBytes, Log, LogData};
 
 mod topic;
 pub use topic::EventTopic;

@@ -1,12 +1,11 @@
-use crate::{kw, utils::DebugPunctuated, Item, Modifier, SolIdent, Spanned, Type};
+use crate::{Item, Modifier, SolIdent, Spanned, Type, kw, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::{cmp::Ordering, fmt};
 use syn::{
-    braced,
+    Attribute, Error, Result, Token, braced,
     parse::{Lookahead1, Parse, ParseStream},
     punctuated::Punctuated,
     token::Brace,
-    Attribute, Error, Result, Token,
 };
 
 /// A contract, abstract contract, interface, or library definition:

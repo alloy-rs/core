@@ -1,4 +1,4 @@
-use crate::{kw, Override, SolPath, Spanned, Visibility};
+use crate::{Override, SolPath, Spanned, Visibility, kw};
 use proc_macro2::Span;
 use std::{
     fmt,
@@ -6,8 +6,8 @@ use std::{
     mem,
 };
 use syn::{
-    parse::{Parse, ParseStream},
     Error, Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 /// A list of unique variable attributes.

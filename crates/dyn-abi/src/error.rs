@@ -1,5 +1,5 @@
 use alloc::{borrow::Cow, string::String};
-use alloy_primitives::{hex, hex::FromHexError, Selector, B256};
+use alloy_primitives::{B256, Selector, hex, hex::FromHexError};
 use alloy_sol_types::Error as SolTypesError;
 use core::fmt;
 use parser::Error as TypeParserError;

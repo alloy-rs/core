@@ -6,11 +6,11 @@
 use super::{FixedBytes, Sign, Signed};
 use bytes::{BufMut, BytesMut};
 use derive_more::Display;
-use postgres_types::{accepts, to_sql_checked, FromSql, IsNull, ToSql, Type, WrongType};
+use postgres_types::{FromSql, IsNull, ToSql, Type, WrongType, accepts, to_sql_checked};
 use std::{
     error::Error,
     iter,
-    str::{from_utf8, FromStr},
+    str::{FromStr, from_utf8},
 };
 
 /// Converts `FixedBytes` to Postgres Bytea Type.
@@ -40,11 +40,7 @@ type BoxedError = Box<dyn Error + Sync + Send + 'static>;
 
 const fn rem_up(a: usize, b: usize) -> usize {
     let rem = a % b;
-    if rem > 0 {
-        rem
-    } else {
-        b
-    }
+    if rem > 0 { rem } else { b }
 }
 
 fn last_idx<T: PartialEq>(x: &[T], value: &T) -> usize {

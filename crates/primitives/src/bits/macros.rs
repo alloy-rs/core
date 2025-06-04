@@ -751,6 +751,7 @@ macro_rules! impl_diesel {
     ($t:ty, $n:literal) => {
         const _: () = {
             use $crate::private::diesel::{
+                Queryable,
                 backend::Backend,
                 deserialize::{FromSql, Result as DeserResult},
                 expression::AsExpression,
@@ -758,7 +759,6 @@ macro_rules! impl_diesel {
                 query_builder::bind_collector::RawBytesBindCollector,
                 serialize::{Output, Result as SerResult, ToSql},
                 sql_types::{Binary, Nullable, SingleValue},
-                Queryable,
             };
 
             impl<Db> ToSql<Binary, Db> for $t
@@ -920,7 +920,7 @@ fixed_bytes_macros! { $
 /// # Examples
 ///
 /// ```
-/// use alloy_primitives::{bytes, Bytes};
+/// use alloy_primitives::{Bytes, bytes};
 ///
 /// static MY_BYTES: Bytes = bytes!("0x0123" "0xabcd");
 /// assert_eq!(MY_BYTES, Bytes::from(&[0x01, 0x23, 0xab, 0xcd]));
@@ -946,7 +946,7 @@ macro_rules! bytes {
 
 #[cfg(test)]
 mod tests {
-    use crate::{hex, Address, Bytes, FixedBytes};
+    use crate::{Address, Bytes, FixedBytes, hex};
 
     #[test]
     fn bytes_macros() {

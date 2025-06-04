@@ -1,7 +1,7 @@
 use alloy_json_abi::{
     Constructor, Error, EventParam, Fallback, Function, Param, Receive, StateMutability,
 };
-use alloy_sol_types::{sol, JsonAbiExt};
+use alloy_sol_types::{JsonAbiExt, sol};
 use pretty_assertions::assert_eq;
 use std::collections::BTreeMap;
 
