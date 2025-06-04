@@ -81,8 +81,10 @@ fn event_rlp_roundtrip() {
     assert_eq!(rlp_decoded, rlpable_log.reserialize());
 
     let decoded_log = MyEvent::decode_log(&rlp_decoded).unwrap();
+    let validated_decoded_log = MyEvent::decode_log_validate(&rlp_decoded).unwrap();
 
-    assert_eq!(decoded_log, rlpable_log)
+    assert_eq!(decoded_log, rlpable_log);
+    assert_eq!(validated_decoded_log, rlpable_log);
 }
 
 fn assert_event_signature<T: SolEvent>(expected: &str) {
