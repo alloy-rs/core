@@ -152,7 +152,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
         cfg_if! {
             if #[cfg(all(feature = "native-keccak", not(any(feature = "sha3-keccak", feature = "tiny-keccak", miri))))] {
                 #[link(wasm_import_module = "vm_hooks")]
-                extern "C" {
+                unsafe extern "C" {
                     /// When targeting VMs with native keccak hooks, the `native-keccak` feature
                     /// can be enabled to import and use the host environment's implementation
                     /// of [`keccak256`] in place of [`sha3`] or [`tiny_keccak`]. This is overridden
