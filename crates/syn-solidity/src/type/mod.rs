@@ -261,7 +261,10 @@ impl Type {
                     match parse_size(s, span)? {
                         None => Self::custom(ident),
                         Some(Some(size)) if size.get() > 256 || size.get() % 8 != 0 => {
-                            return Err(Error::new(span, "uintX must be a multiple of 8 up to 256"));
+                            return Err(Error::new(
+                                span,
+                                "uintX must be a multiple of 8 up to 256",
+                            ));
                         }
                         Some(size) => Self::Uint(span, size),
                     }
