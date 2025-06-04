@@ -4,6 +4,7 @@
 
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
+#![cfg_attr(docsrs, allow(unexpected_cfgs))]
 
 use alloy_core::{primitives::wrap_fixed_bytes, sol};
 
