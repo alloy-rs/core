@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3](https://github.com/alloy-rs/core/releases/tag/v1.1.3) - 2025-06-04
+
+### Bug Fixes
+
+- Removed the interface prefix string while calculating the eip712 type string ([#954](https://github.com/alloy-rs/core/pull/954))
+
+### Features
+
+- Added `decode_log_validate` method ([#957](https://github.com/alloy-rs/core/pull/957))
+
 ## [1.1.2](https://github.com/alloy-rs/core/releases/tag/v1.1.2) - 2025-05-20
 
 ### Dependencies
