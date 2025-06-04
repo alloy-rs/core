@@ -100,7 +100,7 @@ impl<T> Sealed<T> {
     /// Caution: Modifying the inner type can cause side-effects on the `seal` hash.
     #[inline(always)]
     #[doc(hidden)]
-    pub fn inner_mut(&mut self) -> &mut T {
+    pub const fn inner_mut(&mut self) -> &mut T {
         &mut self.inner
     }
 

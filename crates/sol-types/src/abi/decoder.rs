@@ -133,7 +133,7 @@ impl<'de> Decoder<'de> {
 
     /// Advance the offset by `len` bytes.
     #[inline]
-    fn increase_offset(&mut self, len: usize) {
+    const fn increase_offset(&mut self, len: usize) {
         self.offset += len;
     }
 
@@ -212,13 +212,13 @@ impl<'de> Decoder<'de> {
     /// Takes the offset from the child decoder and sets it as the current
     /// offset.
     #[inline]
-    pub fn take_offset_from(&mut self, child: &Self) {
+    pub const fn take_offset_from(&mut self, child: &Self) {
         self.set_offset(child.offset + (self.buf.len() - child.buf.len()));
     }
 
     /// Sets the current offset in the buffer.
     #[inline]
-    pub fn set_offset(&mut self, offset: usize) {
+    pub const fn set_offset(&mut self, offset: usize) {
         self.offset = offset;
     }
 

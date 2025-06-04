@@ -572,7 +572,7 @@ impl AddressChecksumBuffer {
 
     /// Returns the checksum of a formatted address.
     #[inline]
-    pub fn as_mut_str(&mut self) -> &mut str {
+    pub const fn as_mut_str(&mut self) -> &mut str {
         unsafe { str::from_utf8_unchecked_mut(self.0.assume_init_mut()) }
     }
 
