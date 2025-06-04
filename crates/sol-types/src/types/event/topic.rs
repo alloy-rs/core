@@ -209,5 +209,5 @@ fn encode_topic_bytes(sl: &[u8], out: &mut Vec<u8>) {
     let padding = 32 - sl.len() % 32;
     out.reserve(sl.len() + padding);
     out.extend_from_slice(sl);
-    out.extend(core::iter::repeat(0).take(padding));
+    out.extend(core::iter::repeat_n(0, padding));
 }

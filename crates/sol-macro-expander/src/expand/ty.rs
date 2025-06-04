@@ -230,7 +230,7 @@ impl ExpCtxt<'_> {
     pub(crate) fn can_derive_default(&self, ty: &Type) -> bool {
         match ty {
             Type::Array(a) => {
-                self.eval_array_size(a).map_or(true, |sz| sz <= MAX_SUPPORTED_ARRAY_LEN)
+                self.eval_array_size(a).is_none_or(|sz| sz <= MAX_SUPPORTED_ARRAY_LEN)
                     && self.can_derive_default(&a.ty)
             }
             Type::Tuple(tuple) => {

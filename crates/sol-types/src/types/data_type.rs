@@ -432,7 +432,7 @@ where
         for item in self {
             // Array elements are left-padded to 32 bytes.
             if let Some(padding_needed) = 32usize.checked_sub(item.stv_abi_packed_encoded_size()) {
-                out.extend(core::iter::repeat(0).take(padding_needed));
+                out.extend(core::iter::repeat_n(0, padding_needed));
             }
             T::stv_abi_encode_packed_to(item, out);
         }
@@ -595,7 +595,7 @@ where
         for item in self {
             // Array elements are left-padded to 32 bytes.
             if let Some(padding_needed) = 32usize.checked_sub(item.stv_abi_packed_encoded_size()) {
-                out.extend(core::iter::repeat(0).take(padding_needed));
+                out.extend(core::iter::repeat_n(0, padding_needed));
             }
             item.stv_abi_encode_packed_to(out);
         }

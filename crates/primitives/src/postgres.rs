@@ -328,7 +328,7 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                 });
                 #[allow(clippy::cast_sign_loss)]
                 // Expression can not be negative due to checks above
-                let iter = iter.chain(iter::repeat(0).take((exponent + 1 - digits) as usize));
+                let iter = iter.chain(iter::repeat_n(0, (exponent + 1 - digits) as usize));
 
                 let mut value = Self::from_base_be(10000, iter)?;
                 if sign == 0x4000 {
