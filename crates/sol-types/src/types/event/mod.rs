@@ -216,8 +216,18 @@ pub trait SolEvent: Sized {
         Self::decode_raw_log(log.topics(), &log.data)
     }
 
+    /// Decode the event from the given log object with validation.
+    fn decode_log_data_validate(log: &LogData) -> Result<Self> {
+        Self::decode_raw_log_validate(log.topics(), &log.data)
+    }
+
     /// Decode the event from the given log object.
     fn decode_log(log: &Log) -> Result<Log<Self>> {
         Self::decode_log_data(&log.data).map(|data| Log { address: log.address, data })
+    }
+
+    /// Decode the event from the given log object with validation.
+    fn decode_log_validate(log: &Log) -> Result<Log<Self>> {
+        Self::decode_log_data_validate(&log.data).map(|data| Log { address: log.address, data })
     }
 }
