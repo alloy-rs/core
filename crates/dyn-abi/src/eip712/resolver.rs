@@ -366,7 +366,7 @@ impl Resolver {
         if self.detect_cycle(type_name, &mut context) {
             return Err(Error::circular_dependency(type_name));
         }
-        let root_type = type_name.try_into()?;
+        let root_type = type_name.rsplit(':').next().unwrap().try_into()?;
         let mut resolution = vec![];
         self.linearize_into(&mut resolution, root_type)?;
         Ok(resolution)
@@ -518,6 +518,7 @@ mod tests {
     use super::*;
     use alloc::boxed::Box;
     use alloy_sol_types::sol;
+    use serde_json::json;
 
     #[test]
     fn it_detects_cycles() {
@@ -682,5 +683,38 @@ mod tests {
             graph.non_dependent_types().map(|t| &t.type_name).collect::<Vec<_>>(),
             vec!["Transaction"]
         );
+    }
+
+    #[test]
+    fn test_deserialize_resolver_with_colon() {
+        // Test case from https://github.com/foundry-rs/foundry/issues/10765
+        let json = json!({
+            "EIP712Domain": [
+                {
+                    "name": "name",
+                    "type": "string"
+                },
+                {
+                    "name": "version",
+                    "type": "string"
+                },
+                {
+                    "name": "chainId",
+                    "type": "uint256"
+                },
+                {
+                    "name": "verifyingContract",
+                    "type": "address"
+                }
+            ],
+            "Test:Message": [
+                {
+                    "name": "content",
+                    "type": "string"
+                }
+            ]
+        });
+
+        let _result: Resolver = serde_json::from_value(json).unwrap();
     }
 }
