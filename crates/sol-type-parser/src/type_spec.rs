@@ -309,4 +309,10 @@ mod test {
             Err(Error::invalid_type_string("MyStruct"))
         );
     }
+
+    #[test]
+    fn parse_type_specifier_colon() {
+        // This is an invalid type specifier, as it contains a colon
+        let _spec = TypeSpecifier::parse("Test:Message").unwrap_err();
+    }
 }

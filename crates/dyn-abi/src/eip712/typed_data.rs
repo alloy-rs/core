@@ -20,8 +20,10 @@ impl<'de> Deserialize<'de> for Eip712Types {
         let map: BTreeMap<String, Vec<PropertyDef>> = BTreeMap::deserialize(deserializer)?;
 
         for key in map.keys() {
+            // keys can further be qualified with a colon, e.g. "EIP712Domain:MyType"
+            let id = key.rsplit(':').next().unwrap();
             // ensure that all types are valid specifiers
-            let _ = TypeSpecifier::parse(key).map_err(serde::de::Error::custom)?;
+            let _ = TypeSpecifier::parse(id).map_err(serde::de::Error::custom)?;
         }
 
         Ok(Self(map))
@@ -231,7 +233,7 @@ impl TypedData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Error;
+    use crate::{Error, TypedData};
     use alloc::string::ToString;
     use alloy_primitives::hex;
     use alloy_sol_types::sol;
@@ -723,5 +725,51 @@ mod tests {
             hex::encode(&hash[..]),
             "25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775",
         );
+    }
+
+    #[test]
+    fn test_parse_type_with_colon_in_name() {
+        // Test case from https://github.com/foundry-rs/foundry/issues/10765
+        let json = json!({
+            "types": {
+                "EIP712Domain": [
+                    {
+                        "name": "name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "version",
+                        "type": "string"
+                    },
+                    {
+                        "name": "chainId",
+                        "type": "uint256"
+                    },
+                    {
+                        "name": "verifyingContract",
+                        "type": "address"
+                    }
+                ],
+                "Test:Message": [
+                    {
+                        "name": "content",
+                        "type": "string"
+                    }
+                ]
+            },
+            "primaryType": "Test:Message",
+            "domain": {
+                "name": "Test",
+                "version": "1",
+                "chainId": 1,
+                "verifyingContract": "0x0000000000000000000000000000000000000000"
+            },
+            "message": {
+                "content": "hello"
+            }
+        });
+
+        let typed_data: TypedData = serde_json::from_value(json).unwrap();
+        let _hash = typed_data.eip712_signing_hash().unwrap();
     }
 }
