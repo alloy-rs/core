@@ -85,7 +85,7 @@ impl<'a> RootType<'a> {
                     return Self("uint8");
                 }
 
-                // Normalize the `uint` aliases to the canonical `uint256`
+                // Normalize the `u?int` aliases to the canonical `u?int256`
                 match ident {
                     "uint" => Self("uint256"),
                     "int" => Self("int256"),
