@@ -45,7 +45,7 @@ impl<'a> PropDef<'a> {
     pub fn parse(input: &'a str) -> Result<Self, Error> {
         let (ty, name) =
             input.rsplit_once(' ').ok_or_else(|| Error::invalid_property_def(input))?;
-        Ok(PropDef { ty: ty.trim().try_into()?, name: name.trim() })
+        Ok(PropDef { ty: TypeSpecifier::parse_eip712(ty.trim())?, name: name.trim() })
     }
 }
 
