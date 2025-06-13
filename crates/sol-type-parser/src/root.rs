@@ -96,6 +96,37 @@ impl<'a> RootType<'a> {
         .parse_next(input)
     }
 
+    /// Parse a root type from a string.
+    #[cfg(feature = "eip712")]
+    #[inline]
+    pub fn parse_eip712(input: &'a str) -> Result<Self> {
+        Self::eip712_parser.parse(new_input(input)).map_err(Error::parser)
+    }
+
+    /// [`winnow`] parser for EIP-712 types.
+    #[cfg(feature = "eip712")]
+    pub(crate) fn eip712_parser(input: &mut Input<'a>) -> ModalResult<Self> {
+        trace("RootType::eip712", |input: &mut Input<'a>| {
+            use crate::ident::eip712_identifier_parser;
+
+            eip712_identifier_parser(input).map(|ident| {
+                // Keep the same normalization logic
+                if input.starts_with('.') {
+                    let _ = input.next_token();
+                    let _ = eip712_identifier_parser(input);
+                    return Self("uint8");
+                }
+
+                match ident {
+                    "uint" => Self("uint256"),
+                    "int" => Self("int256"),
+                    _ => Self(ident),
+                }
+            })
+        })
+        .parse_next(input)
+    }
+
     /// The string underlying this type. The type name.
     #[inline]
     pub const fn span(self) -> &'a str {

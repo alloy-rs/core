@@ -20,10 +20,8 @@ impl<'de> Deserialize<'de> for Eip712Types {
         let map: BTreeMap<String, Vec<PropertyDef>> = BTreeMap::deserialize(deserializer)?;
 
         for key in map.keys() {
-            // keys can further be qualified with a colon, e.g. "EIP712Domain:MyType"
-            let id = key.rsplit(':').next().unwrap();
             // ensure that all types are valid specifiers
-            let _ = TypeSpecifier::parse(id).map_err(serde::de::Error::custom)?;
+            let _ = TypeSpecifier::parse_eip712(key).map_err(serde::de::Error::custom)?;
         }
 
         Ok(Self(map))

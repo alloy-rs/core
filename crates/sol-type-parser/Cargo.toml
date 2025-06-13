@@ -35,4 +35,5 @@ serde_json.workspace = true
 default = ["std"]
 std = ["winnow/std"]
 serde = ["dep:serde"]
-debug = ["std"] # intentionally doesn't enable `winnow/debug`
+debug = ["std"]       # intentionally doesn't enable `winnow/debug`
+eip712 = []
