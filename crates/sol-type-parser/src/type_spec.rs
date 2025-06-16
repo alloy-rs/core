@@ -113,14 +113,16 @@ impl<'a> TypeSpecifier<'a> {
         .map(|(span, (stem, sizes))| Self { span, stem, sizes })
     }
 
-    /// Parse a type specifier from a string, allowing EIP-712 style identifiers with colons.
+    /// Parse a type specifier from a string with support for `:` in identifiers.
+    ///
+    /// Extends the standard type parsing.
     #[cfg(feature = "eip712")]
     #[inline]
     pub fn parse_eip712(s: &'a str) -> Result<Self> {
         Self::eip712_parser.parse(new_input(s)).map_err(Error::parser)
     }
 
-    /// [`winnow`] parser for EIP-712 types (allows colons in identifiers).
+    /// [`winnow`] parser for EIP-712 types with extended support for `:` in identifiers.
     #[cfg(feature = "eip712")]
     pub(crate) fn eip712_parser(input: &mut Input<'a>) -> ModalResult<Self> {
         trace(

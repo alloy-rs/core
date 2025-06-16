@@ -77,7 +77,9 @@ where
 }
 
 /// Returns `true` if the given character is valid in an EIP-712 identifier.
-/// EIP-712 identifiers can contain colons for namespacing.
+///
+/// Extends the standard identifier character set to include `:` for namespace support in type
+/// names.
 #[cfg(feature = "eip712")]
 #[inline]
 const fn is_eip712_id_continue(c: char) -> bool {
