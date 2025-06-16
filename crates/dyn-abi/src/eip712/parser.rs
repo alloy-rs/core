@@ -45,7 +45,7 @@ impl<'a> PropDef<'a> {
     ///
     /// Unlike the std solidity struct parser, the EIP-712 parser supports `:` in type names for
     /// namespace separation, which is used by some protocols like Hyperliquid. See the relevant
-    /// discussion at: https://github.com/foundry-rs/foundry/issues/10765.
+    /// discussion at: <https://github.com/foundry-rs/foundry/issues/10765>.
     ///
     /// # Example
     ///
