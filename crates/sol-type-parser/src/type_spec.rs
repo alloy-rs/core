@@ -116,7 +116,7 @@ impl<'a> TypeSpecifier<'a> {
     /// Parse a type specifier from a string.
     ///
     /// Although EIP-712 identifiers should stick to the [solidity type naming spec](https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier), since Hyperliquid
-    /// uses colons for their EIP-712 namespacing, alloy decided to add support for them. See the relevant discussion at: [`https://github.com/foundry-rs/foundry/issues/10765`].
+    /// uses colons for their EIP-712 namespacing, alloy decided to add support for them. See the relevant discussion at: [#10765](https://github.com/foundry-rs/foundry/issues/10765).
     #[cfg(feature = "eip712")]
     #[inline]
     pub fn parse_eip712(s: &'a str) -> Result<Self> {
