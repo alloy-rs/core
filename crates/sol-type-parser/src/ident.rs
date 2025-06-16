@@ -79,7 +79,7 @@ where
 /// Returns `true` if the given character is valid in an EIP-712 identifier.
 ///
 /// Despite EIP-712 identifiers should stick to the [solidity type naming spec](https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier), since Hyperliquid
-/// uses colons for their EIP-712 namespacing, alloy decided to add support for them. See the relevant discussion at: [`https://github.com/foundry-rs/foundry/issues/10765`].
+/// uses colons for their EIP-712 namespacing, alloy decided to add support for them. See the relevant discussion at: [#10765](https://github.com/foundry-rs/foundry/issues/10765).
 #[cfg(feature = "eip712")]
 #[inline]
 const fn is_eip712_id_continue(c: char) -> bool {
