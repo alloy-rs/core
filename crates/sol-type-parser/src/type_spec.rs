@@ -113,20 +113,16 @@ impl<'a> TypeSpecifier<'a> {
         .map(|(span, (stem, sizes))| Self { span, stem, sizes })
     }
 
-    /// Parse a type specifier from a string.
+    /// Parse a type specifier from a string with support for `:` in identifiers.
     ///
-    /// Although EIP-712 identifiers should stick to the [solidity type naming spec](https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier), since Hyperliquid
-    /// uses colons for their EIP-712 namespacing, alloy decided to add support for them. See the relevant discussion at: [#10765](https://github.com/foundry-rs/foundry/issues/10765).
+    /// Extends the standard type parsing.
     #[cfg(feature = "eip712")]
     #[inline]
     pub fn parse_eip712(s: &'a str) -> Result<Self> {
         Self::eip712_parser.parse(new_input(s)).map_err(Error::parser)
     }
 
-    /// [`winnow`] parser for EIP-712 types (allows colons in identifiers).
-    ///
-    /// Although EIP-712 identifiers should stick to the [solidity type naming spec](https://docs.soliditylang.org/en/latest/grammar.html#a4.SolidityLexer.Identifier), since Hyperliquid
-    /// uses colons for their namespacing, alloy decided to add support for them. See the relevant discussion at: [#10765](https://github.com/foundry-rs/foundry/issues/10765).
+    /// [`winnow`] parser for EIP-712 types with extended support for `:` in identifiers.
     #[cfg(feature = "eip712")]
     pub(crate) fn eip712_parser(input: &mut Input<'a>) -> ModalResult<Self> {
         trace(
