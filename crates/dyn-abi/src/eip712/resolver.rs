@@ -46,7 +46,7 @@ impl PropertyDef {
         N: Into<String>,
     {
         let type_name = type_name.into();
-        TypeSpecifier::parse(type_name.as_str())?;
+        TypeSpecifier::parse_eip712(type_name.as_str())?;
         Ok(Self::new_unchecked(type_name, name))
     }
 
@@ -115,7 +115,7 @@ impl TypeDef {
     #[inline]
     pub fn new<S: Into<String>>(type_name: S, props: Vec<PropertyDef>) -> Result<Self> {
         let type_name = type_name.into();
-        RootType::parse(type_name.as_str())?;
+        RootType::parse_eip712(type_name.as_str())?;
         Ok(Self { type_name, props })
     }
 
@@ -366,7 +366,7 @@ impl Resolver {
         if self.detect_cycle(type_name, &mut context) {
             return Err(Error::circular_dependency(type_name));
         }
-        let root_type = type_name.rsplit(':').next().unwrap().try_into()?;
+        let root_type = RootType::parse_eip712(type_name)?;
         let mut resolution = vec![];
         self.linearize_into(&mut resolution, root_type)?;
         Ok(resolution)
@@ -378,7 +378,7 @@ impl Resolver {
         if self.detect_cycle(type_name, &mut Default::default()) {
             return Err(Error::circular_dependency(type_name));
         }
-        self.unchecked_resolve(&type_name.try_into()?)
+        self.unchecked_resolve(&TypeSpecifier::parse_eip712(type_name)?)
     }
 
     /// Resolve a type into a [`crate::DynSolType`] without checking for cycles.
@@ -410,7 +410,7 @@ impl Resolver {
         let prop_names: Vec<_> = ty.prop_names().map(str::to_string).collect();
         let tuple: Vec<_> = ty
             .prop_types()
-            .map(|ty| self.unchecked_resolve(&ty.try_into()?))
+            .map(|ty| self.unchecked_resolve(&TypeSpecifier::parse_eip712(ty)?))
             .collect::<Result<_, _>>()?;
 
         Ok(DynSolType::CustomStruct { name: ty.type_name.clone(), prop_names, tuple })
