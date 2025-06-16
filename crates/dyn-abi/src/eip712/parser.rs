@@ -51,9 +51,9 @@ impl<'a> PropDef<'a> {
     ///
     /// ```
     /// # use alloy_dyn_abi::eip712::parser::PropDef;
-    /// let prop = PropDef::parse("Hyperliquid:Message foobar").unwrap();
+    /// let prop = PropDef::parse("Hyperliquid:Message msg").unwrap();
     /// assert_eq!(prop.ty.span(), "Hyperliquid:Message");
-    /// assert_eq!(prop.name, "foobar");
+    /// assert_eq!(prop.name, "msg");
     /// ```
     pub fn parse(input: &'a str) -> Result<Self, Error> {
         let (ty, name) =
