@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bump to edition 2024 ([#960](https://github.com/alloy-rs/core/issues/960))
 
+### Miscellaneous Tasks
+
+- Release 1.2.0
+
 ## [1.1.3](https://github.com/alloy-rs/core/releases/tag/v1.1.3) - 2025-06-04
 
 ### Features
@@ -45,9 +49,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
 
+### Bug Fixes
+
+- [`sol!`] Pass correct call_struct to call_builder in expansion ([#901](https://github.com/alloy-rs/core/issues/901))
+
 ### Features
 
 - 1.0-rc.1
+- [`sol!`] Gen unit/tuple structs for errors, calls, events with 0/1 param ([#883](https://github.com/alloy-rs/core/issues/883))
+- [sol-macro] Function calls should directly yield result  ([#855](https://github.com/alloy-rs/core/issues/855))
+- [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
 
 ### Miscellaneous Tasks
 
@@ -58,21 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other
 
 - Merge branch 'main' into v1.0-rc
-
-## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
-
-### Bug Fixes
-
-- [`sol!`] Pass correct call_struct to call_builder in expansion ([#901](https://github.com/alloy-rs/core/issues/901))
-
-### Features
-
-- [`sol!`] Gen unit/tuple structs for errors, calls, events with 0/1 param ([#883](https://github.com/alloy-rs/core/issues/883))
-- [sol-macro] Function calls should directly yield result  ([#855](https://github.com/alloy-rs/core/issues/855))
-- [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
-
-### Other
-
 - Merge branch 'main' into v1.0-rc
 
 ## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
@@ -166,17 +162,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Miscellaneous Tasks
 
 - Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
-
-## [0.8.12](https://github.com/alloy-rs/core/releases/tag/v0.8.12) - 2024-11-12
-
-### Miscellaneous Tasks
-
 - Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
-
-## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
-
-### Miscellaneous Tasks
-
 - Release 0.8.11 ([#803](https://github.com/alloy-rs/core/issues/803))
 
 ## [0.8.10](https://github.com/alloy-rs/core/releases/tag/v0.8.10) - 2024-10-28
