@@ -42,10 +42,23 @@ impl<'a> TryFrom<&'a str> for PropDef<'a> {
 
 impl<'a> PropDef<'a> {
     /// Parse a string into property definition.
+    ///
+    /// Unlike the std solidity struct parser, the EIP-712 parser supports `:` in type names for
+    /// namespace separation, which is used by some protocols like Hyperliquid. See the relevant
+    /// discussion at: <https://github.com/foundry-rs/foundry/issues/10765>.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use alloy_dyn_abi::eip712::parser::PropDef;
+    /// let prop = PropDef::parse("Hyperliquid:Message msg").unwrap();
+    /// assert_eq!(prop.ty.span(), "Hyperliquid:Message");
+    /// assert_eq!(prop.name, "msg");
+    /// ```
     pub fn parse(input: &'a str) -> Result<Self, Error> {
         let (ty, name) =
             input.rsplit_once(' ').ok_or_else(|| Error::invalid_property_def(input))?;
-        Ok(PropDef { ty: ty.trim().try_into()?, name: name.trim() })
+        Ok(PropDef { ty: TypeSpecifier::parse_eip712(ty.trim())?, name: name.trim() })
     }
 }
 

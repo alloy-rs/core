@@ -76,6 +76,34 @@ where
     Ok(input.next_slice(len))
 }
 
+/// Returns `true` if the given character is valid in an EIP-712 identifier.
+///
+/// Extends the standard identifier character set to include `:` for namespace support in type
+/// names.
+#[cfg(feature = "eip712")]
+#[inline]
+const fn is_eip712_id_continue(c: char) -> bool {
+    matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$' | ':')
+}
+
+/// Parses an EIP-712 identifier (which may contain colons).
+#[cfg(feature = "eip712")]
+#[inline]
+pub(crate) fn eip712_identifier_parser<'a, I>(input: &mut I) -> ModalResult<&'a str>
+where
+    I: Stream<Slice = &'a str> + AsBStr,
+{
+    let mut chars = input.as_bstr().iter().map(|b| *b as char);
+
+    let Some(true) = chars.next().map(is_id_start) else {
+        return Err(ErrMode::from_input(input));
+    };
+
+    // 1 for the first character, we know it's ASCII
+    let len = 1 + chars.take_while(|c| is_eip712_id_continue(*c)).count();
+    Ok(input.next_slice(len))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

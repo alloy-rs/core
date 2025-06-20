@@ -53,6 +53,17 @@ impl<'a> TypeStem<'a> {
         }
     }
 
+    /// [`winnow`] parser for EIP-712 types.
+    #[cfg(feature = "eip712")]
+    pub(crate) fn eip712_parser(input: &mut Input<'a>) -> ModalResult<Self> {
+        let name = "TypeStem::eip712";
+        if input.starts_with('(') || input.starts_with("tuple(") {
+            trace(name, TupleSpecifier::eip712_parser).parse_next(input).map(Self::Tuple)
+        } else {
+            trace(name, RootType::eip712_parser).parse_next(input).map(Self::Root)
+        }
+    }
+
     /// [`winnow`] parser for this type.
     pub(crate) fn parser(input: &mut Input<'a>) -> ModalResult<Self> {
         let name = "TypeStem";
