@@ -250,13 +250,13 @@ mod tests {
     #[test]
     fn parse_storage() {
         assert_eq!(
-            ParameterSpecifier::parse("foo storag"),
+            ParameterSpecifier::parse("foo storage"),
             Ok(ParameterSpecifier {
-                span: "foo storag",
+                span: "foo storage",
                 ty: TypeSpecifier::parse("foo").unwrap(),
                 storage: None,
                 indexed: false,
-                name: Some("storag")
+                name: Some("storage")
             })
         );
         assert_eq!(
@@ -299,6 +299,6 @@ mod tests {
                 name: "bar".into()
             })
         );
-        ParameterSpecifier::parse("foo storag bar").unwrap_err();
+        ParameterSpecifier::parse("foo storage bar").unwrap_err();
     }
 }
