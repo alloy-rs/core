@@ -156,7 +156,7 @@ serde = [
     "indexmap?/serde",
     "rand?/serde",
 ]
-sqlx = ["sqlx/mysql", "sqlx/sqlite", "sqlx/postgres"]
+sqlx = ["std", "sqlx/mysql", "sqlx/sqlite", "sqlx/postgres"]
 
 allocative = ["dep:allocative"]
 arbitrary = [
