@@ -6,7 +6,6 @@
 use crate::Address;
 use core::str::FromStr;
 
-#[cfg(feature = "sqlx")]
 mod sqlx_impl {
     use super::*;
 
