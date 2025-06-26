@@ -97,6 +97,9 @@ postgres-types = { workspace = true, optional = true }
 # diesel
 diesel = { workspace = true, optional = true }
 
+# sqlx support (optional, for DB integration)
+sqlx = { workspace = true, optional = true }
+
 [dev-dependencies]
 bcs.workspace = true
 bincode.workspace = true
@@ -153,6 +156,7 @@ serde = [
     "indexmap?/serde",
     "rand?/serde",
 ]
+sqlx = ["sqlx/mysql", "sqlx/sqlite", "sqlx/postgres"]
 
 allocative = ["dep:allocative"]
 arbitrary = [

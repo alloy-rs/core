@@ -22,6 +22,9 @@ pub mod postgres;
 #[cfg(feature = "diesel")]
 pub mod diesel;
 
+#[cfg(feature = "sqlx")]
+pub mod sqlx;
+
 pub mod aliases;
 #[doc(no_inline)]
 pub use aliases::{
