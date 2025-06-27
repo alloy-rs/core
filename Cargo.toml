@@ -103,4 +103,4 @@ ruint-macro = { version = "1", default-features = false }
 winnow = { version = "0.7", default-features = false, features = ["alloc"] }
 
 # sqlx support (optional, for DB integration)
-sqlx = { version = "0.8", default-features = false}
+sqlx-core = { version = "0.8"}
