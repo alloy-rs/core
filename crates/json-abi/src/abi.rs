@@ -3,7 +3,7 @@ use crate::{
     to_sol::{SolPrinter, ToSolConfig},
 };
 use alloc::{collections::btree_map, string::String, vec::Vec};
-use alloy_primitives::Bytes;
+use alloy_primitives::{Bytes, Selector};
 use btree_map::BTreeMap;
 use core::{fmt, iter, iter::Flatten};
 use serde::{
@@ -292,6 +292,12 @@ impl JsonAbi {
     #[inline]
     pub fn functions_mut(&mut self) -> FlattenValuesMut<'_, Function> {
         self.functions.values_mut().flatten()
+    }
+
+    /// Returns the _first_ [`Function`] with a matching selector.
+    #[inline]
+    pub fn function_by_selector(&self, selector: Selector) -> Option<&Function> {
+        self.functions().find(|func| func.selector() == selector)
     }
 
     /// Returns an iterator over immutable references to the events.
