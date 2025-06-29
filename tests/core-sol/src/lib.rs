@@ -2,21 +2,16 @@
 //!
 //! This has to be in a separate crate where `alloy_sol_types` is not provided as a dependency.
 
-// #![no_std]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(docsrs, allow(unexpected_cfgs))]
+
+use alloy_core::{primitives::wrap_fixed_bytes, sol};
 extern crate alloc;
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-use alloy_core::primitives::wrap_fixed_bytes;
-
-#[cfg(any(feature = "std", feature = "alloc"))]
 wrap_fixed_bytes! {
     struct MyFixedBytes<32>;
 }
-
-use alloy_core::sol;
 
 type _MyUint = sol!(uint32);
 type _MyTuple = sol!((_MyUint, bytes, bool, string, bytes32, (address, uint64)));

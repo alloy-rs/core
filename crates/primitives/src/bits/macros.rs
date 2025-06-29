@@ -11,6 +11,8 @@
 /// # Examples
 ///
 /// ```
+/// #![cfg_attr(not(feature = "std"), no_std)]
+/// extern crate alloc;
 /// use alloy_primitives::wrap_fixed_bytes;
 ///
 /// // These hashes are the same length, and have the same functionality, but
@@ -864,10 +866,7 @@ macro_rules! impl_diesel {
 macro_rules! impl_sqlx {
     ($t:ty, $n:literal) => {
         const _: () = {
-            #[cfg(not(feature = "std"))]
             use alloc::vec::Vec;
-            #[cfg(feature = "std")]
-            use std::vec::Vec;
             use $crate::private::sqlx_core::{
                 database::Database,
                 decode::Decode,

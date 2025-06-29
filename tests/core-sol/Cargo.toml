@@ -10,11 +10,6 @@ license.workspace = true
 repository.workspace = true
 exclude.workspace = true
 
-[features]
-alloc = []
-default = ["alloc"]
-std = ["alloc"]
-
 [dependencies]
 alloy-core = { workspace = true, features = ["sol-types", "json", "map"] }
 derive_more = { version = "2", default-features = false } # https://github.com/alloy-rs/core/pull/918#issuecomment-2743739367

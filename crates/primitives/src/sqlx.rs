@@ -5,7 +5,7 @@
 
 #![cfg_attr(docsrs, doc(cfg(feature = "sqlx")))]
 
-use std::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 
 use sqlx_core::{
     database::Database,
