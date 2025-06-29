@@ -156,7 +156,7 @@ serde = [
     "indexmap?/serde",
     "rand?/serde",
 ]
-sqlx = ["dep:sqlx-core"]
+
 
 allocative = ["dep:allocative"]
 arbitrary = [
@@ -171,6 +171,7 @@ arbitrary = [
 ]
 postgres = ["std", "dep:postgres-types", "ruint/postgres"]
 diesel = ["std", "dep:diesel", "ruint/diesel"]
+sqlx = ["std","dep:sqlx-core","ruint/sqlx"]
 
 # `const-hex` compatibility feature for `hex`.
 # Should not be needed most of the time.

@@ -129,4 +129,7 @@ pub mod private {
 
     #[cfg(feature = "diesel")]
     pub use diesel;
+
+    #[cfg(feature = "sqlx")]
+    pub use sqlx_core;
 }

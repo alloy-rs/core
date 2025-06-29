@@ -1,13 +1,11 @@
 //! Support for the [`sqlx`](https://crates.io/crates/sqlx) crate.
 //!
-//! Currently only encodes to/from a big-endian byte array.
-//!
-//! **Note:** The database column type must be `BINARY(20)` (MySQL/SQLite), `BYTEA` (Postgres), or
-//! equivalent binary type for correct Address roundtrip.
+//! Supports big-endian binary serialization via sqlx binary types (e.g., BINARY(N), BYTEA, BLOB).
+//! Similar to [`ruint`'s implementation](https://github.com/recmo/uint/blob/main/src/support/sqlx.rs)
 
 #![cfg_attr(docsrs, doc(cfg(feature = "sqlx")))]
 
-use alloc::{boxed::Box, vec::Vec};
+use std::{boxed::Box, vec::Vec};
 
 use sqlx_core::{
     database::Database,
@@ -17,10 +15,11 @@ use sqlx_core::{
     types::Type,
 };
 
-use crate::Address;
+use crate::FixedBytes;
 
-impl<DB: Database> Type<DB> for Address
+impl<const BYTES: usize, DB> Type<DB> for FixedBytes<BYTES>
 where
+    DB: Database,
     Vec<u8>: Type<DB>,
 {
     fn type_info() -> DB::TypeInfo {
@@ -32,20 +31,22 @@ where
     }
 }
 
-impl<'a, DB: Database> Encode<'a, DB> for Address
+impl<'a, const BYTES: usize, DB> Encode<'a, DB> for FixedBytes<BYTES>
 where
+    DB: Database,
     Vec<u8>: Encode<'a, DB>,
 {
     fn encode_by_ref(
         &self,
         buf: &mut <DB as Database>::ArgumentBuffer<'a>,
     ) -> Result<IsNull, BoxDynError> {
-        Vec::from(self.as_slice()).encode_by_ref(buf)
+        self.as_slice().to_vec().encode_by_ref(buf)
     }
 }
 
-impl<'a, DB: Database> Decode<'a, DB> for Address
+impl<'a, const BYTES: usize, DB> Decode<'a, DB> for FixedBytes<BYTES>
 where
+    DB: Database,
     Vec<u8>: Decode<'a, DB>,
 {
     fn decode(value: <DB as Database>::ValueRef<'a>) -> Result<Self, BoxDynError> {
