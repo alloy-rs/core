@@ -11,8 +11,6 @@
 /// # Examples
 ///
 /// ```
-/// #![cfg_attr(not(feature = "std"), no_std)]
-/// extern crate alloc;
 /// use alloy_primitives::wrap_fixed_bytes;
 ///
 /// // These hashes are the same length, and have the same functionality, but
@@ -866,13 +864,15 @@ macro_rules! impl_diesel {
 macro_rules! impl_sqlx {
     ($t:ty, $n:literal) => {
         const _: () = {
-            use alloc::vec::Vec;
-            use $crate::private::sqlx_core::{
-                database::Database,
-                decode::Decode,
-                encode::{Encode, IsNull},
-                error::BoxDynError,
-                types::Type,
+            use $crate::private::{
+                Vec,
+                sqlx_core::{
+                    database::Database,
+                    decode::Decode,
+                    encode::{Encode, IsNull},
+                    error::BoxDynError,
+                    types::Type,
+                },
             };
 
             impl<DB> Type<DB> for $t

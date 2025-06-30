@@ -157,7 +157,6 @@ serde = [
     "rand?/serde",
 ]
 
-
 allocative = ["dep:allocative"]
 arbitrary = [
     "std",

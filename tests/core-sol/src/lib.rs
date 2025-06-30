@@ -7,7 +7,6 @@
 #![cfg_attr(docsrs, allow(unexpected_cfgs))]
 
 use alloy_core::{primitives::wrap_fixed_bytes, sol};
-extern crate alloc;
 
 wrap_fixed_bytes! {
     struct MyFixedBytes<32>;
