@@ -558,6 +558,23 @@ impl DynSolType {
         self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_sequence_populate)
     }
 
+    /// Returns `true` if this type is dynamically sized type.
+    pub fn is_dynamic(&self) -> bool {
+        match self {
+            Self::Address
+            | Self::Function
+            | Self::Bool
+            | Self::Uint(..)
+            | Self::Int(..)
+            | Self::FixedBytes(..) => false,
+            Self::Bytes | Self::String | Self::Array(_) => true,
+            Self::Tuple(tuple) => tuple.iter().any(Self::is_dynamic),
+            Self::FixedArray(inner, _) => inner.is_dynamic(),
+            #[cfg(feature = "eip712")]
+            Self::CustomStruct { tuple, .. } => tuple.iter().any(Self::is_dynamic),
+        }
+    }
+
     /// Calculate the minimum number of ABI words necessary to encode this
     /// type.
     pub fn minimum_words(&self) -> usize {
