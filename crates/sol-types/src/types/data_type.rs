@@ -159,7 +159,7 @@ where
 }
 
 /// FixedBytes - `bytesX`
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct FixedBytes<const N: usize>;
 
 impl<T: Borrow<[u8; N]>, const N: usize> SolTypeValue<FixedBytes<N>> for T
