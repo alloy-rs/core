@@ -1,5 +1,3 @@
-use crate::Sign;
-
 use super::Signed;
 use alloc::string::String;
 use core::{fmt, str};
@@ -14,12 +12,7 @@ impl<const BITS: usize, const LIMBS: usize> Serialize for Signed<BITS, LIMBS> {
         if serializer.is_human_readable() {
             serializer.collect_str(self)
         } else {
-            let (sign, abs) = self.into_sign_and_abs();
-            let le_bytes = abs.as_le_bytes_trimmed();
-            let mut buf = [0u8; 1 + 32];
-            buf[0] = sign.is_positive() as u8;
-            buf[1..1 + le_bytes.len()].copy_from_slice(&le_bytes);
-            serializer.serialize_bytes(&buf[0..le_bytes.len() + 1])
+            self.into_raw().serialize(serializer)
         }
     }
 }
@@ -65,28 +58,19 @@ fn deserialize<'de, const BITS: usize, const LIMBS: usize, D: Deserializer<'de>>
         fn visit_string<E: de::Error>(self, v: String) -> Result<Self::Value, E> {
             self.visit_str(&v)
         }
-        fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            let sign = if v[0] == 1 { Sign::Positive } else { Sign::Negative };
-            let u256 = Uint::<BITS, LIMBS>::try_from_le_slice(&v[1..])
-                .ok_or(de::Error::custom("Expected a valid unsigned integer"))?;
-            Ok(Signed::overflowing_from_sign_and_abs(sign, u256).0)
-        }
     }
+
     if deserializer.is_human_readable() {
         deserializer.deserialize_any(SignedVisitor)
     } else {
-        deserializer.deserialize_bytes(SignedVisitor)
+        Uint::<BITS, LIMBS>::deserialize(deserializer).map(Signed::from_raw)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use core::str::FromStr;
-
     use crate::I256;
+    use core::str::FromStr;
 
     const TEST_VALS: [&str; 5] = [
         "12345681238128738123",
