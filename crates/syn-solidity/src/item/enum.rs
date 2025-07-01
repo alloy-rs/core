@@ -1,13 +1,12 @@
-use crate::{utils::DebugPunctuated, SolIdent, Spanned, Type};
+use crate::{SolIdent, Spanned, Type, utils::DebugPunctuated};
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
 use std::{fmt, num::NonZeroU16};
 use syn::{
-    braced,
+    Attribute, Result, Token, braced,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Brace,
-    Attribute, Result, Token,
 };
 
 /// An enum definition: `enum Foo { A, B, C }`.

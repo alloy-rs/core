@@ -1,11 +1,10 @@
-use crate::{kw, ParameterList, SolIdent, Spanned, Type};
+use crate::{ParameterList, SolIdent, Spanned, Type, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parenthesized,
+    Attribute, Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     token::Paren,
-    Attribute, Result, Token,
 };
 
 /// An error definition: `error Foo(uint256 a, uint256 b);`.

@@ -1,5 +1,5 @@
 use super::*;
-use crate::{Address, FixedBytes, Selector, B256};
+use crate::{Address, B256, FixedBytes, Selector};
 use cfg_if::cfg_if;
 use core::{
     fmt,

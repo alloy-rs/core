@@ -1,8 +1,8 @@
 #![allow(clippy::assertions_on_constants)]
 
-use alloy_primitives::{hex, keccak256, Bytes, Log, B256, U256};
+use alloy_primitives::{B256, Bytes, Log, U256, hex, keccak256};
 use alloy_rlp::{Decodable, Encodable};
-use alloy_sol_types::{abi::token::WordToken, sol, SolEvent};
+use alloy_sol_types::{SolEvent, abi::token::WordToken, sol};
 
 sol! {
     #[derive(Debug, Default, PartialEq)]
@@ -81,8 +81,10 @@ fn event_rlp_roundtrip() {
     assert_eq!(rlp_decoded, rlpable_log.reserialize());
 
     let decoded_log = MyEvent::decode_log(&rlp_decoded).unwrap();
+    let validated_decoded_log = MyEvent::decode_log_validate(&rlp_decoded).unwrap();
 
-    assert_eq!(decoded_log, rlpable_log)
+    assert_eq!(decoded_log, rlpable_log);
+    assert_eq!(validated_decoded_log, rlpable_log);
 }
 
 fn assert_event_signature<T: SolEvent>(expected: &str) {

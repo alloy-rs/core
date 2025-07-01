@@ -1,7 +1,7 @@
 //! [`ItemEnum`] expansion.
 
 use super::ExpCtxt;
-use alloy_sol_macro_input::{derives_mapped, mk_doc, ContainsSolAttrs};
+use alloy_sol_macro_input::{ContainsSolAttrs, derives_mapped, mk_doc};
 use ast::{ItemEnum, Spanned};
 use proc_macro2::TokenStream;
 use quote::quote;

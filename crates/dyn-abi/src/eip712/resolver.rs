@@ -1,6 +1,6 @@
 use crate::{
-    eip712::typed_data::Eip712Types, eip712_parser::EncodeType, DynSolType, DynSolValue, Error,
-    Result, Specifier,
+    DynSolType, DynSolValue, Error, Result, Specifier, eip712::typed_data::Eip712Types,
+    eip712_parser::EncodeType,
 };
 use alloc::{
     borrow::ToOwned,
@@ -8,7 +8,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::{keccak256, B256};
+use alloy_primitives::{B256, keccak256};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
 use parser::{RootType, TypeSpecifier, TypeStem};
@@ -46,7 +46,7 @@ impl PropertyDef {
         N: Into<String>,
     {
         let type_name = type_name.into();
-        TypeSpecifier::parse(type_name.as_str())?;
+        TypeSpecifier::parse_eip712(type_name.as_str())?;
         Ok(Self::new_unchecked(type_name, name))
     }
 
@@ -115,7 +115,7 @@ impl TypeDef {
     #[inline]
     pub fn new<S: Into<String>>(type_name: S, props: Vec<PropertyDef>) -> Result<Self> {
         let type_name = type_name.into();
-        RootType::parse(type_name.as_str())?;
+        RootType::parse_eip712(type_name.as_str())?;
         Ok(Self { type_name, props })
     }
 
@@ -366,7 +366,7 @@ impl Resolver {
         if self.detect_cycle(type_name, &mut context) {
             return Err(Error::circular_dependency(type_name));
         }
-        let root_type = type_name.try_into()?;
+        let root_type = RootType::parse_eip712(type_name)?;
         let mut resolution = vec![];
         self.linearize_into(&mut resolution, root_type)?;
         Ok(resolution)
@@ -378,7 +378,7 @@ impl Resolver {
         if self.detect_cycle(type_name, &mut Default::default()) {
             return Err(Error::circular_dependency(type_name));
         }
-        self.unchecked_resolve(&type_name.try_into()?)
+        self.unchecked_resolve(&TypeSpecifier::parse_eip712(type_name)?)
     }
 
     /// Resolve a type into a [`crate::DynSolType`] without checking for cycles.
@@ -410,7 +410,7 @@ impl Resolver {
         let prop_names: Vec<_> = ty.prop_names().map(str::to_string).collect();
         let tuple: Vec<_> = ty
             .prop_types()
-            .map(|ty| self.unchecked_resolve(&ty.try_into()?))
+            .map(|ty| self.unchecked_resolve(&TypeSpecifier::parse_eip712(ty)?))
             .collect::<Result<_, _>>()?;
 
         Ok(DynSolType::CustomStruct { name: ty.type_name.clone(), prop_names, tuple })
@@ -508,11 +508,7 @@ impl Resolver {
             .collect();
 
         self.nodes.iter().filter_map(move |(node, def)| {
-            if !dependent_types.contains(node.as_str()) {
-                Some(def)
-            } else {
-                None
-            }
+            if !dependent_types.contains(node.as_str()) { Some(def) } else { None }
         })
     }
 }
@@ -522,6 +518,7 @@ mod tests {
     use super::*;
     use alloc::boxed::Box;
     use alloy_sol_types::sol;
+    use serde_json::json;
 
     #[test]
     fn it_detects_cycles() {
@@ -686,5 +683,38 @@ mod tests {
             graph.non_dependent_types().map(|t| &t.type_name).collect::<Vec<_>>(),
             vec!["Transaction"]
         );
+    }
+
+    #[test]
+    fn test_deserialize_resolver_with_colon() {
+        // Test case from https://github.com/foundry-rs/foundry/issues/10765
+        let json = json!({
+            "EIP712Domain": [
+                {
+                    "name": "name",
+                    "type": "string"
+                },
+                {
+                    "name": "version",
+                    "type": "string"
+                },
+                {
+                    "name": "chainId",
+                    "type": "uint256"
+                },
+                {
+                    "name": "verifyingContract",
+                    "type": "address"
+                }
+            ],
+            "Test:Message": [
+                {
+                    "name": "content",
+                    "type": "string"
+                }
+            ]
+        });
+
+        let _result: Resolver = serde_json::from_value(json).unwrap();
     }
 }

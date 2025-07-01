@@ -1,7 +1,7 @@
 use crate::{
+    Result, SolType, Word,
     abi::token::{PackedSeqToken, Token, TokenSeq, WordToken},
     types::interface::RevertReason,
-    Result, SolType, Word,
 };
 use alloc::{string::String, vec::Vec};
 use alloy_primitives::U256;
@@ -195,11 +195,7 @@ impl Revert {
     /// Returns the revert reason string, or `"<empty>"` if empty.
     #[inline]
     pub fn reason(&self) -> &str {
-        if self.reason.is_empty() {
-            "<empty>"
-        } else {
-            &self.reason
-        }
+        if self.reason.is_empty() { "<empty>" } else { &self.reason }
     }
 }
 
@@ -498,7 +494,9 @@ mod tests {
         // Solc 0.5.X/0.5.16 adds a random 0x80 byte which makes reserialization check fail.
         // https://github.com/Uniswap/v2-core/blob/ee547b17853e71ed4e0101ccfd52e70d5acded58/contracts/UniswapV2Pair.sol#L178
         // https://github.com/paradigmxyz/evm-inspectors/pull/12
-        let bytes = hex!("08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000024556e697377617056323a20494e53554646494349454e545f494e5055545f414d4f554e5400000000000000000000000000000000000000000000000000000080");
+        let bytes = hex!(
+            "08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000024556e697377617056323a20494e53554646494349454e545f494e5055545f414d4f554e5400000000000000000000000000000000000000000000000000000080"
+        );
 
         let decoded = Revert::abi_decode(&bytes).unwrap();
         assert_eq!(decoded.reason, "UniswapV2: INSUFFICIENT_INPUT_AMOUNT");

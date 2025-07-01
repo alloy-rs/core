@@ -208,7 +208,7 @@ impl DynSolValue {
                     .iter()
                     .map(Self::as_type)
                     .collect::<Option<Vec<_>>>()
-                    .map(DynSolType::Tuple)
+                    .map(DynSolType::Tuple);
             }
             Self::Array(inner) => DynSolType::Array(Box::new(Self::as_type(inner.first()?)?)),
             Self::FixedArray(inner) => {
@@ -707,7 +707,7 @@ impl DynSolValue {
                     // Array elements are left-padded to 32 bytes.
                     if let Some(padding_needed) = 32usize.checked_sub(val.abi_packed_encoded_size())
                     {
-                        buf.extend(core::iter::repeat(0).take(padding_needed));
+                        buf.extend(core::iter::repeat_n(0, padding_needed));
                     }
                     val.abi_encode_packed_to(buf);
                 }

@@ -5,10 +5,10 @@ use std::{
     ops::{Deref, DerefMut},
 };
 use syn::{
+    Result, Token,
     ext::IdentExt,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Result, Token,
 };
 
 /// Create a [`SolPath`] from a list of identifiers.

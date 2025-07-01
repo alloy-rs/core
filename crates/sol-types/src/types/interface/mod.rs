@@ -1,4 +1,4 @@
-use crate::{alloc::string::ToString, Error, Panic, Result, Revert, SolError};
+use crate::{Error, Panic, Result, Revert, SolError, alloc::string::ToString};
 use alloc::{string::String, vec::Vec};
 use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
 
@@ -341,7 +341,7 @@ impl<T> ContractError<T> {
     /// Returns a mutable reference to the inner custom error if `self`
     /// matches [`CustomError`](Self::CustomError).
     #[inline]
-    pub fn as_custom_error_mut(&mut self) -> Option<&mut T> {
+    pub const fn as_custom_error_mut(&mut self) -> Option<&mut T> {
         match self {
             Self::CustomError(inner) => Some(inner),
             _ => None,
@@ -367,7 +367,7 @@ impl<T> ContractError<T> {
     /// Returns a mutable reference to the inner [`Revert`] if `self` matches
     /// [`Revert`](Self::Revert).
     #[inline]
-    pub fn as_revert_mut(&mut self) -> Option<&mut Revert> {
+    pub const fn as_revert_mut(&mut self) -> Option<&mut Revert> {
         match self {
             Self::Revert(inner) => Some(inner),
             _ => None,
@@ -393,7 +393,7 @@ impl<T> ContractError<T> {
     /// Returns a mutable reference to the inner [`Panic`] if `self` matches
     /// [`Panic`](Self::Panic).
     #[inline]
-    pub fn as_panic_mut(&mut self) -> Option<&mut Panic> {
+    pub const fn as_panic_mut(&mut self) -> Option<&mut Panic> {
         match self {
             Self::Panic(inner) => Some(inner),
             _ => None,
@@ -587,7 +587,7 @@ impl<T: SolInterface> FusedIterator for Selectors<T> {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::{keccak256, U256};
+    use alloy_primitives::{U256, keccak256};
 
     fn sel(s: &str) -> [u8; 4] {
         keccak256(s)[..4].try_into().unwrap()

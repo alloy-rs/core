@@ -1,14 +1,14 @@
-use crate::{kw, Modifier, Mutability, Override, SolPath, Spanned, VariableAttribute, Visibility};
+use crate::{Modifier, Mutability, Override, SolPath, Spanned, VariableAttribute, Visibility, kw};
 use proc_macro2::Span;
 use std::{
     fmt,
     ops::{Deref, DerefMut},
 };
 use syn::{
+    Error, Ident, Result, Token,
     ext::IdentExt,
     parse::{Parse, ParseStream},
     token::Brace,
-    Error, Ident, Result, Token,
 };
 
 /// A list of unique function attributes. Used in

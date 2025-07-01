@@ -3,7 +3,7 @@
 use alloy_dyn_abi::{DynSolType, Specifier};
 use alloy_sol_type_parser::TypeSpecifier;
 use criterion::{
-    criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
+    BenchmarkGroup, Criterion, criterion_group, criterion_main, measurement::WallTime,
 };
 use rand::seq::IndexedRandom;
 use std::{hint::black_box, time::Duration};
@@ -13,7 +13,7 @@ const KEYWORDS: &[&str] =
 const COMPLEX: &[&str] = &[
     "((uint104,bytes,bytes8,bytes7,address,bool,address,int256,int32,bytes1,uint56,int136),uint80,uint104,address,bool,bytes14,int16,address,string,uint176,uint72,(uint120,uint192,uint256,int232,bool,bool,bool,bytes5,int56,address,uint224,int248,bytes10,int48,int8),string,string,bool,bool)",
     "(address,string,(bytes,int48,bytes30,bool,address,bytes30,int48,address,bytes17,bool,uint32),bool,address,bytes28,bytes25,uint136)",
-    "(uint168,bytes21,address,(bytes,bool,string,address,bool,string,bytes,uint232,int128,int64,uint96,bytes7,int136),bool,uint200[5],bool,bytes,uint240,address,address,bytes15,bytes)"
+    "(uint168,bytes21,address,(bytes,bool,string,address,bool,string,bytes,uint232,int128,int64,uint96,bytes7,int136),bool,uint200[5],bool,bytes,uint240,address,address,bytes15,bytes)",
 ];
 
 fn parse(c: &mut Criterion) {

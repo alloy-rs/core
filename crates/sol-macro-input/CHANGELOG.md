@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/alloy-rs/core/releases/tag/v1.2.0) - 2025-06-04
+
+### Dependencies
+
+- Bump to edition 2024 ([#960](https://github.com/alloy-rs/core/issues/960))
+
+### Miscellaneous Tasks
+
+- Release 1.2.0
+
+## [1.1.3](https://github.com/alloy-rs/core/releases/tag/v1.1.3) - 2025-06-04
+
+### Miscellaneous Tasks
+
+- Release 1.1.3
+
+## [1.1.2](https://github.com/alloy-rs/core/releases/tag/v1.1.2) - 2025-05-20
+
+### Miscellaneous Tasks
+
+- Release 1.1.2
+
 ## [1.1.1](https://github.com/alloy-rs/core/releases/tag/v1.1.1) - 2025-05-19
 
 ### Miscellaneous Tasks
@@ -200,12 +222,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.7](https://github.com/alloy-rs/core/releases/tag/v0.7.7) - 2024-07-08
 
-### Bug Fixes
-
-- [sol-macro] Allow deriving `Default` on contracts ([#645](https://github.com/alloy-rs/core/issues/645))
-- [sol-macro] Json feature ([#629](https://github.com/alloy-rs/core/issues/629))
-- [sol-macro] Don't double attributes in JSON input ([#583](https://github.com/alloy-rs/core/issues/583))
-
 ### Documentation
 
 - Add per-crate changelogs ([#669](https://github.com/alloy-rs/core/issues/669))
@@ -216,16 +232,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
 - Fix unnameable-types ([#675](https://github.com/alloy-rs/core/issues/675))
 - [sol-types] Exit early if Abigen input is invalid
-- [sol-macro] Add suggestion to remove name ([#647](https://github.com/alloy-rs/core/issues/647))
-
-### Refactor
-
-- Move `expand` from `sol-macro` to its own crate ([#626](https://github.com/alloy-rs/core/issues/626))
-- Break SolInput to its own crate ([#578](https://github.com/alloy-rs/core/issues/578))
 
 ### Styling
 
 - Sort derives ([#662](https://github.com/alloy-rs/core/issues/662))
+
+## [0.7.5](https://github.com/alloy-rs/core/releases/tag/v0.7.5) - 2024-06-04
+
+### Bug Fixes
+
+- [sol-macro] Allow deriving `Default` on contracts ([#645](https://github.com/alloy-rs/core/issues/645))
+
+### Miscellaneous Tasks
+
+- [sol-macro] Add suggestion to remove name ([#647](https://github.com/alloy-rs/core/issues/647))
+
+## [0.7.4](https://github.com/alloy-rs/core/releases/tag/v0.7.4) - 2024-05-14
+
+### Bug Fixes
+
+- [sol-macro] Json feature ([#629](https://github.com/alloy-rs/core/issues/629))
+
+## [0.7.3](https://github.com/alloy-rs/core/releases/tag/v0.7.3) - 2024-05-14
+
+### Refactor
+
+- Move `expand` from `sol-macro` to its own crate ([#626](https://github.com/alloy-rs/core/issues/626))
+
+## [0.7.0](https://github.com/alloy-rs/core/releases/tag/v0.7.0) - 2024-03-30
+
+### Bug Fixes
+
+- [sol-macro] Don't double attributes in JSON input ([#583](https://github.com/alloy-rs/core/issues/583))
+
+### Refactor
+
+- Break SolInput to its own crate ([#578](https://github.com/alloy-rs/core/issues/578))
 
 [`dyn-abi`]: https://crates.io/crates/alloy-dyn-abi
 [dyn-abi]: https://crates.io/crates/alloy-dyn-abi

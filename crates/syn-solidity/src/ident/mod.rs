@@ -3,9 +3,9 @@ use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use std::fmt;
 use syn::{
+    Result, Token,
     ext::IdentExt,
     parse::{Parse, ParseStream},
-    Result, Token,
 };
 
 mod path;
@@ -118,11 +118,7 @@ impl SolIdent {
             }
         }
 
-        if new_raw {
-            Self(Ident::new_raw(s, span))
-        } else {
-            Self(Ident::new(s, span))
-        }
+        if new_raw { Self(Ident::new_raw(s, span)) } else { Self(Ident::new(s, span)) }
     }
 
     /// Returns the identifier as a string, without the `r#` prefix if present.
@@ -147,11 +143,7 @@ impl SolIdent {
     }
 
     pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
-        if Self::peek_any(input) {
-            input.parse().map(Some)
-        } else {
-            Ok(None)
-        }
+        if Self::peek_any(input) { input.parse().map(Some) } else { Ok(None) }
     }
 }
 
@@ -223,9 +215,11 @@ mod tests {
 
     #[test]
     fn ident_dollar() {
-        assert!(syn::parse_str::<SolIdent>("$hello")
-            .unwrap_err()
-            .to_string()
-            .contains("Solidity identifiers starting with `$` are unsupported."));
+        assert!(
+            syn::parse_str::<SolIdent>("$hello")
+                .unwrap_err()
+                .to_string()
+                .contains("Solidity identifiers starting with `$` are unsupported.")
+        );
     }
 }

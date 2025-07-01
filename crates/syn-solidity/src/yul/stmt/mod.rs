@@ -1,10 +1,10 @@
-use crate::{kw, Spanned, YulFnCall, YulFunctionDef};
+use crate::{Spanned, YulFnCall, YulFunctionDef, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
+    Token,
     parse::{Parse, ParseStream, Result},
     token::{Brace, Paren},
-    Token,
 };
 
 mod r#if;

@@ -233,6 +233,7 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_arbitrary!($name, $n);
         $crate::impl_rand!($name);
         $crate::impl_diesel!($name, $n);
+        $crate::impl_sqlx!($name, $n);
 
         impl $name {
             /// Array of Zero bytes.
@@ -751,6 +752,7 @@ macro_rules! impl_diesel {
     ($t:ty, $n:literal) => {
         const _: () = {
             use $crate::private::diesel::{
+                Queryable,
                 backend::Backend,
                 deserialize::{FromSql, Result as DeserResult},
                 expression::AsExpression,
@@ -758,7 +760,6 @@ macro_rules! impl_diesel {
                 query_builder::bind_collector::RawBytesBindCollector,
                 serialize::{Output, Result as SerResult, ToSql},
                 sql_types::{Binary, Nullable, SingleValue},
-                Queryable,
             };
 
             impl<Db> ToSql<Binary, Db> for $t
@@ -857,6 +858,70 @@ macro_rules! impl_diesel {
     ($t:ty, $n:literal) => {};
 }
 
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "sqlx")]
+macro_rules! impl_sqlx {
+    ($t:ty, $n:literal) => {
+        const _: () = {
+            use $crate::private::{
+                Vec,
+                sqlx_core::{
+                    database::Database,
+                    decode::Decode,
+                    encode::{Encode, IsNull},
+                    error::BoxDynError,
+                    types::Type,
+                },
+            };
+
+            impl<DB> Type<DB> for $t
+            where
+                DB: Database,
+                Vec<u8>: Type<DB>,
+            {
+                fn type_info() -> <DB as Database>::TypeInfo {
+                    <$crate::FixedBytes<$n> as Type<DB>>::type_info()
+                }
+
+                fn compatible(ty: &<DB as Database>::TypeInfo) -> bool {
+                    <$crate::FixedBytes<$n> as Type<DB>>::compatible(ty)
+                }
+            }
+
+            impl<'a, DB> Encode<'a, DB> for $t
+            where
+                DB: Database,
+                Vec<u8>: Encode<'a, DB>,
+            {
+                fn encode_by_ref(
+                    &self,
+                    buf: &mut <DB as Database>::ArgumentBuffer<'a>,
+                ) -> Result<IsNull, BoxDynError> {
+                    <$crate::FixedBytes<$n> as Encode<DB>>::encode_by_ref(&self.0, buf)
+                }
+            }
+
+            impl<'a, DB> Decode<'a, DB> for $t
+            where
+                DB: Database,
+                Vec<u8>: Decode<'a, DB>,
+            {
+                fn decode(value: <DB as Database>::ValueRef<'a>) -> Result<Self, BoxDynError> {
+                    <$crate::FixedBytes<$n> as Decode<DB>>::decode(value).map(Self)
+                }
+            }
+        };
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "sqlx"))]
+macro_rules! impl_sqlx {
+    ($t:ty, $n:literal) => {};
+}
+
 macro_rules! fixed_bytes_macros {
     ($d:tt $($(#[$attr:meta])* macro $name:ident($ty:ident $($rest:tt)*);)*) => {$(
         /// Converts a sequence of string literals containing hex-encoded data
@@ -920,7 +985,7 @@ fixed_bytes_macros! { $
 /// # Examples
 ///
 /// ```
-/// use alloy_primitives::{bytes, Bytes};
+/// use alloy_primitives::{Bytes, bytes};
 ///
 /// static MY_BYTES: Bytes = bytes!("0x0123" "0xabcd");
 /// assert_eq!(MY_BYTES, Bytes::from(&[0x01, 0x23, 0xab, 0xcd]));
@@ -946,7 +1011,7 @@ macro_rules! bytes {
 
 #[cfg(test)]
 mod tests {
-    use crate::{hex, Address, Bytes, FixedBytes};
+    use crate::{Address, Bytes, FixedBytes, hex};
 
     #[test]
     fn bytes_macros() {

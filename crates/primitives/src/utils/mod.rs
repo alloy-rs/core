@@ -10,8 +10,8 @@ use core::{
 
 mod units;
 pub use units::{
-    format_ether, format_units, format_units_with, parse_ether, parse_units, DecimalSeparator,
-    ParseUnits, Unit, UnitsError,
+    DecimalSeparator, ParseUnits, Unit, UnitsError, format_ether, format_units, format_units_with,
+    parse_ether, parse_units,
 };
 
 #[doc(hidden)]
@@ -152,7 +152,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
         cfg_if! {
             if #[cfg(all(feature = "native-keccak", not(any(feature = "sha3-keccak", feature = "tiny-keccak", miri))))] {
                 #[link(wasm_import_module = "vm_hooks")]
-                extern "C" {
+                unsafe extern "C" {
                     /// When targeting VMs with native keccak hooks, the `native-keccak` feature
                     /// can be enabled to import and use the host environment's implementation
                     /// of [`keccak256`] in place of [`sha3`] or [`tiny_keccak`]. This is overridden
@@ -300,7 +300,7 @@ impl Keccak256 {
     /// `output` must point to a buffer that is at least 32-bytes long.
     #[inline]
     pub unsafe fn finalize_into_raw(self, output: *mut u8) {
-        self.finalize_into_array(&mut *output.cast::<[u8; 32]>())
+        self.finalize_into_array(unsafe { &mut *output.cast::<[u8; 32]>() })
     }
 }
 

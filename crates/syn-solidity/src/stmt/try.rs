@@ -1,11 +1,10 @@
-use crate::{kw, Block, Expr, ParameterList, Returns, SolIdent, Spanned};
+use crate::{Block, Expr, ParameterList, Returns, SolIdent, Spanned, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parenthesized,
+    Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     token::Paren,
-    Result, Token,
 };
 
 /// A try statement: `try fooBar(42) catch { ... }`.

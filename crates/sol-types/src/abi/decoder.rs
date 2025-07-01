@@ -9,8 +9,9 @@
 //
 
 use crate::{
-    abi::{token::TokenSeq, Token},
-    utils, Error, Result, Word,
+    Error, Result, Word,
+    abi::{Token, token::TokenSeq},
+    utils,
 };
 use alloc::vec::Vec;
 use alloy_primitives::hex;
@@ -89,11 +90,7 @@ impl<'de> Decoder<'de> {
     /// Returns the number of words in the remaining buffer.
     #[inline]
     pub const fn remaining_words(&self) -> usize {
-        if let Some(remaining) = self.remaining() {
-            remaining / Word::len_bytes()
-        } else {
-            0
-        }
+        if let Some(remaining) = self.remaining() { remaining / Word::len_bytes() } else { 0 }
     }
 
     /// Returns a reference to the remaining bytes in the buffer.
@@ -136,7 +133,7 @@ impl<'de> Decoder<'de> {
 
     /// Advance the offset by `len` bytes.
     #[inline]
-    fn increase_offset(&mut self, len: usize) {
+    const fn increase_offset(&mut self, len: usize) {
         self.offset += len;
     }
 
@@ -215,13 +212,13 @@ impl<'de> Decoder<'de> {
     /// Takes the offset from the child decoder and sets it as the current
     /// offset.
     #[inline]
-    pub fn take_offset_from(&mut self, child: &Self) {
+    pub const fn take_offset_from(&mut self, child: &Self) {
         self.set_offset(child.offset + (self.buf.len() - child.buf.len()));
     }
 
     /// Sets the current offset in the buffer.
     #[inline]
-    pub fn set_offset(&mut self, offset: usize) {
+    pub const fn set_offset(&mut self, offset: usize) {
         self.offset = offset;
     }
 
@@ -262,13 +259,7 @@ pub fn decode<'de, T: Token<'de>>(data: &'de [u8]) -> Result<T> {
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
 pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
-    let decode = const {
-        if T::IS_TUPLE {
-            decode_sequence
-        } else {
-            decode
-        }
-    };
+    let decode = const { if T::IS_TUPLE { decode_sequence } else { decode } };
     decode(data)
 }
 
@@ -289,9 +280,9 @@ pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{sol, sol_data, utils::pad_usize, SolType, SolValue};
+    use crate::{SolType, SolValue, sol, sol_data, utils::pad_usize};
     use alloc::string::ToString;
-    use alloy_primitives::{address, bytes, hex, Address, B256, U256};
+    use alloy_primitives::{Address, B256, U256, address, bytes, hex};
 
     #[test]
     fn dynamic_array_of_dynamic_arrays() {

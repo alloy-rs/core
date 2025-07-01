@@ -1,9 +1,9 @@
-use crate::{kw, Spanned};
+use crate::{Spanned, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    parse::{Lookahead1, Parse, ParseStream},
     LitBool, Result,
+    parse::{Lookahead1, Parse, ParseStream},
 };
 
 mod number;

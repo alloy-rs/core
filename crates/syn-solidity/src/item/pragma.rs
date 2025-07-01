@@ -1,9 +1,9 @@
-use crate::{kw, utils::tts_until_semi, SolIdent, Spanned};
+use crate::{SolIdent, Spanned, kw, utils::tts_until_semi};
 use proc_macro2::{Span, TokenStream};
 use std::fmt;
 use syn::{
-    parse::{Parse, ParseStream},
     Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 /// A pragma directive: `pragma solidity ^0.8.0;`

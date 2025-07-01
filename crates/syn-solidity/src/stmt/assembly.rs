@@ -1,11 +1,11 @@
-use crate::{kw, utils::DebugPunctuated, LitStr, Spanned, YulBlock};
+use crate::{LitStr, Spanned, YulBlock, kw, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
+    Result, Token,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Paren,
-    Result, Token,
 };
 
 /// An assembly block, with optional flags: `assembly "evmasm" { ... }`.
@@ -87,10 +87,6 @@ impl Spanned for AssemblyFlags {
 
 impl AssemblyFlags {
     pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
-        if input.peek(Paren) {
-            input.parse().map(Some)
-        } else {
-            Ok(None)
-        }
+        if input.peek(Paren) { input.parse().map(Some) } else { Ok(None) }
     }
 }

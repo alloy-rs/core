@@ -1,6 +1,6 @@
-use crate::{ident::identifier_parser, is_valid_identifier, new_input, Error, Input, Result};
+use crate::{Error, Input, Result, ident::identifier_parser, is_valid_identifier, new_input};
 use core::fmt;
-use winnow::{combinator::trace, stream::Stream, ModalResult, Parser};
+use winnow::{ModalResult, Parser, combinator::trace, stream::Stream};
 
 /// A root type, with no array suffixes. Corresponds to a single, non-sequence
 /// type. This is the most basic type specifier.
@@ -82,6 +82,40 @@ impl<'a> RootType<'a> {
                 if input.starts_with('.') {
                     let _ = input.next_token();
                     let _ = identifier_parser(input);
+                    return Self("uint8");
+                }
+
+                // Normalize the `u?int` aliases to the canonical `u?int256`
+                match ident {
+                    "uint" => Self("uint256"),
+                    "int" => Self("int256"),
+                    _ => Self(ident),
+                }
+            })
+        })
+        .parse_next(input)
+    }
+
+    /// Parse a root type from a string.
+    #[cfg(feature = "eip712")]
+    #[inline]
+    pub fn parse_eip712(input: &'a str) -> Result<Self> {
+        Self::eip712_parser.parse(new_input(input)).map_err(Error::parser)
+    }
+
+    /// [`winnow`] parser for EIP-712 types.
+    #[cfg(feature = "eip712")]
+    pub(crate) fn eip712_parser(input: &mut Input<'a>) -> ModalResult<Self> {
+        trace("RootType::eip712", |input: &mut Input<'a>| {
+            use crate::ident::eip712_identifier_parser;
+
+            eip712_identifier_parser(input).map(|ident| {
+                // Workaround for enums in library function params or returns.
+                // See: https://github.com/alloy-rs/core/pull/386
+                // See ethabi workaround: https://github.com/rust-ethereum/ethabi/blob/b1710adc18f5b771d2d2519c87248b1ba9430778/ethabi/src/param_type/reader.rs#L162-L167
+                if input.starts_with('.') {
+                    let _ = input.next_token();
+                    let _ = eip712_identifier_parser(input);
                     return Self("uint8");
                 }
 

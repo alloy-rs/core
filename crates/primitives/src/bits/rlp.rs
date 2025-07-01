@@ -1,5 +1,5 @@
 use super::FixedBytes;
-use alloy_rlp::{length_of_length, Decodable, Encodable, MaxEncodedLen, MaxEncodedLenAssoc};
+use alloy_rlp::{Decodable, Encodable, MaxEncodedLen, MaxEncodedLenAssoc, length_of_length};
 
 impl<const N: usize> Decodable for FixedBytes<N> {
     #[inline]

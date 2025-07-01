@@ -3,13 +3,13 @@
 use crate::utils::{self, ExprArray};
 use alloy_sol_macro_input::{ContainsSolAttrs, SolAttrs};
 use ast::{
-    visit_mut, EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters,
-    SolIdent, SolPath, Spanned, Type, VariableDeclaration, Visit, VisitMut,
+    EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath,
+    Spanned, Type, VariableDeclaration, Visit, VisitMut, visit_mut,
 };
 use indexmap::IndexMap;
-use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
 use proc_macro_error2::{abort, emit_error};
-use quote::{format_ident, quote, TokenStreamExt};
+use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
+use quote::{TokenStreamExt, format_ident, quote};
 use std::{
     borrow::Borrow,
     collections::HashMap,
@@ -17,7 +17,7 @@ use std::{
     fmt::Write,
     sync::atomic::{AtomicBool, Ordering},
 };
-use syn::{ext::IdentExt, parse_quote, Attribute, Error, Result};
+use syn::{Attribute, Error, Result, ext::IdentExt, parse_quote};
 
 #[macro_use]
 mod macros;

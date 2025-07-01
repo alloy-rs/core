@@ -1,6 +1,6 @@
 use crate::{DynSolType, DynSolValue, Error, Result};
 use alloc::vec::Vec;
-use alloy_primitives::{IntoLogData, Log, LogData, B256};
+use alloy_primitives::{B256, IntoLogData, Log, LogData};
 
 /// A dynamic ABI event.
 ///
@@ -54,7 +54,7 @@ impl DynSolEvent {
 
         match topics.size_hint() {
             (n, Some(m)) if n == m && n != num_topics => {
-                return Err(Error::TopicLengthMismatch { expected: num_topics, actual: n })
+                return Err(Error::TopicLengthMismatch { expected: num_topics, actual: n });
             }
             _ => {}
         }
@@ -172,7 +172,7 @@ impl IntoLogData for DecodedEvent {
 #[cfg(test)]
 mod test {
     use super::*;
-    use alloy_primitives::{address, b256, bytes, U256};
+    use alloy_primitives::{U256, address, b256, bytes};
 
     #[test]
     fn it_decodes_a_simple_log() {

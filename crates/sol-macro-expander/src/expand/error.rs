@@ -1,7 +1,7 @@
 //! [`ItemError`] expansion.
 
-use super::{expand_fields, expand_from_into_tuples, expand_tokenize, ExpCtxt};
-use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
+use super::{ExpCtxt, expand_fields, expand_from_into_tuples, expand_tokenize};
+use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
 use ast::ItemError;
 use proc_macro2::TokenStream;
 use quote::quote;

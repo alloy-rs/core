@@ -1,10 +1,10 @@
-use crate::{utils::DebugPunctuated, Spanned, WalrusToken, YulExpr, YulPath};
+use crate::{Spanned, WalrusToken, YulExpr, YulPath, utils::DebugPunctuated};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
+    Result, Token,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Result, Token,
 };
 
 /// Yul variable assignment. `x := 0` or `x, y := foo()`.

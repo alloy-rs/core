@@ -1,15 +1,14 @@
 use crate::{
-    new_input,
+    Error, Input, Result, TypeStem, new_input,
     utils::{spanned, str_parser},
-    Error, Input, Result, TypeStem,
 };
 use alloc::vec::Vec;
 use core::num::NonZeroUsize;
 use winnow::{
+    ModalResult, Parser,
     ascii::digit0,
     combinator::{cut_err, delimited, repeat, trace},
     error::{ErrMode, FromExternalError},
-    ModalResult, Parser,
 };
 
 /// Represents a type-name. Consists of an identifier and optional array sizes.
@@ -98,6 +97,38 @@ impl<'a> TypeSpecifier<'a> {
             "TypeSpecifier",
             spanned(|input: &mut Input<'a>| {
                 let stem = TypeStem::parser(input)?;
+                let sizes = if input.starts_with('[') {
+                    repeat(
+                        1..,
+                        delimited(str_parser("["), array_size_parser, cut_err(str_parser("]"))),
+                    )
+                    .parse_next(input)?
+                } else {
+                    Vec::new()
+                };
+                Ok((stem, sizes))
+            }),
+        )
+        .parse_next(input)
+        .map(|(span, (stem, sizes))| Self { span, stem, sizes })
+    }
+
+    /// Parse a type specifier from a string with support for `:` in identifiers.
+    ///
+    /// Extends the standard type parsing.
+    #[cfg(feature = "eip712")]
+    #[inline]
+    pub fn parse_eip712(s: &'a str) -> Result<Self> {
+        Self::eip712_parser.parse(new_input(s)).map_err(Error::parser)
+    }
+
+    /// [`winnow`] parser for EIP-712 types with extended support for `:` in identifiers.
+    #[cfg(feature = "eip712")]
+    pub(crate) fn eip712_parser(input: &mut Input<'a>) -> ModalResult<Self> {
+        trace(
+            "TypeSpecifier::eip712",
+            spanned(|input: &mut Input<'a>| {
+                let stem = TypeStem::eip712_parser(input)?;
                 let sizes = if input.starts_with('[') {
                     repeat(
                         1..,
@@ -309,5 +340,11 @@ mod test {
             TypeSpecifier::parse("MyStruct").unwrap().try_basic_solidity(),
             Err(Error::invalid_type_string("MyStruct"))
         );
+    }
+
+    #[test]
+    fn parse_type_specifier_colon() {
+        // This is an invalid type specifier, as it contains a colon
+        let _spec = TypeSpecifier::parse("Test:Message").unwrap_err();
     }
 }

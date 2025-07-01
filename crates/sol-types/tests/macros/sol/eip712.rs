@@ -1,5 +1,5 @@
 use alloy_primitives::B256;
-use alloy_sol_types::{eip712_domain, sol, SolStruct};
+use alloy_sol_types::{SolStruct, eip712_domain, sol};
 
 #[test]
 fn encode_type_nesting() {
@@ -62,4 +62,31 @@ fn encode_data_nesting() {
         alloy_sol_types::SolStruct::eip712_signing_hash(&mail, &domain),
         "25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775".parse::<B256>().unwrap()
     )
+}
+
+#[test]
+fn test_eip712_interface_prefix() {
+    sol! {
+        interface IParentInterfaceA {
+            struct ParentStructA {
+                uint256 numberA;
+            }
+        }
+
+        interface IParentInterfaceB {
+            struct ParentStructB {
+                uint256 numberB;
+            }
+        }
+
+        struct MyStruct {
+            IParentInterfaceA.ParentStructA structA;
+            IParentInterfaceB.ParentStructB structB;
+        }
+    }
+
+    assert_eq!(
+        MyStruct::eip712_encode_type(),
+        "MyStruct(ParentStructA structA,ParentStructB structB)ParentStructA(uint256 numberA)ParentStructB(uint256 numberB)"
+    );
 }

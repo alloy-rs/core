@@ -1,12 +1,11 @@
-use crate::{kw, LitStr, SolIdent, Spanned};
+use crate::{LitStr, SolIdent, Spanned, kw};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    braced,
+    Result, Token, braced,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Brace,
-    Result, Token,
 };
 
 /// An import directive: `import "foo.sol";`.
@@ -160,11 +159,7 @@ impl Spanned for ImportAlias {
 
 impl ImportAlias {
     pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
-        if input.peek(Token![as]) {
-            input.parse().map(Some)
-        } else {
-            Ok(None)
-        }
+        if input.peek(Token![as]) { input.parse().map(Some) } else { Ok(None) }
     }
 }
 
@@ -200,11 +195,7 @@ impl Parse for ImportPlain {
 impl Spanned for ImportPlain {
     fn span(&self) -> Span {
         let span = self.path.span();
-        if let Some(alias) = &self.alias {
-            span.join(alias.span()).unwrap_or(span)
-        } else {
-            span
-        }
+        if let Some(alias) = &self.alias { span.join(alias.span()).unwrap_or(span) } else { span }
     }
 
     fn set_span(&mut self, span: Span) {

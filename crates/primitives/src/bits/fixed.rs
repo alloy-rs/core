@@ -596,7 +596,7 @@ impl<const N: usize> FixedBytes<N> {
     /// Returns a mutable slice containing the entire array. Equivalent to
     /// `&mut s[..]`.
     #[inline]
-    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+    pub const fn as_mut_slice(&mut self) -> &mut [u8] {
         &mut self.0
     }
 

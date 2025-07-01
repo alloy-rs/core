@@ -1,4 +1,4 @@
-use alloy_sol_types::{sol, SolCall};
+use alloy_sol_types::{SolCall, sol};
 
 sol!(
     MyJsonContract1,

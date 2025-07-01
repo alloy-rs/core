@@ -1,4 +1,4 @@
-use crate::{abi::token::WordToken, sol_data::*, SolType};
+use crate::{SolType, abi::token::WordToken, sol_data::*};
 use alloc::vec::Vec;
 use alloy_primitives::keccak256;
 
@@ -209,5 +209,5 @@ fn encode_topic_bytes(sl: &[u8], out: &mut Vec<u8>) {
     let padding = 32 - sl.len() % 32;
     out.reserve(sl.len() + padding);
     out.extend_from_slice(sl);
-    out.extend(core::iter::repeat(0).take(padding));
+    out.extend(core::iter::repeat_n(0, padding));
 }

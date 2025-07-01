@@ -1,5 +1,5 @@
 use crate::{Error, Input, Result, RootType, TupleSpecifier};
-use winnow::{combinator::trace, ModalResult, Parser};
+use winnow::{ModalResult, Parser, combinator::trace};
 
 /// A stem of a Solidity array type. It is either a root type, or a tuple type.
 ///
@@ -50,6 +50,17 @@ impl<'a> TypeStem<'a> {
             input.try_into().map(Self::Tuple)
         } else {
             input.try_into().map(Self::Root)
+        }
+    }
+
+    /// [`winnow`] parser for EIP-712 types.
+    #[cfg(feature = "eip712")]
+    pub(crate) fn eip712_parser(input: &mut Input<'a>) -> ModalResult<Self> {
+        let name = "TypeStem::eip712";
+        if input.starts_with('(') || input.starts_with("tuple(") {
+            trace(name, TupleSpecifier::eip712_parser).parse_next(input).map(Self::Tuple)
+        } else {
+            trace(name, RootType::eip712_parser).parse_next(input).map(Self::Root)
         }
     }
 

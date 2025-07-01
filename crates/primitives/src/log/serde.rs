@@ -77,8 +77,8 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Log<T> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        log::{Log, LogData},
         Bytes,
+        log::{Log, LogData},
     };
     use alloc::vec::Vec;
 

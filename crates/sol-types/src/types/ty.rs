@@ -1,7 +1,7 @@
 use crate::{
+    Result, Word,
     abi::{self, Token, TokenSeq},
     private::SolTypeValue,
-    Result, Word,
 };
 use alloc::{borrow::Cow, vec::Vec};
 
@@ -26,7 +26,7 @@ use alloc::{borrow::Cow, vec::Vec};
 /// Basic usage:
 ///
 /// ```
-/// use alloy_sol_types::{sol_data::*, SolType};
+/// use alloy_sol_types::{SolType, sol_data::*};
 ///
 /// type Uint256DynamicArray = Array<Uint<256>>;
 /// assert_eq!(Uint256DynamicArray::sol_type_name(), "uint256[]");
@@ -41,7 +41,7 @@ use alloc::{borrow::Cow, vec::Vec};
 /// The previous example can be entirely replicated with the [`sol!`] macro:
 ///
 /// ```
-/// use alloy_sol_types::{sol, SolType};
+/// use alloy_sol_types::{SolType, sol};
 ///
 /// type Uint256DynamicArray = sol!(uint256[]);
 /// assert_eq!(Uint256DynamicArray::sol_type_name(), "uint256[]");
@@ -59,7 +59,7 @@ use alloc::{borrow::Cow, vec::Vec};
 ///
 /// ```
 /// use alloy_primitives::Address;
-/// use alloy_sol_types::{sol, SolCall, SolStruct, SolValue};
+/// use alloy_sol_types::{SolCall, SolStruct, SolValue, sol};
 ///
 /// sol! {
 ///     struct MyStruct {

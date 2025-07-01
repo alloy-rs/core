@@ -5,11 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1](https://github.com/alloy-rs/core/releases/tag/v1.2.1) - 2025-06-20
+
+### Bug Fixes
+
+- Colon 712 identifiers ([#963](https://github.com/alloy-rs/core/issues/963))
+
+### Dependencies
+
+- [meta] Add edition 2024 bump to .git-blame-ignore-revs
+
+### Miscellaneous Tasks
+
+- Re-enable clippy::missing-const-for-fn ([#961](https://github.com/alloy-rs/core/issues/961))
+
+## [1.2.0](https://github.com/alloy-rs/core/releases/tag/v1.2.0) - 2025-06-04
+
+### Dependencies
+
+- Bump to edition 2024 ([#960](https://github.com/alloy-rs/core/issues/960))
+- Bump MSRV to 1.85 ([#959](https://github.com/alloy-rs/core/issues/959))
+
+### Miscellaneous Tasks
+
+- Release 1.2.0
+
+## [1.1.3](https://github.com/alloy-rs/core/releases/tag/v1.1.3) - 2025-06-04
+
+### Bug Fixes
+
+- Eip712 string interface prefix ([#954](https://github.com/alloy-rs/core/issues/954))
+
+### Features
+
+- Added `decode_log_validate` method ([#957](https://github.com/alloy-rs/core/issues/957))
+
+### Miscellaneous Tasks
+
+- Release 1.1.3
+
 ## [1.1.2](https://github.com/alloy-rs/core/releases/tag/v1.1.2) - 2025-05-20
 
 ### Dependencies
 
 - Enhance eip712 string parser to canonicalize inputs ([#950](https://github.com/alloy-rs/core/issues/950))
+
+### Miscellaneous Tasks
+
+- Release 1.1.2
 
 ## [1.1.1](https://github.com/alloy-rs/core/releases/tag/v1.1.1) - 2025-05-19
 

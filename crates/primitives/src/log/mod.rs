@@ -1,4 +1,4 @@
-use crate::{Address, Bloom, Bytes, B256};
+use crate::{Address, B256, Bloom, Bytes};
 use alloc::vec::Vec;
 
 #[cfg(feature = "serde")]
@@ -68,7 +68,7 @@ impl LogData {
     /// Get a mutable reference to the topic list. This allows creation of
     /// invalid logs.
     #[inline]
-    pub fn topics_mut_unchecked(&mut self) -> &mut Vec<B256> {
+    pub const fn topics_mut_unchecked(&mut self) -> &mut Vec<B256> {
         &mut self.topics
     }
 

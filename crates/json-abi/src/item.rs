@@ -1,6 +1,6 @@
-use crate::{param::Param, serde_state_mutability_compat, utils::*, EventParam, StateMutability};
+use crate::{EventParam, StateMutability, param::Param, serde_state_mutability_compat, utils::*};
 use alloc::{borrow::Cow, string::String, vec::Vec};
-use alloy_primitives::{keccak256, Selector, B256};
+use alloy_primitives::{B256, Selector, keccak256};
 use core::str::FromStr;
 use parser::utils::ParsedSignature;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};

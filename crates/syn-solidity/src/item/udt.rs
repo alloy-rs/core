@@ -1,12 +1,12 @@
-use crate::{kw, SolIdent, Spanned, Type};
+use crate::{SolIdent, Spanned, Type, kw};
 use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
 };
 use syn::{
-    parse::{Parse, ParseStream},
     Attribute, Result, Token,
+    parse::{Parse, ParseStream},
 };
 
 /// A user-defined value type definition: `type Foo is uint256;`.

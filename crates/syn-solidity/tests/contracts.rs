@@ -8,8 +8,8 @@ use std::{
     process::Command,
 };
 use syn_solidity::{
-    visit::{self, Visit},
     File,
+    visit::{self, Visit},
 };
 
 #[test]

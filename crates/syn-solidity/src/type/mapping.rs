@@ -1,14 +1,13 @@
-use crate::{kw, SolIdent, Spanned, Type, VariableDeclaration};
+use crate::{SolIdent, Spanned, Type, VariableDeclaration, kw};
 use proc_macro2::Span;
 use std::{
     fmt,
     hash::{Hash, Hasher},
 };
 use syn::{
-    parenthesized,
+    Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     token::Paren,
-    Result, Token,
 };
 
 /// A mapping type: `mapping(uint key => string value)`

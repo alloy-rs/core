@@ -8,11 +8,11 @@
 
 #![allow(missing_copy_implementations, missing_debug_implementations)]
 
-use crate::{abi::token::*, private::SolTypeValue, utils, SolType, Word};
+use crate::{SolType, Word, abi::token::*, private::SolTypeValue, utils};
 use alloc::{string::String as RustString, vec::Vec};
 use alloy_primitives::{
-    aliases::*, keccak256, Address as RustAddress, Bytes as RustBytes,
-    FixedBytes as RustFixedBytes, Function as RustFunction, I256, U256,
+    Address as RustAddress, Bytes as RustBytes, FixedBytes as RustFixedBytes,
+    Function as RustFunction, I256, U256, aliases::*, keccak256,
 };
 use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
@@ -296,11 +296,7 @@ impl<T: ?Sized + AsRef<[u8]>> SolTypeValue<Bytes> for T {
     #[inline]
     fn stv_abi_encoded_size(&self) -> usize {
         let s = self.as_ref();
-        if s.is_empty() {
-            64
-        } else {
-            64 + utils::padded_len(s)
-        }
+        if s.is_empty() { 64 } else { 64 + utils::padded_len(s) }
     }
 
     #[inline]
@@ -350,11 +346,7 @@ impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
     #[inline]
     fn stv_abi_encoded_size(&self) -> usize {
         let s = self.as_ref();
-        if s.is_empty() {
-            64
-        } else {
-            64 + utils::padded_len(s.as_bytes())
-        }
+        if s.is_empty() { 64 } else { 64 + utils::padded_len(s.as_bytes()) }
     }
 
     #[inline]
@@ -432,7 +424,7 @@ where
         for item in self {
             // Array elements are left-padded to 32 bytes.
             if let Some(padding_needed) = 32usize.checked_sub(item.stv_abi_packed_encoded_size()) {
-                out.extend(core::iter::repeat(0).take(padding_needed));
+                out.extend(core::iter::repeat_n(0, padding_needed));
             }
             T::stv_abi_encode_packed_to(item, out);
         }
@@ -577,11 +569,7 @@ where
         }
 
         let sum = self.iter().map(T::stv_abi_encoded_size).sum::<usize>();
-        if FixedArray::<U, N>::DYNAMIC {
-            32 + sum
-        } else {
-            sum
-        }
+        if FixedArray::<U, N>::DYNAMIC { 32 + sum } else { sum }
     }
 
     #[inline]
@@ -595,7 +583,7 @@ where
         for item in self {
             // Array elements are left-padded to 32 bytes.
             if let Some(padding_needed) = 32usize.checked_sub(item.stv_abi_packed_encoded_size()) {
-                out.extend(core::iter::repeat(0).take(padding_needed));
+                out.extend(core::iter::repeat_n(0, padding_needed));
             }
             item.stv_abi_encode_packed_to(out);
         }
@@ -1188,8 +1176,8 @@ impl NameBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{sol, SolValue};
-    use alloy_primitives::{hex, Signed};
+    use crate::{SolValue, sol};
+    use alloy_primitives::{Signed, hex};
 
     #[test]
     fn sol_names() {

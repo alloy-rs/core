@@ -1,15 +1,14 @@
 use crate::{
-    utils::{DebugPunctuated, ParseNested},
     Expr, Spanned,
+    utils::{DebugPunctuated, ParseNested},
 };
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    bracketed,
+    Result, Token, bracketed,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::Bracket,
-    Result, Token,
 };
 
 /// An array literal expression: `[a, b, c, d]`.

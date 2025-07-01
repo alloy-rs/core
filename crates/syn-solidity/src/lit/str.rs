@@ -1,12 +1,12 @@
-use crate::{kw, Spanned};
+use crate::{Spanned, kw};
 use proc_macro2::Span;
 use std::{
     fmt,
     ops::{Deref, DerefMut},
 };
 use syn::{
-    parse::{Lookahead1, Parse, ParseStream},
     Result,
+    parse::{Lookahead1, Parse, ParseStream},
 };
 
 macro_rules! str_lit {

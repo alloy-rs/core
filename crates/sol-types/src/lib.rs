@@ -30,10 +30,10 @@ mod impl_core;
 
 mod types;
 pub use types::{
-    data_type as sol_data, decode_revert_reason, ContractError, EventTopic, GenericContractError,
-    GenericRevertReason, Panic, PanicKind, Revert, RevertReason, Selectors, SolCall,
-    SolConstructor, SolEnum, SolError, SolEvent, SolEventInterface, SolInterface, SolStruct,
-    SolType, SolValue, TopicList,
+    ContractError, EventTopic, GenericContractError, GenericRevertReason, Panic, PanicKind, Revert,
+    RevertReason, Selectors, SolCall, SolConstructor, SolEnum, SolError, SolEvent,
+    SolEventInterface, SolInterface, SolStruct, SolType, SolValue, TopicList,
+    data_type as sol_data, decode_revert_reason,
 };
 
 pub mod utils;
@@ -64,8 +64,8 @@ pub mod private {
         vec::Vec,
     };
     pub use alloy_primitives::{
-        self as primitives, bytes, keccak256, Address, Bytes, FixedBytes, Function, IntoLogData,
-        LogData, Signed, Uint, B256, I256, U256,
+        self as primitives, Address, B256, Bytes, FixedBytes, Function, I256, IntoLogData, LogData,
+        Signed, U256, Uint, bytes, keccak256,
     };
     pub use core::{
         borrow::{Borrow, BorrowMut},

@@ -2,7 +2,7 @@
 
 use crate::{FixedBytes, Signed, Uint};
 
-pub use ruint::aliases::{U0, U1, U1024, U2048, U320, U384, U4096, U448};
+pub use ruint::aliases::{U0, U1, U320, U384, U448, U1024, U2048, U4096};
 
 macro_rules! int_aliases {
     ($($unsigned:ident, $signed:ident<$BITS:literal, $LIMBS:literal>),* $(,)?) => {$(

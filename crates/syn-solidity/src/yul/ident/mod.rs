@@ -3,9 +3,9 @@ use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use std::fmt;
 use syn::{
+    Result,
     ext::IdentExt,
     parse::{Parse, ParseStream},
-    Result,
 };
 
 mod path;
@@ -116,10 +116,6 @@ impl YulIdent {
     }
 
     pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
-        if Self::peek_any(input) {
-            input.parse().map(Some)
-        } else {
-            Ok(None)
-        }
+        if Self::peek_any(input) { input.parse().map(Some) } else { Ok(None) }
     }
 }

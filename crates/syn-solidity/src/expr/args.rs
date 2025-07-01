@@ -1,16 +1,14 @@
 use crate::{
-    kw,
+    Expr, SolIdent, Spanned, kw,
     utils::{DebugPunctuated, ParseNested},
-    Expr, SolIdent, Spanned,
 };
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
-    braced, parenthesized,
+    Result, Token, braced, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     token::{Brace, Paren},
-    Result, Token,
 };
 
 /// A function call expression: `foo(42)` or `foo({ bar: 42 })`.

@@ -1,7 +1,7 @@
 //! [`ItemEvent`] expansion.
 
-use super::{anon_name, expand_event_tokenize, expand_tuple_types, ExpCtxt};
-use alloy_sol_macro_input::{mk_doc, ContainsSolAttrs};
+use super::{ExpCtxt, anon_name, expand_event_tokenize, expand_tuple_types};
+use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
 use ast::{EventParameter, ItemEvent, SolIdent, Spanned};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};

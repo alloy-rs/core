@@ -1,15 +1,15 @@
 use crate::{
-    to_sol::{SolPrinter, ToSolConfig},
     AbiItem, Constructor, Error, Event, Fallback, Function, Receive,
+    to_sol::{SolPrinter, ToSolConfig},
 };
 use alloc::{collections::btree_map, string::String, vec::Vec};
-use alloy_primitives::Bytes;
+use alloy_primitives::{Bytes, Selector};
 use btree_map::BTreeMap;
 use core::{fmt, iter, iter::Flatten};
 use serde::{
+    Deserialize, Deserializer, Serialize,
     de::{MapAccess, SeqAccess, Visitor},
     ser::SerializeSeq,
-    Deserialize, Deserializer, Serialize,
 };
 
 macro_rules! set_if_none {
@@ -292,6 +292,12 @@ impl JsonAbi {
     #[inline]
     pub fn functions_mut(&mut self) -> FlattenValuesMut<'_, Function> {
         self.functions.values_mut().flatten()
+    }
+
+    /// Returns the _first_ [`Function`] with a matching selector.
+    #[inline]
+    pub fn function_by_selector(&self, selector: Selector) -> Option<&Function> {
+        self.functions().find(|func| func.selector() == selector)
     }
 
     /// Returns an iterator over immutable references to the events.
@@ -578,7 +584,9 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
                         }
                         if let Some((_, unlinked)) = unlinked.split_once("__$") {
                             if let Some((addr, _)) = unlinked.split_once("$__") {
-                                return Err(E::custom(format!("expected bytecode, found unlinked bytecode with placeholder: {addr}. Use the `ignore_unlinked` sol attribute to bypass this error.")));
+                                return Err(E::custom(format!(
+                                    "expected bytecode, found unlinked bytecode with placeholder: {addr}. Use the `ignore_unlinked` sol attribute to bypass this error."
+                                )));
                             }
                         }
                         Err(E::custom("invalid contract bytecode"))

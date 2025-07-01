@@ -12,11 +12,11 @@
 //! See [`Token`] for more details.
 
 use crate::{
-    abi::{Decoder, Encoder},
     Result, Word,
+    abi::{Decoder, Encoder},
 };
 use alloc::vec::Vec;
-use alloy_primitives::{hex, utils::vec_try_with_capacity, Bytes, FixedBytes, I256, U256};
+use alloy_primitives::{Bytes, FixedBytes, I256, U256, hex, utils::vec_try_with_capacity};
 use core::fmt;
 
 #[allow(unknown_lints, unnameable_types)]
@@ -178,7 +178,7 @@ impl AsRef<Word> for WordToken {
 impl AsRef<[u8]> for WordToken {
     #[inline]
     fn as_ref(&self) -> &[u8] {
-        &self.0 .0
+        &self.0.0
     }
 }
 
@@ -219,7 +219,7 @@ impl WordToken {
     /// Returns a reference to the word as a slice.
     #[inline]
     pub const fn as_slice(&self) -> &[u8] {
-        &self.0 .0
+        &self.0.0
     }
 }
 
@@ -655,7 +655,7 @@ all_the_tuples!(tuple_impls);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{sol_data, SolType};
+    use crate::{SolType, sol_data};
     use alloy_primitives::B256;
 
     macro_rules! assert_type_check {

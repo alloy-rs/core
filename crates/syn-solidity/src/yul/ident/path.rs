@@ -2,9 +2,9 @@ use crate::{Spanned, YulIdent};
 use proc_macro2::Span;
 use std::fmt;
 use syn::{
+    Result, Token,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Result, Token,
 };
 
 /// In inline assembly, only dot-less identifiers can be declared, but dotted

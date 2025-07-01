@@ -32,7 +32,7 @@ pub use item::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
 mod param;
 pub use param::{EventParam, Param};
 
-pub use parser::{serde_state_mutability_compat, StateMutability};
+pub use parser::{StateMutability, serde_state_mutability_compat};
 
 mod internal_type;
 pub use internal_type::InternalType;

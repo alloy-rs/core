@@ -1,8 +1,8 @@
 use ast::Spanned;
 use std::path::PathBuf;
 use syn::{
-    parse::{discouraged::Speculative, Parse, ParseStream},
     Attribute, Error, Ident, LitStr, Result, Token,
+    parse::{Parse, ParseStream, discouraged::Speculative},
 };
 
 /// Parsed input for `sol!`-like macro expanders. This enum represents a `Sol` file, a JSON ABI, or

@@ -194,7 +194,7 @@ fn abi_decode(data: &[u8], params: &[Param]) -> Result<Vec<DynSolValue>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::{address, bytes, hex, Address, U256};
+    use alloy_primitives::{Address, U256, address, bytes, hex};
 
     #[test]
     fn can_encode_decode_functions() {

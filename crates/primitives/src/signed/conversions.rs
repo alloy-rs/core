@@ -1,4 +1,4 @@
-use super::{utils::twos_complement, BigIntConversionError, ParseSignedError, Sign, Signed};
+use super::{BigIntConversionError, ParseSignedError, Sign, Signed, utils::twos_complement};
 use alloc::string::String;
 use core::str::FromStr;
 use ruint::{ToUintError, Uint, UintTryFrom};

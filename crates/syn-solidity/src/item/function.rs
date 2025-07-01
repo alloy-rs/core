@@ -1,6 +1,6 @@
 use crate::{
-    kw, Block, FunctionAttribute, FunctionAttributes, Mutability, ParameterList, Parameters,
-    SolIdent, Spanned, Stmt, Type, VariableDeclaration, VariableDefinition, Visibility,
+    Block, FunctionAttribute, FunctionAttributes, Mutability, ParameterList, Parameters, SolIdent,
+    Spanned, Stmt, Type, VariableDeclaration, VariableDefinition, Visibility, kw,
 };
 use proc_macro2::Span;
 use std::{
@@ -9,10 +9,9 @@ use std::{
     num::NonZeroU16,
 };
 use syn::{
-    parenthesized,
+    Attribute, Error, Result, Token, parenthesized,
     parse::{Parse, ParseStream},
     token::{Brace, Paren},
-    Attribute, Error, Result, Token,
 };
 
 /// A function, constructor, fallback, receive, or modifier definition:
@@ -98,11 +97,7 @@ impl Parse for ItemFunction {
 
 impl Spanned for ItemFunction {
     fn span(&self) -> Span {
-        if let Some(name) = &self.name {
-            name.span()
-        } else {
-            self.kind.span()
-        }
+        if let Some(name) = &self.name { name.span() } else { self.kind.span() }
     }
 
     fn set_span(&mut self, span: Span) {
@@ -346,11 +341,7 @@ impl Returns {
     }
 
     pub fn parse_opt(input: ParseStream<'_>) -> Result<Option<Self>> {
-        if input.peek(kw::returns) {
-            input.parse().map(Some)
-        } else {
-            Ok(None)
-        }
+        if input.peek(kw::returns) { input.parse().map(Some) } else { Ok(None) }
     }
 }
 

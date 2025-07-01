@@ -5,10 +5,9 @@ use std::{
     hash::{Hash, Hasher},
 };
 use syn::{
-    braced,
+    Attribute, Result, Token, braced,
     parse::{Parse, ParseStream},
     token::Brace,
-    Attribute, Result, Token,
 };
 
 /// A struct definition: `struct Foo { uint256 bar; }`.

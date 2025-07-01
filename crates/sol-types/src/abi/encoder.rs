@@ -8,8 +8,9 @@
 // except according to those terms.
 
 use crate::{
+    Word,
     abi::{Token, TokenSeq},
-    utils, Word,
+    utils,
 };
 use alloc::vec::Vec;
 use core::{mem, ptr};
@@ -193,13 +194,7 @@ pub fn encode<'a, T: Token<'a>>(token: &T) -> Vec<u8> {
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
 pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
-    let encode = const {
-        if T::IS_TUPLE {
-            encode_sequence
-        } else {
-            encode
-        }
-    };
+    let encode = const { if T::IS_TUPLE { encode_sequence } else { encode } };
     encode(token)
 }
 
@@ -229,9 +224,9 @@ const fn tuple_from_ref<T>(s: &T) -> &(T,) {
 
 #[cfg(test)]
 mod tests {
-    use crate::{sol_data, SolType};
+    use crate::{SolType, sol_data};
     use alloc::{borrow::ToOwned, string::ToString, vec::Vec};
-    use alloy_primitives::{address, bytes, hex, Address, U256};
+    use alloy_primitives::{Address, U256, address, bytes, hex};
     use alloy_sol_macro::sol;
 
     #[test]
@@ -790,10 +785,10 @@ mod tests {
     #[test]
     fn encode_dynamic_array_of_bytes() {
         type MyTy = sol_data::Array<sol_data::Bytes>;
-        let data = vec![hex!(
-            "019c80031b20d5e69c8093a571162299032018d913930d93ab320ae5ea44a4218a274f00d607"
-        )
-        .to_vec()];
+        let data = vec![
+            hex!("019c80031b20d5e69c8093a571162299032018d913930d93ab320ae5ea44a4218a274f00d607")
+                .to_vec(),
+        ];
 
         let expected = hex!(
             "

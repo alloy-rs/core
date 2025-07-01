@@ -16,7 +16,7 @@ pub use error::{Error, Result};
 
 /// Solidity ident rules.
 mod ident;
-pub use ident::{is_id_continue, is_id_start, is_valid_identifier, IDENT_REGEX};
+pub use ident::{IDENT_REGEX, is_id_continue, is_id_start, is_valid_identifier};
 
 /// Root type specifier.
 mod root;
@@ -39,9 +39,9 @@ mod parameter;
 pub use parameter::{ParameterSpecifier, Parameters, Storage};
 
 mod state_mutability;
+pub use state_mutability::StateMutability;
 #[cfg(feature = "serde")]
 pub use state_mutability::serde_state_mutability_compat;
-pub use state_mutability::StateMutability;
 
 // Not public API.
 #[doc(hidden)]
@@ -50,4 +50,4 @@ pub mod utils;
 #[doc(hidden)]
 pub mod input;
 #[doc(hidden)]
-pub use input::{new_input, Input};
+pub use input::{Input, new_input};

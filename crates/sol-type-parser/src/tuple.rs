@@ -1,12 +1,11 @@
 use crate::{
-    new_input,
+    Error, Input, Result, TypeSpecifier, new_input,
     utils::{spanned, tuple_parser},
-    Error, Input, Result, TypeSpecifier,
 };
 use alloc::vec::Vec;
 use winnow::{
-    combinator::{opt, preceded, trace},
     ModalResult, Parser,
+    combinator::{opt, preceded, trace},
 };
 
 /// A tuple specifier, with no array suffixes. Corresponds to a sequence of
@@ -69,6 +68,20 @@ impl<'a> TupleSpecifier<'a> {
     #[inline]
     fn parse_types(input: &mut Input<'a>) -> ModalResult<Vec<TypeSpecifier<'a>>> {
         preceded(opt("tuple"), tuple_parser(TypeSpecifier::parser)).parse_next(input)
+    }
+
+    /// [`winnow`] parser for EIP-712 types.
+    #[cfg(feature = "eip712")]
+    pub(crate) fn eip712_parser(input: &mut Input<'a>) -> ModalResult<Self> {
+        trace("TupleSpecifier::eip712", spanned(Self::parse_eip712_types))
+            .parse_next(input)
+            .map(|(span, types)| Self { span, types })
+    }
+
+    #[cfg(feature = "eip712")]
+    #[inline]
+    fn parse_eip712_types(input: &mut Input<'a>) -> ModalResult<Vec<TypeSpecifier<'a>>> {
+        preceded(opt("tuple"), tuple_parser(TypeSpecifier::eip712_parser)).parse_next(input)
     }
 
     /// Returns the tuple specifier as a string.

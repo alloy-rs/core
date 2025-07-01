@@ -44,10 +44,10 @@ pub use specifier::Specifier;
 #[cfg(feature = "eip712")]
 pub mod eip712;
 #[cfg(feature = "eip712")]
-pub use eip712::{parser as eip712_parser, Eip712Types, PropertyDef, Resolver, TypeDef, TypedData};
+pub use eip712::{Eip712Types, PropertyDef, Resolver, TypeDef, TypedData, parser as eip712_parser};
 
 #[doc(no_inline)]
 pub use alloy_sol_types::{
-    abi::{self, Decoder, Encoder},
     Eip712Domain, SolType, Word,
+    abi::{self, Decoder, Encoder},
 };
