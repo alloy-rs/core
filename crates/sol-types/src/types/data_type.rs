@@ -20,6 +20,7 @@ use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 // `crates/sol-macro-expander/src/expand/ty.rs`
 
 /// Bool - `bool`
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct Bool;
 
 impl SolTypeValue<Bool> for bool {
@@ -59,6 +60,7 @@ impl SolType for Bool {
 }
 
 /// Int - `intX`
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct Int<const BITS: usize>;
 
 impl<T, const BITS: usize> SolTypeValue<Int<BITS>> for T
@@ -113,6 +115,7 @@ where
 }
 
 /// Uint - `uintX`
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct Uint<const BITS: usize>;
 
 impl<const BITS: usize, T> SolTypeValue<Uint<BITS>> for T
@@ -207,6 +210,7 @@ where
 }
 
 /// Address - `address`
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct Address;
 
 impl<T: Borrow<[u8; 20]>> SolTypeValue<Address> for T {
@@ -246,6 +250,7 @@ impl SolType for Address {
 }
 
 /// Function - `function`
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct Function;
 
 impl<T: Borrow<[u8; 24]>> SolTypeValue<Function> for T {
@@ -285,6 +290,7 @@ impl SolType for Function {
 }
 
 /// Bytes - `bytes`
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct Bytes;
 
 impl<T: ?Sized + AsRef<[u8]>> SolTypeValue<Bytes> for T {
@@ -335,6 +341,7 @@ impl SolType for Bytes {
 }
 
 /// String - `string`
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct String;
 
 impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
@@ -389,6 +396,7 @@ impl SolType for String {
 }
 
 /// Array - `T[]`
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct Array<T>(PhantomData<T>);
 
 impl<T, U> SolTypeValue<Array<U>> for [T]
@@ -550,6 +558,7 @@ impl<T: SolType> SolType for Array<T> {
 }
 
 /// FixedArray - `T[M]`
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FixedArray<T, const N: usize>(PhantomData<T>);
 
 impl<T, U, const N: usize> SolTypeValue<FixedArray<U, N>> for [T; N]
