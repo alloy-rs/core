@@ -86,7 +86,7 @@ mod tests {
             let signed = I256::from_str(val).unwrap();
             let ser = serde_json::to_string(&signed).unwrap();
             assert_eq!(serde_json::from_str::<I256>(&ser).unwrap(), signed);
-            assert_eq!(serde_json::from_str::<I256>(&format!("\"{}\"", val)).unwrap(), signed);
+            assert_eq!(serde_json::from_str::<I256>(&format!("\"{val}\"")).unwrap(), signed);
         }
     }
 
