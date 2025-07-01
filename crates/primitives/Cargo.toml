@@ -97,6 +97,9 @@ postgres-types = { workspace = true, optional = true }
 # diesel
 diesel = { workspace = true, optional = true }
 
+# sqlx support (optional, for DB integration)
+sqlx-core = { workspace = true, optional = true }
+
 [dev-dependencies]
 bcs.workspace = true
 bincode.workspace = true
@@ -167,6 +170,7 @@ arbitrary = [
 ]
 postgres = ["std", "dep:postgres-types", "ruint/postgres"]
 diesel = ["std", "dep:diesel", "ruint/diesel"]
+sqlx = ["std","dep:sqlx-core","ruint/sqlx"]
 
 # `const-hex` compatibility feature for `hex`.
 # Should not be needed most of the time.

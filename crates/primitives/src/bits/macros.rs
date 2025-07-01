@@ -233,6 +233,7 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_arbitrary!($name, $n);
         $crate::impl_rand!($name);
         $crate::impl_diesel!($name, $n);
+        $crate::impl_sqlx!($name, $n);
 
         impl $name {
             /// Array of Zero bytes.
@@ -854,6 +855,70 @@ macro_rules! impl_diesel {
 #[macro_export]
 #[cfg(not(feature = "diesel"))]
 macro_rules! impl_diesel {
+    ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "sqlx")]
+macro_rules! impl_sqlx {
+    ($t:ty, $n:literal) => {
+        const _: () = {
+            use $crate::private::{
+                Vec,
+                sqlx_core::{
+                    database::Database,
+                    decode::Decode,
+                    encode::{Encode, IsNull},
+                    error::BoxDynError,
+                    types::Type,
+                },
+            };
+
+            impl<DB> Type<DB> for $t
+            where
+                DB: Database,
+                Vec<u8>: Type<DB>,
+            {
+                fn type_info() -> <DB as Database>::TypeInfo {
+                    <$crate::FixedBytes<$n> as Type<DB>>::type_info()
+                }
+
+                fn compatible(ty: &<DB as Database>::TypeInfo) -> bool {
+                    <$crate::FixedBytes<$n> as Type<DB>>::compatible(ty)
+                }
+            }
+
+            impl<'a, DB> Encode<'a, DB> for $t
+            where
+                DB: Database,
+                Vec<u8>: Encode<'a, DB>,
+            {
+                fn encode_by_ref(
+                    &self,
+                    buf: &mut <DB as Database>::ArgumentBuffer<'a>,
+                ) -> Result<IsNull, BoxDynError> {
+                    <$crate::FixedBytes<$n> as Encode<DB>>::encode_by_ref(&self.0, buf)
+                }
+            }
+
+            impl<'a, DB> Decode<'a, DB> for $t
+            where
+                DB: Database,
+                Vec<u8>: Decode<'a, DB>,
+            {
+                fn decode(value: <DB as Database>::ValueRef<'a>) -> Result<Self, BoxDynError> {
+                    <$crate::FixedBytes<$n> as Decode<DB>>::decode(value).map(Self)
+                }
+            }
+        };
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "sqlx"))]
+macro_rules! impl_sqlx {
     ($t:ty, $n:literal) => {};
 }
 
