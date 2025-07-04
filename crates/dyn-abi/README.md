@@ -80,7 +80,7 @@ let mail = Mail { from: sender, to: recipient, contents: "Hello, Bob!".to_string
 
 let typed_data = TypedData::from_struct(&mail, None);
 let hash = typed_data.eip712_signing_hash().unwrap();
-assert_eq!(hex::encode(hash), "25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775");
+assert_eq!(hash, b256!("25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775"));
 ```
 
 ## How it works
