@@ -48,7 +48,6 @@ assert_eq!(encoded, my_data);
 EIP-712:
 
 ```rust,ignore
-```
 use alloy_dyn_abi::eip712::TypedData;
 use alloy_sol_types::sol;
 
