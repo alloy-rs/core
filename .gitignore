@@ -2,3 +2,4 @@ target/
 Cargo.lock
 .vscode/
 .idea/
+mutants.out/

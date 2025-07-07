@@ -877,6 +877,7 @@ fn expand_from_into_tuples<P>(
 
     quote! {
         #[doc(hidden)]
+        #[allow(dead_code)]
         type UnderlyingSolTuple<'a> = #sol_tuple;
         #[doc(hidden)]
         type UnderlyingRustTuple<'a> = #rust_tuple;
