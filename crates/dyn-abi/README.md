@@ -48,7 +48,35 @@ assert_eq!(encoded, my_data);
 EIP-712:
 
 ```rust,ignore
-todo!()
+use alloy_dyn_abi::eip712::TypedData;
+use alloy_sol_types::sol;
+
+sol! {
+    struct Person {
+        string name;
+        address wallet;
+    }
+
+    struct Mail {
+        Person from;
+        Person to;
+        string contents;
+    }
+}
+
+let sender = Person {
+    name: "Cow".to_string(),
+    wallet: "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826".parse().unwrap(),
+};
+let recipient = Person {
+    name: "Bob".to_string(),
+    wallet: "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB".parse().unwrap(),
+};
+let mail = Mail { from: sender, to: recipient, contents: "Hello, Bob!".to_string() };
+
+let typed_data = TypedData::from_struct(&mail, None);
+let hash = typed_data.eip712_signing_hash().unwrap();
+assert_eq!(hash, b256!("25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775"));
 ```
 
 ## How it works
