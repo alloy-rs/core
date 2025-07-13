@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
+: "${WORKSPACE_ROOT:?WORKSPACE_ROOT is not set}"
+: "${CRATE_ROOT:?CRATE_ROOT is not set}"
+
 run_unless_dry_run() {
     if [ "$DRY_RUN" = "true" ]; then
         echo "skipping due to dry run: $*" >&2
