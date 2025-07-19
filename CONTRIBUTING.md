@@ -17,6 +17,31 @@ please join us!
 
 [dev]: https://t.me/ethers_rs
 
+## Table of Contents
+
+- [Conduct](#conduct)
+- [Contributing in Issues](#contributing-in-issues)
+  - [Asking for General Help](#asking-for-general-help)
+  - [Submitting a Bug Report](#submitting-a-bug-report)
+  - [Triaging a Bug Report](#triaging-a-bug-report)
+  - [Resolving a Bug Report](#resolving-a-bug-report)
+- [Pull Requests](#pull-requests)
+  - [Contributions Related to Spelling and Grammar](#contributions-related-to-spelling-and-grammar)
+  - [Cargo Commands](#cargo-commands)
+  - [Tests](#tests)
+    - [Unit Tests](#unit-tests)
+    - [Integration tests](#integration-tests)
+    - [Documentation tests](#documentation-tests)
+  - [Commits](#commits)
+    - [Commit message guidelines](#commit-message-guidelines)
+  - [Opening the Pull Request](#opening-the-pull-request)
+  - [Discuss and update](#discuss-and-update)
+  - [Commit Squashing](#commit-squashing)
+- [Reviewing Pull Requests](#reviewing-pull-requests)
+  - [Review a bit at a time](#review-a-bit-at-a-time)
+  - [Be aware of the person behind the code](#be-aware-of-the-person-behind-the-code)
+  - [Abandoned or Stalled Pull Requests](#abandoned-or-stalled-pull-requests)
+
 ## Conduct
 
 The Alloy project adheres to the [Rust Code of Conduct][coc]. This describes
@@ -60,7 +85,7 @@ PR that helps others avoid the problems that you encountered.
 When opening a new issue in the Alloy issue tracker, users will be presented
 with a [basic template][template] that should be filled in. If you believe that
 you have uncovered a bug, please fill out this form, following the template to
-the best of your ability. Do not worry if you cannot answer every detail, just
+to the best of your ability. Do not worry if you cannot answer every detail, just
 fill in what you can.
 
 The two most important pieces of information we need in order to properly
