@@ -11,7 +11,7 @@
 
 use crate::{Error, Result, Word};
 
-const USIZE_BYTES: usize = usize::BITS as usize / 8;
+const USIZE_BYTES: usize = size_of::<usize>();
 
 /// Calculates the padded length of a slice by rounding its length to the next
 /// word.
