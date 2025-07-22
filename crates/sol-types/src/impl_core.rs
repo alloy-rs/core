@@ -48,7 +48,7 @@ where
     Ok(unsafe { array_assume_init(array) })
 }
 
-/// [`MaybeUninit::slice_assume_init_mut`]
+/// `MaybeUninit::slice_assume_init_mut`
 #[inline(always)]
 unsafe fn slice_assume_init_mut<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
     // SAFETY: similar to safety notes for `slice_get_ref`, but we have a
