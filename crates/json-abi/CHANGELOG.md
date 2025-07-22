@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0](https://github.com/alloy-rs/core/releases/tag/v1.3.0) - 2025-07-22
+
+### Miscellaneous Tasks
+
+- Add helper to find function by selector ([#971](https://github.com/alloy-rs/core/issues/971))
+
+## [1.2.1](https://github.com/alloy-rs/core/releases/tag/v1.2.1) - 2025-06-20
+
+### Miscellaneous Tasks
+
+- Release 1.2.1
+
 ## [1.2.0](https://github.com/alloy-rs/core/releases/tag/v1.2.0) - 2025-06-04
 
 ### Dependencies
@@ -140,14 +152,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.13](https://github.com/alloy-rs/core/releases/tag/v0.8.13) - 2024-11-26
 
+### Miscellaneous Tasks
+
+- Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
+
+## [0.8.12](https://github.com/alloy-rs/core/releases/tag/v0.8.12) - 2024-11-12
+
+### Miscellaneous Tasks
+
+- Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
+
+## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
+
 ### Features
 
 - [json-abi] Add `AbiItem::json_type` ([#797](https://github.com/alloy-rs/core/issues/797))
 
 ### Miscellaneous Tasks
 
-- Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
-- Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
 - Release 0.8.11 ([#803](https://github.com/alloy-rs/core/issues/803))
 - [json-abi] Clean up utils ([#794](https://github.com/alloy-rs/core/issues/794))
 

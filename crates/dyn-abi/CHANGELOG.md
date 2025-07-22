@@ -5,11 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0](https://github.com/alloy-rs/core/releases/tag/v1.3.0) - 2025-07-22
+
+### Documentation
+
+- Add EIP-712 usage example to README ([#975](https://github.com/alloy-rs/core/issues/975))
+
+### Features
+
+- Add `is_dynamic` method to `DynSolType` ([#974](https://github.com/alloy-rs/core/issues/974))
+
 ## [1.2.1](https://github.com/alloy-rs/core/releases/tag/v1.2.1) - 2025-06-20
 
 ### Bug Fixes
 
 - Colon 712 identifiers ([#963](https://github.com/alloy-rs/core/issues/963))
+
+### Miscellaneous Tasks
+
+- Release 1.2.1
 
 ## [1.2.0](https://github.com/alloy-rs/core/releases/tag/v1.2.0) - 2025-06-04
 
@@ -57,14 +71,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
 
-### Dependencies
-
-- [deps] Bump getrandom to 0.3, rand to 0.9 ([#869](https://github.com/alloy-rs/core/issues/869))
-
 ### Features
 
 - 1.0-rc.1
-- [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
 
 ### Miscellaneous Tasks
 
@@ -80,6 +89,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Missing import
 - [dyn-abi] Remove dev-dependency on self
+
+## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
+
+### Dependencies
+
+- [deps] Bump getrandom to 0.3, rand to 0.9 ([#869](https://github.com/alloy-rs/core/issues/869))
+
+### Features
+
+- [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
 
 ## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
 
@@ -191,7 +210,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Miscellaneous Tasks
 
 - Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
+
+## [0.8.12](https://github.com/alloy-rs/core/releases/tag/v0.8.12) - 2024-11-12
+
+### Miscellaneous Tasks
+
 - Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
+
+## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
+
+### Miscellaneous Tasks
+
 - Release 0.8.11 ([#803](https://github.com/alloy-rs/core/issues/803))
 
 ## [0.8.10](https://github.com/alloy-rs/core/releases/tag/v0.8.10) - 2024-10-28
