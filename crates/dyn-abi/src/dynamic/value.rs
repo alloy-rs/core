@@ -117,6 +117,13 @@ impl From<Vec<u8>> for DynSolValue {
     }
 }
 
+impl From<Word> for DynSolValue {
+    #[inline]
+    fn from(value: Word) -> Self {
+        Self::FixedBytes(value, 32)
+    }
+}
+
 impl From<String> for DynSolValue {
     #[inline]
     fn from(value: String) -> Self {
