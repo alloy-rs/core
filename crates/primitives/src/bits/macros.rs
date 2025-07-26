@@ -757,14 +757,14 @@ macro_rules! impl_diesel {
                 deserialize::{FromSql, Result as DeserResult},
                 expression::AsExpression,
                 internal::derives::as_expression::Bound,
-                query_builder::bind_collector::RawBytesBindCollector,
                 serialize::{Output, Result as SerResult, ToSql},
                 sql_types::{Binary, Nullable, SingleValue},
             };
 
             impl<Db> ToSql<Binary, Db> for $t
             where
-                for<'c> Db: Backend<BindCollector<'c> = RawBytesBindCollector<Db>>,
+                Db: Backend,
+                [u8]: ToSql<Binary, Db>,
             {
                 fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Db>) -> SerResult {
                     <$crate::FixedBytes<$n> as ToSql<Binary, Db>>::to_sql(&self.0, out)
@@ -785,10 +785,11 @@ macro_rules! impl_diesel {
             // #[derive(diesel::AsExpression)]
             impl<Db> ToSql<Nullable<Binary>, Db> for $t
             where
-                for<'c> Db: Backend<BindCollector<'c> = RawBytesBindCollector<Db>>,
+                Db: Backend,
+                Self: ToSql<Binary, Db>,
             {
                 fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Db>) -> SerResult {
-                    <$crate::FixedBytes<$n> as ToSql<Nullable<Binary>, Db>>::to_sql(&self.0, out)
+                    ToSql::<Binary, Db>::to_sql(self, out)
                 }
             }
 

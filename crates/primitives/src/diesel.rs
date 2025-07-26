@@ -16,11 +16,11 @@ use std::io::Write;
 
 impl<const BYTES: usize, Db> ToSql<Binary, Db> for FixedBytes<BYTES>
 where
-    for<'c> Db: Backend<BindCollector<'c> = RawBytesBindCollector<Db>>,
+    Db: Backend,
+    [u8]: ToSql<Binary, Db>,
 {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Db>) -> SerResult {
-        out.write_all(&self[..])?;
-        Ok(IsNull::No)
+        (&self.0 as &[u8]).to_sql(out)
     }
 }
 
