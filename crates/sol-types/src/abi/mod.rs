@@ -51,6 +51,25 @@ pub const EMPTY_BYTES: &[u8; 64] = &alloy_primitives::hex!(
     "0000000000000000000000000000000000000000000000000000000000000000" // length, 0
 );
 
+// Compile-time assertions to ensure EMPTY_BYTES is correctly formatted
+const _: () = {
+    assert!(EMPTY_BYTES.len() == 64, "EMPTY_BYTES must be exactly 64 bytes");
+    assert!(EMPTY_BYTES[31] == 0x20, "EMPTY_BYTES offset must be 32 (0x20)");
+    assert!(EMPTY_BYTES[63] == 0x00, "EMPTY_BYTES length must be 0");
+
+    // Verify all other bytes are zero
+    let mut i = 0;
+    while i < 31 {
+        assert!(EMPTY_BYTES[i] == 0, "EMPTY_BYTES padding must be zero");
+        i += 1;
+    }
+    let mut i = 32;
+    while i < 63 {
+        assert!(EMPTY_BYTES[i] == 0, "EMPTY_BYTES length field must be zero");
+        i += 1;
+    }
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -58,7 +77,6 @@ mod tests {
 
     #[test]
     fn empty_bytes() {
-        assert_eq!(EMPTY_BYTES.len(), 64);
         assert_eq!(EMPTY_BYTES[..], crate::sol_data::String::abi_encode("")[..]);
         assert_eq!(EMPTY_BYTES[..], crate::sol_data::Bytes::abi_encode(b"")[..]);
         assert_eq!(EMPTY_BYTES[..], "".abi_encode());
