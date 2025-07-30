@@ -27,6 +27,192 @@ impl ParseNested for ExprCall {
 derive_parse!(ExprCall);
 
 impl fmt::Display for ExprCall {
+    /// Formats a function call expression as valid Solidity source code.
+    ///
+    /// This implementation formats function calls by combining the function
+    /// expression with its argument list, with no space between them. This
+    /// follows standard Solidity syntax for function invocations.
+    ///
+    /// # Format Pattern
+    /// ```text
+    /// <function_expr>(<arguments>)
+    /// <function_expr>({ <named_arguments> })
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// **Simple function calls:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("transfer()").unwrap();
+    /// assert_eq!(format!("{}", expr), "transfer()");
+    ///
+    /// let expr: Expr = parse_str("balanceOf(account)").unwrap();
+    /// assert_eq!(format!("{}", expr), "balanceOf(account)");
+    ///
+    /// let expr: Expr = parse_str("approve(spender, amount)").unwrap();
+    /// assert_eq!(format!("{}", expr), "approve(spender, amount)");
+    /// ```
+    ///
+    /// **Method calls on objects:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("token.transfer(recipient, amount)").unwrap();
+    /// assert_eq!(format!("{}", expr), "token.transfer(recipient, amount)");
+    ///
+    /// let expr: Expr = parse_str("contract.method()").unwrap();
+    /// assert_eq!(format!("{}", expr), "contract.method()");
+    ///
+    /// let expr: Expr = parse_str("storage.getValue(key)").unwrap();
+    /// assert_eq!(format!("{}", expr), "storage.getValue(key)");
+    /// ```
+    ///
+    /// **Built-in function calls:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("require(condition, message)").unwrap();
+    /// assert_eq!(format!("{}", expr), "require(condition, message)");
+    ///
+    /// let expr: Expr = parse_str("assert(invariant)").unwrap();
+    /// assert_eq!(format!("{}", expr), "assert(invariant)");
+    ///
+    /// let expr: Expr = parse_str("revert(reason)").unwrap();
+    /// assert_eq!(format!("{}", expr), "revert(reason)");
+    /// ```
+    ///
+    /// **Constructor calls:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("MyContract(initialValue)").unwrap();
+    /// assert_eq!(format!("{}", expr), "MyContract(initialValue)");
+    ///
+    /// let expr: Expr = parse_str("Token(name, symbol, decimals)").unwrap();
+    /// assert_eq!(format!("{}", expr), "Token(name, symbol, decimals)");
+    /// ```
+    ///
+    /// **Complex expressions as function targets:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Array element function call
+    /// let expr: Expr = parse_str("contracts[index].execute()").unwrap();
+    /// assert_eq!(format!("{}", expr), "contracts[index].execute()");
+    ///
+    /// // Parenthesized expression function call
+    /// let expr: Expr = parse_str("(condition ? func1 : func2)(param)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(condition ? func1 : func2)(param)");
+    ///
+    /// // Function returning function
+    /// let expr: Expr = parse_str("getFunction()(args)").unwrap();
+    /// assert_eq!(format!("{}", expr), "getFunction()(args)");
+    /// ```
+    ///
+    /// **Arguments with complex expressions:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Arithmetic expressions as arguments
+    /// let expr: Expr = parse_str("transfer(recipient, balance - fee)").unwrap();
+    /// assert_eq!(format!("{}", expr), "transfer(recipient, balance - fee)");
+    ///
+    /// // Function calls as arguments
+    /// let expr: Expr = parse_str("process(getValue(), getAmount())").unwrap();
+    /// assert_eq!(format!("{}", expr), "process(getValue(), getAmount())");
+    ///
+    /// // Ternary expressions as arguments
+    /// let expr: Expr = parse_str("execute(condition ? value1 : value2)").unwrap();
+    /// assert_eq!(format!("{}", expr), "execute(condition ? value1 : value2)");
+    /// ```
+    ///
+    /// **Chained function calls:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("getContract().getToken().transfer(amount)").unwrap();
+    /// assert_eq!(format!("{}", expr), "getContract().getToken().transfer(amount)");
+    ///
+    /// let expr: Expr = parse_str("factory.createPair().initialize()").unwrap();
+    /// assert_eq!(format!("{}", expr), "factory.createPair().initialize()");
+    /// ```
+    ///
+    /// **Named argument calls (if supported):**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Note: This example shows the format pattern, actual parsing depends on implementation
+    /// let expr: Expr = parse_str("transfer({ to: recipient, amount: value })").unwrap();
+    /// assert_eq!(format!("{}", expr), "transfer({ to: recipient, amount: value })");
+    /// ```
+    ///
+    /// # Common Use Cases in Solidity
+    ///
+    /// **State-changing operations:**
+    /// ```solidity
+    /// // Token transfers
+    /// token.transfer(recipient, amount);
+    ///
+    /// // Contract interactions
+    /// exchange.swap(tokenA, tokenB, amountIn);
+    ///
+    /// // State updates
+    /// updateBalance(user, newBalance);
+    /// ```
+    ///
+    /// **View/pure function calls:**
+    /// ```solidity
+    /// // Reading state
+    /// uint256 balance = token.balanceOf(account);
+    ///
+    /// // Calculations
+    /// uint256 result = calculateFee(amount, rate);
+    ///
+    /// // Validations
+    /// bool isValid = validateInput(data);
+    /// ```
+    ///
+    /// **Built-in function usage:**
+    /// ```solidity
+    /// // Input validation
+    /// require(amount > 0, "Amount must be positive");
+    ///
+    /// // Cryptographic functions
+    /// bytes32 hash = keccak256(abi.encode(data));
+    ///
+    /// // Type conversions
+    /// address recipient = address(uint160(value));
+    /// ```
+    ///
+    /// **Event emissions:**
+    /// ```solidity
+    /// // Logging contract events
+    /// emit Transfer(from, to, amount);
+    /// emit Approval(owner, spender, value);
+    /// ```
+    ///
+    /// # Function Call Types
+    ///
+    /// The Display implementation handles various types of function calls:
+    ///
+    /// 1. **Direct function calls**: `functionName(args)`
+    /// 2. **Method calls**: `object.method(args)`
+    /// 3. **Constructor calls**: `ContractName(args)`
+    /// 4. **Built-in calls**: `require(condition, message)`
+    /// 5. **Type conversions**: `uint256(value)`
+    /// 6. **Complex expressions**: `(expr)(args)`
+    ///
+    /// # Gas and Performance Implications
+    ///
+    /// While the Display implementation doesn't affect gas costs, understanding
+    /// function call structure helps developers:
+    ///
+    /// - Optimize argument passing and function selection
+    /// - Identify potential gas-expensive operations
+    /// - Structure calls for better readability and maintainability
+    /// - Debug transaction failures and unexpected behavior
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.expr, self.args)
     }

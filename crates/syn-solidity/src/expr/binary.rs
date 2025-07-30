@@ -23,6 +23,111 @@ impl ParseNested for ExprBinary {
 derive_parse!(ExprBinary);
 
 impl fmt::Display for ExprBinary {
+    /// Formats a binary expression as valid Solidity source code.
+    ///
+    /// This implementation formats binary operations with proper spacing between
+    /// the left operand, operator, and right operand. The output follows standard
+    /// Solidity formatting conventions and can be directly used as valid syntax.
+    ///
+    /// The formatter respects operator precedence and associativity as established
+    /// by the parser, without adding unnecessary parentheses. Complex expressions
+    /// maintain their original structure and readability.
+    ///
+    /// # Format Pattern
+    /// ```text
+    /// <left_expr> <operator> <right_expr>
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// **Arithmetic operations:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("a + b").unwrap();
+    /// assert_eq!(format!("{}", expr), "a + b");
+    ///
+    /// let expr: Expr = parse_str("x * y").unwrap();
+    /// assert_eq!(format!("{}", expr), "x * y");
+    /// ```
+    ///
+    /// **Comparison operations:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("balance >= amount").unwrap();
+    /// assert_eq!(format!("{}", expr), "balance >= amount");
+    ///
+    /// let expr: Expr = parse_str("owner == msg.sender").unwrap();
+    /// assert_eq!(format!("{}", expr), "owner == msg.sender");
+    /// ```
+    ///
+    /// **Assignment operations:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("balance += amount").unwrap();
+    /// assert_eq!(format!("{}", expr), "balance += amount");
+    ///
+    /// let expr: Expr = parse_str("value <<= shift").unwrap();
+    /// assert_eq!(format!("{}", expr), "value <<= shift");
+    /// ```
+    ///
+    /// **Logical operations:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("condition1 && condition2").unwrap();
+    /// assert_eq!(format!("{}", expr), "condition1 && condition2");
+    ///
+    /// let expr: Expr = parse_str("flag1 || flag2").unwrap();
+    /// assert_eq!(format!("{}", expr), "flag1 || flag2");
+    /// ```
+    ///
+    /// **Bitwise operations:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("mask & value").unwrap();
+    /// assert_eq!(format!("{}", expr), "mask & value");
+    ///
+    /// let expr: Expr = parse_str("data >> 8").unwrap();
+    /// assert_eq!(format!("{}", expr), "data >> 8");
+    /// ```
+    ///
+    /// # Operator Precedence
+    ///
+    /// The Display implementation preserves the precedence relationships established
+    /// during parsing. Higher precedence operations are formatted without additional
+    /// parentheses when they appear as operands to lower precedence operations:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Multiplication has higher precedence than addition
+    /// let expr: Expr = parse_str("a + b * c").unwrap();
+    /// assert_eq!(format!("{}", expr), "a + b * c");
+    ///
+    /// // Parentheses are preserved when they affect evaluation order
+    /// let expr: Expr = parse_str("(a + b) * c").unwrap();
+    /// assert_eq!(format!("{}", expr), "(a + b) * c");
+    /// ```
+    ///
+    /// # Associativity
+    ///
+    /// Left-associative operators are formatted to preserve their evaluation order:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Left-associative: evaluated as ((a + b) + c)
+    /// let expr: Expr = parse_str("a + b + c").unwrap();
+    /// assert_eq!(format!("{}", expr), "a + b + c");
+    ///
+    /// // Complex logical expressions maintain clarity
+    /// let expr: Expr = parse_str("a == b && c != d").unwrap();
+    /// assert_eq!(format!("{}", expr), "a == b && c != d");
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {} {}", self.left, self.op, self.right)
     }

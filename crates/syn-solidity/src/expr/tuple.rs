@@ -32,6 +32,174 @@ impl Parse for ExprTuple {
 }
 
 impl fmt::Display for ExprTuple {
+    /// Formats a tuple expression as valid Solidity source code.
+    ///
+    /// This implementation formats tuple expressions using parentheses with
+    /// comma-separated elements. Elements are separated by a comma followed by
+    /// a single space, following standard Solidity formatting conventions.
+    ///
+    /// # Format Pattern
+    /// ```text
+    /// (<element1>, <element2>, ..., <elementN>)
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// **Empty tuple:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("()").unwrap();
+    /// assert_eq!(format!("{}", expr), "()");
+    /// ```
+    ///
+    /// **Single element (parenthesized expression):**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("(value)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(value)");
+    ///
+    /// let expr: Expr = parse_str("(42)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(42)");
+    /// ```
+    ///
+    /// **Multiple elements:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("(a, b)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(a, b)");
+    ///
+    /// let expr: Expr = parse_str("(x, y, z)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(x, y, z)");
+    ///
+    /// let expr: Expr = parse_str("(1, 2, 3, 4, 5)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(1, 2, 3, 4, 5)");
+    /// ```
+    ///
+    /// **Mixed types:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("(address, amount, true)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(address, amount, true)");
+    ///
+    /// let expr: Expr = parse_str("(\"hello\", 42, false)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(\"hello\", 42, false)");
+    /// ```
+    ///
+    /// **Complex expressions as elements:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Tuple with arithmetic expressions
+    /// let expr: Expr = parse_str("(a + b, x * y, c - d)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(a + b, x * y, c - d)");
+    ///
+    /// // Tuple with member access
+    /// let expr: Expr = parse_str("(user.balance, msg.sender, block.timestamp)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(user.balance, msg.sender, block.timestamp)");
+    ///
+    /// // Tuple with function calls
+    /// let expr: Expr = parse_str("(getBalance(), getAmount(), getTotal())").unwrap();
+    /// assert_eq!(format!("{}", expr), "(getBalance(), getAmount(), getTotal())");
+    /// ```
+    ///
+    /// **Nested tuples:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("((a, b), (c, d))").unwrap();
+    /// assert_eq!(format!("{}", expr), "((a, b), (c, d))");
+    ///
+    /// let expr: Expr = parse_str("((), (1, 2), (x, y, z))").unwrap();
+    /// assert_eq!(format!("{}", expr), "((), (1, 2), (x, y, z))");
+    /// ```
+    ///
+    /// **Tuples with array and other complex expressions:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("([1, 2, 3], mapping, struct)").unwrap();
+    /// assert_eq!(format!("{}", expr), "([1, 2, 3], mapping, struct)");
+    ///
+    /// let expr: Expr = parse_str("(condition ? true : false, array[index])").unwrap();
+    /// assert_eq!(format!("{}", expr), "(condition ? true : false, array[index])");
+    /// ```
+    ///
+    /// # Common Use Cases in Solidity
+    ///
+    /// **Multiple return values:**
+    /// ```solidity
+    /// // Function returning multiple values
+    /// function getBalances() returns (uint256, uint256, bool) {
+    ///     return (balance1, balance2, isActive);
+    /// }
+    ///
+    /// // Destructuring assignment
+    /// (uint256 bal1, uint256 bal2, bool active) = getBalances();
+    /// ```
+    ///
+    /// **Tuple assignments:**
+    /// ```solidity
+    /// // Swapping variables
+    /// (a, b) = (b, a);
+    ///
+    /// // Multiple assignments
+    /// (x, y, z) = (1, 2, 3);
+    /// ```
+    ///
+    /// **Function arguments grouping:**
+    /// ```solidity
+    /// // Passing multiple related values
+    /// processData((startIndex, endIndex, batchSize));
+    ///
+    /// // Complex parameter passing
+    /// initializeContract((owner, treasury, fee), (startTime, endTime));
+    /// ```
+    ///
+    /// **Event emissions:**
+    /// ```solidity
+    /// // Emitting events with multiple parameters
+    /// emit Transfer(from, to, amount);
+    /// // Often written as: emit Transfer((from, to, amount));
+    /// ```
+    ///
+    /// # Parentheses vs Tuples
+    ///
+    /// In Solidity syntax parsing, parentheses serve dual purposes:
+    ///
+    /// 1. **Grouping expressions** (changing precedence): `(a + b) * c`
+    /// 2. **Tuple literals**: `(a, b, c)`
+    ///
+    /// The Display implementation preserves parentheses regardless of their semantic
+    /// purpose, maintaining the original expression structure.
+    ///
+    /// # Trailing Commas
+    ///
+    /// The formatter handles tuples that may have been parsed with trailing commas,
+    /// but the output always omits the trailing comma for clean formatting:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Input may have trailing comma, output will not
+    /// let expr: Expr = parse_str("(a, b, c,)").unwrap();
+    /// assert_eq!(format!("{}", expr), "(a, b, c)");
+    /// ```
+    ///
+    /// # Memory and Performance Considerations
+    ///
+    /// While the Display implementation doesn't affect runtime behavior, tuple
+    /// expressions in Solidity can have memory implications:
+    ///
+    /// - Multiple return values create temporary tuple structures
+    /// - Large tuples may consume significant stack space
+    /// - Tuple destructuring involves multiple memory operations
+    ///
+    /// The formatted output helps developers understand the structure and complexity
+    /// of tuple expressions in their contracts.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("(")?;
         for (i, elem) in self.elems.iter().enumerate() {

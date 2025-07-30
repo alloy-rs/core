@@ -20,6 +20,110 @@ impl Parse for ExprUnary {
 }
 
 impl fmt::Display for ExprUnary {
+    /// Formats a prefix unary expression as valid Solidity source code.
+    ///
+    /// This implementation formats prefix unary operations by placing the operator
+    /// directly before the operand expression without any spacing. This follows
+    /// standard Solidity syntax for unary prefix operators.
+    ///
+    /// # Format Pattern
+    /// ```text
+    /// <operator><operand_expr>
+    /// ```
+    ///
+    /// # Supported Operators
+    ///
+    /// **Logical negation:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("!condition").unwrap();
+    /// assert_eq!(format!("{}", expr), "!condition");
+    ///
+    /// let expr: Expr = parse_str("!isValid").unwrap();
+    /// assert_eq!(format!("{}", expr), "!isValid");
+    /// ```
+    ///
+    /// **Arithmetic negation:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("-amount").unwrap();
+    /// assert_eq!(format!("{}", expr), "-amount");
+    ///
+    /// let expr: Expr = parse_str("-balance").unwrap();
+    /// assert_eq!(format!("{}", expr), "-balance");
+    /// ```
+    ///
+    /// **Bitwise complement:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("~mask").unwrap();
+    /// assert_eq!(format!("{}", expr), "~mask");
+    ///
+    /// let expr: Expr = parse_str("~bits").unwrap();
+    /// assert_eq!(format!("{}", expr), "~bits");
+    /// ```
+    ///
+    /// **Pre-increment:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("++counter").unwrap();
+    /// assert_eq!(format!("{}", expr), "++counter");
+    ///
+    /// let expr: Expr = parse_str("++index").unwrap();
+    /// assert_eq!(format!("{}", expr), "++index");
+    /// ```
+    ///
+    /// **Pre-decrement:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("--counter").unwrap();
+    /// assert_eq!(format!("{}", expr), "--counter");
+    ///
+    /// let expr: Expr = parse_str("--index").unwrap();
+    /// assert_eq!(format!("{}", expr), "--index");
+    /// ```
+    ///
+    /// # Complex Expressions
+    ///
+    /// Unary operators can be applied to complex expressions:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Negation of member access
+    /// let expr: Expr = parse_str("!msg.sender").unwrap();
+    /// assert_eq!(format!("{}", expr), "!msg.sender");
+    ///
+    /// // Negation of function call
+    /// let expr: Expr = parse_str("!isAuthorized()").unwrap();
+    /// assert_eq!(format!("{}", expr), "!isAuthorized()");
+    ///
+    /// // Arithmetic negation of array access
+    /// let expr: Expr = parse_str("-balances[user]").unwrap();
+    /// assert_eq!(format!("{}", expr), "-balances[user]");
+    /// ```
+    ///
+    /// # Operator Precedence
+    ///
+    /// Unary operators have high precedence and bind tightly to their operands.
+    /// When combined with other operators, the precedence is preserved:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Unary minus has higher precedence than addition
+    /// let expr: Expr = parse_str("-a + b").unwrap();
+    /// assert_eq!(format!("{}", expr), "-a + b");
+    ///
+    /// // Multiple unary operators can be chained
+    /// let expr: Expr = parse_str("!!flag").unwrap();
+    /// assert_eq!(format!("{}", expr), "!!flag");
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.op, self.expr)
     }
@@ -57,6 +161,91 @@ impl Parse for ExprDelete {
 }
 
 impl fmt::Display for ExprDelete {
+    /// Formats a delete expression as valid Solidity source code.
+    ///
+    /// This implementation formats delete operations by placing the `delete` keyword
+    /// followed by a single space and the operand expression. This follows standard
+    /// Solidity syntax for delete statements.
+    ///
+    /// # Format Pattern
+    /// ```text
+    /// delete <operand_expr>
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// **Delete array element:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("delete array[index]").unwrap();
+    /// assert_eq!(format!("{}", expr), "delete array[index]");
+    ///
+    /// let expr: Expr = parse_str("delete myArray[0]").unwrap();
+    /// assert_eq!(format!("{}", expr), "delete myArray[0]");
+    /// ```
+    ///
+    /// **Delete mapping value:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("delete balances[account]").unwrap();
+    /// assert_eq!(format!("{}", expr), "delete balances[account]");
+    ///
+    /// let expr: Expr = parse_str("delete userProfiles[userId]").unwrap();
+    /// assert_eq!(format!("{}", expr), "delete userProfiles[userId]");
+    /// ```
+    ///
+    /// **Delete struct field:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("delete user.profile").unwrap();
+    /// assert_eq!(format!("{}", expr), "delete user.profile");
+    ///
+    /// let expr: Expr = parse_str("delete storage.data").unwrap();
+    /// assert_eq!(format!("{}", expr), "delete storage.data");
+    /// ```
+    ///
+    /// **Delete variable:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("delete myVariable").unwrap();
+    /// assert_eq!(format!("{}", expr), "delete myVariable");
+    ///
+    /// let expr: Expr = parse_str("delete temp").unwrap();
+    /// assert_eq!(format!("{}", expr), "delete temp");
+    /// ```
+    ///
+    /// # Complex Expressions
+    ///
+    /// The delete operator can be applied to complex expressions involving
+    /// nested member access, array indexing, and function calls:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Delete nested array element
+    /// let expr: Expr = parse_str("delete users[id].tokens[index]").unwrap();
+    /// assert_eq!(format!("{}", expr), "delete users[id].tokens[index]");
+    ///
+    /// // Delete result of function call indexing
+    /// let expr: Expr = parse_str("delete getArray()[position]").unwrap();
+    /// assert_eq!(format!("{}", expr), "delete getArray()[position]");
+    /// ```
+    ///
+    /// # Solidity Semantics
+    ///
+    /// The `delete` operator in Solidity resets the value to its default:
+    /// - For integers: resets to 0
+    /// - For booleans: resets to false
+    /// - For arrays: resets length to 0
+    /// - For mappings: resets the key to default value
+    /// - For structs: resets all members to their default values
+    ///
+    /// The Display implementation preserves the original syntax without
+    /// interpreting the semantic effects of the delete operation.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "delete {}", self.expr)
     }
@@ -90,6 +279,90 @@ impl ParseNested for ExprPostfix {
 derive_parse!(ExprPostfix);
 
 impl fmt::Display for ExprPostfix {
+    /// Formats a postfix unary expression as valid Solidity source code.
+    ///
+    /// This implementation formats postfix unary operations by placing the operator
+    /// directly after the operand expression without any spacing. This follows
+    /// standard Solidity syntax for postfix operators.
+    ///
+    /// # Format Pattern
+    /// ```text
+    /// <operand_expr><operator>
+    /// ```
+    ///
+    /// # Supported Operators
+    ///
+    /// **Post-increment:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("counter++").unwrap();
+    /// assert_eq!(format!("{}", expr), "counter++");
+    ///
+    /// let expr: Expr = parse_str("index++").unwrap();
+    /// assert_eq!(format!("{}", expr), "index++");
+    /// ```
+    ///
+    /// **Post-decrement:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("counter--").unwrap();
+    /// assert_eq!(format!("{}", expr), "counter--");
+    ///
+    /// let expr: Expr = parse_str("index--").unwrap();
+    /// assert_eq!(format!("{}", expr), "index--");
+    /// ```
+    ///
+    /// # Complex Expressions
+    ///
+    /// Postfix operators can be applied to complex expressions:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Postfix increment of array element
+    /// let expr: Expr = parse_str("counters[i]++").unwrap();
+    /// assert_eq!(format!("{}", expr), "counters[i]++");
+    ///
+    /// // Postfix decrement of struct field
+    /// let expr: Expr = parse_str("user.balance--").unwrap();
+    /// assert_eq!(format!("{}", expr), "user.balance--");
+    ///
+    /// // Postfix increment of member access
+    /// let expr: Expr = parse_str("storage.count++").unwrap();
+    /// assert_eq!(format!("{}", expr), "storage.count++");
+    /// ```
+    ///
+    /// # Operator Precedence and Semantics
+    ///
+    /// Postfix operators have the highest precedence in Solidity and are
+    /// evaluated before most other operations:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // The increment happens after the current value is used
+    /// let expr: Expr = parse_str("arr[index++]").unwrap();
+    /// assert_eq!(format!("{}", expr), "arr[index++]");
+    ///
+    /// // Complex expression with postfix and other operators
+    /// let expr: Expr = parse_str("value++ * 2").unwrap();
+    /// assert_eq!(format!("{}", expr), "value++ * 2");
+    /// ```
+    ///
+    /// # Difference from Prefix Operators
+    ///
+    /// Unlike prefix operators (`++var`, `--var`), postfix operators return
+    /// the value before the operation is applied:
+    ///
+    /// - `var++`: returns current value of `var`, then increments
+    /// - `++var`: increments `var`, then returns new value
+    /// - `var--`: returns current value of `var`, then decrements
+    /// - `--var`: decrements `var`, then returns new value
+    ///
+    /// The Display implementation preserves the original syntax without
+    /// interpreting the semantic differences between pre and post operations.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.expr, self.op)
     }

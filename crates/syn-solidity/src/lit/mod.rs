@@ -32,6 +32,38 @@ pub enum Lit {
 }
 
 impl fmt::Display for Lit {
+    /// Formats the literal as valid Solidity source code.
+    ///
+    /// This implementation ensures that all literals are formatted with proper
+    /// syntax including quotes for string literals and prefixes for special literals.
+    /// The output can be directly used as valid Solidity code.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use syn::parse_str;
+    /// use syn_solidity::{Expr, Lit};
+    ///
+    /// // String literals include quotes
+    /// let expr: Expr = parse_str("\"hello world\"").unwrap();
+    /// assert_eq!(format!("{}", expr), "\"hello world\"");
+    ///
+    /// // Hex literals include prefix and quotes
+    /// let expr: Expr = parse_str("hex\"1234ABCD\"").unwrap();
+    /// assert_eq!(format!("{}", expr), "hex\"1234ABCD\"");
+    ///
+    /// // Unicode literals include prefix and quotes
+    /// let expr: Expr = parse_str("unicode\"Hello 世界\"").unwrap();
+    /// assert_eq!(format!("{}", expr), "unicode\"Hello 世界\"");
+    ///
+    /// // Number literals are formatted directly
+    /// let expr: Expr = parse_str("42").unwrap();
+    /// assert_eq!(format!("{}", expr), "42");
+    ///
+    /// // Denominated literals include units
+    /// let expr: Expr = parse_str("1 ether").unwrap();
+    /// assert_eq!(format!("{}", expr), "1 ether");
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Bool(lit) => write!(f, "{}", if lit.value { "true" } else { "false" }),

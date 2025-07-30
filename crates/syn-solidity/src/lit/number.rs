@@ -16,6 +16,146 @@ pub enum LitNumber {
 }
 
 impl fmt::Display for LitNumber {
+    /// Formats a number literal as valid Solidity source code.
+    ///
+    /// This implementation formats both integer and floating-point number literals
+    /// in their base-10 decimal representation, preserving the original precision
+    /// and format as much as possible. The output can be directly used as valid
+    /// Solidity numeric literals.
+    ///
+    /// # Format Patterns
+    ///
+    /// **Integer literals:**
+    /// ```text
+    /// <digits>
+    /// ```
+    ///
+    /// **Floating-point literals:**
+    /// ```text
+    /// <integer_part>.<fractional_part>
+    /// <integer_part>.<fractional_part>e<exponent>
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// **Integer literals:**
+    /// ```rust
+    /// # use syn_solidity::{Expr, LitNumber};
+    /// # use syn::{parse_str, LitInt};
+    /// # use proc_macro2::Span;
+    ///
+    /// // Small integers
+    /// let num = LitNumber::Int(LitInt::new("0", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "0");
+    ///
+    /// let num = LitNumber::Int(LitInt::new("42", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "42");
+    ///
+    /// let num = LitNumber::Int(LitInt::new("123456789", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "123456789");
+    /// ```
+    ///
+    /// **Large integers (common in Solidity for token amounts):**
+    /// ```rust
+    /// # use syn_solidity::LitNumber;
+    /// # use syn::LitInt;
+    /// # use proc_macro2::Span;
+    ///
+    /// // Wei amounts (18 decimal places)
+    /// let num = LitNumber::Int(LitInt::new("1000000000000000000", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "1000000000000000000");
+    ///
+    /// // Large token supplies
+    /// let num = LitNumber::Int(LitInt::new("21000000000000000000000000", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "21000000000000000000000000");
+    /// ```
+    ///
+    /// **Maximum uint256 value:**
+    /// ```rust
+    /// # use syn_solidity::LitNumber;
+    /// # use syn::LitInt;
+    /// # use proc_macro2::Span;
+    ///
+    /// let max_uint256 =
+    ///     "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+    /// let num = LitNumber::Int(LitInt::new(max_uint256, Span::call_site()));
+    /// assert_eq!(format!("{}", num), max_uint256);
+    /// ```
+    ///
+    /// **Floating-point literals:**
+    /// ```rust
+    /// # use syn_solidity::LitNumber;
+    /// # use syn::LitFloat;
+    /// # use proc_macro2::Span;
+    ///
+    /// // Simple decimals
+    /// let num = LitNumber::Float(LitFloat::new("3.14", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "3.14");
+    ///
+    /// let num = LitNumber::Float(LitFloat::new("0.5", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "0.5");
+    ///
+    /// let num = LitNumber::Float(LitFloat::new("123.456", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "123.456");
+    /// ```
+    ///
+    /// **Scientific notation:**
+    /// ```rust
+    /// # use syn_solidity::LitNumber;
+    /// # use syn::LitFloat;
+    /// # use proc_macro2::Span;
+    ///
+    /// let num = LitNumber::Float(LitFloat::new("1e18", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "1e18");
+    ///
+    /// let num = LitNumber::Float(LitFloat::new("2.5e10", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "2.5e10");
+    ///
+    /// let num = LitNumber::Float(LitFloat::new("1.23e-5", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "1.23e-5");
+    /// ```
+    ///
+    /// **Zero values:**
+    /// ```rust
+    /// # use syn_solidity::LitNumber;
+    /// # use syn::{LitInt, LitFloat};
+    /// # use proc_macro2::Span;
+    ///
+    /// let num = LitNumber::Int(LitInt::new("0", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "0");
+    ///
+    /// let num = LitNumber::Float(LitFloat::new("0.0", Span::call_site()));
+    /// assert_eq!(format!("{}", num), "0.0");
+    /// ```
+    ///
+    /// # Precision and Accuracy
+    ///
+    /// The Display implementation preserves the original precision and format
+    /// of numeric literals as they appeared in the source code:
+    ///
+    /// - Integer literals maintain their exact decimal representation
+    /// - Floating-point literals preserve decimal places and scientific notation
+    /// - No rounding or approximation is performed during formatting
+    ///
+    /// # Solidity Numeric System
+    ///
+    /// Solidity supports integers up to 256 bits and fixed-point decimals.
+    /// The Display implementation handles:
+    ///
+    /// - **Unsigned integers**: `uint8` to `uint256` (most common: `uint256`)
+    /// - **Signed integers**: `int8` to `int256` (most common: `int256`)
+    /// - **Fixed-point**: `fixedMxN` and `ufixedMxN` (limited compiler support)
+    /// - **Scientific notation**: For very large or very small numbers
+    ///
+    /// # Common Use Cases
+    ///
+    /// Number literals in Solidity are commonly used for:
+    /// - Token amounts and balances (often in wei: 1 ether = 10^18 wei)
+    /// - Time durations (seconds, minutes, hours, days, weeks, years)
+    /// - Percentages and rates (often as basis points: 1% = 100 bp)
+    /// - Gas limits and prices
+    /// - Array indices and loop counters
+    /// - Mathematical constants and coefficients
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Int(lit) => write!(f, "{}", lit.base10_digits()),
@@ -127,6 +267,196 @@ impl Parse for LitDenominated {
 }
 
 impl fmt::Display for LitDenominated {
+    /// Formats a denominated number literal as valid Solidity source code.
+    ///
+    /// This implementation formats numbers with their denominations (units) by
+    /// placing a single space between the numeric value and the denomination.
+    /// This follows standard Solidity syntax for denominated literals.
+    ///
+    /// # Format Pattern
+    /// ```text
+    /// <number> <denomination>
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// **Ether denominations (most common in Solidity):**
+    /// ```rust
+    /// # use syn_solidity::{LitNumber, LitDenominated, SubDenomination, kw};
+    /// # use syn::LitInt;
+    /// # use proc_macro2::Span;
+    ///
+    /// // 1 ether = 10^18 wei
+    /// let num = LitNumber::Int(LitInt::new("1", Span::call_site()));
+    /// let denom = SubDenomination::Ether(kw::ether(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "1 ether");
+    ///
+    /// // 0.5 ether for fractional amounts
+    /// let num = LitNumber::Int(LitInt::new("5", Span::call_site()));
+    /// let denom = SubDenomination::Ether(kw::ether(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "5 ether");
+    /// ```
+    ///
+    /// **Wei and Gwei (gas price units):**
+    /// ```rust
+    /// # use syn_solidity::{LitNumber, LitDenominated, SubDenomination, kw};
+    /// # use syn::LitInt;
+    /// # use proc_macro2::Span;
+    ///
+    /// // Wei (smallest unit)
+    /// let num = LitNumber::Int(LitInt::new("1000000000000000000", Span::call_site()));
+    /// let denom = SubDenomination::Wei(kw::wei(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "1000000000000000000 wei");
+    ///
+    /// // Gwei (10^9 wei, common for gas prices)
+    /// let num = LitNumber::Int(LitInt::new("20", Span::call_site()));
+    /// let denom = SubDenomination::Gwei(kw::gwei(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "20 gwei");
+    /// ```
+    ///
+    /// **Time units (for contract timing):**
+    /// ```rust
+    /// # use syn_solidity::{LitNumber, LitDenominated, SubDenomination, kw};
+    /// # use syn::LitInt;
+    /// # use proc_macro2::Span;
+    ///
+    /// // Seconds (base unit for time)
+    /// let num = LitNumber::Int(LitInt::new("60", Span::call_site()));
+    /// let denom = SubDenomination::Seconds(kw::seconds(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "60 seconds");
+    ///
+    /// // Minutes (60 seconds)
+    /// let num = LitNumber::Int(LitInt::new("5", Span::call_site()));
+    /// let denom = SubDenomination::Minutes(kw::minutes(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "5 minutes");
+    ///
+    /// // Hours (3600 seconds)
+    /// let num = LitNumber::Int(LitInt::new("24", Span::call_site()));
+    /// let denom = SubDenomination::Hours(kw::hours(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "24 hours");
+    ///
+    /// // Days (86400 seconds)
+    /// let num = LitNumber::Int(LitInt::new("7", Span::call_site()));
+    /// let denom = SubDenomination::Days(kw::days(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "7 days");
+    ///
+    /// // Weeks (604800 seconds)
+    /// let num = LitNumber::Int(LitInt::new("2", Span::call_site()));
+    /// let denom = SubDenomination::Weeks(kw::weeks(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "2 weeks");
+    ///
+    /// // Years (31536000 seconds, approximately)
+    /// let num = LitNumber::Int(LitInt::new("1", Span::call_site()));
+    /// let denom = SubDenomination::Years(kw::years(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "1 years");
+    /// ```
+    ///
+    /// **Floating-point denominated values:**
+    /// ```rust
+    /// # use syn_solidity::{LitNumber, LitDenominated, SubDenomination, kw};
+    /// # use syn::LitFloat;
+    /// # use proc_macro2::Span;
+    ///
+    /// // Fractional ether amount
+    /// let num = LitNumber::Float(LitFloat::new("0.5", Span::call_site()));
+    /// let denom = SubDenomination::Ether(kw::ether(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "0.5 ether");
+    ///
+    /// // Fractional time (2.5 hours)
+    /// let num = LitNumber::Float(LitFloat::new("2.5", Span::call_site()));
+    /// let denom = SubDenomination::Hours(kw::hours(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "2.5 hours");
+    /// ```
+    ///
+    /// **Zero values:**
+    /// ```rust
+    /// # use syn_solidity::{LitNumber, LitDenominated, SubDenomination, kw};
+    /// # use syn::{LitInt, LitFloat};
+    /// # use proc_macro2::Span;
+    ///
+    /// // Zero ether
+    /// let num = LitNumber::Int(LitInt::new("0", Span::call_site()));
+    /// let denom = SubDenomination::Ether(kw::ether(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "0 ether");
+    ///
+    /// // Zero time with floating point
+    /// let num = LitNumber::Float(LitFloat::new("0.0", Span::call_site()));
+    /// let denom = SubDenomination::Seconds(kw::seconds(Span::call_site()));
+    /// let denominated = LitDenominated { number: num, denom };
+    /// assert_eq!(format!("{}", denominated), "0.0 seconds");
+    /// ```
+    ///
+    /// # Denomination Values and Conversion
+    ///
+    /// Solidity automatically converts denominated literals to their base units:
+    ///
+    /// **Ether denominations (base unit: wei):**
+    /// - `1 wei` = 1 wei (10^0)
+    /// - `1 gwei` = 1,000,000,000 wei (10^9)
+    /// - `1 ether` = 1,000,000,000,000,000,000 wei (10^18)
+    ///
+    /// **Time denominations (base unit: seconds):**
+    /// - `1 seconds` = 1 second
+    /// - `1 minutes` = 60 seconds
+    /// - `1 hours` = 3,600 seconds
+    /// - `1 days` = 86,400 seconds
+    /// - `1 weeks` = 604,800 seconds
+    /// - `1 years` = 31,536,000 seconds (365 days)
+    ///
+    /// # Common Use Cases
+    ///
+    /// Denominated literals are essential in Solidity for:
+    ///
+    /// **Financial operations:**
+    /// ```solidity
+    /// // Contract balance checks
+    /// require(msg.value >= 1 ether, "Minimum 1 ether required");
+    ///
+    /// // Gas price specifications
+    /// uint256 gasPrice = 20 gwei;
+    ///
+    /// // Token amounts in wei
+    /// uint256 reward = 100000000000000000 wei; // 0.1 ether
+    /// ```
+    ///
+    /// **Time-based contract logic:**
+    /// ```solidity
+    /// // Deadline calculations
+    /// uint256 deadline = block.timestamp + 7 days;
+    ///
+    /// // Cooldown periods
+    /// uint256 cooldown = 24 hours;
+    ///
+    /// // Vesting schedules
+    /// uint256 vestingPeriod = 52 weeks; // 1 year
+    /// ```
+    ///
+    /// # Important Notes
+    ///
+    /// 1. **Precision**: All denominated values are converted to base units during compilation, so
+    ///    `1 ether` becomes `1000000000000000000` in the compiled bytecode.
+    ///
+    /// 2. **Type consistency**: Denominated literals must be used with appropriate numeric types
+    ///    (usually `uint256` for currency and time values).
+    ///
+    /// 3. **Readability**: Using denominated literals makes contracts more readable and reduces
+    ///    errors from manually calculating wei amounts or seconds.
+    ///
+    /// The Display implementation preserves the original human-readable format, making it
+    /// easy to understand the intended values without mental conversion to base units.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.number, self.denom)
     }

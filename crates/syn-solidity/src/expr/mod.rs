@@ -100,6 +100,24 @@ pub enum Expr {
 }
 
 impl fmt::Display for Expr {
+    /// Formats the expression as valid Solidity source code.
+    ///
+    /// This implementation ensures that the output can be directly used as
+    /// valid Solidity syntax. All expressions are formatted with proper
+    /// spacing, punctuation, and operator precedence.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use syn::parse_str;
+    /// use syn_solidity::Expr;
+    ///
+    /// let expr: Expr = parse_str("balance >= amount && msg.sender == owner").unwrap();
+    /// assert_eq!(format!("{}", expr), "balance >= amount && msg.sender == owner");
+    ///
+    /// let expr: Expr = parse_str("users[index].profile.name").unwrap();
+    /// assert_eq!(format!("{}", expr), "users[index].profile.name");
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Array(expr) => expr.fmt(f),

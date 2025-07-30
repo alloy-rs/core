@@ -32,6 +32,153 @@ impl ParseNested for ExprMember {
 derive_parse!(ExprMember);
 
 impl fmt::Display for ExprMember {
+    /// Formats a member access expression as valid Solidity source code.
+    ///
+    /// This implementation formats member access operations by placing a dot (`.`)
+    /// between the object expression and the member name. This follows standard
+    /// Solidity syntax for accessing struct fields, contract members, and built-in
+    /// properties.
+    ///
+    /// # Format Pattern
+    /// ```text
+    /// <object_expr>.<member_name>
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// **Struct field access:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("user.balance").unwrap();
+    /// assert_eq!(format!("{}", expr), "user.balance");
+    ///
+    /// let expr: Expr = parse_str("account.profile").unwrap();
+    /// assert_eq!(format!("{}", expr), "account.profile");
+    /// ```
+    ///
+    /// **Built-in message properties:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("msg.sender").unwrap();
+    /// assert_eq!(format!("{}", expr), "msg.sender");
+    ///
+    /// let expr: Expr = parse_str("msg.value").unwrap();
+    /// assert_eq!(format!("{}", expr), "msg.value");
+    ///
+    /// let expr: Expr = parse_str("msg.data").unwrap();
+    /// assert_eq!(format!("{}", expr), "msg.data");
+    /// ```
+    ///
+    /// **Block properties:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("block.timestamp").unwrap();
+    /// assert_eq!(format!("{}", expr), "block.timestamp");
+    ///
+    /// let expr: Expr = parse_str("block.number").unwrap();
+    /// assert_eq!(format!("{}", expr), "block.number");
+    ///
+    /// let expr: Expr = parse_str("block.coinbase").unwrap();
+    /// assert_eq!(format!("{}", expr), "block.coinbase");
+    /// ```
+    ///
+    /// **Transaction properties:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("tx.origin").unwrap();
+    /// assert_eq!(format!("{}", expr), "tx.origin");
+    ///
+    /// let expr: Expr = parse_str("tx.gasprice").unwrap();
+    /// assert_eq!(format!("{}", expr), "tx.gasprice");
+    /// ```
+    ///
+    /// **Contract member access:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("contract.balance").unwrap();
+    /// assert_eq!(format!("{}", expr), "contract.balance");
+    ///
+    /// let expr: Expr = parse_str("this.owner").unwrap();
+    /// assert_eq!(format!("{}", expr), "this.owner");
+    /// ```
+    ///
+    /// # Chained Member Access
+    ///
+    /// Member access can be chained to access nested properties:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Nested struct access
+    /// let expr: Expr = parse_str("user.profile.settings").unwrap();
+    /// assert_eq!(format!("{}", expr), "user.profile.settings");
+    ///
+    /// // Deep property access
+    /// let expr: Expr = parse_str("storage.data.config.value").unwrap();
+    /// assert_eq!(format!("{}", expr), "storage.data.config.value");
+    ///
+    /// // Contract interface member access
+    /// let expr: Expr = parse_str("tokenContract.balanceOf").unwrap();
+    /// assert_eq!(format!("{}", expr), "tokenContract.balanceOf");
+    /// ```
+    ///
+    /// # Complex Expression Members
+    ///
+    /// Member access can be applied to complex expressions:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Array element member access
+    /// let expr: Expr = parse_str("users[index].balance").unwrap();
+    /// assert_eq!(format!("{}", expr), "users[index].balance");
+    ///
+    /// // Function call result member access
+    /// let expr: Expr = parse_str("getUser().profile").unwrap();
+    /// assert_eq!(format!("{}", expr), "getUser().profile");
+    ///
+    /// // Parenthesized expression member access
+    /// let expr: Expr = parse_str("(user1 + user2).total").unwrap();
+    /// assert_eq!(format!("{}", expr), "(user1 + user2).total");
+    /// ```
+    ///
+    /// # Member Access with Function Calls
+    ///
+    /// Member access is often combined with function calls:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Method call on member
+    /// let expr: Expr = parse_str("contract.transfer()").unwrap();
+    /// assert_eq!(format!("{}", expr), "contract.transfer()");
+    ///
+    /// // Chained method calls
+    /// let expr: Expr = parse_str("token.approve().success").unwrap();
+    /// assert_eq!(format!("{}", expr), "token.approve().success");
+    /// ```
+    ///
+    /// # Operator Precedence
+    ///
+    /// Member access has high precedence and binds tightly to its operands.
+    /// It is evaluated before most other operations:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Member access before arithmetic
+    /// let expr: Expr = parse_str("user.balance + amount").unwrap();
+    /// assert_eq!(format!("{}", expr), "user.balance + amount");
+    ///
+    /// // Member access before comparison
+    /// let expr: Expr = parse_str("msg.sender == owner").unwrap();
+    /// assert_eq!(format!("{}", expr), "msg.sender == owner");
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{}", self.expr, self.member)
     }

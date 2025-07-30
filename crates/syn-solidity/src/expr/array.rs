@@ -35,6 +35,135 @@ impl Parse for ExprArray {
 }
 
 impl fmt::Display for ExprArray {
+    /// Formats an array literal expression as valid Solidity source code.
+    ///
+    /// This implementation formats array literals using square brackets with
+    /// comma-separated elements. Elements are separated by a comma followed by
+    /// a single space, following standard Solidity formatting conventions.
+    ///
+    /// # Format Pattern
+    /// ```text
+    /// [<element1>, <element2>, ..., <elementN>]
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// **Empty arrays:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("[]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[]");
+    /// ```
+    ///
+    /// **Numeric arrays:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("[1, 2, 3]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[1, 2, 3]");
+    ///
+    /// let expr: Expr = parse_str("[42]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[42]");
+    ///
+    /// let expr: Expr = parse_str("[100, 200, 300, 400, 500]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[100, 200, 300, 400, 500]");
+    /// ```
+    ///
+    /// **String arrays:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("[\"hello\", \"world\"]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[\"hello\", \"world\"]");
+    ///
+    /// let expr: Expr = parse_str("[\"first\", \"second\", \"third\"]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[\"first\", \"second\", \"third\"]");
+    /// ```
+    ///
+    /// **Boolean arrays:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("[true, false, true]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[true, false, true]");
+    /// ```
+    ///
+    /// **Mixed type arrays (if allowed by type system):**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("[address1, address2, address3]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[address1, address2, address3]");
+    /// ```
+    ///
+    /// **Arrays with complex expressions:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Array with variable references
+    /// let expr: Expr = parse_str("[balance, amount, total]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[balance, amount, total]");
+    ///
+    /// // Array with member access expressions
+    /// let expr: Expr = parse_str("[user.balance, msg.value, block.timestamp]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[user.balance, msg.value, block.timestamp]");
+    ///
+    /// // Array with function calls
+    /// let expr: Expr = parse_str("[getBalance(), getAmount(), getTotal()]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[getBalance(), getAmount(), getTotal()]");
+    /// ```
+    ///
+    /// **Arrays with arithmetic expressions:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("[a + b, x * y, c - d]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[a + b, x * y, c - d]");
+    ///
+    /// let expr: Expr = parse_str("[amount * rate, fee + tax, total / count]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[amount * rate, fee + tax, total / count]");
+    /// ```
+    ///
+    /// **Nested arrays:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("[[1, 2], [3, 4], [5, 6]]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[[1, 2], [3, 4], [5, 6]]");
+    ///
+    /// let expr: Expr = parse_str("[[], [1], [1, 2, 3]]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[[], [1], [1, 2, 3]]");
+    /// ```
+    ///
+    /// # Trailing Commas
+    ///
+    /// The formatter handles arrays that may have been parsed with trailing commas,
+    /// but the output always omits the trailing comma for clean formatting:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Input may have trailing comma, output will not
+    /// let expr: Expr = parse_str("[1, 2, 3,]").unwrap();
+    /// assert_eq!(format!("{}", expr), "[1, 2, 3]");
+    /// ```
+    ///
+    /// # Use Cases
+    ///
+    /// Array literals are commonly used for:
+    /// - Initializing array variables
+    /// - Passing multiple values to functions
+    /// - Creating lookup tables or configuration data
+    /// - Batch operations in smart contracts
+    /// - Test data and example values
+    ///
+    /// # Memory and Gas Considerations
+    ///
+    /// While the Display implementation doesn't affect runtime behavior, array
+    /// literals in Solidity create in-memory arrays that consume gas proportional
+    /// to their size. The formatted output helps developers understand the
+    /// structure and size of array data.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("[")?;
         for (i, elem) in self.elems.iter().enumerate() {

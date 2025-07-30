@@ -41,6 +41,157 @@ impl ParseNested for ExprTernary {
 derive_parse!(ExprTernary);
 
 impl fmt::Display for ExprTernary {
+    /// Formats a ternary (conditional) expression as valid Solidity source code.
+    ///
+    /// This implementation formats ternary expressions using the standard
+    /// conditional operator syntax with proper spacing around the `?` and `:`
+    /// operators. This follows standard Solidity formatting conventions for
+    /// conditional expressions.
+    ///
+    /// # Format Pattern
+    /// ```text
+    /// <condition_expr> ? <true_expr> : <false_expr>
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// **Simple conditionals:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("condition ? trueValue : falseValue").unwrap();
+    /// assert_eq!(format!("{}", expr), "condition ? trueValue : falseValue");
+    ///
+    /// let expr: Expr = parse_str("isValid ? result : error").unwrap();
+    /// assert_eq!(format!("{}", expr), "isValid ? result : error");
+    /// ```
+    ///
+    /// **Numeric conditionals:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("balance > 0 ? balance : 0").unwrap();
+    /// assert_eq!(format!("{}", expr), "balance > 0 ? balance : 0");
+    ///
+    /// let expr: Expr = parse_str("x >= y ? x : y").unwrap();
+    /// assert_eq!(format!("{}", expr), "x >= y ? x : y");
+    /// ```
+    ///
+    /// **Authorization checks:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("msg.sender == owner ? allowed : denied").unwrap();
+    /// assert_eq!(format!("{}", expr), "msg.sender == owner ? allowed : denied");
+    ///
+    /// let expr: Expr = parse_str("hasPermission ? proceed : revert").unwrap();
+    /// assert_eq!(format!("{}", expr), "hasPermission ? proceed : revert");
+    /// ```
+    ///
+    /// **Complex conditions:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("balance >= amount && approved ? success : failure").unwrap();
+    /// assert_eq!(format!("{}", expr), "balance >= amount && approved ? success : failure");
+    ///
+    /// let expr: Expr = parse_str("value > 0 || emergency ? continue : stop").unwrap();
+    /// assert_eq!(format!("{}", expr), "value > 0 || emergency ? continue : stop");
+    /// ```
+    ///
+    /// **Function call results:**
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// let expr: Expr = parse_str("checkCondition() ? getValue() : getDefault()").unwrap();
+    /// assert_eq!(format!("{}", expr), "checkCondition() ? getValue() : getDefault()");
+    ///
+    /// let expr: Expr = parse_str("isAuthorized() ? transfer(amount) : revert()").unwrap();
+    /// assert_eq!(format!("{}", expr), "isAuthorized() ? transfer(amount) : revert()");
+    /// ```
+    ///
+    /// # Nested Ternary Expressions
+    ///
+    /// Ternary expressions can be nested for complex conditional logic:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Nested condition in the true branch
+    /// let expr: Expr = parse_str("outer ? (inner ? value1 : value2) : value3").unwrap();
+    /// assert_eq!(format!("{}", expr), "outer ? (inner ? value1 : value2) : value3");
+    ///
+    /// // Nested condition in the false branch
+    /// let expr: Expr = parse_str("primary ? result : (secondary ? backup : default)").unwrap();
+    /// assert_eq!(format!("{}", expr), "primary ? result : (secondary ? backup : default)");
+    ///
+    /// // Chained ternary operations
+    /// let expr: Expr = parse_str("a ? b : c ? d : e").unwrap();
+    /// assert_eq!(format!("{}", expr), "a ? b : c ? d : e");
+    /// ```
+    ///
+    /// # Complex Expression Components
+    ///
+    /// Any part of the ternary can be a complex expression:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Complex condition with member access
+    /// let expr: Expr = parse_str("user.balance >= cost ? purchase : cancel").unwrap();
+    /// assert_eq!(format!("{}", expr), "user.balance >= cost ? purchase : cancel");
+    ///
+    /// // Complex true/false expressions
+    /// let expr: Expr = parse_str("valid ? users[id].balance : accounts[id].funds").unwrap();
+    /// assert_eq!(format!("{}", expr), "valid ? users[id].balance : accounts[id].funds");
+    ///
+    /// // All complex components
+    /// let expr: Expr =
+    ///     parse_str("getUser().isActive() ? calculateReward(amount) : processRefund(fee)").unwrap();
+    /// assert_eq!(
+    ///     format!("{}", expr),
+    ///     "getUser().isActive() ? calculateReward(amount) : processRefund(fee)"
+    /// );
+    /// ```
+    ///
+    /// # Operator Precedence
+    ///
+    /// The ternary operator has relatively low precedence. Most other operators
+    /// are evaluated before the ternary condition is evaluated:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Arithmetic is evaluated before ternary
+    /// let expr: Expr = parse_str("a + b > c ? x * 2 : y / 3").unwrap();
+    /// assert_eq!(format!("{}", expr), "a + b > c ? x * 2 : y / 3");
+    ///
+    /// // Comparison is evaluated before ternary
+    /// let expr: Expr = parse_str("balance >= amount ? approved : rejected").unwrap();
+    /// assert_eq!(format!("{}", expr), "balance >= amount ? approved : rejected");
+    /// ```
+    ///
+    /// # Right-Associative Behavior
+    ///
+    /// Ternary operators are right-associative, meaning chained ternary
+    /// expressions are evaluated from right to left:
+    ///
+    /// ```rust
+    /// # use syn_solidity::Expr;
+    /// # use syn::parse_str;
+    /// // Equivalent to: a ? b : (c ? d : e)
+    /// let expr: Expr = parse_str("a ? b : c ? d : e").unwrap();
+    /// assert_eq!(format!("{}", expr), "a ? b : c ? d : e");
+    /// ```
+    ///
+    /// # Use Cases
+    ///
+    /// Ternary expressions are commonly used for:
+    /// - Conditional assignments
+    /// - Default value selection
+    /// - Authorization-based execution paths
+    /// - Mathematical operations (min/max selection)
+    /// - Error handling and fallback values
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ? {} : {}", self.cond, self.if_true, self.if_false)
     }
