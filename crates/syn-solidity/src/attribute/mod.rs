@@ -17,6 +17,91 @@ pub use function::{FunctionAttribute, FunctionAttributes};
 mod variable;
 pub use variable::{VariableAttribute, VariableAttributes};
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Expr, SolIdent};
+    use proc_macro2::Span;
+    use syn::{Token, parse_str, punctuated::Punctuated};
+
+    #[test]
+    fn test_display_override_without_paths() {
+        let override_item = Override {
+            override_token: Token![override](Span::call_site()),
+            paren_token: None,
+            paths: Punctuated::new(),
+        };
+
+        assert_eq!(format!("{}", override_item), "override");
+    }
+
+    #[test]
+    fn test_display_modifier_regression() {
+        // This is the key test: ensure expressions in modifiers display correctly
+        // and don't show "<expr>" placeholders anymore
+
+        let mut arguments = Punctuated::new();
+        let expr: Expr = parse_str("msg.sender").unwrap();
+        arguments.push(expr);
+
+        let mut path = SolPath::new();
+        path.push(SolIdent::new("onlyRole"));
+
+        let modifier = Modifier {
+            name: path,
+            paren_token: Some(syn::token::Paren(Span::call_site())),
+            arguments,
+        };
+
+        let result = format!("{}", modifier);
+        assert_eq!(result, "onlyRole(msg.sender)");
+        assert!(!result.contains("<expr>"), "Still contains <expr> placeholder");
+    }
+
+    #[test]
+    fn test_display_modifier_complex_expression() {
+        let mut arguments = Punctuated::new();
+        let expr: Expr = parse_str("balances[user] >= amount").unwrap();
+        arguments.push(expr);
+
+        let mut path = SolPath::new();
+        path.push(SolIdent::new("require"));
+
+        let modifier = Modifier {
+            name: path,
+            paren_token: Some(syn::token::Paren(Span::call_site())),
+            arguments,
+        };
+
+        let result = format!("{}", modifier);
+        assert_eq!(result, "require(balances[user] >= amount)");
+    }
+
+    #[test]
+    fn test_display_modifier_multiple_expressions() {
+        let mut arguments = Punctuated::new();
+
+        let arg1: Expr = parse_str("value > 0").unwrap();
+        arguments.push(arg1);
+        arguments.push_punct(Token![,](Span::call_site()));
+
+        let arg2: Expr = parse_str("msg.sender != address(0)").unwrap();
+        arguments.push(arg2);
+
+        let mut path = SolPath::new();
+        path.push(SolIdent::new("validateInputs"));
+
+        let modifier = Modifier {
+            name: path,
+            paren_token: Some(syn::token::Paren(Span::call_site())),
+            arguments,
+        };
+
+        let result = format!("{}", modifier);
+        assert_eq!(result, "validateInputs(value > 0, msg.sender != address(0))");
+    }
+}
+
 kw_enum! {
     /// A storage location.
     pub enum Storage {
@@ -135,12 +220,11 @@ impl fmt::Display for Modifier {
         self.name.fmt(f)?;
         if self.paren_token.is_some() {
             f.write_str("(")?;
-            for (i, _arg) in self.arguments.iter().enumerate() {
+            for (i, arg) in self.arguments.iter().enumerate() {
                 if i > 0 {
                     f.write_str(", ")?;
                 }
-                // TODO: impl fmt::Display for Expr
-                f.write_str("<expr>")?;
+                arg.fmt(f)?;
             }
             f.write_str(")")?;
         }
