@@ -321,37 +321,37 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
                 quote! {
                     #deploy_doc
                     #[inline]
-                    pub fn deploy<P: alloy_contract::private::Provider<N>, N: alloy_contract::private::Network>(provider: P, #params)
+                    pub fn deploy<P: alloy_contract::private::Provider<N>, N: alloy_contract::private::Network>(__provider: P, #params)
                         -> impl ::core::future::Future<Output = alloy_contract::Result<#name<P, N>>>
                     {
-                        #name::<P, N>::deploy(provider, #args)
+                        #name::<P, N>::deploy(__provider, #args)
                     }
 
                     #deploy_builder_doc
                     #[inline]
-                    pub fn deploy_builder<P: alloy_contract::private::Provider<N>, N: alloy_contract::private::Network>(provider: P, #params)
+                    pub fn deploy_builder<P: alloy_contract::private::Provider<N>, N: alloy_contract::private::Network>(__provider: P, #params)
                         -> alloy_contract::RawCallBuilder<P, N>
                     {
-                        #name::<P, N>::deploy_builder(provider, #args)
+                        #name::<P, N>::deploy_builder(__provider, #args)
                     }
                 },
                 quote! {
                     #deploy_doc
                     #[inline]
-                    pub async fn deploy(provider: P, #params)
+                    pub async fn deploy(__provider: P, #params)
                         -> alloy_contract::Result<#name<P, N>>
                     {
-                        let call_builder = Self::deploy_builder(provider, #args);
+                        let call_builder = Self::deploy_builder(__provider, #args);
                         let contract_address = call_builder.deploy().await?;
                         Ok(Self::new(contract_address, call_builder.provider))
                     }
 
                     #deploy_builder_doc
                     #[inline]
-                    pub fn deploy_builder(provider: P, #params)
+                    pub fn deploy_builder(__provider: P, #params)
                         -> alloy_contract::RawCallBuilder<P, N>
                     {
-                        alloy_contract::RawCallBuilder::new_raw_deploy(provider, #deploy_builder_data)
+                        alloy_contract::RawCallBuilder::new_raw_deploy(__provider, #deploy_builder_data)
                     }
                 },
             )
@@ -375,6 +375,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
 
         let generic_p_n = quote!(<P: alloy_contract::private::Provider<N>, N: alloy_contract::private::Network>);
 
+        // if new builtin functions are introduced: updated reserved check in `call_builder_method_function_name`
         quote! {
             use #alloy_contract as alloy_contract;
 
@@ -382,9 +383,9 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
             #[inline]
             pub const fn new #generic_p_n(
                 address: alloy_sol_types::private::Address,
-                provider: P,
+                __provider: P,
             ) -> #name<P, N> {
-                #name::<P, N>::new(address, provider)
+                #name::<P, N>::new(address, __provider)
             }
 
             #deploy_fn
@@ -410,8 +411,8 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
             impl #generic_p_n #name<P, N> {
                 #[doc = #new_fn_doc]
                 #[inline]
-                pub const fn new(address: alloy_sol_types::private::Address, provider: P) -> Self {
-                    Self { address, provider, _network: ::core::marker::PhantomData }
+                pub const fn new(address: alloy_sol_types::private::Address, __provider: P) -> Self {
+                    Self { address, provider: __provider, _network: ::core::marker::PhantomData }
                 }
 
                 #deploy_method
@@ -1005,8 +1006,11 @@ fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
     }
 }
 
+/// Generate's the call instance's call functions.
+///
+/// The are standalone functions and never used by other generated code.
 fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
-    let name = cx.function_name(f);
+    let name = call_builder_method_function_name(f, cx);
     let call_name = cx.call_name(f);
     let param_names1 = f.parameters.names().enumerate().map(anon_name);
     let param_tys = f.parameters.types().map(|ty| cx.expand_rust_type(ty));
@@ -1027,6 +1031,21 @@ fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
         pub fn #name(&self, #(#param_names1: #param_tys),*) -> alloy_contract::SolCallBuilder<&P, #call_name, N> {
             self.call_builder(&#call_struct)
         }
+    }
+}
+
+/// Returns the function name for the `fn <method> -> alloy_contract::SolCallBuilder` function.
+///
+/// If this conflicts with any of the builtin function names, a `_call` suffix is added.
+fn call_builder_method_function_name(f: &ItemFunction, cx: &ExpCtxt<'_>) -> SolIdent {
+    let call_name_ident = cx.function_name(f);
+    let name = call_name_ident.as_string();
+    match name.as_str() {
+        "new" | "deploy" | "deploy_builder" | "address" | "set_address" | "at" | "provider"
+        | "call_builder" | "event_filter" => {
+            SolIdent::new_spanned(&format!("{name}_call"), call_name_ident.span())
+        }
+        _ => call_name_ident,
     }
 }
 
