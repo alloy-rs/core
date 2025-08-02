@@ -39,14 +39,29 @@ pub use fixed::*;
 cfg_if! {
     if #[cfg(any(feature = "map-hashbrown", not(feature = "std")))] {
         use hashbrown as imp;
+
+        /// A view into a single entry in a map, which may either be vacant or occupied.
+        ///
+        /// See [`Entry`](imp::hash_map::Entry) for more information.
+        pub type Entry<'a, K, V, S = DefaultHashBuilder> = imp::hash_map::Entry<'a, K, V, S>;
+        /// A view into an occupied entry in a `HashMap`. It is part of the [`Entry`] enum.
+        ///
+        /// See [`OccupiedEntry`](imp::hash_map::OccupiedEntry) for more information.
+        pub type OccupiedEntry<'a, K, V, S = DefaultHashBuilder> = imp::hash_map::OccupiedEntry<'a, K, V, S>;
+        /// A view into a vacant entry in a `HashMap`. It is part of the [`Entry`] enum.
+        ///
+        /// See [`VacantEntry`](imp::hash_map::VacantEntry) for more information.
+        pub type VacantEntry<'a, K, V, S = DefaultHashBuilder> = imp::hash_map::VacantEntry<'a, K, V, S>;
     } else {
         use hashbrown as _;
         use std::collections as imp;
+        #[doc(no_inline)]
+        pub use imp::hash_map::{Entry, OccupiedEntry, VacantEntry};
     }
 }
 
 #[doc(no_inline)]
-pub use imp::{hash_map, hash_map::Entry, hash_set};
+pub use imp::{hash_map, hash_set};
 
 /// A [`HashMap`](imp::HashMap) using the [default hasher](DefaultHasher).
 ///
@@ -161,5 +176,28 @@ mod tests {
 
         <DefaultHasher as core::hash::Hasher>::write_u8(&mut hasher, 0);
         let _hasher2 = <DefaultHasher as Clone>::clone(&hasher);
+    }
+
+    // Check that the `Entry` types are correct.
+    fn use_entry(e: Entry<'_, u32, u64>) -> u64 {
+        match e {
+            Entry::Occupied(o) => {
+                let o: OccupiedEntry<'_, u32, u64> = o;
+                *o.get()
+            }
+            Entry::Vacant(v) => {
+                let v: VacantEntry<'_, u32, u64> = v;
+                *v.insert(0)
+            }
+        }
+    }
+
+    #[test]
+    fn test_entry() {
+        let mut map = HashMap::new();
+        map.insert(1, 1);
+        assert_eq!(use_entry(map.entry(0)), 0);
+        assert_eq!(use_entry(map.entry(1)), 1);
+        assert_eq!(use_entry(map.entry(2)), 0);
     }
 }
