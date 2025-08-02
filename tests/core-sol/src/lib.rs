@@ -134,6 +134,19 @@ pub mod no_missing_docs {
     }
 }
 
+// <https://github.com/foundry-rs/foundry/issues/11177>
+sol! {
+    interface IExampleContractEvents {
+        struct SomeEventData {
+            address sender;
+            address receiver;
+        }
+
+        event SomeEvent(SomeEventData eventData);
+    }
+    interface IExampleContract is IExampleContractEvents {}
+}
+
 #[test]
 fn do_stuff() {
     let mut set = alloy_core::primitives::map::B256Map::<MyStruct>::default();
