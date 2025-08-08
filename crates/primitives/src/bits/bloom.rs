@@ -51,6 +51,8 @@ impl From<BloomInput<'_>> for Bloom {
 
 wrap_fixed_bytes!(
     /// Ethereum 256 byte bloom filter.
+    #[cfg_attr(feature = "rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+    #[cfg_attr(feature = "rkyv", rkyv(derive(Copy, Clone, Hash, PartialEq, Eq)))]
     pub struct Bloom<256>;
 );
 

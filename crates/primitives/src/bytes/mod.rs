@@ -12,6 +12,9 @@ mod borsh;
 #[cfg(feature = "rlp")]
 mod rlp;
 
+#[cfg(feature = "rkyv")]
+mod rkyv;
+
 #[cfg(feature = "serde")]
 mod serde;
 
