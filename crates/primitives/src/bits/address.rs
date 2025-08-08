@@ -83,6 +83,8 @@ wrap_fixed_bytes!(
     /// // Format the address without the checksum
     /// assert_eq!(format!("{address:?}"), "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// ```
+    #[cfg_attr(feature = "rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+    #[cfg_attr(feature = "rkyv", rkyv(derive(Copy, Clone, Hash, PartialEq, Eq)))]
     pub struct Address<20>;
 );
 

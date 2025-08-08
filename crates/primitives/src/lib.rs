@@ -39,6 +39,11 @@ pub use bits::{
     Address, AddressChecksumBuffer, AddressError, BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS,
     BLOOM_SIZE_BYTES, Bloom, BloomInput, FixedBytes, Function,
 };
+#[cfg(feature = "rkyv")]
+pub use bits::{
+    AddressResolver, ArchivedAddress, ArchivedBloom, ArchivedFixedBytes, BloomResolver,
+    FixedBytesResolver,
+};
 
 #[path = "bytes/mod.rs"]
 mod bytes_;
