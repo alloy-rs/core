@@ -1423,8 +1423,10 @@ mod tests {
         let token = WordToken::new(word);
         macro_rules! test {
             ($($n:literal => $x:expr),+ $(,)?) => {$(
-                assert_eq!(<Uint<$n>>::detokenize(token), $x);
-                assert_eq!(<Int<$n>>::detokenize(token), $x);
+                let x: <Uint<$n> as SolType>::RustType = $x;
+                assert_eq!(<Uint<$n>>::detokenize(token), x);
+                let x: <Int<$n> as SolType>::RustType = $x;
+                assert_eq!(<Int<$n>>::detokenize(token), x);
             )+};
         }
         #[rustfmt::skip]
