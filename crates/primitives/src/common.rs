@@ -6,7 +6,7 @@ use alloy_rlp::{Buf, BufMut, Decodable, EMPTY_STRING_CODE, Encodable};
 /// The `to` field of a transaction. Either a target address, or empty for a
 /// contract creation.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 #[doc(alias = "TransactionKind")]
 pub enum TxKind {
     /// A transaction that creates a contract.

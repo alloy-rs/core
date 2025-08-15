@@ -127,7 +127,7 @@ impl AString {
     }
 }
 
-#[derive(Debug, derive_arbitrary::Arbitrary)]
+#[derive(Debug, arbitrary::Arbitrary)]
 enum Choice {
     Bool,
     Int,

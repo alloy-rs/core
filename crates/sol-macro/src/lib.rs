@@ -113,8 +113,7 @@ use syn::parse_macro_input;
 /// List of all `#[sol(...)]` supported values:
 /// - `rpc [ = <bool = false>]` (contracts and alike only): generates a structs with methods to
 ///   construct `eth_call`s to an on-chain contract through Ethereum JSON RPC, similar to the
-///   default behavior of [`abigen`]. This makes use of the [`alloy-contract`](https://github.com/alloy-rs/alloy)
-///   crate.
+///   default behavior of [`abigen`]. This makes use of the [`alloy-contract`] crate.
 ///
 ///   Generates the following items inside of the `{contract_name}` module:
 ///   - `struct {contract_name}Instance<P: Provider> { ... }`
@@ -283,6 +282,8 @@ use syn::parse_macro_input;
 /// ```ignore
 #[doc = include_str!("../doctests/json.rs")]
 /// ```
+/// 
+/// [`alloy-contract`]: https://github.com/alloy-rs/alloy
 #[proc_macro]
 #[proc_macro_error]
 pub fn sol(input: TokenStream) -> TokenStream {
