@@ -7,7 +7,7 @@ use crate::{
 /// a chain id), or the y-parity.
 #[deprecated(since = "0.8.15", note = "see https://github.com/alloy-rs/core/pull/776")]
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "arbitrary", derive(derive_arbitrary::Arbitrary, proptest_derive::Arbitrary))]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 pub enum Parity {
     /// Explicit V value. May be EIP-155 modified.
     Eip155(u64),

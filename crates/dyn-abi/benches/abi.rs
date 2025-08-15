@@ -140,10 +140,10 @@ fn encode_single_input() -> String {
 
 fn encode_struct_input() -> Input {
     Input {
-        tokenIn: hex!("C02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2").into(),
-        tokenOut: hex!("955d5c14C8D4944dA1Ea7836bd44D54a8eC35Ba1").into(),
+        tokenIn: hex!("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2").into(),
+        tokenOut: hex!("0x955d5c14C8D4944dA1Ea7836bd44D54a8eC35Ba1").into(),
         fee: Uint::from(10000),
-        recipient: hex!("299A299A22F8C7397d9DB3702439069d951AeA74").into(),
+        recipient: hex!("0x299A299A22F8C7397d9DB3702439069d951AeA74").into(),
         deadline: U256::from(1685523099_u64),
         amountIn: U256::from(10000000000000000000_u128),
         amountOutMinimum: U256::from(836797564735606450550734848_u128),

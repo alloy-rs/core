@@ -31,9 +31,15 @@ pub fn parse_ether(eth: &str) -> Result<U256, UnitsError> {
 /// let amount_in_eth = U256::from_str_radix("15230001000000000000", 10).unwrap();
 /// let amount_in_gwei = U256::from_str_radix("15230001000", 10).unwrap();
 /// let amount_in_wei = U256::from_str_radix("15230001000", 10).unwrap();
-/// assert_eq!(amount_in_eth, parse_units("15.230001000000000000", "ether").unwrap().into());
-/// assert_eq!(amount_in_gwei, parse_units("15.230001000000000000", "gwei").unwrap().into());
-/// assert_eq!(amount_in_wei, parse_units("15230001000", "wei").unwrap().into());
+/// assert_eq!(
+///     amount_in_eth,
+///     <U256 as From<_>>::from(parse_units("15.230001000000000000", "ether").unwrap())
+/// );
+/// assert_eq!(
+///     amount_in_gwei,
+///     <U256 as From<_>>::from(parse_units("15.230001000000000000", "gwei").unwrap())
+/// );
+/// assert_eq!(amount_in_wei, <U256 as From<_>>::from(parse_units("15230001000", "wei").unwrap()));
 /// ```
 ///
 /// Example of trying to parse decimal WEI, which should fail, as WEI is the smallest
@@ -42,7 +48,10 @@ pub fn parse_ether(eth: &str) -> Result<U256, UnitsError> {
 /// ```should_panic
 /// use alloy_primitives::{utils::parse_units, U256};
 /// let amount_in_wei = U256::from_str_radix("15230001000", 10).unwrap();
-/// assert_eq!(amount_in_wei, parse_units("15.230001000000000000", "wei").unwrap().into());
+/// assert_eq!(
+///     amount_in_wei,
+///     <U256 as From<_>>::from(parse_units("15.230001000000000000", "wei").unwrap())
+/// );
 /// ```
 pub fn parse_units<K, E>(amount: &str, units: K) -> Result<ParseUnits, UnitsError>
 where

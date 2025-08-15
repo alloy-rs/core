@@ -47,7 +47,6 @@ serde_json = { workspace = true, optional = true }
 
 # arbitrary
 arbitrary = { workspace = true, optional = true }
-derive_arbitrary = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -78,7 +77,6 @@ arbitrary = [
     "std",
     "alloy-sol-types/arbitrary",
     "dep:arbitrary",
-    "dep:derive_arbitrary",
     "dep:proptest",
 ]
 

@@ -1,0 +1,22 @@
+[files]
+extend-exclude = [
+    ".git",
+    "target",
+    "testdata",
+    "Cargo.toml",
+    "Cargo.lock",
+    "*.json",
+    "**/tests/**",
+    "**/test/**",
+    "**/*_test.*",
+    "**/*_tests.*",
+    "CHANGELOG.md",
+    "crates/primitives/src/hex_literal.rs", # hex data
+    "crates/sol-type-parser/src/ident.rs", # intentional typos
+    "crates/sol-type-parser/src/parameter.rs", # intentional typos
+]
+
+[default.extend-words]
+ser = "ser"
+strat = "strat"
+typ = "typ"
