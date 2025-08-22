@@ -160,6 +160,7 @@ serde = [
 ]
 borsh = [
     "dep:borsh",
+    "ruint/borsh",
 ]
 
 allocative = ["dep:allocative"]
