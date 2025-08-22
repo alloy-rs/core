@@ -227,6 +227,7 @@ macro_rules! wrap_fixed_bytes {
         }
 
         $crate::impl_fb_traits!($name, $n);
+        $crate::impl_borsh!($name, $n);
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
         $crate::impl_allocative!($name);
@@ -631,6 +632,41 @@ macro_rules! impl_rlp {
 #[cfg(not(feature = "rlp"))]
 macro_rules! impl_rlp {
     ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "borsh")]
+macro_rules! impl_borsh {
+    ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "borsh")))]
+        impl $crate::private::borsh::BorshSerialize for $t {
+            #[inline]
+            fn serialize<W: $crate::private::borsh::io::Write>(
+                &self,
+                writer: &mut W,
+            ) -> Result<(), $crate::private::borsh::io::Error> {
+                <$crate::FixedBytes<$n> as $crate::private::borsh::BorshSerialize>::serialize(&self.0, writer)
+            }
+        }
+
+        #[cfg_attr(docsrs, doc(cfg(feature = "borsh")))]
+        impl $crate::private::borsh::BorshDeserialize for $t {
+            #[inline]
+            fn deserialize_reader<R: $crate::private::borsh::io::Read>(
+                reader: &mut R,
+            ) -> Result<Self, $crate::private::borsh::io::Error> {
+                <$crate::FixedBytes<$n> as $crate::private::borsh::BorshDeserialize>::deserialize_reader(reader).map(Self)
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "borsh"))]
+macro_rules! impl_borsh {
+    ($($t:tt)*) => {};
 }
 
 #[doc(hidden)]
