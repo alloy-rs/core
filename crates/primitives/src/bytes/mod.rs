@@ -6,6 +6,9 @@ use core::{
     ops::{Deref, DerefMut, RangeBounds},
 };
 
+#[cfg(feature = "borsh")]
+mod borsh;
+
 #[cfg(feature = "rlp")]
 mod rlp;
 
