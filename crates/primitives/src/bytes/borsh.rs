@@ -1,4 +1,5 @@
 use super::Bytes;
+use alloc::vec::Vec;
 use borsh::{
     BorshDeserialize, BorshSerialize,
     io::{Error, Read, Write},
