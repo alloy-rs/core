@@ -890,6 +890,7 @@ impl CallLikeExpander<'_> {
         let ExpandData { name, variants, .. } = data;
         let types = data.types();
 
+        let sorted_variants = &sorted_data.variants;
         let selectors = &sorted_data.selectors;
 
         let selector_len = selectors.first().unwrap().array.len();
@@ -917,6 +918,17 @@ impl CallLikeExpander<'_> {
                 /// Prefer using `SolInterface` methods instead.
                 // NOTE: This is currently sorted to allow for binary search in `SolInterface`.
                 pub const SELECTORS: &'static [#selector_type] = &[#(#selectors),*];
+
+                /// Returns the enum variant name for the given selector, if known.
+                #[inline]
+                pub fn name_by_selector(selector: #selector_type) -> Option<&'static str> {
+                    // `SELECTORS` and `VARIANT_NAMES` are kept in the same sorted order.
+                    const VARIANT_NAMES: &'static [&'static str] = &[#(::core::stringify!(#sorted_variants)),*];
+                    match Self::SELECTORS.binary_search(&selector) {
+                        ::core::result::Result::Ok(idx) => ::core::option::Option::Some(VARIANT_NAMES[idx]),
+                        ::core::result::Result::Err(_) => ::core::option::Option::None,
+                    }
+                }
             }
         };
 

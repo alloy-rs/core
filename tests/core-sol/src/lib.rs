@@ -70,6 +70,33 @@ sol! {
     }
 }
 
+#[test]
+fn name_by_selector_basic() {
+    alloy_core::sol! {
+        contract NBSelTest {
+            function foo(uint256);
+            function bar(address);
+
+            error FooErr(uint256);
+            error BarErr(address);
+        }
+    }
+
+    // Calls
+    let foo_sel = <NBSelTest::fooCall as alloy_core::sol_types::SolCall>::SELECTOR;
+    let bar_sel = <NBSelTest::barCall as alloy_core::sol_types::SolCall>::SELECTOR;
+    assert_eq!(NBSelTest::NBSelTestCalls::name_by_selector(foo_sel), Some("foo"));
+    assert_eq!(NBSelTest::NBSelTestCalls::name_by_selector(bar_sel), Some("bar"));
+    assert_eq!(NBSelTest::NBSelTestCalls::name_by_selector([0, 0, 0, 0]), None);
+
+    // Errors
+    let fooe_sel = <NBSelTest::FooErr as alloy_core::sol_types::SolError>::SELECTOR;
+    let bare_sel = <NBSelTest::BarErr as alloy_core::sol_types::SolError>::SELECTOR;
+    assert_eq!(NBSelTest::NBSelTestErrors::name_by_selector(fooe_sel), Some("FooErr"));
+    assert_eq!(NBSelTest::NBSelTestErrors::name_by_selector(bare_sel), Some("BarErr"));
+    assert_eq!(NBSelTest::NBSelTestErrors::name_by_selector([0, 0, 0, 0]), None);
+}
+
 /// Docs
 #[deny(missing_docs)]
 pub mod no_missing_docs {
