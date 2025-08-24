@@ -890,14 +890,16 @@ impl CallLikeExpander<'_> {
         let ExpandData { name, variants, .. } = data;
         let types = data.types();
 
-        let sorted_variants = &sorted_data.variants;
         let selectors = &sorted_data.selectors;
+        let sorted_variants = &sorted_data.variants;
+        let sorted_types = sorted_data.types();
 
         let selector_len = selectors.first().unwrap().array.len();
         assert!(selectors.iter().all(|s| s.array.len() == selector_len));
         let selector_type = quote!([u8; #selector_len]);
 
         self.cx.type_derives(&mut attrs, types.iter().cloned().map(ast::Type::custom), false);
+        let trait_ = &data.trait_;
 
         let mut tokens = quote! {
             #(#attrs)*
@@ -919,15 +921,26 @@ impl CallLikeExpander<'_> {
                 // NOTE: This is currently sorted to allow for binary search in `SolInterface`.
                 pub const SELECTORS: &'static [#selector_type] = &[#(#selectors),*];
 
+                /// The names of the variants in the same order as `SELECTORS`.
+                pub const VARIANT_NAMES: &'static [&'static str] = &[#(::core::stringify!(#sorted_variants)),*];
+
+                /// The signatures in the same order as `SELECTORS`.
+                pub const SIGNATURES: &'static [&'static str] = &[#(<#sorted_types as alloy_sol_types::#trait_>::SIGNATURE),*];
+
+                /// Returns the signature for the given selector, if known.
+                #[inline]
+                pub fn signature_by_selector(selector: #selector_type) -> Option<&'static str> {
+                    match Self::SELECTORS.binary_search(&selector) {
+                        ::core::result::Result::Ok(idx) => ::core::option::Option::Some(Self::SIGNATURES[idx]),
+                        ::core::result::Result::Err(_) => ::core::option::Option::None,
+                    }
+                }
+
                 /// Returns the enum variant name for the given selector, if known.
                 #[inline]
                 pub fn name_by_selector(selector: #selector_type) -> Option<&'static str> {
-                    // `SELECTORS` and `VARIANT_NAMES` are kept in the same sorted order.
-                    const VARIANT_NAMES: &'static [&'static str] = &[#(::core::stringify!(#sorted_variants)),*];
-                    match Self::SELECTORS.binary_search(&selector) {
-                        ::core::result::Result::Ok(idx) => ::core::option::Option::Some(VARIANT_NAMES[idx]),
-                        ::core::result::Result::Err(_) => ::core::option::Option::None,
-                    }
+                    let sig = Self::signature_by_selector(selector)?;
+                    sig.split_once('(').map(|(name, _)| name)
                 }
             }
         };
