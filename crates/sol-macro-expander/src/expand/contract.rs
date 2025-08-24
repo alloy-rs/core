@@ -929,7 +929,7 @@ impl CallLikeExpander<'_> {
 
                 /// Returns the signature for the given selector, if known.
                 #[inline]
-                pub fn signature_by_selector(selector: #selector_type) -> Option<&'static str> {
+                pub fn signature_by_selector(selector: #selector_type) -> ::core::option::Option<&'static str> {
                     match Self::SELECTORS.binary_search(&selector) {
                         ::core::result::Result::Ok(idx) => ::core::option::Option::Some(Self::SIGNATURES[idx]),
                         ::core::result::Result::Err(_) => ::core::option::Option::None,
@@ -938,7 +938,7 @@ impl CallLikeExpander<'_> {
 
                 /// Returns the enum variant name for the given selector, if known.
                 #[inline]
-                pub fn name_by_selector(selector: #selector_type) -> Option<&'static str> {
+                pub fn name_by_selector(selector: #selector_type) -> ::core::option::Option<&'static str> {
                     let sig = Self::signature_by_selector(selector)?;
                     sig.split_once('(').map(|(name, _)| name)
                 }
