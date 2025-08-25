@@ -55,6 +55,9 @@ keccak-asm = { workspace = true, optional = true }
 sha3 = { workspace = true, optional = true }
 tiny-keccak = { workspace = true, features = ["keccak"] }
 
+# borsh
+borsh = { workspace = true, optional = true }
+
 # rlp
 alloy-rlp = { workspace = true, optional = true }
 
@@ -154,6 +157,10 @@ serde = [
     "hashbrown?/serde",
     "indexmap?/serde",
     "rand?/serde",
+]
+borsh = [
+    "dep:borsh",
+    "ruint/borsh",
 ]
 
 allocative = ["dep:allocative"]
