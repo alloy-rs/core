@@ -102,7 +102,7 @@ features!
 ```rust
 # use alloy_sol_types::{sol, sol_data, SolType};
 # use alloy_primitives::U256;
-// We also also support Solidity value types
+// We also support Solidity value types
 sol! {
     type MyValueType is uint256;
 }
