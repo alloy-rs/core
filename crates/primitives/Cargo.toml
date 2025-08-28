@@ -55,6 +55,9 @@ keccak-asm = { workspace = true, optional = true }
 sha3 = { workspace = true, optional = true }
 tiny-keccak = { workspace = true, features = ["keccak"] }
 
+# borsh
+borsh = { workspace = true, optional = true }
+
 # rlp
 alloy-rlp = { workspace = true, optional = true }
 
@@ -83,8 +86,7 @@ foldhash = { workspace = true, optional = true }
 rustc-hash = { workspace = true, optional = true }
 
 # arbitrary
-arbitrary = { workspace = true, optional = true }
-derive_arbitrary = { workspace = true, optional = true }
+arbitrary = { workspace = true, optional = true, features = ["derive"] }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
@@ -156,12 +158,15 @@ serde = [
     "indexmap?/serde",
     "rand?/serde",
 ]
+borsh = [
+    "dep:borsh",
+    "ruint/borsh",
+]
 
 allocative = ["dep:allocative"]
 arbitrary = [
     "std",
     "dep:arbitrary",
-    "dep:derive_arbitrary",
     "dep:proptest",
     "dep:proptest-derive",
     "ruint/arbitrary",
@@ -170,7 +175,7 @@ arbitrary = [
 ]
 postgres = ["std", "dep:postgres-types", "ruint/postgres"]
 diesel = ["std", "dep:diesel", "ruint/diesel"]
-sqlx = ["std","dep:sqlx-core","ruint/sqlx"]
+sqlx = ["std", "dep:sqlx-core", "ruint/sqlx"]
 
 # `const-hex` compatibility feature for `hex`.
 # Should not be needed most of the time.

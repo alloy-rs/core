@@ -13,6 +13,9 @@ pub use fixed::FixedBytes;
 mod function;
 pub use function::Function;
 
+#[cfg(feature = "borsh")]
+mod borsh;
+
 #[cfg(feature = "rlp")]
 mod rlp;
 

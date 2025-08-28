@@ -5,12 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1](https://github.com/alloy-rs/core/releases/tag/v1.3.1) - 2025-08-17
+
+### Bug Fixes
+
+- [primitives] Re-export correct `Entry` types ([#989](https://github.com/alloy-rs/core/issues/989))
+
+### Miscellaneous Tasks
+
+- Add typos ([#991](https://github.com/alloy-rs/core/issues/991))
+
 ## [1.3.0](https://github.com/alloy-rs/core/releases/tag/v1.3.0) - 2025-07-22
 
 ### Features
 
 - [primitives] Serialize `Signed` with a compact binary representation ([#953](https://github.com/alloy-rs/core/issues/953))
 - Add native sqlx support for Address (MySQL/Postgres/SQLite) with feature gating and tests ([#970](https://github.com/alloy-rs/core/issues/970))
+
+### Miscellaneous Tasks
+
+- Release 1.3.0
 
 ## [1.2.1](https://github.com/alloy-rs/core/releases/tag/v1.2.1) - 2025-06-20
 
@@ -69,23 +83,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
 
-### Features
+### Bug Fixes
 
-- [primitives] Supporting diesel @ 2.2 ([#915](https://github.com/alloy-rs/core/issues/915))
-- 1.0-rc.1
-- Bump ruint, adjust rand feature
-
-### Miscellaneous Tasks
-
-- Release 1.0.0
-- Release 1.0.0-rc.1
-- Release 0.8.25
-
-### Other
-
-- Merge branch 'main' into v1.0-rc
-
-## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
+- [primitives] Remove undefined behavior in FixedBytes ([#919](https://github.com/alloy-rs/core/issues/919))
+- Do not rely on bytes dependency in `wrap_fixed_bytes!` ([#918](https://github.com/alloy-rs/core/issues/918))
 
 ### Dependencies
 
@@ -93,26 +94,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
+- [primitives] Supporting diesel @ 2.2 ([#915](https://github.com/alloy-rs/core/issues/915))
+- 1.0-rc.1
+- Bump ruint, adjust rand feature
 - [primitives] Remove `From<String> for Bytes` ([#907](https://github.com/alloy-rs/core/issues/907))
-
-### Miscellaneous Tasks
-
-- Remove deprecated `Signature` ([#899](https://github.com/alloy-rs/core/issues/899))
-
-## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
-
-### Bug Fixes
-
-- [primitives] Remove undefined behavior in FixedBytes ([#919](https://github.com/alloy-rs/core/issues/919))
-- Do not rely on bytes dependency in `wrap_fixed_bytes!` ([#918](https://github.com/alloy-rs/core/issues/918))
-
-### Features
-
 - Add inner mut ([#921](https://github.com/alloy-rs/core/issues/921))
 
 ### Miscellaneous Tasks
 
+- Release 1.0.0
+- Release 1.0.0-rc.1
+- Release 0.8.25
+- Remove deprecated `Signature` ([#899](https://github.com/alloy-rs/core/issues/899))
 - Add hash_ref function to sealed.rs ([#920](https://github.com/alloy-rs/core/issues/920))
+
+### Other
+
+- Merge branch 'main' into v1.0-rc
 
 ## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
 
@@ -256,44 +254,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.13](https://github.com/alloy-rs/core/releases/tag/v0.8.13) - 2024-11-26
 
-### Miscellaneous Tasks
-
-- Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
-
-### Other
-
-- Make Signature::new a const fn ([#810](https://github.com/alloy-rs/core/issues/810))
-
-## [0.8.12](https://github.com/alloy-rs/core/releases/tag/v0.8.12) - 2024-11-12
-
 ### Bug Fixes
 
 - `Sealed::hash` serde ([#805](https://github.com/alloy-rs/core/issues/805))
-
-### Features
-
-- Add `AsRef` impl and `hash` method to `Sealed` ([#804](https://github.com/alloy-rs/core/issues/804))
-
-### Miscellaneous Tasks
-
-- Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
-
-## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
-
-### Bug Fixes
-
 - [serde] Add alias `v` for `yParity` ([#801](https://github.com/alloy-rs/core/issues/801))
 
 ### Features
 
+- Add `AsRef` impl and `hash` method to `Sealed` ([#804](https://github.com/alloy-rs/core/issues/804))
 - Add has_eip155_value convenience function to signature ([#791](https://github.com/alloy-rs/core/issues/791))
 
 ### Miscellaneous Tasks
 
+- Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
+- Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
 - Release 0.8.11 ([#803](https://github.com/alloy-rs/core/issues/803))
 
 ### Other
 
+- Make Signature::new a const fn ([#810](https://github.com/alloy-rs/core/issues/810))
 - Revert "chore: replace Signature with PrimitiveSignature" ([#800](https://github.com/alloy-rs/core/issues/800))
 
 ### Performance

@@ -124,8 +124,11 @@ pub mod private {
     #[cfg(feature = "serde")]
     pub use serde;
 
+    #[cfg(feature = "borsh")]
+    pub use borsh;
+
     #[cfg(feature = "arbitrary")]
-    pub use {arbitrary, derive_arbitrary, proptest, proptest_derive};
+    pub use {arbitrary, proptest, proptest_derive};
 
     #[cfg(feature = "diesel")]
     pub use diesel;
