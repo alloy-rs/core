@@ -17,6 +17,19 @@ macro_rules! str_lit {
         }
 
         impl fmt::Display for $name {
+            /// Formats a string literal as valid Solidity source code.
+            ///
+            /// This implementation formats string literals with proper syntax including
+            /// quotes and any required prefixes (e.g., `hex`, `unicode`). The output
+            /// can be directly used as valid Solidity code.
+            ///
+            /// For hex and unicode string literals, the appropriate prefix is included:
+            /// - Regular strings: `"content"`
+            /// - Hex strings: `hex"content"`
+            /// - Unicode strings: `unicode"content"`
+            ///
+            /// Multiple consecutive string literals are concatenated with spaces,
+            /// following Solidity's string concatenation rules.
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 for (i, value) in self.values.iter().enumerate() {
                     if i > 0 {
