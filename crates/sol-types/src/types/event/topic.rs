@@ -206,10 +206,22 @@ impl EventTopic for () {
 all_the_tuples!(tuple_impls);
 
 fn encode_topic_bytes(sl: &[u8], out: &mut Vec<u8>) {
-    let padding = 32 - sl.len() % 32;
+    let padding = non_zero_padding(sl.len());
     out.reserve(sl.len() + padding);
     out.extend_from_slice(sl);
     out.extend(core::iter::repeat_n(0, padding));
+}
+
+#[inline(always)]
+const fn non_zero_padding(len: usize) -> usize {
+    if len == 0 {
+        return 32;
+    }
+
+    match len % 32 {
+        0 => 0,
+        r => 32 - r,
+    }
 }
 
 #[cfg(test)]
