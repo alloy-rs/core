@@ -211,3 +211,33 @@ fn encode_topic_bytes(sl: &[u8], out: &mut Vec<u8>) {
     out.extend_from_slice(sl);
     out.extend(core::iter::repeat_n(0, padding));
 }
+
+#[cfg(test)]
+mod tests {
+    use super::encode_topic_bytes;
+
+    #[test]
+    fn encode_topic_bytes_empty() {
+        let mut out = Vec::new();
+        encode_topic_bytes(&[], &mut out);
+        assert_eq!(out, vec![0; 32]);
+    }
+
+    #[test]
+    fn encode_topic_bytes_remainder_modulo_32() {
+        let mut out = Vec::new();
+        encode_topic_bytes(&[0u8; 11], &mut out);
+        assert_eq!(out, vec![0; 32]);
+    }
+
+    #[test]
+    fn encode_topic_bytes_non_zero_multiple() {
+        let mut out = Vec::new();
+        encode_topic_bytes(&[0u8; 32], &mut out);
+        assert_eq!(out, vec![0; 32]);
+
+        let mut out = Vec::new();
+        encode_topic_bytes(&[0u8; 64], &mut out);
+        assert_eq!(out, vec![0; 64]);
+    }
+}
