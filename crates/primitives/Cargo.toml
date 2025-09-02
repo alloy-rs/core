@@ -127,9 +127,10 @@ std = [
     "sha3?/std",
 ]
 nightly = [
+    "foldhash?/nightly",
+    "hashbrown?/nightly",
     "hex/nightly",
     "ruint/nightly",
-    "hashbrown?/nightly",
     "rustc-hash?/nightly",
 ]
 
@@ -158,10 +159,7 @@ serde = [
     "indexmap?/serde",
     "rand?/serde",
 ]
-borsh = [
-    "dep:borsh",
-    "ruint/borsh",
-]
+borsh = ["dep:borsh", "ruint/borsh"]
 
 allocative = ["dep:allocative"]
 arbitrary = [
