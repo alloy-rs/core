@@ -76,7 +76,7 @@ pub fn parse_derives(attr: &Attribute) -> Punctuated<Path, Token![,]> {
 // 5. document the attribute in the [`sol!`] macro docs.
 
 /// `#[sol(...)]` attributes.
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SolAttrs {
     /// `#[sol(rpc)]`
     pub rpc: Option<bool>,
@@ -211,6 +211,37 @@ impl SolAttrs {
             })?;
         }
         Ok((this, others))
+    }
+
+    /// Merges `other` into `self`. `other` takes precedence over `self`.
+    ///
+    /// This is used to inherit the contract's attributes when expanding its items.
+    pub fn merge(&mut self, other: &SolAttrs) {
+        fn merge_opt<T: Clone>(a: &mut Option<T>, b: &Option<T>) {
+            if let Some(b) = b {
+                *a = Some(b.clone());
+            }
+        }
+        fn merge_vec<T: Clone>(a: &mut Option<Vec<T>>, b: &Option<Vec<T>>) {
+            if let Some(b) = b {
+                a.get_or_insert_default().extend(b.iter().cloned());
+            }
+        }
+        let (a, b) = (self, other);
+        merge_opt(&mut a.rpc, &b.rpc);
+        merge_opt(&mut a.abi, &b.abi);
+        merge_opt(&mut a.all_derives, &b.all_derives);
+        merge_vec(&mut a.extra_derives, &b.extra_derives);
+        merge_opt(&mut a.extra_methods, &b.extra_methods);
+        merge_opt(&mut a.docs, &b.docs);
+        merge_opt(&mut a.alloy_sol_types, &b.alloy_sol_types);
+        merge_opt(&mut a.alloy_contract, &b.alloy_contract);
+        merge_opt(&mut a.rename, &b.rename);
+        merge_opt(&mut a.rename_all, &b.rename_all);
+        merge_opt(&mut a.bytecode, &b.bytecode);
+        merge_opt(&mut a.deployed_bytecode, &b.deployed_bytecode);
+        merge_opt(&mut a.type_check, &b.type_check);
+        merge_opt(&mut a.ignore_unlinked, &b.ignore_unlinked);
     }
 }
 

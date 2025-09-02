@@ -1360,3 +1360,21 @@ fn extra_derives() {
     let s = MyStruct { a: U256::ZERO };
     let _ = format!("{s:#?}");
 }
+
+#[test]
+fn inherit_attrs() {
+    sol! {
+        #![sol(extra_derives(PartialEq, Eq))]
+
+        #[sol(extra_derives(Debug))]
+        contract C {
+            struct MyStruct {
+                uint256 a;
+            }
+        }
+    }
+
+    let a = C::MyStruct { a: U256::ZERO };
+    let b = C::MyStruct { a: U256::ZERO };
+    assert_eq!(a, b, "{a:#?} != {b:#?}");
+}
