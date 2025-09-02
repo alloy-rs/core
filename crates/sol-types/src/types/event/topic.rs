@@ -206,8 +206,50 @@ impl EventTopic for () {
 all_the_tuples!(tuple_impls);
 
 fn encode_topic_bytes(sl: &[u8], out: &mut Vec<u8>) {
-    let padding = 32 - sl.len() % 32;
+    let padding = non_zero_padding(sl.len());
     out.reserve(sl.len() + padding);
     out.extend_from_slice(sl);
     out.extend(core::iter::repeat_n(0, padding));
+}
+
+#[inline(always)]
+const fn non_zero_padding(len: usize) -> usize {
+    if len == 0 {
+        return 32;
+    }
+
+    match len % 32 {
+        0 => 0,
+        r => 32 - r,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encode_topic_bytes_empty() {
+        let mut out = Vec::new();
+        encode_topic_bytes(&[], &mut out);
+        assert_eq!(out, vec![0; 32]);
+    }
+
+    #[test]
+    fn encode_topic_bytes_remainder_modulo_32() {
+        let mut out = Vec::new();
+        encode_topic_bytes(&[0u8; 11], &mut out);
+        assert_eq!(out, vec![0; 32]);
+    }
+
+    #[test]
+    fn encode_topic_bytes_non_zero_multiple() {
+        let mut out = Vec::new();
+        encode_topic_bytes(&[0u8; 32], &mut out);
+        assert_eq!(out, vec![0; 32]);
+
+        let mut out = Vec::new();
+        encode_topic_bytes(&[0u8; 64], &mut out);
+        assert_eq!(out, vec![0; 64]);
+    }
 }
