@@ -38,7 +38,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
-    let bytecode = sol_attrs.bytecode.map(|lit| {
+    let bytecode = sol_attrs.bytecode.as_ref().map(|lit| {
         let name = Ident::new("BYTECODE", lit.span());
         let hex = lit.value();
         let bytes = hex::decode(&hex).unwrap();
@@ -55,7 +55,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
                 alloy_sol_types::private::Bytes::from_static(#lit_bytes);
         }
     });
-    let deployed_bytecode = sol_attrs.deployed_bytecode.map(|lit| {
+    let deployed_bytecode = sol_attrs.deployed_bytecode.as_ref().map(|lit| {
         let name = Ident::new("DEPLOYED_BYTECODE", lit.span());
         let hex = lit.value();
         let bytes = hex::decode(&hex).unwrap();
@@ -84,7 +84,10 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         attrs.into_iter().partition::<Vec<_>, _>(|a| a.path().is_ident("doc"));
     mod_attrs.extend(item_attrs.iter().filter(|a| !a.path().is_ident("derive")).cloned());
 
+    // Expand inner items.
     let mut item_tokens = TokenStream::new();
+    let prev_cx_attrs = cx.attrs.clone();
+    cx.attrs.merge(&sol_attrs);
     for item in body {
         match item {
             Item::Function(function) => match function.kind {
@@ -138,6 +141,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
             item_tokens.extend(cx.expand_item(&item)?);
         }
     }
+    cx.attrs = prev_cx_attrs;
 
     let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
     // Remove any `Default` derives.

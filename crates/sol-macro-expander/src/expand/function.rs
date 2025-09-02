@@ -36,7 +36,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     if name.is_none() {
         // ignore functions without names (modifiers...)
         return Ok(quote!());
-    };
+    }
 
     let returns = returns.as_ref().map(|r| &r.returns).unwrap_or_default();
 
