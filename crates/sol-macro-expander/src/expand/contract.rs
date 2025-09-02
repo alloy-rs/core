@@ -166,6 +166,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let mut attrs = enum_attrs.clone();
         let doc_str = format!("Container for all the [`{name}`](self) function calls.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
+        attrs.push(parse_quote!(#[derive(Clone)]));
         enum_expander.expand(ToExpand::Functions(&functions), attrs)
     });
 
@@ -173,6 +174,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let mut attrs = enum_attrs.clone();
         let doc_str = format!("Container for all the [`{name}`](self) custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
+        attrs.push(parse_quote!(#[derive(Clone)]));
         enum_expander.expand(ToExpand::Errors(&errors), attrs)
     });
 
@@ -180,6 +182,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let mut attrs = enum_attrs;
         let doc_str = format!("Container for all the [`{name}`](self) events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
+        attrs.push(parse_quote!(#[derive(Clone)]));
         enum_expander.expand(ToExpand::Events(&events), attrs)
     });
 
