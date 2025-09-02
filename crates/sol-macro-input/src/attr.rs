@@ -215,18 +215,23 @@ impl SolAttrs {
 
     /// Merges `other` into `self`. `other` takes precedence over `self`.
     ///
-    /// This is used when parsing items inside nested contracts.
+    /// This is used to inherit the contract's attributes when expanding its items.
     pub fn merge(&mut self, other: &SolAttrs) {
         fn merge_opt<T: Clone>(a: &mut Option<T>, b: &Option<T>) {
             if let Some(b) = b {
                 *a = Some(b.clone());
             }
         }
+        fn merge_vec<T: Clone>(a: &mut Option<Vec<T>>, b: &Option<Vec<T>>) {
+            if let Some(b) = b {
+                a.get_or_insert_default().extend(b.iter().cloned());
+            }
+        }
         let (a, b) = (self, other);
         merge_opt(&mut a.rpc, &b.rpc);
         merge_opt(&mut a.abi, &b.abi);
         merge_opt(&mut a.all_derives, &b.all_derives);
-        merge_opt(&mut a.extra_derives, &b.extra_derives);
+        merge_vec(&mut a.extra_derives, &b.extra_derives);
         merge_opt(&mut a.extra_methods, &b.extra_methods);
         merge_opt(&mut a.docs, &b.docs);
         merge_opt(&mut a.alloy_sol_types, &b.alloy_sol_types);
