@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_entry() {
-        let mut map = HashMap::default();
+        let mut map = HashMap::<u32, u64>::default();
         map.insert(1, 1);
         assert_eq!(use_entry(map.entry(0)), 0);
         assert_eq!(use_entry(map.entry(1)), 1);
