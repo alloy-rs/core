@@ -226,7 +226,7 @@ const fn non_zero_padding(len: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::encode_topic_bytes;
+    use super::*;
 
     #[test]
     fn encode_topic_bytes_empty() {
