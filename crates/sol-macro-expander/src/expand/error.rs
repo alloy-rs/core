@@ -52,7 +52,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
                 impl alloy_sol_types::JsonAbiExt for #name {
                     type Abi = alloy_sol_types::private::alloy_json_abi::Error;
 
-                    #[inline]
                     fn abi() -> Self::Abi {
                         #error
                     }

@@ -116,4 +116,14 @@ pub mod private {
     }
 
     pub struct AssertTypeEq<T>(pub T);
+
+    #[inline(never)]
+    pub fn str_to_owned(s: &str) -> String {
+        s.to_owned()
+    }
+
+    #[inline(never)]
+    pub fn make_btree_map<K: Ord, V>(items: Vec<(K, V)>) -> BTreeMap<K, V> {
+        BTreeMap::from_iter(items)
+    }
 }

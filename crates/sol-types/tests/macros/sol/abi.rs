@@ -562,3 +562,38 @@ fn eparam(s: &str, indexed: bool) -> EventParam {
         indexed,
     }
 }
+
+#[test]
+fn special_funcs() {
+    sol! {
+        #[sol(abi)]
+        contract NoAttrs {
+            fallback() external;
+            receive() external;
+        }
+
+        #[sol(abi)]
+        contract WithAttrs {
+            fallback() external payable;
+            receive() external payable;
+        }
+    }
+
+    assert_eq!(
+        NoAttrs::abi::fallback(),
+        Some(Fallback { state_mutability: StateMutability::NonPayable })
+    );
+    assert_eq!(
+        NoAttrs::abi::receive(),
+        Some(Receive { state_mutability: StateMutability::Payable })
+    );
+
+    assert_eq!(
+        WithAttrs::abi::fallback(),
+        Some(Fallback { state_mutability: StateMutability::Payable })
+    );
+    assert_eq!(
+        WithAttrs::abi::receive(),
+        Some(Receive { state_mutability: StateMutability::Payable })
+    );
+}

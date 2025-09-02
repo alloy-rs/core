@@ -5,6 +5,7 @@ use alloy_json_abi::{
 };
 use ast::{ItemError, ItemEvent, ItemFunction};
 use proc_macro2::TokenStream;
+use quote::quote;
 use std::fmt::Write;
 
 pub(crate) fn generate<T>(t: &T, cx: &ExpCtxt<'_>) -> TokenStream
@@ -170,9 +171,9 @@ pub(super) fn constructor(function: &ItemFunction, cx: &ExpCtxt<'_>) -> Construc
     }
 }
 
-pub(super) fn fallback(function: &ItemFunction, _cx: &ExpCtxt<'_>) -> Fallback {
+pub(super) fn fallback(function: &ItemFunction, cx: &ExpCtxt<'_>) -> Fallback {
     assert!(function.kind.is_fallback());
-    Fallback { state_mutability: StateMutability::NonPayable }
+    Fallback { state_mutability: function.attributes.to_dyn_abi(cx) }
 }
 
 pub(super) fn receive(function: &ItemFunction, _cx: &ExpCtxt<'_>) -> Receive {
@@ -181,24 +182,40 @@ pub(super) fn receive(function: &ItemFunction, _cx: &ExpCtxt<'_>) -> Receive {
 }
 
 macro_rules! make_map {
-    ($items:ident, $cx:ident) => {{
-        let mut map = std::collections::BTreeMap::<String, Vec<_>>::new();
+    ($items:expr, $cx:expr, $get_ident:ident, $ty:ident) => {{
+        let mut items_map = std::collections::BTreeMap::<String, Vec<_>>::new();
+        let alloy_sol_types = &$cx.crates.sol_types;
         for item in $items {
-            let item = item.to_dyn_abi($cx);
-            map.entry(item.name.clone()).or_default().push(item);
+            let name = item.to_dyn_abi($cx).name;
+            let ident = $cx.$get_ident(item.into());
+            let item = quote::quote!(<#ident as #alloy_sol_types::JsonAbiExt>::abi);
+            items_map.entry(name).or_default().push(item);
         }
-        crate::verbatim::verbatim(&map, &$cx.crates)
+        let items = items_map.into_iter().map(|(name, items)| {
+            quote!((#name, &[#(#items),*]))
+        });
+        quote! {
+            static LAZY_ITEMS: &[(&str, &[fn() -> #alloy_sol_types::private::alloy_json_abi::$ty])] = &[#(#items,)*];
+            let items = LAZY_ITEMS
+                .iter()
+                .map(|(name, item_fns)| (
+                    alloy_sol_types::private::str_to_owned(name),
+                    item_fns.iter().map(|item_fn| item_fn()).collect()
+                ))
+                .collect();
+            alloy_sol_types::private::make_btree_map(items)
+        }
     }};
 }
 
 pub(super) fn functions_map(functions: &[ItemFunction], cx: &ExpCtxt<'_>) -> TokenStream {
-    make_map!(functions, cx)
+    make_map!(functions, cx, call_name, Function)
 }
 
 pub(super) fn events_map(events: &[&ItemEvent], cx: &ExpCtxt<'_>) -> TokenStream {
-    make_map!(events, cx)
+    make_map!(events.iter().copied(), cx, overloaded_name, Event)
 }
 
 pub(super) fn errors_map(errors: &[&ItemError], cx: &ExpCtxt<'_>) -> TokenStream {
-    make_map!(errors, cx)
+    make_map!(errors.iter().copied(), cx, overloaded_name, Error)
 }

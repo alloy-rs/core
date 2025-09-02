@@ -16,6 +16,12 @@ pub(crate) trait Verbatim {
     fn to_verbatim_tokens(&self, s: &mut TokenStream, crates: &ExternCrates);
 }
 
+impl Verbatim for proc_macro2::TokenStream {
+    fn to_verbatim_tokens(&self, s: &mut TokenStream, _crates: &ExternCrates) {
+        s.extend(self.clone());
+    }
+}
+
 /// Provides a [`quote::ToTokens`] implementations for references of values that implement
 /// [`Verbatim`].
 pub(crate) struct ToTokensCompat<'a, T: ?Sized + Verbatim>(pub(crate) &'a T, &'a ExternCrates);
@@ -33,7 +39,7 @@ impl Verbatim for String {
         tokens.extend(if self.is_empty() {
             quote!(#alloy_sol_types::private::String::new())
         } else {
-            quote!(#alloy_sol_types::private::ToOwned::to_owned(#self))
+            quote!(#alloy_sol_types::private::str_to_owned(#self))
         })
     }
 }
@@ -55,12 +61,11 @@ impl Verbatim for usize {
 impl<T: Verbatim> Verbatim for Vec<T> {
     fn to_verbatim_tokens(&self, s: &mut TokenStream, crates: &ExternCrates) {
         let alloy_sol_types = &crates.sol_types;
-        s.extend(if self.is_empty() {
-            quote!(#alloy_sol_types::private::Vec::new())
-        } else {
-            let iter = self.iter().map(|t| ToTokensCompat(t, crates));
-            quote!(#alloy_sol_types::private::vec![#(#iter),*])
-        });
+        let iter = self.iter().map(|t| ToTokensCompat(t, crates));
+        s.extend(match self.len() {
+            0 => quote!(#alloy_sol_types::private::Vec::new()),
+            _ => quote!(#alloy_sol_types::private::vec![#(#iter),*]),
+        })
     }
 }
 
@@ -72,7 +77,7 @@ impl<K: Verbatim, V: Verbatim> Verbatim for BTreeMap<K, V> {
         } else {
             let k = self.keys().map(|t| ToTokensCompat(t, crates));
             let v = self.values().map(|t| ToTokensCompat(t, crates));
-            quote!(#alloy_sol_types::private::BTreeMap::from([#( (#k, #v) ),*]))
+            quote!(#alloy_sol_types::private::make_btree_map(vec![#( (#k, #v) ),*]))
         });
     }
 }
