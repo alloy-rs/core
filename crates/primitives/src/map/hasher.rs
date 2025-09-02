@@ -41,7 +41,7 @@ cfg_if! {
     }
 }
 
-/// The default [`BuildHasher`](BuildHasher) used by [`HashMap`] and [`HashSet`].
+/// The default [`BuildHasher`] used by [`HashMap`](super::HashMap) and [`HashSet`](super::HashSet).
 ///
 /// See [the module documentation](super) for more information on the default hasher.
 #[derive(Clone, Default)]
@@ -68,7 +68,7 @@ impl BuildHasher for DefaultHashBuilder {
     }
 }
 
-/// The default [`Hasher`] used by [`HashMap`] and [`HashSet`].
+/// The default [`Hasher`] used by [`HashMap`](super::HashMap) and [`HashSet`](super::HashSet).
 ///
 /// See [the module documentation](super) for more information on the default hasher.
 #[derive(Clone)]
