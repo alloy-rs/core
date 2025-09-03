@@ -91,7 +91,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 impl alloy_sol_types::JsonAbiExt for #call_name {
                     type Abi = alloy_sol_types::private::alloy_json_abi::Function;
 
-                    #[inline]
                     fn abi() -> Self::Abi {
                         #function
                     }

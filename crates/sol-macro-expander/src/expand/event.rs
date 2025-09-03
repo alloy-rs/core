@@ -139,7 +139,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
                 impl alloy_sol_types::JsonAbiExt for #name {
                     type Abi = alloy_sol_types::private::alloy_json_abi::Event;
 
-                    #[inline]
                     fn abi() -> Self::Abi {
                         #event
                     }
