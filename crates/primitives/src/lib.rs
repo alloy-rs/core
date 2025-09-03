@@ -70,11 +70,13 @@ pub use utils::{KECCAK256_EMPTY, Keccak256, eip191_hash_message, keccak256};
 #[doc(hidden)] // Use `hex` directly instead!
 pub mod hex_literal;
 
+#[doc(inline)]
+pub use ruint::uint;
 #[doc(no_inline)]
 pub use {
     ::bytes,
     ::hex,
-    ruint::{self, Uint, uint},
+    ruint::{self, Uint},
 };
 
 #[cfg(feature = "serde")]
