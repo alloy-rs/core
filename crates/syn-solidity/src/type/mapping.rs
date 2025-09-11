@@ -43,9 +43,9 @@ impl fmt::Display for TypeMapping {
         if let Some(key_name) = &self.key_name {
             write!(f, "{key_name} ")?;
         }
-        write!(f, "=> {} ", self.value)?;
+        write!(f, "=> {}", self.value)?;
         if let Some(value_name) = &self.value_name {
-            write!(f, "{value_name}")?;
+            write!(f, " {value_name}")?;
         }
         f.write_str(")")
     }
