@@ -1,5 +1,4 @@
 use crate::Bytes;
-use bytes::BytesMut;
 use rkyv::{
     Archive, Deserialize, Place, Serialize,
     bytecheck::CheckBytes,
