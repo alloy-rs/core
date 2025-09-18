@@ -4,8 +4,7 @@
 
 use alloy_primitives::{Address, U256};
 use alloy_sol_types::sol;
-use std::collections::HashSet;
-use std::hash::Hash;
+use std::{collections::HashSet, hash::Hash};
 
 #[test]
 fn test_all_derives() {
