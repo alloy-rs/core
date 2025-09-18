@@ -143,6 +143,8 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
     }
     cx.attrs = prev_cx_attrs;
 
+    let prev_cx_attrs = cx.attrs.clone();
+    cx.attrs.merge(&sol_attrs);
     let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
     // Remove any `Default` derives.
     let mut enum_attrs = item_attrs;
@@ -189,6 +191,8 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         attrs.push(parse_quote!(#[derive(Clone)]));
         enum_expander.expand(ToExpand::Events(&events), attrs)
     });
+
+    cx.attrs = prev_cx_attrs;
 
     let mod_descr_doc = (docs && docs_str(&mod_attrs).trim().is_empty())
         .then(|| mk_doc("Module containing a contract's types and functions."));
