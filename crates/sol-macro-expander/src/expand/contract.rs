@@ -141,10 +141,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
             item_tokens.extend(cx.expand_item(&item)?);
         }
     }
-    cx.attrs = prev_cx_attrs;
 
-    let prev_cx_attrs = cx.attrs.clone();
-    cx.attrs.merge(&sol_attrs);
     let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
     // Remove any `Default` derives.
     let mut enum_attrs = item_attrs;
