@@ -1,6 +1,5 @@
-//! Comprehensive test for contract-level derives applying to all generated types
-//! Tests all_derives, extra_derives, and their combination on contracts with
-//! events and errors
+//! Comprehensive test for contract-level derives applying to all generated types.
+//! Tests all_derives and extra_derives on contracts with events and errors.
 
 use alloy_primitives::{Address, U256};
 use alloy_sol_types::sol;
