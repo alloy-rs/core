@@ -181,6 +181,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         enum_expander.expand(ToExpand::Events(&events), attrs)
     });
 
+    // Do not propagate contract-level derives to the functions enum.
     cx.attrs = prev_cx_attrs;
 
     let functions_enum = (!functions.is_empty()).then(|| {
