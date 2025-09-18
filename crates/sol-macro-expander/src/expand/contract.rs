@@ -164,12 +164,12 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         attr.meta = parse_quote! { derive(#(#derives),*) };
     }
 
+    let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
     let errors_enum = (!errors.is_empty()).then(|| {
         let mut attrs = enum_attrs.clone();
         let doc_str = format!("Container for all the [`{name}`](self) custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         attrs.push(parse_quote!(#[derive(Clone)]));
-        let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
         enum_expander.expand(ToExpand::Errors(&errors), attrs)
     });
 
@@ -178,7 +178,6 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let doc_str = format!("Container for all the [`{name}`](self) events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         attrs.push(parse_quote!(#[derive(Clone)]));
-        let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
         enum_expander.expand(ToExpand::Events(&events), attrs)
     });
 
