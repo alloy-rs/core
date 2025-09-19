@@ -29,6 +29,7 @@ bytes.workspace = true
 hex.workspace = true
 itoa.workspace = true
 ruint.workspace = true
+arrayvec.workspace=true
 
 # macros
 cfg-if.workspace = true

@@ -1,6 +1,6 @@
 use super::{ParseSignedError, Sign, utils::*};
-use alloc::string::String;
-use core::fmt;
+use crate::String;
+use core::fmt::{self, Write};
 use ruint::{BaseConvertError, Uint, UintTryFrom, UintTryTo};
 
 /// Signed integer wrapping a `ruint::Uint`.
@@ -370,8 +370,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     pub fn to_dec_string(&self) -> String {
         let sign = self.sign();
         let abs = self.unsigned_abs();
-
-        format!("{sign}{abs}")
+        let mut buf = String::new();
+        write!(&mut buf, "{sign}{abs}").unwrap();
+        buf
     }
 
     /// Convert from a hex string.
@@ -396,8 +397,9 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     pub fn to_hex_string(&self) -> String {
         let sign = self.sign();
         let abs = self.unsigned_abs();
-
-        format!("{sign}0x{abs:x}")
+        let mut buf = String::new();
+        write!(&mut buf, "{sign}0x{abs:x}").unwrap();
+        buf
     }
 
     /// Splits a Signed into its absolute value and negative flag.
