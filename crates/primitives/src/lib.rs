@@ -105,7 +105,7 @@ pub type B160 = FixedBytes<20>;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
-    // pub use alloc::vec::Vec;
+    pub use alloc::vec::Vec;
     pub use core::{
         self,
         borrow::{Borrow, BorrowMut},
