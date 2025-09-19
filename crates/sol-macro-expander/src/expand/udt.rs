@@ -62,7 +62,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
                 }
             }
 
-            #[automatically_derived]
             impl #name {
                 /// The Solidity type name.
                 pub const NAME: &'static str = stringify!(@name);
