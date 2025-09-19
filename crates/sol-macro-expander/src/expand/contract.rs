@@ -414,7 +414,6 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
             }
 
             /// Instantiation and getters/setters.
-            #[automatically_derived]
             impl #generic_p_n #name<P, N> {
                 #[doc = #new_fn_doc]
                 #[inline]
@@ -458,7 +457,6 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
             }
 
             /// Function calls.
-            #[automatically_derived]
             impl #generic_p_n #name<P, N> {
                 /// Creates a new call builder using this contract instance's provider and address.
                 ///
@@ -474,7 +472,6 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
             }
 
             /// Event filters.
-            #[automatically_derived]
             impl #generic_p_n #name<P, N> {
                 /// Creates a new event filter using this contract instance's provider and address.
                 ///
@@ -917,7 +914,6 @@ impl CallLikeExpander<'_> {
                 )*
             }
 
-            #[automatically_derived]
             impl #name {
                 /// All the selectors of this enum.
                 ///
@@ -958,7 +954,6 @@ impl CallLikeExpander<'_> {
             let methods = variants.iter().zip(types).map(generate_variant_methods);
             tokens.extend(conversions);
             tokens.extend(quote! {
-                #[automatically_derived]
                 impl #name {
                     #(#methods)*
                 }
