@@ -8,6 +8,9 @@
 #![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
+use arrayvec::ArrayString;
+/// A fixed-capacity string type with a maximum length of 80 characters.
+pub type String = ArrayString<80>;
 #[macro_use]
 extern crate alloc;
 
@@ -102,7 +105,7 @@ pub type B160 = FixedBytes<20>;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
-    pub use alloc::vec::Vec;
+    // pub use alloc::vec::Vec;
     pub use core::{
         self,
         borrow::{Borrow, BorrowMut},

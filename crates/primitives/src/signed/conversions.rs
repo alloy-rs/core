@@ -1,5 +1,5 @@
 use super::{BigIntConversionError, ParseSignedError, Sign, Signed, utils::twos_complement};
-use alloc::string::String;
+use crate::String;
 use core::str::FromStr;
 use ruint::{ToUintError, Uint, UintTryFrom};
 
