@@ -72,7 +72,7 @@ jobs:
       matrix:
         flags: ["--no-default-features", "", "--all-features"]
     env:
-      MIRIFLAGS: -Zmiri-strict-provenance
+      MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-tree-borrows
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@miri
