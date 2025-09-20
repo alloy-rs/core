@@ -1,6 +1,6 @@
 //! Support for the [`postgres_types`] crate.
 //!
-//! **WARNING**: this module depends entirely on [`postgres_types`, which is not yet stable,
+//! **WARNING**: this module depends entirely on [`postgres_types`], which is not yet stable,
 //! therefore this module is exempt from the semver guarantees of this crate.
 
 use super::{FixedBytes, Sign, Signed};
@@ -188,7 +188,7 @@ impl<const BITS: usize, const LIMBS: usize> ToSql for Signed<BITS, LIMBS> {
     }
 
     fn accepts(ty: &Type) -> bool {
-        matches!(*ty, |Type::BOOL| Type::CHAR
+        matches!(*ty, Type::BOOL| Type::CHAR
             | Type::INT2
             | Type::INT4
             | Type::INT8
