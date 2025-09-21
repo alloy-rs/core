@@ -271,19 +271,12 @@ impl fmt::Debug for Panic {
 
 impl fmt::Display for Panic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("panic: ")?;
-
-        let kind = self.kind();
-        let msg = kind.map(PanicKind::as_str).unwrap_or("unknown code");
-        f.write_str(msg)?;
-
-        f.write_str(" (0x")?;
-        if let Some(kind) = kind {
-            write!(f, "{:02x}", kind as u32)
+        if let Some(kind) = self.kind() {
+            f.write_str(kind.as_str())?;
         } else {
-            write!(f, "{:x}", self.code)
-        }?;
-        f.write_str(")")
+            write!(f, "unknown panic code: {:#x}", self.code)?;
+        }
+        Ok(())
     }
 }
 
@@ -538,5 +531,35 @@ mod tests {
             decoded,
             C::SenderAddressError(address!("0xa48388222c7ee7daefde5d0b9c99319995c4a990"))
         );
+    }
+
+    #[test]
+    fn panic_kind_display() {
+        let panic = Panic::from(PanicKind::Assert);
+        assert_eq!(panic.to_string(), "assert(false)");
+
+        let panic = Panic::from(PanicKind::UnderOverflow);
+        assert_eq!(panic.to_string(), "arithmetic underflow or overflow");
+
+        let panic = Panic::from(PanicKind::DivisionByZero);
+        assert_eq!(panic.to_string(), "division or modulo by zero");
+
+        let panic = Panic { code: U256::from(0x32) };
+        assert_eq!(panic.to_string(), "out-of-bounds access of an array or bytesN");
+    }
+
+    #[test]
+    fn panic_unknown_code_display() {
+        let panic = Panic { code: U256::from(0x99) };
+        assert_eq!(panic.to_string(), "unknown panic code: 0x99");
+
+        let panic = Panic { code: U256::from(0xFF) };
+        assert_eq!(panic.to_string(), "unknown panic code: 0xff");
+
+        let panic = Panic { code: U256::from(0x05) };
+        assert_eq!(panic.to_string(), "unknown panic code: 0x5");
+
+        let panic = Panic { code: U256::from(0x1234) };
+        assert_eq!(panic.to_string(), "unknown panic code: 0x1234");
     }
 }
