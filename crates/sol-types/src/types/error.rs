@@ -412,7 +412,7 @@ impl PanicKind {
         // Copy from go-ethereum's abi package:
         // https://github.com/ethereum/go-ethereum/blob/4414e2833f92f437d0a68b53ed95ac5756a90a16/accounts/abi/abi.go#L261-L272
         match self {
-            Self::Generic => "genericp anic",
+            Self::Generic => "generic panic",
             Self::Assert => "assert(false)",
             Self::UnderOverflow => "arithmetic underflow or overflow",
             Self::DivisionByZero => "division or modulo by zero",
