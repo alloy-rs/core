@@ -409,19 +409,19 @@ impl PanicKind {
 
     /// Returns the panic code's string representation.
     pub const fn as_str(self) -> &'static str {
-        // modified from the original Solidity comments:
-        // https://github.com/ethereum/solidity/blob/9eaa5cebdb1458457135097efdca1a3573af17c8/libsolutil/ErrorCodes.h#L25-L37
+        // Copy from go-ethereum's abi package:
+        // https://github.com/ethereum/go-ethereum/blob/4414e2833f92f437d0a68b53ed95ac5756a90a16/accounts/abi/abi.go#L261-L272
         match self {
-            Self::Generic => "generic/unspecified error",
-            Self::Assert => "assertion failed",
+            Self::Generic => "genericp anic",
+            Self::Assert => "assert(false)",
             Self::UnderOverflow => "arithmetic underflow or overflow",
             Self::DivisionByZero => "division or modulo by zero",
-            Self::EnumConversionError => "failed to convert value into enum type",
-            Self::StorageEncodingError => "storage byte array incorrectly encoded",
-            Self::EmptyArrayPop => "called `.pop()` on an empty array",
-            Self::ArrayOutOfBounds => "array out-of-bounds access",
-            Self::ResourceError => "memory allocation error",
-            Self::InvalidInternalFunction => "called an invalid internal function",
+            Self::EnumConversionError => "enum overflow",
+            Self::StorageEncodingError => "invalid encoded storage byte array accessed",
+            Self::EmptyArrayPop => "out-of-bounds array access; popping on an empty array",
+            Self::ArrayOutOfBounds => "out-of-bounds access of an array or bytesN",
+            Self::ResourceError => "out of memory",
+            Self::InvalidInternalFunction => "uninitialized function",
         }
     }
 }
