@@ -3,7 +3,7 @@ use crate::{
     abi::token::{PackedSeqToken, Token, TokenSeq, WordToken},
     types::interface::RevertReason,
 };
-use alloc::{string::String, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 use alloy_primitives::U256;
 use core::{borrow::Borrow, fmt};
 
@@ -271,12 +271,19 @@ impl fmt::Debug for Panic {
 
 impl fmt::Display for Panic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(kind) = self.kind() {
-            f.write_str(kind.as_str())?;
+        f.write_str("panic: ")?;
+
+        let kind = self.kind();
+        let msg = kind.map(PanicKind::as_str).unwrap_or("unknown code");
+        f.write_str(msg)?;
+
+        f.write_str(" (0x")?;
+        if let Some(kind) = kind {
+            write!(f, "{:02x}", kind as u32)
         } else {
-            write!(f, "unknown panic code: {:#x}", self.code)?;
-        }
-        Ok(())
+            write!(f, "{:x}", self.code)
+        }?;
+        f.write_str(")")
     }
 }
 
@@ -313,6 +320,18 @@ impl Panic {
     pub fn kind(&self) -> Option<PanicKind> {
         // use try_from to avoid copying by using the `&` impl
         u32::try_from(&self.code).ok().and_then(PanicKind::from_number)
+    }
+
+    /// Returns the geth-compatible panic message string.
+    ///
+    /// This returns just the panic reason without the "panic:" prefix or hex code,
+    /// matching the format used by go-ethereum.
+    pub fn as_geth_string(&self) -> String {
+        if let Some(kind) = self.kind() {
+            kind.as_str().to_owned()
+        } else {
+            format!("unknown panic code: {:#x}", self.code)
+        }
     }
 }
 
@@ -536,30 +555,60 @@ mod tests {
     #[test]
     fn panic_kind_display() {
         let panic = Panic::from(PanicKind::Assert);
-        assert_eq!(panic.to_string(), "assert(false)");
+        assert_eq!(panic.to_string(), "panic: assert(false) (0x01)");
 
         let panic = Panic::from(PanicKind::UnderOverflow);
-        assert_eq!(panic.to_string(), "arithmetic underflow or overflow");
+        assert_eq!(panic.to_string(), "panic: arithmetic underflow or overflow (0x11)");
 
         let panic = Panic::from(PanicKind::DivisionByZero);
-        assert_eq!(panic.to_string(), "division or modulo by zero");
+        assert_eq!(panic.to_string(), "panic: division or modulo by zero (0x12)");
 
         let panic = Panic { code: U256::from(0x32) };
-        assert_eq!(panic.to_string(), "out-of-bounds access of an array or bytesN");
+        assert_eq!(panic.to_string(), "panic: out-of-bounds access of an array or bytesN (0x32)");
+    }
+
+    #[test]
+    fn panic_geth_string() {
+        let panic = Panic::from(PanicKind::Assert);
+        assert_eq!(panic.as_geth_string(), "assert(false)");
+
+        let panic = Panic::from(PanicKind::UnderOverflow);
+        assert_eq!(panic.as_geth_string(), "arithmetic underflow or overflow");
+
+        let panic = Panic::from(PanicKind::DivisionByZero);
+        assert_eq!(panic.as_geth_string(), "division or modulo by zero");
+
+        let panic = Panic { code: U256::from(0x32) };
+        assert_eq!(panic.as_geth_string(), "out-of-bounds access of an array or bytesN");
     }
 
     #[test]
     fn panic_unknown_code_display() {
         let panic = Panic { code: U256::from(0x99) };
-        assert_eq!(panic.to_string(), "unknown panic code: 0x99");
+        assert_eq!(panic.to_string(), "panic: unknown code (0x99)");
 
         let panic = Panic { code: U256::from(0xFF) };
-        assert_eq!(panic.to_string(), "unknown panic code: 0xff");
+        assert_eq!(panic.to_string(), "panic: unknown code (0xff)");
 
         let panic = Panic { code: U256::from(0x05) };
-        assert_eq!(panic.to_string(), "unknown panic code: 0x5");
+        assert_eq!(panic.to_string(), "panic: unknown code (0x5)");
 
         let panic = Panic { code: U256::from(0x1234) };
-        assert_eq!(panic.to_string(), "unknown panic code: 0x1234");
+        assert_eq!(panic.to_string(), "panic: unknown code (0x1234)");
+    }
+
+    #[test]
+    fn panic_unknown_code_geth_string() {
+        let panic = Panic { code: U256::from(0x99) };
+        assert_eq!(panic.as_geth_string(), "unknown panic code: 0x99");
+
+        let panic = Panic { code: U256::from(0xFF) };
+        assert_eq!(panic.as_geth_string(), "unknown panic code: 0xff");
+
+        let panic = Panic { code: U256::from(0x05) };
+        assert_eq!(panic.as_geth_string(), "unknown panic code: 0x5");
+
+        let panic = Panic { code: U256::from(0x1234) };
+        assert_eq!(panic.as_geth_string(), "unknown panic code: 0x1234");
     }
 }
