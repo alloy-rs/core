@@ -3,7 +3,7 @@ use crate::{
     abi::token::{PackedSeqToken, Token, TokenSeq, WordToken},
     types::interface::RevertReason,
 };
-use alloc::{format, string::String, vec::Vec};
+use alloc::{borrow::Cow, format, string::String, vec::Vec};
 use alloy_primitives::U256;
 use core::{borrow::Borrow, fmt};
 
@@ -326,11 +326,11 @@ impl Panic {
     ///
     /// This returns just the panic reason without the "panic:" prefix or hex code,
     /// matching the format used by go-ethereum.
-    pub fn as_geth_string(&self) -> String {
+    pub fn as_geth_string(&self) -> Cow<'static, str> {
         if let Some(kind) = self.kind() {
-            kind.as_str().to_owned()
+            Cow::Borrowed(kind.as_geth_str())
         } else {
-            format!("unknown panic code: {:#x}", self.code)
+            Cow::Owned(format!("unknown panic code: {:#x}", self.code))
         }
     }
 }
@@ -421,19 +421,38 @@ impl PanicKind {
 
     /// Returns the panic code's string representation.
     pub const fn as_str(self) -> &'static str {
-        // Copy from go-ethereum's abi package:
-        // https://github.com/ethereum/go-ethereum/blob/4414e2833f92f437d0a68b53ed95ac5756a90a16/accounts/abi/abi.go#L261-L272
+        // modified from the original Solidity comments:
+        // https://github.com/ethereum/solidity/blob/9eaa5cebdb1458457135097efdca1a3573af17c8/libsolutil/ErrorCodes.h#L25-L37
         match self {
-            Self::Generic => "generic panic",
-            Self::Assert => "assert(false)",
+            Self::Generic => "generic/unspecified error",
+            Self::Assert => "assertion failed",
             Self::UnderOverflow => "arithmetic underflow or overflow",
             Self::DivisionByZero => "division or modulo by zero",
-            Self::EnumConversionError => "enum overflow",
-            Self::StorageEncodingError => "invalid encoded storage byte array accessed",
-            Self::EmptyArrayPop => "out-of-bounds array access; popping on an empty array",
-            Self::ArrayOutOfBounds => "out-of-bounds access of an array or bytesN",
-            Self::ResourceError => "out of memory",
-            Self::InvalidInternalFunction => "uninitialized function",
+            Self::EnumConversionError => "failed to convert value into enum type",
+            Self::StorageEncodingError => "storage byte array incorrectly encoded",
+            Self::EmptyArrayPop => "called `.pop()` on an empty array",
+            Self::ArrayOutOfBounds => "array out-of-bounds access",
+            Self::ResourceError => "memory allocation error",
+            Self::InvalidInternalFunction => "called an invalid internal function",
+        }
+    }
+
+    /// Maps panic codes to their geth-specific string representations.
+    ///
+    /// Copy from go-ethereum's abi package:
+    /// https://github.com/ethereum/go-ethereum/blob/4414e2833f92f437d0a68b53ed95ac5756a90a16/accounts/abi/abi.go#L261-L272
+    pub const fn as_geth_str(self) -> &'static str {
+        match self {
+            PanicKind::Generic => "generic panic",
+            PanicKind::Assert => "assert(false)",
+            PanicKind::UnderOverflow => "arithmetic underflow or overflow",
+            PanicKind::DivisionByZero => "division or modulo by zero",
+            PanicKind::EnumConversionError => "enum overflow",
+            PanicKind::StorageEncodingError => "invalid encoded storage byte array accessed",
+            PanicKind::EmptyArrayPop => "out-of-bounds array access; popping on an empty array",
+            PanicKind::ArrayOutOfBounds => "out-of-bounds access of an array or bytesN",
+            PanicKind::ResourceError => "out of memory",
+            PanicKind::InvalidInternalFunction => "uninitialized function",
         }
     }
 }
@@ -555,7 +574,7 @@ mod tests {
     #[test]
     fn panic_kind_display() {
         let panic = Panic::from(PanicKind::Assert);
-        assert_eq!(panic.to_string(), "panic: assert(false) (0x01)");
+        assert_eq!(panic.to_string(), "panic: assertion failed (0x01)");
 
         let panic = Panic::from(PanicKind::UnderOverflow);
         assert_eq!(panic.to_string(), "panic: arithmetic underflow or overflow (0x11)");
@@ -564,7 +583,7 @@ mod tests {
         assert_eq!(panic.to_string(), "panic: division or modulo by zero (0x12)");
 
         let panic = Panic { code: U256::from(0x32) };
-        assert_eq!(panic.to_string(), "panic: out-of-bounds access of an array or bytesN (0x32)");
+        assert_eq!(panic.to_string(), "panic: array out-of-bounds access (0x32)");
     }
 
     #[test]
