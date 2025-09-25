@@ -27,6 +27,18 @@ impl SolInput {
         let derives =
             attrs.iter().filter(|attr| attr.path().is_ident("derive")).collect::<Vec<_>>();
 
+        // Extract all_derives and extra_derives attributes for propagation to internal contracts
+        let sol_derives = attrs
+            .iter()
+            .filter(|attr| attr.path().is_ident("sol"))
+            .filter_map(|attr| {
+                let meta = &attr.meta;
+                let tokens = quote!(#meta).to_string();
+                (tokens.contains("all_derives") || tokens.contains("extra_derives"))
+                    .then_some(attr.clone())
+            })
+            .collect::<Vec<_>>();
+
         let mut library_tokens_iter = all_tokens
             .by_ref()
             .take_while(|tt| !matches!(tt, TokenTree::Ident(id) if id == "interface"))
@@ -47,6 +59,7 @@ impl SolInput {
 
             let tokens = quote! {
                 #(#derives)*
+                #(#sol_derives)*
                 #sol_library_tokens
             };
 
