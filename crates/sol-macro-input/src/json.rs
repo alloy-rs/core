@@ -30,11 +30,14 @@ impl SolInput {
         // Extract all_derives and extra_derives attributes for propagation to internal contracts
         let sol_derives = attrs
             .iter()
-            .filter(|attr| attr.path().is_ident("sol"))
             .filter(|attr| {
+                if !attr.path().is_ident("sol") {
+                    return false;
+                }
                 let Ok(meta) = attr.meta.require_list() else {
                     return false;
                 };
+
                 let mut contains_derives = false;
                 let _ = meta.parse_nested_meta(|meta| {
                     contains_derives = contains_derives
