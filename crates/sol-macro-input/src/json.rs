@@ -31,11 +31,10 @@ impl SolInput {
         let sol_derives = attrs
             .iter()
             .filter(|attr| attr.path().is_ident("sol"))
-            .filter_map(|attr| {
+            .filter(|attr| {
                 let meta = &attr.meta;
                 let tokens = quote!(#meta).to_string();
-                (tokens.contains("all_derives") || tokens.contains("extra_derives"))
-                    .then_some(attr.clone())
+                tokens.contains("all_derives") || tokens.contains("extra_derives")
             })
             .collect::<Vec<_>>();
 
