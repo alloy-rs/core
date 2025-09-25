@@ -40,9 +40,8 @@ impl SolInput {
 
                 let mut contains_derives = false;
                 let _ = meta.parse_nested_meta(|meta| {
-                    contains_derives = contains_derives
-                        || meta.path.is_ident("all_derives")
-                        || meta.path.is_ident("extra_derives");
+                    contains_derives |=
+                        meta.path.is_ident("all_derives") || meta.path.is_ident("extra_derives");
                     Ok(())
                 });
                 contains_derives
