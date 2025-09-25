@@ -32,9 +32,17 @@ impl SolInput {
             .iter()
             .filter(|attr| attr.path().is_ident("sol"))
             .filter(|attr| {
-                let meta = &attr.meta;
-                let tokens = quote!(#meta).to_string();
-                tokens.contains("all_derives") || tokens.contains("extra_derives")
+                let Ok(meta) = attr.meta.require_list() else {
+                    return false;
+                };
+                let mut contains_derives = false;
+                let _ = meta.parse_nested_meta(|meta| {
+                    contains_derives = contains_derives
+                        || meta.path.is_ident("all_derives")
+                        || meta.path.is_ident("extra_derives");
+                    Ok(())
+                });
+                contains_derives
             })
             .collect::<Vec<_>>();
 
