@@ -24,7 +24,7 @@ impl SolInput {
             .into_iter()
             .partition::<Vec<_>, _>(|attr| matches!(attr.style, AttrStyle::Inner(_)));
 
-        let (derives, sol_derives) = extract_derives_attrs(&attrs);
+        let (derives, sol_derives) = extract_derive_attrs(&attrs);
 
         let mut library_tokens_iter = all_tokens
             .by_ref()
@@ -132,7 +132,7 @@ pub fn tokens_for_sol(name: &Ident, sol: &str) -> Result<TokenStream> {
 }
 
 /// Extract both regular and `sol` derive attributes for propagation further.
-fn extract_derives_attrs(attrs: &[syn::Attribute]) -> (Vec<&syn::Attribute>, Vec<&syn::Attribute>) {
+fn extract_derive_attrs(attrs: &[syn::Attribute]) -> (Vec<&syn::Attribute>, Vec<&syn::Attribute>) {
     attrs.iter().fold((Vec::new(), Vec::new()), |(mut derives, mut sol_derives), attr| {
         if attr.path().is_ident("derive") {
             derives.push(attr);
