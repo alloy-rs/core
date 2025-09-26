@@ -440,16 +440,16 @@ impl PanicKind {
     /// https://github.com/ethereum/go-ethereum/blob/4414e2833f92f437d0a68b53ed95ac5756a90a16/accounts/abi/abi.go#L261-L272
     pub const fn as_geth_str(self) -> &'static str {
         match self {
-            PanicKind::Generic => "generic panic",
-            PanicKind::Assert => "assert(false)",
-            PanicKind::UnderOverflow => "arithmetic underflow or overflow",
-            PanicKind::DivisionByZero => "division or modulo by zero",
-            PanicKind::EnumConversionError => "enum overflow",
-            PanicKind::StorageEncodingError => "invalid encoded storage byte array accessed",
-            PanicKind::EmptyArrayPop => "out-of-bounds array access; popping on an empty array",
-            PanicKind::ArrayOutOfBounds => "out-of-bounds access of an array or bytesN",
-            PanicKind::ResourceError => "out of memory",
-            PanicKind::InvalidInternalFunction => "uninitialized function",
+            Self::Generic => "generic panic",
+            Self::Assert => "assert(false)",
+            Self::UnderOverflow => "arithmetic underflow or overflow",
+            Self::DivisionByZero => "division or modulo by zero",
+            Self::EnumConversionError => "enum overflow",
+            Self::StorageEncodingError => "invalid encoded storage byte array accessed",
+            Self::EmptyArrayPop => "out-of-bounds array access; popping on an empty array",
+            Self::ArrayOutOfBounds => "out-of-bounds access of an array or bytesN",
+            Self::ResourceError => "out of memory",
+            Self::InvalidInternalFunction => "uninitialized function",
         }
     }
 }
