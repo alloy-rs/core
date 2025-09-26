@@ -24,29 +24,7 @@ impl SolInput {
             .into_iter()
             .partition::<Vec<_>, _>(|attr| matches!(attr.style, AttrStyle::Inner(_)));
 
-        let derives =
-            attrs.iter().filter(|attr| attr.path().is_ident("derive")).collect::<Vec<_>>();
-
-        // Extract all_derives and extra_derives attributes for propagation to internal contracts
-        let sol_derives = attrs
-            .iter()
-            .filter(|attr| {
-                if !attr.path().is_ident("sol") {
-                    return false;
-                }
-                let Ok(meta) = attr.meta.require_list() else {
-                    return false;
-                };
-
-                let mut contains_derives = false;
-                let _ = meta.parse_nested_meta(|meta| {
-                    contains_derives |=
-                        meta.path.is_ident("all_derives") || meta.path.is_ident("extra_derives");
-                    Ok(())
-                });
-                contains_derives
-            })
-            .collect::<Vec<_>>();
+        let (derives, sol_derives) = extract_derives_attrs(&attrs);
 
         let mut library_tokens_iter = all_tokens
             .by_ref()
@@ -151,6 +129,28 @@ pub fn tokens_for_sol(name: &Ident, sol: &str) -> Result<TokenStream> {
             tt
         })
         .collect())
+}
+
+/// Extract both regular and `sol` derive attributes for propagation further.
+fn extract_derives_attrs(attrs: &[syn::Attribute]) -> (Vec<&syn::Attribute>, Vec<&syn::Attribute>) {
+    attrs.iter().fold((Vec::new(), Vec::new()), |(mut derives, mut sol_derives), attr| {
+        if attr.path().is_ident("derive") {
+            derives.push(attr);
+        } else if attr.path().is_ident("sol") {
+            if let Ok(meta) = attr.meta.require_list() {
+                let mut contains_derives = false;
+                let _ = meta.parse_nested_meta(|meta| {
+                    contains_derives |=
+                        meta.path.is_ident("all_derives") || meta.path.is_ident("extra_derives");
+                    Ok(())
+                });
+                if contains_derives {
+                    sol_derives.push(attr);
+                }
+            }
+        }
+        (derives, sol_derives)
+    })
 }
 
 #[inline]
