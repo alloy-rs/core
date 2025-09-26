@@ -419,7 +419,7 @@ impl PanicKind {
     /// Returns the panic code's string representation.
     pub const fn as_str(self) -> &'static str {
         // modified from the original Solidity comments:
-        // https://github.com/ethereum/solidity/blob/9eaa5cebdb1458457135097efdca1a3573af17c8/libsolutil/ErrorCodes.h#L25-L37
+        // <https://github.com/ethereum/solidity/blob/9eaa5cebdb1458457135097efdca1a3573af17c8/libsolutil/ErrorCodes.h#L25-L37>
         match self {
             Self::Generic => "generic/unspecified error",
             Self::Assert => "assertion failed",
@@ -437,7 +437,7 @@ impl PanicKind {
     /// Maps panic codes to their geth-specific string representations.
     ///
     /// Copy from go-ethereum's abi package:
-    /// https://github.com/ethereum/go-ethereum/blob/4414e2833f92f437d0a68b53ed95ac5756a90a16/accounts/abi/abi.go#L261-L272
+    /// <https://github.com/ethereum/go-ethereum/blob/4414e2833f92f437d0a68b53ed95ac5756a90a16/accounts/abi/abi.go#L261-L272>
     pub const fn as_geth_str(self) -> &'static str {
         match self {
             Self::Generic => "generic panic",
