@@ -3,7 +3,7 @@ use crate::{
     abi::token::{PackedSeqToken, Token, TokenSeq, WordToken},
     types::interface::RevertReason,
 };
-use alloc::{string::String, vec::Vec};
+use alloc::{borrow::Cow, format, string::String, vec::Vec};
 use alloy_primitives::U256;
 use core::{borrow::Borrow, fmt};
 
@@ -321,6 +321,15 @@ impl Panic {
         // use try_from to avoid copying by using the `&` impl
         u32::try_from(&self.code).ok().and_then(PanicKind::from_number)
     }
+
+    /// Returns the geth-compatible panic message string.
+    pub fn as_geth_str(&self) -> Cow<'static, str> {
+        if let Some(kind) = self.kind() {
+            Cow::Borrowed(kind.as_geth_str())
+        } else {
+            Cow::Owned(format!("unknown panic code: {:#x}", self.code))
+        }
+    }
 }
 
 /// Represents a [Solidity panic].
@@ -410,7 +419,7 @@ impl PanicKind {
     /// Returns the panic code's string representation.
     pub const fn as_str(self) -> &'static str {
         // modified from the original Solidity comments:
-        // https://github.com/ethereum/solidity/blob/9eaa5cebdb1458457135097efdca1a3573af17c8/libsolutil/ErrorCodes.h#L25-L37
+        // <https://github.com/ethereum/solidity/blob/9eaa5cebdb1458457135097efdca1a3573af17c8/libsolutil/ErrorCodes.h#L25-L37>
         match self {
             Self::Generic => "generic/unspecified error",
             Self::Assert => "assertion failed",
@@ -422,6 +431,25 @@ impl PanicKind {
             Self::ArrayOutOfBounds => "array out-of-bounds access",
             Self::ResourceError => "memory allocation error",
             Self::InvalidInternalFunction => "called an invalid internal function",
+        }
+    }
+
+    /// Maps panic codes to their geth-specific string representations.
+    ///
+    /// Copy from go-ethereum's abi package:
+    /// <https://github.com/ethereum/go-ethereum/blob/4414e2833f92f437d0a68b53ed95ac5756a90a16/accounts/abi/abi.go#L261-L272>
+    pub const fn as_geth_str(self) -> &'static str {
+        match self {
+            Self::Generic => "generic panic",
+            Self::Assert => "assert(false)",
+            Self::UnderOverflow => "arithmetic underflow or overflow",
+            Self::DivisionByZero => "division or modulo by zero",
+            Self::EnumConversionError => "enum overflow",
+            Self::StorageEncodingError => "invalid encoded storage byte array accessed",
+            Self::EmptyArrayPop => "out-of-bounds array access; popping on an empty array",
+            Self::ArrayOutOfBounds => "out-of-bounds access of an array or bytesN",
+            Self::ResourceError => "out of memory",
+            Self::InvalidInternalFunction => "uninitialized function",
         }
     }
 }
@@ -538,5 +566,65 @@ mod tests {
             decoded,
             C::SenderAddressError(address!("0xa48388222c7ee7daefde5d0b9c99319995c4a990"))
         );
+    }
+
+    #[test]
+    fn panic_kind_display() {
+        let panic = Panic::from(PanicKind::Assert);
+        assert_eq!(panic.to_string(), "panic: assertion failed (0x01)");
+
+        let panic = Panic::from(PanicKind::UnderOverflow);
+        assert_eq!(panic.to_string(), "panic: arithmetic underflow or overflow (0x11)");
+
+        let panic = Panic::from(PanicKind::DivisionByZero);
+        assert_eq!(panic.to_string(), "panic: division or modulo by zero (0x12)");
+
+        let panic = Panic { code: U256::from(0x32) };
+        assert_eq!(panic.to_string(), "panic: array out-of-bounds access (0x32)");
+    }
+
+    #[test]
+    fn panic_geth_string() {
+        let panic = Panic::from(PanicKind::Assert);
+        assert_eq!(panic.as_geth_str(), "assert(false)");
+
+        let panic = Panic::from(PanicKind::UnderOverflow);
+        assert_eq!(panic.as_geth_str(), "arithmetic underflow or overflow");
+
+        let panic = Panic::from(PanicKind::DivisionByZero);
+        assert_eq!(panic.as_geth_str(), "division or modulo by zero");
+
+        let panic = Panic { code: U256::from(0x32) };
+        assert_eq!(panic.as_geth_str(), "out-of-bounds access of an array or bytesN");
+    }
+
+    #[test]
+    fn panic_unknown_code_display() {
+        let panic = Panic { code: U256::from(0x99) };
+        assert_eq!(panic.to_string(), "panic: unknown code (0x99)");
+
+        let panic = Panic { code: U256::from(0xFF) };
+        assert_eq!(panic.to_string(), "panic: unknown code (0xff)");
+
+        let panic = Panic { code: U256::from(0x05) };
+        assert_eq!(panic.to_string(), "panic: unknown code (0x5)");
+
+        let panic = Panic { code: U256::from(0x1234) };
+        assert_eq!(panic.to_string(), "panic: unknown code (0x1234)");
+    }
+
+    #[test]
+    fn panic_unknown_code_geth_string() {
+        let panic = Panic { code: U256::from(0x99) };
+        assert_eq!(panic.as_geth_str(), "unknown panic code: 0x99");
+
+        let panic = Panic { code: U256::from(0xFF) };
+        assert_eq!(panic.as_geth_str(), "unknown panic code: 0xff");
+
+        let panic = Panic { code: U256::from(0x05) };
+        assert_eq!(panic.as_geth_str(), "unknown panic code: 0x5");
+
+        let panic = Panic { code: U256::from(0x1234) };
+        assert_eq!(panic.as_geth_str(), "unknown panic code: 0x1234");
     }
 }
