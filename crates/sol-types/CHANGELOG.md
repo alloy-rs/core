@@ -5,10 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0](https://github.com/alloy-rs/core/releases/tag/v1.4.0) - 2025-09-26
+
+### Bug Fixes
+
+- [sol-macro-expander] Propagate `all_derives` and `extra_derives` to periphery SC structs ([#1011](https://github.com/alloy-rs/core/issues/1011))
+- [sol-types] Fix `encode_topic_bytes` for byte slices whose length is a non-zero multiple of 32 ([#1000](https://github.com/alloy-rs/core/issues/1000))
+
+### Features
+
+- [sol-macro] Inherit attributes from contract ([#1004](https://github.com/alloy-rs/core/issues/1004))
+
+### Miscellaneous Tasks
+
+- [sol-types] Sync panic reasons from geth ([#1015](https://github.com/alloy-rs/core/issues/1015))
+- Typo rollup ([#997](https://github.com/alloy-rs/core/issues/997))
+
+### Performance
+
+- [sol-macro] Improve abi expansion ([#1005](https://github.com/alloy-rs/core/issues/1005))
+
 ## [1.3.1](https://github.com/alloy-rs/core/releases/tag/v1.3.1) - 2025-08-17
 
 ### Miscellaneous Tasks
 
+- Release 1.3.1
 - Add typos ([#991](https://github.com/alloy-rs/core/issues/991))
 
 ## [1.3.0](https://github.com/alloy-rs/core/releases/tag/v1.3.0) - 2025-07-22
@@ -87,17 +108,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
 
-### Bug Fixes
-
-- [`sol-expander`] Rename from/into + impl From ([#905](https://github.com/alloy-rs/core/issues/905))
-
 ### Features
 
 - 1.0-rc.1
-- [sol-macro] Improve call return encoding ([#909](https://github.com/alloy-rs/core/issues/909))
-- [`sol!`] Gen unit/tuple structs for errors, calls, events with 0/1 param ([#883](https://github.com/alloy-rs/core/issues/883))
-- [sol-macro] Function calls should directly yield result  ([#855](https://github.com/alloy-rs/core/issues/855))
-- [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
 
 ### Miscellaneous Tasks
 
@@ -108,6 +121,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other
 
 - Merge branch 'main' into v1.0-rc
+
+## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
+
+### Features
+
+- [sol-macro] Improve call return encoding ([#909](https://github.com/alloy-rs/core/issues/909))
+
+## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
+
+### Bug Fixes
+
+- [`sol-expander`] Rename from/into + impl From ([#905](https://github.com/alloy-rs/core/issues/905))
+
+### Features
+
+- [`sol!`] Gen unit/tuple structs for errors, calls, events with 0/1 param ([#883](https://github.com/alloy-rs/core/issues/883))
+- [sol-macro] Function calls should directly yield result  ([#855](https://github.com/alloy-rs/core/issues/855))
+- [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
+
+### Other
+
 - Merge branch 'main' into v1.0-rc
 
 ## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
@@ -244,7 +278,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Miscellaneous Tasks
 
 - Release 0.8.13 ([#813](https://github.com/alloy-rs/core/issues/813))
+
+## [0.8.12](https://github.com/alloy-rs/core/releases/tag/v0.8.12) - 2024-11-12
+
+### Miscellaneous Tasks
+
 - Release 0.8.12 ([#806](https://github.com/alloy-rs/core/issues/806))
+
+## [0.8.11](https://github.com/alloy-rs/core/releases/tag/v0.8.11) - 2024-11-05
+
+### Miscellaneous Tasks
+
 - Release 0.8.11 ([#803](https://github.com/alloy-rs/core/issues/803))
 
 ## [0.8.10](https://github.com/alloy-rs/core/releases/tag/v0.8.10) - 2024-10-28
