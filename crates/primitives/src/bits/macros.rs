@@ -5,7 +5,7 @@
 /// type-confused for another named `FixedBytes`.
 ///
 /// **NOTE:** This macro currently requires:
-/// - `#![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]` at the top level of the crate.
+/// - `#![cfg_attr(docsrs, feature(doc_cfg))]` at the top level of the crate.
 /// - The `derive_more` crate in scope.
 ///
 /// # Examples
