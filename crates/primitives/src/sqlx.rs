@@ -16,7 +16,7 @@ use sqlx_core::{
     types::Type,
 };
 
-use crate::{FixedBytes, Signed};
+use crate::{Bytes, FixedBytes, Signed};
 
 impl<const BYTES: usize, DB> Type<DB> for FixedBytes<BYTES>
 where
@@ -88,5 +88,39 @@ where
     fn decode(value: <DB as Database>::ValueRef<'a>) -> Result<Self, BoxDynError> {
         let bytes = Vec::<u8>::decode(value)?;
         Self::try_from_be_slice(bytes.as_slice()).ok_or_else(|| DecodeError::Overflow.into())
+    }
+}
+
+impl<DB: Database> Type<DB> for Bytes
+where
+    Vec<u8>: Type<DB>,
+{
+    fn type_info() -> DB::TypeInfo {
+        <Vec<u8> as Type<DB>>::type_info()
+    }
+
+    fn compatible(ty: &DB::TypeInfo) -> bool {
+        <Vec<u8> as Type<DB>>::compatible(ty)
+    }
+}
+
+impl<'a, DB: Database> Encode<'a, DB> for Bytes
+where
+    Vec<u8>: Encode<'a, DB>,
+{
+    fn encode_by_ref(
+        &self,
+        buf: &mut <DB as Database>::ArgumentBuffer<'a>,
+    ) -> Result<IsNull, BoxDynError> {
+        self.to_vec().encode_by_ref(buf)
+    }
+}
+
+impl<'a, DB: Database> Decode<'a, DB> for Bytes
+where
+    Vec<u8>: Decode<'a, DB>,
+{
+    fn decode(value: <DB as Database>::ValueRef<'a>) -> Result<Self, BoxDynError> {
+        Vec::<u8>::decode(value).map(Self::from)
     }
 }
