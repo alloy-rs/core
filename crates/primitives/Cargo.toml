@@ -56,7 +56,7 @@ sha3 = { workspace = true, optional = true }
 tiny-keccak = { workspace = true, features = ["keccak"] }
 
 # borsh
-borsh = { workspace = true, optional = true }
+borsh = { workspace = true, optional = true, features = ["derive"] }
 
 # rlp
 alloy-rlp = { workspace = true, optional = true }
