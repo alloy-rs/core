@@ -51,14 +51,6 @@ pub(crate) fn pad_usize(value: usize) -> Word {
     padded
 }
 
-/// Returns `Ok(())`. Exists for the [`define_udt!`](crate::define_udt!)'s
-/// typecheck.
-#[doc(hidden)]
-#[inline]
-pub const fn just_ok<T>(_: &T) -> crate::Result<()> {
-    Ok(())
-}
-
 #[inline]
 pub(crate) fn check_zeroes(data: &[u8]) -> bool {
     data.iter().all(|b| *b == 0)
