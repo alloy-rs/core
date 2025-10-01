@@ -11,6 +11,7 @@ extend-exclude = [
     "**/*_test.*",
     "**/*_tests.*",
     "CHANGELOG.md",
+    "crates/dyn-abi/src/coerce.rs", # intentional typos
     "crates/primitives/src/hex_literal.rs", # hex data
     "crates/sol-type-parser/src/ident.rs", # intentional typos
     "crates/sol-type-parser/src/parameter.rs", # intentional typos
