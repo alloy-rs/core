@@ -6347,7 +6347,7 @@ library DateTimeLib {
     /// between `fromTimestamp` and `toTimestamp`.
     /// Note: Even if the true time difference is less than a month,
     /// the difference can be non-zero is the timestamps are
-    /// from diffrent Gregorian calendar months.
+    /// from different Gregorian calendar months.
     function diffMonths(uint256 fromTimestamp, uint256 toTimestamp)
         internal
         pure
@@ -6516,7 +6516,7 @@ library DynamicBufferLib {
                     mstore(add(bufferData, w), mul(prime, newCapacity))
                     break
                 }
-                // Initalize `output` to the next empty position in `bufferData`.
+                // Initialize `output` to the next empty position in `bufferData`.
                 let output := add(bufferData, bufferDataLength)
                 // Copy `data` one word at a time, backwards.
                 for { let o := and(add(mload(data), 0x20), w) } 1 {} {
