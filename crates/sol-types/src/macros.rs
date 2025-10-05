@@ -1,5 +1,65 @@
 /// Calls the given macro with all the tuples.
 #[rustfmt::skip]
+#[cfg(not(feature = "more-tuple-impls"))] // 24
+macro_rules! all_the_tuples {
+    (@double $mac:path) => {
+        $mac!( 1 (T1 U1));
+        $mac!( 2 (T1 U1), (T2 U2));
+        $mac!( 3 (T1 U1), (T2 U2), (T3 U3));
+        $mac!( 4 (T1 U1), (T2 U2), (T3 U3), (T4 U4));
+        $mac!( 5 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5));
+        $mac!( 6 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6));
+        $mac!( 7 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7));
+        $mac!( 8 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8));
+        $mac!( 9 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9));
+        $mac!(10 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10));
+        $mac!(11 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11));
+        $mac!(12 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12));
+        $mac!(13 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13));
+        $mac!(14 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14));
+        $mac!(15 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14), (T15 U15));
+        $mac!(16 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14), (T15 U15), (T16 U16));
+        $mac!(17 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14), (T15 U15), (T16 U16), (T17 U17));
+        $mac!(18 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14), (T15 U15), (T16 U16), (T17 U17), (T18 U18));
+        $mac!(19 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14), (T15 U15), (T16 U16), (T17 U17), (T18 U18), (T19 U19));
+        $mac!(20 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14), (T15 U15), (T16 U16), (T17 U17), (T18 U18), (T19 U19), (T20 U20));
+        $mac!(21 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14), (T15 U15), (T16 U16), (T17 U17), (T18 U18), (T19 U19), (T20 U20), (T21 U21));
+        $mac!(22 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14), (T15 U15), (T16 U16), (T17 U17), (T18 U18), (T19 U19), (T20 U20), (T21 U21), (T22 U22));
+        $mac!(23 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14), (T15 U15), (T16 U16), (T17 U17), (T18 U18), (T19 U19), (T20 U20), (T21 U21), (T22 U22), (T23 U23));
+        $mac!(24 (T1 U1), (T2 U2), (T3 U3), (T4 U4), (T5 U5), (T6 U6), (T7 U7), (T8 U8), (T9 U9), (T10 U10), (T11 U11), (T12 U12), (T13 U13), (T14 U14), (T15 U15), (T16 U16), (T17 U17), (T18 U18), (T19 U19), (T20 U20), (T21 U21), (T22 U22), (T23 U23), (T24 U24));
+    };
+
+    ($mac:path) => {
+        $mac!( 1 T1);
+        $mac!( 2 T1, T2);
+        $mac!( 3 T1, T2, T3);
+        $mac!( 4 T1, T2, T3, T4);
+        $mac!( 5 T1, T2, T3, T4, T5);
+        $mac!( 6 T1, T2, T3, T4, T5, T6);
+        $mac!( 7 T1, T2, T3, T4, T5, T6, T7);
+        $mac!( 8 T1, T2, T3, T4, T5, T6, T7, T8);
+        $mac!( 9 T1, T2, T3, T4, T5, T6, T7, T8, T9);
+        $mac!(10 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10);
+        $mac!(11 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11);
+        $mac!(12 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12);
+        $mac!(13 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13);
+        $mac!(14 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14);
+        $mac!(15 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15);
+        $mac!(16 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16);
+        $mac!(17 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17);
+        $mac!(18 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18);
+        $mac!(19 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19);
+        $mac!(20 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20);
+        $mac!(21 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21);
+        $mac!(22 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22);
+        $mac!(23 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23);
+        $mac!(24 T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24);
+    };
+}
+
+/// Calls the given macro with all the tuples.
+#[rustfmt::skip]
+#[cfg(feature = "more-tuple-impls")] // 60
 macro_rules! all_the_tuples {
     (@double $mac:path) => {
         $mac!( 1 (T1 U1));
