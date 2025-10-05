@@ -24,6 +24,7 @@ custom_keywords!(
     memory,
     storage,
     calldata,
+    transient,
 
     // Visibility
     external,

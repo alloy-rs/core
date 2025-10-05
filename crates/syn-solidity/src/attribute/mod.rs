@@ -23,6 +23,7 @@ kw_enum! {
         Memory(kw::memory),
         Storage(kw::storage),
         Calldata(kw::calldata),
+        Transient(kw::transient),
     }
 }
 
