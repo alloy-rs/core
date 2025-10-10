@@ -6,6 +6,7 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(docsrs, feature(rustdoc_internals), allow(internal_features))] // For `#[doc(fake_variadic)]`.
 
 #[allow(unused_extern_crates)]
 extern crate self as alloy_sol_types;

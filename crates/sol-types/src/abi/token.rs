@@ -519,97 +519,104 @@ impl PackedSeqToken<'_> {
 }
 
 macro_rules! tuple_impls {
-    ($count:literal $($ty:ident),+) => {
-        impl<'de, $($ty: Token<'de>,)+> Sealed for ($($ty,)+) {}
+    ($( { $count:tt $($ty:ident),+ } )*) => {
+        $(
+            #[doc(hidden)]
+            impl<'de, $($ty: Token<'de>,)+> Sealed for ($($ty,)+) {}
 
-        #[allow(non_snake_case)]
-        impl<'de, $($ty: Token<'de>,)+> Token<'de> for ($($ty,)+) {
-            const DYNAMIC: bool = $( <$ty as Token>::DYNAMIC )||+;
+            fake_variadic! { $count =>
+            #[allow(non_snake_case)]
+            impl<'de, $($ty: Token<'de>,)+> Token<'de> for ($($ty,)+) {
+                const DYNAMIC: bool = $( <$ty as Token>::DYNAMIC )||+;
 
-            #[inline]
-            fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
-                // The first element in a dynamic tuple is an offset to the tuple's data;
-                // for a static tuples, the data begins right away
-                if Self::DYNAMIC {
-                    dec.take_indirection().and_then(|mut child| Self::decode_sequence(&mut child))
-                } else {
-                    Self::decode_sequence(dec)
+                #[inline]
+                fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
+                    // The first element in a dynamic tuple is an offset to the tuple's data;
+                    // for a static tuples, the data begins right away
+                    if Self::DYNAMIC {
+                        dec.take_indirection().and_then(|mut child| Self::decode_sequence(&mut child))
+                    } else {
+                        Self::decode_sequence(dec)
+                    }
+                }
+
+                #[inline]
+                fn head_words(&self) -> usize {
+                    if Self::DYNAMIC {
+                        // offset
+                        1
+                    } else {
+                        // elements
+                        let ($($ty,)+) = self;
+                        0 $( + $ty.total_words() )+
+                    }
+                }
+
+                #[inline]
+                fn tail_words(&self) -> usize {
+                    if Self::DYNAMIC {
+                        // elements
+                        let ($($ty,)+) = self;
+                        0 $( + $ty.total_words() )+
+                    } else {
+                        0
+                    }
+                }
+
+                #[inline]
+                fn head_append(&self, enc: &mut Encoder) {
+                    if Self::DYNAMIC {
+                        enc.append_indirection();
+                    } else {
+                        let ($($ty,)+) = self;
+                        $(
+                            $ty.head_append(enc);
+                        )+
+                    }
+                }
+
+                #[inline]
+                fn tail_append(&self, enc: &mut Encoder) {
+                    if Self::DYNAMIC {
+                        self.encode_sequence(enc);
+                    }
                 }
             }
-
-            #[inline]
-            fn head_words(&self) -> usize {
-                if Self::DYNAMIC {
-                    // offset
-                    1
-                } else {
-                    // elements
-                    let ($($ty,)+) = self;
-                    0 $( + $ty.total_words() )+
-                }
             }
 
-            #[inline]
-            fn tail_words(&self) -> usize {
-                if Self::DYNAMIC {
-                    // elements
-                    let ($($ty,)+) = self;
-                    0 $( + $ty.total_words() )+
-                } else {
-                    0
-                }
-            }
+            fake_variadic! { $count =>
+            #[allow(non_snake_case)]
+            impl<'de, $($ty: Token<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
+                const IS_TUPLE: bool = true;
 
-            #[inline]
-            fn head_append(&self, enc: &mut Encoder) {
-                if Self::DYNAMIC {
-                    enc.append_indirection();
-                } else {
+                fn encode_sequence(&self, enc: &mut Encoder) {
                     let ($($ty,)+) = self;
+                    enc.push_offset(0 $( + $ty.head_words() )+);
+
                     $(
                         $ty.head_append(enc);
+                        enc.bump_offset($ty.tail_words());
                     )+
+
+                    $(
+                        $ty.tail_append(enc);
+                    )+
+
+                    enc.pop_offset();
+                }
+
+                #[inline]
+                fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
+                    Ok(($(
+                        match <$ty as Token>::decode_from(dec) {
+                            Ok(t) => t,
+                            Err(e) => return Err(e),
+                        },
+                    )+))
                 }
             }
-
-            #[inline]
-            fn tail_append(&self, enc: &mut Encoder) {
-                if Self::DYNAMIC {
-                    self.encode_sequence(enc);
-                }
             }
-        }
-
-        #[allow(non_snake_case)]
-        impl<'de, $($ty: Token<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
-            const IS_TUPLE: bool = true;
-
-            fn encode_sequence(&self, enc: &mut Encoder) {
-                let ($($ty,)+) = self;
-                enc.push_offset(0 $( + $ty.head_words() )+);
-
-                $(
-                    $ty.head_append(enc);
-                    enc.bump_offset($ty.tail_words());
-                )+
-
-                $(
-                    $ty.tail_append(enc);
-                )+
-
-                enc.pop_offset();
-            }
-
-            #[inline]
-            fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
-                Ok(($(
-                    match <$ty as Token>::decode_from(dec) {
-                        Ok(t) => t,
-                        Err(e) => return Err(e),
-                    },
-                )+))
-            }
-        }
+        )*
     };
 }
 

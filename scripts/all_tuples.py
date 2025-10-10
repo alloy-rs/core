@@ -4,12 +4,20 @@ Generate Rust's all_the_tuples macro with configurable N.
 """
 
 
+def name(prefix, i):
+    if i == 0:
+        return prefix
+    i += 1
+    return f"{prefix}{i}"
+
+
 def generate_tuple_list(n, double=False):
     """Generate tuple list for a given n."""
+
     if double:
-        return ", ".join(f"(T{i} U{i})" for i in range(1, n + 1))
+        return ", ".join(f"({name('T', i)} {name('U', i)})" for i in range(n))
     else:
-        return ", ".join(f"T{i}" for i in range(1, n + 1))
+        return ", ".join(f"{name('T', i)}" for i in range(n))
 
 
 def generate_macro(max_n):
@@ -24,7 +32,7 @@ def generate_macro(max_n):
     # Generate @double variant
     for i in range(1, max_n + 1):
         tuple_list = generate_tuple_list(i, double=True)
-        lines.append(f"        $mac!({i:2} {tuple_list});")
+        lines.append(f"        {{ {i:2} {tuple_list} }}")
 
     lines.append("    };")
     lines.append("")
@@ -33,7 +41,7 @@ def generate_macro(max_n):
     # Generate single variant
     for i in range(1, max_n + 1):
         tuple_list = generate_tuple_list(i, double=False)
-        lines.append(f"        $mac!({i:2} {tuple_list});")
+        lines.append(f"        {{ {i:2} {tuple_list} }}")
 
     lines.append("    };")
     lines.append("}")

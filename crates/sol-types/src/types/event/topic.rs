@@ -160,31 +160,35 @@ impl<T: EventTopic, const N: usize> EventTopic for FixedArray<T, N> {
 }
 
 macro_rules! tuple_impls {
-    ($count:literal $($ty:ident),+) => {
-        #[allow(non_snake_case)]
-        impl<$($ty: EventTopic,)+> EventTopic for ($($ty,)+) {
-            #[inline]
-            fn topic_preimage_length(rust: &Self::RustType) -> usize {
-                let ($($ty,)+) = rust;
-                0usize $( + <$ty>::topic_preimage_length($ty) )+
-            }
+    ($( { $count:tt $($ty:ident),+ } )*) => {
+        $(
+            fake_variadic! { $count =>
+            #[allow(non_snake_case)]
+            impl<$($ty: EventTopic,)+> EventTopic for ($($ty,)+) {
+                #[inline]
+                fn topic_preimage_length(rust: &Self::RustType) -> usize {
+                    let ($($ty,)+) = rust;
+                    0usize $( + <$ty>::topic_preimage_length($ty) )+
+                }
 
-            #[inline]
-            fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
-                let b @ ($($ty,)+) = rust;
-                out.reserve(Self::topic_preimage_length(b));
-                $(
-                    <$ty>::encode_topic_preimage($ty, out);
-                )+
-            }
+                #[inline]
+                fn encode_topic_preimage(rust: &Self::RustType, out: &mut Vec<u8>) {
+                    let b @ ($($ty,)+) = rust;
+                    out.reserve(Self::topic_preimage_length(b));
+                    $(
+                        <$ty>::encode_topic_preimage($ty, out);
+                    )+
+                }
 
-            #[inline]
-            fn encode_topic(rust: &Self::RustType) -> WordToken {
-                let mut out = Vec::new();
-                Self::encode_topic_preimage(rust, &mut out);
-                WordToken(keccak256(out))
+                #[inline]
+                fn encode_topic(rust: &Self::RustType) -> WordToken {
+                    let mut out = Vec::new();
+                    Self::encode_topic_preimage(rust, &mut out);
+                    WordToken(keccak256(out))
+                }
             }
-        }
+            }
+        )*
     };
 }
 

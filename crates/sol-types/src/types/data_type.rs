@@ -685,103 +685,111 @@ impl<T: SolType, const N: usize> SolType for FixedArray<T, N> {
 }
 
 macro_rules! tuple_encodable_impls {
-    ($count:literal $(($ty:ident $uty:ident)),+) => {
-        #[allow(non_snake_case)]
-        impl<$($ty: SolTypeValue<$uty>, $uty: SolType),+> SolTypeValue<($($uty,)+)> for ($($ty,)+) {
-            #[inline]
-            fn stv_to_tokens(&self) -> <($($uty,)+) as SolType>::Token<'_> {
-                let ($($ty,)+) = self;
-                ($(SolTypeValue::<$uty>::stv_to_tokens($ty),)+)
-            }
-
-            fn stv_abi_encoded_size(&self) -> usize {
-                if let Some(size) = <($($uty,)+) as SolType>::ENCODED_SIZE {
-                    return size
+    ($( { $count:tt $(($ty:ident $uty:ident)),+ } )*) => {
+        $(
+            fake_variadic! { $count =>
+            #[allow(non_snake_case)]
+            impl<$($ty: SolTypeValue<$uty>, $uty: SolType),+> SolTypeValue<($($uty,)+)> for ($($ty,)+) {
+                #[inline]
+                fn stv_to_tokens(&self) -> <($($uty,)+) as SolType>::Token<'_> {
+                    let ($($ty,)+) = self;
+                    ($(SolTypeValue::<$uty>::stv_to_tokens($ty),)+)
                 }
 
-                let ($($ty,)+) = self;
-                let sum = 0 $( + $ty.stv_abi_encoded_size() )+;
-                if <($($uty,)+) as SolType>::DYNAMIC {
-                    32 + sum
-                } else {
-                    sum
+                fn stv_abi_encoded_size(&self) -> usize {
+                    if let Some(size) = <($($uty,)+) as SolType>::ENCODED_SIZE {
+                        return size
+                    }
+
+                    let ($($ty,)+) = self;
+                    let sum = 0 $( + $ty.stv_abi_encoded_size() )+;
+                    if <($($uty,)+) as SolType>::DYNAMIC {
+                        32 + sum
+                    } else {
+                        sum
+                    }
+                }
+
+                fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
+                    let ($($ty,)+) = self;
+                    $(
+                        $ty.stv_abi_encode_packed_to(out);
+                    )+
+                }
+
+                fn stv_eip712_data_word(&self) -> Word {
+                    let ($($ty,)+) = self;
+                    let encoding: [[u8; 32]; $count] = [$(
+                        <$uty as SolType>::eip712_data_word($ty).0,
+                    )+];
+                    // SAFETY: Flattening [[u8; 32]; $count] to [u8; $count * 32] is valid
+                    let encoding: &[u8] = unsafe { core::slice::from_raw_parts(encoding.as_ptr().cast(), $count * 32) };
+                    keccak256(encoding).into()
+                }
+
+                fn stv_abi_packed_encoded_size(&self) -> usize {
+                    let ($($ty,)+) = self;
+                    0 $(+ $ty.stv_abi_packed_encoded_size())+
                 }
             }
-
-            fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
-                let ($($ty,)+) = self;
-                $(
-                    $ty.stv_abi_encode_packed_to(out);
-                )+
             }
-
-            fn stv_eip712_data_word(&self) -> Word {
-                let ($($ty,)+) = self;
-                let encoding: [[u8; 32]; $count] = [$(
-                    <$uty as SolType>::eip712_data_word($ty).0,
-                )+];
-                // SAFETY: Flattening [[u8; 32]; $count] to [u8; $count * 32] is valid
-                let encoding: &[u8] = unsafe { core::slice::from_raw_parts(encoding.as_ptr().cast(), $count * 32) };
-                keccak256(encoding).into()
-            }
-
-            fn stv_abi_packed_encoded_size(&self) -> usize {
-                let ($($ty,)+) = self;
-                0 $(+ $ty.stv_abi_packed_encoded_size())+
-            }
-        }
+        )*
     };
 }
 
 macro_rules! tuple_impls {
-    ($count:literal $($ty:ident),+) => {
-        #[allow(non_snake_case)]
-        impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
-            type RustType = ($( $ty::RustType, )+);
-            type Token<'a> = ($( $ty::Token<'a>, )+);
+    ($( { $count:tt $($ty:ident),+ } )*) => {
+        $(
+            fake_variadic! { $count =>
+            #[allow(non_snake_case)]
+            impl<$($ty: SolType,)+> SolType for ($($ty,)+) {
+                type RustType = ($( $ty::RustType, )+);
+                type Token<'a> = ($( $ty::Token<'a>, )+);
 
-            const SOL_NAME: &'static str = NameBuffer::new()
-                .write_byte(b'(')
-                $(
-                .write_str($ty::SOL_NAME)
-                .write_byte(b',')
-                )+
-                .pop() // Remove the last comma
-                .write_byte(b')')
-                .as_str();
-            const ENCODED_SIZE: Option<usize> = 'l: {
-                let mut acc = 0;
-                $(
-                    match <$ty as SolType>::ENCODED_SIZE {
-                        Some(size) => acc += size,
-                        None => break 'l None,
-                    }
-                )+
-                Some(acc)
-            };
-            const PACKED_ENCODED_SIZE: Option<usize> = 'l: {
-                let mut acc = 0;
-                $(
-                    match <$ty as SolType>::PACKED_ENCODED_SIZE {
-                        Some(size) => acc += size,
-                        None => break 'l None,
-                    }
-                )+
-                Some(acc)
-            };
+                const SOL_NAME: &'static str = NameBuffer::new()
+                    .write_byte(b'(')
+                    $(
+                    .write_str($ty::SOL_NAME)
+                    .write_byte(b',')
+                    )+
+                    .pop() // Remove the last comma
+                    .write_byte(b')')
+                    .as_str();
+                const ENCODED_SIZE: Option<usize> = 'l: {
+                    let mut acc = 0;
+                    $(
+                        match <$ty as SolType>::ENCODED_SIZE {
+                            Some(size) => acc += size,
+                            None => break 'l None,
+                        }
+                    )+
+                    Some(acc)
+                };
+                const PACKED_ENCODED_SIZE: Option<usize> = 'l: {
+                    let mut acc = 0;
+                    $(
+                        match <$ty as SolType>::PACKED_ENCODED_SIZE {
+                            Some(size) => acc += size,
+                            None => break 'l None,
+                        }
+                    )+
+                    Some(acc)
+                };
 
-            fn valid_token(token: &Self::Token<'_>) -> bool {
-                let ($($ty,)+) = token;
-                $(<$ty as SolType>::valid_token($ty))&&+
+                fn valid_token(token: &Self::Token<'_>) -> bool {
+                    let ($($ty,)+) = token;
+                    $(<$ty as SolType>::valid_token($ty))&&+
+                }
+
+                fn detokenize(token: Self::Token<'_>) -> Self::RustType {
+                    let ($($ty,)+) = token;
+                    ($(
+                        <$ty as SolType>::detokenize($ty),
+                    )+)
+                }
             }
-
-            fn detokenize(token: Self::Token<'_>) -> Self::RustType {
-                let ($($ty,)+) = token;
-                ($(
-                    <$ty as SolType>::detokenize($ty),
-                )+)
             }
-        }
+        )*
     };
 }
 

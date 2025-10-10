@@ -303,10 +303,14 @@ impl_sol_value! {
 }
 
 macro_rules! tuple_impls {
-    ($count:literal $($ty:ident),+) => {
-        impl<$($ty: SolValue,)+> SolValue for ($($ty,)+) {
-            type SolType = ($($ty::SolType,)+);
-        }
+    ($( { $count:tt $($ty:ident),+ } )*) => {
+        $(
+            fake_variadic! { $count =>
+            impl<$($ty: SolValue,)+> SolValue for ($($ty,)+) {
+                type SolType = ($($ty::SolType,)+);
+            }
+            }
+        )*
     };
 }
 
