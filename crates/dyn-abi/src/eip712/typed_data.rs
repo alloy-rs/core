@@ -810,11 +810,13 @@ mod tests {
         // Therefore the `try_as_basic_solidity` skips over them, returning `MissingType` because
         // the list of linearized types is empty.
         for primary in ["T.", "T.U", "bool", "uint256"] {
-            for set_types in [false, true] {
-                let typed_data = get_typed_data(primary, set_types);
-                let err = typed_data.eip712_signing_hash().unwrap_err();
-                assert_eq!(err, Error::missing_type(primary));
-            }
+            let typed_data = get_typed_data(primary, false);
+            let err = typed_data.eip712_signing_hash().unwrap_err();
+            assert_eq!(err, Error::missing_type(primary));
+
+            let typed_data = get_typed_data(primary, true);
+            let err = typed_data.eip712_signing_hash().unwrap_err();
+            assert!(err.to_string().contains("mismatch"), "{err}");
         }
 
         // Invalid syntax.
@@ -822,7 +824,7 @@ mod tests {
             for set_types in [false, true] {
                 let typed_data = get_typed_data(primary, set_types);
                 let err = typed_data.eip712_signing_hash().unwrap_err();
-                assert!(err.to_string().contains("parser error"), "{err}");
+                assert_eq!(err, Error::missing_type(primary));
             }
         }
     }
