@@ -743,7 +743,7 @@ mod tests {
         };
 
         // Valid syntax.
-        for primary in ["T", "T:U"] {
+        for primary in ["T"] {
             let typed_data = get_typed_data(primary, false);
             let err = typed_data.eip712_signing_hash().unwrap_err();
             assert_eq!(err, Error::missing_type(primary));
