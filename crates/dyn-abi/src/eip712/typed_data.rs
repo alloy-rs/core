@@ -770,4 +770,84 @@ mod tests {
         let typed_data: TypedData = serde_json::from_value(json).unwrap();
         let _hash = typed_data.eip712_signing_hash().unwrap();
     }
+
+    #[test]
+    fn primary_types() {
+        let get_typed_data = |primary: &str, set_types: bool| {
+            let types = if set_types {
+                json!({
+                    primary: [
+                        { "name": "whatever", "type": "string" }
+                    ]
+                })
+            } else {
+                json!({})
+            };
+            let json = json!({
+                "types": types,
+                "primaryType": primary,
+                "domain": {},
+                "message": {
+                    "whatever": "hi"
+                }
+            });
+            serde_json::from_value::<TypedData>(json).unwrap()
+        };
+
+        // Valid syntax.
+        for primary in ["T", "T:U"] {
+            let typed_data = get_typed_data(primary, false);
+            let err = typed_data.eip712_signing_hash().unwrap_err();
+            assert_eq!(err, Error::missing_type(primary));
+
+            let typed_data = get_typed_data(primary, true);
+            let _hash = typed_data.eip712_signing_hash().unwrap();
+        }
+
+        // Invalid syntax, but still parses.
+        // - `.` in the name is re-parsed as `uint8` for the enum hack;
+        // - the rest are basic Solidity types;
+        // Therefore the `try_as_basic_solidity` skips over them, returning `MissingType` because
+        // the list of linearized types is empty.
+        for primary in ["T.", "T.U", "bool", "uint256"] {
+            for set_types in [false, true] {
+                let typed_data = get_typed_data(primary, set_types);
+                let err = typed_data.eip712_signing_hash().unwrap_err();
+                assert_eq!(err, Error::missing_type(primary));
+            }
+        }
+
+        // Invalid syntax.
+        for primary in ["T[]", "string[]", "uint256[]", "(bool,string)", "(bool,string)[]"] {
+            for set_types in [false, true] {
+                let typed_data = get_typed_data(primary, set_types);
+                let err = typed_data.eip712_signing_hash().unwrap_err();
+                assert!(err.to_string().contains("parser error"), "{err}");
+            }
+        }
+    }
+
+    #[test]
+    fn missing_types() {
+        let json = json!({
+            "types": {
+                "User": [
+                    {
+                        "name": "name",
+                        "type": "Unknown"
+                    },
+                ]
+            },
+            "primaryType": "User",
+            "domain": {}
+        });
+        let typed_data = serde_json::from_value::<TypedData>(json).unwrap();
+        let expected_error = Error::missing_type("Unknown");
+
+        let ty = typed_data.encode_type().unwrap_err();
+        assert_eq!(ty, expected_error);
+
+        let err = typed_data.eip712_signing_hash().unwrap_err();
+        assert_eq!(err, expected_error);
+    }
 }
