@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1](https://github.com/alloy-rs/core/releases/tag/v1.4.1) - 2025-10-14
+
+### Features
+
+- Gate 60 tuple impls behind 'more-tuple-impls' feature flag ([#1027](https://github.com/alloy-rs/core/issues/1027))
+- [sol-macro] Add transient storage keyword support ([#1026](https://github.com/alloy-rs/core/issues/1026))
+- Add Sqlx Traits for `Bytes` Type  ([#1020](https://github.com/alloy-rs/core/issues/1020))
+- [primitives] Add Borsh support for `TxKind` ([#1022](https://github.com/alloy-rs/core/issues/1022))
+
+### Miscellaneous Tasks
+
+- Remove some inlines ([#1028](https://github.com/alloy-rs/core/issues/1028))
+- Fix docs, typos ([#1023](https://github.com/alloy-rs/core/issues/1023))
+- Remove feature(doc_auto_cfg) ([#1019](https://github.com/alloy-rs/core/issues/1019))
+
+### Other
+
+- Merge commit from fork
+
+### Refactor
+
+- [dyn-abi] Clean up Resolver ([#1030](https://github.com/alloy-rs/core/issues/1030))
+
 ## [1.4.0](https://github.com/alloy-rs/core/releases/tag/v1.4.0) - 2025-09-26
 
 ### Bug Fixes
@@ -35,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 1.4.0
 - Tweak postgres.rs ([#1018](https://github.com/alloy-rs/core/issues/1018))
 - [sol-types] Sync panic reasons from geth ([#1015](https://github.com/alloy-rs/core/issues/1015))
 - Typo rollup ([#997](https://github.com/alloy-rs/core/issues/997))

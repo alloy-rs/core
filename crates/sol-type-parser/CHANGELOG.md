@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1](https://github.com/alloy-rs/core/releases/tag/v1.4.1) - 2025-10-14
+
+### Miscellaneous Tasks
+
+- Remove some inlines ([#1028](https://github.com/alloy-rs/core/issues/1028))
+- Remove feature(doc_auto_cfg) ([#1019](https://github.com/alloy-rs/core/issues/1019))
+
+## [1.4.0](https://github.com/alloy-rs/core/releases/tag/v1.4.0) - 2025-09-26
+
+### Miscellaneous Tasks
+
+- Release 1.4.0
+
 ## [1.3.1](https://github.com/alloy-rs/core/releases/tag/v1.3.1) - 2025-08-17
 
 ### Miscellaneous Tasks

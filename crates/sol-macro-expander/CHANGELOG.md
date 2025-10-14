@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1](https://github.com/alloy-rs/core/releases/tag/v1.4.1) - 2025-10-14
+
+### Miscellaneous Tasks
+
+- Remove feature(doc_auto_cfg) ([#1019](https://github.com/alloy-rs/core/issues/1019))
+
 ## [1.4.0](https://github.com/alloy-rs/core/releases/tag/v1.4.0) - 2025-09-26
 
 ### Bug Fixes
@@ -17,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [sol-macro] Inherit attributes from contract ([#1004](https://github.com/alloy-rs/core/issues/1004))
 - [sol-macro-expander] Add `Clone` trait to enum contracts containers ([#1003](https://github.com/alloy-rs/core/issues/1003))
 - [sol-macro-expander] Add `name_by_selector` method for enum variant retrieval ([#995](https://github.com/alloy-rs/core/issues/995))
+
+### Miscellaneous Tasks
+
+- Release 1.4.0
 
 ### Performance
 
