@@ -421,6 +421,9 @@ impl Resolver {
     /// <https://eips.ethereum.org/EIPS/eip-712#definition-of-encodetype>
     pub fn encode_type(&self, name: &str) -> Result<String> {
         let linear = self.linearize(name)?;
+        if linear.is_empty() {
+            return Err(Error::missing_type(name));
+        }
         let first = linear.first().unwrap().eip712_encode_type();
 
         // Sort references by name (eip-712 encodeType spec)
