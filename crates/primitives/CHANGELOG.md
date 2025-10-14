@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.26](https://github.com/alloy-rs/core/releases/tag/v0.8.26) - 2025-10-14
+
+### Miscellaneous Tasks
+
+- Add typos ([#991](https://github.com/alloy-rs/core/issues/991))
+
 ## [0.8.25](https://github.com/alloy-rs/core/releases/tag/v0.8.25) - 2025-03-26
 
 ### Bug Fixes
@@ -14,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 0.8.25
 - Add hash_ref function to sealed.rs ([#920](https://github.com/alloy-rs/core/issues/920))
 
 ## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
