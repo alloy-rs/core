@@ -77,7 +77,7 @@ impl<'a> ComponentType<'a> {
         let mut depth = 1; // 1 to account for the ( in the split above
         let mut last = 0;
 
-        for (i, c) in props_str.chars().enumerate() {
+        for (i, c) in props_str.char_indices() {
             match c {
                 '(' => depth += 1,
                 ')' => {
