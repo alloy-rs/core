@@ -1,7 +1,7 @@
 use crate::{FixedBytes, aliases::U160, utils::keccak256};
+use core::borrow::Borrow;
 #[cfg(feature = "alloc")]
 use alloc::{
-    borrow::Borrow,
     string::{String, ToString},
 };
 use core::{fmt, mem::MaybeUninit, str};
@@ -103,7 +103,6 @@ impl From<Address> for U160 {
     }
 }
 
-#[cfg(feature = "alloc")]
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let checksum = self.to_checksum_buffer(None);
@@ -179,7 +178,6 @@ impl Address {
     /// let expected = address!("0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// assert_eq!(address, expected);
     /// ```
-    #[cfg(feature = "alloc")]
     pub fn parse_checksummed<S: AsRef<str>>(
         s: S,
         chain_id: Option<u64>,
@@ -222,7 +220,6 @@ impl Address {
     /// let checksummed: String = address.to_checksum(Some(1));
     /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
     /// ```
-    #[cfg(feature = "alloc")]
     #[inline]
     #[must_use]
     pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
@@ -258,7 +255,6 @@ impl Address {
     /// let checksummed: &mut str = address.to_checksum_raw(&mut buf, Some(1));
     /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
     /// ```
-    #[cfg(feature = "alloc")]
     #[inline]
     #[must_use]
     pub fn to_checksum_raw<'a>(&self, buf: &'a mut [u8], chain_id: Option<u64>) -> &'a mut str {
@@ -401,7 +397,6 @@ impl Address {
     /// let expected = address!("0x533ae9d683B10C02EbDb05471642F85230071FC3");
     /// assert_eq!(address.create2_from_code(salt, init_code), expected);
     /// ```
-    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn create2_from_code<S, C>(&self, salt: S, init_code: C) -> Self
     where
@@ -434,7 +429,6 @@ impl Address {
     /// let expected = address!("0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852");
     /// assert_eq!(address.create2(salt, init_code_hash), expected);
     /// ```
-    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn create2<S, H>(&self, salt: S, init_code_hash: H) -> Self
     where
@@ -479,7 +473,6 @@ impl Address {
     /// // Create an address using CREATE_EOF
     /// let eof_address = address.create_eof(salt);
     /// ```
-    #[cfg(feature = "alloc")]
     #[must_use]
     #[doc(alias = "eof_create")]
     pub fn create_eof<S>(&self, salt: S) -> Self
