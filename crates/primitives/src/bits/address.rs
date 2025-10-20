@@ -289,7 +289,6 @@ impl Address {
     /// let checksummed: &str = buffer.format(&address, Some(1));
     /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
     /// ```
-    #[cfg(feature = "alloc")]
     #[inline]
     pub fn to_checksum_buffer(&self, chain_id: Option<u64>) -> AddressChecksumBuffer {
         // SAFETY: The buffer is initialized by `format`.
@@ -307,7 +306,6 @@ impl Address {
     // > [...] If the chain id passed to the function belongs to a network that opted for using this
     // > checksum variant, prefix the address with the chain id and the `0x` separator before
     // > calculating the hash. [...]
-    #[cfg(feature = "alloc")]
     #[allow(clippy::wrong_self_convention)]
     fn to_checksum_inner(&self, buf: &mut [u8; 42], chain_id: Option<u64>) {
         buf[0] = b'0';
@@ -570,7 +568,6 @@ impl AddressChecksumBuffer {
     /// Calculates the checksum of an address into the buffer.
     ///
     /// See [`Address::to_checksum_buffer`] for more information.
-    #[cfg(feature = "alloc")]
     #[inline]
     pub fn format(&mut self, address: &Address, chain_id: Option<u64>) -> &mut str {
         address.to_checksum_inner(unsafe { self.0.assume_init_mut() }, chain_id);
