@@ -25,6 +25,7 @@ rustdoc-args = [
 workspace = true
 
 [dependencies]
+arrayvec.workspace=true
 bytes.workspace = true
 hex.workspace = true
 itoa.workspace = true

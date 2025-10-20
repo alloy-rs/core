@@ -38,7 +38,15 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
 
             fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
                 let len_error =
-                    |i| de::Error::invalid_length(i, &"exactly {N} bytes"); // TODO: actual formatting
+                    |i| {
+                        // "exactly N bytes" string has len of 15, so we handle N up to 10**17 here safely. Should cover all reasonable N.
+                        let mut string = arrayvec::ArrayString::<32>::new();
+                        if fmt::write(&mut string, format_args!("exactly {N} bytes")).is_ok() {
+                            de::Error::invalid_length(i, &string.as_str())
+                        } else {
+                            de::Error::invalid_length(i, &"exactly N bytes")
+                        }
+                    };
                 let mut bytes = [0u8; N];
 
                 for (i, byte) in bytes.iter_mut().enumerate() {
