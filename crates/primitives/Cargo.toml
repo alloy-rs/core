@@ -114,6 +114,7 @@ serde_json.workspace = true
 [features]
 default = ["std", "map", "map-foldhash"]
 std = [
+    "alloc",
     "bytes/std",
     "hex/std",
     "ruint/std",
@@ -128,6 +129,11 @@ std = [
     "rustc-hash?/std",
     "serde?/std",
     "sha3?/std",
+]
+alloc = [
+    "proptest?/alloc",
+    "ruint/alloc",
+    "serde?/alloc",
 ]
 nightly = [
     "foldhash?/nightly",

@@ -38,7 +38,7 @@ impl<'de, const N: usize> Deserialize<'de> for FixedBytes<N> {
 
             fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
                 let len_error =
-                    |i| de::Error::invalid_length(i, &format!("exactly {N} bytes").as_str());
+                    |i| de::Error::invalid_length(i, &"exactly {N} bytes"); // TODO: actual formatting
                 let mut bytes = [0u8; N];
 
                 for (i, byte) in bytes.iter_mut().enumerate() {

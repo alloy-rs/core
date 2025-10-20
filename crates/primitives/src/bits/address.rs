@@ -1,4 +1,5 @@
 use crate::{FixedBytes, aliases::U160, utils::keccak256};
+#[cfg(feature = "alloc")]
 use alloc::{
     borrow::Borrow,
     string::{String, ToString},
@@ -102,6 +103,7 @@ impl From<Address> for U160 {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let checksum = self.to_checksum_buffer(None);
@@ -177,6 +179,7 @@ impl Address {
     /// let expected = address!("0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
     /// assert_eq!(address, expected);
     /// ```
+    #[cfg(feature = "alloc")]
     pub fn parse_checksummed<S: AsRef<str>>(
         s: S,
         chain_id: Option<u64>,
@@ -219,6 +222,7 @@ impl Address {
     /// let checksummed: String = address.to_checksum(Some(1));
     /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
     /// ```
+    #[cfg(feature = "alloc")]
     #[inline]
     #[must_use]
     pub fn to_checksum(&self, chain_id: Option<u64>) -> String {
@@ -254,6 +258,7 @@ impl Address {
     /// let checksummed: &mut str = address.to_checksum_raw(&mut buf, Some(1));
     /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
     /// ```
+    #[cfg(feature = "alloc")]
     #[inline]
     #[must_use]
     pub fn to_checksum_raw<'a>(&self, buf: &'a mut [u8], chain_id: Option<u64>) -> &'a mut str {
@@ -284,6 +289,7 @@ impl Address {
     /// let checksummed: &str = buffer.format(&address, Some(1));
     /// assert_eq!(checksummed, "0xD8Da6bf26964Af9d7EEd9e03e53415d37AA96045");
     /// ```
+    #[cfg(feature = "alloc")]
     #[inline]
     pub fn to_checksum_buffer(&self, chain_id: Option<u64>) -> AddressChecksumBuffer {
         // SAFETY: The buffer is initialized by `format`.
@@ -301,6 +307,7 @@ impl Address {
     // > [...] If the chain id passed to the function belongs to a network that opted for using this
     // > checksum variant, prefix the address with the chain id and the `0x` separator before
     // > calculating the hash. [...]
+    #[cfg(feature = "alloc")]
     #[allow(clippy::wrong_self_convention)]
     fn to_checksum_inner(&self, buf: &mut [u8; 42], chain_id: Option<u64>) {
         buf[0] = b'0';
@@ -396,6 +403,7 @@ impl Address {
     /// let expected = address!("0x533ae9d683B10C02EbDb05471642F85230071FC3");
     /// assert_eq!(address.create2_from_code(salt, init_code), expected);
     /// ```
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn create2_from_code<S, C>(&self, salt: S, init_code: C) -> Self
     where
@@ -428,6 +436,7 @@ impl Address {
     /// let expected = address!("0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852");
     /// assert_eq!(address.create2(salt, init_code_hash), expected);
     /// ```
+    #[cfg(feature = "alloc")]
     #[must_use]
     pub fn create2<S, H>(&self, salt: S, init_code_hash: H) -> Self
     where
@@ -472,6 +481,7 @@ impl Address {
     /// // Create an address using CREATE_EOF
     /// let eof_address = address.create_eof(salt);
     /// ```
+    #[cfg(feature = "alloc")]
     #[must_use]
     #[doc(alias = "eof_create")]
     pub fn create_eof<S>(&self, salt: S) -> Self
@@ -560,6 +570,7 @@ impl AddressChecksumBuffer {
     /// Calculates the checksum of an address into the buffer.
     ///
     /// See [`Address::to_checksum_buffer`] for more information.
+    #[cfg(feature = "alloc")]
     #[inline]
     pub fn format(&mut self, address: &Address, chain_id: Option<u64>) -> &mut str {
         address.to_checksum_inner(unsafe { self.0.assume_init_mut() }, chain_id);
@@ -579,6 +590,7 @@ impl AddressChecksumBuffer {
     }
 
     /// Returns the checksum of a formatted address.
+    #[cfg(feature = "alloc")]
     #[inline]
     #[allow(clippy::inherent_to_string_shadow_display)]
     pub fn to_string(&self) -> String {

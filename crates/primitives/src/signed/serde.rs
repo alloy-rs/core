@@ -1,4 +1,5 @@
 use super::Signed;
+#[cfg(feature = "alloc")]
 use alloc::string::String;
 use core::{fmt, str};
 use ruint::Uint;
@@ -55,6 +56,7 @@ fn deserialize<'de, const BITS: usize, const LIMBS: usize, D: Deserializer<'de>>
             v.parse().map_err(serde::de::Error::custom)
         }
 
+        #[cfg(feature = "alloc")]
         fn visit_string<E: de::Error>(self, v: String) -> Result<Self::Value, E> {
             self.visit_str(&v)
         }

@@ -8,6 +8,8 @@
 #![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
 
@@ -70,6 +72,7 @@ pub use signature::PrimitiveSignature;
 pub use signature::{Signature, SignatureError, normalize_v, to_eip155_v};
 
 pub mod utils;
+#[cfg(feature = "alloc")]
 pub use utils::{KECCAK256_EMPTY, Keccak256, eip191_hash_message, keccak256};
 
 #[doc(hidden)] // Use `hex` directly instead!
@@ -107,6 +110,7 @@ pub type B160 = FixedBytes<20>;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
+    #[cfg(feature = "alloc")]
     pub use alloc::vec::Vec;
     pub use core::{
         self,
