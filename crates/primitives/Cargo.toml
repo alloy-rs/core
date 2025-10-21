@@ -135,6 +135,7 @@ alloc = [
     "proptest?/alloc",
     "ruint/alloc",
     "serde?/alloc",
+    "hex/alloc",
 ]
 nightly = [
     "foldhash?/nightly",
