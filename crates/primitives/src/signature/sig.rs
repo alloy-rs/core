@@ -1,6 +1,7 @@
 #![allow(clippy::missing_const_for_fn)] // On purpose for forward compatibility.
 
 use crate::{B256, U256, hex, normalize_v, signature::SignatureError, uint};
+#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use core::{fmt::Display, str::FromStr};
 
@@ -60,6 +61,7 @@ impl From<Signature> for [u8; 65] {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl From<&Signature> for Vec<u8> {
     #[inline]
     fn from(value: &Signature) -> Self {
@@ -67,6 +69,7 @@ impl From<&Signature> for Vec<u8> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl From<Signature> for Vec<u8> {
     #[inline]
     fn from(value: Signature) -> Self {

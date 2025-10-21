@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")]
+
 use crate::FixedBytes;
 use alloc::{boxed::Box, vec::Vec};
 use core::{

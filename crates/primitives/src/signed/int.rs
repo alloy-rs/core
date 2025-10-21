@@ -1,4 +1,5 @@
 use super::{ParseSignedError, Sign, utils::*};
+#[cfg(feature = "alloc")]
 use alloc::string::String;
 use core::fmt;
 use ruint::{BaseConvertError, Uint, UintTryFrom, UintTryTo};
@@ -367,6 +368,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 
     /// Convert to a decimal string.
+    #[cfg(feature = "alloc")]
     pub fn to_dec_string(&self) -> String {
         let sign = self.sign();
         let abs = self.unsigned_abs();
@@ -393,6 +395,7 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     }
 
     /// Convert to a hex string.
+    #[cfg(feature = "alloc")]
     pub fn to_hex_string(&self) -> String {
         let sign = self.sign();
         let abs = self.unsigned_abs();
