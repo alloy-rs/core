@@ -1,7 +1,12 @@
 use crate::{EventParam, Param, StateMutability};
 use alloc::string::String;
 use alloy_primitives::Selector;
-use core::{fmt::Write, num::NonZeroUsize};
+
+#[cfg(feature = "parser")]
+use core::fmt::Write;
+#[cfg(feature = "parser")]
+use core::num::NonZeroUsize;
+#[cfg(feature = "parser")]
 use parser::{ParameterSpecifier, TypeSpecifier, TypeStem, utils::ParsedSignature};
 
 /// Capacity to allocate per [Param].
@@ -123,6 +128,7 @@ pub(crate) fn selector(preimage: &str) -> Selector {
 }
 
 /// Strips `prefix` from `s` before parsing with `parser`. `prefix` must be followed by whitespace.
+#[cfg(feature = "parser")]
 pub(crate) fn parse_maybe_prefixed<F: FnOnce(&str) -> R, R>(
     mut s: &str,
     prefix: &str,
@@ -136,16 +142,19 @@ pub(crate) fn parse_maybe_prefixed<F: FnOnce(&str) -> R, R>(
     parser(s)
 }
 
+#[cfg(feature = "parser")]
 #[inline]
 pub(crate) fn parse_sig<const O: bool>(s: &str) -> parser::Result<ParsedSignature<Param>> {
     parser::utils::parse_signature::<O, _, _>(s, |p| mk_param(p.name, p.ty))
 }
 
+#[cfg(feature = "parser")]
 #[inline]
 pub(crate) fn parse_event_sig(s: &str) -> parser::Result<ParsedSignature<EventParam>> {
     parser::utils::parse_signature::<false, _, _>(s, mk_eparam)
 }
 
+#[cfg(feature = "parser")]
 pub(crate) fn mk_param(name: Option<&str>, ty: TypeSpecifier<'_>) -> Param {
     let name = name.unwrap_or_default().into();
     let internal_type = None;
@@ -162,6 +171,7 @@ pub(crate) fn mk_param(name: Option<&str>, ty: TypeSpecifier<'_>) -> Param {
     }
 }
 
+#[cfg(feature = "parser")]
 pub(crate) fn mk_eparam(spec: ParameterSpecifier<'_>) -> EventParam {
     let p = mk_param(spec.name, spec.ty);
     EventParam {
@@ -173,6 +183,7 @@ pub(crate) fn mk_eparam(spec: ParameterSpecifier<'_>) -> EventParam {
     }
 }
 
+#[cfg(feature = "parser")]
 fn ty_string(s: &str, sizes: &[Option<NonZeroUsize>]) -> String {
     let mut ty = String::with_capacity(s.len() + sizes.len() * 4);
     ty.push_str(s);
@@ -186,12 +197,15 @@ fn ty_string(s: &str, sizes: &[Option<NonZeroUsize>]) -> String {
     ty
 }
 
-pub(crate) fn validate_identifier<E: serde::de::Error>(name: &str) -> Result<(), E> {
-    if !name.is_empty() && !parser::is_valid_identifier(name) {
-        return Err(serde::de::Error::invalid_value(
-            serde::de::Unexpected::Str(name),
-            &"a valid Solidity identifier",
-        ));
+pub(crate) fn validate_identifier<E: serde::de::Error>(_name: &str) -> Result<(), E> {
+    #[cfg(feature = "parser")]
+    {
+        if !_name.is_empty() && !parser::is_valid_identifier(_name) {
+            return Err(serde::de::Error::invalid_value(
+                serde::de::Unexpected::Str(_name),
+                &"a valid Solidity identifier",
+            ));
+        }
     }
     Ok(())
 }
@@ -452,7 +466,7 @@ mod tests {
         );
 
         let mut sig_full = sig("toString", vec![param("uint256")], vec![param("string")]);
-        sig_full.state_mutability = Some(StateMutability::View);
+        sig_full.state_mutability = Some(parser::utils::StateMutability::View);
         assert_eq!(
             parse_sig::<true>("toString(uint param) external view returns(string param)"),
             Ok(sig_full)

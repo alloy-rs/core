@@ -1,7 +1,9 @@
 use alloc::string::{String, ToString};
 use core::fmt;
-use parser::TypeSpecifier;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Visitor};
+
+#[cfg(feature = "parser")]
+use parser::TypeSpecifier;
 
 /// The contract internal type. This could be a regular Solidity type, a
 /// user-defined type, an enum, a struct, a contract, or an address payable.
@@ -134,12 +136,14 @@ impl InternalType {
 
     /// Return a [`TypeSpecifier`] describing the struct if this type is a
     /// struct.
+    #[cfg(feature = "parser")]
     #[inline]
     pub fn struct_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_struct().and_then(|s| TypeSpecifier::parse(s.1).ok())
     }
 
     /// Return a [`TypeSpecifier`] describing the enum if this type is an enum.
+    #[cfg(feature = "parser")]
     #[inline]
     pub fn enum_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_enum().and_then(|s| TypeSpecifier::parse(s.1).ok())
@@ -147,6 +151,7 @@ impl InternalType {
 
     /// Return a [`TypeSpecifier`] describing the contract if this type is a
     /// contract.
+    #[cfg(feature = "parser")]
     #[inline]
     pub fn contract_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_contract().and_then(|s| TypeSpecifier::parse(s).ok())
@@ -156,6 +161,7 @@ impl InternalType {
     /// other. An "other" specifier indicates EITHER a regular Solidity type OR
     /// a user-defined type. It is not possible to distinguish between the two
     /// without additional context.
+    #[cfg(feature = "parser")]
     #[inline]
     pub fn other_specifier(&self) -> Option<TypeSpecifier<'_>> {
         self.as_other().and_then(|s| TypeSpecifier::parse(s.1).ok())

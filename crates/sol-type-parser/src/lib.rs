@@ -38,12 +38,6 @@ pub use type_spec::TypeSpecifier;
 mod parameter;
 pub use parameter::{ParameterSpecifier, Parameters, Storage};
 
-mod state_mutability;
-pub use state_mutability::StateMutability;
-#[cfg(feature = "serde")]
-pub use state_mutability::serde_state_mutability_compat;
-
-// Not public API.
 #[doc(hidden)]
 pub mod utils;
 

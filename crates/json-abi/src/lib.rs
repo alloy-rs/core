@@ -21,6 +21,7 @@
 #[allow(unused_imports)]
 extern crate alloc;
 
+#[cfg(feature = "parser")]
 pub extern crate alloy_sol_type_parser as parser;
 
 mod abi;
@@ -32,7 +33,8 @@ pub use item::{AbiItem, Constructor, Error, Event, Fallback, Function, Receive};
 mod param;
 pub use param::{EventParam, Param};
 
-pub use parser::{StateMutability, serde_state_mutability_compat};
+mod state_mutability;
+pub use state_mutability::{StateMutability, serde_state_mutability_compat};
 
 mod internal_type;
 pub use internal_type::InternalType;

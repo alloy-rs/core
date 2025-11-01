@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use crate::{
-    Error, Input, ParameterSpecifier, Result, RootType, StateMutability, ident::identifier_parser,
+    Error, Input, ParameterSpecifier, Result, RootType, ident::identifier_parser,
     input::check_recursion, new_input,
 };
 use alloc::{string::String, vec::Vec};
@@ -115,6 +115,29 @@ pub struct ParsedSignature<Param> {
     pub outputs: Vec<Param>,
     pub anonymous: bool,
     pub state_mutability: Option<StateMutability>,
+}
+
+#[doc(hidden)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StateMutability {
+    Pure,
+    View,
+    NonPayable,
+    Payable,
+}
+
+impl core::str::FromStr for StateMutability {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "pure" => Ok(Self::Pure),
+            "view" => Ok(Self::View),
+            "payable" => Ok(Self::Payable),
+            "nonpayable" => Ok(Self::NonPayable),
+            _ => Err(()),
+        }
+    }
 }
 
 #[doc(hidden)]

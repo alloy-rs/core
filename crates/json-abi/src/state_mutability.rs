@@ -1,7 +1,5 @@
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "serde")]
 const COMPAT_ERROR: &str = "state mutability cannot be both `payable` and `constant`";
 
 /// A JSON ABI function's state mutability.
@@ -9,9 +7,10 @@ const COMPAT_ERROR: &str = "state mutability cannot be both `payable` and `const
 /// This will serialize/deserialize as the `stateMutability` JSON ABI field's value, see
 /// [`as_json_str`](Self::as_json_str).
 /// For backwards compatible deserialization, see [`serde_state_mutability_compat`].
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
 pub enum StateMutability {
     /// Pure functions promise not to read from or modify the state.
     Pure,
@@ -38,6 +37,18 @@ impl core::str::FromStr for StateMutability {
 }
 
 impl StateMutability {
+    #[cfg(feature = "parser")]
+    pub(crate) fn from_parser(value: Option<parser::utils::StateMutability>) -> Self {
+        value
+            .map(|v| match v {
+                parser::utils::StateMutability::Pure => Self::Pure,
+                parser::utils::StateMutability::View => Self::View,
+                parser::utils::StateMutability::NonPayable => Self::NonPayable,
+                parser::utils::StateMutability::Payable => Self::Payable,
+            })
+            .unwrap_or_default()
+    }
+
     /// Parses a state mutability from a string.
     pub fn parse(s: &str) -> Option<Self> {
         match s {
@@ -98,7 +109,6 @@ impl StateMutability {
 /// let reserialized = serde_json::to_string(&ms).expect("failed reserializing");
 /// assert_eq!(reserialized, r#"{"stateMutability":"view"}"#);
 /// ```
-#[cfg(feature = "serde")]
 pub mod serde_state_mutability_compat {
     use super::*;
     use serde::ser::SerializeStruct;
@@ -153,7 +163,7 @@ pub mod serde_state_mutability_compat {
     }
 }
 
-#[cfg(all(test, feature = "serde"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use alloc::string::ToString;
