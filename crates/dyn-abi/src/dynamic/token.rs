@@ -14,17 +14,17 @@ pub enum DynToken<'a> {
     /// A single word.
     Word(Word),
     /// A Fixed Sequence.
-    FixedSeq(Cow<'a, [DynToken<'a>]>, usize),
+    FixedSeq(Cow<'a, [Self]>, usize),
     /// A dynamic-length sequence.
     DynSeq {
         /// The contents of the dynamic sequence.
-        contents: Cow<'a, [DynToken<'a>]>,
+        contents: Cow<'a, [Self]>,
         /// The type template of the dynamic sequence.
         /// This is used only when decoding. It indicates what the token type
         /// of the sequence is. During tokenization of data, the type of the
         /// contents is known, so this is not needed.
         #[doc(hidden)]
-        template: Option<Box<DynToken<'a>>>,
+        template: Option<Box<Self>>,
     },
     /// A packed sequence (string or bytes).
     PackedSeq(&'a [u8]),
