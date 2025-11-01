@@ -78,11 +78,11 @@ pub enum DynSolValue {
     String(String),
 
     /// A dynamically-sized array of values.
-    Array(Vec<DynSolValue>),
+    Array(Vec<Self>),
     /// A fixed-size array of values.
-    FixedArray(Vec<DynSolValue>),
+    FixedArray(Vec<Self>),
     /// A tuple of values.
-    Tuple(Vec<DynSolValue>),
+    Tuple(Vec<Self>),
 
     /// A named struct, treated as a tuple with a name parameter.
     #[cfg(feature = "eip712")]
@@ -92,7 +92,7 @@ pub enum DynSolValue {
         /// The struct's prop names, in declaration order.
         prop_names: Vec<String>,
         /// The inner types.
-        tuple: Vec<DynSolValue>,
+        tuple: Vec<Self>,
     },
 }
 
