@@ -202,6 +202,13 @@ impl Bloom {
         self.accrue_raw_log(log.address, log.topics())
     }
 
+    /// Ingests multiple logs into the bloom filter.
+    pub fn accrue_logs(&mut self, logs: &[Log]) {
+        for log in logs {
+            self.accrue_log(log)
+        }
+    }
+
     /// True if the bloom filter contains a log with given address and topics.
     ///
     /// Note: This method may return false positives. This is inherent to the
