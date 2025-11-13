@@ -1,6 +1,7 @@
 use crate::{FixedBytes, aliases::U160, utils::keccak256};
+use core::borrow::Borrow;
+#[cfg(feature = "alloc")]
 use alloc::{
-    borrow::Borrow,
     string::{String, ToString},
 };
 use core::{fmt, mem::MaybeUninit, str};
@@ -579,6 +580,7 @@ impl AddressChecksumBuffer {
     }
 
     /// Returns the checksum of a formatted address.
+    #[cfg(feature = "alloc")]
     #[inline]
     #[allow(clippy::inherent_to_string_shadow_display)]
     pub fn to_string(&self) -> String {

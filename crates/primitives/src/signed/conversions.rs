@@ -1,4 +1,5 @@
 use super::{BigIntConversionError, ParseSignedError, Sign, Signed, utils::twos_complement};
+#[cfg(feature = "alloc")]
 use alloc::string::String;
 use core::str::FromStr;
 use ruint::{ToUintError, Uint, UintTryFrom};
@@ -95,6 +96,7 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<&str> for Signed<BITS, LIMBS
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<const BITS: usize, const LIMBS: usize> TryFrom<&String> for Signed<BITS, LIMBS> {
     type Error = ParseSignedError;
 
@@ -104,6 +106,7 @@ impl<const BITS: usize, const LIMBS: usize> TryFrom<&String> for Signed<BITS, LI
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<const BITS: usize, const LIMBS: usize> TryFrom<String> for Signed<BITS, LIMBS> {
     type Error = ParseSignedError;
 

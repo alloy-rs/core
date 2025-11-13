@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")] // logs are a wrapper over Vec basically, so there is no point in having them without alloc
+
 use crate::{Address, B256, Bloom, Bytes};
 use alloc::vec::Vec;
 

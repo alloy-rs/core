@@ -1,23 +1,28 @@
 //! Common Ethereum utilities.
 
 use crate::B256;
+
+#[cfg(feature = "alloc")]
 use alloc::{boxed::Box, collections::TryReserveError, vec::Vec};
 use cfg_if::cfg_if;
 use core::{
     fmt,
-    mem::{ManuallyDrop, MaybeUninit},
+    mem::MaybeUninit,
 };
 
 mod units;
+#[cfg(feature = "alloc")]
 pub use units::{
     DecimalSeparator, ParseUnits, Unit, UnitsError, format_ether, format_units, format_units_with,
     parse_ether, parse_units,
 };
 
+#[cfg(feature = "alloc")]
 #[doc(hidden)]
 #[deprecated(since = "0.5.0", note = "use `Unit::ETHER.wei()` instead")]
 pub const WEI_IN_ETHER: crate::U256 = Unit::ETHER.wei_const();
 
+#[cfg(feature = "alloc")]
 #[doc(hidden)]
 #[deprecated(since = "0.5.0", note = "use `Unit` instead")]
 pub type Units = Unit;
@@ -51,6 +56,7 @@ macro_rules! try_vec {
 ///
 /// Stable version of `Box::try_new`.
 #[inline]
+#[cfg(feature = "alloc")]
 pub fn box_try_new<T>(value: T) -> Result<Box<T>, TryReserveError> {
     let mut boxed = box_try_new_uninit::<T>()?;
     unsafe {
@@ -64,6 +70,7 @@ pub fn box_try_new<T>(value: T) -> Result<Box<T>, TryReserveError> {
 /// allocation fails.
 ///
 /// Stable version of `Box::try_new_uninit`.
+#[cfg(feature = "alloc")]
 #[inline]
 pub fn box_try_new_uninit<T>() -> Result<Box<MaybeUninit<T>>, TryReserveError> {
     let mut vec = Vec::<MaybeUninit<T>>::new();
@@ -75,13 +82,14 @@ pub fn box_try_new_uninit<T>() -> Result<Box<MaybeUninit<T>>, TryReserveError> {
     // Make sure we got exactly 1 element.
     vec.shrink_to(1);
 
-    let mut vec = ManuallyDrop::new(vec);
+    let mut vec = core::mem::ManuallyDrop::new(vec);
 
     // SAFETY: `vec` is exactly one element long and has not been deallocated.
     Ok(unsafe { Box::from_raw(vec.as_mut_ptr()) })
 }
 
 /// Tries to collect the elements of an iterator into a `Vec`.
+#[cfg(feature = "alloc")]
 pub fn try_collect_vec<I: Iterator<Item = T>, T>(iter: I) -> Result<Vec<T>, TryReserveError> {
     let mut vec = Vec::new();
     if let Some(size_hint) = iter.size_hint().1 {
@@ -92,6 +100,7 @@ pub fn try_collect_vec<I: Iterator<Item = T>, T>(iter: I) -> Result<Vec<T>, TryR
 }
 
 /// Tries to create a `Vec` with the given capacity.
+#[cfg(feature = "alloc")]
 #[inline]
 pub fn vec_try_with_capacity<T>(capacity: usize) -> Result<Vec<T>, TryReserveError> {
     let mut vec = Vec::new();
@@ -100,6 +109,7 @@ pub fn vec_try_with_capacity<T>(capacity: usize) -> Result<Vec<T>, TryReserveErr
 
 /// Tries to create a `Vec` of `n` elements, each initialized to `elem`.
 // Not public API. Use `try_vec!` instead.
+#[cfg(feature = "alloc")]
 #[doc(hidden)]
 pub fn vec_try_from_elem<T: Clone>(elem: T, n: usize) -> Result<Vec<T>, TryReserveError> {
     let mut vec = Vec::new();
@@ -116,6 +126,7 @@ pub fn vec_try_from_elem<T: Clone>(elem: T, n: usize) -> Result<Vec<T>, TryReser
 /// This message is then hashed using [Keccak-256](keccak256).
 ///
 /// [EIP-191]: https://eips.ethereum.org/EIPS/eip-191
+#[cfg(feature = "alloc")]
 pub fn eip191_hash_message<T: AsRef<[u8]>>(message: T) -> B256 {
     keccak256(eip191_message(message))
 }
@@ -126,6 +137,7 @@ pub fn eip191_hash_message<T: AsRef<[u8]>>(message: T) -> B256 {
 /// `"\x19Ethereum Signed Message:\n" + message.length + message`
 ///
 /// [EIP-191]: https://eips.ethereum.org/EIPS/eip-191
+#[cfg(feature = "alloc")]
 pub fn eip191_message<T: AsRef<[u8]>>(message: T) -> Vec<u8> {
     fn eip191_message(message: &[u8]) -> Vec<u8> {
         let len = message.len();
