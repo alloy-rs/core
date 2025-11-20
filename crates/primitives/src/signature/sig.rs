@@ -165,12 +165,14 @@ impl Signature {
         sig
     }
 
-    /// Returns the byte-array representation of this signature with raw `y_parity`.
+    /// Returns the byte-array representation of this signature as (r, s, y_parity).
     ///
-    /// The first 32 bytes are the `r` value, the second 32 bytes the `s` value
+    /// The first 32 bytes are the `r` value, the second 32 bytes the `s` value,
     /// and the final byte is the `y_parity` value as-is (0 or 1).
+    ///
+    /// See [`as_erc2098`](Self::as_erc2098) for the compact ERC-2098 representation.
     #[inline]
-    pub fn as_raw_bytes(&self) -> [u8; 65] {
+    pub fn as_rsy(&self) -> [u8; 65] {
         let mut sig = [0u8; 65];
         sig[..32].copy_from_slice(&self.r.to_be_bytes::<32>());
         sig[32..64].copy_from_slice(&self.s.to_be_bytes::<32>());
@@ -671,7 +673,7 @@ mod tests {
     }
 
     #[test]
-    fn as_raw_bytes() {
+    fn as_rsy() {
         let signature = Signature::new(
             U256::from_str(
                 "18515461264373351373200002665853028612451056578545711640558177340181847433846",
@@ -687,11 +689,11 @@ mod tests {
         let expected = hex!(
             "0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d8300"
         );
-        assert_eq!(signature.as_raw_bytes(), expected);
+        assert_eq!(signature.as_rsy(), expected);
     }
 
     #[test]
-    fn as_raw_bytes_y_parity_true() {
+    fn as_rsy_y_parity_true() {
         let signature = Signature::new(
             U256::from_str(
                 "18515461264373351373200002665853028612451056578545711640558177340181847433846",
@@ -707,7 +709,7 @@ mod tests {
         let expected = hex!(
             "0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d8301"
         );
-        assert_eq!(signature.as_raw_bytes(), expected);
+        assert_eq!(signature.as_rsy(), expected);
     }
 
     #[test]
