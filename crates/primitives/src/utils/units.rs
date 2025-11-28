@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")]
+
 use crate::{I256, ParseSignedError, U256};
 use alloc::string::{String, ToString};
 use core::fmt;

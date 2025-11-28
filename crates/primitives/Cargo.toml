@@ -25,6 +25,7 @@ rustdoc-args = [
 workspace = true
 
 [dependencies]
+arrayvec.workspace=true
 bytes.workspace = true
 hex.workspace = true
 itoa.workspace = true
@@ -114,6 +115,7 @@ serde_json.workspace = true
 [features]
 default = ["std", "map", "map-foldhash"]
 std = [
+    "alloc",
     "bytes/std",
     "hex/std",
     "ruint/std",
@@ -128,6 +130,12 @@ std = [
     "rustc-hash?/std",
     "serde?/std",
     "sha3?/std",
+]
+alloc = [
+    "proptest?/alloc",
+    "ruint/alloc",
+    "serde?/alloc",
+    "hex/alloc",
 ]
 nightly = [
     "foldhash?/nightly",
