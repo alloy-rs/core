@@ -52,11 +52,13 @@ use alloy_dyn_abi::eip712::TypedData;
 use alloy_sol_types::sol;
 
 sol! {
+    #[derive(serde::Serialize)]
     struct Person {
         string name;
         address wallet;
     }
 
+    #[derive(serde::Serialize)]
     struct Mail {
         Person from;
         Person to;
