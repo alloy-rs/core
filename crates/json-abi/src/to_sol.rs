@@ -220,6 +220,11 @@ impl JsonAbi {
         out.pop(); // trailing newline
 
         out.push('}');
+        if !its.globals.is_empty() {
+            out.push('\n');
+            fmt!(its.globals);
+            out.pop(); // trailing newline
+        }
     }
 }
 
@@ -228,13 +233,20 @@ struct InternalTypes<'a> {
     name: &'a str,
     this_its: BTreeSet<It<'a>>,
     other: BTreeMap<&'a String, BTreeSet<It<'a>>>,
+    globals: BTreeSet<It<'a>>,
     enums_as_udvt: bool,
 }
 
 impl<'a> InternalTypes<'a> {
     #[allow(clippy::missing_const_for_fn)]
     fn new(name: &'a str, enums_as_udvt: bool) -> Self {
-        Self { name, this_its: BTreeSet::new(), other: BTreeMap::new(), enums_as_udvt }
+        Self {
+            name,
+            this_its: BTreeSet::new(),
+            other: BTreeMap::new(),
+            globals: BTreeSet::new(),
+            enums_as_udvt,
+        }
     }
 
     fn visit_abi(&mut self, abi: &'a JsonAbi) {
@@ -313,7 +325,7 @@ impl<'a> InternalTypes<'a> {
                 self.other.entry(contract).or_default().insert(it);
             }
         } else {
-            self.this_its.insert(it);
+            self.globals.insert(it);
         }
     }
 }
