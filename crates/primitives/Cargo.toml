@@ -55,6 +55,10 @@ keccak-asm = { workspace = true, optional = true }
 sha3 = { workspace = true, optional = true }
 tiny-keccak = { workspace = true, features = ["keccak"] }
 
+# keccak cache
+schnellru = { workspace = true, optional = true }
+parking_lot = { workspace = true, optional = true }
+
 # borsh
 borsh = { workspace = true, optional = true, features = ["derive"] }
 
@@ -141,6 +145,7 @@ asm-keccak = ["dep:keccak-asm"]
 native-keccak = []
 sha3-keccak = ["dep:sha3"]
 tiny-keccak = []
+keccak-cache = ["std", "dep:schnellru", "dep:parking_lot"]
 
 map = ["dep:hashbrown"]
 map-hashbrown = ["map"]
@@ -188,3 +193,9 @@ name = "primitives"
 path = "benches/primitives.rs"
 harness = false
 required-features = ["rand"]
+
+[[bench]]
+name = "keccak_cache"
+path = "benches/keccak_cache.rs"
+harness = false
+required-features = ["keccak-cache"]
