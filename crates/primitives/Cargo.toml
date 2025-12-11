@@ -198,4 +198,4 @@ required-features = ["rand"]
 name = "keccak_cache"
 path = "benches/keccak_cache.rs"
 harness = false
-required-features = ["keccak-cache"]
+required-features = ["keccak-cache", "rand"]

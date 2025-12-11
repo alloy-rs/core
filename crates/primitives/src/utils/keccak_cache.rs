@@ -124,7 +124,9 @@ impl KeccakCacheStats {
 
     /// Resets all statistics to zero.
     ///
-    /// Note: This is called automatically by [`clear_keccak_cache`].
+    /// # Note
+    ///
+    /// This is called automatically by [`clear_keccak_cache`].
     pub fn reset(&self) {
         self.hits_20.store(0, Ordering::Relaxed);
         self.hits_32.store(0, Ordering::Relaxed);
