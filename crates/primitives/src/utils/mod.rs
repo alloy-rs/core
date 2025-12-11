@@ -13,7 +13,8 @@ mod keccak_cache;
 #[cfg(feature = "keccak-cache")]
 pub use keccak_cache::{
     DEFAULT_KECCAK_CACHE_SIZE, KECCAK_CACHE_SIZE_ENV, KeccakCacheStats, clear_keccak_cache,
-    keccak_cache_len, keccak_cache_stats,
+    keccak_cache_len, keccak_cache_len_20, keccak_cache_len_32, keccak_cache_stats,
+    reset_keccak_cache_stats,
 };
 
 mod units;

@@ -163,12 +163,19 @@ fn main() {
 
     #[cfg(feature = "keccak-cache")]
     {
-        let stats = alloy_primitives::utils::keccak_cache_stats();
+        use alloy_primitives::utils::{keccak_cache_len, keccak_cache_len_20, keccak_cache_len_32, keccak_cache_stats};
+        let stats = keccak_cache_stats();
         println!("  Cache stats:");
-        println!("    Hits:     {}", stats.hits());
-        println!("    Misses:   {}", stats.misses());
-        println!("    Bypassed: {}", stats.bypassed());
-        println!("    Hit rate: {:.2}%", stats.hit_rate());
-        println!("    Entries:  {}", alloy_primitives::utils::keccak_cache_len());
+        println!("    Hits (20-byte):   {}", stats.hits_20());
+        println!("    Hits (32-byte):   {}", stats.hits_32());
+        println!("    Hits (total):     {}", stats.hits());
+        println!("    Misses (20-byte): {}", stats.misses_20());
+        println!("    Misses (32-byte): {}", stats.misses_32());
+        println!("    Misses (total):   {}", stats.misses());
+        println!("    Bypassed:         {}", stats.bypassed());
+        println!("    Hit rate:         {:.2}%", stats.hit_rate());
+        println!("    Entries (20-byte): {}", keccak_cache_len_20());
+        println!("    Entries (32-byte): {}", keccak_cache_len_32());
+        println!("    Entries (total):   {}", keccak_cache_len());
     }
 }
