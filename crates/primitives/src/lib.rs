@@ -6,6 +6,9 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
+#![cfg_attr(feature = "nightly", feature(core_intrinsics))]
+#![cfg_attr(feature = "nightly", feature(likely_unlikely))]
+#![cfg_attr(feature = "nightly", allow(internal_features))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[macro_use]
