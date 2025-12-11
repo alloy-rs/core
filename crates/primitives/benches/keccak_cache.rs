@@ -2,7 +2,7 @@
 //!
 //! Run with: cargo bench -p alloy-primitives --features keccak-cache --bench keccak_cache
 
-use alloy_primitives::{keccak256, B256};
+use alloy_primitives::{B256, keccak256};
 use std::time::{Duration, Instant};
 
 const NUM_UNIQUE_ADDRESSES: usize = 5000;
@@ -26,16 +26,18 @@ fn main() {
     println!("Generating test data...");
 
     // Generate unique addresses (20 bytes) and storage keys (32 bytes)
-    let addresses: Vec<[u8; 20]> = (0..NUM_UNIQUE_ADDRESSES as u64)
-        .map(|i| generate_random_bytes::<20>(i * 31337))
-        .collect();
+    let addresses: Vec<[u8; 20]> =
+        (0..NUM_UNIQUE_ADDRESSES as u64).map(|i| generate_random_bytes::<20>(i * 31337)).collect();
 
     let storage_keys: Vec<[u8; 32]> = (0..NUM_UNIQUE_KEYS as u64)
         .map(|i| generate_random_bytes::<32>(i * 31337 + 1000000))
         .collect();
 
-    println!("Generated {} unique addresses and {} unique storage keys\n",
-             addresses.len(), storage_keys.len());
+    println!(
+        "Generated {} unique addresses and {} unique storage keys\n",
+        addresses.len(),
+        storage_keys.len()
+    );
 
     // Clear cache and stats
     #[cfg(feature = "keccak-cache")]
@@ -163,7 +165,9 @@ fn main() {
 
     #[cfg(feature = "keccak-cache")]
     {
-        use alloy_primitives::utils::{keccak_cache_len, keccak_cache_len_20, keccak_cache_len_32, keccak_cache_stats};
+        use alloy_primitives::utils::{
+            keccak_cache_len, keccak_cache_len_20, keccak_cache_len_32, keccak_cache_stats,
+        };
         let stats = keccak_cache_stats();
         println!("  Cache stats:");
         println!("    Hits (20-byte):   {}", stats.hits_20());

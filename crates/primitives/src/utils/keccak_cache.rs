@@ -119,11 +119,7 @@ impl KeccakCacheStats {
     pub fn hit_rate(&self) -> f64 {
         let hits = self.hits() as f64;
         let total = self.total_cached() as f64;
-        if total == 0.0 {
-            0.0
-        } else {
-            (hits / total) * 100.0
-        }
+        if total == 0.0 { 0.0 } else { (hits / total) * 100.0 }
     }
 
     /// Resets all statistics to zero.
@@ -562,8 +558,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_access() {
-        use std::sync::Arc;
-        use std::thread;
+        use std::{sync::Arc, thread};
 
         clear_keccak_cache();
 
@@ -571,10 +566,8 @@ mod tests {
         let iterations = 1000;
 
         // Create a set of addresses and keys to hash
-        let addresses: Arc<Vec<[u8; 20]>> =
-            Arc::new((0..100u8).map(|i| [i; 20]).collect());
-        let keys: Arc<Vec<[u8; 32]>> =
-            Arc::new((0..100u8).map(|i| [i; 32]).collect());
+        let addresses: Arc<Vec<[u8; 20]>> = Arc::new((0..100u8).map(|i| [i; 20]).collect());
+        let keys: Arc<Vec<[u8; 32]>> = Arc::new((0..100u8).map(|i| [i; 32]).collect());
 
         let handles: Vec<_> = (0..num_threads)
             .map(|t| {
