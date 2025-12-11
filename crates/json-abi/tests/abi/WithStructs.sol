@@ -1,32 +1,4 @@
 interface WithStructs {
-    type statusType is uint8;
-    struct Bid {
-        address validatorAddress;
-        address opportunityAddress;
-        address searcherContractAddress;
-        address searcherPayableAddress;
-        uint256 bidAmount;
-    }
-    struct NFToken {
-        address implem;
-        uint256 id;
-    }
-    struct Status {
-        uint128 activeAtAuction;
-        uint128 inactiveAtAuction;
-        statusType kind;
-    }
-    struct ValidatorBalanceCheckpoint {
-        uint256 pendingBalanceAtlastBid;
-        uint256 outstandingBalance;
-        uint128 lastWithdrawnAuction;
-        uint128 lastBidReceivedAuction;
-    }
-    struct ValidatorPreferences {
-        uint256 minAutoshipAmount;
-        address validatorPayableAddress;
-    }
-
     event AuctionEnded(uint128 indexed auction_number);
     event AuctionStarted(uint128 indexed auction_number);
     event AuctionStarterSet(address indexed starter);
@@ -102,3 +74,31 @@ interface WithStructs {
     function withdrawStuckERC20(address _tokenAddress) external;
     function withdrawStuckNativeToken(uint256 amount) external;
 }
+type statusType is uint8;
+struct Bid {
+    address validatorAddress;
+    address opportunityAddress;
+    address searcherContractAddress;
+    address searcherPayableAddress;
+    uint256 bidAmount;
+}
+struct NFToken {
+    address implem;
+    uint256 id;
+}
+struct Status {
+    uint128 activeAtAuction;
+    uint128 inactiveAtAuction;
+    statusType kind;
+}
+struct ValidatorBalanceCheckpoint {
+    uint256 pendingBalanceAtlastBid;
+    uint256 outstandingBalance;
+    uint128 lastWithdrawnAuction;
+    uint128 lastBidReceivedAuction;
+}
+struct ValidatorPreferences {
+    uint256 minAutoshipAmount;
+    address validatorPayableAddress;
+}
+

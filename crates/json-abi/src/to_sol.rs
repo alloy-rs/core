@@ -92,6 +92,9 @@ pub(crate) struct SolPrinter<'a> {
 
     /// Configuration.
     config: ToSolConfig,
+
+    /// Current indentation level.
+    indent_level: usize,
 }
 
 impl Deref for SolPrinter<'_> {
@@ -112,7 +115,7 @@ impl DerefMut for SolPrinter<'_> {
 
 impl<'a> SolPrinter<'a> {
     pub(crate) fn new(s: &'a mut String, name: &'a str, config: ToSolConfig) -> Self {
-        Self { s, name, print_param_location: false, config }
+        Self { s, name, print_param_location: false, config, indent_level: 0 }
     }
 
     pub(crate) fn print(&mut self, abi: &'a JsonAbi) {
@@ -120,7 +123,9 @@ impl<'a> SolPrinter<'a> {
     }
 
     fn indent(&mut self) {
-        self.push_str("    ");
+        for _ in 0..self.indent_level {
+            self.push_str("    ");
+        }
     }
 
     /// Normalizes `s` as a Rust identifier and pushes it to the buffer.
@@ -177,11 +182,13 @@ impl JsonAbi {
                 out.push_str(name);
                 out.push_str(" {\n");
                 let prev = core::mem::replace(&mut out.name, name);
+                out.indent_level += 1;
                 for it in its {
                     out.indent();
                     it.to_sol(out);
                     out.push('\n');
                 }
+                out.indent_level -= 1;
                 out.name = prev;
                 out.push_str("}\n\n");
             }
@@ -195,6 +202,7 @@ impl JsonAbi {
         out.push('{');
         out.push('\n');
 
+        out.indent_level += 1;
         if one_contract {
             for (name, its) in &its.other {
                 if its.is_empty() {
@@ -220,6 +228,7 @@ impl JsonAbi {
         out.pop(); // trailing newline
 
         out.push('}');
+        out.indent_level -= 1;
         if !its.globals.is_empty() {
             out.push('\n');
             fmt!(its.globals);
@@ -400,12 +409,13 @@ impl ToSol for It<'_> {
                 out.push_str("struct ");
                 out.push_ident(self.name);
                 out.push_str(" {\n");
+                out.indent_level += 1;
                 for component in components {
-                    out.indent();
                     out.indent();
                     component.to_sol(out);
                     out.push_str(";\n");
                 }
+                out.indent_level -= 1;
                 out.indent();
                 out.push('}');
             }
