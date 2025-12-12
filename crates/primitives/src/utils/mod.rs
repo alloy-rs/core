@@ -385,6 +385,7 @@ mod tests {
     #[test]
     #[cfg(feature = "keccak-cache")]
     fn test_keccak256_cache_edge_cases() {
+        use keccak256_cached as keccak256;
         assert_eq!(keccak256([]), KECCAK256_EMPTY);
         assert_eq!(keccak256([]), KECCAK256_EMPTY);
 
@@ -415,6 +416,7 @@ mod tests {
     #[test]
     #[cfg(all(feature = "keccak-cache", feature = "rand"))]
     fn test_keccak256_cache_multithreaded() {
+        use keccak256_cached as keccak256;
         use rand::{Rng, SeedableRng};
         use std::{sync::Arc, thread};
 
