@@ -151,6 +151,14 @@ pub fn eip191_message<T: AsRef<[u8]>>(message: T) -> Vec<u8> {
 ///
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
+    keccak256_impl(bytes.as_ref())
+}
+
+/// Simple interface to the [`Keccak-256`] hash function,
+/// with a thin cache layer.
+///
+/// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
+pub fn keccak256_cached<T: AsRef<[u8]>>(bytes: T) -> B256 {
     #[cfg(feature = "keccak-cache")]
     return keccak_cache::compute(bytes.as_ref());
     #[cfg(not(feature = "keccak-cache"))]
