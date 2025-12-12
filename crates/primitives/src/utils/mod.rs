@@ -377,8 +377,8 @@ mod tests {
     #[test]
     #[cfg(feature = "keccak-cache")]
     fn test_keccak256_cache_edge_cases() {
-        assert_eq!(keccak256(&[]), KECCAK256_EMPTY);
-        assert_eq!(keccak256(&[]), KECCAK256_EMPTY);
+        assert_eq!(keccak256([]), KECCAK256_EMPTY);
+        assert_eq!(keccak256([]), KECCAK256_EMPTY);
 
         let max_cacheable = vec![0xAA; keccak_cache::MAX_INPUT_LEN];
         let hash1 = keccak256(&max_cacheable);
@@ -397,8 +397,9 @@ mod tests {
 
         let max = if cfg!(miri) { 10 } else { 255 };
         for byte in 0..=max {
-            let hash1 = keccak256(&[byte]);
-            let hash2 = keccak256_impl(&[byte]);
+            let data = &[byte];
+            let hash1 = keccak256(data);
+            let hash2 = keccak256_impl(data);
             assert_eq!(hash1, hash2);
         }
     }
@@ -467,8 +468,7 @@ mod tests {
 
                         assert_eq!(
                             cached_hash, direct_hash,
-                            "Thread {}: Cached hash mismatch for random data (len {})",
-                            thread_id, len
+                            "Thread {thread_id}: Cached hash mismatch for random data (len {len})"
                         );
                     }
                 }
