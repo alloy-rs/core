@@ -19,14 +19,6 @@ mod hint;
 #[cfg(feature = "keccak-cache")]
 mod keccak_cache;
 
-#[doc(hidden)]
-#[deprecated(since = "0.5.0", note = "use `Unit::ETHER.wei()` instead")]
-pub const WEI_IN_ETHER: crate::U256 = Unit::ETHER.wei_const();
-
-#[doc(hidden)]
-#[deprecated(since = "0.5.0", note = "use `Unit` instead")]
-pub type Units = Unit;
-
 /// The prefix used for hashing messages according to EIP-191.
 pub const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
 
