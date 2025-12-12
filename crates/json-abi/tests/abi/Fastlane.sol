@@ -94,4 +94,3 @@ struct ValidatorPreferences {
     uint256 minAutoshipAmount;
     address validatorPayableAddress;
 }
-

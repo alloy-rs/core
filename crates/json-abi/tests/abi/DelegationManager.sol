@@ -128,4 +128,3 @@ interface DelegationManager {
     function updateOperatorMetadataURI(string memory metadataURI) external;
 }
 type DelegatedShares is uint256;
-

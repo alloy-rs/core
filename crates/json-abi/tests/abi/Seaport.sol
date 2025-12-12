@@ -184,4 +184,3 @@ struct SpentItem {
     uint256 identifier;
     uint256 amount;
 }
-

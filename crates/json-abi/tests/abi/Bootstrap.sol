@@ -34,4 +34,3 @@ struct BootstrapConfig {
     address module;
     bytes data;
 }
-
