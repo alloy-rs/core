@@ -165,6 +165,21 @@ impl Signature {
         sig
     }
 
+    /// Returns the byte-array representation of this signature as (r, s, y_parity).
+    ///
+    /// The first 32 bytes are the `r` value, the second 32 bytes the `s` value,
+    /// and the final byte is the `y_parity` value as-is (0 or 1).
+    ///
+    /// See [`as_erc2098`](Self::as_erc2098) for the compact ERC-2098 representation.
+    #[inline]
+    pub fn as_rsy(&self) -> [u8; 65] {
+        let mut sig = [0u8; 65];
+        sig[..32].copy_from_slice(&self.r.to_be_bytes::<32>());
+        sig[32..64].copy_from_slice(&self.s.to_be_bytes::<32>());
+        sig[64] = self.y_parity as u8;
+        sig
+    }
+
     /// Decode the signature from the ERC-2098 compact representation.
     ///
     /// The first 32 bytes are the `r` value, and the next 32 bytes are the `s` value with `yParity`
@@ -209,14 +224,6 @@ impl Signature {
     pub fn with_parity(mut self, v: bool) -> Self {
         self.y_parity = v;
         self
-    }
-
-    /// Returns the inner ECDSA signature.
-    #[cfg(feature = "k256")]
-    #[deprecated(note = "use `Signature::to_k256` instead")]
-    #[inline]
-    pub fn into_inner(self) -> k256::ecdsa::Signature {
-        self.try_into().expect("signature conversion failed")
     }
 
     /// Returns the inner ECDSA signature.
@@ -273,13 +280,6 @@ impl Signature {
     #[inline]
     pub fn recid(&self) -> k256::ecdsa::RecoveryId {
         k256::ecdsa::RecoveryId::new(self.y_parity, false)
-    }
-
-    #[cfg(feature = "k256")]
-    #[doc(hidden)]
-    #[deprecated(note = "use `Signature::recid` instead")]
-    pub fn recovery_id(&self) -> k256::ecdsa::RecoveryId {
-        self.recid()
     }
 
     /// Recovers an [`Address`] from this signature and the given message by first prefixing and
@@ -655,6 +655,46 @@ mod tests {
             "0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d831b"
         );
         assert_eq!(signature.as_bytes(), expected);
+    }
+
+    #[test]
+    fn as_rsy() {
+        let signature = Signature::new(
+            U256::from_str(
+                "18515461264373351373200002665853028612451056578545711640558177340181847433846",
+            )
+            .unwrap(),
+            U256::from_str(
+                "46948507304638947509940763649030358759909902576025900602547168820602576006531",
+            )
+            .unwrap(),
+            false,
+        );
+
+        let expected = hex!(
+            "0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d8300"
+        );
+        assert_eq!(signature.as_rsy(), expected);
+    }
+
+    #[test]
+    fn as_rsy_y_parity_true() {
+        let signature = Signature::new(
+            U256::from_str(
+                "18515461264373351373200002665853028612451056578545711640558177340181847433846",
+            )
+            .unwrap(),
+            U256::from_str(
+                "46948507304638947509940763649030358759909902576025900602547168820602576006531",
+            )
+            .unwrap(),
+            true,
+        );
+
+        let expected = hex!(
+            "0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d8301"
+        );
+        assert_eq!(signature.as_rsy(), expected);
     }
 
     #[test]

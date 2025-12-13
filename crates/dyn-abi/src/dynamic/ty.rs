@@ -97,11 +97,11 @@ pub enum DynSolType {
     String,
 
     /// Dynamically sized array.
-    Array(Box<DynSolType>),
+    Array(Box<Self>),
     /// Fixed-sized array.
-    FixedArray(Box<DynSolType>, usize),
+    FixedArray(Box<Self>, usize),
     /// Tuple.
-    Tuple(Vec<DynSolType>),
+    Tuple(Vec<Self>),
 
     /// User-defined struct.
     #[cfg(feature = "eip712")]
@@ -111,7 +111,7 @@ pub enum DynSolType {
         /// Prop names.
         prop_names: Vec<String>,
         /// Inner types.
-        tuple: Vec<DynSolType>,
+        tuple: Vec<Self>,
     },
 }
 

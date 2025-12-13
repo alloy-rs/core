@@ -47,7 +47,7 @@ wrap_fixed_bytes!(
     extra_derives: [],
     /// An Ethereum address, 20 bytes in length.
     ///
-    /// This type is separate from [`B160`](crate::B160) / [`FixedBytes<20>`]
+    /// This type is separate from [`FixedBytes<20>`]
     /// and is declared with the [`wrap_fixed_bytes!`] macro. This allows us
     /// to implement address-specific functionality.
     ///

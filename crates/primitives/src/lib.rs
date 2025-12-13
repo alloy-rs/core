@@ -6,6 +6,9 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
+#![cfg_attr(feature = "nightly", feature(core_intrinsics))]
+#![cfg_attr(feature = "nightly", feature(likely_unlikely))]
+#![cfg_attr(feature = "nightly", allow(internal_features))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[macro_use]
@@ -65,8 +68,6 @@ mod signed;
 pub use signed::{BigIntConversionError, ParseSignedError, Sign, Signed};
 
 mod signature;
-#[allow(deprecated)]
-pub use signature::PrimitiveSignature;
 pub use signature::{Signature, SignatureError, normalize_v, to_eip155_v};
 
 pub mod utils;
@@ -87,22 +88,6 @@ pub use {
 #[cfg(feature = "serde")]
 #[doc(no_inline)]
 pub use ::hex::serde as serde_hex;
-
-/// 20-byte [fixed byte-array][FixedBytes] type.
-///
-/// You'll likely want to use [`Address`] instead, as it is a different type
-/// from `FixedBytes<20>`, and implements methods useful for working with
-/// Ethereum addresses.
-///
-/// If you are sure you want to use this type, and you don't want the
-/// deprecation warning, you can use `aliases::B160`.
-#[deprecated(
-    since = "0.3.2",
-    note = "you likely want to use `Address` instead. \
-            `B160` and `Address` are different types, \
-            see this type's documentation for more."
-)]
-pub type B160 = FixedBytes<20>;
 
 // Not public API.
 #[doc(hidden)]

@@ -91,7 +91,6 @@ impl<'a> TupleSpecifier<'a> {
     }
 
     /// Returns true if the type is a basic Solidity type.
-    #[inline]
     pub fn try_basic_solidity(&self) -> Result<()> {
         self.types.iter().try_for_each(TypeSpecifier::try_basic_solidity)
     }
