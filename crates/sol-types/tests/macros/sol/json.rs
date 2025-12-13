@@ -47,15 +47,18 @@ fn large_array() {
 
 #[test]
 fn seaport() {
-    sol!(
-        #[derive(Debug, PartialEq, Eq)]
-        Seaport,
-        "../json-abi/tests/abi/Seaport.json"
-    );
-    use Seaport::*;
+    mod container {
+        use super::*;
+        sol!(
+            #[derive(Debug, PartialEq, Eq)]
+            Seaport,
+            "../json-abi/tests/abi/Seaport.json"
+        );
+    }
+    use container::*;
 
     // Constructor with a single argument
-    let _ = constructorCall { conduitController: Address::ZERO };
+    let _ = Seaport::constructorCall { conduitController: Address::ZERO };
 
     // BasicOrderType is a uint8 UDVT
     let o1 = BasicOrderType::from(0u8);
@@ -105,7 +108,11 @@ fn aggregation_router_v5() {
 #[test]
 fn uniswap_v3_position() {
     // https://etherscan.io/address/0x8638fbd429b19249bb3bcf3ec72d07a657e49642#code
-    sol!(UniswapV3Position, "../json-abi/tests/abi/UniswapV3Position.json");
+    mod container {
+        use super::*;
+        sol!(UniswapV3Position, "../json-abi/tests/abi/UniswapV3Position.json");
+    }
+    use container::*;
 
     let _ = UniswapV3Position::getLiquidityByRangeCall {
         pool_: Address::ZERO,
@@ -169,7 +176,12 @@ fn gnosis_safe() {
 // https://github.com/alloy-rs/core/issues/371
 #[test]
 fn blur_exchange() {
-    sol!(BlurExchange, "../json-abi/tests/abi/BlurExchange.json");
+    mod container {
+        use super::*;
+        sol!(BlurExchange, "../json-abi/tests/abi/BlurExchange.json");
+    }
+    use container::*;
+
     let BlurExchange::NAMECall {} = BlurExchange::NAMECall {};
     let BlurExchange::NAMEReturn { _0: _ } = BlurExchange::NAMEReturn { _0: String::new() };
 }
@@ -282,4 +294,38 @@ fn ignore_unlinked_bytecode_attr() {
     );
 
     let _ = AnotherUnlinked::addCall { a: U256::ZERO, b: U256::ZERO };
+}
+
+// Ensure globals stay in the outer namespace and interface/contract items stay nested.
+#[test]
+fn contract_with_globals() {
+    mod container {
+        use super::*;
+        sol!(
+            #[derive(Debug, PartialEq, Eq)]
+            ContractUsingGlobals,
+            "../json-abi/tests/abi/ContractUsingGlobals.json"
+        );
+    }
+
+    // Globals should be available at the module scope, not under ContractWithGlobals.
+    let _udt: container::GlobalUDT = container::GlobalUDT::from(U256::from(123u64));
+    let enm: container::GlobalEnum = container::GlobalEnum::from(1u8);
+    let gs = container::GlobalStruct { value: U256::from(1), enum_: enm.clone().into() };
+
+    // GlobalEnum is flattened to a UDVT over uint8
+    let raw = enm.clone().into_underlying();
+    assert_eq!(raw, 1u8);
+
+    // Interface-scoped struct should live under the interface namespace.
+    let _iface_struct =
+        container::Interface::InterfaceStruct { kind: enm.into(), count: U256::from(2u64) };
+
+    // Events/errors belong to the contract (interface) namespace.
+    let _event_sig = <container::ContractUsingGlobals::GlobalEvent as SolEvent>::SIGNATURE;
+    let _error_sig = <container::ContractUsingGlobals::GlobalError as SolError>::SIGNATURE;
+
+    // Basic equality and Debug derive on globals.
+    assert_eq!(gs, gs);
+    let _ = format!("{gs:?}");
 }

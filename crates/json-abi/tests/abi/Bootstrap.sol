@@ -6,12 +6,6 @@ library ModuleManager {
 }
 
 interface Bootstrap {
-    type CallType is bytes1;
-    struct BootstrapConfig {
-        address module;
-        bytes data;
-    }
-
     error AccountAccessUnauthorized();
     error CannotRemoveLastValidator();
     error HookAlreadyInstalled(address currentHook);
@@ -34,4 +28,9 @@ interface Bootstrap {
     function getValidatorsPaginated(address cursor, uint256 size) external view returns (address[] memory array, address next);
     function initMSA(BootstrapConfig[] memory _valdiators, BootstrapConfig[] memory _executors, BootstrapConfig memory _hook, BootstrapConfig[] memory _fallbacks) external;
     function singleInitMSA(address validator, bytes memory data) external;
+}
+type CallType is bytes1;
+struct BootstrapConfig {
+    address module;
+    bytes data;
 }
