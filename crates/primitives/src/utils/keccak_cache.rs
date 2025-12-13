@@ -10,23 +10,24 @@ use crate::{B256, KECCAK256_EMPTY};
 use core::{
     cell::UnsafeCell,
     hash::BuildHasher,
-    sync::atomic::{AtomicU32, Ordering},
+    sync::atomic::{AtomicUsize, Ordering},
 };
 
 /// Number of cache entries (must be a power of 2).
 const COUNT: usize = 1 << 17; // ~131k entries
-const INDEX_MASK: u32 = (COUNT - 1) as u32;
-const HASH_MASK: u32 = !INDEX_MASK;
 
-const LOCKED_BIT: u32 = 0x0000_8000;
+const INDEX_MASK: usize = (COUNT - 1) as usize;
+const HASH_MASK: usize = !INDEX_MASK;
+
+const LOCKED_BIT: usize = 0x0000_8000;
 
 /// Maximum input length that can be cached.
-pub(super) const MAX_INPUT_LEN: usize = 60;
+pub(super) const MAX_INPUT_LEN: usize = 128 - 32 - size_of::<usize>();
 
 /// A cache entry.
-#[repr(C, align(32))]
+#[repr(C, align(128))]
 struct Entry {
-    combined: AtomicU32,
+    combined: AtomicUsize,
     data: UnsafeCell<EntryData>,
 }
 
@@ -44,7 +45,7 @@ impl Entry {
     }
 
     #[inline]
-    fn try_lock(&self, expected: Option<u32>) -> bool {
+    fn try_lock(&self, expected: Option<usize>) -> bool {
         let state = self.combined.load(Ordering::Relaxed);
         if let Some(expected) = expected {
             if state != expected {
@@ -59,7 +60,7 @@ impl Entry {
     }
 
     #[inline]
-    fn unlock(&self, combined: u32) {
+    fn unlock(&self, combined: usize) {
         self.combined.store(combined, Ordering::Release);
     }
 }
@@ -78,14 +79,17 @@ pub(super) fn compute(input: &[u8]) -> B256 {
         return if input.is_empty() { KECCAK256_EMPTY } else { keccak256(input) };
     }
 
-    let hash64 = crate::map::DefaultHashBuilder::default().hash_one(input);
-    let hash = ((hash64 >> 32) as u32) ^ (hash64 as u32);
-    let index = (hash & INDEX_MASK) as usize;
-    let entry = &CACHE[index];
+    let hash = crate::map::DefaultHashBuilder::default().hash_one(input);
+    let hash = if cfg!(target_pointer_width = "32") {
+        ((hash >> 32) as usize) ^ (hash as usize)
+    } else {
+        hash as usize
+    };
+    let entry = &CACHE[hash & INDEX_MASK];
 
     // Combine hash bits and length.
     // This acts as a cache key to quickly determine if the entry is valid in the next check.
-    let combined = (hash & HASH_MASK) | input.len() as u32;
+    let combined = (hash & HASH_MASK) | input.len();
 
     if entry.try_lock(Some(combined)) {
         // SAFETY: We hold the lock, so we have exclusive access.
