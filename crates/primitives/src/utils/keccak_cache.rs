@@ -100,6 +100,7 @@ struct EntryData {
 impl Entry {
     #[inline]
     const fn new() -> Self {
+        // SAFETY: POD.
         unsafe { core::mem::zeroed() }
     }
 
@@ -134,6 +135,8 @@ fn hash_bytes(input: &[u8]) -> usize {
     // This is tricky because our most common inputs are medium length: 16..=88
     // `foldhash` and `rapidhash` have a fast-path for ..16 bytes and outline the rest,
     // but really we want the opposite, or at least the 16.. path to be inlined.
+
+    // SAFETY: `input.len()` is checked to be within the bounds of `MAX_INPUT_LEN` by caller.
     unsafe { core::hint::assert_unchecked(input.len() <= MAX_INPUT_LEN) };
     if input.len() <= 16 {
         super::hint::cold_path();
