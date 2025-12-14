@@ -141,7 +141,7 @@ asm-keccak = ["dep:keccak-asm"]
 native-keccak = []
 sha3-keccak = ["dep:sha3"]
 tiny-keccak = []
-keccak-cache = ["map"]
+keccak-cache = ["std", "dep:foldhash"]
 
 map = ["dep:hashbrown"]
 map-hashbrown = ["map"]

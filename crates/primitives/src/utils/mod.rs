@@ -19,6 +19,11 @@ mod hint;
 #[cfg(feature = "keccak-cache")]
 mod keccak_cache;
 
+// NOT PUBLIC API.
+#[doc(hidden)]
+#[cfg(all(feature = "keccak-cache", feature = "std"))]
+pub use keccak_cache::stats::format as format_keccak_cache_stats;
+
 /// The prefix used for hashing messages according to EIP-191.
 pub const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
 
