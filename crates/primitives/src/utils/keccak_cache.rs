@@ -26,69 +26,10 @@ const LOCKED_BIT: usize = 0x0000_8000;
 /// Maximum input length that can be cached.
 pub(super) const MAX_INPUT_LEN: usize = 128 - 32 - size_of::<usize>();
 
-/// A cache entry.
-#[repr(C, align(128))]
-struct Entry {
-    combined: AtomicUsize,
-    data: UnsafeCell<EntryData>,
-}
-
-#[repr(C, align(4))]
-#[derive(Clone, Copy)]
-struct EntryData {
-    value: [u8; MAX_INPUT_LEN],
-    keccak256: B256,
-}
-
-impl Entry {
-    #[inline]
-    const fn new() -> Self {
-        unsafe { core::mem::zeroed() }
-    }
-
-    #[inline]
-    fn try_lock(&self, expected: Option<usize>) -> bool {
-        let state = self.combined.load(Ordering::Relaxed);
-        if let Some(expected) = expected {
-            if state != expected {
-                return false;
-            }
-        } else if state & LOCKED_BIT != 0 {
-            return false;
-        }
-        self.combined
-            .compare_exchange(state, state | LOCKED_BIT, Ordering::Acquire, Ordering::Relaxed)
-            .is_ok()
-    }
-
-    #[inline]
-    fn unlock(&self, combined: usize) {
-        self.combined.store(combined, Ordering::Release);
-    }
-}
-
-// SAFETY: `Entry` is a specialized `Mutex<EntryData>` that never blocks.
-unsafe impl Send for Entry {}
-unsafe impl Sync for Entry {}
-
 /// Global cache storage.
 ///
 /// This is sort of an open-coded flat `HashMap<&[u8], Mutex<EntryData>>`.
 static CACHE: [Entry; COUNT] = [const { Entry::new() }; COUNT];
-
-#[inline(always)]
-fn hash_bytes(input: &[u8]) -> usize {
-    // Use `Hasher::write` instead of `Hash::hash` to avoid hashing the length since it's already
-    // considered in the `foldhash` algorithm.
-    let mut hasher = foldhash::fast::FixedState::with_seed(0).build_hasher();
-    hasher.write(input);
-    let hash = hasher.finish();
-    if cfg!(target_pointer_width = "32") {
-        ((hash >> 32) as usize) ^ (hash as usize)
-    } else {
-        hash as usize
-    }
-}
 
 pub(super) fn compute(input: &[u8]) -> B256 {
     if unlikely(input.is_empty() | (input.len() > MAX_INPUT_LEN)) {
@@ -138,6 +79,65 @@ pub(super) fn compute(input: &[u8]) -> B256 {
     }
 
     result
+}
+
+/// A cache entry.
+#[repr(C, align(128))]
+struct Entry {
+    combined: AtomicUsize,
+    data: UnsafeCell<EntryData>,
+}
+
+#[repr(C, align(4))]
+#[derive(Clone, Copy)]
+struct EntryData {
+    value: [u8; MAX_INPUT_LEN],
+    keccak256: B256,
+}
+
+impl Entry {
+    #[inline]
+    const fn new() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+
+    #[inline]
+    fn try_lock(&self, expected: Option<usize>) -> bool {
+        let state = self.combined.load(Ordering::Relaxed);
+        if let Some(expected) = expected {
+            if state != expected {
+                return false;
+            }
+        } else if state & LOCKED_BIT != 0 {
+            return false;
+        }
+        self.combined
+            .compare_exchange(state, state | LOCKED_BIT, Ordering::Acquire, Ordering::Relaxed)
+            .is_ok()
+    }
+
+    #[inline]
+    fn unlock(&self, combined: usize) {
+        self.combined.store(combined, Ordering::Release);
+    }
+}
+
+// SAFETY: `Entry` is a specialized `Mutex<EntryData>` that never blocks.
+unsafe impl Send for Entry {}
+unsafe impl Sync for Entry {}
+
+#[inline(always)]
+fn hash_bytes(input: &[u8]) -> usize {
+    // Use `Hasher::write` instead of `Hash::hash` to avoid hashing the length since it's already
+    // considered in the `foldhash` algorithm.
+    let mut hasher = foldhash::fast::FixedState::with_seed(0).build_hasher();
+    hasher.write(input);
+    let hash = hasher.finish();
+    if cfg!(target_pointer_width = "32") {
+        ((hash >> 32) as usize) ^ (hash as usize)
+    } else {
+        hash as usize
+    }
 }
 
 // NOT PUBLIC API.
