@@ -86,6 +86,7 @@ hashbrown = { workspace = true, optional = true, features = [
 ] }
 indexmap = { workspace = true, optional = true }
 foldhash = { workspace = true, optional = true }
+rapidhash = { workspace = true, optional = true }
 rustc-hash = { workspace = true, optional = true }
 
 # arbitrary
@@ -141,7 +142,7 @@ asm-keccak = ["dep:keccak-asm"]
 native-keccak = []
 sha3-keccak = ["dep:sha3"]
 tiny-keccak = []
-keccak-cache = ["std", "dep:foldhash"]
+keccak-cache = ["std", "dep:rapidhash"]
 
 map = ["dep:hashbrown"]
 map-hashbrown = ["map"]

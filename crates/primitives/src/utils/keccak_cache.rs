@@ -9,7 +9,6 @@ use super::{
 use crate::{B256, KECCAK256_EMPTY};
 use core::{
     cell::UnsafeCell,
-    hash::{BuildHasher, Hasher},
     sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -60,6 +59,9 @@ pub(super) fn compute(input: &[u8]) -> B256 {
             stats::hit(input.len());
             return result;
         }
+        // Hash collision: same `combined` value but different input.
+        // This is extremely rare, but can still happen. For correctness we must still handle it.
+        stats::collision(input, &value[..input.len()]);
     }
     stats::miss(input.len());
 
@@ -127,12 +129,20 @@ unsafe impl Send for Entry {}
 unsafe impl Sync for Entry {}
 
 #[inline(always)]
+#[allow(clippy::missing_const_for_fn)]
 fn hash_bytes(input: &[u8]) -> usize {
-    // Use `Hasher::write` instead of `Hash::hash` to avoid hashing the length since it's already
-    // considered in the `foldhash` algorithm.
-    let mut hasher = foldhash::fast::FixedState::with_seed(0).build_hasher();
-    hasher.write(input);
-    let hash = hasher.finish();
+    // This is tricky because our most common inputs are medium length: 16..=88
+    // `foldhash` and `rapidhash` have a fast-path for ..16 bytes and outline the rest,
+    // but really we want the opposite, or at least the 16.. path to be inlined.
+    unsafe { core::hint::assert_unchecked(input.len() <= MAX_INPUT_LEN) };
+    if input.len() <= 16 {
+        super::hint::cold_path();
+    }
+    let hash = rapidhash::v3::rapidhash_v3_micro_inline::<false, false>(
+        input,
+        const { &rapidhash::v3::RapidSecrets::seed(0) },
+    );
+
     if cfg!(target_pointer_width = "32") {
         ((hash >> 32) as usize) ^ (hash as usize)
     } else {
@@ -145,16 +155,20 @@ pub(super) mod stats {
     use super::*;
     use std::{collections::HashMap, sync::Mutex};
 
+    type BuildHasher = std::hash::BuildHasherDefault<rapidhash::fast::RapidHasher<'static>>;
+
     static STATS: KeccakCacheStats = KeccakCacheStats {
         hits: [const { AtomicUsize::new(0) }; MAX_INPUT_LEN + 1],
         misses: [const { AtomicUsize::new(0) }; MAX_INPUT_LEN + 1],
-        out_of_range: Mutex::new(HashMap::with_hasher(foldhash::fast::FixedState::with_seed(0))),
+        out_of_range: Mutex::new(HashMap::with_hasher(BuildHasher::new())),
+        collisions: Mutex::new(Vec::new()),
     };
 
     struct KeccakCacheStats {
         hits: [AtomicUsize; MAX_INPUT_LEN + 1],
         misses: [AtomicUsize; MAX_INPUT_LEN + 1],
-        out_of_range: Mutex<HashMap<usize, usize, foldhash::fast::FixedState>>,
+        out_of_range: Mutex<HashMap<usize, usize, BuildHasher>>,
+        collisions: Mutex<Vec<(String, String)>>,
     }
 
     #[inline]
@@ -173,12 +187,22 @@ pub(super) mod stats {
         STATS.misses[len].fetch_add(1, Ordering::Relaxed);
     }
 
-    #[inline]
+    #[inline(never)]
     pub(super) fn out_of_range(len: usize) {
         if !ENABLE_STATS {
             return;
         }
         *STATS.out_of_range.lock().unwrap().entry(len).or_insert(0) += 1;
+    }
+
+    #[inline(never)]
+    pub(super) fn collision(input: &[u8], cached: &[u8]) {
+        if !ENABLE_STATS {
+            return;
+        }
+        let input_hex = crate::hex::encode(input);
+        let cached_hex = crate::hex::encode(cached);
+        STATS.collisions.lock().unwrap().push((input_hex, cached_hex));
     }
 
     #[doc(hidden)]
@@ -225,6 +249,16 @@ pub(super) mod stats {
                 "all", total_hits, total_misses, hit_rate
             )
             .unwrap();
+        }
+
+        let collisions = STATS.collisions.lock().unwrap();
+        if !collisions.is_empty() {
+            writeln!(out, "\nhash collisions ({}):", collisions.len()).unwrap();
+            for (input, cached) in collisions.iter() {
+                writeln!(out, "  input:  0x{input}").unwrap();
+                writeln!(out, "  cached: 0x{cached}").unwrap();
+                writeln!(out).unwrap();
+            }
         }
 
         out
