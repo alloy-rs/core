@@ -33,7 +33,10 @@ fn large_array() {
                     inputs: vec![Param {
                         ty: "uint64[128]".into(),
                         name: "longArray".into(),
-                        internal_type: None,
+                        internal_type: Some(alloy_json_abi::InternalType::Other {
+                            contract: None,
+                            ty: "uint64[128]".into()
+                        }),
                         components: vec![],
                     }],
                     outputs: vec![],
