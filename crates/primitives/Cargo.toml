@@ -143,6 +143,7 @@ native-keccak = []
 sha3-keccak = ["dep:sha3"]
 tiny-keccak = []
 keccak-cache = ["std", "dep:rapidhash"]
+keccak-cache-global = ["keccak-cache"]
 
 map = ["dep:hashbrown"]
 map-hashbrown = ["map"]
