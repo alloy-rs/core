@@ -165,6 +165,16 @@ pub fn keccak256_cached<T: AsRef<[u8]>>(bytes: T) -> B256 {
     return keccak256_impl(bytes.as_ref());
 }
 
+/// Simple interface to the [`Keccak-256`] hash function.
+///
+/// This function always computes the hash directly without using the cache.
+///
+/// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
+#[inline]
+pub fn keccak256_uncached<T: AsRef<[u8]>>(bytes: T) -> B256 {
+    keccak256_impl(bytes.as_ref())
+}
+
 fn keccak256_impl(bytes: &[u8]) -> B256 {
     let mut output = MaybeUninit::<B256>::uninit();
 
