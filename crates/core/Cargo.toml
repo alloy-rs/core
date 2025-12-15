@@ -67,6 +67,7 @@ map = ["alloy-primitives/map"]
 map-hashbrown = ["alloy-primitives/map-hashbrown"]
 map-indexmap = ["alloy-primitives/map-indexmap"]
 map-foldhash = ["alloy-primitives/map-foldhash"]
+map-rapidhash = ["alloy-primitives/map-rapidhash"]
 map-fxhash = ["alloy-primitives/map-fxhash"]
 
 getrandom = ["alloy-primitives/getrandom"]
