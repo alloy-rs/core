@@ -28,10 +28,16 @@ cfg_if! {
 #[doc(no_inline)]
 pub use foldhash;
 
+#[cfg(feature = "map-rapidhash")]
+#[doc(no_inline)]
+pub use rapidhash;
+
 // Default hasher.
 cfg_if! {
     if #[cfg(feature = "map-foldhash")] {
         type DefaultHashBuilderInner = foldhash::fast::RandomState;
+    } else if #[cfg(feature = "map-rapidhash")] {
+        type DefaultHashBuilderInner = rapidhash::RapidRandomState;
     } else if #[cfg(feature = "map-fxhash")] {
         type DefaultHashBuilderInner = FxBuildHasher;
     } else if #[cfg(any(feature = "map-hashbrown", not(feature = "std")))] {
