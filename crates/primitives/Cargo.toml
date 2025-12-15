@@ -120,6 +120,7 @@ std = [
     "ruint/std",
     "alloy-rlp?/std",
     "foldhash?/std",
+    "rapidhash?/std",
     "indexmap?/std",
     "k256?/std",
     "keccak-asm?/std",
@@ -132,6 +133,7 @@ std = [
 ]
 nightly = [
     "foldhash?/nightly",
+    "rapidhash?/nightly",
     "hashbrown?/nightly",
     "hex/nightly",
     "ruint/nightly",
@@ -154,7 +156,7 @@ map-fxhash = ["map", "dep:rustc-hash"]
 
 getrandom = ["dep:getrandom"]
 k256 = ["dep:k256"]
-rand = ["dep:rand", "getrandom", "ruint/rand-09", "rustc-hash?/rand"]
+rand = ["dep:rand", "getrandom", "ruint/rand-09", "rapidhash?/rand", "rustc-hash?/rand"]
 rayon = ["dep:rayon", "hashbrown?/rayon", "indexmap?/rayon"]
 rkyv = ["dep:rkyv", "ruint/rkyv"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
