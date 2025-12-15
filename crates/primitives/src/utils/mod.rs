@@ -146,6 +146,8 @@ pub fn eip191_message<T: AsRef<[u8]>>(message: T) -> Vec<u8> {
 
 /// Simple interface to the [`Keccak-256`] hash function.
 ///
+/// Uses the cache if the `keccak-cache-global` feature is enabled.
+///
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
     #[cfg(feature = "keccak-cache-global")]
@@ -156,6 +158,8 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
 
 /// Simple interface to the [`Keccak-256`] hash function,
 /// with a thin cache layer.
+///
+/// Uses the cache if the `keccak-cache` feature is enabled.
 ///
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 pub fn keccak256_cached<T: AsRef<[u8]>>(bytes: T) -> B256 {
@@ -168,6 +172,8 @@ pub fn keccak256_cached<T: AsRef<[u8]>>(bytes: T) -> B256 {
 /// Simple interface to the [`Keccak-256`] hash function.
 ///
 /// This function always computes the hash directly without using the cache.
+///
+/// Does not use the cache even if the `keccak-cache` feature is enabled.
 ///
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 #[inline]
