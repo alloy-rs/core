@@ -329,3 +329,26 @@ fn contract_with_globals() {
     assert_eq!(gs, gs);
     let _ = format!("{gs:?}");
 }
+
+#[test]
+fn handler() {
+    mod container {
+        use super::*;
+        sol!(Handler, "../json-abi/tests/abi/Handler.json");
+    }
+    use container::*;
+
+    // Foo is a global struct, available at module scope.
+    let foo = Foo { newNumber: U256::from(1u64) };
+
+    // FooBar lives under the IHandler library namespace.
+    let foobar = IHandler::FooBar { foo };
+
+    // Calling the interface should accept the namespaced FooBar.
+    let call = Handler::handleCall { foobar };
+    // Encode to ensure the generated types/namespaces are valid (should not panic).
+    let _encoded = call.abi_encode();
+
+    // Check the function selector/signature.
+    assert_eq!(Handler::handleCall::SIGNATURE, "handle(((uint256)))");
+}

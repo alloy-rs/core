@@ -229,9 +229,11 @@ impl JsonAbi {
 
         out.push('}');
         out.indent_level -= 1;
+
         if !its.globals.is_empty() {
             out.push('\n');
             fmt!(its.globals);
+            out.pop(); // trailing newline
             out.pop(); // trailing newline
         }
     }
