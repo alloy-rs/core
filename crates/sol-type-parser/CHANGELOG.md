@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 1.4.1
 - Remove some inlines ([#1028](https://github.com/alloy-rs/core/issues/1028))
 - Remove feature(doc_auto_cfg) ([#1019](https://github.com/alloy-rs/core/issues/1019))
 
