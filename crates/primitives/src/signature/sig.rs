@@ -228,14 +228,6 @@ impl Signature {
 
     /// Returns the inner ECDSA signature.
     #[cfg(feature = "k256")]
-    #[deprecated(note = "use `Signature::to_k256` instead")]
-    #[inline]
-    pub fn into_inner(self) -> k256::ecdsa::Signature {
-        self.try_into().expect("signature conversion failed")
-    }
-
-    /// Returns the inner ECDSA signature.
-    #[cfg(feature = "k256")]
     #[inline]
     pub fn to_k256(self) -> Result<k256::ecdsa::Signature, k256::ecdsa::Error> {
         k256::ecdsa::Signature::from_scalars(self.r.to_be_bytes(), self.s.to_be_bytes())
@@ -288,13 +280,6 @@ impl Signature {
     #[inline]
     pub fn recid(&self) -> k256::ecdsa::RecoveryId {
         k256::ecdsa::RecoveryId::new(self.y_parity, false)
-    }
-
-    #[cfg(feature = "k256")]
-    #[doc(hidden)]
-    #[deprecated(note = "use `Signature::recid` instead")]
-    pub fn recovery_id(&self) -> k256::ecdsa::RecoveryId {
-        self.recid()
     }
 
     /// Recovers an [`Address`] from this signature and the given message by first prefixing and

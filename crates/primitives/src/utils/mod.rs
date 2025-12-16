@@ -14,13 +14,15 @@ pub use units::{
     parse_ether, parse_units,
 };
 
-#[doc(hidden)]
-#[deprecated(since = "0.5.0", note = "use `Unit::ETHER.wei()` instead")]
-pub const WEI_IN_ETHER: crate::U256 = Unit::ETHER.wei_const();
+mod hint;
 
+#[cfg(feature = "keccak-cache")]
+mod keccak_cache;
+
+// NOT PUBLIC API.
 #[doc(hidden)]
-#[deprecated(since = "0.5.0", note = "use `Unit` instead")]
-pub type Units = Unit;
+#[cfg(all(feature = "keccak-cache", feature = "std"))]
+pub use keccak_cache::stats::format as format_keccak_cache_stats;
 
 /// The prefix used for hashing messages according to EIP-191.
 pub const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
@@ -144,48 +146,78 @@ pub fn eip191_message<T: AsRef<[u8]>>(message: T) -> Vec<u8> {
 
 /// Simple interface to the [`Keccak-256`] hash function.
 ///
+/// Uses the cache if the `keccak-cache-global` feature is enabled.
+///
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
-    fn keccak256(bytes: &[u8]) -> B256 {
-        let mut output = MaybeUninit::<B256>::uninit();
+    #[cfg(feature = "keccak-cache-global")]
+    return keccak_cache::compute(bytes.as_ref());
+    #[cfg(not(feature = "keccak-cache-global"))]
+    return keccak256_impl(bytes.as_ref());
+}
 
-        cfg_if! {
-            if #[cfg(all(feature = "native-keccak", not(any(feature = "sha3-keccak", feature = "tiny-keccak", miri))))] {
-                #[link(wasm_import_module = "vm_hooks")]
-                unsafe extern "C" {
-                    /// When targeting VMs with native keccak hooks, the `native-keccak` feature
-                    /// can be enabled to import and use the host environment's implementation
-                    /// of [`keccak256`] in place of [`sha3`] or [`tiny_keccak`]. This is overridden
-                    /// when the `sha3-keccak` or `tiny-keccak` feature is enabled.
-                    ///
-                    /// # Safety
-                    ///
-                    /// The VM accepts the preimage by pointer and length, and writes the
-                    /// 32-byte hash.
-                    /// - `bytes` must point to an input buffer at least `len` long.
-                    /// - `output` must point to a buffer that is at least 32-bytes long.
-                    ///
-                    /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
-                    /// [`sha3`]: https://docs.rs/sha3/latest/sha3/
-                    /// [`tiny_keccak`]: https://docs.rs/tiny-keccak/latest/tiny_keccak/
-                    fn native_keccak256(bytes: *const u8, len: usize, output: *mut u8);
-                }
+/// Simple interface to the [`Keccak-256`] hash function,
+/// with a thin cache layer.
+///
+/// Uses the cache if the `keccak-cache` feature is enabled.
+///
+/// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
+pub fn keccak256_cached<T: AsRef<[u8]>>(bytes: T) -> B256 {
+    #[cfg(feature = "keccak-cache")]
+    return keccak_cache::compute(bytes.as_ref());
+    #[cfg(not(feature = "keccak-cache"))]
+    return keccak256_impl(bytes.as_ref());
+}
 
-                // SAFETY: The output is 32-bytes, and the input comes from a slice.
-                unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr().cast::<u8>()) };
-            } else {
-                let mut hasher = Keccak256::new();
-                hasher.update(bytes);
-                // SAFETY: Never reads from `output`.
-                unsafe { hasher.finalize_into_raw(output.as_mut_ptr().cast()) };
+/// Simple interface to the [`Keccak-256`] hash function.
+///
+/// This function always computes the hash directly without using the cache.
+///
+/// Does not use the cache even if the `keccak-cache` feature is enabled.
+///
+/// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
+#[inline]
+pub fn keccak256_uncached<T: AsRef<[u8]>>(bytes: T) -> B256 {
+    keccak256_impl(bytes.as_ref())
+}
+
+fn keccak256_impl(bytes: &[u8]) -> B256 {
+    let mut output = MaybeUninit::<B256>::uninit();
+
+    cfg_if! {
+        if #[cfg(all(feature = "native-keccak", not(any(feature = "sha3-keccak", feature = "tiny-keccak", miri))))] {
+            #[link(wasm_import_module = "vm_hooks")]
+            unsafe extern "C" {
+                /// When targeting VMs with native keccak hooks, the `native-keccak` feature
+                /// can be enabled to import and use the host environment's implementation
+                /// of [`keccak256`] in place of [`sha3`] or [`tiny_keccak`]. This is overridden
+                /// when the `sha3-keccak` or `tiny-keccak` feature is enabled.
+                ///
+                /// # Safety
+                ///
+                /// The VM accepts the preimage by pointer and length, and writes the
+                /// 32-byte hash.
+                /// - `bytes` must point to an input buffer at least `len` long.
+                /// - `output` must point to a buffer that is at least 32-bytes long.
+                ///
+                /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
+                /// [`sha3`]: https://docs.rs/sha3/latest/sha3/
+                /// [`tiny_keccak`]: https://docs.rs/tiny-keccak/latest/tiny_keccak/
+                fn native_keccak256(bytes: *const u8, len: usize, output: *mut u8);
             }
-        }
 
-        // SAFETY: Initialized above.
-        unsafe { output.assume_init() }
+            // SAFETY: The output is 32-bytes, and the input comes from a slice.
+            unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr().cast::<u8>()) };
+        } else {
+            let mut hasher = Keccak256::new();
+            hasher.update(bytes);
+            // SAFETY: Never reads from `output`.
+            unsafe { hasher.finalize_into_raw(output.as_mut_ptr().cast()) };
+        }
     }
 
-    keccak256(bytes.as_ref())
+    // SAFETY: Initialized above.
+    unsafe { output.assume_init() }
 }
 
 mod keccak256_state {
@@ -364,5 +396,116 @@ mod tests {
         let x = vec![1, 2, 3];
         let y = try_vec![1, 2, 3].unwrap();
         assert_eq!(x, y);
+    }
+
+    #[test]
+    #[cfg(feature = "keccak-cache")]
+    fn test_keccak256_cache_edge_cases() {
+        use keccak256_cached as keccak256;
+        assert_eq!(keccak256([]), KECCAK256_EMPTY);
+        assert_eq!(keccak256([]), KECCAK256_EMPTY);
+
+        let max_cacheable = vec![0xAA; keccak_cache::MAX_INPUT_LEN];
+        let hash1 = keccak256(&max_cacheable);
+        let hash2 = keccak256_impl(&max_cacheable);
+        assert_eq!(hash1, hash2);
+
+        let over_max = vec![0xBB; keccak_cache::MAX_INPUT_LEN + 1];
+        let hash1 = keccak256(&over_max);
+        let hash2 = keccak256_impl(&over_max);
+        assert_eq!(hash1, hash2);
+
+        let long_input = vec![0xCC; 1000];
+        let hash1 = keccak256(&long_input);
+        let hash2 = keccak256_impl(&long_input);
+        assert_eq!(hash1, hash2);
+
+        let max = if cfg!(miri) { 10 } else { 255 };
+        for byte in 0..=max {
+            let data = &[byte];
+            let hash1 = keccak256(data);
+            let hash2 = keccak256_impl(data);
+            assert_eq!(hash1, hash2);
+        }
+    }
+
+    #[test]
+    #[cfg(all(feature = "keccak-cache", feature = "rand"))]
+    fn test_keccak256_cache_multithreaded() {
+        use keccak256_cached as keccak256;
+        use rand::{Rng, SeedableRng};
+        use std::{sync::Arc, thread};
+
+        // Test parameters (reduced for miri).
+        let num_threads = if cfg!(miri) {
+            2
+        } else {
+            thread::available_parallelism().map(|n| n.get()).unwrap_or(8)
+        };
+        let iterations_per_thread = if cfg!(miri) { 10 } else { 1000 };
+        let num_test_vectors = if cfg!(miri) { 5 } else { 100 };
+        let max_data_length = keccak_cache::MAX_INPUT_LEN;
+
+        // Shared test vectors that will be hashed repeatedly to test cache hits.
+        let test_vectors: Arc<Vec<Vec<u8>>> = Arc::new({
+            let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+            (0..num_test_vectors)
+                .map(|_| {
+                    let len = rng.random_range(0..=max_data_length);
+                    (0..len).map(|_| rng.random()).collect()
+                })
+                .collect()
+        });
+
+        let mut handles = vec![];
+
+        for thread_id in 0..num_threads {
+            let test_vectors = Arc::clone(&test_vectors);
+
+            let handle = thread::spawn(move || {
+                // Use thread-local RNG with deterministic seed for reproducibility.
+                let mut rng = rand::rngs::StdRng::seed_from_u64(thread_id as u64);
+                let max_data_length = keccak_cache::MAX_INPUT_LEN;
+
+                for _ in 0..iterations_per_thread {
+                    // 70% chance to use a shared test vector (tests cache hits).
+                    if rng.random_range(0..10) < 7 && !test_vectors.is_empty() {
+                        let idx = rng.random_range(0..test_vectors.len());
+                        let data = &test_vectors[idx];
+
+                        let cached_hash = keccak256(data);
+                        let direct_hash = keccak256_impl(data);
+
+                        assert_eq!(
+                            cached_hash,
+                            direct_hash,
+                            "Thread {}: Cached hash mismatch for shared vector {} (len {})",
+                            thread_id,
+                            idx,
+                            data.len()
+                        );
+                    } else {
+                        // 30% chance to use random data (tests cache misses).
+                        let len = rng.random_range(0..max_data_length + 20);
+                        let data: Vec<u8> = (0..len).map(|_| rng.random()).collect();
+
+                        let cached_hash = keccak256(&data);
+                        let direct_hash = keccak256_impl(&data);
+
+                        assert_eq!(
+                            cached_hash, direct_hash,
+                            "Thread {thread_id}: Cached hash mismatch for random data (len {len})"
+                        );
+                    }
+                }
+            });
+
+            handles.push(handle);
+        }
+
+        // Wait for all threads to complete.
+        for handle in handles {
+            handle.join().expect("Thread panicked");
+        }
     }
 }
