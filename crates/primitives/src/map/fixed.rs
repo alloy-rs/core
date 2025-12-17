@@ -1,5 +1,5 @@
 use super::*;
-use crate::{Address, B256, FixedBytes, Selector};
+use crate::{Address, B256, FixedBytes, Selector, U256};
 use cfg_if::cfg_if;
 use core::{
     fmt,
@@ -50,7 +50,7 @@ macro_rules! fb_alias_maps {
     } };
 }
 
-fb_alias_maps!(Selector<4>, Address<20>, B256<32>);
+fb_alias_maps!(Selector<4>, Address<20>, B256<32>, U256<32>);
 
 #[allow(unused_macros)]
 macro_rules! assert_unchecked {
@@ -145,19 +145,21 @@ impl<const N: usize> Hasher for FbHasher<N> {
         }
     }
 
-    // We can just skip hashing the length prefix entirely since we know it's always `N`.
+    // We can just skip hashing the length prefix entirely since we know it's always `<=N`.
+    // Not always `=N`, because arrays like `[T; M]` are hashed as `[u8; N=M*size_of::<T>()]` for a
+    // few primitive `T` types, like integers.
 
     // `write_length_prefix` calls `write_usize` by default.
     #[cfg(not(feature = "nightly"))]
     #[inline]
     fn write_usize(&mut self, i: usize) {
-        debug_assert_eq!(i, N);
+        debug_assert!(i <= N, "{i} > {N}")
     }
 
     #[cfg(feature = "nightly")]
     #[inline]
     fn write_length_prefix(&mut self, len: usize) {
-        debug_assert_eq!(len, N);
+        debug_assert!(len <= N, "{len} > {N}")
     }
 }
 
@@ -225,5 +227,19 @@ mod tests {
         assert_eq!(map.len(), 1);
         assert_eq!(map2.get(&Address::ZERO), Some(&true));
         assert_eq!(map2.get(&Address::with_last_byte(1)), None);
+    }
+
+    #[test]
+    fn u256_map() {
+        let mut map = U256Map::default();
+        map.insert(U256::ZERO, true);
+        assert_eq!(map.get(&U256::ZERO), Some(&true));
+        assert_eq!(map.get(&U256::ONE), None);
+
+        let map2 = map.clone();
+        assert_eq!(map.len(), map2.len());
+        assert_eq!(map.len(), 1);
+        assert_eq!(map2.get(&U256::ZERO), Some(&true));
+        assert_eq!(map2.get(&U256::ONE), None);
     }
 }
