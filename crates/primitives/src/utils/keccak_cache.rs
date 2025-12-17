@@ -15,13 +15,7 @@ static CACHE: fixed_cache::Cache<Key, B256, BuildHasher> =
 
 pub(super) fn compute(input: &[u8]) -> B256 {
     if unlikely(input.is_empty() | (input.len() > MAX_INPUT_LEN)) {
-        return if input.is_empty() {
-            // stats::hit(0);
-            KECCAK256_EMPTY
-        } else {
-            // stats::out_of_range(input.len());
-            keccak256(input)
-        };
+        return if input.is_empty() { KECCAK256_EMPTY } else { keccak256(input) };
     }
 
     CACHE.get_or_insert_with_ref(input, keccak256, |input| {
