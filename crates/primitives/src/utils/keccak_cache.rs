@@ -39,6 +39,10 @@ impl std::hash::Hasher for Hasher {
 
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
+        // This is tricky because our most common inputs are medium length: 16..=88
+        // `foldhash` and `rapidhash` have a fast-path for ..16 bytes and outline the rest,
+        // but really we want the opposite, or at least the 16.. path to be inlined.
+
         // SAFETY: `bytes.len()` is checked to be within the bounds of `MAX_INPUT_LEN` by caller.
         unsafe { core::hint::assert_unchecked(bytes.len() <= MAX_INPUT_LEN) };
         if bytes.len() <= 16 {
