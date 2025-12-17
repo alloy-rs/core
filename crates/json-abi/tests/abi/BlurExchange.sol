@@ -1,4 +1,39 @@
 interface BlurExchange {
+    type Side is uint8;
+    type SignatureVersion is uint8;
+    struct Execution {
+        Input sell;
+        Input buy;
+    }
+    struct Fee {
+        uint16 rate;
+        address payable recipient;
+    }
+    struct Input {
+        Order order;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        bytes extraSignature;
+        SignatureVersion signatureVersion;
+        uint256 blockNumber;
+    }
+    struct Order {
+        address trader;
+        Side side;
+        address matchingPolicy;
+        address collection;
+        uint256 tokenId;
+        uint256 amount;
+        address paymentToken;
+        uint256 price;
+        uint256 listingTime;
+        uint256 expirationTime;
+        Fee[] fees;
+        uint256 salt;
+        bytes extraParams;
+    }
+
     event AdminChanged(address previousAdmin, address newAdmin);
     event BeaconUpgraded(address indexed beacon);
     event Closed();
@@ -60,38 +95,4 @@ interface BlurExchange {
     function transferOwnership(address newOwner) external;
     function upgradeTo(address newImplementation) external;
     function upgradeToAndCall(address newImplementation, bytes memory data) external payable;
-}
-type Side is uint8;
-type SignatureVersion is uint8;
-struct Execution {
-    Input sell;
-    Input buy;
-}
-struct Fee {
-    uint16 rate;
-    address payable recipient;
-}
-struct Input {
-    Order order;
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-    bytes extraSignature;
-    SignatureVersion signatureVersion;
-    uint256 blockNumber;
-}
-struct Order {
-    address trader;
-    Side side;
-    address matchingPolicy;
-    address collection;
-    uint256 tokenId;
-    uint256 amount;
-    address paymentToken;
-    uint256 price;
-    uint256 listingTime;
-    uint256 expirationTime;
-    Fee[] fees;
-    uint256 salt;
-    bytes extraParams;
 }

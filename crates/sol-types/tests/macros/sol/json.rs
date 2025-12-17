@@ -47,18 +47,15 @@ fn large_array() {
 
 #[test]
 fn seaport() {
-    mod container {
-        use super::*;
-        sol!(
-            #[derive(Debug, PartialEq, Eq)]
-            Seaport,
-            "../json-abi/tests/abi/Seaport.json"
-        );
-    }
-    use container::*;
+    sol!(
+        #[derive(Debug, PartialEq, Eq)]
+        Seaport,
+        "../json-abi/tests/abi/Seaport.json"
+    );
+    use Seaport::*;
 
     // Constructor with a single argument
-    let _ = Seaport::constructorCall { conduitController: Address::ZERO };
+    let _ = constructorCall { conduitController: Address::ZERO };
 
     // BasicOrderType is a uint8 UDVT
     let o1 = BasicOrderType::from(0u8);
@@ -108,11 +105,7 @@ fn aggregation_router_v5() {
 #[test]
 fn uniswap_v3_position() {
     // https://etherscan.io/address/0x8638fbd429b19249bb3bcf3ec72d07a657e49642#code
-    mod container {
-        use super::*;
-        sol!(UniswapV3Position, "../json-abi/tests/abi/UniswapV3Position.json");
-    }
-    use container::*;
+    sol!(UniswapV3Position, "../json-abi/tests/abi/UniswapV3Position.json");
 
     let _ = UniswapV3Position::getLiquidityByRangeCall {
         pool_: Address::ZERO,
@@ -176,12 +169,7 @@ fn gnosis_safe() {
 // https://github.com/alloy-rs/core/issues/371
 #[test]
 fn blur_exchange() {
-    mod container {
-        use super::*;
-        sol!(BlurExchange, "../json-abi/tests/abi/BlurExchange.json");
-    }
-    use container::*;
-
+    sol!(BlurExchange, "../json-abi/tests/abi/BlurExchange.json");
     let BlurExchange::NAMECall {} = BlurExchange::NAMECall {};
     let BlurExchange::NAMEReturn { _0: _ } = BlurExchange::NAMEReturn { _0: String::new() };
 }
@@ -303,6 +291,7 @@ fn contract_with_globals() {
         use super::*;
         sol!(
             #[derive(Debug, PartialEq, Eq)]
+            #[sol(standalone_globals)]
             ContractUsingGlobals,
             "../json-abi/tests/abi/ContractUsingGlobals.json"
         );
@@ -334,7 +323,11 @@ fn contract_with_globals() {
 fn handler() {
     mod container {
         use super::*;
-        sol!(Handler, "../json-abi/tests/abi/Handler.json");
+        sol!(
+            #[sol(standalone_globals)]
+            Handler,
+            "../json-abi/tests/abi/Handler.json"
+        );
     }
     use container::*;
 

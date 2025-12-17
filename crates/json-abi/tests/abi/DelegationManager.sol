@@ -28,6 +28,8 @@ library ISignatureUtils {
 }
 
 interface DelegationManager {
+    type DelegatedShares is uint256;
+
     error ActivelyDelegated();
     error AllocationDelaySet();
     error CallerCannotUndelegate();
@@ -127,4 +129,3 @@ interface DelegationManager {
     function unpause(uint256 newPausedStatus) external;
     function updateOperatorMetadataURI(string memory metadataURI) external;
 }
-type DelegatedShares is uint256;

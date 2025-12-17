@@ -1,4 +1,4 @@
-use crate::{SolInput, SolInputKind};
+use crate::{SolAttrs, SolInput, SolInputKind};
 use alloy_json_abi::{ContractObject, JsonAbi, ToSolConfig};
 use proc_macro2::{Ident, TokenStream, TokenTree};
 use quote::quote;
@@ -17,7 +17,13 @@ impl SolInput {
         };
 
         let mut abi = abi.ok_or_else(|| syn::Error::new(name.span(), "ABI not found in JSON"))?;
-        let sol = abi_to_sol(&name, &mut abi);
+        let (sol_attrs, _) = SolAttrs::parse(&attrs)?;
+        let standalone_globals = sol_attrs.standalone_globals.unwrap_or(false);
+        let config = ToSolConfig::new()
+            .print_constructors(true)
+            .for_sol_macro(true)
+            .standalone_globals(standalone_globals);
+        let sol = abi_to_sol(&name, &mut abi, config);
         let all_tokens = tokens_for_sol(&name, &sol)?;
         let mut ast: ast::File = syn::parse2(all_tokens).map_err(|e| {
             let msg = format!(
@@ -73,9 +79,8 @@ struct ApplyAttrsCtx<'a> {
 
 // doesn't parse Json
 
-fn abi_to_sol(name: &Ident, abi: &mut JsonAbi) -> String {
+fn abi_to_sol(name: &Ident, abi: &mut JsonAbi, config: ToSolConfig) -> String {
     abi.dedup();
-    let config = ToSolConfig::new().print_constructors(true).for_sol_macro(true);
     abi.to_sol(&name.to_string(), Some(config))
 }
 
@@ -228,7 +233,8 @@ mod tests {
         let name = Path::new(path).file_stem().unwrap().to_str().unwrap();
 
         let name_id = id(name);
-        let sol = abi_to_sol(&name_id, &mut abi);
+        let config = ToSolConfig::new().print_constructors(true).for_sol_macro(true);
+        let sol = abi_to_sol(&name_id, &mut abi, config);
         let tokens = match tokens_for_sol(&name_id, &sol) {
             Ok(tokens) => tokens,
             Err(e) => {

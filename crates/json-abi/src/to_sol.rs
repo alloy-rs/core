@@ -21,6 +21,7 @@ pub struct ToSolConfig {
     enums_as_udvt: bool,
     for_sol_macro: bool,
     one_contract: bool,
+    standalone_globals: bool,
 }
 
 impl Default for ToSolConfig {
@@ -39,6 +40,7 @@ impl ToSolConfig {
             enums_as_udvt: true,
             for_sol_macro: false,
             one_contract: false,
+            standalone_globals: false,
         }
     }
 
@@ -71,6 +73,13 @@ impl ToSolConfig {
     /// This breaks if there are structs with the same name in different interfaces.
     pub const fn one_contract(mut self, yes: bool) -> Self {
         self.one_contract = yes;
+        self
+    }
+
+    /// Sets whether globals should be emitted at the root of the output.
+    /// Default: `false`.
+    pub const fn standalone_globals(mut self, yes: bool) -> Self {
+        self.standalone_globals = yes;
         self
     }
 }
@@ -168,7 +177,8 @@ impl JsonAbi {
             };
         }
 
-        let mut its = InternalTypes::new(out.name, out.config.enums_as_udvt);
+        let mut its =
+            InternalTypes::new(out.name, out.config.enums_as_udvt, out.config.standalone_globals);
         its.visit_abi(self);
 
         let one_contract = out.config.one_contract;
@@ -246,17 +256,19 @@ struct InternalTypes<'a> {
     other: BTreeMap<&'a String, BTreeSet<It<'a>>>,
     globals: BTreeSet<It<'a>>,
     enums_as_udvt: bool,
+    standalone_globals: bool,
 }
 
 impl<'a> InternalTypes<'a> {
     #[allow(clippy::missing_const_for_fn)]
-    fn new(name: &'a str, enums_as_udvt: bool) -> Self {
+    fn new(name: &'a str, enums_as_udvt: bool, standalone_globals: bool) -> Self {
         Self {
             name,
             this_its: BTreeSet::new(),
             other: BTreeMap::new(),
             globals: BTreeSet::new(),
             enums_as_udvt,
+            standalone_globals,
         }
     }
 
@@ -335,8 +347,10 @@ impl<'a> InternalTypes<'a> {
             } else {
                 self.other.entry(contract).or_default().insert(it);
             }
-        } else {
+        } else if self.standalone_globals {
             self.globals.insert(it);
+        } else {
+            self.this_its.insert(it);
         }
     }
 }
