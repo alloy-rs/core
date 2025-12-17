@@ -7,7 +7,8 @@ use crate::{B256, KECCAK256_EMPTY};
 use std::mem::MaybeUninit;
 
 /// Maximum input length that can be cached.
-pub(super) const MAX_INPUT_LEN: usize = 128 - 32 - size_of::<usize>() - 1;
+pub(super) const MAX_INPUT_LEN: usize =
+    128 - size_of::<B256>() - size_of::<u8>() - size_of::<usize>();
 
 const COUNT: usize = 1 << 17; // ~131k entries
 static CACHE: fixed_cache::Cache<Key, B256, BuildHasher> =
@@ -87,5 +88,16 @@ impl Key {
     #[inline]
     const fn get(&self) -> &[u8] {
         unsafe { std::slice::from_raw_parts(self.data.as_ptr().cast(), self.len as usize) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sizes() {
+        assert_eq!(size_of::<Key>(), MAX_INPUT_LEN + 1);
+        assert_eq!(size_of::<fixed_cache::Bucket<(Key, B256)>>(), 128);
     }
 }
