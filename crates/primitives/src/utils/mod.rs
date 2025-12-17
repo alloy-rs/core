@@ -17,11 +17,6 @@ pub use units::{
 mod hint;
 
 #[cfg(feature = "keccak-cache")]
-pub mod cache;
-#[cfg(feature = "keccak-cache")]
-pub use cache::{Cache, Entry};
-
-#[cfg(feature = "keccak-cache")]
 mod keccak_cache;
 
 // NOT PUBLIC API.

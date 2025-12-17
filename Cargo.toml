@@ -107,6 +107,7 @@ rayon = { version = "1.2", default-features = false }
 ruint = { version = "1.16.0", default-features = false, features = ["alloc"] }
 ruint-macro = { version = "1", default-features = false }
 winnow = { version = "0.7", default-features = false, features = ["alloc"] }
+fixed-cache = { version = "0.1", path = "../../danipopes/fixed-cache", default-features = false }
 
 # sqlx support (optional, for DB integration)
 sqlx-core = { version = "0.8"}

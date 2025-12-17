@@ -2,154 +2,93 @@
 //!
 //! This cache has a fixed size to allow fast access and minimize per-call overhead.
 
-use super::{
-    hint::{likely, unlikely},
-    keccak256_impl as keccak256,
-};
+use super::{hint::unlikely, keccak256_impl as keccak256};
 use crate::{B256, KECCAK256_EMPTY};
-use core::{
-    cell::UnsafeCell,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 const ENABLE_STATS: bool = false || option_env!("KECCAK_CACHE_STATS").is_some();
 
-/// Number of cache entries (must be a power of 2).
-const COUNT: usize = 1 << 17; // ~131k entries
-
-const INDEX_MASK: usize = COUNT - 1;
-const HASH_MASK: usize = !INDEX_MASK;
-
-const LOCKED_BIT: usize = 0x0000_8000;
-
 /// Maximum input length that can be cached.
-pub(super) const MAX_INPUT_LEN: usize = 128 - 32 - size_of::<usize>();
+pub(super) const MAX_INPUT_LEN: usize = 128 - 32 - size_of::<usize>() - 1;
 
-/// Global cache storage.
-///
-/// This is sort of an open-coded flat `HashMap<&[u8], Mutex<EntryData>>`.
-static CACHE: [Entry; COUNT] = [const { Entry::new() }; COUNT];
+const COUNT: usize = 1 << 17; // ~131k entries
+static CACHE: fixed_cache::Cache<Key, B256, BuildHasher> =
+    fixed_cache::static_cache!(Key, B256, COUNT, BuildHasher::new());
 
 pub(super) fn compute(input: &[u8]) -> B256 {
     if unlikely(input.is_empty() | (input.len() > MAX_INPUT_LEN)) {
         return if input.is_empty() {
-            stats::hit(0);
+            // stats::hit(0);
             KECCAK256_EMPTY
         } else {
-            stats::out_of_range(input.len());
+            // stats::out_of_range(input.len());
             keccak256(input)
         };
     }
 
-    let hash = hash_bytes(input);
-    let entry = &CACHE[hash & INDEX_MASK];
-
-    // Combine hash bits and length.
-    // This acts as a cache key to quickly determine if the entry is valid in the next check.
-    let combined = (hash & HASH_MASK) | input.len();
-
-    if entry.try_lock(Some(combined)) {
-        // SAFETY: We hold the lock, so we have exclusive access.
-        let EntryData { value, keccak256: result } = unsafe { *entry.data.get() };
-
-        entry.unlock(combined);
-
-        if likely(value[..input.len()] == input[..]) {
-            // Cache hit!
-            stats::hit(input.len());
-            return result;
-        }
-        // Hash collision: same `combined` value but different input.
-        // This is extremely rare, but can still happen. For correctness we must still handle it.
-        stats::collision(input, &value[..input.len()]);
-    }
-    stats::miss(input.len());
-
-    // Cache miss or contention - compute hash.
-    let result = keccak256(input);
-
-    // Try to update cache entry if not locked.
-    if entry.try_lock(None) {
-        // SAFETY: We hold the lock, so we have exclusive access.
-        unsafe {
-            let data = &mut *entry.data.get();
-            data.value[..input.len()].copy_from_slice(input);
-            data.keccak256 = result;
-        }
-
-        entry.unlock(combined);
-    }
-
-    result
+    CACHE.get_or_insert_with_ref(input, keccak256, |input| {
+        let mut data = [0u8; MAX_INPUT_LEN];
+        data[..input.len()].copy_from_slice(input);
+        Key { len: input.len() as u8, data }
+    })
 }
 
-/// A cache entry.
-#[repr(C, align(128))]
-struct Entry {
-    combined: AtomicUsize,
-    data: UnsafeCell<EntryData>,
+type BuildHasher = std::hash::BuildHasherDefault<Hasher>;
+#[derive(Default)]
+struct Hasher(u64);
+
+impl std::hash::Hasher for Hasher {
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        // SAFETY: `bytes.len()` is checked to be within the bounds of `MAX_INPUT_LEN` by caller.
+        unsafe { core::hint::assert_unchecked(bytes.len() <= MAX_INPUT_LEN) };
+        if bytes.len() <= 16 {
+            super::hint::cold_path();
+        }
+        self.0 = rapidhash::v3::rapidhash_v3_micro_inline::<false, false>(
+            bytes,
+            const { &rapidhash::v3::RapidSecrets::seed(0) },
+        );
+    }
 }
 
-#[repr(C, align(4))]
 #[derive(Clone, Copy)]
-struct EntryData {
-    value: [u8; MAX_INPUT_LEN],
-    keccak256: B256,
+struct Key {
+    len: u8,
+    data: [u8; MAX_INPUT_LEN],
 }
 
-impl Entry {
+impl PartialEq for Key {
     #[inline]
-    const fn new() -> Self {
-        // SAFETY: POD.
-        unsafe { core::mem::zeroed() }
+    fn eq(&self, other: &Self) -> bool {
+        self.len == other.len && self.get() == other.get()
     }
+}
+impl Eq for Key {}
 
+impl std::borrow::Borrow<[u8]> for Key {
     #[inline]
-    fn try_lock(&self, expected: Option<usize>) -> bool {
-        let state = self.combined.load(Ordering::Relaxed);
-        if let Some(expected) = expected {
-            if state != expected {
-                return false;
-            }
-        } else if state & LOCKED_BIT != 0 {
-            return false;
-        }
-        self.combined
-            .compare_exchange(state, state | LOCKED_BIT, Ordering::Acquire, Ordering::Relaxed)
-            .is_ok()
-    }
-
-    #[inline]
-    fn unlock(&self, combined: usize) {
-        self.combined.store(combined, Ordering::Release);
+    fn borrow(&self) -> &[u8] {
+        self.get()
     }
 }
 
-// SAFETY: `Entry` is a specialized `Mutex<EntryData>` that never blocks.
-unsafe impl Send for Entry {}
-unsafe impl Sync for Entry {}
-
-#[inline(always)]
-#[allow(clippy::missing_const_for_fn)]
-fn hash_bytes(input: &[u8]) -> usize {
-    // This is tricky because our most common inputs are medium length: 16..=88
-    // `foldhash` and `rapidhash` have a fast-path for ..16 bytes and outline the rest,
-    // but really we want the opposite, or at least the 16.. path to be inlined.
-
-    // SAFETY: `input.len()` is checked to be within the bounds of `MAX_INPUT_LEN` by caller.
-    unsafe { core::hint::assert_unchecked(input.len() <= MAX_INPUT_LEN) };
-    if input.len() <= 16 {
-        super::hint::cold_path();
+impl std::hash::Hash for Key {
+    #[inline]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write(self.get());
     }
-    let hash = rapidhash::v3::rapidhash_v3_micro_inline::<false, false>(
-        input,
-        const { &rapidhash::v3::RapidSecrets::seed(0) },
-    );
+}
 
-    if cfg!(target_pointer_width = "32") {
-        ((hash >> 32) as usize) ^ (hash as usize)
-    } else {
-        hash as usize
+impl Key {
+    #[inline]
+    fn get(&self) -> &[u8] {
+        unsafe { self.data.get_unchecked(..self.len as usize) }
     }
 }
 
