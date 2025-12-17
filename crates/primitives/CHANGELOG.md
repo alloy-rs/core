@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0](https://github.com/alloy-rs/core/releases/tag/v1.5.0) - 2025-12-16
+
+### Bug Fixes
+
+- [primitives] Cache keccaks up to 88 bytes ([#1049](https://github.com/alloy-rs/core/issues/1049))
+
+### Documentation
+
+- Document allow(unexpected_cfgs) for wrap_fixed_bytes ([#1043](https://github.com/alloy-rs/core/issues/1043))
+
+### Features
+
+- Add rapidhash to available hashers ([#1051](https://github.com/alloy-rs/core/issues/1051))
+- Add keccak256_uncached ([#1050](https://github.com/alloy-rs/core/issues/1050))
+- [primitives] Add UintTryTo trait for Signed type ([#1029](https://github.com/alloy-rs/core/issues/1029))
+- [primitives] Add keccak256_cached ([#1046](https://github.com/alloy-rs/core/issues/1046))
+- [primitives] Add `Signature::as_rsy` method ([#1041](https://github.com/alloy-rs/core/issues/1041))
+- Add Bloom::accrue_logs method ([#1039](https://github.com/alloy-rs/core/issues/1039))
+
+### Miscellaneous Tasks
+
+- Rm all deprecations ([#1048](https://github.com/alloy-rs/core/issues/1048))
+
+### Testing
+
+- [primitives] Use correct keccak fn
+
 ## [1.4.1](https://github.com/alloy-rs/core/releases/tag/v1.4.1) - 2025-10-14
 
 ### Features
@@ -14,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 1.4.1
 - Fix docs, typos ([#1023](https://github.com/alloy-rs/core/issues/1023))
 - Remove feature(doc_auto_cfg) ([#1019](https://github.com/alloy-rs/core/issues/1019))
 
