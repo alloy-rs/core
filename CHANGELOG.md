@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1](https://github.com/alloy-rs/core/releases/tag/v1.5.1) - 2025-12-18
+
+### Features
+
+- Extract cache to a separate crate ([#1053](https://github.com/alloy-rs/core/issues/1053))
+- [primitives] Add U256Map ([#1052](https://github.com/alloy-rs/core/issues/1052))
+
 ## [1.5.0](https://github.com/alloy-rs/core/releases/tag/v1.5.0) - 2025-12-16
 
 ### Bug Fixes
@@ -26,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 1.5.0
 - Rm all deprecations ([#1048](https://github.com/alloy-rs/core/issues/1048))
 - [doc] Complete alloy-dyn-abi readme ([#1044](https://github.com/alloy-rs/core/issues/1044))
 - Clippy ([#1037](https://github.com/alloy-rs/core/issues/1037))

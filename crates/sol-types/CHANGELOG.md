@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 1.5.0
 - Rm all deprecations ([#1048](https://github.com/alloy-rs/core/issues/1048))
 
 ## [1.4.1](https://github.com/alloy-rs/core/releases/tag/v1.4.1) - 2025-10-14

@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add rapidhash to available hashers ([#1051](https://github.com/alloy-rs/core/issues/1051))
 
+### Miscellaneous Tasks
+
+- Release 1.5.0
+
 ## [1.4.1](https://github.com/alloy-rs/core/releases/tag/v1.4.1) - 2025-10-14
 
 ### Features

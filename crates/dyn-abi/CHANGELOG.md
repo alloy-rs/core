@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 1.5.0
 - [doc] Complete alloy-dyn-abi readme ([#1044](https://github.com/alloy-rs/core/issues/1044))
 - Clippy ([#1037](https://github.com/alloy-rs/core/issues/1037))
 
