@@ -7,20 +7,21 @@ cfg_if! {
         #[doc(no_inline)]
         pub use rustc_hash::{self, FxHasher};
 
-        cfg_if! {
-            if #[cfg(all(feature = "std", feature = "rand"))] {
-                use rustc_hash::FxRandomState as FxBuildHasherInner;
-            } else {
-                use rustc_hash::FxBuildHasher as FxBuildHasherInner;
-            }
-        }
-
         /// The [`FxHasher`] hasher builder.
         ///
         /// This is [`rustc_hash::FxBuildHasher`], unless both the "std" and "rand" features are
         /// enabled, in which case it will be [`rustc_hash::FxRandomState`] for better security at
         /// very little cost.
         pub type FxBuildHasher = FxBuildHasherInner;
+    }
+}
+
+// Used by `FbHasher`.
+cfg_if! {
+    if #[cfg(all(feature = "std", feature = "rand"))] {
+        pub(super) use rustc_hash::FxRandomState as FxBuildHasherInner;
+    } else {
+        pub(super) use rustc_hash::FxBuildHasher as FxBuildHasherInner;
     }
 }
 
