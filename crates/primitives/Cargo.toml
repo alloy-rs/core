@@ -89,7 +89,7 @@ hashbrown = { workspace = true, optional = true, features = [
 indexmap = { workspace = true, optional = true }
 foldhash = { workspace = true, optional = true }
 rapidhash = { workspace = true, optional = true }
-rustc-hash = { workspace = true, optional = true }
+rustc-hash.workspace = true # Always on for FbHasher
 
 # arbitrary
 arbitrary = { workspace = true, optional = true, features = ["derive"] }
@@ -115,7 +115,7 @@ criterion.workspace = true
 serde_json.workspace = true
 
 [features]
-default = ["std", "map", "map-foldhash", "map-fxhash"]
+default = ["std", "map", "map-foldhash"]
 std = [
     "bytes/std",
     "hex/std",
@@ -129,7 +129,7 @@ std = [
     "proptest?/std",
     "rand?/std",
     "rand?/thread_rng",
-    "rustc-hash?/std",
+    "rustc-hash/std",
     "serde?/std",
     "sha3?/std",
 ]
@@ -139,7 +139,7 @@ nightly = [
     "hashbrown?/nightly",
     "hex/nightly",
     "ruint/nightly",
-    "rustc-hash?/nightly",
+    "rustc-hash/nightly",
 ]
 
 asm-keccak = ["dep:keccak-asm"]
@@ -154,11 +154,11 @@ map-hashbrown = ["map"]
 map-indexmap = ["map", "dep:indexmap"]
 map-foldhash = ["map", "dep:foldhash"]
 map-rapidhash = ["map", "dep:rapidhash"]
-map-fxhash = ["map", "dep:rustc-hash"]
+map-fxhash = ["map"]
 
 getrandom = ["dep:getrandom"]
 k256 = ["dep:k256"]
-rand = ["dep:rand", "getrandom", "ruint/rand-09", "rapidhash?/rand", "rustc-hash?/rand"]
+rand = ["dep:rand", "getrandom", "ruint/rand-09", "rapidhash?/rand", "rustc-hash/rand"]
 rayon = ["dep:rayon", "hashbrown?/rayon", "indexmap?/rayon"]
 rkyv = ["dep:rkyv", "ruint/rkyv"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]

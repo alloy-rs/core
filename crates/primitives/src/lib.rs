@@ -15,6 +15,7 @@
 extern crate alloc;
 
 use paste as _;
+use rustc_hash as _;
 #[cfg(feature = "sha3-keccak")]
 use sha3 as _;
 use tiny_keccak as _;

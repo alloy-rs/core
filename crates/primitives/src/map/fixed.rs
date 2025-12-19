@@ -52,19 +52,10 @@ macro_rules! fb_alias_maps {
 
 fb_alias_maps!(Selector<4>, Address<20>, B256<32>, U256<32>);
 
-cfg_if! {
-    if #[cfg(feature = "map-fxhash")] {
-        type FbBuildHasherInner = FxBuildHasher;
-        type FbHasherInner = FxHasher;
-    } else {
-        type FbBuildHasherInner = DefaultHashBuilder;
-        type FbHasherInner = DefaultHasher;
-    }
-}
+type FbBuildHasherInner = super::FxBuildHasherInner;
+type FbHasherInner = rustc_hash::FxHasher;
 
 /// [`BuildHasher`] optimized for hashing [fixed-size byte arrays](FixedBytes).
-///
-/// Works best when the "map-fxhash" is enabled.
 ///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
 #[derive(Clone, Default)]
@@ -89,8 +80,6 @@ impl<const N: usize> BuildHasher for FbBuildHasher<N> {
 }
 
 /// [`Hasher`] optimized for hashing [fixed-size byte arrays](FixedBytes).
-///
-/// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
 ///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
 #[derive(Clone)]
@@ -152,7 +141,7 @@ impl<const N: usize> Hasher for FbHasher<N> {
 }
 
 #[inline(always)]
-fn write_bytes_unrolled(hasher: &mut impl Hasher, mut bytes: &[u8]) {
+fn write_bytes_unrolled(hasher: &mut FbHasherInner, mut bytes: &[u8]) {
     while let Some((chunk, rest)) = bytes.split_first_chunk() {
         hasher.write_usize(usize::from_ne_bytes(*chunk));
         bytes = rest;
