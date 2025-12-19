@@ -52,37 +52,24 @@ macro_rules! fb_alias_maps {
 
 fb_alias_maps!(Selector<4>, Address<20>, B256<32>, U256<32>);
 
-#[allow(unused_macros)]
-macro_rules! assert_unchecked {
-    ($e:expr) => { assert_unchecked!($e,); };
-    ($e:expr, $($t:tt)*) => {
-        if cfg!(debug_assertions) {
-            assert!($e, $($t)*);
-        } else if !$e {
-            unsafe { core::hint::unreachable_unchecked() }
-        }
-    };
-}
-
-macro_rules! assert_eq_unchecked {
-    ($a:expr, $b:expr) => { assert_eq_unchecked!($a, $b,); };
-    ($a:expr, $b:expr, $($t:tt)*) => {
-        if cfg!(debug_assertions) {
-            assert_eq!($a, $b, $($t)*);
-        } else if $a != $b {
-            unsafe { core::hint::unreachable_unchecked() }
-        }
-    };
+cfg_if! {
+    if #[cfg(feature = "map-fxhash")] {
+        type FbBuildHasherInner = FxBuildHasher;
+        type FbHasherInner = FxHasher;
+    } else {
+        type FbBuildHasherInner = DefaultHashBuilder;
+        type FbHasherInner = DefaultHasher;
+    }
 }
 
 /// [`BuildHasher`] optimized for hashing [fixed-size byte arrays](FixedBytes).
 ///
-/// Works best with `fxhash`, enabled by default with the "map-fxhash" feature.
+/// Works best when the "map-fxhash" is enabled.
 ///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
 #[derive(Clone, Default)]
 pub struct FbBuildHasher<const N: usize> {
-    inner: DefaultHashBuilder,
+    inner: FbBuildHasherInner,
     _marker: core::marker::PhantomData<[(); N]>,
 }
 
@@ -108,7 +95,7 @@ impl<const N: usize> BuildHasher for FbBuildHasher<N> {
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
 #[derive(Clone)]
 pub struct FbHasher<const N: usize> {
-    inner: DefaultHasher,
+    inner: FbHasherInner,
     _marker: core::marker::PhantomData<[(); N]>,
 }
 
@@ -116,7 +103,7 @@ impl<const N: usize> Default for FbHasher<N> {
     #[inline]
     fn default() -> Self {
         Self {
-            inner: DefaultHashBuilder::default().build_hasher(),
+            inner: FbBuildHasherInner::default().build_hasher(),
             _marker: core::marker::PhantomData,
         }
     }
@@ -136,7 +123,8 @@ impl<const N: usize> Hasher for FbHasher<N> {
 
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
-        assert_eq_unchecked!(bytes.len(), N);
+        // SAFETY: Precondition.
+        unsafe { core::hint::assert_unchecked(bytes.len() == N) };
         // Threshold decided by some basic micro-benchmarks with fxhash.
         if N > 32 {
             self.inner.write(bytes);
@@ -197,7 +185,7 @@ fn write_bytes_unrolled(hasher: &mut impl Hasher, mut bytes: &[u8]) {
     debug_assert!(bytes.is_empty());
 }
 
-#[cfg(all(test, any(feature = "std", feature = "map-fxhash")))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
