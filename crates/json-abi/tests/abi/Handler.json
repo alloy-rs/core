@@ -1,0 +1,29 @@
+[
+    {
+        "type": "function",
+        "name": "handle",
+        "inputs": [
+            {
+                "name": "foobar",
+                "type": "tuple",
+                "internalType": "struct IHandler.FooBar",
+                "components": [
+                    {
+                        "name": "foo",
+                        "type": "tuple",
+                        "internalType": "struct Foo",
+                        "components": [
+                            {
+                                "name": "newNumber",
+                                "type": "uint256",
+                                "internalType": "uint256"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    }
+]
