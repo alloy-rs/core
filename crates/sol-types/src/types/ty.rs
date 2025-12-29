@@ -3,7 +3,7 @@ use crate::{
     abi::{self, Token, TokenSeq},
     private::SolTypeValue,
 };
-use alloc::{borrow::Cow, vec::Vec};
+use alloc::vec::Vec;
 
 /// A Solidity type.
 ///
@@ -29,13 +29,13 @@ use alloc::{borrow::Cow, vec::Vec};
 /// use alloy_sol_types::{SolType, sol_data::*};
 ///
 /// type Uint256DynamicArray = Array<Uint<256>>;
-/// assert_eq!(Uint256DynamicArray::sol_type_name(), "uint256[]");
+/// assert_eq!(Uint256DynamicArray::SOL_NAME, "uint256[]");
 ///
 /// type Erc20FunctionArgs = (Address, Uint<256>);
-/// assert_eq!(Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
+/// assert_eq!(Erc20FunctionArgs::SOL_NAME, "(address,uint256)");
 ///
 /// type LargeComplexType = (FixedArray<Array<Bool>, 2>, (FixedBytes<13>, String));
-/// assert_eq!(LargeComplexType::sol_type_name(), "(bool[][2],(bytes13,string))");
+/// assert_eq!(LargeComplexType::SOL_NAME, "(bool[][2],(bytes13,string))");
 /// ```
 ///
 /// The previous example can be entirely replicated with the [`sol!`] macro:
@@ -44,13 +44,13 @@ use alloc::{borrow::Cow, vec::Vec};
 /// use alloy_sol_types::{SolType, sol};
 ///
 /// type Uint256DynamicArray = sol!(uint256[]);
-/// assert_eq!(Uint256DynamicArray::sol_type_name(), "uint256[]");
+/// assert_eq!(Uint256DynamicArray::SOL_NAME, "uint256[]");
 ///
 /// type Erc20FunctionArgs = sol!((address, uint256));
-/// assert_eq!(Erc20FunctionArgs::sol_type_name(), "(address,uint256)");
+/// assert_eq!(Erc20FunctionArgs::SOL_NAME, "(address,uint256)");
 ///
 /// type LargeComplexType = sol!((bool[][2],(bytes13,string)));
-/// assert_eq!(LargeComplexType::sol_type_name(), "(bool[][2],(bytes13,string))");
+/// assert_eq!(LargeComplexType::SOL_NAME, "(bool[][2],(bytes13,string))");
 /// ```
 ///
 /// For more complex usage, it's recommended to use the
@@ -122,13 +122,6 @@ pub trait SolType: Sized {
     ///
     /// There should be no need to override the default implementation.
     const DYNAMIC: bool = Self::ENCODED_SIZE.is_none();
-
-    /// Returns the name of this type in Solidity.
-    #[deprecated(since = "0.6.3", note = "use `SOL_NAME` instead")]
-    #[inline]
-    fn sol_type_name() -> Cow<'static, str> {
-        Self::SOL_NAME.into()
-    }
 
     /// Calculate the ABI-encoded size of the data, counting both head and tail
     /// words. For a single-word type this will always be 32.

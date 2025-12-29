@@ -28,7 +28,7 @@ let data = [true, false];
 let validate = true;
 
 // SolTypes expose their Solidity name :)
-assert_eq!(&MySolType::sol_type_name(), "bool[2]");
+assert_eq!(MySolType::SOL_NAME, "bool[2]");
 
 // SolTypes are used to transform Rust into ABI blobs, and back.
 let encoded: Vec<u8> = MySolType::abi_encode(&data);

@@ -7,14 +7,6 @@ cfg_if! {
         #[doc(no_inline)]
         pub use rustc_hash::{self, FxHasher};
 
-        cfg_if! {
-            if #[cfg(all(feature = "std", feature = "rand"))] {
-                use rustc_hash::FxRandomState as FxBuildHasherInner;
-            } else {
-                use rustc_hash::FxBuildHasher as FxBuildHasherInner;
-            }
-        }
-
         /// The [`FxHasher`] hasher builder.
         ///
         /// This is [`rustc_hash::FxBuildHasher`], unless both the "std" and "rand" features are
@@ -24,14 +16,29 @@ cfg_if! {
     }
 }
 
+// Used by `FbHasher`.
+cfg_if! {
+    if #[cfg(all(feature = "std", feature = "rand"))] {
+        pub(super) use rustc_hash::FxRandomState as FxBuildHasherInner;
+    } else {
+        pub(super) use rustc_hash::FxBuildHasher as FxBuildHasherInner;
+    }
+}
+
 #[cfg(feature = "map-foldhash")]
 #[doc(no_inline)]
 pub use foldhash;
+
+#[cfg(feature = "map-rapidhash")]
+#[doc(no_inline)]
+pub use rapidhash;
 
 // Default hasher.
 cfg_if! {
     if #[cfg(feature = "map-foldhash")] {
         type DefaultHashBuilderInner = foldhash::fast::RandomState;
+    } else if #[cfg(feature = "map-rapidhash")] {
+        type DefaultHashBuilderInner = rapidhash::fast::RandomState;
     } else if #[cfg(feature = "map-fxhash")] {
         type DefaultHashBuilderInner = FxBuildHasher;
     } else if #[cfg(any(feature = "map-hashbrown", not(feature = "std")))] {

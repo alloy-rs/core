@@ -285,14 +285,6 @@ impl Type {
         self
     }
 
-    /// Returns whether this type is ABI-encoded as a single EVM word (32 bytes).
-    ///
-    /// This is the same as [`is_value_type`](Self::is_value_type).
-    #[deprecated = "use `is_value_type` instead"]
-    pub fn is_one_word(&self, custom_is_value_type: impl Fn(&SolPath) -> bool) -> bool {
-        self.is_value_type(custom_is_value_type)
-    }
-
     /// Returns whether this type is dynamic according to ABI rules.
     ///
     /// Note that this does not account for custom types, such as UDVTs.

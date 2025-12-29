@@ -5,7 +5,7 @@ use crate::{
     private::SolTypeValue,
     sol_data::{self, ByteCount, SupportedFixedBytes},
 };
-use alloc::{borrow::Cow, string::String, vec::Vec};
+use alloc::{string::String, vec::Vec};
 use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256, aliases::*};
 
 /// A Solidity value.
@@ -30,7 +30,7 @@ use alloy_primitives::{Address, Bytes, FixedBytes, Function, I256, U256, aliases
 /// let my_values = ("hello", 0xdeadbeef_u32, true, [0x42_u8; 24]);
 /// let _ = my_values.abi_encode();
 /// let _ = my_values.abi_encode_packed();
-/// assert_eq!(my_values.sol_type_name(), "(string,uint32,bool,bytes24)");
+/// assert_eq!(my_values.sol_name(), "(string,uint32,bool,bytes24)");
 /// ```
 pub trait SolValue: SolTypeValue<Self::SolType> {
     /// The Solidity type that this type corresponds to.
@@ -42,15 +42,6 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     #[inline]
     fn sol_name(&self) -> &'static str {
         Self::SolType::SOL_NAME
-    }
-
-    /// The name of the associated Solidity type.
-    ///
-    /// See [`SolType::sol_type_name`] for more information.
-    #[deprecated(since = "0.6.3", note = "use `sol_name` instead")]
-    #[inline]
-    fn sol_type_name(&self) -> Cow<'static, str> {
-        self.sol_name().into()
     }
 
     /// Tokenizes the given value into this type's token.

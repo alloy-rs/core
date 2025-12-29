@@ -1692,28 +1692,39 @@ mod tests {
         let m_i256 = I256::unchecked_from(-4);
         let m_i24 = I24::from(m_i256);
         assert_eq!(m_i24, I24::from_dec_str("-4").unwrap());
+        assert_eq!(m_i24.to::<I256>(), m_i256);
         let m_i56 = I56::from(m_i24);
         assert_eq!(m_i56, I56::from_dec_str("-4").unwrap());
+        assert_eq!(m_i56.to::<I24>(), m_i24);
         let m_i128 = I128::from(m_i56);
         assert_eq!(m_i128, I128::from_dec_str("-4").unwrap());
+        assert_eq!(m_i128.to::<I56>(), m_i56);
         let m_i96 = I96::from(m_i128);
         assert_eq!(m_i96, I96::from_dec_str("-4").unwrap());
+        assert_eq!(m_i96.to::<I128>(), m_i128);
 
         // convert positive signed to unsigned
         assert_eq!(U24::from(I24::from_hex_str("0x7FFFFF").unwrap()), U24::from(0x7FFFFF));
+        assert_eq!(I24::from_hex_str("0x7FFFFF").unwrap().to::<U24>(), U24::from(0x7FFFFF));
 
         // convert unsigned to positive signed
         assert_eq!(I24::from(U24::from(0x7FFFFF)), I24::from_hex_str("0x7FFFFF").unwrap());
+        assert_eq!(U24::from(0x7FFFFF).to::<I24>(), I24::from_hex_str("0x7FFFFF").unwrap());
         assert_eq!(I24::from(U96::from(0x7FFFFF)), I24::from_hex_str("0x7FFFFF").unwrap());
+        assert_eq!(U96::from(0x7FFFFF).to::<I24>(), I24::from_hex_str("0x7FFFFF").unwrap());
 
         // can't convert negative signed to unsigned
         assert!(U24::uint_try_from(m_i24).is_err());
+        assert!(<I24 as UintTryTo<U24>>::uint_try_to(&m_i24).is_err());
 
         // can't convert unsigned to positive signed if too large
         assert!(I24::uint_try_from(U24::from(0x800000)).is_err());
+        assert!(<U24 as UintTryTo<I24>>::uint_try_to(&U24::from(0x800000)).is_err());
 
         // out-of-bounds conversions
         assert!(I24::uint_try_from(I128::MIN).is_err());
+        assert!(<I128 as UintTryTo<I24>>::uint_try_to(&I128::MIN).is_err());
         assert!(I24::uint_try_from(I128::MAX).is_err());
+        assert!(<I128 as UintTryTo<I24>>::uint_try_to(&I128::MAX).is_err());
     }
 }
