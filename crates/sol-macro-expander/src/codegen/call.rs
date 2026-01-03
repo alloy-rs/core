@@ -34,16 +34,26 @@ pub enum ReturnInfo {
 #[derive(Debug)]
 pub struct CallCodegen {
     /// Parameter tuple type (e.g., `(alloy_sol_types::sol_data::Uint<256>,)`)
-    pub call_tuple: TokenStream,
+    call_tuple: TokenStream,
     /// Return tuple type
-    pub return_tuple: TokenStream,
+    return_tuple: TokenStream,
     /// Tokenize implementation body
-    pub tokenize_impl: TokenStream,
+    tokenize_impl: TokenStream,
     /// Return value structure info
-    pub return_info: ReturnInfo,
+    return_info: ReturnInfo,
 }
 
 impl CallCodegen {
+    /// Creates a new call codegen.
+    pub fn new(
+        call_tuple: TokenStream,
+        return_tuple: TokenStream,
+        tokenize_impl: TokenStream,
+        return_info: ReturnInfo,
+    ) -> Self {
+        Self { call_tuple, return_tuple, tokenize_impl, return_info }
+    }
+
     /// Returns the return type for `SolCall::Return`.
     pub fn return_type(&self) -> TokenStream {
         match &self.return_info {

@@ -156,7 +156,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         }
     };
 
-    let call_impl = CallCodegen { call_tuple, return_tuple, tokenize_impl, return_info }
+    let call_impl = CallCodegen::new(call_tuple, return_tuple, tokenize_impl, return_info)
         .expand(&call_name, &signature);
 
     let tokens = quote! {

@@ -16,10 +16,9 @@ mod verbatim;
 
 // Re-export commonly used utilities
 pub use codegen::{
-    CallCodegen, Eip712Options, ErrorCodegen, EventCodegen, EventFieldInfo, ReturnInfo,
-    SolInterfaceData, SolInterfaceDeferred, SolInterfaceKind, StructCodegen, StructLayout,
-    expand_sol_interface, expand_sol_interface_deferred, expand_tokenize_simple,
-    gen_from_into_tuple,
+    CallCodegen, Eip712Options, EnumCodegen, ErrorCodegen, EventCodegen, EventFieldInfo,
+    ReturnInfo, SolInterfaceCodegen, SolInterfaceKind, StructCodegen, StructLayout,
+    expand_tokenize_simple, gen_from_into_tuple,
 };
 /// Alias for [`calc_selector`] (commonly used in external consumers).
 pub use utils::calc_selector as selector;

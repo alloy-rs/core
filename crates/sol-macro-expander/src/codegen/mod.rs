@@ -9,6 +9,7 @@
 //! you already have the types resolved.
 
 mod call;
+mod r#enum;
 mod error;
 mod event;
 mod interface;
@@ -19,12 +20,10 @@ use quote::quote;
 
 // Re-export all public types
 pub use call::{CallCodegen, ReturnInfo};
+pub use r#enum::EnumCodegen;
 pub use error::ErrorCodegen;
 pub use event::{EventCodegen, EventFieldInfo};
-pub use interface::{
-    SolInterfaceData, SolInterfaceDeferred, SolInterfaceKind, expand_sol_interface,
-    expand_sol_interface_deferred,
-};
+pub use interface::{SolInterfaceCodegen, SolInterfaceKind};
 pub use r#struct::{Eip712Options, StructCodegen};
 
 // ============================================================================

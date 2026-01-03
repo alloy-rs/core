@@ -27,16 +27,26 @@ pub struct Eip712Options {
 #[derive(Debug)]
 pub struct StructCodegen {
     /// Field names
-    pub field_names: Vec<Ident>,
+    field_names: Vec<Ident>,
     /// Rust types for fields
-    pub rust_types: Vec<TokenStream>,
+    rust_types: Vec<TokenStream>,
     /// Solidity types for fields
-    pub sol_types: Vec<TokenStream>,
+    sol_types: Vec<TokenStream>,
     /// EIP-712 options
-    pub eip712: Eip712Options,
+    eip712: Eip712Options,
 }
 
 impl StructCodegen {
+    /// Creates a new struct codegen.
+    pub fn new(
+        field_names: Vec<Ident>,
+        rust_types: Vec<TokenStream>,
+        sol_types: Vec<TokenStream>,
+        eip712: Eip712Options,
+    ) -> Self {
+        Self { field_names, rust_types, sol_types, eip712 }
+    }
+
     /// Generates the `SolStruct` trait implementation.
     pub fn expand(self, name: &Ident) -> TokenStream {
         let Self { field_names, rust_types, sol_types, eip712 } = self;

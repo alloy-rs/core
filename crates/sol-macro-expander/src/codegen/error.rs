@@ -9,16 +9,26 @@ use quote::quote;
 #[derive(Debug)]
 pub struct ErrorCodegen {
     /// Parameter names
-    pub param_names: Vec<Ident>,
+    param_names: Vec<Ident>,
     /// Solidity types (sol_data::*)
-    pub sol_types: Vec<TokenStream>,
+    sol_types: Vec<TokenStream>,
     /// Rust types
-    pub rust_types: Vec<TokenStream>,
+    rust_types: Vec<TokenStream>,
     /// Whether to use tuple struct pattern (single unnamed param)
-    pub is_tuple_struct: bool,
+    is_tuple_struct: bool,
 }
 
 impl ErrorCodegen {
+    /// Creates a new error codegen.
+    pub fn new(
+        param_names: Vec<Ident>,
+        sol_types: Vec<TokenStream>,
+        rust_types: Vec<TokenStream>,
+        is_tuple_struct: bool,
+    ) -> Self {
+        Self { param_names, sol_types, rust_types, is_tuple_struct }
+    }
+
     /// Generates the `SolError` trait implementation.
     ///
     /// Returns the inner content without the const wrapper. Use

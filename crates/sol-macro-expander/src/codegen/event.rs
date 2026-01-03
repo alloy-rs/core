@@ -23,12 +23,17 @@ pub struct EventFieldInfo {
 #[derive(Debug)]
 pub struct EventCodegen {
     /// Whether this is an anonymous event
-    pub anonymous: bool,
+    anonymous: bool,
     /// All event fields in declaration order
-    pub fields: Vec<EventFieldInfo>,
+    fields: Vec<EventFieldInfo>,
 }
 
 impl EventCodegen {
+    /// Creates a new event codegen.
+    pub fn new(anonymous: bool, fields: Vec<EventFieldInfo>) -> Self {
+        Self { anonymous, fields }
+    }
+
     /// Tuple type for non-indexed params: `(Type1, Type2, ...)`
     pub fn data_tuple(&self) -> TokenStream {
         let types: Vec<_> =
@@ -42,7 +47,7 @@ impl EventCodegen {
         let indexed = self.fields.iter().filter(|f| f.is_indexed).map(|f| {
             if f.indexed_as_hash {
                 let span = f.span;
-                quote_spanned!(span=> ::alloy_sol_types::sol_data::FixedBytes<32>)
+                quote_spanned!(span=> alloy_sol_types::sol_data::FixedBytes<32>)
             } else {
                 f.sol_type.clone()
             }

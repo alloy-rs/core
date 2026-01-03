@@ -91,7 +91,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         }
     };
 
-    let event_impl = EventCodegen { anonymous, fields: fields_info }.expand(&name.0, &signature);
+    let event_impl = EventCodegen::new(anonymous, fields_info).expand(&name.0, &signature);
 
     let tokens = quote! {
         #(#attrs)*

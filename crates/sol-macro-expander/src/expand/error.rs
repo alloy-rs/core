@@ -95,7 +95,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     };
 
     let error_impl =
-        ErrorCodegen { param_names, sol_types, rust_types, is_tuple_struct }.expand(&name.0, &signature);
+        ErrorCodegen::new(param_names, sol_types, rust_types, is_tuple_struct).expand(&name.0, &signature);
 
     let tokens = quote! {
         #(#attrs)*

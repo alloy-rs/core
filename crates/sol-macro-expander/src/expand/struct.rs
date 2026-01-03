@@ -45,12 +45,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
     let alloy_sol_types = &cx.crates.sol_types;
 
-    let struct_impl = StructCodegen {
+    let struct_impl = StructCodegen::new(
         field_names,
         rust_types,
         sol_types,
-        eip712: gen_eip712_options(cx, fields, name),
-    }
+        gen_eip712_options(cx, fields, name),
+    )
     .expand(&name.0);
 
     let attrs = attrs.iter();
