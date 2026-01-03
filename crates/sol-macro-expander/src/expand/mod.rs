@@ -1,6 +1,9 @@
 //! Functions which generate Rust code from the Solidity AST.
 
-use crate::utils::{self, ExprArray};
+use crate::{
+    codegen::StructLayout,
+    utils::{self, ExprArray},
+};
 use alloy_sol_macro_input::{ContainsSolAttrs, SolAttrs};
 use ast::{
     EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath,
@@ -850,60 +853,16 @@ impl FieldKind {
     fn is_deconstruct(&self) -> bool {
         matches!(self, Self::Deconstruct)
     }
-}
 
-/// Expands `From` impls for a list of types and the corresponding tuple.
-fn expand_from_into_tuples<P>(
-    name: &Ident,
-    fields: &Parameters<P>,
-    cx: &ExpCtxt<'_>,
-    field_kind: FieldKind,
-) -> TokenStream {
-    let names = fields.names().enumerate().map(anon_name);
-
-    let names2 = names.clone();
-    let idxs = (0..fields.len()).map(syn::Index::from);
-
-    let (sol_tuple, rust_tuple) = expand_tuple_types(fields.types(), cx);
-
-    let (from_sol_type, from_rust_tuple) = if fields.is_empty() && field_kind.is_deconstruct() {
-        (quote!(()), quote!(Self))
-    } else if fields.len() == 1 && fields[0].name.is_none() && field_kind.is_deconstruct() {
-        let idxs2 = (0..fields.len()).map(syn::Index::from);
-        (quote!((#(value.#idxs),*,)), quote!(Self(#(tuple.#idxs2),*)))
-    } else {
-        (quote!((#(value.#names,)*)), quote!(Self { #(#names2: tuple.#idxs),* }))
-    };
-
-    quote! {
-        #[doc(hidden)]
-        #[allow(dead_code)]
-        type UnderlyingSolTuple<'a> = #sol_tuple;
-        #[doc(hidden)]
-        type UnderlyingRustTuple<'a> = #rust_tuple;
-
-        #[cfg(test)]
-        #[allow(dead_code, unreachable_patterns)]
-        fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
-            match _t {
-                alloy_sol_types::private::AssertTypeEq::<<UnderlyingSolTuple as alloy_sol_types::SolType>::RustType>(_) => {}
+    /// Converts to `StructLayout` based on parameters.
+    fn into_layout<P>(self, params: &Parameters<P>) -> StructLayout {
+        match self {
+            Self::Original => StructLayout::Named,
+            Self::Deconstruct if params.is_empty() => StructLayout::Unit,
+            Self::Deconstruct if params.len() == 1 && params[0].name.is_none() => {
+                StructLayout::Tuple
             }
-        }
-
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<#name> for UnderlyingRustTuple<'_> {
-            fn from(value: #name) -> Self {
-                #from_sol_type
-            }
-        }
-
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<UnderlyingRustTuple<'_>> for #name {
-            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                #from_rust_tuple
-            }
+            Self::Deconstruct => StructLayout::Named,
         }
     }
 }
@@ -938,25 +897,6 @@ fn expand_tokenize<P>(
         params.iter().enumerate().map(|(i, p)| (i, &p.ty, p.name.as_ref())),
         cx,
         params.len(),
-        field_kind,
-    )
-}
-
-/// Expand the body of a `tokenize` function.
-fn expand_event_tokenize<'a>(
-    params: impl IntoIterator<Item = &'a EventParameter>,
-    cx: &ExpCtxt<'_>,
-    params_len: usize,
-    field_kind: FieldKind,
-) -> TokenStream {
-    tokenize_(
-        params
-            .into_iter()
-            .enumerate()
-            .filter(|(_, p)| !p.is_indexed())
-            .map(|(i, p)| (i, &p.ty, p.name.as_ref())),
-        cx,
-        params_len,
         field_kind,
     )
 }

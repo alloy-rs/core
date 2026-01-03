@@ -7,9 +7,22 @@
 #![allow(clippy::missing_const_for_fn, rustdoc::broken_intra_doc_links)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+pub mod codegen;
 pub mod expand;
-mod utils;
+/// Utility functions for Solidity code generation.
+pub mod utils;
 #[cfg(feature = "json")]
 mod verbatim;
+
+// Re-export commonly used utilities
+pub use codegen::{
+    CallCodegen, Eip712Options, ErrorCodegen, EventCodegen, EventFieldInfo, ReturnInfo,
+    SolInterfaceData, SolInterfaceDeferred, SolInterfaceKind, StructCodegen, StructLayout,
+    expand_sol_interface, expand_sol_interface_deferred, expand_tokenize_simple,
+    gen_from_into_tuple,
+};
+/// Alias for [`calc_selector`] (commonly used in external consumers).
+pub use utils::calc_selector as selector;
+pub use utils::calc_selector;
 
 extern crate syn_solidity as ast;

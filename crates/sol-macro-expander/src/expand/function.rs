@@ -1,9 +1,7 @@
 //! [`ItemFunction`] expansion.
 
-use super::{
-    ExpCtxt, FieldKind, anon_name, expand_fields, expand_from_into_tuples, expand_tokenize,
-    expand_tuple_types,
-};
+use super::{ExpCtxt, FieldKind, anon_name, expand_fields, expand_tokenize, expand_tuple_types};
+use crate::codegen::{CallCodegen, ReturnInfo, gen_from_into_tuple};
 use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
 use ast::{FunctionKind, ItemFunction, Spanned};
 use proc_macro2::TokenStream;
@@ -63,15 +61,26 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let call_tuple = expand_tuple_types(parameters.types(), cx).0;
     let return_tuple = expand_tuple_types(returns.types(), cx).0;
 
-    let converts = expand_from_into_tuples(&call_name, parameters, cx, FieldKind::Deconstruct);
-    let return_converts = expand_from_into_tuples(&return_name, returns, cx, FieldKind::Original);
+    let (call_names, (call_sol, call_rust)): (Vec<_>, (Vec<_>, Vec<_>)) = parameters
+        .iter()
+        .enumerate()
+        .map(|(i, p)| (anon_name((i, p.name.as_ref())), (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty))))
+        .unzip();
+    let converts = gen_from_into_tuple(&call_name, &call_names, &call_sol, &call_rust, FieldKind::Deconstruct.into_layout(parameters));
+
+    let (ret_names, (ret_sol, ret_rust)): (Vec<_>, (Vec<_>, Vec<_>)) = returns
+        .iter()
+        .enumerate()
+        .map(|(i, p)| (anon_name((i, p.name.as_ref())), (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty))))
+        .unzip();
+    let return_converts = gen_from_into_tuple(&return_name, &ret_names, &ret_sol, &ret_rust, FieldKind::Original.into_layout(returns));
 
     let signature = cx.function_signature(function);
-    let selector = crate::utils::selector(&signature);
+    let selector = crate::utils::calc_selector(&signature);
     let tokenize_impl = expand_tokenize(parameters, cx, FieldKind::Deconstruct);
 
     let call_doc = docs.then(|| {
-        let selector = hex::encode_prefixed(selector.array.as_slice());
+        let selector = hex::encode_prefixed(selector.as_slice());
         mk_doc(format!(
             "Function with signature `{signature}` and selector `{selector}`.\n\
             ```solidity\n{function}\n```"
@@ -118,13 +127,22 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
     let alloy_sol_types = &cx.crates.sol_types;
 
-    let decode_sequence =
-        quote!(<Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data));
-
     // Determine whether the return type should directly yield result or the <name>Return struct.
     let is_single_return = returns.len() == 1;
-    let return_type =
-        if is_single_return { cx.expand_rust_type(&returns[0].ty) } else { quote!(#return_name) };
+    let return_info = if returns.is_empty() {
+        ReturnInfo::Empty { return_name: return_name.clone() }
+    } else if is_single_return {
+        ReturnInfo::Single {
+            sol_type: cx.expand_type(&returns[0].ty),
+            rust_type: cx.expand_rust_type(&returns[0].ty),
+            field_name: anon_name((0, returns[0].name.as_ref())),
+            return_name: return_name.clone(),
+        }
+    } else {
+        ReturnInfo::Multiple { return_name: return_name.clone() }
+    };
+
+    // For non-single returns, we need a helper method on the return struct
     let tokenize_returns_impl = if is_single_return {
         quote!()
     } else {
@@ -137,38 +155,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
             }
         }
     };
-    let tokenize_returns = if is_single_return {
-        let ty = cx.expand_type(&returns[0].ty);
-        quote! { (<#ty as alloy_sol_types::SolType>::tokenize(ret),) }
-    } else {
-        quote! { #return_name::_tokenize(ret) }
-    };
-    let decode_returns = if is_single_return {
-        let name = anon_name((0, returns[0].name.as_ref()));
-        quote! {
-            #decode_sequence.map(|r| {
-                let r: #return_name = r.into();
-                r.#name
-            })
-        }
-    } else {
-        quote!(#decode_sequence.map(Into::into))
-    };
 
-    let decode_sequence_validate = quote!(
-        <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-    );
-    let decode_returns_validate = if is_single_return {
-        let name = anon_name((0, returns[0].name.as_ref()));
-        quote! {
-            #decode_sequence_validate.map(|r| {
-                let r: #return_name = r.into();
-                r.#name
-            })
-        }
-    } else {
-        quote!(#decode_sequence_validate.map(Into::into))
-    };
+    let call_impl = CallCodegen { call_tuple, return_tuple, tokenize_impl, return_info }
+        .expand(&call_name, &signature);
 
     let tokens = quote! {
         #(#call_attrs)*
@@ -194,44 +183,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
 
             #tokenize_returns_impl
 
-            #[automatically_derived]
-            impl alloy_sol_types::SolCall for #call_name {
-                type Parameters<'a> = #call_tuple;
-                type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
-
-                type Return = #return_type;
-
-                type ReturnTuple<'a> = #return_tuple;
-                type ReturnToken<'a> = <Self::ReturnTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
-
-                const SIGNATURE: &'static str = #signature;
-                const SELECTOR: [u8; 4] = #selector;
-
-                #[inline]
-                fn new<'a>(tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType) -> Self {
-                    tuple.into()
-                }
-
-                #[inline]
-                fn tokenize(&self) -> Self::Token<'_> {
-                    #tokenize_impl
-                }
-
-                #[inline]
-                fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                    #tokenize_returns
-                }
-
-                #[inline]
-                fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                    #decode_returns
-                }
-
-                #[inline]
-                fn abi_decode_returns_validate(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                    #decode_returns_validate
-                }
-            }
+            #call_impl
 
             #abi
         };
@@ -250,7 +202,12 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
     let call_name = format_ident!("constructorCall").with_span(constructor.kind.span());
     let call_fields = expand_fields(parameters, cx);
     let call_tuple = expand_tuple_types(parameters.types(), cx).0;
-    let converts = expand_from_into_tuples(&call_name, parameters, cx, FieldKind::Original);
+    let (param_names, (sol_types, rust_types)): (Vec<_>, (Vec<_>, Vec<_>)) = parameters
+        .iter()
+        .enumerate()
+        .map(|(i, p)| (anon_name((i, p.name.as_ref())), (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty))))
+        .unzip();
+    let converts = gen_from_into_tuple(&call_name, &param_names, &sol_types, &rust_types, FieldKind::Original.into_layout(parameters));
     let tokenize_impl = expand_tokenize(parameters, cx, FieldKind::Original);
 
     let call_doc = docs.then(|| {

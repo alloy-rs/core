@@ -1,6 +1,7 @@
 //! [`ItemError`] expansion.
 
-use super::{ExpCtxt, expand_fields, expand_from_into_tuples, expand_tokenize};
+use super::{ExpCtxt, anon_name, expand_fields};
+use crate::codegen::ErrorCodegen;
 use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
 use ast::ItemError;
 use proc_macro2::TokenStream;
@@ -27,18 +28,27 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
 
-    let tokenize_impl = expand_tokenize(params, cx, super::FieldKind::Deconstruct);
-
     let name = cx.overloaded_name(error.into());
     let signature = cx.error_signature(error);
-    let selector = crate::utils::selector(&signature);
+    let selector = crate::utils::calc_selector(&signature);
 
     let alloy_sol_types = &cx.crates.sol_types;
 
-    let converts = expand_from_into_tuples(&name.0, params, cx, super::FieldKind::Deconstruct);
+    // Collect field data for codegen
+    let (param_names, (sol_types, rust_types)): (Vec<_>, (Vec<_>, Vec<_>)) = params
+        .iter()
+        .enumerate()
+        .map(|(i, p)| {
+            (
+                anon_name((i, p.name.as_ref())),
+                (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty)),
+            )
+        })
+        .unzip();
+    let is_tuple_struct = params.len() == 1 && params[0].name.is_none();
 
     let doc = docs.then(|| {
-        let selector = hex::encode_prefixed(selector.array.as_slice());
+        let selector = hex::encode_prefixed(selector.as_slice());
         mk_doc(format!(
             "Custom error with signature `{signature}` and selector `{selector}`.\n\
              ```solidity\n{error}\n```"
@@ -84,6 +94,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
         }
     };
 
+    let error_impl =
+        ErrorCodegen { param_names, sol_types, rust_types, is_tuple_struct }.expand(&name.0, &signature);
+
     let tokens = quote! {
         #(#attrs)*
         #doc
@@ -95,31 +108,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
         const _: () = {
             use #alloy_sol_types as alloy_sol_types;
 
-            #converts
-
-            #[automatically_derived]
-            impl alloy_sol_types::SolError for #name {
-                type Parameters<'a> = UnderlyingSolTuple<'a>;
-                type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
-
-                const SIGNATURE: &'static str = #signature;
-                const SELECTOR: [u8; 4] = #selector;
-
-                #[inline]
-                fn new<'a>(tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType) -> Self {
-                    tuple.into()
-                }
-
-                #[inline]
-                fn tokenize(&self) -> Self::Token<'_> {
-                    #tokenize_impl
-                }
-
-                #[inline]
-                fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
-                    <Self::Parameters<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data).map(Self::new)
-                }
-            }
+            #error_impl
 
             #abi
         };

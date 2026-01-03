@@ -1,10 +1,11 @@
 //! [`ItemEvent`] expansion.
 
-use super::{ExpCtxt, anon_name, expand_event_tokenize, expand_tuple_types};
+use super::{ExpCtxt, anon_name};
+use crate::codegen::{EventCodegen, EventFieldInfo};
 use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
 use ast::{EventParameter, ItemEvent, SolIdent, Spanned};
 use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned};
+use quote::quote;
 use syn::Result;
 
 /// Expands an [`ItemEvent`]:
@@ -34,94 +35,23 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
     let selector = crate::utils::event_selector(&signature);
     let anonymous = event.is_anonymous();
 
-    // prepend the first topic if not anonymous
-    let first_topic = (!anonymous).then(|| quote!(alloy_sol_types::sol_data::FixedBytes<32>));
-    let topic_list = event.indexed_params().map(|p| expand_event_topic_type(p, cx));
-    let topic_list = first_topic.into_iter().chain(topic_list);
-
-    let (data_tuple, _) = expand_tuple_types(event.non_indexed_params().map(|p| &p.ty), cx);
-
-    // skip first topic if not anonymous, which is the hash of the signature
-    let mut topic_i = !anonymous as usize;
-    let mut data_i = 0usize;
-    let new_impl = event.parameters.iter().enumerate().map(|(i, p)| {
-        let name = anon_name((i, p.name.as_ref()));
-        let param;
-        if p.is_indexed() {
-            let i = syn::Index::from(topic_i);
-            param = quote!(topics.#i);
-            topic_i += 1;
-        } else {
-            let i = syn::Index::from(data_i);
-            param = quote!(data.#i);
-            data_i += 1;
-        }
-        quote!(#name: #param)
-    });
-
-    // NOTE: We need to enumerate before filtering.
-    let topic_tuple_names = event
+    let (fields, fields_info): (Vec<_>, Vec<_>) = event
         .parameters
         .iter()
         .enumerate()
-        .filter(|(_, p)| p.is_indexed())
-        .map(|(i, p)| (i, p.name.as_ref()))
-        .map(anon_name);
-
-    let topics_impl = if anonymous {
-        quote! {(#(self.#topic_tuple_names.clone(),)*)}
-    } else {
-        quote! {(Self::SIGNATURE_HASH.into(), #(self.#topic_tuple_names.clone(),)*)}
-    };
-
-    let encode_first_topic =
-        (!anonymous).then(|| quote!(alloy_sol_types::abi::token::WordToken(Self::SIGNATURE_HASH)));
-
-    let encode_topics_impl = event.parameters.iter().enumerate().filter(|(_, p)| p.is_indexed()).map(|(i, p)| {
-        let name = anon_name((i, p.name.as_ref()));
-        let ty = cx.expand_type(&p.ty);
-
-        if cx.indexed_as_hash(p) {
-            quote! {
-                <alloy_sol_types::sol_data::FixedBytes<32> as alloy_sol_types::EventTopic>::encode_topic(&self.#name)
-            }
-        } else {
-            quote! {
-                <#ty as alloy_sol_types::EventTopic>::encode_topic(&self.#name)
-            }
-        }
-    });
-
-    let fields = event
-        .parameters
-        .iter()
-        .enumerate()
-        .map(|(i, p)| expand_event_topic_field(i, p, p.name.as_ref(), cx));
-
-    let check_signature = (!anonymous).then(|| {
-        quote! {
-            #[inline]
-            fn check_signature(topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType) -> alloy_sol_types::Result<()> {
-                if topics.0 != Self::SIGNATURE_HASH {
-                    return Err(alloy_sol_types::Error::invalid_event_signature_hash(Self::SIGNATURE, topics.0, Self::SIGNATURE_HASH));
-                }
-                Ok(())
-            }
-        }
-    });
-
-    let tokenize_body_impl = expand_event_tokenize(
-        &event.parameters,
-        cx,
-        event.parameters.len(),
-        super::FieldKind::Original,
-    );
-
-    let encode_topics_impl = encode_first_topic
-        .into_iter()
-        .chain(encode_topics_impl)
-        .enumerate()
-        .map(|(i, assign)| quote!(out[#i] = #assign;));
+        .map(|(i, p)| {
+            (
+                expand_event_topic_field(i, p, p.name.as_ref(), cx),
+                EventFieldInfo {
+                    name: anon_name((i, p.name.as_ref())),
+                    sol_type: cx.expand_type(&p.ty),
+                    is_indexed: p.is_indexed(),
+                    indexed_as_hash: cx.indexed_as_hash(p),
+                    span: p.ty.span(),
+                },
+            )
+        })
+        .unzip();
 
     let doc = docs.then(|| {
         let selector = hex::encode_prefixed(selector.array.as_slice());
@@ -161,6 +91,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         }
     };
 
+    let event_impl = EventCodegen { anonymous, fields: fields_info }.expand(&name.0, &signature);
+
     let tokens = quote! {
         #(#attrs)*
         #doc
@@ -172,89 +104,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
         const _: () = {
             use #alloy_sol_types as alloy_sol_types;
 
-            #[automatically_derived]
-            impl alloy_sol_types::SolEvent for #name {
-                type DataTuple<'a> = #data_tuple;
-                type DataToken<'a> = <Self::DataTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
-
-                type TopicList = (#(#topic_list,)*);
-
-                const SIGNATURE: &'static str = #signature;
-                const SIGNATURE_HASH: alloy_sol_types::private::B256 =
-                    alloy_sol_types::private::B256::new(#selector);
-
-                const ANONYMOUS: bool = #anonymous;
-
-                #[allow(unused_variables)]
-                #[inline]
-                fn new(
-                    topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
-                    data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
-                ) -> Self {
-                    Self {
-                        #(#new_impl,)*
-                    }
-                }
-
-                #check_signature
-
-                #[inline]
-                fn tokenize_body(&self) -> Self::DataToken<'_> {
-                    #tokenize_body_impl
-                }
-
-                #[inline]
-                fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
-                    #topics_impl
-                }
-
-                #[inline]
-                fn encode_topics_raw(
-                    &self,
-                    out: &mut [alloy_sol_types::abi::token::WordToken],
-                ) -> alloy_sol_types::Result<()> {
-                    if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
-                        return Err(alloy_sol_types::Error::Overrun);
-                    }
-                    #(#encode_topics_impl)*
-                    Ok(())
-                }
-            }
-
-            #[automatically_derived]
-            impl alloy_sol_types::private::IntoLogData for #name {
-                fn to_log_data(&self) -> alloy_sol_types::private::LogData {
-                    From::from(self)
-                }
-
-                fn into_log_data(self) -> alloy_sol_types::private::LogData {
-                    From::from(&self)
-                }
-            }
-
-
-            #[automatically_derived]
-            impl From<&#name> for alloy_sol_types::private::LogData {
-                #[inline]
-                fn from(this: &#name) -> alloy_sol_types::private::LogData {
-                    alloy_sol_types::SolEvent::encode_log_data(this)
-                }
-            }
+            #event_impl
 
             #abi
         };
     };
     Ok(tokens)
-}
-
-fn expand_event_topic_type(param: &EventParameter, cx: &ExpCtxt<'_>) -> TokenStream {
-    let alloy_sol_types = &cx.crates.sol_types;
-    assert!(param.is_indexed());
-    if cx.indexed_as_hash(param) {
-        quote_spanned! {param.ty.span()=> #alloy_sol_types::sol_data::FixedBytes<32> }
-    } else {
-        cx.expand_type(&param.ty)
-    }
 }
 
 fn expand_event_topic_field(
