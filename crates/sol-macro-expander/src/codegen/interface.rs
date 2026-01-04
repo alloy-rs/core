@@ -37,12 +37,12 @@ struct PrecomputedData {
 /// Code generator for SolInterface enums.
 ///
 /// Supports two modes:
-/// - **Precomputed**: Selectors/signatures are known at codegen time, enabling sorted
-///   binary-search lookups.
-/// - **Deferred**: Selectors/signatures are derived from variant types at compile time,
-///   using linear if-chain lookups. Required when struct parameters are involved.
+/// - **Precomputed**: Selectors/signatures are known at codegen time, enabling sorted binary-search
+///   lookups.
+/// - **Deferred**: Selectors/signatures are derived from variant types at compile time, using
+///   linear if-chain lookups. Required when struct parameters are involved.
 #[derive(Debug)]
-pub struct SolInterfaceCodegen {
+pub struct InterfaceCodegen {
     name: Ident,
     variants: Vec<Ident>,
     types: Vec<Ident>,
@@ -50,7 +50,7 @@ pub struct SolInterfaceCodegen {
     precomputed: Option<PrecomputedData>,
 }
 
-impl SolInterfaceCodegen {
+impl InterfaceCodegen {
     /// Creates a codegen with pre-computed selectors and signatures.
     ///
     /// This mode sorts selectors for binary-search lookup, providing O(log n) performance.
@@ -78,8 +78,9 @@ impl SolInterfaceCodegen {
     /// Selectors and signatures are derived from variant types' `SELECTOR` and `SIGNATURE`
     /// constants at compile time. Uses O(n) if-chain lookup.
     ///
-    /// Required when variant types have struct parameters, since their signatures depend
-    /// on `SolTupleSignature::ABI_TUPLE` which is only available in generated code.
+    /// Required when variant types have struct parameters, since their ABI signatures
+    /// (which replace structs with tuple representations) are only computable after
+    /// the struct types have been fully generated.
     pub fn deferred(
         name: Ident,
         variants: Vec<Ident>,
@@ -112,9 +113,7 @@ impl SolInterfaceCodegen {
                 count,
                 data,
             ),
-            None => {
-                Self::expand_deferred(&name, &name_str, &variants, &types, &trait_path, count)
-            }
+            None => Self::expand_deferred(&name, &name_str, &variants, &types, &trait_path, count),
         };
 
         quote! {

@@ -23,7 +23,7 @@ pub use call::{CallCodegen, ReturnInfo};
 pub use r#enum::EnumCodegen;
 pub use error::ErrorCodegen;
 pub use event::{EventCodegen, EventFieldInfo};
-pub use interface::{SolInterfaceCodegen, SolInterfaceKind};
+pub use interface::{InterfaceCodegen, SolInterfaceKind};
 pub use r#struct::{Eip712Options, StructCodegen};
 
 // ============================================================================

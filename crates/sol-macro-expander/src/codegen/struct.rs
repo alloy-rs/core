@@ -107,22 +107,6 @@ impl StructCodegen {
             #traits
         }
     }
-
-    /// Generates the full const block including the wrapper.
-    ///
-    /// Use this for external crates that want to generate Alloy-compatible types.
-    /// For use with the `sol!` macro (which has configurable crate paths), use
-    /// [`expand_inner`](Self::expand_inner) instead and wrap with your own const block.
-    pub fn expand_with_const(self, name: &Ident) -> TokenStream {
-        let inner = self.expand(name);
-        quote! {
-            #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
-            const _: () = {
-                use alloy_sol_types as alloy_sol_types;
-                #inner
-            };
-        }
-    }
 }
 
 /// Generates just the SolStruct trait implementations (SolValue, SolTypeValue, SolType, SolStruct,

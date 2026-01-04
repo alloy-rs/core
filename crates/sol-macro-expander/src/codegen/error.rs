@@ -30,9 +30,6 @@ impl ErrorCodegen {
     }
 
     /// Generates the `SolError` trait implementation.
-    ///
-    /// Returns the inner content without the const wrapper. Use
-    /// [`expand_with_const`](Self::expand_with_const) for the full implementation.
     pub fn expand(self, name: &Ident, signature: &str) -> TokenStream {
         let Self { param_names, sol_types, rust_types, is_tuple_struct } = self;
 
@@ -49,22 +46,6 @@ impl ErrorCodegen {
             #tupl_impl
 
             #sol_error_impl
-        }
-    }
-
-    /// Generates the full const block including the wrapper.
-    ///
-    /// Use this for external crates that want to generate Alloy-compatible error types.
-    /// For use with the `sol!` macro (which has configurable crate paths), use
-    /// [`expand`](Self::expand) instead and wrap with your own const block.
-    pub fn expand_with_const(self, name: &Ident, signature: &str) -> TokenStream {
-        let inner = self.expand(name, signature);
-        quote! {
-            #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields, clippy::style)]
-            const _: () = {
-                use alloy_sol_types as alloy_sol_types;
-                #inner
-            };
         }
     }
 }
