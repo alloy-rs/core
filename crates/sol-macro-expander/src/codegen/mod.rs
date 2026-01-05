@@ -68,14 +68,15 @@ pub enum StructLayout {
 /// - From/Into conversions between struct and underlying rust tuple
 ///
 /// The `layout` parameter determines how fields are accessed in the generated code.
-/// The `crate_path` should be a path to `alloy_sol_types` (i.e. `quote!(alloy_sol_types)`).
+///
+/// NOTE: The generated code assumes `alloy_sol_types` is in scope (typically via
+/// `use ::alloy_sol_types as alloy_sol_types;` in the outer const block).
 pub fn gen_from_into_tuple(
     struct_name: &Ident,
     field_names: &[Ident],
     sol_types: &[TokenStream],
     rust_types: &[TokenStream],
     layout: StructLayout,
-    crate_path: &TokenStream,
 ) -> TokenStream {
     let sol_tuple = quote_tuple_type(sol_types);
     let rust_tuple = quote_tuple_type(rust_types);
@@ -146,10 +147,10 @@ pub fn gen_from_into_tuple(
 
         #[cfg(test)]
         #[allow(dead_code, unreachable_patterns)]
-        fn _type_assertion(_t: #crate_path::private::AssertTypeEq<UnderlyingRustTuple>) {
+        fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
             match _t {
-                #crate_path::private::AssertTypeEq::<
-                    <UnderlyingSolTuple as #crate_path::SolType>::RustType,
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
                 >(_) => {}
             }
         }
@@ -158,20 +159,26 @@ pub fn gen_from_into_tuple(
     }
 }
 
-/// Generates the tokenize() implementation body.
+/// Generates the tokenize implementation body.
 ///
 /// Returns a TokenStream that produces a tuple of tokenized fields.
-/// The `crate_path` should be a path to `alloy_sol_types` (i.e. `quote!(alloy_sol_types)`).
-pub fn expand_tokenize_simple(
+///
+/// NOTE: The generated code assumes `alloy_sol_types` is in scope.
+pub fn gen_tokenize(
     field_names: &[Ident],
     sol_types: &[TokenStream],
-    crate_path: &TokenStream,
+    is_tuple_struct: bool,
 ) -> TokenStream {
     if field_names.is_empty() {
         quote! { () }
+    } else if is_tuple_struct {
+        // Tuple struct: access via self.0
+        let ty = &sol_types[0];
+        quote! { (<#ty as alloy_sol_types::SolType>::tokenize(&self.0),) }
     } else {
+        // Named struct: access via self.field_name
         let tokenize_fields = field_names.iter().zip(sol_types.iter()).map(|(name, sol_ty)| {
-            quote! { <#sol_ty as #crate_path::SolType>::tokenize(&self.#name) }
+            quote! { <#sol_ty as alloy_sol_types::SolType>::tokenize(&self.#name) }
         });
         quote! { (#(#tokenize_fields,)*) }
     }

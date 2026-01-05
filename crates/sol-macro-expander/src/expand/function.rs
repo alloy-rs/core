@@ -59,7 +59,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let return_fields = expand_fields(returns, cx);
 
     let alloy_sol_types = &cx.crates.sol_types;
-    let crate_path = &quote!(#alloy_sol_types);
 
     let call_tuple = expand_tuple_types(parameters.types(), cx).0;
     let return_tuple = expand_tuple_types(returns.types(), cx).0;
@@ -77,7 +76,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         &call_sol,
         &call_rust,
         FieldKind::Deconstruct.into_layout(parameters),
-        crate_path,
     );
 
     let (ret_names, (ret_sol, ret_rust)): (Vec<_>, (Vec<_>, Vec<_>)) = returns
@@ -93,7 +91,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         &ret_sol,
         &ret_rust,
         FieldKind::Original.into_layout(returns),
-        crate_path,
     );
 
     let signature = cx.function_signature(function);
@@ -176,7 +173,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     };
 
     let call_impl = CallCodegen::new(call_tuple, return_tuple, tokenize_impl, return_info)
-        .expand(&call_name, &signature, crate_path);
+        .expand(&call_name, &signature);
 
     let tokens = quote! {
         #(#call_attrs)*
@@ -234,7 +231,6 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
         &sol_types,
         &rust_types,
         FieldKind::Original.into_layout(parameters),
-        &quote!(#alloy_sol_types),
     );
     let tokenize_impl = expand_tokenize(parameters, cx, FieldKind::Original);
 

@@ -18,7 +18,7 @@ mod verbatim;
 pub use codegen::{
     CallCodegen, Eip712Options, EnumCodegen, ErrorCodegen, EventCodegen, EventFieldInfo,
     InterfaceCodegen, ReturnInfo, SolInterfaceKind, StructCodegen, StructLayout,
-    expand_tokenize_simple, gen_from_into_tuple,
+    gen_from_into_tuple, gen_tokenize,
 };
 /// Alias for [`calc_selector`] (commonly used in external consumers).
 pub use utils::calc_selector as selector;

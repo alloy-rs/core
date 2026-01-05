@@ -15,10 +15,10 @@ pub enum SolInterfaceKind {
 }
 
 impl SolInterfaceKind {
-    fn trait_path(&self, crate_path: &TokenStream) -> TokenStream {
+    fn trait_path(&self) -> TokenStream {
         match self {
-            Self::Call => quote! { #crate_path::SolCall },
-            Self::Error => quote! { #crate_path::SolError },
+            Self::Call => quote! { alloy_sol_types::SolCall },
+            Self::Error => quote! { alloy_sol_types::SolError },
         }
     }
 }
@@ -92,11 +92,11 @@ impl InterfaceCodegen {
 
     /// Generates a complete SolInterface enum with all implementations.
     ///
-    /// NOTE: the `crate_path` should be a path to `alloy_sol_types`.
-    pub fn expand(self, crate_path: &TokenStream) -> TokenStream {
+    /// NOTE: The generated code assumes `alloy_sol_types` is in scope.
+    pub fn expand(self) -> TokenStream {
         let Self { name, variants, types, kind, precomputed } = self;
 
-        let trait_path = kind.trait_path(crate_path);
+        let trait_path = kind.trait_path();
         let name_str = name.to_string();
         let count = variants.len();
 
@@ -106,25 +106,10 @@ impl InterfaceCodegen {
 
         // Mode-specific: inherent methods and SolInterface impl
         let (inherent_impl, interface_impl) = match precomputed {
-            Some(data) => Self::expand_precomputed(
-                &name,
-                &name_str,
-                &variants,
-                &types,
-                &trait_path,
-                count,
-                data,
-                crate_path,
-            ),
-            None => Self::expand_deferred(
-                &name,
-                &name_str,
-                &variants,
-                &types,
-                &trait_path,
-                count,
-                crate_path,
-            ),
+            Some(data) => {
+                Self::expand_precomputed(&name, &name_str, &variants, &types, &trait_path, count, data)
+            }
+            None => Self::expand_deferred(&name, &name_str, &variants, &types, &trait_path, count),
         };
 
         quote! {
@@ -175,7 +160,6 @@ impl InterfaceCodegen {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn expand_precomputed(
         name: &Ident,
         name_str: &str,
@@ -184,7 +168,6 @@ impl InterfaceCodegen {
         trait_path: &TokenStream,
         count: usize,
         data: PrecomputedData,
-        crate_path: &TokenStream,
     ) -> (TokenStream, TokenStream) {
         let PrecomputedData { selectors, signatures, min_data_len } = data;
 
@@ -237,7 +220,7 @@ impl InterfaceCodegen {
 
         let interface_impl = quote! {
             #[automatically_derived]
-            impl #crate_path::SolInterface for #name {
+            impl alloy_sol_types::SolInterface for #name {
                 const NAME: &'static str = #name_str;
                 const MIN_DATA_LENGTH: usize = #min_data_len;
                 const COUNT: usize = #count;
@@ -264,10 +247,10 @@ impl InterfaceCodegen {
                 fn abi_decode_raw(
                     selector: [u8; 4],
                     data: &[u8],
-                ) -> #crate_path::Result<Self> {
-                    static DECODE_SHIMS: &[fn(&[u8]) -> #crate_path::Result<#name>] = &[
+                ) -> alloy_sol_types::Result<Self> {
+                    static DECODE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
                         #({
-                            fn #sorted_variants(data: &[u8]) -> #crate_path::Result<#name> {
+                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
                                 <#sorted_types as #trait_path>::abi_decode_raw(data)
                                     .map(#name::#sorted_variants)
                             }
@@ -276,8 +259,8 @@ impl InterfaceCodegen {
                     ];
 
                     let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                        return Err(#crate_path::Error::unknown_selector(
-                            <Self as #crate_path::SolInterface>::NAME,
+                        return Err(alloy_sol_types::Error::unknown_selector(
+                            <Self as alloy_sol_types::SolInterface>::NAME,
                             selector,
                         ));
                     };
@@ -289,10 +272,10 @@ impl InterfaceCodegen {
                 fn abi_decode_raw_validate(
                     selector: [u8; 4],
                     data: &[u8],
-                ) -> #crate_path::Result<Self> {
-                    static DECODE_VALIDATE_SHIMS: &[fn(&[u8]) -> #crate_path::Result<#name>] = &[
+                ) -> alloy_sol_types::Result<Self> {
+                    static DECODE_VALIDATE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
                         #({
-                            fn #sorted_variants(data: &[u8]) -> #crate_path::Result<#name> {
+                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
                                 <#sorted_types as #trait_path>::abi_decode_raw_validate(data)
                                     .map(#name::#sorted_variants)
                             }
@@ -301,8 +284,8 @@ impl InterfaceCodegen {
                     ];
 
                     let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                        return Err(#crate_path::Error::unknown_selector(
-                            <Self as #crate_path::SolInterface>::NAME,
+                        return Err(alloy_sol_types::Error::unknown_selector(
+                            <Self as alloy_sol_types::SolInterface>::NAME,
                             selector,
                         ));
                     };
@@ -317,7 +300,7 @@ impl InterfaceCodegen {
                 }
 
                 #[inline]
-                fn abi_encode_raw(&self, out: &mut #crate_path::private::Vec<u8>) {
+                fn abi_encode_raw(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
                     match self {
                         #(Self::#variants(inner) => <#types as #trait_path>::abi_encode_raw(inner, out),)*
                     }
@@ -328,7 +311,6 @@ impl InterfaceCodegen {
         (inherent_impl, interface_impl)
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn expand_deferred(
         name: &Ident,
         name_str: &str,
@@ -336,7 +318,6 @@ impl InterfaceCodegen {
         types: &[Ident],
         trait_path: &TokenStream,
         count: usize,
-        crate_path: &TokenStream,
     ) -> (TokenStream, TokenStream) {
         let indices: Vec<_> = (0..variants.len()).collect();
 
@@ -384,7 +365,7 @@ impl InterfaceCodegen {
 
         let interface_impl = quote! {
             #[automatically_derived]
-            impl #crate_path::SolInterface for #name {
+            impl alloy_sol_types::SolInterface for #name {
                 const NAME: &'static str = #name_str;
                 const MIN_DATA_LENGTH: usize = 0; // Conservative; could compute from types
                 const COUNT: usize = #count;
@@ -419,15 +400,15 @@ impl InterfaceCodegen {
                 fn abi_decode_raw(
                     selector: [u8; 4],
                     data: &[u8],
-                ) -> #crate_path::Result<Self> {
+                ) -> alloy_sol_types::Result<Self> {
                     #(
                         if selector == <#types as #trait_path>::SELECTOR {
                             return <#types as #trait_path>::abi_decode_raw(data)
                                 .map(#name::#variants);
                         }
                     )*
-                    Err(#crate_path::Error::unknown_selector(
-                        <Self as #crate_path::SolInterface>::NAME,
+                    Err(alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
                         selector,
                     ))
                 }
@@ -437,15 +418,15 @@ impl InterfaceCodegen {
                 fn abi_decode_raw_validate(
                     selector: [u8; 4],
                     data: &[u8],
-                ) -> #crate_path::Result<Self> {
+                ) -> alloy_sol_types::Result<Self> {
                     #(
                         if selector == <#types as #trait_path>::SELECTOR {
                             return <#types as #trait_path>::abi_decode_raw_validate(data)
                                 .map(#name::#variants);
                         }
                     )*
-                    Err(#crate_path::Error::unknown_selector(
-                        <Self as #crate_path::SolInterface>::NAME,
+                    Err(alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
                         selector,
                     ))
                 }
@@ -458,7 +439,7 @@ impl InterfaceCodegen {
                 }
 
                 #[inline]
-                fn abi_encode_raw(&self, out: &mut #crate_path::private::Vec<u8>) {
+                fn abi_encode_raw(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
                     match self {
                         #(Self::#variants(inner) => <#types as #trait_path>::abi_encode_raw(inner, out),)*
                     }
