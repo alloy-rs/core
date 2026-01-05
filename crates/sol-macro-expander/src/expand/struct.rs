@@ -51,7 +51,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
         sol_types,
         gen_eip712_options(cx, fields, name),
     )
-    .expand(&name.0);
+    .expand(&name.0, &quote!(#alloy_sol_types));
 
     let attrs = attrs.iter();
     let fields = expand_fields(fields, cx);

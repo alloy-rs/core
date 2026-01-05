@@ -58,22 +58,43 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     let call_fields = expand_fields(parameters, cx);
     let return_fields = expand_fields(returns, cx);
 
+    let alloy_sol_types = &cx.crates.sol_types;
+    let crate_path = &quote!(#alloy_sol_types);
+
     let call_tuple = expand_tuple_types(parameters.types(), cx).0;
     let return_tuple = expand_tuple_types(returns.types(), cx).0;
 
     let (call_names, (call_sol, call_rust)): (Vec<_>, (Vec<_>, Vec<_>)) = parameters
         .iter()
         .enumerate()
-        .map(|(i, p)| (anon_name((i, p.name.as_ref())), (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty))))
+        .map(|(i, p)| {
+            (anon_name((i, p.name.as_ref())), (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty)))
+        })
         .unzip();
-    let converts = gen_from_into_tuple(&call_name, &call_names, &call_sol, &call_rust, FieldKind::Deconstruct.into_layout(parameters));
+    let converts = gen_from_into_tuple(
+        &call_name,
+        &call_names,
+        &call_sol,
+        &call_rust,
+        FieldKind::Deconstruct.into_layout(parameters),
+        crate_path,
+    );
 
     let (ret_names, (ret_sol, ret_rust)): (Vec<_>, (Vec<_>, Vec<_>)) = returns
         .iter()
         .enumerate()
-        .map(|(i, p)| (anon_name((i, p.name.as_ref())), (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty))))
+        .map(|(i, p)| {
+            (anon_name((i, p.name.as_ref())), (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty)))
+        })
         .unzip();
-    let return_converts = gen_from_into_tuple(&return_name, &ret_names, &ret_sol, &ret_rust, FieldKind::Original.into_layout(returns));
+    let return_converts = gen_from_into_tuple(
+        &return_name,
+        &ret_names,
+        &ret_sol,
+        &ret_rust,
+        FieldKind::Original.into_layout(returns),
+        crate_path,
+    );
 
     let signature = cx.function_signature(function);
     let selector = crate::utils::calc_selector(&signature);
@@ -125,8 +146,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         }
     };
 
-    let alloy_sol_types = &cx.crates.sol_types;
-
     // Determine whether the return type should directly yield result or the <name>Return struct.
     let is_single_return = returns.len() == 1;
     let return_info = if returns.is_empty() {
@@ -157,7 +176,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
     };
 
     let call_impl = CallCodegen::new(call_tuple, return_tuple, tokenize_impl, return_info)
-        .expand(&call_name, &signature);
+        .expand(&call_name, &signature, crate_path);
 
     let tokens = quote! {
         #(#call_attrs)*
@@ -205,9 +224,18 @@ fn expand_constructor(cx: &ExpCtxt<'_>, constructor: &ItemFunction) -> Result<To
     let (param_names, (sol_types, rust_types)): (Vec<_>, (Vec<_>, Vec<_>)) = parameters
         .iter()
         .enumerate()
-        .map(|(i, p)| (anon_name((i, p.name.as_ref())), (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty))))
+        .map(|(i, p)| {
+            (anon_name((i, p.name.as_ref())), (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty)))
+        })
         .unzip();
-    let converts = gen_from_into_tuple(&call_name, &param_names, &sol_types, &rust_types, FieldKind::Original.into_layout(parameters));
+    let converts = gen_from_into_tuple(
+        &call_name,
+        &param_names,
+        &sol_types,
+        &rust_types,
+        FieldKind::Original.into_layout(parameters),
+        &quote!(#alloy_sol_types),
+    );
     let tokenize_impl = expand_tokenize(parameters, cx, FieldKind::Original);
 
     let call_doc = docs.then(|| {

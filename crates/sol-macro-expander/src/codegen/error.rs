@@ -30,7 +30,9 @@ impl ErrorCodegen {
     }
 
     /// Generates the `SolError` trait implementation.
-    pub fn expand(self, name: &Ident, signature: &str) -> TokenStream {
+    ///
+    /// NOTE: the `crate_path` should be a path to `alloy_sol_types`.
+    pub fn expand(self, name: &Ident, signature: &str, crate_path: &TokenStream) -> TokenStream {
         let Self { param_names, sol_types, rust_types, is_tuple_struct } = self;
 
         let layout = match (param_names.is_empty(), is_tuple_struct) {
@@ -38,9 +40,10 @@ impl ErrorCodegen {
             (_, true) => StructLayout::Tuple,
             _ => StructLayout::Named,
         };
-        let tupl_impl = gen_from_into_tuple(name, &param_names, &sol_types, &rust_types, layout);
-        let tokenize_impl = gen_tokenize(&param_names, &sol_types, is_tuple_struct);
-        let sol_error_impl = gen_sol_error_trait(name, signature, &tokenize_impl);
+        let tupl_impl =
+            gen_from_into_tuple(name, &param_names, &sol_types, &rust_types, layout, crate_path);
+        let tokenize_impl = gen_tokenize(&param_names, &sol_types, is_tuple_struct, crate_path);
+        let sol_error_impl = gen_sol_error_trait(name, signature, &tokenize_impl, crate_path);
 
         quote! {
             #tupl_impl
@@ -55,37 +58,43 @@ fn gen_tokenize(
     param_names: &[Ident],
     sol_types: &[TokenStream],
     is_tuple_struct: bool,
+    crate_path: &TokenStream,
 ) -> TokenStream {
     if param_names.is_empty() {
         quote! { () }
     } else if is_tuple_struct {
         // Tuple struct: access via self.0
         let ty = &sol_types[0];
-        quote! { (<#ty as alloy_sol_types::SolType>::tokenize(&self.0),) }
+        quote! { (<#ty as #crate_path::SolType>::tokenize(&self.0),) }
     } else {
         // Named struct: access via self.field_name
         let tokenize_fields = param_names.iter().zip(sol_types.iter()).map(|(name, sol_ty)| {
-            quote! { <#sol_ty as alloy_sol_types::SolType>::tokenize(&self.#name) }
+            quote! { <#sol_ty as #crate_path::SolType>::tokenize(&self.#name) }
         });
         quote! { (#(#tokenize_fields,)*) }
     }
 }
 
 /// Generates the SolError trait implementation.
-fn gen_sol_error_trait(name: &Ident, signature: &str, tokenize_impl: &TokenStream) -> TokenStream {
+fn gen_sol_error_trait(
+    name: &Ident,
+    signature: &str,
+    tokenize_impl: &TokenStream,
+    crate_path: &TokenStream,
+) -> TokenStream {
     let selector = quote_byte_array(&calc_selector(signature));
 
     quote! {
         #[automatically_derived]
-        impl alloy_sol_types::SolError for #name {
+        impl #crate_path::SolError for #name {
             type Parameters<'a> = UnderlyingSolTuple<'a>;
-            type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
+            type Token<'a> = <Self::Parameters<'a> as #crate_path::SolType>::Token<'a>;
 
             const SIGNATURE: &'static str = #signature;
             const SELECTOR: [u8; 4] = #selector;
 
             #[inline]
-            fn new<'a>(tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType) -> Self {
+            fn new<'a>(tuple: <Self::Parameters<'a> as #crate_path::SolType>::RustType) -> Self {
                 tuple.into()
             }
 
@@ -95,8 +104,8 @@ fn gen_sol_error_trait(name: &Ident, signature: &str, tokenize_impl: &TokenStrea
             }
 
             #[inline]
-            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
-                <Self::Parameters<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data).map(Self::new)
+            fn abi_decode_raw_validate(data: &[u8]) -> #crate_path::Result<Self> {
+                <Self::Parameters<'_> as #crate_path::SolType>::abi_decode_sequence_validate(data).map(Self::new)
             }
         }
     }

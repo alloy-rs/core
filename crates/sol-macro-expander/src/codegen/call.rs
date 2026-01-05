@@ -64,21 +64,21 @@ impl CallCodegen {
     }
 
     /// Returns the tokenize_returns implementation.
-    pub fn tokenize_returns(&self) -> TokenStream {
+    pub fn tokenize_returns(&self, crate_path: &TokenStream) -> TokenStream {
         match &self.return_info {
             ReturnInfo::Empty { return_name } | ReturnInfo::Multiple { return_name } => {
                 quote! { #return_name::_tokenize(ret) }
             }
             ReturnInfo::Single { sol_type, .. } => {
-                quote! { (<#sol_type as alloy_sol_types::SolType>::tokenize(ret),) }
+                quote! { (<#sol_type as #crate_path::SolType>::tokenize(ret),) }
             }
         }
     }
 
     /// Returns the decode_returns implementation.
-    pub fn decode_returns(&self) -> TokenStream {
+    pub fn decode_returns(&self, crate_path: &TokenStream) -> TokenStream {
         let decode_seq =
-            quote!(<Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data));
+            quote!(<Self::ReturnTuple<'_> as #crate_path::SolType>::abi_decode_sequence(data));
         match &self.return_info {
             ReturnInfo::Empty { .. } => quote! { #decode_seq.map(Into::into) },
             ReturnInfo::Single { field_name, return_name, .. } => {
@@ -94,9 +94,8 @@ impl CallCodegen {
     }
 
     /// Returns the decode_returns_validate implementation.
-    pub fn decode_returns_validate(&self) -> TokenStream {
-        let decode_seq =
-            quote!(<Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data));
+    pub fn decode_returns_validate(&self, crate_path: &TokenStream) -> TokenStream {
+        let decode_seq = quote!(<Self::ReturnTuple<'_> as #crate_path::SolType>::abi_decode_sequence_validate(data));
         match &self.return_info {
             ReturnInfo::Empty { .. } => quote! { #decode_seq.map(Into::into) },
             ReturnInfo::Single { field_name, return_name, .. } => {
@@ -114,36 +113,38 @@ impl CallCodegen {
 
 impl CallCodegen {
     /// Generates the `SolCall` trait implementation.
-    pub fn expand(self, name: &Ident, signature: &str) -> TokenStream {
+    ///
+    /// NOTE: the `crate_path` should be a path to `alloy_sol_types`.
+    pub fn expand(self, name: &Ident, signature: &str, crate_path: &TokenStream) -> TokenStream {
         let call_tuple = &self.call_tuple;
         let return_tuple = &self.return_tuple;
         let tokenize_impl = &self.tokenize_impl;
 
         // Computed via methods
         let return_type = self.return_type();
-        let tokenize_returns = self.tokenize_returns();
-        let decode_returns = self.decode_returns();
-        let decode_returns_validate = self.decode_returns_validate();
+        let tokenize_returns = self.tokenize_returns(crate_path);
+        let decode_returns = self.decode_returns(crate_path);
+        let decode_returns_validate = self.decode_returns_validate(crate_path);
 
         let selector = crate::utils::calc_selector(signature);
         let selector_tokens = quote_byte_array(&selector);
 
         quote! {
             #[automatically_derived]
-            impl alloy_sol_types::SolCall for #name {
+            impl #crate_path::SolCall for #name {
                 type Parameters<'a> = #call_tuple;
-                type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
+                type Token<'a> = <Self::Parameters<'a> as #crate_path::SolType>::Token<'a>;
 
                 type Return = #return_type;
 
                 type ReturnTuple<'a> = #return_tuple;
-                type ReturnToken<'a> = <Self::ReturnTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
+                type ReturnToken<'a> = <Self::ReturnTuple<'a> as #crate_path::SolType>::Token<'a>;
 
                 const SIGNATURE: &'static str = #signature;
                 const SELECTOR: [u8; 4] = #selector_tokens;
 
                 #[inline]
-                fn new<'a>(tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType) -> Self {
+                fn new<'a>(tuple: <Self::Parameters<'a> as #crate_path::SolType>::RustType) -> Self {
                     tuple.into()
                 }
 
@@ -158,12 +159,12 @@ impl CallCodegen {
                 }
 
                 #[inline]
-                fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                fn abi_decode_returns(data: &[u8]) -> #crate_path::Result<Self::Return> {
                     #decode_returns
                 }
 
                 #[inline]
-                fn abi_decode_returns_validate(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                fn abi_decode_returns_validate(data: &[u8]) -> #crate_path::Result<Self::Return> {
                     #decode_returns_validate
                 }
             }

@@ -65,7 +65,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
     let variant_idents: Vec<Ident> =
         variants.iter().map(|v| Ident::new(&v.ident.to_string(), v.ident.span())).collect();
 
-    let enum_impl = EnumCodegen::new(variant_idents, has_invalid_variant).expand(&name.0);
+    let enum_impl = EnumCodegen::new(variant_idents, has_invalid_variant)
+        .expand(&name.0, &quote!(#alloy_sol_types));
 
     let doc = docs.then(|| mk_doc(format!("```solidity\n{enumm}\n```")));
     let tokens = quote! {

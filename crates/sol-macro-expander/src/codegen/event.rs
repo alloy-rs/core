@@ -42,12 +42,12 @@ impl EventCodegen {
     }
 
     /// Topic list type: `(FixedBytes<32>, Type1, ...)` or just `(Type1, ...)` for anonymous
-    pub fn topic_list(&self) -> TokenStream {
-        let first = (!self.anonymous).then(|| quote!(alloy_sol_types::sol_data::FixedBytes<32>));
+    pub fn topic_list(&self, crate_path: &TokenStream) -> TokenStream {
+        let first = (!self.anonymous).then(|| quote!(#crate_path::sol_data::FixedBytes<32>));
         let indexed = self.fields.iter().filter(|f| f.is_indexed).map(|f| {
             if f.indexed_as_hash {
                 let span = f.span;
-                quote_spanned!(span=> alloy_sol_types::sol_data::FixedBytes<32>)
+                quote_spanned!(span=> #crate_path::sol_data::FixedBytes<32>)
             } else {
                 f.sol_type.clone()
             }
@@ -57,7 +57,7 @@ impl EventCodegen {
     }
 
     /// `tokenize_body()` impl: tokenize non-indexed fields
-    pub fn tokenize_body(&self) -> TokenStream {
+    pub fn tokenize_body(&self, crate_path: &TokenStream) -> TokenStream {
         let tokenize_stmts: Vec<_> = self
             .fields
             .iter()
@@ -65,7 +65,7 @@ impl EventCodegen {
             .map(|f| {
                 let name = &f.name;
                 let sol_type = &f.sol_type;
-                quote!(<#sol_type as alloy_sol_types::SolType>::tokenize(&self.#name))
+                quote!(<#sol_type as #crate_path::SolType>::tokenize(&self.#name))
             })
             .collect();
         if tokenize_stmts.is_empty() { quote!(()) } else { quote!((#(#tokenize_stmts,)*)) }
@@ -83,16 +83,16 @@ impl EventCodegen {
     }
 
     /// `encode_topics_raw()` impl: encode each topic
-    pub fn encode_topics_impl(&self) -> TokenStream {
+    pub fn encode_topics_impl(&self, crate_path: &TokenStream) -> TokenStream {
         let first_topic = (!self.anonymous)
-            .then(|| quote!(alloy_sol_types::abi::token::WordToken(Self::SIGNATURE_HASH)));
+            .then(|| quote!(#crate_path::abi::token::WordToken(Self::SIGNATURE_HASH)));
         let indexed_encodes = self.fields.iter().filter(|f| f.is_indexed).map(|f| {
             let name = &f.name;
             let sol_type = &f.sol_type;
             if f.indexed_as_hash {
-                quote!(<alloy_sol_types::sol_data::FixedBytes<32> as alloy_sol_types::EventTopic>::encode_topic(&self.#name))
+                quote!(<#crate_path::sol_data::FixedBytes<32> as #crate_path::EventTopic>::encode_topic(&self.#name))
             } else {
-                quote!(<#sol_type as alloy_sol_types::EventTopic>::encode_topic(&self.#name))
+                quote!(<#sol_type as #crate_path::EventTopic>::encode_topic(&self.#name))
             }
         });
         let assignments = first_topic
@@ -130,12 +130,14 @@ impl EventCodegen {
 
 impl EventCodegen {
     /// Generates the `SolEvent` trait implementation.
-    pub fn expand(self, name: &Ident, signature: &str) -> TokenStream {
+    ///
+    /// NOTE: the `crate_path` should be a path to `alloy_sol_types`.
+    pub fn expand(self, name: &Ident, signature: &str, crate_path: &TokenStream) -> TokenStream {
         let data_tuple = self.data_tuple();
-        let topic_list = self.topic_list();
-        let tokenize_body = self.tokenize_body();
+        let topic_list = self.topic_list(crate_path);
+        let tokenize_body = self.tokenize_body(crate_path);
         let topics_impl = self.topics_impl();
-        let encode_topics_impl = self.encode_topics_impl();
+        let encode_topics_impl = self.encode_topics_impl(crate_path);
         let new_impl = self.new_impl();
         let anonymous = self.anonymous;
 
@@ -145,9 +147,9 @@ impl EventCodegen {
         let check_signature = (!anonymous).then(|| {
             quote! {
                 #[inline]
-                fn check_signature(topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType) -> alloy_sol_types::Result<()> {
+                fn check_signature(topics: &<Self::TopicList as #crate_path::SolType>::RustType) -> #crate_path::Result<()> {
                     if topics.0 != Self::SIGNATURE_HASH {
-                        return Err(alloy_sol_types::Error::invalid_event_signature_hash(Self::SIGNATURE, topics.0, Self::SIGNATURE_HASH));
+                        return Err(#crate_path::Error::invalid_event_signature_hash(Self::SIGNATURE, topics.0, Self::SIGNATURE_HASH));
                     }
                     Ok(())
                 }
@@ -156,23 +158,23 @@ impl EventCodegen {
 
         quote! {
             #[automatically_derived]
-            impl alloy_sol_types::SolEvent for #name {
+            impl #crate_path::SolEvent for #name {
                 type DataTuple<'a> = #data_tuple;
-                type DataToken<'a> = <Self::DataTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
+                type DataToken<'a> = <Self::DataTuple<'a> as #crate_path::SolType>::Token<'a>;
 
                 type TopicList = #topic_list;
 
                 const SIGNATURE: &'static str = #signature;
-                const SIGNATURE_HASH: alloy_sol_types::private::B256 =
-                    alloy_sol_types::private::B256::new(#hash_tokens);
+                const SIGNATURE_HASH: #crate_path::private::B256 =
+                    #crate_path::private::B256::new(#hash_tokens);
 
                 const ANONYMOUS: bool = #anonymous;
 
                 #[allow(unused_variables)]
                 #[inline]
                 fn new(
-                    topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
-                    data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
+                    topics: <Self::TopicList as #crate_path::SolType>::RustType,
+                    data: <Self::DataTuple<'_> as #crate_path::SolType>::RustType,
                 ) -> Self {
                     #new_impl
                 }
@@ -185,17 +187,17 @@ impl EventCodegen {
                 }
 
                 #[inline]
-                fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
+                fn topics(&self) -> <Self::TopicList as #crate_path::SolType>::RustType {
                     #topics_impl
                 }
 
                 #[inline]
                 fn encode_topics_raw(
                     &self,
-                    out: &mut [alloy_sol_types::abi::token::WordToken],
-                ) -> alloy_sol_types::Result<()> {
-                    if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
-                        return Err(alloy_sol_types::Error::Overrun);
+                    out: &mut [#crate_path::abi::token::WordToken],
+                ) -> #crate_path::Result<()> {
+                    if out.len() < <Self::TopicList as #crate_path::TopicList>::COUNT {
+                        return Err(#crate_path::Error::Overrun);
                     }
                     #encode_topics_impl
                     Ok(())
@@ -203,21 +205,21 @@ impl EventCodegen {
             }
 
             #[automatically_derived]
-            impl alloy_sol_types::private::IntoLogData for #name {
-                fn to_log_data(&self) -> alloy_sol_types::private::LogData {
+            impl #crate_path::private::IntoLogData for #name {
+                fn to_log_data(&self) -> #crate_path::private::LogData {
                     From::from(self)
                 }
 
-                fn into_log_data(self) -> alloy_sol_types::private::LogData {
+                fn into_log_data(self) -> #crate_path::private::LogData {
                     From::from(&self)
                 }
             }
 
             #[automatically_derived]
-            impl From<&#name> for alloy_sol_types::private::LogData {
+            impl From<&#name> for #crate_path::private::LogData {
                 #[inline]
-                fn from(this: &#name) -> alloy_sol_types::private::LogData {
-                    alloy_sol_types::SolEvent::encode_log_data(this)
+                fn from(this: &#name) -> #crate_path::private::LogData {
+                    #crate_path::SolEvent::encode_log_data(this)
                 }
             }
         }

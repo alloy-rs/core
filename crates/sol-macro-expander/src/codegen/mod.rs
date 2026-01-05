@@ -68,12 +68,14 @@ pub enum StructLayout {
 /// - From/Into conversions between struct and underlying rust tuple
 ///
 /// The `layout` parameter determines how fields are accessed in the generated code.
+/// The `crate_path` should be a path to `alloy_sol_types` (i.e. `quote!(alloy_sol_types)`).
 pub fn gen_from_into_tuple(
     struct_name: &Ident,
     field_names: &[Ident],
     sol_types: &[TokenStream],
     rust_types: &[TokenStream],
     layout: StructLayout,
+    crate_path: &TokenStream,
 ) -> TokenStream {
     let sol_tuple = quote_tuple_type(sol_types);
     let rust_tuple = quote_tuple_type(rust_types);
@@ -144,10 +146,10 @@ pub fn gen_from_into_tuple(
 
         #[cfg(test)]
         #[allow(dead_code, unreachable_patterns)]
-        fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+        fn _type_assertion(_t: #crate_path::private::AssertTypeEq<UnderlyingRustTuple>) {
             match _t {
-                alloy_sol_types::private::AssertTypeEq::<
-                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                #crate_path::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as #crate_path::SolType>::RustType,
                 >(_) => {}
             }
         }
@@ -159,12 +161,17 @@ pub fn gen_from_into_tuple(
 /// Generates the tokenize() implementation body.
 ///
 /// Returns a TokenStream that produces a tuple of tokenized fields.
-pub fn expand_tokenize_simple(field_names: &[Ident], sol_types: &[TokenStream]) -> TokenStream {
+/// The `crate_path` should be a path to `alloy_sol_types` (i.e. `quote!(alloy_sol_types)`).
+pub fn expand_tokenize_simple(
+    field_names: &[Ident],
+    sol_types: &[TokenStream],
+    crate_path: &TokenStream,
+) -> TokenStream {
     if field_names.is_empty() {
         quote! { () }
     } else {
         let tokenize_fields = field_names.iter().zip(sol_types.iter()).map(|(name, sol_ty)| {
-            quote! { <#sol_ty as alloy_sol_types::SolType>::tokenize(&self.#name) }
+            quote! { <#sol_ty as #crate_path::SolType>::tokenize(&self.#name) }
         });
         quote! { (#(#tokenize_fields,)*) }
     }

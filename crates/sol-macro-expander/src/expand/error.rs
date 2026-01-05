@@ -39,10 +39,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
         .iter()
         .enumerate()
         .map(|(i, p)| {
-            (
-                anon_name((i, p.name.as_ref())),
-                (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty)),
-            )
+            (anon_name((i, p.name.as_ref())), (cx.expand_type(&p.ty), cx.expand_rust_type(&p.ty)))
         })
         .unzip();
     let is_tuple_struct = params.len() == 1 && params[0].name.is_none();
@@ -94,8 +91,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
         }
     };
 
-    let error_impl =
-        ErrorCodegen::new(param_names, sol_types, rust_types, is_tuple_struct).expand(&name.0, &signature);
+    let error_impl = ErrorCodegen::new(param_names, sol_types, rust_types, is_tuple_struct).expand(
+        &name.0,
+        &signature,
+        &quote!(#alloy_sol_types),
+    );
 
     let tokens = quote! {
         #(#attrs)*
