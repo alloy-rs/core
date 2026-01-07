@@ -52,8 +52,8 @@ paste.workspace = true
 
 # keccak256
 keccak-asm = { workspace = true, optional = true }
-sha3 = { workspace = true, optional = true }
-tiny-keccak = { workspace = true, features = ["keccak"] }
+sha3.workspace = true
+tiny-keccak = { workspace = true, features = ["keccak"], optional = true }
 
 fixed-cache = { workspace = true, optional = true }
 
@@ -131,7 +131,7 @@ std = [
     "rand?/thread_rng",
     "rustc-hash/std",
     "serde?/std",
-    "sha3?/std",
+    "sha3/std",
 ]
 nightly = [
     "foldhash?/nightly",
@@ -144,8 +144,8 @@ nightly = [
 
 asm-keccak = ["dep:keccak-asm"]
 native-keccak = []
-sha3-keccak = ["dep:sha3"]
-tiny-keccak = []
+sha3-keccak = []
+tiny-keccak = ["dep:tiny-keccak"]
 keccak-cache = ["std", "dep:rapidhash", "dep:fixed-cache"]
 keccak-cache-global = ["keccak-cache"]
 
