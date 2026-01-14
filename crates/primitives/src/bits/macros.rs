@@ -231,6 +231,7 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_borsh!($name, $n);
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
+        $crate::impl_schemars!($name, $n);
         $crate::impl_allocative!($name);
         $crate::impl_arbitrary!($name, $n);
         $crate::impl_rand!($name);
@@ -725,6 +726,39 @@ macro_rules! impl_serde {
 #[cfg(not(feature = "serde"))]
 macro_rules! impl_serde {
     ($t:ty) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "schemars")]
+macro_rules! impl_schemars {
+    ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "schemars")))]
+        impl $crate::private::schemars::JsonSchema for $t {
+            fn schema_name() -> $crate::private::Cow<'static, str> {
+                $crate::private::Cow::Borrowed($crate::private::stringify!($t))
+            }
+            fn json_schema(
+                g: &mut $crate::private::schemars::SchemaGenerator,
+            ) -> $crate::private::schemars::Schema {
+                <$crate::FixedBytes<$n> as $crate::private::schemars::JsonSchema>::json_schema(g)
+            }
+            fn schema_id() -> $crate::private::Cow<'static, str> {
+                $crate::private::Cow::Borrowed($crate::private::concat!(
+                    $crate::private::module_path!(),
+                    "::",
+                    $crate::private::stringify!($t),
+                ))
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "schemars"))]
+macro_rules! impl_schemars {
+    ($t:ty, $n:literal) => {};
 }
 
 #[doc(hidden)]
