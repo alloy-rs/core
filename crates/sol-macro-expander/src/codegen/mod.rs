@@ -9,6 +9,7 @@
 //! you already have the types resolved.
 
 mod call;
+mod contract;
 mod r#enum;
 mod error;
 mod event;
@@ -20,6 +21,10 @@ use quote::quote;
 
 // Re-export all public types
 pub use call::{CallCodegen, ReturnInfo};
+pub use contract::{
+    CallLayout, ConstructorInfo, ContractCodegen, ContractEventInfo, ContractFunctionInfo,
+    is_reserved_method_name,
+};
 pub use r#enum::EnumCodegen;
 pub use error::ErrorCodegen;
 pub use event::{EventCodegen, EventFieldInfo};

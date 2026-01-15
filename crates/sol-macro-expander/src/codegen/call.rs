@@ -95,7 +95,9 @@ impl CallCodegen {
 
     /// Returns the decode_returns_validate implementation.
     fn decode_returns_validate(&self) -> TokenStream {
-        let decode_seq = quote!(<Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data));
+        let decode_seq = quote!(
+            <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+        );
         match &self.return_info {
             ReturnInfo::Empty { .. } => quote! { #decode_seq.map(Into::into) },
             ReturnInfo::Single { field_name, return_name, .. } => {
