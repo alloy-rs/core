@@ -55,11 +55,7 @@ impl InterfaceCodegen {
         min_data_len: usize,
         kind: SolInterfaceKind,
     ) -> Self {
-        assert_eq!(
-            variants.len(),
-            types.len(),
-            "variants and types must have the same length"
-        );
+        assert_eq!(variants.len(), types.len(), "variants and types must have the same length");
         assert_eq!(
             variants.len(),
             selectors.len(),
