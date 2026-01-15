@@ -1,3 +1,5 @@
+//! Utility functions for Solidity code generation.
+
 use ast::Spanned;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;

@@ -45,13 +45,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
     let alloy_sol_types = &cx.crates.sol_types;
 
-    let struct_impl = StructCodegen::new(
-        field_names,
-        rust_types,
-        sol_types,
-        gen_eip712_options(cx, fields, name),
-    )
-    .expand(&name.0);
+    let struct_impl =
+        StructCodegen::new(field_names, rust_types, sol_types, eip712_options(cx, fields, name))
+            .expand(&name.0);
 
     let attrs = attrs.iter();
     let fields = expand_fields(fields, cx);
@@ -75,7 +71,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     Ok(tokens)
 }
 
-fn gen_eip712_options(
+fn eip712_options(
     cx: &ExpCtxt<'_>,
     fields: &ast::Parameters<syn::token::Semi>,
     name: &ast::SolIdent,

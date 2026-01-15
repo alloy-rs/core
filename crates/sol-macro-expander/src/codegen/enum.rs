@@ -21,16 +21,8 @@ impl EnumCodegen {
         Self { variants, has_invalid_variant }
     }
 
-    /// Generates the SolEnum-related trait implementations.
-    ///
-    /// This generates:
-    /// - `From<EnumName> for u8`
-    /// - `TryFrom<u8> for EnumName`
-    /// - `SolValue`
-    /// - `SolTypeValue`
-    /// - `SolType`
-    /// - `EventTopic`
-    /// - `SolEnum`
+    /// Generates trait implementations for: `SolEnum`, `SolValue`, `SolTypeValue`,
+    /// `SolType`, `EventTopic`, `From<EnumName> for u8`, `TryFrom<u8> for EnumName`,
     ///
     /// NOTE: The generated code assumes `alloy_sol_types` is in scope.
     pub fn expand(self, name: &Ident) -> TokenStream {

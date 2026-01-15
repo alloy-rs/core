@@ -9,7 +9,6 @@
 
 pub mod codegen;
 pub mod expand;
-/// Utility functions for Solidity code generation.
 pub mod utils;
 #[cfg(feature = "json")]
 mod verbatim;
@@ -21,8 +20,6 @@ pub use codegen::{
     InterfaceCodegen, ReturnInfo, SolInterfaceKind, StructCodegen, StructLayout,
     gen_from_into_tuple, gen_tokenize, is_reserved_method_name,
 };
-/// Alias for [`calc_selector`] (commonly used in external consumers).
 pub use utils::calc_selector as selector;
-pub use utils::calc_selector;
 
 extern crate syn_solidity as ast;

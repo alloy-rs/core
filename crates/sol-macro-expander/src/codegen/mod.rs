@@ -1,12 +1,4 @@
 //! Context-free code generation utilities.
-//!
-//! These functions generate common Solidity-related Rust code without
-//! requiring the full `ExpCtxt` context, making them reusable by external crates
-//! that want to generate Alloy-compatible types from Rust syntax.
-//!
-//! The `sol!` macro uses the `expand/` modules which have access to the full
-//! parsing context. These utilities are designed for the simpler case where
-//! you already have the types resolved.
 
 mod call;
 mod contract;
@@ -31,10 +23,6 @@ pub use event::{EventCodegen, EventFieldInfo};
 pub use interface::{InterfaceCodegen, SolInterfaceKind};
 pub use r#struct::{Eip712Options, StructCodegen};
 
-// ============================================================================
-// Helper functions
-// ============================================================================
-
 /// Quotes a fixed-size byte array as a TokenStream.
 fn quote_byte_array<const N: usize>(bytes: &[u8; N]) -> TokenStream {
     let elems = bytes.iter().map(|b| quote! { #b });
@@ -49,10 +37,6 @@ fn quote_tuple_type(types: &[TokenStream]) -> TokenStream {
         quote! { (#(#types,)*) }
     }
 }
-
-// ============================================================================
-// Struct layout and From/Into generation
-// ============================================================================
 
 /// Struct layout pattern for From/Into generation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

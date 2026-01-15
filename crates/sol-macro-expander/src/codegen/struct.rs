@@ -111,15 +111,12 @@ impl StructCodegen {
     }
 }
 
-/// Generates just the SolStruct trait implementations (SolValue, SolTypeValue, SolType, SolStruct,
-/// EventTopic).
+/// Generates just the `SolStruct` trait implementations (`SolValue`, `SolTypeValue`, `SolType`,
+/// `SolStruct`, `EventTopic`).
 ///
 /// - Does NOT generate the `const _: () = { ... }` wrapper
-/// - Does NOT generate type aliases or From/Into conversions
+/// - Does NOT generate type aliases or `From`/`Into` conversions
 /// - Assumes `UnderlyingSolTuple<'a>` and `UnderlyingRustTuple<'a>` type aliases already exist
-///
-/// `name_str` should be the struct name without any raw identifier prefix (e.g., "const" not
-/// "r#const").
 fn gen_sol_struct_traits(
     struct_name: &Ident,
     name_s: &str,
