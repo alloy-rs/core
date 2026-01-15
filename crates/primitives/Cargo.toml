@@ -66,6 +66,9 @@ alloy-rlp = { workspace = true, optional = true }
 # serde
 serde = { workspace = true, optional = true, features = ["derive"] }
 
+# schemars
+schemars = { workspace = true, optional = true, default-features = false }
+
 # rkyv
 rkyv = { workspace = true, optional = true }
 
@@ -158,7 +161,13 @@ map-fxhash = ["map"]
 
 getrandom = ["dep:getrandom"]
 k256 = ["dep:k256"]
-rand = ["dep:rand", "getrandom", "ruint/rand-09", "rapidhash?/rand", "rustc-hash/rand"]
+rand = [
+    "dep:rand",
+    "getrandom",
+    "ruint/rand-09",
+    "rapidhash?/rand",
+    "rustc-hash/rand",
+]
 rayon = ["dep:rayon", "hashbrown?/rayon", "indexmap?/rayon"]
 rkyv = ["dep:rkyv", "ruint/rkyv"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
@@ -171,6 +180,7 @@ serde = [
     "indexmap?/serde",
     "rand?/serde",
 ]
+schemars = ["dep:schemars"]
 borsh = ["dep:borsh", "ruint/borsh"]
 
 allocative = ["dep:allocative"]
