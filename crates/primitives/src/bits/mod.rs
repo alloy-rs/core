@@ -28,5 +28,8 @@ mod rlp;
 #[cfg(feature = "serde")]
 mod serde;
 
+#[cfg(feature = "schemars")]
+mod schemars;
+
 #[cfg(feature = "rkyv")]
 mod rkyv;

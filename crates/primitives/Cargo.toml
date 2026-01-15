@@ -52,8 +52,8 @@ paste.workspace = true
 
 # keccak256
 keccak-asm = { workspace = true, optional = true }
-sha3 = { workspace = true, optional = true }
-tiny-keccak = { workspace = true, features = ["keccak"] }
+sha3.workspace = true
+tiny-keccak = { workspace = true, features = ["keccak"], optional = true }
 
 fixed-cache = { workspace = true, optional = true }
 
@@ -65,6 +65,9 @@ alloy-rlp = { workspace = true, optional = true }
 
 # serde
 serde = { workspace = true, optional = true, features = ["derive"] }
+
+# schemars
+schemars = { workspace = true, optional = true, default-features = false }
 
 # rkyv
 rkyv = { workspace = true, optional = true }
@@ -131,7 +134,7 @@ std = [
     "rand?/thread_rng",
     "rustc-hash/std",
     "serde?/std",
-    "sha3?/std",
+    "sha3/std",
 ]
 nightly = [
     "foldhash?/nightly",
@@ -144,8 +147,8 @@ nightly = [
 
 asm-keccak = ["dep:keccak-asm"]
 native-keccak = []
-sha3-keccak = ["dep:sha3"]
-tiny-keccak = []
+sha3-keccak = []
+tiny-keccak = ["dep:tiny-keccak"]
 keccak-cache = ["std", "dep:rapidhash", "dep:fixed-cache"]
 keccak-cache-global = ["keccak-cache"]
 
@@ -158,7 +161,13 @@ map-fxhash = ["map"]
 
 getrandom = ["dep:getrandom"]
 k256 = ["dep:k256"]
-rand = ["dep:rand", "getrandom", "ruint/rand-09", "rapidhash?/rand", "rustc-hash/rand"]
+rand = [
+    "dep:rand",
+    "getrandom",
+    "ruint/rand-09",
+    "rapidhash?/rand",
+    "rustc-hash/rand",
+]
 rayon = ["dep:rayon", "hashbrown?/rayon", "indexmap?/rayon"]
 rkyv = ["dep:rkyv", "ruint/rkyv"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
@@ -171,6 +180,7 @@ serde = [
     "indexmap?/serde",
     "rand?/serde",
 ]
+schemars = ["dep:schemars"]
 borsh = ["dep:borsh", "ruint/borsh"]
 
 allocative = ["dep:allocative"]
