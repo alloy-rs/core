@@ -221,11 +221,7 @@ mod keccak256_state {
             pub(super) use keccak_asm::Digest;
 
             pub(super) type State = keccak_asm::Keccak256;
-        } else if #[cfg(feature = "sha3-keccak")] {
-            pub(super) use sha3::Digest;
-
-            pub(super) type State = sha3::Keccak256;
-        } else {
+        } else if #[cfg(feature = "tiny-keccak")] {
             pub(super) use tiny_keccak::Hasher as Digest;
 
             /// Wraps `tiny_keccak::Keccak` to implement `Digest`-like API.
@@ -248,6 +244,10 @@ mod keccak256_state {
                     self.0.update(bytes);
                 }
             }
+        } else {
+            pub(super) use sha3::Digest;
+
+            pub(super) type State = sha3::Keccak256;
         }
     }
 }
@@ -257,7 +257,7 @@ use keccak256_state::Digest;
 /// Simple [`Keccak-256`] hasher.
 ///
 /// Note that the "native-keccak" feature is not supported for this struct, and will default to the
-/// [`tiny_keccak`] implementation.
+/// [`sha3`] implementation.
 ///
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 #[derive(Clone)]
