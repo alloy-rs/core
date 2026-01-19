@@ -37,6 +37,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
     let rpc = sol_attrs.rpc.or(cx.attrs.rpc).unwrap_or(false);
     let abi = sol_attrs.abi.or(cx.attrs.abi).unwrap_or(false);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
+    let address = sol_attrs.address.clone().or(cx.attrs.address.clone());
 
     let bytecode = sol_attrs.bytecode.as_ref().map(|lit| {
         let name = Ident::new("BYTECODE", lit.span());
@@ -386,17 +387,35 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let generic_p_n = quote!(<P: alloy_contract::private::Provider<N>, N: alloy_contract::private::Network>);
 
         // if new builtin functions are introduced: updated reserved check in `call_builder_method_function_name`
+
+        // different new if we have address
+        let new_fn = if let Some(addr) = address {
+            quote! {
+                #[doc = #new_fn_doc]
+                #[inline]
+                pub const fn new #generic_p_n(
+                    __provider: P,
+                ) -> #name<P, N> {
+                    #name::<P, N>::new(#addr, __provider)
+                }
+            }
+        } else {
+            quote! {
+                #[doc = #new_fn_doc]
+                #[inline]
+                pub const fn new #generic_p_n(
+                    address: alloy_sol_types::private::Address,
+                    __provider: P,
+                ) -> #name<P, N> {
+                    #name::<P, N>::new(address, __provider)
+                }
+            }
+        };
+
         quote! {
             use #alloy_contract as alloy_contract;
 
-            #[doc = #new_fn_doc]
-            #[inline]
-            pub const fn new #generic_p_n(
-                address: alloy_sol_types::private::Address,
-                __provider: P,
-            ) -> #name<P, N> {
-                #name::<P, N>::new(address, __provider)
-            }
+            #new_fn
 
             #deploy_fn
 

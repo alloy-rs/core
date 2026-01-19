@@ -108,6 +108,9 @@ pub struct SolAttrs {
     /// `#[sol(deployed_bytecode = "0x1234")]`
     pub deployed_bytecode: Option<LitStr>,
 
+    /// `#[sol(address = "0x00..00")]`
+    pub address: Option<LitStr>,
+
     /// UDVT only `#[sol(type_check = "my_function")]`
     pub type_check: Option<LitStr>,
 
@@ -177,6 +180,24 @@ impl SolAttrs {
                     Ok(lit)
                 };
 
+                // `path = "0x<hex>"` but with address size validation
+                let addr = || {
+                    let lit = lit()?;
+                    let v = lit.value();
+                    if let Err(e) = hex::check(&v) {
+                        let msg = format!("invalid hex value: {e}");
+                        return Err(Error::new(lit.span(), msg));
+                    }
+                    // 42 = 2 for "0x" + (2 hex chars / byte * 20 byte addr)
+                    if v.len() != 42 {
+                        return Err(Error::new(lit.span(), "invalid address"))
+                    }
+                    Ok(lit)
+                };
+
+
+
+
                 // `path(comma, separated, list)`
                 fn list<T>(
                     meta: &ParseNestedMeta<'_>,
@@ -203,6 +224,8 @@ impl SolAttrs {
 
                     bytecode => bytes()?,
                     deployed_bytecode => bytes()?,
+
+                    address => addr()?,
 
                     type_check => lit()?,
                     ignore_unlinked => bool()?,
@@ -240,6 +263,7 @@ impl SolAttrs {
         merge_opt(&mut a.rename_all, &b.rename_all);
         merge_opt(&mut a.bytecode, &b.bytecode);
         merge_opt(&mut a.deployed_bytecode, &b.deployed_bytecode);
+        merge_opt(&mut a.address, &b.address);
         merge_opt(&mut a.type_check, &b.type_check);
         merge_opt(&mut a.ignore_unlinked, &b.ignore_unlinked);
     }
@@ -494,6 +518,16 @@ mod tests {
             #[sol(bytecode = "xyz")] => Err("invalid hex value: "),
             #[sol(bytecode = "123")] => Err("invalid hex value: "),
         }
+
+        address {
+            #[sol(address = "0x0102030405060708090a0b0c0d0e0f1011121314")] => Ok(sol_attrs! { address: parse_quote!("0x0102030405060708090a0b0c0d0e0f1011121314") }),
+            #[sol(address = "0x0102030405060708090a0b0c0d0e0f10111213")] => Err("invalid address"),
+            #[sol(address = "0x123xyz")] => Err("invalid hex value: "),
+            #[sol(address = "12 34")] => Err("invalid hex value: "),
+            #[sol(address = "xyz")] => Err("invalid hex value: "),
+            #[sol(address = "123")] => Err("invalid hex value: "),
+        }
+
 
         type_check {
             #[sol(type_check = "my_function")] => Ok(sol_attrs! { type_check: parse_quote!("my_function") }),

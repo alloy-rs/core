@@ -119,6 +119,28 @@ impl fmt::Display for Address {
 }
 
 impl Address {
+    /// Decodes an address from a &str at compile time. Panics if
+    /// the address is invalid.
+    /// Does not check for checksum!
+    ///
+    /// # Examples
+    /// ```
+    /// # use alloy_primitives::Address
+    /// const ADDR: Address = Address::from_str_const("0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// ```
+    #[inline]
+    #[must_use]
+    pub const fn from_str_const(addr: &str) -> Self {
+        if addr.len() != 42 {
+            panic!("Wrongly sized address")
+        }
+        match hex::const_decode_to_array(addr.as_bytes()) {
+            Ok(bytes) => Self(FixedBytes(bytes)),
+            Err(_) => panic!("Non-hex address")
+        }
+    }
+
+
     /// Creates an Ethereum address from an EVM word's upper 20 bytes
     /// (`word[12..]`).
     ///
@@ -607,6 +629,14 @@ mod tests {
         assert_eq!(
             "0x0102030405060708090a0b0c0d0e0f1011121314".parse::<Address>().unwrap(),
             expected
+        );
+        assert_eq!(
+            Address::from_str_const("0x0102030405060708090a0b0c0d0e0f1011121314").into_array(),
+            expected
+        );
+        assert_eq!(
+            Address::from_str_const("0xd8da6bf26964af9d7eed9e03e53415d37aa96045").into_array(),
+            hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045")
         );
     }
 
