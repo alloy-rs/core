@@ -396,7 +396,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
                 pub const fn new #generic_p_n(
                     __provider: P,
                 ) -> #name<P, N> {
-                    #name::<P, N>::new(#addr, __provider)
+                    #name::<P, N>::new(alloy_sol_types::private::Address::from_str_const(#addr), __provider)
                 }
             }
         } else {
