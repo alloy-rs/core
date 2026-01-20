@@ -190,13 +190,10 @@ impl SolAttrs {
                     }
                     // 42 = 2 for "0x" + (2 hex chars / byte * 20 byte addr)
                     if v.len() != 42 {
-                        return Err(Error::new(lit.span(), "invalid address"))
+                        return Err(Error::new(lit.span(), "invalid address"));
                     }
                     Ok(lit)
                 };
-
-
-
 
                 // `path(comma, separated, list)`
                 fn list<T>(

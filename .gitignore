@@ -3,3 +3,4 @@ Cargo.lock
 .vscode/
 .idea/
 mutants.out/
+.direnv/

@@ -125,8 +125,8 @@ use syn::parse_macro_input;
 ///       function in the contract
 ///     - `pub fn <eventName>_filter(&self) -> Event<P, eventName>` for each event in the contract
 ///   - `pub fn new ...`, same as above just as a free function in the contract module
-/// - `address = <address hex string literal>`: Stubs the `new` method of the attached contract to use
-///    the specified address instead of requiring one as argument. 
+/// - `address = <address hex string literal>`: Stubs the `new` method of the attached contract to
+///   use the specified address instead of requiring one as argument.
 /// - `abi [ = <bool = false>]`: generates functions which return the dynamic ABI representation
 ///   (provided by [`alloy_json_abi`](https://docs.rs/alloy-json-abi)) of all the generated items.
 ///   Requires the `"json"` feature. For:

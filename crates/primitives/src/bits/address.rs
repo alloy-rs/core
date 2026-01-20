@@ -125,8 +125,10 @@ impl Address {
     ///
     /// # Examples
     /// ```
-    /// # use alloy_primitives::Address
+    /// # use alloy_primitives::Address;
+    /// # use std::str::FromStr;
     /// const ADDR: Address = Address::from_str_const("0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// assert_eq!(ADDR, Address::from_str("0xd8da6bf26964af9d7eed9e03e53415d37aa96045").unwrap());
     /// ```
     #[inline]
     #[must_use]
@@ -136,10 +138,9 @@ impl Address {
         }
         match hex::const_decode_to_array(addr.as_bytes()) {
             Ok(bytes) => Self(FixedBytes(bytes)),
-            Err(_) => panic!("Non-hex address")
+            Err(_) => panic!("Non-hex address"),
         }
     }
-
 
     /// Creates an Ethereum address from an EVM word's upper 20 bytes
     /// (`word[12..]`).
