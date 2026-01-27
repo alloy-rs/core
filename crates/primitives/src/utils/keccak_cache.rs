@@ -10,16 +10,16 @@ use std::mem::MaybeUninit;
 pub(super) const MAX_INPUT_LEN: usize =
     128 - size_of::<B256>() - size_of::<u8>() - size_of::<usize>();
 
-const COUNT: usize = 1 << 17; // ~131k entries
+const COUNT: usize = 1 << 17; // ~131k entries * 128 bytes = 16MiB
 static CACHE: fixed_cache::Cache<Key, B256, BuildHasher> =
     fixed_cache::static_cache!(Key, B256, COUNT, BuildHasher::new());
 
-pub(super) fn compute(input: &[u8]) -> B256 {
+pub(super) fn compute(input: &[u8], imp: impl FnOnce(&[u8]) -> B256) -> B256 {
     if unlikely(input.is_empty() | (input.len() > MAX_INPUT_LEN)) {
         return if input.is_empty() { KECCAK256_EMPTY } else { keccak256(input) };
     }
 
-    CACHE.get_or_insert_with_ref(input, keccak256, |input| {
+    CACHE.get_or_insert_with_ref(input, imp, |input| {
         let mut data = [MaybeUninit::uninit(); MAX_INPUT_LEN];
         unsafe {
             std::ptr::copy_nonoverlapping(input.as_ptr(), data.as_mut_ptr().cast(), input.len())
@@ -54,6 +54,21 @@ impl std::hash::Hasher for Hasher {
             const { &rapidhash::v3::RapidSecrets::seed(0) },
         );
     }
+
+    // We can just skip hashing the length prefix entirely since we know it's always
+    // `<=MAX_INPUT_LEN`, and the hash is good enough.
+
+    // `write_length_prefix` calls `write_usize` by default.
+    #[inline]
+    fn write_usize(&mut self, i: usize) {
+        debug_assert!(i <= MAX_INPUT_LEN, "{i} > {MAX_INPUT_LEN}")
+    }
+
+    #[cfg(feature = "nightly")]
+    #[inline]
+    fn write_length_prefix(&mut self, len: usize) {
+        debug_assert!(len <= MAX_INPUT_LEN, "{len} > {MAX_INPUT_LEN}")
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -65,7 +80,7 @@ struct Key {
 impl PartialEq for Key {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        self.len == other.len && self.get() == other.get()
+        self.get() == other.get()
     }
 }
 impl Eq for Key {}
@@ -96,8 +111,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_sizes() {
+    fn sizes() {
         assert_eq!(size_of::<Key>(), MAX_INPUT_LEN + 1);
         assert_eq!(size_of::<fixed_cache::Bucket<(Key, B256)>>(), 128);
+    }
+
+    #[test]
+    fn caching() {
+        let mut count: usize = 0;
+        let mut compute = |input| {
+            compute(input, |x| {
+                count += 1;
+                keccak256(x)
+            })
+        };
+
+        let input = b"Hello World!";
+        let input2 = b"Hello World! 2";
+
+        let a = compute(input);
+        let b = compute(input);
+        let c = compute(input);
+        assert_eq!(a, b);
+        assert_eq!(a, c);
+
+        let d = compute(input2);
+        let e = compute(input2);
+        assert_ne!(a, d);
+        assert_eq!(d, e);
+
+        assert_eq!(count, 2);
     }
 }
