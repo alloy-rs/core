@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3](https://github.com/alloy-rs/core/releases/tag/v1.5.3) - 2026-01-27
+
+### Dependencies
+
+- [deps] Run cargo shear ([#1055](https://github.com/alloy-rs/core/issues/1055))
+
+### Features
+
+- [primitives] FixedBytes: schemars::JsonSchema ([#1059](https://github.com/alloy-rs/core/issues/1059))
+
+### Miscellaneous Tasks
+
+- Allow bincode advisory in deny.toml ([#1060](https://github.com/alloy-rs/core/issues/1060))
+- [primitives] Switch default keccak to sha3 ([#1057](https://github.com/alloy-rs/core/issues/1057))
+
+### Other
+
+- Update to tempoxyz ([#1062](https://github.com/alloy-rs/core/issues/1062))
+
+### Performance
+
+- [primitives] Always enable 'sha3/asm' feature ([#1058](https://github.com/alloy-rs/core/issues/1058))
+
 ## [1.5.2](https://github.com/alloy-rs/core/releases/tag/v1.5.2) - 2025-12-22
+
+### Miscellaneous Tasks
+
+- Release 1.5.2
 
 ### Performance
 
