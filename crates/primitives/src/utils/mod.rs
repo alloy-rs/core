@@ -176,6 +176,7 @@ pub fn keccak256_uncached<T: AsRef<[u8]>>(bytes: T) -> B256 {
     keccak256_impl(bytes.as_ref())
 }
 
+#[allow(unused)]
 fn keccak256_impl(bytes: &[u8]) -> B256 {
     let mut output = MaybeUninit::<B256>::uninit();
 
@@ -203,6 +204,8 @@ fn keccak256_impl(bytes: &[u8]) -> B256 {
 
             // SAFETY: The output is 32-bytes, and the input comes from a slice.
             unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr().cast::<u8>()) };
+        } else if #[cfg(feature = "asm-keccak")] {
+            return B256::new(keccak_asm::Keccak256::digest(bytes).into());
         } else {
             let mut hasher = Keccak256::new();
             hasher.update(bytes);
