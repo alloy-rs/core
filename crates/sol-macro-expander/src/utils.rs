@@ -1,3 +1,5 @@
+//! Utility functions for Solidity code generation.
+
 use ast::Spanned;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
@@ -10,8 +12,13 @@ pub(crate) fn keccak256<T: AsRef<[u8]>>(bytes: T) -> [u8; 32] {
     Keccak256::digest(bytes).into()
 }
 
+/// Computes the 4-byte function selector from a signature string.
+pub fn calc_selector<T: AsRef<[u8]>>(bytes: T) -> [u8; 4] {
+    keccak256(bytes)[..4].try_into().expect("keccak256 returns 32 bytes")
+}
+
 pub(crate) fn selector<T: AsRef<[u8]>>(bytes: T) -> ExprArray<u8> {
-    ExprArray::new(keccak256(bytes)[..4].to_vec())
+    ExprArray::new(calc_selector(bytes).to_vec())
 }
 
 pub(crate) fn event_selector<T: AsRef<[u8]>>(bytes: T) -> ExprArray<u8> {
