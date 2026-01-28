@@ -204,7 +204,7 @@ fn keccak256_impl(bytes: &[u8]) -> B256 {
 
             // SAFETY: The output is 32-bytes, and the input comes from a slice.
             unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr().cast::<u8>()) };
-        } else if #[cfg(feature = "asm-keccak")] {
+        } else if #[cfg(all(feature = "asm-keccak", not(miri)))] {
             return B256::new(keccak_asm::Keccak256::digest(bytes).into());
         } else {
             let mut hasher = Keccak256::new();
