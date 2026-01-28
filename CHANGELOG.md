@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4](https://github.com/alloy-rs/core/releases/tag/v1.5.4) - 2026-01-28
+
+### Miscellaneous Tasks
+
+- [sol-macro] Use sha3 ([#1064](https://github.com/alloy-rs/core/issues/1064))
+
+### Other
+
+- Fix rkyv miri breakage ([#1066](https://github.com/alloy-rs/core/issues/1066))
+
+### Performance
+
+- [primitives] Use keccak_asm::Keccak256::digest ([#1067](https://github.com/alloy-rs/core/issues/1067))
+-  perf(primitives): remove unnecessary keccak cache length hash computation ([#1065](https://github.com/alloy-rs/core/issues/1065))
+
 ## [1.5.3](https://github.com/alloy-rs/core/releases/tag/v1.5.3) - 2026-01-27
 
 ### Dependencies
@@ -17,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 1.5.3
 - Allow bincode advisory in deny.toml ([#1060](https://github.com/alloy-rs/core/issues/1060))
 - [primitives] Switch default keccak to sha3 ([#1057](https://github.com/alloy-rs/core/issues/1057))
 
