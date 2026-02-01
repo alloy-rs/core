@@ -50,7 +50,6 @@ This repository contains the following crates:
 
 <!--
 When updating this, also update:
-- clippy.toml
 - Cargo.toml
 - .github/workflows/ci.yml
 -->
