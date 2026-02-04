@@ -41,7 +41,8 @@ pub use aliases::{
 mod bits;
 pub use bits::{
     Address, AddressChecksumBuffer, AddressError, BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS,
-    BLOOM_SIZE_BYTES, Bloom, BloomInput, FixedBytes, Function,
+    BLOOM_SIZE_BYTES, Bloom, BloomInput, FixedBytes, FixedBytesSliceExt, FixedBytesVecExt,
+    Function,
 };
 #[cfg(feature = "rkyv")]
 pub use bits::{

@@ -3,17 +3,13 @@
 use ast::Spanned;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use tiny_keccak::{Hasher, Keccak};
+use sha3::{Digest, Keccak256};
 
 /// Simple interface to the [`keccak256`] hash function.
 ///
 /// [`keccak256`]: https://en.wikipedia.org/wiki/SHA-3
 pub(crate) fn keccak256<T: AsRef<[u8]>>(bytes: T) -> [u8; 32] {
-    let mut output = [0u8; 32];
-    let mut hasher = Keccak::v256();
-    hasher.update(bytes.as_ref());
-    hasher.finalize(&mut output);
-    output
+    Keccak256::digest(bytes).into()
 }
 
 /// Computes the 4-byte function selector from a signature string.
