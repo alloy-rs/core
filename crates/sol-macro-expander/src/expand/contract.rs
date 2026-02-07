@@ -1,7 +1,13 @@
 //! [`ItemContract`] expansion.
 
 use super::{ExpCtxt, anon_name};
-use crate::utils::ExprArray;
+use crate::{
+    codegen::{
+        CallLayout, ConstructorInfo, ContractCodegen, ContractEventInfo, ContractFunctionInfo,
+        is_reserved_method_name,
+    },
+    utils::ExprArray,
+};
 use alloy_sol_macro_input::{ContainsSolAttrs, docs_str, mk_doc};
 use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent, Spanned};
 use heck::ToSnakeCase;
@@ -263,231 +269,83 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
     });
 
     let rpc = rpc.then(|| {
-        let contract_name = name;
-        let name = format_ident!("{contract_name}Instance");
-        let name_s = name.to_string();
-        let methods = functions.iter().map(|f| call_builder_method(f, cx));
-        let new_fn_doc = format!(
-            "Creates a new wrapper around an on-chain [`{contract_name}`](self) contract instance.\n\
-             \n\
-             See the [wrapper's documentation](`{name}`) for more details."
-        );
-        let struct_doc = format!(
-            "A [`{contract_name}`](self) instance.\n\
-             \n\
-             Contains type-safe methods for interacting with an on-chain instance of the\n\
-             [`{contract_name}`](self) contract located at a given `address`, using a given\n\
-             provider `P`.\n\
-             \n\
-             If the contract bytecode is available (see the [`sol!`](alloy_sol_types::sol!)\n\
-             documentation on how to provide it), the `deploy` and `deploy_builder` methods can\n\
-             be used to deploy a new instance of the contract.\n\
-             \n\
-             See the [module-level documentation](self) for all the available methods."
-        );
-        let (deploy_fn, deploy_method) = bytecode.is_some().then(|| {
-            let deploy_doc_str =
-                "Deploys this contract using the given `provider` and constructor arguments, if any.\n\
-                 \n\
-                 Returns a new instance of the contract, if the deployment was successful.\n\
-                 \n\
-                 For more fine-grained control over the deployment process, use [`deploy_builder`] instead.";
-            let deploy_doc = mk_doc(deploy_doc_str);
-
-            let deploy_builder_doc_str =
-                "Creates a `RawCallBuilder` for deploying this contract using the given `provider`\n\
-                 and constructor arguments, if any.\n\
-                 \n\
-                 This is a simple wrapper around creating a `RawCallBuilder` with the data set to\n\
-                 the bytecode concatenated with the constructor's ABI-encoded arguments.";
-            let deploy_builder_doc = mk_doc(deploy_builder_doc_str);
-
-            let (params, args) = constructor.and_then(|c| {
-                if c.parameters.is_empty() {
-                    return None;
-                }
-
-                let names1 = c.parameters.names().enumerate().map(anon_name);
-                let names2 = names1.clone();
-                let tys = c.parameters.types().map(|ty| {
-                    cx.expand_rust_type(ty)
-                });
-                Some((quote!(#(#names1: #tys),*), quote!(#(#names2,)*)))
-            }).unzip();
-            let deploy_builder_data = if matches!(constructor, Some(c) if !c.parameters.is_empty()) {
-                quote! {
-                    [
-                        &BYTECODE[..],
-                        &alloy_sol_types::SolConstructor::abi_encode(&constructorCall { #args })[..]
-                    ].concat().into()
-                }
-            } else {
-                quote! {
-                    ::core::clone::Clone::clone(&BYTECODE)
-                }
-            };
-
-            (
-                quote! {
-                    #deploy_doc
-                    #[inline]
-                    pub fn deploy<P: alloy_contract::private::Provider<N>, N: alloy_contract::private::Network>(__provider: P, #params)
-                        -> impl ::core::future::Future<Output = alloy_contract::Result<#name<P, N>>>
-                    {
-                        #name::<P, N>::deploy(__provider, #args)
-                    }
-
-                    #deploy_builder_doc
-                    #[inline]
-                    pub fn deploy_builder<P: alloy_contract::private::Provider<N>, N: alloy_contract::private::Network>(__provider: P, #params)
-                        -> alloy_contract::RawCallBuilder<P, N>
-                    {
-                        #name::<P, N>::deploy_builder(__provider, #args)
-                    }
-                },
-                quote! {
-                    #deploy_doc
-                    #[inline]
-                    pub async fn deploy(__provider: P, #params)
-                        -> alloy_contract::Result<#name<P, N>>
-                    {
-                        let call_builder = Self::deploy_builder(__provider, #args);
-                        let contract_address = call_builder.deploy().await?;
-                        Ok(Self::new(contract_address, call_builder.provider))
-                    }
-
-                    #deploy_builder_doc
-                    #[inline]
-                    pub fn deploy_builder(__provider: P, #params)
-                        -> alloy_contract::RawCallBuilder<P, N>
-                    {
-                        alloy_contract::RawCallBuilder::new_raw_deploy(__provider, #deploy_builder_data)
-                    }
-                },
-            )
-        }).unzip();
-
-        let filter_methods = events.iter().map(|&e| {
-            let event_name = cx.overloaded_name(e.into());
-            let name = format_ident!("{event_name}_filter");
-            let doc = format!(
-                "Creates a new event filter for the [`{event_name}`] event.",
-            );
-            quote! {
-                #[doc = #doc]
-                pub fn #name(&self) -> alloy_contract::Event<&P, #event_name, N> {
-                    self.event_filter::<#event_name>()
-                }
-            }
-        });
-
         let alloy_contract = &cx.crates.contract;
 
-        let generic_p_n = quote!(<P: alloy_contract::private::Provider<N>, N: alloy_contract::private::Network>);
+        // Build function info for codegen
+        let function_infos: Vec<_> = functions
+            .iter()
+            .map(|f| {
+                let func_name = cx.function_name(f);
+                let func_name_str = func_name.as_string();
 
-        // if new builtin functions are introduced: updated reserved check in `call_builder_method_function_name`
+                // Check for reserved names
+                let method_name = if is_reserved_method_name(&func_name_str) {
+                    format_ident!("{}_call", func_name_str)
+                } else {
+                    Ident::new(&func_name_str, func_name.span())
+                };
+
+                let call_name = cx.call_name(f);
+                let param_names: Vec<_> = f.parameters.names().enumerate().map(anon_name).collect();
+                let rust_types: Vec<_> =
+                    f.parameters.types().map(|ty| cx.expand_rust_type(ty)).collect();
+
+                // Determine layout
+                let layout = if f.parameters.is_empty() {
+                    CallLayout::Unit
+                } else if f.parameters.len() == 1 && f.parameters[0].name.is_none() {
+                    CallLayout::Tuple
+                } else {
+                    CallLayout::Named
+                };
+
+                ContractFunctionInfo {
+                    method_name,
+                    call_name: Ident::new(&call_name.to_string(), call_name.span()),
+                    param_names,
+                    rust_types,
+                    layout,
+                }
+            })
+            .collect();
+
+        // Build event info for codegen
+        let event_infos: Vec<_> = events
+            .iter()
+            .map(|&e| {
+                let event_name = cx.overloaded_name(e.into());
+                ContractEventInfo {
+                    event_name: Ident::new(&event_name.to_string(), event_name.span()),
+                }
+            })
+            .collect();
+
+        // Build constructor info for codegen
+        let constructor_info = constructor.and_then(|c| {
+            if c.parameters.is_empty() {
+                return None;
+            }
+            let param_names: Vec<_> = c.parameters.names().enumerate().map(anon_name).collect();
+            let rust_types: Vec<_> =
+                c.parameters.types().map(|ty| cx.expand_rust_type(ty)).collect();
+            Some(ConstructorInfo { param_names, rust_types })
+        });
+
+        let contract_name = Ident::new(&name.to_string(), name.span());
+        let codegen = ContractCodegen::new(
+            contract_name,
+            function_infos,
+            event_infos,
+            bytecode.is_some(),
+            constructor_info,
+        );
+
+        let instance_code = codegen.expand();
+
         quote! {
             use #alloy_contract as alloy_contract;
 
-            #[doc = #new_fn_doc]
-            #[inline]
-            pub const fn new #generic_p_n(
-                address: alloy_sol_types::private::Address,
-                __provider: P,
-            ) -> #name<P, N> {
-                #name::<P, N>::new(address, __provider)
-            }
-
-            #deploy_fn
-
-            #[doc = #struct_doc]
-            #[derive(Clone)]
-            pub struct #name<P, N = alloy_contract::private::Ethereum> {
-                address: alloy_sol_types::private::Address,
-                provider: P,
-                _network: ::core::marker::PhantomData<N>,
-            }
-
-            #[automatically_derived]
-            impl<P, N> ::core::fmt::Debug for #name<P, N> {
-                #[inline]
-                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                    f.debug_tuple(#name_s).field(&self.address).finish()
-                }
-            }
-
-            /// Instantiation and getters/setters.
-            impl #generic_p_n #name<P, N> {
-                #[doc = #new_fn_doc]
-                #[inline]
-                pub const fn new(address: alloy_sol_types::private::Address, __provider: P) -> Self {
-                    Self { address, provider: __provider, _network: ::core::marker::PhantomData }
-                }
-
-                #deploy_method
-
-                /// Returns a reference to the address.
-                #[inline]
-                pub const fn address(&self) -> &alloy_sol_types::private::Address {
-                    &self.address
-                }
-
-                /// Sets the address.
-                #[inline]
-                pub fn set_address(&mut self, address: alloy_sol_types::private::Address) {
-                    self.address = address;
-                }
-
-                /// Sets the address and returns `self`.
-                pub fn at(mut self, address: alloy_sol_types::private::Address) -> Self {
-                    self.set_address(address);
-                    self
-                }
-
-                /// Returns a reference to the provider.
-                #[inline]
-                pub const fn provider(&self) -> &P {
-                    &self.provider
-                }
-            }
-
-            impl<P: ::core::clone::Clone, N> #name<&P, N> {
-                /// Clones the provider and returns a new instance with the cloned provider.
-                #[inline]
-                pub fn with_cloned_provider(self) -> #name<P, N> {
-                    #name { address: self.address, provider: ::core::clone::Clone::clone(&self.provider), _network: ::core::marker::PhantomData }
-                }
-            }
-
-            /// Function calls.
-            impl #generic_p_n #name<P, N> {
-                /// Creates a new call builder using this contract instance's provider and address.
-                ///
-                /// Note that the call can be any function call, not just those defined in this
-                /// contract. Prefer using the other methods for building type-safe contract calls.
-                pub fn call_builder<C: alloy_sol_types::SolCall>(&self, call: &C)
-                    -> alloy_contract::SolCallBuilder<&P, C, N>
-                {
-                    alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
-                }
-
-                #(#methods)*
-            }
-
-            /// Event filters.
-            impl #generic_p_n #name<P, N> {
-                /// Creates a new event filter using this contract instance's provider and address.
-                ///
-                /// Note that the type can be any event, not just those defined in this contract.
-                /// Prefer using the other methods for building type-safe event filters.
-                pub fn event_filter<E: alloy_sol_types::SolEvent>(&self)
-                    -> alloy_contract::Event<&P, E, N>
-                {
-                    alloy_contract::Event::new_sol(&self.provider, &self.address)
-                }
-
-                #(#filter_methods)*
-            }
+            #instance_code
         }
     });
 
@@ -1033,49 +891,6 @@ fn generate_variant_methods((variant, ty): (&Ident, &Ident)) -> TokenStream {
                 _ => ::core::option::Option::None,
             }
         }
-    }
-}
-
-/// Generate's the call instance's call functions.
-///
-/// The are standalone functions and never used by other generated code.
-fn call_builder_method(f: &ItemFunction, cx: &ExpCtxt<'_>) -> TokenStream {
-    let name = call_builder_method_function_name(f, cx);
-    let call_name = cx.call_name(f);
-    let param_names1 = f.parameters.names().enumerate().map(anon_name);
-    let param_tys = f.parameters.types().map(|ty| cx.expand_rust_type(ty));
-    let doc = format!("Creates a new call builder for the [`{name}`] function.");
-
-    let call_struct = if f.parameters.is_empty() {
-        quote! { #call_name }
-    } else if f.parameters.len() == 1 && f.parameters[0].name.is_none() {
-        quote! { #call_name(_0) }
-    } else {
-        let call_fields = param_names1.clone();
-        quote! {
-            #call_name { #(#call_fields),* }
-        }
-    };
-    quote! {
-        #[doc = #doc]
-        pub fn #name(&self, #(#param_names1: #param_tys),*) -> alloy_contract::SolCallBuilder<&P, #call_name, N> {
-            self.call_builder(&#call_struct)
-        }
-    }
-}
-
-/// Returns the function name for the `fn <method> -> alloy_contract::SolCallBuilder` function.
-///
-/// If this conflicts with any of the builtin function names, a `_call` suffix is added.
-fn call_builder_method_function_name(f: &ItemFunction, cx: &ExpCtxt<'_>) -> SolIdent {
-    let call_name_ident = cx.function_name(f);
-    let name = call_name_ident.as_string();
-    match name.as_str() {
-        "new" | "deploy" | "deploy_builder" | "address" | "set_address" | "at" | "provider"
-        | "call_builder" | "event_filter" => {
-            SolIdent::new_spanned(&format!("{name}_call"), call_name_ident.span())
-        }
-        _ => call_name_ident,
     }
 }
 
