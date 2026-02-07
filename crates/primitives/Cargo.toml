@@ -141,7 +141,8 @@ nightly = [
     "rapidhash?/nightly",
     "hashbrown?/nightly",
     "hex/nightly",
-    "ruint/nightly",
+    # TODO: Re-enable on next ruint version (>1.17.2)
+    # "ruint/nightly",
     "rustc-hash/nightly",
 ]
 
