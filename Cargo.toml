@@ -113,4 +113,4 @@ sqlx-core = { version = "0.8"}
 [patch.crates-io]
 # Fix Miri CI: https://github.com/rkyv/rkyv/commit/aea82f04757ed6a3674642f9e7f22b168ec7f955
 rkyv = { git = "https://github.com/rkyv/rkyv", rev = "aea82f04757ed6a3674642f9e7f22b168ec7f955" }
-fixed-cache = { path = "../../danipopes/fixed-cache" }
+fixed-cache = { git = "https://github.com/DaniPopes/fixed-cache", rev = "cb8886f" }
