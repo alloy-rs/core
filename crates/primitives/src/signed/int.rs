@@ -1316,14 +1316,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "std")]
     fn division_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let err = std::panic::catch_unwind(|| {
-                    let _ = <$i_struct>::ONE / <$i_struct>::ZERO;
-                });
-                assert!(err.is_err());
+                assert_eq!(<$i_struct>::ONE.checked_div(<$i_struct>::ZERO), None);
             };
         }
 
@@ -1433,22 +1429,11 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "std")]
     fn div_euclid_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let err = std::panic::catch_unwind(|| {
-                    let _ = <$i_struct>::ONE.div_euclid(<$i_struct>::ZERO);
-                });
-                assert!(err.is_err());
-
-                let err = std::panic::catch_unwind(|| {
-                    assert_eq!(
-                        <$i_struct>::MIN.div_euclid(<$i_struct>::MINUS_ONE),
-                        <$i_struct>::MAX
-                    );
-                });
-                assert!(err.is_err());
+                assert_eq!(<$i_struct>::ONE.checked_div_euclid(<$i_struct>::ZERO), None);
+                assert_eq!(<$i_struct>::MIN.checked_div_euclid(<$i_struct>::MINUS_ONE), None);
             };
         }
 
@@ -1463,14 +1448,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "std")]
     fn div_euclid_overflow() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let err = std::panic::catch_unwind(|| {
-                    let _ = <$i_struct>::MIN.div_euclid(<$i_struct>::MINUS_ONE);
-                });
-                assert!(err.is_err());
+                assert_eq!(<$i_struct>::MIN.checked_div_euclid(<$i_struct>::MINUS_ONE), None);
             };
         }
         run_test!(I96, U96);
@@ -1481,14 +1462,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "std")]
     fn mod_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let err = std::panic::catch_unwind(|| {
-                    let _ = <$i_struct>::ONE % <$i_struct>::ZERO;
-                });
-                assert!(err.is_err());
+                assert_eq!(<$i_struct>::ONE.checked_rem(<$i_struct>::ZERO), None);
             };
         }
 
