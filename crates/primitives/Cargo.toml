@@ -144,6 +144,7 @@ nightly = [
     # TODO: Re-enable on next ruint version (>1.17.2)
     # "ruint/nightly",
     "rustc-hash/nightly",
+    "fixed-cache?/nightly",
 ]
 
 asm-keccak = ["dep:keccak-asm"]
