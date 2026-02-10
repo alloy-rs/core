@@ -482,6 +482,7 @@ mod tests {
 
     #[test]
     #[cfg(feature = "k256")]
+    #[cfg_attr(miri, ignore = "k256 is too slow under Miri")]
     fn can_recover_tx_sender_not_normalized() {
         let sig = Signature::from_str("48b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c8041b").unwrap();
         let hash = b256!("0x5eb4f5a33c621f32a8622d5f943b6b102994dfe4e5aebbefe69bb1b2aa0fc93e");
@@ -491,6 +492,7 @@ mod tests {
 
     #[test]
     #[cfg(feature = "k256")]
+    #[cfg_attr(miri, ignore = "k256 is too slow under Miri")]
     fn recover_web3_signature() {
         // test vector taken from:
         // https://web3js.readthedocs.io/en/v1.2.2/web3-eth-accounts.html#sign
