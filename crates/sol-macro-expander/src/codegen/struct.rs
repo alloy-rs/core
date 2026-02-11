@@ -44,6 +44,8 @@ impl StructCodegen {
         sol_types: Vec<TokenStream>,
         eip712: Eip712Options,
     ) -> Self {
+        debug_assert_eq!(rust_types.len(), sol_types.len());
+        debug_assert_eq!(rust_types.len(), field_names.len());
         Self { field_names, rust_types, sol_types, eip712 }
     }
 

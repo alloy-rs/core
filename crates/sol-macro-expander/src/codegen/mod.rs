@@ -67,6 +67,9 @@ pub fn gen_from_into_tuple(
     rust_types: &[TokenStream],
     layout: StructLayout,
 ) -> TokenStream {
+    debug_assert_eq!(sol_types.len(), rust_types.len());
+    debug_assert_eq!(sol_types.len(), field_names.len());
+
     let sol_tuple = quote_tuple_type(sol_types);
     let rust_tuple = quote_tuple_type(rust_types);
 
@@ -82,7 +85,7 @@ pub fn gen_from_into_tuple(
                 #[automatically_derived]
                 #[doc(hidden)]
                 impl ::core::convert::From<UnderlyingRustTuple<'_>> for #struct_name {
-                    fn from(tuple: UnderlyingRustTuple<'_>) -> Self { Self }
+                    fn from(_: UnderlyingRustTuple<'_>) -> Self { Self }
                 }
             }
         }
@@ -158,6 +161,9 @@ pub fn gen_tokenize(
     sol_types: &[TokenStream],
     is_tuple_struct: bool,
 ) -> TokenStream {
+    debug_assert_eq!(field_names.len(), sol_types.len());
+    debug_assert!(!is_tuple_struct || field_names.len() == 1,);
+
     if field_names.is_empty() {
         quote! { () }
     } else if is_tuple_struct {

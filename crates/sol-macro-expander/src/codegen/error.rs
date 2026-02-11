@@ -1,7 +1,6 @@
 //! SolError trait generation.
 
 use super::{StructLayout, gen_from_into_tuple, gen_tokenize, quote_byte_array};
-use crate::utils::calc_selector;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -26,6 +25,8 @@ impl ErrorCodegen {
         rust_types: Vec<TokenStream>,
         is_tuple_struct: bool,
     ) -> Self {
+        debug_assert_eq!(sol_types.len(), rust_types.len());
+        debug_assert_eq!(sol_types.len(), param_names.len());
         Self { param_names, sol_types, rust_types, is_tuple_struct }
     }
 
@@ -33,6 +34,18 @@ impl ErrorCodegen {
     ///
     /// NOTE: The generated code assumes `alloy_sol_types` is in scope.
     pub fn expand(self, name: &Ident, signature: &str) -> TokenStream {
+        self.expand_with_selector(name, signature, crate::utils::calc_selector(signature))
+    }
+
+    /// Generates the `SolError` trait implementation with a precomputed selector.
+    ///
+    /// NOTE: The generated code assumes `alloy_sol_types` is in scope.
+    pub fn expand_with_selector(
+        self,
+        name: &Ident,
+        signature: &str,
+        selector: [u8; 4],
+    ) -> TokenStream {
         let Self { param_names, sol_types, rust_types, is_tuple_struct } = self;
 
         let layout = match (param_names.is_empty(), is_tuple_struct) {
@@ -42,7 +55,7 @@ impl ErrorCodegen {
         };
         let tupl_impl = gen_from_into_tuple(name, &param_names, &sol_types, &rust_types, layout);
         let tokenize_impl = gen_tokenize(&param_names, &sol_types, is_tuple_struct);
-        let sol_error_impl = gen_sol_error_trait(name, signature, &tokenize_impl);
+        let sol_error_impl = gen_sol_error_trait(name, signature, selector, &tokenize_impl);
 
         quote! {
             #tupl_impl
@@ -53,8 +66,13 @@ impl ErrorCodegen {
 }
 
 /// Generates the SolError trait implementation.
-fn gen_sol_error_trait(name: &Ident, signature: &str, tokenize_impl: &TokenStream) -> TokenStream {
-    let selector = quote_byte_array(&calc_selector(signature));
+fn gen_sol_error_trait(
+    name: &Ident,
+    signature: &str,
+    selector: [u8; 4],
+    tokenize_impl: &TokenStream,
+) -> TokenStream {
+    let selector = quote_byte_array(&selector);
 
     quote! {
         #[automatically_derived]

@@ -79,18 +79,7 @@ impl CallCodegen {
     fn decode_returns(&self) -> TokenStream {
         let decode_seq =
             quote!(<Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(data));
-        match &self.return_info {
-            ReturnInfo::Empty { .. } => quote! { #decode_seq.map(Into::into) },
-            ReturnInfo::Single { field_name, return_name, .. } => {
-                quote! {
-                    #decode_seq.map(|r| {
-                        let r: #return_name = r.into();
-                        r.#field_name
-                    })
-                }
-            }
-            ReturnInfo::Multiple { .. } => quote! { #decode_seq.map(Into::into) },
-        }
+        self.decode_returns_with(decode_seq)
     }
 
     /// Returns the decode_returns_validate implementation.
@@ -98,8 +87,15 @@ impl CallCodegen {
         let decode_seq = quote!(
             <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
         );
+        self.decode_returns_with(decode_seq)
+    }
+
+    /// Shared decode logic for both `decode_returns` and `decode_returns_validate`.
+    fn decode_returns_with(&self, decode_seq: TokenStream) -> TokenStream {
         match &self.return_info {
-            ReturnInfo::Empty { .. } => quote! { #decode_seq.map(Into::into) },
+            ReturnInfo::Empty { .. } | ReturnInfo::Multiple { .. } => {
+                quote! { #decode_seq.map(Into::into) }
+            }
             ReturnInfo::Single { field_name, return_name, .. } => {
                 quote! {
                     #decode_seq.map(|r| {
@@ -108,7 +104,6 @@ impl CallCodegen {
                     })
                 }
             }
-            ReturnInfo::Multiple { .. } => quote! { #decode_seq.map(Into::into) },
         }
     }
 
@@ -116,6 +111,18 @@ impl CallCodegen {
     ///
     /// NOTE: The generated code assumes `alloy_sol_types` is in scope.
     pub fn expand(self, name: &Ident, signature: &str) -> TokenStream {
+        self.expand_with_selector(name, signature, crate::utils::calc_selector(signature))
+    }
+
+    /// Generates the `SolCall` trait implementation with a precomputed selector.
+    ///
+    /// NOTE: The generated code assumes `alloy_sol_types` is in scope.
+    pub fn expand_with_selector(
+        self,
+        name: &Ident,
+        signature: &str,
+        selector: [u8; 4],
+    ) -> TokenStream {
         let call_tuple = &self.call_tuple;
         let return_tuple = &self.return_tuple;
         let tokenize_impl = &self.tokenize_impl;
@@ -126,7 +133,6 @@ impl CallCodegen {
         let decode_returns = self.decode_returns();
         let decode_returns_validate = self.decode_returns_validate();
 
-        let selector = crate::utils::calc_selector(signature);
         let selector_tokens = quote_byte_array(&selector);
 
         quote! {

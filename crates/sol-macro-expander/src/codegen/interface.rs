@@ -136,9 +136,6 @@ impl InterfaceCodegen {
                 /// All the selectors of this enum, sorted for binary search.
                 pub const SELECTORS: &'static [[u8; 4]] = &[#(#sorted_selectors),*];
 
-                /// The variant names in the same order as SELECTORS.
-                pub const VARIANT_NAMES: &'static [&'static str] = &[#(::core::stringify!(#sorted_variants)),*];
-
                 /// The signatures in the same order as SELECTORS.
                 pub const SIGNATURES: &'static [&'static str] = &[#(#sorted_signatures),*];
 
@@ -151,13 +148,11 @@ impl InterfaceCodegen {
                     }
                 }
 
-                /// Returns the enum variant name for the given selector, if known.
+                /// Returns the Solidity name for the given selector, if known.
                 #[inline]
                 pub fn name_by_selector(selector: [u8; 4]) -> ::core::option::Option<&'static str> {
-                    match Self::SELECTORS.binary_search(&selector) {
-                        ::core::result::Result::Ok(idx) => ::core::option::Option::Some(Self::VARIANT_NAMES[idx]),
-                        ::core::result::Result::Err(_) => ::core::option::Option::None,
-                    }
+                    let sig = Self::signature_by_selector(selector)?;
+                    sig.split_once('(').map(|(name, _)| name)
                 }
             }
         };

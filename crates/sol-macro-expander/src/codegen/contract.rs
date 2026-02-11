@@ -276,7 +276,8 @@ fn gen_call_builder_method(f: &ContractFunctionInfo) -> TokenStream {
             quote! { #call_name }
         }
         CallLayout::Tuple => {
-            quote! { #call_name(_0) }
+            let arg = &param_names[0];
+            quote! { #call_name(#arg) }
         }
         CallLayout::Named => {
             quote! { #call_name { #(#param_names),* } }
