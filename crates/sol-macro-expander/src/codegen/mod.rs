@@ -1,4 +1,10 @@
 //! Context-free code generation utilities.
+//!
+//! # ⚠️ STABILITY
+//!
+//! This module is entirely unstable and subject to breaking changes without notice.
+//! It is exposed for use by other alloy crates and proc-macro authors, but no semver
+//! guarantees are made for any items within this module.
 
 mod call;
 mod contract;
