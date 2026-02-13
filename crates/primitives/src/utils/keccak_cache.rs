@@ -11,8 +11,14 @@ pub(super) const MAX_INPUT_LEN: usize =
     128 - size_of::<B256>() - size_of::<u8>() - size_of::<usize>();
 
 const COUNT: usize = 1 << 17; // ~131k entries * 128 bytes = 16MiB
-static CACHE: fixed_cache::Cache<Key, B256, BuildHasher> =
+static CACHE: fixed_cache::Cache<Key, B256, BuildHasher, CacheConfig> =
     fixed_cache::static_cache!(Key, B256, COUNT, BuildHasher::new());
+
+struct CacheConfig {}
+impl fixed_cache::CacheConfig for CacheConfig {
+    const STATS: bool = false;
+    const EPOCHS: bool = false;
+}
 
 pub(super) fn compute(input: &[u8], imp: impl FnOnce(&[u8]) -> B256) -> B256 {
     if unlikely(input.is_empty() | (input.len() > MAX_INPUT_LEN)) {
