@@ -65,6 +65,7 @@ alloy-rlp = { workspace = true, optional = true }
 
 # serde
 serde = { workspace = true, optional = true, features = ["derive"] }
+serde_json = { workspace = true, optional = true }
 
 # schemars
 schemars = { workspace = true, optional = true, default-features = false }
@@ -134,6 +135,7 @@ std = [
     "rand?/thread_rng",
     "rustc-hash/std",
     "serde?/std",
+    "serde_json?/std",
     "sha3/std",
 ]
 nightly = [
@@ -175,6 +177,7 @@ rkyv = ["dep:rkyv", "ruint/rkyv"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = [
     "dep:serde",
+    "dep:serde_json",
     "bytes/serde",
     "hex/serde",
     "ruint/serde",
