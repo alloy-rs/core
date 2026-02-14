@@ -5,7 +5,7 @@ use crate::utils::ExprArray;
 use alloy_sol_macro_input::{ContainsSolAttrs, docs_str, mk_doc};
 use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent, Spanned};
 use heck::ToSnakeCase;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{Attribute, Result, parse_quote};
 
@@ -1098,7 +1098,7 @@ fn generate_error_builders(
     let enum_name = format_ident!("{contract_name}Errors");
     let methods = errors.iter().map(|error| {
         let variant_name = &error.name;
-        let fn_name = format_ident!("{}", snakify(&variant_name.to_string()));
+        let fn_name = snakify_ident(variant_name);
         let doc = format!("Creates a `{variant_name}` error.");
 
         match error.parameters.len() {
@@ -1132,26 +1132,11 @@ fn generate_error_builders(
                     .enumerate()
                     .map(|(i, p)| {
                         let sol_name = super::anon_name((i, p.name.as_ref()));
-                        let param_name = format_ident!("{}", snakify(&sol_name.to_string()));
-                        let ty = cx.expand_rust_type(&p.ty);
-                        (sol_name, param_name, ty)
+                        let param_name = snakify_ident(&sol_name);
+                        (sol_name, param_name, cx.expand_rust_type(&p.ty))
                     })
                     .collect();
-
-                let fn_params = params.iter().map(|(_, param_name, ty)| quote!(#param_name: #ty));
-
-                let field_inits =
-                    params.iter().map(|(sol_name, param_name, _)| quote!(#sol_name: #param_name));
-
-                quote! {
-                    #[doc = #doc]
-                    #[inline]
-                    pub fn #fn_name(#(#fn_params),*) -> Self {
-                        Self::#variant_name(#variant_name {
-                            #(#field_inits),*
-                        })
-                    }
-                }
+                builder_method(&fn_name, &doc, &variant_name, &params)
             }
         }
     });
@@ -1173,7 +1158,7 @@ fn generate_event_builders(
     let enum_name = format_ident!("{contract_name}Events");
     let methods = events.iter().map(|event| {
         let variant_name = cx.overloaded_name((*event).into());
-        let fn_name = format_ident!("{}", snakify(&variant_name.to_string()));
+        let fn_name = snakify_ident(&variant_name);
         let doc = format!("Creates a `{variant_name}` event.");
 
         if event.parameters.is_empty() {
@@ -1191,34 +1176,11 @@ fn generate_event_builders(
                 .enumerate()
                 .map(|(i, p)| {
                     let sol_name = super::anon_name((i, p.name.as_ref()));
-                    let param_name = format_ident!("{}", snakify(&sol_name.to_string()));
-                    let ty = if p.is_indexed() && cx.indexed_as_hash(p) {
-                        let bytes32 = ast::Type::FixedBytes(
-                            p.ty.span(),
-                            core::num::NonZeroU16::new(32).unwrap(),
-                        );
-                        cx.expand_rust_type(&bytes32)
-                    } else {
-                        cx.expand_rust_type(&p.ty)
-                    };
-                    (sol_name, param_name, ty)
+                    let param_name = snakify_ident(&sol_name);
+                    (sol_name, param_name, cx.expand_event_param_type(p))
                 })
                 .collect();
-
-            let fn_params = params.iter().map(|(_, param_name, ty)| quote!(#param_name: #ty));
-
-            let field_inits =
-                params.iter().map(|(sol_name, param_name, _)| quote!(#sol_name: #param_name));
-
-            quote! {
-                #[doc = #doc]
-                #[inline]
-                pub fn #fn_name(#(#fn_params),*) -> Self {
-                    Self::#variant_name(#variant_name {
-                        #(#field_inits),*
-                    })
-                }
-            }
+            builder_method(&fn_name, &doc, &variant_name, &params)
         }
     });
 
@@ -1228,6 +1190,33 @@ fn generate_event_builders(
             #(#methods)*
         }
     }
+}
+
+/// Emits a single named-field builder method.
+fn builder_method(
+    fn_name: &Ident,
+    doc: &str,
+    variant_name: &SolIdent,
+    params: &[(Ident, Ident, TokenStream)],
+) -> TokenStream {
+    let fn_params = params.iter().map(|(_, param_name, ty)| quote!(#param_name: #ty));
+    let field_inits = params.iter().map(|(sol_name, param_name, _)| quote!(#sol_name: #param_name));
+    quote! {
+        #[doc = #doc]
+        #[inline]
+        pub fn #fn_name(#(#fn_params),*) -> Self {
+            Self::#variant_name(#variant_name {
+                #(#field_inits),*
+            })
+        }
+    }
+}
+
+/// Converts a name to snake_case, falling back to a raw identifier if the
+/// result is a Rust keyword.
+fn snakify_ident(name: &impl ToString) -> Ident {
+    let s = snakify(&name.to_string());
+    syn::parse_str::<Ident>(&s).unwrap_or_else(|_| Ident::new_raw(&s, Span::call_site()))
 }
 
 /// `heck` doesn't treat numbers as new words, and discards leading underscores.
