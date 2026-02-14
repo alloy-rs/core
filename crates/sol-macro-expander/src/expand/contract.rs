@@ -170,7 +170,12 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let doc_str = format!("Container for all the [`{name}`](self) custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         attrs.push(parse_quote!(#[derive(Clone)]));
-        enum_expander.expand(ToExpand::Errors(&errors), attrs)
+        let enum_tokens = enum_expander.expand(ToExpand::Errors(&errors), attrs);
+        let builders = generate_error_builders(name, &errors, cx);
+        quote! {
+            #enum_tokens
+            #builders
+        }
     });
 
     let events_enum = (!events.is_empty()).then(|| {
@@ -178,7 +183,12 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let doc_str = format!("Container for all the [`{name}`](self) events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         attrs.push(parse_quote!(#[derive(Clone)]));
-        enum_expander.expand(ToExpand::Events(&events), attrs)
+        let enum_tokens = enum_expander.expand(ToExpand::Events(&events), attrs);
+        let builders = generate_event_builders(name, &events, cx);
+        quote! {
+            #enum_tokens
+            #builders
+        }
     });
 
     // Do not propagate contract-level derives to the functions enum.
@@ -1076,6 +1086,147 @@ fn call_builder_method_function_name(f: &ItemFunction, cx: &ExpCtxt<'_>) -> SolI
             SolIdent::new_spanned(&format!("{name}_call"), call_name_ident.span())
         }
         _ => call_name_ident,
+    }
+}
+
+/// Generates snake_case constructor helpers on the `{Interface}Errors` enum.
+fn generate_error_builders(
+    contract_name: &SolIdent,
+    errors: &[&ItemError],
+    cx: &ExpCtxt<'_>,
+) -> TokenStream {
+    let enum_name = format_ident!("{contract_name}Errors");
+    let methods = errors.iter().map(|error| {
+        let variant_name = &error.name;
+        let fn_name = format_ident!("{}", snakify(&variant_name.to_string()));
+        let doc = format!("Creates a `{variant_name}` error.");
+
+        match error.parameters.len() {
+            // Unit struct: `error Foo();`
+            0 => {
+                quote! {
+                    #[doc = #doc]
+                    #[inline]
+                    pub fn #fn_name() -> Self {
+                        Self::#variant_name(#variant_name)
+                    }
+                }
+            }
+            // Single unnamed param: `error Foo(uint256);` → tuple struct
+            1 if error.parameters[0].name.is_none() => {
+                let ty = cx.expand_rust_type(&error.parameters[0].ty);
+                let param_name = format_ident!("_0");
+                quote! {
+                    #[doc = #doc]
+                    #[inline]
+                    pub fn #fn_name(#param_name: #ty) -> Self {
+                        Self::#variant_name(#variant_name(#param_name))
+                    }
+                }
+            }
+            // Named fields: `error Foo(uint256 bar, address baz);`
+            _ => {
+                let params: Vec<_> = error
+                    .parameters
+                    .iter()
+                    .enumerate()
+                    .map(|(i, p)| {
+                        let sol_name = super::anon_name((i, p.name.as_ref()));
+                        let param_name = format_ident!("{}", snakify(&sol_name.to_string()));
+                        let ty = cx.expand_rust_type(&p.ty);
+                        (sol_name, param_name, ty)
+                    })
+                    .collect();
+
+                let fn_params = params.iter().map(|(_, param_name, ty)| quote!(#param_name: #ty));
+
+                let field_inits =
+                    params.iter().map(|(sol_name, param_name, _)| quote!(#sol_name: #param_name));
+
+                quote! {
+                    #[doc = #doc]
+                    #[inline]
+                    pub fn #fn_name(#(#fn_params),*) -> Self {
+                        Self::#variant_name(#variant_name {
+                            #(#field_inits),*
+                        })
+                    }
+                }
+            }
+        }
+    });
+
+    quote! {
+        #[automatically_derived]
+        impl #enum_name {
+            #(#methods)*
+        }
+    }
+}
+
+/// Generates snake_case constructor helpers on the `{Interface}Events` enum.
+fn generate_event_builders(
+    contract_name: &SolIdent,
+    events: &[&ItemEvent],
+    cx: &ExpCtxt<'_>,
+) -> TokenStream {
+    let enum_name = format_ident!("{contract_name}Events");
+    let methods = events.iter().map(|event| {
+        let variant_name = cx.overloaded_name((*event).into());
+        let fn_name = format_ident!("{}", snakify(&variant_name.to_string()));
+        let doc = format!("Creates a `{variant_name}` event.");
+
+        if event.parameters.is_empty() {
+            quote! {
+                #[doc = #doc]
+                #[inline]
+                pub fn #fn_name() -> Self {
+                    Self::#variant_name(#variant_name)
+                }
+            }
+        } else {
+            let params: Vec<_> = event
+                .parameters
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    let sol_name = super::anon_name((i, p.name.as_ref()));
+                    let param_name = format_ident!("{}", snakify(&sol_name.to_string()));
+                    let ty = if p.is_indexed() && cx.indexed_as_hash(p) {
+                        let bytes32 = ast::Type::FixedBytes(
+                            p.ty.span(),
+                            core::num::NonZeroU16::new(32).unwrap(),
+                        );
+                        cx.expand_rust_type(&bytes32)
+                    } else {
+                        cx.expand_rust_type(&p.ty)
+                    };
+                    (sol_name, param_name, ty)
+                })
+                .collect();
+
+            let fn_params = params.iter().map(|(_, param_name, ty)| quote!(#param_name: #ty));
+
+            let field_inits =
+                params.iter().map(|(sol_name, param_name, _)| quote!(#sol_name: #param_name));
+
+            quote! {
+                #[doc = #doc]
+                #[inline]
+                pub fn #fn_name(#(#fn_params),*) -> Self {
+                    Self::#variant_name(#variant_name {
+                        #(#field_inits),*
+                    })
+                }
+            }
+        }
+    });
+
+    quote! {
+        #[automatically_derived]
+        impl #enum_name {
+            #(#methods)*
+        }
     }
 }
 
