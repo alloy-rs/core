@@ -16,10 +16,14 @@ pub mod quantity;
 pub mod storage;
 pub use storage::JsonStorageKey;
 
+#[cfg(feature = "serde-json")]
 pub mod ttd;
+#[cfg(feature = "serde-json")]
 pub use ttd::*;
 
+#[cfg(feature = "serde-json")]
 mod other;
+#[cfg(feature = "serde-json")]
 pub use other::{OtherFields, WithOtherFields};
 
 /// Serialize a byte vec as a hex string _without_ the "0x" prefix.

@@ -177,7 +177,6 @@ rkyv = ["dep:rkyv", "ruint/rkyv"]
 rlp = ["dep:alloy-rlp", "ruint/alloy-rlp"]
 serde = [
     "dep:serde",
-    "dep:serde_json",
     "bytes/serde",
     "hex/serde",
     "ruint/serde",
@@ -185,6 +184,7 @@ serde = [
     "indexmap?/serde",
     "rand?/serde",
 ]
+serde-json = ["serde", "dep:serde_json"]
 schemars = ["dep:schemars"]
 borsh = ["dep:borsh", "ruint/borsh"]
 
