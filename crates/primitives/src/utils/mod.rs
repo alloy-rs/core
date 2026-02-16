@@ -19,11 +19,6 @@ mod hint;
 #[cfg(feature = "keccak-cache")]
 mod keccak_cache;
 
-// NOT PUBLIC API.
-#[doc(hidden)]
-#[cfg(all(feature = "keccak-cache", feature = "std"))]
-pub use keccak_cache::stats::format as format_keccak_cache_stats;
-
 /// The prefix used for hashing messages according to EIP-191.
 pub const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
 
@@ -151,7 +146,7 @@ pub fn eip191_message<T: AsRef<[u8]>>(message: T) -> Vec<u8> {
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
     #[cfg(feature = "keccak-cache-global")]
-    return keccak_cache::compute(bytes.as_ref());
+    return keccak_cache::compute(bytes.as_ref(), keccak256_impl);
     #[cfg(not(feature = "keccak-cache-global"))]
     return keccak256_impl(bytes.as_ref());
 }
@@ -164,7 +159,7 @@ pub fn keccak256<T: AsRef<[u8]>>(bytes: T) -> B256 {
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 pub fn keccak256_cached<T: AsRef<[u8]>>(bytes: T) -> B256 {
     #[cfg(feature = "keccak-cache")]
-    return keccak_cache::compute(bytes.as_ref());
+    return keccak_cache::compute(bytes.as_ref(), keccak256_impl);
     #[cfg(not(feature = "keccak-cache"))]
     return keccak256_impl(bytes.as_ref());
 }
@@ -181,6 +176,7 @@ pub fn keccak256_uncached<T: AsRef<[u8]>>(bytes: T) -> B256 {
     keccak256_impl(bytes.as_ref())
 }
 
+#[allow(unused)]
 fn keccak256_impl(bytes: &[u8]) -> B256 {
     let mut output = MaybeUninit::<B256>::uninit();
 
@@ -208,6 +204,8 @@ fn keccak256_impl(bytes: &[u8]) -> B256 {
 
             // SAFETY: The output is 32-bytes, and the input comes from a slice.
             unsafe { native_keccak256(bytes.as_ptr(), bytes.len(), output.as_mut_ptr().cast::<u8>()) };
+        } else if #[cfg(all(feature = "asm-keccak", not(miri)))] {
+            return B256::new(keccak_asm::Keccak256::digest(bytes).into());
         } else {
             let mut hasher = Keccak256::new();
             hasher.update(bytes);
@@ -226,11 +224,7 @@ mod keccak256_state {
             pub(super) use keccak_asm::Digest;
 
             pub(super) type State = keccak_asm::Keccak256;
-        } else if #[cfg(feature = "sha3-keccak")] {
-            pub(super) use sha3::Digest;
-
-            pub(super) type State = sha3::Keccak256;
-        } else {
+        } else if #[cfg(feature = "tiny-keccak")] {
             pub(super) use tiny_keccak::Hasher as Digest;
 
             /// Wraps `tiny_keccak::Keccak` to implement `Digest`-like API.
@@ -253,6 +247,10 @@ mod keccak256_state {
                     self.0.update(bytes);
                 }
             }
+        } else {
+            pub(super) use sha3::Digest;
+
+            pub(super) type State = sha3::Keccak256;
         }
     }
 }
@@ -262,7 +260,7 @@ use keccak256_state::Digest;
 /// Simple [`Keccak-256`] hasher.
 ///
 /// Note that the "native-keccak" feature is not supported for this struct, and will default to the
-/// [`tiny_keccak`] implementation.
+/// [`sha3`] implementation.
 ///
 /// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
 #[derive(Clone)]

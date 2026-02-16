@@ -5,6 +5,97 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.6](https://github.com/alloy-rs/core/releases/tag/v1.5.6) - 2026-02-12
+
+### Dependencies
+
+- [deps] Bump fixed-cache ([#1073](https://github.com/alloy-rs/core/issues/1073))
+
+### Miscellaneous Tasks
+
+- Fix changelog
+
+## [1.5.5](https://github.com/alloy-rs/core/releases/tag/v1.5.5) - 2026-02-11
+
+### Dependencies
+
+- [deps] Bump breakings ([#1069](https://github.com/alloy-rs/core/issues/1069))
+
+### Features
+
+- [primitives] Add *flatten* extensions ([#1070](https://github.com/alloy-rs/core/issues/1070))
+
+### Miscellaneous Tasks
+
+- Release 1.5.5
+- Enable alloy-rlp MSRV features ([#1068](https://github.com/alloy-rs/core/issues/1068))
+
+### Testing
+
+- Speed up Miri tests ([#1072](https://github.com/alloy-rs/core/issues/1072))
+- Use checked methods in Signed tests for cranelift compat ([#1071](https://github.com/alloy-rs/core/issues/1071))
+
+## [1.5.4](https://github.com/alloy-rs/core/releases/tag/v1.5.4) - 2026-01-28
+
+### Miscellaneous Tasks
+
+- Release 1.5.4
+- [sol-macro] Use sha3 ([#1064](https://github.com/alloy-rs/core/issues/1064))
+
+### Other
+
+- Fix rkyv miri breakage ([#1066](https://github.com/alloy-rs/core/issues/1066))
+
+### Performance
+
+- [primitives] Use keccak_asm::Keccak256::digest ([#1067](https://github.com/alloy-rs/core/issues/1067))
+-  perf(primitives): remove unnecessary keccak cache length hash computation ([#1065](https://github.com/alloy-rs/core/issues/1065))
+
+## [1.5.3](https://github.com/alloy-rs/core/releases/tag/v1.5.3) - 2026-01-27
+
+### Dependencies
+
+- [deps] Run cargo shear ([#1055](https://github.com/alloy-rs/core/issues/1055))
+
+### Features
+
+- [primitives] FixedBytes: schemars::JsonSchema ([#1059](https://github.com/alloy-rs/core/issues/1059))
+
+### Miscellaneous Tasks
+
+- Release 1.5.3
+- Allow bincode advisory in deny.toml ([#1060](https://github.com/alloy-rs/core/issues/1060))
+- [primitives] Switch default keccak to sha3 ([#1057](https://github.com/alloy-rs/core/issues/1057))
+
+### Other
+
+- Update to tempoxyz ([#1062](https://github.com/alloy-rs/core/issues/1062))
+
+### Performance
+
+- [primitives] Always enable 'sha3/asm' feature ([#1058](https://github.com/alloy-rs/core/issues/1058))
+
+## [1.5.2](https://github.com/alloy-rs/core/releases/tag/v1.5.2) - 2025-12-22
+
+### Miscellaneous Tasks
+
+- Release 1.5.2
+
+### Performance
+
+- [primitives] Always use FxHash for Fb* ([#1054](https://github.com/alloy-rs/core/issues/1054))
+
+## [1.5.1](https://github.com/alloy-rs/core/releases/tag/v1.5.1) - 2025-12-18
+
+### Features
+
+- Extract cache to a separate crate ([#1053](https://github.com/alloy-rs/core/issues/1053))
+- [primitives] Add U256Map ([#1052](https://github.com/alloy-rs/core/issues/1052))
+
+### Miscellaneous Tasks
+
+- Release 1.5.1
+
 ## [1.5.0](https://github.com/alloy-rs/core/releases/tag/v1.5.0) - 2025-12-16
 
 ### Bug Fixes
@@ -26,6 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 1.5.0
 - Rm all deprecations ([#1048](https://github.com/alloy-rs/core/issues/1048))
 - [doc] Complete alloy-dyn-abi readme ([#1044](https://github.com/alloy-rs/core/issues/1044))
 - Clippy ([#1037](https://github.com/alloy-rs/core/issues/1037))
@@ -229,40 +321,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
 
-### Features
-
-- [primitives] Supporting diesel @ 2.2 ([#915](https://github.com/alloy-rs/core/issues/915))
-- 1.0-rc.1
-- Bump ruint, adjust rand feature
-
-### Miscellaneous Tasks
-
-- Release 1.0.0
-- Release 1.0.0-rc.1
-- Release 0.8.25
-
-### Other
-
-- Merge branch 'main' into v1.0-rc
-
-### Testing
-
-- Missing import
-- [dyn-abi] Remove dev-dependency on self
-
-## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
-
-### Features
-
-- [sol-macro] Improve call return encoding ([#909](https://github.com/alloy-rs/core/issues/909))
-
-## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
-
 ### Bug Fixes
 
 - [`sol-expander`] Rename from/into + impl From ([#905](https://github.com/alloy-rs/core/issues/905))
 - [`sol!`] Pass correct call_struct to call_builder in expansion ([#901](https://github.com/alloy-rs/core/issues/901))
 - [sol-macro] Rm fake transport from contract expansion ([#865](https://github.com/alloy-rs/core/issues/865))
+- [primitives] Remove undefined behavior in FixedBytes ([#919](https://github.com/alloy-rs/core/issues/919))
+- Do not rely on bytes dependency in `wrap_fixed_bytes!` ([#918](https://github.com/alloy-rs/core/issues/918))
 
 ### Dependencies
 
@@ -270,33 +335,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
+- [primitives] Supporting diesel @ 2.2 ([#915](https://github.com/alloy-rs/core/issues/915))
+- 1.0-rc.1
+- Bump ruint, adjust rand feature
+- [sol-macro] Improve call return encoding ([#909](https://github.com/alloy-rs/core/issues/909))
 - [primitives] Remove `From<String> for Bytes` ([#907](https://github.com/alloy-rs/core/issues/907))
 - [`sol!`] Gen unit/tuple structs for errors, calls, events with 0/1 param ([#883](https://github.com/alloy-rs/core/issues/883))
 - [sol-macro] Function calls should directly yield result  ([#855](https://github.com/alloy-rs/core/issues/855))
 - [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
-
-### Miscellaneous Tasks
-
-- Remove deprecated `Signature` ([#899](https://github.com/alloy-rs/core/issues/899))
-
-### Other
-
-- Merge branch 'main' into v1.0-rc
-
-## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
-
-### Bug Fixes
-
-- [primitives] Remove undefined behavior in FixedBytes ([#919](https://github.com/alloy-rs/core/issues/919))
-- Do not rely on bytes dependency in `wrap_fixed_bytes!` ([#918](https://github.com/alloy-rs/core/issues/918))
-
-### Features
-
 - Add inner mut ([#921](https://github.com/alloy-rs/core/issues/921))
 
 ### Miscellaneous Tasks
 
+- Release 1.0.0
+- Release 1.0.0-rc.1
+- Release 0.8.25
+- Remove deprecated `Signature` ([#899](https://github.com/alloy-rs/core/issues/899))
 - Add hash_ref function to sealed.rs ([#920](https://github.com/alloy-rs/core/issues/920))
+
+### Other
+
+- Merge branch 'main' into v1.0-rc
+- Merge branch 'main' into v1.0-rc
+
+### Testing
+
+- Missing import
+- [dyn-abi] Remove dev-dependency on self
 
 ## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
 

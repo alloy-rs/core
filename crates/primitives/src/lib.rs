@@ -15,8 +15,9 @@
 extern crate alloc;
 
 use paste as _;
-#[cfg(feature = "sha3-keccak")]
+use rustc_hash as _;
 use sha3 as _;
+#[cfg(feature = "tiny-keccak")]
 use tiny_keccak as _;
 
 #[cfg(feature = "postgres")]
@@ -40,7 +41,8 @@ pub use aliases::{
 mod bits;
 pub use bits::{
     Address, AddressChecksumBuffer, AddressError, BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS,
-    BLOOM_SIZE_BYTES, Bloom, BloomInput, FixedBytes, Function,
+    BLOOM_SIZE_BYTES, Bloom, BloomInput, FixedBytes, FixedBytesSliceExt, FixedBytesVecExt,
+    Function,
 };
 #[cfg(feature = "rkyv")]
 pub use bits::{
@@ -92,7 +94,7 @@ pub use ::hex::serde as serde_hex;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
-    pub use alloc::vec::Vec;
+    pub use alloc::{borrow::Cow, vec::Vec};
     pub use core::{
         self,
         borrow::{Borrow, BorrowMut},
@@ -127,4 +129,7 @@ pub mod private {
 
     #[cfg(feature = "sqlx")]
     pub use sqlx_core;
+
+    #[cfg(feature = "schemars")]
+    pub use schemars;
 }

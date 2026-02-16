@@ -8,9 +8,7 @@
 //!   enabled.
 //! - The previously-listed hash map types prefixed with `Fb`. These are type aliases with
 //!   [`FixedBytes<N>`][fb] as the key, and [`FbBuildHasher`] as the hasher builder. This hasher is
-//!   optimized for hashing fixed-size byte arrays, and wraps around the default hasher builder. It
-//!   performs best when the hasher is `fxhash`, which is enabled by default with the "map-fxhash"
-//!   feature.
+//!   optimized for hashing fixed-size byte arrays.
 //! - The previously-listed hash map types prefixed with [`Selector`], [`Address`], and [`B256`].
 //!   These use [`FbBuildHasher`] with the respective fixed-size byte array as the key. See the
 //!   previous point for more information.
