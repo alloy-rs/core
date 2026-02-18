@@ -3,7 +3,7 @@ members = ["crates/*", "tests/*"]
 resolver = "2"
 
 [workspace.package]
-version = "1.5.6"
+version = "1.5.7"
 edition = "2024"
 rust-version = "1.85"
 authors = ["Alloy Contributors"]
@@ -35,16 +35,16 @@ all = "warn"
 
 [workspace.dependencies]
 # workspace crates
-alloy-core = { version = "1.5.6", path = "crates/core", default-features = false }
-alloy-dyn-abi = { version = "1.5.6", path = "crates/dyn-abi", default-features = false }
-alloy-json-abi = { version = "1.5.6", path = "crates/json-abi", default-features = false }
-alloy-primitives = { version = "1.5.6", path = "crates/primitives", default-features = false }
-alloy-sol-macro = { version = "1.5.6", path = "crates/sol-macro", default-features = false }
-alloy-sol-macro-input = { version = "1.5.6", path = "crates/sol-macro-input", default-features = false }
-alloy-sol-macro-expander = { version = "1.5.6", path = "crates/sol-macro-expander", default-features = false }
-alloy-sol-type-parser = { version = "1.5.6", path = "crates/sol-type-parser", default-features = false }
-alloy-sol-types = { version = "1.5.6", path = "crates/sol-types", default-features = false }
-syn-solidity = { version = "1.5.6", path = "crates/syn-solidity", default-features = false }
+alloy-core = { version = "1.5.7", path = "crates/core", default-features = false }
+alloy-dyn-abi = { version = "1.5.7", path = "crates/dyn-abi", default-features = false }
+alloy-json-abi = { version = "1.5.7", path = "crates/json-abi", default-features = false }
+alloy-primitives = { version = "1.5.7", path = "crates/primitives", default-features = false }
+alloy-sol-macro = { version = "1.5.7", path = "crates/sol-macro", default-features = false }
+alloy-sol-macro-input = { version = "1.5.7", path = "crates/sol-macro-input", default-features = false }
+alloy-sol-macro-expander = { version = "1.5.7", path = "crates/sol-macro-expander", default-features = false }
+alloy-sol-type-parser = { version = "1.5.7", path = "crates/sol-type-parser", default-features = false }
+alloy-sol-types = { version = "1.5.7", path = "crates/sol-types", default-features = false }
+syn-solidity = { version = "1.5.7", path = "crates/syn-solidity", default-features = false }
 
 # borsh
 borsh = { version = "1.5", default-features = false }
