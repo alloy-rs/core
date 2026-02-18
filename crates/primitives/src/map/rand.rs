@@ -17,10 +17,10 @@
 use core::{
     fmt,
     hash::{BuildHasher, Hash},
-    ops::Index,
+    ops::{Index, IndexMut},
 };
 use indexmap::{IndexMap, IndexSet};
-use rand::{Rng, seq::SliceRandom};
+use rand::Rng;
 
 use super::DefaultHashBuilder;
 
@@ -161,9 +161,42 @@ impl<K, V, S> ExactSizeIterator for RandValues<'_, K, V, S> {}
 
 /// An owning iterator that consumes a [`RandMap`] and yields entries in random order.
 ///
-/// Internally this is a Fisher-Yates–shuffled [`Vec`] iterator, giving a uniformly
-/// random permutation with no `unsafe` code.
-pub type RandIntoIter<K, V> = alloc::vec::IntoIter<(K, V)>;
+/// Each call to [`next()`](Iterator::next) picks a uniformly random index and
+/// swap-removes it from the underlying [`IndexMap`], giving a uniform permutation
+/// with O(1) extra memory.
+pub struct RandIntoIter<K, V, S = DefaultHashBuilder> {
+    inner: IndexMap<K, V, S>,
+}
+
+impl<K: fmt::Debug, V: fmt::Debug, S> fmt::Debug for RandIntoIter<K, V, S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RandIntoIter")
+            .field("remaining", &self.inner.len())
+            .finish_non_exhaustive()
+    }
+}
+
+impl<K, V, S> Iterator for RandIntoIter<K, V, S> {
+    type Item = (K, V);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let len = self.inner.len();
+        if len == 0 {
+            return None;
+        }
+        let idx = rand::rng().random_range(0..len);
+        self.inner.swap_remove_index(idx)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.inner.len();
+        (len, Some(len))
+    }
+}
+
+impl<K, V, S> ExactSizeIterator for RandIntoIter<K, V, S> {}
 
 // ---------------------------------------------------------------------------
 // Set iterator
@@ -209,8 +242,40 @@ impl<T, S> ExactSizeIterator for RandSetIter<'_, T, S> {}
 
 /// An owning iterator that consumes a [`RandSet`] and yields elements in random order.
 ///
-/// Internally this is a Fisher-Yates–shuffled [`Vec`] iterator.
-pub type RandSetIntoIter<T> = alloc::vec::IntoIter<T>;
+/// See [`RandIntoIter`] for details on the strategy.
+pub struct RandSetIntoIter<T, S = DefaultHashBuilder> {
+    inner: IndexSet<T, S>,
+}
+
+impl<T: fmt::Debug, S> fmt::Debug for RandSetIntoIter<T, S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RandSetIntoIter")
+            .field("remaining", &self.inner.len())
+            .finish_non_exhaustive()
+    }
+}
+
+impl<T, S> Iterator for RandSetIntoIter<T, S> {
+    type Item = T;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let len = self.inner.len();
+        if len == 0 {
+            return None;
+        }
+        let idx = rand::rng().random_range(0..len);
+        self.inner.swap_remove_index(idx)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.inner.len();
+        (len, Some(len))
+    }
+}
+
+impl<T, S> ExactSizeIterator for RandSetIntoIter<T, S> {}
 
 // ---------------------------------------------------------------------------
 // RandMap
@@ -325,6 +390,22 @@ impl<K, V, S> RandMap<K, V, S> {
     /// Returns an iterator visiting all values in **random order**.
     pub fn values(&self) -> RandValues<'_, K, V, S> {
         RandValues { inner: self.iter() }
+    }
+
+    /// Returns an iterator visiting all key-value pairs with mutable references to the
+    /// values.
+    ///
+    /// Iteration order is the underlying [`IndexMap`] order (not randomized), since
+    /// mutable iteration is typically used for bulk mutation rather than selection.
+    pub fn iter_mut(&mut self) -> indexmap::map::IterMut<'_, K, V> {
+        self.inner.iter_mut()
+    }
+
+    /// Returns an iterator visiting all values mutably.
+    ///
+    /// Iteration order is the underlying [`IndexMap`] order (not randomized).
+    pub fn values_mut(&mut self) -> indexmap::map::ValuesMut<'_, K, V> {
+        self.inner.values_mut()
     }
 
     /// Clears the map, removing all entries.
@@ -447,14 +528,23 @@ where
     }
 }
 
+impl<K, V, Q, S> IndexMut<&Q> for RandMap<K, V, S>
+where
+    Q: ?Sized + Hash + indexmap::Equivalent<K>,
+    K: Hash + Eq,
+    S: BuildHasher,
+{
+    fn index_mut(&mut self, key: &Q) -> &mut V {
+        self.inner.index_mut(key)
+    }
+}
+
 impl<K, V, S> IntoIterator for RandMap<K, V, S> {
     type Item = (K, V);
-    type IntoIter = RandIntoIter<K, V>;
+    type IntoIter = RandIntoIter<K, V, S>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let mut entries: alloc::vec::Vec<(K, V)> = self.inner.into_iter().collect();
-        entries.shuffle(&mut rand::rng());
-        entries.into_iter()
+        RandIntoIter { inner: self.inner }
     }
 }
 
@@ -715,12 +805,10 @@ impl<T, S> From<RandSet<T, S>> for IndexSet<T, S> {
 
 impl<T, S> IntoIterator for RandSet<T, S> {
     type Item = T;
-    type IntoIter = RandSetIntoIter<T>;
+    type IntoIter = RandSetIntoIter<T, S>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let mut entries: alloc::vec::Vec<T> = self.inner.into_iter().collect();
-        entries.shuffle(&mut rand::rng());
-        entries.into_iter()
+        RandSetIntoIter { inner: self.inner }
     }
 }
 
@@ -997,5 +1085,103 @@ mod tests {
         let idx: IndexMap<i32, i32, _> = map.into();
         let map2: RandMap<i32, i32, _> = idx.into();
         assert_eq!(map2.get(&1), Some(&10));
+    }
+
+    #[test]
+    fn index_mut() {
+        let mut map: RandMap<&str, i32> = [("a", 1), ("b", 2)].into_iter().collect();
+        map["a"] = 42;
+        assert_eq!(map.get("a"), Some(&42));
+    }
+
+    #[test]
+    fn iter_mut_visits_all() {
+        let mut map: RandMap<i32, i32> = (0..10).map(|i| (i, i)).collect();
+        for (_, v) in map.iter_mut() {
+            *v *= 10;
+        }
+        for i in 0..10 {
+            assert_eq!(map.get(&i), Some(&(i * 10)));
+        }
+    }
+
+    #[test]
+    fn values_mut_visits_all() {
+        let mut map: RandMap<i32, i32> = (0..5).map(|i| (i, 0)).collect();
+        for v in map.values_mut() {
+            *v = 99;
+        }
+        assert!(map.values().all(|v| *v == 99));
+    }
+
+    #[test]
+    fn into_iter_no_extra_alloc() {
+        // Verify into_iter yields all elements exactly once via swap_remove_index.
+        let map: RandMap<i32, i32> = (0..100).map(|i| (i, i * 10)).collect();
+        let mut keys: alloc::vec::Vec<i32> = map.into_iter().map(|(k, _)| k).collect();
+        keys.sort();
+        let expected: alloc::vec::Vec<i32> = (0..100).collect();
+        assert_eq!(keys, expected);
+    }
+
+    #[test]
+    fn set_into_iter_no_extra_alloc() {
+        let set: RandSet<i32> = (0..100).collect();
+        let mut elements: alloc::vec::Vec<i32> = set.into_iter().collect();
+        elements.sort();
+        let expected: alloc::vec::Vec<i32> = (0..100).collect();
+        assert_eq!(elements, expected);
+    }
+
+    #[test]
+    fn into_iter_exact_size() {
+        let map: RandMap<i32, i32> = (0..10).map(|i| (i, i)).collect();
+        let mut iter = map.into_iter();
+        assert_eq!(iter.len(), 10);
+        iter.next();
+        assert_eq!(iter.len(), 9);
+
+        let set: RandSet<i32> = (0..10).collect();
+        let mut iter = set.into_iter();
+        assert_eq!(iter.len(), 10);
+        iter.next();
+        assert_eq!(iter.len(), 9);
+    }
+
+    #[test]
+    fn with_capacity() {
+        let map: RandMap<i32, i32> = RandMap::with_capacity(100);
+        assert!(map.is_empty());
+
+        let set: RandSet<i32> = RandSet::with_capacity(100);
+        assert!(set.is_empty());
+    }
+
+    #[test]
+    fn into_iter_randomized() {
+        let map: RandMap<i32, i32> = (0..20).map(|i| (i, i)).collect();
+        let order1: alloc::vec::Vec<i32> =
+            map.clone().into_iter().map(|(k, _)| k).collect();
+        let mut any_differ = false;
+        for _ in 0..10 {
+            let order_n: alloc::vec::Vec<i32> =
+                map.clone().into_iter().map(|(k, _)| k).collect();
+            if order_n != order1 {
+                any_differ = true;
+                break;
+            }
+        }
+        assert!(any_differ, "into_iter order should differ between calls");
+    }
+
+    #[test]
+    fn into_iter_drop_partial() {
+        // Ensure partial consumption + drop doesn't leak or panic.
+        let map: RandMap<i32, i32> = (0..100).map(|i| (i, i)).collect();
+        let mut iter = map.into_iter();
+        for _ in 0..50 {
+            iter.next();
+        }
+        drop(iter);
     }
 }
