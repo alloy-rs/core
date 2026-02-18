@@ -2,7 +2,9 @@
 //!
 //! These types delegate all map/set operations to the underlying `indexmap` types, but
 //! randomize iteration order on every `.iter()` call using a coprime-stride permutation.
-//! This prevents fairness bugs caused by deterministic iteration order (see module docs).
+//! This prevents fairness bugs caused by deterministic iteration order — e.g. peer
+//! starvation in reth's `TransactionFetcher::schedule_fetches()`, where stable
+//! `HashMap` ordering causes the same peers to be selected every time.
 //!
 //! # Iteration strategy
 //!
@@ -17,6 +19,7 @@
 use core::{
     fmt,
     hash::{BuildHasher, Hash},
+    iter::FusedIterator,
     ops::{Index, IndexMut},
 };
 use indexmap::{IndexMap, IndexSet};
@@ -77,9 +80,7 @@ pub struct RandIter<'a, K, V, S = DefaultHashBuilder> {
 
 impl<K: fmt::Debug, V: fmt::Debug, S> fmt::Debug for RandIter<'_, K, V, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RandIter")
-            .field("remaining", &self.remaining)
-            .finish_non_exhaustive()
+        f.debug_struct("RandIter").field("remaining", &self.remaining).finish_non_exhaustive()
     }
 }
 
@@ -104,6 +105,7 @@ impl<'a, K, V, S> Iterator for RandIter<'a, K, V, S> {
 }
 
 impl<K, V, S> ExactSizeIterator for RandIter<'_, K, V, S> {}
+impl<K, V, S> FusedIterator for RandIter<'_, K, V, S> {}
 
 /// An iterator that visits every key of an [`IndexMap`] exactly once in random order.
 pub struct RandKeys<'a, K, V, S = DefaultHashBuilder> {
@@ -131,6 +133,7 @@ impl<'a, K, V, S> Iterator for RandKeys<'a, K, V, S> {
 }
 
 impl<K, V, S> ExactSizeIterator for RandKeys<'_, K, V, S> {}
+impl<K, V, S> FusedIterator for RandKeys<'_, K, V, S> {}
 
 /// An iterator that visits every value of an [`IndexMap`] exactly once in random order.
 pub struct RandValues<'a, K, V, S = DefaultHashBuilder> {
@@ -158,6 +161,7 @@ impl<'a, K, V, S> Iterator for RandValues<'a, K, V, S> {
 }
 
 impl<K, V, S> ExactSizeIterator for RandValues<'_, K, V, S> {}
+impl<K, V, S> FusedIterator for RandValues<'_, K, V, S> {}
 
 /// An owning iterator that consumes a [`RandMap`] and yields entries in random order.
 ///
@@ -170,9 +174,7 @@ pub struct RandIntoIter<K, V, S = DefaultHashBuilder> {
 
 impl<K: fmt::Debug, V: fmt::Debug, S> fmt::Debug for RandIntoIter<K, V, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RandIntoIter")
-            .field("remaining", &self.inner.len())
-            .finish_non_exhaustive()
+        f.debug_struct("RandIntoIter").field("remaining", &self.inner.len()).finish_non_exhaustive()
     }
 }
 
@@ -197,6 +199,7 @@ impl<K, V, S> Iterator for RandIntoIter<K, V, S> {
 }
 
 impl<K, V, S> ExactSizeIterator for RandIntoIter<K, V, S> {}
+impl<K, V, S> FusedIterator for RandIntoIter<K, V, S> {}
 
 // ---------------------------------------------------------------------------
 // Set iterator
@@ -212,9 +215,7 @@ pub struct RandSetIter<'a, T, S = DefaultHashBuilder> {
 
 impl<T: fmt::Debug, S> fmt::Debug for RandSetIter<'_, T, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RandSetIter")
-            .field("remaining", &self.remaining)
-            .finish_non_exhaustive()
+        f.debug_struct("RandSetIter").field("remaining", &self.remaining).finish_non_exhaustive()
     }
 }
 
@@ -239,6 +240,7 @@ impl<'a, T, S> Iterator for RandSetIter<'a, T, S> {
 }
 
 impl<T, S> ExactSizeIterator for RandSetIter<'_, T, S> {}
+impl<T, S> FusedIterator for RandSetIter<'_, T, S> {}
 
 /// An owning iterator that consumes a [`RandSet`] and yields elements in random order.
 ///
@@ -276,6 +278,7 @@ impl<T, S> Iterator for RandSetIntoIter<T, S> {
 }
 
 impl<T, S> ExactSizeIterator for RandSetIntoIter<T, S> {}
+impl<T, S> FusedIterator for RandSetIntoIter<T, S> {}
 
 // ---------------------------------------------------------------------------
 // RandMap
@@ -494,7 +497,7 @@ where
     where
         Q: ?Sized + Hash + indexmap::Equivalent<K>,
     {
-        self.inner.swap_remove(key)
+        self.swap_remove(key)
     }
 
     /// Removes a key from the map, returning the stored key and value if the
@@ -506,7 +509,7 @@ where
     where
         Q: ?Sized + Hash + indexmap::Equivalent<K>,
     {
-        self.inner.swap_remove_entry(key)
+        self.swap_remove_entry(key)
     }
 
     /// Removes a key from the map, returning the value if the key was previously in the
@@ -816,7 +819,7 @@ where
     where
         Q: ?Sized + Hash + indexmap::Equivalent<T>,
     {
-        self.inner.swap_remove(value)
+        self.swap_remove(value)
     }
 
     /// Removes a value from the set. Returns `true` if the value was present.
@@ -1248,12 +1251,10 @@ mod tests {
     #[test]
     fn into_iter_randomized() {
         let map: RandMap<i32, i32> = (0..20).map(|i| (i, i)).collect();
-        let order1: alloc::vec::Vec<i32> =
-            map.clone().into_iter().map(|(k, _)| k).collect();
+        let order1: alloc::vec::Vec<i32> = map.clone().into_iter().map(|(k, _)| k).collect();
         let mut any_differ = false;
         for _ in 0..10 {
-            let order_n: alloc::vec::Vec<i32> =
-                map.clone().into_iter().map(|(k, _)| k).collect();
+            let order_n: alloc::vec::Vec<i32> = map.clone().into_iter().map(|(k, _)| k).collect();
             if order_n != order1 {
                 any_differ = true;
                 break;
