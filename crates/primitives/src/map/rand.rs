@@ -485,12 +485,46 @@ where
     }
 
     /// Removes a key from the map, returning the value if the key was previously in the
+    /// map.
+    ///
+    /// This is equivalent to [`swap_remove`](Self::swap_remove). Because iteration order
+    /// is randomized, the swap-remove reordering is unobservable, making this a true O(1)
+    /// drop-in replacement for [`HashMap::remove`](std::collections::HashMap::remove).
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
+    where
+        Q: ?Sized + Hash + indexmap::Equivalent<K>,
+    {
+        self.inner.swap_remove(key)
+    }
+
+    /// Removes a key from the map, returning the stored key and value if the
+    /// key was previously in the map.
+    ///
+    /// This is equivalent to [`swap_remove_entry`](Self::swap_remove_entry).
+    /// See [`remove`](Self::remove) for rationale.
+    pub fn remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V)>
+    where
+        Q: ?Sized + Hash + indexmap::Equivalent<K>,
+    {
+        self.inner.swap_remove_entry(key)
+    }
+
+    /// Removes a key from the map, returning the value if the key was previously in the
     /// map. **Uses swap-remove.**
     pub fn swap_remove<Q>(&mut self, key: &Q) -> Option<V>
     where
         Q: ?Sized + Hash + indexmap::Equivalent<K>,
     {
         self.inner.swap_remove(key)
+    }
+
+    /// Removes a key from the map, returning the stored key and value if the
+    /// key was previously in the map. **Uses swap-remove.**
+    pub fn swap_remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V)>
+    where
+        Q: ?Sized + Hash + indexmap::Equivalent<K>,
+    {
+        self.inner.swap_remove_entry(key)
     }
 
     /// Removes a key from the map, returning the value if the key was previously in the
@@ -500,6 +534,16 @@ where
         Q: ?Sized + Hash + indexmap::Equivalent<K>,
     {
         self.inner.shift_remove(key)
+    }
+
+    /// Removes a key from the map, returning the stored key and value if the
+    /// key was previously in the map. **Uses shift-remove** (preserves insertion
+    /// order at cost of O(n)).
+    pub fn shift_remove_entry<Q>(&mut self, key: &Q) -> Option<(K, V)>
+    where
+        Q: ?Sized + Hash + indexmap::Equivalent<K>,
+    {
+        self.inner.shift_remove_entry(key)
     }
 }
 
@@ -764,6 +808,18 @@ where
     }
 
     /// Removes a value from the set. Returns `true` if the value was present.
+    ///
+    /// This is equivalent to [`swap_remove`](Self::swap_remove). Because iteration order
+    /// is randomized, the swap-remove reordering is unobservable, making this a true O(1)
+    /// drop-in replacement for [`HashSet::remove`](std::collections::HashSet::remove).
+    pub fn remove<Q>(&mut self, value: &Q) -> bool
+    where
+        Q: ?Sized + Hash + indexmap::Equivalent<T>,
+    {
+        self.inner.swap_remove(value)
+    }
+
+    /// Removes a value from the set. Returns `true` if the value was present.
     /// **Uses swap-remove.**
     pub fn swap_remove<Q>(&mut self, value: &Q) -> bool
     where
@@ -911,6 +967,26 @@ mod tests {
     }
 
     #[test]
+    fn map_remove_shims() {
+        let mut map = RandMap::<&str, i32>::default();
+        map.insert("a", 1);
+        map.insert("b", 2);
+        map.insert("c", 3);
+
+        // .remove() delegates to swap_remove
+        assert_eq!(map.remove("b"), Some(2));
+        assert_eq!(map.len(), 2);
+        assert!(!map.contains_key("b"));
+        assert_eq!(map.remove("z"), None);
+
+        // .remove_entry() delegates to swap_remove_entry
+        assert_eq!(map.remove_entry("a"), Some(("a", 1)));
+        assert_eq!(map.len(), 1);
+        assert!(!map.contains_key("a"));
+        assert_eq!(map.remove_entry("a"), None);
+    }
+
+    #[test]
     fn set_basic_operations() {
         let mut set = RandSet::<&str>::default();
         assert!(set.is_empty());
@@ -925,6 +1001,18 @@ mod tests {
         set.swap_remove("x");
         assert_eq!(set.len(), 1);
         assert!(!set.contains("x"));
+    }
+
+    #[test]
+    fn set_remove_shim() {
+        let mut set = RandSet::<&str>::default();
+        set.insert("a");
+        set.insert("b");
+
+        assert!(set.remove("a"));
+        assert_eq!(set.len(), 1);
+        assert!(!set.contains("a"));
+        assert!(!set.remove("a"));
     }
 
     #[test]
