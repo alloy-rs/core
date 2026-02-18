@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.7](https://github.com/alloy-rs/core/releases/tag/v1.5.7) - 2026-02-18
+
+### Bug Fixes
+
+- [sol-macro] Prevent direct String usage in expanded code ([#1076](https://github.com/alloy-rs/core/issues/1076))
+
 ## [1.5.6](https://github.com/alloy-rs/core/releases/tag/v1.5.6) - 2026-02-12
 
 ### Dependencies
@@ -13,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 1.5.6
 - Fix changelog
 
 ## [1.5.5](https://github.com/alloy-rs/core/releases/tag/v1.5.5) - 2026-02-11
@@ -321,13 +328,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
 
+### Features
+
+- [primitives] Supporting diesel @ 2.2 ([#915](https://github.com/alloy-rs/core/issues/915))
+- 1.0-rc.1
+- Bump ruint, adjust rand feature
+
+### Miscellaneous Tasks
+
+- Release 1.0.0
+- Release 1.0.0-rc.1
+- Release 0.8.25
+
+### Other
+
+- Merge branch 'main' into v1.0-rc
+
+### Testing
+
+- Missing import
+- [dyn-abi] Remove dev-dependency on self
+
+## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
+
+### Features
+
+- [sol-macro] Improve call return encoding ([#909](https://github.com/alloy-rs/core/issues/909))
+
+## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
+
 ### Bug Fixes
 
 - [`sol-expander`] Rename from/into + impl From ([#905](https://github.com/alloy-rs/core/issues/905))
 - [`sol!`] Pass correct call_struct to call_builder in expansion ([#901](https://github.com/alloy-rs/core/issues/901))
 - [sol-macro] Rm fake transport from contract expansion ([#865](https://github.com/alloy-rs/core/issues/865))
-- [primitives] Remove undefined behavior in FixedBytes ([#919](https://github.com/alloy-rs/core/issues/919))
-- Do not rely on bytes dependency in `wrap_fixed_bytes!` ([#918](https://github.com/alloy-rs/core/issues/918))
 
 ### Dependencies
 
@@ -335,33 +369,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
-- [primitives] Supporting diesel @ 2.2 ([#915](https://github.com/alloy-rs/core/issues/915))
-- 1.0-rc.1
-- Bump ruint, adjust rand feature
-- [sol-macro] Improve call return encoding ([#909](https://github.com/alloy-rs/core/issues/909))
 - [primitives] Remove `From<String> for Bytes` ([#907](https://github.com/alloy-rs/core/issues/907))
 - [`sol!`] Gen unit/tuple structs for errors, calls, events with 0/1 param ([#883](https://github.com/alloy-rs/core/issues/883))
 - [sol-macro] Function calls should directly yield result  ([#855](https://github.com/alloy-rs/core/issues/855))
 - [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
-- Add inner mut ([#921](https://github.com/alloy-rs/core/issues/921))
 
 ### Miscellaneous Tasks
 
-- Release 1.0.0
-- Release 1.0.0-rc.1
-- Release 0.8.25
 - Remove deprecated `Signature` ([#899](https://github.com/alloy-rs/core/issues/899))
-- Add hash_ref function to sealed.rs ([#920](https://github.com/alloy-rs/core/issues/920))
 
 ### Other
 
 - Merge branch 'main' into v1.0-rc
-- Merge branch 'main' into v1.0-rc
 
-### Testing
+## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
 
-- Missing import
-- [dyn-abi] Remove dev-dependency on self
+### Bug Fixes
+
+- [primitives] Remove undefined behavior in FixedBytes ([#919](https://github.com/alloy-rs/core/issues/919))
+- Do not rely on bytes dependency in `wrap_fixed_bytes!` ([#918](https://github.com/alloy-rs/core/issues/918))
+
+### Features
+
+- Add inner mut ([#921](https://github.com/alloy-rs/core/issues/921))
+
+### Miscellaneous Tasks
+
+- Add hash_ref function to sealed.rs ([#920](https://github.com/alloy-rs/core/issues/920))
 
 ## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
 
