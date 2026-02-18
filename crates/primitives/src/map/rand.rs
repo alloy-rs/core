@@ -20,7 +20,7 @@ use core::{
     ops::Index,
 };
 use indexmap::{IndexMap, IndexSet};
-use rand::Rng;
+use rand::{Rng, seq::SliceRandom};
 
 use super::DefaultHashBuilder;
 
@@ -68,17 +68,15 @@ fn random_start(len: usize) -> usize {
 /// pseudorandom order determined by a coprime-stride permutation.
 pub struct RandIter<'a, K, V, S = DefaultHashBuilder> {
     map: &'a IndexMap<K, V, S>,
-    start: usize,
+    current: usize,
     stride: usize,
-    pos: usize,
-    len: usize,
+    remaining: usize,
 }
 
 impl<K: fmt::Debug, V: fmt::Debug, S> fmt::Debug for RandIter<'_, K, V, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RandIter")
-            .field("pos", &self.pos)
-            .field("len", &self.len)
+            .field("remaining", &self.remaining)
             .finish_non_exhaustive()
     }
 }
@@ -88,18 +86,18 @@ impl<'a, K, V, S> Iterator for RandIter<'a, K, V, S> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.pos >= self.len {
+        if self.remaining == 0 {
             return None;
         }
-        let idx = (self.start + self.pos * self.stride) % self.len;
-        self.pos += 1;
+        let idx = self.current;
+        self.current = (self.current + self.stride) % self.map.len();
+        self.remaining -= 1;
         self.map.get_index(idx)
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.len - self.pos;
-        (remaining, Some(remaining))
+        (self.remaining, Some(self.remaining))
     }
 }
 
@@ -160,64 +158,10 @@ impl<'a, K, V, S> Iterator for RandValues<'a, K, V, S> {
 impl<K, V, S> ExactSizeIterator for RandValues<'_, K, V, S> {}
 
 /// An owning iterator that consumes a [`RandMap`] and yields entries in random order.
-pub struct RandIntoIter<K, V> {
-    entries: alloc::vec::Vec<(K, V)>,
-    start: usize,
-    stride: usize,
-    pos: usize,
-    len: usize,
-}
-
-impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for RandIntoIter<K, V> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RandIntoIter")
-            .field("pos", &self.pos)
-            .field("len", &self.len)
-            .finish_non_exhaustive()
-    }
-}
-
-impl<K, V> Iterator for RandIntoIter<K, V> {
-    type Item = (K, V);
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.pos >= self.len {
-            return None;
-        }
-        let idx = (self.start + self.pos * self.stride) % self.len;
-        self.pos += 1;
-        // SAFETY: each index is visited exactly once due to the coprime-stride invariant,
-        // and we replace the taken slot with uninit memory that is never read again.
-        unsafe {
-            let ptr = self.entries.as_mut_ptr().add(idx);
-            Some(ptr.read())
-        }
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.len - self.pos;
-        (remaining, Some(remaining))
-    }
-}
-
-impl<K, V> ExactSizeIterator for RandIntoIter<K, V> {}
-
-impl<K, V> Drop for RandIntoIter<K, V> {
-    fn drop(&mut self) {
-        // Drop any remaining elements that haven't been yielded.
-        // We need to know which indices were already read. Since the stride is coprime to
-        // len, indices visited so far are: { (start + i * stride) % len | 0 <= i < pos }.
-        // The simplest correct approach: consume the rest of the iterator.
-        while self.next().is_some() {}
-        // Prevent Vec from dropping elements (they've all been moved out or dropped above).
-        // SAFETY: all elements have been consumed via `ptr::read` + Drop above.
-        unsafe {
-            self.entries.set_len(0);
-        }
-    }
-}
+///
+/// Internally this is a Fisher-Yates–shuffled [`Vec`] iterator, giving a uniformly
+/// random permutation with no `unsafe` code.
+pub type RandIntoIter<K, V> = alloc::vec::IntoIter<(K, V)>;
 
 // ---------------------------------------------------------------------------
 // Set iterator
@@ -226,17 +170,15 @@ impl<K, V> Drop for RandIntoIter<K, V> {
 /// An iterator that visits every element of an [`IndexSet`] exactly once in random order.
 pub struct RandSetIter<'a, T, S = DefaultHashBuilder> {
     set: &'a IndexSet<T, S>,
-    start: usize,
+    current: usize,
     stride: usize,
-    pos: usize,
-    len: usize,
+    remaining: usize,
 }
 
 impl<T: fmt::Debug, S> fmt::Debug for RandSetIter<'_, T, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RandSetIter")
-            .field("pos", &self.pos)
-            .field("len", &self.len)
+            .field("remaining", &self.remaining)
             .finish_non_exhaustive()
     }
 }
@@ -246,74 +188,27 @@ impl<'a, T, S> Iterator for RandSetIter<'a, T, S> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.pos >= self.len {
+        if self.remaining == 0 {
             return None;
         }
-        let idx = (self.start + self.pos * self.stride) % self.len;
-        self.pos += 1;
+        let idx = self.current;
+        self.current = (self.current + self.stride) % self.set.len();
+        self.remaining -= 1;
         self.set.get_index(idx)
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.len - self.pos;
-        (remaining, Some(remaining))
+        (self.remaining, Some(self.remaining))
     }
 }
 
 impl<T, S> ExactSizeIterator for RandSetIter<'_, T, S> {}
 
 /// An owning iterator that consumes a [`RandSet`] and yields elements in random order.
-pub struct RandSetIntoIter<T> {
-    entries: alloc::vec::Vec<T>,
-    start: usize,
-    stride: usize,
-    pos: usize,
-    len: usize,
-}
-
-impl<T: fmt::Debug> fmt::Debug for RandSetIntoIter<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RandSetIntoIter")
-            .field("pos", &self.pos)
-            .field("len", &self.len)
-            .finish_non_exhaustive()
-    }
-}
-
-impl<T> Iterator for RandSetIntoIter<T> {
-    type Item = T;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.pos >= self.len {
-            return None;
-        }
-        let idx = (self.start + self.pos * self.stride) % self.len;
-        self.pos += 1;
-        unsafe {
-            let ptr = self.entries.as_mut_ptr().add(idx);
-            Some(ptr.read())
-        }
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.len - self.pos;
-        (remaining, Some(remaining))
-    }
-}
-
-impl<T> ExactSizeIterator for RandSetIntoIter<T> {}
-
-impl<T> Drop for RandSetIntoIter<T> {
-    fn drop(&mut self) {
-        while self.next().is_some() {}
-        unsafe {
-            self.entries.set_len(0);
-        }
-    }
-}
+///
+/// Internally this is a Fisher-Yates–shuffled [`Vec`] iterator.
+pub type RandSetIntoIter<T> = alloc::vec::IntoIter<T>;
 
 // ---------------------------------------------------------------------------
 // RandMap
@@ -365,6 +260,13 @@ impl<K, V, S: Default> Default for RandMap<K, V, S> {
     }
 }
 
+impl<K, V> RandMap<K, V> {
+    /// Creates an empty `RandMap` with the specified capacity.
+    pub fn with_capacity(n: usize) -> Self {
+        Self { inner: IndexMap::with_capacity_and_hasher(n, DefaultHashBuilder::default()) }
+    }
+}
+
 impl<K, V, S> RandMap<K, V, S> {
     /// Creates an empty `RandMap` with the given hasher.
     pub const fn with_hasher(hash_builder: S) -> Self {
@@ -407,11 +309,11 @@ impl<K, V, S> RandMap<K, V, S> {
     pub fn iter(&self) -> RandIter<'_, K, V, S> {
         let len = self.inner.len();
         if len == 0 {
-            return RandIter { map: &self.inner, start: 0, stride: 1, pos: 0, len: 0 };
+            return RandIter { map: &self.inner, current: 0, stride: 1, remaining: 0 };
         }
-        let start = random_start(len);
+        let current = random_start(len);
         let stride = coprime_stride(len);
-        RandIter { map: &self.inner, start, stride, pos: 0, len }
+        RandIter { map: &self.inner, current, stride, remaining: len }
     }
 
     /// Returns an iterator visiting all keys in **random order**.
@@ -549,14 +451,9 @@ impl<K, V, S> IntoIterator for RandMap<K, V, S> {
     type IntoIter = RandIntoIter<K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let entries: alloc::vec::Vec<(K, V)> = self.inner.into_iter().collect();
-        let len = entries.len();
-        if len == 0 {
-            return RandIntoIter { entries, start: 0, stride: 1, pos: 0, len: 0 };
-        }
-        let start = random_start(len);
-        let stride = coprime_stride(len);
-        RandIntoIter { entries, start, stride, pos: 0, len }
+        let mut entries: alloc::vec::Vec<(K, V)> = self.inner.into_iter().collect();
+        entries.shuffle(&mut rand::rng());
+        entries.into_iter()
     }
 }
 
@@ -675,6 +572,13 @@ impl<T, S: Default> Default for RandSet<T, S> {
     }
 }
 
+impl<T> RandSet<T> {
+    /// Creates an empty `RandSet` with the specified capacity.
+    pub fn with_capacity(n: usize) -> Self {
+        Self { inner: IndexSet::with_capacity_and_hasher(n, DefaultHashBuilder::default()) }
+    }
+}
+
 impl<T, S> RandSet<T, S> {
     /// Creates an empty `RandSet` with the given hasher.
     pub const fn with_hasher(hash_builder: S) -> Self {
@@ -715,11 +619,11 @@ impl<T, S> RandSet<T, S> {
     pub fn iter(&self) -> RandSetIter<'_, T, S> {
         let len = self.inner.len();
         if len == 0 {
-            return RandSetIter { set: &self.inner, start: 0, stride: 1, pos: 0, len: 0 };
+            return RandSetIter { set: &self.inner, current: 0, stride: 1, remaining: 0 };
         }
-        let start = random_start(len);
+        let current = random_start(len);
         let stride = coprime_stride(len);
-        RandSetIter { set: &self.inner, start, stride, pos: 0, len }
+        RandSetIter { set: &self.inner, current, stride, remaining: len }
     }
 
     /// Clears the set, removing all elements.
@@ -814,14 +718,9 @@ impl<T, S> IntoIterator for RandSet<T, S> {
     type IntoIter = RandSetIntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let entries: alloc::vec::Vec<T> = self.inner.into_iter().collect();
-        let len = entries.len();
-        if len == 0 {
-            return RandSetIntoIter { entries, start: 0, stride: 1, pos: 0, len: 0 };
-        }
-        let start = random_start(len);
-        let stride = coprime_stride(len);
-        RandSetIntoIter { entries, start, stride, pos: 0, len }
+        let mut entries: alloc::vec::Vec<T> = self.inner.into_iter().collect();
+        entries.shuffle(&mut rand::rng());
+        entries.into_iter()
     }
 }
 
