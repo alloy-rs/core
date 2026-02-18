@@ -30,6 +30,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::{string::String, vec, vec::Vec};
     use serde_json::json;
 
     #[derive(Debug, Deserialize, PartialEq)]
