@@ -38,26 +38,28 @@ const fn gcd(mut a: usize, mut b: usize) -> usize {
     a
 }
 
-/// Returns a random stride coprime to `len` (which must be > 0).
-fn coprime_stride(len: usize) -> usize {
+/// Returns `(start, stride)` for a coprime-stride walk over `len` elements.
+///
+/// A single [`rand::rng()`] lookup is used for both random values.
+fn rand_start_stride(len: usize) -> (usize, usize) {
     debug_assert!(len > 0);
     if len == 1 {
-        return 1;
+        return (0, 1);
     }
     let mut rng = rand::rng();
-    loop {
-        // Pick a candidate in [1, len). For power-of-2 lengths any odd number works,
-        // but the gcd check is fast enough for the general case.
-        let candidate = rng.random_range(1..len);
-        if gcd(candidate, len) == 1 {
-            return candidate;
+    let start = rng.random_range(0..len);
+    let stride = if len.is_power_of_two() {
+        // Any odd number is coprime to a power of two — no rejection needed.
+        rng.random_range(0..len / 2) * 2 + 1
+    } else {
+        loop {
+            let candidate = rng.random_range(1..len);
+            if gcd(candidate, len) == 1 {
+                break candidate;
+            }
         }
-    }
-}
-
-/// Returns a random starting index in `[0, len)`.
-fn random_start(len: usize) -> usize {
-    rand::rng().random_range(0..len)
+    };
+    (start, stride)
 }
 
 // ---------------------------------------------------------------------------
@@ -311,8 +313,7 @@ impl<K, V, S> RandMap<K, V, S> {
         if len == 0 {
             return RandIter { map: &self.inner, current: 0, stride: 1, remaining: 0 };
         }
-        let current = random_start(len);
-        let stride = coprime_stride(len);
+        let (current, stride) = rand_start_stride(len);
         RandIter { map: &self.inner, current, stride, remaining: len }
     }
 
@@ -621,8 +622,7 @@ impl<T, S> RandSet<T, S> {
         if len == 0 {
             return RandSetIter { set: &self.inner, current: 0, stride: 1, remaining: 0 };
         }
-        let current = random_start(len);
-        let stride = coprime_stride(len);
+        let (current, stride) = rand_start_stride(len);
         RandSetIter { set: &self.inner, current, stride, remaining: len }
     }
 
@@ -966,14 +966,15 @@ mod tests {
     }
 
     #[test]
-    fn coprime_stride_produces_full_permutation() {
-        // Verify for a few sizes that the coprime stride visits all indices.
-        for len in [2, 3, 5, 7, 10, 16, 17, 100] {
-            let stride = coprime_stride(len);
+    fn rand_start_stride_produces_full_permutation() {
+        // Verify for a few sizes (incl. power-of-two and non-power-of-two)
+        // that the stride visits all indices.
+        for len in [2, 3, 4, 5, 7, 8, 10, 16, 17, 32, 100] {
+            let (start, stride) = rand_start_stride(len);
             assert_eq!(gcd(stride, len), 1, "stride {stride} not coprime to {len}");
 
             let mut visited = alloc::vec![false; len];
-            let mut idx = 0;
+            let mut idx = start;
             for _ in 0..len {
                 visited[idx] = true;
                 idx = (idx + stride) % len;
