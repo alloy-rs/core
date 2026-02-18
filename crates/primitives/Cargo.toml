@@ -160,6 +160,7 @@ map-indexmap = ["map", "dep:indexmap"]
 map-foldhash = ["map", "dep:foldhash"]
 map-rapidhash = ["map", "dep:rapidhash"]
 map-fxhash = ["map"]
+map-rand = ["map-indexmap", "rand"]
 
 getrandom = ["dep:getrandom"]
 k256 = ["dep:k256"]

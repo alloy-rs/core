@@ -90,6 +90,13 @@ cfg_if! {
     }
 }
 
+// Randomized-iteration wrappers around `IndexMap` / `IndexSet`.
+cfg_if! {
+    if #[cfg(feature = "map-rand")] {
+        pub mod rand;
+    }
+}
+
 /// This module contains the rayon parallel iterator types for hash maps (HashMap<K, V>).
 ///
 /// You will rarely need to interact with it directly unless you have need to name one

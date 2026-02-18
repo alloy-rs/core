@@ -26,6 +26,19 @@ cfg_if! {
     }
 }
 
+cfg_if! {
+    if #[cfg(feature = "map-rand")] {
+        /// [`RandMap`](super::rand::RandMap) optimized for hashing [fixed-size byte
+        /// arrays](FixedBytes).
+        pub type FbRandMap<const N: usize, V> =
+            super::rand::RandMap<FixedBytes<N>, V, FbBuildHasher<N>>;
+        /// [`RandSet`](super::rand::RandSet) optimized for hashing [fixed-size byte
+        /// arrays](FixedBytes).
+        pub type FbRandSet<const N: usize> =
+            super::rand::RandSet<FixedBytes<N>, FbBuildHasher<N>>;
+    }
+}
+
 macro_rules! fb_alias_maps {
     ($($ty:ident < $n:literal >),* $(,)?) => { paste::paste! {
         $(
@@ -44,6 +57,15 @@ macro_rules! fb_alias_maps {
                     pub type [<$ty IndexMap>]<V> = IndexMap<$ty, V, FbBuildHasher<$n>>;
                     #[doc = concat!("[`IndexSet`] optimized for hashing [`", stringify!($ty), "`].")]
                     pub type [<$ty IndexSet>] = IndexSet<$ty, FbBuildHasher<$n>>;
+                }
+            }
+
+            cfg_if! {
+                if #[cfg(feature = "map-rand")] {
+                    #[doc = concat!("[`RandMap`](super::rand::RandMap) optimized for hashing [`", stringify!($ty), "`].")]
+                    pub type [<$ty RandMap>]<V> = super::rand::RandMap<$ty, V, FbBuildHasher<$n>>;
+                    #[doc = concat!("[`RandSet`](super::rand::RandSet) optimized for hashing [`", stringify!($ty), "`].")]
+                    pub type [<$ty RandSet>] = super::rand::RandSet<$ty, FbBuildHasher<$n>>;
                 }
             }
         )*
