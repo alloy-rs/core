@@ -308,6 +308,7 @@ impl<T, S> FusedIterator for RandSetIntoIter<T, S> {}
 /// // Every element is visited exactly once.
 /// assert_eq!(map.iter().count(), 3);
 /// ```
+#[must_use]
 pub struct RandMap<K, V, S = DefaultHashBuilder> {
     inner: IndexMap<K, V, S>,
 }
@@ -688,6 +689,7 @@ where
 ///
 /// assert_eq!(set.iter().count(), 3);
 /// ```
+#[must_use]
 pub struct RandSet<T, S = DefaultHashBuilder> {
     inner: IndexSet<T, S>,
 }
