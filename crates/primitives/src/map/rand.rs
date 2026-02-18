@@ -1275,4 +1275,77 @@ mod tests {
         }
         drop(iter);
     }
+
+    #[test]
+    fn entry_or_default() {
+        // Mirrors reth's `self.announces.entry(peer).or_default().insert(hash, meta)`.
+        let mut map: RandMap<i32, RandMap<i32, i32>> = RandMap::default();
+
+        // Vacant → creates default inner map, then insert into it.
+        map.entry(1).or_default().insert(10, 100);
+        assert_eq!(map.get(&1).unwrap().get(&10), Some(&100));
+
+        // Occupied → returns existing inner map, insert another key.
+        map.entry(1).or_default().insert(20, 200);
+        assert_eq!(map.get(&1).unwrap().len(), 2);
+        assert_eq!(map.get(&1).unwrap().get(&20), Some(&200));
+    }
+
+    #[test]
+    fn entry_or_insert() {
+        let mut map: RandMap<&str, i32> = RandMap::default();
+        map.entry("a").or_insert(42);
+        assert_eq!(map["a"], 42);
+
+        // Existing key is not overwritten.
+        map.entry("a").or_insert(99);
+        assert_eq!(map["a"], 42);
+    }
+
+    #[test]
+    fn map_shift_remove() {
+        let mut map: RandMap<i32, i32> = (0..5).map(|i| (i, i * 10)).collect();
+
+        assert_eq!(map.shift_remove(&2), Some(20));
+        assert_eq!(map.len(), 4);
+        assert!(!map.contains_key(&2));
+
+        // Removing absent key returns None.
+        assert_eq!(map.shift_remove(&2), None);
+        assert_eq!(map.len(), 4);
+
+        // All remaining elements are still accessible.
+        for i in [0, 1, 3, 4] {
+            assert_eq!(map.get(&i), Some(&(i * 10)));
+        }
+    }
+
+    #[test]
+    fn map_shift_remove_entry() {
+        let mut map: RandMap<&str, i32> = [("a", 1), ("b", 2), ("c", 3)].into_iter().collect();
+
+        assert_eq!(map.shift_remove_entry("b"), Some(("b", 2)));
+        assert_eq!(map.len(), 2);
+        assert!(!map.contains_key("b"));
+
+        assert_eq!(map.shift_remove_entry("b"), None);
+    }
+
+    #[test]
+    fn set_shift_remove() {
+        let mut set: RandSet<i32> = (0..5).collect();
+
+        assert!(set.shift_remove(&3));
+        assert_eq!(set.len(), 4);
+        assert!(!set.contains(&3));
+
+        // Removing absent element returns false.
+        assert!(!set.shift_remove(&3));
+        assert_eq!(set.len(), 4);
+
+        // All remaining elements are still accessible.
+        for i in [0, 1, 2, 4] {
+            assert!(set.contains(&i));
+        }
+    }
 }
