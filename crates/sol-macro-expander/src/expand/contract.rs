@@ -214,7 +214,7 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
                 /// Contains [dynamic ABI definitions](alloy_sol_types::private::alloy_json_abi) for [this contract](self).
                 pub mod abi {
                     use super::*;
-                    use alloy_sol_types::private::{alloy_json_abi as json, BTreeMap, Vec};
+                    use alloy_sol_types::private::{alloy_json_abi as json, BTreeMap, String, Vec};
 
                     /// Returns the ABI for [this contract](super).
                     pub fn contract() -> json::JsonAbi {
