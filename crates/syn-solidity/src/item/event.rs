@@ -238,12 +238,6 @@ impl EventParameter {
         self.indexed.is_some()
     }
 
-    /// Returns `true` if the event parameter is stored in the event data
-    /// section.
-    pub const fn is_non_indexed(&self) -> bool {
-        self.indexed.is_none()
-    }
-
     /// Returns `true` if the event parameter is indexed and dynamically sized.
     /// These types are hashed, and then stored in the topics as specified in
     /// [the Solidity spec][ref].
