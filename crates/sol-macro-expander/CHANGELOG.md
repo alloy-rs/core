@@ -5,10 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.7](https://github.com/alloy-rs/core/releases/tag/v1.5.7) - 2026-02-18
+
+### Bug Fixes
+
+- [sol-macro] Prevent direct String usage in expanded code ([#1076](https://github.com/alloy-rs/core/issues/1076))
+
 ## [1.5.6](https://github.com/alloy-rs/core/releases/tag/v1.5.6) - 2026-02-12
 
 ### Miscellaneous Tasks
 
+- Release 1.5.6
 - Fix changelog
 
 ## [1.5.5](https://github.com/alloy-rs/core/releases/tag/v1.5.5) - 2026-02-11
@@ -144,19 +151,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0](https://github.com/alloy-rs/core/releases/tag/v1.0.0) - 2025-04-03
 
-### Bug Fixes
-
-- [`sol-expander`] Rename from/into + impl From ([#905](https://github.com/alloy-rs/core/issues/905))
-- [`sol!`] Pass correct call_struct to call_builder in expansion ([#901](https://github.com/alloy-rs/core/issues/901))
-- [sol-macro] Rm fake transport from contract expansion ([#865](https://github.com/alloy-rs/core/issues/865))
-
 ### Features
 
 - 1.0-rc.1
-- [sol-macro] Improve call return encoding ([#909](https://github.com/alloy-rs/core/issues/909))
-- [`sol!`] Gen unit/tuple structs for errors, calls, events with 0/1 param ([#883](https://github.com/alloy-rs/core/issues/883))
-- [sol-macro] Function calls should directly yield result  ([#855](https://github.com/alloy-rs/core/issues/855))
-- [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
 
 ### Miscellaneous Tasks
 
@@ -167,6 +164,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other
 
 - Merge branch 'main' into v1.0-rc
+
+## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
+
+### Features
+
+- [sol-macro] Improve call return encoding ([#909](https://github.com/alloy-rs/core/issues/909))
+
+## [0.8.23](https://github.com/alloy-rs/core/releases/tag/v0.8.23) - 2025-03-13
+
+### Bug Fixes
+
+- [`sol-expander`] Rename from/into + impl From ([#905](https://github.com/alloy-rs/core/issues/905))
+- [`sol!`] Pass correct call_struct to call_builder in expansion ([#901](https://github.com/alloy-rs/core/issues/901))
+- [sol-macro] Rm fake transport from contract expansion ([#865](https://github.com/alloy-rs/core/issues/865))
+
+### Features
+
+- [`sol!`] Gen unit/tuple structs for errors, calls, events with 0/1 param ([#883](https://github.com/alloy-rs/core/issues/883))
+- [sol-macro] Function calls should directly yield result  ([#855](https://github.com/alloy-rs/core/issues/855))
+- [sol-types] Rm `validate: bool`  ([#863](https://github.com/alloy-rs/core/issues/863))
 
 ## [0.8.24](https://github.com/alloy-rs/core/releases/tag/v0.8.24) - 2025-03-21
 
@@ -388,22 +405,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.7](https://github.com/alloy-rs/core/releases/tag/v0.7.7) - 2024-07-08
 
-### Bug Fixes
-
-- [sol-macro] Allow deriving `Default` on contracts ([#645](https://github.com/alloy-rs/core/issues/645))
-- [sol-macro] Overridden event signatures ([#642](https://github.com/alloy-rs/core/issues/642))
-- [sol-macro] Json feature ([#629](https://github.com/alloy-rs/core/issues/629))
-
 ### Documentation
 
 - Add per-crate changelogs ([#669](https://github.com/alloy-rs/core/issues/669))
-- Update some READMEs ([#641](https://github.com/alloy-rs/core/issues/641))
 
 ### Features
 
 - IntoLogData ([#666](https://github.com/alloy-rs/core/issues/666))
 - Add `abi_packed_encoded_size` ([#672](https://github.com/alloy-rs/core/issues/672))
-- [sol-macro] Allow overridden custom errors ([#644](https://github.com/alloy-rs/core/issues/644))
 
 ### Miscellaneous Tasks
 
@@ -411,13 +420,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
 - [sol-macro] Allow clippy all when emitting contract bytecode ([#674](https://github.com/alloy-rs/core/issues/674))
 
-### Refactor
-
-- Move `expand` from `sol-macro` to its own crate ([#626](https://github.com/alloy-rs/core/issues/626))
-
 ### Styling
 
 - Sort derives ([#662](https://github.com/alloy-rs/core/issues/662))
+
+## [0.7.5](https://github.com/alloy-rs/core/releases/tag/v0.7.5) - 2024-06-04
+
+### Bug Fixes
+
+- [sol-macro] Allow deriving `Default` on contracts ([#645](https://github.com/alloy-rs/core/issues/645))
+- [sol-macro] Overridden event signatures ([#642](https://github.com/alloy-rs/core/issues/642))
+
+### Documentation
+
+- Update some READMEs ([#641](https://github.com/alloy-rs/core/issues/641))
+
+### Features
+
+- [sol-macro] Allow overridden custom errors ([#644](https://github.com/alloy-rs/core/issues/644))
+
+## [0.7.4](https://github.com/alloy-rs/core/releases/tag/v0.7.4) - 2024-05-14
+
+### Bug Fixes
+
+- [sol-macro] Json feature ([#629](https://github.com/alloy-rs/core/issues/629))
+
+## [0.7.3](https://github.com/alloy-rs/core/releases/tag/v0.7.3) - 2024-05-14
+
+### Refactor
+
+- Move `expand` from `sol-macro` to its own crate ([#626](https://github.com/alloy-rs/core/issues/626))
 
 [`dyn-abi`]: https://crates.io/crates/alloy-dyn-abi
 [dyn-abi]: https://crates.io/crates/alloy-dyn-abi
