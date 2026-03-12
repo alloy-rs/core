@@ -647,7 +647,7 @@ impl ToExpand<'_> {
 
             Self::Errors(errors) => ExpandData {
                 name: format_ident!("{contract_name}Errors"),
-                variants: errors.iter().map(|error| error.name.0.clone()).collect(),
+                variants: errors.iter().map(|&error| cx.overloaded_name(error.into()).0).collect(),
                 types: None,
                 min_data_len: errors
                     .iter()
@@ -1097,9 +1097,10 @@ fn generate_error_builders(
 ) -> TokenStream {
     let enum_name = format_ident!("{contract_name}Errors");
     let methods = errors.iter().map(|error| {
-        let variant_name = &error.name;
-        let fn_name = snakify_ident(variant_name);
-        let doc = format!("Creates a `{variant_name}` error.");
+        let variant_name = cx.overloaded_name((*error).into());
+        let fn_name = snakify_ident(&variant_name);
+        let sig = cx.error_signature(error);
+        let doc = format!("Creates a [`{variant_name}`] error.\n\n```solidity\nerror {sig}\n```");
 
         match error.parameters.len() {
             // Unit struct: `error Foo();`
@@ -1159,7 +1160,8 @@ fn generate_event_builders(
     let methods = events.iter().map(|event| {
         let variant_name = cx.overloaded_name((*event).into());
         let fn_name = snakify_ident(&variant_name);
-        let doc = format!("Creates a `{variant_name}` event.");
+        let sig = cx.event_signature(event);
+        let doc = format!("Creates a [`{variant_name}`] event.\n\n```solidity\nevent {sig}\n```");
 
         if event.parameters.is_empty() {
             quote! {
