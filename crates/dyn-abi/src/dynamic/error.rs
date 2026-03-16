@@ -80,9 +80,17 @@ impl DynSolError {
     pub fn decode_error(&self, data: &[u8]) -> Result<DecodedError> {
         // Check selector validity.
         if !data.starts_with(self.selector.as_slice()) {
+            // Need at least 4 bytes to extract the actual selector for the error message.
+            let actual = if data.len() >= 4 {
+                Selector::from_slice(&data[0..4])
+            } else {
+                let mut padded = [0u8; 4];
+                padded[..data.len()].copy_from_slice(data);
+                Selector::new(padded)
+            };
             return Err(Error::SelectorMismatch {
                 expected: self.selector,
-                actual: Selector::from_slice(&data[0..4]),
+                actual,
             });
         }
 
@@ -114,6 +122,15 @@ mod test {
 
         let decoded = error.decode_error(&data).unwrap();
         assert_eq!(decoded.body, vec!(DynSolValue::String("    ".into())));
+    }
+
+    #[test]
+    fn decode_error_short_data() {
+        let error = DynSolError::revert();
+        // Empty data should return SelectorMismatch, not panic.
+        assert!(error.decode_error(&[]).is_err());
+        // Less than 4 bytes should also return an error.
+        assert!(error.decode_error(&[0x08, 0xc3]).is_err());
     }
 
     #[test]
