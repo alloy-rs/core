@@ -67,7 +67,7 @@ syn = "2.0"
 
 cfg-if = "1.0.0"
 derive_more = { version = "2.0", default-features = false }
-paste = "1.0"
+paste = { package = "pastey", version = "0.2" }
 
 # crypto
 k256 = { version = "0.13", default-features = false }
