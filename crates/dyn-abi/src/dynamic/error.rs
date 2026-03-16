@@ -88,10 +88,7 @@ impl DynSolError {
                 padded[..data.len()].copy_from_slice(data);
                 Selector::new(padded)
             };
-            return Err(Error::SelectorMismatch {
-                expected: self.selector,
-                actual,
-            });
+            return Err(Error::SelectorMismatch { expected: self.selector, actual });
         }
 
         // will not panic, as we've already checked the length with starts_with
