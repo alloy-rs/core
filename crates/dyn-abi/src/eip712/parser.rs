@@ -109,12 +109,11 @@ impl<'a> ComponentType<'a> {
                         break;
                     }
                 }
-                ',' => {
-                    if depth == 1 {
+                ','
+                    if depth == 1 => {
                         props.push(props_str[last..i].try_into()?);
                         last = i + c.len_utf8();
                     }
-                }
                 _ => {}
             }
         }
