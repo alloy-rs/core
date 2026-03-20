@@ -100,11 +100,11 @@ itoa = "1"
 postgres-types = "0.2.6"
 pretty_assertions = "1.4"
 proptest = "1"
-proptest-derive = "0.7"
+proptest-derive = "0.8"
 rand = { version = "0.9", default-features = false, features = ["os_rng"] }
 rayon = { version = "1.2", default-features = false }
 ruint = { version = "1.16.0", default-features = false, features = ["alloc"] }
-winnow = { version = "0.7", default-features = false, features = ["alloc"] }
+winnow = { version = "1.0", default-features = false, features = ["alloc", "ascii"] }
 fixed-cache = { version = "0.1.8", default-features = false }
 
 # sqlx support (optional, for DB integration)
