@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.6](https://github.com/alloy-rs/core/releases/tag/v1.5.6) - 2026-02-12
+
+### Miscellaneous Tasks
+
+- Release 1.5.6
+- Fix changelog
+
+## [1.5.5](https://github.com/alloy-rs/core/releases/tag/v1.5.5) - 2026-02-11
+
+### Miscellaneous Tasks
+
+- Release 1.5.5
+
+### Testing
+
+- Speed up Miri tests ([#1072](https://github.com/alloy-rs/core/issues/1072))
+
+## [1.5.4](https://github.com/alloy-rs/core/releases/tag/v1.5.4) - 2026-01-28
+
+### Miscellaneous Tasks
+
+- Release 1.5.4
+
 ## [1.5.3](https://github.com/alloy-rs/core/releases/tag/v1.5.3) - 2026-01-27
 
 ### Miscellaneous Tasks

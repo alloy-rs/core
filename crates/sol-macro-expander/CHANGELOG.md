@@ -5,10 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.7](https://github.com/alloy-rs/core/releases/tag/v1.5.7) - 2026-02-18
+
+### Bug Fixes
+
+- [sol-macro] Prevent direct String usage in expanded code ([#1076](https://github.com/alloy-rs/core/issues/1076))
+
+## [1.5.6](https://github.com/alloy-rs/core/releases/tag/v1.5.6) - 2026-02-12
+
+### Miscellaneous Tasks
+
+- Release 1.5.6
+- Fix changelog
+
+## [1.5.5](https://github.com/alloy-rs/core/releases/tag/v1.5.5) - 2026-02-11
+
+### Miscellaneous Tasks
+
+- Release 1.5.5
+
 ## [1.5.4](https://github.com/alloy-rs/core/releases/tag/v1.5.4) - 2026-01-28
 
 ### Miscellaneous Tasks
 
+- Release 1.5.4
 - [sol-macro] Use sha3 ([#1064](https://github.com/alloy-rs/core/issues/1064))
 
 ## [1.5.3](https://github.com/alloy-rs/core/releases/tag/v1.5.3) - 2026-01-27
