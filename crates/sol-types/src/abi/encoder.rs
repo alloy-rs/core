@@ -82,8 +82,7 @@ impl Encoder {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn suffix_offset(&self) -> usize {
-        debug_assert!(!self.suffix_offset.is_empty());
-        unsafe { *self.suffix_offset.last().unwrap_unchecked() }
+        self.suffix_offset.last().copied().expect("no current suffix offset")
     }
 
     /// Appends a suffix offset.
