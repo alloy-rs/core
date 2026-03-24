@@ -75,31 +75,7 @@ pub trait Token<'de>: Sealed + Sized {
         dec: &mut Decoder<'de>,
         out: &mut [MaybeUninit<Self>],
     ) -> Result<()> {
-        /// Drop guard that drops initialized elements on panic or early return.
-        struct Guard<'a, T> {
-            buf: &'a mut [MaybeUninit<T>],
-            initialized: usize,
-        }
-        impl<T> Drop for Guard<'_, T> {
-            fn drop(&mut self) {
-                // SAFETY: the first `self.initialized` elements are guaranteed initialized.
-                unsafe {
-                    let ptr = self.buf.as_mut_ptr().cast::<T>();
-                    core::ptr::drop_in_place(core::ptr::slice_from_raw_parts_mut(
-                        ptr,
-                        self.initialized,
-                    ));
-                }
-            }
-        }
-
-        let mut guard = Guard { buf: out, initialized: 0 };
-        for x in guard.buf {
-            x.write(Self::decode_from(dec)?);
-            guard.initialized += 1;
-        }
-        core::mem::forget(guard);
-        Ok(())
+        crate::impl_core::try_init_each(out, || Self::decode_from(dec))
     }
 
     /// Calculate the number of head words.
