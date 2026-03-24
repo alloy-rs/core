@@ -7,10 +7,10 @@ use core::{
 
 /// Initializes each element of `out` by calling `f` for each slot.
 ///
-/// On success, all elements in `out` are initialized.
+/// On success, all elements in `out` are initialized and returned as `&mut [T]`.
 /// On failure or panic, already-initialized elements are dropped.
 #[inline]
-pub(crate) fn try_init_each<T, E, F>(out: &mut [MaybeUninit<T>], mut f: F) -> Result<(), E>
+pub(crate) fn try_init_each<T, E, F>(out: &mut [MaybeUninit<T>], mut f: F) -> Result<&mut [T], E>
 where
     F: FnMut() -> Result<T, E>,
 {
@@ -28,13 +28,16 @@ where
         }
     }
 
+    let len = out.len();
     let mut guard = Guard { buf: out, initialized: 0 };
-    for i in 0..guard.buf.len() {
+    for i in 0..len {
         guard.buf[i].write(f()?);
         guard.initialized += 1;
     }
+    let buf = guard.buf as *mut [MaybeUninit<T>] as *mut [T];
     mem::forget(guard);
-    Ok(())
+    // SAFETY: all `len` elements are initialized.
+    Ok(unsafe { &mut *buf })
 }
 
 /// `MaybeUninit::uninit_array`

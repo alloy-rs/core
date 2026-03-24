@@ -60,7 +60,7 @@ pub trait Token<'de>: Sealed + Sized {
 
     /// Decode tokens from a decoder into the given uninitialized buffer.
     ///
-    /// On success, all elements in `out` are guaranteed to be initialized.
+    /// On success, returns the initialized slice.
     /// On error, no elements are initialized (partially initialized elements are dropped).
     ///
     /// The default implementation simply loops over [`decode_from`](Self::decode_from).
@@ -71,10 +71,10 @@ pub trait Token<'de>: Sealed + Sized {
     ///
     /// `out` must point to valid, writable memory for `out.len()` elements.
     #[inline]
-    unsafe fn decode_many_from(
+    unsafe fn decode_many_from<'a>(
         dec: &mut Decoder<'de>,
-        out: &mut [MaybeUninit<Self>],
-    ) -> Result<()> {
+        out: &'a mut [MaybeUninit<Self>],
+    ) -> Result<&'a mut [Self]> {
         crate::impl_core::try_init_each(out, || Self::decode_from(dec))
     }
 
@@ -212,16 +212,20 @@ impl<'a> Token<'a> for WordToken {
     }
 
     #[inline]
-    unsafe fn decode_many_from(dec: &mut Decoder<'a>, out: &mut [MaybeUninit<Self>]) -> Result<()> {
-        let byte_len = out.len() * Word::len_bytes();
+    unsafe fn decode_many_from<'b>(
+        dec: &mut Decoder<'a>,
+        out: &'b mut [MaybeUninit<Self>],
+    ) -> Result<&'b mut [Self]> {
+        let len = out.len();
+        let byte_len = len * Word::len_bytes();
         let slice = dec.take_slice(byte_len)?;
         // SAFETY: `MaybeUninit<WordToken>` has the same layout as `WordToken` which is
         // `#[repr(transparent)]` over `Word` (`[u8; 32]`), all with alignment 1.
-        // `slice` is exactly `out.len() * 32` bytes, matching the output layout.
+        // `slice` is exactly `len * 32` bytes, matching the output layout.
         unsafe {
             core::ptr::copy_nonoverlapping(slice.as_ptr(), out.as_mut_ptr().cast::<u8>(), byte_len);
+            Ok(core::slice::from_raw_parts_mut(out.as_mut_ptr().cast::<Self>(), len))
         }
-        Ok(())
     }
 
     #[inline]
