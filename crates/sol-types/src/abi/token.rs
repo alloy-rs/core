@@ -66,8 +66,12 @@ pub trait Token<'de>: Sealed + Sized {
     /// The default implementation simply loops over [`decode_from`](Self::decode_from).
     /// Implementations may override this to provide a more efficient batch decode,
     /// e.g. a single `memcpy` for [`WordToken`].
+    ///
+    /// # Safety
+    ///
+    /// `out` must point to valid, writable memory for `out.len()` elements.
     #[inline]
-    fn decode_many_from<'a>(
+    unsafe fn decode_many_from<'a>(
         dec: &mut Decoder<'de>,
         out: &'a mut [MaybeUninit<Self>],
     ) -> Result<&'a mut [Self]> {
@@ -208,7 +212,7 @@ impl<'a> Token<'a> for WordToken {
     }
 
     #[inline]
-    fn decode_many_from<'b>(
+    unsafe fn decode_many_from<'b>(
         dec: &mut Decoder<'a>,
         out: &'b mut [MaybeUninit<Self>],
     ) -> Result<&'b mut [Self]> {
@@ -354,9 +358,12 @@ impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
     #[inline]
     fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
         let mut arr = crate::impl_core::uninit_array::<T, N>();
-        T::decode_many_from(dec, &mut arr)?;
-        // SAFETY: `decode_many_from` initialized all elements on success.
-        Ok(Self(unsafe { crate::impl_core::array_assume_init(arr) }))
+        // SAFETY: `arr` is valid writable memory for `N` elements.
+        // `decode_many_from` initializes all elements on success.
+        unsafe {
+            T::decode_many_from(dec, &mut arr)?;
+            Ok(Self(crate::impl_core::array_assume_init(arr)))
+        }
     }
 }
 
@@ -413,9 +420,12 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         // word AFTER the array size
         let mut child = child.raw_child()?;
         let mut tokens = vec_try_with_capacity(len)?;
-        T::decode_many_from(&mut child, &mut tokens.spare_capacity_mut()[..len])?;
-        // SAFETY: `decode_many_from` initialized all `len` elements on success.
-        unsafe { tokens.set_len(len) };
+        // SAFETY: `spare_capacity_mut` returns valid writable memory.
+        // `decode_many_from` initializes all `len` elements on success.
+        unsafe {
+            T::decode_many_from(&mut child, &mut tokens.spare_capacity_mut()[..len])?;
+            tokens.set_len(len);
+        }
         Ok(Self(tokens))
     }
 
