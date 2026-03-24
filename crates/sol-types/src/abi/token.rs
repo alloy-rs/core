@@ -17,7 +17,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use alloy_primitives::{Bytes, FixedBytes, I256, U256, hex, utils::vec_try_with_capacity};
-use core::{fmt, mem::MaybeUninit};
+use core::{fmt, mem, mem::MaybeUninit, ptr};
 
 #[allow(unknown_lints, unnameable_types)]
 mod sealed {
@@ -75,7 +75,7 @@ pub trait Token<'de>: Sealed + Sized {
         dec: &mut Decoder<'de>,
         out: &'a mut [MaybeUninit<Self>],
     ) -> Result<&'a mut [Self]> {
-        crate::impl_core::try_init_each(out, || Self::decode_from(dec))
+        try_init_each(out, || Self::decode_from(dec))
     }
 
     /// Calculate the number of head words.
@@ -563,6 +563,41 @@ impl PackedSeqToken<'_> {
     pub const fn as_slice(&self) -> &[u8] {
         self.0
     }
+}
+
+/// Initializes each element of `out` by calling `f` for each slot.
+///
+/// On success, all elements in `out` are initialized and returned as `&mut [T]`.
+/// On failure or panic, already-initialized elements are dropped.
+#[inline]
+fn try_init_each<T, E, F>(out: &mut [MaybeUninit<T>], mut f: F) -> core::result::Result<&mut [T], E>
+where
+    F: FnMut() -> core::result::Result<T, E>,
+{
+    struct Guard<'a, T> {
+        buf: &'a mut [MaybeUninit<T>],
+        initialized: usize,
+    }
+    impl<T> Drop for Guard<'_, T> {
+        fn drop(&mut self) {
+            // SAFETY: the first `self.initialized` elements are guaranteed initialized.
+            unsafe {
+                let ptr = self.buf.as_mut_ptr().cast::<T>();
+                ptr::drop_in_place(ptr::slice_from_raw_parts_mut(ptr, self.initialized));
+            }
+        }
+    }
+
+    let len = out.len();
+    let mut guard = Guard { buf: out, initialized: 0 };
+    for i in 0..len {
+        guard.buf[i].write(f()?);
+        guard.initialized += 1;
+    }
+    let buf = guard.buf as *mut [MaybeUninit<T>] as *mut [T];
+    mem::forget(guard);
+    // SAFETY: all `len` elements are initialized.
+    Ok(unsafe { &mut *buf })
 }
 
 macro_rules! tuple_impls {

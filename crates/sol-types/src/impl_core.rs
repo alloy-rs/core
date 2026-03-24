@@ -1,44 +1,6 @@
 //! Modified implementations of unstable libcore functions.
 
-use core::{
-    mem::{self, MaybeUninit},
-    ptr,
-};
-
-/// Initializes each element of `out` by calling `f` for each slot.
-///
-/// On success, all elements in `out` are initialized and returned as `&mut [T]`.
-/// On failure or panic, already-initialized elements are dropped.
-#[inline]
-pub(crate) fn try_init_each<T, E, F>(out: &mut [MaybeUninit<T>], mut f: F) -> Result<&mut [T], E>
-where
-    F: FnMut() -> Result<T, E>,
-{
-    struct Guard<'a, T> {
-        buf: &'a mut [MaybeUninit<T>],
-        initialized: usize,
-    }
-    impl<T> Drop for Guard<'_, T> {
-        fn drop(&mut self) {
-            // SAFETY: the first `self.initialized` elements are guaranteed initialized.
-            unsafe {
-                let ptr = self.buf.as_mut_ptr().cast::<T>();
-                ptr::drop_in_place(ptr::slice_from_raw_parts_mut(ptr, self.initialized));
-            }
-        }
-    }
-
-    let len = out.len();
-    let mut guard = Guard { buf: out, initialized: 0 };
-    for i in 0..len {
-        guard.buf[i].write(f()?);
-        guard.initialized += 1;
-    }
-    let buf = guard.buf as *mut [MaybeUninit<T>] as *mut [T];
-    mem::forget(guard);
-    // SAFETY: all `len` elements are initialized.
-    Ok(unsafe { &mut *buf })
-}
+use core::mem::{self, MaybeUninit};
 
 /// `MaybeUninit::uninit_array`
 #[inline]
