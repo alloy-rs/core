@@ -111,12 +111,6 @@ impl Encoder {
         self.buf.push(word);
     }
 
-    /// Append a slice of words to the encoder.
-    #[inline]
-    pub fn append_words(&mut self, words: &[Word]) {
-        self.buf.extend_from_slice(words);
-    }
-
     /// Append a pointer to the current suffix offset.
     ///
     /// # Panics

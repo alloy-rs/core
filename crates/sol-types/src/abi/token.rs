@@ -93,18 +93,6 @@ pub trait Token<'de>: Sealed + Sized {
     /// Append head words to the encoder.
     fn head_append(&self, enc: &mut Encoder);
 
-    /// Append head words for a slice of tokens to the encoder.
-    ///
-    /// The default implementation simply loops over [`head_append`](Self::head_append).
-    /// Implementations may override this to provide a more efficient batch encode,
-    /// e.g. a single `memcpy` for [`WordToken`].
-    #[inline]
-    fn head_append_many(tokens: &[Self], enc: &mut Encoder) {
-        for token in tokens {
-            token.head_append(enc);
-        }
-    }
-
     /// Append tail words to the encoder.
     fn tail_append(&self, enc: &mut Encoder);
 }
@@ -256,13 +244,6 @@ impl<'a> Token<'a> for WordToken {
     }
 
     #[inline]
-    fn head_append_many(tokens: &[Self], enc: &mut Encoder) {
-        // SAFETY: `WordToken` is `#[repr(transparent)]` over `Word`.
-        let words = unsafe { &*(tokens as *const [Self] as *const [Word]) };
-        enc.append_words(words);
-    }
-
-    #[inline]
     fn tail_append(&self, _enc: &mut Encoder) {}
 }
 
@@ -345,7 +326,9 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
         if Self::DYNAMIC {
             enc.append_indirection();
         } else {
-            T::head_append_many(&self.0, enc);
+            for inner in &self.0 {
+                inner.head_append(enc);
+            }
         }
     }
 
@@ -359,21 +342,17 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
 
 impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
     fn encode_sequence(&self, enc: &mut Encoder) {
-        if T::DYNAMIC {
-            enc.push_offset(self.0.iter().map(T::head_words).sum());
+        enc.push_offset(self.0.iter().map(T::head_words).sum());
 
-            for inner in &self.0 {
-                inner.head_append(enc);
-                enc.bump_offset(inner.tail_words());
-            }
-            for inner in &self.0 {
-                inner.tail_append(enc);
-            }
-
-            enc.pop_offset();
-        } else {
-            T::head_append_many(&self.0, enc);
+        for inner in &self.0 {
+            inner.head_append(enc);
+            enc.bump_offset(inner.tail_words());
         }
+        for inner in &self.0 {
+            inner.tail_append(enc);
+        }
+
+        enc.pop_offset();
     }
 
     #[inline]
@@ -476,21 +455,17 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
 
 impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
     fn encode_sequence(&self, enc: &mut Encoder) {
-        if T::DYNAMIC {
-            enc.push_offset(self.0.iter().map(T::head_words).sum());
+        enc.push_offset(self.0.iter().map(T::head_words).sum());
 
-            for inner in &self.0 {
-                inner.head_append(enc);
-                enc.bump_offset(inner.tail_words());
-            }
-            for inner in &self.0 {
-                inner.tail_append(enc);
-            }
-
-            enc.pop_offset();
-        } else {
-            T::head_append_many(&self.0, enc);
+        for inner in &self.0 {
+            inner.head_append(enc);
+            enc.bump_offset(inner.tail_words());
         }
+        for inner in &self.0 {
+            inner.tail_append(enc);
+        }
+
+        enc.pop_offset();
     }
 
     #[inline]
