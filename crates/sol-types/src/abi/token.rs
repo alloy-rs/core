@@ -359,21 +359,7 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
 
 impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
     fn encode_sequence(&self, enc: &mut Encoder) {
-        if T::DYNAMIC {
-            enc.push_offset(self.0.iter().map(T::head_words).sum());
-
-            for inner in &self.0 {
-                inner.head_append(enc);
-                enc.bump_offset(inner.tail_words());
-            }
-            for inner in &self.0 {
-                inner.tail_append(enc);
-            }
-
-            enc.pop_offset();
-        } else {
-            T::head_append_many(&self.0, enc);
-        }
+        encode_sequence_impl(&self.0, enc);
     }
 
     #[inline]
@@ -476,21 +462,7 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
 
 impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
     fn encode_sequence(&self, enc: &mut Encoder) {
-        if T::DYNAMIC {
-            enc.push_offset(self.0.iter().map(T::head_words).sum());
-
-            for inner in &self.0 {
-                inner.head_append(enc);
-                enc.bump_offset(inner.tail_words());
-            }
-            for inner in &self.0 {
-                inner.tail_append(enc);
-            }
-
-            enc.pop_offset();
-        } else {
-            T::head_append_many(&self.0, enc);
-        }
+        encode_sequence_impl(&self.0, enc);
     }
 
     #[inline]
@@ -590,6 +562,26 @@ impl PackedSeqToken<'_> {
     #[inline]
     pub const fn as_slice(&self) -> &[u8] {
         self.0
+    }
+}
+
+/// Shared implementation for [`TokenSeq::encode_sequence`] used by both
+/// [`FixedSeqToken`] and [`DynSeqToken`].
+fn encode_sequence_impl<'de, T: Token<'de>>(tokens: &[T], enc: &mut Encoder) {
+    if T::DYNAMIC {
+        enc.push_offset(tokens.iter().map(T::head_words).sum());
+
+        for inner in tokens {
+            inner.head_append(enc);
+            enc.bump_offset(inner.tail_words());
+        }
+        for inner in tokens {
+            inner.tail_append(enc);
+        }
+
+        enc.pop_offset();
+    } else {
+        T::head_append_many(tokens, enc);
     }
 }
 
