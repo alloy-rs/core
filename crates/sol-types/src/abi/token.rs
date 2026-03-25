@@ -93,6 +93,18 @@ pub trait Token<'de>: Sealed + Sized {
     /// Append head words to the encoder.
     fn head_append(&self, enc: &mut Encoder);
 
+    /// Append head words for a slice of tokens to the encoder.
+    ///
+    /// The default implementation simply loops over [`head_append`](Self::head_append).
+    /// Implementations may override this to provide a more efficient batch encode,
+    /// e.g. a single `memcpy` for [`WordToken`].
+    #[inline]
+    fn head_append_many(tokens: &[Self], enc: &mut Encoder) {
+        for token in tokens {
+            token.head_append(enc);
+        }
+    }
+
     /// Append tail words to the encoder.
     fn tail_append(&self, enc: &mut Encoder);
 }
@@ -244,6 +256,13 @@ impl<'a> Token<'a> for WordToken {
     }
 
     #[inline]
+    fn head_append_many(tokens: &[Self], enc: &mut Encoder) {
+        // SAFETY: `WordToken` is `#[repr(transparent)]` over `Word`.
+        let words = unsafe { &*(tokens as *const [Self] as *const [Word]) };
+        enc.append_words(words);
+    }
+
+    #[inline]
     fn tail_append(&self, _enc: &mut Encoder) {}
 }
 
@@ -326,9 +345,7 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
         if Self::DYNAMIC {
             enc.append_indirection();
         } else {
-            for inner in &self.0 {
-                inner.head_append(enc);
-            }
+            T::head_append_many(&self.0, enc);
         }
     }
 
@@ -341,18 +358,9 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
 }
 
 impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
+    #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
-        enc.push_offset(self.0.iter().map(T::head_words).sum());
-
-        for inner in &self.0 {
-            inner.head_append(enc);
-            enc.bump_offset(inner.tail_words());
-        }
-        for inner in &self.0 {
-            inner.tail_append(enc);
-        }
-
-        enc.pop_offset();
+        encode_sequence_impl(&self.0, enc);
     }
 
     #[inline]
@@ -454,18 +462,9 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
 }
 
 impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
+    #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
-        enc.push_offset(self.0.iter().map(T::head_words).sum());
-
-        for inner in &self.0 {
-            inner.head_append(enc);
-            enc.bump_offset(inner.tail_words());
-        }
-        for inner in &self.0 {
-            inner.tail_append(enc);
-        }
-
-        enc.pop_offset();
+        encode_sequence_impl(&self.0, enc);
     }
 
     #[inline]
@@ -493,18 +492,21 @@ impl fmt::Debug for PackedSeqToken<'_> {
 }
 
 impl<'a> From<&'a [u8]> for PackedSeqToken<'a> {
+    #[inline]
     fn from(value: &'a [u8]) -> Self {
         Self(value)
     }
 }
 
 impl<'a> From<&'a Vec<u8>> for PackedSeqToken<'a> {
+    #[inline]
     fn from(value: &'a Vec<u8>) -> Self {
         Self(value.as_slice())
     }
 }
 
 impl AsRef<[u8]> for PackedSeqToken<'_> {
+    #[inline]
     fn as_ref(&self) -> &[u8] {
         self.0
     }
@@ -563,40 +565,6 @@ impl PackedSeqToken<'_> {
     pub const fn as_slice(&self) -> &[u8] {
         self.0
     }
-}
-
-/// Initializes each element of `out` by calling `f` for each slot.
-///
-/// On success, all elements in `out` are initialized and returned as `&mut [T]`.
-/// On failure or panic, already-initialized elements are dropped.
-#[inline]
-fn try_init_each<T, E, F>(out: &mut [MaybeUninit<T>], mut f: F) -> core::result::Result<&mut [T], E>
-where
-    F: FnMut() -> core::result::Result<T, E>,
-{
-    struct Guard<'a, T> {
-        buf: &'a mut [MaybeUninit<T>],
-        initialized: usize,
-    }
-    impl<T> Drop for Guard<'_, T> {
-        fn drop(&mut self) {
-            // SAFETY: the first `self.initialized` elements are guaranteed initialized.
-            unsafe {
-                let ptr = self.buf.as_mut_ptr().cast::<T>();
-                ptr::drop_in_place(ptr::slice_from_raw_parts_mut(ptr, self.initialized));
-            }
-        }
-    }
-
-    let mut guard = Guard { buf: out, initialized: 0 };
-    for x in guard.buf.iter_mut() {
-        x.write(f()?);
-        guard.initialized += 1;
-    }
-    let buf = guard.buf as *mut [MaybeUninit<T>] as *mut [T];
-    mem::forget(guard);
-    // SAFETY: all `len` elements are initialized.
-    Ok(unsafe { &mut *buf })
 }
 
 macro_rules! tuple_impls {
@@ -732,6 +700,60 @@ impl<'de> TokenSeq<'de> for () {
 }
 
 all_the_tuples!(tuple_impls);
+
+/// Shared implementation for [`TokenSeq::encode_sequence`] used by both
+/// [`FixedSeqToken`] and [`DynSeqToken`].
+fn encode_sequence_impl<'de, T: Token<'de>>(tokens: &[T], enc: &mut Encoder) {
+    if T::DYNAMIC {
+        enc.push_offset(tokens.iter().map(T::head_words).sum());
+
+        for inner in tokens {
+            inner.head_append(enc);
+            enc.bump_offset(inner.tail_words());
+        }
+        for inner in tokens {
+            inner.tail_append(enc);
+        }
+
+        enc.pop_offset();
+    } else {
+        T::head_append_many(tokens, enc);
+    }
+}
+
+/// Initializes each element of `out` by calling `f` for each slot.
+///
+/// On success, all elements in `out` are initialized and returned as `&mut [T]`.
+/// On failure or panic, already-initialized elements are dropped.
+#[inline]
+fn try_init_each<T, E, F>(out: &mut [MaybeUninit<T>], mut f: F) -> core::result::Result<&mut [T], E>
+where
+    F: FnMut() -> core::result::Result<T, E>,
+{
+    struct Guard<'a, T> {
+        buf: &'a mut [MaybeUninit<T>],
+        initialized: usize,
+    }
+    impl<T> Drop for Guard<'_, T> {
+        fn drop(&mut self) {
+            // SAFETY: the first `self.initialized` elements are guaranteed initialized.
+            unsafe {
+                let ptr = self.buf.as_mut_ptr().cast::<T>();
+                ptr::drop_in_place(ptr::slice_from_raw_parts_mut(ptr, self.initialized));
+            }
+        }
+    }
+
+    let mut guard = Guard { buf: out, initialized: 0 };
+    for x in guard.buf.iter_mut() {
+        x.write(f()?);
+        guard.initialized += 1;
+    }
+    let buf = guard.buf as *mut [MaybeUninit<T>] as *mut [T];
+    mem::forget(guard);
+    // SAFETY: all `len` elements are initialized.
+    Ok(unsafe { &mut *buf })
+}
 
 #[cfg(test)]
 mod tests {
