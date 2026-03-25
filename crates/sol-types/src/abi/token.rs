@@ -587,40 +587,6 @@ fn encode_sequence_impl<'de, T: Token<'de>>(tokens: &[T], enc: &mut Encoder) {
     }
 }
 
-/// Initializes each element of `out` by calling `f` for each slot.
-///
-/// On success, all elements in `out` are initialized and returned as `&mut [T]`.
-/// On failure or panic, already-initialized elements are dropped.
-#[inline]
-fn try_init_each<T, E, F>(out: &mut [MaybeUninit<T>], mut f: F) -> core::result::Result<&mut [T], E>
-where
-    F: FnMut() -> core::result::Result<T, E>,
-{
-    struct Guard<'a, T> {
-        buf: &'a mut [MaybeUninit<T>],
-        initialized: usize,
-    }
-    impl<T> Drop for Guard<'_, T> {
-        fn drop(&mut self) {
-            // SAFETY: the first `self.initialized` elements are guaranteed initialized.
-            unsafe {
-                let ptr = self.buf.as_mut_ptr().cast::<T>();
-                ptr::drop_in_place(ptr::slice_from_raw_parts_mut(ptr, self.initialized));
-            }
-        }
-    }
-
-    let mut guard = Guard { buf: out, initialized: 0 };
-    for x in guard.buf.iter_mut() {
-        x.write(f()?);
-        guard.initialized += 1;
-    }
-    let buf = guard.buf as *mut [MaybeUninit<T>] as *mut [T];
-    mem::forget(guard);
-    // SAFETY: all `len` elements are initialized.
-    Ok(unsafe { &mut *buf })
-}
-
 macro_rules! tuple_impls {
     ($count:literal $($ty:ident),+) => {
         impl<'de, $($ty: Token<'de>,)+> Sealed for ($($ty,)+) {}
@@ -754,6 +720,40 @@ impl<'de> TokenSeq<'de> for () {
 }
 
 all_the_tuples!(tuple_impls);
+
+/// Initializes each element of `out` by calling `f` for each slot.
+///
+/// On success, all elements in `out` are initialized and returned as `&mut [T]`.
+/// On failure or panic, already-initialized elements are dropped.
+#[inline]
+fn try_init_each<T, E, F>(out: &mut [MaybeUninit<T>], mut f: F) -> core::result::Result<&mut [T], E>
+where
+    F: FnMut() -> core::result::Result<T, E>,
+{
+    struct Guard<'a, T> {
+        buf: &'a mut [MaybeUninit<T>],
+        initialized: usize,
+    }
+    impl<T> Drop for Guard<'_, T> {
+        fn drop(&mut self) {
+            // SAFETY: the first `self.initialized` elements are guaranteed initialized.
+            unsafe {
+                let ptr = self.buf.as_mut_ptr().cast::<T>();
+                ptr::drop_in_place(ptr::slice_from_raw_parts_mut(ptr, self.initialized));
+            }
+        }
+    }
+
+    let mut guard = Guard { buf: out, initialized: 0 };
+    for x in guard.buf.iter_mut() {
+        x.write(f()?);
+        guard.initialized += 1;
+    }
+    let buf = guard.buf as *mut [MaybeUninit<T>] as *mut [T];
+    mem::forget(guard);
+    // SAFETY: all `len` elements are initialized.
+    Ok(unsafe { &mut *buf })
+}
 
 #[cfg(test)]
 mod tests {
