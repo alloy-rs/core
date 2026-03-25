@@ -567,26 +567,6 @@ impl PackedSeqToken<'_> {
     }
 }
 
-/// Shared implementation for [`TokenSeq::encode_sequence`] used by both
-/// [`FixedSeqToken`] and [`DynSeqToken`].
-fn encode_sequence_impl<'de, T: Token<'de>>(tokens: &[T], enc: &mut Encoder) {
-    if T::DYNAMIC {
-        enc.push_offset(tokens.iter().map(T::head_words).sum());
-
-        for inner in tokens {
-            inner.head_append(enc);
-            enc.bump_offset(inner.tail_words());
-        }
-        for inner in tokens {
-            inner.tail_append(enc);
-        }
-
-        enc.pop_offset();
-    } else {
-        T::head_append_many(tokens, enc);
-    }
-}
-
 macro_rules! tuple_impls {
     ($count:literal $($ty:ident),+) => {
         impl<'de, $($ty: Token<'de>,)+> Sealed for ($($ty,)+) {}
@@ -720,6 +700,26 @@ impl<'de> TokenSeq<'de> for () {
 }
 
 all_the_tuples!(tuple_impls);
+
+/// Shared implementation for [`TokenSeq::encode_sequence`] used by both
+/// [`FixedSeqToken`] and [`DynSeqToken`].
+fn encode_sequence_impl<'de, T: Token<'de>>(tokens: &[T], enc: &mut Encoder) {
+    if T::DYNAMIC {
+        enc.push_offset(tokens.iter().map(T::head_words).sum());
+
+        for inner in tokens {
+            inner.head_append(enc);
+            enc.bump_offset(inner.tail_words());
+        }
+        for inner in tokens {
+            inner.tail_append(enc);
+        }
+
+        enc.pop_offset();
+    } else {
+        T::head_append_many(tokens, enc);
+    }
+}
 
 /// Initializes each element of `out` by calling `f` for each slot.
 ///
