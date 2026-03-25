@@ -17,7 +17,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use alloy_primitives::{Bytes, FixedBytes, I256, U256, hex, utils::vec_try_with_capacity};
-use core::fmt;
+use core::{fmt, mem, mem::MaybeUninit, ptr};
 
 #[allow(unknown_lints, unnameable_types)]
 mod sealed {
@@ -57,6 +57,26 @@ pub trait Token<'de>: Sealed + Sized {
 
     /// Decode a token from a decoder.
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self>;
+
+    /// Decode tokens from a decoder into the given uninitialized buffer.
+    ///
+    /// On success, returns the initialized slice.
+    /// On error, no elements are initialized (partially initialized elements are dropped).
+    ///
+    /// The default implementation simply loops over [`decode_from`](Self::decode_from).
+    /// Implementations may override this to provide a more efficient batch decode,
+    /// e.g. a single `memcpy` for [`WordToken`].
+    ///
+    /// # Safety
+    ///
+    /// `out` must point to valid, writable memory for `out.len()` elements.
+    #[inline]
+    unsafe fn decode_many_from<'a>(
+        dec: &mut Decoder<'de>,
+        out: &'a mut [MaybeUninit<Self>],
+    ) -> Result<&'a mut [Self]> {
+        try_init_each(out, || Self::decode_from(dec))
+    }
 
     /// Calculate the number of head words.
     fn head_words(&self) -> usize;
@@ -107,6 +127,7 @@ pub trait TokenSeq<'a>: Token<'a> {
 
 /// A single EVM word - T for any value type.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[repr(transparent)]
 pub struct WordToken(pub Word);
 
 impl<T> From<&T> for WordToken
@@ -200,6 +221,23 @@ impl<'a> Token<'a> for WordToken {
     #[inline]
     fn decode_from(dec: &mut Decoder<'a>) -> Result<Self> {
         dec.take_word().copied().map(Self)
+    }
+
+    #[inline]
+    unsafe fn decode_many_from<'b>(
+        dec: &mut Decoder<'a>,
+        out: &'b mut [MaybeUninit<Self>],
+    ) -> Result<&'b mut [Self]> {
+        let len = out.len();
+        let byte_len = len * Word::len_bytes();
+        let slice = dec.take_slice(byte_len)?;
+        // SAFETY: `MaybeUninit<WordToken>` has the same layout as `WordToken` which is
+        // `#[repr(transparent)]` over `Word` (`[u8; 32]`), all with alignment 1.
+        // `slice` is exactly `len * 32` bytes, matching the output layout.
+        unsafe {
+            core::ptr::copy_nonoverlapping(slice.as_ptr(), out.as_mut_ptr().cast::<u8>(), byte_len);
+            Ok(core::slice::from_raw_parts_mut(out.as_mut_ptr().cast::<Self>(), len))
+        }
     }
 
     #[inline]
@@ -340,7 +378,13 @@ impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
 
     #[inline]
     fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
-        crate::impl_core::try_from_fn(|_| T::decode_from(dec)).map(Self)
+        let mut arr = crate::impl_core::uninit_array::<T, N>();
+        // SAFETY: `arr` is valid writable memory for `N` elements.
+        // `decode_many_from` initializes all elements on success.
+        unsafe {
+            T::decode_many_from(dec, &mut arr)?;
+            Ok(Self(crate::impl_core::array_assume_init(arr)))
+        }
     }
 }
 
@@ -397,8 +441,11 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         // word AFTER the array size
         let mut child = child.raw_child()?;
         let mut tokens = vec_try_with_capacity(len)?;
-        for _ in 0..len {
-            tokens.push(T::decode_from(&mut child)?);
+        // SAFETY: `spare_capacity_mut` returns valid writable memory.
+        // `decode_many_from` initializes all `len` elements on success.
+        unsafe {
+            T::decode_many_from(&mut child, &mut tokens.spare_capacity_mut()[..len])?;
+            tokens.set_len(len);
         }
         Ok(Self(tokens))
     }
@@ -541,6 +588,40 @@ impl PackedSeqToken<'_> {
     pub const fn as_slice(&self) -> &[u8] {
         self.0
     }
+}
+
+/// Initializes each element of `out` by calling `f` for each slot.
+///
+/// On success, all elements in `out` are initialized and returned as `&mut [T]`.
+/// On failure or panic, already-initialized elements are dropped.
+#[inline]
+fn try_init_each<T, E, F>(out: &mut [MaybeUninit<T>], mut f: F) -> core::result::Result<&mut [T], E>
+where
+    F: FnMut() -> core::result::Result<T, E>,
+{
+    struct Guard<'a, T> {
+        buf: &'a mut [MaybeUninit<T>],
+        initialized: usize,
+    }
+    impl<T> Drop for Guard<'_, T> {
+        fn drop(&mut self) {
+            // SAFETY: the first `self.initialized` elements are guaranteed initialized.
+            unsafe {
+                let ptr = self.buf.as_mut_ptr().cast::<T>();
+                ptr::drop_in_place(ptr::slice_from_raw_parts_mut(ptr, self.initialized));
+            }
+        }
+    }
+
+    let mut guard = Guard { buf: out, initialized: 0 };
+    for x in guard.buf.iter_mut() {
+        x.write(f()?);
+        guard.initialized += 1;
+    }
+    let buf = guard.buf as *mut [MaybeUninit<T>] as *mut [T];
+    mem::forget(guard);
+    // SAFETY: all `len` elements are initialized.
+    Ok(unsafe { &mut *buf })
 }
 
 macro_rules! tuple_impls {

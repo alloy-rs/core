@@ -56,9 +56,13 @@ jobs:
         with:
           cache-on-failure: true
       # Only run tests on latest stable and above
+      - name: pin deps
+        if: ${{ matrix.rust == '1.85' }} # MSRV
+        run: cargo +nightly update -Z minimal-versions
       - name: build
         if: ${{ matrix.rust == '1.85' }} # MSRV
         run: cargo build --workspace ${{ matrix.flags }}
+
       - name: test
         if: ${{ matrix.rust != '1.85' }} # MSRV
         run: cargo test --workspace ${{ matrix.flags }}
