@@ -518,18 +518,21 @@ impl fmt::Debug for PackedSeqToken<'_> {
 }
 
 impl<'a> From<&'a [u8]> for PackedSeqToken<'a> {
+    #[inline]
     fn from(value: &'a [u8]) -> Self {
         Self(value)
     }
 }
 
 impl<'a> From<&'a Vec<u8>> for PackedSeqToken<'a> {
+    #[inline]
     fn from(value: &'a Vec<u8>) -> Self {
         Self(value.as_slice())
     }
 }
 
 impl AsRef<[u8]> for PackedSeqToken<'_> {
+    #[inline]
     fn as_ref(&self) -> &[u8] {
         self.0
     }
