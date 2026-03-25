@@ -358,6 +358,7 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
 }
 
 impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
+    #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
         encode_sequence_impl(&self.0, enc);
     }
@@ -461,6 +462,7 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
 }
 
 impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
+    #[inline]
     fn encode_sequence(&self, enc: &mut Encoder) {
         encode_sequence_impl(&self.0, enc);
     }
