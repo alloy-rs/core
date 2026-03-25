@@ -588,10 +588,9 @@ where
         }
     }
 
-    let len = out.len();
     let mut guard = Guard { buf: out, initialized: 0 };
-    for i in 0..len {
-        guard.buf[i].write(f()?);
+    for x in guard.buf.iter_mut() {
+        x.write(f()?);
         guard.initialized += 1;
     }
     let buf = guard.buf as *mut [MaybeUninit<T>] as *mut [T];
