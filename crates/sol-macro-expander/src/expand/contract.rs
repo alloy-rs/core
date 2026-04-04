@@ -181,9 +181,6 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         enum_expander.expand(ToExpand::Events(&events), attrs)
     });
 
-    // Do not propagate contract-level derives to the functions enum.
-    cx.attrs = prev_cx_attrs;
-
     let functions_enum = (!functions.is_empty()).then(|| {
         let mut attrs = enum_attrs;
         let doc_str = format!("Container for all the [`{name}`](self) function calls.");
@@ -192,6 +189,9 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
         enum_expander.expand(ToExpand::Functions(&functions), attrs)
     });
+
+    // Restore context attrs after all enum containers have been generated.
+    cx.attrs = prev_cx_attrs;
 
     let mod_descr_doc = (docs && docs_str(&mod_attrs).trim().is_empty())
         .then(|| mk_doc("Module containing a contract's types and functions."));

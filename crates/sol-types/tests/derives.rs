@@ -69,9 +69,21 @@ fn test_extra_derives() {
     let errors_enum1 = ExtraDerivesContractErrors::InsufficientBalance(error1);
     let errors_enum2 = ExtraDerivesContractErrors::InsufficientBalance(error2);
 
-    // Test PartialEq and Debug
+    let call1 = transferCall { to: Address::ZERO, amount: U256::from(10) };
+    let call2 = transferCall { to: Address::ZERO, amount: U256::from(10) };
+    let calls_enum1 = ExtraDerivesContractCalls::transfer(call1);
+    let calls_enum2 = ExtraDerivesContractCalls::transfer(call2);
+
+    // Test PartialEq and Debug on all enum containers including calls (#3857)
     assert_eq!(errors_enum1, errors_enum2);
     assert_eq!(events_enum1, events_enum2);
+    assert_eq!(calls_enum1, calls_enum2);
+
+    // Test Hash and Eq derives on calls enum
+    let mut calls_set = HashSet::new();
+    calls_set.insert(calls_enum1);
+    calls_set.insert(calls_enum2);
+    assert_eq!(calls_set.len(), 1);
 
     // Test Hash and Eq derives
     let mut events_set = HashSet::new();
