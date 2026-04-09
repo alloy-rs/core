@@ -104,7 +104,8 @@ impl SolInput {
             input.parse::<Token![,]>()?;
         }
         let span = input.span();
-        let macro_string::MacroString(mut value) = input.parse::<macro_string::MacroString>()?;
+        let macro_string = input.parse::<macro_string::MacroString>()?;
+        let mut value = macro_string.eval()?;
 
         let _ = input.parse::<Option<Token![,]>>()?;
         if !input.is_empty() {
