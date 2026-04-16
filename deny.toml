@@ -53,5 +53,4 @@ license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]
 
 [sources]
 unknown-registry = "deny"
-# We can't release with git dependencies anyway, and using them for temporary patches is fine.
-unknown-git = "allow"
+unknown-git = "deny"
