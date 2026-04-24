@@ -563,6 +563,18 @@ impl<'ast> ExpCtxt<'ast> {
         param.indexed_as_hash(self.custom_is_value_type())
     }
 
+    /// Expands an [`EventParameter`] to its Rust type, rewriting indexed
+    /// dynamically-sized types to `FixedBytes<32>`.
+    fn expand_event_param_type(&self, param: &EventParameter) -> TokenStream {
+        if self.indexed_as_hash(param) {
+            let bytes32 =
+                Type::FixedBytes(param.ty.span(), core::num::NonZeroU16::new(32).unwrap());
+            self.expand_rust_type(&bytes32)
+        } else {
+            self.expand_rust_type(&param.ty)
+        }
+    }
+
     fn custom_is_value_type(&self) -> impl Fn(&SolPath) -> bool + '_ {
         move |ty| self.custom_type(ty).is_value_type(self.custom_is_value_type())
     }

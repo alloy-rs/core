@@ -1378,3 +1378,70 @@ fn inherit_attrs() {
     let b = C::MyStruct { a: U256::ZERO };
     assert_eq!(a, b, "{a:#?} != {b:#?}");
 }
+
+#[test]
+fn enum_builders() {
+    sol! {
+        #[derive(Debug, PartialEq)]
+        interface IExample {
+            error ErrorWithoutArgs();
+            error ErrorWithFields(uint256 available, address token);
+
+            event EventWithoutArgs();
+            event EventWithArgs(address indexed from, address indexed to, uint256 amount);
+            // indexed string is stored as bytes32 hash in the struct
+            event EventWithString(string indexed label, uint256 value);
+
+            // overloaded events and errors
+            event Transfer(address indexed from, address indexed to, uint256 value);
+            event Transfer(address indexed from, uint256 value);
+            error Overflow(uint256 a, uint256 b);
+            error Overflow(uint256 value);
+        }
+    }
+
+    use IExample::*;
+
+    // Error builders
+    let built = IExampleErrors::error_without_args();
+    let manual = IExampleErrors::ErrorWithoutArgs(ErrorWithoutArgs {});
+    assert_eq!(built, manual);
+
+    let (addr, val) = (Address::with_last_byte(1), U256::ONE);
+    let built = IExampleErrors::error_with_fields(val, addr);
+    let manual = IExampleErrors::ErrorWithFields(ErrorWithFields { available: val, token: addr });
+    assert_eq!(built, manual);
+
+    // Overloaded errors
+    let built = IExampleErrors::overflow_0(U256::from(1), U256::from(2));
+    let manual = IExampleErrors::Overflow_0(Overflow_0 { a: U256::from(1), b: U256::from(2) });
+    assert_eq!(built, manual);
+
+    let built = IExampleErrors::overflow_1(U256::from(1));
+    let manual = IExampleErrors::Overflow_1(Overflow_1 { value: U256::from(1) });
+    assert_eq!(built, manual);
+
+    // Event builders
+    let built = IExampleEvents::event_without_args();
+    let manual = IExampleEvents::EventWithoutArgs(EventWithoutArgs {});
+    assert_eq!(built, manual);
+
+    let (from, to, amount) = (Address::with_last_byte(1), Address::with_last_byte(2), U256::ONE);
+    let built = IExampleEvents::event_with_args(from, to, amount);
+    let manual = IExampleEvents::EventWithArgs(EventWithArgs { from, to, amount });
+    assert_eq!(built, manual);
+
+    let hash = B256::with_last_byte(0xAB);
+    let built = IExampleEvents::event_with_string(hash, amount);
+    let manual = IExampleEvents::EventWithString(EventWithString { label: hash, value: amount });
+    assert_eq!(built, manual);
+
+    // Overloaded events
+    let built = IExampleEvents::transfer_0(from, to, amount);
+    let manual = IExampleEvents::Transfer_0(Transfer_0 { from, to, value: amount });
+    assert_eq!(built, manual);
+
+    let built = IExampleEvents::transfer_1(from, amount);
+    let manual = IExampleEvents::Transfer_1(Transfer_1 { from, value: amount });
+    assert_eq!(built, manual);
+}

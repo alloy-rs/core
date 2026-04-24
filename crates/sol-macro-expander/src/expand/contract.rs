@@ -5,7 +5,7 @@ use crate::utils::ExprArray;
 use alloy_sol_macro_input::{ContainsSolAttrs, docs_str, mk_doc};
 use ast::{Item, ItemContract, ItemError, ItemEvent, ItemFunction, SolIdent, Spanned};
 use heck::ToSnakeCase;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{Attribute, Result, parse_quote};
 
@@ -170,7 +170,12 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let doc_str = format!("Container for all the [`{name}`](self) custom errors.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         attrs.push(parse_quote!(#[derive(Clone)]));
-        enum_expander.expand(ToExpand::Errors(&errors), attrs)
+        let enum_tokens = enum_expander.expand(ToExpand::Errors(&errors), attrs);
+        let builders = generate_error_builders(name, &errors, cx);
+        quote! {
+            #enum_tokens
+            #builders
+        }
     });
 
     let events_enum = (!events.is_empty()).then(|| {
@@ -178,7 +183,12 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let doc_str = format!("Container for all the [`{name}`](self) events.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         attrs.push(parse_quote!(#[derive(Clone)]));
-        enum_expander.expand(ToExpand::Events(&events), attrs)
+        let enum_tokens = enum_expander.expand(ToExpand::Events(&events), attrs);
+        let builders = generate_event_builders(name, &events, cx);
+        quote! {
+            #enum_tokens
+            #builders
+        }
     });
 
     // Do not propagate contract-level derives to the functions enum.
@@ -637,7 +647,7 @@ impl ToExpand<'_> {
 
             Self::Errors(errors) => ExpandData {
                 name: format_ident!("{contract_name}Errors"),
-                variants: errors.iter().map(|error| error.name.0.clone()).collect(),
+                variants: errors.iter().map(|&error| cx.overloaded_name(error.into()).0).collect(),
                 types: None,
                 min_data_len: errors
                     .iter()
@@ -1077,6 +1087,138 @@ fn call_builder_method_function_name(f: &ItemFunction, cx: &ExpCtxt<'_>) -> SolI
         }
         _ => call_name_ident,
     }
+}
+
+/// Generates snake_case constructor helpers on the `{Interface}Errors` enum.
+fn generate_error_builders(
+    contract_name: &SolIdent,
+    errors: &[&ItemError],
+    cx: &ExpCtxt<'_>,
+) -> TokenStream {
+    let enum_name = format_ident!("{contract_name}Errors");
+    let methods = errors.iter().map(|error| {
+        let variant_name = cx.overloaded_name((*error).into());
+        let fn_name = snakify_ident(&variant_name);
+        let sig = cx.error_signature(error);
+        let doc = format!("Creates a [`{variant_name}`] error.\n\n```solidity\nerror {sig}\n```");
+
+        match error.parameters.len() {
+            // Unit struct: `error Foo();`
+            0 => {
+                quote! {
+                    #[doc = #doc]
+                    #[inline]
+                    pub fn #fn_name() -> Self {
+                        Self::#variant_name(#variant_name)
+                    }
+                }
+            }
+            // Single unnamed param: `error Foo(uint256);` → tuple struct
+            1 if error.parameters[0].name.is_none() => {
+                let ty = cx.expand_rust_type(&error.parameters[0].ty);
+                let param_name = format_ident!("_0");
+                quote! {
+                    #[doc = #doc]
+                    #[inline]
+                    pub fn #fn_name(#param_name: #ty) -> Self {
+                        Self::#variant_name(#variant_name(#param_name))
+                    }
+                }
+            }
+            // Named fields: `error Foo(uint256 bar, address baz);`
+            _ => {
+                let params: Vec<_> = error
+                    .parameters
+                    .iter()
+                    .enumerate()
+                    .map(|(i, p)| {
+                        let sol_name = super::anon_name((i, p.name.as_ref()));
+                        let param_name = snakify_ident(&sol_name);
+                        (sol_name, param_name, cx.expand_rust_type(&p.ty))
+                    })
+                    .collect();
+                builder_method(&fn_name, &doc, &variant_name, &params)
+            }
+        }
+    });
+
+    quote! {
+        #[automatically_derived]
+        impl #enum_name {
+            #(#methods)*
+        }
+    }
+}
+
+/// Generates snake_case constructor helpers on the `{Interface}Events` enum.
+fn generate_event_builders(
+    contract_name: &SolIdent,
+    events: &[&ItemEvent],
+    cx: &ExpCtxt<'_>,
+) -> TokenStream {
+    let enum_name = format_ident!("{contract_name}Events");
+    let methods = events.iter().map(|event| {
+        let variant_name = cx.overloaded_name((*event).into());
+        let fn_name = snakify_ident(&variant_name);
+        let sig = cx.event_signature(event);
+        let doc = format!("Creates a [`{variant_name}`] event.\n\n```solidity\nevent {sig}\n```");
+
+        if event.parameters.is_empty() {
+            quote! {
+                #[doc = #doc]
+                #[inline]
+                pub fn #fn_name() -> Self {
+                    Self::#variant_name(#variant_name)
+                }
+            }
+        } else {
+            let params: Vec<_> = event
+                .parameters
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    let sol_name = super::anon_name((i, p.name.as_ref()));
+                    let param_name = snakify_ident(&sol_name);
+                    (sol_name, param_name, cx.expand_event_param_type(p))
+                })
+                .collect();
+            builder_method(&fn_name, &doc, &variant_name, &params)
+        }
+    });
+
+    quote! {
+        #[automatically_derived]
+        impl #enum_name {
+            #(#methods)*
+        }
+    }
+}
+
+/// Emits a single named-field builder method.
+fn builder_method(
+    fn_name: &Ident,
+    doc: &str,
+    variant_name: &SolIdent,
+    params: &[(Ident, Ident, TokenStream)],
+) -> TokenStream {
+    let fn_params = params.iter().map(|(_, param_name, ty)| quote!(#param_name: #ty));
+    let field_inits = params.iter().map(|(sol_name, param_name, _)| quote!(#sol_name: #param_name));
+    quote! {
+        #[doc = #doc]
+        #[inline]
+        pub fn #fn_name(#(#fn_params),*) -> Self {
+            Self::#variant_name(#variant_name {
+                #(#field_inits),*
+            })
+        }
+    }
+}
+
+/// Converts a name to snake_case, falling back to a raw identifier if the
+/// result is a Rust keyword.
+fn snakify_ident(name: &impl ToString) -> Ident {
+    let s = snakify(&name.to_string());
+    syn::parse_str::<Ident>(&s).unwrap_or_else(|_| Ident::new_raw(&s, Span::call_site()))
 }
 
 /// `heck` doesn't treat numbers as new words, and discards leading underscores.
