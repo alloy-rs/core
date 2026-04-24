@@ -89,6 +89,8 @@ pub use {
 #[cfg(feature = "serde")]
 #[doc(no_inline)]
 pub use ::hex::serde as serde_hex;
+#[cfg(feature = "serde")]
+pub mod serde;
 
 // Not public API.
 #[doc(hidden)]
