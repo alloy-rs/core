@@ -1,7 +1,8 @@
 use super::ExpCtxt;
 use crate::verbatim::Verbatim;
 use alloy_json_abi::{
-    Constructor, Error, Event, EventParam, Fallback, Function, Param, Receive, StateMutability,
+    Constructor, Error, Event, EventParam, Fallback, Function, InternalType, Param, Receive,
+    StateMutability,
 };
 use ast::{ItemError, ItemEvent, ItemFunction};
 use proc_macro2::TokenStream;
@@ -105,36 +106,99 @@ fn ty_to_param(name: Option<String>, ty: &ast::Type, cx: &ExpCtxt<'_>) -> Param 
         ty_name = format!("tuple{suffix}");
     }
 
-    let mut component_names = vec![];
-    let resolved = match ty.peel_arrays() {
+    // For struct types, get the original fields to preserve type information (like UDVTs)
+    let original_fields = match ty.peel_arrays() {
         ast::Type::Custom(name) => {
             if let ast::Item::Struct(s) = cx.item(name) {
-                component_names = s
-                    .fields
-                    .names()
-                    .map(|n| n.map(|i| i.as_string()).unwrap_or_default())
-                    .collect();
+                Some(s.fields.clone())
+            } else {
+                None
             }
-            cx.custom_type(name)
         }
+        _ => None,
+    };
+
+    let resolved = match ty.peel_arrays() {
+        ast::Type::Custom(name) => cx.custom_type(name),
         ty => ty,
     };
 
-    let components = if let ast::Type::Tuple(tuple) = resolved {
-        tuple
-            .types
+    let components = if let Some(fields) = original_fields {
+        // Use original struct fields to preserve UDVT and other custom type names
+        fields
             .iter()
-            .enumerate()
-            .map(|(i, ty)| ty_to_param(component_names.get(i).cloned(), ty, cx))
+            .map(|field| ty_to_param(field.name.as_ref().map(|n| n.as_string()), &field.ty, cx))
             .collect()
+    } else if let ast::Type::Tuple(tuple) = resolved {
+        // For non-struct tuples, use the resolved types
+        tuple.types.iter().map(|ty| ty_to_param(None, ty, cx)).collect()
     } else {
         vec![]
     };
 
-    // TODO: internal_type
-    let internal_type = None;
+    let internal_type = ty_to_internal_type(ty, cx);
 
     Param { ty: ty_name, name: name.unwrap_or_default(), internal_type, components }
+}
+
+/// Generates the internal type for a given Solidity type.
+/// This represents the source-level type as it appears in the Solidity code.
+fn ty_to_internal_type(ty: &ast::Type, cx: &ExpCtxt<'_>) -> Option<InternalType> {
+    // Collect array suffixes
+    let mut array_suffix = String::new();
+    rec_ty_abi_string_suffix(cx, ty, &mut array_suffix);
+
+    // Peel arrays to get the base type
+    let base_ty = ty.peel_arrays();
+
+    match base_ty {
+        ast::Type::Address(_, Some(_)) => {
+            // Address payable
+            Some(InternalType::AddressPayable(format!("address payable{array_suffix}")))
+        }
+        ast::Type::Custom(path) => {
+            // Determine the contract qualifier.
+            let contract = if path.len() == 2 {
+                // Explicit namespace: MyContract.MyStruct
+                Some(path.first().as_string())
+            } else if path.len() == 1 {
+                // Single component: check if we're in a contract namespace
+                // and if the item is defined in that namespace
+                cx.current_namespace.as_ref().map(|ns| ns.as_string())
+            } else {
+                None
+            };
+
+            // Get the type name (last component of the path)
+            let type_name = path.last().as_string();
+
+            // Look up what kind of item this is
+            match cx.try_item(path) {
+                Some(ast::Item::Struct(_)) => Some(InternalType::Struct {
+                    contract,
+                    ty: format!("{type_name}{array_suffix}"),
+                }),
+                Some(ast::Item::Enum(_)) => {
+                    Some(InternalType::Enum { contract, ty: format!("{type_name}{array_suffix}") })
+                }
+                Some(ast::Item::Contract(_)) => {
+                    Some(InternalType::Contract(format!("{type_name}{array_suffix}")))
+                }
+                Some(ast::Item::Udt(_)) => {
+                    Some(InternalType::Other { contract, ty: format!("{type_name}{array_suffix}") })
+                }
+                _ => {
+                    // Fallback for unresolved custom types
+                    Some(InternalType::Other { contract, ty: format!("{type_name}{array_suffix}") })
+                }
+            }
+        }
+        _ => {
+            // For built-in types, generate the internal type string
+            let ty_str = format!("{}{array_suffix}", super::ty::TypePrinter::new(cx, base_ty));
+            Some(InternalType::Other { contract: None, ty: ty_str })
+        }
+    }
 }
 
 fn ty_abi_string(ty: &ast::Type, cx: &ExpCtxt<'_>) -> String {
