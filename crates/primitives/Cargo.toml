@@ -134,7 +134,6 @@ std = [
     "rand?/thread_rng",
     "rustc-hash/std",
     "serde?/std",
-    "sha3/std",
 ]
 nightly = [
     "foldhash?/nightly",
