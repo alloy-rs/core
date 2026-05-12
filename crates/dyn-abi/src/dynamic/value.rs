@@ -488,6 +488,7 @@ impl DynSolValue {
 
     /// Returns true if the value is a sequence type.
     #[inline]
+    #[allow(clippy::unneeded_wildcard_pattern)]
     pub const fn is_sequence(&self) -> bool {
         matches!(self, as_fixed_seq!(_) | Self::Array(_))
     }
