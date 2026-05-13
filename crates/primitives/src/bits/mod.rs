@@ -16,6 +16,9 @@ pub use fixed::FixedBytes;
 #[cfg(feature = "rkyv")]
 pub use fixed::{ArchivedFixedBytes, FixedBytesResolver};
 
+mod flatten;
+pub use flatten::{FixedBytesSliceExt, FixedBytesVecExt};
+
 mod function;
 pub use function::Function;
 
@@ -27,6 +30,9 @@ mod rlp;
 
 #[cfg(feature = "serde")]
 mod serde;
+
+#[cfg(feature = "schemars")]
+mod schemars;
 
 #[cfg(feature = "rkyv")]
 mod rkyv;

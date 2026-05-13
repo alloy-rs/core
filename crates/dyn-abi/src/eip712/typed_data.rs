@@ -795,7 +795,8 @@ mod tests {
         };
 
         // Valid syntax.
-        for primary in ["T", "T:U"] {
+        let valid: &[&str] = if cfg!(miri) { &["T"] } else { &["T", "T:U"] };
+        for primary in valid {
             let typed_data = get_typed_data(primary, false);
             let err = typed_data.eip712_signing_hash().unwrap_err();
             assert_eq!(err, Error::missing_type(primary));
@@ -809,7 +810,9 @@ mod tests {
         // - the rest are basic Solidity types;
         // Therefore the `try_as_basic_solidity` skips over them, returning `MissingType` because
         // the list of linearized types is empty.
-        for primary in ["T.", "T.U", "bool", "uint256"] {
+        let invalid_parses: &[&str] =
+            if cfg!(miri) { &["T.", "bool"] } else { &["T.", "T.U", "bool", "uint256"] };
+        for primary in invalid_parses {
             let typed_data = get_typed_data(primary, false);
             let err = typed_data.eip712_signing_hash().unwrap_err();
             assert_eq!(err, Error::missing_type(primary));
@@ -820,7 +823,12 @@ mod tests {
         }
 
         // Invalid syntax.
-        for primary in ["T[]", "string[]", "uint256[]", "(bool,string)", "(bool,string)[]"] {
+        let invalid: &[&str] = if cfg!(miri) {
+            &["T[]", "(bool,string)"]
+        } else {
+            &["T[]", "string[]", "uint256[]", "(bool,string)", "(bool,string)[]"]
+        };
+        for primary in invalid {
             for set_types in [false, true] {
                 let typed_data = get_typed_data(primary, set_types);
                 let err = typed_data.eip712_signing_hash().unwrap_err();

@@ -264,12 +264,7 @@ fn expand_event_topic_field(
     cx: &ExpCtxt<'_>,
 ) -> TokenStream {
     let name = anon_name((i, name));
-    let ty = if cx.indexed_as_hash(param) {
-        let bytes32 = ast::Type::FixedBytes(name.span(), core::num::NonZeroU16::new(32).unwrap());
-        cx.expand_rust_type(&bytes32)
-    } else {
-        cx.expand_rust_type(&param.ty)
-    };
+    let ty = cx.expand_event_param_type(param);
     let attrs = &param.attrs;
     quote! {
         #(#attrs)*

@@ -540,7 +540,7 @@ mod tests {
     use alloc::string::ToString;
     use core::ops::Neg;
     use ruint::{
-        BaseConvertError, ParseError,
+        ParseError,
         aliases::{U0, U1, U128, U160, U256},
     };
 
@@ -653,12 +653,7 @@ mod tests {
                 assert_eq!(value.into_sign_and_abs(), (Sign::Positive, unsigned));
 
                 let err = <$i_struct>::from_dec_str("invalid string").unwrap_err();
-                assert_eq!(
-                    err,
-                    ParseSignedError::Ruint(ParseError::BaseConvertError(
-                        BaseConvertError::InvalidDigit(18, 10)
-                    ))
-                );
+                assert_eq!(err, ParseSignedError::Ruint(ParseError::InvalidDigit('i')));
 
                 let err = <$i_struct>::from_dec_str(&format!("1{}", <$u_struct>::MAX)).unwrap_err();
                 assert_eq!(err, ParseSignedError::IntegerOverflow);
@@ -1316,14 +1311,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "std")]
     fn division_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let err = std::panic::catch_unwind(|| {
-                    let _ = <$i_struct>::ONE / <$i_struct>::ZERO;
-                });
-                assert!(err.is_err());
+                assert_eq!(<$i_struct>::ONE.checked_div(<$i_struct>::ZERO), None);
             };
         }
 
@@ -1433,22 +1424,11 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "std")]
     fn div_euclid_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let err = std::panic::catch_unwind(|| {
-                    let _ = <$i_struct>::ONE.div_euclid(<$i_struct>::ZERO);
-                });
-                assert!(err.is_err());
-
-                let err = std::panic::catch_unwind(|| {
-                    assert_eq!(
-                        <$i_struct>::MIN.div_euclid(<$i_struct>::MINUS_ONE),
-                        <$i_struct>::MAX
-                    );
-                });
-                assert!(err.is_err());
+                assert_eq!(<$i_struct>::ONE.checked_div_euclid(<$i_struct>::ZERO), None);
+                assert_eq!(<$i_struct>::MIN.checked_div_euclid(<$i_struct>::MINUS_ONE), None);
             };
         }
 
@@ -1463,14 +1443,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "std")]
     fn div_euclid_overflow() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let err = std::panic::catch_unwind(|| {
-                    let _ = <$i_struct>::MIN.div_euclid(<$i_struct>::MINUS_ONE);
-                });
-                assert!(err.is_err());
+                assert_eq!(<$i_struct>::MIN.checked_div_euclid(<$i_struct>::MINUS_ONE), None);
             };
         }
         run_test!(I96, U96);
@@ -1481,14 +1457,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "std")]
     fn mod_by_zero() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
-                let err = std::panic::catch_unwind(|| {
-                    let _ = <$i_struct>::ONE % <$i_struct>::ZERO;
-                });
-                assert!(err.is_err());
+                assert_eq!(<$i_struct>::ONE.checked_rem(<$i_struct>::ZERO), None);
             };
         }
 

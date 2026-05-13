@@ -685,7 +685,8 @@ mod tests {
         for (addresses, chain_id) in [(eth_mainnet, 1), (rsk_mainnet, 30), (rsk_testnet, 31)] {
             // EIP-1191 test cases treat mainnet as "not adopted"
             let id = if chain_id == 1 { None } else { Some(chain_id) };
-            for addr in addresses {
+            let n = if cfg!(miri) { 3 } else { addresses.len() };
+            for &addr in &addresses[..n] {
                 let parsed1: Address = addr.parse().unwrap();
                 let parsed2 = Address::parse_checksummed(addr, id).unwrap();
                 assert_eq!(parsed1, parsed2);

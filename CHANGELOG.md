@@ -5,7 +5,88 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.7](https://github.com/alloy-rs/core/releases/tag/v1.5.7) - 2026-02-18
+
+### Bug Fixes
+
+- [sol-macro] Prevent direct String usage in expanded code ([#1076](https://github.com/alloy-rs/core/issues/1076))
+
+## [1.5.6](https://github.com/alloy-rs/core/releases/tag/v1.5.6) - 2026-02-12
+
+### Dependencies
+
+- [deps] Bump fixed-cache ([#1073](https://github.com/alloy-rs/core/issues/1073))
+
+### Miscellaneous Tasks
+
+- Release 1.5.6
+- Fix changelog
+
+## [1.5.5](https://github.com/alloy-rs/core/releases/tag/v1.5.5) - 2026-02-11
+
+### Dependencies
+
+- [deps] Bump breakings ([#1069](https://github.com/alloy-rs/core/issues/1069))
+
+### Features
+
+- [primitives] Add *flatten* extensions ([#1070](https://github.com/alloy-rs/core/issues/1070))
+
+### Miscellaneous Tasks
+
+- Release 1.5.5
+- Enable alloy-rlp MSRV features ([#1068](https://github.com/alloy-rs/core/issues/1068))
+
+### Testing
+
+- Speed up Miri tests ([#1072](https://github.com/alloy-rs/core/issues/1072))
+- Use checked methods in Signed tests for cranelift compat ([#1071](https://github.com/alloy-rs/core/issues/1071))
+
+## [1.5.4](https://github.com/alloy-rs/core/releases/tag/v1.5.4) - 2026-01-28
+
+### Miscellaneous Tasks
+
+- Release 1.5.4
+- [sol-macro] Use sha3 ([#1064](https://github.com/alloy-rs/core/issues/1064))
+
+### Other
+
+- Fix rkyv miri breakage ([#1066](https://github.com/alloy-rs/core/issues/1066))
+
+### Performance
+
+- [primitives] Use keccak_asm::Keccak256::digest ([#1067](https://github.com/alloy-rs/core/issues/1067))
+-  perf(primitives): remove unnecessary keccak cache length hash computation ([#1065](https://github.com/alloy-rs/core/issues/1065))
+
+## [1.5.3](https://github.com/alloy-rs/core/releases/tag/v1.5.3) - 2026-01-27
+
+### Dependencies
+
+- [deps] Run cargo shear ([#1055](https://github.com/alloy-rs/core/issues/1055))
+
+### Features
+
+- [primitives] FixedBytes: schemars::JsonSchema ([#1059](https://github.com/alloy-rs/core/issues/1059))
+
+### Miscellaneous Tasks
+
+- Release 1.5.3
+- Allow bincode advisory in deny.toml ([#1060](https://github.com/alloy-rs/core/issues/1060))
+- [primitives] Switch default keccak to sha3 ([#1057](https://github.com/alloy-rs/core/issues/1057))
+
+### Other
+
+- Update to tempoxyz ([#1062](https://github.com/alloy-rs/core/issues/1062))
+
+### Performance
+
+- [primitives] Always enable 'sha3/asm' feature ([#1058](https://github.com/alloy-rs/core/issues/1058))
+
 ## [1.5.2](https://github.com/alloy-rs/core/releases/tag/v1.5.2) - 2025-12-22
+
+### Miscellaneous Tasks
+
+- Release 1.5.2
 
 ### Performance
 

@@ -162,8 +162,8 @@ impl SolAttrs {
                 let lit = || {
                     let value = meta.value()?;
                     let span = value.span();
-                    let macro_string::MacroString(value) =
-                        value.parse::<macro_string::MacroString>()?;
+                    let macro_string = value.parse::<macro_string::MacroString>()?;
+                    let value = macro_string.eval()?;
                     Ok::<_, syn::Error>(LitStr::new(&value, span))
                 };
 
