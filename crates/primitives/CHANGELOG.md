@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0](https://github.com/alloy-rs/core/releases/tag/v1.6.0) - 2026-05-14
+
+### Bug Fixes
+
+- Nightly clippy fixes ([#1085](https://github.com/alloy-rs/core/issues/1085))
+
+### Dependencies
+
+- [deps] Bump all ([#1098](https://github.com/alloy-rs/core/issues/1098))
+
+### Features
+
+- Add optional `secp256k1` backend for ECDSA operations ([#1104](https://github.com/alloy-rs/core/issues/1104))
+
+## [1.5.7](https://github.com/alloy-rs/core/releases/tag/v1.5.7) - 2026-02-27
+
+### Miscellaneous Tasks
+
+- Release 1.5.7 ([#1077](https://github.com/alloy-rs/core/issues/1077))
+
 ## [1.5.6](https://github.com/alloy-rs/core/releases/tag/v1.5.6) - 2026-02-12
 
 ### Dependencies

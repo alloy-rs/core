@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0](https://github.com/alloy-rs/core/releases/tag/v1.6.0) - 2026-05-14
+
+### Bug Fixes
+
+- [dyn-abi] Handle short data in decode_error without panicking ([#1084](https://github.com/alloy-rs/core/issues/1084))
+- Nightly clippy fixes ([#1085](https://github.com/alloy-rs/core/issues/1085))
+
+### Dependencies
+
+- [deps] Bump all ([#1098](https://github.com/alloy-rs/core/issues/1098))
+
+## [1.5.7](https://github.com/alloy-rs/core/releases/tag/v1.5.7) - 2026-02-27
+
+### Miscellaneous Tasks
+
+- Release 1.5.7 ([#1077](https://github.com/alloy-rs/core/issues/1077))
+
 ## [1.5.6](https://github.com/alloy-rs/core/releases/tag/v1.5.6) - 2026-02-12
 
 ### Miscellaneous Tasks

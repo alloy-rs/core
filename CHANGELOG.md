@@ -5,11 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.7](https://github.com/alloy-rs/core/releases/tag/v1.5.7) - 2026-02-18
+## [1.6.0](https://github.com/alloy-rs/core/releases/tag/v1.6.0) - 2026-05-14
+
+### Bug Fixes
+
+- [syn-solidity] Parse `delete` statement as expression, not variable declaration ([#1087](https://github.com/alloy-rs/core/issues/1087))
+- [sol-types] Remove unsound unwrap_unchecked in suffix_offset ([#1083](https://github.com/alloy-rs/core/issues/1083))
+- [dyn-abi] Handle short data in decode_error without panicking ([#1084](https://github.com/alloy-rs/core/issues/1084))
+- Nightly clippy fixes ([#1085](https://github.com/alloy-rs/core/issues/1085))
+
+### Dependencies
+
+- [deps] Bump all ([#1098](https://github.com/alloy-rs/core/issues/1098))
+- Harden supply chain — pin actions, lock permissions, deny git deps ([#1092](https://github.com/alloy-rs/core/issues/1092))
+- Bump winnow, proptest-derive, macro-string ([#1088](https://github.com/alloy-rs/core/issues/1088))
+
+### Features
+
+- Add optional `secp256k1` backend for ECDSA operations ([#1104](https://github.com/alloy-rs/core/issues/1104))
+- [sol-macro] Helper builders for errors and events ([#1080](https://github.com/alloy-rs/core/issues/1080))
+
+### Performance
+
+- Add Token::head_append_many for batch encoding ([#1090](https://github.com/alloy-rs/core/issues/1090))
+- Add Token::decode_many_from for batch decoding ([#1089](https://github.com/alloy-rs/core/issues/1089))
+
+## [1.5.7](https://github.com/alloy-rs/core/releases/tag/v1.5.7) - 2026-02-27
 
 ### Bug Fixes
 
 - [sol-macro] Prevent direct String usage in expanded code ([#1076](https://github.com/alloy-rs/core/issues/1076))
+
+### Miscellaneous Tasks
+
+- Release 1.5.7 ([#1077](https://github.com/alloy-rs/core/issues/1077))
 
 ## [1.5.6](https://github.com/alloy-rs/core/releases/tag/v1.5.6) - 2026-02-12
 
