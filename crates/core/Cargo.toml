@@ -77,6 +77,7 @@ rkyv = ["alloy-primitives/rkyv"]
 rlp = ["alloy-primitives/rlp", "dep:alloy-rlp"]
 serde = ["alloy-primitives/serde"]
 k256 = ["alloy-primitives/k256"]
+secp256k1 = ["alloy-primitives/secp256k1"]
 eip712 = ["alloy-sol-types?/eip712-serde", "alloy-dyn-abi?/eip712"]
 more-tuple-impls = ["alloy-sol-types/more-tuple-impls"]
 
