@@ -184,9 +184,13 @@ impl<'a> EncodeType<'a> {
         };
 
         let primary = first.type_name();
-        _ = resolver.resolve(primary)?;
 
-        // Encode primary type
+        // Encode primary type. This delegates to `Resolver::encode_type`, which
+        // walks the dependency graph via `Resolver::linearize` and surfaces both
+        // missing-type and circular-dependency errors. We intentionally do not
+        // call `Resolver::resolve` here, because that builds a `DynSolType` and
+        // therefore cannot represent recursive struct types (which EIP-712
+        // explicitly permits, see <https://eips.ethereum.org/EIPS/eip-712>).
         resolver.encode_type(primary)
     }
 }
@@ -281,5 +285,28 @@ mod tests {
             EncodeType::parse(CIRCULAR).unwrap().canonicalize(),
             Err(Error::CircularDependency("Transaction".into()))
         );
+    }
+
+    #[test]
+    fn canonicalize_self_referential_type() {
+        // Per EIP-712 ("The standard supports recursive struct types."), a
+        // type that references itself - typically through an array, since
+        // concrete values must still be finite trees - must be accepted as
+        // the primary component for canonicalization.
+        //
+        // Regression test for <https://github.com/alloy-rs/core/issues/1103>.
+        let input = "Node(uint256 value,Node[] children)";
+        let encoded = EncodeType::parse(input).unwrap();
+        assert_eq!(encoded.canonicalize(), Ok(input.to_string()));
+    }
+
+    #[test]
+    fn canonicalize_self_referential_type_with_dependency() {
+        // A self-referential primary type that also depends on another type
+        // should canonicalize, with the dependent type appended per the
+        // EIP-712 ordering rules.
+        let input = "Tree(Leaf root,Tree[] subtrees)Leaf(uint256 value)";
+        let encoded = EncodeType::parse(input).unwrap();
+        assert_eq!(encoded.canonicalize(), Ok(input.to_string()));
     }
 }
