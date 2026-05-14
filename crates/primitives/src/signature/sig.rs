@@ -87,7 +87,10 @@ impl From<secp256k1::ecdsa::RecoverableSignature> for Signature {
         let (recid, bytes) = value.serialize_compact();
         let r = U256::from_be_slice(&bytes[..32]);
         let s = U256::from_be_slice(&bytes[32..]);
-        let v = matches!(recid, secp256k1::ecdsa::RecoveryId::One | secp256k1::ecdsa::RecoveryId::Three);
+        let v = matches!(
+            recid,
+            secp256k1::ecdsa::RecoveryId::One | secp256k1::ecdsa::RecoveryId::Three
+        );
         Self { y_parity: v, r, s }
     }
 }
