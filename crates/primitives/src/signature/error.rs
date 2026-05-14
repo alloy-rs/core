@@ -16,12 +16,23 @@ pub enum SignatureError {
     /// k256 error
     #[cfg(feature = "k256")]
     K256(k256::ecdsa::Error),
+
+    /// secp256k1 error
+    #[cfg(feature = "secp256k1")]
+    Secp256k1(secp256k1::Error),
 }
 
 #[cfg(feature = "k256")]
 impl From<k256::ecdsa::Error> for SignatureError {
     fn from(err: k256::ecdsa::Error) -> Self {
         Self::K256(err)
+    }
+}
+
+#[cfg(feature = "secp256k1")]
+impl From<secp256k1::Error> for SignatureError {
+    fn from(err: secp256k1::Error) -> Self {
+        Self::Secp256k1(err)
     }
 }
 
@@ -36,6 +47,8 @@ impl core::error::Error for SignatureError {
         match self {
             #[cfg(all(feature = "k256", feature = "std"))]
             Self::K256(e) => Some(e),
+            #[cfg(all(feature = "secp256k1", feature = "std"))]
+            Self::Secp256k1(e) => Some(e),
             #[cfg(any(feature = "std", not(feature = "hex-compat")))]
             Self::FromHex(e) => Some(e),
             _ => None,
@@ -48,6 +61,8 @@ impl fmt::Display for SignatureError {
         match self {
             #[cfg(feature = "k256")]
             Self::K256(e) => e.fmt(f),
+            #[cfg(feature = "secp256k1")]
+            Self::Secp256k1(e) => e.fmt(f),
             Self::FromBytes(e) => f.write_str(e),
             Self::FromHex(e) => e.fmt(f),
             Self::InvalidParity(v) => write!(f, "invalid parity: {v}"),

@@ -4,7 +4,7 @@ use crate::{B256, U256, hex, normalize_v, signature::SignatureError, uint};
 use alloc::vec::Vec;
 use core::{fmt::Display, str::FromStr};
 
-#[cfg(feature = "k256")]
+#[cfg(any(feature = "k256", feature = "secp256k1"))]
 use crate::Address;
 
 /// The order of the [Secp256k1](https://en.bitcoin.it/wiki/Secp256k1) curve.
@@ -78,6 +78,17 @@ impl From<Signature> for Vec<u8> {
 impl From<(k256::ecdsa::Signature, k256::ecdsa::RecoveryId)> for Signature {
     fn from(value: (k256::ecdsa::Signature, k256::ecdsa::RecoveryId)) -> Self {
         Self::from_signature_and_parity(value.0, value.1.is_y_odd())
+    }
+}
+
+#[cfg(feature = "secp256k1")]
+impl From<secp256k1::ecdsa::RecoverableSignature> for Signature {
+    fn from(value: secp256k1::ecdsa::RecoverableSignature) -> Self {
+        let (recid, bytes) = value.serialize_compact();
+        let r = U256::from_be_slice(&bytes[..32]);
+        let s = U256::from_be_slice(&bytes[32..]);
+        let v = matches!(recid, secp256k1::ecdsa::RecoveryId::One | secp256k1::ecdsa::RecoveryId::Three);
+        Self { y_parity: v, r, s }
     }
 }
 
@@ -233,6 +244,16 @@ impl Signature {
         k256::ecdsa::Signature::from_scalars(self.r.to_be_bytes(), self.s.to_be_bytes())
     }
 
+    /// Returns the inner ECDSA recoverable signature using the `secp256k1` backend.
+    #[cfg(feature = "secp256k1")]
+    #[inline]
+    pub fn to_secp256k1(&self) -> Result<secp256k1::ecdsa::RecoverableSignature, secp256k1::Error> {
+        let mut bytes = [0u8; 64];
+        bytes[..32].copy_from_slice(&self.r.to_be_bytes::<32>());
+        bytes[32..].copy_from_slice(&self.s.to_be_bytes::<32>());
+        secp256k1::ecdsa::RecoverableSignature::from_compact(&bytes, self.secp256k1_recid())
+    }
+
     /// Instantiate from a signature and recovery id
     #[cfg(feature = "k256")]
     pub fn from_signature_and_parity(sig: k256::ecdsa::Signature, v: bool) -> Self {
@@ -282,22 +303,41 @@ impl Signature {
         k256::ecdsa::RecoveryId::new(self.y_parity, false)
     }
 
+    /// Returns the recovery ID as a [`secp256k1::ecdsa::RecoveryId`].
+    #[cfg(feature = "secp256k1")]
+    #[inline]
+    pub fn secp256k1_recid(&self) -> secp256k1::ecdsa::RecoveryId {
+        if self.y_parity {
+            secp256k1::ecdsa::RecoveryId::One
+        } else {
+            secp256k1::ecdsa::RecoveryId::Zero
+        }
+    }
+
     /// Recovers an [`Address`] from this signature and the given message by first prefixing and
     /// hashing the message according to [EIP-191](crate::eip191_hash_message).
-    #[cfg(feature = "k256")]
+    #[cfg(any(feature = "k256", feature = "secp256k1"))]
     #[inline]
     pub fn recover_address_from_msg<T: AsRef<[u8]>>(
         &self,
         msg: T,
     ) -> Result<Address, SignatureError> {
-        self.recover_from_msg(msg).map(|vk| Address::from_public_key(&vk))
+        self.recover_address_from_prehash(&crate::eip191_hash_message(msg))
     }
 
     /// Recovers an [`Address`] from this signature and the given prehashed message.
-    #[cfg(feature = "k256")]
+    #[cfg(any(feature = "k256", feature = "secp256k1"))]
     #[inline]
     pub fn recover_address_from_prehash(&self, prehash: &B256) -> Result<Address, SignatureError> {
-        self.recover_from_prehash(prehash).map(|vk| Address::from_public_key(&vk))
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "secp256k1")] {
+                let pubkey = self.recover_from_prehash_secp256k1(prehash)?;
+                Ok(Address::from_raw_public_key(&pubkey.serialize_uncompressed()[1..]))
+            } else {
+                let vk = self.recover_from_prehash_k256(prehash)?;
+                Ok(Address::from_public_key(&vk))
+            }
+        }
     }
 
     /// Recovers a [`VerifyingKey`] from this signature and the given message by first prefixing and
@@ -322,6 +362,18 @@ impl Signature {
         &self,
         prehash: &B256,
     ) -> Result<k256::ecdsa::VerifyingKey, SignatureError> {
+        self.recover_from_prehash_k256(prehash)
+    }
+
+    /// Recovers a [`VerifyingKey`] using the `k256` backend.
+    ///
+    /// [`VerifyingKey`]: k256::ecdsa::VerifyingKey
+    #[cfg(feature = "k256")]
+    #[inline]
+    fn recover_from_prehash_k256(
+        &self,
+        prehash: &B256,
+    ) -> Result<k256::ecdsa::VerifyingKey, SignatureError> {
         let this = self.normalized_s();
         k256::ecdsa::VerifyingKey::recover_from_prehash(
             prehash.as_slice(),
@@ -329,6 +381,31 @@ impl Signature {
             this.recid(),
         )
         .map_err(Into::into)
+    }
+
+    /// Recovers a [`secp256k1::PublicKey`] from this signature and the given message by first
+    /// prefixing and hashing the message according to [EIP-191](crate::eip191_hash_message).
+    #[cfg(feature = "secp256k1")]
+    #[inline]
+    pub fn recover_from_msg_secp256k1<T: AsRef<[u8]>>(
+        &self,
+        msg: T,
+    ) -> Result<secp256k1::PublicKey, SignatureError> {
+        self.recover_from_prehash_secp256k1(&crate::eip191_hash_message(msg))
+    }
+
+    /// Recovers a [`secp256k1::PublicKey`] from this signature and the given prehashed message.
+    #[cfg(feature = "secp256k1")]
+    #[inline]
+    pub fn recover_from_prehash_secp256k1(
+        &self,
+        prehash: &B256,
+    ) -> Result<secp256k1::PublicKey, SignatureError> {
+        let this = self.normalized_s();
+        let sig = this.to_secp256k1()?;
+        let msg = secp256k1::Message::from_digest(prehash.0);
+        let secp = secp256k1::Secp256k1::verification_only();
+        secp.recover_ecdsa(msg, &sig).map_err(Into::into)
     }
 
     /// Returns the `r` component of this signature.

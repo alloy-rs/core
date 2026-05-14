@@ -84,6 +84,9 @@ rayon = { workspace = true, optional = true }
 # k256
 k256 = { workspace = true, optional = true, features = ["ecdsa"] }
 
+# secp256k1
+secp256k1 = { workspace = true, optional = true }
+
 # map
 hashbrown = { workspace = true, optional = true, features = [
     "default-hasher",
@@ -128,6 +131,7 @@ std = [
     "rapidhash?/std",
     "indexmap?/std",
     "k256?/std",
+    "secp256k1?/std",
     "keccak-asm?/std",
     "proptest?/std",
     "rand?/std",
@@ -162,6 +166,7 @@ map-fxhash = ["map"]
 
 getrandom = ["dep:getrandom"]
 k256 = ["dep:k256"]
+secp256k1 = ["dep:secp256k1"]
 rand = [
     "dep:rand",
     "getrandom",
