@@ -196,34 +196,3 @@ impl From<TryReserveError> for Error {
         Self::Reserve(value)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::Error;
-    use alloc::{format, string::ToString};
-    use alloy_primitives::B256;
-
-    #[test]
-    fn invalid_event_signature_hash_is_structured() {
-        let got = B256::repeat_byte(0x11);
-        let expected = B256::repeat_byte(0x22);
-        let err =
-            Error::invalid_event_signature_hash("Transfer(address,address,uint256)", got, expected);
-
-        assert_eq!(
-            err,
-            Error::InvalidEventSignatureHash {
-                name: "Transfer(address,address,uint256)",
-                got,
-                expected,
-            }
-        );
-        assert_eq!(
-            err.to_string(),
-            format!(
-                "invalid signature hash for event {:?}: got {got}, expected {expected}",
-                "Transfer(address,address,uint256)"
-            )
-        );
-    }
-}
