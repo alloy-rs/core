@@ -175,7 +175,7 @@ impl Signature {
         let mut sig = [0u8; 65];
         sig[..32].copy_from_slice(&self.r.to_be_bytes::<32>());
         sig[32..64].copy_from_slice(&self.s.to_be_bytes::<32>());
-        sig[64] = 27 + self.y_parity as u8;
+        sig[64] = self.v_byte();
         sig
     }
 
@@ -427,6 +427,12 @@ impl Signature {
     #[inline]
     pub fn v(&self) -> bool {
         self.y_parity
+    }
+
+    /// Returns the recovery ID in 'Electrum' notation (`27 + y_parity`).
+    #[inline]
+    pub const fn v_byte(&self) -> u8 {
+        27 + self.y_parity as u8
     }
 
     /// Length of RLP RS field encoding
@@ -777,6 +783,15 @@ mod tests {
             "0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa63627667cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d8301"
         );
         assert_eq!(signature.as_rsy(), expected);
+    }
+
+    #[test]
+    fn v_byte() {
+        let signature = Signature::new(U256::ZERO, U256::ZERO, false);
+        assert_eq!(signature.v_byte(), 27);
+
+        let signature = signature.with_parity(true);
+        assert_eq!(signature.v_byte(), 28);
     }
 
     #[test]
