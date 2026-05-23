@@ -56,6 +56,7 @@ impl<'a> PropDef<'a> {
     /// assert_eq!(prop.name, "msg");
     /// ```
     pub fn parse(input: &'a str) -> Result<Self, Error> {
+        let input = input.trim();
         let (ty, name) =
             input.rsplit_once(' ').ok_or_else(|| Error::invalid_property_def(input))?;
         Ok(PropDef { ty: TypeSpecifier::parse_eip712(ty.trim())?, name: name.trim() })
@@ -225,6 +226,55 @@ mod tests {
             EncodeType::try_from("EIP712Domain()"),
             Ok(EncodeType { types: vec![empty_domain_type] })
         );
+    }
+
+    #[test]
+    fn prop_def_tolerates_surrounding_whitespace() {
+        let expected = PropDef::parse("uint256 x").unwrap();
+
+        let inputs = ["uint256 x ", " uint256 x", "  uint256 x  ", "\tuint256 x\t"];
+        for input in inputs {
+            let prop = PropDef::parse(input)
+                .unwrap_or_else(|e| panic!("PropDef::parse({input:?}) failed: {e}"));
+            assert_eq!(prop.ty.span(), expected.ty.span());
+            assert_eq!(prop.name, expected.name);
+        }
+    }
+
+    #[test]
+    fn component_type_tolerates_whitespace_inside_parens() {
+        let inputs = ["Foo(uint256 x)", "Foo(uint256 x )", "Foo( uint256 x)", "Foo( uint256 x )"];
+        for input in inputs {
+            let component = ComponentType::parse(input)
+                .unwrap_or_else(|e| panic!("ComponentType::parse({input:?}) failed: {e}"));
+            assert_eq!(component.type_name, "Foo");
+            assert_eq!(component.props.len(), 1);
+            assert_eq!(component.props[0].ty.span(), "uint256");
+            assert_eq!(component.props[0].name, "x");
+        }
+    }
+
+    #[test]
+    fn component_type_tolerates_whitespace_around_commas() {
+        let inputs = [
+            "Foo(uint256 x,uint8 y)",
+            "Foo(uint256 x, uint8 y)",
+            "Foo(uint256 x ,uint8 y)",
+            "Foo(uint256 x , uint8 y)",
+            "Foo( uint256 x , uint8 y )",
+        ];
+        for input in inputs {
+            let component = ComponentType::parse(input)
+                .unwrap_or_else(|e| panic!("ComponentType::parse({input:?}) failed: {e}"));
+            assert_eq!(component.type_name, "Foo");
+            assert_eq!(component.props.len(), 2);
+
+            assert_eq!(component.props[0].ty.span(), "uint256");
+            assert_eq!(component.props[0].name, "x");
+
+            assert_eq!(component.props[1].ty.span(), "uint8");
+            assert_eq!(component.props[1].name, "y");
+        }
     }
 
     #[test]
