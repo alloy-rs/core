@@ -48,9 +48,13 @@ macro_rules! impl_topic_list_tuples {
                 D: Into<WordToken>
             {
                 let mut iter = topics.into_iter();
-                Ok(($(
+                let topics = ($(
                     <$t>::detokenize(iter.next().ok_or_else(length_mismatch)?.into()),
-                )*))
+                )*);
+                if iter.next().is_some() {
+                    return Err(length_mismatch());
+                }
+                Ok(topics)
             }
         }
     )+};
@@ -61,11 +65,14 @@ impl TopicList for () {
     const COUNT: usize = 0;
 
     #[inline]
-    fn detokenize<I, D>(_: I) -> Result<Self::RustType>
+    fn detokenize<I, D>(topics: I) -> Result<Self::RustType>
     where
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,
     {
+        if topics.into_iter().next().is_some() {
+            return Err(length_mismatch());
+        }
         Ok(())
     }
 }

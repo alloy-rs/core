@@ -1237,6 +1237,7 @@ fn event_check_signature() {
     sol! {
         #[derive(Debug)]
         event MyEvent();
+        #[derive(Debug)]
         event MyEventAnonymous() anonymous;
     }
 
@@ -1247,10 +1248,26 @@ fn event_check_signature() {
     assert_eq!(e.to_string(), "topic list length mismatch");
     let e = MyEvent::decode_raw_log([B256::ZERO], &[]).unwrap_err();
     assert!(e.to_string().contains("invalid signature hash"), "{e:?}");
+    let e = MyEvent::decode_raw_log([MyEvent::SIGNATURE_HASH, B256::ZERO], &[]).unwrap_err();
+    assert_eq!(e.to_string(), "topic list length mismatch");
     let MyEvent {} = MyEvent::decode_raw_log([MyEvent::SIGNATURE_HASH], &[]).unwrap();
 
     assert!(MyEventAnonymous::ANONYMOUS);
     let MyEventAnonymous {} = MyEventAnonymous::decode_raw_log(no_topics, &[]).unwrap();
+}
+
+// https://github.com/alloy-rs/core/issues/1038
+#[test]
+fn empty_anonymous_event_rejects_extra_topics() {
+    sol! {
+        #[derive(Debug)]
+        event MyEvent();
+        #[derive(Debug)]
+        event MyEventAnonymous() anonymous;
+    }
+
+    let e = MyEventAnonymous::decode_raw_log([MyEvent::SIGNATURE_HASH], &[]).unwrap_err();
+    assert_eq!(e.to_string(), "topic list length mismatch");
 }
 
 // https://github.com/alloy-rs/core/issues/811
