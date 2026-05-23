@@ -174,7 +174,11 @@ impl Error {
 
     #[doc(hidden)] // Not public API.
     #[cold]
-    pub fn invalid_event_signature_hash(name: &'static str, got: B256, expected: B256) -> Self {
+    pub const fn invalid_event_signature_hash(
+        name: &'static str,
+        got: B256,
+        expected: B256,
+    ) -> Self {
         Self::InvalidEventSignatureHash { name, got, expected }
     }
 }
@@ -196,6 +200,7 @@ impl From<TryReserveError> for Error {
 #[cfg(test)]
 mod tests {
     use super::Error;
+    use alloc::{format, string::ToString};
     use alloy_primitives::B256;
 
     #[test]
