@@ -1270,6 +1270,43 @@ fn empty_anonymous_event_rejects_extra_topics() {
     assert_eq!(e.to_string(), "topic list length mismatch");
 }
 
+#[test]
+fn anonymous_event_decodes_indexed_and_data_fields() {
+    sol! {
+        #[derive(Debug, PartialEq)]
+        event MyEventAnonymous(address indexed owner, uint256 value) anonymous;
+    }
+
+    let event = MyEventAnonymous { owner: Address::repeat_byte(0x11), value: U256::from(42) };
+    let log = event.encode_log_data();
+    assert_eq!(log.topics().len(), 1);
+    assert_eq!(log.data.len(), 32);
+
+    let decoded = MyEventAnonymous::decode_log_data(&log).unwrap();
+    let decoded_validate = MyEventAnonymous::decode_log_data_validate(&log).unwrap();
+    assert_eq!(decoded, event);
+    assert_eq!(decoded_validate, event);
+}
+
+#[test]
+fn anonymous_event_rejects_topic_count_mismatch() {
+    sol! {
+        #[derive(Debug)]
+        event MyEventAnonymous(address indexed owner, uint256 value) anonymous;
+    }
+
+    let owner = B256::repeat_byte(0x11);
+    let event = MyEventAnonymous { owner: Address::repeat_byte(0x11), value: U256::from(42) };
+    let data = event.encode_data();
+    let no_topics: [B256; 0] = [];
+
+    let e = MyEventAnonymous::decode_raw_log(no_topics, &data).unwrap_err();
+    assert_eq!(e.to_string(), "topic list length mismatch");
+
+    let e = MyEventAnonymous::decode_raw_log([owner, B256::ZERO], &data).unwrap_err();
+    assert_eq!(e.to_string(), "topic list length mismatch");
+}
+
 // https://github.com/alloy-rs/core/issues/811
 #[test]
 fn mapping_getters() {
