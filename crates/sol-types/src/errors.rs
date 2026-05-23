@@ -51,6 +51,16 @@ pub enum Error {
         max: u8,
     },
 
+    /// Invalid event signature hash.
+    InvalidEventSignatureHash {
+        /// The event signature.
+        name: &'static str,
+        /// The received signature hash.
+        got: B256,
+        /// The expected signature hash.
+        expected: B256,
+    },
+
     /// Could not decode an event from log topics.
     InvalidLog {
         /// The name of the enum or event.
@@ -109,6 +119,12 @@ impl fmt::Display for Error {
             Self::InvalidEnumValue { name, value, max } => {
                 write!(f, "`{value}` is not a valid {name} enum value (max: `{max}`)")
             }
+            Self::InvalidEventSignatureHash { name, got, expected } => {
+                write!(
+                    f,
+                    "invalid signature hash for event {name:?}: got {got}, expected {expected}"
+                )
+            }
             Self::InvalidLog { name, log } => {
                 write!(f, "could not decode {name} from log: {log:?}")
             }
@@ -158,10 +174,12 @@ impl Error {
 
     #[doc(hidden)] // Not public API.
     #[cold]
-    pub fn invalid_event_signature_hash(name: &'static str, got: B256, expected: B256) -> Self {
-        Self::custom(format!(
-            "invalid signature hash for event {name:?}: got {got}, expected {expected}"
-        ))
+    pub const fn invalid_event_signature_hash(
+        name: &'static str,
+        got: B256,
+        expected: B256,
+    ) -> Self {
+        Self::InvalidEventSignatureHash { name, got, expected }
     }
 }
 
