@@ -51,6 +51,16 @@ pub enum Error {
         max: u8,
     },
 
+    /// Invalid event signature hash.
+    InvalidEventSignatureHash {
+        /// The event signature.
+        name: &'static str,
+        /// The received signature hash.
+        got: B256,
+        /// The expected signature hash.
+        expected: B256,
+    },
+
     /// Could not decode an event from log topics.
     InvalidLog {
         /// The name of the enum or event.
@@ -109,6 +119,12 @@ impl fmt::Display for Error {
             Self::InvalidEnumValue { name, value, max } => {
                 write!(f, "`{value}` is not a valid {name} enum value (max: `{max}`)")
             }
+            Self::InvalidEventSignatureHash { name, got, expected } => {
+                write!(
+                    f,
+                    "invalid signature hash for event {name:?}: got {got}, expected {expected}"
+                )
+            }
             Self::InvalidLog { name, log } => {
                 write!(f, "could not decode {name} from log: {log:?}")
             }
@@ -159,9 +175,7 @@ impl Error {
     #[doc(hidden)] // Not public API.
     #[cold]
     pub fn invalid_event_signature_hash(name: &'static str, got: B256, expected: B256) -> Self {
-        Self::custom(format!(
-            "invalid signature hash for event {name:?}: got {got}, expected {expected}"
-        ))
+        Self::InvalidEventSignatureHash { name, got, expected }
     }
 }
 
@@ -176,5 +190,35 @@ impl From<TryReserveError> for Error {
     #[inline]
     fn from(value: TryReserveError) -> Self {
         Self::Reserve(value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Error;
+    use alloy_primitives::B256;
+
+    #[test]
+    fn invalid_event_signature_hash_is_structured() {
+        let got = B256::repeat_byte(0x11);
+        let expected = B256::repeat_byte(0x22);
+        let err =
+            Error::invalid_event_signature_hash("Transfer(address,address,uint256)", got, expected);
+
+        assert_eq!(
+            err,
+            Error::InvalidEventSignatureHash {
+                name: "Transfer(address,address,uint256)",
+                got,
+                expected,
+            }
+        );
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "invalid signature hash for event {:?}: got {got}, expected {expected}",
+                "Transfer(address,address,uint256)"
+            )
+        );
     }
 }
