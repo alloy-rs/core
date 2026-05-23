@@ -263,15 +263,46 @@ impl Resolver {
         resolver
     }
 
-    /// Detect cycles in the subgraph rooted at `type_name`
+    /// Detect cycles in the subgraph rooted at `type_name`.
+    ///
+    /// This is the strict variant: any cycle, including a self-reference such
+    /// as `Node(Node[] children)`, is reported as a circular dependency. It is
+    /// used by [`Resolver::resolve`], because [`crate::DynSolType`] cannot
+    /// represent recursive types as concrete values.
     fn detect_cycle(&self, type_name: &str) -> Result<()> {
-        match self.detect_cycle_inner(type_name, &mut DfsContext::default()) {
+        match self.detect_cycle_inner(type_name, &mut DfsContext::default(), false) {
             true => Err(Error::circular_dependency(type_name)),
             false => Ok(()),
         }
     }
 
-    fn detect_cycle_inner<'a>(&'a self, type_name: &str, context: &mut DfsContext<'a>) -> bool {
+    /// Detect cycles in the subgraph rooted at `type_name`, allowing
+    /// self-referential type definitions.
+    ///
+    /// Per [EIP-712] ("The standard supports recursive struct types."), a
+    /// type that references itself directly (e.g. `Node(uint256 value, Node[]
+    /// children)`) is permitted in `encodeType` strings even though concrete
+    /// runtime values must still be finite trees. This variant is used by
+    /// [`Resolver::linearize`] / [`Resolver::encode_type`] so that those code
+    /// paths accept recursive struct types, while [`Resolver::resolve`]
+    /// continues to reject them.
+    ///
+    /// Cycles between two or more distinct types are still rejected.
+    ///
+    /// [EIP-712]: https://eips.ethereum.org/EIPS/eip-712
+    fn detect_cycle_permissive(&self, type_name: &str) -> Result<()> {
+        match self.detect_cycle_inner(type_name, &mut DfsContext::default(), true) {
+            true => Err(Error::circular_dependency(type_name)),
+            false => Ok(()),
+        }
+    }
+
+    fn detect_cycle_inner<'a>(
+        &'a self,
+        type_name: &str,
+        context: &mut DfsContext<'a>,
+        allow_self_refs: bool,
+    ) -> bool {
         let Some(ty) = self.nodes.get(type_name) else { return false };
 
         // Detect cycle.
@@ -287,7 +318,12 @@ impl Resolver {
         if !edges.is_empty() {
             context.stack.insert(&ty.type_name);
             for edge in edges {
-                if self.detect_cycle_inner(edge, context) {
+                // EIP-712 permits recursive struct types, so a self-edge is
+                // not treated as a cycle when `allow_self_refs` is enabled.
+                if allow_self_refs && edge == type_name {
+                    continue;
+                }
+                if self.detect_cycle_inner(edge, context, allow_self_refs) {
                     return true;
                 }
             }
@@ -360,8 +396,11 @@ impl Resolver {
     }
 
     /// This function linearizes a type into a list of typedefs of its dependencies.
+    ///
+    /// Self-referential types are permitted (per EIP-712), but cycles between
+    /// distinct types are rejected with [`Error::CircularDependency`].
     pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>> {
-        self.detect_cycle(type_name)?;
+        self.detect_cycle_permissive(type_name)?;
         let mut resolution = vec![];
         self.linearize_into(&mut resolution, type_name)?;
         Ok(resolution)
@@ -496,12 +535,23 @@ impl Resolver {
     }
 
     /// Returns those types which do not depend on any other nodes in the resolver graph.
+    ///
+    /// A type that only refers to itself (e.g. `Node(uint256 value, Node[]
+    /// children)`) is still considered non-dependent: EIP-712 explicitly
+    /// permits recursive struct types, so such a type can still serve as the
+    /// primary component for `encodeType`.
     pub fn non_dependent_types(&self) -> impl Iterator<Item = &TypeDef> {
         let dependent_types: BTreeSet<&str> = self
             .edges
-            .values()
-            .flat_map(|dep| dep.iter())
-            .map(|dep| dep.as_str())
+            .iter()
+            .flat_map(|(source, deps)| {
+                deps.iter().filter_map(move |dep| {
+                    // Skip self-references: a type that only depends on itself
+                    // is not "dependent" on another node and can still be the
+                    // primary component.
+                    if dep == source { None } else { Some(dep.as_str()) }
+                })
+            })
             .filter(|dep| self.nodes.contains_key(*dep))
             .collect();
 
@@ -534,7 +584,7 @@ mod tests {
             vec![PropertyDef::new_unchecked("A", "myA")],
         ));
 
-        assert!(graph.detect_cycle_inner("A", &mut DfsContext::default()));
+        assert!(graph.detect_cycle_inner("A", &mut DfsContext::default(), false));
     }
 
     #[test]
@@ -681,6 +731,52 @@ mod tests {
             graph.non_dependent_types().map(|t| &t.type_name).collect::<Vec<_>>(),
             vec!["Transaction"]
         );
+    }
+
+    #[test]
+    fn non_dependent_self_referential_type_is_primary() {
+        // Per EIP-712, recursive struct types are permitted. A type that only
+        // depends on itself should still appear as a non-dependent (primary)
+        // component, since it does not depend on any *other* node.
+        const ENCODE_TYPE: &str = "Node(uint256 value,Node[] children)";
+        let mut graph = Resolver::default();
+        graph.ingest_string(ENCODE_TYPE).unwrap();
+        assert_eq!(
+            graph.non_dependent_types().map(|t| &t.type_name).collect::<Vec<_>>(),
+            vec!["Node"],
+        );
+    }
+
+    #[test]
+    fn encode_type_round_trip_self_referential() {
+        // Regression test for <https://github.com/alloy-rs/core/issues/1103>.
+        const ENCODE_TYPE: &str = "Node(uint256 value,Node[] children)";
+        let mut graph = Resolver::default();
+        graph.ingest_string(ENCODE_TYPE).unwrap();
+        assert_eq!(graph.encode_type("Node").unwrap(), ENCODE_TYPE);
+    }
+
+    #[test]
+    fn resolve_still_rejects_self_referential_types() {
+        // `Resolver::resolve` builds a `DynSolType`, which cannot represent
+        // recursive types as concrete values, so a self-referential type must
+        // still surface as `CircularDependency`. Only the `encodeType` path is
+        // relaxed to permit recursion.
+        const ENCODE_TYPE: &str = "Node(uint256 value,Node[] children)";
+        let mut graph = Resolver::default();
+        graph.ingest_string(ENCODE_TYPE).unwrap();
+        assert!(matches!(graph.resolve("Node"), Err(Error::CircularDependency(_))));
+    }
+
+    #[test]
+    fn encode_type_still_rejects_mutual_recursion() {
+        // Cycles between distinct types are not what EIP-712 means by
+        // "recursive struct types" and must still be rejected by the
+        // encodeType path.
+        const ENCODE_TYPE: &str = "A(B b)B(A a)";
+        let mut graph = Resolver::default();
+        graph.ingest_string(ENCODE_TYPE).unwrap();
+        assert!(matches!(graph.encode_type("A"), Err(Error::CircularDependency(_))));
     }
 
     #[test]
