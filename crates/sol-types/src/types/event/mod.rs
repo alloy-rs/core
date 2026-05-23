@@ -156,6 +156,8 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the topics of this event from the given data.
+    ///
+    /// This requires the input to contain exactly [`TopicList::COUNT`] topics.
     #[inline]
     fn decode_topics<I, D>(topics: I) -> Result<<Self::TopicList as SolType>::RustType>
     where
