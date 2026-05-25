@@ -21,6 +21,7 @@ pub struct ToSolConfig {
     enums_as_udvt: bool,
     for_sol_macro: bool,
     one_contract: bool,
+    standalone_globals: bool,
 }
 
 impl Default for ToSolConfig {
@@ -39,6 +40,7 @@ impl ToSolConfig {
             enums_as_udvt: true,
             for_sol_macro: false,
             one_contract: false,
+            standalone_globals: false,
         }
     }
 
@@ -73,6 +75,13 @@ impl ToSolConfig {
         self.one_contract = yes;
         self
     }
+
+    /// Sets whether globals should be emitted at the root of the output.
+    /// Default: `false`.
+    pub const fn standalone_globals(mut self, yes: bool) -> Self {
+        self.standalone_globals = yes;
+        self
+    }
 }
 
 pub(crate) trait ToSol {
@@ -92,6 +101,9 @@ pub(crate) struct SolPrinter<'a> {
 
     /// Configuration.
     config: ToSolConfig,
+
+    /// Current indentation level.
+    indent_level: usize,
 }
 
 impl Deref for SolPrinter<'_> {
@@ -112,7 +124,7 @@ impl DerefMut for SolPrinter<'_> {
 
 impl<'a> SolPrinter<'a> {
     pub(crate) fn new(s: &'a mut String, name: &'a str, config: ToSolConfig) -> Self {
-        Self { s, name, print_param_location: false, config }
+        Self { s, name, print_param_location: false, config, indent_level: 0 }
     }
 
     pub(crate) fn print(&mut self, abi: &'a JsonAbi) {
@@ -120,7 +132,9 @@ impl<'a> SolPrinter<'a> {
     }
 
     fn indent(&mut self) {
-        self.push_str("    ");
+        for _ in 0..self.indent_level {
+            self.push_str("    ");
+        }
     }
 
     /// Normalizes `s` as a Rust identifier and pushes it to the buffer.
@@ -163,7 +177,8 @@ impl JsonAbi {
             };
         }
 
-        let mut its = InternalTypes::new(out.name, out.config.enums_as_udvt);
+        let mut its =
+            InternalTypes::new(out.name, out.config.enums_as_udvt, out.config.standalone_globals);
         its.visit_abi(self);
 
         let one_contract = out.config.one_contract;
@@ -177,11 +192,13 @@ impl JsonAbi {
                 out.push_str(name);
                 out.push_str(" {\n");
                 let prev = core::mem::replace(&mut out.name, name);
+                out.indent_level += 1;
                 for it in its {
                     out.indent();
                     it.to_sol(out);
                     out.push('\n');
                 }
+                out.indent_level -= 1;
                 out.name = prev;
                 out.push_str("}\n\n");
             }
@@ -195,6 +212,7 @@ impl JsonAbi {
         out.push('{');
         out.push('\n');
 
+        out.indent_level += 1;
         if one_contract {
             for (name, its) in &its.other {
                 if its.is_empty() {
@@ -220,6 +238,14 @@ impl JsonAbi {
         out.pop(); // trailing newline
 
         out.push('}');
+        out.indent_level -= 1;
+
+        if !its.globals.is_empty() {
+            out.push('\n');
+            fmt!(its.globals);
+            out.pop(); // trailing newline
+            out.pop(); // trailing newline
+        }
     }
 }
 
@@ -228,13 +254,22 @@ struct InternalTypes<'a> {
     name: &'a str,
     this_its: BTreeSet<It<'a>>,
     other: BTreeMap<&'a String, BTreeSet<It<'a>>>,
+    globals: BTreeSet<It<'a>>,
     enums_as_udvt: bool,
+    standalone_globals: bool,
 }
 
 impl<'a> InternalTypes<'a> {
     #[allow(clippy::missing_const_for_fn)]
-    fn new(name: &'a str, enums_as_udvt: bool) -> Self {
-        Self { name, this_its: BTreeSet::new(), other: BTreeMap::new(), enums_as_udvt }
+    fn new(name: &'a str, enums_as_udvt: bool, standalone_globals: bool) -> Self {
+        Self {
+            name,
+            this_its: BTreeSet::new(),
+            other: BTreeMap::new(),
+            globals: BTreeSet::new(),
+            enums_as_udvt,
+            standalone_globals,
+        }
     }
 
     fn visit_abi(&mut self, abi: &'a JsonAbi) {
@@ -312,6 +347,8 @@ impl<'a> InternalTypes<'a> {
             } else {
                 self.other.entry(contract).or_default().insert(it);
             }
+        } else if self.standalone_globals {
+            self.globals.insert(it);
         } else {
             self.this_its.insert(it);
         }
@@ -388,12 +425,13 @@ impl ToSol for It<'_> {
                 out.push_str("struct ");
                 out.push_ident(self.name);
                 out.push_str(" {\n");
+                out.indent_level += 1;
                 for component in components {
-                    out.indent();
                     out.indent();
                     component.to_sol(out);
                     out.push_str(";\n");
                 }
+                out.indent_level -= 1;
                 out.indent();
                 out.push('}');
             }
