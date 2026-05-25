@@ -138,6 +138,7 @@ std = [
     "rand?/thread_rng",
     "rustc-hash/std",
     "serde?/std",
+    "fixed-cache?/std",
 ]
 nightly = [
     "foldhash?/nightly",
@@ -156,6 +157,7 @@ sha3-keccak = []
 tiny-keccak = ["dep:tiny-keccak"]
 keccak-cache = ["std", "dep:rapidhash", "dep:fixed-cache"]
 keccak-cache-global = ["keccak-cache"]
+keccak-cache-stats = ["keccak-cache", "fixed-cache/stats"]
 
 map = ["dep:hashbrown"]
 map-hashbrown = ["map"]
