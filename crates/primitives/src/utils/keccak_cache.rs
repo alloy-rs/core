@@ -10,7 +10,7 @@ use std::mem::MaybeUninit;
 pub(super) const MAX_INPUT_LEN: usize =
     128 - size_of::<B256>() - size_of::<u8>() - size_of::<usize>();
 
-const COUNT: usize = 1 << 17; // ~131k entries * 128 bytes = 16MiB
+const COUNT: usize = 1 << 21; // ~131k entries * 128 bytes = 16MiB
 static CACHE: fixed_cache::Cache<Key, B256, BuildHasher, CacheConfig> =
     fixed_cache::static_cache!(Key, B256, COUNT, BuildHasher::new());
 
