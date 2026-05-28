@@ -18,6 +18,8 @@ mod hint;
 
 #[cfg(feature = "keccak-cache")]
 mod keccak_cache;
+#[cfg(feature = "keccak-cache")]
+pub use keccak_cache::init_keccak_cache;
 #[cfg(feature = "keccak-cache-stats")]
 pub use keccak_cache::{KECCAK_CACHE_STATS, KeccakCacheStats};
 
