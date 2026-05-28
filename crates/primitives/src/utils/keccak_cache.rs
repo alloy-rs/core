@@ -16,8 +16,10 @@ pub use stats::{KECCAK_CACHE_STATS, KeccakCacheStats};
 pub(super) const MAX_INPUT_LEN: usize =
     128 - size_of::<B256>() - size_of::<u8>() - size_of::<usize>();
 
-const COUNT: usize = 1 << 17; // ~131k entries * 128 bytes = 16MiB
-static CACHE: OnceLock<fixed_cache::Cache<Key, B256, BuildHasher, CacheConfig>> = OnceLock::new();
+const DEFAULT_COUNT: usize = 1 << 17; // ~131k entries * 128 bytes = 16MiB
+static CACHE: OnceLock<Cache> = OnceLock::new();
+
+type Cache = fixed_cache::Cache<Key, B256, BuildHasher, CacheConfig>;
 
 struct CacheConfig {}
 impl fixed_cache::CacheConfig for CacheConfig {
@@ -25,17 +27,26 @@ impl fixed_cache::CacheConfig for CacheConfig {
     const EPOCHS: bool = false;
 }
 
+/// Initializes the process-global keccak cache with `entries` buckets.
+///
+/// Returns `true` if this call initialized the cache, and `false` if the cache was already
+/// initialized by an earlier call or by the first cached hash computation. If this is never called,
+/// the cache is initialized lazily with the default size on first use.
+///
+/// # Panics
+///
+/// Panics if `entries` is not a power of two or is less than 4.
+#[must_use]
+pub fn init_keccak_cache(entries: usize) -> bool {
+    init_cache(&CACHE, entries)
+}
+
 pub(super) fn compute(input: &[u8], imp: impl FnOnce(&[u8]) -> B256) -> B256 {
     if unlikely(input.is_empty() | (input.len() > MAX_INPUT_LEN)) {
         return if input.is_empty() { KECCAK256_EMPTY } else { keccak256(input) };
     }
 
-    let cache = CACHE.get_or_init(|| {
-        let cache = fixed_cache::Cache::new(COUNT, BuildHasher::new());
-        #[cfg(feature = "keccak-cache-stats")]
-        let cache = cache.with_stats(Some(fixed_cache::Stats::new(&stats::KECCAK_CACHE_STATS)));
-        cache
-    });
+    let cache = CACHE.get_or_init(default_cache);
     cache.get_or_insert_with_ref(input, imp, |input| {
         let mut data = [MaybeUninit::uninit(); MAX_INPUT_LEN];
         unsafe {
@@ -43,6 +54,24 @@ pub(super) fn compute(input: &[u8], imp: impl FnOnce(&[u8]) -> B256) -> B256 {
         };
         Key { len: input.len() as u8, data }
     })
+}
+
+fn init_cache(cache: &OnceLock<Cache>, entries: usize) -> bool {
+    if cache.get().is_some() {
+        return false;
+    }
+    cache.set(new_cache(entries)).is_ok()
+}
+
+fn default_cache() -> Cache {
+    new_cache(DEFAULT_COUNT)
+}
+
+fn new_cache(entries: usize) -> Cache {
+    let cache = fixed_cache::Cache::new(entries, BuildHasher::new());
+    #[cfg(feature = "keccak-cache-stats")]
+    let cache = cache.with_stats(Some(fixed_cache::Stats::new(&stats::KECCAK_CACHE_STATS)));
+    cache
 }
 
 type BuildHasher = std::hash::BuildHasherDefault<Hasher>;
