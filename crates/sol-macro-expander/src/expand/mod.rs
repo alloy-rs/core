@@ -726,6 +726,26 @@ impl<'ast> ExpCtxt<'ast> {
         attrs.push(parse_quote! { #[derive(#(#derives), *)] });
     }
 
+    /// Like [`type_derives`](Self::type_derives), but for the generated `*Calls`
+    /// / `*Errors` / `*Events` enums.
+    ///
+    /// The enum variant types may be synthetic names that don't resolve as
+    /// items (overloaded items get `_N` suffixes; call variants use `*Call`
+    /// structs), so whether the builtin traits can be derived is precomputed
+    /// from the underlying items' parameter types. Enums never derive
+    /// `Default`.
+    fn enum_derives(&self, attrs: &mut Vec<Attribute>, can_derive_builtin: bool) {
+        if let Some(extra) = &self.attrs.extra_derives {
+            if !extra.is_empty() {
+                attrs.push(parse_quote! { #[derive(#(#extra),*)] });
+            }
+        }
+
+        if self.attrs.all_derives == Some(true) && can_derive_builtin {
+            attrs.push(parse_quote! { #[derive(Debug, PartialEq, Eq, Hash)] });
+        }
+    }
+
     /// Returns an error if any of the types in the parameters are unresolved.
     ///
     /// Provides a better error message than an `unwrap` or `expect` when we
