@@ -132,6 +132,7 @@ std = [
     "indexmap?/std",
     "k256?/std",
     "secp256k1?/std",
+    "secp256k1?/global-context",
     "keccak-asm?/std",
     "proptest?/std",
     "rand?/std",
