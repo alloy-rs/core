@@ -35,7 +35,7 @@ syn = { workspace = true, features = ["extra-traits"] }
 heck = "0.5"
 hex.workspace = true
 indexmap = "2"
-proc-macro-error2.workspace = true
+proc-macro-error3.workspace = true
 sha3.workspace = true
 
 # json
