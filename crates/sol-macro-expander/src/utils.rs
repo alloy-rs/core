@@ -2,6 +2,8 @@ use ast::Spanned;
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
 use sha3::{Digest, Keccak256};
+use std::cell::RefCell;
+use std::panic::{self, AssertUnwindSafe};
 
 /// Simple interface to the [`keccak256`] hash function.
 ///
@@ -26,6 +28,30 @@ pub(crate) fn combine_errors(v: impl IntoIterator<Item = syn::Error>) -> syn::Re
         Some(e) => Err(e),
         None => Ok(()),
     }
+}
+
+thread_local! {
+    static DIAGNOSTICS: RefCell<Vec<proc_macro2_diagnostics::Diagnostic>> =
+        const { RefCell::new(Vec::new()) };
+}
+
+pub(crate) fn emit_diagnostic(diag: proc_macro2_diagnostics::Diagnostic) {
+    DIAGNOSTICS.with(|diagnostics| diagnostics.borrow_mut().push(diag));
+}
+
+fn take_diagnostics() -> Vec<proc_macro2_diagnostics::Diagnostic> {
+    DIAGNOSTICS.with(|diagnostics| diagnostics.take())
+}
+
+fn diagnostics_to_error(
+    diagnostics: Vec<proc_macro2_diagnostics::Diagnostic>,
+) -> Option<syn::Error> {
+    let mut diagnostics = diagnostics.into_iter();
+    let mut error = syn::Error::from(diagnostics.next()?);
+    for diagnostic in diagnostics {
+        error.combine(syn::Error::from(diagnostic));
+    }
+    Some(error)
 }
 
 #[derive(Clone, Debug)]
@@ -81,27 +107,32 @@ impl<T: ToTokens> ToTokens for ExprArray<T> {
     }
 }
 
-/// Applies [`proc_macro_error2`] programmatically.
+/// Applies macro expansion compatibility handling programmatically.
 pub(crate) fn pme_compat(f: impl FnOnce() -> TokenStream) -> TokenStream {
     pme_compat_result(|| Ok(f())).unwrap()
 }
 
-/// Applies [`proc_macro_error2`] programmatically.
+/// Applies macro expansion compatibility handling programmatically.
 pub(crate) fn pme_compat_result(
     f: impl FnOnce() -> syn::Result<TokenStream>,
 ) -> syn::Result<TokenStream> {
-    let mut r = None;
-    let e = proc_macro_error2::entry_point(
-        std::panic::AssertUnwindSafe(|| {
-            r = Some(f());
-            Default::default()
-        }),
-        false,
-    );
-    if let Some(r) = r {
-        if e.is_empty() || r.is_err() {
-            return r;
+    take_diagnostics();
+    let mut result = match panic::catch_unwind(AssertUnwindSafe(f)) {
+        Ok(result) => result,
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| payload.downcast_ref::<&str>().copied())
+                .unwrap_or("procedural macro expansion aborted");
+            Err(syn::Error::new(Span::call_site(), message))
+        }
+    };
+    if let Some(diagnostics) = diagnostics_to_error(take_diagnostics()) {
+        match &mut result {
+            Ok(_) => result = Err(diagnostics),
+            Err(error) => error.combine(diagnostics),
         }
     }
-    Ok(e.into())
+    result
 }

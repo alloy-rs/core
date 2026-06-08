@@ -7,7 +7,6 @@ use ast::{
     Spanned, Type, VariableDeclaration, Visit, VisitMut, visit_mut,
 };
 use indexmap::IndexMap;
-use proc_macro_error2::{abort, emit_error};
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{TokenStreamExt, format_ident, quote};
 use std::{
@@ -21,6 +20,71 @@ use syn::{Attribute, Error, Result, ext::IdentExt, parse_quote};
 
 #[macro_use]
 mod macros;
+
+macro_rules! abort {
+    ($span:expr, $fmt:literal $(, $arg:expr)*; note = $note_span:expr => $note_msg:expr $(;)?) => {{
+        let diag = proc_macro2_diagnostics::Diagnostic::spanned(
+            $span,
+            proc_macro2_diagnostics::Level::Error,
+            format!($fmt $(, $arg)*),
+        )
+        .spanned_child($note_span, proc_macro2_diagnostics::Level::Note, $note_msg);
+        panic!("{}", syn::Error::from(diag));
+    }};
+    ($span:expr, $fmt:literal $(, $arg:expr)*; $($rest:tt)*) => {{
+        let diag = proc_macro2_diagnostics::Diagnostic::spanned(
+            $span,
+            proc_macro2_diagnostics::Level::Error,
+            format!($fmt $(, $arg)*),
+        );
+        panic!("{}", syn::Error::from(diag));
+    }};
+    ($span:expr, $fmt:literal $(, $arg:expr)* $(,)?) => {{
+        let diag = proc_macro2_diagnostics::Diagnostic::spanned(
+            $span,
+            proc_macro2_diagnostics::Level::Error,
+            format!($fmt $(, $arg)*),
+        );
+        panic!("{}", syn::Error::from(diag));
+    }};
+}
+
+macro_rules! emit_error {
+    ($span:expr, $fmt:literal $(, $arg:expr)*; note = $note_span:expr => $note_msg:expr $(;)?) => {{
+        crate::utils::emit_diagnostic(proc_macro2_diagnostics::Diagnostic::spanned(
+            $span,
+            proc_macro2_diagnostics::Level::Error,
+            format!($fmt $(, $arg)*),
+        )
+        .spanned_child($note_span, proc_macro2_diagnostics::Level::Note, $note_msg));
+    }};
+    ($span:expr, $fmt:literal $(, $arg:expr)*; help =? $help_msg:expr $(;)?) => {{
+        let diag = proc_macro2_diagnostics::Diagnostic::spanned(
+            $span,
+            proc_macro2_diagnostics::Level::Error,
+            format!($fmt $(, $arg)*),
+        );
+        crate::utils::emit_diagnostic(if let Some(help) = $help_msg {
+            diag.child(proc_macro2_diagnostics::Level::Help, help)
+        } else {
+            diag
+        });
+    }};
+    ($span:expr, $fmt:literal $(, $arg:expr)*; $($rest:tt)*) => {{
+        crate::utils::emit_diagnostic(proc_macro2_diagnostics::Diagnostic::spanned(
+            $span,
+            proc_macro2_diagnostics::Level::Error,
+            format!($fmt $(, $arg)*),
+        ));
+    }};
+    ($span:expr, $fmt:literal $(, $arg:expr)* $(,)?) => {{
+        crate::utils::emit_diagnostic(proc_macro2_diagnostics::Diagnostic::spanned(
+            $span,
+            proc_macro2_diagnostics::Level::Error,
+            format!($fmt $(, $arg)*),
+        ));
+    }};
+}
 
 mod contract;
 mod r#enum;

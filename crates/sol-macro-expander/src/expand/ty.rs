@@ -2,7 +2,6 @@
 
 use super::ExpCtxt;
 use ast::{Item, Parameters, Spanned, Type, TypeArray};
-use proc_macro_error2::{abort, emit_error};
 use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::{ToTokens, quote_spanned};
 use std::{fmt, num::NonZeroU16};
