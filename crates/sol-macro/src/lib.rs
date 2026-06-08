@@ -14,6 +14,9 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+#[macro_use]
+extern crate proc_macro_error2;
+
 use alloy_sol_macro_expander::expand;
 use alloy_sol_macro_input::{SolAttrs, SolInput, SolInputExpander, SolInputKind};
 use proc_macro::TokenStream;
@@ -164,7 +167,7 @@ use syn::parse_macro_input;
 /// ```ignore
 #[doc = include_str!("../doctests/structs.rs")]
 /// ```
-///
+/// 
 /// ### UDVT and type aliases
 ///
 /// User defined value types (UDVT) generate a tuple struct with the type as
@@ -173,7 +176,7 @@ use syn::parse_macro_input;
 /// ```ignore
 #[doc = include_str!("../doctests/types.rs")]
 /// ```
-///
+/// 
 /// ### State variables
 ///
 /// Public and external state variables will generate a getter function just like in Solidity.
@@ -206,7 +209,7 @@ use syn::parse_macro_input;
 ///     pub unlocked: bools,
 /// }
 /// ```
-///
+/// 
 /// Whereas, if the solidity function returns a single value, the singular return value will yielded by the call.
 /// ```ignore
 /// sol! {
@@ -218,7 +221,7 @@ use syn::parse_macro_input;
 ///
 /// let balance: U256 = erc20.balanceOf(owner).call().await?;
 /// ```
-///
+/// 
 /// In the case of overloaded functions, an underscore and the index of the
 /// function will be appended to `<name>` (like `foo_0`, `foo_1`...) for
 /// disambiguation, but the signature will remain the same.
@@ -229,7 +232,7 @@ use syn::parse_macro_input;
 /// ```ignore
 #[doc = include_str!("../doctests/function_like.rs")]
 /// ```
-///
+/// 
 /// ### Events
 ///
 /// Events generate a struct that implements `SolEvent`.
@@ -241,7 +244,7 @@ use syn::parse_macro_input;
 /// ```ignore
 #[doc = include_str!("../doctests/events.rs")]
 /// ```
-///
+/// 
 /// ### Contracts/interfaces
 ///
 /// Contracts generate a module with the same name, which contains all the items.
@@ -254,7 +257,7 @@ use syn::parse_macro_input;
 /// ```ignore
 #[doc = include_str!("../doctests/contracts.rs")]
 /// ```
-///
+/// 
 /// ## JSON ABI
 ///
 /// Contracts can also be generated from ABI JSON strings and files, similar to
@@ -279,9 +282,10 @@ use syn::parse_macro_input;
 /// ```ignore
 #[doc = include_str!("../doctests/json.rs")]
 /// ```
-///
+/// 
 /// [`alloy-contract`]: https://github.com/alloy-rs/alloy
 #[proc_macro]
+#[proc_macro_error]
 pub fn sol(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as alloy_sol_macro_input::SolInput);
 
