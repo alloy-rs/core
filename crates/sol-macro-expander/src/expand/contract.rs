@@ -191,9 +191,6 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         }
     });
 
-    // Do not propagate contract-level derives to the functions enum.
-    cx.attrs = prev_cx_attrs;
-
     let functions_enum = (!functions.is_empty()).then(|| {
         let mut attrs = enum_attrs;
         let doc_str = format!("Container for all the [`{name}`](self) function calls.");
@@ -202,6 +199,12 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
         let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
         enum_expander.expand(ToExpand::Functions(&functions), attrs)
     });
+
+    // Restore the context attributes now that the errors, events and functions enums have all
+    // been expanded with the contract-level `extra_derives`/`all_derives`. Previously the
+    // functions (calls) enum was expanded after this reset, so it only derived `Clone` while the
+    // errors and events enums (and the call structs themselves) got the user's extra derives.
+    cx.attrs = prev_cx_attrs;
 
     let mod_descr_doc = (docs && docs_str(&mod_attrs).trim().is_empty())
         .then(|| mk_doc("Module containing a contract's types and functions."));
