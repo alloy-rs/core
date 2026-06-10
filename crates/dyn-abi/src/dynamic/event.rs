@@ -276,7 +276,8 @@ mod test {
         };
 
         // Only sig + one indexed topic, supplied via a non-exact iterator.
-        let topics = [t0, b256!("0x000000000000000000000000d9a442856c234a39a81a089c06451ebaa4306a72")];
+        let topics =
+            [t0, b256!("0x000000000000000000000000d9a442856c234a39a81a089c06451ebaa4306a72")];
         let err = event.decode_log_parts(topics.iter().copied().filter(|_| true), &[]).unwrap_err();
         assert!(matches!(err, Error::TopicLengthMismatch { expected: 3, actual: 2 }), "{err:?}");
     }
