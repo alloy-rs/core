@@ -244,7 +244,7 @@ mod test {
         };
 
         // ERC-721-style log: 4 topics (sig + from + to + tokenId), empty data.
-        let topics = vec![
+        let topics = [
             t0,
             b256!("0x000000000000000000000000d9a442856c234a39a81a089c06451ebaa4306a72"),
             b256!("0x0000000000000000000000002a3dd3eb832af982ec71669e178424b10dca2ede"),
@@ -276,8 +276,7 @@ mod test {
         };
 
         // Only sig + one indexed topic, supplied via a non-exact iterator.
-        let topics =
-            vec![t0, b256!("0x000000000000000000000000d9a442856c234a39a81a089c06451ebaa4306a72")];
+        let topics = [t0, b256!("0x000000000000000000000000d9a442856c234a39a81a089c06451ebaa4306a72")];
         let err = event.decode_log_parts(topics.iter().copied().filter(|_| true), &[]).unwrap_err();
         assert!(matches!(err, Error::TopicLengthMismatch { expected: 3, actual: 2 }), "{err:?}");
     }
