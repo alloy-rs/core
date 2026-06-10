@@ -73,18 +73,29 @@ impl DynSolEvent {
             }
         }
 
+        let not_anonymous = !self.is_anonymous() as usize;
         let indexed = self
             .indexed
             .iter()
-            .zip(topics.by_ref().take(self.indexed.len()))
-            .map(|(ty, topic)| {
-                let value = ty.decode_event_topic(topic);
-                Ok(value)
+            .enumerate()
+            .map(|(i, ty)| match topics.next() {
+                Some(topic) => Ok(ty.decode_event_topic(topic)),
+                // Ran out of topics: report the count we actually have (event hash + `i`
+                // indexed topics consumed so far) rather than letting the body decode below
+                // fail with a confusing `Overrun`.
+                None => Err(Error::TopicLengthMismatch {
+                    expected: num_topics,
+                    actual: not_anonymous + i,
+                }),
             })
             .collect::<Result<_>>()?;
 
-        let body = self.body.abi_decode_sequence(data)?.into_fixed_seq().expect("body is a tuple");
-
+        // Validate the topic count before decoding the body. A log whose topic count does not
+        // match this event (e.g. an ERC-721 `Transfer` decoded against the ERC-20 `Transfer`
+        // ABI, which shares the same `topic0`) must surface as `TopicLengthMismatch`, not as an
+        // `Overrun` from trying to read body words that the extra topics displaced. The early
+        // `size_hint` check above only fires for exact-size iterators, so this also covers
+        // iterators (`filter`/`map`/streaming) that don't report an exact length.
         let remaining = topics.count();
         if remaining > 0 {
             return Err(Error::TopicLengthMismatch {
@@ -92,6 +103,8 @@ impl DynSolEvent {
                 actual: num_topics + remaining,
             });
         }
+
+        let body = self.body.abi_decode_sequence(data)?.into_fixed_seq().expect("body is a tuple");
 
         Ok(DecodedEvent { selector: self.topic_0, indexed, body })
     }
@@ -214,5 +227,58 @@ mod test {
 
         let encoded = decoded.encode_log_data();
         assert_eq!(encoded, log);
+    }
+
+    // ERC-20 and ERC-721 `Transfer` share the same `topic0`, so a topic-only filter matches
+    // both. Decoding an ERC-721 transfer (4 topics, empty data) against the ERC-20 ABI used to
+    // fail with a confusing `Overrun` when the topic iterator didn't report an exact size,
+    // because the body was decoded before the topic count was validated. See alloy#2243.
+    #[test]
+    fn topic_count_is_validated_before_body() {
+        let t0 = b256!("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef");
+        // event Transfer(address indexed from, address indexed to, uint256 value)
+        let event = DynSolEvent {
+            topic_0: Some(t0),
+            indexed: vec![DynSolType::Address, DynSolType::Address],
+            body: DynSolType::Tuple(vec![DynSolType::Uint(256)]),
+        };
+
+        // ERC-721-style log: 4 topics (sig + from + to + tokenId), empty data.
+        let topics = vec![
+            t0,
+            b256!("0x000000000000000000000000d9a442856c234a39a81a089c06451ebaa4306a72"),
+            b256!("0x0000000000000000000000002a3dd3eb832af982ec71669e178424b10dca2ede"),
+            b256!("0x0000000000000000000000000000000000000000000000000000000000000290"),
+        ];
+
+        // Exact-size iterator: caught by the up-front `size_hint` check.
+        let err = event.decode_log_parts(topics.iter().copied(), &[]).unwrap_err();
+        assert!(
+            matches!(err, Error::TopicLengthMismatch { expected: 3, actual: 4 }),
+            "exact iterator: {err:?}"
+        );
+
+        // Non-exact iterator (e.g. `filter`): previously returned `Overrun`.
+        let err = event.decode_log_parts(topics.iter().copied().filter(|_| true), &[]).unwrap_err();
+        assert!(
+            matches!(err, Error::TopicLengthMismatch { expected: 3, actual: 4 }),
+            "non-exact iterator: {err:?}"
+        );
+    }
+
+    #[test]
+    fn too_few_topics_is_a_length_mismatch() {
+        let t0 = b256!("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef");
+        let event = DynSolEvent {
+            topic_0: Some(t0),
+            indexed: vec![DynSolType::Address, DynSolType::Address],
+            body: DynSolType::Tuple(vec![DynSolType::Uint(256)]),
+        };
+
+        // Only sig + one indexed topic, supplied via a non-exact iterator.
+        let topics =
+            vec![t0, b256!("0x000000000000000000000000d9a442856c234a39a81a089c06451ebaa4306a72")];
+        let err = event.decode_log_parts(topics.iter().copied().filter(|_| true), &[]).unwrap_err();
+        assert!(matches!(err, Error::TopicLengthMismatch { expected: 3, actual: 2 }), "{err:?}");
     }
 }
