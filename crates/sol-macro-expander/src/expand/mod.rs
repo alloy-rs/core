@@ -7,7 +7,7 @@ use ast::{
     Spanned, Type, VariableDeclaration, Visit, VisitMut, visit_mut,
 };
 use indexmap::IndexMap;
-use proc_macro_error2::{abort, emit_error};
+use proc_macro_error3::{abort, emit_error};
 use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{TokenStreamExt, format_ident, quote};
 use std::{

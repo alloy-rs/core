@@ -407,8 +407,15 @@ impl Signature {
         let this = self.normalized_s();
         let sig = this.to_secp256k1()?;
         let msg = secp256k1::Message::from_digest(prehash.0);
-        let secp = secp256k1::Secp256k1::verification_only();
-        secp.recover_ecdsa(msg, &sig).map_err(Into::into)
+        #[cfg(feature = "std")]
+        {
+            secp256k1::SECP256K1.recover_ecdsa(msg, &sig).map_err(Into::into)
+        }
+        #[cfg(not(feature = "std"))]
+        {
+            let secp = secp256k1::Secp256k1::verification_only();
+            secp.recover_ecdsa(msg, &sig).map_err(Into::into)
+        }
     }
 
     /// Returns the `r` component of this signature.
