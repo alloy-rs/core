@@ -229,10 +229,12 @@ impl ExpCtxt<'_> {
     /// Returns whether the given type can derive the [`Default`] trait.
     pub(crate) fn can_derive_default(&self, ty: &Type) -> bool {
         match ty {
-            Type::Array(a) => {
-                self.eval_array_size(a).is_none_or(|sz| sz <= MAX_SUPPORTED_ARRAY_LEN)
-                    && self.can_derive_default(&a.ty)
-            }
+            Type::Array(a) => match self.eval_array_size(a) {
+                // Dynamic arrays are `Vec<T>`, whose `Default` impl holds for any `T`.
+                None => true,
+                // Fixed arrays are `[T; N]`: `Default` needs `T: Default` and `N <= 32`.
+                Some(sz) => sz <= MAX_SUPPORTED_ARRAY_LEN && self.can_derive_default(&a.ty),
+            },
             Type::Tuple(tuple) => {
                 if tuple.types.len() > MAX_SUPPORTED_TUPLE_LEN {
                     false
