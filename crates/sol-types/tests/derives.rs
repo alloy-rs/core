@@ -69,9 +69,15 @@ fn test_extra_derives() {
     let errors_enum1 = ExtraDerivesContractErrors::InsufficientBalance(error1);
     let errors_enum2 = ExtraDerivesContractErrors::InsufficientBalance(error2);
 
+    let call1 = transferCall { to: Address::ZERO, amount: U256::from(1) };
+    let call2 = transferCall { to: Address::ZERO, amount: U256::from(1) };
+    let calls_enum1 = ExtraDerivesContractCalls::transfer(call1);
+    let calls_enum2 = ExtraDerivesContractCalls::transfer(call2);
+
     // Test PartialEq and Debug
     assert_eq!(errors_enum1, errors_enum2);
     assert_eq!(events_enum1, events_enum2);
+    assert_eq!(calls_enum1, calls_enum2);
 
     // Test Hash and Eq derives
     let mut events_set = HashSet::new();
@@ -85,6 +91,12 @@ fn test_extra_derives() {
     errors_set.insert(errors_enum2);
     // Should not increase size since they're equal
     assert_eq!(errors_set.len(), 1);
+
+    let mut calls_set = HashSet::new();
+    calls_set.insert(calls_enum1);
+    calls_set.insert(calls_enum2);
+    // Should not increase size since they're equal
+    assert_eq!(calls_set.len(), 1);
 }
 
 // Overloaded events (same name, different params) get suffixed variant names
