@@ -75,6 +75,7 @@ secp256k1 = { version = "0.31", default-features = false, features = ["recovery"
 keccak-asm = { version = "0.1.5", default-features = false }
 tiny-keccak = { version = "2.0", default-features = false }
 sha3 = { version = "0.11.0", default-features = false }
+blake3 = { version = "1.8", default-features = false }
 
 # maps
 hashbrown = { version = "0.17", default-features = false }

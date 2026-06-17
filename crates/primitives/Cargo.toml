@@ -54,6 +54,7 @@ paste.workspace = true
 keccak-asm = { workspace = true, optional = true }
 sha3.workspace = true
 tiny-keccak = { workspace = true, features = ["keccak"], optional = true }
+blake3 = { workspace = true, optional = true }
 
 fixed-cache = { workspace = true, optional = true }
 
@@ -134,6 +135,7 @@ std = [
     "secp256k1?/std",
     "secp256k1?/global-context",
     "keccak-asm?/std",
+    "blake3?/std",
     "proptest?/std",
     "rand?/std",
     "rand?/thread_rng",
@@ -156,9 +158,12 @@ asm-keccak = ["dep:keccak-asm"]
 native-keccak = []
 sha3-keccak = []
 tiny-keccak = ["dep:tiny-keccak"]
+blake3 = ["dep:blake3"]
 keccak-cache = ["std", "dep:rapidhash", "dep:fixed-cache"]
 keccak-cache-global = ["keccak-cache"]
 keccak-cache-stats = ["keccak-cache", "fixed-cache/stats"]
+blake3-cache = ["blake3", "std", "dep:rapidhash", "dep:fixed-cache"]
+blake3-cache-global = ["blake3-cache"]
 
 map = ["dep:hashbrown"]
 map-hashbrown = ["map"]

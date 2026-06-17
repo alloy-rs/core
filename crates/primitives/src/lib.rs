@@ -72,8 +72,12 @@ mod signature;
 pub use signature::{Signature, SignatureError, normalize_v, to_eip155_v};
 
 pub mod utils;
+#[cfg(feature = "blake3-cache")]
+pub use utils::init_blake3_cache;
 #[cfg(feature = "keccak-cache")]
 pub use utils::init_keccak_cache;
+#[cfg(feature = "blake3")]
+pub use utils::{BLAKE3_EMPTY, blake3_256, blake3_256_cached, blake3_256_uncached};
 pub use utils::{KECCAK256_EMPTY, Keccak256, eip191_hash_message, keccak256, keccak256_uncached};
 
 #[doc(hidden)] // Use `hex` directly instead!

@@ -16,6 +16,10 @@ pub use units::{
 
 mod hint;
 
+#[cfg(feature = "blake3-cache")]
+mod blake3_cache;
+#[cfg(feature = "blake3-cache")]
+pub use blake3_cache::init_blake3_cache;
 #[cfg(feature = "keccak-cache")]
 mod keccak_cache;
 #[cfg(feature = "keccak-cache")]
@@ -29,6 +33,11 @@ pub const EIP191_PREFIX: &str = "\x19Ethereum Signed Message:\n";
 /// The [Keccak-256](keccak256) hash of the empty string `""`.
 pub const KECCAK256_EMPTY: B256 =
     b256!("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+
+/// The [BLAKE3-256](blake3_256) hash of the empty string `""`.
+#[cfg(feature = "blake3")]
+pub const BLAKE3_EMPTY: B256 =
+    b256!("0xaf1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262");
 
 /// Tries to create a [`Vec`] containing the arguments.
 #[macro_export]
@@ -178,6 +187,46 @@ pub fn keccak256_cached<T: AsRef<[u8]>>(bytes: T) -> B256 {
 #[inline]
 pub fn keccak256_uncached<T: AsRef<[u8]>>(bytes: T) -> B256 {
     keccak256_impl(bytes.as_ref())
+}
+
+/// Simple interface to the BLAKE3-256 hash function.
+///
+/// Uses the cache if the `blake3-cache-global` feature is enabled.
+#[cfg(feature = "blake3")]
+pub fn blake3_256<T: AsRef<[u8]>>(bytes: T) -> B256 {
+    #[cfg(feature = "blake3-cache-global")]
+    return blake3_cache::compute(bytes.as_ref(), blake3_256_impl);
+    #[cfg(not(feature = "blake3-cache-global"))]
+    return blake3_256_impl(bytes.as_ref());
+}
+
+/// Simple interface to the BLAKE3-256 hash function,
+/// with a thin cache layer.
+///
+/// Uses the cache if the `blake3-cache` feature is enabled.
+#[cfg(feature = "blake3")]
+pub fn blake3_256_cached<T: AsRef<[u8]>>(bytes: T) -> B256 {
+    #[cfg(feature = "blake3-cache")]
+    return blake3_cache::compute(bytes.as_ref(), blake3_256_impl);
+    #[cfg(not(feature = "blake3-cache"))]
+    return blake3_256_impl(bytes.as_ref());
+}
+
+/// Simple interface to the BLAKE3-256 hash function.
+///
+/// This function always computes the hash directly without using the cache.
+///
+/// Does not use the cache even if the `blake3-cache` feature is enabled.
+#[cfg(feature = "blake3")]
+#[inline]
+pub fn blake3_256_uncached<T: AsRef<[u8]>>(bytes: T) -> B256 {
+    blake3_256_impl(bytes.as_ref())
+}
+
+#[cfg(feature = "blake3")]
+#[inline]
+fn blake3_256_impl(bytes: &[u8]) -> B256 {
+    B256::new(*blake3::hash(bytes).as_bytes())
 }
 
 #[allow(unused)]
@@ -386,6 +435,36 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "blake3")]
+    fn blake3_256_hashes_match_reference() {
+        let inputs = [
+            Vec::new(),
+            b"hello world".to_vec(),
+            vec![0x00; 1],
+            vec![0xAA; 32],
+            vec![0xBB; 64],
+            (0u8..=255).collect(),
+        ];
+
+        for input in inputs {
+            let expected = B256::new(*blake3::hash(&input).as_bytes());
+            assert_eq!(blake3_256(&input), expected);
+            assert_eq!(blake3_256_cached(&input), expected);
+            assert_eq!(blake3_256_uncached(&input), expected);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "blake3")]
+    fn blake3_256_empty_input() {
+        assert_eq!(blake3_256_uncached([]), BLAKE3_EMPTY);
+        assert_eq!(
+            BLAKE3_EMPTY,
+            b256!("0xaf1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262")
+        );
+    }
+
+    #[test]
     fn test_try_boxing() {
         let x = Box::new(42);
         let y = box_try_new(42).unwrap();
@@ -427,6 +506,39 @@ mod tests {
             let data = &[byte];
             let hash1 = keccak256(data);
             let hash2 = keccak256_impl(data);
+            assert_eq!(hash1, hash2);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "blake3-cache")]
+    fn test_blake3_256_cache_edge_cases() {
+        use blake3_256_cached as blake3_256;
+        assert_eq!(blake3_256([]), BLAKE3_EMPTY);
+        assert_eq!(blake3_256([]), BLAKE3_EMPTY);
+
+        let max_cacheable = vec![0xAA; blake3_cache::MAX_INPUT_LEN];
+        let hash1 = blake3_256(&max_cacheable);
+        let hash2 = blake3_256_impl(&max_cacheable);
+        assert_eq!(hash1, hash2);
+        assert_eq!(blake3_256(&max_cacheable), hash1);
+
+        let over_max = vec![0xBB; blake3_cache::MAX_INPUT_LEN + 1];
+        let hash1 = blake3_256(&over_max);
+        let hash2 = blake3_256_impl(&over_max);
+        assert_eq!(hash1, hash2);
+        assert_eq!(blake3_256(&over_max), hash1);
+
+        let long_input = vec![0xCC; 1000];
+        let hash1 = blake3_256(&long_input);
+        let hash2 = blake3_256_impl(&long_input);
+        assert_eq!(hash1, hash2);
+
+        let max = if cfg!(miri) { 10 } else { 255 };
+        for byte in 0..=max {
+            let data = &[byte];
+            let hash1 = blake3_256(data);
+            let hash2 = blake3_256_impl(data);
             assert_eq!(hash1, hash2);
         }
     }
@@ -493,6 +605,86 @@ mod tests {
 
                         let cached_hash = keccak256(&data);
                         let direct_hash = keccak256_impl(&data);
+
+                        assert_eq!(
+                            cached_hash, direct_hash,
+                            "Thread {thread_id}: Cached hash mismatch for random data (len {len})"
+                        );
+                    }
+                }
+            });
+
+            handles.push(handle);
+        }
+
+        // Wait for all threads to complete.
+        for handle in handles {
+            handle.join().expect("Thread panicked");
+        }
+    }
+
+    #[test]
+    #[cfg(all(feature = "blake3-cache", feature = "rand"))]
+    fn test_blake3_256_cache_multithreaded() {
+        use blake3_256_cached as blake3_256;
+        use rand::{Rng, SeedableRng};
+        use std::{sync::Arc, thread};
+
+        // Test parameters (reduced for miri).
+        let num_threads = if cfg!(miri) {
+            2
+        } else {
+            thread::available_parallelism().map(|n| n.get()).unwrap_or(8)
+        };
+        let iterations_per_thread = if cfg!(miri) { 10 } else { 1000 };
+        let num_test_vectors = if cfg!(miri) { 5 } else { 100 };
+        let max_data_length = blake3_cache::MAX_INPUT_LEN;
+
+        // Shared test vectors that will be hashed repeatedly to test cache hits.
+        let test_vectors: Arc<Vec<Vec<u8>>> = Arc::new({
+            let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+            (0..num_test_vectors)
+                .map(|_| {
+                    let len = rng.random_range(0..=max_data_length);
+                    (0..len).map(|_| rng.random()).collect()
+                })
+                .collect()
+        });
+
+        let mut handles = vec![];
+
+        for thread_id in 0..num_threads {
+            let test_vectors = Arc::clone(&test_vectors);
+
+            let handle = thread::spawn(move || {
+                // Use thread-local RNG with deterministic seed for reproducibility.
+                let mut rng = rand::rngs::StdRng::seed_from_u64(thread_id as u64);
+                let max_data_length = blake3_cache::MAX_INPUT_LEN;
+
+                for _ in 0..iterations_per_thread {
+                    // 70% chance to use a shared test vector (tests cache hits).
+                    if rng.random_range(0..10) < 7 && !test_vectors.is_empty() {
+                        let idx = rng.random_range(0..test_vectors.len());
+                        let data = &test_vectors[idx];
+
+                        let cached_hash = blake3_256(data);
+                        let direct_hash = blake3_256_impl(data);
+
+                        assert_eq!(
+                            cached_hash,
+                            direct_hash,
+                            "Thread {}: Cached hash mismatch for shared vector {} (len {})",
+                            thread_id,
+                            idx,
+                            data.len()
+                        );
+                    } else {
+                        // 30% chance to use random data (tests cache misses).
+                        let len = rng.random_range(0..max_data_length + 20);
+                        let data: Vec<u8> = (0..len).map(|_| rng.random()).collect();
+
+                        let cached_hash = blake3_256(&data);
+                        let direct_hash = blake3_256_impl(&data);
 
                         assert_eq!(
                             cached_hash, direct_hash,
