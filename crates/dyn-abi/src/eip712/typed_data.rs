@@ -319,6 +319,23 @@ mod tests {
     }
 
     #[test]
+    fn primitive_primary_type_returns_error() {
+        let json = json!({
+            "types": {
+                "EIP712Domain": [],
+                "uint256": []
+            },
+            "primaryType": "uint256",
+            "domain": {},
+            "message": "1"
+        });
+
+        let typed_data: TypedData = serde_json::from_value(json).unwrap();
+
+        assert!(typed_data.hash_struct().is_err());
+    }
+
+    #[test]
     fn test_encode_custom_array_type() {
         let json = json!({
             "domain": {},
