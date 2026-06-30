@@ -604,7 +604,7 @@ impl<const N: usize> FixedBytes<N> {
     /// Returns `true` if all bits set in `self` are also set in `b`.
     #[inline]
     pub fn covers(&self, other: &Self) -> bool {
-        (*self & *other) == *other
+        iter::zip(self, other).fold(0, |acc, (a, b)| acc | (b & !a)) == 0
     }
 
     /// Returns `true` if all bits set in `self` are also set in `b`.
