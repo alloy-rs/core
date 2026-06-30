@@ -195,6 +195,13 @@ mod tests {
     }
 
     #[test]
+    fn fixed_bytes_rejects_oversized_hex() {
+        let ty = DynSolType::FixedBytes(2);
+        let j = json!("0x123456");
+        assert!(ty.coerce_json(&j).is_err());
+    }
+
+    #[test]
     fn it_coerces() {
         let j = json!({
             "message": {
