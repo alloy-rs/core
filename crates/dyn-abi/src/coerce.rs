@@ -657,6 +657,11 @@ mod tests {
             DynSolValue::Int(I256::MINUS_ONE, 8),
         );
         assert_eq!(
+            DynSolType::Int(8).coerce_str("-128").unwrap(),
+            DynSolValue::Int(I256::try_from(-128).unwrap(), 8),
+        );
+        assert!(DynSolType::Int(8).coerce_str("-129").is_err());
+        assert_eq!(
             DynSolType::Int(16).coerce_str("-1").unwrap(),
             DynSolValue::Int(I256::MINUS_ONE, 16),
         );
