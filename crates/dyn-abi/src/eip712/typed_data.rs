@@ -188,7 +188,9 @@ impl TypedData {
     /// [`encodeData`]: https://eips.ethereum.org/EIPS/eip-712#definition-of-encodedata
     pub fn encode_data(&self) -> Result<Vec<u8>> {
         let s = self.coerce()?;
-        Ok(self.resolver.encode_data(&s)?.unwrap())
+        self.resolver
+            .encode_data(&s)?
+            .ok_or_else(|| crate::Error::custom("EIP-712 primary type must be a struct"))
     }
 
     /// Calculate the [`encodeType`] for this value.
