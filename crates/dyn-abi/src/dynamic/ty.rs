@@ -242,7 +242,7 @@ impl DynSolType {
                 DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v))
             ),
             Self::Tuple(types) => {
-                matches!(value, as_tuple!(DynSolValue tuple) if zip(types, tuple).all(|(t, v)| t.matches(v)))
+                matches!(value, as_tuple!(DynSolValue tuple) if types.len() == tuple.len() && zip(types, tuple).all(|(t, v)| t.matches(v)))
             }
             #[cfg(feature = "eip712")]
             Self::CustomStruct { name: _, prop_names, tuple } => {
@@ -253,7 +253,7 @@ impl DynSolType {
                         && tuple.len() == t.len()
                         && zip(tuple, t).all(|(a, b)| a.matches(b))
                 } else if let DynSolValue::Tuple(v) = value {
-                    zip(v, tuple).all(|(v, t)| t.matches(v))
+                    v.len() == tuple.len() && zip(v, tuple).all(|(v, t)| t.matches(v))
                 } else {
                     false
                 }
