@@ -158,6 +158,8 @@ use syn::parse_macro_input;
 /// - `type_check = <string literal>` (UDVT only): specifies a function to be used to check an User
 ///   Defined Type.
 /// - `ignore_unlinked [ = <bool = false>]`: ignores unlinked bytecode in contract artifacts.
+/// - `standalone_globals [ = <bool = false>]` (JSON ABI only): emits global structs/UDVTs at the
+///   root of the generated Solidity instead of nesting them under the interface/contract.
 ///
 /// ### Structs and enums
 ///

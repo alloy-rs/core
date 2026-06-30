@@ -1,0 +1,88 @@
+[
+	{
+		"inputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "value",
+						"type": "uint256"
+					},
+					{
+						"internalType": "enum GlobalEnum",
+						"name": "enum_",
+						"type": "uint8"
+					}
+				],
+				"internalType": "struct GlobalStruct",
+				"name": "payload",
+				"type": "tuple"
+			}
+		],
+		"name": "GlobalError",
+		"type": "error"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "value",
+						"type": "uint256"
+					},
+					{
+						"internalType": "enum GlobalEnum",
+						"name": "enum_",
+						"type": "uint8"
+					}
+				],
+				"indexed": false,
+				"internalType": "struct GlobalStruct",
+				"name": "payload",
+				"type": "tuple"
+			},
+			{
+				"indexed": false,
+				"internalType": "GlobalUDT",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "GlobalEvent",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"components": [
+					{
+						"internalType": "enum GlobalEnum",
+						"name": "kind",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "count",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct Interface.InterfaceStruct",
+				"name": "data",
+				"type": "tuple"
+			}
+		],
+		"name": "emitGlobalEvent",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "triggerError",
+		"outputs": [],
+		"stateMutability": "pure",
+		"type": "function"
+	}
+]

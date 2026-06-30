@@ -114,6 +114,10 @@ pub struct SolAttrs {
     /// Ignore unlinked bytecode
     /// `#[sol(ignore_unlinked)]`
     pub ignore_unlinked: Option<bool>,
+
+    /// Emit globals at the root when generating from JSON ABI.
+    /// `#[sol(standalone_globals)]`
+    pub standalone_globals: Option<bool>,
 }
 
 impl SolAttrs {
@@ -206,6 +210,7 @@ impl SolAttrs {
 
                     type_check => lit()?,
                     ignore_unlinked => bool()?,
+                    standalone_globals => bool()?,
                 };
                 Ok(())
             })?;
@@ -242,6 +247,7 @@ impl SolAttrs {
         merge_opt(&mut a.deployed_bytecode, &b.deployed_bytecode);
         merge_opt(&mut a.type_check, &b.type_check);
         merge_opt(&mut a.ignore_unlinked, &b.ignore_unlinked);
+        merge_opt(&mut a.standalone_globals, &b.standalone_globals);
     }
 }
 
@@ -465,6 +471,10 @@ mod tests {
             #[sol(rpc)] => Ok(sol_attrs! { rpc: true }),
             #[sol(rpc = true)] => Ok(sol_attrs! { rpc: true }),
             #[sol(rpc = false)] => Ok(sol_attrs! { rpc: false }),
+
+            #[sol(standalone_globals)] => Ok(sol_attrs! { standalone_globals: true }),
+            #[sol(standalone_globals = true)] => Ok(sol_attrs! { standalone_globals: true }),
+            #[sol(standalone_globals = false)] => Ok(sol_attrs! { standalone_globals: false }),
 
             #[sol(alloy_sol_types)] => Err("expected `=`"),
             #[sol(alloy_sol_types = alloy_core::sol_types)] => Ok(sol_attrs! { alloy_sol_types: parse_quote!(alloy_core::sol_types) }),
