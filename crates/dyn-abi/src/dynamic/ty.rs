@@ -242,7 +242,7 @@ impl DynSolType {
                 DynSolValue::FixedArray(v) if v.len() == *size && v.iter().all(|v| t.matches(v))
             ),
             Self::Tuple(types) => {
-                matches!(value, as_tuple!(DynSolValue tuple) if zip(types, tuple).all(|(t, v)| t.matches(v)))
+                matches!(value, as_tuple!(DynSolValue tuple) if types.len() == tuple.len() && zip(types, tuple).all(|(t, v)| t.matches(v)))
             }
             #[cfg(feature = "eip712")]
             Self::CustomStruct { name: _, prop_names, tuple } => {
@@ -253,7 +253,7 @@ impl DynSolType {
                         && tuple.len() == t.len()
                         && zip(tuple, t).all(|(a, b)| a.matches(b))
                 } else if let DynSolValue::Tuple(v) = value {
-                    zip(v, tuple).all(|(v, t)| t.matches(v))
+                    v.len() == tuple.len() && zip(v, tuple).all(|(v, t)| t.matches(v))
                 } else {
                     false
                 }
@@ -670,7 +670,7 @@ impl DynSolType {
 mod tests {
     use super::*;
     use alloc::string::ToString;
-    use alloy_primitives::{Address, hex};
+    use alloy_primitives::{Address, U256, hex};
 
     #[test]
     fn dynamically_encodes() {
@@ -696,6 +696,14 @@ mod tests {
         let mut enc = crate::Encoder::default();
         DynSolValue::encode_seq_to(val.as_fixed_seq().unwrap(), &mut enc);
         assert_eq!(enc.finish(), vec![word1, word2]);
+    }
+
+    #[test]
+    fn tuple_matches_rejects_short_values() {
+        let ty = DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Bool]);
+        let value = DynSolValue::Tuple(vec![DynSolValue::Uint(U256::ZERO, 256)]);
+
+        assert!(!ty.matches(&value));
     }
 
     // also tests the type name parser
