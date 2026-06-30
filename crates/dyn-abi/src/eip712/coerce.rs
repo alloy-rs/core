@@ -78,10 +78,11 @@ fn uint(n: usize, value: &serde_json::Value) -> Option<U256> {
 
 fn fixed_bytes(n: usize, value: &serde_json::Value) -> Option<Word> {
     if let Some(Ok(buf)) = value.as_str().map(hex::decode) {
-        let mut word = Word::ZERO;
-        let min = n.min(buf.len());
-        if min <= 32 {
-            word[..min].copy_from_slice(&buf[..min]);
+        if n <= Word::len_bytes() && buf.len() == n {
+            let mut word = Word::ZERO;
+            if n != 0 {
+                word[..n].copy_from_slice(&buf);
+            }
             return Some(word);
         }
     }
