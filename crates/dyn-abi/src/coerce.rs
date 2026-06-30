@@ -302,10 +302,14 @@ fn int<'i>(size: usize) -> impl ModalParser<Input<'i>, I256, ContextError> {
     trace(
         name,
         (int_sign, uint(size)).try_map(move |(sign, abs)| {
-            if !sign.is_negative() && abs.bit_len() > size - 1 {
+            if !sign.is_negative() && abs.bit_len() > size.saturating_sub(1) {
                 return Err(Error::IntOverflow);
             }
-            I256::checked_from_sign_and_abs(sign, abs).ok_or(Error::IntOverflow)
+            let int = I256::checked_from_sign_and_abs(sign, abs).ok_or(Error::IntOverflow)?;
+            if int.bits() > size as u32 {
+                return Err(Error::IntOverflow);
+            }
+            Ok(int)
         }),
     )
 }
@@ -656,6 +660,11 @@ mod tests {
             DynSolType::Int(8).coerce_str("-1").unwrap(),
             DynSolValue::Int(I256::MINUS_ONE, 8),
         );
+        assert_eq!(
+            DynSolType::Int(8).coerce_str("-128").unwrap(),
+            DynSolValue::Int(I256::try_from(-128).unwrap(), 8),
+        );
+        assert!(DynSolType::Int(8).coerce_str("-129").is_err());
         assert_eq!(
             DynSolType::Int(16).coerce_str("-1").unwrap(),
             DynSolValue::Int(I256::MINUS_ONE, 16),
