@@ -148,7 +148,8 @@ nightly = [
     "hex/nightly",
     # TODO: Re-enable on next ruint version (>1.17.2)
     # "ruint/nightly",
-    "rustc-hash/nightly",
+    # TODO: Re-enable after https://github.com/rust-lang/rustc-hash/pull/77
+    # "rustc-hash/nightly",
     "fixed-cache?/nightly",
 ]
 
