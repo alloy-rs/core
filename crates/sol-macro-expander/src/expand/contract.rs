@@ -579,6 +579,12 @@ struct ExpandData {
     min_data_len: usize,
     trait_: Ident,
     selectors: Vec<ExprArray<u8>>,
+    /// Whether the builtin `#[sol(all_derives)]` traits can be derived on the
+    /// generated enum. Computed from the underlying items' parameter types,
+    /// because the variant type names may be synthetic (overloaded items get
+    /// `_N` suffixes, call variants use `*Call` structs) and thus not
+    /// resolvable as items.
+    can_derive_builtin: bool,
 }
 
 impl ExpandData {
@@ -645,6 +651,9 @@ impl ToExpand<'_> {
                         .unwrap(),
                     trait_: format_ident!("SolCall"),
                     selectors: functions.iter().map(|f| cx.function_selector(f)).collect(),
+                    can_derive_builtin: functions
+                        .iter()
+                        .all(|f| f.parameters.types().all(|ty| cx.can_derive_builtin_traits(ty))),
                 }
             }
 
@@ -659,6 +668,9 @@ impl ToExpand<'_> {
                     .unwrap(),
                 trait_: format_ident!("SolError"),
                 selectors: errors.iter().map(|e| cx.error_selector(e)).collect(),
+                can_derive_builtin: errors.iter().all(|&error| {
+                    error.parameters.types().all(|ty| cx.can_derive_builtin_traits(ty))
+                }),
             },
 
             Self::Events(events) => {
@@ -676,6 +688,9 @@ impl ToExpand<'_> {
                         .unwrap(),
                     trait_: format_ident!("SolEvent"),
                     selectors: events.iter().map(|e| cx.event_selector(e)).collect(),
+                    can_derive_builtin: events.iter().all(|&event| {
+                        event.parameters.iter().all(|p| cx.can_derive_builtin_traits(&p.ty))
+                    }),
                 }
             }
         }
@@ -918,7 +933,7 @@ impl CallLikeExpander<'_> {
         assert!(selectors.iter().all(|s| s.array.len() == selector_len));
         let selector_type = quote!([u8; #selector_len]);
 
-        self.cx.type_derives(&mut attrs, types.iter().cloned().map(ast::Type::custom), false);
+        self.cx.enum_derives(&mut attrs, data.can_derive_builtin);
         let trait_ = &data.trait_;
 
         let mut tokens = quote! {
