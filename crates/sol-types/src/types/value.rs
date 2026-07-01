@@ -130,12 +130,12 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
 
     /// ABI-decode this type from the given data.
     ///
-    /// See [`SolType::abi_decode`] for more information.
-    fn abi_decode(data: &[u8]) -> Result<Self>
+    /// See [`SolType::abi_decode_unchecked`] for more information.
+    fn abi_decode_unchecked(data: &[u8]) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
     {
-        Self::SolType::abi_decode(data).map(Self::from)
+        Self::SolType::abi_decode_unchecked(data).map(Self::from)
     }
 
     /// ABI-decode this type from the given data, with validation.
@@ -150,14 +150,14 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
 
     /// ABI-decode this type from the given data.
     ///
-    /// See [`SolType::abi_decode_params`] for more information.
+    /// See [`SolType::abi_decode_params_unchecked`] for more information.
     #[inline]
-    fn abi_decode_params<'de>(data: &'de [u8]) -> Result<Self>
+    fn abi_decode_params_unchecked<'de>(data: &'de [u8]) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
         <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
-        Self::SolType::abi_decode_params(data).map(Self::from)
+        Self::SolType::abi_decode_params_unchecked(data).map(Self::from)
     }
 
     /// ABI-decode this type from the given data, with validation.
@@ -174,14 +174,14 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
 
     /// ABI-decode this type from the given data.
     ///
-    /// See [`SolType::abi_decode_sequence`] for more information.
+    /// See [`SolType::abi_decode_sequence_unchecked`] for more information.
     #[inline]
-    fn abi_decode_sequence<'de>(data: &'de [u8]) -> Result<Self>
+    fn abi_decode_sequence_unchecked<'de>(data: &'de [u8]) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
         <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
-        Self::SolType::abi_decode_sequence(data).map(Self::from)
+        Self::SolType::abi_decode_sequence_unchecked(data).map(Self::from)
     }
 
     /// ABI-decode this type from the given data, with validation.
@@ -390,8 +390,8 @@ mod tests {
         ("",).abi_encode_sequence();
         ("",).abi_encode_params();
 
-        let _ = String::abi_decode(b"");
-        let _ = bool::abi_decode(b"");
+        let _ = String::abi_decode_unchecked(b"");
+        let _ = bool::abi_decode_unchecked(b"");
     }
 
     #[test]
@@ -521,13 +521,13 @@ mod tests {
 
     #[test]
     fn decode() {
-        let _: Result<String> = String::abi_decode(b"");
+        let _: Result<String> = String::abi_decode_unchecked(b"");
 
-        let _: Result<Vec<String>> = Vec::<String>::abi_decode(b"");
+        let _: Result<Vec<String>> = Vec::<String>::abi_decode_unchecked(b"");
 
-        let _: Result<(u64, String, U256)> = <(u64, String, U256)>::abi_decode(b"");
+        let _: Result<(u64, String, U256)> = <(u64, String, U256)>::abi_decode_unchecked(b"");
         let _: Result<(i64, Vec<(u32, String, Vec<FixedBytes<4>>)>, U256)> =
-            <(i64, Vec<(u32, String, Vec<FixedBytes<4>>)>, U256)>::abi_decode(b"");
+            <(i64, Vec<(u32, String, Vec<FixedBytes<4>>)>, U256)>::abi_decode_unchecked(b"");
     }
 
     #[test]

@@ -105,7 +105,7 @@ fn function() {
         ],
     };
     let encoded = call.abi_encode();
-    assert_eq!(someFunctionCall::abi_decode(&encoded).unwrap(), call);
+    assert_eq!(someFunctionCall::abi_decode_unchecked(&encoded).unwrap(), call);
 
     assert_eq!(
         call.abi_encoded_size(),
@@ -121,14 +121,14 @@ fn function_returns() {
         function test() returns (uint256[]);
     }
     assert_eq!(
-        testCall::abi_decode_returns(&hex!(
+        testCall::abi_decode_returns_unchecked(&hex!(
             "0000000000000000000000000000000000000000000000000000000000000020
                  0000000000000000000000000000000000000000000000000000000000000000"
         ),),
         Ok(vec![])
     );
     assert_eq!(
-        testCall::abi_decode_returns(&hex!(
+        testCall::abi_decode_returns_unchecked(&hex!(
             "0000000000000000000000000000000000000000000000000000000000000020
                  0000000000000000000000000000000000000000000000000000000000000001
                  0000000000000000000000000000000000000000000000000000000000000002"
@@ -136,7 +136,7 @@ fn function_returns() {
         Ok(vec![U256::from(2)])
     );
     assert_eq!(
-        testCall::abi_decode_returns(&hex!(
+        testCall::abi_decode_returns_unchecked(&hex!(
             "0000000000000000000000000000000000000000000000000000000000000020
                  0000000000000000000000000000000000000000000000000000000000000002
                  0000000000000000000000000000000000000000000000000000000000000042
@@ -163,22 +163,22 @@ fn ret_param_single_test() {
         function balanceOfNamed(address owner) returns (uint256 bal);
     }
     let data = vec![42].abi_encode_sequence();
-    let res = balanceOfCall::abi_decode_returns(&data).unwrap();
+    let res = balanceOfCall::abi_decode_returns_unchecked(&data).unwrap();
 
     assert_eq!(res, U256::from(42));
 
-    let res = balanceOfStructUnnamedCall::abi_decode_returns(&data).unwrap();
+    let res = balanceOfStructUnnamedCall::abi_decode_returns_unchecked(&data).unwrap();
 
     assert_eq!(res, MyBalance { bal: U256::from(42) });
 
     let data = vec![24, 42].abi_encode_sequence();
 
-    let res = balanceOfUnnamedArrayCall::abi_decode_returns(&data).unwrap();
+    let res = balanceOfUnnamedArrayCall::abi_decode_returns_unchecked(&data).unwrap();
 
     assert_eq!(res, [U256::from(24), U256::from(42)]);
 
     let data = vec![42].abi_encode_sequence();
-    let res = balanceOfNamedCall::abi_decode_returns(&data).unwrap();
+    let res = balanceOfNamedCall::abi_decode_returns_unchecked(&data).unwrap();
 
     assert_eq!(res, U256::from(42));
 
@@ -197,20 +197,21 @@ fn ret_tuple_param() {
     }
 
     let data = vec![24, 42].abi_encode_sequence();
-    let balanceOfTupleReturn { _0, _1 } = balanceOfTupleCall::abi_decode_returns(&data).unwrap();
+    let balanceOfTupleReturn { _0, _1 } =
+        balanceOfTupleCall::abi_decode_returns_unchecked(&data).unwrap();
 
     assert_eq!(_0, U256::from(24));
     assert_eq!(_1, U256::from(42));
 
     let balanceOfTupleNamedReturn { bal, _1 } =
-        balanceOfTupleNamedCall::abi_decode_returns(&data).unwrap();
+        balanceOfTupleNamedCall::abi_decode_returns_unchecked(&data).unwrap();
 
     assert_eq!(bal, U256::from(24));
     assert_eq!(_1, U256::from(42));
 
     let data = vec![24, 42, 69].abi_encode_sequence();
     let balanceOfDoubleTupleReturn { _0: (u1, u2), _1: u3 } =
-        balanceOfDoubleTupleCall::abi_decode_returns(&data).unwrap();
+        balanceOfDoubleTupleCall::abi_decode_returns_unchecked(&data).unwrap();
 
     assert_eq!(u1, U256::from(24));
     assert_eq!(u2, U256::from(42));
@@ -248,8 +249,8 @@ fn empty_call() {
     depositCall {}.abi_encode_raw(&mut out);
     assert!(out.is_empty());
 
-    let depositCall {} = depositCall::abi_decode(&depositCall::SELECTOR).unwrap();
-    let depositCall {} = depositCall::abi_decode_raw(&[]).unwrap();
+    let depositCall {} = depositCall::abi_decode_unchecked(&depositCall::SELECTOR).unwrap();
+    let depositCall {} = depositCall::abi_decode_raw_unchecked(&[]).unwrap();
 
     assert!(depositCall::abi_encode_returns(&WETH::depositReturn {}).is_empty());
 }
@@ -902,7 +903,7 @@ fn decoder_fixed_array_before_dynamic() {
     );
     assert_eq!(hex::encode(&encoded), hex::encode(expected));
 
-    let decoded = FullReport::abi_decode(&encoded).unwrap();
+    let decoded = FullReport::abi_decode_unchecked(&encoded).unwrap();
     assert_eq!(decoded, full_report);
 }
 
@@ -1244,16 +1245,17 @@ fn event_check_signature() {
     let no_topics: [B256; 0] = [];
 
     assert!(!MyEvent::ANONYMOUS);
-    let e = MyEvent::decode_raw_log(no_topics, &[]).unwrap_err();
+    let e = MyEvent::decode_raw_log_unchecked(no_topics, &[]).unwrap_err();
     assert_eq!(e.to_string(), "topic list length mismatch");
-    let e = MyEvent::decode_raw_log([B256::ZERO], &[]).unwrap_err();
+    let e = MyEvent::decode_raw_log_unchecked([B256::ZERO], &[]).unwrap_err();
     assert!(e.to_string().contains("invalid signature hash"), "{e:?}");
-    let e = MyEvent::decode_raw_log([MyEvent::SIGNATURE_HASH, B256::ZERO], &[]).unwrap_err();
+    let e =
+        MyEvent::decode_raw_log_unchecked([MyEvent::SIGNATURE_HASH, B256::ZERO], &[]).unwrap_err();
     assert_eq!(e.to_string(), "topic list length mismatch");
-    let MyEvent {} = MyEvent::decode_raw_log([MyEvent::SIGNATURE_HASH], &[]).unwrap();
+    let MyEvent {} = MyEvent::decode_raw_log_unchecked([MyEvent::SIGNATURE_HASH], &[]).unwrap();
 
     assert!(MyEventAnonymous::ANONYMOUS);
-    let MyEventAnonymous {} = MyEventAnonymous::decode_raw_log(no_topics, &[]).unwrap();
+    let MyEventAnonymous {} = MyEventAnonymous::decode_raw_log_unchecked(no_topics, &[]).unwrap();
 }
 
 // https://github.com/alloy-rs/core/issues/1038
@@ -1266,7 +1268,7 @@ fn empty_anonymous_event_rejects_extra_topics() {
         event MyEventAnonymous() anonymous;
     }
 
-    let e = MyEventAnonymous::decode_raw_log([MyEvent::SIGNATURE_HASH], &[]).unwrap_err();
+    let e = MyEventAnonymous::decode_raw_log_unchecked([MyEvent::SIGNATURE_HASH], &[]).unwrap_err();
     assert_eq!(e.to_string(), "topic list length mismatch");
 }
 
@@ -1282,7 +1284,7 @@ fn anonymous_event_decodes_indexed_and_data_fields() {
     assert_eq!(log.topics().len(), 1);
     assert_eq!(log.data.len(), 32);
 
-    let decoded = MyEventAnonymous::decode_log_data(&log).unwrap();
+    let decoded = MyEventAnonymous::decode_log_data_unchecked(&log).unwrap();
     let decoded_validate = MyEventAnonymous::decode_log_data_validate(&log).unwrap();
     assert_eq!(decoded, event);
     assert_eq!(decoded_validate, event);
@@ -1300,10 +1302,10 @@ fn anonymous_event_rejects_topic_count_mismatch() {
     let data = event.encode_data();
     let no_topics: [B256; 0] = [];
 
-    let e = MyEventAnonymous::decode_raw_log(no_topics, &data).unwrap_err();
+    let e = MyEventAnonymous::decode_raw_log_unchecked(no_topics, &data).unwrap_err();
     assert_eq!(e.to_string(), "topic list length mismatch");
 
-    let e = MyEventAnonymous::decode_raw_log([owner, B256::ZERO], &data).unwrap_err();
+    let e = MyEventAnonymous::decode_raw_log_unchecked([owner, B256::ZERO], &data).unwrap_err();
     assert_eq!(e.to_string(), "topic list length mismatch");
 }
 

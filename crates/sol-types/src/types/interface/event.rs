@@ -18,11 +18,11 @@ pub trait SolEventInterface: Sized {
     const COUNT: usize;
 
     /// Decode the events from the given log info.
-    fn decode_raw_log(topics: &[Word], data: &[u8]) -> Result<Self>;
+    fn decode_raw_log_unchecked(topics: &[Word], data: &[u8]) -> Result<Self>;
 
     /// Decode the events from the given log object.
-    fn decode_log(log: &Log) -> Result<Log<Self>> {
-        Self::decode_raw_log(log.topics(), &log.data.data)
+    fn decode_log_unchecked(log: &Log) -> Result<Log<Self>> {
+        Self::decode_raw_log_unchecked(log.topics(), &log.data.data)
             .map(|data| Log { address: log.address, data })
     }
 }

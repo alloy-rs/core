@@ -49,7 +49,7 @@ fn transfer() {
     };
 
     assert_eq!(data[..4], ERC20::transferCall::SELECTOR);
-    let decoded = ERC20::ERC20Calls::abi_decode(&data).unwrap();
+    let decoded = ERC20::ERC20Calls::abi_decode_unchecked(&data).unwrap();
     assert_eq!(decoded, ERC20::ERC20Calls::transfer(expected));
     assert_eq!(decoded.abi_encode(), data);
 }

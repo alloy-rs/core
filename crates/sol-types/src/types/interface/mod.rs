@@ -57,11 +57,11 @@ pub trait SolInterface: Sized {
     }
 
     /// ABI-decodes the given data into one of the variants of `self`.
-    fn abi_decode_raw(selector: [u8; 4], data: &[u8]) -> Result<Self>;
+    fn abi_decode_raw_unchecked(selector: [u8; 4], data: &[u8]) -> Result<Self>;
 
     /// ABI-decodes the given data into one of the variants of `self`, with validation.
     ///
-    /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
+    /// This is the same as [`abi_decode_raw_unchecked`](Self::abi_decode_raw_unchecked), but performs
     /// validation checks on the decoded variant's data.
     fn abi_decode_raw_validate(selector: [u8; 4], data: &[u8]) -> Result<Self>;
 
@@ -88,18 +88,18 @@ pub trait SolInterface: Sized {
 
     /// ABI-decodes the given data into one of the variants of `self`.
     #[inline]
-    fn abi_decode(data: &[u8]) -> Result<Self> {
+    fn abi_decode_unchecked(data: &[u8]) -> Result<Self> {
         if data.len() < Self::MIN_DATA_LENGTH.saturating_add(4) {
             Err(crate::Error::type_check_fail(data, Self::NAME))
         } else {
             let (selector, data) = data.split_first_chunk().unwrap();
-            Self::abi_decode_raw(*selector, data)
+            Self::abi_decode_raw_unchecked(*selector, data)
         }
     }
 
     /// ABI-decodes the given data into one of the variants of `self`, with validation.
     ///
-    /// This is the same as [`abi_decode`](Self::abi_decode), but performs validation
+    /// This is the same as [`abi_decode_unchecked`](Self::abi_decode_unchecked), but performs validation
     /// checks on the decoded variant's data.
     #[inline]
     fn abi_decode_validate(data: &[u8]) -> Result<Self> {
@@ -137,7 +137,7 @@ impl SolInterface for Infallible {
     }
 
     #[inline]
-    fn abi_decode_raw(selector: [u8; 4], _data: &[u8]) -> Result<Self> {
+    fn abi_decode_raw_unchecked(selector: [u8; 4], _data: &[u8]) -> Result<Self> {
         Self::type_check(selector).map(|()| unreachable!())
     }
 
@@ -283,11 +283,11 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
     }
 
     #[inline]
-    fn abi_decode_raw(selector: [u8; 4], data: &[u8]) -> Result<Self> {
+    fn abi_decode_raw_unchecked(selector: [u8; 4], data: &[u8]) -> Result<Self> {
         match selector {
-            Revert::SELECTOR => Revert::abi_decode_raw(data).map(Self::Revert),
-            Panic::SELECTOR => Panic::abi_decode_raw(data).map(Self::Panic),
-            s => T::abi_decode_raw(s, data).map(Self::CustomError),
+            Revert::SELECTOR => Revert::abi_decode_raw_unchecked(data).map(Self::Revert),
+            Panic::SELECTOR => Panic::abi_decode_raw_unchecked(data).map(Self::Panic),
+            s => T::abi_decode_raw_unchecked(s, data).map(Self::CustomError),
         }
     }
 
@@ -465,7 +465,7 @@ where
     /// If both attempts fail, it returns `None`.
     pub fn decode(out: &[u8]) -> Option<Self> {
         // Try to decode as a generic contract error.
-        if let Ok(error) = ContractError::<T>::abi_decode(out) {
+        if let Ok(error) = ContractError::<T>::abi_decode_unchecked(out) {
             return Some(error.into());
         }
 
@@ -640,7 +640,7 @@ mod tests {
         assert_eq!(errors_err1().abi_encode(), encoded_data);
         assert_eq!(contract_error_err1().abi_encode(), encoded_data);
 
-        assert_eq!(C::Err1::abi_decode(&encoded_data), Ok(err1()));
+        assert_eq!(C::Err1::abi_decode_unchecked(&encoded_data), Ok(err1()));
         assert_eq!(
             <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data),
             Ok(errors_err1())
@@ -713,7 +713,7 @@ mod tests {
         assert_eq!(errors_err1().abi_encode(), encoded_data1);
         assert_eq!(contract_error_err1().abi_encode(), encoded_data1);
 
-        assert_eq!(C::Err1::abi_decode(&encoded_data1), Ok(err1()));
+        assert_eq!(C::Err1::abi_decode_unchecked(&encoded_data1), Ok(err1()));
         assert_eq!(
             <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data1),
             Ok(errors_err1())
@@ -745,7 +745,7 @@ mod tests {
         assert_eq!(errors_err2().abi_encode(), encoded_data2);
         assert_eq!(contract_error_err2().abi_encode(), encoded_data2);
 
-        assert_eq!(C::Err2::abi_decode(&encoded_data2), Ok(err2()));
+        assert_eq!(C::Err2::abi_decode_unchecked(&encoded_data2), Ok(err2()));
         assert_eq!(
             <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data2),
             Ok(errors_err2())
@@ -777,7 +777,7 @@ mod tests {
         assert_eq!(errors_err3().abi_encode(), encoded_data3);
         assert_eq!(contract_error_err3().abi_encode(), encoded_data3);
 
-        assert_eq!(C::Err3::abi_decode(&encoded_data3), Ok(err3()));
+        assert_eq!(C::Err3::abi_decode_unchecked(&encoded_data3), Ok(err3()));
         assert_eq!(
             <C::CErrors as SolInterface>::abi_decode_validate(&encoded_data3),
             Ok(errors_err3())

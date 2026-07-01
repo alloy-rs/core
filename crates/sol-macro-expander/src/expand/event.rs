@@ -187,7 +187,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, event: &ItemEvent) -> Result<TokenStream>
 
                 #[allow(unused_variables)]
                 #[inline]
-                fn new(
+                fn new_unchecked(
                     topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
                     data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
                 ) -> Self {

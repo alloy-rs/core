@@ -57,7 +57,7 @@ pub trait SolEvent: Sized {
     ///
     /// Does not check that `topics[0]` is the correct hash.
     /// Use [`new_checked`](Self::new_checked) instead.
-    fn new(
+    fn new_unchecked(
         topics: <Self::TopicList as SolType>::RustType,
         data: <Self::DataTuple<'_> as SolType>::RustType,
     ) -> Self;
@@ -70,7 +70,7 @@ pub trait SolEvent: Sized {
         topics: <Self::TopicList as SolType>::RustType,
         data: <Self::DataTuple<'_> as SolType>::RustType,
     ) -> Result<Self> {
-        Self::check_signature(&topics).map(|()| Self::new(topics, data))
+        Self::check_signature(&topics).map(|()| Self::new_unchecked(topics, data))
     }
 
     /// Check that the event's signature matches the given topics.
@@ -169,13 +169,15 @@ pub trait SolEvent: Sized {
 
     /// ABI-decodes the dynamic data of this event from the given buffer.
     #[inline]
-    fn abi_decode_data<'a>(data: &'a [u8]) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
-        <Self::DataTuple<'a> as SolType>::abi_decode_sequence(data)
+    fn abi_decode_data_unchecked<'a>(
+        data: &'a [u8],
+    ) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
+        <Self::DataTuple<'a> as SolType>::abi_decode_sequence_unchecked(data)
     }
 
     /// ABI-decodes the dynamic data of this event from the given buffer, with validation.
     ///
-    /// This is the same as [`abi_decode_data`](Self::abi_decode_data), but performs
+    /// This is the same as [`abi_decode_data_unchecked`](Self::abi_decode_data_unchecked), but performs
     /// validation checks on the decoded data tuple.
     #[inline]
     fn abi_decode_data_validate<'a>(
@@ -185,7 +187,7 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the event from the given log info.
-    fn decode_raw_log<I, D>(topics: I, data: &[u8]) -> Result<Self>
+    fn decode_raw_log_unchecked<I, D>(topics: I, data: &[u8]) -> Result<Self>
     where
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,
@@ -193,13 +195,13 @@ pub trait SolEvent: Sized {
         let topics = Self::decode_topics(topics)?;
         // Check signature before decoding the data.
         Self::check_signature(&topics)?;
-        let body = Self::abi_decode_data(data)?;
-        Ok(Self::new(topics, body))
+        let body = Self::abi_decode_data_unchecked(data)?;
+        Ok(Self::new_unchecked(topics, body))
     }
 
     /// Decode the event from the given log info, with validation.
     ///
-    /// This is the same as [`decode_raw_log`](Self::decode_raw_log), but performs
+    /// This is the same as [`decode_raw_log_unchecked`](Self::decode_raw_log_unchecked), but performs
     /// validation checks on the decoded topics and data.
     fn decode_raw_log_validate<I, D>(topics: I, data: &[u8]) -> Result<Self>
     where
@@ -210,12 +212,12 @@ pub trait SolEvent: Sized {
         // Check signature before decoding the data.
         Self::check_signature(&topics)?;
         let body = Self::abi_decode_data_validate(data)?;
-        Ok(Self::new(topics, body))
+        Ok(Self::new_unchecked(topics, body))
     }
 
     /// Decode the event from the given log object.
-    fn decode_log_data(log: &LogData) -> Result<Self> {
-        Self::decode_raw_log(log.topics(), &log.data)
+    fn decode_log_data_unchecked(log: &LogData) -> Result<Self> {
+        Self::decode_raw_log_unchecked(log.topics(), &log.data)
     }
 
     /// Decode the event from the given log object with validation.
@@ -224,8 +226,8 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the event from the given log object.
-    fn decode_log(log: &Log) -> Result<Log<Self>> {
-        Self::decode_log_data(&log.data).map(|data| Log { address: log.address, data })
+    fn decode_log_unchecked(log: &Log) -> Result<Log<Self>> {
+        Self::decode_log_data_unchecked(&log.data).map(|data| Log { address: log.address, data })
     }
 
     /// Decode the event from the given log object with validation.

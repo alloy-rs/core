@@ -237,14 +237,14 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
-    fn abi_decode(data: &[u8]) -> Result<Self::RustType> {
+    fn abi_decode_unchecked(data: &[u8]) -> Result<Self::RustType> {
         abi::decode::<Self::Token<'_>>(data).map(Self::detokenize)
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as
     /// single-element sequence, with validation.
     ///
-    /// This is the same as [`abi_decode`](Self::abi_decode), but performs
+    /// This is the same as [`abi_decode_unchecked`](Self::abi_decode_unchecked), but performs
     /// validation checks on the decoded token.
     ///
     /// See the [`abi`] module for more information.
@@ -260,7 +260,7 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
-    fn abi_decode_params<'de>(data: &'de [u8]) -> Result<Self::RustType>
+    fn abi_decode_params_unchecked<'de>(data: &'de [u8]) -> Result<Self::RustType>
     where
         Self::Token<'de>: TokenSeq<'de>,
     {
@@ -270,7 +270,7 @@ pub trait SolType: Sized {
     /// Decodes this type's value from an ABI blob by interpreting it as
     /// function parameters, with validation.
     ///
-    /// This is the same as [`abi_decode_params`](Self::abi_decode_params), but performs
+    /// This is the same as [`abi_decode_params_unchecked`](Self::abi_decode_params_unchecked), but performs
     /// validation checks on the decoded token.
     ///
     /// See the [`abi`] module for more information.
@@ -289,7 +289,7 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
-    fn abi_decode_sequence<'de>(data: &'de [u8]) -> Result<Self::RustType>
+    fn abi_decode_sequence_unchecked<'de>(data: &'de [u8]) -> Result<Self::RustType>
     where
         Self::Token<'de>: TokenSeq<'de>,
     {
@@ -299,7 +299,7 @@ pub trait SolType: Sized {
     /// Decodes this type's value from an ABI blob by interpreting it as
     /// sequence, with validation.
     ///
-    /// This is the same as [`abi_decode_sequence`](Self::abi_decode_sequence), but performs
+    /// This is the same as [`abi_decode_sequence_unchecked`](Self::abi_decode_sequence_unchecked), but performs
     /// validation checks on the decoded token.
     ///
     /// See the [`abi`] module for more information.

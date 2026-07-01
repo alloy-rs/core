@@ -738,14 +738,14 @@ impl CallLikeExpander<'_> {
 
                 #[inline]
                 #[allow(non_snake_case)]
-                fn abi_decode_raw(
+                fn abi_decode_raw_unchecked(
                     selector: [u8; 4],
                     data: &[u8],
                 )-> alloy_sol_types::Result<Self> {
                     static DECODE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
                         #({
                             fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data)
+                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw_unchecked(data)
                                     .map(#name::#sorted_variants)
                             }
                             #sorted_variants
@@ -841,7 +841,7 @@ impl CallLikeExpander<'_> {
                 match topics.first().copied() {
                     #(
                         Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
-                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data)
+                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log_unchecked(topics, data)
                                 .map(Self::#variants),
                     )*
                     _ => { #ret_err }
@@ -852,7 +852,7 @@ impl CallLikeExpander<'_> {
             let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
                 #(
-                    if let Ok(res) = <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data) {
+                    if let Ok(res) = <#variants as alloy_sol_types::#trait_>::decode_raw_log_unchecked(topics, data) {
                         return Ok(Self::#variants(res));
                     }
                 )*
@@ -891,7 +891,7 @@ impl CallLikeExpander<'_> {
                 const NAME: &'static str = #name_s;
                 const COUNT: usize = #count;
 
-                fn decode_raw_log(topics: &[alloy_sol_types::Word], data: &[u8]) -> alloy_sol_types::Result<Self> {
+                fn decode_raw_log_unchecked(topics: &[alloy_sol_types::Word], data: &[u8]) -> alloy_sol_types::Result<Self> {
                     #non_anon_impl
                     #anon_impl
                 }

@@ -51,14 +51,14 @@ pub trait SolError: Sized {
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector.
     #[inline]
-    fn abi_decode_raw(data: &[u8]) -> Result<Self> {
-        <Self::Parameters<'_> as SolType>::abi_decode_sequence(data).map(Self::new)
+    fn abi_decode_raw_unchecked(data: &[u8]) -> Result<Self> {
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence_unchecked(data).map(Self::new)
     }
 
     /// ABI decode this error's arguments from the given slice, **without** its
     /// selector, with validation.
     ///
-    /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
+    /// This is the same as [`abi_decode_raw_unchecked`](Self::abi_decode_raw_unchecked), but performs
     /// validation checks on the decoded parameters tuple.
     #[inline]
     fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
@@ -68,17 +68,17 @@ pub trait SolError: Sized {
     /// ABI decode this error's arguments from the given slice, **with** the
     /// selector.
     #[inline]
-    fn abi_decode(data: &[u8]) -> Result<Self> {
+    fn abi_decode_unchecked(data: &[u8]) -> Result<Self> {
         let data = data
             .strip_prefix(&Self::SELECTOR)
             .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
-        Self::abi_decode_raw(data)
+        Self::abi_decode_raw_unchecked(data)
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the
     /// selector, with validation.
     ///
-    /// This is the same as [`abi_decode`](Self::abi_decode), but performs
+    /// This is the same as [`abi_decode_unchecked`](Self::abi_decode_unchecked), but performs
     /// validation checks on the decoded parameters tuple.
     #[inline]
     fn abi_decode_validate(data: &[u8]) -> Result<Self> {
@@ -187,7 +187,7 @@ impl SolError for Revert {
 
     #[inline]
     fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
-        Self::abi_decode_raw(data)
+        Self::abi_decode_raw_unchecked(data)
     }
 }
 
@@ -477,7 +477,7 @@ mod tests {
     fn revert_encoding() {
         let revert = Revert::from("test");
         let encoded = revert.abi_encode();
-        let decoded = Revert::abi_decode(&encoded).unwrap();
+        let decoded = Revert::abi_decode_unchecked(&encoded).unwrap();
         assert_eq!(encoded.len(), revert.abi_encoded_size() + 4);
         assert_eq!(encoded.len(), 100);
         assert_eq!(revert, decoded);
@@ -488,7 +488,7 @@ mod tests {
         let panic = Panic { code: U256::ZERO };
         assert_eq!(panic.kind(), Some(PanicKind::Generic));
         let encoded = panic.abi_encode();
-        let decoded = Panic::abi_decode(&encoded).unwrap();
+        let decoded = Panic::abi_decode_unchecked(&encoded).unwrap();
 
         assert_eq!(encoded.len(), panic.abi_encoded_size() + 4);
         assert_eq!(encoded.len(), 36);
@@ -526,7 +526,7 @@ mod tests {
             "08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000024556e697377617056323a20494e53554646494349454e545f494e5055545f414d4f554e5400000000000000000000000000000000000000000000000000000080"
         );
 
-        let decoded = Revert::abi_decode(&bytes).unwrap();
+        let decoded = Revert::abi_decode_unchecked(&bytes).unwrap();
         assert_eq!(decoded.reason, "UniswapV2: INSUFFICIENT_INPUT_AMOUNT");
 
         let decoded = decode_revert_reason(&bytes).unwrap();
