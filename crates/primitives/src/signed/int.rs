@@ -271,16 +271,18 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         self.0.leading_zeros()
     }
 
-    /// Returns the number of leading zeros in the binary representation of
+    /// Returns the number of trailing zeros in the binary representation of
     /// `self`.
     #[inline]
+    #[allow(clippy::missing_const_for_fn)] // `ruint` exposes this as const only in newer versions.
     pub fn trailing_zeros(&self) -> usize {
         self.0.trailing_zeros()
     }
 
-    /// Returns the number of leading ones in the binary representation of
+    /// Returns the number of trailing ones in the binary representation of
     /// `self`.
     #[inline]
+    #[allow(clippy::missing_const_for_fn)] // `ruint` exposes this as const only in newer versions.
     pub fn trailing_ones(&self) -> usize {
         self.0.trailing_ones()
     }
