@@ -671,7 +671,7 @@ mod tests {
         match ty.abi_decode_params(&data) {
             // skip the check if the type contains a CustomStruct, since
             // decoding will not populate names
-            Ok(decoded) if !decoded.has_custom_struct() => prop_assert_eq!(
+            Ok(decoded) if !ty.has_custom_struct() => prop_assert_eq!(
                 &decoded,
                 &value,
                 "\n\ndecoded value doesn't match {:?} ({:?})\ndata: {:?}",
