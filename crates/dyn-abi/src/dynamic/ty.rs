@@ -1072,6 +1072,25 @@ re-enc: {re_enc}
     }
 
     #[test]
+    fn nested_zst_array_dos() {
+        let my_type: DynSolType = "(uint256,()[])".parse().unwrap();
+        let value = my_type.abi_decode_params(&hex!(
+            "
+            0000000000000000000000000000000000000000000000000000000000000001
+            0000000000000000000000000000000000000000000000000000000000000040
+            0000000000000000000000000000000000000000000000000000000000000011
+            "
+        ));
+        assert_eq!(
+            value,
+            Ok(DynSolValue::Tuple(vec![
+                DynSolValue::Uint(U256::from(1), 256),
+                DynSolValue::Array(vec![])
+            ]))
+        );
+    }
+
+    #[test]
     #[cfg_attr(miri, ignore = "takes too long")]
     fn recursive_dos() {
         // https://github.com/alloy-rs/core/issues/490
