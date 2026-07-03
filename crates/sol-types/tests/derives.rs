@@ -99,6 +99,28 @@ fn test_extra_derives() {
     assert_eq!(calls_set.len(), 1);
 }
 
+// A dynamic array maps to `Vec<T>`, whose `Default` impl holds for any `T` (empty vec).
+// So a struct with a dynamic-array field of a non-`Default` element (an enum) should
+// still derive `Default` under `#[sol(all_derives)]`.
+#[test]
+fn test_default_dynamic_array_of_non_default_elem() {
+    sol! {
+        #[sol(all_derives)]
+        contract DynArrDefault {
+            enum E { A, B }
+            struct S {
+                E[] xs;
+                uint256 n;
+            }
+        }
+    }
+
+    use DynArrDefault::*;
+    let s = S::default();
+    assert!(s.xs.is_empty());
+    assert_eq!(s.n, U256::ZERO);
+}
+
 // Overloaded events (same name, different params) get suffixed variant names
 // (e.g. `Swap_0`, `Swap_1`). The generated `*Events` enum must still receive
 // the `#[sol(all_derives)]` traits. See alloy-rs/alloy#3856.
