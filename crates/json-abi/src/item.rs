@@ -675,6 +675,15 @@ mod tests {
     }
 
     #[test]
+    fn anonymous_event_full_signature_roundtrips() {
+        let event = Event::parse("event foo() anonymous").unwrap();
+        let full_signature = event.full_signature();
+
+        assert_eq!(full_signature, "event foo() anonymous");
+        assert_eq!(Event::parse(&full_signature), Ok(event));
+    }
+
+    #[test]
     fn parse_error_prefix() {
         let new = |name: &str| Error { name: name.into(), inputs: vec![] };
         assert_eq!(Error::parse("foo()"), Ok(new("foo")));
