@@ -120,3 +120,35 @@ fn test_default_dynamic_array_of_non_default_elem() {
     assert!(s.xs.is_empty());
     assert_eq!(s.n, U256::ZERO);
 }
+
+// Overloaded events (same name, different params) get suffixed variant names
+// (e.g. `Swap_0`, `Swap_1`). The generated `*Events` enum must still receive
+// the `#[sol(all_derives)]` traits. See alloy-rs/alloy#3856.
+#[test]
+#[allow(non_snake_case)]
+fn test_all_derives_overloaded_events() {
+    sol! {
+        #[sol(all_derives)]
+        contract OverloadedEvents {
+            event Swap(address indexed sender, uint256 amount0);
+            event Swap(address indexed sender, address indexed to, int256 amount0, int256 amount1);
+        }
+    }
+
+    use OverloadedEvents::*;
+
+    let a =
+        OverloadedEventsEvents::Swap_0(Swap_0 { sender: Address::ZERO, amount0: U256::from(1) });
+    let b =
+        OverloadedEventsEvents::Swap_0(Swap_0 { sender: Address::ZERO, amount0: U256::from(1) });
+
+    // Debug + PartialEq
+    assert_eq!(a, b);
+    let _ = format!("{a:?}");
+
+    // Hash + Eq
+    let mut set = HashSet::new();
+    set.insert(a);
+    set.insert(b);
+    assert_eq!(set.len(), 1);
+}
