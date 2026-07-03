@@ -605,14 +605,14 @@ impl Event {
     }
 
     /// Returns this event's full signature
-    /// `event $name($($inputs indexed $names),*)`.
+    /// `event $name($($inputs indexed $names),*) $(anonymous)?`.
     ///
     /// This is a full human-readable string, including all parameter names, any optional modifiers
     /// (e.g. indexed) and white-space to aid in human readability. This is useful for
     /// storing a string which can still fully reconstruct the original Fragment
     #[inline]
     pub fn full_signature(&self) -> String {
-        event_full_signature(&self.name, &self.inputs)
+        event_full_signature(&self.name, &self.inputs, self.anonymous)
     }
 
     /// Computes this event's selector: `keccak256(self.signature())`
