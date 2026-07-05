@@ -271,16 +271,18 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         self.0.leading_zeros()
     }
 
-    /// Returns the number of leading zeros in the binary representation of
+    /// Returns the number of trailing zeros in the binary representation of
     /// `self`.
     #[inline]
+    #[allow(clippy::missing_const_for_fn)] // `ruint` exposes this as const only in newer versions.
     pub fn trailing_zeros(&self) -> usize {
         self.0.trailing_zeros()
     }
 
-    /// Returns the number of leading ones in the binary representation of
+    /// Returns the number of trailing ones in the binary representation of
     /// `self`.
     #[inline]
+    #[allow(clippy::missing_const_for_fn)] // `ruint` exposes this as const only in newer versions.
     pub fn trailing_ones(&self) -> usize {
         self.0.trailing_ones()
     }
@@ -1698,5 +1700,9 @@ mod tests {
         assert!(<I128 as UintTryTo<I24>>::uint_try_to(&I128::MIN).is_err());
         assert!(I24::uint_try_from(I128::MAX).is_err());
         assert!(<I128 as UintTryTo<I24>>::uint_try_to(&I128::MAX).is_err());
+
+        assert_eq!(I24::try_from(-8_388_608i32), Ok(I24::MIN));
+        assert!(I24::try_from(-8_388_609i32).is_err());
+        assert!(I24::try_from(i32::MIN).is_err());
     }
 }

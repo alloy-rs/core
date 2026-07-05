@@ -11,11 +11,6 @@ pub const BLOOM_SIZE_BYTES: usize = 256;
 /// Size of the bloom filter in bits
 pub const BLOOM_SIZE_BITS: usize = BLOOM_SIZE_BYTES * 8;
 
-/// Mask, used in accrue
-const MASK: usize = BLOOM_SIZE_BITS - 1;
-/// Number of bytes per item, used in accrue
-const ITEM_BYTES: usize = BLOOM_SIZE_BITS.ilog2().div_ceil(8) as usize;
-
 // BLOOM_SIZE_BYTES must be a power of 2
 #[allow(clippy::assertions_on_constants)]
 const _: () = assert!(BLOOM_SIZE_BYTES.is_power_of_two());
@@ -128,7 +123,8 @@ impl Bloom {
     /// bloom filter data structure.
     #[inline]
     pub fn contains_input(&self, input: BloomInput<'_>) -> bool {
-        self.contains(&input.into())
+        let hash = input.into_hash();
+        self.contains_m3_2048_hashed(&hash)
     }
 
     /// Compile-time version of [`contains`](Self::contains).
@@ -151,18 +147,7 @@ impl Bloom {
     /// Accrues the input into the bloom filter.
     pub fn accrue(&mut self, input: BloomInput<'_>) {
         let hash = input.into_hash();
-
-        let mut ptr = 0;
-
-        for _ in 0..3 {
-            let mut index = 0_usize;
-            for _ in 0..ITEM_BYTES {
-                index = (index << 8) | hash[ptr] as usize;
-                ptr += 1;
-            }
-            index &= MASK;
-            self.0[BLOOM_SIZE_BYTES - 1 - index / 8] |= 1 << (index % 8);
-        }
+        self.m3_2048_hashed(&hash);
     }
 
     /// Accrues the input into the bloom filter.
@@ -187,6 +172,24 @@ impl Bloom {
             let bit = (hash[i + 1] as usize + ((hash[i] as usize) << 8)) & 0x7FF;
             self[BLOOM_SIZE_BYTES - 1 - bit / 8] |= 1 << (bit % 8);
         }
+    }
+
+    /// Returns true if this bloom filter contains the bits set by [`m3_2048`](Self::m3_2048).
+    fn contains_m3_2048(&self, bytes: &[u8]) -> bool {
+        self.contains_m3_2048_hashed(&keccak256(bytes))
+    }
+
+    /// [`contains_m3_2048`](Self::contains_m3_2048) but with a pre-hashed input.
+    fn contains_m3_2048_hashed(&self, hash: &B256) -> bool {
+        for i in [0, 2, 4] {
+            // Each adjacent hash byte pair forms one big-endian 11-bit index.
+            // Bloom bytes are stored high-to-low, while bits within a byte are low-to-high.
+            let bit = (hash[i + 1] as usize + ((hash[i] as usize) << 8)) & 0x7FF;
+            if self[BLOOM_SIZE_BYTES - 1 - bit / 8] & (1 << (bit % 8)) == 0 {
+                return false;
+            }
+        }
+        true
     }
 
     /// Ingests a raw log into the bloom filter.
@@ -214,9 +217,8 @@ impl Bloom {
     /// Note: This method may return false positives. This is inherent to the
     /// bloom filter data structure.
     pub fn contains_raw_log(&self, address: Address, topics: &[B256]) -> bool {
-        let mut bloom = Self::default();
-        bloom.accrue_raw_log(address, topics);
-        self.contains(&bloom)
+        self.contains_m3_2048(address.as_slice())
+            && topics.iter().all(|topic| self.contains_m3_2048(topic.as_slice()))
     }
 
     /// True if the bloom filter contains a log with given address and topics.
@@ -255,19 +257,47 @@ mod tests {
         );
         let address = hex!("ef2d6d194084c2de36e0dabfce45d046b37d1106");
         let topic = hex!("02c69be41d0b7e40352fc85be1cd65eb03d40ef8427a0ca4596b1ead9a00e9fc");
+        let address_hash = keccak256(address);
+        let topic_hash = keccak256(topic);
 
         let mut my_bloom = Bloom::default();
         assert!(!my_bloom.contains_input(BloomInput::Raw(&address)));
         assert!(!my_bloom.contains_input(BloomInput::Raw(&topic)));
+        assert!(!my_bloom.contains_input(BloomInput::Hash(address_hash)));
+        assert!(!my_bloom.contains_input(BloomInput::Hash(topic_hash)));
 
         my_bloom.accrue(BloomInput::Raw(&address));
         assert!(my_bloom.contains_input(BloomInput::Raw(&address)));
         assert!(!my_bloom.contains_input(BloomInput::Raw(&topic)));
+        assert!(my_bloom.contains_input(BloomInput::Hash(address_hash)));
+        assert!(!my_bloom.contains_input(BloomInput::Hash(topic_hash)));
 
         my_bloom.accrue(BloomInput::Raw(&topic));
         assert!(my_bloom.contains_input(BloomInput::Raw(&address)));
         assert!(my_bloom.contains_input(BloomInput::Raw(&topic)));
+        assert!(my_bloom.contains_input(BloomInput::Hash(address_hash)));
+        assert!(my_bloom.contains_input(BloomInput::Hash(topic_hash)));
 
         assert_eq!(my_bloom, bloom);
+    }
+
+    #[test]
+    #[cfg(feature = "arbitrary")]
+    #[cfg_attr(miri, ignore = "proptest is too slow under miri")]
+    fn contains_raw_log_matches_bloom_contains() {
+        use proptest::{arbitrary::any, collection::vec};
+
+        fn contains_via_bloom(bloom: &Bloom, address: Address, topics: &[B256]) -> bool {
+            let mut log_bloom = Bloom::default();
+            log_bloom.accrue_raw_log(address, topics);
+            bloom.contains(&log_bloom)
+        }
+
+        proptest::proptest!(|(bloom: Bloom, address: Address, topics in vec(any::<B256>(), 0..8))| {
+            proptest::prop_assert_eq!(
+                bloom.contains_raw_log(address, &topics),
+                contains_via_bloom(&bloom, address, &topics)
+            );
+        });
     }
 }

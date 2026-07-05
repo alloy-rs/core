@@ -164,6 +164,13 @@ impl<'a> DynToken<'a> {
                 // This expect is safe because this is only invoked after
                 // `empty_dyn_token()` which always sets template
                 let template = template.take().expect("no template for dynamic sequence");
+                if template.minimum_words() == 0 {
+                    // Arrays of zero-sized elements can encode an attacker-controlled length
+                    // without corresponding element data. Preserve the empty representation used
+                    // by zero-sized top-level arrays instead of allocating `size` elements.
+                    debug_assert!(contents.is_empty());
+                    return Ok(());
+                }
 
                 // This appears to be an unclarity in the Solidity spec. The
                 // spec specifies that offsets are relative to the beginning of
