@@ -64,7 +64,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
 
             impl #name {
                 /// The Solidity type name.
-                pub const NAME: &'static str = stringify!(@name);
+                pub const NAME: &'static str = stringify!(#name);
 
                 /// Convert from the underlying value type.
                 #[inline]

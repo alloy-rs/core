@@ -205,4 +205,5 @@ fn do_stuff() {
         Default::default(),
     );
     assert_eq!(set.len(), 1);
+    assert_eq!(MyType::NAME, "MyType");
 }
