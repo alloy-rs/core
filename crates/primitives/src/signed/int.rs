@@ -655,7 +655,12 @@ mod tests {
                 assert_eq!(value.into_sign_and_abs(), (Sign::Positive, unsigned));
 
                 let err = <$i_struct>::from_dec_str("invalid string").unwrap_err();
-                assert_eq!(err, ParseSignedError::Ruint(ParseError::InvalidDigit('i')));
+                assert_eq!(
+                    err,
+                    ParseSignedError::Ruint(ParseError::BaseConvertError(
+                        BaseConvertError::InvalidDigit(18, 10),
+                    )),
+                );
 
                 let err = <$i_struct>::from_dec_str(&format!("1{}", <$u_struct>::MAX)).unwrap_err();
                 assert_eq!(err, ParseSignedError::IntegerOverflow);
