@@ -48,17 +48,17 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
 
                 #[inline]
                 fn stv_eip712_data_word(&self) -> alloy_sol_types::Word {
-                    <#underlying_sol as alloy_sol_types::SolType>::tokenize(self).0
+                    alloy_sol_types::private::SolTypeValue::<#underlying_sol>::stv_eip712_data_word(self)
                 }
 
                 #[inline]
                 fn stv_abi_encode_packed_to(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
-                    <#underlying_sol as alloy_sol_types::SolType>::abi_encode_packed_to(self, out)
+                    alloy_sol_types::private::SolTypeValue::<#underlying_sol>::stv_abi_encode_packed_to(self, out)
                 }
 
                 #[inline]
                 fn stv_abi_packed_encoded_size(&self) -> usize {
-                    <#underlying_sol as alloy_sol_types::SolType>::abi_encoded_size(self)
+                    alloy_sol_types::private::SolTypeValue::<#underlying_sol>::stv_abi_packed_encoded_size(self)
                 }
             }
 
@@ -74,7 +74,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
 
                 /// Return the underlying value.
                 #[inline]
-                pub const fn into_underlying(self) -> #underlying_rust {
+                pub fn into_underlying(self) -> #underlying_rust {
                     self.0
                 }
 

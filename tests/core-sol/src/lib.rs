@@ -207,3 +207,14 @@ fn do_stuff() {
     assert_eq!(set.len(), 1);
     assert_eq!(MyType::NAME, "MyType");
 }
+
+sol! {
+    type MyString is string;
+}
+
+#[test]
+fn test_udt_packed_size() {
+    use alloy_core::sol_types::SolType;
+    let s = alloy_core::sol_types::private::String::from("hello");
+    assert_eq!(<MyString as SolType>::abi_packed_encoded_size(&s), 5);
+}
