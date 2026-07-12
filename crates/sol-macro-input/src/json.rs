@@ -141,17 +141,17 @@ fn extract_derive_attrs(attrs: &[syn::Attribute]) -> (Vec<&syn::Attribute>, Vec<
     attrs.iter().fold((Vec::new(), Vec::new()), |(mut derives, mut sol_derives), attr| {
         if attr.path().is_ident("derive") {
             derives.push(attr);
-        } else if attr.path().is_ident("sol") {
-            if let Ok(meta) = attr.meta.require_list() {
-                let mut contains_derives = false;
-                let _ = meta.parse_nested_meta(|meta| {
-                    contains_derives |=
-                        meta.path.is_ident("all_derives") || meta.path.is_ident("extra_derives");
-                    Ok(())
-                });
-                if contains_derives {
-                    sol_derives.push(attr);
-                }
+        } else if attr.path().is_ident("sol")
+            && let Ok(meta) = attr.meta.require_list()
+        {
+            let mut contains_derives = false;
+            let _ = meta.parse_nested_meta(|meta| {
+                contains_derives |=
+                    meta.path.is_ident("all_derives") || meta.path.is_ident("extra_derives");
+                Ok(())
+            });
+            if contains_derives {
+                sol_derives.push(attr);
             }
         }
         (derives, sol_derives)

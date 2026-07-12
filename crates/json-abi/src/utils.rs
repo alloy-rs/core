@@ -57,11 +57,11 @@ pub(crate) fn full_signature(
         sig.push(' ');
         sig.push_str(state_mutability_str);
     }
-    if let Some(outputs) = outputs {
-        if !outputs.is_empty() {
-            sig.push_str(" returns ");
-            params_tuple(outputs, &mut sig);
-        }
+    if let Some(outputs) = outputs
+        && !outputs.is_empty()
+    {
+        sig.push_str(" returns ");
+        params_tuple(outputs, &mut sig);
     }
     sig
 }
@@ -131,10 +131,10 @@ pub(crate) fn parse_maybe_prefixed<F: FnOnce(&str) -> R, R>(
     prefix: &str,
     parser: F,
 ) -> R {
-    if let Some(stripped) = s.strip_prefix(prefix) {
-        if stripped.starts_with(char::is_whitespace) {
-            s = stripped.trim_start();
-        }
+    if let Some(stripped) = s.strip_prefix(prefix)
+        && stripped.starts_with(char::is_whitespace)
+    {
+        s = stripped.trim_start();
     }
     parser(s)
 }

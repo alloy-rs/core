@@ -545,14 +545,14 @@ macro_rules! impl_rand {
         #[inline]
         #[doc(alias = "random_using")]
         #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
-        pub fn random_with<R: $crate::private::rand::RngCore + ?Sized>(rng: &mut R) -> Self {
+        pub fn random_with<R: $crate::private::rand::Rng + ?Sized>(rng: &mut R) -> Self {
             Self($crate::FixedBytes::random_with(rng))
         }
 
         /// Tries to create a new fixed byte array with the given random number generator.
         #[inline]
         #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
-        pub fn try_random_with<R: $crate::private::rand::TryRngCore + ?Sized>(
+        pub fn try_random_with<R: $crate::private::rand::TryRng + ?Sized>(
             rng: &mut R,
         ) -> $crate::private::Result<Self, R::Error> {
             $crate::FixedBytes::try_random_with(rng).map(Self)
@@ -562,14 +562,14 @@ macro_rules! impl_rand {
         #[inline]
         #[doc(alias = "randomize_using")]
         #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
-        pub fn randomize_with<R: $crate::private::rand::RngCore + ?Sized>(&mut self, rng: &mut R) {
+        pub fn randomize_with<R: $crate::private::rand::Rng + ?Sized>(&mut self, rng: &mut R) {
             self.0.randomize_with(rng);
         }
 
         /// Tries to fill this fixed byte array with the given random number generator.
         #[inline]
         #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
-        pub fn try_randomize_with<R: $crate::private::rand::TryRngCore + ?Sized>(
+        pub fn try_randomize_with<R: $crate::private::rand::TryRng + ?Sized>(
             &mut self,
             rng: &mut R,
         ) -> $crate::private::Result<(), R::Error> {

@@ -211,10 +211,10 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         // if the last limb contains the sign bit, then we're negative
         // because we can't set any higher bits to 1, we use >= as a proxy
         // check to avoid bit comparison
-        if let Some(limb) = self.0.as_limbs().last() {
-            if *limb >= Self::SIGN_BIT {
-                return Sign::Negative;
-            }
+        if let Some(limb) = self.0.as_limbs().last()
+            && *limb >= Self::SIGN_BIT
+        {
+            return Sign::Negative;
         }
         Sign::Positive
     }
@@ -655,7 +655,12 @@ mod tests {
                 assert_eq!(value.into_sign_and_abs(), (Sign::Positive, unsigned));
 
                 let err = <$i_struct>::from_dec_str("invalid string").unwrap_err();
-                assert_eq!(err, ParseSignedError::Ruint(ParseError::InvalidDigit('i')));
+                assert_eq!(
+                    err,
+                    ParseSignedError::Ruint(ParseError::BaseConvertError(
+                        BaseConvertError::InvalidDigit(18, 10),
+                    )),
+                );
 
                 let err = <$i_struct>::from_dec_str(&format!("1{}", <$u_struct>::MAX)).unwrap_err();
                 assert_eq!(err, ParseSignedError::IntegerOverflow);
