@@ -733,7 +733,8 @@ impl DynSolValue {
     /// See [`abi_encode_packed`](Self::abi_encode_packed) for more details.
     pub fn abi_packed_encoded_size(&self) -> usize {
         match self {
-            Self::Address(_) | Self::Function(_) => 20,
+            Self::Address(_) => 20,
+            Self::Function(_) => 24,
             Self::Bool(_) => 1,
             Self::String(s) => s.len(),
             Self::Bytes(b) => b.len(),

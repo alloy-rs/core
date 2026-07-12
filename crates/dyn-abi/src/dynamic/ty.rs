@@ -699,6 +699,25 @@ mod tests {
     }
 
     #[test]
+    fn test_function_packed_encoding_size() {
+        use alloy_primitives::Function;
+
+        let addr = Address::repeat_byte(0x01);
+        let val_addr = DynSolValue::Address(addr);
+        assert_eq!(val_addr.abi_packed_encoded_size(), 20);
+        assert_eq!(val_addr.abi_encode_packed().len(), val_addr.abi_packed_encoded_size());
+
+        let func = Function::from((addr, [0x02; 4]));
+        let val_func = DynSolValue::Function(func);
+        assert_eq!(val_func.abi_packed_encoded_size(), 24);
+        assert_eq!(val_func.abi_encode_packed().len(), val_func.abi_packed_encoded_size());
+
+        let val_array = DynSolValue::Array(vec![val_func.clone(), val_func]);
+        assert_eq!(val_array.abi_packed_encoded_size(), 64);
+        assert_eq!(val_array.abi_encode_packed().len(), val_array.abi_packed_encoded_size());
+    }
+
+    #[test]
     fn tuple_matches_rejects_short_values() {
         let ty = DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Bool]);
         let value = DynSolValue::Tuple(vec![DynSolValue::Uint(U256::ZERO, 256)]);
