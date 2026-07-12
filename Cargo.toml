@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/*", "tests/*"]
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
 version = "1.6.0"
@@ -70,7 +70,7 @@ derive_more = { version = "2.0", default-features = false }
 paste = "1.0"
 
 # crypto
-k256 = { version = "0.13", default-features = false }
+k256 = { version = "0.14", default-features = false }
 secp256k1 = { version = "0.31", default-features = false, features = ["recovery", "alloc"] }
 keccak-asm = { version = "0.1.5", default-features = false }
 tiny-keccak = { version = "2.0", default-features = false }
@@ -102,7 +102,7 @@ postgres-types = "0.2.6"
 pretty_assertions = "1.4"
 proptest = { version = "1", default-features = false }
 proptest-derive = "0.8"
-rand = { version = "0.9", default-features = false, features = ["os_rng"] }
+rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rayon = { version = "1.2", default-features = false }
 ruint = { version = "1.16.0", default-features = false, features = ["alloc"] }
 winnow = { version = "1.0", default-features = false, features = ["alloc", "ascii"] }
