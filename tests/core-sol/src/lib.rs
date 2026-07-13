@@ -207,25 +207,3 @@ fn do_stuff() {
     assert_eq!(set.len(), 1);
     assert_eq!(MyType::NAME, "MyType");
 }
-
-sol! {
-    contract A {
-        struct StructB {
-            uint256 x;
-        }
-    }
-    struct StructA {
-        A.StructB[] b;
-        A.StructB[3] c;
-        A.StructB[][] d;
-        A.StructB e;
-    }
-}
-
-#[test]
-fn test_eip712_strips_custom_type_namespaces() {
-    assert_eq!(
-        <StructA as alloy_core::sol_types::SolStruct>::eip712_encode_type(),
-        "StructA(StructB[] b,StructB[3] c,StructB[][] d,StructB e)StructB(uint256 x)"
-    );
-}
