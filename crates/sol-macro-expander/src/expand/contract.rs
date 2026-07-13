@@ -192,12 +192,17 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
     });
 
     let functions_enum = (!functions.is_empty()).then(|| {
-        let mut attrs = enum_attrs;
+        let mut attrs = enum_attrs.clone();
         let doc_str = format!("Container for all the [`{name}`](self) function calls.");
         attrs.push(parse_quote!(#[doc = #doc_str]));
         attrs.push(parse_quote!(#[derive(Clone)]));
         let enum_expander = CallLikeExpander { cx, contract_name: name.clone(), extra_methods };
-        enum_expander.expand(ToExpand::Functions(&functions), attrs)
+        let calls_enum = enum_expander.expand(ToExpand::Functions(&functions), attrs);
+        let selector_enum = enum_expander.expand_function_selectors(&functions);
+        quote! {
+            #calls_enum
+            #selector_enum
+        }
     });
 
     // Restore the context attributes now that the errors, events and functions enums have all
@@ -817,6 +822,122 @@ impl CallLikeExpander<'_> {
                         Self::#variants(inner) =>
                             <#types as alloy_sol_types::#trait_>::abi_encode_raw(inner, out),
                     )*}
+                }
+            }
+        }
+    }
+
+    fn expand_function_selectors(&self, functions: &[ItemFunction]) -> TokenStream {
+        let data = &ToExpand::Functions(functions).to_data(self);
+
+        let mut sorted_data = data.clone();
+        sorted_data.sort_by_selector();
+
+        let contract_name = &self.contract_name;
+        let name = format_ident!("{contract_name}Selectors");
+        let name_s = name.to_string();
+
+        let variants = &data.variants;
+        let types = data.types();
+        let sorted_variants = &sorted_data.variants;
+        let sorted_types = sorted_data.types();
+        let selectors = &sorted_data.selectors;
+        let count = data.variants.len();
+
+        quote! {
+            /// Selectors for all the function calls of this contract.
+            #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+            pub enum #name {
+                #(
+                    #[allow(missing_docs)]
+                    #variants,
+                )*
+            }
+
+            impl #name {
+                /// The name of this selector enum.
+                pub const NAME: &'static str = #name_s;
+
+                /// The number of selectors in this enum.
+                pub const COUNT: usize = #count;
+
+                /// All the selectors of this enum.
+                ///
+                /// Note that the selectors might not be in the same order as the variants.
+                /// No guarantees are made about the order of the selectors.
+                // NOTE: This is currently sorted to allow for binary search.
+                pub const SELECTORS: &'static [[u8; 4]] = &[#(#selectors),*];
+
+                /// The selector variants in the same order as `SELECTORS`.
+                pub const VARIANTS: &'static [Self] = &[#(Self::#sorted_variants),*];
+
+                /// The names of the variants in the same order as `SELECTORS`.
+                pub const VARIANT_NAMES: &'static [&'static str] = &[#(::core::stringify!(#sorted_variants)),*];
+
+                /// The signatures in the same order as `SELECTORS`.
+                pub const SIGNATURES: &'static [&'static str] = &[#(<#sorted_types as alloy_sol_types::SolCall>::SIGNATURE),*];
+
+                /// Returns the selector for this variant.
+                #[inline]
+                pub const fn selector(self) -> [u8; 4] {
+                    match self {#(
+                        Self::#variants => <#types as alloy_sol_types::SolCall>::SELECTOR,
+                    )*}
+                }
+
+                /// Returns the signature for this variant.
+                #[inline]
+                pub const fn signature(self) -> &'static str {
+                    match self {#(
+                        Self::#variants => <#types as alloy_sol_types::SolCall>::SIGNATURE,
+                    )*}
+                }
+
+                /// Returns the enum variant name for this variant.
+                #[inline]
+                pub const fn name(self) -> &'static str {
+                    match self {#(
+                        Self::#variants => ::core::stringify!(#variants),
+                    )*}
+                }
+
+                /// Returns the signature for the given selector, if known.
+                #[inline]
+                pub fn signature_by_selector(selector: [u8; 4]) -> ::core::option::Option<&'static str> {
+                    match Self::SELECTORS.binary_search(&selector) {
+                        ::core::result::Result::Ok(idx) => ::core::option::Option::Some(Self::SIGNATURES[idx]),
+                        ::core::result::Result::Err(_) => ::core::option::Option::None,
+                    }
+                }
+
+                /// Returns the enum variant name for the given selector, if known.
+                #[inline]
+                pub fn name_by_selector(selector: [u8; 4]) -> ::core::option::Option<&'static str> {
+                    match Self::SELECTORS.binary_search(&selector) {
+                        ::core::result::Result::Ok(idx) => ::core::option::Option::Some(Self::VARIANT_NAMES[idx]),
+                        ::core::result::Result::Err(_) => ::core::option::Option::None,
+                    }
+                }
+            }
+
+            #[automatically_derived]
+            impl ::core::convert::From<#name> for [u8; 4] {
+                #[inline]
+                fn from(value: #name) -> Self {
+                    value.selector()
+                }
+            }
+
+            #[automatically_derived]
+            impl ::core::convert::TryFrom<[u8; 4]> for #name {
+                type Error = [u8; 4];
+
+                #[inline]
+                fn try_from(selector: [u8; 4]) -> ::core::result::Result<Self, Self::Error> {
+                    match Self::SELECTORS.binary_search(&selector) {
+                        ::core::result::Result::Ok(idx) => ::core::result::Result::Ok(Self::VARIANTS[idx]),
+                        ::core::result::Result::Err(_) => ::core::result::Result::Err(selector),
+                    }
                 }
             }
         }
