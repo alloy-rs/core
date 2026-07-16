@@ -17,8 +17,10 @@ if [[ "$crate" = */tests/* || "$crate" = *test-utils* ]]; then
     exit 0
 fi
 
-command=(git cliff --workdir "$root" --config "$root/cliff.toml" "${@}")
-run_unless_dry_run "${command[@]}" --output "$root/CHANGELOG.md"
+command=(git -C "$root" cliff --config "$root/cliff.toml" "${@}")
 if [ -n "$crate" ] && [ "$root" != "$crate" ]; then
     run_unless_dry_run "${command[@]}" --include-path "$crate_glob" --output "$crate/CHANGELOG.md"
+fi
+if [ -z "$crate" ] || [ "$crate" = "$root/crates/core" ]; then
+    run_unless_dry_run "${command[@]}" --output "$root/CHANGELOG.md"
 fi
