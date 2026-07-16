@@ -212,14 +212,14 @@ impl JsonAbi {
         SolPrinter::new(out, name, config.unwrap_or_default()).print(self);
     }
 
-    /// Deduplicates all functions, errors, and events which have the same name and inputs.
+    /// Deduplicates all functions, errors, and events with the same canonical signature.
     pub fn dedup(&mut self) {
         macro_rules! same_bucket {
             () => {
                 |a, b| {
                     // Already grouped by name
                     debug_assert_eq!(a.name, b.name);
-                    a.inputs == b.inputs
+                    a.signature() == b.signature()
                 }
             };
         }
