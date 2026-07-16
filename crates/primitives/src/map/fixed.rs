@@ -58,8 +58,6 @@ type FbHasherInner = foldhash::fast::FoldHasher<'static>;
 /// [`BuildHasher`] optimized for hashing [fixed-size byte arrays](FixedBytes).
 ///
 /// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
-///
-/// The hasher uses the randomly initialized fast foldhash state.
 #[derive(Clone, Default)]
 pub struct FbBuildHasher<const N: usize> {
     inner: FbBuildHasherInner,
