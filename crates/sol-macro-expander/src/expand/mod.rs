@@ -76,25 +76,35 @@ impl<T> NamespacedMap<T> {
 
     /// Given [SolPath] and current namespace, resolves item
     pub fn resolve(&self, path: &SolPath, current_namespace: &Option<SolIdent>) -> Option<&T> {
+        self.resolve_entry(path, current_namespace).map(|(_, value)| value)
+    }
+
+    /// Resolves an item and returns the namespace it was found in.
+    fn resolve_entry(
+        &self,
+        path: &SolPath,
+        current_namespace: &Option<SolIdent>,
+    ) -> Option<(&Option<SolIdent>, &T)> {
         // If path contains two components, its `Contract.Something` where `Contract` is a namespace
         if path.len() == 2 {
-            self.get_by_name_and_namespace(&Some(path.first().clone()), path.last())
+            self.get_entry_by_name_and_namespace(&Some(path.first().clone()), path.last())
         } else {
             // If there's only one component, this is either global item, or item declared in the
             // current namespace.
             //
             // NOTE: This does not account for inheritance
-            self.get_by_name_and_namespace(&None, path.last())
-                .or_else(|| self.get_by_name_and_namespace(current_namespace, path.last()))
+            self.get_entry_by_name_and_namespace(&None, path.last())
+                .or_else(|| self.get_entry_by_name_and_namespace(current_namespace, path.last()))
         }
     }
 
-    fn get_by_name_and_namespace(
+    fn get_entry_by_name_and_namespace(
         &self,
         namespace: &Option<SolIdent>,
         name: &SolIdent,
-    ) -> Option<&T> {
-        self.0.get(namespace).and_then(|vals| vals.get(name))
+    ) -> Option<(&Option<SolIdent>, &T)> {
+        let (namespace, values) = self.0.get_key_value(namespace)?;
+        values.get(name).map(|value| (namespace, value))
     }
 }
 
@@ -537,7 +547,17 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn try_item(&self, name: &SolPath) -> Option<&Item> {
-        self.all_items.resolve(name, &self.current_namespace).copied()
+        self.try_item_in_namespace(name, &self.current_namespace).map(|(_, item)| item)
+    }
+
+    fn try_item_in_namespace(
+        &self,
+        name: &SolPath,
+        current_namespace: &Option<SolIdent>,
+    ) -> Option<(&Option<SolIdent>, &Item)> {
+        self.all_items
+            .resolve_entry(name, current_namespace)
+            .map(|(namespace, item)| (namespace, *item))
     }
 
     fn custom_type(&self, name: &SolPath) -> &Type {

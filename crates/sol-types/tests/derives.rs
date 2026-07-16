@@ -46,6 +46,54 @@ fn test_all_derives() {
     assert_eq!(errors_set.len(), 1);
 }
 
+mod namespaced_custom_types {
+    use super::*;
+
+    sol! {
+        #![sol(all_derives)]
+
+        library External {
+            struct Something {
+                AnotherThing value;
+            }
+
+            struct AnotherThing {
+                uint64 number;
+            }
+
+            struct WithEnum {
+                Status status;
+            }
+
+            struct WithEnumVec {
+                Status[] statuses;
+            }
+
+            enum Status {
+                A,
+                B
+            }
+        }
+
+        contract UsesExternal {
+            event EmittedLog(External.Something value);
+            event EnumLog(External.WithEnum value);
+            event EnumVecLog(External.WithEnumVec value);
+        }
+    }
+
+    #[test]
+    fn test_all_derives_namespaced_custom_types() {
+        fn assert_all_derives<T: Default + std::fmt::Debug + PartialEq + Eq + Hash>() {}
+        fn assert_builtin_derives<T: std::fmt::Debug + PartialEq + Eq + Hash>() {}
+
+        assert_all_derives::<UsesExternal::EmittedLog>();
+        assert_builtin_derives::<UsesExternal::EnumLog>();
+        assert_all_derives::<UsesExternal::EnumVecLog>();
+        assert_builtin_derives::<UsesExternal::UsesExternalEvents>();
+    }
+}
+
 #[test]
 fn test_extra_derives() {
     sol! {
