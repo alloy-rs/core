@@ -52,8 +52,8 @@ macro_rules! fb_alias_maps {
 
 fb_alias_maps!(Selector<4>, Address<20>, B256<32>, U256<32>);
 
-type FbBuildHasherInner = super::FxBuildHasherInner;
-type FbHasherInner = rustc_hash::FxHasher;
+type FbBuildHasherInner = foldhash::fast::RandomState;
+type FbHasherInner = foldhash::fast::FoldHasher<'static>;
 
 /// [`BuildHasher`] optimized for hashing [fixed-size byte arrays](FixedBytes).
 ///
@@ -114,7 +114,7 @@ impl<const N: usize> Hasher for FbHasher<N> {
     fn write(&mut self, bytes: &[u8]) {
         // SAFETY: Precondition.
         unsafe { core::hint::assert_unchecked(bytes.len() == N) };
-        // Threshold decided by some basic micro-benchmarks with fxhash.
+        // Avoid slice overhead for short fixed-size inputs.
         if N > 32 {
             self.inner.write(bytes);
         } else {
