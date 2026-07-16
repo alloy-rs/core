@@ -1,7 +1,7 @@
 //! [`Type`] expansion.
 
 use super::ExpCtxt;
-use ast::{Item, Parameters, Spanned, Type, TypeArray};
+use ast::{Item, Parameters, SolIdent, Spanned, Type, TypeArray};
 use proc_macro_error3::{abort, emit_error};
 use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::{ToTokens, quote_spanned};
@@ -228,35 +228,54 @@ impl ExpCtxt<'_> {
 
     /// Returns whether the given type can derive the [`Default`] trait.
     pub(crate) fn can_derive_default(&self, ty: &Type) -> bool {
+        self.can_derive_default_in_namespace(ty, &self.current_namespace)
+    }
+
+    fn can_derive_default_in_namespace(
+        &self,
+        ty: &Type,
+        current_namespace: &Option<SolIdent>,
+    ) -> bool {
         match ty {
             Type::Array(a) => match self.eval_array_size(a) {
                 // Dynamic arrays are `Vec<T>`, whose `Default` impl holds for any `T`.
                 None => true,
                 // Fixed arrays are `[T; N]`: `Default` needs `T: Default` and `N <= 32`.
-                Some(sz) => sz <= MAX_SUPPORTED_ARRAY_LEN && self.can_derive_default(&a.ty),
+                Some(sz) => {
+                    sz <= MAX_SUPPORTED_ARRAY_LEN
+                        && self.can_derive_default_in_namespace(&a.ty, current_namespace)
+                }
             },
             Type::Tuple(tuple) => {
                 if tuple.types.len() > MAX_SUPPORTED_TUPLE_LEN {
                     false
                 } else {
-                    tuple.types.iter().all(|ty| self.can_derive_default(ty))
+                    tuple
+                        .types
+                        .iter()
+                        .all(|ty| self.can_derive_default_in_namespace(ty, current_namespace))
                 }
             }
 
-            Type::Custom(name) => match self.try_item(name) {
-                Some(Item::Contract(_)) => true,
-                Some(Item::Enum(_)) => false,
-                Some(Item::Error(error)) => {
-                    error.parameters.types().all(|ty| self.can_derive_default(ty))
+            Type::Custom(name) => match self.try_item_in_namespace(name, current_namespace) {
+                Some((_, Item::Contract(_))) => true,
+                Some((_, Item::Enum(_))) => false,
+                Some((namespace, Item::Error(error))) => error
+                    .parameters
+                    .types()
+                    .all(|ty| self.can_derive_default_in_namespace(ty, namespace)),
+                Some((namespace, Item::Event(event))) => event
+                    .parameters
+                    .iter()
+                    .all(|p| self.can_derive_default_in_namespace(&p.ty, namespace)),
+                Some((namespace, Item::Struct(strukt))) => strukt
+                    .fields
+                    .types()
+                    .all(|ty| self.can_derive_default_in_namespace(ty, namespace)),
+                Some((namespace, Item::Udt(udt))) => {
+                    self.can_derive_default_in_namespace(&udt.ty, namespace)
                 }
-                Some(Item::Event(event)) => {
-                    event.parameters.iter().all(|p| self.can_derive_default(&p.ty))
-                }
-                Some(Item::Struct(strukt)) => {
-                    strukt.fields.types().all(|ty| self.can_derive_default(ty))
-                }
-                Some(Item::Udt(udt)) => self.can_derive_default(&udt.ty),
-                Some(item) => abort!(item.span(), "Invalid type in struct field: {:?}", item),
+                Some((_, item)) => abort!(item.span(), "Invalid type in struct field: {:?}", item),
                 _ => false,
             },
 
@@ -267,29 +286,44 @@ impl ExpCtxt<'_> {
     /// Returns whether the given type can derive the builtin traits listed in
     /// `ExprCtxt::derives`, minus `Default`.
     pub(crate) fn can_derive_builtin_traits(&self, ty: &Type) -> bool {
+        self.can_derive_builtin_traits_in_namespace(ty, &self.current_namespace)
+    }
+
+    fn can_derive_builtin_traits_in_namespace(
+        &self,
+        ty: &Type,
+        current_namespace: &Option<SolIdent>,
+    ) -> bool {
         match ty {
-            Type::Array(a) => self.can_derive_builtin_traits(&a.ty),
+            Type::Array(a) => self.can_derive_builtin_traits_in_namespace(&a.ty, current_namespace),
             Type::Tuple(tuple) => {
                 if tuple.types.len() > MAX_SUPPORTED_TUPLE_LEN {
                     false
                 } else {
-                    tuple.types.iter().all(|ty| self.can_derive_builtin_traits(ty))
+                    tuple.types.iter().all(|ty| {
+                        self.can_derive_builtin_traits_in_namespace(ty, current_namespace)
+                    })
                 }
             }
 
-            Type::Custom(name) => match self.try_item(name) {
-                Some(Item::Contract(_)) | Some(Item::Enum(_)) => true,
-                Some(Item::Error(error)) => {
-                    error.parameters.types().all(|ty| self.can_derive_builtin_traits(ty))
+            Type::Custom(name) => match self.try_item_in_namespace(name, current_namespace) {
+                Some((_, Item::Contract(_))) | Some((_, Item::Enum(_))) => true,
+                Some((namespace, Item::Error(error))) => error
+                    .parameters
+                    .types()
+                    .all(|ty| self.can_derive_builtin_traits_in_namespace(ty, namespace)),
+                Some((namespace, Item::Event(event))) => event
+                    .parameters
+                    .iter()
+                    .all(|p| self.can_derive_builtin_traits_in_namespace(&p.ty, namespace)),
+                Some((namespace, Item::Struct(strukt))) => strukt
+                    .fields
+                    .types()
+                    .all(|ty| self.can_derive_builtin_traits_in_namespace(ty, namespace)),
+                Some((namespace, Item::Udt(udt))) => {
+                    self.can_derive_builtin_traits_in_namespace(&udt.ty, namespace)
                 }
-                Some(Item::Event(event)) => {
-                    event.parameters.iter().all(|p| self.can_derive_builtin_traits(&p.ty))
-                }
-                Some(Item::Struct(strukt)) => {
-                    strukt.fields.types().all(|ty| self.can_derive_builtin_traits(ty))
-                }
-                Some(Item::Udt(udt)) => self.can_derive_builtin_traits(&udt.ty),
-                Some(item) => abort!(item.span(), "Invalid type in struct field: {:?}", item),
+                Some((_, item)) => abort!(item.span(), "Invalid type in struct field: {:?}", item),
                 _ => false,
             },
 
