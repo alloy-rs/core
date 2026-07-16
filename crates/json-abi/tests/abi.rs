@@ -72,14 +72,14 @@ fn abi_test(s: &str, path: &str, run_solc: bool) {
 fn dedup_uses_canonical_signatures() {
     let mut abi = JsonAbi::parse([
         "function foo(uint256 first)",
-        "function foo(address other)",
         "function foo(uint256 second)",
+        "function foo(address other)",
         "error DuplicateError(uint256 first)",
-        "error DuplicateError(address other)",
         "error DuplicateError(uint256 second)",
+        "error DuplicateError(address other)",
         "event DuplicateEvent(uint256 indexed first)",
-        "event DuplicateEvent(address indexed other)",
         "event DuplicateEvent(uint256 indexed second)",
+        "event DuplicateEvent(address indexed other)",
     ])
     .unwrap();
 

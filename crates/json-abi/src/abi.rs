@@ -2,11 +2,7 @@ use crate::{
     AbiItem, Constructor, Error, Event, Fallback, Function, Receive,
     to_sol::{SolPrinter, ToSolConfig},
 };
-use alloc::{
-    collections::{BTreeSet, btree_map},
-    string::String,
-    vec::Vec,
-};
+use alloc::{collections::btree_map, string::String, vec::Vec};
 use alloy_primitives::{Bytes, Selector};
 use btree_map::BTreeMap;
 use core::{fmt, iter, iter::Flatten};
@@ -36,11 +32,6 @@ macro_rules! entry_and_push {
 type FlattenValues<'a, V> = Flatten<btree_map::Values<'a, String, Vec<V>>>;
 type FlattenValuesMut<'a, V> = Flatten<btree_map::ValuesMut<'a, String, Vec<V>>>;
 type FlattenIntoValues<V> = Flatten<btree_map::IntoValues<String, Vec<V>>>;
-
-fn dedup_by_signature<T>(items: &mut Vec<T>, signature: impl Fn(&T) -> String) {
-    let mut signatures = BTreeSet::new();
-    items.retain(|item| signatures.insert(signature(item)));
-}
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
 ///
@@ -223,14 +214,23 @@ impl JsonAbi {
 
     /// Deduplicates all functions, errors, and events with the same canonical signature.
     pub fn dedup(&mut self) {
+        macro_rules! same_bucket {
+            () => {
+                |a, b| {
+                    // Already grouped by name
+                    debug_assert_eq!(a.name, b.name);
+                    a.signature() == b.signature()
+                }
+            };
+        }
         for functions in self.functions.values_mut() {
-            dedup_by_signature(functions, Function::signature);
+            functions.dedup_by(same_bucket!());
         }
         for errors in self.errors.values_mut() {
-            dedup_by_signature(errors, Error::signature);
+            errors.dedup_by(same_bucket!());
         }
         for events in self.events.values_mut() {
-            dedup_by_signature(events, Event::signature);
+            events.dedup_by(same_bucket!());
         }
     }
 
