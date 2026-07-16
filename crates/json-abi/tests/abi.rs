@@ -68,6 +68,45 @@ fn abi_test(s: &str, path: &str, run_solc: bool) {
     iterator_test(abi1.clone().into_items(), abi1.into_items().rev(), len);
 }
 
+#[test]
+fn dedup_uses_canonical_signatures() {
+    let mut abi = JsonAbi::parse([
+        "function foo(uint256 first)",
+        "function foo(address other)",
+        "function foo(uint256 second)",
+        "error DuplicateError(uint256 first)",
+        "error DuplicateError(address other)",
+        "error DuplicateError(uint256 second)",
+        "event DuplicateEvent(uint256 indexed first)",
+        "event DuplicateEvent(address indexed other)",
+        "event DuplicateEvent(uint256 indexed second)",
+    ])
+    .unwrap();
+
+    abi.dedup();
+
+    let functions = abi.function("foo").unwrap();
+    assert_eq!(
+        functions.iter().map(|item| item.signature()).collect::<Vec<_>>(),
+        ["foo(uint256)", "foo(address)",]
+    );
+    assert_eq!(functions[0].inputs[0].name, "first");
+
+    let errors = abi.error("DuplicateError").unwrap();
+    assert_eq!(
+        errors.iter().map(|item| item.signature()).collect::<Vec<_>>(),
+        ["DuplicateError(uint256)", "DuplicateError(address)",]
+    );
+    assert_eq!(errors[0].inputs[0].name, "first");
+
+    let events = abi.event("DuplicateEvent").unwrap();
+    assert_eq!(
+        events.iter().map(|item| item.signature()).collect::<Vec<_>>(),
+        ["DuplicateEvent(uint256)", "DuplicateEvent(address)",]
+    );
+    assert_eq!(events[0].inputs[0].name, "first");
+}
+
 #[cfg(all(feature = "std", feature = "serde_json"))]
 fn load_test(path: &str, abi: &JsonAbi) {
     use std::{fs::File, io::BufReader};

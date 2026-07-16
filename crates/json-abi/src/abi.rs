@@ -2,7 +2,11 @@ use crate::{
     AbiItem, Constructor, Error, Event, Fallback, Function, Receive,
     to_sol::{SolPrinter, ToSolConfig},
 };
-use alloc::{collections::btree_map, string::String, vec::Vec};
+use alloc::{
+    collections::{BTreeSet, btree_map},
+    string::String,
+    vec::Vec,
+};
 use alloy_primitives::{Bytes, Selector};
 use btree_map::BTreeMap;
 use core::{fmt, iter, iter::Flatten};
@@ -32,6 +36,11 @@ macro_rules! entry_and_push {
 type FlattenValues<'a, V> = Flatten<btree_map::Values<'a, String, Vec<V>>>;
 type FlattenValuesMut<'a, V> = Flatten<btree_map::ValuesMut<'a, String, Vec<V>>>;
 type FlattenIntoValues<V> = Flatten<btree_map::IntoValues<String, Vec<V>>>;
+
+fn dedup_by_signature<T>(items: &mut Vec<T>, signature: impl Fn(&T) -> String) {
+    let mut signatures = BTreeSet::new();
+    items.retain(|item| signatures.insert(signature(item)));
+}
 
 /// The JSON contract ABI, as specified in the [Solidity ABI spec][ref].
 ///
@@ -212,25 +221,16 @@ impl JsonAbi {
         SolPrinter::new(out, name, config.unwrap_or_default()).print(self);
     }
 
-    /// Deduplicates all functions, errors, and events which have the same name and inputs.
+    /// Deduplicates all functions, errors, and events with the same canonical signature.
     pub fn dedup(&mut self) {
-        macro_rules! same_bucket {
-            () => {
-                |a, b| {
-                    // Already grouped by name
-                    debug_assert_eq!(a.name, b.name);
-                    a.inputs == b.inputs
-                }
-            };
-        }
         for functions in self.functions.values_mut() {
-            functions.dedup_by(same_bucket!());
+            dedup_by_signature(functions, Function::signature);
         }
         for errors in self.errors.values_mut() {
-            errors.dedup_by(same_bucket!());
+            dedup_by_signature(errors, Error::signature);
         }
         for events in self.events.values_mut() {
-            events.dedup_by(same_bucket!());
+            dedup_by_signature(events, Event::signature);
         }
     }
 
