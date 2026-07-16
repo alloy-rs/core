@@ -79,14 +79,26 @@ impl VariableDeclaration {
     /// Formats `self` as an EIP-712 field: `<ty> <name>`
     pub fn fmt_eip712(&self, f: &mut impl Write) -> fmt::Result {
         // According to EIP-712, type strings should only contain struct name, not interface prefix
-        match &self.ty {
-            crate::Type::Custom(path) => {
-                write!(f, "{}", path.last())?;
-            }
-            _ => {
-                write!(f, "{}", self.ty)?;
+        fn fmt_type_eip712(ty: &crate::Type, f: &mut impl Write) -> fmt::Result {
+            match ty {
+                crate::Type::Custom(path) => {
+                    write!(f, "{}", path.last())
+                }
+
+                crate::Type::Array(array) => {
+                    fmt_type_eip712(&array.ty, f)?;
+                    write!(f, "[")?;
+                    if let Some(s) = array.size_lit() {
+                        write!(f, "{}", s.base10_digits())?;
+                    }
+                    write!(f, "]")
+                }
+
+                _ => write!(f, "{ty}"),
             }
         }
+
+        fmt_type_eip712(&self.ty, f)?;
         if let Some(name) = &self.name {
             write!(f, " {name}")?;
         }

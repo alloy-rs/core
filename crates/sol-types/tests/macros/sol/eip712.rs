@@ -90,3 +90,25 @@ fn test_eip712_interface_prefix() {
         "MyStruct(ParentStructA structA,ParentStructB structB)ParentStructA(uint256 numberA)ParentStructB(uint256 numberB)"
     );
 }
+
+#[test]
+fn test_eip712_strips_custom_type_namespaces() {
+    sol! {
+        contract A {
+            struct StructB {
+                uint256 x;
+            }
+        }
+        struct StructA {
+            A.StructB[] b;
+            A.StructB[3] c;
+            A.StructB[][] d;
+            A.StructB e;
+        }
+    }
+
+    assert_eq!(
+        StructA::eip712_encode_type(),
+        "StructA(StructB[] b,StructB[3] c,StructB[][] d,StructB e)StructB(uint256 x)"
+    );
+}
