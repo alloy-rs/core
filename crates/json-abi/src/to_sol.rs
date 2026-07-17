@@ -13,6 +13,12 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
+/// Solidity enum variants keyed by unqualified (`Status`) or qualified (`Token.Status`) names.
+///
+/// Variants must be in discriminant order. Missing, conflicting, or invalid definitions fall back
+/// to a `uint8` UDVT.
+pub type EnumDefinitions = BTreeMap<String, Vec<String>>;
+
 /// Configuration for [`JsonAbi::to_sol`].
 #[derive(Clone, Debug)]
 #[allow(missing_copy_implementations)] // Future-proofing
@@ -49,8 +55,10 @@ impl ToSolConfig {
         self
     }
 
-    /// Sets whether to print `enum`s as user-defined value types (UDVTs) instead of `uint8`.
-    /// Default: `true`.
+    /// Sets whether to preserve enum types instead of printing them as `uint8`. Default: `true`.
+    ///
+    /// Enums with a supplied definition are printed as enum declarations; otherwise they are
+    /// printed as `uint8` user-defined value types. If disabled, supplied definitions are ignored.
     #[inline]
     pub const fn enums_as_udvt(mut self, yes: bool) -> Self {
         self.enums_as_udvt = yes;
@@ -115,8 +123,8 @@ impl<'a> SolPrinter<'a> {
         Self { s, name, print_param_location: false, config }
     }
 
-    pub(crate) fn print(&mut self, abi: &'a JsonAbi) {
-        abi.to_sol_root(self);
+    pub(crate) fn print(&mut self, abi: &'a JsonAbi, enums: &EnumDefinitions) {
+        abi.to_sol_root(self, enums);
     }
 
     fn indent(&mut self) {
@@ -147,7 +155,7 @@ impl<'a> SolPrinter<'a> {
 
 impl JsonAbi {
     #[allow(unknown_lints, for_loops_over_fallibles)]
-    fn to_sol_root<'a>(&'a self, out: &mut SolPrinter<'a>) {
+    fn to_sol_root<'a>(&'a self, out: &mut SolPrinter<'a>, enums: &EnumDefinitions) {
         macro_rules! fmt {
             ($iter:expr) => {
                 let mut any = false;
@@ -163,7 +171,8 @@ impl JsonAbi {
             };
         }
 
-        let mut its = InternalTypes::new(out.name, out.config.enums_as_udvt);
+        let mut its =
+            InternalTypes::new(out.name, out.config.enums_as_udvt, out.config.one_contract, enums);
         its.visit_abi(self);
 
         let one_contract = out.config.one_contract;
@@ -224,17 +233,31 @@ impl JsonAbi {
 }
 
 /// Recursively collects internal structs, enums, and UDVTs from an ABI's items.
-struct InternalTypes<'a> {
+struct InternalTypes<'a, 'e> {
     name: &'a str,
-    this_its: BTreeSet<It<'a>>,
-    other: BTreeMap<&'a String, BTreeSet<It<'a>>>,
+    this_its: BTreeSet<It<'a, 'e>>,
+    other: BTreeMap<&'a String, BTreeSet<It<'a, 'e>>>,
     enums_as_udvt: bool,
+    one_contract: bool,
+    enums: &'e EnumDefinitions,
 }
 
-impl<'a> InternalTypes<'a> {
+impl<'a, 'e> InternalTypes<'a, 'e> {
     #[allow(clippy::missing_const_for_fn)]
-    fn new(name: &'a str, enums_as_udvt: bool) -> Self {
-        Self { name, this_its: BTreeSet::new(), other: BTreeMap::new(), enums_as_udvt }
+    fn new(
+        name: &'a str,
+        enums_as_udvt: bool,
+        one_contract: bool,
+        enums: &'e EnumDefinitions,
+    ) -> Self {
+        Self {
+            name,
+            this_its: BTreeSet::new(),
+            other: BTreeMap::new(),
+            enums_as_udvt,
+            one_contract,
+            enums,
+        }
     }
 
     fn visit_abi(&mut self, abi: &'a JsonAbi) {
@@ -288,7 +311,17 @@ impl<'a> InternalTypes<'a> {
             }
             Some(InternalType::Enum { contract, ty }) => {
                 if self.enums_as_udvt {
-                    self.extend_one(contract, It::new(ty, ItKind::Enum));
+                    let name = ty.split('[').next().unwrap();
+                    let name = name.rsplit('.').next().unwrap();
+                    let variants = if self.enums.is_empty() {
+                        None
+                    } else if let Some(contract) = contract {
+                        self.enums.get(&format!("{contract}.{name}")).map(Vec::as_slice)
+                    } else {
+                        self.enums.get(name).map(Vec::as_slice)
+                    }
+                    .filter(|variants| (1..=256).contains(&variants.len()));
+                    self.extend_one(contract, It::new(ty, ItKind::Enum(variants)));
                 }
             }
             Some(it @ InternalType::Other { contract, ty }) => {
@@ -304,50 +337,89 @@ impl<'a> InternalTypes<'a> {
         }
     }
 
-    fn extend_one(&mut self, contract: &'a Option<String>, it: It<'a>) {
+    fn extend_one(&mut self, contract: &'a Option<String>, it: It<'a, 'e>) {
+        if self.one_contract && matches!(it.kind, ItKind::Enum(_)) {
+            if let Some(items) = self.other.values_mut().find(|items| items.contains(&it)) {
+                Self::insert_item(items, it);
+                return;
+            }
+            if self.this_its.contains(&it) {
+                Self::insert_item(&mut self.this_its, it);
+                return;
+            }
+        }
+
         let contract = contract.as_ref();
-        if let Some(contract) = contract {
+        let items = if let Some(contract) = contract {
             if contract == self.name {
-                self.this_its.insert(it);
+                &mut self.this_its
             } else {
-                self.other.entry(contract).or_default().insert(it);
+                self.other.entry(contract).or_default()
             }
         } else {
-            self.this_its.insert(it);
+            &mut self.this_its
+        };
+        Self::insert_item(items, it);
+    }
+
+    fn insert_item(items: &mut BTreeSet<It<'a, 'e>>, it: It<'a, 'e>) {
+        if let ItKind::Enum(variants) = it.kind {
+            let variants = items.take(&it).map_or(variants, |existing| {
+                let ItKind::Enum(existing) = existing.kind else { unreachable!() };
+                match (existing, variants) {
+                    (Some(existing), Some(variants)) if existing == variants => Some(existing),
+                    _ => None,
+                }
+            });
+            items.insert(It::new(it.name, ItKind::Enum(variants)));
+        } else {
+            items.insert(it);
         }
     }
 }
 
 /// An internal ABI type.
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct It<'a> {
+struct It<'a, 'e> {
     // kind must come before name for `Ord`
-    kind: ItKind<'a>,
+    kind: ItKind<'a, 'e>,
     name: &'a str,
 }
 
-#[derive(PartialEq, Eq)]
-enum ItKind<'a> {
-    Enum,
+enum ItKind<'a, 'e> {
+    Enum(Option<&'e [String]>),
     Udvt(&'a str),
     Struct(&'a Vec<Param>),
 }
 
+impl PartialEq for ItKind<'_, '_> {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::Enum(_), Self::Enum(_))
+                | (Self::Udvt(_), Self::Udvt(_))
+                | (Self::Struct(_), Self::Struct(_))
+        )
+    }
+}
+
+impl Eq for ItKind<'_, '_> {}
+
 // implemented manually because `Param: !Ord`
-impl PartialOrd for ItKind<'_> {
+impl PartialOrd for ItKind<'_, '_> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for ItKind<'_> {
+impl Ord for ItKind<'_, '_> {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (Self::Enum, Self::Enum) => Ordering::Equal,
-            (Self::Enum, _) => Ordering::Less,
-            (_, Self::Enum) => Ordering::Greater,
+            (Self::Enum(_), Self::Enum(_)) => Ordering::Equal,
+            (Self::Enum(_), _) => Ordering::Less,
+            (_, Self::Enum(_)) => Ordering::Greater,
 
             (Self::Udvt(_), Self::Udvt(_)) => Ordering::Equal,
             (Self::Udvt(_), _) => Ordering::Less,
@@ -358,9 +430,9 @@ impl Ord for ItKind<'_> {
     }
 }
 
-impl<'a> It<'a> {
+impl<'a, 'e> It<'a, 'e> {
     #[inline]
-    fn new(ty_name: &'a str, kind: ItKind<'a>) -> Self {
+    fn new(ty_name: &'a str, kind: ItKind<'a, 'e>) -> Self {
         Self {
             kind,
             // `ty_name` might be an array, we just want the identifier
@@ -369,10 +441,22 @@ impl<'a> It<'a> {
     }
 }
 
-impl ToSol for It<'_> {
+impl ToSol for It<'_, '_> {
     fn to_sol(&self, out: &mut SolPrinter<'_>) {
-        match self.kind {
-            ItKind::Enum => {
+        match &self.kind {
+            ItKind::Enum(Some(variants)) => {
+                out.push_str("enum ");
+                out.push_ident(self.name);
+                out.push_str(" { ");
+                for (i, variant) in variants.iter().enumerate() {
+                    if i > 0 {
+                        out.push_str(", ");
+                    }
+                    out.push_ident(variant);
+                }
+                out.push_str(" }");
+            }
+            ItKind::Enum(None) => {
                 out.push_str("type ");
                 out.push_ident(self.name);
                 out.push_str(" is uint8;");
@@ -388,7 +472,7 @@ impl ToSol for It<'_> {
                 out.push_str("struct ");
                 out.push_ident(self.name);
                 out.push_str(" {\n");
-                for component in components {
+                for component in components.iter() {
                     out.indent();
                     out.indent();
                     component.to_sol(out);
