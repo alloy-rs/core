@@ -192,9 +192,8 @@ mod tests {
                 ContractObject { abi: Some(abi), ..Default::default() },
             ),
         };
-        let config = ToSolConfig::new().enum_definitions(
-            [("C.Status".into(), vec!["Pending".into(), "Active".into()])].into(),
-        );
+        let config = ToSolConfig::new()
+            .enum_definitions([("C.Status".into(), vec!["Pending".into(), "Active".into()])]);
 
         let normalized = input.normalize_json_with_config(config).unwrap();
         let SolInputKind::Sol(file) = normalized.kind else { panic!("expected Solidity input") };

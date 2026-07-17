@@ -13,11 +13,7 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
-/// Solidity enum variants keyed by unqualified (`Status`) or qualified (`Token.Status`) names.
-///
-/// Variants must be in discriminant order. Missing, conflicting, or invalid definitions fall back
-/// to a `uint8` UDVT.
-pub type EnumDefinitions = BTreeMap<String, Vec<String>>;
+type EnumDefinitions = BTreeMap<String, Vec<String>>;
 
 /// Configuration for [`JsonAbi::to_sol`].
 #[derive(Clone, Debug)]
@@ -68,8 +64,11 @@ impl ToSolConfig {
     }
 
     /// Sets supplemental enum definitions used when formatting the ABI.
-    pub fn enum_definitions(mut self, definitions: EnumDefinitions) -> Self {
-        self.enum_definitions = definitions;
+    pub fn enum_definitions(
+        mut self,
+        definitions: impl IntoIterator<Item = (String, Vec<String>)>,
+    ) -> Self {
+        self.enum_definitions = definitions.into_iter().collect();
         self
     }
 

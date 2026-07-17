@@ -1,6 +1,6 @@
 use alloy_json_abi::{
-    Constructor, EnumDefinitions, Error, Event, EventParam, Fallback, Function, JsonAbi, Param,
-    Receive, StateMutability, ToSolConfig,
+    Constructor, Error, Event, EventParam, Fallback, Function, JsonAbi, Param, Receive,
+    StateMutability, ToSolConfig,
 };
 use std::collections::BTreeMap;
 
@@ -678,7 +678,7 @@ fn known_enum_definitions() {
     assert!(default.contains("type Status is uint8;"));
     assert_eq!(default, abi.to_sol("EnumUser", Some(ToSolConfig::new())));
 
-    let mut enums = EnumDefinitions::new();
+    let mut enums = BTreeMap::new();
     enums.insert("EnumUser.Status".into(), vec!["Pending".into(), "Active".into()]);
     enums.insert("GlobalStatus".into(), vec!["Off".into(), "On".into()]);
     enums.insert("Types.ExternalStatus".into(), vec!["Open".into(), "Closed".into()]);
@@ -717,7 +717,7 @@ fn conflicting_enum_definitions_fall_back_to_udvt() {
         }]"#,
     )
     .unwrap();
-    let enums = EnumDefinitions::from([
+    let enums = BTreeMap::from([
         ("Status".into(), vec!["Global".into()]),
         ("C.Status".into(), vec!["Local".into()]),
     ]);
@@ -743,7 +743,7 @@ fn invalid_enum_definitions_fall_back_to_udvt() {
     .unwrap();
 
     for variants in [Vec::new(), (0..257).map(|i| format!("V{i}")).collect()] {
-        let enums = EnumDefinitions::from([("C.Status".into(), variants)]);
+        let enums = BTreeMap::from([("C.Status".into(), variants)]);
         let output = abi.to_sol("C", Some(ToSolConfig::new().enum_definitions(enums)));
         assert_eq!(output.matches("type Status is uint8;").count(), 1, "{output}");
         assert!(!output.contains("enum Status"), "{output}");
@@ -768,16 +768,16 @@ fn flattened_conflicting_enum_definitions_fall_back_to_udvt() {
     let config = ToSolConfig::new().one_contract(true);
     let cases = [
         (
-            EnumDefinitions::from([
+            BTreeMap::from([
                 ("A.Status".into(), vec!["Same".into()]),
                 ("B.Status".into(), vec!["Same".into()]),
             ]),
             true,
         ),
-        (EnumDefinitions::new(), false),
-        (EnumDefinitions::from([("A.Status".into(), vec!["Known".into()])]), false),
+        (BTreeMap::new(), false),
+        (BTreeMap::from([("A.Status".into(), vec!["Known".into()])]), false),
         (
-            EnumDefinitions::from([
+            BTreeMap::from([
                 ("A.Status".into(), vec!["A".into()]),
                 ("B.Status".into(), vec!["B".into()]),
             ]),
