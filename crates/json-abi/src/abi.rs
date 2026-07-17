@@ -1,6 +1,6 @@
 use crate::{
     AbiItem, Constructor, Error, Event, Fallback, Function, Receive,
-    to_sol::{EnumDefinitions, SolPrinter, ToSolConfig},
+    to_sol::{SolPrinter, ToSolConfig},
 };
 use alloc::{collections::btree_map, string::String, vec::Vec};
 use alloy_primitives::{Bytes, Selector};
@@ -204,37 +204,12 @@ impl JsonAbi {
         out
     }
 
-    /// Formats this JSON ABI as a Solidity interface using known enum definitions.
-    #[inline]
-    pub fn to_sol_with_enums(
-        &self,
-        name: &str,
-        config: Option<ToSolConfig>,
-        enums: &EnumDefinitions,
-    ) -> String {
-        let mut out = String::new();
-        self.to_sol_raw_with_enums(name, &mut out, config, enums);
-        out
-    }
-
-    /// Formats this JSON ABI as a Solidity interface into the given string using known enum
-    /// definitions.
-    pub fn to_sol_raw_with_enums(
-        &self,
-        name: &str,
-        out: &mut String,
-        config: Option<ToSolConfig>,
-        enums: &EnumDefinitions,
-    ) {
-        out.reserve(self.len() * 128);
-        SolPrinter::new(out, name, config.unwrap_or_default()).print(self, enums);
-    }
-
     /// Formats this JSON ABI as a Solidity interface into the given string.
     ///
     /// See [`to_sol`](JsonAbi::to_sol) for more information.
     pub fn to_sol_raw(&self, name: &str, out: &mut String, config: Option<ToSolConfig>) {
-        self.to_sol_raw_with_enums(name, out, config, &EnumDefinitions::new());
+        out.reserve(self.len() * 128);
+        SolPrinter::new(out, name, config.unwrap_or_default()).print(self);
     }
 
     /// Deduplicates all functions, errors, and events with the same canonical signature.

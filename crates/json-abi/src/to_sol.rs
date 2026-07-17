@@ -27,6 +27,7 @@ pub struct ToSolConfig {
     enums_as_udvt: bool,
     for_sol_macro: bool,
     one_contract: bool,
+    enum_definitions: EnumDefinitions,
 }
 
 impl Default for ToSolConfig {
@@ -45,6 +46,7 @@ impl ToSolConfig {
             enums_as_udvt: true,
             for_sol_macro: false,
             one_contract: false,
+            enum_definitions: EnumDefinitions::new(),
         }
     }
 
@@ -62,6 +64,12 @@ impl ToSolConfig {
     #[inline]
     pub const fn enums_as_udvt(mut self, yes: bool) -> Self {
         self.enums_as_udvt = yes;
+        self
+    }
+
+    /// Sets supplemental enum definitions used when formatting the ABI.
+    pub fn enum_definitions(mut self, definitions: EnumDefinitions) -> Self {
+        self.enum_definitions = definitions;
         self
     }
 
@@ -123,8 +131,8 @@ impl<'a> SolPrinter<'a> {
         Self { s, name, print_param_location: false, config }
     }
 
-    pub(crate) fn print(&mut self, abi: &'a JsonAbi, enums: &EnumDefinitions) {
-        abi.to_sol_root(self, enums);
+    pub(crate) fn print(&mut self, abi: &'a JsonAbi) {
+        abi.to_sol_root(self);
     }
 
     fn indent(&mut self) {
@@ -155,7 +163,7 @@ impl<'a> SolPrinter<'a> {
 
 impl JsonAbi {
     #[allow(unknown_lints, for_loops_over_fallibles)]
-    fn to_sol_root<'a>(&'a self, out: &mut SolPrinter<'a>, enums: &EnumDefinitions) {
+    fn to_sol_root<'a>(&'a self, out: &mut SolPrinter<'a>) {
         macro_rules! fmt {
             ($iter:expr) => {
                 let mut any = false;
@@ -171,8 +179,13 @@ impl JsonAbi {
             };
         }
 
-        let mut its =
-            InternalTypes::new(out.name, out.config.enums_as_udvt, out.config.one_contract, enums);
+        let enum_definitions = core::mem::take(&mut out.config.enum_definitions);
+        let mut its = InternalTypes::new(
+            out.name,
+            out.config.enums_as_udvt,
+            out.config.one_contract,
+            &enum_definitions,
+        );
         its.visit_abi(self);
 
         let one_contract = out.config.one_contract;

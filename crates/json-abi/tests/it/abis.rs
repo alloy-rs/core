@@ -676,14 +676,14 @@ fn known_enum_definitions() {
 
     let default = abi.to_sol("EnumUser", None);
     assert!(default.contains("type Status is uint8;"));
-    assert_eq!(default, abi.to_sol_with_enums("EnumUser", None, &EnumDefinitions::new()));
+    assert_eq!(default, abi.to_sol("EnumUser", Some(ToSolConfig::new())));
 
     let mut enums = EnumDefinitions::new();
     enums.insert("EnumUser.Status".into(), vec!["Pending".into(), "Active".into()]);
     enums.insert("GlobalStatus".into(), vec!["Off".into(), "On".into()]);
     enums.insert("Types.ExternalStatus".into(), vec!["Open".into(), "Closed".into()]);
     enums.insert("Unused".into(), vec!["Ignored".into()]);
-    let enriched = abi.to_sol_with_enums("EnumUser", None, &enums);
+    let enriched = abi.to_sol("EnumUser", Some(ToSolConfig::new().enum_definitions(enums.clone())));
     assert!(enriched.contains("enum Status { Pending, Active }"));
     assert!(enriched.contains("enum GlobalStatus { Off, On }"));
     assert!(enriched.contains("library Types"));
@@ -696,8 +696,8 @@ fn known_enum_definitions() {
     assert!(enriched.contains("RawStatus raw"), "{enriched}");
     assert!(!enriched.contains("Unused"));
 
-    let config = ToSolConfig::new().enums_as_udvt(false);
-    let enums_disabled = abi.to_sol_with_enums("EnumUser", Some(config), &enums);
+    let config = ToSolConfig::new().enums_as_udvt(false).enum_definitions(enums);
+    let enums_disabled = abi.to_sol("EnumUser", Some(config));
     assert!(!enums_disabled.contains("enum Status"));
     assert!(enums_disabled.contains("uint8 status"), "{enums_disabled}");
 }
@@ -722,7 +722,7 @@ fn conflicting_enum_definitions_fall_back_to_udvt() {
         ("C.Status".into(), vec!["Local".into()]),
     ]);
 
-    let output = abi.to_sol_with_enums("C", None, &enums);
+    let output = abi.to_sol("C", Some(ToSolConfig::new().enum_definitions(enums)));
     assert_eq!(output.matches("type Status is uint8;").count(), 1, "{output}");
     assert!(!output.contains("enum Status"), "{output}");
 }
@@ -744,7 +744,7 @@ fn invalid_enum_definitions_fall_back_to_udvt() {
 
     for variants in [Vec::new(), (0..257).map(|i| format!("V{i}")).collect()] {
         let enums = EnumDefinitions::from([("C.Status".into(), variants)]);
-        let output = abi.to_sol_with_enums("C", None, &enums);
+        let output = abi.to_sol("C", Some(ToSolConfig::new().enum_definitions(enums)));
         assert_eq!(output.matches("type Status is uint8;").count(), 1, "{output}");
         assert!(!output.contains("enum Status"), "{output}");
     }
@@ -786,7 +786,7 @@ fn flattened_conflicting_enum_definitions_fall_back_to_udvt() {
     ];
 
     for (enums, expect_enum) in cases {
-        let output = abi.to_sol_with_enums("C", Some(config.clone()), &enums);
+        let output = abi.to_sol("C", Some(config.clone().enum_definitions(enums)));
         if expect_enum {
             assert_eq!(output.matches("enum Status { Same }").count(), 1, "{output}");
             assert!(!output.contains("type Status"), "{output}");
