@@ -645,3 +645,154 @@ interface TestContract {
         .trim()
     );
 }
+
+#[test]
+fn known_enum_definitions() {
+    let abi = serde_json::from_str::<JsonAbi>(
+        r#"[
+            {
+                "type": "function",
+                "name": "useValues",
+                "stateMutability": "pure",
+                "inputs": [
+                    {"name": "status", "type": "uint8", "internalType": "enum EnumUser.Status"},
+                    {"name": "global", "type": "uint8", "internalType": "enum GlobalStatus"},
+                    {"name": "external", "type": "uint8[]", "internalType": "enum Types.ExternalStatus[]"},
+                    {
+                        "name": "wrapper",
+                        "type": "tuple",
+                        "internalType": "struct EnumUser.Wrapper",
+                        "components": [
+                            {"name": "nested", "type": "uint8", "internalType": "enum EnumUser.Status"}
+                        ]
+                    },
+                    {"name": "raw", "type": "uint8", "internalType": "type EnumUser.RawStatus"}
+                ],
+                "outputs": []
+            }
+        ]"#,
+    )
+    .unwrap();
+
+    let default = abi.to_sol("EnumUser", None);
+    assert!(default.contains("type Status is uint8;"));
+    assert_eq!(default, abi.to_sol("EnumUser", Some(ToSolConfig::new())));
+
+    let mut enums = BTreeMap::new();
+    enums.insert("EnumUser.Status".into(), vec!["Pending".into(), "Active".into()]);
+    enums.insert("GlobalStatus".into(), vec!["Off".into(), "On".into()]);
+    enums.insert("Types.ExternalStatus".into(), vec!["Open".into(), "Closed".into()]);
+    enums.insert("Unused".into(), vec!["Ignored".into()]);
+    let enriched = abi.to_sol("EnumUser", Some(ToSolConfig::new().enum_definitions(enums.clone())));
+    assert!(enriched.contains("enum Status { Pending, Active }"));
+    assert!(enriched.contains("enum GlobalStatus { Off, On }"));
+    assert!(enriched.contains("library Types"));
+    assert!(enriched.contains("enum ExternalStatus { Open, Closed }"));
+    assert!(enriched.contains("type RawStatus is uint8;"));
+    assert!(enriched.contains("Status status"), "{enriched}");
+    assert!(enriched.contains("GlobalStatus global"), "{enriched}");
+    assert!(enriched.contains("Types.ExternalStatus[] memory external"), "{enriched}");
+    assert!(enriched.contains("Status nested"), "{enriched}");
+    assert!(enriched.contains("RawStatus raw"), "{enriched}");
+    assert!(!enriched.contains("Unused"));
+
+    let config = ToSolConfig::new().enums_as_udvt(false).enum_definitions(enums);
+    let enums_disabled = abi.to_sol("EnumUser", Some(config));
+    assert!(!enums_disabled.contains("enum Status"));
+    assert!(enums_disabled.contains("uint8 status"), "{enums_disabled}");
+}
+
+#[test]
+fn conflicting_enum_definitions_fall_back_to_udvt() {
+    let abi = serde_json::from_str::<JsonAbi>(
+        r#"[{
+            "type": "function",
+            "name": "useValues",
+            "stateMutability": "pure",
+            "inputs": [
+                {"name": "global", "type": "uint8", "internalType": "enum Status"},
+                {"name": "local", "type": "uint8", "internalType": "enum C.Status"}
+            ],
+            "outputs": []
+        }]"#,
+    )
+    .unwrap();
+    let enums = BTreeMap::from([
+        ("Status".into(), vec!["Global".into()]),
+        ("C.Status".into(), vec!["Local".into()]),
+    ]);
+
+    let output = abi.to_sol("C", Some(ToSolConfig::new().enum_definitions(enums)));
+    assert_eq!(output.matches("type Status is uint8;").count(), 1, "{output}");
+    assert!(!output.contains("enum Status"), "{output}");
+}
+
+#[test]
+fn invalid_enum_definitions_fall_back_to_udvt() {
+    let abi = serde_json::from_str::<JsonAbi>(
+        r#"[{
+            "type": "function",
+            "name": "useValue",
+            "stateMutability": "pure",
+            "inputs": [
+                {"name": "value", "type": "uint8", "internalType": "enum C.Status"}
+            ],
+            "outputs": []
+        }]"#,
+    )
+    .unwrap();
+
+    for variants in [Vec::new(), (0..257).map(|i| format!("V{i}")).collect()] {
+        let enums = BTreeMap::from([("C.Status".into(), variants)]);
+        let output = abi.to_sol("C", Some(ToSolConfig::new().enum_definitions(enums)));
+        assert_eq!(output.matches("type Status is uint8;").count(), 1, "{output}");
+        assert!(!output.contains("enum Status"), "{output}");
+    }
+}
+
+#[test]
+fn flattened_conflicting_enum_definitions_fall_back_to_udvt() {
+    let abi = serde_json::from_str::<JsonAbi>(
+        r#"[{
+            "type": "function",
+            "name": "useValues",
+            "stateMutability": "pure",
+            "inputs": [
+                {"name": "a", "type": "uint8", "internalType": "enum A.Status"},
+                {"name": "b", "type": "uint8", "internalType": "enum B.Status"}
+            ],
+            "outputs": []
+        }]"#,
+    )
+    .unwrap();
+    let config = ToSolConfig::new().one_contract(true);
+    let cases = [
+        (
+            BTreeMap::from([
+                ("A.Status".into(), vec!["Same".into()]),
+                ("B.Status".into(), vec!["Same".into()]),
+            ]),
+            true,
+        ),
+        (BTreeMap::new(), false),
+        (BTreeMap::from([("A.Status".into(), vec!["Known".into()])]), false),
+        (
+            BTreeMap::from([
+                ("A.Status".into(), vec!["A".into()]),
+                ("B.Status".into(), vec!["B".into()]),
+            ]),
+            false,
+        ),
+    ];
+
+    for (enums, expect_enum) in cases {
+        let output = abi.to_sol("C", Some(config.clone().enum_definitions(enums)));
+        if expect_enum {
+            assert_eq!(output.matches("enum Status { Same }").count(), 1, "{output}");
+            assert!(!output.contains("type Status"), "{output}");
+        } else {
+            assert_eq!(output.matches("type Status is uint8;").count(), 1, "{output}");
+            assert!(!output.contains("enum Status"), "{output}");
+        }
+    }
+}
