@@ -273,17 +273,23 @@ impl ParseUnits {
             if amount == "-" {
                 Ok(Self::I256(I256::ZERO))
             } else {
-                let mut n = I256::from_dec_str(amount)?;
-                n *= I256::try_from(10u8)
+                let n = I256::from_dec_str(amount)?;
+                let multiplier = I256::try_from(10u8)
                     .unwrap()
                     .checked_pow(U256::from(exponent - dec_len))
+                    .ok_or(UnitsError::ParseSigned(ParseSignedError::IntegerOverflow))?;
+                let n = n
+                    .checked_mul(multiplier)
                     .ok_or(UnitsError::ParseSigned(ParseSignedError::IntegerOverflow))?;
                 Ok(Self::I256(n))
             }
         } else {
-            let mut a_uint = U256::from_str_radix(amount, 10)?;
-            a_uint *= U256::from(10)
+            let a_uint = U256::from_str_radix(amount, 10)?;
+            let multiplier = U256::from(10)
                 .checked_pow(U256::from(exponent - dec_len))
+                .ok_or(UnitsError::ParseSigned(ParseSignedError::IntegerOverflow))?;
+            let a_uint = a_uint
+                .checked_mul(multiplier)
                 .ok_or(UnitsError::ParseSigned(ParseSignedError::IntegerOverflow))?;
             Ok(Self::U256(a_uint))
         }
@@ -802,6 +808,21 @@ mod tests {
 
         let n: U256 = parse_units("", 3).unwrap().into();
         assert_eq!(n, U256::ZERO, "empty");
+    }
+
+    #[test]
+    fn test_parse_units_mul_overflow() {
+        // Regression: `10^exponent` fits in the target integer (so `checked_pow` succeeds) but
+        // multiplying it by the mantissa overflows. This must return `Err`, matching the
+        // documented behavior for out-of-range inputs (e.g. `parse_units("1", 80)`), instead of
+        // silently wrapping to a wrong value (unsigned `U256`, all profiles) or panicking on the
+        // `debug_assert!` in `Signed::mul` (signed `I256`, debug profile).
+
+        // Unsigned: `10^77 < U256::MAX < 2 * 10^77`, so `2 * 10^77` overflows `U256`.
+        assert!(parse_units("2", 77).is_err(), "unsigned mantissa*10^n overflow must be Err");
+
+        // Signed: `10^76 < I256::MAX < 6 * 10^76`, so `-6 * 10^76` overflows `I256`.
+        assert!(parse_units("-6", 76).is_err(), "signed mantissa*10^n overflow must be Err");
     }
 
     #[test]
