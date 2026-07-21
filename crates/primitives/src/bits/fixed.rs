@@ -444,7 +444,7 @@ impl<const N: usize> FixedBytes<N> {
     #[cfg(feature = "rand")]
     #[inline]
     #[doc(alias = "random_using")]
-    pub fn random_with<R: rand::RngCore + ?Sized>(rng: &mut R) -> Self {
+    pub fn random_with<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
         let mut bytes = Self::ZERO;
         bytes.randomize_with(rng);
         bytes
@@ -453,7 +453,7 @@ impl<const N: usize> FixedBytes<N> {
     /// Tries to create a new [`FixedBytes`] with the given random number generator.
     #[cfg(feature = "rand")]
     #[inline]
-    pub fn try_random_with<R: rand::TryRngCore + ?Sized>(rng: &mut R) -> Result<Self, R::Error> {
+    pub fn try_random_with<R: rand::TryRng + ?Sized>(rng: &mut R) -> Result<Self, R::Error> {
         let mut bytes = Self::ZERO;
         bytes.try_randomize_with(rng)?;
         Ok(bytes)
@@ -491,14 +491,14 @@ impl<const N: usize> FixedBytes<N> {
     #[cfg(feature = "rand")]
     #[inline]
     #[doc(alias = "randomize_using")]
-    pub fn randomize_with<R: rand::RngCore + ?Sized>(&mut self, rng: &mut R) {
+    pub fn randomize_with<R: rand::Rng + ?Sized>(&mut self, rng: &mut R) {
         rng.fill_bytes(&mut self.0);
     }
 
     /// Tries to fill this [`FixedBytes`] with the given random number generator.
     #[inline]
     #[cfg(feature = "rand")]
-    pub fn try_randomize_with<R: rand::TryRngCore + ?Sized>(
+    pub fn try_randomize_with<R: rand::TryRng + ?Sized>(
         &mut self,
         rng: &mut R,
     ) -> Result<(), R::Error> {
