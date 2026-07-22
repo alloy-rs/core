@@ -1402,6 +1402,52 @@ fn array_sizes() {
 }
 
 #[test]
+fn contract_function_selectors_enum() {
+    sol! {
+        interface SelectorTest {
+            function balanceOf(address owner) external view returns (uint256);
+            function transfer(address to, uint256 amount) external returns (bool);
+            function overloaded() external;
+            function overloaded(uint256 value) external;
+        }
+    }
+
+    use SelectorTest::*;
+
+    assert_eq!(
+        SelectorTestSelectors::COUNT,
+        <SelectorTestCalls as alloy_sol_types::SolInterface>::COUNT,
+    );
+    assert_eq!(SelectorTestSelectors::SELECTORS, SelectorTestCalls::SELECTORS);
+
+    let transfer_selector = SelectorTestSelectors::transfer;
+    assert_eq!(transfer_selector.selector(), transferCall::SELECTOR);
+    assert_eq!(transfer_selector.signature(), transferCall::SIGNATURE);
+    assert_eq!(transfer_selector.name(), "transfer");
+    assert_eq!(<[u8; 4]>::from(transfer_selector), transferCall::SELECTOR);
+    assert_eq!(SelectorTestSelectors::try_from(transferCall::SELECTOR), Ok(transfer_selector));
+    assert_eq!(
+        SelectorTestSelectors::signature_by_selector(transferCall::SELECTOR),
+        Some(transferCall::SIGNATURE),
+    );
+    assert_eq!(SelectorTestSelectors::name_by_selector(transferCall::SELECTOR), Some("transfer"));
+
+    assert_eq!(
+        SelectorTestSelectors::try_from(overloaded_0Call::SELECTOR),
+        Ok(SelectorTestSelectors::overloaded_0),
+    );
+    assert_eq!(
+        SelectorTestSelectors::try_from(overloaded_1Call::SELECTOR),
+        Ok(SelectorTestSelectors::overloaded_1),
+    );
+
+    let unknown = [0xff; 4];
+    assert_eq!(SelectorTestSelectors::try_from(unknown), Err(unknown));
+    assert_eq!(SelectorTestSelectors::signature_by_selector(unknown), None);
+    assert_eq!(SelectorTestSelectors::name_by_selector(unknown), None);
+}
+
+#[test]
 fn extra_derives() {
     sol! {
         #![sol(extra_derives(std::fmt::Debug))]
