@@ -302,13 +302,15 @@ fn int<'i>(size: usize) -> impl ModalParser<Input<'i>, I256, ContextError> {
     trace(
         name,
         (int_sign, uint(size)).try_map(move |(sign, abs)| {
-            if !sign.is_negative() && abs.bit_len() > size.saturating_sub(1) {
+            let limit = U256::from(1) << (size - 1);
+            let overflow = if sign.is_negative() { abs > limit } else { abs >= limit };
+
+            if overflow {
                 return Err(Error::IntOverflow);
             }
+
             let int = I256::checked_from_sign_and_abs(sign, abs).ok_or(Error::IntOverflow)?;
-            if int.bits() > size as u32 {
-                return Err(Error::IntOverflow);
-            }
+
             Ok(int)
         }),
     )
@@ -647,14 +649,12 @@ mod tests {
         );
         assert!(DynSolType::Int(8).coerce_str("128").is_err());
         assert!(DynSolType::Int(8).coerce_str("129").is_err());
+
         assert_eq!(
-            DynSolType::Int(16).coerce_str("128").unwrap(),
-            DynSolValue::Int(I256::try_from(128).unwrap(), 16),
+            DynSolType::Int(16).coerce_str("32767").unwrap(),
+            DynSolValue::Int(I256::try_from(32767).unwrap(), 16),
         );
-        assert_eq!(
-            DynSolType::Int(16).coerce_str("129").unwrap(),
-            DynSolValue::Int(I256::try_from(129).unwrap(), 16),
-        );
+        assert!(DynSolType::Int(16).coerce_str("32768").is_err());
 
         assert_eq!(
             DynSolType::Int(8).coerce_str("-1").unwrap(),
@@ -665,10 +665,16 @@ mod tests {
             DynSolValue::Int(I256::try_from(-128).unwrap(), 8),
         );
         assert!(DynSolType::Int(8).coerce_str("-129").is_err());
+
         assert_eq!(
             DynSolType::Int(16).coerce_str("-1").unwrap(),
             DynSolValue::Int(I256::MINUS_ONE, 16),
         );
+        assert_eq!(
+            DynSolType::Int(16).coerce_str("-32768").unwrap(),
+            DynSolValue::Int(I256::try_from(-32768).unwrap(), 16),
+        );
+        assert!(DynSolType::Int(16).coerce_str("-32769").is_err());
     }
 
     #[test]
