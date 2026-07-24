@@ -61,6 +61,9 @@ fn int(n: usize, value: &serde_json::Value) -> Option<I256> {
         if let Some(num) = value.as_i64() {
             return Some(I256::try_from(num).unwrap());
         }
+        if let Some(num) = value.as_u64() {
+            return Some(I256::try_from(num).unwrap());
+        }
         value.as_str().and_then(|s| s.parse().ok())
     })()
     .and_then(|x| (x.bits() <= n as u32).then_some(x))
@@ -200,6 +203,17 @@ mod tests {
         let ty = DynSolType::FixedBytes(2);
         let j = json!("0x123456");
         assert!(ty.coerce_json(&j).is_err());
+    }
+
+    #[test]
+    fn int_coerces_json_number_above_i64_max() {
+        // serde_json stores this as a u64 (it exceeds i64::MAX), but it is a valid
+        // positive int128. The number form must coerce the same as the string form.
+        let n: u64 = 9223372036854775808; // 2^63
+        let ty = DynSolType::Int(128);
+        let want = DynSolValue::Int("9223372036854775808".parse().unwrap(), 128);
+        assert_eq!(ty.coerce_json(&json!(n.to_string())).unwrap(), want);
+        assert_eq!(ty.coerce_json(&json!(n)).unwrap(), want);
     }
 
     #[test]
