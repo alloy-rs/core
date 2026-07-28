@@ -13,19 +13,7 @@ use hex::FromHex;
 /// lengths should use the [`wrap_fixed_bytes!`](crate::wrap_fixed_bytes) macro
 /// to create a new fixed-length byte array type.
 #[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Deref,
-    DerefMut,
-    From,
-    Index,
-    IndexMut,
-    IntoIterator,
+    Clone, Copy, PartialEq, Eq, Hash, Deref, DerefMut, From, Index, IndexMut, IntoIterator,
 )]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary, proptest_derive::Arbitrary))]
 #[cfg_attr(feature = "allocative", derive(allocative::Allocative))]
@@ -36,6 +24,57 @@ use hex::FromHex;
 pub struct FixedBytes<const N: usize>(#[into_iterator(owned, ref, ref_mut)] pub [u8; N]);
 
 crate::impl_fb_traits!(FixedBytes<N>, N, const);
+
+impl<const N: usize> PartialOrd for FixedBytes<N> {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// Byte-lexicographic ordering, identical to the ordering of the underlying
+/// `[u8; N]`, computed over big-endian integer chunks.
+///
+/// The derived implementation lowers to a `memcmp` libcall; for the short,
+/// fixed lengths used as map keys (`Address`, `B256`, ...) the call overhead
+/// dominates the comparison itself. Comparing big-endian `u64` chunks (a
+/// single byte-swapped load per side) preserves the exact ordering while
+/// letting the comparison inline into callers such as `BTreeMap` node
+/// searches.
+impl<const N: usize> Ord for FixedBytes<N> {
+    #[inline]
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        let mut i = 0;
+        while i + 8 <= N {
+            let a = u64::from_be_bytes(self.0[i..i + 8].try_into().unwrap());
+            let b = u64::from_be_bytes(other.0[i..i + 8].try_into().unwrap());
+            if a != b {
+                return a.cmp(&b);
+            }
+            i += 8;
+        }
+        if i + 4 <= N {
+            let a = u32::from_be_bytes(self.0[i..i + 4].try_into().unwrap());
+            let b = u32::from_be_bytes(other.0[i..i + 4].try_into().unwrap());
+            if a != b {
+                return a.cmp(&b);
+            }
+            i += 4;
+        }
+        if i + 2 <= N {
+            let a = u16::from_be_bytes(self.0[i..i + 2].try_into().unwrap());
+            let b = u16::from_be_bytes(other.0[i..i + 2].try_into().unwrap());
+            if a != b {
+                return a.cmp(&b);
+            }
+            i += 2;
+        }
+        if i < N {
+            return self.0[i].cmp(&other.0[i]);
+        }
+        core::cmp::Ordering::Equal
+    }
+}
 
 impl<const N: usize> Default for FixedBytes<N> {
     #[inline]
@@ -699,6 +738,55 @@ mod tests {
         const ACTUAL: FixedBytes<4> = A.concat_const(B);
 
         assert_eq!(ACTUAL, EXPECTED);
+    }
+
+    /// The chunked `Ord` must order exactly like the underlying byte slices
+    /// (what the previous derived implementation produced).
+    #[test]
+    fn ord_matches_slice_ord() {
+        // Deterministic LCG so failures are reproducible.
+        fn step(rng: &mut u64) -> u8 {
+            *rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            (*rng >> 56) as u8
+        }
+
+        fn fill<const N: usize>(rng: &mut u64) -> [u8; N] {
+            let mut out = [0u8; N];
+            for b in &mut out {
+                *b = step(rng);
+            }
+            out
+        }
+
+        fn check<const N: usize>(rng: &mut u64) {
+            for i in 0..1000 {
+                let a: [u8; N] = fill(rng);
+                let mut b: [u8; N] = fill(rng);
+                // Every third pair: equal inputs; every fifth: single-byte diff.
+                if i % 3 == 0 {
+                    b = a;
+                }
+                if i % 5 == 0 {
+                    b = a;
+                    let pos = step(rng) as usize % N;
+                    b[pos] = b[pos].wrapping_add(1);
+                }
+                let (fa, fb) = (FixedBytes(a), FixedBytes(b));
+                assert_eq!(fa.cmp(&fb), a.as_slice().cmp(b.as_slice()), "{fa} vs {fb}");
+                assert_eq!(fa.partial_cmp(&fb), Some(a.as_slice().cmp(b.as_slice())));
+            }
+        }
+
+        let mut rng = 0x243F6A8885A308D3u64;
+        check::<1>(&mut rng);
+        check::<2>(&mut rng);
+        check::<3>(&mut rng);
+        check::<4>(&mut rng);
+        check::<7>(&mut rng);
+        check::<8>(&mut rng);
+        check::<20>(&mut rng);
+        check::<32>(&mut rng);
+        check::<64>(&mut rng);
     }
 
     #[test]
