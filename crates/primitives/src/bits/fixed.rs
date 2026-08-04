@@ -44,36 +44,63 @@ impl<const N: usize> PartialOrd for FixedBytes<N> {
 impl<const N: usize> Ord for FixedBytes<N> {
     #[inline]
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        let mut i = 0;
-        while i + 8 <= N {
-            let a = u64::from_be_bytes(self.0[i..i + 8].try_into().unwrap());
-            let b = u64::from_be_bytes(other.0[i..i + 8].try_into().unwrap());
-            if a != b {
-                return a.cmp(&b);
-            }
-            i += 8;
+        if N <= CMP_UNROLLED_CUTOFF {
+            cmp_bytes_unrolled(&self.0, &other.0)
+        } else {
+            self.0.as_slice().cmp(other.0.as_slice())
         }
-        if i + 4 <= N {
-            let a = u32::from_be_bytes(self.0[i..i + 4].try_into().unwrap());
-            let b = u32::from_be_bytes(other.0[i..i + 4].try_into().unwrap());
-            if a != b {
-                return a.cmp(&b);
-            }
-            i += 4;
-        }
-        if i + 2 <= N {
-            let a = u16::from_be_bytes(self.0[i..i + 2].try_into().unwrap());
-            let b = u16::from_be_bytes(other.0[i..i + 2].try_into().unwrap());
-            if a != b {
-                return a.cmp(&b);
-            }
-            i += 2;
-        }
-        if i < N {
-            return self.0[i].cmp(&other.0[i]);
-        }
-        core::cmp::Ordering::Equal
     }
+}
+
+/// Largest `N` for which [`cmp_bytes_unrolled`] beats the `memcmp` libcall in
+/// the worst case (equal inputs) on both x86-64 and aarch64; see the
+/// `fixed_bytes_ord` benchmarks.
+const CMP_UNROLLED_CUTOFF: usize = 32;
+
+/// Compares byte slices as big-endian integer chunks of decreasing size,
+/// preserving byte-lexicographic order. Counterpart to
+/// `map::fixed::write_bytes_unrolled`.
+#[inline(always)]
+fn cmp_bytes_unrolled(mut lhs: &[u8], mut rhs: &[u8]) -> core::cmp::Ordering {
+    use core::cmp::Ordering;
+
+    debug_assert_eq!(lhs.len(), rhs.len());
+    while let (Some((a, lhs_rest)), Some((b, rhs_rest))) =
+        (lhs.split_first_chunk(), rhs.split_first_chunk())
+    {
+        match u64::from_be_bytes(*a).cmp(&u64::from_be_bytes(*b)) {
+            Ordering::Equal => (lhs, rhs) = (lhs_rest, rhs_rest),
+            unequal => return unequal,
+        }
+    }
+    if let (Some((a, lhs_rest)), Some((b, rhs_rest))) =
+        (lhs.split_first_chunk(), rhs.split_first_chunk())
+    {
+        match u32::from_be_bytes(*a).cmp(&u32::from_be_bytes(*b)) {
+            Ordering::Equal => (lhs, rhs) = (lhs_rest, rhs_rest),
+            unequal => return unequal,
+        }
+    }
+    if let (Some((a, lhs_rest)), Some((b, rhs_rest))) =
+        (lhs.split_first_chunk(), rhs.split_first_chunk())
+    {
+        match u16::from_be_bytes(*a).cmp(&u16::from_be_bytes(*b)) {
+            Ordering::Equal => (lhs, rhs) = (lhs_rest, rhs_rest),
+            unequal => return unequal,
+        }
+    }
+    if let (Some((a, lhs_rest)), Some((b, rhs_rest))) =
+        (lhs.split_first_chunk(), rhs.split_first_chunk())
+    {
+        match u8::from_be_bytes(*a).cmp(&u8::from_be_bytes(*b)) {
+            Ordering::Equal => (lhs, rhs) = (lhs_rest, rhs_rest),
+            unequal => return unequal,
+        }
+    }
+
+    debug_assert!(lhs.is_empty());
+    debug_assert!(rhs.is_empty());
+    Ordering::Equal
 }
 
 impl<const N: usize> Default for FixedBytes<N> {
@@ -786,7 +813,9 @@ mod tests {
         check::<8>(&mut rng);
         check::<20>(&mut rng);
         check::<32>(&mut rng);
+        // Above `CMP_UNROLLED_CUTOFF`: exercises the slice-comparison fallback.
         check::<64>(&mut rng);
+        check::<128>(&mut rng);
     }
 
     #[test]
