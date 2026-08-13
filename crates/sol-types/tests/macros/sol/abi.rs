@@ -122,8 +122,7 @@ fn equal_abis() {
     let custom = Param {
         ty: "tuple".into(),
         name: "cs".into(),
-        // TODO: should be `uint256 custom`, but name is lost in recursive resolution
-        components: vec![param("uint256 ")],
+        components: vec![param("uint256 custom")],
         internal_type: None,
     };
     assert_eq!(
@@ -305,22 +304,19 @@ fn recursive() {
     let chain_info = Param {
         ty: "tuple".into(),
         name: "chainInfo".into(),
-        components: vec![
-            param("uint256 "), // forkId
-            param("uint256 "), // chainId
-        ],
+        components: vec![param("uint256 forkId"), param("uint256 chainId")],
         internal_type: None,
     };
     let storage_accesses = Param {
         ty: "tuple[]".into(),
         name: "storageAccesses".into(),
         components: vec![
-            param("address "), // account
-            param("bytes32 "), // slot
-            param("bool "),    // isWrite
-            param("bytes32 "), // previousValue
-            param("bytes32 "), // newValue
-            param("bool "),    // reverted
+            param("address account"),
+            param("bytes32 slot"),
+            param("bool isWrite"),
+            param("bytes32 previousValue"),
+            param("bytes32 newValue"),
+            param("bool reverted"),
         ],
         internal_type: None,
     };
@@ -399,25 +395,17 @@ fn custom() {
         param("uint8 e"),
         param("uint8[] eArr"),
     ];
-    let custom_struct_erased = vec![
-        param("uint256 "),   // custom
-        param("uint256[] "), // customArr
-        param("uint32 "),    // udvt
-        param("uint32[] "),  // udvtArr
-        param("uint8 "),     // e
-        param("uint8[] "),   // eArr
-    ];
     let custom_struct2 = vec![
         Param {
             ty: "tuple".into(),
             name: "cs".into(),
-            components: custom_struct_erased.clone(),
+            components: custom_struct.clone(),
             internal_type: None,
         },
         Param {
             ty: "tuple[]".into(),
             name: "csArr".into(),
-            components: custom_struct_erased,
+            components: custom_struct.clone(),
             internal_type: None,
         },
     ];
