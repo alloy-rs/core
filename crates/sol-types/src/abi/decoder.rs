@@ -442,9 +442,63 @@ pub fn decode_sequence_with_config<'de, T: TokenSeq<'de>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SolType, SolValue, sol, sol_data, utils::pad_usize};
+    use crate::{SolCall, SolType, SolValue, sol, sol_data, utils::pad_usize};
     use alloc::string::ToString;
     use alloy_primitives::{Address, B256, U256, address, bytes, hex};
+
+    sol! {
+        struct SelectorRule {
+            bytes4 selector;
+            address[] recipients;
+        }
+
+        struct CallScope {
+            address target;
+            SelectorRule[] selectorRules;
+        }
+
+        function setAllowedCalls(address account, CallScope[] callScopes);
+    }
+
+    fn word(value: usize) -> [u8; 32] {
+        let mut out = [0_u8; 32];
+        out[24..].copy_from_slice(&(value as u64).to_be_bytes());
+        out
+    }
+
+    fn aliased_set_allowed_calls_calldata(width: usize) -> Vec<u8> {
+        let mut data = Vec::with_capacity(292 + 96 * width);
+        data.extend(setAllowedCallsCall::SELECTOR);
+
+        data.extend(word(0));
+        data.extend(word(64));
+
+        data.extend(word(width));
+        for _ in 0..width {
+            data.extend(word(width * 32));
+        }
+
+        data.extend(word(1));
+        data.extend(word(64));
+
+        data.extend(word(width));
+        for _ in 0..width {
+            data.extend(word(width * 32));
+        }
+
+        let mut selector = [0_u8; 32];
+        selector[..4].copy_from_slice(&[0xde, 0xad, 0xbe, 0xef]);
+        data.extend(selector);
+        data.extend(word(64));
+
+        data.extend(word(width));
+        for i in 0..width {
+            data.extend(word(i + 1));
+        }
+
+        assert_eq!(data.len(), 292 + 96 * width);
+        data
+    }
 
     #[test]
     fn dynamic_array_of_dynamic_arrays() {
@@ -989,6 +1043,31 @@ mod tests {
             AbiDecoderConfig::new().memory_limit(memory_used - 1),
         )
         .unwrap_err();
+        assert_eq!(err, Error::MemoryLimitExceeded(memory_used - 1));
+    }
+
+    #[test]
+    fn configured_decoder_tracks_tempo_aliased_call_allocations() {
+        type Address = sol_data::Address;
+
+        let width = 2_usize;
+        let data = aliased_set_allowed_calls_calldata(width);
+        let memory_used = width * core::mem::size_of::<<CallScope as SolType>::Token<'_>>()
+            + width.pow(2) * core::mem::size_of::<<SelectorRule as SolType>::Token<'_>>()
+            + width.pow(3) * core::mem::size_of::<<Address as SolType>::Token<'_>>();
+
+        setAllowedCallsCall::abi_decode_with_config(
+            &data,
+            AbiDecoderConfig::new().memory_limit(memory_used),
+        )
+        .unwrap();
+        let err = match setAllowedCallsCall::abi_decode_with_config(
+            &data,
+            AbiDecoderConfig::new().memory_limit(memory_used - 1),
+        ) {
+            Ok(_) => panic!("decoding should exceed the memory limit"),
+            Err(err) => err,
+        };
         assert_eq!(err, Error::MemoryLimitExceeded(memory_used - 1));
     }
 
