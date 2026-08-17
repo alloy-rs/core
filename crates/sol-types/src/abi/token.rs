@@ -313,8 +313,7 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
     #[inline]
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
         if Self::DYNAMIC {
-            let mut child = dec.take_indirection()?;
-            Self::decode_sequence(&mut child)
+            dec.take_indirection().and_then(|mut child| Self::decode_sequence(&mut child))
         } else {
             Self::decode_sequence(dec)
         }
@@ -583,8 +582,7 @@ macro_rules! tuple_impls {
                 // The first element in a dynamic tuple is an offset to the tuple's data;
                 // for a static tuples, the data begins right away
                 if Self::DYNAMIC {
-                    let mut child = dec.take_indirection()?;
-                    Self::decode_sequence(&mut child)
+                    dec.take_indirection().and_then(|mut child| Self::decode_sequence(&mut child))
                 } else {
                     Self::decode_sequence(dec)
                 }
