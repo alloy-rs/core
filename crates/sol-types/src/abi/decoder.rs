@@ -15,7 +15,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use alloy_primitives::hex;
-use core::{fmt, mem, slice::SliceIndex};
+use core::{fmt, mem, ptr, slice::SliceIndex};
 
 /// The decoder recursion limit.
 ///
@@ -105,6 +105,11 @@ impl AbiDecoderConfig {
     }
 }
 
+#[derive(Clone, Copy)]
+struct DecoderState {
+    memory_used: usize,
+}
+
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
 /// deserialize the bytes into a sequence of tokens.
 ///
@@ -122,9 +127,15 @@ pub struct Decoder<'de> {
     depth: usize,
     /// The decoder configuration.
     config: AbiDecoderConfig,
-    /// Memory allocated by this decoder and its children.
-    memory_used: usize,
+    /// State owned by this decoder when `state_ptr` is null.
+    state: DecoderState,
+    /// Shared state owned by an ancestor decoder.
+    state_ptr: *mut DecoderState,
 }
+
+/// SAFETY: `Decoder` only mutates shared state through `&mut Decoder`, and the
+/// input buffer and configuration are immutable.
+unsafe impl Send for Decoder<'_> {}
 
 impl fmt::Debug for Decoder<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -161,12 +172,26 @@ impl<'de> Decoder<'de> {
     /// Instantiates a new decoder from a byte slice.
     #[inline]
     pub const fn new(buf: &'de [u8]) -> Self {
-        Self { buf, offset: 0, depth: 0, config: AbiDecoderConfig::new(), memory_used: 0 }
+        Self {
+            buf,
+            offset: 0,
+            depth: 0,
+            config: AbiDecoderConfig::new(),
+            state: DecoderState { memory_used: 0 },
+            state_ptr: ptr::null_mut(),
+        }
     }
 
     #[inline]
     const fn with_config(buf: &'de [u8], config: AbiDecoderConfig) -> Self {
-        Self { buf, offset: 0, depth: 0, config, memory_used: 0 }
+        Self {
+            buf,
+            offset: 0,
+            depth: 0,
+            config,
+            state: DecoderState { memory_used: 0 },
+            state_ptr: ptr::null_mut(),
+        }
     }
 
     /// Returns the current offset in the buffer.
@@ -226,23 +251,39 @@ impl<'de> Decoder<'de> {
                 offset: 0,
                 depth: self.depth + 1,
                 config: self.config,
-                memory_used: self.memory_used,
+                state: DecoderState { memory_used: 0 },
+                state_ptr: self.state_ptr(),
             }),
             None => Err(Error::Overrun),
         }
     }
 
+    #[inline]
+    const fn state_ptr(&self) -> *mut DecoderState {
+        if self.state_ptr.is_null() { ptr::addr_of!(self.state).cast_mut() } else { self.state_ptr }
+    }
+
+    #[inline]
+    fn state(&mut self) -> &mut DecoderState {
+        // SAFETY: `state_ptr` either points to this decoder's own `state`, or to
+        // an ancestor decoder's `state`. Child decoders are only used while that
+        // ancestor is still alive.
+        unsafe { &mut *self.state_ptr() }
+    }
+
     /// Registers an allocation against the configured memory limit.
     #[inline]
     pub(crate) fn reserve(&mut self, bytes: usize) -> Result<()> {
+        let memory_limit = self.config.get_memory_limit();
         let used = self
+            .state()
             .memory_used
             .checked_add(bytes)
-            .ok_or(Error::MemoryLimitExceeded(self.config.get_memory_limit()))?;
-        if used > self.config.get_memory_limit() {
-            return Err(Error::MemoryLimitExceeded(self.config.get_memory_limit()));
+            .ok_or(Error::MemoryLimitExceeded(memory_limit))?;
+        if used > memory_limit {
+            return Err(Error::MemoryLimitExceeded(memory_limit));
         }
-        self.memory_used = used;
+        self.state().memory_used = used;
         Ok(())
     }
 
@@ -327,9 +368,7 @@ impl<'de> Decoder<'de> {
         f: impl FnOnce(&mut Self) -> Result<T>,
     ) -> Result<T> {
         let mut child = self.take_indirection()?;
-        let result = f(&mut child)?;
-        self.take_memory_from(&child);
-        Ok(result)
+        f(&mut child)
     }
 
     #[inline]
@@ -338,9 +377,7 @@ impl<'de> Decoder<'de> {
         f: impl FnOnce(&mut Self) -> Result<T>,
     ) -> Result<T> {
         let mut child = self.raw_child()?;
-        let result = f(&mut child)?;
-        self.take_memory_from(&child);
-        Ok(result)
+        f(&mut child)
     }
 
     /// Takes a `usize` offset from the buffer by consuming a word.
@@ -360,13 +397,6 @@ impl<'de> Decoder<'de> {
     #[inline]
     pub const fn take_offset_from(&mut self, child: &Self) {
         self.set_offset(child.offset + (self.buf.len() - child.buf.len()));
-        self.memory_used = child.memory_used;
-    }
-
-    /// Takes the allocation count from a child decoder.
-    #[inline]
-    const fn take_memory_from(&mut self, child: &Self) {
-        self.memory_used = child.memory_used;
     }
 
     /// Sets the current offset in the buffer.
@@ -972,6 +1002,10 @@ mod tests {
 
     #[test]
     fn config_defaults_and_setters() {
+        fn assert_send<T: Send>() {}
+
+        assert_send::<Decoder<'static>>();
+
         let mut config = AbiDecoderConfig::new();
         assert_eq!(config.get_recursion_limit(), 16);
         assert_eq!(config.get_memory_limit(), DEFAULT_MEMORY_LIMIT);
