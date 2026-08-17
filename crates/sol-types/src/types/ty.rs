@@ -1,6 +1,6 @@
 use crate::{
     Result, Word,
-    abi::{self, Token, TokenSeq},
+    abi::{self, AbiDecoderConfig, Token, TokenSeq},
     private::SolTypeValue,
 };
 use alloc::vec::Vec;
@@ -241,6 +241,16 @@ pub trait SolType: Sized {
         abi::decode::<Self::Token<'_>>(data).map(Self::detokenize)
     }
 
+    /// Decodes this type's value with a custom ABI decoder configuration.
+    #[inline]
+    fn abi_decode_with_config(data: &[u8], config: AbiDecoderConfig) -> Result<Self::RustType> {
+        let token = abi::decode_with_config::<Self::Token<'_>>(data, config)?;
+        if config.get_strict() {
+            Self::type_check(&token)?;
+        }
+        Ok(Self::detokenize(token))
+    }
+
     /// Decodes this type's value from an ABI blob by interpreting it as
     /// single-element sequence, with validation.
     ///
@@ -249,10 +259,10 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_validate(data: &[u8]) -> Result<Self::RustType> {
-        let token = abi::decode::<Self::Token<'_>>(data)?;
-        Self::type_check(&token)?;
-        Ok(Self::detokenize(token))
+        Self::abi_decode_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as
@@ -267,6 +277,23 @@ pub trait SolType: Sized {
         abi::decode_params::<Self::Token<'_>>(data).map(Self::detokenize)
     }
 
+    /// Decodes this type's function parameters with a custom ABI decoder
+    /// configuration.
+    #[inline]
+    fn abi_decode_params_with_config<'de>(
+        data: &'de [u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Self::RustType>
+    where
+        Self::Token<'de>: TokenSeq<'de>,
+    {
+        let token = abi::decode_params_with_config::<Self::Token<'_>>(data, config)?;
+        if config.get_strict() {
+            Self::type_check(&token)?;
+        }
+        Ok(Self::detokenize(token))
+    }
+
     /// Decodes this type's value from an ABI blob by interpreting it as
     /// function parameters, with validation.
     ///
@@ -275,13 +302,13 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_params_validate<'de>(data: &'de [u8]) -> Result<Self::RustType>
     where
         Self::Token<'de>: TokenSeq<'de>,
     {
-        let token = abi::decode_params::<Self::Token<'_>>(data)?;
-        Self::type_check(&token)?;
-        Ok(Self::detokenize(token))
+        Self::abi_decode_params_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as a
@@ -296,6 +323,22 @@ pub trait SolType: Sized {
         abi::decode_sequence::<Self::Token<'_>>(data).map(Self::detokenize)
     }
 
+    /// Decodes this type's sequence with a custom ABI decoder configuration.
+    #[inline]
+    fn abi_decode_sequence_with_config<'de>(
+        data: &'de [u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Self::RustType>
+    where
+        Self::Token<'de>: TokenSeq<'de>,
+    {
+        let token = abi::decode_sequence_with_config::<Self::Token<'_>>(data, config)?;
+        if config.get_strict() {
+            Self::type_check(&token)?;
+        }
+        Ok(Self::detokenize(token))
+    }
+
     /// Decodes this type's value from an ABI blob by interpreting it as
     /// sequence, with validation.
     ///
@@ -304,12 +347,12 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_sequence_validate<'de>(data: &'de [u8]) -> Result<Self::RustType>
     where
         Self::Token<'de>: TokenSeq<'de>,
     {
-        let token = abi::decode_sequence::<Self::Token<'_>>(data)?;
-        Self::type_check(&token)?;
-        Ok(Self::detokenize(token))
+        Self::abi_decode_sequence_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 }

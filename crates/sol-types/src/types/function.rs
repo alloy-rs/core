@@ -1,6 +1,6 @@
 use crate::{
     Result, SolType, Word,
-    abi::{Token, TokenSeq},
+    abi::{AbiDecoderConfig, Token, TokenSeq},
     private::SolTypeValue,
 };
 use alloc::vec::Vec;
@@ -66,14 +66,24 @@ pub trait SolCall: Sized {
         <Self::Parameters<'_> as SolType>::abi_decode_sequence(data).map(Self::new)
     }
 
+    /// ABI-decodes this call's arguments with a custom decoder configuration,
+    /// without its selector.
+    #[inline]
+    fn abi_decode_raw_with_config(data: &[u8], config: AbiDecoderConfig) -> Result<Self> {
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence_with_config(data, config)
+            .map(Self::new)
+    }
+
     /// ABI decode this call's arguments from the given slice, **without** its
     /// selector, with validation.
     ///
     /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
     /// validation checks on the decoded parameters tuple.
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
-        <Self::Parameters<'_> as SolType>::abi_decode_sequence_validate(data).map(Self::new)
+        Self::abi_decode_raw_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 
     /// ABI decode this call's arguments from the given slice, **with** the
@@ -86,17 +96,25 @@ pub trait SolCall: Sized {
         Self::abi_decode_raw(data)
     }
 
+    /// ABI-decodes this call's arguments with a custom decoder configuration.
+    #[inline]
+    fn abi_decode_with_config(data: &[u8], config: AbiDecoderConfig) -> Result<Self> {
+        let data = data
+            .strip_prefix(&Self::SELECTOR)
+            .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
+        Self::abi_decode_raw_with_config(data, config)
+    }
+
     /// ABI decode this call's arguments from the given slice, **with** the
     /// selector, with validation.
     ///
     /// This is the same as [`abi_decode`](Self::abi_decode), but performs
     /// validation checks on the decoded parameters tuple.
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_validate(data: &[u8]) -> Result<Self> {
-        let data = data
-            .strip_prefix(&Self::SELECTOR)
-            .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
-        Self::abi_decode_raw_validate(data)
+        Self::abi_decode_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 
     /// ABI encode the call to the given buffer **without** its selector.
@@ -118,11 +136,21 @@ pub trait SolCall: Sized {
     /// ABI decode this call's return values from the given slice.
     fn abi_decode_returns(data: &[u8]) -> Result<Self::Return>;
 
+    /// ABI-decodes this call's return values with a custom decoder configuration.
+    fn abi_decode_returns_with_config(
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Self::Return>;
+
     /// ABI decode this call's return values from the given slice, with validation.
     ///
     /// This is the same as [`abi_decode_returns`](Self::abi_decode_returns), but performs
     /// validation checks on the decoded return tuple.
-    fn abi_decode_returns_validate(data: &[u8]) -> Result<Self::Return>;
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
+    fn abi_decode_returns_validate(data: &[u8]) -> Result<Self::Return> {
+        Self::abi_decode_returns_with_config(data, AbiDecoderConfig::new().strict(true))
+    }
 
     /// ABI encode the call's return value.
     #[inline]

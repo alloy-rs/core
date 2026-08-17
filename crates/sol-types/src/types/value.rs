@@ -1,7 +1,7 @@
 use super::SolType;
 use crate::{
     Result, Word,
-    abi::TokenSeq,
+    abi::{AbiDecoderConfig, TokenSeq},
     private::SolTypeValue,
     sol_data::{self, ByteCount, SupportedFixedBytes},
 };
@@ -138,14 +138,24 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
         Self::SolType::abi_decode(data).map(Self::from)
     }
 
+    /// ABI-decode this type with a custom decoder configuration.
+    fn abi_decode_with_config(data: &[u8], config: AbiDecoderConfig) -> Result<Self>
+    where
+        Self: From<<Self::SolType as SolType>::RustType>,
+    {
+        Self::SolType::abi_decode_with_config(data, config).map(Self::from)
+    }
+
     /// ABI-decode this type from the given data, with validation.
     ///
     /// See [`SolType::abi_decode_validate`] for more information.
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_validate(data: &[u8]) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
     {
-        Self::SolType::abi_decode_validate(data).map(Self::from)
+        Self::abi_decode_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 
     /// ABI-decode this type from the given data.
@@ -160,16 +170,28 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
         Self::SolType::abi_decode_params(data).map(Self::from)
     }
 
+    /// ABI-decode this type's function parameters with a custom decoder configuration.
+    #[inline]
+    fn abi_decode_params_with_config<'de>(data: &'de [u8], config: AbiDecoderConfig) -> Result<Self>
+    where
+        Self: From<<Self::SolType as SolType>::RustType>,
+        <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
+    {
+        Self::SolType::abi_decode_params_with_config(data, config).map(Self::from)
+    }
+
     /// ABI-decode this type from the given data, with validation.
     ///
     /// See [`SolType::abi_decode_params_validate`] for more information.
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_params_validate<'de>(data: &'de [u8]) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
         <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
-        Self::SolType::abi_decode_params_validate(data).map(Self::from)
+        Self::abi_decode_params_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 
     /// ABI-decode this type from the given data.
@@ -184,16 +206,31 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
         Self::SolType::abi_decode_sequence(data).map(Self::from)
     }
 
+    /// ABI-decode this type's sequence with a custom decoder configuration.
+    #[inline]
+    fn abi_decode_sequence_with_config<'de>(
+        data: &'de [u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Self>
+    where
+        Self: From<<Self::SolType as SolType>::RustType>,
+        <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
+    {
+        Self::SolType::abi_decode_sequence_with_config(data, config).map(Self::from)
+    }
+
     /// ABI-decode this type from the given data, with validation.
     ///
     /// See [`SolType::abi_decode_sequence_validate`] for more information.
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_sequence_validate<'de>(data: &'de [u8]) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
         <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
-        Self::SolType::abi_decode_sequence_validate(data).map(Self::from)
+        Self::abi_decode_sequence_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 }
 

@@ -313,7 +313,10 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
     #[inline]
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
         if Self::DYNAMIC {
-            dec.take_indirection().and_then(|mut child| Self::decode_sequence(&mut child))
+            let mut child = dec.take_indirection()?;
+            let result = Self::decode_sequence(&mut child)?;
+            dec.take_memory_from(&child);
+            Ok(result)
         } else {
             Self::decode_sequence(dec)
         }
@@ -427,6 +430,7 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
         let mut child = child.raw_child()?;
+        child.reserve_elements::<T>(len)?;
         let mut tokens = vec_try_with_capacity(len)?;
         // SAFETY: `spare_capacity_mut` returns valid writable memory.
         // `decode_many_from` initializes all `len` elements on success.
@@ -434,6 +438,7 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
             T::decode_many_from(&mut child, &mut tokens.spare_capacity_mut()[..len])?;
             tokens.set_len(len);
         }
+        dec.take_memory_from(&child);
         Ok(Self(tokens))
     }
 
@@ -520,6 +525,8 @@ impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
         let mut child = dec.take_indirection()?;
         let len = child.take_offset()?;
         let bytes = child.peek_len(len)?;
+        child.reserve(len)?;
+        dec.take_memory_from(&child);
         Ok(PackedSeqToken(bytes))
     }
 

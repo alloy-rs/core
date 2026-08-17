@@ -51,6 +51,7 @@ pub use alloy_sol_macro::sol;
 #[doc(hidden)]
 #[allow(missing_debug_implementations)]
 pub mod private {
+    #[allow(deprecated)]
     pub use super::{
         abi::RECURSION_LIMIT,
         utils::{next_multiple_of_32, words_for, words_for_len},

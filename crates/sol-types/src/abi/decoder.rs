@@ -15,11 +15,95 @@ use crate::{
 };
 use alloc::vec::Vec;
 use alloy_primitives::hex;
-use core::{fmt, slice::SliceIndex};
+use core::{fmt, mem, slice::SliceIndex};
 
 /// The decoder recursion limit.
-/// This is currently hardcoded, but may be parameterizable in the future.
-pub const RECURSION_LIMIT: u8 = 16;
+///
+/// This is the default value used by [`AbiDecoderConfig`].
+#[deprecated(note = "use `AbiDecoderConfig` to configure the recursion limit")]
+pub const RECURSION_LIMIT: usize = 16;
+
+const DEFAULT_MEMORY_LIMIT: usize = 1 << 30;
+
+/// Configuration for ABI decoding.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AbiDecoderConfig {
+    recursion_limit: usize,
+    memory_limit: usize,
+    strict: bool,
+}
+
+impl Default for AbiDecoderConfig {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AbiDecoderConfig {
+    /// Creates a decoder configuration with the default limits.
+    #[inline]
+    pub const fn new() -> Self {
+        Self { recursion_limit: 16, memory_limit: DEFAULT_MEMORY_LIMIT, strict: false }
+    }
+
+    /// Returns the maximum recursion depth.
+    #[inline]
+    pub const fn get_recursion_limit(&self) -> usize {
+        self.recursion_limit
+    }
+
+    /// Returns the maximum amount of memory that decoding may allocate.
+    #[inline]
+    pub const fn get_memory_limit(&self) -> usize {
+        self.memory_limit
+    }
+
+    /// Returns whether strict validation is enabled.
+    #[inline]
+    pub const fn get_strict(&self) -> bool {
+        self.strict
+    }
+
+    /// Sets the maximum recursion depth.
+    #[inline]
+    pub const fn recursion_limit(mut self, limit: usize) -> Self {
+        self.recursion_limit = limit;
+        self
+    }
+
+    /// Sets the maximum amount of memory that decoding may allocate.
+    #[inline]
+    pub const fn memory_limit(mut self, limit: usize) -> Self {
+        self.memory_limit = limit;
+        self
+    }
+
+    /// Enables or disables strict validation.
+    #[inline]
+    pub const fn strict(mut self, strict: bool) -> Self {
+        self.strict = strict;
+        self
+    }
+
+    /// Sets the maximum recursion depth in place.
+    #[inline]
+    pub const fn set_recursion_limit(&mut self, limit: usize) {
+        self.recursion_limit = limit;
+    }
+
+    /// Sets the maximum amount of memory that decoding may allocate in place.
+    #[inline]
+    pub const fn set_memory_limit(&mut self, limit: usize) {
+        self.memory_limit = limit;
+    }
+
+    /// Enables or disables strict validation in place.
+    #[inline]
+    pub const fn set_strict(&mut self, strict: bool) {
+        self.strict = strict;
+    }
+}
 
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
 /// deserialize the bytes into a sequence of tokens.
@@ -35,7 +119,11 @@ pub struct Decoder<'de> {
     // The current offset in the buffer.
     offset: usize,
     /// The current recursion depth.
-    depth: u8,
+    depth: usize,
+    /// The decoder configuration.
+    config: AbiDecoderConfig,
+    /// Memory allocated by this decoder and its children.
+    memory_used: usize,
 }
 
 impl fmt::Debug for Decoder<'_> {
@@ -47,6 +135,7 @@ impl fmt::Debug for Decoder<'_> {
             .field("buf", &body)
             .field("offset", &self.offset)
             .field("depth", &self.depth)
+            .field("config", &self.config)
             .finish()
     }
 }
@@ -69,10 +158,15 @@ impl fmt::Display for Decoder<'_> {
 }
 
 impl<'de> Decoder<'de> {
-    /// Instantiate a new decoder from a byte slice and a validation flag.
+    /// Instantiates a new decoder from a byte slice.
     #[inline]
     pub const fn new(buf: &'de [u8]) -> Self {
-        Self { buf, offset: 0, depth: 0 }
+        Self { buf, offset: 0, depth: 0, config: AbiDecoderConfig::new(), memory_used: 0 }
+    }
+
+    #[inline]
+    const fn with_config(buf: &'de [u8], config: AbiDecoderConfig) -> Self {
+        Self { buf, offset: 0, depth: 0, config, memory_used: 0 }
     }
 
     /// Returns the current offset in the buffer.
@@ -122,13 +216,42 @@ impl<'de> Decoder<'de> {
     /// The child decoder shares the buffer.
     #[inline]
     pub fn child(&self, offset: usize) -> Result<Self, Error> {
-        if self.depth >= RECURSION_LIMIT {
-            return Err(Error::RecursionLimitExceeded(RECURSION_LIMIT));
+        let recursion_limit = self.config.get_recursion_limit();
+        if self.depth >= recursion_limit {
+            return Err(Error::RecursionLimitExceeded(recursion_limit));
         }
         match self.buf.get(offset..) {
-            Some(buf) => Ok(Decoder { buf, offset: 0, depth: self.depth + 1 }),
+            Some(buf) => Ok(Decoder {
+                buf,
+                offset: 0,
+                depth: self.depth + 1,
+                config: self.config,
+                memory_used: self.memory_used,
+            }),
             None => Err(Error::Overrun),
         }
+    }
+
+    /// Registers an allocation against the configured memory limit.
+    #[inline]
+    pub(crate) fn reserve(&mut self, bytes: usize) -> Result<()> {
+        let used = self
+            .memory_used
+            .checked_add(bytes)
+            .ok_or(Error::MemoryLimitExceeded(self.config.get_memory_limit()))?;
+        if used > self.config.get_memory_limit() {
+            return Err(Error::MemoryLimitExceeded(self.config.get_memory_limit()));
+        }
+        self.memory_used = used;
+        Ok(())
+    }
+
+    #[inline]
+    pub(crate) fn reserve_elements<T>(&mut self, len: usize) -> Result<()> {
+        let bytes = len
+            .checked_mul(mem::size_of::<T>())
+            .ok_or(Error::MemoryLimitExceeded(self.config.get_memory_limit()))?;
+        self.reserve(bytes)
     }
 
     /// Advance the offset by `len` bytes.
@@ -215,6 +338,13 @@ impl<'de> Decoder<'de> {
     #[inline]
     pub const fn take_offset_from(&mut self, child: &Self) {
         self.set_offset(child.offset + (self.buf.len() - child.buf.len()));
+        self.memory_used = child.memory_used;
+    }
+
+    /// Takes the allocation count from a child decoder.
+    #[inline]
+    pub(crate) const fn take_memory_from(&mut self, child: &Self) {
+        self.memory_used = child.memory_used;
     }
 
     /// Sets the current offset in the buffer.
@@ -245,7 +375,16 @@ impl<'de> Decoder<'de> {
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
 pub fn decode<'de, T: Token<'de>>(data: &'de [u8]) -> Result<T> {
-    decode_sequence::<(T,)>(data).map(|(t,)| t)
+    decode_with_config(data, AbiDecoderConfig::default())
+}
+
+/// ABI-decodes a token with the given configuration.
+#[inline(always)]
+pub fn decode_with_config<'de, T: Token<'de>>(
+    data: &'de [u8],
+    config: AbiDecoderConfig,
+) -> Result<T> {
+    decode_sequence_with_config::<(T,)>(data, config).map(|(t,)| t)
 }
 
 /// ABI-decodes top-level function args.
@@ -260,8 +399,20 @@ pub fn decode<'de, T: Token<'de>>(data: &'de [u8]) -> Result<T> {
 /// See the [`abi`](super) module for more information.
 #[inline(always)]
 pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
-    let decode = const { if T::IS_TUPLE { decode_sequence } else { decode } };
-    decode(data)
+    decode_params_with_config(data, AbiDecoderConfig::default())
+}
+
+/// ABI-decodes top-level function args with the given configuration.
+#[inline(always)]
+pub fn decode_params_with_config<'de, T: TokenSeq<'de>>(
+    data: &'de [u8],
+    config: AbiDecoderConfig,
+) -> Result<T> {
+    if T::IS_TUPLE {
+        decode_sequence_with_config(data, config)
+    } else {
+        decode_with_config(data, config)
+    }
 }
 
 /// Decodes ABI compliant vector of bytes into vector of tokens described by
@@ -274,7 +425,16 @@ pub fn decode_params<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
 /// See the [`abi`](super) module for more information.
 #[inline]
 pub fn decode_sequence<'de, T: TokenSeq<'de>>(data: &'de [u8]) -> Result<T> {
-    let mut decoder = Decoder::new(data);
+    decode_sequence_with_config(data, AbiDecoderConfig::default())
+}
+
+/// Decodes an ABI-compliant sequence into tokens with the given configuration.
+#[inline]
+pub fn decode_sequence_with_config<'de, T: TokenSeq<'de>>(
+    data: &'de [u8],
+    config: AbiDecoderConfig,
+) -> Result<T> {
+    let mut decoder = Decoder::with_config(data, config);
     let result = decoder.decode_sequence::<T>()?;
     Ok(result)
 }
@@ -732,5 +892,116 @@ mod tests {
         );
         let err = <sol_data::String as SolType>::abi_decode(&encoded).unwrap_err();
         assert_eq!(err, Error::Overrun);
+    }
+
+    #[test]
+    fn config_defaults_and_setters() {
+        let mut config = AbiDecoderConfig::new();
+        assert_eq!(config.get_recursion_limit(), 16);
+        assert_eq!(config.get_memory_limit(), DEFAULT_MEMORY_LIMIT);
+        assert!(!config.get_strict());
+
+        config.set_recursion_limit(300);
+        config.set_memory_limit(42);
+        config.set_strict(true);
+        assert_eq!(config.get_recursion_limit(), 300);
+        assert_eq!(config.get_memory_limit(), 42);
+        assert!(config.get_strict());
+
+        let config = AbiDecoderConfig::new().recursion_limit(400).memory_limit(24).strict(true);
+        assert_eq!(config.get_recursion_limit(), 400);
+        assert_eq!(config.get_memory_limit(), 24);
+        assert!(config.get_strict());
+    }
+
+    #[test]
+    fn configured_decoder_strict_validation() {
+        let encoded = B256::repeat_byte(0x11);
+        assert!(
+            sol_data::Bool::abi_decode_with_config(encoded.as_slice(), AbiDecoderConfig::new())
+                .is_ok()
+        );
+        assert!(
+            sol_data::Bool::abi_decode_with_config(
+                encoded.as_slice(),
+                AbiDecoderConfig::new().strict(true),
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn configured_decoder_enforces_memory_limit() {
+        type Ty = sol_data::Array<sol_data::Uint<256>>;
+
+        let encoded = Ty::abi_encode(&vec![U256::ZERO]);
+        let err = decode_sequence_with_config::<<Ty as SolType>::Token<'_>>(
+            &encoded,
+            AbiDecoderConfig::new().memory_limit(31),
+        )
+        .unwrap_err();
+        assert_eq!(err, Error::MemoryLimitExceeded(31));
+    }
+
+    #[test]
+    fn direct_decoder_enforces_memory_limit() {
+        type Ty = sol_data::Array<sol_data::Uint<256>>;
+
+        let encoded = Ty::abi_encode(&vec![U256::ZERO]);
+        let mut decoder = Decoder::with_config(&encoded, AbiDecoderConfig::new().memory_limit(31));
+        let err = decoder.decode::<<Ty as SolType>::Token<'_>>().unwrap_err();
+        assert_eq!(err, Error::MemoryLimitExceeded(31));
+    }
+
+    #[test]
+    fn configured_decoder_tracks_child_allocations() {
+        type Ty = sol_data::Array<sol_data::Array<sol_data::Uint<256>>>;
+
+        let encoded = Ty::abi_encode(&vec![vec![U256::ZERO], vec![U256::ZERO]]);
+        let err = decode_sequence_with_config::<<Ty as SolType>::Token<'_>>(
+            &encoded,
+            AbiDecoderConfig::new().memory_limit(100),
+        )
+        .unwrap_err();
+        assert_eq!(err, Error::MemoryLimitExceeded(100));
+    }
+
+    #[test]
+    fn configured_decoder_tracks_recursive_allocations() {
+        type Uint = sol_data::Uint<256>;
+        type Inner = sol_data::Array<Uint>;
+        type Middle = sol_data::Array<Inner>;
+        type Ty = sol_data::Array<Middle>;
+
+        let value = vec![vec![vec![U256::ZERO]], vec![vec![U256::ZERO]]];
+        let encoded = Ty::abi_encode(&value);
+        let memory_used = 2 * core::mem::size_of::<<Middle as SolType>::Token<'_>>()
+            + 2 * core::mem::size_of::<<Inner as SolType>::Token<'_>>()
+            + 2 * core::mem::size_of::<<Uint as SolType>::Token<'_>>();
+
+        decode_sequence_with_config::<<Ty as SolType>::Token<'_>>(
+            &encoded,
+            AbiDecoderConfig::new().memory_limit(memory_used),
+        )
+        .unwrap();
+        let err = decode_sequence_with_config::<<Ty as SolType>::Token<'_>>(
+            &encoded,
+            AbiDecoderConfig::new().memory_limit(memory_used - 1),
+        )
+        .unwrap_err();
+        assert_eq!(err, Error::MemoryLimitExceeded(memory_used - 1));
+    }
+
+    #[test]
+    fn configured_decoder_enforces_recursion_limit() {
+        type Ty = sol_data::Array<sol_data::Uint<256>>;
+
+        let encoded = Ty::abi_encode(&vec![U256::ZERO]);
+        let err = decode_sequence_with_config::<<Ty as SolType>::Token<'_>>(
+            &encoded,
+            AbiDecoderConfig::new().recursion_limit(0),
+        )
+        .unwrap_err();
+        assert_eq!(err, Error::RecursionLimitExceeded(0));
     }
 }
