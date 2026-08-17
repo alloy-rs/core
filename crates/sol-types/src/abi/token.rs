@@ -313,7 +313,8 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
     #[inline]
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
         if Self::DYNAMIC {
-            dec.take_indirection_with(Self::decode_sequence)
+            let mut child = dec.take_indirection()?;
+            Self::decode_sequence(&mut child)
         } else {
             Self::decode_sequence(dec)
         }
@@ -420,24 +421,22 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
-        dec.take_indirection_with(|child| {
-            let len = child.take_offset()?;
-            // This appears to be an unclarity in the Solidity spec. The spec
-            // specifies that offsets are relative to the first word of
-            // `enc(X)`. But known-good test vectors are relative to the
-            // word AFTER the array size
-            child.raw_child_with(|child| {
-                child.reserve_elements::<T>(len)?;
-                let mut tokens = vec_try_with_capacity(len)?;
-                // SAFETY: `spare_capacity_mut` returns valid writable memory.
-                // `decode_many_from` initializes all `len` elements on success.
-                unsafe {
-                    T::decode_many_from(child, &mut tokens.spare_capacity_mut()[..len])?;
-                    tokens.set_len(len);
-                }
-                Ok(Self(tokens))
-            })
-        })
+        let mut child = dec.take_indirection()?;
+        let len = child.take_offset()?;
+        // This appears to be an unclarity in the Solidity spec. The spec
+        // specifies that offsets are relative to the first word of
+        // `enc(X)`. But known-good test vectors are relative to the
+        // word AFTER the array size
+        let mut child = child.raw_child()?;
+        child.reserve_elements::<T>(len)?;
+        let mut tokens = vec_try_with_capacity(len)?;
+        // SAFETY: `spare_capacity_mut` returns valid writable memory.
+        // `decode_many_from` initializes all `len` elements on success.
+        unsafe {
+            T::decode_many_from(&mut child, &mut tokens.spare_capacity_mut()[..len])?;
+            tokens.set_len(len);
+        }
+        Ok(Self(tokens))
     }
 
     #[inline]
@@ -520,12 +519,11 @@ impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
-        dec.take_indirection_with(|child| {
-            let len = child.take_offset()?;
-            let bytes = child.peek_len(len)?;
-            child.reserve(len)?;
-            Ok(PackedSeqToken(bytes))
-        })
+        let mut child = dec.take_indirection()?;
+        let len = child.take_offset()?;
+        let bytes = child.peek_len(len)?;
+        child.reserve(len)?;
+        Ok(PackedSeqToken(bytes))
     }
 
     #[inline]
@@ -585,7 +583,8 @@ macro_rules! tuple_impls {
                 // The first element in a dynamic tuple is an offset to the tuple's data;
                 // for a static tuples, the data begins right away
                 if Self::DYNAMIC {
-                    dec.take_indirection_with(Self::decode_sequence)
+                    let mut child = dec.take_indirection()?;
+                    Self::decode_sequence(&mut child)
                 } else {
                     Self::decode_sequence(dec)
                 }
