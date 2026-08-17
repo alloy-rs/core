@@ -367,24 +367,6 @@ impl<'de> Decoder<'de> {
         self.take_offset().and_then(|offset| self.child(offset))
     }
 
-    #[inline]
-    pub(crate) fn take_indirection_with<T>(
-        &mut self,
-        f: impl FnOnce(&mut Self) -> Result<T>,
-    ) -> Result<T> {
-        let mut child = self.take_indirection()?;
-        f(&mut child)
-    }
-
-    #[inline]
-    pub(crate) fn raw_child_with<T>(
-        &mut self,
-        f: impl FnOnce(&mut Self) -> Result<T>,
-    ) -> Result<T> {
-        let mut child = self.raw_child()?;
-        f(&mut child)
-    }
-
     /// Takes a `usize` offset from the buffer by consuming a word.
     #[inline]
     pub fn take_offset(&mut self) -> Result<usize> {
