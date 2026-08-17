@@ -321,6 +321,28 @@ impl<'de> Decoder<'de> {
         self.take_offset().and_then(|offset| self.child(offset))
     }
 
+    #[inline]
+    pub(crate) fn take_indirection_with<T>(
+        &mut self,
+        f: impl FnOnce(&mut Self) -> Result<T>,
+    ) -> Result<T> {
+        let mut child = self.take_indirection()?;
+        let result = f(&mut child)?;
+        self.take_memory_from(&child);
+        Ok(result)
+    }
+
+    #[inline]
+    pub(crate) fn raw_child_with<T>(
+        &mut self,
+        f: impl FnOnce(&mut Self) -> Result<T>,
+    ) -> Result<T> {
+        let mut child = self.raw_child()?;
+        let result = f(&mut child)?;
+        self.take_memory_from(&child);
+        Ok(result)
+    }
+
     /// Takes a `usize` offset from the buffer by consuming a word.
     #[inline]
     pub fn take_offset(&mut self) -> Result<usize> {
@@ -343,7 +365,7 @@ impl<'de> Decoder<'de> {
 
     /// Takes the allocation count from a child decoder.
     #[inline]
-    pub(crate) const fn take_memory_from(&mut self, child: &Self) {
+    const fn take_memory_from(&mut self, child: &Self) {
         self.memory_used = child.memory_used;
     }
 
@@ -447,17 +469,17 @@ mod tests {
     use alloy_primitives::{Address, B256, U256, address, bytes, hex};
 
     sol! {
-        struct SelectorRule {
+        struct Rule {
             bytes4 selector;
             address[] recipients;
         }
 
-        struct CallScope {
+        struct Scope {
             address target;
-            SelectorRule[] selectorRules;
+            Rule[] rules;
         }
 
-        function setAllowedCalls(address account, CallScope[] callScopes);
+        function apply(address account, Scope[] scopes);
     }
 
     fn word(value: usize) -> [u8; 32] {
@@ -466,9 +488,9 @@ mod tests {
         out
     }
 
-    fn aliased_set_allowed_calls_calldata(width: usize) -> Vec<u8> {
+    fn aliased_call_data(width: usize) -> Vec<u8> {
         let mut data = Vec::with_capacity(292 + 96 * width);
-        data.extend(setAllowedCallsCall::SELECTOR);
+        data.extend(applyCall::SELECTOR);
 
         data.extend(word(0));
         data.extend(word(64));
@@ -1047,21 +1069,18 @@ mod tests {
     }
 
     #[test]
-    fn configured_decoder_tracks_tempo_aliased_call_allocations() {
+    fn configured_decoder_tracks_aliased_tuple_allocations() {
         type Address = sol_data::Address;
 
         let width = 2_usize;
-        let data = aliased_set_allowed_calls_calldata(width);
-        let memory_used = width * core::mem::size_of::<<CallScope as SolType>::Token<'_>>()
-            + width.pow(2) * core::mem::size_of::<<SelectorRule as SolType>::Token<'_>>()
+        let data = aliased_call_data(width);
+        let memory_used = width * core::mem::size_of::<<Scope as SolType>::Token<'_>>()
+            + width.pow(2) * core::mem::size_of::<<Rule as SolType>::Token<'_>>()
             + width.pow(3) * core::mem::size_of::<<Address as SolType>::Token<'_>>();
 
-        setAllowedCallsCall::abi_decode_with_config(
-            &data,
-            AbiDecoderConfig::new().memory_limit(memory_used),
-        )
-        .unwrap();
-        let err = match setAllowedCallsCall::abi_decode_with_config(
+        applyCall::abi_decode_with_config(&data, AbiDecoderConfig::new().memory_limit(memory_used))
+            .unwrap();
+        let err = match applyCall::abi_decode_with_config(
             &data,
             AbiDecoderConfig::new().memory_limit(memory_used - 1),
         ) {
