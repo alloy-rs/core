@@ -194,6 +194,18 @@ impl<'de> Decoder<'de> {
         }
     }
 
+    #[inline]
+    const fn new_child(parent: &Self, buf: &'de [u8]) -> Self {
+        Self {
+            buf,
+            offset: 0,
+            depth: parent.depth + 1,
+            config: parent.config,
+            state: DecoderState { memory_used: 0 },
+            state_ptr: parent.state_ptr(),
+        }
+    }
+
     /// Returns the current offset in the buffer.
     #[inline]
     pub const fn offset(&self) -> usize {
@@ -246,14 +258,7 @@ impl<'de> Decoder<'de> {
             return Err(Error::RecursionLimitExceeded(recursion_limit));
         }
         match self.buf.get(offset..) {
-            Some(buf) => Ok(Decoder {
-                buf,
-                offset: 0,
-                depth: self.depth + 1,
-                config: self.config,
-                state: DecoderState { memory_used: 0 },
-                state_ptr: self.state_ptr(),
-            }),
+            Some(buf) => Ok(Self::new_child(self, buf)),
             None => Err(Error::Overrun),
         }
     }
