@@ -587,7 +587,10 @@ macro_rules! tuple_impls {
                 // The first element in a dynamic tuple is an offset to the tuple's data;
                 // for a static tuples, the data begins right away
                 if Self::DYNAMIC {
-                    dec.take_indirection().and_then(|mut child| Self::decode_sequence(&mut child))
+                    let mut child = dec.take_indirection()?;
+                    let result = Self::decode_sequence(&mut child)?;
+                    dec.take_memory_from(&child);
+                    Ok(result)
                 } else {
                     Self::decode_sequence(dec)
                 }
