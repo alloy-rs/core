@@ -485,60 +485,6 @@ mod tests {
     use alloc::string::ToString;
     use alloy_primitives::{Address, B256, U256, address, bytes, hex};
 
-    sol! {
-        struct Rule {
-            bytes4 selector;
-            address[] recipients;
-        }
-
-        struct Scope {
-            address target;
-            Rule[] rules;
-        }
-
-        function apply(address account, Scope[] scopes);
-    }
-
-    fn word(value: usize) -> [u8; 32] {
-        let mut out = [0_u8; 32];
-        out[24..].copy_from_slice(&(value as u64).to_be_bytes());
-        out
-    }
-
-    fn aliased_call_data(width: usize) -> Vec<u8> {
-        let mut data = Vec::with_capacity(292 + 96 * width);
-        data.extend(applyCall::SELECTOR);
-
-        data.extend(word(0));
-        data.extend(word(64));
-
-        data.extend(word(width));
-        for _ in 0..width {
-            data.extend(word(width * 32));
-        }
-
-        data.extend(word(1));
-        data.extend(word(64));
-
-        data.extend(word(width));
-        for _ in 0..width {
-            data.extend(word(width * 32));
-        }
-
-        let mut selector = [0_u8; 32];
-        selector[..4].copy_from_slice(&[0xde, 0xad, 0xbe, 0xef]);
-        data.extend(selector);
-        data.extend(word(64));
-
-        data.extend(word(width));
-        for i in 0..width {
-            data.extend(word(i + 1));
-        }
-
-        assert_eq!(data.len(), 292 + 96 * width);
-        data
-    }
-
     #[test]
     fn dynamic_array_of_dynamic_arrays() {
         type MyTy = sol_data::Array<sol_data::Array<sol_data::Address>>;
@@ -1091,6 +1037,60 @@ mod tests {
 
     #[test]
     fn configured_decoder_tracks_aliased_tuple_allocations() {
+        sol! {
+            struct Rule {
+                bytes4 selector;
+                address[] recipients;
+            }
+
+            struct Scope {
+                address target;
+                Rule[] rules;
+            }
+
+            function apply(address account, Scope[] scopes);
+        }
+
+        fn word(value: usize) -> [u8; 32] {
+            let mut out = [0_u8; 32];
+            out[24..].copy_from_slice(&(value as u64).to_be_bytes());
+            out
+        }
+
+        fn aliased_call_data(width: usize) -> Vec<u8> {
+            let mut data = Vec::with_capacity(292 + 96 * width);
+            data.extend(applyCall::SELECTOR);
+
+            data.extend(word(0));
+            data.extend(word(64));
+
+            data.extend(word(width));
+            for _ in 0..width {
+                data.extend(word(width * 32));
+            }
+
+            data.extend(word(1));
+            data.extend(word(64));
+
+            data.extend(word(width));
+            for _ in 0..width {
+                data.extend(word(width * 32));
+            }
+
+            let mut selector = [0_u8; 32];
+            selector[..4].copy_from_slice(&[0xde, 0xad, 0xbe, 0xef]);
+            data.extend(selector);
+            data.extend(word(64));
+
+            data.extend(word(width));
+            for i in 0..width {
+                data.extend(word(i + 1));
+            }
+
+            assert_eq!(data.len(), 292 + 96 * width);
+            data
+        }
+
         type Address = sol_data::Address;
 
         let width = 2_usize;
