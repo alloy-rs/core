@@ -1,6 +1,9 @@
 use crate::{
     Result, SolType, Word,
-    abi::token::{PackedSeqToken, Token, TokenSeq, WordToken},
+    abi::{
+        AbiDecoderConfig,
+        token::{PackedSeqToken, Token, TokenSeq, WordToken},
+    },
     types::interface::RevertReason,
 };
 use alloc::{borrow::Cow, format, string::String, vec::Vec};
@@ -55,14 +58,24 @@ pub trait SolError: Sized {
         <Self::Parameters<'_> as SolType>::abi_decode_sequence(data).map(Self::new)
     }
 
+    /// ABI-decodes this error's arguments with a custom decoder configuration,
+    /// without its selector.
+    #[inline]
+    fn abi_decode_raw_with_config(data: &[u8], config: AbiDecoderConfig) -> Result<Self> {
+        <Self::Parameters<'_> as SolType>::abi_decode_sequence_with_config(data, config)
+            .map(Self::new)
+    }
+
     /// ABI decode this error's arguments from the given slice, **without** its
     /// selector, with validation.
     ///
     /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
     /// validation checks on the decoded parameters tuple.
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
-        <Self::Parameters<'_> as SolType>::abi_decode_sequence_validate(data).map(Self::new)
+        Self::abi_decode_raw_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the
@@ -75,17 +88,25 @@ pub trait SolError: Sized {
         Self::abi_decode_raw(data)
     }
 
+    /// ABI-decodes this error's arguments with a custom decoder configuration.
+    #[inline]
+    fn abi_decode_with_config(data: &[u8], config: AbiDecoderConfig) -> Result<Self> {
+        let data = data
+            .strip_prefix(&Self::SELECTOR)
+            .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
+        Self::abi_decode_raw_with_config(data, config)
+    }
+
     /// ABI decode this error's arguments from the given slice, **with** the
     /// selector, with validation.
     ///
     /// This is the same as [`abi_decode`](Self::abi_decode), but performs
     /// validation checks on the decoded parameters tuple.
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_validate(data: &[u8]) -> Result<Self> {
-        let data = data
-            .strip_prefix(&Self::SELECTOR)
-            .ok_or_else(|| crate::Error::type_check_fail_sig(data, Self::SIGNATURE))?;
-        Self::abi_decode_raw_validate(data)
+        Self::abi_decode_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 
     /// ABI encode the error to the given buffer **without** its selector.
@@ -186,8 +207,10 @@ impl SolError for Revert {
     }
 
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
-        Self::abi_decode_raw(data)
+        Self::abi_decode_raw_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 }
 

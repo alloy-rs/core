@@ -1,6 +1,9 @@
 use crate::{
     Result, SolType, Word,
-    abi::token::{Token, TokenSeq, WordToken},
+    abi::{
+        AbiDecoderConfig,
+        token::{Token, TokenSeq, WordToken},
+    },
 };
 use alloc::vec::Vec;
 use alloy_primitives::{B256, FixedBytes, Log, LogData};
@@ -173,15 +176,26 @@ pub trait SolEvent: Sized {
         <Self::DataTuple<'a> as SolType>::abi_decode_sequence(data)
     }
 
+    /// ABI-decodes the dynamic data with a custom decoder configuration.
+    #[inline]
+    fn abi_decode_data_with_config<'a>(
+        data: &'a [u8],
+        config: AbiDecoderConfig,
+    ) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
+        <Self::DataTuple<'a> as SolType>::abi_decode_sequence_with_config(data, config)
+    }
+
     /// ABI-decodes the dynamic data of this event from the given buffer, with validation.
     ///
     /// This is the same as [`abi_decode_data`](Self::abi_decode_data), but performs
     /// validation checks on the decoded data tuple.
     #[inline]
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn abi_decode_data_validate<'a>(
         data: &'a [u8],
     ) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
-        <Self::DataTuple<'a> as SolType>::abi_decode_sequence_validate(data)
+        Self::abi_decode_data_with_config(data, AbiDecoderConfig::new().strict(true))
     }
 
     /// Decode the event from the given log info.
@@ -197,20 +211,34 @@ pub trait SolEvent: Sized {
         Ok(Self::new(topics, body))
     }
 
-    /// Decode the event from the given log info, with validation.
-    ///
-    /// This is the same as [`decode_raw_log`](Self::decode_raw_log), but performs
-    /// validation checks on the decoded topics and data.
-    fn decode_raw_log_validate<I, D>(topics: I, data: &[u8]) -> Result<Self>
+    /// Decodes the event from the given log info with a custom decoder configuration.
+    fn decode_raw_log_with_config<I, D>(
+        topics: I,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Self>
     where
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,
     {
         let topics = Self::decode_topics(topics)?;
-        // Check signature before decoding the data.
         Self::check_signature(&topics)?;
-        let body = Self::abi_decode_data_validate(data)?;
+        let body = Self::abi_decode_data_with_config(data, config)?;
         Ok(Self::new(topics, body))
+    }
+
+    /// Decode the event from the given log info, with validation.
+    ///
+    /// This is the same as [`decode_raw_log`](Self::decode_raw_log), but performs
+    /// validation checks on the decoded topics and data.
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
+    fn decode_raw_log_validate<I, D>(topics: I, data: &[u8]) -> Result<Self>
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
+        Self::decode_raw_log_with_config(topics, data, AbiDecoderConfig::new().strict(true))
     }
 
     /// Decode the event from the given log object.
@@ -218,9 +246,16 @@ pub trait SolEvent: Sized {
         Self::decode_raw_log(log.topics(), &log.data)
     }
 
+    /// Decodes the event from the given log object with a custom decoder configuration.
+    fn decode_log_data_with_config(log: &LogData, config: AbiDecoderConfig) -> Result<Self> {
+        Self::decode_raw_log_with_config(log.topics(), &log.data, config)
+    }
+
     /// Decode the event from the given log object with validation.
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn decode_log_data_validate(log: &LogData) -> Result<Self> {
-        Self::decode_raw_log_validate(log.topics(), &log.data)
+        Self::decode_log_data_with_config(log, AbiDecoderConfig::new().strict(true))
     }
 
     /// Decode the event from the given log object.
@@ -228,8 +263,16 @@ pub trait SolEvent: Sized {
         Self::decode_log_data(&log.data).map(|data| Log { address: log.address, data })
     }
 
+    /// Decodes the event from the given log object with a custom decoder configuration.
+    fn decode_log_with_config(log: &Log, config: AbiDecoderConfig) -> Result<Log<Self>> {
+        Self::decode_log_data_with_config(&log.data, config)
+            .map(|data| Log { address: log.address, data })
+    }
+
     /// Decode the event from the given log object with validation.
+    // TODO: Deprecate in favor of a strict decoder configuration.
+    // #[deprecated(note = "use a strict decoder configuration")]
     fn decode_log_validate(log: &Log) -> Result<Log<Self>> {
-        Self::decode_log_data_validate(&log.data).map(|data| Log { address: log.address, data })
+        Self::decode_log_with_config(log, AbiDecoderConfig::new().strict(true))
     }
 }

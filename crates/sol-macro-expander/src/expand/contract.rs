@@ -779,15 +779,25 @@ impl CallLikeExpander<'_> {
 
                 #[inline]
                 #[allow(non_snake_case)]
-                fn abi_decode_raw_validate(
+                fn abi_decode_raw_with_config(
                     selector: [u8; 4],
                     data: &[u8],
+                    config: alloy_sol_types::abi::AbiDecoderConfig,
                 ) -> alloy_sol_types::Result<Self> {
-                    static DECODE_VALIDATE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
+                    static DECODE_SHIMS: &[fn(
+                        &[u8],
+                        alloy_sol_types::abi::AbiDecoderConfig,
+                    ) -> alloy_sol_types::Result<#name>] = &[
                         #({
-                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw_validate(data)
-                                    .map(#name::#sorted_variants)
+                            fn #sorted_variants(
+                                data: &[u8],
+                                config: alloy_sol_types::abi::AbiDecoderConfig,
+                            ) -> alloy_sol_types::Result<#name> {
+                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw_with_config(
+                                    data,
+                                    config,
+                                )
+                                .map(#name::#sorted_variants)
                             }
                             #sorted_variants
                         }),*
@@ -799,8 +809,23 @@ impl CallLikeExpander<'_> {
                             selector,
                         ));
                     };
-                    // `SELECTORS` and `DECODE_VALIDATE_SHIMS` have the same length and are sorted in the same order.
-                    DECODE_VALIDATE_SHIMS[idx](data)
+                    // `SELECTORS` and `DECODE_SHIMS` have the same length and are sorted in the same order.
+                    DECODE_SHIMS[idx](data, config)
+                }
+
+                #[inline]
+                #[allow(non_snake_case)]
+                // TODO: Deprecate in favor of a strict decoder configuration.
+                // #[deprecated(note = "use a strict decoder configuration")]
+                fn abi_decode_raw_validate(
+                    selector: [u8; 4],
+                    data: &[u8],
+                ) -> alloy_sol_types::Result<Self> {
+                    Self::abi_decode_raw_with_config(
+                        selector,
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::new().strict(true),
+                    )
                 }
 
                 #[inline]
