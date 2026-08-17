@@ -15,7 +15,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use alloy_primitives::hex;
-use core::{fmt, mem, ptr, slice::SliceIndex};
+use core::{cell::UnsafeCell, fmt, mem, ptr, slice::SliceIndex};
 
 /// The decoder recursion limit.
 ///
@@ -117,7 +117,6 @@ struct DecoderState {
 ///
 /// While the Decoder contains the necessary info, the actual deserialization
 /// is done in the [`crate::SolType`] trait.
-#[derive(Clone, Copy)]
 pub struct Decoder<'de> {
     // The underlying buffer.
     buf: &'de [u8],
@@ -128,13 +127,13 @@ pub struct Decoder<'de> {
     /// The decoder configuration.
     config: AbiDecoderConfig,
     /// State owned by this decoder when `state_ptr` is null.
-    state: DecoderState,
+    state: UnsafeCell<DecoderState>,
     /// Shared state owned by an ancestor decoder.
     state_ptr: *mut DecoderState,
 }
 
-/// SAFETY: `Decoder` only mutates shared state through `&mut Decoder`, and the
-/// input buffer and configuration are immutable.
+/// SAFETY: `Decoder` only mutates shared state through `&mut Decoder`, and the input buffer and
+/// configuration are immutable.
 unsafe impl Send for Decoder<'_> {}
 
 impl fmt::Debug for Decoder<'_> {
@@ -177,7 +176,7 @@ impl<'de> Decoder<'de> {
             offset: 0,
             depth: 0,
             config: AbiDecoderConfig::new(),
-            state: DecoderState { memory_used: 0 },
+            state: UnsafeCell::new(DecoderState { memory_used: 0 }),
             state_ptr: ptr::null_mut(),
         }
     }
@@ -189,7 +188,7 @@ impl<'de> Decoder<'de> {
             offset: 0,
             depth: 0,
             config,
-            state: DecoderState { memory_used: 0 },
+            state: UnsafeCell::new(DecoderState { memory_used: 0 }),
             state_ptr: ptr::null_mut(),
         }
     }
@@ -201,7 +200,7 @@ impl<'de> Decoder<'de> {
             offset: 0,
             depth: parent.depth + 1,
             config: parent.config,
-            state: DecoderState { memory_used: 0 },
+            state: UnsafeCell::new(DecoderState { memory_used: 0 }),
             state_ptr: parent.state_ptr(),
         }
     }
@@ -265,7 +264,7 @@ impl<'de> Decoder<'de> {
 
     #[inline]
     const fn state_ptr(&self) -> *mut DecoderState {
-        if self.state_ptr.is_null() { ptr::addr_of!(self.state).cast_mut() } else { self.state_ptr }
+        if self.state_ptr.is_null() { self.state.get() } else { self.state_ptr }
     }
 
     #[inline]
