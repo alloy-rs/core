@@ -62,7 +62,7 @@ impl<'a> DynToken<'a> {
             DynToken::Word(_) => 1,
             DynToken::PackedSeq(_) => 1,
             DynToken::FixedSeq(contents, _) => {
-                contents.iter().map(Self::minimum_words).sum::<usize>()
+                contents.iter().fold(0usize, |sum, token| sum.saturating_add(token.minimum_words()))
             }
             DynToken::DynSeq { .. } => 1,
         }
@@ -164,7 +164,8 @@ impl<'a> DynToken<'a> {
                 // This expect is safe because this is only invoked after
                 // `empty_dyn_token()` which always sets template
                 let template = template.take().expect("no template for dynamic sequence");
-                if template.minimum_words() == 0 {
+                let minimum_words = template.minimum_words();
+                if minimum_words == 0 {
                     // Arrays of zero-sized elements can encode an attacker-controlled length
                     // without corresponding element data. Preserve the empty representation used
                     // by zero-sized top-level arrays instead of allocating `size` elements.
@@ -178,10 +179,9 @@ impl<'a> DynToken<'a> {
                 // word AFTER the array size
                 let mut child = child.raw_child()?;
 
-                // Check that the decoder contains enough words to decode the
-                // sequence. Each item in the sequence is at least one word, so
-                // the remaining words must be at least the size of the sequence
-                if child.remaining_words() < template.minimum_words() * size {
+                let required_words =
+                    minimum_words.checked_mul(size).ok_or(alloy_sol_types::Error::Overrun)?;
+                if child.remaining_words() < required_words {
                     return Err(alloy_sol_types::Error::Overrun.into());
                 }
 
