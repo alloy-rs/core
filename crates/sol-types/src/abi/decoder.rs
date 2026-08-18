@@ -614,6 +614,27 @@ mod tests {
     }
 
     #[test]
+    fn decode_dynamic_array_preallocation() {
+        type MyTy = sol_data::Array<sol_data::Uint<32>>;
+        let mut encoded = Vec::with_capacity(64);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(usize::MAX).as_slice());
+
+        let err = MyTy::abi_decode_sequence(&encoded).unwrap_err();
+        assert_eq!(err, Error::Overrun);
+    }
+
+    #[test]
+    fn decode_dynamic_array_of_zero_sized_type() {
+        type MyTy = sol_data::Array<()>;
+        let mut encoded = Vec::with_capacity(64);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(2).as_slice());
+
+        assert_eq!(MyTy::abi_decode_sequence(&encoded).unwrap(), vec![(), ()]);
+    }
+
+    #[test]
     fn decode_verify_addresses() {
         let input = hex!(
             "

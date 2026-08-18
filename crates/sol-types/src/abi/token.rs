@@ -427,6 +427,10 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
         let mut child = child.raw_child()?;
+        // The input must contain at least one word per non-zero-sized element.
+        if mem::size_of::<T>() != 0 && child.remaining_words() < len {
+            return Err(crate::Error::Overrun);
+        }
         let mut tokens = vec_try_with_capacity(len)?;
         // SAFETY: `spare_capacity_mut` returns valid writable memory.
         // `decode_many_from` initializes all `len` elements on success.
