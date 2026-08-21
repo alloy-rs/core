@@ -15,7 +15,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use alloy_primitives::hex;
-use core::{cell::UnsafeCell, fmt, mem, ptr, slice::SliceIndex};
+use core::{cell::Cell, fmt, mem, slice::SliceIndex};
 
 /// The decoder recursion limit.
 ///
@@ -105,9 +105,19 @@ impl AbiDecoderConfig {
     }
 }
 
-#[derive(Clone, Copy)]
-struct DecoderState {
-    memory_used: usize,
+enum DecoderState<'state> {
+    Root(Cell<usize>),
+    Child(&'state Cell<usize>),
+}
+
+impl<'state> DecoderState<'state> {
+    #[inline]
+    const fn memory_used(&self) -> &Cell<usize> {
+        match self {
+            Self::Root(memory_used) => memory_used,
+            Self::Child(memory_used) => memory_used,
+        }
+    }
 }
 
 /// The [`Decoder`] wraps a byte slice with necessary info to progressively
@@ -117,7 +127,7 @@ struct DecoderState {
 ///
 /// While the Decoder contains the necessary info, the actual deserialization
 /// is done in the [`crate::SolType`] trait.
-pub struct Decoder<'de> {
+pub struct Decoder<'de, 'state> {
     // The underlying buffer.
     buf: &'de [u8],
     // The current offset in the buffer.
@@ -126,17 +136,11 @@ pub struct Decoder<'de> {
     depth: usize,
     /// The decoder configuration.
     config: AbiDecoderConfig,
-    /// State owned by this decoder when `state_ptr` is null.
-    state: UnsafeCell<DecoderState>,
-    /// Shared state owned by an ancestor decoder.
-    state_ptr: *mut DecoderState,
+    /// Shared decoder state.
+    state: DecoderState<'state>,
 }
 
-/// SAFETY: `Decoder` only mutates shared state through `&mut Decoder`, and the input buffer and
-/// configuration are immutable.
-unsafe impl Send for Decoder<'_> {}
-
-impl fmt::Debug for Decoder<'_> {
+impl fmt::Debug for Decoder<'_, '_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut body = self.buf.chunks(32).map(hex::encode_prefixed).collect::<Vec<_>>();
         body[self.offset / 32].push_str(" <-- Next Word");
@@ -150,7 +154,7 @@ impl fmt::Debug for Decoder<'_> {
     }
 }
 
-impl fmt::Display for Decoder<'_> {
+impl fmt::Display for Decoder<'_, '_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Abi Decode Buffer")?;
 
@@ -167,7 +171,7 @@ impl fmt::Display for Decoder<'_> {
     }
 }
 
-impl<'de> Decoder<'de> {
+impl<'de> Decoder<'de, 'static> {
     /// Instantiates a new decoder from a byte slice.
     #[inline]
     pub const fn new(buf: &'de [u8]) -> Self {
@@ -176,33 +180,31 @@ impl<'de> Decoder<'de> {
             offset: 0,
             depth: 0,
             config: AbiDecoderConfig::new(),
-            state: UnsafeCell::new(DecoderState { memory_used: 0 }),
-            state_ptr: ptr::null_mut(),
+            state: DecoderState::Root(Cell::new(0)),
         }
     }
 
     #[inline]
     const fn with_config(buf: &'de [u8], config: AbiDecoderConfig) -> Self {
-        Self {
-            buf,
-            offset: 0,
-            depth: 0,
-            config,
-            state: UnsafeCell::new(DecoderState { memory_used: 0 }),
-            state_ptr: ptr::null_mut(),
-        }
+        Self { buf, offset: 0, depth: 0, config, state: DecoderState::Root(Cell::new(0)) }
     }
+}
 
+impl<'de, 'state> Decoder<'de, 'state> {
     #[inline]
-    const fn new_child(parent: &Self, buf: &'de [u8]) -> Self {
-        Self {
+    const fn new_child<'child>(parent: &'child Self, buf: &'de [u8]) -> Decoder<'de, 'child> {
+        Decoder {
             buf,
             offset: 0,
             depth: parent.depth + 1,
             config: parent.config,
-            state: UnsafeCell::new(DecoderState { memory_used: 0 }),
-            state_ptr: parent.state_ptr(),
+            state: DecoderState::Child(parent.memory_used()),
         }
+    }
+
+    #[inline]
+    const fn memory_used(&self) -> &Cell<usize> {
+        self.state.memory_used()
     }
 
     /// Returns the current offset in the buffer.
@@ -243,7 +245,7 @@ impl<'de> Decoder<'de> {
     ///
     /// See [`child`](Self::child).
     #[inline]
-    pub fn raw_child(&self) -> Result<Self> {
+    pub fn raw_child<'child>(&'child self) -> Result<Decoder<'de, 'child>> {
         self.child(self.offset)
     }
 
@@ -251,7 +253,7 @@ impl<'de> Decoder<'de> {
     /// decoder's offset.
     /// The child decoder shares the buffer.
     #[inline]
-    pub fn child(&self, offset: usize) -> Result<Self, Error> {
+    pub fn child<'child>(&'child self, offset: usize) -> Result<Decoder<'de, 'child>, Error> {
         let recursion_limit = self.config.get_recursion_limit();
         if self.depth >= recursion_limit {
             return Err(Error::RecursionLimitExceeded(recursion_limit));
@@ -262,37 +264,26 @@ impl<'de> Decoder<'de> {
         }
     }
 
-    #[inline]
-    const fn state_ptr(&self) -> *mut DecoderState {
-        if self.state_ptr.is_null() { self.state.get() } else { self.state_ptr }
-    }
-
-    #[inline]
-    fn state(&mut self) -> &mut DecoderState {
-        // SAFETY: `state_ptr` either points to this decoder's own `state`, or to
-        // an ancestor decoder's `state`. Child decoders are only used while that
-        // ancestor is still alive.
-        unsafe { &mut *self.state_ptr() }
-    }
-
     /// Registers an allocation against the configured memory limit.
+    #[doc(hidden)]
     #[inline]
-    pub(crate) fn reserve(&mut self, bytes: usize) -> Result<()> {
+    pub fn reserve(&mut self, bytes: usize) -> Result<()> {
         let memory_limit = self.config.get_memory_limit();
         let used = self
-            .state()
-            .memory_used
+            .memory_used()
+            .get()
             .checked_add(bytes)
             .ok_or(Error::MemoryLimitExceeded(memory_limit))?;
         if used > memory_limit {
             return Err(Error::MemoryLimitExceeded(memory_limit));
         }
-        self.state().memory_used = used;
+        self.memory_used().set(used);
         Ok(())
     }
 
+    #[doc(hidden)]
     #[inline]
-    pub(crate) fn reserve_elements<T>(&mut self, len: usize) -> Result<()> {
+    pub fn reserve_elements<T>(&mut self, len: usize) -> Result<()> {
         let bytes = len
             .checked_mul(mem::size_of::<T>())
             .ok_or(Error::MemoryLimitExceeded(self.config.get_memory_limit()))?;
@@ -362,8 +353,9 @@ impl<'de> Decoder<'de> {
     /// Return a child decoder by consuming a word, interpreting it as a
     /// pointer, and following it.
     #[inline]
-    pub fn take_indirection(&mut self) -> Result<Self, Error> {
-        self.take_offset().and_then(|offset| self.child(offset))
+    pub fn take_indirection<'child>(&'child mut self) -> Result<Decoder<'de, 'child>, Error> {
+        let offset = self.take_offset()?;
+        self.child(offset)
     }
 
     /// Takes a `usize` offset from the buffer by consuming a word.
@@ -381,8 +373,14 @@ impl<'de> Decoder<'de> {
     /// Takes the offset from the child decoder and sets it as the current
     /// offset.
     #[inline]
-    pub const fn take_offset_from(&mut self, child: &Self) {
-        self.set_offset(child.offset + (self.buf.len() - child.buf.len()));
+    pub const fn take_offset_from(&mut self, child: &Decoder<'de, '_>) {
+        self.set_offset(self.offset_from_child(child));
+    }
+
+    /// Returns the parent-relative offset from a child decoder.
+    #[inline]
+    pub const fn offset_from_child(&self, child: &Decoder<'de, '_>) -> usize {
+        child.offset + (self.buf.len() - child.buf.len())
     }
 
     /// Sets the current offset in the buffer.
@@ -934,10 +932,6 @@ mod tests {
 
     #[test]
     fn config_defaults_and_setters() {
-        fn assert_send<T: Send>() {}
-
-        assert_send::<Decoder<'static>>();
-
         let mut config = AbiDecoderConfig::new();
         assert_eq!(config.get_recursion_limit(), 16);
         assert_eq!(config.get_memory_limit(), DEFAULT_MEMORY_LIMIT);
@@ -992,6 +986,17 @@ mod tests {
         let encoded = Ty::abi_encode(&vec![U256::ZERO]);
         let mut decoder = Decoder::with_config(&encoded, AbiDecoderConfig::new().memory_limit(31));
         let err = decoder.decode::<<Ty as SolType>::Token<'_>>().unwrap_err();
+        assert_eq!(err, Error::MemoryLimitExceeded(31));
+    }
+
+    #[test]
+    fn child_decoder_borrows_parent_state() {
+        type Ty = sol_data::Array<sol_data::Uint<256>>;
+
+        let encoded = Ty::abi_encode(&vec![U256::ZERO]);
+        let decoder = Decoder::with_config(&encoded, AbiDecoderConfig::new().memory_limit(31));
+        let mut child = decoder.child(0).unwrap();
+        let err = child.decode::<<Ty as SolType>::Token<'_>>().unwrap_err();
         assert_eq!(err, Error::MemoryLimitExceeded(31));
     }
 
