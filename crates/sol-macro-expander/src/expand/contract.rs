@@ -757,24 +757,11 @@ impl CallLikeExpander<'_> {
                     selector: [u8; 4],
                     data: &[u8],
                 )-> alloy_sol_types::Result<Self> {
-                    static DECODE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
-                        #({
-                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data)
-                                    .map(#name::#sorted_variants)
-                            }
-                            #sorted_variants
-                        }),*
-                    ];
-
-                    let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                        return Err(alloy_sol_types::Error::unknown_selector(
-                            <Self as alloy_sol_types::SolInterface>::NAME,
-                            selector,
-                        ));
-                    };
-                    // `SELECTORS` and `DECODE_SHIMS` have the same length and are sorted in the same order.
-                    DECODE_SHIMS[idx](data)
+                    Self::abi_decode_raw_with_config(
+                        selector,
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::default(),
+                    )
                 }
 
                 #[inline]
@@ -815,8 +802,8 @@ impl CallLikeExpander<'_> {
 
                 #[inline]
                 #[allow(non_snake_case)]
-                // TODO: Deprecate in favor of a strict decoder configuration.
-                // #[deprecated(note = "use a strict decoder configuration")]
+                // TODO: Deprecate in favor of a validating decoder configuration.
+                // #[deprecated(note = "use a validating decoder configuration")]
                 fn abi_decode_raw_validate(
                     selector: [u8; 4],
                     data: &[u8],
@@ -824,7 +811,7 @@ impl CallLikeExpander<'_> {
                     Self::abi_decode_raw_with_config(
                         selector,
                         data,
-                        alloy_sol_types::abi::AbiDecoderConfig::new().strict(true),
+                        alloy_sol_types::abi::AbiDecoderConfig::new().validate(true),
                     )
                 }
 

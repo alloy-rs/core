@@ -245,7 +245,7 @@ pub trait SolType: Sized {
     #[inline]
     fn abi_decode_with_config(data: &[u8], config: AbiDecoderConfig) -> Result<Self::RustType> {
         let token = abi::decode_with_config::<Self::Token<'_>>(data, config)?;
-        if config.get_strict() {
+        if config.get_validate() {
             Self::type_check(&token)?;
         }
         Ok(Self::detokenize(token))
@@ -259,10 +259,10 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_validate(data: &[u8]) -> Result<Self::RustType> {
-        Self::abi_decode_with_config(data, AbiDecoderConfig::new().strict(true))
+        Self::abi_decode_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as
@@ -288,7 +288,7 @@ pub trait SolType: Sized {
         Self::Token<'de>: TokenSeq<'de>,
     {
         let token = abi::decode_params_with_config::<Self::Token<'_>>(data, config)?;
-        if config.get_strict() {
+        if config.get_validate() {
             Self::type_check(&token)?;
         }
         Ok(Self::detokenize(token))
@@ -302,13 +302,13 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_params_validate<'de>(data: &'de [u8]) -> Result<Self::RustType>
     where
         Self::Token<'de>: TokenSeq<'de>,
     {
-        Self::abi_decode_params_with_config(data, AbiDecoderConfig::new().strict(true))
+        Self::abi_decode_params_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 
     /// Decodes this type's value from an ABI blob by interpreting it as a
@@ -333,7 +333,7 @@ pub trait SolType: Sized {
         Self::Token<'de>: TokenSeq<'de>,
     {
         let token = abi::decode_sequence_with_config::<Self::Token<'_>>(data, config)?;
-        if config.get_strict() {
+        if config.get_validate() {
             Self::type_check(&token)?;
         }
         Ok(Self::detokenize(token))
@@ -347,12 +347,12 @@ pub trait SolType: Sized {
     ///
     /// See the [`abi`] module for more information.
     #[inline]
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_sequence_validate<'de>(data: &'de [u8]) -> Result<Self::RustType>
     where
         Self::Token<'de>: TokenSeq<'de>,
     {
-        Self::abi_decode_sequence_with_config(data, AbiDecoderConfig::new().strict(true))
+        Self::abi_decode_sequence_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 }

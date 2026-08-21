@@ -26,11 +26,11 @@ pub const RECURSION_LIMIT: usize = 16;
 const DEFAULT_MEMORY_LIMIT: usize = 1 << 30;
 
 /// Configuration for ABI decoding.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(missing_copy_implementations, missing_debug_implementations)]
 pub struct AbiDecoderConfig {
     recursion_limit: usize,
     memory_limit: usize,
-    strict: bool,
+    validate: bool,
 }
 
 impl Default for AbiDecoderConfig {
@@ -40,11 +40,31 @@ impl Default for AbiDecoderConfig {
     }
 }
 
+impl Clone for AbiDecoderConfig {
+    #[inline]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl Copy for AbiDecoderConfig {}
+
+impl fmt::Debug for AbiDecoderConfig {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AbiDecoderConfig")
+            .field("recursion_limit", &self.recursion_limit)
+            .field("memory_limit", &self.memory_limit)
+            .field("validate", &self.validate)
+            .finish()
+    }
+}
+
 impl AbiDecoderConfig {
     /// Creates a decoder configuration with the default limits.
     #[inline]
     pub const fn new() -> Self {
-        Self { recursion_limit: 16, memory_limit: DEFAULT_MEMORY_LIMIT, strict: false }
+        Self { recursion_limit: 16, memory_limit: DEFAULT_MEMORY_LIMIT, validate: false }
     }
 
     /// Returns the maximum recursion depth.
@@ -59,10 +79,10 @@ impl AbiDecoderConfig {
         self.memory_limit
     }
 
-    /// Returns whether strict validation is enabled.
+    /// Returns whether decoded tokens are validated before detokenization.
     #[inline]
-    pub const fn get_strict(&self) -> bool {
-        self.strict
+    pub const fn get_validate(&self) -> bool {
+        self.validate
     }
 
     /// Sets the maximum recursion depth.
@@ -79,10 +99,16 @@ impl AbiDecoderConfig {
         self
     }
 
-    /// Enables or disables strict validation.
+    /// Enables or disables decoded token validation before detokenization.
+    ///
+    /// When enabled, high-level ABI decode helpers call the target Solidity
+    /// type's token validator before converting the token into the returned
+    /// Rust value. This rejects dirty bool bytes, invalid strings, and other
+    /// token values that can be decoded from ABI words but do not satisfy the
+    /// target type's validity rules.
     #[inline]
-    pub const fn strict(mut self, strict: bool) -> Self {
-        self.strict = strict;
+    pub const fn validate(mut self, validate: bool) -> Self {
+        self.validate = validate;
         self
     }
 
@@ -98,10 +124,10 @@ impl AbiDecoderConfig {
         self.memory_limit = limit;
     }
 
-    /// Enables or disables strict validation in place.
+    /// Enables or disables decoded token validation before detokenization.
     #[inline]
-    pub const fn set_strict(&mut self, strict: bool) {
-        self.strict = strict;
+    pub const fn set_validate(&mut self, validate: bool) {
+        self.validate = validate;
     }
 }
 
@@ -935,23 +961,23 @@ mod tests {
         let mut config = AbiDecoderConfig::new();
         assert_eq!(config.get_recursion_limit(), 16);
         assert_eq!(config.get_memory_limit(), DEFAULT_MEMORY_LIMIT);
-        assert!(!config.get_strict());
+        assert!(!config.get_validate());
 
         config.set_recursion_limit(300);
         config.set_memory_limit(42);
-        config.set_strict(true);
+        config.set_validate(true);
         assert_eq!(config.get_recursion_limit(), 300);
         assert_eq!(config.get_memory_limit(), 42);
-        assert!(config.get_strict());
+        assert!(config.get_validate());
 
-        let config = AbiDecoderConfig::new().recursion_limit(400).memory_limit(24).strict(true);
+        let config = AbiDecoderConfig::new().recursion_limit(400).memory_limit(24).validate(true);
         assert_eq!(config.get_recursion_limit(), 400);
         assert_eq!(config.get_memory_limit(), 24);
-        assert!(config.get_strict());
+        assert!(config.get_validate());
     }
 
     #[test]
-    fn configured_decoder_strict_validation() {
+    fn configured_decoder_validation() {
         let encoded = B256::repeat_byte(0x11);
         assert!(
             sol_data::Bool::abi_decode_with_config(encoded.as_slice(), AbiDecoderConfig::new())
@@ -960,7 +986,7 @@ mod tests {
         assert!(
             sol_data::Bool::abi_decode_with_config(
                 encoded.as_slice(),
-                AbiDecoderConfig::new().strict(true),
+                AbiDecoderConfig::new().validate(true),
             )
             .is_err()
         );

@@ -149,13 +149,13 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     /// ABI-decode this type from the given data, with validation.
     ///
     /// See [`SolType::abi_decode_validate`] for more information.
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_validate(data: &[u8]) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
     {
-        Self::abi_decode_with_config(data, AbiDecoderConfig::new().strict(true))
+        Self::abi_decode_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 
     /// ABI-decode this type from the given data.
@@ -184,14 +184,14 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     ///
     /// See [`SolType::abi_decode_params_validate`] for more information.
     #[inline]
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_params_validate<'de>(data: &'de [u8]) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
         <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
-        Self::abi_decode_params_with_config(data, AbiDecoderConfig::new().strict(true))
+        Self::abi_decode_params_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 
     /// ABI-decode this type from the given data.
@@ -223,14 +223,14 @@ pub trait SolValue: SolTypeValue<Self::SolType> {
     ///
     /// See [`SolType::abi_decode_sequence_validate`] for more information.
     #[inline]
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_sequence_validate<'de>(data: &'de [u8]) -> Result<Self>
     where
         Self: From<<Self::SolType as SolType>::RustType>,
         <Self::SolType as SolType>::Token<'de>: TokenSeq<'de>,
     {
-        Self::abi_decode_sequence_with_config(data, AbiDecoderConfig::new().strict(true))
+        Self::abi_decode_sequence_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 }
 

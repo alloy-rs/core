@@ -72,10 +72,10 @@ pub trait SolError: Sized {
     /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
     /// validation checks on the decoded parameters tuple.
     #[inline]
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
-        Self::abi_decode_raw_with_config(data, AbiDecoderConfig::new().strict(true))
+        Self::abi_decode_raw_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 
     /// ABI decode this error's arguments from the given slice, **with** the
@@ -103,10 +103,10 @@ pub trait SolError: Sized {
     /// This is the same as [`abi_decode`](Self::abi_decode), but performs
     /// validation checks on the decoded parameters tuple.
     #[inline]
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_validate(data: &[u8]) -> Result<Self> {
-        Self::abi_decode_with_config(data, AbiDecoderConfig::new().strict(true))
+        Self::abi_decode_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 
     /// ABI encode the error to the given buffer **without** its selector.
@@ -207,10 +207,10 @@ impl SolError for Revert {
     }
 
     #[inline]
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_raw_validate(data: &[u8]) -> Result<Self> {
-        Self::abi_decode_raw_with_config(data, AbiDecoderConfig::new().strict(true))
+        Self::abi_decode_raw_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 }
 

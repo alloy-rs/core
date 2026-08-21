@@ -190,12 +190,12 @@ pub trait SolEvent: Sized {
     /// This is the same as [`abi_decode_data`](Self::abi_decode_data), but performs
     /// validation checks on the decoded data tuple.
     #[inline]
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_data_validate<'a>(
         data: &'a [u8],
     ) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
-        Self::abi_decode_data_with_config(data, AbiDecoderConfig::new().strict(true))
+        Self::abi_decode_data_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 
     /// Decode the event from the given log info.
@@ -231,14 +231,14 @@ pub trait SolEvent: Sized {
     ///
     /// This is the same as [`decode_raw_log`](Self::decode_raw_log), but performs
     /// validation checks on the decoded topics and data.
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn decode_raw_log_validate<I, D>(topics: I, data: &[u8]) -> Result<Self>
     where
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,
     {
-        Self::decode_raw_log_with_config(topics, data, AbiDecoderConfig::new().strict(true))
+        Self::decode_raw_log_with_config(topics, data, AbiDecoderConfig::new().validate(true))
     }
 
     /// Decode the event from the given log object.
@@ -252,10 +252,10 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the event from the given log object with validation.
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn decode_log_data_validate(log: &LogData) -> Result<Self> {
-        Self::decode_log_data_with_config(log, AbiDecoderConfig::new().strict(true))
+        Self::decode_log_data_with_config(log, AbiDecoderConfig::new().validate(true))
     }
 
     /// Decode the event from the given log object.
@@ -270,9 +270,9 @@ pub trait SolEvent: Sized {
     }
 
     /// Decode the event from the given log object with validation.
-    // TODO: Deprecate in favor of a strict decoder configuration.
-    // #[deprecated(note = "use a strict decoder configuration")]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn decode_log_validate(log: &Log) -> Result<Log<Self>> {
-        Self::decode_log_with_config(log, AbiDecoderConfig::new().strict(true))
+        Self::decode_log_with_config(log, AbiDecoderConfig::new().validate(true))
     }
 }

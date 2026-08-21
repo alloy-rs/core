@@ -238,12 +238,12 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 }
 
                 #[inline]
-                // TODO: Deprecate in favor of a strict decoder configuration.
-                // #[deprecated(note = "use a strict decoder configuration")]
+                // TODO: Deprecate in favor of a validating decoder configuration.
+                // #[deprecated(note = "use a validating decoder configuration")]
                 fn abi_decode_returns_validate(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
                     Self::abi_decode_returns_with_config(
                         data,
-                        alloy_sol_types::abi::AbiDecoderConfig::new().strict(true),
+                        alloy_sol_types::abi::AbiDecoderConfig::new().validate(true),
                     )
                 }
             }
