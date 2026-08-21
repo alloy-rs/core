@@ -105,28 +105,23 @@ fn ty_to_param(name: Option<String>, ty: &ast::Type, cx: &ExpCtxt<'_>) -> Param 
         ty_name = format!("tuple{suffix}");
     }
 
-    let mut component_names = vec![];
     let resolved = match ty.peel_arrays() {
-        ast::Type::Custom(name) => {
-            if let ast::Item::Struct(s) = cx.item(name) {
-                component_names = s
-                    .fields
-                    .names()
-                    .map(|n| n.map(|i| i.as_string()).unwrap_or_default())
-                    .collect();
+        ast::Type::Custom(custom_name) => {
+            if let ast::Item::Struct(s) = cx.item(custom_name) {
+                return Param {
+                    ty: ty_name,
+                    name: name.unwrap_or_default(),
+                    internal_type: None,
+                    components: s.fields.to_dyn_abi(cx),
+                };
             }
-            cx.custom_type(name)
+            cx.custom_type(custom_name)
         }
         ty => ty,
     };
 
     let components = if let ast::Type::Tuple(tuple) = resolved {
-        tuple
-            .types
-            .iter()
-            .enumerate()
-            .map(|(i, ty)| ty_to_param(component_names.get(i).cloned(), ty, cx))
-            .collect()
+        tuple.types.iter().map(|ty| ty_to_param(None, ty, cx)).collect()
     } else {
         vec![]
     };
