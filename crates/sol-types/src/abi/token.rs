@@ -55,6 +55,9 @@ pub trait Token<'de>: Sealed + Sized {
     /// True if the token represents a dynamically-sized type.
     const DYNAMIC: bool;
 
+    /// The minimum number of words required in the containing head.
+    const MINIMUM_WORDS: usize;
+
     /// Decode a token from a decoder.
     fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self>;
 
@@ -217,6 +220,7 @@ impl AsRef<[u8]> for WordToken {
 
 impl<'a> Token<'a> for WordToken {
     const DYNAMIC: bool = false;
+    const MINIMUM_WORDS: usize = 1;
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'a, '_>) -> Result<Self> {
@@ -309,6 +313,7 @@ impl<T, const N: usize> AsRef<[T; N]> for FixedSeqToken<T, N> {
 
 impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
     const DYNAMIC: bool = T::DYNAMIC;
+    const MINIMUM_WORDS: usize = if Self::DYNAMIC { 1 } else { T::MINIMUM_WORDS.saturating_mul(N) };
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
@@ -417,16 +422,35 @@ impl<T> AsRef<[T]> for DynSeqToken<T> {
 
 impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
     const DYNAMIC: bool = true;
+    const MINIMUM_WORDS: usize = 1;
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         let mut child = dec.take_indirection()?;
         let len = child.take_offset()?;
+        if T::MINIMUM_WORDS == 0 {
+            debug_assert_eq!(core::mem::size_of::<T>(), 0);
+            #[allow(clippy::uninit_vec)]
+            let tokens = {
+                let mut tokens = Vec::new();
+                // SAFETY: `MINIMUM_WORDS == 0` is only implemented for zero-sized
+                // token types. A `Vec` of a zero-sized type has `usize::MAX`
+                // capacity, so setting its length does not allocate or initialize
+                // memory.
+                unsafe { tokens.set_len(len) };
+                tokens
+            };
+            return Ok(Self(tokens));
+        }
         // This appears to be an unclarity in the Solidity spec. The spec
         // specifies that offsets are relative to the first word of
         // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
         let mut child = child.raw_child()?;
+        let required_words = T::MINIMUM_WORDS.checked_mul(len).ok_or(crate::Error::Overrun)?;
+        if required_words > child.remaining_words() {
+            return Err(crate::Error::Overrun);
+        }
         child.reserve_elements::<T>(len)?;
         let mut tokens = vec_try_with_capacity(len)?;
         // SAFETY: `spare_capacity_mut` returns valid writable memory.
@@ -515,6 +539,7 @@ impl AsRef<[u8]> for PackedSeqToken<'_> {
 
 impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
     const DYNAMIC: bool = true;
+    const MINIMUM_WORDS: usize = 1;
 
     #[inline]
     fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
@@ -576,6 +601,11 @@ macro_rules! tuple_impls {
         #[allow(non_snake_case)]
         impl<'de, $($ty: Token<'de>,)+> Token<'de> for ($($ty,)+) {
             const DYNAMIC: bool = $( <$ty as Token>::DYNAMIC )||+;
+            const MINIMUM_WORDS: usize = if Self::DYNAMIC {
+                1
+            } else {
+                0usize $( .saturating_add(<$ty as Token>::MINIMUM_WORDS) )+
+            };
 
             #[inline]
             fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
@@ -666,6 +696,7 @@ macro_rules! tuple_impls {
 
 impl<'de> Token<'de> for () {
     const DYNAMIC: bool = false;
+    const MINIMUM_WORDS: usize = 0;
 
     #[inline]
     fn decode_from(_dec: &mut Decoder<'de, '_>) -> Result<Self> {

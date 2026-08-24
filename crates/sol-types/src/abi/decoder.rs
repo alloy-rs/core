@@ -836,6 +836,90 @@ mod tests {
     }
 
     #[test]
+    fn decode_dynamic_array_preallocation() {
+        type MyTy = sol_data::Array<sol_data::Uint<32>>;
+        let mut encoded = Vec::with_capacity(64);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(usize::MAX).as_slice());
+
+        let err = MyTy::abi_decode_sequence(&encoded).unwrap_err();
+        assert_eq!(err, Error::Overrun);
+    }
+
+    #[test]
+    fn decode_dynamic_array_of_zero_sized_type() {
+        type MyTy = sol_data::Array<()>;
+        let mut encoded = Vec::with_capacity(64);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(2).as_slice());
+
+        assert_eq!(MyTy::abi_decode_sequence(&encoded).unwrap(), vec![(), ()]);
+    }
+
+    #[test]
+    fn decode_huge_dynamic_array_of_zero_sized_type() {
+        type MyTy = sol_data::Array<()>;
+        let mut encoded = Vec::with_capacity(64);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(u32::MAX as usize).as_slice());
+
+        let token = decode_sequence::<<MyTy as SolType>::Token<'_>>(&encoded).unwrap();
+        assert_eq!(token.0.len(), u32::MAX as usize);
+    }
+
+    #[test]
+    fn decode_nested_dynamic_array_of_zero_sized_type() {
+        type MyTy = sol_data::Array<sol_data::Array<()>>;
+        let mut encoded = Vec::with_capacity(128);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(1).as_slice());
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(2).as_slice());
+
+        assert_eq!(MyTy::abi_decode_sequence(&encoded).unwrap(), vec![vec![(), ()]]);
+    }
+
+    #[test]
+    fn decode_dynamic_array_of_multiword_static_type() {
+        type MyTy = sol_data::Array<sol_data::FixedArray<sol_data::Uint<32>, 2>>;
+        let mut encoded = Vec::with_capacity(96);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(1).as_slice());
+        // The fixed-array element requires two words, but only one is provided.
+        encoded.extend_from_slice(pad_usize(1).as_slice());
+
+        let err = MyTy::abi_decode_sequence(&encoded).unwrap_err();
+        assert_eq!(err, Error::Overrun);
+    }
+
+    #[test]
+    fn decode_dynamic_array_required_words_overflow() {
+        type MyTy = sol_data::Array<sol_data::FixedArray<sol_data::Uint<32>, 2>>;
+        let mut encoded = Vec::with_capacity(64);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(usize::MAX).as_slice());
+
+        let err = MyTy::abi_decode_sequence(&encoded).unwrap_err();
+        assert_eq!(err, Error::Overrun);
+    }
+
+    #[test]
+    fn decode_dynamic_array_of_dynamic_type() {
+        type MyTy = sol_data::Array<sol_data::Array<sol_data::FixedArray<sol_data::Uint<32>, 3>>>;
+        let mut encoded = Vec::with_capacity(128);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(1).as_slice());
+        // The dynamic element requires one offset word regardless of its inner static width.
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        // The nested array is empty, so no fixed-array data follows.
+        encoded.extend_from_slice(pad_usize(0).as_slice());
+
+        let decoded = MyTy::abi_decode_sequence(&encoded).unwrap();
+        assert_eq!(decoded.len(), 1);
+        assert!(decoded[0].is_empty());
+    }
+
+    #[test]
     fn decode_verify_addresses() {
         let input = hex!(
             "

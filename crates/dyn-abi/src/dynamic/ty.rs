@@ -591,10 +591,14 @@ impl DynSolType {
             Self::String |
             Self::Array(_) => 1,
             // fixed-seq types are the sum of their components
-            Self::FixedArray(v, size) => size * v.minimum_words(),
-            Self::Tuple(tuple) => tuple.iter().map(|ty| ty.minimum_words()).sum(),
+            Self::FixedArray(v, size) => size.saturating_mul(v.minimum_words()),
+            Self::Tuple(tuple) => tuple
+                .iter()
+                .fold(0usize, |sum, ty| sum.saturating_add(ty.minimum_words())),
             #[cfg(feature = "eip712")]
-            Self::CustomStruct { tuple, ..} => tuple.iter().map(|ty| ty.minimum_words()).sum(),
+            Self::CustomStruct { tuple, .. } => tuple
+                .iter()
+                .fold(0usize, |sum, ty| sum.saturating_add(ty.minimum_words())),
         }
     }
 
@@ -671,6 +675,13 @@ mod tests {
     use super::*;
     use alloc::string::ToString;
     use alloy_primitives::{Address, U256, hex};
+
+    fn pad_usize(value: usize) -> Word {
+        let mut word = Word::ZERO;
+        let bytes = value.to_be_bytes();
+        word[Word::len_bytes() - bytes.len()..].copy_from_slice(&bytes);
+        word
+    }
 
     #[test]
     fn dynamically_encodes() {
@@ -1107,6 +1118,24 @@ re-enc: {re_enc}
                 DynSolValue::Array(vec![])
             ]))
         );
+    }
+
+    #[test]
+    fn dynamic_array_required_words_overflow() {
+        let my_type: DynSolType = "uint256[2][]".parse().unwrap();
+        let mut encoded = Vec::with_capacity(64);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(usize::MAX).as_slice());
+
+        assert_eq!(my_type.abi_decode(&encoded), Err(alloy_sol_types::Error::Overrun.into()));
+    }
+
+    #[test]
+    fn minimum_words_saturates() {
+        let element = DynSolType::Tuple(vec![DynSolType::Uint(256), DynSolType::Uint(256)]);
+        let my_type = DynSolType::FixedArray(Box::new(element), usize::MAX);
+
+        assert_eq!(my_type.minimum_words(), usize::MAX);
     }
 
     #[test]
