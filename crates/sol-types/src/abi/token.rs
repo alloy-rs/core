@@ -59,7 +59,7 @@ pub trait Token<'de>: Sealed + Sized {
     const MINIMUM_WORDS: usize;
 
     /// Decode a token from a decoder.
-    fn decode_from(dec: &mut Decoder<'de>) -> Result<Self>;
+    fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self>;
 
     /// Decode tokens from a decoder into the given uninitialized buffer.
     ///
@@ -75,7 +75,7 @@ pub trait Token<'de>: Sealed + Sized {
     /// `out` must point to valid, writable memory for `out.len()` elements.
     #[inline]
     unsafe fn decode_many_from<'a>(
-        dec: &mut Decoder<'de>,
+        dec: &mut Decoder<'de, '_>,
         out: &'a mut [MaybeUninit<Self>],
     ) -> Result<&'a mut [Self]> {
         try_init_each(out, || Self::decode_from(dec))
@@ -125,7 +125,7 @@ pub trait TokenSeq<'a>: Token<'a> {
     fn encode_sequence(&self, enc: &mut Encoder);
 
     /// ABI-decode the token sequence from the encoder.
-    fn decode_sequence(dec: &mut Decoder<'a>) -> Result<Self>;
+    fn decode_sequence(dec: &mut Decoder<'a, '_>) -> Result<Self>;
 }
 
 /// A single EVM word - T for any value type.
@@ -223,13 +223,13 @@ impl<'a> Token<'a> for WordToken {
     const MINIMUM_WORDS: usize = 1;
 
     #[inline]
-    fn decode_from(dec: &mut Decoder<'a>) -> Result<Self> {
+    fn decode_from(dec: &mut Decoder<'a, '_>) -> Result<Self> {
         dec.take_word().copied().map(Self)
     }
 
     #[inline]
     unsafe fn decode_many_from<'b>(
-        dec: &mut Decoder<'a>,
+        dec: &mut Decoder<'a, '_>,
         out: &'b mut [MaybeUninit<Self>],
     ) -> Result<&'b mut [Self]> {
         let len = out.len();
@@ -316,7 +316,7 @@ impl<'de, T: Token<'de>, const N: usize> Token<'de> for FixedSeqToken<T, N> {
     const MINIMUM_WORDS: usize = if Self::DYNAMIC { 1 } else { T::MINIMUM_WORDS.saturating_mul(N) };
 
     #[inline]
-    fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         if Self::DYNAMIC {
             dec.take_indirection().and_then(|mut child| Self::decode_sequence(&mut child))
         } else {
@@ -369,7 +369,7 @@ impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
     }
 
     #[inline]
-    fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         let mut arr = crate::impl_core::uninit_array::<T, N>();
         // SAFETY: `arr` is valid writable memory for `N` elements.
         // `decode_many_from` initializes all elements on success.
@@ -425,11 +425,22 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
     const MINIMUM_WORDS: usize = 1;
 
     #[inline]
-    fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         let mut child = dec.take_indirection()?;
         let len = child.take_offset()?;
         if T::MINIMUM_WORDS == 0 {
-            return Ok(Self(Vec::new()));
+            debug_assert_eq!(core::mem::size_of::<T>(), 0);
+            #[allow(clippy::uninit_vec)]
+            let tokens = {
+                let mut tokens = Vec::new();
+                // SAFETY: `MINIMUM_WORDS == 0` is only implemented for zero-sized
+                // token types. A `Vec` of a zero-sized type has `usize::MAX`
+                // capacity, so setting its length does not allocate or initialize
+                // memory.
+                unsafe { tokens.set_len(len) };
+                tokens
+            };
+            return Ok(Self(tokens));
         }
         // This appears to be an unclarity in the Solidity spec. The spec
         // specifies that offsets are relative to the first word of
@@ -440,6 +451,7 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         if required_words > child.remaining_words() {
             return Err(crate::Error::Overrun);
         }
+        child.reserve_elements::<T>(len)?;
         let mut tokens = vec_try_with_capacity(len)?;
         // SAFETY: `spare_capacity_mut` returns valid writable memory.
         // `decode_many_from` initializes all `len` elements on success.
@@ -481,7 +493,7 @@ impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
     }
 
     #[inline]
-    fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         Self::decode_from(dec)
     }
 }
@@ -530,10 +542,11 @@ impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
     const MINIMUM_WORDS: usize = 1;
 
     #[inline]
-    fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         let mut child = dec.take_indirection()?;
         let len = child.take_offset()?;
         let bytes = child.peek_len(len)?;
+        child.reserve(len)?;
         Ok(PackedSeqToken(bytes))
     }
 
@@ -595,7 +608,7 @@ macro_rules! tuple_impls {
             };
 
             #[inline]
-            fn decode_from(dec: &mut Decoder<'de>) -> Result<Self> {
+            fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
                 // The first element in a dynamic tuple is an offset to the tuple's data;
                 // for a static tuples, the data begins right away
                 if Self::DYNAMIC {
@@ -669,7 +682,7 @@ macro_rules! tuple_impls {
             }
 
             #[inline]
-            fn decode_sequence(dec: &mut Decoder<'de>) -> Result<Self> {
+            fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
                 Ok(($(
                     match <$ty as Token>::decode_from(dec) {
                         Ok(t) => t,
@@ -686,7 +699,7 @@ impl<'de> Token<'de> for () {
     const MINIMUM_WORDS: usize = 0;
 
     #[inline]
-    fn decode_from(_dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_from(_dec: &mut Decoder<'de, '_>) -> Result<Self> {
         Ok(())
     }
 
@@ -714,7 +727,7 @@ impl<'de> TokenSeq<'de> for () {
     fn encode_sequence(&self, _enc: &mut Encoder) {}
 
     #[inline]
-    fn decode_sequence(_dec: &mut Decoder<'de>) -> Result<Self> {
+    fn decode_sequence(_dec: &mut Decoder<'de, '_>) -> Result<Self> {
         Ok(())
     }
 }

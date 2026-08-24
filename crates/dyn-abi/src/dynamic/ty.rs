@@ -606,11 +606,11 @@ impl DynSolType {
     #[cfg_attr(debug_assertions, track_caller)]
     pub(crate) fn abi_decode_inner<'d, F>(
         &self,
-        decoder: &mut Decoder<'d>,
+        decoder: &mut Decoder<'d, '_>,
         f: F,
     ) -> Result<DynSolValue>
     where
-        F: FnOnce(&mut DynToken<'d>, &mut Decoder<'d>) -> Result<()>,
+        F: FnOnce(&mut DynToken<'d>, &mut Decoder<'d, '_>) -> Result<()>,
     {
         if self.is_zst() {
             return Ok(self.zero_sized_value().expect("checked"));

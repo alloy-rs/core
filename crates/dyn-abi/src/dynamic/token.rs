@@ -139,17 +139,20 @@ impl<'a> DynToken<'a> {
 
     /// Decodes from a decoder, populating the structure with the decoded data.
     #[inline]
-    pub(crate) fn decode_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
+    pub(crate) fn decode_populate(&mut self, dec: &mut Decoder<'a, '_>) -> Result<()> {
         match self {
             Self::Word(w) => *w = WordToken::decode_from(dec)?.0,
             Self::FixedSeq(..) => {
-                let dynamic = self.is_dynamic();
-                let mut child = if dynamic { dec.take_indirection() } else { dec.raw_child() }?;
-
-                self.decode_sequence_populate(&mut child)?;
-
-                if !dynamic {
-                    dec.take_offset_from(&child);
+                if self.is_dynamic() {
+                    let mut child = dec.take_indirection()?;
+                    self.decode_sequence_populate(&mut child)?;
+                } else {
+                    let offset = {
+                        let mut child = dec.raw_child()?;
+                        self.decode_sequence_populate(&mut child)?;
+                        dec.offset_from_child(&child)
+                    };
+                    dec.set_offset(offset);
                 }
             }
             Self::DynSeq { contents, template } => {
@@ -189,6 +192,7 @@ impl<'a> DynToken<'a> {
                     // re-use the box allocation
                     unsafe { Vec::from_raw_parts(Box::into_raw(template), 1, 1) }
                 } else {
+                    child.reserve_elements::<Self>(size)?;
                     try_vec![*template; size]?
                 };
 
@@ -206,7 +210,7 @@ impl<'a> DynToken<'a> {
     /// Decode a sequence from the decoder, populating the data by consuming
     /// decoder words.
     #[inline]
-    pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
+    pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'a, '_>) -> Result<()> {
         match self {
             Self::FixedSeq(buf, size) => {
                 buf.to_mut().iter_mut().take(*size).try_for_each(|item| item.decode_populate(dec))
@@ -218,7 +222,7 @@ impl<'a> DynToken<'a> {
 
     /// Decode a single item of this type, as a sequence of length 1.
     #[inline]
-    pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder<'a>) -> Result<()> {
+    pub(crate) fn decode_single_populate(&mut self, dec: &mut Decoder<'a, '_>) -> Result<()> {
         // This is what
         // `Self::FixedSeq(vec![self.clone()], 1).decode_populate()`
         // would do, so we skip the allocation.

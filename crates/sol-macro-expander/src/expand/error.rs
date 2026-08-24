@@ -116,8 +116,13 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
                 }
 
                 #[inline]
+                // TODO: Deprecate in favor of a validating decoder configuration.
+                // #[deprecated(note = "use a validating decoder configuration")]
                 fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
-                    <Self::Parameters<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data).map(Self::new)
+                    Self::abi_decode_raw_with_config(
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::new().validate(true),
+                    )
                 }
             }
 

@@ -1,4 +1,6 @@
-use crate::{Error, Panic, Result, Revert, SolError, alloc::string::ToString};
+use crate::{
+    Error, Panic, Result, Revert, SolError, abi::AbiDecoderConfig, alloc::string::ToString,
+};
 use alloc::{string::String, vec::Vec};
 use core::{convert::Infallible, fmt, iter::FusedIterator, marker::PhantomData};
 
@@ -59,11 +61,22 @@ pub trait SolInterface: Sized {
     /// ABI-decodes the given data into one of the variants of `self`.
     fn abi_decode_raw(selector: [u8; 4], data: &[u8]) -> Result<Self>;
 
+    /// ABI-decodes the given data with a custom decoder configuration.
+    fn abi_decode_raw_with_config(
+        selector: [u8; 4],
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Self>;
+
     /// ABI-decodes the given data into one of the variants of `self`, with validation.
     ///
     /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
     /// validation checks on the decoded variant's data.
-    fn abi_decode_raw_validate(selector: [u8; 4], data: &[u8]) -> Result<Self>;
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
+    fn abi_decode_raw_validate(selector: [u8; 4], data: &[u8]) -> Result<Self> {
+        Self::abi_decode_raw_with_config(selector, data, AbiDecoderConfig::new().validate(true))
+    }
 
     /// The size of the encoded data, *without* any selectors.
     fn abi_encoded_size(&self) -> usize;
@@ -97,18 +110,26 @@ pub trait SolInterface: Sized {
         }
     }
 
+    /// ABI-decodes the given data with a custom decoder configuration.
+    #[inline]
+    fn abi_decode_with_config(data: &[u8], config: AbiDecoderConfig) -> Result<Self> {
+        if data.len() < Self::MIN_DATA_LENGTH.saturating_add(4) {
+            Err(crate::Error::type_check_fail(data, Self::NAME))
+        } else {
+            let (selector, data) = data.split_first_chunk().unwrap();
+            Self::abi_decode_raw_with_config(*selector, data, config)
+        }
+    }
+
     /// ABI-decodes the given data into one of the variants of `self`, with validation.
     ///
     /// This is the same as [`abi_decode`](Self::abi_decode), but performs validation
     /// checks on the decoded variant's data.
     #[inline]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_validate(data: &[u8]) -> Result<Self> {
-        if data.len() < Self::MIN_DATA_LENGTH.saturating_add(4) {
-            Err(crate::Error::type_check_fail(data, Self::NAME))
-        } else {
-            let (selector, data) = data.split_first_chunk().unwrap();
-            Self::abi_decode_raw_validate(*selector, data)
-        }
+        Self::abi_decode_with_config(data, AbiDecoderConfig::new().validate(true))
     }
 }
 
@@ -142,8 +163,19 @@ impl SolInterface for Infallible {
     }
 
     #[inline]
-    fn abi_decode_raw_validate(selector: [u8; 4], _data: &[u8]) -> Result<Self> {
-        Self::type_check(selector).map(|()| unreachable!())
+    fn abi_decode_raw_with_config(
+        selector: [u8; 4],
+        data: &[u8],
+        _config: AbiDecoderConfig,
+    ) -> Result<Self> {
+        Self::abi_decode_raw(selector, data)
+    }
+
+    #[inline]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
+    fn abi_decode_raw_validate(selector: [u8; 4], data: &[u8]) -> Result<Self> {
+        Self::abi_decode_raw_with_config(selector, data, AbiDecoderConfig::new().validate(true))
     }
 
     #[inline]
@@ -292,14 +324,23 @@ impl<T: SolInterface> SolInterface for ContractError<T> {
     }
 
     #[inline]
-    fn abi_decode_raw_validate(selector: [u8; 4], data: &[u8]) -> Result<Self> {
+    fn abi_decode_raw_with_config(
+        selector: [u8; 4],
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Self> {
         match selector {
-            Revert::SELECTOR => {
-                <Revert as SolError>::abi_decode_raw_validate(data).map(Self::Revert)
-            }
-            Panic::SELECTOR => <Panic as SolError>::abi_decode_raw_validate(data).map(Self::Panic),
-            s => T::abi_decode_raw_validate(s, data).map(Self::CustomError),
+            Revert::SELECTOR => Revert::abi_decode_raw_with_config(data, config).map(Self::Revert),
+            Panic::SELECTOR => Panic::abi_decode_raw_with_config(data, config).map(Self::Panic),
+            s => T::abi_decode_raw_with_config(s, data, config).map(Self::CustomError),
         }
+    }
+
+    #[inline]
+    // TODO: Deprecate in favor of a validating decoder configuration.
+    // #[deprecated(note = "use a validating decoder configuration")]
+    fn abi_decode_raw_validate(selector: [u8; 4], data: &[u8]) -> Result<Self> {
+        Self::abi_decode_raw_with_config(selector, data, AbiDecoderConfig::new().validate(true))
     }
 
     #[inline]
