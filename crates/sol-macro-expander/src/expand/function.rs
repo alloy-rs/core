@@ -155,19 +155,21 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
         quote!(#decode_sequence.map(Into::into))
     };
 
-    let decode_sequence_validate = quote!(
-        <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+    let decode_sequence_with_config = quote!(
+        <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence_with_config(
+            data, config,
+        )
     );
-    let decode_returns_validate = if is_single_return {
+    let decode_returns_with_config = if is_single_return {
         let name = anon_name((0, returns[0].name.as_ref()));
         quote! {
-            #decode_sequence_validate.map(|r| {
+            #decode_sequence_with_config.map(|r| {
                 let r: #return_name = r.into();
                 r.#name
             })
         }
     } else {
-        quote!(#decode_sequence_validate.map(Into::into))
+        quote!(#decode_sequence_with_config.map(Into::into))
     };
 
     let tokens = quote! {
@@ -228,8 +230,21 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, function: &ItemFunction) -> Result<TokenS
                 }
 
                 #[inline]
+                fn abi_decode_returns_with_config(
+                    data: &[u8],
+                    config: alloy_sol_types::abi::AbiDecoderConfig,
+                ) -> alloy_sol_types::Result<Self::Return> {
+                    #decode_returns_with_config
+                }
+
+                #[inline]
+                // TODO: Deprecate in favor of a validating decoder configuration.
+                // #[deprecated(note = "use a validating decoder configuration")]
                 fn abi_decode_returns_validate(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                    #decode_returns_validate
+                    Self::abi_decode_returns_with_config(
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::new().validate(true),
+                    )
                 }
             }
 

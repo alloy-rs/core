@@ -757,11 +757,34 @@ impl CallLikeExpander<'_> {
                     selector: [u8; 4],
                     data: &[u8],
                 )-> alloy_sol_types::Result<Self> {
-                    static DECODE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
+                    Self::abi_decode_raw_with_config(
+                        selector,
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::default(),
+                    )
+                }
+
+                #[inline]
+                #[allow(non_snake_case)]
+                fn abi_decode_raw_with_config(
+                    selector: [u8; 4],
+                    data: &[u8],
+                    config: alloy_sol_types::abi::AbiDecoderConfig,
+                ) -> alloy_sol_types::Result<Self> {
+                    static DECODE_SHIMS: &[fn(
+                        &[u8],
+                        alloy_sol_types::abi::AbiDecoderConfig,
+                    ) -> alloy_sol_types::Result<#name>] = &[
                         #({
-                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw(data)
-                                    .map(#name::#sorted_variants)
+                            fn #sorted_variants(
+                                data: &[u8],
+                                config: alloy_sol_types::abi::AbiDecoderConfig,
+                            ) -> alloy_sol_types::Result<#name> {
+                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw_with_config(
+                                    data,
+                                    config,
+                                )
+                                .map(#name::#sorted_variants)
                             }
                             #sorted_variants
                         }),*
@@ -774,33 +797,22 @@ impl CallLikeExpander<'_> {
                         ));
                     };
                     // `SELECTORS` and `DECODE_SHIMS` have the same length and are sorted in the same order.
-                    DECODE_SHIMS[idx](data)
+                    DECODE_SHIMS[idx](data, config)
                 }
 
                 #[inline]
                 #[allow(non_snake_case)]
+                // TODO: Deprecate in favor of a validating decoder configuration.
+                // #[deprecated(note = "use a validating decoder configuration")]
                 fn abi_decode_raw_validate(
                     selector: [u8; 4],
                     data: &[u8],
                 ) -> alloy_sol_types::Result<Self> {
-                    static DECODE_VALIDATE_SHIMS: &[fn(&[u8]) -> alloy_sol_types::Result<#name>] = &[
-                        #({
-                            fn #sorted_variants(data: &[u8]) -> alloy_sol_types::Result<#name> {
-                                <#sorted_types as alloy_sol_types::#trait_>::abi_decode_raw_validate(data)
-                                    .map(#name::#sorted_variants)
-                            }
-                            #sorted_variants
-                        }),*
-                    ];
-
-                    let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                        return Err(alloy_sol_types::Error::unknown_selector(
-                            <Self as alloy_sol_types::SolInterface>::NAME,
-                            selector,
-                        ));
-                    };
-                    // `SELECTORS` and `DECODE_VALIDATE_SHIMS` have the same length and are sorted in the same order.
-                    DECODE_VALIDATE_SHIMS[idx](data)
+                    Self::abi_decode_raw_with_config(
+                        selector,
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::new().validate(true),
+                    )
                 }
 
                 #[inline]

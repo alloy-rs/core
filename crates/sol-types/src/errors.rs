@@ -39,7 +39,10 @@ pub enum Error {
     ReserMismatch,
 
     /// ABI Decoding recursion limit exceeded.
-    RecursionLimitExceeded(u8),
+    RecursionLimitExceeded(usize),
+
+    /// ABI decoding exceeded its configured memory limit.
+    MemoryLimitExceeded(usize),
 
     /// Invalid enum value.
     InvalidEnumValue {
@@ -103,7 +106,8 @@ impl fmt::Display for Error {
             Self::Overrun
             | Self::BufferNotEmpty
             | Self::ReserMismatch
-            | Self::RecursionLimitExceeded(_) => {
+            | Self::RecursionLimitExceeded(_)
+            | Self::MemoryLimitExceeded(_) => {
                 f.write_str("ABI decoding failed: ")?;
                 match *self {
                     Self::Overrun => f.write_str("buffer overrun while deserializing"),
@@ -111,6 +115,9 @@ impl fmt::Display for Error {
                     Self::ReserMismatch => f.write_str("reserialization did not match original"),
                     Self::RecursionLimitExceeded(limit) => {
                         write!(f, "recursion limit of {limit} exceeded during decoding")
+                    }
+                    Self::MemoryLimitExceeded(limit) => {
+                        write!(f, "memory limit of {limit} bytes exceeded during decoding")
                     }
                     _ => unreachable!(),
                 }
