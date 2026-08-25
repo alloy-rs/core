@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [sol-types] Add AbiDecoderConfig ([#1167](https://github.com/alloy-rs/core/issues/1167))
 
+### Miscellaneous Tasks
+
+- Release 1.7.0
+
 ## [1.6.1](https://github.com/alloy-rs/core/releases/tag/v1.6.1) - 2026-07-16
 
 ### Bug Fixes
@@ -150,7 +154,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 
-- Bump to edition 2024 ([#960](https://github.com/alloy-rs/core/issues/960))
 - Bump MSRV to 1.85 ([#959](https://github.com/alloy-rs/core/issues/959))
 
 ### Miscellaneous Tasks
@@ -435,14 +438,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.7](https://github.com/alloy-rs/core/releases/tag/v0.7.7) - 2024-07-08
 
+### Bug Fixes
+
+- [sol-macro] Allow deriving `Default` on contracts ([#645](https://github.com/alloy-rs/core/issues/645))
+- [sol-macro] Overridden event signatures ([#642](https://github.com/alloy-rs/core/issues/642))
+- [sol-macro] Json feature ([#629](https://github.com/alloy-rs/core/issues/629))
+
 ### Documentation
 
 - Add per-crate changelogs ([#669](https://github.com/alloy-rs/core/issues/669))
+- Update some READMEs ([#641](https://github.com/alloy-rs/core/issues/641))
 
 ### Features
 
 - IntoLogData ([#666](https://github.com/alloy-rs/core/issues/666))
 - Add `abi_packed_encoded_size` ([#672](https://github.com/alloy-rs/core/issues/672))
+- [sol-macro] Allow overridden custom errors ([#644](https://github.com/alloy-rs/core/issues/644))
 
 ### Miscellaneous Tasks
 
@@ -450,36 +461,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use workspace.lints ([#676](https://github.com/alloy-rs/core/issues/676))
 - [sol-macro] Allow clippy all when emitting contract bytecode ([#674](https://github.com/alloy-rs/core/issues/674))
 
-### Styling
-
-- Sort derives ([#662](https://github.com/alloy-rs/core/issues/662))
-
-## [0.7.5](https://github.com/alloy-rs/core/releases/tag/v0.7.5) - 2024-06-04
-
-### Bug Fixes
-
-- [sol-macro] Allow deriving `Default` on contracts ([#645](https://github.com/alloy-rs/core/issues/645))
-- [sol-macro] Overridden event signatures ([#642](https://github.com/alloy-rs/core/issues/642))
-
-### Documentation
-
-- Update some READMEs ([#641](https://github.com/alloy-rs/core/issues/641))
-
-### Features
-
-- [sol-macro] Allow overridden custom errors ([#644](https://github.com/alloy-rs/core/issues/644))
-
-## [0.7.4](https://github.com/alloy-rs/core/releases/tag/v0.7.4) - 2024-05-14
-
-### Bug Fixes
-
-- [sol-macro] Json feature ([#629](https://github.com/alloy-rs/core/issues/629))
-
-## [0.7.3](https://github.com/alloy-rs/core/releases/tag/v0.7.3) - 2024-05-14
-
 ### Refactor
 
 - Move `expand` from `sol-macro` to its own crate ([#626](https://github.com/alloy-rs/core/issues/626))
+
+### Styling
+
+- Sort derives ([#662](https://github.com/alloy-rs/core/issues/662))
 
 [`dyn-abi`]: https://crates.io/crates/alloy-dyn-abi
 [dyn-abi]: https://crates.io/crates/alloy-dyn-abi

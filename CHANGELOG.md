@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1](https://github.com/alloy-rs/core/releases/tag/v1.7.1) - 2026-08-25
+
+### Bug Fixes
+
+- [sol-types] Default config trait methods ([#1171](https://github.com/alloy-rs/core/issues/1171))
+
+### Miscellaneous Tasks
+
+- Use underscores for lint names ([#1169](https://github.com/alloy-rs/core/issues/1169))
+
 ## [1.7.0](https://github.com/alloy-rs/core/releases/tag/v1.7.0) - 2026-08-25
 
 ### Bug Fixes
@@ -26,6 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [sol-types] Add AbiDecoderConfig ([#1167](https://github.com/alloy-rs/core/issues/1167))
 - [dyn-abi] Add indexed event topic encoding for DynSolValue ([#1161](https://github.com/alloy-rs/core/issues/1161))
 - [json-abi] Support enum definitions ([#1155](https://github.com/alloy-rs/core/issues/1155))
+
+### Miscellaneous Tasks
+
+- Release 1.7.0
 
 ### Performance
 
@@ -361,10 +375,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Colon 712 identifiers ([#963](https://github.com/alloy-rs/core/issues/963))
 
-### Dependencies
-
-- [meta] Add edition 2024 bump to .git-blame-ignore-revs
-
 ### Miscellaneous Tasks
 
 - Release 1.2.1
@@ -374,7 +384,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 
-- Bump to edition 2024 ([#960](https://github.com/alloy-rs/core/issues/960))
 - Bump MSRV to 1.85 ([#959](https://github.com/alloy-rs/core/issues/959))
 
 ### Miscellaneous Tasks
@@ -1497,7 +1506,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Restructure tests ([#421](https://github.com/alloy-rs/core/issues/421))
 - Rename `TokenType` GAT and trait to `Token` ([#417](https://github.com/alloy-rs/core/issues/417))
 - Remove dead code ([#416](https://github.com/alloy-rs/core/issues/416))
-- Update .git-blame-ignore-revs
 - Use winnow `separated` instead of `separated0` ([#403](https://github.com/alloy-rs/core/issues/403))
 - Clean up ABI, EIP-712, docs ([#373](https://github.com/alloy-rs/core/issues/373))
 - [sol-macro] Move generated docs below input attrs ([#363](https://github.com/alloy-rs/core/issues/363))
@@ -1508,10 +1516,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SSZ implementation for alloy primitives ([#407](https://github.com/alloy-rs/core/issues/407))
 - Enable rand feature for re-exported ruint crate ([#385](https://github.com/alloy-rs/core/issues/385))
 - Cargo build instead of check ([#368](https://github.com/alloy-rs/core/issues/368))
-
-### Styling
-
-- Update rustfmt config ([#406](https://github.com/alloy-rs/core/issues/406))
 
 ### Testing
 
@@ -1968,8 +1972,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Styling
 
-- Add fmt commit to .git-blame-ignore-revs ([#43](https://github.com/alloy-rs/core/issues/43))
-- Add rustfmt.toml ([#42](https://github.com/alloy-rs/core/issues/42))
 - Sol Type re-factoring ([#20](https://github.com/alloy-rs/core/issues/20))
 
 ### Testing
