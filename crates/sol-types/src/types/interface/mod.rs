@@ -62,11 +62,16 @@ pub trait SolInterface: Sized {
     fn abi_decode_raw(selector: [u8; 4], data: &[u8]) -> Result<Self>;
 
     /// ABI-decodes the given data with a custom decoder configuration.
+    ///
+    /// The default implementation ignores the configuration and delegates to
+    /// [`abi_decode_raw`](Self::abi_decode_raw).
     fn abi_decode_raw_with_config(
         selector: [u8; 4],
         data: &[u8],
-        config: AbiDecoderConfig,
-    ) -> Result<Self>;
+        _config: AbiDecoderConfig,
+    ) -> Result<Self> {
+        Self::abi_decode_raw(selector, data)
+    }
 
     /// ABI-decodes the given data into one of the variants of `self`, with validation.
     ///
