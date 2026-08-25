@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0](https://github.com/alloy-rs/core/releases/tag/v1.7.0) - 2026-08-25
+
+### Bug Fixes
+
+- [sol-types] Validate dynamic array length before allocation ([#1164](https://github.com/alloy-rs/core/issues/1164))
+- [primitives] Require list header when decoding logs ([#1166](https://github.com/alloy-rs/core/issues/1166))
+- [sol-macro] Preserve nested ABI component names ([#1162](https://github.com/alloy-rs/core/issues/1162))
+- [dyn-abi] Coerce JSON int values above i64::MAX for signed types ([#1158](https://github.com/alloy-rs/core/issues/1158))
+- [primitives] Return Err on parse_units multiply overflow ([#1156](https://github.com/alloy-rs/core/issues/1156))
+- Restore changelogs ([#1154](https://github.com/alloy-rs/core/issues/1154))
+
+### Dependencies
+
+- [deps] Bump the ci-weekly group with 2 updates ([#1163](https://github.com/alloy-rs/core/issues/1163))
+- [deps] Bump actions/checkout from 7.0.0 to 7.0.1 in the ci-weekly group ([#1159](https://github.com/alloy-rs/core/issues/1159))
+
+### Features
+
+- [sol-types] Add AbiDecoderConfig ([#1167](https://github.com/alloy-rs/core/issues/1167))
+- [dyn-abi] Add indexed event topic encoding for DynSolValue ([#1161](https://github.com/alloy-rs/core/issues/1161))
+- [json-abi] Support enum definitions ([#1155](https://github.com/alloy-rs/core/issues/1155))
+
+### Performance
+
+- Manual Ord for FixedBytes using integer chunk comparison ([#1160](https://github.com/alloy-rs/core/issues/1160))
+
+### Testing
+
+- Remove needless hash borrow ([#1168](https://github.com/alloy-rs/core/issues/1168))
+
 ## [1.6.1](https://github.com/alloy-rs/core/releases/tag/v1.6.1) - 2026-07-16
 
 ### Bug Fixes

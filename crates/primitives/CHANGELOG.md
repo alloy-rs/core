@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0](https://github.com/alloy-rs/core/releases/tag/v1.7.0) - 2026-08-25
+
+### Bug Fixes
+
+- [primitives] Require list header when decoding logs ([#1166](https://github.com/alloy-rs/core/issues/1166))
+- [primitives] Return Err on parse_units multiply overflow ([#1156](https://github.com/alloy-rs/core/issues/1156))
+- Restore changelogs ([#1154](https://github.com/alloy-rs/core/issues/1154))
+
+### Performance
+
+- Manual Ord for FixedBytes using integer chunk comparison ([#1160](https://github.com/alloy-rs/core/issues/1160))
+
+### Testing
+
+- Remove needless hash borrow ([#1168](https://github.com/alloy-rs/core/issues/1168))
+
 ## [1.6.1](https://github.com/alloy-rs/core/releases/tag/v1.6.1) - 2026-07-16
 
 ### Bug Fixes
