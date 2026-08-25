@@ -137,10 +137,15 @@ pub trait SolCall: Sized {
     fn abi_decode_returns(data: &[u8]) -> Result<Self::Return>;
 
     /// ABI-decodes this call's return values with a custom decoder configuration.
+    ///
+    /// The default implementation ignores the configuration and delegates to
+    /// [`abi_decode_returns`](Self::abi_decode_returns).
     fn abi_decode_returns_with_config(
         data: &[u8],
-        config: AbiDecoderConfig,
-    ) -> Result<Self::Return>;
+        _config: AbiDecoderConfig,
+    ) -> Result<Self::Return> {
+        Self::abi_decode_returns(data)
+    }
 
     /// ABI decode this call's return values from the given slice, with validation.
     ///
