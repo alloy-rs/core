@@ -13,22 +13,22 @@ repository = "https://github.com/alloy-rs/core"
 exclude = ["tests"]
 
 [workspace.lints.clippy]
-dbg-macro = "warn"
-manual-string-new = "warn"
-uninlined-format-args = "warn"
-use-self = "warn"
-redundant-clone = "warn"
-missing-const-for-fn = "warn"
+dbg_macro = "warn"
+manual_string_new = "warn"
+uninlined_format_args = "warn"
+use_self = "warn"
+redundant_clone = "warn"
+missing_const_for_fn = "warn"
 
 [workspace.lints.rust]
-missing-copy-implementations = "warn"
-missing-debug-implementations = "warn"
-missing-docs = "warn"
-rust-2018-idioms = "warn"
-unreachable-pub = "warn"
-unused-must-use = "warn"
-redundant-lifetimes = "warn"
-unnameable-types = "warn"
+missing_copy_implementations = "warn"
+missing_debug_implementations = "warn"
+missing_docs = "warn"
+rust_2018_idioms = "warn"
+unreachable_pub = "warn"
+unused_must_use = "warn"
+redundant_lifetimes = "warn"
+unnameable_types = "warn"
 
 [workspace.lints.rustdoc]
 all = "warn"
