@@ -22,10 +22,10 @@ sol! {
     }
     event MyEvent2(Data indexed data);
 
-    #[sol(rename = "OldEvent")]
-    event RenamedEvent(uint256);
-    #[sol(rename = "NewEvent")]
-    event RenamedEvent(string);
+    #[sol(rename = "RenamedEvent")]
+    event OldEvent(uint256);
+    #[sol(rename = "RenamedEvent")]
+    event NewEvent(string);
 }
 
 #[test]

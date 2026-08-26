@@ -1085,20 +1085,20 @@ fn regression_overloads() {
 fn renamed_overloads() {
     sol! {
         contract Renamed {
-            #[sol(rename = "submit_old")]
-            function submit(uint256);
-            #[sol(rename = "submit_new")]
-            function submit(string);
+            #[sol(rename = "submit")]
+            function submit_old(uint256);
+            #[sol(rename = "submit")]
+            function submit_new(string);
 
-            #[sol(rename = "OldEvent")]
-            event RenamedEvent(uint256);
-            #[sol(rename = "NewEvent")]
-            event RenamedEvent(string);
+            #[sol(rename = "RenamedEvent")]
+            event OldEvent(uint256);
+            #[sol(rename = "RenamedEvent")]
+            event NewEvent(string);
 
-            #[sol(rename = "OldError")]
-            error RenamedError(uint256);
-            #[sol(rename = "NewError")]
-            error RenamedError(string);
+            #[sol(rename = "RenamedError")]
+            error OldError(uint256);
+            #[sol(rename = "RenamedError")]
+            error NewError(string);
         }
     }
 
@@ -1113,6 +1113,88 @@ fn renamed_overloads() {
     let error = Renamed::OldError(U256::ZERO);
     assert_eq!(Renamed::OldError::SIGNATURE, "RenamedError(uint256)");
     let _ = Renamed::RenamedErrors::OldError(error);
+}
+
+#[test]
+fn rename_and_rename_all() {
+    sol! {
+        #![sol(rename_all = "camelCase")]
+
+        #[sol(rename = "ActualStruct", rename_all = "SCREAMING_SNAKE_CASE")]
+        struct rust_struct {
+            #[sol(rename = "exactField")]
+            uint256 rust_field;
+            uint256 second_field;
+        }
+
+        #[sol(rename = "ActualChild")]
+        struct rust_child {
+            uint256 value;
+        }
+
+        #[sol(rename = "ActualParent")]
+        struct rust_parent {
+            rust_child child;
+        }
+
+        #[sol(rename = "ActualType")]
+        type rust_type is uint256;
+
+        #[sol(rename_all = "snake_case")]
+        enum rust_enum {
+            #[sol(rename = "first_value")]
+            FirstValue,
+            SecondValue
+        }
+
+        function do_thing(uint256 value);
+        event thing_happened(uint256 value);
+        error bad_thing(uint256 value);
+    }
+
+    let _ = rust_struct { rust_field: U256::ZERO, second_field: U256::ZERO };
+    assert_eq!(rust_struct::NAME, "ActualStruct");
+    assert_eq!(
+        rust_struct::eip712_root_type(),
+        "ActualStruct(uint256 exactField,uint256 SECOND_FIELD)"
+    );
+
+    assert_eq!(rust_child::NAME, "ActualChild");
+    assert_eq!(rust_parent::NAME, "ActualParent");
+    assert_eq!(rust_parent::eip712_root_type(), "ActualParent(ActualChild child)");
+    assert_eq!(rust_type::NAME, "ActualType");
+
+    assert_eq!(do_thingCall::SIGNATURE, "doThing(uint256)");
+    assert_eq!(thing_happened::SIGNATURE, "thingHappened(uint256)");
+    assert_eq!(bad_thing::SIGNATURE, "badThing(uint256)");
+    assert_eq!(
+        rust_enum::try_from(2).err().unwrap(),
+        alloy_sol_types::Error::InvalidEnumValue { name: "rustEnum", value: 2, max: 1 }
+    );
+}
+
+#[test]
+fn contract_rename_all() {
+    sol! {
+        #[sol(rename = "ActualContract", rename_all = "snake_case")]
+        contract RustContract {
+            struct InnerType {
+                uint256 someField;
+            }
+
+            function DoThing(uint256 SomeValue);
+            event SomeEvent(uint256 SomeValue);
+            error SomeError(uint256 SomeValue);
+            uint256 public SomeValue;
+        }
+    }
+
+    assert_eq!(RustContract::InnerType::NAME, "inner_type");
+    assert_eq!(RustContract::InnerType::eip712_root_type(), "inner_type(uint256 some_field)");
+    assert_eq!(RustContract::DoThingCall::SIGNATURE, "do_thing(uint256)");
+    assert_eq!(RustContract::SomeEvent::SIGNATURE, "some_event(uint256)");
+    assert_eq!(RustContract::SomeError::SIGNATURE, "some_error(uint256)");
+    assert_eq!(RustContract::SomeValueCall::SIGNATURE, "some_value()");
 }
 
 #[test]

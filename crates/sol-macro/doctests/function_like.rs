@@ -11,12 +11,12 @@ sol! {
     function overloaded(uint256) returns (uint256);
     function overloaded(string);
 
-    // Overloaded items can override their generated Rust name without changing
-    // their Solidity signature.
-    #[sol(rename = "renamed_old")]
-    function renamed(uint256);
-    #[sol(rename = "renamed_new")]
-    function renamed(string);
+    // `rename` preserves a shared Solidity name while allowing descriptive,
+    // distinct Rust names.
+    #[sol(rename = "renamed")]
+    function renamed_old(uint256);
+    #[sol(rename = "renamed")]
+    function renamed_new(string);
 
     // State variables will generate getter functions just like in Solidity.
     mapping(uint k => bool v) public variableGetter;
@@ -25,14 +25,21 @@ sol! {
     #[derive(Debug, PartialEq, Eq)]
     error MyError(uint256 a, uint256 b);
 
-    #[sol(rename = "OldError")]
-    error RenamedError(uint256);
-    #[sol(rename = "NewError")]
-    error RenamedError(string);
+    #[sol(rename = "RenamedError")]
+    error OldError(uint256);
+    #[sol(rename = "RenamedError")]
+    error NewError(string);
+}
+
+sol! {
+    #![sol(rename_all = "camelCase")]
+
+    function snake_case(uint256);
 }
 
 #[test]
 fn function() {
+    assert_call_signature::<snake_caseCall>("snakeCase(uint256)");
     assert_call_signature::<fooCall>("foo(uint256,uint256)");
 
     let call = fooCall { a: U256::from(1), b: U256::from(2) };
