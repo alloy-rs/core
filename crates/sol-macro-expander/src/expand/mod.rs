@@ -376,6 +376,7 @@ impl ExpCtxt<'_> {
                 let overloaded_items = this.overloaded_items.0.get(namespace).unwrap();
                 let all_orig_names: Vec<_> =
                     overloaded_items.values().flatten().filter_map(|f| f.name()).collect();
+                let mut all_generated_names = HashMap::new();
 
                 for functions in overloaded_items.values().filter(|fs| fs.len() >= 2) {
                     // check for same parameters
@@ -398,11 +399,41 @@ impl ExpCtxt<'_> {
                         let Some(old_name) = item.name() else {
                             continue;
                         };
-                        let new_name = format!("{old_name}_{i}");
+                        let (attrs, _) = match SolAttrs::parse(item.attrs()) {
+                            Ok(attrs) => attrs,
+                            Err(e) => {
+                                failed = true;
+                                emit_error!(e.span(), "{}", e);
+                                continue;
+                            }
+                        };
+                        let (new_name, new_name_span) = if let Some(rename) = attrs.rename {
+                            match syn::parse_str::<SolIdent>(&rename.value()) {
+                                Ok(name) => (name.as_string(), rename.span()),
+                                Err(e) => {
+                                    failed = true;
+                                    emit_error!(rename.span(), "invalid rename: {}", e);
+                                    continue;
+                                }
+                            }
+                        } else {
+                            (format!("{old_name}_{i}"), old_name.span())
+                        };
                         if let Some(other) = all_orig_names.iter().find(|x| x.0 == new_name) {
                             failed = true;
                             emit_error!(
-                                old_name.span(),
+                                new_name_span,
+                                "{} `{old_name}` is overloaded, \
+                                but the generated name `{new_name}` is already in use",
+                                item.desc();
+
+                                note = other.span() => "other declaration is here";
+                            )
+                        }
+                        if let Some(other) = all_generated_names.insert(new_name.clone(), item) {
+                            failed = true;
+                            emit_error!(
+                                new_name_span,
                                 "{} `{old_name}` is overloaded, \
                                 but the generated name `{new_name}` is already in use",
                                 item.desc();
@@ -494,6 +525,14 @@ impl<'ast> From<&'ast ItemError> for OverloadedItem<'ast> {
 }
 
 impl<'a> OverloadedItem<'a> {
+    fn attrs(self) -> &'a [Attribute] {
+        match self {
+            Self::Function(f) => &f.attrs,
+            Self::Event(e) => &e.attrs,
+            Self::Error(e) => &e.attrs,
+        }
+    }
+
     fn name(self) -> Option<&'a SolIdent> {
         match self {
             Self::Function(f) => f.name.as_ref(),

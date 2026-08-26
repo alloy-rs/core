@@ -1082,6 +1082,40 @@ fn regression_overloads() {
 }
 
 #[test]
+fn renamed_overloads() {
+    sol! {
+        contract Renamed {
+            #[sol(rename = "submit_old")]
+            function submit(uint256);
+            #[sol(rename = "submit_new")]
+            function submit(string);
+
+            #[sol(rename = "OldEvent")]
+            event RenamedEvent(uint256);
+            #[sol(rename = "NewEvent")]
+            event RenamedEvent(string);
+
+            #[sol(rename = "OldError")]
+            error RenamedError(uint256);
+            #[sol(rename = "NewError")]
+            error RenamedError(string);
+        }
+    }
+
+    let call = Renamed::submit_oldCall(U256::ZERO);
+    assert_eq!(Renamed::submit_oldCall::SIGNATURE, "submit(uint256)");
+    let _ = Renamed::RenamedCalls::submit_old(call);
+
+    let event = Renamed::OldEvent { _0: U256::ZERO };
+    assert_eq!(Renamed::OldEvent::SIGNATURE, "RenamedEvent(uint256)");
+    let _ = Renamed::RenamedEvents::OldEvent(event);
+
+    let error = Renamed::OldError(U256::ZERO);
+    assert_eq!(Renamed::OldError::SIGNATURE, "RenamedError(uint256)");
+    let _ = Renamed::RenamedErrors::OldError(error);
+}
+
+#[test]
 fn normal_paths() {
     sol! {
         interface I {

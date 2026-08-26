@@ -96,8 +96,8 @@ pub struct SolAttrs {
     /// `#[sol(alloy_contract = alloy_contract)]`
     pub alloy_contract: Option<Path>,
 
-    // TODO: Implement
-    /// UNIMPLEMENTED: `#[sol(rename = "new_name")]`
+    /// Overrides the generated Rust name for an overloaded function, event, or error.
+    /// `#[sol(rename = "new_name")]`
     pub rename: Option<LitStr>,
     // TODO: Implement
     /// UNIMPLEMENTED: `#[sol(rename_all = "camelCase")]`

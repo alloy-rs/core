@@ -111,6 +111,8 @@ use syn::parse_macro_input;
 /// literals are also supported, such as `concat!` and `env!`.
 ///
 /// List of all `#[sol(...)]` supported values:
+/// - `rename = <string literal>` (overloaded functions, events, and errors only): overrides the
+///   generated Rust name without changing the Solidity signature.
 /// - `rpc [ = <bool = false>]` (contracts and alike only): generates a structs with methods to
 ///   construct `eth_call`s to an on-chain contract through Ethereum JSON RPC, similar to the
 ///   default behavior of [`abigen`]. This makes use of the [`alloy-contract`] crate.
