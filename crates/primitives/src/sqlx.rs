@@ -39,7 +39,7 @@ where
 {
     fn encode_by_ref(
         &self,
-        buf: &mut <DB as Database>::ArgumentBuffer<'a>,
+        buf: &mut <DB as Database>::ArgumentBuffer,
     ) -> Result<IsNull, BoxDynError> {
         self.as_slice().to_vec().encode_by_ref(buf)
     }
@@ -75,7 +75,7 @@ where
 {
     fn encode_by_ref(
         &self,
-        buf: &mut <DB as Database>::ArgumentBuffer<'a>,
+        buf: &mut <DB as Database>::ArgumentBuffer,
     ) -> Result<IsNull, BoxDynError> {
         self.0.to_be_bytes_vec().encode_by_ref(buf)
     }
@@ -110,7 +110,7 @@ where
 {
     fn encode_by_ref(
         &self,
-        buf: &mut <DB as Database>::ArgumentBuffer<'a>,
+        buf: &mut <DB as Database>::ArgumentBuffer,
     ) -> Result<IsNull, BoxDynError> {
         self.to_vec().encode_by_ref(buf)
     }
