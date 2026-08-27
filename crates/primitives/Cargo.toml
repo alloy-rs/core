@@ -102,9 +102,6 @@ arbitrary = { workspace = true, optional = true, features = ["derive"] }
 proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 
-# allocative
-allocative = { workspace = true, optional = true }
-
 # postgres
 postgres-types = { workspace = true, optional = true }
 
@@ -193,7 +190,6 @@ serde = [
 schemars = ["dep:schemars"]
 borsh = ["dep:borsh", "ruint/borsh"]
 
-allocative = ["dep:allocative"]
 arbitrary = [
     "std",
     "dep:arbitrary",

@@ -112,9 +112,6 @@ pub mod private {
     #[cfg(feature = "rlp")]
     pub use alloy_rlp;
 
-    #[cfg(feature = "allocative")]
-    pub use allocative;
-
     #[cfg(feature = "serde")]
     pub use serde;
 

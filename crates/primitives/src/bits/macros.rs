@@ -232,7 +232,6 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_rlp!($name, $n);
         $crate::impl_serde!($name);
         $crate::impl_schemars!($name, $n);
-        $crate::impl_allocative!($name);
         $crate::impl_arbitrary!($name, $n);
         $crate::impl_rand!($name);
         $crate::impl_diesel!($name, $n);
@@ -669,28 +668,6 @@ macro_rules! impl_borsh {
 #[cfg(not(feature = "borsh"))]
 macro_rules! impl_borsh {
     ($($t:tt)*) => {};
-}
-
-#[doc(hidden)]
-#[macro_export]
-#[cfg(feature = "allocative")]
-macro_rules! impl_allocative {
-    ($t:ty) => {
-        #[cfg_attr(docsrs, doc(cfg(feature = "allocative")))]
-        impl $crate::private::allocative::Allocative for $t {
-            #[inline]
-            fn visit<'a, 'b: 'a>(&self, visitor: &'a mut $crate::private::allocative::Visitor<'b>) {
-                $crate::private::allocative::Allocative::visit(&self.0, visitor)
-            }
-        }
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-#[cfg(not(feature = "allocative"))]
-macro_rules! impl_allocative {
-    ($t:ty) => {};
 }
 
 #[doc(hidden)]
