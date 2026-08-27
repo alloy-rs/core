@@ -3,7 +3,7 @@
 //! **WARNING**: this module depends entirely on [`postgres_types`], which is not yet stable,
 //! therefore this module is exempt from the semver guarantees of this crate.
 
-use super::{FixedBytes, Sign, Signed};
+use super::{Address, FixedBytes, Sign, Signed};
 use bytes::{BufMut, BytesMut};
 use derive_more::Display;
 use postgres_types::{FromSql, IsNull, ToSql, Type, WrongType, accepts, to_sql_checked};
@@ -27,6 +27,27 @@ impl<const BITS: usize> ToSql for FixedBytes<BITS> {
 
 /// Converts `FixedBytes` From Postgres Bytea Type.
 impl<'a, const BITS: usize> FromSql<'a> for FixedBytes<BITS> {
+    accepts!(BYTEA);
+
+    fn from_sql(_: &Type, raw: &'a [u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
+        Ok(Self::try_from(raw)?)
+    }
+}
+
+/// Converts `Address` to Postgres Bytea Type.
+impl ToSql for Address {
+    fn to_sql(&self, _: &Type, out: &mut BytesMut) -> Result<IsNull, BoxedError> {
+        out.put_slice(&self[..]);
+        Ok(IsNull::No)
+    }
+
+    accepts!(BYTEA);
+
+    to_sql_checked!();
+}
+
+/// Converts `Address` From Postgres Bytea Type.
+impl<'a> FromSql<'a> for Address {
     accepts!(BYTEA);
 
     fn from_sql(_: &Type, raw: &'a [u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
@@ -419,5 +440,25 @@ mod test {
                 0x00, 0x01, // digit: 1
             ],
         );
+    }
+
+    #[test]
+    fn address_bytea_round_trip() {
+        let addr = Address::from([
+            0xd8, 0xda, 0x6b, 0xf2, 0x69, 0x64, 0xaf, 0x9d, 0x7e, 0xed, 0x9e, 0x03, 0xe5, 0x34,
+            0x15, 0xd3, 0x7a, 0xa9, 0x60, 0x45,
+        ]);
+
+        let mut bytes = BytesMut::with_capacity(20);
+        addr.to_sql(&Type::BYTEA, &mut bytes).unwrap();
+        assert_eq!(&*bytes, addr.as_slice());
+
+        assert_eq!(Address::from_sql(&Type::BYTEA, &bytes).unwrap(), addr);
+    }
+
+    #[test]
+    fn address_from_sql_rejects_wrong_length() {
+        assert!(Address::from_sql(&Type::BYTEA, &[0u8; 19]).is_err());
+        assert!(Address::from_sql(&Type::BYTEA, &[0u8; 21]).is_err());
     }
 }
