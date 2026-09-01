@@ -496,6 +496,7 @@ impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
 
     #[inline]
     fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
+        dec.set_strict_head_words(Self::MINIMUM_WORDS)?;
         Self::decode_from(dec)
     }
 }

@@ -1249,6 +1249,19 @@ mod tests {
     }
 
     #[test]
+    fn strict_decoder_accepts_dynamic_array_sequence() {
+        type Ty = sol_data::Array<sol_data::Bytes>;
+
+        let value = vec![bytes![0x11u8; 1], bytes!("2233")];
+        let encoded = Ty::abi_encode(&value);
+
+        assert_eq!(
+            Ty::abi_decode_sequence_with_config(&encoded, AbiDecoderConfig::new().strict(true)),
+            Ok(value),
+        );
+    }
+
+    #[test]
     fn strict_decoder_rejects_gapped_offsets() {
         type Ty = (sol_data::String, sol_data::String);
 
@@ -1260,6 +1273,21 @@ mod tests {
         assert_eq!(Ty::abi_decode(&encoded), Ok(value));
         assert_eq!(
             Ty::abi_decode_with_config(&encoded, AbiDecoderConfig::new().strict(true)),
+            Err(Error::ReserMismatch),
+        );
+    }
+
+    #[test]
+    fn strict_decoder_rejects_trailing_data() {
+        type Ty = (sol_data::Bytes, sol_data::Bytes);
+
+        let value = (bytes![0x11u8; 1], bytes![0x22u8; 1]);
+        let mut encoded = Ty::abi_encode_params(&value);
+        encoded.extend([0; 32]);
+
+        assert_eq!(Ty::abi_decode_params(&encoded), Ok(value));
+        assert_eq!(
+            Ty::abi_decode_params_with_config(&encoded, AbiDecoderConfig::new().strict(true)),
             Err(Error::ReserMismatch),
         );
     }
