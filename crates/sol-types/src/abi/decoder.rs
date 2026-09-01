@@ -1566,6 +1566,19 @@ mod tests {
             Err(err) => err,
         };
         assert_eq!(err, Error::MemoryLimitExceeded(memory_used - 1));
+
+        let strict_memory_used = width
+            * (core::mem::size_of::<<Scope as SolType>::Token<'_>>()
+                + core::mem::size_of::<<Rule as SolType>::Token<'_>>()
+                + core::mem::size_of::<<Address as SolType>::Token<'_>>());
+        let err = match applyCall::abi_decode_with_config(
+            &data,
+            AbiDecoderConfig::new().memory_limit(strict_memory_used).strict(true),
+        ) {
+            Ok(_) => panic!("strict decoding should reject aliased offsets"),
+            Err(err) => err,
+        };
+        assert_eq!(err, Error::ReserMismatch);
     }
 
     #[test]
