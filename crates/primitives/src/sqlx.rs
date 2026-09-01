@@ -132,21 +132,21 @@ where
 #[cfg(feature = "sqlx-postgres")]
 impl<const BYTES: usize> PgHasArrayType for FixedBytes<BYTES> {
     fn array_type_info() -> PgTypeInfo {
-        PgTypeInfo::array_of("bytea")
+        <Vec<u8> as PgHasArrayType>::array_type_info()
     }
 }
 
 #[cfg(feature = "sqlx-postgres")]
 impl<const BITS: usize, const LIMBS: usize> PgHasArrayType for Signed<BITS, LIMBS> {
     fn array_type_info() -> PgTypeInfo {
-        PgTypeInfo::array_of("bytea")
+        <Vec<u8> as PgHasArrayType>::array_type_info()
     }
 }
 
 #[cfg(feature = "sqlx-postgres")]
 impl PgHasArrayType for Bytes {
     fn array_type_info() -> PgTypeInfo {
-        PgTypeInfo::array_of("bytea")
+        <Vec<u8> as PgHasArrayType>::array_type_info()
     }
 }
 
@@ -154,7 +154,7 @@ impl PgHasArrayType for Bytes {
 mod test {
     use super::*;
     use crate::{Address, B256, Bloom, Function, I256};
-    use sqlx_core::{decode::Decode, encode::Encode, type_info::TypeInfo, types::Type};
+    use sqlx_core::{decode::Decode, encode::Encode, types::Type};
     use sqlx_postgres::{PgArgumentBuffer, Postgres};
 
     fn encode_pg<T>(value: &T) -> Vec<u8>
@@ -170,7 +170,11 @@ mod test {
     where
         T: Type<Postgres> + for<'q> Encode<'q, Postgres> + for<'r> Decode<'r, Postgres>,
     {
-        assert_eq!(T::type_info().name(), "bytea[]");
+        let expected = <Vec<Vec<u8>> as Type<Postgres>>::type_info();
+        let actual = T::type_info();
+        assert_eq!(actual, expected);
+        // `PartialEq` treats `array_of("bytea")` as compatible; Debug pins the built-in OID.
+        assert_eq!(format!("{actual:?}"), format!("{expected:?}"));
     }
 
     #[test]
