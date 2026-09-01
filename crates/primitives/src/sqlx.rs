@@ -1,6 +1,7 @@
 //! Support for the [`sqlx`](https://crates.io/crates/sqlx) crate.
 //!
 //! Supports big-endian binary serialization via sqlx binary types (e.g., BINARY(N), BYTEA, BLOB).
+//! With the `sqlx-postgres` feature, `Vec<T>` of these types maps to `BYTEA[]`.
 //! Similar to [`ruint`'s implementation](https://github.com/recmo/uint/blob/main/src/support/sqlx.rs)
 
 #![cfg_attr(docsrs, doc(cfg(feature = "sqlx")))]
@@ -17,6 +18,9 @@ use sqlx_core::{
 };
 
 use crate::{Bytes, FixedBytes, Signed};
+
+#[cfg(feature = "sqlx-postgres")]
+use sqlx_postgres::{PgHasArrayType, PgTypeInfo};
 
 impl<const BYTES: usize, DB> Type<DB> for FixedBytes<BYTES>
 where
@@ -122,5 +126,26 @@ where
 {
     fn decode(value: <DB as Database>::ValueRef<'a>) -> Result<Self, BoxDynError> {
         Vec::<u8>::decode(value).map(Self::from)
+    }
+}
+
+#[cfg(feature = "sqlx-postgres")]
+impl<const BYTES: usize> PgHasArrayType for FixedBytes<BYTES> {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::array_of("bytea")
+    }
+}
+
+#[cfg(feature = "sqlx-postgres")]
+impl<const BITS: usize, const LIMBS: usize> PgHasArrayType for Signed<BITS, LIMBS> {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::array_of("bytea")
+    }
+}
+
+#[cfg(feature = "sqlx-postgres")]
+impl PgHasArrayType for Bytes {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::array_of("bytea")
     }
 }

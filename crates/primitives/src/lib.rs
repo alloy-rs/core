@@ -130,6 +130,9 @@ pub mod private {
     #[cfg(feature = "sqlx")]
     pub use sqlx_core;
 
+    #[cfg(feature = "sqlx-postgres")]
+    pub use sqlx_postgres;
+
     #[cfg(feature = "schemars")]
     pub use schemars;
 }
