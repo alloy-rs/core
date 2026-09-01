@@ -149,3 +149,72 @@ impl PgHasArrayType for Bytes {
         PgTypeInfo::array_of("bytea")
     }
 }
+
+#[cfg(all(test, feature = "sqlx-postgres"))]
+mod test {
+    use super::*;
+    use crate::{Address, B256, Bloom, Function, I256};
+    use sqlx_core::{decode::Decode, encode::Encode, type_info::TypeInfo, types::Type};
+    use sqlx_postgres::{PgArgumentBuffer, Postgres};
+
+    fn encode_pg<T>(value: &T) -> Vec<u8>
+    where
+        T: for<'q> Encode<'q, Postgres>,
+    {
+        let mut buf = PgArgumentBuffer::default();
+        let _ = value.encode_by_ref(&mut buf).unwrap();
+        buf.to_vec()
+    }
+
+    fn assert_bytea_array<T>()
+    where
+        T: Type<Postgres> + for<'q> Encode<'q, Postgres> + for<'r> Decode<'r, Postgres>,
+    {
+        assert_eq!(T::type_info().name(), "bytea[]");
+    }
+
+    #[test]
+    fn vec_primitives_are_bytea_array() {
+        assert_bytea_array::<Vec<Address>>();
+        assert_bytea_array::<Vec<Bloom>>();
+        assert_bytea_array::<Vec<Function>>();
+        assert_bytea_array::<Vec<FixedBytes<20>>>();
+        assert_bytea_array::<Vec<B256>>();
+        assert_bytea_array::<Vec<Bytes>>();
+        assert_bytea_array::<Vec<I256>>();
+    }
+
+    #[test]
+    fn vec_primitives_encode_as_bytea_array() {
+        let addresses = vec![Address::repeat_byte(0x11), Address::repeat_byte(0x22)];
+        assert_eq!(
+            encode_pg(&addresses),
+            encode_pg(&addresses.iter().map(|a| a.as_slice().to_vec()).collect::<Vec<_>>())
+        );
+        assert_eq!(encode_pg(&Vec::<Address>::new()), encode_pg(&Vec::<Vec<u8>>::new()));
+
+        let fixed = vec![FixedBytes::<20>::repeat_byte(0x33), FixedBytes::<20>::repeat_byte(0x44)];
+        assert_eq!(
+            encode_pg(&fixed),
+            encode_pg(&fixed.iter().map(|b| b.as_slice().to_vec()).collect::<Vec<_>>())
+        );
+
+        let hashes = vec![B256::repeat_byte(0x55), B256::ZERO];
+        assert_eq!(
+            encode_pg(&hashes),
+            encode_pg(&hashes.iter().map(|h| h.as_slice().to_vec()).collect::<Vec<_>>())
+        );
+
+        let bytes = vec![Bytes::from_static(&[0xde, 0xad]), Bytes::from_static(&[0xbe, 0xef])];
+        assert_eq!(
+            encode_pg(&bytes),
+            encode_pg(&bytes.iter().map(|b| b.to_vec()).collect::<Vec<_>>())
+        );
+
+        let signed = vec![I256::ONE, I256::MINUS_ONE, I256::ZERO];
+        assert_eq!(
+            encode_pg(&signed),
+            encode_pg(&signed.iter().map(|s| s.to_be_bytes::<32>().to_vec()).collect::<Vec<_>>())
+        );
+    }
+}
