@@ -61,6 +61,13 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-on-failure: true
+      - name: disable allocative on nightly
+        if: ${{ matrix.rust == 'nightly' }}
+        shell: bash
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       # Only run tests on latest stable and above
       - name: pin deps
         if: ${{ matrix.rust == '1.85' }} # MSRV
@@ -94,6 +101,11 @@ jobs:
           toolchain: nightly
           components: miri
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: disable allocative on nightly
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       - run: cargo miri test ${{ matrix.flags }}
 
   wasm:
@@ -139,6 +151,12 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-on-failure: true
+      - name: disable allocative on nightly
+        if: ${{ matrix.rust == 'nightly' }}
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       - name: cargo hack
         run: |
           args=(${{ matrix.flags }})
@@ -194,6 +212,11 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-on-failure: true
+      - name: disable allocative on nightly
+        run: |
+          sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
+          sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
+          sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       - run: cargo clippy --workspace --all-targets --all-features
         env:
           RUSTFLAGS: -Dwarnings
