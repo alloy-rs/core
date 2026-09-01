@@ -32,8 +32,7 @@ pub trait SolEventInterface: Sized {
 
     /// Decode the events from the given log object.
     fn decode_log(log: &Log) -> Result<Log<Self>> {
-        Self::decode_raw_log(log.topics(), &log.data.data)
-            .map(|data| Log { address: log.address, data })
+        Self::decode_log_with_config(log, AbiDecoderConfig::default())
     }
 
     /// Decode the events from the given log object with a custom decoder configuration.

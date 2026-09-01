@@ -167,7 +167,7 @@ pub trait SolEvent: Sized {
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,
     {
-        <Self::TopicList as TopicList>::detokenize(topics)
+        Self::decode_topics_with_config(topics, AbiDecoderConfig::default())
     }
 
     /// Decode the topics of this event with a custom decoder configuration.
@@ -217,11 +217,7 @@ pub trait SolEvent: Sized {
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,
     {
-        let topics = Self::decode_topics(topics)?;
-        // Check signature before decoding the data.
-        Self::check_signature(&topics)?;
-        let body = Self::abi_decode_data(data)?;
-        Ok(Self::new(topics, body))
+        Self::decode_raw_log_with_config(topics, data, AbiDecoderConfig::default())
     }
 
     /// Decodes the event from the given log info with a custom decoder configuration.
@@ -235,6 +231,7 @@ pub trait SolEvent: Sized {
         D: Into<WordToken>,
     {
         let topics = Self::decode_topics_with_config(topics, config)?;
+        // Check signature before decoding the data.
         Self::check_signature(&topics)?;
         let body = Self::abi_decode_data_with_config(data, config)?;
         Ok(Self::new(topics, body))
@@ -273,7 +270,7 @@ pub trait SolEvent: Sized {
 
     /// Decode the event from the given log object.
     fn decode_log(log: &Log) -> Result<Log<Self>> {
-        Self::decode_log_data(&log.data).map(|data| Log { address: log.address, data })
+        Self::decode_log_with_config(log, AbiDecoderConfig::default())
     }
 
     /// Decodes the event from the given log object with a custom decoder configuration.

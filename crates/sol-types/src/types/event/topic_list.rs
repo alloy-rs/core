@@ -36,7 +36,10 @@ pub trait TopicList: SolType + Sealed {
     fn detokenize<I, D>(topics: I) -> Result<Self::RustType>
     where
         I: IntoIterator<Item = D>,
-        D: Into<WordToken>;
+        D: Into<WordToken>,
+    {
+        Self::detokenize_with_config(topics, AbiDecoderConfig::default())
+    }
 
     /// Detokenize the topics into a tuple of Rust types with a decoder configuration.
     fn detokenize_with_config<I, D>(topics: I, config: AbiDecoderConfig) -> Result<Self::RustType>
@@ -50,14 +53,6 @@ macro_rules! impl_topic_list_tuples {
         impl<$($t,)*> Sealed for ($($t,)*) {}
         impl<$($lt,)* $($t: SolType<Token<$lt> = WordToken>,)*> TopicList for ($($t,)*) {
             const COUNT: usize = $c;
-
-            fn detokenize<I, D>(topics: I) -> Result<Self::RustType>
-            where
-                I: IntoIterator<Item = D>,
-                D: Into<WordToken>
-            {
-                Self::detokenize_with_config(topics, AbiDecoderConfig::new())
-            }
 
             fn detokenize_with_config<I, D>(topics: I, config: AbiDecoderConfig) -> Result<Self::RustType>
             where
@@ -86,15 +81,6 @@ macro_rules! impl_topic_list_tuples {
 impl Sealed for () {}
 impl TopicList for () {
     const COUNT: usize = 0;
-
-    #[inline]
-    fn detokenize<I, D>(topics: I) -> Result<Self::RustType>
-    where
-        I: IntoIterator<Item = D>,
-        D: Into<WordToken>,
-    {
-        Self::detokenize_with_config(topics, AbiDecoderConfig::new())
-    }
 
     #[inline]
     fn detokenize_with_config<I, D>(topics: I, _config: AbiDecoderConfig) -> Result<Self::RustType>

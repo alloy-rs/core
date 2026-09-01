@@ -259,16 +259,7 @@ impl<'de> Decoder<'de, 'static> {
     /// Instantiates a new decoder from a byte slice.
     #[inline]
     pub const fn new(buf: &'de [u8]) -> Self {
-        Self {
-            buf,
-            offset: 0,
-            depth: 0,
-            config: AbiDecoderConfig::new(),
-            state: DecoderState::Root {
-                memory_used: Cell::new(0),
-                strict_next_offset: Cell::new(0),
-            },
-        }
+        Self::with_config(buf, AbiDecoderConfig::new())
     }
 
     #[inline]
