@@ -321,7 +321,8 @@ impl<'de, 'state> Decoder<'de, 'state> {
         if self.config.get_strict() {
             let bytes = words.checked_mul(Word::len_bytes()).ok_or(Error::Overrun)?;
             let offset = self.offset.checked_add(bytes).ok_or(Error::Overrun)?;
-            self.state.strict_next_offset().set(offset);
+            let next = self.state.strict_next_offset();
+            next.set(next.get().max(offset));
         }
         Ok(())
     }
@@ -1240,6 +1241,27 @@ mod tests {
         type Ty = (sol_data::Bytes, sol_data::Bytes);
 
         let value = (bytes![0x11u8, 0x22], bytes![0x33u8, 0x44]);
+        let encoded = Ty::abi_encode_params(&value);
+
+        assert_eq!(
+            Ty::abi_decode_params_with_config(&encoded, AbiDecoderConfig::new().strict(true)),
+            Ok(value),
+        );
+    }
+
+    #[test]
+    fn strict_decoder_accepts_static_composites_around_dynamic_fields() {
+        type Uint = sol_data::Uint<256>;
+        type StaticTuple = (Uint, Uint);
+        type StaticArray = sol_data::FixedArray<StaticTuple, 2>;
+        type Ty = (StaticTuple, sol_data::Bytes, StaticArray, sol_data::Bytes);
+
+        let value = (
+            (U256::from(1), U256::from(2)),
+            bytes![0x11u8; 1],
+            [(U256::from(3), U256::from(4)), (U256::from(5), U256::from(6))],
+            bytes![0x22u8; 1],
+        );
         let encoded = Ty::abi_encode_params(&value);
 
         assert_eq!(
