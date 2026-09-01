@@ -886,6 +886,32 @@ impl CallLikeExpander<'_> {
                 #err
             }
         });
+        let non_anon_config_impl = has_non_anon.then(|| {
+            let variants = events.iter().filter(|e| !e.is_anonymous()).map(e_name);
+            let ret = has_anon.then(|| quote!(return));
+            let ret_err = (!has_anon).then_some(&err);
+            quote! {
+                match topics.first().copied() {
+                    #(
+                        Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
+                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
+                                .map(Self::#variants),
+                    )*
+                    _ => { #ret_err }
+                }
+            }
+        });
+        let anon_config_impl = has_anon.then(|| {
+            let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
+            quote! {
+                #(
+                    if let Ok(res) = <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config) {
+                        return Ok(Self::#variants(res));
+                    }
+                )*
+                #err
+            }
+        });
 
         let into_impl = {
             let variants = events.iter().map(e_name);
@@ -921,6 +947,15 @@ impl CallLikeExpander<'_> {
                 fn decode_raw_log(topics: &[alloy_sol_types::Word], data: &[u8]) -> alloy_sol_types::Result<Self> {
                     #non_anon_impl
                     #anon_impl
+                }
+
+                fn decode_raw_log_with_config(
+                    topics: &[alloy_sol_types::Word],
+                    data: &[u8],
+                    config: alloy_sol_types::abi::AbiDecoderConfig,
+                ) -> alloy_sol_types::Result<Self> {
+                    #non_anon_config_impl
+                    #anon_config_impl
                 }
             }
 

@@ -1,6 +1,6 @@
 use alloy_primitives::{Address, B256, I256, U256, b256, bytes, hex, keccak256};
 use alloy_sol_types::{
-    SolCall, SolError, SolEvent, SolStruct, SolType, abi::AbiDecoderConfig, sol,
+    SolCall, SolError, SolEvent, SolEventInterface, SolStruct, SolType, abi::AbiDecoderConfig, sol,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -1322,6 +1322,42 @@ fn indexed_topics_respect_decoder_config() {
         IndexedAddress::decode_raw_log_with_config(
             [dirty_address],
             &[],
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn event_interface_respects_decoder_config() {
+    sol! {
+        contract TopicConfig {
+            event Value(bool indexed value, bytes data);
+        }
+    }
+    use TopicConfig::*;
+
+    let event = Value { value: false, data: bytes!("11") };
+    let data = event.encode_data();
+    let topics = [Value::SIGNATURE_HASH, B256::ZERO];
+
+    assert!(TopicConfigEvents::decode_raw_log(&topics, &data).is_ok());
+    assert!(
+        TopicConfigEvents::decode_raw_log_with_config(
+            &[Value::SIGNATURE_HASH, B256::with_last_byte(2)],
+            &data,
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+
+    let mut trailing = data;
+    trailing.extend([0; 32]);
+    assert!(TopicConfigEvents::decode_raw_log(&topics, &trailing).is_ok());
+    assert!(
+        TopicConfigEvents::decode_raw_log_with_config(
+            &topics,
+            &trailing,
             AbiDecoderConfig::new().strict(true),
         )
         .is_err()
