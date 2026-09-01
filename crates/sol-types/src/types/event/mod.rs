@@ -270,7 +270,7 @@ pub trait SolEvent: Sized {
 
     /// Decode the event from the given log object.
     fn decode_log(log: &Log) -> Result<Log<Self>> {
-        Self::decode_log_with_config(log, AbiDecoderConfig::default())
+        Self::decode_log_data(&log.data).map(|data| Log { address: log.address, data })
     }
 
     /// Decodes the event from the given log object with a custom decoder configuration.

@@ -98,6 +98,15 @@ impl AbiDecoderConfig {
         self.strict
     }
 
+    /// Returns whether this is the default decoder configuration.
+    #[inline]
+    pub const fn is_default(&self) -> bool {
+        self.recursion_limit == 16
+            && self.memory_limit == DEFAULT_MEMORY_LIMIT
+            && !self.validate
+            && !self.strict
+    }
+
     /// Sets the maximum recursion depth.
     #[inline]
     pub const fn recursion_limit(mut self, limit: usize) -> Self {
@@ -227,7 +236,9 @@ pub struct Decoder<'de, 'state> {
 impl fmt::Debug for Decoder<'_, '_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut body = self.buf.chunks(32).map(hex::encode_prefixed).collect::<Vec<_>>();
-        body[self.offset / 32].push_str(" <-- Next Word");
+        if let Some(word) = body.get_mut(self.offset / 32) {
+            word.push_str(" <-- Next Word");
+        }
 
         f.debug_struct("Decoder")
             .field("buf", &body)
@@ -319,7 +330,7 @@ impl<'de, 'state> Decoder<'de, 'state> {
     }
 
     #[inline]
-    const fn is_strict(&self) -> bool {
+    pub(crate) const fn is_strict(&self) -> bool {
         self.config.get_strict()
     }
 
@@ -538,9 +549,9 @@ impl<'de, 'state> Decoder<'de, 'state> {
 impl Drop for Decoder<'_, '_> {
     fn drop(&mut self) {
         if let Some(parent) = self.state.strict_parent() {
-            parent.next_offset.set(
-                parent.start.saturating_add(self.offset.max(self.state.strict_next_offset().get())),
-            );
+            let offset =
+                parent.start.saturating_add(self.offset.max(self.state.strict_next_offset().get()));
+            parent.next_offset.set(parent.next_offset.get().max(offset));
         }
     }
 }
@@ -977,14 +988,16 @@ mod tests {
     }
 
     #[test]
-    fn decode_huge_dynamic_array_of_zero_sized_type() {
+    fn decode_huge_dynamic_array_of_zero_sized_type_exceeds_memory_limit() {
         type MyTy = sol_data::Array<()>;
         let mut encoded = Vec::with_capacity(64);
         encoded.extend_from_slice(pad_usize(32).as_slice());
         encoded.extend_from_slice(pad_usize(u32::MAX as usize).as_slice());
 
-        let token = decode_sequence::<<MyTy as SolType>::Token<'_>>(&encoded).unwrap();
-        assert_eq!(token.0.len(), u32::MAX as usize);
+        assert_eq!(
+            decode_sequence::<<MyTy as SolType>::Token<'_>>(&encoded),
+            Err(Error::MemoryLimitExceeded(DEFAULT_MEMORY_LIMIT)),
+        );
     }
 
     #[test]
@@ -1167,6 +1180,7 @@ mod tests {
         assert_eq!(config.get_memory_limit(), DEFAULT_MEMORY_LIMIT);
         assert!(!config.get_validate());
         assert!(!config.get_strict());
+        assert!(config.is_default());
 
         config.set_recursion_limit(300);
         config.set_memory_limit(42);
@@ -1176,12 +1190,34 @@ mod tests {
         assert_eq!(config.get_memory_limit(), 42);
         assert!(config.get_validate());
         assert!(config.get_strict());
+        assert!(!config.is_default());
 
         let config = AbiDecoderConfig::new().recursion_limit(400).memory_limit(24).strict(true);
         assert_eq!(config.get_recursion_limit(), 400);
         assert_eq!(config.get_memory_limit(), 24);
         assert!(config.get_validate());
         assert!(config.get_strict());
+    }
+
+    #[test]
+    fn child_drop_keeps_the_furthest_strict_offset() {
+        let decoder = Decoder::with_config(&[0; 192], AbiDecoderConfig::new().strict(true));
+        let mut first = decoder.child(64).unwrap();
+        let mut second = decoder.child(128).unwrap();
+        first.take_word().unwrap();
+        second.take_word().unwrap();
+
+        drop(second);
+        drop(first);
+
+        assert_eq!(decoder.state.strict_next_offset().get(), 160);
+    }
+
+    #[test]
+    fn exhausted_decoder_debug_does_not_panic() {
+        let mut decoder = Decoder::new(&[0; 32]);
+        decoder.take_word().unwrap();
+        assert!(!format!("{decoder:?}").is_empty());
     }
 
     #[test]
@@ -1321,7 +1357,7 @@ mod tests {
 
         type Dynamic = sol_data::Array<()>;
 
-        let dynamic = vec![(), ()];
+        let dynamic = vec![];
         let encoded = Dynamic::abi_encode(&dynamic);
         assert_eq!(
             Dynamic::abi_decode_sequence_with_config(
@@ -1329,6 +1365,26 @@ mod tests {
                 AbiDecoderConfig::new().strict(true)
             ),
             Ok(dynamic),
+        );
+    }
+
+    #[test]
+    fn strict_decoder_rejects_nonempty_zero_sized_dynamic_arrays() {
+        type Ty = sol_data::Array<()>;
+
+        let encoded = hex!(
+            "0000000000000000000000000000000000000000000000000000000000000020"
+            "0000000000000000000000000000000000000000000000000000000000000001"
+        );
+
+        assert_eq!(Ty::abi_decode_sequence(&encoded), Ok(vec![()]));
+        assert_eq!(
+            Ty::abi_decode_sequence_with_config(&encoded, AbiDecoderConfig::new().memory_limit(0)),
+            Err(Error::MemoryLimitExceeded(0)),
+        );
+        assert_eq!(
+            Ty::abi_decode_sequence_with_config(&encoded, AbiDecoderConfig::new().strict(true)),
+            Err(Error::ReserMismatch),
         );
     }
 

@@ -63,14 +63,17 @@ pub trait SolInterface: Sized {
 
     /// ABI-decodes the given data with a custom decoder configuration.
     ///
-    /// The default implementation ignores the configuration and delegates to
-    /// [`abi_decode_raw`](Self::abi_decode_raw).
+    /// The default implementation supports only the default configuration.
     fn abi_decode_raw_with_config(
         selector: [u8; 4],
         data: &[u8],
-        _config: AbiDecoderConfig,
+        config: AbiDecoderConfig,
     ) -> Result<Self> {
-        Self::abi_decode_raw(selector, data)
+        if config.is_default() {
+            Self::abi_decode_raw(selector, data)
+        } else {
+            Err(Error::custom("decoder config is unsupported by this SolInterface implementation"))
+        }
     }
 
     /// ABI-decodes the given data into one of the variants of `self`, with validation.
@@ -171,9 +174,13 @@ impl SolInterface for Infallible {
     fn abi_decode_raw_with_config(
         selector: [u8; 4],
         data: &[u8],
-        _config: AbiDecoderConfig,
+        config: AbiDecoderConfig,
     ) -> Result<Self> {
-        Self::abi_decode_raw(selector, data)
+        if config.is_default() {
+            Self::abi_decode_raw(selector, data)
+        } else {
+            Err(Error::custom("decoder config is unsupported by this SolInterface implementation"))
+        }
     }
 
     #[inline]

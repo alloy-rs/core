@@ -431,6 +431,11 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         let len = child.take_offset()?;
         if T::MINIMUM_WORDS == 0 {
             debug_assert_eq!(core::mem::size_of::<T>(), 0);
+            if child.is_strict() && len != 0 {
+                return Err(crate::Error::ReserMismatch);
+            }
+            // Charge a byte per element to bound work on zero-sized tokens.
+            child.reserve(len)?;
             #[allow(clippy::uninit_vec)]
             let tokens = {
                 let mut tokens = Vec::new();

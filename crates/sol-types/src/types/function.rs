@@ -138,13 +138,18 @@ pub trait SolCall: Sized {
 
     /// ABI-decodes this call's return values with a custom decoder configuration.
     ///
-    /// The default implementation ignores the configuration and delegates to
-    /// [`abi_decode_returns`](Self::abi_decode_returns).
+    /// The default implementation supports only the default configuration.
     fn abi_decode_returns_with_config(
         data: &[u8],
-        _config: AbiDecoderConfig,
+        config: AbiDecoderConfig,
     ) -> Result<Self::Return> {
-        Self::abi_decode_returns(data)
+        if config.is_default() {
+            Self::abi_decode_returns(data)
+        } else {
+            Err(crate::Error::custom(
+                "decoder config is unsupported by this SolCall implementation",
+            ))
+        }
     }
 
     /// ABI decode this call's return values from the given slice, with validation.

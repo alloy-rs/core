@@ -852,6 +852,16 @@ impl CallLikeExpander<'_> {
 
         let e_name = |&e: &&ItemEvent| self.cx.overloaded_name(e.into());
         let err = quote! {
+            if topics
+                .len()
+                .checked_mul(alloy_sol_types::Word::len_bytes())
+                .and_then(|len| len.checked_add(data.len()))
+                .is_none_or(|len| len > config.get_memory_limit())
+            {
+                return alloy_sol_types::private::Err(alloy_sol_types::Error::MemoryLimitExceeded(
+                    config.get_memory_limit(),
+                ));
+            }
             alloy_sol_types::private::Err(alloy_sol_types::Error::InvalidLog {
                 name: <Self as alloy_sol_types::SolEventInterface>::NAME,
                 log: alloy_sol_types::private::Box::new(alloy_sol_types::private::LogData::new_unchecked(
@@ -879,8 +889,12 @@ impl CallLikeExpander<'_> {
             let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
                 #(
-                    if let Ok(res) = <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config) {
-                        return Ok(Self::#variants(res));
+                    match <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config) {
+                        Ok(res) => return Ok(Self::#variants(res)),
+                        Err(alloy_sol_types::Error::MemoryLimitExceeded(limit)) => {
+                            return alloy_sol_types::private::Err(alloy_sol_types::Error::MemoryLimitExceeded(limit));
+                        }
+                        Err(_) => {}
                     }
                 )*
                 #err

@@ -1,6 +1,7 @@
 use alloy_primitives::{Address, B256, I256, U256, b256, bytes, hex, keccak256};
 use alloy_sol_types::{
-    SolCall, SolError, SolEvent, SolEventInterface, SolStruct, SolType, abi::AbiDecoderConfig, sol,
+    Error, SolCall, SolError, SolEvent, SolEventInterface, SolStruct, SolType,
+    abi::AbiDecoderConfig, sol,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -1333,6 +1334,7 @@ fn event_interface_respects_decoder_config() {
     sol! {
         contract TopicConfig {
             event Value(bool indexed value, bytes data);
+            event Anonymous(bytes data) anonymous;
         }
     }
     use TopicConfig::*;
@@ -1362,6 +1364,16 @@ fn event_interface_respects_decoder_config() {
         )
         .is_err()
     );
+
+    let anonymous = Anonymous { data: bytes!("11") };
+    let Err(error) = TopicConfigEvents::decode_raw_log_with_config(
+        &[],
+        &anonymous.encode_data(),
+        AbiDecoderConfig::new().memory_limit(0),
+    ) else {
+        panic!("anonymous event should exceed the memory limit");
+    };
+    assert_eq!(error, Error::MemoryLimitExceeded(0));
 }
 
 #[test]

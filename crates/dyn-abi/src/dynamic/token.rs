@@ -184,6 +184,7 @@ impl<'a> DynToken<'a> {
 
                 let required_words =
                     minimum_words.checked_mul(size).ok_or(alloy_sol_types::Error::Overrun)?;
+                child.set_strict_head_words(required_words)?;
                 if child.remaining_words() < required_words {
                     return Err(alloy_sol_types::Error::Overrun.into());
                 }
@@ -213,9 +214,18 @@ impl<'a> DynToken<'a> {
     pub(crate) fn decode_sequence_populate(&mut self, dec: &mut Decoder<'a, '_>) -> Result<()> {
         match self {
             Self::FixedSeq(buf, size) => {
+                let head_words = buf
+                    .iter()
+                    .take(*size)
+                    .try_fold(0usize, |sum, item| sum.checked_add(item.minimum_words()))
+                    .ok_or(alloy_sol_types::Error::Overrun)?;
+                dec.set_strict_head_words(head_words)?;
                 buf.to_mut().iter_mut().take(*size).try_for_each(|item| item.decode_populate(dec))
             }
-            Self::DynSeq { .. } => self.decode_populate(dec),
+            Self::DynSeq { .. } => {
+                dec.set_strict_head_words(1)?;
+                self.decode_populate(dec)
+            }
             _ => Err(Error::custom("Called decode_sequence_populate on non-sequence token")),
         }
     }
