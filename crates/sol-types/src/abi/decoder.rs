@@ -1262,6 +1262,43 @@ mod tests {
     }
 
     #[test]
+    fn strict_decoder_accepts_dynamic_fixed_array_sequence() {
+        type Ty = sol_data::FixedArray<sol_data::Bytes, 2>;
+
+        let value = [bytes![0x11u8; 1], bytes!("2233")];
+        let encoded = Ty::abi_encode_sequence(&value);
+
+        assert_eq!(
+            Ty::abi_decode_sequence_with_config(&encoded, AbiDecoderConfig::new().strict(true)),
+            Ok(value),
+        );
+    }
+
+    #[test]
+    fn strict_decoder_accepts_empty_dynamic_sequences() {
+        type Fixed = sol_data::FixedArray<sol_data::Bytes, 0>;
+
+        let fixed: [alloy_primitives::Bytes; 0] = [];
+        let encoded = Fixed::abi_encode(&fixed);
+        assert_eq!(
+            Fixed::abi_decode_with_config(&encoded, AbiDecoderConfig::new().strict(true)),
+            Ok(fixed),
+        );
+
+        type Dynamic = sol_data::Array<()>;
+
+        let dynamic = vec![(), ()];
+        let encoded = Dynamic::abi_encode(&dynamic);
+        assert_eq!(
+            Dynamic::abi_decode_sequence_with_config(
+                &encoded,
+                AbiDecoderConfig::new().strict(true)
+            ),
+            Ok(dynamic),
+        );
+    }
+
+    #[test]
     fn strict_decoder_rejects_gapped_offsets() {
         type Ty = (sol_data::String, sol_data::String);
 
