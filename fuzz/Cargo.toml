@@ -13,6 +13,10 @@ libfuzzer-sys = "0.4"
 [dependencies.alloy-sol-types]
 path = "../crates/sol-types"
 
+[build-dependencies]
+alloy-primitives = { path = "../crates/primitives" }
+alloy-sol-types = { path = "../crates/sol-types" }
+
 # Keep this fuzz project independent from the parent workspace.
 [workspace]
 members = ["."]

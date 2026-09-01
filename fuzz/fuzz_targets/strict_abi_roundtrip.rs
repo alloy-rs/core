@@ -158,6 +158,14 @@ type StaticArrayShape = (
     sol_data::FixedArray<sol_data::Uint<256>, 2>,
     sol_data::FixedArray<sol_data::FixedArray<sol_data::Address, 2>, 2>,
 );
+type MixedShape = (
+    sol_data::Uint<256>,
+    sol_data::Bytes,
+    sol_data::Address,
+    sol_data::Array<sol_data::Bytes>,
+    sol_data::Bool,
+    sol_data::FixedArray<sol_data::Bytes, 2>,
+);
 
 fn assert_strict_roundtrip<T: SolType>(bytes: &[u8]) {
     let Ok(token) =
@@ -186,6 +194,7 @@ fuzz_target!(|bytes: &[u8]| {
     assert_strict_roundtrip::<PrimitiveShape>(bytes);
     assert_strict_roundtrip::<StaticArrayShape>(bytes);
     assert_strict_roundtrip::<EncoderShape>(bytes);
+    assert_strict_roundtrip::<MixedShape>(bytes);
     assert_strict_roundtrip::<QueuedDeposit>(bytes);
     assert_strict_roundtrip::<DecryptionData>(bytes);
     assert_strict_roundtrip::<EnabledToken>(bytes);
