@@ -31,6 +31,7 @@ pub struct AbiDecoderConfig {
     recursion_limit: usize,
     memory_limit: usize,
     validate: bool,
+    strict: bool,
 }
 
 impl Default for AbiDecoderConfig {
@@ -56,6 +57,7 @@ impl fmt::Debug for AbiDecoderConfig {
             .field("recursion_limit", &self.recursion_limit)
             .field("memory_limit", &self.memory_limit)
             .field("validate", &self.validate)
+            .field("strict", &self.strict)
             .finish()
     }
 }
@@ -64,7 +66,12 @@ impl AbiDecoderConfig {
     /// Creates a decoder configuration with the default limits.
     #[inline]
     pub const fn new() -> Self {
-        Self { recursion_limit: 16, memory_limit: DEFAULT_MEMORY_LIMIT, validate: false }
+        Self {
+            recursion_limit: 16,
+            memory_limit: DEFAULT_MEMORY_LIMIT,
+            validate: false,
+            strict: false,
+        }
     }
 
     /// Returns the maximum recursion depth.
@@ -83,6 +90,12 @@ impl AbiDecoderConfig {
     #[inline]
     pub const fn get_validate(&self) -> bool {
         self.validate
+    }
+
+    /// Returns whether strict ABI layout validation is enabled.
+    #[inline]
+    pub const fn get_strict(&self) -> bool {
+        self.strict
     }
 
     /// Sets the maximum recursion depth.
@@ -112,6 +125,16 @@ impl AbiDecoderConfig {
         self
     }
 
+    /// Enables or disables strict ABI layout validation.
+    ///
+    /// When enabled, dynamic values must be encoded contiguously and in the
+    /// same order as their offsets appear in the containing head.
+    #[inline]
+    pub const fn strict(mut self, strict: bool) -> Self {
+        self.strict = strict;
+        self
+    }
+
     /// Sets the maximum recursion depth in place.
     #[inline]
     pub const fn set_recursion_limit(&mut self, limit: usize) {
@@ -128,6 +151,12 @@ impl AbiDecoderConfig {
     #[inline]
     pub const fn set_validate(&mut self, validate: bool) {
         self.validate = validate;
+    }
+
+    /// Enables or disables strict ABI layout validation in place.
+    #[inline]
+    pub const fn set_strict(&mut self, strict: bool) {
+        self.strict = strict;
     }
 }
 
@@ -164,6 +193,8 @@ pub struct Decoder<'de, 'state> {
     config: AbiDecoderConfig,
     /// Shared decoder state.
     state: DecoderState<'state>,
+    /// The end of the most recently decoded sequence, relative to `buf`.
+    sequence_end: Option<usize>,
 }
 
 impl fmt::Debug for Decoder<'_, '_> {
@@ -207,12 +238,20 @@ impl<'de> Decoder<'de, 'static> {
             depth: 0,
             config: AbiDecoderConfig::new(),
             state: DecoderState::Root(Cell::new(0)),
+            sequence_end: None,
         }
     }
 
     #[inline]
     const fn with_config(buf: &'de [u8], config: AbiDecoderConfig) -> Self {
-        Self { buf, offset: 0, depth: 0, config, state: DecoderState::Root(Cell::new(0)) }
+        Self {
+            buf,
+            offset: 0,
+            depth: 0,
+            config,
+            state: DecoderState::Root(Cell::new(0)),
+            sequence_end: None,
+        }
     }
 }
 
@@ -225,12 +264,23 @@ impl<'de, 'state> Decoder<'de, 'state> {
             depth: parent.depth + 1,
             config: parent.config,
             state: DecoderState::Child(parent.memory_used()),
+            sequence_end: None,
         }
     }
 
     #[inline]
     const fn memory_used(&self) -> &Cell<usize> {
         self.state.memory_used()
+    }
+
+    #[inline]
+    pub(crate) const fn is_strict(&self) -> bool {
+        self.config.get_strict()
+    }
+
+    #[inline]
+    pub(crate) const fn set_sequence_end(&mut self, end: usize) {
+        self.sequence_end = Some(end);
     }
 
     /// Returns the current offset in the buffer.
@@ -498,6 +548,12 @@ pub fn decode_sequence_with_config<'de, T: TokenSeq<'de>>(
 ) -> Result<T> {
     let mut decoder = Decoder::with_config(data, config);
     let result = decoder.decode_sequence::<T>()?;
+    if config.get_strict() && decoder.sequence_end != Some(data.len()) {
+        return Err(Error::NonCanonicalOffset {
+            expected: decoder.sequence_end.unwrap_or_default(),
+            actual: data.len(),
+        });
+    }
     Ok(result)
 }
 
@@ -1046,18 +1102,134 @@ mod tests {
         assert_eq!(config.get_recursion_limit(), 16);
         assert_eq!(config.get_memory_limit(), DEFAULT_MEMORY_LIMIT);
         assert!(!config.get_validate());
+        assert!(!config.get_strict());
 
         config.set_recursion_limit(300);
         config.set_memory_limit(42);
         config.set_validate(true);
+        config.set_strict(true);
         assert_eq!(config.get_recursion_limit(), 300);
         assert_eq!(config.get_memory_limit(), 42);
         assert!(config.get_validate());
+        assert!(config.get_strict());
 
-        let config = AbiDecoderConfig::new().recursion_limit(400).memory_limit(24).validate(true);
+        let config = AbiDecoderConfig::new()
+            .recursion_limit(400)
+            .memory_limit(24)
+            .validate(true)
+            .strict(true);
         assert_eq!(config.get_recursion_limit(), 400);
         assert_eq!(config.get_memory_limit(), 24);
         assert!(config.get_validate());
+        assert!(config.get_strict());
+    }
+
+    #[test]
+    fn strict_decoder_accepts_canonical_layout() {
+        type Ty = (sol_data::Bytes, sol_data::Bytes);
+
+        let value = (bytes!("01"), bytes!("0203"));
+        let encoded = Ty::abi_encode_sequence(&value);
+        let decoded =
+            Ty::abi_decode_sequence_with_config(&encoded, AbiDecoderConfig::new().strict(true))
+                .unwrap();
+        assert_eq!(decoded, value);
+
+        type Array = sol_data::Array<sol_data::Bytes>;
+
+        let value = vec![bytes!("01"), bytes!("0203")];
+        let encoded = Array::abi_encode(&value);
+        let decoded =
+            Array::abi_decode_with_config(&encoded, AbiDecoderConfig::new().strict(true)).unwrap();
+        assert_eq!(decoded, value);
+
+        type FixedArray = sol_data::FixedArray<sol_data::Bytes, 2>;
+
+        let value = [bytes!("01"), bytes!("0203")];
+        let encoded = FixedArray::abi_encode(&value);
+        let decoded =
+            FixedArray::abi_decode_with_config(&encoded, AbiDecoderConfig::new().strict(true))
+                .unwrap();
+        assert_eq!(decoded, value);
+    }
+
+    #[test]
+    fn strict_decoder_rejects_aliased_offsets_before_second_allocation() {
+        type Ty = (sol_data::Array<sol_data::Address>, sol_data::Array<sol_data::Address>);
+
+        let encoded = hex!(
+            "0000000000000000000000000000000000000000000000000000000000000040"
+            "0000000000000000000000000000000000000000000000000000000000000040"
+            "0000000000000000000000000000000000000000000000000000000000000001"
+            "0000000000000000000000001111111111111111111111111111111111111111"
+        );
+        assert!(
+            Ty::abi_decode_sequence_with_config(&encoded, AbiDecoderConfig::new().strict(false),)
+                .is_ok()
+        );
+
+        let err = Ty::abi_decode_sequence_with_config(
+            &encoded,
+            AbiDecoderConfig::new().strict(true).memory_limit(32),
+        )
+        .unwrap_err();
+        assert_eq!(err, Error::NonCanonicalOffset { expected: 128, actual: 64 });
+    }
+
+    #[test]
+    fn strict_decoder_rejects_gaps_and_trailing_data() {
+        type Ty = (sol_data::Bytes, sol_data::Bytes);
+
+        let gapped = hex!(
+            "0000000000000000000000000000000000000000000000000000000000000040"
+            "00000000000000000000000000000000000000000000000000000000000000a0"
+            "0000000000000000000000000000000000000000000000000000000000000001"
+            "1100000000000000000000000000000000000000000000000000000000000000"
+            "0000000000000000000000000000000000000000000000000000000000000000"
+            "0000000000000000000000000000000000000000000000000000000000000001"
+            "2200000000000000000000000000000000000000000000000000000000000000"
+        );
+        assert!(
+            Ty::abi_decode_sequence_with_config(&gapped, AbiDecoderConfig::new().strict(false),)
+                .is_ok()
+        );
+        assert_eq!(
+            Ty::abi_decode_sequence_with_config(&gapped, AbiDecoderConfig::new().strict(true),)
+                .unwrap_err(),
+            Error::NonCanonicalOffset { expected: 128, actual: 160 }
+        );
+
+        let value = (bytes!("01"), bytes!("02"));
+        let mut trailing = Ty::abi_encode_sequence(&value);
+        trailing.extend([0_u8; 32]);
+        assert_eq!(
+            Ty::abi_decode_sequence_with_config(&trailing, AbiDecoderConfig::new().strict(true),)
+                .unwrap_err(),
+            Error::NonCanonicalOffset { expected: trailing.len() - 32, actual: trailing.len() }
+        );
+    }
+
+    #[test]
+    fn strict_decoder_rejects_nested_aliases() {
+        type Ty = (sol_data::Array<sol_data::Bytes>,);
+
+        let encoded = hex!(
+            "0000000000000000000000000000000000000000000000000000000000000020"
+            "0000000000000000000000000000000000000000000000000000000000000002"
+            "0000000000000000000000000000000000000000000000000000000000000040"
+            "0000000000000000000000000000000000000000000000000000000000000040"
+            "0000000000000000000000000000000000000000000000000000000000000001"
+            "1100000000000000000000000000000000000000000000000000000000000000"
+        );
+        assert!(
+            Ty::abi_decode_sequence_with_config(&encoded, AbiDecoderConfig::new().strict(false),)
+                .is_ok()
+        );
+        assert_eq!(
+            Ty::abi_decode_sequence_with_config(&encoded, AbiDecoderConfig::new().strict(true),)
+                .unwrap_err(),
+            Error::NonCanonicalOffset { expected: 128, actual: 64 }
+        );
     }
 
     #[test]

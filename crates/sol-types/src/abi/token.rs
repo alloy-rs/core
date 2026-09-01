@@ -128,6 +128,51 @@ pub trait TokenSeq<'a>: Token<'a> {
     fn decode_sequence(dec: &mut Decoder<'a, '_>) -> Result<Self>;
 }
 
+struct SequenceCursor {
+    next_tail: Option<usize>,
+}
+
+impl SequenceCursor {
+    #[inline]
+    fn new(dec: &Decoder<'_, '_>, head_words: usize) -> Result<Self> {
+        let next_tail = if dec.is_strict() {
+            Some(head_words.checked_mul(Word::len_bytes()).ok_or(crate::Error::Overrun)?)
+        } else {
+            None
+        };
+        Ok(Self { next_tail })
+    }
+
+    #[inline]
+    fn decode<'de, T: Token<'de>>(&mut self, dec: &mut Decoder<'de, '_>) -> Result<T> {
+        if !T::DYNAMIC {
+            return T::decode_from(dec);
+        }
+
+        let Some(expected) = self.next_tail else {
+            return T::decode_from(dec);
+        };
+
+        let actual = dec.peek_offset()?;
+        if actual != expected {
+            return Err(crate::Error::NonCanonicalOffset { expected, actual });
+        }
+
+        let token = T::decode_from(dec)?;
+        let tail_bytes =
+            token.tail_words().checked_mul(Word::len_bytes()).ok_or(crate::Error::Overrun)?;
+        self.next_tail = Some(expected.checked_add(tail_bytes).ok_or(crate::Error::Overrun)?);
+        Ok(token)
+    }
+
+    #[inline]
+    const fn finish(self, dec: &mut Decoder<'_, '_>) {
+        if let Some(end) = self.next_tail {
+            dec.set_sequence_end(end);
+        }
+    }
+}
+
 /// A single EVM word - T for any value type.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[repr(transparent)]
@@ -372,9 +417,9 @@ impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
     fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         let mut arr = crate::impl_core::uninit_array::<T, N>();
         // SAFETY: `arr` is valid writable memory for `N` elements.
-        // `decode_many_from` initializes all elements on success.
+        // `decode_sequence_impl` initializes all elements on success.
         unsafe {
-            T::decode_many_from(dec, &mut arr)?;
+            decode_sequence_impl(dec, &mut arr)?;
             Ok(Self(crate::impl_core::array_assume_init(arr)))
         }
     }
@@ -454,9 +499,9 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         child.reserve_elements::<T>(len)?;
         let mut tokens = vec_try_with_capacity(len)?;
         // SAFETY: `spare_capacity_mut` returns valid writable memory.
-        // `decode_many_from` initializes all `len` elements on success.
+        // `decode_sequence_impl` initializes all `len` elements on success.
         unsafe {
-            T::decode_many_from(&mut child, &mut tokens.spare_capacity_mut()[..len])?;
+            decode_sequence_impl(&mut child, &mut tokens.spare_capacity_mut()[..len])?;
             tokens.set_len(len);
         }
         Ok(Self(tokens))
@@ -494,7 +539,10 @@ impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
 
     #[inline]
     fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
-        Self::decode_from(dec)
+        let mut cursor = SequenceCursor::new(dec, Self::MINIMUM_WORDS)?;
+        let token = cursor.decode(dec)?;
+        cursor.finish(dec);
+        Ok(token)
     }
 }
 
@@ -683,12 +731,19 @@ macro_rules! tuple_impls {
 
             #[inline]
             fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
-                Ok(($(
-                    match <$ty as Token>::decode_from(dec) {
+                let head_words = 0usize $(
+                    .checked_add(<$ty as Token>::MINIMUM_WORDS)
+                    .ok_or(crate::Error::Overrun)?
+                )+;
+                let mut cursor = SequenceCursor::new(dec, head_words)?;
+                let result = ($(
+                    match cursor.decode::<$ty>(dec) {
                         Ok(t) => t,
                         Err(e) => return Err(e),
                     },
-                )+))
+                )+);
+                cursor.finish(dec);
+                Ok(result)
             }
         }
     };
@@ -727,7 +782,8 @@ impl<'de> TokenSeq<'de> for () {
     fn encode_sequence(&self, _enc: &mut Encoder) {}
 
     #[inline]
-    fn decode_sequence(_dec: &mut Decoder<'de, '_>) -> Result<Self> {
+    fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
+        SequenceCursor::new(dec, 0)?.finish(dec);
         Ok(())
     }
 }
@@ -752,6 +808,28 @@ fn encode_sequence_impl<'de, T: Token<'de>>(tokens: &[T], enc: &mut Encoder) {
     } else {
         T::head_append_many(tokens, enc);
     }
+}
+
+/// Shared implementation for decoding a homogeneous token sequence.
+///
+/// # Safety
+///
+/// `out` must point to valid, writable memory for `out.len()` elements.
+#[inline]
+unsafe fn decode_sequence_impl<'a, 'de, T: Token<'de>>(
+    dec: &mut Decoder<'de, '_>,
+    out: &'a mut [MaybeUninit<T>],
+) -> Result<&'a mut [T]> {
+    let head_words = T::MINIMUM_WORDS.checked_mul(out.len()).ok_or(crate::Error::Overrun)?;
+    let mut cursor = SequenceCursor::new(dec, head_words)?;
+    let decoded = if T::DYNAMIC && dec.is_strict() {
+        try_init_each(out, || cursor.decode(dec))?
+    } else {
+        // SAFETY: upheld by the caller.
+        unsafe { T::decode_many_from(dec, out)? }
+    };
+    cursor.finish(dec);
+    Ok(decoded)
 }
 
 /// Initializes each element of `out` by calling `f` for each slot.

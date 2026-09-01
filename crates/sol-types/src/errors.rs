@@ -38,6 +38,14 @@ pub enum Error {
     /// Validation reserialization did not match input.
     ReserMismatch,
 
+    /// A dynamic offset does not match the canonical ABI layout.
+    NonCanonicalOffset {
+        /// The canonical offset.
+        expected: usize,
+        /// The decoded offset.
+        actual: usize,
+    },
+
     /// ABI Decoding recursion limit exceeded.
     RecursionLimitExceeded(usize),
 
@@ -123,6 +131,9 @@ impl fmt::Display for Error {
                 }
             }
             Self::Reserve(e) => e.fmt(f),
+            Self::NonCanonicalOffset { expected, actual } => {
+                write!(f, "non-canonical ABI offset: expected {expected}, got {actual}")
+            }
             Self::InvalidEnumValue { name, value, max } => {
                 write!(f, "`{value}` is not a valid {name} enum value (max: `{max}`)")
             }
