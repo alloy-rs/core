@@ -1217,6 +1217,27 @@ mod tests {
     }
 
     #[test]
+    fn strict_decoder_rejects_noncanonical_bool() {
+        let encoded = Word::with_last_byte(2);
+
+        assert_eq!(sol_data::Bool::abi_decode(encoded.as_slice()), Ok(true));
+        assert!(
+            sol_data::Bool::abi_decode_with_config(
+                encoded.as_slice(),
+                AbiDecoderConfig::new().validate(true),
+            )
+            .is_err()
+        );
+        assert!(
+            sol_data::Bool::abi_decode_with_config(
+                encoded.as_slice(),
+                AbiDecoderConfig::new().strict(true),
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
     fn strict_decoder_rejects_overlapping_nested_offsets() {
         type Ty = sol_data::Array<sol_data::Bytes>;
 

@@ -1,5 +1,7 @@
 use alloy_primitives::{Address, B256, I256, U256, b256, bytes, hex, keccak256};
-use alloy_sol_types::{SolCall, SolError, SolEvent, SolStruct, SolType, sol};
+use alloy_sol_types::{
+    SolCall, SolError, SolEvent, SolStruct, SolType, abi::AbiDecoderConfig, sol,
+};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -1286,6 +1288,44 @@ fn anonymous_event_decodes_indexed_and_data_fields() {
     let decoded_validate = MyEventAnonymous::decode_log_data_validate(&log).unwrap();
     assert_eq!(decoded, event);
     assert_eq!(decoded_validate, event);
+}
+
+#[test]
+fn indexed_topics_respect_decoder_config() {
+    sol! {
+        event IndexedBool(bool indexed value) anonymous;
+        event IndexedAddress(address indexed value) anonymous;
+    }
+
+    let dirty_bool = B256::with_last_byte(2);
+    assert!(IndexedBool::decode_raw_log([dirty_bool], &[]).is_ok());
+    assert!(
+        IndexedBool::decode_raw_log_with_config(
+            [dirty_bool],
+            &[],
+            AbiDecoderConfig::new().validate(true),
+        )
+        .is_err()
+    );
+    assert!(
+        IndexedBool::decode_raw_log_with_config(
+            [dirty_bool],
+            &[],
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+
+    let dirty_address = B256::repeat_byte(0x11);
+    assert!(IndexedAddress::decode_raw_log([dirty_address], &[]).is_ok());
+    assert!(
+        IndexedAddress::decode_raw_log_with_config(
+            [dirty_address],
+            &[],
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
 }
 
 #[test]

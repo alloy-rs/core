@@ -1,4 +1,7 @@
-use crate::{Error, Result, SolType, abi::token::WordToken};
+use crate::{
+    Error, Result, SolType,
+    abi::{AbiDecoderConfig, token::WordToken},
+};
 use alloc::borrow::Cow;
 
 #[allow(unknown_lints, unnameable_types)]
@@ -34,6 +37,12 @@ pub trait TopicList: SolType + Sealed {
     where
         I: IntoIterator<Item = D>,
         D: Into<WordToken>;
+
+    /// Detokenize the topics into a tuple of Rust types with a decoder configuration.
+    fn detokenize_with_config<I, D>(topics: I, config: AbiDecoderConfig) -> Result<Self::RustType>
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>;
 }
 
 macro_rules! impl_topic_list_tuples {
@@ -47,9 +56,23 @@ macro_rules! impl_topic_list_tuples {
                 I: IntoIterator<Item = D>,
                 D: Into<WordToken>
             {
+                Self::detokenize_with_config(topics, AbiDecoderConfig::new())
+            }
+
+            fn detokenize_with_config<I, D>(topics: I, config: AbiDecoderConfig) -> Result<Self::RustType>
+            where
+                I: IntoIterator<Item = D>,
+                D: Into<WordToken>
+            {
                 let mut iter = topics.into_iter();
                 let topics = ($(
-                    <$t>::detokenize(iter.next().ok_or_else(length_mismatch)?.into()),
+                    {
+                        let topic = iter.next().ok_or_else(length_mismatch)?.into();
+                        if config.get_validate() {
+                            <$t>::type_check(&topic)?;
+                        }
+                        <$t>::detokenize(topic)
+                    },
                 )*);
                 if iter.next().is_some() {
                     return Err(length_mismatch());
@@ -66,6 +89,15 @@ impl TopicList for () {
 
     #[inline]
     fn detokenize<I, D>(topics: I) -> Result<Self::RustType>
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
+        Self::detokenize_with_config(topics, AbiDecoderConfig::new())
+    }
+
+    #[inline]
+    fn detokenize_with_config<I, D>(topics: I, _config: AbiDecoderConfig) -> Result<Self::RustType>
     where
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,

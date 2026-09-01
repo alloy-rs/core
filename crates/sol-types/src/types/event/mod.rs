@@ -170,6 +170,19 @@ pub trait SolEvent: Sized {
         <Self::TopicList as TopicList>::detokenize(topics)
     }
 
+    /// Decode the topics of this event with a custom decoder configuration.
+    #[inline]
+    fn decode_topics_with_config<I, D>(
+        topics: I,
+        config: AbiDecoderConfig,
+    ) -> Result<<Self::TopicList as SolType>::RustType>
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<WordToken>,
+    {
+        <Self::TopicList as TopicList>::detokenize_with_config(topics, config)
+    }
+
     /// ABI-decodes the dynamic data of this event from the given buffer.
     #[inline]
     fn abi_decode_data<'a>(data: &'a [u8]) -> Result<<Self::DataTuple<'a> as SolType>::RustType> {
@@ -221,7 +234,7 @@ pub trait SolEvent: Sized {
         I: IntoIterator<Item = D>,
         D: Into<WordToken>,
     {
-        let topics = Self::decode_topics(topics)?;
+        let topics = Self::decode_topics_with_config(topics, config)?;
         Self::check_signature(&topics)?;
         let body = Self::abi_decode_data_with_config(data, config)?;
         Ok(Self::new(topics, body))
