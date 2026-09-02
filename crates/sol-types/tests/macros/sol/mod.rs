@@ -1,5 +1,8 @@
 use alloy_primitives::{Address, B256, I256, U256, b256, bytes, hex, keccak256};
-use alloy_sol_types::{SolCall, SolError, SolEvent, SolStruct, SolType, sol};
+use alloy_sol_types::{
+    Error, SolCall, SolError, SolEvent, SolEventInterface, SolStruct, SolType,
+    abi::AbiDecoderConfig, sol,
+};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -1286,6 +1289,149 @@ fn anonymous_event_decodes_indexed_and_data_fields() {
     let decoded_validate = MyEventAnonymous::decode_log_data_validate(&log).unwrap();
     assert_eq!(decoded, event);
     assert_eq!(decoded_validate, event);
+}
+
+#[test]
+fn indexed_topics_respect_decoder_config() {
+    sol! {
+        event IndexedBool(bool indexed value) anonymous;
+        event IndexedAddress(address indexed value) anonymous;
+    }
+
+    let dirty_bool = B256::with_last_byte(2);
+    assert!(IndexedBool::decode_raw_log([dirty_bool], &[]).is_ok());
+    assert!(
+        IndexedBool::decode_raw_log_with_config(
+            [dirty_bool],
+            &[],
+            AbiDecoderConfig::new().validate(true),
+        )
+        .is_err()
+    );
+    assert!(
+        IndexedBool::decode_raw_log_with_config(
+            [dirty_bool],
+            &[],
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+
+    let dirty_address = B256::repeat_byte(0x11);
+    assert!(IndexedAddress::decode_raw_log([dirty_address], &[]).is_ok());
+    assert!(
+        IndexedAddress::decode_raw_log_with_config(
+            [dirty_address],
+            &[],
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn event_interface_respects_decoder_config() {
+    sol! {
+        contract TopicConfig {
+            event Value(bool indexed value, bytes data);
+            event Anonymous(bytes data) anonymous;
+        }
+    }
+    use TopicConfig::*;
+
+    let event = Value { value: false, data: bytes!("11") };
+    let data = event.encode_data();
+    let topics = [Value::SIGNATURE_HASH, B256::ZERO];
+
+    assert!(TopicConfigEvents::decode_raw_log(&topics, &data).is_ok());
+    assert!(
+        TopicConfigEvents::decode_raw_log_with_config(
+            &[Value::SIGNATURE_HASH, B256::with_last_byte(2)],
+            &data,
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+
+    let mut trailing = data;
+    trailing.extend([0; 32]);
+    assert!(TopicConfigEvents::decode_raw_log(&topics, &trailing).is_ok());
+    assert!(
+        TopicConfigEvents::decode_raw_log_with_config(
+            &topics,
+            &trailing,
+            AbiDecoderConfig::new().strict(true),
+        )
+        .is_err()
+    );
+
+    let anonymous = Anonymous { data: bytes!("11") };
+    let Err(error) = TopicConfigEvents::decode_raw_log_with_config(
+        &[],
+        &anonymous.encode_data(),
+        AbiDecoderConfig::new().memory_limit(0),
+    ) else {
+        panic!("anonymous event should exceed the memory limit");
+    };
+    assert_eq!(error, Error::MemoryLimitExceeded(0));
+}
+
+#[test]
+fn anonymous_event_interface_tries_later_candidates() {
+    sol! {
+        contract AnonymousCandidates {
+            event A(string data) anonymous;
+            event B(
+                uint256 a,
+                uint256 b,
+                uint256 c,
+                uint256 d,
+                uint256 e,
+                bytes data
+            ) anonymous;
+        }
+    }
+    use AnonymousCandidates::*;
+
+    let event = B {
+        a: U256::from(32),
+        b: U256::from(200),
+        c: U256::ZERO,
+        d: U256::ZERO,
+        e: U256::ZERO,
+        data: bytes![0x11; 64],
+    };
+    let data = event.encode_data();
+
+    let Ok(AnonymousCandidatesEvents::B(decoded)) =
+        AnonymousCandidatesEvents::decode_raw_log_with_config(
+            &[],
+            &data,
+            AbiDecoderConfig::new().memory_limit(100),
+        )
+    else {
+        panic!("later anonymous candidate should decode");
+    };
+    assert_eq!(decoded.a, event.a);
+    assert_eq!(decoded.b, event.b);
+    assert_eq!(decoded.c, event.c);
+    assert_eq!(decoded.d, event.d);
+    assert_eq!(decoded.e, event.e);
+    assert_eq!(decoded.data, event.data);
+}
+
+#[test]
+fn event_interface_builder_name_does_not_shadow_decoding() {
+    sol! {
+        contract BuilderName {
+            event DecodeRawLogWithConfig();
+        }
+    }
+    use BuilderName::*;
+
+    assert!(
+        BuilderNameEvents::decode_raw_log(&[DecodeRawLogWithConfig::SIGNATURE_HASH], &[]).is_ok()
+    );
 }
 
 #[test]

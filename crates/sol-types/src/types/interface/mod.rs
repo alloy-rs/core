@@ -63,14 +63,17 @@ pub trait SolInterface: Sized {
 
     /// ABI-decodes the given data with a custom decoder configuration.
     ///
-    /// The default implementation ignores the configuration and delegates to
-    /// [`abi_decode_raw`](Self::abi_decode_raw).
+    /// The default implementation does not support strict decoding.
     fn abi_decode_raw_with_config(
         selector: [u8; 4],
         data: &[u8],
-        _config: AbiDecoderConfig,
+        config: AbiDecoderConfig,
     ) -> Result<Self> {
-        Self::abi_decode_raw(selector, data)
+        if config.get_strict() {
+            Err(Error::custom("strict decoding is unsupported by this SolInterface implementation"))
+        } else {
+            Self::abi_decode_raw(selector, data)
+        }
     }
 
     /// ABI-decodes the given data into one of the variants of `self`, with validation.
@@ -644,6 +647,19 @@ mod tests {
         assert_eq!(
             GenericContractError::selectors().collect::<Vec<_>>(),
             [sel("Error(string)"), sel("Panic(uint256)")]
+        );
+    }
+
+    #[test]
+    fn generic_contract_error_preserves_unknown_selectors_in_strict_mode() {
+        let selector = [0; 4];
+        assert_eq!(
+            GenericContractError::abi_decode_raw_with_config(
+                selector,
+                &[],
+                AbiDecoderConfig::new().strict(true),
+            ),
+            Err(Error::UnknownSelector { name: "GenericContractError", selector: selector.into() }),
         );
     }
 
