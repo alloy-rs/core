@@ -458,6 +458,19 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         if required_words > child.remaining_words() {
             return Err(crate::Error::Overrun);
         }
+        if child.is_strict() && T::DYNAMIC {
+            let mut tokens = Vec::new();
+            for _ in 0..len {
+                let token = T::decode_from(&mut child)?;
+                if tokens.len() == tokens.capacity() {
+                    let additional = tokens.capacity().max(1).min(len - tokens.len());
+                    child.reserve_elements::<T>(additional)?;
+                    tokens.try_reserve_exact(additional)?;
+                }
+                tokens.push(token);
+            }
+            return Ok(Self(tokens));
+        }
         child.reserve_elements::<T>(len)?;
         let mut tokens = vec_try_with_capacity(len)?;
         // SAFETY: `spare_capacity_mut` returns valid writable memory.

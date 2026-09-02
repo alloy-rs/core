@@ -102,7 +102,11 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::TypeCheckFail { expected_type, data } => {
-                write!(f, "type check failed for {expected_type:?} with data: {data}",)
+                write!(f, "type check failed for {expected_type:?}")?;
+                if !data.is_empty() {
+                    write!(f, " with data: {data}")?;
+                }
+                Ok(())
             }
             Self::Overrun
             | Self::BufferNotEmpty
@@ -223,5 +227,13 @@ mod tests {
         let error = Error::type_check_fail_token::<crate::sol_data::Bool>(&token);
         let Error::TypeCheckFail { data, .. } = error else { unreachable!() };
         assert!(data.is_empty());
+    }
+
+    #[test]
+    fn empty_type_check_fail_data_is_not_displayed() {
+        assert_eq!(
+            Error::type_check_fail(&[], "test").to_string(),
+            "type check failed for \"test\""
+        );
     }
 }

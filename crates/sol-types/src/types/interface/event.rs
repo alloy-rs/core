@@ -22,19 +22,19 @@ pub trait SolEventInterface: Sized {
 
     /// Decode the events from the given log info with a custom decoder configuration.
     ///
-    /// The default implementation supports only the default configuration.
+    /// The default implementation does not support strict decoding.
     #[inline]
     fn decode_raw_log_with_config(
         topics: &[Word],
         data: &[u8],
         config: AbiDecoderConfig,
     ) -> Result<Self> {
-        if config.is_default() {
-            Self::decode_raw_log(topics, data)
-        } else {
+        if config.get_strict() {
             Err(crate::Error::custom(
-                "decoder config is unsupported by this SolEventInterface implementation",
+                "strict decoding is unsupported by this SolEventInterface implementation",
             ))
+        } else {
+            Self::decode_raw_log(topics, data)
         }
     }
 
@@ -55,20 +55,24 @@ pub trait SolEventInterface: Sized {
 mod tests {
     use super::*;
 
-    enum Legacy {}
+    struct Legacy;
 
     impl SolEventInterface for Legacy {
         const NAME: &'static str = "Legacy";
         const COUNT: usize = 0;
 
         fn decode_raw_log(_topics: &[Word], _data: &[u8]) -> Result<Self> {
-            Err(crate::Error::custom("legacy decoder"))
+            Ok(Self)
         }
     }
 
     #[test]
-    fn legacy_interfaces_reject_custom_configs() {
-        assert!(Legacy::decode_raw_log_with_config(&[], &[], AbiDecoderConfig::new()).is_err());
+    fn legacy_interfaces_reject_strict_configs() {
+        assert!(Legacy::decode_raw_log_with_config(&[], &[], AbiDecoderConfig::new()).is_ok());
+        assert!(
+            Legacy::decode_raw_log_with_config(&[], &[], AbiDecoderConfig::new().validate(true))
+                .is_ok()
+        );
         assert!(
             Legacy::decode_raw_log_with_config(&[], &[], AbiDecoderConfig::new().strict(true))
                 .is_err()

@@ -98,15 +98,6 @@ impl AbiDecoderConfig {
         self.strict
     }
 
-    /// Returns whether this is the default decoder configuration.
-    #[inline]
-    pub const fn is_default(&self) -> bool {
-        self.recursion_limit == 16
-            && self.memory_limit == DEFAULT_MEMORY_LIMIT
-            && !self.validate
-            && !self.strict
-    }
-
     /// Sets the maximum recursion depth.
     #[inline]
     pub const fn recursion_limit(mut self, limit: usize) -> Self {
@@ -1180,7 +1171,6 @@ mod tests {
         assert_eq!(config.get_memory_limit(), DEFAULT_MEMORY_LIMIT);
         assert!(!config.get_validate());
         assert!(!config.get_strict());
-        assert!(config.is_default());
 
         config.set_recursion_limit(300);
         config.set_memory_limit(42);
@@ -1190,7 +1180,6 @@ mod tests {
         assert_eq!(config.get_memory_limit(), 42);
         assert!(config.get_validate());
         assert!(config.get_strict());
-        assert!(!config.is_default());
 
         let config = AbiDecoderConfig::new().recursion_limit(400).memory_limit(24).strict(true);
         assert_eq!(config.get_recursion_limit(), 400);
@@ -1384,6 +1373,24 @@ mod tests {
         );
         assert_eq!(
             Ty::abi_decode_sequence_with_config(&encoded, AbiDecoderConfig::new().strict(true)),
+            Err(Error::ReserMismatch),
+        );
+    }
+
+    #[test]
+    fn strict_decoder_checks_dynamic_elements_before_reserving_the_outer_array() {
+        type Ty = sol_data::Array<sol_data::FixedArray<sol_data::Bytes, 64>>;
+
+        let mut encoded = Vec::with_capacity(32 * 66);
+        encoded.extend_from_slice(pad_usize(32).as_slice());
+        encoded.extend_from_slice(pad_usize(1).as_slice());
+        encoded.resize(32 * 66, 0);
+
+        assert_eq!(
+            Ty::abi_decode_sequence_with_config(
+                &encoded,
+                AbiDecoderConfig::new().memory_limit(0).strict(true),
+            ),
             Err(Error::ReserMismatch),
         );
     }

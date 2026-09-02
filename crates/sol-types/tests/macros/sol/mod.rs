@@ -1421,6 +1421,20 @@ fn anonymous_event_interface_tries_later_candidates() {
 }
 
 #[test]
+fn event_interface_builder_name_does_not_shadow_decoding() {
+    sol! {
+        contract BuilderName {
+            event DecodeRawLogWithConfig();
+        }
+    }
+    use BuilderName::*;
+
+    assert!(
+        BuilderNameEvents::decode_raw_log(&[DecodeRawLogWithConfig::SIGNATURE_HASH], &[]).is_ok()
+    );
+}
+
+#[test]
 fn anonymous_event_rejects_topic_count_mismatch() {
     sol! {
         #[derive(Debug)]

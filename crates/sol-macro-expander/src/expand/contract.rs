@@ -940,7 +940,7 @@ impl CallLikeExpander<'_> {
                 const COUNT: usize = #count;
 
                 fn decode_raw_log(topics: &[alloy_sol_types::Word], data: &[u8]) -> alloy_sol_types::Result<Self> {
-                    Self::decode_raw_log_with_config(
+                    <Self as alloy_sol_types::SolEventInterface>::decode_raw_log_with_config(
                         topics,
                         data,
                         alloy_sol_types::abi::AbiDecoderConfig::default(),
