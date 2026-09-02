@@ -983,6 +983,8 @@ macro_rules! impl_sqlx {
                     <$crate::FixedBytes<$n> as Decode<DB>>::decode(value).map(Self)
                 }
             }
+
+            $crate::impl_sqlx_postgres!($t, $n);
         };
     };
 }
@@ -991,6 +993,26 @@ macro_rules! impl_sqlx {
 #[macro_export]
 #[cfg(not(feature = "sqlx"))]
 macro_rules! impl_sqlx {
+    ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "sqlx-postgres")]
+macro_rules! impl_sqlx_postgres {
+    ($t:ty, $n:literal) => {
+        impl $crate::private::sqlx_postgres::PgHasArrayType for $t {
+            fn array_type_info() -> $crate::private::sqlx_postgres::PgTypeInfo {
+                <$crate::FixedBytes<$n> as $crate::private::sqlx_postgres::PgHasArrayType>::array_type_info()
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "sqlx-postgres"))]
+macro_rules! impl_sqlx_postgres {
     ($t:ty, $n:literal) => {};
 }
 
