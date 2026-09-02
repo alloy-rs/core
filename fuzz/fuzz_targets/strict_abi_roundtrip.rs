@@ -166,6 +166,11 @@ type MixedShape = (
     sol_data::Bool,
     sol_data::FixedArray<sol_data::Bytes, 2>,
 );
+type NestedArrayShape = (
+    sol_data::Array<sol_data::FixedArray<sol_data::Bytes, 2>>,
+    sol_data::Array<(sol_data::Bytes, sol_data::String)>,
+);
+type EmptyFixedThenBytes = (sol_data::FixedArray<sol_data::Bytes, 0>, sol_data::Bytes);
 
 fn assert_strict_roundtrip<T: SolType>(bytes: &[u8]) {
     let Ok(token) =
@@ -195,6 +200,8 @@ fuzz_target!(|bytes: &[u8]| {
     assert_strict_roundtrip::<StaticArrayShape>(bytes);
     assert_strict_roundtrip::<EncoderShape>(bytes);
     assert_strict_roundtrip::<MixedShape>(bytes);
+    assert_strict_roundtrip::<NestedArrayShape>(bytes);
+    assert_strict_roundtrip::<EmptyFixedThenBytes>(bytes);
     assert_strict_roundtrip::<QueuedDeposit>(bytes);
     assert_strict_roundtrip::<DecryptionData>(bytes);
     assert_strict_roundtrip::<EnabledToken>(bytes);

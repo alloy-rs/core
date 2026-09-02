@@ -19,6 +19,13 @@ type MixedShape = (
     sol_data::FixedArray<sol_data::Bytes, 2>,
 );
 
+type NestedArrayShape = (
+    sol_data::Array<sol_data::FixedArray<sol_data::Bytes, 2>>,
+    sol_data::Array<(sol_data::Bytes, sol_data::String)>,
+);
+
+type EmptyFixedThenBytes = (sol_data::FixedArray<sol_data::Bytes, 0>, sol_data::Bytes);
+
 fn word(value: usize) -> [u8; 32] {
     let mut word = [0; 32];
     word[24..].copy_from_slice(&(value as u64).to_be_bytes());
@@ -65,6 +72,28 @@ fn main() {
         [Bytes::from_static(&[5]), Bytes::from_static(&[6, 7])],
     );
     write_encoded_seed::<MixedShape>(&corpus, "mixed_static_dynamic", &mixed);
+
+    // A dynamic array whose elements each have dynamic heads, plus a dynamic
+    // array of dynamic tuples. This forces strict cursor hand-offs through
+    // several nested decoder children.
+    let nested_arrays = (
+        vec![
+            [Bytes::from_static(&[8]), Bytes::from_static(&[9, 10])],
+            [Bytes::new(), Bytes::from_static(&[11])],
+        ],
+        vec![(Bytes::from_static(&[12]), String::from("tempo")), (Bytes::new(), String::new())],
+    );
+    write_encoded_seed::<NestedArrayShape>(&corpus, "nested_array_dynamic_heads", &nested_arrays);
+
+    // `bytes[0]` has a dynamic ABI type but an empty tail. Its following
+    // dynamic value must begin at the same tail offset, which is an important
+    // boundary case for strict monotonic offsets.
+    let empty_fixed_then_bytes = ([Bytes::new(); 0], Bytes::from_static(&[13]));
+    write_encoded_seed::<EmptyFixedThenBytes>(
+        &corpus,
+        "empty_fixed_dynamic_tail",
+        &empty_fixed_then_bytes,
+    );
 
     // `advanceTempo(bytes,QueuedDeposit[],DecryptionData[],EnabledToken[])`
     // with every dynamic argument empty.
