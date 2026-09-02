@@ -852,6 +852,16 @@ impl CallLikeExpander<'_> {
 
         let e_name = |&e: &&ItemEvent| self.cx.overloaded_name(e.into());
         let err = quote! {
+            if topics
+                .len()
+                .checked_mul(alloy_sol_types::Word::len_bytes())
+                .and_then(|len| len.checked_add(data.len()))
+                .is_none_or(|len| len > config.get_memory_limit())
+            {
+                return alloy_sol_types::private::Err(alloy_sol_types::Error::MemoryLimitExceeded(
+                    config.get_memory_limit(),
+                ));
+            }
             alloy_sol_types::private::Err(alloy_sol_types::Error::InvalidLog {
                 name: <Self as alloy_sol_types::SolEventInterface>::NAME,
                 log: alloy_sol_types::private::Box::new(alloy_sol_types::private::LogData::new_unchecked(
@@ -868,7 +878,7 @@ impl CallLikeExpander<'_> {
                 match topics.first().copied() {
                     #(
                         Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
-                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data)
+                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
                                 .map(Self::#variants),
                     )*
                     _ => { #ret_err }
@@ -878,15 +888,26 @@ impl CallLikeExpander<'_> {
         let anon_impl = has_anon.then(|| {
             let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
+                let mut resource_error = None;
                 #(
-                    if let Ok(res) = <#variants as alloy_sol_types::#trait_>::decode_raw_log(topics, data) {
-                        return Ok(Self::#variants(res));
+                    match <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config) {
+                        Ok(res) => return Ok(Self::#variants(res)),
+                        Err(err @ (
+                            alloy_sol_types::Error::MemoryLimitExceeded(_)
+                            | alloy_sol_types::Error::RecursionLimitExceeded(_)
+                            | alloy_sol_types::Error::Reserve(_)
+                        )) => {
+                            resource_error.get_or_insert(err);
+                        }
+                        Err(_) => {}
                     }
                 )*
+                if let Some(err) = resource_error {
+                    return alloy_sol_types::private::Err(err);
+                }
                 #err
             }
         });
-
         let into_impl = {
             let variants = events.iter().map(e_name);
             let v2 = variants.clone();
@@ -919,6 +940,18 @@ impl CallLikeExpander<'_> {
                 const COUNT: usize = #count;
 
                 fn decode_raw_log(topics: &[alloy_sol_types::Word], data: &[u8]) -> alloy_sol_types::Result<Self> {
+                    <Self as alloy_sol_types::SolEventInterface>::decode_raw_log_with_config(
+                        topics,
+                        data,
+                        alloy_sol_types::abi::AbiDecoderConfig::default(),
+                    )
+                }
+
+                fn decode_raw_log_with_config(
+                    topics: &[alloy_sol_types::Word],
+                    data: &[u8],
+                    config: alloy_sol_types::abi::AbiDecoderConfig,
+                ) -> alloy_sol_types::Result<Self> {
                     #non_anon_impl
                     #anon_impl
                 }

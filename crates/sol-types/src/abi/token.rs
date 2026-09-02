@@ -370,6 +370,7 @@ impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
 
     #[inline]
     fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
+        dec.set_strict_head_words(T::MINIMUM_WORDS.checked_mul(N).ok_or(crate::Error::Overrun)?)?;
         let mut arr = crate::impl_core::uninit_array::<T, N>();
         // SAFETY: `arr` is valid writable memory for `N` elements.
         // `decode_many_from` initializes all elements on success.
@@ -430,6 +431,11 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         let len = child.take_offset()?;
         if T::MINIMUM_WORDS == 0 {
             debug_assert_eq!(core::mem::size_of::<T>(), 0);
+            if child.is_strict() && len != 0 {
+                return Err(crate::Error::ReserMismatch);
+            }
+            // Charge a byte per element to bound work on zero-sized tokens.
+            child.reserve(len)?;
             #[allow(clippy::uninit_vec)]
             let tokens = {
                 let mut tokens = Vec::new();
@@ -446,10 +452,24 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         // specifies that offsets are relative to the first word of
         // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
-        let mut child = child.raw_child()?;
         let required_words = T::MINIMUM_WORDS.checked_mul(len).ok_or(crate::Error::Overrun)?;
+        let mut child = child.raw_child()?;
+        child.set_strict_head_words(required_words)?;
         if required_words > child.remaining_words() {
             return Err(crate::Error::Overrun);
+        }
+        if child.is_strict() && T::DYNAMIC {
+            let mut tokens = Vec::new();
+            for _ in 0..len {
+                let token = T::decode_from(&mut child)?;
+                if tokens.len() == tokens.capacity() {
+                    let additional = tokens.capacity().max(1).min(len - tokens.len());
+                    child.reserve_elements::<T>(additional)?;
+                    tokens.try_reserve_exact(additional)?;
+                }
+                tokens.push(token);
+            }
+            return Ok(Self(tokens));
         }
         child.reserve_elements::<T>(len)?;
         let mut tokens = vec_try_with_capacity(len)?;
@@ -494,6 +514,7 @@ impl<'de, T: Token<'de>> TokenSeq<'de> for DynSeqToken<T> {
 
     #[inline]
     fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
+        dec.set_strict_head_words(Self::MINIMUM_WORDS)?;
         Self::decode_from(dec)
     }
 }
@@ -545,7 +566,7 @@ impl<'de: 'a, 'a> Token<'de> for PackedSeqToken<'a> {
     fn decode_from(dec: &mut Decoder<'de, '_>) -> Result<Self> {
         let mut child = dec.take_indirection()?;
         let len = child.take_offset()?;
-        let bytes = child.peek_len(len)?;
+        let bytes = child.take_padded_slice(len)?;
         child.reserve(len)?;
         Ok(PackedSeqToken(bytes))
     }
@@ -683,6 +704,11 @@ macro_rules! tuple_impls {
 
             #[inline]
             fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
+                let head_words = 0usize $(
+                    .checked_add(<$ty as Token>::MINIMUM_WORDS)
+                    .ok_or(crate::Error::Overrun)?
+                )+;
+                dec.set_strict_head_words(head_words)?;
                 Ok(($(
                     match <$ty as Token>::decode_from(dec) {
                         Ok(t) => t,
