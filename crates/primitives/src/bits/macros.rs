@@ -968,7 +968,7 @@ macro_rules! impl_sqlx {
             {
                 fn encode_by_ref(
                     &self,
-                    buf: &mut <DB as Database>::ArgumentBuffer<'a>,
+                    buf: &mut <DB as Database>::ArgumentBuffer,
                 ) -> Result<IsNull, BoxDynError> {
                     <$crate::FixedBytes<$n> as Encode<DB>>::encode_by_ref(&self.0, buf)
                 }
