@@ -235,6 +235,7 @@ macro_rules! wrap_fixed_bytes {
         $crate::impl_allocative!($name);
         $crate::impl_arbitrary!($name, $n);
         $crate::impl_rand!($name);
+        $crate::impl_postgres!($name, $n);
         $crate::impl_diesel!($name, $n);
         $crate::impl_sqlx!($name, $n);
 
@@ -813,6 +814,59 @@ macro_rules! impl_arbitrary {
 #[macro_export]
 #[cfg(not(feature = "arbitrary"))]
 macro_rules! impl_arbitrary {
+    ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "postgres")]
+macro_rules! impl_postgres {
+    ($t:ty, $n:literal) => {
+        const _: () = {
+            use $crate::private::{
+                Box,
+                bytes::BytesMut,
+                postgres_types::{FromSql, IsNull, ToSql, Type},
+            };
+
+            impl ToSql for $t {
+                fn to_sql(
+                    &self,
+                    ty: &Type,
+                    out: &mut BytesMut,
+                ) -> Result<IsNull, Box<dyn $crate::private::core::error::Error + Sync + Send>>
+                {
+                    <$crate::FixedBytes<$n> as ToSql>::to_sql(&self.0, ty, out)
+                }
+
+                fn accepts(ty: &Type) -> bool {
+                    <$crate::FixedBytes<$n> as ToSql>::accepts(ty)
+                }
+
+                $crate::private::postgres_types::to_sql_checked!();
+            }
+
+            impl<'a> FromSql<'a> for $t {
+                fn from_sql(
+                    ty: &Type,
+                    raw: &'a [u8],
+                ) -> Result<Self, Box<dyn $crate::private::core::error::Error + Sync + Send>>
+                {
+                    <$crate::FixedBytes<$n> as FromSql>::from_sql(ty, raw).map(Self)
+                }
+
+                fn accepts(ty: &Type) -> bool {
+                    <$crate::FixedBytes<$n> as FromSql>::accepts(ty)
+                }
+            }
+        };
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "postgres"))]
+macro_rules! impl_postgres {
     ($t:ty, $n:literal) => {};
 }
 

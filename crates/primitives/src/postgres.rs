@@ -3,7 +3,7 @@
 //! **WARNING**: this module depends entirely on [`postgres_types`], which is not yet stable,
 //! therefore this module is exempt from the semver guarantees of this crate.
 
-use super::{Address, FixedBytes, Sign, Signed};
+use super::{FixedBytes, Sign, Signed};
 use bytes::{BufMut, BytesMut};
 use derive_more::Display;
 use postgres_types::{FromSql, IsNull, ToSql, Type, WrongType, accepts, to_sql_checked};
@@ -27,27 +27,6 @@ impl<const BITS: usize> ToSql for FixedBytes<BITS> {
 
 /// Converts `FixedBytes` From Postgres Bytea Type.
 impl<'a, const BITS: usize> FromSql<'a> for FixedBytes<BITS> {
-    accepts!(BYTEA);
-
-    fn from_sql(_: &Type, raw: &'a [u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
-        Ok(Self::try_from(raw)?)
-    }
-}
-
-/// Converts `Address` to Postgres Bytea Type.
-impl ToSql for Address {
-    fn to_sql(&self, _: &Type, out: &mut BytesMut) -> Result<IsNull, BoxedError> {
-        out.put_slice(&self[..]);
-        Ok(IsNull::No)
-    }
-
-    accepts!(BYTEA);
-
-    to_sql_checked!();
-}
-
-/// Converts `Address` From Postgres Bytea Type.
-impl<'a> FromSql<'a> for Address {
     accepts!(BYTEA);
 
     fn from_sql(_: &Type, raw: &'a [u8]) -> Result<Self, Box<dyn Error + Sync + Send>> {
@@ -372,7 +351,7 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
 mod test {
     use super::*;
 
-    use crate::I256;
+    use crate::{Address, I256};
 
     #[test]
     fn positive_i256_from_sql() {
