@@ -843,7 +843,14 @@ macro_rules! impl_postgres {
                     <$crate::FixedBytes<$n> as ToSql>::accepts(ty)
                 }
 
-                $crate::private::postgres_types::to_sql_checked!();
+                fn to_sql_checked(
+                    &self,
+                    ty: &Type,
+                    out: &mut BytesMut,
+                ) -> Result<IsNull, Box<dyn $crate::private::core::error::Error + Sync + Send>>
+                {
+                    $crate::private::postgres_types::__to_sql_checked(self, ty, out)
+                }
             }
 
             impl<'a> FromSql<'a> for $t {
