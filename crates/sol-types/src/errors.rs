@@ -213,6 +213,7 @@ impl From<TryReserveError> for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::string::ToString;
 
     #[test]
     fn type_check_fail_data_is_bounded() {
