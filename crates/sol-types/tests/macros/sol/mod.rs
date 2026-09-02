@@ -1377,6 +1377,50 @@ fn event_interface_respects_decoder_config() {
 }
 
 #[test]
+fn anonymous_event_interface_tries_later_candidates() {
+    sol! {
+        contract AnonymousCandidates {
+            event A(string data) anonymous;
+            event B(
+                uint256 a,
+                uint256 b,
+                uint256 c,
+                uint256 d,
+                uint256 e,
+                bytes data
+            ) anonymous;
+        }
+    }
+    use AnonymousCandidates::*;
+
+    let event = B {
+        a: U256::from(32),
+        b: U256::from(200),
+        c: U256::ZERO,
+        d: U256::ZERO,
+        e: U256::ZERO,
+        data: bytes![0x11; 64],
+    };
+    let data = event.encode_data();
+
+    let Ok(AnonymousCandidatesEvents::B(decoded)) =
+        AnonymousCandidatesEvents::decode_raw_log_with_config(
+            &[],
+            &data,
+            AbiDecoderConfig::new().memory_limit(100),
+        )
+    else {
+        panic!("later anonymous candidate should decode");
+    };
+    assert_eq!(decoded.a, event.a);
+    assert_eq!(decoded.b, event.b);
+    assert_eq!(decoded.c, event.c);
+    assert_eq!(decoded.d, event.d);
+    assert_eq!(decoded.e, event.e);
+    assert_eq!(decoded.data, event.data);
+}
+
+#[test]
 fn anonymous_event_rejects_topic_count_mismatch() {
     sol! {
         #[derive(Debug)]

@@ -888,15 +888,23 @@ impl CallLikeExpander<'_> {
         let anon_impl = has_anon.then(|| {
             let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
+                let mut resource_error = None;
                 #(
                     match <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config) {
                         Ok(res) => return Ok(Self::#variants(res)),
-                        Err(alloy_sol_types::Error::MemoryLimitExceeded(limit)) => {
-                            return alloy_sol_types::private::Err(alloy_sol_types::Error::MemoryLimitExceeded(limit));
+                        Err(err @ (
+                            alloy_sol_types::Error::MemoryLimitExceeded(_)
+                            | alloy_sol_types::Error::RecursionLimitExceeded(_)
+                            | alloy_sol_types::Error::Reserve(_)
+                        )) => {
+                            resource_error.get_or_insert(err);
                         }
                         Err(_) => {}
                     }
                 )*
+                if let Some(err) = resource_error {
+                    return alloy_sol_types::private::Err(err);
+                }
                 #err
             }
         });
