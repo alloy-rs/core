@@ -957,6 +957,37 @@ mod tests {
     }
 
     #[test]
+    fn bit_shift_overflow() {
+        // Regression: the overflow check used a hardcoded `256` instead of the type's own
+        // `BITS`, so for every width below 256 a shift by `BITS..256` silently reported no
+        // overflow. `checked_shl`/`checked_shr` then returned `Some(ZERO)` instead of `None`,
+        // unlike `Uint` and the Rust primitives.
+        macro_rules! run_test {
+            ($i_struct:ty) => {
+                let bits = <$i_struct>::BITS;
+
+                assert_eq!(<$i_struct>::ONE.overflowing_shl(bits), (<$i_struct>::ZERO, true));
+                assert_eq!(<$i_struct>::ONE.checked_shl(bits), None);
+                assert_eq!(<$i_struct>::MINUS_ONE.overflowing_shr(bits), (<$i_struct>::ZERO, true));
+                assert_eq!(<$i_struct>::MINUS_ONE.checked_shr(bits), None);
+
+                // A shift by one less than the width is still in range.
+                assert!(!<$i_struct>::ONE.overflowing_shl(bits - 1).1);
+                assert!(<$i_struct>::ONE.checked_shl(bits - 1).is_some());
+                assert!(!<$i_struct>::MINUS_ONE.overflowing_shr(bits - 1).1);
+                assert!(<$i_struct>::MINUS_ONE.checked_shr(bits - 1).is_some());
+            };
+        }
+
+        run_test!(I8);
+        run_test!(I24);
+        run_test!(I64);
+        run_test!(I128);
+        run_test!(I160);
+        run_test!(I256);
+    }
+
+    #[test]
     fn arithmetic_shift_right() {
         macro_rules! run_test {
             ($i_struct:ty, $u_struct:ty) => {
