@@ -28,7 +28,7 @@ jobs:
         rust: [
             "stable",
             "nightly",
-            "1.85", # MSRV
+            "1.90", # MSRV
           ]
         flags: [
             # No features
@@ -39,10 +39,10 @@ jobs:
         include:
           # MSRV features
           - os: "ubuntu-latest"
-            rust: "1.85" # MSRV
+            rust: "1.90" # MSRV
             flags: "--features json"
           - os: "windows-latest"
-            rust: "1.85" # MSRV
+            rust: "1.90" # MSRV
             flags: "--features json"
           # All features
           - os: "ubuntu-latest"
@@ -69,14 +69,14 @@ jobs:
           sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
       # Only run tests on latest stable and above
       - name: pin deps
-        if: ${{ matrix.rust == '1.85' }} # MSRV
+        if: ${{ matrix.rust == '1.90' }} # MSRV
         run: cargo +nightly update -Z minimal-versions
       - name: build
-        if: ${{ matrix.rust == '1.85' }} # MSRV
+        if: ${{ matrix.rust == '1.90' }} # MSRV
         run: cargo build --workspace ${{ matrix.flags }}
 
       - name: test
-        if: ${{ matrix.rust != '1.85' }} # MSRV
+        if: ${{ matrix.rust != '1.90' }} # MSRV
         run: cargo test --workspace ${{ matrix.flags }}
 
   miri:

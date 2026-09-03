@@ -48,7 +48,7 @@ impl LogData {
 
     /// True if valid, false otherwise.
     #[inline]
-    pub fn is_valid(&self) -> bool {
+    pub const fn is_valid(&self) -> bool {
         self.topics.len() <= 4
     }
 

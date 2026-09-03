@@ -435,7 +435,7 @@ mod tests {
     #[cfg(all(feature = "keccak-cache", feature = "rand"))]
     fn test_keccak256_cache_multithreaded() {
         use keccak256_cached as keccak256;
-        use rand::{Rng, SeedableRng};
+        use rand::{RngExt, SeedableRng};
         use std::{sync::Arc, thread};
 
         // Test parameters (reduced for miri).
