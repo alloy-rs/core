@@ -49,7 +49,7 @@ impl SolType for Bool {
 
     #[inline]
     fn valid_token(token: &Self::Token<'_>) -> bool {
-        utils::check_zeroes(&token.0[..31])
+        utils::check_zeroes(&token.0[..31]) && token.0[31] <= 1
     }
 
     #[inline]

@@ -94,7 +94,7 @@ pub use ::hex::serde as serde_hex;
 // Not public API.
 #[doc(hidden)]
 pub mod private {
-    pub use alloc::{borrow::Cow, vec::Vec};
+    pub use alloc::{borrow::Cow, boxed::Box, vec::Vec};
     pub use core::{
         self,
         borrow::{Borrow, BorrowMut},
@@ -127,8 +127,14 @@ pub mod private {
     #[cfg(feature = "diesel")]
     pub use diesel;
 
+    #[cfg(feature = "postgres")]
+    pub use {bytes, postgres_types};
+
     #[cfg(feature = "sqlx")]
     pub use sqlx_core;
+
+    #[cfg(feature = "sqlx-postgres")]
+    pub use sqlx_postgres;
 
     #[cfg(feature = "schemars")]
     pub use schemars;
