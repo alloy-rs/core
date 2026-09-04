@@ -11,6 +11,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
     let ItemUdt { name, ty, .. } = udt;
 
     let (sol_attrs, mut attrs) = udt.split_attrs()?;
+    let sol_name = cx.sol_name(name, &udt.attrs);
     cx.type_derives(&mut attrs, std::iter::once(ty), true);
 
     let underlying_sol = cx.expand_type(ty);
@@ -64,7 +65,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, udt: &ItemUdt) -> Result<TokenStream> {
 
             impl #name {
                 /// The Solidity type name.
-                pub const NAME: &'static str = stringify!(#name);
+                pub const NAME: &'static str = #sol_name;
 
                 /// Convert from the underlying value type.
                 #[inline]
