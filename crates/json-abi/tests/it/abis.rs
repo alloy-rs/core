@@ -700,6 +700,61 @@ fn known_enum_definitions() {
     let enums_disabled = abi.to_sol("EnumUser", Some(config));
     assert!(!enums_disabled.contains("enum Status"));
     assert!(enums_disabled.contains("uint8 status"), "{enums_disabled}");
+    assert!(enums_disabled.contains("uint8[] memory external"), "{enums_disabled}");
+}
+
+#[test]
+fn enum_arrays_as_underlying_types() {
+    let abi = serde_json::from_str::<JsonAbi>(
+        r#"[
+            {
+                "type": "error", "name": "Invalid",
+                "inputs": [{"name": "values", "type": "uint8[][2]", "internalType": "enum EnumArrays.Status[][2]"}]
+            },
+            {
+                "type": "event", "name": "Changed", "anonymous": false,
+                "inputs": [
+                    {"name": "values", "type": "uint8[]", "internalType": "enum EnumArrays.Status[]", "indexed": false},
+                    {"name": "fixedValues", "type": "uint8[2]", "internalType": "enum EnumArrays.Status[2]", "indexed": true}
+                ]
+            },
+            {
+                "type": "function", "name": "useValues", "stateMutability": "nonpayable",
+                "inputs": [
+                    {"name": "scalar", "type": "uint8", "internalType": "enum EnumArrays.Status"},
+                    {"name": "dynamicValues", "type": "uint8[]", "internalType": "enum EnumArrays.Status[]"},
+                    {"name": "fixedValues", "type": "uint8[2]", "internalType": "enum EnumArrays.Status[2]"},
+                    {"name": "mixedValues", "type": "uint8[][2]", "internalType": "enum EnumArrays.Status[][2]"},
+                    {
+                        "name": "wrapper", "type": "tuple", "internalType": "struct EnumArrays.Wrapper",
+                        "components": [
+                            {"name": "states", "type": "uint8[]", "internalType": "enum EnumArrays.Status[]"},
+                            {"name": "count", "type": "uint256", "internalType": "uint256"}
+                        ]
+                    },
+                    {"name": "raw", "type": "uint8[]", "internalType": "uint8[]"}
+                ],
+                "outputs": [{"name": "", "type": "uint8[2][]", "internalType": "enum EnumArrays.Status[2][]"}]
+            }
+        ]"#,
+    )
+    .unwrap();
+
+    assert_eq!(
+        abi.to_sol("EnumArrays", Some(ToSolConfig::new().enums_as_udvt(false))),
+        r#"interface EnumArrays {
+    struct Wrapper {
+        uint8[] states;
+        uint256 count;
+    }
+
+    error Invalid(uint8[][2] values);
+
+    event Changed(uint8[] values, uint8[2] indexed fixedValues);
+
+    function useValues(uint8 scalar, uint8[] memory dynamicValues, uint8[2] memory fixedValues, uint8[][2] memory mixedValues, Wrapper memory wrapper, uint8[] memory raw) external returns (uint8[2][] memory);
+}"#
+    );
 }
 
 #[test]

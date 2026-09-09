@@ -738,7 +738,7 @@ fn param(
                 };
                 (None, ty)
             }
-            InternalType::Enum { .. } if !out.config.enums_as_udvt => (None, "uint8"),
+            InternalType::Enum { .. } if !out.config.enums_as_udvt => (None, type_name),
             InternalType::AddressPayable(ty) => (None, &ty[..]),
             InternalType::Struct { contract, ty }
             | InternalType::Enum { contract, ty }
