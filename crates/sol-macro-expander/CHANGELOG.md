@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [sol-types] Add strict ABI decoding ([#1180](https://github.com/alloy-rs/core/issues/1180))
 
+### Miscellaneous Tasks
+
+- Release 1.7.2
+
 ## [1.7.1](https://github.com/alloy-rs/core/releases/tag/v1.7.1) - 2026-08-25
 
 ### Miscellaneous Tasks

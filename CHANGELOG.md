@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.3](https://github.com/alloy-rs/core/releases/tag/v1.7.3) - 2026-09-10
+
+### Bug Fixes
+
+- Allow non atomic targets ([#1184](https://github.com/alloy-rs/core/issues/1184))
+- [primitives] Use BITS in Signed overflowing_shl/shr overflow check ([#1174](https://github.com/alloy-rs/core/issues/1174))
+
+### Features
+
+- [sol-types] Add validation that allows trailing bytes ([#1186](https://github.com/alloy-rs/core/issues/1186))
+
 ## [1.7.2](https://github.com/alloy-rs/core/releases/tag/v1.7.2) - 2026-09-03
 
 ### Dependencies
@@ -19,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Miscellaneous Tasks
 
+- Release 1.7.2
 - [ci] Disable allocative in CI ([#1183](https://github.com/alloy-rs/core/issues/1183))
 
 ## [1.7.1](https://github.com/alloy-rs/core/releases/tag/v1.7.1) - 2026-08-25
