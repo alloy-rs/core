@@ -32,6 +32,7 @@ pub struct AbiDecoderConfig {
     memory_limit: usize,
     validate: bool,
     strict: bool,
+    validate_allow_trailing_bytes: bool,
 }
 
 impl Default for AbiDecoderConfig {
@@ -58,6 +59,7 @@ impl fmt::Debug for AbiDecoderConfig {
             .field("memory_limit", &self.memory_limit)
             .field("validate", &self.validate)
             .field("strict", &self.strict)
+            .field("validate_allow_trailing_bytes", &self.validate_allow_trailing_bytes)
             .finish()
     }
 }
@@ -71,6 +73,7 @@ impl AbiDecoderConfig {
             memory_limit: DEFAULT_MEMORY_LIMIT,
             validate: false,
             strict: false,
+            validate_allow_trailing_bytes: false,
         }
     }
 
@@ -89,13 +92,23 @@ impl AbiDecoderConfig {
     /// Returns whether decoded tokens are validated before detokenization.
     #[inline]
     pub const fn get_validate(&self) -> bool {
-        self.validate || self.strict
+        self.validate || self.get_strict()
     }
 
     /// Returns whether strict ABI encoding is required.
+    ///
+    /// Trailing bytes are permitted when
+    /// [`get_validate_allow_trailing_bytes`](Self::get_validate_allow_trailing_bytes)
+    /// is enabled.
     #[inline]
     pub const fn get_strict(&self) -> bool {
         self.strict
+    }
+
+    /// Returns whether strict validation permits trailing bytes.
+    #[inline]
+    pub const fn get_validate_allow_trailing_bytes(&self) -> bool {
+        self.validate_allow_trailing_bytes
     }
 
     /// Sets the maximum recursion depth.
@@ -129,9 +142,39 @@ impl AbiDecoderConfig {
     ///
     /// Strict mode implies `validate`.
     /// It also rejects gaps or overlaps between dynamic data areas while decoding.
+    /// Trailing bytes are rejected unless
+    /// [`validate_allow_trailing_bytes`](Self::validate_allow_trailing_bytes) is enabled.
     #[inline]
     pub const fn strict(mut self, strict: bool) -> Self {
         self.strict = strict;
+        self
+    }
+
+    /// Allows trailing bytes when strict ABI decoding is enabled.
+    ///
+    /// This does not enable [`strict`](Self::strict) or [`validate`](Self::validate).
+    /// In strict mode, it skips the final check that the encoding consumes the entire
+    /// input. All other strict checks, including canonical offsets, complete zero padding,
+    /// and token validation, remain enabled. This matches Solidity's acceptance of trailing
+    /// bytes only; it does not relax the other checks that Solidity omits. Without strict
+    /// mode, trailing bytes are already permitted.
+    ///
+    /// This option permits trailing bytes even when `strict(true)` is also set,
+    /// regardless of setter order. Disabling it leaves the other configuration flags
+    /// unchanged.
+    ///
+    /// ```
+    /// use alloy_sol_types::{SolType, abi::AbiDecoderConfig, sol_data::Uint};
+    ///
+    /// let mut data = Uint::<8>::abi_encode(&42);
+    /// data.extend_from_slice(&[0xaa, 0xbb]);
+    /// let config = AbiDecoderConfig::new().strict(true).validate_allow_trailing_bytes(true);
+    /// assert_eq!(Uint::<8>::abi_decode_with_config(&data, config)?, 42);
+    /// # Ok::<(), alloy_sol_types::Error>(())
+    /// ```
+    #[inline]
+    pub const fn validate_allow_trailing_bytes(mut self, allow: bool) -> Self {
+        self.validate_allow_trailing_bytes = allow;
         self
     }
 
@@ -157,6 +200,12 @@ impl AbiDecoderConfig {
     #[inline]
     pub const fn set_strict(&mut self, strict: bool) {
         self.strict = strict;
+    }
+
+    /// Sets [`validate_allow_trailing_bytes`](Self::validate_allow_trailing_bytes) in place.
+    #[inline]
+    pub const fn set_validate_allow_trailing_bytes(&mut self, allow: bool) {
+        self.validate_allow_trailing_bytes = allow;
     }
 }
 
@@ -617,7 +666,10 @@ pub fn decode_sequence_with_config<'de, T: TokenSeq<'de>>(
 ) -> Result<T> {
     let mut decoder = Decoder::with_config(data, config);
     let result = decoder.decode_sequence::<T>()?;
-    if config.get_strict() && decoder.state.strict_next_offset().get() != data.len() {
+    if config.get_strict()
+        && !config.get_validate_allow_trailing_bytes()
+        && decoder.state.strict_next_offset().get() != data.len()
+    {
         return Err(Error::ReserMismatch);
     }
     Ok(result)
@@ -1171,6 +1223,7 @@ mod tests {
         assert_eq!(config.get_memory_limit(), DEFAULT_MEMORY_LIMIT);
         assert!(!config.get_validate());
         assert!(!config.get_strict());
+        assert!(!config.get_validate_allow_trailing_bytes());
 
         config.set_recursion_limit(300);
         config.set_memory_limit(42);
@@ -1186,6 +1239,132 @@ mod tests {
         assert_eq!(config.get_memory_limit(), 24);
         assert!(config.get_validate());
         assert!(config.get_strict());
+    }
+
+    #[test]
+    fn validate_allow_trailing_bytes_config() {
+        let mut config = AbiDecoderConfig::new().validate_allow_trailing_bytes(true);
+        assert!(!config.get_validate());
+        assert!(!config.get_strict());
+        assert!(config.get_validate_allow_trailing_bytes());
+
+        config.set_validate_allow_trailing_bytes(false);
+        assert!(!config.get_validate());
+        assert!(!config.get_strict());
+        assert!(!config.get_validate_allow_trailing_bytes());
+
+        config.set_strict(true);
+        config.set_validate_allow_trailing_bytes(true);
+        config.set_validate_allow_trailing_bytes(false);
+        assert!(config.get_strict());
+        assert!(config.get_validate());
+
+        config.set_strict(false);
+        config.set_validate(true);
+        config.set_validate_allow_trailing_bytes(true);
+        assert!(!config.get_strict());
+        assert!(config.get_validate());
+        assert!(config.get_validate_allow_trailing_bytes());
+        config.set_validate_allow_trailing_bytes(false);
+        assert!(!config.get_strict());
+        assert!(config.get_validate());
+        assert!(!config.get_validate_allow_trailing_bytes());
+    }
+
+    #[test]
+    fn validate_allow_trailing_bytes_accepts_encoded_prefixes() {
+        fn check<T: SolType>(value: &T::RustType)
+        where
+            T::RustType: PartialEq + core::fmt::Debug,
+            for<'de> T::Token<'de>: TokenSeq<'de>,
+        {
+            type Encode<T> = fn(&<T as SolType>::RustType) -> Vec<u8>;
+            type Decode<T> = fn(&[u8], AbiDecoderConfig) -> Result<<T as SolType>::RustType>;
+            let codecs: [(Encode<T>, Decode<T>); 3] = [
+                (T::abi_encode, T::abi_decode_with_config),
+                (T::abi_encode_params, |data, config| {
+                    T::abi_decode_params_with_config(data, config)
+                }),
+                (T::abi_encode_sequence, |data, config| {
+                    T::abi_decode_sequence_with_config(data, config)
+                }),
+            ];
+            for (encode, decode) in codecs {
+                for suffix in [&[][..], &[0xff][..], &[0xaa; 32][..], &[0xbb; 33][..]] {
+                    let mut encoded = encode(value);
+                    encoded.extend_from_slice(suffix);
+                    for config in [
+                        AbiDecoderConfig::new().validate(true),
+                        AbiDecoderConfig::new().validate(true).validate_allow_trailing_bytes(true),
+                        AbiDecoderConfig::new().validate_allow_trailing_bytes(true),
+                        AbiDecoderConfig::new().strict(true).validate_allow_trailing_bytes(true),
+                        AbiDecoderConfig::new().validate_allow_trailing_bytes(true).strict(true),
+                    ] {
+                        assert_eq!(&decode(&encoded, config).unwrap(), value);
+                    }
+                    if !suffix.is_empty() {
+                        assert_eq!(
+                            decode(&encoded, AbiDecoderConfig::new().strict(true)),
+                            Err(Error::ReserMismatch),
+                        );
+                    }
+                }
+            }
+        }
+
+        check::<()>(&());
+        check::<(sol_data::Uint<8>, sol_data::Bool)>(&(42, true));
+        check::<(sol_data::Bytes, sol_data::Array<sol_data::String>)>(&(
+            bytes!("1234"),
+            vec!["hello".into(), alloc::string::String::new()],
+        ));
+        check::<(sol_data::Array<sol_data::Bytes>,)>(&(vec![],));
+    }
+
+    #[test]
+    fn validate_allow_trailing_bytes_keeps_other_checks() {
+        let config = AbiDecoderConfig::new().strict(true).validate_allow_trailing_bytes(true);
+        let value = bytes!("1122");
+        let canonical = sol_data::Bytes::abi_encode(&value);
+
+        // A suffix cannot substitute for required padding or payload bytes.
+        for len in [canonical.len() - 1, 65] {
+            assert_eq!(
+                sol_data::Bytes::abi_decode_with_config(&canonical[..len], config),
+                Err(Error::Overrun),
+            );
+        }
+        let mut dirty_padding = canonical.clone();
+        dirty_padding[66] = 1;
+        dirty_padding.push(0xff);
+        assert_eq!(
+            sol_data::Bytes::abi_decode_with_config(&dirty_padding, config),
+            Err(Error::ReserMismatch),
+        );
+
+        let mut gap = canonical;
+        gap[31] = 64;
+        gap.splice(32..32, [0; 32]);
+        assert_eq!(
+            sol_data::Bytes::abi_decode_with_config(&gap, config),
+            Err(Error::ReserMismatch),
+        );
+
+        type Pair = (sol_data::Bytes, sol_data::Bytes);
+        let mut overlap = Pair::abi_encode_params(&(value.clone(), value));
+        overlap[63] = overlap[31];
+        assert_eq!(
+            Pair::abi_decode_params_with_config(&overlap, config),
+            Err(Error::ReserMismatch)
+        );
+
+        let mut invalid_bool = Word::with_last_byte(2).to_vec();
+        invalid_bool.push(0xff);
+        assert!(sol_data::Bool::abi_decode_with_config(&invalid_bool, config).is_err());
+
+        let mut invalid_string = sol_data::Bytes::abi_encode(&bytes!("ff"));
+        invalid_string.push(0xff);
+        assert!(sol_data::String::abi_decode_with_config(&invalid_string, config).is_err());
     }
 
     #[test]
