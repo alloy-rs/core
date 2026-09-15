@@ -142,10 +142,11 @@ impl<'a> RootType<'a> {
             "address" | "bool" | "string" | "bytes" | "uint" | "int" | "function" => Ok(()),
             name => {
                 if let Some(sz) = name.strip_prefix("bytes") {
-                    if let Ok(sz) = sz.parse::<usize>() {
-                        if sz != 0 && sz <= 32 {
-                            return Ok(());
-                        }
+                    if let Ok(sz) = sz.parse::<usize>()
+                        && sz != 0
+                        && sz <= 32
+                    {
+                        return Ok(());
                     }
                     return Err(Error::invalid_size(name));
                 }
@@ -154,10 +155,12 @@ impl<'a> RootType<'a> {
                 let s = name.strip_prefix('u').unwrap_or(name);
 
                 if let Some(sz) = s.strip_prefix("int") {
-                    if let Ok(sz) = sz.parse::<usize>() {
-                        if sz != 0 && sz <= 256 && sz % 8 == 0 {
-                            return Ok(());
-                        }
+                    if let Ok(sz) = sz.parse::<usize>()
+                        && sz != 0
+                        && sz <= 256
+                        && sz % 8 == 0
+                    {
+                        return Ok(());
                     }
                     return Err(Error::invalid_size(name));
                 }

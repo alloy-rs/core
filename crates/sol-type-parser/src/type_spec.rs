@@ -165,7 +165,7 @@ impl<'a> TypeSpecifier<'a> {
 
     /// Returns true if this type is an array.
     #[inline]
-    pub fn is_array(&self) -> bool {
+    pub const fn is_array(&self) -> bool {
         !self.sizes.is_empty()
     }
 }
