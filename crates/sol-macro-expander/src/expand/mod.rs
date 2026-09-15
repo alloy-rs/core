@@ -1,7 +1,7 @@
 //! Functions which generate Rust code from the Solidity AST.
 
 use crate::utils::{self, ExprArray};
-use alloy_sol_macro_input::{ContainsSolAttrs, SolAttrs};
+use alloy_sol_macro_input::{CasingStyle, ContainsSolAttrs, SolAttrs};
 use ast::{
     EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath,
     Spanned, Type, VariableDeclaration, Visit, VisitMut, visit_mut,
@@ -128,6 +128,7 @@ pub struct ExpCtxt<'ast> {
     overloads: IndexMap<Option<SolIdent>, IndexMap<String, String>>,
 
     attrs: SolAttrs,
+    root_attrs: SolAttrs,
     crates: ExternCrates,
     ast: &'ast File,
 
@@ -144,6 +145,7 @@ impl<'ast> ExpCtxt<'ast> {
             overloaded_items: Default::default(),
             overloads: IndexMap::new(),
             attrs: SolAttrs::default(),
+            root_attrs: SolAttrs::default(),
             crates: ExternCrates::default(),
             ast,
             current_namespace: None,
@@ -168,11 +170,17 @@ impl<'ast> ExpCtxt<'ast> {
 
         if let Err(e) = self.parse_file_attributes() {
             tokens.extend(e.into_compile_error());
+            abort = true;
         }
 
         self.visit_file(self.ast);
 
-        if !self.all_items.0.is_empty() {
+        if let Err(e) = self.validate_item_attributes() {
+            tokens.extend(e.into_compile_error());
+            abort = true;
+        }
+
+        if !abort && !self.all_items.0.is_empty() {
             self.resolve_custom_types();
             // Selector collisions requires resolved types.
             if self.mk_overloads_map().is_err() || self.check_selector_collisions().is_err() {
@@ -216,11 +224,59 @@ impl<'ast> ExpCtxt<'ast> {
 impl ExpCtxt<'_> {
     fn parse_file_attributes(&mut self) -> Result<()> {
         let (attrs, others) = self.ast.split_attrs()?;
+        self.root_attrs = attrs.clone();
         self.attrs = attrs;
         self.crates.fill(&self.attrs);
 
         let errs = others.iter().map(|attr| Error::new_spanned(attr, "unexpected attribute"));
         utils::combine_errors(errs)
+    }
+
+    fn validate_item_attributes(&self) -> Result<()> {
+        fn validate_params<P>(params: &Parameters<P>) -> Result<()> {
+            for param in params {
+                SolAttrs::parse(&param.attrs)?;
+            }
+            Ok(())
+        }
+
+        fn validate_item(item: &Item) -> Result<()> {
+            if let Some(attrs) = item.attrs() {
+                SolAttrs::parse(attrs)?;
+            }
+            match item {
+                Item::Contract(contract) => {
+                    for item in &contract.body {
+                        validate_item(item)?;
+                    }
+                }
+                Item::Enum(enumm) => {
+                    for variant in &enumm.variants {
+                        SolAttrs::parse(&variant.attrs)?;
+                    }
+                }
+                Item::Error(error) => validate_params(&error.parameters)?,
+                Item::Event(event) => {
+                    for param in &event.parameters {
+                        SolAttrs::parse(&param.attrs)?;
+                    }
+                }
+                Item::Function(function) => {
+                    validate_params(&function.parameters)?;
+                    if let Some(returns) = &function.returns {
+                        validate_params(&returns.returns)?;
+                    }
+                }
+                Item::Struct(strukt) => validate_params(&strukt.fields)?,
+                _ => {}
+            }
+            Ok(())
+        }
+
+        for item in &self.ast.items {
+            validate_item(item)?;
+        }
+        Ok(())
     }
 
     fn mk_types_map(&mut self) {
@@ -376,7 +432,6 @@ impl ExpCtxt<'_> {
                 let overloaded_items = this.overloaded_items.0.get(namespace).unwrap();
                 let all_orig_names: Vec<_> =
                     overloaded_items.values().flatten().filter_map(|f| f.name()).collect();
-
                 for functions in overloaded_items.values().filter(|fs| fs.len() >= 2) {
                     // check for same parameters
                     for (i, &a) in functions.iter().enumerate() {
@@ -642,8 +697,86 @@ impl<'ast> ExpCtxt<'ast> {
         Ident::new(&new_ident, function_name.span())
     }
 
+    /// Returns the `rename_all` style inherited by items in the current namespace.
+    fn scope_rename_all(&self) -> Option<CasingStyle> {
+        self.rename_all_for_namespace(&self.current_namespace)
+    }
+
+    fn rename_all_for_namespace(&self, namespace: &Option<SolIdent>) -> Option<CasingStyle> {
+        let root = self.root_attrs.rename_all;
+        let Some(namespace) = namespace.as_ref() else { return root };
+        self.ast
+            .items
+            .iter()
+            .find_map(|item| match item {
+                Item::Contract(contract) if contract.name == *namespace => {
+                    SolAttrs::parse(&contract.attrs).ok().and_then(|(attrs, _)| attrs.rename_all)
+                }
+                _ => None,
+            })
+            .or(root)
+    }
+
+    fn sol_name_in_namespace(
+        &self,
+        name: &SolIdent,
+        attrs: &[Attribute],
+        namespace: &Option<SolIdent>,
+    ) -> String {
+        let attrs = SolAttrs::parse(attrs).ok().map(|(attrs, _)| attrs).unwrap_or_default();
+        if let Some(rename) = attrs.rename {
+            rename.value()
+        } else if let Some(rename_all) = self.rename_all_for_namespace(namespace) {
+            rename_all.apply(&name.as_string())
+        } else {
+            name.as_string()
+        }
+    }
+
+    /// Returns the Solidity name for a Rust item name and its local attributes.
+    fn sol_name(&self, name: &SolIdent, attrs: &[Attribute]) -> String {
+        self.sol_name_in_namespace(name, attrs, &self.current_namespace)
+    }
+
+    /// Returns the Solidity name for a child such as a parameter or struct field.
+    fn child_sol_name(
+        &self,
+        name: &SolIdent,
+        attrs: &[Attribute],
+        parent_attrs: &[Attribute],
+    ) -> String {
+        let attrs = SolAttrs::parse(attrs).ok().map(|(attrs, _)| attrs).unwrap_or_default();
+        if let Some(rename) = attrs.rename {
+            return rename.value();
+        }
+        let parent = SolAttrs::parse(parent_attrs)
+            .ok()
+            .and_then(|(attrs, _)| attrs.rename_all)
+            .or_else(|| self.scope_rename_all());
+        parent.map_or_else(|| name.as_string(), |style| style.apply(&name.as_string()))
+    }
+
+    fn function_sol_name(&self, function: &ItemFunction) -> String {
+        self.sol_name(function.name(), &function.attrs)
+    }
+
+    fn error_sol_name(&self, error: &ItemError) -> String {
+        self.sol_name(&error.name, &error.attrs)
+    }
+
+    fn event_sol_name(&self, event: &ItemEvent) -> String {
+        self.sol_name(&event.name, &event.attrs)
+    }
+
+    fn custom_sol_name(&self, name: &SolPath) -> Option<String> {
+        let (namespace, item) = self.try_item_in_namespace(name, &self.current_namespace)?;
+        let ident = item.name()?;
+        let attrs = item.attrs()?;
+        Some(self.sol_name_in_namespace(ident, attrs, namespace))
+    }
+
     fn function_signature(&self, function: &ItemFunction) -> String {
-        self.signature(function.name().as_string(), &function.parameters)
+        self.signature(self.function_sol_name(function), &function.parameters)
     }
 
     fn function_selector(&self, function: &ItemFunction) -> ExprArray<u8> {
@@ -651,7 +784,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn error_signature(&self, error: &ItemError) -> String {
-        self.signature(error.name.as_string(), &error.parameters)
+        self.signature(self.error_sol_name(error), &error.parameters)
     }
 
     fn error_selector(&self, error: &ItemError) -> ExprArray<u8> {
@@ -659,7 +792,7 @@ impl<'ast> ExpCtxt<'ast> {
     }
 
     fn event_signature(&self, event: &ItemEvent) -> String {
-        self.signature(event.name.as_string(), &event.params())
+        self.signature(self.event_sol_name(event), &event.params())
     }
 
     fn event_selector(&self, event: &ItemEvent) -> ExprArray<u8> {
@@ -836,7 +969,7 @@ fn expand_fields<'a, P>(
     params.iter().enumerate().map(|(i, var)| {
         let name = anon_name((i, var.name.as_ref()));
         let ty = cx.expand_rust_type(&var.ty);
-        let attrs = &var.attrs;
+        let attrs = var.attrs.iter().filter(|attr| !attr.path().is_ident("sol"));
         quote! {
             #(#attrs)*
             #[allow(missing_docs)]

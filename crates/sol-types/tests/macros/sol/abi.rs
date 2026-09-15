@@ -12,6 +12,52 @@ macro_rules! abi_map {
 }
 
 #[test]
+fn renamed_items_and_parameters() {
+    sol! {
+        #![sol(abi, rename_all = "camelCase")]
+
+        #[sol(rename = "ActualStruct", rename_all = "snake_case")]
+        struct RustStruct {
+            uint256 SomeField;
+            #[sol(rename = "exactField")]
+            bool OtherField;
+        }
+
+        function use_struct(RustStruct InputStruct) returns (RustStruct OutputStruct);
+
+        #[sol(rename = "exactFunction", rename_all = "UPPERCASE")]
+        function RustFunction(
+            #[sol(rename = "exactInput")] uint256 FirstInput,
+            uint256 SecondInput
+        ) returns (uint256 OutputValue);
+
+        event RustEvent(#[sol(rename = "exactEventInput")] uint256 EventInput);
+        error RustError(#[sol(rename = "exactErrorInput")] uint256 ErrorInput);
+    }
+
+    let use_struct = use_structCall::abi();
+    assert_eq!(use_struct.name, "useStruct");
+    assert_eq!(use_struct.inputs[0].name, "inputStruct");
+    assert_eq!(use_struct.outputs[0].name, "outputStruct");
+    assert_eq!(use_struct.inputs[0].components[0].name, "some_field");
+    assert_eq!(use_struct.inputs[0].components[1].name, "exactField");
+
+    let function = RustFunctionCall::abi();
+    assert_eq!(function.name, "exactFunction");
+    assert_eq!(function.inputs[0].name, "exactInput");
+    assert_eq!(function.inputs[1].name, "SECONDINPUT");
+    assert_eq!(function.outputs[0].name, "OUTPUTVALUE");
+
+    let event = RustEvent::abi();
+    assert_eq!(event.name, "rustEvent");
+    assert_eq!(event.inputs[0].name, "exactEventInput");
+
+    let error = RustError::abi();
+    assert_eq!(error.name, "rustError");
+    assert_eq!(error.inputs[0].name, "exactErrorInput");
+}
+
+#[test]
 fn equal_abis() {
     let contract = Contract::abi::contract();
 
