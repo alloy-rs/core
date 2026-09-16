@@ -210,6 +210,15 @@ fn check_type_depth(depth: usize) -> Result<()> {
     Ok(())
 }
 
+const MAX_RESOLVED_TYPE_NODES: usize = 1024;
+
+fn charge_type_nodes(remaining: &mut usize, nodes: usize) -> Result<()> {
+    *remaining = remaining
+        .checked_sub(nodes)
+        .ok_or_else(|| Error::custom("EIP-712 type expansion limit exceeded"))?;
+    Ok(())
+}
+
 /// A dependency graph built from the `Eip712Types` object. This is used to
 /// safely resolve JSON into a [`crate::DynSolType`] by detecting cycles in the
 /// type graph and traversing the dep graph.
@@ -422,21 +431,33 @@ impl Resolver {
 
     /// Resolve a typename into a [`crate::DynSolType`] or return an error if
     /// the type is missing, or contains a circular dependency.
+    ///
+    /// The expanded type is limited to 1024 nodes, including array wrappers and
+    /// repeated references to the same named type.
     pub fn resolve(&self, type_name: &str) -> Result<DynSolType> {
         self.detect_cycle(type_name)?;
-        self.resolve_unchecked(&TypeSpecifier::parse_eip712(type_name)?, 0)
+        let mut remaining = MAX_RESOLVED_TYPE_NODES;
+        self.resolve_unchecked(&TypeSpecifier::parse_eip712(type_name)?, 0, &mut remaining)
     }
 
     /// Resolve a type into a [`crate::DynSolType`] without checking for cycles.
-    fn resolve_unchecked(&self, type_spec: &TypeSpecifier<'_>, depth: usize) -> Result<DynSolType> {
+    fn resolve_unchecked(
+        &self,
+        type_spec: &TypeSpecifier<'_>,
+        depth: usize,
+        remaining: &mut usize,
+    ) -> Result<DynSolType> {
         let depth = depth.saturating_add(type_spec.sizes.len());
         check_type_depth(depth)?;
+        // Charge before allocating the node or any of its array wrappers.
+        charge_type_nodes(remaining, 1)?;
+        charge_type_nodes(remaining, type_spec.sizes.len())?;
         let ty = match &type_spec.stem {
-            TypeStem::Root(root) => self.resolve_root_type(*root, depth),
+            TypeStem::Root(root) => self.resolve_root_type(*root, depth, remaining),
             TypeStem::Tuple(tuple) => tuple
                 .types
                 .iter()
-                .map(|ty| self.resolve_unchecked(ty, depth + 1))
+                .map(|ty| self.resolve_unchecked(ty, depth + 1, remaining))
                 .collect::<Result<_, _>>()
                 .map(DynSolType::Tuple),
         }?;
@@ -445,7 +466,12 @@ impl Resolver {
 
     /// Resolves a root Solidity type into either a basic type or a custom
     /// struct.
-    fn resolve_root_type(&self, root_type: RootType<'_>, depth: usize) -> Result<DynSolType> {
+    fn resolve_root_type(
+        &self,
+        root_type: RootType<'_>,
+        depth: usize,
+        remaining: &mut usize,
+    ) -> Result<DynSolType> {
         if let Ok(ty) = root_type.resolve() {
             return Ok(ty);
         }
@@ -455,11 +481,18 @@ impl Resolver {
             .get(root_type.span())
             .ok_or_else(|| Error::missing_type(root_type.span()))?;
 
-        let prop_names: Vec<_> = ty.prop_names().map(str::to_string).collect();
+        // Every property needs at least one node. Reject oversized structs before
+        // collecting their fields or copying property names.
+        if ty.props.len() > *remaining {
+            return Err(Error::custom("EIP-712 type expansion limit exceeded"));
+        }
         let tuple: Vec<_> = ty
             .prop_types()
-            .map(|ty| self.resolve_unchecked(&TypeSpecifier::parse_eip712(ty)?, depth + 1))
+            .map(|ty| {
+                self.resolve_unchecked(&TypeSpecifier::parse_eip712(ty)?, depth + 1, remaining)
+            })
             .collect::<Result<_, _>>()?;
+        let prop_names: Vec<_> = ty.prop_names().map(str::to_string).collect();
 
         Ok(DynSolType::CustomStruct { name: ty.type_name.clone(), prop_names, tuple })
     }
@@ -583,6 +616,53 @@ mod tests {
     use alloc::boxed::Box;
     use alloy_sol_types::sol;
     use serde_json::json;
+
+    #[test]
+    fn shared_expansion_budget() {
+        let mut graph = Resolver::default();
+        graph.ingest(
+            TypeDef::new("Leaf", vec![PropertyDef::new("uint256", "value").unwrap()]).unwrap(),
+        );
+        graph.ingest(
+            TypeDef::new(
+                "Pair",
+                vec![
+                    PropertyDef::new("Leaf", "left").unwrap(),
+                    PropertyDef::new("Leaf", "right").unwrap(),
+                ],
+            )
+            .unwrap(),
+        );
+
+        // Pair + two independent Leaf structs + their uint256 fields.
+        let spec = TypeSpecifier::parse_eip712("Pair").unwrap();
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 5).is_ok());
+        assert_eq!(
+            graph.resolve_unchecked(&spec, 0, &mut 4).unwrap_err(),
+            Error::custom("EIP-712 type expansion limit exceeded"),
+        );
+        let spec = TypeSpecifier::parse_eip712("Pair[2][]").unwrap();
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 7).is_ok());
+        assert!(graph.resolve_unchecked(&spec, 0, &mut 6).is_err());
+        assert!(graph.resolve("Pair").is_ok());
+    }
+
+    #[test]
+    fn public_expansion_budget_boundary() {
+        let mut graph = Resolver::default();
+        let props: Vec<_> = (0..MAX_RESOLVED_TYPE_NODES - 1)
+            .map(|i| PropertyDef::new("uint256", format!("field{i}")).unwrap())
+            .collect();
+        graph.ingest(TypeDef::new("Record", props.clone()).unwrap());
+        assert!(graph.resolve("Record").is_ok());
+        let mut props = props;
+        props.push(PropertyDef::new("uint256", "extra").unwrap());
+        graph.ingest(TypeDef::new("Record", props).unwrap());
+        assert_eq!(
+            graph.resolve("Record").unwrap_err(),
+            Error::custom("EIP-712 type expansion limit exceeded")
+        );
+    }
 
     #[test]
     fn it_detects_cycles() {
