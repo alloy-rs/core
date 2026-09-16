@@ -911,8 +911,6 @@ impl CallLikeExpander<'_> {
                             | alloy_sol_types::Error::RecursionLimitExceeded(_)
                             | alloy_sol_types::Error::Reserve(_)
                         )) => {
-                            // Uniqueness cannot be established if a candidate could
-                            // not be checked within the requested resource limits.
                             return Err(err);
                         }
                         Err(_) => {}
