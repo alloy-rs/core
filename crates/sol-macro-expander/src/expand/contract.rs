@@ -872,42 +872,64 @@ impl CallLikeExpander<'_> {
         };
         let non_anon_impl = has_non_anon.then(|| {
             let variants = events.iter().filter(|e| !e.is_anonymous()).map(e_name);
-            let ret = has_anon.then(|| quote!(return));
-            let ret_err = (!has_anon).then_some(&err);
-            quote! {
+            if has_anon {
+                quote! {
+                    match topics.first().copied() {
+                        #(
+                            Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) => {
+                                record_result(<#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
+                                    .map(Self::#variants))?;
+                            }
+                        )*
+                        _ => {}
+                    }
+                }
+            } else { quote! {
                 match topics.first().copied() {
                     #(
                         Some(<#variants as alloy_sol_types::#trait_>::SIGNATURE_HASH) =>
-                            #ret <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
+                            <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
                                 .map(Self::#variants),
                     )*
-                    _ => { #ret_err }
+                    _ => { #err }
                 }
-            }
+            } }
         });
-        let anon_impl = has_anon.then(|| {
+        let decode_impl = if has_anon {
             let variants = events.iter().filter(|e| e.is_anonymous()).map(e_name);
             quote! {
-                let mut resource_error = None;
-                #(
-                    match <#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config) {
-                        Ok(res) => return Ok(Self::#variants(res)),
+                let mut decoded = None;
+                let mut record_result = |result: alloy_sol_types::Result<Self>| -> alloy_sol_types::Result<()> {
+                    match result {
+                        Ok(candidate) => {
+                            if decoded.replace(candidate).is_some() {
+                                return Err(alloy_sol_types::Error::custom("ambiguous event log"));
+                            }
+                        }
                         Err(err @ (
                             alloy_sol_types::Error::MemoryLimitExceeded(_)
                             | alloy_sol_types::Error::RecursionLimitExceeded(_)
                             | alloy_sol_types::Error::Reserve(_)
                         )) => {
-                            resource_error.get_or_insert(err);
+                            return Err(err);
                         }
                         Err(_) => {}
                     }
+                    Ok(())
+                };
+                #non_anon_impl
+                #(
+                    record_result(<#variants as alloy_sol_types::#trait_>::decode_raw_log_with_config(topics, data, config)
+                        .map(Self::#variants))?;
                 )*
-                if let Some(err) = resource_error {
-                    return alloy_sol_types::private::Err(err);
+                if let Some(decoded) = decoded {
+                    return Ok(decoded);
                 }
                 #err
             }
-        });
+        } else {
+            quote! { #non_anon_impl }
+        };
         let into_impl = {
             let variants = events.iter().map(e_name);
             let v2 = variants.clone();
@@ -952,8 +974,7 @@ impl CallLikeExpander<'_> {
                     data: &[u8],
                     config: alloy_sol_types::abi::AbiDecoderConfig,
                 ) -> alloy_sol_types::Result<Self> {
-                    #non_anon_impl
-                    #anon_impl
+                    #decode_impl
                 }
             }
 
