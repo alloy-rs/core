@@ -1377,7 +1377,7 @@ fn event_interface_respects_decoder_config() {
 }
 
 #[test]
-fn anonymous_event_interface_tries_later_candidates() {
+fn anonymous_event_interface_requires_complete_disambiguation() {
     sol! {
         contract AnonymousCandidates {
             event A(string data) anonymous;
@@ -1403,21 +1403,50 @@ fn anonymous_event_interface_tries_later_candidates() {
     };
     let data = event.encode_data();
 
-    let Ok(AnonymousCandidatesEvents::B(decoded)) =
-        AnonymousCandidatesEvents::decode_raw_log_with_config(
-            &[],
+    let result = AnonymousCandidatesEvents::decode_raw_log_with_config(
+        &[],
+        &data,
+        AbiDecoderConfig::new().memory_limit(100),
+    );
+    assert!(matches!(result, Err(Error::MemoryLimitExceeded(100))));
+}
+
+#[test]
+fn event_interface_rejects_ambiguous_layouts() {
+    sol! {
+        contract AmbiguousEvents {
+            event First(uint256 value) anonymous;
+            event Second(uint256 value) anonymous;
+        }
+        contract UniqueEvents {
+            event Value(uint256 value) anonymous;
+            event Empty() anonymous;
+        }
+        contract MixedEvents {
+            event Value(uint256 value);
+            event Anonymous(bytes32 indexed tag, uint256 value) anonymous;
+        }
+    }
+    let data = alloy_sol_types::sol_data::Uint::<256>::abi_encode(&U256::from(42));
+    for strict in [false, true] {
+        let config = AbiDecoderConfig::new().strict(strict);
+        let result =
+            AmbiguousEvents::AmbiguousEventsEvents::decode_raw_log_with_config(&[], &data, config);
+        assert!(matches!(result, Err(Error::Other(message)) if message == "ambiguous event log"));
+        let result = MixedEvents::MixedEventsEvents::decode_raw_log_with_config(
+            &[MixedEvents::Value::SIGNATURE_HASH],
             &data,
-            AbiDecoderConfig::new().memory_limit(100),
-        )
-    else {
-        panic!("later anonymous candidate should decode");
-    };
-    assert_eq!(decoded.a, event.a);
-    assert_eq!(decoded.b, event.b);
-    assert_eq!(decoded.c, event.c);
-    assert_eq!(decoded.d, event.d);
-    assert_eq!(decoded.e, event.e);
-    assert_eq!(decoded.data, event.data);
+            config,
+        );
+        assert!(matches!(result, Err(Error::Other(message)) if message == "ambiguous event log"));
+    }
+    // Strict decoding makes the two anonymous layouts disjoint.
+    let result = UniqueEvents::UniqueEventsEvents::decode_raw_log_with_config(
+        &[],
+        &data,
+        AbiDecoderConfig::new().strict(true),
+    );
+    assert!(matches!(result, Ok(UniqueEvents::UniqueEventsEvents::Value(_))));
 }
 
 #[test]
