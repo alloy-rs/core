@@ -57,7 +57,7 @@ type FbHasherInner = foldhash::fast::FoldHasher<'static>;
 
 /// [`BuildHasher`] optimized for hashing [fixed-size byte arrays](FixedBytes).
 ///
-/// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
+/// Optimized for `N`-length byte arrays. Other byte lengths are supported for borrowed lookups.
 #[derive(Clone, Default)]
 pub struct FbBuildHasher<const N: usize> {
     inner: FbBuildHasherInner,
@@ -81,7 +81,7 @@ impl<const N: usize> BuildHasher for FbBuildHasher<N> {
 
 /// [`Hasher`] optimized for hashing [fixed-size byte arrays](FixedBytes).
 ///
-/// **NOTE:** this hasher accepts only `N`-length byte arrays! It is invalid to hash anything else.
+/// Optimized for `N`-length byte arrays. Other byte lengths are supported for borrowed lookups.
 #[derive(Clone)]
 pub struct FbHasher<const N: usize> {
     inner: FbHasherInner,
@@ -112,32 +112,25 @@ impl<const N: usize> Hasher for FbHasher<N> {
 
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
-        // SAFETY: Precondition.
-        unsafe { core::hint::assert_unchecked(bytes.len() == N) };
         // Avoid slice overhead for short fixed-size inputs.
-        if N > 32 {
+        if N > 32 || bytes.len() != N {
             self.inner.write(bytes);
         } else {
             write_bytes_unrolled(&mut self.inner, bytes);
         }
     }
 
-    // We can just skip hashing the length prefix entirely since we know it's always `<=N`.
-    // Not always `=N`, because arrays like `[T; M]` are hashed as `[u8; N=M*size_of::<T>()]` for a
-    // few primitive `T` types, like integers.
+    // Omit length prefixes so owned fixed-byte keys and borrowed byte slices hash alike.
+    // Borrowed queries need not have length N; equality still checks their length.
 
     // `write_length_prefix` calls `write_usize` by default.
     #[cfg(not(feature = "nightly"))]
     #[inline]
-    fn write_usize(&mut self, i: usize) {
-        debug_assert!(i <= N, "{i} > {N}")
-    }
+    fn write_usize(&mut self, _i: usize) {}
 
     #[cfg(feature = "nightly")]
     #[inline]
-    fn write_length_prefix(&mut self, len: usize) {
-        debug_assert!(len <= N, "{len} > {N}")
-    }
+    fn write_length_prefix(&mut self, _len: usize) {}
 }
 
 #[inline(always)]
@@ -204,6 +197,18 @@ mod tests {
         assert_eq!(map.len(), 1);
         assert_eq!(map2.get(&Address::ZERO), Some(&true));
         assert_eq!(map2.get(&Address::with_last_byte(1)), None);
+    }
+
+    #[test]
+    fn borrowed_slice_lookups() {
+        let mut map = FbMap::<4, _>::default();
+        map.insert(FixedBytes::from([1, 2, 3, 4]), 42);
+        assert_eq!(map.get([1, 2, 3, 4].as_slice()), Some(&42));
+        for query in [&[][..], &[1, 2, 3][..], &[1, 2, 3, 4, 5][..]] {
+            assert_eq!(map.get(query), None);
+            assert_eq!(map.remove(query), None);
+        }
+        assert_eq!(map.len(), 1);
     }
 
     #[test]
