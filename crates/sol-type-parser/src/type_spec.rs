@@ -18,6 +18,8 @@ use winnow::{
 /// sizes are in innermost-to-outermost order. An empty array size vec indicates
 /// that the specified type is not an array
 ///
+/// Parsing limits combined tuple and array nesting to 80 levels.
+///
 /// Type specifier examples:
 /// - `uint256`
 /// - `uint256[2]`
@@ -99,7 +101,7 @@ impl<'a> TypeSpecifier<'a> {
                 let stem = TypeStem::parser(input)?;
                 let sizes = if input.starts_with('[') {
                     repeat(
-                        1..,
+                        1..=crate::input::LIMIT,
                         delimited(str_parser("["), array_size_parser, cut_err(str_parser("]"))),
                     )
                     .parse_next(input)?
@@ -107,7 +109,8 @@ impl<'a> TypeSpecifier<'a> {
                     Vec::new()
                 };
                 Ok((stem, sizes))
-            }),
+            })
+            .verify(|(_, (stem, sizes))| type_depth(stem, sizes) <= crate::input::LIMIT),
         )
         .parse_next(input)
         .map(|(span, (stem, sizes))| Self { span, stem, sizes })
@@ -131,7 +134,7 @@ impl<'a> TypeSpecifier<'a> {
                 let stem = TypeStem::eip712_parser(input)?;
                 let sizes = if input.starts_with('[') {
                     repeat(
-                        1..,
+                        1..=crate::input::LIMIT,
                         delimited(str_parser("["), array_size_parser, cut_err(str_parser("]"))),
                     )
                     .parse_next(input)?
@@ -139,7 +142,8 @@ impl<'a> TypeSpecifier<'a> {
                     Vec::new()
                 };
                 Ok((stem, sizes))
-            }),
+            })
+            .verify(|(_, (stem, sizes))| type_depth(stem, sizes) <= crate::input::LIMIT),
         )
         .parse_next(input)
         .map(|(span, (stem, sizes))| Self { span, stem, sizes })
@@ -170,6 +174,16 @@ impl<'a> TypeSpecifier<'a> {
     }
 }
 
+fn type_depth(stem: &TypeStem<'_>, sizes: &[Option<NonZeroUsize>]) -> usize {
+    let stem_depth = match stem {
+        TypeStem::Root(_) => 0,
+        TypeStem::Tuple(tuple) => {
+            1 + tuple.types.iter().map(|ty| type_depth(&ty.stem, &ty.sizes)).max().unwrap_or(0)
+        }
+    };
+    stem_depth + sizes.len()
+}
+
 fn array_size_parser(input: &mut Input<'_>) -> ModalResult<Option<NonZeroUsize>> {
     let digits = digit0(input)?;
     if digits.is_empty() {
@@ -190,6 +204,28 @@ mod test {
             let es = e.to_string();
             assert!(es.contains(s), "{s:?} not in {es:?}");
         }
+    }
+
+    #[test]
+    fn array_nesting_limit() {
+        let at_limit = alloc::format!("uint256{}", "[]".repeat(crate::input::LIMIT));
+        assert!(TypeSpecifier::parse(&at_limit).is_ok());
+        assert!(TypeSpecifier::parse(&alloc::format!("{at_limit}[]")).is_err());
+        assert!(TypeSpecifier::parse(&alloc::format!("({at_limit})")).is_err());
+        let child = alloc::format!("uint256{}", "[2]".repeat(crate::input::LIMIT - 1));
+        assert!(TypeSpecifier::parse(&alloc::format!("({child})")).is_ok());
+        assert!(TypeSpecifier::parse(&alloc::format!("({child})[]")).is_err());
+        // Siblings do not consume each other's depth budget.
+        assert!(TypeSpecifier::parse(&alloc::format!("({child},{child})")).is_ok());
+    }
+
+    #[cfg(feature = "eip712")]
+    #[test]
+    fn eip712_array_nesting_limit() {
+        let at_limit = alloc::format!("ns:Record{}", "[]".repeat(crate::input::LIMIT));
+        assert!(TypeSpecifier::parse_eip712(&at_limit).is_ok());
+        assert!(TypeSpecifier::parse_eip712(&alloc::format!("{at_limit}[]")).is_err());
+        assert!(TypeSpecifier::parse_eip712(&alloc::format!("({at_limit})")).is_err());
     }
 
     #[test]
