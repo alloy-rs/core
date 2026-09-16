@@ -11,16 +11,35 @@ sol! {
     function overloaded(uint256) returns (uint256);
     function overloaded(string);
 
+    // `rename` preserves a shared Solidity name while allowing descriptive,
+    // distinct Rust names.
+    #[sol(rename = "renamed")]
+    function renamed_old(uint256);
+    #[sol(rename = "renamed")]
+    function renamed_new(string);
+
     // State variables will generate getter functions just like in Solidity.
     mapping(uint k => bool v) public variableGetter;
 
     /// Implements [`SolError`].
     #[derive(Debug, PartialEq, Eq)]
     error MyError(uint256 a, uint256 b);
+
+    #[sol(rename = "RenamedError")]
+    error OldError(uint256);
+    #[sol(rename = "RenamedError")]
+    error NewError(string);
+}
+
+sol! {
+    #![sol(rename_all = "camelCase")]
+
+    function snake_case(uint256);
 }
 
 #[test]
 fn function() {
+    assert_call_signature::<snake_caseCall>("snakeCase(uint256)");
     assert_call_signature::<fooCall>("foo(uint256,uint256)");
 
     let call = fooCall { a: U256::from(1), b: U256::from(2) };
@@ -35,6 +54,12 @@ fn function() {
     let _ = overloaded_2Call("hello".into());
     assert_call_signature::<overloaded_2Call>("overloaded(string)");
 
+    let _ = renamed_oldCall(U256::from(1));
+    assert_call_signature::<renamed_oldCall>("renamed(uint256)");
+
+    let _ = renamed_newCall("hello".into());
+    assert_call_signature::<renamed_newCall>("renamed(string)");
+
     // Exactly the same as `function variableGetter(uint256) returns (bool)`.
     let _ = variableGetterCall { k: U256::from(2) };
     assert_call_signature::<variableGetterCall>("variableGetter(uint256)");
@@ -43,6 +68,9 @@ fn function() {
 
 #[test]
 fn error() {
+    assert_error_signature::<OldError>("RenamedError(uint256)");
+    assert_error_signature::<NewError>("RenamedError(string)");
+
     assert_error_signature::<MyError>("MyError(uint256,uint256)");
     let call_data = hex!(
         "0000000000000000000000000000000000000000000000000000000000000001"

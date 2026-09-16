@@ -5,7 +5,7 @@ use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
 use ast::{Item, ItemStruct, Spanned, Type};
 use proc_macro2::TokenStream;
 use quote::quote;
-use std::num::NonZeroU16;
+use std::{fmt::Write, num::NonZeroU16};
 use syn::Result;
 
 /// Expands an [`ItemStruct`]:
@@ -28,6 +28,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let ItemStruct { name, fields, .. } = s;
 
     let (sol_attrs, mut attrs) = s.split_attrs()?;
+    let sol_name = cx.sol_name(name, &s.attrs);
 
     cx.derives(&mut attrs, fields, true);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
@@ -35,7 +36,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let (field_types, field_names): (Vec<_>, Vec<_>) =
         fields.iter().map(|f| (cx.expand_type(&f.ty), f.name.as_ref().unwrap())).unzip();
 
-    let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, name);
+    let eip712_encode_type_fns = expand_encode_type_fns(cx, fields, &sol_name, &s.attrs);
 
     let tokenize_impl = expand_tokenize(fields, cx, super::FieldKind::Original);
 
@@ -57,7 +58,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
     let attrs = attrs.iter();
     let convert = expand_from_into_tuples(&name.0, fields, cx, super::FieldKind::Original);
-    let name_s = name.as_string();
+    let name_s = sol_name;
     let fields = expand_fields(fields, cx);
 
     let doc = docs.then(|| mk_doc(format!("```solidity\n{s}\n```")));
@@ -193,7 +194,8 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 fn expand_encode_type_fns(
     cx: &ExpCtxt<'_>,
     fields: &ast::Parameters<syn::token::Semi>,
-    name: &ast::SolIdent,
+    name: &str,
+    attrs: &[syn::Attribute],
 ) -> TokenStream {
     // account for UDVTs and enums which do not implement SolStruct
     let mut fields = fields.clone();
@@ -212,7 +214,7 @@ fn expand_encode_type_fns(
         }
     });
 
-    let root = fields.eip712_signature(name.as_string());
+    let root = eip712_signature(cx, &fields, name, attrs);
 
     let custom = fields.iter().filter(|f| f.ty.has_custom());
     let n_custom = custom.clone().count();
@@ -265,5 +267,59 @@ fn expand_encode_type_fns(
         }
 
         #encode_type_impl_opt
+    }
+}
+
+fn eip712_signature(
+    cx: &ExpCtxt<'_>,
+    fields: &ast::Parameters<syn::token::Semi>,
+    name: &str,
+    attrs: &[syn::Attribute],
+) -> String {
+    let mut out = String::with_capacity(name.len() + 2 + fields.len() * 32);
+    out.push_str(name);
+    out.push('(');
+    for (i, field) in fields.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        fmt_eip712_type(cx, &field.ty, &mut out);
+        if let Some(field_name) = &field.name {
+            out.push(' ');
+            out.push_str(&cx.child_sol_name(field_name, &field.attrs, attrs));
+        }
+    }
+    out.push(')');
+    out
+}
+
+fn fmt_eip712_type(cx: &ExpCtxt<'_>, ty: &Type, out: &mut String) {
+    match ty {
+        Type::Custom(name) => {
+            if let Some(name) = cx.custom_sol_name(name) {
+                out.push_str(&name);
+            } else {
+                write!(out, "{}", name.last()).unwrap();
+            }
+        }
+        Type::Array(array) => {
+            fmt_eip712_type(cx, &array.ty, out);
+            out.push('[');
+            if let Some(size) = array.size_lit() {
+                out.push_str(size.base10_digits());
+            }
+            out.push(']');
+        }
+        Type::Tuple(tuple) => {
+            out.push('(');
+            for (i, ty) in tuple.types.iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                fmt_eip712_type(cx, ty, out);
+            }
+            out.push(')');
+        }
+        ty => write!(out, "{ty}").unwrap(),
     }
 }

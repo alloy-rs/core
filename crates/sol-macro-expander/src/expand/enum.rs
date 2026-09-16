@@ -26,7 +26,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
     cx.derives(&mut attrs, [], false);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
 
-    let name_s = name.to_string();
+    let name_s = cx.sol_name(name, &enumm.attrs);
 
     let count = variants.len();
     if count == 0 {
@@ -39,8 +39,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
 
     let has_invalid_variant = max != u8::MAX;
     let invalid_variant = has_invalid_variant.then(|| {
-        let comma = (!variants.trailing_punct()).then(syn::token::Comma::default);
-
         let has_serde = derives_mapped(&attrs).any(|path| {
             let Some(last) = path.segments.last() else {
                 return false;
@@ -50,7 +48,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
         let serde_other = has_serde.then(|| quote!(#[serde(other)]));
 
         quote! {
-            #comma
             /// Invalid variant.
             ///
             /// This is only used when decoding an out-of-range `u8` value.
@@ -75,6 +72,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
         let idx = idx as u8;
         quote! { #idx => ::core::result::Result::Ok(Self::#ident), }
     });
+    let rust_variants = variants.iter().map(|variant| {
+        let ident = &variant.ident;
+        let attrs = variant.attrs.iter().filter(|attr| !attr.path().is_ident("sol"));
+        quote! { #(#attrs)* #ident }
+    });
 
     let doc = docs.then(|| mk_doc(format!("```solidity\n{enumm}\n```")));
     let tokens = quote! {
@@ -84,7 +86,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
         #[derive(Clone, Copy)]
         #[repr(u8)]
         pub enum #name {
-            #variants
+            #(#rust_variants,)*
             #invalid_variant
         }
 
