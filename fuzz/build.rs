@@ -106,4 +106,16 @@ fn main() {
 
     // Canonical zero values for the scalar coverage tuple.
     write_seed(&corpus, "primitive_zero", &[0; 8]);
+
+    // Reuse the strict corpus byte-for-byte for the configuration target.
+    let config_corpus = Path::new(&manifest_dir).join("corpus/abi_decoder_configs");
+    fs::create_dir_all(&config_corpus).expect("create ABI config fuzz corpus");
+    for entry in fs::read_dir(&corpus).expect("read ABI fuzz corpus") {
+        let entry = entry.expect("read ABI fuzz corpus entry");
+        if !entry.file_type().expect("read ABI fuzz corpus entry type").is_file() {
+            continue;
+        }
+        fs::copy(entry.path(), config_corpus.join(entry.file_name()))
+            .expect("alias ABI config fuzz seed");
+    }
 }

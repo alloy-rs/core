@@ -27,3 +27,10 @@ path = "fuzz_targets/strict_abi_roundtrip.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "abi_decoder_configs"
+path = "fuzz_targets/abi_decoder_configs.rs"
+test = false
+doc = false
+bench = false

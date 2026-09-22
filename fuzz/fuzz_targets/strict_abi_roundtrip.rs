@@ -1,6 +1,9 @@
 #![no_main]
 
-use alloy_sol_types::{SolCall, SolType, abi, abi::AbiDecoderConfig, sol_data};
+mod abi_types;
+
+use abi_types::*;
+use alloy_sol_types::{SolCall, SolType, abi, abi::AbiDecoderConfig};
 use libfuzzer_sys::fuzz_target;
 
 // Dynamic ABI signatures copied from the Zones and Tempo precompile bindings.
@@ -129,48 +132,6 @@ alloy_sol_types::sol! {
     // Coverage for a fixed array of dynamic values, absent from the copied ABI.
     function fixedBytes(bytes[2] values);
 }
-
-type ZonesTempoShape = (
-    sol_data::Bytes,
-    sol_data::String,
-    sol_data::Array<sol_data::Bytes>,
-    sol_data::Array<sol_data::Array<sol_data::Bytes>>,
-    sol_data::FixedArray<sol_data::Bytes, 2>,
-    (sol_data::Address, sol_data::Uint<128>, sol_data::Bytes),
-);
-type EncoderShape = (
-    sol_data::Bytes,
-    sol_data::Array<sol_data::Bytes>,
-    sol_data::Array<sol_data::Array<sol_data::Bytes>>,
-    sol_data::FixedArray<sol_data::Bytes, 2>,
-);
-type PrimitiveShape = (
-    sol_data::Bool,
-    sol_data::Int<16>,
-    sol_data::Int<256>,
-    sol_data::Uint<8>,
-    sol_data::Uint<256>,
-    sol_data::FixedBytes<4>,
-    sol_data::FixedBytes<32>,
-    sol_data::Address,
-);
-type StaticArrayShape = (
-    sol_data::FixedArray<sol_data::Uint<256>, 2>,
-    sol_data::FixedArray<sol_data::FixedArray<sol_data::Address, 2>, 2>,
-);
-type MixedShape = (
-    sol_data::Uint<256>,
-    sol_data::Bytes,
-    sol_data::Address,
-    sol_data::Array<sol_data::Bytes>,
-    sol_data::Bool,
-    sol_data::FixedArray<sol_data::Bytes, 2>,
-);
-type NestedArrayShape = (
-    sol_data::Array<sol_data::FixedArray<sol_data::Bytes, 2>>,
-    sol_data::Array<(sol_data::Bytes, sol_data::String)>,
-);
-type EmptyFixedThenBytes = (sol_data::FixedArray<sol_data::Bytes, 0>, sol_data::Bytes);
 
 fn assert_strict_roundtrip<T: SolType>(bytes: &[u8]) {
     let Ok(token) =
