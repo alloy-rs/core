@@ -3,7 +3,7 @@
 mod abi_types;
 
 use abi_types::*;
-use alloy_sol_types::{Error, SolType, abi::AbiDecoderConfig, abi::TokenSeq};
+use alloy_sol_types::{Error, SolType, abi, abi::AbiDecoderConfig, abi::TokenSeq};
 use core::fmt::Debug;
 use libfuzzer_sys::fuzz_target;
 
@@ -81,6 +81,54 @@ fn assert_memory_limit<T>(
     }
 }
 
+fn assert_policy_result<T>(
+    actual: &Result<T, Error>,
+    reference: &Result<T, Error>,
+    policy: &str,
+    entrypoint: &str,
+    sol_name: &str,
+) where
+    T: Debug + PartialEq,
+{
+    match (actual, reference) {
+        (Ok(actual), Ok(reference)) => {
+            assert_eq!(actual, reference, "{policy}: {entrypoint}: {sol_name}")
+        }
+        (Err(_), Err(_)) => {}
+        (Ok(_), Err(err)) => panic!("{policy} accepted: {entrypoint}: {sol_name}: {err}"),
+        (Err(err), Ok(_)) => panic!("{policy} rejected: {entrypoint}: {sol_name}: {err}"),
+    }
+}
+
+fn assert_trailing_policy<T>(
+    bytes: &[u8],
+    default: &Result<T, Error>,
+    strict: &Result<T, Error>,
+    trailing: &Result<T, Error>,
+    encode: impl FnOnce(&T) -> Vec<u8>,
+    entrypoint: &str,
+    sol_name: &str,
+) where
+    T: Debug + PartialEq,
+{
+    if strict.is_ok() {
+        assert_policy_result(trailing, strict, "strict_allow_trailing", entrypoint, sol_name);
+    }
+    if let Ok(expected) = default {
+        let canonical = encode(expected);
+        if bytes.starts_with(&canonical) {
+            match trailing {
+                Ok(actual) => {
+                    assert_eq!(actual, expected, "strict_allow_trailing: {entrypoint}: {sol_name}")
+                }
+                Err(err) => {
+                    panic!("strict_allow_trailing rejected prefix: {entrypoint}: {sol_name}: {err}")
+                }
+            }
+        }
+    }
+}
+
 fn assert_encoding(bytes: &[u8], canonical: &[u8], case: ConfigCase, sol_name: &str) {
     match case.oracle {
         Oracle::Exact => assert_eq!(canonical, bytes, "{}: {sol_name}", case.name),
@@ -146,6 +194,41 @@ where
     check_value::<T>(bytes, case);
     check_params::<T>(bytes, case);
     check_sequence::<T>(bytes, case);
+}
+
+fn check_policy<T>(bytes: &[u8])
+where
+    T: SolType,
+    T::RustType: Debug + PartialEq,
+{
+    let default_config = AbiDecoderConfig::new();
+    let validate_config = default_config.validate(true);
+    let strict_config = default_config.strict(true);
+    let trailing_config = strict_config.validate_allow_trailing_bytes(true);
+
+    let default = T::abi_decode_with_config(bytes, default_config);
+    let validate = T::abi_decode_with_config(bytes, validate_config);
+    let strict = T::abi_decode_with_config(bytes, strict_config);
+    let trailing = T::abi_decode_with_config(bytes, trailing_config);
+    let raw_default = abi::decode_with_config::<T::Token<'_>>(bytes, default_config)
+        .map(T::detokenize);
+    let raw_validate = abi::decode_with_config::<T::Token<'_>>(bytes, default_config).and_then(
+        |token| {
+            T::type_check(&token)?;
+            Ok(T::detokenize(token))
+        },
+    );
+    assert_policy_result(&default, &raw_default, "default", "value", T::SOL_NAME);
+    assert_policy_result(&validate, &raw_validate, "validate", "value", T::SOL_NAME);
+    assert_trailing_policy(
+        bytes,
+        &default,
+        &strict,
+        &trailing,
+        T::abi_encode,
+        "value",
+        T::SOL_NAME,
+    );
 }
 
 fn check_limits<T>(bytes: &[u8])
@@ -232,6 +315,9 @@ fuzz_target!(|input: &[u8]| {
         check::<NestedArrayShape>(input, case);
         check::<EmptyFixedThenBytes>(input, case);
     }
+    // Keep the acceptance-policy differential on one representative shape so it catches config
+    // regressions without duplicating the broad type and entrypoint coverage above.
+    check_policy::<PrimitiveShape>(input);
     check_limits::<ZonesTempoShape>(input);
     check_limits::<EncoderShape>(input);
     check_limits::<PrimitiveShape>(input);

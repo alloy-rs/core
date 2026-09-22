@@ -118,4 +118,13 @@ fn main() {
         fs::copy(entry.path(), config_corpus.join(entry.file_name()))
             .expect("alias ABI config fuzz seed");
     }
+    // The permissive decoder accepts a dirty bool word while validation and strict modes reject
+    // it. This distinguishes the validation policies without adding a fuzzer-controlled mode.
+    write_seed(&config_corpus, "primitive_dirty_bool", &[2, 0, 0, 0, 0, 0, 0, 0]);
+    // Strict-with-trailing must accept a canonical value followed by an arbitrary suffix.
+    let mut primitive_trailing = Vec::with_capacity(8 * 32 + 1);
+    primitive_trailing.extend([0; 8 * 32]);
+    primitive_trailing.push(0xaa);
+    fs::write(config_corpus.join("primitive_trailing"), primitive_trailing)
+        .expect("write trailing ABI fuzz seed");
 }
