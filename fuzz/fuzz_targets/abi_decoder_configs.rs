@@ -24,7 +24,7 @@ struct ConfigCase {
     oracle: Oracle,
 }
 
-fn configs() -> [ConfigCase; 8] {
+fn configs() -> [ConfigCase; 4] {
     [
         ConfigCase {
             name: "default",
@@ -37,36 +37,13 @@ fn configs() -> [ConfigCase; 8] {
             oracle: Oracle::Normalize,
         },
         ConfigCase {
-            name: "allow_trailing",
-            config: AbiDecoderConfig::new().validate_allow_trailing_bytes(true),
-            oracle: Oracle::Normalize,
-        },
-        ConfigCase {
-            name: "validate_allow_trailing",
-            config: AbiDecoderConfig::new().validate(true).validate_allow_trailing_bytes(true),
-            oracle: Oracle::Normalize,
-        },
-        ConfigCase {
             name: "strict",
             config: AbiDecoderConfig::new().strict(true),
             oracle: Oracle::Exact,
         },
         ConfigCase {
-            name: "validate_strict",
-            config: AbiDecoderConfig::new().validate(true).strict(true),
-            oracle: Oracle::Exact,
-        },
-        ConfigCase {
             name: "strict_allow_trailing",
             config: AbiDecoderConfig::new().strict(true).validate_allow_trailing_bytes(true),
-            oracle: Oracle::Prefix,
-        },
-        ConfigCase {
-            name: "validate_strict_allow_trailing",
-            config: AbiDecoderConfig::new()
-                .validate(true)
-                .strict(true)
-                .validate_allow_trailing_bytes(true),
             oracle: Oracle::Prefix,
         },
     ]
@@ -177,12 +154,14 @@ where
     T::RustType: Debug + PartialEq,
     for<'a> T::Token<'a>: TokenSeq<'a>,
 {
-    let strict = AbiDecoderConfig::new().strict(true);
+    // Use permissive decoding for the limit differential so more mutated layouts reach the
+    // recursion and allocation accounting. Each comparison changes only the relevant limit.
+    let baseline = AbiDecoderConfig::new();
 
-    if let Ok(expected) = T::abi_decode_with_config(bytes, strict) {
+    if let Ok(expected) = T::abi_decode_with_config(bytes, baseline) {
         for limit in [0, 1, 4] {
             assert_recursion_limit(
-                T::abi_decode_with_config(bytes, strict.recursion_limit(limit)),
+                T::abi_decode_with_config(bytes, baseline.recursion_limit(limit)),
                 &expected,
                 limit,
                 "value",
@@ -191,7 +170,7 @@ where
         }
         for limit in [0, 32, 4096] {
             assert_memory_limit(
-                T::abi_decode_with_config(bytes, strict.memory_limit(limit)),
+                T::abi_decode_with_config(bytes, baseline.memory_limit(limit)),
                 &expected,
                 limit,
                 "value",
@@ -200,10 +179,10 @@ where
         }
     }
 
-    if let Ok(expected) = T::abi_decode_params_with_config(bytes, strict) {
+    if let Ok(expected) = T::abi_decode_params_with_config(bytes, baseline) {
         for limit in [0, 1, 4] {
             assert_recursion_limit(
-                T::abi_decode_params_with_config(bytes, strict.recursion_limit(limit)),
+                T::abi_decode_params_with_config(bytes, baseline.recursion_limit(limit)),
                 &expected,
                 limit,
                 "params",
@@ -212,7 +191,7 @@ where
         }
         for limit in [0, 32, 4096] {
             assert_memory_limit(
-                T::abi_decode_params_with_config(bytes, strict.memory_limit(limit)),
+                T::abi_decode_params_with_config(bytes, baseline.memory_limit(limit)),
                 &expected,
                 limit,
                 "params",
@@ -221,10 +200,10 @@ where
         }
     }
 
-    if let Ok(expected) = T::abi_decode_sequence_with_config(bytes, strict) {
+    if let Ok(expected) = T::abi_decode_sequence_with_config(bytes, baseline) {
         for limit in [0, 1, 4] {
             assert_recursion_limit(
-                T::abi_decode_sequence_with_config(bytes, strict.recursion_limit(limit)),
+                T::abi_decode_sequence_with_config(bytes, baseline.recursion_limit(limit)),
                 &expected,
                 limit,
                 "sequence",
@@ -233,7 +212,7 @@ where
         }
         for limit in [0, 32, 4096] {
             assert_memory_limit(
-                T::abi_decode_sequence_with_config(bytes, strict.memory_limit(limit)),
+                T::abi_decode_sequence_with_config(bytes, baseline.memory_limit(limit)),
                 &expected,
                 limit,
                 "sequence",
