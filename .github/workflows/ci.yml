@@ -54,11 +54,11 @@ jobs:
             flags: "--all-features"
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -97,11 +97,11 @@ jobs:
       MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-tree-borrows
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: nightly
           components: miri
@@ -121,11 +121,11 @@ jobs:
       contents: read
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: stable
           targets: wasm32-unknown-unknown
@@ -154,15 +154,15 @@ jobs:
         flags: ["", "--all-targets"]
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: ${{ matrix.rust }}
       - name: Install cargo-hack
-        uses: tempoxyz/gh-actions/vendor/taiki-e/install-action@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/vendor/taiki-e/install-action@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
         with:
           tool: cargo-hack@0.6.45
           checksum: true
@@ -182,7 +182,7 @@ jobs:
           ./scripts/check_features.sh "${args[@]}"
 
   check-no-std:
-    name: check no_std ${{ matrix.features }}
+    name: check no_std
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -190,16 +190,16 @@ jobs:
       contents: read
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: stable
           targets: riscv32imac-unknown-none-elf
       - name: Install cargo-hack
-        uses: tempoxyz/gh-actions/vendor/taiki-e/install-action@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/vendor/taiki-e/install-action@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
         with:
           tool: cargo-hack@0.6.45
           checksum: true
@@ -222,7 +222,7 @@ jobs:
       contents: read
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -236,11 +236,11 @@ jobs:
       contents: read
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: nightly
           components: clippy
@@ -264,11 +264,11 @@ jobs:
       contents: read
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           # Pin docs to a known-good nightly until the 2026-07-02 rustdoc ICE is fixed.
           toolchain: nightly-2026-06-27
@@ -293,11 +293,11 @@ jobs:
       contents: read
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: nightly
           components: rustfmt
@@ -329,8 +329,8 @@ jobs:
       - deny
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959
+        uses: tempoxyz/gh-actions/actions/secure-runner@117919c943b804057be733b0c4034c5542e58959 # 2026-09-23T05-09-41Z-117919c9
       - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # release/v1
+        uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
           jobs: ${{ toJSON(needs) }}
