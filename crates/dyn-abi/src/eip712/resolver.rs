@@ -747,7 +747,8 @@ mod tests {
 
     #[test]
     fn linearizes_wide_type_graph() {
-        const DEPENDENCIES: usize = 2048;
+        // Keep interpreted runs small while checking the same traversal and deduplication behavior.
+        const DEPENDENCIES: usize = if cfg!(miri) { 32 } else { 2048 };
         let mut graph = Resolver::default();
         let mut props = Vec::with_capacity(DEPENDENCIES + 1);
         for i in 0..DEPENDENCIES {
