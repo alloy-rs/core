@@ -8,7 +8,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::{B256, keccak256};
+use alloy_primitives::{B256, keccak256, map::HashSet};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
 use parser::{RootType, TypeSpecifier, TypeStem};
@@ -395,6 +395,7 @@ impl Resolver {
     fn linearize_into<'a>(
         &'a self,
         resolution: &mut Vec<&'a TypeDef>,
+        seen: &mut HashSet<&'a str>,
         root_type: &str,
         depth: usize,
     ) -> Result<()> {
@@ -408,10 +409,10 @@ impl Resolver {
             }
             None => return Err(Error::missing_type(root_type)),
         };
-        if !resolution.contains(&this_type) {
+        if seen.insert(&this_type.type_name) {
             resolution.push(this_type);
             for edge in self.edges(this_type) {
-                self.linearize_into(resolution, edge, depth + 1)?;
+                self.linearize_into(resolution, seen, edge, depth + 1)?;
             }
         }
 
@@ -425,7 +426,8 @@ impl Resolver {
     pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>> {
         self.detect_cycle_permissive(type_name)?;
         let mut resolution = vec![];
-        self.linearize_into(&mut resolution, type_name, 0)?;
+        let mut seen = HashSet::default();
+        self.linearize_into(&mut resolution, &mut seen, type_name, 0)?;
         Ok(resolution)
     }
 
@@ -741,6 +743,30 @@ mod tests {
             graph.encode_type("A").unwrap(),
             "A(C myC,B myB)B(C myC)C(uint256 myUint,uint256 myUint2)"
         );
+    }
+
+    #[test]
+    fn linearizes_wide_type_graph() {
+        // Keep interpreted runs small while checking the same traversal and deduplication behavior.
+        const DEPENDENCIES: usize = if cfg!(miri) { 32 } else { 2048 };
+        let mut graph = Resolver::default();
+        let mut props = Vec::with_capacity(DEPENDENCIES + 1);
+        for i in 0..DEPENDENCIES {
+            let name = format!("T{i}");
+            graph.ingest(TypeDef::new(name.clone(), Vec::new()).unwrap());
+            props.push(PropertyDef::new(name, format!("field{i}")).unwrap());
+        }
+        // A repeated dependency must appear only once in the linearized output.
+        props.push(PropertyDef::new("T0", "again").unwrap());
+        graph.ingest(TypeDef::new("Root", props).unwrap());
+
+        let defs = graph.linearize("Root").unwrap();
+        assert_eq!(defs.len(), DEPENDENCIES + 1);
+        assert_eq!(defs[0].type_name(), "Root");
+        for (i, def) in defs[1..].iter().enumerate() {
+            assert_eq!(def.type_name(), format!("T{i}"));
+        }
+        assert!(graph.encode_type("Root").is_ok());
     }
 
     #[test]
