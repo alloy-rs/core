@@ -8,7 +8,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::{B256, keccak256};
+use alloy_primitives::{B256, keccak256, map::HashSet};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
 use parser::{RootType, TypeSpecifier, TypeStem};
@@ -395,7 +395,7 @@ impl Resolver {
     fn linearize_into<'a>(
         &'a self,
         resolution: &mut Vec<&'a TypeDef>,
-        seen: &mut BTreeSet<&'a str>,
+        seen: &mut HashSet<&'a str>,
         root_type: &str,
         depth: usize,
     ) -> Result<()> {
@@ -426,7 +426,7 @@ impl Resolver {
     pub fn linearize(&self, type_name: &str) -> Result<Vec<&TypeDef>> {
         self.detect_cycle_permissive(type_name)?;
         let mut resolution = vec![];
-        let mut seen = BTreeSet::new();
+        let mut seen = HashSet::default();
         self.linearize_into(&mut resolution, &mut seen, type_name, 0)?;
         Ok(resolution)
     }

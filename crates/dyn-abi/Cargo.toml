@@ -65,6 +65,7 @@ std = [
     "serde_json?/std",
 ]
 eip712 = [
+    "alloy-primitives/map",
     "alloy-sol-types/eip712-serde",
     "alloy-sol-type-parser/eip712",
     "dep:derive_more",
