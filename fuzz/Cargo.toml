@@ -1,0 +1,36 @@
+[package]
+name = "alloy-core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.alloy-sol-types]
+path = "../crates/sol-types"
+
+[build-dependencies]
+alloy-primitives = { path = "../crates/primitives" }
+alloy-sol-types = { path = "../crates/sol-types" }
+
+# Keep this fuzz project independent from the parent workspace.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "strict_abi_roundtrip"
+path = "fuzz_targets/strict_abi_roundtrip.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "abi_decoder_configs"
+path = "fuzz_targets/abi_decoder_configs.rs"
+test = false
+doc = false
+bench = false
