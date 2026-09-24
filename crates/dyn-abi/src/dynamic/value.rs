@@ -6,6 +6,7 @@ use alloy_sol_types::{
     abi::Encoder,
     utils::{next_multiple_of_32, words_for_len},
 };
+use core::fmt::NumBuffer;
 
 #[cfg(feature = "eip712")]
 macro_rules! as_fixed_seq {
@@ -266,7 +267,7 @@ impl DynSolValue {
                     _ => unreachable!(),
                 };
                 out.push_str(prefix);
-                out.push_str(itoa::Buffer::new().format(*size));
+                out.push_str(size.format_into(&mut NumBuffer::new()));
             }
 
             Self::Array(values) | Self::FixedArray(values) => {
@@ -281,7 +282,7 @@ impl DynSolValue {
                     _ => unreachable!(),
                 };
                 if format_len {
-                    out.push_str(itoa::Buffer::new().format(values.len()));
+                    out.push_str(values.len().format_into(&mut NumBuffer::new()));
                 }
                 out.push(']');
             }
