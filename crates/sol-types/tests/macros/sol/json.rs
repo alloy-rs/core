@@ -5,6 +5,68 @@ use pretty_assertions::assert_eq;
 use std::borrow::Cow;
 
 #[test]
+fn dollar_sign_names() {
+    sol!(
+        #[sol(abi)]
+        DollarContract,
+        r#"[
+            {
+                "type": "function",
+                "name": "do$thing",
+                "inputs": [{"name": "value$old", "type": "uint256"}],
+                "outputs": [{"name": "result$new", "type": "uint256"}],
+                "stateMutability": "view"
+            },
+            {
+                "type": "function",
+                "name": "use$struct",
+                "inputs": [{
+                    "name": "input$value",
+                    "type": "tuple",
+                    "internalType": "struct Dollar$Struct",
+                    "components": [{"name": "field$value", "type": "uint256"}]
+                }],
+                "outputs": [],
+                "stateMutability": "nonpayable"
+            },
+            {
+                "type": "event",
+                "name": "Event$Name",
+                "inputs": [{"name": "event$value", "type": "uint256", "indexed": false}],
+                "anonymous": false
+            },
+            {
+                "type": "error",
+                "name": "Error$Name",
+                "inputs": [{"name": "error$value", "type": "uint256"}]
+            }
+        ]"#
+    );
+
+    let _ = DollarContract::do_thingCall { value_old: U256::ZERO };
+    assert_eq!(DollarContract::do_thingCall::SIGNATURE, "do$thing(uint256)");
+    assert_eq!(DollarContract::use_structCall::SIGNATURE, "use$struct((uint256))");
+    assert_eq!(DollarContract::Event_Name::SIGNATURE, "Event$Name(uint256)");
+    assert_eq!(DollarContract::Error_Name::SIGNATURE, "Error$Name(uint256)");
+
+    assert_eq!(DollarContract::Dollar_Struct::NAME, "Dollar$Struct");
+    assert_eq!(
+        DollarContract::Dollar_Struct::eip712_root_type(),
+        "Dollar$Struct(uint256 field$value)"
+    );
+
+    let abi = DollarContract::abi::contract();
+    let function = &abi.function("do$thing").unwrap()[0];
+    assert_eq!(function.inputs[0].name, "value$old");
+    assert_eq!(function.outputs[0].name, "result$new");
+    let use_struct = &abi.function("use$struct").unwrap()[0];
+    assert_eq!(use_struct.inputs[0].name, "input$value");
+    assert_eq!(use_struct.inputs[0].components[0].name, "field$value");
+    assert_eq!(abi.event("Event$Name").unwrap()[0].inputs[0].name, "event$value");
+    assert_eq!(abi.error("Error$Name").unwrap()[0].inputs[0].name, "error$value");
+}
+
+#[test]
 fn large_array() {
     sol!(
         #[sol(abi)]
