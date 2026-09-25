@@ -508,9 +508,9 @@ impl Address {
     #[cfg(feature = "k256")]
     #[doc(alias = "from_verifying_key")]
     pub fn from_public_key(pubkey: &k256::ecdsa::VerifyingKey) -> Self {
-        use k256::elliptic_curve::sec1::ToEncodedPoint;
+        use k256::elliptic_curve::sec1::ToSec1Point;
         let affine: &k256::AffinePoint = pubkey.as_ref();
-        let encoded = affine.to_encoded_point(false);
+        let encoded = affine.to_sec1_point(false);
         Self::from_raw_public_key(&encoded.as_bytes()[1..])
     }
 

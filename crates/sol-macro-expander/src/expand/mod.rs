@@ -719,10 +719,10 @@ impl<'ast> ExpCtxt<'ast> {
         I: IntoIterator<Item = T>,
         T: Borrow<Type>,
     {
-        if let Some(extra) = &self.attrs.extra_derives {
-            if !extra.is_empty() {
-                attrs.push(parse_quote! { #[derive(#(#extra),*)] });
-            }
+        if let Some(extra) = &self.attrs.extra_derives
+            && !extra.is_empty()
+        {
+            attrs.push(parse_quote! { #[derive(#(#extra),*)] });
         }
 
         let Some(true) = self.attrs.all_derives else {
@@ -755,10 +755,10 @@ impl<'ast> ExpCtxt<'ast> {
     /// from the underlying items' parameter types. Enums never derive
     /// `Default`.
     fn enum_derives(&self, attrs: &mut Vec<Attribute>, can_derive_builtin: bool) {
-        if let Some(extra) = &self.attrs.extra_derives {
-            if !extra.is_empty() {
-                attrs.push(parse_quote! { #[derive(#(#extra),*)] });
-            }
+        if let Some(extra) = &self.attrs.extra_derives
+            && !extra.is_empty()
+        {
+            attrs.push(parse_quote! { #[derive(#(#extra),*)] });
         }
 
         if self.attrs.all_derives == Some(true) && can_derive_builtin {
@@ -777,15 +777,15 @@ impl<'ast> ExpCtxt<'ast> {
         let mut errored = false;
         for param in params {
             param.ty.visit(|ty| {
-                if let Type::Custom(name) = ty {
-                    if self.try_custom_type(name).is_none() {
-                        let note = (!errored).then(|| {
-                            errored = true;
-                            "Custom types must be declared inside of the same scope they are referenced in,\n\
-                             or \"imported\" as a UDT with `type ... is (...);`"
-                        });
-                        emit_error!(name.span(), "unresolved type"; help =? note);
-                    }
+                if let Type::Custom(name) = ty
+                    && self.try_custom_type(name).is_none()
+                {
+                    let note = (!errored).then(|| {
+                        errored = true;
+                        "Custom types must be declared inside of the same scope they are referenced in,\n\
+                         or \"imported\" as a UDT with `type ... is (...);`"
+                    });
+                    emit_error!(name.span(), "unresolved type"; help =? note);
                 }
             });
         }

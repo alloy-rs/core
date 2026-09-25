@@ -314,6 +314,8 @@ impl<'a, const BITS: usize, const LIMBS: usize> FromSql<'a> for Signed<BITS, LIM
                     return Err(Box::new(FromSqlError::ParseError(ty.clone())));
                 }
                 let mut error = false;
+                // `slice::as_chunks` is newer than the crate's MSRV.
+                #[allow(clippy::chunks_exact_to_as_chunks)]
                 let iter = raw.chunks_exact(2).filter_map(|raw| {
                     if error {
                         return None;
