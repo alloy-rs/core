@@ -11,7 +11,7 @@ use alloc::{
 use alloy_primitives::{B256, keccak256, map::HashSet};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
-use parser::{RootType, TypeSpecifier, TypeStem};
+use parser::{RootType, TypeSpecifier, TypeStem, is_valid_identifier};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// An EIP-712 property definition.
@@ -38,7 +38,8 @@ impl<'de> Deserialize<'de> for PropertyDef {
 }
 
 impl PropertyDef {
-    /// Instantiate a new name-type pair.
+    /// Instantiate a new name-type pair, checking that the type name is a valid
+    /// EIP-712 type and the name a valid Solidity identifier.
     #[inline]
     pub fn new<T, N>(type_name: T, name: N) -> Result<Self>
     where
@@ -47,11 +48,17 @@ impl PropertyDef {
     {
         let type_name = type_name.into();
         TypeSpecifier::parse_eip712(type_name.as_str())?;
+        let name = name.into();
+        // Names are written verbatim into `encodeType`, so separators in a name
+        // could make two different types encode to the same string.
+        if !is_valid_identifier(&name) {
+            return Err(Error::invalid_property_def(&alloc::format!("{type_name} {name}")));
+        }
         Ok(Self::new_unchecked(type_name, name))
     }
 
     /// Instantiate a new name-type pair, without checking that the type name
-    /// is a valid root type.
+    /// is a valid root type or that the name is a valid identifier.
     #[inline]
     pub fn new_unchecked<T, N>(type_name: T, name: N) -> Self
     where
@@ -618,6 +625,22 @@ mod tests {
     use alloc::boxed::Box;
     use alloy_sol_types::sol;
     use serde_json::json;
+
+    #[test]
+    fn property_names_must_be_identifiers() {
+        assert!(PropertyDef::new("uint256", "nonce").is_ok());
+        for name in ["", "a b", "a-b", "1a", "to,uint256 ignored"] {
+            assert!(PropertyDef::new("uint256", name).is_err(), "{name:?}");
+        }
+
+        // Both used to encode as `Transfer(address to,uint256 ignored,uint256 nonce)`.
+        for (first, second) in [("to,uint256 ignored", "nonce"), ("to", "ignored,uint256 nonce")] {
+            let types = json!({
+                "Transfer": [{ "type": "address", "name": first }, { "type": "uint256", "name": second }]
+            });
+            assert!(serde_json::from_value::<Eip712Types>(types).is_err());
+        }
+    }
 
     #[test]
     fn shared_expansion_budget() {
