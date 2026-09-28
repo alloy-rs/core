@@ -304,10 +304,12 @@ jobs:
       - run: cargo fmt --all --check
 
   deny:
-    uses: tempoxyz/ci/.github/workflows/deny.yml@e8b0b7e43db282a365ea7019f5e1657381bccc51
+    uses: tempoxyz/gh-actions/.github/workflows/rust-deny.yml@a8467566cf2204e895d40f6baf19435c8bc7f921
     permissions:
       contents: read
       id-token: write
+    with:
+      rust-toolchain: nightly
 
   ci-success:
     name: ci success
