@@ -578,6 +578,11 @@ impl Resolver {
             }
             DynSolValue::Bytes(buf) => buf,
             DynSolValue::String(s) => s.as_bytes(),
+            // EIP-712 has no tuple type, but the resolver accepts tuple property
+            // types like `(uint256,uint256)`.
+            DynSolValue::Tuple(_) => {
+                return Err(Error::custom("EIP-712 does not support tuple types"));
+            }
             _ => unreachable!("all types are words or covered in the match"),
         };
         Ok(keccak256(to_hash))
@@ -640,6 +645,18 @@ mod tests {
             });
             assert!(serde_json::from_value::<Eip712Types>(types).is_err());
         }
+    }
+
+    #[test]
+    fn tuple_property_errors() {
+        let mut graph = Resolver::default();
+        graph.ingest_string("Foo((uint256,uint256) a)").unwrap();
+        let value = graph.resolve("Foo").unwrap().coerce_json(&json!({ "a": [1, 2] })).unwrap();
+        let expected = Error::custom("EIP-712 does not support tuple types");
+        // Both used to panic on the tuple.
+        assert_eq!(graph.encode_data(&value).unwrap_err(), expected);
+        let array = DynSolValue::Array(vec![DynSolValue::Tuple(vec![true.into()])]);
+        assert_eq!(graph.eip712_data_word(&array).unwrap_err(), expected);
     }
 
     #[test]
