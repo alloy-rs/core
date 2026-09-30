@@ -374,7 +374,12 @@ impl ParseUnits {
     pub const fn get_absolute(self) -> U256 {
         match self {
             Self::U256(n) => n,
-            Self::I256(n) => n.into_raw(),
+            // `into_raw` is the two's complement bit pattern. For a negative
+            // value that is `2^256 - |n|`, not `|n|`.
+            Self::I256(n) => {
+                let raw = n.into_raw();
+                if n.is_negative() { raw.wrapping_neg() } else { raw }
+            }
         }
     }
 
@@ -875,5 +880,19 @@ mod tests {
 
         let n: I256 = parse_units("-", 3).unwrap().into();
         assert_eq!(n, I256::ZERO, "empty");
+    }
+
+    #[test]
+    fn test_get_absolute_of_negative() {
+        // -1 wei is one, not the two's complement bit pattern.
+        let negative = parse_units("-1", 0).unwrap();
+        assert_eq!(negative.get_absolute(), U256::from(1));
+
+        let gwei: U256 = parse_units("-1.5", 9).unwrap().into();
+        assert_eq!(gwei, U256::from(1_500_000_000u64));
+
+        // The most negative value's magnitude is 2^255, which already
+        // matches the raw bits.
+        assert_eq!(ParseUnits::I256(I256::MIN).get_absolute(), I256::MIN.unsigned_abs());
     }
 }
