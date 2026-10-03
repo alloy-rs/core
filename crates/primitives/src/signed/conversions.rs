@@ -35,16 +35,22 @@ impl<const BITS: usize, const LIMBS: usize, const BITS_SRC: usize, const LIMBS_S
     #[inline]
     fn uint_try_from(value: Signed<BITS_SRC, LIMBS_SRC>) -> Result<Self, ToUintError<Self>> {
         let (sign, abs) = value.into_sign_and_abs();
-        let resized = Self::from_raw(Uint::<BITS, LIMBS>::uint_try_from(abs).map_err(signed_err)?);
-        if resized.is_negative() {
-            return Err(ToUintError::ValueNegative(BITS, resized));
-        }
-        Ok(match sign {
-            Sign::Negative => {
-                resized.checked_neg().ok_or(ToUintError::ValueTooLarge(BITS, resized))?
+        let abs = Uint::<BITS, LIMBS>::uint_try_from(abs).map_err(signed_err)?;
+        let resized = Self::from_raw(abs);
+        match sign {
+            // When `abs == 2^(BITS-1)` the resized value is the target's `MIN`: its raw form
+            // has the sign bit set, so the old `is_negative()` check wrongly rejected it as
+            // overflow. Build negatives from sign+magnitude, which represents `MIN` exactly.
+            Sign::Negative => Self::checked_from_sign_and_abs(Sign::Negative, abs)
+                .ok_or(ToUintError::ValueTooLarge(BITS, resized)),
+            Sign::Positive => {
+                if resized.is_negative() {
+                    Err(ToUintError::ValueNegative(BITS, resized))
+                } else {
+                    Ok(resized)
+                }
             }
-            Sign::Positive => resized,
-        })
+        }
     }
 }
 
@@ -58,24 +64,24 @@ impl<const BITS: usize, const LIMBS: usize, const BITS_TARGET: usize, const LIMB
     ) -> Result<Signed<BITS_TARGET, LIMBS_TARGET>, FromUintError<Signed<BITS_TARGET, LIMBS_TARGET>>>
     {
         let (sign, abs) = self.into_sign_and_abs();
-        let resized = Signed::<BITS_TARGET, LIMBS_TARGET>::from_raw(
-            Uint::uint_try_to(&abs).map_err(|e| match e {
-                FromUintError::Overflow(b, t, v) => {
-                    FromUintError::Overflow(b, Signed(t), Signed(v))
+        let abs: Uint<BITS_TARGET, LIMBS_TARGET> = Uint::uint_try_to(&abs).map_err(|e| match e {
+            FromUintError::Overflow(b, t, v) => FromUintError::Overflow(b, Signed(t), Signed(v)),
+        })?;
+        let resized = Signed::<BITS_TARGET, LIMBS_TARGET>::from_raw(abs);
+        match sign {
+            // When `abs == 2^(BITS-1)` the resized value is the target's `MIN`: its raw form
+            // has the sign bit set, so the old `is_negative()` check wrongly rejected it as
+            // overflow. Build negatives from sign+magnitude, which represents `MIN` exactly.
+            Sign::Negative => Signed::checked_from_sign_and_abs(Sign::Negative, abs)
+                .ok_or(FromUintError::Overflow(BITS_TARGET, resized, Signed::MAX)),
+            Sign::Positive => {
+                if resized.is_negative() {
+                    Err(FromUintError::Overflow(BITS_TARGET, resized, Signed::MAX))
+                } else {
+                    Ok(resized)
                 }
-            })?,
-        );
-        if resized.is_negative() {
-            return Err(FromUintError::Overflow(BITS_TARGET, resized, Signed::MAX));
+            }
         }
-        Ok(match sign {
-            Sign::Negative => resized.checked_neg().ok_or(FromUintError::Overflow(
-                BITS_TARGET,
-                resized,
-                Signed::MAX,
-            ))?,
-            Sign::Positive => resized,
-        })
     }
 }
 
@@ -363,4 +369,24 @@ impl_conversions! {
     u32  [low_u64  -> low_u32,   as_u32],   i32  [low_u64  -> low_i32,   as_i32];
     u64  [low_u64  -> low_u64,   as_u64],   i64  [low_u64  -> low_i64,   as_i64];
     usize[low_u64  -> low_usize, as_usize], isize[low_u64  -> low_isize, as_isize];
+}
+
+#[cfg(test)]
+mod resize_min_tests {
+    use super::*;
+    use crate::aliases::{I8, I16};
+
+    #[test]
+    fn resize_negative_min_uint_try_to() {
+        let src = I16::try_from(-128i16).unwrap();
+        let dst: Result<I8, _> = UintTryTo::<I8>::uint_try_to(&src);
+        assert_eq!(dst.unwrap(), I8::MIN);
+    }
+
+    #[test]
+    fn resize_negative_min_uint_try_from() {
+        let src = I16::try_from(-128i16).unwrap();
+        let dst: Result<I8, _> = UintTryFrom::<I16>::uint_try_from(src);
+        assert_eq!(dst.unwrap(), I8::MIN);
+    }
 }
