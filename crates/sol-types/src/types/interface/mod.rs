@@ -541,7 +541,7 @@ impl<T: SolInterface + fmt::Display> RevertReason<T> {
 
 impl<T> RevertReason<T> {
     /// Returns the raw string error message if this type is a [`RevertReason::RawString`]
-    pub fn as_raw_error(&self) -> Option<&str> {
+    pub const fn as_raw_error(&self) -> Option<&str> {
         match self {
             Self::RawString(error) => Some(error.as_str()),
             _ => None,
