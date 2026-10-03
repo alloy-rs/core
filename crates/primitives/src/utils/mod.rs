@@ -130,8 +130,8 @@ pub fn eip191_hash_message<T: AsRef<[u8]>>(message: T) -> B256 {
 pub fn eip191_message<T: AsRef<[u8]>>(message: T) -> Vec<u8> {
     fn eip191_message(message: &[u8]) -> Vec<u8> {
         let len = message.len();
-        let mut len_string_buffer = itoa::Buffer::new();
-        let len_string = len_string_buffer.format(len);
+        let mut len_string_buffer = fmt::NumBuffer::new();
+        let len_string = len.format_into(&mut len_string_buffer);
 
         let mut eth_message = Vec::with_capacity(EIP191_PREFIX.len() + len_string.len() + len);
         eth_message.extend_from_slice(EIP191_PREFIX.as_bytes());

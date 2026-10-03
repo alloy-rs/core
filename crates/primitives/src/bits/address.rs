@@ -310,7 +310,7 @@ impl Address {
         let mut hasher = crate::Keccak256::new();
         match chain_id {
             Some(chain_id) => {
-                hasher.update(itoa::Buffer::new().format(chain_id).as_bytes());
+                hasher.update(chain_id.format_into(&mut fmt::NumBuffer::new()).as_bytes());
                 // Clippy suggests an unnecessary copy.
                 #[allow(clippy::needless_borrows_for_generic_args)]
                 hasher.update(&*buf);

@@ -385,7 +385,7 @@ impl DynSolType {
                     _ => unreachable!(),
                 };
                 out.push_str(prefix);
-                out.push_str(itoa::Buffer::new().format(*size));
+                out.push_str(size.format_into(&mut fmt::NumBuffer::new()));
             }
 
             as_tuple!(Self tuple) => {
@@ -408,7 +408,7 @@ impl DynSolType {
             Self::FixedArray(t, len) => {
                 t.sol_type_name_raw(out);
                 out.push('[');
-                out.push_str(itoa::Buffer::new().format(*len));
+                out.push_str(len.format_into(&mut fmt::NumBuffer::new()));
                 out.push(']');
             }
         }
