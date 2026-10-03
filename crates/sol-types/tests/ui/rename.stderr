@@ -1,0 +1,23 @@
+error: function selector `0x8f5383a4` collides with `first`
+
+         = note: other declaration is here
+
+ --> tests/ui/rename.rs:7:14
+  |
+7 |     function second(uint256);
+  |              ^^^^^^
+
+error: function selector `0x14ba3f12` collides with `foo_bar`
+
+         = note: other declaration is here
+
+  --> tests/ui/rename.rs:14:14
+   |
+14 |     function foobar(uint256);
+   |              ^^^^^^
+
+error: duplicate attribute
+  --> tests/ui/rename.rs:19:31
+   |
+19 |         #[sol(rename = "one", rename = "two")]
+   |                               ^^^^^^

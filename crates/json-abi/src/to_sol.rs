@@ -10,6 +10,7 @@ use alloc::{
 };
 use core::{
     cmp::Ordering,
+    fmt::Write,
     ops::{Deref, DerefMut},
 };
 
@@ -146,6 +147,13 @@ impl<'a> SolPrinter<'a> {
         self.push_str(&s);
     }
 
+    /// Emits a `sol!` rename attribute when normalization changes an identifier.
+    fn push_rename_attr(&mut self, s: &str) {
+        if self.config.for_sol_macro && s.contains('$') {
+            write!(self.s, "#[sol(rename = {s:?})] ").unwrap();
+        }
+    }
+
     /// Normalizes `s` as a Rust identifier.
     ///
     /// All Solidity identifiers are also valid Rust identifiers, except for `$`.
@@ -194,8 +202,9 @@ impl JsonAbi {
                 if its.is_empty() {
                     continue;
                 }
+                out.push_rename_attr(name);
                 out.push_str("library ");
-                out.push_str(name);
+                out.push_ident(name);
                 out.push_str(" {\n");
                 let prev = core::mem::replace(&mut out.name, name);
                 for it in its {
@@ -208,9 +217,11 @@ impl JsonAbi {
             }
         }
 
+        let root_name = String::from(out.name);
+        out.push_rename_attr(&root_name);
         out.push_str("interface ");
-        if !out.name.is_empty() {
-            out.s.push_str(out.name);
+        if !root_name.is_empty() {
+            out.push_ident(&root_name);
             out.push(' ');
         }
         out.push('{');
@@ -457,6 +468,7 @@ impl ToSol for It<'_, '_> {
     fn to_sol(&self, out: &mut SolPrinter<'_>) {
         match &self.kind {
             ItKind::Enum(Some(variants)) => {
+                out.push_rename_attr(self.name);
                 out.push_str("enum ");
                 out.push_ident(self.name);
                 out.push_str(" { ");
@@ -464,16 +476,19 @@ impl ToSol for It<'_, '_> {
                     if i > 0 {
                         out.push_str(", ");
                     }
+                    out.push_rename_attr(variant);
                     out.push_ident(variant);
                 }
                 out.push_str(" }");
             }
             ItKind::Enum(None) => {
+                out.push_rename_attr(self.name);
                 out.push_str("type ");
                 out.push_ident(self.name);
                 out.push_str(" is uint8;");
             }
             ItKind::Udvt(ty) => {
+                out.push_rename_attr(self.name);
                 out.push_str("type ");
                 out.push_ident(self.name);
                 out.push_str(" is ");
@@ -481,6 +496,7 @@ impl ToSol for It<'_, '_> {
                 out.push(';');
             }
             ItKind::Struct(components) => {
+                out.push_rename_attr(self.name);
                 out.push_str("struct ");
                 out.push_ident(self.name);
                 out.push_str(" {\n");
@@ -642,12 +658,9 @@ impl<IN: ToSol> ToSol for AbiFunction<'_, IN> {
             out.print_param_location = true;
         }
 
-        // TODO: Enable once `#[sol(rename)]` is implemented.
-        // if let Some(name) = self.name {
-        //     if out.config.for_sol_macro && name.contains('$') {
-        //         write!(out, "#[sol(rename = \"{name}\")]").unwrap();
-        //     }
-        // }
+        if let Some(name) = self.name {
+            out.push_rename_attr(name);
+        }
 
         out.push_str(self.kw.as_str());
         if let Some(name) = self.name {
@@ -724,6 +737,9 @@ fn param(
     components: &[Param],
     out: &mut SolPrinter<'_>,
 ) {
+    if !name.is_empty() {
+        out.push_rename_attr(name);
+    }
     let mut contract_name = None::<&str>;
     let mut type_name = type_name;
     let storage;

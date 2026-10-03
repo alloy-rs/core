@@ -27,9 +27,13 @@ impl ToAbi for ast::ItemFunction {
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
         Function {
-            name: self.name.as_ref().map(|i| i.as_string()).unwrap_or_default(),
-            inputs: self.parameters.to_dyn_abi(cx),
-            outputs: self.returns.as_ref().map(|r| r.returns.to_dyn_abi(cx)).unwrap_or_default(),
+            name: cx.function_sol_name(self),
+            inputs: params_to_dyn_abi(&self.parameters, cx, &self.attrs),
+            outputs: self
+                .returns
+                .as_ref()
+                .map(|r| params_to_dyn_abi(&r.returns, cx, &self.attrs))
+                .unwrap_or_default(),
             state_mutability: self.attributes.to_dyn_abi(cx),
         }
     }
@@ -39,7 +43,10 @@ impl ToAbi for ast::ItemError {
     type DynAbi = Error;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
-        Error { name: self.name.as_string(), inputs: self.parameters.to_dyn_abi(cx) }
+        Error {
+            name: cx.error_sol_name(self),
+            inputs: params_to_dyn_abi(&self.parameters, cx, &self.attrs),
+        }
     }
 }
 
@@ -48,37 +55,40 @@ impl ToAbi for ast::ItemEvent {
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
         Event {
-            name: self.name.as_string(),
-            inputs: self.parameters.iter().map(|e| e.to_dyn_abi(cx)).collect(),
+            name: cx.event_sol_name(self),
+            inputs: self
+                .parameters
+                .iter()
+                .map(|event| event_param_to_dyn_abi(event, cx, &self.attrs))
+                .collect(),
             anonymous: self.is_anonymous(),
         }
     }
 }
 
-impl<P> ToAbi for ast::Parameters<P> {
-    type DynAbi = Vec<Param>;
-
-    fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
-        self.iter().map(|p| p.to_dyn_abi(cx)).collect()
-    }
+fn params_to_dyn_abi<P>(
+    params: &ast::Parameters<P>,
+    cx: &ExpCtxt<'_>,
+    parent_attrs: &[syn::Attribute],
+) -> Vec<Param> {
+    params
+        .iter()
+        .map(|param| {
+            let name =
+                param.name.as_ref().map(|name| cx.child_sol_name(name, &param.attrs, parent_attrs));
+            ty_to_param(name, &param.ty, cx)
+        })
+        .collect()
 }
 
-impl ToAbi for ast::VariableDeclaration {
-    type DynAbi = Param;
-
-    fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
-        ty_to_param(self.name.as_ref().map(ast::SolIdent::as_string), &self.ty, cx)
-    }
-}
-
-impl ToAbi for ast::EventParameter {
-    type DynAbi = EventParam;
-
-    fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
-        let name = self.name.as_ref().map(ast::SolIdent::as_string);
-        let Param { ty, name, components, internal_type } = ty_to_param(name, &self.ty, cx);
-        EventParam { ty, name, indexed: self.is_indexed(), internal_type, components }
-    }
+fn event_param_to_dyn_abi(
+    param: &ast::EventParameter,
+    cx: &ExpCtxt<'_>,
+    parent_attrs: &[syn::Attribute],
+) -> EventParam {
+    let name = param.name.as_ref().map(|name| cx.child_sol_name(name, &param.attrs, parent_attrs));
+    let Param { ty, name, components, internal_type } = ty_to_param(name, &param.ty, cx);
+    EventParam { ty, name, indexed: param.is_indexed(), internal_type, components }
 }
 
 impl ToAbi for ast::FunctionAttributes {
@@ -112,7 +122,7 @@ fn ty_to_param(name: Option<String>, ty: &ast::Type, cx: &ExpCtxt<'_>) -> Param 
                     ty: ty_name,
                     name: name.unwrap_or_default(),
                     internal_type: None,
-                    components: s.fields.to_dyn_abi(cx),
+                    components: params_to_dyn_abi(&s.fields, cx, &s.attrs),
                 };
             }
             cx.custom_type(custom_name)
@@ -161,7 +171,7 @@ fn rec_ty_abi_string_suffix(cx: &ExpCtxt<'_>, ty: &ast::Type, s: &mut String) {
 pub(super) fn constructor(function: &ItemFunction, cx: &ExpCtxt<'_>) -> Constructor {
     assert!(function.kind.is_constructor());
     Constructor {
-        inputs: function.parameters.to_dyn_abi(cx),
+        inputs: params_to_dyn_abi(&function.parameters, cx, &function.attrs),
         state_mutability: function.attributes.to_dyn_abi(cx),
     }
 }

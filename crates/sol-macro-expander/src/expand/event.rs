@@ -265,7 +265,7 @@ fn expand_event_topic_field(
 ) -> TokenStream {
     let name = anon_name((i, name));
     let ty = cx.expand_event_param_type(param);
-    let attrs = &param.attrs;
+    let attrs = param.attrs.iter().filter(|attr| !attr.path().is_ident("sol"));
     quote! {
         #(#attrs)*
         #[allow(missing_docs)]
