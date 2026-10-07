@@ -385,11 +385,6 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
         };
 
         let value = value.strip_prefix("0x").unwrap_or(value);
-
-        if value.len() > 64 {
-            return Err(ParseSignedError::IntegerOverflow);
-        }
-
         let abs = Uint::<BITS, LIMBS>::from_str_radix(value, 16)?;
         Self::checked_from_sign_and_abs(sign, abs).ok_or(ParseSignedError::IntegerOverflow)
     }
@@ -735,6 +730,16 @@ mod tests {
         run_test!(I160, U160);
         run_test!(I192, U192);
         run_test!(I256, U256);
+        run_test!(I512, U512);
+
+        // Leading zeros do not count towards the width.
+        let padded = format!("0x{:0>80}", "1");
+        assert_eq!(I256::from_hex_str(&padded), Ok(I256::ONE));
+        assert_eq!(I256::from_hex_str(&format!("-{padded}")), Ok(I256::MINUS_ONE));
+
+        // Integers wider than 256 bits round-trip through their hex string.
+        assert_eq!(I512::from_hex_str(&I512::MAX.to_hex_string()), Ok(I512::MAX));
+        assert_eq!(I512::from_hex_str(&I512::MIN.to_hex_string()), Ok(I512::MIN));
     }
 
     #[test]
