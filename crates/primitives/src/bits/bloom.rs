@@ -2,7 +2,8 @@
 //!
 //! Adapted from <https://github.com/paritytech/parity-common/blob/2fb72eea96b6de4a085144ce239feb49da0cd39e/ethbloom/src/lib.rs>
 
-use crate::{Address, B256, Log, LogData, keccak256};
+use crate::{Address, B256, Log, LogData, keccak256, keccak256_batch};
+use core::iter;
 
 /// Number of bits to set per input in Ethereum bloom filter.
 pub const BLOOM_BITS_PER_ITEM: usize = 3;
@@ -61,9 +62,7 @@ impl<'a> FromIterator<&'a (Address, LogData)> for Bloom {
 
 impl<'a> Extend<&'a (Address, LogData)> for Bloom {
     fn extend<T: IntoIterator<Item = &'a (Address, LogData)>>(&mut self, iter: T) {
-        for (address, log_data) in iter {
-            self.accrue_raw_log(*address, log_data.topics())
-        }
+        self.accrue_raw_logs(iter.into_iter().map(|(address, data)| (address, data.topics())));
     }
 }
 
@@ -79,9 +78,7 @@ impl<'a> FromIterator<&'a Log> for Bloom {
 impl<'a> Extend<&'a Log> for Bloom {
     #[inline]
     fn extend<T: IntoIterator<Item = &'a Log>>(&mut self, logs: T) {
-        for log in logs {
-            self.accrue_log(log)
-        }
+        self.accrue_raw_logs(logs.into_iter().map(|log| (&log.address, log.topics())));
     }
 }
 
@@ -194,10 +191,15 @@ impl Bloom {
 
     /// Ingests a raw log into the bloom filter.
     pub fn accrue_raw_log(&mut self, address: Address, topics: &[B256]) {
-        self.m3_2048(address.as_slice());
-        for topic in topics.iter() {
-            self.m3_2048(topic.as_slice());
-        }
+        self.accrue_raw_logs([(&address, topics)]);
+    }
+
+    /// Ingests the address and topics of each log, hashing them in batches.
+    fn accrue_raw_logs<'a>(&mut self, logs: impl IntoIterator<Item = (&'a Address, &'a [B256])>) {
+        let inputs = logs.into_iter().flat_map(|(address, topics)| {
+            iter::once(address.as_slice()).chain(topics.iter().map(B256::as_slice))
+        });
+        keccak256_batch(inputs, |_, hash| self.m3_2048_hashed(&hash));
     }
 
     /// Ingests a log into the bloom filter.
@@ -207,9 +209,7 @@ impl Bloom {
 
     /// Ingests multiple logs into the bloom filter.
     pub fn accrue_logs(&mut self, logs: &[Log]) {
-        for log in logs {
-            self.accrue_log(log)
-        }
+        self.extend(logs);
     }
 
     /// True if the bloom filter contains a log with given address and topics.
@@ -279,6 +279,33 @@ mod tests {
         assert!(my_bloom.contains_input(BloomInput::Hash(topic_hash)));
 
         assert_eq!(my_bloom, bloom);
+    }
+
+    #[test]
+    fn accrue_logs_matches_m3_2048() {
+        let logs = (0..20u8)
+            .map(|i| {
+                let topics = (0..i % 5).map(|j| B256::repeat_byte(i * 5 + j)).collect();
+                Log::new_unchecked(Address::repeat_byte(i), topics, Default::default())
+            })
+            .collect::<alloc::vec::Vec<_>>();
+        let mut expected = Bloom::ZERO;
+        for log in &logs {
+            expected.m3_2048(log.address.as_slice());
+            for topic in log.topics() {
+                expected.m3_2048(topic.as_slice());
+            }
+        }
+
+        assert_eq!(crate::logs_bloom(&logs), expected);
+        let mut bloom = Bloom::ZERO;
+        bloom.accrue_logs(&logs);
+        assert_eq!(bloom, expected);
+        let mut bloom = Bloom::ZERO;
+        for log in &logs {
+            bloom.accrue_log(log);
+        }
+        assert_eq!(bloom, expected);
     }
 
     #[test]

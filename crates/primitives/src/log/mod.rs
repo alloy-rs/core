@@ -6,11 +6,7 @@ mod serde;
 
 /// Compute the logs bloom filter for the given logs.
 pub fn logs_bloom<'a>(logs: impl IntoIterator<Item = &'a Log>) -> Bloom {
-    let mut bloom = Bloom::ZERO;
-    for log in logs {
-        bloom.accrue_log(log);
-    }
-    bloom
+    logs.into_iter().collect()
 }
 
 /// An Ethereum event log object.

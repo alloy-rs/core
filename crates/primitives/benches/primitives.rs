@@ -1,6 +1,9 @@
 #![allow(unknown_lints, clippy::incompatible_msrv, missing_docs)]
 
-use alloy_primitives::{Address, B256, FixedBytes, keccak256};
+use alloy_primitives::{
+    Address, B256, FixedBytes, Log, keccak256, keccak256_batch_uncached, keccak256_uncached,
+    logs_bloom,
+};
 use criterion::{Criterion, criterion_group, criterion_main};
 use std::{collections::BTreeMap, hint::black_box};
 
@@ -21,6 +24,28 @@ fn primitives(c: &mut Criterion) {
             black_box(&out);
         });
     });
+    let inputs = (0..16).map(|_| B256::random()).collect::<Vec<_>>();
+    g.bench_function("keccak256/32x16", |b| {
+        b.iter(|| {
+            for input in black_box(&inputs) {
+                black_box(keccak256_uncached(input));
+            }
+        });
+    });
+    g.bench_function("keccak256_batch/32x16", |b| {
+        b.iter(|| {
+            keccak256_batch_uncached(black_box(&inputs), |_, hash| {
+                black_box(hash);
+            });
+        });
+    });
+    let logs = (0..8)
+        .map(|_| {
+            let topics = (0..3).map(|_| B256::random()).collect();
+            Log::new_unchecked(Address::random(), topics, Default::default())
+        })
+        .collect::<Vec<_>>();
+    g.bench_function("logs_bloom/8x3", |b| b.iter(|| logs_bloom(black_box(&logs))));
     g.finish();
 }
 

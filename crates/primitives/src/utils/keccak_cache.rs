@@ -47,13 +47,70 @@ pub(super) fn compute(input: &[u8], imp: impl FnOnce(&[u8]) -> B256) -> B256 {
     }
 
     let cache = CACHE.get_or_init(default_cache);
-    cache.get_or_insert_with_ref(input, imp, |input| {
-        let mut data = [MaybeUninit::uninit(); MAX_INPUT_LEN];
-        unsafe {
-            std::ptr::copy_nonoverlapping(input.as_ptr(), data.as_mut_ptr().cast(), input.len())
-        };
-        Key { len: input.len() as u8, data }
-    })
+    cache.get_or_insert_with_ref(input, imp, Key::new)
+}
+
+/// Hashes a batch of inputs through the cache, as [`compute`] does for one input.
+///
+/// Probes the cache for each input of a chunk, hashes the misses together, then calls `f` for the
+/// whole chunk in input order.
+pub(super) fn compute_batch<I>(inputs: I, mut f: impl FnMut(I::Item, B256))
+where
+    I: IntoIterator,
+    I::Item: AsRef<[u8]>,
+{
+    const CHUNK: usize = 32;
+
+    let cache = CACHE.get_or_init(default_cache);
+    let mut inputs = inputs.into_iter();
+    loop {
+        let mut items: [Option<I::Item>; CHUNK] = [const { None }; CHUNK];
+        let mut hashes = [B256::ZERO; CHUNK];
+        let mut misses = [0u8; CHUNK];
+        let mut count = 0;
+        let mut miss_count = 0;
+        for (slot, input) in items.iter_mut().zip(&mut inputs) {
+            let bytes = input.as_ref();
+            let hit = if bytes.is_empty() {
+                Some(KECCAK256_EMPTY)
+            } else if bytes.len() > MAX_INPUT_LEN {
+                None
+            } else {
+                cache.get(bytes)
+            };
+            match hit {
+                Some(hash) => hashes[count] = hash,
+                None => {
+                    misses[miss_count] = count as u8;
+                    miss_count += 1;
+                }
+            }
+            *slot = Some(input);
+            count += 1;
+        }
+
+        let misses = &misses[..miss_count];
+        let mut next_miss = misses.iter();
+        super::keccak256_batch_impl(
+            misses.iter().map(|&i| unsafe { items[i as usize].as_ref().unwrap_unchecked() }),
+            |input, hash| {
+                let i = *unsafe { next_miss.next().unwrap_unchecked() } as usize;
+                hashes[i] = hash;
+                let input = input.as_ref();
+                if input.len() <= MAX_INPUT_LEN {
+                    cache.insert(Key::new(input), hash);
+                }
+            },
+        );
+
+        for (item, hash) in items.into_iter().zip(hashes).take(count) {
+            f(unsafe { item.unwrap_unchecked() }, hash);
+        }
+
+        if count < CHUNK {
+            return;
+        }
+    }
 }
 
 fn init_cache(cache: &OnceLock<Cache>, entries: usize) -> bool {
@@ -146,6 +203,17 @@ impl std::hash::Hash for Key {
 }
 
 impl Key {
+    /// Copies `input` into a key. `input` must be at most [`MAX_INPUT_LEN`] bytes long.
+    #[inline]
+    fn new(input: &[u8]) -> Self {
+        debug_assert!(input.len() <= MAX_INPUT_LEN);
+        let mut data = [MaybeUninit::uninit(); MAX_INPUT_LEN];
+        unsafe {
+            std::ptr::copy_nonoverlapping(input.as_ptr(), data.as_mut_ptr().cast(), input.len())
+        };
+        Self { len: input.len() as u8, data }
+    }
+
     #[inline]
     const fn get(&self) -> &[u8] {
         unsafe { std::slice::from_raw_parts(self.data.as_ptr().cast(), self.len as usize) }
