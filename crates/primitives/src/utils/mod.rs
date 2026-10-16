@@ -180,6 +180,94 @@ pub fn keccak256_uncached<T: AsRef<[u8]>>(bytes: T) -> B256 {
     keccak256_impl(bytes.as_ref())
 }
 
+/// Hashes each input with [`Keccak-256`] and calls `f` with the input and its hash, in input order.
+///
+/// This gives the same hashes as calling [`keccak256`] on each input. With the `asm-keccak`
+/// feature, it hashes several inputs at once in SIMD registers, which takes less time per input.
+///
+/// Uses the cache if the `keccak-cache-global` feature is enabled.
+///
+/// # Examples
+///
+/// ```
+/// use alloy_primitives::{address, keccak256, keccak256_batch};
+///
+/// let addresses = [address!("0x0000000000000000000000000000000000000001"); 4];
+/// let mut hashes = Vec::new();
+/// keccak256_batch(&addresses, |address, hash| hashes.push((*address, hash)));
+/// assert!(hashes.iter().all(|&(address, hash)| hash == keccak256(address)));
+/// ```
+///
+/// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
+#[inline]
+pub fn keccak256_batch<I>(inputs: I, f: impl FnMut(I::Item, B256))
+where
+    I: IntoIterator,
+    I::Item: AsRef<[u8]>,
+{
+    #[cfg(feature = "keccak-cache-global")]
+    return keccak_cache::compute_batch(inputs, f);
+    #[cfg(not(feature = "keccak-cache-global"))]
+    return keccak256_batch_impl(inputs, f);
+}
+
+/// Hashes each input with [`Keccak-256`] and calls `f` with the input and its hash, in input order,
+/// with a thin cache layer.
+///
+/// Uses the cache if the `keccak-cache` feature is enabled. See [`keccak256_batch`].
+///
+/// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
+#[inline]
+pub fn keccak256_batch_cached<I>(inputs: I, f: impl FnMut(I::Item, B256))
+where
+    I: IntoIterator,
+    I::Item: AsRef<[u8]>,
+{
+    #[cfg(feature = "keccak-cache")]
+    return keccak_cache::compute_batch(inputs, f);
+    #[cfg(not(feature = "keccak-cache"))]
+    return keccak256_batch_impl(inputs, f);
+}
+
+/// Hashes each input with [`Keccak-256`] and calls `f` with the input and its hash, in input order.
+///
+/// Does not use the cache even if the `keccak-cache` feature is enabled. See [`keccak256_batch`].
+///
+/// [`Keccak-256`]: https://en.wikipedia.org/wiki/SHA-3
+#[inline]
+pub fn keccak256_batch_uncached<I>(inputs: I, f: impl FnMut(I::Item, B256))
+where
+    I: IntoIterator,
+    I::Item: AsRef<[u8]>,
+{
+    keccak256_batch_impl(inputs, f)
+}
+
+#[inline]
+fn keccak256_batch_impl<I>(inputs: I, mut f: impl FnMut(I::Item, B256))
+where
+    I: IntoIterator,
+    I::Item: AsRef<[u8]>,
+{
+    cfg_if! {
+        if #[cfg(all(feature = "native-keccak", not(any(feature = "sha3-keccak", feature = "tiny-keccak", miri))))] {
+            for input in inputs {
+                let hash = keccak256_impl(input.as_ref());
+                f(input, hash);
+            }
+        } else if #[cfg(all(feature = "asm-keccak", not(miri)))] {
+            keccak_asm::Keccak256::digest_batch(inputs, |input, hash| {
+                f(input, B256::new(hash.into()))
+            });
+        } else {
+            for input in inputs {
+                let hash = keccak256_impl(input.as_ref());
+                f(input, hash);
+            }
+        }
+    }
+}
+
 #[allow(unused)]
 fn keccak256_impl(bytes: &[u8]) -> B256 {
     let mut output = MaybeUninit::<B256>::uninit();
@@ -398,6 +486,34 @@ mod tests {
         let x = vec![1, 2, 3];
         let y = try_vec![1, 2, 3].unwrap();
         assert_eq!(x, y);
+    }
+
+    #[test]
+    fn keccak256_batch_matches_keccak256() {
+        // Lengths cross the cache limit and the rate, and repeat so later chunks hit the cache.
+        let data = (0..400).map(|i| (i * 7) as u8).collect::<Vec<_>>();
+        let inputs = (0..300).map(|i| &data[i % 5..][..i * 31 % 200]).collect::<Vec<_>>();
+        for variant in 0..3 {
+            for count in [0, 1, 2, 31, 32, 33, 300] {
+                let inputs = &inputs[..count];
+                let mut i = 0;
+                let mut check = |input: &&[u8], hash| {
+                    assert!(core::ptr::eq(*input, inputs[i]));
+                    assert_eq!(
+                        hash,
+                        keccak256_impl(input),
+                        "variant {variant}, input {i} of {count}"
+                    );
+                    i += 1;
+                };
+                match variant {
+                    0 => keccak256_batch(inputs, &mut check),
+                    1 => keccak256_batch_cached(inputs, &mut check),
+                    _ => keccak256_batch_uncached(inputs, &mut check),
+                }
+                assert_eq!(i, count);
+            }
+        }
     }
 
     #[test]
