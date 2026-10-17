@@ -7,7 +7,7 @@
 
 use super::{hint::unlikely, keccak256_impl as keccak256};
 use crate::{B256, KECCAK256_EMPTY};
-use std::sync::OnceLock;
+use std::{ptr, sync::OnceLock};
 
 #[cfg(feature = "keccak-cache-stats")]
 pub use stats::{KECCAK_CACHE_STATS, KeccakCacheStats};
@@ -50,11 +50,7 @@ pub(super) fn compute(input: &[u8], imp: impl FnOnce(&[u8]) -> B256) -> B256 {
     }
 
     let cache = CACHE.get_or_init(default_cache);
-    cache.get_or_insert_with_ref(input, imp, |input| {
-        let mut data = [0; MAX_INPUT_LEN];
-        unsafe { std::ptr::copy_nonoverlapping(input.as_ptr(), data.as_mut_ptr(), input.len()) };
-        Key { len: input.len() as u8, data }
-    })
+    cache.get_or_insert_with_ref(&Input(input), |input| imp(input.0), |input| Key::new(input.0))
 }
 
 fn init_cache(cache: &OnceLock<Cache>, entries: usize) -> bool {
@@ -118,10 +114,14 @@ impl std::hash::Hasher for Hasher {
     }
 }
 
+/// A cached input.
+///
+/// `len` comes last so that `data` lines up with the words that the cache copies atomically.
 #[derive(Clone, Copy)]
+#[repr(C)]
 struct Key {
-    len: u8,
     data: [u8; MAX_INPUT_LEN],
+    len: u8,
 }
 
 impl PartialEq for Key {
@@ -132,13 +132,6 @@ impl PartialEq for Key {
 }
 impl Eq for Key {}
 
-impl std::borrow::Borrow<[u8]> for Key {
-    #[inline]
-    fn borrow(&self) -> &[u8] {
-        self.get()
-    }
-}
-
 impl std::hash::Hash for Key {
     #[inline]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -148,9 +141,97 @@ impl std::hash::Hash for Key {
 
 impl Key {
     #[inline]
+    const fn new(input: &[u8]) -> Self {
+        let mut data = [0; MAX_INPUT_LEN];
+        unsafe { ptr::copy_nonoverlapping(input.as_ptr(), data.as_mut_ptr(), input.len()) };
+        Self { data, len: input.len() as u8 }
+    }
+
+    /// Returns the `i`th little-endian word of the key's bytes, including `len` in the last one.
+    #[inline(always)]
+    fn word(&self, i: usize) -> u64 {
+        debug_assert!(i < size_of::<Self>() / 8);
+        // SAFETY: `Key` is 88 initialized bytes, and `i` is in bounds.
+        unsafe { u64::from_le(ptr::from_ref(self).cast::<u64>().add(i).read_unaligned()) }
+    }
+
+    #[inline]
     const fn get(&self) -> &[u8] {
         unsafe { std::slice::from_raw_parts(self.data.as_ptr(), self.len as usize) }
     }
+}
+
+/// A lookup input that compares against [`Key`]s word by word instead of calling `bcmp`.
+struct Input<'a>(&'a [u8]);
+
+impl std::hash::Hash for Input<'_> {
+    #[inline]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        // Must match `Key`'s `Hash` implementation.
+        state.write(self.0);
+    }
+}
+
+impl equivalent::Equivalent<Key> for Input<'_> {
+    #[inline]
+    fn equivalent(&self, key: &Key) -> bool {
+        let input = self.0;
+        let len = input.len();
+        if key.len as usize != len {
+            return false;
+        }
+        // Compare one word at a time: the cached key was just copied out with 8-byte stores, and
+        // wider loads from it would stall on store-to-load forwarding.
+        let full = len / 8;
+        for i in 0..full {
+            // SAFETY: `i * 8 + 8 <= len`.
+            if key.word(i) != unsafe { read_u64(input, i * 8) } {
+                return false;
+            }
+        }
+        let rem = len % 8;
+        rem == 0 || key.word(full) & ((1 << (rem * 8)) - 1) == load_tail(input)
+    }
+}
+
+/// Loads the last `input.len() % 8` bytes of `input` as a little-endian integer, without reading
+/// out of bounds.
+#[inline(always)]
+fn load_tail(input: &[u8]) -> u64 {
+    let len = input.len();
+    debug_assert!(len % 8 != 0);
+    // SAFETY: All reads are in bounds of `input`, which is not empty.
+    unsafe {
+        if len >= 8 {
+            read_u64(input, len - 8) >> ((8 - len % 8) * 8)
+        } else if len >= 4 {
+            // The two reads overlap, which is fine since they put the same bytes in the same place.
+            let lo = read_u32(input, 0) as u64;
+            let hi = read_u32(input, len - 4) as u64;
+            lo | (hi << ((len - 4) * 8))
+        } else {
+            let a = *input.get_unchecked(0) as u64;
+            let b = *input.get_unchecked(len / 2) as u64;
+            let c = *input.get_unchecked(len - 1) as u64;
+            a | (b << (len / 2 * 8)) | (c << ((len - 1) * 8))
+        }
+    }
+}
+
+/// # Safety
+///
+/// `i + 8 <= s.len()`.
+#[inline(always)]
+const unsafe fn read_u64(s: &[u8], i: usize) -> u64 {
+    u64::from_le(unsafe { s.as_ptr().add(i).cast::<u64>().read_unaligned() })
+}
+
+/// # Safety
+///
+/// `i + 4 <= s.len()`.
+#[inline(always)]
+const unsafe fn read_u32(s: &[u8], i: usize) -> u32 {
+    u32::from_le(unsafe { s.as_ptr().add(i).cast::<u32>().read_unaligned() })
 }
 
 #[cfg(feature = "keccak-cache-stats")]
@@ -260,6 +341,25 @@ mod tests {
     fn sizes() {
         assert_eq!(size_of::<Key>(), MAX_INPUT_LEN + 1);
         assert_eq!(size_of::<fixed_cache::Bucket<(Key, B256)>>(), 128);
+    }
+
+    #[test]
+    fn input_equivalent() {
+        use equivalent::Equivalent;
+
+        let bytes: Vec<u8> = (0..=MAX_INPUT_LEN as u8).map(|i| i.wrapping_mul(37) ^ 0xa5).collect();
+        for len in 1..=MAX_INPUT_LEN {
+            let input = &bytes[..len];
+            let key = Key::new(input);
+            assert!(Input(input).equivalent(&key), "len {len}");
+            assert!(!Input(&bytes[..len - 1]).equivalent(&key), "len {len}");
+            assert!(!Input(&bytes[..len + 1]).equivalent(&key), "len {len}");
+            for i in 0..len {
+                let mut other = input.to_vec();
+                other[i] ^= 1;
+                assert!(!Input(&other).equivalent(&key), "len {len}, byte {i}");
+            }
+        }
     }
 
     #[test]
