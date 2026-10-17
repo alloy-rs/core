@@ -7,7 +7,7 @@
 
 use super::{hint::unlikely, keccak256_impl as keccak256};
 use crate::{B256, KECCAK256_EMPTY};
-use std::{mem::MaybeUninit, sync::OnceLock};
+use std::sync::OnceLock;
 
 #[cfg(feature = "keccak-cache-stats")]
 pub use stats::{KECCAK_CACHE_STATS, KeccakCacheStats};
@@ -25,6 +25,9 @@ struct CacheConfig {}
 impl fixed_cache::CacheConfig for CacheConfig {
     const STATS: bool = cfg!(feature = "keccak-cache-stats");
     const EPOCHS: bool = false;
+    // SAFETY: `Key` and `B256` are plain bytes without padding, and `Key` zeroes its unused bytes.
+    const LOCK_FREE_READS: fixed_cache::LockFreeReads =
+        unsafe { fixed_cache::LockFreeReads::enabled() };
 }
 
 /// Initializes the process-global keccak cache with `entries` buckets.
@@ -48,10 +51,8 @@ pub(super) fn compute(input: &[u8], imp: impl FnOnce(&[u8]) -> B256) -> B256 {
 
     let cache = CACHE.get_or_init(default_cache);
     cache.get_or_insert_with_ref(input, imp, |input| {
-        let mut data = [MaybeUninit::uninit(); MAX_INPUT_LEN];
-        unsafe {
-            std::ptr::copy_nonoverlapping(input.as_ptr(), data.as_mut_ptr().cast(), input.len())
-        };
+        let mut data = [0; MAX_INPUT_LEN];
+        unsafe { std::ptr::copy_nonoverlapping(input.as_ptr(), data.as_mut_ptr(), input.len()) };
         Key { len: input.len() as u8, data }
     })
 }
@@ -120,7 +121,7 @@ impl std::hash::Hasher for Hasher {
 #[derive(Clone, Copy)]
 struct Key {
     len: u8,
-    data: [MaybeUninit<u8>; MAX_INPUT_LEN],
+    data: [u8; MAX_INPUT_LEN],
 }
 
 impl PartialEq for Key {
@@ -148,7 +149,7 @@ impl std::hash::Hash for Key {
 impl Key {
     #[inline]
     const fn get(&self) -> &[u8] {
-        unsafe { std::slice::from_raw_parts(self.data.as_ptr().cast(), self.len as usize) }
+        unsafe { std::slice::from_raw_parts(self.data.as_ptr(), self.len as usize) }
     }
 }
 
