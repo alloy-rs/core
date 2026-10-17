@@ -146,29 +146,29 @@ fn write_bytes_unrolled(hasher: &mut FbHasherInner, mut bytes: &[u8]) {
         hasher.write_usize(usize::from_ne_bytes(*chunk));
         bytes = rest;
     }
-    if usize::BITS > 64 {
-        if let Some((chunk, rest)) = bytes.split_first_chunk() {
-            hasher.write_u64(u64::from_ne_bytes(*chunk));
-            bytes = rest;
-        }
+    if usize::BITS > 64
+        && let Some((chunk, rest)) = bytes.split_first_chunk()
+    {
+        hasher.write_u64(u64::from_ne_bytes(*chunk));
+        bytes = rest;
     }
-    if usize::BITS > 32 {
-        if let Some((chunk, rest)) = bytes.split_first_chunk() {
-            hasher.write_u32(u32::from_ne_bytes(*chunk));
-            bytes = rest;
-        }
+    if usize::BITS > 32
+        && let Some((chunk, rest)) = bytes.split_first_chunk()
+    {
+        hasher.write_u32(u32::from_ne_bytes(*chunk));
+        bytes = rest;
     }
-    if usize::BITS > 16 {
-        if let Some((chunk, rest)) = bytes.split_first_chunk() {
-            hasher.write_u16(u16::from_ne_bytes(*chunk));
-            bytes = rest;
-        }
+    if usize::BITS > 16
+        && let Some((chunk, rest)) = bytes.split_first_chunk()
+    {
+        hasher.write_u16(u16::from_ne_bytes(*chunk));
+        bytes = rest;
     }
-    if usize::BITS > 8 {
-        if let Some((chunk, rest)) = bytes.split_first_chunk() {
-            hasher.write_u8(u8::from_ne_bytes(*chunk));
-            bytes = rest;
-        }
+    if usize::BITS > 8
+        && let Some((chunk, rest)) = bytes.split_first_chunk()
+    {
+        hasher.write_u8(u8::from_ne_bytes(*chunk));
+        bytes = rest;
     }
 
     debug_assert!(bytes.is_empty());
