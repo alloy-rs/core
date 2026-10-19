@@ -142,6 +142,7 @@ impl std::hash::Hash for Key {
 impl Key {
     #[inline]
     const fn new(input: &[u8]) -> Self {
+        // Lock-free reads and `word` load the whole key, so the unused bytes must be initialized.
         let mut data = [0; MAX_INPUT_LEN];
         unsafe { ptr::copy_nonoverlapping(input.as_ptr(), data.as_mut_ptr(), input.len()) };
         Self { data, len: input.len() as u8 }
