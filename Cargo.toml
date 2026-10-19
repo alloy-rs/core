@@ -106,7 +106,7 @@ rand = { version = "0.9", default-features = false, features = ["os_rng"] }
 rayon = { version = "1.2", default-features = false }
 ruint = { version = "1.16.0", default-features = false, features = ["alloc"] }
 winnow = { version = "1.0", default-features = false, features = ["alloc", "ascii"] }
-fixed-cache = { version = "0.1.8", default-features = false }
+fixed-cache = { version = "0.1.11", default-features = false }
 equivalent = { version = "1", default-features = false }
 
 # sqlx support (optional, for DB integration)
@@ -116,5 +116,3 @@ sqlx-postgres = { version = "0.8"}
 [patch.crates-io]
 # Fix Miri CI: https://github.com/rkyv/rkyv/commit/aea82f04757ed6a3674642f9e7f22b168ec7f955
 rkyv = { git = "https://github.com/rkyv/rkyv", rev = "aea82f04757ed6a3674642f9e7f22b168ec7f955" }
-# TODO: Remove once released: https://github.com/DaniPopes/fixed-cache/pull/20
-fixed-cache = { git = "https://github.com/DaniPopes/fixed-cache", branch = "dani/lock-free-reads-config" }
