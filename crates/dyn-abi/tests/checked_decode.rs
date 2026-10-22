@@ -1,3 +1,5 @@
+//! Public decoder coverage for comparison-mutated arguments.
+
 use alloy_dyn_abi::{DynSolType, DynSolValue};
 
 #[test]
