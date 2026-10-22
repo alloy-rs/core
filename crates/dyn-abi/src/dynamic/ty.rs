@@ -725,7 +725,6 @@ impl DynSolType {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use alloc::string::ToString;
     use alloy_primitives::{Address, U256, hex};
 
