@@ -558,6 +558,56 @@ impl DynSolType {
         self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_sequence_populate)
     }
 
+    /// Decode a sequence, rejecting noncanonical scalar words.
+    ///
+    /// Unlike strict ABI validation, this accepts noncanonical offsets, trailing data,
+    /// dirty dynamic-byte padding, and non-UTF-8 strings. Strings remain lossily decoded.
+    /// All nested scalar words are checked, including values Solidity may decode lazily.
+    pub fn abi_decode_sequence_validate_words(&self, data: &[u8]) -> Result<DynSolValue> {
+        self.abi_decode_inner(&mut Decoder::new(data), |token, decoder| {
+            token.decode_sequence_populate(decoder)?;
+            self.validate_words(token)
+        })
+    }
+
+    fn validate_words(&self, token: &DynToken<'_>) -> Result<()> {
+        match (self, token) {
+            (ty, DynToken::Word(word)) => {
+                let token = (*word).into();
+                let valid = match ty {
+                    Self::Bool => sol_data::Bool::valid_token(&token),
+                    Self::Address => sol_data::Address::valid_token(&token),
+                    Self::Function => sol_data::Function::valid_token(&token),
+                    Self::Uint(bits) => word[..32 - bits / 8].iter().all(|&b| b == 0),
+                    Self::Int(bits) => {
+                        let padding = 32 - bits / 8;
+                        let fill = if word[padding] & 0x80 == 0 { 0 } else { 0xff };
+                        word[..padding].iter().all(|&b| b == fill)
+                    }
+                    Self::FixedBytes(size) => word[*size..].iter().all(|&b| b == 0),
+                    _ => unreachable!("token matches type"),
+                };
+                if !valid {
+                    return Err(Error::custom("noncanonical ABI value word"));
+                }
+            }
+            (Self::Array(ty), DynToken::DynSeq { contents, .. })
+            | (Self::FixedArray(ty, _), DynToken::FixedSeq(contents, _)) => {
+                for token in contents.iter() {
+                    ty.validate_words(token)?;
+                }
+            }
+            (as_tuple!(Self types), DynToken::FixedSeq(tokens, _)) => {
+                for (ty, token) in zip(types, tokens.iter()) {
+                    ty.validate_words(token)?;
+                }
+            }
+            (Self::Bytes | Self::String, DynToken::PackedSeq(_)) => {}
+            _ => unreachable!("token matches type"),
+        }
+        Ok(())
+    }
+
     /// Returns `true` if this type is dynamically sized type.
     pub fn is_dynamic(&self) -> bool {
         match self {
@@ -673,6 +723,45 @@ impl DynSolType {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn validate_scalar_words() {
+        for (name, byte, value) in [
+            ("bool", 31, 4),
+            ("uint8", 30, 1),
+            ("int8", 31, 255),
+            ("address", 0, 1),
+            ("bytes4", 4, 1),
+            ("function", 24, 1),
+        ] {
+            let ty: DynSolType = alloc::format!("({name})").parse().unwrap();
+            let mut data = [0; 32];
+            assert!(ty.abi_decode_sequence_validate_words(&data).is_ok());
+            data[byte] = value;
+            assert!(ty.abi_decode_sequence(&data).is_ok());
+            assert!(ty.abi_decode_sequence_validate_words(&data).is_err(), "{name}");
+        }
+        let ty: DynSolType = "(int8)".parse().unwrap();
+        assert!(ty.abi_decode_sequence_validate_words(&[255; 32]).is_ok());
+    }
+
+    #[test]
+    fn validate_nested_words_without_canonicalizing_payloads() {
+        let ty: DynSolType = "(bool[],bytes,string)".parse().unwrap();
+        let mut data = DynSolValue::Tuple(vec![
+            DynSolValue::Array(vec![DynSolValue::Bool(false)]),
+            DynSolValue::Bytes(vec![0xaa; 40]),
+            DynSolValue::String("hello".into()),
+        ])
+        .abi_encode_params();
+        // Shorten bytes without clearing its old payload, and accept a non-UTF-8 string.
+        data[5 * 32 + 31] = 5;
+        data[9 * 32] = 255;
+        assert!(ty.abi_decode_sequence_validate_words(&data).is_ok());
+        data[4 * 32 + 31] = 4;
+        assert!(ty.abi_decode_sequence(&data).is_ok());
+        assert!(ty.abi_decode_sequence_validate_words(&data).is_err());
+    }
     use alloc::string::ToString;
     use alloy_primitives::{Address, U256, hex};
 
