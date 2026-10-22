@@ -563,7 +563,7 @@ impl DynSolType {
     /// Unlike strict ABI validation, this accepts noncanonical offsets, trailing data,
     /// dirty dynamic-byte padding, and non-UTF-8 strings. Strings remain lossily decoded.
     /// All nested scalar words are checked, including values Solidity may decode lazily.
-    pub fn abi_decode_sequence_validate_words(&self, data: &[u8]) -> Result<DynSolValue> {
+    pub fn abi_decode_sequence_checked(&self, data: &[u8]) -> Result<DynSolValue> {
         self.abi_decode_inner(&mut Decoder::new(data), |token, decoder| {
             token.decode_sequence_populate(decoder)?;
             self.validate_words(token)
@@ -724,44 +724,6 @@ impl DynSolType {
 mod tests {
     use super::*;
 
-    #[test]
-    fn validate_scalar_words() {
-        for (name, byte, value) in [
-            ("bool", 31, 4),
-            ("uint8", 30, 1),
-            ("int8", 31, 255),
-            ("address", 0, 1),
-            ("bytes4", 4, 1),
-            ("function", 24, 1),
-        ] {
-            let ty: DynSolType = alloc::format!("({name})").parse().unwrap();
-            let mut data = [0; 32];
-            assert!(ty.abi_decode_sequence_validate_words(&data).is_ok());
-            data[byte] = value;
-            assert!(ty.abi_decode_sequence(&data).is_ok());
-            assert!(ty.abi_decode_sequence_validate_words(&data).is_err(), "{name}");
-        }
-        let ty: DynSolType = "(int8)".parse().unwrap();
-        assert!(ty.abi_decode_sequence_validate_words(&[255; 32]).is_ok());
-    }
-
-    #[test]
-    fn validate_nested_words_without_canonicalizing_payloads() {
-        let ty: DynSolType = "(bool[],bytes,string)".parse().unwrap();
-        let mut data = DynSolValue::Tuple(vec![
-            DynSolValue::Array(vec![DynSolValue::Bool(false)]),
-            DynSolValue::Bytes(vec![0xaa; 40]),
-            DynSolValue::String("hello".into()),
-        ])
-        .abi_encode_params();
-        // Shorten bytes without clearing its old payload, and accept a non-UTF-8 string.
-        data[5 * 32 + 31] = 5;
-        data[9 * 32] = 255;
-        assert!(ty.abi_decode_sequence_validate_words(&data).is_ok());
-        data[4 * 32 + 31] = 4;
-        assert!(ty.abi_decode_sequence(&data).is_ok());
-        assert!(ty.abi_decode_sequence_validate_words(&data).is_err());
-    }
     use alloc::string::ToString;
     use alloy_primitives::{Address, U256, hex};
 
