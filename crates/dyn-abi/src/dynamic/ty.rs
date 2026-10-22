@@ -563,49 +563,13 @@ impl DynSolType {
     /// Unlike strict ABI validation, this accepts noncanonical offsets, trailing data,
     /// dirty dynamic-byte padding, and non-UTF-8 strings. Strings remain lossily decoded.
     /// All nested scalar words are checked, including values Solidity may decode lazily.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence_checked(&self, data: &[u8]) -> Result<DynSolValue> {
         self.abi_decode_inner(&mut Decoder::new(data), |token, decoder| {
             token.decode_sequence_populate(decoder)?;
             self.validate_words(token)
         })
-    }
-
-    fn validate_words(&self, token: &DynToken<'_>) -> Result<()> {
-        match (self, token) {
-            (ty, DynToken::Word(word)) => {
-                let token = (*word).into();
-                let valid = match ty {
-                    Self::Bool => sol_data::Bool::valid_token(&token),
-                    Self::Address => sol_data::Address::valid_token(&token),
-                    Self::Function => sol_data::Function::valid_token(&token),
-                    Self::Uint(bits) => word[..32 - bits / 8].iter().all(|&b| b == 0),
-                    Self::Int(bits) => {
-                        let padding = 32 - bits / 8;
-                        let fill = if word[padding] & 0x80 == 0 { 0 } else { 0xff };
-                        word[..padding].iter().all(|&b| b == fill)
-                    }
-                    Self::FixedBytes(size) => word[*size..].iter().all(|&b| b == 0),
-                    _ => unreachable!("token matches type"),
-                };
-                if !valid {
-                    return Err(Error::custom("noncanonical ABI value word"));
-                }
-            }
-            (Self::Array(ty), DynToken::DynSeq { contents, .. })
-            | (Self::FixedArray(ty, _), DynToken::FixedSeq(contents, _)) => {
-                for token in contents.iter() {
-                    ty.validate_words(token)?;
-                }
-            }
-            (as_tuple!(Self types), DynToken::FixedSeq(tokens, _)) => {
-                for (ty, token) in zip(types, tokens.iter()) {
-                    ty.validate_words(token)?;
-                }
-            }
-            (Self::Bytes | Self::String, DynToken::PackedSeq(_)) => {}
-            _ => unreachable!("token matches type"),
-        }
-        Ok(())
     }
 
     /// Returns `true` if this type is dynamically sized type.
@@ -678,6 +642,44 @@ impl DynSolType {
             "decoded value does not match type:\n  type: {self:?}\n value: {value:?}"
         );
         Ok(value)
+    }
+
+    fn validate_words(&self, token: &DynToken<'_>) -> Result<()> {
+        match (self, token) {
+            (ty, DynToken::Word(word)) => {
+                let token = (*word).into();
+                let valid = match ty {
+                    Self::Bool => sol_data::Bool::valid_token(&token),
+                    Self::Address => sol_data::Address::valid_token(&token),
+                    Self::Function => sol_data::Function::valid_token(&token),
+                    Self::Uint(bits) => word[..32 - bits / 8].iter().all(|&b| b == 0),
+                    Self::Int(bits) => {
+                        let padding = 32 - bits / 8;
+                        let fill = if word[padding] & 0x80 == 0 { 0 } else { 0xff };
+                        word[..padding].iter().all(|&b| b == fill)
+                    }
+                    Self::FixedBytes(size) => word[*size..].iter().all(|&b| b == 0),
+                    _ => unreachable!("token matches type"),
+                };
+                if !valid {
+                    return Err(Error::custom("noncanonical ABI value word"));
+                }
+            }
+            (Self::Array(ty), DynToken::DynSeq { contents, .. })
+            | (Self::FixedArray(ty, _), DynToken::FixedSeq(contents, _)) => {
+                for token in contents.iter() {
+                    ty.validate_words(token)?;
+                }
+            }
+            (as_tuple!(Self types), DynToken::FixedSeq(tokens, _)) => {
+                for (ty, token) in zip(types, tokens.iter()) {
+                    ty.validate_words(token)?;
+                }
+            }
+            (Self::Bytes | Self::String, DynToken::PackedSeq(_)) => {}
+            _ => unreachable!("token matches type"),
+        }
+        Ok(())
     }
 
     /// Wrap in an array of the specified size
