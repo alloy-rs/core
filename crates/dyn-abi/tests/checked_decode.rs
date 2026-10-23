@@ -6,7 +6,7 @@ use alloy_sol_types::abi::AbiDecoderConfig;
 
 #[test]
 fn decode_mutated_arguments() {
-    let config = AbiDecoderConfig::new().validate(true);
+    let config = AbiDecoderConfig::new().validate_words(true);
     let function = Function::parse("f(bool[],bytes,string)").unwrap();
     let mut data = DynSolValue::Tuple(vec![
         DynSolValue::Array(vec![DynSolValue::Bool(false)]),
