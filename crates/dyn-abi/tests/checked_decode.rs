@@ -36,4 +36,12 @@ fn decode_mutated_arguments() {
             .abi_decode_input_with_config(&data, AbiDecoderConfig::new().validate(true))
             .is_err()
     );
+
+    // Dynamic decoding does not enforce strict ABI encoding, so it rejects strict configs.
+    let function = Function::parse("f(bool)").unwrap();
+    let mut data = function.abi_encode_input_raw(&[DynSolValue::Bool(true)]).unwrap();
+    data.push(0xaa);
+    assert!(
+        function.abi_decode_input_with_config(&data, AbiDecoderConfig::new().strict(true)).is_err()
+    );
 }

@@ -63,6 +63,8 @@ pub trait JsonAbiExt: Sealed {
 
     /// ABI-decodes the given data according to this item's input types, with the given decoder
     /// configuration.
+    ///
+    /// Strict decoding is not supported.
     fn abi_decode_input_with_config(
         &self,
         data: &[u8],
@@ -204,6 +206,9 @@ fn abi_encode(values: &[DynSolValue]) -> Vec<u8> {
 }
 
 fn abi_decode(data: &[u8], params: &[Param], config: AbiDecoderConfig) -> Result<Vec<DynSolValue>> {
+    if config.get_strict() {
+        return Err(CrateError::custom("strict decoding is not supported"));
+    }
     let mut values = Vec::with_capacity(params.len());
     let mut decoder = Decoder::with_config(data, config);
     for param in params {
