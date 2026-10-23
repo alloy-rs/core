@@ -101,7 +101,7 @@ impl AbiDecoderConfig {
     /// Returns whether decoded scalar words must be canonical.
     #[inline]
     pub const fn get_validate_words(&self) -> bool {
-        self.validate_words
+        self.validate_words || self.get_validate()
     }
 
     /// Returns whether strict ABI encoding is required.
@@ -152,7 +152,8 @@ impl AbiDecoderConfig {
     /// When enabled, dynamic ABI input decoding rejects dirty `bool`, `address`, `function`,
     /// integer, and fixed-bytes words, including nested values. Unlike
     /// [`validate`](Self::validate), it accepts non-UTF-8 strings and dirty dynamic-bytes padding,
-    /// which Solidity also accepts.
+    /// which Solidity also accepts. [`validate`](Self::validate) and [`strict`](Self::strict)
+    /// imply this option.
     #[inline]
     pub const fn validate_words(mut self, validate_words: bool) -> Self {
         self.validate_words = validate_words;

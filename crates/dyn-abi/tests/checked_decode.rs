@@ -31,4 +31,9 @@ fn decode_mutated_arguments() {
     data[4 * 32 + 31] = 4;
     assert!(function.abi_decode_input(&data).is_ok());
     assert!(function.abi_decode_input_with_config(&data, config).is_err());
+    assert!(
+        function
+            .abi_decode_input_with_config(&data, AbiDecoderConfig::new().validate(true))
+            .is_err()
+    );
 }
