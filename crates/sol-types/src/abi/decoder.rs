@@ -151,9 +151,8 @@ impl AbiDecoderConfig {
     ///
     /// When enabled, dynamic ABI input decoding rejects dirty `bool`, `address`, `function`,
     /// integer, and fixed-bytes words, including nested values. Unlike
-    /// [`validate`](Self::validate), it accepts non-UTF-8 strings and dirty dynamic-bytes padding,
-    /// which Solidity also accepts. [`validate`](Self::validate) and [`strict`](Self::strict)
-    /// imply this option.
+    /// [`validate`](Self::validate), it accepts non-UTF-8 strings, which Solidity also accepts.
+    /// [`validate`](Self::validate) and [`strict`](Self::strict) imply this option.
     ///
     /// Static [`SolType`](crate::SolType) decoding ignores this option; use
     /// [`validate`](Self::validate) instead.
@@ -345,6 +344,9 @@ impl<'de> Decoder<'de, 'static> {
     }
 
     /// Instantiates a decoder with the given configuration.
+    ///
+    /// The decoder does not reject trailing bytes in strict mode; use
+    /// [`decode_sequence_with_config`] for complete strict decoding.
     #[inline]
     pub const fn with_config(buf: &'de [u8], config: AbiDecoderConfig) -> Self {
         Self {

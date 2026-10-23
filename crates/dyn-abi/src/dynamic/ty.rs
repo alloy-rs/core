@@ -648,7 +648,11 @@ impl DynSolType {
                     _ => unreachable!("token matches type"),
                 };
                 if !valid {
-                    return Err(Error::custom("noncanonical ABI value word"));
+                    return Err(alloy_sol_types::Error::type_check_fail(
+                        word.as_slice(),
+                        self.sol_type_name(),
+                    )
+                    .into());
                 }
             }
             (Self::Array(ty), DynToken::DynSeq { contents, .. })
@@ -664,7 +668,7 @@ impl DynSolType {
             }
             (Self::String, DynToken::PackedSeq(s)) => {
                 if utf8 && core::str::from_utf8(s).is_err() {
-                    return Err(Error::custom("invalid UTF-8 string"));
+                    return Err(alloy_sol_types::Error::type_check_fail(s, "string").into());
                 }
             }
             (Self::Bytes, DynToken::PackedSeq(_)) => {}
