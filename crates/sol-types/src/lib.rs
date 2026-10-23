@@ -129,7 +129,7 @@ pub mod private {
     /// non-generic call, instead of expanding a full owned literal for every item.
     #[cfg(feature = "json")]
     mod static_abi {
-        use alloc::{string::String, vec::Vec};
+        use alloc::vec::Vec;
         use alloy_json_abi::{
             Constructor, Error, Event, EventParam, Function, Param, StateMutability,
         };
@@ -227,8 +227,8 @@ pub mod private {
             items
                 .iter()
                 .map(|p| Param {
-                    ty: String::from(p.ty),
-                    name: String::from(p.name),
+                    ty: p.ty.into(),
+                    name: p.name.into(),
                     components: params(p.components),
                     internal_type: None,
                 })

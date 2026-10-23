@@ -9,5 +9,5 @@
 
 pub mod expand;
 mod utils;
-#[cfg(feature = "json")]
+
 extern crate syn_solidity as ast;
