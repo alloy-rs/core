@@ -558,20 +558,6 @@ impl DynSolType {
         self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_sequence_populate)
     }
 
-    /// Decode a sequence, rejecting noncanonical scalar words.
-    ///
-    /// Unlike strict ABI validation, this accepts noncanonical offsets, trailing data,
-    /// dirty dynamic-byte padding, and non-UTF-8 strings. Strings remain lossily decoded.
-    /// All nested scalar words are checked, including values Solidity may decode lazily.
-    #[inline]
-    #[cfg_attr(debug_assertions, track_caller)]
-    pub fn abi_decode_sequence_checked(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data), |token, decoder| {
-            token.decode_sequence_populate(decoder)?;
-            self.validate_words(token)
-        })
-    }
-
     /// Returns `true` if this type is dynamically sized type.
     pub fn is_dynamic(&self) -> bool {
         match self {
@@ -644,7 +630,7 @@ impl DynSolType {
         Ok(value)
     }
 
-    fn validate_words(&self, token: &DynToken<'_>) -> Result<()> {
+    pub(crate) fn validate_token(&self, token: &DynToken<'_>, utf8: bool) -> Result<()> {
         match (self, token) {
             (ty, DynToken::Word(word)) => {
                 let token = (*word).into();
@@ -662,21 +648,30 @@ impl DynSolType {
                     _ => unreachable!("token matches type"),
                 };
                 if !valid {
-                    return Err(Error::custom("noncanonical ABI value word"));
+                    return Err(alloy_sol_types::Error::type_check_fail(
+                        word.as_slice(),
+                        self.sol_type_name(),
+                    )
+                    .into());
                 }
             }
             (Self::Array(ty), DynToken::DynSeq { contents, .. })
             | (Self::FixedArray(ty, _), DynToken::FixedSeq(contents, _)) => {
                 for token in contents.iter() {
-                    ty.validate_words(token)?;
+                    ty.validate_token(token, utf8)?;
                 }
             }
             (as_tuple!(Self types), DynToken::FixedSeq(tokens, _)) => {
                 for (ty, token) in zip(types, tokens.iter()) {
-                    ty.validate_words(token)?;
+                    ty.validate_token(token, utf8)?;
                 }
             }
-            (Self::Bytes | Self::String, DynToken::PackedSeq(_)) => {}
+            (Self::String, DynToken::PackedSeq(s)) => {
+                if utf8 && core::str::from_utf8(s).is_err() {
+                    return Err(alloy_sol_types::Error::type_check_fail(s, "string").into());
+                }
+            }
+            (Self::Bytes, DynToken::PackedSeq(_)) => {}
             _ => unreachable!("token matches type"),
         }
         Ok(())
