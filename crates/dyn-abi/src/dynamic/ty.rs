@@ -521,36 +521,7 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_with_config(data, AbiDecoderConfig::default())
-    }
-
-    /// Decode a single value with the given decoder configuration.
-    ///
-    /// Validation checks all nested scalar words. Bytes and strings remain permissive;
-    /// strings are lossily decoded. Strict mode additionally checks encoding layout and padding.
-    ///
-    /// ```
-    /// use alloy_dyn_abi::DynSolType;
-    /// use alloy_sol_types::abi::AbiDecoderConfig;
-    ///
-    /// let mut data = [0; 32];
-    /// data[31] = 2;
-    /// assert!(DynSolType::Bool.abi_decode(&data).is_ok());
-    /// let config = AbiDecoderConfig::new().validate(true);
-    /// assert!(DynSolType::Bool.abi_decode_with_config(&data, config).is_err());
-    /// ```
-    #[inline]
-    #[cfg_attr(debug_assertions, track_caller)]
-    pub fn abi_decode_with_config(
-        &self,
-        data: &[u8],
-        config: AbiDecoderConfig,
-    ) -> Result<DynSolValue> {
-        let mut decoder = Decoder::with_config(data, config);
-        decoder.set_strict_head_words(if self.is_dynamic() { 1 } else { self.minimum_words() })?;
-        let value = self.abi_decode_inner(&mut decoder, DynToken::decode_single_populate)?;
-        decoder.finish()?;
-        Ok(value)
+        self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_single_populate)
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
@@ -576,22 +547,9 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_params(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_params_with_config(data, AbiDecoderConfig::default())
-    }
-
-    /// Decode function arguments with the given decoder configuration.
-    ///
-    /// See [`abi_decode_with_config`](Self::abi_decode_with_config) for validation behavior.
-    #[inline]
-    #[cfg_attr(debug_assertions, track_caller)]
-    pub fn abi_decode_params_with_config(
-        &self,
-        data: &[u8],
-        config: AbiDecoderConfig,
-    ) -> Result<DynSolValue> {
         match self {
-            Self::Tuple(_) => self.abi_decode_sequence_with_config(data, config),
-            _ => self.abi_decode_with_config(data, config),
+            Self::Tuple(_) => self.abi_decode_sequence(data),
+            _ => self.abi_decode(data),
         }
     }
 
@@ -600,23 +558,20 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_sequence_with_config(data, AbiDecoderConfig::default())
+        self.abi_decode_sequence_with_decoder(&mut Decoder::new(data))
     }
 
-    /// Decode a sequence with the given decoder configuration.
+    /// Decode a sequence using the supplied decoder.
     ///
-    /// See [`abi_decode_with_config`](Self::abi_decode_with_config) for validation behavior.
+    /// When [`AbiDecoderConfig::validate`] is enabled, all nested scalar words are checked.
+    /// Bytes remain permissive and strings remain lossily decoded.
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub fn abi_decode_sequence_with_config(
+    pub fn abi_decode_sequence_with_decoder(
         &self,
-        data: &[u8],
-        config: AbiDecoderConfig,
+        decoder: &mut Decoder<'_, '_>,
     ) -> Result<DynSolValue> {
-        let mut decoder = Decoder::with_config(data, config);
-        let value = self.abi_decode_inner(&mut decoder, DynToken::decode_sequence_populate)?;
-        decoder.finish()?;
-        Ok(value)
+        self.abi_decode_inner(decoder, DynToken::decode_sequence_populate)
     }
 
     /// Decode a sequence, rejecting noncanonical scalar words.
@@ -624,12 +579,13 @@ impl DynSolType {
     /// Unlike strict ABI validation, this accepts noncanonical offsets, trailing data,
     /// dirty dynamic-byte padding, and non-UTF-8 strings. Strings remain lossily decoded.
     /// All nested scalar words are checked, including values Solidity may decode lazily.
-    /// Equivalent to [`abi_decode_sequence_with_config`](Self::abi_decode_sequence_with_config)
-    /// with [`AbiDecoderConfig::validate`] enabled.
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence_checked(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_sequence_with_config(data, AbiDecoderConfig::new().validate(true))
+        self.abi_decode_sequence_with_decoder(&mut Decoder::with_config(
+            data,
+            AbiDecoderConfig::new().validate(true),
+        ))
     }
 
     /// Returns `true` if this type is dynamically sized type.

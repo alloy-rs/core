@@ -131,8 +131,7 @@ impl AbiDecoderConfig {
     /// type's token validator before converting the token into the returned
     /// Rust value. This rejects dirty bool bytes, invalid strings, and other
     /// token values that can be decoded from ABI words but do not satisfy the
-    /// target type's validity rules. Dynamic ABI types validate scalar words only;
-    /// their strings remain lossily decoded.
+    /// target type's validity rules.
     #[inline]
     pub const fn validate(mut self, validate: bool) -> Self {
         self.validate = validate;
@@ -380,20 +379,6 @@ impl<'de, 'state> Decoder<'de, 'state> {
     #[inline]
     pub const fn config(&self) -> &AbiDecoderConfig {
         &self.config
-    }
-
-    /// Checks that strict decoding consumed the entire input, unless trailing bytes are allowed.
-    ///
-    /// Call this after decoding the complete top-level value or sequence.
-    #[inline]
-    pub fn finish(&self) -> Result<()> {
-        if self.config.get_strict()
-            && !self.config.get_validate_allow_trailing_bytes()
-            && self.state.strict_next_offset().get() != self.buf.len()
-        {
-            return Err(Error::ReserMismatch);
-        }
-        Ok(())
     }
 
     /// Returns the current offset in the buffer.
@@ -688,7 +673,12 @@ pub fn decode_sequence_with_config<'de, T: TokenSeq<'de>>(
 ) -> Result<T> {
     let mut decoder = Decoder::with_config(data, config);
     let result = decoder.decode_sequence::<T>()?;
-    decoder.finish()?;
+    if config.get_strict()
+        && !config.get_validate_allow_trailing_bytes()
+        && decoder.state.strict_next_offset().get() != data.len()
+    {
+        return Err(Error::ReserMismatch);
+    }
     Ok(result)
 }
 
