@@ -154,6 +154,9 @@ impl AbiDecoderConfig {
     /// [`validate`](Self::validate), it accepts non-UTF-8 strings and dirty dynamic-bytes padding,
     /// which Solidity also accepts. [`validate`](Self::validate) and [`strict`](Self::strict)
     /// imply this option.
+    ///
+    /// Static [`SolType`](crate::SolType) decoding ignores this option; use
+    /// [`validate`](Self::validate) instead.
     #[inline]
     pub const fn validate_words(mut self, validate_words: bool) -> Self {
         self.validate_words = validate_words;

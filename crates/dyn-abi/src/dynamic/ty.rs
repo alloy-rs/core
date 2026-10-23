@@ -630,7 +630,7 @@ impl DynSolType {
         Ok(value)
     }
 
-    pub(crate) fn validate_words(&self, token: &DynToken<'_>) -> Result<()> {
+    pub(crate) fn validate_token(&self, token: &DynToken<'_>, utf8: bool) -> Result<()> {
         match (self, token) {
             (ty, DynToken::Word(word)) => {
                 let token = (*word).into();
@@ -654,15 +654,20 @@ impl DynSolType {
             (Self::Array(ty), DynToken::DynSeq { contents, .. })
             | (Self::FixedArray(ty, _), DynToken::FixedSeq(contents, _)) => {
                 for token in contents.iter() {
-                    ty.validate_words(token)?;
+                    ty.validate_token(token, utf8)?;
                 }
             }
             (as_tuple!(Self types), DynToken::FixedSeq(tokens, _)) => {
                 for (ty, token) in zip(types, tokens.iter()) {
-                    ty.validate_words(token)?;
+                    ty.validate_token(token, utf8)?;
                 }
             }
-            (Self::Bytes | Self::String, DynToken::PackedSeq(_)) => {}
+            (Self::String, DynToken::PackedSeq(s)) => {
+                if utf8 && core::str::from_utf8(s).is_err() {
+                    return Err(Error::custom("invalid UTF-8 string"));
+                }
+            }
+            (Self::Bytes, DynToken::PackedSeq(_)) => {}
             _ => unreachable!("token matches type"),
         }
         Ok(())

@@ -26,6 +26,12 @@ fn decode_mutated_arguments() {
             DynSolValue::String(String::from_utf8_lossy(b"\xffello").into_owned()),
         ]
     );
+    // Full validation also rejects non-UTF-8 strings.
+    assert!(
+        function
+            .abi_decode_input_with_config(&data, AbiDecoderConfig::new().validate(true))
+            .is_err()
+    );
 
     // A comparison mutation must not turn a nested bool into an invalid Solidity argument.
     data[4 * 32 + 31] = 4;
