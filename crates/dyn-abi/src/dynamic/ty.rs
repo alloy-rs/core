@@ -4,10 +4,7 @@ use alloy_primitives::{
     try_vec,
     utils::{box_try_new, vec_try_with_capacity},
 };
-use alloy_sol_types::{
-    abi::{AbiDecoderConfig, Decoder},
-    sol_data,
-};
+use alloy_sol_types::{abi::Decoder, sol_data};
 use core::{fmt, iter::zip, num::NonZeroUsize, str::FromStr};
 use parser::TypeSpecifier;
 
@@ -563,7 +560,8 @@ impl DynSolType {
 
     /// Decode a sequence using the supplied decoder.
     ///
-    /// When [`AbiDecoderConfig::validate`] is enabled, all nested scalar words are checked.
+    /// When [`validate`](alloy_sol_types::abi::AbiDecoderConfig::validate) is enabled,
+    /// all nested scalar words are checked.
     /// Bytes remain permissive and strings remain lossily decoded.
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
@@ -572,20 +570,6 @@ impl DynSolType {
         decoder: &mut Decoder<'_, '_>,
     ) -> Result<DynSolValue> {
         self.abi_decode_inner(decoder, DynToken::decode_sequence_populate)
-    }
-
-    /// Decode a sequence, rejecting noncanonical scalar words.
-    ///
-    /// Unlike strict ABI validation, this accepts noncanonical offsets, trailing data,
-    /// dirty dynamic-byte padding, and non-UTF-8 strings. Strings remain lossily decoded.
-    /// All nested scalar words are checked, including values Solidity may decode lazily.
-    #[inline]
-    #[cfg_attr(debug_assertions, track_caller)]
-    pub fn abi_decode_sequence_checked(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_sequence_with_decoder(&mut Decoder::with_config(
-            data,
-            AbiDecoderConfig::new().validate(true),
-        ))
     }
 
     /// Returns `true` if this type is dynamically sized type.
