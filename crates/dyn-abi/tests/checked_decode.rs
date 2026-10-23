@@ -1,7 +1,7 @@
 //! Public decoder coverage for comparison-mutated arguments.
 
 use alloy_dyn_abi::{DynSolType, DynSolValue};
-use alloy_sol_types::abi::{AbiDecoderConfig, Decoder};
+use alloy_sol_types::abi::AbiDecoderConfig;
 
 #[test]
 fn decode_mutated_arguments() {
@@ -18,7 +18,7 @@ fn decode_mutated_arguments() {
     data[5 * 32 + 31] = 5;
     data[9 * 32] = 255;
     assert_eq!(
-        ty.abi_decode_sequence_with_decoder(&mut Decoder::with_config(&data, config)).unwrap(),
+        ty.abi_decode_sequence_with_config(&data, config).unwrap(),
         DynSolValue::Tuple(vec![
             DynSolValue::Array(vec![DynSolValue::Bool(false)]),
             DynSolValue::Bytes(vec![0xaa; 5]),
@@ -29,5 +29,5 @@ fn decode_mutated_arguments() {
     // A comparison mutation must not turn a nested bool into an invalid Solidity argument.
     data[4 * 32 + 31] = 4;
     assert!(ty.abi_decode_sequence(&data).is_ok());
-    assert!(ty.abi_decode_sequence_with_decoder(&mut Decoder::with_config(&data, config)).is_err());
+    assert!(ty.abi_decode_sequence_with_config(&data, config).is_err());
 }

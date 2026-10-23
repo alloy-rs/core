@@ -375,12 +375,6 @@ impl<'de, 'state> Decoder<'de, 'state> {
         self.config.get_strict()
     }
 
-    /// Returns the decoder configuration.
-    #[inline]
-    pub const fn config(&self) -> &AbiDecoderConfig {
-        &self.config
-    }
-
     /// Returns the current offset in the buffer.
     #[inline]
     pub const fn offset(&self) -> usize {

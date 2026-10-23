@@ -4,7 +4,10 @@ use alloy_primitives::{
     try_vec,
     utils::{box_try_new, vec_try_with_capacity},
 };
-use alloy_sol_types::{abi::Decoder, sol_data};
+use alloy_sol_types::{
+    abi::{AbiDecoderConfig, Decoder},
+    sol_data,
+};
 use core::{fmt, iter::zip, num::NonZeroUsize, str::FromStr};
 use parser::TypeSpecifier;
 
@@ -555,21 +558,31 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_sequence_with_decoder(&mut Decoder::new(data))
+        self.abi_decode_inner(&mut Decoder::new(data), DynToken::decode_sequence_populate)
     }
 
-    /// Decode a sequence using the supplied decoder.
+    /// Decode a sequence with the given decoder configuration.
     ///
-    /// When [`validate`](alloy_sol_types::abi::AbiDecoderConfig::validate) is enabled,
-    /// all nested scalar words are checked.
-    /// Bytes remain permissive and strings remain lossily decoded.
+    /// If [`validate`](AbiDecoderConfig::validate) is enabled, all nested scalar words must be
+    /// canonical. Bytes remain permissive and strings remain lossily decoded.
+    /// Strict decoding is not supported.
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
-    pub fn abi_decode_sequence_with_decoder(
+    pub fn abi_decode_sequence_with_config(
         &self,
-        decoder: &mut Decoder<'_, '_>,
+        data: &[u8],
+        config: AbiDecoderConfig,
     ) -> Result<DynSolValue> {
-        self.abi_decode_inner(decoder, DynToken::decode_sequence_populate)
+        if config.get_strict() {
+            return Err(Error::custom("strict decoding is not supported"));
+        }
+        self.abi_decode_inner(&mut Decoder::with_config(data, config), |token, decoder| {
+            token.decode_sequence_populate(decoder)?;
+            if config.get_validate() {
+                self.validate_words(token)?;
+            }
+            Ok(())
+        })
     }
 
     /// Returns `true` if this type is dynamically sized type.
@@ -636,9 +649,6 @@ impl DynSolType {
 
         let mut token = self.empty_dyn_token()?;
         f(&mut token, decoder)?;
-        if decoder.config().get_validate() {
-            self.validate_words(&token)?;
-        }
         let value = self.detokenize(token).expect("invalid empty_dyn_token");
         debug_assert!(
             self.matches(&value),
