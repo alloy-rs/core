@@ -296,12 +296,7 @@ impl ParseUnits {
     }
 
     /// Formats the given number of Wei as the given unit.
-    pub fn format_units_with(&self, mut unit: Unit, separator: DecimalSeparator) -> String {
-        // Edge case: If the number is signed and the unit is the largest possible unit, we need to
-        //            subtract 1 from the unit to avoid overflow.
-        if self.is_signed() && unit == Unit::MAX {
-            unit = Unit::new(Unit::MAX.get() - 1).unwrap();
-        }
+    pub fn format_units_with(&self, unit: Unit, separator: DecimalSeparator) -> String {
         let units = unit.get() as usize;
         let exp10 = unit.wei();
 
@@ -314,10 +309,11 @@ impl ParseUnits {
                 format!("{integer}{}{decimals:0>units$}", separator.separator())
             }
             Self::I256(amount) => {
-                let exp10 = I256::from_raw(exp10);
+                // `10^77` does not fit in `I256`, so divide the magnitude instead.
                 let sign = if amount.is_negative() { "-" } else { "" };
-                let integer = (amount / exp10).twos_complement();
-                let decimals = ((amount % exp10).twos_complement()).to_string();
+                let amount = amount.unsigned_abs();
+                let integer = amount / exp10;
+                let decimals = (amount % exp10).to_string();
                 format!("{sign}{integer}{}{decimals:0>units$}", separator.separator())
             }
         }
@@ -742,12 +738,29 @@ mod tests {
         let eth = format_units(I256::MIN, 76).unwrap();
         let min = "-5.7896044618658097711785492504343953926634992332820282019728792003956564819968";
         assert_eq!(eth, min);
-        // doesn't error
+
         let eth = format_units(I256::MIN, 77).unwrap();
+        let min =
+            "-0.57896044618658097711785492504343953926634992332820282019728792003956564819968";
         assert_eq!(eth, min);
+
+        let eth = format_units(I256::MAX, 77).unwrap();
+        let max = "0.57896044618658097711785492504343953926634992332820282019728792003956564819967";
+        assert_eq!(eth, max);
 
         let _err = format_units(I256::MIN, 78).unwrap_err();
         let _err = format_units(I256::MIN, 79).unwrap_err();
+    }
+
+    #[test]
+    fn format_signed_max_unit() {
+        let eth = format_units(I256::MINUS_ONE, 77).unwrap();
+        assert_eq!(eth, format!("-0.{:0>77}", 1));
+
+        let n = parse_units("-0.5", 77).unwrap();
+        let eth = n.format_units(Unit::MAX);
+        assert_eq!(eth, format!("-0.5{:0>76}", ""));
+        assert_eq!(parse_units(&eth, 77).unwrap(), n);
     }
 
     #[test]
