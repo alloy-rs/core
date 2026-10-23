@@ -131,7 +131,8 @@ impl AbiDecoderConfig {
     /// type's token validator before converting the token into the returned
     /// Rust value. This rejects dirty bool bytes, invalid strings, and other
     /// token values that can be decoded from ABI words but do not satisfy the
-    /// target type's validity rules.
+    /// target type's validity rules. Dynamic ABI types validate scalar words only;
+    /// their strings remain lossily decoded.
     #[inline]
     pub const fn validate(mut self, validate: bool) -> Self {
         self.validate = validate;
@@ -313,8 +314,9 @@ impl<'de> Decoder<'de, 'static> {
         Self::with_config(buf, AbiDecoderConfig::new())
     }
 
+    /// Instantiates a decoder with the given configuration.
     #[inline]
-    const fn with_config(buf: &'de [u8], config: AbiDecoderConfig) -> Self {
+    pub const fn with_config(buf: &'de [u8], config: AbiDecoderConfig) -> Self {
         Self {
             buf,
             offset: 0,
@@ -372,6 +374,26 @@ impl<'de, 'state> Decoder<'de, 'state> {
     #[inline]
     pub(crate) const fn is_strict(&self) -> bool {
         self.config.get_strict()
+    }
+
+    /// Returns the decoder configuration.
+    #[inline]
+    pub const fn config(&self) -> &AbiDecoderConfig {
+        &self.config
+    }
+
+    /// Checks that strict decoding consumed the entire input, unless trailing bytes are allowed.
+    ///
+    /// Call this after decoding the complete top-level value or sequence.
+    #[inline]
+    pub fn finish(&self) -> Result<()> {
+        if self.config.get_strict()
+            && !self.config.get_validate_allow_trailing_bytes()
+            && self.state.strict_next_offset().get() != self.buf.len()
+        {
+            return Err(Error::ReserMismatch);
+        }
+        Ok(())
     }
 
     /// Returns the current offset in the buffer.
@@ -666,12 +688,7 @@ pub fn decode_sequence_with_config<'de, T: TokenSeq<'de>>(
 ) -> Result<T> {
     let mut decoder = Decoder::with_config(data, config);
     let result = decoder.decode_sequence::<T>()?;
-    if config.get_strict()
-        && !config.get_validate_allow_trailing_bytes()
-        && decoder.state.strict_next_offset().get() != data.len()
-    {
-        return Err(Error::ReserMismatch);
-    }
+    decoder.finish()?;
     Ok(result)
 }
 

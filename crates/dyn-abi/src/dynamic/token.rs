@@ -184,7 +184,11 @@ impl<'a> DynToken<'a> {
 
                 let required_words =
                     minimum_words.checked_mul(size).ok_or(alloy_sol_types::Error::Overrun)?;
-                child.set_strict_head_words(required_words)?;
+                child.set_strict_head_words(if template.is_dynamic() {
+                    size
+                } else {
+                    required_words
+                })?;
                 if child.remaining_words() < required_words {
                     return Err(alloy_sol_types::Error::Overrun.into());
                 }
@@ -217,7 +221,9 @@ impl<'a> DynToken<'a> {
                 let head_words = buf
                     .iter()
                     .take(*size)
-                    .try_fold(0usize, |sum, item| sum.checked_add(item.minimum_words()))
+                    .try_fold(0usize, |sum, item| {
+                        sum.checked_add(if item.is_dynamic() { 1 } else { item.minimum_words() })
+                    })
                     .ok_or(alloy_sol_types::Error::Overrun)?;
                 dec.set_strict_head_words(head_words)?;
                 buf.to_mut().iter_mut().take(*size).try_for_each(|item| item.decode_populate(dec))
