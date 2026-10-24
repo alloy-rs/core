@@ -715,7 +715,11 @@ impl DynSolValue {
             }
             Self::FixedArray(inner) | Self::Array(inner) => {
                 for val in inner {
-                    // Array elements are left-padded to 32 bytes.
+                    // Array elements are padded to 32 bytes like in the standard encoding.
+                    if let Some(word) = val.as_word() {
+                        buf.extend_from_slice(word.as_slice());
+                        continue;
+                    }
                     if let Some(padding_needed) = 32usize.checked_sub(val.abi_packed_encoded_size())
                     {
                         buf.extend(core::iter::repeat_n(0, padding_needed));
