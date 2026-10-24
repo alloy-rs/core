@@ -1,5 +1,5 @@
 use super::{ParseSignedError, Sign, utils::*};
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use core::fmt;
 use ruint::{BaseConvertError, Uint, UintTryFrom, UintTryTo};
 
@@ -65,8 +65,7 @@ impl<const BITS: usize, const LIMBS: usize> fmt::Debug for Signed<BITS, LIMBS> {
 impl<const BITS: usize, const LIMBS: usize> fmt::Display for Signed<BITS, LIMBS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (sign, abs) = self.into_sign_and_abs();
-        sign.fmt(f)?;
-        if f.sign_plus() { write!(f, "{abs}") } else { abs.fmt(f) }
+        f.pad_integral(sign.is_positive(), "", &abs.to_string())
     }
 }
 
@@ -777,6 +776,16 @@ mod tests {
                 assert_eq!(format!("{negative:X}"), format!("{unsigned_negative:X}"));
                 assert_eq!(format!("{positive:+X}"), format!("+{unsigned:X}"));
                 assert_eq!(format!("{negative:+X}"), format!("+{unsigned_negative:X}"));
+
+                let native = 3141592653589793_i64;
+                for (value, native) in [(positive, native), (negative, -native)] {
+                    assert_eq!(format!("{value:>20}"), format!("{native:>20}"));
+                    assert_eq!(format!("{value:<20}"), format!("{native:<20}"));
+                    assert_eq!(format!("{value:^21}"), format!("{native:^21}"));
+                    assert_eq!(format!("{value:020}"), format!("{native:020}"));
+                    assert_eq!(format!("{value:+20}"), format!("{native:+20}"));
+                    assert_eq!(format!("{value:*^+21}"), format!("{native:*^+21}"));
+                }
             };
         }
 
