@@ -25,6 +25,12 @@ struct CacheConfig {}
 impl fixed_cache::CacheConfig for CacheConfig {
     const STATS: bool = cfg!(feature = "keccak-cache-stats");
     const EPOCHS: bool = false;
+    // Every thread that hashes shares this cache, so a locked hit would write the bucket's cache
+    // line on every lookup and bounce it between cores and last-level caches.
+    // SAFETY: `Key` and `B256` are plain bytes without `Drop`, and `(Key, B256)` has no padding
+    // because both have an alignment of 1. `Key::data` is fully initialized in `compute`.
+    const LOCK_FREE_READS: fixed_cache::LockFreeReads =
+        unsafe { fixed_cache::LockFreeReads::enabled() };
 }
 
 /// Initializes the process-global keccak cache with `entries` buckets.
@@ -48,7 +54,8 @@ pub(super) fn compute(input: &[u8], imp: impl FnOnce(&[u8]) -> B256) -> B256 {
 
     let cache = CACHE.get_or_init(default_cache);
     cache.get_or_insert_with_ref(input, imp, |input| {
-        let mut data = [MaybeUninit::uninit(); MAX_INPUT_LEN];
+        // Zeroed rather than uninitialized: lock-free reads copy the whole key.
+        let mut data = [MaybeUninit::new(0); MAX_INPUT_LEN];
         unsafe {
             std::ptr::copy_nonoverlapping(input.as_ptr(), data.as_mut_ptr().cast(), input.len())
         };
