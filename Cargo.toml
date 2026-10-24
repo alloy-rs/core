@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.package]
 version = "1.7.3"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.98"
 authors = ["Alloy Contributors"]
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/alloy-rs/core"
@@ -97,7 +97,6 @@ hex = { package = "const-hex", version = "1.14", default-features = false, featu
     "alloc",
     "core-error",
 ] }
-itoa = "1"
 postgres-types = "0.2.6"
 pretty_assertions = "1.4"
 proptest = { version = "1", default-features = false }
