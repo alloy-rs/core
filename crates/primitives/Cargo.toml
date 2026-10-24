@@ -121,6 +121,9 @@ bincode.workspace = true
 criterion.workspace = true
 serde_json.workspace = true
 
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+libc = "0.2"
+
 [features]
 default = ["std", "map", "map-foldhash"]
 std = [
@@ -218,3 +221,9 @@ name = "primitives"
 path = "benches/primitives.rs"
 harness = false
 required-features = ["rand"]
+
+[[bench]]
+name = "keccak_cache_contention"
+path = "benches/keccak_cache_contention.rs"
+harness = false
+required-features = ["keccak-cache-global"]
