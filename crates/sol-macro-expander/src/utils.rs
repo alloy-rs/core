@@ -98,10 +98,10 @@ pub(crate) fn pme_compat_result(
         }),
         false,
     );
-    if let Some(r) = r {
-        if e.is_empty() || r.is_err() {
-            return r;
-        }
+    if let Some(r) = r
+        && (e.is_empty() || r.is_err())
+    {
+        return r;
     }
     Ok(e.into())
 }

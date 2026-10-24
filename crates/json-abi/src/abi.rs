@@ -582,12 +582,12 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
                         if ignore_unlinked_bytecode {
                             return Ok(None);
                         }
-                        if let Some((_, unlinked)) = unlinked.split_once("__$") {
-                            if let Some((addr, _)) = unlinked.split_once("$__") {
-                                return Err(E::custom(format!(
-                                    "expected bytecode, found unlinked bytecode with placeholder: {addr}. Use the `ignore_unlinked` sol attribute to bypass this error."
-                                )));
-                            }
+                        if let Some((_, unlinked)) = unlinked.split_once("__$")
+                            && let Some((addr, _)) = unlinked.split_once("$__")
+                        {
+                            return Err(E::custom(format!(
+                                "expected bytecode, found unlinked bytecode with placeholder: {addr}. Use the `ignore_unlinked` sol attribute to bypass this error."
+                            )));
                         }
                         Err(E::custom("invalid contract bytecode"))
                     }
@@ -612,15 +612,15 @@ impl<'de> Visitor<'de> for ContractObjectVisitor {
                 "abi" => set_if_none!(@serde abi, map.next_value()?),
                 "evm" => {
                     let evm = map.next_value::<EvmObj>()?;
-                    if let Some(bytes) = evm.bytecode {
-                        if let Some(b) = bytes.ensure_bytes(self.ignore_unlinked_bytecode)? {
-                            set_if_none!(@serde bytecode, b);
-                        }
+                    if let Some(bytes) = evm.bytecode
+                        && let Some(b) = bytes.ensure_bytes(self.ignore_unlinked_bytecode)?
+                    {
+                        set_if_none!(@serde bytecode, b);
                     }
-                    if let Some(bytes) = evm.deployed_bytecode {
-                        if let Some(b) = bytes.ensure_bytes(self.ignore_unlinked_bytecode)? {
-                            set_if_none!(@serde deployed_bytecode, b);
-                        }
+                    if let Some(bytes) = evm.deployed_bytecode
+                        && let Some(b) = bytes.ensure_bytes(self.ignore_unlinked_bytecode)?
+                    {
+                        set_if_none!(@serde deployed_bytecode, b);
                     }
                 }
                 "bytecode" | "bin" => {

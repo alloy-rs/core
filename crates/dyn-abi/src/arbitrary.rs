@@ -554,6 +554,9 @@ fn adjust_fb(mut word: B256, size: usize) -> B256 {
 
 #[cfg(all(test, not(miri)))] // doesn't run in isolation and would take too long
 mod tests {
+    // `is_multiple_of` is newer than the crate's MSRV.
+    #![allow(clippy::manual_is_multiple_of)]
+
     use super::*;
     use alloy_primitives::hex;
     #[cfg(feature = "eip712")]
