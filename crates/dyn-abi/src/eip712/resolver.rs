@@ -496,8 +496,8 @@ impl Resolver {
         depth: usize,
         remaining: &mut usize,
     ) -> Result<DynSolType> {
-        if may_be_basic_type(root_type.span())
-            && let Ok(ty) = root_type.resolve()
+        if let Some(ty) =
+            may_be_basic_type(root_type.span()).then(|| root_type.resolve().ok()).flatten()
         {
             return Ok(ty);
         }
