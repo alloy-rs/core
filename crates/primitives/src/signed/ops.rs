@@ -379,10 +379,10 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[track_caller]
     #[must_use]
     pub fn overflowing_rem(self, rhs: Self) -> (Self, bool) {
-        assert!(!rhs.is_zero(), "attempt to divide by zero");
         if self == Self::MIN && rhs == Self::MINUS_ONE {
             return (Self::ZERO, true);
         }
+        assert!(!rhs.is_zero(), "attempt to divide by zero");
         // The remainder takes the sign of `self` and is smaller than `|rhs|`, so it never
         // overflows.
         let (sign, abs) = self.into_sign_and_abs();
@@ -1180,6 +1180,12 @@ mod tests {
                 assert_eq!(to_native(a.div_euclid(b)), x.div_euclid(y), "{a} div_euclid {b}");
             }
         }
+    }
+
+    #[test]
+    fn rem_zero_bits() {
+        type I0 = Signed<0, 0>;
+        assert_eq!(I0::ZERO.overflowing_rem(I0::ZERO), (I0::ZERO, true));
     }
 
     #[test]
