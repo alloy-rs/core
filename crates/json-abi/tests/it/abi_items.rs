@@ -1,5 +1,5 @@
 use alloy_json_abi::{
-    AbiItem, Event, EventParam, Function,
+    AbiItem, Error, Event, EventParam, Function,
     InternalType::{Other, Struct},
     Param, StateMutability,
 };
@@ -178,4 +178,19 @@ fn deserialize_item_errors() {
         item(r#"{"type":"event","type":"event"}"#).unwrap_err().contains("duplicate field `type`")
     );
     assert!(item(r#"{"type":"nope"}"#).unwrap_err().contains("unknown variant `nope`"));
+}
+
+#[test]
+fn deserialize_event_and_error_sequences() {
+    let e = serde_json::from_str::<Event>(r#"["E",[{"type":"uint8","indexed":true}],true]"#);
+    let e = e.unwrap();
+    assert_eq!((e.name.as_str(), e.inputs[0].indexed, e.anonymous), ("E", true, true));
+    let e = serde_json::from_value::<Error>(serde_json::json!(["E", [{"type":"uint8"}]])).unwrap();
+    assert_eq!((e.name.as_str(), e.inputs.len()), ("E", 1));
+
+    assert!(serde_json::from_str::<Event>(r#"["E",[]]"#).is_err());
+    assert!(serde_json::from_str::<Error>(r#"["1",[]]"#).is_err());
+    assert!(serde_json::from_str::<Error>(r#"["E",[{"type":"uint8","indexed":true}]]"#).is_err());
+    assert!(serde_json::from_str::<Function>(r#"["f",[],[]]"#).is_err());
+    assert!(item(r#"["E",[]]"#).is_err());
 }

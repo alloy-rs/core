@@ -10,7 +10,7 @@ use core::{fmt, str::FromStr};
 use parser::utils::ParsedSignature;
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
-    de::{self, IgnoredAny, MapAccess, Visitor},
+    de::{self, IgnoredAny, MapAccess, SeqAccess, Unexpected, Visitor},
 };
 
 /// Declares all JSON ABI items.
@@ -33,7 +33,7 @@ macro_rules! abi_items {
 
             impl<'de> Deserialize<'de> for $name {
                 fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-                    match deserializer.deserialize_map(ItemVisitor { kind: Some(Kind::$name) })? {
+                    match deserialize_item(deserializer, Some(Kind::$name))? {
                         AbiItem::$name(item) => Ok(item.into_owned()),
                         _ => unreachable!("`ItemVisitor` returns the requested kind"),
                     }
@@ -642,9 +642,27 @@ impl Event {
 
 impl<'de> Deserialize<'de> for AbiItem<'_> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_map(ItemVisitor { kind: None })
+        deserialize_item(deserializer, None)
     }
 }
+
+/// Deserializes an item of the given kind, or of the kind given by its `type` field.
+///
+/// Events and errors also accept their fields as a sequence, in declaration order.
+fn deserialize_item<'de, D: Deserializer<'de>>(
+    deserializer: D,
+    kind: Option<Kind>,
+) -> Result<AbiItem<'static>, D::Error> {
+    let visitor = ItemVisitor { kind };
+    match kind {
+        Some(Kind::Event) => deserializer.deserialize_struct("Event", &EVENT_FIELDS, visitor),
+        Some(Kind::Error) => deserializer.deserialize_struct("Error", &ERROR_FIELDS, visitor),
+        _ => deserializer.deserialize_map(visitor),
+    }
+}
+
+const EVENT_FIELDS: [&str; 3] = ["name", "inputs", "anonymous"];
+const ERROR_FIELDS: [&str; 2] = ["name", "inputs"];
 
 /// A key of a JSON ABI item.
 #[derive(Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -730,6 +748,26 @@ impl<'de> Visitor<'de> for ItemVisitor {
 
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("a JSON ABI item")
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+        let Some(kind @ (Kind::Event | Kind::Error)) = self.kind else {
+            return Err(de::Error::invalid_type(Unexpected::Seq, &self));
+        };
+
+        macro_rules! next {
+            ($index:expr) => {
+                seq.next_element()?.ok_or_else(|| de::Error::invalid_length($index, &self))?
+            };
+        }
+
+        let fields = ItemFields {
+            name: Some(next!(0)),
+            inputs: Some(next!(1)),
+            anonymous: if kind == Kind::Event { Some(next!(2)) } else { None },
+            ..Default::default()
+        };
+        fields.finish(kind)
     }
 
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
