@@ -1152,6 +1152,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "too slow, and `ruint` division uses inline asm")]
     fn mul_rem_match_reference() {
         check_mul_rem::<24, 1>();
         check_mul_rem::<64, 1>();
@@ -1160,6 +1161,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "too slow, and `ruint` division uses inline asm")]
     fn narrow_ops_match_native() {
         let values = values::<24, 1>();
         let to_native = |x: I24| i128::try_from(x).unwrap();
