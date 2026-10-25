@@ -688,18 +688,15 @@ macro_rules! tuple_impls {
 
             fn encode_sequence(&self, enc: &mut Encoder) {
                 let ($($ty,)+) = self;
-                enc.push_offset(0 $( + $ty.head_words() )+);
+                let mut offset = (0 $( + $ty.head_words() )+) * 32;
 
                 $(
-                    $ty.head_append(enc);
-                    enc.bump_offset($ty.tail_words());
+                    append_head($ty, enc, &mut offset);
                 )+
 
                 $(
                     $ty.tail_append(enc);
                 )+
-
-                enc.pop_offset();
             }
 
             #[inline]
@@ -764,19 +761,29 @@ all_the_tuples!(tuple_impls);
 /// [`FixedSeqToken`] and [`DynSeqToken`].
 fn encode_sequence_impl<'de, T: Token<'de>>(tokens: &[T], enc: &mut Encoder) {
     if T::DYNAMIC {
-        enc.push_offset(tokens.iter().map(T::head_words).sum());
-
+        // Every dynamic token has a one-word head.
+        let mut offset = tokens.len() * 32;
         for inner in tokens {
-            inner.head_append(enc);
-            enc.bump_offset(inner.tail_words());
+            append_head(inner, enc, &mut offset);
         }
         for inner in tokens {
             inner.tail_append(enc);
         }
-
-        enc.pop_offset();
     } else {
         T::head_append_many(tokens, enc);
+    }
+}
+
+/// Appends the head of `token`, tracking the tail offset in `offset` instead of in `enc`.
+///
+/// A dynamic token's head is a pointer to the current `offset`, which then advances past its tail.
+#[inline]
+fn append_head<'de, T: Token<'de>>(token: &T, enc: &mut Encoder, offset: &mut usize) {
+    if T::DYNAMIC {
+        enc.append_offset(*offset);
+        *offset += token.tail_words() * 32;
+    } else {
+        token.head_append(enc);
     }
 }
 
