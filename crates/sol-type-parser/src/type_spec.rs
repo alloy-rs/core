@@ -1,5 +1,5 @@
 use crate::{
-    Error, Input, Result, TypeStem, new_input,
+    Error, Input, Result, RootType, TypeStem, is_valid_identifier, new_input,
     utils::{spanned, str_parser},
 };
 use alloc::vec::Vec;
@@ -90,6 +90,9 @@ impl<'a> TypeSpecifier<'a> {
     /// Parse a type specifier from a string.
     #[inline]
     pub fn parse(s: &'a str) -> Result<Self> {
+        if is_valid_identifier(s) {
+            return Ok(Self::from_identifier(s));
+        }
         Self::parser.parse(new_input(s)).map_err(Error::parser)
     }
 
@@ -110,7 +113,7 @@ impl<'a> TypeSpecifier<'a> {
                 };
                 Ok((stem, sizes))
             })
-            .verify(|(_, (stem, sizes))| type_depth(stem, sizes) <= crate::input::LIMIT),
+            .verify(|(span, (stem, sizes))| depth_within_limit(span, stem, sizes)),
         )
         .parse_next(input)
         .map(|(span, (stem, sizes))| Self { span, stem, sizes })
@@ -122,6 +125,9 @@ impl<'a> TypeSpecifier<'a> {
     #[cfg(feature = "eip712")]
     #[inline]
     pub fn parse_eip712(s: &'a str) -> Result<Self> {
+        if is_valid_identifier(s) {
+            return Ok(Self::from_identifier(s));
+        }
         Self::eip712_parser.parse(new_input(s)).map_err(Error::parser)
     }
 
@@ -143,10 +149,20 @@ impl<'a> TypeSpecifier<'a> {
                 };
                 Ok((stem, sizes))
             })
-            .verify(|(_, (stem, sizes))| type_depth(stem, sizes) <= crate::input::LIMIT),
+            .verify(|(span, (stem, sizes))| depth_within_limit(span, stem, sizes)),
         )
         .parse_next(input)
         .map(|(span, (stem, sizes))| Self { span, stem, sizes })
+    }
+
+    /// Creates the specifier of a plain identifier, which is a root type without array sizes.
+    #[inline]
+    fn from_identifier(ident: &'a str) -> Self {
+        Self {
+            span: ident,
+            stem: TypeStem::Root(RootType::from_identifier(ident)),
+            sizes: Vec::new(),
+        }
     }
 
     /// Returns the type stem as a string.
@@ -172,6 +188,15 @@ impl<'a> TypeSpecifier<'a> {
     pub fn is_array(&self) -> bool {
         !self.sizes.is_empty()
     }
+}
+
+/// Returns whether the nesting depth of the type is at most [`LIMIT`](crate::input::LIMIT).
+///
+/// Every tuple level takes at least `(` and `)` and every array dimension at least `[]` of the
+/// span, so the depth of a span of `n` bytes is at most `n / 2`. Shorter spans skip the walk.
+#[inline(never)]
+fn depth_within_limit(span: &str, stem: &TypeStem<'_>, sizes: &[Option<NonZeroUsize>]) -> bool {
+    span.len() <= 2 * crate::input::LIMIT + 1 || type_depth(stem, sizes) <= crate::input::LIMIT
 }
 
 fn type_depth(stem: &TypeStem<'_>, sizes: &[Option<NonZeroUsize>]) -> usize {
