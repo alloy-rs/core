@@ -1059,7 +1059,7 @@ mod tests {
 
         // Dynamic tuples inside arrays, with empty strings, bytes and arrays.
         type Elem = (U, SolString, SolBytes, Array<U>);
-        let elems = vec![
+        let elems = [
             (u(1), String::new(), Bytes::new(), vec![]),
             (u(2), "a".into(), Bytes::from(vec![7; 33]), vec![u(1), u(2), u(3)]),
             (u(3), "x".repeat(64), Bytes::from(vec![9; 32]), vec![u(4)]),
@@ -1077,7 +1077,7 @@ mod tests {
             let value = DynSolValue::Array(rust.iter().map(elem).collect());
             check_encoding::<Array<Elem>>(&rust, value.clone());
             check_params::<(Array<Elem>, U, SolString)>(
-                &(rust.clone(), u(5), String::new()),
+                &(rust, u(5), String::new()),
                 DynSolValue::Tuple(vec![value, uint(5), string("")]),
             );
         }
@@ -1103,7 +1103,7 @@ mod tests {
 
         // Fixed arrays of dynamic and of static types, and static tuples inlined in the head.
         check_encoding::<FixedArray<SolString, 3>>(
-            &["".into(), "abc".into(), "d".repeat(100)],
+            &[String::new(), "abc".into(), "d".repeat(100)],
             DynSolValue::FixedArray(vec![string(""), string("abc"), string(&"d".repeat(100))]),
         );
         check_encoding::<FixedArray<U, 3>>(
