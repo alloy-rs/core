@@ -112,7 +112,9 @@ pub trait SolError: Sized {
     /// ABI encode the error to the given buffer **without** its selector.
     #[inline]
     fn abi_encode_raw(&self, out: &mut Vec<u8>) {
-        crate::abi::encoder::encode_sequence_to(&self.tokenize(), out);
+        let token = self.tokenize();
+        out.reserve(token.total_words() * 32);
+        crate::abi::encode_sequence_to(&token, out);
     }
 
     /// ABI encode the error to the given buffer **with** its selector.
@@ -121,7 +123,7 @@ pub trait SolError: Sized {
         let token = self.tokenize();
         let mut out = Vec::with_capacity(4 + token.total_words() * 32);
         out.extend_from_slice(&Self::SELECTOR);
-        crate::abi::encoder::encode_sequence_to(&token, &mut out);
+        crate::abi::encode_sequence_to(&token, &mut out);
         out
     }
 }

@@ -13,7 +13,7 @@ use crate::{
     utils,
 };
 use alloc::vec::Vec;
-use core::ptr;
+use core::{mem, ptr};
 
 /// An ABI encoder.
 ///
@@ -232,11 +232,10 @@ pub fn encode_sequence<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
     enc.into_bytes()
 }
 
-/// ABI-encodes a token sequence, appending to `out`.
+/// ABI-encodes a token sequence, appending to `out`. The caller reserves the capacity.
 #[inline]
 pub(crate) fn encode_sequence_to<'a, T: TokenSeq<'a>>(token: &T, out: &mut Vec<u8>) {
-    out.reserve(token.total_words() * 32);
-    let mut enc = Encoder { buf: core::mem::take(out), suffix_offset: Vec::new() };
+    let mut enc = Encoder { buf: mem::take(out), suffix_offset: Vec::new() };
     enc.append_head_tail(token);
     *out = enc.buf;
 }
