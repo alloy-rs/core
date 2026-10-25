@@ -222,8 +222,8 @@ fn check_type_depth(depth: usize) -> Result<()> {
 
 const MAX_RESOLVED_TYPE_NODES: usize = 1024;
 
-/// Cheap necessary condition for `name` to be a basic Solidity type, so that
-/// struct names can skip the (allocating) basic type check.
+/// Cheap necessary condition for a parsed root type name to be a basic Solidity
+/// type, so that struct names can skip the (allocating) basic type check.
 fn may_be_basic_type(name: &str) -> bool {
     matches!(name, "address" | "bool" | "string" | "function")
         || name.starts_with("bytes")
@@ -424,9 +424,8 @@ impl Resolver {
         check_type_depth(depth)?;
         let this_type = match self.nodes.get(root_type) {
             Some(ty) => ty,
-            None if may_be_basic_type(root_type)
-                && RootType::parse_eip712(root_type)
-                    .is_ok_and(|rt| rt.try_basic_solidity().is_ok()) =>
+            None if RootType::parse_eip712(root_type)
+                .is_ok_and(|rt| rt.try_basic_solidity().is_ok()) =>
             {
                 return Ok(());
             }
@@ -898,6 +897,17 @@ mod tests {
             };
             assert_eq!(graph.resolve(name), Ok(ty), "{name}");
         }
+    }
+
+    #[test]
+    fn enum_property_types_encode_as_uint8() {
+        let mut graph = Resolver::default();
+        graph.ingest(TypeDef::new_unchecked(
+            "Foo".to_string(),
+            vec![PropertyDef::new_unchecked("Contract.Enum", "x")],
+        ));
+        assert_eq!(graph.encode_type("Foo").unwrap(), "Foo(Contract.Enum x)");
+        assert_eq!(graph.linearize("Foo").unwrap().len(), 1);
     }
 
     #[test]
