@@ -69,9 +69,6 @@ impl<'a> RootType<'a> {
     /// Parse a root type from a string.
     #[inline]
     pub fn parse(input: &'a str) -> Result<Self> {
-        if is_valid_identifier(input) {
-            return Ok(Self::from_identifier(input));
-        }
         Self::parser.parse(new_input(input)).map_err(Error::parser)
     }
 

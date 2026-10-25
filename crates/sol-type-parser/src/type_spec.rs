@@ -196,7 +196,7 @@ impl<'a> TypeSpecifier<'a> {
 /// span, so the depth of a span of `n` bytes is at most `n / 2`. Shorter spans skip the walk.
 #[inline(never)]
 fn depth_within_limit(span: &str, stem: &TypeStem<'_>, sizes: &[Option<NonZeroUsize>]) -> bool {
-    span.len() <= 2 * crate::input::LIMIT + 1 || type_depth(stem, sizes) <= crate::input::LIMIT
+    span.len() / 2 <= crate::input::LIMIT || type_depth(stem, sizes) <= crate::input::LIMIT
 }
 
 fn type_depth(stem: &TypeStem<'_>, sizes: &[Option<NonZeroUsize>]) -> usize {
