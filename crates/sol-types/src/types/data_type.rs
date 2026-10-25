@@ -12,7 +12,7 @@ use crate::{SolType, Word, abi::token::*, private::SolTypeValue, utils};
 use alloc::{string::String as RustString, vec::Vec};
 use alloy_primitives::{
     Address as RustAddress, Bytes as RustBytes, FixedBytes as RustFixedBytes,
-    Function as RustFunction, I256, Keccak256, U256, aliases::*, keccak256,
+    Function as RustFunction, I256, U256, aliases::*, keccak256,
 };
 use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
@@ -412,11 +412,11 @@ where
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        let mut hasher = Keccak256::new();
+        let mut encoded = Vec::with_capacity(self.len() * 32);
         for item in self {
-            hasher.update(T::stv_eip712_data_word(item));
+            encoded.extend_from_slice(T::stv_eip712_data_word(item).as_slice());
         }
-        hasher.finalize()
+        keccak256(encoded)
     }
 
     #[inline]
