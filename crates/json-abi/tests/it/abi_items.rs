@@ -124,3 +124,46 @@ fn event_operation_with_tuple_array_input() {
     assert_eq!(deserialized, AbiItem::Event(Cow::Owned(event)));
     assert_ser_de!(AbiItem<'_>, deserialized);
 }
+
+#[test]
+fn deserialize_any_field_order() {
+    let item = |s: &str| serde_json::from_str::<AbiItem<'static>>(s).map_err(|e| e.to_string());
+
+    // `type` may come after the fields that depend on it, and legacy state mutability applies.
+    let f = r#"{"outputs":[],"inputs":[{"name":"a","type":"uint8"}],"payable":true,"name":"f","type":"function"}"#;
+    let f = item(f).unwrap();
+    assert_eq!(f.state_mutability(), Some(StateMutability::Payable));
+    assert_eq!(f.inputs().unwrap()[0].ty, "uint8");
+    assert_eq!(
+        item(r#"{"constant":true,"type":"receive"}"#).unwrap().state_mutability(),
+        Some(StateMutability::View)
+    );
+    assert_eq!(
+        item(r#"{"stateMutability":"payable","constant":true,"type":"fallback"}"#)
+            .unwrap()
+            .state_mutability(),
+        Some(StateMutability::Payable)
+    );
+    assert!(item(r#"{"payable":true,"constant":true,"type":"constructor","inputs":[]}"#).is_err());
+
+    // Only events have indexed inputs.
+    let e = r#"{"inputs":[{"name":"a","type":"uint8","indexed":true}],"anonymous":false,"name":"E","type":"event"}"#;
+    assert!(item(e).unwrap().event_inputs().unwrap()[0].indexed);
+    assert!(item(&e.replace("event", "error")).is_err());
+    assert!(item(&e.replace("event", "constructor")).is_err());
+
+    // Fields of other item kinds are ignored, even when repeated or invalid.
+    let c = r#"{"name":"1","name":"2","outputs":[{"type":"?"}],"inputs":[],"type":"constructor"}"#;
+    assert_eq!(item(c).unwrap().json_type(), "constructor");
+    assert!(item(r#"{"name":"1","name":"2","inputs":[],"outputs":[],"type":"function"}"#).is_err());
+
+    assert!(item(r#"{"inputs":[]}"#).unwrap_err().contains("missing field `type`"));
+    assert!(
+        item(r#"{"type":"event","type":"event"}"#).unwrap_err().contains("duplicate field `type`")
+    );
+    assert!(item(r#"{"type":"nope"}"#).unwrap_err().contains("unknown variant `nope`"));
+
+    // The item structs ignore `type`.
+    let f = r#"{"type":"event","name":"f","inputs":[],"outputs":[]}"#;
+    assert_eq!(serde_json::from_str::<Function>(f).unwrap().name, "f");
+}
