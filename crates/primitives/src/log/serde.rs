@@ -195,7 +195,11 @@ mod tests {
         Bytes,
         log::{Log, LogData},
     };
-    use alloc::{format, vec::Vec};
+    use alloc::{
+        format,
+        string::{String, ToString},
+        vec::Vec,
+    };
     use serde::{
         Deserialize,
         de::{
