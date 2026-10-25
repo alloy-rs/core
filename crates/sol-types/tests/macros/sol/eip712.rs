@@ -175,3 +175,24 @@ fn encode_type_resolves_in_declaring_namespace() {
         b256!("b9e3a672c6f13136c1e3191881e3719beb78be11a605e1b1856d893a2d543067")
     );
 }
+
+#[test]
+fn encode_type_prefers_local_struct_over_global() {
+    sol! {
+        struct Inner {
+            uint256 a;
+        }
+
+        contract Outer {
+            struct Inner {
+                bytes b;
+            }
+
+            struct Wrapper {
+                Inner inner;
+            }
+        }
+    }
+
+    assert_eq!(Outer::Wrapper::eip712_encode_type(), "Wrapper(Inner inner)Inner(bytes b)");
+}

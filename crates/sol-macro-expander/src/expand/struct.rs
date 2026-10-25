@@ -325,6 +325,15 @@ fn collect_components(
         else {
             return None;
         };
+        // The generated Rust code resolves a bare name to the local item, which this lookup
+        // does not when a global item has the same name.
+        if path.len() == 1
+            && struct_namespace.is_none()
+            && namespace.is_some()
+            && cx.all_items.get_entry_by_name_and_namespace(namespace, path.last()).is_some()
+        {
+            return None;
+        }
         let key = (struct_namespace.clone(), s.name.clone());
         if stack.contains(&key) {
             return None;
