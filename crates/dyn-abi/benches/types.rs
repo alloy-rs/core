@@ -121,7 +121,7 @@ fn coerce(c: &mut Criterion) {
     let tuple = DynSolType::parse("(address,uint256,bytes32)[]").unwrap();
     let tuple_str = format!(
         "[{}]",
-        vec![
+        [
             "(0x1111111111111111111111111111111111111111, 1000000000000000000, 0x2222222222222222222222222222222222222222222222222222222222222222)";
             4
         ]
