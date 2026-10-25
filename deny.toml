@@ -4,6 +4,7 @@ yanked = "warn"
 ignore = [
     "RUSTSEC-2024-0436", # paste - no longer maintained
     "RUSTSEC-2025-0141", # bincode - unmaintained but v1.3.3 is complete
+    "RUSTSEC-2026-0387", # crypto-bigint 0.5 via k256 0.13 - only fixed in 0.7.6+
 ]
 
 [bans]
