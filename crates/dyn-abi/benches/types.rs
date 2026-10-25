@@ -87,6 +87,53 @@ fn format(c: &mut Criterion) {
     g.finish();
 }
 
+fn coerce(c: &mut Criterion) {
+    let mut g = group(c, "coerce");
+
+    let address = DynSolType::Address;
+    let address_str = "0x1111111111111111111111111111111111111111";
+    g.bench_function("address", |b| {
+        b.iter(|| black_box(&address).coerce_str(black_box(address_str)).unwrap());
+    });
+
+    let bytes = DynSolType::Bytes;
+    let bytes_str = format!("0x{}", "abcdef0123456789".repeat(256));
+    g.bench_function("bytes_2kb", |b| {
+        b.iter(|| black_box(&bytes).coerce_str(black_box(&bytes_str)).unwrap());
+    });
+
+    let uint = DynSolType::Uint(256);
+    g.bench_function("uint", |b| {
+        b.iter(|| black_box(&uint).coerce_str(black_box("1000000000000000000")).unwrap());
+    });
+    g.bench_function("uint_hex", |b| {
+        b.iter(|| black_box(&uint).coerce_str(black_box("0xde0b6b3a7640000")).unwrap());
+    });
+    g.bench_function("uint_units", |b| {
+        b.iter(|| black_box(&uint).coerce_str(black_box("1.5 ether")).unwrap());
+    });
+
+    let int = DynSolType::Int(256);
+    g.bench_function("int", |b| {
+        b.iter(|| black_box(&int).coerce_str(black_box("-1000000000000000000")).unwrap());
+    });
+
+    let tuple = DynSolType::parse("(address,uint256,bytes32)[]").unwrap();
+    let tuple_str = format!(
+        "[{}]",
+        vec![
+            "(0x1111111111111111111111111111111111111111, 1000000000000000000, 0x2222222222222222222222222222222222222222222222222222222222222222)";
+            4
+        ]
+        .join(", ")
+    );
+    g.bench_function("tuple_array", |b| {
+        b.iter(|| black_box(&tuple).coerce_str(black_box(&tuple_str)).unwrap());
+    });
+
+    g.finish();
+}
+
 fn group<'a>(c: &'a mut Criterion, group_name: &str) -> BenchmarkGroup<'a, WallTime> {
     let mut g = c.benchmark_group(group_name);
     g.noise_threshold(0.03)
@@ -96,5 +143,5 @@ fn group<'a>(c: &'a mut Criterion, group_name: &str) -> BenchmarkGroup<'a, WallT
     g
 }
 
-criterion_group!(benches, parse, resolve, format);
+criterion_group!(benches, parse, resolve, format, coerce);
 criterion_main!(benches);

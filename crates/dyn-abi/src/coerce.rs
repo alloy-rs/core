@@ -9,7 +9,7 @@ use parser::{
 };
 use winnow::{
     ModalParser, ModalResult, Parser,
-    ascii::{alpha0, alpha1, digit1, hex_digit0, hex_digit1, space0},
+    ascii::{alpha1, space0},
     combinator::{cut_err, dispatch, empty, fail, opt, preceded, trace},
     error::{
         AddContext, ContextError, ErrMode, FromExternalError, ParserError, StrContext,
@@ -343,14 +343,13 @@ fn uint<'i>(len: usize) -> impl ModalParser<Input<'i>, U256, ContextError> {
         let fract =
             opt(preceded(
                 '.',
-                cut_err(digit1.context(StrContext::Expected(StrContextValue::Description(
+                cut_err(digits1.context(StrContext::Expected(StrContextValue::Description(
                     "at least one digit",
                 )))),
             ))
             .parse_next(input)?;
 
-        let intpart =
-            intpart.parse::<U256>().map_err(|e| ErrMode::from_external_error(input, e))?;
+        let intpart = parse_u256(intpart).map_err(|e| ErrMode::from_external_error(input, e))?;
         let e = opt(scientific_notation).parse_next(input)?.unwrap_or(0);
 
         let _ = space0(input)?;
@@ -363,8 +362,8 @@ fn uint<'i>(len: usize) -> impl ModalParser<Input<'i>, U256, ContextError> {
         let units = units as usize;
 
         let uint = if let Some(fract) = fract {
-            let fract_uint = U256::from_str_radix(fract, 10)
-                .map_err(|e| ErrMode::from_external_error(input, e))?;
+            let fract_uint =
+                parse_u256(fract).map_err(|e| ErrMode::from_external_error(input, e))?;
 
             if units == 0 && !fract_uint.is_zero() {
                 return Err(ErrMode::from_external_error(
@@ -382,16 +381,16 @@ fn uint<'i>(len: usize) -> impl ModalParser<Input<'i>, U256, ContextError> {
 
             // (intpart * 10^fract.len() + fract) * 10^(units-fract.len())
             (|| -> Option<U256> {
-                let extension = U256::from(10u64).checked_pow(U256::from(fract.len()))?;
+                let extension = pow10(fract.len())?;
                 let extended = intpart.checked_mul(extension)?;
                 let uint = fract_uint.checked_add(extended)?;
-                let units = U256::from(10u64).checked_pow(U256::from(units - fract.len()))?;
+                let units = pow10(units - fract.len())?;
                 uint.checked_mul(units)
             })()
         } else if units > 0 {
             // intpart * 10^units
             (|| -> Option<U256> {
-                let units = U256::from(10u64).checked_pow(U256::from(units))?;
+                let units = pow10(units)?;
                 intpart.checked_mul(units)
             })()
         } else {
@@ -418,9 +417,9 @@ fn prefixed_int<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
             if has_prefix {
                 let _ = input.next_slice(2);
                 // parse hex since it's the most general
-                hex_digit1(input)
+                hex_digits1(input)
             } else {
-                digit1(input)
+                digits1(input)
             }
             .map_err(|e: ErrMode<_>| {
                 e.add_context(
@@ -439,7 +438,7 @@ fn prefixed_int<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
 fn int_units(input: &mut Input<'_>) -> ModalResult<usize> {
     trace(
         "int_units",
-        dispatch! {alpha0;
+        dispatch! {alphas0;
             "ether" => empty.value(18),
             "gwei" | "nano" | "nanoether" => empty.value(9),
             "" | "wei" => empty.value(0),
@@ -501,13 +500,81 @@ fn hex_str<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
     trace("hex_str", |input: &mut Input<'i>| {
         // Allow empty `bytes` only with a prefix.
         let has_prefix = opt("0x").parse_next(input)?.is_some();
-        let s = hex_digit0(input)?;
+        let s = hex_digits0(input);
         if !has_prefix && s.is_empty() {
             return Err(ErrMode::from_external_error(input, Error::EmptyHexStringWithoutPrefix));
         }
         Ok(s)
     })
     .parse_next(input)
+}
+
+/// Parses `s` like [`U256::from_str`](core::str::FromStr), but strings of up to 19 decimal digits
+/// are parsed via `u64`, which is faster.
+#[inline]
+fn parse_u256(s: &str) -> Result<U256, <U256 as core::str::FromStr>::Err> {
+    if s.len() <= 19 && s.bytes().all(|b| b.is_ascii_digit()) {
+        return Ok(U256::from(s.bytes().fold(0u64, |acc, b| acc * 10 + u64::from(b - b'0'))));
+    }
+    s.parse()
+}
+
+/// Returns `10^exp`, or `None` on overflow.
+#[inline]
+fn pow10(exp: usize) -> Option<U256> {
+    match u32::try_from(exp) {
+        Ok(exp @ 0..=19) => Some(U256::from(10u64.pow(exp))),
+        _ => U256::from(10u64).checked_pow(U256::from(exp)),
+    }
+}
+
+/// Takes the longest prefix of `input` whose bytes satisfy `f`.
+///
+/// `f` must only accept ASCII bytes.
+#[inline]
+fn take_ascii<'i>(input: &mut Input<'i>, f: impl Fn(&u8) -> bool) -> &'i str {
+    let bytes = input.as_bytes();
+    let len = bytes.iter().position(|b| !f(b)).unwrap_or(bytes.len());
+    input.next_slice(len)
+}
+
+#[inline]
+fn take_ascii1<'i>(input: &mut Input<'i>, f: impl Fn(&u8) -> bool) -> ModalResult<&'i str> {
+    match take_ascii(input, f) {
+        "" => Err(ErrMode::from_input(input)),
+        s => Ok(s),
+    }
+}
+
+/// Lookup table for `u8::is_ascii_hexdigit`, which the compiler does not lower to a single load.
+static HEX_DIGITS: [bool; 256] = {
+    let mut table = [false; 256];
+    let mut i = 0;
+    while i < 256 {
+        table[i] = (i as u8).is_ascii_hexdigit();
+        i += 1;
+    }
+    table
+};
+
+#[inline]
+fn digits1<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
+    take_ascii1(input, u8::is_ascii_digit)
+}
+
+#[inline]
+fn hex_digits0<'i>(input: &mut Input<'i>) -> &'i str {
+    take_ascii(input, |&b| HEX_DIGITS[b as usize])
+}
+
+#[inline]
+fn hex_digits1<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
+    take_ascii1(input, |&b| HEX_DIGITS[b as usize])
+}
+
+#[inline]
+fn alphas0<'i>(input: &mut Input<'i>) -> ModalResult<&'i str> {
+    Ok(take_ascii(input, u8::is_ascii_alphabetic))
 }
 
 #[cfg(test)]
