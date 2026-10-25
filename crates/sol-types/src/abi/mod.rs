@@ -36,7 +36,7 @@
 //!
 //! This is the least useful one. Most users will not need it.
 
-mod encoder;
+pub(crate) mod encoder;
 pub use encoder::{Encoder, encode, encode_params, encode_sequence};
 
 mod decoder;

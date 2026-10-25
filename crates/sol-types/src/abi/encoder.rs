@@ -13,7 +13,7 @@ use crate::{
     utils,
 };
 use alloc::vec::Vec;
-use core::{mem, ptr};
+use core::ptr;
 
 /// An ABI encoder.
 ///
@@ -22,7 +22,7 @@ use core::{mem, ptr};
 /// high-level [`crate::SolType`] interface (or its dynamic equivalent) instead.
 #[derive(Clone, Debug, Default)]
 pub struct Encoder {
-    buf: Vec<Word>,
+    buf: Vec<u8>,
     suffix_offset: Vec<usize>,
 }
 
@@ -37,7 +37,7 @@ impl Encoder {
     #[inline]
     pub fn with_capacity(size: usize) -> Self {
         Self {
-            buf: Vec::with_capacity(size),
+            buf: Vec::with_capacity(size * 32),
             // Note: this has to be non-zero even if it won't get used. The compiler will optimize
             // it out, but it won't for `Vec::new` (??).
             suffix_offset: Vec::with_capacity(4),
@@ -50,37 +50,34 @@ impl Encoder {
     /// [`push_offset`](Self::push_offset).
     #[inline]
     pub(crate) fn with_buf_capacity(size: usize) -> Self {
-        Self { buf: Vec::with_capacity(size), suffix_offset: Vec::new() }
+        Self { buf: Vec::with_capacity(size * 32), suffix_offset: Vec::new() }
     }
 
     /// Return a reference to the encoded words.
     #[inline]
     pub fn words(&self) -> &[Word] {
-        &self.buf
+        // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`, alignment 1.
+        unsafe { core::slice::from_raw_parts(self.buf.as_ptr().cast(), self.buf.len() / 32) }
     }
 
     /// Finish the encoding process, returning the encoded words.
     ///
     /// Use `into_bytes` instead to flatten the words into bytes.
-    // https://github.com/rust-lang/rust-clippy/issues/4979
-    #[allow(clippy::missing_const_for_fn)]
     #[inline]
     pub fn finish(self) -> Vec<Word> {
-        self.buf
+        self.words().to_vec()
     }
 
     /// Return a reference to the encoded bytes.
     #[inline]
     pub fn bytes(&self) -> &[u8] {
-        // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`
-        unsafe { &*(self.words() as *const [Word] as *const [[u8; 32]]) }.as_flattened()
+        &self.buf
     }
 
     /// Finish the encoding process, returning the encoded bytes.
     #[inline]
     pub fn into_bytes(self) -> Vec<u8> {
-        // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`
-        unsafe { mem::transmute::<Vec<Word>, Vec<[u8; 32]>>(self.finish()) }.into_flattened()
+        self.buf
     }
 
     /// Determine the current suffix offset.
@@ -117,13 +114,16 @@ impl Encoder {
     /// Append a word to the encoder.
     #[inline]
     pub fn append_word(&mut self, word: Word) {
-        self.buf.push(word);
+        self.buf.extend_from_slice(&word.0);
     }
 
     /// Append a slice of words to the encoder.
     #[inline]
     pub fn append_words(&mut self, words: &[Word]) {
-        self.buf.extend_from_slice(words);
+        // SAFETY: `#[repr(transparent)] FixedBytes<N>([u8; N])`
+        self.buf.extend_from_slice(
+            unsafe { &*(words as *const [Word] as *const [[u8; 32]]) }.as_flattened(),
+        );
     }
 
     /// Append a pointer to the current suffix offset.
@@ -169,17 +169,17 @@ impl Encoder {
             return;
         }
 
-        let n_words = utils::words_for(bytes);
-        self.buf.reserve(n_words);
+        let n_bytes = utils::words_for(bytes) * 32;
+        self.buf.reserve(n_bytes);
         unsafe {
             // set length before copying
             // this is fine because we reserved above and we don't panic below
             let len = self.buf.len();
-            self.buf.set_len(len + n_words);
+            self.buf.set_len(len + n_bytes);
 
             // copy
             let cnt = bytes.len();
-            let dst = self.buf.as_mut_ptr().add(len).cast::<u8>();
+            let dst = self.buf.as_mut_ptr().add(len);
             ptr::copy_nonoverlapping(bytes.as_ptr(), dst, cnt);
 
             // set remaining bytes to zero if necessary
@@ -230,6 +230,15 @@ pub fn encode_sequence<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
     let mut enc = Encoder::with_buf_capacity(token.total_words());
     enc.append_head_tail(token);
     enc.into_bytes()
+}
+
+/// ABI-encodes a token sequence, appending to `out`.
+#[inline]
+pub(crate) fn encode_sequence_to<'a, T: TokenSeq<'a>>(token: &T, out: &mut Vec<u8>) {
+    out.reserve(token.total_words() * 32);
+    let mut enc = Encoder { buf: core::mem::take(out), suffix_offset: Vec::new() };
+    enc.append_head_tail(token);
+    *out = enc.buf;
 }
 
 /// Converts a reference to `T` into a reference to a tuple of length 1 (without

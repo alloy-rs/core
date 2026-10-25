@@ -258,6 +258,39 @@ fn empty_call() {
 }
 
 #[test]
+fn encode_appends_to_buffer() {
+    sol! {
+        function f(address[] a, bytes b);
+        error E(string s);
+        event V(uint256 indexed i, bytes b);
+    }
+
+    let call = fCall { a: vec![Address::repeat_byte(1); 3], b: vec![7; 40].into() };
+    let encoded = call.abi_encode();
+    assert_eq!(encoded.len(), 4 + call.abi_encoded_size());
+    let mut out = vec![0xaa; 5];
+    call.abi_encode_raw(&mut out);
+    assert_eq!(out[..5], [0xaa; 5]);
+    assert_eq!(out[5..], encoded[4..]);
+
+    let error = E { s: "hello".into() };
+    let encoded = error.abi_encode();
+    assert_eq!(encoded.len(), 4 + error.abi_encoded_size());
+    let mut out = vec![0xaa; 5];
+    error.abi_encode_raw(&mut out);
+    assert_eq!(out[..5], [0xaa; 5]);
+    assert_eq!(out[5..], encoded[4..]);
+
+    let event = V { i: U256::from(1), b: vec![7; 40].into() };
+    let data = <(alloy_sol_types::sol_data::Bytes,)>::abi_encode_sequence(&(event.b.clone(),));
+    assert_eq!(event.encode_data(), data);
+    let mut out = vec![0xaa; 5];
+    event.encode_data_to(&mut out);
+    assert_eq!(out[..5], [0xaa; 5]);
+    assert_eq!(out[5..], data);
+}
+
+#[test]
 fn function_names() {
     sol! {
         #[sol(extra_methods)]
