@@ -12,7 +12,7 @@ use crate::{SolType, Word, abi::token::*, private::SolTypeValue, utils};
 use alloc::{string::String as RustString, vec::Vec};
 use alloy_primitives::{
     Address as RustAddress, Bytes as RustBytes, FixedBytes as RustFixedBytes,
-    Function as RustFunction, I256, U256, aliases::*, keccak256,
+    Function as RustFunction, I256, Keccak256, U256, aliases::*, keccak256,
 };
 use core::{borrow::Borrow, fmt::*, hash::Hash, marker::PhantomData, ops::*};
 
@@ -301,7 +301,7 @@ impl<T: ?Sized + AsRef<[u8]>> SolTypeValue<Bytes> for T {
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        keccak256(Bytes::abi_encode_packed(self))
+        keccak256(self.as_ref())
     }
 
     #[inline]
@@ -351,7 +351,7 @@ impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        keccak256(String::abi_encode_packed(self))
+        keccak256(self.as_ref())
     }
 
     #[inline]
@@ -412,11 +412,11 @@ where
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        let mut encoded = Vec::new();
+        let mut hasher = Keccak256::new();
         for item in self {
-            encoded.extend_from_slice(T::stv_eip712_data_word(item).as_slice());
+            hasher.update(T::stv_eip712_data_word(item));
         }
-        keccak256(encoded)
+        hasher.finalize()
     }
 
     #[inline]
