@@ -290,8 +290,10 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     /// around at the boundary of the type.
     #[inline]
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // `Uint::wrapping_mul` is not `const` before ruint 1.21.
     pub fn wrapping_mul(self, rhs: Self) -> Self {
-        self.overflowing_mul(rhs).0
+        // Two's complement multiplication is the same operation for signed and unsigned values.
+        Self(self.0.wrapping_mul(rhs.0))
     }
 
     /// Calculates `self` / `rhs`
@@ -377,12 +379,15 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[track_caller]
     #[must_use]
     pub fn overflowing_rem(self, rhs: Self) -> (Self, bool) {
+        assert!(!rhs.is_zero(), "attempt to divide by zero");
         if self == Self::MIN && rhs == Self::MINUS_ONE {
-            (Self::ZERO, true)
-        } else {
-            let div_res = self / rhs;
-            (self - div_res * rhs, false)
+            return (Self::ZERO, true);
         }
+        // The remainder takes the sign of `self` and is smaller than `|rhs|`, so it never
+        // overflows.
+        let (sign, abs) = self.into_sign_and_abs();
+        let rem = abs % rhs.unsigned_abs();
+        (Self(if sign == Sign::Negative { twos_complement(rem) } else { rem }), false)
     }
 
     /// Checked integer remainder. Computes `self % rhs`, returning `None` if
@@ -432,9 +437,13 @@ impl<const BITS: usize, const LIMBS: usize> Signed<BITS, LIMBS> {
     #[track_caller]
     #[must_use]
     pub fn div_euclid(self, rhs: Self) -> Self {
-        let q = self / rhs;
-        if (self % rhs).is_negative() {
-            if rhs.is_positive() { q - Self::ONE } else { q + Self::ONE }
+        assert!(!rhs.is_zero(), "attempt to divide by zero");
+        let (self_sign, self_abs) = self.into_sign_and_abs();
+        let (rhs_sign, rhs_abs) = rhs.into_sign_and_abs();
+        let (q_abs, r_abs) = self_abs.div_rem(rhs_abs);
+        let q = handle_overflow(Self::overflowing_from_sign_and_abs(self_sign * rhs_sign, q_abs));
+        if self_sign == Sign::Negative && !r_abs.is_zero() {
+            if rhs_sign == Sign::Positive { q - Self::ONE } else { q + Self::ONE }
         } else {
             q
         }
@@ -910,7 +919,12 @@ where
     #[inline]
     #[track_caller]
     fn mul(self, rhs: T) -> Self::Output {
-        handle_overflow(self.overflowing_mul(rhs.into()))
+        let rhs = rhs.into();
+        if cfg!(debug_assertions) {
+            handle_overflow(self.overflowing_mul(rhs))
+        } else {
+            self.wrapping_mul(rhs)
+        }
     }
 }
 
@@ -1061,5 +1075,129 @@ impl<const BITS: usize, const LIMBS: usize> ops::Not for Signed<BITS, LIMBS> {
     #[inline]
     fn not(self) -> Self::Output {
         Self(!self.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::vec::Vec;
+
+    type I24 = Signed<24, 1>;
+
+    /// Edge values and values around every limb boundary, of both signs.
+    fn values<const BITS: usize, const LIMBS: usize>() -> Vec<Signed<BITS, LIMBS>> {
+        let mut values = alloc::vec![Signed::MIN, Signed::MAX, Signed::ZERO];
+        for shift in [0, 1, 7, 31, 32, 62, 63, 64, 65, 127, 128, 191, 192, BITS - 2] {
+            if shift >= BITS - 1 {
+                continue;
+            }
+            for delta in [0, 1, 3] {
+                let abs = (Uint::<BITS, LIMBS>::from(1) << shift).wrapping_add(Uint::from(delta));
+                for neg in [false, true] {
+                    values.push(Signed(if neg { twos_complement(abs) } else { abs }));
+                }
+            }
+        }
+        values.extend([Signed::MIN + Signed::ONE, Signed::MAX - Signed::ONE]);
+        values.extend([-7, -2, -1, 1, 2, 7, 1000, -1000].map(|x| Signed::try_from(x).unwrap()));
+        values
+    }
+
+    /// The multiplication that goes through the absolute values.
+    fn mul_via_abs<const BITS: usize, const LIMBS: usize>(
+        a: Signed<BITS, LIMBS>,
+        b: Signed<BITS, LIMBS>,
+    ) -> (Signed<BITS, LIMBS>, bool) {
+        let sign = a.sign() * b.sign();
+        let (abs, overflow) = a.unsigned_abs().overflowing_mul(b.unsigned_abs());
+        let (result, conv) = Signed::overflowing_from_sign_and_abs(sign, abs);
+        if a.is_zero() || b.is_zero() { (Signed::ZERO, false) } else { (result, overflow || conv) }
+    }
+
+    /// The remainder computed as `a - (a / b) * b`.
+    fn rem_via_div<const BITS: usize, const LIMBS: usize>(
+        a: Signed<BITS, LIMBS>,
+        b: Signed<BITS, LIMBS>,
+    ) -> Signed<BITS, LIMBS> {
+        a.wrapping_sub((a / b).wrapping_mul(b))
+    }
+
+    fn check_mul_rem<const BITS: usize, const LIMBS: usize>() {
+        let values = values::<BITS, LIMBS>();
+        for &a in &values {
+            for &b in &values {
+                let (expected, overflow) = mul_via_abs(a, b);
+                assert_eq!(a.overflowing_mul(b), (expected, overflow), "{a} * {b}");
+                assert_eq!(a.wrapping_mul(b), expected, "{a} * {b}");
+                if !overflow {
+                    assert_eq!(a * b, expected, "{a} * {b}");
+                }
+
+                if b.is_zero() {
+                    continue;
+                }
+                let rem = if a == Signed::MIN && b == Signed::MINUS_ONE {
+                    assert_eq!(a.overflowing_rem(b), (Signed::ZERO, true));
+                    Signed::ZERO
+                } else {
+                    let rem = rem_via_div(a, b);
+                    assert_eq!(a.overflowing_rem(b), (rem, false), "{a} % {b}");
+                    assert!(rem.is_zero() || rem.sign() == a.sign(), "{a} % {b}");
+                    rem
+                };
+                assert_eq!(a.wrapping_rem(b), rem, "{a} % {b}");
+            }
+        }
+    }
+
+    #[test]
+    fn mul_rem_match_reference() {
+        check_mul_rem::<24, 1>();
+        check_mul_rem::<64, 1>();
+        check_mul_rem::<160, 3>();
+        check_mul_rem::<256, 4>();
+    }
+
+    #[test]
+    fn narrow_ops_match_native() {
+        let values = values::<24, 1>();
+        let to_native = |x: I24| i128::try_from(x).unwrap();
+        for &a in &values {
+            for &b in &values {
+                let (x, y) = (to_native(a), to_native(b));
+                // Wrap the product to 24 bits.
+                let expected = (x * y) << 104 >> 104;
+                assert_eq!(to_native(a.wrapping_mul(b)), expected, "{a} * {b}");
+                if y == 0 {
+                    continue;
+                }
+                if a == I24::MIN && b == I24::MINUS_ONE {
+                    continue;
+                }
+                assert_eq!(to_native(a % b), x % y, "{a} % {b}");
+                assert_eq!(to_native(a.rem_euclid(b)), x.rem_euclid(y), "{a} rem_euclid {b}");
+                assert_eq!(to_native(a.div_euclid(b)), x.div_euclid(y), "{a} div_euclid {b}");
+            }
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "attempt to divide by zero")]
+    fn rem_by_zero_panics() {
+        let _ = I24::ONE % I24::ZERO;
+    }
+
+    #[test]
+    #[should_panic(expected = "attempt to divide by zero")]
+    fn div_euclid_by_zero_panics() {
+        let _ = I24::MINUS_ONE.div_euclid(I24::ZERO);
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(expected = "overflow")]
+    fn mul_overflow_panics_in_debug() {
+        let _ = I24::MAX * I24::MAX;
     }
 }

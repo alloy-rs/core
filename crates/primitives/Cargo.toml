@@ -218,3 +218,8 @@ name = "primitives"
 path = "benches/primitives.rs"
 harness = false
 required-features = ["rand"]
+
+[[bench]]
+name = "signed"
+path = "benches/signed.rs"
+harness = false
