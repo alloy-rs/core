@@ -67,21 +67,11 @@ macro_rules! abi_items {
         )*}
 
         /// The `type` of a JSON ABI item.
-        #[derive(Clone, Copy, PartialEq, Eq)]
+        #[derive(Clone, Copy, PartialEq, Eq, Deserialize)]
+        #[serde(variant_identifier, rename_all = "lowercase")]
         enum Kind {$(
             $name,
         )*}
-
-        impl Kind {
-            const NAMES: &'static [&'static str] = &[$($name_lower),*];
-
-            fn from_name(name: &str) -> Option<Self> {
-                match name {
-                    $($name_lower => Some(Self::$name),)*
-                    _ => None,
-                }
-            }
-        }
 
         impl Serialize for AbiItem<'_> {
             fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -656,32 +646,9 @@ impl<'de> Deserialize<'de> for AbiItem<'_> {
     }
 }
 
-impl<'de> Deserialize<'de> for Kind {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        struct KindVisitor;
-
-        impl Visitor<'_> for KindVisitor {
-            type Value = Kind;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str("variant identifier")
-            }
-
-            fn visit_str<E: de::Error>(self, v: &str) -> Result<Kind, E> {
-                Kind::from_name(v).ok_or_else(|| E::unknown_variant(v, Kind::NAMES))
-            }
-
-            fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Kind, E> {
-                self.visit_str(&String::from_utf8_lossy(v))
-            }
-        }
-
-        deserializer.deserialize_identifier(KindVisitor)
-    }
-}
-
 /// A key of a JSON ABI item.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(field_identifier, rename_all = "camelCase")]
 enum Field {
     Type,
     Name,
@@ -691,10 +658,22 @@ enum Field {
     StateMutability,
     Payable,
     Constant,
+    #[serde(other)]
     Other,
 }
 
 impl Field {
+    /// The fields that can only be checked for repetition once the item kind is known.
+    const ITEM_FIELDS: [Self; 7] = [
+        Self::Name,
+        Self::Inputs,
+        Self::Outputs,
+        Self::Anonymous,
+        Self::StateMutability,
+        Self::Payable,
+        Self::Constant,
+    ];
+
     const fn name(self) -> &'static str {
         match self {
             Self::Type => "type",
@@ -707,40 +686,6 @@ impl Field {
             Self::Constant => "constant",
             Self::Other => "",
         }
-    }
-}
-
-impl<'de> Deserialize<'de> for Field {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        struct FieldVisitor;
-
-        impl Visitor<'_> for FieldVisitor {
-            type Value = Field;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str("field identifier")
-            }
-
-            fn visit_str<E: de::Error>(self, v: &str) -> Result<Field, E> {
-                Ok(match v {
-                    "type" => Field::Type,
-                    "name" => Field::Name,
-                    "inputs" => Field::Inputs,
-                    "outputs" => Field::Outputs,
-                    "anonymous" => Field::Anonymous,
-                    "stateMutability" => Field::StateMutability,
-                    "payable" => Field::Payable,
-                    "constant" => Field::Constant,
-                    _ => Field::Other,
-                })
-            }
-
-            fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Field, E> {
-                self.visit_str(&String::from_utf8_lossy(v))
-            }
-        }
-
-        deserializer.deserialize_identifier(FieldVisitor)
     }
 }
 
@@ -791,8 +736,8 @@ impl<'de> Visitor<'de> for ItemVisitor {
         let mut kind = self.kind;
         let mut fields = ItemFields::default();
         // A repeated field is only an error if the item has it, which is unknown until the end
-        // if `type` comes last.
-        let mut repeated = None;
+        // if `type` comes last. Bit `field as u8` is set for each repeated field.
+        let mut repeated = 0u8;
 
         macro_rules! set {
             ($field:expr, $slot:expr) => {
@@ -800,7 +745,7 @@ impl<'de> Visitor<'de> for ItemVisitor {
                     if kind.is_some() {
                         return Err(de::Error::duplicate_field($field.name()));
                     }
-                    repeated.get_or_insert($field);
+                    repeated |= 1 << $field as u8;
                     map.next_value::<IgnoredAny>()?;
                 } else {
                     $slot = Some(map.next_value()?);
@@ -833,7 +778,10 @@ impl<'de> Visitor<'de> for ItemVisitor {
         }
 
         let kind = kind.ok_or_else(|| de::Error::missing_field("type"))?;
-        if let Some(field) = repeated.filter(|&field| kind.has(field)) {
+        let repeated = Field::ITEM_FIELDS
+            .into_iter()
+            .find(|&field| repeated & (1 << field as u8) != 0 && kind.has(field));
+        if let Some(field) = repeated {
             return Err(de::Error::duplicate_field(field.name()));
         }
         fields.finish(kind)
@@ -853,6 +801,7 @@ impl ItemFields {
         let params = |inputs: Vec<ParamInner>| {
             inputs.into_iter().map(ParamInner::into_param).collect::<Result<Vec<_>, _>>()
         };
+        // Same as `serde_state_mutability_compat::deserialize`.
         let state_mutability = || match (state_mutability.flatten(), payable, constant) {
             (Some(state_mutability), ..) => Ok(state_mutability),
             (None, payable, constant) => {
