@@ -91,3 +91,9 @@ harness = false
 name = "types"
 path = "benches/types.rs"
 harness = false
+
+[[bench]]
+name = "eip712"
+path = "benches/eip712.rs"
+harness = false
+required-features = ["eip712"]

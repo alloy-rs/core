@@ -8,7 +8,10 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::{B256, keccak256, map::HashSet};
+use alloy_primitives::{
+    B256, keccak256,
+    map::{HashMap, HashSet},
+};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
 use parser::{RootType, TypeSpecifier, TypeStem, is_valid_identifier};
@@ -218,6 +221,18 @@ fn check_type_depth(depth: usize) -> Result<()> {
 }
 
 const MAX_RESOLVED_TYPE_NODES: usize = 1024;
+
+/// Cheap necessary condition for a parsed root type name to be a basic Solidity
+/// type, so that struct names can skip the (allocating) basic type check.
+fn may_be_basic_type(name: &str) -> bool {
+    matches!(name, "address" | "bool" | "string" | "function")
+        || name.starts_with("bytes")
+        || name.starts_with("int")
+        || name.starts_with("uint")
+}
+
+/// Type hashes by struct name, computed once per hashing call.
+type TypeHashes<'a> = HashMap<&'a str, B256>;
 
 fn charge_type_nodes(remaining: &mut usize, nodes: usize) -> Result<()> {
     *remaining = remaining
@@ -481,7 +496,9 @@ impl Resolver {
         depth: usize,
         remaining: &mut usize,
     ) -> Result<DynSolType> {
-        if let Ok(ty) = root_type.resolve() {
+        if let Some(ty) =
+            may_be_basic_type(root_type.span()).then(|| root_type.resolve().ok()).flatten()
+        {
             return Ok(ty);
         }
 
@@ -540,9 +557,10 @@ impl Resolver {
             DynSolValue::CustomStruct { tuple: inner, .. }
             | DynSolValue::Array(inner)
             | DynSolValue::FixedArray(inner) => {
+                let type_hashes = &mut TypeHashes::default();
                 let mut bytes = Vec::with_capacity(inner.len() * 32);
                 for v in inner {
-                    bytes.extend(self.eip712_data_word(v)?.as_slice());
+                    bytes.extend(self.data_word(v, type_hashes)?.as_slice());
                 }
                 Some(bytes)
             }
@@ -556,6 +574,14 @@ impl Resolver {
     /// rules. Atomic types are encoded as-is, while non-atomic types are
     /// encoded as their `encodeData` hash.
     pub fn eip712_data_word(&self, value: &DynSolValue) -> Result<B256> {
+        self.data_word(value, &mut TypeHashes::default())
+    }
+
+    fn data_word<'a>(
+        &self,
+        value: &'a DynSolValue,
+        type_hashes: &mut TypeHashes<'a>,
+    ) -> Result<B256> {
         if let Some(word) = value.as_word() {
             return Ok(word);
         }
@@ -563,16 +589,25 @@ impl Resolver {
         let mut bytes;
         let to_hash = match value {
             DynSolValue::CustomStruct { name, tuple, .. } => {
-                bytes = self.type_hash(name)?.to_vec();
+                let type_hash = match type_hashes.get(name.as_str()) {
+                    Some(type_hash) => *type_hash,
+                    None => {
+                        let type_hash = self.type_hash(name)?;
+                        type_hashes.insert(name, type_hash);
+                        type_hash
+                    }
+                };
+                bytes = Vec::with_capacity((tuple.len() + 1) * 32);
+                bytes.extend_from_slice(type_hash.as_slice());
                 for v in tuple {
-                    bytes.extend(self.eip712_data_word(v)?.as_slice());
+                    bytes.extend(self.data_word(v, type_hashes)?.as_slice());
                 }
                 &bytes[..]
             }
             DynSolValue::Array(inner) | DynSolValue::FixedArray(inner) => {
                 bytes = Vec::with_capacity(inner.len() * 32);
                 for v in inner {
-                    bytes.extend(self.eip712_data_word(v)?);
+                    bytes.extend(self.data_word(v, type_hashes)?);
                 }
                 &bytes[..]
             }
@@ -843,6 +878,36 @@ mod tests {
         assert_eq!(graph.resolve("A"), Ok(a));
         assert_eq!(graph.resolve("B"), Ok(b));
         assert_eq!(graph.resolve("C"), Ok(c));
+    }
+
+    #[test]
+    fn basic_types_take_precedence_over_structs() {
+        let mut graph = Resolver::default();
+        for name in ["uint256", "bytesFoo", "intern", "Person"] {
+            let props = vec![PropertyDef::new_unchecked("bool", "flag")];
+            graph.ingest(TypeDef::new_unchecked(name.to_string(), props));
+        }
+
+        assert_eq!(graph.resolve("uint256"), Ok(DynSolType::Uint(256)));
+        for name in ["bytesFoo", "intern", "Person"] {
+            let ty = DynSolType::CustomStruct {
+                name: name.to_string(),
+                prop_names: vec!["flag".to_string()],
+                tuple: vec![DynSolType::Bool],
+            };
+            assert_eq!(graph.resolve(name), Ok(ty), "{name}");
+        }
+    }
+
+    #[test]
+    fn enum_property_types_encode_as_uint8() {
+        let mut graph = Resolver::default();
+        graph.ingest(TypeDef::new_unchecked(
+            "Foo".to_string(),
+            vec![PropertyDef::new_unchecked("Contract.Enum", "x")],
+        ));
+        assert_eq!(graph.encode_type("Foo").unwrap(), "Foo(Contract.Enum x)");
+        assert_eq!(graph.linearize("Foo").unwrap().len(), 1);
     }
 
     #[test]
