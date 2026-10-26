@@ -204,36 +204,39 @@ fn ty_to_param(
     let mut components = vec![];
     let (ty, internal_type) = match ty.peel_arrays() {
         ast::Type::Custom(path) => {
-            let Some((item_namespace, item)) = cx.try_item_in_namespace(path, namespace) else {
-                abort!(path.span(), "unresolved item: {}", path);
+            let Some((item_namespace, resolved)) = cx.custom_types.resolve_entry(path, namespace)
+            else {
+                abort!(path.span(), "unresolved custom type: {}", path);
             };
+            let (_, item) =
+                cx.all_items.get_entry_by_name_and_namespace(item_namespace, path.last()).unwrap();
             // Canonical names of types declared in a contract are qualified by the contract name.
             let mut canonical = path.last().as_string();
             if let Some(contract) = item_namespace {
                 canonical = format!("{}.{canonical}", contract.as_string());
             }
-            if let ast::Item::Struct(strukt) = item {
-                components = strukt
-                    .fields
-                    .iter()
-                    .map(|field| {
-                        let name = field.name.as_ref().map(SolIdent::as_string);
-                        ty_to_param(name, &field.ty, item_namespace, cx)
-                    })
-                    .collect();
-                ("tuple".into(), Some(format!("struct {canonical}")))
-            } else {
-                let internal_type = match item {
-                    ast::Item::Contract(_) => Some(format!("contract {canonical}")),
-                    ast::Item::Enum(_) => Some(format!("enum {canonical}")),
-                    ast::Item::Udt(_) => Some(canonical),
-                    _ => None,
-                };
-                let Some(resolved) = cx.custom_types.resolve(path, namespace) else {
-                    abort!(path.span(), "unresolved custom type: {}", path);
-                };
-                (TypePrinter::new(cx, resolved).to_string(), internal_type)
-            }
+            let (ty, internal_type) = match item {
+                ast::Item::Struct(strukt) => {
+                    components = strukt
+                        .fields
+                        .iter()
+                        .map(|field| {
+                            let name = field.name.as_ref().map(SolIdent::as_string);
+                            ty_to_param(name, &field.ty, item_namespace, cx)
+                        })
+                        .collect();
+                    ("tuple".into(), format!("struct {canonical}"))
+                }
+                item => {
+                    let kind = match item {
+                        ast::Item::Contract(_) => "contract ",
+                        ast::Item::Enum(_) => "enum ",
+                        _ => "",
+                    };
+                    (TypePrinter::new(cx, resolved).to_string(), format!("{kind}{canonical}"))
+                }
+            };
+            (ty, Some(internal_type))
         }
         ast::Type::Tuple(tuple) => {
             components =
@@ -254,7 +257,9 @@ fn ty_to_param(
     Param {
         ty: format!("{ty}{suffix}"),
         name: name.unwrap_or_default(),
-        internal_type: internal_type.and_then(|ty| InternalType::parse(&format!("{ty}{suffix}"))),
+        internal_type: internal_type
+            .filter(|_| !cx.from_json)
+            .and_then(|ty| InternalType::parse(&format!("{ty}{suffix}"))),
         components,
     }
 }

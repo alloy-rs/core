@@ -1,4 +1,4 @@
-use alloy_json_abi::{Function, InternalType, JsonAbi, Param, StateMutability};
+use alloy_json_abi::{Function, JsonAbi, Param, StateMutability};
 use alloy_primitives::{Address, B256, I256, Signed, U256};
 use alloy_sol_types::{SolCall, SolError, SolEvent, SolStruct, sol};
 use pretty_assertions::assert_eq;
@@ -33,10 +33,7 @@ fn large_array() {
                     inputs: vec![Param {
                         ty: "uint64[128]".into(),
                         name: "longArray".into(),
-                        internal_type: Some(InternalType::Other {
-                            contract: None,
-                            ty: "uint64[128]".into(),
-                        }),
+                        internal_type: None,
                         components: vec![],
                     }],
                     outputs: vec![],

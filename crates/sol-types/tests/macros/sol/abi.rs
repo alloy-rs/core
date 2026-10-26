@@ -793,3 +793,30 @@ fn internal_types() {
 
     assert_eq!(Exchange::fillCall::abi(), expected);
 }
+
+#[test]
+fn internal_type_shadowed_struct() {
+    // This has to be in a module (not a function) because of Rust import rules.
+    mod nested {
+        alloy_sol_types::sol! {
+            #![sol(abi)]
+
+            event Foo(uint256 x);
+
+            contract C {
+                struct Foo { uint256 a; }
+                function f(Foo s);
+            }
+        }
+    }
+
+    assert_eq!(
+        nested::C::fCall::abi().inputs,
+        [Param {
+            ty: "tuple".into(),
+            name: "s".into(),
+            components: vec![param("uint256 a")],
+            internal_type: internal_type("struct C.Foo"),
+        }]
+    );
+}
