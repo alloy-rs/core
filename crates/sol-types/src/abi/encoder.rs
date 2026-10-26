@@ -44,6 +44,15 @@ impl Encoder {
         }
     }
 
+    /// Instantiate a new encoder with a given buffer capacity in words and no suffix offset stack.
+    ///
+    /// For encoders that track the tail offset themselves instead of through
+    /// [`push_offset`](Self::push_offset).
+    #[inline]
+    pub(crate) fn with_buf_capacity(size: usize) -> Self {
+        Self { buf: Vec::with_capacity(size), suffix_offset: Vec::new() }
+    }
+
     /// Return a reference to the encoded words.
     #[inline]
     pub fn words(&self) -> &[Word] {
@@ -126,6 +135,12 @@ impl Encoder {
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn append_indirection(&mut self) {
         self.append_word(utils::pad_usize(self.suffix_offset()));
+    }
+
+    /// Append an offset word.
+    #[inline]
+    pub(crate) fn append_offset(&mut self, offset: usize) {
+        self.append_word(utils::pad_usize(offset));
     }
 
     /// Append a sequence length.
@@ -212,7 +227,7 @@ pub fn encode_params<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
 /// See the [`abi`](super) module for more information.
 #[inline]
 pub fn encode_sequence<'a, T: TokenSeq<'a>>(token: &T) -> Vec<u8> {
-    let mut enc = Encoder::with_capacity(token.total_words());
+    let mut enc = Encoder::with_buf_capacity(token.total_words());
     enc.append_head_tail(token);
     enc.into_bytes()
 }
