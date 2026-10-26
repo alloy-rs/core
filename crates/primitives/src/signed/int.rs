@@ -1,5 +1,5 @@
 use super::{ParseSignedError, Sign, utils::*};
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use core::fmt;
 use ruint::{BaseConvertError, Uint, UintTryFrom, UintTryTo};
 
@@ -65,7 +65,25 @@ impl<const BITS: usize, const LIMBS: usize> fmt::Debug for Signed<BITS, LIMBS> {
 impl<const BITS: usize, const LIMBS: usize> fmt::Display for Signed<BITS, LIMBS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (sign, abs) = self.into_sign_and_abs();
-        f.pad_integral(sign.is_positive(), "", &abs.to_string())
+        if abs.is_zero() {
+            return f.pad_integral(true, "", "0");
+        }
+
+        // Each 64-bit limb needs at most 20 decimal digits.
+        let mut buf = [[b'0'; 20]; LIMBS];
+        let buf = buf.as_flattened_mut();
+        let mut start = buf.len();
+        let mut chunks = abs.to_base_le(10_000_000_000_000_000_000).peekable();
+        let mut digits = itoa::Buffer::new();
+        while let Some(chunk) = chunks.next() {
+            let chunk = digits.format(chunk);
+            let width = if chunks.peek().is_some() { 19 } else { chunk.len() };
+            start -= width;
+            buf[start + width - chunk.len()..start + width].copy_from_slice(chunk.as_bytes());
+        }
+
+        // The buffer contains only ASCII decimal digits.
+        f.pad_integral(sign.is_positive(), "", core::str::from_utf8(&buf[start..]).unwrap())
     }
 }
 
@@ -1744,5 +1762,52 @@ mod tests {
         assert_eq!(I24::try_from(-8_388_608i32), Ok(I24::MIN));
         assert!(I24::try_from(-8_388_609i32).is_err());
         assert!(I24::try_from(i32::MIN).is_err());
+    }
+
+    #[test]
+    fn display_padding_boundaries() {
+        macro_rules! check {
+            ($value:expr, $native:expr) => {{
+                let value = $value;
+                let native = $native;
+                assert_eq!(format!("{value}"), format!("{native}"));
+                assert_eq!(format!("{value:+}"), format!("{native:+}"));
+                assert_eq!(format!("{value:>45}"), format!("{native:>45}"));
+                assert_eq!(format!("{value:<45}"), format!("{native:<45}"));
+                assert_eq!(format!("{value:^46}"), format!("{native:^46}"));
+                assert_eq!(format!("{value:045}"), format!("{native:045}"));
+                assert_eq!(format!("{value:+045}"), format!("{native:+045}"));
+                assert_eq!(format!("{value:*^+46}"), format!("{native:*^+46}"));
+                assert_eq!(format!("{value:🦀>+45}"), format!("{native:🦀>+45}"));
+                assert_eq!(format!("{value:#.2}"), format!("{native:#.2}"));
+            }};
+        }
+
+        check!(I0::ZERO, 0);
+        check!(I1::ZERO, 0);
+        check!(I1::MINUS_ONE, -1);
+        for native in i8::MIN..=i8::MAX {
+            check!(I8::try_from(native).unwrap(), native);
+        }
+        for native in [i128::MIN, -10_000_000_000_000_000_000, -1, 0, 1, i128::MAX] {
+            check!(I128::try_from(native).unwrap(), native);
+        }
+
+        macro_rules! check_wide {
+            ($bits:literal, $limbs:literal) => {
+                for value in [Signed::<$bits, $limbs>::MIN, Signed::<$bits, $limbs>::MAX] {
+                    let (sign, abs) = value.into_sign_and_abs();
+                    let expected = format!("{sign}{abs}");
+                    assert_eq!(format!("{value}"), expected);
+                    assert_eq!(format!("{value:>180}"), format!("{expected:>180}"));
+                }
+            };
+        }
+        check_wide!(64, 1);
+        check_wide!(65, 2);
+        check_wide!(127, 2);
+        check_wide!(129, 3);
+        check_wide!(256, 4);
+        check_wide!(512, 8);
     }
 }
