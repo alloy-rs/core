@@ -317,11 +317,12 @@ impl SolInputExpander for SolMacroExpander {
             SolInputKind::Sol(mut file) => {
                 // Attributes have already been added to the inner contract generated in
                 // `normalize_json`.
-                if !is_json {
+                if is_json {
+                    crate::expand::expand_json(file)
+                } else {
                     file.attrs.extend(attrs);
+                    crate::expand::expand(file)
                 }
-
-                crate::expand::expand(file)
             }
             SolInputKind::Type(ty) => {
                 let (sol_attrs, rest) = SolAttrs::parse(&attrs)?;

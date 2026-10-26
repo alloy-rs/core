@@ -213,13 +213,10 @@ fn abi_decode(data: &[u8], params: &[Param], config: AbiDecoderConfig) -> Result
     let mut decoder = Decoder::with_config(data, config);
     for param in params {
         let ty = param.resolve()?;
-        let value = ty.abi_decode_inner(&mut decoder, |token, decoder| {
-            token.decode_single_populate(decoder)?;
-            if config.get_validate_words() {
-                ty.validate_token(token, config.get_validate())?;
-            }
-            Ok(())
-        })?;
+        let value = ty.abi_decode_inner(
+            &mut decoder,
+            config.get_validate_words().then(|| config.get_validate()),
+        )?;
         values.push(value);
     }
     Ok(values)
