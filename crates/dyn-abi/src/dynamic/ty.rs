@@ -618,11 +618,22 @@ impl DynSolType {
                 validation.word(self, word);
                 Ok(self.word_value(*word))
             }
-            Self::Bytes => Ok(DynSolValue::Bytes(PackedSeqToken::decode_from(dec)?.0.to_vec())),
+            // Once validation has failed the decoded value is discarded, so skip copying payloads
+            // that the decoder's memory limit does not account for.
+            Self::Bytes => {
+                let token = PackedSeqToken::decode_from(dec)?;
+                let bytes = if validation.failed() { Vec::new() } else { token.0.to_vec() };
+                Ok(DynSolValue::Bytes(bytes))
+            }
             Self::String => {
                 let token = PackedSeqToken::decode_from(dec)?;
                 validation.utf8(token.0);
-                Ok(DynSolValue::String(sol_data::String::detokenize(token)))
+                let string = if validation.failed() {
+                    String::new()
+                } else {
+                    sol_data::String::detokenize(token)
+                };
+                Ok(DynSolValue::String(string))
             }
             Self::Array(ty) => {
                 let mut child = dec.take_indirection()?;
@@ -847,6 +858,11 @@ impl<'d, 't> Validation<'d, 't> {
         if self.utf8.is_some() && self.invalid.is_none() && !ty.is_valid_word(word) {
             self.invalid = Some(Invalid::Word(word, ty));
         }
+    }
+
+    #[inline]
+    const fn failed(&self) -> bool {
+        self.invalid.is_some()
     }
 
     #[inline]
