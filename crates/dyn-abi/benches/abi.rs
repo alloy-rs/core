@@ -66,6 +66,11 @@ fn dyn_abi_encode(c: &mut Criterion) {
         b.iter(|| black_box(&input).abi_encode_sequence());
     });
 
+    g.bench_function("nested", |b| {
+        let input = encode_nested_sol_value();
+        b.iter(|| black_box(&input).abi_encode_params());
+    });
+
     g.finish();
 }
 
@@ -187,6 +192,68 @@ fn encode_struct_sol_values() -> [DynSolValue; 8] {
         input.amountOutMinimum.into(),
         input.sqrtPriceLimitX96.to::<U256>().into(),
     ]
+}
+
+/// The arguments of Seaport's `fulfillAdvancedOrder`: a nested struct with arrays of structs,
+/// `bytes` and `bytes32[]`.
+fn encode_nested_sol_value() -> DynSolValue {
+    let word = |n: u8| DynSolValue::FixedBytes([n; 32].into(), 32);
+    let uint = |n: u64| DynSolValue::Uint(U256::from(n), 256);
+    let addr = |n: u8| DynSolValue::Address([n; 20].into());
+    let offer_item = |n: u8| {
+        DynSolValue::Tuple(vec![
+            DynSolValue::Uint(U256::from(n % 4), 8),
+            addr(n),
+            uint(n as u64),
+            uint(1),
+            uint(1),
+        ])
+    };
+    let consideration_item = |n: u8| {
+        DynSolValue::Tuple(vec![
+            DynSolValue::Uint(U256::from(n % 4), 8),
+            addr(n),
+            uint(n as u64),
+            uint(1),
+            uint(1),
+            addr(n + 1),
+        ])
+    };
+    let parameters = DynSolValue::Tuple(vec![
+        addr(1),
+        addr(2),
+        DynSolValue::Array((0..2).map(offer_item).collect()),
+        DynSolValue::Array((0..3).map(consideration_item).collect()),
+        DynSolValue::Uint(U256::from(2), 8),
+        uint(1685523099),
+        uint(1685609499),
+        word(0),
+        uint(0x1234_5678),
+        word(0xcc),
+        uint(3),
+    ]);
+    let order = DynSolValue::Tuple(vec![
+        parameters,
+        uint(1),
+        uint(1),
+        DynSolValue::Bytes(vec![0xab; 65]),
+        DynSolValue::Bytes(vec![0xcd; 100]),
+    ]);
+    let resolver = |n: u64| {
+        DynSolValue::Tuple(vec![
+            uint(n),
+            DynSolValue::Uint(U256::from(1), 8),
+            uint(n),
+            uint(n),
+            DynSolValue::Array((0..4).map(|n| word(n as u8)).collect()),
+        ])
+    };
+    DynSolValue::Tuple(vec![
+        order,
+        DynSolValue::Array((0..2).map(resolver).collect()),
+        word(0xcc),
+        addr(9),
+    ])
 }
 
 fn decode_word_input() -> Vec<u8> {
