@@ -934,6 +934,7 @@ impl CallLikeExpander<'_> {
             quote! {
                 #[automatically_derived]
                 impl alloy_sol_types::private::IntoLogData for #name {
+                    #[inline]
                     fn to_log_data(&self) -> alloy_sol_types::private::LogData {
                         match self {#(
                             Self::#variants(inner) =>
@@ -941,6 +942,7 @@ impl CallLikeExpander<'_> {
                         )*}
                     }
 
+                    #[inline]
                     fn into_log_data(self) -> alloy_sol_types::private::LogData {
                         match self {#(
                             Self::#v2(inner) =>
