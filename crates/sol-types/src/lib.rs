@@ -131,13 +131,14 @@ pub mod private {
     mod static_abi {
         use alloc::vec::Vec;
         use alloy_json_abi::{
-            Constructor, Error, Event, EventParam, Function, Param, StateMutability,
+            Constructor, Error, Event, EventParam, Function, InternalType, Param, StateMutability,
         };
 
         #[derive(Clone, Copy)]
         pub struct StaticParam {
             pub ty: &'static str,
             pub name: &'static str,
+            pub internal_type: Option<&'static str>,
             pub components: &'static [Self],
         }
 
@@ -146,6 +147,7 @@ pub mod private {
             pub ty: &'static str,
             pub name: &'static str,
             pub indexed: bool,
+            pub internal_type: Option<&'static str>,
             pub components: &'static [StaticParam],
         }
 
@@ -208,7 +210,7 @@ pub mod private {
                             name: p.name.into(),
                             indexed: p.indexed,
                             components: params(p.components),
-                            internal_type: None,
+                            internal_type: p.internal_type.and_then(InternalType::parse),
                         })
                         .collect(),
                     anonymous: self.anonymous,
@@ -230,7 +232,7 @@ pub mod private {
                     ty: p.ty.into(),
                     name: p.name.into(),
                     components: params(p.components),
-                    internal_type: None,
+                    internal_type: p.internal_type.and_then(InternalType::parse),
                 })
                 .collect()
         }
