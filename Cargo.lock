@@ -168,9 +168,9 @@ dependencies = [
  "proc-macro-error3",
  "proc-macro2",
  "quote",
- "sha3 0.11.0",
  "syn 2.0.119",
  "syn-solidity",
+ "tiny-keccak",
 ]
 
 [[package]]
