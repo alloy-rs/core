@@ -70,17 +70,18 @@ jobs:
           sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
           sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
           sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
+          cargo update --workspace
       # Only run tests on latest stable and above
       - name: pin deps
         if: ${{ matrix.rust == '1.85' }} # MSRV
         run: cargo +nightly update -Z minimal-versions
       - name: build
         if: ${{ matrix.rust == '1.85' }} # MSRV
-        run: cargo build --workspace ${{ matrix.flags }}
+        run: cargo build --locked --workspace ${{ matrix.flags }}
 
       - name: test
         if: ${{ matrix.rust != '1.85' }} # MSRV
-        run: cargo test --workspace ${{ matrix.flags }}
+        run: cargo test --locked --workspace ${{ matrix.flags }}
 
   miri:
     name: miri ${{ matrix.flags }}
@@ -111,7 +112,8 @@ jobs:
           sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
           sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
           sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
-      - run: cargo miri test ${{ matrix.flags }}
+          cargo update --workspace
+      - run: cargo miri test --locked ${{ matrix.flags }}
 
   wasm:
     runs-on: ubuntu-latest
@@ -137,8 +139,9 @@ jobs:
           sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
           sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
           sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
+          cargo update --workspace
       - name: check
-        run: cargo check --workspace --target wasm32-unknown-unknown
+        run: cargo check --locked --workspace --target wasm32-unknown-unknown
 
   feature-checks:
     name: features ${{ matrix.rust }} ${{ matrix.flags }}
@@ -175,6 +178,7 @@ jobs:
           sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
           sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
           sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
+          cargo update --workspace
       - name: cargo hack
         run: |
           args=(${{ matrix.flags }})
@@ -212,6 +216,7 @@ jobs:
           sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
           sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
           sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
+          cargo update --workspace
       - run: ./scripts/check_no_std.sh
 
   typos:
@@ -252,7 +257,8 @@ jobs:
           sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
           sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
           sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
-      - run: cargo clippy --workspace --all-targets --all-features
+          cargo update --workspace
+      - run: cargo clippy --locked --workspace --all-targets --all-features
         env:
           RUSTFLAGS: -Dwarnings
 
@@ -280,8 +286,9 @@ jobs:
           sed -i '/^allocative = { workspace = true, optional = true }$/d' crates/primitives/Cargo.toml
           sed -i 's/^allocative = \["dep:allocative"\]$/allocative = []/' crates/primitives/Cargo.toml
           sed -i 's/feature = "allocative"/all(feature = "allocative", any())/g' crates/primitives/src/lib.rs crates/primitives/src/bits/{fixed.rs,macros.rs}
+          cargo update --workspace
       - name: Build documentation
-        run: cargo doc --workspace --all-features --no-deps --document-private-items
+        run: cargo doc --locked --workspace --all-features --no-deps --document-private-items
         env:
           RUSTDOCFLAGS: --cfg docsrs -D warnings -Zunstable-options --show-type-layout --generate-link-to-definition
 
@@ -310,6 +317,7 @@ jobs:
       id-token: write
     with:
       rust-toolchain: nightly
+      flags: --locked --all-features
 
   ci-success:
     name: ci success

@@ -137,6 +137,16 @@ cargo test --all-features
 cargo +nightly clippy --all-features
 ```
 
+### Dependency updates
+
+The workspace `Cargo.lock` is committed, and CI builds, tests, and dependency checks
+use `--locked`. When intentionally updating dependencies, use
+`cargo update -p <package>` (optionally with `--precise <version>`) and include the
+lockfile diff in the PR. Verify that the selected versions pass the package policy and the CI
+toolchain/feature matrix. A lockfile does not exempt dependencies from security checks.
+Dependabot opens a single grouped Cargo lockfile and GitHub Actions update each week when
+updates have passed the configured cooldown.
+
 ### Tests
 
 If the change being proposed alters code (as opposed to only documentation for
