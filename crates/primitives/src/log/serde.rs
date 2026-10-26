@@ -45,12 +45,66 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for LogFlattenVisitor<T> {
 
     fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<Self::Value, A::Error> {
         let mut filter = AddressFilter { map, address: None };
-        let data = T::deserialize(MapAccessDeserializer::new(&mut filter))?;
+        let data = T::deserialize(PayloadDeserializer(MapAccessDeserializer::new(&mut filter)))?;
         while filter.next_key::<IgnoredAny>()?.is_some() {
             filter.next_value::<IgnoredAny>()?;
         }
         let address = filter.address.ok_or_else(|| de::Error::missing_field("address"))?;
         Ok(Log { address, data })
+    }
+}
+
+/// Presents the map to `T` like `serde(flatten)` does: a map, with newtypes, options and units
+/// looking through it instead of failing on a map.
+struct PayloadDeserializer<A>(MapAccessDeserializer<A>);
+
+impl<'de, A: MapAccess<'de>> Deserializer<'de> for PayloadDeserializer<A> {
+    type Error = A::Error;
+
+    fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
+        self.0.deserialize_any(visitor)
+    }
+
+    fn deserialize_enum<V: Visitor<'de>>(
+        self,
+        name: &'static str,
+        variants: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error> {
+        self.0.deserialize_enum(name, variants, visitor)
+    }
+
+    fn deserialize_newtype_struct<V: Visitor<'de>>(
+        self,
+        _name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error> {
+        visitor.visit_newtype_struct(self)
+    }
+
+    fn deserialize_option<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
+        visitor.visit_some(self)
+    }
+
+    fn deserialize_unit<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
+        visitor.visit_unit()
+    }
+
+    fn deserialize_unit_struct<V: Visitor<'de>>(
+        self,
+        _name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error> {
+        visitor.visit_unit()
+    }
+
+    fn deserialize_ignored_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
+        visitor.visit_unit()
+    }
+
+    serde::forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string bytes byte_buf seq
+        tuple tuple_struct map struct identifier
     }
 }
 
@@ -299,6 +353,22 @@ mod tests {
         let log = serde_json::from_value::<Log<Value>>(json).unwrap();
         assert_eq!(log.address, gen_log().address);
         assert_eq!(log.data, json!({"topics": [], "data": "0x", "extra": 1}));
+    }
+
+    #[test]
+    fn test_log_json_payload_shapes() {
+        #[derive(Debug, PartialEq, Deserialize)]
+        struct Wrapped(LogData);
+
+        let json = json!({"address": ADDRESS, "topics": [TOPIC], "data": "0x1234"});
+        let expected = gen_log();
+
+        let log = serde_json::from_value::<Log<Wrapped>>(json.clone()).unwrap();
+        assert_eq!((log.address, log.data.0), (expected.address, expected.data.clone()));
+        let log = serde_json::from_value::<Log<Option<LogData>>>(json.clone()).unwrap();
+        assert_eq!(log.data, Some(expected.data));
+        let log = serde_json::from_value::<Log<()>>(json).unwrap();
+        assert_eq!(log.address, expected.address);
     }
 
     #[test]
