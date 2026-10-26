@@ -1,5 +1,6 @@
 use alloy_json_abi::{
-    Constructor, Error, EventParam, Fallback, Function, Param, Receive, StateMutability,
+    Constructor, Error, EventParam, Fallback, Function, InternalType, Param, Receive,
+    StateMutability,
 };
 use alloy_sol_types::{JsonAbiExt, sol};
 use pretty_assertions::assert_eq;
@@ -100,19 +101,19 @@ fn equal_abis() {
                     ty: "tuple".into(),
                     name: String::new(),
                     components: vec![param("uint256 custom")],
-                    internal_type: None,
+                    internal_type: internal_type("struct Contract.CustomStruct"),
                 },
                 Param {
                     ty: "tuple[]".into(),
                     name: String::new(),
                     components: vec![param("uint256 custom")],
-                    internal_type: None,
+                    internal_type: internal_type("struct Contract.CustomStruct[]"),
                 },
                 Param {
                     ty: "tuple[][2]".into(),
                     name: String::new(),
                     components: vec![param("uint256 custom")],
-                    internal_type: None,
+                    internal_type: internal_type("struct Contract.CustomStruct[][2]"),
                 },
             ],
             outputs: vec![],
@@ -123,7 +124,7 @@ fn equal_abis() {
         ty: "tuple".into(),
         name: "cs".into(),
         components: vec![param("uint256 custom")],
-        internal_type: None,
+        internal_type: internal_type("struct Contract.CustomStruct"),
     };
     assert_eq!(
         *contract.function("F22").unwrap().first().unwrap(),
@@ -134,19 +135,19 @@ fn equal_abis() {
                     ty: "tuple".into(),
                     name: String::new(),
                     components: vec![custom.clone(), param("bool cb")],
-                    internal_type: None,
+                    internal_type: internal_type("struct Contract.CustomStruct2"),
                 },
                 Param {
                     ty: "tuple[]".into(),
                     name: String::new(),
                     components: vec![custom.clone(), param("bool cb")],
-                    internal_type: None,
+                    internal_type: internal_type("struct Contract.CustomStruct2[]"),
                 },
                 Param {
                     ty: "tuple[][3]".into(),
                     name: String::new(),
                     components: vec![custom, param("bool cb")],
-                    internal_type: None,
+                    internal_type: internal_type("struct Contract.CustomStruct2[][3]"),
                 },
             ],
             outputs: vec![],
@@ -248,9 +249,10 @@ fn equal_abis() {
             assert_eq!(Contract::$items::abi(), not_contract::$items::abi());
         )*};
     }
+    // `F21Call` and `F22Call` differ only in the contract qualifier of their struct internal types.
     eq_modules!(
         EV00, EV01, EV02, EV10, EV11, EV12, ER0, ER1, ER2, F00Call, F01Call, F02Call, F10Call,
-        F11Call, F12Call, F20Call, F21Call, F22Call
+        F11Call, F12Call, F20Call
     );
 }
 
@@ -305,7 +307,7 @@ fn recursive() {
         ty: "tuple".into(),
         name: "chainInfo".into(),
         components: vec![param("uint256 forkId"), param("uint256 chainId")],
-        internal_type: None,
+        internal_type: internal_type("struct ChainInfo"),
     };
     let storage_accesses = Param {
         ty: "tuple[]".into(),
@@ -318,7 +320,7 @@ fn recursive() {
             param("bytes32 newValue"),
             param("bool reverted"),
         ],
-        internal_type: None,
+        internal_type: internal_type("struct StorageAccess[]"),
     };
     assert_eq!(
         stopAndReturnStateDiffCall::abi(),
@@ -330,7 +332,7 @@ fn recursive() {
                 name: "accesses".into(),
                 components: vec![
                     chain_info,
-                    param("uint8 kind"), // TODO: enum
+                    custom_param("uint8 kind", "enum AccountAccessKind"),
                     param("address account"),
                     param("address accessor"),
                     param("bool initialized"),
@@ -342,7 +344,7 @@ fn recursive() {
                     param("bool reverted"),
                     storage_accesses,
                 ],
-                internal_type: None,
+                internal_type: internal_type("struct AccountAccess[]"),
             }],
             state_mutability: StateMutability::NonPayable,
         }
@@ -390,23 +392,23 @@ fn custom() {
     let custom_struct = vec![
         param("uint256 custom"),
         param("uint256[] customArr"),
-        param("uint32 udvt"),
-        param("uint32[] udvtArr"),
-        param("uint8 e"),
-        param("uint8[] eArr"),
+        custom_param("uint32 udvt", "UDVT"),
+        custom_param("uint32[] udvtArr", "UDVT[]"),
+        custom_param("uint8 e", "enum Enum"),
+        custom_param("uint8[] eArr", "enum Enum[]"),
     ];
     let custom_struct2 = vec![
         Param {
             ty: "tuple".into(),
             name: "cs".into(),
             components: custom_struct.clone(),
-            internal_type: None,
+            internal_type: internal_type("struct CustomStruct"),
         },
         Param {
             ty: "tuple[]".into(),
             name: "csArr".into(),
             components: custom_struct.clone(),
-            internal_type: None,
+            internal_type: internal_type("struct CustomStruct[]"),
         },
     ];
     assert_eq!(
@@ -414,33 +416,33 @@ fn custom() {
         Function {
             name: "myFunc".into(),
             inputs: vec![
-                param("uint32 udvt"),
-                param("uint32[] udvtArr"),
-                param("uint8 e"),
-                param("uint8[] eArr"),
+                custom_param("uint32 udvt", "UDVT"),
+                custom_param("uint32[] udvtArr", "UDVT[]"),
+                custom_param("uint8 e", "enum Enum"),
+                custom_param("uint8[] eArr", "enum Enum[]"),
                 Param {
                     ty: "tuple".into(),
                     name: "cs".into(),
                     components: custom_struct.clone(),
-                    internal_type: None,
+                    internal_type: internal_type("struct CustomStruct"),
                 },
                 Param {
                     ty: "tuple[]".into(),
                     name: "csArr".into(),
                     components: custom_struct,
-                    internal_type: None,
+                    internal_type: internal_type("struct CustomStruct[]"),
                 },
                 Param {
                     ty: "tuple".into(),
                     name: "cs2".into(),
                     components: custom_struct2.clone(),
-                    internal_type: None,
+                    internal_type: internal_type("struct CustomStruct2"),
                 },
                 Param {
                     ty: "tuple[]".into(),
                     name: "cs2Arr".into(),
                     components: custom_struct2,
-                    internal_type: None,
+                    internal_type: internal_type("struct CustomStruct2[]"),
                 },
             ],
             outputs: vec![],
@@ -536,8 +538,22 @@ mod not_contract {
 }
 
 fn param(s: &str) -> Param {
+    let (ty, _) = s.split_once(' ').unwrap();
+    custom_param(s, ty)
+}
+
+fn custom_param(s: &str, internal: &str) -> Param {
     let (ty, name) = s.split_once(' ').unwrap();
-    Param { ty: ty.into(), name: name.into(), internal_type: None, components: vec![] }
+    Param {
+        ty: ty.into(),
+        name: name.into(),
+        internal_type: internal_type(internal),
+        components: vec![],
+    }
+}
+
+fn internal_type(s: &str) -> Option<InternalType> {
+    Some(InternalType::parse(s).unwrap())
 }
 
 fn eparam(s: &str, indexed: bool) -> EventParam {
@@ -545,7 +561,7 @@ fn eparam(s: &str, indexed: bool) -> EventParam {
     EventParam {
         ty: ty.into(),
         name: name.into(),
-        internal_type: None,
+        internal_type: internal_type(ty),
         components: vec![],
         indexed,
     }
@@ -631,98 +647,98 @@ fn contract_abi_matches_json() {
     let expected = serde_json::from_str::<alloy_json_abi::JsonAbi>(
         r#"[
         {"type":"constructor","stateMutability":"payable","inputs":[
-            {"name":"outer","type":"tuple","components":[
-                {"name":"inner","type":"tuple","components":[
-                    {"name":"x","type":"uint256"},
-                    {"name":"ids","type":"uint32[]"},
-                    {"name":"kind","type":"uint8"}]},
-                {"name":"inners","type":"tuple[]","components":[
-                    {"name":"x","type":"uint256"},
-                    {"name":"ids","type":"uint32[]"},
-                    {"name":"kind","type":"uint8"}]},
-                {"name":"pair","type":"tuple[2]","components":[
-                    {"name":"x","type":"uint256"},
-                    {"name":"ids","type":"uint32[]"},
-                    {"name":"kind","type":"uint8"}]},
-                {"name":"words","type":"bytes32[3]"}]}]},
+            {"name":"outer","type":"tuple","internalType":"struct Kitchen.Outer","components":[
+                {"name":"inner","type":"tuple","internalType":"struct Kitchen.Inner","components":[
+                    {"name":"x","type":"uint256","internalType":"uint256"},
+                    {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                    {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                {"name":"inners","type":"tuple[]","internalType":"struct Kitchen.Inner[]","components":[
+                    {"name":"x","type":"uint256","internalType":"uint256"},
+                    {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                    {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                {"name":"pair","type":"tuple[2]","internalType":"struct Kitchen.Inner[2]","components":[
+                    {"name":"x","type":"uint256","internalType":"uint256"},
+                    {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                    {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                {"name":"words","type":"bytes32[3]","internalType":"bytes32[3]"}]}]},
         {"type":"fallback","stateMutability":"payable"},
         {"type":"receive","stateMutability":"payable"},
         {"type":"event","name":"Ev","anonymous":true,"inputs":[
-            {"name":"outer","type":"tuple","indexed":false,"components":[
-                {"name":"inner","type":"tuple","components":[
-                    {"name":"x","type":"uint256"},
-                    {"name":"ids","type":"uint32[]"},
-                    {"name":"kind","type":"uint8"}]},
-                {"name":"inners","type":"tuple[]","components":[
-                    {"name":"x","type":"uint256"},
-                    {"name":"ids","type":"uint32[]"},
-                    {"name":"kind","type":"uint8"}]},
-                {"name":"pair","type":"tuple[2]","components":[
-                    {"name":"x","type":"uint256"},
-                    {"name":"ids","type":"uint32[]"},
-                    {"name":"kind","type":"uint8"}]},
-                {"name":"words","type":"bytes32[3]"}]},
-            {"name":"a","type":"uint256","indexed":true},
-            {"name":"id","type":"uint32","indexed":false},
-            {"name":"kinds","type":"uint8[2]","indexed":false}]},
+            {"name":"outer","type":"tuple","internalType":"struct Kitchen.Outer","indexed":false,"components":[
+                {"name":"inner","type":"tuple","internalType":"struct Kitchen.Inner","components":[
+                    {"name":"x","type":"uint256","internalType":"uint256"},
+                    {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                    {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                {"name":"inners","type":"tuple[]","internalType":"struct Kitchen.Inner[]","components":[
+                    {"name":"x","type":"uint256","internalType":"uint256"},
+                    {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                    {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                {"name":"pair","type":"tuple[2]","internalType":"struct Kitchen.Inner[2]","components":[
+                    {"name":"x","type":"uint256","internalType":"uint256"},
+                    {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                    {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                {"name":"words","type":"bytes32[3]","internalType":"bytes32[3]"}]},
+            {"name":"a","type":"uint256","internalType":"uint256","indexed":true},
+            {"name":"id","type":"uint32","internalType":"Kitchen.Id","indexed":false},
+            {"name":"kinds","type":"uint8[2]","internalType":"enum Kitchen.Kind[2]","indexed":false}]},
         {"type":"event","name":"Ev","anonymous":false,"inputs":[
-            {"name":"topic","type":"bytes32","indexed":true}]},
+            {"name":"topic","type":"bytes32","internalType":"bytes32","indexed":true}]},
         {"type":"error","name":"Err","inputs":[
-            {"name":"inners","type":"tuple[]","components":[
-                {"name":"x","type":"uint256"},
-                {"name":"ids","type":"uint32[]"},
-                {"name":"kind","type":"uint8"}]},
-            {"name":"grid","type":"uint8[2][]"}]},
+            {"name":"inners","type":"tuple[]","internalType":"struct Kitchen.Inner[]","components":[
+                {"name":"x","type":"uint256","internalType":"uint256"},
+                {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+            {"name":"grid","type":"uint8[2][]","internalType":"uint8[2][]"}]},
         {"type":"function","name":"pureFn","stateMutability":"pure",
-            "inputs":[{"name":"id","type":"uint32"}],
-            "outputs":[{"name":"kind","type":"uint8"}]},
+            "inputs":[{"name":"id","type":"uint32","internalType":"Kitchen.Id"}],
+            "outputs":[{"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
         {"type":"function","name":"viewFn","stateMutability":"view",
             "inputs":[
-                {"name":"outers","type":"tuple[]","components":[
-                    {"name":"inner","type":"tuple","components":[
-                        {"name":"x","type":"uint256"},
-                        {"name":"ids","type":"uint32[]"},
-                        {"name":"kind","type":"uint8"}]},
-                    {"name":"inners","type":"tuple[]","components":[
-                        {"name":"x","type":"uint256"},
-                        {"name":"ids","type":"uint32[]"},
-                        {"name":"kind","type":"uint8"}]},
-                    {"name":"pair","type":"tuple[2]","components":[
-                        {"name":"x","type":"uint256"},
-                        {"name":"ids","type":"uint32[]"},
-                        {"name":"kind","type":"uint8"}]},
-                    {"name":"words","type":"bytes32[3]"}]},
-                {"name":"pairs","type":"tuple[2][]","components":[
-                    {"name":"x","type":"uint256"},
-                    {"name":"ids","type":"uint32[]"},
-                    {"name":"kind","type":"uint8"}]}],
+                {"name":"outers","type":"tuple[]","internalType":"struct Kitchen.Outer[]","components":[
+                    {"name":"inner","type":"tuple","internalType":"struct Kitchen.Inner","components":[
+                        {"name":"x","type":"uint256","internalType":"uint256"},
+                        {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                        {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                    {"name":"inners","type":"tuple[]","internalType":"struct Kitchen.Inner[]","components":[
+                        {"name":"x","type":"uint256","internalType":"uint256"},
+                        {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                        {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                    {"name":"pair","type":"tuple[2]","internalType":"struct Kitchen.Inner[2]","components":[
+                        {"name":"x","type":"uint256","internalType":"uint256"},
+                        {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                        {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                    {"name":"words","type":"bytes32[3]","internalType":"bytes32[3]"}]},
+                {"name":"pairs","type":"tuple[2][]","internalType":"struct Kitchen.Inner[2][]","components":[
+                    {"name":"x","type":"uint256","internalType":"uint256"},
+                    {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                    {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]}],
             "outputs":[
-                {"name":"inners","type":"tuple[]","components":[
-                    {"name":"x","type":"uint256"},
-                    {"name":"ids","type":"uint32[]"},
-                    {"name":"kind","type":"uint8"}]},
-                {"name":"","type":"bool"}]},
+                {"name":"inners","type":"tuple[]","internalType":"struct Kitchen.Inner[]","components":[
+                    {"name":"x","type":"uint256","internalType":"uint256"},
+                    {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                    {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                {"name":"","type":"bool","internalType":"bool"}]},
         {"type":"function","name":"payableFn","stateMutability":"payable",
             "inputs":[
-                {"name":"","type":"address"},
-                {"name":"words","type":"bytes32[3][]"}],
+                {"name":"","type":"address","internalType":"address"},
+                {"name":"words","type":"bytes32[3][]","internalType":"bytes32[3][]"}],
             "outputs":[
-                {"name":"outer","type":"tuple","components":[
-                    {"name":"inner","type":"tuple","components":[
-                        {"name":"x","type":"uint256"},
-                        {"name":"ids","type":"uint32[]"},
-                        {"name":"kind","type":"uint8"}]},
-                    {"name":"inners","type":"tuple[]","components":[
-                        {"name":"x","type":"uint256"},
-                        {"name":"ids","type":"uint32[]"},
-                        {"name":"kind","type":"uint8"}]},
-                    {"name":"pair","type":"tuple[2]","components":[
-                        {"name":"x","type":"uint256"},
-                        {"name":"ids","type":"uint32[]"},
-                        {"name":"kind","type":"uint8"}]},
-                    {"name":"words","type":"bytes32[3]"}]}]},
+                {"name":"outer","type":"tuple","internalType":"struct Kitchen.Outer","components":[
+                    {"name":"inner","type":"tuple","internalType":"struct Kitchen.Inner","components":[
+                        {"name":"x","type":"uint256","internalType":"uint256"},
+                        {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                        {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                    {"name":"inners","type":"tuple[]","internalType":"struct Kitchen.Inner[]","components":[
+                        {"name":"x","type":"uint256","internalType":"uint256"},
+                        {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                        {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                    {"name":"pair","type":"tuple[2]","internalType":"struct Kitchen.Inner[2]","components":[
+                        {"name":"x","type":"uint256","internalType":"uint256"},
+                        {"name":"ids","type":"uint32[]","internalType":"Kitchen.Id[]"},
+                        {"name":"kind","type":"uint8","internalType":"enum Kitchen.Kind"}]},
+                    {"name":"words","type":"bytes32[3]","internalType":"bytes32[3]"}]}]},
         {"type":"function","name":"plainFn","stateMutability":"nonpayable",
-            "inputs":[{"name":"kinds","type":"uint8[][2]"}],"outputs":[]},
+            "inputs":[{"name":"kinds","type":"uint8[][2]","internalType":"enum Kitchen.Kind[][2]"}],"outputs":[]},
         {"type":"function","name":"plainFn","stateMutability":"nonpayable",
             "inputs":[],"outputs":[]}
         ]"#,
@@ -730,4 +746,77 @@ fn contract_abi_matches_json() {
     .unwrap();
 
     assert_eq!(Kitchen::abi::contract(), expected);
+}
+
+#[test]
+fn internal_types() {
+    // This has to be in a module (not a function) because of Rust import rules.
+    mod nested {
+        alloy_sol_types::sol! {
+            #![sol(abi)]
+
+            type Price is int128;
+            enum Side { Buy, Sell }
+            interface IToken {}
+
+            contract Book {
+                struct Level { Price price; Entry[] entries; }
+                struct Entry { address payable maker; IToken token; }
+            }
+
+            struct Order { Side side; Book.Level[2] levels; }
+
+            contract Exchange {
+                function fill(Order order, Book.Level level, IToken[] tokens, address payable to) returns (Side);
+            }
+        }
+    }
+    use nested::Exchange;
+
+    let level = r#"
+        {"name":"price","type":"int128","internalType":"Price"},
+        {"name":"entries","type":"tuple[]","internalType":"struct Book.Entry[]","components":[
+            {"name":"maker","type":"address","internalType":"address payable"},
+            {"name":"token","type":"address","internalType":"contract IToken"}]}"#;
+    let expected = serde_json::from_str::<Function>(&format!(
+        r#"{{"type":"function","name":"fill","stateMutability":"nonpayable",
+        "inputs":[
+            {{"name":"order","type":"tuple","internalType":"struct Order","components":[
+                {{"name":"side","type":"uint8","internalType":"enum Side"}},
+                {{"name":"levels","type":"tuple[2]","internalType":"struct Book.Level[2]","components":[{level}]}}]}},
+            {{"name":"level","type":"tuple","internalType":"struct Book.Level","components":[{level}]}},
+            {{"name":"tokens","type":"address[]","internalType":"contract IToken[]"}},
+            {{"name":"to","type":"address","internalType":"address payable"}}],
+        "outputs":[{{"name":"","type":"uint8","internalType":"enum Side"}}]}}"#
+    ))
+    .unwrap();
+
+    assert_eq!(Exchange::fillCall::abi(), expected);
+}
+
+#[test]
+fn internal_type_shadowed_struct() {
+    // This has to be in a module (not a function) because of Rust import rules.
+    mod nested {
+        alloy_sol_types::sol! {
+            #![sol(abi)]
+
+            event Foo(uint256 x);
+
+            contract C {
+                struct Foo { uint256 a; }
+                function f(Foo s);
+            }
+        }
+    }
+
+    assert_eq!(
+        nested::C::fCall::abi().inputs,
+        [Param {
+            ty: "tuple".into(),
+            name: "s".into(),
+            components: vec![param("uint256 a")],
+            internal_type: internal_type("struct C.Foo"),
+        }]
+    );
 }
