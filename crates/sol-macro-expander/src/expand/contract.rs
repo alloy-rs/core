@@ -813,6 +813,14 @@ impl CallLikeExpander<'_> {
                             <#types as alloy_sol_types::#trait_>::abi_encode_raw(inner, out),
                     )*}
                 }
+
+                #[inline]
+                fn abi_encode(&self) -> alloy_sol_types::private::Vec<u8> {
+                    match self {#(
+                        Self::#variants(inner) =>
+                            <#types as alloy_sol_types::#trait_>::abi_encode(inner),
+                    )*}
+                }
             }
         }
     }
