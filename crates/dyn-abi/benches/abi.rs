@@ -1,7 +1,7 @@
 #![allow(unknown_lints, clippy::incompatible_msrv, missing_docs)]
 
 use alloy_dyn_abi::{DynSolType, DynSolValue};
-use alloy_primitives::{U256, Uint, hex};
+use alloy_primitives::{Address, B256, U256, Uint, hex};
 use alloy_sol_types::{SolType, SolValue, sol, sol_data};
 use criterion::{
     BenchmarkGroup, Criterion, criterion_group, criterion_main, measurement::WallTime,
@@ -82,6 +82,12 @@ fn dyn_abi_decode(c: &mut Criterion) {
         let ty = DynSolType::String;
         let input = decode_dynamic_input();
         b.iter(|| ty.abi_decode(black_box(&input)).unwrap());
+    });
+
+    g.bench_function("complex", |b| {
+        let ty = decode_complex_type();
+        let input = decode_complex_input();
+        b.iter(|| ty.abi_decode_sequence(black_box(&input)).unwrap());
     });
 
     g.finish();
@@ -194,6 +200,90 @@ fn decode_dynamic_input() -> Vec<u8> {
         "48656c6c6f20576f726c64210000000000000000000000000000000000000000"
     )
     .to_vec()
+}
+
+/// Seaport's `fulfillAdvancedOrder` arguments.
+fn decode_complex_type() -> DynSolType {
+    DynSolType::parse(
+        "(\
+            (\
+                (\
+                    address,address,\
+                    (uint8,address,uint256,uint256,uint256)[],\
+                    (uint8,address,uint256,uint256,uint256,address)[],\
+                    uint8,uint256,uint256,bytes32,uint256,bytes32,uint256\
+                ),\
+                uint120,uint120,bytes,bytes\
+            ),\
+            (uint256,uint8,uint256,uint256,bytes32[])[],\
+            bytes32,address\
+        )",
+    )
+    .unwrap()
+}
+
+fn decode_complex_input() -> Vec<u8> {
+    let uint = |value: u64| DynSolValue::Uint(U256::from(value), 256);
+    let word = |byte| DynSolValue::FixedBytes(B256::repeat_byte(byte), 32);
+    let address = |byte| DynSolValue::Address(Address::repeat_byte(byte));
+    let tuple = DynSolValue::Tuple;
+    let offer_item = || {
+        tuple(vec![
+            DynSolValue::Uint(U256::from(2), 8),
+            address(0x11),
+            uint(1234),
+            uint(1),
+            uint(1),
+        ])
+    };
+    let consideration_item = |recipient| {
+        tuple(vec![
+            DynSolValue::Uint(U256::ZERO, 8),
+            address(0),
+            uint(0),
+            uint(1_000_000_000_000_000_000),
+            uint(1_000_000_000_000_000_000),
+            address(recipient),
+        ])
+    };
+    let parameters = tuple(vec![
+        address(0x22),
+        address(0x33),
+        DynSolValue::Array(vec![offer_item(), offer_item()]),
+        DynSolValue::Array(vec![
+            consideration_item(0x44),
+            consideration_item(0x55),
+            consideration_item(0x66),
+        ]),
+        DynSolValue::Uint(U256::ZERO, 8),
+        uint(1685523099),
+        uint(1688115099),
+        word(0x77),
+        uint(0xdeadbeef),
+        word(0x88),
+        uint(3),
+    ]);
+    let order = tuple(vec![
+        parameters,
+        DynSolValue::Uint(U256::from(1), 120),
+        DynSolValue::Uint(U256::from(1), 120),
+        DynSolValue::Bytes(vec![0xaa; 65]),
+        DynSolValue::Bytes(vec![0xbb; 8]),
+    ]);
+    let resolver = |side, criteria_proof| {
+        tuple(vec![
+            uint(0),
+            DynSolValue::Uint(U256::from(side), 8),
+            uint(7),
+            uint(8),
+            DynSolValue::Array(criteria_proof),
+        ])
+    };
+    let resolvers = DynSolValue::Array(vec![
+        resolver(1, vec![word(0x99); 4]),
+        resolver(0, vec![word(0xcc); 2]),
+    ]);
+    tuple(vec![order, resolvers, word(0xdd), address(0xee)]).abi_encode_params()
 }
 
 fn group<'a>(c: &'a mut Criterion, group_name: &str) -> BenchmarkGroup<'a, WallTime> {

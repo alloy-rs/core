@@ -301,7 +301,7 @@ impl<T: ?Sized + AsRef<[u8]>> SolTypeValue<Bytes> for T {
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        keccak256(Bytes::abi_encode_packed(self))
+        keccak256(self.as_ref())
     }
 
     #[inline]
@@ -351,7 +351,7 @@ impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        keccak256(String::abi_encode_packed(self))
+        keccak256(self.as_ref())
     }
 
     #[inline]
@@ -412,7 +412,7 @@ where
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        let mut encoded = Vec::new();
+        let mut encoded = Vec::with_capacity(self.len() * 32);
         for item in self {
             encoded.extend_from_slice(T::stv_eip712_data_word(item).as_slice());
         }

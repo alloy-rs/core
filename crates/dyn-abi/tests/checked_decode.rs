@@ -51,3 +51,20 @@ fn decode_mutated_arguments() {
         function.abi_decode_input_with_config(&data, AbiDecoderConfig::new().strict(true)).is_err()
     );
 }
+
+#[test]
+fn malformed_data_wins_over_invalid_words() {
+    let function = Function::parse("f((bool,bytes))").unwrap();
+    let mut data = vec![0u8; 4 * 32];
+    // The tuple's offset, a non-canonical bool, then a `bytes` length that overruns the data.
+    data[31] = 0x20;
+    data[63] = 2;
+    data[95] = 0x40;
+    data[127] = 100;
+
+    let config = AbiDecoderConfig::new().validate_words(true);
+    assert_eq!(
+        function.abi_decode_input_with_config(&data, config).unwrap_err(),
+        alloy_sol_types::Error::Overrun.into()
+    );
+}

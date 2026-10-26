@@ -1,6 +1,7 @@
-use super::ExpCtxt;
-use alloy_json_abi::{Error, Event, EventParam, Function, Param, StateMutability};
-use ast::{ItemError, ItemEvent, ItemFunction};
+use super::{ExpCtxt, ty::TypePrinter};
+use alloy_json_abi::{Error, Event, EventParam, Function, InternalType, Param, StateMutability};
+use ast::{ItemError, ItemEvent, ItemFunction, SolIdent, Spanned};
+use proc_macro_error3::abort;
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::fmt::Write;
@@ -51,13 +52,14 @@ impl StaticAbi for Event {
         let Self { name, inputs, anonymous } = self;
         let inputs = inputs.iter().map(|p| {
             let EventParam { ty, name, indexed, components, internal_type } = p;
-            debug_assert!(internal_type.is_none());
+            let internal_type = internal_type_tokens(internal_type.as_ref());
             let components = params_tokens(components, alloy_sol_types);
             quote! {
                 #alloy_sol_types::private::StaticEventParam {
                     ty: #ty,
                     name: #name,
                     indexed: #indexed,
+                    internal_type: #internal_type,
                     components: #components,
                 }
             }
@@ -75,13 +77,28 @@ impl StaticAbi for Event {
 fn params_tokens(params: &[Param], alloy_sol_types: &syn::Path) -> TokenStream {
     let params = params.iter().map(|p| {
         let Param { ty, name, components, internal_type } = p;
-        debug_assert!(internal_type.is_none());
+        let internal_type = internal_type_tokens(internal_type.as_ref());
         let components = params_tokens(components, alloy_sol_types);
         quote! {
-            #alloy_sol_types::private::StaticParam { ty: #ty, name: #name, components: #components }
+            #alloy_sol_types::private::StaticParam {
+                ty: #ty,
+                name: #name,
+                internal_type: #internal_type,
+                components: #components,
+            }
         }
     });
     quote!(&[#(#params),*])
+}
+
+fn internal_type_tokens(internal_type: Option<&InternalType>) -> TokenStream {
+    match internal_type {
+        Some(internal_type) => {
+            let internal_type = internal_type.to_string();
+            quote!(::core::option::Option::Some(#internal_type))
+        }
+        None => quote!(::core::option::Option::None),
+    }
 }
 
 fn mutability_tokens(m: StateMutability, alloy_sol_types: &syn::Path) -> TokenStream {
@@ -145,7 +162,8 @@ impl ToAbi for ast::VariableDeclaration {
     type DynAbi = Param;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
-        ty_to_param(self.name.as_ref().map(ast::SolIdent::as_string), &self.ty, cx)
+        let name = self.name.as_ref().map(SolIdent::as_string);
+        ty_to_param(name, &self.ty, &cx.current_namespace, cx)
     }
 }
 
@@ -153,8 +171,9 @@ impl ToAbi for ast::EventParameter {
     type DynAbi = EventParam;
 
     fn to_dyn_abi(&self, cx: &ExpCtxt<'_>) -> Self::DynAbi {
-        let name = self.name.as_ref().map(ast::SolIdent::as_string);
-        let Param { ty, name, components, internal_type } = ty_to_param(name, &self.ty, cx);
+        let name = self.name.as_ref().map(SolIdent::as_string);
+        let Param { ty, name, components, internal_type } =
+            ty_to_param(name, &self.ty, &cx.current_namespace, cx);
         EventParam { ty, name, indexed: self.is_indexed(), internal_type, components }
     }
 }
@@ -172,57 +191,77 @@ impl ToAbi for ast::FunctionAttributes {
     }
 }
 
-fn ty_to_param(name: Option<String>, ty: &ast::Type, cx: &ExpCtxt<'_>) -> Param {
-    let mut ty_name = ty_abi_string(ty, cx);
-
-    // HACK: `cx.custom_type` resolves the custom type recursively, so in recursive structs the
-    // peeled `ty` will be `Tuple` rather than `Custom`.
-    if ty_name.starts_with('(') {
-        let paren_i = ty_name.rfind(')').expect("malformed tuple type");
-        let suffix = &ty_name[paren_i + 1..];
-        ty_name = format!("tuple{suffix}");
-    }
-
-    let resolved = match ty.peel_arrays() {
-        ast::Type::Custom(custom_name) => {
-            if let ast::Item::Struct(s) = cx.item(custom_name) {
-                return Param {
-                    ty: ty_name,
-                    name: name.unwrap_or_default(),
-                    internal_type: None,
-                    components: s.fields.to_dyn_abi(cx),
-                };
-            }
-            cx.custom_type(custom_name)
-        }
-        ty => ty,
-    };
-
-    let components = if let ast::Type::Tuple(tuple) = resolved {
-        tuple.types.iter().map(|ty| ty_to_param(None, ty, cx)).collect()
-    } else {
-        vec![]
-    };
-
-    // TODO: internal_type
-    let internal_type = None;
-
-    Param { ty: ty_name, name: name.unwrap_or_default(), internal_type, components }
-}
-
-fn ty_abi_string(ty: &ast::Type, cx: &ExpCtxt<'_>) -> String {
+/// Converts a type to a parameter, resolving custom types in `namespace`.
+fn ty_to_param(
+    name: Option<String>,
+    ty: &ast::Type,
+    namespace: &Option<SolIdent>,
+    cx: &ExpCtxt<'_>,
+) -> Param {
     let mut suffix = String::new();
     rec_ty_abi_string_suffix(cx, ty, &mut suffix);
 
-    let mut ty = ty.peel_arrays();
-    if let ast::Type::Custom(name) = ty {
-        match cx.try_custom_type(name) {
-            Some(ast::Type::Tuple(_)) => return format!("tuple{suffix}"),
-            Some(custom) => ty = custom,
-            None => {}
+    let mut components = vec![];
+    let (ty, internal_type) = match ty.peel_arrays() {
+        ast::Type::Custom(path) => {
+            let Some((item_namespace, resolved)) = cx.custom_types.resolve_entry(path, namespace)
+            else {
+                abort!(path.span(), "unresolved custom type: {}", path);
+            };
+            let (_, item) =
+                cx.all_items.get_entry_by_name_and_namespace(item_namespace, path.last()).unwrap();
+            // Canonical names of types declared in a contract are qualified by the contract name.
+            let mut canonical = path.last().as_string();
+            if let Some(contract) = item_namespace {
+                canonical = format!("{}.{canonical}", contract.as_string());
+            }
+            let (ty, internal_type) = match item {
+                ast::Item::Struct(strukt) => {
+                    components = strukt
+                        .fields
+                        .iter()
+                        .map(|field| {
+                            let name = field.name.as_ref().map(SolIdent::as_string);
+                            ty_to_param(name, &field.ty, item_namespace, cx)
+                        })
+                        .collect();
+                    ("tuple".into(), format!("struct {canonical}"))
+                }
+                item => {
+                    let kind = match item {
+                        ast::Item::Contract(_) => "contract ",
+                        ast::Item::Enum(_) => "enum ",
+                        _ => "",
+                    };
+                    (TypePrinter::new(cx, resolved).to_string(), format!("{kind}{canonical}"))
+                }
+            };
+            (ty, Some(internal_type))
         }
+        ast::Type::Tuple(tuple) => {
+            components =
+                tuple.types.iter().map(|ty| ty_to_param(None, ty, namespace, cx)).collect();
+            ("tuple".into(), None)
+        }
+        ty => {
+            let abi_ty = TypePrinter::new(cx, ty).to_string();
+            let internal_type = match ty {
+                ast::Type::Address(_, Some(_)) => Some("address payable".into()),
+                ast::Type::Function(_) => None,
+                _ => Some(abi_ty.clone()),
+            };
+            (abi_ty, internal_type)
+        }
+    };
+
+    Param {
+        ty: format!("{ty}{suffix}"),
+        name: name.unwrap_or_default(),
+        internal_type: internal_type
+            .filter(|_| !cx.from_json)
+            .and_then(|ty| InternalType::parse(&format!("{ty}{suffix}"))),
+        components,
     }
-    format!("{}{suffix}", super::ty::TypePrinter::new(cx, ty))
 }
 
 fn rec_ty_abi_string_suffix(cx: &ExpCtxt<'_>, ty: &ast::Type, s: &mut String) {
