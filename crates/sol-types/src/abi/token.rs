@@ -370,7 +370,9 @@ impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
 
     #[inline]
     fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
-        dec.set_strict_head_words(T::MINIMUM_WORDS.checked_mul(N).ok_or(crate::Error::Overrun)?)?;
+        dec.set_strict_head_words(
+            T::MINIMUM_WORDS.checked_mul(N).ok_or_else(|| crate::Error::Overrun)?,
+        )?;
         let mut arr = crate::impl_core::uninit_array::<T, N>();
         // SAFETY: `arr` is valid writable memory for `N` elements.
         // `decode_many_from` initializes all elements on success.
@@ -452,7 +454,8 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         // specifies that offsets are relative to the first word of
         // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
-        let required_words = T::MINIMUM_WORDS.checked_mul(len).ok_or(crate::Error::Overrun)?;
+        let required_words =
+            T::MINIMUM_WORDS.checked_mul(len).ok_or_else(|| crate::Error::Overrun)?;
         let mut child = child.raw_child()?;
         child.set_strict_head_words(required_words)?;
         if required_words > child.remaining_words() {
@@ -703,7 +706,7 @@ macro_rules! tuple_impls {
             fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
                 let head_words = 0usize $(
                     .checked_add(<$ty as Token>::MINIMUM_WORDS)
-                    .ok_or(crate::Error::Overrun)?
+                    .ok_or_else(|| crate::Error::Overrun)?
                 )+;
                 dec.set_strict_head_words(head_words)?;
                 Ok(($(

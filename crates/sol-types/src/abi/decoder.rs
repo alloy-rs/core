@@ -395,8 +395,8 @@ impl<'de, 'state> Decoder<'de, 'state> {
     #[inline]
     pub fn set_strict_head_words(&self, words: usize) -> Result<()> {
         if self.config.get_strict() {
-            let bytes = words.checked_mul(Word::len_bytes()).ok_or(Error::Overrun)?;
-            let offset = self.offset.checked_add(bytes).ok_or(Error::Overrun)?;
+            let bytes = words.checked_mul(Word::len_bytes()).ok_or_else(|| Error::Overrun)?;
+            let offset = self.offset.checked_add(bytes).ok_or_else(|| Error::Overrun)?;
             let next = self.state.strict_next_offset();
             next.set(next.get().max(offset));
         }
@@ -474,7 +474,7 @@ impl<'de, 'state> Decoder<'de, 'state> {
             .memory_used()
             .get()
             .checked_add(bytes)
-            .ok_or(Error::MemoryLimitExceeded(memory_limit))?;
+            .ok_or_else(|| Error::MemoryLimitExceeded(memory_limit))?;
         if used > memory_limit {
             return Err(Error::MemoryLimitExceeded(memory_limit));
         }
@@ -487,7 +487,7 @@ impl<'de, 'state> Decoder<'de, 'state> {
     pub fn reserve_elements<T>(&mut self, len: usize) -> Result<()> {
         let bytes = len
             .checked_mul(mem::size_of::<T>())
-            .ok_or(Error::MemoryLimitExceeded(self.config.get_memory_limit()))?;
+            .ok_or_else(|| Error::MemoryLimitExceeded(self.config.get_memory_limit()))?;
         self.reserve(bytes)
     }
 
@@ -500,14 +500,14 @@ impl<'de, 'state> Decoder<'de, 'state> {
     /// Peek into the buffer.
     #[inline]
     pub fn peek<I: SliceIndex<[u8]>>(&self, index: I) -> Result<&'de I::Output, Error> {
-        self.buf.get(index).ok_or(Error::Overrun)
+        self.buf.get(index).ok_or_else(|| Error::Overrun)
     }
 
     /// Peek a slice of size `len` from the buffer at a specific offset, without
     /// advancing the offset.
     #[inline]
     pub fn peek_len_at(&self, offset: usize, len: usize) -> Result<&'de [u8], Error> {
-        let end = offset.checked_add(len).ok_or(Error::Overrun)?;
+        let end = offset.checked_add(len).ok_or_else(|| Error::Overrun)?;
         self.peek(offset..end)
     }
 
