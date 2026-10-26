@@ -3,7 +3,7 @@ use alloc::{borrow::Cow, boxed::Box};
 
 /// A dynamic token.
 ///
-/// Equivalent to an enum over all types implementing [`Token`].
+/// Equivalent to an enum over all types implementing [`Token`](alloy_sol_types::abi::token::Token).
 // NOTE: do not derive `Hash` for this type. The derived version is not
 // compatible with the current `PartialEq` implementation. If manually
 // implementing `Hash`, ignore the `template` prop in the `DynSeq` variant
