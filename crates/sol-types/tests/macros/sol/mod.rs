@@ -281,22 +281,6 @@ fn encode_appends_to_buffer() {
     assert_eq!(out[..5], [0xaa; 5]);
     assert_eq!(out[5..], encoded[4..]);
 
-    sol! {
-        interface I {
-            function g(address[] a, bytes b);
-            error F(string s);
-        }
-    }
-    let calls =
-        I::ICalls::g(I::gCall { a: vec![Address::repeat_byte(1); 3], b: vec![7; 40].into() });
-    let mut expected = calls.selector().to_vec();
-    calls.abi_encode_raw(&mut expected);
-    assert_eq!(calls.abi_encode(), expected);
-    let errors = I::IErrors::F(I::F { s: "hello".into() });
-    let mut expected = errors.selector().to_vec();
-    errors.abi_encode_raw(&mut expected);
-    assert_eq!(errors.abi_encode(), expected);
-
     let event = V { i: U256::from(1), b: vec![7; 40].into() };
     let data = <(alloy_sol_types::sol_data::Bytes,)>::abi_encode_sequence(&(event.b.clone(),));
     assert_eq!(event.encode_data(), data);
@@ -304,6 +288,29 @@ fn encode_appends_to_buffer() {
     event.encode_data_to(&mut out);
     assert_eq!(out[..5], [0xaa; 5]);
     assert_eq!(out[5..], data);
+}
+
+#[test]
+fn interface_abi_encode_is_selector_and_raw() {
+    sol! {
+        interface I {
+            function g(address[] a, bytes b);
+            function h(uint256 x);
+            error F(string s);
+            error G(uint256 x);
+        }
+    }
+
+    fn check(interface: &impl SolInterface) {
+        let mut expected = interface.selector().to_vec();
+        interface.abi_encode_raw(&mut expected);
+        assert_eq!(interface.abi_encode(), expected);
+    }
+
+    check(&I::ICalls::g(I::gCall { a: vec![Address::repeat_byte(1); 3], b: vec![7; 40].into() }));
+    check(&I::ICalls::h(I::hCall { x: U256::from(1) }));
+    check(&I::IErrors::F(I::F { s: "hello".into() }));
+    check(&I::IErrors::G(I::G { x: U256::from(1) }));
 }
 
 #[test]
