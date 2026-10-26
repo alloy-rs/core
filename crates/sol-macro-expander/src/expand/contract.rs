@@ -799,21 +799,6 @@ impl CallLikeExpander<'_> {
                 }
 
                 #[inline]
-                #[allow(non_snake_case)]
-                // TODO: Deprecate in favor of a validating decoder configuration.
-                // #[deprecated(note = "use a validating decoder configuration")]
-                fn abi_decode_raw_validate(
-                    selector: [u8; 4],
-                    data: &[u8],
-                ) -> alloy_sol_types::Result<Self> {
-                    Self::abi_decode_raw_with_config(
-                        selector,
-                        data,
-                        alloy_sol_types::abi::AbiDecoderConfig::new().validate(true),
-                    )
-                }
-
-                #[inline]
                 fn abi_encoded_size(&self) -> usize {
                     match self {#(
                         Self::#variants(inner) =>
