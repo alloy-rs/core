@@ -1,9 +1,17 @@
-use crate::{EventParam, StateMutability, param::Param, serde_state_mutability_compat, utils::*};
+use crate::{
+    EventParam, StateMutability,
+    param::{Param, ParamInner},
+    serde_state_mutability_compat,
+    utils::*,
+};
 use alloc::{borrow::Cow, string::String, vec::Vec};
 use alloy_primitives::{B256, Selector, keccak256};
-use core::str::FromStr;
+use core::{fmt, str::FromStr};
 use parser::utils::ParsedSignature;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{
+    Deserialize, Deserializer, Serialize, Serializer,
+    de::{self, IgnoredAny, MapAccess, SeqAccess, Unexpected, Visitor},
+};
 
 /// Declares all JSON ABI items.
 macro_rules! abi_items {
@@ -16,12 +24,21 @@ macro_rules! abi_items {
     )*) => {
         $(
             $(#[$attr])*
-            #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+            #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
             #[serde(rename = $name_lower, rename_all = "camelCase", tag = "type")]
             $vis struct $name {$(
                 $(#[$fattr])*
                 $fvis $field: $type,
             )*}
+
+            impl<'de> Deserialize<'de> for $name {
+                fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+                    match deserialize_item(deserializer, Some(Kind::$name))? {
+                        AbiItem::$name(item) => Ok(item.into_owned()),
+                        _ => unreachable!("`ItemVisitor` returns the requested kind"),
+                    }
+                }
+            }
 
             impl From<$name> for AbiItem<'_> {
                 #[inline]
@@ -38,17 +55,22 @@ macro_rules! abi_items {
             }
         )*
 
-        // Note: `AbiItem` **must not** derive `Serialize`, since we use `tag`
-        // only for deserialization, while we treat it as `untagged` for serialization.
-        // This is because the individual item structs are already tagged, and
-        // deriving `Serialize` would emit the tag field twice.
+        // Note: `AbiItem` **must not** derive `Serialize`, since we treat it as `untagged` for
+        // serialization. The individual item structs are already tagged, and deriving
+        // `Serialize` would emit the tag field twice.
 
         /// A JSON ABI item.
-        #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize)]
-        #[serde(tag = "type", rename_all = "camelCase")]
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
         pub enum AbiItem<'a> {$(
             #[doc = concat!("A JSON ABI [`", stringify!($name), "`].")]
             $name(Cow<'a, $name>),
+        )*}
+
+        /// The `type` of a JSON ABI item.
+        #[derive(Clone, Copy, PartialEq, Eq, Deserialize)]
+        #[serde(variant_identifier, rename_all = "lowercase")]
+        enum Kind {$(
+            $name,
         )*}
 
         impl Serialize for AbiItem<'_> {
@@ -86,7 +108,7 @@ abi_items! {
         /// The input types of the constructor. May be empty.
         pub inputs: Vec<Param>,
         /// The state mutability of the constructor.
-        #[serde(default, flatten, with = "serde_state_mutability_compat")]
+        #[serde(flatten, with = "serde_state_mutability_compat")]
         pub state_mutability: StateMutability,
     }
 
@@ -94,7 +116,7 @@ abi_items! {
     #[derive(Copy)]
     pub struct Fallback: "fallback" {
         /// The state mutability of the fallback function.
-        #[serde(default, flatten, with = "serde_state_mutability_compat")]
+        #[serde(flatten, with = "serde_state_mutability_compat")]
         pub state_mutability: StateMutability,
     }
 
@@ -102,28 +124,26 @@ abi_items! {
     #[derive(Copy)]
     pub struct Receive: "receive" {
         /// The state mutability of the receive function.
-        #[serde(default, flatten, with = "serde_state_mutability_compat")]
+        #[serde(flatten, with = "serde_state_mutability_compat")]
         pub state_mutability: StateMutability,
     }
 
     /// A JSON ABI function.
     pub struct Function: "function" {
         /// The name of the function.
-        #[serde(deserialize_with = "validated_identifier")]
         pub name: String,
         /// The input types of the function. May be empty.
         pub inputs: Vec<Param>,
         /// The output types of the function. May be empty.
         pub outputs: Vec<Param>,
         /// The state mutability of the function.
-        #[serde(default, flatten, with = "serde_state_mutability_compat")]
+        #[serde(flatten, with = "serde_state_mutability_compat")]
         pub state_mutability: StateMutability,
     }
 
     /// A JSON ABI event.
     pub struct Event: "event" {
         /// The name of the event.
-        #[serde(deserialize_with = "validated_identifier")]
         pub name: String,
         /// A list of the event's inputs, in order.
         pub inputs: Vec<EventParam>,
@@ -136,18 +156,10 @@ abi_items! {
     /// A JSON ABI error.
     pub struct Error: "error" {
         /// The name of the error.
-        #[serde(deserialize_with = "validated_identifier")]
         pub name: String,
         /// A list of the error's components, in order.
         pub inputs: Vec<Param>,
     }
-}
-
-#[inline]
-fn validated_identifier<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
-    let s = String::deserialize(deserializer)?;
-    validate_identifier(&s)?;
-    Ok(s)
 }
 
 impl FromStr for AbiItem<'_> {
@@ -625,6 +637,248 @@ impl Event {
     #[inline]
     pub fn num_topics(&self) -> usize {
         !self.anonymous as usize + self.inputs.iter().filter(|input| input.indexed).count()
+    }
+}
+
+impl<'de> Deserialize<'de> for AbiItem<'_> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserialize_item(deserializer, None)
+    }
+}
+
+/// Deserializes an item of the given kind, or of the kind given by its `type` field.
+///
+/// Events and errors also accept their fields as a sequence, in declaration order.
+fn deserialize_item<'de, D: Deserializer<'de>>(
+    deserializer: D,
+    kind: Option<Kind>,
+) -> Result<AbiItem<'static>, D::Error> {
+    let visitor = ItemVisitor { kind };
+    match kind {
+        Some(Kind::Event) => deserializer.deserialize_struct("Event", &EVENT_FIELDS, visitor),
+        Some(Kind::Error) => deserializer.deserialize_struct("Error", &ERROR_FIELDS, visitor),
+        _ => deserializer.deserialize_map(visitor),
+    }
+}
+
+const EVENT_FIELDS: [&str; 3] = ["name", "inputs", "anonymous"];
+const ERROR_FIELDS: [&str; 2] = ["name", "inputs"];
+
+/// A key of a JSON ABI item.
+#[derive(Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(field_identifier, rename_all = "camelCase")]
+enum Field {
+    Type,
+    Name,
+    Inputs,
+    Outputs,
+    Anonymous,
+    StateMutability,
+    Payable,
+    Constant,
+    #[serde(other)]
+    Other,
+}
+
+impl Field {
+    /// The fields that can only be checked for repetition once the item kind is known.
+    const ITEM_FIELDS: [Self; 7] = [
+        Self::Name,
+        Self::Inputs,
+        Self::Outputs,
+        Self::Anonymous,
+        Self::StateMutability,
+        Self::Payable,
+        Self::Constant,
+    ];
+
+    const fn name(self) -> &'static str {
+        match self {
+            Self::Type => "type",
+            Self::Name => "name",
+            Self::Inputs => "inputs",
+            Self::Outputs => "outputs",
+            Self::Anonymous => "anonymous",
+            Self::StateMutability => "stateMutability",
+            Self::Payable => "payable",
+            Self::Constant => "constant",
+            Self::Other => "",
+        }
+    }
+}
+
+impl Kind {
+    /// Returns whether items of this kind have the given field. Other fields are ignored.
+    const fn has(self, field: Field) -> bool {
+        match field {
+            Field::Name => matches!(self, Self::Function | Self::Event | Self::Error),
+            Field::Inputs => !matches!(self, Self::Fallback | Self::Receive),
+            Field::Outputs => matches!(self, Self::Function),
+            Field::Anonymous => matches!(self, Self::Event),
+            Field::StateMutability | Field::Payable | Field::Constant => {
+                matches!(self, Self::Constructor | Self::Fallback | Self::Receive | Self::Function)
+            }
+            Field::Type | Field::Other => false,
+        }
+    }
+}
+
+/// Deserializes any JSON ABI item in a single pass, without buffering the map.
+///
+/// The item kind is either `kind`, or the `type` field, which can appear after the fields that
+/// depend on it. Inputs are therefore collected as [`ParamInner`], which accepts every field of
+/// both [`Param`] and [`EventParam`], and converted once the kind is known.
+struct ItemVisitor {
+    kind: Option<Kind>,
+}
+
+#[derive(Default)]
+struct ItemFields {
+    name: Option<String>,
+    inputs: Option<Vec<ParamInner>>,
+    outputs: Option<Vec<ParamInner>>,
+    anonymous: Option<bool>,
+    state_mutability: Option<Option<StateMutability>>,
+    payable: Option<Option<bool>>,
+    constant: Option<Option<bool>>,
+}
+
+impl<'de> Visitor<'de> for ItemVisitor {
+    type Value = AbiItem<'static>;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("a JSON ABI item")
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+        let Some(kind @ (Kind::Event | Kind::Error)) = self.kind else {
+            return Err(de::Error::invalid_type(Unexpected::Seq, &self));
+        };
+
+        macro_rules! next {
+            ($index:expr) => {
+                seq.next_element()?.ok_or_else(|| de::Error::invalid_length($index, &self))?
+            };
+        }
+
+        let fields = ItemFields {
+            name: Some(next!(0)),
+            inputs: Some(next!(1)),
+            anonymous: if kind == Kind::Event { Some(next!(2)) } else { None },
+            ..Default::default()
+        };
+        fields.finish(kind)
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+        let mut kind = self.kind;
+        let mut fields = ItemFields::default();
+        // A repeated field is only an error if the item has it, which is unknown until the end
+        // if `type` comes last. Bit `field as u8` is set for each repeated field.
+        let mut repeated = 0u8;
+
+        macro_rules! set {
+            ($field:expr, $slot:expr) => {
+                if $slot.is_some() {
+                    if kind.is_some() {
+                        return Err(de::Error::duplicate_field($field.name()));
+                    }
+                    repeated |= 1 << $field as u8;
+                    map.next_value::<IgnoredAny>()?;
+                } else {
+                    $slot = Some(map.next_value()?);
+                }
+            };
+        }
+
+        while let Some(field) = map.next_key::<Field>()? {
+            match field {
+                Field::Type if self.kind.is_none() => {
+                    if kind.is_some() {
+                        return Err(de::Error::duplicate_field("type"));
+                    }
+                    kind = Some(map.next_value()?);
+                }
+                _ if kind.is_some_and(|kind| !kind.has(field)) => {
+                    map.next_value::<IgnoredAny>()?;
+                }
+                Field::Name => set!(field, fields.name),
+                Field::Inputs => set!(field, fields.inputs),
+                Field::Outputs => set!(field, fields.outputs),
+                Field::Anonymous => set!(field, fields.anonymous),
+                Field::StateMutability => set!(field, fields.state_mutability),
+                Field::Payable => set!(field, fields.payable),
+                Field::Constant => set!(field, fields.constant),
+                Field::Type | Field::Other => {
+                    map.next_value::<IgnoredAny>()?;
+                }
+            }
+        }
+
+        let kind = kind.ok_or_else(|| de::Error::missing_field("type"))?;
+        let repeated = Field::ITEM_FIELDS
+            .into_iter()
+            .find(|&field| repeated & (1 << field as u8) != 0 && kind.has(field));
+        if let Some(field) = repeated {
+            return Err(de::Error::duplicate_field(field.name()));
+        }
+        fields.finish(kind)
+    }
+}
+
+impl ItemFields {
+    fn finish<E: de::Error>(self, kind: Kind) -> Result<AbiItem<'static>, E> {
+        let Self { name, inputs, outputs, anonymous, state_mutability, payable, constant } = self;
+
+        let name = || {
+            let name = name.ok_or_else(|| E::missing_field("name"))?;
+            validate_identifier(&name)?;
+            Ok(name)
+        };
+        let inputs = || inputs.ok_or_else(|| E::missing_field("inputs"));
+        let params = |inputs: Vec<ParamInner>| {
+            inputs.into_iter().map(ParamInner::into_param).collect::<Result<Vec<_>, _>>()
+        };
+        // Same as `serde_state_mutability_compat::deserialize`.
+        let state_mutability = || match (state_mutability.flatten(), payable, constant) {
+            (Some(state_mutability), ..) => Ok(state_mutability),
+            (None, payable, constant) => {
+                match (payable.flatten().unwrap_or(false), constant.flatten().unwrap_or(false)) {
+                    (false, false) => Ok(StateMutability::default()),
+                    (true, false) => Ok(StateMutability::Payable),
+                    (false, true) => Ok(StateMutability::View),
+                    (true, true) => {
+                        Err(E::custom("state mutability cannot be both `payable` and `constant`"))
+                    }
+                }
+            }
+        };
+
+        Ok(match kind {
+            Kind::Constructor => {
+                Constructor { inputs: params(inputs()?)?, state_mutability: state_mutability()? }
+                    .into()
+            }
+            Kind::Fallback => Fallback { state_mutability: state_mutability()? }.into(),
+            Kind::Receive => Receive { state_mutability: state_mutability()? }.into(),
+            Kind::Function => Function {
+                name: name()?,
+                inputs: params(inputs()?)?,
+                outputs: params(outputs.ok_or_else(|| E::missing_field("outputs"))?)?,
+                state_mutability: state_mutability()?,
+            }
+            .into(),
+            Kind::Event => Event {
+                name: name()?,
+                inputs: inputs()?
+                    .into_iter()
+                    .map(ParamInner::into_event_param)
+                    .collect::<Result<_, _>>()?,
+                anonymous: anonymous.ok_or_else(|| E::missing_field("anonymous"))?,
+            }
+            .into(),
+            Kind::Error => Error { name: name()?, inputs: params(inputs()?)? }.into(),
+        })
     }
 }
 
