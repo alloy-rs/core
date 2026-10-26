@@ -11,7 +11,11 @@
 //! 4. LogUnflattenDeserializer for a binary deserializer.
 
 use crate::{Address, Log};
-use core::{fmt, marker::PhantomData};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
+use core::{fmt, marker::PhantomData, mem};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{
@@ -44,8 +48,8 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for LogFlattenVisitor<T> {
     }
 
     fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<Self::Value, A::Error> {
-        let mut filter = AddressFilter { map, address: None };
-        let data = T::deserialize(PayloadDeserializer(MapAccessDeserializer::new(&mut filter)))?;
+        let mut filter = AddressFilter { map, address: None, next: Next::Unread };
+        let data = T::deserialize(PayloadDeserializer(&mut filter))?;
         while filter.next_key::<IgnoredAny>()?.is_some() {
             filter.next_value::<IgnoredAny>()?;
         }
@@ -56,13 +60,13 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for LogFlattenVisitor<T> {
 
 /// Presents the map to `T` like `serde(flatten)` does: a map, with newtypes, options and units
 /// looking through it instead of failing on a map.
-struct PayloadDeserializer<A>(MapAccessDeserializer<A>);
+struct PayloadDeserializer<'a, 'de, A>(&'a mut AddressFilter<'de, A>);
 
-impl<'de, A: MapAccess<'de>> Deserializer<'de> for PayloadDeserializer<A> {
+impl<'de, A: MapAccess<'de>> Deserializer<'de> for PayloadDeserializer<'_, 'de, A> {
     type Error = A::Error;
 
     fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        self.0.deserialize_any(visitor)
+        MapAccessDeserializer::new(self.0).deserialize_any(visitor)
     }
 
     fn deserialize_enum<V: Visitor<'de>>(
@@ -71,7 +75,7 @@ impl<'de, A: MapAccess<'de>> Deserializer<'de> for PayloadDeserializer<A> {
         variants: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error> {
-        self.0.deserialize_enum(name, variants, visitor)
+        MapAccessDeserializer::new(self.0).deserialize_enum(name, variants, visitor)
     }
 
     fn deserialize_newtype_struct<V: Visitor<'de>>(
@@ -82,8 +86,9 @@ impl<'de, A: MapAccess<'de>> Deserializer<'de> for PayloadDeserializer<A> {
         visitor.visit_newtype_struct(self)
     }
 
+    /// An option is `None` when no entry besides `address` is left, as for a serialized `None`.
     fn deserialize_option<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        visitor.visit_some(self)
+        if self.0.is_end()? { visitor.visit_none() } else { visitor.visit_some(self) }
     }
 
     fn deserialize_unit<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
@@ -109,18 +114,47 @@ impl<'de, A: MapAccess<'de>> Deserializer<'de> for PayloadDeserializer<A> {
 }
 
 /// A [`MapAccess`] that takes the `address` entry and yields all others.
-struct AddressFilter<A> {
+struct AddressFilter<'de, A> {
     map: A,
     address: Option<Address>,
+    next: Next<'de>,
 }
 
-impl<'de, A: MapAccess<'de>> MapAccess<'de> for AddressFilter<A> {
+/// The next key of an [`AddressFilter`] once it has been looked at.
+enum Next<'de> {
+    Unread,
+    Key(Key<'de>),
+    End,
+}
+
+impl<'de, A: MapAccess<'de>> AddressFilter<'de, A> {
+    /// Returns whether the map has no entry left besides `address`.
+    fn is_end(&mut self) -> Result<bool, A::Error> {
+        if matches!(self.next, Next::Unread) {
+            self.next = match self.next_key_seed(PhantomData::<Key<'de>>)? {
+                Some(key) => Next::Key(key),
+                None => Next::End,
+            };
+        }
+        Ok(matches!(self.next, Next::End))
+    }
+}
+
+impl<'de, A: MapAccess<'de>> MapAccess<'de> for AddressFilter<'de, A> {
     type Error = A::Error;
 
     fn next_key_seed<K: DeserializeSeed<'de>>(
         &mut self,
         seed: K,
     ) -> Result<Option<K::Value>, Self::Error> {
+        match mem::replace(&mut self.next, Next::Unread) {
+            Next::Key(key) => return key.replay(seed).map(Some),
+            Next::End => {
+                self.next = Next::End;
+                return Ok(None);
+            }
+            Next::Unread => {}
+        }
         let mut seed = Some(seed);
         while let Some(key) = self.map.next_key_seed(KeySeed(&mut seed))? {
             if let Some(key) = key {
@@ -131,6 +165,7 @@ impl<'de, A: MapAccess<'de>> MapAccess<'de> for AddressFilter<A> {
             }
             self.address = Some(self.map.next_value()?);
         }
+        self.next = Next::End;
         Ok(None)
     }
 
@@ -195,6 +230,61 @@ impl<'de, K: DeserializeSeed<'de>> KeySeed<'_, K> {
         }
         let seed = self.0.take().expect("seed is consumed once per key");
         seed.deserialize(key).map(Some)
+    }
+}
+
+/// A map key kept to be passed to a seed later.
+enum Key<'de> {
+    Str(&'de str),
+    String(String),
+    Bytes(&'de [u8]),
+    ByteBuf(Vec<u8>),
+}
+
+impl<'de> Key<'de> {
+    fn replay<K: DeserializeSeed<'de>, E: de::Error>(self, seed: K) -> Result<K::Value, E> {
+        match self {
+            Self::Str(v) => seed.deserialize(BorrowedStrDeserializer::new(v)),
+            Self::String(v) => seed.deserialize(StringDeserializer::new(v)),
+            Self::Bytes(v) => seed.deserialize(BorrowedBytesDeserializer::new(v)),
+            Self::ByteBuf(v) => seed.deserialize(BytesDeserializer::new(&v)),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Key<'de> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserializer.deserialize_identifier(KeyVisitor)
+    }
+}
+
+struct KeyVisitor;
+
+impl<'de> Visitor<'de> for KeyVisitor {
+    type Value = Key<'de>;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("field identifier")
+    }
+
+    fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+        Ok(Key::String(v.to_string()))
+    }
+
+    fn visit_borrowed_str<E: de::Error>(self, v: &'de str) -> Result<Self::Value, E> {
+        Ok(Key::Str(v))
+    }
+
+    fn visit_string<E: de::Error>(self, v: String) -> Result<Self::Value, E> {
+        Ok(Key::String(v))
+    }
+
+    fn visit_bytes<E: de::Error>(self, v: &[u8]) -> Result<Self::Value, E> {
+        Ok(Key::ByteBuf(v.to_vec()))
+    }
+
+    fn visit_borrowed_bytes<E: de::Error>(self, v: &'de [u8]) -> Result<Self::Value, E> {
+        Ok(Key::Bytes(v))
     }
 }
 
@@ -369,6 +459,15 @@ mod tests {
         assert_eq!(log.data, Some(expected.data));
         let log = serde_json::from_value::<Log<()>>(json).unwrap();
         assert_eq!(log.address, expected.address);
+
+        let none = Log { address: expected.address, data: None::<LogData> };
+        let dumped = serde_json::to_string(&none).unwrap();
+        assert_eq!(serde_json::from_str::<Log<Option<LogData>>>(&dumped).unwrap(), none);
+        let json = format!("{{\"extra\":1,\"address\":\"{ADDRESS}\"}}");
+        assert_eq!(
+            serde_json::from_str::<Log<Option<Value>>>(&json).unwrap().data,
+            Some(json!({"extra": 1}))
+        );
     }
 
     #[test]
