@@ -562,22 +562,29 @@ impl DynSolValue {
     /// Returns the number of words this type uses in the head of the ABI blob.
     #[inline]
     pub(crate) fn head_words(&self) -> usize {
+        self.dynamic_head_words().1
+    }
+
+    /// Returns whether this value is dynamic and the number of words it uses in the head of the
+    /// ABI blob.
+    ///
+    /// Computes both in a single pass, stopping at the first dynamic element of a fixed sequence.
+    fn dynamic_head_words(&self) -> (bool, usize) {
         match self.as_fixed_seq() {
-            // If dynamic 1 for the length, otherwise the sum of all head words.
+            // If dynamic 1 for the offset, otherwise the sum of all head words.
             Some(vals) => {
-                // `is_dynamic` iterates over all elements, and we need to sum all elements'
-                // head words, so do both things at once
                 let mut sum = 0;
                 for val in vals {
-                    if val.is_dynamic() {
-                        return 1;
+                    let (dynamic, words) = val.dynamic_head_words();
+                    if dynamic {
+                        return (true, 1);
                     }
-                    sum += val.head_words();
+                    sum += words;
                 }
-                sum
+                (false, sum)
             }
             // Just a single word
-            None => 1,
+            None => (self.is_dynamic(), 1),
         }
     }
 
@@ -824,10 +831,23 @@ impl DynSolValue {
     fn encode_seq_into(contents: &[Self], buf: &mut Vec<u8>) {
         let base = buf.len();
         let mut head = base;
-        buf.resize(base + contents.iter().map(Self::head_words).sum::<usize>() * 32, 0);
 
-        for t in contents {
-            if t.is_dynamic() {
+        // Remember which of the first 64 elements are dynamic, so that static elements are not
+        // walked again just to find out.
+        let mut dynamic = 0u64;
+        let mut head_words = 0;
+        for (i, t) in contents.iter().enumerate() {
+            let (is_dynamic, words) = t.dynamic_head_words();
+            if is_dynamic && i < 64 {
+                dynamic |= 1 << i;
+            }
+            head_words += words;
+        }
+        buf.resize(base + head_words * 32, 0);
+
+        for (i, t) in contents.iter().enumerate() {
+            let is_dynamic = if i < 64 { dynamic & (1 << i) != 0 } else { t.is_dynamic() };
+            if is_dynamic {
                 let offset = buf.len() - base;
                 buf[head + 24..head + 32].copy_from_slice(&(offset as u64).to_be_bytes());
                 head += 32;
@@ -1132,6 +1152,16 @@ mod tests {
             DynSolValue::Array(vec![string("")]),
         );
         check_params::<()>(&(), DynSolValue::Tuple(vec![]));
+
+        // Sequences longer than 64 elements, mixing static and dynamic ones.
+        let value = DynSolValue::Tuple(
+            (0..70)
+                .map(|i| if i % 3 == 0 { string("a") } else { DynSolValue::Tuple(vec![uint(i)]) })
+                .collect(),
+        );
+        let mut enc = Encoder::default();
+        DynSolValue::encode_seq_to(value.as_tuple().unwrap(), &mut enc);
+        assert_eq!(value.abi_encode_params(), enc.into_bytes());
     }
 
     #[test]
