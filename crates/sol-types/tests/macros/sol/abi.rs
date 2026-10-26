@@ -585,3 +585,149 @@ fn special_funcs() {
         Some(Receive { state_mutability: StateMutability::Payable })
     );
 }
+
+#[test]
+fn contract_abi_matches_json() {
+    sol! {
+        #[sol(abi)]
+        contract Kitchen {
+            type Id is uint32;
+
+            enum Kind {
+                A,
+                B
+            }
+
+            struct Inner {
+                uint256 x;
+                Id[] ids;
+                Kind kind;
+            }
+
+            struct Outer {
+                Inner inner;
+                Inner[] inners;
+                Inner[2] pair;
+                bytes32[3] words;
+            }
+
+            constructor(Outer outer) payable;
+            fallback() external payable;
+            receive() external payable;
+
+            event Ev(Outer outer, uint256 indexed a, Id id, Kind[2] kinds) anonymous;
+            event Ev(bytes32 indexed topic);
+
+            error Err(Inner[] inners, uint8[2][] grid);
+
+            function pureFn(Id id) external pure returns (Kind kind);
+            function viewFn(Outer[] outers, Inner[2][] pairs) external view returns (Inner[] inners, bool);
+            function payableFn(address, bytes32[3][] words) external payable returns (Outer outer);
+            function plainFn(Kind[][2] kinds);
+            function plainFn();
+        }
+    }
+
+    let expected = serde_json::from_str::<alloy_json_abi::JsonAbi>(
+        r#"[
+        {"type":"constructor","stateMutability":"payable","inputs":[
+            {"name":"outer","type":"tuple","components":[
+                {"name":"inner","type":"tuple","components":[
+                    {"name":"x","type":"uint256"},
+                    {"name":"ids","type":"uint32[]"},
+                    {"name":"kind","type":"uint8"}]},
+                {"name":"inners","type":"tuple[]","components":[
+                    {"name":"x","type":"uint256"},
+                    {"name":"ids","type":"uint32[]"},
+                    {"name":"kind","type":"uint8"}]},
+                {"name":"pair","type":"tuple[2]","components":[
+                    {"name":"x","type":"uint256"},
+                    {"name":"ids","type":"uint32[]"},
+                    {"name":"kind","type":"uint8"}]},
+                {"name":"words","type":"bytes32[3]"}]}]},
+        {"type":"fallback","stateMutability":"payable"},
+        {"type":"receive","stateMutability":"payable"},
+        {"type":"event","name":"Ev","anonymous":true,"inputs":[
+            {"name":"outer","type":"tuple","indexed":false,"components":[
+                {"name":"inner","type":"tuple","components":[
+                    {"name":"x","type":"uint256"},
+                    {"name":"ids","type":"uint32[]"},
+                    {"name":"kind","type":"uint8"}]},
+                {"name":"inners","type":"tuple[]","components":[
+                    {"name":"x","type":"uint256"},
+                    {"name":"ids","type":"uint32[]"},
+                    {"name":"kind","type":"uint8"}]},
+                {"name":"pair","type":"tuple[2]","components":[
+                    {"name":"x","type":"uint256"},
+                    {"name":"ids","type":"uint32[]"},
+                    {"name":"kind","type":"uint8"}]},
+                {"name":"words","type":"bytes32[3]"}]},
+            {"name":"a","type":"uint256","indexed":true},
+            {"name":"id","type":"uint32","indexed":false},
+            {"name":"kinds","type":"uint8[2]","indexed":false}]},
+        {"type":"event","name":"Ev","anonymous":false,"inputs":[
+            {"name":"topic","type":"bytes32","indexed":true}]},
+        {"type":"error","name":"Err","inputs":[
+            {"name":"inners","type":"tuple[]","components":[
+                {"name":"x","type":"uint256"},
+                {"name":"ids","type":"uint32[]"},
+                {"name":"kind","type":"uint8"}]},
+            {"name":"grid","type":"uint8[2][]"}]},
+        {"type":"function","name":"pureFn","stateMutability":"pure",
+            "inputs":[{"name":"id","type":"uint32"}],
+            "outputs":[{"name":"kind","type":"uint8"}]},
+        {"type":"function","name":"viewFn","stateMutability":"view",
+            "inputs":[
+                {"name":"outers","type":"tuple[]","components":[
+                    {"name":"inner","type":"tuple","components":[
+                        {"name":"x","type":"uint256"},
+                        {"name":"ids","type":"uint32[]"},
+                        {"name":"kind","type":"uint8"}]},
+                    {"name":"inners","type":"tuple[]","components":[
+                        {"name":"x","type":"uint256"},
+                        {"name":"ids","type":"uint32[]"},
+                        {"name":"kind","type":"uint8"}]},
+                    {"name":"pair","type":"tuple[2]","components":[
+                        {"name":"x","type":"uint256"},
+                        {"name":"ids","type":"uint32[]"},
+                        {"name":"kind","type":"uint8"}]},
+                    {"name":"words","type":"bytes32[3]"}]},
+                {"name":"pairs","type":"tuple[2][]","components":[
+                    {"name":"x","type":"uint256"},
+                    {"name":"ids","type":"uint32[]"},
+                    {"name":"kind","type":"uint8"}]}],
+            "outputs":[
+                {"name":"inners","type":"tuple[]","components":[
+                    {"name":"x","type":"uint256"},
+                    {"name":"ids","type":"uint32[]"},
+                    {"name":"kind","type":"uint8"}]},
+                {"name":"","type":"bool"}]},
+        {"type":"function","name":"payableFn","stateMutability":"payable",
+            "inputs":[
+                {"name":"","type":"address"},
+                {"name":"words","type":"bytes32[3][]"}],
+            "outputs":[
+                {"name":"outer","type":"tuple","components":[
+                    {"name":"inner","type":"tuple","components":[
+                        {"name":"x","type":"uint256"},
+                        {"name":"ids","type":"uint32[]"},
+                        {"name":"kind","type":"uint8"}]},
+                    {"name":"inners","type":"tuple[]","components":[
+                        {"name":"x","type":"uint256"},
+                        {"name":"ids","type":"uint32[]"},
+                        {"name":"kind","type":"uint8"}]},
+                    {"name":"pair","type":"tuple[2]","components":[
+                        {"name":"x","type":"uint256"},
+                        {"name":"ids","type":"uint32[]"},
+                        {"name":"kind","type":"uint8"}]},
+                    {"name":"words","type":"bytes32[3]"}]}]},
+        {"type":"function","name":"plainFn","stateMutability":"nonpayable",
+            "inputs":[{"name":"kinds","type":"uint8[][2]"}],"outputs":[]},
+        {"type":"function","name":"plainFn","stateMutability":"nonpayable",
+            "inputs":[],"outputs":[]}
+        ]"#,
+    )
+    .unwrap();
+
+    assert_eq!(Kitchen::abi::contract(), expected);
+}

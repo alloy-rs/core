@@ -1,19 +1,97 @@
 use super::ExpCtxt;
-use crate::verbatim::Verbatim;
-use alloy_json_abi::{
-    Constructor, Error, Event, EventParam, Fallback, Function, Param, Receive, StateMutability,
-};
+use alloy_json_abi::{Error, Event, EventParam, Function, Param, StateMutability};
 use ast::{ItemError, ItemEvent, ItemFunction};
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::fmt::Write;
 
+/// Expands to the owned [`alloy_json_abi`] item, built by a single call from a constant mirror.
 pub(crate) fn generate<T>(t: &T, cx: &ExpCtxt<'_>) -> TokenStream
 where
     T: ToAbi,
-    T::DynAbi: Verbatim,
+    T::DynAbi: StaticAbi,
 {
-    crate::verbatim::verbatim(&t.to_dyn_abi(cx), &cx.crates)
+    t.to_dyn_abi(cx).to_static_tokens(&cx.crates.sol_types)
+}
+
+/// Conversion to tokens that build the item from its `private::Static*` mirror.
+pub(crate) trait StaticAbi {
+    fn to_static_tokens(&self, alloy_sol_types: &syn::Path) -> TokenStream;
+}
+
+impl StaticAbi for Function {
+    fn to_static_tokens(&self, alloy_sol_types: &syn::Path) -> TokenStream {
+        let Self { name, inputs, outputs, state_mutability } = self;
+        let inputs = params_tokens(inputs, alloy_sol_types);
+        let outputs = params_tokens(outputs, alloy_sol_types);
+        let state_mutability = mutability_tokens(*state_mutability, alloy_sol_types);
+        quote! {
+            #alloy_sol_types::private::StaticFunction {
+                name: #name,
+                inputs: #inputs,
+                outputs: #outputs,
+                state_mutability: #state_mutability,
+            }.to_abi()
+        }
+    }
+}
+
+impl StaticAbi for Error {
+    fn to_static_tokens(&self, alloy_sol_types: &syn::Path) -> TokenStream {
+        let Self { name, inputs } = self;
+        let inputs = params_tokens(inputs, alloy_sol_types);
+        quote! {
+            #alloy_sol_types::private::StaticError { name: #name, inputs: #inputs }.to_abi()
+        }
+    }
+}
+
+impl StaticAbi for Event {
+    fn to_static_tokens(&self, alloy_sol_types: &syn::Path) -> TokenStream {
+        let Self { name, inputs, anonymous } = self;
+        let inputs = inputs.iter().map(|p| {
+            let EventParam { ty, name, indexed, components, internal_type } = p;
+            debug_assert!(internal_type.is_none());
+            let components = params_tokens(components, alloy_sol_types);
+            quote! {
+                #alloy_sol_types::private::StaticEventParam {
+                    ty: #ty,
+                    name: #name,
+                    indexed: #indexed,
+                    components: #components,
+                }
+            }
+        });
+        quote! {
+            #alloy_sol_types::private::StaticEvent {
+                name: #name,
+                inputs: &[#(#inputs),*],
+                anonymous: #anonymous,
+            }.to_abi()
+        }
+    }
+}
+
+fn params_tokens(params: &[Param], alloy_sol_types: &syn::Path) -> TokenStream {
+    let params = params.iter().map(|p| {
+        let Param { ty, name, components, internal_type } = p;
+        debug_assert!(internal_type.is_none());
+        let components = params_tokens(components, alloy_sol_types);
+        quote! {
+            #alloy_sol_types::private::StaticParam { ty: #ty, name: #name, components: #components }
+        }
+    });
+    quote!(&[#(#params),*])
+}
+
+fn mutability_tokens(m: StateMutability, alloy_sol_types: &syn::Path) -> TokenStream {
+    let variant = match m {
+        StateMutability::Pure => quote!(Pure),
+        StateMutability::View => quote!(View),
+        StateMutability::NonPayable => quote!(NonPayable),
+        StateMutability::Payable => quote!(Payable),
+    };
+    quote!(#alloy_sol_types::private::alloy_json_abi::StateMutability::#variant)
 }
 
 pub(crate) trait ToAbi {
@@ -158,22 +236,44 @@ fn rec_ty_abi_string_suffix(cx: &ExpCtxt<'_>, ty: &ast::Type, s: &mut String) {
     }
 }
 
-pub(super) fn constructor(function: &ItemFunction, cx: &ExpCtxt<'_>) -> Constructor {
+pub(super) fn constructor(function: Option<&ItemFunction>, cx: &ExpCtxt<'_>) -> TokenStream {
+    let alloy_sol_types = &cx.crates.sol_types;
+    let Some(function) = function else { return quote!(::core::option::Option::None) };
     assert!(function.kind.is_constructor());
-    Constructor {
-        inputs: function.parameters.to_dyn_abi(cx),
-        state_mutability: function.attributes.to_dyn_abi(cx),
+    let inputs = params_tokens(&function.parameters.to_dyn_abi(cx), alloy_sol_types);
+    let state_mutability = mutability_tokens(function.attributes.to_dyn_abi(cx), alloy_sol_types);
+    quote! {
+        ::core::option::Option::Some(
+            #alloy_sol_types::private::StaticConstructor {
+                inputs: #inputs,
+                state_mutability: #state_mutability,
+            }.to_abi()
+        )
     }
 }
 
-pub(super) fn fallback(function: &ItemFunction, cx: &ExpCtxt<'_>) -> Fallback {
+pub(super) fn fallback(function: Option<&ItemFunction>, cx: &ExpCtxt<'_>) -> TokenStream {
+    let alloy_sol_types = &cx.crates.sol_types;
+    let Some(function) = function else { return quote!(::core::option::Option::None) };
     assert!(function.kind.is_fallback());
-    Fallback { state_mutability: function.attributes.to_dyn_abi(cx) }
+    let state_mutability = mutability_tokens(function.attributes.to_dyn_abi(cx), alloy_sol_types);
+    quote! {
+        ::core::option::Option::Some(
+            #alloy_sol_types::private::alloy_json_abi::Fallback { state_mutability: #state_mutability }
+        )
+    }
 }
 
-pub(super) fn receive(function: &ItemFunction, _cx: &ExpCtxt<'_>) -> Receive {
+pub(super) fn receive(function: Option<&ItemFunction>, cx: &ExpCtxt<'_>) -> TokenStream {
+    let alloy_sol_types = &cx.crates.sol_types;
+    let Some(function) = function else { return quote!(::core::option::Option::None) };
     assert!(function.kind.is_receive());
-    Receive { state_mutability: StateMutability::Payable }
+    let state_mutability = mutability_tokens(StateMutability::Payable, alloy_sol_types);
+    quote! {
+        ::core::option::Option::Some(
+            #alloy_sol_types::private::alloy_json_abi::Receive { state_mutability: #state_mutability }
+        )
+    }
 }
 
 macro_rules! make_map {

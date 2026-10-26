@@ -2,7 +2,7 @@ use crate::{DynSolValue, Error as CrateError, Result, Specifier};
 use alloc::vec::Vec;
 use alloy_json_abi::{Constructor, Error, Function, Param};
 use alloy_primitives::Selector;
-use alloy_sol_types::abi::Decoder;
+use alloy_sol_types::abi::{AbiDecoderConfig, Decoder};
 
 #[allow(unknown_lints, unnameable_types)]
 mod sealed {
@@ -56,7 +56,20 @@ pub trait JsonAbiExt: Sealed {
     ///
     /// This function will return an error if the decoded data does not match
     /// the expected input types.
-    fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>>;
+    #[inline]
+    fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
+        self.abi_decode_input_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// ABI-decodes the given data according to this item's input types, with the given decoder
+    /// configuration.
+    ///
+    /// Strict decoding is not supported.
+    fn abi_decode_input_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Vec<DynSolValue>>;
 }
 
 /// Provide ABI encoding and decoding for the [`Function`] type.
@@ -94,8 +107,12 @@ impl JsonAbiExt for Constructor {
     }
 
     #[inline]
-    fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.inputs)
+    fn abi_decode_input_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Vec<DynSolValue>> {
+        abi_decode(data, &self.inputs, config)
     }
 }
 
@@ -111,8 +128,12 @@ impl JsonAbiExt for Error {
     }
 
     #[inline]
-    fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.inputs)
+    fn abi_decode_input_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Vec<DynSolValue>> {
+        abi_decode(data, &self.inputs, config)
     }
 }
 
@@ -128,8 +149,12 @@ impl JsonAbiExt for Function {
     }
 
     #[inline]
-    fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.inputs)
+    fn abi_decode_input_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Vec<DynSolValue>> {
+        abi_decode(data, &self.inputs, config)
     }
 }
 
@@ -141,7 +166,7 @@ impl FunctionExt for Function {
 
     #[inline]
     fn abi_decode_output(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.outputs)
+        abi_decode(data, &self.outputs, AbiDecoderConfig::new())
     }
 }
 
@@ -180,12 +205,21 @@ fn abi_encode(values: &[DynSolValue]) -> Vec<u8> {
     DynSolValue::encode_seq(values)
 }
 
-fn abi_decode(data: &[u8], params: &[Param]) -> Result<Vec<DynSolValue>> {
+fn abi_decode(data: &[u8], params: &[Param], config: AbiDecoderConfig) -> Result<Vec<DynSolValue>> {
+    if config.get_strict() {
+        return Err(CrateError::custom("strict decoding is not supported"));
+    }
     let mut values = Vec::with_capacity(params.len());
-    let mut decoder = Decoder::new(data);
+    let mut decoder = Decoder::with_config(data, config);
     for param in params {
         let ty = param.resolve()?;
-        let value = ty.abi_decode_inner(&mut decoder, crate::DynToken::decode_single_populate)?;
+        let value = ty.abi_decode_inner(&mut decoder, |token, decoder| {
+            token.decode_single_populate(decoder)?;
+            if config.get_validate_words() {
+                ty.validate_token(token, config.get_validate())?;
+            }
+            Ok(())
+        })?;
         values.push(value);
     }
     Ok(values)

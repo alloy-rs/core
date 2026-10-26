@@ -630,6 +630,53 @@ impl DynSolType {
         Ok(value)
     }
 
+    pub(crate) fn validate_token(&self, token: &DynToken<'_>, utf8: bool) -> Result<()> {
+        match (self, token) {
+            (ty, DynToken::Word(word)) => {
+                let token = (*word).into();
+                let valid = match ty {
+                    Self::Bool => sol_data::Bool::valid_token(&token),
+                    Self::Address => sol_data::Address::valid_token(&token),
+                    Self::Function => sol_data::Function::valid_token(&token),
+                    Self::Uint(bits) => word[..32 - bits / 8].iter().all(|&b| b == 0),
+                    Self::Int(bits) => {
+                        let padding = 32 - bits / 8;
+                        let fill = if word[padding] & 0x80 == 0 { 0 } else { 0xff };
+                        word[..padding].iter().all(|&b| b == fill)
+                    }
+                    Self::FixedBytes(size) => word[*size..].iter().all(|&b| b == 0),
+                    _ => unreachable!("token matches type"),
+                };
+                if !valid {
+                    return Err(alloy_sol_types::Error::type_check_fail(
+                        word.as_slice(),
+                        self.sol_type_name(),
+                    )
+                    .into());
+                }
+            }
+            (Self::Array(ty), DynToken::DynSeq { contents, .. })
+            | (Self::FixedArray(ty, _), DynToken::FixedSeq(contents, _)) => {
+                for token in contents.iter() {
+                    ty.validate_token(token, utf8)?;
+                }
+            }
+            (as_tuple!(Self types), DynToken::FixedSeq(tokens, _)) => {
+                for (ty, token) in zip(types, tokens.iter()) {
+                    ty.validate_token(token, utf8)?;
+                }
+            }
+            (Self::String, DynToken::PackedSeq(s)) => {
+                if utf8 && core::str::from_utf8(s).is_err() {
+                    return Err(alloy_sol_types::Error::type_check_fail(s, "string").into());
+                }
+            }
+            (Self::Bytes, DynToken::PackedSeq(_)) => {}
+            _ => unreachable!("token matches type"),
+        }
+        Ok(())
+    }
+
     /// Wrap in an array of the specified size
     #[inline]
     pub(crate) fn array_wrap(self, size: Option<NonZeroUsize>) -> Self {

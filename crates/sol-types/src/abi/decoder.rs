@@ -31,6 +31,7 @@ pub struct AbiDecoderConfig {
     recursion_limit: usize,
     memory_limit: usize,
     validate: bool,
+    validate_words: bool,
     strict: bool,
     validate_allow_trailing_bytes: bool,
 }
@@ -58,6 +59,7 @@ impl fmt::Debug for AbiDecoderConfig {
             .field("recursion_limit", &self.recursion_limit)
             .field("memory_limit", &self.memory_limit)
             .field("validate", &self.validate)
+            .field("validate_words", &self.validate_words)
             .field("strict", &self.strict)
             .field("validate_allow_trailing_bytes", &self.validate_allow_trailing_bytes)
             .finish()
@@ -72,6 +74,7 @@ impl AbiDecoderConfig {
             recursion_limit: 16,
             memory_limit: DEFAULT_MEMORY_LIMIT,
             validate: false,
+            validate_words: false,
             strict: false,
             validate_allow_trailing_bytes: false,
         }
@@ -93,6 +96,12 @@ impl AbiDecoderConfig {
     #[inline]
     pub const fn get_validate(&self) -> bool {
         self.validate || self.get_strict()
+    }
+
+    /// Returns whether decoded scalar words must be canonical.
+    #[inline]
+    pub const fn get_validate_words(&self) -> bool {
+        self.validate_words || self.get_validate()
     }
 
     /// Returns whether strict ABI encoding is required.
@@ -135,6 +144,21 @@ impl AbiDecoderConfig {
     #[inline]
     pub const fn validate(mut self, validate: bool) -> Self {
         self.validate = validate;
+        self
+    }
+
+    /// Requires decoded scalar words to be canonical.
+    ///
+    /// When enabled, dynamic ABI input decoding rejects dirty `bool`, `address`, `function`,
+    /// integer, and fixed-bytes words, including nested values. Unlike
+    /// [`validate`](Self::validate), it accepts non-UTF-8 strings, which Solidity also accepts.
+    /// [`validate`](Self::validate) and [`strict`](Self::strict) imply this option.
+    ///
+    /// Static [`SolType`](crate::SolType) decoding ignores this option; use
+    /// [`validate`](Self::validate) instead.
+    #[inline]
+    pub const fn validate_words(mut self, validate_words: bool) -> Self {
+        self.validate_words = validate_words;
         self
     }
 
@@ -194,6 +218,12 @@ impl AbiDecoderConfig {
     #[inline]
     pub const fn set_validate(&mut self, validate: bool) {
         self.validate = validate;
+    }
+
+    /// Sets [`validate_words`](Self::validate_words) in place.
+    #[inline]
+    pub const fn set_validate_words(&mut self, validate_words: bool) {
+        self.validate_words = validate_words;
     }
 
     /// Requires or allows non-strict ABI encoding in place.
@@ -313,8 +343,12 @@ impl<'de> Decoder<'de, 'static> {
         Self::with_config(buf, AbiDecoderConfig::new())
     }
 
+    /// Instantiates a decoder with the given configuration.
+    ///
+    /// The decoder does not reject trailing bytes in strict mode; use
+    /// [`decode_sequence_with_config`] for complete strict decoding.
     #[inline]
-    const fn with_config(buf: &'de [u8], config: AbiDecoderConfig) -> Self {
+    pub const fn with_config(buf: &'de [u8], config: AbiDecoderConfig) -> Self {
         Self {
             buf,
             offset: 0,
