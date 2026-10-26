@@ -214,12 +214,6 @@ sqlx-postgres = ["sqlx", "dep:sqlx-postgres"]
 hex-compat = ["hex/hex"]
 
 [[bench]]
-name = "log"
-path = "benches/log.rs"
-harness = false
-required-features = ["serde"]
-
-[[bench]]
 name = "primitives"
 path = "benches/primitives.rs"
 harness = false
