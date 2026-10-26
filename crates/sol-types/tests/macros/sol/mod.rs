@@ -1,6 +1,6 @@
 use alloy_primitives::{Address, B256, I256, U256, b256, bytes, hex, keccak256};
 use alloy_sol_types::{
-    Error, SolCall, SolError, SolEvent, SolEventInterface, SolStruct, SolType,
+    Error, SolCall, SolError, SolEvent, SolEventInterface, SolInterface, SolStruct, SolType,
     abi::AbiDecoderConfig, sol,
 };
 use serde::Serialize;
@@ -288,6 +288,29 @@ fn encode_appends_to_buffer() {
     event.encode_data_to(&mut out);
     assert_eq!(out[..5], [0xaa; 5]);
     assert_eq!(out[5..], data);
+}
+
+#[test]
+fn interface_abi_encode_is_selector_and_raw() {
+    sol! {
+        interface I {
+            function g(address[] a, bytes b);
+            function h(uint256 x);
+            error F(string s);
+            error G(uint256 x);
+        }
+    }
+
+    fn check(interface: &impl SolInterface) {
+        let mut expected = interface.selector().to_vec();
+        interface.abi_encode_raw(&mut expected);
+        assert_eq!(interface.abi_encode(), expected);
+    }
+
+    check(&I::ICalls::g(I::gCall { a: vec![Address::repeat_byte(1); 3], b: vec![7; 40].into() }));
+    check(&I::ICalls::h(I::hCall { x: U256::from(1) }));
+    check(&I::IErrors::F(I::F { s: "hello".into() }));
+    check(&I::IErrors::G(I::G { x: U256::from(1) }));
 }
 
 #[test]
