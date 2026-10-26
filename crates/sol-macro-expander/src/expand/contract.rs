@@ -213,13 +213,11 @@ pub(super) fn expand(cx: &mut ExpCtxt<'_>, contract: &ItemContract) -> Result<To
 
     let abi = abi.then(|| {
         if_json! {
-            use crate::verbatim::verbatim;
             use super::to_abi;
 
-            let crates = &cx.crates;
-            let constructor = verbatim(&constructor.map(|x| to_abi::constructor(x, cx)), crates);
-            let fallback = verbatim(&fallback.map(|x| to_abi::fallback(x, cx)), crates);
-            let receive = verbatim(&receive.map(|x| to_abi::receive(x, cx)), crates);
+            let constructor = to_abi::constructor(constructor, cx);
+            let fallback = to_abi::fallback(fallback, cx);
+            let receive = to_abi::receive(receive, cx);
             let functions_map = to_abi::functions_map(&functions, cx);
             let events_map = to_abi::events_map(&events, cx);
             let errors_map = to_abi::errors_map(&errors, cx);
