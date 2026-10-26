@@ -665,7 +665,7 @@ macro_rules! tuple_impls {
                 }
             }
 
-            #[inline]
+            #[inline(always)]
             fn head_append(&self, enc: &mut Encoder) {
                 if Self::DYNAMIC {
                     enc.append_indirection();
@@ -689,6 +689,7 @@ macro_rules! tuple_impls {
         impl<'de, $($ty: Token<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
             const IS_TUPLE: bool = true;
 
+            #[inline(always)]
             fn encode_sequence(&self, enc: &mut Encoder) {
                 let ($($ty,)+) = self;
                 let mut offset = (0 $( + $ty.head_words() )+) * 32;

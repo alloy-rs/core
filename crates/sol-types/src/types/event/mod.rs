@@ -104,8 +104,9 @@ pub trait SolEvent: Sized {
     /// ABI-encode the dynamic data of this event into the given buffer.
     #[inline]
     fn encode_data_to(&self, out: &mut Vec<u8>) {
-        out.reserve(self.abi_encoded_size());
-        out.extend(crate::abi::encode_sequence(&self.tokenize_body()));
+        let token = self.tokenize_body();
+        out.reserve(token.total_words() * 32);
+        crate::abi::encode_sequence_to(&token, out);
     }
 
     /// ABI-encode the dynamic data of this event.
