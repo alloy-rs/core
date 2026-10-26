@@ -94,9 +94,14 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                         return size;
                     }
 
-                    // TODO: Avoid cloning
-                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
-                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_encoded_size(&tuple)
+                    let sum = 0usize #(
+                        + <#field_types as alloy_sol_types::SolType>::abi_encoded_size(&self.#field_names)
+                    )*;
+                    if <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::DYNAMIC {
+                        32 + sum
+                    } else {
+                        sum
+                    }
                 }
 
                 #[inline]
@@ -106,9 +111,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
                 #[inline]
                 fn stv_abi_encode_packed_to(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
-                    // TODO: Avoid cloning
-                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
-                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_encode_packed_to(&tuple, out)
+                    #(
+                        <#field_types as alloy_sol_types::SolType>::abi_encode_packed_to(&self.#field_names, out);
+                    )*
                 }
 
                 #[inline]
@@ -117,9 +122,9 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
                         return size;
                     }
 
-                    // TODO: Avoid cloning
-                    let tuple = <UnderlyingRustTuple<'_> as ::core::convert::From<Self>>::from(self.clone());
-                    <UnderlyingSolTuple<'_> as alloy_sol_types::SolType>::abi_packed_encoded_size(&tuple)
+                    0usize #(
+                        + <#field_types as alloy_sol_types::SolType>::abi_packed_encoded_size(&self.#field_names)
+                    )*
                 }
             }
 
