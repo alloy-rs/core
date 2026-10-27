@@ -149,7 +149,7 @@ impl AbiDecoderConfig {
 
     /// Requires decoded scalar words to be canonical.
     ///
-    /// When enabled, dynamic ABI input decoding rejects dirty `bool`, `address`, `function`,
+    /// When enabled, dynamic ABI decoding rejects dirty `bool`, `address`, `function`,
     /// integer, and fixed-bytes words, including nested values. Unlike
     /// [`validate`](Self::validate), it accepts non-UTF-8 strings, which Solidity also accepts.
     /// [`validate`](Self::validate) and [`strict`](Self::strict) imply this option.

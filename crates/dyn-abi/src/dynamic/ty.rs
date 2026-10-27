@@ -3,7 +3,7 @@ use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::utils::vec_try_with_capacity;
 use alloy_sol_types::{
     abi::{
-        Decoder,
+        AbiDecoderConfig, Decoder,
         token::{PackedSeqToken, Token},
     },
     sol_data,
@@ -470,7 +470,22 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data), None)
+        self.abi_decode_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// Decodes a single value with a custom ABI decoder configuration.
+    ///
+    /// See [`abi_decode`](Self::abi_decode) for how the data is interpreted.
+    /// Strict decoding is not supported.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub fn abi_decode_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<DynSolValue> {
+        let validate = Self::config_validation(config)?;
+        self.abi_decode_inner(&mut Decoder::with_config(data, config), validate)
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
@@ -496,9 +511,23 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_params(&self, data: &[u8]) -> Result<DynSolValue> {
+        self.abi_decode_params_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// Decodes function parameters with a custom ABI decoder configuration.
+    ///
+    /// See [`abi_decode_params`](Self::abi_decode_params) for how the data is interpreted.
+    /// Strict decoding is not supported.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub fn abi_decode_params_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<DynSolValue> {
         match self {
-            Self::Tuple(_) => self.abi_decode_sequence(data),
-            _ => self.abi_decode(data),
+            Self::Tuple(_) => self.abi_decode_sequence_with_config(data, config),
+            _ => self.abi_decode_with_config(data, config),
         }
     }
 
@@ -507,7 +536,25 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.decode_checked(&mut Decoder::new(data), None, Self::decode_sequence)
+        self.abi_decode_sequence_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// Decodes a sequence with a custom ABI decoder configuration.
+    ///
+    /// Strict decoding is not supported.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub fn abi_decode_sequence_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<DynSolValue> {
+        let validate = Self::config_validation(config)?;
+        self.decode_checked(
+            &mut Decoder::with_config(data, config),
+            validate,
+            Self::decode_sequence,
+        )
     }
 
     /// Returns `true` if this type is dynamically sized type.
@@ -566,6 +613,16 @@ impl DynSolType {
         validate: Option<bool>,
     ) -> Result<DynSolValue> {
         self.decode_checked(decoder, validate, Self::decode_value)
+    }
+
+    /// Returns the `validate` argument of [`abi_decode_inner`](Self::abi_decode_inner) for
+    /// `config`.
+    #[inline]
+    pub(crate) fn config_validation(config: AbiDecoderConfig) -> Result<Option<bool>> {
+        if config.get_strict() {
+            return Err(Error::custom("strict decoding is not supported"));
+        }
+        Ok(config.get_validate_words().then(|| config.get_validate()))
     }
 
     #[inline]

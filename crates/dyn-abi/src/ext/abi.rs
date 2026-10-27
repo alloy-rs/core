@@ -92,7 +92,20 @@ pub trait FunctionExt: JsonAbiExt + Sealed {
     /// ABI-decodes the given data according to this functions's output types.
     ///
     /// This method does not check for any prefixes or selectors.
-    fn abi_decode_output(&self, data: &[u8]) -> Result<Vec<DynSolValue>>;
+    #[inline]
+    fn abi_decode_output(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
+        self.abi_decode_output_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// ABI-decodes the given data according to this function's output types, with the given
+    /// decoder configuration.
+    ///
+    /// Strict decoding is not supported.
+    fn abi_decode_output_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Vec<DynSolValue>>;
 }
 
 impl JsonAbiExt for Constructor {
@@ -165,8 +178,12 @@ impl FunctionExt for Function {
     }
 
     #[inline]
-    fn abi_decode_output(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.outputs, AbiDecoderConfig::new())
+    fn abi_decode_output_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Vec<DynSolValue>> {
+        abi_decode(data, &self.outputs, config)
     }
 }
 
@@ -206,17 +223,12 @@ fn abi_encode(values: &[DynSolValue]) -> Vec<u8> {
 }
 
 fn abi_decode(data: &[u8], params: &[Param], config: AbiDecoderConfig) -> Result<Vec<DynSolValue>> {
-    if config.get_strict() {
-        return Err(CrateError::custom("strict decoding is not supported"));
-    }
+    let validate = crate::DynSolType::config_validation(config)?;
     let mut values = Vec::with_capacity(params.len());
     let mut decoder = Decoder::with_config(data, config);
     for param in params {
         let ty = param.resolve()?;
-        let value = ty.abi_decode_inner(
-            &mut decoder,
-            config.get_validate_words().then(|| config.get_validate()),
-        )?;
+        let value = ty.abi_decode_inner(&mut decoder, validate)?;
         values.push(value);
     }
     Ok(values)
