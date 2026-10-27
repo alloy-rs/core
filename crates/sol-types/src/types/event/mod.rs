@@ -203,6 +203,8 @@ pub trait SolEvent: Sized {
     ///
     /// This is the same as [`abi_decode_data`](Self::abi_decode_data), but performs
     /// validation checks on the decoded data tuple.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
@@ -242,6 +244,8 @@ pub trait SolEvent: Sized {
     ///
     /// This is the same as [`decode_raw_log`](Self::decode_raw_log), but performs
     /// validation checks on the decoded topics and data.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
     fn decode_raw_log_validate<I, D>(topics: I, data: &[u8]) -> Result<Self>

@@ -79,6 +79,8 @@ pub trait SolCall: Sized {
     ///
     /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
     /// validation checks on the decoded parameters tuple.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
@@ -110,6 +112,8 @@ pub trait SolCall: Sized {
     ///
     /// This is the same as [`abi_decode`](Self::abi_decode), but performs
     /// validation checks on the decoded parameters tuple.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
@@ -158,6 +162,8 @@ pub trait SolCall: Sized {
     ///
     /// This is the same as [`abi_decode_returns`](Self::abi_decode_returns), but performs
     /// validation checks on the decoded return tuple.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_returns_validate(data: &[u8]) -> Result<Self::Return> {

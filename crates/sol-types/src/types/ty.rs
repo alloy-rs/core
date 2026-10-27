@@ -256,6 +256,8 @@ pub trait SolType: Sized {
     ///
     /// This is the same as [`abi_decode`](Self::abi_decode), but performs
     /// validation checks on the decoded token.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     ///
     /// See the [`abi`] module for more information.
     #[inline]
@@ -299,6 +301,8 @@ pub trait SolType: Sized {
     ///
     /// This is the same as [`abi_decode_params`](Self::abi_decode_params), but performs
     /// validation checks on the decoded token.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     ///
     /// See the [`abi`] module for more information.
     #[inline]
@@ -344,6 +348,8 @@ pub trait SolType: Sized {
     ///
     /// This is the same as [`abi_decode_sequence`](Self::abi_decode_sequence), but performs
     /// validation checks on the decoded token.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     ///
     /// See the [`abi`] module for more information.
     #[inline]

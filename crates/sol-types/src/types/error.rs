@@ -71,6 +71,8 @@ pub trait SolError: Sized {
     ///
     /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
     /// validation checks on the decoded parameters tuple.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
@@ -102,6 +104,8 @@ pub trait SolError: Sized {
     ///
     /// This is the same as [`abi_decode`](Self::abi_decode), but performs
     /// validation checks on the decoded parameters tuple.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     #[inline]
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]

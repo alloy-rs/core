@@ -137,10 +137,27 @@ impl AbiDecoderConfig {
     /// Enables or disables decoded token validation before detokenization.
     ///
     /// When enabled, high-level ABI decode helpers call the target Solidity
-    /// type's token validator before converting the token into the returned
-    /// Rust value. This rejects dirty bool bytes, invalid strings, and other
+    /// type's token validator ([`SolType::type_check`](crate::SolType::type_check))
+    /// before converting the token into the returned Rust value. This rejects
     /// token values that can be decoded from ABI words but do not satisfy the
-    /// target type's validity rules.
+    /// target type's validity rules. Without validation, such values are
+    /// converted anyway (for example, dirty high-order bits are dropped and
+    /// invalid UTF-8 is replaced lossily) instead of returning an error.
+    ///
+    /// Validation checks, recursively for arrays, tuples and structs, that:
+    /// - `bool` words are exactly `0` or `1`;
+    /// - `uintN` words have their unused high-order bits set to zero;
+    /// - `intN` words are sign-extended to the full 32 bytes;
+    /// - `address` words have their 12 high-order bytes set to zero;
+    /// - `function` words have their 8 low-order bytes set to zero;
+    /// - `bytesN` words have their `32 - N` low-order bytes set to zero;
+    /// - `string` values are valid UTF-8;
+    /// - [`sol!`](crate::sol) enum values are in range, and user-defined value types satisfy the
+    ///   rules of their underlying type.
+    ///
+    /// `bytes` and `uint256`/`int256` values are always valid. Validation does
+    /// not check the layout of the encoding itself (offsets, padding of
+    /// dynamic data, or trailing bytes); use [`strict`](Self::strict) for that.
     #[inline]
     pub const fn validate(mut self, validate: bool) -> Self {
         self.validate = validate;

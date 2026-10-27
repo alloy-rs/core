@@ -80,6 +80,8 @@ pub trait SolInterface: Sized {
     ///
     /// This is the same as [`abi_decode_raw`](Self::abi_decode_raw), but performs
     /// validation checks on the decoded variant's data.
+    /// See [`AbiDecoderConfig::validate`](crate::abi::AbiDecoderConfig::validate)
+    /// for the checks that are performed.
     // TODO: Deprecate in favor of a validating decoder configuration.
     // #[deprecated(note = "use a validating decoder configuration")]
     fn abi_decode_raw_validate(selector: [u8; 4], data: &[u8]) -> Result<Self> {
