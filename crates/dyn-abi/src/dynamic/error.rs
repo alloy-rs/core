@@ -1,7 +1,7 @@
 use crate::{DynSolType, DynSolValue, Error, Result};
 use alloc::vec::Vec;
 use alloy_primitives::Selector;
-use alloy_sol_types::SolError;
+use alloy_sol_types::{SolError, abi::AbiDecoderConfig};
 
 /// See [alloy_sol_types::Panic] for signature details.
 const PANIC_SELECTOR: Selector = Selector::new(alloy_sol_types::Panic::SELECTOR);
@@ -71,13 +71,28 @@ impl DynSolError {
 
     /// Decode the error from the given data, which must already be stripped of
     /// its selector.
-    fn decode_error_body(&self, data: &[u8]) -> Result<DecodedError> {
-        let body = self.body.abi_decode_sequence(data)?.into_fixed_seq().expect("body is a tuple");
+    fn decode_error_body(&self, data: &[u8], config: AbiDecoderConfig) -> Result<DecodedError> {
+        let body = self
+            .body
+            .abi_decode_sequence_with_config(data, config)?
+            .into_fixed_seq()
+            .expect("body is a tuple");
         Ok(DecodedError { body })
     }
 
     /// Decode the error from the given data.
     pub fn decode_error(&self, data: &[u8]) -> Result<DecodedError> {
+        self.decode_error_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// Like [`decode_error`](Self::decode_error), with the given decoder configuration.
+    ///
+    /// See [`DynSolType::abi_decode_with_config`] for the validation options.
+    pub fn decode_error_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<DecodedError> {
         // Check selector validity.
         if !data.starts_with(self.selector.as_slice()) {
             // Need at least 4 bytes to extract the actual selector for the error message.
@@ -93,7 +108,7 @@ impl DynSolError {
 
         // will not panic, as we've already checked the length with starts_with
         let data = data.split_at(4).1;
-        self.decode_error_body(data)
+        self.decode_error_body(data, config)
     }
 }
 

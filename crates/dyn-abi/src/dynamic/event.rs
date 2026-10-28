@@ -1,6 +1,7 @@
 use crate::{DynSolType, DynSolValue, Error, Result};
 use alloc::vec::Vec;
 use alloy_primitives::{B256, IntoLogData, Log, LogData};
+use alloy_sol_types::abi::AbiDecoderConfig;
 
 /// A dynamic ABI event.
 ///
@@ -49,6 +50,23 @@ impl DynSolEvent {
     where
         I: IntoIterator<Item = B256>,
     {
+        self.decode_log_parts_with_config(topics, data, AbiDecoderConfig::new())
+    }
+
+    /// Like [`decode_log_parts`](Self::decode_log_parts), with the given decoder configuration.
+    ///
+    /// See [`DynSolType::abi_decode_with_config`] for the validation options. They also apply to
+    /// indexed topics of word types.
+    pub fn decode_log_parts_with_config<I>(
+        &self,
+        topics: I,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<DecodedEvent>
+    where
+        I: IntoIterator<Item = B256>,
+    {
+        let validate = DynSolType::validation(&config)?.is_some();
         let mut topics = topics.into_iter();
         let num_topics = self.indexed.len() + !self.is_anonymous() as usize;
 
@@ -79,7 +97,7 @@ impl DynSolEvent {
             .iter()
             .enumerate()
             .map(|(i, ty)| match topics.next() {
-                Some(topic) => Ok(ty.decode_event_topic(topic)),
+                Some(topic) => ty.decode_event_topic(topic, validate),
                 // Ran out of topics: report the count we actually have (event hash + `i`
                 // indexed topics consumed so far) rather than letting the body decode below
                 // fail with a confusing `Overrun`.
@@ -104,7 +122,11 @@ impl DynSolEvent {
             });
         }
 
-        let body = self.body.abi_decode_sequence(data)?.into_fixed_seq().expect("body is a tuple");
+        let body = self
+            .body
+            .abi_decode_sequence_with_config(data, config)?
+            .into_fixed_seq()
+            .expect("body is a tuple");
 
         Ok(DecodedEvent { selector: self.topic_0, indexed, body })
     }
@@ -112,6 +134,15 @@ impl DynSolEvent {
     /// Decode the event from the given log info.
     pub fn decode_log_data(&self, log: &LogData) -> Result<DecodedEvent> {
         self.decode_log_parts(log.topics().iter().copied(), &log.data)
+    }
+
+    /// Like [`decode_log_data`](Self::decode_log_data), with the given decoder configuration.
+    pub fn decode_log_data_with_config(
+        &self,
+        log: &LogData,
+        config: AbiDecoderConfig,
+    ) -> Result<DecodedEvent> {
+        self.decode_log_parts_with_config(log.topics().iter().copied(), &log.data, config)
     }
 
     /// Get the selector for this event, if any.
