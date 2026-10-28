@@ -85,12 +85,7 @@ impl<'a> RootType<'a> {
                     return Self("uint8");
                 }
 
-                // Normalize the `u?int` aliases to the canonical `u?int256`
-                match ident {
-                    "uint" => Self("uint256"),
-                    "int" => Self("int256"),
-                    _ => Self(ident),
-                }
+                Self::from_identifier(ident)
             })
         })
         .parse_next(input)
@@ -119,15 +114,21 @@ impl<'a> RootType<'a> {
                     return Self("uint8");
                 }
 
-                // Normalize the `u?int` aliases to the canonical `u?int256`
-                match ident {
-                    "uint" => Self("uint256"),
-                    "int" => Self("int256"),
-                    _ => Self(ident),
-                }
+                Self::from_identifier(ident)
             })
         })
         .parse_next(input)
+    }
+
+    /// Creates a root type from a valid identifier, normalizing the `u?int` aliases to the
+    /// canonical `u?int256`.
+    #[inline]
+    pub(crate) fn from_identifier(ident: &'a str) -> Self {
+        match ident {
+            "uint" => Self("uint256"),
+            "int" => Self("int256"),
+            _ => Self(ident),
+        }
     }
 
     /// The string underlying this type. The type name.

@@ -370,7 +370,9 @@ impl<'de, T: Token<'de>, const N: usize> TokenSeq<'de> for FixedSeqToken<T, N> {
 
     #[inline]
     fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
-        dec.set_strict_head_words(T::MINIMUM_WORDS.checked_mul(N).ok_or(crate::Error::Overrun)?)?;
+        dec.set_strict_head_words(
+            T::MINIMUM_WORDS.checked_mul(N).ok_or_else(|| crate::Error::Overrun)?,
+        )?;
         let mut arr = crate::impl_core::uninit_array::<T, N>();
         // SAFETY: `arr` is valid writable memory for `N` elements.
         // `decode_many_from` initializes all elements on success.
@@ -452,7 +454,8 @@ impl<'de, T: Token<'de>> Token<'de> for DynSeqToken<T> {
         // specifies that offsets are relative to the first word of
         // `enc(X)`. But known-good test vectors are relative to the
         // word AFTER the array size
-        let required_words = T::MINIMUM_WORDS.checked_mul(len).ok_or(crate::Error::Overrun)?;
+        let required_words =
+            T::MINIMUM_WORDS.checked_mul(len).ok_or_else(|| crate::Error::Overrun)?;
         let mut child = child.raw_child()?;
         child.set_strict_head_words(required_words)?;
         if required_words > child.remaining_words() {
@@ -662,7 +665,7 @@ macro_rules! tuple_impls {
                 }
             }
 
-            #[inline]
+            #[inline(always)]
             fn head_append(&self, enc: &mut Encoder) {
                 if Self::DYNAMIC {
                     enc.append_indirection();
@@ -686,27 +689,25 @@ macro_rules! tuple_impls {
         impl<'de, $($ty: Token<'de>,)+> TokenSeq<'de> for ($($ty,)+) {
             const IS_TUPLE: bool = true;
 
+            #[inline(always)]
             fn encode_sequence(&self, enc: &mut Encoder) {
                 let ($($ty,)+) = self;
-                enc.push_offset(0 $( + $ty.head_words() )+);
+                let mut offset = (0 $( + $ty.head_words() )+) * 32;
 
                 $(
-                    $ty.head_append(enc);
-                    enc.bump_offset($ty.tail_words());
+                    append_head($ty, enc, &mut offset);
                 )+
 
                 $(
                     $ty.tail_append(enc);
                 )+
-
-                enc.pop_offset();
             }
 
             #[inline]
             fn decode_sequence(dec: &mut Decoder<'de, '_>) -> Result<Self> {
                 let head_words = 0usize $(
                     .checked_add(<$ty as Token>::MINIMUM_WORDS)
-                    .ok_or(crate::Error::Overrun)?
+                    .ok_or_else(|| crate::Error::Overrun)?
                 )+;
                 dec.set_strict_head_words(head_words)?;
                 Ok(($(
@@ -764,19 +765,29 @@ all_the_tuples!(tuple_impls);
 /// [`FixedSeqToken`] and [`DynSeqToken`].
 fn encode_sequence_impl<'de, T: Token<'de>>(tokens: &[T], enc: &mut Encoder) {
     if T::DYNAMIC {
-        enc.push_offset(tokens.iter().map(T::head_words).sum());
-
+        // Every dynamic token has a one-word head.
+        let mut offset = tokens.len() * 32;
         for inner in tokens {
-            inner.head_append(enc);
-            enc.bump_offset(inner.tail_words());
+            append_head(inner, enc, &mut offset);
         }
         for inner in tokens {
             inner.tail_append(enc);
         }
-
-        enc.pop_offset();
     } else {
         T::head_append_many(tokens, enc);
+    }
+}
+
+/// Appends the head of `token`, tracking the tail offset in `offset` instead of in `enc`.
+///
+/// A dynamic token's head is a pointer to the current `offset`, which then advances past its tail.
+#[inline]
+fn append_head<'de, T: Token<'de>>(token: &T, enc: &mut Encoder, offset: &mut usize) {
+    if T::DYNAMIC {
+        enc.append_offset(*offset);
+        *offset += token.tail_words() * 32;
+    } else {
+        token.head_append(enc);
     }
 }
 

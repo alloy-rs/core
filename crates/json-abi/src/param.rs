@@ -54,19 +54,7 @@ impl fmt::Display for Param {
 
 impl<'de> Deserialize<'de> for Param {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        ParamInner::deserialize(deserializer).and_then(|inner| {
-            if inner.indexed.is_none() {
-                inner.validate_fields()?;
-                Ok(Self {
-                    name: inner.name,
-                    ty: inner.ty,
-                    internal_type: inner.internal_type,
-                    components: inner.components,
-                })
-            } else {
-                Err(serde::de::Error::custom("indexed is not supported in params"))
-            }
-        })
+        ParamInner::deserialize(deserializer).and_then(ParamInner::into_param)
     }
 }
 
@@ -353,16 +341,7 @@ impl fmt::Display for EventParam {
 
 impl<'de> Deserialize<'de> for EventParam {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        ParamInner::deserialize(deserializer).and_then(|inner| {
-            inner.validate_fields()?;
-            Ok(Self {
-                name: inner.name,
-                ty: inner.ty,
-                indexed: inner.indexed.unwrap_or(false),
-                internal_type: inner.internal_type,
-                components: inner.components,
-            })
-        })
+        ParamInner::deserialize(deserializer).and_then(ParamInner::into_event_param)
     }
 }
 
@@ -578,8 +557,9 @@ impl EventParam {
     }
 }
 
+/// The fields of both [`Param`] and [`EventParam`], not yet validated.
 #[derive(Deserialize)]
-struct ParamInner {
+pub(crate) struct ParamInner {
     #[serde(default)]
     name: String,
     #[serde(rename = "type")]
@@ -600,6 +580,30 @@ impl Serialize for ParamInner {
 }
 
 impl ParamInner {
+    pub(crate) fn into_param<E: serde::de::Error>(self) -> Result<Param, E> {
+        if self.indexed.is_some() {
+            return Err(E::custom("indexed is not supported in params"));
+        }
+        self.validate_fields()?;
+        Ok(Param {
+            name: self.name,
+            ty: self.ty,
+            internal_type: self.internal_type,
+            components: self.components,
+        })
+    }
+
+    pub(crate) fn into_event_param<E: serde::de::Error>(self) -> Result<EventParam, E> {
+        self.validate_fields()?;
+        Ok(EventParam {
+            name: self.name,
+            ty: self.ty,
+            indexed: self.indexed.unwrap_or(false),
+            internal_type: self.internal_type,
+            components: self.components,
+        })
+    }
+
     #[inline]
     fn validate_fields<E: serde::de::Error>(&self) -> Result<(), E> {
         self.as_borrowed().validate_fields()

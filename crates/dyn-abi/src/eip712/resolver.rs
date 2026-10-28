@@ -8,10 +8,13 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use alloy_primitives::{B256, keccak256, map::HashSet};
+use alloy_primitives::{
+    B256, keccak256,
+    map::{HashMap, HashSet},
+};
 use alloy_sol_types::SolStruct;
 use core::{cmp::Ordering, fmt};
-use parser::{RootType, TypeSpecifier, TypeStem};
+use parser::{RootType, TypeSpecifier, TypeStem, is_valid_identifier};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// An EIP-712 property definition.
@@ -38,7 +41,8 @@ impl<'de> Deserialize<'de> for PropertyDef {
 }
 
 impl PropertyDef {
-    /// Instantiate a new name-type pair.
+    /// Instantiate a new name-type pair, checking that the type name is a valid
+    /// EIP-712 type and the name a valid Solidity identifier.
     #[inline]
     pub fn new<T, N>(type_name: T, name: N) -> Result<Self>
     where
@@ -47,11 +51,17 @@ impl PropertyDef {
     {
         let type_name = type_name.into();
         TypeSpecifier::parse_eip712(type_name.as_str())?;
+        let name = name.into();
+        // Names are written verbatim into `encodeType`, so separators in a name
+        // could make two different types encode to the same string.
+        if !is_valid_identifier(&name) {
+            return Err(Error::invalid_property_def(&alloc::format!("{type_name} {name}")));
+        }
         Ok(Self::new_unchecked(type_name, name))
     }
 
     /// Instantiate a new name-type pair, without checking that the type name
-    /// is a valid root type.
+    /// is a valid root type or that the name is a valid identifier.
     #[inline]
     pub fn new_unchecked<T, N>(type_name: T, name: N) -> Self
     where
@@ -211,6 +221,18 @@ fn check_type_depth(depth: usize) -> Result<()> {
 }
 
 const MAX_RESOLVED_TYPE_NODES: usize = 1024;
+
+/// Cheap necessary condition for a parsed root type name to be a basic Solidity
+/// type, so that struct names can skip the (allocating) basic type check.
+fn may_be_basic_type(name: &str) -> bool {
+    matches!(name, "address" | "bool" | "string" | "function")
+        || name.starts_with("bytes")
+        || name.starts_with("int")
+        || name.starts_with("uint")
+}
+
+/// Type hashes by struct name, computed once per hashing call.
+type TypeHashes<'a> = HashMap<&'a str, B256>;
 
 fn charge_type_nodes(remaining: &mut usize, nodes: usize) -> Result<()> {
     *remaining = remaining
@@ -474,7 +496,9 @@ impl Resolver {
         depth: usize,
         remaining: &mut usize,
     ) -> Result<DynSolType> {
-        if let Ok(ty) = root_type.resolve() {
+        if let Some(ty) =
+            may_be_basic_type(root_type.span()).then(|| root_type.resolve().ok()).flatten()
+        {
             return Ok(ty);
         }
 
@@ -533,9 +557,10 @@ impl Resolver {
             DynSolValue::CustomStruct { tuple: inner, .. }
             | DynSolValue::Array(inner)
             | DynSolValue::FixedArray(inner) => {
+                let type_hashes = &mut TypeHashes::default();
                 let mut bytes = Vec::with_capacity(inner.len() * 32);
                 for v in inner {
-                    bytes.extend(self.eip712_data_word(v)?.as_slice());
+                    bytes.extend(self.data_word(v, type_hashes)?.as_slice());
                 }
                 Some(bytes)
             }
@@ -549,6 +574,14 @@ impl Resolver {
     /// rules. Atomic types are encoded as-is, while non-atomic types are
     /// encoded as their `encodeData` hash.
     pub fn eip712_data_word(&self, value: &DynSolValue) -> Result<B256> {
+        self.data_word(value, &mut TypeHashes::default())
+    }
+
+    fn data_word<'a>(
+        &self,
+        value: &'a DynSolValue,
+        type_hashes: &mut TypeHashes<'a>,
+    ) -> Result<B256> {
         if let Some(word) = value.as_word() {
             return Ok(word);
         }
@@ -556,21 +589,35 @@ impl Resolver {
         let mut bytes;
         let to_hash = match value {
             DynSolValue::CustomStruct { name, tuple, .. } => {
-                bytes = self.type_hash(name)?.to_vec();
+                let type_hash = match type_hashes.get(name.as_str()) {
+                    Some(type_hash) => *type_hash,
+                    None => {
+                        let type_hash = self.type_hash(name)?;
+                        type_hashes.insert(name, type_hash);
+                        type_hash
+                    }
+                };
+                bytes = Vec::with_capacity((tuple.len() + 1) * 32);
+                bytes.extend_from_slice(type_hash.as_slice());
                 for v in tuple {
-                    bytes.extend(self.eip712_data_word(v)?.as_slice());
+                    bytes.extend(self.data_word(v, type_hashes)?.as_slice());
                 }
                 &bytes[..]
             }
             DynSolValue::Array(inner) | DynSolValue::FixedArray(inner) => {
                 bytes = Vec::with_capacity(inner.len() * 32);
                 for v in inner {
-                    bytes.extend(self.eip712_data_word(v)?);
+                    bytes.extend(self.data_word(v, type_hashes)?);
                 }
                 &bytes[..]
             }
             DynSolValue::Bytes(buf) => buf,
             DynSolValue::String(s) => s.as_bytes(),
+            // EIP-712 has no tuple type, but the resolver accepts tuple property
+            // types like `(uint256,uint256)`.
+            DynSolValue::Tuple(_) => {
+                return Err(Error::custom("EIP-712 does not support tuple types"));
+            }
             _ => unreachable!("all types are words or covered in the match"),
         };
         Ok(keccak256(to_hash))
@@ -618,6 +665,34 @@ mod tests {
     use alloc::boxed::Box;
     use alloy_sol_types::sol;
     use serde_json::json;
+
+    #[test]
+    fn property_names_must_be_identifiers() {
+        assert!(PropertyDef::new("uint256", "nonce").is_ok());
+        for name in ["", "a b", "a-b", "1a", "to,uint256 ignored"] {
+            assert!(PropertyDef::new("uint256", name).is_err(), "{name:?}");
+        }
+
+        // Both used to encode as `Transfer(address to,uint256 ignored,uint256 nonce)`.
+        for (first, second) in [("to,uint256 ignored", "nonce"), ("to", "ignored,uint256 nonce")] {
+            let types = json!({
+                "Transfer": [{ "type": "address", "name": first }, { "type": "uint256", "name": second }]
+            });
+            assert!(serde_json::from_value::<Eip712Types>(types).is_err());
+        }
+    }
+
+    #[test]
+    fn tuple_property_errors() {
+        let mut graph = Resolver::default();
+        graph.ingest_string("Foo((uint256,uint256) a)").unwrap();
+        let value = graph.resolve("Foo").unwrap().coerce_json(&json!({ "a": [1, 2] })).unwrap();
+        let expected = Error::custom("EIP-712 does not support tuple types");
+        // Both used to panic on the tuple.
+        assert_eq!(graph.encode_data(&value).unwrap_err(), expected);
+        let array = DynSolValue::Array(vec![DynSolValue::Tuple(vec![true.into()])]);
+        assert_eq!(graph.eip712_data_word(&array).unwrap_err(), expected);
+    }
 
     #[test]
     fn shared_expansion_budget() {
@@ -803,6 +878,36 @@ mod tests {
         assert_eq!(graph.resolve("A"), Ok(a));
         assert_eq!(graph.resolve("B"), Ok(b));
         assert_eq!(graph.resolve("C"), Ok(c));
+    }
+
+    #[test]
+    fn basic_types_take_precedence_over_structs() {
+        let mut graph = Resolver::default();
+        for name in ["uint256", "bytesFoo", "intern", "Person"] {
+            let props = vec![PropertyDef::new_unchecked("bool", "flag")];
+            graph.ingest(TypeDef::new_unchecked(name.to_string(), props));
+        }
+
+        assert_eq!(graph.resolve("uint256"), Ok(DynSolType::Uint(256)));
+        for name in ["bytesFoo", "intern", "Person"] {
+            let ty = DynSolType::CustomStruct {
+                name: name.to_string(),
+                prop_names: vec!["flag".to_string()],
+                tuple: vec![DynSolType::Bool],
+            };
+            assert_eq!(graph.resolve(name), Ok(ty), "{name}");
+        }
+    }
+
+    #[test]
+    fn enum_property_types_encode_as_uint8() {
+        let mut graph = Resolver::default();
+        graph.ingest(TypeDef::new_unchecked(
+            "Foo".to_string(),
+            vec![PropertyDef::new_unchecked("Contract.Enum", "x")],
+        ));
+        assert_eq!(graph.encode_type("Foo").unwrap(), "Foo(Contract.Enum x)");
+        assert_eq!(graph.linearize("Foo").unwrap().len(), 1);
     }
 
     #[test]

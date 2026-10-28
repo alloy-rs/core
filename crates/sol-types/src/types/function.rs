@@ -120,16 +120,18 @@ pub trait SolCall: Sized {
     /// ABI encode the call to the given buffer **without** its selector.
     #[inline]
     fn abi_encode_raw(&self, out: &mut Vec<u8>) {
-        out.reserve(self.abi_encoded_size());
-        out.extend(crate::abi::encode_sequence(&self.tokenize()));
+        let token = self.tokenize();
+        out.reserve(token.total_words() * 32);
+        crate::abi::encode_sequence_to(&token, out);
     }
 
     /// ABI encode the call to the given buffer **with** its selector.
     #[inline]
     fn abi_encode(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(4 + self.abi_encoded_size());
-        out.extend(&Self::SELECTOR);
-        self.abi_encode_raw(&mut out);
+        let token = self.tokenize();
+        let mut out = Vec::with_capacity(4 + token.total_words() * 32);
+        out.extend_from_slice(&Self::SELECTOR);
+        crate::abi::encode_sequence_to(&token, &mut out);
         out
     }
 

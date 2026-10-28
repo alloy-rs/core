@@ -1,6 +1,6 @@
 use alloy_primitives::{Address, B256, I256, U256, b256, bytes, hex, keccak256};
 use alloy_sol_types::{
-    Error, SolCall, SolError, SolEvent, SolEventInterface, SolStruct, SolType,
+    Error, SolCall, SolError, SolEvent, SolEventInterface, SolInterface, SolStruct, SolType,
     abi::AbiDecoderConfig, sol,
 };
 use serde::Serialize;
@@ -255,6 +255,62 @@ fn empty_call() {
     let depositCall {} = depositCall::abi_decode_raw(&[]).unwrap();
 
     assert!(depositCall::abi_encode_returns(&WETH::depositReturn {}).is_empty());
+}
+
+#[test]
+fn encode_appends_to_buffer() {
+    sol! {
+        function f(address[] a, bytes b);
+        error E(string s);
+        event V(uint256 indexed i, bytes b);
+    }
+
+    let call = fCall { a: vec![Address::repeat_byte(1); 3], b: vec![7; 40].into() };
+    let encoded = call.abi_encode();
+    assert_eq!(encoded.len(), 4 + call.abi_encoded_size());
+    let mut out = vec![0xaa; 5];
+    call.abi_encode_raw(&mut out);
+    assert_eq!(out[..5], [0xaa; 5]);
+    assert_eq!(out[5..], encoded[4..]);
+
+    let error = E { s: "hello".into() };
+    let encoded = error.abi_encode();
+    assert_eq!(encoded.len(), 4 + error.abi_encoded_size());
+    let mut out = vec![0xaa; 5];
+    error.abi_encode_raw(&mut out);
+    assert_eq!(out[..5], [0xaa; 5]);
+    assert_eq!(out[5..], encoded[4..]);
+
+    let event = V { i: U256::from(1), b: vec![7; 40].into() };
+    let data = <(alloy_sol_types::sol_data::Bytes,)>::abi_encode_sequence(&(event.b.clone(),));
+    assert_eq!(event.encode_data(), data);
+    let mut out = vec![0xaa; 5];
+    event.encode_data_to(&mut out);
+    assert_eq!(out[..5], [0xaa; 5]);
+    assert_eq!(out[5..], data);
+}
+
+#[test]
+fn interface_abi_encode_is_selector_and_raw() {
+    sol! {
+        interface I {
+            function g(address[] a, bytes b);
+            function h(uint256 x);
+            error F(string s);
+            error G(uint256 x);
+        }
+    }
+
+    fn check(interface: &impl SolInterface) {
+        let mut expected = interface.selector().to_vec();
+        interface.abi_encode_raw(&mut expected);
+        assert_eq!(interface.abi_encode(), expected);
+    }
+
+    check(&I::ICalls::g(I::gCall { a: vec![Address::repeat_byte(1); 3], b: vec![7; 40].into() }));
+    check(&I::ICalls::h(I::hCall { x: U256::from(1) }));
+    check(&I::IErrors::F(I::F { s: "hello".into() }));
+    check(&I::IErrors::G(I::G { x: U256::from(1) }));
 }
 
 #[test]
@@ -1551,6 +1607,59 @@ fn bytes64() {
 
     let x = bytes64 { a: B256::ZERO, b: B256::ZERO };
     assert_eq!(bytes64::abi_encode_packed(&x), alloy_primitives::B512::ZERO.as_slice());
+}
+
+#[test]
+fn nested_dynamic_struct_sizes_and_packed() {
+    sol! {
+        struct Item {
+            address token;
+            uint256 amount;
+            bytes data;
+        }
+
+        struct Order {
+            address offerer;
+            uint256[] amounts;
+            Item[] items;
+            bytes signature;
+            string memo;
+        }
+    }
+
+    type OrderTuple = sol! { (address, uint256[], (address, uint256, bytes)[], bytes, string) };
+
+    let item = |i: u8| Item {
+        token: Address::with_last_byte(i),
+        amount: U256::from(i),
+        data: vec![i; i as usize * 7].into(),
+    };
+    let order = Order {
+        offerer: Address::with_last_byte(9),
+        amounts: vec![U256::from(1), U256::from(2), U256::from(3)],
+        items: vec![item(1), item(2), item(3)],
+        signature: vec![0xab; 65].into(),
+        memo: "hello world".into(),
+    };
+    let tuple = (
+        order.offerer,
+        order.amounts.clone(),
+        order.items.iter().map(|i| (i.token, i.amount, i.data.clone())).collect::<Vec<_>>(),
+        order.signature.clone(),
+        order.memo.clone(),
+    );
+
+    let size = Order::abi_encoded_size(&order);
+    assert_eq!(size, Order::abi_encode(&order).len());
+    assert_eq!(size, OrderTuple::abi_encoded_size(&tuple));
+
+    let packed = Order::abi_encode_packed(&order);
+    assert_eq!(packed, OrderTuple::abi_encode_packed(&tuple));
+    assert_eq!(Order::abi_packed_encoded_size(&order), packed.len());
+
+    let orders = vec![order.clone(), order];
+    type Orders = sol! { Order[] };
+    assert_eq!(Orders::abi_encoded_size(&orders), Orders::abi_encode(&orders).len());
 }
 
 #[test]

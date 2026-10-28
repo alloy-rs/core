@@ -301,7 +301,7 @@ impl<T: ?Sized + AsRef<[u8]>> SolTypeValue<Bytes> for T {
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        keccak256(Bytes::abi_encode_packed(self))
+        keccak256(self.as_ref())
     }
 
     #[inline]
@@ -351,7 +351,7 @@ impl<T: ?Sized + AsRef<str>> SolTypeValue<String> for T {
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        keccak256(String::abi_encode_packed(self))
+        keccak256(self.as_ref())
     }
 
     #[inline]
@@ -412,7 +412,7 @@ where
 
     #[inline]
     fn stv_eip712_data_word(&self) -> Word {
-        let mut encoded = Vec::new();
+        let mut encoded = Vec::with_capacity(self.len() * 32);
         for item in self {
             encoded.extend_from_slice(T::stv_eip712_data_word(item).as_slice());
         }
@@ -422,7 +422,11 @@ where
     #[inline]
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         for item in self {
-            // Array elements are left-padded to 32 bytes.
+            // Array elements are padded to 32 bytes like in the standard encoding.
+            if U::ENCODED_SIZE == Some(32) {
+                out.extend_from_slice(&U::abi_encode(item));
+                continue;
+            }
             if let Some(padding_needed) = 32usize.checked_sub(item.stv_abi_packed_encoded_size()) {
                 out.extend(core::iter::repeat_n(0, padding_needed));
             }
@@ -581,7 +585,11 @@ where
     #[inline]
     fn stv_abi_encode_packed_to(&self, out: &mut Vec<u8>) {
         for item in self {
-            // Array elements are left-padded to 32 bytes.
+            // Array elements are padded to 32 bytes like in the standard encoding.
+            if U::ENCODED_SIZE == Some(32) {
+                out.extend_from_slice(&U::abi_encode(item));
+                continue;
+            }
             if let Some(padding_needed) = 32usize.checked_sub(item.stv_abi_packed_encoded_size()) {
                 out.extend(core::iter::repeat_n(0, padding_needed));
             }
@@ -1577,6 +1585,22 @@ mod tests {
             "fffffd"
             "00000003"
             "fffffffd"
+        );
+        assert_eq!(hex::encode(res_ty), hex::encode(expected));
+        assert_eq!(hex::encode(res_value), hex::encode(expected));
+    }
+
+    #[test]
+    fn encode_packed_arrays() {
+        let value = (vec![-1i8, 1], [RustFixedBytes([0x12]), RustFixedBytes([0x34])]);
+
+        let res_ty = <sol! { (int8[], bytes1[2]) }>::abi_encode_packed(&value);
+        let res_value = value.abi_encode_packed();
+        let expected = hex!(
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            "0000000000000000000000000000000000000000000000000000000000000001"
+            "1200000000000000000000000000000000000000000000000000000000000000"
+            "3400000000000000000000000000000000000000000000000000000000000000"
         );
         assert_eq!(hex::encode(res_ty), hex::encode(expected));
         assert_eq!(hex::encode(res_value), hex::encode(expected));
