@@ -73,7 +73,7 @@ fn malformed_data_wins_over_invalid_words() {
 }
 
 /// A `bool` word that is not 0 or 1.
-fn dirty_bool() -> [u8; 32] {
+const fn dirty_bool() -> [u8; 32] {
     let mut word = [0u8; 32];
     word[31] = 2;
     word
