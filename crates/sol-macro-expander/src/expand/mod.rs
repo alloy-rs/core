@@ -324,15 +324,16 @@ impl ExpCtxt<'_> {
         }
     }
 
-    /// Checks for function and error selector collisions in the resolved items.
+    /// Checks for function, error and event selector collisions in the resolved items.
+    ///
+    /// Overloads share a Rust name, so this checks every overloaded item and not only the last
+    /// item of each name.
     fn check_selector_collisions(&mut self) -> std::result::Result<(), ()> {
         #[derive(Clone, Copy)]
         enum SelectorKind {
             Function,
             Error,
-            // We can ignore events since their selectors are 32 bytes which are unlikely to
-            // collide.
-            // Event,
+            Event,
         }
 
         impl fmt::Display for SelectorKind {
@@ -340,7 +341,7 @@ impl ExpCtxt<'_> {
                 match self {
                     Self::Function => "function",
                     Self::Error => "error",
-                    // Self::Event => "event",
+                    Self::Event => "event",
                 }
                 .fmt(f)
             }
@@ -349,19 +350,22 @@ impl ExpCtxt<'_> {
         let mut result = Ok(());
 
         let mut selectors = vec![HashMap::new(); 3];
-        for (namespace, items) in &self.all_items.clone().0 {
+        for (namespace, items) in &self.overloaded_items.clone().0 {
             self.with_namespace(namespace.clone(), |this| {
                 selectors.iter_mut().for_each(|s| s.clear());
-                for (_, &item) in items {
+                for &item in items.values().flatten() {
                     let (kind, selector) = match item {
-                        Item::Function(function) => {
+                        OverloadedItem::Function(function) => {
                             (SelectorKind::Function, this.function_selector(function))
                         }
-                        Item::Error(error) => (SelectorKind::Error, this.error_selector(error)),
-                        // Item::Event(event) => (SelectorKind::Event, this.event_selector(event)),
-                        _ => continue,
+                        OverloadedItem::Error(error) => {
+                            (SelectorKind::Error, this.error_selector(error))
+                        }
+                        OverloadedItem::Event(event) => {
+                            (SelectorKind::Event, this.event_selector(event))
+                        }
                     };
-                    let selector: [u8; 4] = selector.array.try_into().unwrap();
+                    let selector = selector.array;
                     // 0x00000000 or 0xffffffff are reserved for custom errors.
                     if matches!(kind, SelectorKind::Error)
                         && (selector == [0, 0, 0, 0] || selector == [0xff, 0xff, 0xff, 0xff])
@@ -369,7 +373,7 @@ impl ExpCtxt<'_> {
                         emit_error!(
                             item.span(),
                             "{kind} selector `{}` is reserved",
-                            hex::encode_prefixed(selector),
+                            hex::encode_prefixed(&selector),
                         );
                         result = Err(());
                         continue;
@@ -384,7 +388,7 @@ impl ExpCtxt<'_> {
                             emit_error!(
                                 item.span(),
                                 "{kind} selector `{}` collides with `{}`",
-                                hex::encode_prefixed(selector),
+                                hex::encode_prefixed(entry.key()),
                                 other.name().unwrap();
 
                                 note = other.span() => "other declaration is here";

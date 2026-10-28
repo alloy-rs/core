@@ -28,7 +28,6 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
     let ItemStruct { name, fields, .. } = s;
 
     let (sol_attrs, mut attrs) = s.split_attrs()?;
-    let sol_name = cx.sol_name(name, &s.attrs);
 
     cx.derives(&mut attrs, fields, true);
     let docs = sol_attrs.docs.or(cx.attrs.docs).unwrap_or(true);
@@ -58,7 +57,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
     let attrs = attrs.iter();
     let convert = expand_from_into_tuples(&name.0, fields, cx, super::FieldKind::Original);
-    let name_s = sol_name;
+    let name_s = cx.sol_name(name, &s.attrs);
     let fields = expand_fields(fields, cx);
 
     let doc = docs.then(|| mk_doc(format!("```solidity\n{s}\n```")));

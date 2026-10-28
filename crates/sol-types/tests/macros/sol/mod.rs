@@ -1234,7 +1234,7 @@ fn rename_and_rename_all() {
 #[test]
 fn contract_rename_all() {
     sol! {
-        #[sol(rename = "ActualContract", rename_all = "snake_case")]
+        #[sol(rename_all = "snake_case")]
         contract RustContract {
             struct InnerType {
                 uint256 someField;

@@ -8,6 +8,19 @@ sol! {
 }
 
 sol! {
+    function overloaded(uint256);
+    function overloaded(string);
+    #[sol(rename = "overloaded")]
+    function other(uint256);
+}
+
+sol! {
+    event Old(uint256);
+    #[sol(rename = "Old")]
+    event New(uint256);
+}
+
+sol! {
     struct InvalidFieldAttribute {
         #[sol(rename = "one", rename = "two")]
         uint256 field;

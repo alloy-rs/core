@@ -7,8 +7,26 @@ error: function selector `0x8f5383a4` collides with `first`
 7 |     function second(uint256);
   |              ^^^^^^
 
-error: duplicate attribute
-  --> tests/ui/rename.rs:12:31
+error: function selector `0x7f6e692d` collides with `overloaded`
+
+         = note: other declaration is here
+
+  --> tests/ui/rename.rs:14:14
    |
-12 |         #[sol(rename = "one", rename = "two")]
+14 |     function other(uint256);
+   |              ^^^^^
+
+error: event selector `0x668c9415d314e486aa52bda1cbac340ebfa8ba095559d2b287ba04fc1435ed2c` collides with `Old`
+
+         = note: other declaration is here
+
+  --> tests/ui/rename.rs:20:11
+   |
+20 |     event New(uint256);
+   |           ^^^
+
+error: duplicate attribute
+  --> tests/ui/rename.rs:25:31
+   |
+25 |         #[sol(rename = "one", rename = "two")]
    |                               ^^^^^^
