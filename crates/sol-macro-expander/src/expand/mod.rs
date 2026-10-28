@@ -353,6 +353,8 @@ impl ExpCtxt<'_> {
         for (namespace, items) in &self.overloaded_items.clone().0 {
             self.with_namespace(namespace.clone(), |this| {
                 selectors.iter_mut().for_each(|s| s.clear());
+
+                let mut candidates = Vec::new();
                 for &item in items.values().flatten() {
                     let (kind, selector) = match item {
                         OverloadedItem::Function(function) => {
@@ -365,13 +367,30 @@ impl ExpCtxt<'_> {
                             (SelectorKind::Event, this.event_selector(event))
                         }
                     };
-                    let selector = selector.array;
+                    candidates.push((kind, selector.array, item.span(), item.name().unwrap()));
+                }
+                // Public state variable getters are functions too.
+                for item in this.all_items.0.get(namespace).into_iter().flat_map(|m| m.values()) {
+                    if let Item::Variable(var_def) = item
+                        && let Ok(Some(getter)) = var_def::var_as_function(this, var_def)
+                    {
+                        let selector = this.function_selector(&getter).array;
+                        candidates.push((
+                            SelectorKind::Function,
+                            selector,
+                            var_def.span(),
+                            &var_def.name,
+                        ));
+                    }
+                }
+
+                for (kind, selector, span, name) in candidates {
                     // 0x00000000 or 0xffffffff are reserved for custom errors.
                     if matches!(kind, SelectorKind::Error)
                         && (selector == [0, 0, 0, 0] || selector == [0xff, 0xff, 0xff, 0xff])
                     {
                         emit_error!(
-                            item.span(),
+                            span,
                             "{kind} selector `{}` is reserved",
                             hex::encode_prefixed(&selector),
                         );
@@ -380,18 +399,17 @@ impl ExpCtxt<'_> {
                     }
                     match selectors[kind as usize].entry(selector) {
                         std::collections::hash_map::Entry::Vacant(entry) => {
-                            entry.insert(item);
+                            entry.insert((span, name));
                         }
                         std::collections::hash_map::Entry::Occupied(entry) => {
                             result = Err(());
-                            let other = *entry.get();
+                            let &(other_span, other_name) = entry.get();
                             emit_error!(
-                                item.span(),
-                                "{kind} selector `{}` collides with `{}`",
-                                hex::encode_prefixed(entry.key()),
-                                other.name().unwrap();
+                                span,
+                                "{kind} selector `{}` collides with `{other_name}`",
+                                hex::encode_prefixed(entry.key());
 
-                                note = other.span() => "other declaration is here";
+                                note = other_span => "other declaration is here";
                             );
                         }
                     }

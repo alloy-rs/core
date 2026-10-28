@@ -21,6 +21,12 @@ sol! {
 }
 
 sol! {
+    uint256 public value;
+    #[sol(rename = "value")]
+    function getter();
+}
+
+sol! {
     struct InvalidFieldAttribute {
         #[sol(rename = "one", rename = "two")]
         uint256 field;

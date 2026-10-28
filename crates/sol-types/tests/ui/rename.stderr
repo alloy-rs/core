@@ -25,8 +25,17 @@ error: event selector `0x668c9415d314e486aa52bda1cbac340ebfa8ba095559d2b287ba04f
 20 |     event New(uint256);
    |           ^^^
 
-error: duplicate attribute
-  --> tests/ui/rename.rs:25:31
+error: function selector `0x3fa4f245` collides with `getter`
+
+         = note: other declaration is here
+
+  --> tests/ui/rename.rs:24:5
    |
-25 |         #[sol(rename = "one", rename = "two")]
+24 |     uint256 public value;
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: duplicate attribute
+  --> tests/ui/rename.rs:31:31
+   |
+31 |         #[sol(rename = "one", rename = "two")]
    |                               ^^^^^^
