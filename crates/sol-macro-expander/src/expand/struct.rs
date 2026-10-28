@@ -1,6 +1,6 @@
 //! [`ItemStruct`] expansion.
 
-use super::{ExpCtxt, expand_fields, expand_from_into_tuples, expand_tokenize};
+use super::{ExpCtxt, derives_serde, expand_fields, expand_from_into_tuples, expand_tokenize};
 use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
 use ast::{Item, ItemStruct, SolIdent, SolPath, Spanned, Type};
 use proc_macro2::TokenStream;
@@ -55,10 +55,11 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, s: &ItemStruct) -> Result<TokenStream> {
 
     let alloy_sol_types = &cx.crates.sol_types;
 
+    let serde_parent_attrs = derives_serde(&attrs).then_some(s.attrs.as_slice());
     let attrs = attrs.iter();
     let convert = expand_from_into_tuples(&name.0, fields, cx, super::FieldKind::Original);
     let name_s = cx.sol_name(name, &s.attrs);
-    let fields = expand_fields(fields, cx);
+    let fields = expand_fields(fields, cx, serde_parent_attrs);
 
     let doc = docs.then(|| mk_doc(format!("```solidity\n{s}\n```")));
     let tokens = quote! {

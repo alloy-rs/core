@@ -75,7 +75,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, error: &ItemError) -> Result<TokenStream>
             }
         }
         _ => {
-            let fields = expand_fields(params, cx);
+            let fields = expand_fields(params, cx, None);
             quote! {
                 pub struct #name {
                     #(#fields),*

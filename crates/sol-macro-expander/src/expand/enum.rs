@@ -1,7 +1,7 @@
 //! [`ItemEnum`] expansion.
 
-use super::ExpCtxt;
-use alloy_sol_macro_input::{ContainsSolAttrs, derives_mapped, mk_doc};
+use super::{ExpCtxt, derives_serde};
+use alloy_sol_macro_input::{ContainsSolAttrs, mk_doc};
 use ast::{ItemEnum, Spanned};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -41,13 +41,7 @@ pub(super) fn expand(cx: &ExpCtxt<'_>, enumm: &ItemEnum) -> Result<TokenStream> 
     let invalid_variant = has_invalid_variant.then(|| {
         let comma = (!variants.trailing_punct()).then(syn::token::Comma::default);
 
-        let has_serde = derives_mapped(&attrs).any(|path| {
-            let Some(last) = path.segments.last() else {
-                return false;
-            };
-            last.ident == "Serialize" || last.ident == "Deserialize"
-        });
-        let serde_other = has_serde.then(|| quote!(#[serde(other)]));
+        let serde_other = derives_serde(&attrs).then(|| quote!(#[serde(other)]));
 
         quote! {
             #comma

@@ -1,7 +1,7 @@
 //! Functions which generate Rust code from the Solidity AST.
 
 use crate::utils::{self, ExprArray};
-use alloy_sol_macro_input::{CasingStyle, ContainsSolAttrs, SolAttrs};
+use alloy_sol_macro_input::{CasingStyle, ContainsSolAttrs, SolAttrs, derives_mapped};
 use ast::{
     EventParameter, File, Item, ItemError, ItemEvent, ItemFunction, Parameters, SolIdent, SolPath,
     Spanned, Type, VariableDeclaration, Visit, VisitMut, visit_mut,
@@ -964,17 +964,34 @@ impl ExternCrates {
 
 // helper functions
 
+/// Returns whether the attributes derive `Serialize` or `Deserialize`.
+fn derives_serde(attrs: &[Attribute]) -> bool {
+    derives_mapped(attrs).any(|path| {
+        path.segments.last().is_some_and(|s| s.ident == "Serialize" || s.ident == "Deserialize")
+    })
+}
+
 /// Expands a list of parameters into a list of struct fields.
+///
+/// If `serde_parent_attrs` is set, fields whose Solidity name differs from their Rust name get a
+/// `#[serde(rename)]` with the Solidity name. These are the attributes of the parent item, which
+/// derives serde.
 fn expand_fields<'a, P>(
     params: &'a Parameters<P>,
     cx: &'a ExpCtxt<'_>,
+    serde_parent_attrs: Option<&'a [Attribute]>,
 ) -> impl Iterator<Item = TokenStream> + 'a {
-    params.iter().enumerate().map(|(i, var)| {
+    params.iter().enumerate().map(move |(i, var)| {
         let name = anon_name((i, var.name.as_ref()));
         let ty = cx.expand_rust_type(&var.ty);
         let attrs = var.attrs.iter().filter(|attr| !attr.path().is_ident("sol"));
+        let serde_rename = var.name.as_ref().zip(serde_parent_attrs).and_then(|(name, parent)| {
+            let sol_name = cx.child_sol_name(name, &var.attrs, parent, &cx.current_namespace);
+            (sol_name != name.as_string()).then(|| quote!(#[serde(rename = #sol_name)]))
+        });
         quote! {
             #(#attrs)*
+            #serde_rename
             #[allow(missing_docs)]
             pub #name: #ty
         }

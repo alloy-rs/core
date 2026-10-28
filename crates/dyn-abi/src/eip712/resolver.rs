@@ -995,7 +995,10 @@ mod tests {
 
         let mut graph = Resolver::default();
         graph.ingest_sol_struct::<Root>();
-        assert_eq!(graph.encode_type("Root").unwrap(), Root::eip712_encode_type());
+        assert_eq!(
+            graph.encode_type("Root").unwrap(),
+            "Root(A$B dollar,A a)A(uint256 b)A$B(uint256 a)"
+        );
     }
 
     #[test]
