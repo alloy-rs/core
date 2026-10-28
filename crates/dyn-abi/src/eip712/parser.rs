@@ -166,7 +166,7 @@ impl<'a> EncodeType<'a> {
 
         // Every non-whitespace part of the input must be a component type, so that malformed
         // input is reported instead of being dropped.
-        while !remaining.trim().is_empty() {
+        while !remaining.trim_start().is_empty() {
             let t = ComponentType::parse(remaining)?;
             remaining = &remaining[t.span.len()..];
             types.push(t);
