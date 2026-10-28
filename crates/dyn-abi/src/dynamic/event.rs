@@ -66,7 +66,7 @@ impl DynSolEvent {
     where
         I: IntoIterator<Item = B256>,
     {
-        let validate = DynSolType::validation(&config)?.is_some();
+        let validate = DynSolType::validation(&config)?;
         let mut topics = topics.into_iter();
         let num_topics = self.indexed.len() + !self.is_anonymous() as usize;
 

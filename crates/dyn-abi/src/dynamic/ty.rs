@@ -451,8 +451,12 @@ impl DynSolType {
 
     /// Decode an event topic into a [`DynSolValue`].
     ///
-    /// If `validate` is `true`, the topic of a word type must be canonical.
-    pub(crate) fn decode_event_topic(&self, topic: Word, validate: bool) -> Result<DynSolValue> {
+    /// `validate` is as in [`abi_decode_inner`](Self::abi_decode_inner); it applies to word types.
+    pub(crate) fn decode_event_topic(
+        &self,
+        topic: Word,
+        validate: Option<bool>,
+    ) -> Result<DynSolValue> {
         match self {
             Self::Address
             | Self::Function
@@ -460,13 +464,9 @@ impl DynSolType {
             | Self::FixedBytes(_)
             | Self::Int(_)
             | Self::Uint(_) => {
-                if validate && !self.is_valid_word(&topic) {
-                    return Err(alloy_sol_types::Error::type_check_fail(
-                        topic.as_slice(),
-                        self.sol_type_name(),
-                    )
-                    .into());
-                }
+                let mut validation = Validation::new(validate);
+                validation.word(self, &topic);
+                validation.finish()?;
                 Ok(self.word_value(topic))
             }
             _ => Ok(DynSolValue::FixedBytes(topic, 32)),

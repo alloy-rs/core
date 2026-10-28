@@ -4,7 +4,7 @@ use alloy_dyn_abi::{
     DynSolCall, DynSolType, DynSolValue, ErrorExt, EventExt, FunctionExt, JsonAbiExt,
 };
 use alloy_json_abi::{Error, Event, EventParam, Function};
-use alloy_primitives::{B256, LogData};
+use alloy_primitives::{B256, LogData, U256};
 use alloy_sol_types::abi::AbiDecoderConfig;
 
 #[test]
@@ -86,7 +86,10 @@ fn type_decoders_validate_words() {
 
     let ty = DynSolType::Bool;
     assert_eq!(ty.abi_decode(&data), Ok(DynSolValue::Bool(true)));
-    assert!(ty.abi_decode_with_config(&data, config).is_err());
+    assert_eq!(
+        ty.abi_decode_with_config(&data, config).unwrap_err(),
+        alloy_sol_types::Error::type_check_fail(&data, "bool").into()
+    );
     assert_eq!(ty.abi_decode_params(&data), Ok(DynSolValue::Bool(true)));
     assert!(ty.abi_decode_params_with_config(&data, config).is_err());
 
@@ -97,6 +100,14 @@ fn type_decoders_validate_words() {
     );
     assert!(ty.abi_decode_sequence_with_config(&data, config).is_err());
     assert!(ty.abi_decode_params_with_config(&data, config).is_err());
+
+    // Nested words, and padding of other word types.
+    let ty = DynSolType::Array(Box::new(DynSolType::Uint(8)));
+    let mut data = DynSolValue::Array(vec![DynSolValue::Uint(U256::from(1), 8)]).abi_encode();
+    assert!(ty.abi_decode_with_config(&data, config).is_ok());
+    data[2 * 32] = 1;
+    assert!(ty.abi_decode(&data).is_ok());
+    assert!(ty.abi_decode_with_config(&data, config).is_err());
 
     // Canonical data is unaffected, and strict decoding is unsupported.
     let mut data = dirty_bool();
