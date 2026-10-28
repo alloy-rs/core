@@ -371,17 +371,17 @@ impl ExpCtxt<'_> {
                 }
                 // Public state variable getters are functions too.
                 for item in this.all_items.0.get(namespace).into_iter().flat_map(|m| m.values()) {
-                    if let Item::Variable(var_def) = item
-                        && let Ok(Some(getter)) = var_def::var_as_function(this, var_def)
-                    {
-                        let selector = this.function_selector(&getter).array;
-                        candidates.push((
-                            SelectorKind::Function,
-                            selector,
-                            var_def.span(),
-                            &var_def.name,
-                        ));
-                    }
+                    let Item::Variable(var_def) = item else { continue };
+                    let Ok(Some(getter)) = var_def::var_as_function(this, var_def) else {
+                        continue;
+                    };
+                    let selector = this.function_selector(&getter).array;
+                    candidates.push((
+                        SelectorKind::Function,
+                        selector,
+                        var_def.span(),
+                        &var_def.name,
+                    ));
                 }
 
                 for (kind, selector, span, name) in candidates {
