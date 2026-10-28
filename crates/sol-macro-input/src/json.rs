@@ -145,21 +145,11 @@ fn apply_attrs_to_items(items: &mut [ast::Item], ctx: &ApplyAttrsCtx<'_>) {
             ast::Item::Contract(contract) if contract.kind.is_interface() => {
                 apply_interface_attrs(contract, ctx);
             }
-            ast::Item::Contract(contract) => {
-                extend_attrs(&mut contract.attrs, ctx.derives, ctx.sol_derives);
+            item => {
+                if let Some(attrs) = item.attrs_mut() {
+                    extend_attrs(attrs, ctx.derives, ctx.sol_derives);
+                }
             }
-            ast::Item::Struct(strukt) => {
-                extend_attrs(&mut strukt.attrs, ctx.derives, ctx.sol_derives);
-            }
-            ast::Item::Udt(udt) => {
-                extend_attrs(&mut udt.attrs, ctx.derives, ctx.sol_derives);
-            }
-            ast::Item::Enum(enumm) => {
-                extend_attrs(&mut enumm.attrs, ctx.derives, ctx.sol_derives);
-            }
-            // Globals from `to_sol` are only structs, enums, and UDVTs; errors, functions, events,
-            // etc. are emitted in the interface.
-            _ => debug_assert!(false, "unexpected global item type"),
         }
     }
 }
