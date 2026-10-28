@@ -104,7 +104,7 @@ proptest = { version = "1", default-features = false }
 proptest-derive = "0.8"
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rayon = { version = "1.2", default-features = false }
-ruint = { version = "1.20", default-features = false, features = ["alloc"] }
+ruint = { version = "1.21.1", default-features = false, features = ["alloc"] }
 winnow = { version = "1.0", default-features = false, features = ["alloc", "ascii"] }
 fixed-cache = { version = "0.1.8", default-features = false }
 
