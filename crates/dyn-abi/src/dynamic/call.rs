@@ -1,6 +1,6 @@
 use crate::{DynSolType, DynSolValue, Error, Result};
 use alloy_primitives::Selector;
-use alloy_sol_types::abi::Decoder;
+use alloy_sol_types::abi::{AbiDecoderConfig, Decoder};
 
 #[cfg(not(feature = "std"))]
 use alloc::{string::String, vec::Vec};
@@ -62,7 +62,18 @@ impl DynSolCall {
 
     /// ABI decode the given data as function returns.
     pub fn abi_decode_input(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, &self.parameters)
+        self.abi_decode_input_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// Like [`abi_decode_input`](Self::abi_decode_input), with the given decoder configuration.
+    ///
+    /// See [`DynSolType::abi_decode_with_config`] for the validation options.
+    pub fn abi_decode_input_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Vec<DynSolValue>> {
+        abi_decode(data, &self.parameters, config)
     }
 
     /// ABI encode the given values as function return values.
@@ -73,6 +84,16 @@ impl DynSolCall {
     /// ABI decode the given data as function return values.
     pub fn abi_decode_output(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
         self.returns.abi_decode_output(data)
+    }
+
+    /// Like [`abi_decode_output`](Self::abi_decode_output), with the given decoder
+    /// configuration.
+    pub fn abi_decode_output_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Vec<DynSolValue>> {
+        self.returns.abi_decode_output_with_config(data, config)
     }
 }
 
@@ -110,7 +131,19 @@ impl DynSolReturns {
 
     /// ABI decode the given data as function return values.
     pub fn abi_decode_output(&self, data: &[u8]) -> Result<Vec<DynSolValue>> {
-        abi_decode(data, self.types())
+        self.abi_decode_output_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// Like [`abi_decode_output`](Self::abi_decode_output), with the given decoder
+    /// configuration.
+    ///
+    /// See [`DynSolType::abi_decode_with_config`] for the validation options.
+    pub fn abi_decode_output_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<Vec<DynSolValue>> {
+        abi_decode(data, self.types(), config)
     }
 }
 
@@ -146,11 +179,16 @@ pub(crate) fn abi_encode(values: &[DynSolValue]) -> Vec<u8> {
     DynSolValue::encode_seq(values)
 }
 
-pub(crate) fn abi_decode(data: &[u8], tys: &[DynSolType]) -> Result<Vec<DynSolValue>> {
+fn abi_decode(
+    data: &[u8],
+    tys: &[DynSolType],
+    config: AbiDecoderConfig,
+) -> Result<Vec<DynSolValue>> {
+    let validate = DynSolType::validation(&config)?;
     let mut values = Vec::with_capacity(tys.len());
-    let mut decoder = Decoder::new(data);
+    let mut decoder = Decoder::with_config(data, config);
     for ty in tys {
-        let value = ty.abi_decode_inner(&mut decoder, None)?;
+        let value = ty.abi_decode_inner(&mut decoder, validate)?;
         values.push(value);
     }
     Ok(values)

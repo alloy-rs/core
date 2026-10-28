@@ -3,7 +3,7 @@ use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use alloy_primitives::utils::vec_try_with_capacity;
 use alloy_sol_types::{
     abi::{
-        Decoder,
+        AbiDecoderConfig, Decoder,
         token::{PackedSeqToken, Token},
     },
     sol_data,
@@ -450,16 +450,38 @@ impl DynSolType {
     }
 
     /// Decode an event topic into a [`DynSolValue`].
-    pub(crate) fn decode_event_topic(&self, topic: Word) -> DynSolValue {
+    ///
+    /// `validate` is as in [`abi_decode_inner`](Self::abi_decode_inner); it applies to word types.
+    pub(crate) fn decode_event_topic(
+        &self,
+        topic: Word,
+        validate: Option<bool>,
+    ) -> Result<DynSolValue> {
         match self {
             Self::Address
             | Self::Function
             | Self::Bool
             | Self::FixedBytes(_)
             | Self::Int(_)
-            | Self::Uint(_) => self.word_value(topic),
-            _ => DynSolValue::FixedBytes(topic, 32),
+            | Self::Uint(_) => {
+                let mut validation = Validation::new(validate);
+                validation.word(self, &topic);
+                validation.finish()?;
+                Ok(self.word_value(topic))
+            }
+            _ => Ok(DynSolValue::FixedBytes(topic, 32)),
         }
+    }
+
+    /// Returns how decoding with `config` validates words: `None` if it does not, otherwise
+    /// whether strings must also be valid UTF-8.
+    ///
+    /// Dynamic decoding does not enforce strict ABI encoding, so strict configs are rejected.
+    pub(crate) fn validation(config: &AbiDecoderConfig) -> Result<Option<bool>> {
+        if config.get_strict() {
+            return Err(Error::custom("strict decoding is not supported"));
+        }
+        Ok(config.get_validate_words().then(|| config.get_validate()))
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
@@ -470,7 +492,22 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.abi_decode_inner(&mut Decoder::new(data), None)
+        self.abi_decode_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// Like [`abi_decode`](Self::abi_decode), with the given decoder configuration.
+    ///
+    /// If [`AbiDecoderConfig::validate_words`] or [`AbiDecoderConfig::validate`] is set, every
+    /// scalar word, including nested ones, must be canonical. Strict decoding is not supported.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub fn abi_decode_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<DynSolValue> {
+        let validate = Self::validation(&config)?;
+        self.abi_decode_inner(&mut Decoder::with_config(data, config), validate)
     }
 
     /// Decode a [`DynSolValue`] from a byte slice. Fails if the value does not
@@ -496,9 +533,23 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_params(&self, data: &[u8]) -> Result<DynSolValue> {
+        self.abi_decode_params_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// Like [`abi_decode_params`](Self::abi_decode_params), with the given decoder
+    /// configuration.
+    ///
+    /// See [`abi_decode_with_config`](Self::abi_decode_with_config) for the validation options.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub fn abi_decode_params_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<DynSolValue> {
         match self {
-            Self::Tuple(_) => self.abi_decode_sequence(data),
-            _ => self.abi_decode(data),
+            Self::Tuple(_) => self.abi_decode_sequence_with_config(data, config),
+            _ => self.abi_decode_with_config(data, config),
         }
     }
 
@@ -507,7 +558,26 @@ impl DynSolType {
     #[inline]
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn abi_decode_sequence(&self, data: &[u8]) -> Result<DynSolValue> {
-        self.decode_checked(&mut Decoder::new(data), None, Self::decode_sequence)
+        self.abi_decode_sequence_with_config(data, AbiDecoderConfig::new())
+    }
+
+    /// Like [`abi_decode_sequence`](Self::abi_decode_sequence), with the given decoder
+    /// configuration.
+    ///
+    /// See [`abi_decode_with_config`](Self::abi_decode_with_config) for the validation options.
+    #[inline]
+    #[cfg_attr(debug_assertions, track_caller)]
+    pub fn abi_decode_sequence_with_config(
+        &self,
+        data: &[u8],
+        config: AbiDecoderConfig,
+    ) -> Result<DynSolValue> {
+        let validate = Self::validation(&config)?;
+        self.decode_checked(
+            &mut Decoder::with_config(data, config),
+            validate,
+            Self::decode_sequence,
+        )
     }
 
     /// Returns `true` if this type is dynamically sized type.
