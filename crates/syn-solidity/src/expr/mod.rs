@@ -203,10 +203,10 @@ impl Expr {
     }
 
     fn peel_paren(&self) -> Option<&Self> {
-        if let Self::Tuple(t) = self {
-            if t.elems.len() == 1 {
-                return Some(&t.elems[0]);
-            }
+        if let Self::Tuple(t) = self
+            && t.elems.len() == 1
+        {
+            return Some(&t.elems[0]);
         }
         None
     }
